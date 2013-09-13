@@ -1,0 +1,9 @@
+set(VES_INCLUDE_BASE_DIR "@VES_SOURCE_DIR@/src")
+
+set(VES_RELATIVE_BUILD_INCLUDE_DIRS @VES_RELATIVE_BUILD_INCLUDE_DIRS@)
+foreach(dir ${VES_RELATIVE_BUILD_INCLUDE_DIRS})
+  list(APPEND VES_INCLUDE_DIRS "@VES_BINARY_DIR@/src/${dir}")
+endforeach()
+
+# add the eigen include directory that is used by ves
+list(APPEND VES_INCLUDE_DIRS "@EIGEN_INCLUDE_DIR@")

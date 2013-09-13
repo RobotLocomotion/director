@@ -1,0 +1,29 @@
+# Config file for VES - defines the following variables:
+#
+#  VES_INCLUDE_DIRS - include directories for ves
+#  VES_LIBRARIES    - libraries to link against for ves
+
+
+get_filename_component(VES_CONFIG_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+
+# setup include dirs
+set(VES_INCLUDE_DIRS)
+set(VES_RELATIVE_INCLUDE_DIRS @VES_RELATIVE_INCLUDE_DIRS@)
+
+if(EXISTS "${VES_CONFIG_DIR}/CMakeCache.txt")
+   include("${VES_CONFIG_DIR}/ves-build-config.cmake")
+else()
+  set(VES_INCLUDE_DIR_RELATIVE_TO_CONFIG_DIR @VES_INCLUDE_DIR_RELATIVE_TO_CONFIG_DIR@)
+  set(VES_INCLUDE_BASE_DIR "${VES_CONFIG_DIR}/${VES_INCLUDE_DIR_RELATIVE_TO_CONFIG_DIR}")
+  list(APPEND VES_RELATIVE_INCLUDE_DIRS @VES_RELATIVE_BUILD_INCLUDE_DIRS@)
+endif()
+
+foreach(dir ${VES_RELATIVE_INCLUDE_DIRS})
+  list(APPEND VES_INCLUDE_DIRS "${VES_INCLUDE_BASE_DIR}/${dir}")
+endforeach()
+
+
+# setup libraries & other targets
+include("${VES_CONFIG_DIR}/ves-targets.cmake")
+set(VES_LIBRARIES @VES_LIBRARIES@)
