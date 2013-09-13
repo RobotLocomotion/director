@@ -14,10 +14,8 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
 
 # declare options
-option(BUILD_SHARED_LIBS "Build drake-designer with shared libraries." OFF)
+option(BUILD_SHARED_LIBS "Build drake-designer with shared libraries." ON)
 option(BUILD_TESTING "Build drake-designer with tests enabled." OFF)
-option(VES_USE_VTK "Build the kiwi library.  Requires VTK." OFF)
-option(VES_USE_DESKTOP_GL "Build VES using desktop OpenGL instead of OpenGL ES." OFF)
 
 # include cmake scripts
 include(cmake/dd-macros.cmake)

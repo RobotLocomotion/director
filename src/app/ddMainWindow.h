@@ -4,6 +4,7 @@
 #include <QMainWindow>
 
 class ddViewManager;
+class ddPropertiesPanel;
 
 class ddMainWindow : public QMainWindow
 {
@@ -15,6 +16,7 @@ public:
   virtual ~ddMainWindow();
 
   ddViewManager* viewManager() const;
+  ddPropertiesPanel* propertiesPanel() const;
 
 protected slots:
 

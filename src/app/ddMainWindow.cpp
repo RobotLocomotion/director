@@ -1,7 +1,10 @@
 #include "ddMainWindow.h"
+
+#include "ddDrakeModel.h"
 #include "ddMacros.h"
 #include "ddPythonManager.h"
 #include "ddViewManager.h"
+#include "ddPropertiesPanel.h"
 
 #include "ui_ddMainWindow.h"
 
@@ -18,7 +21,7 @@ class ddMainWindow::ddInternal : public Ui::ddMainWindow
 public:
 
   ddViewManager* ViewManager;
-
+  ddPropertiesPanel* PropertiesPanel;
   ddPythonManager* PythonManager;
 };
 
@@ -30,7 +33,10 @@ ddMainWindow::ddMainWindow()
   this->Internal->setupUi(this);
 
   this->Internal->ViewManager = new ddViewManager;
+  this->Internal->PropertiesPanel = new ddPropertiesPanel;
+
   this->setCentralWidget(this->Internal->ViewManager);
+  this->Internal->PropertiesDock->setWidget(this->Internal->PropertiesPanel);
 
   this->setWindowTitle("Drake Designer");
   this->connect(this->Internal->ActionQuit, SIGNAL(triggered()), QApplication::instance(), SLOT(quit()));
@@ -53,6 +59,13 @@ ddViewManager* ddMainWindow::viewManager() const
 }
 
 //-----------------------------------------------------------------------------
+ddPropertiesPanel* ddMainWindow::propertiesPanel() const
+{
+  return this->Internal->PropertiesPanel;
+}
+
+
+//-----------------------------------------------------------------------------
 void ddMainWindow::handleCommandLineArgs()
 {
   QStringList args = QApplication::instance()->arguments();
@@ -63,6 +76,8 @@ void ddMainWindow::handleCommandLineArgs()
 void ddMainWindow::startup()
 {
   this->handleCommandLineArgs();
+
+  ddDrakeModel model;
 }
 
 //-----------------------------------------------------------------------------

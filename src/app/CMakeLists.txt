@@ -1,27 +1,38 @@
 setup_qt4()
+use_cpp11()
 
 find_package(PythonLibs REQUIRED)
 find_package(PythonInterp REQUIRED)
-find_package(QtPropertyBrowser REQUIRED)
 find_package(PythonQt REQUIRED)
 find_package(CTKPythonConsole REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(Drake REQUIRED)
+find_package(Eigen REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system thread filesystem regex)
 find_package(VTK REQUIRED COMPONENTS vtkRenderingOpenGL vtkGUISupportQt vtkInteractionWidgets vtkWrappingPythonCore)
+find_package(QtPropertyBrowser REQUIRED)
+find_library(QtPropertyBrowser_LIBRARY QtPropertyBrowser PATHS "${QtPropertyBrowser_LIBRARY_DIRS}")
+mark_as_advanced(QtPropertyBrowser_LIBRARY)
 
 include(${VTK_USE_FILE})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/src/common)
+include_directories(${QtPropertyBrowser_INCLUDE_DIRS})
 include_directories(${CTK_PYTHONCONSOLE_INCLUDE_DIRS})
 include_directories(${PYTHONQT_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
+include_directories(${EIGEN_INCLUDE_DIRS})
+include_directories(${DRAKE_INCLUDE_DIRS})
 
 set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
 qt4_wrap_cpp(moc_srcs
   ${decorator_file}
+  ddDrakeModel.h
   ddGLWidgetView.h
   ddMainWindow.h
+  ddPropertiesPanel.h
   ddPythonManager.h
   ddQVTKWidgetView.h
   ddViewBase.h
@@ -41,7 +52,9 @@ set(srcs
   ${ui_srcs}
   ${resource_srcs}
 
+  ddDrakeModel.cpp
   ddGLWidgetView.cpp
+  ddPropertiesPanel.cpp
   ddPythonManager.cpp
   ddPythonQtWrapperFactory.cpp
   ddQVTKWidgetView.cpp
@@ -54,8 +67,11 @@ set(deps
   ${QT_LIBRARIES}
   ${CTK_PYTHONCONSOLE_LIBRARIES}
   ${PYTHONQT_LIBRARIES}
+  ${QtPropertyBrowser_LIBRARY}
   ${OPENGL_LIBRARIES}
   ${VTK_LIBRARIES}
+  ${DRAKE_LIBRARIES}
+  ${Boost_LIBRARIES}
   )
 
 add_library(ddApp ${srcs})
