@@ -5,6 +5,7 @@
 #include "ddPythonManager.h"
 #include "ddViewManager.h"
 #include "ddPropertiesPanel.h"
+#include "ddQVTKWidgetView.h"
 
 #include "ui_ddMainWindow.h"
 
@@ -23,6 +24,8 @@ public:
   ddViewManager* ViewManager;
   ddPropertiesPanel* PropertiesPanel;
   ddPythonManager* PythonManager;
+
+  ddDrakeModel* DrakeModel;
 };
 
 
@@ -77,7 +80,14 @@ void ddMainWindow::startup()
 {
   this->handleCommandLineArgs();
 
-  ddDrakeModel model;
+  ddDrakeModel* model = new ddDrakeModel;
+  this->Internal->DrakeModel = model;
+
+  QString modelFile = "/home/pat/source/drc/drc-trunk/software/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact.urdf";
+  model->loadFromFile(modelFile);
+
+  ddQVTKWidgetView* view = qobject_cast<ddQVTKWidgetView*>(this->Internal->ViewManager->findView("VTK View"));
+  model->addActorsToRenderer(view->renderer());
 }
 
 //-----------------------------------------------------------------------------

@@ -37,15 +37,11 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
 
   this->Internal->Renderer = vtkSmartPointer<vtkRenderer>::New();
   this->Internal->VTKWidget->GetRenderWindow()->AddRenderer(this->Internal->Renderer);
-  //this->Internal->VTKWidget->GetRenderWindow()->SetMultiSamples(4);
 
-  vtkSmartPointer<vtkConeSource> cone = vtkSmartPointer<vtkConeSource>::New();
-  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-  cone->SetResolution( 8 );
-  mapper->AddInputConnection(cone->GetOutputPort());
-  actor->SetMapper(mapper);
-  this->Internal->Renderer->AddActor(actor);
+  //vtkMapper::SetResolveCoincidentTopologyToPolygonOffset();
+
+  // this is actually the default:
+  //this->Internal->VTKWidget->GetRenderWindow()->SetMultiSamples(8);
 
   this->Internal->Renderer->GradientBackgroundOn();
   this->Internal->Renderer->SetBackground(0.0, 0.0, 0.0);
@@ -69,6 +65,12 @@ vtkRenderWindow* ddQVTKWidgetView::renderWindow() const
 }
 
 //-----------------------------------------------------------------------------
+vtkRenderer* ddQVTKWidgetView::renderer() const
+{
+  return this->Internal->Renderer;
+}
+
+//-----------------------------------------------------------------------------
 void ddQVTKWidgetView::setupOrientationMarker()
 {
   this->renderWindow()->GetInteractor()->Disable();
@@ -82,4 +84,16 @@ void ddQVTKWidgetView::setupOrientationMarker()
   widget->InteractiveOff();
   this->Internal->OrientationWidget = widget;
   this->renderWindow()->GetInteractor()->Enable();
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::addCone()
+{
+  vtkSmartPointer<vtkConeSource> cone = vtkSmartPointer<vtkConeSource>::New();
+  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+  cone->SetResolution( 8 );
+  mapper->AddInputConnection(cone->GetOutputPort());
+  actor->SetMapper(mapper);
+  this->Internal->Renderer->AddActor(actor);
 }

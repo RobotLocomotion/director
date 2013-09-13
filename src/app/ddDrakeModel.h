@@ -3,6 +3,7 @@
 
 #include <QObject>
 
+class vtkRenderer;
 
 class ddDrakeModel : public QObject
 {
@@ -12,6 +13,9 @@ public:
 
   ddDrakeModel(QObject* parent=0);
   virtual ~ddDrakeModel();
+
+  void loadFromFile(const QString& filename);
+  void addActorsToRenderer(vtkRenderer* renderer);
 
 protected:
 

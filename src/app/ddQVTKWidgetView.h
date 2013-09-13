@@ -4,6 +4,7 @@
 #include "ddViewBase.h"
 
 class vtkRenderWindow;
+class vtkRenderer;
 
 class ddQVTKWidgetView : public ddViewBase
 {
@@ -15,10 +16,13 @@ public:
   virtual ~ddQVTKWidgetView();
 
   vtkRenderWindow* renderWindow() const;
+  vtkRenderer* renderer() const;
 
 protected:
 
   void setupOrientationMarker();
+
+  void addCone();
 
   class ddInternal;
   ddInternal* Internal;

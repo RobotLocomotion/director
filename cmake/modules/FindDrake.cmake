@@ -1,18 +1,25 @@
+if(DRAKE_DIR)
+  set(_source_dir_hint ${DRAKE_DIR})
+  set(_lib_dir_hint ${DRAKE_DIR}/pod-build/lib)
+endif()
 
-
-set(DRAKE_DIR /source/drc/drc-trunk/software/drake)
-set(DRAKE_LIB_DIR ${DRAKE_DIR}/pod-build/lib)
+find_path(DRAKE_SOURCE_DIR addpath_drake.m HINTS ${_source_dir_hint} DOC "Drake source directory")
+find_library(DRAKE_RBM_LIBRARY drakeRBM HINTS ${_lib_dir_hint} DOC "Drake RBM library")
+find_library(DRAKE_URDF_RBM_LIBRARY URDFRigidBodyManipulator HINTS ${_lib_dir_hint} DOC "Drake URDFRigidBodyManipulator library")
+find_library(DRAKE_URDF_INTERFACE_LIBRARY urdf_interface HINTS ${_lib_dir_hint} DOC "Drake urdf_interface library")
 
 set(DRAKE_LIBRARIES
-  ${DRAKE_LIB_DIR}/libdrakeRBM.dylib
-  ${DRAKE_LIB_DIR}/libURDFRigidBodyManipulator.a
-  ${DRAKE_LIB_DIR}/liburdf_interface.a
+    ${DRAKE_RBM_LIBRARY}
+    ${DRAKE_URDF_RBM_LIBRARY}
+    ${DRAKE_URDF_INTERFACE_LIBRARY}
   )
 
 set(DRAKE_INCLUDE_DIRS
-  ${DRAKE_DIR}/systems/plants
-  ${DRAKE_DIR}/systems/plants/tinyxml
+  ${DRAKE_SOURCE_DIR}/systems/plants
+  ${DRAKE_SOURCE_DIR}/systems/plants/tinyxml
   )
 
 
-set(DRAKE_FOUND 1)
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(Drake DEFAULT_MSG DRAKE_SOURCE_DIR DRAKE_RBM_LIBRARY DRAKE_URDF_RBM_LIBRARY DRAKE_URDF_INTERFACE_LIBRARY)
+mark_as_advanced(DRAKE_SOURCE_DIR DRAKE_RBM_LIBRARY DRAKE_URDF_RBM_LIBRARY DRAKE_URDF_INTERFACE_LIBRARY)

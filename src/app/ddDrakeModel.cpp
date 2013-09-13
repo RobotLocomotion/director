@@ -1,9 +1,18 @@
 #include "ddDrakeModel.h"
+#include "ddSharedPtr.h"
 
 #include <URDFRigidBodyManipulator.h>
 
 #include <vtkPolyData.h>
 #include <vtkSmartPointer.h>
+#include <vtkActor.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkPolyDataNormals.h>
+#include <vtkRenderer.h>
+#include <vtkOBJReader.h>
+#include <vtkTransform.h>
+#include <vtkQuaternion.h>
+#include <vtkProperty.h>
 
 #include <map>
 #include <vector>
@@ -14,24 +23,126 @@
 
 #include <urdf_interface/model.h>
 
+#include <math.h>
+
 using std::map;
 using std::vector;
 using std::string;
 using std::istringstream;
 
+class ddMeshVisual
+{
+ public:
+
+  ddPtrMacro(ddMeshVisual);
+  ddMeshVisual()
+  {
+
+  }
+
+  std::string FileName;
+  vtkSmartPointer<vtkPolyData> PolyData;
+  vtkSmartPointer<vtkActor> Actor;
+  vtkSmartPointer<vtkTransform> Transform;
+
+private:
+
+  Q_DISABLE_COPY(ddMeshVisual);
+};
+
 namespace
 {
 
-vtkSmartPointer<vtkPolyData> loadMesh(const std::string filename)
+int feq (double a, double b)
 {
-  return vtkSmartPointer<vtkPolyData>::New();
+    return fabs (a - b) < 1e-9;
+}
+
+void bot_quat_to_angle_axis (const double q[4], double *theta, double axis[3])
+{
+    double halftheta = acos (q[0]);
+    *theta = halftheta * 2;
+    double sinhalftheta = sin (halftheta);
+    if (feq (halftheta, 0)) {
+        axis[0] = 0;
+        axis[1] = 0;
+        axis[2] = 1;
+        *theta = 0;
+    } else {
+        axis[0] = q[1] / sinhalftheta;
+        axis[1] = q[2] / sinhalftheta;
+        axis[2] = q[3] / sinhalftheta;
+    }
+}
+
+vtkSmartPointer<vtkPolyData> shallowCopy(vtkPolyData* polyData)
+{
+  if (!polyData)
+  {
+    return 0;
+  }
+
+  vtkSmartPointer<vtkPolyData> newPolyData = vtkSmartPointer<vtkPolyData>::New();
+  newPolyData->ShallowCopy(polyData);
+  return newPolyData;
+}
+
+vtkSmartPointer<vtkPolyData> computeNormals(vtkPolyData* polyData)
+{
+  vtkSmartPointer<vtkPolyDataNormals> normalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
+  normalsFilter->SetFeatureAngle(45);
+  normalsFilter->SetInputData(polyData);
+  normalsFilter->Update();
+  return shallowCopy(normalsFilter->GetOutput());
+}
+
+vtkSmartPointer<vtkPolyData> loadPolyData(const std::string filename)
+{
+  vtkSmartPointer<vtkOBJReader> reader = vtkSmartPointer<vtkOBJReader>::New();
+  reader->SetFileName(filename.c_str());
+  reader->Update();
+  if (!reader->GetOutput()->GetNumberOfPoints())
+  {
+    std::cout << "Failed to load data from: " << filename << std::endl;
+  }
+
+  return shallowCopy(reader->GetOutput());
+}
+
+void QuaternionToAngleAxis(double wxyz[4], double angleAxis[4])
+{
+  vtkQuaternion<double> quat(wxyz);
+  angleAxis[0] = quat.GetRotationAngleAndAxis(angleAxis+1);
+  angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
+}
+
+ddMeshVisual::Ptr loadMeshVisual(const std::string& filename)
+{
+  ddMeshVisual::Ptr mesh(new ddMeshVisual);
+  mesh->FileName = filename;
+  mesh->PolyData = computeNormals(loadPolyData(filename));
+  mesh->Actor = vtkSmartPointer<vtkActor>::New();
+
+  mesh->Actor->GetProperty()->SetSpecular(0.9);
+  mesh->Actor->GetProperty()->SetSpecularPower(20);
+  //mesh->Actor->GetProperty()->SetColor(148/255.0, 147/255.0, 155/255.0);
+  mesh->Actor->GetProperty()->SetColor(190/255.0, 190/255.0, 190/255.0);
+  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(mesh->PolyData);
+  mesh->Actor->SetMapper(mapper);
+
+  return mesh;
 }
 
 class URDFRigidBodyManipulatorVTK : public URDFRigidBodyManipulator
 {
 public:
 
-  map<string, vtkSmartPointer<vtkPolyData> > mesh_map;
+  typedef std::map<string, ddMeshVisual::Ptr> MeshMapType;
+
+  MeshMapType mesh_map;
+
+  ddPtrMacro(URDFRigidBodyManipulatorVTK);
 
   URDFRigidBodyManipulatorVTK()
   {
@@ -43,6 +154,31 @@ public:
 
   }
 
+  std::vector<ddMeshVisual::Ptr> meshVisuals()
+  {
+    std::vector<ddMeshVisual::Ptr> visuals;
+    for (MeshMapType::iterator itr = mesh_map.begin(); itr != mesh_map.end(); ++itr)
+    {
+      visuals.push_back(itr->second);
+    }
+    return visuals;
+  }
+
+
+  virtual void loadURDFMesh(boost::shared_ptr<urdf::Mesh> mesh, const std::string& filename)
+  {
+    cout << "Loading mesh: " << filename << endl;
+    ddMeshVisual::Ptr meshVisual = loadMeshVisual(filename);
+
+    if (!meshVisual)
+    {
+      cerr << "Error loading mesh from file: " << filename << endl;
+    }
+    else
+    {
+      mesh_map.insert(make_pair(mesh->filename, meshVisual));
+    }
+  }
 
   virtual bool addURDF(boost::shared_ptr<urdf::ModelInterface> _urdf_model,
                        std::map<std::string, int> jointname_to_jointnum,
@@ -67,7 +203,7 @@ public:
           {
             boost::shared_ptr<urdf::Mesh> mesh(boost::dynamic_pointer_cast<urdf::Mesh>(visuals[iv]->geometry));
 
-            map<string, vtkSmartPointer<vtkPolyData> >::iterator iter = mesh_map.find(mesh->filename);
+            MeshMapType::iterator iter = mesh_map.find(mesh->filename);
             if (iter != mesh_map.end())  // then it's already in the map... no need to load it again
               continue;
 
@@ -102,18 +238,7 @@ public:
 
             if (ext.compare(".obj") == 0)
             {
-              cout << "Loading mesh: " << fname << endl;
-              vtkSmartPointer<vtkPolyData> polyData = loadMesh(fname);
-
-              if (!polyData)
-              {
-                cerr << "Error loading mesh: " << fname << endl;
-              }
-              else
-              {
-                mesh_map.insert(make_pair(mesh->filename, polyData));
-              }
-
+              loadURDFMesh(mesh, fname);
             }
             else
             {
@@ -123,18 +248,7 @@ public:
 
               if ( boost::filesystem::exists( fname ) )
               {
-                cout << "Loading mesh: " << fname << endl;
-                vtkSmartPointer<vtkPolyData> polyData = loadMesh(fname);
-
-                if (!polyData)
-                {
-                  cerr << "Error loading mesh: " << fname << endl;
-                }
-                else
-                {
-                  mesh_map.insert(make_pair(mesh->filename, polyData));
-                }
-
+                loadURDFMesh(mesh, fname);
               }
               else
               {
@@ -155,6 +269,8 @@ public:
   {
     const Vector4d zero(0,0,0,1);
     double theta, axis[3], quat[4];
+
+    double angleAxis[4];
 
 
     Matrix<double,7,1> pose;
@@ -186,7 +302,7 @@ public:
 
           forwardKin(body_ind,zero,2,pose);
 
-          cout << l->second->name << " is at " << pose.transpose() << endl;
+          //cout << l->second->name << " is at " << pose.transpose() << endl;
 
           double* posedata = pose.data();
 
@@ -194,6 +310,20 @@ public:
           //glPushMatrix();
           //glTranslatef(pose(0),pose(1),pose(2));
           //glRotatef(theta * 180/3.141592654, axis[0], axis[1], axis[2]);
+
+
+
+          //QuaternionToAngleAxis(&posedata[3], angleAxis);
+          bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
+
+          vtkSmartPointer<vtkTransform> worldToLink = vtkSmartPointer<vtkTransform>::New();
+          worldToLink->PreMultiply();
+          worldToLink->Translate(pose(0), pose(1), pose(2));
+          worldToLink->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+
+          printf("link rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+          printf("link translation: [%f, %f, %f]\n", pose(0), pose(1), pose(2));
+
 
           // todo: iterate over all visual groups (not just "default")
           map<string, boost::shared_ptr<vector<boost::shared_ptr<urdf::Visual> > > >::iterator v_grp_it = l->second->visual_groups.find("default");
@@ -233,6 +363,25 @@ public:
             glRotatef(theta * 180/3.141592654, axis[0], axis[1], axis[2]);
             */
 
+            quat[0] = vptr->origin.rotation.w;
+            quat[1] = vptr->origin.rotation.x;
+            quat[2] = vptr->origin.rotation.y;
+            quat[3] = vptr->origin.rotation.z;
+            //QuaternionToAngleAxis(quat, angleAxis);
+
+            bot_quat_to_angle_axis(quat, &angleAxis[0], &angleAxis[1]);
+
+            printf("visual rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+            printf("visual translation: [%f, %f, %f]\n", vptr->origin.position.x, vptr->origin.position.y, vptr->origin.position.z);
+
+            vtkSmartPointer<vtkTransform> linkToVisual = vtkSmartPointer<vtkTransform>::New();
+            linkToVisual->PreMultiply();
+            linkToVisual->Translate(vptr->origin.position.x,
+                                   vptr->origin.position.y,
+                                   vptr->origin.position.z);
+            linkToVisual->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+
+
             int type = vptr->geometry->type;
             if (type == urdf::Geometry::SPHERE)
             {
@@ -240,11 +389,15 @@ public:
               double radius = sphere->radius;
 
               //glutSolidSphere(radius,36,36);
+
+              printf("sphere\n");
             }
             else if (type == urdf::Geometry::BOX)
             {
 
               boost::shared_ptr<urdf::Box> box(boost::dynamic_pointer_cast<urdf::Box>(vptr->geometry));
+
+              printf("box\n");
 
               //glScalef(box->dim.x,box->dim.y,box->dim.z);
               //bot_gl_draw_cube();
@@ -254,6 +407,7 @@ public:
 
               boost::shared_ptr<urdf::Cylinder> cyl(boost::dynamic_pointer_cast<urdf::Cylinder>(vptr->geometry));
 
+              printf("cyl\n");
               // transform to center of cylinder
               /*
               glTranslatef(0.0,0.0,-cyl->length/2.0);
@@ -278,10 +432,31 @@ public:
 
               //glScalef(mesh->scale.x,mesh->scale.y,mesh->scale.z);
 
-              map<string,vtkSmartPointer<vtkPolyData> >::iterator iter = mesh_map.find(mesh->filename);
+              linkToVisual->Scale(mesh->scale.x,
+                                  mesh->scale.y,
+                                  mesh->scale.z);
+
+              printf("visual scale: [%f, %f, %f]\n", mesh->scale.x, mesh->scale.y, mesh->scale.z);
+
+              vtkSmartPointer<vtkTransform> worldToVisual = vtkSmartPointer<vtkTransform>::New();
+              worldToVisual->PreMultiply();
+              worldToVisual->Concatenate(worldToLink);
+              worldToVisual->Concatenate(linkToVisual);
+              worldToVisual->Update();
+
+              MeshMapType::iterator iter = mesh_map.find(mesh->filename);
               if (iter!= mesh_map.end())
               {
                 //bot_wavefront_model_gl_draw(iter->second);
+
+                ddMeshVisual::Ptr meshVisual = iter->second;
+                if (meshVisual)
+                {
+                  printf("setting user transform\n");
+                  worldToVisual->Print(std::cout);
+                  meshVisual->Actor->SetUserTransform(worldToVisual);
+                }
+                else printf("mesh visual is null\n");
               }
 
             }
@@ -299,12 +474,11 @@ public:
 };
 
 
-URDFRigidBodyManipulatorVTK* loadVTKModelFromFile(const string &urdf_filename)
+URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filename)
 {
   // urdf_filename can be a list of urdf files seperated by a :
 
-  URDFRigidBodyManipulatorVTK* model = new URDFRigidBodyManipulatorVTK();
-
+  URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
 
   string token;
   istringstream iss(urdf_filename);
@@ -326,7 +500,7 @@ URDFRigidBodyManipulatorVTK* loadVTKModelFromFile(const string &urdf_filename)
     else
     {
         cerr << "Could not open file ["<<urdf_filename.c_str()<<"] for parsing."<< endl;
-        return NULL;
+        return URDFRigidBodyManipulatorVTK::Ptr();
     }
 
     string pathname;
@@ -349,7 +523,7 @@ class ddDrakeModel::ddInternal
 {
 public:
 
-  URDFRigidBodyManipulator* Model;
+  URDFRigidBodyManipulatorVTK::Ptr Model;
 
 };
 
@@ -358,15 +532,45 @@ public:
 ddDrakeModel::ddDrakeModel(QObject* parent) : QObject(parent)
 {
   this->Internal = new ddInternal;
-
-  QString modelFile = "/source/drc/drc-trunk/software/models/mit_gazebo_models/mit_robot_drake/model.urdf";
-  URDFRigidBodyManipulatorVTK* model = loadVTKModelFromFile(modelFile.toAscii().data());
-
-  model->updateModel();
 }
 
 //-----------------------------------------------------------------------------
 ddDrakeModel::~ddDrakeModel()
 {
   delete this->Internal;
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::loadFromFile(const QString& filename)
+{
+  URDFRigidBodyManipulatorVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data());
+  if (!model)
+  {
+    return;
+  }
+
+  MatrixXd q0 = MatrixXd::Zero(model->num_dof, 1);
+  model->doKinematics(q0.data());
+
+  this->Internal->Model = model;
+  model->updateModel();
+}
+
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::addActorsToRenderer(vtkRenderer* renderer)
+{
+  if (!renderer)
+  {
+    return;
+  }
+
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    renderer->AddActor(visuals[i]->Actor);
+  }
+
+  renderer->ResetCamera();
 }
