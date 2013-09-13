@@ -4,6 +4,7 @@
 #include <QWidget>
 
 class QTabWidget;
+class ddViewBase;
 
 class ddViewManager : public QWidget
 {
@@ -16,11 +17,14 @@ public:
 
   QTabWidget* tabWidget() const;
 
-public slots:
+  ddViewBase* findView(const QString& viewName) const;
+
 
 protected:
 
   void addDefaultPage();
+
+  void addView(ddViewBase* view, const QString& viewName);
 
   class ddInternal;
   ddInternal* Internal;

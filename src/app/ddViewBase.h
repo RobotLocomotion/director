@@ -1,5 +1,5 @@
-#ifndef __ddMainWindow_h
-#define __ddMainWindow_h
+#ifndef __ddViewBase_h
+#define __ddViewBase_h
 
 #include <QWidget>
 

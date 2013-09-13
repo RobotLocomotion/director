@@ -1,11 +1,28 @@
 #include "ddViewManager.h"
+#include "ddGLWidgetView.h"
+#include "ddQVTKWidgetView.h"
 #include "ddMacros.h"
 
 #include <QTabWidget>
+#include <QTabBar>
 #include <QVBoxLayout>
-#include <QPushButton>
+#include <QMap>
 
 #include <cstdio>
+
+class MyTabWidget : public QTabWidget
+{
+public:
+
+  MyTabWidget(QWidget* parent=0) : QTabWidget(parent)
+  {
+  }
+
+  void updateTabBar()
+  {
+    this->tabBar()->setVisible(this->count() > 1);
+  }
+};
 
 //-----------------------------------------------------------------------------
 class ddViewManager::ddInternal
@@ -13,6 +30,8 @@ class ddViewManager::ddInternal
 public:
 
   QTabWidget* TabWidget;
+
+  QMap<QString, ddViewBase*> Views;
 };
 
 
@@ -22,9 +41,11 @@ ddViewManager::ddViewManager(QWidget* parent) : QWidget(parent)
   this->Internal = new ddInternal;
 
   QVBoxLayout* layout = new QVBoxLayout(this);
+  layout->setMargin(0);
 
-  QTabWidget* tabWidget = new QTabWidget(this);
+  QTabWidget* tabWidget = new MyTabWidget(this);
   tabWidget->setTabPosition(QTabWidget::West);
+  tabWidget->setDocumentMode(true);
   layout->addWidget(tabWidget);
   this->Internal->TabWidget = tabWidget;
 
@@ -44,8 +65,22 @@ QTabWidget* ddViewManager::tabWidget() const
 }
 
 //-----------------------------------------------------------------------------
+ddViewBase* ddViewManager::findView(const QString& viewName) const
+{
+  return this->Internal->Views.value(viewName);
+}
+
+//-----------------------------------------------------------------------------
+void ddViewManager::addView(ddViewBase* view, const QString& viewName)
+{
+  this->tabWidget()->addTab(view, viewName);
+  this->Internal->Views[viewName] = view;
+  static_cast<MyTabWidget*>(this->tabWidget())->updateTabBar();
+}
+
+//-----------------------------------------------------------------------------
 void ddViewManager::addDefaultPage()
 {
-  QPushButton* button = new QPushButton("hello world");
-  this->tabWidget()->addTab(button, "Create View");
+  //this->addView(new ddGLWidgetView, "OpenGL View");
+  this->addView(new ddQVTKWidgetView, "VTK View");
 }

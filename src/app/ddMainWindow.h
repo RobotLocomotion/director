@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+class ddViewManager;
 
 class ddMainWindow : public QMainWindow
 {
@@ -13,7 +14,7 @@ public:
   ddMainWindow();
   virtual ~ddMainWindow();
 
-public slots:
+  ddViewManager* viewManager() const;
 
 protected slots:
 

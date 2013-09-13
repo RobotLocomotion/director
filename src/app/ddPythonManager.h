@@ -20,6 +20,8 @@ public slots:
 
 protected:
 
+  virtual void preInitialization();
+
   void setupConsoleShortcuts();
 
   class ddInternal;

@@ -47,6 +47,12 @@ ddMainWindow::~ddMainWindow()
 }
 
 //-----------------------------------------------------------------------------
+ddViewManager* ddMainWindow::viewManager() const
+{
+  return this->Internal->ViewManager;
+}
+
+//-----------------------------------------------------------------------------
 void ddMainWindow::handleCommandLineArgs()
 {
   QStringList args = QApplication::instance()->arguments();
@@ -65,4 +71,5 @@ void ddMainWindow::setupPython()
   this->Internal->PythonManager = new ddPythonManager(this);
   this->Internal->PythonManager->addObjectToPythonMain("_mainWindow", this);
   this->Internal->PythonManager->setupConsole(this);
+  this->connect(this->Internal->ActionPythonConsole, SIGNAL(triggered()), this->Internal->PythonManager, SLOT(showConsole()));
 }

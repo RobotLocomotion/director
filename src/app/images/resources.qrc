@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/images">
+    <file>python_logo.png</file>
+    <file>drake_logo.png</file>
+  </qresource>
+</RCC>

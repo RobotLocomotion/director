@@ -1,0 +1,5 @@
+ddViewManager* ddMainWindow::viewManager()
+
+ddViewBase* ddViewManager::findView(const QString&) const;
+
+vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;

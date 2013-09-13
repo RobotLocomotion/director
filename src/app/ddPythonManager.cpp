@@ -1,5 +1,8 @@
 #include "ddPythonManager.h"
 
+#include "ddPythonQtWrapperFactory.h"
+#include "ddPythonQtDecorators.h"
+
 #include <ctkPythonConsole.h>
 
 #include <QApplication>
@@ -31,6 +34,7 @@ ddPythonManager::ddPythonManager(QObject* parent) : ctkAbstractPythonManager(par
   this->setupConsoleShortcuts();
   this->addObjectToPythonMain("_console", console);
 
+  this->executeString("import sys; sys.path += ['/source/paraview/build/VTK/Wrapping/Python', '/source/paraview/build/lib']");
   this->executeString("def quit(): _mainWindow.close()");
   this->executeString("exit = quit");
   //this->executeFile("/source/drc/drc-trunk/software/motion_estimate/signal_scope/src/signal_scope/numpy_test.py");
@@ -44,23 +48,24 @@ ddPythonManager::~ddPythonManager()
 }
 
 //-----------------------------------------------------------------------------
+void ddPythonManager::preInitialization()
+{
+  this->addWrapperFactory(new ddPythonQtWrapperFactory);
+  this->registerPythonQtDecorator(new ddPythonQtDecorators);
+}
+
+//-----------------------------------------------------------------------------
 void ddPythonManager::showConsole()
 {
   this->Internal->Console->show();
 }
-
 
 //-----------------------------------------------------------------------------
 void ddPythonManager::setupConsole(QWidget* parent)
 {
   this->Internal->Console->setParent(parent);
   this->Internal->Console->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
-
-  QShortcut* showAction = new QShortcut(QKeySequence("F8"), parent);
-  showAction->setContext(Qt::ApplicationShortcut);
-  this->connect(showAction, SIGNAL(activated()), SLOT(showConsole()));
 }
-
 
 //-----------------------------------------------------------------------------
 void ddPythonManager::setupConsoleShortcuts()

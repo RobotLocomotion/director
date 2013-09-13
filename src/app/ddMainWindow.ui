@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="images/resources.qrc">
+    <normaloff>:/images/drake_logo.png</normaloff>:/images/drake_logo.png</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="MenuBar">
    <property name="geometry">
@@ -20,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -29,7 +33,14 @@
     </property>
     <addaction name="ActionQuit"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="ActionPythonConsole"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuTools"/>
   </widget>
   <widget class="QStatusBar" name="StatusBar"/>
   <widget class="QDockWidget" name="ObjectsDock">
@@ -50,7 +61,7 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="ActionQuit"/>
+   <addaction name="ActionPythonConsole"/>
   </widget>
   <widget class="QDockWidget" name="PropertiesDock">
    <attribute name="dockWidgetArea">
@@ -69,7 +80,24 @@
     <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
+  <action name="ActionPythonConsole">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/python_logo.png</normaloff>:/images/python_logo.png</iconset>
+   </property>
+   <property name="text">
+    <string>Python Console</string>
+   </property>
+   <property name="shortcut">
+    <string>F8</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="images/resources.qrc"/>
+ </resources>
  <connections/>
 </ui>
