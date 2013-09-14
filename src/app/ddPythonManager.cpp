@@ -6,6 +6,7 @@
 #include <ctkPythonConsole.h>
 
 #include <QApplication>
+#include <QDir>
 #include <QShortcut>
 
 //-----------------------------------------------------------------------------
@@ -33,11 +34,6 @@ ddPythonManager::ddPythonManager(QObject* parent) : ctkAbstractPythonManager(par
   this->Internal->Console = console;
   this->setupConsoleShortcuts();
   this->addObjectToPythonMain("_console", console);
-
-  this->executeString("import sys; sys.path += ['/source/paraview/build/VTK/Wrapping/Python', '/source/paraview/build/lib']");
-  this->executeString("def quit(): _mainWindow.close()");
-  this->executeString("exit = quit");
-  //this->executeFile("/source/drc/drc-trunk/software/motion_estimate/signal_scope/src/signal_scope/numpy_test.py");
 }
 
 //-----------------------------------------------------------------------------
@@ -52,6 +48,27 @@ void ddPythonManager::preInitialization()
 {
   this->addWrapperFactory(new ddPythonQtWrapperFactory);
   this->registerPythonQtDecorator(new ddPythonQtDecorators);
+}
+
+//-----------------------------------------------------------------------------
+QStringList ddPythonManager::pythonPaths()
+{
+  QStringList searchDirs;
+  searchDirs << QCoreApplication::applicationDirPath()  + "/../lib/site-packages"
+             << "/source/paraview/build/VTK/Wrapping/Python"
+             << "/source/paraview/build/lib"
+             << "/home/pat/source/paraview/build/VTK/Wrapping/Python"
+             << "/home/pat/source/paraview/build/lib";
+
+  QStringList paths;
+  foreach (const QString& dirname, searchDirs)
+  {
+    if (QDir(dirname).exists())
+    {
+      paths.append(dirname);
+    }
+  }
+  return paths;
 }
 
 //-----------------------------------------------------------------------------

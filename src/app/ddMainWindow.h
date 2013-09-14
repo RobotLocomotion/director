@@ -17,6 +17,7 @@ public:
 
   ddViewManager* viewManager() const;
   ddPropertiesPanel* propertiesPanel() const;
+  QToolBar* toolBar() const;
 
 protected slots:
 

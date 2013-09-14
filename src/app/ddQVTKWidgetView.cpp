@@ -71,6 +71,12 @@ vtkRenderer* ddQVTKWidgetView::renderer() const
 }
 
 //-----------------------------------------------------------------------------
+void ddQVTKWidgetView::render()
+{
+  this->update();
+}
+
+//-----------------------------------------------------------------------------
 void ddQVTKWidgetView::setupOrientationMarker()
 {
   this->renderWindow()->GetInteractor()->Disable();

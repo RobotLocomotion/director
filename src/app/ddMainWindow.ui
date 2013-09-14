@@ -27,20 +27,20 @@
      <height>22</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuFile">
+   <widget class="QMenu" name="FileMenu">
     <property name="title">
      <string>File</string>
     </property>
     <addaction name="ActionQuit"/>
    </widget>
-   <widget class="QMenu" name="menuTools">
+   <widget class="QMenu" name="ToolsMenu">
     <property name="title">
      <string>Tools</string>
     </property>
     <addaction name="ActionPythonConsole"/>
    </widget>
-   <addaction name="menuFile"/>
-   <addaction name="menuTools"/>
+   <addaction name="FileMenu"/>
+   <addaction name="ToolsMenu"/>
   </widget>
   <widget class="QStatusBar" name="StatusBar"/>
   <widget class="QDockWidget" name="ObjectsDock">
@@ -51,7 +51,7 @@
     <layout class="QVBoxLayout" name="verticalLayout"/>
    </widget>
   </widget>
-  <widget class="QToolBar" name="CommonToolBar">
+  <widget class="QToolBar" name="MainToolBar">
    <property name="windowTitle">
     <string>toolBar</string>
    </property>

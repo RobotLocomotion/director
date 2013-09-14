@@ -14,8 +14,18 @@ public:
   ddDrakeModel(QObject* parent=0);
   virtual ~ddDrakeModel();
 
-  void loadFromFile(const QString& filename);
-  void addActorsToRenderer(vtkRenderer* renderer);
+  bool loadFromFile(const QString& filename);
+  void addToRenderer(vtkRenderer* renderer);
+  void removeFromRenderer(vtkRenderer* renderer);
+
+  int numberOfJoints();
+  void setJointPositions(const QList<double>& positions);
+
+  void setAlpha(double alpha);
+
+signals:
+
+  void modelChanged();
 
 protected:
 

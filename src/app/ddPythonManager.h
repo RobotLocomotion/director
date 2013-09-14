@@ -22,6 +22,8 @@ protected:
 
   virtual void preInitialization();
 
+  virtual QStringList pythonPaths();
+
   void setupConsoleShortcuts();
 
   class ddInternal;

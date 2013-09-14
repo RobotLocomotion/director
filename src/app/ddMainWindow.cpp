@@ -1,11 +1,9 @@
 #include "ddMainWindow.h"
 
-#include "ddDrakeModel.h"
 #include "ddMacros.h"
 #include "ddPythonManager.h"
 #include "ddViewManager.h"
 #include "ddPropertiesPanel.h"
-#include "ddQVTKWidgetView.h"
 
 #include "ui_ddMainWindow.h"
 
@@ -24,8 +22,6 @@ public:
   ddViewManager* ViewManager;
   ddPropertiesPanel* PropertiesPanel;
   ddPythonManager* PythonManager;
-
-  ddDrakeModel* DrakeModel;
 };
 
 
@@ -67,6 +63,11 @@ ddPropertiesPanel* ddMainWindow::propertiesPanel() const
   return this->Internal->PropertiesPanel;
 }
 
+//-----------------------------------------------------------------------------
+QToolBar* ddMainWindow::toolBar() const
+{
+  return this->Internal->MainToolBar;
+}
 
 //-----------------------------------------------------------------------------
 void ddMainWindow::handleCommandLineArgs()
@@ -79,15 +80,8 @@ void ddMainWindow::handleCommandLineArgs()
 void ddMainWindow::startup()
 {
   this->handleCommandLineArgs();
-
-  ddDrakeModel* model = new ddDrakeModel;
-  this->Internal->DrakeModel = model;
-
-  QString modelFile = "/home/pat/source/drc/drc-trunk/software/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact.urdf";
-  model->loadFromFile(modelFile);
-
-  ddQVTKWidgetView* view = qobject_cast<ddQVTKWidgetView*>(this->Internal->ViewManager->findView("VTK View"));
-  model->addActorsToRenderer(view->renderer());
+  this->Internal->PythonManager->executeString("import ddapp.applogic as dd; dd.startup(globals())");
+  //this->Internal->PythonManager->executeString("from ddapp.applogic import *");
 }
 
 //-----------------------------------------------------------------------------

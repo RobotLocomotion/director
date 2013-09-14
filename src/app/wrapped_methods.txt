@@ -1,5 +1,19 @@
-ddViewManager* ddMainWindow::viewManager()
 
-ddViewBase* ddViewManager::findView(const QString&) const;
+int ddDrakeModel::numberOfJoints();
+void ddDrakeModel::setJointPositions(const QList<double>&);
+void ddDrakeModel::setAlpha(double);
+
+ddDrakeModel* ddDRCView::loadURDFModel(const QString&);
+QList<ddDrakeModel*> ddDRCView::models() const;
+void ddDRCView::unloadModel(ddDrakeModel*);
+void ddDRCView::unloadModels();
 
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
+vtkRenderer* ddQVTKWidgetView::renderer() const;
+
+ddViewManager* ddMainWindow::viewManager()
+ddPropertiesPanel* ddMainWindow::propertiesPanel() const;
+QToolBar* ddMainWindow::toolBar() const;
+
+
+ddViewBase* ddViewManager::findView(const QString&) const;

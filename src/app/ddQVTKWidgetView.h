@@ -18,6 +18,10 @@ public:
   vtkRenderWindow* renderWindow() const;
   vtkRenderer* renderer() const;
 
+public slots:
+
+  void render();
+
 protected:
 
   void setupOrientationMarker();

@@ -1,15 +1,11 @@
 #ifndef __ddSharedPtr_h
 #define __ddSharedPtr_h
 
-#ifdef _WIN32
-  #include <memory>
-#else
-  #include <tr1/memory>
-#endif
+#include <memory>
 
-#define ddSharedPtr std::tr1::shared_ptr
-#define ddWeakPtr std::tr1::weak_ptr
-#define ddPtrCast std::tr1::dynamic_pointer_cast
+#define ddSharedPtr std::shared_ptr
+#define ddWeakPtr std::weak_ptr
+#define ddPtrCast std::dynamic_pointer_cast
 
 #define ddPtrMacro(className) \
   typedef ddSharedPtr<className> Ptr; \

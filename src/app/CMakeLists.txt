@@ -30,6 +30,7 @@ set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 qt4_wrap_cpp(moc_srcs
   ${decorator_file}
   ddDrakeModel.h
+  ddDRCView.h
   ddGLWidgetView.h
   ddMainWindow.h
   ddPropertiesPanel.h
@@ -53,6 +54,7 @@ set(srcs
   ${resource_srcs}
 
   ddDrakeModel.cpp
+  ddDRCView.cpp
   ddGLWidgetView.cpp
   ddPropertiesPanel.cpp
   ddPythonManager.cpp

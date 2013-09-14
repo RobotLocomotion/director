@@ -298,7 +298,7 @@ public:
             body_ind = j2->second;  // then it's attached directly to the floating base
           }
 
-          cout << "drawing robot " << robot << " body_ind " << body_ind << ": " << bodies[body_ind].linkname << endl;
+          //cout << "drawing robot " << robot << " body_ind " << body_ind << ": " << bodies[body_ind].linkname << endl;
 
           forwardKin(body_ind,zero,2,pose);
 
@@ -315,14 +315,15 @@ public:
 
           //QuaternionToAngleAxis(&posedata[3], angleAxis);
           bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
+          angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
 
           vtkSmartPointer<vtkTransform> worldToLink = vtkSmartPointer<vtkTransform>::New();
           worldToLink->PreMultiply();
           worldToLink->Translate(pose(0), pose(1), pose(2));
           worldToLink->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
 
-          printf("link rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
-          printf("link translation: [%f, %f, %f]\n", pose(0), pose(1), pose(2));
+          //printf("link rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+          //printf("link translation: [%f, %f, %f]\n", pose(0), pose(1), pose(2));
 
 
           // todo: iterate over all visual groups (not just "default")
@@ -367,12 +368,10 @@ public:
             quat[1] = vptr->origin.rotation.x;
             quat[2] = vptr->origin.rotation.y;
             quat[3] = vptr->origin.rotation.z;
+
             //QuaternionToAngleAxis(quat, angleAxis);
-
             bot_quat_to_angle_axis(quat, &angleAxis[0], &angleAxis[1]);
-
-            printf("visual rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
-            printf("visual translation: [%f, %f, %f]\n", vptr->origin.position.x, vptr->origin.position.y, vptr->origin.position.z);
+            angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
 
             vtkSmartPointer<vtkTransform> linkToVisual = vtkSmartPointer<vtkTransform>::New();
             linkToVisual->PreMultiply();
@@ -380,6 +379,9 @@ public:
                                    vptr->origin.position.y,
                                    vptr->origin.position.z);
             linkToVisual->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+
+            //printf("visual rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+            //printf("visual translation: [%f, %f, %f]\n", vptr->origin.position.x, vptr->origin.position.y, vptr->origin.position.z);
 
 
             int type = vptr->geometry->type;
@@ -389,15 +391,11 @@ public:
               double radius = sphere->radius;
 
               //glutSolidSphere(radius,36,36);
-
-              printf("sphere\n");
             }
             else if (type == urdf::Geometry::BOX)
             {
 
               boost::shared_ptr<urdf::Box> box(boost::dynamic_pointer_cast<urdf::Box>(vptr->geometry));
-
-              printf("box\n");
 
               //glScalef(box->dim.x,box->dim.y,box->dim.z);
               //bot_gl_draw_cube();
@@ -407,7 +405,6 @@ public:
 
               boost::shared_ptr<urdf::Cylinder> cyl(boost::dynamic_pointer_cast<urdf::Cylinder>(vptr->geometry));
 
-              printf("cyl\n");
               // transform to center of cylinder
               /*
               glTranslatef(0.0,0.0,-cyl->length/2.0);
@@ -436,7 +433,7 @@ public:
                                   mesh->scale.y,
                                   mesh->scale.z);
 
-              printf("visual scale: [%f, %f, %f]\n", mesh->scale.x, mesh->scale.y, mesh->scale.z);
+              //printf("visual scale: [%f, %f, %f]\n", mesh->scale.x, mesh->scale.y, mesh->scale.z);
 
               vtkSmartPointer<vtkTransform> worldToVisual = vtkSmartPointer<vtkTransform>::New();
               worldToVisual->PreMultiply();
@@ -452,11 +449,10 @@ public:
                 ddMeshVisual::Ptr meshVisual = iter->second;
                 if (meshVisual)
                 {
-                  printf("setting user transform\n");
-                  worldToVisual->Print(std::cout);
+                  //worldToVisual->Print(std::cout);
                   meshVisual->Actor->SetUserTransform(worldToVisual);
                 }
-                else printf("mesh visual is null\n");
+
               }
 
             }
@@ -524,7 +520,6 @@ class ddDrakeModel::ddInternal
 public:
 
   URDFRigidBodyManipulatorVTK::Ptr Model;
-
 };
 
 
@@ -541,24 +536,72 @@ ddDrakeModel::~ddDrakeModel()
 }
 
 //-----------------------------------------------------------------------------
-void ddDrakeModel::loadFromFile(const QString& filename)
+int ddDrakeModel::numberOfJoints()
 {
-  URDFRigidBodyManipulatorVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data());
+  if (!this->Internal->Model)
+  {
+    return 0;
+  }
+
+  return this->Internal->Model->num_dof;
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
+{
+  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+
   if (!model)
   {
     return;
   }
 
-  MatrixXd q0 = MatrixXd::Zero(model->num_dof, 1);
-  model->doKinematics(q0.data());
+  if (jointPositions.length() != model->num_dof)
+  {
+    return;
+  }
 
-  this->Internal->Model = model;
+  MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
+  for (int i = 0; i < model->num_dof; ++i)
+  {
+    q(i, 0) = jointPositions[i];
+  }
+
+  model->doKinematics(q.data());
   model->updateModel();
+  emit this->modelChanged();
 }
 
+//-----------------------------------------------------------------------------
+bool ddDrakeModel::loadFromFile(const QString& filename)
+{
+  URDFRigidBodyManipulatorVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data());
+  if (!model)
+  {
+    return false;
+  }
+
+  this->Internal->Model = model;
+
+  MatrixXd q0 = MatrixXd::Zero(model->num_dof, 1);
+  model->doKinematics(q0.data());
+  model->updateModel();
+  return true;
+}
 
 //-----------------------------------------------------------------------------
-void ddDrakeModel::addActorsToRenderer(vtkRenderer* renderer)
+void ddDrakeModel::setAlpha(double alpha)
+{
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    visuals[i]->Actor->GetProperty()->SetOpacity(alpha);
+  }
+
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::addToRenderer(vtkRenderer* renderer)
 {
   if (!renderer)
   {
@@ -570,6 +613,24 @@ void ddDrakeModel::addActorsToRenderer(vtkRenderer* renderer)
   for (size_t i = 0; i < visuals.size(); ++i)
   {
     renderer->AddActor(visuals[i]->Actor);
+  }
+
+  renderer->ResetCamera();
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::removeFromRenderer(vtkRenderer* renderer)
+{
+  if (!renderer)
+  {
+    return;
+  }
+
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    renderer->RemoveActor(visuals[i]->Actor);
   }
 
   renderer->ResetCamera();

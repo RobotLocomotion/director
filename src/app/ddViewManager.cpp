@@ -1,6 +1,7 @@
 #include "ddViewManager.h"
 #include "ddGLWidgetView.h"
 #include "ddQVTKWidgetView.h"
+#include "ddDRCView.h"
 #include "ddMacros.h"
 
 #include <QTabWidget>
@@ -82,5 +83,6 @@ void ddViewManager::addView(ddViewBase* view, const QString& viewName)
 void ddViewManager::addDefaultPage()
 {
   //this->addView(new ddGLWidgetView, "OpenGL View");
-  this->addView(new ddQVTKWidgetView, "VTK View");
+  //this->addView(new ddQVTKWidgetView, "VTK View");
+  this->addView(new ddDRCView, "DRC View");
 }
