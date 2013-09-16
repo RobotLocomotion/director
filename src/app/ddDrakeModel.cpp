@@ -53,6 +53,47 @@ private:
 namespace
 {
 
+
+std::vector<std::string> getDofNames()
+{
+  std::vector<std::string> names;
+  names.push_back("base_x");
+  names.push_back("base_y");
+  names.push_back("base_z");
+  names.push_back("base_roll");
+  names.push_back("base_pitch");
+  names.push_back("base_yaw");
+  names.push_back("back_bkz");
+  names.push_back("back_bky");
+  names.push_back("back_bkx");
+  names.push_back("l_arm_usy");
+  names.push_back("l_arm_shx");
+  names.push_back("l_arm_ely");
+  names.push_back("l_arm_elx");
+  names.push_back("l_arm_uwy");
+  names.push_back("l_leg_hpz");
+  names.push_back("l_leg_hpx");
+  names.push_back("l_leg_hpy");
+  names.push_back("l_leg_kny");
+  names.push_back("l_leg_aky");
+  names.push_back("l_leg_akx");
+  names.push_back("l_arm_mwx");
+  names.push_back("r_arm_usy");
+  names.push_back("r_arm_shx");
+  names.push_back("r_arm_ely");
+  names.push_back("r_arm_elx");
+  names.push_back("r_arm_uwy");
+  names.push_back("r_leg_hpz");
+  names.push_back("r_leg_hpx");
+  names.push_back("r_leg_hpy");
+  names.push_back("r_leg_kny");
+  names.push_back("r_leg_aky");
+  names.push_back("r_leg_akx");
+  names.push_back("r_arm_mwx");
+  names.push_back("neck_ay");
+  return names;
+}
+
 int feq (double a, double b)
 {
     return fabs (a - b) < 1e-9;
@@ -561,10 +602,30 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
     return;
   }
 
+  printf("number of dof maps: %d\n", model->dof_map.size());
+
+  const std::map<std::string, int> dofMap = model->dof_map[0];
+  printf("number of dofs in map: %d\n", dofMap.size());
+
+
+  std::vector<std::string> dofNames = getDofNames();
+
   MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
   for (int i = 0; i < model->num_dof; ++i)
   {
-    q(i, 0) = jointPositions[i];
+    const std::string& dofName = dofNames[i];
+
+    std::map<std::string, int>::const_iterator itr = dofMap.find(dofName);
+    if (itr == dofMap.end())
+    {
+      printf("Could not find URDF model dof with name: %s\n", dofName.c_str());
+    }
+
+    int dofId = itr->second;
+
+    printf("rbm dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
+
+    q(dofId, 0) = jointPositions[i];
   }
 
   model->doKinematics(q.data());

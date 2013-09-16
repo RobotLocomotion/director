@@ -2,6 +2,9 @@
 set(python_files
   ddapp/__init__.py
   ddapp/applogic.py
+  ddapp/matlab.py
+  ddapp/midi.py
+  ddapp/pypm.so
   )
 
 set(python_module_dir "${LIBRARY_OUTPUT_PATH}/site-packages")

@@ -7,6 +7,8 @@ import PythonQt
 from PythonQt import QtCore
 from PythonQt import QtGui
 
+from ddapp import midi
+
 def getMainWindow():
     return _mainWindow
 
@@ -35,6 +37,92 @@ def loadTestModel():
 def getDrakeModel():
     return getDRCView().models()[0]
 
+
+class TimerCallback(object):
+
+    def __init__(self):
+        self.targetFps = 30
+        self.timer = QtCore.QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.connect('timeout()', self.timerEvent)
+
+
+    def start(self):
+        self.timer.start(0)
+
+
+    def schedule(self, elapsedTimeInSeconds):
+
+        fpsDelayMilliseconds = int(1000.0 / self.targetFps)
+        elapsedMilliseconds = int(elapsedTimeInSeconds*1000.0)
+        waitMilliseconds = fpsDelayMilliseconds - elapsedMilliseconds
+        self.timer.start(waitMilliseconds if waitMilliseconds > 0 else 1)
+
+
+    def stop(self):
+        self.timer.stop()
+
+    def timerEvent(self):
+
+        startTime = time.time()
+        self.tick()
+        self.schedule(time.time() - startTime)
+
+    def tick(self):
+        pass
+
+
+class MidiJointControl(TimerCallback):
+
+    def __init__(self):
+        TimerCallback.__init__(self)
+        self.reader = midi.MidiReader()
+        self.controller = JointController()
+
+        self.channelToJoint = { 21: 13 }
+
+
+    def _scaleMidiValue(self, midiValue):
+        degrees = midiValue * 180.0/127.0
+        return degrees
+
+
+    def tick(self):
+        messages = self.reader.getMessages()
+        if not messages:
+            return
+
+        targets = {}
+        for message in messages:
+            channel = message[2]
+            value = message[3]
+            targets[channel] = value
+
+        for channel, value in targets.iteritems():
+            jointId = self.channelToJoint.get(channel)
+            position = self._scaleMidiValue(value)
+
+            if jointId is not None:
+                self.controller.setJointPosition(jointId, position)
+
+
+class JointController(object):
+
+    def __init__(self):
+        self.model = getDrakeModel()
+        self.reset()
+
+    def setJointPosition(self, jointId, position):
+
+        assert jointId >= 0 and jointId < len(self.q)
+        self.q[jointId] = math.radians(position % 360.0)
+        self.push()
+
+    def push(self):
+        self.model.setJointPositions(self.q)
+
+    def reset(self):
+        self.q = [0.0 for i in xrange(self.model.numberOfJoints())]
 
 
 def testJoint(jointId):
