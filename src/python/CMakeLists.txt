@@ -4,7 +4,8 @@ set(python_files
   ddapp/applogic.py
   ddapp/matlab.py
   ddapp/midi.py
-  ddapp/pypm.so
+  ddapp/simpletimer.py
+  ddapp/timercallback.py
   )
 
 set(python_module_dir "${LIBRARY_OUTPUT_PATH}/site-packages")
@@ -47,3 +48,6 @@ install(DIRECTORY  ${python_module_dir}/ddapp
         DESTINATION ${install_destination}
         COMPONENT Runtime
         USE_SOURCE_PERMISSIONS)
+
+
+add_subdirectory(extensions)

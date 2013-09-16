@@ -7,6 +7,7 @@ import PythonQt
 from PythonQt import QtCore
 from PythonQt import QtGui
 
+from ddapp.timercallback import TimerCallback
 from ddapp import midi
 
 def getMainWindow():
@@ -36,40 +37,6 @@ def loadTestModel():
 
 def getDrakeModel():
     return getDRCView().models()[0]
-
-
-class TimerCallback(object):
-
-    def __init__(self):
-        self.targetFps = 30
-        self.timer = QtCore.QTimer()
-        self.timer.setSingleShot(True)
-        self.timer.connect('timeout()', self.timerEvent)
-
-
-    def start(self):
-        self.timer.start(0)
-
-
-    def schedule(self, elapsedTimeInSeconds):
-
-        fpsDelayMilliseconds = int(1000.0 / self.targetFps)
-        elapsedMilliseconds = int(elapsedTimeInSeconds*1000.0)
-        waitMilliseconds = fpsDelayMilliseconds - elapsedMilliseconds
-        self.timer.start(waitMilliseconds if waitMilliseconds > 0 else 1)
-
-
-    def stop(self):
-        self.timer.stop()
-
-    def timerEvent(self):
-
-        startTime = time.time()
-        self.tick()
-        self.schedule(time.time() - startTime)
-
-    def tick(self):
-        pass
 
 
 class MidiJointControl(TimerCallback):
