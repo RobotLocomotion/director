@@ -23,6 +23,7 @@ public:
 public slots:
 
   void render();
+  void forceRender();
   void resetCamera();
 
 protected:

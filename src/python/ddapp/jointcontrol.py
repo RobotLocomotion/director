@@ -9,7 +9,6 @@ class JointController(object):
         self.model = model
         self.poses = {}
         self.poses['zero'] = [0.0 for i in xrange(self.model.numberOfJoints())]
-        self.setZeroPose()
 
     def setJointPosition(self, jointId, position):
         assert jointId >= 0 and jointId < len(self.q)

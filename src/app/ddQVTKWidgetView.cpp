@@ -11,11 +11,17 @@
 
 #include <QVTKWidget.h>
 #include <QVBoxLayout>
+#include <QTimer>
 
 //-----------------------------------------------------------------------------
 class ddQVTKWidgetView::ddInternal
 {
 public:
+
+  ddInternal()
+  {
+    this->RenderPending = false;
+  }
 
   QVTKWidget* VTKWidget;
 
@@ -23,6 +29,8 @@ public:
   vtkSmartPointer<vtkRenderWindow> RenderWindow;
 
   vtkSmartPointer<vtkOrientationMarkerWidget> OrientationWidget;
+
+  bool RenderPending;
 };
 
 
@@ -85,8 +93,19 @@ vtkRenderer* ddQVTKWidgetView::renderer() const
 //-----------------------------------------------------------------------------
 void ddQVTKWidgetView::render()
 {
+  if (!this->Internal->RenderPending)
+  {
+    this->Internal->RenderPending = true;
+    QTimer::singleShot(0, this, SLOT(forceRender()));
+  }
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::forceRender()
+{
   this->Internal->RenderWindow->Render();
   this->update();
+  this->Internal->RenderPending = false;
 }
 
 //-----------------------------------------------------------------------------

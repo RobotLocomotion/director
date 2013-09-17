@@ -2,23 +2,9 @@ from subprocess import Popen, PIPE, STDOUT
 
 import subprocess
 import select
-import time
 import os
 
-
-class timer(object):
-
-    def __init__(self):
-        self.reset()
-
-    def now(self):
-        return time.time()
-
-    def elapsed(self):
-        return self.now() - self.t0
-
-    def reset(self):
-        self.t0 = self.now()
+from ddapp.simpletimer import SimpleTimer
 
 
 
@@ -27,98 +13,113 @@ def startMatlab():
     return subprocess.Popen(['matlab', '-nodisplay', '-nosplash'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
-def readAllSoFar(proc, retVal=''):
-    while not proc.poll() and (select.select([proc.stdout],[],[],0)[0] != []):
+def _readAllSoFar(proc, retVal=''):
+    while proc.poll() is None and (select.select([proc.stdout],[],[],0)[0] != []):
         retVal += proc.stdout.read(1)
     return retVal
 
 
-def getNextLine(p):
-
-    retVal = ''
-    while True:
-        retVal += p.stdout.read(1)
-        if retVal[-1] == '\n':
-            return retVal[:-1]
-
-
-def readForPrompt(p, timeout=-1.0):
-
-    t = timer()
-    prompt = '>> '
-    output = ''
-
-    while not p.poll():
-
-        output = readAllSoFar(p, output)
-        if output.endswith(prompt) or (timeout >= 0.0 and t.elapsed() > timeout):
-            return output.split('\n')[:-1]
-
-
-def send(p, inputStr):
-    #print 'sending command:', inputStr
-    p.stdin.write(inputStr + '\n')
-
-
-def getMatlabDir():
+def getAppMatlabDir():
     return os.path.join(os.path.dirname(__file__), '../../../../src/matlab')
 
 
-def getFloatArray(p, expression):
+class MatlabCommunicator(object):
 
-    send(p, 'disp(%s)' % expression)
-    lines = readForPrompt(p)
+    def __init__(self, proc):
+        self.proc = proc
+        self.prompt = '>> '
+        self.clearResult()
 
-    try:
-        return [float(x) for x in lines[:-1]]
-    except:
-        raise Exception('Failed to parse output as a float array.  Output was:\n%s' % '\n'.join(lines))
+    def checkForResult(self):
+        self.accumulatedOutput = _readAllSoFar(self.proc, self.accumulatedOutput)
+        if  self.accumulatedOutput.endswith(self.prompt):
+            self.outputLines = self.accumulatedOutput.split('\n')[:-1]
+            return self.outputLines
+        else:
+            return None
+
+    def isAlive(self):
+        return (self.proc.poll() is None)
+
+    def waitForResult(self, timeout=None):
+
+        t = SimpleTimer()
+
+        while self.isAlive():
+
+            result = self.checkForResult()
+            if result is not None:
+                return result
+
+            if timeout is not None and t.elapsed() > timeout:
+                return None
+
+    def printResult(self):
+        if self.outputLines:
+            print '\n'.join(self.outputLines)
+
+    def clearResult(self):
+        self.accumulatedOutput = ''
+        self.outputLines = []
+
+    def getResult(self):
+        return self.outputLines
+
+    def getResultString(self):
+        return self.accumulatedOutput
+
+    def send(self, command):
+        assert self.isAlive()
+        self.clearResult()
+        self.proc.stdin.write(command + '\n')
+
+    def sendCommands(self, commands, display=True):
+
+        for command in commands:
+            self.send(command)
+            self.waitForResult()
+            if display:
+                self.printResult()
+
+    def waitForResultAsync(self, timeout=0.0):
+        while self.waitForResult(timeout) is None:
+            yield
+
+    def sendCommandsAsync(self, commands, timeout=0.0, display=True):
+
+        for command in commands:
+            self.send(command)
+            for _ in self.waitForResultAsync(timeout):
+                yield
+            if display:
+                self.printResult()
 
 
-def startIKServer():
+    def getFloatArray(self, expression):
 
-    p = startMatlab()
-    print '\n'.join(readForPrompt(p))
+        self.send('disp(%s)' % expression)
+        result = self.waitForResult()
 
-    startupCommands = list()
-    startupCommands.append('addpath_control')
-    startupCommands.append("addpath('%s')" % getMatlabDir())
-    startupCommands.append('runIKServer')
-
-    for command in startupCommands:
-        send(p, command)
-        print '\n'.join(readForPrompt(p))
-
-    return p
+        try:
+            return [float(x) for x in result[:-1]]
+        except:
+            raise Exception('Failed to parse output as a float array.  Output was:\n%s' % '\n'.join(result))
 
 
-def interact():
+    def interact(self):
+        self.checkForResult()
+        self.printResult()
 
-    p = startMatlab()
-    print '\n'.join(readForPrompt(p))
+        while self.isAlive():
 
-    matlabDir = __file__
-    startupCommands = list()
-    #startupCommands.append('addpath_control')
-    startupCommands.append( "addpath('%s')" % getMatlabDir())
+            command = raw_input('>>>')
 
-    for command in startupCommands:
-        send(p, command)
-        print '\n'.join(readForPrompt(p))
+            if not command:
+                continue
 
+            if command == 'break':
+                return
 
-    while not p.poll():
-
-        command = raw_input('>>>')
-
-        if not command:
-            continue
-
-        send(p, command)
-
-        if command in ['quit', 'exit']:
-            p.wait()
-            return
-
-        print '\n'.join(readForPrompt(p))
-
+            self.send(command)
+            self.waitForResult()
+            self.printResult()

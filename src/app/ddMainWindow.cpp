@@ -40,8 +40,6 @@ ddMainWindow::ddMainWindow()
   this->setWindowTitle("Drake Designer");
   this->connect(this->Internal->ActionQuit, SIGNAL(triggered()), QApplication::instance(), SLOT(quit()));
 
-  this->setupPython();
-
   QTimer::singleShot(0, this, SLOT(startup()));
 }
 
@@ -81,6 +79,7 @@ void ddMainWindow::startup()
 {
   this->handleCommandLineArgs();
 
+  this->setupPython();
   QString startupScript = this->Internal->PythonManager->appSitePackagesDir() + "/ddapp/startup.py";
   this->Internal->PythonManager->executeFile(startupScript);
 }

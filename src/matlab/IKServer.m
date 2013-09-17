@@ -5,11 +5,11 @@ classdef IKServer
         ikoptions
         q_nom
     end
-        
+
     methods
-        
+
         function obj = IKServer()
-            obj.robot = RigidBodyManipulator()
+            obj.robot = RigidBodyManipulator();
         end
 
         function obj = loadNominalData(obj)
@@ -17,62 +17,76 @@ classdef IKServer
             nq = obj.robot.getNumDOF();
             obj.q_nom = nom_data.xstar(1:nq);
         end
-        
+
         function obj = setupCosts(obj)
-            
+
             obj.ikoptions = IKoptions(obj.robot);
             obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(5e2);
             obj.ikoptions = obj.ikoptions.setMex(true);
-            
-            val = 100; % high cost on moving legs
+
+            leftLegCost = 100;
+            rightLegCost = 100;
+            leftArmCost = 100;
+            rightArmCost = 100;
+            backCost = 1e4;
+            neckCost = 100;
+
             nq = obj.robot.getNumDOF();
-            
+
             cost = Point(obj.robot.getStateFrame(), 1);
+
             cost.base_x = 0;
             cost.base_y = 0;
             cost.base_z = 100;
             cost.base_roll = 100;
             cost.base_pitch = 100;
             cost.base_yaw = 0;
-            cost.back_bkz = 1e4;
-            cost.back_bky = 1e4;
-            cost.back_bkx = 1e4;
-            cost.neck_ay =  100;
-            cost.l_arm_usy = 1;
-            cost.l_arm_shx = 1;
-            cost.l_arm_ely = 1;
-            cost.l_arm_elx = 1;
-            cost.l_arm_uwy = 1;
-            cost.l_arm_mwx = 1;
-            cost.l_leg_hpz = val;
-            cost.l_leg_hpx = val;
-            cost.l_leg_hpy = val;
-            cost.l_leg_kny = val;
-            cost.l_leg_aky = val;
-            cost.l_leg_akx = val;
-            cost.r_arm_usy = cost.l_arm_usy;
-            cost.r_arm_shx = cost.l_arm_shx;
-            cost.r_arm_ely = cost.l_arm_ely;
-            cost.r_arm_elx = cost.l_arm_elx;
-            cost.r_arm_uwy = cost.l_arm_uwy;
-            cost.r_arm_mwx = cost.l_arm_mwx;
-            cost.r_leg_hpz = cost.l_leg_hpz;
-            cost.r_leg_hpx = cost.l_leg_hpx;
-            cost.r_leg_hpy = cost.l_leg_hpy;
-            cost.r_leg_kny = cost.l_leg_kny;
-            cost.r_leg_aky = cost.l_leg_aky;
-            cost.r_leg_akx = cost.l_leg_akx;
+
+            cost.back_bkz = backCost;
+            cost.back_bky = backCost;
+            cost.back_bkx = backCost;
+
+            cost.neck_ay =  neckCost;
+
+            cost.l_arm_usy = leftArmCost;
+            cost.l_arm_shx = leftArmCost;
+            cost.l_arm_ely = leftArmCost;
+            cost.l_arm_elx = leftArmCost;
+            cost.l_arm_uwy = leftArmCost;
+            cost.l_arm_mwx = leftArmCost;
+
+            cost.r_arm_usy = rightArmCost;
+            cost.r_arm_shx = rightArmCost;
+            cost.r_arm_ely = rightArmCost;
+            cost.r_arm_elx = rightArmCost;
+            cost.r_arm_uwy = rightArmCost;
+            cost.r_arm_mwx = rightArmCost;
+
+            cost.l_leg_hpz = leftLegCost;
+            cost.l_leg_hpx = leftLegCost;
+            cost.l_leg_hpy = leftLegCost;
+            cost.l_leg_kny = leftLegCost;
+            cost.l_leg_aky = leftLegCost;
+            cost.l_leg_akx = leftLegCost;
+
+            cost.r_leg_hpz = rightLegCost;
+            cost.r_leg_hpx = rightLegCost;
+            cost.r_leg_hpy = rightLegCost;
+            cost.r_leg_kny = rightLegCost;
+            cost.r_leg_aky = rightLegCost;
+            cost.r_leg_akx = rightLegCost;
+
             cost = double(cost);
-            
+
             obj.ikoptions = obj.ikoptions.setQ(diag(cost(1:nq)));
             obj.ikoptions = obj.ikoptions.setQa(10*obj.ikoptions.Qa);
             obj.ikoptions = obj.ikoptions.setQv(10*obj.ikoptions.Qv);
 
         end
-        
-        
+
+
         function obj = addRobot(obj, modelName)
-    
+
             filename = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/', modelName, '.urdf'];
             options = struct('floating', true);
             xyz = zeros(3,1);
@@ -82,28 +96,28 @@ classdef IKServer
             obj.robot = compile(obj.robot);
 
         end
-        
-        
+
+
         function obj = addAffordance(obj, affordanceName)
-            filename = [getenv('DRC_PATH'), '/drake/systems/plants/test/', affordanceName, '.urdf']
+            filename = [getenv('DRC_PATH'), '/drake/systems/plants/test/', affordanceName, '.urdf'];
             options = struct('floating', false);
             xyz = zeros(3,1);
             rpy = zeros(3,1);
             obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
             obj.robot = compile(obj.robot);
         end
-        
+
         function linkNames = getLinkNames(obj)
             linkNames = {obj.robot.body.linkname}';
         end
 
         function pts = getLeftFootPoints(obj)
-            bodyIndex = obj.robot.findLinkInd('l_foot');            
+            bodyIndex = obj.robot.findLinkInd('l_foot');
             toe = obj.robot.body(bodyIndex).getContactPoints('toe');
             heel = obj.robot.body(bodyIndex).getContactPoints('heel');
             pts = [toe, heel];
         end
-      
+
         function pts = getRightFootPoints(obj)
             bodyIndex = obj.robot.findLinkInd('r_foot');
             toe = obj.robot.body(bodyIndex).getContactPoints('toe');

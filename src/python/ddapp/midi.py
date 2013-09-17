@@ -4,6 +4,11 @@ import pypm
 import array
 import time
 
+class TriggerFinger(object):
+    pads = range(1,17)
+    faders = range(17, 21)
+    dials = range(21, 29)
+
 
 _initialized = False
 
@@ -31,10 +36,27 @@ def printDevices():
         print deviceId, name, inOutType, status
 
 
+def findInputDevice(deviceName):
+
+    init()
+    for deviceId in xrange(pypm.CountDevices()):
+        interf, name, inp, outp, opened = pypm.GetDeviceInfo(deviceId)
+        if inp and (deviceName in name):
+                return deviceId
+
+
+def findTriggerFinger():
+    return findInputDevice('USB Trigger Finger MIDI')
+
+
 class MidiReader(object):
 
-    def __init__(self, deviceId=0):
+    def __init__(self, deviceId=None):
         init()
+
+        if deviceId is None:
+            deviceId = findTriggerFinger()
+
         self.stream = pypm.Input(deviceId)
 
     def _convertMessage(self, streamMessage):

@@ -3,6 +3,7 @@ set(python_files
   ddapp/__init__.py
   ddapp/applogic.py
   ddapp/cameracontrol.py
+  ddapp/ik.py
   ddapp/jointcontrol.py
   ddapp/matlab.py
   ddapp/midi.py
