@@ -208,12 +208,12 @@ public:
 
   virtual void loadURDFMesh(boost::shared_ptr<urdf::Mesh> mesh, const std::string& filename)
   {
-    cout << "Loading mesh: " << filename << endl;
+    //std::cout << "Loading mesh: " << filename << std::endl;
     ddMeshVisual::Ptr meshVisual = loadMeshVisual(filename);
 
     if (!meshVisual)
     {
-      cerr << "Error loading mesh from file: " << filename << endl;
+      std::cout << "Error loading mesh from file: " << filename << std::endl;
     }
     else
     {
@@ -253,11 +253,11 @@ public:
 
             if (has_package)
             {
-              cout << "replacing " << fname;
+              //cout << "replacing " << fname;
               boost::replace_first(fname,"package://","");
               string package = fname.substr(0,fname.find_first_of("/"));
               boost::replace_first(fname,package,rospack(package));
-              cout << " with " << fname << endl;
+              //cout << " with " << fname << endl;
             }
             else
             {
@@ -594,20 +594,18 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
 
   if (!model)
   {
+    std::cout << "ddDrakeModel::setJointPositions(): model is null" << std::endl;
     return;
   }
 
   if (jointPositions.length() != model->num_dof)
   {
+    std::cout << "ddDrakeModel::setJointPositions(): input jointPositions length "
+              << jointPositions.length() << " != " << model->num_dof << std::endl;
     return;
   }
 
-  printf("number of dof maps: %d\n", model->dof_map.size());
-
   const std::map<std::string, int> dofMap = model->dof_map[0];
-  printf("number of dofs in map: %d\n", dofMap.size());
-
-
   std::vector<std::string> dofNames = getDofNames();
 
   MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
@@ -622,10 +620,8 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
     }
 
     int dofId = itr->second;
-
-    printf("rbm dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
-
     q(dofId, 0) = jointPositions[i];
+    //printf("rbm dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
   }
 
   model->doKinematics(q.data());

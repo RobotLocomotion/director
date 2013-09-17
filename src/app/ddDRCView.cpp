@@ -37,7 +37,6 @@ ddDRCView::~ddDRCView()
 //-----------------------------------------------------------------------------
 const QList<ddDrakeModel*>& ddDRCView::models() const
 {
-  printf("returning %d models\n", this->Internal->Models.length());
   return this->Internal->Models;
 }
 
@@ -76,7 +75,7 @@ ddDrakeModel* ddDRCView::loadURDFModel(const QString& filename)
 
   model->addToRenderer(this->renderer());
   this->Internal->Models.append(model);
-  this->update();
+  this->render();
 
   this->connect(model, SIGNAL(modelChanged()), SLOT(render()));
   return model;

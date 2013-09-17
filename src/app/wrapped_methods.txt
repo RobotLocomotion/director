@@ -8,6 +8,7 @@ QList<ddDrakeModel*> ddDRCView::models() const;
 void ddDRCView::unloadModel(ddDrakeModel*);
 void ddDRCView::unloadModels();
 
+vtkCamera* ddQVTKWidgetView::camera() const;
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
 vtkRenderer* ddQVTKWidgetView::renderer() const;
 

@@ -20,6 +20,7 @@ public:
   QVTKWidget* VTKWidget;
 
   vtkSmartPointer<vtkRenderer> Renderer;
+  vtkSmartPointer<vtkRenderWindow> RenderWindow;
 
   vtkSmartPointer<vtkOrientationMarkerWidget> OrientationWidget;
 };
@@ -35,13 +36,18 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->VTKWidget = new QVTKWidget;
   layout->addWidget(this->Internal->VTKWidget);
 
+  this->Internal->RenderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+  this->Internal->RenderWindow->SetMultiSamples(8);
+  this->Internal->RenderWindow->StereoCapableWindowOn();
+  this->Internal->RenderWindow->SetStereoTypeToRedBlue();
+  this->Internal->RenderWindow->StereoRenderOff();
+  this->Internal->RenderWindow->StereoUpdate();
+  this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
+
   this->Internal->Renderer = vtkSmartPointer<vtkRenderer>::New();
-  this->Internal->VTKWidget->GetRenderWindow()->AddRenderer(this->Internal->Renderer);
+  this->Internal->RenderWindow->AddRenderer(this->Internal->Renderer);
 
   //vtkMapper::SetResolveCoincidentTopologyToPolygonOffset();
-
-  // this is actually the default:
-  //this->Internal->VTKWidget->GetRenderWindow()->SetMultiSamples(8);
 
   this->Internal->Renderer->GradientBackgroundOn();
   this->Internal->Renderer->SetBackground(0.0, 0.0, 0.0);
@@ -59,6 +65,12 @@ ddQVTKWidgetView::~ddQVTKWidgetView()
 }
 
 //-----------------------------------------------------------------------------
+vtkCamera* ddQVTKWidgetView::camera() const
+{
+  return this->Internal->Renderer->GetActiveCamera();
+}
+
+//-----------------------------------------------------------------------------
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const
 {
   return this->Internal->VTKWidget->GetRenderWindow();
@@ -73,7 +85,14 @@ vtkRenderer* ddQVTKWidgetView::renderer() const
 //-----------------------------------------------------------------------------
 void ddQVTKWidgetView::render()
 {
+  this->Internal->RenderWindow->Render();
   this->update();
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::resetCamera()
+{
+  this->renderer()->ResetCamera();
 }
 
 //-----------------------------------------------------------------------------

@@ -14,6 +14,8 @@ public:
 
   void setupConsole(QWidget* parent);
 
+  QString appSitePackagesDir() const;
+
 public slots:
 
   void showConsole();
@@ -23,6 +25,8 @@ protected:
   virtual void preInitialization();
 
   virtual QStringList pythonPaths();
+
+  virtual void executeInitializationScripts();
 
   void setupConsoleShortcuts();
 

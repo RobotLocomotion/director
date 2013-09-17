@@ -3,6 +3,7 @@ from subprocess import Popen, PIPE, STDOUT
 import subprocess
 import select
 import time
+import os
 
 
 class timer(object):
@@ -55,13 +56,28 @@ def readForPrompt(p, timeout=-1.0):
 
 
 def send(p, inputStr):
+    print 'sending command:', inputStr
     p.stdin.write(inputStr + '\n')
+
+
+def getMatlabDir():
+    return os.path.join(os.path.dirname(__file__), '../../../../src/matlab')
 
 
 def interact():
 
     p = startMatlab()
     print '\n'.join(readForPrompt(p))
+
+    matlabDir = __file__
+    startupCommands = list()
+    #startupCommands.append('addpath_control')
+    startupCommands.append( "addpath('%s')" % getMatlabDir())
+
+    for command in startupCommands:
+        send(p, command)
+        print '\n'.join(readForPrompt(p))
+
 
     while not p.poll():
 

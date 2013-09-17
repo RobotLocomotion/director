@@ -18,6 +18,7 @@ class TimerCallback(object):
         '''
         Start the timer.
         '''
+        self.lastTickTime = time.time()
         self.timer.start(0)
 
     def stop(self):
@@ -47,7 +48,9 @@ class TimerCallback(object):
         Internal timer callback method.  Calls ticks() and measures elapsed time.
         '''
         startTime = time.time()
+        self.elapsed = startTime - self.lastTickTime
         self.tick()
+        self.lastTickTime = startTime
         self._schedule(time.time() - startTime)
 
 

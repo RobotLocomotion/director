@@ -80,8 +80,9 @@ void ddMainWindow::handleCommandLineArgs()
 void ddMainWindow::startup()
 {
   this->handleCommandLineArgs();
-  this->Internal->PythonManager->executeString("import ddapp.applogic as dd; dd.startup(globals())");
-  //this->Internal->PythonManager->executeString("from ddapp.applogic import *");
+
+  QString startupScript = this->Internal->PythonManager->appSitePackagesDir() + "/ddapp/startup.py";
+  this->Internal->PythonManager->executeFile(startupScript);
 }
 
 //-----------------------------------------------------------------------------

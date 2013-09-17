@@ -3,8 +3,9 @@
 
 #include "ddViewBase.h"
 
-class vtkRenderWindow;
+class vtkCamera;
 class vtkRenderer;
+class vtkRenderWindow;
 
 class ddQVTKWidgetView : public ddViewBase
 {
@@ -17,10 +18,12 @@ public:
 
   vtkRenderWindow* renderWindow() const;
   vtkRenderer* renderer() const;
+  vtkCamera* camera() const;
 
 public slots:
 
   void render();
+  void resetCamera();
 
 protected:
 

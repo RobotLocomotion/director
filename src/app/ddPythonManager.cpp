@@ -51,10 +51,16 @@ void ddPythonManager::preInitialization()
 }
 
 //-----------------------------------------------------------------------------
+QString ddPythonManager::appSitePackagesDir() const
+{
+  return QCoreApplication::applicationDirPath()  + "/../lib/site-packages";
+}
+
+//-----------------------------------------------------------------------------
 QStringList ddPythonManager::pythonPaths()
 {
   QStringList searchDirs;
-  searchDirs << QCoreApplication::applicationDirPath()  + "/../lib/site-packages"
+  searchDirs << this->appSitePackagesDir()
              << "/source/paraview/build/VTK/Wrapping/Python"
              << "/source/paraview/build/lib"
              << "/home/pat/source/paraview/build/VTK/Wrapping/Python"
@@ -69,6 +75,12 @@ QStringList ddPythonManager::pythonPaths()
     }
   }
   return paths;
+}
+
+//-----------------------------------------------------------------------------
+void ddPythonManager::executeInitializationScripts()
+{
+
 }
 
 //-----------------------------------------------------------------------------

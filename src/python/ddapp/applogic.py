@@ -1,6 +1,5 @@
 
 import os
-import vtk
 import time
 import math
 import PythonQt
@@ -20,6 +19,7 @@ def quit():
 def getDRCBase():
     return os.environ['DRC_BASE']
 
+
 def getDRCView():
     return getMainWindow().viewManager().findView('DRC View')
 
@@ -28,68 +28,19 @@ def getURDFModelDir():
     return os.path.join(getDRCBase(), 'software/models/mit_gazebo_models/mit_robot_drake')
 
 
+def getNominalPoseMatFile():
+    return os.path.join(getDRCBase(), 'software/drake/examples/Atlas/data/atlas_fp.mat')
+
 
 def loadTestModel():
     filename = 'model_minimal_contact.urdf'
     filename = os.path.join(getURDFModelDir(), filename)
-    getDRCView().loadURDFModel(filename)
+    model = getDRCView().loadURDFModel(filename)
+    return model
 
 
-def getDrakeModel():
+def getDefaultDrakeModel():
     return getDRCView().models()[0]
-
-
-class MidiJointControl(TimerCallback):
-
-    def __init__(self):
-        TimerCallback.__init__(self)
-        self.reader = midi.MidiReader()
-        self.controller = JointController()
-
-        self.channelToJoint = { 21: 13 }
-
-
-    def _scaleMidiValue(self, midiValue):
-        degrees = midiValue * 180.0/127.0
-        return degrees
-
-
-    def tick(self):
-        messages = self.reader.getMessages()
-        if not messages:
-            return
-
-        targets = {}
-        for message in messages:
-            channel = message[2]
-            value = message[3]
-            targets[channel] = value
-
-        for channel, value in targets.iteritems():
-            jointId = self.channelToJoint.get(channel)
-            position = self._scaleMidiValue(value)
-
-            if jointId is not None:
-                self.controller.setJointPosition(jointId, position)
-
-
-class JointController(object):
-
-    def __init__(self):
-        self.model = getDrakeModel()
-        self.reset()
-
-    def setJointPosition(self, jointId, position):
-
-        assert jointId >= 0 and jointId < len(self.q)
-        self.q[jointId] = math.radians(position % 360.0)
-        self.push()
-
-    def push(self):
-        self.model.setJointPositions(self.q)
-
-    def reset(self):
-        self.q = [0.0 for i in xrange(self.model.numberOfJoints())]
 
 
 def testJoint(jointId):
@@ -97,7 +48,7 @@ def testJoint(jointId):
     runtime = 2.0
     fps = 30
     sleepDelta = 1.0 / (runtime * fps)
-    model = getDrakeModel()
+    model = getDefaultDrakeModel()
 
     global t
     t = 0.0
@@ -149,15 +100,6 @@ def setupToolBar():
     toolbar.addWidget(combo)
 
 
-def setupConsoleGlobals(globals):
-    '''Add some variables to be predefined in the console.'''
-    globals['quit'] = quit
-    globals['exit'] = quit
-    globals['vtk'] = vtk
-    globals['QtCore'] = QtCore
-    globals['QtGui'] = QtGui
-
-
 def startup(globals):
 
     if 'DRC_BASE' not in os.environ:
@@ -173,7 +115,4 @@ def startup(globals):
     _mainWindow = globals['_mainWindow']
 
     setupToolBar()
-    setupConsoleGlobals(globals)
-
-    loadTestModel()
 

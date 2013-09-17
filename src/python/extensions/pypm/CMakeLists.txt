@@ -15,4 +15,4 @@ if(WIN32 AND NOT CYGWIN)
   set_target_properties(pypm PROPERTIES SUFFIX ".pyd")
 endif()
 
-set_target_properties(pypm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${DD_INSTALL_LIB_DIR}/site-packages/ddapp)
+set_target_properties(pypm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}/site-packages/ddapp)
