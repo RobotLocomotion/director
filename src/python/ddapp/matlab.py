@@ -56,12 +56,40 @@ def readForPrompt(p, timeout=-1.0):
 
 
 def send(p, inputStr):
-    print 'sending command:', inputStr
+    #print 'sending command:', inputStr
     p.stdin.write(inputStr + '\n')
 
 
 def getMatlabDir():
     return os.path.join(os.path.dirname(__file__), '../../../../src/matlab')
+
+
+def getFloatArray(p, expression):
+
+    send(p, 'disp(%s)' % expression)
+    lines = readForPrompt(p)
+
+    try:
+        return [float(x) for x in lines[:-1]]
+    except:
+        raise Exception('Failed to parse output as a float array.  Output was:\n%s' % '\n'.join(lines))
+
+
+def startIKServer():
+
+    p = startMatlab()
+    print '\n'.join(readForPrompt(p))
+
+    startupCommands = list()
+    startupCommands.append('addpath_control')
+    startupCommands.append("addpath('%s')" % getMatlabDir())
+    startupCommands.append('runIKServer')
+
+    for command in startupCommands:
+        send(p, command)
+        print '\n'.join(readForPrompt(p))
+
+    return p
 
 
 def interact():

@@ -9,15 +9,7 @@ classdef IKServer
     methods
         
         function obj = IKServer()
-
             obj.robot = RigidBodyManipulator()
-            
-            obj.ikoptions = IKoptions(obj.robot);
-            obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(5e2);
-            obj.ikoptions = obj.ikoptions.setMex(true);
-           
-            obj = obj.loadNominalData()
-
         end
 
         function obj = loadNominalData(obj)
@@ -27,6 +19,10 @@ classdef IKServer
         end
         
         function obj = setupCosts(obj)
+            
+            obj.ikoptions = IKoptions(obj.robot);
+            obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(5e2);
+            obj.ikoptions = obj.ikoptions.setMex(true);
             
             val = 100; % high cost on moving legs
             nq = obj.robot.getNumDOF();
@@ -83,7 +79,7 @@ classdef IKServer
             rpy = zeros(3,1);
             obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
             obj.robot = weldFingerJoints(obj.robot);
-            % obj.robot = compile(obj.robot);
+            obj.robot = compile(obj.robot);
 
         end
         
@@ -94,19 +90,25 @@ classdef IKServer
             xyz = zeros(3,1);
             rpy = zeros(3,1);
             obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
-            % obj.robot = compile(obj.robot);
+            obj.robot = compile(obj.robot);
         end
         
         function linkNames = getLinkNames(obj)
-            
-            numberOfLinks = size(obj.body, 2)
-            
-            linkNames = cell(numberOfLinks)
-            for i=1:numberOfLinks
-                linkNames{i} = obj.robot.body(i).linkname
-            end
-            
             linkNames = {obj.robot.body.linkname}';
+        end
+
+        function pts = getLeftFootPoints(obj)
+            bodyIndex = obj.robot.findLinkInd('l_foot');            
+            toe = obj.robot.body(bodyIndex).getContactPoints('toe');
+            heel = obj.robot.body(bodyIndex).getContactPoints('heel');
+            pts = [toe, heel];
+        end
+      
+        function pts = getRightFootPoints(obj)
+            bodyIndex = obj.robot.findLinkInd('r_foot');
+            toe = obj.robot.body(bodyIndex).getContactPoints('toe');
+            heel = obj.robot.body(bodyIndex).getContactPoints('heel');
+            pts = [toe, heel];
         end
     end
 
