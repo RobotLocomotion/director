@@ -13,7 +13,7 @@ class AsyncIKCommunicator(TimerCallback):
     def __init__(self, model):
         TimerCallback.__init__(self)
         self.targetFps = 60
-        self.reader = midi.MidiReader()
+        #self.reader = midi.MidiReader()
         self.controller = JointController(model)
         self.channelsX = [midi.TriggerFinger.faders[0], midi.TriggerFinger.pads[0], midi.TriggerFinger.dials[0] ]
         self.channelsY = [midi.TriggerFinger.faders[1], midi.TriggerFinger.pads[1], midi.TriggerFinger.dials[1] ]
@@ -76,6 +76,9 @@ class AsyncIKCommunicator(TimerCallback):
         self.controller.addPose(poseName, pose)
         self.controller.setPose(poseName)
 
+    def interact(self):
+        self.comm.interact()
+
     def updateIk(self):
 
         commands = []
@@ -87,12 +90,16 @@ class AsyncIKCommunicator(TimerCallback):
         else:
             commands.append('q_seed = q_end;')
 
-        commands.append('[q_end, info] = inverseKin(r, q_seed, q_nom, qsc, kc2l, kc2r, kc4, s.ikoptions)')
+        commands.append('[q_end, info] = inverseKin(r, q_seed, q_nom, qsc, kc2l, kc2r, kc4, s.ikoptions);')
 
-        self.tasks.append(self.comm.sendCommandsAsync(commands))
-        self.tasks.append(functools.partial(self.fetchPoseFromServer, 'q_end'))
-        self.waitForAsyncTasks()
+        #self.tasks.append(self.comm.sendCommandsAsync(commands))
+        #self.tasks.append(functools.partial(self.fetchPoseFromServer, 'q_end'))
+        #self.waitForAsyncTasks()
 
+        self.comm.sendCommands(commands)
+        self.fetchPoseFromServer('q_end')
+        info = self.comm.getFloatArray('info')[0]
+        print 'info:', info
 
     def resetQSeed(self):
         commands = []
@@ -137,4 +144,4 @@ class AsyncIKCommunicator(TimerCallback):
         if self.handleAsyncTasks() > 0:
             return
 
-        self.handleMidiEvents()
+        #self.handleMidiEvents()

@@ -24,7 +24,7 @@ protected:
 
   void addDefaultPage();
 
-  void addView(ddViewBase* view, const QString& viewName);
+  void addView(ddViewBase* view, const QString& viewName, int pageIndex=-1);
 
   class ddInternal;
   ddInternal* Internal;

@@ -4,6 +4,7 @@
 #include "ddPythonManager.h"
 #include "ddViewManager.h"
 #include "ddPropertiesPanel.h"
+#include "ddViewMenu.h"
 
 #include "ui_ddMainWindow.h"
 
@@ -40,7 +41,17 @@ ddMainWindow::ddMainWindow()
   this->setWindowTitle("Drake Designer");
   this->connect(this->Internal->ActionQuit, SIGNAL(triggered()), QApplication::instance(), SLOT(quit()));
 
+  this->connect(this->Internal->ShowMatlabConsole, SIGNAL(triggered()), this->Internal->MatlabConsoleDock, SLOT(show()));
+  this->Internal->MatlabConsoleDock->hide();
+
   QTimer::singleShot(0, this, SLOT(startup()));
+
+  this->setCorner(Qt::TopLeftCorner, Qt::LeftDockWidgetArea);
+  this->setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea);
+  this->setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
+  this->setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
+
+  this->setupViewMenu();
 }
 
 //-----------------------------------------------------------------------------
@@ -84,6 +95,29 @@ void ddMainWindow::startup()
   this->Internal->PythonManager->executeFile(startupScript);
 }
 
+//----------------------------------------------------------------------------
+void ddMainWindow::setupViewMenu()
+{
+  ddViewMenu* viewMenu = new ddViewMenu(*this->Internal->ViewMenu, this);
+  ddViewMenu* toolbarMenu = new ddViewMenu(*this->Internal->ToolBarMenu, this);
+
+  viewMenu->addWidget(
+    this->Internal->ObjectsDock,
+    this->Internal->ObjectsDock->windowTitle());
+
+  viewMenu->addWidget(
+    this->Internal->PropertiesDock,
+    this->Internal->PropertiesDock->windowTitle());
+
+  viewMenu->addWidget(
+    this->Internal->MatlabConsoleDock,
+    this->Internal->MatlabConsoleDock->windowTitle());
+
+  toolbarMenu->addWidget(
+    this->Internal->MainToolBar,
+    this->Internal->MainToolBar->windowTitle());
+
+}
 //-----------------------------------------------------------------------------
 void ddMainWindow::setupPython()
 {

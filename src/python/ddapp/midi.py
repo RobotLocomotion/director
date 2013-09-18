@@ -57,6 +57,8 @@ class MidiReader(object):
         if deviceId is None:
             deviceId = findTriggerFinger()
 
+        assert deviceId is not None
+
         self.stream = pypm.Input(deviceId)
 
     def _convertMessage(self, streamMessage):

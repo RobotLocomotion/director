@@ -24,6 +24,10 @@ def getDRCView():
     return getMainWindow().viewManager().findView('DRC View')
 
 
+def getSpreadsheetView():
+    return getMainWindow().viewManager().findView('Spreadsheet View')
+
+
 def getURDFModelDir():
     return os.path.join(getDRCBase(), 'software/models/mit_gazebo_models/mit_robot_drake')
 

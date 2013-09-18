@@ -2,12 +2,14 @@
 #include "ddGLWidgetView.h"
 #include "ddQVTKWidgetView.h"
 #include "ddDRCView.h"
+#include "ddSpreadsheetView.h"
 #include "ddMacros.h"
 
 #include <QTabWidget>
 #include <QTabBar>
 #include <QVBoxLayout>
 #include <QMap>
+#include <QSplitter>
 
 #include <cstdio>
 
@@ -33,6 +35,8 @@ public:
   QTabWidget* TabWidget;
 
   QMap<QString, ddViewBase*> Views;
+
+  QList<QSplitter*> Splitters;
 };
 
 
@@ -72,9 +76,23 @@ ddViewBase* ddViewManager::findView(const QString& viewName) const
 }
 
 //-----------------------------------------------------------------------------
-void ddViewManager::addView(ddViewBase* view, const QString& viewName)
+void ddViewManager::addView(ddViewBase* view, const QString& viewName, int pageIndex)
 {
-  this->tabWidget()->addTab(view, viewName);
+  QSplitter* splitter = 0;
+  if (pageIndex >= 0 && pageIndex < this->Internal->Splitters.length())
+  {
+    splitter = this->Internal->Splitters[pageIndex];
+  }
+  else
+  {
+    splitter = new QSplitter();
+    this->Internal->Splitters.append(splitter);
+    this->tabWidget()->addTab(splitter, viewName);
+  }
+
+  splitter->addWidget(view);
+
+
   this->Internal->Views[viewName] = view;
   static_cast<MyTabWidget*>(this->tabWidget())->updateTabBar();
 }
@@ -85,4 +103,11 @@ void ddViewManager::addDefaultPage()
   //this->addView(new ddGLWidgetView, "OpenGL View");
   //this->addView(new ddQVTKWidgetView, "VTK View");
   this->addView(new ddDRCView, "DRC View");
+  this->addView(new ddSpreadsheetView, "Spreadsheet View");
+
+  this->addView(new ddDRCView, "DRC View 2", 0);
+
+  QList<int> sizes;
+  sizes << 1 << 0;
+  this->Internal->Splitters[0]->setSizes(sizes);
 }

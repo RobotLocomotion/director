@@ -18,3 +18,12 @@ QToolBar* ddMainWindow::toolBar() const;
 
 
 ddViewBase* ddViewManager::findView(const QString&) const;
+
+
+
+QAbstractItemModel* ddSpreadsheetView::model();
+QStringList ddSpreadsheetView::rowData(int) const;
+int ddSpreadsheetView::rowCount() const;
+int ddSpreadsheetView::columnCount() const;
+void ddSpreadsheetView::appendRow(const QStringList&);
+void ddSpreadsheetView::removeRow(int);

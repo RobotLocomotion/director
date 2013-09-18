@@ -27,6 +27,7 @@ protected:
 
   void handleCommandLineArgs();
   void setupPython();
+  void setupViewMenu();
 
   class ddInternal;
   ddInternal* Internal;

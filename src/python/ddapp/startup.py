@@ -23,6 +23,7 @@ jc = jointcontrol.JointController(model)
 jc.addNominalPoseFromFile(app.getNominalPoseMatFile())
 jc.setNominalPose()
 
+spreadsheet = app.getSpreadsheetView()
 view = app.getDRCView()
 camera = view.camera()
 
@@ -35,7 +36,22 @@ orbit = cameracontrol.OrbitController(view)
 
 
 
-s = ik.AsyncIKCommunicator(model)
-s.start()
-s.startServerAsync()
+#s = ik.AsyncIKCommunicator(model)
+#s.start()
+#s.startServerAsync()
 
+
+
+def initSpreadsheetView():
+
+    sv = app.getSpreadsheetView()
+    model = sv.model()
+
+    rowCount = 50
+    columnCount = 26
+    for row in xrange(rowCount):
+        sv.appendRow(['' for column in xrange(columnCount)])
+        for column in xrange(columnCount):
+            model.item(row, column).setEditable(True)
+
+initSpreadsheetView()

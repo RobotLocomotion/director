@@ -36,8 +36,10 @@ qt4_wrap_cpp(moc_srcs
   ddPropertiesPanel.h
   ddPythonManager.h
   ddQVTKWidgetView.h
+  ddSpreadsheetView.h
   ddViewBase.h
   ddViewManager.h
+  ddViewMenu.h
   )
 
 qt4_wrap_ui(ui_srcs
@@ -61,8 +63,10 @@ set(srcs
   ddPythonQtWrapperFactory.cpp
   ddQVTKWidgetView.cpp
   ddMainWindow.cpp
+  ddSpreadsheetView.cpp
   ddViewBase.cpp
   ddViewManager.cpp
+  ddViewMenu.cpp
   )
 
 set(deps

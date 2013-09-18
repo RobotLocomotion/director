@@ -107,8 +107,8 @@ class MatlabCommunicator(object):
 
 
     def interact(self):
-        self.checkForResult()
-        self.printResult()
+
+        self.clearResult()
 
         while self.isAlive():
 
