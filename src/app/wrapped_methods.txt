@@ -15,6 +15,8 @@ vtkRenderer* ddQVTKWidgetView::renderer() const;
 ddViewManager* ddMainWindow::viewManager()
 ddPropertiesPanel* ddMainWindow::propertiesPanel() const;
 QToolBar* ddMainWindow::toolBar() const;
+QTreeWidget* ddMainWindow::objectTree() const;
+QTextEdit* ddMainWindow::outputConsole() const;
 
 
 ddViewBase* ddViewManager::findView(const QString&) const;
@@ -27,3 +29,14 @@ int ddSpreadsheetView::rowCount() const;
 int ddSpreadsheetView::columnCount() const;
 void ddSpreadsheetView::appendRow(const QStringList&);
 void ddSpreadsheetView::removeRow(int);
+
+
+QString QtVariantProperty::propertyName();
+QVariant QtVariantProperty::value();
+void QtVariantProperty::setAttribute(const QString &, const QVariant &);
+
+QtVariantProperty* ddPropertiesPanel::addGroup(const QString&);
+QtVariantProperty* ddPropertiesPanel::addProperty(const QString&, const QVariant&);
+QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString&, const QVariant&, QtVariantProperty*);
+QtVariantProperty* ddPropertiesPanel::findProperty(const QString&) const;
+QtVariantProperty* ddPropertiesPanel::findSubProperty(const QString&, QtVariantProperty*) const;

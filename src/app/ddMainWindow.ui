@@ -38,6 +38,7 @@
      <string>Tools</string>
     </property>
     <addaction name="ActionPythonConsole"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="ViewMenu">
     <property name="title">
@@ -58,13 +59,29 @@
   <widget class="QStatusBar" name="StatusBar"/>
   <widget class="QDockWidget" name="ObjectsDock">
    <property name="windowTitle">
-    <string>Objects Panel</string>
+    <string>Model Browser</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents">
-    <layout class="QVBoxLayout" name="verticalLayout"/>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="margin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QTreeWidget" name="ObjectTree">
+       <property name="headerHidden">
+        <bool>true</bool>
+       </property>
+       <column>
+        <property name="text">
+         <string>Name</string>
+        </property>
+       </column>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
   <widget class="QToolBar" name="MainToolBar">
@@ -77,21 +94,19 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="ActionPythonConsole"/>
-   <addaction name="ShowMatlabConsole"/>
   </widget>
   <widget class="QDockWidget" name="PropertiesDock">
    <property name="windowTitle">
-    <string>Properties Panel</string>
+    <string>Properties</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_2"/>
   </widget>
-  <widget class="QDockWidget" name="MatlabConsoleDock">
+  <widget class="QDockWidget" name="OutputConsoleDock">
    <property name="windowTitle">
-    <string>Matlab Console</string>
+    <string>Output Console</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>8</number>
@@ -102,7 +117,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QTextEdit" name="textEdit">
+      <widget class="QTextEdit" name="OutputConsole">
        <property name="readOnly">
         <bool>true</bool>
        </property>
@@ -135,14 +150,6 @@
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
-   </property>
-  </action>
-  <action name="ShowMatlabConsole">
-   <property name="text">
-    <string>Matlab Console</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+M</string>
    </property>
   </action>
  </widget>

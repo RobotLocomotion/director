@@ -41,8 +41,7 @@ ddMainWindow::ddMainWindow()
   this->setWindowTitle("Drake Designer");
   this->connect(this->Internal->ActionQuit, SIGNAL(triggered()), QApplication::instance(), SLOT(quit()));
 
-  this->connect(this->Internal->ShowMatlabConsole, SIGNAL(triggered()), this->Internal->MatlabConsoleDock, SLOT(show()));
-  this->Internal->MatlabConsoleDock->hide();
+  this->Internal->OutputConsoleDock->hide();
 
   QTimer::singleShot(0, this, SLOT(startup()));
 
@@ -79,6 +78,18 @@ QToolBar* ddMainWindow::toolBar() const
 }
 
 //-----------------------------------------------------------------------------
+QTreeWidget* ddMainWindow::objectTree() const
+{
+  return this->Internal->ObjectTree;
+}
+
+//-----------------------------------------------------------------------------
+QTextEdit* ddMainWindow::outputConsole() const
+{
+  return this->Internal->OutputConsole;
+}
+
+//-----------------------------------------------------------------------------
 void ddMainWindow::handleCommandLineArgs()
 {
   QStringList args = QApplication::instance()->arguments();
@@ -110,8 +121,8 @@ void ddMainWindow::setupViewMenu()
     this->Internal->PropertiesDock->windowTitle());
 
   viewMenu->addWidget(
-    this->Internal->MatlabConsoleDock,
-    this->Internal->MatlabConsoleDock->windowTitle());
+    this->Internal->OutputConsoleDock,
+    this->Internal->OutputConsoleDock->windowTitle());
 
   toolbarMenu->addWidget(
     this->Internal->MainToolBar,

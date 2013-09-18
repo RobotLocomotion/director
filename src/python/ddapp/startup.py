@@ -36,9 +36,9 @@ orbit = cameracontrol.OrbitController(view)
 
 
 
-#s = ik.AsyncIKCommunicator(model)
-#s.start()
-#s.startServerAsync()
+s = ik.AsyncIKCommunicator(model)
+s.start()
+s.startServerAsync()
 
 
 
@@ -54,4 +54,28 @@ def initSpreadsheetView():
         for column in xrange(columnCount):
             model.item(row, column).setEditable(True)
 
+
+def onPropertyChanged(prop):
+    print prop.propertyName(), prop.value()
+
+
+def initProperties():
+
+    p = app.getMainWindow().propertiesPanel()
+    p.clear()
+    prop = p.addGroup("pose")
+
+    s1 = p.addSubProperty("pose", 12.34, prop)
+    s2 = p.addSubProperty("pose", 1.0, prop)
+    s3 = p.addSubProperty("pose", 1.3, prop)
+
+    s1.setAttribute('decimals', 4)
+    s1.setAttribute('minimum', 0.0)
+    s1.setAttribute('maximum', 50.0)
+
+
+    p.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
+
+
 initSpreadsheetView()
+initProperties()

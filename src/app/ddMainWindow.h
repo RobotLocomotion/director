@@ -5,6 +5,8 @@
 
 class ddViewManager;
 class ddPropertiesPanel;
+class QTreeWidget;
+class QTextEdit;
 
 class ddMainWindow : public QMainWindow
 {
@@ -17,7 +19,9 @@ public:
 
   ddViewManager* viewManager() const;
   ddPropertiesPanel* propertiesPanel() const;
+  QTreeWidget* objectTree() const;
   QToolBar* toolBar() const;
+  QTextEdit* outputConsole() const;
 
 protected slots:
 

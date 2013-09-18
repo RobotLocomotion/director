@@ -29,7 +29,7 @@ ddPythonManager::ddPythonManager(QObject* parent) : ctkAbstractPythonManager(par
   console->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
   console->initialize(this);
   console->setAttribute(Qt::WA_QuitOnClose, true);
-  console->resize(600, 280);
+  console->resize(800, 400);
   console->setProperty("isInteractive", true);
   this->Internal->Console = console;
   this->setupConsoleShortcuts();
