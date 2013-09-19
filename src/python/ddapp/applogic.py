@@ -60,7 +60,14 @@ def setupToolBar():
     toolbar.addWidget(combo)
 
 
+def showErrorMessage(message):
+    QtGui.QMessageBox.warning(getMainWindow(), 'Error', message);
+
+
 def startup(globals):
+
+    global _mainWindow
+    _mainWindow = globals['_mainWindow']
 
     if 'DRC_BASE' not in os.environ:
         showErrorMessage('DRC_BASE environment variable is not set')
@@ -69,10 +76,6 @@ def startup(globals):
     if not os.path.isdir(getDRCBase()):
         showErrorMessage('DRC_BASE directory does not exist: ' + getDRCBase())
         return
-
-
-    global _mainWindow
-    _mainWindow = globals['_mainWindow']
 
     setupToolBar()
 

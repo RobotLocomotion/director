@@ -2,5 +2,9 @@
   <qresource prefix="/images">
     <file>python_logo.png</file>
     <file>drake_logo.png</file>
+    <file>robot_icon.png</file>
+    <file>matlab_logo.png</file>
+    <file>eye_icon.png</file>
+    <file>eye_icon_gray.png</file>
   </qresource>
 </RCC>

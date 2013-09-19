@@ -91,5 +91,55 @@ def initProperties():
     p.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
 
 
+def initObjectTree():
+
+    style = QtGui.QApplication.style()
+
+    dirIcon = style.standardIcon(QtGui.QStyle.SP_DirIcon)
+    matlabIcon = QtGui.QIcon(':/images/matlab_logo.png')
+    robotIcon = QtGui.QIcon(':/images/robot_icon.png')
+    eyeIcon = QtGui.QIcon(':/images/eye_icon.png')
+    eyeIconOff = QtGui.QIcon(':/images/eye_icon_gray.png')
+
+    robotsItem = QtGui.QTreeWidgetItem(['robots'])
+    robotsItem.setIcon(0, dirIcon)
+
+    ikmodelItem = QtGui.QTreeWidgetItem(robotsItem, ['model.urdf (IK server)'])
+    ikmodelItem.setIcon(0, matlabIcon)
+    ikmodelItem.setIcon(1, eyeIcon)
+
+    visualItem = QtGui.QTreeWidgetItem(robotsItem, ['model_minimal_contact.urdf (visual)'])
+    visualItem.setIcon(0, robotIcon)
+    visualItem.setIcon(1, eyeIcon)
+
+    visualItem2 = QtGui.QTreeWidgetItem(robotsItem, ['model.urdf (visual)'])
+    visualItem2.setIcon(0, robotIcon)
+    visualItem.setIcon(1, eyeIconOff)
+
+
+
+    tree = app.getMainWindow().objectTree()
+    tree.setColumnCount(2)
+    tree.setHeaderLabels(['Name', ''])
+    tree.headerItem().setIcon(1, eyeIcon)
+
+    tree.header().setVisible(True)
+    tree.header().setStretchLastSection(False)
+    tree.header().setResizeMode(0, QtGui.QHeaderView.Stretch)
+    tree.header().setResizeMode(1, QtGui.QHeaderView.Fixed)
+
+    tree.addTopLevelItem(robotsItem)
+    tree.expandItem(robotsItem)
+    tree.setColumnWidth(1, 24)
+    #tree.resizeColumnToContents(0)
+    #tree.resizeColumnToContents(1)
+
+    items = [robotsItem, ikmodelItem, visualItem, visualItem2]
+    return items
+
+
 initSpreadsheetView()
+items = initObjectTree()
 initProperties()
+
+tree = app.getMainWindow().objectTree()

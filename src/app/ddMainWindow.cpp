@@ -11,6 +11,8 @@
 #include <QApplication>
 #include <QTimer>
 #include <QShortcut>
+#include <QStatusBar>
+#include <QLabel>
 
 #include <cstdio>
 
@@ -49,6 +51,11 @@ ddMainWindow::ddMainWindow()
   this->setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea);
   this->setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
   this->setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
+
+  //QLabel* logoLabel = new QLabel();
+  //logoLabel->setPixmap(QPixmap(":/images/drake_logo.png").scaled(QSize(32,32),  Qt::KeepAspectRatio));
+  //logoLabel->setScaledContents(true);
+  //this->statusBar()->addPermanentWidget(logoLabel);
 
   this->setupViewMenu();
 }
