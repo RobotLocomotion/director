@@ -560,7 +560,17 @@ class ddDrakeModel::ddInternal
 {
 public:
 
+  ddInternal()
+  {
+    this->Visible = true;
+    this->Alpha = 1.0;
+  }
+
   URDFRigidBodyManipulatorVTK::Ptr Model;
+
+  QString FileName;
+  bool Visible;
+  double Alpha;
 };
 
 
@@ -638,23 +648,13 @@ bool ddDrakeModel::loadFromFile(const QString& filename)
     return false;
   }
 
+  this->Internal->FileName = filename;
   this->Internal->Model = model;
 
   MatrixXd q0 = MatrixXd::Zero(model->num_dof, 1);
   model->doKinematics(q0.data());
   model->updateModel();
   return true;
-}
-
-//-----------------------------------------------------------------------------
-void ddDrakeModel::setAlpha(double alpha)
-{
-  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
-  for (size_t i = 0; i < visuals.size(); ++i)
-  {
-    visuals[i]->Actor->GetProperty()->SetOpacity(alpha);
-  }
-
 }
 
 //-----------------------------------------------------------------------------
@@ -691,4 +691,47 @@ void ddDrakeModel::removeFromRenderer(vtkRenderer* renderer)
   }
 
   renderer->ResetCamera();
+}
+
+//-----------------------------------------------------------------------------
+const QString& ddDrakeModel::filename() const
+{
+  return this->Internal->FileName;
+}
+
+//-----------------------------------------------------------------------------
+double ddDrakeModel::alpha() const
+{
+  return this->Internal->Alpha;
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::setAlpha(double alpha)
+{
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    visuals[i]->Actor->GetProperty()->SetOpacity(alpha);
+  }
+  this->Internal->Alpha = alpha;
+  emit this->modelChanged();
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::setVisible(bool visible)
+{
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    visuals[i]->Actor->SetVisibility(visible);
+  }
+  this->Internal->Visible = visible;
+  emit this->modelChanged();
+}
+
+//-----------------------------------------------------------------------------
+bool ddDrakeModel::visible() const
+{
+  return this->Internal->Visible;
 }

@@ -11,6 +11,7 @@ from ddapp import cameracontrol
 from ddapp import ik
 import numpy as np
 
+from collections import namedtuple
 
 
 quit = app.quit
@@ -20,7 +21,6 @@ app.startup(globals())
 
 model = app.loadModelByName('model_minimal_contact.urdf')
 modelConvexHull = app.loadModelByName('model.urdf')
-modelConvexHull.setAlpha(0.0)
 
 
 jc = jointcontrol.JointController(model)
@@ -41,7 +41,7 @@ orbit = cameracontrol.OrbitController(view)
 
 
 
-#s = ik.AsyncIKCommunicator(jc)
+s = ik.AsyncIKCommunicator(jc)
 #s.start()
 #s.startServerAsync()
 
@@ -61,34 +61,100 @@ def initSpreadsheetView():
             model.item(row, column).setEditable(True)
 
 
+
+
+def getActiveItem():
+    items = tree.selectedItems()
+    return items[0] if len(items) == 1 else None
+
+
+def getActiveObject():
+    item = getActiveItem()
+    global objects
+    return objects[item] if item is not None else None
+
+
 def onPropertyChanged(prop):
-    if prop.propertyName() == 'alpha':
-        modelConvexHull.setAlpha(prop.value())
-        view.render()
+
+    item, obj = getActiveItem(), getActiveObject()
+
+    if prop.propertyName() == 'Alpha':
+        obj['data'].setAlpha(prop.value())
 
 
-def initProperties():
+def onTreeSelectionChanged():
 
     p = app.getMainWindow().propertiesPanel()
     p.clear()
 
-    alpha = p.addProperty('alpha', 0.0)
-    alpha.setAttribute('decimals', 2)
-    alpha.setAttribute('minimum', 0.0)
-    alpha.setAttribute('maximum', 1.0)
-    alpha.setAttribute('singleStep', 0.1)
+    item, obj = getActiveItem(), getActiveObject()
 
-    prop = p.addGroup("pose")
-    s1 = p.addSubProperty("pose", 12.34, prop)
-    s2 = p.addSubProperty("pose", 1.0, prop)
-    s3 = p.addSubProperty("pose", 1.3, prop)
+    for prop in obj['properties']:
 
-    s1.setAttribute('decimals', 4)
-    s1.setAttribute('minimum', 0.0)
-    s1.setAttribute('maximum', 50.0)
+        value = None
+        if prop.name == 'Filename':
+            value = obj['data'].filename()
+
+        if prop.name == 'Alpha':
+            value = obj['data'].alpha()
+
+        if value is not None:
+            addProperty(p, prop, value)
 
 
+objects = {}
+ItemProperty = namedtuple('ItemProperty', ['name', 'decimals', 'minimum', 'maximum', 'singleStep'])
+
+
+def onItemClicked(item, column):
+
+  global objects
+  obj = objects[item]
+
+
+  eyeIcon = QtGui.QIcon(':/images/eye_icon.png')
+  eyeIconOff = QtGui.QIcon(':/images/eye_icon_gray.png')
+
+  if column == 1 and 'visible' in obj:
+      obj['visible'] = not obj['visible']
+      icon = eyeIcon if obj['visible'] else eyeIconOff
+      item.setIcon(1, icon)
+      obj['data'].setVisible(obj['visible'])
+
+
+def setPropertyAttributes(p, attributes):
+    p.setAttribute('decimals', attributes.decimals)
+    p.setAttribute('minimum', attributes.minimum)
+    p.setAttribute('maximum', attributes.maximum)
+    p.setAttribute('singleStep', attributes.singleStep)
+
+
+def addProperty(panel, prop, value):
+
+    if isinstance(value, list):
+        groupProp = panel.addGroup(prop.name)
+        for v in value:
+            p = panel.addSubProperty(prop.name, v, groupProp)
+            setPropertyAttributes(p, prop)
+        return groupProp
+    else:
+        p = panel.addProperty(prop.name, value)
+        setPropertyAttributes(p, prop)
+        return p
+
+
+def initProperties():
+    p = app.getMainWindow().propertiesPanel()
+    p.clear()
     p.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
+
+
+def newAlphaProperty():
+    return ItemProperty(name='Alpha', decimals=2, minimum=0.0, maximum=1.0, singleStep=0.1)
+
+
+def newFileNameProperty():
+    return ItemProperty(name='Filename', decimals=0, minimum=0, maximum=0, singleStep=0)
 
 
 def initObjectTree():
@@ -106,17 +172,17 @@ def initObjectTree():
 
     ikmodelItem = QtGui.QTreeWidgetItem(robotsItem, ['model.urdf (IK server)'])
     ikmodelItem.setIcon(0, matlabIcon)
-    ikmodelItem.setIcon(1, eyeIcon)
+    objects[ikmodelItem] = dict(data=s, properties=[])
 
     visualItem = QtGui.QTreeWidgetItem(robotsItem, ['model_minimal_contact.urdf (visual)'])
     visualItem.setIcon(0, robotIcon)
     visualItem.setIcon(1, eyeIcon)
+    objects[visualItem] = dict(data=model, visible=model.visible(), properties=[newAlphaProperty(), newFileNameProperty()])
 
     visualItem2 = QtGui.QTreeWidgetItem(robotsItem, ['model.urdf (visual)'])
     visualItem2.setIcon(0, robotIcon)
-    visualItem.setIcon(1, eyeIconOff)
-
-
+    visualItem2.setIcon(1, eyeIcon)
+    objects[visualItem2] = dict(data=modelConvexHull, visible=modelConvexHull.visible(), properties=[newAlphaProperty(), newFileNameProperty()])
 
     tree = app.getMainWindow().objectTree()
     tree.setColumnCount(2)
@@ -134,12 +200,18 @@ def initObjectTree():
     #tree.resizeColumnToContents(0)
     #tree.resizeColumnToContents(1)
 
+    tree.connect('itemSelectionChanged()', onTreeSelectionChanged)
+    tree.connect('itemClicked(QTreeWidgetItem*, int)', onItemClicked)
+
     items = [robotsItem, ikmodelItem, visualItem, visualItem2]
     return items
 
 
 initSpreadsheetView()
-items = initObjectTree()
 initProperties()
+items = initObjectTree()
+
 
 tree = app.getMainWindow().objectTree()
+
+onItemClicked(items[-1], 1)

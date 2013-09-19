@@ -15,6 +15,8 @@ public:
   virtual ~ddDrakeModel();
 
   bool loadFromFile(const QString& filename);
+  const QString& filename() const;
+
   void addToRenderer(vtkRenderer* renderer);
   void removeFromRenderer(vtkRenderer* renderer);
 
@@ -22,6 +24,10 @@ public:
   void setJointPositions(const QList<double>& positions);
 
   void setAlpha(double alpha);
+  double alpha() const;
+
+  void setVisible(bool visible);
+  bool visible() const;
 
 signals:
 

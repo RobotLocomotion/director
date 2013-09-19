@@ -2,6 +2,11 @@
 int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QList<double>&);
 void ddDrakeModel::setAlpha(double);
+void ddDrakeModel::setVisible(bool);
+
+double ddDrakeModel::alpha() const;
+bool ddDrakeModel::visible() const;
+QString ddDrakeModel::filename() const;
 
 ddDrakeModel* ddDRCView::loadURDFModel(const QString&);
 QList<ddDrakeModel*> ddDRCView::models() const;
