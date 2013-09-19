@@ -1,25 +1,35 @@
 import math
 from ddapp.timercallback import TimerCallback
+from ddapp.simpletimer import SimpleTimer
 from ddapp import midi
 
 
 class JointController(object):
 
     def __init__(self, model):
-        self.model = model
+        #self.numberOfJoints = model.numberOfJoints()
+        self.numberOfJoints = 34
+        self.models = [model]
         self.poses = {}
-        self.poses['zero'] = [0.0 for i in xrange(self.model.numberOfJoints())]
+        self.poses['zero'] = [0.0 for i in xrange(self.numberOfJoints)]
+
+    def addModel(self, model):
+        self.models.append(model)
 
     def setJointPosition(self, jointId, position):
+        '''
+        Set joint position in degrees.
+        '''
         assert jointId >= 0 and jointId < len(self.q)
         self.q[jointId] = math.radians(position % 360.0)
         self.push()
 
     def push(self):
-        self.model.setJointPositions(self.q)
+        for model in self.models:
+            model.setJointPositions(self.q)
 
     def reset(self):
-        self.q = [0.0 for i in xrange(self.model.numberOfJoints())]
+        self.q = [0.0 for i in xrange(self.numberOfJoints)]
 
     def setPose(self, poseName):
         if poseName not in self.poses:
@@ -34,22 +44,23 @@ class JointController(object):
         self.setPose('nominal')
 
     def addPose(self, poseName, poseData):
-        assert len(poseData) == self.model.numberOfJoints()
+        assert len(poseData) == self.numberOfJoints
         self.poses[poseName] = poseData
 
     def addNominalPoseFromFile(self, filename):
         import scipy.io
         matData = scipy.io.loadmat(filename)
-        xstar = matData['xstar'][:self.model.numberOfJoints()]
+        #xstar = matData['xstar'][:self.numberOfJoints]
+        xstar = matData['xstar'][:34]
         self.addPose('nominal', xstar.flatten().tolist())
 
 
 class MidiJointControl(TimerCallback):
 
-    def __init__(self, model):
+    def __init__(self, jointController):
         TimerCallback.__init__(self)
         self.reader = midi.MidiReader()
-        self.controller = JointController(model)
+        self.controller = jointController
         self.channelToJoint = { 21: 13 }
 
 
@@ -75,3 +86,25 @@ class MidiJointControl(TimerCallback):
 
             if jointId is not None:
                 self.controller.setJointPosition(jointId, position)
+
+
+class JointControlTestRamp(TimerCallback):
+
+    def __init__(self, jointController):
+        TimerCallback.__init__(self)
+        self.controller = jointController
+        self.testTime = 2.0
+
+    def testJoint(self, jointId):
+        self.jointId = jointId
+        self.testTimer = SimpleTimer()
+        self.start()
+
+    def tick(self):
+
+        if self.testTimer.elapsed() > self.testTime:
+            self.stop()
+            return
+
+        jointPosition = math.sin( (self.testTimer.elapsed() / self.testTime) * math.pi) * math.pi
+        self.controller.setJointPosition(self.jointId, math.degrees(jointPosition))

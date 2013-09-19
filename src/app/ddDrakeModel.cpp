@@ -598,18 +598,18 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
     return;
   }
 
-  if (jointPositions.length() != model->num_dof)
+  const std::map<std::string, int> dofMap = model->dof_map[0];
+  std::vector<std::string> dofNames = getDofNames();
+
+  if (jointPositions.length() != dofNames.size())
   {
     std::cout << "ddDrakeModel::setJointPositions(): input jointPositions length "
               << jointPositions.length() << " != " << model->num_dof << std::endl;
     return;
   }
 
-  const std::map<std::string, int> dofMap = model->dof_map[0];
-  std::vector<std::string> dofNames = getDofNames();
-
   MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
-  for (int i = 0; i < model->num_dof; ++i)
+  for (int i = 0; i < jointPositions.size(); ++i)
   {
     const std::string& dofName = dofNames[i];
 

@@ -10,11 +10,11 @@ from ddapp.jointcontrol import JointController
 
 class AsyncIKCommunicator(TimerCallback):
 
-    def __init__(self, model):
+    def __init__(self, jointController):
         TimerCallback.__init__(self)
         self.targetFps = 60
         #self.reader = midi.MidiReader()
-        self.controller = JointController(model)
+        self.controller = jointController
         self.channelsX = [midi.TriggerFinger.faders[0], midi.TriggerFinger.pads[0], midi.TriggerFinger.dials[0] ]
         self.channelsY = [midi.TriggerFinger.faders[1], midi.TriggerFinger.pads[1], midi.TriggerFinger.dials[1] ]
         self.channelsZ = [midi.TriggerFinger.faders[3], midi.TriggerFinger.pads[2], midi.TriggerFinger.dials[2] ]
