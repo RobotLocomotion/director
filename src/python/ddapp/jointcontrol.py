@@ -6,15 +6,13 @@ from ddapp import midi
 
 class JointController(object):
 
-    def __init__(self, model):
+    def __init__(self, models, poseCollection=None):
         #self.numberOfJoints = model.numberOfJoints()
         self.numberOfJoints = 34
-        self.models = [model]
+        self.models = models
         self.poses = {}
-        self.poses['zero'] = [0.0 for i in xrange(self.numberOfJoints)]
-
-    def addModel(self, model):
-        self.models.append(model)
+        self.poseCollection = poseCollection
+        self.addPose('q_zero', [0.0 for i in xrange(self.numberOfJoints)])
 
     def setJointPosition(self, jointId, position):
         '''
@@ -38,21 +36,23 @@ class JointController(object):
         self.push()
 
     def setZeroPose(self):
-        self.setPose('zero')
+        self.setPose('q_zero')
 
     def setNominalPose(self):
-        self.setPose('nominal')
+        self.setPose('q_nom')
 
     def addPose(self, poseName, poseData):
         assert len(poseData) == self.numberOfJoints
         self.poses[poseName] = poseData
+        if self.poseCollection is not None:
+            self.poseCollection.setItem(poseName, poseData)
 
     def addNominalPoseFromFile(self, filename):
         import scipy.io
         matData = scipy.io.loadmat(filename)
         #xstar = matData['xstar'][:self.numberOfJoints]
         xstar = matData['xstar'][:34]
-        self.addPose('nominal', xstar.flatten().tolist())
+        self.addPose('q_nom', xstar.flatten().tolist())
 
 
 class MidiJointControl(TimerCallback):

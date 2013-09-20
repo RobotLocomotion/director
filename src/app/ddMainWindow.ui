@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>949</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="FileMenu">
@@ -95,6 +95,11 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="ActionPythonConsole"/>
+   <addaction name="ActionMatlabConsole"/>
+   <addaction name="separator"/>
+   <addaction name="ActionToggleStereoRender"/>
+   <addaction name="ActionResetCamera"/>
   </widget>
   <widget class="QDockWidget" name="PropertiesDock">
    <property name="windowTitle">
@@ -154,11 +159,36 @@
    </property>
   </action>
   <action name="ActionMatlabConsole">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/matlab_logo.png</normaloff>:/images/matlab_logo.png</iconset>
+   </property>
    <property name="text">
     <string>Matlab Console</string>
    </property>
    <property name="shortcut">
     <string>F9</string>
+   </property>
+  </action>
+  <action name="ActionToggleStereoRender">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/3d_glasses.png</normaloff>:/images/3d_glasses.png</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Stereo Render</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle Stereo Render</string>
+   </property>
+  </action>
+  <action name="ActionResetCamera">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/reset_camera.png</normaloff>:/images/reset_camera.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reset Camera</string>
    </property>
   </action>
  </widget>

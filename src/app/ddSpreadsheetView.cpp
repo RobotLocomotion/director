@@ -62,6 +62,26 @@ ddSpreadsheetView::ddSpreadsheetView(QWidget* parent) : ddViewBase(parent)
   layout->setMargin(0);
   layout->addWidget(this->Internal->TableView);
 
+
+  // init cells
+  int rowCount = 50;
+  int columnCount = 26;
+
+  for (int row = 0; row < rowCount; ++row)
+  {
+    QStringList rowData;
+    for (int column = 0; column < columnCount; ++column)
+    {
+      rowData << QString();
+    }
+
+    this->appendRow(rowData);
+
+    for (int column = 0; column < columnCount; ++column)
+    {
+      this->Internal->Model->item(row, column)->setEditable(true);
+    }
+  }
 }
 
 //-----------------------------------------------------------------------------

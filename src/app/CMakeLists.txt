@@ -36,6 +36,7 @@ qt4_wrap_cpp(moc_srcs
   ddPropertiesPanel.h
   ddPythonManager.h
   ddQVTKWidgetView.h
+  ddSignalMap.h
   ddSpreadsheetView.h
   ddViewBase.h
   ddViewManager.h
@@ -47,6 +48,7 @@ qt4_wrap_ui(ui_srcs
   )
 
 qt4_add_resources(resource_srcs
+  uiresources.qrc
   images/resources.qrc
   )
 
@@ -63,6 +65,7 @@ set(srcs
   ddPythonQtWrapperFactory.cpp
   ddQVTKWidgetView.cpp
   ddMainWindow.cpp
+  ddSignalMap.cpp
   ddSpreadsheetView.cpp
   ddViewBase.cpp
   ddViewManager.cpp

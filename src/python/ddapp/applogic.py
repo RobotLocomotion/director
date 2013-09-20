@@ -49,6 +49,26 @@ def getDefaultDrakeModel():
     return getDRCView().models()[0]
 
 
+def addWidgetToDock(widget):
+
+    dock = QtGui.QDockWidget()
+    dock.setWidget(widget)
+    dock.setWindowTitle(widget.windowTitle)
+    getMainWindow().addDockWidget(QtCore.Qt.RightDockWidgetArea, dock)
+    getMainWindow().addWidgetToViewMenu(dock)
+
+
+def resetCamera():
+    getDRCView().resetCamera()
+    getDRCView().render()
+
+
+def toggleStereoRender():
+    renderWindow = getDRCView().renderWindow()
+    renderWindow.SetStereoRender(not renderWindow.GetStereoRender())
+    getDRCView().render()
+
+
 def setupToolBar():
 
     def onComboChanged(text):
@@ -84,5 +104,8 @@ def startup(globals):
         showErrorMessage('DRC_BASE directory does not exist: ' + getDRCBase())
         return
 
-    setupToolBar()
+    _mainWindow.connect('resetCamera()', resetCamera)
+    _mainWindow.connect('toggleStereoRender()', toggleStereoRender)
+
+    #setupToolBar()
 

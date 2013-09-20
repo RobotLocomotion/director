@@ -22,10 +22,12 @@ ddPropertiesPanel* ddMainWindow::propertiesPanel() const;
 QToolBar* ddMainWindow::toolBar() const;
 QTreeWidget* ddMainWindow::objectTree() const;
 QTextEdit* ddMainWindow::outputConsole() const;
+void ddMainWindow::addWidgetToViewMenu(QWidget*);
 
 
 ddViewBase* ddViewManager::findView(const QString&) const;
-
+ddViewBase* ddViewManager::createView(const QString&, int);
+ddViewBase* ddViewManager::createView(const QString&);
 
 
 QAbstractItemModel* ddSpreadsheetView::model();
@@ -45,3 +47,10 @@ QtVariantProperty* ddPropertiesPanel::addProperty(const QString&, const QVariant
 QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString&, const QVariant&, QtVariantProperty*);
 QtVariantProperty* ddPropertiesPanel::findProperty(const QString&) const;
 QtVariantProperty* ddPropertiesPanel::findSubProperty(const QString&, QtVariantProperty*) const;
+
+
+ddSignalMap::ddSignalMap();
+QMap<QString, QVariant> ddSignalMap::map() const;
+void ddSignalMap::signalItemChanged(const QString&);
+void ddSignalMap::setItem(const QString&, const QVariant&);
+QVariant ddSignalMap::value(const QString&) const;

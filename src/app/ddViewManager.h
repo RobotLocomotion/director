@@ -19,6 +19,8 @@ public:
 
   ddViewBase* findView(const QString& viewName) const;
 
+  ddViewBase* createView(const QString& viewName, int pageIndex=-1);
+
 
 protected:
 

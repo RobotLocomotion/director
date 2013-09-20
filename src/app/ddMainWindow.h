@@ -7,6 +7,7 @@ class ddViewManager;
 class ddPropertiesPanel;
 class QTreeWidget;
 class QTextEdit;
+class QDockWidget;
 
 class ddMainWindow : public QMainWindow
 {
@@ -22,6 +23,14 @@ public:
   QTreeWidget* objectTree() const;
   QToolBar* toolBar() const;
   QTextEdit* outputConsole() const;
+
+  void addWidgetToViewMenu(QWidget* widget);
+
+signals:
+
+  void resetCamera();
+  void toggleStereoRender();
+
 
 protected slots:
 

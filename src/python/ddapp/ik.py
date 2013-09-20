@@ -15,27 +15,41 @@ class AsyncIKCommunicator(TimerCallback):
         self.targetFps = 60
         self.comm = None
         self.outputConsole = None
-        self.reader = midi.MidiReader()
         self.controller = jointController
         self.channelsX = [midi.TriggerFinger.faders[0], midi.TriggerFinger.pads[0], midi.TriggerFinger.dials[0] ]
         self.channelsY = [midi.TriggerFinger.faders[1], midi.TriggerFinger.pads[1], midi.TriggerFinger.dials[1] ]
         self.channelsZ = [midi.TriggerFinger.faders[3], midi.TriggerFinger.pads[2], midi.TriggerFinger.dials[2] ]
         self.positionOffset = [0.0, 0.0, 0.0]
-        self.activePositionConstraint = 'r_hand'
-        self.seedWithNominal = False
+        self.activePositionConstraint = 'l_foot'
+        self.quasiStaticConstraintName = 'both_feet_qsc'
+        self.seedName = 'q_end'
+        self.nominalName = 'q_nom'
         self.infoFunc = None
         self.midiMap = [-1.0, 1.0]
+        self.poses = None
 
+        self.constraintNames = [
+           'self_collision_constraint',
+           'l_foot_position_constraint',
+           'r_foot_position_constraint',
+           'utorso_gaze_constraint',
+           'pelvis_position_constraint',
+           'r_hand_position_constraint',
+        ]
         self.activeConstraintNames = [
-               'both_feet_qsc',
-               'l_foot_position_constraint',
-               'r_foot_position_constraint',
-               'utorso_gaze_constraint',
-               'r_hand_position_constraint',
-               'scc',
-              ]
+           'l_foot_position_constraint',
+           'r_foot_position_constraint',
+           'utorso_gaze_constraint',
+          ]
 
         self.tasks = []
+        self._initMidi()
+
+    def _initMidi(self):
+        try:
+            self.reader = midi.MidiReader()
+        except AssertionError:
+            self.reader = None
 
     def _startupCommands(self):
 
@@ -63,6 +77,7 @@ class AsyncIKCommunicator(TimerCallback):
         self.tasks.append(functools.partial(self.comm.printResult))
         self.tasks.append(self.comm.sendCommandsAsync(self._startupCommands()))
         self.tasks.append(functools.partial(self.fetchPoseFromServer, 'q_start'))
+        self.tasks.append(functools.partial(self.fetchPoseFromServer, 'q_end'))
 
     def handleAsyncTasks(self):
 
@@ -107,14 +122,9 @@ class AsyncIKCommunicator(TimerCallback):
         formatArgs = dict(name=self.activePositionConstraint, x=self.positionOffset[0], y=self.positionOffset[1], z=self.positionOffset[2])
         commands.append('{name}_target = vertcat({name}_target_start(1,:)+{x}, {name}_target_start(2,:)+{y}, {name}_target_start(3,:)+{z});'.format(**formatArgs))
         commands.append('{name}_position_constraint = WorldPositionConstraint(r, {name}, {name}_pts, {name}_target, {name}_target, tspan);'.format(**formatArgs))
-
-        if self.seedWithNominal:
-            commands.append('q_seed = q_nom;')
-        else:
-            commands.append('q_seed = q_end;')
-
+        commands.append('q_seed = %s;' % self.seedName)
         commands.append('active_constraints = {%s};' % ', '.join(self.activeConstraintNames))
-        commands.append('[q_end, info] = inverseKin(r, q_seed, q_nom, active_constraints{:}, s.ikoptions);')
+        commands.append('[q_end, info] = inverseKin(r, q_seed, %s, %s, active_constraints{:}, s.ikoptions);' % (self.nominalName, self.quasiStaticConstraintName))
 
         #self.tasks.append(self.comm.sendCommandsAsync(commands))
         #self.tasks.append(functools.partial(self.fetchPoseFromServer, 'q_end'))
@@ -171,4 +181,5 @@ class AsyncIKCommunicator(TimerCallback):
         if self.handleAsyncTasks() > 0:
             return
 
-        self.handleMidiEvents()
+        if self.reader:
+            self.handleMidiEvents()

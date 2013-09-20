@@ -25,6 +25,8 @@ public:
   ddViewManager* ViewManager;
   ddPropertiesPanel* PropertiesPanel;
   ddPythonManager* PythonManager;
+
+  ddViewMenu* ViewMenuManager;
 };
 
 
@@ -45,6 +47,8 @@ ddMainWindow::ddMainWindow()
 
   this->Internal->OutputConsoleDock->hide();
   this->connect(this->Internal->ActionMatlabConsole, SIGNAL(triggered()), this, SLOT(toggleOutputConsoleVisibility()));
+  this->connect(this->Internal->ActionResetCamera, SIGNAL(triggered()), this, SIGNAL(resetCamera()));
+  this->connect(this->Internal->ActionToggleStereoRender, SIGNAL(triggered()), this, SIGNAL(toggleStereoRender()));
 
   QTimer::singleShot(0, this, SLOT(startup()));
 
@@ -111,6 +115,17 @@ void ddMainWindow::toggleOutputConsoleVisibility()
 }
 
 //-----------------------------------------------------------------------------
+void ddMainWindow::addWidgetToViewMenu(QWidget* widget)
+{
+  if (!widget)
+  {
+    return;
+  }
+
+  this->Internal->ViewMenuManager->addWidget(widget, widget->windowTitle());
+}
+
+//-----------------------------------------------------------------------------
 void ddMainWindow::handleCommandLineArgs()
 {
   QStringList args = QApplication::instance()->arguments();
@@ -131,6 +146,7 @@ void ddMainWindow::startup()
 void ddMainWindow::setupViewMenu()
 {
   ddViewMenu* viewMenu = new ddViewMenu(*this->Internal->ViewMenu, this);
+  this->Internal->ViewMenuManager = viewMenu;
   ddViewMenu* toolbarMenu = new ddViewMenu(*this->Internal->ToolBarMenu, this);
 
   viewMenu->addWidget(

@@ -4,12 +4,14 @@
 import os
 import sys
 import vtk
+import PythonQt
 from PythonQt import QtCore, QtGui
 import ddapp.applogic as app
 from ddapp import matlab
 from ddapp import jointcontrol
 from ddapp import cameracontrol
 from ddapp import ik
+from ddapp import ikeditor
 import numpy as np
 
 from collections import namedtuple
@@ -27,11 +29,16 @@ for name in ['model_minimal_contact_fixedjoint_hands.urdf', 'model.urdf', 'model
     if name != 'model_minimal_contact_fixedjoint_hands.urdf':
         models[-1].setVisible(False)
 
+poseCollection = PythonQt.dd.ddSignalMap()
+costCollection = PythonQt.dd.ddSignalMap()
 
-jc = jointcontrol.JointController(models[0])
-jc.models = models
+
+jc = jointcontrol.JointController(models, poseCollection)
 jc.addNominalPoseFromFile(app.getNominalPoseMatFile())
 jc.setNominalPose()
+jc.addPose('q_end', jc.poses['q_nom'])
+jc.addPose('q_start', jc.poses['q_nom'])
+
 
 spreadsheet = app.getSpreadsheetView()
 view = app.getDRCView()
@@ -52,24 +59,11 @@ s.start()
 s.startServerAsync()
 
 def _displaySnoptInfo(info):
-    print 'info:', info
     _mainWindow.statusBar().showMessage('Info: %d' % info)
+
 s.infoFunc = _displaySnoptInfo
 
 r = jointcontrol.JointControlTestRamp(jc)
-
-
-def initSpreadsheetView():
-
-    sv = app.getSpreadsheetView()
-    model = sv.model()
-
-    rowCount = 50
-    columnCount = 26
-    for row in xrange(rowCount):
-        sv.appendRow(['' for column in xrange(columnCount)])
-        for column in xrange(columnCount):
-            model.item(row, column).setEditable(True)
 
 
 def getActiveItem():
@@ -241,10 +235,83 @@ def initObjectTree():
 
 
 
+def setSpreadsheetColumnData(columnIndex, name, data):
 
-initSpreadsheetView()
+    sv = app.getSpreadsheetView()
+    model = sv.model()
+
+    model.item(0, columnIndex).setText(name)
+    for i, value in enumerate(data):
+          model.item(i + 1, columnIndex).setText(value)
+
+def updateSpreadsheetPoses():
+
+    poseMap = poseCollection.map()
+    for i, poseName in enumerate(sorted(poseMap.keys())):
+        setSpreadsheetColumnData(i + 3, poseName, poseMap[poseName])
+
+poseCollection.connect('itemChanged(const QString&)', updateSpreadsheetPoses)
+poseCollection.connect('itemAdded(const QString&)', updateSpreadsheetPoses)
+poseCollection.connect('itemRemoved(const QString&)', updateSpreadsheetPoses)
+
+def updateSpreadsheet():
+
+    jointNames = [
+      'base_x',
+      'base_y',
+      'base_z',
+      'base_roll',
+      'base_pitch',
+      'base_yaw',
+      'back_bkz',
+      'back_bky',
+      'back_bkx',
+      'l_arm_usy',
+      'l_arm_shx',
+      'l_arm_ely',
+      'l_arm_elx',
+      'l_arm_uwy',
+      'l_leg_hpz',
+      'l_leg_hpx',
+      'l_leg_hpy',
+      'l_leg_kny',
+      'l_leg_aky',
+      'l_leg_akx',
+      'l_arm_mwx',
+      'r_arm_usy',
+      'r_arm_shx',
+      'r_arm_ely',
+      'r_arm_elx',
+      'r_arm_uwy',
+      'r_leg_hpz',
+      'r_leg_hpx',
+      'r_leg_hpy',
+      'r_leg_kny',
+      'r_leg_aky',
+      'r_leg_akx',
+      'r_arm_mwx',
+      'neck_ay',
+    ]
+
+    costData = [
+      0.0,
+      0.0,
+      100.0,
+      100.0,
+      0.0,
+    ]
+
+    costData += [100.0 for i in xrange(len(jointNames) - len(costData))]
+    costCollection.setItem('default_costs', costData)
+
+    setSpreadsheetColumnData(0, 'joint_names', jointNames)
+    setSpreadsheetColumnData(1, 'default_costs', costData)
+
+
 initProperties()
 initObjectTree()
+updateSpreadsheet()
+updateSpreadsheetPoses()
 
 tree = app.getMainWindow().objectTree()
 
@@ -252,4 +319,8 @@ tree = app.getMainWindow().objectTree()
 parentItem = addContainerToObjectTree('affordances')
 tableModel = view.loadURDFModel(os.path.join(app.getDRCBase(), 'software/drake/systems/plants/test/table.urdf'))
 addModelToObjectTree(tableModel, parentItem)
+
+
+e = ikeditor.IKEditor(app.getMainWindow(), s, poseCollection, costCollection)
+app.addWidgetToDock(e.widget)
 
