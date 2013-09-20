@@ -52,6 +52,12 @@ class IKEditor(object):
         self.ui.LeftFootEnabled.connect('clicked()', self.leftFootEnabledClicked)
         self.ui.RightFootEnabled.connect('clicked()', self.rightFootEnabledClicked)
         self.ui.ShrinkFactor.connect('valueChanged(double)', self.shrinkFactorChanged)
+
+
+        self.ui.PositionXEnabled.connect('valueChanged(double)', self.positionTargetChanged)
+        self.ui.PositionYEnabled.connect('valueChanged(double)', self.positionTargetChanged)
+        self.ui.PositionZEnabled.connect('valueChanged(double)', self.positionTargetChanged)
+
         self.server = server
         self.poseCollection = poseCollection
         self.costCollection = costCollection
@@ -122,6 +128,13 @@ class IKEditor(object):
         s.quasiStaticConstraintName = qsc
         s.comm.sendCommands(commands)
 
+    def positionTargetChanged(self):
+
+        linkName = self.ui.PositionLinkNameCombo.text
+        assert linkName == self.server.activePositionConstraint
+
+        target = np.array([self.ui.TargetX.value, self.ui.TargetY.value, self.ui.TargetZ.value])
+        enabledState = [self.ui.PositionXEnabled.checked, self.ui.PositionYEnabled.checked, self.ui.PositionZEnabled.checked]
 
     def leftFootEnabledClicked(self):
         print 'left foot:', self.ui.LeftFootEnabled.checked
@@ -154,6 +167,31 @@ class IKEditor(object):
             check.connect('clicked()', self.onConstraintClicked)
             self.ui.ActiveConstraintsGroup.layout().addWidget(check)
 
+    def positionConstraintComboChanged(self, linkName):
+      print 'edit position constraint:', linkName
+      self.server.activePositionConstraint = linkName
+      target = np.array(self.server.comm.getFloatArray('%s_target_start' % linkName))
+
+      if len(target.shape) == 2:
+          target = np.average(target, axis=1)
+
+      self.ui.TargetX.value = target[0]
+      self.ui.TargetY.value = target[1]
+      self.ui.TargetZ.value = target[2]
+
+    def updateEditPositionConstraint(self):
+
+        s = self.server
+
+        linkNames = []
+
+        for name in s.constraintNames:
+            if name.endswith('_position_constraint'):
+                linkNames.append(name.replace('_position_constraint', ''))
+
+        updateComboStrings(self.ui.PositionLinkNameCombo, linkNames, 'l_foot')
+        self.ui.PositionLinkNameCombo.connect('currentIndexChanged(const QString&)', self.positionConstraintComboChanged)
+
 
     def rebuildConstraints(self):
         clearLayout(self.ui.ActiveConstraintsGroup)
@@ -165,3 +203,5 @@ class IKEditor(object):
         self.rebuildConstraints()
         self.onPoseAdded()
         self.onCostAdded()
+        self.updateEditPositionConstraint()
+

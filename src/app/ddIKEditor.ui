@@ -140,21 +140,21 @@
           <string>Edit Position Constraint</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="1">
+          <item row="1" column="1">
            <widget class="QLabel" name="label_4">
             <property name="text">
              <string>Target:</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
+          <item row="1" column="2">
            <widget class="QLabel" name="label_5">
             <property name="text">
              <string>Offset:</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="2" column="0">
            <widget class="QCheckBox" name="PositionXEnabled">
             <property name="layoutDirection">
              <enum>Qt::RightToLeft</enum>
@@ -162,9 +162,12 @@
             <property name="text">
              <string>X: </string>
             </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="2" column="1">
            <widget class="QDoubleSpinBox" name="TargetX">
             <property name="decimals">
              <number>3</number>
@@ -180,7 +183,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
+          <item row="2" column="2">
            <widget class="QDoubleSpinBox" name="OffsetX">
             <property name="decimals">
              <number>3</number>
@@ -196,7 +199,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="3" column="0">
            <widget class="QCheckBox" name="PositionYEnabled">
             <property name="layoutDirection">
              <enum>Qt::RightToLeft</enum>
@@ -204,25 +207,12 @@
             <property name="text">
              <string>Y: </string>
             </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QDoubleSpinBox" name="TargetY">
-            <property name="decimals">
-             <number>3</number>
-            </property>
-            <property name="minimum">
-             <double>-10000000.000000000000000</double>
-            </property>
-            <property name="maximum">
-             <double>10000000.000000000000000</double>
-            </property>
-            <property name="singleStep">
-             <double>0.100000000000000</double>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
-          <item row="2" column="2">
+          <item row="3" column="2">
            <widget class="QDoubleSpinBox" name="OffsetY">
             <property name="decimals">
              <number>3</number>
@@ -238,17 +228,23 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="PositionZEnabled">
-            <property name="layoutDirection">
-             <enum>Qt::RightToLeft</enum>
+          <item row="3" column="1">
+           <widget class="QDoubleSpinBox" name="TargetY">
+            <property name="decimals">
+             <number>3</number>
             </property>
-            <property name="text">
-             <string>Z: </string>
+            <property name="minimum">
+             <double>-10000000.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>10000000.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="4" column="1">
            <widget class="QDoubleSpinBox" name="TargetZ">
             <property name="decimals">
              <number>3</number>
@@ -264,7 +260,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
+          <item row="4" column="2">
            <widget class="QDoubleSpinBox" name="OffsetZ">
             <property name="decimals">
              <number>3</number>
@@ -280,19 +276,42 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="1" colspan="2">
+          <item row="4" column="0">
+           <widget class="QCheckBox" name="PositionZEnabled">
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
+            <property name="text">
+             <string>Z: </string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1" colspan="2">
            <widget class="QPushButton" name="GrabCurrentButton">
             <property name="text">
              <string>Grab current</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="0">
+          <item row="1" column="0">
            <widget class="QLabel" name="label_9">
             <property name="text">
              <string>Enabled:</string>
             </property>
            </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_11">
+            <property name="text">
+             <string>Link name:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="PositionLinkNameCombo"/>
           </item>
          </layout>
         </widget>

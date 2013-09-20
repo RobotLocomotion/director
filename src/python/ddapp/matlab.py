@@ -127,8 +127,15 @@ class MatlabCommunicator(object):
         self.send('disp(%s)' % expression)
         result = self.waitForResult()
 
+        def parseRow(rowData):
+            values = rowData.split()
+            if len(values) == 1:
+                return float(values[0])
+            else:
+                return [float(x) for x in values]
+
         try:
-            return [float(x) for x in result[:-1]]
+            return [parseRow(x) for x in result[:-1]]
         except:
             raise Exception('Failed to parse output as a float array.  Output was:\n%s' % '\n'.join(result))
 
