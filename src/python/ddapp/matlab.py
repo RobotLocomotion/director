@@ -28,6 +28,8 @@ class MatlabCommunicator(object):
     def __init__(self, proc):
         self.proc = proc
         self.prompt = '>> '
+        self.outputConsole = None
+        self.echoToStdOut = True
         self.clearResult()
 
     def checkForResult(self):
@@ -54,9 +56,34 @@ class MatlabCommunicator(object):
             if timeout is not None and t.elapsed() > timeout:
                 return None
 
+    def _colorReplace(self, line):
+        line = line.replace('[\x08', '<font color="orange">')
+        line = line.replace(']\x08', '</font>')
+        line = line.replace('}\x08', '<font color="red">')
+        line = line.replace('{\x08', '</font>')
+        return line
+
+    def _colorStrip(self, line):
+        line = line.replace('[\x08', '')
+        line = line.replace(']\x08', '')
+        line = line.replace('}\x08', '')
+        line = line.replace('{\x08', '')
+        return line
+
     def printResult(self):
-        if self.outputLines:
-            print '\n'.join(self.outputLines)
+        if not self.outputLines:
+            return
+
+        if self.outputConsole:
+            self.outputConsole.append('<pre>' + 
+                '<br/>'.join([self._colorReplace(line) for line in self.outputLines]) + '</pre>')
+
+        if self.echoToStdOut or not self.outputConsole:
+            print '\n'.join([self._colorStrip(line) for line in self.outputLines])
+
+        if self.outputConsole:
+            scrollBar = self.outputConsole.verticalScrollBar()
+            scrollBar.setValue(scrollBar.maximum)
 
     def clearResult(self):
         self.accumulatedOutput = ''
@@ -109,6 +136,8 @@ class MatlabCommunicator(object):
     def interact(self):
 
         self.clearResult()
+        previousEchoMode = self.echoToStdOut
+        self.echoToStdOut = True
 
         while self.isAlive():
 
@@ -118,8 +147,10 @@ class MatlabCommunicator(object):
                 continue
 
             if command == 'break':
-                return
+                break
 
             self.send(command)
             self.waitForResult()
             self.printResult()
+
+        self.echoToStdOut = previousEchoMode

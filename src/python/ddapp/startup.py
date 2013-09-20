@@ -1,7 +1,8 @@
 # This script is executed in the main console namespace so
 # that all the variables defined here become console variables.
 
-
+import os
+import sys
 import vtk
 from PythonQt import QtCore, QtGui
 import ddapp.applogic as app
@@ -19,12 +20,16 @@ exit = quit
 
 app.startup(globals())
 
-model = app.loadModelByName('model_minimal_contact.urdf')
-modelConvexHull = app.loadModelByName('model.urdf')
+
+models = []
+for name in ['model_minimal_contact_fixedjoint_hands.urdf', 'model.urdf', 'model_minimal_contact.urdf', 'model_minimal_contact_point_hands.urdf']:
+    models.append(app.loadModelByName(name))
+    if name != 'model_minimal_contact_fixedjoint_hands.urdf':
+        models[-1].setVisible(False)
 
 
-jc = jointcontrol.JointController(model)
-jc.addModel(modelConvexHull)
+jc = jointcontrol.JointController(models[0])
+jc.models = models
 jc.addNominalPoseFromFile(app.getNominalPoseMatFile())
 jc.setNominalPose()
 
@@ -42,8 +47,14 @@ orbit = cameracontrol.OrbitController(view)
 
 
 s = ik.AsyncIKCommunicator(jc)
-#s.start()
-#s.startServerAsync()
+s.outputConsole = app.getOutputConsole()
+s.start()
+s.startServerAsync()
+
+def _displaySnoptInfo(info):
+    print 'info:', info
+    _mainWindow.statusBar().showMessage('Info: %d' % info)
+s.infoFunc = _displaySnoptInfo
 
 r = jointcontrol.JointControlTestRamp(jc)
 
@@ -59,8 +70,6 @@ def initSpreadsheetView():
         sv.appendRow(['' for column in xrange(columnCount)])
         for column in xrange(columnCount):
             model.item(row, column).setEditable(True)
-
-
 
 
 def getActiveItem():
@@ -89,6 +98,9 @@ def onTreeSelectionChanged():
 
     item, obj = getActiveItem(), getActiveObject()
 
+    if 'properties' not in obj:
+        return
+
     for prop in obj['properties']:
 
         value = None
@@ -110,7 +122,6 @@ def onItemClicked(item, column):
 
   global objects
   obj = objects[item]
-
 
   eyeIcon = QtGui.QIcon(':/images/eye_icon.png')
   eyeIconOff = QtGui.QIcon(':/images/eye_icon_gray.png')
@@ -157,61 +168,88 @@ def newFileNameProperty():
     return ItemProperty(name='Filename', decimals=0, minimum=0, maximum=0, singleStep=0)
 
 
-def initObjectTree():
+def addModelToObjectTree(model, parentItem):
 
-    style = QtGui.QApplication.style()
-
-    dirIcon = style.standardIcon(QtGui.QStyle.SP_DirIcon)
-    matlabIcon = QtGui.QIcon(':/images/matlab_logo.png')
     robotIcon = QtGui.QIcon(':/images/robot_icon.png')
     eyeIcon = QtGui.QIcon(':/images/eye_icon.png')
     eyeIconOff = QtGui.QIcon(':/images/eye_icon_gray.png')
 
-    robotsItem = QtGui.QTreeWidgetItem(['robots'])
-    robotsItem.setIcon(0, dirIcon)
+    modelName = os.path.basename(model.filename())
+    item = QtGui.QTreeWidgetItem(parentItem, [modelName])
+    item.setIcon(0, robotIcon)
+    item.setIcon(1, eyeIcon if model.visible() else eyeIconOff)
 
-    ikmodelItem = QtGui.QTreeWidgetItem(robotsItem, ['model.urdf (IK server)'])
-    ikmodelItem.setIcon(0, matlabIcon)
-    objects[ikmodelItem] = dict(data=s, properties=[])
+    obj = dict(data=model, visible=model.visible(), properties=[newAlphaProperty(), newFileNameProperty()])
+    objects[item] = obj
+    return item
 
-    visualItem = QtGui.QTreeWidgetItem(robotsItem, ['model_minimal_contact.urdf (visual)'])
-    visualItem.setIcon(0, robotIcon)
-    visualItem.setIcon(1, eyeIcon)
-    objects[visualItem] = dict(data=model, visible=model.visible(), properties=[newAlphaProperty(), newFileNameProperty()])
 
-    visualItem2 = QtGui.QTreeWidgetItem(robotsItem, ['model.urdf (visual)'])
-    visualItem2.setIcon(0, robotIcon)
-    visualItem2.setIcon(1, eyeIcon)
-    objects[visualItem2] = dict(data=modelConvexHull, visible=modelConvexHull.visible(), properties=[newAlphaProperty(), newFileNameProperty()])
+def addModelsToObjectTree(models, parentItem):
+    return [addModelToObjectTree(model, parentItem) for model in models]
+
+
+def addBasicItemToObjectTree(name, icon, parentItem):
+    item = QtGui.QTreeWidgetItem(parentItem, [name])
+    item.setIcon(0, icon)
+    objects[item] = dict(data=None)
+    return item
+
+
+def findItemByName(name):
+    for item in objects.keys():
+        if item.text(0) == name:
+            return item
+
+
+def addContainerToObjectTree(name):
+
+    style = QtGui.QApplication.style()
+    dirIcon = style.standardIcon(QtGui.QStyle.SP_DirIcon)
+
+    item = QtGui.QTreeWidgetItem([name])
+    item.setIcon(0, dirIcon)
+
+    tree = app.getMainWindow().objectTree()
+    tree.addTopLevelItem(item)
+    tree.expandItem(item)
+    objects[item] = dict(data=None)
+
+    return item
+
+
+
+def initObjectTree():
+
+    matlabIcon = QtGui.QIcon(':/images/matlab_logo.png')
+    eyeIcon = QtGui.QIcon(':/images/eye_icon.png')
 
     tree = app.getMainWindow().objectTree()
     tree.setColumnCount(2)
     tree.setHeaderLabels(['Name', ''])
     tree.headerItem().setIcon(1, eyeIcon)
-
     tree.header().setVisible(True)
     tree.header().setStretchLastSection(False)
     tree.header().setResizeMode(0, QtGui.QHeaderView.Stretch)
     tree.header().setResizeMode(1, QtGui.QHeaderView.Fixed)
-
-    tree.addTopLevelItem(robotsItem)
-    tree.expandItem(robotsItem)
     tree.setColumnWidth(1, 24)
-    #tree.resizeColumnToContents(0)
-    #tree.resizeColumnToContents(1)
-
     tree.connect('itemSelectionChanged()', onTreeSelectionChanged)
     tree.connect('itemClicked(QTreeWidgetItem*, int)', onItemClicked)
 
-    items = [robotsItem, ikmodelItem, visualItem, visualItem2]
-    return items
+    parentItem = addContainerToObjectTree('robots')
+    addBasicItemToObjectTree('model.urdf (IK server)', matlabIcon, parentItem)
+    addModelsToObjectTree(models, parentItem)
+
+
 
 
 initSpreadsheetView()
 initProperties()
-items = initObjectTree()
-
+initObjectTree()
 
 tree = app.getMainWindow().objectTree()
 
-onItemClicked(items[-1], 1)
+
+parentItem = addContainerToObjectTree('affordances')
+tableModel = view.loadURDFModel(os.path.join(app.getDRCBase(), 'software/drake/systems/plants/test/table.urdf'))
+addModelToObjectTree(tableModel, parentItem)
+

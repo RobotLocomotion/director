@@ -10,6 +10,10 @@
 #include <vtkPolyDataNormals.h>
 #include <vtkRenderer.h>
 #include <vtkOBJReader.h>
+#include <vtkSphereSource.h>
+#include <vtkCylinderSource.h>
+#include <vtkCubeSource.h>
+#include <vtkTransformPolyDataFilter.h>
 #include <vtkTransform.h>
 #include <vtkQuaternion.h>
 #include <vtkProperty.h>
@@ -40,7 +44,6 @@ class ddMeshVisual
 
   }
 
-  std::string FileName;
   vtkSmartPointer<vtkPolyData> PolyData;
   vtkSmartPointer<vtkActor> Actor;
   vtkSmartPointer<vtkTransform> Transform;
@@ -137,6 +140,15 @@ vtkSmartPointer<vtkPolyData> computeNormals(vtkPolyData* polyData)
   return shallowCopy(normalsFilter->GetOutput());
 }
 
+vtkSmartPointer<vtkPolyData> transformPolyData(vtkPolyData* polyData, vtkTransform* transform)
+{
+  vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  transformFilter->SetTransform(transform);
+  transformFilter->SetInputData(polyData);
+  transformFilter->Update();
+  return shallowCopy(transformFilter->GetOutput());
+}
+
 vtkSmartPointer<vtkPolyData> loadPolyData(const std::string filename)
 {
   vtkSmartPointer<vtkOBJReader> reader = vtkSmartPointer<vtkOBJReader>::New();
@@ -145,6 +157,7 @@ vtkSmartPointer<vtkPolyData> loadPolyData(const std::string filename)
   if (!reader->GetOutput()->GetNumberOfPoints())
   {
     std::cout << "Failed to load data from: " << filename << std::endl;
+    return 0;
   }
 
   return shallowCopy(reader->GetOutput());
@@ -157,29 +170,73 @@ void QuaternionToAngleAxis(double wxyz[4], double angleAxis[4])
   angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
 }
 
+ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
+{
+  ddMeshVisual::Ptr visual(new ddMeshVisual);
+  visual->PolyData = computeNormals(polyData);
+  visual->Actor = vtkSmartPointer<vtkActor>::New();
+
+  visual->Actor->GetProperty()->SetSpecular(0.9);
+  visual->Actor->GetProperty()->SetSpecularPower(20);
+  //visual->Actor->GetProperty()->SetColor(148/255.0, 147/255.0, 155/255.0);
+  visual->Actor->GetProperty()->SetColor(190/255.0, 190/255.0, 190/255.0);
+  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputData(visual->PolyData);
+  visual->Actor->SetMapper(mapper);
+
+  return visual;
+}
+
 ddMeshVisual::Ptr loadMeshVisual(const std::string& filename)
 {
-  ddMeshVisual::Ptr mesh(new ddMeshVisual);
-  mesh->FileName = filename;
-  mesh->PolyData = computeNormals(loadPolyData(filename));
-  mesh->Actor = vtkSmartPointer<vtkActor>::New();
+  vtkSmartPointer<vtkPolyData> polyData = loadPolyData(filename);
+  if (!polyData)
+  {
+    return ddMeshVisual::Ptr();
+  }
 
-  mesh->Actor->GetProperty()->SetSpecular(0.9);
-  mesh->Actor->GetProperty()->SetSpecularPower(20);
-  //mesh->Actor->GetProperty()->SetColor(148/255.0, 147/255.0, 155/255.0);
-  mesh->Actor->GetProperty()->SetColor(190/255.0, 190/255.0, 190/255.0);
-  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper->SetInputData(mesh->PolyData);
-  mesh->Actor->SetMapper(mapper);
+  return visualFromPolyData(polyData);
+}
 
-  return mesh;
+ddMeshVisual::Ptr makeSphereVisual(double radius)
+{
+  vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
+  sphere->SetPhiResolution(24);
+  sphere->SetThetaResolution(24);
+  sphere->SetRadius(radius);
+  sphere->Update();
+
+  return visualFromPolyData(shallowCopy(sphere->GetOutput()));
+}
+
+ddMeshVisual::Ptr makeCylinderVisual(double radius, double length)
+{
+  vtkSmartPointer<vtkCylinderSource> cylinder = vtkSmartPointer<vtkCylinderSource>::New();
+  cylinder->SetHeight(length);
+  cylinder->SetRadius(radius);
+  cylinder->SetResolution(24);
+  cylinder->Update();
+
+  vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+  transform->RotateX(90);
+  return visualFromPolyData(transformPolyData(cylinder->GetOutput(), transform));
+}
+
+ddMeshVisual::Ptr makeBoxVisual(double x, double y, double z)
+{
+  vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New();
+  cube->SetXLength(x);
+  cube->SetYLength(y);
+  cube->SetZLength(z);
+  cube->Update();
+  return visualFromPolyData(shallowCopy(cube->GetOutput()));
 }
 
 class URDFRigidBodyManipulatorVTK : public URDFRigidBodyManipulator
 {
 public:
 
-  typedef std::map<string, ddMeshVisual::Ptr> MeshMapType;
+  typedef std::map<boost::shared_ptr<urdf::Visual>, ddMeshVisual::Ptr> MeshMapType;
 
   MeshMapType mesh_map;
 
@@ -205,21 +262,57 @@ public:
     return visuals;
   }
 
-
-  virtual void loadURDFMesh(boost::shared_ptr<urdf::Mesh> mesh, const std::string& filename)
+  std::string locateMeshFile(boost::shared_ptr<urdf::Mesh> mesh, std::string root_dir)
   {
-    //std::cout << "Loading mesh: " << filename << std::endl;
-    ddMeshVisual::Ptr meshVisual = loadMeshVisual(filename);
 
-    if (!meshVisual)
+    string fname = mesh->filename;
+    bool has_package = boost::find_first(mesh->filename,"package://");
+
+    if (has_package)
     {
-      std::cout << "Error loading mesh from file: " << filename << std::endl;
+      //cout << "replacing " << fname;
+      boost::replace_first(fname,"package://","");
+      string package = fname.substr(0,fname.find_first_of("/"));
+      boost::replace_first(fname,package,rospack(package));
+      //cout << " with " << fname << endl;
     }
     else
     {
-      mesh_map.insert(make_pair(mesh->filename, meshVisual));
+      fname = root_dir + "/" + mesh->filename;
+    }
+
+    if (!boost::filesystem::exists(fname))
+    {
+      cerr << "cannot find mesh file: " << fname;
+      if (has_package)
+        cerr << " (note: original mesh string had a package:// in it, and I haven't really implemented rospack yet)";
+      cerr << endl;
+      return std::string();
+    }
+
+    boost::filesystem::path mypath(fname);
+    string ext = mypath.extension().native();
+    boost::to_lower(ext);
+
+    if (mypath.extension().native() != ".obj")
+    {
+      std::string fnameAsObj = mypath.replace_extension(".obj").native();
+      if ( boost::filesystem::exists( fnameAsObj ) )
+      {
+        return fnameAsObj;
+      }
+      else
+      {
+        cerr << "Warning: Mesh " << fname << " ignored because it does not have extension .obj (nor can I find a juxtaposed file with a .obj extension)" << endl;
+        return std::string();
+      }
+    }
+    else
+    {
+      return fname;
     }
   }
+
 
   virtual bool addURDF(boost::shared_ptr<urdf::ModelInterface> _urdf_model,
                        std::map<std::string, int> jointname_to_jointnum,
@@ -234,69 +327,54 @@ public:
       // load geometry
       if (l->second->visual) // then at least one default visual tag exists
       {
+
         // todo: iterate over all visual groups (not just "default")
+
         map<string, boost::shared_ptr<vector<boost::shared_ptr<urdf::Visual> > > >::iterator v_grp_it = l->second->visual_groups.find("default");
+        vector<boost::shared_ptr<urdf::Visual> > visuals = (*v_grp_it->second);
+
         for (size_t iv = 0;iv < v_grp_it->second->size();iv++)
         {
-          vector<boost::shared_ptr<urdf::Visual> > visuals = (*v_grp_it->second);
 
-          if (visuals[iv]->geometry->type == urdf::Geometry::MESH)
+          boost::shared_ptr<urdf::Visual> vptr = visuals[iv];
+
+          int visualType = vptr->geometry->type;
+
+          if (visualType == urdf::Geometry::MESH)
           {
-            boost::shared_ptr<urdf::Mesh> mesh(boost::dynamic_pointer_cast<urdf::Mesh>(visuals[iv]->geometry));
+            boost::shared_ptr<urdf::Mesh> mesh(boost::dynamic_pointer_cast<urdf::Mesh>(vptr->geometry));
 
-            MeshMapType::iterator iter = mesh_map.find(mesh->filename);
-            if (iter != mesh_map.end())  // then it's already in the map... no need to load it again
-              continue;
-
-            string fname = mesh->filename;
-            bool has_package = boost::find_first(mesh->filename,"package://");
-
-            if (has_package)
+            std::string filename = locateMeshFile(mesh, root_dir);
+            if (filename.size())
             {
-              //cout << "replacing " << fname;
-              boost::replace_first(fname,"package://","");
-              string package = fname.substr(0,fname.find_first_of("/"));
-              boost::replace_first(fname,package,rospack(package));
-              //cout << " with " << fname << endl;
-            }
-            else
-            {
-              fname = root_dir + "/" + mesh->filename;
-            }
-            boost::filesystem::path mypath(fname);
-
-            if (!boost::filesystem::exists(fname))
-            {
-              cerr << "cannot find mesh file: " << fname;
-              if (has_package)
-                cerr << " (note: original mesh string had a package:// in it, and I haven't really implemented rospack yet)";
-              cerr << endl;
-              continue;
-            }
-
-            string ext = mypath.extension().native();
-            boost::to_lower(ext);
-
-            if (ext.compare(".obj") == 0)
-            {
-              loadURDFMesh(mesh, fname);
-            }
-            else
-            {
-              // try changing the extension to dae and loading
-
-              fname = mypath.replace_extension(".obj").native();
-
-              if ( boost::filesystem::exists( fname ) )
-              {
-                loadURDFMesh(mesh, fname);
-              }
-              else
-              {
-                cerr << "Warning: Mesh " << fname << " ignored because it does not have extension .obj (nor can I find a juxtaposed file with a .obj extension)" << endl;
-              }
+              ddMeshVisual::Ptr meshVisual = loadMeshVisual(filename);
+              mesh_map[vptr] = meshVisual;
             }
           }
+          else if (visualType == urdf::Geometry::SPHERE)
+          {
+            boost::shared_ptr<urdf::Sphere> sphere(boost::dynamic_pointer_cast<urdf::Sphere>(vptr->geometry));
+            double radius = sphere->radius;
+
+            ddMeshVisual::Ptr meshVisual =  makeSphereVisual(radius);
+            mesh_map[vptr] = meshVisual;
+          }
+          else if (visualType == urdf::Geometry::BOX)
+          {
+            boost::shared_ptr<urdf::Box> box(boost::dynamic_pointer_cast<urdf::Box>(vptr->geometry));
+
+            ddMeshVisual::Ptr meshVisual =  makeBoxVisual(box->dim.x, box->dim.y, box->dim.z);
+            mesh_map[vptr] = meshVisual;
+          }
+          else if (visualType == urdf::Geometry::CYLINDER)
+          {
+            boost::shared_ptr<urdf::Cylinder> cyl(boost::dynamic_pointer_cast<urdf::Cylinder>(vptr->geometry));
+
+            ddMeshVisual::Ptr meshVisual =  makeCylinderVisual(cyl->radius, cyl->length);
+            mesh_map[vptr] = meshVisual;
+          }
+
+
         }
       }
     }
@@ -323,188 +401,144 @@ public:
       // iterate over each link and draw
       for (map<string, boost::shared_ptr<urdf::Link> >::iterator l=urdf_model[robot]->links_.begin(); l!=urdf_model[robot]->links_.end(); l++)
       {
-        if (l->second->visual) // then at least one default visual tag exists
+        if (!l->second->visual) // then at least one default visual tag exists
         {
-          int body_ind;
-          if (l->second->parent_joint)
-          {
-            map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],l->second->parent_joint->name);
-            if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
-            body_ind = j2->second;
-          }
-          else
-          {
-            map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],"base");
-            if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
-            body_ind = j2->second;  // then it's attached directly to the floating base
-          }
+          continue;
+        }
 
-          //cout << "drawing robot " << robot << " body_ind " << body_ind << ": " << bodies[body_ind].linkname << endl;
+        int body_ind;
+        if (l->second->parent_joint)
+        {
+          map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],l->second->parent_joint->name);
+          if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
+          body_ind = j2->second;
+        }
+        else
+        {
+          map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],"base");
+          if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
+          body_ind = j2->second;  // then it's attached directly to the floating base
+        }
 
-          forwardKin(body_ind,zero,2,pose);
+        //cout << "drawing robot " << robot << " body_ind " << body_ind << ": " << bodies[body_ind].linkname << endl;
 
-          //cout << l->second->name << " is at " << pose.transpose() << endl;
+        forwardKin(body_ind, zero, 2, pose);
 
-          double* posedata = pose.data();
+        //cout << l->second->name << " is at " << pose.transpose() << endl;
 
-          //bot_quat_to_angle_axis(&posedata[3], &theta, axis);
+        double* posedata = pose.data();
+
+        //bot_quat_to_angle_axis(&posedata[3], &theta, axis);
+        //glPushMatrix();
+        //glTranslatef(pose(0),pose(1),pose(2));
+        //glRotatef(theta * 180/3.141592654, axis[0], axis[1], axis[2]);
+
+
+
+        //QuaternionToAngleAxis(&posedata[3], angleAxis);
+        bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
+        angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
+
+        vtkSmartPointer<vtkTransform> worldToLink = vtkSmartPointer<vtkTransform>::New();
+        worldToLink->PreMultiply();
+        worldToLink->Translate(pose(0), pose(1), pose(2));
+        worldToLink->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+
+        //printf("link rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+        //printf("link translation: [%f, %f, %f]\n", pose(0), pose(1), pose(2));
+
+
+        // todo: iterate over all visual groups (not just "default")
+        map<string, boost::shared_ptr<vector<boost::shared_ptr<urdf::Visual> > > >::iterator v_grp_it = l->second->visual_groups.find("default");
+        if (v_grp_it == l->second->visual_groups.end()) continue;
+
+        vector<boost::shared_ptr<urdf::Visual> > *visuals = v_grp_it->second.get();
+        for (vector<boost::shared_ptr<urdf::Visual> >::iterator viter = visuals->begin(); viter!=visuals->end(); viter++)
+        {
+          boost::shared_ptr<urdf::Visual> vptr = *viter;
+          if (!vptr) continue;
+
           //glPushMatrix();
-          //glTranslatef(pose(0),pose(1),pose(2));
-          //glRotatef(theta * 180/3.141592654, axis[0], axis[1], axis[2]);
 
+          // handle visual material
+          if (vptr->material)
+          {
+            //glColor4f(vptr->material->color.r,
+            //    vptr->material->color.g,
+            //    vptr->material->color.b,
+            //    vptr->material->color.a);
+          }
 
+          // todo: handle textures here?
 
-          //QuaternionToAngleAxis(&posedata[3], angleAxis);
-          bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
+          // handle visual origin
+
+          /*
+          glTranslatef(vptr->origin.position.x,
+                       vptr->origin.position.y,
+                       vptr->origin.position.z);
+
+          quat[0] = vptr->origin.rotation.w;
+          quat[1] = vptr->origin.rotation.x;
+          quat[2] = vptr->origin.rotation.y;
+          quat[3] = vptr->origin.rotation.z;
+          bot_quat_to_angle_axis(quat, &theta, axis);
+          glRotatef(theta * 180/3.141592654, axis[0], axis[1], axis[2]);
+          */
+
+          quat[0] = vptr->origin.rotation.w;
+          quat[1] = vptr->origin.rotation.x;
+          quat[2] = vptr->origin.rotation.y;
+          quat[3] = vptr->origin.rotation.z;
+
+          //QuaternionToAngleAxis(quat, angleAxis);
+          bot_quat_to_angle_axis(quat, &angleAxis[0], &angleAxis[1]);
           angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
 
-          vtkSmartPointer<vtkTransform> worldToLink = vtkSmartPointer<vtkTransform>::New();
-          worldToLink->PreMultiply();
-          worldToLink->Translate(pose(0), pose(1), pose(2));
-          worldToLink->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+          vtkSmartPointer<vtkTransform> linkToVisual = vtkSmartPointer<vtkTransform>::New();
+          linkToVisual->PreMultiply();
+          linkToVisual->Translate(vptr->origin.position.x,
+                                 vptr->origin.position.y,
+                                 vptr->origin.position.z);
+          linkToVisual->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
 
-          //printf("link rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
-          //printf("link translation: [%f, %f, %f]\n", pose(0), pose(1), pose(2));
+          //printf("visual rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+          //printf("visual translation: [%f, %f, %f]\n", vptr->origin.position.x, vptr->origin.position.y, vptr->origin.position.z);
 
 
-          // todo: iterate over all visual groups (not just "default")
-          map<string, boost::shared_ptr<vector<boost::shared_ptr<urdf::Visual> > > >::iterator v_grp_it = l->second->visual_groups.find("default");
-          if (v_grp_it == l->second->visual_groups.end()) continue;
-
-          vector<boost::shared_ptr<urdf::Visual> > *visuals = v_grp_it->second.get();
-          for (vector<boost::shared_ptr<urdf::Visual> >::iterator viter = visuals->begin(); viter!=visuals->end(); viter++)
+          int visualType = vptr->geometry->type;
+          if (visualType == urdf::Geometry::MESH)
           {
-            urdf::Visual * vptr = viter->get();
-            if (!vptr) continue;
 
-            //glPushMatrix();
+            boost::shared_ptr<urdf::Mesh> mesh(boost::dynamic_pointer_cast<urdf::Mesh>(vptr->geometry));
 
-            // handle visual material
-            if (vptr->material)
-            {
-              //glColor4f(vptr->material->color.r,
-              //    vptr->material->color.g,
-              //    vptr->material->color.b,
-              //    vptr->material->color.a);
-            }
+            //glScalef(mesh->scale.x,mesh->scale.y,mesh->scale.z);
 
-            // todo: handle textures here?
+            linkToVisual->Scale(mesh->scale.x,
+                                mesh->scale.y,
+                                mesh->scale.z);
 
-            // handle visual origin
+            //printf("visual scale: [%f, %f, %f]\n", mesh->scale.x, mesh->scale.y, mesh->scale.z);
 
-            /*
-            glTranslatef(vptr->origin.position.x,
-                         vptr->origin.position.y,
-                         vptr->origin.position.z);
+          }
 
-            quat[0] = vptr->origin.rotation.w;
-            quat[1] = vptr->origin.rotation.x;
-            quat[2] = vptr->origin.rotation.y;
-            quat[3] = vptr->origin.rotation.z;
-            bot_quat_to_angle_axis(quat, &theta, axis);
-            glRotatef(theta * 180/3.141592654, axis[0], axis[1], axis[2]);
-            */
+          vtkSmartPointer<vtkTransform> worldToVisual = vtkSmartPointer<vtkTransform>::New();
+          worldToVisual->PreMultiply();
+          worldToVisual->Concatenate(worldToLink);
+          worldToVisual->Concatenate(linkToVisual);
+          worldToVisual->Update();
 
-            quat[0] = vptr->origin.rotation.w;
-            quat[1] = vptr->origin.rotation.x;
-            quat[2] = vptr->origin.rotation.y;
-            quat[3] = vptr->origin.rotation.z;
+          MeshMapType::iterator iter = mesh_map.find(vptr);
+          if (iter!= mesh_map.end())
+          {
+            ddMeshVisual::Ptr meshVisual = iter->second;
+            meshVisual->Actor->SetUserTransform(worldToVisual);
 
-            //QuaternionToAngleAxis(quat, angleAxis);
-            bot_quat_to_angle_axis(quat, &angleAxis[0], &angleAxis[1]);
-            angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
+          }
 
-            vtkSmartPointer<vtkTransform> linkToVisual = vtkSmartPointer<vtkTransform>::New();
-            linkToVisual->PreMultiply();
-            linkToVisual->Translate(vptr->origin.position.x,
-                                   vptr->origin.position.y,
-                                   vptr->origin.position.z);
-            linkToVisual->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
-
-            //printf("visual rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
-            //printf("visual translation: [%f, %f, %f]\n", vptr->origin.position.x, vptr->origin.position.y, vptr->origin.position.z);
-
-
-            int type = vptr->geometry->type;
-            if (type == urdf::Geometry::SPHERE)
-            {
-              boost::shared_ptr<urdf::Sphere> sphere(boost::dynamic_pointer_cast<urdf::Sphere>(vptr->geometry));
-              double radius = sphere->radius;
-
-              //glutSolidSphere(radius,36,36);
-            }
-            else if (type == urdf::Geometry::BOX)
-            {
-
-              boost::shared_ptr<urdf::Box> box(boost::dynamic_pointer_cast<urdf::Box>(vptr->geometry));
-
-              //glScalef(box->dim.x,box->dim.y,box->dim.z);
-              //bot_gl_draw_cube();
-            }
-            else if (type == urdf::Geometry::CYLINDER)
-            {
-
-              boost::shared_ptr<urdf::Cylinder> cyl(boost::dynamic_pointer_cast<urdf::Cylinder>(vptr->geometry));
-
-              // transform to center of cylinder
-              /*
-              glTranslatef(0.0,0.0,-cyl->length/2.0);
-              GLUquadricObj* quadric = gluNewQuadric();
-              gluQuadricDrawStyle(quadric, GLU_FILL);
-              gluQuadricNormals(quadric, GLU_SMOOTH);
-              gluQuadricOrientation(quadric, GLU_OUTSIDE);
-              gluCylinder(quadric,
-                    cyl->radius,
-                    cyl->radius,
-                    (double) cyl->length,
-                    36,
-                    1);
-              gluDeleteQuadric(quadric);
-              */
-
-            }
-            else if (type == urdf::Geometry::MESH)
-            {
-
-              boost::shared_ptr<urdf::Mesh> mesh(boost::dynamic_pointer_cast<urdf::Mesh>(vptr->geometry));
-
-              //glScalef(mesh->scale.x,mesh->scale.y,mesh->scale.z);
-
-              linkToVisual->Scale(mesh->scale.x,
-                                  mesh->scale.y,
-                                  mesh->scale.z);
-
-              //printf("visual scale: [%f, %f, %f]\n", mesh->scale.x, mesh->scale.y, mesh->scale.z);
-
-              vtkSmartPointer<vtkTransform> worldToVisual = vtkSmartPointer<vtkTransform>::New();
-              worldToVisual->PreMultiply();
-              worldToVisual->Concatenate(worldToLink);
-              worldToVisual->Concatenate(linkToVisual);
-              worldToVisual->Update();
-
-              MeshMapType::iterator iter = mesh_map.find(mesh->filename);
-              if (iter!= mesh_map.end())
-              {
-                //bot_wavefront_model_gl_draw(iter->second);
-
-                ddMeshVisual::Ptr meshVisual = iter->second;
-                if (meshVisual)
-                {
-                  //worldToVisual->Print(std::cout);
-                  meshVisual->Actor->SetUserTransform(worldToVisual);
-                }
-
-              }
-
-            }
-
-            //glPopMatrix();
-          } // end for loop over visuals
-
-          //glPopMatrix();
-        }
-      } // end for loop over links
-    }
+        } // end loop over visuals
+      } // end loop over links
+    } // end loop over robots
   }
 
 

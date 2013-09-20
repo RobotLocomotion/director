@@ -44,6 +44,7 @@ ddMainWindow::ddMainWindow()
   this->connect(this->Internal->ActionQuit, SIGNAL(triggered()), QApplication::instance(), SLOT(quit()));
 
   this->Internal->OutputConsoleDock->hide();
+  this->connect(this->Internal->ActionMatlabConsole, SIGNAL(triggered()), this, SLOT(toggleOutputConsoleVisibility()));
 
   QTimer::singleShot(0, this, SLOT(startup()));
 
@@ -94,6 +95,19 @@ QTreeWidget* ddMainWindow::objectTree() const
 QTextEdit* ddMainWindow::outputConsole() const
 {
   return this->Internal->OutputConsole;
+}
+
+//-----------------------------------------------------------------------------
+void ddMainWindow::toggleOutputConsoleVisibility()
+{
+  if (this->Internal->OutputConsoleDock->isHidden())
+  {
+    this->Internal->OutputConsoleDock->show();
+  }
+  else
+  {
+    this->Internal->OutputConsoleDock->hide();
+  }
 }
 
 //-----------------------------------------------------------------------------

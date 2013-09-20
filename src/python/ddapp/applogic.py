@@ -28,6 +28,10 @@ def getSpreadsheetView():
     return getMainWindow().viewManager().findView('Spreadsheet View')
 
 
+def getOutputConsole():
+    return getMainWindow().outputConsole()
+
+
 def getURDFModelDir():
     return os.path.join(getDRCBase(), 'software/models/mit_gazebo_models/mit_robot_drake')
 
@@ -55,6 +59,9 @@ def setupToolBar():
     combo.addItem('Load URDF...')
     combo.addItem('model.urdf')
     combo.addItem('model_minimal_contact.urdf')
+    combo.addItem('model_minimal_contact_point_hands.urdf')
+    combo.addItem('model_minimal_contact_fixedjoint_hands.urdf')
+
     combo.connect('currentIndexChanged(const QString&)', onComboChanged)
     toolbar = getMainWindow().toolBar()
     toolbar.addWidget(combo)

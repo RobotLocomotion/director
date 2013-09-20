@@ -13,13 +13,28 @@ class AsyncIKCommunicator(TimerCallback):
     def __init__(self, jointController):
         TimerCallback.__init__(self)
         self.targetFps = 60
-        #self.reader = midi.MidiReader()
+        self.comm = None
+        self.outputConsole = None
+        self.reader = midi.MidiReader()
         self.controller = jointController
         self.channelsX = [midi.TriggerFinger.faders[0], midi.TriggerFinger.pads[0], midi.TriggerFinger.dials[0] ]
         self.channelsY = [midi.TriggerFinger.faders[1], midi.TriggerFinger.pads[1], midi.TriggerFinger.dials[1] ]
         self.channelsZ = [midi.TriggerFinger.faders[3], midi.TriggerFinger.pads[2], midi.TriggerFinger.dials[2] ]
-        self.footOffsets = [0.0, 0.0, 0.0]
+        self.positionOffset = [0.0, 0.0, 0.0]
+        self.activePositionConstraint = 'r_hand'
         self.seedWithNominal = False
+        self.infoFunc = None
+        self.midiMap = [-1.0, 1.0]
+
+        self.activeConstraintNames = [
+               'both_feet_qsc',
+               'l_foot_position_constraint',
+               'r_foot_position_constraint',
+               'utorso_gaze_constraint',
+               'r_hand_position_constraint',
+               'scc',
+              ]
+
         self.tasks = []
 
     def _startupCommands(self):
@@ -34,6 +49,7 @@ class AsyncIKCommunicator(TimerCallback):
 
         proc = matlab.startMatlab()
         self.comm = matlab.MatlabCommunicator(proc)
+        self.comm.outputConsole = self.outputConsole
         self.comm.waitForResult()
         self.comm.printResult()
         self.comm.sendCommands(self._startupCommands())
@@ -42,6 +58,7 @@ class AsyncIKCommunicator(TimerCallback):
 
         proc = matlab.startMatlab()
         self.comm = matlab.MatlabCommunicator(proc)
+        self.comm.outputConsole = self.outputConsole
         self.tasks.append(self.comm.waitForResultAsync())
         self.tasks.append(functools.partial(self.comm.printResult))
         self.tasks.append(self.comm.sendCommandsAsync(self._startupCommands()))
@@ -79,18 +96,25 @@ class AsyncIKCommunicator(TimerCallback):
     def interact(self):
         self.comm.interact()
 
+    def setActivePositionConstraint(self, name):
+      self.positionOffset = [0.0, 0.0, 0.0]
+      self.activePositionConstraint = name
+
     def updateIk(self):
 
         commands = []
-        commands.append('l_foot_target = vertcat(l_foot_target_start(1,:)+%s, l_foot_target_start(2,:)+%s, l_foot_target_start(3,:)+%s);' % (self.footOffsets[0], self.footOffsets[1], self.footOffsets[2]) )
-        commands.append('kc2l = WorldPositionConstraint(r, l_foot, l_foot_pts, l_foot_target, l_foot_target, tspan);')
+
+        formatArgs = dict(name=self.activePositionConstraint, x=self.positionOffset[0], y=self.positionOffset[1], z=self.positionOffset[2])
+        commands.append('{name}_target = vertcat({name}_target_start(1,:)+{x}, {name}_target_start(2,:)+{y}, {name}_target_start(3,:)+{z});'.format(**formatArgs))
+        commands.append('{name}_position_constraint = WorldPositionConstraint(r, {name}, {name}_pts, {name}_target, {name}_target, tspan);'.format(**formatArgs))
 
         if self.seedWithNominal:
             commands.append('q_seed = q_nom;')
         else:
             commands.append('q_seed = q_end;')
 
-        commands.append('[q_end, info] = inverseKin(r, q_seed, q_nom, qsc, kc2l, kc2r, kc4, s.ikoptions);')
+        commands.append('active_constraints = {%s};' % ', '.join(self.activeConstraintNames))
+        commands.append('[q_end, info] = inverseKin(r, q_seed, q_nom, active_constraints{:}, s.ikoptions);')
 
         #self.tasks.append(self.comm.sendCommandsAsync(commands))
         #self.tasks.append(functools.partial(self.fetchPoseFromServer, 'q_end'))
@@ -99,16 +123,19 @@ class AsyncIKCommunicator(TimerCallback):
         self.comm.sendCommands(commands)
         self.fetchPoseFromServer('q_end')
         info = self.comm.getFloatArray('info')[0]
-        print 'info:', info
+
+        if self.infoFunc:
+            self.infoFunc(info)
 
     def resetQSeed(self):
         commands = []
-        commands.append('q_seed = q_nom;')
+        commands.append('q_end = q_nom;')
         self.comm.sendCommands(commands)
-
+        self.updateIk()
 
     def _scaleMidiValue(self, midiValue):
-        scaledValue = midiValue * 0.5/127.0
+        ''' midi sends a value between 0 and 127 '''
+        scaledValue = self.midiMap[0] + midiValue * (self.midiMap[1] - self.midiMap[0])/127.0
         return scaledValue
 
     def handleMidiEvents(self):
@@ -127,13 +154,13 @@ class AsyncIKCommunicator(TimerCallback):
         for channel, value in targets.iteritems():
 
             if channel in self.channelsX:
-                self.footOffsets[0] = self._scaleMidiValue(value)
+                self.positionOffset[0] = self._scaleMidiValue(value)
                 shouldUpdate = True
             elif channel in self.channelsY:
-                self.footOffsets[1] = self._scaleMidiValue(value)
+                self.positionOffset[1] = self._scaleMidiValue(value)
                 shouldUpdate = True
             elif channel in self.channelsZ:
-                self.footOffsets[2] = self._scaleMidiValue(value)
+                self.positionOffset[2] = self._scaleMidiValue(value)
                 shouldUpdate = True
 
         if shouldUpdate:
@@ -144,4 +171,4 @@ class AsyncIKCommunicator(TimerCallback):
         if self.handleAsyncTasks() > 0:
             return
 
-        #self.handleMidiEvents()
+        self.handleMidiEvents()

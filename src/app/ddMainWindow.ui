@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>949</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="FileMenu">
@@ -39,6 +39,7 @@
     </property>
     <addaction name="ActionPythonConsole"/>
     <addaction name="separator"/>
+    <addaction name="ActionMatlabConsole"/>
    </widget>
    <widget class="QMenu" name="ViewMenu">
     <property name="title">
@@ -150,6 +151,14 @@
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="ActionMatlabConsole">
+   <property name="text">
+    <string>Matlab Console</string>
+   </property>
+   <property name="shortcut">
+    <string>F9</string>
    </property>
   </action>
  </widget>

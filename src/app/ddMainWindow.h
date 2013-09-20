@@ -26,6 +26,7 @@ public:
 protected slots:
 
   void startup();
+  void toggleOutputConsoleVisibility();
 
 protected:
 
