@@ -14,7 +14,7 @@ class ddPythonManager::ddInternal
 {
 public:
 
-  ctkPythonConsole* Console;
+  QPointer<ctkPythonConsole> Console;
 };
 
 
@@ -24,8 +24,6 @@ ddPythonManager::ddPythonManager(QObject* parent) : ctkAbstractPythonManager(par
   this->Internal = new ddInternal;
 
   ctkPythonConsole* console = new ctkPythonConsole;
-
-
   console->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
   console->initialize(this);
   console->setAttribute(Qt::WA_QuitOnClose, true);

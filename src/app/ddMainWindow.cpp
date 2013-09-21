@@ -13,6 +13,7 @@
 #include <QShortcut>
 #include <QStatusBar>
 #include <QLabel>
+#include <QPointer>
 
 #include <cstdio>
 
@@ -24,7 +25,7 @@ public:
 
   ddViewManager* ViewManager;
   ddPropertiesPanel* PropertiesPanel;
-  ddPythonManager* PythonManager;
+  QPointer<ddPythonManager> PythonManager;
 
   ddViewMenu* ViewMenuManager;
 };
@@ -167,10 +168,16 @@ void ddMainWindow::setupViewMenu()
     this->Internal->MainToolBar->windowTitle());
 
 }
+
+//-----------------------------------------------------------------------------
+void ddMainWindow::setPythonManager(ddPythonManager* pythonManager)
+{
+  this->Internal->PythonManager = pythonManager;
+}
+
 //-----------------------------------------------------------------------------
 void ddMainWindow::setupPython()
 {
-  this->Internal->PythonManager = new ddPythonManager(this);
   this->Internal->PythonManager->addObjectToPythonMain("_mainWindow", this);
   this->Internal->PythonManager->setupConsole(this);
   this->connect(this->Internal->ActionPythonConsole, SIGNAL(triggered()), this->Internal->PythonManager, SLOT(showConsole()));

@@ -5,6 +5,7 @@
 
 class ddViewManager;
 class ddPropertiesPanel;
+class ddPythonManager;
 class QTreeWidget;
 class QTextEdit;
 class QDockWidget;
@@ -25,6 +26,8 @@ public:
   QTextEdit* outputConsole() const;
 
   void addWidgetToViewMenu(QWidget* widget);
+
+  void setPythonManager(ddPythonManager* pythonManager);
 
 signals:
 
