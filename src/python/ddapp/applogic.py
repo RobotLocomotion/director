@@ -2,6 +2,7 @@
 import os
 import time
 import math
+import vtk
 import PythonQt
 from PythonQt import QtCore
 from PythonQt import QtGui
@@ -68,6 +69,17 @@ def toggleStereoRender():
     renderWindow.SetStereoRender(not renderWindow.GetStereoRender())
     getDRCView().render()
 
+def toggleCameraTerrainMode():
+
+    iren = getDRCView().renderWindow().GetInteractor()
+    if isinstance(iren.GetInteractorStyle(), vtk.vtkInteractorStyleTerrain):
+        iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
+    else:
+        iren.SetInteractorStyle(vtk.vtkInteractorStyleTerrain())
+        getDRCView().camera().SetViewUp(0,0,1)
+
+    getDRCView().render()
+
 
 def setupToolBar():
 
@@ -106,6 +118,7 @@ def startup(globals):
 
     _mainWindow.connect('resetCamera()', resetCamera)
     _mainWindow.connect('toggleStereoRender()', toggleStereoRender)
+    _mainWindow.connect('toggleCameraTerrainMode()', toggleCameraTerrainMode)
 
     #setupToolBar()
 

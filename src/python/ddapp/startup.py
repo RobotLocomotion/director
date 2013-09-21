@@ -58,6 +58,7 @@ s.outputConsole = app.getOutputConsole()
 s.start()
 s.startServerAsync()
 
+
 def _displaySnoptInfo(info):
     _mainWindow.statusBar().showMessage('Info: %d' % info)
 
@@ -318,9 +319,24 @@ tree = app.getMainWindow().objectTree()
 
 parentItem = addContainerToObjectTree('affordances')
 tableModel = view.loadURDFModel(os.path.join(app.getDRCBase(), 'software/drake/systems/plants/test/table.urdf'))
+tableModel.setVisible(False)
 addModelToObjectTree(tableModel, parentItem)
 
 
 e = ikeditor.IKEditor(app.getMainWindow(), s, poseCollection, costCollection)
 app.addWidgetToDock(e.widget)
+
+
+
+tdxStyle = view.renderWindow().GetInteractor().GetInteractorStyle().GetTDxStyle()
+tdxSettings = tdxStyle.GetSettings()
+
+translationSensitivity = 0.03
+angleSensitivity = 0.6
+tdxSettings.SetAngleSensitivity(angleSensitivity)
+tdxSettings.SetTranslationXSensitivity(translationSensitivity)
+tdxSettings.SetTranslationYSensitivity(translationSensitivity)
+tdxSettings.SetTranslationZSensitivity(translationSensitivity)
+
+view.resetCamera()
 

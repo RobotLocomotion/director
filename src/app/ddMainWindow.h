@@ -30,6 +30,7 @@ signals:
 
   void resetCamera();
   void toggleStereoRender();
+  void toggleCameraTerrainMode();
 
 
 protected slots:

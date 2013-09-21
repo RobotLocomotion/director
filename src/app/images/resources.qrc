@@ -8,5 +8,6 @@
     <file>eye_icon_gray.png</file>
     <file>3d_glasses.png</file>
     <file>reset_camera.png</file>
+    <file>camera_mode.png</file>
   </qresource>
 </RCC>

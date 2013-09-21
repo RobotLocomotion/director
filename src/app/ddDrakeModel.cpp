@@ -15,7 +15,8 @@
 #include <vtkCubeSource.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTransform.h>
-#include <vtkQuaternion.h>
+#include <vtkMath.h>
+//#include <vtkQuaternion.h>
 #include <vtkProperty.h>
 
 #include <map>
@@ -33,6 +34,12 @@ using std::map;
 using std::vector;
 using std::string;
 using std::istringstream;
+
+#if VTK_MAJOR_VERSION == 6
+ #define SetInputData(filter, obj) filter->SetInputData(obj);
+#else
+  #define SetInputData(filter, obj) filter->SetInput(obj);
+#endif
 
 class ddMeshVisual
 {
@@ -135,7 +142,7 @@ vtkSmartPointer<vtkPolyData> computeNormals(vtkPolyData* polyData)
 {
   vtkSmartPointer<vtkPolyDataNormals> normalsFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
   normalsFilter->SetFeatureAngle(45);
-  normalsFilter->SetInputData(polyData);
+  SetInputData(normalsFilter, polyData);
   normalsFilter->Update();
   return shallowCopy(normalsFilter->GetOutput());
 }
@@ -144,7 +151,7 @@ vtkSmartPointer<vtkPolyData> transformPolyData(vtkPolyData* polyData, vtkTransfo
 {
   vtkSmartPointer<vtkTransformPolyDataFilter> transformFilter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
   transformFilter->SetTransform(transform);
-  transformFilter->SetInputData(polyData);
+  SetInputData(transformFilter, polyData);
   transformFilter->Update();
   return shallowCopy(transformFilter->GetOutput());
 }
@@ -163,12 +170,14 @@ vtkSmartPointer<vtkPolyData> loadPolyData(const std::string filename)
   return shallowCopy(reader->GetOutput());
 }
 
+/*
 void QuaternionToAngleAxis(double wxyz[4], double angleAxis[4])
 {
   vtkQuaternion<double> quat(wxyz);
   angleAxis[0] = quat.GetRotationAngleAndAxis(angleAxis+1);
   angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
 }
+*/
 
 ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
 {
@@ -181,7 +190,7 @@ ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
   //visual->Actor->GetProperty()->SetColor(148/255.0, 147/255.0, 155/255.0);
   visual->Actor->GetProperty()->SetColor(190/255.0, 190/255.0, 190/255.0);
   vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper->SetInputData(visual->PolyData);
+  SetInputData(mapper, visual->PolyData);
   visual->Actor->SetMapper(mapper);
 
   return visual;

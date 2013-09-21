@@ -2,10 +2,8 @@ import math
 import types
 import functools
 from ddapp.timercallback import TimerCallback
-from ddapp import midi
 from ddapp import matlab
 from ddapp.jointcontrol import JointController
-
 
 
 class AsyncIKCommunicator(TimerCallback):
@@ -16,25 +14,25 @@ class AsyncIKCommunicator(TimerCallback):
         self.comm = None
         self.outputConsole = None
         self.controller = jointController
-        self.channelsX = [midi.TriggerFinger.faders[0], midi.TriggerFinger.pads[0], midi.TriggerFinger.dials[0] ]
-        self.channelsY = [midi.TriggerFinger.faders[1], midi.TriggerFinger.pads[1], midi.TriggerFinger.dials[1] ]
-        self.channelsZ = [midi.TriggerFinger.faders[3], midi.TriggerFinger.pads[2], midi.TriggerFinger.dials[2] ]
         self.positionOffset = [0.0, 0.0, 0.0]
         self.activePositionConstraint = 'l_foot'
         self.quasiStaticConstraintName = 'both_feet_qsc'
         self.seedName = 'q_end'
         self.nominalName = 'q_nom'
         self.infoFunc = None
-        self.midiMap = [-1.0, 1.0]
         self.poses = None
 
         self.constraintNames = [
            'self_collision_constraint',
            'l_foot_position_constraint',
            'r_foot_position_constraint',
-           'utorso_gaze_constraint',
-           'pelvis_position_constraint',
+           'l_hand_position_constraint',
            'r_hand_position_constraint',
+           'pelvis_position_constraint',
+           'l_hand_gaze_constraint',
+           'r_hand_gaze_constraint',
+           'pelvis_gaze_constraint',
+           'utorso_gaze_constraint',
         ]
         self.activeConstraintNames = [
            'l_foot_position_constraint',
@@ -43,13 +41,6 @@ class AsyncIKCommunicator(TimerCallback):
           ]
 
         self.tasks = []
-        self._initMidi()
-
-    def _initMidi(self):
-        try:
-            self.reader = midi.MidiReader()
-        except AssertionError:
-            self.reader = None
 
     def _startupCommands(self):
 
@@ -130,6 +121,8 @@ class AsyncIKCommunicator(TimerCallback):
         #self.tasks.append(functools.partial(self.fetchPoseFromServer, 'q_end'))
         #self.waitForAsyncTasks()
 
+        print '\n'.join(commands)
+
         self.comm.sendCommands(commands)
         self.fetchPoseFromServer('q_end')
         info = self.comm.getFloatArray('info')[0]
@@ -143,43 +136,7 @@ class AsyncIKCommunicator(TimerCallback):
         self.comm.sendCommands(commands)
         self.updateIk()
 
-    def _scaleMidiValue(self, midiValue):
-        ''' midi sends a value between 0 and 127 '''
-        scaledValue = self.midiMap[0] + midiValue * (self.midiMap[1] - self.midiMap[0])/127.0
-        return scaledValue
-
-    def handleMidiEvents(self):
-
-        messages = self.reader.getMessages()
-        if not messages:
-            return
-
-        targets = {}
-        for message in messages:
-            channel = message[2]
-            value = message[3]
-            targets[channel] = value
-
-        shouldUpdate = False
-        for channel, value in targets.iteritems():
-
-            if channel in self.channelsX:
-                self.positionOffset[0] = self._scaleMidiValue(value)
-                shouldUpdate = True
-            elif channel in self.channelsY:
-                self.positionOffset[1] = self._scaleMidiValue(value)
-                shouldUpdate = True
-            elif channel in self.channelsZ:
-                self.positionOffset[2] = self._scaleMidiValue(value)
-                shouldUpdate = True
-
-        if shouldUpdate:
-            self.updateIk()
-
     def tick(self):
 
         if self.handleAsyncTasks() > 0:
             return
-
-        if self.reader:
-            self.handleMidiEvents()

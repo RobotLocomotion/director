@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>949</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="FileMenu">
@@ -99,6 +99,7 @@
    <addaction name="ActionMatlabConsole"/>
    <addaction name="separator"/>
    <addaction name="ActionToggleStereoRender"/>
+   <addaction name="ActionToggleCameraTerrainMode"/>
    <addaction name="ActionResetCamera"/>
   </widget>
   <widget class="QDockWidget" name="PropertiesDock">
@@ -171,6 +172,9 @@
    </property>
   </action>
   <action name="ActionToggleStereoRender">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="images/resources.qrc">
      <normaloff>:/images/3d_glasses.png</normaloff>:/images/3d_glasses.png</iconset>
@@ -189,6 +193,21 @@
    </property>
    <property name="text">
     <string>Reset Camera</string>
+   </property>
+  </action>
+  <action name="ActionToggleCameraTerrainMode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/camera_mode.png</normaloff>:/images/camera_mode.png</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Camera Terrain Mode</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle Camera Terrain Mode</string>
    </property>
   </action>
  </widget>

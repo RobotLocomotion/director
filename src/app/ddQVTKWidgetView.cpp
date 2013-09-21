@@ -44,6 +44,8 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->VTKWidget = new QVTKWidget;
   layout->addWidget(this->Internal->VTKWidget);
 
+  this->Internal->VTKWidget->SetUseTDx(true);
+
   this->Internal->RenderWindow = vtkSmartPointer<vtkRenderWindow>::New();
   this->Internal->RenderWindow->SetMultiSamples(8);
   this->Internal->RenderWindow->StereoCapableWindowOn();

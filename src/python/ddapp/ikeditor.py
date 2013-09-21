@@ -1,6 +1,8 @@
 from PythonQt import QtCore, QtGui, QtUiTools
 import math
 import numpy as np
+from ddapp import midi
+from ddapp.timercallback import TimerCallback
 
 
 def addWidgetsToDict(widgets, d):
@@ -44,6 +46,9 @@ class IKEditor(object):
         self.ui = WidgetDict(self.widget.children())
 
 
+        self.ui.UpdateIKButton.connect('clicked()', self.updateIKClicked)
+        self.ui.AutoUpdateCheck.connect('clicked()', self.autoUpdateClicked)
+
         self.ui.SeedCombo.connect('currentIndexChanged(const QString&)', self.seedComboChanged)
         self.ui.NominalCombo.connect('currentIndexChanged(const QString&)', self.nominalComboChanged)
         self.ui.CostsCombo.connect('currentIndexChanged(const QString&)', self.costsComboChanged)
@@ -53,14 +58,23 @@ class IKEditor(object):
         self.ui.RightFootEnabled.connect('clicked()', self.rightFootEnabledClicked)
         self.ui.ShrinkFactor.connect('valueChanged(double)', self.shrinkFactorChanged)
 
+        self.ui.TargetX.connect('valueChanged(double)', self.positionTargetChanged)
+        self.ui.TargetY.connect('valueChanged(double)', self.positionTargetChanged)
+        self.ui.TargetZ.connect('valueChanged(double)', self.positionTargetChanged)
 
-        self.ui.PositionXEnabled.connect('valueChanged(double)', self.positionTargetChanged)
-        self.ui.PositionYEnabled.connect('valueChanged(double)', self.positionTargetChanged)
-        self.ui.PositionZEnabled.connect('valueChanged(double)', self.positionTargetChanged)
+        self.ui.OffsetX.connect('valueChanged(double)', self.positionOffsetChanged)
+        self.ui.OffsetY.connect('valueChanged(double)', self.positionOffsetChanged)
+        self.ui.OffsetZ.connect('valueChanged(double)', self.positionOffsetChanged)
+
+        self.ui.PositionXEnabled.connect('clicked()', self.positionTargetChanged)
+        self.ui.PositionYEnabled.connect('clicked()', self.positionTargetChanged)
+        self.ui.PositionZEnabled.connect('clicked()', self.positionTargetChanged)
 
         self.server = server
         self.poseCollection = poseCollection
         self.costCollection = costCollection
+        self.midiEditor = MidiOffsetEditor(server, self)
+        self.midiEditor.start()
 
         poseCollection.connect('itemAdded(const QString&)', self.onPoseAdded)
 
@@ -86,6 +100,12 @@ class IKEditor(object):
     def onCostAdded(self):
         updateComboStrings(self.ui.CostsCombo, sorted(self.costCollection.map().keys()), 'default_cost')
 
+    def updateIKClicked(self):
+        self.server.updateIk()
+
+    def autoUpdateClicked(self):
+        print 'auto update enabled:', self.ui.AutoUpdateCheck.checked
+        self.midiEditor.enabled = self.ui.AutoUpdateCheck.checked
 
     def seedComboChanged(self, name):
         print 'seed:', name
@@ -100,6 +120,15 @@ class IKEditor(object):
 
     def grabCurrentClicked(self):
         print 'grab current'
+
+        linkName = self.ui.PositionLinkNameCombo.currentText
+        assert linkName == self.server.activePositionConstraint
+
+        commands = []
+        commands.append('kinsol = doKinematics(r, q_end);')
+        commands.append('%s_target_start = r.forwardKin(kinsol, %s, %s_pts);' % (linkName, linkName, linkName))
+        self.server.comm.sendCommands(commands)
+        self.positionConstraintComboChanged(linkName)
 
     def updateQuasistaticConstraint(self):
         s = self.server
@@ -123,18 +152,35 @@ class IKEditor(object):
             commands.append('%s = %s.addContact(%s, %s_pts);' % (qsc, qsc, foot, foot))
         commands.append('%s = %s.setActive(true);' % (qsc, qsc))
 
-        print '\n'.join(commands)
-
-        s.quasiStaticConstraintName = qsc
-        s.comm.sendCommands(commands)
+        self.server.quasiStaticConstraintName = qsc
+        self.server.comm.sendCommands(commands)
 
     def positionTargetChanged(self):
 
-        linkName = self.ui.PositionLinkNameCombo.text
+        print 'position target changed'
+
+        linkName = self.ui.PositionLinkNameCombo.currentText
         assert linkName == self.server.activePositionConstraint
 
         target = np.array([self.ui.TargetX.value, self.ui.TargetY.value, self.ui.TargetZ.value])
         enabledState = [self.ui.PositionXEnabled.checked, self.ui.PositionYEnabled.checked, self.ui.PositionZEnabled.checked]
+
+        # wrong, need to add pts to target location for multi-point links
+        #commands = []
+        #commands.append('%s_target_start = [%f; %f; %f];' % (linkName, target[0], target[1], target[2]))
+        #self.server.comm.sendCommands(commands)
+        self.updateIk()
+
+    def positionOffsetChanged(self):
+        print 'position offset changed'
+        offset = [self.ui.OffsetX.value, self.ui.OffsetY.value, self.ui.OffsetZ.value]
+        print offset
+        self.server.positionOffset = offset
+        self.updateIk()
+
+    def updateIk(self):
+        if self.ui.AutoUpdateCheck.checked:
+            self.server.updateIk()
 
     def leftFootEnabledClicked(self):
         print 'left foot:', self.ui.LeftFootEnabled.checked
@@ -168,16 +214,16 @@ class IKEditor(object):
             self.ui.ActiveConstraintsGroup.layout().addWidget(check)
 
     def positionConstraintComboChanged(self, linkName):
-      print 'edit position constraint:', linkName
-      self.server.activePositionConstraint = linkName
-      target = np.array(self.server.comm.getFloatArray('%s_target_start' % linkName))
+        print 'edit position constraint:', linkName
+        self.server.activePositionConstraint = linkName
+        target = np.array(self.server.comm.getFloatArray('%s_target_start' % linkName))
 
-      if len(target.shape) == 2:
-          target = np.average(target, axis=1)
+        if len(target.shape) == 2:
+            target = np.average(target, axis=1)
 
-      self.ui.TargetX.value = target[0]
-      self.ui.TargetY.value = target[1]
-      self.ui.TargetZ.value = target[2]
+        self.ui.TargetX.value = target[0]
+        self.ui.TargetY.value = target[1]
+        self.ui.TargetZ.value = target[2]
 
     def updateEditPositionConstraint(self):
 
@@ -205,3 +251,58 @@ class IKEditor(object):
         self.onCostAdded()
         self.updateEditPositionConstraint()
 
+
+
+class MidiOffsetEditor(TimerCallback):
+
+    def __init__(self, server, editor):
+        TimerCallback.__init__(self)
+        self.server = server
+        self.editor = editor
+        self.enabled = True
+        self.midiMap = [0.0, 0.5]
+        self.channelsX = [midi.TriggerFinger.faders[0], midi.TriggerFinger.pads[0], midi.TriggerFinger.dials[0]]
+        self.channelsY = [midi.TriggerFinger.faders[1], midi.TriggerFinger.pads[1], midi.TriggerFinger.dials[1]]
+        self.channelsZ = [midi.TriggerFinger.faders[3], midi.TriggerFinger.pads[2], midi.TriggerFinger.dials[2]]
+        self._initReader()
+
+    def _initReader(self):
+
+        try:
+            self.reader = midi.MidiReader()
+        except AssertionError:
+            self.reader = None
+
+    def _scaleMidiValue(self, midiValue):
+        ''' Scales the input midiValue.  The midiValue is between 0 and 127. '''
+        scaledValue = self.midiMap[0] + midiValue * (self.midiMap[1] - self.midiMap[0])/127.0
+        return scaledValue
+
+    def handleMidiEvents(self):
+
+        messages = self.reader.getMessages()
+        if not messages:
+            return
+
+        targets = {}
+        for message in messages:
+            channel = message[2]
+            value = message[3]
+            targets[channel] = value
+
+        shouldUpdate = False
+        for channel, value in targets.iteritems():
+
+            value = self._scaleMidiValue(value)
+
+            if channel in self.channelsX:
+                self.editor.ui.OffsetX.value = value
+            elif channel in self.channelsY:
+                self.editor.ui.OffsetY.value = value
+            elif channel in self.channelsZ:
+                self.editor.ui.OffsetZ.value = value
+
+
+    def tick(self):
+        if self.reader:
+            self.handleMidiEvents()
