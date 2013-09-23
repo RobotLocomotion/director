@@ -7,6 +7,7 @@ s = s.loadNominalData();
 
 r = s.robot;
 
+nq = r.getNumDOF();
 q_nom = s.q_nom;
 q_zero = zeros(size(q_nom, 1), 1);
 
@@ -35,8 +36,6 @@ l_hand_target_start = r.forwardKin(kinsol, l_hand, l_hand_pts);
 r_hand_target_start = r.forwardKin(kinsol, r_hand, r_hand_pts);
 pelvis_target_start = r.forwardKin(kinsol, pelvis, pelvis_pts);
 
-%r_hand_target_start = [0.5; -0.2; 1.4];
-
 l_foot_target = l_foot_target_start;
 r_foot_target = r_foot_target_start;
 l_hand_target = l_hand_target_start;
@@ -50,6 +49,7 @@ r_hand_position_constraint = WorldPositionConstraint(r, r_hand, r_hand_pts, r_ha
 pelvis_position_constraint = WorldPositionConstraint(r, pelvis, pelvis_pts, pelvis_target, pelvis_target, tspan);
 
 l_hand_gaze_constraint = WorldGazeDirConstraint(r, l_hand, [0;0;1], [0;0;1], gaze_theta, tspan);
+l_hand_gaze_constraint2 = WorldGazeDirConstraint(r, l_hand, [0;1;0], [0;1;0], gaze_theta, tspan);
 r_hand_gaze_constraint = WorldGazeDirConstraint(r, r_hand, [0;0;1], [0;0;1], gaze_theta, tspan);
 pelvis_gaze_constraint = WorldGazeDirConstraint(r, pelvis, [0;0;1], [0;0;1], gaze_theta, tspan);
 utorso_gaze_constraint = WorldGazeDirConstraint(r, utorso, [0;0;1], [0;0;1], gaze_theta, tspan);
@@ -72,7 +72,34 @@ r_foot_qsc = both_feet_qsc.setShrinkFactor(shrink_factor);
 r_foot_qsc = both_feet_qsc.addContact(r_foot, r_foot_pts);
 r_foot_qsc = both_feet_qsc.setActive(true);
 
+posture_constraint = PostureConstraint(r, tspan);
+posture_constraint = setJointLimits(posture_constraint, (1:nq)', q_nom, q_nom);
+
+
 active_constraints = {both_feet_qsc, l_foot_position_constraint, r_foot_position_constraint, utorso_gaze_constraint};
 
 [q_start, info] = inverseKin(r, q_nom, q_nom, active_constraints{:}, s.ikoptions);
 q_end = q_start;
+
+
+
+qtraj = PPTrajectory(foh(tspan, [q_start, q_end]));
+nt = 5;
+
+t = linspace(0, 1, nt);
+
+
+% args:
+% RigidBodyManipulator
+% starting joint position
+% starting joint velocity
+% time points
+% join position seeds
+% joint nominal positions
+% constraints...
+% ikoptions
+
+[xtraj, info] = inverseKinTraj(r, q_start, zeros(nq,1), t, squeeze(eval(qtraj,t(2:end))), repmat(q_nom, 1, nt-1), active_constraints{:}, s.ikoptions);
+qtraj = xtraj(1:nq);
+
+

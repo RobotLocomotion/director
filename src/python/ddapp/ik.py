@@ -14,7 +14,7 @@ class AsyncIKCommunicator(TimerCallback):
         self.comm = None
         self.outputConsole = None
         self.controller = jointController
-        self.positionOffset = [0.0, 0.0, 0.0]
+        self.positionOffset = {}
         self.activePositionConstraint = 'l_foot'
         self.quasiStaticConstraintName = 'both_feet_qsc'
         self.seedName = 'q_end'
@@ -102,15 +102,15 @@ class AsyncIKCommunicator(TimerCallback):
     def interact(self):
         self.comm.interact()
 
-    def setActivePositionConstraint(self, name):
-      self.positionOffset = [0.0, 0.0, 0.0]
-      self.activePositionConstraint = name
+    def getPositionOffset(self, linkName):
+        return self.positionOffset.get(linkName, [0.0, 0.0, 0.0])
 
     def updateIk(self):
 
         commands = []
 
-        formatArgs = dict(name=self.activePositionConstraint, x=self.positionOffset[0], y=self.positionOffset[1], z=self.positionOffset[2])
+        positionOffset = self.getPositionOffset(self.activePositionConstraint)
+        formatArgs = dict(name=self.activePositionConstraint, x=positionOffset[0], y=positionOffset[1], z=positionOffset[2])
         commands.append('{name}_target = vertcat({name}_target_start(1,:)+{x}, {name}_target_start(2,:)+{y}, {name}_target_start(3,:)+{z});'.format(**formatArgs))
         commands.append('{name}_position_constraint = WorldPositionConstraint(r, {name}, {name}_pts, {name}_target, {name}_target, tspan);'.format(**formatArgs))
         commands.append('q_seed = %s;' % self.seedName)
@@ -121,7 +121,7 @@ class AsyncIKCommunicator(TimerCallback):
         #self.tasks.append(functools.partial(self.fetchPoseFromServer, 'q_end'))
         #self.waitForAsyncTasks()
 
-        print '\n'.join(commands)
+        #print '\n'.join(commands)
 
         self.comm.sendCommands(commands)
         self.fetchPoseFromServer('q_end')

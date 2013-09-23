@@ -8,10 +8,10 @@ int main(int argc, char **argv)
 {
   QVTKApplication app(argc, argv);
 
-  ddPythonManager pythonManager;
+  ddPythonManager* pythonManager = new ddPythonManager;
 
   ddMainWindow window;
-  window.setPythonManager(&pythonManager);
+  window.setPythonManager(pythonManager);
   window.resize(1800, 1000);
   window.show();
 

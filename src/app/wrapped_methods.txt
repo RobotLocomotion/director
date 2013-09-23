@@ -16,6 +16,7 @@ void ddDRCView::unloadModels();
 vtkCamera* ddQVTKWidgetView::camera() const;
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
 vtkRenderer* ddQVTKWidgetView::renderer() const;
+QList<double> ddQVTKWidgetView::lastTDxMotion() const;
 
 ddViewManager* ddMainWindow::viewManager()
 ddPropertiesPanel* ddMainWindow::propertiesPanel() const;

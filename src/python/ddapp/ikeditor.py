@@ -44,7 +44,7 @@ class IKEditor(object):
         uifile.close()
 
         self.ui = WidgetDict(self.widget.children())
-
+        self._updateBlocked = True
 
         self.ui.UpdateIKButton.connect('clicked()', self.updateIKClicked)
         self.ui.AutoUpdateCheck.connect('clicked()', self.autoUpdateClicked)
@@ -73,12 +73,16 @@ class IKEditor(object):
         self.server = server
         self.poseCollection = poseCollection
         self.costCollection = costCollection
-        self.midiEditor = MidiOffsetEditor(server, self)
+        self.midiEditor = MidiOffsetEditor(self)
         self.midiEditor.start()
+
+        self.motionAccumulator = TDxMotionAccumulator(self)
+        self.motionAccumulator.start()
 
         poseCollection.connect('itemAdded(const QString&)', self.onPoseAdded)
 
         self.rebuild()
+        self._updateBlocked = False
 
 
     def onPoseAdded(self):
@@ -169,17 +173,18 @@ class IKEditor(object):
         #commands = []
         #commands.append('%s_target_start = [%f; %f; %f];' % (linkName, target[0], target[1], target[2]))
         #self.server.comm.sendCommands(commands)
-        self.updateIk()
+        #self.updateIk()
 
     def positionOffsetChanged(self):
         print 'position offset changed'
         offset = [self.ui.OffsetX.value, self.ui.OffsetY.value, self.ui.OffsetZ.value]
-        print offset
-        self.server.positionOffset = offset
+        linkName = self.ui.PositionLinkNameCombo.currentText
+
+        self.server.positionOffset[linkName] = offset
         self.updateIk()
 
     def updateIk(self):
-        if self.ui.AutoUpdateCheck.checked:
+        if self.ui.AutoUpdateCheck.checked and not self._updateBlocked:
             self.server.updateIk()
 
     def leftFootEnabledClicked(self):
@@ -213,17 +218,31 @@ class IKEditor(object):
             check.connect('clicked()', self.onConstraintClicked)
             self.ui.ActiveConstraintsGroup.layout().addWidget(check)
 
+    def setPositionOffset(self, offset):
+        self._updateBlocked = True
+        self.ui.OffsetX.value = offset[0]
+        self.ui.OffsetY.value = offset[1]
+        self.ui.OffsetZ.value = offset[2]
+        self._updateBlocked = False
+
+    def setPositionTarget(self, target):
+        self._updateBlocked = True
+        self.ui.TargetX.value = target[0]
+        self.ui.TargetY.value = target[1]
+        self.ui.TargetZ.value = target[2]
+        self._updateBlocked = False
+
     def positionConstraintComboChanged(self, linkName):
         print 'edit position constraint:', linkName
         self.server.activePositionConstraint = linkName
         target = np.array(self.server.comm.getFloatArray('%s_target_start' % linkName))
+        offset = self.server.getPositionOffset(linkName)
 
         if len(target.shape) == 2:
             target = np.average(target, axis=1)
 
-        self.ui.TargetX.value = target[0]
-        self.ui.TargetY.value = target[1]
-        self.ui.TargetZ.value = target[2]
+        self.setPositionTarget(target)
+        self.setPositionOffset(offset)
 
     def updateEditPositionConstraint(self):
 
@@ -238,6 +257,8 @@ class IKEditor(object):
         updateComboStrings(self.ui.PositionLinkNameCombo, linkNames, 'l_foot')
         self.ui.PositionLinkNameCombo.connect('currentIndexChanged(const QString&)', self.positionConstraintComboChanged)
 
+    def handleTDxMotionEvent(self, motionInfo):
+        self.motionAccumulator.handleMotionEvent(motionInfo)
 
     def rebuildConstraints(self):
         clearLayout(self.ui.ActiveConstraintsGroup)
@@ -255,9 +276,8 @@ class IKEditor(object):
 
 class MidiOffsetEditor(TimerCallback):
 
-    def __init__(self, server, editor):
+    def __init__(self, editor):
         TimerCallback.__init__(self)
-        self.server = server
         self.editor = editor
         self.enabled = True
         self.midiMap = [0.0, 0.5]
@@ -306,3 +326,47 @@ class MidiOffsetEditor(TimerCallback):
     def tick(self):
         if self.reader:
             self.handleMidiEvents()
+
+
+
+class TDxMotionAccumulator(TimerCallback):
+
+    def __init__(self, editor):
+        TimerCallback.__init__(self)
+        self.editor = editor
+        self.translationSensitivity = 0.0001
+        self.translationCutoff = 0.0
+        self.translation = np.zeros(3)
+
+    def handleMotionEvent(self, motionInfo):
+
+        translation = np.array(motionInfo[0:3])
+        angleAxis = motionInfo[3:]
+
+        # swap x and y translation
+        translation[0], translation[1] = translation[1], translation[0]
+
+        # flip y
+        translation[1] *= -1
+
+        translation *= self.translationSensitivity
+        translation[np.abs(translation) < self.translationCutoff] = 0.0
+        if translation.any():
+            self.translation += translation
+
+
+    def tick(self):
+
+        if not self.translation.any():
+            return
+
+
+        ui = self.editor.ui
+        offset = np.array([ui.OffsetX.value, ui.OffsetY.value, ui.OffsetZ.value])
+        offset += self.translation
+        self.translation = np.zeros(3)
+        offset = np.clip(offset, -1.0, 1.0)
+
+        self.editor.setPositionOffset(offset)
+        self.editor.updateIk()
+

@@ -55,8 +55,8 @@ orbit = cameracontrol.OrbitController(view)
 
 s = ik.AsyncIKCommunicator(jc)
 s.outputConsole = app.getOutputConsole()
-s.start()
-s.startServerAsync()
+#s.start()
+#s.startServerAsync()
 
 
 def _displaySnoptInfo(info):
@@ -328,15 +328,27 @@ app.addWidgetToDock(e.widget)
 
 
 
-tdxStyle = view.renderWindow().GetInteractor().GetInteractorStyle().GetTDxStyle()
-tdxSettings = tdxStyle.GetSettings()
+def motionEvent(obj, eventId):
+    e.handleTDxMotionEvent(view.lastTDxMotion())
 
-translationSensitivity = 0.03
-angleSensitivity = 0.6
-tdxSettings.SetAngleSensitivity(angleSensitivity)
-tdxSettings.SetTranslationXSensitivity(translationSensitivity)
-tdxSettings.SetTranslationYSensitivity(translationSensitivity)
-tdxSettings.SetTranslationZSensitivity(translationSensitivity)
+tdxStyle = view.renderWindow().GetInteractor().GetInteractorStyle().GetTDxStyle()
+if tdxStyle:
+    tdxSettings = tdxStyle.GetSettings()
+
+    translationSensitivity = 0.01
+    angleSensitivity = 0.1
+    tdxSettings.SetAngleSensitivity(angleSensitivity)
+    tdxSettings.SetTranslationXSensitivity(translationSensitivity)
+    tdxSettings.SetTranslationYSensitivity(translationSensitivity)
+    tdxSettings.SetTranslationZSensitivity(translationSensitivity)
+
+    tdxStyle.AddObserver('TDxMotionEvent', motionEvent)
 
 view.resetCamera()
+
+
+
+sys.path.append('/source/paraview/PCLPlugin/build/lib')
+import vtkDRCFiltersPython as drc
+m = drc.vtkMultisenseSource()
 

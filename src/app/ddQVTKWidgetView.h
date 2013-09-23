@@ -20,6 +20,8 @@ public:
   vtkRenderer* renderer() const;
   vtkCamera* camera() const;
 
+  QList<double> lastTDxMotion() const;
+
 public slots:
 
   void render();

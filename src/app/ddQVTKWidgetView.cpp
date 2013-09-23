@@ -1,8 +1,11 @@
 #include "ddQVTKWidgetView.h"
 
+#include "vtkTDxInteractorStyleCallback.h"
+
 #include <vtkSmartPointer.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
+#include <vtkInteractorStyle.h>
 #include <vtkActor.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkConeSource.h>
@@ -30,6 +33,8 @@ public:
 
   vtkSmartPointer<vtkOrientationMarkerWidget> OrientationWidget;
 
+  vtkSmartPointer<vtkTDxInteractorStyleCallback> TDxInteractor;
+
   bool RenderPending;
 };
 
@@ -53,6 +58,9 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->RenderWindow->StereoRenderOff();
   this->Internal->RenderWindow->StereoUpdate();
   this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
+
+  this->Internal->TDxInteractor = vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
+  vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor()->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
 
   this->Internal->Renderer = vtkSmartPointer<vtkRenderer>::New();
   this->Internal->RenderWindow->AddRenderer(this->Internal->Renderer);
@@ -114,6 +122,22 @@ void ddQVTKWidgetView::forceRender()
 void ddQVTKWidgetView::resetCamera()
 {
   this->renderer()->ResetCamera();
+}
+
+//-----------------------------------------------------------------------------
+QList<double> ddQVTKWidgetView::lastTDxMotion() const
+{
+  double motionInfo[7];
+  this->Internal->TDxInteractor->GetTranslation(motionInfo);
+  this->Internal->TDxInteractor->GetAngleAxis(motionInfo+3);
+
+  QList<double> motionInfoList;
+  for (int i = 0; i < 7; ++i)
+  {
+    motionInfoList << motionInfo[i];
+  }
+
+  return motionInfoList;
 }
 
 //-----------------------------------------------------------------------------

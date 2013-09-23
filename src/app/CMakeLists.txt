@@ -70,6 +70,8 @@ set(srcs
   ddViewBase.cpp
   ddViewManager.cpp
   ddViewMenu.cpp
+
+  vtkTDxInteractorStyleCallback.cxx
   )
 
 set(deps
