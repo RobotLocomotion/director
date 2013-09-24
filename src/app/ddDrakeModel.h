@@ -23,6 +23,8 @@ public:
   int numberOfJoints();
   void setJointPositions(const QList<double>& positions);
 
+  void setEstRobotState(const QList<double>& robotState);
+
   void setAlpha(double alpha);
   double alpha() const;
 

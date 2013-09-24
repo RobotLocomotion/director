@@ -1,6 +1,7 @@
 
 int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QList<double>&);
+void ddDrakeModel::setEstRobotState(const QList<double>&);
 void ddDrakeModel::setAlpha(double);
 void ddDrakeModel::setVisible(bool);
 

@@ -64,6 +64,57 @@ namespace
 {
 
 
+std::vector<std::string> getEstRobotStateJointNames()
+{
+  std::vector<std::string> names;
+  names.push_back("back_bkz");
+  names.push_back("back_bky");
+  names.push_back("back_bkx");
+  names.push_back("neck_ay");
+  names.push_back("l_leg_hpz");
+  names.push_back("l_leg_hpx");
+  names.push_back("l_leg_hpy");
+  names.push_back("l_leg_kny");
+  names.push_back("l_leg_aky");
+  names.push_back("l_leg_akx");
+  names.push_back("r_leg_hpz");
+  names.push_back("r_leg_hpx");
+  names.push_back("r_leg_hpy");
+  names.push_back("r_leg_kny");
+  names.push_back("r_leg_aky");
+  names.push_back("r_leg_akx");
+  names.push_back("l_arm_usy");
+  names.push_back("l_arm_shx");
+  names.push_back("l_arm_ely");
+  names.push_back("l_arm_elx");
+  names.push_back("l_arm_uwy");
+  names.push_back("l_arm_mwx");
+  names.push_back("r_arm_usy");
+  names.push_back("r_arm_shx");
+  names.push_back("r_arm_ely");
+  names.push_back("r_arm_elx");
+  names.push_back("r_arm_uwy");
+  names.push_back("r_arm_mwx");
+
+  /*
+  names.push_back("hokuyo_joint");
+  names.push_back("pre_spindle_cal_x_joint");
+  names.push_back("pre_spindle_cal_y_joint");
+  names.push_back("pre_spindle_cal_z_joint");
+  names.push_back("pre_spindle_cal_roll_joint");
+  names.push_back("pre_spindle_cal_pitch_joint");
+  names.push_back("pre_spindle_cal_yaw_joint");
+  names.push_back("post_spindle_cal_x_joint");
+  names.push_back("post_spindle_cal_y_joint");
+  names.push_back("post_spindle_cal_z_joint");
+  names.push_back("post_spindle_cal_roll_joint");
+  names.push_back("post_spindle_cal_pitch_joint");
+  names.push_back("post_spindle_cal_yaw_joint");
+  */
+
+  return names;
+}
+
 std::vector<std::string> getDofNames()
 {
   std::vector<std::string> names;
@@ -124,6 +175,20 @@ void bot_quat_to_angle_axis (const double q[4], double *theta, double axis[3])
         axis[1] = q[2] / sinhalftheta;
         axis[2] = q[3] / sinhalftheta;
     }
+}
+
+void bot_quat_to_roll_pitch_yaw (const double q[4], double rpy[3])
+{
+    double roll_a = 2 * (q[0]*q[1] + q[2]*q[3]);
+    double roll_b = 1 - 2 * (q[1]*q[1] + q[2]*q[2]);
+    rpy[0] = atan2 (roll_a, roll_b);
+
+    double pitch_sin = 2 * (q[0]*q[2] - q[3]*q[1]);
+    rpy[1] = asin (pitch_sin);
+
+    double yaw_a = 2 * (q[0]*q[3] + q[1]*q[2]);
+    double yaw_b = 1 - 2 * (q[2]*q[2] + q[3]*q[3]);
+    rpy[2] = atan2 (yaw_a, yaw_b);
 }
 
 vtkSmartPointer<vtkPolyData> shallowCopy(vtkPolyData* polyData)
@@ -674,8 +739,61 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
 
     int dofId = itr->second;
     q(dofId, 0) = jointPositions[i];
-    //printf("rbm dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
+    printf("rbm dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
   }
+
+  model->doKinematics(q.data());
+  model->updateModel();
+  emit this->modelChanged();
+}
+
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::setEstRobotState(const QList<double>& robotState)
+{
+  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+
+  if (!model)
+  {
+    std::cout << "ddDrakeModel::setJointPositions(): model is null" << std::endl;
+    return;
+  }
+
+  const std::map<std::string, int> dofMap = model->dof_map[0];
+  std::vector<std::string> dofNames = getEstRobotStateJointNames();
+
+  MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
+  for (int i = 0; i < dofNames.size(); ++i)
+  {
+    const std::string& dofName = dofNames[i];
+
+    std::map<std::string, int>::const_iterator itr = dofMap.find(dofName);
+    if (itr == dofMap.end())
+    {
+      continue;
+    }
+
+    int dofId = itr->second;
+
+    //printf("est dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
+
+    q(dofId, 0) = robotState[7 + i];
+  }
+
+  q(dofMap.find("base_x")->second, 0) = robotState[0];
+  q(dofMap.find("base_y")->second, 0) = robotState[1];
+  q(dofMap.find("base_z")->second, 0) = robotState[2];
+
+  double base_rpy[3];
+  double base_quat[4] = {robotState[3], robotState[4], robotState[5], robotState[6]};
+
+
+  bot_quat_to_roll_pitch_yaw(base_quat, base_rpy);
+
+  q(dofMap.find("base_roll")->second, 0) = base_rpy[0];
+  q(dofMap.find("base_pitch")->second, 0) = base_rpy[1];
+  q(dofMap.find("base_yaw")->second, 0) = base_rpy[2];
+
 
   model->doKinematics(q.data());
   model->updateModel();
