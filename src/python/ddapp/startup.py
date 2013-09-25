@@ -350,7 +350,7 @@ view.resetCamera()
 
 
 
-sys.path.append('/source/paraview/PCLPlugin/build/lib')
+sys.path.append('/home/pat/source/paraview/PCLPlugin/build/lib')
 import vtkDRCFiltersPython as drc
 
 
@@ -361,7 +361,7 @@ class MultiSenseSource(TimerCallback):
         TimerCallback.__init__(self)
         self.reader = None
         self.lastScanLine = -1
-        self.numberOfActors = 500
+        self.numberOfActors = 250
         self.nextActorId = 0
         self._createActors()
 
@@ -401,6 +401,9 @@ class MultiSenseSource(TimerCallback):
         #print 'robot position:', robotState.GetValue(0), robotState.GetValue(1), robotState.GetValue(2)
 
         robotState = [robotState.GetValue(i) for i in xrange(robotState.GetNumberOfTuples())]
+        if len(robotState) == 7:
+            return
+
         models[0].setEstRobotState(robotState)
 
         currentScanLine = self.reader.GetCurrentScanLine()
