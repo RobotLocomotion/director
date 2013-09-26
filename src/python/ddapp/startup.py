@@ -15,6 +15,7 @@ from ddapp import ikeditor
 from ddapp import objectmodel as om
 from ddapp import spreadsheet
 from ddapp import tdx
+from ddapp import perception
 from ddapp.timercallback import TimerCallback
 
 import numpy as np
@@ -85,4 +86,4 @@ if useTable:
     om.addModelToObjectTree(tableModel, parentItem)
 
 
-
+perception.init(view, models)
