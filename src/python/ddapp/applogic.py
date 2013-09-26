@@ -59,9 +59,20 @@ def addWidgetToDock(widget):
     getMainWindow().addWidgetToViewMenu(dock)
 
 
-def resetCamera():
+def resetCamera(viewDirection=None):
+
+    if viewDirection is not None:
+        camera = getDRCView().camera()
+        camera.SetPosition([0, 0, 0])
+        camera.SetFocalPoint(viewDirection)
+        camera.SetViewUp([0,0,1])
+
     getDRCView().resetCamera()
     getDRCView().render()
+
+
+def displaySnoptInfo(info):
+    getMainWindow().statusBar().showMessage('Info: %d' % info)
 
 
 def toggleStereoRender():

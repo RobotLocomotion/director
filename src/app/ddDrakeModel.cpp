@@ -739,7 +739,7 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
 
     int dofId = itr->second;
     q(dofId, 0) = jointPositions[i];
-    printf("rbm dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
+    //printf("rbm dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
   }
 
   model->doKinematics(q.data());

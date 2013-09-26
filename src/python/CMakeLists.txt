@@ -8,8 +8,12 @@ set(python_files
   ddapp/jointcontrol.py
   ddapp/matlab.py
   ddapp/midi.py
+  ddapp/objectmodel.py
+  ddapp/perception.py
   ddapp/simpletimer.py
+  ddapp/spreadsheet.py
   ddapp/startup.py
+  ddapp/tdx.py
   ddapp/timercallback.py
   )
 

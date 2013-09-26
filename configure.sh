@@ -21,14 +21,17 @@ configure_paladin09()
 {
   cmake=`which cmake`
 
-  vtkDir=/home/pat/source/paraview/build/VTK
+  vtkDir=$HOME/source/paraview/build/VTK
   #vtkDir=/usr/lib/vtk-5.8
 
+  #drakeDir=$HOME/source/drc/drc-trunk/software/drake
+  drakeDir=$HOME/source/drake/drake
+  
   $cmake \
-    -DDRAKE_DIR=/home/pat/source/drc/drc-trunk/software/drake \
-    -DPYTHONQT_DIR=/home/pat/source/PythonQt/install \
-    -DQtPropertyBrowser_DIR=/home/pat/source/qt/build \
-    -DCTK_PYTHONCONSOLE_DIR=/home/pat/source/ctk/python_console/install \
+    -DDRAKE_DIR=$drakeDir \
+    -DPYTHONQT_DIR=$HOME/source/PythonQt/install \
+    -DQtPropertyBrowser_DIR=$HOME/source/qt/build \
+    -DCTK_PYTHONCONSOLE_DIR=$HOME/source/ctk/python_console/install \
     -DVTK_DIR=$vtkDir \
      ../
 }
