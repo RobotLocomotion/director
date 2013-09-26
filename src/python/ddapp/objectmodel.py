@@ -69,7 +69,7 @@ def onTreeSelectionChanged():
 
 
 
-def updateVisItem(item):
+def updateVisIcon(item):
     obj = objects[item]
     isVisible = obj['visible']
     icon = Icons.Eye if isVisible else Icons.EyeOff
@@ -84,7 +84,7 @@ def onItemClicked(item, column):
   if column == 1 and 'visible' in obj:
       obj['visible'] = not obj['visible']
       obj['data'].setVisible(obj['visible'])
-      updateVisItem(item)
+      updateVisIcon(item)
 
 
 def setPropertyAttributes(p, attributes):

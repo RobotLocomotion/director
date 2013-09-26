@@ -72,7 +72,6 @@ QStringList ddPythonManager::pythonPaths()
   QStringList paths;
   foreach (const QString& dirname, searchDirs)
   {
-    std::cout << qPrintable(dirname) << std::endl;
     if (QDir(dirname).exists())
     {
       paths.append(dirname);

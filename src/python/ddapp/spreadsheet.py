@@ -17,7 +17,7 @@ def setSpreadsheetColumnData(columnIndex, name, data):
           model.item(i + 1, columnIndex).setText(value)
 
 
-def updateSpreadsheetPoses(poseCollection):
+def updateSpreadsheetPoses(poseCollection, poseName=None):
 
     poseMap = poseCollection.map()
     for i, poseName in enumerate(sorted(poseMap.keys())):

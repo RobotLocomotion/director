@@ -48,7 +48,7 @@ if useTable:
   tableModel = view.loadURDFModel(os.path.join(app.getDRCBase(), 'software/drake/systems/plants/test/table.urdf'))
   tableModel.setVisible(True)
 
-app.resetCamera(viewDirection=[-1,0,0])
+
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 spreadsheet.init(app.getSpreadsheetView(), poseCollection, costCollection)
@@ -60,6 +60,7 @@ jc.addNominalPoseFromFile(app.getNominalPoseMatFile())
 jc.setNominalPose()
 jc.addPose('q_end', jc.poses['q_nom'])
 jc.addPose('q_start', jc.poses['q_nom'])
+app.resetCamera(viewDirection=[-1,0,0])
 
 
 if useIk:
