@@ -39,6 +39,7 @@ class MultisenseItem(om.ObjectModelItem):
         self.addProperty('Updates Enabled', True)
         self.addProperty('Min Range', model.reader.GetDistanceRange()[0])
         self.addProperty('Max Range', model.reader.GetDistanceRange()[1])
+        self.addProperty('Edge Filter Distance', model.reader.GetEdgeDistanceThreshold())
         self.addProperty('Visible', model.visible)
         self.addProperty('Point Size', model.pointSize)
         self.addProperty('Alpha', model.alpha)
@@ -49,11 +50,15 @@ class MultisenseItem(om.ObjectModelItem):
     def _onPropertyChanged(self, propertyName):
         om.ObjectModelItem._onPropertyChanged(self, propertyName)
 
-        if propertyName == 'Enabled':
-            if self.getProperty('Enabled'):
+        if propertyName == 'Updates Enabled':
+            if self.getProperty('Updates Enabled'):
                 self.model.start()
             else:
                 self.model.stop()
+
+        elif propertyName == 'Edge Filter Distance':
+            self.model.reader.SetEdgeDistanceThreshold(self.getProperty('Edge Filter Distance'))
+            self.model.showRevolution(self.model.displayedRevolution)
 
         elif propertyName == 'Alpha':
             self.model.setAlpha(self.getProperty(propertyName))
@@ -77,8 +82,9 @@ class MultisenseItem(om.ObjectModelItem):
             return om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False)
 
         elif propertyName in ('Min Range', 'Max Range'):
-            return om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.5, hidden=False)
-
+            return om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False)
+        elif propertyName == 'Edge Filter Distance':
+            return om.PropertyAttributes(decimals=3, minimum=0.0, maximum=10.0, singleStep=0.01, hidden=False)
         else:
             return om.ObjectModelItem.getPropertyAttributes(self, propertyName)
 

@@ -12,6 +12,7 @@ import numpy as np
 from vtkPointCloudUtils import vtkNumpy
 from vtkPointCloudUtils.debugVis import DebugData
 from vtkPointCloudUtils.shallowCopy import shallowCopy
+from vtkPointCloudUtils import affordance
 
 import vtkPCLFiltersPython as pcl
 
@@ -21,6 +22,15 @@ eventFilters = {}
 
 def getSegmentationView():
     return app.getViewManager().findView('Segmentation View')
+
+def getDRCView():
+    return app.getViewManager().findView('DRC View')
+
+def switchToView(viewName):
+    app.getViewManager().switchToView(viewName)
+
+def getCurrentView():
+    return app.getViewManager().currentView()
 
 
 def colorBy(polyData, mapper, arrayName, scalarRange=None):
@@ -47,7 +57,7 @@ def thresholdPoints(polyData, arrayName, thresholdRange):
 
 
 
-def applyPlaneFit(dataObj, distanceThreshold=0.01, expectedNormal=None):
+def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None):
 
     expectedNormal = expectedNormal or [-1,0,0]
 
@@ -111,6 +121,69 @@ def switchToSegmentationView():
 
 
 
+def showPolyData(polyData, name, colorByName=None, colorByRange=None, alpha=0.5, visible=True, view=None):
+
+    view = view or getCurrentView()
+    item = om.PolyDataItem(name, polyData, view)
+    om.addToObjectModel(item, om.findObjectByName('segmentation'))
+    item.setProperty('Visible', visible)
+    if colorByName:
+        colorBy(polyData, item.mapper, colorByName, colorByRange)
+    return item
+
+
+
+def extractCircle(polyData, distanceThreshold=0.04):
+
+    circleFit = pcl.vtkPCLSACSegmentationCircle()
+    circleFit.SetDistanceThreshold(distanceThreshold)
+    circleFit.SetInputData(polyData)
+    circleFit.Update()
+
+    polyData = thresholdPoints(circleFit.GetOutput(), 'ransac_labels', [1.0, 1.0])
+    return polyData, circleFit
+
+
+def segmentValve(polyData, planeNormal=None):
+
+
+    polyData, circleFit = extractCircle(polyData, distanceThreshold=0.04)
+    showPolyData(polyData, 'circle fit (initial)', colorByName='z', alpha=0.5, visible=False)
+
+
+    polyData, circleFit = extractCircle(polyData, distanceThreshold=0.01)
+    showPolyData(polyData, 'circle fit', colorByName='z', alpha=0.5)
+
+
+    radius = circleFit.GetCircleRadius()
+    origin = np.array(circleFit.GetCircleOrigin())
+    normal = np.array(circleFit.GetCircleNormal())
+
+
+    normal = planeNormal if planeNormal is not None else normal
+    normal = normal/np.linalg.norm(normal)
+
+
+    p1 = origin - normal*radius
+    p2 = origin + normal*radius
+
+    d = DebugData()
+    d.addLine(p1, p2)
+    d.addLine(origin - normal*0.015, origin + normal*0.015, radius=radius)
+    showPolyData(d.getPolyData(), 'circle model', alpha=0.5, view=getDRCView())
+
+    getDRCView().renderer().ResetCamera(d.getPolyData().GetBounds())
+
+    global params
+    params = {}
+    params['axis'] = normal
+    params['radius'] = radius
+    params['origin'] = origin
+    params['length'] = 0.03
+    return params
+
+
+
 def onSegmentationViewDoubleClicked(widget, mousePosition):
 
     displayPoint = mousePosition.x(), widget.height - mousePosition.y()
@@ -128,11 +201,7 @@ def onSegmentationViewDoubleClicked(widget, mousePosition):
 
     d = DebugData()
     d.addLine(worldPt1, worldPt2)
-
-    rayItem = om.PolyDataItem('mouse click ray', d.getPolyData(), getSegmentationView())
-    #rayItem.setProperty('Color', QtGui.QColor(0, 255, 0))
-    om.addToObjectModel(rayItem, om.findObjectByName('segmentation'))
-
+    showPolyData(d.getPolyData(), 'mouse click ray', visible=False)
 
 
     segmentationObj = om.findObjectByName('pointcloud snapshot')
@@ -156,9 +225,7 @@ def onSegmentationViewDoubleClicked(widget, mousePosition):
     polyData = thresholdPoints(polyData, 'dist_to_line', [0.0, 0.25])
     polyData = thresholdPoints(polyData, 'distance', [0.3, 1.5])
 
-    clusterItem = om.PolyDataItem('selected cluster', polyData, getSegmentationView())
-    om.addToObjectModel(clusterItem, om.findObjectByName('segmentation'))
-    colorBy(polyData, clusterItem.mapper, 'dist_to_line')
+    showPolyData(polyData, 'selected cluster', colorByName='dist_to_line', visible=False)
 
 
     segmentationObj.mapper.ScalarVisibilityOff()
@@ -167,12 +234,15 @@ def onSegmentationViewDoubleClicked(widget, mousePosition):
     # plane fit
     polyData, normal = applyPlaneFit(polyData)
     polyData = thresholdPoints(polyData, 'dist_to_plane', [-0.02, 0.02])
+    showPolyData(polyData, 'plane fit', colorByName='z')
 
-    planeItem = om.PolyDataItem('plane fit', polyData, getSegmentationView())
-    om.addToObjectModel(planeItem, om.findObjectByName('segmentation'))
-    colorBy(polyData, planeItem.mapper, 'z')
+    params = segmentValve(polyData)
+
+    affordance.publishValve(params)
 
     getSegmentationView().render()
+
+    switchToView('DRC View')
 
 
 def segmentationViewEventFilter(obj, event):

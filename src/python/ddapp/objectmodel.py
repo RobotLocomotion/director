@@ -111,6 +111,7 @@ class PolyDataItem(ObjectModelItem):
         self.actor.SetMapper(self.mapper)
         self.view.renderer().AddActor(self.actor)
         self.addProperty('Visible', True)
+        self.addProperty('Point Size', self.actor.GetProperty().GetPointSize())
         self.addProperty('Alpha', 1.0)
         self.addProperty('Color', QtGui.QColor(255,255,255))
 
@@ -123,7 +124,10 @@ class PolyDataItem(ObjectModelItem):
     def _onPropertyChanged(self, propertyName):
         ObjectModelItem._onPropertyChanged(self, propertyName)
 
-        if propertyName == 'Alpha':
+        if propertyName == 'Point Size':
+            self.actor.GetProperty().SetPointSize(self.getProperty(propertyName))
+
+        elif propertyName == 'Alpha':
             self.actor.GetProperty().SetOpacity(self.getProperty(propertyName))
 
         elif propertyName == 'Visible':
@@ -136,9 +140,12 @@ class PolyDataItem(ObjectModelItem):
 
         self.view.render()
 
-
     def getPropertyAttributes(self, propertyName):
-        return ObjectModelItem.getPropertyAttributes(self, propertyName)
+
+        if propertyName == 'Point Size':
+            return PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False)
+        else:
+            return ObjectModelItem.getPropertyAttributes(self, propertyName)
 
 
 def getObjectTree():
