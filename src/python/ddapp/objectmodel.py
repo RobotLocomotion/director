@@ -1,4 +1,5 @@
 import os
+import PythonQt
 from PythonQt import QtCore, QtGui
 from collections import namedtuple
 from collections import OrderedDict
@@ -174,6 +175,10 @@ def getItemForObject(obj):
             return item
 
 
+def getObjectForItem(item):
+    return objects[item]
+
+
 def findObjectByName(name):
     for obj in objects.values():
         if obj.getProperty('Name') == name:
@@ -321,6 +326,31 @@ def initObjectTree():
     tree.connect('itemSelectionChanged()', onTreeSelectionChanged)
     tree.connect('itemClicked(QTreeWidgetItem*, int)', onItemClicked)
 
+
+'''
+_eventFilter = None
+def _onEvent(obj, event):
+
+
+    if event.type() == QtCore.QEvent.MouseButtonDblClick:
+        eventFilter.setEventHandlerResult(True)
+        switchToSegmentationView()
+    else:
+        eventFilter.setEventHandlerResult(False)
+
+
+def installEventFilter():
+
+    global _eventFilter
+    _eventFilter = PythonQt.dd.ddPythonEventFilter()
+
+    qvtkwidget = view.vtkWidget()
+    qvtkwidget.installEventFilter(eventFilter)
+    eventFilters[qvtkwidget] = eventFilter
+
+    eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
+    eventFilter.connect('handleEvent(QObject*, QEvent*)', func)
+'''
 
 def init(objectTree, propertiesPanel):
 

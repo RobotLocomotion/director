@@ -88,6 +88,8 @@ def switchToSegmentationView():
     if not perception._multisenseItem.model.revPolyData or not perception._multisenseItem.model.revPolyData.GetNumberOfPoints():
         return
 
+    cleanup()
+
     viewManager = app.getViewManager()
     segmentationView = viewManager.findView('Segmentation View')
     if not segmentationView:
@@ -99,13 +101,9 @@ def switchToSegmentationView():
     polyData = vtk.vtkPolyData()
     polyData.ShallowCopy(perception._multisenseItem.model.revPolyData)
 
-    segmentationObj = om.findObjectByName('pointcloud snapshot')
-    if not segmentationObj:
-        folder = om.addContainer('segmentation')
-        segmentationObj = om.PolyDataItem('pointcloud snapshot', polyData, segmentationView)
-        om.addToObjectModel(segmentationObj, folder)
-    else:
-        segmentationObj.setPolyData(polyData)
+
+    segmentationObj = om.PolyDataItem('pointcloud snapshot', polyData, segmentationView)
+    om.addToObjectModel(segmentationObj, getOrCreateContainer('segmentation'))
 
 
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
@@ -120,13 +118,24 @@ def switchToSegmentationView():
     segmentationView.render()
 
 
+def getOrCreateContainer(containerName):
 
-def showPolyData(polyData, name, colorByName=None, colorByRange=None, alpha=0.5, visible=True, view=None):
+    folder = om.findObjectByName(containerName)
+    if not folder:
+        folder = om.addContainer(containerName)
+    return folder
+
+
+def showPolyData(polyData, name, colorByName=None, colorByRange=None, alpha=1.0, visible=True, view=None, parentName='segmentation'):
 
     view = view or getCurrentView()
     item = om.PolyDataItem(name, polyData, view)
-    om.addToObjectModel(item, om.findObjectByName('segmentation'))
+
+    parentObj = getOrCreateContainer(parentName) if parentName else None
+
+    om.addToObjectModel(item, parentObj)
     item.setProperty('Visible', visible)
+    item.setProperty('Alpha', alpha)
     if colorByName:
         colorBy(polyData, item.mapper, colorByName, colorByRange)
     return item
@@ -170,7 +179,8 @@ def segmentValve(polyData, planeNormal=None):
     d = DebugData()
     d.addLine(p1, p2)
     d.addLine(origin - normal*0.015, origin + normal*0.015, radius=radius)
-    showPolyData(d.getPolyData(), 'circle model', alpha=0.5, view=getDRCView())
+    showPolyData(d.getPolyData(), 'circle model', alpha=1.0)
+    showPolyData(d.getPolyData(), 'valve', alpha=1.0, view=getDRCView(), parentName='affordances')
 
     getDRCView().renderer().ResetCamera(d.getPolyData().GetBounds())
 
@@ -243,6 +253,23 @@ def onSegmentationViewDoubleClicked(widget, mousePosition):
     getSegmentationView().render()
 
     switchToView('DRC View')
+
+
+def cleanup():
+
+    obj = om.findObjectByName('segmentation')
+    if not obj:
+        return
+
+    item = om.getItemForObject(obj)
+    childItems = item.takeChildren()
+
+    for childItem in childItems:
+        obj = om.getObjectForItem(childItem)
+        if isinstance(obj, om.PolyDataItem):
+            obj.view.renderer().RemoveActor(obj.actor)
+        obj.view.render()
+        del om.objects[childItem]
 
 
 def segmentationViewEventFilter(obj, event):
