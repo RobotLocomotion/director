@@ -153,15 +153,27 @@ def extractCircle(polyData, distanceThreshold=0.04):
     return polyData, circleFit
 
 
+def removeMajorPlane(polyData, distanceThreshold=0.02):
+
+    # perform plane segmentation
+    f = pcl.vtkPCLSACSegmentationPlane()
+    f.SetInputData(polyData)
+    f.SetDistanceThreshold(distanceThreshold)
+    f.Update()
+
+    polyData = thresholdPoints(f.GetOutput(), 'ransac_labels', [0.0, 0.0])
+    return polyData, f
+
+
 def segmentValve(polyData, planeNormal=None):
 
 
     polyData, circleFit = extractCircle(polyData, distanceThreshold=0.04)
-    showPolyData(polyData, 'circle fit (initial)', colorByName='z', alpha=0.5, visible=False)
+    showPolyData(polyData, 'circle fit (initial)', colorByName='z', visible=False)
 
 
     polyData, circleFit = extractCircle(polyData, distanceThreshold=0.01)
-    showPolyData(polyData, 'circle fit', colorByName='z', alpha=0.5)
+    showPolyData(polyData, 'circle fit', colorByName='z')
 
 
     radius = circleFit.GetCircleRadius()
@@ -179,8 +191,8 @@ def segmentValve(polyData, planeNormal=None):
     d = DebugData()
     d.addLine(p1, p2)
     d.addLine(origin - normal*0.015, origin + normal*0.015, radius=radius)
-    showPolyData(d.getPolyData(), 'circle model', alpha=1.0)
-    showPolyData(d.getPolyData(), 'valve', alpha=1.0, view=getDRCView(), parentName='affordances')
+    showPolyData(d.getPolyData(), 'circle model')
+    showPolyData(d.getPolyData(), 'valve', view=getDRCView(), parentName='affordances')
 
     getDRCView().renderer().ResetCamera(d.getPolyData().GetBounds())
 
@@ -193,6 +205,7 @@ def segmentValve(polyData, planeNormal=None):
     return params
 
 
+_removeMajorPlane = True
 
 def onSegmentationViewDoubleClicked(widget, mousePosition):
 
@@ -232,8 +245,11 @@ def onSegmentationViewDoubleClicked(widget, mousePosition):
 
 
     # extract cluster
-    polyData = thresholdPoints(polyData, 'dist_to_line', [0.0, 0.25])
+    polyData = thresholdPoints(polyData, 'dist_to_line', [0.0, 0.5])
     polyData = thresholdPoints(polyData, 'distance', [0.3, 1.5])
+
+    if _removeMajorPlane:
+        polyData, planeFit = removeMajorPlane(polyData, distanceThreshold=0.03)
 
     showPolyData(polyData, 'selected cluster', colorByName='dist_to_line', visible=False)
 
@@ -251,8 +267,6 @@ def onSegmentationViewDoubleClicked(widget, mousePosition):
     affordance.publishValve(params)
 
     getSegmentationView().render()
-
-    switchToView('DRC View')
 
 
 def cleanup():
