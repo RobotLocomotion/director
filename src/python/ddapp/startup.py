@@ -77,13 +77,17 @@ if useIk:
 
 
 om.init(app.getMainWindow().objectTree(), app.getMainWindow().propertiesPanel())
-parentItem = om.addContainerToObjectTree('robots')
-om.addBasicItemToObjectTree('model.urdf (IK server)', om.Icons.Matlab, parentItem)
-om.addModelsToObjectTree(models, parentItem)
+
+
+robotsFolder = om.addContainer('robots')
+
+om.addPlaceholder('model.urdf (IK server)', om.Icons.Matlab, robotsFolder)
+for model in models:
+    om.addRobotModel(model, robotsFolder)
 
 if useTable:
-    parentItem = om.addContainerToObjectTree('affordances')
-    om.addModelToObjectTree(tableModel, parentItem)
+    affordancesFolder = om.addContainerToObjectTree('affordances')
+    om.addRobotModel(tableModel, affordancesFolder)
 
 
 perception.init(view, models)

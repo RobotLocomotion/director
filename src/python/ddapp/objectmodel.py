@@ -1,12 +1,13 @@
 import os
 from PythonQt import QtCore, QtGui
 from collections import namedtuple
+from collections import OrderedDict
 
 _objectTree = None
 _propertiesPanel = None
 
 objects = {}
-ItemProperty = namedtuple('ItemProperty', ['name', 'decimals', 'minimum', 'maximum', 'singleStep'])
+PropertyAttributes = namedtuple('PropertyAttributes', ['decimals', 'minimum', 'maximum', 'singleStep', 'hidden'])
 
 
 class Icons(object):
@@ -16,6 +17,82 @@ class Icons(object):
   EyeOff = QtGui.QIcon(':/images/eye_icon_gray.png')
   Matlab = QtGui.QIcon(':/images/matlab_logo.png')
   Robot = QtGui.QIcon(':/images/robot_icon.png')
+  Laser = QtGui.QIcon(':/images/laser_icon.jpg')
+
+
+
+class ObjectModelItem(object):
+
+    def __init__(self, name, icon=Icons.Robot):
+        self.properties = OrderedDict()
+        self.icon = icon
+        self.addProperty('Name', name)
+
+    def propertyNames(self):
+        return self.properties.keys()
+
+    def hasProperty(self, propertyName):
+        return propertyName in self.properties
+
+    def getProperty(self, propertyName):
+        assert self.hasProperty(propertyName)
+        return self.properties[propertyName]
+
+    def addProperty(self, propertyName, propertyValue):
+        self.properties[propertyName] = propertyValue
+        self._onPropertyAdded(propertyName)
+
+    def setProperty(self, propertyName, propertyValue):
+        assert self.hasProperty(propertyName)
+        self.oldPropertyValue = (propertyName, self.getProperty(propertyName))
+        self.properties[propertyName] = propertyValue
+        self._onPropertyChanged(propertyName)
+        self.oldPropertyValue = None
+
+    def getPropertyAttributes(self, propertyName):
+
+        if propertyName == 'Alpha':
+            return PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=0.1, hidden=False)
+        elif propertyName == 'Name':
+            return PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=True)
+        else:
+            return PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False)
+
+    def _onPropertyChanged(self, propertyName):
+        updatePropertyPanel(self, propertyName)
+        if propertyName == 'Visible':
+            updateVisIcon(self)
+
+    def _onPropertyAdded(self, propertyName):
+        pass
+
+
+class ContainerItem(ObjectModelItem):
+
+    def __init__(self, name):
+        ObjectModelItem.__init__(self, name, Icons.Directory)
+
+
+class RobotModelItem(ObjectModelItem):
+
+    def __init__(self, model):
+
+        modelName = os.path.basename(model.filename())
+        ObjectModelItem.__init__(self, modelName, Icons.Robot)
+
+        self.model = model
+        self.addProperty('Filename', model.filename())
+        self.addProperty('Visible', model.visible())
+        self.addProperty('Alpha', model.alpha())
+        self.addProperty('Color', QtGui.QColor(255,0,0))
+
+    def _onPropertyChanged(self, propertyName):
+        ObjectModelItem._onPropertyChanged(self, propertyName)
+
+        if propertyName == 'Alpha':
+            self.model.setAlpha(self.getProperty(propertyName))
+        elif propertyName == 'Visible':
+            self.model.setVisible(self.getProperty(propertyName))
 
 
 def getObjectTree():
@@ -37,54 +114,84 @@ def getActiveObject():
     return objects[item] if item is not None else None
 
 
+def getItemForObject(obj):
+    global objects
+    for item, itemObj in objects.iteritems():
+        if itemObj == obj:
+            return item
+
+
+def findItemByName(name):
+    for item in objects.keys():
+        if item.text(0) == name:
+            return item
+
+_blockSignals = False
 def onPropertyChanged(prop):
 
-    item, obj = getActiveItem(), getActiveObject()
+    if _blockSignals:
+        return
 
-    if prop.propertyName() == 'Alpha':
-        obj['data'].setAlpha(prop.value())
+    if prop.isSubProperty():
+        return
+
+    item, obj = getActiveItem(), getActiveObject()
+    obj.setProperty(prop.propertyName(), prop.value())
 
 
 def onTreeSelectionChanged():
 
+    item, obj = getActiveItem(), getActiveObject()
+
+    global _blockSignals
+    _blockSignals = True
+
     p = getPropertiesPanel()
     p.clear()
 
-    item, obj = getActiveItem(), getActiveObject()
+    for propertyName in obj.propertyNames():
 
-    if 'properties' not in obj:
+        value = obj.getProperty(propertyName)
+        attributes = obj.getPropertyAttributes(propertyName)
+        if value is not None and not attributes.hidden:
+            addProperty(p, propertyName, attributes, value)
+
+    _blockSignals = False
+
+
+def updateVisIcon(obj):
+    item = getItemForObject(obj)
+    if not obj.hasProperty('Visible'):
         return
 
-    for prop in obj['properties']:
-
-        value = None
-        if prop.name == 'Filename':
-            value = obj['data'].filename()
-
-        if prop.name == 'Alpha':
-            value = obj['data'].alpha()
-
-        if value is not None:
-            addProperty(p, prop, value)
-
-
-
-def updateVisIcon(item):
-    obj = objects[item]
-    isVisible = obj['visible']
+    isVisible = obj.getProperty('Visible')
     icon = Icons.Eye if isVisible else Icons.EyeOff
     item.setIcon(1, icon)
 
 
+def updatePropertyPanel(obj, propertyName):
+    if getActiveObject() != obj:
+        return
+
+    p = getPropertiesPanel()
+    prop = p.findProperty(propertyName)
+    if prop is None:
+        return
+
+    global _blockSignals
+    _blockSignals = True
+    prop.setValue(obj.getProperty(propertyName))
+    _blockSignals = False
+
+
 def onItemClicked(item, column):
 
-  global objects
-  obj = objects[item]
+    global objects
+    obj = objects[item]
 
-  if column == 1 and 'visible' in obj:
-      obj['visible'] = not obj['visible']
-      obj['data'].setVisible(obj['visible'])
-      updateVisIcon(item)
+    if column == 1 and obj.hasProperty('Visible'):
+        obj.setProperty('Visible', not obj.getProperty('Visible'))
+        updateVisIcon(obj)
 
 
 def setPropertyAttributes(p, attributes):
@@ -94,17 +201,17 @@ def setPropertyAttributes(p, attributes):
     p.setAttribute('singleStep', attributes.singleStep)
 
 
-def addProperty(panel, prop, value):
+def addProperty(panel, name, attributes, value):
 
     if isinstance(value, list):
-        groupProp = panel.addGroup(prop.name)
+        groupProp = panel.addGroup(name)
         for v in value:
-            p = panel.addSubProperty(prop.name, v, groupProp)
-            setPropertyAttributes(p, prop)
+            p = panel.addSubProperty(name, v, groupProp)
+            setPropertyAttributes(p, attributes)
         return groupProp
     else:
-        p = panel.addProperty(prop.name, value)
-        setPropertyAttributes(p, prop)
+        p = panel.addProperty(name, value)
+        setPropertyAttributes(p, attributes)
         return p
 
 
@@ -114,56 +221,36 @@ def initProperties():
     p.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
 
 
-def newAlphaProperty():
-    return ItemProperty(name='Alpha', decimals=2, minimum=0.0, maximum=1.0, singleStep=0.1)
+def addToObjectModel(obj, parentObj=None):
 
+    parentItem = getItemForObject(parentObj)
+    objName = obj.getProperty('Name')
 
-def newFileNameProperty():
-    return ItemProperty(name='Filename', decimals=0, minimum=0, maximum=0, singleStep=0)
-
-
-def addModelToObjectTree(model, parentItem):
-
-
-    modelName = os.path.basename(model.filename())
-    item = QtGui.QTreeWidgetItem(parentItem, [modelName])
-    item.setIcon(0, Icons.Robot)
-
-    obj = dict(data=model, visible=model.visible(), properties=[newAlphaProperty(), newFileNameProperty()])
+    item = QtGui.QTreeWidgetItem(parentItem, [objName])
+    item.setIcon(0, obj.icon)
     objects[item] = obj
+    updateVisIcon(obj)
 
-    updateVisIcon(item)
-    return item
-
-
-def addModelsToObjectTree(models, parentItem):
-    return [addModelToObjectTree(model, parentItem) for model in models]
-
-
-def addBasicItemToObjectTree(name, icon, parentItem):
-    item = QtGui.QTreeWidgetItem(parentItem, [name])
-    item.setIcon(0, icon)
-    objects[item] = dict(data=None)
-    return item
+    if parentItem is None:
+        tree = getObjectTree()
+        tree.addTopLevelItem(item)
+        tree.expandItem(item)
 
 
-def findItemByName(name):
-    for item in objects.keys():
-        if item.text(0) == name:
-            return item
+def addContainer(name):
+    obj = ContainerItem(name)
+    addToObjectModel(obj)
+    return obj
 
+def addRobotModel(model, parentObj):
+    obj = RobotModelItem(model)
+    addToObjectModel(obj, parentObj)
+    return obj
 
-def addContainerToObjectTree(name):
-
-    item = QtGui.QTreeWidgetItem([name])
-    item.setIcon(0, Icons.Directory)
-    objects[item] = dict(data=None)
-
-    tree = getObjectTree()
-    tree.addTopLevelItem(item)
-    tree.expandItem(item)
-
-    return item
+def addPlaceholder(name, icon, parentObj):
+    obj = ObjectModelItem(name, icon)
+    addToObjectModel(obj, parentObj)
+    return obj
 
 
 def initObjectTree():

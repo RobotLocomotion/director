@@ -14,7 +14,8 @@ class ddPropertiesPanel::ddInternal
 public:
 
   QtVariantPropertyManager* Manager;
-  QtAbstractPropertyBrowser* Browser;
+  //QtAbstractPropertyBrowser* Browser;
+  QtTreePropertyBrowser* Browser;
 
   QMap<QString, QtVariantProperty*> Properties;
 };
@@ -35,7 +36,7 @@ ddPropertiesPanel::ddPropertiesPanel(QWidget* parent) : QWidget(parent)
   QtVariantEditorFactory *variantFactory = new QtVariantEditorFactory;
   browser->setFactoryForManager(manager, variantFactory);
   browser->setPropertiesWithoutValueMarked(true);
-  browser->setRootIsDecorated(false);
+  browser->setRootIsDecorated(true);
 
 
   this->connect(this->Internal->Manager,
@@ -86,6 +87,13 @@ QtVariantProperty* ddPropertiesPanel::addProperty(const QString& name, const QVa
   property->setValue(value);
   this->Internal->Browser->addProperty(property);
   this->Internal->Properties[name] = property;
+
+  QtBrowserItem * browserItem = this->Internal->Browser->topLevelItem(property);
+  if (browserItem)
+  {
+    this->Internal->Browser->setExpanded(browserItem, false);
+  }
+
   return property;
 }
 

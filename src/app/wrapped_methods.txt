@@ -42,7 +42,9 @@ void ddSpreadsheetView::removeRow(int);
 
 QString QtVariantProperty::propertyName();
 QVariant QtVariantProperty::value();
+void QtVariantProperty::setValue(const QVariant &);
 void QtVariantProperty::setAttribute(const QString &, const QVariant &);
+bool QtVariantProperty::isSubProperty() const;
 
 QtVariantProperty* ddPropertiesPanel::addGroup(const QString&);
 QtVariantProperty* ddPropertiesPanel::addProperty(const QString&, const QVariant&);
