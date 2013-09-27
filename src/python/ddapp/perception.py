@@ -3,71 +3,12 @@ import sys
 import vtk
 import PythonQt
 from PythonQt import QtCore, QtGui
-
 import ddapp.objectmodel as om
-
 from ddapp.timercallback import TimerCallback
-
 import vtkDRCFiltersPython as drc
+from vtkPointCloudUtils.debugVis import DebugData
+import numpy as np
 
-
-'''
-
->>> 
->>> perception.m.reader.GetTransform('SCAN', 'local', perception.m.lastRobotStateUtime, trans)
->>> print trans.GetMatrix()
-vtkMatrix4x4 (0xec978b0)
-  Debug: Off
-  Modified Time: 4619724
-  Reference Count: 2
-  Registered Events: (none)
-  Elements:
-    0.835177 -0.192944 0.515025 0.263848 
-    0.0033693 0.93822 0.346022 -0.0175402 
-    -0.54997 -0.287255 0.78423 1.78908 
-    0 0 0 1 
-
-
->>> p = [0,0,0]
->>> trans.TransformPoint(p)
-(0.26384816893784385, -0.01754017254221784, 1.7890823239833162)
->>> import vtkPointCloudUtils
->>> from vtkPointCloudUtils import debugVis
-Traceback (most recent call last):
-  File "<console>", line 1, in <module>
-  File "/home/drc/source/drc/paraview/vtkPointCloudUtils/debugVis.py", line 70
-    self.addPolyData(cone.GetOutput(), color)
-   ^
-IndentationError: unexpected indent
->>> 
->>> from vtkPointCloudUtils import debugVis
->>> d = debugVis.DebugData()
->>> d.addSphere(p, radius=0.05, color=[0,1,0])
->>> mapper = vtk.vtkMapper()
-Traceback (most recent call last):
-  File "<console>", line 1, in <module>
-TypeError: this is an abstract class and cannot be instantiated
->>> mapper = vtk.vtkPolyDataMapper()
->>> mapper.SetInputData(d.getPolyData())
->>> actor = vtk.vtkActor()
->>> view.renderer().AddActor(actor)
->>> d
-<vtkPointCloudUtils.debugVis.DebugData object at 0xd580290>
->>> d.getPolyData().GetNumberOfPoints()
-530L
->>> actor.SetMapper(mapper)
->>> p
-[0, 0, 0]
->>> scanPos = perception.m.reader.GetTransform('SCAN', 'local', perception.m.lastRobotStateUtime, trans)
->>> scanPos
->>> scanPos = trans.TransformPoint(p)
->>> scanPos
-(0.26384816893784385, -0.01754017254221784, 1.7890823239833162)
->>> d = debugVis.DebugData()
->>> d.addSphere(scanPos, radius=0.05, color=[0,1,0])
->>> mapper.SetInputData(d.getPolyData())
-
-'''
 
 _view = None
 def getRenderView():
@@ -79,8 +20,14 @@ _debugItem = None
 def updateDebugItem(polyData):
     global _debugItem
     if not _debugItem:
-        debugItem = PolyDataItem('', polyData)
-        
+        _debugItem = om.PolyDataItem('spindle axis', polyData, getRenderView())
+        _debugItem.setProperty('Color', QtGui.QColor(0, 255, 0))
+        om.addToObjectModel(_debugItem, om.findObjectByName('sensors'))
+    else:
+        _debugItem.setPolyData(polyData)
+
+    _view.render()
+
 
 class MultisenseItem(om.ObjectModelItem):
 
@@ -89,7 +36,9 @@ class MultisenseItem(om.ObjectModelItem):
         om.ObjectModelItem.__init__(self, 'Multisense', om.Icons.Laser)
 
         self.model = model
-        self.addProperty('Enabled', True)
+        self.addProperty('Updates Enabled', True)
+        self.addProperty('Min Range', model.reader.GetDistanceRange()[0])
+        self.addProperty('Max Range', model.reader.GetDistanceRange()[1])
         self.addProperty('Visible', model.visible)
         self.addProperty('Point Size', model.pointSize)
         self.addProperty('Alpha', model.alpha)
@@ -115,55 +64,23 @@ class MultisenseItem(om.ObjectModelItem):
         elif propertyName == 'Point Size':
             self.model.setPointSize(self.getProperty(propertyName))
 
+        elif propertyName in ('Min Range', 'Max Range'):
+            self.model.reader.SetDistanceRange(self.getProperty('Min Range'), self.getProperty('Max Range'))
+            self.model.showRevolution(self.model.displayedRevolution)
+
+        _view.render()
+
+
     def getPropertyAttributes(self, propertyName):
 
         if propertyName == 'Point Size':
             return om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False)
+
+        elif propertyName in ('Min Range', 'Max Range'):
+            return om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.5, hidden=False)
+
         else:
             return om.ObjectModelItem.getPropertyAttributes(self, propertyName)
-
-
-
-class PolyDataItem(om.ObjectModelItem):
-
-    def __init__(self, name, polyData):
-
-        om.ObjectModelItem.__init__(self, name, om.Icons.Robot)
-
-        self.polyData = polyData
-        self.mapper = vtk.vtkPolyDataMapper()
-        self.actor = vtk.vtkActor()
-        getRenderView().renderer().AddActor(actor)
-        self.addProperty('Visible', True)
-        self.addProperty('Alpha', 1.0)
-        self.addProperty('Color', QtGui.QColor(255,255,255))
-
-
-    def setPolyData(self, polyData):
-        self.polyData = polyData
-        self.mapper.SetInputData(polyData)
-
-    def _onPropertyChanged(self, propertyName):
-        om.ObjectModelItem._onPropertyChanged(self, propertyName)
-
-        if propertyName == 'Alpha':
-            self.actor.GetProperty().SetOpacity(self.getProperty(propertyName))
-
-        elif propertyName == 'Visible':
-            self.actor.SetVisibility(self.getProperty(propertyName))
-
-        elif propertyName == 'Color':
-            color = self.getProperty(propertyName)
-            color = [color.r()/255.0, color.g()/255.0, color.b()/255.0]
-            self.actor.GetProperty().SetColor(color)
-
-
-    def getPropertyAttributes(self, propertyName):
-        pass
-        #if propertyName == '...':
-        #    return om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False)
-        #else:
-        #    return om.ObjectModelItem.getPropertyAttributes(self, propertyName)
 
 
 class MultiSenseSource(TimerCallback):
@@ -219,12 +136,8 @@ class MultiSenseSource(TimerCallback):
 
     def showRevolution(self, revId):
         self.reader.GetDataForRevolution(revId, self.revPolyData)
-        self.revActor.SetVisibility(True)
         self.view.render()
         self.displayedRevolution = revId
-
-    def hideRevolution(self):
-        self.revActor.SetVisibility(False)
 
     def setPointSize(self, pointSize):
         for actor in self.actors:
@@ -246,6 +159,7 @@ class MultiSenseSource(TimerCallback):
     def start(self):
         if self.reader is None:
             self.reader = drc.vtkMultisenseSource()
+            self.reader.SetDistanceRange(0.25, 4.0)
             self.reader.Start()
 
         TimerCallback.start(self)
@@ -261,6 +175,8 @@ class MultiSenseSource(TimerCallback):
         robotState = [robotState.GetValue(i) for i in xrange(robotState.GetNumberOfTuples())]
         for model in self.models:
             model.setEstRobotState(robotState)
+
+        #self.updateDebugItems()
 
 
     def updateScanLines(self):
@@ -295,18 +211,45 @@ class MultiSenseSource(TimerCallback):
             return
 
         self.showRevolution(currentRevolution)
-        self.view.render()
+
+
+    def getSpindleAxis(self):
+
+        t = vtk.vtkTransform()
+        self.reader.GetTransform('SCAN', 'local', self.lastRobotStateUtime, t)
+
+        p1 = [0.0, 0.0, 0.0]
+        p2 = [2.0, 0.0, 0.0]
+
+        p1 = np.array(t.TransformPoint(p1))
+        p2 = np.array(t.TransformPoint(p2))
+
+        axis = p2 - p1
+        return axis/np.linalg.norm(axis)
 
 
     def updateDebugItems(self):
-        pass
+
+        t = vtk.vtkTransform()
+        self.reader.GetTransform('SCAN', 'local', self.lastRobotStateUtime, t)
+
+        p1 = [0.0, 0.0, 0.0]
+        p2 = [2.0, 0.0, 0.0]
+
+        p1 = t.TransformPoint(p1)
+        p2 = t.TransformPoint(p2)
+
+        d = DebugData()
+        d.addSphere(p1, radius=0.01, color=[0,1,0])
+        d.addLine(p1, p2, color=[0,1,0])
+        updateDebugItem(d.getPolyData())
+
 
     def tick(self):
 
         self.updateRobotState()
         self.updateRevolution()
         self.updateScanLines()
-        self.updateDebugItems()
 
 
 

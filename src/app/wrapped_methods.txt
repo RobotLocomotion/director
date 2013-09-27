@@ -17,6 +17,7 @@ void ddDRCView::unloadModels();
 vtkCamera* ddQVTKWidgetView::camera() const;
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
 vtkRenderer* ddQVTKWidgetView::renderer() const;
+QVTKWidget* ddQVTKWidgetView::vtkWidget() const;
 QList<double> ddQVTKWidgetView::lastTDxMotion() const;
 
 ddViewManager* ddMainWindow::viewManager()
@@ -26,10 +27,18 @@ QTreeWidget* ddMainWindow::objectTree() const;
 QTextEdit* ddMainWindow::outputConsole() const;
 void ddMainWindow::addWidgetToViewMenu(QWidget*);
 
+ddPythonEventFilter::ddPythonEventFilter();
+ddPythonEventFilter::~ddPythonEventFilter();
+void ddPythonEventFilter::setEventHandlerResult(bool);
+void ddPythonEventFilter::addFilteredEventType(int);
+void ddPythonEventFilter::removeFilteredEventType(int);
+
 
 ddViewBase* ddViewManager::findView(const QString&) const;
 ddViewBase* ddViewManager::createView(const QString&, int);
 ddViewBase* ddViewManager::createView(const QString&);
+void ddViewManager::switchToView(const QString&);
+ddViewBase* ddViewManager::currentView() const;
 
 
 QAbstractItemModel* ddSpreadsheetView::model();

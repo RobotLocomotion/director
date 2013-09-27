@@ -76,6 +76,25 @@ ddViewBase* ddViewManager::findView(const QString& viewName) const
 }
 
 //-----------------------------------------------------------------------------
+void ddViewManager::switchToView(const QString& viewName)
+{
+  for (int i = 0; i < this->Internal->TabWidget->count(); ++i)
+  {
+    if (this->Internal->TabWidget->tabText(i) == viewName)
+    {
+      this->Internal->TabWidget->setCurrentIndex(i);
+      return;
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
+ddViewBase* ddViewManager::currentView() const
+{
+  return this->findView(this->Internal->TabWidget->tabText(this->Internal->TabWidget->currentIndex()));
+}
+
+//-----------------------------------------------------------------------------
 void ddViewManager::addView(ddViewBase* view, const QString& viewName, int pageIndex)
 {
   QSplitter* splitter = 0;
@@ -108,6 +127,10 @@ ddViewBase* ddViewManager::createView(const QString& viewName, int pageIndex)
   else if (viewName == "Spreadsheet View")
   {
     view = new ddSpreadsheetView;
+  }
+  else if (viewName == "Segmentation View")
+  {
+    view = new ddQVTKWidgetView;
   }
 
   if (view)

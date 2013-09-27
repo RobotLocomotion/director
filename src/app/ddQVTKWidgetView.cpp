@@ -101,6 +101,12 @@ vtkRenderer* ddQVTKWidgetView::renderer() const
 }
 
 //-----------------------------------------------------------------------------
+QVTKWidget* ddQVTKWidgetView::vtkWidget() const
+{
+  return this->Internal->VTKWidget;
+}
+
+//-----------------------------------------------------------------------------
 void ddQVTKWidgetView::render()
 {
   if (!this->Internal->RenderPending)
@@ -113,6 +119,7 @@ void ddQVTKWidgetView::render()
 //-----------------------------------------------------------------------------
 void ddQVTKWidgetView::forceRender()
 {
+  this->Internal->Renderer->ResetCameraClippingRange();
   this->Internal->RenderWindow->Render();
   this->update();
   this->Internal->RenderPending = false;

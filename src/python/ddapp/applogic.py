@@ -21,12 +21,20 @@ def getDRCBase():
     return os.environ['DRC_BASE']
 
 
+def getViewManager():
+    return getMainWindow().viewManager()
+
+
 def getDRCView():
     return getMainWindow().viewManager().findView('DRC View')
 
 
 def getSpreadsheetView():
     return getMainWindow().viewManager().findView('Spreadsheet View')
+
+
+def getCurrentView():
+    return getMainWindow().viewManager().currentView()
 
 
 def getOutputConsole():
@@ -61,14 +69,20 @@ def addWidgetToDock(widget):
 
 def resetCamera(viewDirection=None):
 
+    view = getCurrentView()
+    try:
+        camera = view.camera()
+    except AttributeError:
+        return
+
     if viewDirection is not None:
-        camera = getDRCView().camera()
+        camera = view.camera()
         camera.SetPosition([0, 0, 0])
         camera.SetFocalPoint(viewDirection)
         camera.SetViewUp([0,0,1])
 
-    getDRCView().resetCamera()
-    getDRCView().render()
+    view.resetCamera()
+    view.render()
 
 
 def displaySnoptInfo(info):

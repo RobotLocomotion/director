@@ -16,9 +16,12 @@ from ddapp import objectmodel as om
 from ddapp import spreadsheet
 from ddapp import tdx
 from ddapp import perception
+from ddapp import segmentation
 from ddapp.timercallback import TimerCallback
 
 import numpy as np
+from vtkPointCloudUtils import vtkNumpy
+
 
 app.startup(globals())
 quit = app.quit
@@ -91,3 +94,5 @@ if useTable:
 
 
 perception.init(view, models)
+segmentation.init()
+

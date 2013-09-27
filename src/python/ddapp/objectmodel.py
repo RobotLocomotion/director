@@ -3,6 +3,8 @@ from PythonQt import QtCore, QtGui
 from collections import namedtuple
 from collections import OrderedDict
 
+import vtk
+
 _objectTree = None
 _propertiesPanel = None
 
@@ -95,6 +97,50 @@ class RobotModelItem(ObjectModelItem):
             self.model.setVisible(self.getProperty(propertyName))
 
 
+class PolyDataItem(ObjectModelItem):
+
+    def __init__(self, name, polyData, view):
+
+        ObjectModelItem.__init__(self, name, Icons.Robot)
+
+        self.polyData = polyData
+        self.view = view
+        self.mapper = vtk.vtkPolyDataMapper()
+        self.mapper.SetInputData(self.polyData)
+        self.actor = vtk.vtkActor()
+        self.actor.SetMapper(self.mapper)
+        self.view.renderer().AddActor(self.actor)
+        self.addProperty('Visible', True)
+        self.addProperty('Alpha', 1.0)
+        self.addProperty('Color', QtGui.QColor(255,255,255))
+
+
+    def setPolyData(self, polyData):
+        self.polyData = polyData
+        self.mapper.SetInputData(polyData)
+        self.view.render()
+
+    def _onPropertyChanged(self, propertyName):
+        ObjectModelItem._onPropertyChanged(self, propertyName)
+
+        if propertyName == 'Alpha':
+            self.actor.GetProperty().SetOpacity(self.getProperty(propertyName))
+
+        elif propertyName == 'Visible':
+            self.actor.SetVisibility(self.getProperty(propertyName))
+
+        elif propertyName == 'Color':
+            color = self.getProperty(propertyName)
+            color = [color.red()/255.0, color.green()/255.0, color.blue()/255.0]
+            self.actor.GetProperty().SetColor(color)
+
+        self.view.render()
+
+
+    def getPropertyAttributes(self, propertyName):
+        return ObjectModelItem.getPropertyAttributes(self, propertyName)
+
+
 def getObjectTree():
     return _objectTree
 
@@ -121,10 +167,11 @@ def getItemForObject(obj):
             return item
 
 
-def findItemByName(name):
-    for item in objects.keys():
-        if item.text(0) == name:
-            return item
+def findObjectByName(name):
+    for obj in objects.values():
+        if obj.getProperty('Name') == name:
+            return obj
+
 
 _blockSignals = False
 def onPropertyChanged(prop):

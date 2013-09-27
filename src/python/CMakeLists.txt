@@ -10,6 +10,7 @@ set(python_files
   ddapp/midi.py
   ddapp/objectmodel.py
   ddapp/perception.py
+  ddapp/segmentation.py
   ddapp/simpletimer.py
   ddapp/spreadsheet.py
   ddapp/startup.py

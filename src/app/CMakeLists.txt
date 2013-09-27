@@ -31,6 +31,7 @@ qt4_wrap_cpp(moc_srcs
   ${decorator_file}
   ddDrakeModel.h
   ddDRCView.h
+  ddPythonEventFilter.h
   ddGLWidgetView.h
   ddMainWindow.h
   ddPropertiesPanel.h
@@ -95,7 +96,7 @@ target_link_libraries(drake-designer ddApp)
 add_custom_command(OUTPUT ${decorator_file}
   COMMAND ${PYTHON_EXECUTABLE} WrapPythonQt.py
   -i wrapped_methods.txt -o "${decorator_file}"
-  --class-prefixes vtk dd --qt-class-prefixes dd
+  --class-prefixes vtk dd QVTK --qt-class-prefixes dd QVTK
   --module-name dd
   DEPENDS wrapped_methods.txt WrapPythonQt.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

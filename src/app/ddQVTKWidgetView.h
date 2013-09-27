@@ -6,6 +6,7 @@
 class vtkCamera;
 class vtkRenderer;
 class vtkRenderWindow;
+class QVTKWidget;
 
 class ddQVTKWidgetView : public ddViewBase
 {
@@ -21,6 +22,8 @@ public:
   vtkCamera* camera() const;
 
   QList<double> lastTDxMotion() const;
+
+  QVTKWidget* vtkWidget() const;
 
 public slots:
 

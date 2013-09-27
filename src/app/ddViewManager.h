@@ -21,6 +21,9 @@ public:
 
   ddViewBase* createView(const QString& viewName, int pageIndex=-1);
 
+  void switchToView(const QString& viewName);
+
+  ddViewBase* currentView() const;
 
 protected:
 
