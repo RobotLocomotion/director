@@ -13,6 +13,7 @@ from vtkPointCloudUtils import vtkNumpy
 from vtkPointCloudUtils.debugVis import DebugData
 from vtkPointCloudUtils.shallowCopy import shallowCopy
 from vtkPointCloudUtils import affordance
+from vtkPointCloudUtils import io
 
 import vtkPCLFiltersPython as pcl
 
@@ -83,12 +84,28 @@ def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None):
     return polyData, normal
 
 
-def switchToSegmentationView():
+def addCoordArraysToPolyData(polyData):
+    polyData = shallowCopy(polyData)
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    vtkNumpy.addNumpyToVtk(polyData, points[:,0].copy(), 'x')
+    vtkNumpy.addNumpyToVtk(polyData, points[:,1].copy(), 'y')
+    vtkNumpy.addNumpyToVtk(polyData, points[:,2].copy(), 'z')
+    return polyData
 
-    if not perception._multisenseItem.model.revPolyData or not perception._multisenseItem.model.revPolyData.GetNumberOfPoints():
-        return
 
-    cleanup()
+def getDebugRevolutionData():
+    filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
+    return io.readPolyData(filename)
+
+
+def getCurrentRevolutionData():
+    revPolyData = perception._multisenseItem.model.revPolyData
+    if not revPolyData or not revPolyData.GetNumberOfPoints():
+        return None
+    return addCoordArraysToPolyData(revPolyData)
+
+
+def getOrCreateSegmentationView():
 
     viewManager = app.getViewManager()
     segmentationView = viewManager.findView('Segmentation View')
@@ -97,22 +114,21 @@ def switchToSegmentationView():
         installEventFilter(segmentationView, segmentationViewEventFilter)
 
     viewManager.switchToView('Segmentation View')
-
-    polyData = vtk.vtkPolyData()
-    polyData.ShallowCopy(perception._multisenseItem.model.revPolyData)
+    return segmentationView
 
 
-    segmentationObj = om.PolyDataItem('pointcloud snapshot', polyData, segmentationView)
-    om.addToObjectModel(segmentationObj, getOrCreateContainer('segmentation'))
+def activateSegmentationMode():
 
+    polyData = getDebugRevolutionData()
+    #polyData = getCurrentRevolutionData()
 
-    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
-    vtkNumpy.addNumpyToVtk(polyData, points[:,0].copy(), 'x')
-    vtkNumpy.addNumpyToVtk(polyData, points[:,1].copy(), 'y')
-    vtkNumpy.addNumpyToVtk(polyData, points[:,2].copy(), 'z')
+    if not polyData:
+        return
 
-    colorBy(polyData, segmentationObj.mapper, 'x')
+    cleanup()
+    segmentationView = getOrCreateSegmentationView()
 
+    segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='x')
 
     app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
     segmentationView.render()
@@ -264,7 +280,7 @@ def onSegmentationViewDoubleClicked(widget, mousePosition):
 
     params = segmentValve(polyData)
 
-    affordance.publishValve(params)
+    #affordance.publishValve(params)
 
     getSegmentationView().render()
 
@@ -301,7 +317,7 @@ def drcViewEventFilter(obj, event):
     eventFilter = eventFilters[obj]
     if event.type() == QtCore.QEvent.MouseButtonDblClick:
         eventFilter.setEventHandlerResult(True)
-        switchToSegmentationView()
+        activateSegmentationMode()
     else:
         eventFilter.setEventHandlerResult(False)
 
@@ -322,3 +338,6 @@ def installEventFilter(view, func):
 def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
+
+    activateSegmentationMode()
+
