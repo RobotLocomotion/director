@@ -161,8 +161,6 @@ class IKEditor(object):
 
     def positionTargetChanged(self):
 
-        print 'position target changed'
-
         linkName = self.ui.PositionLinkNameCombo.currentText
         assert linkName == self.server.activePositionConstraint
 
@@ -176,7 +174,6 @@ class IKEditor(object):
         #self.updateIk()
 
     def positionOffsetChanged(self):
-        print 'position offset changed'
         offset = [self.ui.OffsetX.value, self.ui.OffsetY.value, self.ui.OffsetZ.value]
         linkName = self.ui.PositionLinkNameCombo.currentText
 

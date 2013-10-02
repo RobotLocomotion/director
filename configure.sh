@@ -24,9 +24,9 @@ configure_paladin09()
   vtkDir=$HOME/source/paraview/build/VTK
   #vtkDir=/usr/lib/vtk-5.8
 
-  #drakeDir=$HOME/source/drc/drc-trunk/software/drake
-  drakeDir=$HOME/source/drake/drake
-  
+  drakeDir=$HOME/source/drc/drc-trunk/software/drake
+  #drakeDir=$HOME/source/drake/drake
+
   $cmake \
     -DDRAKE_DIR=$drakeDir \
     -DPYTHONQT_DIR=$HOME/source/PythonQt/install \

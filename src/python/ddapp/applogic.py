@@ -37,6 +37,12 @@ def getCurrentView():
     return getMainWindow().viewManager().currentView()
 
 
+def getCurrentRenderView():
+    view = getCurrentView()
+    if hasattr(view, 'camera'):
+        return view
+
+
 def getOutputConsole():
     return getMainWindow().outputConsole()
 
@@ -67,13 +73,10 @@ def addWidgetToDock(widget):
     getMainWindow().addWidgetToViewMenu(dock)
 
 
-def resetCamera(viewDirection=None):
+def resetCamera(viewDirection=None, view=None):
 
-    view = getCurrentView()
-    try:
-        camera = view.camera()
-    except AttributeError:
-        return
+    view = view or getCurrentRenderView()
+    assert(view)
 
     if viewDirection is not None:
         camera = view.camera()
@@ -90,20 +93,27 @@ def displaySnoptInfo(info):
 
 
 def toggleStereoRender():
-    renderWindow = getDRCView().renderWindow()
+    view = getCurrentRenderView()
+    assert(view)
+
+    renderWindow = view.renderWindow()
     renderWindow.SetStereoRender(not renderWindow.GetStereoRender())
-    getDRCView().render()
+    view.render()
+
 
 def toggleCameraTerrainMode():
 
-    iren = getDRCView().renderWindow().GetInteractor()
+    view = getCurrentRenderView()
+    assert(view)
+
+    iren = view.renderWindow().GetInteractor()
     if isinstance(iren.GetInteractorStyle(), vtk.vtkInteractorStyleTerrain):
         iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
     else:
         iren.SetInteractorStyle(vtk.vtkInteractorStyleTerrain())
-        getDRCView().camera().SetViewUp(0,0,1)
+        view.camera().SetViewUp(0,0,1)
 
-    getDRCView().render()
+    view.render()
 
 
 def setupToolBar():

@@ -1,7 +1,7 @@
 
 s = IKServer();
-s = s.addRobot('model');
-s = s.addAffordance('table');
+s = s.addRobot('model_minimal_contact_fixedjoint_hands');
+%s = s.addAffordance('table');
 s = s.setupCosts();
 s = s.loadNominalData();
 

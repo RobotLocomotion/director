@@ -92,7 +92,7 @@ classdef IKServer
             xyz = zeros(3,1);
             rpy = zeros(3,1);
             obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
-            obj.robot = weldFingerJoints(obj.robot);
+            %obj.robot = weldFingerJoints(obj.robot);
             obj.robot = compile(obj.robot);
 
         end

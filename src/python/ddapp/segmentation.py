@@ -131,6 +131,7 @@ def activateSegmentationMode():
     segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='x')
 
     app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
+    segmentationView.camera().Dolly(3.0)
     segmentationView.render()
 
 
@@ -211,6 +212,7 @@ def segmentValve(polyData, planeNormal=None):
     showPolyData(d.getPolyData(), 'valve', view=getDRCView(), parentName='affordances')
 
     getDRCView().renderer().ResetCamera(d.getPolyData().GetBounds())
+    getSegmentationView().renderer().ResetCamera(d.getPolyData().GetBounds())
 
     global params
     params = {}

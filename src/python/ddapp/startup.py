@@ -71,8 +71,8 @@ if useIk:
     s = ik.AsyncIKCommunicator(jc)
     s.outputConsole = app.getOutputConsole()
     s.infoFunc = app.displaySnoptInfo
-    #s.start()
-    #s.startServerAsync()
+    s.start()
+    s.startServerAsync()
 
     e = ikeditor.IKEditor(app.getMainWindow(), s, poseCollection, costCollection)
     app.addWidgetToDock(e.widget)
