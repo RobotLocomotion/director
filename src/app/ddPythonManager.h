@@ -14,11 +14,12 @@ public:
 
   void setupConsole(QWidget* parent);
 
-  QString appSitePackagesDir() const;
+  static QString appSitePackagesDir();
 
 public slots:
 
   void showConsole();
+  void onExecuteFile(const QString& filename);
 
 protected:
 

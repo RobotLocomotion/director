@@ -6,6 +6,7 @@
 class ddViewManager;
 class ddPropertiesPanel;
 class ddPythonManager;
+class ddViewBase;
 class QTreeWidget;
 class QTextEdit;
 class QDockWidget;
@@ -40,6 +41,8 @@ protected slots:
 
   void startup();
   void toggleOutputConsoleVisibility();
+
+  void onCurrentViewChanged(ddViewBase* previousView, ddViewBase* currentView);
 
 protected:
 

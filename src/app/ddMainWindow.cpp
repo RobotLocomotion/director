@@ -1,6 +1,7 @@
 #include "ddMainWindow.h"
 
 #include "ddMacros.h"
+#include "ddMacrosManager.h"
 #include "ddPythonManager.h"
 #include "ddViewManager.h"
 #include "ddPropertiesPanel.h"
@@ -25,6 +26,8 @@ public:
 
   ddViewManager* ViewManager;
   ddPropertiesPanel* PropertiesPanel;
+  ddMacrosManager* ViewMacrosManager;
+  ddMacrosManager* UserMacrosManager;
   QPointer<ddPythonManager> PythonManager;
 
   ddViewMenu* ViewMenuManager;
@@ -65,6 +68,16 @@ ddMainWindow::ddMainWindow()
   //this->statusBar()->addPermanentWidget(logoLabel);
 
   this->setupViewMenu();
+
+  this->Internal->ViewMacrosManager = new ddMacrosManager(this);
+  this->Internal->ViewMacrosManager->setToolBar(this->Internal->ViewToolBar);
+
+  this->Internal->UserMacrosManager = new ddMacrosManager(this);
+  this->Internal->UserMacrosManager->setToolBar(this->Internal->MacrosToolBar);
+  this->Internal->UserMacrosManager->addPath(this->Internal->PythonManager->appSitePackagesDir() + "/../../../src/python/ddapp/macros");
+
+  this->connect(this->Internal->ViewManager, SIGNAL(currentViewChanged(ddViewBase*, ddViewBase*)), SLOT(onCurrentViewChanged(ddViewBase*, ddViewBase*)));
+  this->onCurrentViewChanged(0, this->Internal->ViewManager->currentView());
 }
 
 //-----------------------------------------------------------------------------
@@ -128,6 +141,18 @@ void ddMainWindow::addWidgetToViewMenu(QWidget* widget)
 }
 
 //-----------------------------------------------------------------------------
+void ddMainWindow::onCurrentViewChanged(ddViewBase* previousView, ddViewBase* currentView)
+{
+  QMap<QString, QString> macroDirs;
+
+  macroDirs["Segmentation View"] = ddPythonManager::appSitePackagesDir() + "/ddapp/macros/segmentation_view";
+  macroDirs["DRC View"] = ddPythonManager::appSitePackagesDir() + "/ddapp/macros/drc_view";
+
+  this->Internal->ViewMacrosManager->removePath(macroDirs.value(this->Internal->ViewManager->viewName(previousView)));
+  this->Internal->ViewMacrosManager->addPath(macroDirs.value(this->Internal->ViewManager->viewName(currentView)));
+}
+
+//-----------------------------------------------------------------------------
 void ddMainWindow::handleCommandLineArgs()
 {
   QStringList args = QApplication::instance()->arguments();
@@ -140,7 +165,7 @@ void ddMainWindow::startup()
   this->handleCommandLineArgs();
 
   this->setupPython();
-  QString startupScript = this->Internal->PythonManager->appSitePackagesDir() + "/ddapp/startup.py";
+  QString startupScript = ddPythonManager::appSitePackagesDir() + "/ddapp/startup.py";
   this->Internal->PythonManager->executeFile(startupScript);
 }
 
@@ -167,6 +192,13 @@ void ddMainWindow::setupViewMenu()
     this->Internal->MainToolBar,
     this->Internal->MainToolBar->windowTitle());
 
+  toolbarMenu->addWidget(
+    this->Internal->ViewToolBar,
+    this->Internal->ViewToolBar->windowTitle());
+
+  toolbarMenu->addWidget(
+    this->Internal->MacrosToolBar,
+    this->Internal->MacrosToolBar->windowTitle());
 }
 
 //-----------------------------------------------------------------------------
@@ -181,4 +213,7 @@ void ddMainWindow::setupPython()
   this->Internal->PythonManager->addObjectToPythonMain("_mainWindow", this);
   this->Internal->PythonManager->setupConsole(this);
   this->connect(this->Internal->ActionPythonConsole, SIGNAL(triggered()), this->Internal->PythonManager, SLOT(showConsole()));
+
+  this->Internal->PythonManager->connect(this->Internal->ViewMacrosManager, SIGNAL(executeScriptRequested(const QString&)), SLOT(onExecuteFile(const QString&)));
+  this->Internal->PythonManager->connect(this->Internal->UserMacrosManager, SIGNAL(executeScriptRequested(const QString&)), SLOT(onExecuteFile(const QString&)));
 }

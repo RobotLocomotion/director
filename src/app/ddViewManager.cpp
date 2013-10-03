@@ -32,6 +32,13 @@ class ddViewManager::ddInternal
 {
 public:
 
+  ddInternal()
+  {
+    this->CurrentTabIndex = -1;
+  }
+
+  int CurrentTabIndex;
+
   QTabWidget* TabWidget;
 
   QMap<QString, ddViewBase*> Views;
@@ -53,6 +60,8 @@ ddViewManager::ddViewManager(QWidget* parent) : QWidget(parent)
   tabWidget->setDocumentMode(true);
   layout->addWidget(tabWidget);
   this->Internal->TabWidget = tabWidget;
+
+  this->connect(this->Internal->TabWidget, SIGNAL(currentChanged(int)), SLOT(onCurrentTabChanged(int)));
 
   this->addDefaultPage();
 }
@@ -76,6 +85,12 @@ ddViewBase* ddViewManager::findView(const QString& viewName) const
 }
 
 //-----------------------------------------------------------------------------
+QString ddViewManager::viewName(ddViewBase* view)
+{
+  return this->Internal->Views.key(view);
+}
+
+//-----------------------------------------------------------------------------
 void ddViewManager::switchToView(const QString& viewName)
 {
   for (int i = 0; i < this->Internal->TabWidget->count(); ++i)
@@ -92,6 +107,18 @@ void ddViewManager::switchToView(const QString& viewName)
 ddViewBase* ddViewManager::currentView() const
 {
   return this->findView(this->Internal->TabWidget->tabText(this->Internal->TabWidget->currentIndex()));
+}
+
+//-----------------------------------------------------------------------------
+void ddViewManager::onCurrentTabChanged(int currentIndex)
+{
+  ddViewBase* previousView = 0;
+  if (this->Internal->CurrentTabIndex >= 0)
+  {
+    previousView = this->findView(this->Internal->TabWidget->tabText(this->Internal->CurrentTabIndex));
+  }
+  this->Internal->CurrentTabIndex = currentIndex;
+  emit this->currentViewChanged(previousView, this->currentView());
 }
 
 //-----------------------------------------------------------------------------

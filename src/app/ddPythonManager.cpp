@@ -49,9 +49,9 @@ void ddPythonManager::preInitialization()
 }
 
 //-----------------------------------------------------------------------------
-QString ddPythonManager::appSitePackagesDir() const
+QString ddPythonManager::appSitePackagesDir()
 {
-  return QCoreApplication::applicationDirPath()  + "/../lib/site-packages";
+  return QFileInfo(QCoreApplication::applicationDirPath()  + "/../lib/site-packages").canonicalFilePath();
 }
 
 //-----------------------------------------------------------------------------
@@ -90,6 +90,12 @@ void ddPythonManager::executeInitializationScripts()
 void ddPythonManager::showConsole()
 {
   this->Internal->Console->show();
+}
+
+//-----------------------------------------------------------------------------
+void ddPythonManager::onExecuteFile(const QString& filename)
+{
+  this->executeFile(filename);
 }
 
 //-----------------------------------------------------------------------------

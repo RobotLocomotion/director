@@ -33,6 +33,7 @@ qt4_wrap_cpp(moc_srcs
   ddDRCView.h
   ddPythonEventFilter.h
   ddGLWidgetView.h
+  ddMacrosManager.h
   ddMainWindow.h
   ddPropertiesPanel.h
   ddPythonManager.h
@@ -65,6 +66,7 @@ set(srcs
   ddPythonManager.cpp
   ddPythonQtWrapperFactory.cpp
   ddQVTKWidgetView.cpp
+  ddMacrosManager.cpp
   ddMainWindow.cpp
   ddSignalMap.cpp
   ddSpreadsheetView.cpp

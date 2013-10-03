@@ -96,3 +96,4 @@ if useTable:
 perception.init(view, models)
 segmentation.init()
 
+m = perception._multisenseItem.model

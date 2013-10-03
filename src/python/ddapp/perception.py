@@ -182,7 +182,7 @@ class MultiSenseSource(TimerCallback):
         for model in self.models:
             model.setEstRobotState(robotState)
 
-        #self.updateDebugItems()
+        self.updateDebugItems()
 
 
     def updateScanLines(self):
@@ -220,24 +220,21 @@ class MultiSenseSource(TimerCallback):
 
 
     def getSpindleAxis(self):
+        return self.getAxis('SCAN', [1.0, 0.0, 0.0])
 
+    def getAxis(self, frameName, axisVector):
+        t = self.getFrame(frameName)
+        return t.TransformVector(axisVector)
+
+    def getFrame(self, name, relativeTo='local'):
         t = vtk.vtkTransform()
-        self.reader.GetTransform('SCAN', 'local', self.lastRobotStateUtime, t)
-
-        p1 = [0.0, 0.0, 0.0]
-        p2 = [2.0, 0.0, 0.0]
-
-        p1 = np.array(t.TransformPoint(p1))
-        p2 = np.array(t.TransformPoint(p2))
-
-        axis = p2 - p1
-        return axis/np.linalg.norm(axis)
+        self.reader.GetTransform(name, relativeTo, self.reader.GetCurrentScanTime(), t)
+        return t
 
 
     def updateDebugItems(self):
 
-        t = vtk.vtkTransform()
-        self.reader.GetTransform('SCAN', 'local', self.lastRobotStateUtime, t)
+        t = self.getFrame('SCAN')
 
         p1 = [0.0, 0.0, 0.0]
         p2 = [2.0, 0.0, 0.0]

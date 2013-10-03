@@ -25,6 +25,16 @@ public:
 
   ddViewBase* currentView() const;
 
+  QString viewName(ddViewBase* view);
+
+signals:
+
+  void currentViewChanged(ddViewBase* previousView, ddViewBase* currentView);
+
+protected slots:
+
+  void onCurrentTabChanged(int currentIndex);
+
 protected:
 
   void addDefaultPage();

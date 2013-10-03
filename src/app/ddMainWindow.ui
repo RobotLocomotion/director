@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>949</width>
-    <height>602</height>
+    <width>1277</width>
+    <height>835</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>949</width>
+     <width>1277</width>
      <height>25</height>
     </rect>
    </property>
@@ -132,6 +132,28 @@
      </item>
     </layout>
    </widget>
+  </widget>
+  <widget class="QToolBar" name="ViewToolBar">
+   <property name="windowTitle">
+    <string>View Actions</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="MacrosToolBar">
+   <property name="windowTitle">
+    <string>Macros</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
   </widget>
   <action name="ActionQuit">
    <property name="text">

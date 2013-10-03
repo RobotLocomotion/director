@@ -14,6 +14,8 @@ from vtkPointCloudUtils.debugVis import DebugData
 from vtkPointCloudUtils.shallowCopy import shallowCopy
 from vtkPointCloudUtils import affordance
 from vtkPointCloudUtils import io
+from vtkPointCloudUtils import pointCloudUtils
+
 
 import vtkPCLFiltersPython as pcl
 
@@ -90,11 +92,20 @@ def addCoordArraysToPolyData(polyData):
     vtkNumpy.addNumpyToVtk(polyData, points[:,0].copy(), 'x')
     vtkNumpy.addNumpyToVtk(polyData, points[:,1].copy(), 'y')
     vtkNumpy.addNumpyToVtk(polyData, points[:,2].copy(), 'z')
+
+    bodyFrame = perception._multisenseItem.model.getFrame('body')
+    bodyOrigin = bodyFrame.TransformPoint([0.0, 0.0, 0.0])
+    bodyX = bodyFrame.TransformVector([1.0, 0.0, 0.0])
+    bodyY = bodyFrame.TransformVector([0.0, 1.0, 0.0])
+    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, bodyX, origin=bodyOrigin, resultArrayName='distance_along_robot_x')
+    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, bodyY, origin=bodyOrigin, resultArrayName='distance_along_robot_y')
+
     return polyData
 
 
 def getDebugRevolutionData():
-    filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
+    #filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
+    filename = os.path.join(os.getcwd(), 'bungie_valve.vtp')
     return io.readPolyData(filename)
 
 
@@ -128,7 +139,10 @@ def activateSegmentationMode():
     cleanup()
     segmentationView = getOrCreateSegmentationView()
 
-    segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='x')
+    #polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 1.5])
+    #polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-1, 1])
+
+    segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='distance_along_robot_x')
 
     app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
     segmentationView.camera().Dolly(3.0)
@@ -141,6 +155,14 @@ def getOrCreateContainer(containerName):
     if not folder:
         folder = om.addContainer(containerName)
     return folder
+
+
+def updatePolyData(polyData, name):
+
+    obj = om.findObjectByName(name)
+    obj = obj or showPolyData(polyData, name)
+    obj.setPolyData(polyData)
+    return obj
 
 
 def showPolyData(polyData, name, colorByName=None, colorByRange=None, alpha=1.0, visible=True, view=None, parentName='segmentation'):
@@ -225,9 +247,70 @@ def segmentValve(polyData, planeNormal=None):
 
 _removeMajorPlane = True
 
+
+def onSegmentationMouseMove(widget, mousePosition):
+
+    global lastMovePos
+    lastMovePos = mousePosition.x(), widget.height - mousePosition.y()
+
+
+
+class PointPicker(TimerCallback):
+
+    def __init__(self):
+        TimerCallback.__init__(self)
+        self.targetFps = 30
+        pass
+
+    def tick(self):
+
+        updatePolyData(vtk.vtkPolyData(), 'pick point')
+
+
+        picker = vtk.vtkPointPicker()
+        picker.SetTolerance(0.01)
+        picker.Pick(lastMovePos[0], lastMovePos[1], 0, app.getCurrentView().renderer())
+
+        pickPoints = picker.GetPickedPositions()
+
+
+        if pickPoints.GetNumberOfPoints() and picker.GetDataSet() == om.findObjectByName('pointcloud snapshot').polyData:
+
+            #print pickPoints.GetNumberOfPoints()
+
+            pickedPoint = picker.GetPickedPositions().GetPoint(0)
+
+            d = DebugData()
+            d.addSphere(pickedPoint, radius=0.0075)
+            obj = updatePolyData(d.getPolyData(), 'pick point')
+            obj.setProperty('Color', QtGui.QColor(0, 255, 0))
+
+        else:
+            updatePolyData(vtk.vtkPolyData(), 'pick point')
+            #print 'no picked points'
+
+
+
+pointPicker = None
+
+
 def onSegmentationViewDoubleClicked(widget, mousePosition):
 
+
+    global pointPicker
+    if not pointPicker:
+        pointPicker = PointPicker()
+        pointPicker.start()
+    else:
+        pointPicker.stop()
+        pointPicker = None
+    return
+
+
     displayPoint = mousePosition.x(), widget.height - mousePosition.y()
+
+    global lastClickPos
+    lastClickPos = displayPoint
 
     worldPt1 = [0,0,0,0]
     worldPt2 = [0,0,0,0]
@@ -310,6 +393,9 @@ def segmentationViewEventFilter(obj, event):
     if event.type() == QtCore.QEvent.MouseButtonDblClick:
         eventFilter.setEventHandlerResult(True)
         onSegmentationViewDoubleClicked(obj, event.pos())
+    elif event.type() == QtCore.QEvent.MouseMove:
+        eventFilter.setEventHandlerResult(False)
+        onSegmentationMouseMove(obj, event.pos())
     else:
         eventFilter.setEventHandlerResult(False)
 
@@ -334,6 +420,7 @@ def installEventFilter(view, func):
     eventFilters[qvtkwidget] = eventFilter
 
     eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
+    eventFilter.addFilteredEventType(QtCore.QEvent.MouseMove)
     eventFilter.connect('handleEvent(QObject*, QEvent*)', func)
 
 
