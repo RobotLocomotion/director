@@ -71,7 +71,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QTreeWidget" name="ObjectTree">
+      <widget class="ddObjectTree" name="ObjectTree">
        <property name="headerHidden">
         <bool>true</bool>
        </property>
@@ -233,6 +233,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ddObjectTree</class>
+   <extends>QTreeWidget</extends>
+   <header>ddObjectTree.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="images/resources.qrc"/>
  </resources>

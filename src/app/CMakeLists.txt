@@ -35,6 +35,7 @@ qt4_wrap_cpp(moc_srcs
   ddGLWidgetView.h
   ddMacrosManager.h
   ddMainWindow.h
+  ddObjectTree.h
   ddPropertiesPanel.h
   ddPythonManager.h
   ddQVTKWidgetView.h
@@ -62,18 +63,20 @@ set(srcs
   ddDrakeModel.cpp
   ddDRCView.cpp
   ddGLWidgetView.cpp
+  ddMacrosManager.cpp
+  ddMainWindow.cpp
+  ddObjectTree.cpp
   ddPropertiesPanel.cpp
   ddPythonManager.cpp
   ddPythonQtWrapperFactory.cpp
   ddQVTKWidgetView.cpp
-  ddMacrosManager.cpp
-  ddMainWindow.cpp
   ddSignalMap.cpp
   ddSpreadsheetView.cpp
   ddViewBase.cpp
   ddViewManager.cpp
   ddViewMenu.cpp
 
+  vtkSimpleActorInteractor.cxx
   vtkTDxInteractorStyleCallback.cxx
   )
 

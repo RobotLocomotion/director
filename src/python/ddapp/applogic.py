@@ -7,9 +7,6 @@ import PythonQt
 from PythonQt import QtCore
 from PythonQt import QtGui
 
-from ddapp.timercallback import TimerCallback
-from ddapp import midi
-
 def getMainWindow():
     return _mainWindow
 

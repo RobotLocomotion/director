@@ -69,6 +69,9 @@ class ObjectModelItem(object):
     def _onPropertyAdded(self, propertyName):
         pass
 
+    def onRemoveFromObjectModel(self):
+        pass
+
 
 class ContainerItem(ObjectModelItem):
 
@@ -106,21 +109,35 @@ class PolyDataItem(ObjectModelItem):
 
         self.polyData = polyData
         self.view = view
+        self.views = [view]
         self.mapper = vtk.vtkPolyDataMapper()
         self.mapper.SetInputData(self.polyData)
         self.actor = vtk.vtkActor()
         self.actor.SetMapper(self.mapper)
         self.view.renderer().AddActor(self.actor)
+
         self.addProperty('Visible', True)
         self.addProperty('Point Size', self.actor.GetProperty().GetPointSize())
         self.addProperty('Alpha', 1.0)
         self.addProperty('Color', QtGui.QColor(255,255,255))
 
 
+    def _renderAllViews(self):
+        for view in self.views:
+            view.render()
+
     def setPolyData(self, polyData):
         self.polyData = polyData
         self.mapper.SetInputData(polyData)
-        self.view.render()
+        self._renderAllViews()
+
+    def addToView(self, view):
+        if view in self.views:
+            return
+
+        self.views.append(view)
+        view.renderer().AddActor(self.actor)
+        view.render()
 
     def _onPropertyChanged(self, propertyName):
         ObjectModelItem._onPropertyChanged(self, propertyName)
@@ -139,7 +156,7 @@ class PolyDataItem(ObjectModelItem):
             color = [color.red()/255.0, color.green()/255.0, color.blue()/255.0]
             self.actor.GetProperty().SetColor(color)
 
-        self.view.render()
+        self._renderAllViews()
 
     def getPropertyAttributes(self, propertyName):
 
@@ -147,6 +164,18 @@ class PolyDataItem(ObjectModelItem):
             return PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False)
         else:
             return ObjectModelItem.getPropertyAttributes(self, propertyName)
+
+    def onRemoveFromObjectModel(self):
+        for view in self.views:
+            view.renderer().RemoveActor(self.actor)
+            view.render()
+
+
+
+class AffordanceItem(PolyDataItem):
+
+    def publish(self):
+        pass
 
 
 def getObjectTree():
@@ -164,7 +193,6 @@ def getActiveItem():
 
 def getActiveObject():
     item = getActiveItem()
-    global objects
     return objects[item] if item is not None else None
 
 
@@ -194,13 +222,17 @@ def onPropertyChanged(prop):
     if prop.isSubProperty():
         return
 
-    item, obj = getActiveItem(), getActiveObject()
+    obj = getActiveObject()
     obj.setProperty(prop.propertyName(), prop.value())
 
 
 def onTreeSelectionChanged():
 
-    item, obj = getActiveItem(), getActiveObject()
+    item = getActiveItem()
+    if not item:
+        return
+
+    obj = getObjectForItem(item)
 
     global _blockSignals
     _blockSignals = True
@@ -280,6 +312,36 @@ def initProperties():
     p.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
 
 
+def _removeItemFromObjectModel(item):
+
+    while item.childCount():
+        _removeItemFromObjectModel(item.child(0))
+
+    try:
+        obj = getObjectForItem(item)
+    except KeyError:
+        return
+
+    obj.onRemoveFromObjectModel()
+    if item.parent():
+        item.parent().removeChild(item)
+    else:
+        tree = getObjectTree()
+        tree.takeTopLevelItem(tree.indexOfTopLevelItem(item))
+
+    del objects[item]
+
+
+def removeFromObjectModel(obj):
+
+    if obj is None:
+        return
+
+    item = getItemForObject(obj)
+    if item:
+        _removeItemFromObjectModel(item)
+
+
 def addToObjectModel(obj, parentObj=None):
 
     parentItem = getItemForObject(parentObj)
@@ -312,6 +374,44 @@ def addPlaceholder(name, icon, parentObj):
     return obj
 
 
+def onShowContextMenu(clickPosition):
+
+    obj = getActiveObject()
+    if not obj:
+        return
+
+    globalPos = getObjectTree().viewport().mapToGlobal(clickPosition)
+
+    menu = QtGui.QMenu()
+    menu.addAction("Remove")
+    #menu.addSeparator()
+
+    if isinstance(obj, AffordanceItem):
+        menu.addAction("Publish affordance")
+
+    selectedAction = menu.exec_(globalPos);
+    if selectedAction is None:
+        return
+
+    if selectedAction.text == "Remove":
+        removeFromObjectModel(obj)
+
+    if selectedAction.text == "Publish affordance":
+        obj.publish()
+
+
+def onKeyPress(keyEvent):
+
+
+    if keyEvent.key() == QtCore.Qt.Key_Delete:
+
+        keyEvent.setAccepted(True)
+        tree = getObjectTree()
+        items = tree.selectedItems()
+        for item in items:
+            _removeItemFromObjectModel(item)
+
+
 def initObjectTree():
 
     tree = getObjectTree()
@@ -325,32 +425,10 @@ def initObjectTree():
     tree.setColumnWidth(1, 24)
     tree.connect('itemSelectionChanged()', onTreeSelectionChanged)
     tree.connect('itemClicked(QTreeWidgetItem*, int)', onItemClicked)
+    tree.connect('customContextMenuRequested(const QPoint&)', onShowContextMenu)
+    tree.connect('keyPressSignal(QKeyEvent*)', onKeyPress)
 
 
-'''
-_eventFilter = None
-def _onEvent(obj, event):
-
-
-    if event.type() == QtCore.QEvent.MouseButtonDblClick:
-        eventFilter.setEventHandlerResult(True)
-        switchToSegmentationView()
-    else:
-        eventFilter.setEventHandlerResult(False)
-
-
-def installEventFilter():
-
-    global _eventFilter
-    _eventFilter = PythonQt.dd.ddPythonEventFilter()
-
-    qvtkwidget = view.vtkWidget()
-    qvtkwidget.installEventFilter(eventFilter)
-    eventFilters[qvtkwidget] = eventFilter
-
-    eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
-    eventFilter.connect('handleEvent(QObject*, QEvent*)', func)
-'''
 
 def init(objectTree, propertiesPanel):
 

@@ -31,6 +31,9 @@ public slots:
   void forceRender();
   void resetCamera();
 
+  void setActorManipulationStyle();
+  void setCameraManipulationStyle();
+
 protected:
 
   void setupOrientationMarker();

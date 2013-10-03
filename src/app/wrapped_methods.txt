@@ -14,6 +14,8 @@ QList<ddDrakeModel*> ddDRCView::models() const;
 void ddDRCView::unloadModel(ddDrakeModel*);
 void ddDRCView::unloadModels();
 
+ddQVTKWidgetView::ddQVTKWidgetView();
+ddQVTKWidgetView::~ddQVTKWidgetView();
 vtkCamera* ddQVTKWidgetView::camera() const;
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
 vtkRenderer* ddQVTKWidgetView::renderer() const;
@@ -26,6 +28,9 @@ QToolBar* ddMainWindow::toolBar() const;
 QTreeWidget* ddMainWindow::objectTree() const;
 QTextEdit* ddMainWindow::outputConsole() const;
 void ddMainWindow::addWidgetToViewMenu(QWidget*);
+
+ddObjectTree::ddObjectTree();
+ddObjectTree::~ddObjectTree();
 
 ddPythonEventFilter::ddPythonEventFilter();
 ddPythonEventFilter::~ddPythonEventFilter();

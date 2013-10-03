@@ -16,6 +16,17 @@ set(python_files
   ddapp/startup.py
   ddapp/tdx.py
   ddapp/timercallback.py
+
+  #ddapp/macros/get_polydata.py
+
+  ddapp/macros/segmentation_view/ortho_x.py
+  ddapp/macros/segmentation_view/ortho_y.py
+  ddapp/macros/segmentation_view/ortho_z.py
+  ddapp/macros/segmentation_view/perspective.py
+  ddapp/macros/segmentation_view/segment_board.py
+
+  ddapp/macros/get_polydata.py
+  ddapp/macros/get_polydata.py
   )
 
 set(python_module_dir "${LIBRARY_OUTPUT_PATH}/site-packages")

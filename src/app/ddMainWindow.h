@@ -7,7 +7,7 @@ class ddViewManager;
 class ddPropertiesPanel;
 class ddPythonManager;
 class ddViewBase;
-class QTreeWidget;
+class ddObjectTree;
 class QTextEdit;
 class QDockWidget;
 
@@ -22,7 +22,7 @@ public:
 
   ddViewManager* viewManager() const;
   ddPropertiesPanel* propertiesPanel() const;
-  QTreeWidget* objectTree() const;
+  ddObjectTree* objectTree() const;
   QToolBar* toolBar() const;
   QTextEdit* outputConsole() const;
 

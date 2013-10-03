@@ -13,7 +13,7 @@ def wrap(inFileName, outFileName, exportSymbol, exportHeader, classNamePrefixes,
     lines = inFile.read().splitlines()
     inFile.close()
 
-    classNameRegexes = [re.compile('%s[a-zA-Z0-9]*' % prefix) for prefix in classNamePrefixes]
+    classNameRegexes = [re.compile('\\b%s[a-zA-Z0-9]*' % prefix) for prefix in classNamePrefixes]
     qtClassNamePrefixes = tuple(qtClassNamePrefixes)
     moduleName = moduleName or 'PythonQt'
     exportInclude = '#include "%s"' % exportHeader if exportHeader else ''

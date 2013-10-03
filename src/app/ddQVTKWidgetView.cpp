@@ -1,6 +1,7 @@
 #include "ddQVTKWidgetView.h"
 
 #include "vtkTDxInteractorStyleCallback.h"
+#include "vtkSimpleActorInteractor.h"
 
 #include <vtkSmartPointer.h>
 #include <vtkRenderer.h>
@@ -10,6 +11,7 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkConeSource.h>
 #include <vtkOrientationMarkerWidget.h>
+#include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkAxesActor.h>
 
 #include <QVTKWidget.h>
@@ -145,6 +147,18 @@ QList<double> ddQVTKWidgetView::lastTDxMotion() const
   }
 
   return motionInfoList;
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::setActorManipulationStyle()
+{
+  this->renderWindow()->GetInteractor()->SetInteractorStyle(vtkSmartPointer<vtkSimpleActorInteractor>::New());
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::setCameraManipulationStyle()
+{
+  this->renderWindow()->GetInteractor()->SetInteractorStyle(vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New());
 }
 
 //-----------------------------------------------------------------------------

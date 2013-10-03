@@ -23,6 +23,32 @@ import vtkPCLFiltersPython as pcl
 eventFilters = {}
 
 
+
+
+class CubeAffordanceItem(om.AffordanceItem):
+
+    def setAffordanceParams(self, params):
+        self.params = params
+
+    def updateParamsFromActorTransform(self):
+
+        t = self.actor.GetUserTransform()
+
+        xaxis = np.array(t.TransformVector([1,0,0]))
+        yaxis = np.array(t.TransformVector([0,1,0]))
+        zaxis = np.array(t.TransformVector([0,0,1]))
+        self.params['xaxis'] = xaxis
+        self.params['yaxis'] = yaxis
+        self.params['zaxis'] = zaxis
+        self.params['origin'] = t.GetPosition()
+
+
+    def publish(self):
+        self.updateParamsFromActorTransform()
+        aff = affordance.createBoxAffordance(self.params)
+        affordance.publishAffordance(aff)
+
+
 def getSegmentationView():
     return app.getViewManager().findView('Segmentation View')
 
@@ -152,8 +178,8 @@ def getTransformFromAxes(xaxis, yaxis, zaxis):
 
 def activateSegmentationMode():
 
-    polyData = getDebugRevolutionData()
-    #polyData = getCurrentRevolutionData()
+    #polyData = getDebugRevolutionData()
+    polyData = getCurrentRevolutionData()
 
     if not polyData:
         return
@@ -162,9 +188,10 @@ def activateSegmentationMode():
     segmentationView = getOrCreateSegmentationView()
 
     #polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 2.0])
-    #polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-1, 1])
+    #polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-1.5, 1.5])
 
-    segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='x')
+    #segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='x')
+    segmentationObj = showPolyData(polyData, 'pointcloud snapshot', alpha=0.3)
 
     app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
     #segmentationView.camera().Dolly(3.0)
@@ -179,18 +206,22 @@ def getOrCreateContainer(containerName):
     return folder
 
 
-def updatePolyData(polyData, name):
+def updatePolyData(polyData, name, **kwargs):
 
     obj = om.findObjectByName(name)
-    obj = obj or showPolyData(polyData, name)
+    obj = obj or showPolyData(polyData, name, **kwargs)
     obj.setPolyData(polyData)
     return obj
 
 
-def showPolyData(polyData, name, colorByName=None, colorByRange=None, alpha=1.0, visible=True, view=None, parentName='segmentation'):
+def showPolyData(polyData, name, colorByName=None, colorByRange=None, alpha=1.0, visible=True, view=None, parentName='segmentation', cls=None):
 
-    view = view or getCurrentView()
-    item = om.PolyDataItem(name, polyData, view)
+    view = view or app.getCurrentRenderView()
+    if view is None:
+        return
+
+    cls = cls or om.PolyDataItem
+    item = cls(name, polyData, view)
 
     parentObj = getOrCreateContainer(parentName) if parentName else None
 
@@ -277,8 +308,9 @@ def onSegmentationMouseMove(widget, mousePosition):
 
 def onSegmentationMousePress(widget, mousePosition):
 
-    displayPoint = mousePosition.x(), widget.height - mousePosition.y()
-    pointPicker.handleClick(displayPoint)
+    if segmentationMode:
+        displayPoint = mousePosition.x(), widget.height - mousePosition.y()
+        pointPicker.handleClick(displayPoint)
 
 def onSegmentationMouseRelease(widget, mousePosition):
     pass
@@ -333,6 +365,12 @@ class PointPicker(TimerCallback):
 
         stopSegment()
 
+
+        segmentationObj = om.findObjectByName('pointcloud snapshot')
+        segmentationObj.mapper.ScalarVisibilityOff()
+        segmentationObj.setProperty('Point Size', 2)
+        segmentationObj.setProperty('Alpha', 0.8)
+
         p1 = self.p1.copy()
         p2 = self.p2.copy()
         p3 = self.p3.copy()
@@ -377,22 +415,33 @@ class PointPicker(TimerCallback):
         d.addLine(origin - zaxis*zwidth/2.0, origin + zaxis*zwidth/2.0)
         obj = updatePolyData(d.getPolyData(), 'board axes')
         obj.setProperty('Color', QtGui.QColor(255, 255, 0))
+        obj.setProperty('Visible', False)
+        om.findObjectByName('annotation').setProperty('Visible', False)
 
         cube = vtk.vtkCubeSource()
         cube.SetXLength(xwidth)
         cube.SetYLength(ywidth)
         cube.SetZLength(zwidth)
         cube.Update()
+        cube = shallowCopy(cube.GetOutput())
 
         t = getTransformFromAxes(xaxis, yaxis, zaxis)
         t.PostMultiply()
         t.Translate(origin)
 
-        f = vtk.vtkTransformPolyDataFilter()
-        f.AddInputConnection(cube.GetOutputPort())
-        f.SetTransform(t)
-        f.Update()
-        obj = updatePolyData(shallowCopy(f.GetOutput()), 'board model')
+        #f = vtk.vtkTransformPolyDataFilter()
+        #f.SetInputData(cube)
+        #f.SetTransform(t)
+        #f.Update()
+        #cube = shallowCopy(f.GetOutput())
+
+        obj = updatePolyData(cube, 'board affordance', cls=CubeAffordanceItem, parentName='affordances')
+        obj.actor.SetUserTransform(t)
+        obj.addToView(app.getDRCView())
+
+        params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
+        obj.setAffordanceParams(params)
+        obj.updateParamsFromActorTransform()
 
     def handleRelease(self, displayPoint):
         pass
@@ -481,6 +530,9 @@ def startSegment():
     global segmentationMode
     segmentationMode = True
     pointPicker.clear()
+    om.removeFromObjectModel(om.findObjectByName('board affordance'))
+    om.removeFromObjectModel(om.findObjectByName('board axes'))
+    om.removeFromObjectModel(om.findObjectByName('annotation'))
 
 
 def stopSegment():
@@ -489,6 +541,131 @@ def stopSegment():
     segmentationMode = False
 
 
+
+savedCameraParams = None
+
+def perspective():
+
+    global savedCameraParams
+    if savedCameraParams is None:
+        return
+
+    aff = om.findObjectByName('board affordance')
+    aff.setProperty('Alpha', 1.0)
+    om.findObjectByName('pointcloud snapshot').actor.SetPickable(1)
+
+    view = getSegmentationView()
+    c = view.camera()
+    c.ParallelProjectionOff()
+    c.SetPosition(savedCameraParams['Position'])
+    c.SetFocalPoint(savedCameraParams['FocalPoint'])
+    c.SetViewUp(savedCameraParams['ViewUp'])
+    view.setCameraManipulationStyle()
+    view.render()
+
+
+def saveCameraParams(overwrite=False):
+
+    global savedCameraParams
+    if overwrite or (savedCameraParams is None):
+
+        view = getSegmentationView()
+        c = view.camera()
+        savedCameraParams = dict(Position=c.GetPosition(), FocalPoint=c.GetFocalPoint(), ViewUp=c.GetViewUp())
+
+
+def orthoX():
+
+    aff = om.findObjectByName('board affordance')
+    if not aff:
+        return
+
+    saveCameraParams()
+
+    aff.updateParamsFromActorTransform()
+    aff.setProperty('Alpha', 0.3)
+    om.findObjectByName('pointcloud snapshot').actor.SetPickable(0)
+
+    view = getSegmentationView()
+    c = view.camera()
+    c.ParallelProjectionOn()
+
+    origin = aff.params['origin']
+    viewDirection = aff.params['xaxis']
+    viewUp = -aff.params['yaxis']
+    viewDistance = aff.params['xwidth']*3
+    scale = aff.params['zwidth']
+
+    c.SetFocalPoint(origin)
+    c.SetPosition(origin - viewDirection*viewDistance)
+    c.SetViewUp(viewUp)
+    c.SetParallelScale(scale)
+
+    view.setActorManipulationStyle()
+    view.render()
+
+
+def orthoY():
+
+    aff = om.findObjectByName('board affordance')
+    if not aff:
+        return
+
+    saveCameraParams()
+
+    aff.updateParamsFromActorTransform()
+    aff.setProperty('Alpha', 0.3)
+    om.findObjectByName('pointcloud snapshot').actor.SetPickable(0)
+
+    view = getSegmentationView()
+    c = view.camera()
+    c.ParallelProjectionOn()
+
+    origin = aff.params['origin']
+    viewDirection = aff.params['yaxis']
+    viewUp = -aff.params['xaxis']
+    viewDistance = aff.params['ywidth']*4
+    scale = aff.params['zwidth']
+
+    c.SetFocalPoint(origin)
+    c.SetPosition(origin - viewDirection*viewDistance)
+    c.SetViewUp(viewUp)
+    c.SetParallelScale(scale)
+
+    view.setActorManipulationStyle()
+    view.render()
+
+
+def orthoZ():
+
+    aff = om.findObjectByName('board affordance')
+    if not aff:
+        return
+
+    saveCameraParams()
+
+    aff.updateParamsFromActorTransform()
+    aff.setProperty('Alpha', 0.3)
+    om.findObjectByName('pointcloud snapshot').actor.SetPickable(0)
+
+    view = getSegmentationView()
+    c = view.camera()
+    c.ParallelProjectionOn()
+
+    origin = aff.params['origin']
+    viewDirection = aff.params['zaxis']
+    viewUp = -aff.params['yaxis']
+    viewDistance = aff.params['zwidth']
+    scale = aff.params['ywidth']*6
+
+    c.SetFocalPoint(origin)
+    c.SetPosition(origin - viewDirection*viewDistance)
+    c.SetViewUp(viewUp)
+    c.SetParallelScale(scale)
+
+    view.setActorManipulationStyle()
+    view.render()
+
 def onSegmentationViewDoubleClicked(widget, mousePosition):
 
 
@@ -496,7 +673,6 @@ def onSegmentationViewDoubleClicked(widget, mousePosition):
 
     pickedPoint = pickPoint('pointcloud snapshot', displayPoint)
     if pickedPoint is not None:
-
 
         #getSegmentationView().camera().SetFocalPoint(pickedPoint)
         #getSegmentationView().camera().SetPosition(pickedPoint - np.array([1.0, 0.0, 0.0]))
@@ -509,7 +685,8 @@ def onSegmentationViewDoubleClicked(widget, mousePosition):
         getSegmentationView().renderer().ResetCamera(bounds)
 
         segmentationObj = om.findObjectByName('pointcloud snapshot')
-        colorBy(segmentationObj, 'x', [bounds[0], bounds[1]])
+        #colorBy(segmentationObj, 'z', [pickedPoint[2]-0.1, pickedPoint[2]+0.1])
+        segmentationObj.setProperty('Point Size', 5)
 
         getSegmentationView().render()
 
@@ -620,5 +797,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    activateSegmentationMode()
+    #activateSegmentationMode()
 

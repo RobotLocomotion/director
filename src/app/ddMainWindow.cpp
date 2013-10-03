@@ -105,7 +105,7 @@ QToolBar* ddMainWindow::toolBar() const
 }
 
 //-----------------------------------------------------------------------------
-QTreeWidget* ddMainWindow::objectTree() const
+ddObjectTree* ddMainWindow::objectTree() const
 {
   return this->Internal->ObjectTree;
 }

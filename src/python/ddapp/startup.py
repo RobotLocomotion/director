@@ -21,6 +21,8 @@ from ddapp.timercallback import TimerCallback
 
 import numpy as np
 from vtkPointCloudUtils import vtkNumpy
+from vtkPointCloudUtils.debugVis import DebugData
+from vtkPointCloudUtils import io
 
 
 app.startup(globals())
@@ -30,6 +32,8 @@ view = app.getDRCView()
 camera = view.camera()
 tree = app.getMainWindow().objectTree()
 orbit = cameracontrol.OrbitController(view)
+showPolyData = segmentation.showPolyData
+updatePolyData = segmentation.updatePolyData
 
 
 ###############################################################################
