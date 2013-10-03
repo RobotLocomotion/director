@@ -36,7 +36,10 @@ def getCurrentView():
     return app.getViewManager().currentView()
 
 
-def colorBy(polyData, mapper, arrayName, scalarRange=None):
+def colorBy(obj, arrayName, scalarRange=None):
+
+    polyData = obj.polyData
+    mapper = obj.mapper
 
     polyData.GetPointData().SetScalars(polyData.GetPointData().GetArray(arrayName))
     lut = vtk.vtkLookupTable()
@@ -105,8 +108,12 @@ def addCoordArraysToPolyData(polyData):
 
 def getDebugRevolutionData():
     #filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
-    filename = os.path.join(os.getcwd(), 'bungie_valve.vtp')
-    return io.readPolyData(filename)
+    #filename = os.path.join(os.getcwd(), 'bungie_valve.vtp')
+    #filename = os.path.join(os.getcwd(), 'cinder-blocks.vtp')
+    #filename = os.path.join(os.getcwd(), 'cylinder_table.vtp')
+    filename = os.path.join(os.getcwd(), 'two-by-fours.vtp')
+
+    return addCoordArraysToPolyData(io.readPolyData(filename))
 
 
 def getCurrentRevolutionData():
@@ -128,6 +135,21 @@ def getOrCreateSegmentationView():
     return segmentationView
 
 
+def getTransformFromAxes(xaxis, yaxis, zaxis):
+
+    t = vtk.vtkTransform()
+    m = vtk.vtkMatrix4x4()
+
+    axes = [xaxis, yaxis, zaxis]
+    for r in xrange(3):
+        for c in xrange(3):
+            # transpose on assignment
+            m.SetElement(r, c, axes[c][r])
+
+    t.SetMatrix(m)
+    return t
+
+
 def activateSegmentationMode():
 
     polyData = getDebugRevolutionData()
@@ -139,13 +161,13 @@ def activateSegmentationMode():
     cleanup()
     segmentationView = getOrCreateSegmentationView()
 
-    #polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 1.5])
+    #polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 2.0])
     #polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-1, 1])
 
-    segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='distance_along_robot_x')
+    segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='x')
 
     app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
-    segmentationView.camera().Dolly(3.0)
+    #segmentationView.camera().Dolly(3.0)
     segmentationView.render()
 
 
@@ -176,7 +198,7 @@ def showPolyData(polyData, name, colorByName=None, colorByRange=None, alpha=1.0,
     item.setProperty('Visible', visible)
     item.setProperty('Alpha', alpha)
     if colorByName:
-        colorBy(polyData, item.mapper, colorByName, colorByRange)
+        colorBy(item, colorByName, colorByRange)
     return item
 
 
@@ -245,7 +267,7 @@ def segmentValve(polyData, planeNormal=None):
     return params
 
 
-_removeMajorPlane = True
+_removeMajorPlane = False
 
 
 def onSegmentationMouseMove(widget, mousePosition):
@@ -253,6 +275,28 @@ def onSegmentationMouseMove(widget, mousePosition):
     global lastMovePos
     lastMovePos = mousePosition.x(), widget.height - mousePosition.y()
 
+def onSegmentationMousePress(widget, mousePosition):
+
+    displayPoint = mousePosition.x(), widget.height - mousePosition.y()
+    pointPicker.handleClick(displayPoint)
+
+def onSegmentationMouseRelease(widget, mousePosition):
+    pass
+
+
+def pickPoint(objName, displayPoint, tolerance=0.01):
+
+    view = app.getCurrentRenderView()
+    obj = om.findObjectByName(objName)
+    assert obj and view
+
+    picker = vtk.vtkPointPicker()
+    picker.AddPickList(obj.actor)
+    picker.PickFromListOn()
+    picker.SetTolerance(tolerance)
+    picker.Pick(displayPoint[0], displayPoint[1], 0, view.renderer())
+    pickPoints = picker.GetPickedPositions()
+    return np.array(pickPoints.GetPoint(0)) if pickPoints.GetNumberOfPoints() else None
 
 
 class PointPicker(TimerCallback):
@@ -260,99 +304,239 @@ class PointPicker(TimerCallback):
     def __init__(self):
         TimerCallback.__init__(self)
         self.targetFps = 30
+        self.clear()
+
+    def clear(self):
+        self.p1 = None
+        self.p2 = None
+        self.p3 = None
+        self.hoverPos = None
+
+    def handleClick(self, displayPoint):
+
+        if self.p1 is None:
+            self.p1 = self.hoverPos
+            print 'set p1:', self.p1
+        elif self.p2 is None:
+            self.p2 = self.hoverPos
+            print 'set p2:', self.p2
+        elif self.p3 is None:
+            self.p3 = self.hoverPos
+            print 'set p3:', self.p3
+
+            if self.p3 is not None:
+                print 'stopping'
+                self.finish()
+
+
+    def finish(self):
+
+        stopSegment()
+
+        p1 = self.p1.copy()
+        p2 = self.p2.copy()
+        p3 = self.p3.copy()
+
+        # constraint z to lie in plane
+        #p1[2] = p2[2] = p3[2] = max(p1[2], p2[2], p3[2])
+
+        zedge = p2 - p1
+        zaxis = zedge / np.linalg.norm(zedge)
+
+        xwidth = distanceToLine(p3, p1, p2)
+        print 'x width:', xwidth
+
+        # expected dimensions for 2x4 board
+        xwidth = 0.089
+        ywidth = 0.038
+
+        zwidth = np.linalg.norm(zedge)
+
+        yaxis = np.cross(p2 - p1, p3 - p1)
+        yaxis = yaxis / np.linalg.norm(yaxis)
+
+        xaxis = np.cross(yaxis, zaxis)
+
+        # flip axes
+        if np.dot(yaxis, [0,0,-1]) < 0:
+            yaxis *= -1
+
+        if np.dot(xaxis, p3 - p1) < 0:
+            xaxis *= -1
+
+        # make right handed
+        zaxis = np.cross(xaxis, yaxis)
+
+        origin = ((p1 + p2) / 2.0) + xaxis*xwidth/2.0 + yaxis*ywidth/2.0
+
+
+        d = DebugData()
+        d.addSphere(origin, radius=0.01)
+        d.addLine(origin - xaxis*xwidth/2.0, origin + xaxis*xwidth/2.0)
+        d.addLine(origin - yaxis*ywidth/2.0, origin + yaxis*ywidth/2.0)
+        d.addLine(origin - zaxis*zwidth/2.0, origin + zaxis*zwidth/2.0)
+        obj = updatePolyData(d.getPolyData(), 'board axes')
+        obj.setProperty('Color', QtGui.QColor(255, 255, 0))
+
+        cube = vtk.vtkCubeSource()
+        cube.SetXLength(xwidth)
+        cube.SetYLength(ywidth)
+        cube.SetZLength(zwidth)
+        cube.Update()
+
+        t = getTransformFromAxes(xaxis, yaxis, zaxis)
+        t.PostMultiply()
+        t.Translate(origin)
+
+        f = vtk.vtkTransformPolyDataFilter()
+        f.AddInputConnection(cube.GetOutputPort())
+        f.SetTransform(t)
+        f.Update()
+        obj = updatePolyData(shallowCopy(f.GetOutput()), 'board model')
+
+    def handleRelease(self, displayPoint):
         pass
+
+
+    def draw(self):
+
+        d = DebugData()
+
+        p1 = self.p1 if self.p1 is not None else self.hoverPos
+        p2 = self.p2 if self.p2 is not None else self.hoverPos
+        p3 = self.p3 if self.p3 is not None else self.hoverPos
+
+
+        for p in (p1, p2, p3):
+            if p is not None:
+                d.addSphere(p, radius=0.01)
+
+
+        if p1 is not None:
+            if p2 is not None:
+                d.addLine(p1, p2)
+            if p3 is not None:
+                d.addLine(p1, p3)
+                d.addLine(p2, p3)
+
+
+        obj = updatePolyData(d.getPolyData(), 'annotation')
+        obj.setProperty('Color', QtGui.QColor(0, 255, 0))
+
 
     def tick(self):
 
-        updatePolyData(vtk.vtkPolyData(), 'pick point')
+        if not segmentationMode:
+            return
 
-
-        picker = vtk.vtkPointPicker()
-        picker.SetTolerance(0.01)
-        picker.Pick(lastMovePos[0], lastMovePos[1], 0, app.getCurrentView().renderer())
-
-        pickPoints = picker.GetPickedPositions()
-
-
-        if pickPoints.GetNumberOfPoints() and picker.GetDataSet() == om.findObjectByName('pointcloud snapshot').polyData:
-
-            #print pickPoints.GetNumberOfPoints()
-
-            pickedPoint = picker.GetPickedPositions().GetPoint(0)
-
-            d = DebugData()
-            d.addSphere(pickedPoint, radius=0.0075)
-            obj = updatePolyData(d.getPolyData(), 'pick point')
-            obj.setProperty('Color', QtGui.QColor(0, 255, 0))
-
-        else:
-            updatePolyData(vtk.vtkPolyData(), 'pick point')
-            #print 'no picked points'
+        self.hoverPos = pickPoint('pointcloud snapshot', lastMovePos)
+        self.draw()
 
 
 
-pointPicker = None
+pointPicker = PointPicker()
+pointPicker.start()
 
 
-def onSegmentationViewDoubleClicked(widget, mousePosition):
+def distanceToLine(x0, x1, x2):
+    numerator = np.sqrt(np.sum(np.cross((x0 - x1), (x0-x2))**2))
+    denom = np.linalg.norm(x2-x1)
+    return numerator / denom
 
 
-    global pointPicker
-    if not pointPicker:
-        pointPicker = PointPicker()
-        pointPicker.start()
-    else:
-        pointPicker.stop()
-        pointPicker = None
-    return
+def labelDistanceToLine(polyData, linePoint1, linePoint2, resultArrayName='distance_to_line'):
 
-
-    displayPoint = mousePosition.x(), widget.height - mousePosition.y()
-
-    global lastClickPos
-    lastClickPos = displayPoint
-
-    worldPt1 = [0,0,0,0]
-    worldPt2 = [0,0,0,0]
-
-    renderer = getSegmentationView().renderer()
-    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 0, worldPt1)
-    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 1, worldPt2)
-
-
-    worldPt1 = np.array(worldPt1[:3])
-    worldPt2 = np.array(worldPt2[:3])
-
-    d = DebugData()
-    d.addLine(worldPt1, worldPt2)
-    showPolyData(d.getPolyData(), 'mouse click ray', visible=False)
-
-
-    segmentationObj = om.findObjectByName('pointcloud snapshot')
-    polyData = segmentationObj.polyData
-    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
-
-    x1 = worldPt1
-    x2 = worldPt2
-    x0 = points
+    x0 = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    x1 = linePoint1
+    x2 = linePoint2
 
     numerator = np.sqrt(np.sum(np.cross((x0 - x1), (x0-x2))**2, axis=1))
     denom = np.linalg.norm(x2-x1)
 
     dists = numerator / denom
 
-    vtkNumpy.addNumpyToVtk(polyData, dists, 'dist_to_line')
-    colorBy(polyData, segmentationObj.mapper, 'dist_to_line', [0.0, 0.2])
+    polyData = shallowCopy(polyData)
+    vtkNumpy.addNumpyToVtk(polyData, dists, resultArrayName)
+    return polyData
 
 
-    # extract cluster
-    polyData = thresholdPoints(polyData, 'dist_to_line', [0.0, 0.5])
-    polyData = thresholdPoints(polyData, 'distance', [0.3, 1.5])
+def getRayFromDisplayPoint(view, displayPoint):
+
+    worldPt1 = [0,0,0,0]
+    worldPt2 = [0,0,0,0]
+    renderer = view.renderer()
+
+    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 0, worldPt1)
+    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 1, worldPt2)
+
+    worldPt1 = np.array(worldPt1[:3])
+    worldPt2 = np.array(worldPt2[:3])
+    return worldPt1, worldPt2
+
+
+segmentationMode = False
+
+def startSegment():
+
+    global segmentationMode
+    segmentationMode = True
+    pointPicker.clear()
+
+
+def stopSegment():
+
+    global segmentationMode
+    segmentationMode = False
+
+
+def onSegmentationViewDoubleClicked(widget, mousePosition):
+
+
+    displayPoint = mousePosition.x(), widget.height - mousePosition.y()
+
+    pickedPoint = pickPoint('pointcloud snapshot', displayPoint)
+    if pickedPoint is not None:
+
+
+        #getSegmentationView().camera().SetFocalPoint(pickedPoint)
+        #getSegmentationView().camera().SetPosition(pickedPoint - np.array([1.0, 0.0, 0.0]))
+
+        boundsRadius = 0.2
+        diagonal = np.array([boundsRadius, boundsRadius, boundsRadius])
+        bounds = np.hstack([pickedPoint - diagonal, pickedPoint + diagonal])
+
+        bounds = [bounds[0], bounds[3], bounds[1], bounds[4], bounds[2], bounds[5]]
+        getSegmentationView().renderer().ResetCamera(bounds)
+
+        segmentationObj = om.findObjectByName('pointcloud snapshot')
+        colorBy(segmentationObj, 'x', [bounds[0], bounds[1]])
+
+        getSegmentationView().render()
+
+    return
+
+    worldPt1, worldPt2 = getRayFromDisplayPoint(getSegmentationView(), displayPoint)
+
+    #d = DebugData()
+    #d.addLine(worldPt1, worldPt2)
+    #showPolyData(d.getPolyData(), 'mouse click ray', visible=False)
+
+
+    segmentationObj = om.findObjectByName('pointcloud snapshot')
+    polyData = segmentationObj.polyData
+
+    polyData = labelDistanceToLine(polyData, worldPt1, worldPt2)
+
+    # extract points near line
+    distanceToLineThreshold = 0.3
+    polyData = thresholdPoints(polyData, 'distance_to_line', [0.0, distanceToLineThreshold])
 
     if _removeMajorPlane:
         polyData, planeFit = removeMajorPlane(polyData, distanceThreshold=0.03)
 
-    showPolyData(polyData, 'selected cluster', colorByName='dist_to_line', visible=False)
+    showPolyData(polyData, 'selected cluster', colorByName='distance_to_line', visible=False)
+
+    return
 
 
     segmentationObj.mapper.ScalarVisibilityOff()
@@ -394,8 +578,14 @@ def segmentationViewEventFilter(obj, event):
         eventFilter.setEventHandlerResult(True)
         onSegmentationViewDoubleClicked(obj, event.pos())
     elif event.type() == QtCore.QEvent.MouseMove:
-        eventFilter.setEventHandlerResult(False)
+        eventFilter.setEventHandlerResult(segmentationMode)
         onSegmentationMouseMove(obj, event.pos())
+    elif event.type() == QtCore.QEvent.MouseButtonPress:
+        eventFilter.setEventHandlerResult(segmentationMode)
+        onSegmentationMousePress(obj, event.pos())
+    elif event.type() == QtCore.QEvent.MouseButtonRelease:
+        eventFilter.setEventHandlerResult(segmentationMode)
+        onSegmentationMouseRelease(obj, event.pos())
     else:
         eventFilter.setEventHandlerResult(False)
 
@@ -421,6 +611,8 @@ def installEventFilter(view, func):
 
     eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
     eventFilter.addFilteredEventType(QtCore.QEvent.MouseMove)
+    eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonPress)
+    eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonRelease)
     eventFilter.connect('handleEvent(QObject*, QEvent*)', func)
 
 
