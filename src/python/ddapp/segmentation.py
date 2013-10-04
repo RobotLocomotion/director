@@ -146,6 +146,10 @@ def getCurrentRevolutionData():
     revPolyData = perception._multisenseItem.model.revPolyData
     if not revPolyData or not revPolyData.GetNumberOfPoints():
         return None
+
+    if useVoxelGrid:
+        revPolyData = applyVoxelGrid(revPolyData, leafSize=0.015)
+
     return addCoordArraysToPolyData(revPolyData)
 
 
@@ -176,6 +180,17 @@ def getTransformFromAxes(xaxis, yaxis, zaxis):
     return t
 
 
+useVoxelGrid = False
+
+def applyVoxelGrid(polyData, leafSize=0.01):
+
+    v = pcl.vtkPCLVoxelGrid()
+    v.SetLeafSize(leafSize, leafSize, leafSize)
+    v.SetInputData(polyData)
+    v.Update()
+    return shallowCopy(v.GetOutput())
+
+
 def activateSegmentationMode():
 
     #polyData = getDebugRevolutionData()
@@ -187,11 +202,13 @@ def activateSegmentationMode():
     cleanup()
     segmentationView = getOrCreateSegmentationView()
 
-    #polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 2.0])
-    #polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-1.5, 1.5])
+    perspective()
 
-    #segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='x')
-    segmentationObj = showPolyData(polyData, 'pointcloud snapshot', alpha=0.3)
+    polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 2.0])
+    polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-1.0, 1.0])
+
+    segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='distance_along_robot_x')
+    #segmentationObj = showPolyData(polyData, 'pointcloud snapshot', alpha=0.3)
 
     app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
     #segmentationView.camera().Dolly(3.0)
@@ -551,8 +568,12 @@ def perspective():
         return
 
     aff = om.findObjectByName('board affordance')
-    aff.setProperty('Alpha', 1.0)
-    om.findObjectByName('pointcloud snapshot').actor.SetPickable(1)
+    if aff is not None:
+        aff.setProperty('Alpha', 1.0)
+
+    obj = om.findObjectByName('pointcloud snapshot')
+    if obj is not None:
+        obj.actor.SetPickable(1)
 
     view = getSegmentationView()
     c = view.camera()
