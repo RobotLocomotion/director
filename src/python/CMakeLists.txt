@@ -24,9 +24,8 @@ set(python_files
   ddapp/macros/segmentation_view/ortho_z.py
   ddapp/macros/segmentation_view/perspective.py
   ddapp/macros/segmentation_view/segment_board.py
+  ddapp/macros/segmentation_view/segment_cinderblocks.py
 
-  ddapp/macros/get_polydata.py
-  ddapp/macros/get_polydata.py
   )
 
 set(python_module_dir "${LIBRARY_OUTPUT_PATH}/site-packages")

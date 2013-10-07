@@ -35,6 +35,7 @@ protected:
   {
     if (this->EventTypes.contains(event->type()))
     {
+        this->EventHandlerResult = false;
         emit this->handleEvent(obj, event);
         return this->EventHandlerResult;
     }
