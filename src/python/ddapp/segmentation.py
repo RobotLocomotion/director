@@ -1,6 +1,7 @@
 import os
 import sys
 import vtk
+import colorsys
 import PythonQt
 from PythonQt import QtCore, QtGui
 import ddapp.applogic as app
@@ -23,6 +24,7 @@ import vtkPCLFiltersPython as pcl
 eventFilters = {}
 
 _spindleAxis = None
+_spindleAxis = np.array([ 18.63368125,   4.80462354, -20.86224685])
 
 
 class CubeAffordanceItem(om.AffordanceItem):
@@ -133,7 +135,74 @@ output.ShallowCopy(t.GetOutput())
 
 
 
-''
+'''
+
+def getRandomColor():
+    '''
+    Return a random color as a list of RGB values between 0.0 and 1.0.
+    '''
+    return colorsys.hsv_to_rgb(np.random.rand(), 1.0, 0.9)
+
+
+
+def extractLargestCluster(polyData):
+
+    polyData = applyEuclideanClustering(polyData)
+    return thresholdPoints(polyData, 'cluster_labels', [1, 1])
+
+
+def getMajorPlanes(polyData, useVoxelGrid=True):
+
+    voxelGridSize = 0.01
+    distanceToPlaneThreshold = 0.02
+
+    if useVoxelGrid:
+        polyData = applyVoxelGrid(polyData, leafSize=voxelGridSize)
+
+    polyDataList = []
+
+    minClusterSize = 100
+
+    while len(polyDataList) < 25:
+
+        polyData, normal = applyPlaneFit(polyData, distanceToPlaneThreshold)
+        outliers = thresholdPoints(polyData, 'ransac_labels', [0, 0])
+        inliers = thresholdPoints(polyData, 'ransac_labels', [1, 1])
+        largestCluster = extractLargestCluster(inliers)
+
+        #i = len(polyDataList)
+        #showPolyData(inliers, 'inliers %d' % i, color=getRandomColor(), parentName='major planes')
+        #showPolyData(outliers, 'outliers %d' % i, color=getRandomColor(), parentName='major planes')
+        #showPolyData(largestCluster, 'cluster %d' % i, color=getRandomColor(), parentName='major planes')
+
+        if largestCluster.GetNumberOfPoints() > minClusterSize:
+            polyDataList.append(largestCluster)
+            polyData = outliers
+        else:
+            break
+
+    return polyDataList
+
+
+def showMajorPlanes():
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    inputObj.setProperty('Visible', False)
+    polyData = inputObj.polyData
+
+    om.removeFromObjectModel(om.findObjectByName('major planes'))
+    folderObj = om.findObjectByName('segmentation')
+    folderObj = om.getOrCreateContainer('major planes', folderObj)
+
+
+
+    polyData = thresholdPoints(polyData, 'distance', [1, 4])
+    polyDataList = getMajorPlanes(polyData)
+
+
+    for i, polyData in enumerate(polyDataList):
+        obj = showPolyData(polyData, 'plane %d' % i, color=getRandomColor(), visible=True, parentName='major planes')
+        obj.setProperty('Point Size', 3)
 
 
 def cropToBox(polyData, params, expansionDistance=0.1):
@@ -157,9 +226,20 @@ def cropToBox(polyData, params, expansionDistance=0.1):
     updatePolyData(polyData, 'cropped')
 
 
-def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None):
+def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100, maxClusterSize=1e6):
 
-    expectedNormal = expectedNormal or [-1,0,0]
+    f = pcl.vtkPCLEuclideanClusterExtraction()
+    f.SetInputData(dataObj)
+    f.SetClusterTolerance(clusterTolerance)
+    f.SetMinClusterSize(int(minClusterSize))
+    f.SetMaxClusterSize(int(maxClusterSize))
+    f.Update()
+    return shallowCopy(f.GetOutput())
+
+
+def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, returnOrigin=False):
+
+    expectedNormal = expectedNormal if expectedNormal is not None else [-1,0,0]
 
     # perform plane segmentation
     f = pcl.vtkPCLSACSegmentationPlane()
@@ -180,7 +260,10 @@ def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None):
     dist = np.dot(points - origin, normal)
     vtkNumpy.addNumpyToVtk(polyData, dist, 'dist_to_plane')
 
-    return polyData, normal
+    if returnOrigin:
+        return polyData, origin, normal
+    else:
+        return polyData, normal
 
 
 def addCoordArraysToPolyData(polyData):
@@ -292,14 +375,6 @@ def activateSegmentationMode(debug=False):
     segmentationView.render()
 
 
-def getOrCreateContainer(containerName):
-
-    folder = om.findObjectByName(containerName)
-    if not folder:
-        folder = om.addContainer(containerName)
-    return folder
-
-
 def updatePolyData(polyData, name, **kwargs):
 
     obj = om.findObjectByName(name)
@@ -308,7 +383,7 @@ def updatePolyData(polyData, name, **kwargs):
     return obj
 
 
-def showPolyData(polyData, name, colorByName=None, colorByRange=None, alpha=1.0, visible=True, view=None, parentName='segmentation', cls=None):
+def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None, alpha=1.0, visible=True, view=None, parentName='segmentation', cls=None):
 
     view = view or app.getCurrentRenderView()
     if view is None:
@@ -317,15 +392,17 @@ def showPolyData(polyData, name, colorByName=None, colorByRange=None, alpha=1.0,
     cls = cls or om.PolyDataItem
     item = cls(name, polyData, view)
 
-    parentObj = getOrCreateContainer(parentName) if parentName else None
+    parentObj = om.getOrCreateContainer(parentName) if parentName else None
 
     om.addToObjectModel(item, parentObj)
     item.setProperty('Visible', visible)
     item.setProperty('Alpha', alpha)
+    if color:
+        color = [component * 255 for component in color]
+        item.setProperty('Color', QtGui.QColor(*color))
     if colorByName:
         colorBy(item, colorByName, colorByRange)
     return item
-
 
 
 def extractCircle(polyData, distanceThreshold=0.04):
@@ -392,15 +469,31 @@ def segmentValve(polyData, planeNormal=None):
     return params
 
 
+def pickDataSet(displayPoint, tolerance=0.01):
+
+    view = app.getCurrentRenderView()
+    assert view
+
+    picker = vtk.vtkPointPicker()
+    picker.SetTolerance(tolerance)
+    picker.Pick(displayPoint[0], displayPoint[1], 0, view.renderer())
+    pickPoints = picker.GetPickedPositions()
+    return picker.GetDataSet(), np.array(pickPoints.GetPoint(0)) if pickPoints.GetNumberOfPoints() else None
+
+
 def pickPoint(objName, displayPoint, tolerance=0.01):
 
     view = app.getCurrentRenderView()
-    obj = om.findObjectByName(objName)
-    assert obj and view
+    assert view
 
     picker = vtk.vtkPointPicker()
-    picker.AddPickList(obj.actor)
-    picker.PickFromListOn()
+
+    if objName:
+        obj = om.findObjectByName(objName)
+        assert obj
+        picker.AddPickList(obj.actor)
+        picker.PickFromListOn()
+
     picker.SetTolerance(tolerance)
     picker.Pick(displayPoint[0], displayPoint[1], 0, view.renderer())
     pickPoints = picker.GetPickedPositions()
@@ -596,9 +689,99 @@ def getRayFromDisplayPoint(view, displayPoint):
     return worldPt1, worldPt2
 
 
-segmentationMode = False
+def getPlaneEquationFromPolyData(polyData, expectedNormal):
+
+    _, origin, normal  = applyPlaneFit(polyData, expectedNormal=expectedNormal, returnOrigin=True)
+    return origin, normal, np.hstack((normal, [np.dot(origin, normal)]))
+
+
+
+
+def segmentBlockByPlanes(blockDimensions):
+
+    planes = om.getObjectChildren(om.findObjectByName('selected planes'))[:2]
+
+    origin1, normal1, plane1 = getPlaneEquationFromPolyData(planes[0].polyData, expectedNormal=_spindleAxis)
+    origin2, normal2, plane2 = getPlaneEquationFromPolyData(planes[1].polyData, expectedNormal=_spindleAxis)
+
+    xaxis = normal2
+    yaxis = normal1
+    zaxis = np.cross(xaxis, yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+
+    pts1 = vtkNumpy.getNumpyFromVtk(planes[0].polyData, 'Points')
+    pts2 = vtkNumpy.getNumpyFromVtk(planes[1].polyData, 'Points')
+
+    linePoint = np.zeros(3)
+    centroid2 = np.sum(pts2, axis=0)/len(pts2)
+    vtk.vtkPlane.ProjectPoint(centroid2, origin1, normal1, linePoint)
+
+    dists = np.dot(pts1-linePoint, zaxis)
+
+    p1 = linePoint + zaxis*np.min(dists)
+    p2 = linePoint + zaxis*np.max(dists)
+
+    xwidth, ywidth = blockDimensions
+    zwidth = np.linalg.norm(p2 - p1)
+
+    origin = p1 + xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0 
+
+
+    '''
+
+    # reorient axes
+    if np.dot(yaxis, _spindleAxis) < 0:
+        yaxis *= -1
+
+    if np.dot(xaxis, p3 - p1) < 0:
+        xaxis *= -1
+
+    # make right handed
+    zaxis = np.cross(xaxis, yaxis)
+
+    '''
+
+    d = DebugData()
+
+    d.addSphere(linePoint, radius=0.02)
+    d.addSphere(p1, radius=0.01)
+    d.addSphere(p2, radius=0.01)
+    d.addLine(p1, p2)
+
+    d.addSphere(origin, radius=0.01)
+    d.addLine(origin - xaxis*xwidth/2.0, origin + xaxis*xwidth/2.0)
+    d.addLine(origin - yaxis*ywidth/2.0, origin + yaxis*ywidth/2.0)
+    d.addLine(origin - zaxis*zwidth/2.0, origin + zaxis*zwidth/2.0)
+    obj = updatePolyData(d.getPolyData(), 'block axes')
+    obj.setProperty('Color', QtGui.QColor(255, 255, 0))
+    obj.setProperty('Visible', False)
+
+    cube = vtk.vtkCubeSource()
+    cube.SetXLength(xwidth)
+    cube.SetYLength(ywidth)
+    cube.SetZLength(zwidth)
+    cube.Update()
+    cube = shallowCopy(cube.GetOutput())
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    obj = updatePolyData(cube, 'block affordance', cls=CubeAffordanceItem, parentName='affordances')
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+
+    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
+
 
 def startBlockSegmentation(dimensions):
+
+
+    if om.findObjectByName('selected planes'):
+        segmentBlockByPlanes(dimensions)
+        return
 
     pointPicker.clear()
     pointPicker.enabled = True
@@ -737,6 +920,28 @@ def orthoZ():
     view.render()
 
 
+def getObjectByDataSet(polyData):
+
+    for item, obj in om.objects.iteritems():
+        if isinstance(obj, om.PolyDataItem) and obj.polyData == polyData:
+            return obj
+
+
+def selectActor(displayPoint):
+
+    polyData, pickedPoint = pickDataSet(displayPoint)
+    obj = getObjectByDataSet(polyData)
+    if not obj:
+        return
+
+    name = obj.getProperty('Name')
+    om.getOrCreateContainer('selected planes', om.findObjectByName('segmentation'))
+    obj2 = showPolyData(shallowCopy(polyData), name, parentName='selected planes')
+    obj2.setProperty('Color', obj.getProperty('Color'))
+    obj2.setProperty('Point Size', 4)
+    obj.setProperty('Visible', False)
+
+
 def zoomToDisplayPoint(displayPoint, boundsRadius=0.2):
 
     pickedPoint = pickPoint('pointcloud snapshot', displayPoint)
@@ -786,6 +991,11 @@ def onSegmentationViewDoubleClicked(displayPoint):
 
     action = 'zoom_to'
 
+
+    if om.findObjectByName('major planes'):
+        action = 'select_actor'
+
+
     if action == 'zoom_to':
 
         zoomToDisplayPoint(displayPoint)
@@ -793,6 +1003,9 @@ def onSegmentationViewDoubleClicked(displayPoint):
     elif action == 'select_with_ray':
 
         extractPointsAlongClickRay(displayPoint)
+
+    elif action == 'select_actor':
+        selectActor(displayPoint)
 
 
     '''

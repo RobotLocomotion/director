@@ -191,6 +191,21 @@ def getActiveItem():
     return items[0] if len(items) == 1 else None
 
 
+def getParentObject(obj):
+    item = getItemForObject(obj)
+    if item and item.parent():
+        return getObjectForItem(item.parent())
+
+
+def getObjectChildren(obj):
+
+    item = getItemForObject(obj)
+    if not item:
+        return
+
+    return [getObjectForItem(item.child(i)) for i in xrange(item.childCount())]
+
+
 def getActiveObject():
     item = getActiveItem()
     return objects[item] if item is not None else None
@@ -358,9 +373,9 @@ def addToObjectModel(obj, parentObj=None):
         tree.expandItem(item)
 
 
-def addContainer(name):
+def addContainer(name, parentObj=None):
     obj = ContainerItem(name)
-    addToObjectModel(obj)
+    addToObjectModel(obj, parentObj)
     return obj
 
 def addRobotModel(model, parentObj):
@@ -373,6 +388,12 @@ def addPlaceholder(name, icon, parentObj):
     addToObjectModel(obj, parentObj)
     return obj
 
+def getOrCreateContainer(name, parentObj=None):
+
+    containerObj = findObjectByName(name)
+    if not containerObj:
+        containerObj = addContainer(name, parentObj)
+    return containerObj
 
 def onShowContextMenu(clickPosition):
 
