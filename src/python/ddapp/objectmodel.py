@@ -404,11 +404,12 @@ def onShowContextMenu(clickPosition):
     globalPos = getObjectTree().viewport().mapToGlobal(clickPosition)
 
     menu = QtGui.QMenu()
-    menu.addAction("Remove")
-    #menu.addSeparator()
 
     if isinstance(obj, AffordanceItem):
         menu.addAction("Publish affordance")
+        menu.addSeparator()
+
+    menu.addAction("Remove")
 
     selectedAction = menu.exec_(globalPos);
     if selectedAction is None:

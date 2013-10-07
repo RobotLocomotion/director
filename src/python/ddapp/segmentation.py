@@ -48,6 +48,10 @@ class CubeAffordanceItem(om.AffordanceItem):
     def publish(self):
         self.updateParamsFromActorTransform()
         aff = affordance.createBoxAffordance(self.params)
+        aff.otdf_type = 'cinderblockstep'
+        aff.nparams = 0
+        aff.params = []
+        aff.param_names = []
         affordance.publishAffordance(aff)
 
 
@@ -264,6 +268,18 @@ def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, returnOr
         return polyData, origin, normal
     else:
         return polyData, normal
+
+
+def applyLineFit(dataObj, distanceThreshold=0.02):
+
+    f = pcl.vtkPCLSACSegmentationLine()
+    f.SetInputData(dataObj)
+    f.SetDistanceThreshold(distanceThreshold)
+    f.Update()
+    origin = np.array(f.GetLineOrigin())
+    direction = np.array(f.GetLineDirection())
+
+    return origin, direction, shallowCopy(f.GetOutput())
 
 
 def addCoordArraysToPolyData(polyData):
@@ -697,6 +713,154 @@ def getPlaneEquationFromPolyData(polyData, expectedNormal):
 
 
 
+def computeEdge(polyData, edgeAxis, perpAxis, binWidth=0.1):
+
+    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, edgeAxis, resultArrayName='dist_along_edge')
+    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, perpAxis, resultArrayName='dist_perp_to_edge')
+
+
+    polyData, bins = binByScalar(polyData, 'dist_along_edge', binWidth)
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    binLabels = vtkNumpy.getNumpyFromVtk(polyData, 'bin_labels')
+    distToEdge = vtkNumpy.getNumpyFromVtk(polyData, 'dist_perp_to_edge')
+
+    numberOfBins = len(bins) - 1
+    edgePoints = []
+    for i in xrange(numberOfBins):
+        binPoints = points[binLabels == i]
+        binDists = distToEdge[binLabels == i]
+        edgePoints.append(binPoints[binDists.argmax()])
+
+    return np.array(edgePoints)
+
+
+def binByScalar(lidarData, scalarArrayName, binWidth, binLabelsArrayName='bin_labels'):
+    '''
+    Gets the array with name scalarArrayName from lidarData.
+    Computes bins by dividing the scalar array into bins of size binWidth.
+    Adds a new label array to the lidar points identifying which bin the point belongs to,
+    where the first bin is labeled with 0.
+    Returns the new, labeled lidar data and the bins.
+    The bins are an array where each value represents a bin edge.
+    '''
+
+    scalars = vtkNumpy.getNumpyFromVtk(lidarData, scalarArrayName)
+    bins = np.arange(scalars.min(), scalars.max()+binWidth, binWidth)
+    binLabels = np.digitize(scalars, bins) - 1
+    assert(len(binLabels) == len(scalars))
+    newData = shallowCopy(lidarData)
+    vtkNumpy.addNumpyToVtk(newData, binLabels, binLabelsArrayName)
+    return newData, bins
+
+
+def getObb(polyData):
+
+    f = vtk.vtkAnnotateOBBs()
+    f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, 'cluster_label')
+    f.SetInputData(polyData)
+    f.Update()
+    assert f.GetNumberOfBoundingBoxes() == 1
+
+
+def segmentBlockByTopPlane(blockDimensions):
+
+    plane = om.getObjectChildren(om.findObjectByName('selected planes'))[0]
+    polyData = plane.polyData
+
+    polyData, normal  = applyPlaneFit(polyData, distanceThreshold=0.05, expectedNormal=_spindleAxis)
+
+    lineOrigin, lineDirection, _ = applyLineFit(polyData)
+
+
+    zaxis = lineDirection
+    yaxis = normal
+    xaxis = np.cross(yaxis, zaxis)
+
+    if np.dot(xaxis, _spindleAxis) < 0:
+        xaxis *= -1
+
+    # make right handed
+    zaxis = np.cross(xaxis, yaxis)
+
+
+    edgePoints = computeEdge(polyData, zaxis, xaxis)
+    edgePoints = vtkNumpy.getVtkPolyDataFromNumpyPoints(edgePoints)
+
+    d = DebugData()
+    obj = updatePolyData(edgePoints, 'edge points')
+
+    linePoint, lineDirection, _ = applyLineFit(edgePoints)
+    zaxis = lineDirection
+    xaxis = np.cross(yaxis, zaxis)
+
+
+    if np.dot(xaxis, _spindleAxis) < 0:
+        xaxis *= -1
+
+    # make right handed
+    zaxis = np.cross(xaxis, yaxis)
+
+    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, xaxis, resultArrayName='dist_along_line')
+    pts = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+
+    dists = np.dot(pts-linePoint, zaxis)
+
+    p1 = linePoint + zaxis*np.min(dists)
+    p2 = linePoint + zaxis*np.max(dists)
+
+    xwidth, ywidth = blockDimensions
+    zwidth = np.linalg.norm(p2 - p1)
+
+    origin = p1 - xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0 
+
+    d = DebugData()
+
+    #d.addSphere(linePoint, radius=0.02)
+    #d.addLine(linePoint, linePoint + yaxis*ywidth)
+    #d.addLine(linePoint, linePoint + xaxis*xwidth)
+    #d.addLine(linePoint, linePoint + zaxis*zwidth)
+
+
+    d.addSphere(p1, radius=0.01)
+    d.addSphere(p2, radius=0.01)
+    d.addLine(p1, p2)
+
+    d.addSphere(origin, radius=0.01)
+    #d.addLine(origin - xaxis*xwidth/2.0, origin + xaxis*xwidth/2.0)
+    #d.addLine(origin - yaxis*ywidth/2.0, origin + yaxis*ywidth/2.0)
+    #d.addLine(origin - zaxis*zwidth/2.0, origin + zaxis*zwidth/2.0)
+
+    d.addLine(origin, origin + xaxis*xwidth/2.0)
+    d.addLine(origin, origin + yaxis*ywidth/2.0)
+    d.addLine(origin, origin + zaxis*zwidth/2.0)
+
+
+    obj = updatePolyData(d.getPolyData(), 'block axes')
+    obj.setProperty('Color', QtGui.QColor(255, 255, 0))
+    obj.setProperty('Visible', False)
+
+    cube = vtk.vtkCubeSource()
+    cube.SetXLength(xwidth)
+    cube.SetYLength(ywidth)
+    cube.SetZLength(zwidth)
+    cube.Update()
+    cube = shallowCopy(cube.GetOutput())
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    obj = updatePolyData(cube, 'block affordance', cls=CubeAffordanceItem, parentName='affordances')
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+
+    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
+
+
+
+
 def segmentBlockByPlanes(blockDimensions):
 
     planes = om.getObjectChildren(om.findObjectByName('selected planes'))[:2]
@@ -780,7 +944,7 @@ def startBlockSegmentation(dimensions):
 
 
     if om.findObjectByName('selected planes'):
-        segmentBlockByPlanes(dimensions)
+        segmentBlockByTopPlane(dimensions)
         return
 
     pointPicker.clear()
@@ -1027,19 +1191,7 @@ def onSegmentationViewDoubleClicked(displayPoint):
 
 def cleanup():
 
-    obj = om.findObjectByName('segmentation')
-    if not obj:
-        return
-
-    item = om.getItemForObject(obj)
-    childItems = item.takeChildren()
-
-    for childItem in childItems:
-        obj = om.getObjectForItem(childItem)
-        if isinstance(obj, om.PolyDataItem):
-            obj.view.renderer().RemoveActor(obj.actor)
-        obj.view.render()
-        del om.objects[childItem]
+    om.removeFromObjectModel(om.findObjectByName('segmentation'))
 
 
 def segmentationViewEventFilter(obj, event):
@@ -1089,5 +1241,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    activateSegmentationMode(debug=True)
+    activateSegmentationMode(debug=False)
 

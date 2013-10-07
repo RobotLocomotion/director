@@ -18,6 +18,7 @@ set(python_files
   ddapp/timercallback.py
 
   #ddapp/macros/get_polydata.py
+  ddapp/macros/publish.py
 
   ddapp/macros/segmentation_view/ortho_x.py
   ddapp/macros/segmentation_view/ortho_y.py
