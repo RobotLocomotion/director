@@ -1,6 +1,7 @@
 import os
 import sys
 import vtk
+import math
 import PythonQt
 from PythonQt import QtCore, QtGui
 import ddapp.objectmodel as om
@@ -9,6 +10,9 @@ import vtkDRCFiltersPython as drc
 from vtkPointCloudUtils.debugVis import DebugData
 import numpy as np
 
+import drc as lcmdrc
+import multisense as lcmmultisense
+import lcmUtils
 
 _view = None
 def getRenderView():
@@ -27,6 +31,28 @@ def updateDebugItem(polyData):
         _debugItem.setPolyData(polyData)
 
     _view.render()
+
+
+def setMultisenseRevolutionTime(secondsPerRevolution):
+
+    assert secondsPerRevolution >= 1.0
+
+    m = lcmmultisense.command_t()
+    m.utime = 0
+    m.fps = 5
+    m.gain = 4
+    m.rpm = 60.0 / (secondsPerRevolution)
+
+    lcmUtils.GlobalLCM.get().publish('MULTISENSE_COMMAND', m.encode())
+
+
+def setNeckPitch(neckPitchDegrees):
+
+    assert neckPitchDegrees <= 90 and neckPitchDegrees >= -90
+    m = lcmdrc.neck_pitch_t()
+    m.utime = 0
+    m.pitch = math.radians(neckPitchDegrees)
+    lcmUtils.GlobalLCM.get().publish('DESIRED_NECK_PITCH', m.encode())
 
 
 class MultisenseItem(om.ObjectModelItem):
@@ -224,7 +250,7 @@ class MultiSenseSource(TimerCallback):
 
     def getAxis(self, frameName, axisVector):
         t = self.getFrame(frameName)
-        return t.TransformVector(axisVector)
+        return np.array(t.TransformVector(axisVector))
 
     def getFrame(self, name, relativeTo='local'):
         t = vtk.vtkTransform()
@@ -234,7 +260,7 @@ class MultiSenseSource(TimerCallback):
 
     def updateDebugItems(self):
 
-        t = self.getFrame('SCAN')
+        t = self.getFrame('head')
 
         p1 = [0.0, 0.0, 0.0]
         p2 = [2.0, 0.0, 0.0]

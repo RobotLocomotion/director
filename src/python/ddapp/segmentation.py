@@ -2,11 +2,14 @@ import os
 import sys
 import vtk
 import colorsys
+import time
+import functools
 import PythonQt
 from PythonQt import QtCore, QtGui
 import ddapp.applogic as app
 from ddapp import objectmodel as om
 from ddapp import perception
+from ddapp import lcmUtils
 from ddapp.timercallback import TimerCallback
 
 import numpy as np
@@ -20,14 +23,15 @@ from vtkPointCloudUtils import pointCloudUtils
 
 import vtkPCLFiltersPython as pcl
 
+import drc as lcmdrc
+
 
 eventFilters = {}
 
 _spindleAxis = None
-_spindleAxis = np.array([ 18.63368125,   4.80462354, -20.86224685])
 
 
-class CubeAffordanceItem(om.AffordanceItem):
+class BlockAffordanceItem(om.AffordanceItem):
 
     def setAffordanceParams(self, params):
         self.params = params
@@ -52,6 +56,28 @@ class CubeAffordanceItem(om.AffordanceItem):
         aff.nparams = 0
         aff.params = []
         aff.param_names = []
+        affordance.publishAffordance(aff)
+
+
+class CylinderAffordanceItem(om.AffordanceItem):
+
+    def setAffordanceParams(self, params):
+        self.params = params
+
+    def updateParamsFromActorTransform(self):
+
+        t = self.actor.GetUserTransform()
+
+        xaxis = np.array(t.TransformVector([1,0,0]))
+        yaxis = np.array(t.TransformVector([0,1,0]))
+        zaxis = np.array(t.TransformVector([0,0,1]))
+        self.params['axis'] = zaxis
+        self.params['origin'] = t.GetPosition()
+
+
+    def publish(self):
+        self.updateParamsFromActorTransform()
+        aff = affordance.createValveAffordance(self.params)
         affordance.publishAffordance(aff)
 
 
@@ -155,6 +181,34 @@ def extractLargestCluster(polyData):
     return thresholdPoints(polyData, 'cluster_labels', [1, 1])
 
 
+def segmentGroundPlane():
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    inputObj.setProperty('Visible', False)
+    polyData = shallowCopy(inputObj.polyData)
+
+    zvalues = vtkNumpy.getNumpyFromVtk(polyData, 'Points')[:,2]
+    groundHeight = np.percentile(zvalues, 5)
+    searchRegion = thresholdPoints(polyData, 'z', [groundHeight - 0.3, groundHeight + 0.3])
+
+    updatePolyData(searchRegion, 'ground search region', colorByName='z', visible=False)
+
+    _, origin, normal = applyPlaneFit(searchRegion, distanceThreshold=0.02, expectedNormal=[0,0,1], perpendicularAxis=[0,0,1], returnOrigin=True)
+
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    dist = np.dot(points - origin, normal)
+    vtkNumpy.addNumpyToVtk(polyData, dist, 'dist_to_plane')
+
+
+    groundPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    scenePoints = thresholdPoints(polyData, 'dist_to_plane', [0.05, 2.5])
+
+    updatePolyData(groundPoints, 'ground points', color=[1, 1, 1], alpha=0.3)
+
+    scenePoints = applyEuclideanClustering(scenePoints, clusterTolerance=0.10, minClusterSize=100, maxClusterSize=1e6)
+    updatePolyData(scenePoints, 'scene points', colorByName='cluster_labels')
+
+
 def getMajorPlanes(polyData, useVoxelGrid=True):
 
     voxelGridSize = 0.01
@@ -241,7 +295,7 @@ def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100,
     return shallowCopy(f.GetOutput())
 
 
-def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, returnOrigin=False):
+def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, perpendicularAxis=None, returnOrigin=False):
 
     expectedNormal = expectedNormal if expectedNormal is not None else [-1,0,0]
 
@@ -249,6 +303,9 @@ def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, returnOr
     f = pcl.vtkPCLSACSegmentationPlane()
     f.SetInputData(dataObj)
     f.SetDistanceThreshold(distanceThreshold)
+    if perpendicularAxis is not None:
+        f.SetPerpendicularConstraintEnabled(True)
+        f.SetPerpendicularAxis(perpendicularAxis)
     f.Update()
     origin = f.GetPlaneOrigin()
     normal = np.array(f.GetPlaneNormal())
@@ -300,9 +357,9 @@ def addCoordArraysToPolyData(polyData):
 
 
 def getDebugRevolutionData():
-    #filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
+    filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
     #filename = os.path.join(os.getcwd(), 'bungie_valve.vtp')
-    filename = os.path.join(os.getcwd(), 'cinder-blocks.vtp')
+    #filename = os.path.join(os.getcwd(), 'cinder-blocks.vtp')
     #filename = os.path.join(os.getcwd(), 'cylinder_table.vtp')
     #filename = os.path.join(os.getcwd(), 'two-by-fours.vtp')
 
@@ -421,11 +478,14 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     return item
 
 
-def extractCircle(polyData, distanceThreshold=0.04):
+def extractCircle(polyData, distanceThreshold=0.04, radiusLimit=None):
 
     circleFit = pcl.vtkPCLSACSegmentationCircle()
     circleFit.SetDistanceThreshold(distanceThreshold)
     circleFit.SetInputData(polyData)
+    if radiusLimit is not None:
+        circleFit.SetRadiusLimit(radiusLimit)
+        circleFit.SetRadiusConstraintEnabled(True)
     circleFit.Update()
 
     polyData = thresholdPoints(circleFit.GetOutput(), 'ransac_labels', [1.0, 1.0])
@@ -444,45 +504,207 @@ def removeMajorPlane(polyData, distanceThreshold=0.02):
     return polyData, f
 
 
-def segmentValve(polyData, planeNormal=None):
+def showFrame(frame, name, scale=1.0):
+
+    a = vtk.vtkAxes()
+    a.SetComputeNormals(0)
+    a.SetScaleFactor(scale)
+
+    t = vtk.vtkTransformPolyDataFilter()
+    t.SetTransform(frame)
+    t.AddInputConnection(a.GetOutputPort())
+    t.Update()
+    obj = updatePolyData(t.GetOutput(), name, colorByName='Axes')
+    lut = obj.mapper.GetLookupTable()
+    lut.SetHueRange(0, 0.667)
 
 
-    polyData, circleFit = extractCircle(polyData, distanceThreshold=0.04)
-    showPolyData(polyData, 'circle fit (initial)', colorByName='z', visible=False)
+def generateFeetForValve():
+
+    aff = om.findObjectByName('valve affordance')
+    assert aff
 
 
-    polyData, circleFit = extractCircle(polyData, distanceThreshold=0.01)
-    showPolyData(polyData, 'circle fit', colorByName='z')
+    params = aff.params
+
+    origin = np.array(params['origin'])
+    origin[2] = 0.0
+
+    xaxis = -params['axis']
+    zaxis = np.array([0,0,1])
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+
+    stanceWidth = 0.2
+    stanceRotation = 25.0
+    stanceOffset = [-1.0, -0.5]
+
+    valveFrame = getTransformFromAxes(xaxis, yaxis, zaxis)
+    valveFrame.PostMultiply()
+    valveFrame.Translate(origin)
+    showFrame(valveFrame, 'valve ground frame', scale=0.2)
+
+    stanceFrame = vtk.vtkTransform()
+    stanceFrame.PostMultiply()
+    stanceFrame.RotateZ(stanceRotation)
+    stanceFrame.Translate(np.array([1,0,0])*stanceOffset[0] + np.array([0,1,0])*stanceOffset[1])
+    stanceFrame.Concatenate(valveFrame)
+    #showFrame(stanceFrame, 'stance frame', scale=0.2)
+
+
+    lfootFrame = vtk.vtkTransform()
+    lfootFrame.PostMultiply()
+    lfootFrame.Translate(0, stanceWidth/2.0, 0)
+    lfootFrame.Concatenate(stanceFrame)
+
+    rfootFrame = vtk.vtkTransform()
+    rfootFrame.PostMultiply()
+    rfootFrame.Translate(0, -stanceWidth/2.0, 0)
+    rfootFrame.Concatenate(stanceFrame)
+
+
+    showFrame(lfootFrame, 'lfoot frame', scale=0.2)
+    showFrame(rfootFrame, 'rfoot frame', scale=0.2)
+
+    d = DebugData()
+    d.addLine(valveFrame.GetPosition(), stanceFrame.GetPosition())
+
+
+    updatePolyData(d.getPolyData(), 'stance debug')
+
+    publishSteppingGoal(lfootFrame, rfootFrame)
+
+
+
+def poseFromFrame(frame):
+
+    trans = lcmdrc.vector_3d_t()
+    trans.x, trans.y, trans.z = frame.GetPosition()
+    trans.z += 0.0745342
+
+    wxyz = range(4)
+    perception.drc.vtkMultisenseSource.GetBotQuaternion(frame, wxyz)
+    quat = lcmdrc.quaternion_t()
+    quat.w, quat.x, quat.y, quat.z = wxyz
+
+    pose = lcmdrc.position_3d_t()
+    pose.translation = trans
+    pose.rotation = quat
+    return pose
+
+
+def publishSteppingGoal(lfootFrame, rfootFrame):
+
+    m = lcmdrc.traj_opt_constraint_t()
+    m.utime = int(time.time() * 1e6)
+    m.robot_name = 'atlas'
+    m.num_links = 2
+    m.link_name = ['l_foot', 'r_foot']
+    m.link_timestamps = [0, 1e6]
+    m.num_joints = 0
+    m.link_origin_position = [poseFromFrame(lfootFrame), poseFromFrame(rfootFrame)]
+    lcmUtils.GlobalLCM.get().publish('DESIRED_FOOT_STEP_SEQUENCE', m.encode())
+
+
+def startValveSegmentation():
+
+
+    segmentValveByWallPlane()
+    return
+
+
+    if om.findObjectByName('selected planes'):
+        segmentValveByWallPlane()
+        return
+
+    pointPicker.clear()
+    pointPicker.enabled = True
+    pointPicker.annotationFunc = segmentValveByAnnotation
+    om.removeFromObjectModel(om.findObjectByName('valve affordance'))
+    om.removeFromObjectModel(om.findObjectByName('valve axes'))
+    om.removeFromObjectModel(om.findObjectByName('annotation'))
+
+
+def segmentValveByWallPlane():
+
+    # find wall plane
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+
+    bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
+
+    polyData, origin, normal  = applyPlaneFit(polyData, expectedNormal=-bodyX, returnOrigin=True)
+
+    wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(wallPoints, 'valve wall')
+
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.05, 0.4])
+
+    updatePolyData(searchRegion, 'valve search region')
+
+
+    searchRegion, origin, _  = applyPlaneFit(searchRegion, expectedNormal=normal, perpendicularAxis=normal, returnOrigin=True)
+    searchRegion = thresholdPoints(searchRegion, 'dist_to_plane', [-0.01, 0.01])
+
+    updatePolyData(searchRegion, 'valve search region 2')
+
+
+    largestCluster = extractLargestCluster(searchRegion)
+
+    updatePolyData(largestCluster, 'valve cluster')
+
+
+    polyData, circleFit = extractCircle(largestCluster, distanceThreshold=0.01, radiusLimit=[0.19, 0.21])
+    updatePolyData(polyData, 'circle fit', visible=False)
+
+
+    #polyData, circleFit = extractCircle(polyData, distanceThreshold=0.01)
+    #showPolyData(polyData, 'circle fit', colorByName='z')
 
 
     radius = circleFit.GetCircleRadius()
     origin = np.array(circleFit.GetCircleOrigin())
-    normal = np.array(circleFit.GetCircleNormal())
+    circleNormal = np.array(circleFit.GetCircleNormal())
+    circleNormal = circleNormal/np.linalg.norm(circleNormal)
 
+    if np.dot(circleNormal, normal) < 0:
+        circleNormal *= -1
 
-    normal = planeNormal if planeNormal is not None else normal
-    normal = normal/np.linalg.norm(normal)
-
-
-    p1 = origin - normal*radius
-    p2 = origin + normal*radius
+    # force use of the plane normal
+    circleNormal = normal
 
     d = DebugData()
-    d.addLine(p1, p2)
-    d.addLine(origin - normal*0.015, origin + normal*0.015, radius=radius)
-    showPolyData(d.getPolyData(), 'circle model')
-    showPolyData(d.getPolyData(), 'valve', view=getDRCView(), parentName='affordances')
+    d.addLine(origin - normal*radius, origin + normal*radius)
+    d.addCircle(origin, circleNormal, radius)
+    updatePolyData(d.getPolyData(), 'valve axes', visible=False)
 
-    getDRCView().renderer().ResetCamera(d.getPolyData().GetBounds())
-    getSegmentationView().renderer().ResetCamera(d.getPolyData().GetBounds())
 
-    global params
-    params = {}
-    params['axis'] = normal
-    params['radius'] = radius
-    params['origin'] = origin
-    params['length'] = 0.03
-    return params
+    zaxis = circleNormal
+    xaxis = bodyX
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    zwidth = 0.03
+
+    d = DebugData()
+    d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
+
+
+    obj = updatePolyData(d.getPolyData(), 'valve affordance', cls=CylinderAffordanceItem, parentName='affordances')
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+
+    params = dict(axis=zaxis, radius=radius, length=zwidth, origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=radius, ywidth=radius, zwidth=zwidth)
+
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
 
 
 def pickDataSet(displayPoint, tolerance=0.01):
@@ -534,6 +756,7 @@ class PointPicker(TimerCallback):
         self.p2 = None
         self.p3 = None
         self.hoverPos = None
+        self.annotationFunc = None
         self.lastMovePos = [0, 0]
 
     def onMouseMove(self, displayPoint):
@@ -556,73 +779,12 @@ class PointPicker(TimerCallback):
 
         self.enabled = False
 
-        segmentationObj = om.findObjectByName('pointcloud snapshot')
-        segmentationObj.mapper.ScalarVisibilityOff()
-        segmentationObj.setProperty('Point Size', 2)
-        segmentationObj.setProperty('Alpha', 0.8)
-
         p1 = self.p1.copy()
         p2 = self.p2.copy()
         p3 = self.p3.copy()
 
-        # constraint z to lie in plane
-        p1[2] = p2[2] = p3[2] = max(p1[2], p2[2], p3[2])
-
-        zedge = p2 - p1
-        zaxis = zedge / np.linalg.norm(zedge)
-
-        #xwidth = distanceToLine(p3, p1, p2)
-
-        # expected dimensions
-        xwidth, ywidth = self.blockDimensions
-
-        zwidth = np.linalg.norm(zedge)
-
-        yaxis = np.cross(p2 - p1, p3 - p1)
-        yaxis = yaxis / np.linalg.norm(yaxis)
-
-        xaxis = np.cross(yaxis, zaxis)
-
-        # reorient axes
-        if np.dot(yaxis, _spindleAxis) < 0:
-            yaxis *= -1
-
-        if np.dot(xaxis, p3 - p1) < 0:
-            xaxis *= -1
-
-        # make right handed
-        zaxis = np.cross(xaxis, yaxis)
-
-        origin = ((p1 + p2) / 2.0) + xaxis*xwidth/2.0 + yaxis*ywidth/2.0
-
-        d = DebugData()
-        d.addSphere(origin, radius=0.01)
-        d.addLine(origin - xaxis*xwidth/2.0, origin + xaxis*xwidth/2.0)
-        d.addLine(origin - yaxis*ywidth/2.0, origin + yaxis*ywidth/2.0)
-        d.addLine(origin - zaxis*zwidth/2.0, origin + zaxis*zwidth/2.0)
-        obj = updatePolyData(d.getPolyData(), 'block axes')
-        obj.setProperty('Color', QtGui.QColor(255, 255, 0))
-        obj.setProperty('Visible', False)
-        om.findObjectByName('annotation').setProperty('Visible', False)
-
-        cube = vtk.vtkCubeSource()
-        cube.SetXLength(xwidth)
-        cube.SetYLength(ywidth)
-        cube.SetZLength(zwidth)
-        cube.Update()
-        cube = shallowCopy(cube.GetOutput())
-
-        t = getTransformFromAxes(xaxis, yaxis, zaxis)
-        t.PostMultiply()
-        t.Translate(origin)
-
-        obj = updatePolyData(cube, 'block affordance', cls=CubeAffordanceItem, parentName='affordances')
-        obj.actor.SetUserTransform(t)
-        obj.addToView(app.getDRCView())
-
-        params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
-        obj.setAffordanceParams(params)
-        obj.updateParamsFromActorTransform()
+        if self.annotationFunc is not None:
+            self.annotationFunc(p1, p2, p3)
 
 
     def handleRelease(self, displayPoint):
@@ -753,13 +915,79 @@ def binByScalar(lidarData, scalarArrayName, binWidth, binLabelsArrayName='bin_la
     return newData, bins
 
 
-def getObb(polyData):
+def showObbs(polyData):
 
-    f = vtk.vtkAnnotateOBBs()
-    f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, 'cluster_label')
+    f = pcl.vtkAnnotateOBBs()
+    f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, 'cluster_labels')
     f.SetInputData(polyData)
     f.Update()
-    assert f.GetNumberOfBoundingBoxes() == 1
+
+
+def segmentBlockByAnnotation(blockDimensions, p1, p2, p3):
+
+    segmentationObj = om.findObjectByName('pointcloud snapshot')
+    segmentationObj.mapper.ScalarVisibilityOff()
+    segmentationObj.setProperty('Point Size', 2)
+    segmentationObj.setProperty('Alpha', 0.8)
+
+    # constraint z to lie in plane
+    #p1[2] = p2[2] = p3[2] = max(p1[2], p2[2], p3[2])
+
+    zedge = p2 - p1
+    zaxis = zedge / np.linalg.norm(zedge)
+
+    #xwidth = distanceToLine(p3, p1, p2)
+
+    # expected dimensions
+    xwidth, ywidth = blockDimensions
+
+    zwidth = np.linalg.norm(zedge)
+
+    yaxis = np.cross(p2 - p1, p3 - p1)
+    yaxis = yaxis / np.linalg.norm(yaxis)
+
+    xaxis = np.cross(yaxis, zaxis)
+
+    # reorient axes
+    if np.dot(yaxis, _spindleAxis) < 0:
+        yaxis *= -1
+
+    if np.dot(xaxis, p3 - p1) < 0:
+        xaxis *= -1
+
+    # make right handed
+    zaxis = np.cross(xaxis, yaxis)
+
+    origin = ((p1 + p2) / 2.0) + xaxis*xwidth/2.0 + yaxis*ywidth/2.0
+
+    d = DebugData()
+    d.addSphere(origin, radius=0.01)
+    d.addLine(origin - xaxis*xwidth/2.0, origin + xaxis*xwidth/2.0)
+    d.addLine(origin - yaxis*ywidth/2.0, origin + yaxis*ywidth/2.0)
+    d.addLine(origin - zaxis*zwidth/2.0, origin + zaxis*zwidth/2.0)
+    obj = updatePolyData(d.getPolyData(), 'block axes')
+    obj.setProperty('Color', QtGui.QColor(255, 255, 0))
+    obj.setProperty('Visible', False)
+    om.findObjectByName('annotation').setProperty('Visible', False)
+
+    cube = vtk.vtkCubeSource()
+    cube.SetXLength(xwidth)
+    cube.SetYLength(ywidth)
+    cube.SetZLength(zwidth)
+    cube.Update()
+    cube = shallowCopy(cube.GetOutput())
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    obj = updatePolyData(cube, 'block affordance', cls=BlockAffordanceItem, parentName='affordances')
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+
+    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
 
 
 def segmentBlockByTopPlane(blockDimensions):
@@ -850,15 +1078,13 @@ def segmentBlockByTopPlane(blockDimensions):
     t.PostMultiply()
     t.Translate(origin)
 
-    obj = updatePolyData(cube, 'block affordance', cls=CubeAffordanceItem, parentName='affordances')
+    obj = updatePolyData(cube, 'block affordance', cls=BlockAffordanceItem, parentName='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
     params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
-
-
 
 
 def segmentBlockByPlanes(blockDimensions):
@@ -931,7 +1157,7 @@ def segmentBlockByPlanes(blockDimensions):
     t.PostMultiply()
     t.Translate(origin)
 
-    obj = updatePolyData(cube, 'block affordance', cls=CubeAffordanceItem, parentName='affordances')
+    obj = updatePolyData(cube, 'block affordance', cls=BlockAffordanceItem, parentName='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
@@ -949,7 +1175,7 @@ def startBlockSegmentation(dimensions):
 
     pointPicker.clear()
     pointPicker.enabled = True
-    pointPicker.blockDimensions = dimensions
+    pointPicker.annotationFunc = functools.partial(segmentBlockByAnnotation, dimensions)
     om.removeFromObjectModel(om.findObjectByName('block affordance'))
     om.removeFromObjectModel(om.findObjectByName('block axes'))
     om.removeFromObjectModel(om.findObjectByName('annotation'))
@@ -991,9 +1217,17 @@ def saveCameraParams(overwrite=False):
         savedCameraParams = dict(Position=c.GetPosition(), FocalPoint=c.GetFocalPoint(), ViewUp=c.GetViewUp())
 
 
+
+def getDefaultAffordanceObject():
+
+    for obj in om.objects.values():
+        if isinstance(obj, om.AffordanceItem):
+            return obj
+
+
 def orthoX():
 
-    aff = om.findObjectByName('block affordance')
+    aff = getDefaultAffordanceObject()
     if not aff:
         return
 
@@ -1024,7 +1258,7 @@ def orthoX():
 
 def orthoY():
 
-    aff = om.findObjectByName('block affordance')
+    aff = getDefaultAffordanceObject()
     if not aff:
         return
 
@@ -1055,7 +1289,7 @@ def orthoY():
 
 def orthoZ():
 
-    aff = om.findObjectByName('block affordance')
+    aff = getDefaultAffordanceObject()
     if not aff:
         return
 
@@ -1170,23 +1404,6 @@ def onSegmentationViewDoubleClicked(displayPoint):
 
     elif action == 'select_actor':
         selectActor(displayPoint)
-
-
-    '''
-    segmentationObj.mapper.ScalarVisibilityOff()
-    segmentationObj.setProperty('Alpha', 0.3)
-
-    # plane fit
-    polyData, normal = applyPlaneFit(polyData)
-    polyData = thresholdPoints(polyData, 'dist_to_plane', [-0.02, 0.02])
-    showPolyData(polyData, 'plane fit', colorByName='z')
-
-    params = segmentValve(polyData)
-
-    #affordance.publishValve(params)
-
-    getSegmentationView().render()
-    '''
 
 
 def cleanup():

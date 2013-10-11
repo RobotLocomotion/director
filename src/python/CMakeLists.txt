@@ -6,6 +6,7 @@ set(python_files
   ddapp/ik.py
   ddapp/ikeditor.py
   ddapp/jointcontrol.py
+  ddapp/lcmUtils.py
   ddapp/matlab.py
   ddapp/midi.py
   ddapp/objectmodel.py
@@ -19,6 +20,9 @@ set(python_files
 
   #ddapp/macros/get_polydata.py
   ddapp/macros/publish.py
+  ddapp/macros/bot_spy.py
+  ddapp/macros/neck_pitch.py
+  ddapp/macros/multisense_rpm.py
 
   ddapp/macros/segmentation_view/ortho_x.py
   ddapp/macros/segmentation_view/ortho_y.py
@@ -26,6 +30,7 @@ set(python_files
   ddapp/macros/segmentation_view/perspective.py
   ddapp/macros/segmentation_view/segment_board.py
   ddapp/macros/segmentation_view/segment_cinderblocks.py
+  ddapp/macros/segmentation_view/segment_valve.py
   ddapp/macros/segmentation_view/major_planes.py
 
   )
