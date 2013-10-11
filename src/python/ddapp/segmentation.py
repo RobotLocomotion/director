@@ -428,9 +428,6 @@ def applyVoxelGrid(polyData, leafSize=0.01):
     return shallowCopy(v.GetOutput())
 
 
-
-snapshotCount = 0
-
 def activateSegmentationMode(debug=False):
 
     if debug:
@@ -451,16 +448,13 @@ def activateSegmentationMode(debug=False):
 
     thresholdWorkspace = False
 
-    global snapshotCount
-
     if thresholdWorkspace:
         polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 2.0])
         polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-1.0, 1.0])
         segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='distance_along_robot_x')
 
     else:
-        segmentationObj = showPolyData(polyData, 'pointcloud snapshot %d' % snapshotCount, alpha=0.3)
-        snapshotCount += 1
+        segmentationObj = showPolyData(polyData, 'pointcloud snapshot', alpha=0.3)
 
     segmentationObj.headAxis = perception._multisenseItem.model.getAxis('head', [1,0,0])
 
@@ -1521,5 +1515,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    activateSegmentationMode(debug=False)
+    activateSegmentationMode(debug=True)
 
