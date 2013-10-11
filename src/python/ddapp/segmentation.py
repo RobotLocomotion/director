@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 import vtk
 import colorsys
 import time
@@ -10,16 +11,16 @@ import ddapp.applogic as app
 from ddapp import objectmodel as om
 from ddapp import perception
 from ddapp import lcmUtils
+from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
 
 import numpy as np
-from vtkPointCloudUtils import vtkNumpy
-from vtkPointCloudUtils.debugVis import DebugData
-from vtkPointCloudUtils.shallowCopy import shallowCopy
-from vtkPointCloudUtils import affordance
-from vtkPointCloudUtils import io
-from vtkPointCloudUtils import pointCloudUtils
-
+import vtkNumpy
+from debugVis import DebugData
+from shallowCopy import shallowCopy
+import affordance
+import io
+import pointCloudUtils
 
 import vtkPCLFiltersPython as pcl
 
@@ -181,6 +182,19 @@ def extractLargestCluster(polyData):
     return thresholdPoints(polyData, 'cluster_labels', [1, 1])
 
 
+
+def segmentGroundPoints(polyData):
+
+    zvalues = vtkNumpy.getNumpyFromVtk(polyData, 'Points')[:,2]
+    groundHeight = np.percentile(zvalues, 5)
+    polyData = thresholdPoints(polyData, 'z', [groundHeight - 0.3, groundHeight + 0.3])
+
+    polyData, normal = applyPlaneFit(polyData, distanceThreshold=0.005, expectedNormal=[0,0,1])
+    groundPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+
+    return groundPoints, normal
+
+
 def segmentGroundPlane():
 
     inputObj = om.findObjectByName('pointcloud snapshot')
@@ -198,7 +212,6 @@ def segmentGroundPlane():
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
     dist = np.dot(points - origin, normal)
     vtkNumpy.addNumpyToVtk(polyData, dist, 'dist_to_plane')
-
 
     groundPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     scenePoints = thresholdPoints(polyData, 'dist_to_plane', [0.05, 2.5])
@@ -415,6 +428,9 @@ def applyVoxelGrid(polyData, leafSize=0.01):
     return shallowCopy(v.GetOutput())
 
 
+
+snapshotCount = 0
+
 def activateSegmentationMode(debug=False):
 
     if debug:
@@ -428,12 +444,14 @@ def activateSegmentationMode(debug=False):
     global _spindleAxis
     _spindleAxis = perception._multisenseItem.model.getSpindleAxis()
 
-    cleanup()
+    #cleanup()
     segmentationView = getOrCreateSegmentationView()
 
     perspective()
 
     thresholdWorkspace = False
+
+    global snapshotCount
 
     if thresholdWorkspace:
         polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 2.0])
@@ -441,12 +459,57 @@ def activateSegmentationMode(debug=False):
         segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='distance_along_robot_x')
 
     else:
-        segmentationObj = showPolyData(polyData, 'pointcloud snapshot', alpha=0.3)
+        segmentationObj = showPolyData(polyData, 'pointcloud snapshot %d' % snapshotCount, alpha=0.3)
+        snapshotCount += 1
+
+    segmentationObj.headAxis = perception._multisenseItem.model.getAxis('head', [1,0,0])
 
     app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
     #segmentationView.camera().Dolly(3.0)
     segmentationView.render()
 
+
+def segmentGroundPlanes():
+
+    objs = []
+    for obj in om.objects.values():
+        name = obj.getProperty('Name')
+        if name.startswith('pointcloud snapshot'):
+            objs.append(obj)
+
+    objs = sorted(objs, key=lambda x: x.getProperty('Name'))
+
+    d = DebugData()
+
+    prevHeadAxis = None
+    for obj in objs:
+        name = obj.getProperty('Name')
+        print '----- %s---------' % name
+        print  'head axis:', obj.headAxis
+        groundPoints, normal = segmentGroundPoints(obj.polyData)
+        print 'ground normal:', normal
+        showPolyData(groundPoints, name + ' ground points', visible=False)
+        a = np.array([0,0,1])
+        b = np.array(normal)
+        diff = math.degrees(math.acos(np.dot(a,b) / (np.linalg.norm(a) * np.linalg.norm(b))))
+        if diff > 90:
+            print 180 - diff
+        else:
+            print diff
+
+        if prevHeadAxis is not None:
+            a = prevHeadAxis
+            b = np.array(obj.headAxis)
+            diff = math.degrees(math.acos(np.dot(a,b) / (np.linalg.norm(a) * np.linalg.norm(b))))
+            if diff > 90:
+                print 180 - diff
+            else:
+                print diff
+        prevHeadAxis = np.array(obj.headAxis)
+
+        d.addLine([0,0,0], normal)
+
+    updatePolyData(d.getPolyData(), 'normals')
 
 def updatePolyData(polyData, name, **kwargs):
 
@@ -603,7 +666,7 @@ def publishSteppingGoal(lfootFrame, rfootFrame):
     m.link_timestamps = [0, 1e6]
     m.num_joints = 0
     m.link_origin_position = [poseFromFrame(lfootFrame), poseFromFrame(rfootFrame)]
-    lcmUtils.GlobalLCM.get().publish('DESIRED_FOOT_STEP_SEQUENCE', m.encode())
+    lcmUtils.publish('DESIRED_FOOT_STEP_SEQUENCE', m)
 
 
 def startValveSegmentation():

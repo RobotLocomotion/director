@@ -1,22 +1,30 @@
 
 set(python_files
-  ddapp/__init__.py
+  ddapp/affordance.py
   ddapp/applogic.py
   ddapp/cameracontrol.py
-  ddapp/ik.py
+  ddapp/debugVis.py
   ddapp/ikeditor.py
+  ddapp/ik.py
+  ddapp/__init__.py
+  ddapp/io.py
   ddapp/jointcontrol.py
   ddapp/lcmUtils.py
   ddapp/matlab.py
   ddapp/midi.py
   ddapp/objectmodel.py
   ddapp/perception.py
+  ddapp/pointCloudUtils.py
   ddapp/segmentation.py
+  ddapp/shallowCopy.py
   ddapp/simpletimer.py
   ddapp/spreadsheet.py
   ddapp/startup.py
   ddapp/tdx.py
   ddapp/timercallback.py
+  ddapp/transformUtils.py
+  ddapp/vtkAll.py
+  ddapp/vtkNumpy.py
 
   #ddapp/macros/get_polydata.py
   ddapp/macros/publish.py
