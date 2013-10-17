@@ -19,7 +19,7 @@ import vtkNumpy
 from debugVis import DebugData
 from shallowCopy import shallowCopy
 import affordance
-import io
+import ioUtils
 import pointCloudUtils
 
 import vtkPCLFiltersPython as pcl
@@ -376,7 +376,7 @@ def getDebugRevolutionData():
     #filename = os.path.join(os.getcwd(), 'cylinder_table.vtp')
     #filename = os.path.join(os.getcwd(), 'two-by-fours.vtp')
 
-    return addCoordArraysToPolyData(io.readPolyData(filename))
+    return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
 
 def getCurrentRevolutionData():

@@ -7,7 +7,7 @@ set(python_files
   ddapp/ikeditor.py
   ddapp/ik.py
   ddapp/__init__.py
-  ddapp/io.py
+  ddapp/ioUtils.py
   ddapp/jointcontrol.py
   ddapp/lcmUtils.py
   ddapp/matlab.py

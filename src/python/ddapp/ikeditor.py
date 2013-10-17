@@ -49,6 +49,11 @@ class IKEditor(object):
         self.ui.UpdateIKButton.connect('clicked()', self.updateIKClicked)
         self.ui.AutoUpdateCheck.connect('clicked()', self.autoUpdateClicked)
 
+        self.ui.TrajButton.connect('clicked()', self.trajClicked)
+        self.ui.IKTrajButton.connect('clicked()', self.ikTrajClicked)
+        self.ui.StorePoseButton.connect('clicked()', self.storePoseClicked)
+        self.ui.TrajSlider.connect('valueChanged(int)', self.trajSliderChanged)
+
         self.ui.SeedCombo.connect('currentIndexChanged(const QString&)', self.seedComboChanged)
         self.ui.NominalCombo.connect('currentIndexChanged(const QString&)', self.nominalComboChanged)
         self.ui.CostsCombo.connect('currentIndexChanged(const QString&)', self.costsComboChanged)
@@ -79,11 +84,17 @@ class IKEditor(object):
         self.motionAccumulator = TDxMotionAccumulator(self)
         self.motionAccumulator.start()
 
+        self.frameWidget = None
+
         poseCollection.connect('itemAdded(const QString&)', self.onPoseAdded)
 
         self.rebuild()
         self._updateBlocked = False
 
+
+    def makeFrameWidget(self, view):
+        self.frameWidget = WidgetCallback(self, view)
+        self.frameWidget.start()
 
     def onPoseAdded(self):
 
@@ -99,7 +110,8 @@ class IKEditor(object):
 
         updateComboStrings(self.ui.SeedCombo, sorted(self.poseCollection.map().keys()), 'q_end')
         updateComboStrings(self.ui.NominalCombo, sorted(self.poseCollection.map().keys()), 'q_nom')
-
+        updateComboStrings(self.ui.TrajStartPoseCombo, sorted(self.poseCollection.map().keys()), 'q_start')
+        updateComboStrings(self.ui.TrajEndPoseCombo, sorted(self.poseCollection.map().keys()), 'q_end')
 
     def onCostAdded(self):
         updateComboStrings(self.ui.CostsCombo, sorted(self.costCollection.map().keys()), 'default_cost')
@@ -128,11 +140,11 @@ class IKEditor(object):
         linkName = self.ui.PositionLinkNameCombo.currentText
         assert linkName == self.server.activePositionConstraint
 
-        commands = []
-        commands.append('kinsol = doKinematics(r, q_end);')
-        commands.append('%s_target_start = r.forwardKin(kinsol, %s, %s_pts);' % (linkName, linkName, linkName))
-        self.server.comm.sendCommands(commands)
+        self.server.grabCurrentLinkPose(linkName)
         self.positionConstraintComboChanged(linkName)
+
+        if self.frameWidget:
+            self.frameWidget.showWithLink(linkName)
 
     def updateQuasistaticConstraint(self):
         s = self.server
@@ -160,24 +172,16 @@ class IKEditor(object):
         self.server.comm.sendCommands(commands)
 
     def positionTargetChanged(self):
-
         linkName = self.ui.PositionLinkNameCombo.currentText
-        assert linkName == self.server.activePositionConstraint
-
         target = np.array([self.ui.TargetX.value, self.ui.TargetY.value, self.ui.TargetZ.value])
         enabledState = [self.ui.PositionXEnabled.checked, self.ui.PositionYEnabled.checked, self.ui.PositionZEnabled.checked]
-
-        # wrong, need to add pts to target location for multi-point links
-        #commands = []
-        #commands.append('%s_target_start = [%f; %f; %f];' % (linkName, target[0], target[1], target[2]))
-        #self.server.comm.sendCommands(commands)
-        #self.updateIk()
+        self.server.setPositionTarget(linkName, target)
+        self.updateIk()
 
     def positionOffsetChanged(self):
         offset = [self.ui.OffsetX.value, self.ui.OffsetY.value, self.ui.OffsetZ.value]
         linkName = self.ui.PositionLinkNameCombo.currentText
-
-        self.server.positionOffset[linkName] = offset
+        self.server.setPositionOffset(linkName, offset)
         self.updateIk()
 
     def updateIk(self):
@@ -185,15 +189,12 @@ class IKEditor(object):
             self.server.updateIk()
 
     def leftFootEnabledClicked(self):
-        print 'left foot:', self.ui.LeftFootEnabled.checked
         self.updateQuasistaticConstraint()
 
     def rightFootEnabledClicked(self):
-        print 'right foot:', self.ui.RightFootEnabled.checked
         self.updateQuasistaticConstraint()
 
     def shrinkFactorChanged(self):
-        print 'shrink factor:', self.ui.ShrinkFactor.value
         self.updateQuasistaticConstraint()
 
     def onConstraintClicked(self):
@@ -232,14 +233,13 @@ class IKEditor(object):
     def positionConstraintComboChanged(self, linkName):
         print 'edit position constraint:', linkName
         self.server.activePositionConstraint = linkName
-        target = np.array(self.server.comm.getFloatArray('%s_target_start' % linkName))
+        target = self.server.getPositionTarget(linkName)
         offset = self.server.getPositionOffset(linkName)
-
-        if len(target.shape) == 2:
-            target = np.average(target, axis=1)
-
         self.setPositionTarget(target)
         self.setPositionOffset(offset)
+
+        if self.frameWidget:
+            self.frameWidget.hide()
 
     def updateEditPositionConstraint(self):
 
@@ -256,6 +256,24 @@ class IKEditor(object):
 
     def handleTDxMotionEvent(self, motionInfo):
         self.motionAccumulator.handleMotionEvent(motionInfo)
+
+    def trajClicked(self):
+        poseStart = self.ui.TrajStartPoseCombo.currentText
+        poseEnd = self.ui.TrajEndPoseCombo.currentText
+        self.server.makePoseTraj(poseStart, poseEnd)
+
+    def ikTrajClicked(self):
+        poseStart = self.ui.TrajStartPoseCombo.currentText
+        poseEnd = self.ui.TrajEndPoseCombo.currentText
+        self.server.runIkTraj(poseStart, poseEnd)
+
+    def trajSliderChanged(self, value):
+        t = value / 100.0
+        self.server.sampleTraj(t)
+
+    def storePoseClicked(self):
+        poseName = self.ui.StoredPoseName.text
+        self.server.storeCurrentPose(poseName)
 
     def rebuildConstraints(self):
         clearLayout(self.ui.ActiveConstraintsGroup)
@@ -367,3 +385,55 @@ class TDxMotionAccumulator(TimerCallback):
         self.editor.setPositionOffset(offset)
         self.editor.updateIk()
 
+
+
+########
+
+import perception
+
+class WidgetCallback(TimerCallback):
+
+    def __init__(self, editor, view):
+        TimerCallback.__init__(self)
+        self.editor = editor
+        self.view = view
+        self.transform = None
+        self.widget = perception.drc.vtkFrameWidget()
+        self.widget.CreateDefaultRepresentation()
+        self.widget.SetInteractor(view.renderWindow().GetInteractor())
+        self.widget.EnabledOff()
+        self.rep = self.widget.GetRepresentation()
+
+    def showWithLink(self, linkName):
+
+        self.linkName = linkName
+        self.transform = self.editor.server.getLinkFrame(linkName)
+        self.lastMTime = self.transform.GetMTime()
+        self.rep.SetTransform(self.transform)
+        self.widget.EnabledOn()
+        self.view.render()
+
+    def hide(self):
+        self.widget.EnabledOff()
+        self.transform = None
+
+    def updateTargets(self):
+        wxyz = range(4)
+        perception.drc.vtkMultisenseSource.GetBotQuaternion(self.transform, wxyz)
+        pos = self.transform.GetPosition()
+
+        self.editor.server.setPositionTarget(self.linkName, pos)
+        self.editor.server.setOrientationTarget(self.linkName, wxyz)
+        self.editor.updateIk()
+
+    def tick(self):
+
+        if not self.transform:
+            return
+
+        mtime = self.transform.GetMTime()
+        if mtime == self.lastMTime:
+            return
+
+        self.lastMTime = mtime
+        self.updateTargets()

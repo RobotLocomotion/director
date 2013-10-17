@@ -41,6 +41,9 @@ class JointController(object):
     def setNominalPose(self):
         self.setPose('q_nom')
 
+    def getPose(self, poseName):
+        return self.poses.get(poseName)
+
     def addPose(self, poseName, poseData):
         assert len(poseData) == self.numberOfJoints
         self.poses[poseName] = poseData

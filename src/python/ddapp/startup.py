@@ -26,6 +26,8 @@ from vtkPointCloudUtils import io
 
 
 app.startup(globals())
+om.init(app.getMainWindow().objectTree(), app.getMainWindow().propertiesPanel())
+
 quit = app.quit
 exit = quit
 view = app.getDRCView()
@@ -39,7 +41,8 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = False
+useIk = True
+usePerception = False
 useTable = False
 
 #modelsToLoad = ['model_minimal_contact_fixedjoint_hands.urdf', 'model.urdf',
@@ -79,11 +82,10 @@ if useIk:
     s.startServerAsync()
 
     e = ikeditor.IKEditor(app.getMainWindow(), s, poseCollection, costCollection)
+    e.makeFrameWidget(view)
     app.addWidgetToDock(e.widget)
 
 
-
-om.init(app.getMainWindow().objectTree(), app.getMainWindow().propertiesPanel())
 
 
 robotsFolder = om.addContainer('robots')
@@ -96,8 +98,6 @@ if useTable:
     affordancesFolder = om.addContainerToObjectTree('affordances')
     om.addRobotModel(tableModel, affordancesFolder)
 
-
-perception.init(view, models)
-segmentation.init()
-
-m = perception._multisenseItem.model
+if usePerception:
+    perception.init(view, models)
+    segmentation.init()
