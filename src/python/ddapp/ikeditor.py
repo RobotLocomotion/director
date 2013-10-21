@@ -403,6 +403,7 @@ class WidgetCallback(TimerCallback):
         self.widget.SetInteractor(view.renderWindow().GetInteractor())
         self.widget.EnabledOff()
         self.rep = self.widget.GetRepresentation()
+        self.rep.SetWorldSize(0.5)
 
     def showWithLink(self, linkName):
 

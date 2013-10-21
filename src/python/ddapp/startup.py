@@ -41,8 +41,8 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = True
-usePerception = False
+useIk = False
+usePerception = True
 useTable = False
 
 #modelsToLoad = ['model_minimal_contact_fixedjoint_hands.urdf', 'model.urdf',
