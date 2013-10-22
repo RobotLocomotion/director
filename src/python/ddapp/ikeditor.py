@@ -120,7 +120,6 @@ class IKEditor(object):
         self.server.updateIk()
 
     def autoUpdateClicked(self):
-        print 'auto update enabled:', self.ui.AutoUpdateCheck.checked
         self.midiEditor.enabled = self.ui.AutoUpdateCheck.checked
 
     def seedComboChanged(self, name):
@@ -135,7 +134,6 @@ class IKEditor(object):
         print 'costs:', name
 
     def grabCurrentClicked(self):
-        print 'grab current'
 
         linkName = self.ui.PositionLinkNameCombo.currentText
         assert linkName == self.server.activePositionConstraint
@@ -159,17 +157,17 @@ class IKEditor(object):
             qsc = 'right_foot_qsc'
             feet = ['r_foot']
         else:
-            raise Exception('quasistatic constraint requires at least one foot enabled')
+            self.server.quasiStaticConstraintName = ''
+            return
 
         commands = []
-        commands.append('%s = QuasiStaticConstraint(r);' % qsc)
+        commands.append('%s = QuasiStaticConstraint(r, tspan);' % qsc)
         commands.append('%s = %s.setShrinkFactor(%f);' % (qsc, qsc, self.ui.ShrinkFactor.value))
         for foot in feet:
             commands.append('%s = %s.addContact(%s, %s_pts);' % (qsc, qsc, foot, foot))
         commands.append('%s = %s.setActive(true);' % (qsc, qsc))
-
-        self.server.quasiStaticConstraintName = qsc
         self.server.comm.sendCommands(commands)
+        self.server.quasiStaticConstraintName = qsc
 
     def positionTargetChanged(self):
         linkName = self.ui.PositionLinkNameCombo.currentText

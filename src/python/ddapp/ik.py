@@ -63,6 +63,7 @@ class AsyncIKCommunicator(TimerCallback):
     def _startupCommands(self):
 
         commands = []
+        commands.append('format long e')
         commands.append('addpath_control')
         commands.append("addpath('%s')" % matlab.getAppMatlabDir())
         commands.append('runIKServer')
@@ -190,9 +191,6 @@ class AsyncIKCommunicator(TimerCallback):
         linkPosition = np.array(self.comm.getFloatArray('%s_position_target_start' % linkName))
         linkOrientation = np.array(self.comm.getFloatArray('%s_orient_target_start' % linkName))
 
-        print 'grabbed %s position: %s' % (linkName, linkPosition)
-        print 'grabbed %s orientation: %s' % (linkName, linkOrientation)
-
         self.setPositionTarget(linkName, linkPosition)
         self.setOrientationTarget(linkName, linkOrientation)
         self.setPositionOffset(linkName, [0.0, 0.0, 0.0])
@@ -240,15 +238,18 @@ class AsyncIKCommunicator(TimerCallback):
             elif constraintName.endswith('orient_constraint'):
                 commands.extend(self.updateOrientationConstraint(constraintName.replace('_orient_constraint', ''), execute=False))
 
+
+        activeConstraintNames = list(self.activeConstraintNames)
+        if self.quasiStaticConstraintName:
+            activeConstraintNames.insert(0, self.quasiStaticConstraintName)
+
         commands.append('q_seed = %s;' % self.seedName)
-        commands.append('active_constraints = {%s};' % ', '.join(self.activeConstraintNames))
-        commands.append('[q_end, info] = inverseKin(r, q_seed, %s, %s, active_constraints{:}, s.ikoptions);' % (self.nominalName, self.quasiStaticConstraintName))
+        commands.append('active_constraints = {%s};' % ', '.join(activeConstraintNames))
+        commands.append('[q_end, info] = inverseKin(r, q_seed, %s, active_constraints{:}, s.ikoptions);' % self.nominalName)
 
         #self.tasks.append(self.comm.sendCommandsAsync(commands))
         #self.tasks.append(functools.partial(self.fetchPoseFromServer, 'q_end'))
         #self.waitForAsyncTasks()
-
-        print '\n'.join(commands)
 
         self.comm.sendCommands(commands)
         self.fetchPoseFromServer('q_end')
@@ -263,16 +264,12 @@ class AsyncIKCommunicator(TimerCallback):
         commands = []
         commands.append('q_trajPose = eval(qtraj, %f);' % t)
 
-        print '\n'.join(commands)
-
         self.comm.sendCommands(commands)
         self.fetchPoseFromServer('q_trajPose')
 
     def storeCurrentPose(self, poseName):
         commands = []
         commands.append('%s = q_end;' % poseName)
-
-        print '\n'.join(commands)
 
         self.comm.sendCommands(commands)
         self.fetchPoseFromServer(poseName)
@@ -281,8 +278,6 @@ class AsyncIKCommunicator(TimerCallback):
 
         commands = []
         commands.append('qtraj = PPTrajectory(foh(tspan, [%s, %s]));' % (poseStart, poseEnd))
-
-        print '\n'.join(commands)
 
         self.comm.sendCommands(commands)
 

@@ -30,6 +30,7 @@ class MatlabCommunicator(object):
         self.prompt = '>> '
         self.outputConsole = None
         self.echoToStdOut = True
+        self.echoCommandsToStdOut = False
         self.clearResult()
 
     def checkForResult(self):
@@ -99,6 +100,8 @@ class MatlabCommunicator(object):
         assert self.isAlive()
         self.clearResult()
         self.proc.stdin.write(command + '\n')
+        if self.echoCommandsToStdOut:
+            print command
 
     def sendCommands(self, commands, display=True):
 
@@ -141,7 +144,7 @@ class MatlabCommunicator(object):
 
     def assignFloatArray(self, array, arrayName):
 
-        arrayStr = '[%s]' % ';'.join([str(float(x)) for x in array])
+        arrayStr = '[%s]' % ';'.join([repr(float(x)) for x in array])
         self.send('%s = %s;' % (arrayName, arrayStr))
         self.waitForResult()
 
