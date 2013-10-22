@@ -1,17 +1,21 @@
 import functools
 
-def motionEvent(view, obj, eventId):
-    e.handleTDxMotionEvent(view.lastTDxMotion())
+_editor = None
 
-def init(view):
+def motionEvent(view, obj, eventId):
+    _editor.handleTDxMotionEvent(view.lastTDxMotion())
+
+def init(view, editor):
 
     tdxStyle = view.renderWindow().GetInteractor().GetInteractorStyle().GetTDxStyle()
     if tdxStyle is None:
         return
 
+    global _editor
+    _editor = editor
     tdxSettings = tdxStyle.GetSettings()
 
-    translationSensitivity = 0.01
+    translationSensitivity = 0.1
     angleSensitivity = 0.1
     tdxSettings.SetAngleSensitivity(angleSensitivity)
     tdxSettings.SetTranslationXSensitivity(translationSensitivity)

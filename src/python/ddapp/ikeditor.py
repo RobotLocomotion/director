@@ -347,7 +347,7 @@ class TDxMotionAccumulator(TimerCallback):
     def __init__(self, editor):
         TimerCallback.__init__(self)
         self.editor = editor
-        self.translationSensitivity = 0.0001
+        self.translationSensitivity = 0.001
         self.translationCutoff = 0.0
         self.translation = np.zeros(3)
 
@@ -359,8 +359,14 @@ class TDxMotionAccumulator(TimerCallback):
         # swap x and y translation
         translation[0], translation[1] = translation[1], translation[0]
 
+        # swap x and z translation
+        translation[0], translation[2] = translation[2], translation[0]
+
         # flip y
         translation[1] *= -1
+
+        # flip x
+        translation[0] *= -1
 
         translation *= self.translationSensitivity
         translation[np.abs(translation) < self.translationCutoff] = 0.0
@@ -372,7 +378,6 @@ class TDxMotionAccumulator(TimerCallback):
 
         if not self.translation.any():
             return
-
 
         ui = self.editor.ui
         offset = np.array([ui.OffsetX.value, ui.OffsetY.value, ui.OffsetZ.value])

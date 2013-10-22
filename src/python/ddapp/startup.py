@@ -63,7 +63,6 @@ if useTable:
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 spreadsheet.init(app.getSpreadsheetView(), poseCollection, costCollection)
-tdx.init(view)
 
 
 jc = jointcontrol.JointController(models, poseCollection)
@@ -84,6 +83,7 @@ if useIk:
     e = ikeditor.IKEditor(app.getMainWindow(), s, poseCollection, costCollection)
     e.makeFrameWidget(view)
     app.addWidgetToDock(e.widget)
+    tdx.init(view, e)
 
 
 
