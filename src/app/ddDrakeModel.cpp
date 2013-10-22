@@ -727,7 +727,7 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
   }
 
   MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
-  for (int i = 0; i < jointPositions.size(); ++i)
+  for (int i = 0; i < dofNames.size(); ++i)
   {
     const std::string& dofName = dofNames[i];
 

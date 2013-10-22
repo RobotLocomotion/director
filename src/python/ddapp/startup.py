@@ -41,7 +41,7 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = False
+useIk = True
 usePerception = True
 useTable = False
 
@@ -99,5 +99,24 @@ if useTable:
     om.addRobotModel(tableModel, affordancesFolder)
 
 if usePerception:
-    perception.init(view, models)
+
+
+    robotStateModel = app.loadModelByName('model_minimal_contact_fixedjoint_hands.urdf')
+    robotStateJointController = jointcontrol.JointController([robotStateModel])
+    robotStateJointController.setZeroPose()
+
+    perception.init(view, robotStateJointController)
     segmentation.init()
+
+    sensorsFolder = om.getOrCreateContainer('sensors')
+    obj = om.addRobotModel(robotStateModel, sensorsFolder)
+    obj.setProperty('Name', 'ESTIMATED_ROBOT_STATE')
+
+    def grabRobotState():
+        poseName = 'ESTIMATED_ROBOT_STATE'
+        robotStatePose = robotStateJointController.poses[poseName]
+        s.sendPoseToServer(robotStatePose, poseName)
+        s.forcePose(poseName)
+
+
+

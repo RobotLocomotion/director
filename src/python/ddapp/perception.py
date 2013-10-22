@@ -5,6 +5,7 @@ import math
 import PythonQt
 from PythonQt import QtCore, QtGui
 import ddapp.objectmodel as om
+from ddapp import robotstate
 from ddapp.timercallback import TimerCallback
 import vtkDRCFiltersPython as drc
 from vtkPointCloudUtils.debugVis import DebugData
@@ -117,10 +118,10 @@ class MultisenseItem(om.ObjectModelItem):
 
 class MultiSenseSource(TimerCallback):
 
-    def __init__(self, view, models):
+    def __init__(self, view, jointController):
         TimerCallback.__init__(self)
         self.view = view
-        self.models = models
+        self.jointController = jointController
         self.reader = None
         self.displayedRevolution = -1
         self.lastScanLine = -1
@@ -196,6 +197,9 @@ class MultiSenseSource(TimerCallback):
 
         TimerCallback.start(self)
 
+
+
+
     def updateRobotState(self):
 
         robotState = vtk.vtkDoubleArray()
@@ -205,8 +209,11 @@ class MultiSenseSource(TimerCallback):
 
         self.lastRobotStateUtime = timestamp
         robotState = [robotState.GetValue(i) for i in xrange(robotState.GetNumberOfTuples())]
-        for model in self.models:
-            model.setEstRobotState(robotState)
+
+        poseName = 'ESTIMATED_ROBOT_STATE'
+        pose = robotstate.robotStateToDrakePose(robotState)
+        self.jointController.addPose(poseName, pose)
+        self.jointController.setPose(poseName)
 
         self.updateDebugItems()
 
@@ -282,16 +289,16 @@ class MultiSenseSource(TimerCallback):
 
 
 
-def init(view, models):
+def init(view, jointController):
     global _multisenseItem
     global _view
 
     _view = view
 
-    m = MultiSenseSource(view, models)
+    m = MultiSenseSource(view, jointController)
     m.start()
 
-    sensorsFolder = om.addContainer('sensors')
+    sensorsFolder = om.getOrCreateContainer('sensors')
 
     _multisenseItem = MultisenseItem(m)
     om.addToObjectModel(_multisenseItem, sensorsFolder)

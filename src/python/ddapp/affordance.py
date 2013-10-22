@@ -3,6 +3,7 @@ import transformUtils
 import drc as lcmdrc
 import numpy as np
 
+from ddapp import lcmUtils
 
 def createCylinderAffordance(params):
 
@@ -62,7 +63,7 @@ def createBoxAffordance(params):
     zwidth, ywidth = ywidth, zwidth
 
 
-    if True: # this is for cinderblockstep.otdf
+    if False: # this is for cinderblockstep.otdf
         xaxis, yaxis = yaxis, xaxis
         xwidth, ywidth = ywidth, xwidth
 
@@ -146,9 +147,9 @@ def publishAffordance(aff):
         aff.uid = existingUid
         aff.aff_store_control = lcmdrc.affordance_t.UPDATE
         channelName =  'AFFORDANCE_TRACK'
-        lc.publish(channelName, aff.encode())
+        lcmUtils.publish(channelName, aff)
 
     else:
         affPlus = createAffordancePlus(aff)
         channelName = 'AFFORDANCE_FIT'
-        lc.publish(channelName, affPlus.encode())
+        lcmUtils.publish(channelName, affPlus)

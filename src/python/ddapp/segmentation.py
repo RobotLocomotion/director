@@ -53,7 +53,8 @@ class BlockAffordanceItem(om.AffordanceItem):
     def publish(self):
         self.updateParamsFromActorTransform()
         aff = affordance.createBoxAffordance(self.params)
-        aff.otdf_type = 'cinderblockstep'
+        #aff.otdf_type = 'cinderblockstep'
+        aff.otdf_type = 'box'
         aff.nparams = 0
         aff.params = []
         aff.param_names = []
@@ -1515,5 +1516,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    activateSegmentationMode(debug=True)
+    #activateSegmentationMode(debug=True)
 

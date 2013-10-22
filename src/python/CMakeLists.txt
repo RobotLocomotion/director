@@ -15,6 +15,7 @@ set(python_files
   ddapp/objectmodel.py
   ddapp/perception.py
   ddapp/pointCloudUtils.py
+  ddapp/robotstate.py
   ddapp/segmentation.py
   ddapp/shallowCopy.py
   ddapp/simpletimer.py

@@ -5,12 +5,15 @@ import numpy as np
 
 cdef extern from "bot_core/rotations.h":
 
-    int bot_quat_to_matrix(const double quat[4], double rot[9])
-    int bot_matrix_to_quat(const double rot[9], double quat[4])
-    int bot_quat_pos_to_matrix(const double quat[4], const double pos[3], double m[16])
-    void bot_angle_axis_to_quat (double theta, const double axis[3], double q[4])
-    void bot_quat_to_angle_axis (const double q[4], double *theta, double axis[3])
-    void bot_angle_axis_to_roll_pitch_yaw (double angle, const double axis[3], double rpy[3])
+    int bot_quat_to_matrix(double quat[4], double rot[9])
+    int bot_matrix_to_quat(double rot[9], double quat[4])
+    int bot_quat_pos_to_matrix(double quat[4], double pos[3], double m[16])
+    void bot_angle_axis_to_quat(double theta, double axis[3], double q[4])
+    void bot_quat_to_angle_axis(double q[4], double *theta, double axis[3])
+    void bot_roll_pitch_yaw_to_quat(double rpy[3], double q[4])
+    void bot_quat_to_roll_pitch_yaw(double q[4], double rpy[3])
+    void bot_roll_pitch_yaw_to_angle_axis(double rpy[3], double *angle, double axis[3])
+    void bot_angle_axis_to_roll_pitch_yaw(double angle, double axis[3], double rpy[3])
 
 
 ######################
@@ -24,9 +27,11 @@ cdef double* to_vec3d(data) except NULL:
     array_check(data, 3, float)
     return [data[0], data[1], data[2]]
 
-cdef double* to_vec4d(data) except NULL:
+cdef double* to_vec4d(data, double* cdata) except NULL:
     array_check(data, 4, float)
-    return [data[0], data[1], data[2], data[3]]
+    for i in xrange(4):
+        cdata[i] = data[i]
+    return cdata
 
 cdef double* to_vec9d(data) except NULL:
     return [data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8]]
@@ -69,7 +74,8 @@ def array_check(sequence, size, intype):
 
 def quat_to_matrix(quat):
     cdef double rot[9]
-    bot_quat_to_matrix(to_vec4d(quat), rot)
+    cdef double cquat[4]
+    bot_quat_to_matrix(to_vec4d(quat, cquat), rot)
     return from_vec9d(rot)
 
 def matrix_to_quat(rot):
@@ -79,7 +85,8 @@ def matrix_to_quat(rot):
 
 def quat_pos_to_matrix(quat, pos):
     cdef double[16] m
-    bot_quat_pos_to_matrix(to_vec4d(quat), to_vec3d(pos), m)
+    cdef double cquat[4]
+    bot_quat_pos_to_matrix(to_vec4d(quat, cquat), to_vec3d(pos), m)
     return from_vec16d(m)
 
 def angle_axis_to_quat(theta, axis):
@@ -90,7 +97,25 @@ def angle_axis_to_quat(theta, axis):
 def quat_to_angle_axis(quat):
     cdef double theta
     cdef double axis[3]
-    bot_quat_to_angle_axis(to_vec4d(quat), &theta, axis)
+    cdef double cquat[4]
+    bot_quat_to_angle_axis(to_vec4d(quat, cquat), &theta, axis)
+    return theta, from_vec3d(axis)
+
+def roll_pitch_yaw_to_quat(rpy):
+    cdef double quat[4]
+    bot_roll_pitch_yaw_to_quat(to_vec3d(rpy), quat)
+    return from_vec4d(quat)
+
+def quat_to_roll_pitch_yaw(quat):
+    cdef double rpy[3]
+    cdef double cquat[4]
+    bot_quat_to_roll_pitch_yaw(to_vec4d(quat, cquat), rpy)
+    return from_vec3d(rpy)
+
+def roll_pitch_yaw_to_angle_axis(rpy):
+    cdef double theta
+    cdef double axis[3]
+    bot_roll_pitch_yaw_to_angle_axis(to_vec3d(rpy), &theta, axis)
     return theta, from_vec3d(axis)
 
 def angle_axis_to_roll_pitch_yaw(angle, axis):

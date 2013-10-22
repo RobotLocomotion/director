@@ -117,6 +117,21 @@ class AsyncIKCommunicator(TimerCallback):
         self.controller.addPose(poseName, pose)
         self.controller.setPose(poseName)
 
+    def sendPoseToServer(self, pose, poseName):
+        self.comm.assignFloatArray(pose, poseName)
+        self.controller.addPose(poseName, pose)
+
+    def forcePose(self, poseName):
+
+        commands = []
+        commands.append('q_end = %s;' % poseName)
+        self.comm.sendCommands(commands)
+
+        self.controller.setPose(poseName)
+
+        for linkName in ['l_hand', 'r_hand', 'l_foot', 'r_foot', 'pelvis', 'utorso']:
+            self.grabCurrentLinkPose(linkName)
+
     def interact(self):
         self.comm.interact()
 

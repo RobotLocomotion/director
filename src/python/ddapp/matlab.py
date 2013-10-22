@@ -139,6 +139,11 @@ class MatlabCommunicator(object):
         except:
             raise Exception('Failed to parse output as a float array.  Output was:\n%s' % '\n'.join(result))
 
+    def assignFloatArray(self, array, arrayName):
+
+        arrayStr = '[%s]' % ';'.join([str(float(x)) for x in array])
+        self.send('%s = %s;' % (arrayName, arrayStr))
+        self.waitForResult()
 
     def interact(self):
 
