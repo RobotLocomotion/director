@@ -41,23 +41,11 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = True
+useIk = False
 usePerception = True
-useTable = False
 
-#modelsToLoad = ['model_minimal_contact_fixedjoint_hands.urdf', 'model.urdf',
-#                'model_minimal_contact.urdf', 'model_minimal_contact_point_hands.urdf']
-modelsToLoad = ['model_minimal_contact_fixedjoint_hands.urdf']
-models = []
 
-for name in modelsToLoad:
-    models.append(app.loadModelByName(name))
-    if name != 'model_minimal_contact_fixedjoint_hands.urdf':
-        models[-1].setVisible(False)
 
-if useTable:
-  tableModel = view.loadURDFModel(os.path.join(app.getDRCBase(), 'software/drake/systems/plants/test/table.urdf'))
-  tableModel.setVisible(True)
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -65,15 +53,40 @@ costCollection = PythonQt.dd.ddSignalMap()
 spreadsheet.init(app.getSpreadsheetView(), poseCollection, costCollection)
 
 
-jc = jointcontrol.JointController(models, poseCollection)
-jc.addNominalPoseFromFile(app.getNominalPoseMatFile())
-jc.setNominalPose()
-jc.addPose('q_end', jc.poses['q_nom'])
-jc.addPose('q_start', jc.poses['q_nom'])
-app.resetCamera(viewDirection=[-1,0,0])
-
 
 if useIk:
+
+
+    ikFolder = om.addContainer('Drake IK')
+    om.addPlaceholder('matlab server', om.Icons.Matlab, ikFolder)
+
+    #modelsToLoad = ['model_minimal_contact_fixedjoint_hands.urdf', 'model.urdf',
+    #                'model_minimal_contact.urdf', 'model_minimal_contact_point_hands.urdf']
+    modelsToLoad = ['model_minimal_contact_fixedjoint_hands.urdf']
+    models = []
+
+    for name in modelsToLoad:
+        model = app.loadModelByName(name)
+        om.addRobotModel(model, ikFolder)
+        models.append(model)
+        if name != 'model_minimal_contact_fixedjoint_hands.urdf':
+            model.setVisible(False)
+
+
+    useTable = False
+    if useTable:
+        tableModel = view.loadURDFModel(os.path.join(app.getDRCBase(), 'software/drake/systems/plants/test/table.urdf'))
+        tableModel.setVisible(True)
+        affordancesFolder = om.getOrCreateContainer('affordances')
+        om.addRobotModel(tableModel, affordancesFolder)
+
+
+    jc = jointcontrol.JointController(models, poseCollection)
+    jc.addNominalPoseFromFile(app.getNominalPoseMatFile())
+    jc.setNominalPose()
+    jc.addPose('q_end', jc.poses['q_nom'])
+    jc.addPose('q_start', jc.poses['q_nom'])
+
     s = ik.AsyncIKCommunicator(jc)
     s.outputConsole = app.getOutputConsole()
     s.infoFunc = app.displaySnoptInfo
@@ -86,20 +99,7 @@ if useIk:
     tdx.init(view, e)
 
 
-
-
-robotsFolder = om.addContainer('robots')
-
-om.addPlaceholder('model.urdf (IK server)', om.Icons.Matlab, robotsFolder)
-for model in models:
-    om.addRobotModel(model, robotsFolder)
-
-if useTable:
-    affordancesFolder = om.addContainerToObjectTree('affordances')
-    om.addRobotModel(tableModel, affordancesFolder)
-
 if usePerception:
-
 
     robotStateModel = app.loadModelByName('model_minimal_contact_fixedjoint_hands.urdf')
     robotStateJointController = jointcontrol.JointController([robotStateModel])
@@ -119,4 +119,4 @@ if usePerception:
         s.forcePose(poseName)
 
 
-
+app.resetCamera(viewDirection=[-1,0,0])

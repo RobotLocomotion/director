@@ -133,6 +133,7 @@ def cropToLineSegment(polyData, point1, point2):
     return thresholdPoints(polyData, 'dist_along_line', [0.0, length])
 
 
+
 '''
 icp programmable filter
 
@@ -371,11 +372,12 @@ def addCoordArraysToPolyData(polyData):
 
 
 def getDebugRevolutionData():
-    filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
+    #filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
     #filename = os.path.join(os.getcwd(), 'bungie_valve.vtp')
     #filename = os.path.join(os.getcwd(), 'cinder-blocks.vtp')
     #filename = os.path.join(os.getcwd(), 'cylinder_table.vtp')
     #filename = os.path.join(os.getcwd(), 'two-by-fours.vtp')
+    filename = os.path.join(os.getcwd(), 'debris.vtp')
 
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
@@ -664,6 +666,88 @@ def publishSteppingGoal(lfootFrame, rfootFrame):
     lcmUtils.publish('DESIRED_FOOT_STEP_SEQUENCE', m)
 
 
+def cropToPlane(polyData, origin, normal, threshold):
+    polyData = shallowCopy(polyData)
+    normal = normal/np.linalg.norm(normal)
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    dist = np.dot(points - origin, normal)
+    vtkNumpy.addNumpyToVtk(polyData, dist, 'dist_to_plane')
+    cropped = thresholdPoints(polyData, 'dist_to_plane', threshold)
+    return cropped, polyData
+
+
+def createLine(p1, p2):
+
+    # require p1 to be point on left
+    if p1[0] > p2[0]:
+        p1, p2 = p2, p1
+
+    worldPt1, worldPt2 = getRayFromDisplayPoint(getSegmentationView(), p1)
+    worldPt3, worldPt4 = getRayFromDisplayPoint(getSegmentationView(), p2)
+    worldPt5, worldPt6 = getRayFromDisplayPoint(getSegmentationView(), p2)
+
+    leftRay = worldPt2 - worldPt1
+    rightRay = worldPt4 - worldPt3
+    middleRay = worldPt6 - worldPt5
+
+    d = DebugData()
+    d.addLine(worldPt1, worldPt2)
+    d.addLine(worldPt3, worldPt4)
+    d.addLine(worldPt1, worldPt3)
+    d.addLine(worldPt2, worldPt4)
+    updatePolyData(d.getPolyData(), 'line annotation', visible=False)
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = shallowCopy(inputObj.polyData)
+
+    origin = worldPt1
+
+    normal = np.cross(rightRay, leftRay)
+    leftNormal = np.cross(normal, leftRay)
+    rightNormal = np.cross(rightRay, normal)
+
+    normal /= np.linalg.norm(normal)
+    leftNormal /= np.linalg.norm(leftNormal)
+    rightNormal /= np.linalg.norm(rightNormal)
+
+    d = DebugData()
+    d.addSphere(origin, radius=0.02)
+    d.addLine(origin, origin + leftNormal)
+    updatePolyData(d.getPolyData(), 'left normal', visible=False, color=[1,0,0])
+
+    d = DebugData()
+    d.addLine(origin, origin + rightNormal)
+    updatePolyData(d.getPolyData(), 'right normal', visible=False, color=[0,1,0])
+    
+
+    cropped, polyData = cropToPlane(polyData, origin, normal, [-0.10, 0.10])
+
+    updatePolyData(polyData, 'slice dist', colorByName='dist_to_plane', colorByRange=[-0.5, 0.5], visible=False)
+    updatePolyData(cropped, 'slice',  colorByName='dist_to_plane', visible=False)
+
+    cropped, _ = cropToPlane(cropped, origin, leftNormal, [-100, 0])
+    cropped, _ = cropToPlane(cropped, origin, rightNormal, [-100, 0])
+
+    updatePolyData(cropped, 'slice segment',  colorByName='dist_to_plane', visible=False)
+
+    planePoints, planeNormal = applyPlaneFit(cropped)
+    planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(planePoints, 'board segmentation', color=getRandomColor(), visible=False)
+
+    blockDimensions = [0.140, 0.038] # 6x2
+    segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=middleRay, expectedXAxis=middleRay, edgeSign=-1)
+
+
+def startInteractiveLineDraw():
+
+    picker = LineDraw(getSegmentationView())
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.start()
+    picker.annotationFunc = createLine
+    om.removeFromObjectModel(om.findObjectByName('line annotation'))
+
+
 def startValveSegmentation():
 
 
@@ -675,9 +759,11 @@ def startValveSegmentation():
         segmentValveByWallPlane()
         return
 
-    pointPicker.clear()
-    pointPicker.enabled = True
-    pointPicker.annotationFunc = segmentValveByAnnotation
+    picker = PointPicker()
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.start()
+    picker.annotationFunc = segmentValveByAnnotation
     om.removeFromObjectModel(om.findObjectByName('valve affordance'))
     om.removeFromObjectModel(om.findObjectByName('valve axes'))
     om.removeFromObjectModel(om.findObjectByName('annotation'))
@@ -844,6 +930,8 @@ class PointPicker(TimerCallback):
         if self.annotationFunc is not None:
             self.annotationFunc(p1, p2, p3)
 
+        removeViewPicker(self)
+
 
     def handleRelease(self, displayPoint):
         pass
@@ -884,9 +972,73 @@ class PointPicker(TimerCallback):
         self.draw()
 
 
+class LineDraw(TimerCallback):
 
-pointPicker = PointPicker()
-pointPicker.start()
+    def __init__(self, view):
+        TimerCallback.__init__(self)
+        self.targetFps = 30
+        self.enabled = False
+        self.view = view
+        self.renderer = view.renderer()
+        self.line = vtk.vtkLeaderActor2D()
+        self.line.SetArrowPlacementToNone()
+        self.line.GetPositionCoordinate().SetCoordinateSystemToViewport()
+        self.line.GetPosition2Coordinate().SetCoordinateSystemToViewport()
+        self.line.GetProperty().SetLineWidth(2)
+        self.line.SetPosition(0,0)
+        self.line.SetPosition2(0,0)
+        self.clear()
+
+    def clear(self):
+        self.p1 = None
+        self.p2 = None
+        self.annotationFunc = None
+        self.lastMovePos = [0, 0]
+        self.renderer.RemoveActor2D(self.line)
+
+    def onMouseMove(self, displayPoint):
+        self.lastMovePos = displayPoint
+
+    def onMousePress(self, displayPoint):
+
+        if self.p1 is None:
+            self.p1 = list(self.lastMovePos)
+            if self.p1 is not None:
+                self.renderer.AddActor2D(self.line)
+        else:
+            self.p2 = self.lastMovePos
+            self.finish()
+
+    def finish(self):
+
+        self.enabled = False
+        self.renderer.RemoveActor2D(self.line)
+        if self.annotationFunc is not None:
+            self.annotationFunc(self.p1, self.p2)
+
+
+    def handleRelease(self, displayPoint):
+        pass
+
+    def tick(self):
+
+        if not self.enabled:
+            return
+
+        if self.p1:
+            self.line.SetPosition(self.p1)
+            self.line.SetPosition2(self.lastMovePos)
+            self.view.render()
+
+viewPickers = []
+
+def addViewPicker(picker):
+    global viewPickers
+    viewPickers.append(picker)
+
+def removeViewPicker(picker):
+    global viewPickers
+    viewPickers.remove(picker)
 
 
 def distanceToLine(x0, x1, x2):
@@ -949,7 +1101,8 @@ def computeEdge(polyData, edgeAxis, perpAxis, binWidth=0.1):
     for i in xrange(numberOfBins):
         binPoints = points[binLabels == i]
         binDists = distToEdge[binLabels == i]
-        edgePoints.append(binPoints[binDists.argmax()])
+        if len(binDists):
+            edgePoints.append(binPoints[binDists.argmax()])
 
     return np.array(edgePoints)
 
@@ -1048,12 +1201,21 @@ def segmentBlockByAnnotation(blockDimensions, p1, p2, p3):
     obj.updateParamsFromActorTransform()
 
 
-def segmentBlockByTopPlane(blockDimensions):
+def projectPointToPlane(point, origin, normal):
+    projectedPoint = np.zeros(3)
+    vtk.vtkPlane.ProjectPoint(point, origin, normal, projectedPoint)
+    return projectedPoint
 
-    plane = om.getObjectChildren(om.findObjectByName('selected planes'))[0]
-    polyData = plane.polyData
 
-    polyData, normal  = applyPlaneFit(polyData, distanceThreshold=0.05, expectedNormal=_spindleAxis)
+def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expectedXAxis=None, edgeSign=1):
+
+    if expectedNormal is None:
+        expectedNormal = _spindleAxis
+
+    if expectedXAxis is None:
+        expectedXAxis = _spindleAxis
+
+    polyData, planeOrigin, normal  = applyPlaneFit(polyData, distanceThreshold=0.05, expectedNormal=expectedNormal, returnOrigin=True)
 
     lineOrigin, lineDirection, _ = applyLineFit(polyData)
 
@@ -1062,25 +1224,25 @@ def segmentBlockByTopPlane(blockDimensions):
     yaxis = normal
     xaxis = np.cross(yaxis, zaxis)
 
-    if np.dot(xaxis, _spindleAxis) < 0:
+    if np.dot(xaxis, expectedXAxis) < 0:
         xaxis *= -1
 
     # make right handed
     zaxis = np.cross(xaxis, yaxis)
 
 
-    edgePoints = computeEdge(polyData, zaxis, xaxis)
+    edgePoints = computeEdge(polyData, zaxis, xaxis*edgeSign)
     edgePoints = vtkNumpy.getVtkPolyDataFromNumpyPoints(edgePoints)
 
     d = DebugData()
-    obj = updatePolyData(edgePoints, 'edge points')
+    obj = updatePolyData(edgePoints, 'edge points', visible=False)
 
     linePoint, lineDirection, _ = applyLineFit(edgePoints)
     zaxis = lineDirection
     xaxis = np.cross(yaxis, zaxis)
 
 
-    if np.dot(xaxis, _spindleAxis) < 0:
+    if np.dot(xaxis, expectedXAxis) < 0:
         xaxis *= -1
 
     # make right handed
@@ -1094,10 +1256,13 @@ def segmentBlockByTopPlane(blockDimensions):
     p1 = linePoint + zaxis*np.min(dists)
     p2 = linePoint + zaxis*np.max(dists)
 
+    p1 = projectPointToPlane(p1, planeOrigin, normal)
+    p2 = projectPointToPlane(p2, planeOrigin, normal)
+
     xwidth, ywidth = blockDimensions
     zwidth = np.linalg.norm(p2 - p1)
 
-    origin = p1 - xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0 
+    origin = p1 - edgeSign*xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0 
 
     d = DebugData()
 
@@ -1136,7 +1301,7 @@ def segmentBlockByTopPlane(blockDimensions):
     t.PostMultiply()
     t.Translate(origin)
 
-    obj = updatePolyData(cube, 'block affordance', cls=BlockAffordanceItem, parentName='affordances')
+    obj = showPolyData(cube, 'block affordance', cls=BlockAffordanceItem, parentName='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
@@ -1226,14 +1391,16 @@ def segmentBlockByPlanes(blockDimensions):
 
 def startBlockSegmentation(dimensions):
 
-
     if om.findObjectByName('selected planes'):
-        segmentBlockByTopPlane(dimensions)
+        polyData = om.getObjectChildren(om.findObjectByName('selected planes'))[0].polyData
+        segmentBlockByTopPlane(polyData, dimensions)
         return
 
-    pointPicker.clear()
-    pointPicker.enabled = True
-    pointPicker.annotationFunc = functools.partial(segmentBlockByAnnotation, dimensions)
+    picker = PointPicker()
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentBlockByAnnotation, dimensions)
     om.removeFromObjectModel(om.findObjectByName('block affordance'))
     om.removeFromObjectModel(om.findObjectByName('block axes'))
     om.removeFromObjectModel(om.findObjectByName('annotation'))
@@ -1477,14 +1644,18 @@ def segmentationViewEventFilter(obj, event):
         eventFilter.setEventHandlerResult(True)
         onSegmentationViewDoubleClicked(mapMousePosition(obj, event))
 
-    elif pointPicker.enabled:
+    else:
 
-        if event.type() == QtCore.QEvent.MouseMove:
-            pointPicker.onMouseMove(mapMousePosition(obj, event))
-            eventFilter.setEventHandlerResult(True)
-        elif event.type() == QtCore.QEvent.MouseButtonPress:
-            pointPicker.onMousePress(mapMousePosition(obj, event))
-            eventFilter.setEventHandlerResult(True)
+        for picker in viewPickers:
+            if not picker.enabled:
+                continue
+
+            if event.type() == QtCore.QEvent.MouseMove:
+                picker.onMouseMove(mapMousePosition(obj, event))
+                eventFilter.setEventHandlerResult(True)
+            elif event.type() == QtCore.QEvent.MouseButtonPress:
+                picker.onMousePress(mapMousePosition(obj, event))
+                eventFilter.setEventHandlerResult(True)
 
 
 
@@ -1516,5 +1687,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    #activateSegmentationMode(debug=True)
+    activateSegmentationMode(debug=True)
 
