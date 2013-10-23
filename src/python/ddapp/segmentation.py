@@ -83,6 +83,78 @@ class CylinderAffordanceItem(om.AffordanceItem):
         affordance.publishAffordance(aff)
 
 
+class FrameItem(om.PolyDataItem):
+
+    def __init__(self, name, transform, view):
+
+        scale = 1.0
+        self.transform = transform
+        polyData = self._createAxes(scale)
+
+        om.PolyDataItem.__init__(self, name, polyData, view)
+
+        colorBy(self, 'Axes')
+        lut = self.mapper.GetLookupTable()
+        lut.SetHueRange(0, 0.667)
+
+        self.actor.SetUserTransform(transform)
+
+        self.widget = perception.drc.vtkFrameWidget()
+        self.widget.CreateDefaultRepresentation()
+        self.widget.SetInteractor(view.renderWindow().GetInteractor())
+        self.widget.EnabledOff()
+        self.rep = self.widget.GetRepresentation()
+        self.rep.SetWorldSize(scale)
+        self.rep.SetTransform(transform)
+
+        self.addProperty('Scale', scale)
+        self.addProperty('Edit', False)
+
+
+    def _createAxes(self, scale):
+        axes = vtk.vtkAxes()
+        axes.SetComputeNormals(0)
+        axes.SetScaleFactor(scale)
+        axes.Update()
+
+        #t = vtk.vtkTransformPolyDataFilter()
+        #t.SetTransform(transform)
+        #t.AddInputConnection(self.axes.GetOutputPort())
+        #t.Update()
+
+        return shallowCopy(axes.GetOutput())
+
+    def addToView(self, view):
+        om.PolyDataItem.addToView(self, view)
+        #view.renderer().AddActor(self.actor)
+        #view.render()
+
+    def _onPropertyChanged(self, propertyName):
+
+        if propertyName == 'Scale':
+            scale = self.getProperty(propertyName)
+            self.rep.SetWorldSize(scale)
+            self.setPolyData(self._createAxes(scale))
+        elif propertyName == 'Edit':
+            self.widget.SetEnabled(self.getProperty(propertyName))
+
+        om.PolyDataItem._onPropertyChanged(self, propertyName)
+
+    def getPropertyAttributes(self, propertyName):
+
+        if propertyName == 'Scale':
+            return om.PropertyAttributes(decimals=2, minimum=0.01, maximum=100, singleStep=0.1, hidden=False)
+        else:
+            return om.PolyDataItem.getPropertyAttributes(self, propertyName)
+
+    def onRemoveFromObjectModel(self):
+        om.PolyDataItem.onRemoveFromObjectModel(self)
+
+        for view in self.views:
+            view.renderer().RemoveActor(self.actor)
+            view.render()
+
+
 def getSegmentationView():
     return app.getViewManager().findView('Segmentation View')
 
@@ -564,8 +636,9 @@ def removeMajorPlane(polyData, distanceThreshold=0.02):
     return polyData, f
 
 
-def showFrame(frame, name, scale=1.0):
+def showFrame(frame, name, parentName='segmentation', scale=1.0):
 
+    '''
     a = vtk.vtkAxes()
     a.SetComputeNormals(0)
     a.SetScaleFactor(scale)
@@ -577,7 +650,11 @@ def showFrame(frame, name, scale=1.0):
     obj = updatePolyData(t.GetOutput(), name, colorByName='Axes')
     lut = obj.mapper.GetLookupTable()
     lut.SetHueRange(0, 0.667)
+    '''
 
+    parentObj = om.getOrCreateContainer(parentName) if parentName else None
+    item = FrameItem(name, frame, app.getCurrentRenderView())
+    om.addToObjectModel(item, parentObj)
 
 def generateFeetForValve():
 
@@ -1308,6 +1385,8 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
+
+    #showFrame(obj.actor.GetUserTransform(), 'affordance frame', parentName='block affordance')
 
 
 def segmentBlockByPlanes(blockDimensions):
