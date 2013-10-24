@@ -28,7 +28,7 @@ closest_distance = 0.05;
 
 l_foot_pts = s.getLeftFootPoints();
 r_foot_pts = s.getRightFootPoints();
-both_feet_qsc = QuasiStaticConstraint(r);
+both_feet_qsc = QuasiStaticConstraint(r, 1, tspan);
 both_feet_qsc = both_feet_qsc.setShrinkFactor(shrink_factor);
 both_feet_qsc = both_feet_qsc.addContact(r_foot, r_foot_pts);
 both_feet_qsc = both_feet_qsc.addContact(l_foot, l_foot_pts);

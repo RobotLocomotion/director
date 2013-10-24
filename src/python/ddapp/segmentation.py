@@ -54,10 +54,9 @@ class BlockAffordanceItem(om.AffordanceItem):
         self.updateParamsFromActorTransform()
         aff = affordance.createBoxAffordance(self.params)
         #aff.otdf_type = 'cinderblockstep'
-        aff.otdf_type = 'box'
-        aff.nparams = 0
-        aff.params = []
-        aff.param_names = []
+        #aff.nparams = 0
+        #aff.params = []
+        #aff.param_names = []
         affordance.publishAffordance(aff)
 
 
@@ -101,7 +100,6 @@ class FrameItem(om.PolyDataItem):
 
         self.widget = perception.drc.vtkFrameWidget()
         self.widget.CreateDefaultRepresentation()
-        self.widget.SetInteractor(view.renderWindow().GetInteractor())
         self.widget.EnabledOff()
         self.rep = self.widget.GetRepresentation()
         self.rep.SetWorldSize(scale)
@@ -126,8 +124,6 @@ class FrameItem(om.PolyDataItem):
 
     def addToView(self, view):
         om.PolyDataItem.addToView(self, view)
-        #view.renderer().AddActor(self.actor)
-        #view.render()
 
     def _onPropertyChanged(self, propertyName):
 
@@ -136,6 +132,10 @@ class FrameItem(om.PolyDataItem):
             self.rep.SetWorldSize(scale)
             self.setPolyData(self._createAxes(scale))
         elif propertyName == 'Edit':
+            view = app.getCurrentRenderView()
+            if view not in self.views:
+                view = self.views[0]
+            self.widget.SetInteractor(view.renderWindow().GetInteractor())
             self.widget.SetEnabled(self.getProperty(propertyName))
 
         om.PolyDataItem._onPropertyChanged(self, propertyName)
@@ -636,25 +636,18 @@ def removeMajorPlane(polyData, distanceThreshold=0.02):
     return polyData, f
 
 
-def showFrame(frame, name, parentName='segmentation', scale=1.0):
+def showFrame(frame, name, parentObjOrName='segmentation', scale=0.5, visible=True):
+    if isinstance(parentObjOrName, str):
+        parentObj = om.getOrCreateContainer(parentObjOrName)
+    else:
+        parentObj = parentObjOrName
 
-    '''
-    a = vtk.vtkAxes()
-    a.SetComputeNormals(0)
-    a.SetScaleFactor(scale)
-
-    t = vtk.vtkTransformPolyDataFilter()
-    t.SetTransform(frame)
-    t.AddInputConnection(a.GetOutputPort())
-    t.Update()
-    obj = updatePolyData(t.GetOutput(), name, colorByName='Axes')
-    lut = obj.mapper.GetLookupTable()
-    lut.SetHueRange(0, 0.667)
-    '''
-
-    parentObj = om.getOrCreateContainer(parentName) if parentName else None
     item = FrameItem(name, frame, app.getCurrentRenderView())
     om.addToObjectModel(item, parentObj)
+    item.setProperty('Visible', visible)
+    item.setProperty('Scale', scale)
+    return item
+
 
 def generateFeetForValve():
 
@@ -674,50 +667,95 @@ def generateFeetForValve():
 
     stanceWidth = 0.2
     stanceRotation = 25.0
-    stanceOffset = [-1.0, -0.5]
+    stanceOffset = [-1.0, -0.5, 0.0]
 
     valveFrame = getTransformFromAxes(xaxis, yaxis, zaxis)
     valveFrame.PostMultiply()
     valveFrame.Translate(origin)
-    showFrame(valveFrame, 'valve ground frame', scale=0.2)
+
+    stanceFrame, lfootFrame, rfootFrame = getFootFramesFromReferenceFrame(valveFrame, stanceWidth, stanceRotation, stanceOffset)
+
+    showFrame(boardFrame, 'board ground frame', parentObjOrName=aff, scale=0.15, visible=False)
+    showFrame(lfootFrame, 'lfoot frame', parentObjOrName=aff, scale=0.15)
+    showFrame(rfootFrame, 'rfoot frame', parentObjOrName=aff, scale=0.15)
+
+    #d = DebugData()
+    #d.addLine(valveFrame.GetPosition(), stanceFrame.GetPosition())
+    #updatePolyData(d.getPolyData(), 'stance debug')
+    #publishSteppingGoal(lfootFrame, rfootFrame)
+
+
+
+def generateFeetForDebris():
+
+    aff = om.findObjectByName('board A')
+    if not aff:
+        return
+
+    params = aff.params
+
+    origin = np.array(params['origin'])
+
+    origin = origin + params['zaxis']*params['zwidth']/2.0 - params['xaxis']*params['xwidth']/2.0
+    origin[2] = 0.0
+
+    yaxis = params['zaxis']
+    zaxis = np.array([0,0,1])
+    xaxis = np.cross(yaxis, zaxis)
+
+    stanceWidth = 0.35
+    stanceRotation = 0.0
+    stanceOffset = [-0.48, -0.08, 0]
+
+    boardFrame = getTransformFromAxes(xaxis, yaxis, zaxis)
+    boardFrame.PostMultiply()
+    boardFrame.Translate(origin)
+
+    stanceFrame, lfootFrame, rfootFrame = getFootFramesFromReferenceFrame(boardFrame, stanceWidth, stanceRotation, stanceOffset)
+
+    showFrame(boardFrame, 'board ground frame', parentObjOrName=aff, scale=0.15, visible=False)
+    lfoot = showFrame(lfootFrame, 'lfoot frame', parentObjOrName=aff, scale=0.15)
+    rfoot = showFrame(rfootFrame, 'rfoot frame', parentObjOrName=aff, scale=0.15)
+
+    for obj in [lfoot, rfoot]:
+        obj.addToView(app.getDRCView())
+
+    #d = DebugData()
+    #d.addLine(valveFrame.GetPosition(), stanceFrame.GetPosition())
+    #updatePolyData(d.getPolyData(), 'stance debug')
+    #publishSteppingGoal(lfootFrame, rfootFrame)
+
+
+def getFootFramesFromReferenceFrame(referenceFrame, stanceWidth, stanceRotation, stanceOffset):
+
+    footHeight=0.0745342
+
+    ref = vtk.vtkTransform()
+    ref.SetMatrix(referenceFrame.GetMatrix())
 
     stanceFrame = vtk.vtkTransform()
     stanceFrame.PostMultiply()
     stanceFrame.RotateZ(stanceRotation)
-    stanceFrame.Translate(np.array([1,0,0])*stanceOffset[0] + np.array([0,1,0])*stanceOffset[1])
-    stanceFrame.Concatenate(valveFrame)
-    #showFrame(stanceFrame, 'stance frame', scale=0.2)
-
+    stanceFrame.Translate(stanceOffset)
+    stanceFrame.Concatenate(ref)
 
     lfootFrame = vtk.vtkTransform()
     lfootFrame.PostMultiply()
-    lfootFrame.Translate(0, stanceWidth/2.0, 0)
+    lfootFrame.Translate(0, stanceWidth/2.0, footHeight)
     lfootFrame.Concatenate(stanceFrame)
 
     rfootFrame = vtk.vtkTransform()
     rfootFrame.PostMultiply()
-    rfootFrame.Translate(0, -stanceWidth/2.0, 0)
+    rfootFrame.Translate(0, -stanceWidth/2.0, footHeight)
     rfootFrame.Concatenate(stanceFrame)
 
-
-    showFrame(lfootFrame, 'lfoot frame', scale=0.2)
-    showFrame(rfootFrame, 'rfoot frame', scale=0.2)
-
-    d = DebugData()
-    d.addLine(valveFrame.GetPosition(), stanceFrame.GetPosition())
-
-
-    updatePolyData(d.getPolyData(), 'stance debug')
-
-    publishSteppingGoal(lfootFrame, rfootFrame)
-
+    return stanceFrame, lfootFrame, rfootFrame
 
 
 def poseFromFrame(frame):
 
     trans = lcmdrc.vector_3d_t()
     trans.x, trans.y, trans.z = frame.GetPosition()
-    trans.z += 0.0745342
 
     wxyz = range(4)
     perception.drc.vtkMultisenseSource.GetBotQuaternion(frame, wxyz)
@@ -730,17 +768,61 @@ def poseFromFrame(frame):
     return pose
 
 
-def publishSteppingGoal(lfootFrame, rfootFrame):
+def publishStickyFeet(lfootFrame, rfootFrame):
+
+    worldAffordanceId = affordance.publishWorldAffordance()
 
     m = lcmdrc.traj_opt_constraint_t()
     m.utime = int(time.time() * 1e6)
-    m.robot_name = 'atlas'
+    m.robot_name = worldAffordanceId
     m.num_links = 2
     m.link_name = ['l_foot', 'r_foot']
-    m.link_timestamps = [0, 1e6]
+    m.link_timestamps = [m.utime, m.utime]
     m.num_joints = 0
     m.link_origin_position = [poseFromFrame(lfootFrame), poseFromFrame(rfootFrame)]
-    lcmUtils.publish('DESIRED_FOOT_STEP_SEQUENCE', m)
+    #lcmUtils.publish('DESIRED_FOOT_STEP_SEQUENCE', m)
+    lcmUtils.publish('AFF_TRIGGERED_CANDIDATE_STICKY_FEET', m)
+
+
+def publishStickyHand(handFrame, affordanceItem=None):
+
+    worldAffordanceId = affordance.publishWorldAffordance()
+
+    m = lcmdrc.desired_grasp_state_t()
+    m.utime = 0
+    m.robot_name = 'atlas'
+    m.object_name = worldAffordanceId
+    m.geometry_name = 'box_0'
+    m.unique_id = 3
+    m.grasp_type = m.IROBOT_RIGHT
+    m.power_grasp = False
+
+    m.l_hand_pose = poseFromFrame(vtk.vtkTransform())
+    m.r_hand_pose = poseFromFrame(handFrame)
+
+    m.num_l_joints = 0
+    m.l_joint_name = []
+    m.l_joint_position = []
+
+    m.num_r_joints = 8
+    m.r_joint_name = [
+        'right_finger[0]/joint_base_rotation',
+        'right_finger[0]/joint_base',
+        'right_finger[0]/joint_flex',
+        'right_finger[1]/joint_base_rotation',
+        'right_finger[1]/joint_base',
+        'right_finger[1]/joint_flex',
+        'right_finger[2]/joint_base',
+        'right_finger[2]/joint_flex',
+        ]
+
+    m.r_joint_position = [
+        0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0,
+        0.0, 0.0,
+        ]
+
+    lcmUtils.publish('CANDIDATE_GRASP', m)
 
 
 def cropToPlane(polyData, origin, normal, threshold):
@@ -811,8 +893,20 @@ def createLine(p1, p2):
     planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-0.01, 0.01])
     updatePolyData(planePoints, 'board segmentation', color=getRandomColor(), visible=False)
 
+
+    names = ['board A', 'board B', 'board C', 'board D', 'board E']
+    for name in names:
+        if not om.findObjectByName(name):
+            break
+    else:
+        name = 'board'
+
+
     blockDimensions = [0.140, 0.038] # 6x2
-    segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=middleRay, expectedXAxis=middleRay, edgeSign=-1)
+    segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=middleRay, expectedXAxis=middleRay, edgeSign=-1, name=name)
+    
+    if name == 'board A':
+        generateFeetForDebris()
 
 
 def startInteractiveLineDraw():
@@ -1284,7 +1378,7 @@ def projectPointToPlane(point, origin, normal):
     return projectedPoint
 
 
-def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expectedXAxis=None, edgeSign=1):
+def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expectedXAxis=None, edgeSign=1, name='block affordance'):
 
     if expectedNormal is None:
         expectedNormal = _spindleAxis
@@ -1378,11 +1472,11 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     t.PostMultiply()
     t.Translate(origin)
 
-    obj = showPolyData(cube, 'block affordance', cls=BlockAffordanceItem, parentName='affordances')
+    obj = showPolyData(cube, name, cls=BlockAffordanceItem, parentName='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
-    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
+    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name=name)
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
 
@@ -1644,12 +1738,13 @@ def selectActor(displayPoint):
     obj.setProperty('Visible', False)
 
 
-def zoomToDisplayPoint(displayPoint, boundsRadius=0.2):
+def zoomToDisplayPoint(displayPoint, boundsRadius=0.5, view=None):
 
     pickedPoint = pickPoint('pointcloud snapshot', displayPoint)
     if pickedPoint is None:
         return
 
+    view = view or app.getCurrentRenderView()
 
     worldPt1, worldPt2 = getRayFromDisplayPoint(getSegmentationView(), displayPoint)
     global _spindleAxis
@@ -1659,12 +1754,14 @@ def zoomToDisplayPoint(displayPoint, boundsRadius=0.2):
     diagonal = np.array([boundsRadius, boundsRadius, boundsRadius])
     bounds = np.hstack([pickedPoint - diagonal, pickedPoint + diagonal])
     bounds = [bounds[0], bounds[3], bounds[1], bounds[4], bounds[2], bounds[5]]
-    getSegmentationView().renderer().ResetCamera(bounds)
+    view.renderer().ResetCamera(bounds)
+    view.camera().SetFocalPoint(pickedPoint)
+    view.render()
 
-    segmentationObj = om.findObjectByName('pointcloud snapshot')
-    segmentationObj.setProperty('Point Size', 5)
+    #segmentationObj = om.findObjectByName('pointcloud snapshot')
+    #segmentationObj.setProperty('Point Size', 5)
     #colorBy(segmentationObj, 'z', [pickedPoint[2]-0.1, pickedPoint[2]+0.1])
-    getSegmentationView().render()
+
 
 
 def extractPointsAlongClickRay(displayPoint, distanceToLineThreshold=0.3, addDebugRay=False):
@@ -1766,5 +1863,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    activateSegmentationMode(debug=True)
+    #activateSegmentationMode(debug=True)
 

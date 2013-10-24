@@ -121,6 +121,8 @@ class PolyDataItem(ObjectModelItem):
         self.addProperty('Alpha', 1.0)
         self.addProperty('Color', QtGui.QColor(255,255,255))
 
+        self._renderAllViews()
+
 
     def _renderAllViews(self):
         for view in self.views:

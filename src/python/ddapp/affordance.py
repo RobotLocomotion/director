@@ -2,6 +2,7 @@ import vtkAll as vtk
 import transformUtils
 import drc as lcmdrc
 import numpy as np
+import time
 
 from ddapp import lcmUtils
 
@@ -58,9 +59,10 @@ def createBoxAffordance(params):
     zaxis = params['zaxis']
 
 
-    # swap z and y before publishing
-    zaxis, yaxis = yaxis, zaxis
-    zwidth, ywidth = ywidth, zwidth
+    if False: # this was for a hand seed program
+        # swap z and y before publishing
+        zaxis, yaxis = yaxis, zaxis
+        zwidth, ywidth = ywidth, zwidth
 
 
     if False: # this is for cinderblockstep.otdf
@@ -73,12 +75,11 @@ def createBoxAffordance(params):
 
         origin -= zaxis*0.5*zwidth
 
-
     orientation = transformUtils.orientationFromAxes(xaxis, yaxis, zaxis)
 
     aff.utime = 0
     aff.otdf_type = 'box'
-    aff.friendly_name = 'box'
+    aff.friendly_name = params.get('friendly_name') or 'box'
     aff.uid = 0
     aff.map_id = 0
     aff.aff_store_control = lcmdrc.affordance_t.NEW
@@ -117,6 +118,20 @@ def createAffordancePlus(affordance):
     return affPlus
 
 
+def publishWorldAffordance():
+
+    params = dict(origin=[0,0,0], xwidth=0.1, ywidth=0.1, zwidth=0.1, xaxis=[1,0,0], yaxis=[0,1,0], zaxis=[0,0,1], friendly_name='world_aff')
+    aff = createBoxAffordance(params)
+    existingAffordance = findExistingAffordance(aff)
+    if not existingAffordance:
+        publishAffordance(aff)
+        time.sleep(1.5) # allow time for drc viewer to receive updated affordance info
+        while not existingAffordance:
+            existingAffordance = findExistingAffordance(aff)
+
+    return '%s_%d' % (existingAffordance.otdf_type, existingAffordance.uid)
+
+
 def getAffordances():
 
     msg = lcmUtils.captureMessage('AFFORDANCE_COLLECTION', lcmdrc.affordance_collection_t)
@@ -130,21 +145,21 @@ def findExistingAffordance(aff):
     # lookup by friendly_name
     for storeAff in affs.affs:
         if storeAff.friendly_name == aff.friendly_name:
-            return storeAff.uid
+            return storeAff
 
     # lookup by otdf_type
-    for storeAff in affs.affs:
-        if storeAff.otdf_type == aff.otdf_type:
-            return storeAff.uid
+    #for storeAff in affs.affs:
+    #    if storeAff.otdf_type == aff.otdf_type:
+    #        return storeAff
 
 
 def publishAffordance(aff):
 
 
-    existingUid = findExistingAffordance(aff)
+    existingAffordance = findExistingAffordance(aff)
 
-    if existingUid:
-        aff.uid = existingUid
+    if existingAffordance:
+        aff.uid = existingAffordance.uid
         aff.aff_store_control = lcmdrc.affordance_t.UPDATE
         channelName =  'AFFORDANCE_TRACK'
         lcmUtils.publish(channelName, aff)

@@ -41,7 +41,7 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = True
+useIk = False
 usePerception = True
 
 

@@ -161,7 +161,7 @@ class IKEditor(object):
             return
 
         commands = []
-        commands.append('%s = QuasiStaticConstraint(r, tspan);' % qsc)
+        commands.append('%s = QuasiStaticConstraint(r, 1, tspan);' % qsc)
         commands.append('%s = %s.setShrinkFactor(%f);' % (qsc, qsc, self.ui.ShrinkFactor.value))
         for foot in feet:
             commands.append('%s = %s.addContact(%s, %s_pts);' % (qsc, qsc, foot, foot))
@@ -422,12 +422,7 @@ class WidgetCallback(TimerCallback):
         self.transform = None
 
     def updateTargets(self):
-        wxyz = range(4)
-        perception.drc.vtkMultisenseSource.GetBotQuaternion(self.transform, wxyz)
-        pos = self.transform.GetPosition()
-
-        self.editor.server.setPositionTarget(self.linkName, pos)
-        self.editor.server.setOrientationTarget(self.linkName, wxyz)
+        self.editor.server.setLinkConstraintsWithFrame(self.linkName, self.transform)
         self.editor.updateIk()
 
     def tick(self):

@@ -4,6 +4,7 @@ import functools
 import numpy as np
 from ddapp.timercallback import TimerCallback
 from ddapp import matlab
+from ddapp import botpy
 from ddapp.jointcontrol import JointController
 
 import vtk
@@ -179,6 +180,16 @@ class AsyncIKCommunicator(TimerCallback):
         t = vtk.vtkTransform()
         t.SetMatrix(mat.flatten())
         return t
+
+    def setLinkConstraintsWithFrame(self, linkName, frame):
+        angleAxis = range(4)
+        frame.GetOrientationWXYZ(angleAxis)
+        angleAxis[0] = math.radians(angleAxis[0])
+        pos = frame.GetPosition()
+        quat = botpy.angle_axis_to_quat(angleAxis[0], angleAxis[1:])
+        self.setPositionTarget(linkName, pos)
+        self.setOrientationTarget(linkName, quat)
+
 
     def grabCurrentLinkPose(self, linkName):
         commands = []
