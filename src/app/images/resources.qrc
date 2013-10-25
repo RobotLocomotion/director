@@ -24,5 +24,9 @@
     <file>2x4.png</file>
     <file>2x6.png</file>
     <file>4x4.png</file>
+
+    <file>cinderblock.png</file>
+    <file>cinderblock_double.png</file>
+
   </qresource>
 </RCC>
