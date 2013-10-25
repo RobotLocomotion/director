@@ -10,5 +10,19 @@
     <file>reset_camera.png</file>
     <file>camera_mode.png</file>
     <file>laser_icon.jpg</file>
+
+    <file>task1.png</file>
+    <file>task2.png</file>
+    <file>task3.png</file>
+    <file>task4.png</file>
+    <file>task5.png</file>
+    <file>task6.png</file>
+    <file>task6_drill.png</file>
+    <file>task7.png</file>
+    <file>task8.png</file>
+
+    <file>2x4.png</file>
+    <file>2x6.png</file>
+    <file>4x4.png</file>
   </qresource>
 </RCC>
