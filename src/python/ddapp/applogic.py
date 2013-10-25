@@ -131,9 +131,12 @@ def setupToolBar():
     toolbar.addWidget(combo)
 
 
-def showErrorMessage(message):
-    QtGui.QMessageBox.warning(getMainWindow(), 'Error', message);
+def showErrorMessage(message, title='Error'):
+    QtGui.QMessageBox.warning(getMainWindow(), title, message);
 
+
+def showInfoMessage(message, title='Info'):
+    QtGui.QMessageBox.information(getMainWindow(), title, message);
 
 def startup(globals):
 

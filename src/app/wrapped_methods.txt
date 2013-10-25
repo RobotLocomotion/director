@@ -32,6 +32,12 @@ void ddMainWindow::addWidgetToViewMenu(QWidget*);
 ddObjectTree::ddObjectTree();
 ddObjectTree::~ddObjectTree();
 
+ddTaskSelection::ddTaskSelection();
+ddTaskSelection::~ddTaskSelection();
+
+ddLumberSelection::ddLumberSelection();
+ddLumberSelection::~ddLumberSelection();
+
 ddPythonEventFilter::ddPythonEventFilter();
 ddPythonEventFilter::~ddPythonEventFilter();
 void ddPythonEventFilter::setEventHandlerResult(bool);

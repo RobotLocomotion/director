@@ -382,7 +382,7 @@ def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100,
     return shallowCopy(f.GetOutput())
 
 
-def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, perpendicularAxis=None, returnOrigin=False):
+def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, perpendicularAxis=None, angleEpsilon=0.2, returnOrigin=False):
 
     expectedNormal = expectedNormal if expectedNormal is not None else [-1,0,0]
 
@@ -393,6 +393,7 @@ def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, perpendi
     if perpendicularAxis is not None:
         f.SetPerpendicularConstraintEnabled(True)
         f.SetPerpendicularAxis(perpendicularAxis)
+        f.SetAngleEpsilon(angleEpsilon)
     f.Update()
     origin = f.GetPlaneOrigin()
     normal = np.array(f.GetPlaneNormal())
@@ -503,6 +504,67 @@ def applyVoxelGrid(polyData, leafSize=0.01):
     return shallowCopy(v.GetOutput())
 
 
+def getLumberDimensions(lumberId):
+
+    dimensions = [
+                  [0.089, 0.038], # 2x4
+                  [0.140, 0.038], # 2x6
+                  [0.089, 0.089], # 4x4
+                 ]
+
+    return dimensions[lumberId]
+
+
+class SegmentationPanel(object):
+
+    def __init__(self):
+        self.panel = QtGui.QWidget()
+        self.taskSelection = PythonQt.dd.ddTaskSelection()
+        self.debrisWizard = self._makeDebrisWizard()
+
+        self.taskSelection.connect('taskSelected(int)', self.onTaskSelected)
+
+        l = QtGui.QVBoxLayout(self.panel)
+        l.addWidget(self.taskSelection)
+        l.addWidget(self.debrisWizard)
+        self.debrisWizard.hide()
+
+    def _makeDebrisWizard(self):
+        debrisWizard = QtGui.QWidget()
+        lumberSelection = PythonQt.dd.ddLumberSelection()
+        lumberSelection.connect('lumberSelected(int)', self.onDebrisLumberSelected)
+        l = QtGui.QVBoxLayout(debrisWizard)
+        l.addWidget(lumberSelection)
+        l.addStretch()
+        return debrisWizard
+
+    def onDebrisLumberSelected(self, lumberId):
+        blockDimensions = getLumberDimensions(lumberId)
+        startInteractiveLineDraw(blockDimensions)
+
+    def startDebrisTask(self):
+        self.debrisWizard.show()
+        self.taskSelection.hide()
+
+    def cancelCurrentTask(self):
+        self.debrisWizard.hide()
+        self.taskSelection.show()
+
+    def onTaskSelected(self, taskId):
+        taskId += 1
+
+        if taskId == 4:
+            self.startDebrisTask()
+        else:
+            app.showInfoMessage('Sorry, not impemented yet.')
+
+
+def createDockWidget():
+    global _segmentationPanel
+    _segmentationPanel = SegmentationPanel()
+    app.addWidgetToDock(_segmentationPanel.panel)
+
+
 def activateSegmentationMode(debug=False):
 
     if debug:
@@ -536,6 +598,8 @@ def activateSegmentationMode(debug=False):
     app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
     #segmentationView.camera().Dolly(3.0)
     segmentationView.render()
+
+    createDockWidget()
 
 
 def segmentGroundPlanes():
@@ -835,7 +899,12 @@ def cropToPlane(polyData, origin, normal, threshold):
     return cropped, polyData
 
 
-def createLine(p1, p2):
+def createLine(blockDimensions, p1, p2):
+
+
+    sliceWidth = np.array(blockDimensions).max()/2.0 + 0.02
+    sliceThreshold =  [-sliceWidth, sliceWidth]
+
 
     # require p1 to be point on left
     if p1[0] > p2[0]:
@@ -848,6 +917,7 @@ def createLine(p1, p2):
     leftRay = worldPt2 - worldPt1
     rightRay = worldPt4 - worldPt3
     middleRay = worldPt6 - worldPt5
+    middleRay /= np.linalg.norm(middleRay)
 
     d = DebugData()
     d.addLine(worldPt1, worldPt2)
@@ -877,9 +947,8 @@ def createLine(p1, p2):
     d = DebugData()
     d.addLine(origin, origin + rightNormal)
     updatePolyData(d.getPolyData(), 'right normal', visible=False, color=[0,1,0])
-    
 
-    cropped, polyData = cropToPlane(polyData, origin, normal, [-0.10, 0.10])
+    cropped, polyData = cropToPlane(polyData, origin, normal, sliceThreshold)
 
     updatePolyData(polyData, 'slice dist', colorByName='dist_to_plane', colorByRange=[-0.5, 0.5], visible=False)
     updatePolyData(cropped, 'slice',  colorByName='dist_to_plane', visible=False)
@@ -889,8 +958,8 @@ def createLine(p1, p2):
 
     updatePolyData(cropped, 'slice segment',  colorByName='dist_to_plane', visible=False)
 
-    planePoints, planeNormal = applyPlaneFit(cropped)
-    planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-0.01, 0.01])
+    planePoints, planeNormal = applyPlaneFit(cropped, distanceThreshold=0.005, perpendicularAxis=middleRay, angleEpsilon=math.radians(60))
+    planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-0.005, 0.005])
     updatePolyData(planePoints, 'board segmentation', color=getRandomColor(), visible=False)
 
 
@@ -902,20 +971,19 @@ def createLine(p1, p2):
         name = 'board'
 
 
-    blockDimensions = [0.140, 0.038] # 6x2
     segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=middleRay, expectedXAxis=middleRay, edgeSign=-1, name=name)
-    
+
     if name == 'board A':
         generateFeetForDebris()
 
 
-def startInteractiveLineDraw():
+def startInteractiveLineDraw(blockDimensions):
 
     picker = LineDraw(getSegmentationView())
     addViewPicker(picker)
     picker.enabled = True
     picker.start()
-    picker.annotationFunc = createLine
+    picker.annotationFunc = functools.partial(createLine, blockDimensions)
     om.removeFromObjectModel(om.findObjectByName('line annotation'))
 
 
@@ -1256,7 +1324,7 @@ def getPlaneEquationFromPolyData(polyData, expectedNormal):
 
 
 
-def computeEdge(polyData, edgeAxis, perpAxis, binWidth=0.1):
+def computeEdge(polyData, edgeAxis, perpAxis, binWidth=0.03):
 
     polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, edgeAxis, resultArrayName='dist_along_edge')
     polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, perpAxis, resultArrayName='dist_perp_to_edge')
@@ -1863,5 +1931,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    #activateSegmentationMode(debug=True)
+    activateSegmentationMode(debug=True)
 

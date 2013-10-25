@@ -31,16 +31,18 @@ qt4_wrap_cpp(moc_srcs
   ${decorator_file}
   ddDrakeModel.h
   ddDRCView.h
-  ddPythonEventFilter.h
+  ddLumberSelection.h
   ddGLWidgetView.h
   ddMacrosManager.h
   ddMainWindow.h
   ddObjectTree.h
   ddPropertiesPanel.h
+  ddPythonEventFilter.h
   ddPythonManager.h
   ddQVTKWidgetView.h
   ddSignalMap.h
   ddSpreadsheetView.h
+  ddTaskSelection.h
   ddViewBase.h
   ddViewManager.h
   ddViewMenu.h
@@ -48,6 +50,8 @@ qt4_wrap_cpp(moc_srcs
 
 qt4_wrap_ui(ui_srcs
   ddMainWindow.ui
+  ddLumberSelection.ui
+  ddTaskSelection.ui
   )
 
 qt4_add_resources(resource_srcs
@@ -62,6 +66,7 @@ set(srcs
 
   ddDrakeModel.cpp
   ddDRCView.cpp
+  ddLumberSelection.cpp
   ddGLWidgetView.cpp
   ddMacrosManager.cpp
   ddMainWindow.cpp
@@ -72,6 +77,7 @@ set(srcs
   ddQVTKWidgetView.cpp
   ddSignalMap.cpp
   ddSpreadsheetView.cpp
+  ddTaskSelection.cpp
   ddViewBase.cpp
   ddViewManager.cpp
   ddViewMenu.cpp
