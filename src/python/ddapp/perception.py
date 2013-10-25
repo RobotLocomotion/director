@@ -267,7 +267,7 @@ class MultiSenseSource(TimerCallback):
 
     def updateDebugItems(self):
 
-        t = self.getFrame('head')
+        t = self.getFrame('SCAN')
 
         p1 = [0.0, 0.0, 0.0]
         p2 = [2.0, 0.0, 0.0]

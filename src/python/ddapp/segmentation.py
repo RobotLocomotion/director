@@ -447,10 +447,11 @@ def addCoordArraysToPolyData(polyData):
 def getDebugRevolutionData():
     #filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
     #filename = os.path.join(os.getcwd(), 'bungie_valve.vtp')
-    #filename = os.path.join(os.getcwd(), 'cinder-blocks.vtp')
+    filename = os.path.join(os.getcwd(), 'cinder-blocks.vtp')
     #filename = os.path.join(os.getcwd(), 'cylinder_table.vtp')
     #filename = os.path.join(os.getcwd(), 'two-by-fours.vtp')
-    filename = os.path.join(os.getcwd(), 'debris.vtp')
+    #filename = os.path.join(os.getcwd(), 'debris.vtp')
+    #filename = os.path.join(os.getcwd(), 'simulated_debris.vtp')
 
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
@@ -521,12 +522,14 @@ class SegmentationPanel(object):
         self.panel = QtGui.QWidget()
         self.taskSelection = PythonQt.dd.ddTaskSelection()
         self.debrisWizard = self._makeDebrisWizard()
+        self.terrainWizard = self._makeTerrainWizard()
 
         self.taskSelection.connect('taskSelected(int)', self.onTaskSelected)
 
         l = QtGui.QVBoxLayout(self.panel)
         l.addWidget(self.taskSelection)
         l.addWidget(self.debrisWizard)
+        l.addWidget(self.terrainWizard)
         self.debrisWizard.hide()
 
     def _makeDebrisWizard(self):
@@ -538,12 +541,48 @@ class SegmentationPanel(object):
         l.addStretch()
         return debrisWizard
 
+    def _makeTerrainWizard(self):
+        terrainWizard = QtGui.QWidget()
+
+        self.cinderBlockButton = QtGui.QToolButton()
+        self.cinderBlock2Button = QtGui.QToolButton()
+        self.cinderBlockButton.setIcon(QtGui.QIcon(':/images/cinderblock.png'))
+        self.cinderBlock2Button.setIcon(QtGui.QIcon(':/images/cinderblock_double.png'))
+        self.cinderBlockButton.setIconSize(QtCore.QSize(60,60))
+        self.cinderBlock2Button.setIconSize(QtCore.QSize(60,60))
+
+        self.cinderBlockButton.connect('clicked()', functools.partial(self.onTerrainCinderblockSelected, self.cinderBlockButton))
+        self.cinderBlock2Button.connect('clicked()', functools.partial(self.onTerrainCinderblockSelected, self.cinderBlock2Button))
+
+        buttons = QtGui.QWidget()
+        l = QtGui.QHBoxLayout(buttons)
+        l.addStretch()
+        l.addWidget(self.cinderBlockButton)
+        l.addWidget(self.cinderBlock2Button)
+        l.addStretch()
+
+        l = QtGui.QVBoxLayout(terrainWizard)
+        l.addWidget(buttons)
+        l.addStretch()
+        return terrainWizard
+
     def onDebrisLumberSelected(self, lumberId):
         blockDimensions = getLumberDimensions(lumberId)
         startInteractiveLineDraw(blockDimensions)
 
+    def onTerrainCinderblockSelected(self, button):
+        if button == self.cinderBlockButton:
+            blockDimensions = [0.1905, 0.149225]
+        elif button == self.cinderBlock2Button:
+            blockDimensions = [0.1905, 0.29845]
+        startInteractiveLineDraw(blockDimensions)
+
     def startDebrisTask(self):
         self.debrisWizard.show()
+        self.taskSelection.hide()
+
+    def startTerrainTask(self):
+        self.terrainWizard.show()
         self.taskSelection.hide()
 
     def cancelCurrentTask(self):
@@ -551,18 +590,27 @@ class SegmentationPanel(object):
         self.taskSelection.show()
 
     def onTaskSelected(self, taskId):
-        taskId += 1
 
-        if taskId == 4:
-            self.startDebrisTask()
+        taskFunctions = {
+                         2:self.startTerrainTask,
+                         4:self.startDebrisTask,
+                        }
+
+        taskFunction = taskFunctions.get(taskId+1)
+
+        if taskFunction:
+            taskFunction()
         else:
             app.showInfoMessage('Sorry, not impemented yet.')
 
 
+
 def createDockWidget():
     global _segmentationPanel
-    _segmentationPanel = SegmentationPanel()
-    app.addWidgetToDock(_segmentationPanel.panel)
+    try: _segmentationPanel
+    except NameError:
+        _segmentationPanel = SegmentationPanel()
+        app.addWidgetToDock(_segmentationPanel.panel)
 
 
 def activateSegmentationMode(debug=False):
@@ -963,7 +1011,7 @@ def createLine(blockDimensions, p1, p2):
     updatePolyData(planePoints, 'board segmentation', color=getRandomColor(), visible=False)
 
 
-    names = ['board A', 'board B', 'board C', 'board D', 'board E']
+    names = ['board A', 'board B', 'board C', 'board D', 'board E', 'board F', 'board G', 'board H', 'board I']
     for name in names:
         if not om.findObjectByName(name):
             break
@@ -973,8 +1021,8 @@ def createLine(blockDimensions, p1, p2):
 
     segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=middleRay, expectedXAxis=middleRay, edgeSign=-1, name=name)
 
-    if name == 'board A':
-        generateFeetForDebris()
+    #if name == 'board A':
+    #    generateFeetForDebris()
 
 
 def startInteractiveLineDraw(blockDimensions):
@@ -1548,7 +1596,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
 
-    #showFrame(obj.actor.GetUserTransform(), 'affordance frame', parentName='block affordance')
+    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parentObjOrName=obj, visible=False)
 
 
 def segmentBlockByPlanes(blockDimensions):
