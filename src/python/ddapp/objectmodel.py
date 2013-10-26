@@ -129,9 +129,49 @@ class PolyDataItem(ObjectModelItem):
             view.render()
 
     def setPolyData(self, polyData):
+
+        arrayName = self.getColorByArrayName()
+
         self.polyData = polyData
         self.mapper.SetInputData(polyData)
+        self.colorBy(arrayName)
         self._renderAllViews()
+
+    def getColorByArrayName(self):
+        if self.polyData:
+            scalars = self.polyData.GetPointData().GetScalars()
+            if scalars:
+                return scalars.GetName()
+
+    def colorBy(self, arrayName, scalarRange=None, lut=None):
+
+        if not arrayName:
+            self.mapper.ScalarVisibilityOff()
+            return
+
+        array = self.polyData.GetPointData().GetArray(arrayName)
+        if not array:
+            print 'colorBy(%s): array not found' % arrayName
+            self.mapper.ScalarVisibilityOff()
+            return
+
+        self.polyData.GetPointData().SetScalars(array)
+
+        if scalarRange is None:
+            scalarRange = array.GetRange()
+
+        if not lut:
+            lut = vtk.vtkLookupTable()
+            lut.SetNumberOfColors(256)
+            lut.SetHueRange(0.667, 0)
+            lut.Build()
+
+        self.mapper.SetLookupTable(lut)
+        self.mapper.ScalarVisibilityOn()
+        self.mapper.SetScalarRange(scalarRange)
+        self.mapper.InterpolateScalarsBeforeMappingOff()
+        #self.mapper.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
+
 
     def addToView(self, view):
         if view in self.views:

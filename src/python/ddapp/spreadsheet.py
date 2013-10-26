@@ -2,6 +2,8 @@
 from PythonQt import QtCore, QtGui
 import functools
 
+from ddapp import applogic as app
+
 _spreadsheetView = None
 def getSpreadsheetView():
     return _spreadsheetView
@@ -78,10 +80,10 @@ def initSpreadsheetColumns(costCollection):
     setSpreadsheetColumnData(1, 'default_costs', costData)
 
 
-def init(spreadsheetView, poseCollection, costCollection):
+def init(poseCollection, costCollection):
 
     global _spreadsheetView
-    _spreadsheetView = spreadsheetView
+    _spreadsheetView = app.getViewManager().createView('Spreadsheet View')
 
     updateMethod = functools.partial(updateSpreadsheetPoses, poseCollection)
     poseCollection.connect('itemChanged(const QString&)', updateMethod)

@@ -43,15 +43,17 @@ updatePolyData = segmentation.updatePolyData
 
 useIk = False
 usePerception = True
-
+useSpreadsheet = False
 
 
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
-spreadsheet.init(app.getSpreadsheetView(), poseCollection, costCollection)
 
+
+if useSpreadsheet:
+    spreadsheet.init(poseCollection, costCollection)
 
 
 if useIk:

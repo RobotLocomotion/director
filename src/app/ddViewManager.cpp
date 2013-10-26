@@ -159,6 +159,10 @@ ddViewBase* ddViewManager::createView(const QString& viewName, int pageIndex)
   {
     view = new ddQVTKWidgetView;
   }
+  else if (viewName == "IK View")
+  {
+    view = new ddDRCView;
+  }
 
   if (view)
   {
@@ -171,13 +175,5 @@ ddViewBase* ddViewManager::createView(const QString& viewName, int pageIndex)
 //-----------------------------------------------------------------------------
 void ddViewManager::addDefaultPage()
 {
-  //this->addView(new ddGLWidgetView, "OpenGL View");
-  //this->addView(new ddQVTKWidgetView, "VTK View");
   this->addView(new ddDRCView, "DRC View");
-  this->addView(new ddSpreadsheetView, "Spreadsheet View");
-
-  //this->addView(new ddDRCView, "DRC View 2", 0);
-  //QList<int> sizes;
-  //sizes << 1 << 0;
-  //this->Internal->Splitters[0]->setSizes(sizes);
 }

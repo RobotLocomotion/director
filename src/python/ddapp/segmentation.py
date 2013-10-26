@@ -92,7 +92,7 @@ class FrameItem(om.PolyDataItem):
 
         om.PolyDataItem.__init__(self, name, polyData, view)
 
-        colorBy(self, 'Axes')
+        self.colorBy('Axes')
         lut = self.mapper.GetLookupTable()
         lut.SetHueRange(0, 0.667)
 
@@ -158,30 +158,17 @@ class FrameItem(om.PolyDataItem):
 def getSegmentationView():
     return app.getViewManager().findView('Segmentation View')
 
+
 def getDRCView():
     return app.getViewManager().findView('DRC View')
+
 
 def switchToView(viewName):
     app.getViewManager().switchToView(viewName)
 
+
 def getCurrentView():
     return app.getViewManager().currentView()
-
-
-def colorBy(obj, arrayName, scalarRange=None):
-
-    polyData = obj.polyData
-    mapper = obj.mapper
-
-    polyData.GetPointData().SetScalars(polyData.GetPointData().GetArray(arrayName))
-    lut = vtk.vtkLookupTable()
-    lut.SetNumberOfColors(256)
-    lut.SetHueRange(0.667, 0)
-    lut.Build()
-    mapper.SetLookupTable(lut)
-    mapper.ScalarVisibilityOn()
-    mapper.SetScalarRange(scalarRange or polyData.GetPointData().GetArray(arrayName).GetRange())
-    mapper.InterpolateScalarsBeforeMappingOff()
 
 
 def thresholdPoints(polyData, arrayName, thresholdRange):
@@ -189,7 +176,7 @@ def thresholdPoints(polyData, arrayName, thresholdRange):
     f = vtk.vtkThresholdPoints()
     f.SetInputData(polyData)
     f.ThresholdBetween(thresholdRange[0], thresholdRange[1])
-    f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName);
+    f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
     f.Update()
     return shallowCopy(f.GetOutput())
 
@@ -531,6 +518,7 @@ class SegmentationPanel(object):
         l.addWidget(self.debrisWizard)
         l.addWidget(self.terrainWizard)
         self.debrisWizard.hide()
+        self.terrainWizard.hide()
 
     def _makeDebrisWizard(self):
         debrisWizard = QtGui.QWidget()
@@ -717,8 +705,9 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     if color:
         color = [component * 255 for component in color]
         item.setProperty('Color', QtGui.QColor(*color))
-    if colorByName:
-        colorBy(item, colorByName, colorByRange)
+        item.colorBy(None)
+    else:
+        item.colorBy(colorByName, colorByRange)
     return item
 
 
@@ -958,26 +947,27 @@ def createLine(blockDimensions, p1, p2):
     if p1[0] > p2[0]:
         p1, p2 = p2, p1
 
-    worldPt1, worldPt2 = getRayFromDisplayPoint(getSegmentationView(), p1)
-    worldPt3, worldPt4 = getRayFromDisplayPoint(getSegmentationView(), p2)
-    worldPt5, worldPt6 = getRayFromDisplayPoint(getSegmentationView(), p2)
+    _, worldPt1 = getRayFromDisplayPoint(getSegmentationView(), p1)
+    _, worldPt2 = getRayFromDisplayPoint(getSegmentationView(), p2)
 
-    leftRay = worldPt2 - worldPt1
-    rightRay = worldPt4 - worldPt3
-    middleRay = worldPt6 - worldPt5
-    middleRay /= np.linalg.norm(middleRay)
+    cameraPt = np.array(getSegmentationView().camera().GetPosition())
+
+    leftRay = worldPt1 - cameraPt
+    rightRay = worldPt2 - cameraPt
+    middleRay = (leftRay + rightRay) / 2.0
+
 
     d = DebugData()
+    d.addLine(cameraPt, worldPt1)
+    d.addLine(cameraPt, worldPt2)
     d.addLine(worldPt1, worldPt2)
-    d.addLine(worldPt3, worldPt4)
-    d.addLine(worldPt1, worldPt3)
-    d.addLine(worldPt2, worldPt4)
+    d.addLine(cameraPt, cameraPt + middleRay)
     updatePolyData(d.getPolyData(), 'line annotation', visible=False)
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = shallowCopy(inputObj.polyData)
 
-    origin = worldPt1
+    origin = cameraPt
 
     normal = np.cross(rightRay, leftRay)
     leftNormal = np.cross(normal, leftRay)
@@ -986,30 +976,21 @@ def createLine(blockDimensions, p1, p2):
     normal /= np.linalg.norm(normal)
     leftNormal /= np.linalg.norm(leftNormal)
     rightNormal /= np.linalg.norm(rightNormal)
-
-    d = DebugData()
-    d.addSphere(origin, radius=0.02)
-    d.addLine(origin, origin + leftNormal)
-    updatePolyData(d.getPolyData(), 'left normal', visible=False, color=[1,0,0])
-
-    d = DebugData()
-    d.addLine(origin, origin + rightNormal)
-    updatePolyData(d.getPolyData(), 'right normal', visible=False, color=[0,1,0])
+    middleRay /= np.linalg.norm(middleRay)
 
     cropped, polyData = cropToPlane(polyData, origin, normal, sliceThreshold)
 
     updatePolyData(polyData, 'slice dist', colorByName='dist_to_plane', colorByRange=[-0.5, 0.5], visible=False)
     updatePolyData(cropped, 'slice',  colorByName='dist_to_plane', visible=False)
 
-    cropped, _ = cropToPlane(cropped, origin, leftNormal, [-100, 0])
-    cropped, _ = cropToPlane(cropped, origin, rightNormal, [-100, 0])
+    cropped, _ = cropToPlane(cropped, origin, leftNormal, [-1e6, 0])
+    cropped, _ = cropToPlane(cropped, origin, rightNormal, [-1e6, 0])
 
     updatePolyData(cropped, 'slice segment',  colorByName='dist_to_plane', visible=False)
 
     planePoints, planeNormal = applyPlaneFit(cropped, distanceThreshold=0.005, perpendicularAxis=middleRay, angleEpsilon=math.radians(60))
     planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-0.005, 0.005])
     updatePolyData(planePoints, 'board segmentation', color=getRandomColor(), visible=False)
-
 
     names = ['board A', 'board B', 'board C', 'board D', 'board E', 'board F', 'board G', 'board H', 'board I']
     for name in names:
@@ -1018,11 +999,7 @@ def createLine(blockDimensions, p1, p2):
     else:
         name = 'board'
 
-
     segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=middleRay, expectedXAxis=middleRay, edgeSign=-1, name=name)
-
-    #if name == 'board A':
-    #    generateFeetForDebris()
 
 
 def startInteractiveLineDraw(blockDimensions):
@@ -1032,7 +1009,6 @@ def startInteractiveLineDraw(blockDimensions):
     picker.enabled = True
     picker.start()
     picker.annotationFunc = functools.partial(createLine, blockDimensions)
-    om.removeFromObjectModel(om.findObjectByName('line annotation'))
 
 
 def startValveSegmentation():
@@ -1504,8 +1480,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
 
     polyData, planeOrigin, normal  = applyPlaneFit(polyData, distanceThreshold=0.05, expectedNormal=expectedNormal, returnOrigin=True)
 
-    lineOrigin, lineDirection, _ = applyLineFit(polyData)
-
+    _, lineDirection, _ = applyLineFit(polyData)
 
     zaxis = lineDirection
     yaxis = normal
@@ -1866,18 +1841,12 @@ def zoomToDisplayPoint(displayPoint, boundsRadius=0.5, view=None):
     global _spindleAxis
     _spindleAxis = worldPt2 - worldPt1
 
-
     diagonal = np.array([boundsRadius, boundsRadius, boundsRadius])
     bounds = np.hstack([pickedPoint - diagonal, pickedPoint + diagonal])
     bounds = [bounds[0], bounds[3], bounds[1], bounds[4], bounds[2], bounds[5]]
     view.renderer().ResetCamera(bounds)
     view.camera().SetFocalPoint(pickedPoint)
     view.render()
-
-    #segmentationObj = om.findObjectByName('pointcloud snapshot')
-    #segmentationObj.setProperty('Point Size', 5)
-    #colorBy(segmentationObj, 'z', [pickedPoint[2]-0.1, pickedPoint[2]+0.1])
-
 
 
 def extractPointsAlongClickRay(displayPoint, distanceToLineThreshold=0.3, addDebugRay=False):
