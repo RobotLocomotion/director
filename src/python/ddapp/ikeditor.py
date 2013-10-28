@@ -179,7 +179,10 @@ class IKEditor(object):
     def positionOffsetChanged(self):
         offset = [self.ui.OffsetX.value, self.ui.OffsetY.value, self.ui.OffsetZ.value]
         linkName = self.ui.PositionLinkNameCombo.currentText
-        self.server.setPositionOffset(linkName, offset)
+        axesEnabled = [self.ui.PositionXEnabled.checked, self.ui.PositionYEnabled.checked, self.ui.PositionZEnabled.checked]
+        offsetBounds = [(0, 0) if enabled else (-10, 10) for enabled in axesEnabled]
+        self.server.setPositionOffset(linkName, offset, axesEnabled)
+        self.server.setPositionOffsetBounds(linkName, offset, axesEnabled)
         self.updateIk()
 
     def updateIk(self):

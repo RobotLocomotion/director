@@ -19,6 +19,7 @@ class AsyncIKCommunicator(TimerCallback):
         self.outputConsole = None
         self.controller = jointController
         self.positionOffset = {}
+        self.positionOffsetBounds = {}
         self.positionTargets = {}
         self.orientationOffset = {}
         self.orientationTargets = {}
@@ -148,8 +149,14 @@ class AsyncIKCommunicator(TimerCallback):
     def getPositionOffset(self, linkName):
         return self.positionOffset.get(linkName, np.array([0.0, 0.0, 0.0]))
 
+    def getPositionOffsetBounds(self, linkName):
+        return self.positionOffsetBounds.get(linkName, [(0,0), (0,0), (0,0)])
+
     def setPositionOffset(self, linkName, offset):
         self.positionOffset[linkName] = np.array(offset)
+
+    def setPositionOffsetBounds(self, linkName, bounds):
+        self.positionOffsetBounds[linkName] = bounds
 
     def getOrientationTarget(self, linkName):
         if linkName not in self.orientationTargets:
@@ -205,6 +212,7 @@ class AsyncIKCommunicator(TimerCallback):
         self.setPositionTarget(linkName, linkPosition)
         self.setOrientationTarget(linkName, linkOrientation)
         self.setPositionOffset(linkName, [0.0, 0.0, 0.0])
+        self.setPositionOffsetBounds(linkName, [(0,0), (0,0), (0,0)])
         self.setOrientationOffset(linkName, [0.0, 0.0, 0.0])
 
 
@@ -213,10 +221,17 @@ class AsyncIKCommunicator(TimerCallback):
         commands = []
         positionTarget = self.getPositionTarget(linkName)
         positionOffset = self.getPositionOffset(linkName)
+        offsetBounds = self.getPositionOffsetBounds(linkName)
         positionConstraint = positionTarget + positionOffset
-        formatArgs = dict(name=linkName, x=positionConstraint[0], y=positionConstraint[1], z=positionConstraint[2])
+
+        t = vtk.vtkTransform()
+        elements = [[t.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)]
+        elements = ';'.join([','.join([repr(x) for x in row]) for row in elements]
+
+        formatArgs = dict(name=linkName, x=positionConstraint[0], y=positionConstraint[1], z=positionConstraint[2], ref_frame=elements)
         commands.append('{name}_position_target = [{x}; {y}; {z}];'.format(**formatArgs))
-        commands.append('{name}_position_constraint = WorldPositionConstraint(r, {name}, [0;0;0], {name}_position_target, {name}_position_target, tspan);'.format(**formatArgs))
+        commands.append('{name}_ref_frame = {ref_frame}];'.format(**formatArgs))
+        commands.append('{name}_position_constraint = WorldPositionInFrameConstraint(r, {name}, [0;0;0], {name}_ref_frame, {name}_position_target, {name}_position_target, tspan);'.format(**formatArgs))
         if execute:
             self.comm.sendCommands(commands)
         else:
@@ -295,9 +310,11 @@ class AsyncIKCommunicator(TimerCallback):
     def runIkTraj(self, poseStart='q_start', poseEnd='q_end', nt=5):
 
         commands = []
-        commands.append('qtraj = PPTrajectory(foh(tspan, [%s, %s]));' % (poseStart, poseEnd))
+
         commands.append('nt = %d;' % nt)
-        commands.append('t = linspace(0, 1, nt);')
+        commands.append('t = linspace(tspan(1), tspan(end), nt);')
+        commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(q_nom, 1, nt)));')
+        commands.append('q_seed_traj = PPTrajectory(foh(tspan, [%s, %s]));' % (poseStart, poseEnd))
 
         '''
         % args:
@@ -311,7 +328,7 @@ class AsyncIKCommunicator(TimerCallback):
         % ikoptions
         '''
 
-        commands.append('[xtraj, info] = inverseKinTraj(r, %s, zeros(nq,1), t, squeeze(eval(qtraj, t(2:end))), repmat(q_nom, 1, nt-1), active_constraints{:}, s.ikoptions);' % poseStart)
+        commands.append('[xtraj, info] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, s.ikoptions);')
         commands.append('qtraj = xtraj(1:nq);')
         self.comm.sendCommands(commands)
 

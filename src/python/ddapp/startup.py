@@ -41,7 +41,7 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = False
+useIk = True
 usePerception = True
 useSpreadsheet = False
 
@@ -59,6 +59,10 @@ if useSpreadsheet:
 if useIk:
 
 
+    ikview = app.getViewManager().createView('IK View')
+
+    app.getViewManager().switchToView('IK View')
+
     ikFolder = om.addContainer('Drake IK')
     om.addPlaceholder('matlab server', om.Icons.Matlab, ikFolder)
 
@@ -68,7 +72,7 @@ if useIk:
     models = []
 
     for name in modelsToLoad:
-        model = app.loadModelByName(name)
+        model = ikview.loadURDFModel(os.path.join(app.getURDFModelDir(), name))
         om.addRobotModel(model, ikFolder)
         models.append(model)
         if name != 'model_minimal_contact_fixedjoint_hands.urdf':
@@ -77,7 +81,7 @@ if useIk:
 
     useTable = False
     if useTable:
-        tableModel = view.loadURDFModel(os.path.join(app.getDRCBase(), 'software/drake/systems/plants/test/table.urdf'))
+        tableModel = ikview.loadURDFModel(os.path.join(app.getDRCBase(), 'software/drake/systems/plants/test/table.urdf'))
         tableModel.setVisible(True)
         affordancesFolder = om.getOrCreateContainer('affordances')
         om.addRobotModel(tableModel, affordancesFolder)
@@ -96,14 +100,18 @@ if useIk:
     s.startServerAsync()
 
     e = ikeditor.IKEditor(app.getMainWindow(), s, poseCollection, costCollection)
-    e.makeFrameWidget(view)
+    e.makeFrameWidget(ikview)
     app.addWidgetToDock(e.widget)
-    tdx.init(view, e)
+    tdx.init(ikview, e)
+
+    app.resetCamera(viewDirection=[-1,0,0], view=ikview)
 
 
 if usePerception:
 
-    robotStateModel = app.loadModelByName('model_minimal_contact_fixedjoint_hands.urdf')
+    urdfFile = os.path.join(app.getURDFModelDir(), 'model_minimal_contact_fixedjoint_hands.urdf')
+    robotStateModel = view.loadURDFModel(urdfFile)
+
     robotStateJointController = jointcontrol.JointController([robotStateModel])
     robotStateJointController.setZeroPose()
 
@@ -121,4 +129,4 @@ if usePerception:
         s.forcePose(poseName)
 
 
-app.resetCamera(viewDirection=[-1,0,0])
+app.resetCamera(viewDirection=[-1,0,0], view=view)
