@@ -161,7 +161,7 @@ class IKEditor(object):
             return
 
         commands = []
-        commands.append('%s = QuasiStaticConstraint(r, 1, tspan);' % qsc)
+        commands.append('%s = QuasiStaticConstraint(r, tspan, 1);' % qsc)
         commands.append('%s = %s.setShrinkFactor(%f);' % (qsc, qsc, self.ui.ShrinkFactor.value))
         for foot in feet:
             commands.append('%s = %s.addContact(%s, %s_pts);' % (qsc, qsc, foot, foot))
@@ -181,8 +181,8 @@ class IKEditor(object):
         linkName = self.ui.PositionLinkNameCombo.currentText
         axesEnabled = [self.ui.PositionXEnabled.checked, self.ui.PositionYEnabled.checked, self.ui.PositionZEnabled.checked]
         offsetBounds = [(0, 0) if enabled else (-10, 10) for enabled in axesEnabled]
-        self.server.setPositionOffset(linkName, offset, axesEnabled)
-        self.server.setPositionOffsetBounds(linkName, offset, axesEnabled)
+        self.server.setPositionOffset(linkName, offset)
+        self.server.setPositionOffsetBounds(linkName, offsetBounds)
         self.updateIk()
 
     def updateIk(self):

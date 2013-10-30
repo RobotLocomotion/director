@@ -8,7 +8,7 @@ import ddapp.objectmodel as om
 from ddapp import robotstate
 from ddapp.timercallback import TimerCallback
 import vtkDRCFiltersPython as drc
-from vtkPointCloudUtils.debugVis import DebugData
+from ddapp.debugVis import DebugData
 import numpy as np
 
 import drc as lcmdrc
@@ -289,6 +289,38 @@ class MultiSenseSource(TimerCallback):
 
 
 
+class MapServerSource(TimerCallback):
+
+    def __init__(self, polyData=None, callbackFunc=None):
+        TimerCallback.__init__(self)
+        self.reader = None
+        self.displayedMapId = -1
+        self.targetFps = 10
+        self.polyData = polyData or vtk.vtkPolyData()
+        self.callbackFunc = callbackFunc
+
+    def showMap(self, mapId):
+        self.reader.GetDataForMap(mapId, self.polyData)
+        self.displayedMapId = mapId
+        if self.callbackFunc:
+            self.callbackFunc()
+
+    def start(self):
+        if self.reader is None:
+            self.reader = drc.vtkMapServerSource()
+            self.reader.Start()
+
+        TimerCallback.start(self)
+
+    def updateMap(self):
+        mapId = self.reader.GetCurrentMapId() - 1
+        if mapId != self.displayMapId:
+            self.showMap(mapId)
+
+    def tick(self):
+        self.updateMap()
+
+
 def init(view, jointController):
     global _multisenseItem
     global _view
@@ -302,6 +334,13 @@ def init(view, jointController):
 
     _multisenseItem = MultisenseItem(m)
     om.addToObjectModel(_multisenseItem, sensorsFolder)
+
+
+    mapServerSource = MapServerSource(callbackFunc=view.render)
+    mapServerObj = om.PolyDataItem('Map Server', mapServerSource.polyData, view)
+    mapServerObj.source = mapServerSource
+    om.addToObjectModel(mapServerObj, sensorsFolder)
+
     return _multisenseItem
 
 

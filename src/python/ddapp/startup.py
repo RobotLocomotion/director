@@ -20,9 +20,8 @@ from ddapp import segmentation
 from ddapp.timercallback import TimerCallback
 
 import numpy as np
-from vtkPointCloudUtils import vtkNumpy
-from vtkPointCloudUtils.debugVis import DebugData
-from vtkPointCloudUtils import io
+from ddapp.debugVis import DebugData
+from ddapp import ioUtils as io
 
 
 app.startup(globals())

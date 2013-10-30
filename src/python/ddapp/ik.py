@@ -226,12 +226,14 @@ class AsyncIKCommunicator(TimerCallback):
 
         t = vtk.vtkTransform()
         elements = [[t.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)]
-        elements = ';'.join([','.join([repr(x) for x in row]) for row in elements]
+        elements = ';'.join([','.join([repr(x) for x in row]) for row in elements])
 
         formatArgs = dict(name=linkName, x=positionConstraint[0], y=positionConstraint[1], z=positionConstraint[2], ref_frame=elements)
         commands.append('{name}_position_target = [{x}; {y}; {z}];'.format(**formatArgs))
-        commands.append('{name}_ref_frame = {ref_frame}];'.format(**formatArgs))
-        commands.append('{name}_position_constraint = WorldPositionInFrameConstraint(r, {name}, [0;0;0], {name}_ref_frame, {name}_position_target, {name}_position_target, tspan);'.format(**formatArgs))
+        commands.append('%s_position_bounds = [%r; %r; %r];' % (linkName, offsetBounds[0][1], offsetBounds[1][1], offsetBounds[2][1]))
+        commands.append('{name}_point_in_body_frame = [0;0;0];'.format(**formatArgs))
+        commands.append('{name}_ref_frame = [{ref_frame}];'.format(**formatArgs))
+        commands.append('{name}_position_constraint = WorldPositionInFrameConstraint(r, {name}, {name}_point_in_body_frame, {name}_ref_frame, {name}_position_target - {name}_position_bounds, {name}_position_target + {name}_position_bounds, tspan);'.format(**formatArgs))
         if execute:
             self.comm.sendCommands(commands)
         else:
