@@ -16,7 +16,7 @@ if(CTK_PYTHONCONSOLE_DIR)
   set(_lib_dir_hint "${CTK_PYTHONCONSOLE_DIR}/lib")
 endif()
 
-find_path(CTK_PYTHONCONSOLE_INCLUDE_DIR ctkPythonConsole.h HINTS ${_include_dir_hint} DOC "Path to the ctkPythonConsole include directory")
+find_path(CTK_PYTHONCONSOLE_INCLUDE_DIR ctkPythonConsole.h HINTS ${_include_dir_hint} PATH_SUFFIXES ctkPythonConsole DOC "Path to the ctkPythonConsole include directory")
 find_library(CTK_PYTHONCONSOLE_LIBRARY ctkPythonConsole HINTS ${_lib_dir_hint} DOC "Path to the ctkPythonConsole library")
 
 set(CTK_PYTHONCONSOLE_INCLUDE_DIRS ${CTK_PYTHONCONSOLE_INCLUDE_DIR})

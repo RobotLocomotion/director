@@ -13,7 +13,7 @@ if(PYTHONQT_DIR)
   set(_lib_dir_hint "${PYTHONQT_DIR}/lib")
 endif()
 
-find_path(PYTHONQT_INCLUDE_DIR PythonQt.h HINTS ${_include_dir_hint} DOC "Path to the PythonQt include directory")
+find_path(PYTHONQT_INCLUDE_DIR PythonQt.h HINTS ${_include_dir_hint} PATH_SUFFIXES PythonQt DOC "Path to the PythonQt include directory")
 find_library(PYTHONQT_LIBRARY PythonQt HINTS ${_lib_dir_hint} DOC "The PythonQt library")
 
 set(PYTHONQT_INCLUDE_DIRS ${PYTHONQT_INCLUDE_DIR})
