@@ -11,14 +11,12 @@ find_package(Eigen REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem regex)
 find_package(VTK REQUIRED COMPONENTS vtkIOGeometry vtkRenderingOpenGL vtkGUISupportQt vtkInteractionWidgets vtkWrappingPythonCore)
 find_package(QtPropertyBrowser REQUIRED)
-find_library(QtPropertyBrowser_LIBRARY QtPropertyBrowser PATHS "${QtPropertyBrowser_LIBRARY_DIRS}")
-mark_as_advanced(QtPropertyBrowser_LIBRARY)
 
 include(${VTK_USE_FILE})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/src/common)
-include_directories(${QtPropertyBrowser_INCLUDE_DIRS})
+include_directories(${QTPROPERTYBROWSER_INCLUDE_DIRS})
 include_directories(${CTK_PYTHONCONSOLE_INCLUDE_DIRS})
 include_directories(${PYTHONQT_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
@@ -90,7 +88,7 @@ set(deps
   ${QT_LIBRARIES}
   ${CTK_PYTHONCONSOLE_LIBRARIES}
   ${PYTHONQT_LIBRARIES}
-  ${QtPropertyBrowser_LIBRARY}
+  ${QTPROPERTYBROWSER_LIBRARY}
   ${OPENGL_LIBRARIES}
   ${VTK_LIBRARIES}
   ${DRAKE_LIBRARIES}
