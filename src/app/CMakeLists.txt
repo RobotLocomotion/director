@@ -9,7 +9,7 @@ find_package(OpenGL REQUIRED)
 find_package(Drake REQUIRED)
 find_package(Eigen REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem regex)
-find_package(VTK REQUIRED COMPONENTS vtkIOGeometry vtkRenderingOpenGL vtkGUISupportQt vtkInteractionWidgets vtkWrappingPythonCore)
+find_package(VTK REQUIRED)
 find_package(QtPropertyBrowser REQUIRED)
 
 include(${VTK_USE_FILE})
@@ -82,6 +82,11 @@ set(srcs
 
   vtkSimpleActorInteractor.cxx
   vtkTDxInteractorStyleCallback.cxx
+  )
+
+set(VTK_LIBRARIES
+  QVTK
+  vtkPythonCore
   )
 
 set(deps
