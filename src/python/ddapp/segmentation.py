@@ -174,7 +174,7 @@ def getCurrentView():
 def thresholdPoints(polyData, arrayName, thresholdRange):
     assert(polyData.GetPointData().GetArray(arrayName))
     f = vtk.vtkThresholdPoints()
-    f.SetInputData(polyData)
+    f.SetInput(polyData)
     f.ThresholdBetween(thresholdRange[0], thresholdRange[1])
     f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
     f.Update()
@@ -219,7 +219,7 @@ icp.GetLandmarkTransform().SetModeToRigidBody()
 icp.Update()
 
 t = filtersGeneral.vtkTransformPolyDataFilter()
-t.SetInputData(points.VTKObject)
+t.SetInput(points.VTKObject)
 t.SetTransform(icp)
 t.Update()
 
@@ -361,7 +361,7 @@ def cropToBox(polyData, params, expansionDistance=0.1):
 def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100, maxClusterSize=1e6):
 
     f = pcl.vtkPCLEuclideanClusterExtraction()
-    f.SetInputData(dataObj)
+    f.SetInput(dataObj)
     f.SetClusterTolerance(clusterTolerance)
     f.SetMinClusterSize(int(minClusterSize))
     f.SetMaxClusterSize(int(maxClusterSize))
@@ -375,7 +375,7 @@ def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, perpendi
 
     # perform plane segmentation
     f = pcl.vtkPCLSACSegmentationPlane()
-    f.SetInputData(dataObj)
+    f.SetInput(dataObj)
     f.SetDistanceThreshold(distanceThreshold)
     if perpendicularAxis is not None:
         f.SetPerpendicularConstraintEnabled(True)
@@ -405,7 +405,7 @@ def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, perpendi
 def applyLineFit(dataObj, distanceThreshold=0.02):
 
     f = pcl.vtkPCLSACSegmentationLine()
-    f.SetInputData(dataObj)
+    f.SetInput(dataObj)
     f.SetDistanceThreshold(distanceThreshold)
     f.Update()
     origin = np.array(f.GetLineOrigin())
@@ -487,7 +487,7 @@ def applyVoxelGrid(polyData, leafSize=0.01):
 
     v = pcl.vtkPCLVoxelGrid()
     v.SetLeafSize(leafSize, leafSize, leafSize)
-    v.SetInputData(polyData)
+    v.SetInput(polyData)
     v.Update()
     return shallowCopy(v.GetOutput())
 
@@ -715,7 +715,7 @@ def extractCircle(polyData, distanceThreshold=0.04, radiusLimit=None):
 
     circleFit = pcl.vtkPCLSACSegmentationCircle()
     circleFit.SetDistanceThreshold(distanceThreshold)
-    circleFit.SetInputData(polyData)
+    circleFit.SetInput(polyData)
     if radiusLimit is not None:
         circleFit.SetRadiusLimit(radiusLimit)
         circleFit.SetRadiusConstraintEnabled(True)
@@ -729,7 +729,7 @@ def removeMajorPlane(polyData, distanceThreshold=0.02):
 
     # perform plane segmentation
     f = pcl.vtkPCLSACSegmentationPlane()
-    f.SetInputData(polyData)
+    f.SetInput(polyData)
     f.SetDistanceThreshold(distanceThreshold)
     f.Update()
 
@@ -1393,7 +1393,7 @@ def showObbs(polyData):
 
     f = pcl.vtkAnnotateOBBs()
     f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, 'cluster_labels')
-    f.SetInputData(polyData)
+    f.SetInput(polyData)
     f.Update()
 
 

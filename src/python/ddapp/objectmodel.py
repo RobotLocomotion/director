@@ -111,7 +111,7 @@ class PolyDataItem(ObjectModelItem):
         self.view = view
         self.views = [view]
         self.mapper = vtk.vtkPolyDataMapper()
-        self.mapper.SetInputData(self.polyData)
+        self.mapper.SetInput(self.polyData)
         self.actor = vtk.vtkActor()
         self.actor.SetMapper(self.mapper)
         self.view.renderer().AddActor(self.actor)
@@ -133,7 +133,7 @@ class PolyDataItem(ObjectModelItem):
         arrayName = self.getColorByArrayName()
 
         self.polyData = polyData
-        self.mapper.SetInputData(polyData)
+        self.mapper.SetInput(polyData)
         self.colorBy(arrayName)
         self._renderAllViews()
 

@@ -29,7 +29,7 @@ def thresholdPoints(dataObj, arrayName, minValue, maxValue):
     if not dataObj.GetPointData().GetArray(arrayName):
         raise Exception("The data object passed to thresholdPoints has no array named: '%s'" % arrayName)
     thresh = vtk.vtkThresholdPoints()
-    thresh.SetInputData(dataObj)
+    thresh.SetInput(dataObj)
     thresh.ThresholdBetween(minValue, maxValue)
     thresh.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName);
     thresh.Update()

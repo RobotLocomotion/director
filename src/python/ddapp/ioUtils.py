@@ -21,7 +21,7 @@ def writePolyData(polyData, filename):
     if ext == '.vtp':
         writer = vtk.vtkXMLPolyDataWriter()
         writer.SetFileName(filename)
-        writer.SetInputData(polyData)
+        writer.SetInput(polyData)
         writer.Update()
     else:
         raise Exception('Unknown file extension in writePolyData: %s' % filename)

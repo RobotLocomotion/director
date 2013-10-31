@@ -145,7 +145,7 @@ class MultiSenseSource(TimerCallback):
         mapper = vtk.vtkPolyDataMapper()
         actor = vtk.vtkActor()
 
-        mapper.SetInputData(polyData)
+        mapper.SetInput(polyData)
         actor.SetMapper(mapper)
         self.view.renderer().AddActor(actor)
         return polyData, mapper, actor
