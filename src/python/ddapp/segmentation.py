@@ -456,7 +456,8 @@ def getCurrentRevolutionData():
 
 def getCurrentMapServerData():
     mapServer = om.findObjectByName('Map Server')
-    if mapServer and mapServer.source.polyData:
+    polyData = None
+    if mapServer and mapServer.getProperty('Visible'):
         polyData = mapServer.source.polyData
 
     if not polyData or not polyData.GetNumberOfPoints():
