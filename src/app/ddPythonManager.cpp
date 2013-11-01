@@ -57,17 +57,8 @@ QString ddPythonManager::appSitePackagesDir()
 //-----------------------------------------------------------------------------
 QStringList ddPythonManager::pythonPaths()
 {
-  QString rootDir = "/source";
-  if (!QDir(rootDir).exists())
-  {
-    rootDir = QDir::homePath() + rootDir;
-  }
-
   QStringList searchDirs;
-  searchDirs << this->appSitePackagesDir()
-             << rootDir + "/paraview/build/VTK/Wrapping/Python"
-             << rootDir + "/paraview/build/lib"
-             << rootDir + "/paraview/PCLPlugin/build/lib";
+  searchDirs << this->appSitePackagesDir();
 
   QStringList paths;
   foreach (const QString& dirname, searchDirs)
