@@ -40,6 +40,8 @@ public:
   int GetNumberOfDatasets();
   vtkPolyData* GetDataset(int i);
 
+  vtkIdType GetCurrentMapId();
+  void GetDataForMapId(vtkIdType mapId, vtkPolyData* polyData);
 
 protected:
 

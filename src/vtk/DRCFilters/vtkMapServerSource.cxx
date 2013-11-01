@@ -123,6 +123,14 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXY
   return polyData;
 }
 
+//----------------------------------------------------------------------------
+class MapData
+{
+public:
+  uint64_t Id;
+  vtkSmartPointer<vtkPolyData> Data;
+};
+
 
 //----------------------------------------------------------------------------
 class LCMListener
@@ -134,6 +142,7 @@ public:
     this->ShouldStop = true;
     this->NewData = false;
     this->MaxNumberOfDatasets = 100;
+    this->CurrentMapId = -1;
 
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
@@ -241,8 +250,15 @@ public:
 
   std::vector<vtkSmartPointer<vtkPolyData> > GetDatasets()
   {
+    std::vector<vtkSmartPointer<vtkPolyData> > datasets;
+
     boost::lock_guard<boost::mutex> lock(this->Mutex);
-    return std::vector<vtkSmartPointer<vtkPolyData> >(this->Datasets.begin(), this->Datasets.end());
+    for (size_t i = 0; i < this->Datasets.size(); ++i)
+      {
+      datasets.push_back(this->Datasets[i].Data);
+      }
+
+    return datasets;
   }
 
   std::vector<double> GetTimesteps()
@@ -264,12 +280,22 @@ public:
     boost::lock_guard<boost::mutex> lock(this->Mutex);
     if (timestep >= 0 && timestep < this->Datasets.size())
       {
-      return this->Datasets[timestep];
+      return this->Datasets[timestep].Data;
       }
     else
       {
       return 0;
       }
+  }
+
+  vtkIdType GetCurrentMapId()
+  {
+    return this->CurrentMapId;
+  }
+
+  void GetDataForMapId(vtkIdType mapId, vtkPolyData* polyData)
+  {
+
   }
 
 protected:
@@ -288,30 +314,30 @@ protected:
 
   void HandleNewData(const drc::map_image_t* msg)
   {
-
     maps::DepthImageView depthImage;
     maps::LcmTranslator::fromLcm(*msg, depthImage);
 
     maps::PointCloud::Ptr pointCloud = depthImage.getAsPointCloud();
 
-    // convert to poly data
-    vtkSmartPointer<vtkPolyData> polyData = PolyDataFromPointCloud(pointCloud);
+    MapData mapData;
+    mapData.Id = ++this->CurrentMapId;
+    mapData.Data = PolyDataFromPointCloud(pointCloud);
 
     // store data
     boost::lock_guard<boost::mutex> lock(this->Mutex);
-    this->Datasets.push_back(polyData);
+    this->Datasets.push_back(mapData);
     this->UpdateDequeSize();
     this->NewData = true;
-
   }
 
   bool NewData;
   bool ShouldStop;
   int MaxNumberOfDatasets;
+  vtkIdType CurrentMapId;
 
   boost::mutex Mutex;
 
-  std::deque<vtkSmartPointer<vtkPolyData> > Datasets;
+  std::deque<MapData> Datasets;
 
   boost::shared_ptr<lcm::LCM> LCMHandle;
 
@@ -382,6 +408,18 @@ void vtkMapServerSource::Poll()
 int vtkMapServerSource::GetNumberOfDatasets()
 {
   return this->Internal->Listener->GetDatasets().size();
+}
+
+//-----------------------------------------------------------------------------
+vtkIdType vtkMapServerSource::GetCurrentMapId()
+{
+  return this->Internal->Listener->GetCurrentMapId();
+}
+
+//-----------------------------------------------------------------------------
+void vtkMapServerSource::GetDataForMapId(vtkIdType mapId, vtkPolyData* polyData)
+{
+  return this->Internal->Listener->GetDataForMapId(mapId, polyData);
 }
 
 //-----------------------------------------------------------------------------
