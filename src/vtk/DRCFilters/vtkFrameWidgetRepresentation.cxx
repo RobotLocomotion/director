@@ -55,7 +55,9 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include <cmath>
 
-#define SetInputData(x) SetInput(x)
+#if VTK_MAJOR_VERSION == 5
+  #define SetInputData(x) SetInput(x)
+#endif
 
 vtkStandardNewMacro(vtkFrameWidgetRepresentation);
 

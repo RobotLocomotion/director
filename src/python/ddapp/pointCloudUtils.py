@@ -20,7 +20,7 @@ def appendPolyData(polyDataList):
     assert(len(polyDataList))
     append = vtk.vtkAppendPolyData()
     for polyData in polyDataList:
-        append.AddInputData(polyData)
+        append.AddInput(polyData)
     append.Update()
     return shallowCopy(append.GetOutput())
 
