@@ -1,6 +1,8 @@
 # This script is executed in the main console namespace so
 # that all the variables defined here become console variables.
 
+import ddapp
+
 import os
 import sys
 import vtk
