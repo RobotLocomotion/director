@@ -74,7 +74,7 @@ ddMainWindow::ddMainWindow()
 
   this->Internal->UserMacrosManager = new ddMacrosManager(this);
   this->Internal->UserMacrosManager->setToolBar(this->Internal->MacrosToolBar);
-  this->Internal->UserMacrosManager->addPath(this->Internal->PythonManager->appSitePackagesDir() + "/../../../src/python/ddapp/macros");
+  this->Internal->UserMacrosManager->addPath(this->Internal->PythonManager->appSitePackagesDir() + "/ddapp/macros");
 
   this->connect(this->Internal->ViewManager, SIGNAL(currentViewChanged(ddViewBase*, ddViewBase*)), SLOT(onCurrentViewChanged(ddViewBase*, ddViewBase*)));
   this->onCurrentViewChanged(0, this->Internal->ViewManager->currentView());
