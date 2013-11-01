@@ -300,12 +300,17 @@ class MapServerSource(TimerCallback):
         self.callbackFunc = callbackFunc
 
     def showMap(self, mapId):
-        self.reader.GetDataForMapId(mapId, self.polyData)
-        print 'got %d points for map' % self.polyData.GetNumberOfPoints()
+        polyData = vtk.vtkPolyData()
+        self.reader.GetDataForMapId(mapId, polyData)
+
+        if polyData.GetNumberOfPoints() < 20000:
+
+            return
+
+        self.polyData.ShallowCopy(polyData)
 
         self.displayedMapId = mapId
         if self.callbackFunc:
-            print 'callback...'
             self.callbackFunc()
 
     def start(self):
@@ -318,7 +323,6 @@ class MapServerSource(TimerCallback):
     def updateMap(self):
         mapId = self.reader.GetCurrentMapId()
         if mapId != self.displayedMapId:
-            print 'showing new map:', mapId
             self.showMap(mapId)
 
     def tick(self):
