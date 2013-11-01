@@ -300,9 +300,12 @@ class MapServerSource(TimerCallback):
         self.callbackFunc = callbackFunc
 
     def showMap(self, mapId):
-        self.reader.GetDataForMap(mapId, self.polyData)
+        self.reader.GetDataForMapId(mapId, self.polyData)
+        print 'got %d points for map' % self.polyData.GetNumberOfPoints()
+
         self.displayedMapId = mapId
         if self.callbackFunc:
+            print 'callback...'
             self.callbackFunc()
 
     def start(self):
@@ -313,8 +316,9 @@ class MapServerSource(TimerCallback):
         TimerCallback.start(self)
 
     def updateMap(self):
-        mapId = self.reader.GetCurrentMapId() - 1
-        if mapId != self.displayMapId:
+        mapId = self.reader.GetCurrentMapId()
+        if mapId != self.displayedMapId:
+            print 'showing new map:', mapId
             self.showMap(mapId)
 
     def tick(self):
@@ -339,6 +343,7 @@ def init(view, jointController):
     mapServerSource = MapServerSource(callbackFunc=view.render)
     mapServerObj = om.PolyDataItem('Map Server', mapServerSource.polyData, view)
     mapServerObj.source = mapServerSource
+    mapServerSource.start()
     om.addToObjectModel(mapServerObj, sensorsFolder)
 
     return _multisenseItem

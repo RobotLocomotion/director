@@ -21,6 +21,8 @@
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkSmartPointer.h"
+#include "vtkTransform.h"
+#include "vtkTransformPolyDataFilter.h"
 #include "vtkNew.h"
 
 
@@ -40,6 +42,7 @@
 
 //#include <lcmtypes/drc_lcmtypes.hpp>
 #include <lcmtypes/drc/map_image_t.hpp>
+#include <lcmtypes/drc/map_cloud_t.hpp>
 
 
 #include <maps/LcmTranslator.hpp>
@@ -131,7 +134,6 @@ public:
   vtkSmartPointer<vtkPolyData> Data;
 };
 
-
 //----------------------------------------------------------------------------
 class LCMListener
 {
@@ -150,11 +152,17 @@ public:
       std::cerr <<"ERROR: lcm is not good()" <<std::endl;
     }
 
-    this->LCMHandle->subscribe( "MAP_DEPTH", &LCMListener::lidarHandler, this);
+    this->LCMHandle->subscribe( "MAP_DEPTH", &LCMListener::depthHandler, this);
+    this->LCMHandle->subscribe( "MAP_CLOUD", &LCMListener::cloudHandler, this);
   }
 
 
-  void lidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_image_t* msg)
+  void cloudHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_cloud_t* msg)
+  {
+    this->HandleNewData(msg);
+  }
+
+  void depthHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_image_t* msg)
   {
     this->HandleNewData(msg);
   }
@@ -275,8 +283,6 @@ public:
 
   vtkSmartPointer<vtkPolyData> GetDatasetForTime(int timestep)
   {
-    printf("getting data for timestep: %d\n", timestep);
-
     boost::lock_guard<boost::mutex> lock(this->Mutex);
     if (timestep >= 0 && timestep < this->Datasets.size())
       {
@@ -295,7 +301,19 @@ public:
 
   void GetDataForMapId(vtkIdType mapId, vtkPolyData* polyData)
   {
+    if (!polyData)
+      {
+      return;
+      }
 
+    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    for (size_t i = 0; i < this->Datasets.size(); ++i)
+      {
+      if (this->Datasets[i].Id == mapId)
+        {
+        polyData->DeepCopy(this->Datasets[i].Data);
+        }
+      }
   }
 
 protected:
@@ -322,6 +340,28 @@ protected:
     MapData mapData;
     mapData.Id = ++this->CurrentMapId;
     mapData.Data = PolyDataFromPointCloud(pointCloud);
+
+    printf("storing depth map id: %d.  %d points\n", mapData.Id, mapData.Data->GetNumberOfPoints());
+
+    // store data
+    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    this->Datasets.push_back(mapData);
+    this->UpdateDequeSize();
+    this->NewData = true;
+  }
+
+  void HandleNewData(const drc::map_cloud_t* msg)
+  {
+    maps::PointCloudView cloudView;
+    maps::LcmTranslator::fromLcm(*msg, cloudView);
+
+    maps::PointCloud::Ptr pointCloud = cloudView.getAsPointCloud();
+
+    MapData mapData;
+    mapData.Id = ++this->CurrentMapId;
+    mapData.Data = PolyDataFromPointCloud(pointCloud);
+
+    printf("storing cloud map id: %d.  %d points\n", mapData.Id, mapData.Data->GetNumberOfPoints());
 
     // store data
     boost::lock_guard<boost::mutex> lock(this->Mutex);

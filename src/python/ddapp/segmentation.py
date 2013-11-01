@@ -454,6 +454,17 @@ def getCurrentRevolutionData():
     return addCoordArraysToPolyData(revPolyData)
 
 
+def getCurrentMapServerData():
+    mapServer = om.findObjectByName('Map Server')
+    if mapServer and mapServer.source.polyData:
+        polyData = mapServer.source.polyData
+
+    if not polyData or not polyData.GetNumberOfPoints():
+        return None
+
+    return addCoordArraysToPolyData(polyData)
+
+
 def getOrCreateSegmentationView():
 
     viewManager = app.getViewManager()
@@ -606,7 +617,7 @@ def activateSegmentationMode(debug=False):
     if debug:
         polyData = getDebugRevolutionData()
     else:
-        polyData = getCurrentRevolutionData()
+        polyData = getCurrentMapServerData() or getCurrentRevolutionData()
 
     if not polyData:
         return
