@@ -189,7 +189,15 @@ public:
     FD_SET(lcmFd, &fds);
 
     int status = select(lcmFd + 1, &fds, 0, 0, &tv);
-    return (status != 0 && FD_ISSET(lcmFd, &fds));
+    if (status == -1 && errno != EINTR)
+    {
+      printf("select() returned error: %d\n", errno);
+    }
+    else if (status == -1 && errno == EINTR)
+    {
+      printf("select() interrupted\n");
+    }
+    return (status > 0 && FD_ISSET(lcmFd, &fds));
   }
 
   void ThreadLoopWithSelect()
