@@ -19,13 +19,17 @@ cdef extern from "bot_core/rotations.h":
 ######################
 
 
-cdef double* to_vec2d(data) except NULL:
+cdef double* to_vec2d(data, double* cdata) except NULL:
     array_check(data, 2, float)
-    return [data[0], data[1]]
+    for i in xrange(2):
+        cdata[i] = data[i]
+    return cdata
 
-cdef double* to_vec3d(data) except NULL:
+cdef double* to_vec3d(data, double* cdata) except NULL:
     array_check(data, 3, float)
-    return [data[0], data[1], data[2]]
+    for i in xrange(3):
+        cdata[i] = data[i]
+    return cdata
 
 cdef double* to_vec4d(data, double* cdata) except NULL:
     array_check(data, 4, float)
@@ -79,19 +83,21 @@ def quat_to_matrix(quat):
     return from_vec9d(rot)
 
 def matrix_to_quat(rot):
-    cdef double[4] quat
+    cdef double quat[4]
     bot_matrix_to_quat(to_vec9d(rot), quat)
     return from_vec4d(quat)
 
 def quat_pos_to_matrix(quat, pos):
-    cdef double[16] m
+    cdef double m[16]
     cdef double cquat[4]
-    bot_quat_pos_to_matrix(to_vec4d(quat, cquat), to_vec3d(pos), m)
+    cdef double cpos[3]
+    bot_quat_pos_to_matrix(to_vec4d(quat, cquat), to_vec3d(pos, cpos), m)
     return from_vec16d(m)
 
 def angle_axis_to_quat(theta, axis):
-    cdef double[4] q
-    bot_angle_axis_to_quat(theta, to_vec3d(axis), q)
+    cdef double q[4]
+    cdef double caxis[3]
+    bot_angle_axis_to_quat(theta, to_vec3d(axis, caxis), q)
     return from_vec4d(q)
 
 def quat_to_angle_axis(quat):
@@ -103,7 +109,8 @@ def quat_to_angle_axis(quat):
 
 def roll_pitch_yaw_to_quat(rpy):
     cdef double quat[4]
-    bot_roll_pitch_yaw_to_quat(to_vec3d(rpy), quat)
+    cdef double crpy[3]
+    bot_roll_pitch_yaw_to_quat(to_vec3d(rpy, crpy), quat)
     return from_vec4d(quat)
 
 def quat_to_roll_pitch_yaw(quat):
@@ -115,10 +122,12 @@ def quat_to_roll_pitch_yaw(quat):
 def roll_pitch_yaw_to_angle_axis(rpy):
     cdef double theta
     cdef double axis[3]
-    bot_roll_pitch_yaw_to_angle_axis(to_vec3d(rpy), &theta, axis)
+    cdef double crpy[3]
+    bot_roll_pitch_yaw_to_angle_axis(to_vec3d(rpy, crpy), &theta, axis)
     return theta, from_vec3d(axis)
 
 def angle_axis_to_roll_pitch_yaw(angle, axis):
     cdef double rpy[3]
-    bot_angle_axis_to_roll_pitch_yaw(angle, to_vec3d(axis), rpy)
+    cdef double caxis[3]
+    bot_angle_axis_to_roll_pitch_yaw(angle, to_vec3d(axis, caxis), rpy)
     return from_vec3d(rpy)
