@@ -329,7 +329,7 @@ class MapServerSource(TimerCallback):
         self.updateMap()
 
 
-def init(view, jointController, useMapServer=False):
+def init(view, jointController, useMapServer=True):
     global _multisenseItem
     global _view
 

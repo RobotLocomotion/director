@@ -171,6 +171,10 @@ def getCurrentView():
     return app.getViewManager().currentView()
 
 
+def getDebugFolder():
+    return om.getOrCreateContainer('debug', om.findObjectByName('segmentation'))
+
+
 def thresholdPoints(polyData, arrayName, thresholdRange):
     assert(polyData.GetPointData().GetArray(arrayName))
     f = vtk.vtkThresholdPoints()
@@ -266,7 +270,7 @@ def segmentGroundPlane():
     groundHeight = np.percentile(zvalues, 5)
     searchRegion = thresholdPoints(polyData, 'z', [groundHeight - 0.3, groundHeight + 0.3])
 
-    updatePolyData(searchRegion, 'ground search region', colorByName='z', visible=False)
+    updatePolyData(searchRegion, 'ground search region', parent=getDebugFolder(), colorByName='z', visible=False)
 
     _, origin, normal = applyPlaneFit(searchRegion, distanceThreshold=0.02, expectedNormal=[0,0,1], perpendicularAxis=[0,0,1], returnOrigin=True)
 
@@ -275,12 +279,13 @@ def segmentGroundPlane():
     vtkNumpy.addNumpyToVtk(polyData, dist, 'dist_to_plane')
 
     groundPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
-    scenePoints = thresholdPoints(polyData, 'dist_to_plane', [0.05, 2.5])
+    scenePoints = thresholdPoints(polyData, 'dist_to_plane', [0.05, 10])
 
-    updatePolyData(groundPoints, 'ground points', color=[1, 1, 1], alpha=0.3)
+    updatePolyData(groundPoints, 'ground points', alpha=0.3)
+    updatePolyData(scenePoints, 'scene points', alpha=0.3)
 
-    scenePoints = applyEuclideanClustering(scenePoints, clusterTolerance=0.10, minClusterSize=100, maxClusterSize=1e6)
-    updatePolyData(scenePoints, 'scene points', colorByName='cluster_labels')
+    #scenePoints = applyEuclideanClustering(scenePoints, clusterTolerance=0.10, minClusterSize=100, maxClusterSize=1e6)
+    #updatePolyData(scenePoints, 'scene points', colorByName='cluster_labels')
 
 
 def getMajorPlanes(polyData, useVoxelGrid=True):
@@ -303,9 +308,9 @@ def getMajorPlanes(polyData, useVoxelGrid=True):
         largestCluster = extractLargestCluster(inliers)
 
         #i = len(polyDataList)
-        #showPolyData(inliers, 'inliers %d' % i, color=getRandomColor(), parentName='major planes')
-        #showPolyData(outliers, 'outliers %d' % i, color=getRandomColor(), parentName='major planes')
-        #showPolyData(largestCluster, 'cluster %d' % i, color=getRandomColor(), parentName='major planes')
+        #showPolyData(inliers, 'inliers %d' % i, color=getRandomColor(), parent='major planes')
+        #showPolyData(outliers, 'outliers %d' % i, color=getRandomColor(), parent='major planes')
+        #showPolyData(largestCluster, 'cluster %d' % i, color=getRandomColor(), parent='major planes')
 
         if largestCluster.GetNumberOfPoints() > minClusterSize:
             polyDataList.append(largestCluster)
@@ -333,7 +338,7 @@ def showMajorPlanes():
 
 
     for i, polyData in enumerate(polyDataList):
-        obj = showPolyData(polyData, 'plane %d' % i, color=getRandomColor(), visible=True, parentName='major planes')
+        obj = showPolyData(polyData, 'plane %d' % i, color=getRandomColor(), visible=True, parent='major planes')
         obj.setProperty('Point Size', 3)
 
 
@@ -432,14 +437,13 @@ def addCoordArraysToPolyData(polyData):
 
 
 def getDebugRevolutionData():
-    #filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
-    #filename = os.path.join(os.getcwd(), 'bungie_valve.vtp')
-    #filename = os.path.join(os.getcwd(), 'cinder-blocks.vtp')
-    #filename = os.path.join(os.getcwd(), 'cylinder_table.vtp')
-    #filename = os.path.join(os.getcwd(), 'two-by-fours.vtp')
-    filename = os.path.join(os.getcwd(), 'debris.vtp')
-    #filename = os.path.join(os.getcwd(), 'simulated_debris.vtp')
-
+    dataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../drc-data'))
+    #filename = os.path.join(dataDir, 'valve_wall.vtp')
+    #filename = os.path.join(dataDir, 'bungie_valve.vtp')
+    #filename = os.path.join(dataDir, 'cinder-blocks.vtp')
+    #filename = os.path.join(dataDir, 'cylinder_table.vtp')
+    #filename = os.path.join(dataDir, 'debris.vtp')
+    filename = os.path.join(dataDir, 'rev1.vtp')
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
 
@@ -632,18 +636,22 @@ def activateSegmentationMode(debug=False):
     perspective()
 
     thresholdWorkspace = False
+    doRemoveGround = True
 
     if thresholdWorkspace:
         polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 2.0])
         polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-1.0, 1.0])
-        segmentationObj = showPolyData(polyData, 'pointcloud snapshot', colorByName='distance_along_robot_x')
 
-    else:
-        segmentationObj = showPolyData(polyData, 'pointcloud snapshot', alpha=0.3)
+    if doRemoveGround:
+        groundPoints, polyData = removeGround(polyData)
+        segmentationObj = updatePolyData(groundPoints, 'ground', alpha=0.3, visible=False)
 
+    segmentationObj = updatePolyData(polyData, 'pointcloud snapshot', alpha=0.3)
     segmentationObj.headAxis = perception._multisenseItem.model.getAxis('head', [1,0,0])
 
-    app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
+    segmentationView.camera().DeepCopy(app.getDRCView().camera())
+
+    #app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
     #segmentationView.camera().Dolly(3.0)
     segmentationView.render()
 
@@ -700,7 +708,7 @@ def updatePolyData(polyData, name, **kwargs):
     return obj
 
 
-def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None, alpha=1.0, visible=True, view=None, parentName='segmentation', cls=None):
+def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None, alpha=1.0, visible=True, view=None, parent='segmentation', cls=None):
 
     view = view or app.getCurrentRenderView()
     if view is None:
@@ -709,7 +717,10 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     cls = cls or om.PolyDataItem
     item = cls(name, polyData, view)
 
-    parentObj = om.getOrCreateContainer(parentName) if parentName else None
+    if isinstance(parent, str):
+        parentObj = om.getOrCreateContainer(parent)
+    else:
+        parentObj = parent
 
     om.addToObjectModel(item, parentObj)
     item.setProperty('Visible', visible)
@@ -749,11 +760,34 @@ def removeMajorPlane(polyData, distanceThreshold=0.02):
     return polyData, f
 
 
-def showFrame(frame, name, parentObjOrName='segmentation', scale=0.5, visible=True):
-    if isinstance(parentObjOrName, str):
-        parentObj = om.getOrCreateContainer(parentObjOrName)
+def removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.05):
+
+    searchRegionThickness = 0.5
+
+    zvalues = vtkNumpy.getNumpyFromVtk(polyData, 'z')
+    assert zvalues is not None
+    groundHeight = np.percentile(zvalues, 5)
+    searchRegion = thresholdPoints(polyData, 'z', [groundHeight - searchRegionThickness/2.0, groundHeight + searchRegionThickness/2.0])
+
+    updatePolyData(searchRegion, 'ground search region', parent=getDebugFolder(), colorByName='z', visible=False)
+
+    _, origin, normal = applyPlaneFit(searchRegion, distanceThreshold=0.02, expectedNormal=[0,0,1], perpendicularAxis=[0,0,1], returnOrigin=True)
+
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    dist = np.dot(points - origin, normal)
+    vtkNumpy.addNumpyToVtk(polyData, dist, 'dist_to_plane')
+
+    groundPoints = thresholdPoints(polyData, 'dist_to_plane', [-groundThickness/2.0, groundThickness/2.0])
+    scenePoints = thresholdPoints(polyData, 'dist_to_plane', [sceneHeightFromGround, 100])
+
+    return groundPoints, scenePoints
+
+
+def showFrame(frame, name, parent='segmentation', scale=0.5, visible=True):
+    if isinstance(parent, str):
+        parentObj = om.getOrCreateContainer(parent)
     else:
-        parentObj = parentObjOrName
+        parentObj = parent
 
     item = FrameItem(name, frame, app.getCurrentRenderView())
     om.addToObjectModel(item, parentObj)
@@ -788,9 +822,9 @@ def generateFeetForValve():
 
     stanceFrame, lfootFrame, rfootFrame = getFootFramesFromReferenceFrame(valveFrame, stanceWidth, stanceRotation, stanceOffset)
 
-    showFrame(boardFrame, 'board ground frame', parentObjOrName=aff, scale=0.15, visible=False)
-    showFrame(lfootFrame, 'lfoot frame', parentObjOrName=aff, scale=0.15)
-    showFrame(rfootFrame, 'rfoot frame', parentObjOrName=aff, scale=0.15)
+    showFrame(boardFrame, 'board ground frame', parent=aff, scale=0.15, visible=False)
+    showFrame(lfootFrame, 'lfoot frame', parent=aff, scale=0.15)
+    showFrame(rfootFrame, 'rfoot frame', parent=aff, scale=0.15)
 
     #d = DebugData()
     #d.addLine(valveFrame.GetPosition(), stanceFrame.GetPosition())
@@ -826,9 +860,9 @@ def generateFeetForDebris():
 
     stanceFrame, lfootFrame, rfootFrame = getFootFramesFromReferenceFrame(boardFrame, stanceWidth, stanceRotation, stanceOffset)
 
-    showFrame(boardFrame, 'board ground frame', parentObjOrName=aff, scale=0.15, visible=False)
-    lfoot = showFrame(lfootFrame, 'lfoot frame', parentObjOrName=aff, scale=0.15)
-    rfoot = showFrame(rfootFrame, 'rfoot frame', parentObjOrName=aff, scale=0.15)
+    showFrame(boardFrame, 'board ground frame', parent=aff, scale=0.15, visible=False)
+    lfoot = showFrame(lfootFrame, 'lfoot frame', parent=aff, scale=0.15)
+    rfoot = showFrame(rfootFrame, 'rfoot frame', parent=aff, scale=0.15)
 
     for obj in [lfoot, rfoot]:
         obj.addToView(app.getDRCView())
@@ -974,7 +1008,7 @@ def createLine(blockDimensions, p1, p2):
     d.addLine(cameraPt, worldPt2)
     d.addLine(worldPt1, worldPt2)
     d.addLine(cameraPt, cameraPt + middleRay)
-    updatePolyData(d.getPolyData(), 'line annotation', visible=False)
+    updatePolyData(d.getPolyData(), 'line annotation', parent=getDebugFolder(), visible=False)
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = shallowCopy(inputObj.polyData)
@@ -992,17 +1026,17 @@ def createLine(blockDimensions, p1, p2):
 
     cropped, polyData = cropToPlane(polyData, origin, normal, sliceThreshold)
 
-    updatePolyData(polyData, 'slice dist', colorByName='dist_to_plane', colorByRange=[-0.5, 0.5], visible=False)
-    updatePolyData(cropped, 'slice',  colorByName='dist_to_plane', visible=False)
+    updatePolyData(polyData, 'slice dist', parent=getDebugFolder(), colorByName='dist_to_plane', colorByRange=[-0.5, 0.5], visible=False)
+    updatePolyData(cropped, 'slice',  parent=getDebugFolder(), colorByName='dist_to_plane', visible=False)
 
     cropped, _ = cropToPlane(cropped, origin, leftNormal, [-1e6, 0])
     cropped, _ = cropToPlane(cropped, origin, rightNormal, [-1e6, 0])
 
-    updatePolyData(cropped, 'slice segment',  colorByName='dist_to_plane', visible=False)
+    updatePolyData(cropped, 'slice segment', parent=getDebugFolder(), colorByName='dist_to_plane', visible=False)
 
     planePoints, planeNormal = applyPlaneFit(cropped, distanceThreshold=0.005, perpendicularAxis=middleRay, angleEpsilon=math.radians(60))
     planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-0.005, 0.005])
-    updatePolyData(planePoints, 'board segmentation', color=getRandomColor(), visible=False)
+    updatePolyData(planePoints, 'board segmentation', parent=getDebugFolder(), color=getRandomColor(), visible=False)
 
     names = ['board A', 'board B', 'board C', 'board D', 'board E', 'board F', 'board G', 'board H', 'board I']
     for name in names:
@@ -1116,7 +1150,7 @@ def segmentValveByWallPlane():
     d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
 
 
-    obj = updatePolyData(d.getPolyData(), 'valve affordance', cls=CylinderAffordanceItem, parentName='affordances')
+    obj = updatePolyData(d.getPolyData(), 'valve affordance', cls=CylinderAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
@@ -1164,16 +1198,15 @@ def mapMousePosition(widget, mouseEvent):
 
 class PointPicker(TimerCallback):
 
-    def __init__(self):
+    def __init__(self, numberOfPoints=3):
         TimerCallback.__init__(self)
         self.targetFps = 30
         self.enabled = False
+        self.numberOfPoints = numberOfPoints
         self.clear()
 
     def clear(self):
-        self.p1 = None
-        self.p2 = None
-        self.p3 = None
+        self.points = [None for i in xrange(self.numberOfPoints)]
         self.hoverPos = None
         self.annotationFunc = None
         self.lastMovePos = [0, 0]
@@ -1183,55 +1216,45 @@ class PointPicker(TimerCallback):
 
     def onMousePress(self, displayPoint):
 
-        if self.p1 is None:
-            self.p1 = self.hoverPos
-        elif self.p2 is None:
-            self.p2 = self.hoverPos
-        elif self.p3 is None:
-            self.p3 = self.hoverPos
+        for i in xrange(self.numberOfPoints):
+            if self.points[i] is None:
+                self.points[i] = self.hoverPos
+                break
 
-            if self.p3 is not None:
-                self.finish()
-
+        if self.points[-1] is not None:
+            self.finish()
 
     def finish(self):
 
         self.enabled = False
-
-        p1 = self.p1.copy()
-        p2 = self.p2.copy()
-        p3 = self.p3.copy()
-
+        points = [p.copy() for p in self.points]
         if self.annotationFunc is not None:
-            self.annotationFunc(p1, p2, p3)
+            self.annotationFunc(*points)
 
         removeViewPicker(self)
 
-
     def handleRelease(self, displayPoint):
         pass
-
 
     def draw(self):
 
         d = DebugData()
 
-        p1 = self.p1 if self.p1 is not None else self.hoverPos
-        p2 = self.p2 if self.p2 is not None else self.hoverPos
-        p3 = self.p3 if self.p3 is not None else self.hoverPos
+        points = [p if p is not None else self.hoverPos for p in self.points]
 
-
-        for p in (p1, p2, p3):
+        # draw points
+        for p in points:
             if p is not None:
                 d.addSphere(p, radius=0.01)
 
+        # draw lines
+        for a, b in zip(points, points[1:]):
+            if b is not None:
+                d.addLine(a, b)
 
-        if p1 is not None:
-            if p2 is not None:
-                d.addLine(p1, p2)
-            if p3 is not None:
-                d.addLine(p1, p3)
-                d.addLine(p2, p3)
+        # connect end points
+        if points[-1] is not None:
+            d.addLine(points[0], points[-1])
 
 
         obj = updatePolyData(d.getPolyData(), 'annotation')
@@ -1467,7 +1490,7 @@ def segmentBlockByAnnotation(blockDimensions, p1, p2, p3):
     t.PostMultiply()
     t.Translate(origin)
 
-    obj = updatePolyData(cube, 'block affordance', cls=BlockAffordanceItem, parentName='affordances')
+    obj = updatePolyData(cube, 'block affordance', cls=BlockAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
@@ -1509,7 +1532,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     edgePoints = vtkNumpy.getVtkPolyDataFromNumpyPoints(edgePoints)
 
     d = DebugData()
-    obj = updatePolyData(edgePoints, 'edge points', visible=False)
+    obj = updatePolyData(edgePoints, 'edge points', parent=getDebugFolder(), visible=False)
 
     linePoint, lineDirection, _ = applyLineFit(edgePoints)
     zaxis = lineDirection
@@ -1560,9 +1583,9 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     d.addLine(origin, origin + zaxis*zwidth/2.0)
 
 
-    obj = updatePolyData(d.getPolyData(), 'block axes')
-    obj.setProperty('Color', QtGui.QColor(255, 255, 0))
-    obj.setProperty('Visible', False)
+    #obj = updatePolyData(d.getPolyData(), 'block axes')
+    #obj.setProperty('Color', QtGui.QColor(255, 255, 0))
+    #obj.setProperty('Visible', False)
 
     cube = vtk.vtkCubeSource()
     cube.SetXLength(xwidth)
@@ -1575,7 +1598,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     t.PostMultiply()
     t.Translate(origin)
 
-    obj = showPolyData(cube, name, cls=BlockAffordanceItem, parentName='affordances')
+    obj = showPolyData(cube, name, cls=BlockAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
@@ -1583,7 +1606,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
 
-    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parentObjOrName=obj, visible=False)
+    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
 
 
 def segmentBlockByPlanes(blockDimensions):
@@ -1656,7 +1679,7 @@ def segmentBlockByPlanes(blockDimensions):
     t.PostMultiply()
     t.Translate(origin)
 
-    obj = updatePolyData(cube, 'block affordance', cls=BlockAffordanceItem, parentName='affordances')
+    obj = updatePolyData(cube, 'block affordance', cls=BlockAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
@@ -1682,6 +1705,22 @@ def startBlockSegmentation(dimensions):
     om.removeFromObjectModel(om.findObjectByName('annotation'))
 
 
+def startBoundedPlaneSegmentation(expectedNormal):
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentBoundedPlaneByAnnotation, expectedNormal)
+
+
+def segmentBoundedPlaneByAnnotation(expectedNormal, point):
+
+    print expectedNormal, point
+
+
+
+
 savedCameraParams = None
 
 def perspective():
@@ -1690,8 +1729,8 @@ def perspective():
     if savedCameraParams is None:
         return
 
-    aff = om.findObjectByName('block affordance')
-    if aff is not None:
+    aff = getDefaultAffordanceObject()
+    if aff:
         aff.setProperty('Alpha', 1.0)
 
     obj = om.findObjectByName('pointcloud snapshot')
@@ -1720,6 +1759,10 @@ def saveCameraParams(overwrite=False):
 
 
 def getDefaultAffordanceObject():
+
+    obj = om.getActiveObject()
+    if isinstance(obj, om.AffordanceItem):
+        return obj
 
     for obj in om.objects.values():
         if isinstance(obj, om.AffordanceItem):
@@ -1835,7 +1878,7 @@ def selectActor(displayPoint):
 
     name = obj.getProperty('Name')
     om.getOrCreateContainer('selected planes', om.findObjectByName('segmentation'))
-    obj2 = showPolyData(shallowCopy(polyData), name, parentName='selected planes')
+    obj2 = showPolyData(shallowCopy(polyData), name, parent='selected planes')
     obj2.setProperty('Color', obj.getProperty('Color'))
     obj2.setProperty('Point Size', 4)
     obj.setProperty('Visible', False)
@@ -1960,5 +2003,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    activateSegmentationMode(debug=True)
+    #activateSegmentationMode(debug=True)
 

@@ -19,6 +19,7 @@ from ddapp import spreadsheet
 from ddapp import tdx
 from ddapp import perception
 from ddapp import segmentation
+from ddapp import vtkNumpy as vnp
 from ddapp.timercallback import TimerCallback
 
 import numpy as np
@@ -42,7 +43,7 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = True
+useIk = False
 usePerception = True
 useSpreadsheet = False
 
