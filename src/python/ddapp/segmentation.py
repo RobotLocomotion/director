@@ -1084,9 +1084,10 @@ def startValveSegmentation():
     #om.removeFromObjectModel(om.findObjectByName('annotation'))
 
 
-def segmentValveByWallPlane(expectedValveRadius, point):
+def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
-    # find wall plane
+
+    centerPoint = (point1 + point2) / 2.0
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
@@ -1094,21 +1095,34 @@ def segmentValveByWallPlane(expectedValveRadius, point):
     cameraPos = np.array(getSegmentationView().camera().GetPosition())
 
     #bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
-    bodyX = point - cameraPos
+    bodyX = centerPoint - cameraPos
     bodyX /= np.linalg.norm(bodyX)
 
-    polyData, origin, normal  = applyPlaneFit(polyData, expectedNormal=-bodyX, searchOrigin=point, searchRadius = 0.3, returnOrigin=True)
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-bodyX, searchOrigin=point1, searchRadius=0.2, returnOrigin=True)
+
+
+    perpLine = np.cross(point2 - point1, normal)
+    #perpLine /= np.linalg.norm(perpLine)
+    #perpLine * np.linalg.norm(point2 - point1)/2.0
+    point3, point4 = centerPoint + perpLine/2.0, centerPoint - perpLine/2.0
+
+    d = DebugData()
+    d.addLine(point1, point2)
+    d.addLine(point3, point4)
+    updatePolyData(d.getPolyData(), 'crop lines', parent=getDebugFolder(), visible=False)
 
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     updatePolyData(wallPoints, 'valve wall', parent=getDebugFolder(), visible=False)
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.05, 0.4])
+    searchRegion = cropToLineSegment(searchRegion, point1, point2)
+    searchRegion = cropToLineSegment(searchRegion, point3, point4)
 
     updatePolyData(searchRegion, 'valve search region', parent=getDebugFolder(), visible=False)
 
 
     searchRegion, origin, _  = applyPlaneFit(searchRegion, expectedNormal=normal, perpendicularAxis=normal, returnOrigin=True)
-    searchRegion = thresholdPoints(searchRegion, 'dist_to_plane', [-0.01, 0.01])
+    searchRegion = thresholdPoints(searchRegion, 'dist_to_plane', [-0.015, 0.015])
 
     updatePolyData(searchRegion, 'valve search region 2', parent=getDebugFolder(), visible=False)
 
@@ -1118,7 +1132,9 @@ def segmentValveByWallPlane(expectedValveRadius, point):
     updatePolyData(largestCluster, 'valve cluster', parent=getDebugFolder(), visible=False)
 
 
-    radiusLimit = [expectedValveRadius - 0.01, expectedValveRadius + 0.01] if expectedValveRadius else None
+    #radiusLimit = [expectedValveRadius - 0.01, expectedValveRadius + 0.01] if expectedValveRadius else None
+    radiusLimit = None
+
     polyData, circleFit = extractCircle(largestCluster, distanceThreshold=0.01, radiusLimit=radiusLimit)
     updatePolyData(polyData, 'circle fit', parent=getDebugFolder(), visible=False)
 
@@ -1137,11 +1153,12 @@ def segmentValveByWallPlane(expectedValveRadius, point):
 
     # force use of the plane normal
     circleNormal = normal
+    radius = expectedValveRadius
 
     d = DebugData()
     d.addLine(origin - normal*radius, origin + normal*radius)
     d.addCircle(origin, circleNormal, radius)
-    updatePolyData(d.getPolyData(), 'valve axes', visible=False)
+    updatePolyData(d.getPolyData(), 'valve axes', parent=getDebugFolder(), visible=False)
 
 
     zaxis = circleNormal
@@ -1738,7 +1755,7 @@ def startBoundedPlaneSegmentation(expectedNormal):
 
 def startValveSegmentationByWallPlane(expectedValveRadius):
 
-    picker = PointPicker(numberOfPoints=1)
+    picker = PointPicker(numberOfPoints=2)
     addViewPicker(picker)
     picker.enabled = True
     picker.start()
