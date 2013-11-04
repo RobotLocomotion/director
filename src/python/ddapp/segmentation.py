@@ -434,10 +434,10 @@ def addCoordArraysToPolyData(polyData):
 def getDebugRevolutionData():
     #filename = os.path.join(os.getcwd(), 'valve_wall.vtp')
     #filename = os.path.join(os.getcwd(), 'bungie_valve.vtp')
-    filename = os.path.join(os.getcwd(), 'cinder-blocks.vtp')
+    #filename = os.path.join(os.getcwd(), 'cinder-blocks.vtp')
     #filename = os.path.join(os.getcwd(), 'cylinder_table.vtp')
     #filename = os.path.join(os.getcwd(), 'two-by-fours.vtp')
-    #filename = os.path.join(os.getcwd(), 'debris.vtp')
+    filename = os.path.join(os.getcwd(), 'debris.vtp')
     #filename = os.path.join(os.getcwd(), 'simulated_debris.vtp')
 
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
@@ -1960,5 +1960,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    #activateSegmentationMode(debug=True)
+    activateSegmentationMode(debug=True)
 

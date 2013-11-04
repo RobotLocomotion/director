@@ -180,7 +180,7 @@ class IKEditor(object):
         offset = [self.ui.OffsetX.value, self.ui.OffsetY.value, self.ui.OffsetZ.value]
         linkName = self.ui.PositionLinkNameCombo.currentText
         axesEnabled = [self.ui.PositionXEnabled.checked, self.ui.PositionYEnabled.checked, self.ui.PositionZEnabled.checked]
-        offsetBounds = [(0, 0) if enabled else (-10, 10) for enabled in axesEnabled]
+        offsetBounds = [(0.01, 0.01) if enabled else (-10, 10) for enabled in axesEnabled]
         self.server.setPositionOffset(linkName, offset)
         self.server.setPositionOffsetBounds(linkName, offsetBounds)
         self.updateIk()

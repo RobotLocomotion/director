@@ -194,14 +194,20 @@ class AsyncIKCommunicator(TimerCallback):
         angleAxis[0] = math.radians(angleAxis[0])
         pos = frame.GetPosition()
         quat = botpy.angle_axis_to_quat(angleAxis[0], angleAxis[1:])
+
         self.setPositionTarget(linkName, pos)
         self.setOrientationTarget(linkName, quat)
 
 
     def grabCurrentLinkPose(self, linkName):
+
+        pointInLink = '[0;0;0]'
+        if linkName in ('l_hand', 'r_hand'):
+            pointInLink = '[0.0;0.2;0.05]'
+
         commands = []
         commands.append('kinsol = doKinematics(r, q_end);')
-        commands.append('%s_pose = r.forwardKin(kinsol, %s, [0;0;0], 2);' % (linkName, linkName))
+        commands.append('%s_pose = r.forwardKin(kinsol, %s, %s, 2);' % (linkName, linkName, pointInLink))
         commands.append('%s_position_target_start = %s_pose(1:3);' % (linkName, linkName))
         commands.append('%s_orient_target_start = %s_pose(4:7);' % (linkName, linkName))
         self.comm.sendCommands(commands)
@@ -224,14 +230,18 @@ class AsyncIKCommunicator(TimerCallback):
         offsetBounds = self.getPositionOffsetBounds(linkName)
         positionConstraint = positionTarget + positionOffset
 
+        pointInLink = '[0;0;0]'
+        if linkName in ('l_hand', 'r_hand'):
+            pointInLink = '[0.0;0.2;0.05]'
+
         t = vtk.vtkTransform()
         elements = [[t.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)]
         elements = ';'.join([','.join([repr(x) for x in row]) for row in elements])
 
-        formatArgs = dict(name=linkName, x=positionConstraint[0], y=positionConstraint[1], z=positionConstraint[2], ref_frame=elements)
+        formatArgs = dict(name=linkName, x=positionConstraint[0], y=positionConstraint[1], z=positionConstraint[2], ref_frame=elements, link_pt=pointInLink)
         commands.append('{name}_position_target = [{x}; {y}; {z}];'.format(**formatArgs))
         commands.append('%s_position_bounds = [%r; %r; %r];' % (linkName, offsetBounds[0][1], offsetBounds[1][1], offsetBounds[2][1]))
-        commands.append('{name}_point_in_body_frame = [0;0;0];'.format(**formatArgs))
+        commands.append('{name}_point_in_body_frame = {link_pt};'.format(**formatArgs))
         commands.append('{name}_ref_frame = [{ref_frame}];'.format(**formatArgs))
         commands.append('{name}_position_constraint = WorldPositionInFrameConstraint(r, {name}, {name}_point_in_body_frame, {name}_ref_frame, {name}_position_target - {name}_position_bounds, {name}_position_target + {name}_position_bounds, tspan);'.format(**formatArgs))
         if execute:
@@ -247,7 +257,7 @@ class AsyncIKCommunicator(TimerCallback):
         orientationConstraint = orientationTarget
         formatArgs = dict(name=linkName, w=orientationConstraint[0], x=orientationConstraint[1], y=orientationConstraint[2], z=orientationConstraint[3])
         commands.append('{name}_orient_target = [{w}; {x}; {y}; {z}];'.format(**formatArgs))
-        commands.append('{name}_orient_constraint = WorldQuatConstraint(r, {name}, {name}_orient_target, 0.0, tspan);'.format(**formatArgs))
+        commands.append('{name}_orient_constraint = WorldQuatConstraint(r, {name}, {name}_orient_target, 0.005, tspan);'.format(**formatArgs))
         if execute:
             self.comm.sendCommands(commands)
         else:
