@@ -414,6 +414,10 @@ def addToObjectModel(obj, parentObj=None):
         tree.addTopLevelItem(item)
         tree.expandItem(item)
 
+def collapse(obj):
+    item = getItemForObject(obj)
+    if item:
+        getObjectTree().collapseItem(item)
 
 def addContainer(name, parentObj=None):
     obj = ContainerItem(name)

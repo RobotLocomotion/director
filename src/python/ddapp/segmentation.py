@@ -172,7 +172,11 @@ def getCurrentView():
 
 
 def getDebugFolder():
-    return om.getOrCreateContainer('debug', om.findObjectByName('segmentation'))
+    obj = om.findObjectByName('debug')
+    if obj is None:
+        obj = om.getOrCreateContainer('debug', om.findObjectByName('segmentation'))
+        om.collapse(obj)
+    return obj
 
 
 def thresholdPoints(polyData, arrayName, thresholdRange):
@@ -379,13 +383,18 @@ def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100,
     return shallowCopy(f.GetOutput())
 
 
-def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, perpendicularAxis=None, angleEpsilon=0.2, returnOrigin=False):
+def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpendicularAxis=None, angleEpsilon=0.2, returnOrigin=False, searchOrigin=None, searchRadius=None):
 
     expectedNormal = expectedNormal if expectedNormal is not None else [-1,0,0]
 
+    fitInput = polyData
+    if searchOrigin is not None:
+        assert searchRadius
+        fitInput = cropToSphere(fitInput, searchOrigin, searchRadius)
+
     # perform plane segmentation
     f = pcl.vtkPCLSACSegmentationPlane()
-    f.SetInput(dataObj)
+    f.SetInput(fitInput)
     f.SetDistanceThreshold(distanceThreshold)
     if perpendicularAxis is not None:
         f.SetPerpendicularConstraintEnabled(True)
@@ -401,8 +410,8 @@ def applyPlaneFit(dataObj, distanceThreshold=0.02, expectedNormal=None, perpendi
 
     # for each point, compute signed distance to plane
 
-    polyData = shallowCopy(f.GetOutput())
-    points = vtkNumpy.getNumpyFromVtk(dataObj, 'Points')
+    polyData = shallowCopy(polyData)
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
     dist = np.dot(points - origin, normal)
     vtkNumpy.addNumpyToVtk(polyData, dist, 'dist_to_plane')
 
@@ -443,12 +452,12 @@ def addCoordArraysToPolyData(polyData):
 
 def getDebugRevolutionData():
     dataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../drc-data'))
-    #filename = os.path.join(dataDir, 'valve_wall.vtp')
+    filename = os.path.join(dataDir, 'valve_wall.vtp')
     #filename = os.path.join(dataDir, 'bungie_valve.vtp')
     #filename = os.path.join(dataDir, 'cinder-blocks.vtp')
     #filename = os.path.join(dataDir, 'cylinder_table.vtp')
     #filename = os.path.join(dataDir, 'debris.vtp')
-    filename = os.path.join(dataDir, 'rev1.vtp')
+    #filename = os.path.join(dataDir, 'rev1.vtp')
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
 
@@ -1065,57 +1074,53 @@ def startInteractiveLineDraw(blockDimensions):
 def startValveSegmentation():
 
 
-    segmentValveByWallPlane()
-    return
-
-
-    if om.findObjectByName('selected planes'):
-        segmentValveByWallPlane()
-        return
-
     picker = PointPicker()
     addViewPicker(picker)
     picker.enabled = True
     picker.start()
     picker.annotationFunc = segmentValveByAnnotation
-    om.removeFromObjectModel(om.findObjectByName('valve affordance'))
-    om.removeFromObjectModel(om.findObjectByName('valve axes'))
-    om.removeFromObjectModel(om.findObjectByName('annotation'))
+    #om.removeFromObjectModel(om.findObjectByName('valve affordance'))
+    #om.removeFromObjectModel(om.findObjectByName('valve axes'))
+    #om.removeFromObjectModel(om.findObjectByName('annotation'))
 
 
-def segmentValveByWallPlane():
+def segmentValveByWallPlane(expectedValveRadius, point):
 
     # find wall plane
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
+    cameraPos = np.array(getSegmentationView().camera().GetPosition())
 
-    bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
+    #bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
+    bodyX = point - cameraPos
+    bodyX /= np.linalg.norm(bodyX)
 
-    polyData, origin, normal  = applyPlaneFit(polyData, expectedNormal=-bodyX, returnOrigin=True)
+    polyData, origin, normal  = applyPlaneFit(polyData, expectedNormal=-bodyX, searchOrigin=point, searchRadius = 0.3, returnOrigin=True)
 
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
-    updatePolyData(wallPoints, 'valve wall')
+    updatePolyData(wallPoints, 'valve wall', parent=getDebugFolder(), visible=False)
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.05, 0.4])
 
-    updatePolyData(searchRegion, 'valve search region')
+    updatePolyData(searchRegion, 'valve search region', parent=getDebugFolder(), visible=False)
 
 
     searchRegion, origin, _  = applyPlaneFit(searchRegion, expectedNormal=normal, perpendicularAxis=normal, returnOrigin=True)
     searchRegion = thresholdPoints(searchRegion, 'dist_to_plane', [-0.01, 0.01])
 
-    updatePolyData(searchRegion, 'valve search region 2')
+    updatePolyData(searchRegion, 'valve search region 2', parent=getDebugFolder(), visible=False)
 
 
     largestCluster = extractLargestCluster(searchRegion)
 
-    updatePolyData(largestCluster, 'valve cluster')
+    updatePolyData(largestCluster, 'valve cluster', parent=getDebugFolder(), visible=False)
 
 
-    polyData, circleFit = extractCircle(largestCluster, distanceThreshold=0.01, radiusLimit=[0.19, 0.21])
-    updatePolyData(polyData, 'circle fit', visible=False)
+    radiusLimit = [expectedValveRadius - 0.01, expectedValveRadius + 0.01] if expectedValveRadius else None
+    polyData, circleFit = extractCircle(largestCluster, distanceThreshold=0.01, radiusLimit=radiusLimit)
+    updatePolyData(polyData, 'circle fit', parent=getDebugFolder(), visible=False)
 
 
     #polyData, circleFit = extractCircle(polyData, distanceThreshold=0.01)
@@ -1208,6 +1213,7 @@ class PointPicker(TimerCallback):
         self.targetFps = 30
         self.enabled = False
         self.numberOfPoints = numberOfPoints
+        self.annotationObj = None
         self.clear()
 
     def clear(self):
@@ -1232,6 +1238,8 @@ class PointPicker(TimerCallback):
     def finish(self):
 
         self.enabled = False
+        om.removeFromObjectModel(self.annotationObj)
+
         points = [p.copy() for p in self.points]
         if self.annotationFunc is not None:
             self.annotationFunc(*points)
@@ -1262,8 +1270,8 @@ class PointPicker(TimerCallback):
             d.addLine(points[0], points[-1])
 
 
-        obj = updatePolyData(d.getPolyData(), 'annotation')
-        obj.setProperty('Color', QtGui.QColor(0, 255, 0))
+        self.annotationObj = updatePolyData(d.getPolyData(), 'annotation', parent=getDebugFolder())
+        self.annotationObj.setProperty('Color', QtGui.QColor(0, 255, 0))
 
 
     def tick(self):
@@ -1726,6 +1734,15 @@ def startBoundedPlaneSegmentation(expectedNormal):
     picker.enabled = True
     picker.start()
     picker.annotationFunc = functools.partial(segmentBoundedPlaneByAnnotation, expectedNormal)
+
+
+def startValveSegmentationByWallPlane(expectedValveRadius):
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentValveByWallPlane, expectedValveRadius)
 
 
 def segmentBoundedPlaneByAnnotation(expectedNormal, point):
