@@ -16,12 +16,12 @@ def _updateSysPath():
                 'vtk/__init__.py'
                 ]
 
-    buildDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
+    baseDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../../src'))
 
     searchPaths = []
-    searchPaths.append(os.path.join(buildDir, 'PointCloudLibraryPlugin/lib'))
-    searchPaths.append(os.path.join(buildDir, 'vtk/Wrapping/Python'))
-    searchPaths.append(os.path.join(buildDir, 'vtk/bin'))
+    searchPaths.append(os.path.join(baseDir, 'PointCloudLibraryPlugin-build/lib'))
+    searchPaths.append(os.path.join(baseDir, 'vtk-build/Wrapping/Python'))
+    searchPaths.append(os.path.join(baseDir, 'vtk-build/bin'))
 
     for library in libraries:
         path = findFileInPaths(library, searchPaths)
