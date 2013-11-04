@@ -303,7 +303,7 @@ class MapServerSource(TimerCallback):
         polyData = vtk.vtkPolyData()
         self.reader.GetDataForMapId(mapId, polyData)
 
-        if polyData.GetNumberOfPoints() < 20000:
+        if polyData.GetNumberOfPoints() < 10000:
 
             return
 

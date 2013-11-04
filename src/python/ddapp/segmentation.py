@@ -363,6 +363,11 @@ def cropToBox(polyData, params, expansionDistance=0.1):
     updatePolyData(polyData, 'cropped')
 
 
+def cropToSphere(polyData, origin, radius):
+    polyData = labelDistanceToPoint(polyData, origin)
+    return thresholdPoints(polyData, 'distance_to_point', [0, radius])
+
+
 def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100, maxClusterSize=1e6):
 
     f = pcl.vtkPCLEuclideanClusterExtraction()
@@ -1361,6 +1366,15 @@ def labelDistanceToLine(polyData, linePoint1, linePoint2, resultArrayName='dista
     return polyData
 
 
+def labelDistanceToPoint(polyData, point, resultArrayName='distance_to_point'):
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    points = points - point
+    dists = np.sqrt(np.sum(points**2, axis=1))
+    polyData = shallowCopy(polyData)
+    vtkNumpy.addNumpyToVtk(polyData, dists, resultArrayName)
+    return polyData
+
+
 def getRayFromDisplayPoint(view, displayPoint):
 
     worldPt1 = [0,0,0,0]
@@ -1716,8 +1730,31 @@ def startBoundedPlaneSegmentation(expectedNormal):
 
 def segmentBoundedPlaneByAnnotation(expectedNormal, point):
 
-    print expectedNormal, point
 
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    inputObj.setProperty('Visible', False)
+    polyData = shallowCopy(inputObj.polyData)
+
+    searchRegion = cropToSphere(polyData, point, radius=0.5)
+
+
+    updatePolyData(searchRegion, 'search region', parent=getDebugFolder(), visible=False)
+
+    _, origin, normal = applyPlaneFit(searchRegion, distanceThreshold=0.02, expectedNormal=expectedNormal, perpendicularAxis=expectedNormal, returnOrigin=True)
+
+    points = vtkNumpy.getNumpyFromVtk(searchRegion, 'Points')
+    dist = np.dot(points - origin, normal)
+    vtkNumpy.addNumpyToVtk(searchRegion, dist, 'dist_to_plane')
+
+
+    planePoints = thresholdPoints(searchRegion, 'dist_to_plane', [-0.01, 0.01])
+    scenePoints = thresholdPoints(searchRegion, 'dist_to_plane', [0.025, 10])
+
+    updatePolyData(planePoints, 'plane points', color=[1,0,0], alpha=0.3)
+    updatePolyData(scenePoints, 'scene points', color=[0,1,0], alpha=0.3)
+
+    #scenePoints = applyEuclideanClustering(scenePoints, clusterTolerance=0.10, minClusterSize=20, maxClusterSize=1e6)
+    #updatePolyData(scenePoints, 'scene points', colorByName='cluster_labels')
 
 
 
