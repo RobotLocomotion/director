@@ -329,7 +329,7 @@ class MapServerSource(TimerCallback):
         self.updateMap()
 
 
-def init(view, jointController):
+def init(view, jointController, useMapServer=False):
     global _multisenseItem
     global _view
 
@@ -343,12 +343,12 @@ def init(view, jointController):
     _multisenseItem = MultisenseItem(m)
     om.addToObjectModel(_multisenseItem, sensorsFolder)
 
-
-    mapServerSource = MapServerSource(callbackFunc=view.render)
-    mapServerObj = om.PolyDataItem('Map Server', mapServerSource.polyData, view)
-    mapServerObj.source = mapServerSource
-    mapServerSource.start()
-    om.addToObjectModel(mapServerObj, sensorsFolder)
+    if useMapServer:
+        mapServerSource = MapServerSource(callbackFunc=view.render)
+        mapServerObj = om.PolyDataItem('Map Server', mapServerSource.polyData, view)
+        mapServerObj.source = mapServerSource
+        mapServerSource.start()
+        om.addToObjectModel(mapServerObj, sensorsFolder)
 
     return _multisenseItem
 
