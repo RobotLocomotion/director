@@ -74,11 +74,12 @@ if useIk:
     models = []
 
     for name in modelsToLoad:
-        model = ikview.loadURDFModel(os.path.join(app.getURDFModelDir(), name))
+        model = ikview.loadURDFModel('/home/pat/source/drc/drc-trunk/software/models/mit_gazebo_models/mit_robot/model_LI_RI.urdf')
+        #model = ikview.loadURDFModel(os.path.join(app.getURDFModelDir(), name))
         om.addRobotModel(model, ikFolder)
         models.append(model)
-        if name != 'model_minimal_contact_fixedjoint_hands.urdf':
-            model.setVisible(False)
+        #if name != 'model_minimal_contact_fixedjoint_hands.urdf':
+        #    model.setVisible(False)
 
 
     useTable = False
@@ -111,10 +112,10 @@ if useIk:
 
 if usePerception:
 
-    urdfFile = os.path.join(app.getURDFModelDir(), 'model_minimal_contact_fixedjoint_hands.urdf')
+    #urdfFile = os.path.join(app.getURDFModelDir(), 'model_minimal_contact_fixedjoint_hands.urdf')
 
-    #mitRobotDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot)
-    #urdfFile = os.path.join(mitRobotDir, 'model_LI_RI.urdf')
+    mitRobotDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot')
+    urdfFile = os.path.join(mitRobotDir, 'model_LI_RI.urdf')
 
     robotStateModel = view.loadURDFModel(urdfFile)
 

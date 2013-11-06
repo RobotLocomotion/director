@@ -201,9 +201,16 @@ class AsyncIKCommunicator(TimerCallback):
 
     def grabCurrentLinkPose(self, linkName):
 
+
         pointInLink = '[0;0;0]'
-        if linkName in ('l_hand', 'r_hand'):
-            pointInLink = '[0.0;0.2;0.05]'
+
+
+        if linkName == 'l_hand':
+            #pointInLink = '[0.00179;0.13516;0.01176]' #sandia
+            pointInLink = '[0;0.11516;0.015]' #irobot
+        elif linkName == 'r_hand':
+            #pointInLink = '[-0.00179;-0.13516;-0.01176]' #sandia
+            pointInLink = '[0;-0.11516;-0.015]' #irobot
 
         commands = []
         commands.append('kinsol = doKinematics(r, q_end);')
@@ -231,8 +238,14 @@ class AsyncIKCommunicator(TimerCallback):
         positionConstraint = positionTarget + positionOffset
 
         pointInLink = '[0;0;0]'
-        if linkName in ('l_hand', 'r_hand'):
-            pointInLink = '[0.0;0.2;0.05]'
+
+        if linkName == 'l_hand':
+            #pointInLink = '[0.00179;0.13516;0.01176]' #sandia
+            pointInLink = '[0;0.11516;0.015]' #irobot
+        elif linkName == 'r_hand':
+            #pointInLink = '[-0.00179;-0.13516;-0.01176]' #sandia
+            pointInLink = '[0;-0.11516;-0.015]' #irobot
+
 
         t = vtk.vtkTransform()
         elements = [[t.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)]
@@ -243,7 +256,11 @@ class AsyncIKCommunicator(TimerCallback):
         commands.append('%s_position_bounds = [%r; %r; %r];' % (linkName, offsetBounds[0][1], offsetBounds[1][1], offsetBounds[2][1]))
         commands.append('{name}_point_in_body_frame = {link_pt};'.format(**formatArgs))
         commands.append('{name}_ref_frame = [{ref_frame}];'.format(**formatArgs))
-        commands.append('{name}_position_constraint = WorldPositionInFrameConstraint(r, {name}, {name}_point_in_body_frame, {name}_ref_frame, {name}_position_target - {name}_position_bounds, {name}_position_target + {name}_position_bounds, tspan);'.format(**formatArgs))
+
+        #commands.append('{name}_position_constraint = WorldPositionInFrameConstraint(r, {name}, {name}_point_in_body_frame, {name}_ref_frame, {name}_position_target - {name}_position_bounds, {name}_position_target + {name}_position_bounds, tspan);'.format(**formatArgs))
+
+        commands.append('{name}_position_constraint = WorldPositionConstraint(r, {name}, {name}_point_in_body_frame, {name}_position_target - {name}_position_bounds, {name}_position_target + {name}_position_bounds, tspan);'.format(**formatArgs))
+
         if execute:
             self.comm.sendCommands(commands)
         else:

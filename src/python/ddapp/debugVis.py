@@ -58,6 +58,16 @@ class DebugData(object):
             tube.Update()
             self.addPolyData(tube.GetOutput(), color)
 
+    def addFrame(self, frame, scale, tubeRadius=0.0):
+
+        origin = np.array([0.0, 0.0, 0.0])
+        axes = [[scale, 0.0, 0.0], [0.0, scale, 0.0], [0.0, 0.0, scale]]
+        colors = [[1,0,0], [0,1,0], [0,0,1]]
+        frame.TransformPoint(origin, origin)
+        for axis, color in zip(axes, colors):
+            frame.TransformVector(axis, axis)
+            self.addLine(origin, origin+axis, radius=tubeRadius, color=color)
+
     def addCircle(self, origin, normal, radius, color=[1,1,1]):
 
         cone = vtk.vtkConeSource()

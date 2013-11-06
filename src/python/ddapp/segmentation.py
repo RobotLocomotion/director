@@ -60,6 +60,31 @@ class BlockAffordanceItem(om.AffordanceItem):
         affordance.publishAffordance(aff)
 
 
+class FrameAffordanceItem(om.AffordanceItem):
+
+    def setAffordanceParams(self, params):
+        self.params = params
+        assert 'otdf_type' in params
+
+    def updateParamsFromActorTransform(self):
+
+        t = self.actor.GetUserTransform()
+
+        xaxis = np.array(t.TransformVector([1,0,0]))
+        yaxis = np.array(t.TransformVector([0,1,0]))
+        zaxis = np.array(t.TransformVector([0,0,1]))
+        self.params['xaxis'] = xaxis
+        self.params['yaxis'] = yaxis
+        self.params['zaxis'] = zaxis
+        self.params['origin'] = t.GetPosition()
+
+
+    def publish(self):
+        self.updateParamsFromActorTransform()
+        aff = affordance.createFrameAffordance(self.params)
+        affordance.publishAffordance(aff)
+
+
 class CylinderAffordanceItem(om.AffordanceItem):
 
     def setAffordanceParams(self, params):
@@ -188,6 +213,14 @@ def thresholdPoints(polyData, arrayName, thresholdRange):
     f.Update()
     return shallowCopy(f.GetOutput())
 
+
+def transformPolyData(polyData, transform):
+
+    t = vtk.vtkTransformPolyDataFilter()
+    t.SetTransform(transform)
+    t.SetInput(shallowCopy(polyData))
+    t.Update()
+    return shallowCopy(t.GetOutput())
 
 
 def cropToLineSegment(polyData, point1, point2):
@@ -846,7 +879,6 @@ def generateFeetForValve():
     #publishSteppingGoal(lfootFrame, rfootFrame)
 
 
-
 def generateFeetForDebris():
 
     aff = om.findObjectByName('board A')
@@ -885,6 +917,41 @@ def generateFeetForDebris():
     #d.addLine(valveFrame.GetPosition(), stanceFrame.GetPosition())
     #updatePolyData(d.getPolyData(), 'stance debug')
     #publishSteppingGoal(lfootFrame, rfootFrame)
+
+
+def generateFeetForWye():
+
+    aff = om.findObjectByName('wye points')
+    if not aff:
+        return
+
+    params = aff.params
+
+    origin = np.array(params['origin'])
+    origin[2] = 0.0
+
+    yaxis = params['xaxis']
+    xaxis = -params['zaxis']
+    zaxis = np.cross(xaxis, yaxis)
+
+    stanceWidth = 0.20
+    stanceRotation = 0.0
+    stanceOffset = [-0.48, -0.08, 0]
+
+    affGroundFrame = getTransformFromAxes(xaxis, yaxis, zaxis)
+    affGroundFrame.PostMultiply()
+    affGroundFrame.Translate(origin)
+
+    stanceFrame, lfootFrame, rfootFrame = getFootFramesFromReferenceFrame(affGroundFrame, stanceWidth, stanceRotation, stanceOffset)
+
+    showFrame(affGroundFrame, 'affordance ground frame', parent=aff, scale=0.15, visible=False)
+    lfoot = showFrame(lfootFrame, 'lfoot frame', parent=aff, scale=0.15)
+    rfoot = showFrame(rfootFrame, 'rfoot frame', parent=aff, scale=0.15)
+
+    for obj in [lfoot, rfoot]:
+        obj.addToView(app.getDRCView())
+
+    publishStickyFeet(lfootFrame, rfootFrame)
 
 
 def getFootFramesFromReferenceFrame(referenceFrame, stanceWidth, stanceRotation, stanceOffset):
@@ -1071,19 +1138,6 @@ def startInteractiveLineDraw(blockDimensions):
     picker.annotationFunc = functools.partial(createLine, blockDimensions)
 
 
-def startValveSegmentation():
-
-
-    picker = PointPicker()
-    addViewPicker(picker)
-    picker.enabled = True
-    picker.start()
-    picker.annotationFunc = segmentValveByAnnotation
-    #om.removeFromObjectModel(om.findObjectByName('valve affordance'))
-    #om.removeFromObjectModel(om.findObjectByName('valve axes'))
-    #om.removeFromObjectModel(om.findObjectByName('annotation'))
-
-
 def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
 
@@ -1187,6 +1241,62 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     obj.updateParamsFromActorTransform()
 
 
+def segmentWye(point1, point2):
+
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, returnOrigin=True)
+
+
+    wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(wallPoints, 'wall points', parent=getDebugFolder(), visible=False)
+
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
+    searchRegion = cropToSphere(searchRegion, point2, 0.30)
+    wyePoints = extractLargestCluster(searchRegion)
+
+
+
+
+    zaxis = normal
+    yaxis = [0,0,-1]
+    xaxis = np.cross(yaxis, zaxis)
+    yaxis = np.cross(zaxis, xaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(point2)
+
+
+
+    wyePoints = transformPolyData(wyePoints, t.GetLinearInverse())
+
+    wyeObj = showPolyData(wyePoints, 'wye points', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    wyeObj.actor.SetUserTransform(t)
+    showFrame(t, 'wye frame', parent=wyeObj, visible=True)
+
+    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name='wye', otdf_type='wye')
+    wyeObj.setAffordanceParams(params)
+    wyeObj.updateParamsFromActorTransform()
+
+    '''
+    obj = updatePolyData(d.getPolyData(), 'valve affordance', cls=CylinderAffordanceItem, parent='affordances')
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+
+    params = dict(axis=zaxis, radius=radius, length=zwidth, origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=radius, ywidth=radius, zwidth=zwidth)
+
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
+    '''
+
+
+
+
 def pickDataSet(displayPoint, tolerance=0.01):
 
     view = app.getCurrentRenderView()
@@ -1231,6 +1341,7 @@ class PointPicker(TimerCallback):
         self.enabled = False
         self.numberOfPoints = numberOfPoints
         self.annotationObj = None
+        self.drawLines = True
         self.clear()
 
     def clear(self):
@@ -1239,10 +1350,14 @@ class PointPicker(TimerCallback):
         self.annotationFunc = None
         self.lastMovePos = [0, 0]
 
-    def onMouseMove(self, displayPoint):
+    def onMouseMove(self, displayPoint, modifiers=None):
         self.lastMovePos = displayPoint
 
-    def onMousePress(self, displayPoint):
+    def onMousePress(self, displayPoint, modifiers=None):
+
+        #print 'mouse press:', modifiers
+        #if not modifiers:
+        #    return
 
         for i in xrange(self.numberOfPoints):
             if self.points[i] is None:
@@ -1277,14 +1392,15 @@ class PointPicker(TimerCallback):
             if p is not None:
                 d.addSphere(p, radius=0.01)
 
-        # draw lines
-        for a, b in zip(points, points[1:]):
-            if b is not None:
-                d.addLine(a, b)
+        if self.drawLines:
+            # draw lines
+            for a, b in zip(points, points[1:]):
+                if b is not None:
+                    d.addLine(a, b)
 
-        # connect end points
-        if points[-1] is not None:
-            d.addLine(points[0], points[-1])
+            # connect end points
+            if points[-1] is not None:
+                d.addLine(points[0], points[-1])
 
 
         self.annotationObj = updatePolyData(d.getPolyData(), 'annotation', parent=getDebugFolder())
@@ -1324,10 +1440,10 @@ class LineDraw(TimerCallback):
         self.lastMovePos = [0, 0]
         self.renderer.RemoveActor2D(self.line)
 
-    def onMouseMove(self, displayPoint):
+    def onMouseMove(self, displayPoint, modifiers=None):
         self.lastMovePos = displayPoint
 
-    def onMousePress(self, displayPoint):
+    def onMousePress(self, displayPoint, modifiers=None):
 
         if self.p1 is None:
             self.p1 = list(self.lastMovePos)
@@ -1762,6 +1878,16 @@ def startValveSegmentationByWallPlane(expectedValveRadius):
     picker.annotationFunc = functools.partial(segmentValveByWallPlane, expectedValveRadius)
 
 
+def startWyeSegmentation():
+
+    picker = PointPicker(numberOfPoints=2)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentWye)
+
+
 def segmentBoundedPlaneByAnnotation(expectedNormal, point):
 
 
@@ -2038,10 +2164,10 @@ def segmentationViewEventFilter(obj, event):
                 continue
 
             if event.type() == QtCore.QEvent.MouseMove:
-                picker.onMouseMove(mapMousePosition(obj, event))
+                picker.onMouseMove(mapMousePosition(obj, event), event.modifiers())
                 eventFilter.setEventHandlerResult(True)
             elif event.type() == QtCore.QEvent.MouseButtonPress:
-                picker.onMousePress(mapMousePosition(obj, event))
+                picker.onMousePress(mapMousePosition(obj, event), event.modifiers())
                 eventFilter.setEventHandlerResult(True)
 
 

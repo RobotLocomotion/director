@@ -1,6 +1,10 @@
 
 s = IKServer();
-s = s.addRobot('model_minimal_contact_fixedjoint_hands');
+
+robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_fixedjoint_hands.urdf'];
+%robotURDF = '/home/pat/source/drc/drc-trunk/software/models/mit_gazebo_models/mit_robot/model_LN_RI.urdf';
+
+s = s.addRobot(robotURDF);
 %s = s.addAffordance('table');
 s = s.setupCosts();
 s = s.loadNominalData();

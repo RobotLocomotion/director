@@ -85,9 +85,8 @@ classdef IKServer
         end
 
 
-        function obj = addRobot(obj, modelName)
+        function obj = addRobot(obj, filename)
 
-            filename = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/', modelName, '.urdf'];
             options = struct('floating', true);
             xyz = zeros(3,1);
             rpy = zeros(3,1);

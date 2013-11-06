@@ -42,6 +42,41 @@ def createCylinderAffordance(params):
     return aff
 
 
+def createFrameAffordance(params):
+
+    aff = lcmdrc.affordance_t()
+
+    origin = params['origin']
+    xaxis = params['xaxis']
+    yaxis = params['yaxis']
+    zaxis = params['zaxis']
+
+
+    orientation = transformUtils.orientationFromAxes(xaxis, yaxis, zaxis)
+
+    aff.utime = 0
+    aff.otdf_type = params.get('otdf_type') or 'box'
+    aff.friendly_name = params.get('friendly_name') or 'box'
+    aff.uid = 0
+    aff.map_id = 0
+    aff.aff_store_control = lcmdrc.affordance_t.NEW
+    aff.origin_xyz = origin
+    aff.origin_rpy = orientation
+
+    aff.nparams = 0
+    aff.param_names = []
+    aff.params = []
+
+    aff.nstates = 0
+
+    aff.bounding_xyz = [0,0,0]
+    aff.bounding_rpy = [0,0,0]
+    aff.bounding_lwh = [0,0,0]
+
+    aff.modelfile = ''
+
+    return aff
+
 
 def createBoxAffordance(params):
 
