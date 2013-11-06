@@ -213,7 +213,9 @@ class MultiSenseSource(TimerCallback):
         poseName = 'ESTIMATED_ROBOT_STATE'
         pose = robotstate.robotStateToDrakePose(robotState)
         self.jointController.addPose(poseName, pose)
-        self.jointController.setPose(poseName)
+
+        for model in self.jointController.models:
+            model.setEstRobotState(robotState)
 
         self.updateDebugItems()
 

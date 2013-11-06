@@ -95,9 +95,9 @@ std::vector<std::string> getEstRobotStateJointNames()
   names.push_back("r_arm_elx");
   names.push_back("r_arm_uwy");
   names.push_back("r_arm_mwx");
+  names.push_back("hokuyo_joint");
 
   /*
-  names.push_back("hokuyo_joint");
   names.push_back("pre_spindle_cal_x_joint");
   names.push_back("pre_spindle_cal_y_joint");
   names.push_back("pre_spindle_cal_z_joint");

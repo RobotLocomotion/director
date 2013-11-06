@@ -112,6 +112,10 @@ if useIk:
 if usePerception:
 
     urdfFile = os.path.join(app.getURDFModelDir(), 'model_minimal_contact_fixedjoint_hands.urdf')
+
+    #mitRobotDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot)
+    #urdfFile = os.path.join(mitRobotDir, 'model_LI_RI.urdf')
+
     robotStateModel = view.loadURDFModel(urdfFile)
 
     robotStateJointController = jointcontrol.JointController([robotStateModel])
