@@ -3,6 +3,8 @@ import ddapp.applogic as app
 from ddapp import affordance
 from shallowCopy import shallowCopy
 import ddapp.vtkAll as vtk
+import numpy as np
+from PythonQt import QtCore, QtGui
 
 class BlockAffordanceItem(om.AffordanceItem):
 
