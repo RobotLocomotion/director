@@ -134,7 +134,7 @@ class PolyDataItem(ObjectModelItem):
 
         self.polyData = polyData
         self.mapper.SetInput(polyData)
-        self.colorBy(arrayName)
+        self.colorBy(arrayName, lut=self.mapper.GetLookupTable())
         self._renderAllViews()
 
     def getColorByArrayName(self):
@@ -163,7 +163,8 @@ class PolyDataItem(ObjectModelItem):
         if not lut:
             lut = vtk.vtkLookupTable()
             lut.SetNumberOfColors(256)
-            lut.SetHueRange(0.667, 0)
+            #lut.SetHueRange(0.667, 0)
+            lut.SetHueRange(0, 0.667)
             lut.Build()
 
         self.mapper.SetLookupTable(lut)

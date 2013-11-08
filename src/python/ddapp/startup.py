@@ -20,6 +20,7 @@ from ddapp import tdx
 from ddapp import perception
 from ddapp import segmentation
 from ddapp import vtkNumpy as vnp
+from ddapp import visualization as vis
 from ddapp.timercallback import TimerCallback
 
 import numpy as np
@@ -43,7 +44,7 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = False
+useIk = True
 usePerception = True
 useSpreadsheet = False
 
@@ -68,18 +69,13 @@ if useIk:
     ikFolder = om.addContainer('Drake IK')
     om.addPlaceholder('matlab server', om.Icons.Matlab, ikFolder)
 
-    #modelsToLoad = ['model_minimal_contact_fixedjoint_hands.urdf', 'model.urdf',
-    #                'model_minimal_contact.urdf', 'model_minimal_contact_point_hands.urdf']
-    modelsToLoad = ['model_minimal_contact_fixedjoint_hands.urdf']
-    models = []
+    #urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_fixedjoint_hands.urdf')
+    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_LS_RI.urdf')
 
-    for name in modelsToLoad:
-        model = ikview.loadURDFModel('/home/pat/source/drc/drc-trunk/software/models/mit_gazebo_models/mit_robot/model_LI_RI.urdf')
-        #model = ikview.loadURDFModel(os.path.join(app.getURDFModelDir(), name))
-        om.addRobotModel(model, ikFolder)
-        models.append(model)
-        #if name != 'model_minimal_contact_fixedjoint_hands.urdf':
-        #    model.setVisible(False)
+    models = []
+    model = ikview.loadURDFModel(urdfFile)
+    om.addRobotModel(model, ikFolder)
+    models.append(model)
 
 
     useTable = False
@@ -134,6 +130,37 @@ if usePerception:
         robotStatePose = robotStateJointController.poses[poseName]
         s.sendPoseToServer(robotStatePose, poseName)
         s.forcePose(poseName)
+
+
+    def setupFinger(pos):
+
+        grabRobotState()
+        p = perception._multisenseItem.model.revPolyData
+        vis.showPolyData(p, 'lidar', alpha=0.3)
+        t = s.grabCurrentLinkPose('l_hand')
+        vis.showFrame(t, 'lhand')
+
+        fingerTip = np.array(pos)
+
+        handLinkPos = np.array(t.GetPosition())
+        posOffset = fingerTip - handLinkPos
+
+        ft = vtk.vtkTransform()
+        ft.DeepCopy(t)
+
+        ft.PostMultiply()
+        ft.Translate(posOffset)
+
+        vis.showFrame(ft, 'fingerTip')
+
+        hand_to_finger = vtk.vtkTransform()
+        hand_to_finger.DeepCopy(ft)
+        hand_to_finger.Concatenate(t.GetLinearInverse())
+
+        posOffset = np.array(hand_to_finger.GetPosition())
+
+        s.setPointInLink('l_hand', posOffset)
+
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)

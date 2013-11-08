@@ -30,6 +30,9 @@
 
 #include <math.h>
 
+#include <QMap>
+#include <QDir>
+
 using std::map;
 using std::vector;
 using std::string;
@@ -154,6 +157,9 @@ std::vector<std::string> getDofNames()
   names.push_back("neck_ay");
   return names;
 }
+
+
+QMap<QString, QString> PackageSearchPaths;
 
 int feq (double a, double b)
 {
@@ -347,7 +353,18 @@ public:
       //cout << "replacing " << fname;
       boost::replace_first(fname,"package://","");
       string package = fname.substr(0,fname.find_first_of("/"));
-      boost::replace_first(fname,package,rospack(package));
+
+      QString packageDir = ddDrakeModel::findPackageDirectory(package.c_str());
+      if (packageDir.isEmpty())
+      {
+        std::cout << "Failed to locate package: " << package << std::endl;
+        return std::string();
+      }
+
+
+      //boost::replace_first(fname,package,rospack(package));
+
+      boost::replace_first(fname, package, packageDir.toAscii().data());
       //cout << " with " << fname << endl;
     }
     else
@@ -895,4 +912,16 @@ void ddDrakeModel::setVisible(bool visible)
 bool ddDrakeModel::visible() const
 {
   return this->Internal->Visible;
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::addPackageSearchPath(const QString& searchPath)
+{
+  PackageSearchPaths[QDir(searchPath).dirName()] = searchPath;
+}
+
+//-----------------------------------------------------------------------------
+QString ddDrakeModel::findPackageDirectory(const QString& packageName)
+{
+  return PackageSearchPaths.value(packageName);
 }

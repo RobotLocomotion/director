@@ -4,6 +4,7 @@ import numpy as np
 from ddapp import midi
 from ddapp.timercallback import TimerCallback
 
+import ddapp.visualization as vis
 
 def addWidgetsToDict(widgets, d):
 
@@ -138,11 +139,11 @@ class IKEditor(object):
         linkName = self.ui.PositionLinkNameCombo.currentText
         assert linkName == self.server.activePositionConstraint
 
-        self.server.grabCurrentLinkPose(linkName)
+        transform = self.server.grabCurrentLinkPose(linkName)
         self.positionConstraintComboChanged(linkName)
 
         if self.frameWidget:
-            self.frameWidget.showWithLink(linkName)
+            self.frameWidget.showWithLink(linkName, transform)
 
     def updateQuasistaticConstraint(self):
         s = self.server
@@ -288,6 +289,44 @@ class IKEditor(object):
         self.onCostAdded()
         self.updateEditPositionConstraint()
 
+    def showLinkFrames(self):
+
+        linkNames = [
+          'l_clav',
+          'l_farm',
+          'l_foot',
+          'l_hand',
+          'l_larm',
+          'l_lglut',
+          'l_lleg',
+          'l_scap',
+          'l_talus',
+          'l_uarm',
+          'l_uglut',
+          'l_uleg',
+          'ltorso',
+          'mtorso',
+          'pelvis',
+          'r_clav',
+          'r_farm',
+          'r_foot',
+          'r_hand',
+          'r_larm',
+          'r_lglut',
+          'r_lleg',
+          'r_scap',
+          'r_talus',
+          'r_uarm',
+          'r_uglut',
+          'r_uleg',
+          'utorso',
+          'head',
+        ]
+
+        for linkName in linkNames:
+            frame = self.server.grabCurrentLinkPose(linkName)
+            vis.updateFrame(frame, linkName, parent='robot frames', visible=False)
+
 
 
 class MidiOffsetEditor(TimerCallback):
@@ -411,10 +450,10 @@ class WidgetCallback(TimerCallback):
         self.rep = self.widget.GetRepresentation()
         self.rep.SetWorldSize(0.5)
 
-    def showWithLink(self, linkName):
+    def showWithLink(self, linkName, transform):
 
         self.linkName = linkName
-        self.transform = self.editor.server.getLinkFrame(linkName)
+        self.transform = transform
         self.lastMTime = self.transform.GetMTime()
         self.rep.SetTransform(self.transform)
         self.widget.EnabledOn()
@@ -426,7 +465,19 @@ class WidgetCallback(TimerCallback):
 
     def updateTargets(self):
         self.editor.server.setLinkConstraintsWithFrame(self.linkName, self.transform)
+
+        bodyAxis, _ = self.editor.server.getGazeAxes(self.linkName)
+        worldAxis = np.zeros(3)
+
+        #print 'using %s body axis:' % (self.linkName), bodyAxis
+
+        self.transform.TransformVector(bodyAxis, worldAxis)
+
+        #print 'transformed to world axis:', worldAxis
+
+        self.editor.server.setGazeAxes(self.linkName, bodyAxis, worldAxis)
         self.editor.updateIk()
+
 
     def tick(self):
 

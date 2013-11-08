@@ -1,6 +1,7 @@
 import vtkAll as vtk
-import vtkDRCFiltersPython as drcFilters
-
+from ddapp import botpy
+import math
+import numpy as np
 
 def getTransformFromAxes(xaxis, yaxis, zaxis):
 
@@ -34,5 +35,33 @@ def orientationFromNormal(normal):
 def orientationFromAxes(xaxis, yaxis, zaxis):
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
     rpy = [0.0, 0.0, 0.0]
-    drcFilters.vtkMultisenseSource.GetBotRollPitchYaw(t, rpy)
+    vtk.vtkMultisenseSource.GetBotRollPitchYaw(t, rpy)
     return rpy
+
+
+def transformFromPose(position, quaternion):
+    '''
+    Returns a vtkTransform
+    '''
+    rotationMatrix = np.zeros((3,3))
+    vtk.vtkMath.QuaternionToMatrix3x3(quaternion, rotationMatrix)
+
+    mat = np.eye(4)
+    mat[:3,:3] = rotationMatrix
+    mat[:3,3] = position
+
+    t = vtk.vtkTransform()
+    t.SetMatrix(mat.flatten())
+    return t
+
+
+def poseFromTransform(transform):
+    '''
+    Returns position, quaternion
+    '''
+    angleAxis = range(4)
+    transform.GetOrientationWXYZ(angleAxis)
+    angleAxis[0] = math.radians(angleAxis[0])
+    pos = transform.GetPosition()
+    quat = botpy.angle_axis_to_quat(angleAxis[0], angleAxis[1:])
+    return np.array(pos), np.array(quat)

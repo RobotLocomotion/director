@@ -31,6 +31,9 @@ public:
   void setVisible(bool visible);
   bool visible() const;
 
+  static void addPackageSearchPath(const QString& searchPath);
+  static QString findPackageDirectory(const QString& packageName);
+
 signals:
 
   void modelChanged();

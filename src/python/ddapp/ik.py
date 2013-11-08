@@ -6,6 +6,7 @@ from ddapp.timercallback import TimerCallback
 from ddapp import matlab
 from ddapp import botpy
 from ddapp.jointcontrol import JointController
+from ddapp.transformUtils import transformFromPose, poseFromTransform
 
 import vtk
 
@@ -21,14 +22,24 @@ class AsyncIKCommunicator(TimerCallback):
         self.positionOffset = {}
         self.positionOffsetBounds = {}
         self.positionTargets = {}
+        self.pointInLink = {}
         self.orientationOffset = {}
         self.orientationTargets = {}
+        self.gazeAxes = {}
         self.activePositionConstraint = 'l_hand'
         self.quasiStaticConstraintName = 'both_feet_qsc'
         self.seedName = 'q_end'
         self.nominalName = 'q_nom'
         self.infoFunc = None
         self.poses = None
+
+        #self.setPointInLink('l_hand', [0, 0.11516, 0.015]) #irobot
+        #self.setPointInLink('r_hand', [0, -0.11516, -0.015]) #irobot
+
+        #self.setPointInLink('l_hand', [0.00179, 0.13516, 0.01176]) #sandia
+        #self.setPointInLink('r_hand', [-0.00179, -0.13516, -0.01176]) #sandia
+
+        self.setGazeAxes('utorso', [0,0,1], [0,0,1])
 
         self.constraintNames = [
            'self_collision_constraint',
@@ -169,31 +180,20 @@ class AsyncIKCommunicator(TimerCallback):
     def getOrientationOffset(self, linkName):
         return self.orientationOffset.get(linkName, np.array([0.0, 0.0, 0.0]))
 
+    def getGazeAxes(self, linkName):
+        return self.gazeAxes.get(linkName, (np.array([1.0, 0.0, 0.0]), np.array([1.0, 0.0, 0.0])))
+
+    def setGazeAxes(self, linkName, bodyAxis, worldAxis):
+        self.gazeAxes[linkName] = (np.array(bodyAxis), np.array(worldAxis))
+
     def setOrientationOffset(self, linkName, offset):
         self.orientationOffset[linkName] = np.array(offset)
 
-    def getLinkFrame(self, linkName):
-
-        quat = self.getOrientationTarget(linkName)
-        pos = self.getPositionTarget(linkName)
-
-        rotationMatrix = np.zeros((3,3))
-        vtk.vtkMath.QuaternionToMatrix3x3(quat, rotationMatrix)
-
-        mat = np.eye(4)
-        mat[:3,:3] = rotationMatrix
-        mat[:3,3] = pos
-
-        t = vtk.vtkTransform()
-        t.SetMatrix(mat.flatten())
-        return t
+    def setPointInLink(self, linkName, point):
+        self.pointInLink[linkName] = point
 
     def setLinkConstraintsWithFrame(self, linkName, frame):
-        angleAxis = range(4)
-        frame.GetOrientationWXYZ(angleAxis)
-        angleAxis[0] = math.radians(angleAxis[0])
-        pos = frame.GetPosition()
-        quat = botpy.angle_axis_to_quat(angleAxis[0], angleAxis[1:])
+        pos, quat = poseFromTransform(frame)
 
         self.setPositionTarget(linkName, pos)
         self.setOrientationTarget(linkName, quat)
@@ -201,33 +201,28 @@ class AsyncIKCommunicator(TimerCallback):
 
     def grabCurrentLinkPose(self, linkName):
 
-
-        pointInLink = '[0;0;0]'
-
-
-        if linkName == 'l_hand':
-            #pointInLink = '[0.00179;0.13516;0.01176]' #sandia
-            pointInLink = '[0;0.11516;0.015]' #irobot
-        elif linkName == 'r_hand':
-            #pointInLink = '[-0.00179;-0.13516;-0.01176]' #sandia
-            pointInLink = '[0;-0.11516;-0.015]' #irobot
+        #pointInLink = self.pointInLink.get(linkName, (0,0,0))
+        pointInLink = (0,0,0)
+        pointInLink = '[%s]' % (';'.join([repr(x) for x in pointInLink]))
 
         commands = []
         commands.append('kinsol = doKinematics(r, q_end);')
+        commands.append("%s = r.findLinkInd('%s');" % (linkName, linkName))
         commands.append('%s_pose = r.forwardKin(kinsol, %s, %s, 2);' % (linkName, linkName, pointInLink))
         commands.append('%s_position_target_start = %s_pose(1:3);' % (linkName, linkName))
         commands.append('%s_orient_target_start = %s_pose(4:7);' % (linkName, linkName))
         self.comm.sendCommands(commands)
 
         linkPosition = np.array(self.comm.getFloatArray('%s_position_target_start' % linkName))
-        linkOrientation = np.array(self.comm.getFloatArray('%s_orient_target_start' % linkName))
+        linkQuaternion = np.array(self.comm.getFloatArray('%s_orient_target_start' % linkName))
 
         self.setPositionTarget(linkName, linkPosition)
-        self.setOrientationTarget(linkName, linkOrientation)
+        self.setOrientationTarget(linkName, linkQuaternion)
         self.setPositionOffset(linkName, [0.0, 0.0, 0.0])
         self.setPositionOffsetBounds(linkName, [(0,0), (0,0), (0,0)])
         self.setOrientationOffset(linkName, [0.0, 0.0, 0.0])
 
+        return transformFromPose(linkPosition, linkQuaternion)
 
     def updatePositionConstraint(self, linkName, execute=True):
 
@@ -237,15 +232,8 @@ class AsyncIKCommunicator(TimerCallback):
         offsetBounds = self.getPositionOffsetBounds(linkName)
         positionConstraint = positionTarget + positionOffset
 
-        pointInLink = '[0;0;0]'
-
-        if linkName == 'l_hand':
-            #pointInLink = '[0.00179;0.13516;0.01176]' #sandia
-            pointInLink = '[0;0.11516;0.015]' #irobot
-        elif linkName == 'r_hand':
-            #pointInLink = '[-0.00179;-0.13516;-0.01176]' #sandia
-            pointInLink = '[0;-0.11516;-0.015]' #irobot
-
+        pointInLink = self.pointInLink.get(linkName, (0,0,0))
+        pointInLink = '[%s]' % (';'.join([repr(x) for x in pointInLink]))
 
         t = vtk.vtkTransform()
         elements = [[t.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)]
@@ -274,7 +262,23 @@ class AsyncIKCommunicator(TimerCallback):
         orientationConstraint = orientationTarget
         formatArgs = dict(name=linkName, w=orientationConstraint[0], x=orientationConstraint[1], y=orientationConstraint[2], z=orientationConstraint[3])
         commands.append('{name}_orient_target = [{w}; {x}; {y}; {z}];'.format(**formatArgs))
-        commands.append('{name}_orient_constraint = WorldQuatConstraint(r, {name}, {name}_orient_target, 0.005, tspan);'.format(**formatArgs))
+        commands.append('{name}_orient_constraint = WorldQuatConstraint(r, {name}, {name}_orient_target, 0.0, tspan);'.format(**formatArgs))
+        if execute:
+            self.comm.sendCommands(commands)
+        else:
+            return commands
+
+    def updateGazeConstraint(self, linkName, execute=True):
+
+        commands = []
+        bodyAxis, worldAxis = self.getGazeAxes(linkName)
+        theta = 0.02
+
+        formatArgs = dict(name=linkName)
+        commands.append('%s_gaze_theta = %s;' % (linkName, repr(theta)))
+        commands.append('%s_gaze_body_axis = [%s];' % (linkName, ';'.join([repr(x) for x in bodyAxis])))
+        commands.append('%s_gaze_world_axis = [%s];' % (linkName, ';'.join([repr(x) for x in worldAxis])))
+        commands.append('{name}_gaze_constraint = WorldGazeDirConstraint(r, {name}, {name}_gaze_body_axis, {name}_gaze_world_axis, {name}_gaze_theta, tspan);'.format(**formatArgs))
         if execute:
             self.comm.sendCommands(commands)
         else:
@@ -292,6 +296,8 @@ class AsyncIKCommunicator(TimerCallback):
                 commands.extend(self.updatePositionConstraint(constraintName.replace('_position_constraint', ''), execute=False))
             elif constraintName.endswith('orient_constraint'):
                 commands.extend(self.updateOrientationConstraint(constraintName.replace('_orient_constraint', ''), execute=False))
+            elif constraintName.endswith('gaze_constraint'):
+                commands.extend(self.updateGazeConstraint(constraintName.replace('_gaze_constraint', ''), execute=False))
 
 
         activeConstraintNames = list(self.activeConstraintNames)

@@ -2,7 +2,7 @@
 s = IKServer();
 
 robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_fixedjoint_hands.urdf'];
-%robotURDF = '/home/pat/source/drc/drc-trunk/software/models/mit_gazebo_models/mit_robot/model_LN_RI.urdf';
+%robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot/model_LN_RI.urdf'];
 
 s = s.addRobot(robotURDF);
 %s = s.addAffordance('table');
@@ -25,9 +25,7 @@ utorso = r.findLinkInd('utorso');
 pelvis = r.findLinkInd('pelvis');
 
 tspan = [0,1];
-gaze_theta = 0.02;
 shrink_factor = 0.5;
-closest_distance = 0.05;
 
 
 l_foot_pts = s.getLeftFootPoints();
@@ -37,5 +35,3 @@ both_feet_qsc = both_feet_qsc.setShrinkFactor(shrink_factor);
 both_feet_qsc = both_feet_qsc.addContact(r_foot, r_foot_pts);
 both_feet_qsc = both_feet_qsc.addContact(l_foot, l_foot_pts);
 both_feet_qsc = both_feet_qsc.setActive(true);
-
-utorso_gaze_constraint = WorldGazeDirConstraint(r, utorso, [0;0;1], [0;0;1], gaze_theta, tspan);

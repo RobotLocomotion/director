@@ -131,6 +131,19 @@ def setupToolBar():
     toolbar.addWidget(combo)
 
 
+def setupPackagePaths():
+
+    searchPaths = [
+        'ros_workspace/mit_drcsim_scripts',
+        'ros_workspace/sandia-hand/ros/sandia_hand_description',
+        'software/models/mit_gazebo_models/mit_robot',
+        'software/models/mit_gazebo_models/multisense_sl',
+        'software/models/mit_gazebo_models/handle_description',
+                  ]
+
+    for path in searchPaths:
+        PythonQt.dd.ddDrakeModel.addPackageSearchPath(os.path.join(getDRCBase(), path))
+
 def showErrorMessage(message, title='Error'):
     QtGui.QMessageBox.warning(getMainWindow(), title, message);
 
@@ -154,6 +167,8 @@ def startup(globals):
     _mainWindow.connect('resetCamera()', resetCamera)
     _mainWindow.connect('toggleStereoRender()', toggleStereoRender)
     _mainWindow.connect('toggleCameraTerrainMode()', toggleCameraTerrainMode)
+
+    setupPackagePaths()
 
     #setupToolBar()
 

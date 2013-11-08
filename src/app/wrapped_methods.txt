@@ -9,6 +9,9 @@ double ddDrakeModel::alpha() const;
 bool ddDrakeModel::visible() const;
 QString ddDrakeModel::filename() const;
 
+static void ddDrakeModel::addPackageSearchPath(const QString&);
+static QString ddDrakeModel::findPackageDirectory(const QString&);
+
 ddDrakeModel* ddDRCView::loadURDFModel(const QString&);
 QList<ddDrakeModel*> ddDRCView::models() const;
 void ddDRCView::unloadModel(ddDrakeModel*);
