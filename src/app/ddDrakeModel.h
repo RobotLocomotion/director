@@ -15,6 +15,7 @@ public:
   virtual ~ddDrakeModel();
 
   bool loadFromFile(const QString& filename);
+  bool loadFromXML(const QString& xmlString);
   const QString& filename() const;
 
   void addToRenderer(vtkRenderer* renderer);

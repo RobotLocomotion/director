@@ -163,8 +163,7 @@ class PolyDataItem(ObjectModelItem):
         if not lut:
             lut = vtk.vtkLookupTable()
             lut.SetNumberOfColors(256)
-            #lut.SetHueRange(0.667, 0)
-            lut.SetHueRange(0, 0.667)
+            lut.SetHueRange(0.667, 0)
             lut.Build()
 
         self.mapper.SetLookupTable(lut)

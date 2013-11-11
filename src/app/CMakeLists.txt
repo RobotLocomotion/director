@@ -29,6 +29,8 @@ qt4_wrap_cpp(moc_srcs
   ${decorator_file}
   ddDrakeModel.h
   ddDRCView.h
+  ddLCMSubscriber.h
+  ddLCMThread.h
   ddLumberSelection.h
   ddGLWidgetView.h
   ddMacrosManager.h
@@ -65,6 +67,7 @@ set(srcs
   ddDrakeModel.cpp
   ddDRCView.cpp
   ddLumberSelection.cpp
+  ddLCMThread.cpp
   ddGLWidgetView.cpp
   ddMacrosManager.cpp
   ddMainWindow.cpp

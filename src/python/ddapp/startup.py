@@ -44,7 +44,7 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = True
+useIk = False
 usePerception = True
 useSpreadsheet = False
 
@@ -164,3 +164,21 @@ if usePerception:
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
+
+
+
+
+'''
+import drc as lcmdrc
+from ddapp import lcmUtils
+
+def onRobotModel(m):
+    print 'onRobotModel'
+    model = view.loadURDFModelXML(m.urdf_xml_string)
+    sensorsFolder = om.getOrCreateContainer('sensors')
+    obj = om.addRobotModel(model, sensorsFolder)
+    obj.setProperty('Name', 'model publisher')
+
+lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
+'''
+

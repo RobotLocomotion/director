@@ -6,6 +6,27 @@ import ddapp.vtkAll as vtk
 import numpy as np
 from PythonQt import QtCore, QtGui
 
+
+def computeAToB(a,b):
+
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    t.Concatenate(b)
+    t.Concatenate(a.GetLinearInverse())
+    return t
+
+
+def assertAToB(a, b, a_to_b):
+
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    t.Concatenate(a)
+    t.Concatenate(a_to_b)
+
+    assert np.all(np.abs(np.array(t.GetPosition()) - np.array(b.GetPosition())) < 1e6)
+
+
+
 class BlockAffordanceItem(om.AffordanceItem):
 
     def setAffordanceParams(self, params):
@@ -27,11 +48,19 @@ class BlockAffordanceItem(om.AffordanceItem):
     def publish(self):
         self.updateParamsFromActorTransform()
         aff = affordance.createBoxAffordance(self.params)
-        #aff.otdf_type = 'cinderblockstep'
-        #aff.nparams = 0
-        #aff.params = []
-        #aff.param_names = []
         affordance.publishAffordance(aff)
+
+
+    def updateICPTransform(self, transform):
+        delta = computeAToB(self.icpTransformInitial, transform)
+        newUserTransform = vtk.vtkTransform()
+        newUserTransform.PostMultiply()
+        newUserTransform.Identity()
+        newUserTransform.Concatenate(self.baseTransform)
+        newUserTransform.Concatenate(delta)
+
+        self.actor.SetUserTransform(newUserTransform)
+        self._renderAllViews()
 
 
 class FrameAffordanceItem(om.AffordanceItem):
@@ -94,7 +123,6 @@ class FrameItem(om.PolyDataItem):
         self.colorBy('Axes')
         lut = self.mapper.GetLookupTable()
         lut.SetHueRange(0, 0.667)
-        #lut.SetHueRange(0.667, 0.0)
         lut.Build()
 
         self.actor.SetUserTransform(transform)

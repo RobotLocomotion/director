@@ -678,6 +678,14 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
 }
 
 
+URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromXML(const string &xmlString)
+{
+  URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
+  model->addURDFfromXML(xmlString, "");
+  return model;
+}
+
+
 } // end namespace
 
 //-----------------------------------------------------------------------------
@@ -827,6 +835,24 @@ bool ddDrakeModel::loadFromFile(const QString& filename)
   }
 
   this->Internal->FileName = filename;
+  this->Internal->Model = model;
+
+  MatrixXd q0 = MatrixXd::Zero(model->num_dof, 1);
+  model->doKinematics(q0.data());
+  model->updateModel();
+  return true;
+}
+
+//-----------------------------------------------------------------------------
+bool ddDrakeModel::loadFromXML(const QString& xmlString)
+{
+  URDFRigidBodyManipulatorVTK::Ptr model = loadVTKModelFromXML(xmlString.toAscii().data());
+  if (!model)
+  {
+    return false;
+  }
+
+  this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
 
   MatrixXd q0 = MatrixXd::Zero(model->num_dof, 1);

@@ -80,3 +80,22 @@ ddDrakeModel* ddDRCView::loadURDFModel(const QString& filename)
   this->connect(model, SIGNAL(modelChanged()), SLOT(render()));
   return model;
 }
+
+//-----------------------------------------------------------------------------
+ddDrakeModel* ddDRCView::loadURDFModelXML(const QString& xmlString)
+{
+  ddDrakeModel* model = new ddDrakeModel(this);
+
+  if (!model->loadFromXML(xmlString))
+  {
+    delete model;
+    return 0;
+  }
+
+  model->addToRenderer(this->renderer());
+  this->Internal->Models.append(model);
+  this->render();
+
+  this->connect(model, SIGNAL(modelChanged()), SLOT(render()));
+  return model;
+}

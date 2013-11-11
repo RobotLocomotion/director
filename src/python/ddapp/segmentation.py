@@ -11,6 +11,7 @@ import ddapp.applogic as app
 from ddapp import objectmodel as om
 from ddapp import perception
 from ddapp import lcmUtils
+from ddapp import transformUtils
 from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
 from ddapp.visualization import *
@@ -26,6 +27,7 @@ import pointCloudUtils
 import vtkPCLFiltersPython as pcl
 
 import drc as lcmdrc
+import bot_core as lcmbotcore
 
 
 eventFilters = {}
@@ -1048,6 +1050,36 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     obj.updateParamsFromActorTransform()
 
 
+
+
+_icpSub = None
+_icpCallbacks = []
+_icpTransforms = []
+
+def onICPCorrection(messageData):
+
+    print 'onICPCorrection'
+
+    messageClass = lcmbotcore.rigid_transform_t
+    m = messageClass.decode(messageData.data())
+    t = transformUtils.transformFromPose(m.trans, m.quat)
+
+    _icpTransforms.append(t)
+
+    for func in _icpCallbacks:
+        print 'calling callback...'
+        func(t)
+
+
+def initICPCallback():
+
+    global _icpSub
+    lcmThread = lcmUtils.getGlobalLCMThread()
+    _icpSub = PythonQt.dd.ddLCMSubscriber('HEAD_TO_LOCAL_CORRECTED', lcmThread)
+    _icpSub.connect('messageReceived(const QByteArray&)', onICPCorrection)
+    lcmThread.addSubscriber(_icpSub)
+
+
 def segmentWye(point1, point2):
 
 
@@ -1454,6 +1486,7 @@ def segmentBlockByAnnotation(blockDimensions, p1, p2, p3):
 
     obj = updatePolyData(cube, 'block affordance', cls=BlockAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
+
     obj.addToView(app.getDRCView())
 
     params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
@@ -1563,6 +1596,17 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     obj = showPolyData(cube, name, cls=BlockAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
+
+    print 'setting icp initial transform on affordance'
+    obj.baseTransform = vtk.vtkTransform()
+    obj.baseTransform.SetMatrix(t.GetMatrix())
+    obj.icpTransformInitial = _icpTransforms[-1] if len(_icpTransforms) else None
+
+    print 'setting base transform:', obj.baseTransform.GetPosition()
+    print 'setting initial icp:', obj.icpTransformInitial.GetPosition()
+
+
+    _icpCallbacks.append(obj.updateICPTransform)
 
     params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name=name)
     obj.setAffordanceParams(params)
@@ -2006,6 +2050,8 @@ def installEventFilter(view, func):
 def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
+
+    #initICPCallback()
 
     #activateSegmentationMode(debug=True)
 

@@ -17,6 +17,7 @@ public:
   const QList<ddDrakeModel*>& models() const;
 
   ddDrakeModel* loadURDFModel(const QString& filename);
+  ddDrakeModel* loadURDFModelXML(const QString& xmlString);
   void unloadModel(ddDrakeModel* model);
   void unloadModels();
 

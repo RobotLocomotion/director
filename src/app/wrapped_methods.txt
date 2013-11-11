@@ -1,4 +1,17 @@
 
+
+ddLCMThread::ddLCMThread();
+ddLCMThread::ddLCMThread(QObject*);
+ddLCMThread::~ddLCMThread();
+void ddLCMThread::stop();
+void ddLCMThread::addSubscriber(ddLCMSubscriber*);
+void ddLCMThread::removeSubscriber(ddLCMSubscriber*);
+
+ddLCMSubscriber::ddLCMSubscriber(const QString&);
+ddLCMSubscriber::ddLCMSubscriber(const QString&, QObject*);
+ddLCMSubscriber::~ddLCMSubscriber();
+void ddLCMSubscriber::setCallback(QVariant)
+
 int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QList<double>&);
 void ddDrakeModel::setEstRobotState(const QList<double>&);
@@ -13,6 +26,7 @@ static void ddDrakeModel::addPackageSearchPath(const QString&);
 static QString ddDrakeModel::findPackageDirectory(const QString&);
 
 ddDrakeModel* ddDRCView::loadURDFModel(const QString&);
+ddDrakeModel* ddDRCView::loadURDFModelXML(const QString&);
 QList<ddDrakeModel*> ddDRCView::models() const;
 void ddDRCView::unloadModel(ddDrakeModel*);
 void ddDRCView::unloadModels();
