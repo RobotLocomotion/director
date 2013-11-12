@@ -1088,7 +1088,7 @@ def segmentWye(point1, point2):
 
     viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
 
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, returnOrigin=True)
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
 
 
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
@@ -1097,8 +1097,6 @@ def segmentWye(point1, point2):
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
     searchRegion = cropToSphere(searchRegion, point2, 0.30)
     wyePoints = extractLargestCluster(searchRegion)
-
-
 
 
     zaxis = normal
@@ -1134,6 +1132,66 @@ def segmentWye(point1, point2):
     '''
 
 
+def segmentDrillWall(point1, point2, point3):
+
+    d = DebugData()
+
+    points = [point1, point2, point3]
+
+    # draw points
+    for p in points:
+        d.addSphere(p, radius=0.01)
+
+    for a, b in zip(points, points[1:] + [points[0]]):
+        d.addLine(a, b)
+
+    obj = updatePolyData(d.getPolyData(), 'drill wall points', parent=getDebugFolder())
+    obj.setProperty('Color', QtGui.QColor(0, 255, 0))
+
+
+def segmentDrill(point1, point2, point3):
+
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
+
+
+    tablePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(tablePoints, 'table points', parent=getDebugFolder(), visible=False)
+
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
+    searchRegion = cropToSphere(searchRegion, point2, 0.30)
+    drillPoints = extractLargestCluster(searchRegion)
+
+
+    zaxis = normal
+    yaxis = point3 - point2
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis = np.cross(zaxis, xaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+
+    drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
+    drillToButton = np.array([0.034091, 0.007616, -0.060168])
+    t.Translate(point2 - drillToTopPoint)
+
+    drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+
+    aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
+    aff.actor.SetUserTransform(t)
+    showFrame(t, 'drill frame', parent=aff, visible=False)
+
+    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='dewalt_button', otdf_type='dewalt_button')
+    aff.setAffordanceParams(params)
+    aff.updateParamsFromActorTransform()
+    aff.addToView(app.getDRCView())
 
 
 def pickDataSet(displayPoint, tolerance=0.01):
@@ -1711,13 +1769,13 @@ def startBlockSegmentation(dimensions):
     om.removeFromObjectModel(om.findObjectByName('annotation'))
 
 
-def startBoundedPlaneSegmentation(expectedNormal):
+def startBoundedPlaneSegmentation():
 
     picker = PointPicker(numberOfPoints=1)
     addViewPicker(picker)
     picker.enabled = True
     picker.start()
-    picker.annotationFunc = functools.partial(segmentBoundedPlaneByAnnotation, expectedNormal)
+    picker.annotationFunc = functools.partial(segmentBoundedPlaneByAnnotation)
 
 
 def startValveSegmentationByWallPlane(expectedValveRadius):
@@ -1739,7 +1797,26 @@ def startWyeSegmentation():
     picker.annotationFunc = functools.partial(segmentWye)
 
 
-def segmentBoundedPlaneByAnnotation(expectedNormal, point):
+def startDrillSegmentation():
+
+    picker = PointPicker(numberOfPoints=3)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDrill)
+
+def startDrillWallSegmentation():
+
+    picker = PointPicker(numberOfPoints=3)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = True
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDrillWall)
+
+
+def segmentBoundedPlaneByAnnotation(point):
 
 
     inputObj = om.findObjectByName('pointcloud snapshot')
@@ -1748,10 +1825,11 @@ def segmentBoundedPlaneByAnnotation(expectedNormal, point):
 
     searchRegion = cropToSphere(polyData, point, radius=0.5)
 
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
 
     updatePolyData(searchRegion, 'search region', parent=getDebugFolder(), visible=False)
 
-    _, origin, normal = applyPlaneFit(searchRegion, distanceThreshold=0.02, expectedNormal=expectedNormal, perpendicularAxis=expectedNormal, returnOrigin=True)
+    _, origin, normal = applyPlaneFit(searchRegion, distanceThreshold=0.02, expectedNormal=viewPlaneNormal, perpendicularAxis=viewPlaneNormal, angleEpsilon=0.7, returnOrigin=True)
 
     points = vtkNumpy.getNumpyFromVtk(searchRegion, 'Points')
     dist = np.dot(points - origin, normal)

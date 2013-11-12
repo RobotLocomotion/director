@@ -10,6 +10,11 @@ def readPolyData(filename):
         reader.SetFileName(filename)
         reader.Update()
         return reader.GetOutput()
+    elif ext == '.obj':
+        reader = vtk.vtkOBJReader()
+        reader.SetFileName(filename)
+        reader.Update()
+        return reader.GetOutput()
 
     raise Exception('Unknown file extension in readPolyData: %s' % filename)
 
