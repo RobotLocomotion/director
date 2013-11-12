@@ -44,7 +44,7 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = False
+useIk = True
 usePerception = True
 useSpreadsheet = False
 
@@ -123,10 +123,10 @@ if usePerception:
 
     sensorsFolder = om.getOrCreateContainer('sensors')
     obj = om.addRobotModel(robotStateModel, sensorsFolder)
-    obj.setProperty('Name', 'ESTIMATED_ROBOT_STATE')
+    obj.setProperty('Name', 'EST_ROBOT_STATE')
 
     def grabRobotState():
-        poseName = 'ESTIMATED_ROBOT_STATE'
+        poseName = 'EST_ROBOT_STATE'
         robotStatePose = robotStateJointController.poses[poseName]
         s.sendPoseToServer(robotStatePose, poseName)
         s.forcePose(poseName)

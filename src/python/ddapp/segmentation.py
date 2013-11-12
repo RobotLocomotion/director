@@ -139,6 +139,17 @@ def extractLargestCluster(polyData):
     return thresholdPoints(polyData, 'cluster_labels', [1, 1])
 
 
+def extractClusters(polyData, **kwargs):
+
+    polyData = applyEuclideanClustering(polyData, **kwargs)
+    clusterLabels = vtkNumpy.getNumpyFromVtk(polyData, 'cluster_labels')
+    clusters = []
+    for i in xrange(1, clusterLabels.max() + 1):
+        cluster = thresholdPoints(polyData, 'cluster_labels', [i, i])
+        clusters.append(cluster)
+    return clusters
+
+
 
 def segmentGroundPoints(polyData):
 
@@ -271,6 +282,16 @@ def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100,
     return shallowCopy(f.GetOutput())
 
 
+def labelOutliers(dataObj, searchRadius=0.03, neighborsInSearchRadius=10):
+
+    f = pcl.vtkPCLRadiusOutlierRemoval()
+    f.SetInput(dataObj)
+    f.SetSearchRadius(searchRadius)
+    f.SetNeighborsInSearchRadius(int(neighborsInSearchRadius))
+    f.Update()
+    return shallowCopy(f.GetOutput())
+
+
 def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpendicularAxis=None, angleEpsilon=0.2, returnOrigin=False, searchOrigin=None, searchRadius=None):
 
     expectedNormal = expectedNormal if expectedNormal is not None else [-1,0,0]
@@ -332,18 +353,20 @@ def addCoordArraysToPolyData(polyData):
     bodyOrigin = bodyFrame.TransformPoint([0.0, 0.0, 0.0])
     bodyX = bodyFrame.TransformVector([1.0, 0.0, 0.0])
     bodyY = bodyFrame.TransformVector([0.0, 1.0, 0.0])
+    bodyZ = bodyFrame.TransformVector([0.0, 0.0, 1.0])
     polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, bodyX, origin=bodyOrigin, resultArrayName='distance_along_robot_x')
     polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, bodyY, origin=bodyOrigin, resultArrayName='distance_along_robot_y')
+    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, bodyZ, origin=bodyOrigin, resultArrayName='distance_along_robot_z')
 
     return polyData
 
 
 def getDebugRevolutionData():
     dataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../drc-data'))
-    filename = os.path.join(dataDir, 'valve_wall.vtp')
+    #filename = os.path.join(dataDir, 'valve_wall.vtp')
     #filename = os.path.join(dataDir, 'bungie_valve.vtp')
     #filename = os.path.join(dataDir, 'cinder-blocks.vtp')
-    #filename = os.path.join(dataDir, 'cylinder_table.vtp')
+    filename = os.path.join(dataDir, 'cylinder_table.vtp')
     #filename = os.path.join(dataDir, 'debris.vtp')
     #filename = os.path.join(dataDir, 'rev1.vtp')
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
@@ -532,17 +555,17 @@ def activateSegmentationMode(debug=False):
     global _spindleAxis
     _spindleAxis = perception._multisenseItem.model.getSpindleAxis()
 
-    #cleanup()
     segmentationView = getOrCreateSegmentationView()
 
     perspective()
 
     thresholdWorkspace = False
-    doRemoveGround = True
+    doRemoveGround = False
 
     if thresholdWorkspace:
         polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 2.0])
-        polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-1.0, 1.0])
+        polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-3.0, 3.0])
+        polyData = thresholdPoints(polyData, 'distance_along_robot_z', [-10.0, 1.5])
 
     if doRemoveGround:
         groundPoints, polyData = removeGround(polyData)
@@ -552,9 +575,6 @@ def activateSegmentationMode(debug=False):
     segmentationObj.headAxis = perception._multisenseItem.model.getAxis('head', [1,0,0])
 
     segmentationView.camera().DeepCopy(app.getDRCView().camera())
-
-    #app.resetCamera(perception._multisenseItem.model.getSpindleAxis())
-    #segmentationView.camera().Dolly(3.0)
     segmentationView.render()
 
     createDockWidget()
@@ -1058,16 +1078,15 @@ _icpTransforms = []
 
 def onICPCorrection(messageData):
 
-    print 'onICPCorrection'
-
     messageClass = lcmbotcore.rigid_transform_t
     m = messageClass.decode(messageData.data())
     t = transformUtils.transformFromPose(m.trans, m.quat)
 
     _icpTransforms.append(t)
 
+    print 'appending icp transform %d' % len(_icpTransforms)
+
     for func in _icpCallbacks:
-        print 'calling callback...'
         func(t)
 
 
@@ -1161,7 +1180,8 @@ def segmentDrill(point1, point2, point3):
 
 
     tablePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
-    updatePolyData(tablePoints, 'table points', parent=getDebugFolder(), visible=False)
+    updatePolyData(tablePoints, 'table plane points', parent=getDebugFolder(), visible=False)
+
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
     searchRegion = cropToSphere(searchRegion, point2, 0.30)
@@ -1181,6 +1201,83 @@ def segmentDrill(point1, point2, point3):
     drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
     drillToButton = np.array([0.034091, 0.007616, -0.060168])
     t.Translate(point2 - drillToTopPoint)
+
+    drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+
+    aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
+    aff.actor.SetUserTransform(t)
+    showFrame(t, 'drill frame', parent=aff, visible=False)
+
+    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='dewalt_button', otdf_type='dewalt_button')
+    aff.setAffordanceParams(params)
+    aff.updateParamsFromActorTransform()
+    aff.addToView(app.getDRCView())
+
+
+def segmentDrillAuto(point1):
+
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    expectedNormal = np.array([0.0, 0.0, 1.0])
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal, perpendicularAxis=expectedNormal, searchOrigin=point1, searchRadius=0.4, angleEpsilon=0.2, returnOrigin=True)
+
+
+    tablePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(tablePoints, 'table plane points', parent=getDebugFolder(), visible=False)
+
+    tablePoints = labelDistanceToPoint(tablePoints, point1)
+    tablePointsClusters = extractClusters(tablePoints)
+    tablePointsClusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
+
+    tablePoints = tablePointsClusters[0]
+    updatePolyData(tablePoints, 'table points', parent=getDebugFolder(), visible=False)
+
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
+    searchRegion = cropToSphere(searchRegion, point1, 0.30)
+    drillPoints = extractLargestCluster(searchRegion)
+
+
+    # determine drill orientation (rotation about z axis)
+
+    centroids = computeCentroids(drillPoints, axis=normal)
+
+    centroidsPolyData = vtkNumpy.getVtkPolyDataFromNumpyPoints(centroids)
+    d = DebugData()
+    updatePolyData(centroidsPolyData, 'cluster centroids', parent=getDebugFolder(), visible=False)
+
+
+    '''
+    f = pcl.vtkAnnotateOBBs()
+    f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, 'cluster_labels')
+    f.SetInput(drillPoints)
+    f.Update()
+
+    nBoxes = f.GetNumberOfBoundingBoxes()
+    assert nBoxes == 1
+
+    edges = np.array((3,3))
+    for i, edge in enumerate(edges):
+        f.GetBoundingBoxEdge(0, i, edge)
+
+    sort(edges, key=lambda x: np.linalg.norm(x))
+    '''
+
+    zaxis = normal
+    yaxis = centroids[0] - centroids[-1]
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis = np.cross(zaxis, xaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+
+    drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
+    drillToButton = np.array([0.034091, 0.007616, -0.060168])
+    t.Translate(centroids[-1] - drillToTopPoint)
 
     drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
 
@@ -1455,6 +1552,26 @@ def computeEdge(polyData, edgeAxis, perpAxis, binWidth=0.03):
             edgePoints.append(binPoints[binDists.argmax()])
 
     return np.array(edgePoints)
+
+
+def computeCentroids(polyData, axis, binWidth=0.025):
+
+    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, axis, resultArrayName='dist_along_axis')
+
+    polyData, bins = binByScalar(polyData, 'dist_along_axis', binWidth)
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    binLabels = vtkNumpy.getNumpyFromVtk(polyData, 'bin_labels')
+
+    numberOfBins = len(bins) - 1
+    centroids = []
+    for i in xrange(numberOfBins):
+        binPoints = points[binLabels == i]
+
+        if len(binPoints):
+            centroids.append(np.average(binPoints, axis=0))
+
+    return np.array(centroids)
+
 
 
 def binByScalar(lidarData, scalarArrayName, binWidth, binLabelsArrayName='bin_labels'):
@@ -1771,7 +1888,7 @@ def startBlockSegmentation(dimensions):
 
 def startBoundedPlaneSegmentation():
 
-    picker = PointPicker(numberOfPoints=1)
+    picker = PointPicker(numberOfPoints=2)
     addViewPicker(picker)
     picker.enabled = True
     picker.start()
@@ -1806,6 +1923,17 @@ def startDrillSegmentation():
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrill)
 
+
+def startDrillAutoSegmentation():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDrillAuto)
+
+
 def startDrillWallSegmentation():
 
     picker = PointPicker(numberOfPoints=3)
@@ -1816,34 +1944,79 @@ def startDrillWallSegmentation():
     picker.annotationFunc = functools.partial(segmentDrillWall)
 
 
-def segmentBoundedPlaneByAnnotation(point):
-
+def segmentBoundedPlaneByAnnotation(point1, point2):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
-    inputObj.setProperty('Visible', False)
     polyData = shallowCopy(inputObj.polyData)
 
-    searchRegion = cropToSphere(polyData, point, radius=0.5)
 
     viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
 
-    updatePolyData(searchRegion, 'search region', parent=getDebugFolder(), visible=False)
-
-    _, origin, normal = applyPlaneFit(searchRegion, distanceThreshold=0.02, expectedNormal=viewPlaneNormal, perpendicularAxis=viewPlaneNormal, angleEpsilon=0.7, returnOrigin=True)
-
-    points = vtkNumpy.getNumpyFromVtk(searchRegion, 'Points')
-    dist = np.dot(points - origin, normal)
-    vtkNumpy.addNumpyToVtk(searchRegion, dist, 'dist_to_plane')
+    polyData, origin, normal = applyPlaneFit(polyData, distanceThreshold=0.015, expectedNormal=viewPlaneNormal, perpendicularAxis=viewPlaneNormal,
+                                             searchOrigin=point1, searchRadius=0.3, angleEpsilon=0.7, returnOrigin=True)
 
 
-    planePoints = thresholdPoints(searchRegion, 'dist_to_plane', [-0.01, 0.01])
-    scenePoints = thresholdPoints(searchRegion, 'dist_to_plane', [0.025, 10])
+    planePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.015, 0.015])
+    updatePolyData(planePoints, 'unbounded plane points', parent=getDebugFolder(), visible=False)
 
-    updatePolyData(planePoints, 'plane points', color=[1,0,0], alpha=0.3)
-    updatePolyData(scenePoints, 'scene points', color=[0,1,0], alpha=0.3)
 
-    #scenePoints = applyEuclideanClustering(scenePoints, clusterTolerance=0.10, minClusterSize=20, maxClusterSize=1e6)
-    #updatePolyData(scenePoints, 'scene points', colorByName='cluster_labels')
+    planePoints = applyVoxelGrid(planePoints, leafSize=0.03)
+    planePoints = labelOutliers(planePoints, searchRadius=0.06, neighborsInSearchRadius=12)
+
+    updatePolyData(planePoints, 'voxel plane points', parent=getDebugFolder(), colorByName='is_outlier', visible=False)
+
+    planePoints = thresholdPoints(planePoints, 'is_outlier', [0, 0])
+
+    planePoints = labelDistanceToPoint(planePoints, point1)
+    clusters = extractClusters(planePoints, clusterTolerance=0.10)
+    clusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
+
+    planePoints = clusters[0]
+    updatePolyData(planePoints, 'plane points', parent=getDebugFolder(), visible=False)
+
+
+    perpAxis = point2 - point1
+    perpAxis /= np.linalg.norm(perpAxis)
+    edgeAxis = np.cross(normal, perpAxis)
+
+    edgePoints = computeEdge(planePoints, edgeAxis, perpAxis)
+    edgePoints = vtkNumpy.getVtkPolyDataFromNumpyPoints(edgePoints)
+    updatePolyData(edgePoints, 'edge points', parent=getDebugFolder(), visible=False)
+
+
+    linePoint, lineDirection, _ = applyLineFit(edgePoints)
+
+    zaxis = normal
+    yaxis = lineDirection
+    xaxis = np.cross(yaxis, zaxis)
+
+    if np.dot(xaxis, perpAxis) < 0:
+        xaxis *= -1
+
+    # make right handed
+    yaxis = np.cross(zaxis, xaxis)
+
+    pts = vtkNumpy.getNumpyFromVtk(planePoints, 'Points')
+
+    dists = np.dot(pts-linePoint, yaxis)
+
+    p1 = linePoint + yaxis*np.min(dists)
+    p2 = linePoint + yaxis*np.max(dists)
+
+    p1 = projectPointToPlane(p1, origin, normal)
+    p2 = projectPointToPlane(p2, origin, normal)
+
+    d = DebugData()
+    d.addSphere(p1, radius=0.01)
+    d.addSphere(p2, radius=0.01)
+    d.addLine(p1, p2)
+    updatePolyData(d.getPolyData(), 'plane edge', parent=getDebugFolder(), visible=False)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate((p1 + p2)/ 2.0)
+
+    updateFrame(t, 'plane edge frame', parent=getDebugFolder(), visible=False)
 
 
 

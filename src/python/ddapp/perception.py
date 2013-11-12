@@ -210,7 +210,7 @@ class MultiSenseSource(TimerCallback):
         self.lastRobotStateUtime = timestamp
         robotState = [robotState.GetValue(i) for i in xrange(robotState.GetNumberOfTuples())]
 
-        poseName = 'ESTIMATED_ROBOT_STATE'
+        poseName = 'EST_ROBOT_STATE'
         pose = robotstate.robotStateToDrakePose(robotState)
         self.jointController.addPose(poseName, pose)
 

@@ -1,5 +1,7 @@
 import botpy
-
+import drc as lcmdrc
+import numpy as np
+import time
 
 _robotStateToDrakePoseJointMap = None
 _drakePoseToRobotStateJointMap = None
@@ -67,6 +69,23 @@ def robotStateToDrakePose(robotState):
     return drakePose
 
 
+def getPoseLCMFromXYZRPY(xyz, rpy):
+
+    wxyz = botpy.roll_pitch_yaw_to_quat(rpy)
+
+    trans = lcmdrc.vector_3d_t()
+    trans.x, trans.y, trans.z = xyz
+
+    quat = lcmdrc.quaternion_t()
+    quat.w, quat.x, quat.y, quat.z = wxyz
+
+    pose = lcmdrc.position_3d_t()
+    pose.translation = trans
+    pose.rotation = quat
+
+    return pose
+
+
 def drakePoseToRobotState(drakePose):
 
     robotState = range(28)
@@ -77,7 +96,27 @@ def drakePoseToRobotState(drakePose):
         if jointIdx is not None:
             robotState[jointIdx] = jointAngle
 
-    return robotState
+    xyz = drakePose[:3]
+    rpy = drakePose[3:6]
+
+    m = lcmdrc.robot_state_t()
+    m.utime = int(time.time() * 1e6)
+    m.pose = getPoseLCMFromXYZRPY(xyz, rpy)
+    m.twist = lcmdrc.twist_t()
+    m.twist.linear_velocity = lcmdrc.vector_3d_t()
+    m.twist.angular_velocity = lcmdrc.vector_3d_t()
+    m.num_joints = 28
+    m.joint_name = getRobotStateJointNames()
+    m.joint_position = robotState
+    m.joint_velocity = np.zeros(28)
+    m.joint_effort = np.zeros(28)
+    m.force_torque = lcmdrc.force_torque_t()
+    m.force_torque.l_hand_force = np.zeros(3)
+    m.force_torque.l_hand_torque = np.zeros(3)
+    m.force_torque.r_hand_force = np.zeros(3)
+    m.force_torque.r_hand_torque = np.zeros(3)
+
+    return m
 
 
 
