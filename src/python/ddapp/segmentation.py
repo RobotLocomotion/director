@@ -1153,9 +1153,25 @@ def segmentWye(point1, point2):
 
 def segmentDrillWall(point1, point2, point3):
 
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+
     d = DebugData()
 
     points = [point1, point2, point3]
+
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+    expectedNormal = np.cross(point2 - point1, point3 - point1)
+    expectedNormal /= np.linalg.norm(expectedNormal)
+    if np.dot(expectedNormal, viewPlaneNormal) < 0:
+        expectedNormal *= -1.0
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal, searchOrigin=(point1 + point2 + point3)/3.0, searchRadius=0.3, angleEpsilon=0.3, returnOrigin=True)
+
+    points = [projectPointToPlane(point, origin, normal) for point in points]
 
     # draw points
     for p in points:
@@ -1772,16 +1788,16 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
-    print 'setting icp initial transform on affordance'
-    obj.baseTransform = vtk.vtkTransform()
-    obj.baseTransform.SetMatrix(t.GetMatrix())
-    obj.icpTransformInitial = _icpTransforms[-1] if len(_icpTransforms) else None
+    useICPTransforms = False
+    if useICPTransforms:
+        obj.baseTransform = vtk.vtkTransform()
+        obj.baseTransform.SetMatrix(t.GetMatrix())
+        obj.icpTransformInitial = _icpTransforms[-1] if len(_icpTransforms) else None
 
-    print 'setting base transform:', obj.baseTransform.GetPosition()
-    print 'setting initial icp:', obj.icpTransformInitial.GetPosition()
+        print 'setting base transform:', obj.baseTransform.GetPosition()
+        print 'setting initial icp:', obj.icpTransformInitial.GetPosition()
 
-
-    _icpCallbacks.append(obj.updateICPTransform)
+        _icpCallbacks.append(obj.updateICPTransform)
 
     params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name=name)
     obj.setAffordanceParams(params)

@@ -198,8 +198,6 @@ class MultiSenseSource(TimerCallback):
         TimerCallback.start(self)
 
 
-
-
     def updateRobotState(self):
 
         robotState = vtk.vtkDoubleArray()
