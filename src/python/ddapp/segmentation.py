@@ -227,8 +227,6 @@ def showMajorPlanes():
     folderObj = om.findObjectByName('segmentation')
     folderObj = om.getOrCreateContainer('major planes', folderObj)
 
-
-
     polyData = thresholdPoints(polyData, 'distance', [1, 4])
     polyDataList = getMajorPlanes(polyData)
 
@@ -358,10 +356,12 @@ def getDebugRevolutionData():
     dataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../drc-data'))
     #filename = os.path.join(dataDir, 'valve_wall.vtp')
     #filename = os.path.join(dataDir, 'bungie_valve.vtp')
-    filename = os.path.join(dataDir, 'cinder-blocks.vtp')
+    #filename = os.path.join(dataDir, 'cinder-blocks.vtp')
     #filename = os.path.join(dataDir, 'cylinder_table.vtp')
     #filename = os.path.join(dataDir, 'debris.vtp')
     #filename = os.path.join(dataDir, 'rev1.vtp')
+    filename = os.path.join(dataDir, 'drill-in-hand.vtp')
+
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
 
@@ -444,6 +444,8 @@ class SegmentationPanel(object):
         self.taskSelection = PythonQt.dd.ddTaskSelection()
         self.debrisWizard = self._makeDebrisWizard()
         self.terrainWizard = self._makeTerrainWizard()
+        self.firehoseWizard = self._makeFirehoseWizard()
+        self.drillWizard = self._makeDrillWizard()
 
         self.taskSelection.connect('taskSelected(int)', self.onTaskSelected)
 
@@ -451,17 +453,58 @@ class SegmentationPanel(object):
         l.addWidget(self.taskSelection)
         l.addWidget(self.debrisWizard)
         l.addWidget(self.terrainWizard)
+        l.addWidget(self.firehoseWizard)
+        l.addWidget(self.drillWizard)
         self.debrisWizard.hide()
         self.terrainWizard.hide()
+        self.firehoseWizard.hide()
+        self.drillWizard.hide()
 
     def _makeDebrisWizard(self):
         debrisWizard = QtGui.QWidget()
         lumberSelection = PythonQt.dd.ddLumberSelection()
         lumberSelection.connect('lumberSelected(int)', self.onDebrisLumberSelected)
         l = QtGui.QVBoxLayout(debrisWizard)
+        l.addWidget(self._makeBackButton())
         l.addWidget(lumberSelection)
         l.addStretch()
         return debrisWizard
+
+    def _makeFirehoseWizard(self):
+        firehoseWizard = QtGui.QWidget()
+        segmentButton = QtGui.QToolButton()
+        segmentButton.setIcon(QtGui.QIcon(':/images/wye.png'))
+        segmentButton.setIconSize(QtCore.QSize(60,60))
+        segmentButton.connect('clicked()', self.onSegmentWye)
+        l = QtGui.QVBoxLayout(firehoseWizard)
+        l.addWidget(self._makeBackButton())
+        l.addWidget(segmentButton)
+        l.addStretch()
+        return firehoseWizard
+
+
+    def _makeButton(self, text, func):
+
+        b = QtGui.QPushButton(text)
+        b.connect('clicked()', func)
+        return b
+
+    def _makeDrillWizard(self):
+        drillWizard = QtGui.QWidget()
+
+        #segmentButton = QtGui.QToolButton()
+        #segmentButton.setIcon(QtGui.QIcon(':/images/wye.png'))
+        #segmentButton.setIconSize(QtCore.QSize(60,60))
+        #segmentButton.connect('clicked()', self.onSegmentWye)
+
+        l = QtGui.QVBoxLayout(drillWizard)
+        l.addWidget(self._makeBackButton())
+        l.addWidget(self._makeButton('segment drill on table', startDrillAutoSegmentation))
+        l.addWidget(self._makeButton('segment drill in hand', startDrillInHandSegmentation))
+        l.addWidget(self._makeButton('segment wall', startDrillWallSegmentation))
+        l.addStretch()
+        return drillWizard
+
 
     def _makeTerrainWizard(self):
         terrainWizard = QtGui.QWidget()
@@ -484,9 +527,28 @@ class SegmentationPanel(object):
         l.addStretch()
 
         l = QtGui.QVBoxLayout(terrainWizard)
+        l.addWidget(self._makeBackButton())
         l.addWidget(buttons)
         l.addStretch()
         return terrainWizard
+
+    def _makeBackButton(self):
+        w = QtGui.QPushButton()
+        w.setIcon(QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_ArrowBack))
+        w.connect('clicked()', self.onBackButton)
+
+        frame = QtGui.QWidget()
+        l = QtGui.QHBoxLayout(frame)
+        l.addWidget(w)
+        l.addStretch()
+        return frame
+
+
+    def onBackButton(self):
+        self.cancelCurrentTask()
+
+    def onSegmentWye(self):
+        startWyeSegmentation()
 
     def onDebrisLumberSelected(self, lumberId):
         blockDimensions = getLumberDimensions(lumberId)
@@ -507,8 +569,19 @@ class SegmentationPanel(object):
         self.terrainWizard.show()
         self.taskSelection.hide()
 
+    def startFirehoseTask(self):
+        self.firehoseWizard.show()
+        self.taskSelection.hide()
+
+    def startDrillTask(self):
+        self.drillWizard.show()
+        self.taskSelection.hide()
+
     def cancelCurrentTask(self):
         self.debrisWizard.hide()
+        self.terrainWizard.hide()
+        self.firehoseWizard.hide()
+        self.drillWizard.hide()
         self.taskSelection.show()
 
     def onTaskSelected(self, taskId):
@@ -516,6 +589,8 @@ class SegmentationPanel(object):
         taskFunctions = {
                          2:self.startTerrainTask,
                          4:self.startDebrisTask,
+                         8:self.startFirehoseTask,
+                         6:self.startDrillTask,
                         }
 
         taskFunction = taskFunctions.get(taskId+1)
@@ -554,7 +629,7 @@ def activateSegmentationMode(debug=False):
 
     initICPCallback()
 
-    thresholdWorkspace = True
+    thresholdWorkspace = False
     doRemoveGround = False
 
     if thresholdWorkspace:
@@ -1312,6 +1387,64 @@ def segmentDrillAuto(point1):
     aff.addToView(app.getDRCView())
 
 
+
+def segmentDrillInHand(p1, p2):
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    distanceToLineThreshold = 0.05
+
+    polyData = labelDistanceToLine(polyData, p1, p2)
+    polyData = thresholdPoints(polyData, 'distance_to_line', [0.0, distanceToLineThreshold])
+
+    lineSegment = p2 - p1
+    lineLength = np.linalg.norm(lineSegment)
+
+    cropped, polyData = cropToPlane(polyData, p1, lineSegment/lineLength, [-0.03, lineLength + 0.03])
+
+    updatePolyData(cropped, 'drill cluster', parent=getDebugFolder(), visible=False)
+
+
+    drillPoints = cropped
+    normal = lineSegment/lineLength
+
+    centroids = computeCentroids(drillPoints, axis=normal)
+
+    centroidsPolyData = vtkNumpy.getVtkPolyDataFromNumpyPoints(centroids)
+    d = DebugData()
+    updatePolyData(centroidsPolyData, 'cluster centroids', parent=getDebugFolder(), visible=False)
+
+
+    zaxis = normal
+    yaxis = centroids[0] - centroids[-1]
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis = np.cross(zaxis, xaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+
+    drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
+    drillToButton = np.array([0.034091, 0.007616, -0.060168])
+
+    t.PreMultiply()
+    t.Translate(-drillToTopPoint)
+    t.PostMultiply()
+    t.Translate(p2)
+
+    drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+
+    aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
+    aff.actor.SetUserTransform(t)
+    showFrame(t, 'drill frame', parent=aff, visible=False)
+
+    params = dict(origin=t.GetPosition(), xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='dewalt_button', otdf_type='dewalt_button')
+    aff.setAffordanceParams(params)
+    aff.updateParamsFromActorTransform()
+    aff.addToView(app.getDRCView())
+
+
 def pickDataSet(displayPoint, tolerance=0.01):
 
     view = app.getCurrentRenderView()
@@ -1967,6 +2100,15 @@ def startDrillWallSegmentation():
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrillWall)
 
+def startDrillInHandSegmentation():
+
+    picker = PointPicker(numberOfPoints=2)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = True
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDrillInHand)
+
 
 def segmentBoundedPlaneByAnnotation(point1, point2):
 
@@ -2326,5 +2468,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    #activateSegmentationMode(debug=True)
+    activateSegmentationMode(debug=True)
 
