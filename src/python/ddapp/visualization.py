@@ -16,17 +16,6 @@ def computeAToB(a,b):
     return t
 
 
-def assertAToB(a, b, a_to_b):
-
-    t = vtk.vtkTransform()
-    t.PostMultiply()
-    t.Concatenate(a)
-    t.Concatenate(a_to_b)
-
-    assert np.all(np.abs(np.array(t.GetPosition()) - np.array(b.GetPosition())) < 1e6)
-
-
-
 class BlockAffordanceItem(om.AffordanceItem):
 
     def setAffordanceParams(self, params):
@@ -53,11 +42,14 @@ class BlockAffordanceItem(om.AffordanceItem):
 
     def updateICPTransform(self, transform):
         delta = computeAToB(self.icpTransformInitial, transform)
+        print 'initial:', self.icpTransformInitial.GetPosition(), self.icpTransformInitial.GetOrientation()
+        print 'latest:', transform.GetPosition(), transform.GetOrientation()
+        print 'delta:', delta.GetPosition(), delta.GetOrientation()
         newUserTransform = vtk.vtkTransform()
         newUserTransform.PostMultiply()
         newUserTransform.Identity()
         newUserTransform.Concatenate(self.baseTransform)
-        newUserTransform.Concatenate(delta)
+        newUserTransform.Concatenate(delta.GetLinearInverse())
 
         self.actor.SetUserTransform(newUserTransform)
         self._renderAllViews()

@@ -94,19 +94,14 @@ icp programmable filter
 
 import vtkFiltersGeneralPython as filtersGeneral
 
-
-
 points = inputs[0]
 block = inputs[1]
 
 print points.GetNumberOfPoints()
 print block.GetNumberOfPoints()
 
-
 if points.GetNumberOfPoints() < block.GetNumberOfPoints():
     block, points = points, block
-
-
 
 icp = vtk.vtkIterativeClosestPointTransform()
 icp.SetSource(points.VTKObject)
@@ -120,10 +115,8 @@ t.SetTransform(icp)
 t.Update()
 
 output.ShallowCopy(t.GetOutput())
-
-
-
 '''
+
 
 def getRandomColor():
     '''
@@ -365,8 +358,8 @@ def getDebugRevolutionData():
     dataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../drc-data'))
     #filename = os.path.join(dataDir, 'valve_wall.vtp')
     #filename = os.path.join(dataDir, 'bungie_valve.vtp')
-    #filename = os.path.join(dataDir, 'cinder-blocks.vtp')
-    filename = os.path.join(dataDir, 'cylinder_table.vtp')
+    filename = os.path.join(dataDir, 'cinder-blocks.vtp')
+    #filename = os.path.join(dataDir, 'cylinder_table.vtp')
     #filename = os.path.join(dataDir, 'debris.vtp')
     #filename = os.path.join(dataDir, 'rev1.vtp')
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
@@ -559,7 +552,9 @@ def activateSegmentationMode(debug=False):
 
     perspective()
 
-    thresholdWorkspace = False
+    initICPCallback()
+
+    thresholdWorkspace = True
     doRemoveGround = False
 
     if thresholdWorkspace:
@@ -1094,9 +1089,24 @@ def initICPCallback():
 
     global _icpSub
     lcmThread = lcmUtils.getGlobalLCMThread()
-    _icpSub = PythonQt.dd.ddLCMSubscriber('HEAD_TO_LOCAL_CORRECTED', lcmThread)
+    _icpSub = PythonQt.dd.ddLCMSubscriber('MAP_LOCAL_CORRECTION', lcmThread)
     _icpSub.connect('messageReceived(const QByteArray&)', onICPCorrection)
     lcmThread.addSubscriber(_icpSub)
+
+
+
+
+def applyICP(source, target):
+
+    icp = vtk.vtkIterativeClosestPointTransform()
+    icp.SetSource(source)
+    icp.SetTarget(target)
+    icp.GetLandmarkTransform().SetModeToRigidBody()
+    icp.Update()
+    t = vtk.vtkTransform()
+    t.SetMatrix(icp.GetMatrix())
+    return t
+
 
 
 def segmentWye(point1, point2):
@@ -1116,39 +1126,34 @@ def segmentWye(point1, point2):
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
     searchRegion = cropToSphere(searchRegion, point2, 0.30)
     wyePoints = extractLargestCluster(searchRegion)
+    updatePolyData(wyePoints, 'wye cluster', parent=getDebugFolder(), visible=False)
 
+    wyeMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/wye.obj'))
 
-    zaxis = normal
-    yaxis = [0,0,-1]
-    xaxis = np.cross(yaxis, zaxis)
+    wyeMeshPoint = np.array([0.0, 0.0, 0.005])
+    wyeMeshLeftHandle = np.array([0.032292, 0.02949, 0.068485])
+
+    xaxis = -normal
+    zaxis = [0,0,1]
     yaxis = np.cross(zaxis, xaxis)
 
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PreMultiply()
+    t.Translate(-wyeMeshPoint)
     t.PostMultiply()
     t.Translate(point2)
 
+    d = DebugData()
+    d.addSphere(point2, radius=0.005)
+    updatePolyData(d.getPolyData(), 'wye pick point', parent=getDebugFolder(), visible=False)
 
-
-    wyePoints = transformPolyData(wyePoints, t.GetLinearInverse())
-
-    wyeObj = showPolyData(wyePoints, 'wye points', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    wyeObj = showPolyData(wyeMesh, 'wye', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     wyeObj.actor.SetUserTransform(t)
-    showFrame(t, 'wye frame', parent=wyeObj, visible=True)
+    showFrame(t, 'wye frame', parent=wyeObj, visible=False)
 
-    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name='wye', otdf_type='wye')
+    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='wye', otdf_type='wye')
     wyeObj.setAffordanceParams(params)
     wyeObj.updateParamsFromActorTransform()
-
-    '''
-    obj = updatePolyData(d.getPolyData(), 'valve affordance', cls=CylinderAffordanceItem, parent='affordances')
-    obj.actor.SetUserTransform(t)
-    obj.addToView(app.getDRCView())
-
-    params = dict(axis=zaxis, radius=radius, length=zwidth, origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=radius, ywidth=radius, zwidth=zwidth)
-
-    obj.setAffordanceParams(params)
-    obj.updateParamsFromActorTransform()
-    '''
 
 
 def segmentDrillWall(point1, point2, point3):
@@ -1788,20 +1793,23 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
-    useICPTransforms = False
-    if useICPTransforms:
-        obj.baseTransform = vtk.vtkTransform()
-        obj.baseTransform.SetMatrix(t.GetMatrix())
-        obj.icpTransformInitial = _icpTransforms[-1] if len(_icpTransforms) else None
-
-        print 'setting base transform:', obj.baseTransform.GetPosition()
-        print 'setting initial icp:', obj.icpTransformInitial.GetPosition()
-
-        _icpCallbacks.append(obj.updateICPTransform)
-
     params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name=name)
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
+
+    if len(_icpTransforms):
+        objTrack = showPolyData(cube, name, cls=BlockAffordanceItem, parent=obj, color=[0.8, 1, 0.8])
+        objTrack.actor.SetUserTransform(t)
+        objTrack.baseTransform = vtk.vtkTransform()
+        objTrack.baseTransform.SetMatrix(t.GetMatrix())
+        objTrack.icpTransformInitial = _icpTransforms[-1]
+        objTrack.addToView(app.getDRCView())
+
+        print 'setting base transform:', objTrack.baseTransform.GetPosition()
+        print 'setting initial icp:', objTrack.icpTransformInitial.GetPosition()
+
+        _icpCallbacks.append(objTrack.updateICPTransform)
+
 
     frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
 
@@ -2317,8 +2325,6 @@ def installEventFilter(view, func):
 def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
-
-    #initICPCallback()
 
     #activateSegmentationMode(debug=True)
 
