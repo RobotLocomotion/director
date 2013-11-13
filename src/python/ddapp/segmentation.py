@@ -1224,6 +1224,7 @@ def segmentWye(point1, point2):
 
     wyeObj = showPolyData(wyeMesh, 'wye', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     wyeObj.actor.SetUserTransform(t)
+    wyeObj.addToView(app.getDRCView())
     showFrame(t, 'wye frame', parent=wyeObj, visible=False)
 
     params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='wye', otdf_type='wye')
@@ -1260,8 +1261,42 @@ def segmentDrillWall(point1, point2, point3):
     for a, b in zip(points, points[1:] + [points[0]]):
         d.addLine(a, b)
 
-    obj = updatePolyData(d.getPolyData(), 'drill wall points', parent=getDebugFolder())
-    obj.setProperty('Color', QtGui.QColor(0, 255, 0))
+    obj = updatePolyData(d.getPolyData(), 'drill wall points', parent=getDebugFolder(), color=[0,1,0])
+
+    xaxis = -normal
+    zaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(point1)
+
+    d = DebugData()
+    pointsInWallFrame = []
+    for p in points:
+        pp = np.zeros(3)
+        t.GetLinearInverse().Transform(p, pp)
+        pointsInWallFrame.append(pp)
+        print pp
+        d.addSphere(pp, radius=0.01)
+
+    points = pointsInWallFrame
+
+    for a, b in zip(points, points[1:] + [points[0]]):
+        d.addLine(a, b)
+
+    aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    aff.actor.SetUserTransform(t)
+    showFrame(t, 'wall frame', parent=aff, visible=False)
+
+    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
+                  p1y=points[0][1], p1z=points[0][2],
+                  p2y=points[0][1], p2z=points[0][2],
+                  p3y=points[0][1], p3z=points[0][2],
+                  friendly_name='drill_wall', otdf_type='drill_wall')
+
+    aff.setAffordanceParams(params)
+    aff.updateParamsFromActorTransform()
 
 
 def segmentDrill(point1, point2, point3):
@@ -2468,5 +2503,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    activateSegmentationMode(debug=True)
+    #activateSegmentationMode(debug=True)
 
