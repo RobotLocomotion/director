@@ -1275,7 +1275,7 @@ def segmentDrillWall(point1, point2, point3):
     pointsInWallFrame = []
     for p in points:
         pp = np.zeros(3)
-        t.GetLinearInverse().Transform(p, pp)
+        t.GetLinearInverse().TransformPoint(p, pp)
         pointsInWallFrame.append(pp)
         print pp
         d.addSphere(pp, radius=0.01)
@@ -1291,8 +1291,8 @@ def segmentDrillWall(point1, point2, point3):
 
     params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
                   p1y=points[0][1], p1z=points[0][2],
-                  p2y=points[0][1], p2z=points[0][2],
-                  p3y=points[0][1], p3z=points[0][2],
+                  p2y=points[1][1], p2z=points[1][2],
+                  p3y=points[2][1], p3z=points[2][2],
                   friendly_name='drill_wall', otdf_type='drill_wall')
 
     aff.setAffordanceParams(params)

@@ -67,6 +67,14 @@ def createFrameAffordance(params):
     aff.param_names = []
     aff.params = []
 
+    for k, v in params.iteritems():
+        if isinstance(v, float):
+            print k, v
+            aff.param_names.append(k)
+            aff.params.append(v)
+
+    aff.nparams = len(aff.params)
+
     aff.nstates = 0
 
     aff.bounding_xyz = [0,0,0]
