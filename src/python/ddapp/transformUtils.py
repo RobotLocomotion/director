@@ -39,6 +39,12 @@ def orientationFromAxes(xaxis, yaxis, zaxis):
     return rpy
 
 
+def rollPitchYawFromTransform(t):
+    rpy = np.zeros(3)
+    vtk.vtkMultisenseSource.GetBotRollPitchYaw(t, rpy)
+    return rpy
+
+
 def transformFromPose(position, quaternion):
     '''
     Returns a vtkTransform

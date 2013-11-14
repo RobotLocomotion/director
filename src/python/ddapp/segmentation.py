@@ -365,64 +365,6 @@ def getDebugRevolutionData():
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
 
-def getBoardCorners(params):
-    axes = [np.array(params[axis]) for axis in ['xaxis', 'yaxis', 'zaxis']]
-    widths = [np.array(params[axis])/2.0 for axis in ['xwidth', 'ywidth', 'zwidth']]
-    edges = [axes[i] * widths[i] for i in xrange(3)]
-    origin = np.array(params['origin'])
-    return [
-            origin + edges[0] + edges[1] + edges[2],
-            origin - edges[0] + edges[1] + edges[2],
-            origin - edges[0] - edges[1] + edges[2],
-            origin + edges[0] - edges[1] + edges[2],
-            origin + edges[0] + edges[1] - edges[2],
-            origin - edges[0] + edges[1] - edges[2],
-            origin - edges[0] - edges[1] - edges[2],
-            origin + edges[0] - edges[1] - edges[2],
-           ]
-
-def getPointDistances(target, points):
-    return np.array([np.linalg.norm(target - p) for p in points])
-
-
-def computeClosestCorner(aff, referenceFrame):
-    corners = getBoardCorners(aff.params)
-    dists = getPointDistances(np.array(referenceFrame.GetPosition()), corners)
-    return corners[dists.argmin()]
-
-
-def computeGroundFrame(aff, referenceFrame):
-    refAxis = np.array([0,-1,0])
-    referenceFrame.TransformVector(refAxis, refAxis)
-    axes = [np.array(aff.params[axis]) for axis in ['xaxis', 'yaxis', 'zaxis']]
-    axisProjections = np.array([np.abs(np.dot(axis, refAxis)) for axis in axes])
-    boardAxis = axes[axisProjections.argmax()]
-    if np.dot(boardAxis, refAxis) < 0:
-        boardAxis = -boardAxis
-    xaxis = boardAxis
-    zaxis = [0,0,1]
-    yaxis = np.cross(zaxis, xaxis)
-    xaxis = np.cross(yaxis, zaxis)
-    closestCorner = computeClosestCorner(aff, referenceFrame)
-    groundFrame = getTransformFromAxes(xaxis, yaxis, zaxis)
-    groundFrame.PostMultiply()
-    groundFrame.Translate(closestCorner[0], closestCorner[1], 0.0)
-    return groundFrame
-
-
-
-def showBoardDebug(affs):
-    referenceFrame = vtk.vtkTransform()
-    referenceFrame.Translate(0, 0, 5.0)
-    affs = affs or om.objects.values()
-    for obj affs:
-        if isinstance(obj, BlockAffordanceItem):
-            d = DebugData()
-            d.addSphere(computeClosestCorner(obj, referenceFrame), radius=0.015)
-            showPolyData(d.getPolyData(), 'closest corner', parent='board debug', visible=True)
-            showFrame(computeGroundFrame(obj, referenceFrame), 'ground frame', parent='board debug', visible=True)
-
-
 def getCurrentRevolutionData():
     revPolyData = perception._multisenseItem.model.revPolyData
     if not revPolyData or not revPolyData.GetNumberOfPoints():

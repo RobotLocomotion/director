@@ -1,1 +1,0 @@
-segmentation.startValveSegmentationByWallPlane(0.21)

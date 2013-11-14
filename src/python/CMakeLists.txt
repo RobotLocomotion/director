@@ -39,8 +39,6 @@ set(python_files
   ddapp/macros/segmentation_view/ortho_y.py
   ddapp/macros/segmentation_view/ortho_z.py
   ddapp/macros/segmentation_view/perspective.py
-  ddapp/macros/segmentation_view/segment_valve.py
-  ddapp/macros/segmentation_view/segment_wye.py
 
   )
 
