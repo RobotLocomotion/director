@@ -358,11 +358,69 @@ def getDebugRevolutionData():
     #filename = os.path.join(dataDir, 'bungie_valve.vtp')
     #filename = os.path.join(dataDir, 'cinder-blocks.vtp')
     #filename = os.path.join(dataDir, 'cylinder_table.vtp')
-    #filename = os.path.join(dataDir, 'debris.vtp')
+    filename = os.path.join(dataDir, 'debris.vtp')
     #filename = os.path.join(dataDir, 'rev1.vtp')
-    filename = os.path.join(dataDir, 'drill-in-hand.vtp')
+    #filename = os.path.join(dataDir, 'drill-in-hand.vtp')
 
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
+
+
+def getBoardCorners(params):
+    axes = [np.array(params[axis]) for axis in ['xaxis', 'yaxis', 'zaxis']]
+    widths = [np.array(params[axis])/2.0 for axis in ['xwidth', 'ywidth', 'zwidth']]
+    edges = [axes[i] * widths[i] for i in xrange(3)]
+    origin = np.array(params['origin'])
+    return [
+            origin + edges[0] + edges[1] + edges[2],
+            origin - edges[0] + edges[1] + edges[2],
+            origin - edges[0] - edges[1] + edges[2],
+            origin + edges[0] - edges[1] + edges[2],
+            origin + edges[0] + edges[1] - edges[2],
+            origin - edges[0] + edges[1] - edges[2],
+            origin - edges[0] - edges[1] - edges[2],
+            origin + edges[0] - edges[1] - edges[2],
+           ]
+
+def getPointDistances(target, points):
+    return np.array([np.linalg.norm(target - p) for p in points])
+
+
+def computeClosestCorner(aff, referenceFrame):
+    corners = getBoardCorners(aff.params)
+    dists = getPointDistances(np.array(referenceFrame.GetPosition()), corners)
+    return corners[dists.argmin()]
+
+
+def computeGroundFrame(aff, referenceFrame):
+    refAxis = np.array([0,-1,0])
+    referenceFrame.TransformVector(refAxis, refAxis)
+    axes = [np.array(aff.params[axis]) for axis in ['xaxis', 'yaxis', 'zaxis']]
+    axisProjections = np.array([np.abs(np.dot(axis, refAxis)) for axis in axes])
+    boardAxis = axes[axisProjections.argmax()]
+    if np.dot(boardAxis, refAxis) < 0:
+        boardAxis = -boardAxis
+    xaxis = boardAxis
+    zaxis = [0,0,1]
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    closestCorner = computeClosestCorner(aff, referenceFrame)
+    groundFrame = getTransformFromAxes(xaxis, yaxis, zaxis)
+    groundFrame.PostMultiply()
+    groundFrame.Translate(closestCorner[0], closestCorner[1], 0.0)
+    return groundFrame
+
+
+
+def showBoardDebug(affs):
+    referenceFrame = vtk.vtkTransform()
+    referenceFrame.Translate(0, 0, 5.0)
+    affs = affs or om.objects.values()
+    for obj affs:
+        if isinstance(obj, BlockAffordanceItem):
+            d = DebugData()
+            d.addSphere(computeClosestCorner(obj, referenceFrame), radius=0.015)
+            showPolyData(d.getPolyData(), 'closest corner', parent='board debug', visible=True)
+            showFrame(computeGroundFrame(obj, referenceFrame), 'ground frame', parent='board debug', visible=True)
 
 
 def getCurrentRevolutionData():
@@ -1339,7 +1397,20 @@ def segmentDrill(point1, point2, point3):
     aff.actor.SetUserTransform(t)
     showFrame(t, 'drill frame', parent=aff, visible=False)
 
-    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='dewalt_button', otdf_type='dewalt_button')
+    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
+                  button_x=0.035,
+                  button_y=0.007,
+                  button_z=-0.06,
+                  guard_x=0.0,
+                  guard_y=-0.01,
+                  guard_z=0.15,
+                  guard_nx=0.0,
+                  guard_ny=0.0,
+                  guard_nz=1.0,
+                  button_nx=1.0,
+                  button_ny=0.0,
+                  button_nz=0.0,
+                  friendly_name='dewalt_button', otdf_type='dewalt_button')
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
     aff.addToView(app.getDRCView())
@@ -2503,5 +2574,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    #activateSegmentationMode(debug=True)
+    activateSegmentationMode(debug=True)
 
