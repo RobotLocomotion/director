@@ -502,6 +502,7 @@ class SegmentationPanel(object):
         l.addWidget(self._makeButton('segment drill on table', startDrillAutoSegmentation))
         l.addWidget(self._makeButton('segment drill in hand', startDrillInHandSegmentation))
         l.addWidget(self._makeButton('segment wall', startDrillWallSegmentation))
+        l.addWidget(self._makeButton('pick point', startPickPoint))
         l.addStretch()
         return drillWizard
 
@@ -1297,6 +1298,7 @@ def segmentDrillWall(point1, point2, point3):
 
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
+    aff.addToView(app.getDRCView())
 
 
 def segmentDrill(point1, point2, point3):
@@ -2117,6 +2119,26 @@ def startWyeSegmentation():
     picker.drawLines = False
     picker.start()
     picker.annotationFunc = functools.partial(segmentWye)
+
+
+def storePoint(p):
+    global _pickPoint
+    _pickPoint = p
+
+
+def getPickPoint():
+    global _pickPoint
+    return _pickPoint
+
+
+def startPickPoint():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = storePoint
 
 
 def startDrillSegmentation():
