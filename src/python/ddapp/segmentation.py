@@ -2516,5 +2516,5 @@ def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
-    activateSegmentationMode(debug=True)
+    #activateSegmentationMode(debug=True)
 
