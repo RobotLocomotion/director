@@ -21,6 +21,7 @@ from ddapp import perception
 from ddapp import segmentation
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
+from ddapp import actionhandlers
 from ddapp.timercallback import TimerCallback
 
 import numpy as np
@@ -30,6 +31,7 @@ from ddapp import ioUtils as io
 
 app.startup(globals())
 om.init(app.getMainWindow().objectTree(), app.getMainWindow().propertiesPanel())
+actionhandlers.init()
 
 quit = app.quit
 exit = quit

@@ -35,6 +35,8 @@ signals:
   void resetCamera();
   void toggleStereoRender();
   void toggleCameraTerrainMode();
+  void fileOpen();
+  void fileSaveData();
 
 
 protected slots:

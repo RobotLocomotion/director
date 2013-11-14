@@ -31,6 +31,9 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="ActionOpen"/>
+    <addaction name="ActionSaveData"/>
+    <addaction name="separator"/>
     <addaction name="ActionQuit"/>
    </widget>
    <widget class="QMenu" name="ToolsMenu">
@@ -157,7 +160,7 @@
   </widget>
   <action name="ActionQuit">
    <property name="text">
-    <string>Quit</string>
+    <string>&amp;Quit</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
@@ -230,6 +233,22 @@
    </property>
    <property name="toolTip">
     <string>Toggle Camera Terrain Mode</string>
+   </property>
+  </action>
+  <action name="ActionOpen">
+   <property name="text">
+    <string>&amp;Open...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="ActionSaveData">
+   <property name="text">
+    <string>&amp;Save data...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
  </widget>

@@ -1,5 +1,6 @@
 
 set(python_files
+  ddapp/actionhandlers.py
   ddapp/affordance.py
   ddapp/applogic.py
   ddapp/cameracontrol.py

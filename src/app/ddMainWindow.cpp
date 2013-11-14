@@ -54,6 +54,8 @@ ddMainWindow::ddMainWindow()
   this->connect(this->Internal->ActionResetCamera, SIGNAL(triggered()), this, SIGNAL(resetCamera()));
   this->connect(this->Internal->ActionToggleStereoRender, SIGNAL(triggered()), this, SIGNAL(toggleStereoRender()));
   this->connect(this->Internal->ActionToggleCameraTerrainMode, SIGNAL(triggered()), this, SIGNAL(toggleCameraTerrainMode()));
+  this->connect(this->Internal->ActionOpen, SIGNAL(triggered()), this, SIGNAL(fileOpen()));
+  this->connect(this->Internal->ActionSaveData, SIGNAL(triggered()), this, SIGNAL(fileSaveData()));
 
   QTimer::singleShot(0, this, SLOT(startup()));
 

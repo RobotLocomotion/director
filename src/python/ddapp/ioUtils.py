@@ -1,32 +1,43 @@
 import os
 import vtkAll as vtk
+from shallowCopy import shallowCopy
 
 def readPolyData(filename):
 
     ext = os.path.splitext(filename)[1]
 
-    if ext == '.vtp':
-        reader = vtk.vtkXMLPolyDataReader()
-        reader.SetFileName(filename)
-        reader.Update()
-        return reader.GetOutput()
-    elif ext == '.obj':
-        reader = vtk.vtkOBJReader()
-        reader.SetFileName(filename)
-        reader.Update()
-        return reader.GetOutput()
+    readers = {
+            '.vtp' : vtk.vtkXMLPolyDataReader,
+            '.vtk' : vtk.vtkPolyDataReader,
+            '.ply' : vtk.vtkPLYReader,
+            '.pcd' : vtk.vtkPCDReader,
+            '.obj' : vtk.vtkOBJReader,
+            '.stl' : vtk.vtkSTLReader,
+              }
 
-    raise Exception('Unknown file extension in readPolyData: %s' % filename)
+    if ext not in readers:
+        raise Exception('Unknown file extension in readPolyData: %s' % filename)
+
+    reader = readers[ext]()
+    reader.SetFileName(filename)
+    reader.Update()
+    return shallowCopy(reader.GetOutput())
 
 
 def writePolyData(polyData, filename):
 
     ext = os.path.splitext(filename)[1]
 
-    if ext == '.vtp':
-        writer = vtk.vtkXMLPolyDataWriter()
-        writer.SetFileName(filename)
-        writer.SetInput(polyData)
-        writer.Update()
-    else:
+    writers = {
+            '.vtp' : vtk.vtkXMLPolyDataWriter,
+            '.ply' : vtk.vtkPLYWriter,
+            '.stl' : vtk.vtkSTLWriter,
+              }
+
+    if ext not in writers:
         raise Exception('Unknown file extension in writePolyData: %s' % filename)
+
+    writer = writers[ext]()
+    writer.SetFileName(filename)
+    writer.SetInput(polyData)
+    writer.Update()

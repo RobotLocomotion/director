@@ -145,11 +145,11 @@ def setupPackagePaths():
         PythonQt.dd.ddDrakeModel.addPackageSearchPath(os.path.join(getDRCBase(), path))
 
 def showErrorMessage(message, title='Error'):
-    QtGui.QMessageBox.warning(getMainWindow(), title, message);
+    QtGui.QMessageBox.warning(getMainWindow(), title, message)
 
 
 def showInfoMessage(message, title='Info'):
-    QtGui.QMessageBox.information(getMainWindow(), title, message);
+    QtGui.QMessageBox.information(getMainWindow(), title, message)
 
 def startup(globals):
 
