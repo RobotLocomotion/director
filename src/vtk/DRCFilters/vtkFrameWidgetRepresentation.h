@@ -66,7 +66,7 @@ public:
   virtual void HighlightActor(vtkDataSet* dataset);
 
   virtual double *GetBounds();
-  
+
   // Description:
   // Methods supporting, and required by, the rendering process.
   virtual void ReleaseGraphicsResources(vtkWindow*);
@@ -90,6 +90,12 @@ public:
   vtkSetMacro(WorldSize, double);
   vtkGetMacro(WorldSize, double);
 
+
+  // Description:
+  // Use a tube filter instead of only drawing lines.
+  vtkSetMacro(UseTubeFilter, bool);
+  vtkGetMacro(UseTubeFilter, bool);
+
   enum {Outside=0,Translating,TranslatingInPlane,Rotating};
 
 protected:
@@ -97,6 +103,7 @@ protected:
   ~vtkFrameWidgetRepresentation();
 
   double WorldSize;
+  bool UseTubeFilter;
 
 
   // Manage how the representation appears

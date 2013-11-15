@@ -39,6 +39,8 @@ class BlockAffordanceItem(om.AffordanceItem):
         aff = affordance.createBoxAffordance(self.params)
         affordance.publishAffordance(aff)
 
+        if hasattr(self, 'publishCallback'):
+            self.publishCallback()
 
     def updateICPTransform(self, transform):
         delta = computeAToB(self.icpTransformInitial, transform)

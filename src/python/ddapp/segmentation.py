@@ -29,10 +29,8 @@ import vtkPCLFiltersPython as pcl
 import drc as lcmdrc
 import bot_core as lcmbotcore
 
-
-eventFilters = {}
-
-_spindleAxis = None
+import vs as lcmvs
+from ddapp import lcmUtils
 
 
 def getSegmentationView():
@@ -388,18 +386,6 @@ def getCurrentMapServerData():
     return addCoordArraysToPolyData(polyData)
 
 
-def getOrCreateSegmentationView():
-
-    viewManager = app.getViewManager()
-    segmentationView = viewManager.findView('Segmentation View')
-    if not segmentationView:
-        segmentationView = viewManager.createView('Segmentation View')
-        installEventFilter(segmentationView, segmentationViewEventFilter)
-
-    viewManager.switchToView('Segmentation View')
-    return segmentationView
-
-
 def getTransformFromAxes(xaxis, yaxis, zaxis):
 
     t = vtk.vtkTransform()
@@ -425,230 +411,6 @@ def applyVoxelGrid(polyData, leafSize=0.01):
     v.Update()
     return shallowCopy(v.GetOutput())
 
-
-def getLumberDimensions(lumberId):
-
-    dimensions = [
-                  [0.089, 0.038], # 2x4
-                  [0.140, 0.038], # 2x6
-                  [0.089, 0.089], # 4x4
-                 ]
-
-    return dimensions[lumberId]
-
-
-class SegmentationPanel(object):
-
-    def __init__(self):
-        self.panel = QtGui.QWidget()
-        self.taskSelection = PythonQt.dd.ddTaskSelection()
-        self.debrisWizard = self._makeDebrisWizard()
-        self.terrainWizard = self._makeTerrainWizard()
-        self.firehoseWizard = self._makeFirehoseWizard()
-        self.drillWizard = self._makeDrillWizard()
-
-        self.taskSelection.connect('taskSelected(int)', self.onTaskSelected)
-
-        l = QtGui.QVBoxLayout(self.panel)
-        l.addWidget(self.taskSelection)
-        l.addWidget(self.debrisWizard)
-        l.addWidget(self.terrainWizard)
-        l.addWidget(self.firehoseWizard)
-        l.addWidget(self.drillWizard)
-        self.debrisWizard.hide()
-        self.terrainWizard.hide()
-        self.firehoseWizard.hide()
-        self.drillWizard.hide()
-
-    def _makeDebrisWizard(self):
-        debrisWizard = QtGui.QWidget()
-        lumberSelection = PythonQt.dd.ddLumberSelection()
-        lumberSelection.connect('lumberSelected(int)', self.onDebrisLumberSelected)
-        l = QtGui.QVBoxLayout(debrisWizard)
-        l.addWidget(self._makeBackButton())
-        l.addWidget(lumberSelection)
-        l.addStretch()
-        return debrisWizard
-
-    def _makeFirehoseWizard(self):
-        firehoseWizard = QtGui.QWidget()
-        segmentButton = QtGui.QToolButton()
-        segmentButton.setIcon(QtGui.QIcon(':/images/wye.png'))
-        segmentButton.setIconSize(QtCore.QSize(60,60))
-        segmentButton.connect('clicked()', self.onSegmentWye)
-        l = QtGui.QVBoxLayout(firehoseWizard)
-        l.addWidget(self._makeBackButton())
-        l.addWidget(segmentButton)
-        l.addStretch()
-        return firehoseWizard
-
-
-    def _makeButton(self, text, func):
-
-        b = QtGui.QPushButton(text)
-        b.connect('clicked()', func)
-        return b
-
-    def _makeDrillWizard(self):
-        drillWizard = QtGui.QWidget()
-
-        #segmentButton = QtGui.QToolButton()
-        #segmentButton.setIcon(QtGui.QIcon(':/images/wye.png'))
-        #segmentButton.setIconSize(QtCore.QSize(60,60))
-        #segmentButton.connect('clicked()', self.onSegmentWye)
-
-        l = QtGui.QVBoxLayout(drillWizard)
-        l.addWidget(self._makeBackButton())
-        l.addWidget(self._makeButton('segment drill on table', startDrillAutoSegmentation))
-        l.addWidget(self._makeButton('segment drill in hand', startDrillInHandSegmentation))
-        l.addWidget(self._makeButton('segment wall', startDrillWallSegmentation))
-        l.addWidget(self._makeButton('pick point', startPickPoint))
-        l.addStretch()
-        return drillWizard
-
-
-    def _makeTerrainWizard(self):
-        terrainWizard = QtGui.QWidget()
-
-        self.cinderBlockButton = QtGui.QToolButton()
-        self.cinderBlock2Button = QtGui.QToolButton()
-        self.cinderBlockButton.setIcon(QtGui.QIcon(':/images/cinderblock.png'))
-        self.cinderBlock2Button.setIcon(QtGui.QIcon(':/images/cinderblock_double.png'))
-        self.cinderBlockButton.setIconSize(QtCore.QSize(60,60))
-        self.cinderBlock2Button.setIconSize(QtCore.QSize(60,60))
-
-        self.cinderBlockButton.connect('clicked()', functools.partial(self.onTerrainCinderblockSelected, self.cinderBlockButton))
-        self.cinderBlock2Button.connect('clicked()', functools.partial(self.onTerrainCinderblockSelected, self.cinderBlock2Button))
-
-        buttons = QtGui.QWidget()
-        l = QtGui.QHBoxLayout(buttons)
-        l.addStretch()
-        l.addWidget(self.cinderBlockButton)
-        l.addWidget(self.cinderBlock2Button)
-        l.addStretch()
-
-        l = QtGui.QVBoxLayout(terrainWizard)
-        l.addWidget(self._makeBackButton())
-        l.addWidget(buttons)
-        l.addStretch()
-        return terrainWizard
-
-    def _makeBackButton(self):
-        w = QtGui.QPushButton()
-        w.setIcon(QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_ArrowBack))
-        w.connect('clicked()', self.onBackButton)
-
-        frame = QtGui.QWidget()
-        l = QtGui.QHBoxLayout(frame)
-        l.addWidget(w)
-        l.addStretch()
-        return frame
-
-
-    def onBackButton(self):
-        self.cancelCurrentTask()
-
-    def onSegmentWye(self):
-        startWyeSegmentation()
-
-    def onDebrisLumberSelected(self, lumberId):
-        blockDimensions = getLumberDimensions(lumberId)
-        startInteractiveLineDraw(blockDimensions)
-
-    def onTerrainCinderblockSelected(self, button):
-        if button == self.cinderBlockButton:
-            blockDimensions = [0.1905, 0.149225]
-        elif button == self.cinderBlock2Button:
-            blockDimensions = [0.1905, 0.29845]
-        startInteractiveLineDraw(blockDimensions)
-
-    def startDebrisTask(self):
-        self.debrisWizard.show()
-        self.taskSelection.hide()
-
-    def startTerrainTask(self):
-        self.terrainWizard.show()
-        self.taskSelection.hide()
-
-    def startFirehoseTask(self):
-        self.firehoseWizard.show()
-        self.taskSelection.hide()
-
-    def startDrillTask(self):
-        self.drillWizard.show()
-        self.taskSelection.hide()
-
-    def cancelCurrentTask(self):
-        self.debrisWizard.hide()
-        self.terrainWizard.hide()
-        self.firehoseWizard.hide()
-        self.drillWizard.hide()
-        self.taskSelection.show()
-
-    def onTaskSelected(self, taskId):
-
-        taskFunctions = {
-                         2:self.startTerrainTask,
-                         4:self.startDebrisTask,
-                         8:self.startFirehoseTask,
-                         6:self.startDrillTask,
-                        }
-
-        taskFunction = taskFunctions.get(taskId+1)
-
-        if taskFunction:
-            taskFunction()
-        else:
-            app.showInfoMessage('Sorry, not impemented yet.')
-
-
-
-def createDockWidget():
-    global _segmentationPanel
-    try: _segmentationPanel
-    except NameError:
-        _segmentationPanel = SegmentationPanel()
-        app.addWidgetToDock(_segmentationPanel.panel)
-
-
-def activateSegmentationMode(debug=False):
-
-    if debug:
-        polyData = getDebugRevolutionData()
-    else:
-        polyData = getCurrentMapServerData() or getCurrentRevolutionData()
-
-    if not polyData:
-        return
-
-    global _spindleAxis
-    _spindleAxis = perception._multisenseItem.model.getSpindleAxis()
-
-    segmentationView = getOrCreateSegmentationView()
-
-    perspective()
-
-    initICPCallback()
-
-    thresholdWorkspace = False
-    doRemoveGround = False
-
-    if thresholdWorkspace:
-        polyData = thresholdPoints(polyData, 'distance_along_robot_x', [0.3, 2.0])
-        polyData = thresholdPoints(polyData, 'distance_along_robot_y', [-3.0, 3.0])
-        polyData = thresholdPoints(polyData, 'distance_along_robot_z', [-10.0, 1.5])
-
-    if doRemoveGround:
-        groundPoints, polyData = removeGround(polyData)
-        segmentationObj = updatePolyData(groundPoints, 'ground', alpha=0.3, visible=False)
-
-    segmentationObj = updatePolyData(polyData, 'pointcloud snapshot', alpha=0.3)
-    segmentationObj.headAxis = perception._multisenseItem.model.getAxis('head', [1,0,0])
-
-    segmentationView.camera().DeepCopy(app.getDRCView().camera())
-    segmentationView.render()
-
-    createDockWidget()
 
 
 def segmentGroundPlanes():
@@ -1777,6 +1539,24 @@ def computeCentroids(polyData, axis, binWidth=0.025):
     return np.array(centroids)
 
 
+def computePointCountsAlongAxis(polyData, axis, binWidth=0.025):
+
+    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, axis, resultArrayName='dist_along_axis')
+
+    polyData, bins = binByScalar(polyData, 'dist_along_axis', binWidth)
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    binLabels = vtkNumpy.getNumpyFromVtk(polyData, 'bin_labels')
+
+    numberOfBins = len(bins) - 1
+    binCount = []
+    for i in xrange(numberOfBins):
+        binPoints = points[binLabels == i]
+        binCount.append(len(binPoints))
+
+    return np.array(binCount)
+
+
+
 
 def binByScalar(lidarData, scalarArrayName, binWidth, binLabelsArrayName='bin_labels'):
     '''
@@ -1831,7 +1611,8 @@ def segmentBlockByAnnotation(blockDimensions, p1, p2, p3):
     xaxis = np.cross(yaxis, zaxis)
 
     # reorient axes
-    if np.dot(yaxis, _spindleAxis) < 0:
+    viewPlaneNormal = getSegmentationView().camera().GetViewPlaneNormal()
+    if np.dot(yaxis, viewPlaneNormal) < 0:
         yaxis *= -1
 
     if np.dot(xaxis, p3 - p1) < 0:
@@ -1879,13 +1660,111 @@ def projectPointToPlane(point, origin, normal):
     return projectedPoint
 
 
-def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expectedXAxis=None, edgeSign=1, name='block affordance'):
 
-    if expectedNormal is None:
-        expectedNormal = _spindleAxis
 
-    if expectedXAxis is None:
-        expectedXAxis = _spindleAxis
+####
+# debrs task ground frame
+
+def getBoardCorners(params):
+    axes = [np.array(params[axis]) for axis in ['xaxis', 'yaxis', 'zaxis']]
+    widths = [np.array(params[axis])/2.0 for axis in ['xwidth', 'ywidth', 'zwidth']]
+    edges = [axes[i] * widths[i] for i in xrange(3)]
+    origin = np.array(params['origin'])
+    return [
+            origin + edges[0] + edges[1] + edges[2],
+            origin - edges[0] + edges[1] + edges[2],
+            origin - edges[0] - edges[1] + edges[2],
+            origin + edges[0] - edges[1] + edges[2],
+            origin + edges[0] + edges[1] - edges[2],
+            origin - edges[0] + edges[1] - edges[2],
+            origin - edges[0] - edges[1] - edges[2],
+            origin + edges[0] - edges[1] - edges[2],
+           ]
+
+def getPointDistances(target, points):
+    return np.array([np.linalg.norm(target - p) for p in points])
+
+
+def computeClosestCorner(aff, referenceFrame):
+    corners = getBoardCorners(aff.params)
+    dists = getPointDistances(np.array(referenceFrame.GetPosition()), corners)
+    return corners[dists.argmin()]
+
+
+def computeGroundFrame(aff, referenceFrame):
+    print referenceFrame.GetPosition(), referenceFrame.GetOrientation()
+
+    refAxis = [0.0, -1.0, 0.0]
+    referenceFrame.TransformVector(refAxis, refAxis)
+
+    print 'ref axis is:', refAxis
+
+    refAxis = np.array(refAxis)
+
+    axes = [np.array(aff.params[axis]) for axis in ['xaxis', 'yaxis', 'zaxis']]
+    axisProjections = np.array([np.abs(np.dot(axis, refAxis)) for axis in axes])
+    boardAxis = axes[axisProjections.argmax()]
+    if np.dot(boardAxis, refAxis) < 0:
+        boardAxis = -boardAxis
+
+    print 'board axis is:', boardAxis
+
+    d = DebugData()
+    d.addLine([0,0,0], boardAxis)
+    d.addLine([0,0,0], refAxis)
+    d.addSphere(boardAxis, radius=0.02)
+    updatePolyData(d.getPolyData(), 'ground frame debug')
+
+    xaxis = boardAxis
+    zaxis = [0,0,1]
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    closestCorner = computeClosestCorner(aff, referenceFrame)
+    groundFrame = getTransformFromAxes(xaxis, yaxis, zaxis)
+    groundFrame.PostMultiply()
+    groundFrame.Translate(closestCorner[0], closestCorner[1], 0.0)
+    return groundFrame
+
+
+def showBoardDebug(affs=None):
+    referenceFrame = vtk.vtkTransform()
+    referenceFrame.Translate(0, 0, 5.0)
+    affs = affs or om.objects.values()
+    for obj in affs:
+        if isinstance(obj, BlockAffordanceItem):
+            d = DebugData()
+            d.addSphere(computeClosestCorner(obj, referenceFrame), radius=0.015)
+            showPolyData(d.getPolyData(), 'closest corner', parent='board debug', visible=True)
+            showFrame(computeGroundFrame(obj, referenceFrame), 'ground frame', parent='board debug', visible=True)
+
+
+def publishTriad(transform, collectionId=1234):
+
+    o = lcmvs.obj_t()
+
+    xyz = transform.GetPosition()
+    rpy = transformUtils.rollPitchYawFromTransform(transform)
+
+    o.roll, o.pitch, o.yaw = rpy
+    o.x, o.y, o.z = xyz
+    o.id = 1
+
+    m = lcmvs.obj_collection_t()
+    m.id = collectionId
+    m.name = 'stance_triads'
+    m.type = lcmvs.obj_collection_t.AXIS3D
+    m.nobjs = 1
+    m.reset = False
+    m.objs = [o]
+
+    lcmUtils.publish('OBJ_COLLECTION', m)
+
+####
+
+
+
+def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXAxis, edgeSign=1, name='block affordance'):
 
     polyData, planeOrigin, normal  = applyPlaneFit(polyData, distanceThreshold=0.05, expectedNormal=expectedNormal, returnOrigin=True)
 
@@ -1996,13 +1875,68 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal=None, expec
 
     frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
 
+    t = computeDebrisStanceFrame(obj)
+    if t:
+        updateFrame(t, 'debris stance frame', parent=getDebugFolder())
+        obj.publishCallback = functools.partial(publishDebrisStanceFrame, obj)
+
+
+def computeDebrisStanceFrame(aff):
+
+    debrisReferenceFrame = om.findObjectByName('debris reference frame').transform
+    debrisWallEdge = om.findObjectByName('debris plane edge')
+
+    if debrisReferenceFrame and debrisWallEdge:
+
+        affGroundFrame = computeGroundFrame(aff, debrisReferenceFrame)
+
+        updateFrame(affGroundFrame, 'board ground frame')
+
+        affWallEdge = computeGroundFrame(aff, debrisReferenceFrame)
+
+        framePos = np.array(affGroundFrame.GetPosition())
+        p1, p2 = debrisWallEdge.points
+        edgeAxis = p2 - p1
+        edgeAxis /= np.linalg.norm(edgeAxis)
+        projectedPos = p1 + edgeAxis * np.dot(framePos - p1, edgeAxis)
+
+        d = DebugData()
+        d.addSphere(p1, radius=0.02)
+        d.addSphere(p2, radius=0.02)
+        d.addLine(p1, p2)
+        d.addSphere(projectedPos, radius=0.025)
+        updatePolyData(d.getPolyData(), 'stance debug', visible=False)
+
+        affWallFrame = vtk.vtkTransform()
+        affWallFrame.SetMatrix(affGroundFrame.GetMatrix())
+        affWallFrame.PostMultiply()
+        affWallFrame.Translate(projectedPos - framePos)
+
+        updateFrame(affWallFrame, 'aff ground wall frame', visible=False)
+
+        stanceWidth = 0.20
+        stanceOffsetX = -0.35
+        stanceOffsetY = -0.45
+        stanceRotation = math.pi/2.0
+
+        stanceFrame, _, _ = getFootFramesFromReferenceFrame(affWallFrame, stanceWidth, math.degrees(stanceRotation), [stanceOffsetX, stanceOffsetY, 0.0])
+
+        return stanceFrame
+
+
+def publishDebrisStanceFrame(aff):
+
+    frame = computeDebrisStanceFrame(aff)
+    publishTriad(frame)
+
 
 def segmentBlockByPlanes(blockDimensions):
 
     planes = om.getObjectChildren(om.findObjectByName('selected planes'))[:2]
 
-    origin1, normal1, plane1 = getPlaneEquationFromPolyData(planes[0].polyData, expectedNormal=_spindleAxis)
-    origin2, normal2, plane2 = getPlaneEquationFromPolyData(planes[1].polyData, expectedNormal=_spindleAxis)
+    viewPlaneNormal = getSegmentationView().camera().GetViewPlaneNormal()
+    origin1, normal1, plane1 = getPlaneEquationFromPolyData(planes[0].polyData, expectedNormal=viewPlaneNormal)
+    origin2, normal2, plane2 = getPlaneEquationFromPolyData(planes[1].polyData, expectedNormal=viewPlaneNormal)
 
     xaxis = normal2
     yaxis = normal1
@@ -2025,21 +1959,6 @@ def segmentBlockByPlanes(blockDimensions):
     zwidth = np.linalg.norm(p2 - p1)
 
     origin = p1 + xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0 
-
-
-    '''
-
-    # reorient axes
-    if np.dot(yaxis, _spindleAxis) < 0:
-        yaxis *= -1
-
-    if np.dot(xaxis, p3 - p1) < 0:
-        xaxis *= -1
-
-    # make right handed
-    zaxis = np.cross(xaxis, yaxis)
-
-    '''
 
     d = DebugData()
 
@@ -2074,23 +1993,6 @@ def segmentBlockByPlanes(blockDimensions):
     params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
-
-
-def startBlockSegmentation(dimensions):
-
-    if om.findObjectByName('selected planes'):
-        polyData = om.getObjectChildren(om.findObjectByName('selected planes'))[0].polyData
-        segmentBlockByTopPlane(polyData, dimensions)
-        return
-
-    picker = PointPicker()
-    addViewPicker(picker)
-    picker.enabled = True
-    picker.start()
-    picker.annotationFunc = functools.partial(segmentBlockByAnnotation, dimensions)
-    om.removeFromObjectModel(om.findObjectByName('block affordance'))
-    om.removeFromObjectModel(om.findObjectByName('block axes'))
-    om.removeFromObjectModel(om.findObjectByName('annotation'))
 
 
 def startBoundedPlaneSegmentation():
@@ -2141,6 +2043,16 @@ def startPickPoint():
     picker.annotationFunc = storePoint
 
 
+def startSelectToolTip():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = selectToolTip
+
+
 def startDrillSegmentation():
 
     picker = PointPicker(numberOfPoints=3)
@@ -2178,6 +2090,103 @@ def startDrillInHandSegmentation():
     picker.drawLines = True
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrillInHand)
+
+
+def startSegmentDebrisWall():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDebrisWall)
+
+
+def selectToolTip(point1):
+    print point1
+
+
+
+def segmentDebrisWall(point1):
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = shallowCopy(inputObj.polyData)
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+
+    polyData, origin, normal = applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=viewPlaneNormal, perpendicularAxis=viewPlaneNormal,
+                                             searchOrigin=point1, searchRadius=0.25, angleEpsilon=0.7, returnOrigin=True)
+
+
+    planePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.02, 0.02])
+    updatePolyData(planePoints, 'unbounded plane points', parent=getDebugFolder(), visible=False)
+
+
+    planePoints = applyVoxelGrid(planePoints, leafSize=0.03)
+    planePoints = labelOutliers(planePoints, searchRadius=0.06, neighborsInSearchRadius=10)
+
+    updatePolyData(planePoints, 'voxel plane points', parent=getDebugFolder(), colorByName='is_outlier', visible=False)
+
+    planePoints = thresholdPoints(planePoints, 'is_outlier', [0, 0])
+
+    planePoints = labelDistanceToPoint(planePoints, point1)
+    clusters = extractClusters(planePoints, clusterTolerance=0.10)
+    clusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
+
+    planePoints = clusters[0]
+    planeObj = updatePolyData(planePoints, 'debris plane points', parent=getDebugFolder(), visible=False)
+
+
+    perpAxis = [0,0,-1]
+    perpAxis /= np.linalg.norm(perpAxis)
+    edgeAxis = np.cross(normal, perpAxis)
+
+    edgePoints = computeEdge(planePoints, edgeAxis, perpAxis)
+    edgePoints = vtkNumpy.getVtkPolyDataFromNumpyPoints(edgePoints)
+    updatePolyData(edgePoints, 'edge points', parent=getDebugFolder(), visible=False)
+
+
+    linePoint, lineDirection, _ = applyLineFit(edgePoints)
+
+    #binCounts = computePointCountsAlongAxis(planePoints, lineDirection)
+
+
+    xaxis = lineDirection
+    yaxis = normal
+
+    zaxis = np.cross(xaxis, yaxis)
+
+    if np.dot(zaxis, [0, 0, 1]) < 0:
+        zaxis *= -1
+        xaxis *= -1
+
+    pts = vtkNumpy.getNumpyFromVtk(planePoints, 'Points')
+
+    dists = np.dot(pts-linePoint, xaxis)
+
+    p1 = linePoint + xaxis*np.min(dists)
+    p2 = linePoint + xaxis*np.max(dists)
+
+    p1 = projectPointToPlane(p1, origin, normal)
+    p2 = projectPointToPlane(p2, origin, normal)
+
+    d = DebugData()
+    d.addSphere(p1, radius=0.01)
+    d.addSphere(p2, radius=0.01)
+    d.addLine(p1, p2)
+    edgeObj = updatePolyData(d.getPolyData(), 'debris plane edge', parent=planeObj, visible=True)
+    edgeObj.points = [p1, p2]
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(p1)
+
+    updateFrame(t, 'debris plane frame', parent=planeObj, visible=False)
+
+    refFrame = vtk.vtkTransform()
+    refFrame.PostMultiply()
+    refFrame.SetMatrix(t.GetMatrix())
+    refFrame.Translate(-xaxis + yaxis + zaxis*2.0)
+    updateFrame(refFrame, 'debris reference frame', parent=planeObj, visible=False)
 
 
 def segmentBoundedPlaneByAnnotation(point1, point2):
@@ -2428,8 +2437,6 @@ def zoomToDisplayPoint(displayPoint, boundsRadius=0.5, view=None):
     view = view or app.getCurrentRenderView()
 
     worldPt1, worldPt2 = getRayFromDisplayPoint(getSegmentationView(), displayPoint)
-    global _spindleAxis
-    _spindleAxis = worldPt2 - worldPt1
 
     diagonal = np.array([boundsRadius, boundsRadius, boundsRadius])
     bounds = np.hstack([pickedPoint - diagonal, pickedPoint + diagonal])
@@ -2460,83 +2467,5 @@ def extractPointsAlongClickRay(displayPoint, distanceToLineThreshold=0.3, addDeb
     return polyData
 
 
-def onSegmentationViewDoubleClicked(displayPoint):
 
-
-    action = 'zoom_to'
-
-
-    if om.findObjectByName('major planes'):
-        action = 'select_actor'
-
-
-    if action == 'zoom_to':
-
-        zoomToDisplayPoint(displayPoint)
-
-    elif action == 'select_with_ray':
-
-        extractPointsAlongClickRay(displayPoint)
-
-    elif action == 'select_actor':
-        selectActor(displayPoint)
-
-
-def cleanup():
-
-    om.removeFromObjectModel(om.findObjectByName('segmentation'))
-
-
-def segmentationViewEventFilter(obj, event):
-
-    eventFilter = eventFilters[obj]
-
-    if event.type() == QtCore.QEvent.MouseButtonDblClick:
-        eventFilter.setEventHandlerResult(True)
-        onSegmentationViewDoubleClicked(mapMousePosition(obj, event))
-
-    else:
-
-        for picker in viewPickers:
-            if not picker.enabled:
-                continue
-
-            if event.type() == QtCore.QEvent.MouseMove:
-                picker.onMouseMove(mapMousePosition(obj, event), event.modifiers())
-                eventFilter.setEventHandlerResult(True)
-            elif event.type() == QtCore.QEvent.MouseButtonPress:
-                picker.onMousePress(mapMousePosition(obj, event), event.modifiers())
-                eventFilter.setEventHandlerResult(True)
-
-
-
-def drcViewEventFilter(obj, event):
-
-    eventFilter = eventFilters[obj]
-    if event.type() == QtCore.QEvent.MouseButtonDblClick:
-        eventFilter.setEventHandlerResult(True)
-        activateSegmentationMode()
-
-
-def installEventFilter(view, func):
-
-    global eventFilters
-    eventFilter = PythonQt.dd.ddPythonEventFilter()
-
-    qvtkwidget = view.vtkWidget()
-    qvtkwidget.installEventFilter(eventFilter)
-    eventFilters[qvtkwidget] = eventFilter
-
-    eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
-    eventFilter.addFilteredEventType(QtCore.QEvent.MouseMove)
-    eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonPress)
-    eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonRelease)
-    eventFilter.connect('handleEvent(QObject*, QEvent*)', func)
-
-
-def init():
-
-    installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
-
-    #activateSegmentationMode(debug=True)
 

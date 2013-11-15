@@ -96,7 +96,7 @@ DataRep DataRepFromPolyData(vtkPolyData* polyData)
   return rep;
 }
 
-DataRep MakeCircle(double radius, int axis)
+DataRep MakeCircle(double radius, int axis, bool useTubeFilter)
 {
   vtkSmartPointer<vtkRegularPolygonSource> c = vtkSmartPointer<vtkRegularPolygonSource>::New();
   c->GeneratePolygonOff();
@@ -112,6 +112,8 @@ DataRep MakeCircle(double radius, int axis)
   f->SetNumberOfSides(24);
   f->Update();
 
+  vtkPolyData* polyData = useTubeFilter ? f->GetOutput() : c->GetOutput();
+
   vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
   if (axis == 0)
     {
@@ -122,11 +124,11 @@ DataRep MakeCircle(double radius, int axis)
     t->RotateX(90);
     }
 
-  return DataRepFromPolyData(Transform(f->GetOutput(), t));
+  return DataRepFromPolyData(Transform(polyData, t));
 }
 
 
-DataRep MakeAxis(double length, int axis)
+DataRep MakeAxis(double length, int axis, bool useTubeFilter)
 {
   /*
   vtkSmartPointer<vtkArrowSource> c = vtkSmartPointer<vtkArrowSource>::New();
@@ -149,6 +151,7 @@ DataRep MakeAxis(double length, int axis)
   f->SetNumberOfSides(24);
   f->Update();
 
+  vtkPolyData* polyData = useTubeFilter ? f->GetOutput() : c->GetOutput();
 
   vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
   if (axis == 1)
@@ -160,7 +163,7 @@ DataRep MakeAxis(double length, int axis)
     t->RotateY(-90);
     }
 
-  return DataRepFromPolyData(Transform(f->GetOutput(), t));
+  return DataRepFromPolyData(Transform(polyData, t));
 }
 
 DataRep MakeDisk(double radius, int axis)
@@ -225,19 +228,19 @@ public:
       }
   }
 
-  void RebuildActors(double scale)
+  void RebuildActors(double scale, bool useTubeFilter)
   {
     this->Reps.clear();
     this->Axes.clear();
     this->Actors.clear();
 
-    Reps.push_back(MakeCircle(scale, 0));
-    Reps.push_back(MakeCircle(scale, 1));
-    Reps.push_back(MakeCircle(scale, 2));
+    Reps.push_back(MakeCircle(scale, 0, useTubeFilter));
+    Reps.push_back(MakeCircle(scale, 1, useTubeFilter));
+    Reps.push_back(MakeCircle(scale, 2, useTubeFilter));
 
-    Axes.push_back(MakeAxis(scale, 0));
-    Axes.push_back(MakeAxis(scale, 1));
-    Axes.push_back(MakeAxis(scale, 2));
+    Axes.push_back(MakeAxis(scale, 0, useTubeFilter));
+    Axes.push_back(MakeAxis(scale, 1, useTubeFilter));
+    Axes.push_back(MakeAxis(scale, 2, useTubeFilter));
 
     Reps[0].Actor->GetProperty()->SetColor(1,0,0);
     Reps[1].Actor->GetProperty()->SetColor(0,1,0);
@@ -290,8 +293,9 @@ vtkFrameWidgetRepresentation::vtkFrameWidgetRepresentation()
 {
   this->Internal = new vtkInternal;
   this->InteractionState = vtkFrameWidgetRepresentation::Outside;
-  this->WorldSize = 1.0;
-  this->Internal->RebuildActors(this->WorldSize);
+  this->WorldSize = 0.5;
+  this->UseTubeFilter = false;
+  this->Internal->RebuildActors(this->WorldSize, this->UseTubeFilter);
 }
 
 //----------------------------------------------------------------------------
@@ -678,7 +682,7 @@ void vtkFrameWidgetRepresentation::BuildRepresentation()
         this->Renderer->GetActiveCamera()->GetMTime() > this->BuildTime)) )
     {
     this->BuildTime.Modified();
-    this->Internal->RebuildActors(this->WorldSize);
+    this->Internal->RebuildActors(this->WorldSize, this->UseTubeFilter);
     }
 }
 

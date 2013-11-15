@@ -23,6 +23,7 @@ from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
 from ddapp.timercallback import TimerCallback
+from ddapp import segmentationpanel
 
 import numpy as np
 from ddapp.debugVis import DebugData
@@ -121,7 +122,7 @@ if usePerception:
     robotStateJointController.setZeroPose()
 
     perception.init(view, robotStateJointController)
-    segmentation.init()
+    segmentationpanel.init()
 
     sensorsFolder = om.getOrCreateContainer('sensors')
     obj = om.addRobotModel(robotStateModel, sensorsFolder)
