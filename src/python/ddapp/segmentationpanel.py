@@ -47,6 +47,7 @@ class SegmentationPanel(object):
         l.addWidget(self._makeBackButton())
         l.addWidget(lumberSelection)
         l.addWidget(self._makeButton('segment cinderblock wall', startSegmentDebrisWall))
+        l.addWidget(self._makeButton('segment cinderblock wall manual', startSegmentDebrisWallManual))
         l.addStretch()
         return debrisWizard
 

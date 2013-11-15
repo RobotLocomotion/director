@@ -1692,12 +1692,9 @@ def computeClosestCorner(aff, referenceFrame):
 
 
 def computeGroundFrame(aff, referenceFrame):
-    print referenceFrame.GetPosition(), referenceFrame.GetOrientation()
 
     refAxis = [0.0, -1.0, 0.0]
     referenceFrame.TransformVector(refAxis, refAxis)
-
-    print 'ref axis is:', refAxis
 
     refAxis = np.array(refAxis)
 
@@ -1707,16 +1704,8 @@ def computeGroundFrame(aff, referenceFrame):
     if np.dot(boardAxis, refAxis) < 0:
         boardAxis = -boardAxis
 
-    print 'board axis is:', boardAxis
-
-    d = DebugData()
-    d.addLine([0,0,0], boardAxis)
-    d.addLine([0,0,0], refAxis)
-    d.addSphere(boardAxis, radius=0.02)
-    updatePolyData(d.getPolyData(), 'ground frame debug')
-
     xaxis = boardAxis
-    zaxis = [0,0,1]
+    zaxis = np.array([0.0, 0.0, 1.0])
     yaxis = np.cross(zaxis, xaxis)
     yaxis /= np.linalg.norm(yaxis)
     xaxis = np.cross(yaxis, zaxis)
@@ -1877,7 +1866,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
 
     t = computeDebrisStanceFrame(obj)
     if t:
-        updateFrame(t, 'debris stance frame', parent=getDebugFolder())
+        showFrame(t, 'debris stance frame', parent=obj)
         obj.publishCallback = functools.partial(publishDebrisStanceFrame, obj)
 
 
@@ -1890,7 +1879,7 @@ def computeDebrisStanceFrame(aff):
 
         affGroundFrame = computeGroundFrame(aff, debrisReferenceFrame)
 
-        updateFrame(affGroundFrame, 'board ground frame')
+        updateFrame(affGroundFrame, 'board ground frame', parent=getDebugFolder(), visible=False)
 
         affWallEdge = computeGroundFrame(aff, debrisReferenceFrame)
 
@@ -1900,24 +1889,28 @@ def computeDebrisStanceFrame(aff):
         edgeAxis /= np.linalg.norm(edgeAxis)
         projectedPos = p1 + edgeAxis * np.dot(framePos - p1, edgeAxis)
 
-        d = DebugData()
-        d.addSphere(p1, radius=0.02)
-        d.addSphere(p2, radius=0.02)
-        d.addLine(p1, p2)
-        d.addSphere(projectedPos, radius=0.025)
-        updatePolyData(d.getPolyData(), 'stance debug', visible=False)
-
         affWallFrame = vtk.vtkTransform()
-        affWallFrame.SetMatrix(affGroundFrame.GetMatrix())
         affWallFrame.PostMultiply()
-        affWallFrame.Translate(projectedPos - framePos)
 
-        updateFrame(affWallFrame, 'aff ground wall frame', visible=False)
+        useWallFrameForRotation = True
 
-        stanceWidth = 0.20
-        stanceOffsetX = -0.35
-        stanceOffsetY = -0.45
-        stanceRotation = math.pi/2.0
+        if useWallFrameForRotation:
+            affWallFrame.SetMatrix(debrisReferenceFrame.GetMatrix())
+            affWallFrame.Translate(projectedPos - np.array(debrisReferenceFrame.GetPosition()))
+
+            stanceWidth = 0.20
+            stanceOffsetX = -0.35
+            stanceOffsetY = 0.45
+            stanceRotation = 0.0
+
+        else:
+            affWallFrame.SetMatrix(affGroundFrame.GetMatrix())
+            affWallFrame.Translate(projectedPos - framePos)
+
+            stanceWidth = 0.20
+            stanceOffsetX = -0.35
+            stanceOffsetY = -0.45
+            stanceRotation = math.pi/2.0
 
         stanceFrame, _, _ = getFootFramesFromReferenceFrame(affWallFrame, stanceWidth, math.degrees(stanceRotation), [stanceOffsetX, stanceOffsetY, 0.0])
 
@@ -2100,10 +2093,47 @@ def startSegmentDebrisWall():
     picker.start()
     picker.annotationFunc = functools.partial(segmentDebrisWall)
 
+def startSegmentDebrisWallManual():
+
+    picker = PointPicker(numberOfPoints=2)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDebrisWallManual)
+
 
 def selectToolTip(point1):
     print point1
 
+
+
+def segmentDebrisWallManual(point1, point2):
+
+    p1, p2 = point1, point2
+
+    d = DebugData()
+    d.addSphere(p1, radius=0.01)
+    d.addSphere(p2, radius=0.01)
+    d.addLine(p1, p2)
+    edgeObj = updatePolyData(d.getPolyData(), 'debris plane edge', visible=True)
+    edgeObj.points = [p1, p2]
+
+    xaxis = p2 - p1
+    xaxis /= np.linalg.norm(xaxis)
+    zaxis = np.array([0.0, 0.0, 1.0])
+    yaxis = np.cross(zaxis, xaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(p1)
+
+    updateFrame(t, 'debris plane frame', parent=edgeObj, visible=False)
+
+    refFrame = vtk.vtkTransform()
+    refFrame.PostMultiply()
+    refFrame.SetMatrix(t.GetMatrix())
+    refFrame.Translate(-xaxis + yaxis + zaxis*20.0)
+    updateFrame(refFrame, 'debris reference frame', parent=edgeObj, visible=False)
 
 
 def segmentDebrisWall(point1):
@@ -2185,7 +2215,7 @@ def segmentDebrisWall(point1):
     refFrame = vtk.vtkTransform()
     refFrame.PostMultiply()
     refFrame.SetMatrix(t.GetMatrix())
-    refFrame.Translate(-xaxis + yaxis + zaxis*2.0)
+    refFrame.Translate(-xaxis + yaxis + zaxis*20.0)
     updateFrame(refFrame, 'debris reference frame', parent=planeObj, visible=False)
 
 
