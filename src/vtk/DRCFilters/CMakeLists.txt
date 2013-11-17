@@ -37,6 +37,7 @@ if (USE_DRC_MAPS)
   include_directories(${PCL_INCLUDE_DIRS})
   include_directories(${MAPS_INCLUDE_DIRS})
   list(APPEND deps ${MAPS_LIBRARIES} ${PCL_LIBRARIES})
+  use_cpp11()
 endif()
 
 
