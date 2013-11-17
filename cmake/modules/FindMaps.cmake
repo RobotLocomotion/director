@@ -32,4 +32,4 @@ macro(pkg_config_find_module varname pkgname header library pathsuffix)
 endmacro()
 
 
-pkg_config_find_module(MAPS maps MapManager.h maps maps)
+pkg_config_find_module(MAPS maps MapManager.hpp maps maps)
