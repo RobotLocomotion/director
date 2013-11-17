@@ -11,6 +11,7 @@ find_package(Eigen REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem regex)
 find_package(VTK REQUIRED)
 find_package(QtPropertyBrowser REQUIRED)
+find_package(LCM REQUIRED)
 
 include(${VTK_USE_FILE})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -22,6 +23,7 @@ include_directories(${PYTHONQT_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
 include_directories(${EIGEN_INCLUDE_DIRS})
 include_directories(${DRAKE_INCLUDE_DIRS})
+include_directories(${LCM_INCLUDE_DIRS})
 
 set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
@@ -101,7 +103,9 @@ set(deps
   ${VTK_LIBRARIES}
   ${DRAKE_LIBRARIES}
   ${Boost_LIBRARIES}
+  ${LCM_LIBRARIES}
   )
+
 
 add_library(ddApp ${srcs})
 target_link_libraries(ddApp ${deps})

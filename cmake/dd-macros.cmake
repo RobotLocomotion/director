@@ -22,3 +22,15 @@ macro(use_cpp11)
     endif()
   endif()
 endmacro()
+
+
+macro(use_pkg target cachevar)
+  find_package(PkgConfig)
+  pkg_check_modules(${cachevar}_pkgconfig ${ARGN})
+
+  string(REPLACE ";" " " _cflags_str "${${cachevar}_pkgconfig_CFLAGS}")
+  string(REPLACE ";" " " _ldflags_str "${${cachevar}_pkgconfig_LDFLAGS}")
+
+  set_target_properties(${target} PROPERTIES COMPILE_FLAGS ${_cflags_str})
+  set_target_properties(${target} PROPERTIES LINK_FLAGS ${_ldflags_str})
+endmacro()
