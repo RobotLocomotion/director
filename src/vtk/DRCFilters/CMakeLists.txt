@@ -31,9 +31,12 @@ set(deps
 option(USE_DRC_MAPS "Build drake-designer with drc maps dependency." ON)
 if (USE_DRC_MAPS)
   find_package(Maps REQUIRED)
+  find_package(PCL REQUIRED)
+
   list(APPEND sources vtkMapServerSource.cxx)
+  include_directories(${PCL_INCLUDE_DIRS})
   include_directories(${MAPS_INCLUDE_DIRS})
-  list(APPEND deps ${MAPS_LIBRARIES})
+  list(APPEND deps ${MAPS_LIBRARIES} ${PCL_LIBRARIES})
 endif()
 
 
