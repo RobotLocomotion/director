@@ -33,4 +33,7 @@ macro(use_pkg target cachevar)
 
   set_target_properties(${target} PROPERTIES COMPILE_FLAGS ${_cflags_str})
   set_target_properties(${target} PROPERTIES LINK_FLAGS ${_ldflags_str})
+  link_directories(${${cachevar}_pkgconfig_LIBRARY_DIRS})
+  target_link_libraries(${target} ${${cachevar}_pkgconfig_LIBRARIES})
+
 endmacro()
