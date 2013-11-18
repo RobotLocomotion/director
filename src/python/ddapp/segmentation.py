@@ -1833,10 +1833,12 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
 
 def computeDebrisStanceFrame(aff):
 
-    debrisReferenceFrame = om.findObjectByName('debris reference frame').transform
+    debrisReferenceFrame = om.findObjectByName('debris reference frame')
     debrisWallEdge = om.findObjectByName('debris plane edge')
 
     if debrisReferenceFrame and debrisWallEdge:
+
+        debrisReferenceFrame = debrisReferenceFrame.transform
 
         affGroundFrame = computeGroundFrame(aff, debrisReferenceFrame)
 
