@@ -29,6 +29,7 @@ set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
 qt4_wrap_cpp(moc_srcs
   ${decorator_file}
+  ddBotImageQueue.h
   ddDrakeModel.h
   ddDRCView.h
   ddLCMSubscriber.h
@@ -109,6 +110,7 @@ set(deps
 
 add_library(ddApp ${srcs})
 target_link_libraries(ddApp ${deps})
+use_pkg(ddApp ddApp_pkg_dep bot2-core bot2-frames bot2-param-client image-utils)
 
 add_executable(drake-designer main.cpp)
 target_link_libraries(drake-designer ddApp)

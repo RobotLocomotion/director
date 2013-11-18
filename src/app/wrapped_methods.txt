@@ -12,6 +12,14 @@ ddLCMSubscriber::ddLCMSubscriber(const QString&, QObject*);
 ddLCMSubscriber::~ddLCMSubscriber();
 void ddLCMSubscriber::setCallback(QVariant)
 
+ddBotImageQueue::ddBotImageQueue(QObject*);
+ddBotImageQueue::ddBotImageQueue();
+ddBotImageQueue::~ddBotImageQueue();
+void ddBotImageQueue::init(ddLCMThread*);
+void ddBotImageQueue::colorizeLidar(vtkPolyData*);
+void ddBotImageQueue::getImage(const QString&, vtkImageData*);
+
+
 int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QList<double>&);
 void ddDrakeModel::setEstRobotState(const QList<double>&);

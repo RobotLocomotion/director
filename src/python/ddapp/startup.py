@@ -24,6 +24,7 @@ from ddapp import visualization as vis
 from ddapp import actionhandlers
 from ddapp.timercallback import TimerCallback
 from ddapp import segmentationpanel
+from ddapp import lcmUtils
 
 import numpy as np
 from ddapp.debugVis import DebugData
@@ -168,6 +169,27 @@ if usePerception:
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 
+def testImageQueue():
+    global imageQueue
+    imageQueue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
+    imageQueue.init(lcmUtils.getGlobalLCMThread())
+
+def testColorize():
+    s = vtk.vtkSphereSource()
+    s.SetThetaResolution(400)
+    s.SetPhiResolution(400)
+    s.SetRadius(10)
+    s.Update()
+    p = s.GetOutput()
+    imageQueue.colorizeLidar(p)
+    showPolyData(p, 'sphere', colorByName='rgb')
+
+    p = perception._multisenseItem.model.revPolyData
+    imageQueue.colorizeLidar(p)
+    showPolyData(p, 'lidar', colorByName='rgb')
+
+
+testImageQueue()
 
 
 
