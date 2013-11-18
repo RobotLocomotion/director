@@ -23,6 +23,8 @@ ddLCMThread::~ddLCMThread()
 //-----------------------------------------------------------------------------
 void ddLCMThread::initLCM()
 {
+  QMutexLocker locker(&mMutex);
+
   if (mLCM)
   {
     return;

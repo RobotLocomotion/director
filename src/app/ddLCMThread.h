@@ -25,6 +25,12 @@ public:
   void addSubscriber(ddLCMSubscriber* subscriber);
   void removeSubscriber(ddLCMSubscriber* subscriber);
 
+  lcm::LCM* lcmHandle()
+  {
+    this->initLCM();
+    return mLCM;
+  }
+
  protected:
 
   void run();
