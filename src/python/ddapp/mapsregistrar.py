@@ -23,7 +23,8 @@ def addICPCallback(func):
 def storeInitialTransform():
     global _initialTransform
     _initialTransform = _icpTransforms[-1] if len(_icpTransforms) else None
-    print 'stored initial icp transform'
+    if _initialTransform:
+        print 'stored initial icp transform'
 
 
 def getInitialTransform():
@@ -36,9 +37,13 @@ def onICPCorrection(messageData):
     m = messageClass.decode(messageData.data())
     t = transformUtils.transformFromPose(m.trans, m.quat)
 
-    _icpTransforms.append(t)
 
+    _icpTransforms.append(t)
     print 'appending icp transform %d' % len(_icpTransforms)
+
+
+    if len(_icpTransforms) == 1:
+        storeInitialTransform()
 
     for func in _icpCallbacks:
         func(t)

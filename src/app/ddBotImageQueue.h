@@ -226,8 +226,6 @@ public:
       polyData->GetPoint(i, ptLocal.data());
       Eigen::Vector3d pt = cameraData.mLocalToCamera * ptLocal;
 
-      //printf("pt: %f %f %f\n", pt[0], pt[1], pt[2]);
-
       double in[] = {pt[0], pt[1], pt[2]};
       double pix[3];
       if (bot_camtrans_project_point(cameraData.mCamTrans, in, pix) == 0)
@@ -237,7 +235,6 @@ public:
 
         if (px >= 0 && px < w && py >= 0 && py < h)
         {
-          printf("error, pixel index out of bounds: %d %d\n", px, py);
           size_t bufIndex = w*py*3 + px*3;
           rgb->SetComponent(i, 0, cameraData.mImageBuffer[bufIndex + 0]);
           rgb->SetComponent(i, 1, cameraData.mImageBuffer[bufIndex + 1]);
