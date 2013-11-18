@@ -26,6 +26,7 @@ class SegmentationPanel(object):
         self.debrisWizard = self._makeDebrisWizard()
         self.terrainWizard = self._makeTerrainWizard()
         self.firehoseWizard = self._makeFirehoseWizard()
+        self.valveWizard = self._makeValveWizard()
         self.drillWizard = self._makeDrillWizard()
 
         self.taskSelection.connect('taskSelected(int)', self.onTaskSelected)
@@ -36,9 +37,11 @@ class SegmentationPanel(object):
         l.addWidget(self.terrainWizard)
         l.addWidget(self.firehoseWizard)
         l.addWidget(self.drillWizard)
+        l.addWidget(self.valveWizard)
         self.debrisWizard.hide()
         self.terrainWizard.hide()
         self.firehoseWizard.hide()
+        self.valveWizard.hide()
         self.drillWizard.hide()
 
     def _makeDebrisWizard(self):
@@ -64,6 +67,15 @@ class SegmentationPanel(object):
         l.addWidget(segmentButton)
         l.addStretch()
         return firehoseWizard
+
+
+    def _makeValveWizard(self):
+        wizard = QtGui.QWidget()
+        l = QtGui.QVBoxLayout(wizard)
+        l.addWidget(self._makeBackButton())
+        l.addWidget(self._makeButton('segment valve', functools.partial(startValveSegmentationByWallPlane, 0.195)))
+        l.addStretch()
+        return wizard
 
 
     def _makeButton(self, text, func):
@@ -155,11 +167,16 @@ class SegmentationPanel(object):
         self.drillWizard.show()
         self.taskSelection.hide()
 
+    def startValveTask(self):
+        self.valveWizard.show()
+        self.taskSelection.hide()
+
     def cancelCurrentTask(self):
         self.debrisWizard.hide()
         self.terrainWizard.hide()
         self.firehoseWizard.hide()
         self.drillWizard.hide()
+        self.valveWizard.hide()
         self.taskSelection.show()
 
     def onTaskSelected(self, taskId):
@@ -169,6 +186,7 @@ class SegmentationPanel(object):
                          4:self.startDebrisTask,
                          8:self.startFirehoseTask,
                          6:self.startDrillTask,
+                         7:self.startValveTask,
                         }
 
         taskFunction = taskFunctions.get(taskId+1)
