@@ -235,12 +235,9 @@ public:
         int px = static_cast<int>(pix[0]);
         int py = static_cast<int>(pix[1]);
 
-        if (px < 0 || px >= w || py < 0 || py >= h)
+        if (px >= 0 && px < w && py >= 0 && py < h)
         {
           printf("error, pixel index out of bounds: %d %d\n", px, py);
-        }
-        else
-        {
           size_t bufIndex = w*py*3 + px*3;
           rgb->SetComponent(i, 0, cameraData.mImageBuffer[bufIndex + 0]);
           rgb->SetComponent(i, 1, cameraData.mImageBuffer[bufIndex + 1]);
@@ -261,7 +258,7 @@ protected slots:
     mHeadLeft.mImageMessage = message.images[0];
     mHeadLeft.mImageBuffer.clear();
     this->getTransform("local", mHeadLeft.mCoordFrame, mHeadLeft.mLocalToCamera, mHeadLeft.mImageMessage.utime);
-    printf("got image %s: %d %d\n", mHeadLeft.mName.c_str(), mHeadLeft.mImageMessage.width, mHeadLeft.mImageMessage.height);
+    //printf("got image %s: %d %d\n", mHeadLeft.mName.c_str(), mHeadLeft.mImageMessage.width, mHeadLeft.mImageMessage.height);
   }
 
   void onChestLeft(const QByteArray& data)
@@ -269,7 +266,7 @@ protected slots:
     mChestLeft.mImageMessage.decode(data.data(), 0, data.size());
     mChestLeft.mImageBuffer.clear();
     this->getTransform("local", mChestLeft.mCoordFrame, mChestLeft.mLocalToCamera, mChestLeft.mImageMessage.utime);
-    printf("got image %s: %d %d\n", mChestLeft.mName.c_str(), mChestLeft.mImageMessage.width, mChestLeft.mImageMessage.height);
+    //printf("got image %s: %d %d\n", mChestLeft.mName.c_str(), mChestLeft.mImageMessage.width, mChestLeft.mImageMessage.height);
   }
 
   void onChestRight(const QByteArray& data)
@@ -277,7 +274,7 @@ protected slots:
     mChestRight.mImageMessage.decode(data.data(), 0, data.size());
     mChestRight.mImageBuffer.clear();
     this->getTransform("local", mChestRight.mCoordFrame, mChestRight.mLocalToCamera, mChestRight.mImageMessage.utime);
-    printf("got image %s: %d %d\n", mChestRight.mName.c_str(), mChestRight.mImageMessage.width, mChestRight.mImageMessage.height);
+    //printf("got image %s: %d %d\n", mChestRight.mName.c_str(), mChestRight.mImageMessage.width, mChestRight.mImageMessage.height);
   }
 
   vtkSmartPointer<vtkImageData> toVtkImage(CameraData& cameraData)
@@ -312,6 +309,8 @@ protected slots:
     unsigned char* outPtr = static_cast<unsigned char*>(image->GetScalarPointer(0, 0, 0));
 
     std::copy(cameraData.mImageBuffer.begin(), cameraData.mImageBuffer.end(), outPtr);
+
+    return image;
   }
 
 protected:
