@@ -14,6 +14,7 @@ from ddapp import lcmUtils
 from ddapp import transformUtils
 from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
+from ddapp import mapsregistrar
 from ddapp.visualization import *
 
 import numpy as np
@@ -901,36 +902,6 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
-
-
-
-
-_icpSub = None
-_icpCallbacks = []
-_icpTransforms = []
-
-def onICPCorrection(messageData):
-
-    messageClass = lcmbotcore.rigid_transform_t
-    m = messageClass.decode(messageData.data())
-    t = transformUtils.transformFromPose(m.trans, m.quat)
-
-    _icpTransforms.append(t)
-
-    print 'appending icp transform %d' % len(_icpTransforms)
-
-    for func in _icpCallbacks:
-        func(t)
-
-
-def initICPCallback():
-
-    global _icpSub
-    lcmThread = lcmUtils.getGlobalLCMThread()
-    _icpSub = PythonQt.dd.ddLCMSubscriber('MAP_LOCAL_CORRECTION', lcmThread)
-    _icpSub.connect('messageReceived(const QByteArray&)', onICPCorrection)
-    lcmThread.addSubscriber(_icpSub)
-
 
 
 
@@ -1848,18 +1819,20 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
 
-    if len(_icpTransforms):
+    icpTransform = mapsregistrar.getInitialTransform()
+
+    if icpTransform:
         objTrack = showPolyData(cube, name, cls=BlockAffordanceItem, parent=obj, color=[0.8, 1, 0.8])
         objTrack.actor.SetUserTransform(t)
         objTrack.baseTransform = vtk.vtkTransform()
         objTrack.baseTransform.SetMatrix(t.GetMatrix())
-        objTrack.icpTransformInitial = _icpTransforms[-1]
+        objTrack.icpTransformInitial = icpTransform
         objTrack.addToView(app.getDRCView())
 
         print 'setting base transform:', objTrack.baseTransform.GetPosition()
         print 'setting initial icp:', objTrack.icpTransformInitial.GetPosition()
 
-        _icpCallbacks.append(objTrack.updateICPTransform)
+        mapsregistrar.addICPCallback(objTrack.updateICPTransform)
 
 
     frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)

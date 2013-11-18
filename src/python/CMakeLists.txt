@@ -11,6 +11,7 @@ set(python_files
   ddapp/ioUtils.py
   ddapp/jointcontrol.py
   ddapp/lcmUtils.py
+  ddapp/mapsregistrar.py
   ddapp/matlab.py
   ddapp/midi.py
   ddapp/objectmodel.py

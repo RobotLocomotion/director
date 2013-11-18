@@ -1,5 +1,7 @@
 from ddapp.segmentation import *
 
+from ddapp import mapsregistrar
+
 import PythonQt
 from PythonQt import QtCore, QtGui
 
@@ -72,12 +74,6 @@ class SegmentationPanel(object):
 
     def _makeDrillWizard(self):
         drillWizard = QtGui.QWidget()
-
-        #segmentButton = QtGui.QToolButton()
-        #segmentButton.setIcon(QtGui.QIcon(':/images/wye.png'))
-        #segmentButton.setIconSize(QtCore.QSize(60,60))
-        #segmentButton.connect('clicked()', self.onSegmentWye)
-
         l = QtGui.QVBoxLayout(drillWizard)
         l.addWidget(self._makeBackButton())
         l.addWidget(self._makeButton('segment drill on table', startDrillAutoSegmentation))
@@ -251,7 +247,6 @@ def segmentationViewEventFilter(obj, event):
                 eventFilter.setEventHandlerResult(True)
 
 
-
 def drcViewEventFilter(obj, event):
 
     eventFilter = eventFilters[obj]
@@ -291,7 +286,7 @@ def activateSegmentationMode(debug=False):
 
     perspective()
 
-    initICPCallback()
+    mapsregistrar.storeInitialTransform()
 
     thresholdWorkspace = False
     doRemoveGround = False
@@ -317,5 +312,7 @@ def activateSegmentationMode(debug=False):
 def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
+
+    mapsregistrar.initICPCallback()
 
     #activateSegmentationMode(debug=True)
