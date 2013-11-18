@@ -1,2 +1,2 @@
-import os
-os.popen('bot-spy')
+from ddapp import botspy
+botspy.startBotSpy()

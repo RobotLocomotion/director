@@ -3,6 +3,7 @@ set(python_files
   ddapp/actionhandlers.py
   ddapp/affordance.py
   ddapp/applogic.py
+  ddapp/botspy.py
   ddapp/cameracontrol.py
   ddapp/debugVis.py
   ddapp/ikeditor.py
