@@ -1034,6 +1034,26 @@ def segmentDrillWall(point1, point2, point3):
     aff.addToView(app.getDRCView())
 
 
+def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis):
+
+    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
+                  button_x=0.035,
+                  button_y=0.007,
+                  button_z=-0.06,
+                  guard_x=0.0,
+                  guard_y=-0.01,
+                  guard_z=0.15,
+                  guard_nx=0.0,
+                  guard_ny=0.0,
+                  guard_nz=1.0,
+                  button_nx=1.0,
+                  button_ny=0.0,
+                  button_nz=0.0,
+                  friendly_name='dewalt_button', otdf_type='dewalt_button')
+
+    return params
+
+
 def segmentDrill(point1, point2, point3):
 
 
@@ -1053,6 +1073,7 @@ def segmentDrill(point1, point2, point3):
     searchRegion = cropToSphere(searchRegion, point2, 0.30)
     drillPoints = extractLargestCluster(searchRegion)
 
+    drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
 
     zaxis = normal
     yaxis = point3 - point2
@@ -1062,11 +1083,10 @@ def segmentDrill(point1, point2, point3):
     yaxis = np.cross(zaxis, xaxis)
 
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PreMultiply()
+    t.Translate(-drillToTopPoint)
     t.PostMultiply()
-
-    drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
-    drillToButton = np.array([0.034091, 0.007616, -0.060168])
-    t.Translate(point2 - drillToTopPoint)
+    t.Translate(point2)
 
     drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
 
@@ -1074,20 +1094,7 @@ def segmentDrill(point1, point2, point3):
     aff.actor.SetUserTransform(t)
     showFrame(t, 'drill frame', parent=aff, visible=False)
 
-    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
-                  button_x=0.035,
-                  button_y=0.007,
-                  button_z=-0.06,
-                  guard_x=0.0,
-                  guard_y=-0.01,
-                  guard_z=0.15,
-                  guard_nx=0.0,
-                  guard_ny=0.0,
-                  guard_nz=1.0,
-                  button_nx=1.0,
-                  button_ny=0.0,
-                  button_nz=0.0,
-                  friendly_name='dewalt_button', otdf_type='dewalt_button')
+    params = getDrillAffordanceParams(origin, xaxis, yaxis, zaxis)
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
     aff.addToView(app.getDRCView())
@@ -1127,22 +1134,7 @@ def segmentDrillAuto(point1):
     d = DebugData()
     updatePolyData(centroidsPolyData, 'cluster centroids', parent=getDebugFolder(), visible=False)
 
-
-    '''
-    f = pcl.vtkAnnotateOBBs()
-    f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, 'cluster_labels')
-    f.SetInput(drillPoints)
-    f.Update()
-
-    nBoxes = f.GetNumberOfBoundingBoxes()
-    assert nBoxes == 1
-
-    edges = np.array((3,3))
-    for i, edge in enumerate(edges):
-        f.GetBoundingBoxEdge(0, i, edge)
-
-    sort(edges, key=lambda x: np.linalg.norm(x))
-    '''
+    drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
 
     zaxis = normal
     yaxis = centroids[0] - centroids[-1]
@@ -1152,11 +1144,10 @@ def segmentDrillAuto(point1):
     yaxis = np.cross(zaxis, xaxis)
 
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PreMultiply()
+    t.Translate(-drillToTopPoint)
     t.PostMultiply()
-
-    drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
-    drillToButton = np.array([0.034091, 0.007616, -0.060168])
-    t.Translate(centroids[-1] - drillToTopPoint)
+    t.Translate(centroids[-1])
 
     drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
 
@@ -1164,7 +1155,7 @@ def segmentDrillAuto(point1):
     aff.actor.SetUserTransform(t)
     showFrame(t, 'drill frame', parent=aff, visible=False)
 
-    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='dewalt_button', otdf_type='dewalt_button')
+    params = getDrillAffordanceParams(origin, xaxis, yaxis, zaxis)
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
     aff.addToView(app.getDRCView())
@@ -1198,6 +1189,7 @@ def segmentDrillInHand(p1, p2):
     d = DebugData()
     updatePolyData(centroidsPolyData, 'cluster centroids', parent=getDebugFolder(), visible=False)
 
+    drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
 
     zaxis = normal
     yaxis = centroids[0] - centroids[-1]
@@ -1207,10 +1199,6 @@ def segmentDrillInHand(p1, p2):
     yaxis = np.cross(zaxis, xaxis)
 
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
-
-    drillToTopPoint = np.array([-0.002904, -0.010029, 0.153182])
-    drillToButton = np.array([0.034091, 0.007616, -0.060168])
-
     t.PreMultiply()
     t.Translate(-drillToTopPoint)
     t.PostMultiply()
@@ -1222,7 +1210,7 @@ def segmentDrillInHand(p1, p2):
     aff.actor.SetUserTransform(t)
     showFrame(t, 'drill frame', parent=aff, visible=False)
 
-    params = dict(origin=t.GetPosition(), xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='dewalt_button', otdf_type='dewalt_button')
+    params = getDrillAffordanceParams(np.array(t.GetPosition()), xaxis, yaxis, zaxis)
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
     aff.addToView(app.getDRCView())
