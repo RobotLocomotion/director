@@ -28,6 +28,7 @@ set(python_files
   ddapp/tdx.py
   ddapp/timercallback.py
   ddapp/transformUtils.py
+  ddapp/utime.py
   ddapp/visualization.py
   ddapp/vtkAll.py
   ddapp/vtkNumpy.py
