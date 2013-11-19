@@ -1,7 +1,7 @@
 from ddapp.segmentation import *
 
 from ddapp import mapsregistrar
-
+from ddapp import drilltaskpanel
 import PythonQt
 from PythonQt import QtCore, QtGui
 
@@ -18,6 +18,13 @@ def getLumberDimensions(lumberId):
     return dimensions[lumberId]
 
 
+def _makeButton(text, func):
+
+    b = QtGui.QPushButton(text)
+    b.connect('clicked()', func)
+    return b
+
+
 class SegmentationPanel(object):
 
     def __init__(self):
@@ -28,16 +35,18 @@ class SegmentationPanel(object):
         self.firehoseWizard = self._makeFirehoseWizard()
         self.valveWizard = self._makeValveWizard()
         self.drillWizard = self._makeDrillWizard()
-
+        self.backButton = self._makeBackButton()
         self.taskSelection.connect('taskSelected(int)', self.onTaskSelected)
 
         l = QtGui.QVBoxLayout(self.panel)
+        l.addWidget(self.backButton)
         l.addWidget(self.taskSelection)
         l.addWidget(self.debrisWizard)
         l.addWidget(self.terrainWizard)
         l.addWidget(self.firehoseWizard)
         l.addWidget(self.drillWizard)
         l.addWidget(self.valveWizard)
+        self.backButton.hide()
         self.debrisWizard.hide()
         self.terrainWizard.hide()
         self.firehoseWizard.hide()
@@ -49,10 +58,9 @@ class SegmentationPanel(object):
         lumberSelection = PythonQt.dd.ddLumberSelection()
         lumberSelection.connect('lumberSelected(int)', self.onDebrisLumberSelected)
         l = QtGui.QVBoxLayout(debrisWizard)
-        l.addWidget(self._makeBackButton())
         l.addWidget(lumberSelection)
-        l.addWidget(self._makeButton('segment cinderblock wall', startSegmentDebrisWall))
-        l.addWidget(self._makeButton('segment cinderblock wall manual', startSegmentDebrisWallManual))
+        l.addWidget(_makeButton('segment cinderblock wall', startSegmentDebrisWall))
+        l.addWidget(_makeButton('segment cinderblock wall manual', startSegmentDebrisWallManual))
         l.addStretch()
         return debrisWizard
 
@@ -63,7 +71,6 @@ class SegmentationPanel(object):
         segmentButton.setIconSize(QtCore.QSize(60,60))
         segmentButton.connect('clicked()', self.onSegmentWye)
         l = QtGui.QVBoxLayout(firehoseWizard)
-        l.addWidget(self._makeBackButton())
         l.addWidget(segmentButton)
         l.addStretch()
         return firehoseWizard
@@ -72,28 +79,25 @@ class SegmentationPanel(object):
     def _makeValveWizard(self):
         wizard = QtGui.QWidget()
         l = QtGui.QVBoxLayout(wizard)
-        l.addWidget(self._makeBackButton())
-        l.addWidget(self._makeButton('segment valve', functools.partial(startValveSegmentationByWallPlane, 0.195)))
-        l.addWidget(self._makeButton('segment small valve', functools.partial(startValveSegmentationByWallPlane, 0.10)))
-        l.addWidget(self._makeButton('segment bar', functools.partial(startInteractiveLineDraw, [0.015, 0.015])))
+        l.addWidget(_makeButton('segment valve', functools.partial(startValveSegmentationByWallPlane, 0.195)))
+        l.addWidget(_makeButton('segment small valve', functools.partial(startValveSegmentationByWallPlane, 0.10)))
+        l.addWidget(_makeButton('segment bar', functools.partial(startInteractiveLineDraw, [0.015, 0.015])))
         l.addStretch()
         return wizard
 
 
-    def _makeButton(self, text, func):
-
-        b = QtGui.QPushButton(text)
-        b.connect('clicked()', func)
-        return b
-
     def _makeDrillWizard(self):
-        drillWizard = QtGui.QWidget()
+        drillWizard = QtGui.QGroupBox('Drill Segmentation')
         l = QtGui.QVBoxLayout(drillWizard)
-        l.addWidget(self._makeBackButton())
-        l.addWidget(self._makeButton('segment drill on table', startDrillAutoSegmentation))
-        l.addWidget(self._makeButton('segment drill in hand', startDrillInHandSegmentation))
-        l.addWidget(self._makeButton('segment wall', startDrillWallSegmentation))
-        l.addWidget(self._makeButton('select tooltip', startSelectToolTip))
+        l.addWidget(_makeButton('segment drill on table', startDrillAutoSegmentation))
+        l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
+        l.addWidget(_makeButton('segment wall', startDrillWallSegmentation))
+        l.addWidget(_makeButton('select tooltip', startSelectToolTip))
+        l.addWidget(QtGui.QLabel(''))
+
+        self.drill = drilltaskpanel.DrillTaskPanel()
+        l.addWidget(self.drill.widget)
+
         l.addStretch()
         return drillWizard
 
@@ -119,9 +123,8 @@ class SegmentationPanel(object):
         l.addStretch()
 
         l = QtGui.QVBoxLayout(terrainWizard)
-        l.addWidget(self._makeBackButton())
         l.addWidget(buttons)
-        l.addWidget(self._makeButton('double wide', functools.partial(startInteractiveLineDraw, [0.1905*2, 0.149225])))
+        l.addWidget(_makeButton('double wide', functools.partial(startInteractiveLineDraw, [0.1905*2, 0.149225])))
 
 
         l.addStretch()
@@ -156,25 +159,25 @@ class SegmentationPanel(object):
             blockDimensions = [0.1905, 0.29845]
         startInteractiveLineDraw(blockDimensions)
 
-    def startDebrisTask(self):
-        self.debrisWizard.show()
+    def _showTaskWidgets(self, w):
         self.taskSelection.hide()
+        self.backButton.show()
+        w.show()
+
+    def startDebrisTask(self):
+        self._showTaskWidgets(self.debrisWizard)
 
     def startTerrainTask(self):
-        self.terrainWizard.show()
-        self.taskSelection.hide()
+        self._showTaskWidgets(self.terrainWizard)
 
     def startFirehoseTask(self):
-        self.firehoseWizard.show()
-        self.taskSelection.hide()
+        self._showTaskWidgets(self.firehoseWizard)
 
     def startDrillTask(self):
-        self.drillWizard.show()
-        self.taskSelection.hide()
+        self._showTaskWidgets(self.drillWizard)
 
     def startValveTask(self):
-        self.valveWizard.show()
-        self.taskSelection.hide()
+        self._showTaskWidgets(self.valveWizard)
 
     def cancelCurrentTask(self):
         self.debrisWizard.hide()
@@ -182,6 +185,7 @@ class SegmentationPanel(object):
         self.firehoseWizard.hide()
         self.drillWizard.hide()
         self.valveWizard.hide()
+        self.backButton.hide()
         self.taskSelection.show()
 
     def onTaskSelected(self, taskId):
@@ -338,4 +342,4 @@ def init():
 
     mapsregistrar.initICPCallback()
 
-    #activateSegmentationMode(debug=True)
+    activateSegmentationMode(debug=True)
