@@ -894,7 +894,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
 
 
-    obj = updatePolyData(d.getPolyData(), 'valve affordance', cls=CylinderAffordanceItem, parent='affordances')
+    obj = showPolyData(d.getPolyData(), 'valve affordance', cls=CylinderAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 

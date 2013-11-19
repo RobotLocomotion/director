@@ -25,6 +25,7 @@ from ddapp import actionhandlers
 from ddapp.timercallback import TimerCallback
 from ddapp import segmentationpanel
 from ddapp import lcmUtils
+import drc as lcmdrc
 
 import numpy as np
 from ddapp.debugVis import DebugData
@@ -193,17 +194,13 @@ testImageQueue()
 
 
 
-'''
-import drc as lcmdrc
-from ddapp import lcmUtils
-
 def onRobotModel(m):
     print 'onRobotModel'
     model = view.loadURDFModelXML(m.urdf_xml_string)
     sensorsFolder = om.getOrCreateContainer('sensors')
     obj = om.addRobotModel(model, sensorsFolder)
     obj.setProperty('Name', 'model publisher')
+    robotStateJointController.models.append(model)
 
 lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
-'''
 

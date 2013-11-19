@@ -74,6 +74,8 @@ class SegmentationPanel(object):
         l = QtGui.QVBoxLayout(wizard)
         l.addWidget(self._makeBackButton())
         l.addWidget(self._makeButton('segment valve', functools.partial(startValveSegmentationByWallPlane, 0.195)))
+        l.addWidget(self._makeButton('segment small valve', functools.partial(startValveSegmentationByWallPlane, 0.10)))
+        l.addWidget(self._makeButton('segment bar', functools.partial(startInteractiveLineDraw, [0.015, 0.015])))
         l.addStretch()
         return wizard
 
