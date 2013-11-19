@@ -973,10 +973,8 @@ def segmentDrillWall(point1, point2, point3):
     polyData = inputObj.polyData
 
 
-    d = DebugData()
 
     points = [point1, point2, point3]
-
 
     viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
     expectedNormal = np.cross(point2 - point1, point3 - point1)
@@ -988,22 +986,15 @@ def segmentDrillWall(point1, point2, point3):
 
     points = [projectPointToPlane(point, origin, normal) for point in points]
 
-    # draw points
-    for p in points:
-        d.addSphere(p, radius=0.01)
-
-    for a, b in zip(points, points[1:] + [points[0]]):
-        d.addLine(a, b)
-
-    obj = updatePolyData(d.getPolyData(), 'drill wall points', parent=getDebugFolder(), color=[0,1,0])
-
     xaxis = -normal
     zaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis = np.cross(xaxis, yaxis)
 
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
     t.PostMultiply()
-    t.Translate(point1)
+    t.Translate(points[0])
 
     d = DebugData()
     pointsInWallFrame = []
@@ -1011,22 +1002,19 @@ def segmentDrillWall(point1, point2, point3):
         pp = np.zeros(3)
         t.GetLinearInverse().TransformPoint(p, pp)
         pointsInWallFrame.append(pp)
-        print pp
         d.addSphere(pp, radius=0.01)
 
-    points = pointsInWallFrame
-
-    for a, b in zip(points, points[1:] + [points[0]]):
+    for a, b in zip(pointsInWallFrame, pointsInWallFrame[1:] + [pointsInWallFrame[0]]):
         d.addLine(a, b)
 
     aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     aff.actor.SetUserTransform(t)
     showFrame(t, 'wall frame', parent=aff, visible=False)
 
-    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
-                  p1y=points[0][1], p1z=points[0][2],
-                  p2y=points[1][1], p2z=points[1][2],
-                  p3y=points[2][1], p3z=points[2][2],
+    params = dict(origin=points[0], xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
+                  p1y=pointsInWallFrame[0][1], p1z=pointsInWallFrame[0][2],
+                  p2y=pointsInWallFrame[1][1], p2z=pointsInWallFrame[1][2],
+                  p3y=pointsInWallFrame[2][1], p3z=pointsInWallFrame[2][2],
                   friendly_name='drill_wall', otdf_type='drill_wall')
 
     aff.setAffordanceParams(params)
