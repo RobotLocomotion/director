@@ -121,7 +121,7 @@ def createBoxAffordance(params):
     orientation = transformUtils.orientationFromAxes(xaxis, yaxis, zaxis)
 
     aff.utime = 0
-    aff.otdf_type = 'box'
+    aff.otdf_type = params.get('otdf_type') or 'box'
     aff.friendly_name = params.get('friendly_name') or 'box'
     aff.uid = 0
     aff.map_id = 0

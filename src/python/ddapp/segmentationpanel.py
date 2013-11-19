@@ -121,6 +121,9 @@ class SegmentationPanel(object):
         l = QtGui.QVBoxLayout(terrainWizard)
         l.addWidget(self._makeBackButton())
         l.addWidget(buttons)
+        l.addWidget(self._makeButton('double wide', functools.partial(startInteractiveLineDraw, [0.1905*2, 0.149225])))
+
+
         l.addStretch()
         return terrainWizard
 
