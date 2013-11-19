@@ -1663,16 +1663,32 @@ def computeGroundFrame(aff, referenceFrame):
     return groundFrame
 
 
-def showBoardDebug(affs=None):
-    referenceFrame = vtk.vtkTransform()
-    referenceFrame.Translate(0, 0, 5.0)
-    affs = affs or om.objects.values()
-    for obj in affs:
-        if isinstance(obj, BlockAffordanceItem):
-            d = DebugData()
-            d.addSphere(computeClosestCorner(obj, referenceFrame), radius=0.015)
-            showPolyData(d.getPolyData(), 'closest corner', parent='board debug', visible=True)
-            showFrame(computeGroundFrame(obj, referenceFrame), 'ground frame', parent='board debug', visible=True)
+def computeCornerFrame(aff, referenceFrame):
+
+    refAxis = [0.0, -1.0, 0.0]
+    referenceFrame.TransformVector(refAxis, refAxis)
+
+    refAxis = np.array(refAxis)
+
+    axes = [np.array(aff.params[axis]) for axis in ['xaxis', 'yaxis', 'zaxis']]
+    edgeLengths = [edgeLength for edgeLength in ['xwidth', 'ywidth', 'zwidth']]
+
+    axisProjections = np.array([np.abs(np.dot(axis, refAxis)) for axis in axes])
+    boardAxis = axes[axisProjections.argmax()]
+    if np.dot(boardAxis, refAxis) < 0:
+        boardAxis = -boardAxis
+
+    longAxis = axes[np.argmax(edgeLengths)]
+
+    xaxis = boardAxis
+    yaxis = axes[2]
+    zaxis = np.cross(xaxis, yaxis)
+
+    closestCorner = computeClosestCorner(aff, referenceFrame)
+    cornerFrame = getTransformFromAxes(xaxis, yaxis, zaxis)
+    cornerFrame.PostMultiply()
+    cornerFrame.Translate(closestCorner)
+    return cornerFrame
 
 
 def publishTriad(transform, collectionId=1234):
@@ -1813,10 +1829,21 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
 
     frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
 
+    computeDebrisGraspSeed(obj)
     t = computeDebrisStanceFrame(obj)
     if t:
         showFrame(t, 'debris stance frame', parent=obj)
         obj.publishCallback = functools.partial(publishDebrisStanceFrame, obj)
+
+
+def computeDebrisGraspSeed(aff):
+
+    debrisReferenceFrame = om.findObjectByName('debris reference frame')
+    if debrisReferenceFrame:
+
+        debrisReferenceFrame = debrisReferenceFrame.transform
+        affCornerFrame = computeCornerFrame(aff, debrisReferenceFrame)
+        showFrame(affCornerFrame, 'board corner frame', parent=aff, visible=False)
 
 
 def computeDebrisStanceFrame(aff):
@@ -1869,7 +1896,6 @@ def computeDebrisStanceFrame(aff):
 
 
 def publishDebrisStanceFrame(aff):
-
     frame = computeDebrisStanceFrame(aff)
     publishTriad(frame)
 
