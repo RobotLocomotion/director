@@ -357,7 +357,8 @@ def getDebugRevolutionData():
     #filename = os.path.join(dataDir, 'bungie_valve.vtp')
     #filename = os.path.join(dataDir, 'cinder-blocks.vtp')
     #filename = os.path.join(dataDir, 'cylinder_table.vtp')
-    filename = os.path.join(dataDir, 'debris.vtp')
+    filename = os.path.join(dataDir, 'firehose.vtp')
+    #filename = os.path.join(dataDir, 'debris.vtp')
     #filename = os.path.join(dataDir, 'rev1.vtp')
     #filename = os.path.join(dataDir, 'drill-in-hand.vtp')
 
@@ -943,8 +944,10 @@ def segmentWye(point1, point2):
     wyeMeshLeftHandle = np.array([0.032292, 0.02949, 0.068485])
 
     xaxis = -normal
-    zaxis = [0,0,1]
+    zaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis = np.cross(xaxis, yaxis)
 
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
     t.PreMultiply()
@@ -961,9 +964,46 @@ def segmentWye(point1, point2):
     wyeObj.addToView(app.getDRCView())
     showFrame(t, 'wye frame', parent=wyeObj, visible=False)
 
-    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='wye', otdf_type='wye')
+    params = dict(origin=np.array(t.GetPosition()), xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='wye', otdf_type='wye')
     wyeObj.setAffordanceParams(params)
     wyeObj.updateParamsFromActorTransform()
+
+
+def segmentHoseNozzle(point1):
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    searchRegion = cropToSphere(polyData, point1, 0.10)
+    updatePolyData(searchRegion, 'nozzle search region', parent=getDebugFolder(), visible=False)
+
+    xaxis = [1,0,0]
+    yaxis = [0,-1,0]
+    zaxis = [0,0,-1]
+    origin = point1
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(point1)
+
+    nozzleRadius = 0.0266
+    nozzleLength = 0.042
+    nozzleTipRadius = 0.031
+    nozzleTipLength = 0.024
+
+
+    d = DebugData()
+    d.addLine(np.array([0,0,-nozzleLength/2.0]), np.array([0,0,nozzleLength/2.0]), radius=nozzleRadius)
+    d.addLine(np.array([0,0,nozzleLength/2.0]), np.array([0,0,nozzleLength/2.0 + nozzleTipLength]), radius=nozzleTipRadius)
+
+    obj = showPolyData(d.getPolyData(), 'hose nozzle', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+    showFrame(t, 'nozzle frame', parent=obj, visible=False)
+
+    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='firehose_simple', otdf_type='firehose_simple')
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
 
 
 def segmentDrillWall(point1, point2, point3):
@@ -1991,6 +2031,16 @@ def startWyeSegmentation():
     picker.drawLines = False
     picker.start()
     picker.annotationFunc = functools.partial(segmentWye)
+
+
+def startHoseNozzleSegmentation():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentHoseNozzle)
 
 
 def storePoint(p):

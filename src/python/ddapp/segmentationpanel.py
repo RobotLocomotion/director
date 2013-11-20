@@ -72,6 +72,7 @@ class SegmentationPanel(object):
         segmentButton.connect('clicked()', self.onSegmentWye)
         l = QtGui.QVBoxLayout(firehoseWizard)
         l.addWidget(segmentButton)
+        l.addWidget(_makeButton('segment hose nozzle', startHoseNozzleSegmentation))
         l.addStretch()
         return firehoseWizard
 
