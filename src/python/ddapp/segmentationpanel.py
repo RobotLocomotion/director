@@ -343,4 +343,4 @@ def init():
 
     mapsregistrar.initICPCallback()
 
-    activateSegmentationMode(debug=True)
+    #activateSegmentationMode(debug=True)

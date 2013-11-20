@@ -25,6 +25,7 @@ from ddapp import actionhandlers
 from ddapp.timercallback import TimerCallback
 from ddapp import segmentationpanel
 from ddapp import lcmUtils
+from ddapp.shallowCopy import shallowCopy
 import drc as lcmdrc
 
 import numpy as np
@@ -176,16 +177,19 @@ def testImageQueue():
     imageQueue.init(lcmUtils.getGlobalLCMThread())
 
 def testColorize():
-    s = vtk.vtkSphereSource()
-    s.SetThetaResolution(400)
-    s.SetPhiResolution(400)
-    s.SetRadius(10)
-    s.Update()
-    p = s.GetOutput()
-    imageQueue.colorizeLidar(p)
-    showPolyData(p, 'sphere', colorByName='rgb')
 
-    p = perception._multisenseItem.model.revPolyData
+    colorizeSphere = False
+    if colorizeSphere:
+        s = vtk.vtkSphereSource()
+        s.SetThetaResolution(400)
+        s.SetPhiResolution(400)
+        s.SetRadius(10)
+        s.Update()
+        p = s.GetOutput()
+        imageQueue.colorizeLidar(p)
+        showPolyData(p, 'sphere', colorByName='rgb')
+
+    p = shallowCopy(perception._multisenseItem.model.revPolyData)
     imageQueue.colorizeLidar(p)
     showPolyData(p, 'lidar', colorByName='rgb')
 
