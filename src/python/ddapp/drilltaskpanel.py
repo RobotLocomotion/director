@@ -7,6 +7,8 @@ from drc import drill_control_t
 
 import ddapp.applogic as app
 
+import numpy as np
+
 def _makeButton(text, func):
 
     b = QtGui.QPushButton(text)
@@ -57,6 +59,7 @@ class DrillTaskPanel(object):
 
         l = QtGui.QVBoxLayout(self.widget)
         l.addWidget(_makeButton('refit drill', self.refitDrill))
+        l.addWidget(_makeButton('button pre-pose plan', self.buttonPrePosePlan))
         l.addWidget(_makeButton('request nominal plan', self.nominalPlan))
         l.addWidget(_makeButton('request arm prepose plan', self.armPreposePlan))
         l.addWidget(_makeButton('request walking goal', self.walkingGoal))
@@ -69,17 +72,21 @@ class DrillTaskPanel(object):
 
         hw = QtGui.QWidget()
         hl = QtGui.QHBoxLayout(hw)
+        self.drillDeltaCombo = QtGui.QComboBox()
+        self.drillDeltaCombo.addItem('button')
+        self.drillDeltaCombo.addItem('wall')
         self.drillDeltaButton = _makeButton('drill delta', self.drillDelta)
         hl.addWidget(self.drillDeltaButton)
+        hl.addWidget(self.drillDeltaCombo)
         for spin in self.deltaSpinBoxes:
             hl.addWidget(spin)
         hl.addWidget(QtGui.QLabel('cm'))
+        hl.addWidget(_makeButton('clear', self.clearDrillDelta))
         l.addWidget(hw)
 
         self.keyPressNav = KeyboardNavigation()
         self.keyPressNav.callbacks.append(self.onKeyPress)
         l.addWidget(self.keyPressNav.widget)
-
 
     def sendControlMessage(self, command, data=None):
         m = drill_control_t()
@@ -91,29 +98,48 @@ class DrillTaskPanel(object):
 
 
     def onKeyPress(self, key):
+
         dist = 0.01
-        if key == QtCore.Qt.Key_Left:
-            delta = [-dist, 0.0, 0.0]
-        elif key == QtCore.Qt.Key_Right:
-            delta = [dist, 0.0, 0.0]
-        elif key == QtCore.Qt.Key_Up:
-            delta = [0.0, dist, 0.0]
-        elif key == QtCore.Qt.Key_Down:
-            delta = [0.0, -dist, 0.0]
-        elif key == QtCore.Qt.Key_PageUp:
-            delta = [0.0, 0.0, dist]
-        elif key == QtCore.Qt.Key_PageDown:
-            delta = [0.0, 0.0, -dist]
-        else:
+
+        keyDeltas = {
+                      QtCore.Qt.Key_Left   : np.array([0.0, dist, 0.0]),
+                      QtCore.Qt.Key_Right : np.array([0.0, -dist, 0.0]),
+
+                      QtCore.Qt.Key_Up       : np.array([0.0, 0.0, dist]),
+                      QtCore.Qt.Key_Down     : np.array([0.0, 0.0, -dist]),
+
+                      QtCore.Qt.Key_PageUp     : np.array([-dist, 0.0, 0.0]),
+                      QtCore.Qt.Key_PageDown    : np.array([dist, 0.0, 0.0]),
+                    }
+
+        if key not in keyDeltas:
             print 'unknown key:', key
             return
+
+        delta = np.array([spin.value / 100.0 for spin in self.deltaSpinBoxes])
+        delta += keyDeltas[key]
 
         for spin, value in zip(self.deltaSpinBoxes, delta):
             spin.value = round(value * 100)
 
         self.drillDeltaButton.animateClick()
-        self.sendControlMessage(drill_control_t.RQ_DRILL_DELTA_PLAN, delta)
+        self.sendDeltaMessage(delta)
 
+
+    def sendDeltaMessage(self, data):
+        deltaTypes = { 'button' : drill_control_t.RQ_BUTTON_DELTA_PLAN,
+                       'wall' : drill_control_t.RQ_DRILL_DELTA_PLAN
+                    }
+
+        deltaType = deltaTypes[self.drillDeltaCombo.currentText]
+        self.sendControlMessage(deltaType, data)
+
+    def clearDrillDelta(self):
+        for spin in self.deltaSpinBoxes:
+            spin.value = 0
+
+    def buttonPrePosePlan(self):
+        self.sendControlMessage(drill_control_t.RQ_BUTTON_PREPOSE_PLAN)
 
     def refitDrill(self):
         self.sendControlMessage(drill_control_t.REFIT_DRILL)
@@ -141,6 +167,6 @@ class DrillTaskPanel(object):
 
     def drillDelta(self):
         data = [float(spin.value)/100.0 for spin in self.deltaSpinBoxes]
-        self.sendControlMessage(drill_control_t.RQ_DRILL_DELTA_PLAN, data)
+        self.sendDeltaMessage(data)
 
 
