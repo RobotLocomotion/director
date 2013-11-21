@@ -28,6 +28,7 @@
 #include <vtkPolyData.h>
 #include <vtkPointData.h>
 #include <vtkUnsignedCharArray.h>
+#include <vtkFloatArray.h>
 
 class ddBotImageQueue : public QObject
  {
@@ -132,11 +133,11 @@ public:
     mBotFrames = bot_frames_get_global(lcmThread->lcmHandle()->getUnderlyingLCM(), mBotParam);
 
 
-    char** cameraNames =  bot_param_get_all_camera_names(mBotParam);
-    for (int i = 0; cameraNames[i] != 0; ++i)
-    {
-      printf("camera: %s\n", cameraNames[i]);
-    }
+    //char** cameraNames =  bot_param_get_all_camera_names(mBotParam);
+    //for (int i = 0; cameraNames[i] != 0; ++i)
+    //{
+    //  printf("camera: %s\n", cameraNames[i]);
+    //}
 
 
     this->initCamera("CAMERACHEST_LEFT", mChestLeft);
@@ -146,7 +147,6 @@ public:
     lcmThread->addSubscriber(&mMultisenseSubscriber);
     lcmThread->addSubscriber(&mChestLeftSubscriber);
     lcmThread->addSubscriber(&mChestRightSubscriber);
-
   }
 
 
@@ -185,6 +185,66 @@ public:
     colorizeLidar(polyData, mChestLeft);
     colorizeLidar(polyData, mHeadLeft);
   }
+
+  void computeTextureCoords(vtkPolyData* polyData)
+  {
+    computeTextureCoords(polyData, mChestLeft);
+    computeTextureCoords(polyData, mChestRight);
+    computeTextureCoords(polyData, mHeadLeft);
+  }
+
+
+  void computeTextureCoords(vtkPolyData* polyData, CameraData& cameraData)
+  {
+    size_t w = cameraData.mImageMessage.width;
+    size_t h = cameraData.mImageMessage.height;
+
+    bool computeDist = false;
+    if (cameraData.mName == "CAMERACHEST_LEFT" || cameraData.mName == "CAMERACHEST_RIGHT")
+    {
+      computeDist = true;
+    }
+
+    vtkSmartPointer<vtkFloatArray> tcoords = vtkFloatArray::SafeDownCast(polyData->GetPointData()->GetArray(cameraData.mName.c_str()));
+    if (!tcoords)
+    {
+      tcoords = vtkSmartPointer<vtkFloatArray>::New();
+      tcoords->SetName(cameraData.mName.c_str());
+      tcoords->SetNumberOfComponents(2);
+      tcoords->SetNumberOfTuples(polyData->GetNumberOfPoints());
+      polyData->GetPointData()->AddArray(tcoords);
+
+      tcoords->FillComponent(0, -1);
+      tcoords->FillComponent(1, -1);
+    }
+
+    const vtkIdType nPoints = polyData->GetNumberOfPoints();
+    for (vtkIdType i = 0; i < nPoints; ++i)
+    {
+      Eigen::Vector3d ptLocal;
+      polyData->GetPoint(i, ptLocal.data());
+      Eigen::Vector3d pt = cameraData.mLocalToCamera * ptLocal;
+
+      double in[] = {pt[0], pt[1], pt[2]};
+      double pix[3];
+      if (bot_camtrans_project_point(cameraData.mCamTrans, in, pix) == 0)
+      {
+        float u = pix[0] / (w-1);
+        float v = pix[1] / (h-1);
+
+        if (u >= 0 && u <= 1.0 && v >= 0 && v <= 1.0)
+        {
+          if (computeDist &&  ((0.5 - u)*(0.5 - u) + (0.5 - v)*(0.5 -v)) > 0.14)
+          {
+            continue;
+          }
+          tcoords->SetComponent(i, 0, u);
+          tcoords->SetComponent(i, 1, v);
+        }
+      }
+    }
+  }
+
 
   void colorizeLidar(vtkPolyData* polyData, CameraData& cameraData)
   {
