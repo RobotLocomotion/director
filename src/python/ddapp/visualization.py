@@ -1,6 +1,7 @@
 import ddapp.objectmodel as om
 import ddapp.applogic as app
 from ddapp import affordance
+import ddapp.affordanceupdater as affup
 from shallowCopy import shallowCopy
 import ddapp.vtkAll as vtk
 import numpy as np
@@ -13,13 +14,19 @@ def computeAToB(a,b):
     t.PostMultiply()
     t.Concatenate(b)
     t.Concatenate(a.GetLinearInverse())
-    return t
+    tt = vtk.vtkTransform()
+    tt.SetMatrix(t.GetMatrix())
+    return tt
 
 
 class AffordanceItem(om.PolyDataItem):
 
     def __init__(self, name, polyData, view):
         om.PolyDataItem.__init__(self, name, polyData, view)
+
+        self.baseTransform = None
+        affup.updater.addCallback(self.onGroundTransform)
+
 
     def publish(self):
         pass
@@ -36,6 +43,24 @@ class AffordanceItem(om.PolyDataItem):
 
     def computeBaseTransform(self):
         self.baseTransform = computeAToB(self.groundTransform, self.actor.GetUserTransform())
+
+    def onGroundTransform(self, newTransform, resetTime):
+
+        if not self.baseTransform or resetTime > self.groundTransformResetTime:
+            self.groundTransform = newTransform
+            self.groundTransformResetTime = resetTime
+            self.computeBaseTransform()
+            return
+
+        newUserTransform = vtk.vtkTransform()
+        newUserTransform.PostMultiply()
+        newUserTransform.Identity()
+        newUserTransform.Concatenate(self.baseTransform)
+        newUserTransform.Concatenate(newTransform)
+
+        self.actor.GetUserTransform().SetMatrix(newUserTransform.GetMatrix())
+        self._renderAllViews()
+
 
 
 class BlockAffordanceItem(AffordanceItem):
