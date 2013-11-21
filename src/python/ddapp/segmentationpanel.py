@@ -83,6 +83,18 @@ class SegmentationPanel(object):
         l.addWidget(_makeButton('segment valve', functools.partial(startValveSegmentationByWallPlane, 0.195)))
         l.addWidget(_makeButton('segment small valve', functools.partial(startValveSegmentationByWallPlane, 0.10)))
         l.addWidget(_makeButton('segment bar', functools.partial(startInteractiveLineDraw, [0.015, 0.015])))
+
+        hw = QtGui.QFrame()
+        hl = QtGui.QHBoxLayout(hw)
+        hl.addWidget(_makeButton('request valve circle plan', self.requestValveCirclePlan))
+        self.circlePlanAngle = QtGui.QSpinBox()
+        self.circlePlanAngle.setMinimum(-360)
+        self.circlePlanAngle.setMaximum(360)
+        self.circlePlanAngle.setSingleStep(5)
+        hl.addWidget(self.circlePlanAngle)
+        hl.addWidget(QtGui.QLabel('degrees'))
+        l.addWidget(hw)
+
         l.addStretch()
         return wizard
 
@@ -96,8 +108,8 @@ class SegmentationPanel(object):
         l.addWidget(_makeButton('select tooltip', startSelectToolTip))
         l.addWidget(QtGui.QLabel(''))
 
-        self.drill = drilltaskpanel.DrillTaskPanel()
-        l.addWidget(self.drill.widget)
+        self.drillTaskPanel = drilltaskpanel.DrillTaskPanel()
+        l.addWidget(self.drillTaskPanel.widget)
 
         l.addStretch()
         return drillWizard
@@ -179,6 +191,9 @@ class SegmentationPanel(object):
 
     def startValveTask(self):
         self._showTaskWidgets(self.valveWizard)
+
+    def requestValveCirclePlan(self):
+        self.drillTaskPanel.valveCirclePlan(self.circlePlanAngle.value)
 
     def cancelCurrentTask(self):
         self.debrisWizard.hide()
@@ -343,4 +358,4 @@ def init():
 
     mapsregistrar.initICPCallback()
 
-    #activateSegmentationMode(debug=True)
+    activateSegmentationMode(debug=True)

@@ -8,6 +8,7 @@ from drc import drill_control_t
 import ddapp.applogic as app
 
 import numpy as np
+import math
 
 def _makeButton(text, func):
 
@@ -59,6 +60,7 @@ class DrillTaskPanel(object):
 
         l = QtGui.QVBoxLayout(self.widget)
         l.addWidget(_makeButton('refit drill', self.refitDrill))
+        l.addWidget(_makeButton('button preset posture', self.gotoButtonPreset))
         l.addWidget(_makeButton('button pre-pose plan', self.buttonPrePosePlan))
         l.addWidget(_makeButton('request nominal plan', self.nominalPlan))
         l.addWidget(_makeButton('request arm prepose plan', self.armPreposePlan))
@@ -68,7 +70,19 @@ class DrillTaskPanel(object):
         l.addWidget(_makeButton('request drill-in plan', self.drillInPlan))
         l.addWidget(QtGui.QLabel(''))
         l.addWidget(_makeButton('next drill plan', self.nextDrillPlan))
-        l.addWidget(QtGui.QLabel(''))
+
+        hw = QtGui.QWidget()
+        hl = QtGui.QHBoxLayout(hw)
+        hl.addWidget(_makeButton('set drill depth', self.setDrillDepth))
+        self.drillDepthSpin = QtGui.QSpinBox()
+        self.drillDepthSpin.setMinimum(-100)
+        self.drillDepthSpin.setMaximum(100)
+        self.drillDepthSpin.setSingleStep(1)
+        hl.addWidget(self.drillDepthSpin)
+        hl.addWidget(QtGui.QLabel('cm'))
+        l.addWidget(hw)
+
+
 
         hw = QtGui.QWidget()
         hl = QtGui.QHBoxLayout(hw)
@@ -82,11 +96,17 @@ class DrillTaskPanel(object):
             hl.addWidget(spin)
         hl.addWidget(QtGui.QLabel('cm'))
         hl.addWidget(_makeButton('clear', self.clearDrillDelta))
+        l.addWidget(QtGui.QLabel(''))
+        l.addWidget(QtGui.QLabel(''))
         l.addWidget(hw)
-
         self.keyPressNav = KeyboardNavigation()
         self.keyPressNav.callbacks.append(self.onKeyPress)
         l.addWidget(self.keyPressNav.widget)
+
+
+
+
+
 
     def sendControlMessage(self, command, data=None):
         m = drill_control_t()
@@ -147,6 +167,9 @@ class DrillTaskPanel(object):
     def nominalPlan(self):
         self.sendControlMessage(drill_control_t.RQ_NOMINAL_PLAN)
 
+    def gotoButtonPreset(self):
+        self.sendControlMessage(drill_control_t.RQ_GOTO_BUTTON_PRESET)
+
     def armPreposePlan(self):
         self.sendControlMessage(drill_control_t.RQ_ARM_PREPOSE_PLAN)
 
@@ -169,4 +192,10 @@ class DrillTaskPanel(object):
         data = [float(spin.value)/100.0 for spin in self.deltaSpinBoxes]
         self.sendDeltaMessage(data)
 
+    def setDrillDepth(self):
+        depth = self.drillDepthSpin.value/100.0
+        self.sendControlMessage(drill_control_t.SET_DRILL_DEPTH, data=[depth])
+
+    def valveCirclePlan(self, angleInDegrees):
+        self.sendControlMessage(drill_control_t.RQ_VALVE_CIRCLE_PLAN, data=[math.radians(angleInDegrees)])
 
