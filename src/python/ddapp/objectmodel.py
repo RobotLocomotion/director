@@ -309,7 +309,7 @@ def onTreeSelectionChanged():
 
 def updateVisIcon(obj):
     item = getItemForObject(obj)
-    if not obj.hasProperty('Visible'):
+    if not item or not obj.hasProperty('Visible'):
         return
 
     isVisible = obj.getProperty('Visible')
