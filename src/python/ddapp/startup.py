@@ -128,8 +128,7 @@ if usePerception:
     segmentationpanel.init()
 
     sensorsFolder = om.getOrCreateContainer('sensors')
-    obj = om.addRobotModel(robotStateModel, sensorsFolder)
-    obj.setProperty('Name', 'EST_ROBOT_STATE')
+    robotStateModel = om.addRobotModel(robotStateModel, sensorsFolder)
 
     def grabRobotState():
         poseName = 'EST_ROBOT_STATE'
@@ -197,14 +196,13 @@ def testColorize():
 testImageQueue()
 
 
-
 def onRobotModel(m):
-    print 'onRobotModel'
     model = view.loadURDFModelXML(m.urdf_xml_string)
     sensorsFolder = om.getOrCreateContainer('sensors')
     obj = om.addRobotModel(model, sensorsFolder)
     obj.setProperty('Name', 'model publisher')
     robotStateJointController.models.append(model)
+    robotStateModel.setProperty('Visible', False)
 
 lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
 

@@ -27,6 +27,7 @@ def updateDebugItem(polyData):
     if not _debugItem:
         _debugItem = om.PolyDataItem('spindle axis', polyData, getRenderView())
         _debugItem.setProperty('Color', QtGui.QColor(0, 255, 0))
+        _debugItem.setProperty('Visible', False)
         om.addToObjectModel(_debugItem, om.findObjectByName('sensors'))
     else:
         _debugItem.setPolyData(polyData)
