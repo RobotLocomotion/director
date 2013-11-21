@@ -1001,7 +1001,7 @@ def segmentHoseNozzle(point1):
     obj.addToView(app.getDRCView())
     showFrame(t, 'nozzle frame', parent=obj, visible=False)
 
-    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='firehose_simple', otdf_type='firehose_simple')
+    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='firehose', otdf_type='firehose')
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
 
