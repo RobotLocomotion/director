@@ -52,6 +52,12 @@ class ObjectModelItem(object):
         self._onPropertyChanged(propertyName)
         self.oldPropertyValue = None
 
+    def getActionNames(self):
+        return []
+
+    def onAction(self, action):
+        pass
+
     def getPropertyAttributes(self, propertyName):
 
         if propertyName == 'Alpha':
@@ -214,12 +220,6 @@ class PolyDataItem(ObjectModelItem):
             view.renderer().RemoveActor(self.actor)
             view.render()
 
-
-
-class AffordanceItem(PolyDataItem):
-
-    def publish(self):
-        pass
 
 
 def getObjectTree():
@@ -453,10 +453,15 @@ def onShowContextMenu(clickPosition):
 
     menu = QtGui.QMenu()
 
-    if isinstance(obj, AffordanceItem):
-        menu.addAction("Publish affordance")
-        menu.addSeparator()
+    actions = obj.getActionNames()
 
+    for actionName in obj.getActionNames():
+        if not actionName:
+            menu.addSeparator()
+        else:
+            menu.addAction(actionName)
+
+    menu.addSeparator()
     menu.addAction("Remove")
 
     selectedAction = menu.exec_(globalPos);
@@ -465,9 +470,8 @@ def onShowContextMenu(clickPosition):
 
     if selectedAction.text == "Remove":
         removeFromObjectModel(obj)
-
-    if selectedAction.text == "Publish affordance":
-        obj.publish()
+    else:
+        obj.onAction(selectedAction.text)
 
 
 def onKeyPress(keyEvent):

@@ -16,7 +16,29 @@ def computeAToB(a,b):
     return t
 
 
-class BlockAffordanceItem(om.AffordanceItem):
+class AffordanceItem(om.PolyDataItem):
+
+    def __init__(self, name, polyData, view):
+        om.PolyDataItem.__init__(self, name, polyData, view)
+
+    def publish(self):
+        pass
+
+    def getActionNames(self):
+        actions = ['Publish affordance']
+        return om.PolyDataItem.getActionNames(self) + actions
+
+    def onAction(self, action):
+        if action == 'Publish affordance':
+            self.publish()
+        else:
+            om.PolyDataItem.onAction(self, action)
+
+    def computeBaseTransform(self):
+        self.baseTransform = computeAToB(self.groundTransform, self.actor.GetUserTransform())
+
+
+class BlockAffordanceItem(AffordanceItem):
 
     def setAffordanceParams(self, params):
         self.params = params
@@ -57,7 +79,7 @@ class BlockAffordanceItem(om.AffordanceItem):
         self._renderAllViews()
 
 
-class FrameAffordanceItem(om.AffordanceItem):
+class FrameAffordanceItem(AffordanceItem):
 
     def setAffordanceParams(self, params):
         self.params = params
@@ -82,7 +104,7 @@ class FrameAffordanceItem(om.AffordanceItem):
         affordance.publishAffordance(aff)
 
 
-class CylinderAffordanceItem(om.AffordanceItem):
+class CylinderAffordanceItem(AffordanceItem):
 
     def setAffordanceParams(self, params):
         self.params = params
