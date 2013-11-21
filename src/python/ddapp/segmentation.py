@@ -2362,11 +2362,11 @@ def saveCameraParams(overwrite=False):
 def getDefaultAffordanceObject():
 
     obj = om.getActiveObject()
-    if isinstance(obj, om.AffordanceItem):
+    if isinstance(obj, AffordanceItem):
         return obj
 
     for obj in om.objects.values():
-        if isinstance(obj, om.AffordanceItem):
+        if isinstance(obj, AffordanceItem):
             return obj
 
 

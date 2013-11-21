@@ -274,6 +274,13 @@ def testTexture():
 testImageQueue()
 
 
+def affUpdaterOn():
+    vis.affup.updater.on()
+
+def affUpdaterOff():
+    vis.affup.updater.off()
+
+
 def onRobotModel(m):
     model = view.loadURDFModelXML(m.urdf_xml_string)
     sensorsFolder = om.getOrCreateContainer('sensors')
