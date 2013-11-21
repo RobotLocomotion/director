@@ -108,8 +108,8 @@ class DrillTaskPanel(object):
                       QtCore.Qt.Key_Up       : np.array([0.0, 0.0, dist]),
                       QtCore.Qt.Key_Down     : np.array([0.0, 0.0, -dist]),
 
-                      QtCore.Qt.Key_PageUp     : np.array([-dist, 0.0, 0.0]),
-                      QtCore.Qt.Key_PageDown    : np.array([dist, 0.0, 0.0]),
+                      QtCore.Qt.Key_PageUp     : np.array([dist, 0.0, 0.0]),
+                      QtCore.Qt.Key_PageDown    : np.array([-dist, 0.0, 0.0]),
                     }
 
         if key not in keyDeltas:
