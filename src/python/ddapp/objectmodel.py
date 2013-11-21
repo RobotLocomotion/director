@@ -65,6 +65,8 @@ class ObjectModelItem(object):
         updatePropertyPanel(self, propertyName)
         if propertyName == 'Visible':
             updateVisIcon(self)
+        if propertyName == 'Name':
+            getItemForObject(self).setText(0, self.getProperty('Name'))
 
     def _onPropertyAdded(self, propertyName):
         pass
