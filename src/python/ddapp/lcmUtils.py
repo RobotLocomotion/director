@@ -70,11 +70,12 @@ def captureMessageCallback(channel, messageClass, callback):
 
     lcmThread = getGlobalLCMThread()
     sub = PythonQt.dd.ddLCMSubscriber(channel)
-
+    messages = []
     def handleMessage(messageData):
         lcmThread.removeSubscriber(sub)
-        m = messageClass.decode(messageData.data())
-        callback(m)
+        if not messages:
+            messages.append(messageClass.decode(messageData.data()))
+            callback(messages[-1])
 
     sub.connect('messageReceived(const QByteArray&)', handleMessage)
     lcmThread.addSubscriber(sub)
