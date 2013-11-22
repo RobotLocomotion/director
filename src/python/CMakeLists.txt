@@ -27,6 +27,7 @@ set(python_files
   ddapp/simpletimer.py
   ddapp/spreadsheet.py
   ddapp/startup.py
+  ddapp/statelistener.py
   ddapp/tdx.py
   ddapp/timercallback.py
   ddapp/transformUtils.py
