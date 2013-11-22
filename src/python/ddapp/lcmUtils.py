@@ -68,17 +68,29 @@ def captureMessageAsync(channel, messageClass):
 
 def captureMessageCallback(channel, messageClass, callback):
 
-    lcmThread = getGlobalLCMThread()
-    sub = PythonQt.dd.ddLCMSubscriber(channel)
+    subscriber = None
     messages = []
-    def handleMessage(messageData):
-        lcmThread.removeSubscriber(sub)
+    def handleMessage(message):
+        getGlobalLCMThread().removeSubscriber(subscriber)
         if not messages:
-            messages.append(messageClass.decode(messageData.data()))
-            callback(messages[-1])
+            messages.append(True)
+            callback(message)
 
-    sub.connect('messageReceived(const QByteArray&)', handleMessage)
-    lcmThread.addSubscriber(sub)
+    subscriber = addSubscriber(channel, messageClass, handleMessage)
+    return subscriber
+
+
+def addSubscriber(channel, messageClass, callback):
+
+    lcmThread = getGlobalLCMThread()
+    subscriber = PythonQt.dd.ddLCMSubscriber(channel, lcmThread)
+
+    def handleMessage(messageData):
+        callback(messageClass.decode(messageData.data()))
+
+    subscriber.connect('messageReceived(const QByteArray&)', handleMessage)
+    lcmThread.addSubscriber(subscriber)
+    return subscriber
 
 
 def publish(channel, message):
