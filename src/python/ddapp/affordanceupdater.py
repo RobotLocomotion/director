@@ -21,12 +21,12 @@ class AffordanceUpdater(object):
 
 
     def off(self):
-        self.pause = True
+        self.paused = True
         self._reset()
 
 
     def on(self):
-        self.pause = False
+        self.paused = False
         self._reset()
 
 
