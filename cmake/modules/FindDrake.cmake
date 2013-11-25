@@ -5,8 +5,8 @@ endif()
 
 find_path(DRAKE_SOURCE_DIR addpath_drake.m HINTS ${_source_dir_hint} DOC "Drake source directory")
 find_library(DRAKE_RBM_LIBRARY drakeRBM HINTS ${_lib_dir_hint} DOC "Drake RBM library")
-find_library(DRAKE_URDF_RBM_LIBRARY URDFRigidBodyManipulator HINTS ${_lib_dir_hint} DOC "Drake URDFRigidBodyManipulator library")
-find_library(DRAKE_URDF_INTERFACE_LIBRARY urdf_interface HINTS ${_lib_dir_hint} DOC "Drake urdf_interface library")
+find_library(DRAKE_URDF_RBM_LIBRARY drakeRBMurdf HINTS ${_lib_dir_hint} DOC "Drake URDFRigidBodyManipulator library")
+find_library(DRAKE_URDF_INTERFACE_LIBRARY drakeURDFinterface HINTS ${_lib_dir_hint} DOC "Drake urdf_interface library")
 
 set(DRAKE_LIBRARIES
     ${DRAKE_RBM_LIBRARY}
