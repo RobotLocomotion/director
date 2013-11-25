@@ -56,6 +56,8 @@
 namespace
 {
 
+const int WORKSPACE_DEPTH_VIEW_ID = 42;
+
 //----------------------------------------------------------------------------
 vtkSmartPointer<vtkCellArray> NewVertexCells(vtkIdType numberOfVerts)
 {
@@ -144,7 +146,6 @@ public:
     this->ShouldStop = true;
     this->NewData = false;
     this->MaxNumberOfDatasets = 100;
-    this->CurrentMapId = -1;
 
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
@@ -244,8 +245,6 @@ public:
       return;
       }
 
-    printf("starting\n");
-
     this->ShouldStop = false;
     this->Thread = boost::shared_ptr<boost::thread>(
       new boost::thread(boost::bind(&LCMListener::ThreadLoopWithSelect, this)));
@@ -255,46 +254,47 @@ public:
   {
     if (this->Thread)
       {
-      printf("stopping thread...\n");
       this->ShouldStop = true;
       this->Thread->interrupt();
       this->Thread->join();
       this->Thread.reset();
-      printf("done.\n");
       }
   }
 
-  std::vector<vtkSmartPointer<vtkPolyData> > GetDatasets()
+  std::vector<vtkSmartPointer<vtkPolyData> > GetDatasets(int viewId)
   {
-    std::vector<vtkSmartPointer<vtkPolyData> > datasets;
+    std::vector<vtkSmartPointer<vtkPolyData> > polyData;
 
     boost::lock_guard<boost::mutex> lock(this->Mutex);
-    for (size_t i = 0; i < this->Datasets.size(); ++i)
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    for (size_t i = 0; i < datasets.size(); ++i)
       {
-      datasets.push_back(this->Datasets[i].Data);
+      polyData.push_back(datasets[i].Data);
       }
 
-    return datasets;
+    return polyData;
   }
 
-  std::vector<double> GetTimesteps()
+  std::vector<double> GetTimesteps(int viewId)
   {
     boost::lock_guard<boost::mutex> lock(this->Mutex);
 
     std::vector<double> timesteps;
-    for (int i = 0; i < this->Datasets.size(); ++i)
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    for (int i = 0; i < datasets.size(); ++i)
       {
       timesteps.push_back(i);
       }
     return timesteps;
   }
 
-  vtkSmartPointer<vtkPolyData> GetDatasetForTime(int timestep)
+  vtkSmartPointer<vtkPolyData> GetDatasetForTime(int viewId, int timestep)
   {
     boost::lock_guard<boost::mutex> lock(this->Mutex);
-    if (timestep >= 0 && timestep < this->Datasets.size())
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    if (timestep >= 0 && timestep < datasets.size())
       {
-      return this->Datasets[timestep].Data;
+      return datasets[timestep].Data;
       }
     else
       {
@@ -302,12 +302,17 @@ public:
       }
   }
 
-  vtkIdType GetCurrentMapId()
+  vtkIdType GetCurrentMapId(int viewId)
   {
-    return this->CurrentMapId;
+    std::map<int, vtkIdType>::const_iterator itr = this->CurrentMapIds.find(viewId);
+    if (itr == this->CurrentMapIds.end())
+      {
+        return -1;
+      }
+    return itr->second;
   }
 
-  void GetDataForMapId(vtkIdType mapId, vtkPolyData* polyData)
+  void GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData)
   {
     if (!polyData)
       {
@@ -315,66 +320,83 @@ public:
       }
 
     boost::lock_guard<boost::mutex> lock(this->Mutex);
-    for (size_t i = 0; i < this->Datasets.size(); ++i)
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    for (size_t i = 0; i < datasets.size(); ++i)
       {
-      if (this->Datasets[i].Id == mapId)
+      if (datasets[i].Id == mapId)
         {
-        polyData->DeepCopy(this->Datasets[i].Data);
+        polyData->DeepCopy(datasets[i].Data);
         }
       }
   }
 
 protected:
 
-  void UpdateDequeSize()
+  void UpdateDequeSize(std::deque<MapData>& datasets)
   {
     if (this->MaxNumberOfDatasets <= 0)
       {
       return;
       }
-    while (this->Datasets.size() >= this->MaxNumberOfDatasets)
+    while (datasets.size() >= this->MaxNumberOfDatasets)
       {
-      this->Datasets.pop_front();
+      datasets.pop_front();
       }
+  }
+
+  vtkIdType GetNextMapId(int viewId)
+  {
+    std::map<int, vtkIdType>::iterator itr = this->CurrentMapIds.find(viewId);
+    if (itr == this->CurrentMapIds.end())
+      {
+        this->CurrentMapIds[viewId] = -1;
+        itr = this->CurrentMapIds.begin();
+      }
+
+    return ++itr->second;
   }
 
   void HandleNewData(const drc::map_image_t* msg)
   {
+    int viewId = msg->view_id;
     maps::DepthImageView depthImage;
     maps::LcmTranslator::fromLcm(*msg, depthImage);
 
     maps::PointCloud::Ptr pointCloud = depthImage.getAsPointCloud();
 
     MapData mapData;
-    mapData.Id = ++this->CurrentMapId;
+    mapData.Id = this->GetNextMapId(viewId);
     mapData.Data = PolyDataFromPointCloud(pointCloud);
 
-    printf("storing depth map id: %d.  %d points\n", mapData.Id, mapData.Data->GetNumberOfPoints());
+    //printf("storing depth map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
 
     // store data
     boost::lock_guard<boost::mutex> lock(this->Mutex);
-    this->Datasets.push_back(mapData);
-    this->UpdateDequeSize();
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    datasets.push_back(mapData);
+    this->UpdateDequeSize(datasets);
     this->NewData = true;
   }
 
   void HandleNewData(const drc::map_cloud_t* msg)
   {
+    int viewId = msg->view_id;
     maps::PointCloudView cloudView;
     maps::LcmTranslator::fromLcm(*msg, cloudView);
 
     maps::PointCloud::Ptr pointCloud = cloudView.getAsPointCloud();
 
     MapData mapData;
-    mapData.Id = ++this->CurrentMapId;
+    mapData.Id = this->GetNextMapId(viewId);
     mapData.Data = PolyDataFromPointCloud(pointCloud);
 
-    printf("storing cloud map id: %d.  %d points\n", mapData.Id, mapData.Data->GetNumberOfPoints());
+    //printf("storing cloud map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
 
     // store data
     boost::lock_guard<boost::mutex> lock(this->Mutex);
-    this->Datasets.push_back(mapData);
-    this->UpdateDequeSize();
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    datasets.push_back(mapData);
+    this->UpdateDequeSize(datasets);
     this->NewData = true;
   }
 
@@ -385,7 +407,8 @@ protected:
 
   boost::mutex Mutex;
 
-  std::deque<MapData> Datasets;
+  std::map<int, std::deque<MapData> > Datasets;
+  std::map<int, vtkIdType> CurrentMapIds;
 
   boost::shared_ptr<lcm::LCM> LCMHandle;
 
@@ -453,27 +476,27 @@ void vtkMapServerSource::Poll()
 }
 
 //-----------------------------------------------------------------------------
-int vtkMapServerSource::GetNumberOfDatasets()
+int vtkMapServerSource::GetNumberOfDatasets(int viewId)
 {
-  return this->Internal->Listener->GetDatasets().size();
+  return this->Internal->Listener->GetDatasets(viewId).size();
 }
 
 //-----------------------------------------------------------------------------
-vtkIdType vtkMapServerSource::GetCurrentMapId()
+vtkIdType vtkMapServerSource::GetCurrentMapId(int viewId)
 {
-  return this->Internal->Listener->GetCurrentMapId();
+  return this->Internal->Listener->GetCurrentMapId(viewId);
 }
 
 //-----------------------------------------------------------------------------
-void vtkMapServerSource::GetDataForMapId(vtkIdType mapId, vtkPolyData* polyData)
+void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData)
 {
-  return this->Internal->Listener->GetDataForMapId(mapId, polyData);
+  return this->Internal->Listener->GetDataForMapId(viewId, mapId, polyData);
 }
 
 //-----------------------------------------------------------------------------
-vtkPolyData* vtkMapServerSource::GetDataset(int i)
+vtkPolyData* vtkMapServerSource::GetDataset(int viewId, vtkIdType i)
 {
-  return this->Internal->Listener->GetDatasetForTime(i);
+  return this->Internal->Listener->GetDatasetForTime(viewId, i);
 }
 
 //-----------------------------------------------------------------------------
@@ -483,9 +506,8 @@ int vtkMapServerSource::RequestInformation(vtkInformation *request,
 {
   vtkInformation *info = outputVector->GetInformationObject(0);
 
-  printf("requst info\n");
 
-  std::vector<double> timesteps = this->Internal->Listener->GetTimesteps();
+  std::vector<double> timesteps = this->Internal->Listener->GetTimesteps(WORKSPACE_DEPTH_VIEW_ID);
   if (timesteps.size())
     {
     double timeRange[2] = {timesteps.front(), timesteps.back()};
@@ -511,8 +533,6 @@ int vtkMapServerSource::RequestData(
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
-  printf("request data\n");
-
   vtkInformation *info = outputVector->GetInformationObject(0);
   vtkDataSet *output = vtkDataSet::SafeDownCast(info->Get(vtkDataObject::DATA_OBJECT()));
 
@@ -523,14 +543,14 @@ int vtkMapServerSource::RequestData(
     timestep = static_cast<int>(floor(timeRequest+0.5));
     }
 
-  vtkSmartPointer<vtkPolyData> polyData = this->Internal->Listener->GetDatasetForTime(timestep);
+  vtkSmartPointer<vtkPolyData> polyData = this->Internal->Listener->GetDatasetForTime(WORKSPACE_DEPTH_VIEW_ID, timestep);
   if (polyData)
     {
     output->ShallowCopy(polyData);
     }
   else
     {
-    printf("no data\n");
+    printf("no map data for timestep: %d\n", timestep);
     }
 
   return 1;

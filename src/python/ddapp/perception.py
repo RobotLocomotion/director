@@ -296,18 +296,14 @@ class MapServerSource(TimerCallback):
         TimerCallback.__init__(self)
         self.reader = None
         self.displayedMapId = -1
+        self.displayedViewId = 42
         self.targetFps = 10
         self.polyData = polyData or vtk.vtkPolyData()
         self.callbackFunc = callbackFunc
 
     def showMap(self, mapId):
         polyData = vtk.vtkPolyData()
-        self.reader.GetDataForMapId(mapId, polyData)
-
-        if polyData.GetNumberOfPoints() < 10000:
-
-            return
-
+        self.reader.GetDataForMapId(self.displayedViewId, mapId, polyData)
         self.polyData.ShallowCopy(polyData)
 
         self.displayedMapId = mapId
@@ -322,7 +318,7 @@ class MapServerSource(TimerCallback):
         TimerCallback.start(self)
 
     def updateMap(self):
-        mapId = self.reader.GetCurrentMapId()
+        mapId = self.reader.GetCurrentMapId(self.displayedViewId)
         if mapId != self.displayedMapId:
             self.showMap(mapId)
 
@@ -330,7 +326,7 @@ class MapServerSource(TimerCallback):
         self.updateMap()
 
 
-def init(view, jointController, useMapServer=False):
+def init(view, jointController, useMapServer=True):
     global _multisenseItem
     global _view
 

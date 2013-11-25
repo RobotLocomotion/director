@@ -37,11 +37,11 @@ public:
   void Start();
   void Stop();
 
-  int GetNumberOfDatasets();
-  vtkPolyData* GetDataset(int i);
+  int GetNumberOfDatasets(int viewId);
+  vtkPolyData* GetDataset(int viewId, vtkIdType i);
 
-  vtkIdType GetCurrentMapId();
-  void GetDataForMapId(vtkIdType mapId, vtkPolyData* polyData);
+  vtkIdType GetCurrentMapId(int viewId);
+  void GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData);
 
 protected:
 
