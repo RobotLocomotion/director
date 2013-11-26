@@ -4,6 +4,7 @@
 #include <QObject>
 
 class vtkRenderer;
+class vtkTransform;
 
 class ddDrakeModel : public QObject
 {
@@ -25,6 +26,8 @@ public:
   void setJointPositions(const QList<double>& positions);
 
   void setEstRobotState(const QList<double>& robotState);
+
+  void getLinkToWorld(const QString& linkName, vtkTransform* transform);
 
   void setAlpha(double alpha);
   double alpha() const;

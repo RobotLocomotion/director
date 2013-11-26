@@ -24,6 +24,7 @@ void ddBotImageQueue::getImage(const QString&, vtkImageData*);
 int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QList<double>&);
 void ddDrakeModel::setEstRobotState(const QList<double>&);
+void ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
 void ddDrakeModel::setAlpha(double);
 void ddDrakeModel::setVisible(bool);
 

@@ -25,6 +25,7 @@
 #include <sstream>
 #include <boost/shared_ptr.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include <urdf_interface/model.h>
 
@@ -231,6 +232,16 @@ vtkSmartPointer<vtkPolyData> loadPolyData(const std::string filename)
 {
   vtkSmartPointer<vtkOBJReader> reader = vtkSmartPointer<vtkOBJReader>::New();
   reader->SetFileName(filename.c_str());
+
+  /*
+  std::string chullFilename = filename;
+  boost::algorithm::replace_last(chullFilename, ".obj", "_chull.obj");
+  if (boost::filesystem::exists(chullFilename))
+  {
+    reader->SetFileName(chullFilename.c_str());
+  }
+  */
+
   reader->Update();
   if (!reader->GetOutput()->GetNumberOfPoints())
   {
@@ -479,10 +490,7 @@ public:
   {
     const Vector4d zero(0,0,0,1);
     double theta, axis[3], quat[4];
-
     double angleAxis[4];
-
-
     Matrix<double,7,1> pose;
 
     // iterate over each model
@@ -633,6 +641,67 @@ public:
   }
 
 
+  virtual QMap<QString, int> getLinkIds()
+  {
+    QMap<QString, int> linkMap;
+
+    // iterate over each model
+    for (int robot=0; robot< urdf_model.size(); robot++)
+    {
+      // iterate over each link
+      for (map<string, boost::shared_ptr<urdf::Link> >::iterator l=urdf_model[robot]->links_.begin(); l!=urdf_model[robot]->links_.end(); l++)
+      {
+
+
+        int body_ind;
+        if (l->second->parent_joint)
+        {
+          map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],l->second->parent_joint->name);
+          if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
+          body_ind = j2->second;
+        }
+        else
+        {
+          map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],"base");
+          if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
+          body_ind = j2->second;  // then it's attached directly to the floating base
+        }
+
+        linkMap[l->second->name.c_str()] = body_ind;
+      }
+    }
+
+    return linkMap;
+
+  }
+
+  vtkSmartPointer<vtkTransform> getLinkToWorld(QString linkName)
+  {
+    QMap<QString, int> linkMap = this->getLinkIds();
+
+    if (!linkMap.contains(linkName))
+    {
+      printf("getLinkToWorld: cannot find link name: %s\n", linkName.toAscii().data());
+      return NULL;
+    }
+
+
+    const Vector4d zero(0,0,0,1);
+    double theta, axis[3], quat[4];
+    double angleAxis[4];
+    Matrix<double, 7 ,1> pose;
+
+    forwardKin(linkMap.value(linkName), zero, 2, pose);
+
+    double* posedata = pose.data();
+    bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
+    vtkSmartPointer<vtkTransform> linkToWorld = vtkSmartPointer<vtkTransform>::New();
+    linkToWorld->PostMultiply();
+    linkToWorld->RotateWXYZ(vtkMath::DegreesFromRadians(angleAxis[0]), angleAxis[1], angleAxis[2], angleAxis[3]);
+    linkToWorld->Translate(pose(0), pose(1), pose(2));
+    return linkToWorld;
+  }
+
 };
 
 
@@ -772,6 +841,21 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
   emit this->modelChanged();
 }
 
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::getLinkToWorld(const QString& linkName, vtkTransform* transform)
+{
+  if (!transform || !this->Internal->Model)
+  {
+    return;
+  }
+
+  vtkSmartPointer<vtkTransform> linkToWorld = this->Internal->Model->getLinkToWorld(linkName);
+  if (linkToWorld)
+  {
+    transform->SetMatrix(linkToWorld->GetMatrix());
+  }
+}
 
 //-----------------------------------------------------------------------------
 void ddDrakeModel::setEstRobotState(const QList<double>& robotState)
