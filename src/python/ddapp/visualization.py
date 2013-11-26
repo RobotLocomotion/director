@@ -7,6 +7,7 @@ import ddapp.vtkAll as vtk
 import numpy as np
 from PythonQt import QtCore, QtGui
 
+from ddapp.affordancelistener import listener as affListener
 
 def computeAToB(a,b):
 
@@ -23,9 +24,10 @@ class AffordanceItem(om.PolyDataItem):
 
     def __init__(self, name, polyData, view):
         om.PolyDataItem.__init__(self, name, polyData, view)
-
         self.baseTransform = None
+        self.params = {}
         affup.updater.addCallback(self.onGroundTransform)
+        affListener.registerAffordance(self)
 
 
     def publish(self):
@@ -40,6 +42,11 @@ class AffordanceItem(om.PolyDataItem):
             self.publish()
         else:
             om.PolyDataItem.onAction(self, action)
+
+    def onServerAffordanceUpdate(self, serverAff):
+        if not self.params.get('uid'):
+            print 'assigning uid from server:', serverAff.uid
+            self.params['uid'] = serverAff.uid
 
     def computeBaseTransform(self):
         self.baseTransform = computeAToB(self.groundTransform, self.actor.GetUserTransform())
@@ -60,6 +67,10 @@ class AffordanceItem(om.PolyDataItem):
 
         self.actor.GetUserTransform().SetMatrix(newUserTransform.GetMatrix())
         self._renderAllViews()
+
+    def onRemoveFromObjectModel(self):
+        om.PolyDataItem.onRemoveFromObjectModel(self)
+        affListener.unregisterAffordance(self)
 
 
 
@@ -147,7 +158,7 @@ class CylinderAffordanceItem(AffordanceItem):
 
     def publish(self):
         self.updateParamsFromActorTransform()
-        aff = affordance.createValveAffordance(self.params)
+        aff = affordance.createCylinderAffordance(self.params)
         affordance.publishAffordance(aff)
 
 

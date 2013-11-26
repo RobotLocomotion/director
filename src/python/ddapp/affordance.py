@@ -19,9 +19,9 @@ def createCylinderAffordance(params):
     orientation = transformUtils.orientationFromNormal(axis)
 
     aff.utime = 0
-    aff.otdf_type = 'cylinder'
-    aff.friendly_name = 'cylinder'
-    aff.uid = 0
+    aff.otdf_type = params.get('otdf_type') or 'cylinder'
+    aff.friendly_name = params.get('friendly_name') or 'cylinder'
+    aff.uid = params.get('uid') or 0
     aff.map_id = 0
     aff.aff_store_control = lcmdrc.affordance_t.NEW
     aff.origin_xyz = origin
@@ -57,7 +57,7 @@ def createFrameAffordance(params):
     aff.utime = 0
     aff.otdf_type = params.get('otdf_type') or 'box'
     aff.friendly_name = params.get('friendly_name') or 'box'
-    aff.uid = 0
+    aff.uid = params.get('uid') or 0
     aff.map_id = 0
     aff.aff_store_control = lcmdrc.affordance_t.NEW
     aff.origin_xyz = origin
@@ -101,29 +101,12 @@ def createBoxAffordance(params):
     yaxis = params['yaxis']
     zaxis = params['zaxis']
 
-
-    if False: # this was for a hand seed program
-        # swap z and y before publishing
-        zaxis, yaxis = yaxis, zaxis
-        zwidth, ywidth = ywidth, zwidth
-
-
-    if False: # this is for cinderblockstep.otdf
-        xaxis, yaxis = yaxis, xaxis
-        xwidth, ywidth = ywidth, xwidth
-
-        zaxis = -zaxis
-        xaxis = -xaxis
-        yaxis = np.cross(zaxis, xaxis)
-
-        origin -= zaxis*0.5*zwidth
-
     orientation = transformUtils.orientationFromAxes(xaxis, yaxis, zaxis)
 
     aff.utime = 0
     aff.otdf_type = params.get('otdf_type') or 'box'
     aff.friendly_name = params.get('friendly_name') or 'box'
-    aff.uid = 0
+    aff.uid = params.get('uid') or 0
     aff.map_id = 0
     aff.aff_store_control = lcmdrc.affordance_t.NEW
     aff.origin_xyz = origin
@@ -182,32 +165,26 @@ def getAffordances():
 
 
 def findExistingAffordance(aff):
-
     affs = getAffordances()
-
-    # lookup by friendly_name
     for storeAff in affs.affs:
-        if storeAff.friendly_name == aff.friendly_name:
+        if storeAff.uid == aff.uid or storeAff.friendly_name == aff.friendly_name:
             return storeAff
-
-    # lookup by otdf_type
-    #for storeAff in affs.affs:
-    #    if storeAff.otdf_type == aff.otdf_type:
-    #        return storeAff
 
 
 def publishAffordance(aff):
 
+    if aff.uid:
 
-    existingAffordance = findExistingAffordance(aff)
+        print 'publishing update affordance with uid:', aff.uid
 
-    if existingAffordance:
-        aff.uid = existingAffordance.uid
         aff.aff_store_control = lcmdrc.affordance_t.UPDATE
         channelName =  'AFFORDANCE_TRACK'
         lcmUtils.publish(channelName, aff)
 
     else:
+
+        print 'publishing new affordance with uid:', aff.uid
+
         affPlus = createAffordancePlus(aff)
         channelName = 'AFFORDANCE_FIT'
         lcmUtils.publish(channelName, affPlus)

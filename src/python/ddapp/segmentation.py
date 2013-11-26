@@ -899,7 +899,9 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
-    params = dict(axis=zaxis, radius=radius, length=zwidth, origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=radius, ywidth=radius, zwidth=zwidth)
+    params = dict(axis=zaxis, radius=radius, length=zwidth, origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis,
+                  xwidth=radius, ywidth=radius, zwidth=zwidth,
+                  otdf_type='steering_cyl', friendly_name='valve')
 
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
