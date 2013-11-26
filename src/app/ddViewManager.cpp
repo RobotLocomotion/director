@@ -147,11 +147,11 @@ void ddViewManager::addView(ddViewBase* view, const QString& viewName, int pageI
 ddViewBase* ddViewManager::createView(const QString& viewName, const QString& viewType, int pageIndex)
 {
   ddViewBase* view = 0;
-  if (viewName == "VTK View")
+  if (viewType == "VTK View")
   {
     view = new ddQVTKWidgetView;
   }
-  else if (viewName == "Spreadsheet View")
+  else if (viewType == "Spreadsheet View")
   {
     view = new ddSpreadsheetView;
   }
