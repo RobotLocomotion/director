@@ -2,6 +2,7 @@
 set(python_files
   ddapp/actionhandlers.py
   ddapp/affordance.py
+  ddapp/affordancelistener.py
   ddapp/affordanceupdater.py
   ddapp/applogic.py
   ddapp/botspy.py
