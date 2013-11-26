@@ -225,10 +225,11 @@ class FrameItem(om.PolyDataItem):
     def onRemoveFromObjectModel(self):
         om.PolyDataItem.onRemoveFromObjectModel(self)
 
+        self.widget.SetInteractor(None)
+        self.widget.EnabledOff()
         for view in self.views:
             view.renderer().RemoveActor(self.actor)
             view.render()
-
 
 
 def updatePolyData(polyData, name, **kwargs):
@@ -247,7 +248,7 @@ def updateFrame(frame, name, **kwargs):
     return obj
 
 
-def showFrame(frame, name, parent='segmentation', scale=0.5, visible=True):
+def showFrame(frame, name, parent='segmentation', scale=0.35, visible=True):
     if isinstance(parent, str):
         parentObj = om.getOrCreateContainer(parent)
     else:
