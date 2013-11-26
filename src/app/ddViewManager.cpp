@@ -144,24 +144,16 @@ void ddViewManager::addView(ddViewBase* view, const QString& viewName, int pageI
 }
 
 //-----------------------------------------------------------------------------
-ddViewBase* ddViewManager::createView(const QString& viewName, int pageIndex)
+ddViewBase* ddViewManager::createView(const QString& viewName, const QString& viewType, int pageIndex)
 {
   ddViewBase* view = 0;
-  if (viewName == "DRC View")
+  if (viewName == "VTK View")
   {
-    view = new ddDRCView;
+    view = new ddQVTKWidgetView;
   }
   else if (viewName == "Spreadsheet View")
   {
     view = new ddSpreadsheetView;
-  }
-  else if (viewName == "Segmentation View")
-  {
-    view = new ddQVTKWidgetView;
-  }
-  else if (viewName == "IK View")
-  {
-    view = new ddDRCView;
   }
 
   if (view)
@@ -175,5 +167,5 @@ ddViewBase* ddViewManager::createView(const QString& viewName, int pageIndex)
 //-----------------------------------------------------------------------------
 void ddViewManager::addDefaultPage()
 {
-  this->addView(new ddDRCView, "DRC View");
+  this->addView(new ddQVTKWidgetView, "DRC View");
 }

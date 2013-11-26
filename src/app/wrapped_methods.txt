@@ -20,7 +20,12 @@ void ddBotImageQueue::colorizeLidar(vtkPolyData*);
 void ddBotImageQueue::computeTextureCoords(vtkPolyData*);
 void ddBotImageQueue::getImage(const QString&, vtkImageData*);
 
-
+ddDrakeModel::ddDrakeModel();
+ddDrakeModel::~ddDrakeModel();
+bool ddDrakeModel::loadFromFile(const QString&);
+bool ddDrakeModel::loadFromXML(const QString&);
+void ddDrakeModel::addToRenderer(vtkRenderer*);
+void ddDrakeModel::removeFromRenderer(vtkRenderer*);
 int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QList<double>&);
 void ddDrakeModel::setEstRobotState(const QList<double>&);
@@ -73,8 +78,8 @@ void ddPythonEventFilter::removeFilteredEventType(int);
 
 
 ddViewBase* ddViewManager::findView(const QString&) const;
-ddViewBase* ddViewManager::createView(const QString&, int);
-ddViewBase* ddViewManager::createView(const QString&);
+ddViewBase* ddViewManager::createView(const QString&, const QString&, int);
+ddViewBase* ddViewManager::createView(const QString&, const QString&);
 void ddViewManager::switchToView(const QString&);
 ddViewBase* ddViewManager::currentView() const;
 

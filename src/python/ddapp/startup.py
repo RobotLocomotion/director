@@ -68,7 +68,7 @@ if useSpreadsheet:
 if useIk:
 
 
-    ikview = app.getViewManager().createView('IK View')
+    ikview = app.getViewManager().createView('IK View', 'VTK View')
 
     app.getViewManager().switchToView('IK View')
 
@@ -78,11 +78,9 @@ if useIk:
     #urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_fixedjoint_hands.urdf')
     urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_LS_RI.urdf')
 
-    models = []
-    model = ikview.loadURDFModel(urdfFile)
-    om.addRobotModel(model, ikFolder)
-    models.append(model)
-
+    model = app.loadRobotModelFromFile(urdfFile)
+    obj = om.addRobotModel(model, ikFolder)
+    obj.addToView(ikview)
 
     useTable = False
     if useTable:
@@ -92,7 +90,7 @@ if useIk:
         om.addRobotModel(tableModel, affordancesFolder)
 
 
-    jc = jointcontrol.JointController(models, poseCollection)
+    jc = jointcontrol.JointController([model], poseCollection)
     jc.addNominalPoseFromFile(app.getNominalPoseMatFile())
     jc.setNominalPose()
     jc.addPose('q_end', jc.poses['q_nom'])
@@ -119,7 +117,8 @@ if usePerception:
     mitRobotDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot')
     urdfFile = os.path.join(mitRobotDir, 'model_LI_RI.urdf')
 
-    robotStateModel = view.loadURDFModel(urdfFile)
+    robotStateModel = app.loadRobotModelFromFile(urdfFile)
+
 
     robotStateJointController = jointcontrol.JointController([robotStateModel])
     robotStateJointController.setZeroPose()
@@ -129,6 +128,7 @@ if usePerception:
 
     sensorsFolder = om.getOrCreateContainer('sensors')
     robotStateModel = om.addRobotModel(robotStateModel, sensorsFolder)
+    robotStateModel.addToView(view)
 
     def grabRobotState():
         poseName = 'EST_ROBOT_STATE'
@@ -281,13 +281,37 @@ def affUpdaterOff():
     vis.affup.updater.off()
 
 
+def getLinkFrame(linkName):
+    t = vtk.vtkTransform()
+    robotStateModel.model.getLinkToWorld(linkName, t)
+    return t
+
+
+def resetCameraToRobot():
+    t = getLinkFrame('utorso')
+    focalPoint = [0.3, 0.0, 0.3]
+    position = [-4.0, -2.0, 2.0]
+    t.TransformPoint(focalPoint, focalPoint)
+    t.TransformPoint(position, position)
+    c = view.camera()
+    c.SetFocalPoint(focalPoint)
+    c.SetPosition(position)
+    c.SetViewUp([0.0, 0.0, 1.0])
+    view.render()
+
+
 def onRobotModel(m):
-    model = view.loadURDFModelXML(m.urdf_xml_string)
+    model = app.loadRobotModelFromString(m.urdf_xml_string)
     sensorsFolder = om.getOrCreateContainer('sensors')
     obj = om.addRobotModel(model, sensorsFolder)
     obj.setProperty('Name', 'model publisher')
     robotStateJointController.models.append(model)
+
+    global robotStateModel
+    obj.addToView(robotStateModel.views[0])
     robotStateModel.setProperty('Visible', False)
+    robotStateModel = obj
+
 
 lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
 

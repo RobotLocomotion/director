@@ -83,7 +83,7 @@ def initSpreadsheetColumns(costCollection):
 def init(poseCollection, costCollection):
 
     global _spreadsheetView
-    _spreadsheetView = app.getViewManager().createView('Spreadsheet View')
+    _spreadsheetView = app.getViewManager().createView('Spreadsheet View', 'Spreadsheet View')
 
     updateMethod = functools.partial(updateSpreadsheetPoses, poseCollection)
     poseCollection.connect('itemChanged(const QString&)', updateMethod)

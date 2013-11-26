@@ -19,7 +19,7 @@ public:
 
   ddViewBase* findView(const QString& viewName) const;
 
-  ddViewBase* createView(const QString& viewName, int pageIndex=-1);
+  ddViewBase* createView(const QString& viewName, const QString& viewType, int pageIndex=-1);
 
   void switchToView(const QString& viewName);
 

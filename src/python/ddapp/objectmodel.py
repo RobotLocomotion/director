@@ -95,10 +95,13 @@ class RobotModelItem(ObjectModelItem):
         ObjectModelItem.__init__(self, modelName, Icons.Robot)
 
         self.model = model
+        model.connect('modelChanged()', self.onModelChanged)
+
         self.addProperty('Filename', model.filename())
         self.addProperty('Visible', model.visible())
         self.addProperty('Alpha', model.alpha())
         self.addProperty('Color', QtGui.QColor(255,0,0))
+        self.views = []
 
     def _onPropertyChanged(self, propertyName):
         ObjectModelItem._onPropertyChanged(self, propertyName)
@@ -107,6 +110,22 @@ class RobotModelItem(ObjectModelItem):
             self.model.setAlpha(self.getProperty(propertyName))
         elif propertyName == 'Visible':
             self.model.setVisible(self.getProperty(propertyName))
+
+    def onModelChanged(self):
+        for view in self.views:
+            view.render()
+
+    def addToView(self, view):
+        if view in self.views:
+            return
+        self.views.append(view)
+        self.model.addToRenderer(view.renderer())
+        view.render()
+
+    def onRemoveFromObjectModel(self):
+        for view in self.views:
+            self.model.removeFromRenderer(view.renderer())
+            view.render()
 
 
 class PolyDataItem(ObjectModelItem):

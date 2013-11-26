@@ -237,7 +237,7 @@ def getOrCreateSegmentationView():
     viewManager = app.getViewManager()
     segmentationView = viewManager.findView('Segmentation View')
     if not segmentationView:
-        segmentationView = viewManager.createView('Segmentation View')
+        segmentationView = viewManager.createView('Segmentation View', 'VTK View')
         installEventFilter(segmentationView, segmentationViewEventFilter)
 
     viewManager.switchToView('Segmentation View')

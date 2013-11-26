@@ -131,6 +131,21 @@ def setupToolBar():
     toolbar.addWidget(combo)
 
 
+def loadRobotModelFromFile(filename):
+    model = PythonQt.dd.ddDrakeModel()
+    if not model.loadFromFile(filename):
+        return None
+    return model
+
+
+def loadRobotModelFromString(xmlString):
+    model = PythonQt.dd.ddDrakeModel()
+    if not model.loadFromXML(xmlString):
+        return None
+    return model
+
+
+
 def setupPackagePaths():
 
     searchPaths = [
