@@ -1,6 +1,6 @@
 import time
 from PythonQt import QtCore
-
+import traceback
 
 class TimerCallback(object):
 
@@ -13,6 +13,7 @@ class TimerCallback(object):
         self.timer = QtCore.QTimer()
         self.timer.setSingleShot(True)
         self.timer.connect('timeout()', self._timerEvent)
+        self.callback = None
 
     def start(self):
         '''
@@ -31,7 +32,11 @@ class TimerCallback(object):
         '''
         Timer event callback method.  Subclasses can override this method.
         '''
-        pass
+        if self.callback:
+            try:
+                self.callback()
+            except:
+                print traceback.format_exc()
 
     def _schedule(self, elapsedTimeInSeconds):
         '''
