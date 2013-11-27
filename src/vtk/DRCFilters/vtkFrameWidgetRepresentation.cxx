@@ -605,8 +605,6 @@ int vtkFrameWidgetRepresentation::ComputeInteractionState(int X, int Y, int vtkN
         {
 
         this->InteractionState = vtkFrameWidgetRepresentation::Rotating;
-
-        printf("picked circle %d\n", i);
         this->Internal->RotateAxis = i;
         this->Internal->AxesPicker->GetPickPosition(this->Internal->CirclePickPoint);
         this->Internal->Transform->GetOrientationWXYZ(this->Internal->LastOrientation);
@@ -621,9 +619,7 @@ int vtkFrameWidgetRepresentation::ComputeInteractionState(int X, int Y, int vtkN
       {
       if (this->Internal->Axes[i].PolyData.GetPointer() == dataset)
         {
-        printf("picked axis %d\n", i);
         this->Internal->TranslateAxis = i;
-
         this->InteractionState = vtkFrameWidgetRepresentation::Translating;
         }
       }
