@@ -18,7 +18,6 @@ def findAffordanceByFriendlyName(affs, friendlyName):
     if not friendlyName:
         return None
     for aff in affs:
-        print 'searching friendly name:', aff.friendly_name, friendlyName
         if aff.friendly_name == friendlyName:
             return aff
 
