@@ -858,6 +858,16 @@ void ddDrakeModel::getLinkToWorld(const QString& linkName, vtkTransform* transfo
 }
 
 //-----------------------------------------------------------------------------
+QList<QString> ddDrakeModel::getLinkNames()
+{
+  if (!this->Internal->Model)
+  {
+    return QList<QString>();
+  }
+  return this->Internal->Model->getLinkIds().keys();
+}
+
+//-----------------------------------------------------------------------------
 void ddDrakeModel::setEstRobotState(const QList<double>& robotState)
 {
   URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
