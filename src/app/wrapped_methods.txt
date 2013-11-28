@@ -19,6 +19,7 @@ void ddBotImageQueue::init(ddLCMThread*);
 void ddBotImageQueue::colorizeLidar(vtkPolyData*);
 void ddBotImageQueue::computeTextureCoords(vtkPolyData*);
 void ddBotImageQueue::getImage(const QString&, vtkImageData*);
+void ddBotImageQueue::getBodyToCameraTransform(const QString&, vtkTransform*);
 
 ddDrakeModel::ddDrakeModel();
 ddDrakeModel::~ddDrakeModel();

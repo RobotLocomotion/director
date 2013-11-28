@@ -29,6 +29,8 @@
 #include <vtkPointData.h>
 #include <vtkUnsignedCharArray.h>
 #include <vtkFloatArray.h>
+#include <vtkTransform.h>
+#include <vtkMatrix4x4.h>
 
 class ddBotImageQueue : public QObject
  {
@@ -62,7 +64,14 @@ public:
     BotCamTrans* mCamTrans;
     bot_core::image_t mImageMessage;
     Eigen::Isometry3d mLocalToCamera;
+    Eigen::Isometry3d mBodyToCamera;
     std::vector<uint8_t> mImageBuffer;
+
+    CameraData()
+    {
+      mImageMessage.width = 0;
+      mImageMessage.height = 0;
+    }
 
     ~CameraData()
     {
@@ -188,61 +197,36 @@ public:
 
   void computeTextureCoords(vtkPolyData* polyData)
   {
-    computeTextureCoords(polyData, mChestLeft);
-    computeTextureCoords(polyData, mChestRight);
-    computeTextureCoords(polyData, mHeadLeft);
+    computeTextureCoords(polyData, &mChestLeft);
+    computeTextureCoords(polyData, &mChestRight);
+    computeTextureCoords(polyData, &mHeadLeft);
   }
 
-
-  void computeTextureCoords(vtkPolyData* polyData, CameraData& cameraData)
+  void getBodyToCameraTransform(const QString& cameraName, vtkTransform* transform)
   {
-    size_t w = cameraData.mImageMessage.width;
-    size_t h = cameraData.mImageMessage.height;
-
-    bool computeDist = false;
-    if (cameraData.mName == "CAMERACHEST_LEFT" || cameraData.mName == "CAMERACHEST_RIGHT")
+    if (!transform)
     {
-      computeDist = true;
+      return;
     }
 
-    vtkSmartPointer<vtkFloatArray> tcoords = vtkFloatArray::SafeDownCast(polyData->GetPointData()->GetArray(cameraData.mName.c_str()));
-    if (!tcoords)
-    {
-      tcoords = vtkSmartPointer<vtkFloatArray>::New();
-      tcoords->SetName(cameraData.mName.c_str());
-      tcoords->SetNumberOfComponents(2);
-      tcoords->SetNumberOfTuples(polyData->GetNumberOfPoints());
-      polyData->GetPointData()->AddArray(tcoords);
+    transform->Identity();
 
-      tcoords->FillComponent(0, -1);
-      tcoords->FillComponent(1, -1);
+    CameraData* cameraData = this->getCameraData(cameraName);
+    if (!cameraData)
+    {
+      return;
     }
 
-    const vtkIdType nPoints = polyData->GetNumberOfPoints();
-    for (vtkIdType i = 0; i < nPoints; ++i)
+    Eigen::Isometry3d mat = cameraData->mBodyToCamera;
+    vtkSmartPointer<vtkMatrix4x4> vtkmat = vtkSmartPointer<vtkMatrix4x4>::New();
+    for (int i = 0; i < 4; ++i)
     {
-      Eigen::Vector3d ptLocal;
-      polyData->GetPoint(i, ptLocal.data());
-      Eigen::Vector3d pt = cameraData.mLocalToCamera * ptLocal;
-
-      double in[] = {pt[0], pt[1], pt[2]};
-      double pix[3];
-      if (bot_camtrans_project_point(cameraData.mCamTrans, in, pix) == 0)
+      for (int j = 0; j < 4; ++j)
       {
-        float u = pix[0] / (w-1);
-        float v = pix[1] / (h-1);
-
-        if (u >= 0 && u <= 1.0 && v >= 0 && v <= 1.0)
-        {
-          if (computeDist &&  ((0.5 - u)*(0.5 - u) + (0.5 - v)*(0.5 -v)) > 0.14)
-          {
-            continue;
-          }
-          tcoords->SetComponent(i, 0, u);
-          tcoords->SetComponent(i, 1, v);
-        }
+        vtkmat->SetElement(i, j, mat(i,j));
       }
     }
+    transform->SetMatrix(vtkmat);
   }
 
 
@@ -315,6 +299,7 @@ protected slots:
     mHeadLeft.mImageMessage = message.images[0];
     mHeadLeft.mImageBuffer.clear();
     this->getTransform("local", mHeadLeft.mCoordFrame, mHeadLeft.mLocalToCamera, mHeadLeft.mImageMessage.utime);
+    this->getTransform("utorso", mHeadLeft.mCoordFrame, mHeadLeft.mBodyToCamera, mHeadLeft.mImageMessage.utime);
     //printf("got image %s: %d %d\n", mHeadLeft.mName.c_str(), mHeadLeft.mImageMessage.width, mHeadLeft.mImageMessage.height);
   }
 
@@ -323,6 +308,7 @@ protected slots:
     mChestLeft.mImageMessage.decode(data.data(), 0, data.size());
     mChestLeft.mImageBuffer.clear();
     this->getTransform("local", mChestLeft.mCoordFrame, mChestLeft.mLocalToCamera, mChestLeft.mImageMessage.utime);
+    this->getTransform("utorso", mChestLeft.mCoordFrame, mChestLeft.mBodyToCamera, mChestLeft.mImageMessage.utime);
     //printf("got image %s: %d %d\n", mChestLeft.mName.c_str(), mChestLeft.mImageMessage.width, mChestLeft.mImageMessage.height);
   }
 
@@ -331,6 +317,7 @@ protected slots:
     mChestRight.mImageMessage.decode(data.data(), 0, data.size());
     mChestRight.mImageBuffer.clear();
     this->getTransform("local", mChestRight.mCoordFrame, mChestRight.mLocalToCamera, mChestRight.mImageMessage.utime);
+    this->getTransform("utorso", mChestRight.mCoordFrame, mChestRight.mBodyToCamera, mChestRight.mImageMessage.utime);
     //printf("got image %s: %d %d\n", mChestRight.mName.c_str(), mChestRight.mImageMessage.width, mChestRight.mImageMessage.height);
   }
 
@@ -341,12 +328,17 @@ protected slots:
     size_t h = cameraData.mImageMessage.height;
     size_t buf_size = w*h*3;
 
+    if (buf_size == 0)
+    {
+      return vtkSmartPointer<vtkImageData>::New();
+    }
+
     if (!cameraData.mImageBuffer.size())
     {
       if (cameraData.mImageMessage.pixelformat != bot_core::image_t::PIXEL_FORMAT_MJPEG)
       {
         printf("Error: expected PIXEL_FORMAT_MJPEG for camera %s\n", cameraData.mName.c_str());
-        return NULL;
+        return vtkSmartPointer<vtkImageData>::New();
       }
 
       cameraData.mImageBuffer.resize(buf_size);
@@ -371,6 +363,77 @@ protected slots:
   }
 
 protected:
+
+  CameraData* getCameraData(const QString& cameraName)
+  {
+    if (cameraName == "CAMERA_LEFT")
+    {
+      return &mHeadLeft;
+    }
+    else if (cameraName == "CAMERACHEST_LEFT")
+    {
+      return &mChestLeft;
+    }
+    else if (cameraName == "CAMERACHEST_RIGHT")
+    {
+      return &mChestRight;
+    }
+    return 0;
+  }
+
+  void computeTextureCoords(vtkPolyData* polyData, CameraData* cameraData)
+  {
+    size_t w = cameraData->mImageMessage.width;
+    size_t h = cameraData->mImageMessage.height;
+
+    bool computeDist = false;
+    if (cameraData->mName == "CAMERACHEST_LEFT" || cameraData->mName == "CAMERACHEST_RIGHT")
+    {
+      computeDist = true;
+    }
+
+    std::string arrayName = "tcoords_" + cameraData->mName;
+    vtkSmartPointer<vtkFloatArray> tcoords = vtkFloatArray::SafeDownCast(polyData->GetPointData()->GetArray(arrayName.c_str()));
+    if (!tcoords)
+    {
+      tcoords = vtkSmartPointer<vtkFloatArray>::New();
+      tcoords->SetName(arrayName.c_str());
+      tcoords->SetNumberOfComponents(2);
+      tcoords->SetNumberOfTuples(polyData->GetNumberOfPoints());
+      polyData->GetPointData()->AddArray(tcoords);
+
+      tcoords->FillComponent(0, -1);
+      tcoords->FillComponent(1, -1);
+    }
+
+    const vtkIdType nPoints = polyData->GetNumberOfPoints();
+    for (vtkIdType i = 0; i < nPoints; ++i)
+    {
+      Eigen::Vector3d ptLocal;
+      polyData->GetPoint(i, ptLocal.data());
+      //Eigen::Vector3d pt = cameraData.mLocalToCamera * ptLocal;
+      //Eigen::Vector3d pt = cameraData->mBodyToCamera * ptLocal;
+      Eigen::Vector3d pt = ptLocal;
+
+      double in[] = {pt[0], pt[1], pt[2]};
+      double pix[3];
+      if (bot_camtrans_project_point(cameraData->mCamTrans, in, pix) == 0)
+      {
+        float u = pix[0] / (w-1);
+        float v = pix[1] / (h-1);
+
+        //if (u >= 0 && u <= 1.0 && v >= 0 && v <= 1.0)
+        //{
+          //if (computeDist &&  ((0.5 - u)*(0.5 - u) + (0.5 - v)*(0.5 -v)) > 0.14)
+          //{
+          //  continue;
+          //}
+          tcoords->SetComponent(i, 0, u);
+          tcoords->SetComponent(i, 1, v);
+        //}
+      }
+    }
+  }
 
   BotParam* mBotParam;
   BotFrames* mBotFrames;

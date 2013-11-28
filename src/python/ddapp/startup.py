@@ -19,6 +19,7 @@ from ddapp import spreadsheet
 from ddapp import tdx
 from ddapp import perception
 from ddapp import segmentation
+from ddapp import cameraview
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
@@ -112,7 +113,6 @@ if useIk:
 
 if usePerception:
 
-    #urdfFile = os.path.join(app.getURDFModelDir(), 'model_minimal_contact_fixedjoint_hands.urdf')
 
     mitRobotDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot')
     urdfFile = os.path.join(mitRobotDir, 'model_LI_RI.urdf')
@@ -125,6 +125,7 @@ if usePerception:
 
     perception.init(view, robotStateJointController)
     segmentationpanel.init()
+    #cameraview.init()
 
     sensorsFolder = om.getOrCreateContainer('sensors')
     robotStateModel = om.addRobotModel(robotStateModel, sensorsFolder)
@@ -170,108 +171,6 @@ if usePerception:
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 
-def testImageQueue():
-    global imageQueue
-    imageQueue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
-    imageQueue.init(lcmUtils.getGlobalLCMThread())
-
-def testColorize():
-
-    colorizeSphere = True
-    if colorizeSphere:
-        s = vtk.vtkSphereSource()
-        s.SetThetaResolution(400)
-        s.SetPhiResolution(400)
-        s.SetRadius(10)
-        s.Update()
-        p = s.GetOutput()
-        imageQueue.colorizeLidar(p)
-        showPolyData(p, 'sphere', colorByName='rgb')
-
-    #p = shallowCopy(perception._multisenseItem.model.revPolyData)
-    #imageQueue.colorizeLidar(p)
-    #showPolyData(p, 'lidar', colorByName='rgb')
-
-
-def thresholdCells(dataObj, arrayName, thresholdRange):
-    if not dataObj.GetPointData().GetArray(arrayName):
-        raise Exception('thresholdCells: could not locate array: %s' % arrayName)
-    f = vtk.vtkThreshold()
-    f.SetInput(dataObj)
-    f.ThresholdBetween(thresholdRange[0], thresholdRange[1])
-    f.SetInputArrayToProcess(0, 0, 0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName);
-    g = vtk.vtkGeometryFilter()
-    g.AddInputConnection(f.GetOutputPort())
-    g.Update()
-    return shallowCopy(g.GetOutput())
-
-def makeSphere(radius, resolution):
-
-    s = vtk.vtkSphereSource()
-    s.SetThetaResolution(resolution)
-    s.SetPhiResolution(resolution)
-    s.SetRadius(radius)
-    s.Update()
-    return shallowCopy(s.GetOutput())
-
-
-def testTexture():
-
-    s = makeSphere(9.95, 50)
-    s2 = makeSphere(10, 50)
-
-    imageQueue.computeTextureCoords(s)
-    imageQueue.computeTextureCoords(s2)
-
-    s = thresholdCells(s, 'CAMERA_LEFT', [0.0, 1.0])
-    obj = showPolyData(s, 'sphere')
-    obj2 = showPolyData(s2, 'sphere2')
-
-    image1 = vtk.vtkImageData()
-    imageQueue.getImage('CAMERA_LEFT', image1)
-
-    image2 = vtk.vtkImageData()
-    imageQueue.getImage('CAMERACHEST_LEFT', image2)
-
-    image3 = vtk.vtkImageData()
-    imageQueue.getImage('CAMERACHEST_RIGHT', image3)
-
-    tex1 = vtk.vtkTexture()
-    tex1.SetInput(image1)
-    tex1.EdgeClampOn()
-    tex1.RepeatOff()
-
-    tex2 = vtk.vtkTexture()
-    tex2.SetInput(image2)
-    tex2.EdgeClampOn()
-    tex2.RepeatOff()
-
-    tex3 = vtk.vtkTexture()
-    tex3.SetInput(image3)
-    tex3.EdgeClampOn()
-    tex3.RepeatOff()
-
-    tex1.SetBlendingMode(vtk.vtkTexture.VTK_TEXTURE_BLENDING_MODE_REPLACE)
-    tex2.SetBlendingMode(vtk.vtkTexture.VTK_TEXTURE_BLENDING_MODE_REPLACE)
-    tex3.SetBlendingMode(vtk.vtkTexture.VTK_TEXTURE_BLENDING_MODE_ADD)
-
-    renwin = view.renderWindow()
-    hardware = renwin.GetHardwareSupport()
-
-    print hardware.GetSupportsMultiTexturing()
-    print hardware.GetNumberOfFixedTextureUnits()
-
-
-    obj.mapper.MapDataArrayToMultiTextureAttribute(vtk.vtkProperty.VTK_TEXTURE_UNIT_0, 'CAMERA_LEFT', vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS)
-    obj2.mapper.MapDataArrayToMultiTextureAttribute(vtk.vtkProperty.VTK_TEXTURE_UNIT_1, 'CAMERACHEST_LEFT', vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS)
-    obj2.mapper.MapDataArrayToMultiTextureAttribute(vtk.vtkProperty.VTK_TEXTURE_UNIT_2, 'CAMERACHEST_RIGHT', vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS)
-
-    obj.actor.GetProperty().SetTexture(vtk.vtkProperty.VTK_TEXTURE_UNIT_0, tex1)
-    obj2.actor.GetProperty().SetTexture(vtk.vtkProperty.VTK_TEXTURE_UNIT_1, tex2)
-    obj2.actor.GetProperty().SetTexture(vtk.vtkProperty.VTK_TEXTURE_UNIT_2, tex3)
-
-
-testImageQueue()
 
 
 def affUpdaterOn():
