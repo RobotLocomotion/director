@@ -5,8 +5,6 @@ from ddapp import lcmUtils
 from ddapp.utime import getUtime
 from drc import drill_control_t
 
-import ddapp.applogic as app
-
 import numpy as np
 import math
 
