@@ -20,6 +20,7 @@ public slots:
 
   void showConsole();
   void onExecuteFile(const QString& filename);
+  void handleCommandLineArgs();
 
 protected:
 

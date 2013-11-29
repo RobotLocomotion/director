@@ -43,6 +43,17 @@ ddPythonManager::~ddPythonManager()
 }
 
 //-----------------------------------------------------------------------------
+void ddPythonManager::handleCommandLineArgs()
+{
+  QStringList args = QApplication::instance()->arguments();
+  args.removeFirst();
+  foreach (QString arg, args)
+  {
+    this->executeFile(arg);
+  }
+}
+
+//-----------------------------------------------------------------------------
 void ddPythonManager::preInitialization()
 {
   this->addWrapperFactory(new ddPythonQtWrapperFactory);
