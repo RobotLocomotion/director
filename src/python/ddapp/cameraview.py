@@ -9,10 +9,10 @@ from ddapp import vtkNumpy
 import ddapp.vtkAll as vtk
 
 import PythonQt
+from PythonQt import QtCore, QtGui
 import bot_core as lcmbotcore
-
+import numpy as np
 from ddapp.simpletimer import SimpleTimer
-
 from ddapp import ioUtils
 import sys
 
@@ -72,6 +72,7 @@ class CameraView(object):
         self.initView()
         #self.initView2()
 
+        self.initEventFilter()
 
     def initImageQueue(self):
 
@@ -87,6 +88,8 @@ class CameraView(object):
             'CAMERACHEST_RIGHT' : vtk.vtkTransform(),
           }
 
+        self.imageUtimes = {}
+
         self.textures = {}
         for name, image in self.images.iteritems():
             tex = vtk.vtkTexture()
@@ -97,6 +100,38 @@ class CameraView(object):
 
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
         self.queue.init(lcmUtils.getGlobalLCMThread())
+
+
+
+    def onViewDoubleClicked(self, displayPoint):
+
+        obj, pickedPoint = vis.findPickedObject(displayPoint, view=self.view)
+
+        if pickedPoint is None:
+            return
+
+        imageName = obj.getProperty('Name')
+        imageUtime = self.imageUtimes[imageName]
+
+        cameraToLocal = vtk.vtkTransform()
+        self.queue.getTransform(imageName, 'local', imageUtime, cameraToLocal)
+
+        utorsoToLocal = vtk.vtkTransform()
+        self.queue.getTransform('utorso', 'local', imageUtime, utorsoToLocal)
+
+        drcView = app.getViewManager().findView('DRC View')
+
+        p = range(3)
+        utorsoToLocal.TransformPoint(pickedPoint, p)
+        d = vis.DebugData()
+        d.addLine(cameraToLocal.GetPosition(), p)
+        vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView)
+
+
+    def filterEvent(self, obj, event):
+        if event.type() == QtCore.QEvent.MouseButtonDblClick:
+            self.eventFilter.setEventHandlerResult(True)
+            self.onViewDoubleClicked(vis.mapMousePosition(obj, event))
 
 
     def initView(self):
@@ -136,6 +171,14 @@ class CameraView(object):
         self.timerCallback.start()
 
 
+    def initEventFilter(self):
+        self.eventFilter = PythonQt.dd.ddPythonEventFilter()
+        qvtkwidget = self.view.vtkWidget()
+        qvtkwidget.installEventFilter(self.eventFilter)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
+        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
+
+
     def initSphereGeometry(self):
 
         if self.sphereObjects:
@@ -146,7 +189,7 @@ class CameraView(object):
                 return False
 
         sphereResolution = 50
-        sphereRadii = [9.8, 10, 9.9]
+        sphereRadii = [9.95, 9.95, 10]
         imageNames = ['CAMERA_LEFT', 'CAMERACHEST_LEFT', 'CAMERACHEST_RIGHT']
         self.sphereObjects = []
 
@@ -185,15 +228,23 @@ class CameraView(object):
         return True
 
 
+    def writeImage(self, imageName, outFile):
+        writer = vtk.vtkPNGWriter()
+        writer.SetInput(self.images[imageName])
+        writer.SetFileName(outFile)
+        writer.Write()
+
+
+    def updateImages(self):
+        for imageName, image in self.images.iteritems():
+            imageUtime = self.queue.getCurrentImageTime(imageName)
+            if imageUtime != self.imageUtimes.get(imageName, 0):
+                self.imageUtimes[imageName] = self.queue.getImage(imageName, image)
+
+
     def updateImageView(self):
 
-
-        for imageName, image in self.images.iteritems():
-            self.queue.getImage(imageName, image)
-            #writer = vtk.vtkPNGWriter()
-            #writer.SetInput(image)
-            #writer.SetFileName(imageName + '.png')
-            #writer.Write()
+        self.updateImages()
 
         if not self.initSphereGeometry():
             return
@@ -210,8 +261,7 @@ class CameraView(object):
 
     def updateImageView2(self):
 
-        for imageName, image in self.images.iteritems():
-            self.queue.getImage(imageName, image)
+        self.updateImages()
         self.view.render()
 
 

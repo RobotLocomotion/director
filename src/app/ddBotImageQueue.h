@@ -55,6 +55,7 @@ public:
     {
       mImageMessage.width = 0;
       mImageMessage.height = 0;
+      mImageMessage.utime = 0;
     }
 
     ~CameraData()
@@ -70,7 +71,8 @@ public:
 
   void init(ddLCMThread* lcmThread);
 
-  void getImage(const QString& cameraName, vtkImageData* image);
+  quint64 getImage(const QString& cameraName, vtkImageData* image);
+  quint64 getCurrentImageTime(const QString& cameraName);
 
   void colorizePoints(const QString& cameraName, vtkPolyData* polyData);
 
@@ -78,6 +80,7 @@ public:
 
   void getBodyToCameraTransform(const QString& cameraName, vtkTransform* transform);
 
+  int getTransform(const QString& fromFrame, const QString& toFrame, quint64 utime, vtkTransform* transform);
 
 protected slots:
 

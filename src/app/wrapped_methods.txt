@@ -18,8 +18,10 @@ ddBotImageQueue::~ddBotImageQueue();
 void ddBotImageQueue::init(ddLCMThread*);
 void ddBotImageQueue::colorizePoints(const QString&, vtkPolyData*);
 void ddBotImageQueue::computeTextureCoords(const QString&, vtkPolyData*);
-void ddBotImageQueue::getImage(const QString&, vtkImageData*);
+quint64 ddBotImageQueue::getImage(const QString&, vtkImageData*);
+quint64 ddBotImageQueue::getCurrentImageTime(const QString&);
 void ddBotImageQueue::getBodyToCameraTransform(const QString&, vtkTransform*);
+int ddBotImageQueue::getTransform(const QString&, const QString&, quint64, vtkTransform*);
 
 ddDrakeModel::ddDrakeModel();
 ddDrakeModel::~ddDrakeModel();

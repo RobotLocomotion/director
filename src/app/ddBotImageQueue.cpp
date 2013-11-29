@@ -102,12 +102,35 @@ void ddBotImageQueue::init(ddLCMThread* lcmThread)
 }
 
 //-----------------------------------------------------------------------------
+int ddBotImageQueue::getTransform(const QString& fromFrame, const QString& toFrame, quint64 utime, vtkTransform* transform)
+{
+  if (!transform)
+    {
+    return 0;
+    }
+
+  double matx[16];
+  int status = bot_frames_get_trans_mat_4x4_with_utime(mBotFrames, fromFrame.toAscii().data(),  toFrame.toAscii().data(), utime, matx);
+
+  vtkSmartPointer<vtkMatrix4x4> vtkmat = vtkSmartPointer<vtkMatrix4x4>::New();
+  for (int i = 0; i < 4; ++i)
+  {
+    for (int j = 0; j < 4; ++j)
+    {
+      vtkmat->SetElement(i, j, matx[i*4+j]);
+    }
+  }
+
+  transform->SetMatrix(vtkmat);
+  return status;
+}
+
+//-----------------------------------------------------------------------------
 int ddBotImageQueue::getTransform(std::string from_frame, std::string to_frame,
                    Eigen::Isometry3d & mat, vtkIdType utime)
 {
-  int status;
   double matx[16];
-  status = bot_frames_get_trans_mat_4x4_with_utime( mBotFrames, from_frame.c_str(),  to_frame.c_str(), utime, matx);
+  int status = bot_frames_get_trans_mat_4x4_with_utime( mBotFrames, from_frame.c_str(),  to_frame.c_str(), utime, matx);
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
       mat(i,j) = matx[i*4+j];
@@ -117,15 +140,28 @@ int ddBotImageQueue::getTransform(std::string from_frame, std::string to_frame,
 }
 
 //-----------------------------------------------------------------------------
-void ddBotImageQueue::getImage(const QString& cameraName, vtkImageData* image)
+quint64 ddBotImageQueue::getImage(const QString& cameraName, vtkImageData* image)
 {
   CameraData* cameraData = this->getCameraData(cameraName);
   if (!cameraData)
   {
-    return;
+    return 0;
   }
 
   image->DeepCopy(toVtkImage(cameraData));
+  return cameraData->mImageMessage.utime;
+}
+
+//-----------------------------------------------------------------------------
+quint64 ddBotImageQueue::getCurrentImageTime(const QString& cameraName)
+{
+  CameraData* cameraData = this->getCameraData(cameraName);
+  if (!cameraData)
+  {
+    return 0;
+  }
+
+  return cameraData->mImageMessage.utime;
 }
 
 //-----------------------------------------------------------------------------
