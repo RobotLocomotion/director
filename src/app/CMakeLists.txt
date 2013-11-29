@@ -115,6 +115,9 @@ use_pkg(ddApp ddApp_pkg_dep bot2-core bot2-frames bot2-param-client image-utils)
 add_executable(drake-designer main.cpp)
 target_link_libraries(drake-designer ddApp)
 
+add_executable(ddConsoleApp consoleApp.cpp)
+target_link_libraries(ddConsoleApp ddApp)
+
 
 add_custom_command(OUTPUT ${decorator_file}
   COMMAND ${PYTHON_EXECUTABLE} WrapPythonQt.py
