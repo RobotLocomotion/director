@@ -10,6 +10,7 @@
 #include <QVBoxLayout>
 #include <QMap>
 #include <QSplitter>
+#include <QEvent>
 
 #include <cstdio>
 
@@ -110,6 +111,22 @@ ddViewBase* ddViewManager::currentView() const
 }
 
 //-----------------------------------------------------------------------------
+void ddViewManager::popOut(ddViewBase* view)
+{
+  QSplitter* splitter = qobject_cast<QSplitter*>(view->parent());
+  int pageIndex = this->Internal->TabWidget->indexOf(splitter);
+  if (pageIndex < 0)
+  {
+    return;
+  }
+
+  view->setParent(0);
+  view->show();
+  view->installEventFilter(this);
+  this->Internal->TabWidget->removeTab(pageIndex);
+}
+
+//-----------------------------------------------------------------------------
 void ddViewManager::onCurrentTabChanged(int currentIndex)
 {
   ddViewBase* previousView = 0;
@@ -137,7 +154,6 @@ void ddViewManager::addView(ddViewBase* view, const QString& viewName, int pageI
   }
 
   splitter->addWidget(view);
-
 
   this->Internal->Views[viewName] = view;
   static_cast<MyTabWidget*>(this->tabWidget())->updateTabBar();
@@ -168,4 +184,23 @@ ddViewBase* ddViewManager::createView(const QString& viewName, const QString& vi
 void ddViewManager::addDefaultPage()
 {
   this->addView(new ddQVTKWidgetView, "DRC View");
+}
+
+//-----------------------------------------------------------------------------
+bool ddViewManager::eventFilter(QObject* obj, QEvent* event)
+{
+  ddViewBase* view = qobject_cast<ddViewBase*>(obj);
+
+  if (view && event->type() == QEvent::Close)
+  {
+    view->removeEventFilter(this);
+    QString viewName = this->Internal->Views.key(view);
+    this->addView(view, viewName);
+    event->ignore();
+    return true;
+  }
+  else
+  {
+    return QWidget::eventFilter(obj, event);
+  }
 }

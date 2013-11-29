@@ -84,7 +84,7 @@ ddViewBase* ddViewManager::createView(const QString&, const QString&, int);
 ddViewBase* ddViewManager::createView(const QString&, const QString&);
 void ddViewManager::switchToView(const QString&);
 ddViewBase* ddViewManager::currentView() const;
-
+void ddViewManager::popOut(ddViewBase*);
 
 QAbstractItemModel* ddSpreadsheetView::model();
 QStringList ddSpreadsheetView::rowData(int) const;

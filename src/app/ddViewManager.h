@@ -27,6 +27,8 @@ public:
 
   QString viewName(ddViewBase* view);
 
+  void popOut(ddViewBase* view);
+
 signals:
 
   void currentViewChanged(ddViewBase* previousView, ddViewBase* currentView);
@@ -36,6 +38,8 @@ protected slots:
   void onCurrentTabChanged(int currentIndex);
 
 protected:
+
+  bool eventFilter(QObject* obj, QEvent* event);
 
   void addDefaultPage();
 
