@@ -16,8 +16,8 @@ ddBotImageQueue::ddBotImageQueue(QObject*);
 ddBotImageQueue::ddBotImageQueue();
 ddBotImageQueue::~ddBotImageQueue();
 void ddBotImageQueue::init(ddLCMThread*);
-void ddBotImageQueue::colorizeLidar(vtkPolyData*);
-void ddBotImageQueue::computeTextureCoords(vtkPolyData*);
+void ddBotImageQueue::colorizePoints(const QString&, vtkPolyData*);
+void ddBotImageQueue::computeTextureCoords(const QString&, vtkPolyData*);
 void ddBotImageQueue::getImage(const QString&, vtkImageData*);
 void ddBotImageQueue::getBodyToCameraTransform(const QString&, vtkTransform*);
 

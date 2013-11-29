@@ -67,6 +67,7 @@ set(srcs
   ${ui_srcs}
   ${resource_srcs}
 
+  ddBotImageQueue.cpp
   ddDrakeModel.cpp
   ddDRCView.cpp
   ddLumberSelection.cpp
