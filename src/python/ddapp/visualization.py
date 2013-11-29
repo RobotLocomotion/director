@@ -4,6 +4,7 @@ from ddapp import affordance
 import ddapp.affordanceupdater as affup
 from shallowCopy import shallowCopy
 import ddapp.vtkAll as vtk
+from ddapp.debugVis import DebugData
 import numpy as np
 from PythonQt import QtCore, QtGui
 
@@ -297,3 +298,49 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
         item.colorBy(colorByName, colorByRange)
     return item
 
+
+def pickPoint(displayPoint, obj=None, view=None, pickType='points', tolerance=0.01):
+
+    view = view or app.getCurrentRenderView()
+    assert view
+
+    picker = vtk.vtkPointPicker() if pickType == 'points' else vtk.vtkCellPicker()
+
+    if isinstance(obj, str):
+        obj = om.findObjectByName(objName)
+        assert obj
+
+    if obj:
+        picker.AddPickList(obj.actor)
+        picker.PickFromListOn()
+
+    picker.SetTolerance(tolerance)
+    picker.Pick(displayPoint[0], displayPoint[1], 0, view.renderer())
+    pickPoints = picker.GetPickedPositions()
+    pickedPoint = np.array(pickPoints.GetPoint(0)) if pickPoints.GetNumberOfPoints() else None
+    pickedDataset = picker.GetDataSet()
+
+    if obj:
+        return pickedPoint
+    else:
+        return pickedDataset, pickedPoint
+
+
+def mapMousePosition(widget, mouseEvent):
+    mousePosition = mouseEvent.pos()
+    return mousePosition.x(), widget.height - mousePosition.y()
+
+
+def getObjectByDataSet(polyData):
+    for item, obj in om.objects.iteritems():
+        if isinstance(obj, om.PolyDataItem) and obj.polyData == polyData:
+            return obj
+
+
+def findPickedObject(displayPoint, view=None):
+
+    view = view or app.getCurrentRenderView()
+    assert view
+
+    polyData, pickedPoint = pickPoint(displayPoint, view=view, pickType='cells')
+    return getObjectByDataSet(polyData), pickedPoint

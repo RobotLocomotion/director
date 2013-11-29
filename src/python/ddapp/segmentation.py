@@ -1246,40 +1246,6 @@ def segmentDrillInHand(p1, p2):
     aff.addToView(app.getDRCView())
 
 
-def pickDataSet(displayPoint, tolerance=0.01):
-
-    view = app.getCurrentRenderView()
-    assert view
-
-    picker = vtk.vtkPointPicker()
-    picker.SetTolerance(tolerance)
-    picker.Pick(displayPoint[0], displayPoint[1], 0, view.renderer())
-    pickPoints = picker.GetPickedPositions()
-    return picker.GetDataSet(), np.array(pickPoints.GetPoint(0)) if pickPoints.GetNumberOfPoints() else None
-
-
-def pickPoint(objName, displayPoint, tolerance=0.01):
-
-    view = app.getCurrentRenderView()
-    assert view
-
-    picker = vtk.vtkPointPicker()
-
-    if objName:
-        obj = om.findObjectByName(objName)
-        assert obj
-        picker.AddPickList(obj.actor)
-        picker.PickFromListOn()
-
-    picker.SetTolerance(tolerance)
-    picker.Pick(displayPoint[0], displayPoint[1], 0, view.renderer())
-    pickPoints = picker.GetPickedPositions()
-    return np.array(pickPoints.GetPoint(0)) if pickPoints.GetNumberOfPoints() else None
-
-
-def mapMousePosition(widget, mouseEvent):
-    mousePosition = mouseEvent.pos()
-    return mousePosition.x(), widget.height - mousePosition.y()
 
 
 class PointPicker(TimerCallback):
@@ -1361,7 +1327,7 @@ class PointPicker(TimerCallback):
         if not self.enabled:
             return
 
-        self.hoverPos = pickPoint('pointcloud snapshot', self.lastMovePos)
+        self.hoverPos = pickPoint(self.lastMovePos, obj='pointcloud snapshot')
         self.draw()
 
 
@@ -2465,31 +2431,9 @@ def orthoZ():
     view.render()
 
 
-def getObjectByDataSet(polyData):
-
-    for item, obj in om.objects.iteritems():
-        if isinstance(obj, om.PolyDataItem) and obj.polyData == polyData:
-            return obj
-
-
-def selectActor(displayPoint):
-
-    polyData, pickedPoint = pickDataSet(displayPoint)
-    obj = getObjectByDataSet(polyData)
-    if not obj:
-        return
-
-    name = obj.getProperty('Name')
-    om.getOrCreateContainer('selected planes', om.findObjectByName('segmentation'))
-    obj2 = showPolyData(shallowCopy(polyData), name, parent='selected planes')
-    obj2.setProperty('Color', obj.getProperty('Color'))
-    obj2.setProperty('Point Size', 4)
-    obj.setProperty('Visible', False)
-
-
 def zoomToDisplayPoint(displayPoint, boundsRadius=0.5, view=None):
 
-    pickedPoint = pickPoint('pointcloud snapshot', displayPoint)
+    pickedPoint = pickPoint(displayPoint, obj='pointcloud snapshot')
     if pickedPoint is None:
         return
 
