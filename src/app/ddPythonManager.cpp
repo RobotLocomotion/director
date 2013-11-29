@@ -31,6 +31,7 @@ ddPythonManager::ddPythonManager(QObject* parent) : ctkAbstractPythonManager(par
   console->setProperty("isInteractive", true);
   this->Internal->Console = console;
   this->setupConsoleShortcuts();
+  this->addObjectToPythonMain("_pythonManager", this);
   this->addObjectToPythonMain("_console", console);
 }
 
