@@ -304,6 +304,7 @@ public:
 
   vtkIdType GetCurrentMapId(int viewId)
   {
+    boost::lock_guard<boost::mutex> lock(this->Mutex);
     std::map<int, vtkIdType>::const_iterator itr = this->CurrentMapIds.find(viewId);
     if (itr == this->CurrentMapIds.end())
       {
@@ -365,7 +366,6 @@ protected:
     maps::PointCloud::Ptr pointCloud = depthImage.getAsPointCloud();
 
     MapData mapData;
-    mapData.Id = this->GetNextMapId(viewId);
     mapData.Data = PolyDataFromPointCloud(pointCloud);
 
     //printf("storing depth map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
@@ -373,6 +373,7 @@ protected:
     // store data
     boost::lock_guard<boost::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
+    mapData.Id = this->GetNextMapId(viewId);
     datasets.push_back(mapData);
     this->UpdateDequeSize(datasets);
     this->NewData = true;
@@ -387,7 +388,6 @@ protected:
     maps::PointCloud::Ptr pointCloud = cloudView.getAsPointCloud();
 
     MapData mapData;
-    mapData.Id = this->GetNextMapId(viewId);
     mapData.Data = PolyDataFromPointCloud(pointCloud);
 
     //printf("storing cloud map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
@@ -395,6 +395,7 @@ protected:
     // store data
     boost::lock_guard<boost::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
+    mapData.Id = this->GetNextMapId(viewId);
     datasets.push_back(mapData);
     this->UpdateDequeSize(datasets);
     this->NewData = true;
