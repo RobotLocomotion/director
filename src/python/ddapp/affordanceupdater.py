@@ -34,12 +34,9 @@ class AffordanceUpdater(object):
         self.resetTime = self.timer.now()
 
 
-    def _onFootPose(self, messageData):
+    def _onFootPose(self, m):
 
-        messageClass = lcmbotcore.pose_t
-        m = messageClass.decode(messageData.data())
         self.currentTransform = transformUtils.transformFromPose(m.pos, m.orientation)
-
         if not self.paused and self.timer.elapsed() > 1.0:
             self.timer.reset()
             for func in self.callbacks:
@@ -47,11 +44,7 @@ class AffordanceUpdater(object):
 
 
     def _init(self):
-
-        lcmThread = lcmUtils.getGlobalLCMThread()
-        self.subscriber = PythonQt.dd.ddLCMSubscriber('POSE_RIGHT_FOOT', lcmThread)
-        self.subscriber.connect('messageReceived(const QByteArray&)', self._onFootPose)
-        lcmThread.addSubscriber(self.subscriber)
+        self.subscriber = lcmUtils.addSubscriber('POSE_RIGHT_FOOT', lcmbotcore.pose_t, self._onFootPose)
 
 
 updater = AffordanceUpdater()

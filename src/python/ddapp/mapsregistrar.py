@@ -31,16 +31,12 @@ def getInitialTransform():
     return _initialTransform
 
 
-def onICPCorrection(messageData):
+def onICPCorrection(m):
 
-    messageClass = lcmbotcore.rigid_transform_t
-    m = messageClass.decode(messageData.data())
     t = transformUtils.transformFromPose(m.trans, m.quat)
-
 
     _icpTransforms.append(t)
     print 'appending icp transform %d' % len(_icpTransforms)
-
 
     if len(_icpTransforms) == 1:
         storeInitialTransform()
@@ -52,10 +48,7 @@ def onICPCorrection(messageData):
 def initICPCallback():
 
     global _icpSub
-    lcmThread = lcmUtils.getGlobalLCMThread()
-    _icpSub = PythonQt.dd.ddLCMSubscriber('MAP_LOCAL_CORRECTION', lcmThread)
-    _icpSub.connect('messageReceived(const QByteArray&)', onICPCorrection)
-    lcmThread.addSubscriber(_icpSub)
+    _icpSub = lcmUtils.addSubscriber('MAP_LOCAL_CORRECTION', lcmbotcore.rigid_transform_t, onICPCorrection)
 
 
 def _readAllSoFar(proc, retVal=''):

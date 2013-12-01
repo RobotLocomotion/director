@@ -47,9 +47,14 @@ public:
     mCallback = callback.value<PythonQtObjectPtr>();
   }
 
+  const QString& channel() const
+  {
+    return mChannel;
+  }
+
 signals:
 
-  void messageReceived(const QByteArray& messageData);
+  void messageReceived(const QByteArray& messageData, const QString& mChannel);
 
 protected:
 
@@ -57,7 +62,7 @@ protected:
   void messageHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel)
   {
     ddNotUsed(channel);
-    emit this->messageReceived(QByteArray((char*)rbuf->data, rbuf->data_size));
+    emit this->messageReceived(QByteArray((char*)rbuf->data, rbuf->data_size), mChannel);
 
     /*
     if (mCallback)

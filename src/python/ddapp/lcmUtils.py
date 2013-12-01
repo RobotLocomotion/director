@@ -57,7 +57,7 @@ def captureMessageAsync(channel, messageClass):
         messages.append(messageClass.decode(messageData.data()))
         lcmThread.removeSubscriber(sub)
 
-    sub.connect('messageReceived(const QByteArray&)', handleMessage)
+    sub.connect('messageReceived(const QByteArray&, const QString&)', handleMessage)
     lcmThread.addSubscriber(sub)
 
     while not messages:
@@ -88,7 +88,7 @@ def addSubscriber(channel, messageClass, callback):
     def handleMessage(messageData):
         callback(messageClass.decode(messageData.data()))
 
-    subscriber.connect('messageReceived(const QByteArray&)', handleMessage)
+    subscriber.connect('messageReceived(const QByteArray&, const QString&)', handleMessage)
     lcmThread.addSubscriber(subscriber)
     return subscriber
 
