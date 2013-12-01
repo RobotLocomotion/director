@@ -214,5 +214,31 @@ def onRobotModel(m):
 
 lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
 
+def resetCameraToHeadView():
+
+    head = getLinkFrame('head')
+    utorso = getLinkFrame('utorso')
+
+    viewDirection = np.array([1.0, 0.0, 0.0])
+    utorso.TransformVector(viewDirection, viewDirection)
+
+    cameraPosition = np.array(head.GetPosition()) + 0.10 * viewDirection
+
+    camera = view.camera()
+
+    focalOffset = np.array(camera.GetFocalPoint()) - np.array(camera.GetPosition())
+    focalOffset /= np.linalg.norm(focalOffset)
+
+    camera.SetPosition(cameraPosition)
+    camera.SetFocalPoint(cameraPosition + focalOffset*0.03)
+    camera.SetViewUp([0, 0, 1])
+    camera.SetViewAngle(90)
+    view.render()
+
+
+tc = TimerCallback()
+tc.targetFps = 60
+tc.callback = resetCameraToHeadView
+
 cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
 
