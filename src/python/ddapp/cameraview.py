@@ -227,10 +227,10 @@ class CameraView(object):
         if not self.updateImages():
             return
 
+        self.updateSphereGeometry()
+
         if not self.view.isVisible():
             return
-
-        self.updateSphereGeometry()
         self.view.render()
 
 
