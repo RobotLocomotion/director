@@ -5,6 +5,7 @@ import ddapp.affordanceupdater as affup
 from shallowCopy import shallowCopy
 import ddapp.vtkAll as vtk
 from ddapp.debugVis import DebugData
+from ddapp import transformUtils
 import numpy as np
 from PythonQt import QtCore, QtGui
 
@@ -29,7 +30,8 @@ class AffordanceItem(om.PolyDataItem):
         self.params = {}
         affup.updater.addCallback(self.onGroundTransform)
         affListener.registerAffordance(self)
-
+        self.addProperty('uid', 0)
+        self.addProperty('Server updates enabled', False)
 
     def publish(self):
         pass
@@ -44,10 +46,21 @@ class AffordanceItem(om.PolyDataItem):
         else:
             om.PolyDataItem.onAction(self, action)
 
+    def getPropertyAttributes(self, propertyName):
+        if propertyName == 'uid':
+            return om.PropertyAttributes(decimals=0, minimum=0, maximum=1e6, singleStep=1, hidden=False)
+        else:
+            return om.PolyDataItem.getPropertyAttributes(self, propertyName)
+
     def onServerAffordanceUpdate(self, serverAff):
         if not self.params.get('uid'):
-            print 'assigning uid from server:', serverAff.uid
             self.params['uid'] = serverAff.uid
+            self.setProperty('uid', serverAff.uid)
+
+        if self.getProperty('Server updates enabled'):
+            quat = transformUtils.botpy.roll_pitch_yaw_to_quat(serverAff.origin_rpy)
+            t = transformUtils.transformFromPose(serverAff.origin_xyz, quat)
+            self.actor.GetUserTransform().SetMatrix(t.GetMatrix())
 
     def computeBaseTransform(self):
         self.baseTransform = computeAToB(self.groundTransform, self.actor.GetUserTransform())

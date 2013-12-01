@@ -69,7 +69,6 @@ def createFrameAffordance(params):
 
     for k, v in params.iteritems():
         if isinstance(v, float):
-            print k, v
             aff.param_names.append(k)
             aff.params.append(v)
 
@@ -188,3 +187,10 @@ def publishAffordance(aff):
         affPlus = createAffordancePlus(aff)
         channelName = 'AFFORDANCE_FIT'
         lcmUtils.publish(channelName, affPlus)
+
+
+def deleteAffordance(msg):
+    msg.aff_store_control = lcmdrc.affordance_t.DELETE
+    affPlus = createAffordancePlus(msg)
+    channelName =  'AFFORDANCE_FIT'
+    lcmUtils.publish(channelName, affPlus)
