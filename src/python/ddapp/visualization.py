@@ -307,7 +307,7 @@ def pickPoint(displayPoint, obj=None, view=None, pickType='points', tolerance=0.
     picker = vtk.vtkPointPicker() if pickType == 'points' else vtk.vtkCellPicker()
 
     if isinstance(obj, str):
-        obj = om.findObjectByName(objName)
+        obj = om.findObjectByName(obj)
         assert obj
 
     if obj:
