@@ -1122,7 +1122,7 @@ def segmentDrill(point1, point2, point3):
 
     aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(t)
-    showFrame(t, 'drill frame', parent=aff, visible=False)
+    showFrame(t, 'drill frame', parent=aff, visible=False).addToView(app.getDRCView())
 
     params = getDrillAffordanceParams(origin, xaxis, yaxis, zaxis)
     aff.setAffordanceParams(params)
@@ -1183,7 +1183,7 @@ def segmentDrillAuto(point1):
 
     aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(t)
-    showFrame(t, 'drill frame', parent=aff, visible=False)
+    showFrame(t, 'drill frame', parent=aff, visible=False).addToView(app.getDRCView())
 
     params = getDrillAffordanceParams(origin, xaxis, yaxis, zaxis)
     aff.setAffordanceParams(params)
@@ -1238,7 +1238,7 @@ def segmentDrillInHand(p1, p2):
 
     aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(t)
-    showFrame(t, 'drill frame', parent=aff, visible=False)
+    showFrame(t, 'drill frame', parent=aff, visible=False).addToView(app.getDRCView())
 
     params = getDrillAffordanceParams(np.array(t.GetPosition()), xaxis, yaxis, zaxis)
     aff.setAffordanceParams(params)
