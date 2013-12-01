@@ -42,6 +42,7 @@ public:
   {
     public:
 
+    int mImageMessageIndex;
     std::string mName;
     std::string mCoordFrame;
     BotCamTrans* mCamTrans;
@@ -53,6 +54,7 @@ public:
 
     CameraData()
     {
+      mImageMessageIndex = 0;
       mImageMessage.width = 0;
       mImageMessage.height = 0;
       mImageMessage.utime = 0;
@@ -68,6 +70,7 @@ public:
 
   virtual ~ddBotImageQueue();
 
+  bool addCameraStream(const QString& cameraName);
 
   void init(ddLCMThread* lcmThread);
 
@@ -84,15 +87,13 @@ public:
 
 protected slots:
 
-  void onMultisenseImages(const QByteArray& data);
-  void onChestLeft(const QByteArray& data);
-  void onChestRight(const QByteArray& data);
-
+  void onImagesMessage(const QByteArray& data, const QString& channel);
+  void onImageMessage(const QByteArray& data, const QString& channel);
 
 protected:
 
   CameraData* getCameraData(const QString& cameraName);
-  void initCameraData(std::string name, CameraData* cameraData);
+  bool initCameraData(const QString& cameraName, CameraData* cameraData);
 
   vtkSmartPointer<vtkImageData> toVtkImage(CameraData* cameraData);
 
@@ -106,14 +107,10 @@ protected:
   BotParam* mBotParam;
   BotFrames* mBotFrames;
 
-  ddLCMSubscriber mMultisenseSubscriber;
-  ddLCMSubscriber mChestLeftSubscriber;
-  ddLCMSubscriber mChestRightSubscriber;
-
-
-  CameraData mChestLeft;
-  CameraData mChestRight;
-  CameraData mHeadLeft;
+  ddLCMThread* mLCM;
+  QMap<QString, QString> mChannelMap;
+  QMap<QString, ddLCMSubscriber*> mSubscribers;
+  QMap<QString, CameraData*> mCameraData;
 };
 
 #endif
