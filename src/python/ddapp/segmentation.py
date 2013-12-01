@@ -1044,10 +1044,10 @@ def segmentDrillWall(point1, point2, point3):
         pp = np.zeros(3)
         t.GetLinearInverse().TransformPoint(p, pp)
         pointsInWallFrame.append(pp)
-        d.addSphere(pp, radius=0.01)
+        d.addSphere(pp, radius=0.02)
 
     for a, b in zip(pointsInWallFrame, pointsInWallFrame[1:] + [pointsInWallFrame[0]]):
-        d.addLine(a, b)
+        d.addLine(a, b, radius=0.015)
 
     aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     aff.actor.SetUserTransform(t)
@@ -1246,6 +1246,50 @@ def segmentDrillInHand(p1, p2):
     aff.addToView(app.getDRCView())
 
 
+
+def addDrillAffordance():
+
+    drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+
+    aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    aff.actor.SetUserTransform(t)
+    showFrame(t, 'drill frame', parent=aff, visible=False).addToView(app.getDRCView())
+
+    params = getDrillAffordanceParams(np.array(t.GetPosition()), [1,0,0], [0,1,0], [0,0,1])
+    aff.setAffordanceParams(params)
+    aff.updateParamsFromActorTransform()
+    aff.addToView(app.getDRCView())
+    return aff
+
+
+def getLinkFrame(linkName):
+    robotStateModel = om.findObjectByName('model publisher')
+    assert robotStateModel
+    t = vtk.vtkTransform()
+    robotStateModel.model.getLinkToWorld(linkName, t)
+    return t
+
+
+def moveDrillToHand(hand='right'):
+    drill = om.findObjectByName('drill')
+    if not drill:
+        drill = addDrillAffordance()
+
+    assert hand in ('right', 'left')
+    drillTransform = drill.actor.GetUserTransform()
+    drillOffset = vtk.vtkTransform()
+    drillOffset.PostMultiply()
+    drillOffset.RotateY(-90)
+    drillOffset.RotateX(-90)
+    drillOffset.Translate(0, 0, 0.12)
+    rightBaseLink = getLinkFrame('%s_base_link' % hand)
+    drillTransform.PostMultiply()
+    drillTransform.Identity()
+    drillTransform.Concatenate(drillOffset)
+    drillTransform.Concatenate(rightBaseLink)
+    drill._renderAllViews()
 
 
 class PointPicker(TimerCallback):

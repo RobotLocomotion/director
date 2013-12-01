@@ -105,8 +105,8 @@ class SegmentationPanel(object):
         l = QtGui.QVBoxLayout(drillWizard)
         l.addWidget(_makeButton('segment drill on table', startDrillAutoSegmentation))
         l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
+        l.addWidget(_makeButton('move drill to hand', moveDrillToHand))
         l.addWidget(_makeButton('segment wall', startDrillWallSegmentation))
-        l.addWidget(_makeButton('select tooltip', startSelectToolTip))
         l.addWidget(QtGui.QLabel(''))
 
         self.drillTaskPanel = drilltaskpanel.DrillTaskPanel()

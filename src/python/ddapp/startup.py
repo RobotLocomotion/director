@@ -199,26 +199,6 @@ def resetCameraToRobot():
     view.render()
 
 
-
-def moveDrillToHand():
-    drillFrame = om.findObjectByName('drill frame')
-    drillFrame.addToView(view)
-    drillTransform = drillFrame.transform
-    drillOffset = vtk.vtkTransform()
-    drillOffset.PostMultiply()
-    drillOffset.RotateY(-90)
-    drillOffset.RotateX(-90)
-    drillOffset.Translate(0, 0, 0.12)
-    rightBaseLink = getLinkFrame('right_base_link')
-    drillTransform.PostMultiply()
-    drillTransform.Identity()
-    drillTransform.Concatenate(drillOffset)
-    drillTransform.Concatenate(rightBaseLink)
-    view.render()
-
-
-
-
 def onRobotModel(m):
     model = app.loadRobotModelFromString(m.urdf_xml_string)
     sensorsFolder = om.getOrCreateContainer('sensors')
