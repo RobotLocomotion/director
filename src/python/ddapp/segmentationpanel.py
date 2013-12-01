@@ -29,6 +29,7 @@ class SegmentationPanel(object):
 
     def __init__(self):
         self.panel = QtGui.QWidget()
+        self.panel.setWindowTitle('Segmentation Tools')
         self.taskSelection = PythonQt.dd.ddTaskSelection()
         self.debrisWizard = self._makeDebrisWizard()
         self.terrainWizard = self._makeTerrainWizard()
