@@ -142,7 +142,6 @@ class CameraView(object):
 
     def initView(self):
         self.view = app.getViewManager().createView('Camera View', 'VTK View')
-        app.getViewManager().switchToView('Camera View')
 
         self.view.camera().SetViewAngle(90)
         self.view.camera().SetPosition(-7.5, 0.0, 5.0)
@@ -151,7 +150,7 @@ class CameraView(object):
 
         self.sphereObjects = {}
 
-        app.toggleCameraTerrainMode()
+        app.toggleCameraTerrainMode(self.view)
 
         self.timerCallback = TimerCallback()
         self.timerCallback.targetFps = 60
@@ -286,8 +285,6 @@ class CameraImageView(object):
         self.imageActor = vtk.vtkImageActor()
         self.imageActor.SetInput(self.imageManager.images[self.imageName])
         self.view.renderer().AddActor(self.imageActor)
-
-        #app.getViewManager().switchToView(self.viewName)
 
         self.timerCallback = TimerCallback()
         self.timerCallback.targetFps = 60

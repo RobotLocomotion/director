@@ -98,9 +98,9 @@ def toggleStereoRender():
     view.render()
 
 
-def toggleCameraTerrainMode():
+def toggleCameraTerrainMode(view = None):
 
-    view = getCurrentRenderView()
+    view = view or getCurrentRenderView()
     assert(view)
 
     iren = view.renderWindow().GetInteractor()
@@ -111,6 +111,25 @@ def toggleCameraTerrainMode():
         view.camera().SetViewUp(0,0,1)
 
     view.render()
+
+
+def getToolBarActions():
+    actions = {}
+    for action in getMainWindow().toolBar().actions():
+        if action.name:
+            actions[action.name] = action
+    return actions
+
+
+def updateToggleTerrainAction(view):
+    isTerrainMode = False
+    if hasattr(view, 'renderWindow'):
+        isTerrainMode = isinstance(view.renderWindow().GetInteractor().GetInteractorStyle(), vtk.vtkInteractorStyleTerrain)
+    getToolBarActions()['ActionToggleCameraTerrainMode'].checked = isTerrainMode
+
+
+def onCurrentViewChanged(previousView, currentView):
+    updateToggleTerrainAction(currentView)
 
 
 def setupToolBar():
@@ -187,3 +206,5 @@ def startup(globals):
 
     #setupToolBar()
 
+    vm = getViewManager()
+    vm.connect('currentViewChanged(ddViewBase*, ddViewBase*)', onCurrentViewChanged);
