@@ -125,7 +125,7 @@ if usePerception:
 
     perception.init(view, robotStateJointController)
     segmentationpanel.init()
-    #cameraview.init()
+    cameraview.init()
 
     sensorsFolder = om.getOrCreateContainer('sensors')
     robotStateModel = om.addRobotModel(robotStateModel, sensorsFolder)
