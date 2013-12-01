@@ -2514,5 +2514,30 @@ def extractPointsAlongClickRay(displayPoint, distanceToLineThreshold=0.3, addDeb
     return polyData
 
 
+def extractPointsAlongClickRay(position, ray):
 
+    print 'extractPointsAlongClickRay'
+
+    segmentationObj = om.findObjectByName('pointcloud snapshot')
+    polyData = segmentationObj.polyData
+
+    polyData = labelDistanceToLine(polyData, position, position + ray)
+
+    distanceToLineThreshold = 0.05
+
+    # extract points near line
+    polyData = thresholdPoints(polyData, 'distance_to_line', [0.0, distanceToLineThreshold])
+
+    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, ray, origin=position, resultArrayName='dist_along_line')
+    polyData = thresholdPoints(polyData, 'dist_along_line', [0.20, 1e6])
+
+    showPolyData(polyData, 'ray points', colorByName='distance_to_line', view=getSegmentationView())
+
+    dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_to_line')
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+
+    d = DebugData()
+    d.addSphere(points[dists.argmin()], radius=0.01)
+    d.addLine(position, points[dists.argmin()])
+    showPolyData(d.getPolyData(), 'camera ray', view=getSegmentationView())
 

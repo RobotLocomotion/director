@@ -63,6 +63,13 @@ def testColorize():
     showPolyData(p, 'sphere', colorByName='rgb')
 
 
+def rayDebug(position, ray):
+    d = vis.DebugData()
+    d.addLine(position, position+ray*5.0)
+    drcView = app.getViewManager().findView('DRC View')
+    vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView)
+
+
 class CameraView(object):
 
     def __init__(self):
@@ -71,6 +78,7 @@ class CameraView(object):
 
         self.initView()
         self.initEventFilter()
+        self.rayCallback = rayDebug
 
 
     def initImageQueue(self):
@@ -119,13 +127,16 @@ class CameraView(object):
         utorsoToLocal = vtk.vtkTransform()
         self.queue.getTransform('utorso', 'local', imageUtime, utorsoToLocal)
 
-        drcView = app.getViewManager().findView('DRC View')
+
 
         p = range(3)
         utorsoToLocal.TransformPoint(pickedPoint, p)
-        d = vis.DebugData()
-        d.addLine(cameraToLocal.GetPosition(), p)
-        vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView)
+
+        ray = np.array(p) - np.array(cameraToLocal.GetPosition())
+        ray /= np.linalg.norm(ray)
+
+        if self.rayCallback:
+            self.rayCallback(np.array(cameraToLocal.GetPosition()), ray)
 
 
     def filterEvent(self, obj, event):

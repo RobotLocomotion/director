@@ -214,3 +214,5 @@ def onRobotModel(m):
 
 lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
 
+cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
+
