@@ -225,11 +225,12 @@ class SegmentationPanel(object):
 
 
 def createDockWidget():
-    global _segmentationPanel
+    global _segmentationPanel, _dock
     try: _segmentationPanel
     except NameError:
         _segmentationPanel = SegmentationPanel()
-        app.addWidgetToDock(_segmentationPanel.panel)
+        _dock = app.addWidgetToDock(_segmentationPanel.panel)
+        _dock.hide()
 
 
 
@@ -241,7 +242,6 @@ def getOrCreateSegmentationView():
         segmentationView = viewManager.createView('Segmentation View', 'VTK View')
         installEventFilter(segmentationView, segmentationViewEventFilter)
 
-    viewManager.switchToView('Segmentation View')
     return segmentationView
 
 
@@ -327,6 +327,7 @@ def activateSegmentationMode(debug=False):
         return
 
     segmentationView = getOrCreateSegmentationView()
+    app.getViewManager().switchToView('Segmentation View')
 
     perspective()
 
@@ -350,13 +351,15 @@ def activateSegmentationMode(debug=False):
     segmentationView.camera().DeepCopy(app.getDRCView().camera())
     segmentationView.render()
 
-    createDockWidget()
+    _dock.show()
 
 
 def init():
 
     installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
+    getOrCreateSegmentationView()
+    createDockWidget()
     mapsregistrar.initICPCallback()
 
     #activateSegmentationMode(debug=True)

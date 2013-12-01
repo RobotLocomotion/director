@@ -68,6 +68,7 @@ def addWidgetToDock(widget):
     dock.setWindowTitle(widget.windowTitle)
     getMainWindow().addDockWidget(QtCore.Qt.RightDockWidgetArea, dock)
     getMainWindow().addWidgetToViewMenu(dock)
+    return dock
 
 
 def resetCamera(viewDirection=None, view=None):
