@@ -113,7 +113,10 @@ bool ddBotImageQueue::addCameraStream(const QString& cameraName)
   ddLCMSubscriber* subscriber;
   QString channel = cameraName;
 
-  if (cameraName == "CAMERA_LEFT")
+
+  bool useImagesMessage = false;
+
+  if (useImagesMessage && cameraName == "CAMERA_LEFT")
   {
     channel = "CAMERA";
     subscriber = new ddLCMSubscriber(channel, this);
@@ -299,15 +302,22 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
 
   if (!cameraData->mImageBuffer.size())
   {
-    if (cameraData->mImageMessage.pixelformat != bot_core::image_t::PIXEL_FORMAT_MJPEG)
+    if (cameraData->mImageMessage.pixelformat == bot_core::image_t::PIXEL_FORMAT_RGB)
+    {
+      cameraData->mImageBuffer = cameraData->mImageMessage.data;
+    }
+    else if (cameraData->mImageMessage.pixelformat != bot_core::image_t::PIXEL_FORMAT_MJPEG)
     {
       printf("Error: expected PIXEL_FORMAT_MJPEG for camera %s\n", cameraData->mName.c_str());
       return vtkSmartPointer<vtkImageData>::New();
     }
+    else
+    {
 
-    //printf("jpeg decompress: %s\n", cameraData->mName.c_str());
-    cameraData->mImageBuffer.resize(buf_size);
-    jpeg_decompress_8u_rgb(cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size, cameraData->mImageBuffer.data(), w, h, w*3);
+      //printf("jpeg decompress: %s\n", cameraData->mName.c_str());
+      cameraData->mImageBuffer.resize(buf_size);
+      jpeg_decompress_8u_rgb(cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size, cameraData->mImageBuffer.data(), w, h, w*3);
+    }
   }
   //else printf("already decompressed: %s\n", cameraData->mName.c_str());
 
