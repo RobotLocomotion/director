@@ -39,6 +39,8 @@ set(python_files
   ddapp/vtkNumpy.py
 
   #ddapp/macros/get_polydata.py
+  ddapp/macros/popout.py
+  ddapp/macros/colorize.py
   ddapp/macros/publish.py
   ddapp/macros/bot_spy.py
   ddapp/macros/neck_pitch.py
