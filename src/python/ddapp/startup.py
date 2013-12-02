@@ -180,10 +180,15 @@ def affUpdaterOff():
     vis.affup.updater.off()
 
 
-def getLinkFrame(linkName):
+def getLinkFrame(linkName, model=None):
     t = vtk.vtkTransform()
-    robotStateModel.model.getLinkToWorld(linkName, t)
+    model = model or robotStateModel
+    model.model.getLinkToWorld(linkName, t)
     return t
+
+
+def showLinkFrame(linkName, model=None):
+    return vis.updateFrame(getLinkFrame(linkName, model), linkName, parent='link frames')
 
 
 def resetCameraToRobot():
