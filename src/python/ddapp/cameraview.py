@@ -342,3 +342,9 @@ def init():
     chestLeft = CameraImageView(cameraView, 'CAMERACHEST_LEFT', 'Chest left')
     chestRight = CameraImageView(cameraView, 'CAMERACHEST_RIGHT', 'Chest right')
 
+    useAnaglyph = False
+    if useAnaglyph:
+        global anaglyph
+        cameraView.queue.addCameraStream('CAMERA_ANAGLYPH')
+        anaglyph = CameraImageView(cameraView, 'CAMERA_ANAGLYPH', 'Head Anaglyph')
+
