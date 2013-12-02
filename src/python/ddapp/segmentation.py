@@ -1272,25 +1272,32 @@ def getLinkFrame(linkName):
     return t
 
 
-def moveDrillToHand(hand='right'):
+def getDefaultDrillInHandOffset():
+
+    drillRotation = 0.0
+    drillOffset = vtk.vtkTransform()
+    drillOffset.PostMultiply()
+    drillOffset.RotateY(0)
+    drillOffset.RotateX(0)
+    drillOffset.RotateZ(drillRotation)
+    drillOffset.Translate(0, 0.09, 0)
+    segmentation.moveDrillToHand(drillOffset)
+    return drillOffset
+
+
+def moveDrillToHand(drillOffset, hand='right'):
     drill = om.findObjectByName('drill')
     if not drill:
         drill = addDrillAffordance()
 
     assert hand in ('right', 'left')
     drillTransform = drill.actor.GetUserTransform()
-    drillOffset = vtk.vtkTransform()
-    drillOffset.PostMultiply()
-    drillOffset.RotateY(-90)
-    drillOffset.RotateX(-90)
-    drillOffset.Translate(0, 0, 0.12)
     rightBaseLink = getLinkFrame('%s_base_link' % hand)
     drillTransform.PostMultiply()
     drillTransform.Identity()
     drillTransform.Concatenate(drillOffset)
     drillTransform.Concatenate(rightBaseLink)
     drill._renderAllViews()
-
 
 class PointPicker(TimerCallback):
 
