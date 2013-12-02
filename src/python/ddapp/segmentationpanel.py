@@ -360,6 +360,6 @@ def init():
 
     getOrCreateSegmentationView()
     createDockWidget()
-    mapsregistrar.initICPCallback()
+    #mapsregistrar.initICPCallback()
 
     #activateSegmentationMode(debug=True)
