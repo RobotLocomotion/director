@@ -174,6 +174,8 @@ def setupPackagePaths():
         'software/models/mit_gazebo_models/mit_robot',
         'software/models/mit_gazebo_models/multisense_sl',
         'software/models/mit_gazebo_models/handle_description',
+        'software/models/mit_gazebo_models/hook_description',
+        'software/models/mit_gazebo_models',
                   ]
 
     for path in searchPaths:
