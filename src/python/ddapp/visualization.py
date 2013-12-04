@@ -312,8 +312,11 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     return item
 
 
+def showHandCloud(hand='left', view=None):
 
-def showHandCloud(hand='left'):
+    view = view or app.getCurrentRenderView()
+    if view is None:
+        return
 
     assert hand in ('left', 'right')
 
@@ -327,7 +330,7 @@ def showHandCloud(hand='left'):
         return reader.GetCurrentMapId(viewId)
 
     p = vtk.vtkPolyData()
-    obj = vis.showPolyData(p, '%s hand cloud' % hand, view=segmentation.getDRCView(), parent='sensors')
+    obj = showPolyData(p, '%s hand cloud' % hand, view=view, parent='sensors')
     obj.currentViewId = -1
 
     def updateCloud():
