@@ -971,6 +971,58 @@ def segmentWye(point1, point2):
     wyeObj.updateParamsFromActorTransform()
 
 
+def segmentDoorHandle(point1, point2):
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
+
+    wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(wallPoints, 'wall points', parent=getDebugFolder(), visible=False)
+
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
+    searchRegion = cropToSphere(searchRegion, point2, 0.30)
+    wyePoints = extractLargestCluster(searchRegion)
+    updatePolyData(wyePoints, 'handle cluster', parent=getDebugFolder(), visible=False)
+
+    handlePoint = np.array([0.0, 0.0, -0.05])
+
+    xaxis = -normal
+    zaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis = np.cross(xaxis, yaxis)
+
+    xwidth = 0.02
+    ywidth = 0.01
+    zwidth = 0.1
+    cube = vtk.vtkCubeSource()
+    cube.SetXLength(xwidth)
+    cube.SetYLength(ywidth)
+    cube.SetZLength(zwidth)
+    cube.Update()
+    cube = shallowCopy(cube.GetOutput())
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PreMultiply()
+    t.Translate(-handlePoint)
+    t.PostMultiply()
+    t.Translate(point2)
+
+    obj = showPolyData(cube, name, cls=BlockAffordanceItem, parent='affordances')
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+
+    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name='door_handle', otdf_type='door_handle')
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
+
+    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
+
+
 def segmentHoseNozzle(point1):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
@@ -1083,6 +1135,16 @@ def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis):
 
     return params
 
+def getDrillMesh():
+
+    button = np.array([0.035, 0.007, -0.06])
+
+    drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+    d = DebugData()
+    d.addPolyData(drillMesh)
+    d.addSphere(button, radius=0.005, color=[0,1,0])
+    return d.getPolyData()
+
 
 def segmentDrill(point1, point2, point3):
 
@@ -1118,7 +1180,7 @@ def segmentDrill(point1, point2, point3):
     t.PostMultiply()
     t.Translate(point2)
 
-    drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+    drillMesh = getDrillMesh()
 
     aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(t)
@@ -1179,7 +1241,7 @@ def segmentDrillAuto(point1):
     t.PostMultiply()
     t.Translate(centroids[-1])
 
-    drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+    drillMesh = getDrillMesh()
 
     aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(t)
@@ -1234,7 +1296,7 @@ def segmentDrillInHand(p1, p2):
     t.PostMultiply()
     t.Translate(p2)
 
-    drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+    drillMesh = getDrillMesh()
 
     aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(t)
@@ -1249,7 +1311,7 @@ def segmentDrillInHand(p1, p2):
 
 def addDrillAffordance():
 
-    drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+    drillMesh = getDrillMesh()
 
     aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
     t = vtk.vtkTransform()
@@ -1266,22 +1328,21 @@ def addDrillAffordance():
 
 def getLinkFrame(linkName):
     robotStateModel = om.findObjectByName('model publisher')
+    robotStateModel = robotStateModel or getVisibleRobotModel()
     assert robotStateModel
     t = vtk.vtkTransform()
     robotStateModel.model.getLinkToWorld(linkName, t)
     return t
 
 
-def getDefaultDrillInHandOffset():
+def getDrillInHandOffset(zRotation=0.0, zTranslation=0.0, flip=False):
 
-    drillRotation = 0.0
     drillOffset = vtk.vtkTransform()
     drillOffset.PostMultiply()
-    drillOffset.RotateY(0)
-    drillOffset.RotateX(0)
-    drillOffset.RotateZ(drillRotation)
-    drillOffset.Translate(0, 0.09, 0)
-    segmentation.moveDrillToHand(drillOffset)
+    if flip:
+        drillOffset.RotateY(180)
+    drillOffset.RotateZ(zRotation)
+    drillOffset.Translate(0, 0.09, zTranslation - 0.015)
     return drillOffset
 
 
@@ -2052,6 +2113,16 @@ def startWyeSegmentation():
     picker.annotationFunc = functools.partial(segmentWye)
 
 
+def startDoorHandleSegmentation():
+
+    picker = PointPicker(numberOfPoints=2)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDoorHandle)
+
+
 def startHoseNozzleSegmentation():
 
     picker = PointPicker(numberOfPoints=1)
@@ -2388,6 +2459,10 @@ def getDefaultAffordanceObject():
         if isinstance(obj, AffordanceItem):
             return obj
 
+def getVisibleRobotModel():
+    for obj in om.objects.values():
+        if isinstance(obj, om.RobotModelItem) and obj.getProperty('Visible'):
+            return obj
 
 def orthoX():
 

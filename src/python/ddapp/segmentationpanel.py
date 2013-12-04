@@ -30,29 +30,33 @@ class SegmentationPanel(object):
     def __init__(self):
         self.panel = QtGui.QWidget()
         self.panel.setWindowTitle('Segmentation Tools')
+
         self.taskSelection = PythonQt.dd.ddTaskSelection()
-        self.debrisWizard = self._makeDebrisWizard()
-        self.terrainWizard = self._makeTerrainWizard()
-        self.firehoseWizard = self._makeFirehoseWizard()
-        self.valveWizard = self._makeValveWizard()
-        self.drillWizard = self._makeDrillWizard()
-        self.backButton = self._makeBackButton()
         self.taskSelection.connect('taskSelected(int)', self.onTaskSelected)
 
         l = QtGui.QVBoxLayout(self.panel)
+        self.backButton = self._makeBackButton()
         l.addWidget(self.backButton)
         l.addWidget(self.taskSelection)
-        l.addWidget(self.debrisWizard)
-        l.addWidget(self.terrainWizard)
-        l.addWidget(self.firehoseWizard)
-        l.addWidget(self.drillWizard)
-        l.addWidget(self.valveWizard)
         self.backButton.hide()
-        self.debrisWizard.hide()
-        self.terrainWizard.hide()
-        self.firehoseWizard.hide()
-        self.valveWizard.hide()
-        self.drillWizard.hide()
+
+        wizards = {
+                    'driving' : self._makeDrivingWizard,
+                    'terrain' : self._makeTerrainWizard,
+                    'ladder' : self._makeLadderWizard,
+                    'debris' : self._makeDebrisWizard,
+                    'door' : self._makeDoorWizard,
+                    'drill' : self._makeDrillWizard,
+                    'valve' : self._makeValveWizard,
+                    'firehose' : self._makeFirehoseWizard,
+                  }
+
+        self.wizards = {}
+        for name, func in wizards.iteritems():
+          widget = func()
+          self.wizards[name] = widget
+          l.addWidget(widget)
+          widget.hide()
 
     def _makeDebrisWizard(self):
         debrisWizard = QtGui.QWidget()
@@ -77,6 +81,24 @@ class SegmentationPanel(object):
         l.addStretch()
         return firehoseWizard
 
+    def _makeDoorWizard(self):
+        wizard = QtGui.QWidget()
+        l = QtGui.QVBoxLayout(wizard)
+        l.addWidget(_makeButton('segment door handle', startDoorHandleSegmentation))
+        l.addStretch()
+        return wizard
+
+    def _makeDrivingWizard(self):
+        wizard = QtGui.QWidget()
+        l = QtGui.QVBoxLayout(wizard)
+        l.addStretch()
+        return wizard
+
+    def _makeLadderWizard(self):
+        wizard = QtGui.QWidget()
+        l = QtGui.QVBoxLayout(wizard)
+        l.addStretch()
+        return wizard
 
     def _makeValveWizard(self):
         wizard = QtGui.QWidget()
@@ -105,9 +127,26 @@ class SegmentationPanel(object):
         l = QtGui.QVBoxLayout(drillWizard)
         l.addWidget(_makeButton('segment drill on table', startDrillAutoSegmentation))
         l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
-        l.addWidget(_makeButton('move drill to hand', moveDrillToHand))
         l.addWidget(_makeButton('segment wall', startDrillWallSegmentation))
+
+        hw = QtGui.QWidget()
+        hl = QtGui.QHBoxLayout(hw)
+        hl.addWidget(_makeButton('move drill to hand', self.moveDrillToHand))
+        self.handCombo = QtGui.QComboBox()
+        self.handCombo.addItem('left')
+        self.handCombo.addItem('right')
+        hl.addWidget(self.handCombo)
+        hl.addWidget(_makeButton('flip z', self.flipDrill))
+        self.drillFlip = False
+        l.addWidget(hw)
+        self.drillRotationSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
+        self.drillRotationSlider.setMinimum(0)
+        self.drillRotationSlider.setMaximum(100)
+        self.drillRotationSlider.setValue(0)
+        l.addWidget(self.drillRotationSlider)
+        hw.connect(self.drillRotationSlider, 'valueChanged(int)', self.moveDrillToHand)
         l.addWidget(QtGui.QLabel(''))
+
 
         self.drillTaskPanel = drilltaskpanel.DrillTaskPanel()
         l.addWidget(self.drillTaskPanel.widget)
@@ -178,50 +217,44 @@ class SegmentationPanel(object):
         self.backButton.show()
         w.show()
 
-    def startDebrisTask(self):
-        self._showTaskWidgets(self.debrisWizard)
-
-    def startTerrainTask(self):
-        self._showTaskWidgets(self.terrainWizard)
-
-    def startFirehoseTask(self):
-        self._showTaskWidgets(self.firehoseWizard)
-
-    def startDrillTask(self):
-        self._showTaskWidgets(self.drillWizard)
-
-    def startValveTask(self):
-        self._showTaskWidgets(self.valveWizard)
+    def startTask(self, taskName):
+        self._showTaskWidgets(self.wizards[taskName])
 
     def requestValveCirclePlan(self):
         self.drillTaskPanel.valveCirclePlan(self.circlePlanAngle.value)
 
+    def moveDrillToHand(self):
+        hand = self.handCombo.currentText
+        rotation = (self.drillRotationSlider.value / 100.0) * 360
+        self.drillOffset = getDrillInHandOffset(zRotation=rotation, flip=self.drillFlip)
+        moveDrillToHand(self.drillOffset, hand)
+
+    def flipDrill(self):
+        self.drillFlip = not self.drillFlip
+
+        self.moveDrillToHand()
+
     def cancelCurrentTask(self):
-        self.debrisWizard.hide()
-        self.terrainWizard.hide()
-        self.firehoseWizard.hide()
-        self.drillWizard.hide()
-        self.valveWizard.hide()
+        for w in self.wizards.values():
+            w.hide()
         self.backButton.hide()
         self.taskSelection.show()
 
     def onTaskSelected(self, taskId):
 
-        taskFunctions = {
-                         2:self.startTerrainTask,
-                         4:self.startDebrisTask,
-                         8:self.startFirehoseTask,
-                         6:self.startDrillTask,
-                         7:self.startValveTask,
-                        }
+        tasks = {
+                   1: 'driving',
+                   2: 'terrain',
+                   3: 'ladder',
+                   4: 'debris',
+                   5: 'door',
+                   6: 'drill',
+                   7: 'valve',
+                   8: 'firehose',
+                  }
 
-        taskFunction = taskFunctions.get(taskId+1)
-
-        if taskFunction:
-            taskFunction()
-        else:
-            app.showInfoMessage('Sorry, not impemented yet.')
-
+        taskName = tasks[taskId+1]
+        self.startTask(taskName)
 
 
 def createDockWidget():
