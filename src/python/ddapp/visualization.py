@@ -312,6 +312,40 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     return item
 
 
+
+def showHandCloud(hand='left'):
+
+    assert hand in ('left', 'right')
+
+    maps = om.findObjectByName('Map Server')
+    assert maps is not None
+
+    viewId = 52 if hand == 'left' else 53
+    reader = maps.source.reader
+
+    def getCurrentViewId():
+        return reader.GetCurrentMapId(viewId)
+
+    p = vtk.vtkPolyData()
+    obj = vis.showPolyData(p, '%s hand cloud' % hand, view=segmentation.getDRCView(), parent='sensors')
+    obj.currentViewId = -1
+
+    def updateCloud():
+        currentViewId = getCurrentViewId()
+        #print 'updateCloud: current view id:', currentViewId
+        if currentViewId != obj.currentViewId:
+            reader.GetDataForMapId(viewId, currentViewId, p)
+            #print 'updated poly data.  %d points.' % p.GetNumberOfPoints()
+            obj._renderAllViews()
+
+    t = TimerCallback()
+    t.targetFps = 1
+    t.callback = updateCloud
+    t.start()
+    obj.updater = t
+    return obj
+
+
 def pickPoint(displayPoint, obj=None, view=None, pickType='points', tolerance=0.01):
 
     view = view or app.getCurrentRenderView()
