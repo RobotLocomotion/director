@@ -1116,6 +1116,92 @@ def segmentDrillWall(point1, point2, point3):
     aff.addToView(app.getDRCView())
 
 
+def refitDrillWall(point1):
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    aff = om.findObjectByName('drill targets')
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+    expectedNormal = np.cross(point2 - point1, [0.0, 0.0, 1.0])
+    expectedNormal /= np.linalg.norm(expectedNormal)
+    if np.dot(expectedNormal, viewPlaneNormal) < 0:
+        expectedNormal *= -1.0
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal, searchOrigin=point1, searchRadius=0.3, angleEpsilon=0.3, returnOrigin=True)
+
+    triangleOrigin = projectPointToPlane(point2, origin, normal)
+    edge1 = np.array([0.0, -1.0, 0.0])
+    edge2 = np.array([0.0, 0.0, -1.0])
+    edge1Length = 24 * .0254
+    edge2Length = 12 * .0254
+
+    xaxis = -normal
+    zaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis = np.cross(xaxis, yaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(triangleOrigin)
+
+
+def segmentDrillWallConstrained(point1, point2):
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+    expectedNormal = np.cross(point2 - point1, [0.0, 0.0, 1.0])
+    expectedNormal /= np.linalg.norm(expectedNormal)
+    if np.dot(expectedNormal, viewPlaneNormal) < 0:
+        expectedNormal *= -1.0
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal, searchOrigin=point1, searchRadius=0.3, angleEpsilon=0.3, returnOrigin=True)
+
+    triangleOrigin = projectPointToPlane(point2, origin, normal)
+    edge1 = np.array([0.0, -1.0, 0.0])
+    edge2 = np.array([0.0, 0.0, -1.0])
+    edge1Length = 24 * .0254
+    edge2Length = 12 * .0254
+
+    xaxis = -normal
+    zaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis = np.cross(xaxis, yaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(triangleOrigin)
+
+    pointsInWallFrame = [np.array([0.0, 0.0, 0.0]), edge1*edge1Length, edge1*edge1Length + edge2*edge2Length]
+
+    d = DebugData()
+    for p in pointsInWallFrame:
+        d.addSphere(p, radius=0.02)
+
+    for a, b in zip(pointsInWallFrame, pointsInWallFrame[1:] + [pointsInWallFrame[0]]):
+        d.addLine(a, b, radius=0.015)
+
+    aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    aff.actor.SetUserTransform(t)
+    frameObj = showFrame(t, 'wall frame', parent=aff, visible=False)
+    frameObj.addToView(app.getDRCView())
+
+    params = dict(origin=triangleOrigin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
+                  p1y=pointsInWallFrame[0][1], p1z=pointsInWallFrame[0][2],
+                  p2y=pointsInWallFrame[1][1], p2z=pointsInWallFrame[1][2],
+                  p3y=pointsInWallFrame[2][1], p3z=pointsInWallFrame[2][2],
+                  friendly_name='drill_wall', otdf_type='drill_wall')
+
+    aff.setAffordanceParams(params)
+    aff.updateParamsFromActorTransform()
+    aff.addToView(app.getDRCView())
+
+
 def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis):
 
     params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
@@ -2191,6 +2277,15 @@ def startDrillWallSegmentation():
     picker.drawLines = True
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrillWall)
+
+def startDrillWallSegmentationConstrained():
+
+    picker = PointPicker(numberOfPoints=2)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDrillWallConstrained)
 
 def startDrillInHandSegmentation():
 

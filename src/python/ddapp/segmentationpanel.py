@@ -128,6 +128,7 @@ class SegmentationPanel(object):
         l.addWidget(_makeButton('segment drill on table', startDrillAutoSegmentation))
         l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
         l.addWidget(_makeButton('segment wall', startDrillWallSegmentation))
+        l.addWidget(_makeButton('segment wall constrained', startDrillWallSegmentationConstrained))
 
         hw = QtGui.QWidget()
         hl = QtGui.QHBoxLayout(hw)
