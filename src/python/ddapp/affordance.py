@@ -173,17 +173,13 @@ def findExistingAffordance(aff):
 def publishAffordance(aff):
 
     if aff.uid:
-
-        print 'publishing update affordance with uid:', aff.uid
-
+        #print 'publishing update affordance with uid:', aff.uid
         aff.aff_store_control = lcmdrc.affordance_t.UPDATE
         channelName =  'AFFORDANCE_TRACK'
         lcmUtils.publish(channelName, aff)
 
     else:
-
-        print 'publishing new affordance with uid:', aff.uid
-
+        #print 'publishing new affordance with uid:', aff.uid
         affPlus = createAffordancePlus(aff)
         channelName = 'AFFORDANCE_FIT'
         lcmUtils.publish(channelName, affPlus)
