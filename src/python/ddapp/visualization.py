@@ -5,6 +5,7 @@ import ddapp.affordanceupdater as affup
 from shallowCopy import shallowCopy
 import ddapp.vtkAll as vtk
 from ddapp.debugVis import DebugData
+from ddapp.timercallback import TimerCallback
 from ddapp import transformUtils
 import numpy as np
 from PythonQt import QtCore, QtGui
