@@ -247,3 +247,13 @@ tc.callback = resetCameraToHeadView
 
 cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
 
+
+def updateDrill():
+    aff = om.findObjectByName('drill')
+    if aff:
+        segmentationpanel._segmentationPanel.moveDrillToHand()
+        aff.publish()
+
+drillUpdater = TimerCallback()
+drillUpdater.targetFps = 30
+drillUpdater.callback = updateDrill
