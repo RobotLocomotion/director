@@ -95,21 +95,22 @@ class CameraView(object):
         self.textures = {}
 
         for name in imageNames:
-
-            image = vtk.vtkImageData()
-            tex = vtk.vtkTexture()
-            tex.SetInput(image)
-            tex.EdgeClampOn()
-            tex.RepeatOff()
-
-            self.imageUtimes[name] = 0
-            self.images[name] = image
-            self.textures[name] = tex
-            self.transforms[name] = vtk.vtkTransform()
+            self.addImage(name)
 
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
         self.queue.init(lcmUtils.getGlobalLCMThread())
 
+    def addImage(self, name):
+        image = vtk.vtkImageData()
+        tex = vtk.vtkTexture()
+        tex.SetInput(image)
+        tex.EdgeClampOn()
+        tex.RepeatOff()
+
+        self.imageUtimes[name] = 0
+        self.images[name] = image
+        self.textures[name] = tex
+        self.transforms[name] = vtk.vtkTransform()
 
     def onViewDoubleClicked(self, displayPoint):
 
@@ -180,7 +181,7 @@ class CameraView(object):
 
         sphereResolution = 50
         sphereRadii = {
-                'CAMERA_LEFT' : 9.90,
+                'CAMERA_LEFT' : 9.85,
                 'CAMERACHEST_LEFT' : 9.95,
                 'CAMERACHEST_RIGHT' : 10
                 }
@@ -332,6 +333,17 @@ class CameraImageView(object):
                 self.resetCamera()
                 self.imageInitialized = True
 
+views = {}
+
+def addCameraView(channel, name):
+
+    cameraView.queue.addCameraStream(channel)
+    cameraView.addImage(channel)
+    view = CameraImageView(cameraView, channel, name)
+    global views
+    views[channel] = view
+    return view
+
 
 def init():
     global cameraView
@@ -342,9 +354,9 @@ def init():
     chestLeft = CameraImageView(cameraView, 'CAMERACHEST_LEFT', 'Chest left')
     chestRight = CameraImageView(cameraView, 'CAMERACHEST_RIGHT', 'Chest right')
 
+    addCameraView('AFFORDANCE_OVERLAY', 'Affordance overlay')
+
     useAnaglyph = False
     if useAnaglyph:
-        global anaglyph
-        cameraView.queue.addCameraStream('CAMERA_ANAGLYPH')
-        anaglyph = CameraImageView(cameraView, 'CAMERA_ANAGLYPH', 'Head Anaglyph')
+        addCameraView('CAMERA_ANAGLYPH', 'Head Anaglyph')
 
