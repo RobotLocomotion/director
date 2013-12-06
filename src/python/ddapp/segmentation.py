@@ -932,7 +932,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     obj.updateParamsFromActorTransform()
 
     frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
-
+    frameObj.addToView(app.getDRCView())
 
 
 def applyICP(source, target):
@@ -1049,7 +1049,7 @@ def segmentDoorHandle(point1, point2):
     obj.updateParamsFromActorTransform()
 
     frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
-
+    frameObj.addToView(app.getDRCView())
 
 def segmentHoseNozzle(point1):
 
@@ -1149,7 +1149,6 @@ refitWallCallbacks = []
 
 def refitWall(point1):
 
-    print 'refitting wall...'
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
@@ -1161,7 +1160,6 @@ def refitWall(point1):
     updatePolyData(wallPoints, 'wall points', parent=getDebugFolder(), visible=False)
 
     for func in refitWallCallbacks:
-        print 'callback...'
         func(point1, origin, normal)
 
 
@@ -2083,6 +2081,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
 
 
     frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
+    frameObj.addToView(app.getDRCView())
 
     computeDebrisGraspSeed(obj)
     t = computeDebrisStanceFrame(obj)

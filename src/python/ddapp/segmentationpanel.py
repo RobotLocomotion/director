@@ -106,7 +106,7 @@ class SegmentationPanel(object):
         l.addWidget(_makeButton('segment valve', functools.partial(startValveSegmentationByWallPlane, 0.195)))
         l.addWidget(_makeButton('segment small valve', functools.partial(startValveSegmentationByWallPlane, 0.10)))
         l.addWidget(_makeButton('segment bar', functools.partial(startInteractiveLineDraw, [0.015, 0.015])))
-        l.addWidget(QLabel(''))
+        l.addWidget(QtGui.QLabel(''))
         l.addWidget(_makeButton('refit wall', startRefitWall))
 
         hw = QtGui.QFrame()
