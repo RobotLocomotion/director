@@ -998,7 +998,7 @@ def segmentWye(point1, point2):
     wyeObj.updateParamsFromActorTransform()
 
 
-def segmentDoorHandle(side, point1, point2):
+def segmentDoorHandle(otdfType, point1, point2):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
@@ -1040,7 +1040,6 @@ def segmentDoorHandle(side, point1, point2):
     t.Translate(point2)
 
     name = 'door handle'
-    otdfType = 'door_handle_%s' % side
     obj = showPolyData(cube, name, cls=FrameAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
@@ -2286,14 +2285,14 @@ def startWyeSegmentation():
     picker.annotationFunc = functools.partial(segmentWye)
 
 
-def startDoorHandleSegmentation(side):
+def startDoorHandleSegmentation(otdfType):
 
     picker = PointPicker(numberOfPoints=2)
     addViewPicker(picker)
     picker.enabled = True
     picker.drawLines = False
     picker.start()
-    picker.annotationFunc = functools.partial(segmentDoorHandle, side)
+    picker.annotationFunc = functools.partial(segmentDoorHandle, otdfType)
 
 
 def startHoseNozzleSegmentation():
