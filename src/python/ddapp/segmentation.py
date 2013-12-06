@@ -353,11 +353,11 @@ def addCoordArraysToPolyData(polyData):
 
 def getDebugRevolutionData():
     dataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../drc-data'))
-    #filename = os.path.join(dataDir, 'valve_wall.vtp')
+    filename = os.path.join(dataDir, 'valve_wall.vtp')
     #filename = os.path.join(dataDir, 'bungie_valve.vtp')
     #filename = os.path.join(dataDir, 'cinder-blocks.vtp')
     #filename = os.path.join(dataDir, 'cylinder_table.vtp')
-    filename = os.path.join(dataDir, 'firehose.vtp')
+    #filename = os.path.join(dataDir, 'firehose.vtp')
     #filename = os.path.join(dataDir, 'debris.vtp')
     #filename = os.path.join(dataDir, 'rev1.vtp')
     #filename = os.path.join(dataDir, 'drill-in-hand.vtp')
@@ -802,6 +802,30 @@ def startInteractiveLineDraw(blockDimensions):
     picker.annotationFunc = functools.partial(createLine, blockDimensions)
 
 
+
+def refitValveAffordance(aff, point1, origin, normal):
+
+    print 'refitValveAffordance'
+
+    xaxis = aff.params['xaxis']
+    yaxis = aff.params['yaxis']
+    zaxis = aff.params['zaxis']
+    origin = aff.params['origin']
+
+    zaxis = normal
+    xaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    aff.actor.GetUserTransform().SetMatrix(t.GetMatrix())
+    aff.updateParamsFromActorTransform()
+
+
 def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
 
@@ -880,7 +904,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
 
     zaxis = circleNormal
-    xaxis = bodyX
+    xaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
     xaxis = np.cross(yaxis, zaxis)
     xaxis /= np.linalg.norm(xaxis)
@@ -894,10 +918,11 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     d = DebugData()
     d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
 
-
-    obj = showPolyData(d.getPolyData(), 'valve affordance', cls=CylinderAffordanceItem, parent='affordances')
+    name = 'valve affordance'
+    obj = showPolyData(d.getPolyData(), name, cls=CylinderAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
+    refitWallCallbacks.append(functools.partial(refitValveAffordance, obj))
 
     params = dict(axis=zaxis, radius=radius, length=zwidth, origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis,
                   xwidth=radius, ywidth=radius, zwidth=zwidth,
@@ -905,6 +930,8 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
+
+    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
 
 
 
@@ -985,10 +1012,10 @@ def segmentDoorHandle(point1, point2):
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
     searchRegion = cropToSphere(searchRegion, point2, 0.30)
-    wyePoints = extractLargestCluster(searchRegion)
-    updatePolyData(wyePoints, 'handle cluster', parent=getDebugFolder(), visible=False)
+    handlePoints = extractLargestCluster(searchRegion)
+    updatePolyData(handlePoints, 'handle cluster', parent=getDebugFolder(), visible=False)
 
-    handlePoint = np.array([0.0, 0.0, -0.05])
+    handlePoint = np.array([0.005, 0.065, 0.011])
 
     xaxis = -normal
     zaxis = [0, 0, 1]
@@ -996,9 +1023,9 @@ def segmentDoorHandle(point1, point2):
     yaxis /= np.linalg.norm(yaxis)
     zaxis = np.cross(xaxis, yaxis)
 
-    xwidth = 0.02
-    ywidth = 0.01
-    zwidth = 0.1
+    xwidth = 0.01
+    ywidth = 0.13
+    zwidth = 0.022
     cube = vtk.vtkCubeSource()
     cube.SetXLength(xwidth)
     cube.SetYLength(ywidth)
@@ -1007,11 +1034,12 @@ def segmentDoorHandle(point1, point2):
     cube = shallowCopy(cube.GetOutput())
 
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
-    t.PreMultiply()
-    t.Translate(-handlePoint)
+    #t.PreMultiply()
+    #t.Translate(-handlePoint)
     t.PostMultiply()
     t.Translate(point2)
 
+    name = 'door handle'
     obj = showPolyData(cube, name, cls=BlockAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
@@ -1114,6 +1142,27 @@ def segmentDrillWall(point1, point2, point3):
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
     aff.addToView(app.getDRCView())
+
+
+
+refitWallCallbacks = []
+
+def refitWall(point1):
+
+    print 'refitting wall...'
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
+
+    wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(wallPoints, 'wall points', parent=getDebugFolder(), visible=False)
+
+    for func in refitWallCallbacks:
+        print 'callback...'
+        func(point1, origin, normal)
 
 
 def refitDrillWall(point1):
@@ -2187,6 +2236,16 @@ def startValveSegmentationByWallPlane(expectedValveRadius):
     picker.enabled = True
     picker.start()
     picker.annotationFunc = functools.partial(segmentValveByWallPlane, expectedValveRadius)
+
+
+def startRefitWall():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.start()
+    picker.annotationFunc = refitWall
+
 
 
 def startWyeSegmentation():
