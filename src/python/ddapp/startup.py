@@ -115,7 +115,7 @@ if usePerception:
 
 
     mitRobotDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot')
-    urdfFile = os.path.join(mitRobotDir, 'model_LI_RI.urdf')
+    urdfFile = os.path.join(mitRobotDir, 'model_LI_RR.urdf')
 
     robotStateModel = app.loadRobotModelFromFile(urdfFile)
 
