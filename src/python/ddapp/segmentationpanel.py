@@ -84,7 +84,8 @@ class SegmentationPanel(object):
     def _makeDoorWizard(self):
         wizard = QtGui.QWidget()
         l = QtGui.QVBoxLayout(wizard)
-        l.addWidget(_makeButton('segment door handle', startDoorHandleSegmentation))
+        l.addWidget(_makeButton('segment door handle - left', functools.partial(startDoorHandleSegmentation, 'left')))
+        l.addWidget(_makeButton('segment door handle - right', functools.partial(startDoorHandleSegmentation, 'right')))
         l.addStretch()
         return wizard
 

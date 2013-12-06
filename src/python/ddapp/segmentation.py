@@ -998,7 +998,7 @@ def segmentWye(point1, point2):
     wyeObj.updateParamsFromActorTransform()
 
 
-def segmentDoorHandle(point1, point2):
+def segmentDoorHandle(side, point1, point2):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
@@ -1040,16 +1040,18 @@ def segmentDoorHandle(point1, point2):
     t.Translate(point2)
 
     name = 'door handle'
-    obj = showPolyData(cube, name, cls=BlockAffordanceItem, parent='affordances')
+    otdfType = 'door_handle_%s' % side
+    obj = showPolyData(cube, name, cls=FrameAffordanceItem, parent='affordances')
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
 
-    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name='door_handle', otdf_type='door_handle')
+    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name=name, otdf_type=otdfType)
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
 
     frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
     frameObj.addToView(app.getDRCView())
+
 
 def segmentHoseNozzle(point1):
 
@@ -1195,6 +1197,16 @@ def refitDrillWall(point1):
     t.Translate(triangleOrigin)
 
 
+def getGroundHeightFromFeet():
+    rfoot = getLinkFrame('r_foot')
+    return np.array(rfoot.GetPosition())[2] -  0.0745342
+
+
+def getTranslationRelativeToFoot(t):
+
+    rfoot = getLinkFrame('r_foot')
+
+
 def segmentDrillWallConstrained(point1, point2):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
@@ -1247,6 +1259,23 @@ def segmentDrillWallConstrained(point1, point2):
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
     aff.addToView(app.getDRCView())
+
+    '''
+    rfoot = getLinkFrame('r_foot')
+    tt = getTransformFromAxes(xaxis, yaxis, zaxis)
+    tt.PostMultiply()
+    tt.Translate(rfoot.GetPosition())
+    showFrame(tt, 'rfoot with wall orientation')
+    aff.footToAffTransform = computeAToB(tt, t)
+
+    footToAff = list(aff.footToAffTransform.GetPosition())
+    tt.TransformVector(footToAff, footToAff)
+
+    d = DebugData()
+    d.addSphere(tt.GetPosition(), radius=0.02)
+    d.addLine(tt.GetPosition(), np.array(tt.GetPosition()) + np.array(footToAff))
+    showPolyData(d.getPolyData(), 'rfoot debug')
+    '''
 
 
 def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis):
@@ -2257,14 +2286,14 @@ def startWyeSegmentation():
     picker.annotationFunc = functools.partial(segmentWye)
 
 
-def startDoorHandleSegmentation():
+def startDoorHandleSegmentation(side):
 
     picker = PointPicker(numberOfPoints=2)
     addViewPicker(picker)
     picker.enabled = True
     picker.drawLines = False
     picker.start()
-    picker.annotationFunc = functools.partial(segmentDoorHandle)
+    picker.annotationFunc = functools.partial(segmentDoorHandle, side)
 
 
 def startHoseNozzleSegmentation():
