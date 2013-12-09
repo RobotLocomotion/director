@@ -178,7 +178,7 @@
      <normaloff>:/images/python_logo.png</normaloff>:/images/python_logo.png</iconset>
    </property>
    <property name="text">
-    <string>Python Console</string>
+    <string>&amp;Python Console</string>
    </property>
    <property name="shortcut">
     <string>F8</string>
@@ -193,7 +193,7 @@
      <normaloff>:/images/matlab_logo.png</normaloff>:/images/matlab_logo.png</iconset>
    </property>
    <property name="text">
-    <string>Matlab Console</string>
+    <string>&amp;Matlab Console</string>
    </property>
    <property name="shortcut">
     <string>F9</string>
