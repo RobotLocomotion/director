@@ -300,11 +300,14 @@ class MapServerSource(TimerCallback):
         self.targetFps = 10
         self.polyData = polyData or vtk.vtkPolyData()
         self.callbackFunc = callbackFunc
+        self.colorizeCallback = None
 
     def showMap(self, mapId):
         polyData = vtk.vtkPolyData()
         self.reader.GetDataForMapId(self.displayedViewId, mapId, polyData)
         self.polyData.ShallowCopy(polyData)
+        if self.colorizeCallback:
+            self.colorizeCallback()
 
         self.displayedMapId = mapId
         if self.callbackFunc:

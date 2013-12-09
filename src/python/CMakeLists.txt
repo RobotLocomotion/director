@@ -8,6 +8,7 @@ set(python_files
   ddapp/botspy.py
   ddapp/cameracontrol.py
   ddapp/cameraview.py
+  ddapp/colorize.py
   ddapp/debugVis.py
   ddapp/drilltaskpanel.py
   ddapp/ikeditor.py
@@ -40,7 +41,6 @@ set(python_files
 
   #ddapp/macros/get_polydata.py
   ddapp/macros/popout.py
-  ddapp/macros/colorize.py
   ddapp/macros/publish.py
   ddapp/macros/neck_pitch.py
   ddapp/macros/multisense_rpm.py

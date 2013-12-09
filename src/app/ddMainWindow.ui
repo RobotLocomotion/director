@@ -104,6 +104,7 @@
    <addaction name="ActionMatlabConsole"/>
    <addaction name="separator"/>
    <addaction name="ActionToggleStereoRender"/>
+   <addaction name="ActionColorizeLidar"/>
    <addaction name="ActionToggleCameraTerrainMode"/>
    <addaction name="ActionResetCamera"/>
   </widget>
@@ -259,6 +260,21 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+B</string>
+   </property>
+  </action>
+  <action name="ActionColorizeLidar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/paint_bucket.png</normaloff>:/images/paint_bucket.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Colorize Lidar</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
    </property>
   </action>
  </widget>

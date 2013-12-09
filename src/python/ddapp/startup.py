@@ -20,6 +20,7 @@ from ddapp import tdx
 from ddapp import perception
 from ddapp import segmentation
 from ddapp import cameraview
+from ddapp import colorize
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
@@ -126,6 +127,7 @@ if usePerception:
     perception.init(view, robotStateJointController)
     segmentationpanel.init()
     cameraview.init()
+    colorize.init()
 
     sensorsFolder = om.getOrCreateContainer('sensors')
     robotStateModel = om.addRobotModel(robotStateModel, sensorsFolder)
