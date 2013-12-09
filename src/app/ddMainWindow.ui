@@ -43,6 +43,8 @@
     <addaction name="ActionPythonConsole"/>
     <addaction name="separator"/>
     <addaction name="ActionMatlabConsole"/>
+    <addaction name="separator"/>
+    <addaction name="ActionBotSpy"/>
    </widget>
    <widget class="QMenu" name="ViewMenu">
     <property name="title">
@@ -249,6 +251,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="ActionBotSpy">
+   <property name="text">
+    <string>&amp;Bot Spy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+B</string>
    </property>
   </action>
  </widget>

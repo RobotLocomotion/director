@@ -42,7 +42,6 @@ set(python_files
   ddapp/macros/popout.py
   ddapp/macros/colorize.py
   ddapp/macros/publish.py
-  ddapp/macros/bot_spy.py
   ddapp/macros/neck_pitch.py
   ddapp/macros/multisense_rpm.py
 

@@ -64,6 +64,7 @@ ddPropertiesPanel* ddMainWindow::propertiesPanel() const;
 QToolBar* ddMainWindow::toolBar() const;
 QTreeWidget* ddMainWindow::objectTree() const;
 QTextEdit* ddMainWindow::outputConsole() const;
+QMenu* ddMainWindow::toolsMenu() const;
 void ddMainWindow::addWidgetToViewMenu(QWidget*);
 
 ddObjectTree::ddObjectTree();

@@ -119,6 +119,12 @@ QTextEdit* ddMainWindow::outputConsole() const
 }
 
 //-----------------------------------------------------------------------------
+QMenu* ddMainWindow::toolsMenu() const
+{
+  return this->Internal->ToolsMenu;
+}
+
+//-----------------------------------------------------------------------------
 void ddMainWindow::toggleOutputConsoleVisibility()
 {
   if (this->Internal->OutputConsoleDock->isHidden())

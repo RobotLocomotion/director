@@ -10,6 +10,7 @@ class ddViewBase;
 class ddObjectTree;
 class QTextEdit;
 class QDockWidget;
+class QMenu;
 
 class ddMainWindow : public QMainWindow
 {
@@ -29,6 +30,8 @@ public:
   void addWidgetToViewMenu(QWidget* widget);
 
   void setPythonManager(ddPythonManager* pythonManager);
+
+  QMenu* toolsMenu() const;
 
 signals:
 

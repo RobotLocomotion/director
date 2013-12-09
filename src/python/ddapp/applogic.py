@@ -6,6 +6,7 @@ import vtk
 import PythonQt
 from PythonQt import QtCore
 from PythonQt import QtGui
+from ddapp import botspy
 
 def getMainWindow():
     return _mainWindow
@@ -115,8 +116,16 @@ def toggleCameraTerrainMode(view = None):
 
 
 def getToolBarActions():
+    return getActions(getMainWindow().toolBar())
+
+
+def getToolsMenuActions():
+    return getActions(getMainWindow().toolsMenu())
+
+
+def getActions(widget):
     actions = {}
-    for action in getMainWindow().toolBar().actions():
+    for action in widget.actions():
         if action.name:
             actions[action.name] = action
     return actions
@@ -149,6 +158,11 @@ def setupToolBar():
     combo.connect('currentIndexChanged(const QString&)', onComboChanged)
     toolbar = getMainWindow().toolBar()
     toolbar.addWidget(combo)
+
+
+def setupActions():
+    botApyAction = getToolsMenuActions()['ActionBotSpy']
+    botApyAction.connect(botApyAction, 'triggered()', botspy.startBotSpy)
 
 
 def loadRobotModelFromFile(filename):
@@ -207,7 +221,7 @@ def startup(globals):
     _mainWindow.connect('toggleCameraTerrainMode()', toggleCameraTerrainMode)
 
     setupPackagePaths()
-
+    setupActions()
     #setupToolBar()
 
     vm = getViewManager()
