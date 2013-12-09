@@ -43,6 +43,7 @@
 //#include <lcmtypes/drc_lcmtypes.hpp>
 #include <lcmtypes/drc/map_image_t.hpp>
 #include <lcmtypes/drc/map_cloud_t.hpp>
+#include <lcmtypes/drc/data_request_t.hpp>
 
 
 #include <maps/LcmTranslator.hpp>
@@ -56,7 +57,7 @@
 namespace
 {
 
-const int WORKSPACE_DEPTH_VIEW_ID = 42;
+const int WORKSPACE_DEPTH_VIEW_ID = drc::data_request_t::DEPTH_MAP_WORKSPACE_C;
 
 //----------------------------------------------------------------------------
 vtkSmartPointer<vtkCellArray> NewVertexCells(vtkIdType numberOfVerts)
