@@ -15,6 +15,14 @@ def getLumberDimensions(lumberId):
                   [0.089, 0.089], # 4x4
                  ]
 
+def getBalsaLumberDimensions(lumberId):
+
+    dimensions = [
+                  [0.0762, 0.0381], # 2x4 actually (1.5x3)
+                  [0.140, 0.038], # 2x6, not used
+                  [0.0762, 0.0762], # 4x4 actually (3x3)
+                 ]
+
     return dimensions[lumberId]
 
 
@@ -207,7 +215,7 @@ class SegmentationPanel(object):
         startWyeSegmentation()
 
     def onDebrisLumberSelected(self, lumberId):
-        blockDimensions = getLumberDimensions(lumberId)
+        blockDimensions = getBalsaLumberDimensions(lumberId)
         startInteractiveLineDraw(blockDimensions)
 
     def onTerrainCinderblockSelected(self, button):
