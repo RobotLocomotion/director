@@ -25,6 +25,8 @@ public:
 
   QVTKWidget* vtkWidget() const;
 
+  void installImageInteractor();
+
 public slots:
 
   void render();

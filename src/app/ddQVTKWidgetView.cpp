@@ -7,16 +7,44 @@
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkInteractorStyle.h>
+#include <vtkObjectFactory.h>
 #include <vtkActor.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkConeSource.h>
 #include <vtkOrientationMarkerWidget.h>
 #include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkInteractorStyleRubberBand3D.h>
+#include <vtkRenderWindowInteractor.h>
 #include <vtkAxesActor.h>
 
 #include <QVTKWidget.h>
 #include <QVBoxLayout>
 #include <QTimer>
+
+//-----------------------------------------------------------------------------
+class vtkCustomRubberBandStyle : public vtkInteractorStyleRubberBand3D
+{
+public:
+
+  static vtkCustomRubberBandStyle *New();
+  vtkTypeMacro(vtkCustomRubberBandStyle, vtkInteractorStyleRubberBand3D);
+
+  virtual void OnRightButtonDown()
+  {
+    if(this->Interaction == NONE)
+      {
+      this->Interaction = ZOOMING;
+      this->FindPokedRenderer(
+        this->Interactor->GetEventPosition()[0], 
+        this->Interactor->GetEventPosition()[1]);
+      this->InvokeEvent(vtkCommand::StartInteractionEvent);
+      }
+  }
+
+};
+
+vtkStandardNewMacro(vtkCustomRubberBandStyle);
+
 
 //-----------------------------------------------------------------------------
 class ddQVTKWidgetView::ddInternal
@@ -88,6 +116,12 @@ ddQVTKWidgetView::~ddQVTKWidgetView()
 vtkCamera* ddQVTKWidgetView::camera() const
 {
   return this->Internal->Renderer->GetActiveCamera();
+}
+
+//-----------------------------------------------------------------------------
+ void ddQVTKWidgetView::installImageInteractor()
+{
+  this->renderWindow()->GetInteractor()->SetInteractorStyle(vtkCustomRubberBandStyle::New());
 }
 
 //-----------------------------------------------------------------------------
