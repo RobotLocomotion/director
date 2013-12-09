@@ -350,6 +350,30 @@ def showHandCloud(hand='left', view=None):
     return obj
 
 
+def pickImage(displayPoint, obj=None, view=None):
+
+    view = view or app.getCurrentRenderView()
+    assert view
+
+    picker = vtk.vtkCellPicker()
+
+    if isinstance(obj, str):
+        obj = om.findObjectByName(obj)
+        assert obj
+
+    if obj:
+        picker.AddPickList(obj.actor)
+        picker.PickFromListOn()
+
+    picker.Pick(displayPoint[0], displayPoint[1], 0, view.renderer())
+    pickedDataset = picker.GetDataSet()
+
+    if obj:
+        return picker.GetPointIJK()
+    else:
+        return pickedDataset, picker.GetPointIJK()
+
+
 def pickPoint(displayPoint, obj=None, view=None, pickType='points', tolerance=0.01):
 
     view = view or app.getCurrentRenderView()
