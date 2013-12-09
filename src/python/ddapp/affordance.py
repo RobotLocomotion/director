@@ -67,7 +67,13 @@ def createFrameAffordance(params):
     aff.param_names = []
     aff.params = []
 
+    skipParams = ['xwidth', 'ywidth', 'zwidth',
+                  'xaxis', 'yaxis', 'zaxis', 'origin',
+                  'friendly_name', 'otdf_type', 'uid']
+
     for k, v in params.iteritems():
+        if k in skipParams:
+            continue
         if isinstance(v, float):
             aff.param_names.append(k)
             aff.params.append(v)
