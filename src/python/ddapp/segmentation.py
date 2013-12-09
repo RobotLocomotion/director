@@ -1052,6 +1052,63 @@ def segmentDoorHandle(otdfType, point1, point2):
     frameObj.addToView(app.getDRCView())
 
 
+def segmentTruss(point1, point2):
+
+
+
+    edge = point2 - point1
+    edgeLength = np.linalg.norm(edge)
+
+    stanceOffset = [-0.42, 0.0, 0.0]
+    stanceYaw = 0.0
+
+
+    d = DebugData()
+    p1 = [0.0, 0.0, 0.0]
+    p2 = -np.array([0.0, -1.0, 0.0]) * edgeLength
+    d.addSphere(p1, radius=0.02)
+    d.addSphere(p2, radius=0.02)
+    d.addLine(p1, p2)
+
+    stanceTransform = vtk.vtkTransform()
+    stanceTransform.PostMultiply()
+    stanceTransform.Translate(stanceOffset)
+    #stanceTransform.RotateZ(stanceYaw)
+
+    geometry = transformPolyData(d.getPolyData(), stanceTransform.GetLinearInverse())
+
+    yaxis = edge/edgeLength
+    zaxis = [0.0, 0.0, 1.0]
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+
+
+    xwidth = 0.1
+    ywidth = edgeLength
+    zwidth = 0.1
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PreMultiply()
+    t.Concatenate(stanceTransform)
+    t.PostMultiply()
+    t.Translate(point1)
+
+    name = 'truss'
+    otdfType = 'robot_knees'
+    obj = showPolyData(geometry, name, cls=FrameAffordanceItem, parent='affordances')
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+
+    params = dict(origin=t.GetPosition(), xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name=name, otdf_type=otdfType)
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
+
+    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
+    frameObj.addToView(app.getDRCView())
+
+
 def segmentHoseNozzle(point1):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
@@ -2293,6 +2350,16 @@ def startDoorHandleSegmentation(otdfType):
     picker.drawLines = False
     picker.start()
     picker.annotationFunc = functools.partial(segmentDoorHandle, otdfType)
+
+
+def startTrussSegmentation():
+
+    picker = PointPicker(numberOfPoints=2)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = True
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentTruss)
 
 
 def startHoseNozzleSegmentation():

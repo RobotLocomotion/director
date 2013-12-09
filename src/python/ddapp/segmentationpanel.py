@@ -72,8 +72,9 @@ class SegmentationPanel(object):
         lumberSelection.connect('lumberSelected(int)', self.onDebrisLumberSelected)
         l = QtGui.QVBoxLayout(debrisWizard)
         l.addWidget(lumberSelection)
-        l.addWidget(_makeButton('segment cinderblock wall', startSegmentDebrisWall))
-        l.addWidget(_makeButton('segment cinderblock wall manual', startSegmentDebrisWallManual))
+        #l.addWidget(_makeButton('segment cinderblock wall', startSegmentDebrisWall))
+        #l.addWidget(_makeButton('segment cinderblock wall manual', startSegmentDebrisWallManual))
+        l.addWidget(_makeButton('segment truss', startTrussSegmentation))
         l.addStretch()
         return debrisWizard
 
