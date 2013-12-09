@@ -45,6 +45,15 @@ class KeyboardNavigation(object):
             func(event.key())
 
 
+def sendControlMessage(command, data=None, channel='DRILL_CONTROL'):
+    m = drill_control_t()
+    m.utime = getUtime()
+    m.control_type = command
+    m.data = data if data is not None else []
+    m.data_length = len(m.data)
+    lcmUtils.publish(channel, m)
+
+
 class DrillTaskPanel(object):
 
     def __init__(self):
@@ -102,19 +111,6 @@ class DrillTaskPanel(object):
         l.addWidget(self.keyPressNav.widget)
 
 
-
-
-
-
-    def sendControlMessage(self, command, data=None):
-        m = drill_control_t()
-        m.utime = getUtime()
-        m.control_type = command
-        m.data = data if data is not None else []
-        m.data_length = len(m.data)
-        lcmUtils.publish('DRILL_CONTROL', m)
-
-
     def onKeyPress(self, key):
 
         dist = 0.01
@@ -150,41 +146,41 @@ class DrillTaskPanel(object):
                     }
 
         deltaType = deltaTypes[self.drillDeltaCombo.currentText]
-        self.sendControlMessage(deltaType, data)
+        sendControlMessage(deltaType, data)
 
     def clearDrillDelta(self):
         for spin in self.deltaSpinBoxes:
             spin.value = 0
 
     def buttonPrePosePlan(self):
-        self.sendControlMessage(drill_control_t.RQ_BUTTON_PREPOSE_PLAN)
+        sendControlMessage(drill_control_t.RQ_BUTTON_PREPOSE_PLAN)
 
     def refitDrill(self):
-        self.sendControlMessage(drill_control_t.REFIT_DRILL)
+        sendControlMessage(drill_control_t.REFIT_DRILL)
 
     def nominalPlan(self):
-        self.sendControlMessage(drill_control_t.RQ_NOMINAL_PLAN)
+        sendControlMessage(drill_control_t.RQ_NOMINAL_PLAN)
 
     def gotoButtonPreset(self):
-        self.sendControlMessage(drill_control_t.RQ_GOTO_BUTTON_PRESET)
+        sendControlMessage(drill_control_t.RQ_GOTO_BUTTON_PRESET)
 
     def armPreposePlan(self):
-        self.sendControlMessage(drill_control_t.RQ_ARM_PREPOSE_PLAN)
+        sendControlMessage(drill_control_t.RQ_ARM_PREPOSE_PLAN)
 
     def walkingGoal(self):
-        self.sendControlMessage(drill_control_t.RQ_WALKING_GOAL)
+        sendControlMessage(drill_control_t.RQ_WALKING_GOAL)
 
     def nominalFixedPlan(self):
-        self.sendControlMessage(drill_control_t.RQ_NOMINAL_FIXED_PLAN)
+        sendControlMessage(drill_control_t.RQ_NOMINAL_FIXED_PLAN)
 
     def preDrillPlan(self):
-        self.sendControlMessage(drill_control_t.RQ_PREDRILL_PLAN)
+        sendControlMessage(drill_control_t.RQ_PREDRILL_PLAN)
 
     def drillInPlan(self):
-        self.sendControlMessage(drill_control_t.RQ_DRILL_IN_PLAN)
+        sendControlMessage(drill_control_t.RQ_DRILL_IN_PLAN)
 
     def nextDrillPlan(self):
-        self.sendControlMessage(drill_control_t.RQ_NEXT_DRILL_PLAN)
+        sendControlMessage(drill_control_t.RQ_NEXT_DRILL_PLAN)
 
     def drillDelta(self):
         data = [float(spin.value)/100.0 for spin in self.deltaSpinBoxes]
@@ -192,8 +188,8 @@ class DrillTaskPanel(object):
 
     def setDrillDepth(self):
         depth = self.drillDepthSpin.value/100.0
-        self.sendControlMessage(drill_control_t.SET_DRILL_DEPTH, data=[depth])
+        sendControlMessage(drill_control_t.SET_DRILL_DEPTH, data=[depth])
 
     def valveCirclePlan(self, angleInDegrees):
-        self.sendControlMessage(drill_control_t.RQ_VALVE_CIRCLE_PLAN, data=[math.radians(angleInDegrees)])
+        sendControlMessage(drill_control_t.RQ_VALVE_CIRCLE_PLAN, data=[math.radians(angleInDegrees)])
 

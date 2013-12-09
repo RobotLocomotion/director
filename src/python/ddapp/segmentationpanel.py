@@ -108,6 +108,8 @@ class SegmentationPanel(object):
     def _makeLadderWizard(self):
         wizard = QtGui.QWidget()
         l = QtGui.QVBoxLayout(wizard)
+        l.addWidget(_makeButton('straighten - left', functools.partial(drilltaskpanel.sendControlMessage, drilltaskpanel.drill_control_t.LADDER_STRAIGHTEN_LEFT)))
+        l.addWidget(_makeButton('straighten - right', functools.partial(drilltaskpanel.sendControlMessage, drilltaskpanel.drill_control_t.LADDER_STRAIGHTEN_RIGHT)))
         l.addStretch()
         return wizard
 
