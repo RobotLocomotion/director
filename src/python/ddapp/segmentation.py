@@ -1253,7 +1253,7 @@ def getTranslationRelativeToFoot(t):
     rfoot = getLinkFrame('r_foot')
 
 
-def segmentDrillWallConstrained(point1, point2):
+def segmentDrillWallConstrained(verticalEdgeOnLeft, horizontalEdgeOnTop, point1, point2):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
@@ -1267,8 +1267,20 @@ def segmentDrillWallConstrained(point1, point2):
     polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal, searchOrigin=point1, searchRadius=0.3, angleEpsilon=0.3, returnOrigin=True)
 
     triangleOrigin = projectPointToPlane(point2, origin, normal)
+
     edge1 = np.array([0.0, -1.0, 0.0])
-    edge2 = np.array([0.0, 0.0, -1.0])
+    edge2 = np.array([0.0, 0.0, 1.0])
+
+    print verticalEdgeOnLeft, horizontalEdgeOnTop
+
+    #if verticalEdgeOnLeft:
+    #    edge1 = -edge1
+    #if horizontalEdgeOnTop:
+    #    edge2 = -edge2
+
+    print edge1
+    print edge2
+
     edge1Length = 24 * .0254
     edge2Length = 12 * .0254
 
@@ -1282,7 +1294,7 @@ def segmentDrillWallConstrained(point1, point2):
     t.PostMultiply()
     t.Translate(triangleOrigin)
 
-    pointsInWallFrame = [np.array([0.0, 0.0, 0.0]), edge1*edge1Length, edge1*edge1Length + edge2*edge2Length]
+    pointsInWallFrame = [np.array([0.0, 0.0, 0.0]),  edge2*edge2Length, edge2*edge2Length + edge1*edge1Length]
 
     d = DebugData()
     for p in pointsInWallFrame:
@@ -2422,14 +2434,14 @@ def startDrillWallSegmentation():
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrillWall)
 
-def startDrillWallSegmentationConstrained():
+def startDrillWallSegmentationConstrained(verticalEdgeOnLeft, horizontalEdgeOnTop):
 
     picker = PointPicker(numberOfPoints=2)
     addViewPicker(picker)
     picker.enabled = True
     picker.drawLines = False
     picker.start()
-    picker.annotationFunc = functools.partial(segmentDrillWallConstrained)
+    picker.annotationFunc = functools.partial(segmentDrillWallConstrained, verticalEdgeOnLeft, horizontalEdgeOnTop)
 
 def startDrillInHandSegmentation():
 
