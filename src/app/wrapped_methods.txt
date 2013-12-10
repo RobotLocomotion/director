@@ -37,6 +37,10 @@ void ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
 QStringList ddDrakeModel::getLinkNames();
 void ddDrakeModel::setAlpha(double);
 void ddDrakeModel::setVisible(bool);
+QColor ddDrakeModel::color() const;
+void ddDrakeModel::setColor(const QColor&);
+void ddDrakeModel::setLinkColor(const QString&, const QColor&);
+
 
 double ddDrakeModel::alpha() const;
 bool ddDrakeModel::visible() const;

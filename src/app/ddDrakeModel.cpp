@@ -58,6 +58,7 @@ class ddMeshVisual
   vtkSmartPointer<vtkPolyData> PolyData;
   vtkSmartPointer<vtkActor> Actor;
   vtkSmartPointer<vtkTransform> Transform;
+  std::string Name;
 
 private:
 
@@ -441,6 +442,7 @@ public:
           boost::shared_ptr<urdf::Visual> vptr = visuals[iv];
 
           int visualType = vptr->geometry->type;
+          ddMeshVisual::Ptr meshVisual;
 
           if (visualType == urdf::Geometry::MESH)
           {
@@ -449,30 +451,29 @@ public:
             std::string filename = locateMeshFile(mesh, root_dir);
             if (filename.size())
             {
-              ddMeshVisual::Ptr meshVisual = loadMeshVisual(filename);
-              mesh_map[vptr] = meshVisual;
+              meshVisual = loadMeshVisual(filename);
             }
           }
           else if (visualType == urdf::Geometry::SPHERE)
           {
             boost::shared_ptr<urdf::Sphere> sphere(boost::dynamic_pointer_cast<urdf::Sphere>(vptr->geometry));
             double radius = sphere->radius;
-
-            ddMeshVisual::Ptr meshVisual =  makeSphereVisual(radius);
-            mesh_map[vptr] = meshVisual;
+            meshVisual =  makeSphereVisual(radius);
           }
           else if (visualType == urdf::Geometry::BOX)
           {
             boost::shared_ptr<urdf::Box> box(boost::dynamic_pointer_cast<urdf::Box>(vptr->geometry));
-
-            ddMeshVisual::Ptr meshVisual =  makeBoxVisual(box->dim.x, box->dim.y, box->dim.z);
-            mesh_map[vptr] = meshVisual;
+            meshVisual =  makeBoxVisual(box->dim.x, box->dim.y, box->dim.z);
           }
           else if (visualType == urdf::Geometry::CYLINDER)
           {
             boost::shared_ptr<urdf::Cylinder> cyl(boost::dynamic_pointer_cast<urdf::Cylinder>(vptr->geometry));
+            meshVisual =  makeCylinderVisual(cyl->radius, cyl->length);
+          }
 
-            ddMeshVisual::Ptr meshVisual =  makeCylinderVisual(cyl->radius, cyl->length);
+          if (meshVisual)
+          {
+            meshVisual->Name = l->second->name;
             mesh_map[vptr] = meshVisual;
           }
 
@@ -766,6 +767,7 @@ public:
   {
     this->Visible = true;
     this->Alpha = 1.0;
+    this->Color = Qt::white;
   }
 
   URDFRigidBodyManipulatorVTK::Ptr Model;
@@ -773,6 +775,7 @@ public:
   QString FileName;
   bool Visible;
   double Alpha;
+  QColor Color;
 };
 
 
@@ -995,6 +998,52 @@ void ddDrakeModel::removeFromRenderer(vtkRenderer* renderer)
 const QString& ddDrakeModel::filename() const
 {
   return this->Internal->FileName;
+}
+
+//-----------------------------------------------------------------------------
+QColor ddDrakeModel::color() const
+{
+  return this->Internal->Color;
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::setColor(const QColor& color)
+{
+  this->Internal->Color = color;
+
+  double red = color.redF();
+  double green = color.greenF();
+  double blue = color.blueF();
+  double alpha = color.alphaF();
+
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    visuals[i]->Actor->GetProperty()->SetColor(red, green, blue);
+  }
+  this->setAlpha(alpha);
+  emit this->modelChanged();
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::setLinkColor(const QString& linkName, const QColor& color)
+{
+  double red = color.redF();
+  double green = color.greenF();
+  double blue = color.blueF();
+  double alpha = color.alphaF();
+
+
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    if (visuals[i]->Name == linkName.toAscii().data())
+    {
+      visuals[i]->Actor->GetProperty()->SetColor(red, green, blue);
+      visuals[i]->Actor->GetProperty()->SetOpacity(alpha);
+    }
+  }
+  emit this->modelChanged();
 }
 
 //-----------------------------------------------------------------------------

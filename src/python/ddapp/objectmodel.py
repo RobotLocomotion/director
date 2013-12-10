@@ -110,6 +110,8 @@ class RobotModelItem(ObjectModelItem):
             self.model.setAlpha(self.getProperty(propertyName))
         elif propertyName == 'Visible':
             self.model.setVisible(self.getProperty(propertyName))
+        elif propertyName == 'Color':
+            self.model.setColor(self.getProperty(propertyName))
 
     def onModelChanged(self):
         for view in self.views:

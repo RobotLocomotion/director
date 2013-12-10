@@ -2,6 +2,7 @@
 #define __ddDrakeModel_h
 
 #include <QObject>
+#include <QColor>
 
 class vtkRenderer;
 class vtkTransform;
@@ -35,6 +36,11 @@ public:
 
   void setVisible(bool visible);
   bool visible() const;
+
+  QColor color() const;
+  void setColor(const QColor& color);
+
+  void setLinkColor(const QString& linkName, const QColor& color);
 
   static void addPackageSearchPath(const QString& searchPath);
   static QString findPackageDirectory(const QString& packageName);
