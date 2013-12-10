@@ -394,7 +394,7 @@ def init():
     chestLeft = CameraImageView(cameraView, 'CAMERACHEST_LEFT', 'Chest left')
     chestRight = CameraImageView(cameraView, 'CAMERACHEST_RIGHT', 'Chest right')
 
-    addCameraView('AFFORDANCE_OVERLAY', 'Affordance overlay')
+    #addCameraView('AFFORDANCE_OVERLAY', 'Affordance overlay')
 
     useAnaglyph = False
     if useAnaglyph:
