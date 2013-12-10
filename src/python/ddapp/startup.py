@@ -30,6 +30,8 @@ from ddapp import lcmUtils
 from ddapp.shallowCopy import shallowCopy
 import drc as lcmdrc
 
+import functools
+
 import numpy as np
 from ddapp.debugVis import DebugData
 from ddapp import ioUtils as io
@@ -279,6 +281,21 @@ def lockAffordanceToHand(aff, hand='l_hand'):
     aff.actor.GetUserTransform().SetMatrix(t.GetMatrix())
     aff.publish()
 
+
 affUpdater = TimerCallback()
 affUpdater.targetFps = 30
 affUpdater.callback = None
+
+
+def lockToHandOn():
+
+    aff = om.getActiveObject()
+    affUpdater.callback = functools.partial(lockAffordanceToHand, aff)
+    affUpdater.start()
+
+
+def lockToHandOff():
+    affUpdater.stop()
+    aff = om.getActiveObject()
+    aff.handToAffT = None
+    
