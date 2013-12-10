@@ -259,3 +259,26 @@ def updateDrill():
 drillUpdater = TimerCallback()
 drillUpdater.targetFps = 30
 drillUpdater.callback = updateDrill
+
+
+
+
+
+def lockAffordanceToHand(aff, hand='l_hand'):
+
+    linkFrame = getLinkFrame(hand)
+    affT = aff.actor.GetUserTransform()
+
+    if not hasattr(aff, 'handToAffT') or not aff.handToAffT:
+        aff.handToAffT = vis.computeAToB(linkFrame, affT)
+
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    t.Concatenate(aff.handToAffT)
+    t.Concatenate(linkFrame)
+    aff.actor.GetUserTransform().SetMatrix(t.GetMatrix())
+    aff.publish()
+
+affUpdater = TimerCallback()
+affUpdater.targetFps = 30
+affUpdater.callback = None

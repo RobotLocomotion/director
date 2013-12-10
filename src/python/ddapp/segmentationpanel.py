@@ -75,6 +75,11 @@ class SegmentationPanel(object):
         #l.addWidget(_makeButton('segment cinderblock wall', startSegmentDebrisWall))
         #l.addWidget(_makeButton('segment cinderblock wall manual', startSegmentDebrisWallManual))
         l.addWidget(_makeButton('segment truss', startTrussSegmentation))
+
+        self.lockAffordanceButton = _makeButton('lock affordance to hand', self.onLockAffordanceToHand)
+        self.lockAffordanceButton.checkable = True
+        l.addWidget(self.lockAffordanceButton)
+
         l.addStretch()
         return debrisWizard
 
@@ -245,6 +250,11 @@ class SegmentationPanel(object):
         rotation = (self.drillRotationSlider.value / 100.0) * 360
         self.drillOffset = getDrillInHandOffset(zRotation=rotation, flip=self.drillFlip)
         moveDrillToHand(self.drillOffset, hand)
+
+
+    def onLockAffordanceToHand(self):
+        pass
+
 
     def flipDrill(self):
         self.drillFlip = not self.drillFlip
