@@ -1190,6 +1190,7 @@ def segmentDrillWall(point1, point2, point3):
     aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     aff.actor.SetUserTransform(t)
     showFrame(t, 'wall frame', parent=aff, visible=False)
+    refitWallCallbacks.append(functools.partial(refitDrillWall, aff))
 
     params = dict(origin=points[0], xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
                   p1y=pointsInWallFrame[0][1], p1z=pointsInWallFrame[0][2],
@@ -1221,26 +1222,14 @@ def refitWall(point1):
         func(point1, origin, normal)
 
 
-def refitDrillWall(point1):
+def refitDrillWall(aff, point1, origin, normal):
 
-    inputObj = om.findObjectByName('pointcloud snapshot')
-    polyData = inputObj.polyData
+    t = aff.actor.GetUserTransform()
 
-    aff = om.findObjectByName('drill targets')
+    targetOrigin = np.array(t.GetPosition())
 
-    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
-    expectedNormal = np.cross(point2 - point1, [0.0, 0.0, 1.0])
-    expectedNormal /= np.linalg.norm(expectedNormal)
-    if np.dot(expectedNormal, viewPlaneNormal) < 0:
-        expectedNormal *= -1.0
-
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal, searchOrigin=point1, searchRadius=0.3, angleEpsilon=0.3, returnOrigin=True)
-
-    triangleOrigin = projectPointToPlane(point2, origin, normal)
-    edge1 = np.array([0.0, -1.0, 0.0])
-    edge2 = np.array([0.0, 0.0, -1.0])
-    edge1Length = 24 * .0254
-    edge2Length = 12 * .0254
+    projectedOrigin = projectPointToPlane(targetOrigin, origin, normal)
+    projectedOrigin[2] = targetOrigin[2]
 
     xaxis = -normal
     zaxis = [0, 0, 1]
@@ -1250,7 +1239,8 @@ def refitDrillWall(point1):
 
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
     t.PostMultiply()
-    t.Translate(triangleOrigin)
+    t.Translate(projectedOrigin)
+    aff.actor.GetUserTransform().SetMatrix(t.GetMatrix())
 
 
 def getGroundHeightFromFeet():
@@ -1303,6 +1293,7 @@ def segmentDrillWallConstrained(point1, point2):
 
     aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     aff.actor.SetUserTransform(t)
+    refitWallCallbacks.append(functools.partial(refitDrillWall, aff))
     frameObj = showFrame(t, 'wall frame', parent=aff, visible=False)
     frameObj.addToView(app.getDRCView())
 
