@@ -296,7 +296,7 @@ class MapServerSource(TimerCallback):
         TimerCallback.__init__(self)
         self.reader = None
         self.displayedMapId = -1
-        self.displayedViewId = lcmdrc.data_request_t.DEPTH_MAP_WORKSPACE_C
+        self.displayedViewId = lcmdrc.data_request_t.DEPTH_MAP_WORKSPACE
         self.targetFps = 10
         self.polyData = polyData or vtk.vtkPolyData()
         self.callbackFunc = callbackFunc

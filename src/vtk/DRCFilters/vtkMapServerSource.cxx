@@ -57,7 +57,7 @@
 namespace
 {
 
-const int WORKSPACE_DEPTH_VIEW_ID = drc::data_request_t::DEPTH_MAP_WORKSPACE_C;
+const int WORKSPACE_DEPTH_VIEW_ID = drc::data_request_t::DEPTH_MAP_WORKSPACE;
 
 //----------------------------------------------------------------------------
 vtkSmartPointer<vtkCellArray> NewVertexCells(vtkIdType numberOfVerts)
