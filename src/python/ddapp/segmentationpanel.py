@@ -152,24 +152,16 @@ class SegmentationPanel(object):
 
         hw = QtGui.QWidget()
         hl = QtGui.QHBoxLayout(hw)
-        hl.addWidget(QtGui.QLabel('veritcal edge:'))
+        hl.addWidget(QtGui.QLabel('right angle:'))
         hl.setMargin(0)
-        self.verticalEdgeCombo = QtGui.QComboBox()
-        self.verticalEdgeCombo.addItem('left')
-        self.verticalEdgeCombo.addItem('right')
-        hl.addWidget(self.verticalEdgeCombo)
+        self.rightAngleCombo = QtGui.QComboBox()
+        self.rightAngleCombo.addItem(DRILL_TRIANGLE_BOTTOM_LEFT)
+        self.rightAngleCombo.addItem(DRILL_TRIANGLE_BOTTOM_RIGHT)
+        self.rightAngleCombo.addItem(DRILL_TRIANGLE_TOP_LEFT)
+        self.rightAngleCombo.addItem(DRILL_TRIANGLE_TOP_RIGHT)
+        hl.addWidget(self.rightAngleCombo)
         l.addWidget(hw)
 
-
-        hw = QtGui.QWidget()
-        hl = QtGui.QHBoxLayout(hw)
-        hl.setMargin(0)
-        hl.addWidget(QtGui.QLabel('horizontal edge:'))
-        self.horizontalEdgeCombo = QtGui.QComboBox()
-        self.horizontalEdgeCombo.addItem('top')
-        self.horizontalEdgeCombo.addItem('bottom')
-        hl.addWidget(self.horizontalEdgeCombo)
-        l.addWidget(hw)
 
         l.addWidget(_makeButton('refit wall', startRefitWall))
 
@@ -268,21 +260,9 @@ class SegmentationPanel(object):
     def requestValveCirclePlan(self):
         self.drillTaskPanel.valveCirclePlan(self.circlePlanAngle.value)
 
-
     def segmentDrillWallConstrained(self):
-        verticalEdge = str(self.verticalEdgeCombo.currentText)
-        horizontalEdge = str(self.horizontalEdgeCombo.currentText)
-
-        print verticalEdge
-        print horizontalEdge
-
-        verticalEdgeOnLeft = verticalEdge == 'left'
-        horizontalEdgeOnTop = horizontalEdge == 'top'
-
-        print verticalEdgeOnLeft
-        print horizontalEdgeOnTop
-
-        startDrillWallSegmentationConstrained(verticalEdgeOnLeft, horizontalEdgeOnTop)
+        rightAngleLocation = str(self.rightAngleCombo.currentText)
+        startDrillWallSegmentationConstrained(rightAngleLocation)
 
     def moveDrillToHand(self):
         hand = self.handCombo.currentText

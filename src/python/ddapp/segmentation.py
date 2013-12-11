@@ -34,6 +34,12 @@ import vs as lcmvs
 from ddapp import lcmUtils
 
 
+DRILL_TRIANGLE_BOTTOM_LEFT = 'bottom left'
+DRILL_TRIANGLE_BOTTOM_RIGHT = 'bottom right'
+DRILL_TRIANGLE_TOP_LEFT = 'top left'
+DRILL_TRIANGLE_TOP_RIGHT = 'top right'
+
+
 def getSegmentationView():
     return app.getViewManager().findView('Segmentation View')
 
@@ -1253,7 +1259,7 @@ def getTranslationRelativeToFoot(t):
     rfoot = getLinkFrame('r_foot')
 
 
-def segmentDrillWallConstrained(verticalEdgeOnLeft, horizontalEdgeOnTop, point1, point2):
+def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
@@ -1268,22 +1274,6 @@ def segmentDrillWallConstrained(verticalEdgeOnLeft, horizontalEdgeOnTop, point1,
 
     triangleOrigin = projectPointToPlane(point2, origin, normal)
 
-    edge1 = np.array([0.0, -1.0, 0.0])
-    edge2 = np.array([0.0, 0.0, 1.0])
-
-    print verticalEdgeOnLeft, horizontalEdgeOnTop
-
-    #if verticalEdgeOnLeft:
-    #    edge1 = -edge1
-    #if horizontalEdgeOnTop:
-    #    edge2 = -edge2
-
-    print edge1
-    print edge2
-
-    edge1Length = 24 * .0254
-    edge2Length = 12 * .0254
-
     xaxis = -normal
     zaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
@@ -1294,7 +1284,30 @@ def segmentDrillWallConstrained(verticalEdgeOnLeft, horizontalEdgeOnTop, point1,
     t.PostMultiply()
     t.Translate(triangleOrigin)
 
-    pointsInWallFrame = [np.array([0.0, 0.0, 0.0]),  edge2*edge2Length, edge2*edge2Length + edge1*edge1Length]
+
+    edgeRight = np.array([0.0, -1.0, 0.0]) * (24 * .0254)
+    edgeUp = np.array([0.0, 0.0, 1.0]) * (12 * .0254)
+
+
+    pointsInWallFrame = [np.array([0.0, 0.0, 0.0])]
+
+    if rightAngleLocation == DRILL_TRIANGLE_BOTTOM_LEFT:
+        pointsInWallFrame.append(edgeRight - edgeUp)
+        pointsInWallFrame.append(-edgeUp)
+
+    elif rightAngleLocation == DRILL_TRIANGLE_BOTTOM_RIGHT:
+        pointsInWallFrame.append(edgeRight + edgeUp)
+        pointsInWallFrame.append(edgeRight)
+
+    elif rightAngleLocation == DRILL_TRIANGLE_TOP_LEFT:
+        pointsInWallFrame.append(edgeRight)
+        pointsInWallFrame.append(-edgeUp)
+
+    elif rightAngleLocation == DRILL_TRIANGLE_TOP_RIGHT:
+        pointsInWallFrame.append(edgeRight)
+        pointsInWallFrame.append(edgeRight - edgeUp)
+    else:
+        raise Exception('unexpected value for right angle location: ', + rightAngleLocation)
 
     d = DebugData()
     for p in pointsInWallFrame:
@@ -2434,14 +2447,14 @@ def startDrillWallSegmentation():
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrillWall)
 
-def startDrillWallSegmentationConstrained(verticalEdgeOnLeft, horizontalEdgeOnTop):
+def startDrillWallSegmentationConstrained(rightAngleLocation):
 
     picker = PointPicker(numberOfPoints=2)
     addViewPicker(picker)
     picker.enabled = True
     picker.drawLines = False
     picker.start()
-    picker.annotationFunc = functools.partial(segmentDrillWallConstrained, verticalEdgeOnLeft, horizontalEdgeOnTop)
+    picker.annotationFunc = functools.partial(segmentDrillWallConstrained, rightAngleLocation)
 
 def startDrillInHandSegmentation():
 
