@@ -123,6 +123,46 @@ output.ShallowCopy(t.GetOutput())
 '''
 
 
+
+def lockAffordanceToHand(aff, hand='l_hand'):
+
+    linkFrame = getLinkFrame(hand)
+    affT = aff.actor.GetUserTransform()
+
+    if not hasattr(aff, 'handToAffT') or not aff.handToAffT:
+        aff.handToAffT = computeAToB(linkFrame, affT)
+
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    t.Concatenate(aff.handToAffT)
+    t.Concatenate(linkFrame)
+    aff.actor.GetUserTransform().SetMatrix(t.GetMatrix())
+    aff.publish()
+
+
+handAffUpdater = TimerCallback()
+handAffUpdater.targetFps = 30
+handAffUpdater.callback = None
+
+
+def lockToHandOn():
+    aff = getDefaultAffordanceObject()
+    if not aff:
+        return
+    handAffUpdater.callback = functools.partial(lockAffordanceToHand, aff)
+    handAffUpdater.start()
+
+
+def lockToHandOff():
+
+    aff = getDefaultAffordanceObject()
+    if not aff:
+        return
+
+    handAffUpdater.stop()
+    aff.handToAffT = None
+
+
 def getRandomColor():
     '''
     Return a random color as a list of RGB values between 0.0 and 1.0.

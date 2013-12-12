@@ -270,14 +270,15 @@ class SegmentationPanel(object):
         self.drillOffset = getDrillInHandOffset(zRotation=rotation, flip=self.drillFlip)
         moveDrillToHand(self.drillOffset, hand)
 
-
     def onLockAffordanceToHand(self):
-        pass
-
+        lockEnabled = self.lockAffordanceButton.isChecked()
+        if lockEnabled:
+            lockToHandOn()
+        else:
+            lockToHandOff()
 
     def flipDrill(self):
         self.drillFlip = not self.drillFlip
-
         self.moveDrillToHand()
 
     def cancelCurrentTask(self):
