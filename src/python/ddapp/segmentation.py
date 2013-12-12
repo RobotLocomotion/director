@@ -131,9 +131,9 @@ def getRandomColor():
 
 
 
-def extractLargestCluster(polyData):
+def extractLargestCluster(polyData, minClusterSize=100):
 
-    polyData = applyEuclideanClustering(polyData)
+    polyData = applyEuclideanClustering(polyData, minClusterSize=minClusterSize)
     return thresholdPoints(polyData, 'cluster_labels', [1, 1])
 
 
@@ -1449,7 +1449,7 @@ def segmentDrillAuto(point1):
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
     searchRegion = cropToSphere(searchRegion, point1, 0.30)
-    drillPoints = extractLargestCluster(searchRegion)
+    drillPoints = extractLargestCluster(searchRegion, minClusterSize=1)
 
 
     # determine drill orientation (rotation about z axis)
