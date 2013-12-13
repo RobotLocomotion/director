@@ -342,6 +342,12 @@ void vtkFrameWidgetRepresentation::WidgetInteraction(double e[2])
                                                pos[0], pos[1], pos[2],
                                                focalPoint);
   z = focalPoint[2];
+
+  if (z >= 1.0)
+    {
+    z = 0.99;
+    }
+
   vtkInteractorObserver::ComputeDisplayToWorld(
                           this->Renderer,this->LastEventPosition[0],
                           this->LastEventPosition[1], z, prevPickPoint);
