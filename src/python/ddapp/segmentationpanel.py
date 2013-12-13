@@ -146,9 +146,40 @@ class SegmentationPanel(object):
         drillWizard = QtGui.QGroupBox('Drill Segmentation')
         l = QtGui.QVBoxLayout(drillWizard)
         l.addWidget(_makeButton('segment drill on table', startDrillAutoSegmentation))
-        l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
+        #l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
         #l.addWidget(_makeButton('segment wall', startDrillWallSegmentation))
-        l.addWidget(_makeButton('segment wall', self.segmentDrillWallConstrained))
+
+        hw = QtGui.QWidget()
+        hl = QtGui.QHBoxLayout(hw)
+        hl.setMargin(0)
+        hl.addWidget(_makeButton('move drill to hand', self.moveDrillToHand))
+        self.handCombo = QtGui.QComboBox()
+        self.handCombo.addItem('left')
+        self.handCombo.addItem('right')
+        hl.addWidget(self.handCombo)
+        hl.addWidget(_makeButton('flip z', self.flipDrill))
+        self.drillFlip = False
+        l.addWidget(hw)
+
+        self.drillRotationSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
+        self.drillRotationSlider.setMinimum(0)
+        self.drillRotationSlider.setMaximum(100)
+        self.drillRotationSlider.setValue(0)
+
+        self.drillOffsetSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
+        self.drillOffsetSlider.setMinimum(0)
+        self.drillOffsetSlider.setMaximum(100)
+        self.drillOffsetSlider.setValue(50)
+
+        hw = QtGui.QWidget()
+        hl = QtGui.QHBoxLayout(hw)
+        hl.setMargin(0)
+        hl.addWidget(self.drillRotationSlider)
+        hl.addWidget(self.drillOffsetSlider)
+        hw.connect(self.drillRotationSlider, 'valueChanged(int)', self.moveDrillToHand)
+        hw.connect(self.drillOffsetSlider, 'valueChanged(int)', self.moveDrillToHand)
+        l.addWidget(hw)
+
 
         hw = QtGui.QWidget()
         hl = QtGui.QHBoxLayout(hw)
@@ -162,26 +193,11 @@ class SegmentationPanel(object):
         hl.addWidget(self.rightAngleCombo)
         l.addWidget(hw)
 
-
+        l.addWidget(_makeButton('segment wall', self.segmentDrillWallConstrained))
         l.addWidget(_makeButton('refit wall', startRefitWall))
 
 
-        hw = QtGui.QWidget()
-        hl = QtGui.QHBoxLayout(hw)
-        hl.addWidget(_makeButton('move drill to hand', self.moveDrillToHand))
-        self.handCombo = QtGui.QComboBox()
-        self.handCombo.addItem('left')
-        self.handCombo.addItem('right')
-        hl.addWidget(self.handCombo)
-        hl.addWidget(_makeButton('flip z', self.flipDrill))
-        self.drillFlip = False
-        l.addWidget(hw)
-        self.drillRotationSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
-        self.drillRotationSlider.setMinimum(0)
-        self.drillRotationSlider.setMaximum(100)
-        self.drillRotationSlider.setValue(0)
-        l.addWidget(self.drillRotationSlider)
-        hw.connect(self.drillRotationSlider, 'valueChanged(int)', self.moveDrillToHand)
+
         l.addWidget(QtGui.QLabel(''))
 
 
@@ -267,7 +283,9 @@ class SegmentationPanel(object):
     def moveDrillToHand(self):
         hand = self.handCombo.currentText
         rotation = (self.drillRotationSlider.value / 100.0) * 360
-        self.drillOffset = getDrillInHandOffset(zRotation=rotation, flip=self.drillFlip)
+        offset = (self.drillOffsetSlider.value / 100.0) * 0.10 - 0.05
+
+        self.drillOffset = getDrillInHandOffset(zRotation=rotation, zTranslation=offset, flip=self.drillFlip)
         moveDrillToHand(self.drillOffset, hand)
 
     def onLockAffordanceToHand(self):
