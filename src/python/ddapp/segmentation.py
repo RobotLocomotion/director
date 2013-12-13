@@ -1329,32 +1329,39 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
     edgeUp = np.array([0.0, 0.0, 1.0]) * (12 * .0254)
 
 
-    pointsInWallFrame = [np.array([0.0, 0.0, 0.0])]
+    pointsInWallFrame = np.zeros((3,3))
 
     if rightAngleLocation == DRILL_TRIANGLE_BOTTOM_LEFT:
-        pointsInWallFrame.append(edgeRight - edgeUp)
-        pointsInWallFrame.append(-edgeUp)
+        pointsInWallFrame[1] = edgeUp
+        pointsInWallFrame[2] =  edgeRight
 
     elif rightAngleLocation == DRILL_TRIANGLE_BOTTOM_RIGHT:
-        pointsInWallFrame.append(edgeRight + edgeUp)
-        pointsInWallFrame.append(edgeRight)
+        pointsInWallFrame[1] = edgeRight + edgeUp
+        pointsInWallFrame[2] = edgeRight
 
     elif rightAngleLocation == DRILL_TRIANGLE_TOP_LEFT:
-        pointsInWallFrame.append(edgeRight)
-        pointsInWallFrame.append(-edgeUp)
+        pointsInWallFrame[1] = edgeRight
+        pointsInWallFrame[2] = -edgeUp
 
     elif rightAngleLocation == DRILL_TRIANGLE_TOP_RIGHT:
-        pointsInWallFrame.append(edgeRight)
-        pointsInWallFrame.append(edgeRight - edgeUp)
+        pointsInWallFrame[1] = edgeRight
+        pointsInWallFrame[2] = edgeRight - edgeUp
     else:
         raise Exception('unexpected value for right angle location: ', + rightAngleLocation)
+
+    center = pointsInWallFrame.sum(axis=0)/3.0
+    shrinkFactor = 0.90
+    shrinkPoints = (pointsInWallFrame - center) * shrinkFactor + center
 
     d = DebugData()
     for p in pointsInWallFrame:
         d.addSphere(p, radius=0.02)
 
-    for a, b in zip(pointsInWallFrame, pointsInWallFrame[1:] + [pointsInWallFrame[0]]):
-        d.addLine(a, b, radius=0.015)
+    for a, b in zip(pointsInWallFrame, np.vstack((pointsInWallFrame[1:], pointsInWallFrame[0]))):
+        d.addLine(a, b, radius=0.01)
+
+    for a, b in zip(shrinkPoints, np.vstack((shrinkPoints[1:], shrinkPoints[0]))):
+        d.addLine(a, b, radius=0.0025)
 
     aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     aff.actor.SetUserTransform(t)
@@ -1363,9 +1370,9 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
     frameObj.addToView(app.getDRCView())
 
     params = dict(origin=triangleOrigin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
-                  p1y=pointsInWallFrame[0][1], p1z=pointsInWallFrame[0][2],
-                  p2y=pointsInWallFrame[1][1], p2z=pointsInWallFrame[1][2],
-                  p3y=pointsInWallFrame[2][1], p3z=pointsInWallFrame[2][2],
+                  p1y=shrinkPoints[0][1], p1z=shrinkPoints[0][2],
+                  p2y=shrinkPoints[1][1], p2z=shrinkPoints[1][2],
+                  p3y=shrinkPoints[2][1], p3z=shrinkPoints[2][2],
                   friendly_name='drill_wall', otdf_type='drill_wall')
 
     aff.setAffordanceParams(params)
