@@ -10,7 +10,7 @@ def setVisProperties(obj, colorModeEnabled):
 
     if colorModeEnabled:
         alpha = 1.0
-        pointSize = 5.0
+        pointSize = 7.0
         colorBy = 'rgb'
     else:
         alpha = 0.3
@@ -46,7 +46,7 @@ def colorizeSegmentationLidar(enabled):
 def colorizeMapCallback():
     obj = om.findObjectByName('Map Server')
     colorizePoints(obj.polyData)
-    setVisProperties(obj, True)
+    obj.colorBy('rgb')
 
 
 def colorizeMaps(enabled):
