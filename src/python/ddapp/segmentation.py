@@ -1037,7 +1037,8 @@ def segmentWye(point1, point2):
     wyeObj = showPolyData(wyeMesh, 'wye', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     wyeObj.actor.SetUserTransform(t)
     wyeObj.addToView(app.getDRCView())
-    showFrame(t, 'wye frame', parent=wyeObj, visible=False)
+    frameObj = showFrame(t, 'wye frame', parent=wyeObj, visible=False)
+    frameObj.addToView(app.getDRCView())
 
     params = dict(origin=np.array(t.GetPosition()), xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='wye', otdf_type='wye')
     wyeObj.setAffordanceParams(params)
@@ -1185,7 +1186,8 @@ def segmentHoseNozzle(point1):
     obj = showPolyData(d.getPolyData(), 'hose nozzle', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
-    showFrame(t, 'nozzle frame', parent=obj, visible=False)
+    frameObj = showFrame(t, 'nozzle frame', parent=obj, visible=False)
+    frameObj.addToView(app.getDRCView())
 
     params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, friendly_name='firehose', otdf_type='firehose')
     obj.setAffordanceParams(params)
