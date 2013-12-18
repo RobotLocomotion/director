@@ -149,10 +149,16 @@ class SegmentationPanel(object):
         #l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
         #l.addWidget(_makeButton('segment wall', startDrillWallSegmentation))
 
+        self.drillUpdater = TimerCallback()
+        self.drillUpdater.targetFps = 30
+        self.drillUpdater.callback = self.moveDrillToHand
+
         hw = QtGui.QWidget()
         hl = QtGui.QHBoxLayout(hw)
         hl.setMargin(0)
-        hl.addWidget(_makeButton('move drill to hand', self.moveDrillToHand))
+        self.moveDrillToHandButton = _makeButton('move drill to hand', self.onMoveDrillToHandClicked)
+        self.moveDrillToHandButton.checkable = True
+        hl.addWidget(self.moveDrillToHandButton)
         self.handCombo = QtGui.QComboBox()
         self.handCombo.addItem('left')
         self.handCombo.addItem('right')
@@ -287,6 +293,18 @@ class SegmentationPanel(object):
 
         self.drillOffset = getDrillInHandOffset(zRotation=rotation, zTranslation=offset, flip=self.drillFlip)
         moveDrillToHand(self.drillOffset, hand)
+
+        aff = om.findObjectByName('drill')
+        if aff:
+            aff.publish()
+
+
+    def onMoveDrillToHandClicked(self):
+        enabled = self.moveDrillToHandButton.isChecked()
+        if enabled:
+            self.drillUpdater.start()
+        else:
+            self.drillUpdater.stop()
 
     def onLockAffordanceToHand(self):
         lockEnabled = self.lockAffordanceButton.isChecked()
