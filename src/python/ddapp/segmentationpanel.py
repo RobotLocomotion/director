@@ -229,6 +229,7 @@ class SegmentationPanel(object):
 
         buttons = QtGui.QWidget()
         l = QtGui.QHBoxLayout(buttons)
+        l.setMargin(0)
         l.addStretch()
         l.addWidget(self.cinderBlockButton)
         l.addWidget(self.cinderBlock2Button)
@@ -249,6 +250,7 @@ class SegmentationPanel(object):
 
         frame = QtGui.QWidget()
         l = QtGui.QHBoxLayout(frame)
+        l.setMargin(0)
         l.addWidget(w)
         l.addStretch()
         return frame
