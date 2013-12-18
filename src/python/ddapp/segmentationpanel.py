@@ -121,14 +121,40 @@ class SegmentationPanel(object):
     def _makeValveWizard(self):
         wizard = QtGui.QWidget()
         l = QtGui.QVBoxLayout(wizard)
-        l.addWidget(_makeButton('segment valve', functools.partial(startValveSegmentationByWallPlane, 0.195)))
-        l.addWidget(_makeButton('segment small valve', functools.partial(startValveSegmentationByWallPlane, 0.10)))
-        l.addWidget(_makeButton('segment bar', functools.partial(startInteractiveLineDraw, [0.015, 0.015])))
+
+
+        hw = QtGui.QWidget()
+        hl = QtGui.QHBoxLayout(hw)
+        hl.setMargin(0)
+        self.valveMethodCombo = QtGui.QComboBox()
+        self.valveMethodCombo.addItem('auto wall')
+        self.valveMethodCombo.addItem('manual')
+        hl.addWidget(QtGui.QLabel('method:'))
+        hl.addWidget(self.valveMethodCombo)
+        l.addWidget(hw)
+
+        l.addWidget(_makeButton('segment large valve', self.segmentLargeValve))
+        l.addWidget(_makeButton('segment small valve', self.segmentSmallValve))
+        l.addWidget(_makeButton('segment bar', self.segmentLeverValve))
+
+        hw = QtGui.QFrame()
+        hl = QtGui.QHBoxLayout(hw)
+        hl.setMargin(0)
+        hl.addWidget(_makeButton('segment value radius:', self.segmentValveCustomRadius))
+        self.valveRadiusSpin = QtGui.QSpinBox()
+        self.valveRadiusSpin.setMinimum(0)
+        self.valveRadiusSpin.setMaximum(99)
+        self.valveRadiusSpin.setSingleStep(1)
+        hl.addWidget(self.valveRadiusSpin)
+        hl.addWidget(QtGui.QLabel('cm'))
+        l.addWidget(hw)
+
         l.addWidget(QtGui.QLabel(''))
         l.addWidget(_makeButton('refit wall', startRefitWall))
 
         hw = QtGui.QFrame()
         hl = QtGui.QHBoxLayout(hw)
+        hl.setMargin(0)
         hl.addWidget(_makeButton('request valve circle plan', self.requestValveCirclePlan))
         self.circlePlanAngle = QtGui.QSpinBox()
         self.circlePlanAngle.setMinimum(-360)
@@ -283,6 +309,38 @@ class SegmentationPanel(object):
 
     def requestValveCirclePlan(self):
         self.drillTaskPanel.valveCirclePlan(self.circlePlanAngle.value)
+
+
+    def startValveSegmentation(self, radius):
+
+        method = self.valveMethodCombo.currentText
+
+        if method == 'auto wall':
+            func = startValveSegmentationByWallPlane
+        elif method == 'manual':
+            func = startValveSegmentationManual
+
+        func(radius)
+
+
+    def segmentLargeValve(self):
+
+        radiusInInches = 7.7
+        inchesToMeters = 0.0254
+        self.startValveSegmentation(radiusInInches * inchesToMeters)
+
+    def segmentSmallValve(self):
+
+        radiusInInches = 4.0
+        inchesToMeters = 0.0254
+        self.startValveSegmentation(radiusInInches * inchesToMeters)
+
+    def segmentValveCustomRadius(self):
+        valveRadius = self.valveRadiusSpin.value / 100.0
+        self.startValveSegmentation(valveRadius)
+
+    def segmentLeverValve(self):
+        startLeverValveSegmentation()
 
     def segmentDrillWallConstrained(self):
         rightAngleLocation = str(self.rightAngleCombo.currentText)

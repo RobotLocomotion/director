@@ -848,10 +848,17 @@ def startInteractiveLineDraw(blockDimensions):
     picker.annotationFunc = functools.partial(createLine, blockDimensions)
 
 
+def startLeverValveSegmentation():
+
+    picker = PointPicker(numberOfPoints=2)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentLeverValve)
+
 
 def refitValveAffordance(aff, point1, origin, normal):
-
-    print 'refitValveAffordance'
 
     xaxis = aff.params['xaxis']
     yaxis = aff.params['yaxis']
@@ -870,6 +877,61 @@ def refitValveAffordance(aff, point1, origin, normal):
 
     aff.actor.GetUserTransform().SetMatrix(t.GetMatrix())
     aff.updateParamsFromActorTransform()
+
+
+def segmentValve(expectedValveRadius, point1, point2):
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+
+    polyData, _, wallNormal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
+
+
+    wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(wallPoints, 'wall points', parent=getDebugFolder(), visible=False)
+
+
+    polyData, _, _ = applyPlaneFit(polyData, expectedNormal=wallNormal, searchOrigin=point2, searchRadius=expectedValveRadius, angleEpsilon=0.2, returnOrigin=True)
+    valveCluster = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    valveCluster = cropToSphere(valveCluster, point2, expectedValveRadius*2)
+    valveCluster = extractLargestCluster(valveCluster,  minClusterSize=1)
+    updatePolyData(valveCluster, 'valve cluster', parent=getDebugFolder(), visible=False)
+    origin = np.average(vtkNumpy.getNumpyFromVtk(valveCluster, 'Points') , axis=0)
+
+    zaxis = wallNormal
+    xaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    zwidth = 0.03
+    radius = expectedValveRadius
+
+
+    d = DebugData()
+    d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
+
+    name = 'valve affordance'
+    obj = showPolyData(d.getPolyData(), name, cls=CylinderAffordanceItem, parent='affordances')
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+    refitWallCallbacks.append(functools.partial(refitValveAffordance, obj))
+
+    params = dict(axis=zaxis, radius=radius, length=zwidth, origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis,
+                  xwidth=radius, ywidth=radius, zwidth=zwidth,
+                  otdf_type='steering_cyl', friendly_name='valve')
+
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
+
+    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
+    frameObj.addToView(app.getDRCView())
 
 
 def segmentValveByWallPlane(expectedValveRadius, point1, point2):
@@ -902,7 +964,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     updatePolyData(wallPoints, 'valve wall', parent=getDebugFolder(), visible=False)
 
-    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.05, 0.4])
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.05, 0.5])
     searchRegion = cropToLineSegment(searchRegion, point1, point2)
     searchRegion = cropToLineSegment(searchRegion, point3, point4)
 
@@ -915,7 +977,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     updatePolyData(searchRegion, 'valve search region 2', parent=getDebugFolder(), visible=False)
 
 
-    largestCluster = extractLargestCluster(searchRegion)
+    largestCluster = extractLargestCluster(searchRegion, minClusterSize=1)
 
     updatePolyData(largestCluster, 'valve cluster', parent=getDebugFolder(), visible=False)
 
@@ -994,6 +1056,51 @@ def applyICP(source, target):
 
 
 
+def segmentLeverValve(point1, point2):
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
+
+
+    wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(wallPoints, 'wall points', parent=getDebugFolder(), visible=False)
+
+    radius = 0.01
+    length = 0.33
+
+    zaxis = normal
+    xaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(point2)
+
+    leverP1 = point2
+    leverP2 = point2 + xaxis * length
+    d = DebugData()
+    d.addLine([0,0,0], [length, 0, 0], radius=radius)
+    geometry = d.getPolyData()
+
+
+    obj = showPolyData(geometry, 'valve lever', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+    frameObj = showFrame(t, 'lever frame', parent=obj, visible=False)
+    frameObj.addToView(app.getDRCView())
+
+    otdfType = 'lever_valve'
+    params = dict(origin=np.array(t.GetPosition()), xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, radius=radius, length=length, friendly_name=otdfType, otdf_type=otdfType)
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
+
+
 def segmentWye(point1, point2):
 
 
@@ -1007,11 +1114,6 @@ def segmentWye(point1, point2):
 
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     updatePolyData(wallPoints, 'wall points', parent=getDebugFolder(), visible=False)
-
-    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
-    searchRegion = cropToSphere(searchRegion, point2, 0.30)
-    wyePoints = extractLargestCluster(searchRegion)
-    updatePolyData(wyePoints, 'wye cluster', parent=getDebugFolder(), visible=False)
 
     wyeMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/wye.obj'))
 
@@ -1056,11 +1158,6 @@ def segmentDoorHandle(otdfType, point1, point2):
 
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     updatePolyData(wallPoints, 'wall points', parent=getDebugFolder(), visible=False)
-
-    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.03, 0.4])
-    searchRegion = cropToSphere(searchRegion, point2, 0.30)
-    handlePoints = extractLargestCluster(searchRegion)
-    updatePolyData(handlePoints, 'handle cluster', parent=getDebugFolder(), visible=False)
 
     handlePoint = np.array([0.005, 0.065, 0.011])
 
@@ -2385,6 +2482,16 @@ def startValveSegmentationByWallPlane(expectedValveRadius):
     picker.enabled = True
     picker.start()
     picker.annotationFunc = functools.partial(segmentValveByWallPlane, expectedValveRadius)
+
+
+def startValveSegmentationManual(expectedValveRadius):
+
+    picker = PointPicker(numberOfPoints=2)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentValve, expectedValveRadius)
 
 
 def startRefitWall():
