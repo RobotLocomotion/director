@@ -135,6 +135,8 @@ if usePerception:
     robotStateModel = om.addRobotModel(robotStateModel, sensorsFolder)
     robotStateModel.addToView(view)
 
+    cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
+
     def grabRobotState():
         poseName = 'EST_ROBOT_STATE'
         robotStatePose = robotStateJointController.poses[poseName]
@@ -248,5 +250,3 @@ def resetCameraToHeadView():
 tc = TimerCallback()
 tc.targetFps = 60
 tc.callback = resetCameraToHeadView
-
-cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
