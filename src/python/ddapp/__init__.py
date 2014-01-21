@@ -16,7 +16,7 @@ def _updateSysPath():
                 'vtk/__init__.py'
                 ]
 
-    baseDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
+    baseDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../../externals/pod-build/src'))
 
     searchPaths = []
     searchPaths.append(os.path.join(baseDir, 'PointCloudLibraryPlugin-build/lib'))
