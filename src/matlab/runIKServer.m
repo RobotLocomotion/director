@@ -1,7 +1,8 @@
 
 s = IKServer();
 
-robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_fixedjoint_hands.urdf'];
+%robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_fixedjoint_hands.urdf'];
+robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_point_hands.urdf'];
 %robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot/model_LN_RI.urdf'];
 
 s = s.addRobot(robotURDF);

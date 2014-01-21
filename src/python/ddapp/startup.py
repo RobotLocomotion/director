@@ -80,7 +80,7 @@ if useIk:
     om.addPlaceholder('matlab server', om.Icons.Matlab, ikFolder)
 
     #urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_fixedjoint_hands.urdf')
-    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_LS_RI.urdf')
+    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_LI_RR.urdf')
 
     model = app.loadRobotModelFromFile(urdfFile)
     obj = om.addRobotModel(model, ikFolder)
