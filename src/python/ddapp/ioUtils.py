@@ -2,7 +2,7 @@ import os
 import vtkAll as vtk
 from shallowCopy import shallowCopy
 
-def readPolyData(filename):
+def readPolyData(filename, computeNormals=False):
 
     ext = os.path.splitext(filename)[1]
 
@@ -21,7 +21,12 @@ def readPolyData(filename):
     reader = readers[ext]()
     reader.SetFileName(filename)
     reader.Update()
-    return shallowCopy(reader.GetOutput())
+    polyData = shallowCopy(reader.GetOutput())
+
+    if computeNormals:
+        return _computeNormals(polyData)
+    else:
+        return polyData
 
 
 def writePolyData(polyData, filename):
@@ -41,3 +46,11 @@ def writePolyData(polyData, filename):
     writer.SetFileName(filename)
     writer.SetInput(polyData)
     writer.Update()
+
+
+def _computeNormals(polyData):
+    normals = vtk.vtkPolyDataNormals()
+    normals.SetFeatureAngle(45)
+    normals.SetInput(polyData)
+    normals.Update()
+    return shallowCopy(normals.GetOutput())
