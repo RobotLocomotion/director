@@ -21,6 +21,8 @@ from ddapp import perception
 from ddapp import segmentation
 from ddapp import cameraview
 from ddapp import colorize
+from ddapp import robotstate
+from ddapp import footsteps
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
@@ -54,10 +56,10 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = False
-usePerception = True
-useSpreadsheet = False
-
+useIk = True
+usePerception = False
+useSpreadsheet = True
+useFootsteps = True
 
 
 
@@ -85,6 +87,8 @@ if useIk:
     model = app.loadRobotModelFromFile(urdfFile)
     obj = om.addRobotModel(model, ikFolder)
     obj.addToView(ikview)
+    defaultRobotModel = obj
+
 
     useTable = False
     if useTable:
@@ -100,19 +104,28 @@ if useIk:
     jc.addPose('q_end', jc.poses['q_nom'])
     jc.addPose('q_start', jc.poses['q_nom'])
 
-    s = ik.AsyncIKCommunicator(jc)
-    s.outputConsole = app.getOutputConsole()
-    s.infoFunc = app.displaySnoptInfo
-    s.start()
-    s.startServerAsync()
 
-    e = ikeditor.IKEditor(app.getMainWindow(), s, poseCollection, costCollection)
-    e.makeFrameWidget(ikview)
-    app.addWidgetToDock(e.widget)
-    tdx.init(ikview, e)
+    def startIkServer():
+        s = ik.AsyncIKCommunicator(jc)
+        s.outputConsole = app.getOutputConsole()
+        s.infoFunc = app.displaySnoptInfo
+        s.start()
+        s.startServerAsync()
+
+        e = ikeditor.IKEditor(app.getMainWindow(), s, poseCollection, costCollection)
+        e.makeFrameWidget(ikview)
+        app.addWidgetToDock(e.widget)
+        tdx.init(ikview, e)
+
+    startAutomatically = False
+    if startAutomatically:
+        startIkServer()
 
     app.resetCamera(viewDirection=[-1,0,0], view=ikview)
 
+
+if useFootsteps:
+    footsteps.init()
 
 if usePerception:
 
@@ -134,6 +147,7 @@ if usePerception:
     sensorsFolder = om.getOrCreateContainer('sensors')
     robotStateModel = om.addRobotModel(robotStateModel, sensorsFolder)
     robotStateModel.addToView(view)
+    defaultRobotModel = robotStateModel
 
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
 
@@ -142,6 +156,21 @@ if usePerception:
         robotStatePose = robotStateJointController.poses[poseName]
         s.sendPoseToServer(robotStatePose, poseName)
         s.forcePose(poseName)
+
+
+    def onRobotModel(m):
+        model = app.loadRobotModelFromString(m.urdf_xml_string)
+        sensorsFolder = om.getOrCreateContainer('sensors')
+        obj = om.addRobotModel(model, sensorsFolder)
+        obj.setProperty('Name', 'model publisher')
+        robotStateJointController.models.append(model)
+
+        global robotStateModel
+        obj.addToView(robotStateModel.views[0])
+        robotStateModel.setProperty('Visible', False)
+        robotStateModel = obj
+
+    lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
 
 
     def setupFinger(pos):
@@ -188,13 +217,37 @@ def affUpdaterOff():
 
 def getLinkFrame(linkName, model=None):
     t = vtk.vtkTransform()
-    model = model or robotStateModel
+    model = model or defaultRobotModel
     model.model.getLinkToWorld(linkName, t)
     return t
 
 
 def showLinkFrame(linkName, model=None):
     return vis.updateFrame(getLinkFrame(linkName, model), linkName, parent='link frames')
+
+
+
+def createWalkingGoal():
+
+    distanceForward = 1.0
+
+    t1 = getLinkFrame('l_foot')
+    t2 = getLinkFrame('r_foot')
+    pelvisT = getLinkFrame('pelvis')
+
+    heading = np.array([1.0, 0.0, 0.0])
+    pelvisT.TransformVector(heading, heading)
+
+    t1ToT2 = np.array(t2.GetPosition()) - np.array(t1.GetPosition())
+
+    footHeight=0.0817
+    footHeight = t1.GetPosition()[2]
+
+    t1.Translate(t1ToT2/2.0)
+    t1.Translate([0.0, 0.0, -footHeight])
+    t1.Translate(heading * distanceForward)
+
+    footsteps.createWalkingGoal(t1)
 
 
 def resetCameraToRobot():
@@ -209,21 +262,6 @@ def resetCameraToRobot():
     c.SetViewUp([0.0, 0.0, 1.0])
     view.render()
 
-
-def onRobotModel(m):
-    model = app.loadRobotModelFromString(m.urdf_xml_string)
-    sensorsFolder = om.getOrCreateContainer('sensors')
-    obj = om.addRobotModel(model, sensorsFolder)
-    obj.setProperty('Name', 'model publisher')
-    robotStateJointController.models.append(model)
-
-    global robotStateModel
-    obj.addToView(robotStateModel.views[0])
-    robotStateModel.setProperty('Visible', False)
-    robotStateModel = obj
-
-
-lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
 
 def resetCameraToHeadView():
 
@@ -245,6 +283,12 @@ def resetCameraToHeadView():
     camera.SetViewUp([0, 0, 1])
     camera.SetViewAngle(90)
     view.render()
+
+
+def sendEstRobotState(poseName='q_end'):
+    pose = jc.getPose(poseName)
+    msg = robotstate.drakePoseToRobotState(pose)
+    lcmUtils.publish('EST_ROBOT_STATE', msg)
 
 
 tc = TimerCallback()

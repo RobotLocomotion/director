@@ -11,6 +11,7 @@ set(python_files
   ddapp/colorize.py
   ddapp/debugVis.py
   ddapp/drilltaskpanel.py
+  ddapp/footsteps.py
   ddapp/ikeditor.py
   ddapp/ik.py
   ddapp/__init__.py
@@ -42,6 +43,7 @@ set(python_files
   #ddapp/macros/get_polydata.py
   ddapp/macros/popout.py
   ddapp/macros/publish.py
+  ddapp/macros/new_walking_goal.py
 
   ddapp/macros/segmentation_view/ortho_x.py
   ddapp/macros/segmentation_view/ortho_y.py
