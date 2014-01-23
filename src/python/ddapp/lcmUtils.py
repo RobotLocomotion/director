@@ -1,7 +1,7 @@
 import lcm
 import PythonQt
 from PythonQt import QtCore
-
+import pickle
 
 class GlobalLCM(object):
 
@@ -95,3 +95,12 @@ def addSubscriber(channel, messageClass, callback):
 
 def publish(channel, message):
     getGlobalLCM().publish(channel, message.encode())
+
+
+def dumpMessage(msg, filename):
+    pickle.dump((type(msg), msg.encode()), open(filename, 'w'))
+
+
+def loadMessage(filename):
+    cls, bytes = pickle.load(open('walking_goal_t.pkl'))
+    return cls.decode(bytes)
