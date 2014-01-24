@@ -114,7 +114,7 @@ bool ddBotImageQueue::addCameraStream(const QString& cameraName)
   QString channel = cameraName;
 
 
-  bool useImagesMessage = false;
+  bool useImagesMessage = true;
 
   if (useImagesMessage && cameraName == "CAMERA_LEFT")
   {
