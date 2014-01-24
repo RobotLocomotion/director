@@ -216,10 +216,8 @@ def affUpdaterOff():
 
 
 def getLinkFrame(linkName, model=None):
-    t = vtk.vtkTransform()
     model = model or defaultRobotModel
-    model.model.getLinkToWorld(linkName, t)
-    return t
+    return model.getLinkFrame(linkName)
 
 
 def showLinkFrame(linkName, model=None):
