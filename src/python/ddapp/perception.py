@@ -7,6 +7,7 @@ from PythonQt import QtCore, QtGui
 import ddapp.objectmodel as om
 from ddapp import robotstate
 from ddapp.timercallback import TimerCallback
+from ddapp.utime import getUtime
 import vtkDRCFiltersPython as drc
 from ddapp.debugVis import DebugData
 import numpy as np
@@ -40,12 +41,13 @@ def setMultisenseRevolutionTime(secondsPerRevolution):
     assert secondsPerRevolution >= 1.0
 
     m = lcmmultisense.command_t()
-    m.utime = 0
-    m.fps = 5
-    m.gain = 4
+    m.utime = getUtime()
+    m.fps = -1
+    m.gain = -1
+    m.agc = -1
     m.rpm = 60.0 / (secondsPerRevolution)
 
-    lcmUtils.GlobalLCM.get().publish('MULTISENSE_COMMAND', m.encode())
+    lcmUtils.publish('MULTISENSE_COMMAND', m)
 
 
 def setNeckPitch(neckPitchDegrees):
