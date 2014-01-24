@@ -846,18 +846,20 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
 
 
 //-----------------------------------------------------------------------------
-void ddDrakeModel::getLinkToWorld(const QString& linkName, vtkTransform* transform)
+bool ddDrakeModel::getLinkToWorld(const QString& linkName, vtkTransform* transform)
 {
   if (!transform || !this->Internal->Model)
   {
-    return;
+    return false;
   }
 
   vtkSmartPointer<vtkTransform> linkToWorld = this->Internal->Model->getLinkToWorld(linkName);
   if (linkToWorld)
   {
     transform->SetMatrix(linkToWorld->GetMatrix());
+    return true;
   }
+  return false;
 }
 
 //-----------------------------------------------------------------------------
