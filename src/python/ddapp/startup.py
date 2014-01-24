@@ -23,6 +23,8 @@ from ddapp import cameraview
 from ddapp import colorize
 from ddapp import robotstate
 from ddapp import footsteps
+from ddapp import atlasdriver
+from ddapp import atlasdriverpanel
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
@@ -60,7 +62,7 @@ useIk = True
 usePerception = False
 useSpreadsheet = True
 useFootsteps = True
-
+useAtlasDriver = True
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -123,6 +125,10 @@ if useIk:
 
     app.resetCamera(viewDirection=[-1,0,0], view=ikview)
 
+
+if useAtlasDriver:
+    atlasdriver.init()
+    atlasdriverpanel.init(atlasdriver.driver)
 
 if useFootsteps:
     footsteps.init()
