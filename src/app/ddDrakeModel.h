@@ -28,7 +28,7 @@ public:
 
   void setEstRobotState(const QList<double>& robotState);
 
-  void getLinkToWorld(const QString& linkName, vtkTransform* transform);
+  bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
   QList<QString> getLinkNames();
 
   void setAlpha(double alpha);

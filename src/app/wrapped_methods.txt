@@ -33,7 +33,7 @@ void ddDrakeModel::removeFromRenderer(vtkRenderer*);
 int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QList<double>&);
 void ddDrakeModel::setEstRobotState(const QList<double>&);
-void ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
+bool ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
 QStringList ddDrakeModel::getLinkNames();
 void ddDrakeModel::setAlpha(double);
 void ddDrakeModel::setVisible(bool);
