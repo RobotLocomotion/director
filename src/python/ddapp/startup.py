@@ -58,9 +58,9 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = True
-usePerception = False
-useSpreadsheet = True
+useIk = False
+usePerception = True
+useSpreadsheet = False
 useFootsteps = True
 useAtlasDriver = True
 
@@ -230,28 +230,8 @@ def showLinkFrame(linkName, model=None):
     return vis.updateFrame(getLinkFrame(linkName, model), linkName, parent='link frames')
 
 
-
 def createWalkingGoal():
-
-    distanceForward = 1.0
-
-    t1 = getLinkFrame('l_foot')
-    t2 = getLinkFrame('r_foot')
-    pelvisT = getLinkFrame('pelvis')
-
-    heading = np.array([1.0, 0.0, 0.0])
-    pelvisT.TransformVector(heading, heading)
-
-    t1ToT2 = np.array(t2.GetPosition()) - np.array(t1.GetPosition())
-
-    footHeight=0.0817
-    footHeight = t1.GetPosition()[2]
-
-    t1.Translate(t1ToT2/2.0)
-    t1.Translate([0.0, 0.0, -footHeight])
-    t1.Translate(heading * distanceForward)
-
-    footsteps.createWalkingGoal(t1)
+    footsteps.createWalkingGoal(defaultRobotModel)
 
 
 def resetCameraToRobot():
