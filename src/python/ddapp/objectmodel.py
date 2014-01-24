@@ -117,6 +117,13 @@ class RobotModelItem(ObjectModelItem):
         for view in self.views:
             view.render()
 
+    def getLinkFrame(self, linkName):
+        t = vtk.vtkTransform()
+        if self.model.getLinkToWorld(linkName, t):
+            return t
+        else:
+            return None
+
     def addToView(self, view):
         if view in self.views:
             return
