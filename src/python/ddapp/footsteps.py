@@ -18,7 +18,7 @@ import drc as lcmdrc
 
 
 waitingForPlan = False
-
+lastFootstepPlan = None
 
 class WidgetCallback(TimerCallback):
 
@@ -126,6 +126,9 @@ def onCandidateFootstepPlan(msg):
     global waitingForPlan
     waitingForPlan = False
 
+    global lastFootstepPlan
+    lastFootstepPlan = msg
+
 
 def positionMessageFromFrame(transform):
 
@@ -144,9 +147,32 @@ def positionMessageFromFrame(transform):
 
 
 
-def createWalkingGoal(transform):
+def createWalkingGoal(model):
 
-    frameObj = vis.showFrame(transform, 'walking goal')
+    distanceForward = 1.0
+
+    t1 = model.getLinkFrame('l_foot')
+    t2 = model.getLinkFrame('r_foot')
+    pelvisT = model.getLinkFrame('pelvis')
+
+    xaxis = [1.0, 0.0, 0.0]
+    pelvisT.TransformVector(xaxis, xaxis)
+    xaxis = np.array(xaxis)
+    zaxis = np.array([0.0, 0.0, 1.0])
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+
+    stancePosition = np.array(t2.GetPosition()) + np.array(t1.GetPosition()) / 2.0
+
+    footHeight=0.0817
+
+    t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(stancePosition)
+    t.Translate([0.0, 0.0, -footHeight])
+    t.Translate(xaxis*distanceForward)
+
+    frameObj = vis.showFrame(t, 'walking goal')
     callback = WidgetCallback(frameObj)
     callback.start()
     frameObj.callback = callback
@@ -158,20 +184,60 @@ def sendWalkingGoal():
     goalObj = om.findObjectByName('walking goal')
     assert goalObj
 
-    msg = lcmUtils.loadMessage('walking_goal_t.pkl')
-    msg.utime = getUtime()
+    msg = lcmdrc.walking_goal_t()
     msg.goal_pos = positionMessageFromFrame(goalObj.transform)
     msg.max_num_steps = 100
-    msg.follow_spline = 1
-    msg.allow_optimization = False
-
-    msg.nom_forward_step = 0.20
+    msg.min_num_steps = 0
+    msg.timeout = 0
+    msg.step_speed = 1.0
+    msg.min_step_width = 0.21
+    msg.nom_step_width = 0.25
+    msg.max_step_width = 0.4
+    msg.nom_forward_step = 0.15
+    msg.max_forward_step = 0.45
+    msg.step_height = 0.05
+    msg.fixed_step_duration = 0.0
+    msg.bdi_step_duration = 2.0
+    msg.bdi_sway_duration = 0.0
+    msg.bdi_lift_height = 0.05
+    msg.bdi_toe_off = 1
+    msg.bdi_knee_nominal = 0.0
+    msg.bdi_max_foot_vel = 0.0
+    msg.bdi_sway_end_dist = 0.02
+    msg.bdi_step_end_dist = 0.02
+    msg.follow_spline = False
+    msg.ignore_terrain = False
+    msg.force_to_sticky_feet = False
+    msg.goal_type = msg.GOAL_TYPE_CENTER
+    msg.mu = 1.0
+    msg.behavior = msg.BEHAVIOR_BDI_STEPPING
+    msg.map_command = 2
+    msg.velocity_based_steps = False
+    msg.allow_optimization = True
+    msg.is_new_goal = True
+    msg.right_foot_lead = msg.LEAD_AUTO
+    msg.utime = getUtime()
 
     global waitingForPlan
     waitingForPlan = True
 
     lcmUtils.publish('WALKING_GOAL', msg)
     return msg
+
+
+def sendStopWalking():
+    msg = lcmdrc.plan_control_t()
+    msg.utime = getUtime()
+    msg.control = lcmdrc.plan_control_t.TERMINATE
+    lcmUtils.publish('STOP_WALKING', msg)
+
+
+def commitFootstepPlan():
+    global lastFootstepPlan
+    if lastFootstepPlan is not None:
+        lastFootstepPlan.utime = getUtime()
+        lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', lastFootstepPlan)
+        lastFootstepPlan = None
 
 
 def init():
