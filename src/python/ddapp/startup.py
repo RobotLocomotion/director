@@ -23,6 +23,7 @@ from ddapp import cameraview
 from ddapp import colorize
 from ddapp import robotstate
 from ddapp import footsteps
+from ddapp import footstepspanel
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import vtkNumpy as vnp
@@ -132,6 +133,8 @@ if useAtlasDriver:
 
 if useFootsteps:
     footsteps.init()
+    footstepspanel.init()
+
 
 if usePerception:
 

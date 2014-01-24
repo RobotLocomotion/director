@@ -14,6 +14,7 @@ set(python_files
   ddapp/debugVis.py
   ddapp/drilltaskpanel.py
   ddapp/footsteps.py
+  ddapp/footstepspanel.py
   ddapp/ikeditor.py
   ddapp/ik.py
   ddapp/__init__.py
