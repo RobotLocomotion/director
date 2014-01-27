@@ -901,6 +901,11 @@ void ddDrakeModel::setEstRobotState(const QList<double>& robotState)
   const std::map<std::string, int> dofMap = model->dof_map[0];
   std::vector<std::string> dofNames = getEstRobotStateJointNames();
 
+  if (robotState.size() == 35)
+  {
+    dofNames.pop_back();
+  }
+
   MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
   for (int i = 0; i < dofNames.size(); ++i)
   {
