@@ -59,11 +59,11 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = False
-usePerception = True
-useSpreadsheet = False
-useFootsteps = True
-useAtlasDriver = True
+useIk = True
+usePerception = False
+useSpreadsheet = True
+useFootsteps = False
+useAtlasDriver = False
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -281,3 +281,50 @@ def sendEstRobotState(poseName='q_end'):
 tc = TimerCallback()
 tc.targetFps = 60
 tc.callback = resetCameraToHeadView
+
+
+
+class ViewEventFilter(object):
+
+    def __init__(self, view):
+        self.view = view
+        self.initEventFilter()
+        self.doubleClickCallback = None
+
+
+    def filterEvent(self, obj, event):
+        if event.type() == QtCore.QEvent.MouseButtonDblClick:
+            if self.doubleClickCallback:
+                result = self.doubleClickCallback(vis.mapMousePosition(obj, event))
+                self.eventFilter.setEventHandlerResult(result)
+
+    def initEventFilter(self):
+        self.eventFilter = PythonQt.dd.ddPythonEventFilter()
+        qvtkwidget = self.view.vtkWidget()
+        qvtkwidget.installEventFilter(self.eventFilter)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
+        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
+
+
+def onViewDoubleClicked(displayPoint):
+
+    model = defaultRobotModel.model
+
+    polyData, pickedPoint = vis.pickPoint(displayPoint, view=ikview, pickType='cells')
+    linkName = model.getLinkNameForMesh(polyData)
+    if not linkName:
+        return False
+
+    colorNoHighlight = QtGui.QColor(190, 190, 190)
+    colorHighlight = QtCore.Qt.red
+
+    linkNames = [linkName]
+    model.setColor(colorNoHighlight)
+
+    for name in linkNames:
+        model.setLinkColor(name, colorHighlight)
+
+    return True
+
+ef = ViewEventFilter(ikview)
+ef.doubleClickCallback = onViewDoubleClicked
