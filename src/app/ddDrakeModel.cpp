@@ -873,6 +873,21 @@ QList<QString> ddDrakeModel::getLinkNames()
 }
 
 //-----------------------------------------------------------------------------
+QString ddDrakeModel::getLinkNameForMesh(vtkPolyData* polyData)
+{
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    if (visuals[i]->PolyData == polyData)
+    {
+      return visuals[i]->Name.c_str();
+    }
+  }
+  return QString();
+}
+
+
+//-----------------------------------------------------------------------------
 void ddDrakeModel::setEstRobotState(const QList<double>& robotState)
 {
   URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;

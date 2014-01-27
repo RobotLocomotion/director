@@ -6,6 +6,7 @@
 
 class vtkRenderer;
 class vtkTransform;
+class vtkPolyData;
 
 class ddDrakeModel : public QObject
 {
@@ -30,6 +31,8 @@ public:
 
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
   QList<QString> getLinkNames();
+
+  QString getLinkNameForMesh(vtkPolyData* polyData);
 
   void setAlpha(double alpha);
   double alpha() const;
