@@ -387,6 +387,8 @@ void vtkFrameWidgetRepresentation::Translate(double *p1, double *p2)
 
   vtkMath::ProjectVector(v, axis, v);
   this->Internal->Transform->Translate(v[0], v[1], v[2]);
+
+  this->Internal->Transform->Modified();
 }
 
 //----------------------------------------------------------------------------
@@ -404,6 +406,8 @@ void vtkFrameWidgetRepresentation::TranslateInPlane(double *p1, double *p2)
   double v[3] = {p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2]};
 
   this->Internal->Transform->Translate(v[0], v[1], v[2]);
+
+  this->Internal->Transform->Modified();
 }
 
 //----------------------------------------------------------------------------
@@ -514,6 +518,8 @@ void vtkFrameWidgetRepresentation::Rotate(int X,
     }
 
   this->Internal->Transform->Translate(pos[0], pos[1], pos[2]);
+
+  this->Internal->Transform->Modified();
 }
 
 //----------------------------------------------------------------------------
