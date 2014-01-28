@@ -33,6 +33,7 @@ class JointController(object):
         if poseName not in self.poses:
             raise Exception('Pose %r has not been defined.' % poseName)
         self.q = self.poses[poseName]
+        self.currentPoseName = poseName
         self.push()
 
     def setZeroPose(self):
