@@ -26,6 +26,7 @@ from ddapp import footsteps
 from ddapp import footstepspanel
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
+from ddapp import robotplanlistener
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
@@ -62,7 +63,8 @@ updatePolyData = segmentation.updatePolyData
 useIk = True
 usePerception = False
 useSpreadsheet = True
-useFootsteps = False
+useFootsteps = True
+usePlanning = False
 useAtlasDriver = False
 
 
@@ -134,6 +136,24 @@ if useAtlasDriver:
 if useFootsteps:
     footsteps.init()
     footstepspanel.init()
+
+
+if usePlanning:
+    planListener = robotplanlistener.RobotPlanListener()
+    planListener.playbackSpeed = 5.0
+
+    def planCallback():
+        planListener.stopAnimation()
+        planListener.playPlan(jc)
+        planListener.picklePlan('plan.pkl')
+
+    def animationCallback():
+        sendEstRobotState(jc.currentPoseName)
+
+    planListener.manipPlanCallback = planCallback
+    planListener.animationCallback = animationCallback
+
+    app.addToolbarMacro('plot plan', planListener.plotPlan)
 
 
 if usePerception:
