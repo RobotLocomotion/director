@@ -242,6 +242,6 @@ def commitFootstepPlan():
 
 def init():
 
-    lcmUtils.addSubscriber('CANDIDATE_BDI_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, onCandidateFootstepPlan)
+    lcmUtils.addSubscriber('CANDIDATE_BDI_FOOTSTEP_PLAN', lcmdrc.deprecated_footstep_plan_t, onCandidateFootstepPlan)
 
 
