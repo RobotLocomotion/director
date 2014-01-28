@@ -19,7 +19,8 @@ class TimerCallback(object):
         '''
         Start the timer.
         '''
-        self.lastTickTime = time.time()
+        self.startTime = time.time()
+        self.lastTickTime = self.startTime
         self.timer.start(0)
 
     def stop(self):
@@ -34,9 +35,10 @@ class TimerCallback(object):
         '''
         if self.callback:
             try:
-                self.callback()
+                return self.callback()
             except:
                 print traceback.format_exc()
+                return False
 
     def _schedule(self, elapsedTimeInSeconds):
         '''
@@ -54,8 +56,8 @@ class TimerCallback(object):
         '''
         startTime = time.time()
         self.elapsed = startTime - self.lastTickTime
-        self.tick()
-        self.lastTickTime = startTime
-        self._schedule(time.time() - startTime)
+        if self.tick() is not False:
+            self.lastTickTime = startTime
+            self._schedule(time.time() - startTime)
 
 
