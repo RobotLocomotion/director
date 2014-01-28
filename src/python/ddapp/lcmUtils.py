@@ -102,5 +102,5 @@ def dumpMessage(msg, filename):
 
 
 def loadMessage(filename):
-    cls, bytes = pickle.load(open('walking_goal_t.pkl'))
+    cls, bytes = pickle.load(open(filename))
     return cls.decode(bytes)
