@@ -22,8 +22,8 @@ from ddapp import segmentation
 from ddapp import cameraview
 from ddapp import colorize
 from ddapp import robotstate
-from ddapp import footsteps
-from ddapp import footstepspanel
+from ddapp import footstepsdriver
+from ddapp import footstepsdriverpanel
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import robotplanlistener
@@ -134,8 +134,9 @@ if useAtlasDriver:
     atlasdriverpanel.init(atlasdriver.driver)
 
 if useFootsteps:
-    footsteps.init()
-    footstepspanel.init()
+    # footsteps.init()
+    footstepsdriver.init(jc)
+    footstepsdriverpanel.init(footstepsdriver.driver)
 
 
 if usePlanning:
@@ -254,7 +255,7 @@ def showLinkFrame(linkName, model=None):
 
 
 def createWalkingGoal():
-    footsteps.createWalkingGoal(defaultRobotModel)
+    footstepsdriver.driver.createWalkingGoal(defaultRobotModel)
 
 
 def resetCameraToRobot():
