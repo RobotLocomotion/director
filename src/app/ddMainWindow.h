@@ -25,6 +25,7 @@ public:
   ddPropertiesPanel* propertiesPanel() const;
   ddObjectTree* objectTree() const;
   QToolBar* toolBar() const;
+  QToolBar* macrosToolBar() const;
   QTextEdit* outputConsole() const;
 
   void addWidgetToViewMenu(QWidget* widget);

@@ -160,6 +160,13 @@ def setupToolBar():
     toolbar.addWidget(combo)
 
 
+def addToolbarMacro(name, func):
+
+    toolbar = getMainWindow().macrosToolBar()
+    action = toolbar.addAction(name)
+    action.connect('triggered()', func)
+
+
 def setupActions():
     botApyAction = getToolsMenuActions()['ActionBotSpy']
     botApyAction.connect(botApyAction, 'triggered()', botspy.startBotSpy)
