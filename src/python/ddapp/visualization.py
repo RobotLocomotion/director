@@ -204,6 +204,14 @@ class FrameItem(om.PolyDataItem):
         self.addProperty('Scale', scale)
         self.addProperty('Edit', False)
 
+        self.onTransformModifiedCallback = None
+        self.transform.AddObserver('ModifiedEvent', self.onTransformModified)
+
+
+    def onTransformModified(self, transform, event):
+        if self.onTransformModifiedCallback:
+            self.onTransformModifiedCallback(self)
+
 
     def _createAxes(self, scale):
         axes = vtk.vtkAxes()
