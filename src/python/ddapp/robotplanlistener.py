@@ -31,13 +31,11 @@ class RobotPlanListener(object):
         self.animationTimer = None
         self.manipPlanCallback = None
         self.animationCallback = None
-        self.interpolationMethod = 'pchip'
+        self.interpolationMethod = 'cubic'
         self.playbackSpeed = 1.0
 
     def onManipPlan(self, msg):
         self.lastPlanMsg = msg
-        msg = self.convertKeyframePlan(msg)
-        lcmUtils.publish('ROBOT_PLAN_RESAMPLE', msg)
         if self.manipPlanCallback:
             self.manipPlanCallback()
 
@@ -58,6 +56,53 @@ class RobotPlanListener(object):
         msg.right_leg_control_type = msg.NONE
 
         return msg
+
+
+    def commitPlan(self):
+        msg = self.convertKeyframePlan(msg)
+        msg.utime = getUtime()
+        lcmUtils.publish('COMMITTED_ROBOT_PLAN', msg)
+
+    def sendPlannerModeControl(self, mode='fixed_joints'):
+        msg = lcmdrc.grasp_opt_mode_t()
+        msg.utime = getUtime()
+        msg.mode = {'fixed_joints' : 3}[mode]
+        lcmUtils.publish('MANIP_PLANNER_MODE_CONTROL', msg)
+
+
+    def clearEndEffectorGoals(self):
+        msg = lcmdrc.ee_goal_t()
+        msg.ee_goal_pos = lcmdrc.position_3d_t()
+        msg.ee_goal_pos.translation = lcmdrc.vector_3d_t()
+        msg.ee_goal_pos.rotation = lcmdrc.quaternion_t()
+        msg.ee_goal_twist = lcmdrc.twist_t()
+        msg.ee_goal_twist.linear_velocity = lcmdrc.vector_3d_t()
+        msg.ee_goal_twist.angular_velocity = lcmdrc.vector_3d_t()
+
+        lcmUtils.publish('LEFT_PALM_GOAL_CLEAR', msg)
+        lcmUtils.publish('RIGHT_PALM_GOAL_CLEAR', msg)
+
+
+    def sendEndEffectorGoal(self, linkName, goalInWorldFrame):
+
+        self.clearEndEffectorGoals()
+        self.sendPlannerModeControl()
+
+        msg = lcmdrc.ee_goal_t()
+        msg.ee_goal_pos = transformUtils.positionMessageFromFrame(goalInWorldFrame)
+        msg.ee_goal_twist = lcmdrc.twist_t()
+        msg.ee_goal_twist.linear_velocity = lcmdrc.vector_3d_t()
+        msg.ee_goal_twist.angular_velocity = lcmdrc.vector_3d_t()
+
+        channels = {
+                    'l_hand' : 'LEFT_PALM_GOAL',
+                    'r_hand' : 'RIGHT_PALM_GOAL',
+                    'l_foot' : 'LEFT_FOOT_GOAL',
+                    'l_right' : 'RIGHT_FOOT_GOAL',
+                   }
+
+        channel = channels[linkName]
+        lcmUtils.publish(channel, msg)
 
 
     def convertPlanStateToPose(self, msg):
