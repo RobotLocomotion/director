@@ -77,6 +77,7 @@ def getFootstepsFolder():
 class FootstepsDriver(object):
     def __init__(self, jc):
         self.lastFootstepPlanMessage = None
+        self.lastFootstepRequest = None
         self.goalSteps = None
         self.has_plan = False
         self._setupSubscriptions()
@@ -181,6 +182,7 @@ class FootstepsDriver(object):
         request = self.constructFootstepPlanRequest()
         request.num_goal_steps = len(self.goalSteps)
         request.goal_steps = self.goalSteps
+        self.lastFootstepRequest = request
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
         return request
 
@@ -192,14 +194,14 @@ class FootstepsDriver(object):
         self.sendUpdatePlanRequest()
 
     def sendUpdatePlanRequest(self):
-        msg = self.constructFootstepPlanRequest()
+        msg = self.lastFootstepRequest
         msg.num_existing_steps = self.lastFootstepPlanMessage.num_steps
         msg.existing_steps = self.lastFootstepPlanMessage.footsteps
+        self.lastFootstepRequest = msg
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', msg)
         return msg
 
     def onWalkingGoalModified(self, frameObj):
-        pos, wxyz = transformUtils.poseFromTransform(frameObj.transform)
         self.sendFootstepPlanRequest()
 
     def constructFootstepPlanRequest(self):
@@ -234,6 +236,7 @@ class FootstepsDriver(object):
 
     def sendFootstepPlanRequest(self):
         msg = self.constructFootstepPlanRequest()
+        self.lastFootstepRequest = msg
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', msg)
         return msg
 
