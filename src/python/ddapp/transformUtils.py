@@ -74,7 +74,23 @@ def poseFromTransform(transform):
     return np.array(pos), np.array(quat)
 
 
+def frameFromPositionMessage(positionMessage):
+    '''
+    Given an lcmdrc.position_t message, returns a vtkTransform
+    '''
+    trans = positionMessage.translation
+    quat = positionMessage.rotation
+
+    trans = [trans.x, trans.y, trans.z]
+    quat = [quat.w, quat.x, quat.y, quat.z]
+
+    return transformFromPose(trans, quat)
+
+
 def positionMessageFromFrame(transform):
+    '''
+    Given a vtkTransform, returns an lcmdrc.position_t message
+    '''
 
     pos, wxyz = poseFromTransform(transform)
 
