@@ -127,7 +127,6 @@ class FootstepsDriver(object):
         frameObj.setProperty('Edit', True)
 
         frameObj.onTransformModifiedCallback = self.onWalkingGoalModified
-        print "created walking goal"
         self.sendFootstepPlanRequest()
 
     def onStepModified(self, ndx, frameObj):
