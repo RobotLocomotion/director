@@ -1,0 +1,35 @@
+<RCC>
+  <qresource prefix="/images">
+    <file>python_logo.png</file>
+    <file>drake_logo.png</file>
+    <file>robot_icon.png</file>
+    <file>matlab_logo.png</file>
+    <file>eye_icon.png</file>
+    <file>eye_icon_gray.png</file>
+    <file>3d_glasses.png</file>
+    <file>reset_camera.png</file>
+    <file>camera_mode.png</file>
+    <file>laser_icon.jpg</file>
+    <file>paint_bucket.png</file>
+
+    <file>wye.png</file>
+
+    <file>task1.png</file>
+    <file>task2.png</file>
+    <file>task3.png</file>
+    <file>task4.png</file>
+    <file>task5.png</file>
+    <file>task6.png</file>
+    <file>task6_drill.png</file>
+    <file>task7.png</file>
+    <file>task8.png</file>
+
+    <file>2x4.png</file>
+    <file>2x6.png</file>
+    <file>4x4.png</file>
+
+    <file>cinderblock.png</file>
+    <file>cinderblock_double.png</file>
+
+  </qresource>
+</RCC>

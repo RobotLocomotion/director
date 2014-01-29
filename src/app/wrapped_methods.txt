@@ -1,0 +1,123 @@
+
+
+ddLCMThread::ddLCMThread();
+ddLCMThread::ddLCMThread(QObject*);
+ddLCMThread::~ddLCMThread();
+void ddLCMThread::stop();
+void ddLCMThread::addSubscriber(ddLCMSubscriber*);
+void ddLCMThread::removeSubscriber(ddLCMSubscriber*);
+
+ddLCMSubscriber::ddLCMSubscriber(const QString&);
+ddLCMSubscriber::ddLCMSubscriber(const QString&, QObject*);
+ddLCMSubscriber::~ddLCMSubscriber();
+void ddLCMSubscriber::setCallback(QVariant)
+
+ddBotImageQueue::ddBotImageQueue(QObject*);
+ddBotImageQueue::ddBotImageQueue();
+ddBotImageQueue::~ddBotImageQueue();
+void ddBotImageQueue::init(ddLCMThread*);
+void ddBotImageQueue::colorizePoints(const QString&, vtkPolyData*);
+void ddBotImageQueue::computeTextureCoords(const QString&, vtkPolyData*);
+quint64 ddBotImageQueue::getImage(const QString&, vtkImageData*);
+quint64 ddBotImageQueue::getCurrentImageTime(const QString&);
+void ddBotImageQueue::getBodyToCameraTransform(const QString&, vtkTransform*);
+int ddBotImageQueue::getTransform(const QString&, const QString&, quint64, vtkTransform*);
+bool ddBotImageQueue::addCameraStream(const QString&);
+
+ddDrakeModel::ddDrakeModel();
+ddDrakeModel::~ddDrakeModel();
+bool ddDrakeModel::loadFromFile(const QString&);
+bool ddDrakeModel::loadFromXML(const QString&);
+void ddDrakeModel::addToRenderer(vtkRenderer*);
+void ddDrakeModel::removeFromRenderer(vtkRenderer*);
+int ddDrakeModel::numberOfJoints();
+void ddDrakeModel::setJointPositions(const QList<double>&);
+void ddDrakeModel::setEstRobotState(const QList<double>&);
+void ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
+QStringList ddDrakeModel::getLinkNames();
+void ddDrakeModel::setAlpha(double);
+void ddDrakeModel::setVisible(bool);
+QColor ddDrakeModel::color() const;
+void ddDrakeModel::setColor(const QColor&);
+void ddDrakeModel::setLinkColor(const QString&, const QColor&);
+
+
+double ddDrakeModel::alpha() const;
+bool ddDrakeModel::visible() const;
+QString ddDrakeModel::filename() const;
+
+static void ddDrakeModel::addPackageSearchPath(const QString&);
+static QString ddDrakeModel::findPackageDirectory(const QString&);
+
+ddDrakeModel* ddDRCView::loadURDFModel(const QString&);
+ddDrakeModel* ddDRCView::loadURDFModelXML(const QString&);
+QList<ddDrakeModel*> ddDRCView::models() const;
+void ddDRCView::unloadModel(ddDrakeModel*);
+void ddDRCView::unloadModels();
+
+ddQVTKWidgetView::ddQVTKWidgetView();
+ddQVTKWidgetView::~ddQVTKWidgetView();
+vtkCamera* ddQVTKWidgetView::camera() const;
+vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
+vtkRenderer* ddQVTKWidgetView::renderer() const;
+QVTKWidget* ddQVTKWidgetView::vtkWidget() const;
+QList<double> ddQVTKWidgetView::lastTDxMotion() const;
+void ddQVTKWidgetView::installImageInteractor();
+
+ddViewManager* ddMainWindow::viewManager()
+ddPropertiesPanel* ddMainWindow::propertiesPanel() const;
+QToolBar* ddMainWindow::toolBar() const;
+QTreeWidget* ddMainWindow::objectTree() const;
+QTextEdit* ddMainWindow::outputConsole() const;
+QMenu* ddMainWindow::toolsMenu() const;
+void ddMainWindow::addWidgetToViewMenu(QWidget*);
+
+ddObjectTree::ddObjectTree();
+ddObjectTree::~ddObjectTree();
+
+ddTaskSelection::ddTaskSelection();
+ddTaskSelection::~ddTaskSelection();
+
+ddLumberSelection::ddLumberSelection();
+ddLumberSelection::~ddLumberSelection();
+
+ddPythonEventFilter::ddPythonEventFilter();
+ddPythonEventFilter::~ddPythonEventFilter();
+void ddPythonEventFilter::setEventHandlerResult(bool);
+void ddPythonEventFilter::addFilteredEventType(int);
+void ddPythonEventFilter::removeFilteredEventType(int);
+
+
+ddViewBase* ddViewManager::findView(const QString&) const;
+ddViewBase* ddViewManager::createView(const QString&, const QString&, int);
+ddViewBase* ddViewManager::createView(const QString&, const QString&);
+void ddViewManager::switchToView(const QString&);
+ddViewBase* ddViewManager::currentView() const;
+void ddViewManager::popOut(ddViewBase*);
+
+QAbstractItemModel* ddSpreadsheetView::model();
+QStringList ddSpreadsheetView::rowData(int) const;
+int ddSpreadsheetView::rowCount() const;
+int ddSpreadsheetView::columnCount() const;
+void ddSpreadsheetView::appendRow(const QStringList&);
+void ddSpreadsheetView::removeRow(int);
+
+
+QString QtVariantProperty::propertyName();
+QVariant QtVariantProperty::value();
+void QtVariantProperty::setValue(const QVariant &);
+void QtVariantProperty::setAttribute(const QString &, const QVariant &);
+bool QtVariantProperty::isSubProperty() const;
+
+QtVariantProperty* ddPropertiesPanel::addGroup(const QString&);
+QtVariantProperty* ddPropertiesPanel::addProperty(const QString&, const QVariant&);
+QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString&, const QVariant&, QtVariantProperty*);
+QtVariantProperty* ddPropertiesPanel::findProperty(const QString&) const;
+QtVariantProperty* ddPropertiesPanel::findSubProperty(const QString&, QtVariantProperty*) const;
+
+
+ddSignalMap::ddSignalMap();
+QMap<QString, QVariant> ddSignalMap::map() const;
+void ddSignalMap::signalItemChanged(const QString&);
+void ddSignalMap::setItem(const QString&, const QVariant&);
+QVariant ddSignalMap::value(const QString&) const;

@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ddMainWindow</class>
+ <widget class="QMainWindow" name="ddMainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1277</width>
+    <height>835</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="images/resources.qrc">
+    <normaloff>:/images/drake_logo.png</normaloff>:/images/drake_logo.png</iconset>
+  </property>
+  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QMenuBar" name="MenuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1277</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="FileMenu">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="ActionOpen"/>
+    <addaction name="ActionSaveData"/>
+    <addaction name="separator"/>
+    <addaction name="ActionQuit"/>
+   </widget>
+   <widget class="QMenu" name="ToolsMenu">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="ActionPythonConsole"/>
+    <addaction name="separator"/>
+    <addaction name="ActionMatlabConsole"/>
+    <addaction name="separator"/>
+    <addaction name="ActionBotSpy"/>
+   </widget>
+   <widget class="QMenu" name="ViewMenu">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <widget class="QMenu" name="ToolBarMenu">
+     <property name="title">
+      <string>Toolbars</string>
+     </property>
+    </widget>
+    <addaction name="separator"/>
+    <addaction name="ToolBarMenu"/>
+   </widget>
+   <addaction name="FileMenu"/>
+   <addaction name="ViewMenu"/>
+   <addaction name="ToolsMenu"/>
+  </widget>
+  <widget class="QStatusBar" name="StatusBar"/>
+  <widget class="QDockWidget" name="ObjectsDock">
+   <property name="windowTitle">
+    <string>Model Browser</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="margin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="ddObjectTree" name="ObjectTree">
+       <property name="headerHidden">
+        <bool>true</bool>
+       </property>
+       <column>
+        <property name="text">
+         <string>Name</string>
+        </property>
+       </column>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QToolBar" name="MainToolBar">
+   <property name="windowTitle">
+    <string>Main Tool Bar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="ActionPythonConsole"/>
+   <addaction name="ActionMatlabConsole"/>
+   <addaction name="separator"/>
+   <addaction name="ActionToggleStereoRender"/>
+   <addaction name="ActionColorizeLidar"/>
+   <addaction name="ActionToggleCameraTerrainMode"/>
+   <addaction name="ActionResetCamera"/>
+  </widget>
+  <widget class="QDockWidget" name="PropertiesDock">
+   <property name="windowTitle">
+    <string>Properties</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_2"/>
+  </widget>
+  <widget class="QDockWidget" name="OutputConsoleDock">
+   <property name="windowTitle">
+    <string>Output Console</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_3">
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <property name="margin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QTextEdit" name="OutputConsole">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QToolBar" name="ViewToolBar">
+   <property name="windowTitle">
+    <string>View Actions</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="MacrosToolBar">
+   <property name="windowTitle">
+    <string>Macros</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <action name="ActionQuit">
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="ActionPythonConsole">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/python_logo.png</normaloff>:/images/python_logo.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Python Console</string>
+   </property>
+   <property name="shortcut">
+    <string>F8</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="ActionMatlabConsole">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/matlab_logo.png</normaloff>:/images/matlab_logo.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Matlab Console</string>
+   </property>
+   <property name="shortcut">
+    <string>F9</string>
+   </property>
+  </action>
+  <action name="ActionToggleStereoRender">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/3d_glasses.png</normaloff>:/images/3d_glasses.png</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Stereo Render</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle Stereo Render</string>
+   </property>
+  </action>
+  <action name="ActionResetCamera">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/reset_camera.png</normaloff>:/images/reset_camera.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reset Camera</string>
+   </property>
+  </action>
+  <action name="ActionToggleCameraTerrainMode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/camera_mode.png</normaloff>:/images/camera_mode.png</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Camera Terrain Mode</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle Camera Terrain Mode</string>
+   </property>
+  </action>
+  <action name="ActionOpen">
+   <property name="text">
+    <string>&amp;Open...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="ActionSaveData">
+   <property name="text">
+    <string>&amp;Save data...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="ActionBotSpy">
+   <property name="text">
+    <string>&amp;Bot Spy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+B</string>
+   </property>
+  </action>
+  <action name="ActionColorizeLidar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/paint_bucket.png</normaloff>:/images/paint_bucket.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Colorize Lidar</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ddObjectTree</class>
+   <extends>QTreeWidget</extends>
+   <header>ddObjectTree.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="images/resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>
