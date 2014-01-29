@@ -2,6 +2,7 @@ import vtkAll as vtk
 from ddapp import botpy
 import math
 import numpy as np
+import drc as lcmdrc
 
 def getTransformFromAxes(xaxis, yaxis, zaxis):
 
@@ -71,3 +72,20 @@ def poseFromTransform(transform):
     pos = transform.GetPosition()
     quat = botpy.angle_axis_to_quat(angleAxis[0], angleAxis[1:])
     return np.array(pos), np.array(quat)
+
+
+def positionMessageFromFrame(transform):
+
+    pos, wxyz = poseFromTransform(transform)
+
+    trans = lcmdrc.vector_3d_t()
+    trans.x, trans.y, trans.z = pos
+
+    quat = lcmdrc.quaternion_t()
+    quat.w, quat.x, quat.y, quat.z = wxyz
+
+    pose = lcmdrc.position_3d_t()
+    pose.translation = trans
+    pose.rotation = quat
+    return pose
+
