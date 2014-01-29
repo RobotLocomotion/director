@@ -13,6 +13,7 @@ import numpy as np
 import drc as lcmdrc
 import functools
 
+
 def loadFootMeshes():
     meshDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/meshes')
     meshes = []
@@ -27,16 +28,20 @@ def loadFootMeshes():
 def getLeftFootMesh():
     return getFootMeshes()[0]
 
+
 def getRightFootMesh():
     return getFootMeshes()[1]
 
+
 def getLeftFootColor():
     return [1.0, 1.0, 0.0]
+
 
 def getRightFootColor():
     return [0.33, 1.0, 0.0]
 
 _footMeshes = None
+
 
 def getFootMeshes():
     global _footMeshes
@@ -44,12 +49,14 @@ def getFootMeshes():
         _footMeshes = loadFootMeshes()
     return _footMeshes
 
+
 def getFootstepsFolder():
     obj = om.findObjectByName('footstep plan')
     if obj is None:
         obj = om.getOrCreateContainer('footstep plan')
         #om.collapse(obj)
     return obj
+
 
 class FootstepsDriver(object):
     def __init__(self, jc):
@@ -108,7 +115,7 @@ class FootstepsDriver(object):
 
         stancePosition = np.array(t2.GetPosition()) + np.array(t1.GetPosition()) / 2.0
 
-        footHeight=0.0817
+        footHeight = 0.0817
 
         t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
         t.PostMultiply()
@@ -186,8 +193,20 @@ class FootstepsDriver(object):
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', msg)
         return msg
 
+    def sendStopWalking(self):
+        msg = lcmdrc.plan_control_t()
+        msg.utime = getUtime()
+        msg.control = lcmdrc.plan_control_t.TERMINATE
+        lcmUtils.publish('STOP_WALKING', msg)
+
+    def commitFootsepPlan(self):
+        if not self.has_plan:
+            print "I don't have a footstep plan to commit"
+            return
+        self.lastFootstepPlanMessage.utime = getUtime()
+        lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', self.lastFootstepPlanMessage)
+
 
 def init(jc):
     global driver
     driver = FootstepsDriver(jc)
-
