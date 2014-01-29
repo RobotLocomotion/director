@@ -36,6 +36,8 @@ class FootstepsPanel(object):
 
         l.addWidget(_makeButton('new walking goal', self.onNewWalkingGoal))
         l.addWidget(QtGui.QLabel(''))
+        l.addWidget(_makeButton('goal steps', self.onGoalSteps))
+        l.addWidget(QtGui.QLabel(''))
         l.addWidget(_makeButton('execute footstep plan', self.onExecute))
         l.addWidget(QtGui.QLabel(''))
         l.addWidget(_makeButton('stop walking', self.onStop))
@@ -44,6 +46,10 @@ class FootstepsPanel(object):
     def onNewWalkingGoal(self):
         model = getVisibleRobotModel()
         self.driver.createWalkingGoal(model)
+
+    def onGoalSteps(self):
+        model = getVisibleRobotModel()
+        self.driver.createGoalSteps(model)
 
     def onExecute(self):
         self.driver.commitFootstepPlan()

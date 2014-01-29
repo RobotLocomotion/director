@@ -43,6 +43,22 @@ def getRightFootColor():
 _footMeshes = None
 
 
+def getDefaultStepParams():
+    default_step_params = lcmdrc.footstep_params_t()
+    default_step_params.step_speed = 1.0
+    default_step_params.step_height = 0.05
+    default_step_params.bdi_step_duration = 2.0
+    default_step_params.bdi_sway_duration = 0.0
+    default_step_params.bdi_lift_height = 0.05
+    default_step_params.bdi_toe_off = 1
+    default_step_params.bdi_knee_nominal = 0.0
+    default_step_params.bdi_max_foot_vel = 0.0
+    default_step_params.bdi_sway_end_dist = 0.02
+    default_step_params.bdi_step_end_dist = 0.02
+    default_step_params.mu = 1.0
+    return default_step_params
+
+
 def getFootMeshes():
     global _footMeshes
     if not _footMeshes:
@@ -61,6 +77,7 @@ def getFootstepsFolder():
 class FootstepsDriver(object):
     def __init__(self, jc):
         self.lastFootstepPlanMessage = None
+        self.goalSteps = None
         self.has_plan = False
         self._setupSubscriptions()
         self.jc = jc
@@ -129,6 +146,44 @@ class FootstepsDriver(object):
         frameObj.onTransformModifiedCallback = self.onWalkingGoalModified
         self.sendFootstepPlanRequest()
 
+    def createGoalSteps(self, model):
+        distanceForward = 1.0
+
+        fr = model.getLinkFrame('l_foot')
+        fl = model.getLinkFrame('r_foot')
+        pelvisT = model.getLinkFrame('pelvis')
+
+        xaxis = [1.0, 0.0, 0.0]
+        pelvisT.TransformVector(xaxis, xaxis)
+        xaxis = np.array(xaxis)
+        zaxis = np.array([0.0, 0.0, 1.0])
+        yaxis = np.cross(zaxis, xaxis)
+        xaxis = np.cross(yaxis, zaxis)
+
+        numGoalSteps = 3
+        is_right_foot = True
+        self.goalSteps = []
+        for i in range(numGoalSteps):
+            t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+            t.PostMultiply()
+            if is_right_foot:
+                t.Translate(fr.GetPosition())
+            else:
+                t.Translate(fl.GetPosition())
+            t.Translate(xaxis*distanceForward)
+            distanceForward += 0.15
+            is_right_foot = not is_right_foot
+            step = lcmdrc.footstep_t()
+            step.pos = transformUtils.positionMessageFromFrame(t)
+            step.is_right_foot = is_right_foot
+            step.params = getDefaultStepParams()
+            self.goalSteps.append(step)
+        request = self.constructFootstepPlanRequest()
+        request.num_goal_steps = len(self.goalSteps)
+        request.goal_steps = self.goalSteps
+        lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
+        return request
+
     def onStepModified(self, ndx, frameObj):
         self.lastFootstepPlanMessage.footsteps[ndx+2].pos = transformUtils.positionMessageFromFrame(frameObj.transform)
         self.lastFootstepPlanMessage.footsteps[ndx+2].fixed_x = True
@@ -148,8 +203,6 @@ class FootstepsDriver(object):
         self.sendFootstepPlanRequest()
 
     def constructFootstepPlanRequest(self):
-        goalObj = om.findObjectByName('walking goal')
-        assert goalObj
 
         msg = lcmdrc.footstep_plan_request_t()
         msg.utime = getUtime()
@@ -157,7 +210,11 @@ class FootstepsDriver(object):
         state_msg = robotstate.drakePoseToRobotState(pose)
         msg.initial_state = state_msg
 
-        msg.goal_pos = transformUtils.positionMessageFromFrame(goalObj.transform)
+        goalObj = om.findObjectByName('walking goal')
+        if goalObj:
+            msg.goal_pos = transformUtils.positionMessageFromFrame(goalObj.transform)
+        else:
+            msg.goal_pos = transformUtils.positionMessageFromFrame(transformUtils.transformFromPose((0,0,0), (1,0,0,0)))
         msg.params = lcmdrc.footstep_plan_params_t()
         msg.params.max_num_steps = 30
         msg.params.min_num_steps = 0
@@ -171,19 +228,7 @@ class FootstepsDriver(object):
         msg.params.behavior = msg.params.BEHAVIOR_BDI_STEPPING
         msg.params.map_command = 2
         msg.params.leading_foot = msg.params.LEAD_AUTO
-
-        msg.default_step_params = lcmdrc.footstep_params_t()
-        msg.default_step_params.step_speed = 1.0
-        msg.default_step_params.step_height = 0.05
-        msg.default_step_params.bdi_step_duration = 2.0
-        msg.default_step_params.bdi_sway_duration = 0.0
-        msg.default_step_params.bdi_lift_height = 0.05
-        msg.default_step_params.bdi_toe_off = 1
-        msg.default_step_params.bdi_knee_nominal = 0.0
-        msg.default_step_params.bdi_max_foot_vel = 0.0
-        msg.default_step_params.bdi_sway_end_dist = 0.02
-        msg.default_step_params.bdi_step_end_dist = 0.02
-        msg.default_step_params.mu = 1.0
+        msg.default_step_params = getDefaultStepParams()
 
         return msg
 
