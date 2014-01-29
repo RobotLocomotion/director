@@ -3,23 +3,94 @@ from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp.utime import getUtime
 from ddapp import transformUtils
+from ddapp.debugVis import DebugData
+from ddapp import ioUtils
+from ddapp import robotstate
 from ddapp import applogic as app
 
+import os
 import numpy as np
 import drc as lcmdrc
+import functools
 
+def loadFootMeshes():
+    meshDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/meshes')
+    meshes = []
+    for foot in ['l', 'r']:
+        d = DebugData()
+        d.addPolyData(ioUtils.readPolyData(os.path.join(meshDir, '%s_talus.stl' % foot), computeNormals=True))
+        d.addPolyData(ioUtils.readPolyData(os.path.join(meshDir, '%s_foot.stl' % foot), computeNormals=True))
+        meshes.append(d.getPolyData())
+    return meshes
+
+
+def getLeftFootMesh():
+    return getFootMeshes()[0]
+
+def getRightFootMesh():
+    return getFootMeshes()[1]
+
+def getLeftFootColor():
+    return [1.0, 1.0, 0.0]
+
+def getRightFootColor():
+    return [0.33, 1.0, 0.0]
+
+_footMeshes = None
+
+def getFootMeshes():
+    global _footMeshes
+    if not _footMeshes:
+        _footMeshes = loadFootMeshes()
+    return _footMeshes
+
+def getFootstepsFolder():
+    obj = om.findObjectByName('footstep plan')
+    if obj is None:
+        obj = om.getOrCreateContainer('footstep plan')
+        #om.collapse(obj)
+    return obj
 
 class FootstepsDriver(object):
     def __init__(self, jc):
         self.lastFootstepPlanMessage = None
+        self.has_plan = False
         self._setupSubscriptions()
         self.jc = jc
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
 
+    def clearFootstepPlan(self):
+        self.has_plan = False
+        folder = getFootstepsFolder()
+        om.removeFromObjectModel(folder)
+
     def onFootstepPlan(self, msg):
-        print "Got footstep plan with {:d} steps".format(msg.num_steps)
+        self.clearFootstepPlan()
+        self.has_plan = True
+        planFolder = getFootstepsFolder()
+
+        for i, footstep in enumerate(msg.footsteps[2:]):
+            trans = footstep.pos.translation
+            trans = [trans.x, trans.y, trans.z]
+            quat = footstep.pos.rotation
+            quat = [quat.w, quat.x, quat.y, quat.z]
+            footstepTransform = transformUtils.transformFromPose(trans, quat)
+
+            if footstep.is_right_foot:
+                mesh = getRightFootMesh()
+                color = getRightFootColor()
+            else:
+                mesh = getLeftFootMesh()
+                color = getLeftFootColor()
+
+            obj = vis.showPolyData(mesh, 'step %d' % i, color=color, alpha=1.0, parent=planFolder)
+            frameObj = vis.showFrame(footstepTransform, 'frame', parent=obj, scale=0.3, visible=False)
+            frameObj.onTransformModifiedCallback = functools.partial(self.onStepModified, i)
+            obj.actor.SetUserTransform(footstepTransform)
+
+        self.lastFootstepPlanMessage = msg
 
     def createWalkingGoal(self, model):
         distanceForward = 1.0
@@ -47,15 +118,30 @@ class FootstepsDriver(object):
 
         frameObj = vis.showFrame(t, 'walking goal')
         frameObj.setProperty('Edit', True)
-        t.AddObserver('Modified', self.onWalkingGoalModified)
+
+        frameObj.onTransformModifiedCallback = self.onWalkingGoalModified
         print "created walking goal"
+        self.sendFootstepPlanRequest()
 
-    def onWalkingGoalModified(self, transform, event):
-        pos, wxyz = transformUtils.poseFromTransform(transform)
-        print pos
+    def onStepModified(self, ndx, frameObj):
+        self.lastFootstepPlanMessage.footsteps[ndx+2].pos = transformUtils.positionMessageFromFrame(frameObj.transform)
+        self.lastFootstepPlanMessage.footsteps[ndx+2].fixed_x = True
+        self.lastFootstepPlanMessage.footsteps[ndx+2].fixed_y = True
+        self.lastFootstepPlanMessage.footsteps[ndx+2].fixed_yaw = True
+        self.sendUpdatePlanRequest()
 
+    def sendUpdatePlanRequest(self):
+        msg = self.constructFootstepPlanRequest()
+        msg.num_existing_steps = self.lastFootstepPlanMessage.num_steps
+        msg.existing_steps = self.lastFootstepPlanMessage.footsteps
+        lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', msg)
+        return msg
 
-    def sendFootstepPlanRequest(self):
+    def onWalkingGoalModified(self, frameObj):
+        pos, wxyz = transformUtils.poseFromTransform(frameObj.transform)
+        self.sendFootstepPlanRequest()
+
+    def constructFootstepPlanRequest(self):
         goalObj = om.findObjectByName('walking goal')
         assert goalObj
 
@@ -65,9 +151,9 @@ class FootstepsDriver(object):
         state_msg = robotstate.drakePoseToRobotState(pose)
         msg.initial_state = state_msg
 
-        msg.goal_pos = positionMessageFromFrame(goalObj.transform)
+        msg.goal_pos = transformUtils.positionMessageFromFrame(goalObj.transform)
         msg.params = lcmdrc.footstep_plan_params_t()
-        msg.params.max_num_steps = 100
+        msg.params.max_num_steps = 30
         msg.params.min_num_steps = 0
         msg.params.min_step_width = 0.21
         msg.params.nom_step_width = 0.25
@@ -75,10 +161,10 @@ class FootstepsDriver(object):
         msg.params.nom_forward_step = 0.15
         msg.params.max_forward_step = 0.45
         msg.params.ignore_terrain = False
-        msg.params.planning_mode = msg.MODE_AUTO
-        msg.params.behavior = msg.BEHAVIOR_BDI_STEPPING
+        msg.params.planning_mode = msg.params.MODE_AUTO
+        msg.params.behavior = msg.params.BEHAVIOR_BDI_STEPPING
         msg.params.map_command = 2
-        msg.params.leading_foot = msg.LEAD_AUTO
+        msg.params.leading_foot = msg.params.LEAD_AUTO
 
         msg.default_step_params = lcmdrc.footstep_params_t()
         msg.default_step_params.step_speed = 1.0
@@ -93,6 +179,10 @@ class FootstepsDriver(object):
         msg.default_step_params.bdi_step_end_dist = 0.02
         msg.default_step_params.mu = 1.0
 
+        return msg
+
+    def sendFootstepPlanRequest(self):
+        msg = self.constructFootstepPlanRequest()
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', msg)
         return msg
 
