@@ -229,10 +229,9 @@ class FrameItem(om.PolyDataItem):
     def addToView(self, view):
         om.PolyDataItem.addToView(self, view)
 
-    def setFrame(self, transform):
-        self.transform = transform
-        polyData = self._createAxes(self.getProperty('Scale'))
-        self.setPolyData(polyData)
+    def copyFrame(self, transform):
+        self.transform.SetMatrix(transform.GetMatrix())
+        self._renderAllViews()
 
     def _onPropertyChanged(self, propertyName):
 
@@ -278,7 +277,7 @@ def updateFrame(frame, name, **kwargs):
 
     obj = om.findObjectByName(name)
     obj = obj or showFrame(frame, name, **kwargs)
-    obj.setFrame(frame)
+    obj.copyFrame(frame)
     return obj
 
 
