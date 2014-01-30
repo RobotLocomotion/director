@@ -5,7 +5,6 @@ from ddapp import applogic as app
 from ddapp.utime import getUtime
 from ddapp import objectmodel as om
 from ddapp.timercallback import TimerCallback
-from ddapp import footsteps
 
 import numpy as np
 import math
