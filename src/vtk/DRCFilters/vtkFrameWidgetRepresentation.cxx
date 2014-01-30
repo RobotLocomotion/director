@@ -394,19 +394,25 @@ void vtkFrameWidgetRepresentation::Translate(double *p1, double *p2)
 //----------------------------------------------------------------------------
 void vtkFrameWidgetRepresentation::TranslateInPlane(double *p1, double *p2)
 {
-  double planeOrigin[3] = {0,0,0};
-  double planeNormal[3] = {0,0,0};
-  planeNormal[this->Internal->RotateAxis] = 1;
-
-  this->Internal->Transform->TransformPoint(planeOrigin, planeOrigin);
-  this->Internal->Transform->TransformVector(planeNormal, planeNormal);
-
-  vtkPlane::ProjectPoint(p1, planeOrigin, planeNormal, p1);
-  vtkPlane::ProjectPoint(p2, planeOrigin, planeNormal, p2);
   double v[3] = {p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2]};
 
-  this->Internal->Transform->Translate(v[0], v[1], v[2]);
+  double constraintAxis1[3] = {0,0,0};
+  double constraintAxis2[3] = {0,0,0};
+  constraintAxis1[(this->Internal->RotateAxis+1) % 3] = 1;
+  constraintAxis2[(this->Internal->RotateAxis+2) % 3] = 1;
 
+  this->Internal->Transform->TransformVector(constraintAxis1, constraintAxis1);
+  this->Internal->Transform->TransformVector(constraintAxis2, constraintAxis2);
+
+  // project vector of motion onto the constraint axes
+  double d = vtkMath::Dot(v, constraintAxis1);
+  double d2 = vtkMath::Dot(v, constraintAxis2);
+
+  v[0] = d*constraintAxis1[0] + d2*constraintAxis2[0];
+  v[1] = d*constraintAxis1[1] + d2*constraintAxis2[1];
+  v[2] = d*constraintAxis1[2] + d2*constraintAxis2[2];
+
+  this->Internal->Transform->Translate(v[0], v[1], v[2]);
   this->Internal->Transform->Modified();
 }
 
@@ -430,94 +436,93 @@ void vtkFrameWidgetRepresentation::Rotate(int X,
                                   double *p2,
                                   double *vpn)
 {
-  double v[3]; //vector of motion
-  double axis[3]; //axis of rotation
-  double theta; //rotation angle
 
+  double v[3]; //vector of motion
   v[0] = p2[0] - p1[0];
   v[1] = p2[1] - p1[1];
   v[2] = p2[2] - p1[2];
 
-  // Create axis of rotation and angle of rotation
-  vtkMath::Cross(vpn,v,axis);
-  if ( vtkMath::Normalize(axis) == 0.0 )
-    {
-    return;
-    }
-  int *size = this->Renderer->GetSize();
 
-  double l2 = (X-this->LastEventPosition[0])*(X-this->LastEventPosition[0])
-             + (Y-this->LastEventPosition[1])*(Y-this->LastEventPosition[1]);
-  theta = 360.0 * sqrt(l2/(size[0]*size[0]+size[1]*size[1]));
-
-
-  // Translate our transform back to the origin, do the rotation, then move
-  // it back to the current position
-  double pos[3];
-  this->Internal->Transform->GetPosition(pos);
-
+  double centerOfRotation[3];
+  this->Internal->Transform->GetPosition(centerOfRotation);
 
 
   if (this->Internal->RotateAxis >= 0)
     {
 
+    // Compute the center of rotation in display coordinates
+    double displayCenterOfRotation[3];
+    vtkInteractorObserver::ComputeWorldToDisplay(this->Renderer,
+                                                  centerOfRotation[0],
+                                                  centerOfRotation[1],
+                                                  centerOfRotation[2],
+                                                  displayCenterOfRotation);
 
-    double rayPoint0[4];
-    double rayPoint1[4];
-    double t;
-    double planePoint[3];
-    double closestPoint[3];
-    vtkIdType cellId;
-    int subId;
-    double dist;
+    // Compute rotation angle
+    double vec1[3];
+    vec1[0] = X - displayCenterOfRotation[0];
+    vec1[1] = Y - displayCenterOfRotation[1];
+    vec1[2] = 0.0;
 
-    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, X, Y, 0.0, rayPoint0);
-    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, X, Y, 1.0, rayPoint1);
+    double vec2[3];
+    vec2[0] = this->LastEventPosition[0] - displayCenterOfRotation[0];
+    vec2[1] = this->LastEventPosition[1] - displayCenterOfRotation[1];
+    vec2[2] = 0.0;
 
-    this->Internal->Transform->GetLinearInverse()->TransformPoint(rayPoint0, rayPoint0);
-    this->Internal->Transform->GetLinearInverse()->TransformPoint(rayPoint1, rayPoint1);
+    if (vtkMath::Normalize(vec1) == 0.0 || vtkMath::Normalize(vec2) == 0.0)
+      {
+      return;
+      }
 
-    double circleOrigin[3] = {0,0,0};
-    double circleNormal[3] = {0,0,0};
-    circleNormal[this->Internal->RotateAxis] = 1;
+    double theta = vtkMath::DegreesFromRadians(std::acos(vtkMath::Dot(vec1, vec2)));
+    double direction[3];
+    vtkMath::Cross(vec1, vec2, direction);
+    if (direction[2] < 0.0)
+      {
+      theta = -theta;
+      }
 
-    vtkPlane::IntersectWithLine(rayPoint0, rayPoint1, circleNormal, circleOrigin, t, planePoint);
-    this->Internal->CellLocator->FindClosestPoint(planePoint, closestPoint, cellId, subId, dist);
-    this->Internal->Transform->TransformPoint(closestPoint, closestPoint);
 
-    this->Internal->SphereSource->SetCenter(closestPoint);
+    double rotateAxis[3] = {0,0,0};
+    rotateAxis[this->Internal->RotateAxis] = 1;
+    this->Internal->Transform->TransformVector(rotateAxis, rotateAxis);
 
-    //printf("pick point: %f %f %f\n", this->Internal->CirclePickPoint[0], this->Internal->CirclePickPoint[1], this->Internal->CirclePickPoint[2]);
-    //printf("closest point: %f %f %f\n", closestPoint[0], closestPoint[1], closestPoint[2]);
+    if (vtkMath::Dot(vpn, rotateAxis) > 0.0)
+      {
+      theta = -theta;
+      }
 
-    this->Internal->Transform->TransformVector(circleNormal, circleNormal);
-    this->Internal->Transform->TransformPoint(circleOrigin, circleOrigin);
-
-    double edge1[3] = {this->Internal->CirclePickPoint[0] - circleOrigin[0],
-                       this->Internal->CirclePickPoint[1] - circleOrigin[1],
-                       this->Internal->CirclePickPoint[2] - circleOrigin[2] };
-
-    double edge2[3] = {closestPoint[0] - circleOrigin[0],
-                       closestPoint[1] - circleOrigin[1],
-                       closestPoint[2] - circleOrigin[2] };
-
-    theta = ComputeSignedAngle(edge1, edge2, circleNormal);
-    //printf("theta: %f\n", theta);
-
-    this->Internal->Transform->Identity();
-    this->Internal->Transform->RotateWXYZ(this->Internal->LastOrientation[0], this->Internal->LastOrientation+1);
-    this->Internal->Transform->RotateWXYZ(theta, circleNormal);
+    this->Internal->Transform->Translate(-centerOfRotation[0], -centerOfRotation[1], -centerOfRotation[2]);
+    this->Internal->Transform->RotateWXYZ(theta, rotateAxis);
+    this->Internal->Transform->Translate(centerOfRotation[0], centerOfRotation[1], centerOfRotation[2]);
 
     }
   else
     {
 
-    this->Internal->Transform->Translate(-pos[0], -pos[1], -pos[2]);
+
+    double axis[3]; //axis of rotation
+    double theta; //rotation angle
+
+    // Create axis of rotation and angle of rotation
+    vtkMath::Cross(vpn,v,axis);
+    if ( vtkMath::Normalize(axis) == 0.0 )
+      {
+      return;
+      }
+    int *size = this->Renderer->GetSize();
+
+    double l2 = (X-this->LastEventPosition[0])*(X-this->LastEventPosition[0])
+               + (Y-this->LastEventPosition[1])*(Y-this->LastEventPosition[1]);
+    theta = 360.0 * sqrt(l2/(size[0]*size[0]+size[1]*size[1]));
+
+
+    this->Internal->Transform->Translate(-centerOfRotation[0], -centerOfRotation[1], -centerOfRotation[2]);
     this->Internal->Transform->RotateWXYZ(theta,axis);
+    this->Internal->Transform->Translate(centerOfRotation[0], centerOfRotation[1], centerOfRotation[2]);
 
     }
 
-  this->Internal->Transform->Translate(pos[0], pos[1], pos[2]);
 
   this->Internal->Transform->Modified();
 }
