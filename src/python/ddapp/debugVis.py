@@ -69,17 +69,38 @@ class DebugData(object):
             self.addLine(origin, origin+axis, radius=tubeRadius, color=color)
 
     def addCircle(self, origin, normal, radius, color=[1,1,1]):
+        self.addCone(origin, normal, radius, height, color=color, fill=False)
 
+    def addCone(self, origin, normal, radius, height, color=[1,1,1], fill=True):
         cone = vtk.vtkConeSource()
         cone.SetRadius(radius)
         cone.SetCenter(origin)
         cone.SetDirection(normal)
-        cone.SetHeight(0)
+        cone.SetHeight(height)
         cone.SetResolution(32)
-        edges = vtk.vtkExtractEdges()
-        edges.AddInputConnection(cone.GetOutputPort())
-        edges.Update()
-        self.addPolyData(edges.GetOutput(), color)
+        if fill:
+            cone.Update()
+            self.addPolyData(cone.GetOutput(), color)
+        else:
+            edges = vtk.vtkExtractEdges()
+            edges.AddInputConnection(cone.GetOutputPort())
+            edges.Update()
+            self.addPolyData(edges.GetOutput(), color)
+
+    def addArrow(self, start, end, headRadius=0.05, tubeRadius=0.01, color=[1,1,1], startHead=False, endHead=True):
+        normal = np.array(end) - np.array(start)
+        normal = normal / np.linalg.norm(normal)
+        if startHead:
+            start = np.array(start) + headRadius * normal
+        if endHead:
+            end = np.array(end) - headRadius * normal
+        self.addLine(start, end, radius=tubeRadius, color=color)
+        if startHead:
+            self.addCone(origin=start, normal=-normal, radius=headRadius,
+                         height=headRadius, color=color, fill=True)
+        if endHead:
+            self.addCone(origin=end, normal=normal, radius=headRadius,
+                         height=headRadius, color=color, fill=True)
 
     def addSphere(self, center, radius=0.05, color=[1,1,1]):
 

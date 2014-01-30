@@ -96,12 +96,17 @@ class FootstepsDriver(object):
         self.has_plan = True
         planFolder = getFootstepsFolder()
 
-        for i, footstep in enumerate(msg.footsteps[2:]):
+        allTransforms = []
+        for i, footstep in enumerate(msg.footsteps):
             trans = footstep.pos.translation
             trans = [trans.x, trans.y, trans.z]
             quat = footstep.pos.rotation
             quat = [quat.w, quat.x, quat.y, quat.z]
             footstepTransform = transformUtils.transformFromPose(trans, quat)
+            allTransforms.append(footstepTransform)
+
+            if i < 2:
+                continue
 
             if footstep.is_right_foot:
                 mesh = getRightFootMesh()
@@ -109,10 +114,24 @@ class FootstepsDriver(object):
             else:
                 mesh = getLeftFootMesh()
                 color = getLeftFootColor()
+            if footstep.infeasibility > 1e-6:
+                d = DebugData()
+                # normal = np.array(allTransforms[i-1].GetPosition()) - np.array(footstepTransform.GetPosition())
+                # normal = normal / np.linalg.norm(normal)
+                start = allTransforms[i-1].GetPosition()
+                end = footstepTransform.GetPosition()
+                d.addArrow(start, end, 0.02, 0.005,
+                           startHead=True,
+                           endHead=True)
+                # d.addCone(start, normal, 0.02, 0.02)
+                # d.addCone(end, -normal, 0.02, 0.02)
+                # d.addLine(start, end,radius=0.005)
+                vis.showPolyData(d.getPolyData(), 'infeasibility %d -> %d' % (i-2, i-1), parent=planFolder, color=[1, 0.2, 0.2])
 
-            obj = vis.showPolyData(mesh, 'step %d' % i, color=color, alpha=1.0, parent=planFolder)
+
+            obj = vis.showPolyData(mesh, 'step %d' % (i-1), color=color, alpha=1.0, parent=planFolder)
             frameObj = vis.showFrame(footstepTransform, 'frame', parent=obj, scale=0.3, visible=False)
-            frameObj.onTransformModifiedCallback = functools.partial(self.onStepModified, i)
+            frameObj.onTransformModifiedCallback = functools.partial(self.onStepModified, i-2)
             obj.actor.SetUserTransform(footstepTransform)
 
         self.lastFootstepPlanMessage = msg
