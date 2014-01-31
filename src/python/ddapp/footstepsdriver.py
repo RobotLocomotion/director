@@ -150,7 +150,7 @@ class FootstepsDriver(object):
         yaxis = np.cross(zaxis, xaxis)
         xaxis = np.cross(yaxis, zaxis)
 
-        stancePosition = np.array(t2.GetPosition()) + np.array(t1.GetPosition()) / 2.0
+        stancePosition = (np.array(t2.GetPosition()) + np.array(t1.GetPosition())) / 2.0
 
         footHeight = 0.0817
 
@@ -223,19 +223,20 @@ class FootstepsDriver(object):
     def onWalkingGoalModified(self, frameObj):
         self.sendFootstepPlanRequest()
 
-    def constructFootstepPlanRequest(self):
+    def constructFootstepPlanRequest(self, goalObj):
 
         msg = lcmdrc.footstep_plan_request_t()
         msg.utime = getUtime()
-        pose = self.jc.getPose('q_end')
+        pose = self.jc.getPose(self.jc.currentPoseName)
         state_msg = robotstate.drakePoseToRobotState(pose)
         msg.initial_state = state_msg
 
-        goalObj = om.findObjectByName('walking goal')
+        goalObj = goalObj or om.findObjectByName('walking goal')
         if goalObj:
             msg.goal_pos = transformUtils.positionMessageFromFrame(goalObj.transform)
         else:
             msg.goal_pos = transformUtils.positionMessageFromFrame(transformUtils.transformFromPose((0,0,0), (1,0,0,0)))
+
         msg.params = lcmdrc.footstep_plan_params_t()
         msg.params.max_num_steps = 30
         msg.params.min_num_steps = 0
@@ -253,11 +254,26 @@ class FootstepsDriver(object):
 
         return msg
 
-    def sendFootstepPlanRequest(self):
-        msg = self.constructFootstepPlanRequest()
+    def sendFootstepPlanRequest(self, goalObj=None):
+        msg = self.constructFootstepPlanRequest(goalObj)
         self.lastFootstepRequest = msg
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', msg)
         return msg
+
+    def sendWalkingPlanRequest(self):
+        assert self.lastFootstepPlanMessage
+
+        msg = lcmdrc.walking_plan_request_t()
+        msg.utime = getUtime()
+        pose = self.jc.getPose(self.jc.currentPoseName)
+        state_msg = robotstate.drakePoseToRobotState(pose)
+        msg.initial_state = state_msg
+
+        msg.new_nominal_state = msg.initial_state
+        msg.use_new_nominal_state = False
+        msg.footstep_plan = self.lastFootstepPlanMessage
+        lcmUtils.publish('WALKING_TRAJ_REQUEST', msg)
+
 
     def sendStopWalking(self):
         msg = lcmdrc.plan_control_t()
