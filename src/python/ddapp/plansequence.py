@@ -25,10 +25,11 @@ import drc as lcmdrc
 class PlanSequence(object):
 
 
-    def __init__(self, robotModel, footstepPlanner, manipPlanner):
+    def __init__(self, robotModel, footstepPlanner, manipPlanner, planningJointController):
         self.robotModel = robotModel
         self.footstepPlanner = footstepPlanner
         self.manipPlanner = manipPlanner
+        self.planningJointController = planningJointController
         self.graspingHand = 'left'
 
 
@@ -72,7 +73,7 @@ class PlanSequence(object):
         return t
 
 
-    def computeGraspFrame(self):
+    def computeGraspFrameRotary(self):
 
         assert self.drillAffordance
 
@@ -83,6 +84,19 @@ class PlanSequence(object):
         t.Concatenate(self.drillFrame.transform)
 
         self.graspFrame = vis.updateFrame(t, 'grasp frame', parent=self.drillAffordance, visible=False, scale=0.3)
+
+
+    def computeGraspFrameBarrel(self):
+
+        assert self.drillAffordance
+
+        position = [-0.13, 0.0, 0.015]
+        rpy = [0, 90, 0]
+
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t.Concatenate(self.drillFrame.transform)
+
+        self.graspFrame = vis.updateFrame(t, 'grasp frame', parent=self.drillAffordance, visible=True, scale=0.25)
 
 
     def computeStanceFrame(self):
@@ -112,7 +126,7 @@ class PlanSequence(object):
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(graspGroundFrame)
 
-        self.graspStanceFrame = vis.updateFrame(t, 'grasp stance', parent=self.drillAffordance, visible=False, scale=0.3)
+        self.graspStanceFrame = vis.updateFrame(t, 'grasp stance', parent=self.drillAffordance, visible=True, scale=0.25)
 
 
 
@@ -132,6 +146,9 @@ class PlanSequence(object):
         self.footstepPlanner.sendFootstepPlanRequest(self.graspStanceFrame)
 
 
+    def computeWalkingPlanRequest(self):
+        self.footstepPlanner.sendWalkingPlanRequest()
+
     def spawnDrillAffordance(self):
 
         drillFrame = self.computeDrillFrame(self.robotModel)
@@ -142,14 +159,22 @@ class PlanSequence(object):
         self.drillAffordance.actor.SetUserTransform(drillFrame)
         self.drillFrame = vis.showFrame(drillFrame, 'drill frame', parent=self.drillAffordance, visible=True, scale=0.2)
 
-        self.computeGraspFrame()
+        self.computeGraspFrameRotary()
+        self.computeStanceFrame()
+
+
+    def findDrillAffordance(self):
+        self.drillAffordance = om.findObjectByName('drill')
+        self.drillFrame = om.findObjectByName('drill frame')
+
+        self.computeGraspFrameBarrel()
         self.computeStanceFrame()
 
 
     def sendEstRobotState(self):
-        pose = self.footstepPlanner.jc.getPose(self.footstepPlanner.jc.currentPoseName)
+        pose = self.planningJointController.getPose(self.planningJointController.currentPoseName)
         msg = robotstate.drakePoseToRobotState(pose)
-        lcmUtils.publish('EST_ROBOT_STATE', msg)
+        lcmUtils.publish('EST_ROBOT_STATE_REACHING_PLANNER', msg)
 
 
     def cleanupFootstepPlans(self):
@@ -157,12 +182,17 @@ class PlanSequence(object):
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
 
 
+    def updateGraspAndStanceFrame(self):
+        self.computeGraspFrame()
+        self.computeStanceFrame()
+
+
     def plan(self):
 
         while True:
             #print 'reset'
             #self.cleanupFootstepPlans()
-            #self.footstepPlanner.jc.setNominalPose()
+            #self.planningJointController.setNominalPose()
             #self.sendEstRobotState()
             #yield
 
