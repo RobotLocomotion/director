@@ -41,7 +41,7 @@ configure:
 		   -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 		   -DCMAKE_PREFIX_PATH:PATH=$(BUILD_PREFIX) \
 		   -DDRAKE_DIR:PATH=$(BUILD_PREFIX)/../drake \
-		   -DUSE_DRC_MAPS:BOOL=OFF \
+		   -DUSE_DRC_MAPS:BOOL=ON \
 		   ..
 
 clean:
