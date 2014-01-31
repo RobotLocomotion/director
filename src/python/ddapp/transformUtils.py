@@ -74,6 +74,22 @@ def poseFromTransform(transform):
     return np.array(pos), np.array(quat)
 
 
+def frameFromPositionAndRPY(position, rpy):
+    '''
+    rpy specified in degrees
+    '''
+
+    rpy = [math.radians(deg) for deg in rpy]
+
+    angle, axis = botpy.roll_pitch_yaw_to_angle_axis(rpy)
+
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    t.RotateWXYZ(math.degrees(angle), axis)
+    t.Translate(position)
+    return t
+
+
 def frameFromPositionMessage(positionMessage):
     '''
     Given an lcmdrc.position_t message, returns a vtkTransform
