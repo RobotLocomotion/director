@@ -64,11 +64,11 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = True
-usePerception = False
+useIk = False
+usePerception = True
 useSpreadsheet = True
 useFootsteps = True
-usePlanning = False
+usePlanning = True
 useAtlasDriver = False
 
 
@@ -112,6 +112,7 @@ if useIk:
     jc.setNominalPose()
     jc.addPose('q_end', jc.poses['q_nom'])
     jc.addPose('q_start', jc.poses['q_nom'])
+    defaultJointController = jc
 
 
     def startIkServer():
@@ -137,53 +138,6 @@ if useAtlasDriver:
     atlasdriver.init()
     atlasdriverpanel.init(atlasdriver.driver)
 
-if useFootsteps:
-    # footsteps.init()
-    footstepsdriver.init(jc)
-    footstepsdriverpanel.init(footstepsdriver.driver)
-
-
-if usePlanning:
-    planListener = robotplanlistener.RobotPlanListener()
-    planListener.playbackSpeed = 1.0
-
-    def manipPlanCallback():
-        planListener.stopAnimation()
-        planListener.playManipPlan(jc)
-
-    def walkingPlanCallback():
-        planListener.stopAnimation()
-        planListener.playWalkingPlan(jc)
-
-    def animationCallback():
-        sendEstRobotState(jc.currentPoseName)
-
-    planListener.manipPlanCallback = manipPlanCallback
-    planListener.walkingPlanCallback = walkingPlanCallback
-    planListener.animationCallback = animationCallback
-
-    app.addToolbarMacro('plot plan', planListener.plotPlan)
-
-
-    def planSequenceTest():
-        global planner
-        planner = plansequence.PlanSequence(defaultRobotModel, footstepsdriver.driver, planListener)
-        planner.spawnDrillAffordance()
-
-        global plan
-        plan = planner.plan()
-
-
-    def replan():
-        planner.computeGraspFrame()
-        planner.computeStanceFrame()
-        planner.computeGraspPlan()
-
-    def showWalking():
-        footstepsdriver.driver.sendWalkingPlanRequest()
-
-
-    planSequenceTest()
 
 
 if usePerception:
@@ -197,6 +151,8 @@ if usePerception:
 
     robotStateJointController = jointcontrol.JointController([robotStateModel])
     robotStateJointController.setZeroPose()
+    defaultJointController = robotStateJointController
+    defaultJointController.currentPoseName = 'EST_ROBOT_STATE'
 
     perception.init(view, robotStateJointController)
     segmentationpanel.init()
@@ -263,6 +219,72 @@ if usePerception:
 
 
 
+if useFootsteps:
+    footstepsdriver.init(defaultJointController)
+    footstepsdriverpanel.init(footstepsdriver.driver)
+
+
+if usePlanning:
+
+
+    planningFolder = om.getOrCreateContainer('planning')
+
+    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_LI_RI.urdf')
+
+    planningModel = app.loadRobotModelFromFile(urdfFile)
+    obj = om.addRobotModel(planningModel, planningFolder)
+    obj.addToView(view)
+    obj.setProperty('Visible', False)
+    obj.setProperty('Name', 'robot model')
+    planningRobotModel = obj
+
+
+    planningJc = jointcontrol.JointController([planningModel], poseCollection)
+    planningJc.addNominalPoseFromFile(app.getNominalPoseMatFile())
+    planningJc.setNominalPose()
+    planningJc.addPose('q_end', planningJc.poses['q_nom'])
+    planningJc.addPose('q_start', planningJc.poses['q_nom'])
+
+
+    planListener = robotplanlistener.RobotPlanListener()
+    planListener.playbackSpeed = 1.0
+
+    def manipPlanCallback():
+        planListener.stopAnimation()
+        planListener.playbackSpeed = 4.0
+        planningRobotModel.setProperty('Visible', True)
+        planListener.playManipPlan(planningJc)
+
+    def walkingPlanCallback():
+        planListener.stopAnimation()
+        planListener.playbackSpeed = 1.0
+        planningRobotModel.setProperty('Visible', True)
+        planListener.playWalkingPlan(planningJc)
+
+    def animationCallback():
+        planner.sendEstRobotState()
+
+    planListener.manipPlanCallback = manipPlanCallback
+    planListener.walkingPlanCallback = walkingPlanCallback
+    planListener.animationCallback = animationCallback
+
+    app.addToolbarMacro('plot plan', planListener.plotPlan)
+
+    app.addToolbarMacro('fit drill', segmentation.startDrillBarrelSegmentation)
+
+
+    def planSequenceTest():
+        global planner
+        planner = plansequence.PlanSequence(planningRobotModel, footstepsdriver.driver, planListener, planningJc)
+
+        app.addToolbarMacro('update drill', planner.findDrillAffordance)
+        app.addToolbarMacro('get footsteps', planner.computeFootstepPlan)
+        app.addToolbarMacro('get walking', planner.computeWalkingPlanRequest)
+        app.addToolbarMacro('get grasping', planner.computeGraspPlan)
+
+    planSequenceTest()
+
+
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 
 
@@ -284,10 +306,6 @@ def showLinkFrame(linkName, model=None):
     if not frame:
         raise Exception('Link not found: ' + linkName)
     return vis.updateFrame(frame, linkName, parent='link frames')
-
-
-def createWalkingGoal():
-    footstepsdriver.driver.createWalkingGoal(defaultRobotModel)
 
 
 def resetCameraToRobot():
@@ -336,7 +354,7 @@ tc.targetFps = 60
 tc.callback = resetCameraToHeadView
 
 
-
+'''
 class ViewEventFilter(object):
 
     def __init__(self, view):
@@ -381,3 +399,4 @@ def onViewDoubleClicked(displayPoint):
 
 ef = ViewEventFilter(ikview)
 ef.doubleClickCallback = onViewDoubleClicked
+'''
