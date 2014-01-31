@@ -65,6 +65,5 @@ def init(driver):
 
     panel = FootstepsPanel(driver)
     dock = app.addWidgetToDock(panel.widget)
-    #dock.hide()
-
+    dock.hide()
     return panel
