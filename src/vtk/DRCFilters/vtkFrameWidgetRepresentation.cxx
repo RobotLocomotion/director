@@ -474,14 +474,16 @@ void vtkFrameWidgetRepresentation::Rotate(int X,
       return;
       }
 
-    double theta = vtkMath::DegreesFromRadians(std::acos(vtkMath::Dot(vec1, vec2)));
+    double vectorDot = vtkMath::Dot(vec1, vec2);
+    vectorDot = vectorDot > 1.0 ? 1.0 : vectorDot < -1.0 ? -1.0 : vectorDot;
+    double theta = vtkMath::DegreesFromRadians(std::acos(vectorDot));
+
     double direction[3];
     vtkMath::Cross(vec1, vec2, direction);
     if (direction[2] < 0.0)
       {
       theta = -theta;
       }
-
 
     double rotateAxis[3] = {0,0,0};
     rotateAxis[this->Internal->RotateAxis] = 1;
