@@ -27,6 +27,7 @@ from ddapp import footstepsdriverpanel
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import robotplanlistener
+from ddapp import plansequence
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
@@ -36,7 +37,10 @@ from ddapp import lcmUtils
 from ddapp.shallowCopy import shallowCopy
 import drc as lcmdrc
 
+from ddapp import botpy
+
 import functools
+import math
 
 import numpy as np
 from ddapp.debugVis import DebugData
@@ -141,23 +145,45 @@ if useFootsteps:
 
 if usePlanning:
     planListener = robotplanlistener.RobotPlanListener()
-    planListener.playbackSpeed = 5.0
+    planListener.playbackSpeed = 1.0
 
-    def planCallback():
+    def manipPlanCallback():
         planListener.stopAnimation()
-        planListener.playPlan(jc)
+        planListener.playManipPlan(jc)
+
+    def walkingPlanCallback():
+        planListener.stopAnimation()
+        planListener.playWalkingPlan(jc)
 
     def animationCallback():
         sendEstRobotState(jc.currentPoseName)
 
-    planListener.manipPlanCallback = planCallback
+    planListener.manipPlanCallback = manipPlanCallback
+    planListener.walkingPlanCallback = walkingPlanCallback
     planListener.animationCallback = animationCallback
 
     app.addToolbarMacro('plot plan', planListener.plotPlan)
 
-    def replan(side='left'):
-        assert side in ('left', 'right')
-        planListener.sendEndEffectorGoal('%s_hand' % side[0], om.findObjectByName('%s_base_link' % side).transform)
+
+    def planSequenceTest():
+        global planner
+        planner = plansequence.PlanSequence(defaultRobotModel, footstepsdriver.driver, planListener)
+        planner.spawnDrillAffordance()
+
+        global plan
+        plan = planner.plan()
+
+
+    def replan():
+        planner.computeGraspFrame()
+        planner.computeStanceFrame()
+        planner.computeGraspPlan()
+
+    def showWalking():
+        footstepsdriver.driver.sendWalkingPlanRequest()
+
+
+    planSequenceTest()
 
 
 if usePerception:
