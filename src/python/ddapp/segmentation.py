@@ -398,8 +398,8 @@ def addCoordArraysToPolyData(polyData):
 
 
 def getDebugRevolutionData():
-    dataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../drc-data'))
-    filename = os.path.join(dataDir, 'valve_wall.vtp')
+    #dataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../drc-data'))
+    #filename = os.path.join(dataDir, 'valve_wall.vtp')
     #filename = os.path.join(dataDir, 'bungie_valve.vtp')
     #filename = os.path.join(dataDir, 'cinder-blocks.vtp')
     #filename = os.path.join(dataDir, 'cylinder_table.vtp')
@@ -407,6 +407,8 @@ def getDebugRevolutionData():
     #filename = os.path.join(dataDir, 'debris.vtp')
     #filename = os.path.join(dataDir, 'rev1.vtp')
     #filename = os.path.join(dataDir, 'drill-in-hand.vtp')
+
+    filename = '/home/drc/Desktop/scans-for-pat/drill-scan2.vtp'
 
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
@@ -1515,6 +1517,7 @@ def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis):
 
     return params
 
+
 def getDrillMesh():
 
     button = np.array([0.035, 0.007, -0.06])
@@ -1524,6 +1527,10 @@ def getDrillMesh():
     d.addPolyData(drillMesh)
     d.addSphere(button, radius=0.005, color=[0,1,0])
     return d.getPolyData()
+
+
+def getDrillBarrelMesh():
+    return ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt.ply'), computeNormals=True)
 
 
 def segmentDrill(point1, point2, point3):
@@ -1631,6 +1638,92 @@ def segmentDrillAuto(point1):
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
     aff.addToView(app.getDRCView())
+
+
+def segmentDrillBarrel(point1):
+
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    expectedNormal = np.array([0.0, 0.0, 1.0])
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal, perpendicularAxis=expectedNormal, searchOrigin=point1, searchRadius=0.4, angleEpsilon=0.2, returnOrigin=True)
+
+
+    tablePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(tablePoints, 'table plane points', parent=getDebugFolder(), visible=False)
+
+    tablePoints = labelDistanceToPoint(tablePoints, point1)
+    tablePointsClusters = extractClusters(tablePoints)
+    tablePointsClusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
+
+    tablePoints = tablePointsClusters[0]
+    updatePolyData(tablePoints, 'table points', parent=getDebugFolder(), visible=False)
+
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.3])
+    searchRegion = cropToSphere(searchRegion, point1, 0.30)
+    #drillPoints = extractLargestCluster(searchRegion, minClusterSize=1)
+    drillPoints = searchRegion
+
+    updatePolyData(drillPoints, 'drill cluster', parent=getDebugFolder(), visible=False)
+
+
+    drillBarrelPoints = thresholdPoints(drillPoints, 'dist_to_plane', [0.177, 0.30])
+
+
+    # fit line to drill barrel points
+    linePoint, lineDirection, _ = applyLineFit(drillBarrelPoints, distanceThreshold=0.5)
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+
+    if np.dot(lineDirection, viewPlaneNormal) > 0:
+        lineDirection = -lineDirection
+
+    updatePolyData(drillBarrelPoints, 'drill barrel points', parent=getDebugFolder(), visible=False)
+
+
+    pts = vtkNumpy.getNumpyFromVtk(drillBarrelPoints, 'Points')
+
+    dists = np.dot(pts-linePoint, lineDirection)
+
+    p1 = linePoint + lineDirection*np.min(dists)
+    p2 = linePoint + lineDirection*np.max(dists)
+
+    p1 = projectPointToPlane(p1, origin, normal)
+    p2 = projectPointToPlane(p2, origin, normal)
+
+
+    d = DebugData()
+    d.addSphere(p1, radius=0.01)
+    d.addSphere(p2, radius=0.01)
+    d.addLine(p1, p2)
+    updatePolyData(d.getPolyData(), 'drill debug points', color=[0,1,0], parent=getDebugFolder(), visible=False)
+
+
+    drillToBasePoint = np.array([-0.07,  0.0  , -0.12])
+
+    zaxis = normal
+    xaxis = lineDirection
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PreMultiply()
+    t.Translate(-drillToBasePoint)
+    t.PostMultiply()
+    t.Translate(p1)
+
+    drillMesh = getDrillBarrelMesh()
+
+    aff = showPolyData(drillMesh, 'drill', visible=True)
+    aff.addToView(app.getDRCView())
+
+    aff.actor.SetUserTransform(t)
+    showFrame(t, 'drill frame', parent=aff, visible=False).addToView(app.getDRCView())
 
 
 
@@ -2592,6 +2685,16 @@ def startDrillAutoSegmentation():
     picker.drawLines = False
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrillAuto)
+
+
+def startDrillBarrelSegmentation():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDrillBarrel)
 
 
 def startDrillWallSegmentation():
