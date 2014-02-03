@@ -2,6 +2,7 @@ import os
 import vtkAll as vtk
 from ddapp import botpy
 import math
+import time
 import numpy as np
 
 from ddapp import transformUtils
@@ -72,11 +73,30 @@ class RobotPlanListener(object):
         msg.utime = getUtime()
         lcmUtils.publish('COMMITTED_ROBOT_PLAN', msg)
 
+
     def sendPlannerModeControl(self, mode='fixed_joints'):
         msg = lcmdrc.grasp_opt_mode_t()
         msg.utime = getUtime()
         msg.mode = {'fixed_joints' : 3}[mode]
         lcmUtils.publish('MANIP_PLANNER_MODE_CONTROL', msg)
+
+
+    def sendJointSpeedLimit(self, speedLimit=25):
+
+        assert speedLimit > 0 and speedLimit < 50
+        msg = lcmdrc.plan_execution_speed_t()
+        msg.speed = math.radians(speedLimit)
+        msg.utime = getUtime()
+        lcmUtils.publish('DESIRED_JOINT_SPEED', msg)
+
+
+    def sendEEArcSpeedLimit(self, speedLimit=0.20):
+
+        assert speedLimit > 0 and speedLimit < 0.50
+        msg = lcmdrc.plan_execution_speed_t()
+        msg.utime = getUtime()
+        msg.speed = speedLimit
+        lcmUtils.publish('DESIRED_EE_ARC_SPEED', msg)
 
 
     def clearEndEffectorGoals(self):
@@ -92,10 +112,21 @@ class RobotPlanListener(object):
         lcmUtils.publish('RIGHT_PALM_GOAL_CLEAR', msg)
 
 
-    def sendEndEffectorGoal(self, linkName, goalInWorldFrame):
-
+    def sendPlannerSettings(self):
+        '''
+        This will be removed when the planner lcm messages are updated to
+        take parameters and inputs.
+        '''
         self.clearEndEffectorGoals()
         self.sendPlannerModeControl()
+        self.sendJointSpeedLimit()
+        self.sendEEArcSpeedLimit()
+        time.sleep(0.05)
+
+
+    def sendEndEffectorGoal(self, linkName, goalInWorldFrame):
+
+        self.sendPlannerSettings()
 
         msg = lcmdrc.ee_goal_t()
         msg.ee_goal_pos = transformUtils.positionMessageFromFrame(goalInWorldFrame)

@@ -1,4 +1,5 @@
 import os
+import sys
 import vtkAll as vtk
 from ddapp import botpy
 import math
@@ -17,21 +18,69 @@ from ddapp.utime import getUtime
 from ddapp import robotstate
 from ddapp import segmentation
 
-
 import drc as lcmdrc
+
+
+sys.path.append(os.path.join(app.getDRCBase(), 'software/tools/tools/scripts'))
+import RobotPoseGUI as rpg
+
+
+
+
+class RobotPoseGUIWrapper(object):
+
+    initialized = False
+    main = None
+
+    @classmethod
+    def init(cls):
+        if cls.initialized:
+            return True
+
+        rpg.lcmWrapper = rpg.LCMWrapper()
+        cls.main = rpg.MainWindow()
+
+    @classmethod
+    def sendPose(cls, groupName, poseName, side=None):
+
+        cls.init()
+
+        config = rpg.loadConfig(cls.main.getPoseConfigFile())
+        assert groupName in config
+
+        poses = {}
+        for pose in config[groupName]:
+            poses[pose['name']] = pose
+
+        assert poseName in poses
+        pose = poses[poseName]
+        joints = pose['joints']
+
+        if side is not None:
+            sides = ('left', 'right')
+            assert side in sides
+            assert pose['nominal_handedness'] in sides
+
+            if pose['nominal_handedness'] != side:
+                joints = rpg.applyMirror(joints)
+
+
+        rpg.publishPostureGoal(rpg.applyMirror(pose['joints']), pose['name'])
+
 
 
 
 class PlanSequence(object):
 
 
-    def __init__(self, robotModel, footstepPlanner, manipPlanner, planningJointController):
+    def __init__(self, robotModel, footstepPlanner, manipPlanner, sensorJointController, planningJointController):
         self.robotModel = robotModel
         self.footstepPlanner = footstepPlanner
         self.manipPlanner = manipPlanner
+        self.sensorJointController = sensorJointController
         self.planningJointController = planningJointController
         self.graspingHand = 'left'
-
+        self.planFromCurrentRobotState = False
 
 
     def computeGroundFrame(self, robotModel):
@@ -129,16 +178,16 @@ class PlanSequence(object):
         self.graspStanceFrame = vis.updateFrame(t, 'grasp stance', parent=self.drillAffordance, visible=True, scale=0.25)
 
 
-
     def computeGraspPlan(self):
 
         linkMap = {
                       'left' : 'l_hand',
                       'right': 'r_hand'
-                   }
+                  }
 
         linkName = linkMap[self.graspingHand]
 
+        self.sendPlannerSettings()
         self.manipPlanner.sendEndEffectorGoal('l_hand', self.graspFrame.transform)
 
 
@@ -148,6 +197,29 @@ class PlanSequence(object):
 
     def computeWalkingPlanRequest(self):
         self.footstepPlanner.sendWalkingPlanRequest()
+
+
+    def sendPreGraspPose(self):
+
+        self.sendPlannerSettings()
+        RobotPoseGUIWrapper.sendPose('hose', '1 walking with hose', side=self.graspingHand)
+
+
+    def sendPelvisCrouch(self):
+        pass
+
+
+    def sendPelvisStand(self):
+        pass
+
+
+    def sendOpenHand(self):
+        pass
+
+
+    def sendCloseHand(self):
+        pass
+
 
     def spawnDrillAffordance(self):
 
@@ -171,8 +243,24 @@ class PlanSequence(object):
         self.computeStanceFrame()
 
 
-    def sendEstRobotState(self):
+    def sendPlannerSettings(self):
+
+        if self.planFromCurrentRobotState:
+            self.sendSensedEstimatedRobotState()
+        else:
+            self.sendPlanningEstimatedRobotState()
+
+        self.manipPlanner.sendPlannerSettings()
+
+
+    def sendPlanningEstimatedRobotState(self):
         pose = self.planningJointController.getPose(self.planningJointController.currentPoseName)
+        msg = robotstate.drakePoseToRobotState(pose)
+        lcmUtils.publish('EST_ROBOT_STATE_REACHING_PLANNER', msg)
+
+
+    def sendSensedEstimatedRobotState(self):
+        pose = self.sensorJointController.getPose('EST_ROBOT_STATE')
         msg = robotstate.drakePoseToRobotState(pose)
         lcmUtils.publish('EST_ROBOT_STATE_REACHING_PLANNER', msg)
 
@@ -190,11 +278,6 @@ class PlanSequence(object):
     def plan(self):
 
         while True:
-            #print 'reset'
-            #self.cleanupFootstepPlans()
-            #self.planningJointController.setNominalPose()
-            #self.sendEstRobotState()
-            #yield
 
             print 'computed footsteps'
             self.computeGraspFrame()
@@ -210,6 +293,10 @@ class PlanSequence(object):
             self.cleanupFootstepPlans()
             self.computeGraspPlan()
             yield
+
+
+
+
 
 
 
