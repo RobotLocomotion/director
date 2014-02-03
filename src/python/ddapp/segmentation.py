@@ -536,8 +536,7 @@ def removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.05):
 
     searchRegionThickness = 0.5
 
-    zvalues = vtkNumpy.getNumpyFromVtk(polyData, 'z')
-    assert zvalues is not None
+    zvalues = vtkNumpy.getNumpyFromVtk(polyData, 'Points')[:,2]
     groundHeight = np.percentile(zvalues, 5)
     searchRegion = thresholdPoints(polyData, 'z', [groundHeight - searchRegionThickness/2.0, groundHeight + searchRegionThickness/2.0])
 
@@ -1640,16 +1639,72 @@ def segmentDrillAuto(point1):
     aff.addToView(app.getDRCView())
 
 
-def segmentDrillBarrel(point1):
 
+def findAndFitDrillBarrel():
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
+    groundPoints, scenePoints =  removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.50)
+
+    scenePoints = thresholdPoints(scenePoints, 'dist_to_plane', [0.5, 1.7])
+
+
+    f = pcl.vtkPCLNormalEstimation()
+    f.SetSearchRadius(0.05)
+    f.SetInput(scenePoints)
+    f.Update()
+    scenePoints = shallowCopy(f.GetOutput())
+
+    normals = vtkNumpy.getNumpyFromVtk(scenePoints, 'normals')
+    normalsDotUp = np.abs(np.dot(normals, [0,0,1]))
+
+    vtkNumpy.addNumpyToVtk(scenePoints, normalsDotUp, 'normals_dot_up')
+
+    surfaces = thresholdPoints(scenePoints, 'normals_dot_up', [0.95, 1.0])
+
+
+    updatePolyData(groundPoints, 'ground points', parent=getDebugFolder(), visible=False)
+    updatePolyData(scenePoints, 'scene points', parent=getDebugFolder(), colorByName='normals_dot_up', visible=False)
+    updatePolyData(surfaces, 'surfaces', parent=getDebugFolder(), visible=False)
+
+    clusters = extractClusters(surfaces, clusterTolerance=0.10, minClusterSize=50)
+
+    for clusterId, cluster in enumerate(clusters):
+        updatePolyData(cluster, 'surface cluster %d' % clusterId, colorByName='cluster_labels')
+
+        bounds = cluster.GetBounds()
+        diagonal = np.linalg.norm(np.array(bounds[::2]) - np.array(bounds[1::2]))
+
+        print 'cluster %d diagonal: %f' % (clusterId, diagonal)
+
+        centroid = np.average(vtkNumpy.getNumpyFromVtk(cluster, 'Points'), axis=0)
+
+        try:
+            segmentDrillBarrel(centroid, polyData=scenePoints)
+        except:
+            print 'fit drill failed for cluster:', clusterId
+
+
+def segmentDrillBarrel(point1, polyData=None):
+
+    tableClusterSearchRadius = 0.4
+    drillClusterSearchRadius = 0.5 #0.3
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = polyData or inputObj.polyData
+
     expectedNormal = np.array([0.0, 0.0, 1.0])
 
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal, perpendicularAxis=expectedNormal, searchOrigin=point1, searchRadius=0.4, angleEpsilon=0.2, returnOrigin=True)
+    if not polyData.GetNumberOfPoints():
+        return
 
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal,
+        perpendicularAxis=expectedNormal, searchOrigin=point1,
+        searchRadius=tableClusterSearchRadius, angleEpsilon=0.2, returnOrigin=True)
+
+
+    if not polyData.GetNumberOfPoints():
+        return
 
     tablePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     updatePolyData(tablePoints, 'table plane points', parent=getDebugFolder(), visible=False)
@@ -1662,14 +1717,23 @@ def segmentDrillBarrel(point1):
     updatePolyData(tablePoints, 'table points', parent=getDebugFolder(), visible=False)
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.3])
-    searchRegion = cropToSphere(searchRegion, point1, 0.30)
+    searchRegion = cropToSphere(searchRegion, point1, drillClusterSearchRadius)
     #drillPoints = extractLargestCluster(searchRegion, minClusterSize=1)
     drillPoints = searchRegion
+
+
+    if not drillPoints.GetNumberOfPoints():
+        return
+
 
     updatePolyData(drillPoints, 'drill cluster', parent=getDebugFolder(), visible=False)
 
 
     drillBarrelPoints = thresholdPoints(drillPoints, 'dist_to_plane', [0.177, 0.30])
+
+
+    if not drillBarrelPoints.GetNumberOfPoints():
+        return
 
 
     # fit line to drill barrel points
