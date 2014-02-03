@@ -100,7 +100,7 @@ class RobotModelItem(ObjectModelItem):
         self.addProperty('Filename', model.filename())
         self.addProperty('Visible', model.visible())
         self.addProperty('Alpha', model.alpha())
-        self.addProperty('Color', QtGui.QColor(255,0,0))
+        self.addProperty('Color', model.color())
         self.views = []
 
     def _onPropertyChanged(self, propertyName):

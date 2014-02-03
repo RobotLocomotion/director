@@ -68,6 +68,7 @@ private:
 namespace
 {
 
+const int GRAY_DEFAULT = 190;
 
 std::vector<std::string> getEstRobotStateJointNames()
 {
@@ -270,8 +271,7 @@ ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
 
   visual->Actor->GetProperty()->SetSpecular(0.9);
   visual->Actor->GetProperty()->SetSpecularPower(20);
-  //visual->Actor->GetProperty()->SetColor(148/255.0, 147/255.0, 155/255.0);
-  visual->Actor->GetProperty()->SetColor(190/255.0, 190/255.0, 190/255.0);
+  visual->Actor->GetProperty()->SetColor(GRAY_DEFAULT/255.0, GRAY_DEFAULT/255.0, GRAY_DEFAULT/255.0);
   vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   SetInputData(mapper, visual->PolyData);
   visual->Actor->SetMapper(mapper);
@@ -767,7 +767,7 @@ public:
   {
     this->Visible = true;
     this->Alpha = 1.0;
-    this->Color = Qt::white;
+    this->Color = QColor(GRAY_DEFAULT, GRAY_DEFAULT, GRAY_DEFAULT);
   }
 
   URDFRigidBodyManipulatorVTK::Ptr Model;
