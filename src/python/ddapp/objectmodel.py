@@ -179,6 +179,12 @@ class PolyDataItem(ObjectModelItem):
             if scalars:
                 return scalars.GetName()
 
+    def setSolidColor(self, color):
+
+        color = [component * 255 for component in color]
+        self.setProperty('Color', QtGui.QColor(*color))
+        self.colorBy(None)
+
     def colorBy(self, arrayName, scalarRange=None, lut=None):
 
         if not arrayName:
