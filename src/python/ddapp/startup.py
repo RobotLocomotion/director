@@ -150,8 +150,10 @@ if usePerception:
 
 
     robotStateJointController = jointcontrol.JointController([robotStateModel])
-    robotStateJointController.setZeroPose()
+    robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_zero'))
     defaultJointController = robotStateJointController
+
+
     defaultJointController.currentPoseName = 'EST_ROBOT_STATE'
 
     perception.init(view, robotStateJointController)
@@ -236,6 +238,7 @@ if usePlanning:
     obj.addToView(view)
     obj.setProperty('Visible', False)
     obj.setProperty('Name', 'robot model')
+    obj.setProperty('Color', QtGui.QColor(255, 253, 213))
     planningRobotModel = obj
 
 
@@ -251,31 +254,41 @@ if usePlanning:
 
     def manipPlanCallback():
         planListener.stopAnimation()
-        planListener.playbackSpeed = 4.0
+        #planListener.playbackSpeed = 1.0
         planningRobotModel.setProperty('Visible', True)
         planListener.playManipPlan(planningJc)
 
     def walkingPlanCallback():
         planListener.stopAnimation()
-        planListener.playbackSpeed = 1.0
+        #planListener.playbackSpeed = 1.0
         planningRobotModel.setProperty('Visible', True)
         planListener.playWalkingPlan(planningJc)
 
     def animationCallback():
-        planner.sendEstRobotState()
+        planner.sendPlanningEstimatedRobotState()
 
     planListener.manipPlanCallback = manipPlanCallback
     planListener.walkingPlanCallback = walkingPlanCallback
-    planListener.animationCallback = animationCallback
+    #planListener.animationCallback = animationCallback
 
     app.addToolbarMacro('plot plan', planListener.plotPlan)
 
-    app.addToolbarMacro('fit drill', segmentation.startDrillBarrelSegmentation)
+    def fitDrillMultisense():
+        pd = om.findObjectByName('Multisense').model.revPolyData
+        om.removeFromObjectModel(om.findObjectByName('debug'))
+        segmentation.findAndFitDrillBarrel(pd,  getLinkFrame('utorso'))
 
+    app.addToolbarMacro('fit drill', fitDrillMultisense)
+
+    def drillTrackerOn():
+        om.findObjectByName('Multisense').model.showRevolutionCallback = fitDrillMultisense
+
+    def drillTrackerOff():
+        om.findObjectByName('Multisense').model.showRevolutionCallback = None
 
     def planSequenceTest():
         global planner
-        planner = plansequence.PlanSequence(planningRobotModel, footstepsdriver.driver, planListener, planningJc)
+        planner = plansequence.PlanSequence(planningRobotModel, footstepsdriver.driver, planListener, robotStateJointController, planningJc)
 
         app.addToolbarMacro('update drill', planner.findDrillAffordance)
         app.addToolbarMacro('get footsteps', planner.computeFootstepPlan)
@@ -283,6 +296,7 @@ if usePlanning:
         app.addToolbarMacro('get grasping', planner.computeGraspPlan)
 
     planSequenceTest()
+    drillTrackerOn()
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
