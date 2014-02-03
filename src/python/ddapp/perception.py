@@ -141,6 +141,7 @@ class MultiSenseSource(TimerCallback):
         self.setPointSize(self.pointSize)
         self.setAlpha(self.alpha)
         self.targetFps = 60
+        self.showRevolutionCallback = None
 
 
     def _newActor(self):
@@ -174,6 +175,8 @@ class MultiSenseSource(TimerCallback):
         self.reader.GetDataForRevolution(revId, self.revPolyData)
         self.view.render()
         self.displayedRevolution = revId
+        if self.showRevolutionCallback:
+            self.showRevolutionCallback()
 
     def setPointSize(self, pointSize):
         for actor in self.actors:
