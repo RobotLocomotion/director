@@ -12,6 +12,7 @@ class JointController(object):
         self.models = models
         self.poses = {}
         self.poseCollection = poseCollection
+        self.currentPoseName = None
         self.addPose('q_zero', [0.0 for i in xrange(self.numberOfJoints)])
 
     def setJointPosition(self, jointId, position):
