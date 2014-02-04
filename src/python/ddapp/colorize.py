@@ -2,6 +2,8 @@ import ddapp.applogic as app
 import ddapp.objectmodel as om
 from ddapp import cameraview
 
+import functools
+
 actionName = 'ActionColorizeLidar'
 
 
@@ -10,17 +12,15 @@ def setVisProperties(obj, colorModeEnabled):
 
     if colorModeEnabled:
         alpha = 1.0
-        pointSize = 7.0
+        pointSize = 4.0
         colorBy = 'rgb'
     else:
-        alpha = 0.3
+        alpha = 0.5
         pointSize = 1.0
         colorBy = None
 
-    obj.colorBy(colorBy)
     obj.setProperty('Alpha', alpha)
     obj.setProperty('Point Size', pointSize)
-    app.getCurrentRenderView().render()
 
 
 def colorizePoints(polyData):
@@ -63,6 +63,24 @@ def colorizeMaps(enabled):
     setVisProperties(mapServerObj, enabled)
 
 
+def colorizeMultisense(enabled):
+    obj = om.findObjectByName('Multisense')
+    if not obj:
+        return
+
+    def callback():
+        colorizePoints(obj.model.polyDataObj.polyData)
+        obj.model.polyDataObj.colorBy('rgb')
+
+    if enabled:
+        callback()
+        obj.model.colorizeCallback = callback
+    else:
+        obj.model.colorizeCallback = None
+
+    setVisProperties(obj, enabled)
+
+
 def colorizeMapsOff():
     obj = om.findObjectByName('Map Server')
     obj.source.colorizeCallback = None
@@ -75,6 +93,7 @@ def onColorizeLidar():
 
     colorizeEnabled = app.getToolBarActions()[actionName].checked
     colorizeMaps(colorizeEnabled)
+    colorizeMultisense(colorizeEnabled)
     colorizeSegmentationLidar(colorizeEnabled)
 
 

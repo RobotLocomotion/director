@@ -159,7 +159,6 @@ class PolyDataItem(ObjectModelItem):
 
         self._renderAllViews()
 
-
     def _renderAllViews(self):
         for view in self.views:
             view.render()
@@ -178,6 +177,10 @@ class PolyDataItem(ObjectModelItem):
             scalars = self.polyData.GetPointData().GetScalars()
             if scalars:
                 return scalars.GetName()
+
+    def getArrayNames(self):
+        pointData = self.polyData.GetPointData()
+        return [pointData.GetArrayName(i) for i in xrange(pointData.GetNumberOfArrays())]
 
     def setSolidColor(self, color):
 
@@ -213,6 +216,7 @@ class PolyDataItem(ObjectModelItem):
         self.mapper.SetScalarRange(scalarRange)
         self.mapper.InterpolateScalarsBeforeMappingOff()
         #self.mapper.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
+        self._renderAllViews()
 
 
     def addToView(self, view):
@@ -250,10 +254,18 @@ class PolyDataItem(ObjectModelItem):
             return ObjectModelItem.getPropertyAttributes(self, propertyName)
 
     def onRemoveFromObjectModel(self):
-        for view in self.views:
-            view.renderer().RemoveActor(self.actor)
-            view.render()
+        self.removeFromAllViews()
 
+    def removeFromAllViews(self):
+        for view in list(self.views):
+            self.removeFromView(view)
+        assert len(self.views) == 0
+
+    def removeFromView(self, view):
+        assert view in self.views
+        self.views.remove(view)
+        view.renderer().RemoveActor(self.actor)
+        view.render()
 
 
 def getObjectTree():
