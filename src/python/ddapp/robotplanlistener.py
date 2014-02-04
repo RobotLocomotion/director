@@ -68,8 +68,9 @@ class RobotPlanListener(object):
         return msg
 
 
-    def commitPlan(self):
-        msg = self.convertKeyframePlan(msg)
+    def commitManipPlan(self):
+        assert self.lastManipPlanMsg is not None
+        msg = self.convertKeyframePlan(self.lastManipPlanMsg)
         msg.utime = getUtime()
         lcmUtils.publish('COMMITTED_ROBOT_PLAN', msg)
 
