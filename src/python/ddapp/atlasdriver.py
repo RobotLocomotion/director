@@ -114,6 +114,34 @@ class AtlasDriver(object):
         lcmUtils.publish('CALIBRATE_ARM_ENCODERS', msg)
 
 
+    def getPelvisHeightLimits(self):
+        '''
+        returns pelvis height limits in meters: min, max
+        '''
+        return (0.66, 0.92)
+
+
+    def sendPelvisHeightCommand(self, height):
+
+        heightLimit = self.getPelvisHeightLimits()
+        assert heightLimit[0] <= height <= heightLimit[1]
+
+        pelvisParams = lcmdrc.atlas_behavior_pelvis_servo_params_t()
+        pelvisParams.com_v0 = 0.0
+        pelvisParams.com_v1 = 0.0
+        pelvisParams.pelvis_height = height
+        pelvisParams.pelvis_yaw = 0.0
+        pelvisParams.pelvis_pitch = 0.0
+        pelvisParams.pelvis_roll = 0.0
+
+        msg = lcmdrc.atlas_behavior_manipulate_params_t()
+        msg.use_demo_mode = 0
+        msg.use_desired = 1
+        msg.desired = pelvisParams
+
+        lcmUtils.publish('ATLAS_MANIPULATE_PARAMS', msg)
+
+
 
 def init():
 
