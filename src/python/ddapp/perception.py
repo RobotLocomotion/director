@@ -70,6 +70,7 @@ class MultisenseItem(om.ObjectModelItem):
         self.addProperty('Min Range', model.reader.GetDistanceRange()[0])
         self.addProperty('Max Range', model.reader.GetDistanceRange()[1])
         self.addProperty('Edge Filter Distance', model.reader.GetEdgeDistanceThreshold())
+        self.addProperty('Number of Scan Lines', model.numberOfScanLines)
         self.addProperty('Visible', model.visible)
         self.addProperty('Point Size', model.pointSize)
         self.addProperty('Alpha', model.alpha)
@@ -99,6 +100,10 @@ class MultisenseItem(om.ObjectModelItem):
         elif propertyName == 'Point Size':
             self.model.setPointSize(self.getProperty(propertyName))
 
+        elif propertyName == 'Number of Scan Lines':
+            self.model.numberOfScanLines = self.getProperty(propertyName)
+            self.model.initScanLines()
+
         elif propertyName in ('Min Range', 'Max Range'):
             self.model.reader.SetDistanceRange(self.getProperty('Min Range'), self.getProperty('Max Range'))
             self.model.showRevolution(self.model.displayedRevolution)
@@ -115,6 +120,8 @@ class MultisenseItem(om.ObjectModelItem):
             return om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False)
         elif propertyName == 'Edge Filter Distance':
             return om.PropertyAttributes(decimals=3, minimum=0.0, maximum=10.0, singleStep=0.01, hidden=False)
+        elif propertyName == 'Number of Scan Lines':
+            return om.PropertyAttributes(decimals=0, minimum=0, maximum=100, singleStep=1, hidden=False)
         else:
             return om.ObjectModelItem.getPropertyAttributes(self, propertyName)
 
@@ -128,72 +135,73 @@ class MultiSenseSource(TimerCallback):
         self.reader = None
         self.displayedRevolution = -1
         self.lastScanLine = -1
-        self.numberOfActors = 1
-        self.nextActorId = 0
+        self.numberOfScanLines = 1
+        self.nextScanLineId = 0
+        self.scanLines = []
         self.lastRobotStateUtime = 0
         self.pointSize = 1
         self.alpha = 0.5
         self.visible = True
-        self._createActors()
+        self.initScanLines()
 
-        self.revPolyData, self.revMapper, self.revActor = self._newActor()
+        self.revPolyData = vtk.vtkPolyData()
+        self.polyDataObj = om.PolyDataItem('Multisense Scan', self.revPolyData, view)
 
         self.setPointSize(self.pointSize)
         self.setAlpha(self.alpha)
         self.targetFps = 60
         self.showRevolutionCallback = None
+        self.colorizeCallback = None
 
+    def initScanLines(self):
 
-    def _newActor(self):
-        polyData = vtk.vtkPolyData()
-        mapper = vtk.vtkPolyDataMapper()
-        actor = vtk.vtkActor()
+        for scanLine in self.scanLines:
+            scanLine.removeFromAllViews()
 
-        mapper.SetInput(polyData)
-        actor.SetMapper(mapper)
-        self.view.renderer().AddActor(actor)
-        return polyData, mapper, actor
+        self.scanLines = []
+        self.nextScanLineId = 0
+        self.lastScanLine = -1
 
-
-    def _createActors(self):
-
-        self.polyData = []
-        self.mappers = []
-        self.actors = []
-
-        for i in xrange(self.numberOfActors):
-            polyData, mapper, actor = self._newActor()
-            self.polyData.append(polyData)
-            self.mappers.append(mapper)
-            self.actors.append(actor)
-            actor.GetProperty().SetColor(1,0,0)
+        for i in xrange(self.numberOfScanLines):
+            polyData = vtk.vtkPolyData()
+            scanLine = om.PolyDataItem('scan line %d' % i, polyData, self.view)
+            scanLine.setSolidColor((1,0,0))
+            self.scanLines.append(scanLine)
 
     def getScanToLocal(self):
         return None
 
     def showRevolution(self, revId):
+
+        colorByArray = self.polyDataObj.getColorByArrayName()
         self.reader.GetDataForRevolution(revId, self.revPolyData)
-        self.view.render()
+
         self.displayedRevolution = revId
+
         if self.showRevolutionCallback:
             self.showRevolutionCallback()
+        if self.colorizeCallback:
+            self.colorizeCallback()
+
+        self.polyDataObj.colorBy(colorByArray, lut=self.polyDataObj.mapper.GetLookupTable())
+
 
     def setPointSize(self, pointSize):
-        for actor in self.actors:
-            actor.GetProperty().SetPointSize(pointSize+2)
-        self.revActor.GetProperty().SetPointSize(pointSize)
+        for scanLine in self.scanLines:
+            scanLine.setProperty('Point Size', pointSize + 2)
+        self.polyDataObj.setProperty('Point Size', pointSize)
 
     def setAlpha(self, alpha):
         self.alpha = alpha
-        for actor in self.actors:
-            actor.GetProperty().SetOpacity(alpha)
-        self.revActor.GetProperty().SetOpacity(alpha)
+        for scanLine in self.scanLines:
+            scanLine.setProperty('Alpha', alpha)
+        self.polyDataObj.setProperty('Alpha', alpha)
 
     def setVisible(self, visible):
         self.visible = visible
-        for actor in self.actors:
-            actor.SetVisibility(visible)
-        self.revActor.SetVisibility(visible)
+        for scanLine in self.scanLines:
+            scanLine.setProperty('Visible', visible)
+        self.polyDataObj.setProperty('Visible', visible)
 
     def start(self):
         if self.reader is None:
@@ -202,7 +210,6 @@ class MultiSenseSource(TimerCallback):
             self.reader.Start()
 
         TimerCallback.start(self)
-
 
     def updateRobotState(self):
 
@@ -226,6 +233,9 @@ class MultiSenseSource(TimerCallback):
 
     def updateScanLines(self):
 
+        if not self.numberOfScanLines:
+            return
+
         currentScanLine = self.reader.GetCurrentScanLine() - 1
         scanLinesToUpdate = currentScanLine - self.lastScanLine
 
@@ -235,28 +245,25 @@ class MultiSenseSource(TimerCallback):
 
         #print 'current scanline:', currentScanLine
         #print 'scan lines to update:', scanLinesToUpdate
-        #print 'updating actors:', self.nextActorId, (self.nextActorId + (scanLinesToUpdate-1)) % self.numberOfActors
+        #print 'updating actors:', self.nextScanLineId, (self.nextScanLineId + (scanLinesToUpdate-1)) % self.numberOfActors
         #print 'updating scan lines:', self.lastScanLine + 1, self.lastScanLine + 1 + (scanLinesToUpdate-1)
 
         for i in xrange(scanLinesToUpdate):
-            polyData = self.polyData[(self.nextActorId + i) % self.numberOfActors]
-            self.reader.GetDataForScanLine(self.lastScanLine + i + 1, polyData)
+            scanLine = self.scanLines[(self.nextScanLineId + i) % self.numberOfScanLines]
+            self.reader.GetDataForScanLine(self.lastScanLine + i + 1, scanLine.polyData)
 
         self.lastScanLine = currentScanLine
-        self.nextActorId = (self.nextActorId + scanLinesToUpdate) % self.numberOfActors
+        self.nextScanLineId = (self.nextScanLineId + scanLinesToUpdate) % self.numberOfScanLines
 
         self.view.render()
 
 
     def updateRevolution(self):
-
         currentRevolution = self.reader.GetCurrentRevolution() - 1
-
         if currentRevolution == self.displayedRevolution:
             return
 
         self.showRevolution(currentRevolution)
-
 
     def getSpindleAxis(self):
         return self.getAxis('SCAN', [1.0, 0.0, 0.0])
