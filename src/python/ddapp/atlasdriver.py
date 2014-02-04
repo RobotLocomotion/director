@@ -38,7 +38,7 @@ class AtlasDriver(object):
         self.timer = SimpleTimer()
 
     def _setupSubscriptions(self):
-        lcmUtils.addSubscriber('ATLAS_STATE', lcmdrc.atlas_state_t, self.onAtlasState)
+        #lcmUtils.addSubscriber('ATLAS_STATE', lcmdrc.atlas_state_t, self.onAtlasState)
         lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
 
     def onAtlasState(self, message):

@@ -70,7 +70,7 @@ usePerception = True
 useSpreadsheet = True
 useFootsteps = True
 usePlanning = True
-useAtlasDriver = False
+useAtlasDriver = True
 
 
 poseCollection = PythonQt.dd.ddSignalMap()

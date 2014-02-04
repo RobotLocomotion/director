@@ -55,7 +55,6 @@ class AtlasDriverPanel(object):
     def updatePanel(self):
         self.behaviorLabel.text = 'current behavior: %s' % self.driver.getCurrentBehaviorName()
 
-
     def onFreeze(self):
         self.driver.sendFreezeCommand()
 
@@ -89,6 +88,6 @@ def init(driver):
 
     panel = AtlasDriverPanel(driver)
     dock = app.addWidgetToDock(panel.widget)
-    #dock.hide()
+    dock.hide()
 
     return panel
