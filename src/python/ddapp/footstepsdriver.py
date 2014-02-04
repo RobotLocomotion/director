@@ -47,6 +47,7 @@ def getDefaultStepParams():
     default_step_params = lcmdrc.footstep_params_t()
     default_step_params.step_speed = 1.0
     default_step_params.step_height = 0.05
+    default_step_params.constrain_full_foot_pose = False
     default_step_params.bdi_step_duration = 2.0
     default_step_params.bdi_sway_duration = 0.0
     default_step_params.bdi_lift_height = 0.05
