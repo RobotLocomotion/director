@@ -15,6 +15,7 @@ set(python_files
   ddapp/drilltaskpanel.py
   ddapp/footstepsdriver.py
   ddapp/footstepsdriverpanel.py
+  ddapp/handdriver.py
   ddapp/ikeditor.py
   ddapp/ik.py
   ddapp/__init__.py

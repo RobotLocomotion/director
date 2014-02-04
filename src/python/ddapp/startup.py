@@ -27,6 +27,7 @@ from ddapp import footstepsdriverpanel
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import robotplanlistener
+from ddapp import handdriver
 from ddapp import plansequence
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
@@ -367,6 +368,8 @@ tc = TimerCallback()
 tc.targetFps = 60
 tc.callback = resetCameraToHeadView
 
+
+d = handdriver.IRobotHandDriver(side='left')
 
 '''
 class ViewEventFilter(object):
