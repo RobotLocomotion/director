@@ -297,7 +297,7 @@ if usePlanning:
         app.addToolbarMacro('get grasping', planner.computeGraspPlan)
 
     planSequenceTest()
-    drillTrackerOn()
+    #drillTrackerOn()
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
