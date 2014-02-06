@@ -127,6 +127,7 @@ class PlanSequence(object):
         self.planPlaybackFunction = planPlaybackFunction
         self.graspingHand = 'left'
         self.planFromCurrentRobotState = False
+        self.userPromptEnabled = True
         self.walkingPlan = None
         self.preGraspPlan = None
         self.graspPlan = None
@@ -172,11 +173,7 @@ class PlanSequence(object):
 
 
     def computeGraspFrame(self):
-
-        # remove me
-        self.computeGraspFrameRotary()
-        return
-
+        #self.computeGraspFrameRotary()
         self.computeGraspFrameBarrel()
 
 
@@ -197,7 +194,7 @@ class PlanSequence(object):
 
         assert self.drillAffordance
 
-        position = [-0.13, 0.0, 0.015]
+        position = [-0.12, 0.0, 0.025]
         rpy = [0, 90, 0]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
@@ -292,7 +289,7 @@ class PlanSequence(object):
         self.handDriver.sendOpen()
 
     def sendCloseHand(self):
-        self.handDriver.sendClose(50)
+        self.handDriver.sendClose(60)
 
     def sendNeckPitchLookDown(self):
         self.multisenseDriver.setNeckPitch(40)
@@ -303,10 +300,6 @@ class PlanSequence(object):
 
     def waitForAtlasBehaviorAsync(self, behaviorName):
         assert behaviorName in self.atlasDriver.getBehaviorMap().values()
-
-        # remove me
-        yield; return;
-
         while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
             yield
 
@@ -317,7 +310,10 @@ class PlanSequence(object):
 
 
     def userPrompt(self, message):
-        return
+
+        if not self.userPromptEnabled:
+            return
+
         yield
         result = raw_input(message)
         if result != 'y':
@@ -334,10 +330,6 @@ class PlanSequence(object):
     def waitForCleanLidarSweepAsync(self):
         currentRevolution = self.multisenseDriver.displayedRevolution
         desiredRevolution = currentRevolution + 2
-
-        # remove me
-        yield; return;
-
         while self.multisenseDriver.displayedRevolution < desiredRevolution:
             yield
 
@@ -355,20 +347,16 @@ class PlanSequence(object):
         self.computeGraspFrame()
         self.computeStanceFrame()
 
-
     def findDrillAffordance(self):
         self.drillAffordance = om.findObjectByName('drill')
         self.drillFrame = om.findObjectByName('drill frame')
 
-
     def geEstimatedRobotStatePose(self):
         return self.sensorJointController.getPose('EST_ROBOT_STATE')
-
 
     def cleanupFootstepPlans(self):
         om.removeFromObjectModel(om.findObjectByName('walking goal'))
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
-
 
     def playNominalPlan(self):
         plans = [self.walkingPlan, self.preGraspPlan, self.graspPlan]
@@ -384,6 +372,7 @@ class PlanSequence(object):
     def computeNominalPlan(self):
 
         self.planFromCurrentRobotState = False
+
         self.findDrillAffordance()
         self.computeGraspFrame()
         self.computeStanceFrame()
@@ -393,19 +382,16 @@ class PlanSequence(object):
         self.computeGraspPlan()
         self.playNominalPlan()
 
-
     def autonomousExecute(self):
 
         self.planFromCurrentRobotState = True
 
         taskQueue = AsyncTaskQueue()
 
-
-        # remove me
-        def dummy():
-            pass
-        self.affordanceFitFunction = dummy
-
+        # stand and open hand
+        taskQueue.addTask(self.userPrompt('stand and open hand. continue? y/n: '))
+        taskQueue.addTask(self.atlasDriver.sendStandCommand)
+        taskQueue.addTask(self.sendOpenHand)
 
         # user prompt
         taskQueue.addTask(self.userPrompt('sending neck pitch forward. continue? y/n: '))
@@ -503,6 +489,20 @@ class PlanSequence(object):
         taskQueue.addTask(self.printAsync('commit grasp plan'))
         taskQueue.addTask(self.commitGraspPlan)
         taskQueue.addTask(self.delay(10.0))
+
+        # recompute grasp plan
+        taskQueue.addTask(self.printAsync('recompute grasp plan'))
+        taskQueue.addTask(self.computeGraspPlan)
+        taskQueue.addTask(self.playGraspPlan)
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('commit manip plan. continue? y/n: '))
+
+        # commit grasp plan
+        taskQueue.addTask(self.printAsync('commit grasp plan'))
+        taskQueue.addTask(self.commitGraspPlan)
+        taskQueue.addTask(self.delay(3.0))
+
 
         # user prompt
         taskQueue.addTask(self.userPrompt('closing hand. continue? y/n: '))
