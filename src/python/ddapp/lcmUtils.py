@@ -80,17 +80,77 @@ def captureMessageCallback(channel, messageClass, callback):
     return subscriber
 
 
-def addSubscriber(channel, messageClass, callback):
+def addSubscriber(channel, messageClass=None, callback=None):
 
     lcmThread = getGlobalLCMThread()
     subscriber = PythonQt.dd.ddLCMSubscriber(channel, lcmThread)
 
     def handleMessage(messageData):
-        callback(messageClass.decode(messageData.data()))
+        try:
+            msg = messageClass.decode(messageData.data())
+        except ValueError:
+            print 'error decoding message on channel:', channel
+        else:
+            callback(msg)
 
-    subscriber.connect('messageReceived(const QByteArray&, const QString&)', handleMessage)
+    if callback is not None:
+        if messageClass is not None:
+            subscriber.connect('messageReceived(const QByteArray&, const QString&)', handleMessage)
+        else:
+            subscriber.connect('messageReceived(const QByteArray&, const QString&)', callback)
+    else:
+        subscriber.setCallbackEnabled(False)
+
     lcmThread.addSubscriber(subscriber)
     return subscriber
+
+
+def removeSubscriber(subscriber):
+    lcmThread = getGlobalLCMThread()
+    lcmThread.removeSubscriber(subscriber)
+    if subscriber.parent() == lcmThread:
+        subscriber.setParent(None)
+
+
+def getNextMessage(subscriber, messageClass=None, timeout=0):
+
+    messageData = subscriber.getNextMessage(timeout).data()
+
+    if not messageData:
+        return None
+
+    if messageClass is not None:
+        try:
+            msg = messageClass.decode(messageData)
+        except ValueError:
+            print 'error decoding message on channel:', subscriber.channel()
+            return None
+
+        return msg
+    else:
+        return messageData
+
+
+class MessageResponseHelper(object):
+
+    def __init__(self, responseChannel, responseMessageClass=None):
+        self.subscriber = addSubscriber(responseChannel)
+        self.messageClass = responseMessageClass
+
+    def waitForResponse(self, timeout=5000, keepAlive=True):
+        response = getNextMessage(self.subscriber, self.messageClass, timeout)
+        if not keepAlive:
+            self.finish()
+        return response
+
+    def finish(self):
+        removeSubscriber(self.subscriber)
+
+    @staticmethod
+    def publishAndWait(channel, message, responseChannel, responseMessageClass=None, timeout=5000):
+        helper = MessageResponseHelper(responseChannel, responseMessageClass)
+        publish(channel, message)
+        return helper.waitForResponse(timeout, keepAlive=False)
 
 
 def publish(channel, message):
