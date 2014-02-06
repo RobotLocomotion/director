@@ -154,11 +154,6 @@ if usePerception:
     robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_zero'))
     defaultJointController = robotStateJointController
 
-    # remove me
-    robotStateJointController.poses['EST_ROBOT_STATE'][2] = 0.9
-    robotStateJointController.setPose('EST_ROBOT_STATE')
-
-
     defaultJointController.currentPoseName = 'EST_ROBOT_STATE'
 
     perception.init(view, robotStateJointController)
@@ -302,10 +297,8 @@ if usePlanning:
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans)
 
-    # remove me
-    planner.spawnDrillAffordance()
+    planner.userPromptEnabled = False
     q = planner.autonomousExecute()
-    #drillTrackerOn()
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
