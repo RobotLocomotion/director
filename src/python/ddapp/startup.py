@@ -177,16 +177,21 @@ if usePerception:
 
 
     def onRobotModel(m):
+
+        global robotStateModel, defaultRobotModel
+
         model = app.loadRobotModelFromString(m.urdf_xml_string)
         sensorsFolder = om.getOrCreateContainer('sensors')
         obj = om.addRobotModel(model, sensorsFolder)
         obj.setProperty('Name', 'model publisher')
         robotStateJointController.models.append(model)
+        robotStateJointController.push()
 
-        global robotStateModel
         obj.addToView(robotStateModel.views[0])
-        robotStateModel.setProperty('Visible', False)
+        om.removeFromObjectModel(robotStateModel)
+        robotStateJointController.models.remove(robotStateModel.model)
         robotStateModel = obj
+        defaultRobotModel = obj
 
     lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
 
