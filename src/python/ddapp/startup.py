@@ -287,6 +287,7 @@ if usePlanning:
         segmentation.findAndFitDrillBarrel(pd,  getLinkFrame('utorso'))
 
     app.addToolbarMacro('plot plan', plotManipPlan)
+    app.addToolbarMacro('play manip plan', playManipPlan)
     app.addToolbarMacro('fit drill', fitDrillMultisense)
 
     def drillTrackerOn():
