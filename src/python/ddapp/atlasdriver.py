@@ -39,7 +39,8 @@ class AtlasDriver(object):
 
     def _setupSubscriptions(self):
         #lcmUtils.addSubscriber('ATLAS_STATE', lcmdrc.atlas_state_t, self.onAtlasState)
-        lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
+        sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
+        sub.setSpeedLimit(60)
 
     def onAtlasState(self, message):
         self.lastAtlasStateMessage = message
