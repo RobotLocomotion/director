@@ -396,7 +396,145 @@ class PlanSequence(object):
 
     def autonomousExecute(self):
 
+        self.planFromCurrentRobotState = True
+
         taskQueue = AsyncTaskQueue()
+
+
+        # remove me
+        def dummy():
+            pass
+        self.affordanceFitFunction = dummy
+
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('sending neck pitch forward. continue? y/n: '))
+
+        # set neck pitch
+        taskQueue.addTask(self.printAsync('neck pitch forward'))
+        taskQueue.addTask(self.sendNeckPitchLookForward)
+        taskQueue.addTask(self.delay(1.0))
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('perception and fitting. continue? y/n: '))
+
+        # perception & fitting
+        taskQueue.addTask(self.printAsync('waiting for clean lidar sweep'))
+        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
+
+        taskQueue.addTask(self.printAsync('fitting drill affordance'))
+        taskQueue.addTask(self.affordanceFitFunction)
+        taskQueue.addTask(self.findDrillAffordance)
+
+        # compute grasp & stance
+        taskQueue.addTask(self.printAsync('computing grasp and stance frames'))
+        taskQueue.addTask(self.computeGraspFrame)
+        taskQueue.addTask(self.computeStanceFrame)
+
+        # footstep plan
+        taskQueue.addTask(self.printAsync('compute footstep plan'))
+        taskQueue.addTask(self.computeFootstepPlan)
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('sending footstep plan. continue? y/n: '))
+
+        # walk
+        taskQueue.addTask(self.printAsync('walking'))
+        taskQueue.addTask(self.commitFootstepPlan)
+        taskQueue.addTask(self.waitForAtlasBehaviorAsync('step'))
+        taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('sending neck pitch. continue? y/n: '))
+
+        # set neck pitch
+        taskQueue.addTask(self.printAsync('neck pitch down'))
+        taskQueue.addTask(self.sendNeckPitchLookDown)
+        taskQueue.addTask(self.delay(1.0))
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('crouching. continue? y/n: '))
+
+        # crouch
+        taskQueue.addTask(self.printAsync('send manip mode'))
+        taskQueue.addTask(self.atlasDriver.sendManipCommand)
+        taskQueue.addTask(self.delay(1.0))
+        taskQueue.addTask(self.printAsync('crouching'))
+        taskQueue.addTask(self.sendPelvisCrouch)
+        taskQueue.addTask(self.delay(3.0))
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('perception and fitting. continue? y/n: '))
+
+        # perception & fitting
+        taskQueue.addTask(self.printAsync('waiting for clean lidar sweep'))
+        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
+
+        taskQueue.addTask(self.printAsync('fitting drill affordance'))
+        taskQueue.addTask(self.affordanceFitFunction)
+        taskQueue.addTask(self.findDrillAffordance)
+
+        # compute grasp frame
+        taskQueue.addTask(self.printAsync('computing grasp frame'))
+        taskQueue.addTask(self.computeGraspFrame)
+
+        # compute pre grasp plan
+        taskQueue.addTask(self.printAsync('computing pre grasp plan'))
+        taskQueue.addTask(self.computePreGraspPose)
+        taskQueue.addTask(self.playPreGraspPlan)
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('commit manip plan. continue? y/n: '))
+
+        # commit pre grasp plan
+        taskQueue.addTask(self.printAsync('commit pre grasp plan'))
+        taskQueue.addTask(self.commitPreGraspPlan)
+        taskQueue.addTask(self.delay(10.0))
+
+        # compute grasp plan
+        taskQueue.addTask(self.printAsync('computing grasp plan'))
+        taskQueue.addTask(self.computeGraspPlan)
+        taskQueue.addTask(self.playGraspPlan)
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('commit manip plan. continue? y/n: '))
+
+        # commit grasp plan
+        taskQueue.addTask(self.printAsync('commit grasp plan'))
+        taskQueue.addTask(self.commitGraspPlan)
+        taskQueue.addTask(self.delay(10.0))
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('closing hand. continue? y/n: '))
+
+        # close hand
+        taskQueue.addTask(self.printAsync('close hand'))
+        taskQueue.addTask(self.sendCloseHand)
+        taskQueue.addTask(self.delay(3.0))
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('raise pelvis. continue? y/n: '))
+
+        # stand
+        taskQueue.addTask(self.printAsync('raise pelvis'))
+        taskQueue.addTask(self.sendPelvisStand)
+        taskQueue.addTask(self.delay(3.0))
+
+        # compute pre grasp plan
+        taskQueue.addTask(self.printAsync('computing pre grasp plan'))
+        taskQueue.addTask(self.computePreGraspPose)
+        taskQueue.addTask(self.playPreGraspPlan)
+
+        # user prompt
+        taskQueue.addTask(self.userPrompt('commit manip plan. continue? y/n: '))
+
+        # commit pre grasp plan
+        taskQueue.addTask(self.printAsync('commit pre grasp plan'))
+        taskQueue.addTask(self.commitPreGraspPlan)
+        taskQueue.addTask(self.delay(10.0))
+
+        taskQueue.addTask(self.printAsync('done!'))
+
         return taskQueue
 
 
