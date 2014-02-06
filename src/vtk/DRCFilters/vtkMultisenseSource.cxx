@@ -151,6 +151,8 @@ public:
     this->SplitRange = 180;
     this->LastOffsetSpindleAngle = 0;
     this->MaxNumberOfScanLines = 10000;
+    this->botparam_ = 0;
+    this->botframes_ = 0;
 
     this->DistanceRange[0] = 0.0;
     this->DistanceRange[1] = 30.0;
@@ -165,12 +167,22 @@ public:
       std::cerr <<"ERROR: lcm is not good()" <<std::endl;
     }
 
-    //botparam_ = bot_param_new_from_server(this->LCMHandle->getUnderlyingLCM(), 0);
+    bool useBotParamFromFile = false;
 
-    std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_02.cfg";
-    botparam_ = bot_param_new_from_file(configFile.c_str());
+    if (useBotParamFromFile)
+      {
+      std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_05.cfg";
+      botparam_ = bot_param_new_from_file(configFile.c_str());
+      }
+    else
+      {
+      while (!botparam_)
+        {
+        botparam_ = bot_param_new_from_server(this->LCMHandle->getUnderlyingLCM(), 0);
+        }
+      }
 
-    botframes_= bot_frames_get_global(this->LCMHandle->getUnderlyingLCM(), botparam_);
+    botframes_ = bot_frames_get_global(this->LCMHandle->getUnderlyingLCM(), botparam_);
 
     this->LCMHandle->subscribe( "SCAN", &LCMListener::lidarHandler, this);
     this->LCMHandle->subscribe( "EST_ROBOT_STATE", &LCMListener::robotStateHandler, this);

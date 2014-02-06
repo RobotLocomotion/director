@@ -65,11 +65,11 @@ bool ddBotImageQueue::initCameraData(const QString& cameraName, CameraData* came
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::init(ddLCMThread* lcmThread)
 {
-  bool useBotParamFromFile = true;
+  bool useBotParamFromFile = false;
 
   if (useBotParamFromFile)
   {
-    std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_02.cfg";
+    std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_05.cfg";
     mBotParam = bot_param_new_from_file(configFile.c_str());
   }
   else
@@ -109,7 +109,7 @@ bool ddBotImageQueue::addCameraStream(const QString& cameraName)
   QString channel = cameraName;
 
 
-  bool useImagesMessage = true;
+  bool useImagesMessage = false;
 
   if (useImagesMessage && cameraName == "CAMERA_LEFT")
   {
