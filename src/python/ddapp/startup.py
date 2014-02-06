@@ -228,8 +228,8 @@ if usePerception:
 
 
 if useFootsteps:
-    footstepsdriver.init(defaultJointController)
-    footstepsdriverpanel.init(footstepsdriver.driver)
+    footstepsDriver = footstepsdriver.FootstepsDriver(defaultJointController)
+    footstepsdriverpanel.init(footstepsDriver)
 
 
 if usePlanning:

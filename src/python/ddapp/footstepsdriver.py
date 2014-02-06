@@ -7,6 +7,8 @@ from ddapp.debugVis import DebugData
 from ddapp import ioUtils
 from ddapp import robotstate
 from ddapp import applogic as app
+from ddapp import vtkAll as vtk
+from ddapp.simpletimer import SimpleTimer
 
 import os
 import numpy as np
@@ -77,24 +79,33 @@ def getFootstepsFolder():
 
 class FootstepsDriver(object):
     def __init__(self, jc):
-        self.lastFootstepPlanMessage = None
+        self.lastFootstepPlan = None
         self.lastFootstepRequest = None
         self.goalSteps = None
-        self.has_plan = False
         self._setupSubscriptions()
-        self.jc = jc
+        self.jointController = jc
+        self.lastWalkingPlan = None
+        self.walkingPlanCallback = None
+
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
+        lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
     def clearFootstepPlan(self):
-        self.has_plan = False
+        self.lastFootstepPlan = None
         folder = getFootstepsFolder()
         om.removeFromObjectModel(folder)
 
+    def onWalkingPlan(self, msg):
+        self.lastWalkingPlan = msg
+        if self.walkingPlanCallback:
+            self.walkingPlanCallback()
+
     def onFootstepPlan(self, msg):
         self.clearFootstepPlan()
-        self.has_plan = True
+        self.lastFootstepPlan = msg
+
         planFolder = getFootstepsFolder()
 
         allTransforms = []
@@ -135,8 +146,6 @@ class FootstepsDriver(object):
             frameObj.onTransformModifiedCallback = functools.partial(self.onStepModified, i-2)
             obj.actor.SetUserTransform(footstepTransform)
 
-        self.lastFootstepPlanMessage = msg
-
     def createWalkingGoal(self, model):
         distanceForward = 1.0
 
@@ -165,7 +174,7 @@ class FootstepsDriver(object):
         frameObj.setProperty('Edit', True)
 
         frameObj.onTransformModifiedCallback = self.onWalkingGoalModified
-        self.sendFootstepPlanRequest()
+        self.sendFootstepPlanRequest(t)
 
     def createGoalSteps(self, model):
         distanceForward = 1.0
@@ -207,36 +216,34 @@ class FootstepsDriver(object):
         return request
 
     def onStepModified(self, ndx, frameObj):
-        self.lastFootstepPlanMessage.footsteps[ndx+2].pos = transformUtils.positionMessageFromFrame(frameObj.transform)
-        self.lastFootstepPlanMessage.footsteps[ndx+2].fixed_x = True
-        self.lastFootstepPlanMessage.footsteps[ndx+2].fixed_y = True
-        self.lastFootstepPlanMessage.footsteps[ndx+2].fixed_yaw = True
+        self.lastFootstepPlan.footsteps[ndx+2].pos = transformUtils.positionMessageFromFrame(frameObj.transform)
+        self.lastFootstepPlan.footsteps[ndx+2].fixed_x = True
+        self.lastFootstepPlan.footsteps[ndx+2].fixed_y = True
+        self.lastFootstepPlan.footsteps[ndx+2].fixed_yaw = True
         self.sendUpdatePlanRequest()
 
     def sendUpdatePlanRequest(self):
         msg = self.lastFootstepRequest
-        msg.num_existing_steps = self.lastFootstepPlanMessage.num_steps
-        msg.existing_steps = self.lastFootstepPlanMessage.footsteps
+        msg.num_existing_steps = self.lastFootstepPlan.num_steps
+        msg.existing_steps = self.lastFootstepPlan.footsteps
         self.lastFootstepRequest = msg
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', msg)
         return msg
 
     def onWalkingGoalModified(self, frameObj):
-        self.sendFootstepPlanRequest()
+        self.sendFootstepPlanRequest(frameObj.transform)
 
-    def constructFootstepPlanRequest(self, goalObj):
+    def constructFootstepPlanRequest(self, goalFrame=None):
 
         msg = lcmdrc.footstep_plan_request_t()
         msg.utime = getUtime()
-        pose = self.jc.getPose(self.jc.currentPoseName)
+        pose = self.jointController.getPose(self.jointController.currentPoseName)
         state_msg = robotstate.drakePoseToRobotState(pose)
         msg.initial_state = state_msg
 
-        goalObj = goalObj or om.findObjectByName('walking goal')
-        if goalObj:
-            msg.goal_pos = transformUtils.positionMessageFromFrame(goalObj.transform)
-        else:
-            msg.goal_pos = transformUtils.positionMessageFromFrame(transformUtils.transformFromPose((0,0,0), (1,0,0,0)))
+        if goalFrame is None:
+            goalFrame = vtk.vtkTransform()
+        msg.goal_pos = transformUtils.positionMessageFromFrame(goalFrame)
 
         msg.params = lcmdrc.footstep_plan_params_t()
         msg.params.max_num_steps = 30
@@ -255,26 +262,39 @@ class FootstepsDriver(object):
 
         return msg
 
-    def sendFootstepPlanRequest(self, goalObj=None):
-        msg = self.constructFootstepPlanRequest(goalObj)
-        self.lastFootstepRequest = msg
-        lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', msg)
-        return msg
+    def sendFootstepPlanRequest(self, goalFrame, waitForResponse=False, waitTimeout=5000):
 
-    def sendWalkingPlanRequest(self):
-        assert self.lastFootstepPlanMessage
+        request = self.constructFootstepPlanRequest(goalFrame)
+        self.lastFootstepRequest = request
+
+        requestChannel = 'FOOTSTEP_PLAN_REQUEST'
+        responseChannel = 'FOOTSTEP_PLAN_RESPONSE'
+
+        if waitForResponse:
+            return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, request,
+                                    responseChannel, lcmdrc.footstep_plan_t, waitTimeout)
+        else:
+            lcmUtils.publish(requestChannel, request)
+
+    def sendWalkingPlanRequest(self, footstepPlan, waitForResponse=False, waitTimeout=5000):
 
         msg = lcmdrc.walking_plan_request_t()
         msg.utime = getUtime()
-        pose = self.jc.getPose(self.jc.currentPoseName)
+        pose = self.jointController.getPose(self.jointController.currentPoseName)
         state_msg = robotstate.drakePoseToRobotState(pose)
         msg.initial_state = state_msg
-
         msg.new_nominal_state = msg.initial_state
         msg.use_new_nominal_state = False
-        msg.footstep_plan = self.lastFootstepPlanMessage
-        lcmUtils.publish('WALKING_TRAJ_REQUEST', msg)
+        msg.footstep_plan = footstepPlan
 
+        requestChannel = 'WALKING_TRAJ_REQUEST'
+        responseChannel = 'WALKING_TRAJ_RESPONSE'
+
+        if waitForResponse:
+            return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, msg,
+                                    responseChannel, lcmdrc.robot_plan_t, waitTimeout)
+        else:
+            lcmUtils.publish(requestChannel, msg)
 
     def sendStopWalking(self):
         msg = lcmdrc.plan_control_t()
@@ -282,14 +302,6 @@ class FootstepsDriver(object):
         msg.control = lcmdrc.plan_control_t.TERMINATE
         lcmUtils.publish('STOP_WALKING', msg)
 
-    def commitFootsepPlan(self):
-        if not self.has_plan:
-            print "I don't have a footstep plan to commit"
-            return
-        self.lastFootstepPlanMessage.utime = getUtime()
-        lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', self.lastFootstepPlanMessage)
-
-
-def init(jc):
-    global driver
-    driver = FootstepsDriver(jc)
+    def commitFootstepPlan(self, footstepPlan):
+        footstepPlan.utime = getUtime()
+        lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', footstepPlan)
