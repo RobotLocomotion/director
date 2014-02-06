@@ -3,6 +3,9 @@ import sys
 import vtkAll as vtk
 from ddapp import botpy
 import math
+import time
+import types
+import functools
 import numpy as np
 
 from ddapp import transformUtils
@@ -16,6 +19,7 @@ from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
 from ddapp import robotstate
+from ddapp import robotplanlistener
 from ddapp import segmentation
 
 import drc as lcmdrc
@@ -41,7 +45,7 @@ class RobotPoseGUIWrapper(object):
         cls.main = rpg.MainWindow()
 
     @classmethod
-    def sendPose(cls, groupName, poseName, side=None):
+    def getPose(cls, groupName, poseName, side=None):
 
         cls.init()
 
@@ -64,23 +68,68 @@ class RobotPoseGUIWrapper(object):
             if pose['nominal_handedness'] != side:
                 joints = rpg.applyMirror(joints)
 
+        return joints
 
-        rpg.publishPostureGoal(rpg.applyMirror(pose['joints']), pose['name'])
 
 
+
+class AsyncTaskQueue(object):
+
+    def __init__(self):
+        self.tasks = []
+        self.timer = TimerCallback()
+        self.timer.callback = self.handleAsyncTasks
+
+    def start(self):
+        self.timer.start()
+
+    def stop(self):
+        self.timer.stop()
+
+    def addTask(self, task):
+        self.tasks.append(task)
+
+    def handleAsyncTasks(self):
+
+        for i in xrange(10):
+
+            if not self.tasks:
+                break
+
+            task = self.tasks[0]
+
+            if hasattr(task, '__call__'):
+                result = task()
+                self.tasks.remove(task)
+                if isinstance(result, types.GeneratorType):
+                    self.tasks.insert(0, result)
+            elif isinstance(task, types.GeneratorType):
+                try:
+                    task.next()
+                except StopIteration:
+                    self.tasks.remove(task)
+
+        return len(self.tasks)
 
 
 class PlanSequence(object):
 
 
-    def __init__(self, robotModel, footstepPlanner, manipPlanner, sensorJointController, planningJointController):
+    def __init__(self, robotModel, footstepPlanner, manipPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction):
         self.robotModel = robotModel
         self.footstepPlanner = footstepPlanner
         self.manipPlanner = manipPlanner
+        self.handDriver = handDriver
+        self.atlasDriver = atlasDriver
+        self.multisenseDriver = multisenseDriver
+        self.affordanceFitFunction = affordanceFitFunction
         self.sensorJointController = sensorJointController
-        self.planningJointController = planningJointController
+        self.planPlaybackFunction = planPlaybackFunction
         self.graspingHand = 'left'
         self.planFromCurrentRobotState = False
+        self.walkingPlan = None
+        self.preGraspPlan = None
+        self.graspPlan = None
 
 
     def computeGroundFrame(self, robotModel):
@@ -115,11 +164,20 @@ class PlanSequence(object):
     def computeDrillFrame(self, robotModel):
 
         position = [1.5, 0.0, 1.2]
-        rpy = [0, 0, -90]
+        rpy = [0, 0, -89]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(self.computeGroundFrame(robotModel))
         return t
+
+
+    def computeGraspFrame(self):
+
+        # remove me
+        self.computeGraspFrameRotary()
+        return
+
+        self.computeGraspFrameBarrel()
 
 
     def computeGraspFrameRotary(self):
@@ -150,7 +208,6 @@ class PlanSequence(object):
 
     def computeStanceFrame(self):
 
-
         graspFrame = self.graspFrame.transform
 
         groundFrame = self.computeGroundFrame(self.robotModel)
@@ -178,47 +235,111 @@ class PlanSequence(object):
         self.graspStanceFrame = vis.updateFrame(t, 'grasp stance', parent=self.drillAffordance, visible=True, scale=0.25)
 
 
+    def computeFootstepPlan(self):
+        self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(self.graspStanceFrame.transform, waitForResponse=True)
+
+
+    def computeWalkingPlan(self):
+        self.walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, waitForResponse=True)
+
+
+    def computePreGraspPose(self):
+
+        goalPoseJoints = RobotPoseGUIWrapper.getPose('hose', '1 walking with hose', side=self.graspingHand)
+
+        if self.planFromCurrentRobotState:
+            startPose = self.geEstimatedRobotStatePose()
+        else:
+            planState = self.walkingPlan.plan[-1]
+            startPose = robotplanlistener.RobotPlanPlayback.convertPlanStateToPose(planState)
+
+        self.preGraspPlan = self.manipPlanner.sendPoseGoal(startPose, goalPoseJoints, waitForResponse=True)
+
+
     def computeGraspPlan(self):
 
         linkMap = {
                       'left' : 'l_hand',
                       'right': 'r_hand'
                   }
-
         linkName = linkMap[self.graspingHand]
 
-        self.sendPlannerSettings()
-        self.manipPlanner.sendEndEffectorGoal('l_hand', self.graspFrame.transform)
+        if self.planFromCurrentRobotState:
+            startPose = self.geEstimatedRobotStatePose()
+        else:
+            planState = self.preGraspPlan.plan[-1]
+            startPose = robotplanlistener.RobotPlanPlayback.convertPlanStateToPose(planState)
+
+        self.graspPlan = self.manipPlanner.sendEndEffectorGoal(startPose, linkName, self.graspFrame.transform, waitForResponse=True)
 
 
-    def computeFootstepPlan(self):
-        self.footstepPlanner.sendFootstepPlanRequest(self.graspStanceFrame)
+    def commitFootstepPlan(self):
+        self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
 
+    def commitPreGraspPlan(self):
+        self.manipPlanner.commitManipPlan(self.preGraspPlan)
 
-    def computeWalkingPlanRequest(self):
-        self.footstepPlanner.sendWalkingPlanRequest()
-
-
-    def sendPreGraspPose(self):
-
-        self.sendPlannerSettings()
-        RobotPoseGUIWrapper.sendPose('hose', '1 walking with hose', side=self.graspingHand)
-
+    def commitGraspPlan(self):
+        self.manipPlanner.commitManipPlan(self.graspPlan)
 
     def sendPelvisCrouch(self):
-        pass
-
+        self.atlasDriver.sendPelvisHeightCommand(0.7)
 
     def sendPelvisStand(self):
-        pass
-
+        self.atlasDriver.sendPelvisHeightCommand(0.8)
 
     def sendOpenHand(self):
-        pass
-
+        self.handDriver.sendOpen()
 
     def sendCloseHand(self):
-        pass
+        self.handDriver.sendClose(50)
+
+    def sendNeckPitchLookDown(self):
+        self.multisenseDriver.setNeckPitch(40)
+
+    def sendNeckPitchLookForward(self):
+        self.multisenseDriver.setNeckPitch(15)
+
+
+    def waitForAtlasBehaviorAsync(self, behaviorName):
+        assert behaviorName in self.atlasDriver.getBehaviorMap().values()
+
+        # remove me
+        yield; return;
+
+        while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
+            yield
+
+
+    def printAsync(self, s):
+        yield
+        print s
+
+
+    def userPrompt(self, message):
+        return
+        yield
+        result = raw_input(message)
+        if result != 'y':
+            raise Exception('user abort.')
+
+
+    def delay(self, delayTimeInSeconds):
+        yield
+        t = SimpleTimer()
+        while t.elapsed() < delayTimeInSeconds:
+            yield
+
+
+    def waitForCleanLidarSweepAsync(self):
+        currentRevolution = self.multisenseDriver.displayedRevolution
+        desiredRevolution = currentRevolution + 2
+
+        # remove me
+        yield; return;
+
+        while self.multisenseDriver.displayedRevolution < desiredRevolution:
+            yield
 
 
     def spawnDrillAffordance(self):
@@ -231,7 +352,7 @@ class PlanSequence(object):
         self.drillAffordance.actor.SetUserTransform(drillFrame)
         self.drillFrame = vis.showFrame(drillFrame, 'drill frame', parent=self.drillAffordance, visible=True, scale=0.2)
 
-        self.computeGraspFrameRotary()
+        self.computeGraspFrame()
         self.computeStanceFrame()
 
 
@@ -239,30 +360,9 @@ class PlanSequence(object):
         self.drillAffordance = om.findObjectByName('drill')
         self.drillFrame = om.findObjectByName('drill frame')
 
-        self.computeGraspFrameBarrel()
-        self.computeStanceFrame()
 
-
-    def sendPlannerSettings(self):
-
-        if self.planFromCurrentRobotState:
-            self.sendSensedEstimatedRobotState()
-        else:
-            self.sendPlanningEstimatedRobotState()
-
-        self.manipPlanner.sendPlannerSettings()
-
-
-    def sendPlanningEstimatedRobotState(self):
-        pose = self.planningJointController.getPose(self.planningJointController.currentPoseName)
-        msg = robotstate.drakePoseToRobotState(pose)
-        lcmUtils.publish('EST_ROBOT_STATE_REACHING_PLANNER', msg)
-
-
-    def sendSensedEstimatedRobotState(self):
-        pose = self.sensorJointController.getPose('EST_ROBOT_STATE')
-        msg = robotstate.drakePoseToRobotState(pose)
-        lcmUtils.publish('EST_ROBOT_STATE_REACHING_PLANNER', msg)
+    def geEstimatedRobotStatePose(self):
+        return self.sensorJointController.getPose('EST_ROBOT_STATE')
 
 
     def cleanupFootstepPlans(self):
@@ -270,33 +370,33 @@ class PlanSequence(object):
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
 
 
-    def updateGraspAndStanceFrame(self):
+    def playNominalPlan(self):
+        plans = [self.walkingPlan, self.preGraspPlan, self.graspPlan]
+        assert None not in plans
+        self.planPlaybackFunction(plans)
+
+    def playPreGraspPlan(self):
+        self.planPlaybackFunction([self.preGraspPlan])
+
+    def playGraspPlan(self):
+        self.planPlaybackFunction([self.graspPlan])
+
+    def computeNominalPlan(self):
+
+        self.planFromCurrentRobotState = False
+        self.findDrillAffordance()
         self.computeGraspFrame()
         self.computeStanceFrame()
+        self.computeFootstepPlan()
+        self.computeWalkingPlan()
+        self.computePreGraspPose()
+        self.computeGraspPlan()
+        self.playNominalPlan()
 
 
-    def plan(self):
+    def autonomousExecute(self):
 
-        while True:
-
-            print 'computed footsteps'
-            self.computeGraspFrame()
-            self.computeStanceFrame()
-            self.computeFootstepPlan()
-            yield
-
-            print 'computed walking plan'
-            self.footstepPlanner.sendWalkingPlanRequest()
-            yield
-
-            print 'computed grasp plan'
-            self.cleanupFootstepPlans()
-            self.computeGraspPlan()
-            yield
-
-
-
-
-
+        taskQueue = AsyncTaskQueue()
+        return taskQueue
 
 
