@@ -11,11 +11,6 @@ ddBotImageQueue::ddBotImageQueue(QObject* parent) : QObject(parent)
 //-----------------------------------------------------------------------------
 ddBotImageQueue::~ddBotImageQueue()
 {
-  foreach (ddLCMSubscriber* subscriber, mSubscribers.values())
-  {
-    mLCM->removeSubscriber(subscriber);
-  }
-
   foreach (CameraData* cameraData, mCameraData.values())
   {
     delete cameraData;
