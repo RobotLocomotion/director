@@ -21,11 +21,16 @@ import drc as lcmdrc
 
 class SystemStatusListener(object):
 
-    def __init__(self):
+    def __init__(self, outputConsole):
+        self.outputConsole = outputConsole
         lcmUtils.addSubscriber('SYSTEM_STATUS', lcmdrc.system_status_t, self.onSystemStatus)
 
     def onSystemStatus(self, message):
-        print 'SYSTEM_STATUS:', message.value
+        message = 'SYSTEM_STATUS: ' + message.value
+        if self.outputConsole is not None:
+            self.outputConsole.append(message)
+        else:
+            print message
 
 
 class AtlasDriver(object):
@@ -39,7 +44,8 @@ class AtlasDriver(object):
 
     def _setupSubscriptions(self):
         #lcmUtils.addSubscriber('ATLAS_STATE', lcmdrc.atlas_state_t, self.onAtlasState)
-        lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
+        sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
+        sub.setSpeedLimit(60)
 
     def onAtlasState(self, message):
         self.lastAtlasStateMessage = message
@@ -143,11 +149,11 @@ class AtlasDriver(object):
 
 
 
-def init():
+def init(outputConsole):
 
     global driver
     driver = AtlasDriver()
 
     global systemStatus
-    systemStatus = SystemStatusListener()
+    systemStatus = SystemStatusListener(outputConsole)
 

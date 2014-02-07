@@ -11,11 +11,6 @@ ddBotImageQueue::ddBotImageQueue(QObject* parent) : QObject(parent)
 //-----------------------------------------------------------------------------
 ddBotImageQueue::~ddBotImageQueue()
 {
-  foreach (ddLCMSubscriber* subscriber, mSubscribers.values())
-  {
-    mLCM->removeSubscriber(subscriber);
-  }
-
   foreach (CameraData* cameraData, mCameraData.values())
   {
     delete cameraData;
@@ -74,7 +69,7 @@ void ddBotImageQueue::init(ddLCMThread* lcmThread)
 
   if (useBotParamFromFile)
   {
-    std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_02.cfg";
+    std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_05.cfg";
     mBotParam = bot_param_new_from_file(configFile.c_str());
   }
   else
@@ -114,7 +109,7 @@ bool ddBotImageQueue::addCameraStream(const QString& cameraName)
   QString channel = cameraName;
 
 
-  bool useImagesMessage = true;
+  bool useImagesMessage = false;
 
   if (useImagesMessage && cameraName == "CAMERA_LEFT")
   {

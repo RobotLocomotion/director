@@ -25,29 +25,17 @@ import pickle
 import scipy.interpolate
 
 
-class RobotPlanListener(object):
+class ManipulationPlanDriver(object):
 
     def __init__(self):
         lcmUtils.addSubscriber('CANDIDATE_MANIP_PLAN', lcmdrc.robot_plan_w_keyframes_t, self.onManipPlan)
-        lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
-        self.lastManipPlanMsg = None
-        self.lastWalkingPlanMsg = None
-        self.animationTimer = None
+        self.lastManipPlan = None
         self.manipPlanCallback = None
-        self.walkingPlanCallback = None
-        self.animationCallback = None
-        self.interpolationMethod = 'cubic'
-        self.playbackSpeed = 1.0
 
     def onManipPlan(self, msg):
-        self.lastManipPlanMsg = msg
+        self.lastManipPlan = msg
         if self.manipPlanCallback:
             self.manipPlanCallback()
-
-    def onWalkingPlan(self, msg):
-        self.lastWalkingPlanMsg = msg
-        if self.walkingPlanCallback:
-            self.walkingPlanCallback()
 
     def convertKeyframePlan(self, keyframeMsg):
         msg = lcmdrc.robot_plan_t()
@@ -68,11 +56,12 @@ class RobotPlanListener(object):
         return msg
 
 
-    def commitManipPlan(self):
-        assert self.lastManipPlanMsg is not None
-        msg = self.convertKeyframePlan(self.lastManipPlanMsg)
-        msg.utime = getUtime()
-        lcmUtils.publish('COMMITTED_ROBOT_PLAN', msg)
+    def commitManipPlan(self, manipPlan):
+
+        if isinstance(manipPlan, lcmdrc.robot_plan_w_keyframes_t):
+            manipPlan = self.convertKeyframePlan(manipPlan)
+        manipPlan.utime = getUtime()
+        lcmUtils.publish('COMMITTED_ROBOT_PLAN', manipPlan)
 
 
     def sendPlannerModeControl(self, mode='fixed_joints'):
@@ -82,7 +71,7 @@ class RobotPlanListener(object):
         lcmUtils.publish('MANIP_PLANNER_MODE_CONTROL', msg)
 
 
-    def sendJointSpeedLimit(self, speedLimit=25):
+    def sendJointSpeedLimit(self, speedLimit=30):
 
         assert speedLimit > 0 and speedLimit < 50
         msg = lcmdrc.plan_execution_speed_t()
@@ -91,7 +80,7 @@ class RobotPlanListener(object):
         lcmUtils.publish('DESIRED_JOINT_SPEED', msg)
 
 
-    def sendEEArcSpeedLimit(self, speedLimit=0.20):
+    def sendEEArcSpeedLimit(self, speedLimit=0.30):
 
         assert speedLimit > 0 and speedLimit < 0.50
         msg = lcmdrc.plan_execution_speed_t()
@@ -113,11 +102,16 @@ class RobotPlanListener(object):
         lcmUtils.publish('RIGHT_PALM_GOAL_CLEAR', msg)
 
 
-    def sendPlannerSettings(self):
+    def sendPlannerSettings(self, initialPose):
         '''
         This will be removed when the planner lcm messages are updated to
         take parameters and inputs.
         '''
+
+        stateMessage = robotstate.drakePoseToRobotState(initialPose)
+        lcmUtils.publish('EST_ROBOT_STATE_REACHING_PLANNER', stateMessage)
+        time.sleep(0.05)
+
         self.clearEndEffectorGoals()
         self.sendPlannerModeControl()
         self.sendJointSpeedLimit()
@@ -125,11 +119,31 @@ class RobotPlanListener(object):
         time.sleep(0.05)
 
 
-    def sendEndEffectorGoal(self, linkName, goalInWorldFrame):
+    def sendPoseGoal(self, startPose, goalPoseJoints, waitForResponse=False, waitTimeout=5000):
 
-        self.sendPlannerSettings()
+        msg = lcmdrc.joint_angles_t()
+        msg.utime = getUtime()
+        for name, position in goalPoseJoints.iteritems():
+            msg.joint_name.append(name)
+            msg.joint_position.append(position)
+        msg.num_joints = len(msg.joint_name)
+
+        requestChannel='POSTURE_GOAL'
+        responseChannel = 'CANDIDATE_MANIP_PLAN'
+
+        self.sendPlannerSettings(startPose)
+
+        if waitForResponse:
+            return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, msg,
+                                    responseChannel, lcmdrc.robot_plan_w_keyframes_t, waitTimeout)
+        else:
+            lcmUtils.publish(requestChannel, msg)
+
+
+    def sendEndEffectorGoal(self, startPose, linkName, goalInWorldFrame, waitForResponse=False, waitTimeout=5000):
 
         msg = lcmdrc.ee_goal_t()
+        msg.utime = getUtime()
         msg.ee_goal_pos = transformUtils.positionMessageFromFrame(goalInWorldFrame)
         msg.ee_goal_twist = lcmdrc.twist_t()
         msg.ee_goal_twist.linear_velocity = lcmdrc.vector_3d_t()
@@ -142,11 +156,30 @@ class RobotPlanListener(object):
                     'l_right' : 'RIGHT_FOOT_GOAL',
                    }
 
-        channel = channels[linkName]
-        lcmUtils.publish(channel, msg)
+        requestChannel = channels[linkName]
+        responseChannel = 'CANDIDATE_MANIP_PLAN'
+
+        self.sendPlannerSettings(startPose)
+
+        if waitForResponse:
+            return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, msg,
+                                    responseChannel, lcmdrc.robot_plan_w_keyframes_t, waitTimeout)
+        else:
+            lcmUtils.publish(requestChannel, msg)
 
 
-    def convertPlanStateToPose(self, msg):
+
+class RobotPlanPlayback(object):
+
+    def __init__(self):
+        self.animationCallback = None
+        self.animationTimer = None
+        self.interpolationMethod = 'cubic'
+        self.playbackSpeed = 1.0
+
+
+    @staticmethod
+    def convertPlanStateToPose(msg):
 
         jointMap = {}
         for name, position in zip(msg.joint_name, msg.joint_position):
@@ -167,9 +200,7 @@ class RobotPlanListener(object):
         return pose
 
 
-    def getPlanPoses(self, msg=None):
-        msg = msg or self.lastManipPlanMsg
-        assert msg
+    def getPlanPoses(self, msg):
 
         poses = []
         poseTimes = []
@@ -177,12 +208,10 @@ class RobotPlanListener(object):
             pose = self.convertPlanStateToPose(plan)
             poseTimes.append(plan.utime / 1e6)
             poses.append(pose)
-        return poseTimes, poses
+        return np.array(poseTimes), poses
 
 
-    def getPlanElapsedTime(self, msg=None):
-        msg = msg or self.lastManipPlanMsg
-        assert msg
+    def getPlanElapsedTime(self, msg):
 
         startTime = msg.plan[0].utime
         endTime = msg.plan[-1].utime
@@ -198,25 +227,27 @@ class RobotPlanListener(object):
         self.interpolationMethod = method
 
 
-    def picklePlan(self, filename, msg=None):
-        msg = msg or self.lastManipPlanMsg
-        assert msg
-
-        poseTimes, poses = self.getPlanPoses(msg)
-        pickle.dump((poseTimes, poses), open(filename, 'w'))
-
-
-    def playManipPlan(self, jointController):
-        self.playPlan(self.lastManipPlanMsg, jointController)
-
-
-    def playWalkingPlan(self, jointController):
-        self.playPlan(self.lastWalkingPlanMsg, jointController)
-
-
     def playPlan(self, msg, jointController):
 
-        poseTimes, poses = self.getPlanPoses(msg)
+        self.playPlans(poseTimes, [msg], jointController)
+
+
+    def playPlans(self, messages, jointController):
+
+        assert len(messages)
+
+        allPoseTimes, allPoses = self.getPlanPoses(messages[0])
+
+        for msg in messages[1:]:
+            poseTimes, poses = self.getPlanPoses(msg)
+            poseTimes += allPoseTimes[-1]
+            allPoseTimes = np.hstack((allPoseTimes, poseTimes[1:]))
+            allPoses += poses[1:]
+
+        self.playPoses(allPoseTimes, allPoses, jointController)
+
+
+    def playPoses(self, poseTimes, poses, jointController):
 
         if self.interpolationMethod in ['slinear', 'quadratic', 'cubic']:
             f = scipy.interpolate.interp1d(poseTimes, poses, axis=0, kind=self.interpolationMethod)
@@ -253,11 +284,16 @@ class RobotPlanListener(object):
 
 
 
-    def plotPlan(self):
+    def picklePlan(self, filename, msg):
+        poseTimes, poses = self.getPlanPoses(msg)
+        pickle.dump((poseTimes, poses), open(filename, 'w'))
+
+
+    def plotPlan(self, msg):
 
         import matplotlib.pyplot as plt
 
-        poseTimes, poses = self.getPlanPoses()
+        poseTimes, poses = self.getPlanPoses(msg)
 
         poses = np.array(poses)
         diffs = np.diff(poses, axis=0)

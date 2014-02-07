@@ -36,27 +36,6 @@ def updateDebugItem(polyData):
     _view.render()
 
 
-def setMultisenseRevolutionTime(secondsPerRevolution):
-
-    assert secondsPerRevolution >= 1.0
-
-    m = lcmmultisense.command_t()
-    m.utime = getUtime()
-    m.fps = -1
-    m.gain = -1
-    m.agc = -1
-    m.rpm = 60.0 / (secondsPerRevolution)
-
-    lcmUtils.publish('MULTISENSE_COMMAND', m)
-
-
-def setNeckPitch(neckPitchDegrees):
-
-    assert neckPitchDegrees <= 90 and neckPitchDegrees >= -90
-    m = lcmdrc.neck_pitch_t()
-    m.utime = 0
-    m.pitch = math.radians(neckPitchDegrees)
-    lcmUtils.GlobalLCM.get().publish('DESIRED_NECK_PITCH', m.encode())
 
 
 class MultisenseItem(om.ObjectModelItem):
@@ -301,6 +280,30 @@ class MultiSenseSource(TimerCallback):
         self.updateScanLines()
 
 
+    @staticmethod
+    def setLidarRevolutionTime(secondsPerRevolution):
+
+        assert secondsPerRevolution >= 1.0
+
+        m = lcmmultisense.command_t()
+        m.utime = getUtime()
+        m.fps = -1
+        m.gain = -1
+        m.agc = -1
+        m.rpm = 60.0 / (secondsPerRevolution)
+
+        lcmUtils.publish('MULTISENSE_COMMAND', m)
+
+    @staticmethod
+    def setNeckPitch(neckPitchDegrees):
+
+        assert neckPitchDegrees <= 90 and neckPitchDegrees >= -90
+        m = lcmdrc.neck_pitch_t()
+        m.utime = 0
+        m.pitch = math.radians(neckPitchDegrees)
+        lcmUtils.publish('DESIRED_NECK_PITCH', m)
+
+
 
 class MapServerSource(TimerCallback):
 
@@ -344,11 +347,13 @@ class MapServerSource(TimerCallback):
 def init(view, jointController):
     global _multisenseItem
     global _view
+    global multisenseDriver
 
     _view = view
 
     m = MultiSenseSource(view, jointController)
     m.start()
+    multisenseDriver = m
 
     sensorsFolder = om.getOrCreateContainer('sensors')
 

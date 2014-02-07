@@ -52,7 +52,7 @@ class FootstepsPanel(object):
         self.driver.createGoalSteps(model)
 
     def onExecute(self):
-        self.driver.commitFootstepPlan()
+        self.driver.commitFootstepPlan(self.driver.lastFootstepPlan)
 
     def onStop(self):
         self.driver.sendStopWalking()
