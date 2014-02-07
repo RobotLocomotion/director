@@ -257,6 +257,10 @@ if usePlanning:
     planPlayback = robotplanlistener.RobotPlanPlayback()
 
 
+    def showPose(pose):
+        planningRobotModel.setProperty('Visible', True)
+        planningJc.setPose('show_pose', pose)
+
     def playPlan(plan):
         playPlans([plan])
 
@@ -293,10 +297,14 @@ if usePlanning:
     planner = plansequence.PlanSequence(defaultRobotModel, footstepsDriver, manipPlanner,
                                         handDriver, atlasdriver.driver, perception.multisenseDriver,
                                         fitDrillMultisense, robotStateJointController,
-                                        playPlans)
+                                        playPlans, showPose)
 
-    planner.userPromptEnabled = False
-    q = planner.autonomousExecute()
+    #planner.userPromptEnabled = False
+    #q = planner.autonomousExecute()
+    #defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
+    #planner.spawnDrillAffordance()
+
+
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)

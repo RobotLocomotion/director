@@ -44,6 +44,27 @@ def getDrakePoseToRobotStateJointMap():
     return _drakePoseToRobotStateJointMap
 
 
+def convertStateMessageToDrakePose(msg):
+
+    jointMap = {}
+    for name, position in zip(msg.joint_name, msg.joint_position):
+        jointMap[name] = position
+
+    jointPositions = []
+    for name in getDrakePoseJointNames()[6:]:
+        jointPositions.append(jointMap[name])
+
+    trans = msg.pose.translation
+    quat = msg.pose.rotation
+    trans = [trans.x, trans.y, trans.z]
+    quat = [quat.w, quat.x, quat.y, quat.z]
+    rpy = botpy.quat_to_roll_pitch_yaw(quat)
+
+    pose = np.hstack((trans, rpy, jointPositions))
+    assert len(pose) == 34
+    return pose
+
+
 def robotStateToDrakePose(robotState):
 
     drakePose = range(34)
