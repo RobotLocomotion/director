@@ -109,8 +109,7 @@ if useIk:
 
 
     jc = jointcontrol.JointController([model], poseCollection)
-    jc.addNominalPoseFromFile(app.getNominalPoseMatFile())
-    jc.setNominalPose()
+    jc.setNominalPose(jc.loadPoseFromFile(app.getNominalPoseMatFile()))
     jc.addPose('q_end', jc.poses['q_nom'])
     jc.addPose('q_start', jc.poses['q_nom'])
     defaultJointController = jc
@@ -151,10 +150,10 @@ if usePerception:
 
 
     robotStateJointController = jointcontrol.JointController([robotStateModel])
+    robotStateJointController.setNominalPose(robotStateJointController.loadPoseFromFile(app.getNominalPoseMatFile()))
     robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_zero'))
     defaultJointController = robotStateJointController
 
-    defaultJointController.currentPoseName = 'EST_ROBOT_STATE'
 
     perception.init(view, robotStateJointController)
     segmentationpanel.init()
@@ -249,11 +248,10 @@ if usePlanning:
     handDriver = handdriver.IRobotHandDriver(side='left')
 
     planningJc = jointcontrol.JointController([planningModel], poseCollection)
-    planningJc.addNominalPoseFromFile(app.getNominalPoseMatFile())
-    planningJc.setNominalPose()
-    planningJc.addPose('q_end', planningJc.poses['q_nom'])
-    planningJc.addPose('q_start', planningJc.poses['q_nom'])
+    planningJc.setNominalPose(planningJc.loadPoseFromFile(app.getNominalPoseMatFile()))
 
+    #midiController = jointcontrol.MidiJointControl(planningJc)
+    #midiController.start()
 
     manipPlanner = robotplanlistener.ManipulationPlanDriver()
     planPlayback = robotplanlistener.RobotPlanPlayback()
@@ -359,8 +357,9 @@ def resetCameraToHeadView():
     view.render()
 
 
-def sendEstRobotState(poseName='q_end'):
-    pose = jc.getPose(poseName)
+def sendEstRobotState(pose=None):
+    if pose is None:
+        pose = defaultJointController.q
     msg = robotstate.drakePoseToRobotState(pose)
     lcmUtils.publish('EST_ROBOT_STATE', msg)
 

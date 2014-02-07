@@ -1,3 +1,4 @@
+import os
 import math
 from ddapp.timercallback import TimerCallback
 from ddapp.simpletimer import SimpleTimer
@@ -7,7 +8,6 @@ from ddapp import midi
 class JointController(object):
 
     def __init__(self, models, poseCollection=None):
-        #self.numberOfJoints = model.numberOfJoints()
         self.numberOfJoints = 34
         self.models = models
         self.poses = {}
@@ -27,9 +27,6 @@ class JointController(object):
         for model in self.models:
             model.setJointPositions(self.q)
 
-    def reset(self):
-        self.q = [0.0 for i in xrange(self.numberOfJoints)]
-
     def setPose(self, poseName, poseData=None):
         if poseData is not None:
             self.addPose(poseName, poseData)
@@ -42,8 +39,8 @@ class JointController(object):
     def setZeroPose(self):
         self.setPose('q_zero')
 
-    def setNominalPose(self):
-        self.setPose('q_nom')
+    def setNominalPose(self, poseData=None):
+        self.setPose('q_nom', poseData)
 
     def getPose(self, poseName):
         return self.poses.get(poseName)
@@ -54,12 +51,11 @@ class JointController(object):
         if self.poseCollection is not None:
             self.poseCollection.setItem(poseName, poseData)
 
-    def addNominalPoseFromFile(self, filename):
+    def loadPoseFromFile(self, filename):
+        assert os.path.splitext(filename)[1] == '.mat'
         import scipy.io
         matData = scipy.io.loadmat(filename)
-        #xstar = matData['xstar'][:self.numberOfJoints]
-        xstar = matData['xstar'][:34]
-        self.addPose('q_nom', xstar.flatten().tolist())
+        return matData['xstar'][:self.numberOfJoints]
 
 
 class MidiJointControl(TimerCallback):
@@ -68,7 +64,7 @@ class MidiJointControl(TimerCallback):
         TimerCallback.__init__(self)
         self.reader = midi.MidiReader()
         self.controller = jointController
-        self.channelToJoint = { 21: 13 }
+        self.channelToJoint = { 112: 13 }
 
 
     def _scaleMidiValue(self, midiValue):
