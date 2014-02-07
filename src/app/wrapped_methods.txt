@@ -9,8 +9,12 @@ void ddLCMThread::removeSubscriber(ddLCMSubscriber*);
 
 ddLCMSubscriber::ddLCMSubscriber(const QString&);
 ddLCMSubscriber::ddLCMSubscriber(const QString&, QObject*);
+QByteArray ddLCMSubscriber::getNextMessage(int) const;
+void ddLCMSubscriber::setCallbackEnabled(bool);
+bool ddLCMSubscriber::callbackIsEnabled() const;
+void ddLCMSubscriber::setSpeedLimit(double);
+QString ddLCMSubscriber::channel() const;
 ddLCMSubscriber::~ddLCMSubscriber();
-void ddLCMSubscriber::setCallback(QVariant)
 
 ddBotImageQueue::ddBotImageQueue(QObject*);
 ddBotImageQueue::ddBotImageQueue();

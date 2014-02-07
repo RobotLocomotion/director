@@ -38,7 +38,7 @@ class IRobotHandDriver(object):
         pass
 
 
-    def sendCalibrate(withJig=True):
+    def sendCalibrate(self, withJig=True):
         msg = lcmirobot.calibrate_t()
         msg.utime = getUtime()
         msg.in_jig = withJig

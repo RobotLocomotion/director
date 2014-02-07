@@ -7,6 +7,10 @@
 #include <string>
 
 #include <PythonQt.h>
+#include <QMutex>
+#include <QMutexLocker>
+#include <QWaitCondition>
+#include <QTime>
 
 #include <lcm/lcm-cpp.hpp>
 
@@ -24,7 +28,8 @@ public:
   ddLCMSubscriber(const QString& channel, QObject* parent=NULL) : QObject(parent)
   {
     mChannel = channel;
-    mCallback = NULL;
+    this->mEmitMessages = true;
+    this->mRequiredElapsedMilliseconds = 0;
   }
 
   virtual ~ddLCMSubscriber()
@@ -42,14 +47,58 @@ public:
     mSubscription = 0;
   }
 
-  void setCallback(QVariant callback)
-  {
-    mCallback = callback.value<PythonQtObjectPtr>();
-  }
-
   const QString& channel() const
   {
     return mChannel;
+  }
+
+  void setCallbackEnabled(bool enabled)
+  {
+    this->mEmitMessages = enabled;
+  }
+
+  bool callbackIsEnabled() const
+  {
+    return this->mEmitMessages;
+  }
+
+  void setSpeedLimit(double hertz)
+  {
+    if (hertz <= 0.0)
+    {
+      this->mRequiredElapsedMilliseconds = 0;
+    }
+    else
+    {
+      this->mRequiredElapsedMilliseconds = static_cast<int>(1000.0 / hertz);
+    }
+  }
+
+  QByteArray getNextMessage(int timeout)
+  {
+
+    QMutexLocker locker(&this->mMutex);
+
+    QByteArray msg = this->mLastMessage;
+    this->mLastMessage.clear();
+
+
+    if (msg.size())
+    {
+      return msg;
+    }
+
+    bool haveNewMessage = this->mWaitCondition.wait(&this->mMutex, timeout);
+
+    if (!haveNewMessage)
+    {
+      return QByteArray();
+    }
+
+    msg = this->mLastMessage;
+    this->mLastMessage.clear();
+
+    return msg;
   }
 
 signals:
@@ -62,21 +111,33 @@ protected:
   void messageHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel)
   {
     ddNotUsed(channel);
-    emit this->messageReceived(QByteArray((char*)rbuf->data, rbuf->data_size), mChannel);
 
-    /*
-    if (mCallback)
+    QByteArray messageBytes = QByteArray((char*)rbuf->data, rbuf->data_size);
+
+    if (this->mEmitMessages)
     {
-      QVariantList args;
-      args << QByteArray((char*)rbuf->data, rbuf->data_size);
-      QVariant result = PythonQt::self()->call(mCallback, args);
-      ddNotUsed(result);
+      if (this->mRequiredElapsedMilliseconds == 0 || mTimer.elapsed() > this->mRequiredElapsedMilliseconds)
+        {
+        this->mTimer.restart();
+        emit this->messageReceived(messageBytes, mChannel);
+        }
     }
-    */
+    else
+    {
+      this->mMutex.lock();
+      this->mLastMessage = messageBytes;
+      this->mMutex.unlock();
+      this->mWaitCondition.wakeAll();
+    }
+
   }
 
-  PythonQtObjectPtr mCallback;
-
+  bool mEmitMessages;
+  int mRequiredElapsedMilliseconds;
+  mutable QMutex mMutex;
+  QWaitCondition mWaitCondition;
+  QByteArray mLastMessage;
+  QTime mTimer;
   QString mChannel;
   lcm::Subscription* mSubscription;
 
