@@ -246,7 +246,7 @@ class FootstepsDriver(object):
         msg.params.max_step_width = 0.4
         msg.params.nom_forward_step = 0.15
         msg.params.max_forward_step = 0.45
-        msg.params.ignore_terrain = False
+        msg.params.ignore_terrain = True
         msg.params.planning_mode = msg.params.MODE_AUTO
         msg.params.behavior = msg.params.BEHAVIOR_BDI_STEPPING
         msg.params.map_command = 2
