@@ -29,13 +29,21 @@ class ManipulationPlanDriver(object):
 
     def __init__(self):
         lcmUtils.addSubscriber('CANDIDATE_MANIP_PLAN', lcmdrc.robot_plan_w_keyframes_t, self.onManipPlan)
+        lcmUtils.addSubscriber('CANDIDATE_ROBOT_ENDPOSE', lcmdrc.robot_state_t, self.onRobotEndPose)
         self.lastManipPlan = None
+        self.lastRobotEndPose = None
         self.manipPlanCallback = None
+        self.endPoseCallback = None
 
     def onManipPlan(self, msg):
         self.lastManipPlan = msg
         if self.manipPlanCallback:
             self.manipPlanCallback()
+
+    def onRobotEndPose(self, msg):
+        self.lastRobotEndPose = msg
+        if self.endPoseCallback:
+            self.endPoseCallback()
 
     def convertKeyframePlan(self, keyframeMsg):
         msg = lcmdrc.robot_plan_t()
@@ -110,7 +118,7 @@ class ManipulationPlanDriver(object):
 
         stateMessage = robotstate.drakePoseToRobotState(initialPose)
         lcmUtils.publish('EST_ROBOT_STATE_REACHING_PLANNER', stateMessage)
-        time.sleep(0.05)
+        time.sleep(0.1)
 
         self.clearEndEffectorGoals()
         self.sendPlannerModeControl()
@@ -136,6 +144,33 @@ class ManipulationPlanDriver(object):
         if waitForResponse:
             return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, msg,
                                     responseChannel, lcmdrc.robot_plan_w_keyframes_t, waitTimeout)
+        else:
+            lcmUtils.publish(requestChannel, msg)
+
+
+    def sendEndPoseGoal(self, startPose, linkName, goalInWorldFrame, waitForResponse=False, waitTimeout=5000):
+
+        msg = lcmdrc.traj_opt_constraint_t()
+        msg.utime = getUtime()
+
+        msg.num_joints = 0
+        msg.joint_name = []
+        msg.joint_position = []
+        msg.joint_timestamps = []
+
+        msg.num_links = 1
+        msg.link_name = [linkName]
+        msg.link_timestamps = [0]
+        msg.link_origin_position = [transformUtils.positionMessageFromFrame(goalInWorldFrame)]
+
+        requestChannel='POSE_GOAL'
+        responseChannel = 'CANDIDATE_ROBOT_ENDPOSE'
+
+        self.sendPlannerSettings(startPose)
+
+        if waitForResponse:
+            return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, msg,
+                                    responseChannel, lcmdrc.robot_state_t, waitTimeout)
         else:
             lcmUtils.publish(requestChannel, msg)
 
@@ -178,34 +213,12 @@ class RobotPlanPlayback(object):
         self.playbackSpeed = 1.0
 
 
-    @staticmethod
-    def convertPlanStateToPose(msg):
-
-        jointMap = {}
-        for name, position in zip(msg.joint_name, msg.joint_position):
-            jointMap[name] = position
-
-        jointPositions = []
-        for name in robotstate.getDrakePoseJointNames()[6:]:
-            jointPositions.append(jointMap[name])
-
-        trans = msg.pose.translation
-        quat = msg.pose.rotation
-        trans = [trans.x, trans.y, trans.z]
-        quat = [quat.w, quat.x, quat.y, quat.z]
-        rpy = botpy.quat_to_roll_pitch_yaw(quat)
-
-        pose = np.hstack((trans, rpy, jointPositions))
-        assert len(pose) == 34
-        return pose
-
-
     def getPlanPoses(self, msg):
 
         poses = []
         poseTimes = []
         for plan in msg.plan:
-            pose = self.convertPlanStateToPose(plan)
+            pose = robotstate.convertStateMessageToDrakePose(plan)
             poseTimes.append(plan.utime / 1e6)
             poses.append(pose)
         return np.array(poseTimes), poses
