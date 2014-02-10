@@ -147,12 +147,12 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 
   const bot_core::planar_lidar_t* msg = &scanLine.msg;
 
-  float spindleAngle = scanLine.SpindleAngle;
+  double spindleAngle = scanLine.SpindleAngle;
   unsigned int scanLineId = scanLine.ScanLineId;
-  float theta = msg->rad0;
-  const float thetaStep = msg->radstep;
+  double thetaStart = msg->rad0;
+  const double thetaStep = msg->radstep;
   const int numPoints = msg->nranges;
-  const float edgeFilterEnabledRange = 2.0;
+  const double edgeFilterEnabledRange = 2.0;
   const std::vector<float>&  ranges = msg->ranges;
   const std::vector<float>& intensities = msg->intensities;
 
@@ -168,8 +168,6 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 
   for (int i = 0; i < numPoints; ++i)
   {
-    theta += thetaStep;
-
     if (ranges[i] < distanceRange[0] || ranges[i] > distanceRange[1])
     {
       continue;
@@ -190,8 +188,7 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
       }
     }
 
-
-
+    double theta = thetaStart + i*thetaStep;
     Eigen::Vector3d pt(ranges[i] * cos(theta), ranges[i] * sin(theta), 0.0);
     pt = aff * pt;
     //pt = angleAxis.matrix() * pt;
