@@ -115,7 +115,7 @@ class AsyncTaskQueue(object):
 class PlanSequence(object):
 
 
-    def __init__(self, robotModel, footstepPlanner, manipPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction):
+    def __init__(self, robotModel, footstepPlanner, manipPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
         self.robotModel = robotModel
         self.footstepPlanner = footstepPlanner
         self.manipPlanner = manipPlanner
@@ -125,6 +125,7 @@ class PlanSequence(object):
         self.affordanceFitFunction = affordanceFitFunction
         self.sensorJointController = sensorJointController
         self.planPlaybackFunction = planPlaybackFunction
+        self.showPoseFunction = showPoseFunction
         self.graspingHand = 'left'
         self.planFromCurrentRobotState = False
         self.userPromptEnabled = True
@@ -165,7 +166,7 @@ class PlanSequence(object):
     def computeDrillFrame(self, robotModel):
 
         position = [1.5, 0.0, 1.2]
-        rpy = [0, 0, -89]
+        rpy = [1, 1, 1]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(self.computeGroundFrame(robotModel))
@@ -240,6 +241,20 @@ class PlanSequence(object):
         self.walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, waitForResponse=True)
 
 
+    def computeEndPose(self):
+        graspLinks = {
+            'l_hand' : 'left_base_link',
+            'r_hand' : 'right_base_link',
+           }
+        linkName = graspLinks[self.getEndEffectorLinkName()]
+        startPose = self.geEstimatedRobotStatePose()
+        self.endPosePlan = self.manipPlanner.sendEndPoseGoal(startPose, linkName, self.graspFrame.transform, waitForResponse=True)
+        self.showEndPose()
+
+    def showEndPose(self):
+        endPose = robotstate.convertStateMessageToDrakePose(self.endPosePlan)
+        self.showPoseFunction(endPose)
+
     def computePreGraspPose(self):
 
         goalPoseJoints = RobotPoseGUIWrapper.getPose('hose', '1 walking with hose', side=self.graspingHand)
@@ -248,24 +263,27 @@ class PlanSequence(object):
             startPose = self.geEstimatedRobotStatePose()
         else:
             planState = self.walkingPlan.plan[-1]
-            startPose = robotplanlistener.RobotPlanPlayback.convertPlanStateToPose(planState)
+            startPose = robotstate.convertStateMessageToDrakePose(planState)
 
         self.preGraspPlan = self.manipPlanner.sendPoseGoal(startPose, goalPoseJoints, waitForResponse=True)
 
 
-    def computeGraspPlan(self):
-
+    def getEndEffectorLinkName(self):
         linkMap = {
                       'left' : 'l_hand',
                       'right': 'r_hand'
                   }
-        linkName = linkMap[self.graspingHand]
+        return linkMap[self.graspingHand]
+
+    def computeGraspPlan(self):
+
+        linkName = self.getEndEffectorLinkName()
 
         if self.planFromCurrentRobotState:
             startPose = self.geEstimatedRobotStatePose()
         else:
             planState = self.preGraspPlan.plan[-1]
-            startPose = robotplanlistener.RobotPlanPlayback.convertPlanStateToPose(planState)
+            startPose = robotstate.convertStateMessageToDrakePose(planState)
 
         self.graspPlan = self.manipPlanner.sendEndEffectorGoal(startPose, linkName, self.graspFrame.transform, waitForResponse=True)
 
@@ -339,8 +357,8 @@ class PlanSequence(object):
         drillFrame = self.computeDrillFrame(self.robotModel)
 
         folder = om.getOrCreateContainer('affordances')
-        drillMesh = segmentation.getDrillMesh()
-        self.drillAffordance = vis.showPolyData(drillMesh, 'drill', color=[1.0, 1.0, 0.0], parent=folder)
+        drillMesh = segmentation.getDrillBarrelMesh()
+        self.drillAffordance = vis.showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], parent=folder)
         self.drillAffordance.actor.SetUserTransform(drillFrame)
         self.drillFrame = vis.showFrame(drillFrame, 'drill frame', parent=self.drillAffordance, visible=True, scale=0.2)
 
