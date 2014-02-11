@@ -24,7 +24,7 @@ layout = {  'plan_received': ['idle', 'walk_planning'],
 
 class ActionSequence(object):
 
-    def __init__(self, actionSequence, initial, objectModel, manipPlanner, footstepPlanner, sensorJointController):
+    def __init__(self, actionSequence, initial, objectModel, manipPlanner, footstepPlanner, sensorJointController, playbackFunction):
 
         #local variables
         self.fsm = SimpleFsm()
@@ -33,13 +33,14 @@ class ActionSequence(object):
         self.manipPlanner = manipPlanner
         self.footstepPlanner = footstepPlanner
         self.sensorJointController = sensorJointController
+        self.playbackFunction = playbackFunction
 
         #Store all the action objects
         self.action_objects = []
 
         #All FSMs need a default goal and a fail action
-        self.action_objects.append(Goal(self.fsm))
-        self.action_objects.append(Fail(self.fsm))
+        self.action_objects.append(Goal(self))
+        self.action_objects.append(Fail(self))
 
         #Populate the FSM with all action objects
         for key in actionSequence.keys():
@@ -47,7 +48,6 @@ class ActionSequence(object):
             action_ptr = key(actionSequence[key][0],
                              actionSequence[key][1],
                              actionSequence[key][2],
-                             self.fsm,
                              self)
 
             #Store the instance
@@ -72,11 +72,11 @@ class ActionSequence(object):
 
 #if __name__ == '__main__':
 
-states = {WalkPlan    : [Walk, Fail,        [None] ],
+states = {WalkPlan    : [Walk, Fail,        {'target':'grasp stance'} ],
           Walk        : [WaitForScan, Fail, [None] ],
           WaitForScan : [Fit, Fail,         [None] ],
           Fit         : [ReachPlan, Fail,   [None] ],
-          ReachPlan   : [Reach, WalkPlan,   {'target':'drill frame', 'hand':'left'} ],
+          ReachPlan   : [Reach, WalkPlan,   {'target':'grasp frame', 'hand':'left'} ],
           Reach       : [Grip, Fail,        [None] ],
           Grip        : [RetractPlan, Fail, [None] ],
           RetractPlan : [Retract, Fail,     [None] ],
@@ -87,16 +87,13 @@ states = {WalkPlan    : [Walk, Fail,        [None] ],
 #                       initial = WaitForScan,
 #                       objectModel = om,
 #                       manipPlanner = manipPlanner,
-#                       footstepPlanner = footstepPlanner,
-#sensorJointController = sensorJointController)
+#                       footstepPlanner = footstepsDriver,
+#                       sensorJointController = robotStateJointController)
 
-timer = TimerCallback()
+#timer = TimerCallback()
 #timer.callback = reach.fsm.update
 #timer.targetFps = 3
-
 #reach.fsm.start()
+
 #timer.start()
-
-
-
 #self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(self.graspStanceFrame.transform, waitForResponse=True)
