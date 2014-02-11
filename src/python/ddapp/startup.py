@@ -40,6 +40,10 @@ from ddapp.timercallback import TimerCallback
 from ddapp import segmentationpanel
 from ddapp import lcmUtils
 from ddapp.shallowCopy import shallowCopy
+
+from actionmanager import actionmanagerfsm
+from actionmanager.actions import *
+
 import drc as lcmdrc
 
 from ddapp import botpy
@@ -311,9 +315,33 @@ if usePlanning:
 
     #planner.userPromptEnabled = False
     #q = planner.autonomousExecute()
-    #defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
-    #planner.spawnDrillAffordance()
+    defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
 
+    reach_sequence = {WalkPlan    : [Walk, Fail,        {'target':'grasp stance'} ],
+                      Walk        : [WaitForScan, Fail, [None] ],
+                      WaitForScan : [Fit, Fail,         [None] ],
+                      Fit         : [ReachPlan, Fail,   [None] ],
+                      ReachPlan   : [Reach, WalkPlan,   {'target':'grasp frame', 'hand':'left'} ],
+                      Reach       : [Grip, Fail,        [None] ],
+                      Grip        : [RetractPlan, Fail, [None] ],
+                      RetractPlan : [Retract, Fail,     [None] ],
+                      Retract     : [Goal, Fail,        [None] ] }
+
+    reach = actionmanagerfsm.ActionSequence(actionSequence = reach_sequence,
+                                            initial = WaitForScan,
+                                            objectModel = om,
+                                            manipPlanner = manipPlanner,
+                                            footstepPlanner = footstepsDriver,
+                                            sensorJointController = robotStateJointController,
+                                            playbackFunction = playPlans)
+    reach_timer = TimerCallback()
+    reach_timer.callback = reach.fsm.update
+    reach_timer.targetFps = 3
+    reach_timer.start()
+    planner.spawnDrillAffordance()
+
+    planner.userPromptEnabled = False
+    q = planner.autonomousExecute()
 
 
 
