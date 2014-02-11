@@ -54,6 +54,10 @@ set(python_files
   ddapp/macros/segmentation_view/ortho_z.py
   ddapp/macros/segmentation_view/perspective.py
 
+  actionmanager/__init__.py
+  actionmanager/actions.py
+  actionmanager/actionmanagerfsm.py
+  actionmanager/simplefsm.py
   )
 
 set(python_module_dir "${LIBRARY_OUTPUT_PATH}/site-packages")
