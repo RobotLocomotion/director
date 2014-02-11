@@ -143,6 +143,10 @@ class ManipulationPlanDriver(object):
         self.sendPlannerSettings(startPose)
 
         if waitForResponse:
+            if waitTimeout == 0:
+                helper = lcmUtils.MessageResponseHelper(responseChannel, lcmdrc.robot_plan_w_keyframes_t)
+                lcmUtils.publish(requestChannel, msg)
+                return helper
             return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, msg,
                                     responseChannel, lcmdrc.robot_plan_w_keyframes_t, waitTimeout)
         else:
