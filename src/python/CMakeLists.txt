@@ -60,7 +60,7 @@ set(python_files
 
   actionmanager/__init__.py
   actionmanager/actions.py
-  actionmanager/actionmanagerfsm.py
+  actionmanager/actionsequence.py
   actionmanager/simplefsm.py
   )
 
