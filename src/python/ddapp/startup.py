@@ -37,7 +37,7 @@ from ddapp import segmentationpanel
 from ddapp import lcmUtils
 from ddapp.shallowCopy import shallowCopy
 
-from actionmanager import actionmanagerfsm
+from actionmanager import actionsequence
 from actionmanager.actions import *
 
 import drc as lcmdrc
@@ -307,27 +307,31 @@ if usePlanning:
     #q = planner.autonomousExecute()
     defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
 
-    reach_sequence = {'walk_plan'    : [WalkPlan,       'walk',          'fail',      {'target':'grasp stance'} ],
-                      'walk'         : [Walk,           'wait_for_scan', 'fail',      [None] ],
-                      'wait_for_scan': [WaitForScan,    'fit',           'fail',      [None] ],
-                      'fit'          : [Fit,            'ready_plan',    'fail',      [None] ],
-                      'ready_plan'   : [JointMovePlan,  'ready_move',    'fail',      {'group':'General','name':'shooter','side':'left'} ],
-                      'ready_move'   : [JointMove,      'reach_plan',    'fail',      [None] ],
-                      'reach_plan'   : [ReachPlan,      'reach',         'walk_plan', {'target':'grasp frame', 'hand':'left'} ],
-                      'reach'        : [Reach,          'grip',          'fail',      [None] ],
-                      'grip'         : [Grip,           'retract_plan1', 'fail',      [None] ],
-                      'retract_plan1' : [JointMovePlan, 'retract_move1', 'fail',      {'group':'General','name':'shooter','side':'left'} ],
-                      'retract_move1' : [JointMove,     'retract_plan2', 'fail',      [None] ],
-                      'retract_plan2' : [JointMovePlan, 'retract_move2', 'fail',      {'group':'General','name':'handdown','side':'left'} ],
-                      'retract_move2' : [JointMove,     'goal',          'fail',      [None] ] }
+    reach_sequence = {'walk_plan'     : [WalkPlan,       'walk',          'fail',      {'target':'grasp stance'} ],
+                      'walk'          : [Walk,           'wait_for_scan', 'fail',      [None] ],
+                      'wait_for_scan' : [WaitForScan,    'fit',           'fail',      [None] ],
+                      'fit'           : [Fit,            'ready_plan',    'fail',      [None] ],
+                      'ready_plan'    : [JointMovePlan,  'ready_move',    'fail',      {'group':'General','name':'shooter','side':'left'} ],
+                      'ready_move'    : [JointMove,      'reach_plan',    'fail',      [None] ],
+                      'reach_plan'    : [ReachPlan,      'reach',         'walk_plan', {'target':'grasp frame', 'hand':'left'} ],
+                      'reach'         : [Reach,          'grip',          'fail',      [None] ],
+                      'grip'          : [Grip,           'retract_plan1', 'fail',      [None] ],
+                      'retract_plan1' : [JointMovePlan,  'retract_move1', 'fail',      {'group':'General','name':'shooter','side':'left'} ],
+                      'retract_move1' : [JointMove,      'retract_plan2', 'fail',      [None] ],
+                      'retract_plan2' : [JointMovePlan,  'retract_move2', 'fail',      {'group':'General','name':'handdown','side':'left'} ],
+                      'retract_move2' : [JointMove,      'goal',          'fail',      [None] ] }
 
-    reach = actionmanagerfsm.ActionSequence(actionSequence = reach_sequence,
-                                            initial = 'wait_for_scan',
-                                            objectModel = om,
-                                            manipPlanner = manipPlanner,
-                                            footstepPlanner = footstepsDriver,
-                                            sensorJointController = robotStateJointController,
-                                            playbackFunction = playPlans)
+    reach = actionsequence.ActionSequence(objectModel = om,
+                                          sensorJointController = robotStateJointController,
+                                          playbackFunction = playPlans,
+                                          manipPlanner = manipPlanner,
+                                          footstepPlanner = footstepsDriver,
+                                          handDriver = handDriver,
+                                          atlasDriver = atlasdriver.driver,
+                                          multisenseDriver = perception.multisenseDriver)
+
+    reach.populate(sequence = reach_sequence, initial = 'ready_plan')
+
     reach_timer = TimerCallback()
     reach_timer.callback = reach.fsm.update
     reach_timer.targetFps = 3
