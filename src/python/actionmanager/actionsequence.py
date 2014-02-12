@@ -2,69 +2,66 @@ from simplefsm import SimpleFsm
 from actions import *
 from ddapp.timercallback import TimerCallback
 
-states = [  'idle',
-            'walk_planning',
-            'walking',
-            'scanning',
-            'refitting',
-            'reach_planning',
-            'reaching',
-            'retracting']
-
-layout = {  'plan_received': ['idle', 'walk_planning'],
-            'not_reachable': ['walk_planning', 'walking'],
-            'reachable': ['walk_planning', 'reach_planning'],
-            'walk_done': ['walking', 'scanning'],
-            'scan_done': ['scanning', 'refitting'],
-            'fit_done': ['refitting', 'reach_planning'],
-            'reach_planned': ['reach_planning', 'reaching'],
-            'reach_done': ['reaching', 'retracting'],
-            'retract_done': ['retracting', 'idle']}
-
-
 class ActionSequence(object):
 
-    def __init__(self, actionSequence, initial, objectModel, manipPlanner, footstepPlanner, sensorJointController, playbackFunction):
+    def __init__(self,
+                 objectModel,
+                 sensorJointController,
+                 playbackFunction,
+                 manipPlanner,
+                 footstepPlanner,
+                 handDriver,
+                 atlasDriver,
+                 multisenseDriver):
 
-        #local variables
-        self.fsm = SimpleFsm()
-
+        #Planner objects
         self.om = objectModel
         self.manipPlanner = manipPlanner
         self.footstepPlanner = footstepPlanner
         self.sensorJointController = sensorJointController
         self.playbackFunction = playbackFunction
 
+        #Hardware Drivers
+        self.handDriver = handDriver
+        self.atlasDriver = atlasDriver
+        self.multisenseDriver = multisenseDriver
+
+        #Shared storage for actions
         self.planPose = None
         self.vizMode = True
         self.vizModeAnimation = []
 
-        #Store all the action objects
-        self.action_objects = []
+        self.fsm = None
+        self.fsmDebug = False
+
+    def populate(self, sequence, initial):
+
+        #Create and store all the actions, create and populate the FSM
+        self.fsm = SimpleFsm(debug = self.fsmDebug)
+        self.actionObjects = []
 
         #All FSMs need a default goal and a fail action
-        self.action_objects.append(Goal(self))
-        self.action_objects.append(Fail(self))
+        self.actionObjects.append(Goal(self))
+        self.actionObjects.append(Fail(self))
 
         #Populate the FSM with all action objects
-        for key in actionSequence.keys():
+        for name in sequence.keys():
 
-            name = key
-            actionClass = actionSequence[key][0]
+            actionClass = sequence[name][0]
 
             #Create an instance
-            action_ptr = actionClass(name,
-                                     actionSequence[key][1],
-                                     actionSequence[key][2],
-                                     actionSequence[key][3],
-                                     self)
+            actionPtr = actionClass(name,
+                                    sequence[name][1],
+                                    sequence[name][2],
+                                    sequence[name][3],
+                                    self)
 
             #Store the instance
-            self.action_objects.append(action_ptr)
+            self.actionObjects.append(actionPtr)
 
             #Use the instance to populate the FSM with success/fail transitions
-            self.fsm.addTransition(name, actionSequence[key][1])
-            self.fsm.addTransition(name, actionSequence[key][2])
+            self.fsm.addTransition(name, sequence[name][1])
+            self.fsm.addTransition(name, sequence[name][2])
 
             #Setup the special transition to the init state
             if name == initial:
@@ -73,10 +70,20 @@ class ActionSequence(object):
                 self.fsm.onUpdate['init'] = self.fsm.initTransition
 
         #Populate the fsm with all appropriate function pointers
-        for action_ptr in self.action_objects:
-            self.fsm.onEnter[action_ptr.name] = action_ptr.onEnter
-            self.fsm.onUpdate[action_ptr.name] = action_ptr.onUpdate
-            self.fsm.onExit[action_ptr.name] = action_ptr.onExit
+        for actionPtr in self.actionObjects:
+            self.fsm.onEnter[actionPtr.name] = actionPtr.onEnter
+            self.fsm.onUpdate[actionPtr.name] = actionPtr.onUpdate
+            self.fsm.onExit[actionPtr.name] = actionPtr.onExit
+
+    def reset(self):
+        self.fsm.reset()
+        self.planPose = None
+        self.vizMode = True
+        self.vizModeAnimation = []
+
+    def clear(self):
+        self.reset()
+        self.fsm = None
 
 
 #if __name__ == '__main__':
@@ -92,7 +99,7 @@ class ActionSequence(object):
 #          Retract     : [Goal, Fail,        [None] ]}
 
 
-#reach = ActionSequence(actionSequence = states,
+#reach = ActionSequence(sequence = states,
 #                       initial = WaitForScan,
 #                       objectModel = om,
 #                       manipPlanner = manipPlanner,

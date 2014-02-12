@@ -2,7 +2,9 @@ from sets import Set
 
 class SimpleFsm(object):
 
-    def __init__(self):
+    def __init__(self, debug = False):
+
+        self.debug = debug
 
         self.started = False
         self.onEnter = {}
@@ -24,7 +26,8 @@ class SimpleFsm(object):
         self.initTrans = 'init'
 
     def addState(self, state):
-        print "adding state:", state
+        if self.debug:
+            print "adding state:", state
         self.states.add(state)
         if not state in self.onEnter:
             self.onEnter[state] = self.noop
@@ -77,16 +80,19 @@ class SimpleFsm(object):
             return
 
         #Do the transition
-        print "Leaving: ", self.current
+        if self.debug:
+            print "Leaving: ", self.current
         self.onExit[self.current]()
         transitionString = self.current+'_to_'+newState
-        print "Transition: ", self.transitionDict[transitionString]
-        print "Entering: ", newState
+        if self.debug:
+            print "Transition: ", self.transitionDict[transitionString]
+            print "Entering: ", newState
         self.onEnter[newState]()
         self.current = newState
 
     def update(self):
         if self.started:
-            print "Updating in state:", self.current
+            if self.debug:
+                print "Updating in state:", self.current
             self.onUpdate[self.current]()
 
