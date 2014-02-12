@@ -296,8 +296,8 @@ class FootstepsDriver(object):
 
         if waitForResponse:
             if waitTimeout == 0:
-                helper = lcmUtils.MessageResponseHelper.publishAndWait(responseChannel, lcmdrc.robot_plan_t)
-                lcmUtiles.publish(requestChannel, msg)
+                helper = lcmUtils.MessageResponseHelper(responseChannel, lcmdrc.robot_plan_t)
+                lcmUtils.publish(requestChannel, msg)
                 return helper
             return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, msg,
                                                                  responseChannel, lcmdrc.robot_plan_t, waitTimeout)
