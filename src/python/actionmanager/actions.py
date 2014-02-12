@@ -87,20 +87,27 @@ class Walk(Action):
 
     def __init__(self, success, fail, args, container):
         Action.__init__(self, success, fail, args, container)
-        self.counter = 10
+        self.walkAnimationResponse = None
 
     def onEnter(self):
         print "Entered the WALK state"
-        self.container.playbackFunction([self.container.walkPlan])
+        if self.container.vizMode:
+            self.walkAnimationResponse = self.container.footstepPlanner.sendWalkingPlanRequest(self.container.walkPlan, waitForResponse=True, waitTimeout=0)
 
     def onUpdate(self):
-        self.counter -= 1
-        if self.counter == 0:
+
+        response = self.walkAnimationResponse.waitForResponse(timeout = 0)
+
+        if response:
+            self.container.walkAnimation = response
             print "done walking, time to go to", self.success_action.name
+            self.container.playbackFunction([self.container.walkAnimation])
             self.container.fsm.transition(self.success_action.name)
 
     def onExit(self):
-        self.counter = 10
+        self.walkAnimationResponse.finish()
+        self.walkAnimationResponse = None
+
 
 class ReachPlan(Action):
 
