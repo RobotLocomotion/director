@@ -317,18 +317,22 @@ if usePlanning:
     #q = planner.autonomousExecute()
     defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
 
-    reach_sequence = {WalkPlan    : [Walk, Fail,        {'target':'grasp stance'} ],
-                      Walk        : [WaitForScan, Fail, [None] ],
-                      WaitForScan : [Fit, Fail,         [None] ],
-                      Fit         : [ReachPlan, Fail,   [None] ],
-                      ReachPlan   : [Reach, WalkPlan,   {'target':'grasp frame', 'hand':'left'} ],
-                      Reach       : [Grip, Fail,        [None] ],
-                      Grip        : [RetractPlan, Fail, [None] ],
-                      RetractPlan : [Retract, Fail,     [None] ],
-                      Retract     : [Goal, Fail,        [None] ] }
+    reach_sequence = {'walk_plan'    : [WalkPlan,       'walk',          'fail',      {'target':'grasp stance'} ],
+                      'walk'         : [Walk,           'wait_for_scan', 'fail',      [None] ],
+                      'wait_for_scan': [WaitForScan,    'fit',           'fail',      [None] ],
+                      'fit'          : [Fit,            'ready_plan',    'fail',      [None] ],
+                      'ready_plan'   : [JointMovePlan,  'ready_move',    'fail',      {'group':'General','name':'shooter','side':'left'} ],
+                      'ready_move'   : [JointMove,      'reach_plan',    'fail',      [None] ],
+                      'reach_plan'   : [ReachPlan,      'reach',         'walk_plan', {'target':'grasp frame', 'hand':'left'} ],
+                      'reach'        : [Reach,          'grip',          'fail',      [None] ],
+                      'grip'         : [Grip,           'retract_plan1', 'fail',      [None] ],
+                      'retract_plan1' : [JointMovePlan, 'retract_move1', 'fail',      {'group':'General','name':'shooter','side':'left'} ],
+                      'retract_move1' : [JointMove,     'retract_plan2', 'fail',      [None] ],
+                      'retract_plan2' : [JointMovePlan, 'retract_move2', 'fail',      {'group':'General','name':'handdown','side':'left'} ],
+                      'retract_move2' : [JointMove,     'goal',          'fail',      [None] ] }
 
     reach = actionmanagerfsm.ActionSequence(actionSequence = reach_sequence,
-                                            initial = WaitForScan,
+                                            initial = 'wait_for_scan',
                                             objectModel = om,
                                             manipPlanner = manipPlanner,
                                             footstepPlanner = footstepsDriver,
@@ -336,7 +340,7 @@ if usePlanning:
                                             playbackFunction = playPlans)
     reach_timer = TimerCallback()
     reach_timer.callback = reach.fsm.update
-    reach_timer.targetFps = 5
+    reach_timer.targetFps = 3
     reach_timer.start()
     planner.spawnDrillAffordance()
 

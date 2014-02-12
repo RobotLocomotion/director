@@ -35,7 +35,9 @@ class ActionSequence(object):
         self.sensorJointController = sensorJointController
         self.playbackFunction = playbackFunction
 
+        self.planPose = None
         self.vizMode = True
+        self.vizModeAnimation = []
 
         #Store all the action objects
         self.action_objects = []
@@ -46,23 +48,28 @@ class ActionSequence(object):
 
         #Populate the FSM with all action objects
         for key in actionSequence.keys():
+
+            name = key
+            actionClass = actionSequence[key][0]
+
             #Create an instance
-            action_ptr = key(actionSequence[key][0],
-                             actionSequence[key][1],
-                             actionSequence[key][2],
-                             self)
+            action_ptr = actionClass(name,
+                                     actionSequence[key][1],
+                                     actionSequence[key][2],
+                                     actionSequence[key][3],
+                                     self)
 
             #Store the instance
             self.action_objects.append(action_ptr)
 
             #Use the instance to populate the FSM with success/fail transitions
-            self.fsm.addTransition(action_ptr.name, actionSequence[key][0].name)
-            self.fsm.addTransition(action_ptr.name, actionSequence[key][1].name)
+            self.fsm.addTransition(name, actionSequence[key][1])
+            self.fsm.addTransition(name, actionSequence[key][2])
 
             #Setup the special transition to the init state
-            if key.name == initial.name:
-                self.fsm.addTransition('init', key.name)
-                self.fsm.setInitTransition(key.name)
+            if name == initial:
+                self.fsm.addTransition('init', name)
+                self.fsm.setInitTransition(name)
                 self.fsm.onUpdate['init'] = self.fsm.initTransition
 
         #Populate the fsm with all appropriate function pointers
@@ -74,15 +81,15 @@ class ActionSequence(object):
 
 #if __name__ == '__main__':
 
-states = {WalkPlan    : [Walk, Fail,        {'target':'grasp stance'} ],
-          Walk        : [WaitForScan, Fail, [None] ],
-          WaitForScan : [Fit, Fail,         [None] ],
-          Fit         : [ReachPlan, Fail,   [None] ],
-          ReachPlan   : [Reach, WalkPlan,   {'target':'grasp frame', 'hand':'left'} ],
-          Reach       : [Grip, Fail,        [None] ],
-          Grip        : [RetractPlan, Fail, [None] ],
-          RetractPlan : [Retract, Fail,     [None] ],
-          Retract     : [Goal, Fail,        [None] ] }
+#states = {WalkPlan    : [Walk, Fail,        {'target':'grasp stance'} ],
+#          Walk        : [WaitForScan, Fail, [None] ],
+#          WaitForScan : [Fit, Fail,         [None] ],
+#          Fit         : [ReachPlan, Fail,   [None] ],
+#          ReachPlan   : [Reach, WalkPlan,   {'target':'grasp frame', 'hand':'left'} ],
+#          Reach       : [Grip, Fail,        [None] ],
+#          Grip        : [RetractPlan, Fail, [None] ],
+#          RetractPlan : [Retract, Fail,     {'side':'left'} ],
+#          Retract     : [Goal, Fail,        [None] ]}
 
 
 #reach = ActionSequence(actionSequence = states,
