@@ -1,7 +1,12 @@
+from ddapp import robotstate
+import RobotPoseGUI as rpg
+
+from ddapp.plansequence import RobotPoseGUIWrapper
 
 class Action(object):
 
-    def __init__(self, success, fail, args, container):
+    def __init__(self, name, success, fail, args, container):
+        self.name = name
         self.container = container
         self.args = args
         self.success_action = success
@@ -19,25 +24,29 @@ class Action(object):
 
 class Goal(Action):
 
-    name = 'goal'
-
     def __init__(self, container):
-        Action.__init__(self, None, None, None, container)
+        Action.__init__(self, 'goal', None, None, None, container)
 
     def onEnter(self):
         print "HOORAY! Entered the GOAL state"
 
+        #In viz mode, play the animation
+        if self.container.vizMode:
+            self.container.playbackFunction(self.container.vizModeAnimation)
+
+        #Stop the FSM now that we're at a terminus
+        self.container.fsm.stop()
 
 class Fail(Action):
 
-    name = 'fail'
-
     def __init__(self, container):
-        Action.__init__(self, None, None, None, container)
+        Action.__init__(self, 'fail', None, None, None, container)
 
     def onEnter(self):
         print "NOOO! Entered the FAIL state"
 
+        #Stop the FSM now that we're at a terminus
+        self.container.fsm.stop()
 
 
 #Generic notes:
@@ -50,15 +59,12 @@ class Fail(Action):
 
 class WalkPlan(Action):
 
-    name = 'walk_plan'
-
-    def __init__(self, success, fail, args, container):
-        Action.__init__(self, success, fail, args, container)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
         self.walkPlanResponse = None
 
     def onEnter(self):
-        print "Entered the WALK_PLAN state"
         graspStanceFrame = self.container.om.findObjectByName(self.args['target'])
         self.walkPlanResponse = self.container.footstepPlanner.sendFootstepPlanRequest(graspStanceFrame.transform, waitForResponse=True, waitTimeout=0)
 
@@ -70,12 +76,11 @@ class WalkPlan(Action):
 
             if response.num_steps == 0:
                 print 'walk plan failed'
-                self.container.fsm.transition(self.fail_action.name)
+                self.container.fsm.transition(self.fail_action)
             else:
                 print 'walk plan successful'
                 self.container.walkPlan = response
-                print "done planning, time to go to", self.success_action.name
-                self.container.fsm.transition(self.success_action.name)
+                self.container.fsm.transition(self.success_action)
 
     def onExit(self):
         self.walkPlanResponse.finish()
@@ -83,48 +88,56 @@ class WalkPlan(Action):
 
 class Walk(Action):
 
-    name = 'walk'
-
-    def __init__(self, success, fail, args, container):
-        Action.__init__(self, success, fail, args, container)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
         self.walkAnimationResponse = None
 
     def onEnter(self):
-        print "Entered the WALK state"
+
+        #Logic for viz-mode:
         if self.container.vizMode:
+            #Use the footstep plan to calculate a walking plan, for animation purposes only
             self.walkAnimationResponse = self.container.footstepPlanner.sendWalkingPlanRequest(self.container.walkPlan, waitForResponse=True, waitTimeout=0)
+
+        #Logic for execute mode:
+
 
     def onUpdate(self):
 
-        response = self.walkAnimationResponse.waitForResponse(timeout = 0)
+        #Logic for viz-mode:
+        if self.container.vizMode:
+            response = self.walkAnimationResponse.waitForResponse(timeout = 0)
+            if response:
+                #We got a successful response from the walk planner, cache it and update the plan state
+                self.container.walkAnimation = response
+                self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.walkAnimation.plan[-1])
+                self.container.vizModeAnimation.append(self.container.walkAnimation)
+                self.container.fsm.transition(self.success_action)
 
-        if response:
-            self.container.walkAnimation = response
-            print "done walking, time to go to", self.success_action.name
-            self.container.playbackFunction([self.container.walkAnimation])
-            self.container.fsm.transition(self.success_action.name)
+        #Logic for execute mode:
 
     def onExit(self):
-        self.walkAnimationResponse.finish()
-        self.walkAnimationResponse = None
+
+        #Logic for viz-mode:
+        if self.container.vizMode:
+            self.walkAnimationResponse.finish()
+            self.walkAnimationResponse = None
 
 
 class ReachPlan(Action):
 
-    name = 'reach_plan'
-
-    def __init__(self, success, fail, args, container):
-        Action.__init__(self, success, fail, args, container)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
         self.manipPlanResponse = None
 
     def onEnter(self):
-        print "Entered the REACH_PLAN state"
         linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
         linkName = linkMap[self.args['hand']]
         graspFrame = self.container.om.findObjectByName(self.args['target'])
-        startPose = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
-        self.manipPlanResponse = self.container.manipPlanner.sendEndEffectorGoal(startPose, linkName, graspFrame.transform, waitForResponse=True, waitTimeout=0)
+        if self.container.planPose == None:
+            self.container.planPose = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
+        self.manipPlanResponse = self.container.manipPlanner.sendEndEffectorGoal(self.container.planPose, linkName, graspFrame.transform, waitForResponse=True, waitTimeout=0)
 
     def onUpdate(self):
         response = self.manipPlanResponse.waitForResponse(timeout = 0)
@@ -132,10 +145,15 @@ class ReachPlan(Action):
         if response:
             if response.plan_info[-1] > 10:
                 print "PLANNER REPORTS ERROR!"
-                self.container.fsm.transition(self.fail_action.name)
+                self.container.fsm.transition(self.fail_action)
             else:
                 print "Planner reports success!"
-                self.container.fsm.transition(self.success_action.name)
+                self.container.fsm.transition(self.success_action)
+
+                #Viz Mode Logic:
+                if self.container.vizMode:
+                    self.container.vizModeAnimation.append(response)
+                    self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
 
     def onExit(self):
         self.manipPlanResponse.finish()
@@ -144,81 +162,100 @@ class ReachPlan(Action):
 
 class Reach(Action):
 
-    name = 'reach'
-
-    def __init__(self, success, fail, args, container):
-        Action.__init__(self, success, fail, args, container)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
 
     def onEnter(self):
-        print "Entered the REACH state"
+        return
 
     def onUpdate(self):
-        self.counter -= 1
-        if self.counter == 0:
-            print "done reaching, time to go to", self.success_action.name
-            self.container.fsm.transition(self.success_action.name)
+
+        #Viz Mode Logic
+        if self.container.vizMode:
+            #Update the current state to be the end of the last step for future planning
+            self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
+            self.container.fsm.transition(self.success_action)
+
+        #Execute Mode Logic
+        else:
+            self.counter -= 1
+            if self.counter == 0:
+                self.container.fsm.transition(self.success_action)
 
     def onExit(self):
         self.counter = 10
 
 
-class RetractPlan(Action):
+class JointMovePlan(Action):
 
-    name = 'retract_plan'
-
-    def __init__(self, success, fail, args, container):
-        Action.__init__(self, success, fail, args, container)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
+        self.retractPlanResponse = None
 
     def onEnter(self):
-        print "Entered the RETRACT_PLAN state"
+        goalPoseJoints = RobotPoseGUIWrapper.getPose(self.args['group'], self.args['name'], self.args['side'])
+        if self.container.planPose == None:
+            self.container.planPose = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
+        self.retractPlanResponse = self.container.manipPlanner.sendPoseGoal(self.container.planPose, goalPoseJoints, waitForResponse=True, waitTimeout=0)
 
     def onUpdate(self):
-        self.counter -= 1
-        if self.counter == 0:
-            print "done planning, time to go to", self.success_action.name
-            self.container.fsm.transition(self.success_action.name)
+
+        response = self.retractPlanResponse.waitForResponse(timeout = 0)
+        if response:
+            self.container.retractPlan = response
+            self.container.vizModeAnimation.append(response)
+            self.container.fsm.transition(self.success_action)
 
     def onExit(self):
         self.counter = 10
 
-class Retract(Action):
+class JointMove(Action):
 
-    name = 'retract'
-
-    def __init__(self, success, fail, args, container):
-        Action.__init__(self, success, fail, args, container)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
 
     def onEnter(self):
-        print "Entered the RETRACT state"
+        return
 
     def onUpdate(self):
-        self.counter -= 1
-        if self.counter == 0:
-            print "done retracting, time to go to", self.success_action.name
-            self.container.fsm.transition(self.success_action.name)
+
+        #Viz Mode Logic
+        if self.container.vizMode:
+            self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
+            self.container.fsm.transition(self.success_action)
+
+        #Execute Mode Logic
+        else:
+            self.counter -= 1
+            if self.counter == 0:
+                self.container.fsm.transition(self.success_action)
 
     def onExit(self):
         self.counter = 10
 
 class Grip(Action):
 
-    name = 'grip'
-
-    def __init__(self, success, fail, args, container):
-        Action.__init__(self, success, fail, args, container)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
 
     def onEnter(self):
-        print "Entered the GRIP state"
+        return
 
     def onUpdate(self):
-        self.counter -= 1
-        if self.counter == 0:
-            print "done gripping, time to go to", self.success_action.name
-            self.container.fsm.transition(self.success_action.name)
+
+        #Viz Mode Logic
+        if self.container.vizMode:
+            self.container.fsm.transition(self.success_action)
+
+        #Execute Mode Logic
+        else:
+            self.counter -= 1
+            if self.counter == 0:
+                self.container.fsm.transition(self.success_action)
 
     def onExit(self):
         self.counter = 10
@@ -226,20 +263,24 @@ class Grip(Action):
 
 class Fit(Action):
 
-    name = 'fit'
-
-    def __init__(self, success, fail, args, container):
-        Action.__init__(self, success, fail, args, container)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
 
     def onEnter(self):
-        print "Entered the FIT state"
+        return
 
     def onUpdate(self):
-        self.counter -= 1
-        if self.counter == 0:
-            print "done fitping, time to go to", self.success_action.name
-            self.container.fsm.transition(self.success_action.name)
+
+        #Viz Mode Logic
+        if self.container.vizMode:
+            self.container.fsm.transition(self.success_action)
+
+        #Execute Mode Logic
+        else:
+            self.counter -= 1
+            if self.counter == 0:
+                self.container.fsm.transition(self.success_action)
 
     def onExit(self):
         self.counter = 10
@@ -247,20 +288,24 @@ class Fit(Action):
 
 class WaitForScan(Action):
 
-    name = 'waitforscan'
-
-    def __init__(self, success, fail, args, container):
-        Action.__init__(self, success, fail, args, container)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
 
     def onEnter(self):
-        print "Entered the WAITFORSCAN state"
+        return
 
     def onUpdate(self):
-        self.counter -= 1
-        if self.counter == 0:
-            print "done waiting for scan, time to go to", self.success_action.name
-            self.container.fsm.transition(self.success_action.name)
+
+        #Viz Mode Logic
+        if self.container.vizMode:
+            self.container.fsm.transition(self.success_action)
+
+        #Execute Mode Logic
+        else:
+            self.counter -= 1
+            if self.counter == 0:
+                self.container.fsm.transition(self.success_action)
 
     def onExit(self):
         self.counter = 10

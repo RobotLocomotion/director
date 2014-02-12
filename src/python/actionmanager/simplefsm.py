@@ -87,6 +87,6 @@ class SimpleFsm(object):
 
     def update(self):
         if self.started:
-            print "Updating in state:",self.current
+            print "Updating in state:", self.current
             self.onUpdate[self.current]()
 
