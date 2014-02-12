@@ -326,7 +326,7 @@ if usePlanning:
                                             playbackFunction = playPlans)
     reach_timer = TimerCallback()
     reach_timer.callback = reach.fsm.update
-    reach_timer.targetFps = 3
+    reach_timer.targetFps = 5
     reach_timer.start()
     planner.spawnDrillAffordance()
 

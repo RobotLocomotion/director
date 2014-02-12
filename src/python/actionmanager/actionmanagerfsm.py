@@ -35,6 +35,8 @@ class ActionSequence(object):
         self.sensorJointController = sensorJointController
         self.playbackFunction = playbackFunction
 
+        self.vizMode = True
+
         #Store all the action objects
         self.action_objects = []
 
