@@ -78,7 +78,8 @@ class ActionSequence(object):
             self.fsm.onExit[actionPtr.name] = actionPtr.onExit
 
     def reset(self):
-        self.fsm.reset()
+        if self.fsm:
+            self.fsm.reset()
         self.planPose = None
         self.vizMode = True
         self.vizModeAnimation = []
