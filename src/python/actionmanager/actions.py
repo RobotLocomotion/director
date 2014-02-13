@@ -1,3 +1,4 @@
+from time import time
 from ddapp import robotstate
 import RobotPoseGUI as rpg
 
@@ -73,13 +74,12 @@ class WalkPlan(Action):
         response = self.walkPlanResponse.waitForResponse(timeout = 0)
 
         if response:
-
             if response.num_steps == 0:
                 print 'walk plan failed'
                 self.container.fsm.transition(self.fail_action)
             else:
                 print 'walk plan successful'
-                self.container.walkPlan = response
+                self.container.footstepPlan = response
                 self.container.fsm.transition(self.success_action)
 
     def onExit(self):
@@ -97,10 +97,12 @@ class Walk(Action):
         #Logic for viz-mode:
         if self.container.vizMode:
             #Use the footstep plan to calculate a walking plan, for animation purposes only
-            self.walkAnimationResponse = self.container.footstepPlanner.sendWalkingPlanRequest(self.container.walkPlan, waitForResponse=True, waitTimeout=0)
+            self.walkAnimationResponse = self.container.footstepPlanner.sendWalkingPlanRequest(self.container.footstepPlan, waitForResponse=True, waitTimeout=0)
 
         #Logic for execute mode:
-
+        else:
+            self.container.footstepPlanner.commitFootstepPlan(self.footstepPlan)
+            self.walkStart = False
 
     def onUpdate(self):
 
@@ -115,6 +117,11 @@ class Walk(Action):
                 self.container.fsm.transition(self.success_action)
 
         #Logic for execute mode:
+        else:
+            if self.container.atlasDriver.getCurrentBehaviorName() == 'step':
+                self.walkStart = True
+            if self.walkStart and self.container.atlasDriver.getCurrentBehaviorName() == 'stand':
+                self.container.fsm.transition(self.success_action)
 
     def onExit(self):
 
@@ -123,6 +130,9 @@ class Walk(Action):
             self.walkAnimationResponse.finish()
             self.walkAnimationResponse = None
 
+        #Logic for execute-mode:
+        else:
+            self.walkStart = None
 
 class ReachPlan(Action):
 
@@ -240,35 +250,43 @@ class Grip(Action):
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-        self.counter = 10
 
     def onEnter(self):
-        return
+        self.container.handDriver.sendClose(60)
 
     def onUpdate(self):
 
         #Viz Mode Logic
-        if self.container.vizMode:
-            self.container.fsm.transition(self.success_action)
-
         #Execute Mode Logic
-        else:
-            self.counter -= 1
-            if self.counter == 0:
-                self.container.fsm.transition(self.success_action)
+        self.container.fsm.transition(self.success_action)
 
     def onExit(self):
-        self.counter = 10
+        return
 
+class Release(Action):
+
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
+
+    def onEnter(self):
+        self.container.handDriver.sendOpen()
+
+    def onUpdate(self):
+
+        #Viz Mode Logic
+        #Execute Mode Logic
+        self.container.fsm.transition(self.success_action)
+
+    def onExit(self):
+        return
 
 class Fit(Action):
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-        self.counter = 10
 
     def onEnter(self):
-        return
+        self.enterTime = time()
 
     def onUpdate(self):
 
@@ -278,22 +296,29 @@ class Fit(Action):
 
         #Execute Mode Logic
         else:
-            self.counter -= 1
-            if self.counter == 0:
+            if self.container.affordanceServer[self.args['affordance']] > self.enterTime:
+                print "New affordance fit found."
                 self.container.fsm.transition(self.success_action)
 
     def onExit(self):
-        self.counter = 10
+        self.waitTime = 0.0
 
 
 class WaitForScan(Action):
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-        self.counter = 10
 
     def onEnter(self):
-        return
+
+        #Viz Mode Logic
+        if self.container.vizMode:
+            return
+
+        #Execute Mode Logic
+        else:
+            self.currentRevolution = self.container.multisenseDriver.displayedRevolution
+            self.desiredRevolution = self.currentRevolution + 2
 
     def onUpdate(self):
 
@@ -303,9 +328,9 @@ class WaitForScan(Action):
 
         #Execute Mode Logic
         else:
-            self.counter -= 1
-            if self.counter == 0:
+            if self.container.multisenseDriver.displayedRevolution >= self.desiredRevolution:
                 self.container.fsm.transition(self.success_action)
 
     def onExit(self):
-        self.counter = 10
+        self.currentRevolution = None
+        self.desiredRevolution = None

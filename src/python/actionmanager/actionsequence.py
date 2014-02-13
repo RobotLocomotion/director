@@ -12,7 +12,8 @@ class ActionSequence(object):
                  footstepPlanner,
                  handDriver,
                  atlasDriver,
-                 multisenseDriver):
+                 multisenseDriver,
+                 affordanceServer):
 
         #Planner objects
         self.om = objectModel
@@ -25,6 +26,7 @@ class ActionSequence(object):
         self.handDriver = handDriver
         self.atlasDriver = atlasDriver
         self.multisenseDriver = multisenseDriver
+        self.affordanceServer = affordanceServer
 
         #Shared storage for actions
         self.planPose = None
