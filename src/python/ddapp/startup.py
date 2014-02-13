@@ -8,6 +8,7 @@ import sys
 import vtk
 import PythonQt
 from PythonQt import QtCore, QtGui
+from time import time
 import ddapp.applogic as app
 from ddapp import matlab
 from ddapp import jointcontrol
@@ -310,7 +311,7 @@ if usePlanning:
     reach_sequence = {'walk_plan'     : [WalkPlan,       'walk',          'fail',      {'target':'grasp stance'} ],
                       'walk'          : [Walk,           'wait_for_scan', 'fail',      [None] ],
                       'wait_for_scan' : [WaitForScan,    'fit',           'fail',      [None] ],
-                      'fit'           : [Fit,            'ready_plan',    'fail',      [None] ],
+                      'fit'           : [Fit,            'ready_plan',    'fail',      {'affordance':'drill'} ],
                       'ready_plan'    : [JointMovePlan,  'ready_move',    'fail',      {'group':'General','name':'shooter','side':'left'} ],
                       'ready_move'    : [JointMove,      'reach_plan',    'fail',      [None] ],
                       'reach_plan'    : [ReachPlan,      'reach',         'walk_plan', {'target':'grasp frame', 'hand':'left'} ],
@@ -321,6 +322,8 @@ if usePlanning:
                       'retract_plan2' : [JointMovePlan,  'retract_move2', 'fail',      {'group':'General','name':'handdown','side':'left'} ],
                       'retract_move2' : [JointMove,      'goal',          'fail',      [None] ] }
 
+    affordanceServer = {'drill' : time()}
+
     reach = actionsequence.ActionSequence(objectModel = om,
                                           sensorJointController = robotStateJointController,
                                           playbackFunction = playPlans,
@@ -328,7 +331,8 @@ if usePlanning:
                                           footstepPlanner = footstepsDriver,
                                           handDriver = handDriver,
                                           atlasDriver = atlasdriver.driver,
-                                          multisenseDriver = perception.multisenseDriver)
+                                          multisenseDriver = perception.multisenseDriver,
+                                          affordanceServer = affordanceServer)
 
     reach.populate(sequence = reach_sequence, initial = 'ready_plan')
 
