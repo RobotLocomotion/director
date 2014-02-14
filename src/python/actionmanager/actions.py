@@ -33,7 +33,8 @@ class Goal(Action):
 
         #In viz mode, play the animation
         if self.container.vizMode:
-            self.container.playbackFunction(self.container.vizModeAnimation)
+            if self.container.vizModeAnimation != []:
+                self.container.playbackFunction(self.container.vizModeAnimation)
 
         #Stop the FSM now that we're at a terminus
         self.container.fsm.stop()
@@ -101,7 +102,7 @@ class Walk(Action):
 
         #Logic for execute mode:
         else:
-            self.container.footstepPlanner.commitFootstepPlan(self.footstepPlan)
+            self.container.footstepPlanner.commitFootstepPlan(self.container.footstepPlan)
             self.walkStart = False
 
     def onUpdate(self):
@@ -289,6 +290,8 @@ class Fit(Action):
         self.enterTime = time()
 
     def onUpdate(self):
+
+        self.container.fsm.transition(self.success_action)
 
         #Viz Mode Logic
         if self.container.vizMode:
