@@ -27,6 +27,7 @@ quint64 ddBotImageQueue::getCurrentImageTime(const QString&);
 void ddBotImageQueue::getBodyToCameraTransform(const QString&, vtkTransform*);
 int ddBotImageQueue::getTransform(const QString&, const QString&, quint64, vtkTransform*);
 bool ddBotImageQueue::addCameraStream(const QString&);
+QList<double> ddBotImageQueue::getCameraFrustumBounds(const QString&);
 
 ddDrakeModel::ddDrakeModel();
 ddDrakeModel::~ddDrakeModel();

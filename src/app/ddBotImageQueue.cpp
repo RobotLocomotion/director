@@ -218,6 +218,18 @@ void ddBotImageQueue::computeTextureCoords(const QString& cameraName, vtkPolyDat
 }
 
 //-----------------------------------------------------------------------------
+QList<double> ddBotImageQueue::getCameraFrustumBounds(const QString& cameraName)
+{
+  CameraData* cameraData = this->getCameraData(cameraName);
+  if (!cameraData)
+  {
+    return QList<double>();
+  }
+
+  return this->getCameraFrustumBounds(cameraData);
+}
+
+//-----------------------------------------------------------------------------
 void ddBotImageQueue::getBodyToCameraTransform(const QString& cameraName, vtkTransform* transform)
 {
   if (!transform)
@@ -408,6 +420,30 @@ void ddBotImageQueue::colorizePoints(vtkPolyData* polyData, CameraData* cameraDa
       }
     }
   }
+}
+
+//-----------------------------------------------------------------------------
+QList<double> ddBotImageQueue::getCameraFrustumBounds(CameraData* cameraData)
+{
+  double width = bot_camtrans_get_image_width(cameraData->mCamTrans);
+  double height = bot_camtrans_get_image_width(cameraData->mCamTrans);
+  double ray[4][3];
+
+  bot_camtrans_unproject_pixel(cameraData->mCamTrans, 0, 0, &ray[0][0]);
+  bot_camtrans_unproject_pixel(cameraData->mCamTrans, width, 0, &ray[1][0]);
+  bot_camtrans_unproject_pixel(cameraData->mCamTrans, width, height, &ray[2][0]);
+  bot_camtrans_unproject_pixel(cameraData->mCamTrans, 0, height, &ray[3][0]);
+
+  QList<double> rays;
+  for (int i = 0; i < 4; ++i)
+  {
+    Eigen::Vector3d pt(&ray[i][0]);
+    rays.append(pt[0]);
+    rays.append(pt[1]);
+    rays.append(pt[2]);
+  }
+
+  return rays;
 }
 
 //-----------------------------------------------------------------------------
