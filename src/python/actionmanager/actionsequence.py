@@ -8,15 +8,18 @@ class ActionSequence(object):
                  objectModel,
                  sensorJointController,
                  playbackFunction,
+                 timerObject,
                  manipPlanner,
                  footstepPlanner,
                  handDriver,
                  atlasDriver,
                  multisenseDriver,
-                 affordanceServer):
+                 affordanceServer,
+                 fsmDebug = False):
 
         #Planner objects
         self.om = objectModel
+        self.timerObject = timerObject
         self.manipPlanner = manipPlanner
         self.footstepPlanner = footstepPlanner
         self.sensorJointController = sensorJointController
@@ -34,12 +37,14 @@ class ActionSequence(object):
         self.vizModeAnimation = []
 
         self.fsm = None
-        self.fsmDebug = False
+        self.fsmDebug = fsmDebug
 
     def populate(self, sequence, initial):
 
         #Create and store all the actions, create and populate the FSM
         self.fsm = SimpleFsm(debug = self.fsmDebug)
+        self.timerObject.callback = self.fsm.update
+
         self.actionObjects = []
 
         #All FSMs need a default goal and a fail action
@@ -78,15 +83,17 @@ class ActionSequence(object):
             self.fsm.onExit[actionPtr.name] = actionPtr.onExit
 
     def reset(self):
-        if self.fsm:
-            self.fsm.reset()
+        self.fsm.reset()
+        self.fsm.debug = self.fsmDebug
         self.planPose = None
-        self.vizMode = True
         self.vizModeAnimation = []
 
-    def clear(self):
-        self.reset()
-        self.fsm = None
+    def start(self, vizMode = True):
+        self.vizMode = vizMode
+        self.fsm.start()
+
+    def stop(self):
+        self.fsm.stop()
 
 
 #if __name__ == '__main__':
