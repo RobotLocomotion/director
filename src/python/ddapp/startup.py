@@ -322,24 +322,26 @@ if usePlanning:
                       'retract_plan2' : [JointMovePlan,  'retract_move2', 'fail',      {'group':'General','name':'handdown','side':'left'} ],
                       'retract_move2' : [JointMove,      'goal',          'fail',      [None] ] }
 
+    seq2 = {'wait_for_scan' : [WaitForScan,    'goal',           'fail',      [None] ]}
+
     affordanceServer = {'drill' : time()}
 
+    reach_timer = TimerCallback()
+    reach_timer.targetFps = 25
     reach = actionsequence.ActionSequence(objectModel = om,
                                           sensorJointController = robotStateJointController,
                                           playbackFunction = playPlans,
+                                          timerObject = reach_timer,
                                           manipPlanner = manipPlanner,
                                           footstepPlanner = footstepsDriver,
                                           handDriver = handDriver,
                                           atlasDriver = atlasdriver.driver,
                                           multisenseDriver = perception.multisenseDriver,
-                                          affordanceServer = affordanceServer)
-
-    reach.populate(sequence = reach_sequence, initial = 'ready_plan')
-
-    reach_timer = TimerCallback()
-    reach_timer.callback = reach.fsm.update
-    reach_timer.targetFps = 3
+                                          affordanceServer = affordanceServer,
+                                          fsmDebug = True)
+    reach.populate(sequence = reach_sequence, initial = 'wait_for_scan')
     reach_timer.start()
+
     planner.spawnDrillAffordance()
 
     planner.userPromptEnabled = False
