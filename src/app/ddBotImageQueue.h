@@ -77,6 +77,11 @@ public:
   quint64 getImage(const QString& cameraName, vtkImageData* image);
   quint64 getCurrentImageTime(const QString& cameraName);
 
+  // Returns four xyz vectors as a 12 element list.  The vectors are rays
+  // representing the top left, top right, bottom right, and bottom left
+  // edges of the camera frustum.
+  QList<double> getCameraFrustumBounds(const QString& cameraName);
+
   void colorizePoints(const QString& cameraName, vtkPolyData* polyData);
 
   void computeTextureCoords(const QString& cameraName, vtkPolyData* polyData);
@@ -100,6 +105,8 @@ protected:
   void colorizePoints(vtkPolyData* polyData, CameraData* cameraData);
 
   void computeTextureCoords(vtkPolyData* polyData, CameraData* cameraData);
+
+  QList<double> getCameraFrustumBounds(CameraData* cameraData);
 
   int getTransform(std::string from_frame, std::string to_frame,
                      Eigen::Isometry3d & mat, vtkIdType utime);
