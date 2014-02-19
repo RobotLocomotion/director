@@ -31,6 +31,7 @@ public:
 
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
   QList<QString> getLinkNames();
+  QList<QString> getJointNames();
 
   QString getLinkNameForMesh(vtkPolyData* polyData);
 

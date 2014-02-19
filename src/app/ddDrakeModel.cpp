@@ -873,6 +873,26 @@ QList<QString> ddDrakeModel::getLinkNames()
 }
 
 //-----------------------------------------------------------------------------
+QList<QString> ddDrakeModel::getJointNames()
+{
+  if (!this->Internal->Model)
+  {
+    return QList<QString>();
+  }
+
+  QList<QString> names;
+
+  const std::map<std::string, int> dofMap = this->Internal->Model->dof_map[0];
+  std::map<std::string, int>::const_iterator itr;
+  for(itr = dofMap.begin(); itr != dofMap.end(); ++itr)
+  {
+    names.append(itr->first.c_str());
+  }
+
+  return names;
+}
+
+//-----------------------------------------------------------------------------
 QString ddDrakeModel::getLinkNameForMesh(vtkPolyData* polyData)
 {
   std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
