@@ -16,6 +16,7 @@ from ddapp import ik
 from ddapp import ikeditor
 from ddapp import objectmodel as om
 from ddapp import spreadsheet
+from ddapp import transformUtils
 from ddapp import tdx
 from ddapp import perception
 from ddapp import segmentation
