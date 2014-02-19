@@ -243,7 +243,8 @@ if usePlanning:
     obj.addToView(view)
     obj.setProperty('Visible', False)
     obj.setProperty('Name', 'robot model')
-    obj.setProperty('Color', QtGui.QColor(255, 253, 213))
+    #obj.setProperty('Color', QtGui.QColor(255, 253, 213))
+    obj.setProperty('Color', QtGui.QColor(255, 180, 0))
     planningRobotModel = obj
 
     handDriver = handdriver.IRobotHandDriver(side='left')
@@ -257,18 +258,20 @@ if usePlanning:
     manipPlanner = robotplanlistener.ManipulationPlanDriver()
     planPlayback = robotplanlistener.RobotPlanPlayback()
 
+    playbackRobotModel = planningRobotModel
+    playbackJointController = planningJc
 
     def showPose(pose):
-        planningRobotModel.setProperty('Visible', True)
-        planningJc.setPose('show_pose', pose)
+        playbackRobotModel.setProperty('Visible', True)
+        playbackJointController.setPose('show_pose', pose)
 
     def playPlan(plan):
         playPlans([plan])
 
     def playPlans(plans):
         planPlayback.stopAnimation()
-        planningRobotModel.setProperty('Visible', True)
-        planPlayback.playPlans(plans, planningJc)
+        playbackRobotModel.setProperty('Visible', True)
+        planPlayback.playPlans(plans, playbackJointController)
 
     def playManipPlan():
         playPlan(manipPlanner.lastManipPlan)
@@ -295,7 +298,7 @@ if usePlanning:
         om.findObjectByName('Multisense').model.showRevolutionCallback = None
 
 
-    planner = plansequence.PlanSequence(defaultRobotModel, footstepsDriver, manipPlanner,
+    planner = plansequence.PlanSequence(robotStateModel, footstepsDriver, manipPlanner,
                                         handDriver, atlasdriver.driver, perception.multisenseDriver,
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
