@@ -412,7 +412,7 @@ def getDebugRevolutionData():
     #filename = os.path.join(dataDir, 'rev1.vtp')
     #filename = os.path.join(dataDir, 'drill-in-hand.vtp')
 
-    filename = '/home/drc/Desktop/scans-for-pat/drill-scan2.vtp'
+    filename = os.path.expanduser('~/Desktop/scans/debris-scan.vtp')
 
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
@@ -821,14 +821,17 @@ def createLine(blockDimensions, p1, p2):
     planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-0.005, 0.005])
     updatePolyData(planePoints, 'board segmentation', parent=getDebugFolder(), color=getRandomColor(), visible=False)
 
+    '''
     names = ['board A', 'board B', 'board C', 'board D', 'board E', 'board F', 'board G', 'board H', 'board I']
     for name in names:
         if not om.findObjectByName(name):
             break
     else:
         name = 'board'
+    '''
+    name = 'board'
 
-    segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=middleRay, expectedXAxis=middleRay, edgeSign=-1, name=name)
+    segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=-middleRay, expectedXAxis=middleRay, edgeSign=-1, name=name)
 
 
 def startInteractiveLineDraw(blockDimensions):
@@ -2484,7 +2487,28 @@ def publishTriad(transform, collectionId=1234):
 
 ####
 
+def createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances'):
 
+    cube = vtk.vtkCubeSource()
+    cube.SetXLength(xwidth)
+    cube.SetYLength(ywidth)
+    cube.SetZLength(zwidth)
+    cube.Update()
+    cube = shallowCopy(cube.GetOutput())
+
+    print 'making block affordance'
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    obj = showPolyData(cube, name, cls=BlockAffordanceItem, parent=parent)
+    obj.actor.SetUserTransform(t)
+    obj.addToView(app.getDRCView())
+
+    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name=name)
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
+    return obj
 
 def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXAxis, edgeSign=1, name='block affordance'):
 
@@ -2534,7 +2558,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
     xwidth, ywidth = blockDimensions
     zwidth = np.linalg.norm(p2 - p1)
 
-    origin = p1 - edgeSign*xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0 
+    origin = p1 - edgeSign*xaxis*xwidth/2.0 - yaxis*ywidth/2.0 + zaxis*zwidth/2.0
 
     d = DebugData()
 
@@ -2562,29 +2586,13 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
     #obj.setProperty('Color', QtGui.QColor(255, 255, 0))
     #obj.setProperty('Visible', False)
 
-    cube = vtk.vtkCubeSource()
-    cube.SetXLength(xwidth)
-    cube.SetYLength(ywidth)
-    cube.SetZLength(zwidth)
-    cube.Update()
-    cube = shallowCopy(cube.GetOutput())
-
-    t = getTransformFromAxes(xaxis, yaxis, zaxis)
-    t.PostMultiply()
-    t.Translate(origin)
-
-    obj = showPolyData(cube, name, cls=BlockAffordanceItem, parent='affordances')
-    obj.actor.SetUserTransform(t)
-    obj.addToView(app.getDRCView())
-
-    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name=name)
-    obj.setAffordanceParams(params)
-    obj.updateParamsFromActorTransform()
+    obj = createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name)
 
     icpTransform = mapsregistrar.getInitialTransform()
 
     if icpTransform:
-        objTrack = showPolyData(cube, name, cls=BlockAffordanceItem, parent=obj, color=[0.8, 1, 0.8])
+        t = obj.actor.GetUserTransform()
+        objTrack = showPolyData(obj.polyData, name, cls=BlockAffordanceItem, parent=obj, color=[0.8, 1, 0.8])
         objTrack.actor.SetUserTransform(t)
         objTrack.baseTransform = vtk.vtkTransform()
         objTrack.baseTransform.SetMatrix(t.GetMatrix())
