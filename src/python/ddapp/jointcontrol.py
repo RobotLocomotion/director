@@ -57,7 +57,7 @@ class JointController(object):
         assert os.path.splitext(filename)[1] == '.mat'
         import scipy.io
         matData = scipy.io.loadmat(filename)
-        return matData['xstar'][:self.numberOfJoints]
+        return matData['xstar'][:self.numberOfJoints].flatten()
 
 
 class MidiJointControl(TimerCallback):
