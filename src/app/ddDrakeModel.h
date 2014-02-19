@@ -25,6 +25,7 @@ public:
   void removeFromRenderer(vtkRenderer* renderer);
 
   int numberOfJoints();
+  void setJointPositions(const QList<double>& positions, const QList<QString>& jointNames);
   void setJointPositions(const QList<double>& positions);
 
   void setEstRobotState(const QList<double>& robotState);

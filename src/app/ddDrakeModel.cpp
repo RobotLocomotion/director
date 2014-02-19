@@ -121,46 +121,6 @@ std::vector<std::string> getEstRobotStateJointNames()
   return names;
 }
 
-std::vector<std::string> getDofNames()
-{
-  std::vector<std::string> names;
-  names.push_back("base_x");
-  names.push_back("base_y");
-  names.push_back("base_z");
-  names.push_back("base_roll");
-  names.push_back("base_pitch");
-  names.push_back("base_yaw");
-  names.push_back("back_bkz");
-  names.push_back("back_bky");
-  names.push_back("back_bkx");
-  names.push_back("l_arm_usy");
-  names.push_back("l_arm_shx");
-  names.push_back("l_arm_ely");
-  names.push_back("l_arm_elx");
-  names.push_back("l_arm_uwy");
-  names.push_back("l_leg_hpz");
-  names.push_back("l_leg_hpx");
-  names.push_back("l_leg_hpy");
-  names.push_back("l_leg_kny");
-  names.push_back("l_leg_aky");
-  names.push_back("l_leg_akx");
-  names.push_back("l_arm_mwx");
-  names.push_back("r_arm_usy");
-  names.push_back("r_arm_shx");
-  names.push_back("r_arm_ely");
-  names.push_back("r_arm_elx");
-  names.push_back("r_arm_uwy");
-  names.push_back("r_leg_hpz");
-  names.push_back("r_leg_hpx");
-  names.push_back("r_leg_hpy");
-  names.push_back("r_leg_kny");
-  names.push_back("r_leg_aky");
-  names.push_back("r_leg_akx");
-  names.push_back("r_arm_mwx");
-  names.push_back("neck_ay");
-  return names;
-}
-
 
 QMap<QString, QString> PackageSearchPaths;
 
@@ -803,7 +763,7 @@ int ddDrakeModel::numberOfJoints()
 }
 
 //-----------------------------------------------------------------------------
-void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
+void ddDrakeModel::setJointPositions(const QList<double>& jointPositions, const QList<QString>& jointNames)
 {
   URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
 
@@ -814,29 +774,28 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
   }
 
   const std::map<std::string, int> dofMap = model->dof_map[0];
-  std::vector<std::string> dofNames = getDofNames();
 
-  if (jointPositions.length() != dofNames.size())
+  if (jointPositions.size() != jointNames.size())
   {
     std::cout << "ddDrakeModel::setJointPositions(): input jointPositions length "
-              << jointPositions.length() << " != " << model->num_dof << std::endl;
+              << jointPositions.size() << " != " << jointNames.size() << std::endl;
     return;
   }
 
   MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
-  for (int i = 0; i < dofNames.size(); ++i)
+  for (int i = 0; i < jointNames.size(); ++i)
   {
-    const std::string& dofName = dofNames[i];
+    const QString& dofName = jointNames[i];
 
-    std::map<std::string, int>::const_iterator itr = dofMap.find(dofName);
+    std::map<std::string, int>::const_iterator itr = dofMap.find(dofName.toAscii().data());
     if (itr == dofMap.end())
     {
-      printf("Could not find URDF model dof with name: %s\n", dofName.c_str());
+      printf("Could not find URDF model dof with name: %s\n", qPrintable(dofName));
+      continue;
     }
 
     int dofId = itr->second;
     q(dofId, 0) = jointPositions[i];
-    //printf("rbm dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
   }
 
   model->doKinematics(q.data());
@@ -844,6 +803,34 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
   emit this->modelChanged();
 }
 
+//-----------------------------------------------------------------------------
+void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
+{
+  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+
+  if (!model)
+  {
+    std::cout << "ddDrakeModel::setJointPositions(): model is null" << std::endl;
+    return;
+  }
+
+  if (jointPositions.length() != model->num_dof)
+  {
+    std::cout << "ddDrakeModel::setJointPositions(): input jointPositions length "
+              << jointPositions.length() << " != " << model->num_dof << std::endl;
+    return;
+  }
+
+  MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
+  for (int i = 0; i < jointPositions.length(); ++i)
+  {
+    q(i, 0) = jointPositions[i];
+  }
+
+  model->doKinematics(q.data());
+  model->updateModel();
+  emit this->modelChanged();
+}
 
 //-----------------------------------------------------------------------------
 bool ddDrakeModel::getLinkToWorld(const QString& linkName, vtkTransform* transform)
