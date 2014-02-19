@@ -9,11 +9,12 @@ def getTransformFromAxes(xaxis, yaxis, zaxis):
     t = vtk.vtkTransform()
     m = vtk.vtkMatrix4x4()
 
-    axes = [xaxis, yaxis, zaxis]
+    axes = np.array([xaxis, yaxis, zaxis]).transpose().copy()
+    vtk.vtkMath.Orthogonalize3x3(axes, axes)
+
     for r in xrange(3):
         for c in xrange(3):
-            # transpose on assignment
-            m.SetElement(r, c, axes[c][r])
+            m.SetElement(r, c, axes[r][c])
 
     t.SetMatrix(m)
     return t
