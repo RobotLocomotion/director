@@ -37,6 +37,7 @@ void ddDrakeModel::addToRenderer(vtkRenderer*);
 void ddDrakeModel::removeFromRenderer(vtkRenderer*);
 int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QList<double>&);
+void ddDrakeModel::setJointPositions(const QList<double>&, const QStringList&);
 void ddDrakeModel::setEstRobotState(const QList<double>&);
 bool ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
 QString ddDrakeModel::getLinkNameForMesh(vtkPolyData*);

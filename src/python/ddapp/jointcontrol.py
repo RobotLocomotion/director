@@ -2,13 +2,15 @@ import os
 import math
 from ddapp.timercallback import TimerCallback
 from ddapp.simpletimer import SimpleTimer
+from ddapp import robotstate
 from ddapp import midi
 
 
 class JointController(object):
 
     def __init__(self, models, poseCollection=None):
-        self.numberOfJoints = 34
+        self.jointNames = robotstate.getDrakePoseJointNames()
+        self.numberOfJoints = len(self.jointNames)
         self.models = models
         self.poses = {}
         self.poseCollection = poseCollection
@@ -25,7 +27,7 @@ class JointController(object):
 
     def push(self):
         for model in self.models:
-            model.setJointPositions(self.q)
+            model.setJointPositions(self.q, self.jointNames)
 
     def setPose(self, poseName, poseData=None):
         if poseData is not None:
