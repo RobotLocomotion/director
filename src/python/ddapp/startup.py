@@ -381,6 +381,52 @@ tc.targetFps = 60
 tc.callback = resetCameraToHeadView
 
 
+import drake as lcmdrake
+class DrakeVisualizer(object):
+
+    def __init__(self, view):
+        lcmUtils.addSubscriber('DRAKE_VIEWER_COMMAND', lcmdrake.lcmt_viewer_command, self.onViewerCommand)
+        lcmUtils.addSubscriber('DRAKE_VIEWER_STATE', lcmdrake.lcmt_robot_state, self.onRobotState)
+
+        self.view = view
+        self.models = []
+        self.jointControllers = []
+        self.filenames = []
+
+
+    def onViewerCommand(self, msg):
+        print 'viewer command'
+        if msg.command_type == lcmdrake.lcmt_viewer_command.LOAD_URDF:
+            msg.command_type = msg.STATUS
+            lcmUtils.publish('DRAKE_VIEWER_STATUS', msg)
+            urdfFile = msg.command_data
+            for model in self.models:
+                if model.model.filename() == urdfFile:
+                    return
+            self.loadURDF(urdfFile)
+
+    def loadURDF(self, filename):
+        model = app.loadRobotModelFromFile(filename)
+        jointController = jointcontrol.JointController([model])
+        jointController.setZeroPose()
+        obj = om.addRobotModel(model, om.getOrCreateContainer('drake viewer models'))
+        obj.addToView(self.view)
+        self.models.append(obj)
+        self.jointControllers.append(jointController)
+
+
+    def onRobotState(self, msg):
+
+          if not self.models:
+              return
+
+          assert msg.num_robots == 1
+          pose = msg.joint_position
+          self.jointControllers[0].setPose('drake_viewer_pose', pose)
+
+#visualizer = DrakeVisualizer(view)
+
+
 
 '''
 class ViewEventFilter(object):
