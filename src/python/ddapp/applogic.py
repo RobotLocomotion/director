@@ -193,6 +193,7 @@ def setupPackagePaths():
         'ros_workspace/mit_drcsim_scripts',
         'ros_workspace/sandia-hand/ros/sandia_hand_description',
         'software/models/mit_gazebo_models/mit_robot',
+        'software/models/mit_gazebo_models/irobot_hand',
         'software/models/mit_gazebo_models/multisense_sl',
         'software/models/mit_gazebo_models/handle_description',
         'software/models/mit_gazebo_models/hook_description',
