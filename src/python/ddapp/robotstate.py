@@ -2,6 +2,7 @@ import botpy
 import drc as lcmdrc
 import numpy as np
 import time
+import re
 
 _robotStateToDrakePoseJointMap = None
 _drakePoseToRobotStateJointMap = None
@@ -139,6 +140,10 @@ def drakePoseToRobotState(drakePose):
 
     return m
 
+
+def matchJoints(regex):
+    search = re.compile(regex).search
+    return [name for name in getDrakePoseJointNames() if search(name)]
 
 
 def getDrakePoseJointNames():
