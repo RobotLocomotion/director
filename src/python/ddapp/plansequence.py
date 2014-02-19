@@ -149,6 +149,7 @@ class PlanSequence(object):
         xaxis = np.array(xaxis)
         zaxis = np.array([0.0, 0.0, 1.0])
         yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
         xaxis = np.cross(yaxis, zaxis)
 
         stancePosition = (np.array(t2.GetPosition()) + np.array(t1.GetPosition())) / 2.0
@@ -174,7 +175,6 @@ class PlanSequence(object):
 
 
     def computeGraspFrame(self):
-        #self.computeGraspFrameRotary()
         self.computeGraspFrameBarrel()
 
 
@@ -195,8 +195,13 @@ class PlanSequence(object):
 
         assert self.drillAffordance
 
+        # for left_base_link
         position = [-0.12, 0.0, 0.025]
         rpy = [0, 90, 0]
+
+        # for irobot palm point
+        #position = [-0.04, 0.0, 0.01]
+        #rpy = [0, 90, -90]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(self.drillFrame.transform)
@@ -212,12 +217,16 @@ class PlanSequence(object):
         groundHeight = groundFrame.GetPosition()[2]
 
         graspPosition = np.array(graspFrame.GetPosition())
+        graspYAxis = [0.0, 1.0, 0.0]
         graspZAxis = [0.0, 0.0, 1.0]
+        graspFrame.TransformVector(graspYAxis, graspYAxis)
         graspFrame.TransformVector(graspZAxis, graspZAxis)
 
+        #xaxis = graspYAxis
         xaxis = graspZAxis
         zaxis = [0, 0, 1]
         yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
         xaxis = np.cross(yaxis, zaxis)
 
         graspGroundFrame = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
