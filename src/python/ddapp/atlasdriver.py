@@ -119,6 +119,12 @@ class AtlasDriver(object):
         msg.utime = getUtime()
         lcmUtils.publish('CALIBRATE_ARM_ENCODERS', msg)
 
+    def sendPlanUsingBdiHeight(self, enabled):
+        msg = lcmdrc.plan_adjust_mode_t()
+        msg.utime = getUtime()
+        msg.mode = 1 if enabled else 0
+        lcmUtils.publish('PLAN_USING_BDI_HEIGHT', msg)
+
 
     def getPelvisHeightLimits(self):
         '''
