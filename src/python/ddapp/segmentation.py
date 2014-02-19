@@ -440,21 +440,6 @@ def getCurrentMapServerData():
     return addCoordArraysToPolyData(polyData)
 
 
-def getTransformFromAxes(xaxis, yaxis, zaxis):
-
-    t = vtk.vtkTransform()
-    m = vtk.vtkMatrix4x4()
-
-    axes = [xaxis, yaxis, zaxis]
-    for r in xrange(3):
-        for c in xrange(3):
-            # transpose on assignment
-            m.SetElement(r, c, axes[c][r])
-
-    t.SetMatrix(m)
-    return t
-
-
 useVoxelGrid = False
 
 def applyVoxelGrid(polyData, leafSize=0.01):
