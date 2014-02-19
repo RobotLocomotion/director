@@ -105,6 +105,7 @@ class MatlabCommunicator(object):
 
     def sendCommands(self, commands, display=True):
 
+        commands = '\n'.join(commands).split('\n')
         for command in commands:
             self.send(command)
             self.waitForResult()
@@ -117,6 +118,7 @@ class MatlabCommunicator(object):
 
     def sendCommandsAsync(self, commands, timeout=0.0, display=True):
 
+        commands = '\n'.join(commands).split('\n')
         for command in commands:
             self.send(command)
             for _ in self.waitForResultAsync(timeout):
@@ -129,6 +131,8 @@ class MatlabCommunicator(object):
 
         self.send('disp(%s)' % expression)
         result = self.waitForResult()
+        if len(result) and not result[-1]:
+            result.pop()
 
         def parseRow(rowData):
             values = rowData.split()
@@ -138,7 +142,7 @@ class MatlabCommunicator(object):
                 return [float(x) for x in values]
 
         try:
-            return [parseRow(x) for x in result[:-1]]
+            return [parseRow(x) for x in result]
         except:
             raise Exception('Failed to parse output as a float array.  Output was:\n%s' % '\n'.join(result))
 
