@@ -96,6 +96,7 @@ class RobotModelItem(ObjectModelItem):
 
         self.model = model
         model.connect('modelChanged()', self.onModelChanged)
+        self.modelChangedCallback = None
 
         self.addProperty('Filename', model.filename())
         self.addProperty('Visible', model.visible())
@@ -114,6 +115,8 @@ class RobotModelItem(ObjectModelItem):
             self.model.setColor(self.getProperty(propertyName))
 
     def onModelChanged(self):
+        if self.modelChangedCallback:
+            self.modelChangedCallback(self)
         for view in self.views:
             view.render()
 
