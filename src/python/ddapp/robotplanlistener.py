@@ -214,8 +214,8 @@ class RobotPlanPlayback(object):
         self.playbackSpeed = 1.0
         self.jointNameRegex = ''
 
-
-    def getPlanPoses(self, msg):
+    @staticmethod
+    def getPlanPoses(msg):
 
         poses = []
         poseTimes = []
