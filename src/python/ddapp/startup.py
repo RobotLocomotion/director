@@ -428,7 +428,6 @@ class DrakeVisualizer(object):
 
 
 
-'''
 class ViewEventFilter(object):
 
     def __init__(self, view):
@@ -440,7 +439,7 @@ class ViewEventFilter(object):
     def filterEvent(self, obj, event):
         if event.type() == QtCore.QEvent.MouseButtonDblClick:
             if self.doubleClickCallback:
-                result = self.doubleClickCallback(vis.mapMousePosition(obj, event))
+                result = self.doubleClickCallback(vis.mapMousePosition(obj, event), self.view)
                 self.eventFilter.setEventHandlerResult(result)
 
     def initEventFilter(self):
@@ -451,11 +450,11 @@ class ViewEventFilter(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
 
-def onViewDoubleClicked(displayPoint):
+def highlightSelectedLink(displayPoint, view):
 
     model = defaultRobotModel.model
 
-    polyData, pickedPoint = vis.pickPoint(displayPoint, view=ikview, pickType='cells')
+    polyData, pickedPoint = vis.pickPoint(displayPoint, view=view, pickType='cells')
     linkName = model.getLinkNameForMesh(polyData)
     if not linkName:
         return False
@@ -471,6 +470,31 @@ def onViewDoubleClicked(displayPoint):
 
     return True
 
-ef = ViewEventFilter(ikview)
-ef.doubleClickCallback = onViewDoubleClicked
-'''
+
+def toggleChildFrameWidget(displayPoint, view):
+
+    pickedObj, pickedPoint = vis.findPickedObject(displayPoint, view=view)
+    if not pickedObj:
+        return False
+
+    name = pickedObj.getProperty('Name')
+    children = om.getObjectChildren(pickedObj)
+
+    for child in children:
+        if isinstance(child, vis.FrameItem) and child.getProperty('Name') == name + ' frame':
+            child.setProperty('Edit', not child.getProperty('Edit'))
+
+    return False
+
+
+def callbackSwitch(displayPoint, view):
+
+  if toggleChildFrameWidget(displayPoint, view):
+      return
+
+  #if highlightSelectedLink(displayPoint, view):
+  #    return
+
+
+ef = ViewEventFilter(view)
+ef.doubleClickCallback = callbackSwitch
