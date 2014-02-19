@@ -13,6 +13,11 @@ class TimerCallback(object):
         self.timer = QtCore.QTimer()
         self.timer.setSingleShot(True)
         self.timer.connect('timeout()', self._timerEvent)
+
+        self.singleShotTimer = QtCore.QTimer()
+        self.singleShotTimer.setSingleShot(True)
+        self.singleShotTimer.setSingleShot(True)
+        self.singleShotTimer.connect('timeout()', self._singleShotTimerEvent)
         self.callback = None
 
     def start(self):
@@ -39,6 +44,12 @@ class TimerCallback(object):
             except:
                 print traceback.format_exc()
                 return False
+
+    def singleShot(self, timeoutInSeconds):
+        self.singleShotTimer.start(int(timeoutInSeconds * 1000))
+
+    def _singleShotTimerEvent(self):
+        self.tick()
 
     def _schedule(self, elapsedTimeInSeconds):
         '''
