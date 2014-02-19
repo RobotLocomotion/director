@@ -3,6 +3,7 @@ import vtkAll as vtk
 from ddapp import botpy
 import math
 import time
+import re
 import numpy as np
 
 from ddapp import transformUtils
@@ -211,6 +212,7 @@ class RobotPlanPlayback(object):
         self.animationTimer = None
         self.interpolationMethod = 'cubic'
         self.playbackSpeed = 1.0
+        self.jointNameRegex = ''
 
 
     def getPlanPoses(self, msg):
@@ -309,11 +311,15 @@ class RobotPlanPlayback(object):
         poseTimes, poses = self.getPlanPoses(msg)
 
         poses = np.array(poses)
-        diffs = np.diff(poses, axis=0)
 
-        movingJointIds = np.unique(np.where(diffs != 0.0)[1])
-        movingJointNames = [robotstate.getDrakePoseJointNames()[jointId] for jointId in movingJointIds]
-        movingJointTrajectories = [poses[:,jointId] for jointId in movingJointIds]
+        if self.jointNameRegex:
+            jointIds = range(poses.shape[1])
+        else:
+            diffs = np.diff(poses, axis=0)
+            jointIds = np.unique(np.where(diffs != 0.0)[1])
+
+        jointNames = [robotstate.getDrakePoseJointNames()[jointId] for jointId in jointIds]
+        jointTrajectories = [poses[:,jointId] for jointId in jointIds]
 
         seriesNames = []
 
@@ -321,9 +327,14 @@ class RobotPlanPlayback(object):
         numberOfSamples = (poseTimes[-1] - poseTimes[0]) / sampleResolutionInSeconds
         xnew = np.linspace(poseTimes[0], poseTimes[-1], numberOfSamples)
 
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
 
 
-        for jointId, jointName, jointTrajectory in zip(movingJointIds, movingJointNames, movingJointTrajectories):
+        for jointId, jointName, jointTrajectory in zip(jointIds, jointNames, jointTrajectories):
+
+            if self.jointNameRegex and not re.match(self.jointNameRegex, jointName):
+                continue
 
             x = poseTimes
             y = jointTrajectory
@@ -335,15 +346,16 @@ class RobotPlanPlayback(object):
             elif self.interpolationMethod == 'pchip':
                 f = scipy.interpolate.pchip(x, y)
 
-            plt.plot(x, y, 'ko')
+            ax.plot(x, y, 'ko')
             seriesNames.append(jointName + ' points')
 
-            plt.plot(xnew, f(xnew), '-')
+            ax.plot(xnew, f(xnew), '-')
             seriesNames.append(jointName + ' ' + self.interpolationMethod)
 
 
-        plt.legend(seriesNames, loc='upper right')
-        plt.xlabel('time (s)')
-        plt.ylabel('joint angle (deg)')
+        ax.legend(seriesNames, loc='upper right').draggable()
+        ax.set_xlabel('time (s)')
+        ax.set_ylabel('joint angle (deg)')
+        ax.set_title('joint trajectories')
         plt.show()
 
