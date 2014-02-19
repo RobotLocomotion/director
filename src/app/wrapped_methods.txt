@@ -41,6 +41,7 @@ void ddDrakeModel::setEstRobotState(const QList<double>&);
 bool ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
 QString ddDrakeModel::getLinkNameForMesh(vtkPolyData*);
 QStringList ddDrakeModel::getLinkNames();
+QStringList ddDrakeModel::getJointNames();
 void ddDrakeModel::setAlpha(double);
 void ddDrakeModel::setVisible(bool);
 QColor ddDrakeModel::color() const;
