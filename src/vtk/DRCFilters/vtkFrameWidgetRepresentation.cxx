@@ -41,9 +41,12 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkAxesActor.h"
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkCylinderSource.h"
+#include "vtkArcSource.h"
 #include "vtkDiskSource.h"
 #include "vtkLineSource.h"
 #include "vtkRegularPolygonSource.h"
+#include "vtkSphereSource.h"
+#include "vtkAppendPolyData.h"
 #include "vtkExtractEdges.h"
 #include "vtkTubeFilter.h"
 #include "vtkCleanPolyData.h"
@@ -98,6 +101,7 @@ DataRep DataRepFromPolyData(vtkPolyData* polyData)
 
 DataRep MakeCircle(double radius, int axis, bool useTubeFilter)
 {
+
   vtkSmartPointer<vtkRegularPolygonSource> c = vtkSmartPointer<vtkRegularPolygonSource>::New();
   c->GeneratePolygonOff();
   c->SetNumberOfSides(64);
@@ -106,9 +110,18 @@ DataRep MakeCircle(double radius, int axis, bool useTubeFilter)
   c->Update();
 
 
+/*
+  vtkSmartPointer<vtkArcSource> c = vtkSmartPointer<vtkArcSource>::New();
+  c->SetResolution(32);
+  c->SetCenter(0,0,0);
+  c->SetPoint1(radius,0,0);
+  c->SetPoint2(0,radius,0);
+  c->Update();
+*/
+
   vtkSmartPointer<vtkTubeFilter> f = vtkSmartPointer<vtkTubeFilter>::New();
   f->SetInputConnection(c->GetOutputPort());
-  f->SetRadius(0.01);
+  f->SetRadius(0.0025);
   f->SetNumberOfSides(24);
   f->Update();
 
@@ -117,7 +130,7 @@ DataRep MakeCircle(double radius, int axis, bool useTubeFilter)
   vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
   if (axis == 0)
     {
-    t->RotateY(90);
+    t->RotateY(-90);
     }
   else if (axis == 1)
     {
@@ -141,17 +154,32 @@ DataRep MakeAxis(double length, int axis, bool useTubeFilter)
   */
 
   vtkSmartPointer<vtkLineSource> c = vtkSmartPointer<vtkLineSource>::New();
-  c->SetPoint1(-length, 0, 0);
-  c->SetPoint2(length, 0, 0);
+  //c->SetPoint1(-length, 0, 0);
+  c->SetPoint1(0, 0, 0);
+  c->SetPoint2(length + length*0.5, 0, 0);
   c->Update();
 
   vtkSmartPointer<vtkTubeFilter> f = vtkSmartPointer<vtkTubeFilter>::New();
   f->SetInputConnection(c->GetOutputPort());
-  f->SetRadius(0.01);
+  f->SetRadius(0.0025);
   f->SetNumberOfSides(24);
   f->Update();
 
   vtkPolyData* polyData = useTubeFilter ? f->GetOutput() : c->GetOutput();
+
+  vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
+  sphere->SetCenter(length + length*0.5, 0, 0);
+  sphere->SetRadius(0.02);
+  sphere->SetThetaResolution(32);
+  sphere->SetPhiResolution(32);
+  sphere->Update();
+
+  vtkSmartPointer<vtkAppendPolyData> append = vtkSmartPointer<vtkAppendPolyData>::New();
+  append->AddInputConnection(f->GetOutputPort());
+  append->AddInputConnection(sphere->GetOutputPort());
+  append->Update();
+
+  polyData = useTubeFilter ? append->GetOutput() : c->GetOutput();
 
   vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
   if (axis == 1)
@@ -163,15 +191,17 @@ DataRep MakeAxis(double length, int axis, bool useTubeFilter)
     t->RotateY(-90);
     }
 
+
+
   return DataRepFromPolyData(Transform(polyData, t));
 }
 
 DataRep MakeDisk(double radius, int axis)
 {
   vtkSmartPointer<vtkDiskSource> d = vtkSmartPointer<vtkDiskSource>::New();
-  d->SetCircumferentialResolution(32);
+  d->SetCircumferentialResolution(64);
   d->SetOuterRadius(radius);
-  d->SetInnerRadius(radius - 0.02);
+  d->SetInnerRadius(radius - 0.01);
 
 
   vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
@@ -179,7 +209,7 @@ DataRep MakeDisk(double radius, int axis)
     {
     t->RotateY(90);
     }
-  else if (axis == 2)
+  else if (axis == 1)
     {
     t->RotateX(90);
     }
@@ -234,13 +264,27 @@ public:
     this->Axes.clear();
     this->Actors.clear();
 
+    useTubeFilter = true;
     Reps.push_back(MakeCircle(scale, 0, useTubeFilter));
     Reps.push_back(MakeCircle(scale, 1, useTubeFilter));
     Reps.push_back(MakeCircle(scale, 2, useTubeFilter));
 
+
+    /*
+    Reps.push_back(MakeDisk(scale, 0));
+    Reps.push_back(MakeDisk(scale, 1));
+    Reps.push_back(MakeDisk(scale, 2));
+    */
+
     Axes.push_back(MakeAxis(scale, 0, useTubeFilter));
     Axes.push_back(MakeAxis(scale, 1, useTubeFilter));
     Axes.push_back(MakeAxis(scale, 2, useTubeFilter));
+
+    /*
+    Reps[0].Actor->GetProperty()->SetColor(1,1,1);
+    Reps[1].Actor->GetProperty()->SetColor(1,1,1);
+    Reps[2].Actor->GetProperty()->SetColor(1,1,1);
+    */
 
     Reps[0].Actor->GetProperty()->SetColor(1,0,0);
     Reps[1].Actor->GetProperty()->SetColor(0,1,0);
@@ -248,6 +292,7 @@ public:
     Axes[0].Actor->GetProperty()->SetColor(1,0,0);
     Axes[1].Actor->GetProperty()->SetColor(0,1,0);
     Axes[2].Actor->GetProperty()->SetColor(0,0,1);
+
 
     for (size_t i = 0; i < this->Reps.size(); ++i)
       {
@@ -561,6 +606,7 @@ void vtkFrameWidgetRepresentation::HighlightOff()
 //----------------------------------------------------------------------------
 void vtkFrameWidgetRepresentation::HighlightActor(vtkDataSet* dataset)
 {
+  /*
   for (size_t i = 0; i < this->Internal->Reps.size(); ++i)
     {
     if (this->Internal->Reps[i].PolyData.GetPointer() == dataset)
@@ -588,6 +634,34 @@ void vtkFrameWidgetRepresentation::HighlightActor(vtkDataSet* dataset)
       this->Internal->Axes[i].Actor->GetProperty()->SetLineWidth(1.0);
       }
     }
+  */
+
+
+  for (size_t i = 0; i < this->Internal->Reps.size(); ++i)
+    {
+    if (this->Internal->Reps[i].PolyData.GetPointer() == dataset)
+      {
+      this->Internal->Reps[i].Actor->GetProperty()->SetAmbient(0.7);
+      this->Internal->Reps[i].Actor->GetProperty()->SetAmbientColor(this->Internal->Reps[i].Actor->GetProperty()->GetColor());
+      }
+    else
+      {
+      this->Internal->Reps[i].Actor->GetProperty()->SetAmbient(0.0);
+      }
+    }
+
+  for (size_t i = 0; i < this->Internal->Axes.size(); ++i)
+    {
+    if (this->Internal->Axes[i].PolyData.GetPointer() == dataset)
+      {
+      this->Internal->Axes[i].Actor->GetProperty()->SetAmbient(0.7);
+      this->Internal->Axes[i].Actor->GetProperty()->SetAmbientColor(this->Internal->Axes[i].Actor->GetProperty()->GetColor());
+      }
+    else
+      {
+      this->Internal->Axes[i].Actor->GetProperty()->SetAmbient(0.0);
+      }
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -596,7 +670,6 @@ void vtkFrameWidgetRepresentation::OnMouseHover(double e[2])
   this->Internal->AxesPicker->Pick(e[0], e[1], 0.0, this->Renderer);
   vtkDataSet* dataset = this->Internal->AxesPicker->GetDataSet();
   this->HighlightActor(dataset);
-
 }
 
 //----------------------------------------------------------------------------
