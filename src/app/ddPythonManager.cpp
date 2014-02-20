@@ -105,7 +105,7 @@ void ddPythonManager::onExecuteFile(const QString& filename)
 void ddPythonManager::setupConsole(QWidget* parent)
 {
   this->Internal->Console->setParent(parent);
-  this->Internal->Console->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
+  this->Internal->Console->setWindowFlags(Qt::Dialog);
 }
 
 //-----------------------------------------------------------------------------
