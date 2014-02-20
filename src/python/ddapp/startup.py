@@ -485,7 +485,9 @@ def toggleChildFrameWidget(displayPoint, view):
 
     for child in children:
         if isinstance(child, vis.FrameItem) and child.getProperty('Name') == name + ' frame':
-            child.setProperty('Edit', not child.getProperty('Edit'))
+            edit = not child.getProperty('Edit')
+            child.setProperty('Edit', edit)
+            pickedObj.setProperty('Alpha', 0.5 if edit else 1.0)
 
     return False
 
