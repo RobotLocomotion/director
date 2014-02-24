@@ -86,27 +86,27 @@ class AtlasDriver(object):
     def getCurrentInletPressure(self):
         if self.lastAtlasStatusMessage:
             return self.lastAtlasStatusMessage.pump_inlet_pressure
-        return 0.01
+        return 0.0
 
     def getCurrentSupplyPressure(self):
         if self.lastAtlasStatusMessage:
             return self.lastAtlasStatusMessage.pump_supply_pressure
-        return 0.02
+        return 0.0
 
     def getCurrentReturnPressure(self):
         if self.lastAtlasStatusMessage:
             return self.lastAtlasStatusMessage.pump_return_pressure
-        return 0.03
+        return 0.0
 
     def getCurrentAirSumpPressure(self):
         if self.lastAtlasStatusMessage:
             return self.lastAtlasStatusMessage.air_sump_pressure
-        return 0.04
+        return 0.0
 
     def getCurrentPumpRpm(self):
         if self.lastAtlasStatusMessage:
             return self.lastAtlasStatusMessage.current_pump_rpm
-        return 0.05
+        return 0.0
 
     def sendBehaviorCommand(self, behaviorName):
 
