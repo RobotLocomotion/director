@@ -7,6 +7,7 @@ set(python_files
   ddapp/applogic.py
   ddapp/atlasdriver.py
   ddapp/atlasdriverpanel.py
+  ddapp/atlasstatuspanel.py
   ddapp/botspy.py
   ddapp/cameracontrol.py
   ddapp/cameraview.py
