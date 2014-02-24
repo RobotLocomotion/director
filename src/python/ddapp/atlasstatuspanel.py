@@ -47,13 +47,13 @@ class AtlasStatusPanel(object):
     def updatePanel(self):
         self.widget.behaviorValue.text = self.driver.getCurrentBehaviorName()
 
-        self.widget.inletPressureValue.value = self.driver.getCurrentInletPressure()
-        self.widget.supplyPressureValue.value = self.driver.getCurrentSupplyPressure()
-        self.widget.returnPressureValue.value = self.driver.getCurrentReturnPressure()
+        self.widget.inletPressureValue.display('%.1f' % self.driver.getCurrentInletPressure())
+        self.widget.supplyPressureValue.display('%.1f' % self.driver.getCurrentSupplyPressure())
+        self.widget.returnPressureValue.display('%.1f' % self.driver.getCurrentReturnPressure())
 
-        self.widget.sumpPressureValue.value = self.driver.getCurrentAirSumpPressure()
+        self.widget.sumpPressureValue.display('%.1f' % self.driver.getCurrentAirSumpPressure())
 
-        self.widget.pumpRpmValue.value = self.driver.getCurrentPumpRpm()
+        self.widget.pumpRpmValue.display('%.1f' %  self.driver.getCurrentPumpRpm())
 
 
 def init(driver):
