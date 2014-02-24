@@ -45,6 +45,9 @@ class AtlasStatusPanel(object):
 
 
     def updatePanel(self):
+        if not self.widget.isVisible():
+            return
+
         self.widget.behaviorValue.text = self.driver.getCurrentBehaviorName()
 
         self.widget.inletPressureValue.display('%.1f' % self.driver.getCurrentInletPressure())
@@ -58,8 +61,12 @@ class AtlasStatusPanel(object):
 
 def init(driver):
 
+    global panel
+    global dock
 
-    box = AtlasStatusPanel(driver)
+    panel = AtlasStatusPanel(driver)
+    dock = app.addWidgetToDock(panel.widget)
+    dock.hide()
 
-    box.widget.show()
+    return panel
 
