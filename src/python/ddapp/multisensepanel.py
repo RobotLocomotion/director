@@ -149,31 +149,16 @@ class MultisensePanel(object):
         if self.queued_data['neckPitch'] != self.sent_data['neckPitch']:
             self.driver.setNeckPitch(self.queued_data['neckPitch'])
 
-        fps = -1
-        if self.queued_data['headCamFps'] != self.sent_data['headCamFps']:
-            fps = self.queued_data['headCamFps']
-
-        camGain = -1
-        if self.queued_data['headCamGain'] != self.sent_data['headCamGain']:
-            camGain = self.queued_data['headCamGain']
-
-        autoGain = -1
-        if self.queued_data['autoGain'] != self.sent_data['autoGain']:
-            if self.queued_data['autoGain']:
-                autoGain = 1
-            else:
-                autoGain = 0
-
-        ledFlash = False
-        if self.queued_data['ledOn'] != self.sent_data['ledOn']:
-            ledFlash = self.queued_data['ledOn']
-
-        ledDuty = 0.0
-        if self.queued_data['ledBrightness'] != self.sent_data['ledBrightness']:
-            ledDuty = self.queued_data['ledBrightness']
+        fps = self.queued_data['headCamFps']
+        camGain = self.queued_data['headCamGain']
+        ledFlash = self.queued_data['ledOn']
+        ledDuty = self.queued_data['ledBrightness']
+        if self.queued_data['autoGain']:
+            autoGain = 1
+        else:
+            autoGain = 0
 
         self.driver.setMultisenseCommand(fps, camGain, autoGain, self.queued_data['spinRate'], ledFlash, ledDuty)
-
         self.sent_data = deepcopy(self.queued_data)
 
 def toggleWidgetShow():
