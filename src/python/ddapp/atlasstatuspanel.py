@@ -39,6 +39,7 @@ class AtlasStatusPanel(object):
 
         self.updateTimer = TimerCallback()
         self.updateTimer.callback = self.updatePanel
+        self.updateTimer.targetFps = 1
         self.updateTimer.start()
 
         self.updatePanel()
