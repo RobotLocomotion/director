@@ -467,14 +467,6 @@ def segmentationViewEventFilter(obj, event):
                 eventFilter.setEventHandlerResult(True)
 
 
-def drcViewEventFilter(obj, event):
-
-    eventFilter = eventFilters[obj]
-    if event.type() == QtCore.QEvent.MouseButtonDblClick:
-        eventFilter.setEventHandlerResult(True)
-        activateSegmentationMode()
-
-
 def installEventFilter(view, func):
 
     global eventFilters
@@ -497,10 +489,12 @@ def activateSegmentationMode(debug=False):
     if debug:
         polyData = getDebugRevolutionData()
     else:
+        if not perception._multisenseItem.getProperty('Visible'):
+            return False
         polyData = getCurrentMapServerData() or getCurrentRevolutionData()
 
     if not polyData:
-        return
+        return False
 
     segmentationView = getOrCreateSegmentationView()
     app.getViewManager().switchToView('Segmentation View')
@@ -529,10 +523,10 @@ def activateSegmentationMode(debug=False):
 
     _dock.show()
 
+    return True
+
 
 def init():
-
-    installEventFilter(app.getViewManager().findView('DRC View'), drcViewEventFilter)
 
     getOrCreateSegmentationView()
     createDockWidget()

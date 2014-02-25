@@ -488,6 +488,10 @@ def toggleChildFrameWidget(displayPoint, view):
             edit = not child.getProperty('Edit')
             child.setProperty('Edit', edit)
             pickedObj.setProperty('Alpha', 0.5 if edit else 1.0)
+            return True
+
+    return False
+
 
     return False
 
@@ -499,6 +503,9 @@ def callbackSwitch(displayPoint, view):
 
   #if highlightSelectedLink(displayPoint, view):
   #    return
+
+  if segmentationpanel.activateSegmentationMode():
+        return
 
 
 ef = ViewEventFilter(view)
