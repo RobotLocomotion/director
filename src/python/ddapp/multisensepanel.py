@@ -122,7 +122,7 @@ class MultisensePanel(object):
 
     def sendButtonClicked(self, event):
         self.publishCommand(self.queued_data)
-        self.sent_data = deepcopy(self.queued_data)
+
 
     def updatePanel(self):
         if not self.widget.isVisible():
@@ -142,16 +142,36 @@ class MultisensePanel(object):
         return match
 
     def publishCommand(self, data):
-        command = command_t
-        print 'sending'
 
-        command.utime = time()
-        command.fps = 1 #float
-        command.gain = 1.0#float
-        command.rpm = 1#float
-        command.agc = 1 #autogain, -1 ignore, 0 for off, 1 for on
-        command.leds_flash = False #bool, false for no flash
-        command.leds_duty_cycle = 0#float, 0 for off, 100 for fully on
+        if self.queued_data['neckPitch'] != self.sent_data['neckPitch']:
+            self.driver.setNeckPitch(self.queued_data['neckPitch'])
+
+        fps = -1
+        if self.queued_data['headCamFps'] != self.sent_data['headCamFps']:
+            fps = self.queued_data['headCamFps']
+
+        camGain = -1
+        if self.queued_data['headCamGain'] != self.sent_data['headCamGain']:
+            camGain = self.queued_data['headCamGain']
+
+        autoGain = -1
+        if self.queued_data['autoGain'] != self.sent_data['autoGain']:
+            if self.queued_data['autoGain']:
+                autoGain = 1
+            else:
+                autoGain = 0
+
+        ledFlash = False
+        if self.queued_data['ledOn'] != self.sent_data['ledOn']:
+            ledFlash = self.queued_data['ledOn']
+
+        ledDuty = 0.0
+        if self.queued_data['ledBrightness'] != self.sent_data['ledBrightness']:
+            ledDuty = self.queued_data['ledBrightness']
+
+        self.driver.setMultisenseCommand(fps, camGain, autoGain, self.queued_data['spinRate'], ledFlash, ledDuty)
+
+        self.sent_data = deepcopy(self.queued_data)
 
 def init(driver):
 
