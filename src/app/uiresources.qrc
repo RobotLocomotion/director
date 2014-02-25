@@ -2,5 +2,6 @@
   <qresource prefix="/ui">
     <file>ddIKEditor.ui</file>
     <file>ddRobotStatus.ui</file>
+    <file>ddMultisense.ui</file>
   </qresource>
 </RCC>
