@@ -57,6 +57,7 @@ class MultisensePanel(object):
         self.queued_data['autoGain'] = True
         self.queued_data['ledOn'] = False
         self.queued_data['ledBrightness'] = 0.0
+        self.widget.headCamGainSpinner.setEnabled(False)
 
         for key in self.queued_data.keys():
             self.sent_data[key] = None
@@ -84,6 +85,8 @@ class MultisensePanel(object):
 
     def headCamAutoGainChange(self, event):
         self.queued_data['autoGain'] = self.widget.headAutoGainCheck.isChecked()
+
+        self.widget.headCamGainSpinner.setEnabled(not self.queued_data['autoGain'])
 
     def neckPitchChange(self, event):
         self.queued_data['neckPitch'] = self.widget.neckPitchSpinner.value
