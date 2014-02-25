@@ -125,6 +125,8 @@ class MultiSenseSource(TimerCallback):
 
         self.revPolyData = vtk.vtkPolyData()
         self.polyDataObj = om.PolyDataItem('Multisense Scan', self.revPolyData, view)
+        self.polyDataObj.actor.SetPickable(0)
+
 
         self.setPointSize(self.pointSize)
         self.setAlpha(self.alpha)
@@ -144,6 +146,7 @@ class MultiSenseSource(TimerCallback):
         for i in xrange(self.numberOfScanLines):
             polyData = vtk.vtkPolyData()
             scanLine = om.PolyDataItem('scan line %d' % i, polyData, self.view)
+            scanLine.actor.SetPickable(0)
             scanLine.setSolidColor((1,0,0))
             self.scanLines.append(scanLine)
 
