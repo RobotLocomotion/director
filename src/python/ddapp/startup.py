@@ -141,7 +141,6 @@ if useAtlasDriver:
     atlasdriver.init(app.getOutputConsole())
     atlasdriverpanel.init(atlasdriver.driver)
     atlasstatuspanel.init(atlasdriver.driver)
-    multisensepanel.init(atlasdriver.driver)
 
 if usePerception:
 
@@ -169,6 +168,8 @@ if usePerception:
     defaultRobotModel = robotStateModel
 
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
+
+    multisensepanel.init(perception.multisenseDriver)
 
     def grabRobotState():
         poseName = 'EST_ROBOT_STATE'

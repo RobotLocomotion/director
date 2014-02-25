@@ -295,6 +295,32 @@ class MultiSenseSource(TimerCallback):
         lcmUtils.publish('MULTISENSE_COMMAND', m)
 
     @staticmethod
+    def setLidarRpm(rpm):
+
+        m = lcmmultisense.command_t()
+        m.utime = getUtime()
+        m.fps = -1
+        m.gain = -1
+        m.agc = -1
+        m.rpm = rpm
+
+        lcmUtils.publish('MULTISENSE_COMMAND', m)
+
+    @staticmethod
+    def setMultisenseCommand(fps, gain, agc, rpm, led_flash, led_duty):
+
+        m = lcmmultisense.command_t()
+        m.utime = getUtime()
+        m.fps = fps
+        m.gain = gain
+        m.agc = agc
+        m.rpm = rpm
+        m.leds_flash = led_flash
+        m.leds_duty_cycle = led_duty
+
+        lcmUtils.publish('MULTISENSE_COMMAND', m)
+
+    @staticmethod
     def setNeckPitch(neckPitchDegrees):
 
         assert neckPitchDegrees <= 90 and neckPitchDegrees >= -90
