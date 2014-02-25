@@ -834,6 +834,62 @@ def createLine(blockDimensions, p1, p2):
     segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=-middleRay, expectedXAxis=middleRay, edgeSign=-1, name=name)
 
 
+def updateBlockAffordances(polyData=None):
+
+    for obj in om.objects.values():
+        if isinstance(obj, BlockAffordanceItem):
+            if 'refit' in obj.getProperty('Name'):
+                om.removeFromObjectModel(obj)
+
+    for obj in om.objects.values():
+        if isinstance(obj, BlockAffordanceItem):
+            updateBlockFit(obj, polyData)
+
+
+def updateBlockFit(affordanceObj, polyData=None):
+
+    affordanceObj.updateParamsFromActorTransform()
+
+    name = affordanceObj.getProperty('Name') + ' refit'
+    origin = affordanceObj.params['origin']
+    normal = affordanceObj.params['yaxis']
+    edgePerpAxis = affordanceObj.params['xaxis']
+    blockDimensions = [affordanceObj.params['xwidth'], affordanceObj.params['ywidth']]
+
+    if polyData is None:
+        inputObj = om.findObjectByName('pointcloud snapshot')
+        polyData = shallowCopy(inputObj.polyData)
+
+    cropThreshold = 0.1
+    cropped = polyData
+    cropped, _ = cropToPlane(cropped, origin, normal, [-cropThreshold, cropThreshold])
+    cropped, _ = cropToPlane(cropped, origin, edgePerpAxis, [-cropThreshold, cropThreshold])
+
+    updatePolyData(cropped, 'refit search region', parent=getDebugFolder(), visible=False)
+
+    cropped = extractLargestCluster(cropped)
+
+    planePoints, planeNormal = applyPlaneFit(cropped, distanceThreshold=0.005, perpendicularAxis=normal, angleEpsilon=math.radians(10))
+    planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-0.005, 0.005])
+    updatePolyData(planePoints, 'refit board segmentation', parent=getDebugFolder(), visible=False)
+
+    refitObj = segmentBlockByTopPlane(planePoints, blockDimensions, expectedNormal=normal, expectedXAxis=edgePerpAxis, edgeSign=-1, name=name)
+
+    refitOrigin = np.array(refitObj.params['origin'])
+    refitLength = refitObj.params['zwidth']
+    refitZAxis = refitObj.params['zaxis']
+    refitEndPoint1 = refitOrigin + refitZAxis*refitLength/2.0
+
+    originalLength = affordanceObj.params['zwidth']
+    correctedOrigin = refitEndPoint1 - refitZAxis*originalLength/2.0
+    originDelta = correctedOrigin - refitOrigin
+
+    refitObj.params['zwidth'] = originalLength
+    refitObj.polyData.DeepCopy(affordanceObj.polyData)
+    refitObj.actor.GetUserTransform().Translate(originDelta)
+    refitObj.updateParamsFromActorTransform()
+
+
 def startInteractiveLineDraw(blockDimensions):
 
     picker = LineDraw(getSegmentationView())
@@ -2485,7 +2541,6 @@ def publishTriad(transform, collectionId=1234):
 
     lcmUtils.publish('OBJ_COLLECTION', m)
 
-####
 
 def createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances'):
 
@@ -2496,7 +2551,6 @@ def createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, n
     cube.Update()
     cube = shallowCopy(cube.GetOutput())
 
-    print 'making block affordance'
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
     t.PostMultiply()
     t.Translate(origin)
@@ -2509,6 +2563,7 @@ def createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, n
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
     return obj
+
 
 def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXAxis, edgeSign=1, name='block affordance'):
 
@@ -2605,7 +2660,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
         mapsregistrar.addICPCallback(objTrack.updateICPTransform)
 
 
-    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
+    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, scale=0.2, visible=False)
     frameObj.addToView(app.getDRCView())
 
     computeDebrisGraspSeed(obj)
@@ -2613,6 +2668,8 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
     if t:
         showFrame(t, 'debris stance frame', parent=obj)
         obj.publishCallback = functools.partial(publishDebrisStanceFrame, obj)
+
+    return obj
 
 
 def computeDebrisGraspSeed(aff):
