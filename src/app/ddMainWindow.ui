@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1277</width>
-    <height>835</height>
+    <width>1439</width>
+    <height>1073</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1277</width>
+     <width>1439</width>
      <height>25</height>
     </rect>
    </property>
@@ -45,6 +45,7 @@
     <addaction name="ActionMatlabConsole"/>
     <addaction name="separator"/>
     <addaction name="ActionBotSpy"/>
+    <addaction name="ActionToggleStereoRender"/>
    </widget>
    <widget class="QMenu" name="ViewMenu">
     <property name="title">
@@ -103,7 +104,7 @@
    <addaction name="ActionPythonConsole"/>
    <addaction name="ActionMatlabConsole"/>
    <addaction name="separator"/>
-   <addaction name="ActionToggleStereoRender"/>
+   <addaction name="ActionMultisensePanel"/>
    <addaction name="ActionColorizeLidar"/>
    <addaction name="ActionToggleCameraTerrainMode"/>
    <addaction name="ActionResetCamera"/>
@@ -275,6 +276,18 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="ActionMultisensePanel">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/3d_scanner.png</normaloff>:/images/3d_scanner.png</iconset>
+   </property>
+   <property name="text">
+    <string>MultisensePanel</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
    </property>
   </action>
  </widget>

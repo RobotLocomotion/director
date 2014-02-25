@@ -176,14 +176,25 @@ class MultisensePanel(object):
 
         self.sent_data = deepcopy(self.queued_data)
 
+def toggleWidgetShow():
+
+    if dock.isVisible():
+        dock.hide()
+    else:
+        dock.show()
+
 def init(driver):
 
-    global panel
     global dock
 
     panel = MultisensePanel(driver)
     dock = app.addWidgetToDock(panel.widget)
     dock.hide()
+
+    actionName = 'ActionMultisensePanel'
+    action = app.getToolBarActions()[actionName]
+    action.triggered.connect(toggleWidgetShow)
+
 
     return panel
 
