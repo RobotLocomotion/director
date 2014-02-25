@@ -28,6 +28,7 @@ from ddapp import footstepsdriverpanel
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import atlasstatuspanel
+from ddapp import multisensepanel
 from ddapp import robotplanlistener
 from ddapp import handdriver
 from ddapp import plansequence
@@ -140,6 +141,7 @@ if useAtlasDriver:
     atlasdriver.init(app.getOutputConsole())
     atlasdriverpanel.init(atlasdriver.driver)
     atlasstatuspanel.init(atlasdriver.driver)
+    multisensepanel.init(atlasdriver.driver)
 
 if usePerception:
 
