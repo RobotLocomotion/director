@@ -11,6 +11,7 @@ import numpy as np
 from ddapp import transformUtils
 from ddapp import lcmUtils
 from ddapp.timercallback import TimerCallback
+from ddapp.asynctaskqueue import AsyncTaskQueue
 from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
@@ -69,47 +70,6 @@ class RobotPoseGUIWrapper(object):
                 joints = rpg.applyMirror(joints)
 
         return joints
-
-
-
-
-class AsyncTaskQueue(object):
-
-    def __init__(self):
-        self.tasks = []
-        self.timer = TimerCallback()
-        self.timer.callback = self.handleAsyncTasks
-
-    def start(self):
-        self.timer.start()
-
-    def stop(self):
-        self.timer.stop()
-
-    def addTask(self, task):
-        self.tasks.append(task)
-
-    def handleAsyncTasks(self):
-
-        for i in xrange(10):
-
-            if not self.tasks:
-                break
-
-            task = self.tasks[0]
-
-            if hasattr(task, '__call__'):
-                result = task()
-                self.tasks.remove(task)
-                if isinstance(result, types.GeneratorType):
-                    self.tasks.insert(0, result)
-            elif isinstance(task, types.GeneratorType):
-                try:
-                    task.next()
-                except StopIteration:
-                    self.tasks.remove(task)
-
-        return len(self.tasks)
 
 
 class PlanSequence(object):
