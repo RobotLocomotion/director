@@ -3,5 +3,6 @@
     <file>ddIKEditor.ui</file>
     <file>ddRobotStatus.ui</file>
     <file>ddMultisense.ui</file>
+    <file>ddHandControl.ui</file>
   </qresource>
 </RCC>

@@ -105,6 +105,10 @@
    <addaction name="ActionMatlabConsole"/>
    <addaction name="separator"/>
    <addaction name="ActionMultisensePanel"/>
+   <addaction name="ActionAtlasStatusPanel"/>
+   <addaction name="ActionFootstepPanel"/>
+   <addaction name="ActionHandControlPanel"/>
+   <addaction name="separator"/>
    <addaction name="ActionColorizeLidar"/>
    <addaction name="ActionToggleCameraTerrainMode"/>
    <addaction name="ActionResetCamera"/>
@@ -288,6 +292,39 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+M</string>
+   </property>
+  </action>
+  <action name="ActionFootstepPanel">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/feet.png</normaloff>:/images/feet.png</iconset>
+   </property>
+   <property name="text">
+    <string>FootstepPanel</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="ActionAtlasStatusPanel">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/gauge.png</normaloff>:/images/gauge.png</iconset>
+   </property>
+   <property name="text">
+    <string>AtlasStatusPanel</string>
+   </property>
+   <property name="toolTip">
+    <string>AtlasStatusPanel</string>
+   </property>
+  </action>
+  <action name="ActionHandControlPanel">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/claw.png</normaloff>:/images/claw.png</iconset>
+   </property>
+   <property name="text">
+    <string>HandControlPanel</string>
    </property>
   </action>
  </widget>

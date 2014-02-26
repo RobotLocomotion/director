@@ -57,6 +57,12 @@ class FootstepsPanel(object):
     def onStop(self):
         self.driver.sendStopWalking()
 
+def toggleWidgetShow():
+
+    if dock.isVisible():
+        dock.hide()
+    else:
+        dock.show()
 
 def init(driver):
 
@@ -66,4 +72,10 @@ def init(driver):
     panel = FootstepsPanel(driver)
     dock = app.addWidgetToDock(panel.widget)
     dock.hide()
+
+    actionName = 'ActionFootstepPanel'
+    action = app.getToolBarActions()[actionName]
+    action.triggered.connect(toggleWidgetShow)
+
+
     return panel
