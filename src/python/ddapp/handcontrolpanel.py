@@ -56,13 +56,13 @@ class HandControlPanel(object):
 
     def getModeInt(self, inputStr):
         if inputStr == 'Basic':
+            return 0
+        if inputStr == 'Pinch':
             return 1
         if inputStr == 'Wide':
             return 2
-        if inputStr == 'Pinch':
-            return 3
         if inputStr == 'Scissor':
-            return 4
+            return 3
         return 0
 
     def updatePanel(self):
@@ -74,7 +74,15 @@ class HandControlPanel(object):
         else:
             side = 'right'
 
-        self.drivers[side].sendOpen()
+        self.widget.advanced.closePercentSpinner.setValue(0.0)
+
+        position = 0.0
+        force = float(self.widget.advanced.forcePercentSpinner.value)
+        velocity = float(self.widget.advanced.velocityPercentSpinner.value)
+
+        mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
+
+        self.drivers[side].sendCustom(position, force, velocity, mode)
 
     def closeClicked(self):
         if self.widget.handSelect.leftButton.checked:
@@ -82,7 +90,15 @@ class HandControlPanel(object):
         else:
             side = 'right'
 
-        self.drivers[side].sendClose()
+        self.widget.advanced.closePercentSpinner.setValue(100.0)
+
+        position = 100.0
+        force = float(self.widget.advanced.forcePercentSpinner.value)
+        velocity = float(self.widget.advanced.velocityPercentSpinner.value)
+
+        mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
+
+        self.drivers[side].sendCustom(position, force, velocity, mode)
 
     def sendClicked(self):
         if self.widget.handSelect.leftButton.checked:
@@ -138,4 +154,3 @@ def init(driverL, driverR):
 
 
     return panel
-
