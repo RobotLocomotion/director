@@ -29,6 +29,7 @@ from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import atlasstatuspanel
 from ddapp import multisensepanel
+from ddapp import handcontrolpanel
 from ddapp import robotplanlistener
 from ddapp import handdriver
 from ddapp import plansequence
@@ -250,7 +251,9 @@ if usePlanning:
     obj.setProperty('Color', QtGui.QColor(255, 180, 0))
     planningRobotModel = obj
 
-    handDriver = handdriver.IRobotHandDriver(side='left')
+    rHandDriver = handdriver.RobotiqHandDriver(side='right')
+    lHandDriver = handdriver.RobotiqHandDriver(side='left')
+    handcontrolpanel.init(lHandDriver, rHandDriver)
 
     planningJc = jointcontrol.JointController([planningModel], poseCollection)
     planningJc.setNominalPose(planningJc.loadPoseFromFile(app.getNominalPoseMatFile()))
@@ -302,7 +305,7 @@ if usePlanning:
 
 
     planner = plansequence.PlanSequence(robotStateModel, footstepsDriver, manipPlanner,
-                                        handDriver, atlasdriver.driver, perception.multisenseDriver,
+                                        lHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
 
