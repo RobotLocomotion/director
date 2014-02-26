@@ -99,3 +99,34 @@ class RobotiqHandDriver(object):
         msg.velocity = 254
         channel = 'ROBOTIQ_%s_COMMAND' % self.side.upper()
         lcmUtils.publish(channel, msg)
+
+    def sendCustom(self, position, force, velocity, mode):
+        assert 0.0 <= position <= 100.0
+        assert 0.0 <= force <= 100.0
+        assert 0.0 <= velocity <= 100.0
+        assert 0 <= int(mode) <= 4
+
+        msg = lcmrobotiq.command_t()
+        msg.utime = getUtime()
+        msg.activate = 1
+        msg.do_move = 1
+        msg.position = int(254 * (position/100.0))
+        msg.force = int(255 * (force/100.0))
+        msg.velocity = int(254 * (velocity/100.0))
+        msg.mode = int(mode)
+        channel = 'ROBOTIQ_%s_COMMAND' % self.side.upper()
+        lcmUtils.publish(channel, msg)
+
+    def setMode(self, mode):
+        assert 0 <= int(mode) <= 4
+
+        msg = lcmrobotiq.command_t()
+        msg.utime = getUtime()
+        msg.activate = 1
+        msg.do_move = 0
+        msg.position = 0
+        msg.force = 0
+        msg.velocity = 0
+        msg.mode = int(mode)
+        channel = 'ROBOTIQ_%s_COMMAND' % self.side.upper()
+        lcmUtils.publish(channel, msg)
