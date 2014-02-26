@@ -59,15 +59,24 @@ class AtlasStatusPanel(object):
 
         self.widget.pumpRpmValue.display('%.1f' %  self.driver.getCurrentPumpRpm())
 
+def toggleWidgetShow():
+
+    if dock.isVisible():
+        dock.hide()
+    else:
+        dock.show()
 
 def init(driver):
 
-    global panel
     global dock
 
     panel = AtlasStatusPanel(driver)
     dock = app.addWidgetToDock(panel.widget)
     dock.hide()
+
+    actionName = 'ActionAtlasStatusPanel'
+    action = app.getToolBarActions()[actionName]
+    action.triggered.connect(toggleWidgetShow)
 
     return panel
 
