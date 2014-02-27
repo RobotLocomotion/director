@@ -31,6 +31,7 @@ from ddapp import atlasdriverpanel
 from ddapp import atlasstatuspanel
 from ddapp import multisensepanel
 from ddapp import handcontrolpanel
+from ddapp import actionmanagerpanel
 from ddapp import robotplanlistener
 from ddapp import handdriver
 from ddapp import plansequence
@@ -44,6 +45,7 @@ from ddapp.shallowCopy import shallowCopy
 
 from actionmanager import actionsequence
 from actionmanager.actions import *
+from actionmanager import sequences
 
 import drc as lcmdrc
 
@@ -318,21 +320,41 @@ if usePlanning:
     #q = planner.autonomousExecute()
     defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
 
-    reach_sequence = {'walk_plan'     : [WalkPlan,       'walk',          'fail',      {'target':'grasp stance'} ],
-                      'walk'          : [Walk,           'wait_for_scan', 'fail',      [None] ],
-                      'wait_for_scan' : [WaitForScan,    'fit',           'fail',      [None] ],
-                      'fit'           : [Fit,            'ready_plan',    'fail',      {'affordance':'drill'} ],
-                      'ready_plan'    : [JointMovePlan,  'ready_move',    'fail',      {'group':'General','name':'shooter','side':'left'} ],
-                      'ready_move'    : [JointMove,      'reach_plan',    'fail',      [None] ],
-                      'reach_plan'    : [ReachPlan,      'reach',         'walk_plan', {'target':'grasp frame', 'hand':'left'} ],
-                      'reach'         : [Reach,          'grip',          'fail',      [None] ],
-                      'grip'          : [Grip,           'retract_plan1', 'fail',      [None] ],
-                      'retract_plan1' : [JointMovePlan,  'retract_move1', 'fail',      {'group':'General','name':'shooter','side':'left'} ],
-                      'retract_move1' : [JointMove,      'retract_plan2', 'fail',      [None] ],
-                      'retract_plan2' : [JointMovePlan,  'retract_move2', 'fail',      {'group':'General','name':'handdown','side':'left'} ],
-                      'retract_move2' : [JointMove,      'goal',          'fail',      [None] ] }
 
-    seq2 = {'wait_for_scan' : [WaitForScan,    'goal',           'fail',      [None] ]}
+    ampanel = actionmanagerpanel.init()
+
+    sequenceList = sequences.sequenceList
+    treeItems = {}
+
+    for (seqName, seq, startPoint, typeName) in sequenceList:
+
+        if typeName == 'Primitive':
+            item = QtGui.QTreeWidgetItem()
+            item.setText(0, seqName)
+            item.setText(1, typeName)
+            if seq[seqName][3] != [None]:
+                item.setText(2, ", ".join(seq[seqName][3]))
+            else:
+                item.setText(2, "None")
+            ampanel.widget.sequenceSelector.sequenceTree.addTopLevelItem(item)
+            treeItems[seqName] = [item, None]
+        else:
+            item = QtGui.QTreeWidgetItem()
+            item.setText(0, seqName)
+            item.setText(1, typeName)
+            ampanel.widget.sequenceSelector.sequenceTree.addTopLevelItem(item)
+
+            treeItems[seqName] = [item, {}]
+
+            for subAction in seq.keys():
+                child = QtGui.QTreeWidgetItem(item)
+                child.setText(0, subAction)
+                child.setText(1, seq[subAction][0].__name__)
+                if seq[subAction][3] != [None]:
+                    child.setText(2, ", ".join(seq[subAction][3]))
+                else:
+                    child.setText(2, "None")
+                treeItems[seqName][1][subAction] = child
 
     affordanceServer = {'drill' : time()}
 
@@ -344,12 +366,12 @@ if usePlanning:
                                           timerObject = reach_timer,
                                           manipPlanner = manipPlanner,
                                           footstepPlanner = footstepsDriver,
-                                          handDriver = handDriver,
+                                          handDriver = lHandDriver,
                                           atlasDriver = atlasdriver.driver,
                                           multisenseDriver = perception.multisenseDriver,
                                           affordanceServer = affordanceServer,
                                           fsmDebug = True)
-    reach.populate(sequence = reach_sequence, initial = 'wait_for_scan')
+    reach.populate(sequence = sequenceList[0][1], initial = sequenceList[0][2])
     reach_timer.start()
 
     planner.spawnDrillAffordance()

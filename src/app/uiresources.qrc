@@ -4,5 +4,6 @@
     <file>ddRobotStatus.ui</file>
     <file>ddMultisense.ui</file>
     <file>ddHandControl.ui</file>
+    <file>ddActionManager.ui</file>
   </qresource>
 </RCC>

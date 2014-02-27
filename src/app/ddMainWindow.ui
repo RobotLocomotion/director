@@ -108,6 +108,7 @@
    <addaction name="ActionAtlasStatusPanel"/>
    <addaction name="ActionFootstepPanel"/>
    <addaction name="ActionHandControlPanel"/>
+   <addaction name="ActionActionManagerPanel"/>
    <addaction name="separator"/>
    <addaction name="ActionColorizeLidar"/>
    <addaction name="ActionToggleCameraTerrainMode"/>
@@ -325,6 +326,15 @@
    </property>
    <property name="text">
     <string>HandControlPanel</string>
+   </property>
+  </action>
+  <action name="ActionActionManagerPanel">
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/robot_icon.png</normaloff>:/images/robot_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>ActionManagerPanel</string>
    </property>
   </action>
  </widget>

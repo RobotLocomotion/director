@@ -11,6 +11,7 @@ set(python_files
   ddapp/atlasstatuspanel.py
   ddapp/multisensepanel.py
   ddapp/handcontrolpanel.py
+  ddapp/actionmanagerpanel.py
   ddapp/botspy.py
   ddapp/cameracontrol.py
   ddapp/cameraview.py
@@ -62,6 +63,7 @@ set(python_files
   actionmanager/actions.py
   actionmanager/actionsequence.py
   actionmanager/simplefsm.py
+  actionmanager/sequences.py
   )
 
 set(python_module_dir "${LIBRARY_OUTPUT_PATH}/site-packages")
