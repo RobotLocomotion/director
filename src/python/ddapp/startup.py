@@ -320,7 +320,6 @@ if usePlanning:
     #q = planner.autonomousExecute()
     defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
 
-
     ampanel = actionmanagerpanel.init()
 
     sequenceList = sequences.sequenceList
