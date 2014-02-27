@@ -9,7 +9,6 @@ import numpy as np
 import math
 from time import time
 from copy import deepcopy
-from multisense import command_t
 
 def addWidgetsToDict(widgets, d):
 
