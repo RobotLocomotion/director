@@ -1,6 +1,36 @@
 from simplefsm import SimpleFsm
-from actions import *
 from ddapp.timercallback import TimerCallback
+
+import actions
+
+def checkValidity(sequence):
+
+    sequenceValid = True
+
+    actionList = sequence.keys()
+    validActions = actionList + ['goal', 'fail']
+
+    for action in actionList:
+        #Make sure the first arg is a class by seeing if it's type is 'type'
+        #that name via the 'from actions import *' import
+        className = sequence[action][0]
+        if not type(className) == type:
+            print "Specified action argument is not an action class (or any class at all)"
+            sequenceValid = False
+        elif className.__name__ not in dir(actions):
+            print "Specified action class:", className.__name__, "is not recognized"
+            sequenceValid = False
+        success = sequence[action][1]
+        if success not in validActions:
+            print "Action:", action, "requesting success transition to unknown state:", success
+            sequenceValid = False
+        fail = sequence[action][2]
+        if fail not in validActions:
+            print "Action:", action, "requesting failure transition to unknown state:", success
+            sequenceValid = False
+
+    return sequenceValid
+
 
 class ActionSequence(object):
 
@@ -48,8 +78,8 @@ class ActionSequence(object):
         self.actionObjects = []
 
         #All FSMs need a default goal and a fail action
-        self.actionObjects.append(Goal(self))
-        self.actionObjects.append(Fail(self))
+        self.actionObjects.append(actions.Goal(self))
+        self.actionObjects.append(actions.Fail(self))
 
         #Populate the FSM with all action objects
         for name in sequence.keys():

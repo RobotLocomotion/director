@@ -1,8 +1,19 @@
 from time import time
 from ddapp import robotstate
-import RobotPoseGUI as rpg
+from sets import Set
 
 from ddapp.plansequence import RobotPoseGUIWrapper
+
+#Base Class, all actions must inherit from this
+#All inheritors must:
+#
+# In constructor, need to pass the following
+# -instance name
+# -name of an instance to transition to on success
+# -name of an instance to transition to on failure
+# -a list of arguments passed in
+# -a reference to an ActionSequence object used as a data container
+#  to share data between Actions
 
 class Action(object):
 
@@ -22,6 +33,8 @@ class Action(object):
     def onExit(self):
         print "default exit"
 
+#Below are standard success and fail actions which simply terminate
+#the sequence with a success or fail message
 
 class Goal(Action):
 
@@ -337,3 +350,4 @@ class WaitForScan(Action):
     def onExit(self):
         self.currentRevolution = None
         self.desiredRevolution = None
+
