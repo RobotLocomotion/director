@@ -315,10 +315,18 @@ def getObjectForItem(item):
     return objects[item]
 
 
-def findObjectByName(name):
+def findObjectByName(name, parent=None):
+    if parent:
+        return findChildByName(parent, name)
     for obj in objects.values():
         if obj.getProperty('Name') == name:
             return obj
+
+
+def findChildByName(parent, name):
+    for child in getObjectChildren(parent):
+        if child.getProperty('Name') == name:
+            return child
 
 
 _blockSignals = False
