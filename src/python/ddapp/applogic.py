@@ -2,7 +2,7 @@
 import os
 import time
 import math
-import vtk
+import ddapp.vtkAll as vtk
 import PythonQt
 from PythonQt import QtCore
 from PythonQt import QtGui
