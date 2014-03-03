@@ -19,6 +19,7 @@ public:
 
   vtkRenderWindow* renderWindow() const;
   vtkRenderer* renderer() const;
+  vtkRenderer* backgroundRenderer() const;
   vtkCamera* camera() const;
 
   QList<double> lastTDxMotion() const;
