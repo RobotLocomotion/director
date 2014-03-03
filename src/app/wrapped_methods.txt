@@ -121,6 +121,8 @@ void QtVariantProperty::setValue(const QVariant &);
 void QtVariantProperty::setAttribute(const QString &, const QVariant &);
 bool QtVariantProperty::isSubProperty() const;
 
+ddPropertiesPanel::ddPropertiesPanel();
+ddPropertiesPanel::~ddPropertiesPanel();
 QtVariantProperty* ddPropertiesPanel::addGroup(const QString&);
 QtVariantProperty* ddPropertiesPanel::addProperty(const QString&, const QVariant&);
 QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString&, const QVariant&, QtVariantProperty*);
