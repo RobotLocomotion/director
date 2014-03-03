@@ -71,6 +71,7 @@ vtkRenderer* ddQVTKWidgetView::renderer() const;
 QVTKWidget* ddQVTKWidgetView::vtkWidget() const;
 QList<double> ddQVTKWidgetView::lastTDxMotion() const;
 void ddQVTKWidgetView::installImageInteractor();
+void ddQVTKWidgetView::addCustomBounds(const QList<double>&);
 
 ddViewManager* ddMainWindow::viewManager()
 ddPropertiesPanel* ddMainWindow::propertiesPanel() const;
