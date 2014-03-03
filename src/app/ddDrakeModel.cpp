@@ -1001,8 +1001,6 @@ void ddDrakeModel::addToRenderer(vtkRenderer* renderer)
   {
     renderer->AddActor(visuals[i]->Actor);
   }
-
-  renderer->ResetCamera();
 }
 
 //-----------------------------------------------------------------------------
@@ -1019,8 +1017,6 @@ void ddDrakeModel::removeFromRenderer(vtkRenderer* renderer)
   {
     renderer->RemoveActor(visuals[i]->Actor);
   }
-
-  renderer->ResetCamera();
 }
 
 //-----------------------------------------------------------------------------
