@@ -113,6 +113,7 @@ def toggleCameraTerrainMode(view = None):
         view.camera().SetViewUp(0,0,1)
 
     view.render()
+    updateToggleTerrainAction(view)
 
 
 def getToolBarActions():
