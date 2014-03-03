@@ -27,6 +27,12 @@ public:
 
   void installImageInteractor();
 
+  void addCustomBounds(const QList<double>& bounds);
+
+signals:
+
+  void computeBoundsRequest(ddQVTKWidgetView* view);
+
 public slots:
 
   void render();
