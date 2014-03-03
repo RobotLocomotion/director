@@ -68,6 +68,7 @@ ddQVTKWidgetView::~ddQVTKWidgetView();
 vtkCamera* ddQVTKWidgetView::camera() const;
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
 vtkRenderer* ddQVTKWidgetView::renderer() const;
+vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const;
 QVTKWidget* ddQVTKWidgetView::vtkWidget() const;
 QList<double> ddQVTKWidgetView::lastTDxMotion() const;
 void ddQVTKWidgetView::installImageInteractor();

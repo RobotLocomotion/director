@@ -140,6 +140,12 @@ vtkRenderer* ddQVTKWidgetView::renderer() const
 }
 
 //-----------------------------------------------------------------------------
+vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const
+{
+  return this->Internal->Renderer;
+}
+
+//-----------------------------------------------------------------------------
 QVTKWidget* ddQVTKWidgetView::vtkWidget() const
 {
   return this->Internal->VTKWidget;
