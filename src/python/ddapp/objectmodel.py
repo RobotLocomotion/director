@@ -567,6 +567,7 @@ def init(objectTree, propertiesPanel):
     global _propertiesPanel
     _objectTree = objectTree
     _propertiesPanel = propertiesPanel
+    propertiesPanel.setBrowserModeToWidget()
 
     initProperties()
     initObjectTree()

@@ -13,9 +13,14 @@ class ddPropertiesPanel::ddInternal
 {
 public:
 
+  ddInternal()
+  {
+    this->Manager = 0;
+    this->Browser = 0;
+  }
+
   QtVariantPropertyManager* Manager;
-  //QtAbstractPropertyBrowser* Browser;
-  QtTreePropertyBrowser* Browser;
+  QtAbstractPropertyBrowser* Browser;
 
   QMap<QString, QtVariantProperty*> Properties;
 };
@@ -29,29 +34,47 @@ ddPropertiesPanel::ddPropertiesPanel(QWidget* parent) : QWidget(parent)
   QtVariantPropertyManager *manager = new QtVariantPropertyManager;
   this->Internal->Manager = manager;
 
-  QtTreePropertyBrowser *browser = new QtTreePropertyBrowser;
-  //QtGroupBoxPropertyBrowser* browser = new QtGroupBoxPropertyBrowser;
-  this->Internal->Browser = browser;
-
-  QtVariantEditorFactory *variantFactory = new QtVariantEditorFactory;
-  browser->setFactoryForManager(manager, variantFactory);
-  browser->setPropertiesWithoutValueMarked(true);
-  browser->setRootIsDecorated(true);
-
+  QVBoxLayout* layout = new QVBoxLayout(this);
+  layout->setMargin(0);
+  this->setBrowserModeToTree();
 
   this->connect(this->Internal->Manager,
       SIGNAL(valueChanged(QtProperty*, const QVariant&)),
       SLOT(onPropertyValueChanged(QtProperty*)));
-
-  QVBoxLayout* layout = new QVBoxLayout(this);
-  layout->setMargin(0);
-  layout->addWidget(this->Internal->Browser);
 }
 
 //-----------------------------------------------------------------------------
 ddPropertiesPanel::~ddPropertiesPanel()
 {
   delete this->Internal;
+}
+
+//-----------------------------------------------------------------------------
+void ddPropertiesPanel::setBrowserModeToTree()
+{
+  this->clear();
+  delete this->Internal->Browser;
+
+  QtVariantEditorFactory *variantFactory = new QtVariantEditorFactory;
+  QtTreePropertyBrowser *browser = new QtTreePropertyBrowser;
+  browser->setFactoryForManager(this->Internal->Manager, variantFactory);
+  browser->setPropertiesWithoutValueMarked(true);
+  browser->setRootIsDecorated(true);
+  this->layout()->addWidget(browser);
+  this->Internal->Browser = browser;
+}
+
+//-----------------------------------------------------------------------------
+void ddPropertiesPanel::setBrowserModeToWidget()
+{
+  this->clear();
+  delete this->Internal->Browser;
+
+  QtVariantEditorFactory *variantFactory = new QtVariantEditorFactory;
+  QtGroupBoxPropertyBrowser* browser = new QtGroupBoxPropertyBrowser;
+  browser->setFactoryForManager(this->Internal->Manager, variantFactory);
+  this->layout()->addWidget(browser);
+  this->Internal->Browser = browser;
 }
 
 //-----------------------------------------------------------------------------
@@ -89,9 +112,10 @@ QtVariantProperty* ddPropertiesPanel::addProperty(const QString& name, const QVa
   this->Internal->Properties[name] = property;
 
   QtBrowserItem * browserItem = this->Internal->Browser->topLevelItem(property);
-  if (browserItem)
+  QtTreePropertyBrowser* treeBrowser = qobject_cast<QtTreePropertyBrowser*>(this->Internal->Browser);
+  if (browserItem && treeBrowser)
   {
-    this->Internal->Browser->setExpanded(browserItem, false);
+    treeBrowser->setExpanded(browserItem, false);
   }
 
   return property;
