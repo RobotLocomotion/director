@@ -119,7 +119,7 @@ protected:
       if (this->mRequiredElapsedMilliseconds == 0 || mTimer.elapsed() > this->mRequiredElapsedMilliseconds)
         {
         this->mTimer.restart();
-        emit this->messageReceived(messageBytes, mChannel);
+        emit this->messageReceived(messageBytes, QString(channel.c_str()));
         }
     }
     else
