@@ -229,6 +229,12 @@ void ddQVTKWidgetView::setCameraManipulationStyle()
 }
 
 //-----------------------------------------------------------------------------
+vtkOrientationMarkerWidget* ddQVTKWidgetView::orientationMarkerWidget() const
+{
+  return this->Internal->OrientationWidget;
+}
+
+//-----------------------------------------------------------------------------
 void ddQVTKWidgetView::setupOrientationMarker()
 {
   this->renderWindow()->GetInteractor()->Disable();
