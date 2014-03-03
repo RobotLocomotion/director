@@ -9,9 +9,9 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 
 set(sources
-  vtkMultisenseSource.cxx
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
+  vtkMultisenseSource.cxx
   )
 
 
@@ -27,6 +27,14 @@ set(deps
   ${VTK_LIBRARIES}
   )
 
+set(pkg_deps
+  drc-lcmtypes
+  bot2-frames
+  bot2-core
+  lcm
+  eigen3
+)
+
 
 option(USE_DRC_MAPS "Build drake-designer with drc maps dependency." ON)
 if (USE_DRC_MAPS)
@@ -40,11 +48,16 @@ if (USE_DRC_MAPS)
   use_cpp11()
 endif()
 
+option(USE_LCM_GL "Build drake-designer with bot lcm gl dependency." ON)
+if(USE_LCM_GL)
+  list(APPEND sources vtkLCMGLProp.cxx)
+  list(APPEND pkg_deps bot2-lcmgl-renderer)
+endif()
 
 set(library_name vtkDRCFilters)
 add_library(${library_name} ${sources})
 target_link_libraries(${library_name} ${deps})
-use_pkg(${library_name} ${library_name}_pkgconfig_deps drc-lcmtypes bot2-frames bot2-core lcm eigen3)
+use_pkg(${library_name} ${library_name}_pkgconfig_deps ${pkg_deps})
 
 
 if(VTK_WRAP_PYTHON)
