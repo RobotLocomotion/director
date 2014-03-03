@@ -25,6 +25,7 @@ from ddapp import colorize
 from ddapp import robotstate
 from ddapp import footstepsdriver
 from ddapp import footstepsdriverpanel
+from ddapp import lcmgl
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import atlasstatuspanel
@@ -75,6 +76,7 @@ useSpreadsheet = True
 useFootsteps = True
 usePlanning = True
 useAtlasDriver = True
+useLCMGL = True
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -234,6 +236,8 @@ if useFootsteps:
     footstepsDriver = footstepsdriver.FootstepsDriver(defaultJointController)
     footstepsdriverpanel.init(footstepsDriver)
 
+if useLCMGL:
+    lcmgl.init(view)
 
 if usePlanning:
 
