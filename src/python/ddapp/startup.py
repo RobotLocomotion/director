@@ -5,10 +5,10 @@ import ddapp
 
 import os
 import sys
-import vtk
 import PythonQt
 from PythonQt import QtCore, QtGui
 import ddapp.applogic as app
+from ddapp import vtkAll as vtk
 from ddapp import matlab
 from ddapp import jointcontrol
 from ddapp import cameracontrol
