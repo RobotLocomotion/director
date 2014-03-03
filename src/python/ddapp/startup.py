@@ -176,6 +176,9 @@ if usePerception:
 
     multisensepanel.init(perception.multisenseDriver)
 
+    vis.showGrid(view)
+    view.connect('computeBoundsRequest(ddQVTKWidgetView*)', vis.computeViewBoundsNoGrid)
+
     def grabRobotState():
         poseName = 'EST_ROBOT_STATE'
         robotStatePose = robotStateJointController.poses[poseName]
