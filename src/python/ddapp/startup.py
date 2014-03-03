@@ -158,7 +158,7 @@ if usePerception:
 
     robotStateJointController = jointcontrol.JointController([robotStateModel])
     robotStateJointController.setNominalPose(robotStateJointController.loadPoseFromFile(app.getNominalPoseMatFile()))
-    robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_zero'))
+    robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_nom'))
     defaultJointController = robotStateJointController
 
 
