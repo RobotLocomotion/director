@@ -128,6 +128,8 @@ QtVariantProperty* ddPropertiesPanel::addProperty(const QString&, const QVariant
 QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString&, const QVariant&, QtVariantProperty*);
 QtVariantProperty* ddPropertiesPanel::findProperty(const QString&) const;
 QtVariantProperty* ddPropertiesPanel::findSubProperty(const QString&, QtVariantProperty*) const;
+void ddPropertiesPanel::setBrowserModeToTree();
+void ddPropertiesPanel::setBrowserModeToWidget();
 
 
 ddSignalMap::ddSignalMap();
