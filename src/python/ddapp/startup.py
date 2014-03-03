@@ -178,6 +178,7 @@ if usePerception:
 
     vis.showGrid(view)
     view.connect('computeBoundsRequest(ddQVTKWidgetView*)', vis.computeViewBoundsNoGrid)
+    app.toggleCameraTerrainMode(view)
 
     def grabRobotState():
         poseName = 'EST_ROBOT_STATE'

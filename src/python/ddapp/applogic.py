@@ -8,6 +8,8 @@ from PythonQt import QtCore
 from PythonQt import QtGui
 from ddapp import botspy
 
+_mainWindow = None
+
 def getMainWindow():
     return _mainWindow
 
@@ -133,6 +135,8 @@ def getActions(widget):
 
 
 def updateToggleTerrainAction(view):
+    if not getMainWindow():
+        return
     isTerrainMode = False
     if hasattr(view, 'renderWindow'):
         isTerrainMode = isinstance(view.renderWindow().GetInteractor().GetInteractorStyle(), vtk.vtkInteractorStyleTerrain)
