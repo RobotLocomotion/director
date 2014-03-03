@@ -9,6 +9,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 
 set(sources
+  vtkGridSource.cxx
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
   vtkMultisenseSource.cxx
