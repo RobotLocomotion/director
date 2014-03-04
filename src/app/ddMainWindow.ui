@@ -14,7 +14,7 @@
    <string>MainWindow</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="images/resources.qrc">
+   <iconset>
     <normaloff>:/images/drake_logo.png</normaloff>:/images/drake_logo.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget"/>
@@ -180,7 +180,7 @@
   </action>
   <action name="ActionPythonConsole">
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/python_logo.png</normaloff>:/images/python_logo.png</iconset>
    </property>
    <property name="text">
@@ -195,7 +195,7 @@
   </action>
   <action name="ActionMatlabConsole">
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/matlab_logo.png</normaloff>:/images/matlab_logo.png</iconset>
    </property>
    <property name="text">
@@ -210,7 +210,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/3d_glasses.png</normaloff>:/images/3d_glasses.png</iconset>
    </property>
    <property name="text">
@@ -222,7 +222,7 @@
   </action>
   <action name="ActionResetCamera">
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/reset_camera.png</normaloff>:/images/reset_camera.png</iconset>
    </property>
    <property name="text">
@@ -234,7 +234,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/camera_mode.png</normaloff>:/images/camera_mode.png</iconset>
    </property>
    <property name="text">
@@ -273,7 +273,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/paint_bucket.png</normaloff>:/images/paint_bucket.png</iconset>
    </property>
    <property name="text">
@@ -285,7 +285,7 @@
   </action>
   <action name="ActionMultisensePanel">
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/3d_scanner.png</normaloff>:/images/3d_scanner.png</iconset>
    </property>
    <property name="text">
@@ -297,7 +297,7 @@
   </action>
   <action name="ActionFootstepPanel">
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/feet.png</normaloff>:/images/feet.png</iconset>
    </property>
    <property name="text">
@@ -309,7 +309,7 @@
   </action>
   <action name="ActionAtlasStatusPanel">
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/gauge.png</normaloff>:/images/gauge.png</iconset>
    </property>
    <property name="text">
@@ -321,7 +321,7 @@
   </action>
   <action name="ActionHandControlPanel">
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/claw.png</normaloff>:/images/claw.png</iconset>
    </property>
    <property name="text">
@@ -330,7 +330,7 @@
   </action>
   <action name="ActionActionManagerPanel">
    <property name="icon">
-    <iconset resource="images/resources.qrc">
+    <iconset>
      <normaloff>:/images/robot_icon.png</normaloff>:/images/robot_icon.png</iconset>
    </property>
    <property name="text">

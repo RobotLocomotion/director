@@ -1,6 +1,8 @@
 from simplefsm import SimpleFsm
 from ddapp.timercallback import TimerCallback
 
+from sets import Set
+
 import actions
 
 def checkValidity(sequence):
@@ -20,6 +22,8 @@ def checkValidity(sequence):
         elif className.__name__ not in dir(actions):
             print "Specified action class:", className.__name__, "is not recognized"
             sequenceValid = False
+
+        #Make sure the second and third arguments are valid action names
         success = sequence[action][1]
         if success not in validActions:
             print "Action:", action, "requesting success transition to unknown state:", success
@@ -29,7 +33,43 @@ def checkValidity(sequence):
             print "Action:", action, "requesting failure transition to unknown state:", success
             sequenceValid = False
 
+        #Make sure the fourth argument is a dictionary of valid argument types and argument
+        #sources (other actions or 'USER')
+        args = sequence[action][3]
+        for arg in args.keys():
+            #First, do the args exist
+            if not arg in actions.argType.keys():
+                print arg, "specified as arg for action", action, "but it is not valid."
+                sequenceValid = False
+                break
+            #Second, is the specified producer of this argument valid
+            producer = args[arg]
+            if not producer in actionList + ['USER']:
+                print producer, "specified as source of arg", arg, "is not a valid argument source."
+                sequenceValid = False
+                break
+            #Third, does the producer actually produce that argument
+            if producer == 'USER':
+                continue
+            else:
+                producerType = sequence[producer][0]
+                if arg not in producerType.outputs:
+                    print action, "needs", arg, "and designated it as coming from", producer, ", which is of type", producerType.__name__, "which does not make", arg
+                    sequenceValid = False
+                    break
     return sequenceValid
+
+def generateUserArgList(sequence):
+
+    userArgs = Set([])
+
+    for action in sequence:
+        arguments = sequence[action][3]
+        for argument in arguments.keys():
+            if arguments[argument] == 'USER':
+                userArgs.add(argument)
+
+    return list(userArgs)
 
 
 class ActionSequence(object):
@@ -112,6 +152,14 @@ class ActionSequence(object):
             self.fsm.onUpdate[actionPtr.name] = actionPtr.onUpdate
             self.fsm.onExit[actionPtr.name] = actionPtr.onExit
 
+    def getActionByName(self, name):
+
+        for action in self.actionObjects:
+            if self.actionObjects[action].name == name:
+                return action
+        return None
+
+
     def reset(self):
         self.fsm.reset()
         self.fsm.debug = self.fsmDebug
@@ -124,6 +172,7 @@ class ActionSequence(object):
 
     def stop(self):
         self.fsm.stop()
+
 
 
 #if __name__ == '__main__':

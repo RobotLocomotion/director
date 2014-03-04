@@ -1,6 +1,5 @@
 from time import time
 from ddapp import robotstate
-from sets import Set
 
 from ddapp.plansequence import RobotPoseGUIWrapper
 
@@ -15,7 +14,20 @@ from ddapp.plansequence import RobotPoseGUIWrapper
 # -a reference to an ActionSequence object used as a data container
 #  to share data between Actions
 
+
+argType = {}
+argType['Affordance'] = None
+argType['WalkPlan'] = None
+argType['WalkTarget'] = None
+argType['RobotPose'] = None
+argType['JointPlan'] = None
+argType['Hand'] = None
+argType['Constraints'] = None
+
 class Action(object):
+
+    inputs = []
+    ouputs = []
 
     def __init__(self, name, success, fail, args, container):
         self.name = name
@@ -37,6 +49,9 @@ class Action(object):
 #the sequence with a success or fail message
 
 class Goal(Action):
+
+    inputs = []
+    ouputs = []
 
     def __init__(self, container):
         Action.__init__(self, 'goal', None, None, None, container)
@@ -74,6 +89,9 @@ class Fail(Action):
 
 class WalkPlan(Action):
 
+    inputs = ['WalkTarget']
+    outputs = ['WalkPlan']
+
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
@@ -101,6 +119,9 @@ class WalkPlan(Action):
         self.walkPlanResponse = None
 
 class Walk(Action):
+
+    inputs = ['WalkPlan']
+    outputs = ['RobotPose']
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
@@ -148,7 +169,29 @@ class Walk(Action):
         else:
             self.walkStart = None
 
+class PoseSearch(Action):
+
+    inputs = ['Affordance', 'Hand', 'Constraints']
+    outputs = ['RobotPose', 'WalkTarget', 'Hand']
+
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
+        self.counter = 10
+        self.manipPlanResponse = None
+
+    def onEnter(self):
+        return
+
+    def onUpdate(self):
+        return
+
+    def onExit(self):
+        return
+
 class ReachPlan(Action):
+
+    inputs = ['RobotPose', 'Hand', 'Constraints']
+    outputs = ['JointPlan']
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
@@ -186,6 +229,9 @@ class ReachPlan(Action):
 
 class Reach(Action):
 
+    inputs = ['JointPlan']
+    outputs = ['RobotPose']
+
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
@@ -213,6 +259,9 @@ class Reach(Action):
 
 class JointMovePlan(Action):
 
+    inputs = ['RobotPose']
+    outputs = ['JointPlan']
+
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
         self.counter = 10
@@ -236,6 +285,9 @@ class JointMovePlan(Action):
         self.counter = 10
 
 class JointMove(Action):
+
+    inputs = ['JointPlan']
+    outputs = ['RobotPose']
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
@@ -262,6 +314,9 @@ class JointMove(Action):
 
 class Grip(Action):
 
+    inputs = ['Hand']
+    outputs = []
+
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
 
@@ -279,6 +334,9 @@ class Grip(Action):
 
 class Release(Action):
 
+    inputs = ['Hand']
+    outputs = []
+
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
 
@@ -295,6 +353,9 @@ class Release(Action):
         return
 
 class Fit(Action):
+
+    inputs = ['Affordance']
+    outputs = []
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
@@ -321,6 +382,9 @@ class Fit(Action):
 
 
 class WaitForScan(Action):
+
+    inputs = []
+    outputs = []
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
