@@ -320,58 +320,25 @@ if usePlanning:
     #q = planner.autonomousExecute()
     defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
 
-    ampanel = actionmanagerpanel.init()
-
-    sequenceList = sequences.sequenceList
-    treeItems = {}
-
-    for (seqName, seq, startPoint, typeName) in sequenceList:
-
-        if typeName == 'Primitive':
-            item = QtGui.QTreeWidgetItem()
-            item.setText(0, seqName)
-            item.setText(1, typeName)
-            if seq[seqName][3] != [None]:
-                item.setText(2, ", ".join(seq[seqName][3]))
-            else:
-                item.setText(2, "None")
-            ampanel.widget.sequenceSelector.sequenceTree.addTopLevelItem(item)
-            treeItems[seqName] = [item, None]
-        else:
-            item = QtGui.QTreeWidgetItem()
-            item.setText(0, seqName)
-            item.setText(1, typeName)
-            ampanel.widget.sequenceSelector.sequenceTree.addTopLevelItem(item)
-
-            treeItems[seqName] = [item, {}]
-
-            for subAction in seq.keys():
-                child = QtGui.QTreeWidgetItem(item)
-                child.setText(0, subAction)
-                child.setText(1, seq[subAction][0].__name__)
-                if seq[subAction][3] != [None]:
-                    child.setText(2, ", ".join(seq[subAction][3]))
-                else:
-                    child.setText(2, "None")
-                treeItems[seqName][1][subAction] = child
-
+    as_timer = TimerCallback()
+    as_timer.targetFps = 25
     affordanceServer = {'drill' : time()}
+    actionSeq = actionsequence.ActionSequence(objectModel = om,
+                                              sensorJointController = robotStateJointController,
+                                              playbackFunction = playPlans,
+                                              timerObject = as_timer,
+                                              manipPlanner = manipPlanner,
+                                              footstepPlanner = footstepsDriver,
+                                              handDriver = lHandDriver,
+                                              atlasDriver = atlasdriver.driver,
+                                              multisenseDriver = perception.multisenseDriver,
+                                              affordanceServer = affordanceServer,
+                                              fsmDebug = True)
 
-    reach_timer = TimerCallback()
-    reach_timer.targetFps = 25
-    reach = actionsequence.ActionSequence(objectModel = om,
-                                          sensorJointController = robotStateJointController,
-                                          playbackFunction = playPlans,
-                                          timerObject = reach_timer,
-                                          manipPlanner = manipPlanner,
-                                          footstepPlanner = footstepsDriver,
-                                          handDriver = lHandDriver,
-                                          atlasDriver = atlasdriver.driver,
-                                          multisenseDriver = perception.multisenseDriver,
-                                          affordanceServer = affordanceServer,
-                                          fsmDebug = True)
-    reach.populate(sequence = sequenceList[0][1], initial = sequenceList[0][2])
-    reach_timer.start()
+    ampanel = actionmanagerpanel.init(actionSeq)
+
+    #reach.populate(sequence = sequences.sequenceList[0][1], initial = sequences.sequenceList[0][2])
+    #as_timer.start()
 
     planner.spawnDrillAffordance()
 
