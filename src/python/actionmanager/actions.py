@@ -322,28 +322,29 @@ class JointMovePlan(Action):
 
     inputs = ['PoseName', 'Group', 'Hand']
     outputs = ['JointPlan']
- 
+
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-        self.counter = 10
-        self.retractPlanResponse = None
+        self.jointMovePlanResponse = None
 
     def onEnter(self):
+        #Send a planner request
         goalPoseJoints = RobotPoseGUIWrapper.getPose(self.args['Group'], self.args['PoseName'], self.args['Hand'])
         if self.container.planPose == None:
             self.container.planPose = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
-        self.retractPlanResponse = self.container.manipPlanner.sendPoseGoal(self.container.planPose, goalPoseJoints, waitForResponse=True, waitTimeout=0)
+        self.jointMovePlanResponse = self.container.manipPlanner.sendPoseGoal(self.container.planPose, goalPoseJoints, waitForResponse=True, waitTimeout=0)
 
     def onUpdate(self):
-
-        response = self.retractPlanResponse.waitForResponse(timeout = 0)
+        #Wait for planner response
+        response = self.jointMovePlanResponse.waitForResponse(timeout = 0)
         if response:
-            self.container.retractPlan = response
+            self.container.jointMovePlan = response
             self.container.vizModeAnimation.append(response)
             self.success()
 
     def onExit(self):
-        self.counter = 10
+        return
+
 
 class JointMove(Action):
 
@@ -352,26 +353,40 @@ class JointMove(Action):
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-        self.counter = 10
+        self.startTime = 0.0
 
     def onEnter(self):
-        return
+        if self.container.vizMode:
+            #Viz Mode Logic
+            #Update the plan state to match the end of the animation
+            self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
+        else:
+            #Execute Mode Logic
+            #Send the command to the robot
+            self.container.manipPlanner.commitManipPlan(self.container.jointMovePlan)
+            self.startTime = time()
+            return
 
     def onUpdate(self):
-
-        #Viz Mode Logic
         if self.container.vizMode:
-            self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
+            #Viz Mode Logic
+            #do nothing
             self.success()
-
-        #Execute Mode Logic
         else:
-            self.counter -= 1
-            if self.counter == 0:
+            #Execute Mode Logic
+            #Wait for success
+            if time() > self.startTime + 10.0:
                 self.success()
 
+                #Need logic here to see if we reached our target to within some tolerance
+                #success or fail based on that
+                #is there a way to see if the robot is running?
+
+            return
+
     def onExit(self):
-        self.counter = 10
+        return
+
 
 class Grip(Action):
 
@@ -380,15 +395,30 @@ class Grip(Action):
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.gripTime = 0.0
+        self.gripWait = 2.0
 
     def onEnter(self):
-        self.container.handDriver.sendClose(60)
+        if self.container.vizMode:
+            #Viz Mode Logic
+            #Do nothing
+            return
+        else:
+            #Execute Mode Logic
+            self.container.handDriver.sendClose(100)
+            self.gripTime = time()
 
     def onUpdate(self):
-
-        #Viz Mode Logic
-        #Execute Mode Logic
-        self.success()
+        if self.container.vizMode:
+            #Viz Mode Logic
+            self.success()
+        else:
+            #Execute Mode Logic
+            #Wait for grip time, then send another command just to ensure
+            #proper regrasp
+            if time() > self.gripTime + self.gripWait:
+                self.container.handDriver.sendClose(100)
+                self.success()
 
     def onExit(self):
         return
@@ -400,15 +430,30 @@ class Release(Action):
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.gripTime = 0.0
+        self.gripWait = 1.0
 
     def onEnter(self):
-        self.container.handDriver.sendOpen()
+        if self.container.vizMode:
+            #Viz Mode Logic
+            #Do nothing
+            return
+        else:
+            #Execute Mode Logic
+            self.container.handDriver.sendOpen()
+            self.gripTime = time()
 
     def onUpdate(self):
-
-        #Viz Mode Logic
-        #Execute Mode Logic
-        self.success()
+        if self.container.vizMode:
+            #Viz Mode Logic
+            self.success()
+        else:
+            #Execute Mode Logic
+            #Wait for grip time, then send another command just to ensure
+            #proper regrasp
+            if time() > self.gripTime + self.gripWait:
+                self.container.handDriver.sendOpen()
+                self.success()
 
     def onExit(self):
         return
