@@ -321,24 +321,22 @@ if usePlanning:
     defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
 
     as_timer = TimerCallback()
-    as_timer.targetFps = 25
+    as_timer.targetFps = 5
+    as_timer.start()
     affordanceServer = {'drill' : time()}
-    actionSeq = actionsequence.ActionSequence(objectModel = om,
-                                              sensorJointController = robotStateJointController,
-                                              playbackFunction = playPlans,
-                                              timerObject = as_timer,
-                                              manipPlanner = manipPlanner,
-                                              footstepPlanner = footstepsDriver,
-                                              handDriver = lHandDriver,
-                                              atlasDriver = atlasdriver.driver,
-                                              multisenseDriver = perception.multisenseDriver,
-                                              affordanceServer = affordanceServer,
-                                              fsmDebug = True)
+    actionManager = actionsequence.ActionSequence(objectModel = om,
+                                                  sensorJointController = robotStateJointController,
+                                                  playbackFunction = playPlans,
+                                                  timerObject = as_timer,
+                                                  manipPlanner = manipPlanner,
+                                                  footstepPlanner = footstepsDriver,
+                                                  handDriver = lHandDriver,
+                                                  atlasDriver = atlasdriver.driver,
+                                                  multisenseDriver = perception.multisenseDriver,
+                                                  affordanceServer = affordanceServer,
+                                                  fsmDebug = True)
 
-    ampanel = actionmanagerpanel.init(actionSeq)
-
-    #reach.populate(sequence = sequences.sequenceList[0][1], initial = sequences.sequenceList[0][2])
-    #as_timer.start()
+    ampanel = actionmanagerpanel.init(actionManager)
 
     planner.spawnDrillAffordance()
 

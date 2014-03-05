@@ -142,7 +142,7 @@ class PlanSequence(object):
 
         assert self.drillAffordance
 
-        position = [0.0,-0.13,0.0]
+        position = [0.0,-0.18,0.0]
         rpy = [-90,90,0]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
@@ -156,7 +156,7 @@ class PlanSequence(object):
         assert self.drillAffordance
 
         # for left_base_link
-        position = [-0.12, 0.0, 0.025]
+        position = [-0.12, 0.0, 0.028]
         rpy = [0, 90, 0]
 
         # for irobot palm point
@@ -199,8 +199,19 @@ class PlanSequence(object):
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(graspGroundFrame)
 
-        self.graspStanceFrame = vis.updateFrame(t, 'grasp stance', parent=self.drillAffordance, visible=True, scale=0.25)
+        self.graspStanceFrame = vis.updateFrame(t, 'grasp stance left', parent=self.drillAffordance, visible=True, scale=0.25)
 
+        graspGroundFrame2 = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        graspGroundFrame2.PostMultiply()
+        graspGroundFrame2.Translate(graspPosition[0], graspPosition[1], groundHeight)
+
+        position2 = [-0.57, 0.4, 0.0]
+        rpy2 = [0, 0, 0]
+
+        t2 = transformUtils.frameFromPositionAndRPY(position2, rpy2)
+        t2.Concatenate(graspGroundFrame)
+
+        self.graspStanceFrame2 = vis.updateFrame(t2, 'grasp stance right', parent=self.drillAffordance, visible=True, scale=0.25)
 
     def computeFootstepPlan(self):
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(self.graspStanceFrame.transform, waitForResponse=True)
