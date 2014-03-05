@@ -28,7 +28,7 @@ simple_reach_seq    = {'wait_for_scan1': [WaitForScan,    'pose_search',   'fail
                        'reach_plan'    : [ReachPlan,      'reach',         'fail',      {'TargetPose': 'pose_search', 'Hand': 'pose_search', 'Constraints': 'USER'} ],
                        'reach'         : [Reach,          'grip',          'fail',      {'JointPlan': 'reach_plan'} ],
                        'grip'          : [Grip,           'retract_plan1', 'fail',      {'Hand': 'pose_search'} ],
-                       'retract_plan1' : [JointMovePlan,  'retract_move1', 'fail',      {'RobotPose': 'USER'} ],
+                       'retract_plan1' : [JointMovePlan,  'retract_move1', 'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'USER'} ],
                        'retract_move1' : [JointMove,      'goal',          'fail',      {'JointPlan': 'retract_plan1'} ]}
 
 #sequenceDict['PlannedReach'] = [simple_reach_seq, 'wait_for_scan1', 'Sequence']
@@ -40,7 +40,7 @@ simple_reach_seq = {'walk_plan'    : [WalkPlan,      'walk',          'fail',   
                     'reach_plan'   : [ReachPlan,     'reach',         'walk_plan', {'TargetFrame': 'USER', 'Hand': 'USER', 'Constraints': 'USER'} ],
                     'reach'        : [Reach,         'grip',          'fail',      {'JointPlan': 'reach_plan'} ],
                     'grip'         : [Grip,          'retract_plan',  'fail',      {'Hand': 'pose_search'} ],
-                    'retract_plan' : [JointMovePlan, 'retract_move',  'fail',      {'RobotPose': '1 walking with hose', 'Group': 'hose', 'Hand': 'USER'} ],
+                    'retract_plan' : [JointMovePlan, 'retract_move',  'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'USER'} ],
                     'retract_move' : [JointMove,     'goal',          'fail',      {'JointPlan': 'retract_plan'} ]}
 
 sequenceDict['SimpleReach'] = [simple_reach_seq, 'wait_for_scan', 'Sequence']
@@ -53,7 +53,7 @@ drill_reach_seq = {'walk_plan'    : [WalkPlan,      'walk',          'fail',    
                    'reach_plan'   : [ReachPlan,     'reach',         'walk_plan', {'TargetFrame': 'grasp frame', 'Hand': 'right', 'Constraints': 'none'} ],
                    'reach'        : [Reach,         'grip',          'fail',      {'JointPlan': 'reach_plan'} ],
                    'grip'         : [Grip,          'retract_plan',  'fail',      {'Hand': 'pose_search'} ],
-                   'retract_plan' : [JointMovePlan, 'retract_move',  'fail',      {'RobotPose': '1 walking with hose', 'Group': 'hose', 'Hand': 'right'} ],
+                   'retract_plan' : [JointMovePlan, 'retract_move',  'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'right'} ],
                    'retract_move' : [JointMove,     'goal',          'fail',      {'JointPlan': 'retract_plan'} ]}
 
 sequenceDict['DrillReachRight'] = [drill_reach_seq, 'wait_for_scan', 'Sequence']
@@ -65,7 +65,7 @@ drill_reach_seq = {'walk_plan'    : [WalkPlan,      'walk',          'fail',    
                    'reach_plan'   : [ReachPlan,     'reach',         'walk_plan', {'TargetFrame': 'grasp frame', 'Hand': 'left', 'Constraints': 'none'} ],
                    'reach'        : [Reach,         'grip',          'fail',      {'JointPlan': 'reach_plan'} ],
                    'grip'         : [Grip,          'retract_plan',  'fail',      {'Hand': 'pose_search'} ],
-                   'retract_plan' : [JointMovePlan, 'retract_move',  'fail',      {'RobotPose': '1 walking with hose', 'Group': 'hose', 'Hand': 'left'} ],
+                   'retract_plan' : [JointMovePlan, 'retract_move',  'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'left'} ],
                    'retract_move' : [JointMove,     'goal',          'fail',      {'JointPlan': 'retract_plan'} ]}
 
 sequenceDict['DrillReachLeft'] = [drill_reach_seq, 'wait_for_scan', 'Sequence']
