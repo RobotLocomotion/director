@@ -27,14 +27,14 @@ argType['Constraints'] = None
 class Action(object):
 
     inputs = []
-    ouputs = []
+    outputs = []
 
     def __init__(self, name, success, fail, args, container):
         self.name = name
         self.container = container
         self.args = args
-        self.success_action = success
-        self.fail_action = fail
+        self.successAction = success
+        self.failAction = fail
 
     def onEnter(self):
         print "default enter"
@@ -45,13 +45,21 @@ class Action(object):
     def onExit(self):
         print "default exit"
 
+    def checkInputArgs(self, args, inputs):
+        valid = True
+        for arg in args:
+            if arg not in inputs:
+                valid = False
+                print "Arg:", arg, "provided but it is not a valid input for:", self.name
+        return valid
+
 #Below are standard success and fail actions which simply terminate
 #the sequence with a success or fail message
 
 class Goal(Action):
 
     inputs = []
-    ouputs = []
+    outputs = []
 
     def __init__(self, container):
         Action.__init__(self, 'goal', None, None, None, container)
@@ -59,10 +67,9 @@ class Goal(Action):
     def onEnter(self):
         print "HOORAY! Entered the GOAL state"
 
-        #In viz mode, play the animation
+        #If in vizmode, play the animation
         if self.container.vizMode:
-            if self.container.vizModeAnimation != []:
-                self.container.playbackFunction(self.container.vizModeAnimation)
+            self.container.play()
 
         #Stop the FSM now that we're at a terminus
         self.container.fsm.stop()
@@ -98,7 +105,7 @@ class WalkPlan(Action):
         self.walkPlanResponse = None
 
     def onEnter(self):
-        graspStanceFrame = self.container.om.findObjectByName(self.args['target'])
+        graspStanceFrame = self.container.om.findObjectByName(self.args['WalkTarget'])
         self.walkPlanResponse = self.container.footstepPlanner.sendFootstepPlanRequest(graspStanceFrame.transform, waitForResponse=True, waitTimeout=0)
 
     def onUpdate(self):
@@ -108,11 +115,11 @@ class WalkPlan(Action):
         if response:
             if response.num_steps == 0:
                 print 'walk plan failed'
-                self.container.fsm.transition(self.fail_action)
+                self.container.fsm.transition(self.failAction)
             else:
                 print 'walk plan successful'
                 self.container.footstepPlan = response
-                self.container.fsm.transition(self.success_action)
+                self.container.fsm.transition(self.successAction)
 
     def onExit(self):
         self.walkPlanResponse.finish()
@@ -149,14 +156,14 @@ class Walk(Action):
                 self.container.walkAnimation = response
                 self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.walkAnimation.plan[-1])
                 self.container.vizModeAnimation.append(self.container.walkAnimation)
-                self.container.fsm.transition(self.success_action)
+                self.container.fsm.transition(self.successAction)
 
         #Logic for execute mode:
         else:
             if self.container.atlasDriver.getCurrentBehaviorName() == 'step':
                 self.walkStart = True
             if self.walkStart and self.container.atlasDriver.getCurrentBehaviorName() == 'stand':
-                self.container.fsm.transition(self.success_action)
+                self.container.fsm.transition(self.successAction)
 
     def onExit(self):
 
@@ -190,7 +197,7 @@ class PoseSearch(Action):
 
 class ReachPlan(Action):
 
-    inputs = ['RobotPose', 'Hand', 'Constraints']
+    inputs = ['TargetFrame', 'Hand', 'Constraints']
     outputs = ['JointPlan']
 
     def __init__(self, name, success, fail, args, container):
@@ -200,8 +207,14 @@ class ReachPlan(Action):
 
     def onEnter(self):
         linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
-        linkName = linkMap[self.args['hand']]
-        graspFrame = self.container.om.findObjectByName(self.args['target'])
+
+        if not self.checkInputArgs(self.args, self.inputs):
+            print self.name, "ERROR: Input args do not match."
+            self.container.fsm.transition('fail')
+
+        linkName = linkMap[self.args['Hand']]
+        graspFrame = self.container.om.findObjectByName(self.args['TargetFrame'])
+
         if self.container.planPose == None:
             self.container.planPose = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
         self.manipPlanResponse = self.container.manipPlanner.sendEndEffectorGoal(self.container.planPose, linkName, graspFrame.transform, waitForResponse=True, waitTimeout=0)
@@ -210,17 +223,19 @@ class ReachPlan(Action):
         response = self.manipPlanResponse.waitForResponse(timeout = 0)
 
         if response:
+            self.outputVals = {'JointPose': None}
             if response.plan_info[-1] > 10:
                 print "PLANNER REPORTS ERROR!"
-                self.container.fsm.transition(self.fail_action)
+                self.container.fsm.transition(self.failAction)
             else:
                 print "Planner reports success!"
-                self.container.fsm.transition(self.success_action)
+                self.container.fsm.transition(self.successAction)
 
                 #Viz Mode Logic:
                 if self.container.vizMode:
                     self.container.vizModeAnimation.append(response)
                     self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
+                    self.outputVals['JointPose'] = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
 
     def onExit(self):
         self.manipPlanResponse.finish()
@@ -245,13 +260,13 @@ class Reach(Action):
         if self.container.vizMode:
             #Update the current state to be the end of the last step for future planning
             self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
-            self.container.fsm.transition(self.success_action)
+            self.container.fsm.transition(self.successAction)
 
         #Execute Mode Logic
         else:
             self.counter -= 1
             if self.counter == 0:
-                self.container.fsm.transition(self.success_action)
+                self.container.fsm.transition(self.successAction)
 
     def onExit(self):
         self.counter = 10
@@ -268,7 +283,7 @@ class JointMovePlan(Action):
         self.retractPlanResponse = None
 
     def onEnter(self):
-        goalPoseJoints = RobotPoseGUIWrapper.getPose(self.args['group'], self.args['name'], self.args['side'])
+        goalPoseJoints = RobotPoseGUIWrapper.getPose(self.args['Group'], self.args['RobotPose'], self.args['Hand'])
         if self.container.planPose == None:
             self.container.planPose = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
         self.retractPlanResponse = self.container.manipPlanner.sendPoseGoal(self.container.planPose, goalPoseJoints, waitForResponse=True, waitTimeout=0)
@@ -279,7 +294,7 @@ class JointMovePlan(Action):
         if response:
             self.container.retractPlan = response
             self.container.vizModeAnimation.append(response)
-            self.container.fsm.transition(self.success_action)
+            self.container.fsm.transition(self.successAction)
 
     def onExit(self):
         self.counter = 10
@@ -301,13 +316,13 @@ class JointMove(Action):
         #Viz Mode Logic
         if self.container.vizMode:
             self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
-            self.container.fsm.transition(self.success_action)
+            self.container.fsm.transition(self.successAction)
 
         #Execute Mode Logic
         else:
             self.counter -= 1
             if self.counter == 0:
-                self.container.fsm.transition(self.success_action)
+                self.container.fsm.transition(self.successAction)
 
     def onExit(self):
         self.counter = 10
@@ -327,7 +342,7 @@ class Grip(Action):
 
         #Viz Mode Logic
         #Execute Mode Logic
-        self.container.fsm.transition(self.success_action)
+        self.container.fsm.transition(self.successAction)
 
     def onExit(self):
         return
@@ -347,7 +362,7 @@ class Release(Action):
 
         #Viz Mode Logic
         #Execute Mode Logic
-        self.container.fsm.transition(self.success_action)
+        self.container.fsm.transition(self.successAction)
 
     def onExit(self):
         return
@@ -365,17 +380,17 @@ class Fit(Action):
 
     def onUpdate(self):
 
-        self.container.fsm.transition(self.success_action)
+        self.container.fsm.transition(self.successAction)
 
         #Viz Mode Logic
         if self.container.vizMode:
-            self.container.fsm.transition(self.success_action)
+            self.container.fsm.transition(self.successAction)
 
         #Execute Mode Logic
         else:
             if self.container.affordanceServer[self.args['affordance']] > self.enterTime:
                 print "New affordance fit found."
-                self.container.fsm.transition(self.success_action)
+                self.container.fsm.transition(self.successAction)
 
     def onExit(self):
         self.waitTime = 0.0
@@ -404,12 +419,12 @@ class WaitForScan(Action):
 
         #Viz Mode Logic
         if self.container.vizMode:
-            self.container.fsm.transition(self.success_action)
+            self.container.fsm.transition(self.successAction)
 
         #Execute Mode Logic
         else:
             if self.container.multisenseDriver.displayedRevolution >= self.desiredRevolution:
-                self.container.fsm.transition(self.success_action)
+                self.container.fsm.transition(self.successAction)
 
     def onExit(self):
         self.currentRevolution = None

@@ -1,9 +1,21 @@
 from simplefsm import SimpleFsm
 from ddapp.timercallback import TimerCallback
 
+from collections import OrderedDict
 from sets import Set
 
 import actions
+
+def checkArgsPopulated(sequence):
+
+    noUserArgs = True
+
+    for action in sequence.keys():
+        args = sequence[action][3]
+        if 'USER' in args.values():
+            noUserArgs = False
+
+    return noUserArgs
 
 def checkValidity(sequence):
 
@@ -59,7 +71,7 @@ def checkValidity(sequence):
                     break
     return sequenceValid
 
-def generateUserArgList(sequence):
+def generateUserArgDict(sequence):
 
     userArgs = Set([])
 
@@ -69,8 +81,10 @@ def generateUserArgList(sequence):
             if arguments[argument] == 'USER':
                 userArgs.add(argument)
 
-    return list(userArgs)
+    return OrderedDict([(arg, 'USER') for arg in list(userArgs)])
 
+def generateUserArgList(sequence):
+    return generateUserArgDict(sequence).keys()
 
 class ActionSequence(object):
 
@@ -97,6 +111,7 @@ class ActionSequence(object):
 
         #Hardware Drivers
         self.handDriver = handDriver
+
         self.atlasDriver = atlasDriver
         self.multisenseDriver = multisenseDriver
         self.affordanceServer = affordanceServer
@@ -108,18 +123,24 @@ class ActionSequence(object):
 
         self.fsm = None
         self.fsmDebug = fsmDebug
+        self.name = 'None'
+        self.sequence = None
+        self.actionObjects = {}
 
-    def populate(self, sequence, initial):
+    def populate(self, name, sequence, initial):
 
         #Create and store all the actions, create and populate the FSM
         self.fsm = SimpleFsm(debug = self.fsmDebug)
         self.timerObject.callback = self.fsm.update
 
-        self.actionObjects = []
+        #Create and store data related to this sequence
+        self.name = name
+        self.sequence = sequence
+        self.actionObjects = {}
 
         #All FSMs need a default goal and a fail action
-        self.actionObjects.append(actions.Goal(self))
-        self.actionObjects.append(actions.Fail(self))
+        self.actionObjects['goal'] = actions.Goal(self)
+        self.actionObjects['fail'] = actions.Fail(self)
 
         #Populate the FSM with all action objects
         for name in sequence.keys():
@@ -127,14 +148,14 @@ class ActionSequence(object):
             actionClass = sequence[name][0]
 
             #Create an instance
-            actionPtr = actionClass(name,
-                                    sequence[name][1],
-                                    sequence[name][2],
-                                    sequence[name][3],
-                                    self)
+            actionPtr = actionClass(name,              #Name
+                                    sequence[name][1], #Success Transition
+                                    sequence[name][2], #Fail Transition
+                                    sequence[name][3], #Arg List
+                                    self)              #Sequence Object as data container
 
             #Store the instance
-            self.actionObjects.append(actionPtr)
+            self.actionObjects[name] = actionPtr
 
             #Use the instance to populate the FSM with success/fail transitions
             self.fsm.addTransition(name, sequence[name][1])
@@ -147,18 +168,15 @@ class ActionSequence(object):
                 self.fsm.onUpdate['init'] = self.fsm.initTransition
 
         #Populate the fsm with all appropriate function pointers
-        for actionPtr in self.actionObjects:
+        for actionPtr in self.actionObjects.values():
             self.fsm.onEnter[actionPtr.name] = actionPtr.onEnter
             self.fsm.onUpdate[actionPtr.name] = actionPtr.onUpdate
             self.fsm.onExit[actionPtr.name] = actionPtr.onExit
 
     def getActionByName(self, name):
-
-        for action in self.actionObjects:
-            if self.actionObjects[action].name == name:
-                return action
+        if name in self.actionObjects.keys():
+            return self.actionObjects[name]
         return None
-
 
     def reset(self):
         self.fsm.reset()
@@ -173,32 +191,12 @@ class ActionSequence(object):
     def stop(self):
         self.fsm.stop()
 
+    def clear(self):
+        self.reset()
+        self.name = 'None'
+        self.sequence = {}
+        self.actionObjects = {}
 
-
-#if __name__ == '__main__':
-
-#states = {WalkPlan    : [Walk, Fail,        {'target':'grasp stance'} ],
-#          Walk        : [WaitForScan, Fail, [None] ],
-#          WaitForScan : [Fit, Fail,         [None] ],
-#          Fit         : [ReachPlan, Fail,   [None] ],
-#          ReachPlan   : [Reach, WalkPlan,   {'target':'grasp frame', 'hand':'left'} ],
-#          Reach       : [Grip, Fail,        [None] ],
-#          Grip        : [RetractPlan, Fail, [None] ],
-#          RetractPlan : [Retract, Fail,     {'side':'left'} ],
-#          Retract     : [Goal, Fail,        [None] ]}
-
-
-#reach = ActionSequence(sequence = states,
-#                       initial = WaitForScan,
-#                       objectModel = om,
-#                       manipPlanner = manipPlanner,
-#                       footstepPlanner = footstepsDriver,
-#                       sensorJointController = robotStateJointController)
-
-#timer = TimerCallback()
-#timer.callback = reach.fsm.update
-#timer.targetFps = 3
-#reach.fsm.start()
-
-#timer.start()
-#self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(self.graspStanceFrame.transform, waitForResponse=True)
+    def play(self):
+        if self.vizModeAnimation != []:
+            self.playbackFunction(self.vizModeAnimation)
