@@ -25,17 +25,17 @@ def checkValidity(sequence):
     validActions = actionList + ['goal', 'fail']
 
     for action in actionList:
-        #Make sure the first arg is a class by seeing if it's type is 'type'
-        #that name via the 'from actions import *' import
+        #Make sure the first arg is a class by seeing if it's type is a class (i.e. it is 'type')
         className = sequence[action][0]
         if not type(className) == type:
             print "Specified action argument is not an action class (or any class at all)"
             sequenceValid = False
+        #If it is a class, make sure it's from the actions module
         elif className.__name__ not in dir(actions):
             print "Specified action class:", className.__name__, "is not recognized"
             sequenceValid = False
 
-        #Make sure the second and third arguments are valid action names
+        #Make sure the second and third arguments are valid action instance names
         success = sequence[action][1]
         if success not in validActions:
             print "Action:", action, "requesting success transition to unknown state:", success
@@ -65,7 +65,7 @@ def checkValidity(sequence):
                 continue
             else:
                 producerType = sequence[producer][0]
-                if arg not in producerType.outputs:
+                if arg not in producerType.outputs.keys():
                     print action, "needs", arg, "and designated it as coming from", producer, ", which is of type", producerType.__name__, "which does not make", arg
                     sequenceValid = False
                     break
@@ -161,6 +161,10 @@ class ActionSequence(object):
             self.fsm.addTransition(name, sequence[name][1])
             self.fsm.addTransition(name, sequence[name][2])
 
+            #all states need a transition to fail to catch errors
+            if sequence[name][2] != 'fail':
+                self.fsm.addTransition(name, 'fail')
+
             #Setup the special transition to the init state
             if name == initial:
                 self.fsm.addTransition('init', name)
@@ -169,9 +173,20 @@ class ActionSequence(object):
 
         #Populate the fsm with all appropriate function pointers
         for actionPtr in self.actionObjects.values():
-            self.fsm.onEnter[actionPtr.name] = actionPtr.onEnter
+            self.fsm.onEnter[actionPtr.name] = actionPtr.argParseAndEnter
             self.fsm.onUpdate[actionPtr.name] = actionPtr.onUpdate
             self.fsm.onExit[actionPtr.name] = actionPtr.onExit
+
+        #Now that all of the actions are created, the argument list needs
+        #to be modified to have action references instead of names
+
+        #Look at each action object...
+        for actionRef in self.actionObjects.values():
+            #Now look at each argument in the argument list...
+            for argName, argVal in actionRef.args.iteritems():
+                #If the argument's data is an action instance name, replace with a ref
+                if argVal in self.actionObjects.keys():
+                    actionRef.args[argName] = self.actionObjects[argVal]
 
     def getActionByName(self, name):
         if name in self.actionObjects.keys():
