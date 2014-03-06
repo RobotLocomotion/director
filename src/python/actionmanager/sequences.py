@@ -70,6 +70,19 @@ drill_reach_seq = {'walk_plan'    : [WalkPlan,      'walk',          'fail',    
 
 sequenceDict['DrillReachLeft'] = [drill_reach_seq, 'wait_for_scan', 'Sequence']
 
+named_pose_seq = {'manip_mode' : [ChangeMode,    'joint_plan', 'fail', {'NewMode' : 'manip'} ],
+                  'joint_plan' : [JointMovePlan, 'joint_move', 'fail', {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'USER'} ],
+                  'joint_move' : [JointMove,     'goal',       'fail', {'JointPlan': 'joint_plan'} ]}
+
+sequenceDict['NamedPose'] = [named_pose_seq, 'manip_mode', 'Sequence']
+
+simple_walk_seq = {'step_mode' : [ChangeMode,    'walk_plan', 'fail', {'NewMode'   : 'stand'} ],
+                   'walk_plan' : [WalkPlan,      'walk',      'fail', {'WalkTarget': 'USER'} ],
+                   'walk'      : [Walk,          'goal',      'fail', {'WalkPlan'  : 'walk_plan'} ]}
+
+sequenceDict['SimpleWalk'] = [simple_walk_seq, 'step_mode', 'Sequence']
+
+
 
 #Make a list out of the sequence ditionary, don't touch this line, just add to the dictionary
 sequenceList = [[key]+sequenceDict[key] for key in sequenceDict.keys()]
