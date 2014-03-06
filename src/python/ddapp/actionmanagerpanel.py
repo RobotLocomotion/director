@@ -48,11 +48,14 @@ class ActionManagerPanel(object):
         self.updateTimer.targetFps = 5
         self.updateTimer.start()
 
-        self.populateSequenceSelector()
+        self.templateTreeItems = {}
+        self.savedTreeItems = {}
+
+        self.populateTreeWidget(self.widget.blankTemplates.templateTree, sequences.sequenceDict, self.templateTreeItems)
 
         #Connect signals
-        self.widget.sequenceSelector.sequenceTree.currentItemChanged.connect(self.selectionChanged)
-        self.widget.sequenceSelector.updateButton.clicked.connect(self.updateClicked)
+        self.widget.blankTemplates.templateTree.currentItemChanged.connect(self.selectionChanged)
+        self.widget.saveButton.clicked.connect(self.saveClicked)
 
         self.widget.statusDisplay.createButton.clicked.connect(self.createActionSequence)
         self.widget.statusDisplay.visualizeButton.clicked.connect(self.visualizeActionSequence)
@@ -106,33 +109,31 @@ class ActionManagerPanel(object):
         if self.currentAction != '':
             self.sequenceController.stop()
 
-
-    def populateSequenceSelector(self):
+    def populateTreeWidget(self, treeWidget, dataDict, treeDict):
         #Populate this widget with sequences from the python library
-        self.treeItems = {}
 
-        for (seqName, seq, startPoint, typeName) in sequences.sequenceList:
+        for seqName in dataDict.keys():
+            seq, startPoints, typeName = dataDict[seqName]
             if typeName == 'Primitive':
                 highLevelArgs = actionsequence.generateUserArgDict(seq)
                 item = QtGui.QTreeWidgetItem()
                 item.setText(0, seqName)
-                item.setText(1, typeName)
+                item.setText(1, seq[seqName][0].__name__)
                 if seq[seqName][3] != []:
                     item.setText(2, ", ".join(highLevelArgs.keys()))
                     item.setText(3, ", ".join([highLevelArgs[val] for val in highLevelArgs.keys()]))
                 else:
                     item.setText(2, "None")
-                self.widget.sequenceSelector.sequenceTree.addTopLevelItem(item)
-                self.treeItems[seqName] = [item, None]
+                treeWidget.addTopLevelItem(item)
+                treeDict[seqName] = [item, None]
             else:
                 highLevelArgs = actionsequence.generateUserArgList(seq)
                 item = QtGui.QTreeWidgetItem()
                 item.setText(0, seqName)
-                item.setText(1, typeName)
                 item.setText(2, ", ".join(highLevelArgs))
-                self.widget.sequenceSelector.sequenceTree.addTopLevelItem(item)
+                treeWidget.addTopLevelItem(item)
 
-                self.treeItems[seqName] = [item, {}]
+                treeDict[seqName] = [item, {}]
 
                 for subAction in seq.keys():
                     child = QtGui.QTreeWidgetItem(item)
@@ -146,9 +147,9 @@ class ActionManagerPanel(object):
                         child.setText(3, ", ".join([argDict[val] for val in argDict.keys()]))
                     else:
                         child.setText(2, "None")
-                    self.treeItems[seqName][1][subAction] = child
+                    treeDict[seqName][1][subAction] = child
 
-    def updateClicked(self, event):
+    def saveClicked(self, event):
 
         #Extract the data from the edit boxes
         newDataDict = {}
@@ -167,9 +168,8 @@ class ActionManagerPanel(object):
                     sequences.sequenceDict[self.currentAction][0][subAction][3][arg] = newDataDict[arg]
 
         #Repopulate the sequence selector with this data
-        self.widget.sequenceSelector.sequenceTree.clear()
-        self.populateSequenceSelector()
-
+        self.widget.blankTemplates.templateTree.clear()
+        self.populateTreeWidget(self.widget.blankTemplates.templateTree, sequences.sequenceDict, self.templateTreeItems)
 
     def clearArgEditor(self):
         for child in self.widget.argumentEditor.findChildren(QtGui.QWidget):
