@@ -325,6 +325,7 @@ if usePlanning:
     as_timer.start()
     affordanceServer = {'drill' : time()}
     actionManager = actionsequence.ActionSequence(objectModel = om,
+                                                  robotModel = robotStateModel,
                                                   sensorJointController = robotStateJointController,
                                                   playbackFunction = playPlans,
                                                   timerObject = as_timer,

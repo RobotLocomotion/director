@@ -45,30 +45,21 @@ simple_reach_seq = {'walk_plan'    : [WalkPlan,      'walk',          'fail',   
 
 sequenceDict['SimpleReach'] = [simple_reach_seq, 'wait_for_scan', 'Sequence']
 
+drill_reach_seq = {'pose_search'   : [PoseSearch,    'reach_plan',    'fail',      {'Affordance': 'drill', 'Hand' : 'right'} ],
+                   'walk_plan'     : [WalkPlan,      'walk',          'fail',      {'WalkTarget': 'pose_search'} ],
+                   'walk'          : [Walk,          'wait_for_scan', 'fail',      {'WalkPlan': 'walk_plan'} ],
+                   'wait_for_scan' : [WaitForScan,   'fit',           'fail',      {} ],
+                   'fit'           : [Fit,           'pose_search',   'fail',      {'Affordance': 'drill'} ],
+                   'reach_plan'    : [ReachPlan,     'pregrasp_plan', 'walk_plan', {'TargetFrame': 'pose_search', 'Hand': 'pose_search', 'Constraints': 'none'} ],
+                   'pregrasp_plan' : [JointMovePlan, 'pregrasp_move', 'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'right'} ],
+                   'pregrasp_move' : [JointMove,     'reach_plan2',   'fail',      {'JointPlan': 'retract_plan'} ],
+                   'reach_plan2'   : [ReachPlan,     'reach',         'fail',      {'TargetFrame': 'pose_search', 'Hand': 'pose_search', 'Constraints': 'none'} ],
+                   'reach'         : [Reach,         'grip',          'fail',      {'JointPlan': 'reach_plan'} ],
+                   'grip'          : [Grip,          'retract_plan',  'fail',      {'Hand': 'pose_search'} ],
+                   'retract_plan'  : [JointMovePlan, 'retract_move',  'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'right'} ],
+                   'retract_move'  : [JointMove,     'goal',          'fail',      {'JointPlan': 'retract_plan'} ]}
 
-drill_reach_seq = {'walk_plan'    : [WalkPlan,      'walk',          'fail',      {'WalkTarget': 'grasp stance right'} ],
-                   'walk'         : [Walk,          'wait_for_scan', 'fail',      {'WalkPlan': 'walk_plan'} ],
-                   'wait_for_scan': [WaitForScan,   'fit',           'fail',      {} ],
-                   'fit'          : [Fit,           'reach_plan',    'fail',      {'Affordance': 'drill'} ],
-                   'reach_plan'   : [ReachPlan,     'reach',         'walk_plan', {'TargetFrame': 'grasp frame', 'Hand': 'right', 'Constraints': 'none'} ],
-                   'reach'        : [Reach,         'grip',          'fail',      {'JointPlan': 'reach_plan'} ],
-                   'grip'         : [Grip,          'retract_plan',  'fail',      {'Hand': 'pose_search'} ],
-                   'retract_plan' : [JointMovePlan, 'retract_move',  'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'right'} ],
-                   'retract_move' : [JointMove,     'goal',          'fail',      {'JointPlan': 'retract_plan'} ]}
-
-sequenceDict['DrillReachRight'] = [drill_reach_seq, 'wait_for_scan', 'Sequence']
-
-drill_reach_seq = {'walk_plan'    : [WalkPlan,      'walk',          'fail',      {'WalkTarget': 'grasp stance left'} ],
-                   'walk'         : [Walk,          'wait_for_scan', 'fail',      {'WalkPlan': 'walk_plan'} ],
-                   'wait_for_scan': [WaitForScan,   'fit',           'fail',      {} ],
-                   'fit'          : [Fit,           'reach_plan',    'fail',      {'Affordance': 'drill'} ],
-                   'reach_plan'   : [ReachPlan,     'reach',         'walk_plan', {'TargetFrame': 'grasp frame', 'Hand': 'left', 'Constraints': 'none'} ],
-                   'reach'        : [Reach,         'grip',          'fail',      {'JointPlan': 'reach_plan'} ],
-                   'grip'         : [Grip,          'retract_plan',  'fail',      {'Hand': 'pose_search'} ],
-                   'retract_plan' : [JointMovePlan, 'retract_move',  'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'left'} ],
-                   'retract_move' : [JointMove,     'goal',          'fail',      {'JointPlan': 'retract_plan'} ]}
-
-sequenceDict['DrillReachLeft'] = [drill_reach_seq, 'wait_for_scan', 'Sequence']
+sequenceDict['DrillReachR'] = [drill_reach_seq, 'pose_search', 'Sequence']
 
 named_pose_seq = {'manip_mode' : [ChangeMode,    'joint_plan', 'fail', {'NewMode' : 'manip'} ],
                   'joint_plan' : [JointMovePlan, 'joint_move', 'fail', {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'USER'} ],
@@ -81,8 +72,6 @@ simple_walk_seq = {'step_mode' : [ChangeMode,    'walk_plan', 'fail', {'NewMode'
                    'walk'      : [Walk,          'goal',      'fail', {'WalkPlan'  : 'walk_plan'} ]}
 
 sequenceDict['SimpleWalk'] = [simple_walk_seq, 'step_mode', 'Sequence']
-
-
 
 #Make a list out of the sequence ditionary, don't touch this line, just add to the dictionary
 sequenceList = [[key]+sequenceDict[key] for key in sequenceDict.keys()]

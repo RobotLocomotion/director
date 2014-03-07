@@ -90,6 +90,7 @@ class ActionSequence(object):
 
     def __init__(self,
                  objectModel,
+                 robotModel,
                  sensorJointController,
                  playbackFunction,
                  timerObject,
@@ -103,6 +104,7 @@ class ActionSequence(object):
 
         #Planner objects
         self.om = objectModel
+        self.robotModel = robotModel
         self.timerObject = timerObject
         self.manipPlanner = manipPlanner
         self.footstepPlanner = footstepPlanner
