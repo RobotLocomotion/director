@@ -3,6 +3,8 @@ import numpy as np
 from ddapp import robotstate
 from ddapp import transformUtils
 from ddapp import visualization as vis
+from ddapp import segmentation
+
 from ddapp.plansequence import RobotPoseGUIWrapper
 
 # Declare all valid inputs/ouputs here
@@ -594,24 +596,17 @@ class Fit(Action):
         Action.__init__(self, name, success, fail, args, container)
 
     def onEnter(self):
-        self.enterTime = time()
+        return
 
     def onUpdate(self):
+        pd = self.container.om.findObjectByName('Multisense').model.revPolyData
+        self.container.om.removeFromObjectModel(self.container.om.findObjectByName('debug'))
+        segmentation.findAndFitDrillBarrel(pd, self.container.robotModel.getLinkFrame('utorso'))
 
         self.success()
 
-        # Viz Mode Logic
-        if self.container.vizMode:
-            self.success()
-
-        # Execute Mode Logic
-        else:
-            if self.container.affordanceServer[self.parsedArgs['affordance']] > self.enterTime:
-                print "New affordance fit found."
-                self.success()
-
     def onExit(self):
-        self.waitTime = 0.0
+        return
 
 
 class WaitForScan(Action):

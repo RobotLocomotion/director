@@ -3,6 +3,7 @@ from actions import *
 from collections import OrderedDict
 
 #Create a list of all sequences
+primitivesDict = OrderedDict([])
 sequenceDict = OrderedDict([])
 
 for name, value in actions.__dict__.iteritems():
@@ -13,7 +14,7 @@ for name, value in actions.__dict__.iteritems():
         argDict = {}
         for arg in value.inputs:
             argDict[arg] = 'USER'
-        sequenceDict[name] = [{name : [value, 'goal', 'fail', argDict]}, name, 'Primitive']
+        primitivesDict[name] = [{name : [value, 'goal', 'fail', argDict]}, name, 'Primitive']
 
 
 #Create new sequences below and add each to the list.
@@ -59,7 +60,7 @@ drill_reach_seq = {'pose_search'   : [PoseSearch,    'reach_plan',    'fail',   
                    'retract_plan'  : [JointMovePlan, 'retract_move',  'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'right'} ],
                    'retract_move'  : [JointMove,     'goal',          'fail',      {'JointPlan': 'retract_plan'} ]}
 
-sequenceDict['DrillReachR'] = [drill_reach_seq, 'pose_search', 'Sequence']
+sequenceDict['DrillReachR'] = [drill_reach_seq, 'wait_for_scan', 'Sequence']
 
 named_pose_seq = {'manip_mode' : [ChangeMode,    'joint_plan', 'fail', {'NewMode' : 'manip'} ],
                   'joint_plan' : [JointMovePlan, 'joint_move', 'fail', {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'USER'} ],
