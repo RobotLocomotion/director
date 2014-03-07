@@ -13,83 +13,78 @@
   <property name="windowTitle">
    <string>Action Sequence Controller</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout_5">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_5">
-     <item>
-      <widget class="QGroupBox" name="blankTemplates">
-       <property name="minimumSize">
-        <size>
-         <width>360</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="title">
-        <string>Blank Templates</string>
-       </property>
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <item>
-         <widget class="QTreeWidget" name="templateTree">
-          <column>
-           <property name="text">
-            <string>Action</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>Type</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>Arguments</string>
-           </property>
-          </column>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="savedTemplates">
-       <property name="title">
-        <string>Saved Templates</string>
-       </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <widget class="QTreeWidget" name="savedTree">
-          <property name="minimumSize">
-           <size>
-            <width>300</width>
-            <height>0</height>
-           </size>
-          </property>
-          <column>
-           <property name="text">
-            <string>Name</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>Type</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>Arguments</string>
-           </property>
-          </column>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QGroupBox" name="actionSequences">
+     <property name="title">
+      <string>Action Sequences</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QTreeWidget" name="templateTree">
+        <column>
+         <property name="text">
+          <string>Action</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Type</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Arguments</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <widget class="QGroupBox" name="argumentEditor">
+     <property name="minimumSize">
+      <size>
+       <width>360</width>
+       <height>100</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>Argument Editor</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QScrollArea" name="scrollArea">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Sunken</enum>
+        </property>
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="scrollGrid">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>899</width>
+           <height>292</height>
+          </rect>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2"/>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <spacer name="horizontalSpacer">
+      <spacer name="horizontalSpacer_2">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
@@ -109,27 +104,7 @@
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer_6">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="createButton_2">
-       <property name="text">
-        <string>Create</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_2">
+      <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
@@ -142,20 +117,6 @@
       </spacer>
      </item>
     </layout>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="argumentEditor">
-     <property name="minimumSize">
-      <size>
-       <width>360</width>
-       <height>100</height>
-      </size>
-     </property>
-     <property name="title">
-      <string>Argument Editor</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_2"/>
-    </widget>
    </item>
    <item>
     <widget class="QGroupBox" name="statusDisplay">
@@ -175,6 +136,13 @@
          <widget class="QPushButton" name="createButton">
           <property name="text">
            <string>Create</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="clearButton">
+          <property name="text">
+           <string>Clear</string>
           </property>
          </widget>
         </item>

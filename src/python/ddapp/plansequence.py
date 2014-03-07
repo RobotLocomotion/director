@@ -342,8 +342,8 @@ class PlanSequence(object):
         self.drillAffordance.actor.SetUserTransform(drillFrame)
         self.drillFrame = vis.showFrame(drillFrame, 'drill frame', parent=self.drillAffordance, visible=True, scale=0.2)
 
-        self.computeGraspFrame()
-        self.computeStanceFrame()
+        #self.computeGraspFrame()
+        #self.computeStanceFrame()
 
     def findDrillAffordance(self):
         self.drillAffordance = om.findObjectByName('drill')

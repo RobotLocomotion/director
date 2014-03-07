@@ -1,6 +1,8 @@
 from time import time
+import numpy as np
 from ddapp import robotstate
-
+from ddapp import transformUtils
+from ddapp import visualization as vis
 from ddapp.plansequence import RobotPoseGUIWrapper
 
 # Declare all valid inputs/ouputs here
@@ -277,21 +279,96 @@ class Walk(Action):
         else:
             self.walkStart = None
 
+def computeGroundFrame(robotModel):
+    '''
+    Given a robol model, returns a vtkTransform at a position between
+    the feet, on the ground, with z-axis up and x-axis aligned with the
+    robot pelvis x-axis.
+    '''
+    t1 = robotModel.getLinkFrame('l_foot')
+    t2 = robotModel.getLinkFrame('r_foot')
+    pelvisT = robotModel.getLinkFrame('pelvis')
+
+    xaxis = [1.0, 0.0, 0.0]
+    pelvisT.TransformVector(xaxis, xaxis)
+    xaxis = np.array(xaxis)
+    zaxis = np.array([0.0, 0.0, 1.0])
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+
+    stancePosition = (np.array(t2.GetPosition()) + np.array(t1.GetPosition())) / 2.0
+
+    footHeight = 0.0811
+
+    t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(stancePosition)
+    t.Translate([0.0, 0.0, -footHeight])
+
+    return t
+
 class PoseSearch(Action):
 
-    inputs = ['Affordance', 'Hand', 'Constraints']
-    outputs = ['RobotPose', 'WalkTarget', 'Hand']
+    inputs = ['Affordance', 'Hand']
+    outputs = {'TargetFrame' : None, 'WalkTarget' : None, 'Hand' : None}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-        self.counter = 10
-        self.manipPlanResponse = None
 
     def onEnter(self):
+
+        self.targetAffordance = self.container.om.findObjectByName(self.parsedArgs['Affordance'])
+        self.targetAffordanceFrame = self.container.om.findObjectByName(self.parsedArgs['Affordance'] + ' frame')
+
+        self.outputs['TargetFrame'] = self.parsedArgs['Affordance'] + ' grasp frame'
+        self.outputs['WalkTarget'] = self.parsedArgs['Affordance'] + ' stance frame'
+        self.outputs['Hand'] = self.parsedArgs['Hand']
+
+        #Calculate where to place the hand (hard coded offsets based on drill, just for testing)
+        # for left_base_link
+        position = [-0.12, 0.0, 0.028]
+        rpy = [0, 90, 0]
+        grasp = transformUtils.frameFromPositionAndRPY(position, rpy)
+        grasp.Concatenate(self.targetAffordanceFrame.transform)
+        self.graspFrame = vis.updateFrame(grasp, self.outputs['TargetFrame'], parent=self.targetAffordance, visible=True, scale=0.25)
+
+        #Calculate where to place the walking target (hard coded offsets based on drill, just for testing)
+        graspFrame = self.graspFrame.transform
+        groundFrame = computeGroundFrame(self.container.robotModel)
+        groundHeight = groundFrame.GetPosition()[2]
+
+        graspPosition = np.array(graspFrame.GetPosition())
+        graspYAxis = [0.0, 1.0, 0.0]
+        graspZAxis = [0.0, 0.0, 1.0]
+        graspFrame.TransformVector(graspYAxis, graspYAxis)
+        graspFrame.TransformVector(graspZAxis, graspZAxis)
+
+        xaxis = graspZAxis
+        zaxis = [0, 0, 1]
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        xaxis = np.cross(yaxis, zaxis)
+
+        graspGroundFrame = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        graspGroundFrame.PostMultiply()
+        graspGroundFrame.Translate(graspPosition[0], graspPosition[1], groundHeight)
+
+        if self.parsedArgs['Hand'] == 'right':
+            position = [-0.57, 0.4, 0.0]
+        else:
+            position = [-0.57, -0.4, 0.0]
+        rpy = [0, 0, 0]
+
+        stance = transformUtils.frameFromPositionAndRPY(position, rpy)
+        stance.Concatenate(graspGroundFrame)
+
+        self.stanceFrame = vis.updateFrame(stance, self.outputs['WalkTarget'], parent=self.targetAffordance, visible=True, scale=0.25)
+
         return
 
     def onUpdate(self):
-        return
+        self.success()
 
     def onExit(self):
         return
@@ -299,11 +376,10 @@ class PoseSearch(Action):
 class ReachPlan(Action):
 
     inputs = ['TargetFrame', 'Hand', 'Constraints']
-    outputs = ['JointPlan']
+    outputs = {'JointPlan' : None}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-        self.counter = 10
         self.manipPlanResponse = None
 
     def onEnter(self):
@@ -320,7 +396,6 @@ class ReachPlan(Action):
         response = self.manipPlanResponse.waitForResponse(timeout = 0)
 
         if response:
-            self.outputVals = {'JointPose': None}
             if response.plan_info[-1] > 10:
                 print "PLANNER REPORTS ERROR!"
                 self.fail()
@@ -332,7 +407,7 @@ class ReachPlan(Action):
                 if self.container.vizMode:
                     self.container.vizModeAnimation.append(response)
                     self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
-                    self.outputVals['JointPose'] = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
+                    self.outputs['JointPlan'] = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
 
     def onExit(self):
         self.manipPlanResponse.finish()
@@ -342,7 +417,7 @@ class ReachPlan(Action):
 class Reach(Action):
 
     inputs = ['JointPlan']
-    outputs = ['RobotPose']
+    outputs = {}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)

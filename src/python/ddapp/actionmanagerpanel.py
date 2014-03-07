@@ -51,17 +51,18 @@ class ActionManagerPanel(object):
         self.templateTreeItems = {}
         self.savedTreeItems = {}
 
-        self.populateTreeWidget(self.widget.blankTemplates.templateTree, sequences.sequenceDict, self.templateTreeItems)
+        self.populateTreeWidget(self.widget.actionSequences.templateTree, sequences.sequenceDict, self.templateTreeItems)
 
         #Connect signals
-        self.widget.blankTemplates.templateTree.currentItemChanged.connect(self.selectionChanged)
-        self.widget.saveButton.clicked.connect(self.saveClicked)
+        self.widget.actionSequences.templateTree.currentItemChanged.connect(self.selectionChanged)
+        self.ui.saveButton.clicked.connect(self.saveClicked)
 
         self.widget.statusDisplay.createButton.clicked.connect(self.createActionSequence)
         self.widget.statusDisplay.visualizeButton.clicked.connect(self.visualizeActionSequence)
         self.widget.statusDisplay.executeButton.clicked.connect(self.runActionSequence)
         self.widget.statusDisplay.resetButton.clicked.connect(self.resetActionSequence)
         self.widget.statusDisplay.stopButton.clicked.connect(self.stopActionSequence)
+        self.widget.statusDisplay.clearButton.clicked.connect(self.clearActionSequence)
 
 	self.updatePanel()
 
@@ -109,6 +110,10 @@ class ActionManagerPanel(object):
         if self.currentAction != '':
             self.sequenceController.stop()
 
+    def clearActionSequence(self):
+        if self.currentAction != '':
+            self.sequenceController.clear()
+
     def populateTreeWidget(self, treeWidget, dataDict, treeDict):
         #Populate this widget with sequences from the python library
 
@@ -152,6 +157,7 @@ class ActionManagerPanel(object):
     def saveClicked(self, event):
 
         #Extract the data from the edit boxes
+        newDict = False
         newDataDict = {}
 
         for i in range(len(self.widget.argumentEditor.findChildren(QtGui.QWidget))-1):
@@ -159,20 +165,38 @@ class ActionManagerPanel(object):
             child1 = children[i]
             child2 = children[i+1]
             if isinstance(child1, QtGui.QLabel) and isinstance(child2, QtGui.QLineEdit):
-                newDataDict[str(child1.text)] = str(child2.text)
+                if str(child1.text) == 'Name: ':
+                    if str(child2.text) != self.currentAction:
+                        newDict = True
+                        newName = str(child2.text)
+                        print newName
+                else:
+                    newDataDict[str(child1.text)] = str(child2.text)
 
         #Go to the entry for the current action in the sequence dictionary and save the data
-        for subAction in sequences.sequenceDict[self.currentAction][0].keys():
-            for arg in sequences.sequenceDict[self.currentAction][0][subAction][3]:
+        if newDict:
+            name = newName
+            sequences.sequenceDict[name] = deepcopy(sequences.sequenceDict[self.currentAction])
+            #if copyied item is a primitive, this are a big messy... fix this later
+            if sequences.sequenceDict[name][2] == 'Primitive':
+                sequences.sequenceDict[name][1] = name
+                sequences.sequenceDict[name][0][name] = deepcopy(sequences.sequenceDict[name][0][self.currentAction])
+                sequences.sequenceDict[name][0].pop(self.currentAction)
+        else:
+            name = self.currentAction
+
+        for subAction in sequences.sequenceDict[name][0].keys():
+            for arg in sequences.sequenceDict[name][0][subAction][3]:
                 if arg in newDataDict.keys():
-                    sequences.sequenceDict[self.currentAction][0][subAction][3][arg] = newDataDict[arg]
+                    sequences.sequenceDict[name][0][subAction][3][arg] = newDataDict[arg]
 
         #Repopulate the sequence selector with this data
-        self.widget.blankTemplates.templateTree.clear()
-        self.populateTreeWidget(self.widget.blankTemplates.templateTree, sequences.sequenceDict, self.templateTreeItems)
+        self.widget.actionSequences.templateTree.clear()
+        self.populateTreeWidget(self.widget.actionSequences.templateTree, sequences.sequenceDict, self.templateTreeItems)
 
     def clearArgEditor(self):
-        for child in self.widget.argumentEditor.findChildren(QtGui.QWidget):
+        #for child in self.widget.argumentEditor.findChildren(QtGui.QWidget):
+        for child in self.ui.scrollGrid.findChildren(QtGui.QWidget):
             child.delete()
 
 
@@ -186,12 +210,28 @@ class ActionManagerPanel(object):
             self.clearArgEditor()
 
             if self.currentAction in sequences.sequenceDict.keys():
+                #Add all the data of this dictionary into a grid on the UI
+                grid = self.ui.scrollGrid.layout()
+                lineNum = 0
+
+                #First create a widget to display the name
+                grid.addWidget(QtGui.QLabel('Name: '),lineNum,0)
+                grid.addWidget(QtGui.QLineEdit(self.currentAction),lineNum,2)
+                lineNum += 1
+
                 #Create a grid of arguments and boxes to edit them
-                grid = self.widget.argumentEditor.layout()
-                argList = actionsequence.generateUserArgDict(sequences.sequenceDict[self.currentAction][0])
-                for count, key in enumerate(argList.keys()):
-                    grid.addWidget(QtGui.QLabel(key),count,0)
-                    grid.addWidget(QtGui.QLineEdit(argList[key]),count,1)
+                seq = sequences.sequenceDict[self.currentAction][0]
+
+                for step in seq.keys():
+                    grid.addWidget(QtGui.QLabel(step),lineNum,0)
+
+                    if len(seq[step][3].keys()) == 0:
+                        lineNum += 1
+                    else:
+                        for arg in seq[step][3].keys():
+                            grid.addWidget(QtGui.QLabel(arg),lineNum,1)
+                            grid.addWidget(QtGui.QLineEdit(seq[step][3][arg]),lineNum,2)
+                            lineNum += 1
 
         else:
             self.currentAction = ''
