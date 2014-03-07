@@ -173,26 +173,39 @@ class ChangeMode(Action):
         self.enterTime = 0.0
 
     def onEnter(self):
-        self.enterTime = time()
-        self.behaviorTarget = self.parsedArgs['NewMode']
-        self.container.atlasDriver.sendBehaviorCommand(self.behaviorTarget)
+
+        # Logic for viz-mode:
+        if self.container.vizMode:
+            self.currentBehavior = self.parsedArgs['NewMode']
+
+        # Logic for execute mode:
+        else:
+            self.enterTime = time()
+            self.behaviorTarget = self.parsedArgs['NewMode']
+            self.container.atlasDriver.sendBehaviorCommand(self.behaviorTarget)
 
     def onUpdate(self):
-        # Error checking on bad mode types
-        if self.behaviorTarget not in self.container.atlasDriver.getBehaviorMap().values():
-            print 'ERROR: desired transition does not exist, failing'
-            self.fail()
-        else:
-            self.currentBehavior = self.container.atlasDriver.getCurrentBehaviorName()
 
-            if self.currentBehavior == self.behaviorTarget:
-                self.success()
+        # Logic for viz-mide:
+        if self.container.vizMode:
+            self.success()
+
+        # Error checking on bad mode types
+        else:
+            if self.behaviorTarget not in self.container.atlasDriver.getBehaviorMap().values():
+                print 'ERROR: desired transition does not exist, failing'
+                self.fail()
             else:
-                if time() > self.enterTime + self.timeOut:
-                    print 'ERROR: mode change timed out'
-                    self.fail()
+                self.currentBehavior = self.container.atlasDriver.getCurrentBehaviorName()
+
+                if self.currentBehavior == self.behaviorTarget:
+                    self.success()
                 else:
-                    return
+                    if time() > self.enterTime + self.timeOut:
+                        print 'ERROR: mode change timed out'
+                        self.fail()
+                    else:
+                        return
 
     def onExit(self):
         return
