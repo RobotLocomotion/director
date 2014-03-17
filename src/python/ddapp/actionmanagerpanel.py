@@ -118,41 +118,30 @@ class ActionManagerPanel(object):
         #Populate this widget with sequences from the python library
 
         for seqName in dataDict.keys():
-            seq, startPoints, typeName = dataDict[seqName]
-            if typeName == 'Primitive':
-                highLevelArgs = actionsequence.generateUserArgDict(seq)
-                item = QtGui.QTreeWidgetItem()
-                item.setText(0, seqName)
-                item.setText(1, seq[seqName][0].__name__)
-                if seq[seqName][3] != []:
-                    item.setText(2, ", ".join(highLevelArgs.keys()))
-                    item.setText(3, ", ".join([highLevelArgs[val] for val in highLevelArgs.keys()]))
+            seq, startPoints = dataDict[seqName]
+
+            highLevelArgs = actionsequence.generateUserArgList(seq)
+            item = QtGui.QTreeWidgetItem()
+            item.setText(0, seqName)
+            item.setText(2, ", ".join(highLevelArgs))
+            treeWidget.addTopLevelItem(item)
+
+            treeDict[seqName] = [item, {}]
+
+            for subAction in seq.keys():
+                child = QtGui.QTreeWidgetItem(item)
+                child.setText(0, subAction)
+                child.setText(1, seq[subAction][0].__name__)
+                argDict = seq[subAction][3]
+                if argDict != {}:
+                    inputNames = seq[subAction][3].keys()
+                    inputArgs = seq[subAction]
+                    child.setText(2, ", ".join(argDict.keys()))
+                    #child.setText(3, ", ".join([argDict[val] for val in argDict.keys()]))
+                    child.setText(3, ", ".join([argDict[val] if isinstance(argDict[val],str) else argDict[val].name for val in argDict.keys()]))
                 else:
-                    item.setText(2, "None")
-                treeWidget.addTopLevelItem(item)
-                treeDict[seqName] = [item, None]
-            else:
-                highLevelArgs = actionsequence.generateUserArgList(seq)
-                item = QtGui.QTreeWidgetItem()
-                item.setText(0, seqName)
-                item.setText(2, ", ".join(highLevelArgs))
-                treeWidget.addTopLevelItem(item)
-
-                treeDict[seqName] = [item, {}]
-
-                for subAction in seq.keys():
-                    child = QtGui.QTreeWidgetItem(item)
-                    child.setText(0, subAction)
-                    child.setText(1, seq[subAction][0].__name__)
-                    argDict = seq[subAction][3]
-                    if argDict != {}:
-                        inputNames = seq[subAction][3].keys()
-                        inputArgs = seq[subAction]
-                        child.setText(2, ", ".join(argDict.keys()))
-                        child.setText(3, ", ".join([argDict[val] for val in argDict.keys()]))
-                    else:
-                        child.setText(2, "None")
-                    treeDict[seqName][1][subAction] = child
+                    child.setText(2, "None")
+                treeDict[seqName][1][subAction] = child
 
     def saveClicked(self, event):
 
@@ -177,11 +166,6 @@ class ActionManagerPanel(object):
         if newDict:
             name = newName
             sequences.sequenceDict[name] = deepcopy(sequences.sequenceDict[self.currentAction])
-            #if copyied item is a primitive, this are a big messy... fix this later
-            if sequences.sequenceDict[name][2] == 'Primitive':
-                sequences.sequenceDict[name][1] = name
-                sequences.sequenceDict[name][0][name] = deepcopy(sequences.sequenceDict[name][0][self.currentAction])
-                sequences.sequenceDict[name][0].pop(self.currentAction)
         else:
             name = self.currentAction
 

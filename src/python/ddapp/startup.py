@@ -321,7 +321,7 @@ if usePlanning:
     defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
 
     as_timer = TimerCallback()
-    as_timer.targetFps = 5
+    as_timer.targetFps = 10
     as_timer.start()
     affordanceServer = {'drill' : time()}
     actionManager = actionsequence.ActionSequence(objectModel = om,

@@ -4,8 +4,9 @@ from ddapp import robotstate
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import segmentation
-
 from ddapp.plansequence import RobotPoseGUIWrapper
+
+from copy import deepcopy
 
 # Declare all valid inputs/ouputs here
 # Using a dictionary to possibly give them type information later
@@ -43,7 +44,6 @@ argType['Constraints'] = None
 class Action(object):
 
     inputs = []
-    outputs = {}
 
     def __init__(self, name, success, fail, args, container):
         self.name = name
@@ -52,6 +52,9 @@ class Action(object):
         self.parsedArgs = {} # storage for inputs after being processed
         self.successAction = success
         self.failAction = fail
+        self.animations = []
+        self.inputState = None
+        self.outputState = None
 
     def onEnter(self):
         print "default enter"
@@ -67,16 +70,28 @@ class Action(object):
 
     def success(self):
         self.transition(self.successAction)
+        self.container.executionList.append([self.name, 'success'])
 
     def fail(self):
         self.transition(self.failAction)
+        self.container.executionList.append([self.name, 'fail'])
 
     def hardFail(self):
         self.transition('fail')
+        self.container.executionList.append([self.name, 'abort'])
 
     def argParseAndEnter(self):
+        if self.container.previousAction != None and self.container.previousAction.outputState != None:
+            self.inputState = self.container.previousAction.outputState
+        else:
+            print "ERROR: no previous state found, using estimated current state"
+            self.inputState = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
         self.parseInputs()
         self.onEnter()
+
+    def storeEndStateAndExit(self):
+        self.container.previousAction = self
+        self.onExit()
 
     def checkInputArgs(self, args, inputs):
         # Simple arg safety checking
@@ -112,12 +127,17 @@ class Action(object):
             if isinstance(self.args[arg], str):
                 self.parsedArgs[arg] = self.args[arg]
             elif isinstance(self.args[arg], Action):
-                self.parsedArgs[arg] = self.args[arg].outputs[arg]
+                self.parsedArgs[arg] = deepcopy(self.args[arg].outputs[arg])
             else:
                 print "ERROR: provided input arg is neither a string nor a class reference"
                 self.parsedArgs[arg] = None
                 self.hardFail()
 
+    def animate(self, index):
+        if self.animations != []:
+            self.container.playbackFunction([self.animations[index]])
+        else:
+            print "ERROR: This action does not have an animation"
 
 # Below are standard success and fail actions which simply terminate
 # the sequence with a success or fail message
@@ -125,10 +145,10 @@ class Action(object):
 class Goal(Action):
 
     inputs = []
-    outputs = {}
 
     def __init__(self, container):
         Action.__init__(self, 'goal', None, None, {}, container)
+        self.outputs = {}
 
     def onEnter(self):
         print "HOORAY! Entered the GOAL state"
@@ -140,10 +160,14 @@ class Goal(Action):
         # Stop the FSM now that we're at a terminus
         self.container.fsm.stop()
 
+
 class Fail(Action):
+
+    inputs = []
 
     def __init__(self, container):
         Action.__init__(self, 'fail', None, None, {}, container)
+        self.outputs = {}
 
     def onEnter(self):
         print "NOOO! Entered the FAIL state"
@@ -151,8 +175,9 @@ class Fail(Action):
         # Stop the FSM now that we're at a terminus
         self.container.fsm.stop()
 
-# Full action objects start below:
 
+# Full action objects start below:
+#
 # Generic notes:
 #        state transition when success
 #        state transition when fail
@@ -164,16 +189,14 @@ class Fail(Action):
 class ChangeMode(Action):
 
     inputs = ['NewMode']
-    outputs = {}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-
+        self.outputs = {}
         self.timeOut = 10.0
         self.enterTime = 0.0
 
     def onEnter(self):
-
         # Logic for viz-mode:
         if self.container.vizMode:
             self.currentBehavior = self.parsedArgs['NewMode']
@@ -185,13 +208,13 @@ class ChangeMode(Action):
             self.container.atlasDriver.sendBehaviorCommand(self.behaviorTarget)
 
     def onUpdate(self):
-
         # Logic for viz-mide:
         if self.container.vizMode:
             self.success()
 
-        # Error checking on bad mode types
+        # Logic for execute mode:
         else:
+            # Error checking on bad mode types
             if self.behaviorTarget not in self.container.atlasDriver.getBehaviorMap().values():
                 print 'ERROR: desired transition does not exist, failing'
                 self.fail()
@@ -208,21 +231,23 @@ class ChangeMode(Action):
                         return
 
     def onExit(self):
-        return
 
+        # This is a state change action, no robot motion
+        self.outputState = deepcopy(self.inputState)
 
 class WalkPlan(Action):
 
     inputs = ['WalkTarget']
-    outputs = {'WalkPlan' : None}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {'WalkPlan' : None}
         self.walkPlanResponse = None
 
     def onEnter(self):
         graspStanceFrame = self.container.om.findObjectByName(self.parsedArgs['WalkTarget'])
         self.walkPlanResponse = self.container.footstepPlanner.sendFootstepPlanRequest(graspStanceFrame.transform, waitForResponse=True, waitTimeout=0)
+        # TODO: this only plans from current state, need to fix that
 
     def onUpdate(self):
 
@@ -239,18 +264,21 @@ class WalkPlan(Action):
                 self.success()
 
     def onExit(self):
+        # Cleanup planner objects
         self.walkPlanResponse.finish()
         self.walkPlanResponse = None
+
+        # This is a planning action, no robot motion
+        self.outputState = deepcopy(self.inputState)
 
 class Walk(Action):
 
     inputs = ['WalkPlan']
-    outputs = {}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {}
         self.walkAnimationResponse = None
-        self.startTime = 0.0
 
     def onEnter(self):
 
@@ -271,9 +299,8 @@ class Walk(Action):
             response = self.walkAnimationResponse.waitForResponse(timeout = 0)
             if response:
                 # We got a successful response from the walk planner, cache it and update the plan state
-                self.container.walkAnimation = response
-                self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.walkAnimation.plan[-1])
-                self.container.vizModeAnimation.append(self.container.walkAnimation)
+                self.animations.append(response)
+                self.container.vizModeAnimation.append(response)
                 self.success()
 
         # Logic for execute mode:
@@ -284,7 +311,7 @@ class Walk(Action):
                 self.success()
 
     def onExit(self):
-
+        # Cleanup planner code
         # Logic for viz-mode:
         if self.container.vizMode:
             self.walkAnimationResponse.finish()
@@ -293,6 +320,17 @@ class Walk(Action):
         # Logic for execute-mode:
         else:
             self.walkStart = None
+
+        # This is a motion action, output should be new robot state, based on mode selection
+        if self.container.vizMode:
+            # Viz Mode Logic
+            # (simulating a perfect execution, output state is the end of animation state)
+            self.outputState = robotstate.convertStateMessageToDrakePose(self.animations[-1].plan[-1])
+        else:
+            # Execute Mode Logic
+            # (the move is complete, so output state is current estimated robot state)
+            self.outputState = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
+        return
 
 def computeGroundFrame(robotModel):
     '''
@@ -326,10 +364,10 @@ def computeGroundFrame(robotModel):
 class PoseSearch(Action):
 
     inputs = ['Affordance', 'Hand']
-    outputs = {'TargetFrame' : None, 'WalkTarget' : None, 'Hand' : None}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {'TargetFrame' : None, 'WalkTarget' : None, 'Hand' : None}
 
     def onEnter(self):
 
@@ -343,7 +381,11 @@ class PoseSearch(Action):
         #Calculate where to place the hand (hard coded offsets based on drill, just for testing)
         # for left_base_link
         position = [-0.12, 0.0, 0.028]
-        rpy = [0, 90, 0]
+        if self.parsedArgs['Hand'] == 'right':
+            rpy = [180, 0, 90]
+        else:
+            rpy = [0, 0, -90]
+
         grasp = transformUtils.frameFromPositionAndRPY(position, rpy)
         grasp.Concatenate(self.targetAffordanceFrame.transform)
         self.graspFrame = vis.updateFrame(grasp, self.outputs['TargetFrame'], parent=self.targetAffordance, visible=True, scale=0.25)
@@ -355,24 +397,22 @@ class PoseSearch(Action):
 
         graspPosition = np.array(graspFrame.GetPosition())
         graspYAxis = [0.0, 1.0, 0.0]
-        graspZAxis = [0.0, 0.0, 1.0]
+        graspXAxis = [1.0, 0.0, 0.0]
         graspFrame.TransformVector(graspYAxis, graspYAxis)
-        graspFrame.TransformVector(graspZAxis, graspZAxis)
+        graspFrame.TransformVector(graspXAxis, graspXAxis)
 
-        xaxis = graspZAxis
+        xaxis = graspYAxis
         zaxis = [0, 0, 1]
         yaxis = np.cross(zaxis, xaxis)
         yaxis /= np.linalg.norm(yaxis)
-        xaxis = np.cross(yaxis, zaxis)
-
         graspGroundFrame = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
         graspGroundFrame.PostMultiply()
         graspGroundFrame.Translate(graspPosition[0], graspPosition[1], groundHeight)
 
         if self.parsedArgs['Hand'] == 'right':
-            position = [-0.57, 0.4, 0.0]
+            position = [-0.55, 0.50, 0.0]
         else:
-            position = [-0.57, -0.4, 0.0]
+            position = [-0.55, -0.50, 0.0]
         rpy = [0, 0, 0]
 
         stance = transformUtils.frameFromPositionAndRPY(position, rpy)
@@ -386,15 +426,81 @@ class PoseSearch(Action):
         self.success()
 
     def onExit(self):
-        return
+        # This is a planning action, no robot motion
+        self.outputState = deepcopy(self.inputState)
+
+
+class DeltaReachPlan(Action):
+
+    inputs = ['TargetFrame', 'Hand', 'Style', 'Direction', 'Amount']
+
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {'JointPlan' : None}
+        self.manipPlanResponse = None
+
+    def onEnter(self):
+
+        linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
+        linkName = linkMap[self.parsedArgs['Hand']]
+
+        graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
+        deltaFrame = transformUtils.frameFromPositionAndRPY([0,0,0],[0,0,0])
+
+        vis.updateFrame(deltaFrame, self.parsedArgs['TargetFrame'] + " " + self.name, parent=graspFrame, visible=True, scale=0.25)
+
+        deltaFrame.DeepCopy(graspFrame.transform)
+
+        if self.parsedArgs['Direction'] == 'X':
+            delta = transformUtils.frameFromPositionAndRPY([float(self.parsedArgs['Amount']),0,0],[0,0,0])
+        elif self.parsedArgs['Direction'] == 'Y':
+            delta = transformUtils.frameFromPositionAndRPY([0,float(self.parsedArgs['Amount']),0],[0,0,0])
+        else:
+            delta = transformUtils.frameFromPositionAndRPY([0,0,float(self.parsedArgs['Amount'])],[0,0,0])
+
+        if self.parsedArgs['Style'] == 'Local':
+            deltaFrame.PreMultiply()
+        else:
+            deltaFrame.PostMultiply()
+        deltaFrame.Concatenate(delta)
+
+        self.manipPlanResponse = self.container.manipPlanner.sendEndEffectorGoal(self.inputState, linkName, deltaFrame, waitForResponse=True, waitTimeout=0)
+
+    def onUpdate(self):
+        response = self.manipPlanResponse.waitForResponse(timeout = 0)
+
+        if response:
+            if response.plan_info[-1] > 10:
+                print "PLANNER REPORTS ERROR!"
+
+                # Plan failed, save it in the animation list, but don't update output data
+                self.animations.append(response)
+
+                self.fail()
+            else:
+                print "Planner reports success!"
+
+                # Plan was successful, save it to be animated and update output data
+                self.animations.append(response)
+                self.outputs['JointPlan'] = deepcopy(response)
+
+                self.success()
+
+    def onExit(self):
+        # Planner Cleanup
+        self.manipPlanResponse.finish()
+        self.manipPlanResponse = None
+
+        # This is a planning action, no robot motion
+        self.outputState = deepcopy(self.inputState)
 
 class ReachPlan(Action):
 
     inputs = ['TargetFrame', 'Hand', 'Constraints']
-    outputs = {'JointPlan' : None}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {'JointPlan' : None}
         self.manipPlanResponse = None
 
     def onEnter(self):
@@ -403,9 +509,7 @@ class ReachPlan(Action):
         linkName = linkMap[self.parsedArgs['Hand']]
         graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
 
-        if self.container.planPose == None:
-            self.container.planPose = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
-        self.manipPlanResponse = self.container.manipPlanner.sendEndEffectorGoal(self.container.planPose, linkName, graspFrame.transform, waitForResponse=True, waitTimeout=0)
+        self.manipPlanResponse = self.container.manipPlanner.sendEndEffectorGoal(self.inputState, linkName, graspFrame.transform, waitForResponse=True, waitTimeout=0)
 
     def onUpdate(self):
         response = self.manipPlanResponse.waitForResponse(timeout = 0)
@@ -413,95 +517,72 @@ class ReachPlan(Action):
         if response:
             if response.plan_info[-1] > 10:
                 print "PLANNER REPORTS ERROR!"
+
+                # Plan failed, save it in the animation list, but don't update output data
+                self.animations.append(response)
+
                 self.fail()
             else:
                 print "Planner reports success!"
+
+                # Plan was successful, save it to be animated and update output data
+                self.animations.append(response)
+                self.outputs['JointPlan'] = deepcopy(response)
+
                 self.success()
 
-                # Viz Mode Logic:
-                if self.container.vizMode:
-                    self.container.vizModeAnimation.append(response)
-                    self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
-                    self.outputs['JointPlan'] = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
-
     def onExit(self):
+        # Planner Cleanup
         self.manipPlanResponse.finish()
         self.manipPlanResponse = None
 
-
-class Reach(Action):
-
-    inputs = ['JointPlan']
-    outputs = {}
-
-    def __init__(self, name, success, fail, args, container):
-        Action.__init__(self, name, success, fail, args, container)
-        self.counter = 10
-
-    def onEnter(self):
-        return
-
-    def onUpdate(self):
-
-        # Viz Mode Logic
-        if self.container.vizMode:
-            # Update the current state to be the end of the last step for future planning
-            self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
-            self.success()
-
-        # Execute Mode Logic
-        else:
-            self.counter -= 1
-            if self.counter == 0:
-                self.success()
-
-    def onExit(self):
-        self.counter = 10
-
+        # This is a planning action, no robot motion
+        self.outputState = deepcopy(self.inputState)
 
 class JointMovePlan(Action):
 
     inputs = ['PoseName', 'Group', 'Hand']
-    outputs = {'JointPlan' : None}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {'JointPlan' : None}
         self.jointMovePlanResponse = None
 
     def onEnter(self):
         # Send a planner request
         goalPoseJoints = RobotPoseGUIWrapper.getPose(self.parsedArgs['Group'], self.parsedArgs['PoseName'], self.parsedArgs['Hand'])
-        if self.container.planPose == None:
-            self.container.planPose = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
-        self.jointMovePlanResponse = self.container.manipPlanner.sendPoseGoal(self.container.planPose, goalPoseJoints, waitForResponse=True, waitTimeout=0)
+        self.jointMovePlanResponse = self.container.manipPlanner.sendPoseGoal(self.inputState, goalPoseJoints, waitForResponse=True, waitTimeout=0)
 
     def onUpdate(self):
         # Wait for planner response
         response = self.jointMovePlanResponse.waitForResponse(timeout = 0)
         if response:
+            self.animations.append(response)
             self.outputs['JointPlan'] = response
-            self.container.jointMovePlan = response
-            self.container.vizModeAnimation.append(response)
             self.success()
 
     def onExit(self):
-        return
+        #This is a planning action, no robot motion
+        self.outputState = deepcopy(self.inputState)
 
 
 class JointMove(Action):
 
     inputs = ['JointPlan']
-    outputs = {'RobotPose' : None}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {'RobotPose' : None}
         self.startTime = 0.0
 
     def onEnter(self):
+        #Create an animation based on the incoming plan
+        self.animations.append(self.parsedArgs['JointPlan'])
+        self.container.vizModeAnimation.append(self.parsedArgs['JointPlan'])
+
         if self.container.vizMode:
             # Viz Mode Logic
-            # Update the plan state to match the end of the animation
-            self.container.planPose = robotstate.convertStateMessageToDrakePose(self.container.vizModeAnimation[-1].plan[-1])
+            return
         else:
             # Execute Mode Logic
             # Send the command to the robot
@@ -510,6 +591,7 @@ class JointMove(Action):
             return
 
     def onUpdate(self):
+        #Perform the motion
         if self.container.vizMode:
             # Viz Mode Logic
             # do nothing
@@ -518,25 +600,31 @@ class JointMove(Action):
             # Execute Mode Logic
             # Wait for success
             if time() > self.startTime + 10.0:
-                self.success()
 
                 # Need logic here to see if we reached our target to within some tolerance
                 # success or fail based on that
                 # is there a way to see if the robot is running?
-
-            return
+                self.success()
 
     def onExit(self):
-        return
+        # This is a motion action, output should be new robot state, based on mode selection
+        if self.container.vizMode:
+            # Viz Mode Logic
+            # (simulating a perfect execution, output state is the end of animation state)
+            self.outputState = robotstate.convertStateMessageToDrakePose(self.animations[-1].plan[-1])
+        else:
+            # Execute Mode Logic
+            # (the move is complete, so output state is current estimated robot state)
+            self.outputState = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
 
 
 class Grip(Action):
 
     inputs = ['Hand']
-    outputs = {}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {}
         self.gripTime = 0.0
         self.gripWait = 2.0
 
@@ -563,15 +651,18 @@ class Grip(Action):
                 self.success()
 
     def onExit(self):
-        return
+        # This action does not move the robot, set the output state accordingly
+        # TODO: make this animate the fingers in the future
+        self.outputState = deepcopy(self.inputState)
+
 
 class Release(Action):
 
     inputs = ['Hand']
-    outputs = {}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {}
         self.gripTime = 0.0
         self.gripWait = 1.0
 
@@ -598,37 +689,46 @@ class Release(Action):
                 self.success()
 
     def onExit(self):
-        return
+        # This action does not move the robot, set the output state accordingly
+        # TODO: make this animate the fingers in the future
+        self.outputState = deepcopy(self.inputState)
+
 
 class Fit(Action):
 
     inputs = ['Affordance']
-    outputs = {}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {}
 
     def onEnter(self):
         return
 
     def onUpdate(self):
-        pd = self.container.om.findObjectByName('Multisense').model.revPolyData
-        self.container.om.removeFromObjectModel(self.container.om.findObjectByName('debug'))
-        segmentation.findAndFitDrillBarrel(pd, self.container.robotModel.getLinkFrame('utorso'))
-
-        self.success()
+        if self.container.vizMode:
+            # Viz Mode Logic
+            self.success()
+        else:
+            # Execute Mode Logic
+            pd = self.container.om.findObjectByName('Multisense').model.revPolyData
+            self.container.om.removeFromObjectModel(self.container.om.findObjectByName('debug'))
+            segmentation.findAndFitDrillBarrel(pd, self.container.robotModel.getLinkFrame('utorso'))
+            self.success()
 
     def onExit(self):
-        return
+        # This action does not move the robot, set the output state accordingly
+        # TODO: make this animate the fingers in the future
+        self.outputState = deepcopy(self.inputState)
 
 
 class WaitForScan(Action):
 
     inputs = []
-    outputs = {}
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {}
 
     def onEnter(self):
 
@@ -653,6 +753,10 @@ class WaitForScan(Action):
                 self.success()
 
     def onExit(self):
+        # Cleanup
         self.currentRevolution = None
         self.desiredRevolution = None
 
+        # This action does not move the robot, set the output state accordingly
+        # TODO: make this animate the fingers in the future
+        self.outputState = deepcopy(self.inputState)
