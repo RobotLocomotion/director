@@ -119,7 +119,6 @@ class ActionSequence(object):
         self.affordanceServer = affordanceServer
 
         #Shared storage for actions
-        self.planPose = None
         self.vizMode = True
         self.vizModeAnimation = []
 
@@ -128,17 +127,22 @@ class ActionSequence(object):
         self.name = 'None'
         self.sequence = None
         self.actionObjects = {}
+        self.previousAction = None
+        self.executionList = []
 
     def populate(self, name, sequence, initial):
 
         #Create and store all the actions, create and populate the FSM
         self.fsm = SimpleFsm(debug = self.fsmDebug)
         self.timerObject.callback = self.fsm.update
+        self.timerObject.start()
 
         #Create and store data related to this sequence
         self.name = name
         self.sequence = sequence
         self.actionObjects = {}
+        self.previousAction = None
+        self.executionList = []
 
         #All FSMs need a default goal and a fail action
         self.actionObjects['goal'] = actions.Goal(self)
@@ -177,7 +181,7 @@ class ActionSequence(object):
         for actionPtr in self.actionObjects.values():
             self.fsm.onEnter[actionPtr.name] = actionPtr.argParseAndEnter
             self.fsm.onUpdate[actionPtr.name] = actionPtr.onUpdate
-            self.fsm.onExit[actionPtr.name] = actionPtr.onExit
+            self.fsm.onExit[actionPtr.name] = actionPtr.storeEndStateAndExit
 
         #Now that all of the actions are created, the argument list needs
         #to be modified to have action references instead of names
@@ -196,10 +200,11 @@ class ActionSequence(object):
         return None
 
     def reset(self):
+        self.fsm.stop()
         self.fsm.reset()
         self.fsm.debug = self.fsmDebug
-        self.planPose = None
         self.vizModeAnimation = []
+        self.executionList = []
 
     def start(self, vizMode = True):
         self.vizMode = vizMode
