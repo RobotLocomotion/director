@@ -117,7 +117,7 @@ add_executable(drake-designer main.cpp)
 target_link_libraries(drake-designer ddApp)
 
 add_executable(ddConsoleApp consoleApp.cpp)
-target_link_libraries(ddConsoleApp ddApp)
+target_link_libraries(ddConsoleApp ddApp ${PYTHON_LIBRARIES})
 
 install(TARGETS drake-designer ddConsoleApp ddApp
     RUNTIME DESTINATION ${DD_INSTALL_BIN_DIR}
