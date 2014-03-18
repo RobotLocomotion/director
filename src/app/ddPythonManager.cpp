@@ -58,6 +58,13 @@ void ddPythonManager::preInitialization()
 {
   this->addWrapperFactory(new ddPythonQtWrapperFactory);
   this->registerPythonQtDecorator(new ddPythonQtDecorators);
+
+  // when running from a cmake build directory (not an install tree)
+  // then automatically prepend the python sys.path
+  if (QFileInfo(QCoreApplication::applicationDirPath()  + "/../CMakeCache.txt").exists())
+  {
+    PythonQt::self()->addSysPath(this->appSitePackagesDir());
+  }
 }
 
 //-----------------------------------------------------------------------------

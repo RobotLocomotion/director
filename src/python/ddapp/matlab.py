@@ -20,7 +20,7 @@ def _readAllSoFar(proc, retVal=''):
 
 
 def getAppMatlabDir():
-    return os.path.join(os.path.dirname(__file__), '../../../../src/matlab')
+    return os.path.join(os.path.dirname(__file__), '../../../../../src/matlab')
 
 
 class MatlabCommunicator(object):
