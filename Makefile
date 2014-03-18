@@ -23,7 +23,7 @@ BUILD_TYPE="Release"
 endif
 
 all: pod-build/Makefile
-	$(MAKE) -C pod-build all
+	$(MAKE) -C pod-build all install
 
 pod-build/Makefile:
 	$(MAKE) configure
