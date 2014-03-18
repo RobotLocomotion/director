@@ -380,7 +380,7 @@ class PoseSearch(Action):
 
         #Calculate where to place the hand (hard coded offsets based on drill, just for testing)
         # for left_base_link
-        position = [-0.12, 0.0, 0.028]
+        position = [-0.15, 0.0, 0.028]
         if self.parsedArgs['Hand'] == 'right':
             rpy = [180, 0, 90]
         else:
