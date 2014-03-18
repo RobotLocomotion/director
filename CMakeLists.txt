@@ -30,4 +30,4 @@ include(cmake/dd-version.cmake)
 add_subdirectory(src)
 
 # documentation
-#add_subdirectory(docs)
+add_subdirectory(docs)
