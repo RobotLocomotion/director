@@ -13,4 +13,5 @@ else()
   set_target_properties(botpy PROPERTIES PREFIX "" SUFFIX ".so")
 endif()
 
-set_target_properties(botpy PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}/site-packages/ddapp)
+set_target_properties(botpy PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/ddapp")
+install(TARGETS botpy DESTINATION ${DD_INSTALL_PYTHON_DIR}/ddapp)

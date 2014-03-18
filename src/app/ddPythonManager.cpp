@@ -63,7 +63,7 @@ void ddPythonManager::preInitialization()
 //-----------------------------------------------------------------------------
 QString ddPythonManager::appSitePackagesDir()
 {
-  return QFileInfo(QCoreApplication::applicationDirPath()  + "/../lib/site-packages").canonicalFilePath();
+  return QFileInfo(QCoreApplication::applicationDirPath()  + "/../lib/python2.7/dist-packages").canonicalFilePath();
 }
 
 //-----------------------------------------------------------------------------

@@ -62,7 +62,8 @@ set(python_files
 
   )
 
-set(python_module_dir "${LIBRARY_OUTPUT_PATH}/site-packages")
+
+set(python_module_dir "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}")
 
 # Copy python files
 set(copied_python_files)
@@ -76,6 +77,9 @@ foreach(file ${python_files})
                      COMMAND ${CMAKE_COMMAND} -E copy ${src} ${tgt}
                      OUTPUT ${tgt}
                      COMMENT "source copy")
+
+  get_filename_component(tgt_we ${tgt} NAME_WE)
+  install(FILES ${tgt} ${tgtDir}/${tgt_we}.pyc DESTINATION ${DD_INSTALL_PYTHON_DIR}/ddapp COMPONENT Runtime)
 endforeach(file)
 
 
@@ -94,14 +98,6 @@ add_custom_command(
 
 add_custom_target(python_byte_compile ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/compile_complete")
 
-
-# Install python module
-set(install_destination ${DD_INSTALL_LIB_DIR}/site-packages)
-
-install(DIRECTORY  ${python_module_dir}/ddapp
-        DESTINATION ${install_destination}
-        COMPONENT Runtime
-        USE_SOURCE_PERMISSIONS)
 
 
 add_subdirectory(extensions)
