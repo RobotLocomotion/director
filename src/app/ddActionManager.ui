@@ -130,6 +130,30 @@
       <string>Status Display</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="4">
+       <widget class="QScrollArea" name="scrollArea_2">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="actionGrid">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>593</width>
+           <height>292</height>
+          </rect>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_4"/>
+        </widget>
+       </widget>
+      </item>
       <item row="0" column="0">
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
@@ -140,11 +164,24 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="clearButton">
+         <widget class="QPushButton" name="deleteButton">
           <property name="text">
-           <string>Clear</string>
+           <string>Delete</string>
           </property>
          </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
         <item>
          <widget class="QPushButton" name="resetButton">
@@ -200,24 +237,17 @@
         </item>
         <item>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="1" column="1">
-           <widget class="QLabel" name="stateLabel">
-            <property name="text">
-             <string>unknown</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLabel" name="nameLabel">
-            <property name="text">
-             <string>unknown</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_2">
             <property name="text">
              <string>Current State:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLabel" name="runningLabel">
+            <property name="text">
+             <string>unknown</string>
             </property>
            </widget>
           </item>
@@ -235,8 +265,15 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
-           <widget class="QLabel" name="runningLabel">
+          <item row="0" column="1">
+           <widget class="QLabel" name="nameLabel">
+            <property name="text">
+             <string>unknown</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLabel" name="stateLabel">
             <property name="text">
              <string>unknown</string>
             </property>
@@ -286,20 +323,6 @@
          </spacer>
         </item>
        </layout>
-      </item>
-      <item row="0" column="4">
-       <widget class="QTreeWidget" name="treeWidget_2">
-        <column>
-         <property name="text">
-          <string>Action</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Arguments</string>
-         </property>
-        </column>
-       </widget>
       </item>
      </layout>
     </widget>
