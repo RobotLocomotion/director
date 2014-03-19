@@ -36,6 +36,7 @@ from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import atlasstatuspanel
 from ddapp import multisensepanel
+from ddapp import navigationpanel
 from ddapp import handcontrolpanel
 from ddapp import actionmanagerpanel
 from ddapp import robotplanlistener
@@ -301,6 +302,10 @@ if usePlanning:
         playbackPanel.setPlan(posturePlan)
 
     #lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
+
+
+
+navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)

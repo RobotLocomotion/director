@@ -10,6 +10,7 @@ set(python_files
   ddapp/atlasdriverpanel.py
   ddapp/atlasstatuspanel.py
   ddapp/multisensepanel.py
+  ddapp/navigationpanel.py
   ddapp/handcontrolpanel.py
   ddapp/actionmanagerpanel.py
   ddapp/botspy.py

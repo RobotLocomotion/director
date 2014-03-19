@@ -107,6 +107,9 @@ class FootstepsDriver(object):
         self.lastFootstepPlan = msg
 
         planFolder = getFootstepsFolder()
+        self.drawFootstepPlan(msg, planFolder)
+
+    def drawFootstepPlan(self, msg, folder):
 
         allTransforms = []
         for i, footstep in enumerate(msg.footsteps):
@@ -138,10 +141,10 @@ class FootstepsDriver(object):
                 # d.addCone(start, normal, 0.02, 0.02)
                 # d.addCone(end, -normal, 0.02, 0.02)
                 # d.addLine(start, end,radius=0.005)
-                vis.showPolyData(d.getPolyData(), 'infeasibility %d -> %d' % (i-2, i-1), parent=planFolder, color=[1, 0.2, 0.2])
+                vis.showPolyData(d.getPolyData(), 'infeasibility %d -> %d' % (i-2, i-1), parent=folder, color=[1, 0.2, 0.2])
 
 
-            obj = vis.showPolyData(mesh, 'step %d' % (i-1), color=color, alpha=1.0, parent=planFolder)
+            obj = vis.showPolyData(mesh, 'step %d' % (i-1), color=color, alpha=1.0, parent=folder)
             frameObj = vis.showFrame(footstepTransform, 'frame', parent=obj, scale=0.3, visible=False)
             frameObj.onTransformModifiedCallback = functools.partial(self.onStepModified, i-2)
             obj.actor.SetUserTransform(footstepTransform)
