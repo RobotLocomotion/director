@@ -605,7 +605,8 @@ class JointMove(Action):
         else:
             # Execute Mode Logic
             # Wait for success
-            if time() > self.startTime + 10.0:
+            print "WAITING FOR MOTION to complete"
+            if time() > self.startTime + 5.0:
 
                 # Need logic here to see if we reached our target to within some tolerance
                 # success or fail based on that
@@ -716,6 +717,9 @@ class Fit(Action):
             # Viz Mode Logic
             self.success()
         else:
+
+#            self.success()
+
             # Execute Mode Logic
             pd = self.container.om.findObjectByName('Multisense').model.revPolyData
             self.container.om.removeFromObjectModel(self.container.om.findObjectByName('debug'))
