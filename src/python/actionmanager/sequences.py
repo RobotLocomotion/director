@@ -81,11 +81,13 @@ drill_reach_seq = {'pose_search'      : [PoseSearch,    'reach_plan',    'fail',
                    'retract_plan'     : [JointMovePlan, 'retract_move',  'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'left'} ],
                    'retract_move'     : [JointMove,     'goal',          'fail',      {'JointPlan': 'retract_plan'} ]}
 
-sequenceDict['DrillReachL'] = [drill_reach_seq, 'wait_for_scan']
+sequenceDict['DrillReachL'] = [drill_reach_seq, 'pose_search']
 
-named_pose_seq = {'manip_mode' : [ChangeMode,    'joint_plan', 'fail', {'NewMode' : 'manip'} ],
-                  'joint_plan' : [JointMovePlan, 'joint_move', 'fail', {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'USER'} ],
-                  'joint_move' : [JointMove,     'goal',       'fail', {'JointPlan': 'joint_plan'} ]}
+named_pose_seq = {'manip_mode' : [ChangeMode,     'joint_plan',  'fail', {'NewMode' : 'manip'} ],
+                  'joint_plan' : [JointMovePlan,  'joint_move',  'fail', {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'USER'} ],
+                  'joint_move' : [JointMove,      'joint_plan2', 'fail', {'JointPlan': 'joint_plan'} ],
+                  'joint_plan2' : [JointMovePlan, 'joint_move2', 'fail', {'PoseName': 'shooter', 'Group': 'General', 'Hand': 'USER'} ],
+                  'joint_move2' : [JointMove,     'goal',        'fail', {'JointPlan': 'joint_plan2'} ]}
 
 sequenceDict['NamedPose'] = [named_pose_seq, 'manip_mode']
 

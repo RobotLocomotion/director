@@ -186,7 +186,6 @@ class ActionSequence(object):
         #Now that all of the actions are created, the argument list needs
         #to be modified to have action references instead of names
 
-    def 
         #Look at each action object...
         for actionRef in self.actionObjects.values():
             #Now look at each argument in the argument list...
