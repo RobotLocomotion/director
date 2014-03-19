@@ -56,6 +56,12 @@ class Action(object):
         self.inputState = None
         self.outputState = None
 
+    def reset(self):
+        self.parsedArgs = {}
+        self.animations = []
+        self.inputState = None
+        self.outputState = None
+
     def onEnter(self):
         print "default enter"
 
@@ -70,15 +76,15 @@ class Action(object):
 
     def success(self):
         self.transition(self.successAction)
-        self.container.executionList.append([self.name, 'success'])
+        self.container.executionList.append([self.name, 'success', len(self.animations)])
 
     def fail(self):
         self.transition(self.failAction)
-        self.container.executionList.append([self.name, 'fail'])
+        self.container.executionList.append([self.name, 'fail', len(self.animations)])
 
     def hardFail(self):
         self.transition('fail')
-        self.container.executionList.append([self.name, 'abort'])
+        self.container.executionList.append([self.name, 'abort', len(self.animations)])
 
     def argParseAndEnter(self):
         if self.container.previousAction != None and self.container.previousAction.outputState != None:
