@@ -24,6 +24,7 @@ from ddapp import cameraview
 from ddapp import colorize
 from ddapp import drakevisualizer
 from ddapp import robotstate
+from ddapp import roboturdf
 from ddapp import footstepsdriver
 from ddapp import footstepsdriverpanel
 from ddapp import lcmgl
@@ -72,7 +73,9 @@ updatePolyData = segmentation.updatePolyData
 
 
 useIk = False
+useRobotState = True
 usePerception = True
+useGrid = True
 useSpreadsheet = True
 useFootsteps = True
 useHands = True
@@ -80,7 +83,6 @@ usePlanning = True
 useAtlasDriver = True
 useLCMGL = True
 useDrakeVisualizer = True
-defaultUrdfHands = 'LR_RR'
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -92,54 +94,23 @@ if useSpreadsheet:
 
 if useIk:
 
-
-    ikview = app.getViewManager().createView('IK View', 'VTK View')
-
-    app.getViewManager().switchToView('IK View')
-
-    ikFolder = om.addContainer('Drake IK')
-    om.addPlaceholder('matlab server', om.Icons.Matlab, ikFolder)
-
-    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_%s.urdf' % defaultUrdfHands)
-
-    model = app.loadRobotModelFromFile(urdfFile)
-    obj = om.addRobotModel(model, ikFolder)
-    obj.addToView(ikview)
-    defaultRobotModel = obj
-
-
-    useTable = False
-    if useTable:
-        tableModel = ikview.loadURDFModel(os.path.join(app.getDRCBase(), 'software/drake/systems/plants/test/table.urdf'))
-        tableModel.setVisible(True)
-        affordancesFolder = om.getOrCreateContainer('affordances')
-        om.addRobotModel(tableModel, affordancesFolder)
-
-
-    jc = jointcontrol.JointController([model], poseCollection)
-    jc.setNominalPose(jc.loadPoseFromFile(app.getNominalPoseMatFile()))
-    jc.addPose('q_end', jc.poses['q_nom'])
-    jc.addPose('q_start', jc.poses['q_nom'])
-    defaultJointController = jc
-
+    ikRobotModel, ikJointController = roboturdf.loadRobotModel('ik model', view, parent='IK Server', color=roboturdf.getRobotOrangeColor(), visible=False)
+    ikJointController.addPose('q_end', ikJointController.getPose('q_nom'))
+    ikJointController.addPose('q_start', ikJointController.getPose('q_nom'))
 
     def startIkServer():
-        s = ik.AsyncIKCommunicator(jc)
+        global s
+        s = ik.AsyncIKCommunicator(ikJointController)
         s.outputConsole = app.getOutputConsole()
         s.infoFunc = app.displaySnoptInfo
         s.start()
         s.startServerAsync()
 
-        e = ikeditor.IKEditor(app.getMainWindow(), s, poseCollection, costCollection)
-        e.makeFrameWidget(ikview)
-        app.addWidgetToDock(e.widget)
-        tdx.init(ikview, e)
-
-    startAutomatically = False
+    startAutomatically = True
     if startAutomatically:
         startIkServer()
-
-    app.resetCamera(viewDirection=[-1,0,0], view=ikview)
+    else:
+        s = None
 
 
 if useAtlasDriver:
@@ -147,95 +118,29 @@ if useAtlasDriver:
     atlasdriverpanel.init(atlasdriver.driver)
     atlasstatuspanel.init(atlasdriver.driver)
 
-if usePerception:
 
-
-    mitRobotDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot')
-    urdfFile = os.path.join(mitRobotDir, 'model_%s.urdf' % defaultUrdfHands)
-
-    robotStateModel = app.loadRobotModelFromFile(urdfFile)
-
-
-    robotStateJointController = jointcontrol.JointController([robotStateModel])
-    robotStateJointController.setNominalPose(robotStateJointController.loadPoseFromFile(app.getNominalPoseMatFile()))
+if useRobotState:
+    robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
     robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_nom'))
-    defaultJointController = robotStateJointController
+    roboturdf.startModelPublisherListener([(robotStateModel, robotStateJointController)])
     robotStateJointController.addLCMUpdater('EST_ROBOT_STATE')
 
 
-    perception.init(view, robotStateJointController)
+if usePerception:
+
+    perception.init(view)
     segmentationpanel.init()
     cameraview.init()
     colorize.init()
 
-    sensorsFolder = om.getOrCreateContainer('sensors')
-    robotStateModel = om.addRobotModel(robotStateModel, sensorsFolder)
-    robotStateModel.addToView(view)
-    defaultRobotModel = robotStateModel
-
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
-
     multisensepanel.init(perception.multisenseDriver)
 
+
+if useGrid:
     vis.showGrid(view)
     view.connect('computeBoundsRequest(ddQVTKWidgetView*)', vis.computeViewBoundsNoGrid)
     app.toggleCameraTerrainMode(view)
-
-    def grabRobotState():
-        poseName = 'EST_ROBOT_STATE'
-        robotStatePose = robotStateJointController.poses[poseName]
-        s.sendPoseToServer(robotStatePose, poseName)
-        s.forcePose(poseName)
-
-
-    def onRobotModel(m):
-
-        global robotStateModel, defaultRobotModel
-
-        model = app.loadRobotModelFromString(m.urdf_xml_string)
-        sensorsFolder = om.getOrCreateContainer('sensors')
-        obj = om.addRobotModel(model, sensorsFolder)
-        obj.setProperty('Name', 'model publisher')
-        robotStateJointController.models.append(model)
-        robotStateJointController.push()
-
-        obj.addToView(robotStateModel.views[0])
-        om.removeFromObjectModel(robotStateModel)
-        robotStateJointController.models.remove(robotStateModel.model)
-        robotStateModel = obj
-        defaultRobotModel = obj
-
-    lcmUtils.captureMessageCallback('ROBOT_MODEL', lcmdrc.robot_urdf_t, onRobotModel)
-
-
-    def setupFinger(pos):
-
-        grabRobotState()
-        p = perception._multisenseItem.model.revPolyData
-        vis.showPolyData(p, 'lidar', alpha=0.3)
-        t = s.grabCurrentLinkPose('l_hand')
-        vis.showFrame(t, 'lhand')
-
-        fingerTip = np.array(pos)
-
-        handLinkPos = np.array(t.GetPosition())
-        posOffset = fingerTip - handLinkPos
-
-        ft = vtk.vtkTransform()
-        ft.DeepCopy(t)
-
-        ft.PostMultiply()
-        ft.Translate(posOffset)
-
-        vis.showFrame(ft, 'fingerTip')
-
-        hand_to_finger = vtk.vtkTransform()
-        hand_to_finger.DeepCopy(ft)
-        hand_to_finger.Concatenate(t.GetLinearInverse())
-
-        posOffset = np.array(hand_to_finger.GetPosition())
-
-        s.setPointInLink('l_hand', posOffset)
 
 
 if useHands:
@@ -245,7 +150,7 @@ if useHands:
 
 
 if useFootsteps:
-    footstepsDriver = footstepsdriver.FootstepsDriver(defaultJointController)
+    footstepsDriver = footstepsdriver.FootstepsDriver(robotStateJointController)
     footstepsdriverpanel.init(footstepsDriver)
 
 
@@ -259,32 +164,13 @@ if useDrakeVisualizer:
 
 if usePlanning:
 
+    playbackRobotModel, playbackJointController = roboturdf.loadRobotModel('playback model', view, parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
+    teleopRobotModel, teleopJointController = roboturdf.loadRobotModel('teleop model', view, parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
 
-    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_%s.urdf' % defaultUrdfHands)
-    planningFolder = om.getOrCreateContainer('planning')
-
-
-    planningModel = app.loadRobotModelFromFile(urdfFile)
-    obj = om.addRobotModel(planningModel, planningFolder)
-    obj.addToView(view)
-    obj.setProperty('Visible', False)
-    obj.setProperty('Name', 'robot model')
-    #obj.setProperty('Color', QtGui.QColor(255, 253, 213))
-    obj.setProperty('Color', QtGui.QColor(255, 180, 0))
-    planningRobotModel = obj
-
-
-    planningJc = jointcontrol.JointController([planningModel], poseCollection)
-    planningJc.setNominalPose(planningJc.loadPoseFromFile(app.getNominalPoseMatFile()))
-
-    #midiController = jointcontrol.MidiJointControl(planningJc)
-    #midiController.start()
 
     manipPlanner = robotplanlistener.ManipulationPlanDriver()
     planPlayback = robotplanlistener.RobotPlanPlayback()
 
-    playbackRobotModel = planningRobotModel
-    playbackJointController = planningJc
 
     def showPose(pose):
         playbackRobotModel.setProperty('Visible', True)
@@ -348,7 +234,7 @@ def affUpdaterOff():
 
 
 def getLinkFrame(linkName, model=None):
-    model = model or defaultRobotModel
+    model = model or robotStateModel
     return model.getLinkFrame(linkName)
 
 
@@ -396,7 +282,7 @@ def resetCameraToHeadView():
 
 def sendEstRobotState(pose=None):
     if pose is None:
-        pose = defaultJointController.q
+        pose = robotStateJointController.q
     msg = robotstate.drakePoseToRobotState(pose)
     lcmUtils.publish('EST_ROBOT_STATE', msg)
 
@@ -430,7 +316,7 @@ class ViewEventFilter(object):
 
 def highlightSelectedLink(displayPoint, view):
 
-    model = defaultRobotModel.model
+    model = robotStateModel.model
 
     polyData, pickedPoint = vis.pickPoint(displayPoint, view=view, pickType='cells')
     linkName = model.getLinkNameForMesh(polyData)
