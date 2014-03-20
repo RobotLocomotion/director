@@ -80,7 +80,7 @@ usePlanning = True
 useAtlasDriver = True
 useLCMGL = True
 useDrakeVisualizer = True
-
+defaultUrdfHands = 'LR_RR'
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -100,8 +100,7 @@ if useIk:
     ikFolder = om.addContainer('Drake IK')
     om.addPlaceholder('matlab server', om.Icons.Matlab, ikFolder)
 
-    #urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_fixedjoint_hands.urdf')
-    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_LR_RR.urdf')
+    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_%s.urdf' % defaultUrdfHands)
 
     model = app.loadRobotModelFromFile(urdfFile)
     obj = om.addRobotModel(model, ikFolder)
@@ -152,7 +151,7 @@ if usePerception:
 
 
     mitRobotDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot')
-    urdfFile = os.path.join(mitRobotDir, 'model_LR_RR.urdf')
+    urdfFile = os.path.join(mitRobotDir, 'model_%s.urdf' % defaultUrdfHands)
 
     robotStateModel = app.loadRobotModelFromFile(urdfFile)
 
@@ -260,9 +259,9 @@ if useDrakeVisualizer:
 if usePlanning:
 
 
+    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_%s.urdf' % defaultUrdfHands)
     planningFolder = om.getOrCreateContainer('planning')
 
-    urdfFile = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/model_LR_RR.urdf')
 
     planningModel = app.loadRobotModelFromFile(urdfFile)
     obj = om.addRobotModel(planningModel, planningFolder)
