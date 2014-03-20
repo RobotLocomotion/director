@@ -75,6 +75,7 @@ useIk = False
 usePerception = True
 useSpreadsheet = True
 useFootsteps = True
+useHands = True
 usePlanning = True
 useAtlasDriver = True
 useLCMGL = True
@@ -237,13 +238,20 @@ if usePerception:
         s.setPointInLink('l_hand', posOffset)
 
 
+if useHands:
+    rHandDriver = handdriver.RobotiqHandDriver(side='right')
+    lHandDriver = handdriver.RobotiqHandDriver(side='left')
+    handcontrolpanel.init(lHandDriver, rHandDriver)
+
 
 if useFootsteps:
     footstepsDriver = footstepsdriver.FootstepsDriver(defaultJointController)
     footstepsdriverpanel.init(footstepsDriver)
 
+
 if useLCMGL:
     lcmgl.init(view)
+
 
 if useDrakeVisualizer:
     drakeVis = drakevisualizer.DrakeVisualizer(view)
@@ -265,9 +273,6 @@ if usePlanning:
     obj.setProperty('Color', QtGui.QColor(255, 180, 0))
     planningRobotModel = obj
 
-    rHandDriver = handdriver.RobotiqHandDriver(side='right')
-    lHandDriver = handdriver.RobotiqHandDriver(side='left')
-    handcontrolpanel.init(lHandDriver, rHandDriver)
 
     planningJc = jointcontrol.JointController([planningModel], poseCollection)
     planningJc.setNominalPose(planningJc.loadPoseFromFile(app.getNominalPoseMatFile()))
