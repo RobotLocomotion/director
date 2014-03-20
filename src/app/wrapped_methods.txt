@@ -48,7 +48,7 @@ void ddDrakeModel::setVisible(bool);
 QColor ddDrakeModel::color() const;
 void ddDrakeModel::setColor(const QColor&);
 void ddDrakeModel::setLinkColor(const QString&, const QColor&);
-
+void ddDrakeModel::getModelMesh(vtkPolyData*);
 
 double ddDrakeModel::alpha() const;
 bool ddDrakeModel::visible() const;

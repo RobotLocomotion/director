@@ -4,6 +4,7 @@
 #include <URDFRigidBodyManipulator.h>
 
 #include <vtkPolyData.h>
+#include <vtkAppendPolyData.h>
 #include <vtkSmartPointer.h>
 #include <vtkActor.h>
 #include <vtkPolyDataMapper.h>
@@ -41,8 +42,10 @@ using std::istringstream;
 
 #if VTK_MAJOR_VERSION == 6
  #define SetInputData(filter, obj) filter->SetInputData(obj);
+ #define AddInputData(filter, obj) filter->AddInputData(obj);
 #else
   #define SetInputData(filter, obj) filter->SetInput(obj);
+  #define AddInputData(filter, obj) filter->AddInput(obj);
 #endif
 
 class ddMeshVisual
@@ -228,6 +231,8 @@ ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
   ddMeshVisual::Ptr visual(new ddMeshVisual);
   visual->PolyData = computeNormals(polyData);
   visual->Actor = vtkSmartPointer<vtkActor>::New();
+  visual->Transform = vtkSmartPointer<vtkTransform>::New();
+  visual->Actor->SetUserTransform(visual->Transform);
 
   visual->Actor->GetProperty()->SetSpecular(0.9);
   visual->Actor->GetProperty()->SetSpecularPower(20);
@@ -592,8 +597,7 @@ public:
           if (iter!= mesh_map.end())
           {
             ddMeshVisual::Ptr meshVisual = iter->second;
-            meshVisual->Actor->SetUserTransform(worldToVisual);
-
+            meshVisual->Transform->SetMatrix(worldToVisual->GetMatrix());
           }
 
         } // end loop over visuals
@@ -985,6 +989,30 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
   model->doKinematics(q0.data());
   model->updateModel();
   return true;
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
+{
+  if (!polyData)
+  {
+    return;
+  }
+
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    AddInputData(appendFilter, transformPolyData(visuals[i]->PolyData, visuals[i]->Transform));
+  }
+
+  if (visuals.size())
+  {
+    appendFilter->Update();
+  }
+
+  polyData->DeepCopy(appendFilter->GetOutput());
 }
 
 //-----------------------------------------------------------------------------
