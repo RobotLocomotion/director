@@ -202,7 +202,9 @@ class PolyDataItem(ObjectModelItem):
         self.polyData = polyData
         self.mapper.SetInput(polyData)
         self.colorBy(arrayName, lut=self.mapper.GetLookupTable())
-        self._renderAllViews()
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
 
     def getColorByArrayName(self):
         if self.polyData:
@@ -248,7 +250,9 @@ class PolyDataItem(ObjectModelItem):
         self.mapper.SetScalarRange(scalarRange)
         self.mapper.InterpolateScalarsBeforeMappingOff()
         #self.mapper.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
-        self._renderAllViews()
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
 
 
     def addToView(self, view):

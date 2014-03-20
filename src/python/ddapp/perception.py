@@ -33,10 +33,6 @@ def updateDebugItem(polyData):
     else:
         _debugItem.setPolyData(polyData)
 
-    _view.render()
-
-
-
 
 class MultisenseItem(om.ObjectModelItem):
 
