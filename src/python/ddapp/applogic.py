@@ -64,12 +64,12 @@ def getDefaultDrakeModel():
     return getDRCView().models()[0]
 
 
-def addWidgetToDock(widget):
+def addWidgetToDock(widget, dockArea=QtCore.Qt.RightDockWidgetArea):
 
     dock = QtGui.QDockWidget()
     dock.setWidget(widget)
     dock.setWindowTitle(widget.windowTitle)
-    getMainWindow().addDockWidget(QtCore.Qt.RightDockWidgetArea, dock)
+    getMainWindow().addDockWidget(dockArea, dock)
     getMainWindow().addWidgetToViewMenu(dock)
     return dock
 
