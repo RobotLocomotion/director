@@ -39,6 +39,7 @@ from ddapp import handcontrolpanel
 from ddapp import robotplanlistener
 from ddapp import handdriver
 from ddapp import playbackpanel
+from ddapp import teleoppanel
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
@@ -252,6 +253,10 @@ if usePlanning:
 
     playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
                                       robotStateModel, robotStateJointController, manipPlanner)
+
+    teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
+                     ikPlanner, manipPlanner, lhandMesh, rhandMesh, playbackPanel.setPlan)
+
 
 
     debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, playbackRobotModel,
