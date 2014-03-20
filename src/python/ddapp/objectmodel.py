@@ -131,6 +131,23 @@ class RobotModelItem(ObjectModelItem):
         else:
             return None
 
+    def setModel(self, model):
+        assert model is not None
+        if model == self.model:
+            return
+
+        views = list(self.views)
+        self.removeFromAllViews()
+        self.model = model
+        self.model.setAlpha(self.getProperty('Alpha'))
+        self.model.setVisible(self.getProperty('Visible'))
+        self.model.setColor(self.getProperty('Color'))
+        self.setProperty('Filename', model.filename())
+
+        for view in views:
+            self.addToView(view)
+        self.onModelChanged()
+
     def addToView(self, view):
         if view in self.views:
             return
@@ -139,10 +156,18 @@ class RobotModelItem(ObjectModelItem):
         view.render()
 
     def onRemoveFromObjectModel(self):
-        for view in self.views:
-            self.model.removeFromRenderer(view.renderer())
-            view.render()
+        self.removeFromAllViews()
 
+    def removeFromAllViews(self):
+        for view in list(self.views):
+            self.removeFromView(view)
+        assert len(self.views) == 0
+
+    def removeFromView(self, view):
+        assert view in self.views
+        self.views.remove(view)
+        self.model.removeFromRenderer(view.renderer())
+        view.render()
 
 class PolyDataItem(ObjectModelItem):
 
