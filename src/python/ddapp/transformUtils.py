@@ -47,6 +47,17 @@ def rollPitchYawFromTransform(t):
     return rpy
 
 
+
+def frameInterpolate(trans_a, trans_b, weight_b):
+    '''
+    Interpolate two frames where weight_b=[0,1]
+    '''
+    [pos_a, quat_a] = poseFromTransform(trans_a)
+    [pos_b, quat_b] = poseFromTransform(trans_b)
+    pos_c = pos_a *(1-weight_b) + pos_b * weight_b;
+    quat_c = botpy.quat_interpolate(quat_a,quat_b, weight_b)
+    return transformFromPose(pos_c, quat_c)
+
 def transformFromPose(position, quaternion):
     '''
     Returns a vtkTransform

@@ -15,6 +15,7 @@ cdef extern from "bot_core/rotations.h":
     void bot_roll_pitch_yaw_to_angle_axis(double rpy[3], double *angle, double axis[3])
     void bot_angle_axis_to_roll_pitch_yaw(double angle, double axis[3], double rpy[3])
 
+    void bot_quat_interpolate(double q0[4], double q1[4], double u, double result[4])
 
 ######################
 
@@ -131,3 +132,11 @@ def angle_axis_to_roll_pitch_yaw(angle, axis):
     cdef double caxis[3]
     bot_angle_axis_to_roll_pitch_yaw(angle, to_vec3d(axis, caxis), rpy)
     return from_vec3d(rpy)
+
+
+def quat_interpolate(q0, q1, u):
+    cdef double result[4]
+    cdef double cq0[4]
+    cdef double cq1[4]
+    bot_quat_interpolate( to_vec4d(q0, cq0), to_vec4d(q1, cq1), u, result)
+    return from_vec4d(result)
