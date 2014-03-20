@@ -5,10 +5,12 @@ import ddapp.applogic as app
 import ddapp.objectmodel as om
 import ddapp.visualization as vis
 import ddapp.vtkAll as vtk
+from ddapp import botpy
 from ddapp import jointcontrol
 from ddapp import getDRCBaseDir
 from ddapp import lcmUtils
 from ddapp import filterUtils
+from ddapp import transformUtils
 
 import drc as lcmdrc
 import math
