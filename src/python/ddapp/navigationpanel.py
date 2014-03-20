@@ -53,6 +53,8 @@ class NavigationPanel(object):
         self.ui.visualizeButton.connect("clicked()", self.onVisualizeButton)
         self.ui.planButton.connect("clicked()", self.onPlanButton)
         self.ui.executeButton.connect("clicked()", self.onExecuteButton)
+        self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
+        self.ui.showBDIButton.connect("clicked()", self.onShowBDIButton)
 
         self.goal = dict()
 
@@ -66,6 +68,9 @@ class NavigationPanel(object):
         sub = lcmUtils.addSubscriber('EST_ROBOT_STATE_BDI', lcmdrc.robot_state_t, self.onERSBDI)
         sub.setSpeedLimit(60)
 
+        self.playbackRobotModel.setProperty('Visible', True)
+        self.showBDIPlan = True # show the BDI plans when created
+
     #############################
     def onPoseBDI(self,msg):
         self.pose_bdi = msg
@@ -76,7 +81,7 @@ class NavigationPanel(object):
     def onERSBDI(self,msg):
         pose = robotstate.convertStateMessageToDrakePose(msg)
         self.playbackJointController.setPose("ERS BDI", pose)
-        self.playbackRobotModel.setProperty('Visible', True)
+        
 
     def onFootStepPlanResponse(self,msg):
         self.transformPlanToBDIFrame(msg)
@@ -130,10 +135,15 @@ class NavigationPanel(object):
             t_stepbdi.Concatenate(t_bodybdi)
             footstep.pos = transformUtils.positionMessageFromFrame(t_stepbdi)
 
+        if (self.showBDIPlan is True):
+            self.drawBDIFootstepPlan()
+        else:
+            print "not showing bdi plan"
 
+    def drawBDIFootstepPlan(self):
         folder = om.getOrCreateContainer("BDI footstep plan")
         om.removeFromObjectModel(folder)
-        self.footstepDriver.drawFootstepPlan(self.bdi_plan, om.getOrCreateContainer("BDI footstep plan") )
+        self.footstepDriver.drawFootstepPlan(self.bdi_plan, om.getOrCreateContainer("BDI footstep plan"), [0.0, 0.0, 1.0] , [1.0, 0.0, 0.0])
 
     ###############################
     def onCaptureButton(self):
@@ -156,7 +166,9 @@ class NavigationPanel(object):
         t.PostMultiply()
         t.Translate([0,0,-0.85])
         frame.Concatenate(t)
-        vis.updateFrame(frame, self.getSelectedGoalName(), parent="navigation")
+        #vis.showFrame(frame, self.getSelectedGoalName(), parent="navigation", scale=0.35, visible=True)
+        #vis.updateFrame(frame, self.getSelectedGoalName(), parent="navigation")
+        vis.updateFrame(frame, "Current Goal", parent="navigation")
 
     def onPlanButton(self):
         print "plan",self.ui.comboBox.currentText
@@ -164,6 +176,18 @@ class NavigationPanel(object):
         frame = self.getFrameFromCombo()
         self.footstepDriver.sendFootstepPlanRequest(frame)
 
+    def onHideBDIButton(self):
+        print "hide bdi"
+        self.showBDIPlan = False
+        self.playbackRobotModel.setProperty('Visible', False)
+        folder = om.getOrCreateContainer("BDI footstep plan")
+        om.removeFromObjectModel(folder)
+
+    def onShowBDIButton(self):
+        print "show bdi"
+        self.showBDIPlan = True
+        self.playbackRobotModel.setProperty('Visible', True)
+        self.drawBDIFootstepPlan()
 
     def onExecuteButton(self):
         if (self.bdi_plan is None):
@@ -180,7 +204,6 @@ def init(jointController, footstepDriver, playbackRobotModel, playbackJointContr
     panel = NavigationPanel(jointController, footstepDriver, playbackRobotModel, playbackJointController)
     dock = app.addWidgetToDock(panel.widget)
     #dock.hide()
-
 
     return panel
 

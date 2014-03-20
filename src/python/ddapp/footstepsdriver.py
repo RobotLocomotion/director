@@ -109,7 +109,7 @@ class FootstepsDriver(object):
         planFolder = getFootstepsFolder()
         self.drawFootstepPlan(msg, planFolder)
 
-    def drawFootstepPlan(self, msg, folder):
+    def drawFootstepPlan(self, msg, folder,left_color=None, right_color=None):
 
         allTransforms = []
         for i, footstep in enumerate(msg.footsteps):
@@ -125,10 +125,16 @@ class FootstepsDriver(object):
 
             if footstep.is_right_foot:
                 mesh = getRightFootMesh()
-                color = getRightFootColor()
+                if (right_color is None):
+                    color = getRightFootColor()
+                else:
+                    color = right_color
             else:
                 mesh = getLeftFootMesh()
-                color = getLeftFootColor()
+                if (left_color is None):
+                    color = getLeftFootColor()
+                else:
+                    color = left_color
             if footstep.infeasibility > 1e-6:
                 d = DebugData()
                 # normal = np.array(allTransforms[i-1].GetPosition()) - np.array(footstepTransform.GetPosition())
