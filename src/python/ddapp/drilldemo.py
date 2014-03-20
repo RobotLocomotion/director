@@ -16,6 +16,7 @@ from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp.debugVis import DebugData
+from ddapp import ikplanner
 from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
@@ -24,6 +25,8 @@ from ddapp import robotplanlistener
 from ddapp import segmentation
 
 import drc as lcmdrc
+
+from PythonQt import QtCore, QtGui
 
 
 sys.path.append(os.path.join(app.getDRCBase(), 'software/tools/tools/scripts'))
@@ -44,6 +47,8 @@ class RobotPoseGUIWrapper(object):
 
         rpg.lcmWrapper = rpg.LCMWrapper()
         cls.main = rpg.MainWindow()
+        #cls.main.show()
+        cls.initialized = True
 
     @classmethod
     def getPose(cls, groupName, poseName, side=None):
@@ -71,14 +76,16 @@ class RobotPoseGUIWrapper(object):
 
         return joints
 
+RobotPoseGUIWrapper.init()
 
-class PlanSequence(object):
 
+class DrillPlannerDemo(object):
 
-    def __init__(self, robotModel, footstepPlanner, manipPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
+    def __init__(self, robotModel, footstepPlanner, manipPlanner, ikPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
         self.robotModel = robotModel
         self.footstepPlanner = footstepPlanner
         self.manipPlanner = manipPlanner
+        self.ikPlanner = ikPlanner
         self.handDriver = handDriver
         self.atlasDriver = atlasDriver
         self.multisenseDriver = multisenseDriver
@@ -126,8 +133,12 @@ class PlanSequence(object):
 
     def computeDrillFrame(self, robotModel):
 
-        position = [1.5, 0.0, 1.2]
+        position = [1.5, 0.0, 0.9]
         rpy = [1, 1, 1]
+
+        # drill close to origin
+        #position = [0.65, 0.4, 0.9]
+        #rpy = [1, 1, 1]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(self.computeGroundFrame(robotModel))
@@ -156,17 +167,38 @@ class PlanSequence(object):
         assert self.drillAffordance
 
         # for left_base_link
-        position = [-0.12, 0.0, 0.025]
-        rpy = [0, 90, 0]
+        #position = [-0.12, 0.0, 0.025]
+        #rpy = [0, 90, 0]
 
-        # for irobot palm point
-        #position = [-0.04, 0.0, 0.01]
-        #rpy = [0, 90, -90]
+        # for palm point
+        position = [-0.04, 0.0, 0.01]
+        rpy = [0, 90, -90]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(self.drillFrame.transform)
 
-        self.graspFrame = vis.updateFrame(t, 'grasp frame', parent=self.drillAffordance, visible=True, scale=0.25)
+        self.graspFrame = vis.updateFrame(t, 'grasp frame', parent=self.drillAffordance, visible=True, scale=0.2)
+        vis.updateFrame(t, 'sample grasp frame 0', parent=self.drillAffordance, visible=False, scale=0.2)
+
+        #def updateFrame(frame):
+        #    self.computeGraspFrame()
+        #self.drillFrame.onTransformModifiedCallback = updateFrame
+
+
+    def computeDrillTipFrame(self):
+
+        assert self.drillAffordance
+
+        position = [0.18, 0.0, 0.13]
+        rpy = [0, 0, 0]
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t.Concatenate(self.drillFrame.transform)
+
+        drillTipFrame = vis.updateFrame(t, 'drill tip frame', parent=self.drillAffordance, visible=False, scale=0.2)
+
+        #def updateFrame(frame):
+        #    self.computeDrillTipFrame()
+        #self.graspFrame.onTransformModifiedCallback = updateFrame
 
 
     def computeStanceFrame(self):
@@ -182,8 +214,8 @@ class PlanSequence(object):
         graspFrame.TransformVector(graspYAxis, graspYAxis)
         graspFrame.TransformVector(graspZAxis, graspZAxis)
 
-        #xaxis = graspYAxis
-        xaxis = graspZAxis
+        xaxis = graspYAxis
+        #xaxis = graspZAxis
         zaxis = [0, 0, 1]
         yaxis = np.cross(zaxis, xaxis)
         yaxis /= np.linalg.norm(yaxis)
@@ -199,7 +231,7 @@ class PlanSequence(object):
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(graspGroundFrame)
 
-        self.graspStanceFrame = vis.updateFrame(t, 'grasp stance', parent=self.drillAffordance, visible=True, scale=0.25)
+        self.graspStanceFrame = vis.updateFrame(t, 'grasp stance', parent=self.drillAffordance, visible=False, scale=0.2)
 
 
     def computeFootstepPlan(self):
@@ -216,7 +248,7 @@ class PlanSequence(object):
             'r_hand' : 'right_base_link',
            }
         linkName = graspLinks[self.getEndEffectorLinkName()]
-        startPose = self.geEstimatedRobotStatePose()
+        startPose = self.getEstimatedRobotStatePose()
         self.endPosePlan = self.manipPlanner.sendEndPoseGoal(startPose, linkName, self.graspFrame.transform, waitForResponse=True)
         self.showEndPose()
 
@@ -229,12 +261,26 @@ class PlanSequence(object):
         goalPoseJoints = RobotPoseGUIWrapper.getPose('hose', '1 walking with hose', side=self.graspingHand)
 
         if self.planFromCurrentRobotState:
-            startPose = self.geEstimatedRobotStatePose()
+            startPose = self.getEstimatedRobotStatePose()
         else:
             planState = self.walkingPlan.plan[-1]
             startPose = robotstate.convertStateMessageToDrakePose(planState)
 
-        self.preGraspPlan = self.manipPlanner.sendPoseGoal(startPose, goalPoseJoints, waitForResponse=True)
+        graspPose = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, planTraj=False)
+
+        endPose = self.ikPlanner.mergePostures(graspPose, goalPoseJoints)
+        self.preGraspPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+
+        #self.preGraspPlan = self.ikPlanner.planPostureGoal(startPose, graspPose, goalPoseJoints)
+
+
+    def planPostureGoal(self, groupName, poseName, side=None):
+
+        goalPoseJoints = RobotPoseGUIWrapper.getPose(groupName, poseName, side=side)
+        startPose = self.getEstimatedRobotStatePose()
+        endPose = self.ikPlanner.mergePostures(startPose, goalPoseJoints)
+        self.posturePlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.planPlaybackFunction([self.posturePlan])
 
 
     def getEndEffectorLinkName(self):
@@ -249,12 +295,32 @@ class PlanSequence(object):
         linkName = self.getEndEffectorLinkName()
 
         if self.planFromCurrentRobotState:
-            startPose = self.geEstimatedRobotStatePose()
+            startPose = self.getEstimatedRobotStatePose()
         else:
             planState = self.preGraspPlan.plan[-1]
             startPose = robotstate.convertStateMessageToDrakePose(planState)
 
-        self.graspPlan = self.manipPlanner.sendEndEffectorGoal(startPose, linkName, self.graspFrame.transform, waitForResponse=True)
+        self.graspPlan = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, lockTorso=True)
+
+
+
+    def reach(self):
+        self.computeGraspFrame()
+        self.ikPlanner.newReachGoal(self.graspFrame, lockTorso=False)
+
+
+    def moveDrillTip(self):
+        self.computeDrillTipFrame()
+        tipToWorld = om.findObjectByName('drill tip frame')
+        handLinkToWorld = self.robotModel.getLinkFrame('l_hand')
+
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Concatenate(tipToWorld.transform)
+        t.Concatenate(handLinkToWorld.GetLinearInverse())
+        tipToHandLink = ikplanner.copyFrame(t)
+
+        self.ikPlanner.newReachGoal(linkConstraintFrame=tipToHandLink, lockTorso=False)
 
 
     def commitFootstepPlan(self):
@@ -329,16 +395,17 @@ class PlanSequence(object):
         drillMesh = segmentation.getDrillBarrelMesh()
         self.drillAffordance = vis.showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], parent=folder)
         self.drillAffordance.actor.SetUserTransform(drillFrame)
-        self.drillFrame = vis.showFrame(drillFrame, 'drill frame', parent=self.drillAffordance, visible=True, scale=0.2)
+        self.drillFrame = vis.showFrame(drillFrame, 'drill frame', parent=self.drillAffordance, visible=False, scale=0.2)
 
         self.computeGraspFrame()
         self.computeStanceFrame()
+        self.computeDrillTipFrame()
 
     def findDrillAffordance(self):
         self.drillAffordance = om.findObjectByName('drill')
         self.drillFrame = om.findObjectByName('drill frame')
 
-    def geEstimatedRobotStatePose(self):
+    def getEstimatedRobotStatePose(self):
         return self.sensorJointController.getPose('EST_ROBOT_STATE')
 
     def cleanupFootstepPlans(self):

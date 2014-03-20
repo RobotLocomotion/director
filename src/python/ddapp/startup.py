@@ -8,12 +8,15 @@ import sys
 import PythonQt
 from PythonQt import QtCore, QtGui
 import ddapp.applogic as app
+from ddapp import botpy
 from ddapp import vtkAll as vtk
 from ddapp import matlab
 from ddapp import jointcontrol
 from ddapp import cameracontrol
+from ddapp import debrisdemo
+from ddapp import drilldemo
 from ddapp import ik
-from ddapp import ikeditor
+from ddapp import ikplanner
 from ddapp import objectmodel as om
 from ddapp import spreadsheet
 from ddapp import transformUtils
@@ -35,7 +38,6 @@ from ddapp import multisensepanel
 from ddapp import handcontrolpanel
 from ddapp import robotplanlistener
 from ddapp import handdriver
-from ddapp import plansequence
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
@@ -44,8 +46,6 @@ from ddapp import segmentationpanel
 from ddapp import lcmUtils
 from ddapp.shallowCopy import shallowCopy
 import drc as lcmdrc
-
-from ddapp import botpy
 
 import functools
 import math
@@ -72,7 +72,7 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-useIk = False
+useIk = True
 useRobotState = True
 usePerception = True
 useGrid = True
@@ -198,8 +198,28 @@ if usePlanning:
         om.removeFromObjectModel(om.findObjectByName('debug'))
         segmentation.findAndFitDrillBarrel(pd,  getLinkFrame('utorso'))
 
-    app.addToolbarMacro('plot plan', plotManipPlan)
-    app.addToolbarMacro('play manip plan', playManipPlan)
+    def refitBlocks(autoApprove=True):
+        polyData = om.findObjectByName('Multisense').model.revPolyData
+        segmentation.updateBlockAffordances(polyData)
+        if autoApprove:
+            approveRefit()
+
+    def approveRefit():
+
+        for obj in om.objects.values():
+            if isinstance(obj, vis.BlockAffordanceItem):
+                if 'refit' in obj.getProperty('Name'):
+                    originalObj = om.findObjectByName(obj.getProperty('Name').replace(' refit', ''))
+                    if originalObj:
+                        originalObj.params = obj.params
+                        originalObj.polyData.DeepCopy(obj.polyData)
+                        originalObj.actor.GetUserTransform().SetMatrix(obj.actor.GetUserTransform().GetMatrix())
+                        originalObj.actor.GetUserTransform().Modified()
+                        obj.setProperty('Visible', False)
+
+
+    #app.addToolbarMacro('plot plan', plotManipPlan)
+    #app.addToolbarMacro('play manip plan', playManipPlan)
     #app.addToolbarMacro('fit drill', fitDrillMultisense)
 
     def drillTrackerOn():
@@ -209,15 +229,40 @@ if usePlanning:
         om.findObjectByName('Multisense').model.showRevolutionCallback = None
 
 
-    planner = plansequence.PlanSequence(robotStateModel, footstepsDriver, manipPlanner,
+
+    ikPlanner = ikplanner.IKPlanner(s, ikRobotModel, ikJointController,
+                                        robotStateJointController, playPlans, showPose, playbackRobotModel)
+
+
+
+    if 'LI' in roboturdf.defaultUrdfHands:
+        lhandModel = roboturdf.HandLoader('left_irobot', robotStateModel, view)
+    else:
+        lhandModel = roboturdf.HandLoader('left_robotiq', robotStateModel, view)
+
+    if 'RI' in roboturdf.defaultUrdfHands:
+        rhandModel = roboturdf.HandLoader('right_irobot', robotStateModel, view)
+    else:
+        rhandModel = roboturdf.HandLoader('right_robotiq', robotStateModel, view)
+
+    ikPlanner.handModels.append(lhandModel)
+    ikPlanner.handModels.append(rhandModel)
+
+    lhandMesh = lhandModel.newPolyData()
+    rhandMesh = rhandModel.newPolyData()
+
+
+
+
+    debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, playbackRobotModel,
+                    ikPlanner, manipPlanner, atlasdriver.driver, lHandDriver,
+                    perception.multisenseDriver, refitBlocks)
+
+    drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                         lHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
 
-    #planner.userPromptEnabled = False
-    #q = planner.autonomousExecute()
-    #defaultJointController.setPose('EST_ROBOT_STATE', defaultJointController.getPose('q_nom'))
-    #planner.spawnDrillAffordance()
 
 
 
@@ -354,6 +399,24 @@ def toggleChildFrameWidget(displayPoint, view):
     return False
 
 
+def selectHandWidget(displayPoint, view):
+
+    polyData, pickedPoint = vis.pickPoint(displayPoint, view=view, pickType='cells')
+
+    def toggleHandFrame(hand):
+        if ikPlanner.reachingSide not in hand.getProperty('Name'):
+            return
+        frame = ikPlanner.findAffordanceChild('desired grasp frame')
+        if frame:
+            edit = not frame.getProperty('Edit')
+            frame.setProperty('Edit', edit)
+            hand.setProperty('Alpha', 0.5 if edit else 1.0)
+
+    for model in ikPlanner.handModels:
+        if model.handModel.model.getLinkNameForMesh(polyData):
+            toggleHandFrame(model.handModel)
+            return True
+
     return False
 
 
@@ -364,6 +427,9 @@ def callbackSwitch(displayPoint, view):
 
   #if highlightSelectedLink(displayPoint, view):
   #    return
+
+  if selectHandWidget(displayPoint, view):
+      return
 
   if segmentationpanel.activateSegmentationMode():
         return
