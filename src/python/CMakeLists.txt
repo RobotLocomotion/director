@@ -50,6 +50,7 @@ set(python_files
   ddapp/startup.py
   ddapp/statelistener.py
   ddapp/tdx.py
+  ddapp/teleoppanel.py
   ddapp/timercallback.py
   ddapp/transformUtils.py
   ddapp/utime.py
