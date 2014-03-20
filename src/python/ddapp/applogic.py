@@ -89,6 +89,17 @@ def resetCamera(viewDirection=None, view=None):
     view.render()
 
 
+def setBackgroundColor(color, color2=None, view=None):
+    view = view or getCurrentRenderView()
+    assert(view)
+
+    if color2 is None:
+        color2 = color
+    ren = view.renderer()
+    ren.SetBackground(color)
+    ren.SetBackground2(color2)
+
+
 def displaySnoptInfo(info):
     getMainWindow().statusBar().showMessage('Info: %d' % info)
 
