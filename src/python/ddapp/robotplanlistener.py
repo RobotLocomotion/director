@@ -215,15 +215,29 @@ class RobotPlanPlayback(object):
         self.jointNameRegex = ''
 
     @staticmethod
-    def getPlanPoses(msg):
+    def getPlanPoses(msgOrList):
 
-        poses = []
-        poseTimes = []
-        for plan in msg.plan:
-            pose = robotstate.convertStateMessageToDrakePose(plan)
-            poseTimes.append(plan.utime / 1e6)
-            poses.append(pose)
-        return np.array(poseTimes), poses
+        if isinstance(msgOrList, list):
+            messages = msgOrList
+            allPoseTimes, allPoses = RobotPlanPlayback.getPlanPoses(messages[0])
+
+            for msg in messages[1:]:
+                poseTimes, poses = RobotPlanPlayback.getPlanPoses(msg)
+                poseTimes += allPoseTimes[-1]
+                allPoseTimes = np.hstack((allPoseTimes, poseTimes[1:]))
+                allPoses += poses[1:]
+            return allPoseTimes, allPoses
+
+        else:
+            msg = msgOrList
+
+            poses = []
+            poseTimes = []
+            for plan in msg.plan:
+                pose = robotstate.convertStateMessageToDrakePose(plan)
+                poseTimes.append(plan.utime / 1e6)
+                poses.append(pose)
+            return np.array(poseTimes), poses
 
 
     def getPlanElapsedTime(self, msg):
@@ -251,23 +265,49 @@ class RobotPlanPlayback(object):
 
         assert len(messages)
 
-        allPoseTimes, allPoses = self.getPlanPoses(messages[0])
-
-        for msg in messages[1:]:
-            poseTimes, poses = self.getPlanPoses(msg)
-            poseTimes += allPoseTimes[-1]
-            allPoseTimes = np.hstack((allPoseTimes, poseTimes[1:]))
-            allPoses += poses[1:]
-
-        self.playPoses(allPoseTimes, allPoses, jointController)
+        poseTimes, poses = self.getPlanPoses(messages)
+        self.playPoses(poseTimes, poses, jointController)
 
 
-    def playPoses(self, poseTimes, poses, jointController):
+    def getPoseInterpolatorFromPlan(self, message):
+        poseTimes, poses = self.getPlanPoses(message)
+        return self.getPoseInterpolator(poseTimes, poses)
 
+
+    def getPoseInterpolator(self, poseTimes, poses):
         if self.interpolationMethod in ['slinear', 'quadratic', 'cubic']:
             f = scipy.interpolate.interp1d(poseTimes, poses, axis=0, kind=self.interpolationMethod)
         elif self.interpolationMethod == 'pchip':
             f = scipy.interpolate.pchip(poseTimes, poses, axis=0)
+        return f
+
+
+    def getPlanPoseMeshes(self, messages, jointController, robotModel, numberOfSamples):
+
+        poseTimes, poses = self.getPlanPoses(messages)
+        f = self.getPoseInterpolator(poseTimes, poses)
+        sampleTimes = np.linspace(poseTimes[0], poseTimes[-1], numberOfSamples)
+        meshes = []
+
+        for sampleTime in sampleTimes:
+
+            pose = f(sampleTime)
+            jointController.setPose('plan_playback', pose)
+            polyData = vtk.vtkPolyData()
+            robotModel.model.getModelMesh(polyData)
+            meshes.append(polyData)
+
+        return meshes
+
+
+    def showPoseAtTime(self, time, jointController, poseInterpolator):
+        pose = poseInterpolator(time)
+        jointController.setPose('plan_playback', pose)
+
+
+    def playPoses(self, poseTimes, poses, jointController):
+
+        f = self.getPoseInterpolator(poseTimes, poses)
 
         timer = SimpleTimer()
 
@@ -277,8 +317,7 @@ class RobotPlanPlayback(object):
 
             if tNow > poseTimes[-1]:
                 pose = poses[-1]
-                jointController.addPose('plan_playback', pose)
-                jointController.setPose('plan_playback')
+                jointController.setPose('plan_playback', pose)
 
                 if self.animationCallback:
                     self.animationCallback()
@@ -286,8 +325,7 @@ class RobotPlanPlayback(object):
                 return False
 
             pose = f(tNow)
-            jointController.addPose('plan_playback', pose)
-            jointController.setPose('plan_playback')
+            jointController.setPose('plan_playback', pose)
 
             if self.animationCallback:
                 self.animationCallback()
@@ -296,7 +334,7 @@ class RobotPlanPlayback(object):
         self.animationTimer.targetFps = 60
         self.animationTimer.callback = updateAnimation
         self.animationTimer.start()
-
+        updateAnimation()
 
 
     def picklePlan(self, filename, msg):

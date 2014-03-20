@@ -7,9 +7,9 @@ from ddapp import matlab
 from ddapp import botpy
 from ddapp.jointcontrol import JointController
 from ddapp.transformUtils import transformFromPose, poseFromTransform
+from ddapp.ikconstraints import *
 
 import vtk
-
 
 class AsyncIKCommunicator(TimerCallback):
 
@@ -23,17 +23,18 @@ class AsyncIKCommunicator(TimerCallback):
         self.positionOffsetBounds = {}
         self.positionTargets = {}
         self.pointInLink = {}
+        self.referenceFrame = {}
         self.orientationOffset = {}
         self.orientationTargets = {}
         self.gazeAxes = {}
-        self.activePositionConstraint = 'l_hand'
         self.quasiStaticConstraintName = 'both_feet_qsc'
-        self.seedName = 'q_end'
+        self.seedName = 'q_nom'
         self.nominalName = 'q_nom'
         self.infoFunc = None
         self.poses = None
+        self.quatTolerance = 0.0
 
-        #self.setPointInLink('l_hand', [0, 0.11516, 0.015]) #irobot
+        self.setPointInLink('l_hand', [0, 0.20516, 0.015]) #irobot
         #self.setPointInLink('r_hand', [0, -0.11516, -0.015]) #irobot
 
         #self.setPointInLink('l_hand', [0.00179, 0.13516, 0.01176]) #sandia
@@ -62,13 +63,27 @@ class AsyncIKCommunicator(TimerCallback):
            'r_hand_gaze_constraint',
            'pelvis_gaze_constraint',
            'utorso_gaze_constraint',
+
+            'l_foot_ground_constraint',
+            'r_foot_ground_constraint',
+            'feet_together_constraint',
+
+            'l_hand_pre_reach_constraint',
+            'l_hand_pre_grasp_constraint',
+            'posture_constraint',
+            'knee_posture_constraint',
+
         ]
         self.activeConstraintNames = [
            'l_foot_position_constraint',
            'r_foot_position_constraint',
            'l_foot_orient_constraint',
            'r_foot_orient_constraint',
-           'utorso_gaze_constraint',
+
+            #'utorso_gaze_constraint',
+            #'l_foot_ground_constraint',
+            #'r_foot_ground_constraint',
+            #'feet_together_constraint',
           ]
 
         self.tasks = []
@@ -131,6 +146,7 @@ class AsyncIKCommunicator(TimerCallback):
         self.controller.addPose(poseName, pose)
         self.controller.setPose(poseName)
 
+
     def sendPoseToServer(self, pose, poseName):
         self.comm.assignFloatArray(pose, poseName)
         self.controller.addPose(poseName, pose)
@@ -148,6 +164,9 @@ class AsyncIKCommunicator(TimerCallback):
 
     def interact(self):
         self.comm.interact()
+
+    def setQuatTolerance(self, angleInDegrees):
+        self.quatTolerance = math.sin(math.radians(angleInDegrees))**2
 
     def getPositionTarget(self, linkName):
         if linkName not in self.positionTargets:
@@ -192,17 +211,26 @@ class AsyncIKCommunicator(TimerCallback):
     def setPointInLink(self, linkName, point):
         self.pointInLink[linkName] = point
 
-    def setLinkConstraintsWithFrame(self, linkName, frame):
+    def setLinkConstraintWithFrame(self, linkName, frame):
         pos, quat = poseFromTransform(frame)
 
         self.setPositionTarget(linkName, pos)
         self.setOrientationTarget(linkName, quat)
+        self.referenceFrame[linkName] = None
+
+
+    def setLinkConstraintWithReferenceFrame(self, linkName, frame):
+        pos, quat = poseFromTransform(frame)
+
+        self.setPositionTarget(linkName, np.zeros(3))
+        self.setOrientationTarget(linkName, quat)
+        self.referenceFrame[linkName] = frame
 
 
     def grabCurrentLinkPose(self, linkName):
 
-        #pointInLink = self.pointInLink.get(linkName, (0,0,0))
-        pointInLink = (0,0,0)
+        pointInLink = self.pointInLink.get(linkName, (0,0,0))
+        #pointInLink = (0,0,0)
         pointInLink = '[%s]' % (';'.join([repr(x) for x in pointInLink]))
 
         commands = []
@@ -226,6 +254,10 @@ class AsyncIKCommunicator(TimerCallback):
 
     def updatePositionConstraint(self, linkName, execute=True):
 
+        tspan = 'tspan'
+        if linkName == 'l_hand':
+            tspan = 'tspan_end'
+
         commands = []
         positionTarget = self.getPositionTarget(linkName)
         positionOffset = self.getPositionOffset(linkName)
@@ -235,19 +267,19 @@ class AsyncIKCommunicator(TimerCallback):
         pointInLink = self.pointInLink.get(linkName, (0,0,0))
         pointInLink = '[%s]' % (';'.join([repr(x) for x in pointInLink]))
 
-        t = vtk.vtkTransform()
-        elements = [[t.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)]
+        refFrame = self.referenceFrame.get(linkName) or vtk.vtkTransform()
+        elements = [[refFrame.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)]
         elements = ';'.join([','.join([repr(x) for x in row]) for row in elements])
 
-        formatArgs = dict(name=linkName, x=positionConstraint[0], y=positionConstraint[1], z=positionConstraint[2], ref_frame=elements, link_pt=pointInLink)
+        formatArgs = dict(name=linkName, x=positionConstraint[0], y=positionConstraint[1], z=positionConstraint[2], ref_frame=elements, link_pt=pointInLink, tspan=tspan)
         commands.append('{name}_position_target = [{x}; {y}; {z}];'.format(**formatArgs))
         commands.append('%s_position_bounds = [%r; %r; %r];' % (linkName, offsetBounds[0][1], offsetBounds[1][1], offsetBounds[2][1]))
         commands.append('{name}_point_in_body_frame = {link_pt};'.format(**formatArgs))
         commands.append('{name}_ref_frame = [{ref_frame}];'.format(**formatArgs))
 
-        #commands.append('{name}_position_constraint = WorldPositionInFrameConstraint(r, {name}, {name}_point_in_body_frame, {name}_ref_frame, {name}_position_target - {name}_position_bounds, {name}_position_target + {name}_position_bounds, tspan);'.format(**formatArgs))
+        commands.append('{name}_position_constraint = WorldPositionInFrameConstraint(r, {name}, {name}_point_in_body_frame, {name}_ref_frame, {name}_position_target - {name}_position_bounds, {name}_position_target + {name}_position_bounds, {tspan});'.format(**formatArgs))
 
-        commands.append('{name}_position_constraint = WorldPositionConstraint(r, {name}, {name}_point_in_body_frame, {name}_position_target - {name}_position_bounds, {name}_position_target + {name}_position_bounds, tspan);'.format(**formatArgs))
+        #commands.append('{name}_position_constraint = WorldPositionConstraint(r, {name}, {name}_point_in_body_frame, {name}_position_target - {name}_position_bounds, {name}_position_target + {name}_position_bounds, {tspan});'.format(**formatArgs))
 
         if execute:
             self.comm.sendCommands(commands)
@@ -256,13 +288,21 @@ class AsyncIKCommunicator(TimerCallback):
 
     def updateOrientationConstraint(self, linkName, execute=True):
 
+        tspan = 'tspan'
+        if linkName == 'l_hand':
+            tspan = 'tspan_pre_grasp_to_end'
+
         commands = []
         orientationTarget = self.getOrientationTarget(linkName)
         orientationOffset = self.getOrientationOffset(linkName)
+
+        tolerance = 0.0
+        if linkName == 'l_hand':
+            tolerance = self.quatTolerance
         orientationConstraint = orientationTarget
-        formatArgs = dict(name=linkName, w=orientationConstraint[0], x=orientationConstraint[1], y=orientationConstraint[2], z=orientationConstraint[3])
+        formatArgs = dict(name=linkName, w=orientationConstraint[0], x=orientationConstraint[1], y=orientationConstraint[2], z=orientationConstraint[3], tolerance=tolerance, tspan=tspan)
         commands.append('{name}_orient_target = [{w}; {x}; {y}; {z}];'.format(**formatArgs))
-        commands.append('{name}_orient_constraint = WorldQuatConstraint(r, {name}, {name}_orient_target, 0.0, tspan);'.format(**formatArgs))
+        commands.append('{name}_orient_constraint = WorldQuatConstraint(r, {name}, {name}_orient_target, {tolerance}, {tspan});'.format(**formatArgs))
         if execute:
             self.comm.sendCommands(commands)
         else:
@@ -285,13 +325,11 @@ class AsyncIKCommunicator(TimerCallback):
             return commands
 
 
-    def updateIk(self):
+    def getConstraintCommands(self, constraintNames):
 
         commands = []
 
-        #commands.extend(self.updatePositionConstraint(self.activePositionConstraint, execute=False))
-
-        for constraintName in self.activeConstraintNames:
+        for constraintName in constraintNames:
             if constraintName.endswith('position_constraint'):
                 commands.extend(self.updatePositionConstraint(constraintName.replace('_position_constraint', ''), execute=False))
             elif constraintName.endswith('orient_constraint'):
@@ -299,13 +337,20 @@ class AsyncIKCommunicator(TimerCallback):
             elif constraintName.endswith('gaze_constraint'):
                 commands.extend(self.updateGazeConstraint(constraintName.replace('_gaze_constraint', ''), execute=False))
 
+        commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
+        return commands
 
-        activeConstraintNames = list(self.activeConstraintNames)
+
+    def updateIk(self):
+
+        commands = []
+
+        constraintNames = list(self.activeConstraintNames)
         if self.quasiStaticConstraintName:
-            activeConstraintNames.insert(0, self.quasiStaticConstraintName)
+            constraintNames.insert(0, self.quasiStaticConstraintName)
 
+        commands += self.getConstraintCommands(constraintNames)
         commands.append('q_seed = %s;' % self.seedName)
-        commands.append('active_constraints = {%s};' % ', '.join(activeConstraintNames))
         commands.append('[q_end, info] = inverseKin(r, q_seed, %s, active_constraints{:}, s.ikoptions);' % self.nominalName)
 
         #self.tasks.append(self.comm.sendCommandsAsync(commands))
@@ -319,11 +364,39 @@ class AsyncIKCommunicator(TimerCallback):
         if self.infoFunc:
             self.infoFunc(info)
 
+        return info
+
+
+    def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):
+
+        commands = []
+        constraintNames = []
+        for constraintId, constraint in enumerate(constraints):
+            constraint.getCommands(commands, constraintNames, suffix='_%d' % constraintId)
+
+        nominalPostureName = nominalPostureName or self.nominalName
+        seedPostureName = seedPostureName or self.seedName
+
+        commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
+        commands.append('q_seed = %s;' % seedPostureName)
+        commands.append('clear q_end;')
+        commands.append('clear info;')
+        commands.append('clear infeasible_constraint;')
+        commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, q_seed, %s, active_constraints{:}, s.ikoptions);' % nominalPostureName)
+        commands.append('display(infeasibleConstraintMsg(infeasible_constraint));')
+
+        self.comm.sendCommands(commands)
+        endPose = self.comm.getFloatArray('q_end')
+        info = self.comm.getFloatArray('info')[0]
+
+        return endPose, info
+
 
     def sampleTraj(self, t):
 
         commands = []
-        commands.append('q_trajPose = eval(qtraj, %f);' % t)
+        commands.append('tdelta = qtraj.tspan(end) - qtraj.tspan(1);')
+        commands.append('q_trajPose = eval(qtraj, qtraj.tspan(1) + %f*tdelta);' % t)
 
         self.comm.sendCommands(commands)
         self.fetchPoseFromServer('q_trajPose')
@@ -339,37 +412,53 @@ class AsyncIKCommunicator(TimerCallback):
 
         commands = []
         commands.append('qtraj = PPTrajectory(foh(tspan, [%s, %s]));' % (poseStart, poseEnd))
-
         self.comm.sendCommands(commands)
 
-    def runIkTraj(self, poseStart='q_start', poseEnd='q_end', nt=5):
+    def runIkTraj(self, constraints, poseStart='q_start', poseEnd='q_end', timeSamples=None, additionalTimeSamples=0):
+
+        if timeSamples is None:
+            timeSamples = np.hstack([constraint.tspan for constraint in constraints])
+            timeSamples = [x for x in timeSamples if x not in [-np.inf, np.inf]]
+            timeSamples.append(0.0)
+            timeSamples = np.unique(timeSamples)
 
         commands = []
 
-        commands.append('nt = %d;' % nt)
-        commands.append('t = linspace(tspan(1), tspan(end), nt);')
+        constraintNames = []
+        for constraintId, constraint in enumerate(constraints):
+            constraint.getCommands(commands, constraintNames, suffix='_%d' % constraintId)
+
+        commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
+        commands.append('t = [%s];' % ', '.join([repr(x) for x in timeSamples]))
+        commands.append('nt = size(t, 2);')
         commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(q_nom, 1, nt)));')
-        commands.append('q_seed_traj = PPTrajectory(foh(tspan, [%s, %s]));' % (poseStart, poseEnd))
+        commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
+        commands.append('clear xtraj;')
+        commands.append('clear info;')
+        commands.append('clear infeasible_constraint;')
+        if additionalTimeSamples:
+            commands.append('additionalTimeSamples = linspace(t(1), t(end), %d);' % additionalTimeSamples)
+        else:
+            commands.append('additionalTimeSamples = [];')
 
-        '''
-        % args:
-        % RigidBodyManipulator
-        % starting joint position
-        % starting joint velocity
-        % time points
-        % join position seeds
-        % joint nominal positions
-        % constraints
-        % ikoptions
-        '''
-
-        commands.append('[xtraj, info] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, s.ikoptions);')
+        commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
+        commands.append('[xtraj, info, infeasible_constraint] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, ikoptions);')
+        commands.append('display(infeasibleConstraintMsg(infeasible_constraint));')
         commands.append('qtraj = xtraj(1:nq);')
+
+        publish = True
+        planLengthInSeconds = 10.0
+        if publish:
+            commands.append('s.publishTraj(plan_pub, atlas, xtraj, info, %f);' % planLengthInSeconds)
+
         self.comm.sendCommands(commands)
 
         info = self.comm.getFloatArray('info')[0]
         if self.infoFunc:
             self.infoFunc(info)
+
+        return info
+
 
     def resetQSeed(self):
         commands = []
