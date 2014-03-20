@@ -6,6 +6,7 @@ import ddapp.vtkAll as vtk
 import PythonQt
 from PythonQt import QtCore
 from PythonQt import QtGui
+from ddapp import getDRCBaseDir as getDRCBase
 from ddapp import botspy
 
 _mainWindow = None
@@ -13,12 +14,9 @@ _mainWindow = None
 def getMainWindow():
     return _mainWindow
 
+
 def quit():
     QtGui.QApplication.instance().quit()
-
-
-def getDRCBase():
-    return os.environ['DRC_BASE']
 
 
 def getViewManager():
