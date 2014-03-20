@@ -160,6 +160,7 @@ if usePerception:
     robotStateJointController.setNominalPose(robotStateJointController.loadPoseFromFile(app.getNominalPoseMatFile()))
     robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_nom'))
     defaultJointController = robotStateJointController
+    robotStateJointController.addLCMUpdater('EST_ROBOT_STATE')
 
 
     perception.init(view, robotStateJointController)
