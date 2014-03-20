@@ -155,6 +155,29 @@ class FootstepsDriver(object):
             frameObj.onTransformModifiedCallback = functools.partial(self.onStepModified, i-2)
             obj.actor.SetUserTransform(footstepTransform)
 
+    def getContactPts(self):
+        '''
+        hard coded Location of the Drake contact points relative to foot frame. this should be read from URDF
+        '''
+        contact_pts = np.zeros((4,3))
+        contact_pts[0,:] = [-0.082,  0.0624435, -0.081119]
+        contact_pts[1,:] = [-0.082, -0.0624435, -0.081119]
+        contact_pts[2,:] = [0.178,   0.0624435, -0.081119]
+        contact_pts[3,:] = [0.178,  -0.0624435, -0.081119]
+        return contact_pts
+
+    def getFeetMidPoint(self, model):       
+        contact_pts = self.getContactPts()
+        contact_pts_mid = np.mean(contact_pts, axis=0) # mid point on foot relative to foot frame
+
+        t_lf_mid = model.getLinkFrame('l_foot')
+        t_lf_mid.Translate(contact_pts_mid)
+
+        t_rf_mid = model.getLinkFrame('r_foot')
+        t_rf_mid.Translate(contact_pts_mid)
+        t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
+        return t_feet_mid
+
     def createWalkingGoal(self, model):
         distanceForward = 1.0
 

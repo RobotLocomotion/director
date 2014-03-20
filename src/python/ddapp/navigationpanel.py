@@ -16,6 +16,7 @@ from ddapp import transformUtils
 import ddapp.visualization as vis
 import ddapp.objectmodel as om
 from ddapp import robotstate
+from ddapp import botpy
 from bot_core.pose_t import pose_t
 import drc as lcmdrc
 
@@ -71,6 +72,8 @@ class NavigationPanel(object):
         self.playbackRobotModel.setProperty('Visible', True)
         self.showBDIPlan = True # show the BDI plans when created
 
+
+
     #############################
     def onPoseBDI(self,msg):
         self.pose_bdi = msg
@@ -85,6 +88,8 @@ class NavigationPanel(object):
 
     def onFootStepPlanResponse(self,msg):
         self.transformPlanToBDIFrame(msg)
+
+
         
     #################################
     def printTransform(self,t,message):
@@ -98,8 +103,9 @@ class NavigationPanel(object):
 
     def getFrameFromCombo(self):
         pose = self.goal[ self.getSelectedGoalName() ]
-        frame = transformUtils.frameFromPositionAndRPY(pose[0:3], np.degrees(pose[3:6]) )
-        return frame
+        #frame = transformUtils.frameFromPositionAndRPY(pose[0:3], np.degrees(pose[3:6]) )
+
+        return pose
 
     def transformPlanToBDIFrame(self, plan):
         if ((self.pose_bdi is None) or (self.pose_body is None)):
@@ -147,10 +153,18 @@ class NavigationPanel(object):
 
     ###############################
     def onCaptureButton(self):
-        print "capture",self.jointController.q
-        goal = self.jointController.q[0:6]
+        print "capture" #,self.jointController.q
+        # body frame:
+        #goal = self.jointController.q[0:6]
+
+        # mid point of feet (as used by robin)
+        # this assumes model publisher exists - not always true currently
+        model = om.findObjectByName("model publisher")
+        t_feet_mid = self.footstepDriver.getFeetMidPoint(model)
+        #vis.updateFrame(t_feet_mid, "Current Goal New", parent="navigation")
+
         goal_name = "Goal %d" % len(self.goal)
-        self.goal[goal_name] = goal
+        self.goal[goal_name] = t_feet_mid
         self.updateComboBox()
 
     def updateComboBox(self):
@@ -161,14 +175,12 @@ class NavigationPanel(object):
         print "viz",self.ui.comboBox.currentText
         frame = self.getFrameFromCombo()
 
-        # move frame to the feet of the robot: (hard coded for now - TODO: ask robin)
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Translate([0,0,-0.85])
-        frame.Concatenate(t)
         #vis.showFrame(frame, self.getSelectedGoalName(), parent="navigation", scale=0.35, visible=True)
         #vis.updateFrame(frame, self.getSelectedGoalName(), parent="navigation")
         vis.updateFrame(frame, "Current Goal", parent="navigation")
+
+
+
 
     def onPlanButton(self):
         print "plan",self.ui.comboBox.currentText
