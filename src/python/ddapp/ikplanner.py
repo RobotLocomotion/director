@@ -20,7 +20,7 @@ from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
 from ddapp import robotstate
-from ddapp import robotplanlistener
+from ddapp import planplayback
 from ddapp import segmentation
 
 from ddapp import ik
@@ -519,7 +519,7 @@ class IKPlanner(object):
 
 
     def commitState(self):
-        poseTimes, poses = robotplanlistener.RobotPlanPlayback.getPlanPoses(self.lastManipPlan)
+        poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(self.lastManipPlan)
         self.sensorJointController.setPose('EST_ROBOT_STATE', poses[-1])
 
 
