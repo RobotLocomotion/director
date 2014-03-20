@@ -15,10 +15,10 @@ int main(int argc, char **argv)
   QApplication app(argc, argv);
 #endif
 
-  ddPythonManager* pythonManager = new ddPythonManager;
+  ddPythonManager pythonManager;
 
   ddMainWindow window;
-  window.setPythonManager(pythonManager);
+  window.setPythonManager(&pythonManager);
   window.resize(1800, 1000);
   window.show();
 
