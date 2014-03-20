@@ -101,3 +101,4 @@ add_custom_target(python_byte_compile ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/c
 
 
 add_subdirectory(extensions)
+add_subdirectory(tests)
