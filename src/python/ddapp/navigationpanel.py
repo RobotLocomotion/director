@@ -151,6 +151,8 @@ class NavigationPanel(object):
         om.removeFromObjectModel(folder)
         self.footstepDriver.drawFootstepPlan(self.bdi_plan, om.getOrCreateContainer("BDI footstep plan"), [0.0, 0.0, 1.0] , [1.0, 0.0, 0.0])
 
+
+
     ###############################
     def onCaptureButton(self):
         print "capture" #,self.jointController.q
@@ -178,9 +180,6 @@ class NavigationPanel(object):
         #vis.showFrame(frame, self.getSelectedGoalName(), parent="navigation", scale=0.35, visible=True)
         #vis.updateFrame(frame, self.getSelectedGoalName(), parent="navigation")
         vis.updateFrame(frame, "Current Goal", parent="navigation")
-
-
-
 
     def onPlanButton(self):
         print "plan",self.ui.comboBox.currentText
