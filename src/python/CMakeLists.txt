@@ -37,6 +37,7 @@ set(python_files
   ddapp/midi.py
   ddapp/objectmodel.py
   ddapp/perception.py
+  ddapp/playbackpanel.py
   ddapp/pointCloudUtils.py
   ddapp/robotstate.py
   ddapp/robotplanlistener.py

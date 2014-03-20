@@ -38,6 +38,7 @@ from ddapp import multisensepanel
 from ddapp import handcontrolpanel
 from ddapp import robotplanlistener
 from ddapp import handdriver
+from ddapp import playbackpanel
 from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
@@ -249,6 +250,9 @@ if usePlanning:
 
 
 
+    playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
+                                      robotStateModel, robotStateJointController, manipPlanner)
+
 
     debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, playbackRobotModel,
                     ikPlanner, manipPlanner, atlasdriver.driver, lHandDriver,
@@ -260,7 +264,19 @@ if usePlanning:
                                         playPlans, showPose)
 
 
+    def onPostureGoal(msg):
 
+        goalPoseJoints = {}
+        for name, position in zip(msg.joint_name, msg.joint_position):
+            goalPoseJoints[name] = position
+
+        startPose = np.array(robotStateJointController.q)
+        endPose = ikPlanner.mergePostures(startPose, goalPoseJoints)
+        posturePlan = ikPlanner.computePostureGoal(startPose, endPose)
+
+        playbackPanel.setPlan(posturePlan)
+
+    lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
