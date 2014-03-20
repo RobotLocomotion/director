@@ -11,6 +11,9 @@ def _initCoverage():
             pass
 
 
+def getDRCBaseDir():
+    return os.environ['DRC_BASE']
+
 def findFileInPaths(filename, searchPaths):
     for path in searchPaths:
         if os.path.isfile(os.path.join(path, filename)):
