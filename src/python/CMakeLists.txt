@@ -38,6 +38,7 @@ set(python_files
   ddapp/pointCloudUtils.py
   ddapp/robotstate.py
   ddapp/robotplanlistener.py
+  ddapp/roboturdf.py
   ddapp/segmentation.py
   ddapp/segmentationpanel.py
   ddapp/shallowCopy.py

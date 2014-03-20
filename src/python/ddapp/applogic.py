@@ -45,23 +45,6 @@ def getOutputConsole():
     return getMainWindow().outputConsole()
 
 
-def getURDFModelDir():
-    return os.path.join(getDRCBase(), 'software/models/mit_gazebo_models/mit_robot_drake')
-
-
-def getNominalPoseMatFile():
-    return os.path.join(getDRCBase(), 'software/drake/examples/Atlas/data/atlas_fp.mat')
-
-
-def loadModelByName(name):
-    filename = os.path.join(getURDFModelDir(), name)
-    return getDRCView().loadURDFModel(filename)
-
-
-def getDefaultDrakeModel():
-    return getDRCView().models()[0]
-
-
 def addWidgetToDock(widget, dockArea=QtCore.Qt.RightDockWidgetArea):
 
     dock = QtGui.QDockWidget()
@@ -156,24 +139,6 @@ def onCurrentViewChanged(previousView, currentView):
     updateToggleTerrainAction(currentView)
 
 
-def setupToolBar():
-
-    def onComboChanged(text):
-        loadModelByName(text)
-
-
-    combo = QtGui.QComboBox()
-    combo.addItem('Load URDF...')
-    combo.addItem('model.urdf')
-    combo.addItem('model_minimal_contact.urdf')
-    combo.addItem('model_minimal_contact_point_hands.urdf')
-    combo.addItem('model_minimal_contact_fixedjoint_hands.urdf')
-
-    combo.connect('currentIndexChanged(const QString&)', onComboChanged)
-    toolbar = getMainWindow().toolBar()
-    toolbar.addWidget(combo)
-
-
 def addToolbarMacro(name, func):
 
     toolbar = getMainWindow().macrosToolBar()
@@ -185,38 +150,6 @@ def setupActions():
     botApyAction = getToolsMenuActions()['ActionBotSpy']
     botApyAction.connect(botApyAction, 'triggered()', botspy.startBotSpy)
 
-
-def loadRobotModelFromFile(filename):
-    model = PythonQt.dd.ddDrakeModel()
-    if not model.loadFromFile(filename):
-        return None
-    return model
-
-
-def loadRobotModelFromString(xmlString):
-    model = PythonQt.dd.ddDrakeModel()
-    if not model.loadFromXML(xmlString):
-        return None
-    return model
-
-
-
-def setupPackagePaths():
-
-    searchPaths = [
-        'ros_workspace/mit_drcsim_scripts',
-        'ros_workspace/sandia-hand/ros/sandia_hand_description',
-        'software/models/mit_gazebo_models/mit_robot',
-        'software/models/mit_gazebo_models/irobot_hand',
-        'software/models/mit_gazebo_models/multisense_sl',
-        'software/models/mit_gazebo_models/handle_description',
-        'software/models/mit_gazebo_models/hook_description',
-        'software/models/mit_gazebo_models/hook_description',
-        'software/models/mit_gazebo_models/robotiq_hand_description',
-                  ]
-
-    for path in searchPaths:
-        PythonQt.dd.ddDrakeModel.addPackageSearchPath(os.path.join(getDRCBase(), path))
 
 def showErrorMessage(message, title='Error'):
     QtGui.QMessageBox.warning(getMainWindow(), title, message)
@@ -242,9 +175,7 @@ def startup(globals):
     _mainWindow.connect('toggleStereoRender()', toggleStereoRender)
     _mainWindow.connect('toggleCameraTerrainMode()', toggleCameraTerrainMode)
 
-    setupPackagePaths()
     setupActions()
-    #setupToolBar()
 
     vm = getViewManager()
     vm.connect('currentViewChanged(ddViewBase*, ddViewBase*)', onCurrentViewChanged);
