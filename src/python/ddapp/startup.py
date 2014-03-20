@@ -38,6 +38,7 @@ from ddapp import multisensepanel
 from ddapp import handcontrolpanel
 from ddapp import robotplanlistener
 from ddapp import handdriver
+from ddapp import planplayback
 from ddapp import playbackpanel
 from ddapp import teleoppanel
 from ddapp import vtkNumpy as vnp
@@ -167,7 +168,7 @@ if usePlanning:
 
 
     manipPlanner = robotplanlistener.ManipulationPlanDriver()
-    planPlayback = robotplanlistener.RobotPlanPlayback()
+    planPlayback = planplayback.PlanPlayback()
 
 
     def showPose(pose):
