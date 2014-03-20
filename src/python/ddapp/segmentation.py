@@ -17,6 +17,7 @@ from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
 from ddapp import mapsregistrar
 from ddapp.visualization import *
+from ddapp.filterUtils import *
 
 import numpy as np
 import vtkNumpy
@@ -63,25 +64,6 @@ def getDebugFolder():
         obj = om.getOrCreateContainer('debug', om.getOrCreateContainer('segmentation'))
         om.collapse(obj)
     return obj
-
-
-def thresholdPoints(polyData, arrayName, thresholdRange):
-    assert(polyData.GetPointData().GetArray(arrayName))
-    f = vtk.vtkThresholdPoints()
-    f.SetInput(polyData)
-    f.ThresholdBetween(thresholdRange[0], thresholdRange[1])
-    f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
-    f.Update()
-    return shallowCopy(f.GetOutput())
-
-
-def transformPolyData(polyData, transform):
-
-    t = vtk.vtkTransformPolyDataFilter()
-    t.SetTransform(transform)
-    t.SetInput(shallowCopy(polyData))
-    t.Update()
-    return shallowCopy(t.GetOutput())
 
 
 def cropToLineSegment(polyData, point1, point2):
