@@ -1,6 +1,5 @@
 import lcm
 import PythonQt
-from PythonQt import QtCore
 import pickle
 import atexit
 
