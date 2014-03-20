@@ -98,19 +98,15 @@ if useIk:
     ikJointController.addPose('q_end', ikJointController.getPose('q_nom'))
     ikJointController.addPose('q_start', ikJointController.getPose('q_nom'))
 
-    def startIkServer():
-        global s
-        s = ik.AsyncIKCommunicator(ikJointController)
-        s.outputConsole = app.getOutputConsole()
-        s.infoFunc = app.displaySnoptInfo
-        s.start()
-        s.startServerAsync()
+    ikServer = ik.AsyncIKCommunicator(ikJointController)
+    ikServer.outputConsole = app.getOutputConsole()
+    ikServer.infoFunc = app.displaySnoptInfo
 
-    startAutomatically = True
-    if startAutomatically:
-        startIkServer()
-    else:
-        s = None
+    def startIkServer():
+        ikServer.start()
+        ikServer.startServerAsync()
+
+    #startIkServer()
 
 
 if useAtlasDriver:
@@ -230,7 +226,7 @@ if usePlanning:
 
 
 
-    ikPlanner = ikplanner.IKPlanner(s, ikRobotModel, ikJointController,
+    ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController,
                                         robotStateJointController, playPlans, showPose, playbackRobotModel)
 
 
