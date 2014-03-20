@@ -4,18 +4,23 @@ from ddapp.timercallback import TimerCallback
 from ddapp.simpletimer import SimpleTimer
 from ddapp import robotstate
 from ddapp import midi
+from ddapp import getDRCBaseDir
+from ddapp import lcmUtils
+import drc as lcmdrc
+import numpy as np
 
 
 class JointController(object):
 
-    def __init__(self, models, poseCollection=None):
-        self.jointNames = robotstate.getDrakePoseJointNames()
+    def __init__(self, models, poseCollection=None, jointNames=None):
+        self.jointNames = jointNames or robotstate.getDrakePoseJointNames()
         self.numberOfJoints = len(self.jointNames)
-        self.models = models
+        self.models = list(models)
         self.poses = {}
         self.poseCollection = poseCollection
         self.currentPoseName = None
         self.addPose('q_zero', [0.0 for i in xrange(self.numberOfJoints)])
+        self.addPose('q_nom', self.loadPoseFromFile(self.getNominalPoseMatFile()))
 
     def setJointPosition(self, jointId, position):
         '''
@@ -27,7 +32,7 @@ class JointController(object):
 
     def push(self):
         for model in self.models:
-            model.setJointPositions(self.q, self.jointNames)
+            model.model.setJointPositions(self.q, self.jointNames)
 
     def setPose(self, poseName, poseData=None):
         if poseData is not None:
@@ -58,6 +63,35 @@ class JointController(object):
         import scipy.io
         matData = scipy.io.loadmat(filename)
         return matData['xstar'][:self.numberOfJoints].flatten()
+
+    def addLCMUpdater(self, channelName):
+        '''
+        adds an lcm subscriber to update the joint positions from
+        lcm robot_state_t messages
+        '''
+
+        def onRobotStateMessage(msg):
+            poseName = channelName
+            pose = robotstate.convertStateMessageToDrakePose(msg)
+
+            # use joint name/positions from robot_state_t and append base_{x,y,z,roll,pitch,yaw}
+            jointPositions = np.hstack((msg.joint_position, pose[:6]))
+            jointNames = msg.joint_name + robotstate.getDrakePoseJointNames()[:6]
+
+            self.setPose(poseName, pose)
+            for model in self.models:
+                model.model.setJointPositions(jointPositions, jointNames)
+
+        self.subscriber = lcmUtils.addSubscriber(channelName, lcmdrc.robot_state_t, onRobotStateMessage)
+        self.subscriber.setSpeedLimit(60)
+
+    def removeLCMUpdater(self):
+        lcmUtils.removeSubscriber(self.subscriber)
+        self.subscriber = None
+
+    @staticmethod
+    def getNominalPoseMatFile():
+        return os.path.join(getDRCBaseDir(), 'software/drake/examples/Atlas/data/atlas_fp.mat')
 
 
 class MidiJointControl(TimerCallback):
