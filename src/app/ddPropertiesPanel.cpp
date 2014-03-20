@@ -106,8 +106,26 @@ QtVariantProperty* ddPropertiesPanel::addGroup(const QString& name)
 //-----------------------------------------------------------------------------
 QtVariantProperty* ddPropertiesPanel::addProperty(const QString& name, const QVariant& value)
 {
-  QtVariantProperty* property = this->Internal->Manager->addProperty(value.type(), name);
-  property->setValue(value);
+  int propertyType = value.type();
+  if (propertyType == QVariant::List || propertyType == QVariant::StringList)
+  {
+    propertyType = this->Internal->Manager->enumTypeId();
+  }
+
+
+  QtVariantProperty* property = this->Internal->Manager->addProperty(propertyType, name);
+
+  if (propertyType == this->Internal->Manager->enumTypeId())
+  {
+    QStringList values = value.toStringList();
+    property->setAttribute("enumNames", values);
+    property->setValue(0);
+  }
+  else
+  {
+    property->setValue(value);
+  }
+
   this->Internal->Browser->addProperty(property);
   this->Internal->Properties[name] = property;
 

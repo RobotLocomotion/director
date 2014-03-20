@@ -28,6 +28,7 @@ class ObjectModelItem(object):
 
     def __init__(self, name, icon=Icons.Robot):
         self.properties = OrderedDict()
+        self.propertyAttributes = {}
         self.icon = icon
         self.addProperty('Name', name)
 
@@ -41,8 +42,10 @@ class ObjectModelItem(object):
         assert self.hasProperty(propertyName)
         return self.properties[propertyName]
 
-    def addProperty(self, propertyName, propertyValue):
+    def addProperty(self, propertyName, propertyValue, attributes=None):
         self.properties[propertyName] = propertyValue
+        if attributes is not None:
+            self.propertyAttributes[propertyName] = attributes
         self._onPropertyAdded(propertyName)
 
     def setProperty(self, propertyName, propertyValue):
@@ -65,7 +68,8 @@ class ObjectModelItem(object):
         elif propertyName == 'Name':
             return PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=True)
         else:
-            return PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False)
+            attributes = PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False)
+            return self.propertyAttributes.setdefault(propertyName, attributes)
 
     def _onPropertyChanged(self, propertyName):
         updatePropertyPanel(self, propertyName)
@@ -342,6 +346,14 @@ def onPropertyChanged(prop):
     obj.setProperty(prop.propertyName(), prop.value())
 
 
+def addPropertiesToPanel(obj, p):
+    for propertyName in obj.propertyNames():
+        value = obj.getProperty(propertyName)
+        attributes = obj.getPropertyAttributes(propertyName)
+        if value is not None and not attributes.hidden:
+            addProperty(p, propertyName, attributes, value)
+
+
 def onTreeSelectionChanged():
 
     item = getActiveItem()
@@ -356,12 +368,7 @@ def onTreeSelectionChanged():
     p = getPropertiesPanel()
     p.clear()
 
-    for propertyName in obj.propertyNames():
-
-        value = obj.getProperty(propertyName)
-        attributes = obj.getPropertyAttributes(propertyName)
-        if value is not None and not attributes.hidden:
-            addProperty(p, propertyName, attributes, value)
+    addPropertiesToPanel(obj, p)
 
     _blockSignals = False
 
@@ -410,8 +417,9 @@ def setPropertyAttributes(p, attributes):
 
 def addProperty(panel, name, attributes, value):
 
-    if isinstance(value, list):
-        groupProp = panel.addGroup(name)
+    if isinstance(value, list) and not isinstance(value[0], str):
+        groupName = '%s [%s]' % (name, ', '.join([str(v) for v in value]))
+        groupProp = panel.addGroup(groupName)
         for v in value:
             p = panel.addSubProperty(name, v, groupProp)
             setPropertyAttributes(p, attributes)
