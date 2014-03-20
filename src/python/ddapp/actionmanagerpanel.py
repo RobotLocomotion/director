@@ -9,7 +9,7 @@ import numpy as np
 import math
 import functools
 from time import time
-from copy import deepcopy
+from copy import copy, deepcopy
 
 from actionmanager import sequences
 from actionmanager import actionsequence
@@ -128,6 +128,7 @@ class ActionManagerPanel(object):
 
     def runActionSequence(self):
         if self.currentAction != '':
+            self.sequenceController.reset()
             self.sequenceController.start(vizMode = False)
 
     def resetActionSequence(self):
@@ -205,7 +206,7 @@ class ActionManagerPanel(object):
         if newDictName:
             name = newDictName
             sequences.sequenceDict[name] = [{}, sequences.sequenceDict[self.currentAction][1]]
-            sequences.sequenceDict[name][0] = deepcopy(sequences.sequenceDict[self.currentAction][0])
+            sequences.sequenceDict[name][0] = copy(sequences.sequenceDict[self.currentAction][0])
         else:
             name = self.currentAction
 
