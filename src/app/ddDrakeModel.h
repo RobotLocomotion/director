@@ -34,6 +34,8 @@ public:
   QList<QString> getLinkNames();
   QList<QString> getJointNames();
 
+  void getModelMesh(vtkPolyData* polyData);
+
   QString getLinkNameForMesh(vtkPolyData* polyData);
 
   void setAlpha(double alpha);
