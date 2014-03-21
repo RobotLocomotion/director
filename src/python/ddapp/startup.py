@@ -276,6 +276,8 @@ if usePlanning:
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
 
+    drillDemo.spawnDrillAffordance()
+
     amTimer = TimerCallback()
     amTimer.targetFps = 10
     amTimer.start()
@@ -289,7 +291,7 @@ if usePlanning:
                                                   handDriver = lHandDriver,
                                                   atlasDriver = atlasdriver.driver,
                                                   multisenseDriver = perception.multisenseDriver,
-                                                  affordanceServer = affordanceServer,
+                                                  affordanceServer = None,
                                                   fsmDebug = True)
 
     ampanel = actionmanagerpanel.init(actionManager)
@@ -306,7 +308,7 @@ if usePlanning:
 
         playbackPanel.setPlan(posturePlan)
 
-    lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
+    #lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)

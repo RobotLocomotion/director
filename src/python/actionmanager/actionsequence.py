@@ -1,6 +1,7 @@
 from simplefsm import SimpleFsm
 from ddapp.timercallback import TimerCallback
 
+from copy import deepcopy
 from collections import OrderedDict
 from sets import Set
 
@@ -139,7 +140,7 @@ class ActionSequence(object):
 
         #Create and store data related to this sequence
         self.name = name
-        self.sequence = sequence
+        self.sequence = deepcopy(sequence)
         self.actionObjects = {}
         self.previousAction = None
         self.executionList = []
@@ -149,26 +150,26 @@ class ActionSequence(object):
         self.actionObjects['fail'] = actions.Fail(self)
 
         #Populate the FSM with all action objects
-        for name in sequence.keys():
+        for name in self.sequence.keys():
 
-            actionClass = sequence[name][0]
+            actionClass = self.sequence[name][0]
 
             #Create an instance
             actionPtr = actionClass(name,              #Name
-                                    sequence[name][1], #Success Transition
-                                    sequence[name][2], #Fail Transition
-                                    sequence[name][3], #Arg List
+                                    self.sequence[name][1], #Success Transition
+                                    self.sequence[name][2], #Fail Transition
+                                    self.sequence[name][3], #Arg List
                                     self)              #Sequence Object as data container
 
             #Store the instance
             self.actionObjects[name] = actionPtr
 
             #Use the instance to populate the FSM with success/fail transitions
-            self.fsm.addTransition(name, sequence[name][1])
-            self.fsm.addTransition(name, sequence[name][2])
+            self.fsm.addTransition(name, self.sequence[name][1])
+            self.fsm.addTransition(name, self.sequence[name][2])
 
             #all states need a transition to fail to catch errors
-            if sequence[name][2] != 'fail':
+            if self.sequence[name][2] != 'fail':
                 self.fsm.addTransition(name, 'fail')
 
             #Setup the special transition to the init state

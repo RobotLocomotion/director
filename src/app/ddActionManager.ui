@@ -6,9 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>945</width>
-    <height>1055</height>
+    <width>521</width>
+    <height>920</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>520</width>
+    <height>0</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Action Sequence Controller</string>
@@ -22,6 +34,9 @@
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
        <widget class="QTreeWidget" name="templateTree">
+        <attribute name="headerDefaultSectionSize">
+         <number>125</number>
+        </attribute>
         <column>
          <property name="text">
           <string>Action</string>
@@ -70,8 +85,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>899</width>
-           <height>292</height>
+           <width>475</width>
+           <height>228</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayout_2"/>
@@ -130,30 +145,6 @@
       <string>Status Display</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="4">
-       <widget class="QScrollArea" name="scrollArea_2">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <widget class="QWidget" name="actionGrid">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>593</width>
-           <height>292</height>
-          </rect>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_4"/>
-        </widget>
-       </widget>
-      </item>
       <item row="0" column="0">
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
@@ -310,17 +301,28 @@
          </widget>
         </item>
         <item>
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
+         <widget class="QScrollArea" name="scrollArea_2">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
+          <property name="widgetResizable">
+           <bool>true</bool>
           </property>
-         </spacer>
+          <widget class="QWidget" name="actionGrid">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>380</width>
+             <height>138</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_4"/>
+          </widget>
+         </widget>
         </item>
        </layout>
       </item>
