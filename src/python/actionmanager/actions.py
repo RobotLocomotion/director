@@ -1,12 +1,14 @@
 from time import time
+from copy import deepcopy
 import numpy as np
+
 from ddapp import robotstate
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import segmentation
 from ddapp.drilldemo import RobotPoseGUIWrapper
 
-from copy import deepcopy
+import takktile
 
 # Declare all valid inputs/ouputs here
 # Using a dictionary to possibly give them type information later
@@ -609,6 +611,75 @@ class JointMove(Action):
             # Wait for success
             print "WAITING FOR MOTION to complete"
             if time() > self.startTime + 5.0:
+
+                # Need logic here to see if we reached our target to within some tolerance
+                # success or fail based on that
+                # is there a way to see if the robot is running?
+                self.success()
+
+    def onExit(self):
+        # This is a motion action, output should be new robot state, based on mode selection
+        if self.container.vizMode:
+            # Viz Mode Logic
+            # (simulating a perfect execution, output state is the end of animation state)
+            self.outputState = robotstate.convertStateMessageToDrakePose(self.animations[-1].plan[-1])
+        else:
+            # Execute Mode Logic
+            # (the move is complete, so output state is current estimated robot state)
+            self.outputState = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
+
+
+class JointMoveGuarded(Action):
+
+    inputs = ['JointPlan', 'Hand']
+
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {'RobotPose' : None}
+        self.startTime = 0.0
+
+    def setContactTrue(self):
+        self.contact = True
+
+    def onEnter(self):
+        #Create an animation based on the incoming plan
+        self.animations.append(self.parsedArgs['JointPlan'])
+        self.container.vizModeAnimation.append(self.parsedArgs['JointPlan'])
+        self.contact = False
+
+        if self.container.vizMode:
+            # Viz Mode Logic
+            return
+        else:
+            # Execute Mode Logic
+
+            # Set up a LCM monitor on the contact detector
+            channel = 'TAKKTILE_CONTACT_' + self.parsedArgs('Hand').upper()
+            lcmUtils.captureMessageCallback(channel, takktile.contact_t, self.contactTrue)
+
+            # Send the command to the robot
+            self.container.manipPlanner.commitManipPlan(self.parsedArgs['JointPlan'])
+            self.startTime = time()
+            return
+
+    def onUpdate(self):
+        #Perform the motion
+        if self.container.vizMode:
+            # Viz Mode Logic
+            # do nothing
+            self.success()
+        else:
+            # Execute Mode Logic
+            # Wait for success
+            print "WAITING FOR MOTION to complete"
+
+            if self.contact:
+                print "Pausing motion because of contact!"
+                self.container.manipPlanner.sendPlanPause()
+                self.success()
+
+            if time() > self.startTime + 5.0:
+                print "Ending motion because of timeout, no contact found"
 
                 # Need logic here to see if we reached our target to within some tolerance
                 # success or fail based on that
