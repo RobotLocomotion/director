@@ -51,9 +51,7 @@ from ddapp import segmentationpanel
 from ddapp import lcmUtils
 from ddapp.shallowCopy import shallowCopy
 
-from actionmanager import actionsequence
-from actionmanager.actions import *
-from actionmanager import sequences
+from actionmanager import actionmanager
 
 import drc as lcmdrc
 
@@ -276,23 +274,17 @@ if usePlanning:
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
 
-    drillDemo.spawnDrillAffordance()
-
-    amTimer = TimerCallback()
-    amTimer.targetFps = 10
-    amTimer.start()
-    actionManager = actionsequence.ActionSequence(objectModel = om,
-                                                  robotModel = robotStateModel,
-                                                  sensorJointController = robotStateJointController,
-                                                  playbackFunction = playPlans,
-                                                  timerObject = amTimer,
-                                                  manipPlanner = manipPlanner,
-                                                  footstepPlanner = footstepsDriver,
-                                                  handDriver = lHandDriver,
-                                                  atlasDriver = atlasdriver.driver,
-                                                  multisenseDriver = perception.multisenseDriver,
-                                                  affordanceServer = None,
-                                                  fsmDebug = True)
+    actionManager = actionmanger.ActionManager(objectModel = om,
+                                               robotModel = robotStateModel,
+                                               sensorJointController = robotStateJointController,
+                                               playbackFunction = playPlans,
+                                               manipPlanner = manipPlanner,
+                                               footstepPlanner = footstepsDriver,
+                                               handDriver = lHandDriver,
+                                               atlasDriver = atlasdriver.driver,
+                                               multisenseDriver = perception.multisenseDriver,
+                                               affordanceServer = None,
+                                               fsmDebug = True)
 
     ampanel = actionmanagerpanel.init(actionManager)
 

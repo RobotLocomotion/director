@@ -87,14 +87,13 @@ def generateUserArgDict(sequence):
 def generateUserArgList(sequence):
     return generateUserArgDict(sequence).keys()
 
-class ActionSequence(object):
+class ActionManager(object):
 
     def __init__(self,
                  objectModel,
                  robotModel,
                  sensorJointController,
                  playbackFunction,
-                 timerObject,
                  manipPlanner,
                  footstepPlanner,
                  handDriver,
@@ -106,7 +105,6 @@ class ActionSequence(object):
         #Planner objects
         self.om = objectModel
         self.robotModel = robotModel
-        self.timerObject = timerObject
         self.manipPlanner = manipPlanner
         self.footstepPlanner = footstepPlanner
         self.sensorJointController = sensorJointController
@@ -135,8 +133,9 @@ class ActionSequence(object):
 
         #Create and store all the actions, create and populate the FSM
         self.fsm = SimpleFsm(debug = self.fsmDebug)
+        self.timerObject  = TimerCallback()
+        self.timerObject.targetFps = 10
         self.timerObject.callback = self.fsm.update
-        self.timerObject.start()
 
         #Create and store data related to this sequence
         self.name = name
@@ -211,10 +210,12 @@ class ActionSequence(object):
 
     def start(self, vizMode = True):
         self.vizMode = vizMode
+        self.timerObject.start()
         self.fsm.start()
 
     def stop(self):
         self.fsm.stop()
+        self.timerObject.stop()
 
     def clear(self):
         self.reset()
