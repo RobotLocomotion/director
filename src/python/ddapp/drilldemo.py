@@ -233,17 +233,6 @@ class DrillPlannerDemo(object):
 
         self.graspStanceFrame = vis.updateFrame(t, 'grasp stance', parent=self.drillAffordance, visible=False, scale=0.2)
 
-        graspGroundFrame2 = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-        graspGroundFrame2.PostMultiply()
-        graspGroundFrame2.Translate(graspPosition[0], graspPosition[1], groundHeight)
-
-        position2 = [-0.57, 0.4, 0.0]
-        rpy2 = [0, 0, 0]
-
-        t2 = transformUtils.frameFromPositionAndRPY(position2, rpy2)
-        t2.Concatenate(graspGroundFrame)
-
-        self.graspStanceFrame2 = vis.updateFrame(t2, 'grasp stance right', parent=self.drillAffordance, visible=True, scale=0.25)
 
     def computeFootstepPlan(self):
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(self.graspStanceFrame.transform, waitForResponse=True)
