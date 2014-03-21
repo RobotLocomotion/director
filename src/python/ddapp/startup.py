@@ -274,17 +274,17 @@ if usePlanning:
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
 
-    actionManager = actionmanger.ActionManager(objectModel = om,
-                                               robotModel = robotStateModel,
-                                               sensorJointController = robotStateJointController,
-                                               playbackFunction = playPlans,
-                                               manipPlanner = manipPlanner,
-                                               footstepPlanner = footstepsDriver,
-                                               handDriver = lHandDriver,
-                                               atlasDriver = atlasdriver.driver,
-                                               multisenseDriver = perception.multisenseDriver,
-                                               affordanceServer = None,
-                                               fsmDebug = True)
+    actionManager = actionmanager.ActionManager(objectModel = om,
+                                                robotModel = robotStateModel,
+                                                sensorJointController = robotStateJointController,
+                                                playbackFunction = playPlans,
+                                                manipPlanner = manipPlanner,
+                                                footstepPlanner = footstepsDriver,
+                                                handDriver = lHandDriver,
+                                                atlasDriver = atlasdriver.driver,
+                                                multisenseDriver = perception.multisenseDriver,
+                                                affordanceServer = None,
+                                                fsmDebug = True)
 
     ampanel = actionmanagerpanel.init(actionManager)
 
