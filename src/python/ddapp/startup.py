@@ -7,6 +7,7 @@ import os
 import sys
 import PythonQt
 from PythonQt import QtCore, QtGui
+from time import time
 import ddapp.applogic as app
 from ddapp import botpy
 from ddapp import vtkAll as vtk
@@ -36,6 +37,7 @@ from ddapp import atlasdriverpanel
 from ddapp import atlasstatuspanel
 from ddapp import multisensepanel
 from ddapp import handcontrolpanel
+from ddapp import actionmanagerpanel
 from ddapp import robotplanlistener
 from ddapp import handdriver
 from ddapp import planplayback
@@ -48,6 +50,9 @@ from ddapp.timercallback import TimerCallback
 from ddapp import segmentationpanel
 from ddapp import lcmUtils
 from ddapp.shallowCopy import shallowCopy
+
+from actionmanager import actionmanager
+
 import drc as lcmdrc
 
 import functools
@@ -269,6 +274,19 @@ if usePlanning:
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
 
+    actionManager = actionmanager.ActionManager(objectModel = om,
+                                                robotModel = robotStateModel,
+                                                sensorJointController = robotStateJointController,
+                                                playbackFunction = playPlans,
+                                                manipPlanner = manipPlanner,
+                                                footstepPlanner = footstepsDriver,
+                                                handDriver = lHandDriver,
+                                                atlasDriver = atlasdriver.driver,
+                                                multisenseDriver = perception.multisenseDriver,
+                                                affordanceServer = None,
+                                                fsmDebug = True)
+
+    ampanel = actionmanagerpanel.init(actionManager)
 
     def onPostureGoal(msg):
 
@@ -282,7 +300,7 @@ if usePlanning:
 
         playbackPanel.setPlan(posturePlan)
 
-    lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
+    #lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
