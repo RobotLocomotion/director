@@ -60,6 +60,13 @@ class ManipulationPlanDriver(object):
         lcmUtils.publish('COMMITTED_ROBOT_PLAN', manipPlan)
 
 
+    def sendPlanPause(self):
+        msg = lcmdrc.plan_control_t()
+        msg.utime = getUtime()
+        msg.control = lcmdrc.plan_control_t.PAUSE
+        lcmUtils.publish('COMMITTED_PLAN_PAUSE', msg)
+
+
     def sendPlannerModeControl(self, mode='fixed_joints'):
         msg = lcmdrc.grasp_opt_mode_t()
         msg.utime = getUtime()
