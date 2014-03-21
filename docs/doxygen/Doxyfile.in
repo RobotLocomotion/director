@@ -4,7 +4,7 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = VES
+PROJECT_NAME           = "Drake Designer"
 PROJECT_NUMBER         =
 PROJECT_BRIEF          =
 PROJECT_LOGO           =
@@ -17,10 +17,10 @@ ABBREVIATE_BRIEF       =
 ALWAYS_DETAILED_SEC    = NO
 INLINE_INHERITED_MEMB  = NO
 FULL_PATH_NAMES        = YES
-STRIP_FROM_PATH        = "@VES_SOURCE_DIR@" \
-                         "@VES_BINARY_DIR@"
-STRIP_FROM_INC_PATH    = "@VES_SOURCE_DIR@" \
-                         "@VES_BINARY_DIR@"
+STRIP_FROM_PATH        = "@DD_SOURCE_DIR@" \
+                         "@DD_BINARY_DIR@"
+STRIP_FROM_INC_PATH    = "@DD_SOURCE_DIR@" \
+                         "@DD_BINARY_DIR@"
 SHORT_NAMES            = NO
 JAVADOC_AUTOBRIEF      = NO
 QT_AUTOBRIEF           = NO
@@ -95,12 +95,9 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = @VES_SOURCE_DIR@/Docs/Doxygen \
-                         @VES_SOURCE_DIR@/src/ves \
-                         @VES_SOURCE_DIR@/src/shaders \
-                         @VES_BINARY_DIR@/src/shaders \
-                         @VES_SOURCE_DIR@/src/kiwi \
-                         @VES_SOURCE_DIR@/Apps/Android/Kiwi/jni
+INPUT                  = @DD_SOURCE_DIR@/docs/doxygen \
+                         @DD_SOURCE_DIR@/src/app \
+                         @DD_SOURCE_DIR@/src/vtk/DRCFilters
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.h \
                          *.hpp \
@@ -135,8 +132,7 @@ VERBATIM_HEADERS       = YES
 ALPHABETICAL_INDEX     = YES
 COLS_IN_ALPHA_INDEX    = 3
 IGNORE_PREFIX          = vtk \
-                         ves \
-                         vsg
+                         dd
 #---------------------------------------------------------------------------
 # configuration options related to the HTML output
 #---------------------------------------------------------------------------
@@ -167,7 +163,7 @@ BINARY_TOC             = NO
 TOC_EXPAND             = NO
 GENERATE_QHP           = YES
 QCH_FILE               =
-QHP_NAMESPACE          = com.kitware.ves
+QHP_NAMESPACE          = org.mitdrc.ddapp
 QHP_VIRTUAL_FOLDER     = doc
 QHP_CUST_FILTER_NAME   =
 QHP_CUST_FILTER_ATTRS  =
@@ -251,7 +247,7 @@ SEARCH_INCLUDES        = YES
 INCLUDE_PATH           =
 INCLUDE_FILE_PATTERNS  =
 PREDEFINED             =
-EXPAND_AS_DEFINED      = vesNotUsed vesTypeMacro vesSharedPtr vesWeakPtr
+EXPAND_AS_DEFINED      = ddNotUsed ddTypeMacro ddSharedPtr ddWeakPtr
 SKIP_FUNCTION_MACROS   = YES
 #---------------------------------------------------------------------------
 # Configuration::additions related to external references

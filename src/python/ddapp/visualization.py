@@ -265,6 +265,31 @@ class FrameItem(om.PolyDataItem):
             view.render()
 
 
+def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=None):
+
+    grid = vtk.vtkGridSource()
+    grid.SetScale(cellSize)
+    grid.SetGridSize(numberOfCells)
+    grid.Update()
+    #color = [0.33,0.66,0]
+    color = color or [1, 1, 1]
+    gridObj = showPolyData(grid.GetOutput(), 'grid', view=view, alpha=0.10, color=color, visible=True, parent=parent)
+    gridObj.gridSource = grid
+    gridObj.actor.GetProperty().LightingOff()
+    return gridObj
+
+
+def computeViewBoundsNoGrid(view):
+    grid = om.findObjectByName('grid')
+    if not grid or not grid.getProperty('Visible'):
+        return
+
+    grid.actor.SetUseBounds(False)
+    bounds = view.renderer().ComputeVisiblePropBounds()
+    grid.actor.SetUseBounds(True)
+    view.addCustomBounds(bounds)
+
+
 def updatePolyData(polyData, name, **kwargs):
 
     obj = om.findObjectByName(name)

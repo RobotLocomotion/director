@@ -28,6 +28,7 @@ class ObjectModelItem(object):
 
     def __init__(self, name, icon=Icons.Robot):
         self.properties = OrderedDict()
+        self.propertyAttributes = {}
         self.icon = icon
         self.addProperty('Name', name)
 
@@ -41,8 +42,10 @@ class ObjectModelItem(object):
         assert self.hasProperty(propertyName)
         return self.properties[propertyName]
 
-    def addProperty(self, propertyName, propertyValue):
+    def addProperty(self, propertyName, propertyValue, attributes=None):
         self.properties[propertyName] = propertyValue
+        if attributes is not None:
+            self.propertyAttributes[propertyName] = attributes
         self._onPropertyAdded(propertyName)
 
     def setProperty(self, propertyName, propertyValue):
@@ -65,7 +68,8 @@ class ObjectModelItem(object):
         elif propertyName == 'Name':
             return PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=True)
         else:
-            return PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False)
+            attributes = PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False)
+            return self.propertyAttributes.setdefault(propertyName, attributes)
 
     def _onPropertyChanged(self, propertyName):
         updatePropertyPanel(self, propertyName)
@@ -127,6 +131,23 @@ class RobotModelItem(ObjectModelItem):
         else:
             return None
 
+    def setModel(self, model):
+        assert model is not None
+        if model == self.model:
+            return
+
+        views = list(self.views)
+        self.removeFromAllViews()
+        self.model = model
+        self.model.setAlpha(self.getProperty('Alpha'))
+        self.model.setVisible(self.getProperty('Visible'))
+        self.model.setColor(self.getProperty('Color'))
+        self.setProperty('Filename', model.filename())
+
+        for view in views:
+            self.addToView(view)
+        self.onModelChanged()
+
     def addToView(self, view):
         if view in self.views:
             return
@@ -135,10 +156,18 @@ class RobotModelItem(ObjectModelItem):
         view.render()
 
     def onRemoveFromObjectModel(self):
-        for view in self.views:
-            self.model.removeFromRenderer(view.renderer())
-            view.render()
+        self.removeFromAllViews()
 
+    def removeFromAllViews(self):
+        for view in list(self.views):
+            self.removeFromView(view)
+        assert len(self.views) == 0
+
+    def removeFromView(self, view):
+        assert view in self.views
+        self.views.remove(view)
+        self.model.removeFromRenderer(view.renderer())
+        view.render()
 
 class PolyDataItem(ObjectModelItem):
 
@@ -173,7 +202,9 @@ class PolyDataItem(ObjectModelItem):
         self.polyData = polyData
         self.mapper.SetInput(polyData)
         self.colorBy(arrayName, lut=self.mapper.GetLookupTable())
-        self._renderAllViews()
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
 
     def getColorByArrayName(self):
         if self.polyData:
@@ -219,7 +250,9 @@ class PolyDataItem(ObjectModelItem):
         self.mapper.SetScalarRange(scalarRange)
         self.mapper.InterpolateScalarsBeforeMappingOff()
         #self.mapper.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
-        self._renderAllViews()
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
 
 
     def addToView(self, view):
@@ -315,10 +348,18 @@ def getObjectForItem(item):
     return objects[item]
 
 
-def findObjectByName(name):
+def findObjectByName(name, parent=None):
+    if parent:
+        return findChildByName(parent, name)
     for obj in objects.values():
         if obj.getProperty('Name') == name:
             return obj
+
+
+def findChildByName(parent, name):
+    for child in getObjectChildren(parent):
+        if child.getProperty('Name') == name:
+            return child
 
 
 _blockSignals = False
@@ -332,6 +373,14 @@ def onPropertyChanged(prop):
 
     obj = getActiveObject()
     obj.setProperty(prop.propertyName(), prop.value())
+
+
+def addPropertiesToPanel(obj, p):
+    for propertyName in obj.propertyNames():
+        value = obj.getProperty(propertyName)
+        attributes = obj.getPropertyAttributes(propertyName)
+        if value is not None and not attributes.hidden:
+            addProperty(p, propertyName, attributes, value)
 
 
 def onTreeSelectionChanged():
@@ -348,12 +397,7 @@ def onTreeSelectionChanged():
     p = getPropertiesPanel()
     p.clear()
 
-    for propertyName in obj.propertyNames():
-
-        value = obj.getProperty(propertyName)
-        attributes = obj.getPropertyAttributes(propertyName)
-        if value is not None and not attributes.hidden:
-            addProperty(p, propertyName, attributes, value)
+    addPropertiesToPanel(obj, p)
 
     _blockSignals = False
 
@@ -402,8 +446,9 @@ def setPropertyAttributes(p, attributes):
 
 def addProperty(panel, name, attributes, value):
 
-    if isinstance(value, list):
-        groupProp = panel.addGroup(name)
+    if isinstance(value, list) and not isinstance(value[0], str):
+        groupName = '%s [%s]' % (name, ', '.join([str(v) for v in value]))
+        groupProp = panel.addGroup(groupName)
         for v in value:
             p = panel.addSubProperty(name, v, groupProp)
             setPropertyAttributes(p, attributes)
@@ -559,6 +604,7 @@ def init(objectTree, propertiesPanel):
     global _propertiesPanel
     _objectTree = objectTree
     _propertiesPanel = propertiesPanel
+    propertiesPanel.setBrowserModeToWidget()
 
     initProperties()
     initObjectTree()

@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QColor>
+#include <QVector>
 
 class vtkRenderer;
 class vtkTransform;
@@ -25,14 +26,15 @@ public:
   void removeFromRenderer(vtkRenderer* renderer);
 
   int numberOfJoints();
-  void setJointPositions(const QList<double>& positions, const QList<QString>& jointNames);
-  void setJointPositions(const QList<double>& positions);
-
-  void setEstRobotState(const QList<double>& robotState);
+  void setJointPositions(const QVector<double>& positions, const QList<QString>& jointNames);
+  void setJointPositions(const QVector<double>& positions);
+  const QVector<double>& getJointPositions() const;
 
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
   QList<QString> getLinkNames();
   QList<QString> getJointNames();
+
+  void getModelMesh(vtkPolyData* polyData);
 
   QString getLinkNameForMesh(vtkPolyData* polyData);
 

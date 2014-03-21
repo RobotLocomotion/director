@@ -2,6 +2,18 @@ import os
 import sys
 
 
+def _initCoverage():
+    if  'COVERAGE_PROCESS_START' in os.environ:
+        try:
+            import coverage
+            coverage.process_startup()
+        except ImportError:
+            pass
+
+
+def getDRCBaseDir():
+    return os.environ['DRC_BASE']
+
 def findFileInPaths(filename, searchPaths):
     for path in searchPaths:
         if os.path.isfile(os.path.join(path, filename)):
@@ -16,7 +28,7 @@ def _updateSysPath():
                 'vtk/__init__.py'
                 ]
 
-    baseDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../../externals/pod-build/src'))
+    baseDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../../../externals/pod-build/src'))
 
     searchPaths = []
     searchPaths.append(os.path.join(baseDir, 'PointCloudLibraryPlugin-build/lib'))
@@ -31,3 +43,4 @@ def _updateSysPath():
 
 
 _updateSysPath()
+_initCoverage()

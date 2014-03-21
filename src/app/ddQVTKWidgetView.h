@@ -4,6 +4,7 @@
 #include "ddViewBase.h"
 
 class vtkCamera;
+class vtkOrientationMarkerWidget;
 class vtkRenderer;
 class vtkRenderWindow;
 class QVTKWidget;
@@ -19,13 +20,21 @@ public:
 
   vtkRenderWindow* renderWindow() const;
   vtkRenderer* renderer() const;
+  vtkRenderer* backgroundRenderer() const;
   vtkCamera* camera() const;
 
   QList<double> lastTDxMotion() const;
 
   QVTKWidget* vtkWidget() const;
+  vtkOrientationMarkerWidget* orientationMarkerWidget() const;
 
   void installImageInteractor();
+
+  void addCustomBounds(const QList<double>& bounds);
+
+signals:
+
+  void computeBoundsRequest(ddQVTKWidgetView* view);
 
 public slots:
 

@@ -1,7 +1,7 @@
 import lcm
 import PythonQt
-from PythonQt import QtCore
 import pickle
+import atexit
 
 class GlobalLCM(object):
 
@@ -17,9 +17,16 @@ class GlobalLCM(object):
   @classmethod
   def getThread(cls):
       if cls._lcmThread == None:
-          cls._lcmThread = PythonQt.dd.ddLCMThread(PythonQt.QtCore.QCoreApplication.instance())
+          cls._lcmThread = PythonQt.dd.ddLCMThread()
+          atexit.register(cls.finalize)
           cls._lcmThread.start()
       return cls._lcmThread
+
+  @classmethod
+  def finalize(cls):
+      if cls._lcmThread:
+          cls._lcmThread.delete()
+          cls._lcmThread = None
 
 
 def getGlobalLCM():
