@@ -58,12 +58,19 @@ void ddPythonManager::preInitialization()
 {
   this->addWrapperFactory(new ddPythonQtWrapperFactory);
   this->registerPythonQtDecorator(new ddPythonQtDecorators);
+
+  // when running from a cmake build directory (not an install tree)
+  // then automatically prepend the python sys.path
+  if (QFileInfo(QCoreApplication::applicationDirPath()  + "/../CMakeCache.txt").exists())
+  {
+    PythonQt::self()->addSysPath(this->appSitePackagesDir());
+  }
 }
 
 //-----------------------------------------------------------------------------
 QString ddPythonManager::appSitePackagesDir()
 {
-  return QFileInfo(QCoreApplication::applicationDirPath()  + "/../lib/site-packages").canonicalFilePath();
+  return QFileInfo(QCoreApplication::applicationDirPath()  + "/../lib/python2.7/dist-packages").canonicalFilePath();
 }
 
 //-----------------------------------------------------------------------------

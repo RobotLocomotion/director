@@ -4,6 +4,7 @@
 #include <URDFRigidBodyManipulator.h>
 
 #include <vtkPolyData.h>
+#include <vtkAppendPolyData.h>
 #include <vtkSmartPointer.h>
 #include <vtkActor.h>
 #include <vtkPolyDataMapper.h>
@@ -41,8 +42,10 @@ using std::istringstream;
 
 #if VTK_MAJOR_VERSION == 6
  #define SetInputData(filter, obj) filter->SetInputData(obj);
+ #define AddInputData(filter, obj) filter->AddInputData(obj);
 #else
   #define SetInputData(filter, obj) filter->SetInput(obj);
+  #define AddInputData(filter, obj) filter->AddInput(obj);
 #endif
 
 class ddMeshVisual
@@ -69,58 +72,6 @@ namespace
 {
 
 const int GRAY_DEFAULT = 190;
-
-std::vector<std::string> getEstRobotStateJointNames()
-{
-  std::vector<std::string> names;
-  names.push_back("back_bkz");
-  names.push_back("back_bky");
-  names.push_back("back_bkx");
-  names.push_back("neck_ay");
-  names.push_back("l_leg_hpz");
-  names.push_back("l_leg_hpx");
-  names.push_back("l_leg_hpy");
-  names.push_back("l_leg_kny");
-  names.push_back("l_leg_aky");
-  names.push_back("l_leg_akx");
-  names.push_back("r_leg_hpz");
-  names.push_back("r_leg_hpx");
-  names.push_back("r_leg_hpy");
-  names.push_back("r_leg_kny");
-  names.push_back("r_leg_aky");
-  names.push_back("r_leg_akx");
-  names.push_back("l_arm_usy");
-  names.push_back("l_arm_shx");
-  names.push_back("l_arm_ely");
-  names.push_back("l_arm_elx");
-  names.push_back("l_arm_uwy");
-  names.push_back("l_arm_mwx");
-  names.push_back("r_arm_usy");
-  names.push_back("r_arm_shx");
-  names.push_back("r_arm_ely");
-  names.push_back("r_arm_elx");
-  names.push_back("r_arm_uwy");
-  names.push_back("r_arm_mwx");
-  names.push_back("hokuyo_joint");
-
-  /*
-  names.push_back("pre_spindle_cal_x_joint");
-  names.push_back("pre_spindle_cal_y_joint");
-  names.push_back("pre_spindle_cal_z_joint");
-  names.push_back("pre_spindle_cal_roll_joint");
-  names.push_back("pre_spindle_cal_pitch_joint");
-  names.push_back("pre_spindle_cal_yaw_joint");
-  names.push_back("post_spindle_cal_x_joint");
-  names.push_back("post_spindle_cal_y_joint");
-  names.push_back("post_spindle_cal_z_joint");
-  names.push_back("post_spindle_cal_roll_joint");
-  names.push_back("post_spindle_cal_pitch_joint");
-  names.push_back("post_spindle_cal_yaw_joint");
-  */
-
-  return names;
-}
-
 
 QMap<QString, QString> PackageSearchPaths;
 
@@ -228,6 +179,8 @@ ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
   ddMeshVisual::Ptr visual(new ddMeshVisual);
   visual->PolyData = computeNormals(polyData);
   visual->Actor = vtkSmartPointer<vtkActor>::New();
+  visual->Transform = vtkSmartPointer<vtkTransform>::New();
+  visual->Actor->SetUserTransform(visual->Transform);
 
   visual->Actor->GetProperty()->SetSpecular(0.9);
   visual->Actor->GetProperty()->SetSpecularPower(20);
@@ -592,8 +545,7 @@ public:
           if (iter!= mesh_map.end())
           {
             ddMeshVisual::Ptr meshVisual = iter->second;
-            meshVisual->Actor->SetUserTransform(worldToVisual);
-
+            meshVisual->Transform->SetMatrix(worldToVisual->GetMatrix());
           }
 
         } // end loop over visuals
@@ -736,6 +688,7 @@ public:
   bool Visible;
   double Alpha;
   QColor Color;
+  QVector<double> JointPositions;
 };
 
 
@@ -763,7 +716,7 @@ int ddDrakeModel::numberOfJoints()
 }
 
 //-----------------------------------------------------------------------------
-void ddDrakeModel::setJointPositions(const QList<double>& jointPositions, const QList<QString>& jointNames)
+void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, const QList<QString>& jointNames)
 {
   URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
 
@@ -777,12 +730,13 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions, const 
 
   if (jointPositions.size() != jointNames.size())
   {
-    std::cout << "ddDrakeModel::setJointPositions(): input jointPositions length "
+    std::cout << "ddDrakeModel::setJointPositions(): input jointPositions size "
               << jointPositions.size() << " != " << jointNames.size() << std::endl;
     return;
   }
 
   MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
+  this->Internal->JointPositions.resize(model->num_dof);
   for (int i = 0; i < jointNames.size(); ++i)
   {
     const QString& dofName = jointNames[i];
@@ -796,6 +750,7 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions, const 
 
     int dofId = itr->second;
     q(dofId, 0) = jointPositions[i];
+    this->Internal->JointPositions[dofId] = jointPositions[i];
   }
 
   model->doKinematics(q.data());
@@ -804,7 +759,7 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions, const 
 }
 
 //-----------------------------------------------------------------------------
-void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
+void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
 {
   URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
 
@@ -814,22 +769,29 @@ void ddDrakeModel::setJointPositions(const QList<double>& jointPositions)
     return;
   }
 
-  if (jointPositions.length() != model->num_dof)
+  if (jointPositions.size() != model->num_dof)
   {
-    std::cout << "ddDrakeModel::setJointPositions(): input jointPositions length "
-              << jointPositions.length() << " != " << model->num_dof << std::endl;
+    std::cout << "ddDrakeModel::setJointPositions(): input jointPositions size "
+              << jointPositions.size() << " != " << model->num_dof << std::endl;
     return;
   }
 
   MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
-  for (int i = 0; i < jointPositions.length(); ++i)
+  for (int i = 0; i < jointPositions.size(); ++i)
   {
     q(i, 0) = jointPositions[i];
   }
 
+  this->Internal->JointPositions = jointPositions;
   model->doKinematics(q.data());
   model->updateModel();
   emit this->modelChanged();
+}
+
+//-----------------------------------------------------------------------------
+const QVector<double>& ddDrakeModel::getJointPositions() const
+{
+  return this->Internal->JointPositions;
 }
 
 //-----------------------------------------------------------------------------
@@ -895,63 +857,6 @@ QString ddDrakeModel::getLinkNameForMesh(vtkPolyData* polyData)
 
 
 //-----------------------------------------------------------------------------
-void ddDrakeModel::setEstRobotState(const QList<double>& robotState)
-{
-  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
-
-  if (!model)
-  {
-    std::cout << "ddDrakeModel::setJointPositions(): model is null" << std::endl;
-    return;
-  }
-
-  const std::map<std::string, int> dofMap = model->dof_map[0];
-  std::vector<std::string> dofNames = getEstRobotStateJointNames();
-
-  if (robotState.size() == 35)
-  {
-    dofNames.pop_back();
-  }
-
-  MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
-  for (int i = 0; i < dofNames.size(); ++i)
-  {
-    const std::string& dofName = dofNames[i];
-
-    std::map<std::string, int>::const_iterator itr = dofMap.find(dofName);
-    if (itr == dofMap.end())
-    {
-      continue;
-    }
-
-    int dofId = itr->second;
-
-    //printf("est dof %02d %s  -->  %d\n", i, dofName.c_str(), dofId);
-
-    q(dofId, 0) = robotState[7 + i];
-  }
-
-  q(dofMap.find("base_x")->second, 0) = robotState[0];
-  q(dofMap.find("base_y")->second, 0) = robotState[1];
-  q(dofMap.find("base_z")->second, 0) = robotState[2];
-
-  double base_rpy[3];
-  double base_quat[4] = {robotState[3], robotState[4], robotState[5], robotState[6]};
-
-
-  bot_quat_to_roll_pitch_yaw(base_quat, base_rpy);
-
-  q(dofMap.find("base_roll")->second, 0) = base_rpy[0];
-  q(dofMap.find("base_pitch")->second, 0) = base_rpy[1];
-  q(dofMap.find("base_yaw")->second, 0) = base_rpy[2];
-
-
-  model->doKinematics(q.data());
-  model->updateModel();
-  emit this->modelChanged();
-}
-
-//-----------------------------------------------------------------------------
 bool ddDrakeModel::loadFromFile(const QString& filename)
 {
   URDFRigidBodyManipulatorVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data());
@@ -963,9 +868,7 @@ bool ddDrakeModel::loadFromFile(const QString& filename)
   this->Internal->FileName = filename;
   this->Internal->Model = model;
 
-  MatrixXd q0 = MatrixXd::Zero(model->num_dof, 1);
-  model->doKinematics(q0.data());
-  model->updateModel();
+  this->setJointPositions(QVector<double>(model->num_dof, 0.0));
   return true;
 }
 
@@ -981,10 +884,32 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
   this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
 
-  MatrixXd q0 = MatrixXd::Zero(model->num_dof, 1);
-  model->doKinematics(q0.data());
-  model->updateModel();
+  this->setJointPositions(QVector<double>(model->num_dof, 0.0));
   return true;
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
+{
+  if (!polyData)
+  {
+    return;
+  }
+
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    AddInputData(appendFilter, transformPolyData(visuals[i]->PolyData, visuals[i]->Transform));
+  }
+
+  if (visuals.size())
+  {
+    appendFilter->Update();
+  }
+
+  polyData->DeepCopy(appendFilter->GetOutput());
 }
 
 //-----------------------------------------------------------------------------
@@ -1001,8 +926,6 @@ void ddDrakeModel::addToRenderer(vtkRenderer* renderer)
   {
     renderer->AddActor(visuals[i]->Actor);
   }
-
-  renderer->ResetCamera();
 }
 
 //-----------------------------------------------------------------------------
@@ -1019,8 +942,6 @@ void ddDrakeModel::removeFromRenderer(vtkRenderer* renderer)
   {
     renderer->RemoveActor(visuals[i]->Actor);
   }
-
-  renderer->ResetCamera();
 }
 
 //-----------------------------------------------------------------------------

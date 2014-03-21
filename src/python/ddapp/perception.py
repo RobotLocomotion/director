@@ -33,10 +33,6 @@ def updateDebugItem(polyData):
     else:
         _debugItem.setPolyData(polyData)
 
-    _view.render()
-
-
-
 
 class MultisenseItem(om.ObjectModelItem):
 
@@ -107,17 +103,15 @@ class MultisenseItem(om.ObjectModelItem):
 
 class MultiSenseSource(TimerCallback):
 
-    def __init__(self, view, jointController):
+    def __init__(self, view):
         TimerCallback.__init__(self)
         self.view = view
-        self.jointController = jointController
         self.reader = None
         self.displayedRevolution = -1
         self.lastScanLine = -1
         self.numberOfScanLines = 1
         self.nextScanLineId = 0
         self.scanLines = []
-        self.lastRobotStateUtime = 0
         self.pointSize = 1
         self.alpha = 0.5
         self.visible = True
@@ -193,26 +187,6 @@ class MultiSenseSource(TimerCallback):
 
         TimerCallback.start(self)
 
-    def updateRobotState(self):
-
-        robotState = vtk.vtkDoubleArray()
-        timestamp = self.reader.GetCurrentRobotState(robotState)
-        if timestamp == self.lastRobotStateUtime:
-            return
-
-        self.lastRobotStateUtime = timestamp
-        robotState = [robotState.GetValue(i) for i in xrange(robotState.GetNumberOfTuples())]
-
-        poseName = 'EST_ROBOT_STATE'
-        pose = robotstate.robotStateToDrakePose(robotState)
-        self.jointController.setPose(poseName, pose)
-
-        for model in self.jointController.models:
-            model.setEstRobotState(robotState)
-
-        self.updateDebugItems()
-
-
     def updateScanLines(self):
 
         if not self.numberOfScanLines:
@@ -278,7 +252,7 @@ class MultiSenseSource(TimerCallback):
 
     def tick(self):
 
-        self.updateRobotState()
+        self.updateDebugItems()
         self.updateRevolution()
         self.updateScanLines()
 
@@ -373,14 +347,14 @@ class MapServerSource(TimerCallback):
         self.updateMap()
 
 
-def init(view, jointController):
+def init(view):
     global _multisenseItem
     global _view
     global multisenseDriver
 
     _view = view
 
-    m = MultiSenseSource(view, jointController)
+    m = MultiSenseSource(view)
     m.start()
     multisenseDriver = m
 

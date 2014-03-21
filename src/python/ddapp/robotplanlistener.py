@@ -1,29 +1,16 @@
 import os
 import vtkAll as vtk
-from ddapp import botpy
 import math
 import time
-import re
 import numpy as np
 
 from ddapp import transformUtils
 from ddapp import lcmUtils
-from ddapp.timercallback import TimerCallback
 from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import applogic as app
-from ddapp.debugVis import DebugData
-from ddapp import ioUtils
-from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
 from ddapp import robotstate
-from ddapp import botpy
 
 import drc as lcmdrc
-
-import pickle
-
-import scipy.interpolate
 
 
 class ManipulationPlanDriver(object):
@@ -210,160 +197,3 @@ class ManipulationPlanDriver(object):
                                     responseChannel, lcmdrc.robot_plan_w_keyframes_t, waitTimeout)
         else:
             lcmUtils.publish(requestChannel, msg)
-
-
-
-class RobotPlanPlayback(object):
-
-    def __init__(self):
-        self.animationCallback = None
-        self.animationTimer = None
-        self.interpolationMethod = 'cubic'
-        self.playbackSpeed = 1.0
-        self.jointNameRegex = ''
-
-    @staticmethod
-    def getPlanPoses(msg):
-
-        poses = []
-        poseTimes = []
-        for plan in msg.plan:
-            pose = robotstate.convertStateMessageToDrakePose(plan)
-            poseTimes.append(plan.utime / 1e6)
-            poses.append(pose)
-        return np.array(poseTimes), poses
-
-
-    def getPlanElapsedTime(self, msg):
-
-        startTime = msg.plan[0].utime
-        endTime = msg.plan[-1].utime
-        return (endTime - startTime) / 1e6
-
-
-    def stopAnimation(self):
-        if self.animationTimer:
-            self.animationTimer.stop()
-
-
-    def setInterpolationMethod(method):
-        self.interpolationMethod = method
-
-
-    def playPlan(self, msg, jointController):
-
-        self.playPlans(poseTimes, [msg], jointController)
-
-
-    def playPlans(self, messages, jointController):
-
-        assert len(messages)
-
-        allPoseTimes, allPoses = self.getPlanPoses(messages[0])
-
-        for msg in messages[1:]:
-            poseTimes, poses = self.getPlanPoses(msg)
-            poseTimes += allPoseTimes[-1]
-            allPoseTimes = np.hstack((allPoseTimes, poseTimes[1:]))
-            allPoses += poses[1:]
-
-        self.playPoses(allPoseTimes, allPoses, jointController)
-
-
-    def playPoses(self, poseTimes, poses, jointController):
-
-        if self.interpolationMethod in ['slinear', 'quadratic', 'cubic']:
-            f = scipy.interpolate.interp1d(poseTimes, poses, axis=0, kind=self.interpolationMethod)
-        elif self.interpolationMethod == 'pchip':
-            f = scipy.interpolate.pchip(poseTimes, poses, axis=0)
-
-        timer = SimpleTimer()
-
-        def updateAnimation():
-
-            tNow = timer.elapsed() * self.playbackSpeed
-
-            if tNow > poseTimes[-1]:
-                pose = poses[-1]
-                jointController.addPose('plan_playback', pose)
-                jointController.setPose('plan_playback')
-
-                if self.animationCallback:
-                    self.animationCallback()
-
-                return False
-
-            pose = f(tNow)
-            jointController.addPose('plan_playback', pose)
-            jointController.setPose('plan_playback')
-
-            if self.animationCallback:
-                self.animationCallback()
-
-        self.animationTimer = TimerCallback()
-        self.animationTimer.targetFps = 60
-        self.animationTimer.callback = updateAnimation
-        self.animationTimer.start()
-
-
-
-    def picklePlan(self, filename, msg):
-        poseTimes, poses = self.getPlanPoses(msg)
-        pickle.dump((poseTimes, poses), open(filename, 'w'))
-
-
-    def plotPlan(self, msg):
-
-        import matplotlib.pyplot as plt
-
-        poseTimes, poses = self.getPlanPoses(msg)
-
-        poses = np.array(poses)
-
-        if self.jointNameRegex:
-            jointIds = range(poses.shape[1])
-        else:
-            diffs = np.diff(poses, axis=0)
-            jointIds = np.unique(np.where(diffs != 0.0)[1])
-
-        jointNames = [robotstate.getDrakePoseJointNames()[jointId] for jointId in jointIds]
-        jointTrajectories = [poses[:,jointId] for jointId in jointIds]
-
-        seriesNames = []
-
-        sampleResolutionInSeconds = 0.01
-        numberOfSamples = (poseTimes[-1] - poseTimes[0]) / sampleResolutionInSeconds
-        xnew = np.linspace(poseTimes[0], poseTimes[-1], numberOfSamples)
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-
-
-        for jointId, jointName, jointTrajectory in zip(jointIds, jointNames, jointTrajectories):
-
-            if self.jointNameRegex and not re.match(self.jointNameRegex, jointName):
-                continue
-
-            x = poseTimes
-            y = jointTrajectory
-
-            y = np.rad2deg(y)
-
-            if self.interpolationMethod in ['slinear', 'quadratic', 'cubic']:
-                f = scipy.interpolate.interp1d(x, y, kind=self.interpolationMethod)
-            elif self.interpolationMethod == 'pchip':
-                f = scipy.interpolate.pchip(x, y)
-
-            ax.plot(x, y, 'ko')
-            seriesNames.append(jointName + ' points')
-
-            ax.plot(xnew, f(xnew), '-')
-            seriesNames.append(jointName + ' ' + self.interpolationMethod)
-
-
-        ax.legend(seriesNames, loc='upper right').draggable()
-        ax.set_xlabel('time (s)')
-        ax.set_ylabel('joint angle (deg)')
-        ax.set_title('joint trajectories')
-        plt.show()
-

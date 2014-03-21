@@ -29,6 +29,25 @@ def readPolyData(filename, computeNormals=False):
         return polyData
 
 
+def readImage(filename):
+
+    ext = os.path.splitext(filename)[1]
+
+    readers = {
+            '.png' : vtk.vtkPNGReader,
+            '.jpg' : vtk.vtkJPEGReader,
+              }
+
+    if ext not in readers:
+        raise Exception('Unknown file extension in readImage: %s' % filename)
+
+    reader = readers[ext]()
+    reader.SetFileName(filename)
+    reader.Update()
+    image = shallowCopy(reader.GetOutput())
+    return image
+
+
 def writePolyData(polyData, filename):
 
     ext = os.path.splitext(filename)[1]

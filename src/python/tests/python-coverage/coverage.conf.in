@@ -1,0 +1,13 @@
+# python coverage config file
+
+[run]
+branch = True
+parallel = True
+source = @python_coverage_source@
+data_file = @python_coverage_data_dir@/coverage.data
+
+[report]
+ignore_errors = True
+
+[html]
+directory = @python_coverage_html_dir@

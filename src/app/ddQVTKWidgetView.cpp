@@ -3,6 +3,7 @@
 #include "vtkTDxInteractorStyleCallback.h"
 #include "vtkSimpleActorInteractor.h"
 
+#include <vtkBoundingBox.h>
 #include <vtkSmartPointer.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
@@ -64,6 +65,8 @@ public:
   vtkSmartPointer<vtkOrientationMarkerWidget> OrientationWidget;
 
   vtkSmartPointer<vtkTDxInteractorStyleCallback> TDxInteractor;
+
+  QList<QList<double> > CustomBounds;
 
   bool RenderPending;
 };
@@ -137,6 +140,12 @@ vtkRenderer* ddQVTKWidgetView::renderer() const
 }
 
 //-----------------------------------------------------------------------------
+vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const
+{
+  return this->Internal->Renderer;
+}
+
+//-----------------------------------------------------------------------------
 QVTKWidget* ddQVTKWidgetView::vtkWidget() const
 {
   return this->Internal->VTKWidget;
@@ -162,9 +171,33 @@ void ddQVTKWidgetView::forceRender()
 }
 
 //-----------------------------------------------------------------------------
+void ddQVTKWidgetView::addCustomBounds(const QList<double>& bounds)
+{
+  this->Internal->CustomBounds.append(bounds);
+}
+
+//-----------------------------------------------------------------------------
 void ddQVTKWidgetView::resetCamera()
 {
-  this->renderer()->ResetCamera();
+  this->Internal->CustomBounds.clear();
+  emit this->computeBoundsRequest(this);
+
+  if (this->Internal->CustomBounds.size())
+  {
+    vtkBoundingBox bbox;
+    foreach (const QList<double>& b, this->Internal->CustomBounds)
+    {
+      double bounds[6] = {b[0], b[1], b[2], b[3], b[4], b[5]};
+      bbox.AddBounds(bounds);
+    }
+    double bounds[6];
+    bbox.GetBounds(bounds);
+    this->renderer()->ResetCamera(bounds);
+  }
+  else
+  {
+    this->renderer()->ResetCamera();
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -193,6 +226,12 @@ void ddQVTKWidgetView::setActorManipulationStyle()
 void ddQVTKWidgetView::setCameraManipulationStyle()
 {
   this->renderWindow()->GetInteractor()->SetInteractorStyle(vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New());
+}
+
+//-----------------------------------------------------------------------------
+vtkOrientationMarkerWidget* ddQVTKWidgetView::orientationMarkerWidget() const
+{
+  return this->Internal->OrientationWidget;
 }
 
 //-----------------------------------------------------------------------------

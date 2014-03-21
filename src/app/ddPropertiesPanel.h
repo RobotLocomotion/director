@@ -18,6 +18,9 @@ public:
   ddPropertiesPanel(QWidget* parent=0);
   virtual ~ddPropertiesPanel();
 
+  void setBrowserModeToTree();
+  void setBrowserModeToWidget();
+
   QtVariantPropertyManager* propertyManager() const;
   QtAbstractPropertyBrowser* propertyBrowser() const;
 

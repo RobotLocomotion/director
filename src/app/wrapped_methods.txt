@@ -36,9 +36,9 @@ bool ddDrakeModel::loadFromXML(const QString&);
 void ddDrakeModel::addToRenderer(vtkRenderer*);
 void ddDrakeModel::removeFromRenderer(vtkRenderer*);
 int ddDrakeModel::numberOfJoints();
-void ddDrakeModel::setJointPositions(const QList<double>&);
-void ddDrakeModel::setJointPositions(const QList<double>&, const QStringList&);
-void ddDrakeModel::setEstRobotState(const QList<double>&);
+void ddDrakeModel::setJointPositions(const QVector<double>&);
+void ddDrakeModel::setJointPositions(const QVector<double>&, const QStringList&);
+QVector<double> ddDrakeModel::getJointPositions() const;
 bool ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
 QString ddDrakeModel::getLinkNameForMesh(vtkPolyData*);
 QStringList ddDrakeModel::getLinkNames();
@@ -48,7 +48,7 @@ void ddDrakeModel::setVisible(bool);
 QColor ddDrakeModel::color() const;
 void ddDrakeModel::setColor(const QColor&);
 void ddDrakeModel::setLinkColor(const QString&, const QColor&);
-
+void ddDrakeModel::getModelMesh(vtkPolyData*);
 
 double ddDrakeModel::alpha() const;
 bool ddDrakeModel::visible() const;
@@ -68,9 +68,12 @@ ddQVTKWidgetView::~ddQVTKWidgetView();
 vtkCamera* ddQVTKWidgetView::camera() const;
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
 vtkRenderer* ddQVTKWidgetView::renderer() const;
+vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const;
 QVTKWidget* ddQVTKWidgetView::vtkWidget() const;
+vtkOrientationMarkerWidget* ddQVTKWidgetView::orientationMarkerWidget() const;
 QList<double> ddQVTKWidgetView::lastTDxMotion() const;
 void ddQVTKWidgetView::installImageInteractor();
+void ddQVTKWidgetView::addCustomBounds(const QList<double>&);
 
 ddViewManager* ddMainWindow::viewManager()
 ddPropertiesPanel* ddMainWindow::propertiesPanel() const;
@@ -118,11 +121,15 @@ void QtVariantProperty::setValue(const QVariant &);
 void QtVariantProperty::setAttribute(const QString &, const QVariant &);
 bool QtVariantProperty::isSubProperty() const;
 
+ddPropertiesPanel::ddPropertiesPanel();
+ddPropertiesPanel::~ddPropertiesPanel();
 QtVariantProperty* ddPropertiesPanel::addGroup(const QString&);
 QtVariantProperty* ddPropertiesPanel::addProperty(const QString&, const QVariant&);
 QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString&, const QVariant&, QtVariantProperty*);
 QtVariantProperty* ddPropertiesPanel::findProperty(const QString&) const;
 QtVariantProperty* ddPropertiesPanel::findSubProperty(const QString&, QtVariantProperty*) const;
+void ddPropertiesPanel::setBrowserModeToTree();
+void ddPropertiesPanel::setBrowserModeToWidget();
 
 
 ddSignalMap::ddSignalMap();

@@ -24,11 +24,11 @@ classdef IKServer
             obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(5e2);
             obj.ikoptions = obj.ikoptions.setMex(true);
 
-            leftLegCost = 10;
-            rightLegCost = 10;
+            leftLegCost = 1;
+            rightLegCost = 1;
             leftArmCost = 1;
             rightArmCost = 1;
-            backCost = 10;
+            backCost = 1e6;
             neckCost = 100;
 
             nq = obj.robot.getNumDOF();
@@ -78,9 +78,16 @@ classdef IKServer
 
             cost = double(cost);
 
+            vel_cost = cost*.05;
+            accel_cost = cost*.05;
+
             obj.ikoptions = obj.ikoptions.setQ(diag(cost(1:nq)));
-            obj.ikoptions = obj.ikoptions.setQa(10*obj.ikoptions.Qa);
-            obj.ikoptions = obj.ikoptions.setQv(10*obj.ikoptions.Qv);
+            obj.ikoptions = obj.ikoptions.setQa(diag(vel_cost(1:nq)));
+            obj.ikoptions = obj.ikoptions.setQv(diag(accel_cost(1:nq)));
+            obj.ikoptions = obj.ikoptions.setqdf(zeros(nq,1), zeros(nq,1)); % upper and lower bnd on velocity.
+
+            % obj.ikoptions = obj.ikoptions.setQa(10*obj.ikoptions.Qa);
+            % obj.ikoptions = obj.ikoptions.setQv(10*obj.ikoptions.Qv);
 
         end
 
@@ -123,6 +130,28 @@ classdef IKServer
             heel = obj.robot.body(bodyIndex).getContactPoints('heel');
             pts = [toe, heel];
         end
+
+
+        function publishTraj(obj, plan_pub, atlas, xtraj, snopt_info, timeInSeconds)
+
+            for i = 1:atlas.getNumStates
+                atlas2robotFrameIndMap(i) = find(strcmp(atlas.getStateFrame.coordinates{i}, obj.robot.getStateFrame.coordinates));
+            end
+
+            utime = now() * 24 * 60 * 60;
+            nq_atlas = length(atlas2robotFrameIndMap)/2;
+            ts = xtraj.pp.breaks;
+            q = xtraj.eval(ts);
+            xtraj_atlas = zeros(2+2*nq_atlas,length(ts));
+            xtraj_atlas(2+(1:nq_atlas),:) = q(atlas2robotFrameIndMap(1:nq_atlas),:);
+            snopt_info_vector = snopt_info*ones(1, size(xtraj_atlas,2));
+
+            ts = ts*timeInSeconds;
+            ts = ts - ts(1);
+            plan_pub.publish(xtraj_atlas, ts, utime, snopt_info_vector);
+
+        end
+
     end
 
 end
