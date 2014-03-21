@@ -4,7 +4,7 @@ from ddapp import robotstate
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import segmentation
-from ddapp.plansequence import RobotPoseGUIWrapper
+from ddapp.drilldemo import RobotPoseGUIWrapper
 
 from copy import deepcopy
 
@@ -57,7 +57,7 @@ class Action(object):
         self.outputState = None
 
     def reset(self):
-        self.parsedArgs = {}
+        self.outputs = {}
         self.animations = []
         self.inputState = None
         self.outputState = None
@@ -237,9 +237,9 @@ class ChangeMode(Action):
                         return
 
     def onExit(self):
-
         # This is a state change action, no robot motion
         self.outputState = deepcopy(self.inputState)
+
 
 class WalkPlan(Action):
 
@@ -276,6 +276,7 @@ class WalkPlan(Action):
 
         # This is a planning action, no robot motion
         self.outputState = deepcopy(self.inputState)
+
 
 class Walk(Action):
 
@@ -337,6 +338,7 @@ class Walk(Action):
             # (the move is complete, so output state is current estimated robot state)
             self.outputState = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
         return
+
 
 def computeGroundFrame(robotModel):
     '''
@@ -446,7 +448,6 @@ class DeltaReachPlan(Action):
         self.manipPlanResponse = None
 
     def onEnter(self):
-
         linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
         linkName = linkMap[self.parsedArgs['Hand']]
 
@@ -499,6 +500,7 @@ class DeltaReachPlan(Action):
 
         # This is a planning action, no robot motion
         self.outputState = deepcopy(self.inputState)
+
 
 class ReachPlan(Action):
 
@@ -717,9 +719,6 @@ class Fit(Action):
             # Viz Mode Logic
             self.success()
         else:
-
-#            self.success()
-
             # Execute Mode Logic
             pd = self.container.om.findObjectByName('Multisense').model.revPolyData
             self.container.om.removeFromObjectModel(self.container.om.findObjectByName('debug'))
@@ -741,7 +740,6 @@ class WaitForScan(Action):
         self.outputs = {}
 
     def onEnter(self):
-
         # Viz Mode Logic
         if self.container.vizMode:
             return
@@ -752,7 +750,6 @@ class WaitForScan(Action):
             self.desiredRevolution = self.currentRevolution + 2
 
     def onUpdate(self):
-
         # Viz Mode Logic
         if self.container.vizMode:
             self.success()
