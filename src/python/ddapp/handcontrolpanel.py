@@ -39,10 +39,6 @@ class HandControlPanel(object):
         self.ui = WidgetDict(self.widget.children())
         self._updateBlocked = True
 
-        self.updateTimer = TimerCallback()
-        self.updateTimer.callback = self.updatePanel
-        self.updateTimer.start()
-
         self.widget.advanced.sendButton.setEnabled(True)
 
         #connect the callbacks
@@ -52,7 +48,6 @@ class HandControlPanel(object):
         self.widget.advanced.calibrateButton.clicked.connect(self.calibrateClicked)
         self.widget.advanced.setModeButton.clicked.connect(self.setModeClicked)
 
-        self.updatePanel()
 
     def getModeInt(self, inputStr):
         if inputStr == 'Basic':
@@ -65,8 +60,6 @@ class HandControlPanel(object):
             return 3
         return 0
 
-    def updatePanel(self):
-        return
 
     def openClicked(self):
         if self.widget.handSelect.leftButton.checked:

@@ -271,8 +271,12 @@ class FootstepsDriver(object):
         responseChannel = 'FOOTSTEP_PLAN_RESPONSE'
 
         if waitForResponse:
+            if waitTimeout == 0:
+                helper = lcmUtils.MessageResponseHelper(responseChannel, lcmdrc.footstep_plan_t)
+                lcmUtils.publish(requestChannel, request)
+                return helper
             return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, request,
-                                    responseChannel, lcmdrc.footstep_plan_t, waitTimeout)
+                                                                 responseChannel, lcmdrc.footstep_plan_t, waitTimeout)
         else:
             lcmUtils.publish(requestChannel, request)
 
@@ -291,8 +295,12 @@ class FootstepsDriver(object):
         responseChannel = 'WALKING_TRAJ_RESPONSE'
 
         if waitForResponse:
+            if waitTimeout == 0:
+                helper = lcmUtils.MessageResponseHelper(responseChannel, lcmdrc.robot_plan_t)
+                lcmUtils.publish(requestChannel, msg)
+                return helper
             return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, msg,
-                                    responseChannel, lcmdrc.robot_plan_t, waitTimeout)
+                                                                 responseChannel, lcmdrc.robot_plan_t, waitTimeout)
         else:
             lcmUtils.publish(requestChannel, msg)
 

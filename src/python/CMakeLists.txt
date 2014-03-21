@@ -11,6 +11,7 @@ set(python_files
   ddapp/atlasstatuspanel.py
   ddapp/multisensepanel.py
   ddapp/handcontrolpanel.py
+  ddapp/actionmanagerpanel.py
   ddapp/botspy.py
   ddapp/cameracontrol.py
   ddapp/cameraview.py
@@ -67,6 +68,11 @@ set(python_files
   ddapp/macros/segmentation_view/ortho_z.py
   ddapp/macros/segmentation_view/perspective.py
 
+  actionmanager/__init__.py
+  actionmanager/actions.py
+  actionmanager/actionmanager.py
+  actionmanager/simplefsm.py
+  actionmanager/sequences.py
   )
 
 

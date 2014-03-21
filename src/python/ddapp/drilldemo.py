@@ -153,7 +153,7 @@ class DrillPlannerDemo(object):
 
         assert self.drillAffordance
 
-        position = [0.0,-0.13,0.0]
+        position = [0.0,-0.18,0.0]
         rpy = [-90,90,0]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
