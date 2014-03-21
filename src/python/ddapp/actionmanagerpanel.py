@@ -66,11 +66,11 @@ class ActionManagerPanel(object):
         self.widget.statusDisplay.stopButton.clicked.connect(self.stopActionSequence)
         self.widget.statusDisplay.deleteButton.clicked.connect(self.deleteActionSequence)
 
-	self.updatePanel()
+        self.updatePanel()
 
 
     def updatePanel(self):
-    	self.widget.statusDisplay.nameLabel.text = self.sequenceController.name
+        self.widget.statusDisplay.nameLabel.text = self.sequenceController.name
 
         if self.sequenceController.fsm:
             self.widget.statusDisplay.stateLabel.text = self.sequenceController.fsm.current
