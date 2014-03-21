@@ -192,6 +192,8 @@ class FrameItem(om.PolyDataItem):
         lut.SetHueRange(0, 0.667)
         lut.Build()
 
+        self._blockSignals = False
+
         self.actor.SetUserTransform(transform)
 
         self.widget = vtk.vtkFrameWidget()
@@ -209,7 +211,7 @@ class FrameItem(om.PolyDataItem):
 
 
     def onTransformModified(self, transform, event):
-        if self.onTransformModifiedCallback:
+        if not self._blockSignals and self.onTransformModifiedCallback:
             self.onTransformModifiedCallback(self)
 
 
@@ -230,8 +232,12 @@ class FrameItem(om.PolyDataItem):
         om.PolyDataItem.addToView(self, view)
 
     def copyFrame(self, transform):
+        self._blockSignals = True
         self.transform.SetMatrix(transform.GetMatrix())
-        self._renderAllViews()
+        self._blockSignals = False
+        self.transform.Modified()
+        if self.getProperty('Visible'):
+            self._renderAllViews()
 
     def _onPropertyChanged(self, propertyName):
 

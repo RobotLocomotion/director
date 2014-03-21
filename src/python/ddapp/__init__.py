@@ -14,10 +14,20 @@ def _initCoverage():
 def getDRCBaseDir():
     return os.environ['DRC_BASE']
 
+
 def findFileInPaths(filename, searchPaths):
     for path in searchPaths:
         if os.path.isfile(os.path.join(path, filename)):
             return path
+
+
+def _locateExternals():
+    baseDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../..'))
+    for path in ['', '..']:
+        externals = os.path.join(baseDir, path, 'externals/pod-build/src')
+        if os.path.isdir(externals):
+            return externals
+    raise Exception('Failed to locate externals dir.')
 
 
 def _updateSysPath():
@@ -28,12 +38,12 @@ def _updateSysPath():
                 'vtk/__init__.py'
                 ]
 
-    baseDir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../../../externals/pod-build/src'))
+    baseDir = _locateExternals()
 
-    searchPaths = []
-    searchPaths.append(os.path.join(baseDir, 'PointCloudLibraryPlugin-build/lib'))
-    searchPaths.append(os.path.join(baseDir, 'vtk-build/Wrapping/Python'))
-    searchPaths.append(os.path.join(baseDir, 'vtk-build/bin'))
+    searchPaths = [
+      os.path.join(baseDir, 'PointCloudLibraryPlugin-build/lib'),
+      os.path.join(baseDir, 'vtk-build/Wrapping/Python'),
+      os.path.join(baseDir, 'vtk-build/bin')]
 
     for library in libraries:
         path = findFileInPaths(library, searchPaths)
