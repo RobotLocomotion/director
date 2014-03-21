@@ -91,18 +91,32 @@ named_pose_seq = {'manip_mode' : [ChangeMode,     'joint_plan',  'fail', {'NewMo
 
 sequenceDict['NamedPose'] = [named_pose_seq, 'manip_mode']
 
-guarded_move_seq = {'manip_mode'    : [ChangeMode,      'pregrasp_plan', 'fail',  {'NewMode' : 'manip'} ],
-                    'pregrasp_plan' : [JointMovePlan,   'pregrasp_move', 'fail',  {'PoseName': 'shooter', 'Group': 'General', 'Hand': 'left'} ],
-                    'pregrasp_move' : [JointMoveGuarded,'delta1_plan',   'fail',  {'JointPlan': 'pregrasp_plan', 'Hand': 'left'} ],
-                    'delta1_plan'   : [DeltaReachPlan,  'delta1_move',   'fail',  {'TargetFrame': 'drill grasp frame', 'Hand': 'left', 'Style': 'Local', 'Direction':'Y', 'Amount':'0.12'} ],
-                    'delta1_move'   : [JointMove,       'grip',          'fail',  {'JointPlan': 'delta1'} ],
-                    'grip'          : [Grip,            'delta2_plan',   'fail',  {'Hand': 'pose_search'} ],
-                    'delta2_plan'   : [DeltaReachPlan,  'delta2_move',   'fail',  {'TargetFrame': 'drill grasp frame', 'Hand': 'left', 'Style': 'Global', 'Direction':'Z', 'Amount':'0.10'} ],
-                    'delta2_move'   : [JointMove,       'retract_plan',  'fail',  {'JointPlan': 'delta2'} ],
-                    'retract_plan'  : [JointMovePlan,   'retract_move',  'fail',  {'PoseName': 'shooter', 'Group': 'General', 'Hand': 'left'} ],
-                    'retract_move'  : [JointMove,       'goal',          'fail',  {'JointPlan': 'retract_plan'} ]}
+guarded_move_seq = {'manip_mode'    : [ChangeMode,       'pose_search',   'fail',  {'NewMode' : 'manip'} ],
+                    'pose_search'   : [PoseSearch,       'pregrasp_plan', 'fail',  {'Affordance': 'drill', 'Hand' : 'left'} ],
+                    'pregrasp_plan' : [JointMovePlan,    'pregrasp_move', 'fail',  {'PoseName': 'shooter', 'Group': 'General', 'Hand': 'left'} ],
+                    'pregrasp_move' : [JointMove,        'reach_plan2',   'fail',  {'JointPlan': 'pregrasp_plan'} ],
+                    'reach_plan2'      : [ReachPlan,     'reach',         'fail',  {'TargetFrame': 'pose_search', 'Hand': 'pose_search', 'Constraints': 'none'} ],
+                    'reach'            : [JointMove,     'delta1',        'fail',   {'JointPlan': 'reach_plan2'} ],
+                    'delta1_plan'   : [DeltaReachPlan,   'delta1_move',   'fail',  {'TargetFrame': 'drill grasp frame', 'Hand': 'left', 'Style': 'Local', 'Direction':'Y', 'Amount':'0.12'} ],
+                    'delta1_move'   : [JointMoveGuarded, 'grip',          'fail',  {'JointPlan': 'delta1_plan', 'Hand': 'left'} ],
+                    'grip'          : [Grip,             'delta2_plan',   'fail',  {'Hand': 'pose_search'} ],
+                    'delta2_plan'   : [DeltaReachPlan,   'delta2_move',   'fail',  {'TargetFrame': 'drill grasp frame', 'Hand': 'left', 'Style': 'Global', 'Direction':'Z', 'Amount':'0.10'} ],
+                    'delta2_move'   : [JointMove,        'retract_plan',  'fail',  {'JointPlan': 'delta2_plan'} ],
+                    'retract_plan'  : [JointMovePlan,    'retract_move',  'fail',  {'PoseName': 'shooter', 'Group': 'General', 'Hand': 'left'} ],
+                    'retract_move'  : [JointMove,        'goal',          'fail',  {'JointPlan': 'retract_plan'} ]}
 
 sequenceDict['GuardedL'] = [guarded_move_seq, 'manip_mode']
+
+guarded_move_seq2 = {'manip_mode'    : [ChangeMode,       'delta1_plan',   'fail',  {'NewMode' : 'manip'} ],
+                     'delta1_plan'   : [DeltaReachPlan,   'delta1_move',   'fail',  {'TargetFrame': 'drill grasp frame', 'Hand': 'left', 'Style': 'Local', 'Direction':'Y', 'Amount':'0.12'} ],
+                     'delta1_move'   : [JointMoveGuarded, 'grip',          'fail',  {'JointPlan': 'delta1_plan', 'Hand': 'left'} ],
+                     'grip'          : [Grip,             'delta2_plan',   'fail',  {'Hand': 'pose_search'} ],
+                     'delta2_plan'   : [DeltaReachPlan,   'delta2_move',   'fail',  {'TargetFrame': 'drill grasp frame', 'Hand': 'left', 'Style': 'Global', 'Direction':'Z', 'Amount':'0.10'} ],
+                     'delta2_move'   : [JointMove,        'retract_plan',  'fail',  {'JointPlan': 'delta2_plan'} ],
+                     'retract_plan'  : [JointMovePlan,    'retract_move',  'fail',  {'PoseName': 'shooter', 'Group': 'General', 'Hand': 'left'} ],
+                     'retract_move'  : [JointMove,        'goal',          'fail',  {'JointPlan': 'retract_plan'} ]}
+
+sequenceDict['GuardedL2'] = [guarded_move_seq2, 'manip_mode']
 
 
 simple_walk_seq = {'step_mode' : [ChangeMode,    'walk_plan', 'fail', {'NewMode'   : 'stand'} ],
