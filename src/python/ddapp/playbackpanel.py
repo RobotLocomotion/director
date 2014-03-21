@@ -161,19 +161,15 @@ class PlaybackPanel(object):
             self.ui.playbackFrame.setEnabled(False)
             self.hidePlan()
             self.ui.hideButton.text = 'show'
-
             self.ui.executeButton.setEnabled(False)
-            self.ui.stopButton.setEnabled(False)
 
             if not self.plan:
                 self.ui.hideButton.setEnabled(False)
         else:
             self.ui.playbackFrame.setEnabled(True)
             self.ui.hideButton.text = 'hide'
-
             self.ui.hideButton.setEnabled(True)
             self.ui.executeButton.setEnabled(True)
-            self.ui.stopButton.setEnabled(True)
 
             self.viewModeChanged()
 
@@ -191,6 +187,7 @@ class PlaybackPanel(object):
 
     def stopClicked(self):
         self.stopAnimation()
+        self.manipPlanner.sendPlanPause()
 
 
     def updatePlanFrames(self):
