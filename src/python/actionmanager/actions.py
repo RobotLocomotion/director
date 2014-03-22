@@ -5,6 +5,7 @@ import numpy as np
 from ddapp import robotstate
 from ddapp import transformUtils
 from ddapp import visualization as vis
+from ddapp import lcmUtils
 from ddapp import segmentation
 from ddapp.drilldemo import RobotPoseGUIWrapper
 
@@ -637,8 +638,9 @@ class JointMoveGuarded(Action):
         Action.__init__(self, name, success, fail, args, container)
         self.outputs = {'RobotPose' : None}
         self.startTime = 0.0
+        self.contact = False
 
-    def setContactTrue(self):
+    def setContactTrue(self, data):
         self.contact = True
 
     def onEnter(self):
@@ -654,8 +656,8 @@ class JointMoveGuarded(Action):
             # Execute Mode Logic
 
             # Set up a LCM monitor on the contact detector
-            channel = 'TAKKTILE_CONTACT_' + self.parsedArgs('Hand').upper()
-            lcmUtils.captureMessageCallback(channel, takktile.contact_t, self.contactTrue)
+            channel = 'TAKKTILE_CONTACT_' + self.parsedArgs['Hand'].upper()
+            lcmUtils.captureMessageCallback(channel, takktile.contact_t, self.setContactTrue)
 
             # Send the command to the robot
             self.container.manipPlanner.commitManipPlan(self.parsedArgs['JointPlan'])
