@@ -160,6 +160,7 @@ class MultiSenseSource(TimerCallback):
             self.colorizeCallback()
 
         self.polyDataObj.colorBy(colorByArray, lut=self.polyDataObj.mapper.GetLookupTable())
+        self.view.render()
 
 
     def setPointSize(self, pointSize):
