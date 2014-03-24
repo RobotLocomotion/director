@@ -92,6 +92,7 @@ usePlanning = True
 useAtlasDriver = True
 useLCMGL = True
 useDrakeVisualizer = True
+useNavigationPanel = False
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -304,8 +305,8 @@ if usePlanning:
     #lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
 
 
-
-navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
+if useNavigationPanel:
+    navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
 
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
