@@ -12,7 +12,7 @@ from time import time
 from copy import copy, deepcopy
 
 from actionmanager import sequences
-from actionmanager import actionsequence
+from actionmanager import actionmanager
 
 def addWidgetsToDict(widgets, d):
 
@@ -111,7 +111,7 @@ class ActionManagerPanel(object):
 
     def createActionSequence(self):
         if self.currentAction != '':
-            if actionsequence.checkArgsPopulated(sequences.sequenceDict[self.currentAction][0]):
+            if actionmanager.checkArgsPopulated(sequences.sequenceDict[self.currentAction][0]):
                 self.sequenceController.populate(self.currentAction,
                                                  sequences.sequenceDict[self.currentAction][0],
                                                  sequences.sequenceDict[self.currentAction][1])
@@ -149,7 +149,7 @@ class ActionManagerPanel(object):
         for seqName in dataDict.keys():
             seq, startPoints = dataDict[seqName]
 
-            highLevelArgs = actionsequence.generateUserArgList(seq)
+            highLevelArgs = actionmanager.generateUserArgList(seq)
             item = QtGui.QTreeWidgetItem()
             item.setText(0, seqName)
             item.setText(2, ", ".join(highLevelArgs))
