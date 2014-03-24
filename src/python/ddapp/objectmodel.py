@@ -143,6 +143,7 @@ class RobotModelItem(ObjectModelItem):
         self.model.setVisible(self.getProperty('Visible'))
         self.model.setColor(self.getProperty('Color'))
         self.setProperty('Filename', model.filename())
+        model.connect('modelChanged()', self.onModelChanged)
 
         for view in views:
             self.addToView(view)
