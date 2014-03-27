@@ -21,12 +21,13 @@ ddBotImageQueue::~ddBotImageQueue()
 bool ddBotImageQueue::initCameraData(const QString& cameraName, CameraData* cameraData)
 {
   cameraData->mName = cameraName.toAscii().data();
+  cameraData->mHasCalibration = true;
 
   cameraData->mCamTrans = bot_param_get_new_camtrans(mBotParam, cameraName.toAscii().data());
   if (!cameraData->mCamTrans)
   {
     printf("Failed to get BotCamTrans for camera: %s\n", qPrintable(cameraName));
-    return false;
+    cameraData->mHasCalibration = false;
   }
 
   QString key = QString("cameras.") + cameraName + QString(".coord_frame");
@@ -39,7 +40,7 @@ bool ddBotImageQueue::initCameraData(const QString& cameraName, CameraData* came
   else
   {
     printf("Failed to get coord_frame for camera: %s\n", qPrintable(cameraName));
-    return false;
+    cameraData->mHasCalibration = false;
   }
   return true;
 
@@ -275,8 +276,12 @@ void ddBotImageQueue::onImagesMessage(const QByteArray& data, const QString& cha
   QMutexLocker locker(&cameraData->mMutex);
   cameraData->mImageMessage = message.images[cameraData->mImageMessageIndex];
   cameraData->mImageBuffer.clear();
-  this->getTransform("local", cameraData->mCoordFrame, cameraData->mLocalToCamera, cameraData->mImageMessage.utime);
-  this->getTransform("utorso", cameraData->mCoordFrame, cameraData->mBodyToCamera, cameraData->mImageMessage.utime);
+
+  if (cameraData->mHasCalibration)
+  {
+    this->getTransform("local", cameraData->mCoordFrame, cameraData->mLocalToCamera, cameraData->mImageMessage.utime);
+    this->getTransform("utorso", cameraData->mCoordFrame, cameraData->mBodyToCamera, cameraData->mImageMessage.utime);
+  }
   //printf("got image %s: %d %d\n", cameraData->mName.c_str(), cameraData->mImageMessage.width, cameraData->mImageMessage.height);
 }
 
@@ -285,11 +290,18 @@ void ddBotImageQueue::onImageMessage(const QByteArray& data, const QString& chan
 {
   CameraData* cameraData = this->getCameraData(mChannelMap[channel]);
 
+  int64_t previousUtime = cameraData->mImageMessage.utime;
+
   QMutexLocker locker(&cameraData->mMutex);
   cameraData->mImageMessage.decode(data.data(), 0, data.size());
   cameraData->mImageBuffer.clear();
-  this->getTransform("local", cameraData->mCoordFrame, cameraData->mLocalToCamera, cameraData->mImageMessage.utime);
-  this->getTransform("utorso", cameraData->mCoordFrame, cameraData->mBodyToCamera, cameraData->mImageMessage.utime);
+
+  if (cameraData->mHasCalibration)
+  {
+    this->getTransform("local", cameraData->mCoordFrame, cameraData->mLocalToCamera, cameraData->mImageMessage.utime);
+    this->getTransform("utorso", cameraData->mCoordFrame, cameraData->mBodyToCamera, cameraData->mImageMessage.utime);
+  }
+
   //printf("got image %s: %d %d\n", cameraData->mName.c_str(), cameraData->mImageMessage.width, cameraData->mImageMessage.height);
 }
 
@@ -348,6 +360,12 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::colorizePoints(vtkPolyData* polyData, CameraData* cameraData)
 {
+  if (!cameraData->mHasCalibration)
+  {
+    printf("Error: colorizePoints, no calibration data for: %s\n", cameraData->mName.c_str());
+    return;
+  }
+
   QMutexLocker locker(&cameraData->mMutex);
 
   size_t w = cameraData->mImageMessage.width;
@@ -449,6 +467,12 @@ QList<double> ddBotImageQueue::getCameraFrustumBounds(CameraData* cameraData)
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::computeTextureCoords(vtkPolyData* polyData, CameraData* cameraData)
 {
+  if (!cameraData->mHasCalibration)
+  {
+    printf("Error: computeTextureCoords, no calibration data for: %s\n", cameraData->mName.c_str());
+    return;
+  }
+
   QMutexLocker locker(&cameraData->mMutex);
 
   size_t w = cameraData->mImageMessage.width;
