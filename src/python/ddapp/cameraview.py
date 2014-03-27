@@ -332,6 +332,7 @@ class CameraImageView(object):
 
         self.imageActor = vtk.vtkImageActor()
         self.imageActor.SetInput(self.imageManager.images[self.imageName])
+        self.imageActor.SetVisibility(False)
         self.view.renderer().AddActor(self.imageActor)
 
         self.timerCallback = TimerCallback()
@@ -367,6 +368,7 @@ class CameraImageView(object):
             self.updateUtime = currentUtime
 
             if not self.imageInitialized and self.imageActor.GetInput().GetDimensions()[0]:
+                self.imageActor.SetVisibility(True)
                 self.resetCamera()
                 self.imageInitialized = True
 
