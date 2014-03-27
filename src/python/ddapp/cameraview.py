@@ -330,6 +330,8 @@ class CameraImageView(object):
         self.interactorStyle = self.view.renderWindow().GetInteractor().GetInteractorStyle()
         self.interactorStyle.AddObserver('SelectionChangedEvent', self.onRubberBandPick)
 
+        self.view.renderWindow().GetInteractor().AddObserver('KeyPressEvent', self.onKeyPress)
+
         self.imageActor = vtk.vtkImageActor()
         self.imageActor.SetInput(self.imageManager.images[self.imageName])
         self.imageActor.SetVisibility(False)
@@ -356,6 +358,26 @@ class CameraImageView(object):
         camera.SetPosition(0,0,-1)
         camera.SetViewUp(0,-1, 0)
         self.view.resetCamera()
+        self.fitImageToView()
+
+
+    def onKeyPress(self, obj, event):
+        if obj.GetKeyCode() == 'p':
+            return
+        if obj.GetKeyCode() == 'r':
+            self.fitImageToView()
+
+
+    def fitImageToView(self):
+
+        camera = self.view.camera()
+        image = self.imageManager.images[self.imageName]
+        imageWidth, imageHeight, _ = image.GetDimensions()
+
+        viewWidth, viewHeight = self.view.renderWindow().GetSize()
+        aspectRatio = float(viewWidth)/viewHeight
+        parallelScale = max(imageWidth/aspectRatio, imageHeight) / 2.0
+        camera.SetParallelScale(parallelScale)
 
     def updateView(self):
 
