@@ -42,6 +42,7 @@ public:
   {
     public:
 
+    bool mHasCalibration;
     int mImageMessageIndex;
     std::string mName;
     std::string mCoordFrame;
@@ -54,6 +55,7 @@ public:
 
     CameraData()
     {
+      mHasCalibration = false;
       mImageMessageIndex = 0;
       mImageMessage.width = 0;
       mImageMessage.height = 0;
