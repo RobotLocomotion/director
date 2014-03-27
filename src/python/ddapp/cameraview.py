@@ -107,9 +107,17 @@ class CameraView(object):
 
         self.initImageQueue()
 
-        self.initView()
-        self.initEventFilter()
-        self.rayCallback = rayDebug
+        if app.getMainWindow():
+            self.initView()
+            self.initEventFilter()
+            self.rayCallback = rayDebug
+        else:
+            self.view = None
+
+        self.timerCallback = TimerCallback()
+        self.timerCallback.targetFps = 60
+        self.timerCallback.callback = self.updateView
+        self.timerCallback.start()
 
 
     def initImageQueue(self):
@@ -159,8 +167,6 @@ class CameraView(object):
         utorsoToLocal = vtk.vtkTransform()
         self.queue.getTransform('utorso', 'local', imageUtime, utorsoToLocal)
 
-
-
         p = range(3)
         utorsoToLocal.TransformPoint(pickedPoint, p)
 
@@ -184,6 +190,7 @@ class CameraView(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
     def initView(self):
+
         self.view = app.getViewManager().createView('Camera View', 'VTK View')
 
         self.view.camera().SetViewAngle(90)
@@ -194,11 +201,6 @@ class CameraView(object):
         self.sphereObjects = {}
 
         app.toggleCameraTerrainMode(self.view)
-
-        self.timerCallback = TimerCallback()
-        self.timerCallback.targetFps = 60
-        self.timerCallback.callback = self.updateView
-        self.timerCallback.start()
 
 
     def getSphereGeometry(self, imageName):
@@ -269,6 +271,10 @@ class CameraView(object):
 
         if not self.updateImages():
             return
+
+        if not self.view:
+            return
+
 
         self.updateSphereGeometry()
 
