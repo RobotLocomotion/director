@@ -33,6 +33,7 @@ set(python_files
   ddapp/ioUtils.py
   ddapp/jointcontrol.py
   ddapp/lcmgl.py
+  ddapp/lcmspy.py
   ddapp/lcmUtils.py
   ddapp/mapsregistrar.py
   ddapp/matlab.py
