@@ -379,6 +379,20 @@ class CameraImageView(object):
         parallelScale = max(imageWidth/aspectRatio, imageHeight) / 2.0
         camera.SetParallelScale(parallelScale)
 
+
+    def setImageName(self, imageName):
+        if imageName == self.imageName:
+            return
+
+        assert imageName in self.imageManager.images
+
+        self.imageName = imageName
+        self.imageInitialized = False
+        self.updateUtime = 0
+        self.imageActor.SetInput(self.imageManager.images[self.imageName])
+        self.imageActor.SetVisibility(False)
+        self.view.render()
+
     def updateView(self):
 
         if not self.view.isVisible():
