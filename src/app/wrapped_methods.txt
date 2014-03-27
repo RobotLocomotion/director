@@ -93,6 +93,8 @@ ddTaskSelection::~ddTaskSelection();
 ddLumberSelection::ddLumberSelection();
 ddLumberSelection::~ddLumberSelection();
 
+void ddPythonManager::setupConsole(QWidget*);
+
 ddPythonEventFilter::ddPythonEventFilter();
 ddPythonEventFilter::~ddPythonEventFilter();
 void ddPythonEventFilter::setEventHandlerResult(bool);
