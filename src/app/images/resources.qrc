@@ -37,5 +37,16 @@
     <file>cinderblock.png</file>
     <file>cinderblock_double.png</file>
 
+    <file>media/media-eject.png</file>
+    <file>media/media-loop.png</file>
+    <file>media/media-playback-pause.png</file>
+    <file>media/media-playback-start.png</file>
+    <file>media/media-playback-stop.png</file>
+    <file>media/media-record.png</file>
+    <file>media/media-seek-backward.png</file>
+    <file>media/media-seek-forward.png</file>
+    <file>media/media-skip-backward.png</file>
+    <file>media/media-skip-forward.png</file>
+
   </qresource>
 </RCC>
