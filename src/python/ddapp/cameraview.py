@@ -280,16 +280,15 @@ class CameraView(object):
 
 class CameraImageView(object):
 
-    def __init__(self, imageManager, imageName='CAMERA_LEFT', viewName='Head camera'):
+    def __init__(self, imageManager, imageName, viewName=None, view=None):
 
         self.imageManager = imageManager
-        self.viewName = viewName
+        self.viewName = viewName or imageName
         self.imageName = imageName
         self.imageInitialized = False
         self.updateUtime = 0
-        self.initView()
+        self.initView(view)
         self.initEventFilter()
-
 
     def onViewDoubleClicked(self, displayPoint):
 
@@ -315,7 +314,6 @@ class CameraImageView(object):
         d.addLine(cameraToLocal.GetPosition(), p)
         vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView)
 
-
     def filterEvent(self, obj, event):
         if event.type() == QtCore.QEvent.MouseButtonDblClick:
             self.eventFilter.setEventHandlerResult(True)
@@ -327,12 +325,11 @@ class CameraImageView(object):
         imagePoints = [vis.pickImage(point, view=self.view)[1] for point in displayPoints]
         sendFOVRequest(self.imageName, imagePoints)
 
-
-    def initView(self):
-        self.view = app.getViewManager().createView(self.viewName, 'VTK View')
+    def initView(self, view):
+        self.view = view or app.getViewManager().createView(self.viewName, 'VTK View')
         self.view.installImageInteractor()
         self.interactorStyle = self.view.renderWindow().GetInteractor().GetInteractorStyle()
-        self.interactorStyle.AddObserver('SelectionChangedEvent', self.onRubberBandPick)    
+        self.interactorStyle.AddObserver('SelectionChangedEvent', self.onRubberBandPick)
 
         self.imageActor = vtk.vtkImageActor()
         self.imageActor.SetInput(self.imageManager.images[self.imageName])
@@ -390,7 +387,7 @@ def init():
     cameraView = CameraView()
 
     global headView, chestLeft, chestRight
-    headView = CameraImageView(cameraView)
+    headView = CameraImageView(cameraView, 'CAMERA_LEFT', 'Head camera')
     chestLeft = CameraImageView(cameraView, 'CAMERACHEST_LEFT', 'Chest left')
     chestRight = CameraImageView(cameraView, 'CAMERACHEST_RIGHT', 'Chest right')
 
