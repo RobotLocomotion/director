@@ -315,10 +315,9 @@ class CameraImageView(object):
         vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView)
 
     def filterEvent(self, obj, event):
-        if event.type() == QtCore.QEvent.MouseButtonDblClick:
+        if self.eventFilterEnabled and event.type() == QtCore.QEvent.MouseButtonDblClick:
             self.eventFilter.setEventHandlerResult(True)
             self.onViewDoubleClicked(vis.mapMousePosition(obj, event))
-
 
     def onRubberBandPick(self, obj, event):
         displayPoints = self.interactorStyle.GetStartPosition(), self.interactorStyle.GetEndPosition()
@@ -347,6 +346,7 @@ class CameraImageView(object):
         qvtkwidget.installEventFilter(self.eventFilter)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
+        self.eventFilterEnabled = True
 
     def resetCamera(self):
         camera = self.view.camera()
