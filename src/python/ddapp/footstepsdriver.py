@@ -76,6 +76,12 @@ def getFootstepsFolder():
         #om.collapse(obj)
     return obj
 
+def getBDIAdjustedFootstepsFolder():
+    obj = om.findObjectByName('BDI adj footstep plan')
+    if obj is None:
+        obj = om.getOrCreateContainer('BDI adj footstep plan')
+        #om.collapse(obj)
+    return obj
 
 class FootstepsDriver(object):
     def __init__(self, jc):
@@ -90,6 +96,7 @@ class FootstepsDriver(object):
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
+        lcmUtils.addSubscriber('BDI_ADJUSTED_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, self.onBDIAdjustedFootstepPlan)
         lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
     def clearFootstepPlan(self):
@@ -101,6 +108,12 @@ class FootstepsDriver(object):
         self.lastWalkingPlan = msg
         if self.walkingPlanCallback:
             self.walkingPlanCallback()
+
+    def onBDIAdjustedFootstepPlan(self, msg):
+        folder = getBDIAdjustedFootstepsFolder()
+        om.removeFromObjectModel(folder)
+        folder = getBDIAdjustedFootstepsFolder()
+        self.drawFootstepPlan(msg, folder)
 
     def onFootstepPlan(self, msg):
         self.clearFootstepPlan()
@@ -166,7 +179,7 @@ class FootstepsDriver(object):
         contact_pts[3,:] = [0.178,  -0.0624435, -0.081119]
         return contact_pts
 
-    def getFeetMidPoint(self, model):       
+    def getFeetMidPoint(self, model):
         contact_pts = self.getContactPts()
         contact_pts_mid = np.mean(contact_pts, axis=0) # mid point on foot relative to foot frame
 
