@@ -112,6 +112,7 @@ class FootstepsDriver(object):
         
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
+        lcmUtils.addSubscriber('BDI_ADJUSTED_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, self.onBDIAdjustedFootstepPlan)
         lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
         ### Related to BDI-frame adjustment:
@@ -126,6 +127,12 @@ class FootstepsDriver(object):
         self.lastWalkingPlan = msg
         if self.walkingPlanCallback:
             self.walkingPlanCallback()
+
+    def onBDIAdjustedFootstepPlan(self, msg):
+        folder = getBDIAdjustedFootstepsFolder()
+        om.removeFromObjectModel(folder)
+        folder = getBDIAdjustedFootstepsFolder()
+        self.drawFootstepPlan(msg, folder)
 
     def onFootstepPlan(self, msg):
         self.clearFootstepPlan()
