@@ -2091,6 +2091,7 @@ class PointPicker(TimerCallback):
 
         self.annotationObj = updatePolyData(d.getPolyData(), 'annotation', parent=getDebugFolder())
         self.annotationObj.setProperty('Color', QtGui.QColor(0, 255, 0))
+        self.annotationObj.actor.SetPickable(False)
 
 
     def tick(self):
