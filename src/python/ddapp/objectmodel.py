@@ -559,7 +559,7 @@ def onShowContextMenu(clickPosition):
     menu.addSeparator()
     menu.addAction("Remove")
 
-    selectedAction = menu.exec_(globalPos);
+    selectedAction = menu.exec_(globalPos)
     if selectedAction is None:
         return
 
