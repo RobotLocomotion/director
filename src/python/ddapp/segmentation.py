@@ -364,6 +364,21 @@ def applyLineFit(dataObj, distanceThreshold=0.02):
     return origin, direction, shallowCopy(f.GetOutput())
 
 
+def normalEstimation(dataObj, searchCloud=None, searchRadius=0.05, useVoxelGrid=False, voxelGridLeafSize=0.05):
+
+    f = pcl.vtkPCLNormalEstimation()
+    f.SetSearchRadius(searchRadius)
+    f.SetInput(dataObj)
+    if searchCloud:
+        f.SetInput(1, searchCloud)
+    elif useVoxelGrid:
+        f.SetInput(1, applyVoxelGrid(dataObj, voxelGridLeafSize))
+    f.Update()
+    dataObj = shallowCopy(f.GetOutput())
+    dataObj.GetPointData().SetNormals(dataObj.GetPointData().GetArray('normals'))
+    return dataObj
+
+
 def addCoordArraysToPolyData(polyData):
     polyData = shallowCopy(polyData)
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
