@@ -153,7 +153,7 @@ class CameraView(object):
 
     def onViewDoubleClicked(self, displayPoint):
 
-        obj, pickedPoint = vis.findPickedObject(displayPoint, view=self.view)
+        obj, pickedPoint = vis.findPickedObject(displayPoint, self.view)
 
         if pickedPoint is None or not obj:
             return
@@ -298,7 +298,7 @@ class CameraImageView(object):
 
     def onViewDoubleClicked(self, displayPoint):
 
-        obj, pickedPoint = vis.findPickedObject(displayPoint, view=self.view)
+        obj, pickedPoint = vis.findPickedObject(displayPoint, self.view)
 
         if pickedPoint is None or not obj:
             return
@@ -327,7 +327,7 @@ class CameraImageView(object):
 
     def onRubberBandPick(self, obj, event):
         displayPoints = self.interactorStyle.GetStartPosition(), self.interactorStyle.GetEndPosition()
-        imagePoints = [vis.pickImage(point, view=self.view)[1] for point in displayPoints]
+        imagePoints = [vis.pickImage(point, self.view)[1] for point in displayPoints]
         sendFOVRequest(self.imageName, imagePoints)
 
     def initView(self, view):

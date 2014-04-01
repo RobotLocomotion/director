@@ -402,8 +402,8 @@ class ViewEventFilter(object):
 def highlightSelectedLink(displayPoint, view):
 
     model = robotStateModel.model
+    pickedPoint, _, polyData = vis.pickProp(displayPoint, view)
 
-    polyData, pickedPoint = vis.pickPoint(displayPoint, view=view, pickType='cells')
     linkName = model.getLinkNameForMesh(polyData)
     if not linkName:
         return False
@@ -420,28 +420,40 @@ def highlightSelectedLink(displayPoint, view):
     return True
 
 
-def toggleChildFrameWidget(displayPoint, view):
+def getChildFrame(obj):
+    if not obj:
+        return None
 
-    pickedObj, pickedPoint = vis.findPickedObject(displayPoint, view=view)
-    if not pickedObj:
-        return False
-
-    name = pickedObj.getProperty('Name')
-    children = om.getObjectChildren(pickedObj)
-
+    name = obj.getProperty('Name')
+    children = om.getObjectChildren(obj)
     for child in children:
         if isinstance(child, vis.FrameItem) and child.getProperty('Name') == name + ' frame':
-            edit = not child.getProperty('Edit')
-            child.setProperty('Edit', edit)
-            pickedObj.setProperty('Alpha', 0.5 if edit else 1.0)
-            return True
+            return child
 
-    return False
+
+def toggleFrameWidget(displayPoint, view):
+
+    obj, _ = vis.findPickedObject(displayPoint, view)
+
+    if not isinstance(obj, vis.FrameItem):
+        obj = getChildFrame(obj)
+
+    if not obj:
+        return False
+
+    edit = not obj.getProperty('Edit')
+    obj.setProperty('Edit', edit)
+
+    parent = om.getParentObject(obj)
+    if getChildFrame(parent) == obj:
+        parent.setProperty('Alpha', 0.5 if edit else 1.0)
+
+    return True
 
 
 def selectHandWidget(displayPoint, view):
 
-    polyData, pickedPoint = vis.pickPoint(displayPoint, view=view, pickType='cells')
+    pickedPoint, _, polyData = vis.pickProp(displayPoint, view)
 
     def toggleHandFrame(hand):
         if ikPlanner.reachingSide not in hand.getProperty('Name'):
@@ -462,7 +474,7 @@ def selectHandWidget(displayPoint, view):
 
 def callbackSwitch(displayPoint, view):
 
-  if toggleChildFrameWidget(displayPoint, view):
+  if toggleFrameWidget(displayPoint, view):
       return
 
   #if highlightSelectedLink(displayPoint, view):
