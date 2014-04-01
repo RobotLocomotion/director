@@ -312,6 +312,7 @@ app.resetCamera(viewDirection=[-1,0,0], view=view)
 def affUpdaterOn():
     vis.affup.updater.on()
 
+
 def affUpdaterOff():
     vis.affup.updater.off()
 
@@ -366,38 +367,152 @@ def sendEstRobotState(pose=None):
     lcmUtils.publish('EST_ROBOT_STATE', msg)
 
 
-tc = TimerCallback()
-tc.targetFps = 60
-tc.callback = resetCameraToHeadView
+def zoomToPick(displayPoint, view):
+    pickedPoint, prop, _ = vis.pickProp(displayPoint, view)
+    if prop:
+        flyer.zoomTo(pickedPoint)
+
+
+def highlightSelectedLink(displayPoint, view):
+
+    model = robotStateModel.model
+    pickedPoint, _, polyData = vis.pickProp(displayPoint, view)
+
+    linkName = model.getLinkNameForMesh(polyData)
+    if not linkName:
+        return False
+
+    colorNoHighlight = QtGui.QColor(190, 190, 190)
+    colorHighlight = QtCore.Qt.red
+
+    linkNames = [linkName]
+    model.setColor(colorNoHighlight)
+
+    for name in linkNames:
+        model.setLinkColor(name, colorHighlight)
+
+    return True
+
+
+def toggleFrameWidget(displayPoint, view):
+
+
+    def getChildFrame(obj):
+        if not obj:
+            return None
+
+        name = obj.getProperty('Name')
+        children = om.getObjectChildren(obj)
+        for child in children:
+            if isinstance(child, vis.FrameItem) and child.getProperty('Name') == name + ' frame':
+                return child
+
+
+    obj, _ = vis.findPickedObject(displayPoint, view)
+
+    if not isinstance(obj, vis.FrameItem):
+        obj = getChildFrame(obj)
+
+    if not obj:
+        return False
+
+    edit = not obj.getProperty('Edit')
+    obj.setProperty('Edit', edit)
+
+    parent = om.getParentObject(obj)
+    if getChildFrame(parent) == obj:
+        parent.setProperty('Alpha', 0.5 if edit else 1.0)
+
+    return True
+
+
+def showRightClickMenu(displayPoint, view):
+
+    pickedObj, pickedPoint = vis.findPickedObject(displayPoint, view)
+    if not pickedObj:
+        return
+
+    objectName = pickedObj.getProperty('Name')
+    if objectName == 'grid':
+        return
+
+    displayPoint = displayPoint[0], view.height - displayPoint[1]
+
+    globalPos = view.mapToGlobal(QtCore.QPoint(*displayPoint))
+
+    menu = QtGui.QMenu(view)
+
+    actions = ['action 1', 'action 2', 'action 3']
+    actions = []
+
+    widgetAction = QtGui.QWidgetAction(menu)
+    label = QtGui.QLabel('  ' + objectName + '  ')
+    widgetAction.setDefaultWidget(label)
+    menu.addAction(widgetAction)
+    menu.addSeparator()
+
+    for actionName in actions:
+        if not actionName:
+            menu.addSeparator()
+        else:
+            menu.addAction(actionName)
+
+    selectedAction = menu.popup(globalPos)
 
 
 class ViewEventFilter(object):
 
     def __init__(self, view):
         self.view = view
+        self.mouseStart = None
         self.initEventFilter()
-        self.doubleClickCallback = None
-
 
     def filterEvent(self, obj, event):
-        if event.type() == QtCore.QEvent.MouseButtonDblClick:
-            if self.doubleClickCallback:
-                result = self.doubleClickCallback(vis.mapMousePosition(obj, event), self.view)
-                self.eventFilter.setEventHandlerResult(result)
+
+        if event.type() == QtCore.QEvent.MouseButtonDblClick and event.button() == QtCore.Qt.LeftButton:
+            self.onLeftDoubleClick(event)
+
+        elif event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.RightButton:
+            self.mouseStart = QtCore.QPoint(event.pos())
+
+        elif event.type() == QtCore.QEvent.MouseMove and self.mouseStart is not None:
+            delta = QtCore.QPoint(event.pos()) - self.mouseStart
+            if delta.manhattanLength() > 3:
+                self.mouseStart = None
+
+        elif event.type() == QtCore.QEvent.MouseButtonRelease and event.button() == QtCore.Qt.RightButton and self.mouseStart is not None:
+            self.mouseStart = None
+            self.onRightClick(event)
+
+    def consumeEvent(self):
+        self.eventFilter.setEventHandlerResult(True)
+
+    def onLeftDoubleClick(self, event):
+
+        displayPoint = vis.mapMousePosition(self.view, event)
+
+        if toggleFrameWidget(displayPoint, self.view):
+            return
+
+        #if highlightSelectedLink(displayPoint, self.view):
+        #    return
+
+        if segmentationpanel.activateSegmentationMode():
+            return
+
+    def onRightClick(self, event):
+        displayPoint = vis.mapMousePosition(self.view, event)
+        showRightClickMenu(displayPoint, self.view)
 
     def initEventFilter(self):
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
         qvtkwidget = self.view.vtkWidget()
         qvtkwidget.installEventFilter(self.eventFilter)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
-
-def zoomToPick(displayPoint, view):
-
-    pickedPoint, prop, _ = vis.pickProp(displayPoint, view)
-    if not prop:
-        return
-
-    flyer.zoomTo(pickedPoint)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonPress)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonRelease)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseMove)
+        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
 
 class KeyEventFilter(object):
@@ -428,95 +543,7 @@ class KeyEventFilter(object):
 
 
 keyEventFilter = KeyEventFilter(view)
+mouseEventFilter = ViewEventFilter(view)
 
 
-def highlightSelectedLink(displayPoint, view):
 
-    model = robotStateModel.model
-    pickedPoint, _, polyData = vis.pickProp(displayPoint, view)
-
-    linkName = model.getLinkNameForMesh(polyData)
-    if not linkName:
-        return False
-
-    colorNoHighlight = QtGui.QColor(190, 190, 190)
-    colorHighlight = QtCore.Qt.red
-
-    linkNames = [linkName]
-    model.setColor(colorNoHighlight)
-
-    for name in linkNames:
-        model.setLinkColor(name, colorHighlight)
-
-    return True
-
-
-def getChildFrame(obj):
-    if not obj:
-        return None
-
-    name = obj.getProperty('Name')
-    children = om.getObjectChildren(obj)
-    for child in children:
-        if isinstance(child, vis.FrameItem) and child.getProperty('Name') == name + ' frame':
-            return child
-
-
-def toggleFrameWidget(displayPoint, view):
-
-    obj, _ = vis.findPickedObject(displayPoint, view)
-
-    if not isinstance(obj, vis.FrameItem):
-        obj = getChildFrame(obj)
-
-    if not obj:
-        return False
-
-    edit = not obj.getProperty('Edit')
-    obj.setProperty('Edit', edit)
-
-    parent = om.getParentObject(obj)
-    if getChildFrame(parent) == obj:
-        parent.setProperty('Alpha', 0.5 if edit else 1.0)
-
-    return True
-
-
-def selectHandWidget(displayPoint, view):
-
-    pickedPoint, _, polyData = vis.pickProp(displayPoint, view)
-
-    def toggleHandFrame(hand):
-        if ikPlanner.reachingSide not in hand.getProperty('Name'):
-            return
-        frame = ikPlanner.findAffordanceChild('desired grasp frame')
-        if frame:
-            edit = not frame.getProperty('Edit')
-            frame.setProperty('Edit', edit)
-            hand.setProperty('Alpha', 0.5 if edit else 1.0)
-
-    for model in ikPlanner.handModels:
-        if model.handModel.model.getLinkNameForMesh(polyData):
-            toggleHandFrame(model.handModel)
-            return True
-
-    return False
-
-
-def callbackSwitch(displayPoint, view):
-
-  if toggleFrameWidget(displayPoint, view):
-      return
-
-  #if highlightSelectedLink(displayPoint, view):
-  #    return
-
-  if selectHandWidget(displayPoint, view):
-      return
-
-  if segmentationpanel.activateSegmentationMode():
-        return
-
-
-ef = ViewEventFilter(view)
-ef.doubleClickCallback = callbackSwitch
