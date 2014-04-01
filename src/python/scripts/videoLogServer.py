@@ -73,7 +73,7 @@ class ServerThread(object):
 
         if hasattr(msg, 'images'):
             msg = msg.images[0]
-        return msg
+        return msg, filename
 
 
     def closeLogs(self):
@@ -102,9 +102,12 @@ class ServerThread(object):
 
         utimeIndex = (len(self.utimes)-1)*data.value
 
-        print 'slider: %.2f.   index: %d    timeDelta:  %.3f' % (data.value, utimeIndex, (self.utimes[-1] - self.utimes[utimeIndex])*1e-6)
         utimeRequest = self.utimes[utimeIndex]
-        image = self.getImage(utimeRequest)
+        image, filename = self.getImage(utimeRequest)
+
+        print 'slider: %.2f.   index: %d    timeDelta:  %.3f    file: %s' % (data.value, utimeIndex, (self.utimes[-1] - self.utimes[utimeIndex])*1e-6, os.path.basename(filename))
+
+
         self.lc.publish('VIDEO_PLAYBACK_IMAGE', image.encode())
 
 
@@ -165,7 +168,7 @@ def updateLogInfo(filename, catalog):
     fieldData = catalog.get(filename)
 
     if not fieldData:
-        #print 'discovered new file:', filename
+        print 'discovered new file:', filename
         fieldData = FieldData(filename=filename, fileSize=0, lastFilePos=0, channelTypes={}, imageStreams={})
         logCatalog[filename] = fieldData
         cropUtimeMap()
@@ -226,7 +229,8 @@ def updateLogInfo(filename, catalog):
 
 
 def getExistingLogFiles(dirName):
-    return sorted(glob.glob(dirName + '/lcmlog-*'))
+    filenames = glob.glob(dirName + '/lcmlog-*')
+    return sorted(filenames, key=lambda x: int(x.split('.')[1]))
 
 
 def pruneLogFiles(logFiles):
