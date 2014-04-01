@@ -393,7 +393,7 @@ class DrillPlannerDemo(object):
 
         folder = om.getOrCreateContainer('affordances')
         drillMesh = segmentation.getDrillBarrelMesh()
-        self.drillAffordance = vis.showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], parent=folder)
+        self.drillAffordance = vis.showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=vis.AffordanceItem, parent=folder)
         self.drillAffordance.actor.SetUserTransform(drillFrame)
         self.drillFrame = vis.showFrame(drillFrame, 'drill frame', parent=self.drillAffordance, visible=False, scale=0.2)
 
