@@ -313,7 +313,11 @@ def updateFrame(frame, name, **kwargs):
     return obj
 
 
-def showFrame(frame, name, parent='segmentation', scale=0.35, visible=True):
+def showFrame(frame, name, view=None, parent='segmentation', scale=0.35, visible=True):
+
+    view = view or app.getCurrentRenderView()
+    assert view
+
     if isinstance(parent, str):
         parentObj = om.getOrCreateContainer(parent)
     else:
