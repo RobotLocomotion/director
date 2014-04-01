@@ -1103,6 +1103,43 @@ def applyICP(source, target):
     return t
 
 
+def applyDiskGlyphs(polyData):
+
+    voxelGridLeafSize = 0.03
+    normalEstimationSearchRadius = 0.05
+    diskRadius = 0.015
+    diskResolution = 12
+
+    scanInput = polyData
+
+    pd = applyVoxelGrid(scanInput, leafSize=voxelGridLeafSize)
+
+    pd = labelOutliers(pd, searchRadius=normalEstimationSearchRadius, neighborsInSearchRadius=3)
+    pd = thresholdPoints(pd, 'is_outlier', [0, 0])
+
+    pd = normalEstimation(pd, searchRadius=normalEstimationSearchRadius, searchCloud=scanInput)
+
+    disk = vtk.vtkDiskSource()
+    disk.SetOuterRadius(diskRadius)
+    disk.SetInnerRadius(0.0)
+    disk.SetRadialResolution(0)
+    disk.SetCircumferentialResolution(diskResolution)
+    disk.Update()
+
+    t = vtk.vtkTransform()
+    t.RotateY(90)
+    disk = transformPolyData(disk.GetOutput(), t)
+
+    glyph = vtk.vtkGlyph3D()
+    glyph.ScalingOff()
+    glyph.OrientOn()
+    glyph.SetSource(disk)
+    glyph.SetInput(pd)
+    glyph.SetVectorModeToUseNormal()
+    glyph.Update()
+
+    return shallowCopy(glyph.GetOutput())
+
 
 def segmentLeverValve(point1, point2):
 
