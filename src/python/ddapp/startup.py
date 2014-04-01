@@ -298,7 +298,7 @@ if usePlanning:
 
         playbackPanel.setPlan(posturePlan)
 
-    #lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
+    lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
 
 
 if useNavigationPanel:
