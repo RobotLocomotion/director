@@ -122,7 +122,6 @@ void vtkFrameWidget::SelectAction(vtkAbstractWidget *w)
     interactionState = vtkFrameWidgetRepresentation::TranslatingInPlane;
     }
 
-  // The SetInteractionState has the side effect of highlighting the widget
   reinterpret_cast<vtkFrameWidgetRepresentation*>(self->WidgetRep)->
     SetInteractionState(interactionState);
 
@@ -174,6 +173,11 @@ void vtkFrameWidget::EndSelectAction(vtkAbstractWidget *w)
     SetInteractionState(vtkFrameWidgetRepresentation::Outside);
 
   reinterpret_cast<vtkFrameWidgetRepresentation*>(self->WidgetRep)->HighlightOff();
+
+  double e[2];
+  e[0] = static_cast<double>(self->Interactor->GetEventPosition()[0]);
+  e[1] = static_cast<double>(self->Interactor->GetEventPosition()[1]);
+  static_cast<vtkFrameWidgetRepresentation*>(self->WidgetRep)->OnMouseHover(e);
 
   self->ReleaseFocus();
 

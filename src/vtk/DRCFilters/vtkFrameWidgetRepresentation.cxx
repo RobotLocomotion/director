@@ -286,6 +286,7 @@ public:
     Reps[2].Actor->GetProperty()->SetColor(1,1,1);
     */
 
+
     Reps[0].Actor->GetProperty()->SetColor(1,0,0);
     Reps[1].Actor->GetProperty()->SetColor(0,1,0);
     Reps[2].Actor->GetProperty()->SetColor(0,0,1);
@@ -743,7 +744,6 @@ double *vtkFrameWidgetRepresentation::GetBounds()
 {
   this->BuildRepresentation();
 
-
   for (size_t i = 0; i < this->Internal->Actors.size(); ++i)
     {
     double* b = this->Internal->Actors[i]->GetBounds();
@@ -764,10 +764,7 @@ double *vtkFrameWidgetRepresentation::GetBounds()
 void vtkFrameWidgetRepresentation::BuildRepresentation()
 {
   // Rebuild only if necessary
-  if ( this->GetMTime() > this->BuildTime ||
-       (this->Renderer && this->Renderer->GetVTKWindow() &&
-        (this->Renderer->GetVTKWindow()->GetMTime() > this->BuildTime ||
-        this->Renderer->GetActiveCamera()->GetMTime() > this->BuildTime)) )
+  if ( this->GetMTime() > this->BuildTime)
     {
     this->BuildTime.Modified();
     this->Internal->RebuildActors(this->WorldSize, this->UseTubeFilter);
