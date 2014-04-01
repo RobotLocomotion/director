@@ -396,7 +396,44 @@ class ViewEventFilter(object):
         qvtkwidget = self.view.vtkWidget()
         qvtkwidget.installEventFilter(self.eventFilter)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
+
+def zoomToPick(displayPoint, view):
+
+    pickedPoint, prop, _ = vis.pickProp(displayPoint, view)
+    if not prop:
+        return
+
+    flyer.zoomTo(pickedPoint)
+
+
+class KeyEventFilter(object):
+
+    def __init__(self, view):
+        self.view = view
+        self.initEventFilter()
+
+    def filterEvent(self, obj, event):
+
+        if event.type() == QtCore.QEvent.KeyPress:
+            if str(event.text()).lower() == 'f':
+                self.eventFilter.setEventHandlerResult(True)
+                cursorPos = self.view.mapFromGlobal(QtGui.QCursor.pos())
+                displayPoint = cursorPos.x(), self.view.height - cursorPos.y()
+                zoomToPick(displayPoint, self.view)
+            elif str(event.text()).lower() == 'r':
+                self.eventFilter.setEventHandlerResult(True)
+                resetCameraToRobot()
+
+
+    def initEventFilter(self):
+        self.eventFilter = PythonQt.dd.ddPythonEventFilter()
+        qvtkwidget = self.view.vtkWidget()
+        qvtkwidget.installEventFilter(self.eventFilter)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
+
+
+keyEventFilter = KeyEventFilter(view)
 
 
 def highlightSelectedLink(displayPoint, view):
