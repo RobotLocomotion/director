@@ -299,8 +299,8 @@ class JointTeleopPanel(object):
 
     def toSliderValue(self, jointIndex, jointValue):
         jointRange = self.jointLimitsMin[jointIndex], self.jointLimitsMax[jointIndex]
-        if jointValue < jointRange[0] or jointValue > jointRange[1]:
-            print 'warning: joint %s value %f is out of expected range [%f, %f]' % (self.toJointName(jointIndex), jointValue, jointRange[0], jointRange[1])
+        #if jointValue < jointRange[0] or jointValue > jointRange[1]:
+        #    print 'warning: joint %s value %f is out of expected range [%f, %f]' % (self.toJointName(jointIndex), jointValue, jointRange[0], jointRange[1])
         return (jointValue - jointRange[0]) / (jointRange[1] - jointRange[0])
 
     def getSlider(self, joint):
