@@ -3307,7 +3307,7 @@ def orthoZ():
 
 def zoomToDisplayPoint(displayPoint, boundsRadius=0.5, view=None):
 
-    pickedPoint = pickPoint(displayPoint, obj='pointcloud snapshot')
+    pickedPoint = pickPoint(displayPoint, getSegmentationView(), obj='pointcloud snapshot')
     if pickedPoint is None:
         return
 
