@@ -282,6 +282,7 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
     gridObj = showPolyData(grid.GetOutput(), 'grid', view=view, alpha=0.10, color=color, visible=True, parent=parent)
     gridObj.gridSource = grid
     gridObj.actor.GetProperty().LightingOff()
+    gridObj.actor.SetPickable(False)
     return gridObj
 
 
