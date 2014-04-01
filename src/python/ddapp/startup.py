@@ -74,6 +74,7 @@ view = app.getDRCView()
 camera = view.camera()
 tree = app.getMainWindow().objectTree()
 orbit = cameracontrol.OrbitController(view)
+flyer = cameracontrol.Flyer(view)
 showPolyData = segmentation.showPolyData
 updatePolyData = segmentation.updatePolyData
 
@@ -334,15 +335,11 @@ def showLinkFrame(linkName, model=None):
 
 def resetCameraToRobot():
     t = getLinkFrame('utorso')
-    focalPoint = [0.3, 0.0, 0.3]
+    focalPoint = [0.0, 0.0, 0.0]
     position = [-4.0, -2.0, 2.0]
     t.TransformPoint(focalPoint, focalPoint)
     t.TransformPoint(position, position)
-    c = view.camera()
-    c.SetFocalPoint(focalPoint)
-    c.SetPosition(position)
-    c.SetViewUp([0.0, 0.0, 1.0])
-    view.render()
+    flyer.zoomTo(focalPoint, position)
 
 
 def resetCameraToHeadView():
