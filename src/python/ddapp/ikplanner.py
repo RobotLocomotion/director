@@ -29,12 +29,7 @@ import drc as lcmdrc
 
 from PythonQt import QtCore, QtGui
 
-
-def copyFrame(transform):
-    t = vtk.vtkTransform()
-    t.PostMultiply()
-    t.SetMatrix(transform.GetMatrix())
-    return t
+copyFrame = transformUtils.copyFrame
 
 
 class IKPlanner(object):

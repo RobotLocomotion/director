@@ -133,3 +133,9 @@ def positionMessageFromFrame(transform):
     pose.rotation = quat
     return pose
 
+
+def copyFrame(transform):
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    t.SetMatrix(transform.GetMatrix())
+    return t
