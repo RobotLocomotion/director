@@ -59,6 +59,7 @@ ddViewManager::ddViewManager(QWidget* parent) : QWidget(parent)
   QTabWidget* tabWidget = new MyTabWidget(this);
   tabWidget->setTabPosition(QTabWidget::West);
   tabWidget->setDocumentMode(true);
+  tabWidget->setMovable(true);
   layout->addWidget(tabWidget);
   this->Internal->TabWidget = tabWidget;
 
