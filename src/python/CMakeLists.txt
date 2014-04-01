@@ -1,6 +1,7 @@
 
 set(python_files
   ddapp/actionhandlers.py
+  ddapp/actionmanagerpanel.py
   ddapp/affordance.py
   ddapp/affordancelistener.py
   ddapp/affordanceupdater.py
@@ -9,10 +10,6 @@ set(python_files
   ddapp/atlasdriver.py
   ddapp/atlasdriverpanel.py
   ddapp/atlasstatuspanel.py
-  ddapp/multisensepanel.py
-  ddapp/navigationpanel.py
-  ddapp/handcontrolpanel.py
-  ddapp/actionmanagerpanel.py
   ddapp/botspy.py
   ddapp/cameracontrol.py
   ddapp/cameraview.py
@@ -25,6 +22,7 @@ set(python_files
   ddapp/filterUtils.py
   ddapp/footstepsdriver.py
   ddapp/footstepsdriverpanel.py
+  ddapp/handcontrolpanel.py
   ddapp/handdriver.py
   ddapp/ik.py
   ddapp/ikconstraints.py
@@ -38,6 +36,8 @@ set(python_files
   ddapp/mapsregistrar.py
   ddapp/matlab.py
   ddapp/midi.py
+  ddapp/multisensepanel.py
+  ddapp/navigationpanel.py
   ddapp/objectmodel.py
   ddapp/perception.py
   ddapp/planplayback.py
