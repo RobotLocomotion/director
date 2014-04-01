@@ -134,11 +134,28 @@ setupPackagePaths()
 
 
 
+class HandFactory(object):
+
+    def __init__(self, robotModel):
+        self.robotModel = robotModel
+        self.loaders = {}
+
+    def getLoader(self, handType):
+        loader = self.loaders.get(handType)
+        if loader is None:
+            loader = HandLoader(handType, self.robotModel)
+            self.loaders[handType] = loader
+        return loader
+
+    def newPolyData(self, handType, view, name=None, parent=None):
+        loader = self.getLoader(handType)
+        name = name or handType.replace('_', ' ')
+        return loader.newPolyData(name, view, parent=parent)
 
 
 class HandLoader(object):
 
-    def __init__(self, handType, robotModel, view):
+    def __init__(self, handType, robotModel):
 
 
         def toFrame(xyzrpy):
@@ -167,7 +184,7 @@ class HandLoader(object):
             palmLink = '%s_hand_face' % self.side[0]
             robotMountToPalm = toFrame(baseToPalm)
 
-            self.loadHandModel(view)
+            self.loadHandModel()
 
             baseToHandRoot = self.getLinkToLinkTransform(self.handModel, 'plane::xy::base', handRootLink)
             robotMountToHandRoot = self.getLinkToLinkTransform(robotModel, robotMountLink, handRootLink)
@@ -197,7 +214,7 @@ class HandLoader(object):
             palmLink = '%s_hand_face' % self.side[0]
             robotMountToPalm = self.getLinkToLinkTransform(robotModel, robotMountLink, palmLink)
 
-            self.loadHandModel(view)
+            self.loadHandModel()
 
             baseToHandRoot = self.getLinkToLinkTransform(self.handModel, 'plane::xy::base', handRootLink)
             robotMountToHandRoot = self.getLinkToLinkTransform(robotModel, robotMountLink, handRootLink)
@@ -251,6 +268,46 @@ class HandLoader(object):
         return t
 
 
+    def loadHandModel(self):
+
+        color = [1.0, 1.0, 0.0]
+        if self.side == 'right':
+            color = [0.33, 1.0, 0.0]
+
+        filename = self.getHandUrdf()
+        handModel = loadRobotModelFromFile(filename)
+        handModel = om.addRobotModel(handModel, om.getOrCreateContainer('hands'))
+        handModel.setProperty('Name', os.path.basename(filename).replace('.urdf', '').replace('_', ' '))
+        handModel.setProperty('Visible', False)
+        color = np.array(color)*255
+        handModel.setProperty('Color', QtGui.QColor(color[0], color[1], color[2]))
+        handModel.setProperty('Alpha', 1.0)
+
+        om.removeFromObjectModel(handModel)
+        #handModel.addToView(view)
+        self.handModel = handModel
+
+
+    def newPolyData(self, name, view, parent=None):
+        self.handModel.model.setJointPositions(np.zeros(self.handModel.model.numberOfJoints()))
+        polyData = vtk.vtkPolyData()
+        self.handModel.model.getModelMesh(polyData)
+        polyData = filterUtils.transformPolyData(polyData, self.modelToPalm)
+
+        if isinstance(parent, str):
+            parent = om.getOrCreateContainer(parent)
+
+        color = [1.0, 1.0, 0.0]
+        if self.side == 'right':
+            color = [0.33, 1.0, 0.0]
+        obj = vis.showPolyData(polyData, name, view=view, color=color, visible=False, parent=parent)
+        frame = vtk.vtkTransform()
+        frame.PostMultiply()
+        obj.actor.SetUserTransform(frame)
+        frameObj = vis.showFrame(frame, '%s frame' % name, view=view, scale=0.2, visible=False, parent=obj)
+        return obj
+
+
     def moveToRobot(self, robotModel):
 
         handLinkToWorld = robotModel.getLinkFrame(self.handLinkName)
@@ -279,41 +336,6 @@ class HandLoader(object):
 
         self.moveHandModelToFrame(self.handModel, t)
 
-
-    def loadHandModel(self, view):
-
-        color = [1.0, 1.0, 0.0]
-        if self.side == 'right':
-            color = [0.33, 1.0, 0.0]
-
-        filename = self.getHandUrdf()
-        handModel = loadRobotModelFromFile(filename)
-        handModel = om.addRobotModel(handModel, om.getOrCreateContainer('hands'))
-        handModel.setProperty('Name', os.path.basename(filename).replace('.urdf', '').replace('_', ' '))
-        handModel.setProperty('Visible', False)
-        color = np.array(color)*255
-        handModel.setProperty('Color', QtGui.QColor(color[0], color[1], color[2]))
-        handModel.setProperty('Alpha', 1.0)
-
-        handModel.addToView(view)
-        self.handModel = handModel
-
-    def newPolyData(self):
-        self.handModel.model.setJointPositions(np.zeros(self.handModel.model.numberOfJoints()))
-        polyData = vtk.vtkPolyData()
-        self.handModel.model.getModelMesh(polyData)
-        polyData = filterUtils.transformPolyData(polyData, self.modelToPalm)
-
-        name = '%s %s' % (self.handType, self.side)
-        color = [1.0, 1.0, 0.0]
-        if self.side == 'right':
-            color = [0.33, 1.0, 0.0]
-        obj = vis.showPolyData(polyData, name, color=color, visible=False, parent=om.getOrCreateContainer('hands'))
-        frame = vtk.vtkTransform()
-        frame.PostMultiply()
-        obj.actor.SetUserTransform(frame)
-        frameObj = vis.showFrame(frame, '%s frame' % name, scale=0.2, visible=False, parent=obj)
-        return obj
 
     @staticmethod
     def moveHandModelToFrame(model, frame):

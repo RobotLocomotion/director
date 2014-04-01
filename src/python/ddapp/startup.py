@@ -237,27 +237,21 @@ if usePlanning:
         om.findObjectByName('Multisense').model.showRevolutionCallback = None
 
 
+    handFactory = roboturdf.HandFactory(robotStateModel)
 
     ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController,
                                         robotStateJointController, playPlans, showPose, playbackRobotModel)
 
 
+    leftHandType = 'left_%s' % ('robotiq' if 'LR' in roboturdf.defaultUrdfHands else 'irobot')
+    rightHandType = 'right_%s' % ('robotiq' if 'RR' in roboturdf.defaultUrdfHands else 'irobot')
 
-    if 'LI' in roboturdf.defaultUrdfHands:
-        lhandModel = roboturdf.HandLoader('left_irobot', robotStateModel, view)
-    else:
-        lhandModel = roboturdf.HandLoader('left_robotiq', robotStateModel, view)
 
-    if 'RI' in roboturdf.defaultUrdfHands:
-        rhandModel = roboturdf.HandLoader('right_irobot', robotStateModel, view)
-    else:
-        rhandModel = roboturdf.HandLoader('right_robotiq', robotStateModel, view)
+    ikPlanner.handModels.append(handFactory.getLoader(leftHandType))
+    ikPlanner.handModels.append(handFactory.getLoader(rightHandType))
 
-    ikPlanner.handModels.append(lhandModel)
-    ikPlanner.handModels.append(rhandModel)
-
-    lhandMesh = lhandModel.newPolyData()
-    rhandMesh = rhandModel.newPolyData()
+    lhandMesh = handFactory.newPolyData(leftHandType, view, parent='hands')
+    rhandMesh = handFactory.newPolyData(rightHandType, view, parent='hands')
 
 
 
