@@ -122,6 +122,7 @@ if useIk:
 
 if useAtlasDriver:
     atlasdriver.init(app.getOutputConsole())
+    atlasDriver = atlasdriver.driver
     atlasdriverpanel.init(atlasdriver.driver)
     atlasstatuspanel.init(atlasdriver.driver)
 
