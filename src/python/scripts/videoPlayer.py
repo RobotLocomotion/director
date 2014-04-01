@@ -1,3 +1,4 @@
+import os
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 from ddapp.timercallback import TimerCallback
@@ -62,9 +63,11 @@ class VideoPlayer(object):
 
     def __init__(self):
 
+        self.pid = os.getpid()
         self.loadUi()
         self.setupUi()
         self.setupImageStreams()
+        self.enableLiveMode()
 
     def loadUi(self):
 
@@ -110,8 +113,13 @@ class VideoPlayer(object):
         self.view.renderer().SetBackground([0,0,0])
         self.view.renderer().SetBackground2([0,0,0])
 
+        self.ui.timeLabel.visible = False
+        self.ui.seekForwardButton.visible = False
+        self.ui.seekBackwardButton.visible = False
+
         self.ui.slider.connect('valueChanged(int)', self.onSliderChanged)
         self.ui.resumeButton.connect('clicked()', self.onResumeClicked)
+        self.ui.playButton.connect('clicked()', self.onPlayClicked)
 
         self.ui.mainWidget.layout().addWidget(self.view)
         self.widget.resize(1280, 1024 + self.ui.controlsFrame.height)
@@ -128,14 +136,36 @@ class VideoPlayer(object):
         return FieldData(**argDict)
 
     def onResumeClicked(self):
-        self.ui.slider.setValue(self.ui.slider.maximum)
-        self.cameraView.setImageName(CAPTURE_CHANNEL)
-        self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='resume')
+        self.enableLiveMode()
 
+
+    def enableReviewMode(self):
+        self.cameraView.setImageName('VIDEO_PLAYBACK_IMAGE')
+        self.ui.resumeButton.setEnabled(True)
+        self.ui.playButton.setEnabled(True)
+
+
+    def enableLiveMode(self):
+        self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='resume')
+        self.ui.slider.blockSignals(True)
+        self.ui.slider.setValue(self.ui.slider.maximum)
+        self.ui.slider.blockSignals(False)
+        self.cameraView.setImageName(CAPTURE_CHANNEL)
+        self.ui.resumeButton.setEnabled(False)
+        self.ui.playButton.setEnabled(False)
+
+
+    def getSliderValue(self):
+        return (self.ui.slider.value/float(self.ui.slider.maximum))
 
     def onSliderChanged(self, sliderValue):
-        self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='request_frame', value=(sliderValue/float(self.ui.slider.maximum)))
+        self.enableReviewMode()
+        self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='request_frame', value=self.getSliderValue(), pid=self.pid)
         self.cameraView.setImageName('VIDEO_PLAYBACK_IMAGE')
+
+
+    def onPlayClicked(self):
+        self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='play', value=self.getSliderValue(), pid=self.pid, speed=self.ui.playbackSpeedSpin.value)
 
 
 def main():
