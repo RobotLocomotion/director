@@ -67,6 +67,8 @@ public:
 
   virtual double *GetBounds();
 
+  virtual void GetActors(vtkPropCollection* propCollection);
+
   // Description:
   // Methods supporting, and required by, the rendering process.
   virtual void ReleaseGraphicsResources(vtkWindow*);
