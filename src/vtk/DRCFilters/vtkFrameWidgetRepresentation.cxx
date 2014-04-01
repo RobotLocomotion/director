@@ -761,6 +761,20 @@ double *vtkFrameWidgetRepresentation::GetBounds()
 }
 
 //----------------------------------------------------------------------------
+void vtkFrameWidgetRepresentation::GetActors(vtkPropCollection* propCollection)
+{
+  if (!propCollection)
+    {
+    return;
+    }
+
+  for (size_t i = 0; i < this->Internal->Actors.size(); ++i)
+    {
+    propCollection->AddItem(this->Internal->Actors[i]);
+    }
+}
+
+//----------------------------------------------------------------------------
 void vtkFrameWidgetRepresentation::BuildRepresentation()
 {
   // Rebuild only if necessary
