@@ -277,6 +277,7 @@ if usePlanning:
                                                 sensorJointController = robotStateJointController,
                                                 playbackFunction = playPlans,
                                                 manipPlanner = manipPlanner,
+                                                ikPlanner = ikPlanner,
                                                 footstepPlanner = footstepsDriver,
                                                 handDriver = lHandDriver,
                                                 atlasDriver = atlasdriver.driver,

@@ -95,6 +95,7 @@ class ActionManager(object):
                  sensorJointController,
                  playbackFunction,
                  manipPlanner,
+                 ikPlanner,
                  footstepPlanner,
                  handDriver,
                  atlasDriver,
@@ -106,6 +107,7 @@ class ActionManager(object):
         self.om = objectModel
         self.robotModel = robotModel
         self.manipPlanner = manipPlanner
+        self.ikPlanner = ikPlanner
         self.footstepPlanner = footstepPlanner
         self.sensorJointController = sensorJointController
         self.playbackFunction = playbackFunction
