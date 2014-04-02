@@ -53,7 +53,6 @@ class NavigationPanel(object):
         self.ui.captureButton.connect("clicked()", self.onCaptureButton)
         self.ui.visualizeButton.connect("clicked()", self.onVisualizeButton)
         self.ui.planButton.connect("clicked()", self.onPlanButton)
-        self.ui.executeButton.connect("clicked()", self.onExecuteButton)
         self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
         self.ui.showBDIButton.connect("clicked()", self.onShowBDIButton)
 
@@ -161,7 +160,7 @@ class NavigationPanel(object):
 
         # mid point of feet (as used by robin)
         # this assumes model publisher exists - not always true currently
-        model = om.findObjectByName("model publisher")
+        model = om.findObjectByName("robot state model")
         t_feet_mid = self.footstepDriver.getFeetMidPoint(model)
         #vis.updateFrame(t_feet_mid, "Current Goal New", parent="navigation")
 
@@ -199,14 +198,6 @@ class NavigationPanel(object):
         self.showBDIPlan = True
         self.playbackRobotModel.setProperty('Visible', True)
         self.drawBDIFootstepPlan()
-
-    def onExecuteButton(self):
-        if (self.bdi_plan is None):
-            print "No BDI plan calculated, cannot execute"
-            return
-
-        print "committing bdi plan"
-        self.footstepDriver.commitFootstepPlan(self.bdi_plan)
 
 def init(jointController, footstepDriver, playbackRobotModel, playbackJointController):
 
