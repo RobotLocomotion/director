@@ -53,7 +53,7 @@ class IKPlanner(object):
 
         self.reachingSide = 'left'
         self.graspSample = 0
-        self.additionalTimeSamples = 10
+        self.additionalTimeSamples = 0
         self.useQuasiStaticConstraint = True
 
         #self.handToUtorso = [0.05, 0.6, 0.10]
