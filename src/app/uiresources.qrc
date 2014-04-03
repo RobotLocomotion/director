@@ -4,6 +4,7 @@
     <file>ddHandControl.ui</file>
     <file>ddIKEditor.ui</file>
     <file>ddMultisense.ui</file>
+    <file>ddFootsteps.ui</file>
     <file>ddNavigation.ui</file>
     <file>ddPlaybackPanel.ui</file>
     <file>ddRobotStatus.ui</file>

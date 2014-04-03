@@ -11,34 +11,38 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Navigation</string>
+   <string>Footsteps</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="2" column="0">
-    <widget class="QPushButton" name="visualizeButton">
+   <item row="4" column="1">
+    <widget class="QPushButton" name="showBDIButton">
      <property name="text">
-      <string>visualize</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QComboBox" name="comboBox"/>
-   </item>
-   <item row="2" column="1">
-    <widget class="QPushButton" name="planButton">
-     <property name="text">
-      <string>plan</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>goals</string>
+      <string>Show BDI</string>
      </property>
     </widget>
    </item>
    <item row="3" column="0" colspan="2">
+    <widget class="QPushButton" name="stopButton">
+     <property name="text">
+      <string>stop walking</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <widget class="QPushButton" name="walkingGoalButton">
+     <property name="text">
+      <string>new walking goal</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QPushButton" name="hideBDIButton">
+     <property name="text">
+      <string>Hide BDI</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="2">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -51,10 +55,17 @@
      </property>
     </spacer>
    </item>
-   <item row="0" column="0" colspan="2">
-    <widget class="QPushButton" name="captureButton">
+   <item row="1" column="0" colspan="2">
+    <widget class="QPushButton" name="goalStepsButton">
      <property name="text">
-      <string>capture current</string>
+      <string>goal steps</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <widget class="QPushButton" name="executeButton">
+     <property name="text">
+      <string>execute footstep plan</string>
      </property>
     </widget>
    </item>
