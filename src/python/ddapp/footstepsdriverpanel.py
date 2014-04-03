@@ -17,10 +17,8 @@ def _makeButton(text, func):
     return b
 
 
-def getVisibleRobotModel():
-    for obj in om.objects.values():
-        if isinstance(obj, om.RobotModelItem) and obj.getProperty('Visible'):
-            return obj
+def getDefaultRobotModel():
+    return om.findObjectByName('robot state model')
 
 
 class FootstepsPanel(object):
@@ -44,11 +42,11 @@ class FootstepsPanel(object):
         l.addStretch()
 
     def onNewWalkingGoal(self):
-        model = getVisibleRobotModel()
+        model = getDefaultRobotModel()
         self.driver.createWalkingGoal(model)
 
     def onGoalSteps(self):
-        model = getVisibleRobotModel()
+        model = getDefaultRobotModel()
         self.driver.createGoalSteps(model)
 
     def onExecute(self):
