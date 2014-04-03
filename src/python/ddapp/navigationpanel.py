@@ -58,36 +58,28 @@ class NavigationPanel(object):
 
         self.goal = dict()
 
-        lcmUtils.addSubscriber('POSE_BDI', pose_t, self.onPoseBDI)
-        lcmUtils.addSubscriber('POSE_BODY', pose_t, self.onPoseBody)
+        sub = lcmUtils.addSubscriber('POSE_BDI', pose_t, self.onPoseBDI)
+        sub.setSpeedLimit(60)
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootStepPlanResponse)
         self.pose_bdi = None
-        self.pose_body = None
         self.bdi_plan = None
-
-        sub = lcmUtils.addSubscriber('EST_ROBOT_STATE_BDI', lcmdrc.robot_state_t, self.onERSBDI)
-        sub.setSpeedLimit(60)
 
         self.playbackRobotModel.setProperty('Visible', True)
         self.showBDIPlan = True # show the BDI plans when created
 
-
-
     #############################
-    def onPoseBDI(self,msg):
-        self.pose_bdi = msg
-        
-    def onPoseBody(self,msg):
-        self.pose_body = msg
 
-    def onERSBDI(self,msg):
-        pose = robotstate.convertStateMessageToDrakePose(msg)
+    def onPoseBDI(self,msg):
+        # Set the xyzrpy of this pose to equal that estimated by BDI
+        self.pose_bdi = msg
+        rpy = botpy.quat_to_roll_pitch_yaw(msg.orientation)
+        pose = self.jointController.getPose(self.jointController.currentPoseName).copy()
+        pose[0:3] = msg.pos
+        pose[3:6] = rpy
         self.playbackJointController.setPose("ERS BDI", pose)
         
-
     def onFootStepPlanResponse(self,msg):
         self.transformPlanToBDIFrame(msg)
-
 
         
     #################################
@@ -107,13 +99,15 @@ class NavigationPanel(object):
         return pose
 
     def transformPlanToBDIFrame(self, plan):
-        if ((self.pose_bdi is None) or (self.pose_body is None)):
-            print "haven't received POSE_BDI and POSE_BODY"
+        if (self.pose_bdi is None):
+            print "haven't received POSE_BDI"
             return
 
-        t_bodybdi  = transformUtils.transformFromPose(self.pose_bdi.pos,self.pose_bdi.orientation)
+        t_bodybdi  = transformUtils.transformFromPose(self.pose_bdi.pos, self.pose_bdi.orientation)
         t_bodybdi.PostMultiply()
-        t_bodymain = transformUtils.transformFromPose(self.pose_body.pos,self.pose_body.orientation)
+        
+        current_pose = self.jointController.q
+        t_bodymain = transformUtils.transformFromPose( current_pose[0:3]  , botpy.roll_pitch_yaw_to_quat(current_pose[3:6])   )
         t_bodymain.PostMultiply()
         #self.printTransform(t_bodybdi,"t_bodybdi")
         #self.printTransform(t_bodymain,"t_bodymain")
