@@ -104,7 +104,7 @@ class FootstepsDriver(object):
         self.bdi_plan_adjusted = None
 
         view = app.getDRCView()
-        self.bdiRobotModel, self.bdiJointController = roboturdf.loadRobotModel('bdi model', view, parent='bid model', color=roboturdf.getRobotOrangeColor(), visible=False)
+        self.bdiRobotModel, self.bdiJointController = roboturdf.loadRobotModel('bdi model', view, parent='bdi model', color=roboturdf.getRobotOrangeColor(), visible=False)
         self.bdiRobotModel.setProperty('Visible', False)
         self.showBDIPlan = False # hide the BDI plans when created
         
@@ -115,11 +115,11 @@ class FootstepsDriver(object):
         lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
         ### Related to BDI-frame adjustment:
-        sub = lcmUtils.addSubscriber('POSE_BDI', pose_t, self.onPoseBDI)
-        sub.setSpeedLimit(60)
+        sub1 = lcmUtils.addSubscriber('POSE_BDI', pose_t, self.onPoseBDI)
+        sub1.setSpeedLimit(60)
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootStepPlanResponse)
-        lcmUtils.addSubscriber('BDI_ADJUSTED_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, self.onBDIAdjustedFootstepPlan)
-        
+        sub2 = lcmUtils.addSubscriber('BDI_ADJUSTED_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, self.onBDIAdjustedFootstepPlan)
+        sub2.setSpeedLimit(1) # was 5 but was slow rendering
         
     ##############################
     def onWalkingPlan(self, msg):
@@ -396,8 +396,8 @@ class FootstepsDriver(object):
         self.bdi_plan_adjusted = msg.decode( msg.encode() ) # decode and encode ensures deepcopy
         if (self.showBDIPlan is True):
             self.drawBDIFootstepPlanAdjusted()
-        else:
-            print "not showing adjusted bdi plan"
+        #else:
+        #    print "not showing adjusted bdi plan"
         
     def transformPlanToBDIFrame(self, plan):
         if (self.pose_bdi is None):
@@ -433,8 +433,8 @@ class FootstepsDriver(object):
 
         if (self.showBDIPlan is True):
             self.drawBDIFootstepPlan()
-        else:
-            print "not showing bdi plan"
+        #else:
+        #    print "not showing bdi plan"
 
     def drawBDIFootstepPlan(self):
         if (self.bdi_plan is None):
