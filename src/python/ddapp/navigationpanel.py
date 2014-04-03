@@ -17,7 +17,7 @@ import ddapp.visualization as vis
 import ddapp.objectmodel as om
 from ddapp import robotstate
 from ddapp import botpy
-from bot_core.pose_t import pose_t
+
 import drc as lcmdrc
 
 def addWidgetsToDict(widgets, d):
@@ -53,100 +53,26 @@ class NavigationPanel(object):
         self.ui.captureButton.connect("clicked()", self.onCaptureButton)
         self.ui.visualizeButton.connect("clicked()", self.onVisualizeButton)
         self.ui.planButton.connect("clicked()", self.onPlanButton)
-        self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
-        self.ui.showBDIButton.connect("clicked()", self.onShowBDIButton)
 
         self.goal = dict()
-
-        sub = lcmUtils.addSubscriber('POSE_BDI', pose_t, self.onPoseBDI)
-        sub.setSpeedLimit(60)
-        lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootStepPlanResponse)
-        self.pose_bdi = None
-        self.bdi_plan = None
-
-        self.playbackRobotModel.setProperty('Visible', True)
-        self.showBDIPlan = True # show the BDI plans when created
-
-    #############################
-
-    def onPoseBDI(self,msg):
-        # Set the xyzrpy of this pose to equal that estimated by BDI
-        self.pose_bdi = msg
-        rpy = botpy.quat_to_roll_pitch_yaw(msg.orientation)
-        pose = self.jointController.getPose(self.jointController.currentPoseName).copy()
-        pose[0:3] = msg.pos
-        pose[3:6] = rpy
-        self.playbackJointController.setPose("ERS BDI", pose)
         
-    def onFootStepPlanResponse(self,msg):
-        self.transformPlanToBDIFrame(msg)
-
         
-    #################################
+    ###############################
+    def getSelectedGoalName(self):
+        goal_name = self.ui.comboBox.currentText
+        return goal_name
+    
+    def getFrameFromCombo(self):
+        pose = self.goal[ self.getSelectedGoalName() ]
+        #frame = transformUtils.frameFromPositionAndRPY(pose[0:3], np.degrees(pose[3:6]) )
+        return pose
+    
     def printTransform(self,t,message):
         p = t.GetPosition()
         q = t.GetOrientation()
         print "%f %f %f | %f %f %f | %s" % (p[0],p[1],p[2],q[0],q[1],q[2],message)
-
-    def getSelectedGoalName(self):
-        goal_name = self.ui.comboBox.currentText
-        return goal_name
-
-    def getFrameFromCombo(self):
-        pose = self.goal[ self.getSelectedGoalName() ]
-        #frame = transformUtils.frameFromPositionAndRPY(pose[0:3], np.degrees(pose[3:6]) )
-
-        return pose
-
-    def transformPlanToBDIFrame(self, plan):
-        if (self.pose_bdi is None):
-            print "haven't received POSE_BDI"
-            return
-
-        t_bodybdi  = transformUtils.transformFromPose(self.pose_bdi.pos, self.pose_bdi.orientation)
-        t_bodybdi.PostMultiply()
-        
-        current_pose = self.jointController.q
-        t_bodymain = transformUtils.transformFromPose( current_pose[0:3]  , botpy.roll_pitch_yaw_to_quat(current_pose[3:6])   )
-        t_bodymain.PostMultiply()
-        #self.printTransform(t_bodybdi,"t_bodybdi")
-        #self.printTransform(t_bodymain,"t_bodymain")
-
-        # iterate and transform
-        self.bdi_plan = plan.decode( plan.encode() ) # decode and encode ensures deepcopy
-        for i, footstep in enumerate(self.bdi_plan.footsteps):
-            step = footstep.pos
-            
-            #print i
-            t_step = transformUtils.frameFromPositionMessage(step)
-            #self.printTransform(t_step,"t_step")
-            #self.printTransform(t_bodymain,"t_bodymain")
-
-            t_body_to_step = vtk.vtkTransform()
-            t_body_to_step.DeepCopy(t_step)
-            t_body_to_step.PostMultiply()
-            t_body_to_step.Concatenate(t_bodymain.GetLinearInverse())
-            #self.printTransform(t_body_to_step,"t_body_to_step")
-
-            t_stepbdi = vtk.vtkTransform()
-            t_stepbdi.DeepCopy(t_body_to_step)
-            t_stepbdi.PostMultiply()
-            t_stepbdi.Concatenate(t_bodybdi)
-            footstep.pos = transformUtils.positionMessageFromFrame(t_stepbdi)
-
-        if (self.showBDIPlan is True):
-            self.drawBDIFootstepPlan()
-        else:
-            print "not showing bdi plan"
-
-    def drawBDIFootstepPlan(self):
-        folder = om.getOrCreateContainer("BDI footstep plan")
-        om.removeFromObjectModel(folder)
-        self.footstepDriver.drawFootstepPlan(self.bdi_plan, om.getOrCreateContainer("BDI footstep plan"), [0.0, 0.0, 1.0] , [1.0, 0.0, 0.0])
-
-
-
-    ###############################
+    
+    
     def onCaptureButton(self):
         print "capture" #,self.jointController.q
         # body frame:
@@ -180,18 +106,6 @@ class NavigationPanel(object):
         frame = self.getFrameFromCombo()
         self.footstepDriver.sendFootstepPlanRequest(frame)
 
-    def onHideBDIButton(self):
-        print "hide bdi"
-        self.showBDIPlan = False
-        self.playbackRobotModel.setProperty('Visible', False)
-        folder = om.getOrCreateContainer("BDI footstep plan")
-        om.removeFromObjectModel(folder)
-
-    def onShowBDIButton(self):
-        print "show bdi"
-        self.showBDIPlan = True
-        self.playbackRobotModel.setProperty('Visible', True)
-        self.drawBDIFootstepPlan()
 
 def init(jointController, footstepDriver, playbackRobotModel, playbackJointController):
 
