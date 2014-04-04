@@ -463,7 +463,7 @@ class CameraDeltaPlan(Action):
         # Start listening for a message with the desired camera transform
         lcmUtils.captureMessageCallback(self.parsedArgs['Channel'], rigid_transform_t, self.setMessageReceived)
 
-        if self.vizMode:
+        if self.container.vizMode:
             self.message.data = rigit_transform_t()
             self.message.data.trans = [1,2,3]
             self.setMessageReceived = True
