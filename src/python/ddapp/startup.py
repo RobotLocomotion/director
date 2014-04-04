@@ -305,7 +305,9 @@ if usePlanning:
 
 
 if useNavigationPanel:
-    navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
+    thispanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
+    picker = PointPicker(view, callback=thispanel.pointPickerDemo, numberOfPoints=2)
+    picker.start()
 
 
 def getLinkFrame(linkName, model=None):
@@ -330,6 +332,4 @@ def sendEstRobotState(pose=None):
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view, handFactory, robotStateModel, footstepsDriver)
 
-#pd = io.readPolyData('/Users/pat/Desktop/scans/debris-scan.vtp')
-#o = vis.showPolyData(pd, 'scan')
 
