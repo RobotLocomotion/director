@@ -113,7 +113,7 @@ def init(jointController, footstepDriver, playbackRobotModel, playbackJointContr
 
     panel = NavigationPanel(jointController, footstepDriver, playbackRobotModel, playbackJointController)
     dock = app.addWidgetToDock(panel.widget)
-    #dock.hide()
+    dock.hide()
 
     return panel
 
