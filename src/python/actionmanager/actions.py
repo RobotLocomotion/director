@@ -9,6 +9,8 @@ from ddapp import lcmUtils
 from ddapp import segmentation
 from ddapp.drilldemo import RobotPoseGUIWrapper
 
+from drc import robot_state_t
+
 import takktile
 
 # Declare all valid inputs/ouputs here
@@ -22,7 +24,7 @@ argType['RobotPose'] = None
 argType['JointPlan'] = None
 argType['Hand'] = None
 argType['Constraints'] = None
-
+argType['BodyPose'] = None
 
 # Base Class, all actions must inherit from this
 # All inheritors must:
@@ -393,9 +395,9 @@ class PoseSearch(Action):
         # for left_base_link
         position = [-0.15, 0.0, 0.028]
         if self.parsedArgs['Hand'] == 'right':
-            rpy = [180, 0, 90]
+            rpy = [0, -90, -90]
         else:
-            rpy = [0, 0, -90]
+            rpy = [0, 90, -90]
 
         grasp = transformUtils.frameFromPositionAndRPY(position, rpy)
         grasp.Concatenate(self.targetAffordanceFrame.transform)
@@ -421,9 +423,9 @@ class PoseSearch(Action):
         graspGroundFrame.Translate(graspPosition[0], graspPosition[1], groundHeight)
 
         if self.parsedArgs['Hand'] == 'right':
-            position = [-0.55, 0.50, 0.0]
+            position = [-0.57, 0.40, 0.0]
         else:
-            position = [-0.55, -0.50, 0.0]
+            position = [-0.57, -0.40, 0.0]
         rpy = [0, 0, 0]
 
         stance = transformUtils.frameFromPositionAndRPY(position, rpy)
@@ -448,7 +450,7 @@ class DeltaReachPlan(Action):
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
         self.outputs = {'JointPlan' : None}
-        self.manipPlanResponse = None
+        self.manipPlan = None
 
     def onEnter(self):
         linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
@@ -457,7 +459,7 @@ class DeltaReachPlan(Action):
         graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
         deltaFrame = transformUtils.frameFromPositionAndRPY([0,0,0],[0,0,0])
 
-        vis.updateFrame(deltaFrame, self.parsedArgs['TargetFrame'] + " " + self.name, parent=graspFrame, visible=True, scale=0.25)
+        frameObject = vis.updateFrame(deltaFrame, self.parsedArgs['TargetFrame'] + " " + self.name, parent=graspFrame, visible=True, scale=0.25)
 
         deltaFrame.DeepCopy(graspFrame.transform)
 
@@ -474,32 +476,29 @@ class DeltaReachPlan(Action):
             deltaFrame.PostMultiply()
         deltaFrame.Concatenate(delta)
 
-        self.manipPlanResponse = self.container.manipPlanner.sendEndEffectorGoal(self.inputState, linkName, deltaFrame, waitForResponse=True, waitTimeout=0)
+        self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], frameObject, planTraj=True)
 
     def onUpdate(self):
-        response = self.manipPlanResponse.waitForResponse(timeout = 0)
 
-        if response:
-            if response.plan_info[-1] > 10:
-                print "PLANNER REPORTS ERROR!"
+        if self.manipPlan.plan_info[-1] > 10:
+            print "PLANNER REPORTS ERROR!"
 
-                # Plan failed, save it in the animation list, but don't update output data
-                self.animations.append(response)
+            # Plan failed, save it in the animation list, but don't update output data
+            self.animations.append(self.manipPlan)
 
-                self.fail()
-            else:
-                print "Planner reports success!"
+            self.fail()
+        else:
+            print "Planner reports success!"
 
-                # Plan was successful, save it to be animated and update output data
-                self.animations.append(response)
-                self.outputs['JointPlan'] = deepcopy(response)
+            # Plan was successful, save it to be animated and update output data
+            self.animations.append(self.manipPlan)
+            self.outputs['JointPlan'] = deepcopy(self.manipPlan)
 
-                self.success()
+            self.success()
 
     def onExit(self):
         # Planner Cleanup
-        self.manipPlanResponse.finish()
-        self.manipPlanResponse = None
+        self.manipPlan = None
 
         # This is a planning action, no robot motion
         self.outputState = deepcopy(self.inputState)
@@ -511,71 +510,73 @@ class ReachPlan(Action):
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-        self.outputs = {'JointPlan' : None}
-        self.manipPlanResponse = None
+        self.outputs = {'JointPlan' : None, 'BodyPose' : None}
+        self.manipPlan = None
 
     def onEnter(self):
-        linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
 
-        linkName = linkMap[self.parsedArgs['Hand']]
         graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
-
-        self.manipPlanResponse = self.container.manipPlanner.sendEndEffectorGoal(self.inputState, linkName, graspFrame.transform, waitForResponse=True, waitTimeout=0)
+        self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], graspFrame, planTraj=True)
 
     def onUpdate(self):
-        response = self.manipPlanResponse.waitForResponse(timeout = 0)
 
-        if response:
-            if response.plan_info[-1] > 10:
-                print "PLANNER REPORTS ERROR!"
+        if self.manipPlan.plan_info[-1] > 10:
+            print "PLANNER REPORTS ERROR!"
 
-                # Plan failed, save it in the animation list, but don't update output data
-                self.animations.append(response)
+            # Plan failed, save it in the animation list, but don't update output data
+            self.animations.append(self.manipPlan)
+            self.outputs['BodyPose'] = deepcopy(self.inputState)
 
-                self.fail()
-            else:
-                print "Planner reports success!"
+            self.fail()
+        else:
+            print "Planner reports success!"
 
-                # Plan was successful, save it to be animated and update output data
-                self.animations.append(response)
-                self.outputs['JointPlan'] = deepcopy(response)
+            # Plan was successful, save it to be animated and update output data
+            self.animations.append(self.manipPlan)
+            self.outputs['JointPlan'] = deepcopy(self.manipPlan)
+            self.outputs['BodyPose'] = deepcopy(self.manipPlan.plan[-1])
 
-                self.success()
+            self.success()
 
     def onExit(self):
         # Planner Cleanup
-        self.manipPlanResponse.finish()
-        self.manipPlanResponse = None
+        self.manipPlan = None
 
         # This is a planning action, no robot motion
         self.outputState = deepcopy(self.inputState)
 
 class JointMovePlan(Action):
 
-    inputs = ['PoseName', 'Group', 'Hand']
+    inputs = ['PoseName', 'Group', 'Hand', 'BodyPose']
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
         self.outputs = {'JointPlan' : None}
-        self.jointMovePlanResponse = None
+        self.jointMovePlan = None
 
     def onEnter(self):
         # Send a planner request
-        goalPoseJoints = RobotPoseGUIWrapper.getPose(self.parsedArgs['Group'], self.parsedArgs['PoseName'], self.parsedArgs['Hand'])
-        self.jointMovePlanResponse = self.container.manipPlanner.sendPoseGoal(self.inputState, goalPoseJoints, waitForResponse=True, waitTimeout=0)
+
+        if not isinstance(self.parsedArgs['BodyPose'], robot_state_t):
+            goalPoseJoints = RobotPoseGUIWrapper.getPose(self.parsedArgs['Group'], self.parsedArgs['PoseName'], self.parsedArgs['Hand'])
+            endPose = self.container.ikPlanner.mergePostures(self.inputState, goalPoseJoints)
+            self.jointMovePlan = self.container.ikPlanner.computePostureGoal(self.inputState, endPose)
+        else:
+            goalPoseJoints = RobotPoseGUIWrapper.getPose(self.parsedArgs['Group'], self.parsedArgs['PoseName'], self.parsedArgs['Hand'])
+            desiredBodyPose = robotstate.convertStateMessageToDrakePose(self.parsedArgs['BodyPose'])
+            endPose = self.container.ikPlanner.mergePostures(desiredBodyPose, goalPoseJoints)
+            self.jointMovePlan = self.container.ikPlanner.computePostureGoal(self.inputState, endPose)
 
     def onUpdate(self):
-        # Wait for planner response
-        response = self.jointMovePlanResponse.waitForResponse(timeout = 0)
-        if response:
-            self.animations.append(response)
-            self.outputs['JointPlan'] = response
-            self.success()
+        self.animations.append(self.jointMovePlan)
+        self.outputs['JointPlan'] = self.jointMovePlan
+        self.success()
 
     def onExit(self):
-        #This is a planning action, no robot motion
+        # Cleanup
+        self.jointMovePlan = None
+        # This is a planning action, no robot motion
         self.outputState = deepcopy(self.inputState)
-
 
 class JointMove(Action):
 
@@ -587,7 +588,7 @@ class JointMove(Action):
         self.startTime = 0.0
 
     def onEnter(self):
-        #Create an animation based on the incoming plan
+        # Create an animation based on the incoming plan
         self.animations.append(self.parsedArgs['JointPlan'])
         self.container.vizModeAnimation.append(self.parsedArgs['JointPlan'])
 
