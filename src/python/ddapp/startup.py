@@ -48,6 +48,7 @@ from ddapp import vtkNumpy as vnp
 from ddapp import visualization as vis
 from ddapp import actionhandlers
 from ddapp.timercallback import TimerCallback
+from ddapp.pointpicker import PointPicker
 from ddapp import segmentationpanel
 from ddapp import lcmUtils
 from ddapp.shallowCopy import shallowCopy
@@ -277,6 +278,7 @@ if usePlanning:
                                                 sensorJointController = robotStateJointController,
                                                 playbackFunction = playPlans,
                                                 manipPlanner = manipPlanner,
+                                                ikPlanner = ikPlanner,
                                                 footstepPlanner = footstepsDriver,
                                                 handDriver = lHandDriver,
                                                 atlasDriver = atlasdriver.driver,
@@ -546,4 +548,8 @@ keyEventFilter = KeyEventFilter(view)
 mouseEventFilter = ViewEventFilter(view)
 
 
+def pointPickerDemo(p1, p2):
+    print p1, p2
 
+picker = PointPicker(view, callback=pointPickerDemo, numberOfPoints=2)
+#picker.start()
