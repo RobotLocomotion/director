@@ -424,9 +424,9 @@ class PoseSearch(Action):
         graspGroundFrame.Translate(graspPosition[0], graspPosition[1], groundHeight)
 
         if self.parsedArgs['Hand'] == 'right':
-            position = [-0.57, 0.40, 0.0]
+            position = [-0.69, 0.40, 0.0]
         else:
-            position = [-0.57, -0.40, 0.0]
+            position = [-0.69, -0.40, 0.0]
         rpy = [0, 0, 0]
 
         stance = transformUtils.frameFromPositionAndRPY(position, rpy)
@@ -464,20 +464,21 @@ class CameraDeltaPlan(Action):
         lcmUtils.captureMessageCallback(self.parsedArgs['Channel'], rigid_transform_t, self.setMessageReceived)
 
         if self.container.vizMode:
-            self.message.data = rigit_transform_t()
-            self.message.data.trans = [1,2,3]
-            self.setMessageReceived = True
+            self.message = rigid_transform_t()
+            self.message.trans = [0, 0.01, 0]
+            self.messageReceived = True
 
     def onUpdate(self):
         # Wait until the message is received, then do planning
         if self.messageReceived:
 
-            linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
+            linkMap = { 'left' : 'left_palm', 'right': 'right_palm'}
             linkName = linkMap[self.parsedArgs['Hand']]
 
-            graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
+            handFrame = self.container.robotModel.getLinkFrame(linkName)
+
             deltaFrame = transformUtils.frameFromPositionAndRPY([0,0,0],[0,0,0])
-            deltaFrame.DeepCopy(graspFrame.transform)
+            deltaFrame.DeepCopy(handFrame)
 
             if self.parsedArgs['Style'] == 'Local':
                 deltaFrame.PreMultiply()
@@ -485,11 +486,13 @@ class CameraDeltaPlan(Action):
                 deltaFrame.PostMultiply()
 
             delta = transformUtils.frameFromPositionAndRPY([self.message.trans[0],
-                                                            self.message.trans[1],
+                                                            self.message.trans[1] - 0.1,
                                                             self.message.trans[2]],
-                                                           [el for el in botpy.quat_to_roll_pitch_yaw(self.message.quat)])
+#                                                           [el for el in botpy.quat_to_roll_pitch_yaw(self.message.quat)])
+                                                           [0, 90, 0])
             deltaFrame.Concatenate(delta)
 
+            graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
             frameObject = vis.updateFrame(deltaFrame, 'CameraAdjustFrame', parent=graspFrame, visible=True, scale=0.25)
 
             self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], frameObject, planTraj=True)
@@ -531,12 +534,15 @@ class DeltaReachPlan(Action):
         linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
         linkName = linkMap[self.parsedArgs['Hand']]
 
-        graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
+        graspFrame = self.container.robotModel.getLinkFrame(self.parsedArgs['TargetFrame'])
+        #graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
+
         deltaFrame = transformUtils.frameFromPositionAndRPY([0,0,0],[0,0,0])
 
-        frameObject = vis.updateFrame(deltaFrame, self.parsedArgs['TargetFrame'] + " " + self.name, parent=graspFrame, visible=True, scale=0.25)
+        handObject = self.container.om.findObjectByName('left robotiq')
+        frameObject = vis.updateFrame(deltaFrame, self.parsedArgs['TargetFrame'] + " " + self.name, parent=handObject, visible=True, scale=0.25)
 
-        deltaFrame.DeepCopy(graspFrame.transform)
+        deltaFrame.DeepCopy(graspFrame)
 
         if self.parsedArgs['Direction'] == 'X':
             delta = transformUtils.frameFromPositionAndRPY([float(self.parsedArgs['Amount']),0,0],[0,0,0])
@@ -687,7 +693,7 @@ class JointMove(Action):
             # Execute Mode Logic
             # Wait for success
             print "WAITING FOR MOTION to complete"
-            if time() > self.startTime + 5.0:
+            if time() > self.startTime + 11.0:
 
                 # Need logic here to see if we reached our target to within some tolerance
                 # success or fail based on that

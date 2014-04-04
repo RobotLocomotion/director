@@ -72,14 +72,31 @@ drill_reach_seq = {'pose_search'      : [PoseSearch,      'reach_plan',    'fail
                    'manip_mode'       : [ChangeMode,      'pregrasp_move', 'fail',      {'NewMode' : 'manip'} ],
                    'pregrasp_move'    : [JointMove,       'reach_plan2',   'fail',      {'JointPlan': 'pregrasp_plan'} ],
                    'reach_plan2'      : [ReachPlan,       'reach',         'fail',      {'TargetFrame': 'pose_search', 'Hand': 'pose_search', 'Constraints': 'none'} ],
-                   'reach'            : [JointMove,       'delta1',        'fail',      {'JointPlan': 'reach_plan2'} ],
-                   'delta1'           : [DeltaReachPlan,  'delta1_move',   'fail',      {'TargetFrame': 'drill grasp frame', 'Hand': 'left', 'Style': 'Local', 'Direction':'Y', 'Amount':'0.12'} ],
+                   'reach'            : [JointMove,       'cam_delta',     'fail',      {'JointPlan': 'reach_plan2'} ],
+                   'cam_delta'        : [CameraDeltaPlan, 'cam_move',      'fail',      {'TargetFrame': 'left robotiq', 'Hand': 'left', 'Style': 'Local', 'Channel': 'HAND_TO_OBJ'}],
+                   'cam_move'         : [JointMove,       'delta1',        'fail',      {'JointPlan': 'cam_delta'} ],
+                   'delta1'           : [DeltaReachPlan,  'delta1_move',   'fail',      {'TargetFrame': 'left_palm', 'Hand': 'left', 'Style': 'Local', 'Direction':'Y', 'Amount':'0.12'} ],
                    'delta1_move'      : [JointMoveGuarded,'grip',          'fail',      {'JointPlan': 'delta1', 'Hand': 'left'} ],
                    'grip'             : [Grip,            'delta2',        'fail',      {'Hand': 'pose_search'} ],
-                   'delta2'           : [DeltaReachPlan,  'delta2_move',   'fail',      {'TargetFrame': 'drill grasp frame', 'Hand': 'left', 'Style': 'Global', 'Direction':'Z', 'Amount':'0.10'} ],
+                   'delta2'           : [DeltaReachPlan,  'delta2_move',   'fail',      {'TargetFrame': 'left_palm', 'Hand': 'left', 'Style': 'Global', 'Direction':'Z', 'Amount':'0.10'} ],
                    'delta2_move'      : [JointMove,       'retract_plan',  'fail',      {'JointPlan': 'delta2'} ],
                    'retract_plan'     : [JointMovePlan,   'retract_move',  'fail',      {'PoseName': '1 walking with hose', 'Group': 'hose', 'Hand': 'left', 'BodyPose' : 'reach_plan'} ],
                    'retract_move'     : [JointMove,       'goal',          'fail',      {'JointPlan': 'retract_plan'} ]}
+
+drill_reach_seq = {'pose_search'      : [PoseSearch,      'reach_plan',    'fail',      {'Affordance': 'drill', 'Hand' : 'left'} ],
+                   'walk_plan'        : [WalkPlan,        'stand_mode',    'fail',      {'WalkTarget': 'pose_search'} ],
+                   'stand_mode'       : [ChangeMode,      'walk',          'fail',      {'NewMode' : 'stand'} ],
+                   'walk'             : [Walk,            'wait_for_scan', 'fail',      {'WalkPlan': 'walk_plan'} ],
+                   'wait_for_scan'    : [WaitForScan,     'fit',           'fail',      {} ],
+                   'fit'              : [Fit,             'pose_search',   'fail',      {'Affordance': 'drill'} ],
+                   'reach_plan'       : [ReachPlan,       'pregrasp_plan', 'walk_plan', {'TargetFrame': 'pose_search', 'Hand': 'pose_search', 'Constraints': 'none'} ],
+                   'pregrasp_plan'    : [JointMovePlan,   'manip_mode',    'fail',      {'PoseName': 'shooter', 'Group': 'General', 'Hand': 'left', 'BodyPose' : 'reach_plan'} ],
+                   'manip_mode'       : [ChangeMode,      'pregrasp_move', 'fail',      {'NewMode' : 'manip'} ],
+                   'pregrasp_move'    : [JointMove,       'reach_plan2',   'fail',      {'JointPlan': 'pregrasp_plan'} ],
+                   'reach_plan2'      : [ReachPlan,       'reach',         'fail',      {'TargetFrame': 'pose_search', 'Hand': 'pose_search', 'Constraints': 'none'} ],
+                   'reach'            : [JointMove,       'cam_delta',     'fail',      {'JointPlan': 'reach_plan2'} ],
+                   'cam_delta'        : [CameraDeltaPlan, 'cam_move',      'fail',      {'TargetFrame': 'left robotiq', 'Hand': 'left', 'Style': 'Local', 'Channel': 'HAND_TO_OBJ'}],
+                   'cam_move'         : [JointMove,       'goal',          'fail',      {'JointPlan': 'cam_delta'} ]}
 
 sequenceDict['DrillReachL'] = [drill_reach_seq, 'pose_search']
 
@@ -125,7 +142,7 @@ simple_walk_seq = {'step_mode' : [ChangeMode,    'walk_plan', 'fail', {'NewMode'
 
 sequenceDict['SimpleWalk'] = [simple_walk_seq, 'step_mode']
 
-test_seq = {'cam_delta' : [CameraDeltaPlan, 'goal', 'fail', {'TargetFrame': 'left robotiq frame', 'Hand': 'left', 'Style': 'Local', 'Channel': 'BODY_TO_UTORSO'}]}
+test_seq = {'cam_delta' : [CameraDeltaPlan, 'goal', 'fail', {'TargetFrame': 'left robotiq', 'Hand': 'left', 'Style': 'Local', 'Channel': 'HAND_TO_OBJ'}]}
 
 sequenceDict['CamDelta'] = [test_seq, 'cam_delta']
 
