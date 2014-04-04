@@ -119,7 +119,7 @@ class MultiSenseSource(TimerCallback):
 
         self.revPolyData = vtk.vtkPolyData()
         self.polyDataObj = om.PolyDataItem('Multisense Scan', self.revPolyData, view)
-        self.polyDataObj.actor.SetPickable(0)
+        self.polyDataObj.actor.SetPickable(1)
 
 
         self.setPointSize(self.pointSize)
