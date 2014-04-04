@@ -156,11 +156,11 @@ class ActionManager(object):
             actionClass = self.sequence[name][0]
 
             #Create an instance
-            actionPtr = actionClass(name,              #Name
+            actionPtr = actionClass(name,                   #Name
                                     self.sequence[name][1], #Success Transition
                                     self.sequence[name][2], #Fail Transition
                                     self.sequence[name][3], #Arg List
-                                    self)              #Sequence Object as data container
+                                    self)                   #Sequence Object as data container
 
             #Store the instance
             self.actionObjects[name] = actionPtr

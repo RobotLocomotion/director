@@ -125,6 +125,9 @@ simple_walk_seq = {'step_mode' : [ChangeMode,    'walk_plan', 'fail', {'NewMode'
 
 sequenceDict['SimpleWalk'] = [simple_walk_seq, 'step_mode']
 
+test_seq = {'cam_delta' : [CameraDeltaPlan, 'goal', 'fail', {'TargetFrame': 'left robotiq frame', 'Hand': 'left', 'Style': 'Local', 'Channel': 'BODY_TO_UTORSO'}]}
+
+sequenceDict['CamDelta'] = [test_seq, 'cam_delta']
 
 #Make a list out of the sequence ditionary, don't touch this line, just add to the dictionary
 sequenceList = [[key]+sequenceDict[key] for key in sequenceDict.keys()]

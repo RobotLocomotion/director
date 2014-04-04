@@ -10,7 +10,8 @@ from ddapp import segmentation
 from ddapp.drilldemo import RobotPoseGUIWrapper
 
 from drc import robot_state_t
-
+from bot_core import rigid_transform_t
+import botpy
 import takktile
 
 # Declare all valid inputs/ouputs here
@@ -439,6 +440,80 @@ class PoseSearch(Action):
         self.success()
 
     def onExit(self):
+        # This is a planning action, no robot motion
+        self.outputState = deepcopy(self.inputState)
+
+
+class CameraDeltaPlan(Action):
+
+    inputs = ['TargetFrame', 'Hand', 'Style', 'Channel']
+
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {'JointPlan' : None}
+        self.manipPlan = None
+        self.messageReceived = False
+        self.message = None
+
+    def setMessageReceived(self, data):
+        self.messageReceived = True
+        self.message = data
+
+    def onEnter(self):
+        # Start listening for a message with the desired camera transform
+        lcmUtils.captureMessageCallback(self.parsedArgs['Channel'], rigid_transform_t, self.setMessageReceived)
+
+        if self.vizMode:
+            self.message.data = rigit_transform_t()
+            self.message.data.trans = [1,2,3]
+            self.setMessageReceived = True
+
+    def onUpdate(self):
+        # Wait until the message is received, then do planning
+        if self.messageReceived:
+
+            linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
+            linkName = linkMap[self.parsedArgs['Hand']]
+
+            graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
+            deltaFrame = transformUtils.frameFromPositionAndRPY([0,0,0],[0,0,0])
+            deltaFrame.DeepCopy(graspFrame.transform)
+
+            if self.parsedArgs['Style'] == 'Local':
+                deltaFrame.PreMultiply()
+            else:
+                deltaFrame.PostMultiply()
+
+            delta = transformUtils.frameFromPositionAndRPY([self.message.trans[0],
+                                                            self.message.trans[1],
+                                                            self.message.trans[2]],
+                                                           [el for el in botpy.quat_to_roll_pitch_yaw(self.message.quat)])
+            deltaFrame.Concatenate(delta)
+
+            frameObject = vis.updateFrame(deltaFrame, 'CameraAdjustFrame', parent=graspFrame, visible=True, scale=0.25)
+
+            self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], frameObject, planTraj=True)
+
+            if self.manipPlan.plan_info[-1] > 10:
+                print "PLANNER REPORTS ERROR!"
+
+                # Plan failed, save it in the animation list, but don't update output data
+                self.animations.append(self.manipPlan)
+
+                self.fail()
+            else:
+                print "Planner reports success!"
+
+                # Plan was successful, save it to be animated and update output data
+                self.animations.append(self.manipPlan)
+                self.outputs['JointPlan'] = deepcopy(self.manipPlan)
+
+                self.success()
+
+    def onExit(self):
+        # Planner Cleanup
+        self.manipPlan = None
+
         # This is a planning action, no robot motion
         self.outputState = deepcopy(self.inputState)
 
