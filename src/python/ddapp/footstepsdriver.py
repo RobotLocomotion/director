@@ -51,21 +51,7 @@ def getRightFootColor():
 _footMeshes = None
 
 
-def getDefaultStepParams():
-    default_step_params = lcmdrc.footstep_params_t()
-    default_step_params.step_speed = 1.0
-    default_step_params.step_height = 0.05
-    default_step_params.constrain_full_foot_pose = False
-    default_step_params.bdi_step_duration = 2.0
-    default_step_params.bdi_sway_duration = 0.0
-    default_step_params.bdi_lift_height = 0.05
-    default_step_params.bdi_toe_off = 1
-    default_step_params.bdi_knee_nominal = 0.0
-    default_step_params.bdi_max_foot_vel = 0.0
-    default_step_params.bdi_sway_end_dist = 0.02
-    default_step_params.bdi_step_end_dist = 0.02
-    default_step_params.mu = 1.0
-    return default_step_params
+
 
 
 def getFootMeshes():
@@ -131,6 +117,23 @@ class FootstepsDriver(object):
         sub2.setSpeedLimit(1) # was 5 but was slow rendering
 
     ##############################
+    
+    def getDefaultStepParams(self):
+        default_step_params = lcmdrc.footstep_params_t()
+        default_step_params.step_speed = 1.0
+        default_step_params.step_height = 0.05
+        default_step_params.constrain_full_foot_pose = False
+        default_step_params.bdi_step_duration = 2.0
+        default_step_params.bdi_sway_duration = 0.0
+        default_step_params.bdi_lift_height = 0.05
+        default_step_params.bdi_toe_off = 1
+        default_step_params.bdi_knee_nominal = 0.0
+        default_step_params.bdi_max_foot_vel = 0.0
+        default_step_params.bdi_sway_end_dist = 0.02
+        default_step_params.bdi_step_end_dist = 0.02
+        default_step_params.mu = 1.0
+        return default_step_params    
+    
     def onWalkingPlan(self, msg):
         self.lastWalkingPlan = msg
         if self.walkingPlanCallback:
@@ -255,7 +258,7 @@ class FootstepsDriver(object):
             step = lcmdrc.footstep_t()
             step.pos = transformUtils.positionMessageFromFrame(t)
             step.is_right_foot = is_right_foot
-            step.params = getDefaultStepParams()
+            step.params = self.getDefaultStepParams()
             self.goalSteps.append(step)
 
         request = self.constructFootstepPlanRequest(pose)
@@ -312,7 +315,7 @@ class FootstepsDriver(object):
         msg.params.behavior = self.behavior_lcm_map[self.params.behavior]
         msg.params.map_command = 2
         msg.params.leading_foot = msg.params.LEAD_AUTO
-        msg.default_step_params = getDefaultStepParams()
+        msg.default_step_params = self.getDefaultStepParams()
         return msg
 
     def sendFootstepPlanRequest(self, request, waitForResponse=False, waitTimeout=5000):

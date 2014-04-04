@@ -109,6 +109,62 @@ class NavigationPanel(object):
         request = self.footstepDriver.constructFootstepPlanRequest(startPose, goalFrame)
         self.footstepDriver.sendFootstepPlanRequest(request)
 
+    def pointPickerDemo(self,p1, p2):
+        print "mezo"
+        print p1, p2
+        
+        yaw = math.atan2( p2[1] - p1[1] , p2[0] - p1[0] )*180/math.pi + 90
+        
+        print yaw*180/math.pi
+        frame_p1 = transformUtils.frameFromPositionAndRPY(p1, [0,0,yaw])
+        
+        blockl = 0.3937
+        blockh = 0.142875
+        
+        frame_pt_to_centerline = transformUtils.frameFromPositionAndRPY( [0, -blockl/2, 0], [0,0,0])
+         
+        frame_pt_to_centerline.PostMultiply()
+        frame_pt_to_centerline.Concatenate(frame_p1)
+         
+        vis.updateFrame(frame_pt_to_centerline, "p1", parent="navigation")
+        
+        flist = np.array( [[ blockl*-0.5 , .1  , 0      , 0 , 0 , 0] ,
+                           [ blockl*-0.5 , -.1 , 0      , 0 , 0 , 0] ,
+	                   [ blockl*0.5  , .1  , blockh , 0 , 0 , 0] ,
+                           [ blockl*0.5  ,-.1  , blockh , 0 , 0 , 0] ,
+                           [ blockl*1.5  , .1  , 0      , 0 , 0 , 0] ,
+                           [ blockl*1.5  ,-.1  , 0      , 0 , 0 , 0]])
+        #print flist
+        
+        numGoalSteps = 3
+        is_right_foot = True
+        self.goalSteps = []
+        for i in range(numGoalSteps):
+
+            #print flist[i,:]
+            #print flist[i,0:3] 
+            #print flist[i,3:6]
+            
+            step_t= transformUtils.frameFromPositionAndRPY(flist[i,0:3] , flist[i,3:6])
+
+            step_t.PostMultiply()
+            step_t.Concatenate(frame_pt_to_centerline)
+            
+ 
+            is_right_foot = not is_right_foot
+            step = lcmdrc.footstep_t()
+            step.pos = transformUtils.positionMessageFromFrame(step_t)
+            step.is_right_foot = is_right_foot
+            step.params = self.footstepDriver.getDefaultStepParams()
+            
+            vis.updateFrame(step_t, str(i), parent="navigation")
+            
+            self.goalSteps.append(step)
+        request = self.footstepDriver.constructFootstepPlanRequest()
+        request.num_goal_steps = len(self.goalSteps)
+        request.goal_steps = self.goalSteps
+        self.lastFootstepRequest = request
+        lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)        
 
 def init(jointController, footstepDriver, playbackRobotModel, playbackJointController):
 
@@ -120,3 +176,5 @@ def init(jointController, footstepDriver, playbackRobotModel, playbackJointContr
 
     return panel
 
+
+     
