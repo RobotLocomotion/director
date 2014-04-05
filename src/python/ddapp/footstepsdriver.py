@@ -103,13 +103,11 @@ class FootstepsDriver(object):
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
-        lcmUtils.addSubscriber('BDI_ADJUSTED_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, self.onBDIAdjustedFootstepPlan)
         lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
         ### Related to BDI-frame adjustment:
         sub1 = lcmUtils.addSubscriber('POSE_BDI', pose_t, self.onPoseBDI)
         sub1.setSpeedLimit(60)
-        lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootStepPlanResponse)
         sub2 = lcmUtils.addSubscriber('BDI_ADJUSTED_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, self.onBDIAdjustedFootstepPlan)
         sub2.setSpeedLimit(1) # was 5 but was slow rendering
 
@@ -144,11 +142,12 @@ class FootstepsDriver(object):
 
     def onFootstepPlan(self, msg):
         self.clearFootstepPlan()
-        self.lastFootstepPlan = msg
+        self.lastFootstepPlan = msg.decode( msg.encode() ) # decode and encode ensures deepcopy
 
         planFolder = getFootstepsFolder()
         self.drawFootstepPlan(msg, planFolder)
 
+        self.transformPlanToBDIFrame(msg)
 
     def clearFootstepPlan(self):
         self.lastFootstepPlan = None
@@ -376,9 +375,6 @@ class FootstepsDriver(object):
         pose[0:3] = msg.pos
         pose[3:6] = rpy
         self.bdiJointController.setPose("ERS BDI", pose)
-
-    def onFootStepPlanResponse(self,msg):
-        self.transformPlanToBDIFrame(msg)
 
     def onBDIAdjustedFootstepPlan(self,msg):
         self.bdi_plan_adjusted = msg.decode( msg.encode() ) # decode and encode ensures deepcopy
