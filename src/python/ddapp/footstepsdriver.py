@@ -48,11 +48,8 @@ def getLeftFootColor():
 def getRightFootColor():
     return [0.33, 1.0, 0.0]
 
+
 _footMeshes = None
-
-
-
-
 
 def getFootMeshes():
     global _footMeshes
