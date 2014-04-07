@@ -7,10 +7,14 @@ import ddapp.vtkAll as vtk
 from ddapp.debugVis import DebugData
 from ddapp.timercallback import TimerCallback
 from ddapp import transformUtils
+from ddapp import callbacks
 import numpy as np
 from PythonQt import QtCore, QtGui
 
 from ddapp.affordancelistener import listener as affListener
+
+import weakref
+import itertools
 
 def computeAToB(a,b):
 
@@ -206,14 +210,21 @@ class FrameItem(om.PolyDataItem):
         self.addProperty('Scale', scale)
         self.addProperty('Edit', False)
 
+        self.callbacks = callbacks.CallbackRegistry(['FrameModified'])
         self.onTransformModifiedCallback = None
-        self.transform.AddObserver('ModifiedEvent', self.onTransformModified)
+        self.observerTag = self.transform.AddObserver('ModifiedEvent', self.onTransformModified)
 
+    def connectFrameModified(self, func):
+        return self.callbacks.connect('FrameModified', func)
+
+    def disconnectFrameModified(self, callbackId):
+        self.callbacks.disconnect(callbackId)
 
     def onTransformModified(self, transform, event):
-        if not self._blockSignals and self.onTransformModifiedCallback:
-            self.onTransformModifiedCallback(self)
-
+        if not self._blockSignals:
+            if self.onTransformModifiedCallback:
+                self.onTransformModifiedCallback(self)
+            self.callbacks.process('FrameModified', self)
 
     def _createAxes(self, scale):
         axes = vtk.vtkAxes()
@@ -264,11 +275,125 @@ class FrameItem(om.PolyDataItem):
     def onRemoveFromObjectModel(self):
         om.PolyDataItem.onRemoveFromObjectModel(self)
 
+        self.transform.RemoveObserver(self.observerTag)
+
         self.widget.SetInteractor(None)
         self.widget.EnabledOff()
         for view in self.views:
             view.renderer().RemoveActor(self.actor)
             view.render()
+
+
+
+
+class FrameSync(object):
+
+    class FrameData(object):
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    def __init__(self):
+        self.frames = {}
+        self._blockCallbacks = False
+        self._ids = itertools.count()
+
+    def addFrame(self, frame, ignoreIncoming=False):
+
+        if frame is None:
+            return
+
+        if self._findFrameId(frame) is not None:
+            return
+
+        frameId = self._ids.next()
+        callbackId = frame.connectFrameModified(self._onFrameModified)
+
+        self.frames[frameId] = FrameSync.FrameData(
+            ref=weakref.ref(frame),
+            baseTransform=self._computeBaseTransform(frame),
+            callbackId=callbackId,
+            ignoreIncoming=ignoreIncoming)
+
+    def removeFrame(self, frame):
+
+        frameId = self._findFrameId(frame)
+        if frameId is None:
+            raise KeyError(frame)
+
+        frame.disconnectFrameModified(self.frames[frameId].callbackId)
+        self._removeFrameId(frameId)
+
+    def _computeBaseTransform(self, frame):
+
+        currentDelta = None
+        for frameId, frameData in self.frames.items():
+
+            if frameData.ref() is None:
+                self._removeFrameId(frameId)
+            elif frameData.ref() is frame:
+                continue
+            else:
+                currentDelta = transformUtils.copyFrame(frameData.baseTransform.GetLinearInverse())
+                currentDelta.Concatenate(transformUtils.copyFrame(frameData.ref().transform))
+                break
+
+        t = transformUtils.copyFrame(frame.transform)
+        t.PostMultiply()
+        if currentDelta:
+            t.Concatenate(currentDelta.GetLinearInverse())
+
+        return t
+
+    def _removeFrameId(self, frameId):
+        del self.frames[frameId]
+
+    def _findFrameId(self, frame):
+
+        for frameId, frameData in self.frames.items():
+
+            if frameData.ref() is None:
+                self._removeFrameId(frameId)
+            elif frameData.ref() is frame:
+                return frameId
+
+    def _moveFrame(self, frameId, modifiedFrameId):
+
+        frameData = self.frames[frameId]
+        modifiedFrameData = self.frames[modifiedFrameId]
+
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Concatenate(frameData.baseTransform)
+        t.Concatenate(modifiedFrameData.baseTransform.GetLinearInverse())
+        t.Concatenate(modifiedFrameData.ref().transform)
+        frameData.ref().copyFrame(t)
+
+    def _onFrameModified(self, frame):
+
+        if self._blockCallbacks:
+            return
+
+        modifiedFrameId = self._findFrameId(frame)
+        assert modifiedFrameId is not None
+
+        #print self, 'onFrameModified:', self.frames[modifiedFrameId].ref().getProperty('Name')
+
+        if self.frames[modifiedFrameId].ignoreIncoming:
+            self.frames[modifiedFrameId].baseTransform = self._computeBaseTransform(frame)
+            return
+
+        self._blockCallbacks = True
+
+        for frameId, frameData in self.frames.items():
+            if frameData.ref() is None:
+                self._removeFrameId(frameId)
+            elif frameId != modifiedFrameId:
+
+                #print '  ', self, 'moving:', self.frames[frameId].ref().getProperty('Name')
+                self._moveFrame(frameId, modifiedFrameId)
+
+        self._blockCallbacks = False
+
 
 
 def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=None):

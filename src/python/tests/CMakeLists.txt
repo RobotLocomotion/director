@@ -5,6 +5,7 @@ endif()
 include(python-coverage/setup.cmake)
 
 set(python_tests
+  testFrameSync.py
   testPythonConsole.py
   testPropertiesPanel.py
 )
