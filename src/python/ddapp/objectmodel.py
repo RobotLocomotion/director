@@ -4,13 +4,28 @@ from PythonQt import QtCore, QtGui
 from collections import namedtuple
 from collections import OrderedDict
 
+from ddapp.fieldcontainer import FieldContainer
 import vtk
 
 _objectTree = None
 _propertiesPanel = None
 
 objects = {}
-PropertyAttributes = namedtuple('PropertyAttributes', ['decimals', 'minimum', 'maximum', 'singleStep', 'hidden'])
+
+class PropertyAttributes(FieldContainer):
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+          decimals    = 0,
+          minimum = 0,
+          maximum = 0,
+          singleStep = 0,
+          hidden = False,
+          readOnly = False,
+          )
+
+        self._set_fields(**kwargs)
 
 
 class Icons(object):
