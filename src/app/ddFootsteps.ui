@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
+    <width>398</width>
     <height>299</height>
    </rect>
   </property>
@@ -14,17 +14,10 @@
    <string>Footsteps</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="4" column="1">
-    <widget class="QPushButton" name="showBDIButton">
+   <item row="1" column="0" colspan="2">
+    <widget class="QPushButton" name="goalStepsButton">
      <property name="text">
-      <string>Show BDI</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QPushButton" name="stopButton">
-     <property name="text">
-      <string>stop walking</string>
+      <string>goal steps</string>
      </property>
     </widget>
    </item>
@@ -35,34 +28,31 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0">
+   <item row="6" column="0">
     <widget class="QPushButton" name="hideBDIButton">
      <property name="text">
       <string>Hide BDI</string>
      </property>
     </widget>
    </item>
-   <item row="5" column="0" colspan="2">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
+   <item row="8" column="0" colspan="2">
+    <widget class="QWidget" name="params_container" native="true"/>
    </item>
-   <item row="1" column="0" colspan="2">
-    <widget class="QPushButton" name="goalStepsButton">
+   <item row="5" column="0" colspan="2">
+    <widget class="QPushButton" name="stopButton">
      <property name="text">
-      <string>goal steps</string>
+      <string>stop walking</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="0" colspan="2">
+   <item row="6" column="1">
+    <widget class="QPushButton" name="showBDIButton">
+     <property name="text">
+      <string>Show BDI</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0" colspan="2">
     <widget class="QPushButton" name="executeButton">
      <property name="text">
       <string>execute footstep plan</string>
