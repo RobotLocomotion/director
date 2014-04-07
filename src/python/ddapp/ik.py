@@ -442,14 +442,26 @@ class AsyncIKCommunicator(TimerCallback):
             commands.append('additionalTimeSamples = [];')
 
         commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
+        #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
+
         commands.append('[xtraj, info, infeasible_constraint] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, ikoptions);')
         commands.append('display(infeasibleConstraintMsg(infeasible_constraint));')
         commands.append('qtraj = xtraj(1:nq);')
 
+
+        commands.append('num_pointwise_time_points = 20;')
+        commands.append('pointwise_time_points = linspace(t(1), t(end), num_pointwise_time_points);')
+        commands.append('q_seed_pointwise = eval(xtraj, pointwise_time_points);')
+        commands.append('q_seed_pointwise = q_seed_pointwise(1:nq,:);') #eval(qtraj, pointwise_time_points)
+        commands.append('[xtraj, info] = inverseKinPointwise(r, pointwise_time_points, q_seed_pointwise, q_seed_pointwise, active_constraints{:}, ikoptions);')
+        commands.append('xtraj_pw = PPTrajectory(foh(pointwise_time_points, xtraj));')
+        commands.append('info = info(end);')
+
+
         publish = True
         planLengthInSeconds = 10.0
         if publish:
-            commands.append('s.publishTraj(plan_pub, atlas, xtraj, info, %f);' % planLengthInSeconds)
+            commands.append('s.publishTraj(plan_pub, atlas, xtraj_pw, info, %f);' % planLengthInSeconds)
 
         self.comm.sendCommands(commands)
 
