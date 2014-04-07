@@ -107,24 +107,30 @@ QtVariantProperty* ddPropertiesPanel::addGroup(const QString& name)
 QtVariantProperty* ddPropertiesPanel::addProperty(const QString& name, const QVariant& value)
 {
   int propertyType = value.type();
-  if (propertyType == QVariant::List || propertyType == QVariant::StringList)
-  {
-    propertyType = this->Internal->Manager->enumTypeId();
-  }
-
 
   QtVariantProperty* property = this->Internal->Manager->addProperty(propertyType, name);
+  property->setValue(value);
 
-  if (propertyType == this->Internal->Manager->enumTypeId())
+  this->Internal->Browser->addProperty(property);
+  this->Internal->Properties[name] = property;
+
+  QtBrowserItem * browserItem = this->Internal->Browser->topLevelItem(property);
+  QtTreePropertyBrowser* treeBrowser = qobject_cast<QtTreePropertyBrowser*>(this->Internal->Browser);
+  if (browserItem && treeBrowser)
   {
-    QStringList values = value.toStringList();
-    property->setAttribute("enumNames", values);
-    property->setValue(0);
+    treeBrowser->setExpanded(browserItem, false);
   }
-  else
-  {
-    property->setValue(value);
-  }
+
+  return property;
+}
+
+//-----------------------------------------------------------------------------
+QtVariantProperty* ddPropertiesPanel::addEnumProperty(const QString& name, const QVariant& value)
+{
+  int propertyType = this->Internal->Manager->enumTypeId();
+
+  QtVariantProperty* property = this->Internal->Manager->addProperty(propertyType, name);
+  property->setValue(value);
 
   this->Internal->Browser->addProperty(property);
   this->Internal->Properties[name] = property;

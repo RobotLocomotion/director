@@ -22,6 +22,7 @@ class PropertyAttributes(FieldContainer):
           maximum = 0,
           singleStep = 0,
           hidden = False,
+          enumNames = None,
           readOnly = False,
           )
 
@@ -458,6 +459,8 @@ def setPropertyAttributes(p, attributes):
     p.setAttribute('minimum', attributes.minimum)
     p.setAttribute('maximum', attributes.maximum)
     p.setAttribute('singleStep', attributes.singleStep)
+    if attributes.enumNames:
+        p.setAttribute('enumNames', attributes.enumNames)
 
 
 def addProperty(panel, name, attributes, value):
@@ -469,6 +472,10 @@ def addProperty(panel, name, attributes, value):
             p = panel.addSubProperty(name, v, groupProp)
             setPropertyAttributes(p, attributes)
         return groupProp
+    elif attributes.enumNames:
+        p = panel.addEnumProperty(name, value)
+        setPropertyAttributes(p, attributes)
+        return p
     else:
         p = panel.addProperty(name, value)
         setPropertyAttributes(p, attributes)

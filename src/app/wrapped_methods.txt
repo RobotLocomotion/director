@@ -127,6 +127,7 @@ ddPropertiesPanel::ddPropertiesPanel();
 ddPropertiesPanel::~ddPropertiesPanel();
 QtVariantProperty* ddPropertiesPanel::addGroup(const QString&);
 QtVariantProperty* ddPropertiesPanel::addProperty(const QString&, const QVariant&);
+QtVariantProperty* ddPropertiesPanel::addEnumProperty(const QString&, const QVariant&);
 QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString&, const QVariant&, QtVariantProperty*);
 QtVariantProperty* ddPropertiesPanel::findProperty(const QString&) const;
 QtVariantProperty* ddPropertiesPanel::findSubProperty(const QString&, QtVariantProperty*) const;

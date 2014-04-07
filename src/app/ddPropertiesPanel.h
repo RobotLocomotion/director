@@ -26,6 +26,7 @@ public:
 
   QtVariantProperty* addGroup(const QString& name);
   QtVariantProperty* addProperty(const QString& name, const QVariant& value);
+  QtVariantProperty* addEnumProperty(const QString& name, const QVariant& value);
   QtVariantProperty* addSubProperty(const QString& name, const QVariant& value, QtVariantProperty* parent);
   QtVariantProperty* findProperty(const QString& name) const;
   QtVariantProperty* findSubProperty(const QString& name, QtVariantProperty* parent) const;
