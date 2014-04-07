@@ -954,7 +954,7 @@ class IKPlanner(object):
         self.runIkTraj(constraints, poseStart, poseEnd, timeSamples)
 
 
-    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=False):
+    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True):
 
         if isinstance(poseStart, str):
             startPoseName = poseStart
