@@ -53,6 +53,7 @@ set(python_files
   ddapp/segmentationpanel.py
   ddapp/shallowCopy.py
   ddapp/simpletimer.py
+  ddapp/splinewidget.py
   ddapp/spreadsheet.py
   ddapp/startup.py
   ddapp/statelistener.py
