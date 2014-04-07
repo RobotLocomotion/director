@@ -3,6 +3,8 @@ import ddapp.applogic as app
 import ddapp.objectmodel as om
 from ddapp.timercallback import TimerCallback
 from ddapp import robotstate
+from ddapp import visualization as vis
+from ddapp import transformUtils
 import math
 import numpy as np
 
@@ -40,6 +42,7 @@ class EndEffectorTeleopPanel(object):
         self.ui.fixBackCheck.connect('clicked()', self.fixBackChanged)
         self.ui.fixOrientCheck.connect('clicked()', self.fixOrientChanged)
         self.ui.eeTeleopSideCombo.connect('currentIndexChanged(const QString&)', self.sideChanged)
+        self.frameSync = None
 
     def getSide(self):
         return str(self.ui.eeTeleopSideCombo.currentText)
@@ -68,50 +71,55 @@ class EndEffectorTeleopPanel(object):
     def removeGoals(self):
         om.removeFromObjectModel(om.findObjectByName('reach goal left'))
         om.removeFromObjectModel(om.findObjectByName('reach goal right'))
+        self.frameSync = None
 
-    def getGoalMatrix(self, side):
+    def getGoalFrame(self, side):
         goal = om.findObjectByName('reach goal %s' % side)
-        return goal.transform.GetMatrix() if goal is not None else None
+        return transformUtils.copyFrame(goal.transform) if goal is not None else None
 
-    def updateGoalFrame(self, goalMatrix, side):
+    def updateGoalFrame(self, transform, side):
         goalFrame = om.findObjectByName('reach goal %s' % side)
         if not goalFrame:
             return
 
-        if goalMatrix is not None:
-            goalFrame.transform.SetMatrix(goalMatrix)
-        goalFrame.onTransformModifiedCallback(goalFrame)
+        if transform is not None:
+            goalFrame.copyFrame(transform)
+        else:
+            goalFrame.transform.Modified()
 
+        return goalFrame
 
 
     def updateHandModels(self):
 
-        self.panel.lhandModel.setProperty('Visible', False)
-        self.panel.rhandModel.setProperty('Visible', False)
+        def syncHandFrame(handModel, goalFrame):
 
-        def wrapCallback(originalCallback, handModel):
-            def callback(frame):
-                originalCallback(frame)
-                handModel.actor.GetUserTransform().SetMatrix(frame.transform.GetMatrix())
-                handModel.setProperty('Visible', True)
-            return callback
+            handObj = handModel.newPolyData('reach goal left hand', self.panel.teleopRobotModel.views[0], parent=goalFrame)
+            handFrame = om.getObjectChildren(handObj)[0]
+            handFrame.copyFrame(goalFrame.transform)
+
+            frameSync = vis.FrameSync()
+            frameSync.addFrame(goalFrame)
+            frameSync.addFrame(handFrame)
+            return frameSync
+
 
         leftGoal = om.findObjectByName('reach goal left')
         rightGoal = om.findObjectByName('reach goal right')
 
         if leftGoal:
-            leftGoal.onTransformModifiedCallback = wrapCallback(leftGoal.onTransformModifiedCallback, self.panel.lhandModel)
-
+            self.leftFrameSync = syncHandFrame(self.panel.lhandModel, leftGoal)
         if rightGoal:
-            rightGoal.onTransformModifiedCallback = wrapCallback(rightGoal.onTransformModifiedCallback, self.panel.rhandModel)
+            self.rightFrameSync = syncHandFrame(self.panel.rhandModel, rightGoal)
+
 
     def updateConstraints(self):
 
         if not self.ui.eeTeleopButton.checked:
             return
 
-        leftGoal = self.getGoalMatrix('left')
-        rightGoal = self.getGoalMatrix('right')
+        leftGoal = self.getGoalFrame('left')
+        rightGoal = self.getGoalFrame('right')
         self.removeGoals()
 
         side = self.getSide()
@@ -426,8 +434,6 @@ class TeleopPanel(object):
         self.teleopRobotModel.setProperty('Visible', False)
         self.robotStateModel.setProperty('Visible', True)
         self.robotStateModel.setProperty('Alpha', 1.0)
-        self.lhandModel.setProperty('Visible', False)
-        self.rhandModel.setProperty('Visible', False)
 
     def showTeleopModel(self):
         self.teleopRobotModel.setProperty('Visible', True)
