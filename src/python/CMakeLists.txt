@@ -19,6 +19,7 @@ set(python_files
   ddapp/drakevisualizer.py
   ddapp/drilldemo.py
   ddapp/drilltaskpanel.py
+  ddapp/fieldcontainer.py
   ddapp/filterUtils.py
   ddapp/footstepsdriver.py
   ddapp/footstepsdriverpanel.py
