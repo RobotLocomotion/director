@@ -160,13 +160,32 @@ class EndEffectorTeleopPanel(object):
             self.deactivate()
 
     def activate(self):
+        self.ui.eeTeleopButton.blockSignals(True)
+        self.ui.eeTeleopButton.checked = True
+        self.ui.eeTeleopButton.blockSignals(False)
         self.panel.endEffectorTeleopActivated()
         self.updateConstraints()
 
 
     def deactivate(self):
+        self.ui.eeTeleopButton.blockSignals(True)
+        self.ui.eeTeleopButton.checked = False
+        self.ui.eeTeleopButton.blockSignals(False)
         self.removeGoals()
         self.panel.endEffectorTeleopDeactivated()
+
+
+    def newReachTeleop(self, frame, side):
+        self.panel.jointTeleop.deactivate()
+
+        self.deactivate()
+        self.ui.fixBaseCheck.checked = False
+        self.ui.fixBackCheck.checked = False
+        self.ui.fixOrientCheck.checked = True
+        self.ui.eeTeleopSideCombo.setCurrentIndex(self.ui.eeTeleopSideCombo.findText(side))
+
+        self.activate()
+        return self.updateGoalFrame(frame, side)
 
 
 inf = np.inf
@@ -259,16 +278,25 @@ class JointTeleopPanel(object):
 
 
     def teleopButtonClicked(self):
-        self.timerCallback.stop()
-
         if self.ui.jointTeleopButton.checked:
-            self.panel.jointTeleopActivated()
-            self.grabCurrentPose()
-            self.updateSliders()
+            self.activate()
         else:
-            self.panel.jointTeleopDeactivated()
+            self.deactivate()
 
+
+    def activate(self):
+        self.timerCallback.stop()
+        self.panel.jointTeleopActivated()
+        self.grabCurrentPose()
+        self.updateSliders()
         self.updateWidgetState()
+
+
+    def deactivate(self):
+        self.timerCallback.stop()
+        self.panel.jointTeleopDeactivated()
+        self.updateWidgetState()
+
 
     def updateWidgetState(self):
 
