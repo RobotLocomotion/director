@@ -100,6 +100,12 @@ class ObjectModelItem(object):
     def onRemoveFromObjectModel(self):
         pass
 
+    def children(self):
+        return getObjectChildren(self)
+
+    def findChild(self, name):
+        return findChildByName(self, name)
+
 
 class ContainerItem(ObjectModelItem):
 
@@ -142,6 +148,7 @@ class RobotModelItem(ObjectModelItem):
 
     def getLinkFrame(self, linkName):
         t = vtk.vtkTransform()
+        t.PostMultiply()
         if self.model.getLinkToWorld(linkName, t):
             return t
         else:
@@ -192,21 +199,20 @@ class PolyDataItem(ObjectModelItem):
 
         ObjectModelItem.__init__(self, name, Icons.Robot)
 
+        self.views = []
         self.polyData = polyData
-        self.view = view
-        self.views = [view]
         self.mapper = vtk.vtkPolyDataMapper()
         self.mapper.SetInput(self.polyData)
         self.actor = vtk.vtkActor()
         self.actor.SetMapper(self.mapper)
-        self.view.renderer().AddActor(self.actor)
 
         self.addProperty('Visible', True)
         self.addProperty('Point Size', self.actor.GetProperty().GetPointSize())
         self.addProperty('Alpha', 1.0)
         self.addProperty('Color', QtGui.QColor(255,255,255))
 
-        self._renderAllViews()
+        if view is not None:
+            self.addToView(view)
 
     def _renderAllViews(self):
         for view in self.views:
@@ -271,6 +277,9 @@ class PolyDataItem(ObjectModelItem):
         if self.getProperty('Visible'):
             self._renderAllViews()
 
+    def getChildFrame(self):
+        frameName = self.getProperty('Name') + ' frame'
+        return self.findChild(frameName)
 
     def addToView(self, view):
         if view in self.views:
