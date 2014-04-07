@@ -565,7 +565,7 @@ class IKPlanner(object):
 
         startPoseName = 'retract_start'
         self.jointController.addPose(startPoseName, startPose)
-        self.computePostureGoal(startPoseName, 'q_nom')
+        self.ikServer.sendPoseToServer(startPose, startPoseName)
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
@@ -584,7 +584,7 @@ class IKPlanner(object):
         self.computePostureGoal(startPoseName, 'retract_end')
 
 
-    def computeRetractTraj(self, poseEnd='grasp_end_pose', timeSamples=None):
+    def computeRetractTraj(self):
 
         if self.planFromCurrentRobotState:
             startPose = np.array(self.sensorJointController.q)
@@ -670,7 +670,7 @@ class IKPlanner(object):
         print 'stand info:', info
 
         self.jointController.addPose('stand_end', endPose)
-        self.computePostureGoal(startPoseName, 'stand_end')
+        return self.computePostureGoal(startPoseName, 'stand_end')
 
     def computePreGraspEndPose(self):
 
@@ -923,7 +923,7 @@ class IKPlanner(object):
         movingBaseConstraint = constraints[-2]
         assert isinstance(movingBaseConstraint, ik.PostureConstraint)
         assert 'base_x' in movingBaseConstraint.joints
-        movingBaseConstraint.tspan = [self.tspanStart[0], self.tspanPreGrasp[1]-0.1]
+        movingBaseConstraint.tspan = [self.tspanStart[0], self.tspanPreGrasp[1]]
 
         preReachPosition = self.createPreReachConstraint()
         preReachPosition.tspan = self.tspanPreReach
@@ -977,7 +977,7 @@ class IKPlanner(object):
         pEnd = self.createPostureConstraint(endPoseName, robotstate.matchJoints('.*'))
         pEnd.tspan = np.array([1.0, 1.0])
 
-        constraints = [pStart, pEnd]
+        constraints = [pEnd]
 
         if feetOnGround:
             constraints.extend(self.createFixedFootConstraints(startPoseName))
