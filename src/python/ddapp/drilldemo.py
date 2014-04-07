@@ -178,11 +178,12 @@ class DrillPlannerDemo(object):
         t.Concatenate(self.drillFrame.transform)
 
         self.graspFrame = vis.updateFrame(t, 'grasp frame', parent=self.drillAffordance, visible=True, scale=0.2)
-        vis.updateFrame(t, 'sample grasp frame 0', parent=self.drillAffordance, visible=False, scale=0.2)
+        self.sampleGraspFrame = vis.updateFrame(transformUtils.copyFrame(t), 'sample grasp frame 0', parent=self.drillAffordance, visible=False, scale=0.2)
 
-        #def updateFrame(frame):
-        #    self.computeGraspFrame()
-        #self.drillFrame.onTransformModifiedCallback = updateFrame
+        self.frameSync = vis.FrameSync()
+        self.frameSync.addFrame(self.graspFrame)
+        self.frameSync.addFrame(self.sampleGraspFrame)
+        self.frameSync.addFrame(self.drillFrame)
 
 
     def computeDrillTipFrame(self):
@@ -196,9 +197,8 @@ class DrillPlannerDemo(object):
 
         drillTipFrame = vis.updateFrame(t, 'drill tip frame', parent=self.drillAffordance, visible=False, scale=0.2)
 
-        #def updateFrame(frame):
-        #    self.computeDrillTipFrame()
-        #self.graspFrame.onTransformModifiedCallback = updateFrame
+        self.frameSync.addFrame(self.drillFrame)
+        self.frameSync.addFrame(drillTipFrame)
 
 
     def computeStanceFrame(self):
@@ -232,6 +232,9 @@ class DrillPlannerDemo(object):
         t.Concatenate(graspGroundFrame)
 
         self.graspStanceFrame = vis.updateFrame(t, 'grasp stance', parent=self.drillAffordance, visible=False, scale=0.2)
+
+        self.frameSync.addFrame(self.drillFrame)
+        self.frameSync.addFrame(self.graspStanceFrame)
 
 
     def computeFootstepPlan(self):
