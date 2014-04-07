@@ -9,6 +9,7 @@ from ddapp import robotstate
 from ddapp import applogic as app
 from ddapp import vtkAll as vtk
 from ddapp.simpletimer import SimpleTimer
+from ddapp.shallowCopy import shallowCopy
 from ddapp import roboturdf
 
 import os
@@ -33,11 +34,11 @@ def loadFootMeshes():
 
 
 def getLeftFootMesh():
-    return getFootMeshes()[0]
+    return shallowCopy(getFootMeshes()[0])
 
 
 def getRightFootMesh():
-    return getFootMeshes()[1]
+    return shallowCopy(getFootMeshes()[1])
 
 
 def getLeftFootColor():
