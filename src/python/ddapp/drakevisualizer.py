@@ -1,5 +1,7 @@
 from ddapp import lcmUtils
 from ddapp import jointcontrol
+from ddapp import roboturdf
+
 import ddapp.objectmodel as om
 import ddapp.applogic as app
 
@@ -36,7 +38,7 @@ class DrakeVisualizer(object):
         return obj
 
     def loadURDF(self, filename):
-        model = app.loadRobotModelFromFile(filename)
+        model = roboturdf.loadRobotModelFromFile(filename)
         jointController = jointcontrol.JointController([model])
         jointController.setZeroPose()
         obj = self.addRobotModelItem(model)
