@@ -75,6 +75,8 @@ QList<double> ddQVTKWidgetView::lastTDxMotion() const;
 void ddQVTKWidgetView::installImageInteractor();
 void ddQVTKWidgetView::addCustomBounds(const QList<double>&);
 
+ddMainWindow::ddMainWindow();
+ddMainWindow::~ddMainWindow();
 ddViewManager* ddMainWindow::viewManager()
 ddPropertiesPanel* ddMainWindow::propertiesPanel() const;
 QToolBar* ddMainWindow::toolBar() const;
