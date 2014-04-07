@@ -112,24 +112,10 @@ class FootstepsDriver(object):
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
-        # self.params_container.addProperty('double', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=100, singleStep=0.5, hidden=False))
-        # self.params_container.addProperty('double list', [1.0, 2.0, 3.0], attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=100, singleStep=0.5, hidden=False))
-
-        # self.params_container.addProperty('int', 1, attributes=om.PropertyAttributes(decimals=0, minimum=100, maximum=1, singleStep=0.5, hidden=False))
-        # self.params_container.addProperty('int list', [1, 2, 3], attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=100, singleStep=0.5, hidden=False))
-
-        # self.params_container.addProperty('bool', True, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=1, singleStep=1, hidden=False))
-
-        # self.params_container.addProperty('str', 'value', attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False))
-
-        self.params.addProperty('Behavior', ['BDI Stepping', 'BDI Walking', 'Drake Walking'], attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False))
-
+        self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
         self.behavior_lcm_map = {0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
                              1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
                              2: lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING}
-
-        # self.params_container.addProperty('color', QtGui.QColor(255, 200, 0), attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False))
-
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
@@ -144,23 +130,6 @@ class FootstepsDriver(object):
         sub2.setSpeedLimit(1) # was 5 but was slow rendering
 
     ##############################
-
-    def getDefaultStepParams(self):
-        default_step_params = lcmdrc.footstep_params_t()
-        default_step_params.step_speed = 1.0
-        default_step_params.step_height = 0.05
-        default_step_params.constrain_full_foot_pose = False
-        default_step_params.bdi_step_duration = 2.0
-        default_step_params.bdi_sway_duration = 0.0
-        default_step_params.bdi_lift_height = 0.05
-        default_step_params.bdi_toe_off = 1
-        default_step_params.bdi_knee_nominal = 0.0
-        default_step_params.bdi_max_foot_vel = 0.0
-        default_step_params.bdi_sway_end_dist = 0.02
-        default_step_params.bdi_step_end_dist = 0.02
-        default_step_params.mu = 1.0
-        return default_step_params
-
     def onWalkingPlan(self, msg):
         self.lastWalkingPlan = msg
         if self.walkingPlanCallback:
@@ -179,7 +148,6 @@ class FootstepsDriver(object):
         planFolder = getFootstepsFolder()
         self.drawFootstepPlan(msg, planFolder)
 
-        self.transformPlanToBDIFrame(msg)
 
     def clearFootstepPlan(self):
         self.lastFootstepPlan = None
@@ -325,10 +293,6 @@ class FootstepsDriver(object):
 
         self.sendFootstepPlanRequest(request)
 
-        # self.lastFootstepRequest = request
-        # lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
-        # return request
-
     def onStepModified(self, ndx, frameObj):
         self.lastFootstepPlan.footsteps[ndx+2].pos = transformUtils.positionMessageFromFrame(frameObj.transform)
         self.lastFootstepPlan.footsteps[ndx+2].fixed_x = True
@@ -340,9 +304,14 @@ class FootstepsDriver(object):
         msg = self.lastFootstepRequest
         msg.num_existing_steps = self.lastFootstepPlan.num_steps
         msg.existing_steps = self.lastFootstepPlan.footsteps
-        self.lastFootstepRequest = msg
-        lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', msg)
-        return msg
+        msg = self.applyParams(msg)
+        self.sendFootstepPlanRequest(msg)
+
+    def updateRequest(self):
+        if self.lastFootstepRequest is not None:
+            msg = self.lastFootstepRequest
+            msg = self.applyParams(msg)
+            self.sendFootstepPlanRequest(msg)
 
     def onWalkingGoalModified(self, frameObj):
         request = self.constructFootstepPlanRequest(frameObj.transform)
@@ -360,6 +329,10 @@ class FootstepsDriver(object):
             goalFrame = vtk.vtkTransform()
         msg.goal_pos = transformUtils.positionMessageFromFrame(goalFrame)
 
+        msg = self.applyParams(msg)
+        return msg
+
+    def applyParams(self, msg):
         msg.params = lcmdrc.footstep_plan_params_t()
         msg.params.max_num_steps = 30
         msg.params.min_num_steps = 0
@@ -370,17 +343,14 @@ class FootstepsDriver(object):
         msg.params.max_forward_step = 0.45
         msg.params.ignore_terrain = True
         msg.params.planning_mode = msg.params.MODE_AUTO
-        print "alternate Names", self.params.alternateNames
         msg.params.behavior = self.behavior_lcm_map[self.params.behavior]
         msg.params.map_command = 2
         msg.params.leading_foot = msg.params.LEAD_AUTO
         msg.default_step_params = getDefaultStepParams()
-
         return msg
 
     def sendFootstepPlanRequest(self, request, waitForResponse=False, waitTimeout=5000):
 
-        # request = self.constructFootstepPlanRequest(goalFrame)
         self.lastFootstepRequest = request
 
         requestChannel = 'FOOTSTEP_PLAN_REQUEST'
@@ -440,6 +410,8 @@ class FootstepsDriver(object):
         pose[0:3] = msg.pos
         pose[3:6] = rpy
         self.bdiJointController.setPose("ERS BDI", pose)
+    def onFootStepPlanResponse(self,msg):
+        self.transformPlanToBDIFrame(msg)
 
     def onBDIAdjustedFootstepPlan(self,msg):
         self.bdi_plan_adjusted = msg.decode( msg.encode() ) # decode and encode ensures deepcopy

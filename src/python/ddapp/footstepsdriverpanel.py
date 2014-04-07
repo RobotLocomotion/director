@@ -62,6 +62,11 @@ class FootstepsPanel(object):
         self.params_panel.setBrowserModeToWidget()
         om.addPropertiesToPanel(self.driver.params, self.params_panel)
         l.addWidget(self.params_panel)
+        self.params_panel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
+
+    def onPropertyChanged(self, prop):
+        self.driver.params.setProperty(prop.propertyName(), prop.value())
+        self.driver.updateRequest()
 
     def onNewWalkingGoal(self):
         model = getDefaultRobotModel()
