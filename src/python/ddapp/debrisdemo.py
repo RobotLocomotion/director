@@ -69,18 +69,12 @@ class DebrisPlannerDemo(object):
         self.ikPlanner.computeNominal()
         self.playManipPlan()
 
-    def newReachGoal(self):
-        self.ikPlanner.newReachGoal()
-
     def toggleAffordanceEdit(self):
         aff = self.ikPlanner.findAffordance()
         frame = self.ikPlanner.getAffordanceFrame()
         edit = not frame.getProperty('Edit')
         frame.setProperty('Edit', edit)
         aff.setProperty('Alpha', 0.5 if edit else 1.0)
-
-    def planReach(self):
-        self.ikPlanner.planReach()
 
     def commit(self):
         if self.visOnly:
