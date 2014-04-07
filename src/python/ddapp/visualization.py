@@ -492,6 +492,8 @@ def getObjectByDataSet(polyData):
 
 
 def getObjectByProp(prop):
+    if not prop:
+        return None
     for item, obj in om.objects.iteritems():
         if isinstance(obj, FrameItem) and obj.widget.GetRepresentation() == prop:
             return obj
