@@ -15,26 +15,26 @@ def startApplication(enableQuitTimer=False):
 def main():
 
     obj = om.ObjectModelItem('test')
-    obj.addProperty('double', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=100, singleStep=0.5, hidden=False))
-    obj.addProperty('double list', [1.0, 2.0, 3.0], attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=100, singleStep=0.5, hidden=False))
+    obj.addProperty('double', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=100, singleStep=0.5))
+    obj.addProperty('double list', [1.0, 2.0, 3.0], attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=100, singleStep=0.5))
 
-    obj.addProperty('int', 1, attributes=om.PropertyAttributes(decimals=0, minimum=100, maximum=1, singleStep=0.5, hidden=False))
-    obj.addProperty('int list', [1, 2, 3], attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=100, singleStep=0.5, hidden=False))
+    obj.addProperty('int', 1, attributes=om.PropertyAttributes(minimum=0, maximum=100, singleStep=5))
+    obj.addProperty('int list', [1, 2, 3], attributes=om.PropertyAttributes(minimum=0, maximum=100, singleStep=1))
 
-    obj.addProperty('bool', True, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=1, singleStep=1, hidden=False))
+    obj.addProperty('bool', True)
 
-    obj.addProperty('str', 'value', attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False))
+    obj.addProperty('str', 'value')
 
-    obj.addProperty('str list', ['value 1', 'value 2', 'value 3'], attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False))
+    obj.addProperty('str list', 0, attributes=om.PropertyAttributes(enumNames=['value 1', 'value 2', 'value 3']))
 
-    obj.addProperty('color', QtGui.QColor(255, 200, 0), attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False))
+    obj.addProperty('color', QtGui.QColor(255, 200, 0))
 
     panel = PythonQt.dd.ddPropertiesPanel()
     panel.setBrowserModeToWidget()
     om.addPropertiesToPanel(obj, panel)
     panel.show()
 
-    startApplication(enableQuitTimer=True)
+    startApplication(enableQuitTimer=False)
 
 
 if __name__ == '__main__':
