@@ -29,10 +29,11 @@ def getRobotOrangeColor():
     return QtGui.QColor(255, 180, 0)
 
 
-def loadRobotModel(name, view=None, parent='planning', urdfHands=None, color=None, visible=True):
+def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True):
 
-    urdfHands = urdfHands or defaultUrdfHands
-    urdfFile = os.path.join(getRobotModelDir(), 'model_%s.urdf' % urdfHands)
+    if not urdfFile:
+        urdfFile = os.path.join(getRobotModelDir(), 'model_%s.urdf' % defaultUrdfHands)
+
     folder = om.getOrCreateContainer(parent)
 
     model = loadRobotModelFromFile(urdfFile)
@@ -136,21 +137,42 @@ setupPackagePaths()
 
 class HandFactory(object):
 
-    def __init__(self, robotModel):
+    def __init__(self, robotModel, defaultLeftHandType=None, defaultRightHandType=None):
+
+        if not defaultLeftHandType:
+            defaultLeftHandType = 'left_%s' % ('robotiq' if 'LR' in defaultUrdfHands else 'irobot')
+        if not defaultRightHandType:
+            defaultRightHandType = 'right_%s' % ('robotiq' if 'RR' in defaultUrdfHands else 'irobot')
+
         self.robotModel = robotModel
         self.loaders = {}
+        self.defaultHandTypes = {
+            'left' : defaultLeftHandType,
+            'right' : defaultRightHandType
+            }
 
-    def getLoader(self, handType):
+
+    def getLoader(self, side):
+
+        assert side in self.defaultHandTypes.keys()
+        handType = self.defaultHandTypes[side]
         loader = self.loaders.get(handType)
         if loader is None:
             loader = HandLoader(handType, self.robotModel)
             self.loaders[handType] = loader
         return loader
 
-    def newPolyData(self, handType, view, name=None, parent=None):
-        loader = self.getLoader(handType)
-        name = name or handType.replace('_', ' ')
+    def newPolyData(self, side, view, name=None, parent=None):
+        loader = self.getLoader(side)
+        name = name or self.defaultHandTypes[side].replace('_', ' ')
         return loader.newPolyData(name, view, parent=parent)
+
+    def placeHandModelWithTransform(self, transform, view, side, name=None, parent=None):
+        handObj = self.newPolyData(side, view, name=name, parent=parent)
+        handObj.setProperty('Visible', True)
+        handFrame = om.getObjectChildren(handObj)[0]
+        handFrame.copyFrame(transform)
+        return handObj, handFrame
 
 
 class HandLoader(object):
@@ -270,22 +292,24 @@ class HandLoader(object):
 
     def loadHandModel(self):
 
+        filename = self.getHandUrdf()
+        handModel = loadRobotModelFromFile(filename)
+        handModel = om.RobotModelItem(handModel)
+        self.handModel = handModel
+
+        '''
         color = [1.0, 1.0, 0.0]
         if self.side == 'right':
             color = [0.33, 1.0, 0.0]
 
-        filename = self.getHandUrdf()
-        handModel = loadRobotModelFromFile(filename)
         handModel = om.addRobotModel(handModel, om.getOrCreateContainer('hands'))
         handModel.setProperty('Name', os.path.basename(filename).replace('.urdf', '').replace('_', ' '))
         handModel.setProperty('Visible', False)
         color = np.array(color)*255
         handModel.setProperty('Color', QtGui.QColor(color[0], color[1], color[2]))
         handModel.setProperty('Alpha', 1.0)
-
-        om.removeFromObjectModel(handModel)
         #handModel.addToView(view)
-        self.handModel = handModel
+        '''
 
 
     def newPolyData(self, name, view, parent=None):
@@ -308,6 +332,18 @@ class HandLoader(object):
         return obj
 
 
+    def getPalmToWorldTransform(self, robotModel):
+
+        handLinkToWorld = robotModel.getLinkFrame(self.handLinkName)
+
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Concatenate(self.palmToHandLink)
+        t.Concatenate(handLinkToWorld)
+
+        return t
+
+
     def moveToRobot(self, robotModel):
 
         handLinkToWorld = robotModel.getLinkFrame(self.handLinkName)
@@ -319,12 +355,7 @@ class HandLoader(object):
         t.Concatenate(handLinkToWorld)
 
         self.moveHandModelToFrame(self.handModel, t)
-
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Concatenate(self.palmToHandLink)
-        t.Concatenate(handLinkToWorld)
-        vis.updateFrame(t, '%s palm' % self.side)
+        vis.updateFrame(self.getPalmToWorldTransform(), '%s palm' % self.side)
 
 
     def moveToGraspFrame(self, frame):
