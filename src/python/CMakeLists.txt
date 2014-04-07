@@ -62,6 +62,7 @@ set(python_files
   ddapp/timercallback.py
   ddapp/transformUtils.py
   ddapp/utime.py
+  ddapp/viewbehaviors.py
   ddapp/visualization.py
   ddapp/vtkAll.py
   ddapp/vtkNumpy.py
