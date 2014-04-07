@@ -174,6 +174,7 @@ class FootstepsDriver(object):
                     color = getLeftFootColor()
                 else:
                     color = left_color
+
             if footstep.infeasibility > 1e-6:
                 d = DebugData()
                 # normal = np.array(allTransforms[i-1].GetPosition()) - np.array(footstepTransform.GetPosition())
@@ -188,10 +189,9 @@ class FootstepsDriver(object):
                 # d.addLine(start, end,radius=0.005)
                 vis.showPolyData(d.getPolyData(), 'infeasibility %d -> %d' % (i-2, i-1), parent=folder, color=[1, 0.2, 0.2])
 
-
-            obj = vis.showPolyData(mesh, 'step %d' % (i-1), color=color, alpha=1.0, parent=folder)
-            frameObj = vis.showFrame(footstepTransform, 'frame', parent=obj, scale=0.3, visible=False)
-            frameObj.onTransformModifiedCallback = functools.partial(self.onStepModified, i-2)
+            stepName = 'step %d' % (i-1)
+            obj = vis.showPolyData(mesh, stepName, color=color, alpha=1.0, parent=folder)
+            frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
             obj.actor.SetUserTransform(footstepTransform)
 
     def getContactPts(self):
@@ -241,10 +241,10 @@ class FootstepsDriver(object):
         t.Translate([0.0, 0.0, -footHeight])
         t.Translate(xaxis*distanceForward)
 
-        frameObj = vis.showFrame(t, 'walking goal')
+        frameObj = vis.updateFrame(t, 'walking goal', parent='planning')
         frameObj.setProperty('Edit', True)
 
-        frameObj.onTransformModifiedCallback = self.onWalkingGoalModified
+        frameObj.connectFrameModified(self.onWalkingGoalModified)
         self.sendFootstepPlanRequest(t)
 
     def createGoalSteps(self, model):
