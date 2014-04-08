@@ -135,8 +135,14 @@ class NavigationPanel(object):
                            [ blockl*1.5  , .1  , 0      , 0 , 0 , 0] ,
                            [ blockl*1.5  ,-.1  , 0      , 0 , 0 , 0]])
         #print flist
+
         
-        numGoalSteps = 3
+        contact_pts = self.footstepDriver.getContactPts()
+        contact_pts_mid = np.mean(contact_pts, axis=0) # mid point on foot relative to foot frame
+        foot_to_sole = transformUtils.frameFromPositionAndRPY( contact_pts_mid, [0,0,0]).GetLinearInverse()
+        
+        
+        numGoalSteps = 6
         is_right_foot = True
         self.goalSteps = []
         for i in range(numGoalSteps):
@@ -149,6 +155,7 @@ class NavigationPanel(object):
 
             step_t.PostMultiply()
             step_t.Concatenate(frame_pt_to_centerline)
+            step_t.Concatenate(foot_to_sole)
             
  
             is_right_foot = not is_right_foot
