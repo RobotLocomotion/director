@@ -259,8 +259,8 @@ class WalkPlan(Action):
 
     def onEnter(self):
         graspStanceFrame = self.container.om.findObjectByName(self.parsedArgs['WalkTarget'])
-        self.walkPlanResponse = self.container.footstepPlanner.sendFootstepPlanRequest(graspStanceFrame.transform, waitForResponse=True, waitTimeout=0)
-        # TODO: this only plans from current state, need to fix that
+        request = self.container.footstepPlanner.constructFootstepPlanRequest(self.inputState, graspStanceFrame.transform)
+        self.walkPlanResponse = self.container.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True, waitTimeout=0)
 
     def onUpdate(self):
 
@@ -299,7 +299,7 @@ class Walk(Action):
         # Logic for viz-mode:
         if self.container.vizMode:
             # Use the footstep plan to calculate a walking plan, for animation purposes only
-            self.walkAnimationResponse = self.container.footstepPlanner.sendWalkingPlanRequest(self.container.footstepPlan, waitForResponse=True, waitTimeout=0)
+            self.walkAnimationResponse = self.container.footstepPlanner.sendWalkingPlanRequest(self.container.footstepPlan, self.inputState, waitForResponse=True, waitTimeout=0)
 
         # Logic for execute mode:
         else:
