@@ -128,9 +128,6 @@ class NavigationPanel(object):
          
         vis.updateFrame(frame_pt_to_centerline, "p1", parent="navigation")
         
-        contact_pts = self.footstepDriver.getContactPts()
-        contact_pts_mid = np.mean(contact_pts, axis=0) # mid point on foot relative to foot frame
-        foot_to_sole = transformUtils.frameFromPositionAndRPY( [0.04, 0, 0.0811 ] , [0,0,0]) # .GetLinearInverse()
 
         flist = np.array( [[ blockl*-0.5 , .1  , 0      , 0 , 0 , 0] ,
                            [ blockl*-0.5 , -.1 , 0      , 0 , 0 , 0] ,
@@ -155,14 +152,11 @@ class NavigationPanel(object):
             #print flist[i,0:3] 
             #print flist[i,3:6]
             
-            step_t= transformUtils.frameFromPositionAndRPY(flist[i,0:3] , flist[i,3:6])
-
+            step_t = vtk.vtkTransform()
             step_t.PostMultiply()
+            step_t.Concatenate(transformUtils.frameFromPositionAndRPY(flist[i,0:3] , flist[i,3:6]))
+            step_t.Concatenate(foot_to_sole)
             step_t.Concatenate(frame_pt_to_centerline)
-            step_t.Concatenate(foot_to_sole)
-            
-            step_t.PostMultiply()
-            step_t.Concatenate(foot_to_sole)
 
  
             is_right_foot = not is_right_foot
