@@ -174,10 +174,11 @@ class NavigationPanel(object):
             vis.updateFrame(step_t, str(i), parent="navigation")
             
             self.goalSteps.append(step)
-        request = self.footstepDriver.constructFootstepPlanRequest()
+
+        startPose = self.jointController.q
+        request = self.footstepDriver.constructFootstepPlanRequest(startPose)
         request.num_goal_steps = len(self.goalSteps)
         request.goal_steps = self.goalSteps
-        self.lastFootstepRequest = request
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)        
 
 def init(jointController, footstepDriver, playbackRobotModel, playbackJointController):
