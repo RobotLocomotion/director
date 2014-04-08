@@ -90,12 +90,13 @@ def getBDIAdjustedFootstepsFolder():
     return obj
 
 class FootstepsDriver(object):
-    def __init__(self, jc):
+
+    def __init__(self, jointController):
+        self.jointController = jointController
         self.lastFootstepPlan = None
         self.lastFootstepRequest = None
         self.goalSteps = None
         self._setupSubscriptions()
-        self.jointController = jc
         self.lastWalkingPlan = None
         self.walkingPlanCallback = None
         self._setupProperties()
@@ -224,38 +225,7 @@ class FootstepsDriver(object):
         t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
         return t_feet_mid
 
-    def createWalkingGoal(self, model):
-        distanceForward = 1.0
-
-        t1 = model.getLinkFrame('l_foot')
-        t2 = model.getLinkFrame('r_foot')
-        pelvisT = model.getLinkFrame('pelvis')
-
-        xaxis = [1.0, 0.0, 0.0]
-        pelvisT.TransformVector(xaxis, xaxis)
-        xaxis = np.array(xaxis)
-        zaxis = np.array([0.0, 0.0, 1.0])
-        yaxis = np.cross(zaxis, xaxis)
-        xaxis = np.cross(yaxis, zaxis)
-
-        stancePosition = (np.array(t2.GetPosition()) + np.array(t1.GetPosition())) / 2.0
-
-        footHeight = 0.0817
-
-        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-        t.PostMultiply()
-        t.Translate(stancePosition)
-        t.Translate([0.0, 0.0, -footHeight])
-        t.Translate(xaxis*distanceForward)
-
-        frameObj = vis.updateFrame(t, 'walking goal', parent='planning')
-        frameObj.setProperty('Edit', True)
-
-        frameObj.onTransformModifiedCallback = self.onWalkingGoalModified
-        request = self.constructFootstepPlanRequest(t)
-        self.sendFootstepPlanRequest(request)
-
-    def createGoalSteps(self, model):
+    def createGoalSteps(self, model, pose):
         distanceForward = 1.0
 
         fr = model.getLinkFrame('l_foot')
@@ -287,7 +257,8 @@ class FootstepsDriver(object):
             step.is_right_foot = is_right_foot
             step.params = getDefaultStepParams()
             self.goalSteps.append(step)
-        request = self.constructFootstepPlanRequest()
+
+        request = self.constructFootstepPlanRequest(pose)
         request.num_goal_steps = len(self.goalSteps)
         request.goal_steps = self.goalSteps
 
@@ -313,15 +284,10 @@ class FootstepsDriver(object):
             msg = self.applyParams(msg)
             self.sendFootstepPlanRequest(msg)
 
-    def onWalkingGoalModified(self, frameObj):
-        request = self.constructFootstepPlanRequest(frameObj.transform)
-        self.sendFootstepPlanRequest(request)
-
-    def constructFootstepPlanRequest(self, goalFrame=None):
+    def constructFootstepPlanRequest(self, pose, goalFrame=None):
 
         msg = lcmdrc.footstep_plan_request_t()
         msg.utime = getUtime()
-        pose = self.jointController.getPose(self.jointController.currentPoseName)
         state_msg = robotstate.drakePoseToRobotState(pose)
         msg.initial_state = state_msg
 
@@ -351,6 +317,7 @@ class FootstepsDriver(object):
 
     def sendFootstepPlanRequest(self, request, waitForResponse=False, waitTimeout=5000):
 
+        assert isinstance(request, lcmdrc.footstep_plan_request_t)
         self.lastFootstepRequest = request
 
         requestChannel = 'FOOTSTEP_PLAN_REQUEST'
@@ -366,12 +333,11 @@ class FootstepsDriver(object):
         else:
             lcmUtils.publish(requestChannel, request)
 
-    def sendWalkingPlanRequest(self, footstepPlan, waitForResponse=False, waitTimeout=5000):
+    def sendWalkingPlanRequest(self, footstepPlan, startPose, waitForResponse=False, waitTimeout=5000):
 
         msg = lcmdrc.walking_plan_request_t()
         msg.utime = getUtime()
-        pose = self.jointController.getPose(self.jointController.currentPoseName)
-        state_msg = robotstate.drakePoseToRobotState(pose)
+        state_msg = robotstate.drakePoseToRobotState(startPose)
         msg.initial_state = state_msg
         msg.new_nominal_state = msg.initial_state
         msg.use_new_nominal_state = False
@@ -406,10 +372,11 @@ class FootstepsDriver(object):
         self.pose_bdi = msg
         # Set the xyzrpy of this pose to equal that estimated by BDI
         rpy = botpy.quat_to_roll_pitch_yaw(msg.orientation)
-        pose = self.jointController.getPose(self.jointController.currentPoseName).copy()
+        pose = self.jointController.q.copy()
         pose[0:3] = msg.pos
         pose[3:6] = rpy
         self.bdiJointController.setPose("ERS BDI", pose)
+
     def onFootStepPlanResponse(self,msg):
         self.transformPlanToBDIFrame(msg)
 
@@ -459,7 +426,7 @@ class FootstepsDriver(object):
 
     def drawBDIFootstepPlan(self):
         if (self.bdi_plan is None):
-	    return
+            return
 
         folder = om.getOrCreateContainer("BDI footstep plan")
         om.removeFromObjectModel(folder)
@@ -467,7 +434,7 @@ class FootstepsDriver(object):
 
     def drawBDIFootstepPlanAdjusted(self):
         if (self.bdi_plan_adjusted is None):
-	    return
+            return
 
         folder = om.getOrCreateContainer('BDI adj footstep plan')
         om.removeFromObjectModel(folder)

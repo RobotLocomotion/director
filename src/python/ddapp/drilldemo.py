@@ -238,11 +238,18 @@ class DrillPlannerDemo(object):
 
 
     def computeFootstepPlan(self):
-        self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(self.graspStanceFrame.transform, waitForResponse=True)
+
+        startPose = self.getEstimatedRobotStatePose()
+        goalFrame = self.graspStanceFrame.transform
+
+        request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
+        self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
 
 
     def computeWalkingPlan(self):
-        self.walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, waitForResponse=True)
+
+        startPose = self.getEstimatedRobotStatePose()
+        self.walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
 
 
     def computeEndPose(self):

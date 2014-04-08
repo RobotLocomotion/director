@@ -103,8 +103,11 @@ class NavigationPanel(object):
     def onPlanButton(self):
         print "plan",self.ui.comboBox.currentText
 
-        frame = self.getFrameFromCombo()
-        self.footstepDriver.sendFootstepPlanRequest(frame)
+        goalFrame = self.getFrameFromCombo()
+        startPose = self.jointController.q
+
+        request = self.footstepDriver.constructFootstepPlanRequest(startPose, goalFrame)
+        self.footstepDriver.sendFootstepPlanRequest(request)
 
 
 def init(jointController, footstepDriver, playbackRobotModel, playbackJointController):
