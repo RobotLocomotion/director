@@ -272,8 +272,6 @@ if usePlanning:
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
 
-    startIkServer()
-    drillDemo.spawnDrillAffordance()
     actionManager = actionmanager.ActionManager(objectModel = om,
                                                 robotModel = robotStateModel,
                                                 sensorJointController = robotStateJointController,
