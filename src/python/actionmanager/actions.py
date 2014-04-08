@@ -11,6 +11,7 @@ from ddapp.drilldemo import RobotPoseGUIWrapper
 
 from drc import robot_state_t
 from bot_core import rigid_transform_t
+from vtk import vtkTransform
 import botpy
 import takktile
 
@@ -465,37 +466,42 @@ class CameraDeltaPlan(Action):
 
         if self.container.vizMode:
             self.message = rigid_transform_t()
-            self.message.trans = [0, 0.01, 0]
+            self.message.trans = [-0.04, 0.0, 0.0]
             self.messageReceived = True
 
     def onUpdate(self):
         # Wait until the message is received, then do planning
         if self.messageReceived:
 
-            linkMap = { 'left' : 'left_palm', 'right': 'right_palm'}
+            linkMap = { 'left' : 'l_hand_face', 'right': 'r_hand_face'}
             linkName = linkMap[self.parsedArgs['Hand']]
 
-            handFrame = self.container.robotModel.getLinkFrame(linkName)
-
-            deltaFrame = transformUtils.frameFromPositionAndRPY([0,0,0],[0,0,0])
-            deltaFrame.DeepCopy(handFrame)
-
-            if self.parsedArgs['Style'] == 'Local':
-                deltaFrame.PreMultiply()
+            if self.container.vizMode:
+                handToWorld = self.container.ikPlanner.getLinkFrameAtPose(linkName, self.inputState)
             else:
-                deltaFrame.PostMultiply()
+                handToWorld = self.container.robotModel.getLinkFrame(linkName)
 
             delta = transformUtils.frameFromPositionAndRPY([self.message.trans[0],
-                                                            self.message.trans[1] - 0.1,
+                                                            self.message.trans[1],
                                                             self.message.trans[2]],
 #                                                           [el for el in botpy.quat_to_roll_pitch_yaw(self.message.quat)])
-                                                           [0, 90, 0])
-            deltaFrame.Concatenate(delta)
+                                                           [0, 0, 0])
 
-            graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
-            frameObject = vis.updateFrame(deltaFrame, 'CameraAdjustFrame', parent=graspFrame, visible=True, scale=0.25)
+            if self.parsedArgs['Style'] == 'Local':
+                goalTransform = vtkTransform()
+                goalTransform.PostMultiply()
+                goalTransform.Concatenate(delta)
+                goalTransform.Concatenate(handToWorld)
+            else:
+                goalTransform = vtkTransform()
+                goalTransform.PostMultiply()
+                goalTransform.Concatenate(handToWorld)
+                goalTransform.Concatenate(delta)
 
-            self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], frameObject, planTraj=True)
+            handFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
+            goalFrame = vis.updateFrame(goalTransform, 'CameraAdjustFrame', parent=handFrame, visible=True, scale=0.25)
+
+            self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], goalFrame, planTraj=True)
 
             if self.manipPlan.plan_info[-1] > 10:
                 print "PLANNER REPORTS ERROR!"
@@ -531,18 +537,13 @@ class DeltaReachPlan(Action):
         self.manipPlan = None
 
     def onEnter(self):
-        linkMap = { 'left' : 'l_hand', 'right': 'r_hand'}
+        linkMap = { 'left' : 'l_hand_face', 'right': 'r_hand_face'}
         linkName = linkMap[self.parsedArgs['Hand']]
 
-        graspFrame = self.container.robotModel.getLinkFrame(self.parsedArgs['TargetFrame'])
-        #graspFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
-
-        deltaFrame = transformUtils.frameFromPositionAndRPY([0,0,0],[0,0,0])
-
-        handObject = self.container.om.findObjectByName('left robotiq')
-        frameObject = vis.updateFrame(deltaFrame, self.parsedArgs['TargetFrame'] + " " + self.name, parent=handObject, visible=True, scale=0.25)
-
-        deltaFrame.DeepCopy(graspFrame)
+        if self.container.vizMode:
+            handToWorld = self.container.ikPlanner.getLinkFrameAtPose(linkName, self.inputState)
+        else:
+            handToWorld = self.container.robotModel.getLinkFrame(linkName)
 
         if self.parsedArgs['Direction'] == 'X':
             delta = transformUtils.frameFromPositionAndRPY([float(self.parsedArgs['Amount']),0,0],[0,0,0])
@@ -552,12 +553,20 @@ class DeltaReachPlan(Action):
             delta = transformUtils.frameFromPositionAndRPY([0,0,float(self.parsedArgs['Amount'])],[0,0,0])
 
         if self.parsedArgs['Style'] == 'Local':
-            deltaFrame.PreMultiply()
+            goalTransform = vtkTransform()
+            goalTransform.PostMultiply()
+            goalTransform.Concatenate(delta)
+            goalTransform.Concatenate(handToWorld)
         else:
-            deltaFrame.PostMultiply()
-        deltaFrame.Concatenate(delta)
+            goalTransform = vtkTransform()
+            goalTransform.PostMultiply()
+            goalTransform.Concatenate(handToWorld)
+            goalTransform.Concatenate(delta)
 
-        self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], frameObject, planTraj=True)
+        handFrame = self.container.om.findObjectByName('left robotiq')
+        goalFrame = vis.updateFrame(goalTransform, self.parsedArgs['TargetFrame'] + " " + self.name, parent=handFrame, visible=True, scale=0.25)
+
+        self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], goalFrame, planTraj=True)
 
     def onUpdate(self):
 
@@ -706,11 +715,12 @@ class JointMove(Action):
             # Viz Mode Logic
             # (simulating a perfect execution, output state is the end of animation state)
             self.outputState = robotstate.convertStateMessageToDrakePose(self.animations[-1].plan[-1])
+            self.outputs = {'RobotPose' : robotstate.convertStateMessageToDrakePose(self.animations[-1].plan[-1])}
         else:
             # Execute Mode Logic
             # (the move is complete, so output state is current estimated robot state)
             self.outputState = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
-
+            self.outputs = {'RobotPose' : self.container.sensorJointController.getPose('EST_ROBOT_STATE')}
 
 class JointMoveGuarded(Action):
 
@@ -776,11 +786,12 @@ class JointMoveGuarded(Action):
             # Viz Mode Logic
             # (simulating a perfect execution, output state is the end of animation state)
             self.outputState = robotstate.convertStateMessageToDrakePose(self.animations[-1].plan[-1])
+            self.outputs = {'RobotPose' : robotstate.convertStateMessageToDrakePose(self.animations[-1].plan[-1])}
         else:
             # Execute Mode Logic
             # (the move is complete, so output state is current estimated robot state)
             self.outputState = self.container.sensorJointController.getPose('EST_ROBOT_STATE')
-
+            self.outputs = {'RobotPose' : self.container.sensorJointController.getPose('EST_ROBOT_STATE')}
 
 class Grip(Action):
 
