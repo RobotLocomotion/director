@@ -4,6 +4,8 @@ from ddapp import lcmUtils
 from ddapp import applogic as app
 from ddapp.utime import getUtime
 from ddapp import objectmodel as om
+from ddapp import transformUtils
+from ddapp import visualization as vis
 from ddapp.timercallback import TimerCallback
 
 import numpy as np
@@ -15,10 +17,6 @@ def _makeButton(text, func):
     b = QtGui.QPushButton(text)
     b.connect('clicked()', func)
     return b
-
-
-def getDefaultRobotModel():
-    return om.findObjectByName('robot state model')
 
 def addWidgetsToDict(widgets, d):
 
@@ -34,9 +32,11 @@ class WidgetDict(object):
 
 class FootstepsPanel(object):
 
-    def __init__(self, driver):
+    def __init__(self, driver, robotModel, jointController):
 
         self.driver = driver
+        self.robotModel = robotModel
+        self.jointController = jointController
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddFootsteps.ui')
@@ -68,13 +68,30 @@ class FootstepsPanel(object):
         self.driver.params.setProperty(prop.propertyName(), prop.value())
         self.driver.updateRequest()
 
+
+    def newWalkingGoalFrame(self, robotModel, distanceForward=1.0):
+        t = self.driver.getFeetMidPoint(robotModel)
+        t.PreMultiply()
+        t.Translate(distanceForward, 0.0, 0.0)
+        t.PostMultiply()
+        return t
+
+
     def onNewWalkingGoal(self):
-        model = getDefaultRobotModel()
-        self.driver.createWalkingGoal(model)
+
+        t = self.newWalkingGoalFrame(self.robotModel)
+        frameObj = vis.updateFrame(t, 'walking goal', parent='planning', scale=0.25)
+        frameObj.setProperty('Edit', True)
+        frameObj.connectFrameModified(self.onWalkingGoalModified)
+        self.onWalkingGoalModified(frameObj)
+
+    def onWalkingGoalModified(self, frame):
+
+        request = self.driver.constructFootstepPlanRequest(self.jointController.q, frame.transform)
+        self.driver.sendFootstepPlanRequest(request)
 
     def onGoalSteps(self):
-        model = getDefaultRobotModel()
-        self.driver.createGoalSteps(model)
+        self.driver.createGoalSteps(self.robotModel, self.jointController.q)
 
     def onExecute(self):
         self.driver.commitFootstepPlan(self.driver.lastFootstepPlan)
@@ -107,12 +124,12 @@ def toggleWidgetShow():
     else:
         dock.show()
 
-def init(driver):
+def init(driver, robotModel, jointController):
 
     global panel
     global dock
 
-    panel = FootstepsPanel(driver)
+    panel = FootstepsPanel(driver, robotModel, jointController)
     dock = app.addWidgetToDock(panel.widget)
     dock.hide()
 
