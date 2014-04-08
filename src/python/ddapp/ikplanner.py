@@ -409,6 +409,11 @@ class IKPlanner(object):
         print 'grasp end pose info:', self.graspEndPoseInfo
 
 
+    def getLinkFrameAtPose(self, linkName, pose):
+        self.jointController.setPose('user_pose', pose)
+        return self.robotModel.getLinkFrame(linkName)
+
+
     def computeGraspEndPoseFrames(self):
 
         graspFrame = self.getAffordanceChild('grasp frame')
