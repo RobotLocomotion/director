@@ -52,8 +52,6 @@ public:
   void GetDataForScanLine(int scanLine, vtkPolyData* polyData);
   vtkIdType GetCurrentScanTime();
 
-  vtkIdType GetCurrentRobotState(vtkDoubleArray* robotState);
-
   void GetTransform(const char* fromFrame, const char* toFrame, vtkIdType utime, vtkTransform* transform);
 
   static void GetBotRollPitchYaw(vtkTransform* transform, double rpy[3]);

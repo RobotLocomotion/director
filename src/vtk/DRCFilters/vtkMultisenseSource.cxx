@@ -38,7 +38,6 @@
 #include <bot_param/param_client.h>
 
 #include <lcmtypes/bot_core.hpp>
-#include <lcmtypes/drc/robot_state_t.hpp>
 
 #include <sys/select.h>
 
@@ -158,9 +157,6 @@ public:
     this->DistanceRange[1] = 30.0;
     this->EdgeDistanceThreshold = 0.03;
 
-    this->CurrentRobotState.num_joints = 0;
-    this->CurrentRobotState.utime = 0;
-
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
     {
@@ -185,7 +181,6 @@ public:
     botframes_ = bot_frames_get_global(this->LCMHandle->getUnderlyingLCM(), botparam_);
 
     this->LCMHandle->subscribe( "SCAN", &LCMListener::lidarHandler, this);
-    this->LCMHandle->subscribe( "EST_ROBOT_STATE", &LCMListener::robotStateHandler, this);
   }
 
 
@@ -193,24 +188,6 @@ public:
   {
     this->HandleNewData(msg);
   }
-
-
-  void robotStateHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::robot_state_t* msg)
-  {
-
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
-    this->CurrentRobotState = *msg;
-
-    //int nJoints = msg->num_joints;
-    //printf("-------------------\n");
-    //printf("n joints: %d\n", nJoints);
-    //for (int i = 0; i < nJoints; ++i)
-    //{
-    //  printf("%s\n", msg->joint_name[i].c_str());
-    //}
-    //printf("-------------------\n");
-  }
-
 
   bool CheckForNewData()
   {
@@ -348,12 +325,6 @@ public:
     }
   }
 
-  drc::robot_state_t GetCurrentRobotState()
-  {
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
-    return this->CurrentRobotState;
-  }
-
   vtkSmartPointer<vtkPolyData> GetDataForScanLine(int scanLine)
   {
     std::vector<ScanLineData> scanLines;
@@ -430,7 +401,6 @@ protected:
 
   void HandleNewData(const bot_core::planar_lidar_t* msg)
   {
-
     this->CurrentScanTime = msg->utime;
 
     Eigen::Isometry3d scanToLocalStart;
@@ -444,30 +414,8 @@ protected:
     Eigen::Isometry3d spindleRotation;
     get_trans_with_utime("PRE_SPINDLE", "POST_SPINDLE", msg->utime, spindleRotation);
 
-
-    Eigen::Isometry3d m = Eigen::Isometry3d::Identity();
-    m(0, 0) = 0;
-    m(1, 0) = 0;
-    m(2, 0) = 1;
-
-    m(0, 1) = spindleRotation(0, 0);
-    m(1, 1) = -spindleRotation(1, 0);
-
-    m(0, 2) = -spindleRotation(0, 1);
-    m(1, 2) = spindleRotation(0, 1);
-
-
     Eigen::Matrix3d rot = spindleRotation.rotation();
     Eigen::Vector3d eulerAngles = rot.eulerAngles(0, 1, 2);
-
-    /*
-    printf("---scan to local with utime--\n");
-    std::cout << scanToLocal.matrix() << std::endl;
-
-    printf("---scan to local current--\n");
-    std::cout << scanToLocal2.matrix() << std::endl;
-    */
-
     //printf("euler angles: %f %f %f\n", eulerAngles[0], eulerAngles[1], eulerAngles[2]);
 
     double spindleAngle = eulerAngles[2] * (180.0 / M_PI) + 180.0;
@@ -498,11 +446,9 @@ protected:
     scanLine.ScanLineId = this->CurrentScanLine++;
     scanLine.ScanToLocalStart = scanToLocalStart;
     scanLine.ScanToLocalEnd = scanToLocalEnd;
-    //scanLine.ScanToLocal = m;
     scanLine.SpindleAngle = spindleAngle;
     scanLine.Revolution = this->CurrentRevolution;
     scanLine.msg = *msg;
-
 
     this->UpdateDequeSize();
   }
@@ -528,7 +474,6 @@ protected:
 
   boost::shared_ptr<boost::thread> Thread;
 
-  drc::robot_state_t CurrentRobotState;
 
   vtkIdType CurrentScanTime;
 
@@ -696,29 +641,6 @@ void vtkMultisenseSource::GetDataForScanLine(int scanLine, vtkPolyData* polyData
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   vtkSmartPointer<vtkPolyData> data = this->Internal->Listener->GetDataForScanLine(scanLine);
   polyData->ShallowCopy(data);
-}
-
-//-----------------------------------------------------------------------------
-vtkIdType vtkMultisenseSource::GetCurrentRobotState(vtkDoubleArray* robotState)
-{
-  drc::robot_state_t msg = this->Internal->Listener->GetCurrentRobotState();
-
-  robotState->SetNumberOfTuples(msg.num_joints + 7);
-  robotState->SetValue(0, msg.pose.translation.x);
-  robotState->SetValue(1, msg.pose.translation.y);
-  robotState->SetValue(2, msg.pose.translation.z);
-
-  robotState->SetValue(3, msg.pose.rotation.w);
-  robotState->SetValue(4, msg.pose.rotation.x);
-  robotState->SetValue(5, msg.pose.rotation.y);
-  robotState->SetValue(6, msg.pose.rotation.z);
-
-  for (int i = 0; i < msg.num_joints; ++i)
-  {
-    robotState->SetValue(7 + i, msg.joint_position[i]);
-  }
-
-  return msg.utime;
 }
 
 //-----------------------------------------------------------------------------
