@@ -161,9 +161,18 @@ class RobotModelItem(ObjectModelItem):
         elif propertyName == 'Color':
             self.model.setColor(self.getProperty(propertyName))
 
+        self._renderAllViews()
+
+
     def onModelChanged(self):
         if self.modelChangedCallback:
             self.modelChangedCallback(self)
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
+
+
+    def _renderAllViews(self):
         for view in self.views:
             view.render()
 
