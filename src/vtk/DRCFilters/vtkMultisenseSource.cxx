@@ -433,8 +433,12 @@ protected:
 
     this->CurrentScanTime = msg->utime;
 
-    Eigen::Isometry3d scanToLocal;
-    get_trans_with_utime("SCAN", "local", msg->utime, scanToLocal);
+    Eigen::Isometry3d scanToLocalStart;
+    Eigen::Isometry3d scanToLocalEnd;
+
+    get_trans_with_utime("SCAN", "local", msg->utime, scanToLocalStart);
+    get_trans_with_utime("SCAN", "local", msg->utime +  1e6*3/(40*4), scanToLocalEnd);
+
     //get_trans_with_utime("SCAN", "PRE_SPINDLE", msg->utime, scanToLocal);
 
     Eigen::Isometry3d spindleRotation;
@@ -492,7 +496,8 @@ protected:
     this->ScanLines.resize(this->ScanLines.size() + 1);
     ScanLineData& scanLine = this->ScanLines.back();
     scanLine.ScanLineId = this->CurrentScanLine++;
-    scanLine.ScanToLocal = scanToLocal;
+    scanLine.ScanToLocalStart = scanToLocalStart;
+    scanLine.ScanToLocalEnd = scanToLocalEnd;
     //scanLine.ScanToLocal = m;
     scanLine.SpindleAngle = spindleAngle;
     scanLine.Revolution = this->CurrentRevolution;
