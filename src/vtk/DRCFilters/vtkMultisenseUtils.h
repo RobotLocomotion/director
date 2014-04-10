@@ -88,32 +88,32 @@ DataArrays CreateData(vtkIdType numberOfPoints)
   // points
   vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
   points->SetDataTypeToFloat();
-  points->SetNumberOfPoints(numberOfPoints);
+  points->Allocate(numberOfPoints);
   polyData->SetPoints(points.GetPointer());
   polyData->SetVerts(NewVertexCells(numberOfPoints));
 
   // intensity
   vtkSmartPointer<vtkFloatArray> intensity = vtkSmartPointer<vtkFloatArray>::New();
   intensity->SetName("intensity");
-  intensity->SetNumberOfTuples(numberOfPoints);
+  intensity->Allocate(numberOfPoints);
   polyData->GetPointData()->AddArray(intensity.GetPointer());
 
   // scan line id
   vtkSmartPointer<vtkUnsignedIntArray> scanLineId = vtkSmartPointer<vtkUnsignedIntArray>::New();
   scanLineId->SetName("scan_line_id");
-  scanLineId->SetNumberOfTuples(numberOfPoints);
+  scanLineId->Allocate(numberOfPoints);
   polyData->GetPointData()->AddArray(scanLineId.GetPointer());
 
   // azimuth
   vtkSmartPointer<vtkFloatArray> azimuth = vtkSmartPointer<vtkFloatArray>::New();
   azimuth->SetName("azimuth");
-  azimuth->SetNumberOfTuples(numberOfPoints);
+  azimuth->Allocate(numberOfPoints);
   polyData->GetPointData()->AddArray(azimuth.GetPointer());
 
   // spindle angle
   vtkSmartPointer<vtkFloatArray> spindleAngle = vtkSmartPointer<vtkFloatArray>::New();
   spindleAngle->SetName("spindle_angle");
-  spindleAngle->SetNumberOfTuples(numberOfPoints);
+  spindleAngle->Allocate(numberOfPoints);
   polyData->GetPointData()->AddArray(spindleAngle.GetPointer());
 
   // range
@@ -125,7 +125,7 @@ DataArrays CreateData(vtkIdType numberOfPoints)
   // timestamp
   vtkSmartPointer<vtkUnsignedIntArray> timestamp = vtkSmartPointer<vtkUnsignedIntArray>::New();
   timestamp->SetName("timestamp");
-  timestamp->SetNumberOfTuples(numberOfPoints);
+  timestamp->Allocate(numberOfPoints);
   polyData->GetPointData()->AddArray(timestamp.GetPointer());
 
   DataArrays arrays;
@@ -208,8 +208,7 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 vtkSmartPointer<vtkPolyData> GetPointCloudFromScanLines(const std::vector<ScanLineData>& scanLines, double distanceRange[2], double edgeDistanceThreshold)
 {
   //printf("GetPointCloud, given %d scan lines\n", scanLines.size());
-
-  DataArrays dataArrays = CreateData(0);
+  DataArrays dataArrays = CreateData(800 * scanLines.size());
 
   for (size_t i = 0; i < scanLines.size(); ++i)
   {
@@ -217,6 +216,8 @@ vtkSmartPointer<vtkPolyData> GetPointCloudFromScanLines(const std::vector<ScanLi
   }
 
   dataArrays.Dataset->SetVerts(NewVertexCells(dataArrays.Dataset->GetNumberOfPoints()));
+
+  //printf("%.1f points per scan line\n", static_cast<float>(dataArrays.Dataset->GetNumberOfPoints())/scanLines.size());
 
   return dataArrays.Dataset;
 }
