@@ -20,6 +20,7 @@ class SimpleFsm(object):
         self.addState('goal')
         self.addState('fail')
         self.addState('init')
+        self.addState('pause')
 
         #Set state to an initial value
         self.current = 'init'
@@ -80,12 +81,15 @@ class SimpleFsm(object):
             return
 
         #Do the transition
+        #LEAVE CURRENT
         if self.debug:
+            transitionString = self.current+'_to_'+newState
+            print "Transition: ", self.transitionDict[transitionString]
             print "Leaving: ", self.current
         self.onExit[self.current]()
-        transitionString = self.current+'_to_'+newState
+
+        #ENTER NEXT
         if self.debug:
-            print "Transition: ", self.transitionDict[transitionString]
             print "Entering: ", newState
         self.onEnter[newState]()
         self.current = newState
