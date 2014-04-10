@@ -43,7 +43,8 @@ public:
   uint64_t Revolution;
   uint64_t ScanLineId;
   double SpindleAngle;
-  Eigen::Isometry3d ScanToLocal;
+  Eigen::Isometry3d ScanToLocalStart;
+  Eigen::Isometry3d ScanToLocalEnd;
   bot_core::planar_lidar_t msg;
 };
 
@@ -149,24 +150,26 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 
   double spindleAngle = scanLine.SpindleAngle;
   unsigned int scanLineId = scanLine.ScanLineId;
-  double thetaStart = msg->rad0;
+  double theta = msg->rad0;
   const double thetaStep = msg->radstep;
   const int numPoints = msg->nranges;
   const double edgeFilterEnabledRange = 2.0;
   const std::vector<float>&  ranges = msg->ranges;
   const std::vector<float>& intensities = msg->intensities;
 
-  Eigen::Affine3d aff = Eigen::Affine3d(scanLine.ScanToLocal);
-  Eigen::AngleAxisd angleAxis = Eigen::AngleAxisd(spindleAngle, Eigen::Vector3d(0,1,0));
+  if (numPoints < 2)
+    {
+    return;
+    }
 
+  double t = 0.0;
+  const double tStep = 1.0/(numPoints-1);
+  Eigen::Quaterniond q0(scanLine.ScanToLocalStart.linear());
+  Eigen::Quaterniond q1(scanLine.ScanToLocalEnd.linear());
+  Eigen::Vector3d pos0(scanLine.ScanToLocalStart.translation());
+  Eigen::Vector3d pos1(scanLine.ScanToLocalEnd.translation());
 
-  if (msg->nranges != msg->nintensities)
-  {
-    printf("ranges and intensities don't match\n");
-  }
-
-
-  for (int i = 0; i < numPoints; ++i)
+  for (int i = 0; i < numPoints; ++i, t += tStep, theta += thetaStep)
   {
     if (ranges[i] < distanceRange[0] || ranges[i] > distanceRange[1])
     {
@@ -188,10 +191,11 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
       }
     }
 
-    double theta = thetaStart + i*thetaStep;
     Eigen::Vector3d pt(ranges[i] * cos(theta), ranges[i] * sin(theta), 0.0);
-    pt = aff * pt;
-    //pt = angleAxis.matrix() * pt;
+
+    Eigen::Quaterniond q = q0.slerp(t, q1);
+    Eigen::Vector3d pos = (1-t)*pos0 + t*pos1;
+    pt = q*pt + pos;
 
     dataArrays.Points->InsertNextPoint(pt[0], pt[1], pt[2]);
 
