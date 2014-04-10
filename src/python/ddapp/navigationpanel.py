@@ -127,12 +127,9 @@ class NavigationPanel(object):
         self.footstepDriver.onFootstepPlan(reversedPlan)
         
     def pointPickerDemo(self,p1, p2):
-        #print "mezo"
-        #print p1, p2
         
         yaw = math.atan2( p2[1] - p1[1] , p2[0] - p1[0] )*180/math.pi + 90
         
-        print yaw*180/math.pi
         frame_p1 = transformUtils.frameFromPositionAndRPY(p1, [0,0,yaw])
         
         blockl = 0.3937
@@ -226,30 +223,18 @@ class NavigationPanel(object):
         foot_to_sole = transformUtils.frameFromPositionAndRPY( contact_pts_mid, [0,0,0]).GetLinearInverse()
         
         flist_shape = flist.shape
-        #is_right_foot = True
         self.goalSteps = []
         for i in range(flist_shape[0]):
-
-            #print flist[i,:]
-            #print flist[i,0:3] 
-            #print flist[i,3:6]
-            
             step_t = vtk.vtkTransform()
             step_t.PostMultiply()
             step_t.Concatenate(transformUtils.frameFromPositionAndRPY(flist[i,0:3] , flist[i,3:6]))
             step_t.Concatenate(foot_to_sole)
             step_t.Concatenate(frame_pt_to_centerline)
-
- 
-            #is_right_foot = not is_right_foot
-            
             step = lcmdrc.footstep_t()
             step.pos = transformUtils.positionMessageFromFrame(step_t)
             step.is_right_foot =  flist[i,6] # is_right_foot
             step.params = self.footstepDriver.getDefaultStepParams()
-            
             vis.updateFrame(step_t, str(i), parent="navigation")
-            
             self.goalSteps.append(step)
 
         startPose = self.jointController.q
@@ -264,7 +249,7 @@ def init(jointController, footstepDriver, playbackRobotModel, playbackJointContr
 
     panel = NavigationPanel(jointController, footstepDriver, playbackRobotModel, playbackJointController)
     dock = app.addWidgetToDock(panel.widget)
-    #dock.hide()
+    dock.hide()
 
     return panel
 
