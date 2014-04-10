@@ -31,7 +31,6 @@ class AffordanceItem(om.PolyDataItem):
 
     def __init__(self, name, polyData, view):
         om.PolyDataItem.__init__(self, name, polyData, view)
-        self.baseTransform = None
         self.params = {}
         affup.updater.addCallback(self.onGroundTransform)
         affListener.registerAffordance(self)
@@ -66,26 +65,6 @@ class AffordanceItem(om.PolyDataItem):
             quat = transformUtils.botpy.roll_pitch_yaw_to_quat(serverAff.origin_rpy)
             t = transformUtils.transformFromPose(serverAff.origin_xyz, quat)
             self.actor.GetUserTransform().SetMatrix(t.GetMatrix())
-
-    def computeBaseTransform(self):
-        self.baseTransform = computeAToB(self.groundTransform, self.actor.GetUserTransform())
-
-    def onGroundTransform(self, newTransform, resetTime):
-
-        if not self.baseTransform or resetTime > self.groundTransformResetTime:
-            self.groundTransform = newTransform
-            self.groundTransformResetTime = resetTime
-            self.computeBaseTransform()
-            return
-
-        newUserTransform = vtk.vtkTransform()
-        newUserTransform.PostMultiply()
-        newUserTransform.Identity()
-        newUserTransform.Concatenate(self.baseTransform)
-        newUserTransform.Concatenate(newTransform)
-
-        self.actor.GetUserTransform().SetMatrix(newUserTransform.GetMatrix())
-        self._renderAllViews()
 
     def onRemoveFromObjectModel(self):
         om.PolyDataItem.onRemoveFromObjectModel(self)
