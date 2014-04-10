@@ -146,9 +146,10 @@ class ActionManager(object):
         self.previousAction = None
         self.executionList = []
 
-        #All FSMs need a default goal and a fail action
+        #All FSMs need a default goal, fail, and pause action
         self.actionObjects['goal'] = actions.Goal(self)
         self.actionObjects['fail'] = actions.Fail(self)
+        self.actionObjects['pause'] = actions.Pause(self)
 
         #Populate the FSM with all action objects
         for name in self.sequence.keys():
@@ -172,6 +173,10 @@ class ActionManager(object):
             #all states need a transition to fail to catch errors
             if self.sequence[name][2] != 'fail':
                 self.fsm.addTransition(name, 'fail')
+
+            #all states need a transition into and out of the pause state
+            self.fsm.addTransition(name, 'pause')
+            self.fsm.addTransition('pause', name)
 
             #Setup the special transition to the init state
             if name == initial:
