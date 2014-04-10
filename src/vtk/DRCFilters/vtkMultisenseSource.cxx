@@ -153,6 +153,9 @@ public:
     this->botparam_ = 0;
     this->botframes_ = 0;
 
+    this->SweepPolyDataRevolution = -1;
+    this->SweepPolyData = 0;
+
     this->DistanceRange[0] = 0.0;
     this->DistanceRange[1] = 30.0;
     this->EdgeDistanceThreshold = 0.03;
@@ -267,6 +270,9 @@ public:
     this->ShouldStop = false;
     this->Thread = boost::shared_ptr<boost::thread>(
       new boost::thread(boost::bind(&LCMListener::ThreadLoopWithSelect, this)));
+
+    this->SweepThread = boost::shared_ptr<boost::thread>(
+      new boost::thread(boost::bind(&LCMListener::SweepThreadLoop, this)));
   }
 
   void Stop()
@@ -274,9 +280,11 @@ public:
     if (this->Thread)
       {
       this->ShouldStop = true;
-      this->Thread->interrupt();
+      this->Condition.notify_one();
       this->Thread->join();
       this->Thread.reset();
+      this->SweepThread->join();
+      this->SweepThread.reset();
       }
   }
 
@@ -292,7 +300,7 @@ public:
 
   int GetCurrentRevolution()
   {
-    return this->CurrentRevolution;
+    return this->SweepPolyDataRevolution+1;
   }
 
   int GetCurrentScanLine()
@@ -335,7 +343,10 @@ public:
 
   vtkSmartPointer<vtkPolyData> GetDataForRevolution(int revolution)
   {
-    //printf("getting data for revolution: %d\n", revolution);
+    if (revolution == this->SweepPolyDataRevolution)
+    {
+      return this->SweepPolyData;
+    }
 
     std::vector<ScanLineData> scanLines;
     this->GetScanLinesForRevolution(scanLines, revolution);
@@ -376,6 +387,23 @@ public:
   vtkIdType GetCurrentScanTime()
   {
     return this->CurrentScanTime;
+  }
+
+  void SweepThreadLoop()
+  {
+    while (!this->ShouldStop)
+      {
+      boost::unique_lock<boost::mutex> lock(this->SweepMutex);
+
+      this->Condition.wait(lock);
+      if (this->ShouldStop)
+        {
+        break;
+        }
+
+      this->SweepPolyData = this->GetDataForRevolution(this->CurrentRevolution-1);
+      this->SweepPolyDataRevolution = this->CurrentRevolution-1;
+      }
   }
 
 protected:
@@ -435,6 +463,7 @@ protected:
       //printf("---> splitting revolution %d at angle %f, total scan lines: %d\n", this->CurrentRevolution, spindleAngle, this->ScanLines.size());
       this->CurrentRevolution++;
       this->NewData = true;
+      this->Condition.notify_one();
     }
 
     this->LastOffsetSpindleAngle = offsetSpindleAngle;
@@ -466,14 +495,19 @@ protected:
   double EdgeDistanceThreshold;
   double DistanceRange[2];
 
+  vtkSmartPointer<vtkPolyData> SweepPolyData;
+  int SweepPolyDataRevolution;
+
   boost::mutex Mutex;
+  boost::mutex SweepMutex;
+  boost::condition_variable Condition;
 
   std::deque<ScanLineData> ScanLines;
 
   boost::shared_ptr<lcm::LCM> LCMHandle;
 
   boost::shared_ptr<boost::thread> Thread;
-
+  boost::shared_ptr<boost::thread> SweepThread;
 
   vtkIdType CurrentScanTime;
 
