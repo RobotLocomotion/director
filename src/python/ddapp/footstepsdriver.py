@@ -145,9 +145,8 @@ class FootstepsDriver(object):
         self.lastFootstepPlan = msg.decode( msg.encode() ) # decode and encode ensures deepcopy
 
         planFolder = getFootstepsFolder()
-        self.drawFootstepPlan(msg, planFolder)
-
-        self.transformPlanToBDIFrame(msg)
+        self.drawFootstepPlan( self.lastFootstepPlan , planFolder)
+        self.transformPlanToBDIFrame( self.lastFootstepPlan )
 
     def clearFootstepPlan(self):
         self.lastFootstepPlan = None
@@ -158,6 +157,7 @@ class FootstepsDriver(object):
     def drawFootstepPlan(self, msg, folder,left_color=None, right_color=None):
 
         allTransforms = []
+        
         for i, footstep in enumerate(msg.footsteps):
             trans = footstep.pos.translation
             trans = [trans.x, trans.y, trans.z]
@@ -197,7 +197,15 @@ class FootstepsDriver(object):
                 vis.showPolyData(d.getPolyData(), 'infeasibility %d -> %d' % (i-2, i-1), parent=folder, color=[1, 0.2, 0.2])
 
             stepName = 'step %d' % (i-1)
-            obj = vis.showPolyData(mesh, stepName, color=color, alpha=1.0, parent=folder)
+            
+            # add gradual shading to steps to indicate destination
+	    frac = float(i)/ float(msg.num_steps-1)
+	    this_color = [0,0,0]
+            this_color[0] = 0.25*color[0] + 0.75*frac*color[0]
+            this_color[1] = 0.25*color[1] + 0.75*frac*color[1]
+            this_color[2] = 0.25*color[2] + 0.75*frac*color[2]
+            
+            obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=1.0, parent=folder)
             frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
             obj.actor.SetUserTransform(footstepTransform)
 
