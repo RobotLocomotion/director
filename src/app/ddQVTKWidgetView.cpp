@@ -58,6 +58,10 @@ public:
   {
     this->RenderPending = false;
     this->Connector = vtkSmartPointer<vtkEventQtSlotConnect>::New();
+    this->RenderTimer.setSingleShot(false);
+
+    int timerFramesPerSeconds = 60;
+    this->RenderTimer.setInterval(1000/timerFramesPerSeconds);
   }
 
   QVTKWidget* VTKWidget;
@@ -76,6 +80,7 @@ public:
   bool RenderPending;
 
   ddFPSCounter FPSCounter;
+  QTimer RenderTimer;
 };
 
 
@@ -117,6 +122,9 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->setupOrientationMarker();
 
   this->Internal->Renderer->ResetCamera();
+
+  this->connect(&this->Internal->RenderTimer, SIGNAL(timeout()), SLOT(onRenderTimer()));
+  this->Internal->RenderTimer.start();
 }
 
 //-----------------------------------------------------------------------------
@@ -167,7 +175,6 @@ void ddQVTKWidgetView::render()
   if (!this->Internal->RenderPending)
   {
     this->Internal->RenderPending = true;
-    QTimer::singleShot(0, this, SLOT(forceRender()));
   }
 }
 
@@ -188,6 +195,16 @@ void ddQVTKWidgetView::onStartRender()
 void ddQVTKWidgetView::onEndRender()
 {
   this->Internal->FPSCounter.update();
+  //printf("end render: %.2f fps\n", this->Internal->FPSCounter.averageFPS());
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::onRenderTimer()
+{
+  if (this->Internal->RenderPending)
+  {
+    this->forceRender();
+  }
 }
 
 //-----------------------------------------------------------------------------

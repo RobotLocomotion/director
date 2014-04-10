@@ -47,8 +47,9 @@ public slots:
 
 protected slots:
 
-   void onStartRender();
-   void onEndRender();
+  void onStartRender();
+  void onEndRender();
+  void onRenderTimer();
 
 protected:
 
