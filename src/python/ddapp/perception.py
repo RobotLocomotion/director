@@ -160,7 +160,9 @@ class MultiSenseSource(TimerCallback):
             self.colorizeCallback()
 
         self.polyDataObj.colorBy(colorByArray, lut=self.polyDataObj.mapper.GetLookupTable())
-        self.view.render()
+
+        if self.polyDataObj.getProperty('Visible'):
+            self.view.render()
 
 
     def setPointSize(self, pointSize):
@@ -212,7 +214,8 @@ class MultiSenseSource(TimerCallback):
         self.lastScanLine = currentScanLine
         self.nextScanLineId = (self.nextScanLineId + scanLinesToUpdate) % self.numberOfScanLines
 
-        self.view.render()
+        if self.scanLines[0].getProperty('Visible'):
+            self.view.render()
 
 
     def updateRevolution(self):
