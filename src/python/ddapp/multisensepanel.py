@@ -49,8 +49,8 @@ class MultisensePanel(object):
         self.sent_data = {}
 
         self.queued_data['neckPitch'] = 0
-        self.queued_data['spinRate'] = 3
-        self.queued_data['scanDuration'] = 10
+        self.queued_data['spinRate'] = 5
+        self.queued_data['scanDuration'] = 6
         self.queued_data['headCamFps'] = 5
         self.queued_data['headCamGain'] = 1.0
         self.queued_data['autoGain'] = True
