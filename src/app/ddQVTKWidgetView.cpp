@@ -1,4 +1,5 @@
 #include "ddQVTKWidgetView.h"
+#include "ddFPSCounter.h"
 
 #include "vtkTDxInteractorStyleCallback.h"
 #include "vtkSimpleActorInteractor.h"
@@ -17,6 +18,7 @@
 #include <vtkInteractorStyleRubberBand3D.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkAxesActor.h>
+#include <vtkEventQtSlotConnect.h>
 
 #include <QVTKWidget.h>
 #include <QVBoxLayout>
@@ -55,6 +57,7 @@ public:
   ddInternal()
   {
     this->RenderPending = false;
+    this->Connector = vtkSmartPointer<vtkEventQtSlotConnect>::New();
   }
 
   QVTKWidget* VTKWidget;
@@ -66,9 +69,13 @@ public:
 
   vtkSmartPointer<vtkTDxInteractorStyleCallback> TDxInteractor;
 
+  vtkSmartPointer<vtkEventQtSlotConnect> Connector;
+
   QList<QList<double> > CustomBounds;
 
   bool RenderPending;
+
+  ddFPSCounter FPSCounter;
 };
 
 
@@ -103,6 +110,9 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->Renderer->GradientBackgroundOn();
   this->Internal->Renderer->SetBackground(0.0, 0.0, 0.0);
   this->Internal->Renderer->SetBackground2(0.3, 0.3, 0.3);
+
+  this->Internal->Connector->Connect(this->Internal->Renderer, vtkCommand::StartEvent, this, SLOT(onStartRender()));
+  this->Internal->Connector->Connect(this->Internal->Renderer, vtkCommand::EndEvent, this, SLOT(onEndRender()));
 
   this->setupOrientationMarker();
 
@@ -166,8 +176,18 @@ void ddQVTKWidgetView::forceRender()
 {
   this->Internal->Renderer->ResetCameraClippingRange();
   this->Internal->RenderWindow->Render();
-  this->update();
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::onStartRender()
+{
   this->Internal->RenderPending = false;
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::onEndRender()
+{
+  this->Internal->FPSCounter.update();
 }
 
 //-----------------------------------------------------------------------------
