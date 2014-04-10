@@ -146,7 +146,7 @@ public:
     this->NewData = false;
     this->CurrentRevolution = 0;
     this->CurrentScanLine = 0;
-    this->SplitAngle = 90;
+    this->SplitAngle = 0;
     this->SplitRange = 180;
     this->LastOffsetSpindleAngle = 0;
     this->MaxNumberOfScanLines = 10000;
