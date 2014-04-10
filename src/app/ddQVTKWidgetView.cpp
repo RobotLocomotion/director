@@ -235,6 +235,8 @@ void ddQVTKWidgetView::resetCamera()
   {
     this->renderer()->ResetCamera();
   }
+
+  this->Internal->Renderer->ResetCameraClippingRange();
 }
 
 //-----------------------------------------------------------------------------
