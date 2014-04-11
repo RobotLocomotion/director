@@ -2,6 +2,7 @@ import lcm
 import PythonQt
 import pickle
 import atexit
+import time
 
 class GlobalLCM(object):
 
@@ -28,7 +29,10 @@ class GlobalLCM(object):
           cls._lcmThread.delete()
           cls._lcmThread = None
 
-
+# Produces utime equivalent to libbot          
+def timestamp_now ():
+    return int (time.time () * 1000000)          
+          
 def getGlobalLCM():
     return GlobalLCM.get()
 
