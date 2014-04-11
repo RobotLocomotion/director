@@ -54,6 +54,7 @@ from ddapp.timercallback import TimerCallback
 from ddapp.pointpicker import PointPicker
 from ddapp import segmentationpanel
 from ddapp import lcmUtils
+from ddapp.utime import getUtime
 from ddapp.shallowCopy import shallowCopy
 
 from actionmanager import actionmanager
@@ -233,6 +234,21 @@ if usePlanning:
     #app.addToolbarMacro('plot plan', plotManipPlan)
     #app.addToolbarMacro('play manip plan', playManipPlan)
     #app.addToolbarMacro('fit drill', fitDrillMultisense)
+
+    def sendSceneHeightRequest():
+
+      msg = lcmdrc.data_request_t()
+      msg.type = lcmdrc.data_request_t.HEIGHT_MAP_SCENE
+      msg.period = 0
+
+      msgList = lcmdrc.data_request_list_t()
+      msgList.utime = getUtime()
+      msgList.requests = [msg]
+      msgList.num_requests = len(msgList.requests)
+      lcmUtils.publish('DATA_REQUEST', msgList)
+
+    app.addToolbarMacro('scene height', sendSceneHeightRequest)
+
 
     def drillTrackerOn():
         om.findObjectByName('Multisense').model.showRevolutionCallback = fitDrillMultisense
