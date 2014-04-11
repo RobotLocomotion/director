@@ -97,9 +97,18 @@ class FootstepsDriver(object):
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
         self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
-        self.behavior_lcm_map = {0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
-                             1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
-                             2: lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING}
+        self.params.addProperty('Map Command', 0, attributes=om.PropertyAttributes(enumNames=['Full Heightmap', 'Flat Ground', 'Z Normals']))
+        self.params.addProperty('Ignore Terrain', True)
+        self.params.addProperty('Nominal Step Width', 0.26, attributes=om.PropertyAttributes(decimals=2, minimum=0.21, maximum=0.4, singleStep=0.01))
+        self.behavior_lcm_map = {
+                              0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
+                              1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
+                              2: lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING}
+
+        self.map_command_lcm_map = {
+                              0: lcmdrc.map_controller_command_t.FULL_HEIGHTMAP,
+                              1: lcmdrc.map_controller_command_t.FLAT_GROUND,
+                              2: lcmdrc.map_controller_command_t.Z_NORMALS}
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
@@ -310,14 +319,14 @@ class FootstepsDriver(object):
         msg.params.max_num_steps = 30
         msg.params.min_num_steps = 0
         msg.params.min_step_width = 0.21
-        msg.params.nom_step_width = 0.25
+        msg.params.nom_step_width = self.params.nominal_step_width
         msg.params.max_step_width = 0.4
         msg.params.nom_forward_step = 0.15
         msg.params.max_forward_step = 0.45
-        msg.params.ignore_terrain = True
+        msg.params.ignore_terrain = self.params.ignore_terrain
         msg.params.planning_mode = msg.params.MODE_AUTO
         msg.params.behavior = self.behavior_lcm_map[self.params.behavior]
-        msg.params.map_command = 2
+        msg.params.map_command = self.map_command_lcm_map[self.params.map_command]
         msg.params.leading_foot = msg.params.LEAD_AUTO
         msg.default_step_params = self.getDefaultStepParams()
         return msg
