@@ -167,8 +167,9 @@ def toggleFootstepWidget(displayPoint, view):
 
     footMesh = shallowCopy(obj.polyData)
     footFrame = transformUtils.copyFrame(obj.getChildFrame().transform)
+    footFrame = transformUtils.frameFromPositionAndRPY(footFrame.GetPosition(), [0.0, 0.0, footFrame.GetOrientation()[2]])
 
-    footObj = vis.showPolyData(footMesh, 'footstep widget', parent='planning')
+    footObj = vis.showPolyData(footMesh, 'footstep widget', parent='planning', alpha=0.2)
     footObj.stepIndex = stepIndex
     frameObj = vis.showFrame(footFrame, 'footstep widget frame', parent=footObj, scale=0.2)
     footObj.actor.SetUserTransform(frameObj.transform)
@@ -176,11 +177,9 @@ def toggleFootstepWidget(displayPoint, view):
     frameObj.setProperty('Edit', True)
 
     def onFootWidgetChanged(frame):
-        print 'modified step:', stepIndex
         footstepsDriver.onStepModified(stepIndex - 1, frame)
 
     frameObj.connectFrameModified(onFootWidgetChanged)
-
     return True
 
 
@@ -189,11 +188,7 @@ def reachToHand(pickedObj):
     frame = pickedObj.getChildFrame()
     assert frame
 
-    print 'reach to obj:', pickedObj.getProperty('Name')
-    print 'reach to frame:', frame.getProperty('Name')
-
     goalFrame = teleoppanel.panel.endEffectorTeleop.newReachTeleop(frame.transform, side)
-
     goalFrame.frameSync = vis.FrameSync()
     goalFrame.frameSync.addFrame(goalFrame, ignoreIncoming=True)
     goalFrame.frameSync.addFrame(frame)
