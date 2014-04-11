@@ -34,14 +34,15 @@ class JointController(object):
         for model in self.models:
             model.model.setJointPositions(self.q, self.jointNames)
 
-    def setPose(self, poseName, poseData=None):
+    def setPose(self, poseName, poseData=None, pushToModel=True):
         if poseData is not None:
             self.addPose(poseName, poseData)
         if poseName not in self.poses:
             raise Exception('Pose %r has not been defined.' % poseName)
         self.q = self.poses[poseName]
         self.currentPoseName = poseName
-        self.push()
+        if pushToModel:
+            self.push()
 
     def setZeroPose(self):
         self.setPose('q_zero')
@@ -78,7 +79,7 @@ class JointController(object):
             jointPositions = np.hstack((msg.joint_position, pose[:6]))
             jointNames = msg.joint_name + robotstate.getDrakePoseJointNames()[:6]
 
-            self.setPose(poseName, pose)
+            self.setPose(poseName, pose, pushToModel=False)
             for model in self.models:
                 model.model.setJointPositions(jointPositions, jointNames)
 

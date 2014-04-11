@@ -16,7 +16,6 @@ class TimerCallback(object):
 
         self.singleShotTimer = QtCore.QTimer()
         self.singleShotTimer.setSingleShot(True)
-        self.singleShotTimer.setSingleShot(True)
         self.singleShotTimer.connect('timeout()', self._singleShotTimerEvent)
         self.callback = None
 

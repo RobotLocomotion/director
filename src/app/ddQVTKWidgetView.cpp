@@ -1,4 +1,5 @@
 #include "ddQVTKWidgetView.h"
+#include "ddFPSCounter.h"
 
 #include "vtkTDxInteractorStyleCallback.h"
 #include "vtkSimpleActorInteractor.h"
@@ -17,6 +18,7 @@
 #include <vtkInteractorStyleRubberBand3D.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkAxesActor.h>
+#include <vtkEventQtSlotConnect.h>
 
 #include <QVTKWidget.h>
 #include <QVBoxLayout>
@@ -55,6 +57,11 @@ public:
   ddInternal()
   {
     this->RenderPending = false;
+    this->Connector = vtkSmartPointer<vtkEventQtSlotConnect>::New();
+    this->RenderTimer.setSingleShot(false);
+
+    int timerFramesPerSeconds = 60;
+    this->RenderTimer.setInterval(1000/timerFramesPerSeconds);
   }
 
   QVTKWidget* VTKWidget;
@@ -66,9 +73,14 @@ public:
 
   vtkSmartPointer<vtkTDxInteractorStyleCallback> TDxInteractor;
 
+  vtkSmartPointer<vtkEventQtSlotConnect> Connector;
+
   QList<QList<double> > CustomBounds;
 
   bool RenderPending;
+
+  ddFPSCounter FPSCounter;
+  QTimer RenderTimer;
 };
 
 
@@ -104,9 +116,15 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->Renderer->SetBackground(0.0, 0.0, 0.0);
   this->Internal->Renderer->SetBackground2(0.3, 0.3, 0.3);
 
+  this->Internal->Connector->Connect(this->Internal->Renderer, vtkCommand::StartEvent, this, SLOT(onStartRender()));
+  this->Internal->Connector->Connect(this->Internal->Renderer, vtkCommand::EndEvent, this, SLOT(onEndRender()));
+
   this->setupOrientationMarker();
 
   this->Internal->Renderer->ResetCamera();
+
+  this->connect(&this->Internal->RenderTimer, SIGNAL(timeout()), SLOT(onRenderTimer()));
+  this->Internal->RenderTimer.start();
 }
 
 //-----------------------------------------------------------------------------
@@ -157,7 +175,6 @@ void ddQVTKWidgetView::render()
   if (!this->Internal->RenderPending)
   {
     this->Internal->RenderPending = true;
-    QTimer::singleShot(0, this, SLOT(forceRender()));
   }
 }
 
@@ -166,8 +183,28 @@ void ddQVTKWidgetView::forceRender()
 {
   this->Internal->Renderer->ResetCameraClippingRange();
   this->Internal->RenderWindow->Render();
-  this->update();
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::onStartRender()
+{
   this->Internal->RenderPending = false;
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::onEndRender()
+{
+  this->Internal->FPSCounter.update();
+  //printf("end render: %.2f fps\n", this->Internal->FPSCounter.averageFPS());
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::onRenderTimer()
+{
+  if (this->Internal->RenderPending)
+  {
+    this->forceRender();
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -198,6 +235,8 @@ void ddQVTKWidgetView::resetCamera()
   {
     this->renderer()->ResetCamera();
   }
+
+  this->Internal->Renderer->ResetCameraClippingRange();
 }
 
 //-----------------------------------------------------------------------------

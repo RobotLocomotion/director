@@ -108,7 +108,7 @@ class MultiSenseSource(TimerCallback):
         self.view = view
         self.reader = None
         self.displayedRevolution = -1
-        self.lastScanLine = -1
+        self.lastScanLine = 0
         self.numberOfScanLines = 1
         self.nextScanLineId = 0
         self.scanLines = []
@@ -135,7 +135,7 @@ class MultiSenseSource(TimerCallback):
 
         self.scanLines = []
         self.nextScanLineId = 0
-        self.lastScanLine = -1
+        self.lastScanLine = max(self.lastScanLine - self.numberOfScanLines, 0)
 
         for i in xrange(self.numberOfScanLines):
             polyData = vtk.vtkPolyData()
@@ -160,7 +160,9 @@ class MultiSenseSource(TimerCallback):
             self.colorizeCallback()
 
         self.polyDataObj.colorBy(colorByArray, lut=self.polyDataObj.mapper.GetLookupTable())
-        self.view.render()
+
+        if self.polyDataObj.getProperty('Visible'):
+            self.view.render()
 
 
     def setPointSize(self, pointSize):
@@ -195,10 +197,10 @@ class MultiSenseSource(TimerCallback):
 
         currentScanLine = self.reader.GetCurrentScanLine() - 1
         scanLinesToUpdate = currentScanLine - self.lastScanLine
+        scanLinesToUpdate = min(scanLinesToUpdate, self.numberOfScanLines)
 
         if not scanLinesToUpdate:
             return
-
 
         #print 'current scanline:', currentScanLine
         #print 'scan lines to update:', scanLinesToUpdate
@@ -212,7 +214,8 @@ class MultiSenseSource(TimerCallback):
         self.lastScanLine = currentScanLine
         self.nextScanLineId = (self.nextScanLineId + scanLinesToUpdate) % self.numberOfScanLines
 
-        self.view.render()
+        if self.scanLines[0].getProperty('Visible'):
+            self.view.render()
 
 
     def updateRevolution(self):

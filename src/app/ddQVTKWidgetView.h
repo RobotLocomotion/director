@@ -45,6 +45,12 @@ public slots:
   void setActorManipulationStyle();
   void setCameraManipulationStyle();
 
+protected slots:
+
+  void onStartRender();
+  void onEndRender();
+  void onRenderTimer();
+
 protected:
 
   void setupOrientationMarker();

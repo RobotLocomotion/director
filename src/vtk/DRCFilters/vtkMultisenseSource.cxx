@@ -38,7 +38,6 @@
 #include <bot_param/param_client.h>
 
 #include <lcmtypes/bot_core.hpp>
-#include <lcmtypes/drc/robot_state_t.hpp>
 
 #include <sys/select.h>
 
@@ -147,19 +146,19 @@ public:
     this->NewData = false;
     this->CurrentRevolution = 0;
     this->CurrentScanLine = 0;
-    this->SplitAngle = 90;
+    this->SplitAngle = 0;
     this->SplitRange = 180;
     this->LastOffsetSpindleAngle = 0;
     this->MaxNumberOfScanLines = 10000;
     this->botparam_ = 0;
     this->botframes_ = 0;
 
+    this->SweepPolyDataRevolution = -1;
+    this->SweepPolyData = 0;
+
     this->DistanceRange[0] = 0.0;
     this->DistanceRange[1] = 30.0;
     this->EdgeDistanceThreshold = 0.03;
-
-    this->CurrentRobotState.num_joints = 0;
-    this->CurrentRobotState.utime = 0;
 
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
@@ -185,7 +184,6 @@ public:
     botframes_ = bot_frames_get_global(this->LCMHandle->getUnderlyingLCM(), botparam_);
 
     this->LCMHandle->subscribe( "SCAN", &LCMListener::lidarHandler, this);
-    this->LCMHandle->subscribe( "EST_ROBOT_STATE", &LCMListener::robotStateHandler, this);
   }
 
 
@@ -193,24 +191,6 @@ public:
   {
     this->HandleNewData(msg);
   }
-
-
-  void robotStateHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::robot_state_t* msg)
-  {
-
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
-    this->CurrentRobotState = *msg;
-
-    //int nJoints = msg->num_joints;
-    //printf("-------------------\n");
-    //printf("n joints: %d\n", nJoints);
-    //for (int i = 0; i < nJoints; ++i)
-    //{
-    //  printf("%s\n", msg->joint_name[i].c_str());
-    //}
-    //printf("-------------------\n");
-  }
-
 
   bool CheckForNewData()
   {
@@ -290,6 +270,9 @@ public:
     this->ShouldStop = false;
     this->Thread = boost::shared_ptr<boost::thread>(
       new boost::thread(boost::bind(&LCMListener::ThreadLoopWithSelect, this)));
+
+    this->SweepThread = boost::shared_ptr<boost::thread>(
+      new boost::thread(boost::bind(&LCMListener::SweepThreadLoop, this)));
   }
 
   void Stop()
@@ -297,9 +280,11 @@ public:
     if (this->Thread)
       {
       this->ShouldStop = true;
-      this->Thread->interrupt();
+      this->Condition.notify_one();
       this->Thread->join();
       this->Thread.reset();
+      this->SweepThread->join();
+      this->SweepThread.reset();
       }
   }
 
@@ -315,7 +300,7 @@ public:
 
   int GetCurrentRevolution()
   {
-    return this->CurrentRevolution;
+    return this->SweepPolyDataRevolution+1;
   }
 
   int GetCurrentScanLine()
@@ -348,12 +333,6 @@ public:
     }
   }
 
-  drc::robot_state_t GetCurrentRobotState()
-  {
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
-    return this->CurrentRobotState;
-  }
-
   vtkSmartPointer<vtkPolyData> GetDataForScanLine(int scanLine)
   {
     std::vector<ScanLineData> scanLines;
@@ -364,7 +343,10 @@ public:
 
   vtkSmartPointer<vtkPolyData> GetDataForRevolution(int revolution)
   {
-    //printf("getting data for revolution: %d\n", revolution);
+    if (revolution == this->SweepPolyDataRevolution)
+    {
+      return this->SweepPolyData;
+    }
 
     std::vector<ScanLineData> scanLines;
     this->GetScanLinesForRevolution(scanLines, revolution);
@@ -407,6 +389,23 @@ public:
     return this->CurrentScanTime;
   }
 
+  void SweepThreadLoop()
+  {
+    while (!this->ShouldStop)
+      {
+      boost::unique_lock<boost::mutex> lock(this->SweepMutex);
+
+      this->Condition.wait(lock);
+      if (this->ShouldStop)
+        {
+        break;
+        }
+
+      this->SweepPolyData = this->GetDataForRevolution(this->CurrentRevolution-1);
+      this->SweepPolyDataRevolution = this->CurrentRevolution-1;
+      }
+  }
+
 protected:
 
   void UpdateDequeSize()
@@ -430,40 +429,21 @@ protected:
 
   void HandleNewData(const bot_core::planar_lidar_t* msg)
   {
-
     this->CurrentScanTime = msg->utime;
 
-    Eigen::Isometry3d scanToLocal;
-    get_trans_with_utime("SCAN", "local", msg->utime, scanToLocal);
+    Eigen::Isometry3d scanToLocalStart;
+    Eigen::Isometry3d scanToLocalEnd;
+
+    get_trans_with_utime("SCAN", "local", msg->utime, scanToLocalStart);
+    get_trans_with_utime("SCAN", "local", msg->utime +  1e6*3/(40*4), scanToLocalEnd);
+
     //get_trans_with_utime("SCAN", "PRE_SPINDLE", msg->utime, scanToLocal);
 
     Eigen::Isometry3d spindleRotation;
     get_trans_with_utime("PRE_SPINDLE", "POST_SPINDLE", msg->utime, spindleRotation);
 
-
-    Eigen::Isometry3d m = Eigen::Isometry3d::Identity();
-    m(0, 0) = 0;
-    m(1, 0) = 0;
-    m(2, 0) = 1;
-
-    m(0, 1) = spindleRotation(0, 0);
-    m(1, 1) = -spindleRotation(1, 0);
-
-    m(0, 2) = -spindleRotation(0, 1);
-    m(1, 2) = spindleRotation(0, 1);
-
-
     Eigen::Matrix3d rot = spindleRotation.rotation();
     Eigen::Vector3d eulerAngles = rot.eulerAngles(0, 1, 2);
-
-    /*
-    printf("---scan to local with utime--\n");
-    std::cout << scanToLocal.matrix() << std::endl;
-
-    printf("---scan to local current--\n");
-    std::cout << scanToLocal2.matrix() << std::endl;
-    */
-
     //printf("euler angles: %f %f %f\n", eulerAngles[0], eulerAngles[1], eulerAngles[2]);
 
     double spindleAngle = eulerAngles[2] * (180.0 / M_PI) + 180.0;
@@ -483,6 +463,7 @@ protected:
       //printf("---> splitting revolution %d at angle %f, total scan lines: %d\n", this->CurrentRevolution, spindleAngle, this->ScanLines.size());
       this->CurrentRevolution++;
       this->NewData = true;
+      this->Condition.notify_one();
     }
 
     this->LastOffsetSpindleAngle = offsetSpindleAngle;
@@ -492,12 +473,11 @@ protected:
     this->ScanLines.resize(this->ScanLines.size() + 1);
     ScanLineData& scanLine = this->ScanLines.back();
     scanLine.ScanLineId = this->CurrentScanLine++;
-    scanLine.ScanToLocal = scanToLocal;
-    //scanLine.ScanToLocal = m;
+    scanLine.ScanToLocalStart = scanToLocalStart;
+    scanLine.ScanToLocalEnd = scanToLocalEnd;
     scanLine.SpindleAngle = spindleAngle;
     scanLine.Revolution = this->CurrentRevolution;
     scanLine.msg = *msg;
-
 
     this->UpdateDequeSize();
   }
@@ -515,15 +495,19 @@ protected:
   double EdgeDistanceThreshold;
   double DistanceRange[2];
 
+  vtkSmartPointer<vtkPolyData> SweepPolyData;
+  int SweepPolyDataRevolution;
+
   boost::mutex Mutex;
+  boost::mutex SweepMutex;
+  boost::condition_variable Condition;
 
   std::deque<ScanLineData> ScanLines;
 
   boost::shared_ptr<lcm::LCM> LCMHandle;
 
   boost::shared_ptr<boost::thread> Thread;
-
-  drc::robot_state_t CurrentRobotState;
+  boost::shared_ptr<boost::thread> SweepThread;
 
   vtkIdType CurrentScanTime;
 
@@ -691,29 +675,6 @@ void vtkMultisenseSource::GetDataForScanLine(int scanLine, vtkPolyData* polyData
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   vtkSmartPointer<vtkPolyData> data = this->Internal->Listener->GetDataForScanLine(scanLine);
   polyData->ShallowCopy(data);
-}
-
-//-----------------------------------------------------------------------------
-vtkIdType vtkMultisenseSource::GetCurrentRobotState(vtkDoubleArray* robotState)
-{
-  drc::robot_state_t msg = this->Internal->Listener->GetCurrentRobotState();
-
-  robotState->SetNumberOfTuples(msg.num_joints + 7);
-  robotState->SetValue(0, msg.pose.translation.x);
-  robotState->SetValue(1, msg.pose.translation.y);
-  robotState->SetValue(2, msg.pose.translation.z);
-
-  robotState->SetValue(3, msg.pose.rotation.w);
-  robotState->SetValue(4, msg.pose.rotation.x);
-  robotState->SetValue(5, msg.pose.rotation.y);
-  robotState->SetValue(6, msg.pose.rotation.z);
-
-  for (int i = 0; i < msg.num_joints; ++i)
-  {
-    robotState->SetValue(7 + i, msg.joint_position[i]);
-  }
-
-  return msg.utime;
 }
 
 //-----------------------------------------------------------------------------
