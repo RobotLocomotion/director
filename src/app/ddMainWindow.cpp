@@ -155,6 +155,21 @@ void ddMainWindow::addWidgetToViewMenu(QWidget* widget)
 }
 
 //-----------------------------------------------------------------------------
+QList<QAction*> ddMainWindow::toolBarActions() const
+{
+  QList<QToolBar*> toolBars;
+  toolBars << this->Internal->MainToolBar << this->Internal->PanelToolBar;
+
+  QList<QAction*> actions;
+  foreach (QToolBar* toolBar, toolBars)
+  {
+    actions << toolBar->actions();
+  }
+
+  return actions;
+}
+
+//-----------------------------------------------------------------------------
 void ddMainWindow::onCurrentViewChanged(ddViewBase* previousView, ddViewBase* currentView)
 {
   QMap<QString, QString> macroDirs;

@@ -85,6 +85,7 @@ QTreeWidget* ddMainWindow::objectTree() const;
 QTextEdit* ddMainWindow::outputConsole() const;
 QMenu* ddMainWindow::toolsMenu() const;
 void ddMainWindow::addWidgetToViewMenu(QWidget*);
+QList<QAction*> ddMainWindow::toolBarActions() const;
 
 ddObjectTree::ddObjectTree();
 ddObjectTree::~ddObjectTree();

@@ -8,6 +8,7 @@ class ddPropertiesPanel;
 class ddPythonManager;
 class ddViewBase;
 class ddObjectTree;
+class QAction;
 class QTextEdit;
 class QDockWidget;
 class QMenu;
@@ -29,6 +30,8 @@ public:
   QTextEdit* outputConsole() const;
 
   void addWidgetToViewMenu(QWidget* widget);
+
+  QList<QAction*> toolBarActions() const;
 
   void setPythonManager(ddPythonManager* pythonManager);
 
