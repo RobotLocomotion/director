@@ -30,6 +30,7 @@ public:
     mChannel = channel;
     this->mEmitMessages = true;
     this->mRequiredElapsedMilliseconds = 0;
+    this->connect(this, SIGNAL(messageReceivedInQueue(const QString&)), SLOT(onMessageInQueue(const QString&)));
   }
 
   virtual ~ddLCMSubscriber()
@@ -103,7 +104,17 @@ public:
 
 signals:
 
-  void messageReceived(const QByteArray& messageData, const QString& mChannel);
+  void messageReceived(const QByteArray& messageData, const QString& channel);
+  void messageReceivedInQueue(const QString& channel);
+
+protected slots:
+
+  void onMessageInQueue(const QString& channel)
+  {
+    QByteArray msg = this->getNextMessage(0);
+    emit this->messageReceived(msg, channel);
+  }
+
 
 protected:
 
@@ -119,7 +130,17 @@ protected:
       if (this->mRequiredElapsedMilliseconds == 0 || mTimer.elapsed() > this->mRequiredElapsedMilliseconds)
         {
         this->mTimer.restart();
-        emit this->messageReceived(messageBytes, QString(channel.c_str()));
+
+        this->mMutex.lock();
+        bool doEmit = !this->mLastMessage.size();
+        this->mLastMessage = messageBytes;
+        this->mMutex.unlock();
+
+        if (doEmit)
+        {
+          emit this->messageReceivedInQueue(QString(channel.c_str()));
+        }
+
         }
     }
     else
