@@ -320,7 +320,7 @@ if usePlanning:
 if useNavigationPanel:
     thispanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
     picker = PointPicker(view, callback=thispanel.pointPickerDemo, numberOfPoints=2)
-    #picker.start()
+    picker.start()
 
 
 def getLinkFrame(linkName, model=None):

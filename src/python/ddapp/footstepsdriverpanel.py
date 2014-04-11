@@ -130,7 +130,7 @@ def init(driver, robotModel, jointController):
 
     panel = FootstepsPanel(driver, robotModel, jointController)
     dock = app.addWidgetToDock(panel.widget)
-    dock.hide()
+    #dock.hide()
 
     actionName = 'ActionFootstepPanel'
     action = app.getToolBarActions()[actionName]
