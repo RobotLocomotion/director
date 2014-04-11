@@ -155,6 +155,7 @@ public:
     }
 
     this->LCMHandle->subscribe( "MAP_DEPTH", &LCMListener::depthHandler, this);
+    this->LCMHandle->subscribe( "MAP_DEBUG", &LCMListener::depthHandler, this);
     this->LCMHandle->subscribe( "MAP_CLOUD", &LCMListener::cloudHandler, this);
   }
 
