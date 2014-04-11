@@ -14,7 +14,7 @@
    <string>MainWindow</string>
   </property>
   <property name="windowIcon">
-   <iconset>
+   <iconset resource="images/resources.qrc">
     <normaloff>:/images/drake_logo.png</normaloff>:/images/drake_logo.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget"/>
@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1439</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="FileMenu">
@@ -104,12 +104,6 @@
    <addaction name="ActionPythonConsole"/>
    <addaction name="ActionMatlabConsole"/>
    <addaction name="separator"/>
-   <addaction name="ActionMultisensePanel"/>
-   <addaction name="ActionAtlasStatusPanel"/>
-   <addaction name="ActionFootstepPanel"/>
-   <addaction name="ActionHandControlPanel"/>
-   <addaction name="ActionActionManagerPanel"/>
-   <addaction name="separator"/>
    <addaction name="ActionColorizeLidar"/>
    <addaction name="ActionToggleCameraTerrainMode"/>
    <addaction name="ActionResetCamera"/>
@@ -167,6 +161,22 @@
     <bool>false</bool>
    </attribute>
   </widget>
+  <widget class="QToolBar" name="PanelToolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>RightToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="ActionAtlasStatusPanel"/>
+   <addaction name="ActionMultisensePanel"/>
+   <addaction name="ActionFootstepPanel"/>
+   <addaction name="ActionHandControlPanel"/>
+   <addaction name="ActionActionManagerPanel"/>
+  </widget>
   <action name="ActionQuit">
    <property name="text">
     <string>&amp;Quit</string>
@@ -180,7 +190,7 @@
   </action>
   <action name="ActionPythonConsole">
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/python_logo.png</normaloff>:/images/python_logo.png</iconset>
    </property>
    <property name="text">
@@ -195,7 +205,7 @@
   </action>
   <action name="ActionMatlabConsole">
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/matlab_logo.png</normaloff>:/images/matlab_logo.png</iconset>
    </property>
    <property name="text">
@@ -210,7 +220,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/3d_glasses.png</normaloff>:/images/3d_glasses.png</iconset>
    </property>
    <property name="text">
@@ -222,7 +232,7 @@
   </action>
   <action name="ActionResetCamera">
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/reset_camera.png</normaloff>:/images/reset_camera.png</iconset>
    </property>
    <property name="text">
@@ -234,7 +244,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/camera_mode.png</normaloff>:/images/camera_mode.png</iconset>
    </property>
    <property name="text">
@@ -273,7 +283,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/paint_bucket.png</normaloff>:/images/paint_bucket.png</iconset>
    </property>
    <property name="text">
@@ -285,7 +295,7 @@
   </action>
   <action name="ActionMultisensePanel">
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/3d_scanner.png</normaloff>:/images/3d_scanner.png</iconset>
    </property>
    <property name="text">
@@ -297,7 +307,7 @@
   </action>
   <action name="ActionFootstepPanel">
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/feet.png</normaloff>:/images/feet.png</iconset>
    </property>
    <property name="text">
@@ -309,7 +319,7 @@
   </action>
   <action name="ActionAtlasStatusPanel">
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/gauge.png</normaloff>:/images/gauge.png</iconset>
    </property>
    <property name="text">
@@ -321,7 +331,7 @@
   </action>
   <action name="ActionHandControlPanel">
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/claw.png</normaloff>:/images/claw.png</iconset>
    </property>
    <property name="text">
@@ -330,7 +340,7 @@
   </action>
   <action name="ActionActionManagerPanel">
    <property name="icon">
-    <iconset>
+    <iconset resource="images/resources.qrc">
      <normaloff>:/images/robot_icon.png</normaloff>:/images/robot_icon.png</iconset>
    </property>
    <property name="text">

@@ -111,19 +111,19 @@ def toggleCameraTerrainMode(view = None):
 
 
 def getToolBarActions():
-    return getActions(getMainWindow().toolBar())
+    return getActionsDict(getMainWindow().toolBarActions())
 
 
 def getToolsMenuActions():
-    return getActions(getMainWindow().toolsMenu())
+    return getActionsDict(getMainWindow().toolsMenu().actions())
 
 
-def getActions(widget):
-    actions = {}
-    for action in widget.actions():
+def getActionsDict(actions):
+    actionsDict = {}
+    for action in actions:
         if action.name:
-            actions[action.name] = action
-    return actions
+            actionsDict[action.name] = action
+    return actionsDict
 
 
 def updateToggleTerrainAction(view):
