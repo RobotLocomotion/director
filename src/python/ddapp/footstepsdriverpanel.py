@@ -57,12 +57,14 @@ class FootstepsPanel(object):
         self._setupPropertiesPanel()
 
     def _setupPropertiesPanel(self):
-        l = QtGui.QVBoxLayout(self.ui.params_container)
-        self.params_panel = PythonQt.dd.ddPropertiesPanel()
-        self.params_panel.setBrowserModeToWidget()
-        om.addPropertiesToPanel(self.driver.params, self.params_panel)
-        l.addWidget(self.params_panel)
-        self.params_panel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
+        l = QtGui.QVBoxLayout(self.ui.paramsContainer)
+        l.setMargin(0)
+        propertiesPanel = PythonQt.dd.ddPropertiesPanel()
+        propertiesPanel.setBrowserModeToWidget()
+        om.addPropertiesToPanel(self.driver.params, propertiesPanel)
+        l.addWidget(propertiesPanel)
+        propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
+        PythonQt.dd.ddGroupBoxHider(self.ui.paramsContainer)
 
     def onPropertyChanged(self, prop):
         self.driver.params.setProperty(prop.propertyName(), prop.value())
