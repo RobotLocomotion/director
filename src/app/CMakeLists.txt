@@ -36,6 +36,7 @@ qt4_wrap_cpp(moc_srcs
   ddLCMThread.h
   ddLumberSelection.h
   ddGLWidgetView.h
+  ddGroupBoxHider.h
   ddMacrosManager.h
   ddMainWindow.h
   ddObjectTree.h

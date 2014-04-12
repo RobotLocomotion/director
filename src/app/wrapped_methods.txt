@@ -29,6 +29,10 @@ int ddBotImageQueue::getTransform(const QString&, const QString&, quint64, vtkTr
 bool ddBotImageQueue::addCameraStream(const QString&);
 QList<double> ddBotImageQueue::getCameraFrustumBounds(const QString&);
 
+
+ddGroupBoxHider::ddGroupBoxHider(QGroupBox*);
+ddGroupBoxHider::~ddGroupBoxHider();
+
 ddDrakeModel::ddDrakeModel();
 ddDrakeModel::~ddDrakeModel();
 bool ddDrakeModel::loadFromFile(const QString&);
