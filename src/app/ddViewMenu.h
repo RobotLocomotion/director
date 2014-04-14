@@ -73,8 +73,9 @@ public:
   /// \param widget The widget to add.
   /// \param icon An icon to display in the menu.
   /// \param text The text to display in the menu.
-  void addWidget(QWidget* widget, const QString& text,
-    const QIcon &icon = QIcon());
+  void addWidget(QWidget* widget, const QString& text, const QIcon &icon = QIcon());
+
+  void addWidget(QWidget* widget, QAction* action);
 
   /// Add a separator to the view menu
   void addSeparator();

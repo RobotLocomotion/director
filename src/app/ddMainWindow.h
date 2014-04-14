@@ -30,6 +30,7 @@ public:
   QTextEdit* outputConsole() const;
 
   void addWidgetToViewMenu(QWidget* widget);
+  void addWidgetToViewMenu(QWidget* widget, QAction* action);
 
   QList<QAction*> toolBarActions() const;
 

@@ -45,13 +45,16 @@ def getOutputConsole():
     return getMainWindow().outputConsole()
 
 
-def addWidgetToDock(widget, dockArea=QtCore.Qt.RightDockWidgetArea):
+def addWidgetToDock(widget, dockArea=QtCore.Qt.RightDockWidgetArea, action=None):
 
     dock = QtGui.QDockWidget()
     dock.setWidget(widget)
     dock.setWindowTitle(widget.windowTitle)
     getMainWindow().addDockWidget(dockArea, dock)
-    getMainWindow().addWidgetToViewMenu(dock)
+    if action is None:
+        getMainWindow().addWidgetToViewMenu(dock)
+    else:
+        getMainWindow().addWidgetToViewMenu(dock, action)
     return dock
 
 
