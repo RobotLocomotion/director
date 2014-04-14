@@ -9,7 +9,7 @@ from ddapp import lcmUtils
 from ddapp import segmentation
 from ddapp.drilldemo import RobotPoseGUIWrapper
 
-from drc import robot_state_t
+from drc import robot_state_t, actionman_status_t, actionman_resume_t
 from bot_core import rigid_transform_t
 from vtk import vtkTransform
 import botpy
@@ -83,11 +83,18 @@ class Action(object):
 
     def success(self):
         if self.container.pauseBetween:
+            # Skip the pauses if it's a transition to goal
+            if self.successAction is 'goal':
+                self.transition(self.successAction)
+
+            # if success called when aleady paused, that means continue
             if self.name == 'pause':
                 self.transition(self.successAction)
+
+            # Default case is transition to pause and store success transition
             else:
                 self.container.actionObjects['pause'].successAction = self.successAction
-                self.transition(self.pauseAction)
+                self.transition('pause')
         else:
             self.transition(self.successAction)
             self.container.executionList.append([self.name, 'success', len(self.animations)])
@@ -209,24 +216,20 @@ class Pause(Action):
         self.resumeChannel = 'ACTION_MANAGER_RESUME'
         self.resumeReceived = False
 
-    def resumeCallback(self):
+    def resumeCallback(self, data):
         self.resumeReceived = True
 
     def onEnter(self):
         print "Entering the pause state.  Waiting for continue message via LCM topic."
-
-        lcmUtils.captureMessageCallback(self.resumeChannel, actionman_resume_t, self.resumeReceived)
-
-        # Stop the FSM now that we're at a terminus
-        self.container.fsm.stop()
+        lcmUtils.captureMessageCallback(self.resumeChannel, actionman_resume_t, self.resumeCallback)
 
     def onUpdate(self):
         if self.resumeReceived:
             self.success()
 
     def onExit(self):
-        #cleanup
-        self.resumeRecevied = True
+        # Cleanup
+        self.resumeReceived = False
 
         # This is a dummy action, no robot motion
         self.outputState = deepcopy(self.inputState)
@@ -506,11 +509,10 @@ class CameraDeltaPlan(Action):
         # Start listening for a message with the desired camera transform
         lcmUtils.captureMessageCallback(self.parsedArgs['Channel'], rigid_transform_t, self.setMessageReceived)
 
-#        if self.container.vizMode:
-#
-#            self.message = rigid_transform_t()
-#            self.message.trans = [-0.04, 0.0, 0.0]
-#            self.messageReceived = True
+        if self.container.vizMode:
+            self.message = rigid_transform_t()
+            self.message.trans = [-0.04, 0.0, 0.0]
+            self.messageReceived = True
 
     def onUpdate(self):
         # Wait until the message is received, then do planning
