@@ -320,7 +320,7 @@ if usePlanning:
 if useNavigationPanel:
     thispanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
     picker = PointPicker(view, callback=thispanel.pointPickerDemo, numberOfPoints=2)
-    picker.start()
+    #picker.start()
 
 
 def getLinkFrame(linkName, model=None):
@@ -334,6 +334,7 @@ def showLinkFrame(linkName, model=None):
         raise Exception('Link not found: ' + linkName)
     return vis.updateFrame(frame, linkName, parent='link frames')
 
+
 def sendEstRobotState(pose=None):
     if pose is None:
         pose = robotStateJointController.q
@@ -341,8 +342,5 @@ def sendEstRobotState(pose=None):
     lcmUtils.publish('EST_ROBOT_STATE', msg)
 
 
-
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view, handFactory, robotStateModel, footstepsDriver)
-
-
