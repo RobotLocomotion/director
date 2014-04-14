@@ -44,7 +44,7 @@ ddMainWindow::ddMainWindow()
   this->Internal->PropertiesPanel = new ddPropertiesPanel;
 
   this->setCentralWidget(this->Internal->ViewManager);
-  this->Internal->PropertiesDock->setWidget(this->Internal->PropertiesPanel);
+  this->Internal->PropertiesScrollArea->setWidget(this->Internal->PropertiesPanel);
 
   this->setWindowTitle("Drake Designer");
   this->connect(this->Internal->ActionQuit, SIGNAL(triggered()), QApplication::instance(), SLOT(quit()));
