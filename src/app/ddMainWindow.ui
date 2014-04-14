@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1439</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="FileMenu">
@@ -171,7 +171,7 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="ActionAtlasStatusPanel"/>
+   <addaction name="ActionAtlasDriverPanel"/>
    <addaction name="ActionMultisensePanel"/>
    <addaction name="ActionFootstepPanel"/>
    <addaction name="ActionHandControlPanel"/>
@@ -317,16 +317,19 @@
     <string>Ctrl+F</string>
    </property>
   </action>
-  <action name="ActionAtlasStatusPanel">
+  <action name="ActionAtlasDriverPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="images/resources.qrc">
      <normaloff>:/images/gauge.png</normaloff>:/images/gauge.png</iconset>
    </property>
    <property name="text">
-    <string>AtlasStatusPanel</string>
+    <string>Atlas Driver</string>
    </property>
    <property name="toolTip">
-    <string>AtlasStatusPanel</string>
+    <string>Atlas Driver</string>
    </property>
   </action>
   <action name="ActionHandControlPanel">
