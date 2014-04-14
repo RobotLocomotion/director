@@ -35,7 +35,6 @@ from ddapp import footstepsdriverpanel
 from ddapp import lcmgl
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
-from ddapp import atlasstatuspanel
 from ddapp import multisensepanel
 from ddapp import navigationpanel
 from ddapp import handcontrolpanel
@@ -126,10 +125,8 @@ if useIk:
 
 
 if useAtlasDriver:
-    atlasdriver.init(app.getOutputConsole())
-    atlasDriver = atlasdriver.driver
+    atlasDriver = atlasdriver.init(app.getOutputConsole())
     atlasdriverpanel.init(atlasdriver.driver)
-    atlasstatuspanel.init(atlasdriver.driver)
 
 
 if useRobotState:

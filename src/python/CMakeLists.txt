@@ -8,7 +8,6 @@ set(python_files
   ddapp/asynctaskqueue.py
   ddapp/atlasdriver.py
   ddapp/atlasdriverpanel.py
-  ddapp/atlasstatuspanel.py
   ddapp/botspy.py
   ddapp/callbacks.py
   ddapp/cameracontrol.py
