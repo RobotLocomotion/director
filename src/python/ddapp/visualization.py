@@ -1,7 +1,6 @@
 import ddapp.objectmodel as om
 import ddapp.applogic as app
 from ddapp import affordance
-import ddapp.affordanceupdater as affup
 from shallowCopy import shallowCopy
 import ddapp.vtkAll as vtk
 from ddapp.debugVis import DebugData
@@ -32,7 +31,6 @@ class AffordanceItem(om.PolyDataItem):
     def __init__(self, name, polyData, view):
         om.PolyDataItem.__init__(self, name, polyData, view)
         self.params = {}
-        affup.updater.addCallback(self.onGroundTransform)
         affListener.registerAffordance(self)
         self.addProperty('uid', 0)
         self.addProperty('Server updates enabled', False)
