@@ -47,7 +47,6 @@ class FootstepsPanel(object):
         self.ui = WidgetDict(self.widget.children())
 
         self.ui.walkingGoalButton.connect("clicked()", self.onNewWalkingGoal)
-        self.ui.goalStepsButton.connect("clicked()", self.onGoalSteps)
         self.ui.executeButton.connect("clicked()", self.onExecute)
         self.ui.stopButton.connect("clicked()", self.onStop)
 
@@ -92,9 +91,6 @@ class FootstepsPanel(object):
 
         request = self.driver.constructFootstepPlanRequest(self.jointController.q, frame.transform)
         self.driver.sendFootstepPlanRequest(request)
-
-    def onGoalSteps(self):
-        self.driver.createGoalSteps(self.robotModel, self.jointController.q)
 
     def onExecute(self):
         self.driver.commitFootstepPlan(self.driver.lastFootstepPlan)
