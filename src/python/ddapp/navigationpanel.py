@@ -1,5 +1,6 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
+import ddapp
 from ddapp import lcmUtils
 from ddapp import applogic as app
 from ddapp.utime import getUtime
@@ -18,6 +19,12 @@ import ddapp.visualization as vis
 import ddapp.objectmodel as om
 from ddapp import robotstate
 from ddapp import botpy
+
+
+from ddapp import ioUtils as io
+from ddapp import vtkNumpy as vnp
+from ddapp import segmentation
+
 
 # lcmtypes:
 import drc as lcmdrc
@@ -58,10 +65,16 @@ class NavigationPanel(object):
         self.ui.reversePlanButton.connect("clicked()", self.onReversePlanButton)
         self.ui.initAtZeroButton.connect("clicked()", self.onInitAtZeroButton)
         self.ui.restartNavButton.connect("clicked()", self.onRestartNavButton)
+        self.ui.showMapButton.connect("clicked()", self.onShowMapButton)
+        self.ui.hideMapButton.connect("clicked()", self.onHideMapButton)
+        self.ui.disableLaserButton.connect("clicked()", self.onDisableLaserButton)
+        self.ui.enableLaserButton.connect("clicked()", self.onEnableLaserButton)
 
+        
         # Data Variables:
         self.goal = dict()
         self.init_frame = None
+        self.octomap_cloud = None
         
     ###############################
     
@@ -162,7 +175,7 @@ class NavigationPanel(object):
         ready_init = lcmdrc.utime_t()
         ready_init.utime = lcmUtils.timestamp_now()
         lcmUtils.publish('STATE_EST_READY', ready_init)
-        sleep(1)
+        sleep(1) # sleep needed to give SE time to restart
         
 
     def sendInitMessage(self, pos, yaw):
@@ -183,7 +196,35 @@ class NavigationPanel(object):
         lcmUtils.publish('MAV_STATE_EST_VIEWER_MEASUREMENT', init)
         
         
+    def onShowMapButton(self):
+        if (self.octomap_cloud is None):
+            filename = ddapp.getDRCBaseDir() + "/software/build/data/octomap.pcd"
+            self.octomap_cloud = io.readPolyData(filename) # c++ object called vtkPolyData
+            self.octomap_cloud = segmentation.cropToLineSegment(self.octomap_cloud, np.array([0,0,-10]), np.array([0,0,3]) )
+            # access to z values
+            #points= vnp.getNumpyFromVtk(self.octomap_cloud, 'Points')
+            #zvalues = points[:,2]
 
+        vis.showPolyData(self.octomap_cloud, 'prior map', alpha=1.0, color=[0,0,0.4])
+        
+        
+    def onHideMapButton(self):
+        folder = om.getOrCreateContainer("segmentation")
+        om.removeFromObjectModel(folder)
+
+        
+    def onEnableLaserButton(self):   
+        msg = lcmdrc.utime_t()
+        msg.utime = lcmUtils.timestamp_now()
+        lcmUtils.publish('STATE_EST_LASER_ENABLE', msg)
+        
+
+    def onDisableLaserButton(self):   
+        msg = lcmdrc.utime_t()
+        msg.utime = lcmUtils.timestamp_now()
+        lcmUtils.publish('STATE_EST_LASER_DISABLE', msg)
+    
+        
     def pointPickerDemoOriginal(self,p1, p2):
         
         yaw = math.atan2( p2[1] - p1[1] , p2[0] - p1[0] )*180/math.pi + 90
@@ -200,6 +241,8 @@ class NavigationPanel(object):
          
         vis.updateFrame(frame_pt_to_centerline, "corner", parent="navigation")
 
+        
+        
 # Original: 1 up/down
 #        flist = np.array( [[ blockl*-0.5 , .1  , 0      , 0 , 0 , 0] ,
 #                           [ blockl*-0.5 , -.1 , 0      , 0 , 0 , 0] ,
