@@ -14,13 +14,6 @@
    <string>Navigation</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="2" column="0">
-    <widget class="QPushButton" name="visualizeButton">
-     <property name="text">
-      <string>visualize</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="1">
     <widget class="QComboBox" name="comboBox"/>
    </item>
@@ -52,6 +45,13 @@
      </property>
     </widget>
    </item>
+   <item row="2" column="0">
+    <widget class="QPushButton" name="visualizeButton">
+     <property name="text">
+      <string>visualize</string>
+     </property>
+    </widget>
+   </item>
    <item row="3" column="0" colspan="2">
     <widget class="Line" name="line">
      <property name="lineWidth">
@@ -75,7 +75,14 @@
      </property>
     </widget>
    </item>
-   <item row="9" column="0" colspan="2">
+   <item row="8" column="0" colspan="2">
+    <widget class="QPushButton" name="initAtZeroButton">
+     <property name="text">
+      <string>Init Nav At Zero</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0" colspan="2">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -88,10 +95,10 @@
      </property>
     </spacer>
    </item>
-   <item row="8" column="0" colspan="2">
-    <widget class="QPushButton" name="initAtZeroButton">
+   <item row="9" column="0" colspan="2">
+    <widget class="QPushButton" name="restartNavButton">
      <property name="text">
-      <string>Init Nav At Zero</string>
+      <string>Restart Navigation</string>
      </property>
     </widget>
    </item>
