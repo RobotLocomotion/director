@@ -91,8 +91,37 @@ bool ddViewMenu::eventFilter(QObject* watched, QEvent* e)
   return QObject::eventFilter(watched, e);
 }
 
-void ddViewMenu::addWidget(QWidget* widget, const QString& text,
-  const QIcon& icon)
+void ddViewMenu::addWidget(QWidget* widget, QAction* action)
+{
+  if (this->Implementation->ActionMap.contains(widget))
+    {
+    qCritical() << "can't add widget twice";
+    return;
+    }
+
+  if (!widget)
+    {
+    qCritical() << "null widget";
+    return;
+    }
+
+  if (!action)
+    {
+    qCritical() << "null action";
+    return;
+    }
+
+  action->setCheckable(true);
+  action->setChecked(widget->isVisible());
+
+  this->connect(action, SIGNAL(triggered(bool)), widget, SLOT(setVisible(bool)));
+  this->Implementation->ActionMap.insert(widget, action);
+  widget->installEventFilter(this);
+  this->Implementation->Menu.addAction(action);
+}
+
+
+void ddViewMenu::addWidget(QWidget* widget, const QString& text, const QIcon& icon)
 {
   if(this->Implementation->ActionMap.contains(widget))
     {
@@ -105,21 +134,14 @@ void ddViewMenu::addWidget(QWidget* widget, const QString& text,
     qCritical() << "null widget";
     return;
     }
-    
+
   QAction* const action = new QAction(text, this);
-  action->setCheckable(true);
-  action->setChecked(widget->isVisible());
   if(!icon.isNull())
     {
     action->setIcon(icon);
     }
-  this->connect(
-    action, SIGNAL(triggered(bool)), widget, SLOT(setVisible(bool)));
 
-  this->Implementation->ActionMap.insert(widget, action);
-  widget->installEventFilter(this);
-
-  this->Implementation->Menu.addAction(action);
+  this->addWidget(widget, action);
 }
 
 void ddViewMenu::addSeparator()

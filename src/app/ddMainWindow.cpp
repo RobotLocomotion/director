@@ -155,6 +155,12 @@ void ddMainWindow::addWidgetToViewMenu(QWidget* widget)
 }
 
 //-----------------------------------------------------------------------------
+void ddMainWindow::addWidgetToViewMenu(QWidget* widget, QAction* action)
+{
+  this->Internal->ViewMenuManager->addWidget(widget, action);
+}
+
+//-----------------------------------------------------------------------------
 QList<QAction*> ddMainWindow::toolBarActions() const
 {
   QList<QToolBar*> toolBars;
