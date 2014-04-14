@@ -57,6 +57,7 @@ class NavigationPanel(object):
         self.ui.planButton.connect("clicked()", self.onPlanButton)
         self.ui.reversePlanButton.connect("clicked()", self.onReversePlanButton)
         self.ui.initAtZeroButton.connect("clicked()", self.onInitAtZeroButton)
+        self.ui.restartNavButton.connect("clicked()", self.onRestartNavButton)
 
         # Data Variables:
         self.goal = dict()
@@ -130,6 +131,13 @@ class NavigationPanel(object):
           reversedPlan.footsteps[j] = footstep
         
         self.footstepDriver.onFootstepPlan(reversedPlan)
+
+    def onRestartNavButton(self):
+        ready_init = lcmdrc.utime_t()
+        ready_init.utime = lcmUtils.timestamp_now()
+        lcmUtils.publish('STATE_EST_RESTART', ready_init)
+
+
         
     def onInitAtZeroButton(self):
         self.sendReadyMessage()
@@ -138,8 +146,8 @@ class NavigationPanel(object):
         init_frame = transformUtils.frameFromPositionAndRPY( p1 , [0,0,0] )
         vis.updateFrame(init_frame, "init pose", parent="navigation")
         self.sendInitMessage(p1, 0)        
-    
-    
+        
+        
     def pointPickerDemo(self,p1, p2):
         self.sendReadyMessage()
       
@@ -153,7 +161,7 @@ class NavigationPanel(object):
     def sendReadyMessage(self):
         ready_init = lcmdrc.utime_t()
         ready_init.utime = lcmUtils.timestamp_now()
-        lcmUtils.publish('MAV_STATE_EST_READY', ready_init)
+        lcmUtils.publish('STATE_EST_READY', ready_init)
         sleep(1)
         
 
@@ -170,7 +178,7 @@ class NavigationPanel(object):
         init.R_effective[0]  = 0.25
         init.R_effective[5]  = 0.25
         init.R_effective[10] = 0.25
-        init.R_effective[15] =  math.pow( 0.01*math.pi/180 , 2 )
+        init.R_effective[15] =  math.pow( 5*math.pi/180 , 2 )
         
         lcmUtils.publish('MAV_STATE_EST_VIEWER_MEASUREMENT', init)
         
