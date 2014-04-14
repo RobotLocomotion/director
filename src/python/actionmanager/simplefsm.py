@@ -1,4 +1,5 @@
 from sets import Set
+from copy import copy
 
 class SimpleFsm(object):
 
@@ -24,6 +25,7 @@ class SimpleFsm(object):
 
         #Set state to an initial value
         self.current = 'init'
+        self.previous = 'none'
         self.initTrans = 'init'
 
     def addState(self, state):
@@ -73,10 +75,12 @@ class SimpleFsm(object):
 
     def transition(self, newState):
         if not newState in self.states:
+            print "Attemping to transition from", self.current, "to", newState
             print "Desired new state does not exist"
             return
 
         if not [self.current, newState] in self.validTransitions:
+            print "Attemping to transition from", self.current, "to", newState
             print "Desired transition is not valid"
             return
 
@@ -92,6 +96,7 @@ class SimpleFsm(object):
         if self.debug:
             print "Entering: ", newState
         self.onEnter[newState]()
+        self.previous = copy(self.current)
         self.current = newState
 
     def update(self):

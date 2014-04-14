@@ -131,6 +131,8 @@ class ActionManager(object):
         self.previousAction = None
         self.executionList = []
 
+        self.pauseBetween = False
+
     def populate(self, name, sequence, initial):
 
         #Create and store all the actions, create and populate the FSM

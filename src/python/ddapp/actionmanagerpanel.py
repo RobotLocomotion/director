@@ -11,6 +11,8 @@ import functools
 from time import time
 from copy import copy, deepcopy
 
+from drc import actionman_resume_t
+
 from actionmanager import sequences
 from actionmanager import actionmanager
 
@@ -29,10 +31,10 @@ class WidgetDict(object):
 
 class ActionManagerPanel(object):
 
-    def __init__(self, actionSequence):
+    def __init__(self, actionManager):
 
         #Store local variables
-        self.sequenceController = actionSequence
+        self.actionManager = actionManager
         self.currentAction = ''
 
         loader = QtUiTools.QUiLoader()
@@ -66,23 +68,26 @@ class ActionManagerPanel(object):
         self.widget.statusDisplay.stopButton.clicked.connect(self.stopActionSequence)
         self.widget.statusDisplay.deleteButton.clicked.connect(self.deleteActionSequence)
 
+        self.widget.statusDisplay.pauseCheckBox.clicked.connect(self.pauseCheckBoxClicked)
+        self.widget.statusDisplay.resumeButton.clicked.connect(self.resumeButtonClicked)
+
         self.updatePanel()
 
 
     def updatePanel(self):
-        self.widget.statusDisplay.nameLabel.text = self.sequenceController.name
+        self.widget.statusDisplay.nameLabel.text = self.actionManager.name
 
-        if self.sequenceController.fsm:
-            self.widget.statusDisplay.stateLabel.text = self.sequenceController.fsm.current
-            if self.sequenceController.fsm.started:
+        if self.actionManager.fsm:
+            self.widget.statusDisplay.stateLabel.text = self.actionManager.fsm.current
+            self.widget.statusDisplay.previousLabel.text = self.actionManager.fsm.previous
+            if self.actionManager.fsm.started:
                 self.widget.statusDisplay.runningLabel.text = 'True'
             else:
                 self.widget.statusDisplay.runningLabel.text = 'False'
         else:
             self.widget.statusDisplay.stateLabel.text = 'unknown'
-            self.widget.statusDisplay.stateLabel.text = 'unknown'
 
-        if len(self.sequenceController.executionList) != self.oldExecutionListLength:
+        if len(self.actionManager.executionList) != self.oldExecutionListLength:
             self.redrawExecutionList()
 
     def redrawExecutionList(self):
@@ -91,9 +96,9 @@ class ActionManagerPanel(object):
         self.executionListChildren = []
 
         lineNum = 0
-        for [action, result, run] in self.sequenceController.executionList:
+        for [action, result, run] in self.actionManager.executionList:
 
-            actionObj = self.sequenceController.actionObjects[action]
+            actionObj = self.actionManager.actionObjects[action]
 
             grid = self.ui.actionGrid.layout()
             grid.addWidget(QtGui.QLabel(action),lineNum,0)
@@ -107,41 +112,49 @@ class ActionManagerPanel(object):
 
             lineNum += 1
 
-        self.oldExecutionListLength = len(self.sequenceController.executionList)
+        self.oldExecutionListLength = len(self.actionManager.executionList)
+
+    def resumeButtonClicked(self):
+        resume = actionman_resume_t()
+        resume.utime = time() * 1000000
+        lcmUtils.publish('ACTION_MANAGER_RESUME', resume)
+
+    def pauseCheckBoxClicked(self):
+        self.actionManager.pauseBetween = self.widget.statusDisplay.pauseCheckBox.isChecked()
 
     def createActionSequence(self):
         if self.currentAction != '':
             if actionmanager.checkArgsPopulated(sequences.sequenceDict[self.currentAction][0]):
-                self.sequenceController.populate(self.currentAction,
-                                                 sequences.sequenceDict[self.currentAction][0],
-                                                 sequences.sequenceDict[self.currentAction][1])
+                self.actionManager.populate(self.currentAction,
+                                            sequences.sequenceDict[self.currentAction][0],
+                                            sequences.sequenceDict[self.currentAction][1])
                 self.widget.statusDisplay.statusLabel.text = ''
             else:
                 self.widget.statusDisplay.statusLabel.text = 'ERROR: Selected sequence has unpopulated user fields'
 
     def visualizeActionSequence(self):
         if self.currentAction != '':
-            if self.sequenceController.fsm and self.sequenceController.fsm.current == 'goal':
-                self.sequenceController.play()
+            if self.actionManager.fsm and self.actionManager.fsm.current == 'goal':
+                self.actionManager.play()
             else:
-                self.sequenceController.start(vizMode = True)
+                self.actionManager.start(vizMode = True)
 
     def runActionSequence(self):
         if self.currentAction != '':
-            self.sequenceController.reset()
-            self.sequenceController.start(vizMode = False)
+            self.actionManager.reset()
+            self.actionManager.start(vizMode = False)
 
     def resetActionSequence(self):
         if self.currentAction != '':
-            self.sequenceController.reset()
+            self.actionManager.reset()
 
     def stopActionSequence(self):
         if self.currentAction != '':
-            self.sequenceController.stop()
+            self.actionManager.stop()
 
     def deleteActionSequence(self):
         if self.currentAction != '':
-            self.sequenceController.clear()
+            self.actionManager.clear()
 
     def populateTreeWidget(self, treeWidget, dataDict, treeDict):
         #Populate this widget with sequences from the python library
@@ -226,7 +239,6 @@ class ActionManagerPanel(object):
     def clearActionGrid(self):
         for child in self.ui.actionGrid.findChildren(QtGui.QWidget):
             child.delete()
-
 
     def selectionChanged(self, event):
         if not event == None:
