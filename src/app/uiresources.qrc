@@ -7,7 +7,7 @@
     <file>ddFootsteps.ui</file>
     <file>ddNavigation.ui</file>
     <file>ddPlaybackPanel.ui</file>
-    <file>ddRobotStatus.ui</file>
+    <file>ddAtlasDriverPanel.ui</file>
     <file>ddTeleopPanel.ui</file>
     <file>ddVideoPlayer.ui</file>
   </qresource>

@@ -29,7 +29,7 @@ class AtlasStatusPanel(object):
         self.driver = driver
 
         loader = QtUiTools.QUiLoader()
-        uifile = QtCore.QFile(':/ui/ddRobotStatus.ui')
+        uifile = QtCore.QFile(':/ui/ddAtlasDriverPanel.ui')
         assert uifile.open(uifile.ReadOnly)
 
         self.widget = loader.load(uifile)
