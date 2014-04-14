@@ -33,14 +33,8 @@ public:
     return qobject_cast<QGroupBox*>(this->parent());
   }
 
-  static void setLayoutWidgetVisibility(QWidget* w, bool visible)
+  static void setLayoutWidgetVisibility(QLayout* layout, bool visible)
   {
-    if (!w)
-    {
-      return;
-    }
-
-    QLayout* layout = w->layout();
     if (!layout)
     {
       return;
@@ -54,6 +48,10 @@ public:
       {
         layoutWidget->setVisible(visible);
       }
+      else
+      {
+        setLayoutWidgetVisibility(item->layout(), visible);
+      }
     }
   }
 
@@ -62,7 +60,7 @@ public slots:
   void updateGroupBox()
   {
     QGroupBox* groupBox = this->parentGroupBox();
-    this->setLayoutWidgetVisibility(groupBox, groupBox->isChecked());
+    this->setLayoutWidgetVisibility(groupBox->layout(), groupBox->isChecked());
   }
 
 private:
