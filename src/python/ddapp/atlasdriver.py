@@ -38,23 +38,20 @@ class AtlasDriver(object):
     def __init__(self):
 
         self.lastAtlasStatusMessage = None
-        self.lastAtlasStateMessage = None
         self._setupSubscriptions()
         self.timer = SimpleTimer()
 
     def _setupSubscriptions(self):
-        #lcmUtils.addSubscriber('ATLAS_STATE', lcmdrc.atlas_state_t, self.onAtlasState)
         sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
         sub.setSpeedLimit(60)
-
-    def onAtlasState(self, message):
-        self.lastAtlasStateMessage = message
 
     def onAtlasStatus(self, message):
         self.lastAtlasStatusMessage = message
 
-
     def getBehaviorMap(self):
+        '''
+        Return a dict that maps behavior ids (int) to behavior names (string).
+        '''
         msg = lcmdrc.atlas_status_t
         behaviors = {
                     msg.BEHAVIOR_NONE        : 'none',
@@ -71,16 +68,19 @@ class AtlasDriver(object):
         return behaviors
 
     def getCurrentBehaviorName(self):
+        '''
+        Returns the current behavior name as a string.  Returns None if the
+        current behavior is unknown.  The current behavior is unknown if no
+        atlas status messages have arrived since this class was initialized.
+        The returned string is one of the behavior names in the values of
+        the behavior map returned by getBehaviorMap().
+        '''
         if not self.lastAtlasStatusMessage:
-            return '<waiting for status message>'
+            return None
 
         behaviors = self.getBehaviorMap()
-
         behaviorId = self.lastAtlasStatusMessage.behavior
-
-        if behaviorId not in behaviors:
-            return '<unknown behavior: %d' % behaviorId
-
+        assert behaviorId in behaviors
         return behaviors[behaviorId]
 
     def getCurrentInletPressure(self):
@@ -186,4 +186,6 @@ def init(outputConsole):
 
     global systemStatus
     systemStatus = SystemStatusListener(outputConsole)
+
+    return driver
 
