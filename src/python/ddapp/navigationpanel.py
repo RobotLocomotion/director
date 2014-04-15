@@ -70,6 +70,8 @@ class NavigationPanel(object):
         self.ui.disableLaserButton.connect("clicked()", self.onDisableLaserButton)
         self.ui.enableLaserButton.connect("clicked()", self.onEnableLaserButton)
 
+        self.ui.startNewMapButton.connect("clicked()", self.onStartNewMapButton)
+        self.ui.useNewMapButton.connect("clicked()", self.onUseNewMapButton)
         
         # Data Variables:
         self.goal = dict()
@@ -197,14 +199,21 @@ class NavigationPanel(object):
         
         
     def onShowMapButton(self):
-        if (self.octomap_cloud is None):
-            filename = ddapp.getDRCBaseDir() + "/software/build/data/octomap.pcd"
-            self.octomap_cloud = io.readPolyData(filename) # c++ object called vtkPolyData
-            self.octomap_cloud = segmentation.cropToLineSegment(self.octomap_cloud, np.array([0,0,-10]), np.array([0,0,3]) )
-            # access to z values
-            #points= vnp.getNumpyFromVtk(self.octomap_cloud, 'Points')
-            #zvalues = points[:,2]
+        # reloads the map each time - in case its changed on disk:
+        #if (self.octomap_cloud is None):
+        filename = ddapp.getDRCBaseDir() + "/software/build/data/octomap.pcd"
+        self.octomap_cloud = io.readPolyData(filename) # c++ object called vtkPolyData
+        
+        assert (self.octomap_cloud.GetNumberOfPoints() !=0 )
+        
+        self.octomap_cloud = segmentation.cropToLineSegment(self.octomap_cloud, np.array([0,0,-10]), np.array([0,0,3]) )
+        # access to z values
+        #points= vnp.getNumpyFromVtk(self.octomap_cloud, 'Points')
+        #zvalues = points[:,2]
 
+        # remove previous map:
+        folder = om.getOrCreateContainer("segmentation")
+        om.removeFromObjectModel(folder)
         vis.showPolyData(self.octomap_cloud, 'prior map', alpha=1.0, color=[0,0,0.4])
         
         
@@ -224,6 +233,22 @@ class NavigationPanel(object):
         msg.utime = lcmUtils.timestamp_now()
         lcmUtils.publish('STATE_EST_LASER_DISABLE', msg)
     
+    def onStartNewMapButton(self):   
+        '''
+        Send a trigger to the Create Octomap process to start a new map
+        '''
+        msg = lcmdrc.utime_t()
+        msg.utime = lcmUtils.timestamp_now()
+        lcmUtils.publish('STATE_EST_START_NEW_MAP', msg)    
+
+    
+    def onUseNewMapButton(self): 
+        '''
+        Send a trigger to the GPF to use the newly created map
+        '''
+        msg = lcmdrc.utime_t()
+        msg.utime = lcmUtils.timestamp_now()
+        lcmUtils.publish('STATE_EST_USE_NEW_MAP', msg)    
         
     def pointPickerDemoOriginal(self,p1, p2):
         
