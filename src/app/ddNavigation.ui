@@ -7,53 +7,39 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>299</height>
+    <height>333</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Navigation</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0">
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>goals</string>
+   <item row="13" column="0" colspan="2">
+    <widget class="Line" name="line_3">
+     <property name="midLineWidth">
+      <number>10</number>
      </property>
-    </widget>
-   </item>
-   <item row="6" column="0" colspan="2">
-    <widget class="QPushButton" name="reversePlanButton">
-     <property name="text">
-      <string>Reverse Current Plan</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QPushButton" name="visualizeButton">
-     <property name="text">
-      <string>visualize</string>
-     </property>
-    </widget>
-   </item>
-   <item row="12" column="0" colspan="2">
-    <spacer name="verticalSpacer">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="2" column="1">
-    <widget class="QPushButton" name="planButton">
-     <property name="text">
-      <string>plan</string>
+      <enum>Qt::Horizontal</enum>
      </property>
     </widget>
+   </item>
+   <item row="9" column="0" colspan="2">
+    <widget class="QPushButton" name="restartNavButton">
+     <property name="text">
+      <string>Restart Navigation</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0" colspan="2">
+    <widget class="QPushButton" name="initAtZeroButton">
+     <property name="text">
+      <string>Init Nav At Zero</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QComboBox" name="comboBox"/>
    </item>
    <item row="3" column="0" colspan="2">
     <widget class="Line" name="line">
@@ -78,22 +64,53 @@
      </property>
     </widget>
    </item>
-   <item row="9" column="0" colspan="2">
-    <widget class="QPushButton" name="initAtZeroButton">
+   <item row="11" column="1">
+    <widget class="QPushButton" name="enableLaserButton">
      <property name="text">
-      <string>Init Nav At Zero</string>
+      <string>Enable Laser</string>
      </property>
     </widget>
    </item>
-   <item row="11" column="0" colspan="2">
-    <widget class="QPushButton" name="restartNavButton">
+   <item row="6" column="0" colspan="2">
+    <widget class="QPushButton" name="reversePlanButton">
      <property name="text">
-      <string>Restart Navigation</string>
+      <string>Reverse Current Plan</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
-    <widget class="QComboBox" name="comboBox"/>
+   <item row="2" column="0">
+    <widget class="QPushButton" name="visualizeButton">
+     <property name="text">
+      <string>visualize</string>
+     </property>
+    </widget>
+   </item>
+   <item row="16" column="0" colspan="2">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>goals</string>
+     </property>
+    </widget>
+   </item>
+   <item row="15" column="1">
+    <widget class="QPushButton" name="useNewMapButton">
+     <property name="text">
+      <string>Use New Map</string>
+     </property>
+    </widget>
    </item>
    <item row="0" column="0" colspan="2">
     <widget class="QPushButton" name="captureButton">
@@ -102,31 +119,38 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="1">
-    <widget class="QPushButton" name="showMapButton">
-     <property name="text">
-      <string>Show Map</string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="0">
-    <widget class="QPushButton" name="hideMapButton">
-     <property name="text">
-      <string>Hide Map</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="0">
+   <item row="11" column="0">
     <widget class="QPushButton" name="disableLaserButton">
      <property name="text">
       <string>Disable Laser</string>
      </property>
     </widget>
    </item>
-   <item row="10" column="1">
-    <widget class="QPushButton" name="enableLaserButton">
+   <item row="2" column="1">
+    <widget class="QPushButton" name="planButton">
      <property name="text">
-      <string>Enable Laser</string>
+      <string>plan</string>
+     </property>
+    </widget>
+   </item>
+   <item row="15" column="0">
+    <widget class="QPushButton" name="startNewMapButton">
+     <property name="text">
+      <string>Start New Map</string>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="1">
+    <widget class="QPushButton" name="showMapButton">
+     <property name="text">
+      <string>Show Map</string>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="0">
+    <widget class="QPushButton" name="hideMapButton">
+     <property name="text">
+      <string>Hide Map</string>
      </property>
     </widget>
    </item>
