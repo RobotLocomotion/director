@@ -43,6 +43,7 @@ from ddapp import robotplanlistener
 from ddapp import handdriver
 from ddapp import planplayback
 from ddapp import playbackpanel
+from ddapp import screengrabberpanel
 from ddapp import splinewidget
 from ddapp import teleoppanel
 from ddapp import vtkNumpy as vnp
@@ -321,6 +322,9 @@ if useNavigationPanel:
     thispanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
     picker = PointPicker(view, callback=thispanel.pointPickerDemo, numberOfPoints=2)
     #picker.start()
+
+
+screengrabberpanel.init(view)
 
 
 def getLinkFrame(linkName, model=None):

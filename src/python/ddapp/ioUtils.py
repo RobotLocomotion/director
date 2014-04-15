@@ -66,6 +66,26 @@ def writePolyData(polyData, filename):
     writer.SetInput(polyData)
     writer.Update()
 
+def writeImage(image, filename):
+
+    ext = os.path.splitext(filename)[1]
+
+    writers = {
+            '.png' : vtk.vtkPNGWriter,
+            '.jpg' : vtk.vtkJPEGWriter,
+            '.pnm' : vtk.vtkPNMWriter,
+            '.tiff' : vtk.vtkTIFFWriter,
+            '.bmp' : vtk.vtkBMPWriter,
+              }
+
+    if ext not in writers:
+        raise Exception('Unknown file extension in writePolyData: %s' % filename)
+
+    writer = writers[ext]()
+    writer.SetFileName(filename)
+    writer.SetInput(image)
+    writer.Write()
+
 
 def _computeNormals(polyData):
     normals = vtk.vtkPolyDataNormals()

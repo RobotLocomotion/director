@@ -8,6 +8,7 @@
     <file>ddNavigation.ui</file>
     <file>ddPlaybackPanel.ui</file>
     <file>ddAtlasDriverPanel.ui</file>
+    <file>ddScreenGrabber.ui</file>
     <file>ddTeleopPanel.ui</file>
     <file>ddVideoPlayer.ui</file>
   </qresource>

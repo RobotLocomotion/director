@@ -47,6 +47,7 @@ set(python_files
   ddapp/robotstate.py
   ddapp/robotplanlistener.py
   ddapp/roboturdf.py
+  ddapp/screengrabberpanel.py
   ddapp/segmentation.py
   ddapp/segmentationpanel.py
   ddapp/shallowCopy.py
