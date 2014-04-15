@@ -344,15 +344,18 @@ class NavigationPanel(object):
         request.goal_steps = self.goalSteps
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)        
 
+
+def _getAction():
+    return app.getToolBarActions()['ActionNavigationPanel']
+
+
 def init(jointController, footstepDriver, playbackRobotModel, playbackJointController):
 
+    global panel
     global dock
 
     panel = NavigationPanel(jointController, footstepDriver, playbackRobotModel, playbackJointController)
-    dock = app.addWidgetToDock(panel.widget)
+    dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
     return panel
-
-
-     

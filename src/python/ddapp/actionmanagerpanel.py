@@ -275,24 +275,17 @@ class ActionManagerPanel(object):
         #self.widget.argumentEditor.constraintList.addItem(event.text(2))
 
 
-def toggleWidgetShow():
+def _getAction():
+    return app.getToolBarActions()['ActionActionManagerPanel']
 
-    if dock.isVisible():
-        dock.hide()
-    else:
-        dock.show()
 
 def init(actionSeq):
 
+    global panel
     global dock
 
     panel = ActionManagerPanel(actionSeq)
-    dock = app.addWidgetToDock(panel.widget)
+    dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
-
-    actionName = 'ActionActionManagerPanel'
-    action = app.getToolBarActions()[actionName]
-    action.triggered.connect(toggleWidgetShow)
-
 
     return panel
