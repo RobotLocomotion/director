@@ -201,9 +201,11 @@
     <bool>false</bool>
    </attribute>
    <addaction name="ActionAtlasDriverPanel"/>
+   <addaction name="ActionNavigationPanel"/>
    <addaction name="ActionMultisensePanel"/>
    <addaction name="ActionFootstepPanel"/>
    <addaction name="ActionHandControlPanel"/>
+   <addaction name="ActionTeleopPanel"/>
    <addaction name="ActionActionManagerPanel"/>
    <addaction name="ActionScreenGrabberPanel"/>
   </widget>
@@ -324,24 +326,36 @@
    </property>
   </action>
   <action name="ActionMultisensePanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="images/resources.qrc">
      <normaloff>:/images/3d_scanner.png</normaloff>:/images/3d_scanner.png</iconset>
    </property>
    <property name="text">
-    <string>MultisensePanel</string>
+    <string>Multisense Panel</string>
+   </property>
+   <property name="toolTip">
+    <string>Multisense Panel</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+M</string>
    </property>
   </action>
   <action name="ActionFootstepPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="images/resources.qrc">
      <normaloff>:/images/feet.png</normaloff>:/images/feet.png</iconset>
    </property>
    <property name="text">
-    <string>FootstepPanel</string>
+    <string>Footstep Panel</string>
+   </property>
+   <property name="toolTip">
+    <string>Footstep Panel</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
@@ -363,21 +377,33 @@
    </property>
   </action>
   <action name="ActionHandControlPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="images/resources.qrc">
      <normaloff>:/images/claw.png</normaloff>:/images/claw.png</iconset>
    </property>
    <property name="text">
-    <string>HandControlPanel</string>
+    <string>Hand Control Panel</string>
+   </property>
+   <property name="toolTip">
+    <string>Hand Control Panel</string>
    </property>
   </action>
   <action name="ActionActionManagerPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="images/resources.qrc">
      <normaloff>:/images/robot_icon.png</normaloff>:/images/robot_icon.png</iconset>
    </property>
    <property name="text">
-    <string>ActionManagerPanel</string>
+    <string>Action Manager</string>
+   </property>
+   <property name="toolTip">
+    <string>Action Manager</string>
    </property>
   </action>
   <action name="ActionScreenGrabberPanel">
@@ -393,6 +419,36 @@
    </property>
    <property name="toolTip">
     <string>Screen Grabber</string>
+   </property>
+  </action>
+  <action name="ActionTeleopPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/drake_logo.png</normaloff>:/images/drake_logo.png</iconset>
+   </property>
+   <property name="text">
+    <string>Teleop Panel</string>
+   </property>
+   <property name="toolTip">
+    <string>Teleop Panel</string>
+   </property>
+  </action>
+  <action name="ActionNavigationPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/compass_icon.png</normaloff>:/images/compass_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Navigation Panel</string>
+   </property>
+   <property name="toolTip">
+    <string>Navigation Panel</string>
    </property>
   </action>
  </widget>
