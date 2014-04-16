@@ -160,25 +160,18 @@ class MultisensePanel(object):
         self.driver.setMultisenseCommand(fps, camGain, autoGain, self.queued_data['spinRate'], ledFlash, ledDuty)
         self.sent_data = deepcopy(self.queued_data)
 
-def toggleWidgetShow():
 
-    if dock.isVisible():
-        dock.hide()
-    else:
-        dock.show()
+def _getAction():
+    return app.getToolBarActions()['ActionMultisensePanel']
+
 
 def init(driver):
 
+    global panel
     global dock
 
     panel = MultisensePanel(driver)
-    dock = app.addWidgetToDock(panel.widget)
+    dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
-    actionName = 'ActionMultisensePanel'
-    action = app.getToolBarActions()[actionName]
-    action.triggered.connect(toggleWidgetShow)
-
-
     return panel
-
