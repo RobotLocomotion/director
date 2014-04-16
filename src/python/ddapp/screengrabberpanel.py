@@ -116,8 +116,6 @@ class ScreenGrabberPanel(object):
     def onSaveScreenshot(self):
 
         outDir = self.screenshotOutputDirectory()
-        print 'save screenshot to dir:', outDir
-
         if not self.ensureDirectoryIsWritable(outDir):
             return
 
@@ -160,8 +158,6 @@ class ScreenGrabberPanel(object):
         self.updateRecordingStats()
 
     def onRecordMovie(self):
-
-
         if self.isRecordMode():
             self.startRecording()
         else:
@@ -229,8 +225,6 @@ class ScreenGrabberPanel(object):
             return
         else:
             viewSize = [int(value) for value in current.split(' ')[0].split('x')]
-            print viewSize
-
             self.ui.viewWidthSpin.value = viewSize[0]
             self.ui.viewHeightSpin.value = viewSize[1]
 
@@ -323,6 +317,5 @@ def init(view):
     panel = ScreenGrabberPanel(view)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
-
 
     return panel

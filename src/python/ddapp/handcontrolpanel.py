@@ -126,24 +126,17 @@ class HandControlPanel(object):
         self.drivers[side].sendCalibrate()
 
 
-def toggleWidgetShow():
+def _getAction():
+    return app.getToolBarActions()['ActionHandControlPanel']
 
-    if dock.isVisible():
-        dock.hide()
-    else:
-        dock.show()
 
 def init(driverL, driverR):
 
+    global panel
     global dock
 
     panel = HandControlPanel(driverL, driverR)
-    dock = app.addWidgetToDock(panel.widget)
+    dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
-
-    actionName = 'ActionHandControlPanel'
-    action = app.getToolBarActions()[actionName]
-    action.triggered.connect(toggleWidgetShow)
-
 
     return panel

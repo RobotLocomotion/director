@@ -478,8 +478,17 @@ class TeleopPanel(object):
         self.showPlanFunction(plan)
 
 
+def _getAction():
+    return app.getToolBarActions()['ActionTeleopPanel']
+
+
 def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction):
+
     global panel
+    global dock
+
     panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction)
-    dock = app.addWidgetToDock(panel.widget)
+    dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
+
+    return panel

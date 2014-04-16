@@ -116,12 +116,8 @@ class FootstepsPanel(object):
         self.driver.drawBDIFootstepPlan()
         self.driver.drawBDIFootstepPlanAdjusted()
 
-def toggleWidgetShow():
-
-    if dock.isVisible():
-        dock.hide()
-    else:
-        dock.show()
+def _getAction():
+    return app.getToolBarActions()['ActionFootstepPanel']
 
 def init(driver, robotModel, jointController):
 
@@ -129,12 +125,7 @@ def init(driver, robotModel, jointController):
     global dock
 
     panel = FootstepsPanel(driver, robotModel, jointController)
-    dock = app.addWidgetToDock(panel.widget)
+    dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
-
-    actionName = 'ActionFootstepPanel'
-    action = app.getToolBarActions()[actionName]
-    action.triggered.connect(toggleWidgetShow)
-
 
     return panel
