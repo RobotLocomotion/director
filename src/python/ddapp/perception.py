@@ -10,6 +10,7 @@ from ddapp.timercallback import TimerCallback
 from ddapp.utime import getUtime
 import vtkDRCFiltersPython as drc
 from ddapp.debugVis import DebugData
+import ddapp.visualization as vis
 import numpy as np
 
 import drc as lcmdrc
@@ -41,6 +42,9 @@ class MultisenseItem(om.ObjectModelItem):
         om.ObjectModelItem.__init__(self, 'Multisense', om.Icons.Laser)
 
         self.model = model
+        self.scalarBarWidget = None
+        self.addProperty('Color By', 0, attributes=om.PropertyAttributes(enumNames=['Solid Color', 'Intensity', 'Z Coordinate', 'Range', 'Spindle Angle', 'Azimuth', 'Camera RGB']))
+        self.addProperty('Show Scalar Bar', False)
         self.addProperty('Updates Enabled', True)
         self.addProperty('Min Range', model.reader.GetDistanceRange()[0])
         self.addProperty('Max Range', model.reader.GetDistanceRange()[1])
@@ -83,8 +87,69 @@ class MultisenseItem(om.ObjectModelItem):
             self.model.reader.SetDistanceRange(self.getProperty('Min Range'), self.getProperty('Max Range'))
             self.model.showRevolution(self.model.displayedRevolution)
 
+        elif propertyName == 'Color By':
+            self._updateColorBy()
+
+        elif propertyName == 'Show Scalar Bar':
+            self._updateScalarBar()
+
         _view.render()
 
+
+    def _updateColorBy(self):
+
+        arrayMap = {
+          0 : None,
+          1 : 'intensity',
+          2 : 'z',
+          3 : 'distance',
+          4 : 'spindle_angle',
+          5 : 'azimuth',
+          6 : 'rgb',
+          }
+
+        rangeMap = {
+            1 : (400, 4000),
+            2 : (0.0, 2.0),
+            3 : (0.5, 4.0),
+            4 : (0, 360),
+            5 : (-2.5, 2.5),
+        }
+
+        colorBy = self.getProperty('Color By')
+        scalarRange = rangeMap.get(colorBy)
+        arrayName = arrayMap.get(colorBy)
+
+        if arrayName:
+            if arrayName == 'rgb' and arrayName not in self.model.polyDataObj.getArrayNames():
+                self.model.colorizeCallback()
+            self.model.polyDataObj.colorBy(arrayName, scalarRange=scalarRange)
+        else:
+            self.model.polyDataObj.colorBy(None)
+
+        self._updateScalarBar()
+
+    def _updateScalarBar(self):
+        barEnabled = self.getProperty('Show Scalar Bar')
+        colorBy = self.getProperty('Color By')
+        if barEnabled and colorBy not in (0, 6):
+            self._showScalarBar()
+        else:
+            self._hideScalarBar()
+
+    def _hideScalarBar(self):
+        if self.scalarBarWidget:
+            self.scalarBarWidget.Off()
+            self.scalarBarWidget.SetInteractor(None)
+            self.scalarBarWidget = None
+            self.model.polyDataObj._renderAllViews()
+
+    def _showScalarBar(self):
+        title = self.getPropertyAttributes('Color By').enumNames[self.getProperty('Color By')]
+        view = self.model.polyDataObj.views[0]
+        lut = self.model.polyDataObj.mapper.GetLookupTable()
+        self.scalarBarWidget = vis.createScalarBarWidget(view, lut, title)
+        self.model.polyDataObj._renderAllViews()
 
     def getPropertyAttributes(self, propertyName):
 
@@ -156,7 +221,7 @@ class MultiSenseSource(TimerCallback):
 
         if self.showRevolutionCallback:
             self.showRevolutionCallback()
-        if self.colorizeCallback:
+        if self.colorizeCallback and colorByArray == 'rgb':
             self.colorizeCallback()
 
         self.polyDataObj.colorBy(colorByArray, lut=self.polyDataObj.mapper.GetLookupTable())
