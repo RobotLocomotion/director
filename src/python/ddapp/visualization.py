@@ -388,6 +388,24 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
     return gridObj
 
 
+def createScalarBarWidget(view, lookupTable, title):
+
+    w = vtk.vtkScalarBarWidget()
+    bar = w.GetScalarBarActor()
+    bar.SetTitle(title)
+    bar.SetLookupTable(lookupTable)
+    w.SetRepositionable(True)
+    w.SetInteractor(view.renderWindow().GetInteractor())
+    w.On()
+
+    rep = w.GetRepresentation()
+    rep.SetOrientation(0)
+    rep.SetPosition(0.77, 0.92)
+    rep.SetPosition2(0.20, 0.07)
+
+    return w
+
+
 def computeViewBoundsNoGrid(view):
     grid = om.findObjectByName('grid')
     if not grid or not grid.getProperty('Visible'):
