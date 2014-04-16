@@ -68,17 +68,9 @@ def colorizeMultisense(enabled):
     if not obj:
         return
 
-    def callback():
-        colorizePoints(obj.model.polyDataObj.polyData)
-        obj.model.polyDataObj.colorBy('rgb')
-
-    if enabled:
-        callback()
-        obj.model.colorizeCallback = callback
-    else:
-        obj.model.colorizeCallback = None
-
     setVisProperties(obj, enabled)
+    colorBy = 'Camera RGB' if enabled else 'Solid Color'
+    obj.setProperty('Color By', colorBy)
 
 
 def colorizeMapsOff():
@@ -96,7 +88,18 @@ def onColorizeLidar():
     colorizeMultisense(colorizeEnabled)
     colorizeSegmentationLidar(colorizeEnabled)
 
+def initColorizeCallbacks():
+
+    obj = om.findObjectByName('Multisense')
+    assert(obj)
+
+    def callback():
+        colorizePoints(obj.model.polyDataObj.polyData)
+
+    obj.model.colorizeCallback = callback
+
 
 def init():
     action = app.getToolBarActions()[actionName]
     action.connect(action, 'triggered()', onColorizeLidar)
+    initColorizeCallbacks()
