@@ -120,7 +120,7 @@ DataArrays CreateData(vtkIdType numberOfPoints)
   // range
   vtkSmartPointer<vtkFloatArray> distance = vtkSmartPointer<vtkFloatArray>::New();
   distance->SetName("distance");
-  distance->SetNumberOfTuples(numberOfPoints);
+  distance->Allocate(numberOfPoints);
   polyData->GetPointData()->AddArray(distance.GetPointer());
 
   // timestamp
