@@ -86,7 +86,7 @@ class VideoPlayer(object):
             CAPTURE_CHANNEL,
             'VIDEO_PLAYBACK_IMAGE']
 
-        self.imageManager = cameraview.CameraView()
+        self.imageManager = cameraview.ImageManager()
 
         for channelName in streams:
             self.imageManager.queue.addCameraStream(channelName)

@@ -73,13 +73,13 @@ def sendFOVRequest(channel, imagePoints):
     imagePoints = np.array([[pt[0], pt[1]] for pt in imagePoints])
     minX, maxX = imagePoints[:,0].min(), imagePoints[:,0].max()
     minY, maxY = imagePoints[:,1].min(), imagePoints[:,1].max()
-    
+
     message.x = minX
     message.y = minY
     message.w = maxX - minX
     message.h = maxY - minY
 
-    print message.x, message.y, message.w, message.h
+    #print message.x, message.y, message.w, message.h
 
     requestChannel = 'SUBIMAGE_REQUEST'
     lcmUtils.publish(requestChannel, message)
@@ -101,45 +101,23 @@ def rayDebug(position, ray):
     vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView)
 
 
-class CameraView(object):
+
+class ImageManager(object):
 
     def __init__(self):
 
-        self.initImageQueue()
-
-        if app.getMainWindow():
-            self.initView()
-            self.initEventFilter()
-            self.rayCallback = rayDebug
-        else:
-            self.view = None
-
-        self.timerCallback = TimerCallback()
-        self.timerCallback.targetFps = 60
-        self.timerCallback.callback = self.updateView
-        self.timerCallback.start()
-
-
-    def initImageQueue(self):
-
-        imageNames = [
-            'CAMERA_LEFT',
-            'CAMERACHEST_LEFT',
-            'CAMERACHEST_RIGHT',
-            ]
-
         self.images = {}
-        self.transforms = {}
         self.imageUtimes = {}
         self.textures = {}
-
-        for name in imageNames:
-            self.addImage(name)
 
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
         self.queue.init(lcmUtils.getGlobalLCMThread())
 
     def addImage(self, name):
+
+        if name in self.images:
+            return
+
         image = vtk.vtkImageData()
         tex = vtk.vtkTexture()
         tex.SetInput(image)
@@ -149,7 +127,61 @@ class CameraView(object):
         self.imageUtimes[name] = 0
         self.images[name] = image
         self.textures[name] = tex
-        self.transforms[name] = vtk.vtkTransform()
+
+    def writeImage(self, imageName, outFile):
+        writer = vtk.vtkPNGWriter()
+        writer.SetInput(self.images[imageName])
+        writer.SetFileName(outFile)
+        writer.Write()
+
+    def updateImage(self, imageName):
+        imageUtime = self.queue.getCurrentImageTime(imageName)
+        if imageUtime != self.imageUtimes[imageName]:
+            image = self.images[imageName]
+            self.imageUtimes[imageName] = self.queue.getImage(imageName, image)
+        return imageUtime
+
+    def updateImages(self):
+        for imageName in self.images.keys():
+            self.updateImage(imageName)
+
+    def hasImage(self, imageName):
+        return imageName in self.images
+
+    def getImage(self, imageName):
+        return self.images[imageName]
+
+    def getUtime(self, imageName):
+        return self.imageUtimes[imageName]
+
+    def getTexture(self, imageName):
+        return self.textures[imageName]
+
+
+class CameraView(object):
+
+    def __init__(self, imageManager):
+
+        self.imageManager = imageManager
+        self.updateUtimes = {}
+        self.sphereObjects = {}
+        self.sphereImages = [
+                'CAMERA_LEFT',
+                'CAMERACHEST_LEFT',
+                'CAMERACHEST_RIGHT']
+
+        for name in self.sphereImages:
+            imageManager.addImage(name)
+            self.updateUtimes[name] = 0
+
+        self.initView()
+        self.initEventFilter()
+        self.rayCallback = rayDebug
+
+        self.timerCallback = TimerCallback()
+        self.timerCallback.targetFps = 60
+        self.timerCallback.callback = self.updateView
+        self.timerCallback.start()
 
     def onViewDoubleClicked(self, displayPoint):
 
@@ -159,13 +191,13 @@ class CameraView(object):
             return
 
         imageName = obj.getProperty('Name')
-        imageUtime = self.imageUtimes[imageName]
+        imageUtime = self.imageManager.getUtime(imageName)
 
         cameraToLocal = vtk.vtkTransform()
-        self.queue.getTransform(imageName, 'local', imageUtime, cameraToLocal)
+        self.imageManager.queue.getTransform(imageName, 'local', imageUtime, cameraToLocal)
 
         utorsoToLocal = vtk.vtkTransform()
-        self.queue.getTransform('utorso', 'local', imageUtime, utorsoToLocal)
+        self.imageManager.queue.getTransform('utorso', 'local', imageUtime, utorsoToLocal)
 
         p = range(3)
         utorsoToLocal.TransformPoint(pickedPoint, p)
@@ -176,32 +208,36 @@ class CameraView(object):
         if self.rayCallback:
             self.rayCallback(np.array(cameraToLocal.GetPosition()), ray)
 
-
     def filterEvent(self, obj, event):
         if event.type() == QtCore.QEvent.MouseButtonDblClick:
             self.eventFilter.setEventHandlerResult(True)
             self.onViewDoubleClicked(vis.mapMousePosition(obj, event))
+        elif event.type() == QtCore.QEvent.KeyPress:
+            if str(event.text()).lower() == 'p':
+                self.eventFilter.setEventHandlerResult(True)
+            elif str(event.text()).lower() == 'r':
+                self.eventFilter.setEventHandlerResult(True)
+                self.resetCamera()
 
     def initEventFilter(self):
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
         qvtkwidget = self.view.vtkWidget()
         qvtkwidget.installEventFilter(self.eventFilter)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
     def initView(self):
 
         self.view = app.getViewManager().createView('Camera View', 'VTK View')
+        app.toggleCameraTerrainMode(self.view)
+        self.resetCamera()
 
+    def resetCamera(self):
         self.view.camera().SetViewAngle(90)
         self.view.camera().SetPosition(-7.5, 0.0, 5.0)
         self.view.camera().SetFocalPoint(0.0, 0.0, 0.0)
         self.view.camera().SetViewUp(0.0, 0.0, 1.0)
-
-        self.sphereObjects = {}
-
-        app.toggleCameraTerrainMode(self.view)
-
 
     def getSphereGeometry(self, imageName):
 
@@ -209,7 +245,7 @@ class CameraView(object):
         if sphereObj:
             return sphereObj
 
-        if not self.images[imageName].GetDimensions()[0]:
+        if not self.imageManager.getImage(imageName).GetDimensions()[0]:
             return None
 
         sphereResolution = 50
@@ -220,7 +256,7 @@ class CameraView(object):
                 }
 
         geometry = makeSphere(sphereRadii[imageName], sphereResolution)
-        self.queue.computeTextureCoords(imageName, geometry)
+        self.imageManager.queue.computeTextureCoords(imageName, geometry)
 
         tcoordsArrayName = 'tcoords_%s' % imageName
         vtkNumpy.addNumpyToVtk(geometry, vtkNumpy.getNumpyFromVtk(geometry, tcoordsArrayName)[:,0].copy(), 'tcoords_U')
@@ -230,56 +266,43 @@ class CameraView(object):
         geometry.GetPointData().SetTCoords(geometry.GetPointData().GetArray(tcoordsArrayName))
 
         sphereObj = vis.showPolyData(geometry, imageName, view=self.view, parent='cameras')
-        sphereObj.actor.SetTexture(self.textures[imageName])
+        sphereObj.actor.SetTexture(self.imageManager.getTexture(imageName))
         sphereObj.actor.GetProperty().LightingOff()
 
         self.sphereObjects[imageName] = sphereObj
         return sphereObj
 
-
     def updateSphereGeometry(self):
 
-        for imageName, transform in self.transforms.iteritems():
+        for imageName in self.sphereImages:
             sphereObj = self.getSphereGeometry(imageName)
             if not sphereObj:
                 continue
 
-            self.queue.getBodyToCameraTransform(imageName, transform)
+            transform = vtk.vtkTransform()
+            self.imageManager.queue.getBodyToCameraTransform(imageName, transform)
             sphereObj.actor.SetUserTransform(transform.GetLinearInverse())
 
-        return True
-
-
-    def writeImage(self, imageName, outFile):
-        writer = vtk.vtkPNGWriter()
-        writer.SetInput(self.images[imageName])
-        writer.SetFileName(outFile)
-        writer.Write()
-
-
     def updateImages(self):
+
         updated = False
-        for imageName, image in self.images.iteritems():
-            imageUtime = self.queue.getCurrentImageTime(imageName)
-            if imageUtime != self.imageUtimes.get(imageName, 0):
-                self.imageUtimes[imageName] = self.queue.getImage(imageName, image)
+        for imageName, lastUtime in self.updateUtimes.iteritems():
+            currentUtime = self.imageManager.updateImage(imageName)
+            if currentUtime != lastUtime:
+                self.updateUtimes[imageName] = currentUtime
                 updated = True
+
         return updated
 
-
     def updateView(self):
+
+        if not self.view.isVisible():
+            return
 
         if not self.updateImages():
             return
 
-        if not self.view:
-            return
-
-
         self.updateSphereGeometry()
-
-        if not self.view.isVisible():
-            return
         self.view.render()
 
 
@@ -287,6 +310,8 @@ class CameraView(object):
 class CameraImageView(object):
 
     def __init__(self, imageManager, imageName, viewName=None, view=None):
+
+        imageManager.addImage(imageName)
 
         self.imageManager = imageManager
         self.viewName = viewName or imageName
@@ -337,6 +362,9 @@ class CameraImageView(object):
         imagePoints = [vis.pickImage(point, self.view)[1] for point in displayPoints]
         sendFOVRequest(self.imageName, imagePoints)
 
+    def getImage(self):
+        return self.imageManager.getImage(self.imageName)
+
     def initView(self, view):
         self.view = view or app.getViewManager().createView(self.viewName, 'VTK View')
         self.view.installImageInteractor()
@@ -344,7 +372,7 @@ class CameraImageView(object):
         self.interactorStyle.AddObserver('SelectionChangedEvent', self.onRubberBandPick)
 
         self.imageActor = vtk.vtkImageActor()
-        self.imageActor.SetInput(self.imageManager.images[self.imageName])
+        self.imageActor.SetInput(self.getImage())
         self.imageActor.SetVisibility(False)
         self.view.renderer().AddActor(self.imageActor)
 
@@ -352,7 +380,6 @@ class CameraImageView(object):
         self.timerCallback.targetFps = 60
         self.timerCallback.callback = self.updateView
         self.timerCallback.start()
-
 
     def initEventFilter(self):
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
@@ -376,7 +403,7 @@ class CameraImageView(object):
     def fitImageToView(self):
 
         camera = self.view.camera()
-        image = self.imageManager.images[self.imageName]
+        image = self.getImage()
         imageWidth, imageHeight, _ = image.GetDimensions()
 
         viewWidth, viewHeight = self.view.renderWindow().GetSize()
@@ -384,17 +411,16 @@ class CameraImageView(object):
         parallelScale = max(imageWidth/aspectRatio, imageHeight) / 2.0
         camera.SetParallelScale(parallelScale)
 
-
     def setImageName(self, imageName):
         if imageName == self.imageName:
             return
 
-        assert imageName in self.imageManager.images
+        assert self.imageManager.hasImage(imageName)
 
         self.imageName = imageName
         self.imageInitialized = False
         self.updateUtime = 0
-        self.imageActor.SetInput(self.imageManager.images[self.imageName])
+        self.imageActor.SetInput(self.imageManager.getImage(self.imageName))
         self.imageActor.SetVisibility(False)
         self.view.render()
 
@@ -403,10 +429,10 @@ class CameraImageView(object):
         if not self.view.isVisible():
             return
 
-        currentUtime = self.imageManager.imageUtimes[self.imageName]
+        currentUtime = self.imageManager.updateImage(self.imageName)
         if currentUtime != self.updateUtime:
-            self.view.render()
             self.updateUtime = currentUtime
+            self.view.render()
 
             if not self.imageInitialized and self.imageActor.GetInput().GetDimensions()[0]:
                 self.imageActor.SetVisibility(True)
@@ -415,28 +441,27 @@ class CameraImageView(object):
 
 views = {}
 
-def addCameraView(channel, name):
 
-    cameraView.queue.addCameraStream(channel)
-    cameraView.addImage(channel)
-    view = CameraImageView(cameraView, channel, name)
+def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
+
+    cameraName = cameraName or channel
+    imageManager.queue.addCameraStream(channel, cameraName, imageType)
+    imageManager.addImage(cameraName)
+    view = CameraImageView(imageManager, cameraName, viewName)
     global views
     views[channel] = view
     return view
 
 
 def init():
+
+    global imageManager
+    imageManager = ImageManager()
+
     global cameraView
-    cameraView = CameraView()
+    cameraView = CameraView(imageManager)
 
-    global headView, chestLeft, chestRight
-    headView = CameraImageView(cameraView, 'CAMERA_LEFT', 'Head camera')
-    chestLeft = CameraImageView(cameraView, 'CAMERACHEST_LEFT', 'Chest left')
-    chestRight = CameraImageView(cameraView, 'CAMERACHEST_RIGHT', 'Chest right')
-
-    #addCameraView('AFFORDANCE_OVERLAY', 'Affordance overlay')
-
-    useAnaglyph = False
-    if useAnaglyph:
-        addCameraView('CAMERA_ANAGLYPH', 'Head Anaglyph')
+    addCameraView('CAMERA_LEFT', 'Head camera')
+    addCameraView('CAMERACHEST_LEFT', 'Chest left')
+    addCameraView('CAMERACHEST_RIGHT', 'Chest right')
 
