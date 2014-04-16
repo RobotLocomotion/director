@@ -61,6 +61,7 @@ public:
   vtkFloatArray* Azimuth;
   vtkFloatArray* SpindleAngle;
   vtkFloatArray* Distance;
+  vtkFloatArray* ZHeight;
   vtkUnsignedIntArray* Timestamp;
 };
 
@@ -123,6 +124,12 @@ DataArrays CreateData(vtkIdType numberOfPoints)
   distance->Allocate(numberOfPoints);
   polyData->GetPointData()->AddArray(distance.GetPointer());
 
+  // z
+  vtkSmartPointer<vtkFloatArray> zheight = vtkSmartPointer<vtkFloatArray>::New();
+  zheight->SetName("z");
+  zheight->Allocate(numberOfPoints);
+  polyData->GetPointData()->AddArray(zheight.GetPointer());
+
   // timestamp
   vtkSmartPointer<vtkUnsignedIntArray> timestamp = vtkSmartPointer<vtkUnsignedIntArray>::New();
   timestamp->SetName("timestamp");
@@ -137,6 +144,7 @@ DataArrays CreateData(vtkIdType numberOfPoints)
   arrays.Azimuth = azimuth.GetPointer();
   arrays.SpindleAngle = spindleAngle.GetPointer();
   arrays.Distance = distance.GetPointer();
+  arrays.ZHeight = zheight.GetPointer();
   arrays.Timestamp = timestamp.GetPointer();
 
   return arrays;
@@ -204,6 +212,7 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
     dataArrays.Azimuth->InsertNextValue(theta);
     dataArrays.SpindleAngle->InsertNextValue(spindleAngle);
     dataArrays.Distance->InsertNextValue(ranges[i]);
+    dataArrays.ZHeight->InsertNextValue(pt[2]);
     dataArrays.Timestamp->InsertNextValue(msg->utime);
   }
 
