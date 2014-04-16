@@ -43,7 +43,6 @@ public:
     public:
 
     bool mHasCalibration;
-    int mImageMessageIndex;
     std::string mName;
     std::string mCoordFrame;
     BotCamTrans* mCamTrans;
@@ -56,7 +55,6 @@ public:
     CameraData()
     {
       mHasCalibration = false;
-      mImageMessageIndex = 0;
       mImageMessage.width = 0;
       mImageMessage.height = 0;
       mImageMessage.utime = 0;
@@ -72,7 +70,17 @@ public:
 
   virtual ~ddBotImageQueue();
 
-  bool addCameraStream(const QString& cameraName);
+  // Adds an lcm subscriber for the given channel if one does not already exit.
+  // Assumes the camera name is the same as the given channel name.  Camera name
+  // is used to lookup camera parameters from botparam.  Not all image channels
+  // have named cameras in botparam.
+  bool addCameraStream(const QString& channel);
+
+  // Adds an lcm subscriber for the given channel if one does not already exist.
+  // Looks for camera parameters in botparam using the given cameraName.  Not
+  // all image channels have named cameras in botparam.  The imageType, if >= 0,
+  // is used to extract image_t message from images_t.
+  bool addCameraStream(const QString& channel, const QString& cameraName, int imageType);
 
   void init(ddLCMThread* lcmThread);
 
@@ -117,7 +125,7 @@ protected:
   BotFrames* mBotFrames;
 
   ddLCMThread* mLCM;
-  QMap<QString, QString> mChannelMap;
+  QMap<QString, QMap<int, QString> > mChannelMap;
   QMap<QString, ddLCMSubscriber*> mSubscribers;
   QMap<QString, CameraData*> mCameraData;
 };
