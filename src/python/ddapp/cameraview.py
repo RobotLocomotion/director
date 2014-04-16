@@ -325,6 +325,13 @@ class CameraImageView(object):
             self.eventFilter.setEventHandlerResult(True)
             self.onViewDoubleClicked(vis.mapMousePosition(obj, event))
 
+        elif event.type() == QtCore.QEvent.KeyPress:
+            if str(event.text()).lower() == 'p':
+                self.eventFilter.setEventHandlerResult(True)
+            elif str(event.text()).lower() == 'r':
+                self.eventFilter.setEventHandlerResult(True)
+                self.resetCamera()
+
     def onRubberBandPick(self, obj, event):
         displayPoints = self.interactorStyle.GetStartPosition(), self.interactorStyle.GetEndPosition()
         imagePoints = [vis.pickImage(point, self.view)[1] for point in displayPoints]
@@ -335,8 +342,6 @@ class CameraImageView(object):
         self.view.installImageInteractor()
         self.interactorStyle = self.view.renderWindow().GetInteractor().GetInteractorStyle()
         self.interactorStyle.AddObserver('SelectionChangedEvent', self.onRubberBandPick)
-
-        self.view.renderWindow().GetInteractor().AddObserver('KeyPressEvent', self.onKeyPress)
 
         self.imageActor = vtk.vtkImageActor()
         self.imageActor.SetInput(self.imageManager.images[self.imageName])
@@ -354,6 +359,7 @@ class CameraImageView(object):
         qvtkwidget = self.view.vtkWidget()
         qvtkwidget.installEventFilter(self.eventFilter)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
         self.eventFilterEnabled = True
 
@@ -365,14 +371,7 @@ class CameraImageView(object):
         camera.SetViewUp(0,-1, 0)
         self.view.resetCamera()
         self.fitImageToView()
-
-
-    def onKeyPress(self, obj, event):
-        if obj.GetKeyCode() == 'p':
-            return
-        if obj.GetKeyCode() == 'r':
-            self.fitImageToView()
-
+        self.view.render()
 
     def fitImageToView(self):
 
