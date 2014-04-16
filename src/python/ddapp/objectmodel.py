@@ -284,30 +284,35 @@ class PolyDataItem(ObjectModelItem):
 
         if not arrayName:
             self.mapper.ScalarVisibilityOff()
+            self.polyData.GetPointData().SetActiveScalars(None)
             return
 
         array = self.polyData.GetPointData().GetArray(arrayName)
         if not array:
             print 'colorBy(%s): array not found' % arrayName
             self.mapper.ScalarVisibilityOff()
+            self.polyData.GetPointData().SetActiveScalars(None)
             return
 
-        self.polyData.GetPointData().SetScalars(array)
+        self.polyData.GetPointData().SetActiveScalars(arrayName)
 
-        if scalarRange is None:
-            scalarRange = array.GetRange()
 
         if not lut:
+            if scalarRange is None:
+                scalarRange = array.GetRange()
+
             lut = vtk.vtkLookupTable()
             lut.SetNumberOfColors(256)
             lut.SetHueRange(0.667, 0)
+            lut.SetRange(scalarRange)
             lut.Build()
 
-        self.mapper.SetLookupTable(lut)
+
+        #self.mapper.SetColorModeToMapScalars()
         self.mapper.ScalarVisibilityOn()
-        self.mapper.SetScalarRange(scalarRange)
+        self.mapper.SetUseLookupTableScalarRange(True)
+        self.mapper.SetLookupTable(lut)
         self.mapper.InterpolateScalarsBeforeMappingOff()
-        #self.mapper.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, arrayName)
 
         if self.getProperty('Visible'):
             self._renderAllViews()
