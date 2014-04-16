@@ -92,42 +92,53 @@ void ddBotImageQueue::init(ddLCMThread* lcmThread)
   this->addCameraStream("CAMERACHEST_LEFT");
   this->addCameraStream("CAMERACHEST_RIGHT");
   this->addCameraStream("CAMERA_LEFT");
+  this->addCameraStream("CAMERA", "CAMERA_LEFT", multisense::images_t::LEFT);
+  //this->addCameraStream("CAMERA", "CAMERA_RIGHT", multisense::images_t::RIGHT);
 }
 
 //-----------------------------------------------------------------------------
-bool ddBotImageQueue::addCameraStream(const QString& cameraName)
+bool ddBotImageQueue::addCameraStream(const QString& channel)
 {
-  CameraData* cameraData = new CameraData;
+  return this->addCameraStream(channel, channel, -1);
+}
 
-  if (!this->initCameraData(cameraName, cameraData))
+//-----------------------------------------------------------------------------
+bool ddBotImageQueue::addCameraStream(const QString& channel, const QString& cameraName, int imageType)
+{
+  if (!this->mCameraData.contains(cameraName))
   {
-    delete cameraData;
-    return false;
+    CameraData* cameraData = new CameraData;
+    if (!this->initCameraData(cameraName, cameraData))
+    {
+      delete cameraData;
+      return false;
+    }
+
+    this->mCameraData[cameraName] = cameraData;
+  }
+
+  this->mChannelMap[channel][imageType] = cameraName;
+
+  if (!this->mSubscribers.contains(channel))
+  {
+    ddLCMSubscriber* subscriber = new ddLCMSubscriber(channel, this);
+
+    if (imageType >= 0)
+    {
+      this->connect(subscriber, SIGNAL(messageReceived(const QByteArray&, const QString&)),
+          SLOT(onImagesMessage(const QByteArray&, const QString&)), Qt::DirectConnection);
+    }
+    else
+    {
+      this->connect(subscriber, SIGNAL(messageReceived(const QByteArray&, const QString&)),
+          SLOT(onImageMessage(const QByteArray&, const QString&)), Qt::DirectConnection);
+    }
+
+    this->mSubscribers[channel] = subscriber;
+    mLCM->addSubscriber(subscriber);
   }
 
 
-  ddLCMSubscriber* subscriber;
-  QString channel = cameraName;
-
-
-  bool useImagesMessage = false;
-
-  if (useImagesMessage && cameraName == "CAMERA_LEFT")
-  {
-    channel = "CAMERA";
-    subscriber = new ddLCMSubscriber(channel, this);
-    this->connect(subscriber, SIGNAL(messageReceived(const QByteArray&, const QString&)), SLOT(onImagesMessage(const QByteArray&, const QString&)), Qt::DirectConnection);
-  }
-  else
-  {
-    subscriber = new ddLCMSubscriber(channel, this);
-    this->connect(subscriber, SIGNAL(messageReceived(const QByteArray&, const QString&)), SLOT(onImageMessage(const QByteArray&, const QString&)), Qt::DirectConnection);
-  }
-
-  this->mChannelMap[channel] = cameraName;
-  this->mSubscribers[cameraName] = subscriber;
-  this->mCameraData[cameraName] = cameraData;
-  mLCM->addSubscriber(subscriber);
   return true;
 }
 
@@ -268,29 +279,54 @@ ddBotImageQueue::CameraData* ddBotImageQueue::getCameraData(const QString& camer
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::onImagesMessage(const QByteArray& data, const QString& channel)
 {
-  CameraData* cameraData = this->getCameraData(mChannelMap[channel]);
-
   multisense::images_t message;
   message.decode(data.data(), 0, data.size());
 
-  QMutexLocker locker(&cameraData->mMutex);
-  cameraData->mImageMessage = message.images[cameraData->mImageMessageIndex];
-  cameraData->mImageBuffer.clear();
+  const QMap<int, QString> cameraNameMap = mChannelMap[channel];
 
-  if (cameraData->mHasCalibration)
+  for (QMap<int, QString>::const_iterator itr = cameraNameMap.constBegin(); itr != cameraNameMap.end(); ++itr)
   {
-    this->getTransform("local", cameraData->mCoordFrame, cameraData->mLocalToCamera, cameraData->mImageMessage.utime);
-    this->getTransform("utorso", cameraData->mCoordFrame, cameraData->mBodyToCamera, cameraData->mImageMessage.utime);
+    int imageType = itr.key();
+    const QString& cameraName = itr.value();
+
+    bot_core::image_t* imageMessage = 0;
+    for (int i = 0; i < message.n_images; ++i)
+    {
+      if (message.image_types[i] == imageType)
+      {
+        imageMessage = &message.images[i];
+        break;
+      }
+    }
+
+    if (!imageMessage)
+    {
+      return;
+    }
+
+    CameraData* cameraData = this->getCameraData(cameraName);
+
+    QMutexLocker locker(&cameraData->mMutex);
+    cameraData->mImageMessage = *imageMessage;
+    cameraData->mImageBuffer.clear();
+
+    if (cameraData->mHasCalibration)
+    {
+      this->getTransform("local", cameraData->mCoordFrame, cameraData->mLocalToCamera, cameraData->mImageMessage.utime);
+      this->getTransform("utorso", cameraData->mCoordFrame, cameraData->mBodyToCamera, cameraData->mImageMessage.utime);
+    }
+
+    //printf("got image %s: %d %d\n", cameraData->mName.c_str(), cameraData->mImageMessage.width, cameraData->mImageMessage.height);
   }
-  //printf("got image %s: %d %d\n", cameraData->mName.c_str(), cameraData->mImageMessage.width, cameraData->mImageMessage.height);
 }
 
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::onImageMessage(const QByteArray& data, const QString& channel)
 {
-  CameraData* cameraData = this->getCameraData(mChannelMap[channel]);
+  const QString& cameraName = mChannelMap[channel][-1];
 
-  int64_t previousUtime = cameraData->mImageMessage.utime;
+  CameraData* cameraData = this->getCameraData(cameraName);
+
 
   QMutexLocker locker(&cameraData->mMutex);
   cameraData->mImageMessage.decode(data.data(), 0, data.size());
