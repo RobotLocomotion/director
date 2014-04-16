@@ -77,6 +77,11 @@ class ObjectModelItem(object):
 
     def setProperty(self, propertyName, propertyValue):
         assert self.hasProperty(propertyName)
+
+        attributes = self.getPropertyAttributes(propertyName)
+        if attributes.enumNames and type(propertyValue) != int:
+            propertyValue = attributes.enumNames.index(propertyValue)
+
         self.oldPropertyValue = (propertyName, self.getProperty(propertyName))
         self.properties[propertyName] = propertyValue
         self._onPropertyChanged(propertyName)
