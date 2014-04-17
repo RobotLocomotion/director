@@ -146,7 +146,7 @@ public:
   {
     this->ShouldStop = true;
     this->NewData = false;
-    this->MaxNumberOfDatasets = 100;
+    this->MaxNumberOfDatasets = 20;
     this->ViewIds = vtkSmartPointer<vtkIntArray>::New();
 
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
