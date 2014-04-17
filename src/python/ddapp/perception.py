@@ -43,7 +43,7 @@ class MultisenseItem(om.ObjectModelItem):
 
         self.model = model
         self.scalarBarWidget = None
-        self.addProperty('Color By', 0, attributes=om.PropertyAttributes(enumNames=['Solid Color', 'Intensity', 'Z Coordinate', 'Range', 'Spindle Angle', 'Azimuth', 'Camera RGB']))
+        self.addProperty('Color By', 0, attributes=om.PropertyAttributes(enumNames=['Solid Color', 'Intensity', 'Z Coordinate', 'Range', 'Spindle Angle', 'Azimuth', 'Camera RGB', 'Scan Delta']))
         self.addProperty('Show Scalar Bar', False)
         self.addProperty('Updates Enabled', True)
         self.addProperty('Min Range', model.reader.GetDistanceRange()[0])
@@ -106,6 +106,7 @@ class MultisenseItem(om.ObjectModelItem):
           4 : 'spindle_angle',
           5 : 'azimuth',
           6 : 'rgb',
+          7 : 'scan_delta'
           }
 
         rangeMap = {
@@ -114,6 +115,7 @@ class MultisenseItem(om.ObjectModelItem):
             3 : (0.5, 4.0),
             4 : (0, 360),
             5 : (-2.5, 2.5),
+            7 : (0.0, 0.3)
         }
 
         colorBy = self.getProperty('Color By')

@@ -62,6 +62,7 @@ public:
   vtkFloatArray* SpindleAngle;
   vtkFloatArray* Distance;
   vtkFloatArray* ZHeight;
+  vtkFloatArray* ScanDelta;
   vtkUnsignedIntArray* Timestamp;
 };
 
@@ -130,6 +131,12 @@ DataArrays CreateData(vtkIdType numberOfPoints)
   zheight->Allocate(numberOfPoints);
   polyData->GetPointData()->AddArray(zheight.GetPointer());
 
+  // scan delta
+  vtkSmartPointer<vtkFloatArray> scanDelta = vtkSmartPointer<vtkFloatArray>::New();
+  scanDelta->SetName("scan_delta");
+  scanDelta->Allocate(numberOfPoints);
+  polyData->GetPointData()->AddArray(scanDelta.GetPointer());
+
   // timestamp
   vtkSmartPointer<vtkUnsignedIntArray> timestamp = vtkSmartPointer<vtkUnsignedIntArray>::New();
   timestamp->SetName("timestamp");
@@ -145,6 +152,7 @@ DataArrays CreateData(vtkIdType numberOfPoints)
   arrays.SpindleAngle = spindleAngle.GetPointer();
   arrays.Distance = distance.GetPointer();
   arrays.ZHeight = zheight.GetPointer();
+  arrays.ScanDelta = scanDelta.GetPointer();
   arrays.Timestamp = timestamp.GetPointer();
 
   return arrays;
@@ -186,10 +194,12 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 
 
     // Edge effect filter
+    float scanDelta = 0.0;
     if ( (i > 0) && ( i+1 < numPoints))
     {
       float rightDiff = fabs(ranges[i] - ranges[i-1]);
       float leftDiff = fabs(ranges[i] - ranges[i+1]);
+      scanDelta = std::max(rightDiff, leftDiff);
       if (( rightDiff > edgeDistanceThreshold) || (leftDiff > edgeDistanceThreshold ))
       {
         if (ranges[i] < edgeFilterEnabledRange)
@@ -213,6 +223,7 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
     dataArrays.SpindleAngle->InsertNextValue(spindleAngle);
     dataArrays.Distance->InsertNextValue(ranges[i]);
     dataArrays.ZHeight->InsertNextValue(pt[2]);
+    dataArrays.ScanDelta->InsertNextValue(scanDelta);
     dataArrays.Timestamp->InsertNextValue(msg->utime);
   }
 
