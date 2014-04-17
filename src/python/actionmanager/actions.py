@@ -9,7 +9,7 @@ from ddapp import lcmUtils
 from ddapp import segmentation
 from ddapp.drilldemo import RobotPoseGUIWrapper
 
-from drc import robot_state_t
+from drc import robot_state_t, actionman_status_t, actionman_resume_t
 from bot_core import rigid_transform_t
 from vtk import vtkTransform
 import botpy
@@ -82,8 +82,22 @@ class Action(object):
         self.container.fsm.transition(val)
 
     def success(self):
-        self.transition(self.successAction)
-        self.container.executionList.append([self.name, 'success', len(self.animations)])
+        if self.container.pauseBetween:
+            # Skip the pauses if it's a transition to goal
+            if self.successAction is 'goal':
+                self.transition(self.successAction)
+
+            # if success called when aleady paused, that means continue
+            if self.name == 'pause':
+                self.transition(self.successAction)
+
+            # Default case is transition to pause and store success transition
+            else:
+                self.container.actionObjects['pause'].successAction = self.successAction
+                self.transition('pause')
+        else:
+            self.transition(self.successAction)
+            self.container.executionList.append([self.name, 'success', len(self.animations)])
 
     def fail(self):
         self.transition(self.failAction)
@@ -188,6 +202,37 @@ class Fail(Action):
         # Stop the FSM now that we're at a terminus
         self.container.fsm.stop()
 
+
+# Below is the special Pause action which does nothing and waits
+# for a special LCM message to resume
+
+class Pause(Action):
+
+    inputs = []
+
+    def __init__(self, container):
+        Action.__init__(self, 'pause', None, None, {}, container)
+        self.outputs = {}
+        self.resumeChannel = 'ACTION_MANAGER_RESUME'
+        self.resumeReceived = False
+
+    def resumeCallback(self, data):
+        self.resumeReceived = True
+
+    def onEnter(self):
+        print "Entering the pause state.  Waiting for continue message via LCM topic."
+        lcmUtils.captureMessageCallback(self.resumeChannel, actionman_resume_t, self.resumeCallback)
+
+    def onUpdate(self):
+        if self.resumeReceived:
+            self.success()
+
+    def onExit(self):
+        # Cleanup
+        self.resumeReceived = False
+
+        # This is a dummy action, no robot motion
+        self.outputState = deepcopy(self.inputState)
 
 # Full action objects start below:
 #
