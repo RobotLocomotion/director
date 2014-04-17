@@ -233,17 +233,26 @@ if usePlanning:
     #app.addToolbarMacro('play manip plan', playManipPlan)
     #app.addToolbarMacro('fit drill', fitDrillMultisense)
 
-    def sendSceneHeightRequest():
+    def sendDataRequest(requestType, repeatTime=0.0):
 
       msg = lcmdrc.data_request_t()
-      msg.type = lcmdrc.data_request_t.HEIGHT_MAP_SCENE
-      msg.period = 0
+      msg.type = requestType
+      msg.period = int(repeatTime*10) # period is specified in tenths of a second
 
       msgList = lcmdrc.data_request_list_t()
       msgList.utime = getUtime()
       msgList.requests = [msg]
       msgList.num_requests = len(msgList.requests)
       lcmUtils.publish('DATA_REQUEST', msgList)
+
+    def sendSceneHeightRequest(repeatTime=0.0):
+        sendDataRequest(lcmdrc.data_request_t.HEIGHT_MAP_SCENE, repeatTime)
+
+    def sendWorkspaceDepthRequest(repeatTime=0.0):
+        sendDataRequest(lcmdrc.data_request_t.DEPTH_MAP_WORKSPACE_C, repeatTime)
+
+    def sendSceneDepthRequest(repeatTime=0.0):
+        sendDataRequest(lcmdrc.data_request_t.DEPTH_MAP_SCENE, repeatTime)
 
     app.addToolbarMacro('scene height', sendSceneHeightRequest)
 
