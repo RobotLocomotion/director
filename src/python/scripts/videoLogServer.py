@@ -6,6 +6,7 @@ import functools
 import threading
 import glob
 import json
+import re
 import numpy as np
 
 from ddapp import lcmspy as spy
@@ -300,8 +301,20 @@ def updateLogInfo(filename, catalog):
 
 
 def getExistingLogFiles(dirName):
+
+    # sort log filenames by splitting string into
+    # list of strings and numbers.
+    # Example filename: lcmlog-2014-04-16.25
+    # sort implementation taken from: http://stackoverflow.com/a/5967539
+
+    def atoi(text):
+        return int(text) if text.isdigit() else text
+
+    def splitKeys(text):
+        return [atoi(c) for c in re.split('(\d+)', text)]
+
     filenames = glob.glob(dirName + '/lcmlog-*')
-    return sorted(filenames, key=lambda x: int(x.split('.')[1]))
+    return sorted(filenames, key=splitKeys)
 
 
 def pruneLogFiles(logFiles):
