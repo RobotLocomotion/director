@@ -87,6 +87,9 @@ class ObjectModelItem(object):
         self._onPropertyChanged(propertyName)
         self.oldPropertyValue = None
 
+    def hasDataSet(self, dataSet):
+        return False
+
     def getActionNames(self):
         return []
 
@@ -168,6 +171,8 @@ class RobotModelItem(ObjectModelItem):
 
         self._renderAllViews()
 
+    def hasDataSet(self, dataSet):
+        return len(self.model.getLinkNameForMesh(dataSet)) != 0
 
     def onModelChanged(self):
         if self.modelChangedCallback:
@@ -252,6 +257,10 @@ class PolyDataItem(ObjectModelItem):
     def _renderAllViews(self):
         for view in self.views:
             view.render()
+
+    def hasDataSet(self, dataSet):
+        return dataSet == self.polyData
+
 
     def setPolyData(self, polyData):
 
