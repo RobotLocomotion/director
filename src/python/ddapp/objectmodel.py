@@ -403,6 +403,15 @@ def getActiveObject():
     return objects[item] if item is not None else None
 
 
+def setActiveObject(obj):
+    item = getItemForObject(obj)
+    if item:
+        tree = getObjectTree()
+        #tree.clearSelection()
+        #item.setSelected(True)
+        tree.setCurrentItem(item)
+        tree.scrollToItem(item)
+
 def getItemForObject(obj):
     global objects
     for item, itemObj in objects.iteritems():
@@ -586,6 +595,13 @@ def collapse(obj):
     item = getItemForObject(obj)
     if item:
         getObjectTree().collapseItem(item)
+
+
+def expand(obj):
+    item = getItemForObject(obj)
+    if item:
+        getObjectTree().expandItem(item)
+
 
 def addContainer(name, parentObj=None):
     obj = ContainerItem(name)
