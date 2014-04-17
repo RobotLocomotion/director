@@ -245,4 +245,4 @@ def init(view_, handFactory_, robotModel_):
     global robotModel
     robotModel = robotModel_
 
-    app.addToolbarMacro('interpolate reach', interpolateReach)
+    #app.addToolbarMacro('interpolate reach', interpolateReach)
