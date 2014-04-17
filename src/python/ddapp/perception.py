@@ -131,6 +131,9 @@ class MultisenseItem(om.ObjectModelItem):
 
         self._updateScalarBar()
 
+    def hasDataSet(self, dataSet):
+        return self.model.polyDataObj.hasDataSet(dataSet)
+
     def _updateScalarBar(self):
         barEnabled = self.getProperty('Show Scalar Bar')
         colorBy = self.getProperty('Color By')

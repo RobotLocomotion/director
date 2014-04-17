@@ -605,11 +605,8 @@ def mapMousePosition(widget, mouseEvent):
 
 def getObjectByDataSet(polyData):
     for item, obj in om.objects.iteritems():
-        if isinstance(obj, om.PolyDataItem) and obj.polyData == polyData:
+        if obj.hasDataSet(polyData):
             return obj
-        elif isinstance(obj, om.RobotModelItem) and obj.model.getLinkNameForMesh(polyData):
-            return obj
-
 
 def getObjectByProp(prop):
     if not prop:
