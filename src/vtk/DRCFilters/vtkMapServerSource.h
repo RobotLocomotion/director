@@ -43,6 +43,8 @@ public:
   vtkIdType GetCurrentMapId(int viewId);
   void GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData);
 
+  vtkIntArray* GetViewIds();
+
 protected:
 
 

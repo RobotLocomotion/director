@@ -147,6 +147,7 @@ public:
     this->ShouldStop = true;
     this->NewData = false;
     this->MaxNumberOfDatasets = 100;
+    this->ViewIds = vtkSmartPointer<vtkIntArray>::New();
 
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
@@ -333,6 +334,20 @@ public:
       }
   }
 
+  vtkIntArray* GetViewIds()
+  {
+    this->ViewIds->SetNumberOfTuples(this->CurrentMapIds.size());
+
+    std::map<int, vtkIdType>::const_iterator itr;
+    int i;
+    for (i = 0, itr = this->CurrentMapIds.begin(); itr != this->CurrentMapIds.end(); ++itr, ++i)
+      {
+      this->ViewIds->SetValue(i, itr->first);
+      }
+
+    return this->ViewIds;
+  }
+
 protected:
 
   void UpdateDequeSize(std::deque<MapData>& datasets)
@@ -407,6 +422,7 @@ protected:
   bool ShouldStop;
   int MaxNumberOfDatasets;
   vtkIdType CurrentMapId;
+  vtkSmartPointer<vtkIntArray> ViewIds;
 
   boost::mutex Mutex;
 
@@ -500,6 +516,12 @@ void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyDat
 vtkPolyData* vtkMapServerSource::GetDataset(int viewId, vtkIdType i)
 {
   return this->Internal->Listener->GetDatasetForTime(viewId, i);
+}
+
+//-----------------------------------------------------------------------------
+vtkIntArray* vtkMapServerSource::GetViewIds()
+{
+  return this->Internal->Listener->GetViewIds();
 }
 
 //-----------------------------------------------------------------------------
