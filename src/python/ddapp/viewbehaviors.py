@@ -11,6 +11,7 @@ from ddapp import applogic as app
 from ddapp import vtkAll as vtk
 from ddapp.shallowCopy import shallowCopy
 from ddapp import segmentationpanel
+from ddapp import segmentation
 import numpy as np
 
 
@@ -231,6 +232,33 @@ def showRightClickMenu(displayPoint, view):
     def onSpline():
         splinewidget.newSpline(pickedObj, view)
 
+
+    def getPointCloud(obj):
+        try:
+            obj = obj.model.polyDataObj
+        except AttributeError:
+            pass
+        if obj and obj.polyData.GetNumberOfPoints() and (obj.polyData.GetNumberOfCells() == obj.polyData.GetNumberOfVerts()):
+            return obj
+
+    pointCloudObj = getPointCloud(pickedObj)
+
+
+    def onSegmentGround():
+        groundPoints, scenePoints =  segmentation.removeGround(pointCloudObj.polyData)
+        vis.showPolyData(groundPoints, 'ground points', color=[0,1,0], parent='segmentation')
+        vis.showPolyData(scenePoints, 'scene points', color=[1,0,1], parent='segmentation')
+        pickedObj.setProperty('Visible', False)
+
+
+    def onCopyPointCloud():
+        polyData = vtk.vtkPolyData()
+        polyData.DeepCopy(pointCloudObj.polyData)
+        obj = vis.showPolyData(polyData, pointCloudObj.getProperty('Name') + ' copy', color=[0,1,0], parent='segmentation')
+        om.setActiveObject(obj)
+        pickedObj.setProperty('Visible', False)
+
+
     actions = [
       (None, None),
       ('Hide', onHide),
@@ -243,6 +271,13 @@ def showRightClickMenu(displayPoint, view):
             (None, None),
             ('Touch', onTouch),
             ('Spline', onSpline),
+            ])
+
+    if pointCloudObj:
+        actions.extend([
+            (None, None),
+            ('Copy Pointcloud', onCopyPointCloud),
+            ('Segment Ground', onSegmentGround),
             ])
 
     for actionName, func in actions:
