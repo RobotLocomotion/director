@@ -84,8 +84,8 @@ public:
 
   void init(ddLCMThread* lcmThread);
 
-  quint64 getImage(const QString& cameraName, vtkImageData* image);
-  quint64 getCurrentImageTime(const QString& cameraName);
+  qint64 getImage(const QString& cameraName, vtkImageData* image);
+  qint64 getCurrentImageTime(const QString& cameraName);
 
   // Returns four xyz vectors as a 12 element list.  The vectors are rays
   // representing the top left, top right, bottom right, and bottom left
@@ -98,7 +98,10 @@ public:
 
   void getBodyToCameraTransform(const QString& cameraName, vtkTransform* transform);
 
-  int getTransform(const QString& fromFrame, const QString& toFrame, quint64 utime, vtkTransform* transform);
+  int getTransform(const QString& fromFrame, const QString& toFrame, qint64 utime, vtkTransform* transform);
+  int getTransform(const QString& fromFrame, const QString& toFrame, vtkTransform* transform);
+
+  QStringList getBotFrameNames() const;
 
 protected slots:
 
@@ -119,7 +122,7 @@ protected:
   QList<double> getCameraFrustumBounds(CameraData* cameraData);
 
   int getTransform(std::string from_frame, std::string to_frame,
-                     Eigen::Isometry3d & mat, vtkIdType utime);
+                     Eigen::Isometry3d& mat, qint64 utime);
 
   BotParam* mBotParam;
   BotFrames* mBotFrames;
