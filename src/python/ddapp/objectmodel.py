@@ -38,6 +38,9 @@ class Icons(object):
   Matlab = QtGui.QIcon(':/images/matlab_logo.png')
   Robot = QtGui.QIcon(':/images/robot_icon.png')
   Laser = QtGui.QIcon(':/images/laser_icon.jpg')
+  Feet = QtGui.QIcon(':/images/feet.png')
+  Hand = QtGui.QIcon(':/images/claw.png')
+
 
 def cleanPropertyName(s):
     """

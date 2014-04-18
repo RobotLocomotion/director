@@ -62,14 +62,16 @@ def getFootstepsFolder():
     obj = om.findObjectByName('footstep plan')
     if obj is None:
         obj = om.getOrCreateContainer('footstep plan')
-        #om.collapse(obj)
+        obj.setIcon(om.Icons.Feet)
+        om.collapse(obj)
     return obj
 
 def getBDIAdjustedFootstepsFolder():
     obj = om.findObjectByName('BDI adj footstep plan')
     if obj is None:
         obj = om.getOrCreateContainer('BDI adj footstep plan')
-        #om.collapse(obj)
+        obj.setIcon(om.Icons.Feet)
+        om.collapse(obj)
     return obj
 
 class FootstepsDriver(object):
@@ -215,6 +217,7 @@ class FootstepsDriver(object):
             this_color[2] = 0.25*color[2] + 0.75*frac*color[2]
             
             obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=1.0, parent=folder)
+            obj.setIcon(om.Icons.Feet)
             frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
             obj.actor.SetUserTransform(footstepTransform)
 
@@ -443,7 +446,11 @@ class FootstepsDriver(object):
 
         folder = om.getOrCreateContainer("BDI footstep plan")
         om.removeFromObjectModel(folder)
-        self.drawFootstepPlan(self.bdi_plan, om.getOrCreateContainer("BDI footstep plan"), [0.0, 0.0, 1.0] , [1.0, 0.0, 0.0])
+
+        folder = om.getOrCreateContainer("BDI footstep plan")
+        folder.setIcon(om.Icons.Feet)
+        om.collapse(folder)
+        self.drawFootstepPlan(self.bdi_plan, folder, [0.0, 0.0, 1.0] , [1.0, 0.0, 0.0])
 
     def drawBDIFootstepPlanAdjusted(self):
         if (self.bdi_plan_adjusted is None):
@@ -451,5 +458,9 @@ class FootstepsDriver(object):
 
         folder = om.getOrCreateContainer('BDI adj footstep plan')
         om.removeFromObjectModel(folder)
-        self.drawFootstepPlan(self.bdi_plan_adjusted, om.getOrCreateContainer('BDI adj footstep plan'), [1.0, 1.0, 0.0] , [0.0, 1.0, 1.0])
+
+        folder = om.getOrCreateContainer('BDI adj footstep plan')
+        folder.setIcon(om.Icons.Feet)
+        om.collapse(folder)
+        self.drawFootstepPlan(self.bdi_plan_adjusted, folder, [1.0, 1.0, 0.0] , [0.0, 1.0, 1.0])
 
