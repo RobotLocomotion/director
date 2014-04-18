@@ -55,6 +55,12 @@ class ObjectModelItem(object):
         self.alternateNames = {}
         self.addProperty('Name', name)
 
+    def setIcon(self, icon):
+        self.icon = icon
+        item = getItemForObject(self)
+        if item:
+            item.setIcon(0, icon)
+
     def propertyNames(self):
         return self.properties.keys()
 
