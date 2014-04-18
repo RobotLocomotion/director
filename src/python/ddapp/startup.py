@@ -32,6 +32,7 @@ from ddapp import robotstate
 from ddapp import roboturdf
 from ddapp import footstepsdriver
 from ddapp import footstepsdriverpanel
+from ddapp import framevisualization
 from ddapp import lcmgl
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
@@ -334,6 +335,7 @@ if useNavigationPanel:
 
 
 screengrabberpanel.init(view)
+framevisualization.init(view)
 
 
 def getLinkFrame(linkName, model=None):

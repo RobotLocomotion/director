@@ -22,6 +22,7 @@ set(python_files
   ddapp/filterUtils.py
   ddapp/footstepsdriver.py
   ddapp/footstepsdriverpanel.py
+  ddapp/framevisualization.py
   ddapp/handcontrolpanel.py
   ddapp/handdriver.py
   ddapp/ik.py
