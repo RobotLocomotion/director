@@ -98,6 +98,8 @@ useAtlasDriver = True
 useLCMGL = True
 useDrakeVisualizer = True
 useNavigationPanel = True
+useImageWidget = False
+
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -357,3 +359,7 @@ def sendEstRobotState(pose=None):
 
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view, handFactory, robotStateModel, footstepsDriver)
+
+
+if useImageWidget:
+    imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
