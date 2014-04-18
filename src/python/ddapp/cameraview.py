@@ -52,7 +52,7 @@ def makeSphere(radius, resolution):
 
 
 def colorizePoints(polyData, cameraName='CAMERA_LEFT'):
-    cameraView.queue.colorizePoints(cameraName, polyData)
+    imageManager.queue.colorizePoints(cameraName, polyData)
 
 
 
@@ -305,6 +305,53 @@ class CameraView(object):
         self.updateSphereGeometry()
         self.view.render()
 
+
+class ImageWidget(object):
+
+    def __init__(self, imageManager, imageName, view):
+        self.view = view
+        self.imageManager = imageManager
+        self.imageName = imageName
+
+        self.updateUtime = 0
+        self.initialized = False
+
+        self.imageWidget = vtk.vtkLogoWidget()
+        rep = self.imageWidget.GetRepresentation()
+        rep.GetImageProperty().SetOpacity(1.0)
+        self.imageWidget.SetInteractor(self.view.renderWindow().GetInteractor())
+
+        self.flip = vtk.vtkImageFlip()
+        self.flip.SetFilteredAxis(1)
+        self.flip.SetInput(imageManager.getImage(imageName))
+        rep.SetImage(self.flip.GetOutput())
+
+        self.timerCallback = TimerCallback()
+        self.timerCallback.targetFps = 60
+        self.timerCallback.callback = self.updateView
+        self.timerCallback.start()
+
+
+    def hide(self):
+        self.imageWidget.Off()
+
+    def show(self):
+        self.imageWidget.On()
+
+    def updateView(self):
+
+        if not self.view.isVisible():
+            return
+
+        currentUtime = self.imageManager.updateImage(self.imageName)
+        if currentUtime != self.updateUtime:
+            if not self.initialized:
+                self.show()
+                self.initialized = True
+
+            self.updateUtime = currentUtime
+            self.flip.Update()
+            self.view.render()
 
 
 class CameraImageView(object):
