@@ -115,7 +115,11 @@ test_seq = {'pregrasp_plan' : [JointMovePlan,   'manip_mode',    'fail', {'PoseN
             'cam_delta'     : [CameraDeltaPlan, 'cam_move',      'fail', {'TargetFrame': 'left robotiq', 'Hand': 'left', 'Style': 'Local', 'Channel': 'HAND_TO_OBJ'} ],
             'cam_move'      : [JointMove,       'goal',          'fail', {'JointPlan': 'cam_delta'} ] }
 
-sequenceDict['CamDelta'] = [test_seq, 'pregrasp_plan']
+test_seq = {'manip_mode'    : [ChangeMode,      'cam_delta',     'fail', {'NewMode' : 'manip'} ],
+            'cam_delta'     : [CameraDeltaPlan, 'cam_move',      'fail', {'TargetFrame': 'left robotiq', 'Hand': 'left', 'Style': 'Local', 'Channel': 'REACH_TARGET_POSE'} ],
+            'cam_move'      : [JointMove,       'goal',          'fail', {'JointPlan': 'cam_delta'} ] }
+
+sequenceDict['CamDeltaMove'] = [test_seq, 'cam_delta']
 
 #Make a list out of the sequence ditionary, don't touch this line, just add to the dictionary
 sequenceList = [[key]+sequenceDict[key] for key in sequenceDict.keys()]
