@@ -6,6 +6,7 @@ include(python-coverage/setup.cmake)
 
 set(python_tests
   testFrameSync.py
+  testObjectModel.py
   testPythonConsole.py
   testPropertiesPanel.py
 )
