@@ -19,15 +19,27 @@ def main():
 
     om.init(objectTree, propertiesPanel)
 
-    o = om.ObjectModelItem('test item')
-    o.addProperty('foo', 1)
+    p = om.ObjectModelItem('test parent item')
 
-    om.addToObjectModel(o)
+    p.addProperty('foo', 1)
+
+    om.addToObjectModel(p)
+
+    c = om.ObjectModelItem('test child item')
+
+    om.addToObjectModel(c, p)
+
+    assert om.findObjectByName('test parent item') == p
+    assert om.findObjectByName('test child item') == c
+
+    assert p.children()[0] == c
+
+    assert c.children() == []
 
     objectTree.show()
     propertiesPanel.show()
 
-    startApplication(enableQuitTimer=False)
+    startApplication(enableQuitTimer=True)
 
 
 if __name__ == '__main__':

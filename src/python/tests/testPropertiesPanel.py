@@ -34,7 +34,7 @@ def main():
     om.addPropertiesToPanel(obj, panel)
     panel.show()
 
-    startApplication(enableQuitTimer=False)
+    startApplication(enableQuitTimer=True)
 
 
 if __name__ == '__main__':
