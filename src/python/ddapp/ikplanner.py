@@ -154,7 +154,7 @@ class IKPlanner(object):
         handMesh = self.findAffordanceChild('desired grasp hand')
         if not handMesh:
             handMesh = self.getHandModel().newPolyData('desired grasp hand', self.robotModel.views[0], parent=self.findAffordance())
-        handFrame = om.getObjectChildren(handMesh)[0]
+        handFrame = handMesh.children()[0]
         handFrame.copyFrame(graspFrame.transform)
 
     def findAffordance(self):
@@ -164,9 +164,7 @@ class IKPlanner(object):
 
     def findAffordanceChild(self, name):
         assert self.affordance
-        for child in om.getObjectChildren(self.affordance):
-            if child.getProperty('Name') == name:
-                return child
+        return self.affordance.findChild(name)
 
 
     def getAffordanceChild(self, name):

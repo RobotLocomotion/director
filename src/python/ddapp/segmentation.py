@@ -2773,7 +2773,7 @@ def publishDebrisStanceFrame(aff):
 
 def segmentBlockByPlanes(blockDimensions):
 
-    planes = om.getObjectChildren(om.findObjectByName('selected planes'))[:2]
+    planes = om.findObjectByName('selected planes').children()[:2]
 
     viewPlaneNormal = getSegmentationView().camera().GetViewPlaneNormal()
     origin1, normal1, plane1 = getPlaneEquationFromPolyData(planes[0].polyData, expectedNormal=viewPlaneNormal)

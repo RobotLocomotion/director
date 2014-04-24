@@ -84,7 +84,7 @@ class LCMGLManager(object):
 
     def getDrawObject(self, name):
         parent = om.getOrCreateContainer('LCM GL')
-        return om.findChildByName(parent, name)
+        return parent.findChild(name)
 
     def addDrawObject(self, name, msgBytes):
         actor = vtk.vtkLCMGLProp()

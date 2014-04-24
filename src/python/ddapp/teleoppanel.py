@@ -95,7 +95,7 @@ class EndEffectorTeleopPanel(object):
         def syncHandFrame(handModel, goalFrame):
 
             handObj = handModel.newPolyData('reach goal left hand', self.panel.teleopRobotModel.views[0], parent=goalFrame)
-            handFrame = om.getObjectChildren(handObj)[0]
+            handFrame = handObj.children()[0]
             handFrame.copyFrame(goalFrame.transform)
 
             frameSync = vis.FrameSync()
