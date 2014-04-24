@@ -84,7 +84,7 @@ def colorizeMapsOff():
 def onColorizeLidar():
 
     colorizeEnabled = app.getToolBarActions()[actionName].checked
-    colorizeMaps(colorizeEnabled)
+    #colorizeMaps(colorizeEnabled)
     colorizeMultisense(colorizeEnabled)
     colorizeSegmentationLidar(colorizeEnabled)
 
