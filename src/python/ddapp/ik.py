@@ -33,6 +33,8 @@ class AsyncIKCommunicator(TimerCallback):
         self.infoFunc = None
         self.poses = None
         self.quatTolerance = 0.0
+        self.maxDegreesPerSecond = 30.0
+        self.usePointwise = True
 
         self.setPointInLink('l_hand', [0, 0.20516, 0.015]) #irobot
         #self.setPointInLink('r_hand', [0, -0.11516, -0.015]) #irobot
@@ -91,10 +93,12 @@ class AsyncIKCommunicator(TimerCallback):
     def _startupCommands(self):
 
         commands = []
+        commands.append('\n%-------- startup --------\n')
         commands.append('format long e')
         commands.append('addpath_control')
         commands.append("addpath('%s')" % matlab.getAppMatlabDir())
         commands.append('runIKServer')
+        commands.append('\n%------ startup end ------\n')
         return commands
 
     def startServer(self):
@@ -370,6 +374,7 @@ class AsyncIKCommunicator(TimerCallback):
     def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):
 
         commands = []
+        commands.append('\n%-------- runIk --------\n')
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
             constraint.getCommands(commands, constraintNames, suffix='_%d' % constraintId)
@@ -382,8 +387,11 @@ class AsyncIKCommunicator(TimerCallback):
         commands.append('clear q_end;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
+        commands.append('\n')
         commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, q_seed, %s, active_constraints{:}, s.ikoptions);' % nominalPostureName)
-        commands.append('display(infeasibleConstraintMsg(infeasible_constraint));')
+        commands.append('\n')
+        commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
+        commands.append('\n%-------- runIk end --------\n')
 
         self.comm.sendCommands(commands)
         endPose = self.comm.getFloatArray('q_end')
@@ -423,16 +431,19 @@ class AsyncIKCommunicator(TimerCallback):
             timeSamples = np.unique(timeSamples)
 
         commands = []
+        commands.append('\n%-------- runIkTraj --------\n')
 
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
             constraint.getCommands(commands, constraintNames, suffix='_%d' % constraintId)
+            commands.append('\n')
 
         commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
         commands.append('t = [%s];' % ', '.join([repr(x) for x in timeSamples]))
         commands.append('nt = size(t, 2);')
         commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(q_nom, 1, nt)));')
-        commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
+        #commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
+        commands.append('q_seed_traj = PPTrajectory(spline([t(1), t(end)], [zeros(nq,1), %s, %s, zeros(nq,1)]));' % (poseStart, poseEnd))
         commands.append('clear xtraj;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
@@ -444,25 +455,33 @@ class AsyncIKCommunicator(TimerCallback):
         commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
 
+        commands.append('\n')
         commands.append('[xtraj, info, infeasible_constraint] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, ikoptions);')
-        commands.append('display(infeasibleConstraintMsg(infeasible_constraint));')
+        commands.append('\n')
+        commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
         commands.append('qtraj = xtraj(1:nq);')
+        commands.append('max_degrees_per_second = %f;' % self.maxDegreesPerSecond)
+        commands.append('plan_time = s.getPlanTimeForJointVelocity(xtraj, max_degrees_per_second);')
 
 
-        commands.append('num_pointwise_time_points = 20;')
-        commands.append('pointwise_time_points = linspace(t(1), t(end), num_pointwise_time_points);')
-        commands.append('q_seed_pointwise = eval(xtraj, pointwise_time_points);')
-        commands.append('q_seed_pointwise = q_seed_pointwise(1:nq,:);') #eval(qtraj, pointwise_time_points)
-        commands.append('[xtraj, info] = inverseKinPointwise(r, pointwise_time_points, q_seed_pointwise, q_seed_pointwise, active_constraints{:}, ikoptions);')
-        commands.append('xtraj_pw = PPTrajectory(foh(pointwise_time_points, xtraj));')
-        commands.append('info = info(end);')
-
+        if self.usePointwise:
+            commands.append('\n%--- pointwise ik --------\n')
+            commands.append('num_pointwise_time_points = 20;')
+            commands.append('pointwise_time_points = linspace(t(1), t(end), num_pointwise_time_points);')
+            #commands.append('spline_traj = PPTrajectory(spline(t, [ zeros(size(xtraj, 1),1), xtraj.eval(t), zeros(size(xtraj, 1),1)]));')
+            #commands.append('q_seed_pointwise = spline_traj.eval(pointwise_time_points);')
+            commands.append('q_seed_pointwise = xtraj.eval(pointwise_time_points);')
+            commands.append('q_seed_pointwise = q_seed_pointwise(1:nq,:);')
+            commands.append('[xtraj_pw, info] = inverseKinPointwise(r, pointwise_time_points, q_seed_pointwise, q_seed_pointwise, active_constraints{:}, ikoptions);')
+            commands.append('xtraj_pw = PPTrajectory(foh(pointwise_time_points, xtraj_pw));')
+            commands.append('info = info(end);')
+            commands.append('\n%--- pointwise ik end --------\n')
 
         publish = True
-        planLengthInSeconds = 10.0
         if publish:
-            commands.append('s.publishTraj(plan_pub, atlas, xtraj_pw, info, %f);' % planLengthInSeconds)
+            commands.append('s.publishTraj(plan_publisher, r, %s, info, plan_time);' % ('xtraj_pw' if self.usePointwise else 'xtraj'))
 
+        commands.append('\n%--- runIKTraj end --------\n')
         self.comm.sendCommands(commands)
 
         info = self.comm.getFloatArray('info')[0]
