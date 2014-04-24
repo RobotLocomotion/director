@@ -64,7 +64,7 @@ def placeHandModel(displayPoint, view):
 
     obj, _ = vis.findPickedObject(displayPoint, view)
     if isinstance(obj, vis.FrameItem):
-        _, handFrame = handFactory.placeHandModelWithTransform(obj.transform, view, side=side, parent=om.getParentObject(obj))
+        _, handFrame = handFactory.placeHandModelWithTransform(obj.transform, view, side=side, parent=obj.parent())
         handFrame.frameSync = vis.FrameSync()
         handFrame.frameSync.addFrame(obj)
         handFrame.frameSync.addFrame(handFrame, ignoreIncoming=True)
@@ -129,7 +129,7 @@ def toggleFrameWidget(displayPoint, view):
     edit = not obj.getProperty('Edit')
     obj.setProperty('Edit', edit)
 
-    parent = om.getParentObject(obj)
+    parent = obj.parent()
     if getChildFrame(parent) == obj:
         parent.setProperty('Alpha', 0.5 if edit else 1.0)
 

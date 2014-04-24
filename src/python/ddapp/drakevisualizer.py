@@ -32,7 +32,8 @@ class DrakeVisualizer(object):
             self.loadURDF(urdfFile)
 
     def addRobotModelItem(self, model):
-        obj = om.addRobotModel(model, om.getOrCreateContainer('Drake Viewer Models'))
+        obj = om.RobotModelItem(model)
+        om.addToObjectModel(obj, om.getOrCreateContainer('Drake Viewer Models'))
         obj.setProperty('Color', QtGui.QColor(255, 180, 0))
         obj.addToView(self.view)
         return obj
@@ -50,7 +51,7 @@ class DrakeVisualizer(object):
           if not self.models:
               return
 
-          if not om.getItemForObject(self.models[0]):
+          if self.models[0] not in om.getObjects():
               self.models[0] = self.addRobotModelItem(self.models[0].model)
 
           assert msg.num_robots == 1

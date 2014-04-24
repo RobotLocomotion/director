@@ -35,9 +35,10 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
         urdfFile = os.path.join(getRobotModelDir(), 'model_%s.urdf' % defaultUrdfHands)
 
     folder = om.getOrCreateContainer(parent)
-
     model = loadRobotModelFromFile(urdfFile)
-    obj = om.addRobotModel(model, folder)
+    obj = om.RobotModelItem(model)
+    om.addToObjectModel(obj, folder)
+
     obj.setProperty('Visible', visible)
     obj.setProperty('Name', name)
     obj.setProperty('Color', color or getRobotGrayColor())
@@ -170,7 +171,7 @@ class HandFactory(object):
     def placeHandModelWithTransform(self, transform, view, side, name=None, parent=None):
         handObj = self.newPolyData(side, view, name=name, parent=parent)
         handObj.setProperty('Visible', True)
-        handFrame = om.getObjectChildren(handObj)[0]
+        handFrame = handObj.children()[0]
         handFrame.copyFrame(transform)
         return handObj, handFrame
 
@@ -302,7 +303,8 @@ class HandLoader(object):
         if self.side == 'right':
             color = [0.33, 1.0, 0.0]
 
-        handModel = om.addRobotModel(handModel, om.getOrCreateContainer('hands'))
+        handModel = om.RobotModelItem(handModel)
+        om.addToObjectModel(handModel, om.getOrCreateContainer('hands'))
         handModel.setProperty('Name', os.path.basename(filename).replace('.urdf', '').replace('_', ' '))
         handModel.setProperty('Visible', False)
         color = np.array(color)*255
