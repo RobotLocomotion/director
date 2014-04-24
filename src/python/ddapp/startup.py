@@ -220,7 +220,7 @@ if usePlanning:
 
     def approveRefit():
 
-        for obj in om.objects.values():
+        for obj in om.getObjects():
             if isinstance(obj, vis.BlockAffordanceItem):
                 if 'refit' in obj.getProperty('Name'):
                     originalObj = om.findObjectByName(obj.getProperty('Name').replace(' refit', ''))

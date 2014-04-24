@@ -52,7 +52,7 @@ def computeGroundFrame(aff, referenceFrame):
 def showBoardDebug(affs=None):
     referenceFrame = vtk.vtkTransform()
     referenceFrame.Translate(0, 0, 5.0)
-    affs = affs or om.objects.values()
+    affs = affs or om.getObjects()
     for obj in affs:
         if isinstance(obj, BlockAffordanceItem):
             d = DebugData()
@@ -104,7 +104,7 @@ def publishTriad(transform, collectionId=1234):
 
 def generateFeetForDebris(affs=None):
 
-    affs = affs or om.objects.values()
+    affs = affs or om.getObjects()
     affs = [aff for aff in affs if isinstance(aff, BlockAffordanceItem)]
 
     stanceWidth = 0.20

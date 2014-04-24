@@ -452,7 +452,7 @@ def applyVoxelGrid(polyData, leafSize=0.01):
 def segmentGroundPlanes():
 
     objs = []
-    for obj in om.objects.values():
+    for obj in om.getObjects():
         name = obj.getProperty('Name')
         if name.startswith('pointcloud snapshot'):
             objs.append(obj)
@@ -833,12 +833,12 @@ def createLine(blockDimensions, p1, p2):
 
 def updateBlockAffordances(polyData=None):
 
-    for obj in om.objects.values():
+    for obj in om.getObjects():
         if isinstance(obj, BlockAffordanceItem):
             if 'refit' in obj.getProperty('Name'):
                 om.removeFromObjectModel(obj)
 
-    for obj in om.objects.values():
+    for obj in om.getObjects():
         if isinstance(obj, BlockAffordanceItem):
             updateBlockFit(obj, polyData)
 
@@ -3255,12 +3255,12 @@ def getDefaultAffordanceObject():
     if isinstance(obj, AffordanceItem):
         return obj
 
-    for obj in om.objects.values():
+    for obj in om.getObjects():
         if isinstance(obj, AffordanceItem):
             return obj
 
 def getVisibleRobotModel():
-    for obj in om.objects.values():
+    for obj in om.getObjects():
         if isinstance(obj, om.RobotModelItem) and obj.getProperty('Visible'):
             return obj
 
