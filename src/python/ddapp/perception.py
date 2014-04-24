@@ -406,7 +406,7 @@ class MapServerSource(TimerCallback):
     def updatePolyData(self, viewId, polyData):
 
         obj = self.polyDataObjects.get(viewId)
-        if obj not in om.objects.values():
+        if obj not in om.getObjects():
             obj = None
         if not obj:
             obj = om.PolyDataItem(self.getNameForViewId(viewId), polyData, self.view)

@@ -69,7 +69,7 @@ def loadRobotModelFromString(xmlString):
 
 
 def getExistingRobotModels():
-    return [obj for obj in om.objects.values() if isinstance(obj, om.RobotModelItem)]
+    return [obj for obj in om.getObjects() if isinstance(obj, om.RobotModelItem)]
 
 
 _modelPublisherString = None

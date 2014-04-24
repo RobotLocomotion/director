@@ -604,14 +604,14 @@ def mapMousePosition(widget, mouseEvent):
 
 
 def getObjectByDataSet(polyData):
-    for item, obj in om.objects.iteritems():
+    for obj in om.getObjects():
         if obj.hasDataSet(polyData):
             return obj
 
 def getObjectByProp(prop):
     if not prop:
         return None
-    for item, obj in om.objects.iteritems():
+    for obj in om.getObjects():
         if isinstance(obj, FrameItem) and obj.widget.GetRepresentation() == prop:
             return obj
     if isinstance(prop, vtk.vtkActor):
