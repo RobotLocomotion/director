@@ -21,7 +21,7 @@ classdef IKServer
         function obj = setupCosts(obj)
 
             obj.ikoptions = IKoptions(obj.robot);
-            obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(5e2);
+            obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(500);
             obj.ikoptions = obj.ikoptions.setMex(true);
 
             leftLegCost = 1;
@@ -78,16 +78,14 @@ classdef IKServer
 
             cost = double(cost);
 
-            vel_cost = cost*.05;
-            accel_cost = cost*.05;
+            vel_cost = cost*0.05;
+            accel_cost = cost*0.05;
 
             obj.ikoptions = obj.ikoptions.setQ(diag(cost(1:nq)));
             obj.ikoptions = obj.ikoptions.setQa(diag(vel_cost(1:nq)));
             obj.ikoptions = obj.ikoptions.setQv(diag(accel_cost(1:nq)));
-            obj.ikoptions = obj.ikoptions.setqdf(zeros(nq,1), zeros(nq,1)); % upper and lower bnd on velocity.
-
-            % obj.ikoptions = obj.ikoptions.setQa(10*obj.ikoptions.Qa);
-            % obj.ikoptions = obj.ikoptions.setQv(10*obj.ikoptions.Qv);
+            obj.ikoptions = obj.ikoptions.setqd0(zeros(nq,1), zeros(nq,1)); % upper and lower bnd on initial velocity.
+            obj.ikoptions = obj.ikoptions.setqdf(zeros(nq,1), zeros(nq,1)); % upper and lower bnd on final velocity.
 
         end
 
@@ -131,6 +129,25 @@ classdef IKServer
             pts = [toe, heel];
         end
 
+
+        function plan_time = getPlanTimeForJointVelocity(obj, xtraj, maxDegreesPerSecond)
+
+            qdot_desired = maxDegreesPerSecond*pi/180;
+
+            nq = obj.robot.getNumDOF();
+            sfine = linspace(0, 1, 50);
+            coords = obj.robot.getStateFrame.coordinates(1:nq);
+            neck_idx = strcmp(coords, 'neck_ay');
+            back_joints = cellfun(@(s) ~isempty(strfind(s,'back_bk')), coords);
+
+            qtraj = xtraj(1:nq);
+            dqtraj = fnder(qtraj, 1);
+            qdot_breaks = dqtraj.eval(sfine);
+            weighted_qdot_breaks = qdot_breaks(~neck_idx,:);
+            weighted_qdot_breaks(back_joints,:) = 2*weighted_qdot_breaks(back_joints,:);
+            plan_time = max(max(abs(weighted_qdot_breaks),[],2))/qdot_desired;
+
+        end
 
         function publishTraj(obj, plan_pub, atlas, xtraj, snopt_info, timeInSeconds)
 

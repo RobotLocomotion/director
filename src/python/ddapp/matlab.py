@@ -31,6 +31,9 @@ class MatlabCommunicator(object):
         self.outputConsole = None
         self.echoToStdOut = True
         self.echoCommandsToStdOut = False
+        self.writeCommandsToLogFile = False
+        self.logFile = None
+        self.logFileName = 'matlab_commands.m'
         self.clearResult()
 
     def checkForResult(self):
@@ -40,6 +43,11 @@ class MatlabCommunicator(object):
             return self.outputLines
         else:
             return None
+
+    def getLogFile(self):
+        if self.logFile is None:
+            self.logFile = open(self.logFileName, 'w')
+        return self.logFile
 
     def isAlive(self):
         return (self.proc.poll() is None)
@@ -102,6 +110,9 @@ class MatlabCommunicator(object):
         self.proc.stdin.write(command + '\n')
         if self.echoCommandsToStdOut:
             print command
+        if self.writeCommandsToLogFile:
+            self.getLogFile().write(command + '\n')
+            self.getLogFile().flush()
 
     def sendCommands(self, commands, display=True):
 

@@ -11,14 +11,6 @@ s = s.setupCosts();
 s = s.loadNominalData();
 
 r = s.robot;
-
-rbmoptions.floating = true;
-atlas = Atlas(strcat(getenv('DRC_BASE'),'/software/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_point_hands.urdf'),rbmoptions);
-
-joint_names = atlas.getStateFrame.coordinates(1:getNumDOF(atlas));
-joint_names = regexprep(joint_names, 'pelvis', 'base', 'preservecase');
-plan_pub = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, joint_names);
-
 nq = r.getNumDOF();
 q_nom = s.q_nom;
 q_zero = zeros(nq, 1);
@@ -35,3 +27,4 @@ l_foot_pts = s.getLeftFootPoints();
 r_foot_pts = s.getRightFootPoints();
 
 joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
+plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, r.getStateFrame.coordinates(1:nq));
