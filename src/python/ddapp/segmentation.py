@@ -18,6 +18,7 @@ from ddapp.timercallback import TimerCallback
 from ddapp import mapsregistrar
 from ddapp.visualization import *
 from ddapp.filterUtils import *
+from ddapp.fieldcontainer import FieldContainer
 
 import numpy as np
 import vtkNumpy
@@ -1662,6 +1663,52 @@ def segmentDrill(point1, point2, point3):
     aff.addToView(app.getDRCView())
 
 
+def computeDelaunay3D(polyData):
+    f = vtk.vtkDelaunay3D()
+    f.SetInput(polyData)
+    f.Update()
+
+    surface = vtk.vtkGeometryFilter()
+    surface.SetInput(f.GetOutput())
+    surface.Update()
+    return shallowCopy(surface.GetOutput())
+
+
+def segmentTableScene(polyData, searchPoint):
+
+    expectedNormal = np.array([0.0, 0.0, 1.0])
+    tableNormalEpsilon = 0.4
+
+    polyData = applyVoxelGrid(polyData, leafSize=0.01)
+
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal, perpendicularAxis=expectedNormal, searchOrigin=searchPoint, searchRadius=0.4, angleEpsilon=tableNormalEpsilon, returnOrigin=True)
+    tablePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(tablePoints, 'table plane points', parent=getDebugFolder(), visible=False)
+
+    tablePoints = labelDistanceToPoint(tablePoints, searchPoint)
+    tablePointsClusters = extractClusters(tablePoints)
+    tablePointsClusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
+
+    tablePoints = tablePointsClusters[0]
+    updatePolyData(tablePoints, 'table points', parent=getDebugFolder(), visible=False)
+
+    tableCentroid = np.average(vtkNumpy.getNumpyFromVtk(tablePoints, 'Points'), axis=0)
+
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.5])
+    searchRegion = cropToSphere(searchRegion, tableCentroid, 0.50)
+
+    objectClusters = extractClusters(searchRegion, clusterTolerance=0.03, minClusterSize=10)
+
+    def makeObj(pd):
+        _, _, wireframe = getOrientedBoundingBox(pd)
+        mesh = computeDelaunay3D(pd)
+        return FieldContainer(points=pd, box=wireframe, mesh=mesh)
+
+    clusters = [makeObj(cluster) for cluster in objectClusters]
+
+    return FieldContainer(table=makeObj(tablePoints), clusters=clusters)
+
+
 def segmentDrillAuto(point1):
 
 
@@ -1770,7 +1817,7 @@ def findAndFitDrillBarrel(polyData=None, robotFrame=None):
     for clusterId, cluster in enumerate(clusters):
         clusterObj = updatePolyData(cluster, 'surface cluster %d' % clusterId, color=[1,1,0], parent=getDebugFolder(), visible=False)
 
-        origin, edges = getOrientedBoundingBox(cluster)
+        origin, edges, _ = getOrientedBoundingBox(cluster)
         edgeLengths = [np.linalg.norm(edge) for edge in edges[:2]]
 
         skipCluster = False
@@ -2370,7 +2417,9 @@ def showObbs(polyData):
 
 
 def getOrientedBoundingBox(polyData):
-
+    '''
+    returns origin, edges, and outline wireframe
+    '''
     nPoints = polyData.GetNumberOfPoints()
     assert nPoints
     polyData = shallowCopy(polyData)
@@ -2393,7 +2442,7 @@ def getOrientedBoundingBox(polyData):
     for i in xrange(3):
         f.GetBoundingBoxEdge(0, i, edges[i])
 
-    return origin, edges
+    return origin, edges, shallowCopy(f.GetOutput())
 
 
 def segmentBlockByAnnotation(blockDimensions, p1, p2, p3):
