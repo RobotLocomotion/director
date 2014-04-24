@@ -386,6 +386,7 @@ class JointTeleopPanel(object):
             self.updateSliders()
 
         self.panel.showPose(self.pose)
+        self.updateLabels()
 
     def updateLabels(self):
 
