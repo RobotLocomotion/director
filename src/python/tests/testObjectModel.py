@@ -54,7 +54,7 @@ def main():
     objectTree2.show()
     propertiesPanel2.show()
 
-    startApplication(enableQuitTimer=False)
+    startApplication(enableQuitTimer=True)
 
 
 if __name__ == '__main__':

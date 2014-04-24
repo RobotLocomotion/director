@@ -50,7 +50,7 @@ class ObjectModelItem(object):
         self.properties = OrderedDict()
         self.propertyAttributes = {}
         self.icon = icon
-        self.tree = tree
+        self._tree = tree
         self.alternateNames = {}
         self.addProperty('Name', name)
 
@@ -101,6 +101,9 @@ class ObjectModelItem(object):
     def onAction(self, action):
         pass
 
+    def getObjectTree(self):
+        return self._tree
+
     def getPropertyAttributes(self, propertyName):
 
         if propertyName == 'Alpha':
@@ -112,12 +115,12 @@ class ObjectModelItem(object):
             return self.propertyAttributes.setdefault(propertyName, attributes)
 
     def _onPropertyChanged(self, propertyName):
-        if self.tree is not None:
-            self.tree.updatePropertyPanel(self, propertyName)
+        if self._tree is not None:
+            self._tree.updatePropertyPanel(self, propertyName)
             if propertyName == 'Visible':
-                self.tree.updateVisIcon(self)
+                self._tree.updateVisIcon(self)
             if propertyName == 'Name':
-                self.tree.getItemForObject(self).setText(0, self.getProperty('Name'))
+                self._tree.getItemForObject(self).setText(0, self.getProperty('Name'))
 
     def _onPropertyAdded(self, propertyName):
         pass
@@ -126,14 +129,14 @@ class ObjectModelItem(object):
         pass
 
     def children(self):
-        if self.tree is not None:
-            return self.tree.getObjectChildren(self)
+        if self._tree is not None:
+            return self._tree.getObjectChildren(self)
         else:
             return []
 
     def findChild(self, name):
-        if self.tree is not None:
-            return self.tree.findChildByName(self, name)
+        if self._tree is not None:
+            return self._tree.findChildByName(self, name)
         else:
             return None
 
@@ -396,7 +399,7 @@ class ObjectModelTree(object):
     def __init__(self):
         self._objectTree = None
         self._propertiesPanel = None
-        self.objects = {}
+        self._objects = {}
         self._blockSignals = False
 
     def getObjectTree(self):
@@ -423,7 +426,7 @@ class ObjectModelTree(object):
 
     def getActiveObject(self):
         item = self.getActiveItem()
-        return self.objects[item] if item is not None else None
+        return self._objects[item] if item is not None else None
 
     def setActiveObject(self, obj):
         item = self.getItemForObject(obj)
@@ -434,18 +437,21 @@ class ObjectModelTree(object):
             tree.setCurrentItem(item)
             tree.scrollToItem(item)
 
+    def getObjects(self):
+        return self._objects.values()
+
     def getItemForObject(self, obj):
-        for item, itemObj in self.objects.iteritems():
+        for item, itemObj in self._objects.iteritems():
             if itemObj == obj:
                 return item
 
     def getObjectForItem(self, item):
-        return self.objects[item]
+        return self._objects[item]
 
     def findObjectByName(self, name, parent=None):
         if parent:
             return self.findChildByName(parent, name)
-        for obj in self.objects.values():
+        for obj in self._objects.values():
             if obj.getProperty('Name') == name:
                 return obj
 
@@ -515,7 +521,7 @@ class ObjectModelTree(object):
 
     def onItemClicked(self, item, column):
 
-        obj = self.objects[item]
+        obj = self._objects[item]
 
         if column == 1 and obj.hasProperty('Visible'):
             obj.setProperty('Visible', not obj.getProperty('Visible'))
@@ -572,7 +578,7 @@ class ObjectModelTree(object):
             tree = self.getObjectTree()
             tree.takeTopLevelItem(tree.indexOfTopLevelItem(item))
 
-        del self.objects[item]
+        del self._objects[item]
 
 
     def removeFromObjectModel(self, obj):
@@ -582,11 +588,11 @@ class ObjectModelTree(object):
         item = self.getItemForObject(obj)
         if item:
             self._removeItemFromObjectModel(item)
-            obj.tree = None
+            obj._tree = None
 
 
     def addToObjectModel(self, obj, parentObj=None):
-        assert obj.tree is None
+        assert obj._tree is None
 
         parentItem = self.getItemForObject(parentObj)
         objName = obj.getProperty('Name')
@@ -594,9 +600,9 @@ class ObjectModelTree(object):
         item = QtGui.QTreeWidgetItem(parentItem, [objName])
         item.setIcon(0, obj.icon)
 
-        obj.tree = self
+        obj._tree = self
 
-        self.objects[item] = obj
+        self._objects[item] = obj
         self.updateVisIcon(obj)
 
         if parentItem is None:
@@ -736,6 +742,9 @@ def getActiveObject():
 
 def setActiveObject(obj):
     _t.setActiveObject(obj)
+
+def getObjects():
+    return _t.getObjects()
 
 def getItemForObject(obj):
     return _t.getItemForObject(obj)
