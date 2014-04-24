@@ -1,5 +1,5 @@
 import vtk
-
+import numpy as np
 
 def _max_length(strings):
     if not strings: return 0
@@ -66,6 +66,14 @@ def _repr(self, indent=4):
 class FieldContainer(object):
 
     __repr__ = _repr
+
+
+    def __init__(self, **kwargs):
+        self._set_fields(**kwargs)
+
+    def __iter__(self):
+        for name in self._fields:
+            yield name, getattr(self, name)
 
     def _add_fields(self, **fields):
         if not hasattr(self, '_fields'):
