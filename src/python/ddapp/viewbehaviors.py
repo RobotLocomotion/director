@@ -83,7 +83,7 @@ def placeHandModel(displayPoint, view):
     zaxis = np.cross(xaxis, yaxis)
     zaxis /= np.linalg.norm(zaxis)
 
-    t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+    t = transformUtils.getTransformFromAxes(-zaxis, yaxis, xaxis)
     t.PostMultiply()
     t.Translate(pickedPoint)
     _, handFrame = handFactory.placeHandModelWithTransform(t, view, side=side, parent=obj)
