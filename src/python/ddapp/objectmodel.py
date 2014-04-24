@@ -44,23 +44,13 @@ def cleanPropertyName(s):
     return re.sub(r'\W|^(?=\d)','_',s).lower()  # \W matches non-alphanumeric, ^(?=\d) matches the first position if followed by a digit
 
 
-class ObjectModelTree(object):
-
-    def getObjectTree():
-        return self
-
-
-def getActiveItem():
-    items = getObjectTree().selectedItems()
-    return items[0] if len(items) == 1 else None
-
-
 class ObjectModelItem(object):
 
-    def __init__(self, name, icon=Icons.Robot):
+    def __init__(self, name, icon=Icons.Robot, tree=None):
         self.properties = OrderedDict()
         self.propertyAttributes = {}
         self.icon = icon
+        self.tree = tree
         self.alternateNames = {}
         self.addProperty('Name', name)
 
@@ -122,11 +112,12 @@ class ObjectModelItem(object):
             return self.propertyAttributes.setdefault(propertyName, attributes)
 
     def _onPropertyChanged(self, propertyName):
-        updatePropertyPanel(self, propertyName)
-        if propertyName == 'Visible':
-            updateVisIcon(self)
-        if propertyName == 'Name':
-            getItemForObject(self).setText(0, self.getProperty('Name'))
+        if self.tree is not None:
+            self.tree.updatePropertyPanel(self, propertyName)
+            if propertyName == 'Visible':
+                self.tree.updateVisIcon(self)
+            if propertyName == 'Name':
+                self.tree.getItemForObject(self).setText(0, self.getProperty('Name'))
 
     def _onPropertyAdded(self, propertyName):
         pass
@@ -135,10 +126,16 @@ class ObjectModelItem(object):
         pass
 
     def children(self):
-        return getObjectChildren(self)
+        if self.tree is not None:
+            return self.tree.getObjectChildren(self)
+        else:
+            return []
 
     def findChild(self, name):
-        return findChildByName(self, name)
+        if self.tree is not None:
+            return self.tree.findChildByName(self, name)
+        else:
+            return None
 
     def __getattribute__(self, name):
         try:
@@ -585,14 +582,20 @@ class ObjectModelTree(object):
         item = self.getItemForObject(obj)
         if item:
             self._removeItemFromObjectModel(item)
+            obj.tree = None
 
 
     def addToObjectModel(self, obj, parentObj=None):
+        assert obj.tree is None
+
         parentItem = self.getItemForObject(parentObj)
         objName = obj.getProperty('Name')
 
         item = QtGui.QTreeWidgetItem(parentItem, [objName])
         item.setIcon(0, obj.icon)
+
+        obj.tree = self
+
         self.objects[item] = obj
         self.updateVisIcon(obj)
 
@@ -692,10 +695,10 @@ class ObjectModelTree(object):
         tree.header().setResizeMode(0, QtGui.QHeaderView.Stretch)
         tree.header().setResizeMode(1, QtGui.QHeaderView.Fixed)
         tree.setColumnWidth(1, 24)
-        tree.connect('itemSelectionChanged()', onTreeSelectionChanged)
-        tree.connect('itemClicked(QTreeWidgetItem*, int)', onItemClicked)
-        tree.connect('customContextMenuRequested(const QPoint&)', onShowContextMenu)
-        tree.connect('keyPressSignal(QKeyEvent*)', onKeyPress)
+        tree.connect('itemSelectionChanged()', self.onTreeSelectionChanged)
+        tree.connect('itemClicked(QTreeWidgetItem*, int)', self.onItemClicked)
+        tree.connect('customContextMenuRequested(const QPoint&)', self.onShowContextMenu)
+        tree.connect('keyPressSignal(QKeyEvent*)', self.onKeyPress)
 
 
     def init(self, objectTree, propertiesPanel):
@@ -713,7 +716,7 @@ class ObjectModelTree(object):
 
 _t = ObjectModelTree()
 
-def getObjectTree(self):
+def getObjectTree():
     return _t.getObjectTree()
 
 def getPropertiesPanel():
