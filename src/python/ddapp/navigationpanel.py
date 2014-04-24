@@ -343,6 +343,30 @@ class NavigationPanel(object):
                            [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
                            
                            
+# 2 up and down
+        r =1
+        flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
+                           [ blockl*-0.5       , -sep , 0       , 0 , 0 , 0, r], # start
+	                   [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
+                           [ blockl*0.5 + 0.0  ,-sep  , blockh  , 0 , 0 , 0, r], # 1
+                           [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
+                           [ blockl*1.5 + 0.03 ,-sep  , 2*blockh, 0 , 0 , 0, r], # 2
+                           [ blockl*2.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
+                           [ blockl*2.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r], # 1d
+                           [ blockl*3.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0],
+                           [ blockl*3.5 + 0.03  ,-sep , 0       , 0 , 0 , 0, r], # half 
+                           [ blockl*3.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0], # extra step for planner
+                           [ blockl*2.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r], # invert order
+                           [ blockl*2.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
+                           [ blockl*1.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
+                           [ blockl*1.5 - 0.06 , sep  , 2*blockh, 0 , 0 , 0, 0],
+                           [ blockl*0.5 + 0.04 ,-sep  , blockh  , 0 , 0 , 0, r],
+	                   [ blockl*0.5 - 0.06 , sep  , blockh  , 0 , 0 , 0, 0],
+                           [ blockl*-0.5+ 0.04 , -sep , 0       , 0 , 0 , 0, r],
+                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
+                                                      
+                           
+                           
         contact_pts = self.footstepDriver.getContactPts()
         contact_pts_mid = np.mean(contact_pts, axis=0) # mid point on foot relative to foot frame
         foot_to_sole = transformUtils.frameFromPositionAndRPY( contact_pts_mid, [0,0,0]).GetLinearInverse()
