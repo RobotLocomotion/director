@@ -238,6 +238,10 @@ def showRightClickMenu(displayPoint, view):
             obj = obj.model.polyDataObj
         except AttributeError:
             pass
+        try:
+            obj.polyData
+        except AttributeError:
+            return None
         if obj and obj.polyData.GetNumberOfPoints() and (obj.polyData.GetNumberOfCells() == obj.polyData.GetNumberOfVerts()):
             return obj
 
