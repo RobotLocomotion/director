@@ -123,7 +123,7 @@ class FootstepsDriver(object):
         sub2.setSpeedLimit(1) # was 5 but was slow rendering
 
     ##############################
-    
+
     def getDefaultStepParams(self):
         default_step_params = lcmdrc.footstep_params_t()
         default_step_params.step_speed = 1.0
@@ -138,8 +138,8 @@ class FootstepsDriver(object):
         default_step_params.bdi_sway_end_dist = 0.02
         default_step_params.bdi_step_end_dist = 0.02
         default_step_params.mu = 1.0
-        return default_step_params    
-    
+        return default_step_params
+
     def onWalkingPlan(self, msg):
         self.lastWalkingPlan = msg
         if self.walkingPlanCallback:
@@ -168,7 +168,7 @@ class FootstepsDriver(object):
     def drawFootstepPlan(self, msg, folder,left_color=None, right_color=None):
 
         allTransforms = []
-        
+
         for i, footstep in enumerate(msg.footsteps):
             trans = footstep.pos.translation
             trans = [trans.x, trans.y, trans.z]
@@ -208,14 +208,14 @@ class FootstepsDriver(object):
                 vis.showPolyData(d.getPolyData(), 'infeasibility %d -> %d' % (i-2, i-1), parent=folder, color=[1, 0.2, 0.2])
 
             stepName = 'step %d' % (i-1)
-            
+
             # add gradual shading to steps to indicate destination
 	    frac = float(i)/ float(msg.num_steps-1)
 	    this_color = [0,0,0]
             this_color[0] = 0.25*color[0] + 0.75*frac*color[0]
             this_color[1] = 0.25*color[1] + 0.75*frac*color[1]
             this_color[2] = 0.25*color[2] + 0.75*frac*color[2]
-            
+
             obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=1.0, parent=folder)
             obj.setIcon(om.Icons.Feet)
             frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
@@ -326,6 +326,8 @@ class FootstepsDriver(object):
         msg.params.max_step_width = 0.4
         msg.params.nom_forward_step = 0.15
         msg.params.max_forward_step = 0.45
+        msg.params.nom_upward_step = 0.25;
+        msg.params.nom_downward_step = 0.15;
         msg.params.ignore_terrain = self.params.ignore_terrain
         msg.params.planning_mode = msg.params.MODE_AUTO
         msg.params.behavior = self.behavior_lcm_map[self.params.behavior]
