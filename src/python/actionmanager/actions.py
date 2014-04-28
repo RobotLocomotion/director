@@ -12,6 +12,8 @@ from ddapp.drilldemo import RobotPoseGUIWrapper
 from drc import robot_state_t, actionman_status_t, actionman_resume_t
 from bot_core import rigid_transform_t
 from bot_frames import update_t
+from perception import pfgrasp_command_t
+
 from vtk import vtkTransform
 import botpy
 import takktile
@@ -491,9 +493,11 @@ class PoseSearch(Action):
         self.outputState = deepcopy(self.inputState)
 
 
-class CameraDeltaPlan(Action):
 
-    inputs = ['TargetFrame', 'Hand', 'Style', 'Channel']
+
+class PFGraspCommand(Action):
+
+    inputs = ['CommandType', 'Channel']
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
@@ -502,101 +506,117 @@ class CameraDeltaPlan(Action):
         self.messageReceived = False
         self.message = None
 
-    def setMessageReceived(self, data):
-        self.messageReceived = True
+    def setResponseRecevied(self, data):
         self.message = data
+        self.messageReceived = True
 
     def onEnter(self):
-        # Start listening for a message with the desired camera transform
-        lcmUtils.captureMessageCallback(self.parsedArgs['Channel'], update_t, self.setMessageReceived)
+        # Send out the message to start
+        message = pfgrasp_command_t()
+        message.command = self.parsedArgs['CommandType']
+        lcmUtils.dumpMessage('PFGRASP_CMD', message)
 
-#        if self.container.vizMode:
-#            self.message = update_t()
-#            self.message.trans = [-0.04, 0.0, 0.0]
-#            self.messageReceived = True
+        # Create a listener to wait for the response
+        if message.command == 3:
+            lcmUtils.captureMessageCallback(self.parsedArgs['Channel'], update_t, self.setMessageReceived)
 
     def onUpdate(self):
-        # Wait until the message is received, then do planning
-        if self.messageReceived:
+        if self.parsedArgs['CommandType'] == 3:
+            self.success()
 
-            linkMap = { 'left' : 'l_hand_face', 'right': 'r_hand_face'}
-            #linkMap = { 'left' : 'cameralhand', 'right': 'r_hand_face'}
-            linkName = linkMap[self.parsedArgs['Hand']]
+        else:
+            if self.messageReceived:
+                self.outputs['MoveCommand'] = [self.message.trans, self.message.quat, self.message.relative_to]
 
-            # local means the published topic is a full transform
-            if self.message.relative_to == 'local':
-                cameraToWorld = transformUtils.frameFromPositionAndRPY([self.message.trans[0],
-                                                                        self.message.trans[1],
-                                                                        self.message.trans[2]],
-                                                                       np.degrees(botpy.quat_to_roll_pitch_yaw(self.message.quat)))
+    def onExit(self):
+        # Cleanup
+        self.message = None
 
-                #cameraToHand = transformUtils.frameFromPositionAndRPY([-0.096, -0.02, 0], np.degrees([-1.57079, 0, 1.57079]))
-                #handToCamera = cameraToHand.GetInverse()
+       # This is a planning action, no robot motion
+        self.outputState = deepcopy(self.inputState)
 
-                #cameraToFT = transformUtils.frameFromPositionAndRPY([-0.096, 0.06, 0], np.degrees([-1.57079, 0, 1.57079]))
-                #handToFT = transformUtils.frameFromPositionAndRPY([0.0, 0.08, 0], np.degrees([0, 0, 0]))
-                #FTToCamera = cameraToFT.GetInverse()
 
-                #handToCamera = transformUtils.frameFromPositionAndRPY([-0.096, -0.02, 0], np.degrees([-1.57079, 0, 1.57079]))
-                #print handToCamera
+class CameraDeltaPlan(Action):
 
-                handToCamera = transformUtils.frameFromPositionAndRPY([0.0, 0.096, 0.02], np.degrees([1.57079, 0, 1.57079]))
+    inputs = ['TargetFrame', 'Hand', 'Style', 'MoveCommand']
 
-                handToWorld = vtkTransform()
-                handToWorld.PostMultiply()
-                handToWorld.Concatenate(handToCamera)
-                handToWorld.Concatenate(cameraToWorld)
+    def __init__(self, name, success, fail, args, container):
+        Action.__init__(self, name, success, fail, args, container)
+        self.outputs = {'JointPlan' : None}
+        self.manipPlan = None
 
-                handFrame = self.container.om.findObjectByName('cameras')
-                goalFrame = vis.updateFrame(handToWorld, 'CameraAdjustFrame', parent=handFrame, visible=True, scale=0.25)
-                goalFrame2 = vis.updateFrame(cameraToWorld, 'PeterFrame', parent=handFrame, visible=True, scale=0.25)
+    def onEnter(self):
+        self.moveCommand = self.parsedArgs['MoveCommand']
 
-                #call the planner
-                self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], goalFrame, planTraj=True)
+    def onUpdate(self):
+        linkMap = { 'left' : 'l_hand_face', 'right': 'r_hand_face'}
+        linkName = linkMap[self.parsedArgs['Hand']]
 
+        # local means the published topic is a full transform
+        if self.moveCommand[2] == 'local':
+            cameraToWorld = transformUtils.frameFromPositionAndRPY([self.moveCommand[0][0],
+                                                                    self.moveCommand[0][1],
+                                                                    self.moveCommand[0][2]],
+                                                                   np.degrees(botpy.quat_to_roll_pitch_yaw(self.moveCommand[1])))
+
+            #peter started using bot-frames to calculate hand position so this is no longer needed
+            #handToCamera = transformUtils.frameFromPositionAndRPY([0.0, 0.096, 0.02], np.degrees([1.57079, 0, 1.57079]))
+
+            handToWorld = vtkTransform()
+            handToWorld.PostMultiply()
+            #handToWorld.Concatenate(handToCamera)
+            handToWorld.Concatenate(cameraToWorld)
+
+            handFrame = self.container.om.findObjectByName('cameras')
+            goalFrame = vis.updateFrame(handToWorld, 'CameraAdjustFrame', parent=handFrame, visible=True, scale=0.25)
+            goalFrame2 = vis.updateFrame(cameraToWorld, 'PeterFrame', parent=handFrame, visible=True, scale=0.25)
+
+            #call the planner
+            self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], goalFrame, planTraj=True)
+
+        else:
+            if self.container.vizMode:
+                handToWorld = self.container.ikPlanner.getLinkFrameAtPose(linkName, self.inputState)
             else:
-                if self.container.vizMode:
-                    handToWorld = self.container.ikPlanner.getLinkFrameAtPose(linkName, self.inputState)
-                else:
-                    handToWorld = self.container.robotModel.getLinkFrame(linkName)
+                handToWorld = self.container.robotModel.getLinkFrame(linkName)
 
-                delta = transformUtils.frameFromPositionAndRPY([self.message.trans[0],
-                                                                self.message.trans[1],
-                                                                self.message.trans[2]],
-                                                                [0, 0, 0])
+            delta = transformUtils.frameFromPositionAndRPY([self.moveCommand[0][0],
+                                                            self.moveCommand[0][1],
+                                                            self.moveCommand[0][2]],
+                                                            [0, 0, 0])
 
-                if self.parsedArgs['Style'] == 'Local':
-                    goalTransform = vtkTransform()
-                    goalTransform.PostMultiply()
-                    goalTransform.Concatenate(delta)
-                    goalTransform.Concatenate(handToWorld)
-                else:
-                    goalTransform = vtkTransform()
-                    goalTransform.PostMultiply()
-                    goalTransform.Concatenate(handToWorld)
-                    goalTransform.Concatenate(delta)
-
-                handFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
-                goalFrame = vis.updateFrame(goalTransform, 'CameraAdjustFrame', parent=handFrame, visible=True, scale=0.25)
-
-                #call the planner
-                self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], goalFrame, planTraj=True)
-
-            if self.manipPlan.plan_info[-1] > 10:
-                print "PLANNER REPORTS ERROR!"
-
-                # Plan failed, save it in the animation list, but don't update output data
-                self.animations.append(self.manipPlan)
-
-                self.fail()
+            if self.parsedArgs['Style'] == 'Local':
+                goalTransform = vtkTransform()
+                goalTransform.PostMultiply()
+                goalTransform.Concatenate(delta)
+                goalTransform.Concatenate(handToWorld)
             else:
-                print "Planner reports success!"
+                goalTransform = vtkTransform()
+                goalTransform.PostMultiply()
+                goalTransform.Concatenate(handToWorld)
+                goalTransform.Concatenate(delta)
 
-                # Plan was successful, save it to be animated and update output data
-                self.animations.append(self.manipPlan)
-                self.outputs['JointPlan'] = deepcopy(self.manipPlan)
+            handFrame = self.container.om.findObjectByName(self.parsedArgs['TargetFrame'])
+            goalFrame = vis.updateFrame(goalTransform, 'CameraAdjustFrame', parent=handFrame, visible=True, scale=0.25)
 
-                self.success()
+            #call the planner
+            self.manipPlan = self.container.ikPlanner.planEndEffectorGoal(self.inputState, self.parsedArgs['Hand'], goalFrame, planTraj=True)
+
+        if self.manipPlan.plan_info[-1] > 10:
+            print "PLANNER REPORTS ERROR!"
+
+            # Plan failed, save it in the animation list, but don't update output data
+            self.animations.append(self.manipPlan)
+
+            self.fail()
+        else:
+            print "Planner reports success!"
+
+            # Plan was successful, save it to be animated and update output data
+            self.animations.append(self.manipPlan)
+            self.outputs['JointPlan'] = deepcopy(self.manipPlan)
+
+            self.success()
 
     def onExit(self):
         # Planner Cleanup
