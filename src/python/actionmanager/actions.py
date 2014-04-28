@@ -1,6 +1,8 @@
 from time import time
-from copy import deepcopy
+from copy import deepcopy, copy
+from math import sqrt
 import numpy as np
+from time import sleep
 
 from ddapp import robotstate
 from ddapp import transformUtils
@@ -12,7 +14,7 @@ from ddapp.drilldemo import RobotPoseGUIWrapper
 from drc import robot_state_t, actionman_status_t, actionman_resume_t
 from bot_core import rigid_transform_t
 from bot_frames import update_t
-from perception import pfgrasp_command_t
+from drc import pfgrasp_command_t
 
 from vtk import vtkTransform
 import botpy
@@ -501,36 +503,49 @@ class PFGraspCommand(Action):
 
     def __init__(self, name, success, fail, args, container):
         Action.__init__(self, name, success, fail, args, container)
-        self.outputs = {'JointPlan' : None}
+        self.outputs = {'MoveCommand' : None}
         self.manipPlan = None
         self.messageReceived = False
         self.message = None
 
-    def setResponseRecevied(self, data):
+    def setMessageReceived(self, data):
         self.message = data
         self.messageReceived = True
 
     def onEnter(self):
-        # Send out the message to start
-        message = pfgrasp_command_t()
-        message.command = self.parsedArgs['CommandType']
-        lcmUtils.dumpMessage('PFGRASP_CMD', message)
-
         # Create a listener to wait for the response
-        if message.command == 3:
+        if self.parsedArgs['CommandType'] == '3':
+            self.messageReceived = False
+            self.message = None
             lcmUtils.captureMessageCallback(self.parsedArgs['Channel'], update_t, self.setMessageReceived)
+            sleep(0.1)
+
+        # Send out the message to start
+        message = pfgrasp_command_t.pfgrasp_command_t()
+        message.command = int(self.parsedArgs['CommandType'])
+        lcmUtils.publish('PFGRASP_CMD', message)
 
     def onUpdate(self):
-        if self.parsedArgs['CommandType'] == 3:
+        if not self.parsedArgs['CommandType'] == '3':
             self.success()
 
         else:
             if self.messageReceived:
-                self.outputs['MoveCommand'] = [self.message.trans, self.message.quat, self.message.relative_to]
+                handToWorld_XYZ = self.container.ikPlanner.getLinkFrameAtPose('l_hand_face', self.inputState).GetPosition()
+                dist = sqrt( (handToWorld_XYZ[0]-self.message.trans[0])**2 +
+                             (handToWorld_XYZ[1]-self.message.trans[1])**2 +
+                             (handToWorld_XYZ[2]-self.message.trans[2])**2)
+                print "DISTANCE TO GO:", dist
+                if dist > 0.015:
+                    self.outputs['MoveCommand'] = [copy(self.message.trans), copy(self.message.quat), copy(self.message.relative_to)]
+                    self.fail()
+                else:
+                    self.success()
 
     def onExit(self):
         # Cleanup
         self.message = None
+        self.messageReceived = False
 
        # This is a planning action, no robot motion
         self.outputState = deepcopy(self.inputState)
@@ -871,7 +886,7 @@ class JointMoveGuarded(Action):
                 self.container.manipPlanner.sendPlanPause()
                 self.success()
 
-            if time() > self.startTime + 5.0:
+            if time() > self.startTime + 11.0:
                 print "Ending motion because of timeout, no contact found"
 
                 # Need logic here to see if we reached our target to within some tolerance
