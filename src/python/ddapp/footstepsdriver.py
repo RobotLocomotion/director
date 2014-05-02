@@ -295,7 +295,7 @@ class FootstepsDriver(object):
         msg.num_existing_steps = self.lastFootstepPlan.num_steps
         msg.existing_steps = self.lastFootstepPlan.footsteps
         msg = self.applyParams(msg)
-        self.sendFootstepCheckRequest(msg)
+        self.sendFootstepPlanRequest(msg)
 
     def updateRequest(self):
         if self.lastFootstepRequest is not None:
@@ -342,25 +342,6 @@ class FootstepsDriver(object):
         self.lastFootstepRequest = request
 
         requestChannel = 'FOOTSTEP_PLAN_REQUEST'
-        responseChannel = 'FOOTSTEP_PLAN_RESPONSE'
-
-        if waitForResponse:
-            if waitTimeout == 0:
-                helper = lcmUtils.MessageResponseHelper(responseChannel, lcmdrc.footstep_plan_t)
-                lcmUtils.publish(requestChannel, request)
-                return helper
-            return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, request,
-                                                                 responseChannel, lcmdrc.footstep_plan_t, waitTimeout)
-        else:
-            lcmUtils.publish(requestChannel, request)
-
-    def sendFootstepCheckRequest(self, request, waitForResponse=False, waitTimeout=5000):
-
-        msg_class = lcmdrc.footstep_check_request_t
-        assert isinstance(request, msg_class)
-        self.lastFootstepRequest = request
-
-        requestChannel = 'FOOTSTEP_CHECK_REQUEST'
         responseChannel = 'FOOTSTEP_PLAN_RESPONSE'
 
         if waitForResponse:
