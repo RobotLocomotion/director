@@ -37,8 +37,8 @@ class ServerAffordanceItem(om.ObjectModelItem):
         #self.addProperty('origin_xyz', message.origin_xyz)
         #self.addProperty('origin_rpy', message.origin_rpy)
 
-    def _onPropertyChanged(self, propertyName):
-        ObjectModelItem._onPropertyChanged(self, propertyName)
+    def _onPropertyChanged(self, propertySet, propertyName):
+        ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
 
     def onRemoveFromObjectModel(self):
         if self.message:

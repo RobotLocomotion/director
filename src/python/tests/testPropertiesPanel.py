@@ -31,7 +31,7 @@ def main():
 
     panel = PythonQt.dd.ddPropertiesPanel()
     panel.setBrowserModeToWidget()
-    om.addPropertiesToPanel(obj, panel)
+    om.PropertyPanelHelper.addPropertiesToPanel(obj.properties, panel)
     panel.show()
 
     startApplication(enableQuitTimer=True)

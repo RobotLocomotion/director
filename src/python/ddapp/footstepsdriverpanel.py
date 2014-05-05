@@ -60,7 +60,7 @@ class FootstepsPanel(object):
         l.setMargin(0)
         propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         propertiesPanel.setBrowserModeToWidget()
-        om.addPropertiesToPanel(self.driver.params, propertiesPanel)
+        om.PropertyPanelHelper.addPropertiesToPanel(self.driver.params.properties, propertiesPanel)
         l.addWidget(propertiesPanel)
         propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
         PythonQt.dd.ddGroupBoxHider(self.ui.paramsContainer)
