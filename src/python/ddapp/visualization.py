@@ -32,7 +32,7 @@ class AffordanceItem(om.PolyDataItem):
         om.PolyDataItem.__init__(self, name, polyData, view)
         self.params = {}
         affListener.registerAffordance(self)
-        self.addProperty('uid', 0)
+        self.addProperty('uid', 0, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=1e6, singleStep=1, hidden=False))
         self.addProperty('Server updates enabled', False)
 
     def publish(self):
@@ -47,12 +47,6 @@ class AffordanceItem(om.PolyDataItem):
             self.publish()
         else:
             om.PolyDataItem.onAction(self, action)
-
-    def getPropertyAttributes(self, propertyName):
-        if propertyName == 'uid':
-            return om.PropertyAttributes(decimals=0, minimum=0, maximum=1e6, singleStep=1, hidden=False)
-        else:
-            return om.PolyDataItem.getPropertyAttributes(self, propertyName)
 
     def onServerAffordanceUpdate(self, serverAff):
         if not self.params.get('uid'):
@@ -184,7 +178,7 @@ class FrameItem(om.PolyDataItem):
         self.rep.SetWorldSize(scale)
         self.rep.SetTransform(transform)
 
-        self.addProperty('Scale', scale)
+        self.addProperty('Scale', scale, attributes=om.PropertyAttributes(decimals=2, minimum=0.01, maximum=100, singleStep=0.1, hidden=False))
         self.addProperty('Edit', False)
 
         self.callbacks = callbacks.CallbackRegistry(['FrameModified'])
@@ -241,13 +235,6 @@ class FrameItem(om.PolyDataItem):
             self.widget.SetEnabled(self.getProperty(propertyName))
 
         om.PolyDataItem._onPropertyChanged(self, propertyName)
-
-    def getPropertyAttributes(self, propertyName):
-
-        if propertyName == 'Scale':
-            return om.PropertyAttributes(decimals=2, minimum=0.01, maximum=100, singleStep=0.1, hidden=False)
-        else:
-            return om.PolyDataItem.getPropertyAttributes(self, propertyName)
 
     def onRemoveFromObjectModel(self):
         om.PolyDataItem.onRemoveFromObjectModel(self)
