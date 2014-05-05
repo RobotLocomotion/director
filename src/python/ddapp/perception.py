@@ -65,8 +65,8 @@ class MultisenseItem(om.ObjectModelItem):
         #self.addProperty('Color', QtGui.QColor(255,255,255))
         #self.addProperty('Scanline Color', QtGui.QColor(255,0,0))
 
-    def _onPropertyChanged(self, propertyName):
-        om.ObjectModelItem._onPropertyChanged(self, propertyName)
+    def _onPropertyChanged(self, propertySet, propertyName):
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
 
         if propertyName == 'Updates Enabled':
             if self.getProperty('Updates Enabled'):

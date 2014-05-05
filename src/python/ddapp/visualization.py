@@ -221,7 +221,8 @@ class FrameItem(om.PolyDataItem):
         if self.getProperty('Visible'):
             self._renderAllViews()
 
-    def _onPropertyChanged(self, propertyName):
+    def _onPropertyChanged(self, propertySet, propertyName):
+        om.PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
 
         if propertyName == 'Scale':
             scale = self.getProperty(propertyName)
@@ -233,8 +234,6 @@ class FrameItem(om.PolyDataItem):
                 view = self.views[0]
             self.widget.SetInteractor(view.renderWindow().GetInteractor())
             self.widget.SetEnabled(self.getProperty(propertyName))
-
-        om.PolyDataItem._onPropertyChanged(self, propertyName)
 
     def onRemoveFromObjectModel(self):
         om.PolyDataItem.onRemoveFromObjectModel(self)

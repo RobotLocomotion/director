@@ -322,16 +322,16 @@ class FootstepsDriver(object):
         msg.params.max_num_steps = 30
         msg.params.min_num_steps = 0
         msg.params.min_step_width = 0.21
-        msg.params.nom_step_width = self.params.nominal_step_width
+        msg.params.nom_step_width = self.params.properties.nominal_step_width
         msg.params.max_step_width = 0.4
         msg.params.nom_forward_step = 0.15
         msg.params.max_forward_step = 0.45
         msg.params.nom_upward_step = 0.25;
         msg.params.nom_downward_step = 0.15;
-        msg.params.ignore_terrain = self.params.ignore_terrain
+        msg.params.ignore_terrain = self.params.properties.ignore_terrain
         msg.params.planning_mode = msg.params.MODE_AUTO
-        msg.params.behavior = self.behavior_lcm_map[self.params.behavior]
-        msg.params.map_command = self.map_command_lcm_map[self.params.map_command]
+        msg.params.behavior = self.behavior_lcm_map[self.params.properties.behavior]
+        msg.params.map_command = self.map_command_lcm_map[self.params.properties.map_command]
         msg.params.leading_foot = msg.params.LEAD_AUTO
         msg.default_step_params = self.getDefaultStepParams()
         return msg
