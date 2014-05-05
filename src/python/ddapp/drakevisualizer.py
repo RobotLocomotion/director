@@ -32,7 +32,7 @@ class DrakeVisualizer(object):
             self.loadURDF(urdfFile)
 
     def addRobotModelItem(self, model):
-        obj = om.RobotModelItem(model)
+        obj = roboturdf.RobotModelItem(model)
         om.addToObjectModel(obj, om.getOrCreateContainer('Drake Viewer Models'))
         obj.setProperty('Color', QtGui.QColor(255, 180, 0))
         obj.addToView(self.view)
