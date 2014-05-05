@@ -158,7 +158,7 @@ class MultisenseItem(om.ObjectModelItem):
             self.model.polyDataObj._renderAllViews()
 
     def _showScalarBar(self):
-        title = self.getPropertyAttributes('Color By').enumNames[self.getProperty('Color By')]
+        title = self.getPropertyAttribute('Color By', 'enumNames')[self.getProperty('Color By')]
         view = self.model.polyDataObj.views[0]
         lut = self.model.polyDataObj.mapper.GetLookupTable()
         self.scalarBarWidget = vis.createScalarBarWidget(view, lut, title)

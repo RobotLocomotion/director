@@ -101,9 +101,10 @@ class ObjectModelItem(object):
 
     def getObjectTree(self):
         return self._tree
+    def getPropertyAttribute(self, propertyName, propertyAttribute):
+        assert self.hasProperty(propertyName)
+        return getattr(self.propertyAttributes[propertyName], propertyAttribute)
 
-    def getPropertyAttributes(self, propertyName):
-        return self.propertyAttributes[propertyName]
 
 
     def _onPropertyChanged(self, propertyName):
