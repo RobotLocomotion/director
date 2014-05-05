@@ -28,7 +28,7 @@ _debugItem = None
 def updateDebugItem(polyData):
     global _debugItem
     if not _debugItem:
-        _debugItem = om.PolyDataItem('spindle axis', polyData, getRenderView())
+        _debugItem = vis.PolyDataItem('spindle axis', polyData, getRenderView())
         _debugItem.setProperty('Color', QtGui.QColor(0, 255, 0))
         _debugItem.setProperty('Visible', False)
         om.addToObjectModel(_debugItem, om.findObjectByName('sensors'))
@@ -182,7 +182,7 @@ class MultiSenseSource(TimerCallback):
         self.initScanLines()
 
         self.revPolyData = vtk.vtkPolyData()
-        self.polyDataObj = om.PolyDataItem('Multisense Sweep', self.revPolyData, view)
+        self.polyDataObj = vis.PolyDataItem('Multisense Sweep', self.revPolyData, view)
         self.polyDataObj.actor.SetPickable(1)
 
 
@@ -203,7 +203,7 @@ class MultiSenseSource(TimerCallback):
 
         for i in xrange(self.numberOfScanLines):
             polyData = vtk.vtkPolyData()
-            scanLine = om.PolyDataItem('scan line %d' % i, polyData, self.view)
+            scanLine = vis.PolyDataItem('scan line %d' % i, polyData, self.view)
             scanLine.actor.SetPickable(0)
             scanLine.setSolidColor((1,0,0))
             self.scanLines.append(scanLine)
@@ -402,7 +402,7 @@ class MapServerSource(TimerCallback):
         if obj not in om.getObjects():
             obj = None
         if not obj:
-            obj = om.PolyDataItem(self.getNameForViewId(viewId), polyData, self.view)
+            obj = vis.PolyDataItem(self.getNameForViewId(viewId), polyData, self.view)
             obj.setProperty('Color', QtGui.QColor(0, 175, 255))
             folder = om.findObjectByName('Map Server')
             om.addToObjectModel(obj, folder)
