@@ -8,7 +8,6 @@ from collections import OrderedDict
 from ddapp import callbacks
 
 from ddapp.fieldcontainer import FieldContainer
-import vtk
 
 class PropertyAttributes(FieldContainer):
 
@@ -264,99 +263,6 @@ class ContainerItem(ObjectModelItem):
 
     def __init__(self, name):
         ObjectModelItem.__init__(self, name, Icons.Directory)
-
-
-class RobotModelItem(ObjectModelItem):
-
-    def __init__(self, model):
-
-        modelName = os.path.basename(model.filename())
-        ObjectModelItem.__init__(self, modelName, Icons.Robot)
-
-        self.model = model
-        model.connect('modelChanged()', self.onModelChanged)
-        self.modelChangedCallback = None
-
-        self.addProperty('Filename', model.filename())
-        self.addProperty('Visible', model.visible())
-        self.addProperty('Alpha', model.alpha(),
-                         attributes=PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
-        self.addProperty('Color', model.color())
-        self.views = []
-
-    def _onPropertyChanged(self, propertySet, propertyName):
-        ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
-
-        if propertyName == 'Alpha':
-            self.model.setAlpha(self.getProperty(propertyName))
-        elif propertyName == 'Visible':
-            self.model.setVisible(self.getProperty(propertyName))
-        elif propertyName == 'Color':
-            self.model.setColor(self.getProperty(propertyName))
-
-        self._renderAllViews()
-
-    def hasDataSet(self, dataSet):
-        return len(self.model.getLinkNameForMesh(dataSet)) != 0
-
-    def onModelChanged(self):
-        if self.modelChangedCallback:
-            self.modelChangedCallback(self)
-
-        if self.getProperty('Visible'):
-            self._renderAllViews()
-
-
-    def _renderAllViews(self):
-        for view in self.views:
-            view.render()
-
-    def getLinkFrame(self, linkName):
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        if self.model.getLinkToWorld(linkName, t):
-            return t
-        else:
-            return None
-
-    def setModel(self, model):
-        assert model is not None
-        if model == self.model:
-            return
-
-        views = list(self.views)
-        self.removeFromAllViews()
-        self.model = model
-        self.model.setAlpha(self.getProperty('Alpha'))
-        self.model.setVisible(self.getProperty('Visible'))
-        self.model.setColor(self.getProperty('Color'))
-        self.setProperty('Filename', model.filename())
-        model.connect('modelChanged()', self.onModelChanged)
-
-        for view in views:
-            self.addToView(view)
-        self.onModelChanged()
-
-    def addToView(self, view):
-        if view in self.views:
-            return
-        self.views.append(view)
-        self.model.addToRenderer(view.renderer())
-        view.render()
-
-    def onRemoveFromObjectModel(self):
-        self.removeFromAllViews()
-
-    def removeFromAllViews(self):
-        for view in list(self.views):
-            self.removeFromView(view)
-        assert len(self.views) == 0
-
-    def removeFromView(self, view):
-        assert view in self.views
-        self.views.remove(view)
-        self.model.removeFromRenderer(view.renderer())
-        view.render()
 
 
 class ObjectModelTree(object):

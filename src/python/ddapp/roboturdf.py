@@ -29,6 +29,98 @@ def getRobotOrangeColor():
     return QtGui.QColor(255, 180, 0)
 
 
+class RobotModelItem(om.ObjectModelItem):
+
+    def __init__(self, model):
+
+        modelName = os.path.basename(model.filename())
+        om.ObjectModelItem.__init__(self, modelName, om.Icons.Robot)
+
+        self.model = model
+        model.connect('modelChanged()', self.onModelChanged)
+        self.modelChangedCallback = None
+
+        self.addProperty('Filename', model.filename())
+        self.addProperty('Visible', model.visible())
+        self.addProperty('Alpha', model.alpha(),
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
+        self.addProperty('Color', model.color())
+        self.views = []
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Alpha':
+            self.model.setAlpha(self.getProperty(propertyName))
+        elif propertyName == 'Visible':
+            self.model.setVisible(self.getProperty(propertyName))
+        elif propertyName == 'Color':
+            self.model.setColor(self.getProperty(propertyName))
+
+        self._renderAllViews()
+
+    def hasDataSet(self, dataSet):
+        return len(self.model.getLinkNameForMesh(dataSet)) != 0
+
+    def onModelChanged(self):
+        if self.modelChangedCallback:
+            self.modelChangedCallback(self)
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
+
+    def _renderAllViews(self):
+        for view in self.views:
+            view.render()
+
+    def getLinkFrame(self, linkName):
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        if self.model.getLinkToWorld(linkName, t):
+            return t
+        else:
+            return None
+
+    def setModel(self, model):
+        assert model is not None
+        if model == self.model:
+            return
+
+        views = list(self.views)
+        self.removeFromAllViews()
+        self.model = model
+        self.model.setAlpha(self.getProperty('Alpha'))
+        self.model.setVisible(self.getProperty('Visible'))
+        self.model.setColor(self.getProperty('Color'))
+        self.setProperty('Filename', model.filename())
+        model.connect('modelChanged()', self.onModelChanged)
+
+        for view in views:
+            self.addToView(view)
+        self.onModelChanged()
+
+    def addToView(self, view):
+        if view in self.views:
+            return
+        self.views.append(view)
+        self.model.addToRenderer(view.renderer())
+        view.render()
+
+    def onRemoveFromObjectModel(self):
+        self.removeFromAllViews()
+
+    def removeFromAllViews(self):
+        for view in list(self.views):
+            self.removeFromView(view)
+        assert len(self.views) == 0
+
+    def removeFromView(self, view):
+        assert view in self.views
+        self.views.remove(view)
+        self.model.removeFromRenderer(view.renderer())
+        view.render()
+
+
 def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True):
 
     if not urdfFile:
@@ -36,7 +128,7 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
 
     folder = om.getOrCreateContainer(parent)
     model = loadRobotModelFromFile(urdfFile)
-    obj = om.RobotModelItem(model)
+    obj = RobotModelItem(model)
     om.addToObjectModel(obj, folder)
 
     obj.setProperty('Visible', visible)
@@ -70,7 +162,7 @@ def loadRobotModelFromString(xmlString):
 
 
 def getExistingRobotModels():
-    return [obj for obj in om.getObjects() if isinstance(obj, om.RobotModelItem)]
+    return [obj for obj in om.getObjects() if isinstance(obj, RobotModelItem)]
 
 
 _modelPublisherString = None
@@ -295,7 +387,7 @@ class HandLoader(object):
 
         filename = self.getHandUrdf()
         handModel = loadRobotModelFromFile(filename)
-        handModel = om.RobotModelItem(handModel)
+        handModel = RobotModelItem(handModel)
         self.handModel = handModel
 
         '''
@@ -303,7 +395,7 @@ class HandLoader(object):
         if self.side == 'right':
             color = [0.33, 1.0, 0.0]
 
-        handModel = om.RobotModelItem(handModel)
+        handModel = RobotModelItem(handModel)
         om.addToObjectModel(handModel, om.getOrCreateContainer('hands'))
         handModel.setProperty('Name', os.path.basename(filename).replace('.urdf', '').replace('_', ' '))
         handModel.setProperty('Visible', False)

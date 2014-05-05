@@ -12,6 +12,7 @@ import ddapp.applogic as app
 from ddapp import objectmodel as om
 from ddapp import perception
 from ddapp import lcmUtils
+from ddapp import roboturdf
 from ddapp import transformUtils
 from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
@@ -3310,7 +3311,7 @@ def getDefaultAffordanceObject():
 
 def getVisibleRobotModel():
     for obj in om.getObjects():
-        if isinstance(obj, om.RobotModelItem) and obj.getProperty('Visible'):
+        if isinstance(obj, roboturdf.RobotModelItem) and obj.getProperty('Visible'):
             return obj
 
 def orthoX():
