@@ -52,7 +52,7 @@ class ObjectModelItem(object):
         self.icon = icon
         self._tree = tree
         self.alternateNames = {}
-        self.addProperty('Name', name)
+        self.addProperty('Name', name, attributes=PropertyAttributes(hidden=True))
 
     def setIcon(self, icon):
         self.icon = icon
@@ -75,8 +75,7 @@ class ObjectModelItem(object):
             raise ValueError('Adding this property would conflict with a different existing property with alternate name {:s}'.format(alternateName))
         self.alternateNames[alternateName] = propertyName
         self.properties[propertyName] = propertyValue
-        if attributes is not None:
-            self.propertyAttributes[propertyName] = attributes
+        self.propertyAttributes[propertyName] = attributes or PropertyAttributes()
         self._onPropertyAdded(propertyName)
 
     def setProperty(self, propertyName, propertyValue):
@@ -104,14 +103,8 @@ class ObjectModelItem(object):
         return self._tree
 
     def getPropertyAttributes(self, propertyName):
+        return self.propertyAttributes[propertyName]
 
-        if propertyName == 'Alpha':
-            return PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=0.1, hidden=False)
-        elif propertyName == 'Name':
-            return PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=True)
-        else:
-            attributes = PropertyAttributes(decimals=0, minimum=0, maximum=0, singleStep=0, hidden=False)
-            return self.propertyAttributes.setdefault(propertyName, attributes)
 
     def _onPropertyChanged(self, propertyName):
         if self._tree is not None:
@@ -171,7 +164,8 @@ class RobotModelItem(ObjectModelItem):
 
         self.addProperty('Filename', model.filename())
         self.addProperty('Visible', model.visible())
-        self.addProperty('Alpha', model.alpha())
+        self.addProperty('Alpha', model.alpha(),
+                         attributes=PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
         self.addProperty('Color', model.color())
         self.views = []
 
@@ -263,8 +257,10 @@ class PolyDataItem(ObjectModelItem):
         self.actor.SetMapper(self.mapper)
 
         self.addProperty('Visible', True)
-        self.addProperty('Point Size', self.actor.GetProperty().GetPointSize())
-        self.addProperty('Alpha', 1.0)
+        self.addProperty('Point Size', self.actor.GetProperty().GetPointSize(),
+                         attributes=PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
+        self.addProperty('Alpha', 1.0,
+                         attributes=PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
         self.addProperty('Color', QtGui.QColor(255,255,255))
 
         if view is not None:
@@ -372,13 +368,6 @@ class PolyDataItem(ObjectModelItem):
             self.actor.GetProperty().SetColor(color)
 
         self._renderAllViews()
-
-    def getPropertyAttributes(self, propertyName):
-
-        if propertyName == 'Point Size':
-            return PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False)
-        else:
-            return ObjectModelItem.getPropertyAttributes(self, propertyName)
 
     def onRemoveFromObjectModel(self):
         self.removeFromAllViews()

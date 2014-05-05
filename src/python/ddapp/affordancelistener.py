@@ -32,22 +32,13 @@ class ServerAffordanceItem(om.ObjectModelItem):
         om.ObjectModelItem.__init__(self, name, om.Icons.Robot)
 
         self.message = message
-        self.addProperty('uid', message.uid)
-        self.addProperty('otdf_type', message.otdf_type)
+        self.addProperty('uid', message.uid, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=1e6, singleStep=1, hidden=False))
+        self.addProperty('otdf_type', message.otdf_type, attributes=om.PropertyAttributes(decimals=3, minimum=-1e6, maximum=1e6, singleStep=0.01, hidden=False))
         #self.addProperty('origin_xyz', message.origin_xyz)
         #self.addProperty('origin_rpy', message.origin_rpy)
 
     def _onPropertyChanged(self, propertyName):
         ObjectModelItem._onPropertyChanged(self, propertyName)
-
-    def getPropertyAttributes(self, propertyName):
-
-        if propertyName == 'uid':
-            return om.PropertyAttributes(decimals=0, minimum=0, maximum=1e6, singleStep=1, hidden=False)
-        elif propertyName in ('origin_xyz', 'origin_rpy'):
-            return om.PropertyAttributes(decimals=3, minimum=-1e6, maximum=1e6, singleStep=0.01, hidden=False)
-        else:
-            return om.ObjectModelItem.getPropertyAttributes(self, propertyName)
 
     def onRemoveFromObjectModel(self):
         if self.message:

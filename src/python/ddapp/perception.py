@@ -44,16 +44,23 @@ class MultisenseItem(om.ObjectModelItem):
 
         self.model = model
         self.scalarBarWidget = None
-        self.addProperty('Color By', 0, attributes=om.PropertyAttributes(enumNames=['Solid Color', 'Intensity', 'Z Coordinate', 'Range', 'Spindle Angle', 'Azimuth', 'Camera RGB', 'Scan Delta']))
+        self.addProperty('Color By', 0,
+                         attributes=om.PropertyAttributes(enumNames=['Solid Color', 'Intensity', 'Z Coordinate', 'Range', 'Spindle Angle', 'Azimuth', 'Camera RGB', 'Scan Delta']))
         self.addProperty('Show Scalar Bar', False)
         self.addProperty('Updates Enabled', True)
-        self.addProperty('Min Range', model.reader.GetDistanceRange()[0])
-        self.addProperty('Max Range', model.reader.GetDistanceRange()[1])
-        self.addProperty('Edge Filter Distance', model.reader.GetEdgeDistanceThreshold())
-        self.addProperty('Number of Scan Lines', model.numberOfScanLines)
+        self.addProperty('Min Range', model.reader.GetDistanceRange()[0],
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
+        self.addProperty('Max Range', model.reader.GetDistanceRange()[1],
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
+        self.addProperty('Edge Filter Distance', model.reader.GetEdgeDistanceThreshold(),
+                         attributes=om.PropertyAttributes(decimals=3, minimum=0.0, maximum=10.0, singleStep=0.01, hidden=False))
+        self.addProperty('Number of Scan Lines', model.numberOfScanLines,
+                         attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=100, singleStep=1, hidden=False))
         self.addProperty('Visible', model.visible)
-        self.addProperty('Point Size', model.pointSize)
-        self.addProperty('Alpha', model.alpha)
+        self.addProperty('Point Size', model.pointSize,
+                         attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
+        self.addProperty('Alpha', model.alpha,
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
 
         #self.addProperty('Color', QtGui.QColor(255,255,255))
         #self.addProperty('Scanline Color', QtGui.QColor(255,0,0))
@@ -156,20 +163,6 @@ class MultisenseItem(om.ObjectModelItem):
         lut = self.model.polyDataObj.mapper.GetLookupTable()
         self.scalarBarWidget = vis.createScalarBarWidget(view, lut, title)
         self.model.polyDataObj._renderAllViews()
-
-    def getPropertyAttributes(self, propertyName):
-
-        if propertyName == 'Point Size':
-            return om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False)
-
-        elif propertyName in ('Min Range', 'Max Range'):
-            return om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False)
-        elif propertyName == 'Edge Filter Distance':
-            return om.PropertyAttributes(decimals=3, minimum=0.0, maximum=10.0, singleStep=0.01, hidden=False)
-        elif propertyName == 'Number of Scan Lines':
-            return om.PropertyAttributes(decimals=0, minimum=0, maximum=100, singleStep=1, hidden=False)
-        else:
-            return om.ObjectModelItem.getPropertyAttributes(self, propertyName)
 
 
 class MultiSenseSource(TimerCallback):
