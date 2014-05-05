@@ -26,10 +26,148 @@ def computeAToB(a,b):
     return tt
 
 
-class AffordanceItem(om.PolyDataItem):
+
+class PolyDataItem(om.ObjectModelItem):
 
     def __init__(self, name, polyData, view):
-        om.PolyDataItem.__init__(self, name, polyData, view)
+
+        om.ObjectModelItem.__init__(self, name, om.Icons.Robot)
+
+        self.views = []
+        self.polyData = polyData
+        self.mapper = vtk.vtkPolyDataMapper()
+        self.mapper.SetInput(self.polyData)
+        self.actor = vtk.vtkActor()
+        self.actor.SetMapper(self.mapper)
+
+        self.addProperty('Visible', True)
+        self.addProperty('Point Size', self.actor.GetProperty().GetPointSize(),
+                         attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
+        self.addProperty('Alpha', 1.0,
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
+        self.addProperty('Color', QtGui.QColor(255,255,255))
+
+        if view is not None:
+            self.addToView(view)
+
+    def _renderAllViews(self):
+        for view in self.views:
+            view.render()
+
+    def hasDataSet(self, dataSet):
+        return dataSet == self.polyData
+
+    def setPolyData(self, polyData):
+
+        arrayName = self.getColorByArrayName()
+
+        self.polyData = polyData
+        self.mapper.SetInput(polyData)
+        self.colorBy(arrayName, lut=self.mapper.GetLookupTable())
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
+
+    def getColorByArrayName(self):
+        if self.polyData:
+            scalars = self.polyData.GetPointData().GetScalars()
+            if scalars:
+                return scalars.GetName()
+
+    def getArrayNames(self):
+        pointData = self.polyData.GetPointData()
+        return [pointData.GetArrayName(i) for i in xrange(pointData.GetNumberOfArrays())]
+
+    def setSolidColor(self, color):
+
+        color = [component * 255 for component in color]
+        self.setProperty('Color', QtGui.QColor(*color))
+        self.colorBy(None)
+
+    def colorBy(self, arrayName, scalarRange=None, lut=None):
+
+        if not arrayName:
+            self.mapper.ScalarVisibilityOff()
+            self.polyData.GetPointData().SetActiveScalars(None)
+            return
+
+        array = self.polyData.GetPointData().GetArray(arrayName)
+        if not array:
+            print 'colorBy(%s): array not found' % arrayName
+            self.mapper.ScalarVisibilityOff()
+            self.polyData.GetPointData().SetActiveScalars(None)
+            return
+
+        self.polyData.GetPointData().SetActiveScalars(arrayName)
+
+
+        if not lut:
+            if scalarRange is None:
+                scalarRange = array.GetRange()
+
+            lut = vtk.vtkLookupTable()
+            lut.SetNumberOfColors(256)
+            lut.SetHueRange(0.667, 0)
+            lut.SetRange(scalarRange)
+            lut.Build()
+
+
+        #self.mapper.SetColorModeToMapScalars()
+        self.mapper.ScalarVisibilityOn()
+        self.mapper.SetUseLookupTableScalarRange(True)
+        self.mapper.SetLookupTable(lut)
+        self.mapper.InterpolateScalarsBeforeMappingOff()
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
+
+    def getChildFrame(self):
+        frameName = self.getProperty('Name') + ' frame'
+        return self.findChild(frameName)
+
+    def addToView(self, view):
+        if view in self.views:
+            return
+
+        self.views.append(view)
+        view.renderer().AddActor(self.actor)
+        view.render()
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Point Size':
+            self.actor.GetProperty().SetPointSize(self.getProperty(propertyName))
+        elif propertyName == 'Alpha':
+            self.actor.GetProperty().SetOpacity(self.getProperty(propertyName))
+        elif propertyName == 'Visible':
+            self.actor.SetVisibility(self.getProperty(propertyName))
+        elif propertyName == 'Color':
+            color = self.getProperty(propertyName)
+            color = [color.red()/255.0, color.green()/255.0, color.blue()/255.0]
+            self.actor.GetProperty().SetColor(color)
+
+        self._renderAllViews()
+
+    def onRemoveFromObjectModel(self):
+        self.removeFromAllViews()
+
+    def removeFromAllViews(self):
+        for view in list(self.views):
+            self.removeFromView(view)
+        assert len(self.views) == 0
+
+    def removeFromView(self, view):
+        assert view in self.views
+        self.views.remove(view)
+        view.renderer().RemoveActor(self.actor)
+        view.render()
+
+
+class AffordanceItem(PolyDataItem):
+
+    def __init__(self, name, polyData, view):
+        PolyDataItem.__init__(self, name, polyData, view)
         self.params = {}
         affListener.registerAffordance(self)
         self.addProperty('uid', 0, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=1e6, singleStep=1, hidden=False))
@@ -40,13 +178,13 @@ class AffordanceItem(om.PolyDataItem):
 
     def getActionNames(self):
         actions = ['Publish affordance']
-        return om.PolyDataItem.getActionNames(self) + actions
+        return PolyDataItem.getActionNames(self) + actions
 
     def onAction(self, action):
         if action == 'Publish affordance':
             self.publish()
         else:
-            om.PolyDataItem.onAction(self, action)
+            PolyDataItem.onAction(self, action)
 
     def onServerAffordanceUpdate(self, serverAff):
         if not self.params.get('uid'):
@@ -59,7 +197,7 @@ class AffordanceItem(om.PolyDataItem):
             self.actor.GetUserTransform().SetMatrix(t.GetMatrix())
 
     def onRemoveFromObjectModel(self):
-        om.PolyDataItem.onRemoveFromObjectModel(self)
+        PolyDataItem.onRemoveFromObjectModel(self)
         affListener.unregisterAffordance(self)
 
 
@@ -152,7 +290,7 @@ class CylinderAffordanceItem(AffordanceItem):
         affordance.publishAffordance(aff)
 
 
-class FrameItem(om.PolyDataItem):
+class FrameItem(PolyDataItem):
 
     def __init__(self, name, transform, view):
 
@@ -160,7 +298,7 @@ class FrameItem(om.PolyDataItem):
         self.transform = transform
         polyData = self._createAxes(scale)
 
-        om.PolyDataItem.__init__(self, name, polyData, view)
+        PolyDataItem.__init__(self, name, polyData, view)
 
         self.colorBy('Axes')
         lut = self.mapper.GetLookupTable()
@@ -211,7 +349,7 @@ class FrameItem(om.PolyDataItem):
         return shallowCopy(axes.GetOutput())
 
     def addToView(self, view):
-        om.PolyDataItem.addToView(self, view)
+        PolyDataItem.addToView(self, view)
 
     def copyFrame(self, transform):
         self._blockSignals = True
@@ -222,7 +360,7 @@ class FrameItem(om.PolyDataItem):
             self._renderAllViews()
 
     def _onPropertyChanged(self, propertySet, propertyName):
-        om.PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
+        PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
 
         if propertyName == 'Scale':
             scale = self.getProperty(propertyName)
@@ -236,7 +374,7 @@ class FrameItem(om.PolyDataItem):
             self.widget.SetEnabled(self.getProperty(propertyName))
 
     def onRemoveFromObjectModel(self):
-        om.PolyDataItem.onRemoveFromObjectModel(self)
+        PolyDataItem.onRemoveFromObjectModel(self)
 
         self.transform.RemoveObserver(self.observerTag)
 
@@ -441,7 +579,7 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     view = view or app.getCurrentRenderView()
     assert view
 
-    cls = cls or om.PolyDataItem
+    cls = cls or PolyDataItem
     item = cls(name, polyData, view)
 
     if isinstance(parent, str):
