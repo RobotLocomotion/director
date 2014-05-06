@@ -418,7 +418,7 @@ protected:
   vtkSmartPointer<vtkImageData> ConvertDepthImage(std::shared_ptr<maps::DepthImage> depthImage)
   {
     int width = depthImage->getWidth();
-    int height = depthImage->getWidth();
+    int height = depthImage->getHeight();
 
     vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
     image->SetWholeExtent(0, width-1, 0, height-1, 0, 0);
