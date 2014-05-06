@@ -438,7 +438,7 @@ class MapServerSource(TimerCallback):
 
         dims = depthImage.GetDimensions()
         d = vnp.getNumpyFromVtk(depthImage, 'ImageScalars')
-        d = d.reshape(dims[0], dims[1])
+        d = d.reshape(dims[1], dims[0])
         t = np.array([[transform.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)])
 
         return d, t
