@@ -206,7 +206,9 @@ class NavigationPanel(object):
         
         assert (self.octomap_cloud.GetNumberOfPoints() !=0 )
         
-        self.octomap_cloud = segmentation.cropToLineSegment(self.octomap_cloud, np.array([0,0,-10]), np.array([0,0,3]) )
+        # clip point cloud to height - doesnt work very well yet. need to know robot's height
+        #self.octomap_cloud = segmentation.cropToLineSegment(self.octomap_cloud, np.array([0,0,-10]), np.array([0,0,3]) )
+
         # access to z values
         #points= vnp.getNumpyFromVtk(self.octomap_cloud, 'Points')
         #zvalues = points[:,2]
