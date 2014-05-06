@@ -392,7 +392,7 @@ protected:
     if (itr == this->CurrentMapIds.end())
       {
         this->CurrentMapIds[viewId] = -1;
-        itr = this->CurrentMapIds.begin();
+        itr = this->CurrentMapIds.find(viewId);
       }
 
     return ++itr->second;
