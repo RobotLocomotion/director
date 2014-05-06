@@ -423,6 +423,26 @@ class MapServerSource(TimerCallback):
         if self.callbackFunc:
             self.callbackFunc()
 
+    def getSceneHeightData(self):
+        return self.getDepthMapData(lcmdrc.data_request_t.HEIGHT_MAP_SCENE)
+
+    def getDepthMapData(self, viewId):
+
+        mapId = self.reader.GetCurrentMapId(viewId)
+        if mapId < 0:
+            return None, None
+
+        depthImage = vtk.vtkImageData()
+        transform = vtk.vtkTransform()
+        self.reader.GetDataForMapId(viewId, mapId, depthImage, transform)
+
+        dims = depthImage.GetDimensions()
+        d = vnp.getNumpyFromVtk(depthImage, 'ImageScalars')
+        d = d.reshape(dims[0], dims[1])
+        t = np.array([[transform.GetMatrix().GetElement(r, c) for c in xrange(4)] for r in xrange(4)])
+
+        return d, t
+
     def start(self):
         if self.reader is None:
             self.reader = drc.vtkMapServerSource()
