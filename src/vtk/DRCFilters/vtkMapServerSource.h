@@ -23,6 +23,9 @@
 
 #include <vtkDRCFiltersModule.h>
 
+class vtkImageData;
+class vtkTransform;
+
 class VTKDRCFILTERS_EXPORT vtkMapServerSource : public vtkPolyDataAlgorithm
 {
 public:
@@ -42,6 +45,7 @@ public:
 
   vtkIdType GetCurrentMapId(int viewId);
   void GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData);
+  void GetDataForMapId(int viewId, vtkIdType mapId, vtkImageData* imageData, vtkTransform* transform);
 
   vtkIntArray* GetViewIds();
 

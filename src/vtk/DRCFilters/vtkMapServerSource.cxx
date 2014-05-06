@@ -32,6 +32,7 @@
 #include <vtkDoubleArray.h>
 #include <vtkFloatArray.h>
 #include <vtkPointData.h>
+#include <vtkImageData.h>
 
 
 #include <Eigen/Dense>
@@ -48,6 +49,7 @@
 
 #include <maps/LcmTranslator.hpp>
 #include <maps/DepthImageView.hpp>
+#include <maps/DepthImage.hpp>
 #include <maps/PointCloudView.hpp>
 
 
@@ -135,6 +137,8 @@ class MapData
 public:
   uint64_t Id;
   vtkSmartPointer<vtkPolyData> Data;
+  vtkSmartPointer<vtkImageData> DepthImage;
+  vtkSmartPointer<vtkTransform> Transform;
 };
 
 //----------------------------------------------------------------------------
@@ -334,6 +338,26 @@ public:
       }
   }
 
+  void GetDataForMapId(int viewId, vtkIdType mapId, vtkImageData* imageData, vtkTransform* transform)
+  {
+    if (!imageData || !transform)
+      {
+      return;
+      }
+
+    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    for (size_t i = 0; i < datasets.size(); ++i)
+      {
+      if (datasets[i].Id == mapId)
+        {
+        imageData->DeepCopy(datasets[i].DepthImage);
+        transform->DeepCopy(datasets[i].Transform);
+        }
+      }
+  }
+
+
   vtkIntArray* GetViewIds()
   {
     this->ViewIds->SetNumberOfTuples(this->CurrentMapIds.size());
@@ -374,16 +398,69 @@ protected:
     return ++itr->second;
   }
 
+
+  vtkSmartPointer<vtkTransform> ToVtkTransform(const Eigen::Projective3f& mat)
+  {
+    vtkSmartPointer<vtkMatrix4x4> vtkmat = vtkSmartPointer<vtkMatrix4x4>::New();
+    for (int i = 0; i < 4; ++i)
+      {
+      for (int j = 0; j < 4; ++j)
+        {
+        vtkmat->SetElement(i, j, mat(i,j));
+        }
+      }
+
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->SetMatrix(vtkmat);
+    return transform;
+  }
+
+  vtkSmartPointer<vtkImageData> ConvertDepthImage(std::shared_ptr<maps::DepthImage> depthImage)
+  {
+    int width = depthImage->getWidth();
+    int height = depthImage->getWidth();
+
+    vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
+    image->SetWholeExtent(0, width-1, 0, height-1, 0, 0);
+    image->SetSpacing(1.0, 1.0, 1.0);
+    image->SetOrigin(0.0, 0.0, 0.0);
+    image->SetExtent(image->GetWholeExtent());
+    image->SetNumberOfScalarComponents(1);
+    image->SetScalarType(VTK_FLOAT);
+    image->AllocateScalars();
+
+    std::vector<float> imageData = depthImage->getData(maps::DepthImage::TypeDepth);
+
+    /*
+    float invalidValue = depthImage->getInvalidValue(maps::DepthImage::TypeDepth);
+    float replacementValue = 0.0
+    for (int i = 0; i < imageData.size(); ++i)
+      {
+      if (imageData[i] == invalidValue)
+        {
+          imageData[i] = replacementValue;
+        }
+      }
+    */
+
+    float* outPtr = static_cast<float*>(image->GetScalarPointer(0, 0, 0));
+    std::copy(imageData.begin(), imageData.end(), outPtr);
+
+    return image;
+  }
+
   void HandleNewData(const drc::map_image_t* msg)
   {
     int viewId = msg->view_id;
-    maps::DepthImageView depthImage;
-    maps::LcmTranslator::fromLcm(*msg, depthImage);
+    maps::DepthImageView depthImageView;
+    maps::LcmTranslator::fromLcm(*msg, depthImageView);
 
-    maps::PointCloud::Ptr pointCloud = depthImage.getAsPointCloud();
+    maps::PointCloud::Ptr pointCloud = depthImageView.getAsPointCloud();
 
     MapData mapData;
     mapData.Data = PolyDataFromPointCloud(pointCloud);
+    mapData.DepthImage = this->ConvertDepthImage(depthImageView.getDepthImage());
+    mapData.Transform = this->ToVtkTransform(depthImageView.getTransform());
 
     //printf("storing depth map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
 
@@ -510,6 +587,12 @@ vtkIdType vtkMapServerSource::GetCurrentMapId(int viewId)
 void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData)
 {
   return this->Internal->Listener->GetDataForMapId(viewId, mapId, polyData);
+}
+
+//-----------------------------------------------------------------------------
+void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkImageData* imageData, vtkTransform* transform)
+{
+  return this->Internal->Listener->GetDataForMapId(viewId, mapId, imageData, transform);
 }
 
 //-----------------------------------------------------------------------------
