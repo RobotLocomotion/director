@@ -76,6 +76,7 @@ def writeImage(image, filename):
             '.pnm' : vtk.vtkPNMWriter,
             '.tiff' : vtk.vtkTIFFWriter,
             '.bmp' : vtk.vtkBMPWriter,
+            '.vti' : vtk.vtkXMLImageDataWriter,
               }
 
     if ext not in writers:
