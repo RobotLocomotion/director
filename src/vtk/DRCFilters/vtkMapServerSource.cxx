@@ -586,13 +586,13 @@ vtkIdType vtkMapServerSource::GetCurrentMapId(int viewId)
 //-----------------------------------------------------------------------------
 void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData)
 {
-  return this->Internal->Listener->GetDataForMapId(viewId, mapId, polyData);
+  this->Internal->Listener->GetDataForMapId(viewId, mapId, polyData);
 }
 
 //-----------------------------------------------------------------------------
 void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkImageData* imageData, vtkTransform* transform)
 {
-  return this->Internal->Listener->GetDataForMapId(viewId, mapId, imageData, transform);
+  this->Internal->Listener->GetDataForMapId(viewId, mapId, imageData, transform);
 }
 
 //-----------------------------------------------------------------------------
