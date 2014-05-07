@@ -77,8 +77,8 @@ class AtlasDriverPanel(object):
         self.ui.calibrateBdiButton.setEnabled(behaviorIsFreeze)
         self.ui.calibrateEncodersButton.setEnabled(behaviorIsFreeze)
         self.ui.prepButton.setEnabled(behaviorIsFreeze)
-        self.ui.standButton.setEnabled(behavior in ('prep', 'stand', 'manip', 'step', 'walk'))
-        self.ui.mitStandButton.setEnabled(behavior in ('stand', 'user'))
+        self.ui.standButton.setEnabled(behavior in ('prep', 'stand', 'user', 'manip', 'step', 'walk'))
+        self.ui.mitStandButton.setEnabled(behavior=='user')
         self.ui.manipButton.setEnabled(behavior in ('stand', 'manip'))
         self.ui.userButton.setEnabled(behavior is not None)
 
