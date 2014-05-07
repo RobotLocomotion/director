@@ -19,6 +19,17 @@ import drc as lcmdrc
 from bot_core.pose_t import pose_t
 import functools
 
+DEFAULT_PARAM_SET = 'BDI'
+DEFAULT_STEP_PARAMS = {'BDI': {'Nominal Step Width': 0.27,
+                               'Nominal Forward Step': 0.15,
+                               'Max Forward Step': 0.40,
+                               'Max Step Width': 0.4,
+                               'Behavior': 0},
+                       'drake': {'Nominal Step Width': 0.28,
+                                 'Nominal Forward Step': 0.25,
+                                 'Max Forward Step': 0.30,
+                                 'Max Step Width': 0.32,
+                                 'Behavior': 2}}
 
 import ddapp.applogic as app
 
@@ -84,6 +95,7 @@ class FootstepsDriver(object):
         self._setupSubscriptions()
         self.lastWalkingPlan = None
         self.walkingPlanCallback = None
+        self.default_step_params = DEFAULT_STEP_PARAMS
         self._setupProperties()
 
         ### Stuff pertaining to rendering BDI-frame steps
@@ -101,7 +113,11 @@ class FootstepsDriver(object):
         self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
         self.params.addProperty('Map Command', 0, attributes=om.PropertyAttributes(enumNames=['Full Heightmap', 'Flat Ground', 'Z Normals']))
         self.params.addProperty('Ignore Terrain', True)
-        self.params.addProperty('Nominal Step Width', 0.26, attributes=om.PropertyAttributes(decimals=2, minimum=0.21, maximum=0.4, singleStep=0.01))
+        self.params.addProperty('Nominal Step Width', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.21, maximum=0.4, singleStep=0.01))
+        self.params.addProperty('Nominal Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
+        self.params.addProperty('Max Step Width', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.22, maximum=0.5, singleStep=0.01))
+        self.params.addProperty('Max Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
+        self.applyDefaults(DEFAULT_PARAM_SET)
         self.behavior_lcm_map = {
                               0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
                               1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
@@ -111,6 +127,11 @@ class FootstepsDriver(object):
                               0: lcmdrc.map_controller_command_t.FULL_HEIGHTMAP,
                               1: lcmdrc.map_controller_command_t.FLAT_GROUND,
                               2: lcmdrc.map_controller_command_t.Z_NORMALS}
+
+    def applyDefaults(self, set_name):
+        defaults = self.default_step_params[set_name]
+        for k, v in defaults.iteritems():
+            self.params.setProperty(k, v)
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
@@ -126,9 +147,9 @@ class FootstepsDriver(object):
 
     def getDefaultStepParams(self):
         default_step_params = lcmdrc.footstep_params_t()
-        default_step_params.step_speed = 1.0
+        default_step_params.step_speed = 0.2
         default_step_params.step_height = 0.05
-        default_step_params.constrain_full_foot_pose = False
+        default_step_params.constrain_full_foot_pose = True
         default_step_params.bdi_step_duration = 2.0
         default_step_params.bdi_sway_duration = 0.0
         default_step_params.bdi_lift_height = 0.05
@@ -319,13 +340,13 @@ class FootstepsDriver(object):
 
     def applyParams(self, msg):
         msg.params = lcmdrc.footstep_plan_params_t()
-        msg.params.max_num_steps = 30
+        msg.params.max_num_steps = 20
         msg.params.min_num_steps = 0
-        msg.params.min_step_width = 0.21
+        msg.params.min_step_width = 0.20
         msg.params.nom_step_width = self.params.properties.nominal_step_width
-        msg.params.max_step_width = 0.4
-        msg.params.nom_forward_step = 0.15
-        msg.params.max_forward_step = 0.45
+        msg.params.max_step_width = self.params.properties.max_step_width
+        msg.params.nom_forward_step = self.params.properties.nominal_forward_step
+        msg.params.max_forward_step = self.params.properties.max_forward_step
         msg.params.nom_upward_step = 0.25;
         msg.params.nom_downward_step = 0.15;
         msg.params.ignore_terrain = self.params.properties.ignore_terrain
@@ -354,28 +375,40 @@ class FootstepsDriver(object):
         else:
             lcmUtils.publish(requestChannel, request)
 
-    def sendWalkingPlanRequest(self, footstepPlan, startPose, waitForResponse=False, waitTimeout=5000):
+    def sendWalkingPlanRequest(self, footstepPlan, startPose, waitForResponse=False, waitTimeout=5000, req_type='traj'):
 
         msg = lcmdrc.walking_plan_request_t()
         msg.utime = getUtime()
         state_msg = robotstate.drakePoseToRobotState(startPose)
         msg.initial_state = state_msg
         msg.new_nominal_state = msg.initial_state
-        msg.use_new_nominal_state = False
+        msg.use_new_nominal_state = True
         msg.footstep_plan = footstepPlan
 
-        requestChannel = 'WALKING_TRAJ_REQUEST'
-        responseChannel = 'WALKING_TRAJ_RESPONSE'
+        if req_type == 'traj':
+            requestChannel = 'WALKING_TRAJ_REQUEST'
+            responseChannel = 'WALKING_TRAJ_RESPONSE'
+            response_type = lcmdrc.robot_plan_t
+        elif req_type == 'controller':
+            requestChannel = 'WALKING_CONTROLLER_PLAN_REQUEST'
+            responseChannel = 'WALKING_CONTROLLER_PLAN_RESPONSE'
+            response_type = lcmdrc.walking_plan_t
+        else:
+            raise ValueError("Invalid request type: {:s}".format(req_type))
+
 
         if waitForResponse:
             if waitTimeout == 0:
-                helper = lcmUtils.MessageResponseHelper(responseChannel, lcmdrc.robot_plan_t)
+                helper = lcmUtils.MessageResponseHelper(responseChannel, response_type)
                 lcmUtils.publish(requestChannel, msg)
                 return helper
             return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, msg,
-                                                                 responseChannel, lcmdrc.robot_plan_t, waitTimeout)
+                                                                 responseChannel, response_type, waitTimeout)
         else:
             lcmUtils.publish(requestChannel, msg)
+
+    def sendWalkingControllerRequest(self, footstepPlan, startPose, waitForResponse=False, waitTimeout=5000):
+        self.sendWalkingPlanRequest(footstepPlan, startPose, waitForResponse, waitTimeout, req_type='controller')
 
     def sendStopWalking(self):
         msg = lcmdrc.plan_control_t()
