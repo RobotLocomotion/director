@@ -3,6 +3,7 @@ from PythonQt import QtCore, QtGui
 import re
 import ddapp.objectmodel as om
 import ddapp.visualization as vis
+from ddapp import lcmUtils
 from ddapp import cameracontrol
 from ddapp import splinewidget
 from ddapp import transformUtils
@@ -411,6 +412,46 @@ class KeyEventFilter(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
 
+
+
+class KeyPressLogCommander(object):
+
+    def __init__(self, widget):
+        self.widget = widget
+        self.initEventFilter()
+        self.commander = lcmUtils.LogPlayerCommander()
+
+    def filterEvent(self, obj, event):
+
+        if event.type() == QtCore.QEvent.KeyPress:
+            key = str(event.text()).lower()
+            consumed = True
+
+            if key == 'p':
+                self.commander.togglePlay()
+            elif key == 'n':
+                self.commander.step()
+            elif key in ('+', '='):
+                self.commander.faster()
+            elif key in ('-', '_'):
+                self.commander.slower()
+            elif key == '[':
+                self.commander.back()
+            elif key == ']':
+                self.commander.forward()
+            else:
+                consumed = False
+
+            self.eventFilter.setEventHandlerResult(consumed)
+
+
+    def initEventFilter(self):
+        self.eventFilter = PythonQt.dd.ddPythonEventFilter()
+        self.widget.installEventFilter(self.eventFilter)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
+        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
+
+
 def setupGlobals(handFactory_, robotModel_, footstepsDriver_, flyer_):
 
     global handFactory, robotModel, footstepsDriver, flyer
@@ -431,6 +472,7 @@ class ViewBehaviors(object):
         self.keyEventFilter = KeyEventFilter(view)
         self.mouseEventFilter = ViewEventFilter(view)
         self.flyer = cameracontrol.Flyer(view)
+        self.logCommander = KeyPressLogCommander(view.vtkWidget())
 
         setupGlobals(handFactory, robotModel, footstepsDriver, self.flyer)
 
