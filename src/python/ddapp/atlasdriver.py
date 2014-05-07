@@ -64,7 +64,6 @@ class AtlasDriver(object):
                     msg.BEHAVIOR_USER        : 'user',
                     8                        : 'calibrate',
                     9                        : 'stop',
-                    10                       : 'mit_stand',
                     }
         return behaviors
 
@@ -131,7 +130,9 @@ class AtlasDriver(object):
         self.sendBehaviorCommand('stand')
 
     def sendMITStandCommand(self):
-        self.sendBehaviorCommand('mit_stand')
+        msg = lcmdrc.utime_t()
+        msg.utime = getUtime()
+        lcmUtils.publish('START_MIT_STAND', msg)
 
     def sendManipCommand(self):
         self.sendBehaviorCommand('manip')
