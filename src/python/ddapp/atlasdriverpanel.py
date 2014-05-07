@@ -35,6 +35,7 @@ class AtlasDriverPanel(object):
 
         self.ui.prepButton.connect('clicked()', self.onPrep)
         self.ui.standButton.connect('clicked()', self.onStand)
+        self.ui.mitStandButton.connect('clicked()', self.onMITStand)
 
         self.ui.userButton.connect('clicked()', self.onUser)
         self.ui.manipButton.connect('clicked()', self.onManip)
@@ -77,6 +78,7 @@ class AtlasDriverPanel(object):
         self.ui.calibrateEncodersButton.setEnabled(behaviorIsFreeze)
         self.ui.prepButton.setEnabled(behaviorIsFreeze)
         self.ui.standButton.setEnabled(behavior in ('prep', 'stand', 'manip', 'step', 'walk'))
+        self.ui.mitStandButton.setEnabled(behavior in ('stand', 'user'))
         self.ui.manipButton.setEnabled(behavior in ('stand', 'manip'))
         self.ui.userButton.setEnabled(behavior is not None)
 
@@ -97,6 +99,9 @@ class AtlasDriverPanel(object):
 
     def onStand(self):
         self.driver.sendStandCommand()
+
+    def onMITStand(self):
+        self.driver.sendMITStandCommand()
 
     def onManip(self):
         self.driver.sendManipCommand()

@@ -64,6 +64,7 @@ class AtlasDriver(object):
                     msg.BEHAVIOR_USER        : 'user',
                     8                        : 'calibrate',
                     9                        : 'stop',
+                    10                       : 'mit_stand',
                     }
         return behaviors
 
@@ -128,6 +129,9 @@ class AtlasDriver(object):
 
     def sendStandCommand(self):
         self.sendBehaviorCommand('stand')
+
+    def sendMITStandCommand(self):
+        self.sendBehaviorCommand('mit_stand')
 
     def sendManipCommand(self):
         self.sendBehaviorCommand('manip')
