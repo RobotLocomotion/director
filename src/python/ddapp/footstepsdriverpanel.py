@@ -5,6 +5,7 @@ from ddapp import applogic as app
 from ddapp.utime import getUtime
 from ddapp import objectmodel as om
 from ddapp import transformUtils
+from ddapp import roboturdf
 from ddapp import visualization as vis
 from ddapp.timercallback import TimerCallback
 
@@ -47,8 +48,12 @@ class FootstepsPanel(object):
         self.ui = WidgetDict(self.widget.children())
 
         self.ui.walkingGoalButton.connect("clicked()", self.onNewWalkingGoal)
-        self.ui.executeButton.connect("clicked()", self.onExecute)
+        self.ui.walkingPlanButton.connect("clicked()", self.onShowWalkingPlan)
+        self.ui.BDIExecuteButton.connect("clicked()", self.onBDIExecute)
+        self.ui.drakeExecuteButton.connect("clicked()", self.onDrakeExecute)
         self.ui.stopButton.connect("clicked()", self.onStop)
+        self.ui.BDIDefaultsButton.connect("clicked()", lambda: self.applyDefaults('BDI'))
+        self.ui.drakeDefaultsButton.connect("clicked()", lambda: self.applyDefaults('drake'))
 
         ### BDI frame logic
         self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
@@ -58,17 +63,21 @@ class FootstepsPanel(object):
     def _setupPropertiesPanel(self):
         l = QtGui.QVBoxLayout(self.ui.paramsContainer)
         l.setMargin(0)
-        propertiesPanel = PythonQt.dd.ddPropertiesPanel()
-        propertiesPanel.setBrowserModeToWidget()
-        om.PropertyPanelHelper.addPropertiesToPanel(self.driver.params.properties, propertiesPanel)
-        l.addWidget(propertiesPanel)
-        propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
+        self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
+        self.propertiesPanel.setBrowserModeToWidget()
+        om.PropertyPanelHelper.addPropertiesToPanel(self.driver.params.properties, self.propertiesPanel)
+        l.addWidget(self.propertiesPanel)
+        self.propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
         PythonQt.dd.ddGroupBoxHider(self.ui.paramsContainer)
 
     def onPropertyChanged(self, prop):
         self.driver.params.setProperty(prop.propertyName(), prop.value())
         self.driver.updateRequest()
 
+    def applyDefaults(self, set_name):
+        for k, v in self.driver.default_step_params[set_name].iteritems():
+            self.driver.params.setProperty(k, v)
+            om.PropertyPanelHelper.onPropertyValueChanged(self.propertiesPanel, self.driver.params.properties, k)
 
     def newWalkingGoalFrame(self, robotModel, distanceForward=1.0):
         t = self.driver.getFeetMidPoint(robotModel)
@@ -92,8 +101,16 @@ class FootstepsPanel(object):
         request = self.driver.constructFootstepPlanRequest(self.jointController.q, frame.transform)
         self.driver.sendFootstepPlanRequest(request)
 
-    def onExecute(self):
+    def onBDIExecute(self):
         self.driver.commitFootstepPlan(self.driver.lastFootstepPlan)
+
+    def onDrakeExecute(self):
+        startPose = self.jointController.getPose('EST_ROBOT_STATE')
+        self.driver.sendWalkingControllerRequest(self.driver.lastFootstepPlan, startPose, waitForResponse=True)
+
+    def onShowWalkingPlan(self):
+        startPose = self.jointController.getPose('EST_ROBOT_STATE')
+        self.driver.sendWalkingPlanRequest(self.driver.lastFootstepPlan, startPose, waitForResponse=True)
 
     def onStop(self):
         self.driver.sendStopWalking()
