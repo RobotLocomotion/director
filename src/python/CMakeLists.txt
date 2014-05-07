@@ -15,6 +15,7 @@ set(python_files
   ddapp/colorize.py
   ddapp/debrisdemo.py
   ddapp/debugVis.py
+  ddapp/depthimageprovider.py
   ddapp/drakevisualizer.py
   ddapp/drilldemo.py
   ddapp/drilltaskpanel.py

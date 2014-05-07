@@ -100,6 +100,7 @@ class FootstepsDriver(object):
         self.lastWalkingPlan = None
         self.walkingPlanCallback = None
         self.default_step_params = DEFAULT_STEP_PARAMS
+        self.safe_terrain_regions = []
         self._setupProperties()
 
         ### Stuff pertaining to rendering BDI-frame steps
@@ -343,6 +344,7 @@ class FootstepsDriver(object):
         msg.goal_pos = transformUtils.positionMessageFromFrame(goalFrame)
 
         msg = self.applyParams(msg)
+        msg = self.applySafeRegions(msg)
         return msg
 
     def applyParams(self, msg):
@@ -362,6 +364,12 @@ class FootstepsDriver(object):
         msg.params.map_command = self.map_command_lcm_map[self.params.properties.map_command]
         msg.params.leading_foot = msg.params.LEAD_AUTO
         msg.default_step_params = self.getDefaultStepParams()
+        return msg
+
+    def applySafeRegions(self, msg):
+        msg.num_iris_regions = len(self.safe_terrain_regions)
+        for r in self.safe_terrain_regions:
+            msg.iris_regions.append(r.to_iris_region_t())
         return msg
 
     def sendFootstepPlanRequest(self, request, waitForResponse=False, waitTimeout=5000):
