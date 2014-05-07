@@ -3,6 +3,7 @@ import PythonQt
 import pickle
 import atexit
 import time
+import socket
 
 class GlobalLCM(object):
 
@@ -175,3 +176,32 @@ def dumpMessage(msg, filename):
 def loadMessage(filename):
     cls, bytes = pickle.load(open(filename))
     return cls.decode(bytes)
+
+
+class LogPlayerCommander(object):
+
+    def __init__(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.logPlayerIp = '127.0.0.1'
+        self.logPlayerPort = 53261
+
+    def sendCommand(self, msg):
+        self.socket.sendto(msg, (self.logPlayerIp, self.logPlayerPort))
+
+    def togglePlay(self):
+        self.sendCommand('PLAYPAUSETOGGLE')
+
+    def step(self):
+        self.sendCommand('STEP')
+
+    def faster(self):
+        self.sendCommand('FASTER')
+
+    def slower(self):
+        self.sendCommand('SLOWER')
+
+    def back(self):
+        self.sendCommand('BACK5')
+
+    def forward(self):
+        self.sendCommand('FORWARD5')
