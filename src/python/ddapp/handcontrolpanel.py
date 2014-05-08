@@ -30,11 +30,7 @@ class HandControlPanel(object):
         self.drivers['left'] = lDriver
         self.drivers['right'] = rDriver
 
-        self.storedCommand = False
-        self.position = None
-        self.force = None
-        self.velocity = None
-        self.mode = None
+        self.storedCommand = {'left': None, 'right': None}
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddHandControl.ui')
@@ -80,14 +76,14 @@ class HandControlPanel(object):
 
         self.widget.advanced.closePercentSpinner.setValue(0.0)
 
-        self.position = 0.0
-        self.force = float(self.widget.advanced.forcePercentSpinner.value)
-        self.velocity = float(self.widget.advanced.velocityPercentSpinner.value)
+        position = 0.0
+        force = float(self.widget.advanced.forcePercentSpinner.value)
+        velocity = float(self.widget.advanced.velocityPercentSpinner.value)
 
-        self.mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
+        mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
 
-        self.drivers[side].sendCustom(self.position, self.force, self.velocity, self.mode)
-        self.storedCommand = True
+        self.drivers[side].sendCustom(position, force, velocity, mode)
+        self.storedCommand[side] = (position, force, velocity, mode)
 
     def closeClicked(self):
         if self.widget.handSelect.leftButton.checked:
@@ -97,14 +93,14 @@ class HandControlPanel(object):
 
         self.widget.advanced.closePercentSpinner.setValue(100.0)
 
-        self.position = 100.0
-        self.force = float(self.widget.advanced.forcePercentSpinner.value)
-        self.velocity = float(self.widget.advanced.velocityPercentSpinner.value)
+        position = 100.0
+        force = float(self.widget.advanced.forcePercentSpinner.value)
+        velocity = float(self.widget.advanced.velocityPercentSpinner.value)
 
-        self.mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
+        mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
 
-        self.drivers[side].sendCustom(self.position, self.force, self.velocity, self.mode)
-        self.storedCommand = True
+        self.drivers[side].sendCustom(position, force, velocity, mode)
+        self.storedCommand[side] = (position, force, velocity, mode)
 
     def sendClicked(self):
         if self.widget.handSelect.leftButton.checked:
@@ -112,14 +108,14 @@ class HandControlPanel(object):
         else:
             side = 'right'
 
-        self.position = float(self.widget.advanced.closePercentSpinner.value)
-        self.force = float(self.widget.advanced.forcePercentSpinner.value)
-        self.velocity = float(self.widget.advanced.velocityPercentSpinner.value)
+        position = float(self.widget.advanced.closePercentSpinner.value)
+        force = float(self.widget.advanced.forcePercentSpinner.value)
+        velocity = float(self.widget.advanced.velocityPercentSpinner.value)
 
-        self.mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
+        mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
 
-        self.drivers[side].sendCustom(self.position, self.force, self.velocity, self.mode)
-        self.storedCommand = True
+        self.drivers[side].sendCustom(position, force, velocity, mode)
+        self.storedCommand[side] = (position, force, velocity, mode)
 
     def setModeClicked(self):
         if self.widget.handSelect.leftButton.checked:
@@ -127,9 +123,10 @@ class HandControlPanel(object):
         else:
             side = 'right'
 
-        self.mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
+        mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
 
-        self.drivers[side].setMode(self.mode)
+        self.drivers[side].setMode(mode)
+        self.storedCommand[side] = None
 
     def calibrateClicked(self):
         if self.widget.handSelect.leftButton.checked:
@@ -138,10 +135,16 @@ class HandControlPanel(object):
             side = 'right'
 
         self.drivers[side].sendCalibrate()
+        self.storedCommand[side] = None
 
     def updatePanel(self):
-        if self.ui.repeaterCheckBox.checked and self.storedCommand:
-            self.drivers[side].sendCustom(self.position, self.force, self.velocity, self.mode)
+        if self.ui.repeaterCheckBox.checked and self.storedCommand['left']:
+            position, force, velocity, mode = self.storedCommand['left']
+            self.drivers['left'].sendCustom(position, force, velocity, mode)
+        if self.ui.repeaterCheckBox.checked and self.storedCommand['right']:
+            position, force, velocity, mode = self.storedCommand['right']
+            self.drivers['right'].sendCustom(position, force, velocity, mode)
+
 
 
 def _getAction():
