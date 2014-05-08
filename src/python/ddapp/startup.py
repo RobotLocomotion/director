@@ -166,7 +166,7 @@ if useHands:
 
 if useFootsteps:
     footstepsDriver = footstepsdriver.FootstepsDriver(robotStateJointController)
-    footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController)
+    footstepsPanel = footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController)
 
 
 if useLCMGL:
