@@ -260,6 +260,13 @@
             </item>
            </widget>
           </item>
+          <item row="4" column="1">
+           <widget class="QCheckBox" name="repeaterCheckBox">
+            <property name="text">
+             <string>Repeat Command</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item>
@@ -304,9 +311,6 @@
        </layout>
       </item>
      </layout>
-     <zorder>gridLayoutWidget</zorder>
-     <zorder>gridLayoutWidget</zorder>
-     <zorder>verticalLayoutWidget</zorder>
     </widget>
    </item>
    <item>
