@@ -20,7 +20,7 @@ from bot_core.pose_t import pose_t
 import functools
 
 DEFAULT_PARAM_SET = 'BDI'
-DEFAULT_STEP_PARAMS = {'BDI': {'Nominal Step Width': 0.27,
+DEFAULT_STEP_PARAMS = {'BDI': {'Nominal Step Width': 0.26,
                                'Nominal Forward Step': 0.15,
                                'Max Forward Step': 0.40,
                                'Max Step Width': 0.4,
