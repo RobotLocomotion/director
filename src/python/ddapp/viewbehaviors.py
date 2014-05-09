@@ -266,30 +266,14 @@ def showRightClickMenu(displayPoint, view):
     def onSegmentTableScene():
         data = segmentation.segmentTableScene(pointCloudObj.polyData, pickedPoint)
         tableObj = vis.showPolyData(data.table.mesh, 'table', color=[0,1,0], parent='segmentation')
-        vis.showPolyData(data.table.box, 'table box', color=[0,1,0], parent=tableObj, alpha=0.2)
-        vis.showPolyData(data.table.points, 'table points', color=[0,1,0], parent=tableObj, visible=False)
+        tableFrame = vis.showFrame(data.table.frame, 'table frame', scale=0.2, visible=False, parent=tableObj)
+        tableBox = vis.showPolyData(data.table.box, 'table box', color=[0,1,0], parent=tableObj, alpha=0.6)
+        tablePoints = vis.showPolyData(data.table.points, 'table points', color=[0,1,0], parent=tableObj, visible=False)
+        for obj in [tableObj, tableBox, tablePoints]:
+            obj.actor.SetUserTransform(data.table.frame)
 
+        vis.showClusterObjects(data.clusters, parent='segmentation')
 
-        colors =  [ QtCore.Qt.green,
-                    QtCore.Qt.red,
-                    QtCore.Qt.blue,
-                    QtCore.Qt.yellow,
-                    QtCore.Qt.magenta,
-                    QtCore.Qt.cyan,
-                    QtCore.Qt.darkCyan,
-                    QtCore.Qt.darkGreen,
-                    QtCore.Qt.darkMagenta ]
-
-        colors = [QtGui.QColor(c) for c in colors]
-        colors = [(c.red()/255.0, c.green()/255.0, c.blue()/255.0) for c in colors]
-
-        for i, cluster in enumerate(data.clusters):
-            name = 'object %d' % i
-            color= colors[i+1] #segmentation.getRandomColor()
-            clusterObj = vis.showPolyData(cluster.mesh, name, color=color, parent='segmentation', alpha=0.4)
-            vis.showPolyData(cluster.box, name + ' box', color=color, parent=clusterObj, alpha=1.0)
-            pts = vis.showPolyData(cluster.points, name + ' points', color=color, parent=clusterObj, visible=True, alpha=1.0)
-            pts.setProperty('Point Size', 8)
 
     actions = [
       (None, None),
