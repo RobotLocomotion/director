@@ -11,6 +11,8 @@ from ddapp import vtkAll as vtk
 from ddapp.simpletimer import SimpleTimer
 from ddapp.shallowCopy import shallowCopy
 from ddapp import roboturdf
+from ddapp import segmentation
+import ddapp.vtkNumpy as vnp
 
 import os
 import numpy as np
@@ -102,6 +104,7 @@ class FootstepsDriver(object):
         self.default_step_params = DEFAULT_STEP_PARAMS
         self.safe_terrain_regions = []
         self._setupProperties()
+        self.contact_slices = {}
 
         ### Stuff pertaining to rendering BDI-frame steps
         self.pose_bdi = None
@@ -204,6 +207,18 @@ class FootstepsDriver(object):
             quat = footstep.pos.rotation
             quat = [quat.w, quat.x, quat.y, quat.z]
             footstepTransform = transformUtils.transformFromPose(trans, quat)
+
+            for zs, xy in self.contact_slices.iteritems():
+                points0 = np.vstack((xy, zs[0] + np.zeros((1,xy.shape[1]))))
+                points1 = np.vstack((xy, zs[1] + np.zeros((1,xy.shape[1]))))
+                points = np.hstack((points0, points1))
+                points = points + np.array([[0.05],[0],[-0.0811]])
+                points = points.T
+                polyData = vnp.getVtkPolyDataFromNumpyPoints(points.copy())
+                mesh = segmentation.computeDelaunay3D(polyData)
+                obj = vis.showPolyData(mesh, 'walking volume', parent=folder, alpha=0.5)
+                obj.actor.SetUserTransform(footstepTransform)
+
             allTransforms.append(footstepTransform)
 
             if i < 2:
