@@ -43,7 +43,6 @@ class PlaybackPanel(object):
         self.robotStateJointController = robotStateJointController
         self.manipPlanner = manipPlanner
 
-        self.visOnly = True
         self.planFramesObj = None
         self.plan = None
         self.poseInterpolator = None
@@ -75,8 +74,23 @@ class PlaybackPanel(object):
         self.ui.executeButton.connect('clicked()', self.executeClicked)
         self.ui.stopButton.connect('clicked()', self.stopClicked)
 
+        self.ui.executeButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.ui.executeButton.connect('customContextMenuRequested(const QPoint&)', self.showExecuteContextMenu)
+
         self.setPlan(None)
         self.hideClicked()
+
+
+    def showExecuteContextMenu(self, clickPosition):
+
+        globalPos = self.ui.executeButton.mapToGlobal(clickPosition)
+
+        menu = QtGui.QMenu()
+        menu.addAction('Visualization Only')
+
+        selectedAction = menu.exec_(globalPos)
+        if selectedAction is not None:
+            self.executePlan(visOnly=True)
 
 
     def getViewMode(self):
@@ -175,7 +189,11 @@ class PlaybackPanel(object):
 
 
     def executeClicked(self):
-        if self.visOnly:
+        self.executePlan()
+
+
+    def executePlan(self, visOnly=False):
+        if visOnly:
             _, poses = self.planPlayback.getPlanPoses(self.plan)
             self.robotStateJointController.setPose('EST_ROBOT_STATE', poses[-1])
         else:
