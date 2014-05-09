@@ -724,9 +724,9 @@
     </widget>
    </item>
    <item row="3" column="0">
-    <widget class="QPushButton" name="savePostureButton">
+    <widget class="QPushButton" name="postureDatabaseButton">
      <property name="text">
-      <string>Save Posture</string>
+      <string>Open Posture Database</string>
      </property>
     </widget>
    </item>
