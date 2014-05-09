@@ -201,8 +201,10 @@ if usePlanning:
     def playManipPlan():
         playPlan(manipPlanner.lastManipPlan)
 
-    def playWalkingPlan():
-        playPlan(footstepsDriver.lastWalkingPlan)
+    if useFootsteps:
+        def playWalkingPlan():
+            playPlan(footstepsDriver.lastWalkingPlan)
+        footstepsDriver.walkingPlanCallback = playWalkingPlan
 
     def plotManipPlan():
         planPlayback.plotPlan(manipPlanner.lastManipPlan)
