@@ -201,10 +201,8 @@ if usePlanning:
     def playManipPlan():
         playPlan(manipPlanner.lastManipPlan)
 
-    if useFootsteps:
-        def playWalkingPlan():
-            playPlan(footstepsDriver.lastWalkingPlan)
-        footstepsDriver.walkingPlanCallback = playWalkingPlan
+    def playWalkingPlan():
+        playPlan(footstepsDriver.lastWalkingPlan)
 
     def plotManipPlan():
         planPlayback.plotPlan(manipPlanner.lastManipPlan)
@@ -284,6 +282,8 @@ if usePlanning:
 
     playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
                                       robotStateModel, robotStateJointController, manipPlanner)
+
+    footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
 
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, handFactory.getLoader('left'), handFactory.getLoader('right'), playbackPanel.setPlan)
