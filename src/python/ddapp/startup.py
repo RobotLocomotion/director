@@ -284,6 +284,8 @@ if usePlanning:
                                       robotStateModel, robotStateJointController, manipPlanner)
 
     footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
+    manipPlanner.manipPlanCallback = playbackPanel.setPlan
+
 
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, handFactory.getLoader('left'), handFactory.getLoader('right'), playbackPanel.setPlan)

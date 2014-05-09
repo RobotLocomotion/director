@@ -26,7 +26,7 @@ class ManipulationPlanDriver(object):
     def onManipPlan(self, msg):
         self.lastManipPlan = msg
         if self.manipPlanCallback:
-            self.manipPlanCallback()
+            self.manipPlanCallback(self.lastManipPlan)
 
     def onRobotEndPose(self, msg):
         self.lastRobotEndPose = msg
