@@ -12,6 +12,7 @@ from PythonQt import QtCore, QtGui
 
 from ddapp.affordancelistener import listener as affListener
 
+import os
 import weakref
 import itertools
 
@@ -747,3 +748,19 @@ def findPickedObject(displayPoint, view):
     pickedPoint, pickedProp, pickedDataset = pickProp(displayPoint, view)
     obj = getObjectByProp(pickedProp)
     return obj, pickedPoint
+
+
+def showImage(filename):
+    '''
+    Returns a QLabel displaying the image contents of given filename.
+    Make sure to assign the label, it will destruct when it goes out
+    of scope.
+    '''
+    image = QtGui.QImage(filename)
+    assert not image.isNull()
+    imageLabel = QtGui.QLabel()
+    imageLabel.setPixmap(QtGui.QPixmap.fromImage(image))
+    imageLabel.setScaledContents(True)
+    imageLabel.resize(imageLabel.pixmap.size())
+    imageLabel.setWindowTitle(os.path.basename(filename))
+    imageLabel.show()
