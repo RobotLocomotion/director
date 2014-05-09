@@ -20,6 +20,24 @@ def getTransformFromAxes(xaxis, yaxis, zaxis):
     return t
 
 
+def getTransformFromOriginAndNormal(origin, normal, normalAxis=2):
+
+    normal = np.array(normal)
+    normal /= np.linalg.norm(normal)
+
+    axes = [[0,0,0],
+            [0,0,0],
+            [0,0,0]]
+
+    axes[normalAxis] = normal
+
+    vtk.vtkMath.Perpendiculars(axes[normalAxis], axes[(normalAxis+1) % 3], axes[(normalAxis+2) % 3], 0)
+    t = getTransformFromAxes(*axes)
+    t.PostMultiply()
+    t.Translate(origin)
+    return t
+
+
 def orientationFromNormal(normal):
     '''
     Creates a frame where the Z axis points in the direction of the given normal.
