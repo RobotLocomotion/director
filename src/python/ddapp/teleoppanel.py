@@ -129,14 +129,18 @@ class EndEffectorTeleopPanel(object):
 
         ikPlanner = self.panel.ikPlanner
 
-        poseName = ikPlanner.newReachStartPosture()
-        constraints = ikPlanner.newReachConstraints(poseName, lockBack=lockBack, lockBase=lockBase, lockLeftArm=side=='right', lockRightArm=side=='left')
+        startPoseName = 'reach_start'
+        startPose = np.array(self.panel.robotStateJointController.q)
+        ikPlanner.addPose(startPose, startPoseName)
+
+        constraints = ikPlanner.newReachConstraints(startPoseName, lockBack=lockBack, lockBase=lockBase, lockLeftArm=side=='right', lockRightArm=side=='left')
 
         sides = ['left', 'right'] if side == 'both' else [side]
 
         for side in sides:
             ikPlanner.reachingSide = side
-            ikPlanner.newReachGoal(constraints=constraints, lockOrient=lockOrient, runIk=False, showPoseFunction=self.panel.showPose)
+            constraintSet = ikPlanner.newReachGoal(startPoseName, constraints=constraints, lockOrient=lockOrient, runIk=False, showPoseFunction=self.panel.showPose)
+            self.constraintSet = constraintSet
 
         self.updateHandModels()
         self.updateGoalFrame(leftGoal, 'left')
@@ -150,8 +154,11 @@ class EndEffectorTeleopPanel(object):
         self.generatePlan()
 
     def generatePlan(self):
-        self.panel.ikPlanner.planReach()
-        self.panel.showPlan()
+
+        self.updateConstraints()
+        #plan = self.constraintSet.runIkTraj()
+        plan = self.constraintSet.planEndPoseGoal()
+        self.panel.showPlan(plan)
 
     def teleopButtonClicked(self):
         if self.ui.eeTeleopButton.checked:
@@ -262,6 +269,10 @@ class JointTeleopPanel(object):
 
         self.signalMapper.connect('mapped(const QString&)', self.sliderChanged)
 
+        self.startPose = None
+        self.endPose = None
+        self.userJoints = {}
+
         self.updateWidgetState()
 
 
@@ -269,12 +280,13 @@ class JointTeleopPanel(object):
         if not self.ui.jointTeleopButton.checked:
             return
 
+        self.computeEndPose()
         self.generatePlan()
 
 
     def generatePlan(self):
-        self.panel.ikPlanner.computePostureGoal(self.basePose, self.pose)
-        self.panel.showPlan()
+        plan = self.panel.ikPlanner.computePostureGoal(self.startPose, self.endPose)
+        self.panel.showPlan(plan)
 
 
     def teleopButtonClicked(self):
@@ -287,8 +299,7 @@ class JointTeleopPanel(object):
     def activate(self):
         self.timerCallback.stop()
         self.panel.jointTeleopActivated()
-        self.grabCurrentPose()
-        self.updateSliders()
+        self.resetPose()
         self.updateWidgetState()
 
 
@@ -312,15 +323,18 @@ class JointTeleopPanel(object):
 
 
     def resetButtonClicked(self):
-        self.grabCurrentPose()
+        self.resetPose()
+        self.panel.showPose(self.endPose)
+
+    def resetPose(self):
+        self.userJoints = {}
+        self.computeEndPose()
         self.updateSliders()
-        self.panel.showPose(self.pose)
 
     def onTimerCallback(self):
         if not self.ui.tabWidget.visible:
             return
-        self.grabCurrentPose()
-        self.updateSliders()
+        self.resetPose()
 
     def toJointIndex(self, jointName):
         return robotstate.getDrakePoseJointNames().index(jointName)
@@ -343,12 +357,40 @@ class JointTeleopPanel(object):
         jointName = self.toJointName(joint) if isinstance(joint, int) else joint
         return self.slidersMap[jointName]
 
-    def grabCurrentPose(self):
-        self.basePose = np.array(self.panel.robotStateJointController.q)
-        self.pose = np.array(self.basePose)
+    def computeEndPose(self):
+
+        self.startPose = np.array(self.panel.robotStateJointController.q)
+        self.endPose = self.startPose.copy()
+
+        hasKnee = False
+        for jointIndex, jointValue in self.userJoints.iteritems():
+            self.endPose[jointIndex] = jointValue
+            if 'kny' in self.toJointName(jointIndex):
+                hasKnee = True
+
+        if hasKnee:
+
+            ikPlanner = self.panel.ikPlanner
+
+            startPoseName = 'posture_goal_start'
+            ikPlanner.addPose(self.startPose, startPoseName)
+
+            endPoseName = 'posture_goal_end'
+            ikPlanner.addPose(self.endPose, endPoseName)
+
+            jointNames = self.slidersMap.keys()
+            p = ikPlanner.createPostureConstraint(endPoseName, jointNames)
+
+            constraints = [p]
+            constraints.extend(ikPlanner.createFixedFootConstraints(startPoseName))
+            constraints.append(ikPlanner.createMovingBasePostureConstraint(startPoseName))
+
+            self.endPose, info = ikPlanner.ikServer.runIk(constraints, seedPostureName=startPoseName)
+
 
     def getJointValue(self, jointIndex):
-        return self.pose[jointIndex]
+        return self.endPose[jointIndex]
+
 
     def sliderChanged(self, jointName):
 
@@ -356,37 +398,17 @@ class JointTeleopPanel(object):
         jointIndex = self.toJointIndex(jointName)
         jointValue = self.toJointValue(jointIndex, slider.value / 99.0)
 
-        self.pose[jointIndex] = jointValue
+        self.userJoints[jointIndex] = jointValue
 
         if 'kny' in jointName:
-            if jointName == 'l_leg_kny':
-                self.pose[self.toJointIndex('r_leg_kny')] = jointValue
-
-            elif jointName == 'r_leg_kny':
-                self.pose[self.toJointIndex('l_leg_kny')] = jointValue
-
-            ik = self.panel.ikPlanner
-
-            startPoseName = 'posture_goal_start'
-            ik.jointController.addPose(startPoseName, self.basePose)
-            ik.ikServer.sendPoseToServer(ik.jointController.getPose(startPoseName), startPoseName)
-
-            endPoseName = 'posture_goal_end'
-            ik.jointController.addPose(endPoseName, self.pose)
-            ik.ikServer.sendPoseToServer(ik.jointController.getPose(endPoseName), endPoseName)
-
-            jointNames = self.slidersMap.keys()
-            p = ik.createPostureConstraint(endPoseName, jointNames)
-
-            constraints = [p]
-            constraints.extend(ik.createFixedFootConstraints(startPoseName))
-            constraints.append(ik.createMovingBasePostureConstraint(startPoseName))
-
-            self.pose, info = ik.ikServer.runIk(constraints, seedPostureName=startPoseName)
+            self.userJoints[self.toJointIndex('r_leg_kny')] = jointValue
+            self.userJoints[self.toJointIndex('l_leg_kny')] = jointValue
             self.updateSliders()
 
-        self.panel.showPose(self.pose)
+        self.computeEndPose()
+        self.panel.showPose(self.endPose)
         self.updateLabels()
+
 
     def updateLabels(self):
 
@@ -473,8 +495,7 @@ class TeleopPanel(object):
         self.teleopJointController.setPose('teleop_pose', pose)
         self.showTeleopModel()
 
-    def showPlan(self):
-        plan = self.ikPlanner.lastManipPlan
+    def showPlan(self, plan):
         self.hideTeleopModel()
         self.showPlanFunction(plan)
 

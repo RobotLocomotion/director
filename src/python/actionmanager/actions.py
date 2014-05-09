@@ -7,7 +7,6 @@ from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import lcmUtils
 from ddapp import segmentation
-from ddapp.drilldemo import RobotPoseGUIWrapper
 
 from drc import robot_state_t, actionman_status_t, actionman_resume_t
 from bot_core import rigid_transform_t
@@ -727,13 +726,11 @@ class JointMovePlan(Action):
         # Send a planner request
 
         if not isinstance(self.parsedArgs['BodyPose'], robot_state_t):
-            goalPoseJoints = RobotPoseGUIWrapper.getPose(self.parsedArgs['Group'], self.parsedArgs['PoseName'], self.parsedArgs['Hand'])
-            endPose = self.container.ikPlanner.mergePostures(self.inputState, goalPoseJoints)
+            endPose = self.container.ikPlanner.getMergedPostureFromDatabase(self.inputState, self.parsedArgs['Group'], self.parsedArgs['PoseName'], self.parsedArgs['Hand'])
             self.jointMovePlan = self.container.ikPlanner.computePostureGoal(self.inputState, endPose)
         else:
-            goalPoseJoints = RobotPoseGUIWrapper.getPose(self.parsedArgs['Group'], self.parsedArgs['PoseName'], self.parsedArgs['Hand'])
             desiredBodyPose = robotstate.convertStateMessageToDrakePose(self.parsedArgs['BodyPose'])
-            endPose = self.container.ikPlanner.mergePostures(desiredBodyPose, goalPoseJoints)
+            endPose = self.container.ikPlanner.getMergedPostureFromDatabase(desiredBodyPose, self.parsedArgs['Group'], self.parsedArgs['PoseName'], self.parsedArgs['Hand'])
             self.jointMovePlan = self.container.ikPlanner.computePostureGoal(self.inputState, endPose)
 
     def onUpdate(self):

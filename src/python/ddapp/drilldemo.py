@@ -29,56 +29,6 @@ import drc as lcmdrc
 from PythonQt import QtCore, QtGui
 
 
-sys.path.append(os.path.join(app.getDRCBase(), 'software/tools/tools/scripts'))
-import RobotPoseGUI as rpg
-
-
-
-
-class RobotPoseGUIWrapper(object):
-
-    initialized = False
-    main = None
-
-    @classmethod
-    def init(cls):
-        if cls.initialized:
-            return True
-
-        rpg.lcmWrapper = rpg.LCMWrapper()
-        cls.main = rpg.MainWindow()
-        #cls.main.show()
-        cls.initialized = True
-
-    @classmethod
-    def getPose(cls, groupName, poseName, side=None):
-
-        cls.init()
-
-        config = rpg.loadConfig(cls.main.getPoseConfigFile())
-        assert groupName in config
-
-        poses = {}
-        for pose in config[groupName]:
-            poses[pose['name']] = pose
-
-        assert poseName in poses
-        pose = poses[poseName]
-        joints = pose['joints']
-
-        if side is not None:
-            sides = ('left', 'right')
-            assert side in sides
-            assert pose['nominal_handedness'] in sides
-
-            if pose['nominal_handedness'] != side:
-                joints = rpg.applyMirror(joints)
-
-        return joints
-
-RobotPoseGUIWrapper.init()
-
-
 class DrillPlannerDemo(object):
 
     def __init__(self, robotModel, footstepPlanner, manipPlanner, ikPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
@@ -266,9 +216,9 @@ class DrillPlannerDemo(object):
         endPose = robotstate.convertStateMessageToDrakePose(self.endPosePlan)
         self.showPoseFunction(endPose)
 
+
     def computePreGraspPose(self):
 
-        goalPoseJoints = RobotPoseGUIWrapper.getPose('hose', '1 walking with hose', side=self.graspingHand)
 
         if self.planFromCurrentRobotState:
             startPose = self.getEstimatedRobotStatePose()
@@ -276,19 +226,16 @@ class DrillPlannerDemo(object):
             planState = self.walkingPlan.plan[-1]
             startPose = robotstate.convertStateMessageToDrakePose(planState)
 
-        graspPose = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, planTraj=False)
+        endPose = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, planTraj=False)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'arm up pregrasp', side=self.graspingHand)
 
-        endPose = self.ikPlanner.mergePostures(graspPose, goalPoseJoints)
         self.preGraspPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-
-        #self.preGraspPlan = self.ikPlanner.planPostureGoal(startPose, graspPose, goalPoseJoints)
 
 
     def planPostureGoal(self, groupName, poseName, side=None):
 
-        goalPoseJoints = RobotPoseGUIWrapper.getPose(groupName, poseName, side=side)
         startPose = self.getEstimatedRobotStatePose()
-        endPose = self.ikPlanner.mergePostures(startPose, goalPoseJoints)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, groupName, poseName, side=side)
         self.posturePlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.planPlaybackFunction([self.posturePlan])
 
@@ -313,26 +260,6 @@ class DrillPlannerDemo(object):
         self.graspPlan = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, lockTorso=True)
 
 
-
-    def reach(self):
-        self.computeGraspFrame()
-        self.ikPlanner.newReachGoal(self.graspFrame, lockTorso=False)
-
-
-    def moveDrillTip(self):
-        self.computeDrillTipFrame()
-        tipToWorld = om.findObjectByName('drill tip frame')
-        handLinkToWorld = self.robotModel.getLinkFrame('l_hand')
-
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Concatenate(tipToWorld.transform)
-        t.Concatenate(handLinkToWorld.GetLinearInverse())
-        tipToHandLink = ikplanner.copyFrame(t)
-
-        self.ikPlanner.newReachGoal(linkConstraintFrame=tipToHandLink, lockTorso=False)
-
-
     def commitFootstepPlan(self):
         self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
 
@@ -352,7 +279,8 @@ class DrillPlannerDemo(object):
         self.atlasDriver.sendPelvisHeightCommand(0.8)
 
     def computeStandPlan(self):
-        self.standPlan = self.ikPlanner.computeStand()
+        startPose = self.getPlanningStartPose()
+        self.standPlan = self.ikPlanner.computeStandPlan(startPose)
 
     def sendOpenHand(self):
         self.handDriver.sendOpen()
@@ -423,6 +351,14 @@ class DrillPlannerDemo(object):
 
     def getEstimatedRobotStatePose(self):
         return self.sensorJointController.getPose('EST_ROBOT_STATE')
+
+
+    def getPlanningStartPose(self):
+        if self.planFromCurrentRobotState:
+            return self.getEstimatedRobotStatePose()
+        else:
+            assert False
+
 
     def cleanupFootstepPlans(self):
         om.removeFromObjectModel(om.findObjectByName('walking goal'))

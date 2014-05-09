@@ -115,13 +115,13 @@ if useIk:
     ikRobotModel, ikJointController = roboturdf.loadRobotModel('ik model', view, parent='IK Server', color=roboturdf.getRobotOrangeColor(), visible=False)
     ikJointController.addPose('q_end', ikJointController.getPose('q_nom'))
     ikJointController.addPose('q_start', ikJointController.getPose('q_nom'))
+    om.removeFromObjectModel(om.findObjectByName('IK Server'))
 
-    ikServer = ik.AsyncIKCommunicator(ikJointController)
+    ikServer = ik.AsyncIKCommunicator()
     ikServer.outputConsole = app.getOutputConsole()
     ikServer.infoFunc = app.displaySnoptInfo
 
     def startIkServer():
-        ikServer.start()
         ikServer.startServerAsync()
         #ikServer.comm.echoCommandsToStdOut = True
 
@@ -232,10 +232,6 @@ if usePlanning:
                         obj.setProperty('Visible', False)
 
 
-    #app.addToolbarMacro('plot plan', plotManipPlan)
-    #app.addToolbarMacro('play manip plan', playManipPlan)
-    #app.addToolbarMacro('fit drill', fitDrillMultisense)
-
     def sendDataRequest(requestType, repeatTime=0.0):
 
       msg = lcmdrc.data_request_t()
@@ -268,16 +264,9 @@ if usePlanning:
 
 
     handFactory = roboturdf.HandFactory(robotStateModel)
+    handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
 
-    ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController,
-                                        robotStateJointController, playPlans, showPose, playbackRobotModel)
-
-
-
-
-
-    ikPlanner.handModels.append(handFactory.getLoader('left'))
-    ikPlanner.handModels.append(handFactory.getLoader('right'))
+    ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)
 
 
     playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
@@ -292,7 +281,7 @@ if usePlanning:
 
 
 
-    debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, playbackRobotModel,
+    debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, robotStateJointController, playbackRobotModel,
                     ikPlanner, manipPlanner, atlasdriver.driver, lHandDriver,
                     perception.multisenseDriver, refitBlocks)
 
@@ -300,6 +289,7 @@ if usePlanning:
                                         lHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
+
 
     splinewidget.init(view, handFactory, robotStateModel)
 
