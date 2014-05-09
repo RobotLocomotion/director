@@ -5,6 +5,7 @@ from ddapp.timercallback import TimerCallback
 from ddapp import robotstate
 from ddapp import visualization as vis
 from ddapp import transformUtils
+from ddapp import ikplanner
 import math
 import numpy as np
 
@@ -453,9 +454,13 @@ class TeleopPanel(object):
         uifile.close()
 
         self.ui = WidgetDict(self.widget.children())
+        self.ui.postureDatabaseButton.connect('clicked()', self.onPostureDatabaseClicked)
 
         self.endEffectorTeleop = EndEffectorTeleopPanel(self)
         self.jointTeleop = JointTeleopPanel(self)
+
+    def onPostureDatabaseClicked(self):
+        ikplanner.RobotPoseGUIWrapper.show()
 
     def disableJointTeleop(self):
         self.ui.jointTeleopFrame.setEnabled(False)

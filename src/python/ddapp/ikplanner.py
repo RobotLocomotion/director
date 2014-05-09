@@ -719,7 +719,10 @@ class RobotPoseGUIWrapper(object):
 
     @classmethod
     def show(cls):
+        cls.init()
         cls.main.show()
+        cls.main.raise_()
+        cls.main.activateWindow()
 
     @classmethod
     def getPose(cls, groupName, poseName, side=None):
