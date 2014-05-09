@@ -49,11 +49,12 @@ class HandControlPanel(object):
         self.widget.advanced.sendButton.clicked.connect(self.sendClicked)
         self.widget.advanced.calibrateButton.clicked.connect(self.calibrateClicked)
         self.widget.advanced.setModeButton.clicked.connect(self.setModeClicked)
+        self.widget.advanced.repeatRateSpinner.valueChanged.connect(self.rateSpinnerChanged)
 
         # create a timer to repeat commands
         self.updateTimer = TimerCallback()
         self.updateTimer.callback = self.updatePanel
-        self.updateTimer.targetFps = 5
+        self.updateTimer.targetFps = 3
         self.updateTimer.start()
 
 
@@ -136,6 +137,9 @@ class HandControlPanel(object):
 
         self.drivers[side].sendCalibrate()
         self.storedCommand[side] = None
+
+    def rateSpinnerChanged(self):
+        self.updateTimer.targetFps = self.ui.repeatRateSpinner.value
 
     def updatePanel(self):
         if self.ui.repeaterCheckBox.checked and self.storedCommand['left']:
