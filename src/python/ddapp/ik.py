@@ -472,10 +472,12 @@ class AsyncIKCommunicator(TimerCallback):
             #commands.append('q_seed_pointwise = spline_traj.eval(pointwise_time_points);')
             commands.append('q_seed_pointwise = xtraj.eval(pointwise_time_points);')
             commands.append('q_seed_pointwise = q_seed_pointwise(1:nq,:);')
-            commands.append('[xtraj_pw, info] = inverseKinPointwise(r, pointwise_time_points, q_seed_pointwise, q_seed_pointwise, active_constraints{:}, ikoptions);')
+            commands.append('[xtraj_pw, info_pw] = inverseKinPointwise(r, pointwise_time_points, q_seed_pointwise, q_seed_pointwise, active_constraints{:}, ikoptions);')
             commands.append('xtraj_pw = PPTrajectory(foh(pointwise_time_points, xtraj_pw));')
-            commands.append('info = info(end);')
+            commands.append('info = info_pw(end);')
+            commands.append('if (any(info_pw > 10)) disp(\'pointwise info:\'); disp(info_pw); end;')
             commands.append('\n%--- pointwise ik end --------\n')
+
 
         publish = True
         if publish:
