@@ -83,6 +83,13 @@ def getFootstepsFolder():
         om.collapse(obj)
     return obj
 
+def getWalkingVolumesFolder():
+    obj = om.findObjectByName('walking volumes')
+    if obj is None:
+        obj = om.getOrCreateContainer('walking volumes')
+        om.collapse(obj)
+    return obj
+
 def getBDIAdjustedFootstepsFolder():
     obj = om.findObjectByName('BDI adj footstep plan')
     if obj is None:
@@ -105,6 +112,7 @@ class FootstepsDriver(object):
         self.safe_terrain_regions = []
         self._setupProperties()
         self.contact_slices = {}
+        self.show_contact_slices = False
 
         ### Stuff pertaining to rendering BDI-frame steps
         self.pose_bdi = None
@@ -195,11 +203,13 @@ class FootstepsDriver(object):
         self.lastFootstepPlan = None
         folder = getFootstepsFolder()
         om.removeFromObjectModel(folder)
-
+        volFolder = getWalkingVolumesFolder()
+        om.removeFromObjectModel(volFolder)
 
     def drawFootstepPlan(self, msg, folder,left_color=None, right_color=None):
 
         allTransforms = []
+        volFolder = getWalkingVolumesFolder()
 
         for i, footstep in enumerate(msg.footsteps):
             trans = footstep.pos.translation
@@ -208,16 +218,17 @@ class FootstepsDriver(object):
             quat = [quat.w, quat.x, quat.y, quat.z]
             footstepTransform = transformUtils.transformFromPose(trans, quat)
 
-            for zs, xy in self.contact_slices.iteritems():
-                points0 = np.vstack((xy, zs[0] + np.zeros((1,xy.shape[1]))))
-                points1 = np.vstack((xy, zs[1] + np.zeros((1,xy.shape[1]))))
-                points = np.hstack((points0, points1))
-                points = points + np.array([[0.05],[0],[-0.0811]])
-                points = points.T
-                polyData = vnp.getVtkPolyDataFromNumpyPoints(points.copy())
-                mesh = segmentation.computeDelaunay3D(polyData)
-                obj = vis.showPolyData(mesh, 'walking volume', parent=folder, alpha=0.5)
-                obj.actor.SetUserTransform(footstepTransform)
+            if self.show_contact_slices:
+                for zs, xy in self.contact_slices.iteritems():
+                    points0 = np.vstack((xy, zs[0] + np.zeros((1,xy.shape[1]))))
+                    points1 = np.vstack((xy, zs[1] + np.zeros((1,xy.shape[1]))))
+                    points = np.hstack((points0, points1))
+                    points = points + np.array([[0.05],[0],[-0.0811]])
+                    points = points.T
+                    polyData = vnp.getVtkPolyDataFromNumpyPoints(points.copy())
+                    mesh = segmentation.computeDelaunay3D(polyData)
+                    obj = vis.showPolyData(mesh, 'walking volume', parent=volFolder, alpha=0.5)
+                    obj.actor.SetUserTransform(footstepTransform)
 
             allTransforms.append(footstepTransform)
 

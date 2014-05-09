@@ -65,6 +65,7 @@ class FootstepsPanel(object):
         self.ui.stopButton.connect("clicked()", self.onStop)
         self.ui.BDIDefaultsButton.connect("clicked()", lambda: self.applyDefaults('BDI'))
         self.ui.drakeDefaultsButton.connect("clicked()", lambda: self.applyDefaults('drake'))
+        self.ui.showWalkingVolumesCheck.connect("clicked()", self.onShowWalkingVolumes)
 
         ### BDI frame logic
         self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
@@ -74,6 +75,17 @@ class FootstepsPanel(object):
 
         self.driver.contact_slices = self.terrain_segmentation.contact_slices
 
+    def onShowWalkingVolumes(self):
+        self.driver.show_contact_slices = self.ui.showWalkingVolumesCheck.checked
+
+        # TODO: instead of deleting or regernating these, we can just
+        # show/hide them in the om. This requires a feature that Pat will
+        # implement soon, to show/hide an entire folder's contents
+        if self.ui.showWalkingVolumesCheck.checked:
+            self.driver.updateRequest()
+        else:
+            om.removeFromObjectModel(om.findObjectByName('walking volumes'))
+
     def onNewRegionSeed(self):
         t = self.newWalkingGoalFrame(self.robotModel)
         idx = len(self.region_seed_frames)
@@ -82,19 +94,20 @@ class FootstepsPanel(object):
         frameObj.setProperty('Edit', True)
         frameObj.connectFrameModified(self.onRegionSeedModified)
         self.region_seed_frames.append(frameObj)
-        self.onRegionSeedModified(frameObj)
-
-    def onRegionSeedModified(self, frame):
         heights, world2px = self.depth_provider.getSceneHeightData()
         heights[np.isinf(heights)] = np.nan
         print heights.shape
         print world2px
         px2world = np.linalg.inv(world2px)
         self.terrain_segmentation.setHeights(heights, px2world)
+
+        self.onRegionSeedModified(frameObj)
+
+    def onRegionSeedModified(self, frame):
         pos, wxyz = transformUtils.poseFromTransform(frame.transform)
         rpy = transformUtils.rollPitchYawFromTransform(frame.transform)
         pose = np.hstack((pos, rpy))
-        safe_region = self.terrain_segmentation.findSafeRegion(pose)
+        safe_region = self.terrain_segmentation.findSafeRegion(pose, iter_limit=2)
         debug = DebugData()
         om_name = 'IRIS region boundary {:d}'.format(frame.index)
         om.removeFromObjectModel(om.findObjectByName(om_name))
