@@ -6,6 +6,7 @@ import os
 
 from ddapp.simpletimer import SimpleTimer
 
+import numpy as np
 
 
 
@@ -159,7 +160,12 @@ class MatlabCommunicator(object):
 
     def assignFloatArray(self, array, arrayName):
 
-        arrayStr = '[%s]' % ';'.join([repr(float(x)) for x in array])
+        if np.ndim(array) == 1:
+            arrayStr = '[%s]' % ';'.join([repr(float(x)) for x in array])
+        else:
+            assert np.ndim(array) == 2
+            arrayStr = '[%s]' % '; '.join([', '.join([repr(x) for x in row]) for row in array])
+
         self.send('%s = %s;' % (arrayName, arrayStr))
         self.waitForResult()
 
