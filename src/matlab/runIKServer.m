@@ -17,6 +17,7 @@ q_zero = zeros(nq, 1);
 q_start = q_nom;
 q_end = q_nom;
 
+world = r.findLinkInd('world');
 l_foot = r.findLinkInd('l_foot');
 r_foot = r.findLinkInd('r_foot');
 l_hand = r.findLinkInd('l_hand');
