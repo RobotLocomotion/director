@@ -13,7 +13,8 @@ classdef IKServer
         end
 
         function obj = loadNominalData(obj)
-            nom_data = load([getDrakePath() '/examples/Atlas/data/atlas_fp.mat']);
+            %nom_data = load([getDrakePath() '/examples/Atlas/data/atlas_bdi_fp.mat']);
+            nom_data = load([getenv('DRC_BASE'), '/software/control/matlab/data/atlas_bdi_fp.mat']);
             nq = obj.robot.getNumDOF();
             obj.q_nom = nom_data.xstar(1:nq);
         end
