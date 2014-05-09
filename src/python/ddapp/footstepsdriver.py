@@ -24,12 +24,16 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Nominal Step Width': 0.26,
                                'Nominal Forward Step': 0.15,
                                'Max Forward Step': 0.40,
                                'Max Step Width': 0.4,
-                               'Behavior': 0},
+                               'Behavior': 0,
+                               'Drake Swing Speed': 0.2,
+                               'Drake Min Hold Time': 2.0},
                        'drake': {'Nominal Step Width': 0.28,
                                  'Nominal Forward Step': 0.25,
                                  'Max Forward Step': 0.30,
                                  'Max Step Width': 0.32,
-                                 'Behavior': 2}}
+                                 'Behavior': 2,
+                                 'Drake Swing Speed': 0.2,
+                                 'Drake Min Hold Time': 2.0}}
 
 import ddapp.applogic as app
 
@@ -117,6 +121,8 @@ class FootstepsDriver(object):
         self.params.addProperty('Nominal Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Max Step Width', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.22, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Max Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
+        self.params.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.05, maximum=5.0, singleStep=0.05))
+        self.params.addProperty('Drake Min Hold Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=5.0, singleStep=0.05))
         self.applyDefaults(DEFAULT_PARAM_SET)
         self.behavior_lcm_map = {
                               0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
@@ -147,7 +153,8 @@ class FootstepsDriver(object):
 
     def getDefaultStepParams(self):
         default_step_params = lcmdrc.footstep_params_t()
-        default_step_params.step_speed = 0.2
+        default_step_params.step_speed = self.params.properties.drake_swing_speed
+        default_step_params.drake_min_hold_time = self.params.properties.drake_min_hold_time
         default_step_params.step_height = 0.05
         default_step_params.constrain_full_foot_pose = True
         default_step_params.bdi_step_duration = 2.0
