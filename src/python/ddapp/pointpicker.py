@@ -21,6 +21,9 @@ class PointPicker(object):
         self.installEventFilter()
         self.clear()
 
+    def stop(self):
+        self.removeEventFilter()
+
     def installEventFilter(self):
 
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
@@ -76,7 +79,7 @@ class PointPicker(object):
         if self.annotationFunc is not None:
             self.annotationFunc(*points)
 
-        self.clear() 
+        self.clear()
 
 
     def draw(self):
