@@ -25,7 +25,7 @@ class Flyer(TimerCallback):
         self.flyTime = 0.5
         self.startTime = 0.0
         self.maintainViewDirection = False
-        self.positionZoom = 0.2
+        self.positionZoom = 0.7
 
     def getCameraCopy(self):
         camera = vtk.vtkCamera()
@@ -48,6 +48,7 @@ class Flyer(TimerCallback):
             else:
                 newPosition = oldPosition
             newPosition += self.positionZoom*(newFocalPoint - newPosition)
+            #newPosition = newFocalPoint - self.positionZoom*(newFocalPoint - newPosition)
 
         c.SetFocalPoint(newFocalPoint)
         c.SetPosition(newPosition)
