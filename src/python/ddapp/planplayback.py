@@ -49,9 +49,8 @@ class PlanPlayback(object):
                 poses.append(pose)
             return np.array(poseTimes), poses
 
-
-    def getPlanElapsedTime(self, msg):
-
+    @staticmethod
+    def getPlanElapsedTime(msg):
         startTime = msg.plan[0].utime
         endTime = msg.plan[-1].utime
         return (endTime - startTime) / 1e6
