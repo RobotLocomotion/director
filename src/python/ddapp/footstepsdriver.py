@@ -171,7 +171,7 @@ class FootstepsDriver(object):
     def onWalkingPlan(self, msg):
         self.lastWalkingPlan = msg
         if self.walkingPlanCallback:
-            self.walkingPlanCallback()
+            self.walkingPlanCallback(self.lastWalkingPlan)
 
     def onBDIAdjustedFootstepPlan(self, msg):
         folder = getBDIAdjustedFootstepsFolder()
