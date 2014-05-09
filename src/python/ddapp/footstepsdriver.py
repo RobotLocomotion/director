@@ -25,8 +25,8 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Nominal Step Width': 0.26,
                                'Max Forward Step': 0.40,
                                'Max Step Width': 0.4,
                                'Behavior': 0,
-                               'Drake Swing Speed': 0.0,
-                               'Drake Min Hold Time': 0.0},
+                               'Drake Swing Speed': 0.2,
+                               'Drake Min Hold Time': 2.0},
                        'drake': {'Nominal Step Width': 0.28,
                                  'Nominal Forward Step': 0.25,
                                  'Max Forward Step': 0.30,
@@ -121,7 +121,7 @@ class FootstepsDriver(object):
         self.params.addProperty('Nominal Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Max Step Width', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.22, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Max Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
-        self.params.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=5.0, singleStep=0.05))
+        self.params.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.05, maximum=5.0, singleStep=0.05))
         self.params.addProperty('Drake Min Hold Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=5.0, singleStep=0.05))
         self.applyDefaults(DEFAULT_PARAM_SET)
         self.behavior_lcm_map = {
