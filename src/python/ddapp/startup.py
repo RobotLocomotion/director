@@ -17,6 +17,7 @@ from ddapp import callbacks
 from ddapp import cameracontrol
 from ddapp import debrisdemo
 from ddapp import drilldemo
+from ddapp import tabledemo
 from ddapp import ik
 from ddapp import ikplanner
 from ddapp import objectmodel as om
@@ -284,6 +285,10 @@ if usePlanning:
     debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, robotStateJointController, playbackRobotModel,
                     ikPlanner, manipPlanner, atlasdriver.driver, lHandDriver,
                     perception.multisenseDriver, refitBlocks)
+
+    tableDemo = tabledemo.TableDemo(robotStateModel, playbackRobotModel,
+                    ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
+                    perception.multisenseDriver, view, robotStateJointController)
 
     drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                         lHandDriver, atlasdriver.driver, perception.multisenseDriver,

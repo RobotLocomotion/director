@@ -58,6 +58,7 @@ set(python_files
   ddapp/spreadsheet.py
   ddapp/startup.py
   ddapp/statelistener.py
+  ddapp/tabledemo.py
   ddapp/tdx.py
   ddapp/teleoppanel.py
   ddapp/timercallback.py
