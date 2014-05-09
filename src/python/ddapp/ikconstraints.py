@@ -55,6 +55,20 @@ class ConstraintBase(FieldContainer):
         assert pose.shape == (7,)
         return ConstraintBase.toColumnVectorString(pose)
 
+    @staticmethod
+    def toPosition(pos):
+        if isinstance(pos, vtk.vtkTransform):
+            pos = np.array(pos.GetPosition())
+        assert pos.shape == (3,)
+        return pos
+
+    @staticmethod
+    def toQuaternion(quat):
+        if isinstance(quat, vtk.vtkTransform):
+            _, quat = poseFromTransform(quat)
+        assert quat.shape == (4,)
+        return quat
+
     def getTSpanString(self):
         return self.toRowVectorString(self.tspan)
 
@@ -171,10 +185,10 @@ class RelativePositionConstraint(ConstraintBase):
     def __init__(self, **kwargs):
 
         self._add_fields(
-            linkName = '',
-            linkNameTarget = '',
-            referenceFrame = vtk.vtkTransform(),
-            pointInLink    = np.zeros(3),
+            bodyNameA = '',
+            bodyNameB = '',
+            pointInBodyA    = np.zeros(3),
+            frameInBodyB = vtk.vtkTransform(),
             positionTarget = np.zeros(3),
             positionOffset = np.zeros(3),
             lowerBound     = np.zeros(3),
@@ -185,39 +199,35 @@ class RelativePositionConstraint(ConstraintBase):
 
     def _getCommands(self, commands, constraintNames, suffix):
 
-        assert self.linkName
+        assert self.bodyNameA
+        assert self.bodyNameB
 
         varName = 'relative_position_constraint%s' % suffix
         constraintNames.append(varName)
 
-        positionTarget = self.positionTarget
-        if isinstance(positionTarget, vtk.vtkTransform):
-            positionTarget = positionTarget.GetPosition()
-
-        positionOffset = self.positionOffset
-        if isinstance(positionOffset, vtk.vtkTransform):
-            positionOffset = positionOffset.GetPosition()
-
+        pointInBodyA = self.toPosition(self.pointInBodyA)
+        positionTarget = self.toPosition(self.positionTarget)
+        positionOffset = self.toPosition(self.positionOffset)
 
         formatArgs = dict(varName=varName,
                           robotArg=self.robotArg,
                           tspan=self.getTSpanString(),
-                          linkNameA=self.linkName,
-                          linkNameB=self.linkNameTarget,
-                          pointInLink=self.toColumnVectorString(self.pointInLink),
-                          refFrame=self.toPositionQuaternionString(self.referenceFrame),
+                          bodyNameA=self.bodyNameA,
+                          bodyNameB=self.bodyNameB,
+                          pointInBodyA=self.toColumnVectorString(pointInBodyA),
+                          frameInBodyB=self.toPositionQuaternionString(self.frameInBodyB),
                           positionTarget=self.toColumnVectorString(positionTarget + positionOffset),
                           lowerBound=self.toColumnVectorString(self.lowerBound),
                           upperBound=self.toColumnVectorString(self.upperBound))
 
 
         commands.append(
-            'point_in_link_frame = {pointInLink};\n'
-            'ref_frame = {refFrame};\n'
+            'point_in_body_a = {pointInBodyA};\n'
+            'frame_in_body_b = {frameInBodyB};\n'
             'lower_bounds = {positionTarget} + {lowerBound};\n'
             'upper_bounds = {positionTarget} + {upperBound};\n'
-            '{varName} = RelativePositionConstraint({robotArg}, point_in_link_frame, lower_bounds, upper_bounds, '
-            '{linkNameA}, {linkNameB}, ref_frame, {tspan});'
+            '{varName} = RelativePositionConstraint({robotArg}, point_in_body_a, lower_bounds, '
+            'upper_bounds, {bodyNameA}, {bodyNameB}, frame_in_body_b, {tspan});'
             ''.format(**formatArgs))
 
 
@@ -256,6 +266,45 @@ class QuatConstraint(ConstraintBase):
         commands.append(
             '{varName} = WorldQuatConstraint({robotArg}, {linkName}, '
             '{quat}, {tolerance}, {tspan});'
+            ''.format(**formatArgs))
+
+
+class EulerConstraint(ConstraintBase):
+
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            linkName                = '',
+            orientation              = np.array([0.0, 0.0, 0.0]),
+            lowerBound              = np.array([0.0, 0.0, 0.0]),
+            upperBound              = np.array([0.0, 0.0, 0.0]),
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+        assert self.linkName
+
+        varName = 'euler_constraint%s' % suffix
+        constraintNames.append(varName)
+
+        orientation = self.orientation
+        if isinstance(orientation, vtk.vtkTransform):
+            orientation = np.radians(np.array(orientation.GetOrientation()))
+
+        formatArgs = dict(varName=varName,
+                          robotArg=self.robotArg,
+                          tspan=self.getTSpanString(),
+                          linkName=self.linkName,
+                          orientation=self.toColumnVectorString(orientation),
+                          lowerBound=self.toColumnVectorString(self.lowerBound),
+                          upperBound=self.toColumnVectorString(self.upperBound))
+
+        commands.append(
+            '{varName} = WorldEulerConstraint({robotArg}, {linkName}, '
+            '{orientation} + {lowerBound}, {orientation} + {upperBound}, {tspan});'
             ''.format(**formatArgs))
 
 
@@ -300,6 +349,91 @@ class WorldGazeOrientConstraint(ConstraintBase):
             ''.format(**formatArgs))
 
 
+class WorldGazeDirConstraint(ConstraintBase):
+
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            linkName                = '',
+            bodyAxis                = np.array([1.0, 0.0, 0.0]),
+            targetFrame             = vtk.vtkTransform,
+            targetAxis              = np.array([1.0, 0.0, 0.0]),
+            coneThreshold           = 0.0,
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+        assert self.linkName
+
+        varName = 'gaze_dir_constraint%s' % suffix
+        constraintNames.append(varName)
+
+        worldAxis = np.array(self.targetAxis)
+        print 'worldAxis: ', worldAxis
+        self.targetFrame.TransformVector(worldAxis, worldAxis)
+        print 'transformed: ', worldAxis
+
+        formatArgs = dict(varName=varName,
+                          robotArg=self.robotArg,
+                          tspan=self.getTSpanString(),
+                          linkName=self.linkName,
+                          bodyAxis=self.toColumnVectorString(self.bodyAxis),
+                          worldAxis=self.toColumnVectorString(worldAxis),
+                          coneThreshold=repr(self.coneThreshold))
+
+        commands.append(
+            '{varName} = WorldGazeDirConstraint({robotArg}, {linkName}, {bodyAxis}, '
+            '{worldAxis}, {coneThreshold}, {tspan});'
+            ''.format(**formatArgs))
+
+
+class WorldGazeTargetConstraint(ConstraintBase):
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            linkName                = '',
+            axis                    = np.array([1.0, 0.0, 0.0]),
+            worldPoint              = np.array([1.0, 0.0, 0.0]),
+            bodyPoint               = np.array([1.0, 0.0, 0.0]),
+            coneThreshold           = 0.0,
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+        assert self.linkName
+
+        varName = 'gaze_target_constraint%s' % suffix
+        constraintNames.append(varName)
+
+        worldPoint = self.worldPoint
+        if isinstance(worldPoint, vtk.vtkTransform):
+            worldPoint = worldPoint.GetPosition()
+
+        bodyPoint = self.bodyPoint
+        if isinstance(bodyPoint, vtk.vtkTransform):
+            bodyPoint = bodyPoint.GetPosition()
+
+        formatArgs = dict(varName=varName,
+                          robotArg=self.robotArg,
+                          tspan=self.getTSpanString(),
+                          linkName=self.linkName,
+                          axis=self.toColumnVectorString(self.axis),
+                          worldPoint=self.toColumnVectorString(worldPoint),
+                          bodyPoint=self.toColumnVectorString(bodyPoint),
+                          coneThreshold=repr(self.coneThreshold))
+
+        commands.append(
+            '{varName} = WorldGazeTargetConstraint({robotArg}, {linkName}, {axis}, '
+            '{worldPoint}, {bodyPoint}, {coneThreshld}, {tspan});'
+            ''.format(**formatArgs))
+
+
 class QuasiStaticConstraint(ConstraintBase):
 
 
@@ -330,7 +464,7 @@ class QuasiStaticConstraint(ConstraintBase):
         commands.append(
             '{varName} = QuasiStaticConstraint({robotArg}, {tspan}, 1);\n'
             '{varName} = {varName}.setShrinkFactor({shrinkFactor});\n'
-            '{varName}.setActive(true);'
+            '{varName} = {varName}.setActive(true);'
             ''.format(**formatArgs))
 
         if self.leftFootEnabled:
@@ -338,4 +472,35 @@ class QuasiStaticConstraint(ConstraintBase):
         if self.rightFootEnabled:
             commands.append('{varName} = {varName}.addContact(r_foot, r_foot_pts);'.format(**formatArgs))
 
+
+class ContactConstraint(ConstraintBase):
+
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            lowerBound  = 0.01,
+            upperBound = 1e6,
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+
+        if not (self.leftFootEnabled or self.rightFootEnabled):
+            return
+
+        varName = 'contact_constraint%s' % suffix
+        constraintNames.append(varName)
+
+        formatArgs = dict(varName=varName,
+                          robotArg=self.robotArg,
+                          tspan=self.getTSpanString(),
+                          lowerBound=repr(self.lowerBound),
+                          upperBound=repr(self.upperBound))
+
+        commands.append(
+            '{varName} = AllBodiesClosestDistanceConstraint({robotArg}, {lowerBound}, {upperBound}, {tspan});\n'
+            ''.format(**formatArgs))
 

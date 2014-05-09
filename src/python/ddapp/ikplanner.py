@@ -32,223 +32,81 @@ from PythonQt import QtCore, QtGui
 copyFrame = transformUtils.copyFrame
 
 
+class ConstraintSet(object):
+
+    def __init__(self, ikPlanner, constraints, jointController, showPoseFunction, endPoseName, startPoseName):
+        self.ikPlanner = ikPlanner
+        self.constraints = constraints
+        self.jointController = jointController
+        self.showPoseFunction = showPoseFunction
+        self.endPoseName = endPoseName
+        self.startPoseName = startPoseName
+
+    def runIk(self):
+
+        self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, nominalPostureName=self.startPoseName, seedPostureName=self.startPoseName)
+        print 'info:', self.info
+
+        if self.jointController:
+            self.jointController.addPose(self.endPoseName, self.endPose)
+        if self.showPoseFunction:
+            self.showPoseFunction(self.endPose)
+
+        return self.endPose, self.info
+
+
+    def runIkTraj(self):
+        self.ikPlanner.ikServer.sendPoseToServer(self.endPose, self.endPoseName)
+        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName)
+        return self.plan
+
+    def planEndPoseGoal(self):
+        self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName)
+        return self.plan
+
+
+    def onFrameModified(self, frame):
+        self.runIk()
+
+
 class IKPlanner(object):
 
-    def __init__(self, ikServer, robotModel, jointController, sensorJointController, planPlaybackFunction, showPoseFunction, playbackRobotModel):
+    def __init__(self, ikServer, robotModel, jointController, handModels):
 
         self.ikServer = ikServer
         self.robotModel = robotModel
         self.jointController = jointController
-        self.sensorJointController = sensorJointController
-
-        self.planPlaybackFunction = planPlaybackFunction
-        self.showPoseFunction = showPoseFunction
-        self.playbackRobotModel = playbackRobotModel
-
-        self.endPoses = []
-        self.affordanceName = 'board'
-        #self.affordanceName = 'drill'
-        self.affordance = None
-        self.handModels = []
+        self.handModels = handModels
 
         self.reachingSide = 'left'
-        self.graspSample = 0
+
         self.additionalTimeSamples = 0
         self.useQuasiStaticConstraint = True
-
-        #self.handToUtorso = [0.05, 0.6, 0.10]
-        self.handToUtorso = [0.2, 0.7, 0.0]
-
-        self.planFromCurrentRobotState = True
-
-        self.tspanPreReach = [0.35, 0.35]
-        self.tspanFull = [0.0, 1.0]
-        self.tspanPreGrasp = [0.7, 0.7]
-        self.tspanPreGraspToEnd = [0.7, 1.0]
-        self.tspanStart = [0.0, 0.0]
-        self.tspanEnd = [1.0, 1.0]
 
 
     def getHandModel(self):
         return self.handModels[0] if  self.reachingSide == 'left' else self.handModels[1]
 
+
     def getHandLink(self):
         return self.getHandModel().handLinkName
 
+
     def getPalmToHandLink(self):
         return self.getHandModel().palmToHandLink
+
 
     def getPalmPoint(self):
         return np.array(self.getPalmToHandLink().GetPosition())
 
 
-    def computeGroundFrame(self, robotModel):
-        '''
-        Given a robol model, returns a vtkTransform at a position between
-        the feet, on the ground, with z-axis up and x-axis aligned with the
-        robot pelvis x-axis.
-        '''
-        t1 = robotModel.getLinkFrame('l_foot')
-        t2 = robotModel.getLinkFrame('r_foot')
-        pelvisT = robotModel.getLinkFrame('pelvis')
-
-        xaxis = [1.0, 0.0, 0.0]
-        pelvisT.TransformVector(xaxis, xaxis)
-        xaxis = np.array(xaxis)
-        zaxis = np.array([0.0, 0.0, 1.0])
-        yaxis = np.cross(zaxis, xaxis)
-        yaxis /= np.linalg.norm(yaxis)
-        xaxis = np.cross(yaxis, zaxis)
-
-        stancePosition = (np.array(t2.GetPosition()) + np.array(t1.GetPosition())) / 2.0
-
-        footHeight = 0.0811
-
-        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-        t.PostMultiply()
-        t.Translate(stancePosition)
-        t.Translate([0.0, 0.0, -footHeight])
-
-        return t
-
-
-    def randomAffordance(self, robotModel):
-        aff = self.findAffordance()
-        if aff:
-            om.removeFromObjectModel(aff)
-        self.spawnAffordance(robotModel, randomize=True)
-
-
-    def spawnAffordance(self, robotModel, randomize=False):
-
-        if randomize:
-
-            position = [random.uniform(0.5, 0.8), random.uniform(-0.2, 0.2), random.uniform(0.5, 0.8)]
-            rpy = [random.choice((random.uniform(-35, 35), random.uniform(70, 110))), random.uniform(-10, 10),  random.uniform(-5, 5)]
-            zwidth = random.uniform(0.5, 1.0)
-
-        else:
-
-            position = [0.65, 0.0, 0.6]
-            rpy = [25, 1, 0]
-            zwidth = 24 * .0254
-
-        xwidth = 3.75 * .0254
-        ywidth = 1.75 * .0254
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(self.computeGroundFrame(robotModel))
-        xaxis = [1,0,0]
-        yaxis = [0,1,0]
-        zaxis = [0,0,1]
-        for axis in (xaxis, yaxis, zaxis):
-            t.TransformVector(axis, axis)
-
-        affordance = segmentation.createBlockAffordance(t.GetPosition(), xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, 'board', parent='affordances')
-        affordance.setProperty('Color', QtGui.QColor(200, 150, 100))
-        t = affordance.actor.GetUserTransform()
-        affordanceFrame = vis.showFrame(t, 'board frame', parent=affordance, visible=False, scale=0.2)
-
-
-    def updateHandModel(self):
-        graspFrame = self.getAffordanceChild('desired grasp frame')
-        handMesh = self.findAffordanceChild('desired grasp hand')
-        if not handMesh:
-            handMesh = self.getHandModel().newPolyData('desired grasp hand', self.robotModel.views[0], parent=self.findAffordance())
-        handFrame = handMesh.children()[0]
-        handFrame.copyFrame(graspFrame.transform)
-
-    def findAffordance(self):
-        self.affordance = om.findObjectByName(self.affordanceName)
-        return self.affordance
-
-
-    def findAffordanceChild(self, name):
-        assert self.affordance
-        return self.affordance.findChild(name)
-
-
-    def getAffordanceChild(self, name):
-        child = self.findAffordanceChild(name)
-        if not child:
-            raise Exception('Failed to locate affordance child: %s' % name)
-        return child
-
-
-    def getAffordanceFrame(self):
-        self.findAffordance()
-        assert self.affordance
-        affordanceName = self.affordance.getProperty('Name')
-        return self.getAffordanceChild('%s frame' % affordanceName)
-
-
-    def computeGraspFrameSamples(self):
-
-        if self.affordanceName == 'board':
-            self.computeGraspFrameSamplesBoard()
-        else:
-            self.getAffordanceChild('sample grasp frame 0')
-
-
-    def computeGraspFrameSamplesBoard(self):
-
-        affordanceFrame = self.getAffordanceFrame()
-
-        additionalOffset = 0.0
-        yoffset = 0.5*self.affordance.params['ywidth'] + additionalOffset
-        xoffset = 0.5*self.affordance.params['xwidth'] + additionalOffset
-
-        frames = [
-          [[0.0, yoffset, 0.0], [0.0, 90, 180.0]],
-          [[0.0, yoffset, 0.0], [0.0, -90, 180.0]],
-
-          [[0.0, -yoffset, 0.0], [0.0, 90, 0.0]],
-          [[0.0, -yoffset, 0.0], [0.0, -90, 0.0]],
-
-          [[xoffset, 0.0, 0.0], [-90, -90, 180.0]],
-          [[xoffset, 0.0, 0.0], [90, 90, 180.0]],
-
-          [[-xoffset, 0.0, 0.0], [90, -90, 180.0]],
-          [[-xoffset, 0.0, 0.0], [-90, 90, 180.0]],
-          ]
-
-        for i, frame in enumerate(frames):
-            pos, rpy = frame
-            t = transformUtils.frameFromPositionAndRPY(pos, rpy)
-            t.Concatenate(affordanceFrame.transform)
-            name = 'sample grasp frame %d' % i
-            om.removeFromObjectModel(self.findAffordanceChild(name))
-            vis.showFrame(copyFrame(t), name, parent=self.affordance, visible=False, scale=0.2)
-
-
-    def computeGraspFrame(self):
-        frame = self.getAffordanceChild('sample grasp frame %d' % self.graspSample)
-        name = 'grasp frame'
-        om.removeFromObjectModel(self.findAffordanceChild(name))
-        vis.showFrame(copyFrame(frame.transform), name, parent=self.affordance, visible=False, scale=0.2)
-
-
-    def computeInitialState(self):
-
-        if self.planFromCurrentRobotState:
-            startPose = np.array(self.sensorJointController.q)
-        else:
-            startPose = np.array(self.jointController.getPose('q_nom'))
-
-        self.ikServer.sendPoseToServer(startPose, 'q_start')
-        self.jointController.addPose('q_start', startPose)
-
-
-    def createPreReachConstraint(self):
-
-        handToUtorso = np.array(self.handToUtorso)
-        if self.reachingSide == 'right':
-            handToUtorso[1] *= -1
+    def createHandRelativePositionConstraint(self, side, targetBodyName, targetPosition):
 
         p = ik.RelativePositionConstraint()
-        p.linkName = self.getHandLink()
-        p.linkNameTarget = 'utorso'
-        p.pointInLink = self.getPalmPoint()
-        p.positionTarget = np.array(handToUtorso)
+        p.bodyNameA = self.getHandLink()
+        p.bodyNameB = targetBodyName
+        p.pointInBodyA = self.getPalmPoint()
+        p.positionTarget = targetPosition
         return p
 
 
@@ -324,47 +182,102 @@ class IKPlanner(object):
         return positionConstraint, orientationConstraint
 
 
-    def createSearchGraspConstraints(self):
-        if self.affordanceName == 'board':
-            return self.createSearchGraspConstraintsBoard()
-        else:
-            targetFrame = self.getAffordanceChild('grasp frame')
-            return self.createReachConstraints(targetFrame, positionTolerance=0.0025, angleToleranceInDegrees=1.0)
+    def createAxisInPlaneConstraint(self, targetFrame, linkConstraintFrame):
+        '''
+        Constrain the X axis of targetFrame to be in the XY plane of linkConstraintFrame in hand link.
+        Returns two relative position constraints.
+        '''
+
+        def makeOffsetTransform(offset):
+            t = vtk.vtkTransform()
+            t.PostMultiply()
+            t.Translate(offset)
+            t.Concatenate(targetFrame)
+            return t
+
+        p = ik.RelativePositionConstraint()
+        p.bodyNameA = 'world'
+        p.bodyNameB = self.getHandLink()
+        p.frameInBodyB = linkConstraintFrame
+        p.pointInBodyA = makeOffsetTransform([0.25, 0.0, 0.0])
+        p.positionTarget = np.zeros(3)
+        p.lowerBound = np.array([np.nan, np.nan, 0.0])
+        p.upperBound = np.array([np.nan, np.nan, 0.0])
+        rollConstraint1 = p
+
+        p = ik.RelativePositionConstraint()
+        p.bodyNameA = 'world'
+        p.bodyNameB = self.getHandLink()
+        p.frameInBodyB = linkConstraintFrame
+        p.pointInBodyA = makeOffsetTransform([-0.25, 0.0, 0.0])
+        p.positionTarget = np.zeros(3)
+        p.lowerBound = np.array([np.nan, np.nan, 0.0])
+        p.upperBound = np.array([np.nan, np.nan, 0.0])
+        rollConstraint2 = p
+
+        return rollConstraint1, rollConstraint2
 
 
-    def createSearchGraspConstraintsBoard(self):
+    def createGraspOrbitConstraints(self, targetFrame, linkConstraintFrame=None):
 
-        targetFrame = self.getAffordanceChild('grasp frame')
-        boardHalfLength = self.affordance.params['zwidth']/2.0 - 0.08
+        if linkConstraintFrame is None:
+            linkConstraintFrame = self.getPalmToHandLink()
 
-        graspPosition, graspOrientation = self.createReachConstraints(targetFrame, positionTolerance=0.0025, angleToleranceInDegrees=1.0)
-        graspPosition.lowerBound = np.array([-boardHalfLength, 0.0, 0.0])
-        graspPosition.upperBound = np.array([boardHalfLength, 0.0, 0.0])
+        p = ik.PositionConstraint()
+        p.linkName = self.getHandLink()
+        p.pointInLink = np.array(linkConstraintFrame.GetPosition())
+        p.referenceFrame = targetFrame.transform
+        p.lowerBound = [0.0, 0.0, 0.0] #np.zeros(3)
+        p.upperBound = [0.07, 0.0, 0.0] #np.zeros(3)
+        positionConstraint = p
 
-        return graspPosition, graspOrientation
+        rollConstraint1, rollConstraint2 = self.createAxisInPlaneConstraint(targetFrame.transform, linkConstraintFrame)
+
+        return positionConstraint, rollConstraint1, rollConstraint2
 
 
-    def createRetractGraspConstraints(self):
+    def createMoveOnLineConstraints(self, startPose, targetFrame, linkConstraintFrame=None):
 
-        targetFrame = self.getAffordanceChild('desired grasp frame')
+        if linkConstraintFrame is None:
+            linkConstraintFrame = self.getPalmToHandLink()
 
+
+        self.jointController.setPose('start_pose', startPose)
+        linkFrame = self.robotModel.getLinkFrame(self.getHandLink())
         t = vtk.vtkTransform()
         t.PostMultiply()
-        t.Concatenate(targetFrame.transform)
-        t.Translate(0.0, 0.0, 0.25)
-        retractFrame = vis.updateFrame(copyFrame(t), 'retract frame', scale=0.2, visible=False, parent=self.affordance)
+        t.Concatenate(linkConstraintFrame)
+        t.Concatenate(linkFrame)
 
-        return self.createReachConstraints(retractFrame, positionTolerance=0.03, angleToleranceInDegrees=5.0)
+        motionAxisInWorld = np.array(targetFrame.GetPosition()) - np.array(t.GetPosition())
+
+        targetFrame = transformUtils.getTransformFromOriginAndNormal(targetFrame.GetPosition(), motionAxisInWorld)
+
+        p = ik.PositionConstraint()
+        p.linkName = self.getHandLink()
+        p.pointInLink = np.array(linkConstraintFrame.GetPosition())
+        p.referenceFrame = targetFrame
+        p.lowerBound = np.zeros(3)
+        p.upperBound = np.zeros(3)
+        positionConstraint = p
+
+        p = ik.QuatConstraint()
+        p.linkName = self.getHandLink()
+        p.quaternion = linkFrame
+        p.angleToleranceInDegrees = 2
+        orientationConstraint = p
+
+        p = ik.PositionConstraint()
+        p.linkName = self.getHandLink()
+        p.pointInLink = np.array(linkConstraintFrame.GetPosition())
+        p.referenceFrame = targetFrame
+        p.lowerBound = [0.0, 0.0, np.nan]
+        p.upperBound = [0.0, 0.0, np.nan]
+        axisConstraint = p
+
+        return positionConstraint, orientationConstraint, axisConstraint
 
 
-    def createGraspConstraints(self):
-        targetFrame = self.getAffordanceChild('desired grasp frame')
-        return self.createReachConstraints(targetFrame, positionTolerance=0.005, angleToleranceInDegrees=3.0)
-
-
-    def createPreGraspConstraints(self):
-        targetFrame = self.getAffordanceChild('pre grasp frame')
-        return self.createReachConstraints(targetFrame, positionTolerance=0.02, angleToleranceInDegrees=7.0)
 
 
     def createMovingReachConstraints(self, startPoseName, lockBack=False, lockBase=False, lockArm=True):
@@ -391,306 +304,65 @@ class IKPlanner(object):
         return constraints
 
 
-    def computeGraspEndPoseSearch(self):
-
-        startPoseName = 'q_start'
-
-        constraints = []
-        constraints.extend(self.createSearchGraspConstraints())
-        constraints.extend(self.createMovingReachConstraints(startPoseName))
-
-        self.graspEndPose, self.graspEndPoseInfo = self.ikServer.runIk(constraints)
-
-        self.ikServer.sendPoseToServer(self.graspEndPose, 'grasp_end_pose')
-        self.jointController.setPose('grasp_end_pose', self.graspEndPose)
-
-        print 'grasp end pose info:', self.graspEndPoseInfo
-
-
     def getLinkFrameAtPose(self, linkName, pose):
         self.jointController.setPose('user_pose', pose)
         return self.robotModel.getLinkFrame(linkName)
 
 
-    def computeGraspEndPoseFrames(self):
+    def computeNominalPose(self, startPose):
 
-        graspFrame = self.getAffordanceChild('grasp frame')
-        affordanceFrame = self.getAffordanceFrame()
-
-        self.jointController.setPose('grasp_end_pose', self.graspEndPose)
-        handFrame = self.robotModel.getLinkFrame(self.getHandLink())
-
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Concatenate(self.getPalmToHandLink())
-        t.Concatenate(handFrame)
-        graspEndPoseFrame = t
-        vis.updateFrame(t, 'grasp frame (ik result with tolerance)', scale=0.2, visible=False, parent=self.affordance)
-
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Concatenate(graspFrame.transform)
-        t.Translate(np.array(graspEndPoseFrame.GetPosition()) - np.array(graspFrame.transform.GetPosition()))
-        t.Concatenate(affordanceFrame.transform.GetLinearInverse())
-        self.affordanceToGrasp = copyFrame(t)
-
-
-        def updateAffordanceToGrasp(frame):
-            affordanceFrame = self.getAffordanceFrame()
-            t = vtk.vtkTransform()
-            t.PostMultiply()
-            t.Concatenate(frame.transform)
-            t.Concatenate(affordanceFrame.transform.GetLinearInverse())
-            self.affordanceToGrasp = copyFrame(t)
-            self.updateHandModel()
-
-
-        def updateGraspFrame(frame, create=False):
-
-            graspFrame = self.findAffordanceChild('desired grasp frame')
-            if not graspFrame and not create:
-                frame.onTransformModifiedCallback = None
-                return
-
-            t = vtk.vtkTransform()
-            t.PostMultiply()
-            t.Concatenate(self.affordanceToGrasp)
-            t.Concatenate(frame.transform)
-
-            if graspFrame:
-                graspFrame.onTransformModifiedCallback = None
-            graspFrame = vis.updateFrame(copyFrame(t), 'desired grasp frame', scale=0.2, visible=False, parent=self.affordance)
-            graspFrame.onTransformModifiedCallback = updateAffordanceToGrasp
-            self.updateHandModel()
-            return graspFrame
-
-        self.lockAffordanceToHand = False
-
-        def onRobotModelChanged(model):
-            handFrame = self.playbackRobotModel.getLinkFrame(self.getHandLink())
-            t = vtk.vtkTransform()
-            t.PostMultiply()
-            t.Concatenate(self.getPalmToHandLink())
-            t.Concatenate(handFrame)
-            palmFrame = vis.updateFrame(t, 'palm frame', scale=0.2, visible=False, parent=self.affordance)
-
-            if self.lockAffordanceToHand:
-                t = vtk.vtkTransform()
-                t.PostMultiply()
-                t.Concatenate(self.affordanceToGrasp.GetLinearInverse())
-                t.Concatenate(palmFrame.transform)
-                affordanceFrame = self.getAffordanceFrame()
-                affordanceFrame.copyFrame(t)
-
-        self.playbackRobotModel.modelChangedCallback = onRobotModelChanged
-
-        graspFrame = updateGraspFrame(affordanceFrame, create=True)
-        affordanceFrame.onTransformModifiedCallback = updateGraspFrame
-
-
-    def computePreGraspFrame(self, preGraspDistance=0.20):
-
-        graspFrame = self.getAffordanceChild('desired grasp frame')
-
-        pos = [0.0, -preGraspDistance, 0.0]
-        rpy = [0.0, 0.0, 0.0]
-        preGraspToGrasp = transformUtils.frameFromPositionAndRPY(pos, rpy)
-
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Concatenate(preGraspToGrasp)
-        t.Concatenate(graspFrame.transform)
-        vis.updateFrame(copyFrame(t), 'pre grasp frame', scale=0.2, visible=False, parent=self.affordance)
-
-
-    def computeGraspEndPose(self):
-
-        startPoseName = 'q_start'
-
-        constraints = []
-        constraints.extend(self.createMovingReachConstraints(startPoseName))
-        constraints.extend(self.createGraspConstraints())
-
-        self.graspEndPose, info = self.ikServer.runIk(constraints)
-
-        self.ikServer.sendPoseToServer(self.graspEndPose, 'grasp_end_pose')
-        self.jointController.setPose('grasp_end_pose', self.graspEndPose)
-
-        print 'grasp end pose info:', info
-
-
-    def commitState(self):
-        poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(self.lastManipPlan)
-        self.sensorJointController.setPose('EST_ROBOT_STATE', poses[-1])
-
-
-    def computePreGraspAdjustment(self):
-
-        assert self.planFromCurrentRobotState
-        startPose = np.array(self.sensorJointController.q)
-
-        startPoseName = 'reach_start'
-        self.jointController.addPose(startPoseName, startPose)
-        self.computePostureGoal(startPoseName, 'pre_grasp_end_pose')
-
-
-    def computeGraspReach(self):
-
-        if self.planFromCurrentRobotState:
-            startPose = np.array(self.sensorJointController.q)
-        else:
-            startPose = np.array(self.jointController.getPose('pre_grasp_end_pose'))
-
-        startPoseName = 'reach_start'
-        self.jointController.addPose(startPoseName, startPose)
-        self.ikServer.sendPoseToServer(startPose, startPoseName)
-
-
-        constraints = []
-        constraints.extend(self.createGraspConstraints())
-        constraints.append(self.createLockedTorsoPostureConstraint(startPoseName))
-        constraints.append(self.createLockedArmPostureConstraint(startPoseName))
-
-        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
-
-        print 'grasp reach info:', info
-
-        self.jointController.addPose('reach_end', endPose)
-        self.computePostureGoal(startPoseName, 'reach_end')
-
-
-    def computeNominal(self):
-
-        if self.planFromCurrentRobotState:
-            startPose = np.array(self.sensorJointController.q)
-        else:
-            startPose = np.array(self.jointController.getPose('retract_end'))
-
-        startPoseName = 'retract_start'
-        self.jointController.addPose(startPoseName, startPose)
-        self.ikServer.sendPoseToServer(startPose, startPoseName)
-
-        constraints = []
-        constraints.extend(self.createFixedFootConstraints(startPoseName))
-        constraints.append(self.createKneePostureConstraint([0.4, 0.4]))
-        constraints.append(self.createMovingBasePostureConstraint(startPoseName))
-
-        nominalJoints = []
-        nominalJoints += robotstate.matchJoints('back')
-        nominalJoints += robotstate.matchJoints('arm')
-        constraints.append(self.createPostureConstraint('q_nom', nominalJoints))
-
-        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
-        print 'nominal pose info:', info
-
-        self.jointController.addPose('retract_end', endPose)
-        self.computePostureGoal(startPoseName, 'retract_end')
-
-
-    def computeRetractTraj(self):
-
-        if self.planFromCurrentRobotState:
-            startPose = np.array(self.sensorJointController.q)
-        else:
-            startPose = np.array(self.jointController.getPose('grasp_end_pose'))
-
-        startPoseName = 'retract_start'
-        self.jointController.addPose(startPoseName, startPose)
-        self.ikServer.sendPoseToServer(startPose, startPoseName)
-
-        constraints = []
-        constraints.extend(self.createMovingReachConstraints(startPoseName))
-
-        graspPosition, graspOrientation = self.createRetractGraspConstraints()
-        graspPosition.tspan = self.tspanEnd
-        graspOrientation.tspan = self.tspanEnd
-
-        constraints.extend([
-            graspPosition,
-            graspOrientation,
-            ])
-
-
-        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
-        print 'retract info:', info
-
-        self.jointController.addPose('retract_end', endPose)
-        self.computePostureGoal(startPoseName, 'retract_end')
-
-        #self.runIkTraj(constraints, startPoseName, startPoseName, timeSamples)
-
-
-    def computeArmExtend(self):
-
-        if self.planFromCurrentRobotState:
-            startPose = np.array(self.sensorJointController.q)
-        else:
-            startPose = np.array(self.jointController.getPose('grasp_end_pose'))
-
-        startPoseName = 'retract_start'
-        self.jointController.addPose(startPoseName, startPose)
-        self.ikServer.sendPoseToServer(startPose, startPoseName)
-
-        constraints = []
-        constraints.extend(self.createFixedFootConstraints(startPoseName))
-        constraints.append(self.createKneePostureConstraint([0.4, 0.4]))
-        constraints.append(self.createMovingBasePostureConstraint(startPoseName))
-        constraints.append(self.createLockedArmPostureConstraint(startPoseName))
-        constraints.append(self.createPostureConstraint('q_nom', robotstate.matchJoints('back')))
-
-        movingArmJoints = 'l_arm' if self.reachingSide == 'left' else 'r_arm'
-        constraints.append(self.createPostureConstraint('q_zero', robotstate.matchJoints(movingArmJoints)))
-
-        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
-
-        print 'retract info:', info
-
-        self.jointController.addPose('retract_end', endPose)
-        self.computePostureGoal(startPoseName, 'retract_end')
-
-
-    def computeStand(self):
-
-        if self.planFromCurrentRobotState:
-            startPose = np.array(self.sensorJointController.q)
-        else:
-            startPose = np.array(self.jointController.getPose('grasp_end_pose'))
-
+        nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
         self.jointController.addPose(startPoseName, startPose)
         self.ikServer.sendPoseToServer(startPose, startPoseName)
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
-        constraints.append(self.createKneePostureConstraint([0.4, 0.4]))
         constraints.append(self.createMovingBasePostureConstraint(startPoseName))
-        constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
-        constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
-        constraints.append(self.createPostureConstraint(startPoseName, robotstate.matchJoints('back')))
+        constraints.append(self.createLockedLeftArmPostureConstraint(nominalPoseName))
+        constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
+        constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('.*_leg_kny')))
+        constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
         endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
+        return endPose, info
 
-        print 'stand info:', info
+
+    def computeNominalPlan(self, startPose):
+
+        endPose, info = self.computeNominalPose(startPose)
+        print 'info:', info
 
         self.jointController.addPose('stand_end', endPose)
         return self.computePostureGoal(startPoseName, 'stand_end')
 
-    def computePreGraspEndPose(self):
+
+    def computeStandPose(self, startPose):
+
+        nominalPoseName = 'q_nom'
+        startPoseName = 'stand_start'
+        self.jointController.addPose(startPoseName, startPose)
+        self.ikServer.sendPoseToServer(startPose, startPoseName)
 
         constraints = []
-        constraints.extend(self.createPreGraspConstraints())
-        constraints.append(self.createLockedTorsoPostureConstraint('grasp_end_pose'))
+        constraints.extend(self.createFixedFootConstraints(startPoseName))
+        constraints.append(self.createMovingBasePostureConstraint(startPoseName))
+        constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
+        constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('.*_leg_kny')))
+        constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
-        self.preGraspEndPose, self.preGraspEndPoseInfo = self.ikServer.runIk(constraints)
-
-        self.ikServer.sendPoseToServer(self.preGraspEndPose, 'pre_grasp_end_pose')
-        self.jointController.addPose('pre_grasp_end_pose', self.preGraspEndPose)
-
-        print 'pre grasp end pose info:', self.preGraspEndPoseInfo
+        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
+        return endPose, info
 
 
-    def planReach(self):
-        self.computePostureGoal('reach_start', 'reach_end', feetOnGround=True)
+    def computeStandPlan(self, startPose):
+
+        endPose, info = self.computeStandPose(startPose)
+        print 'info:', info
+
+        self.jointController.addPose('stand_end', endPose)
+        return self.computePostureGoal(startPoseName, 'stand_end')
 
 
     def createPostureConstraint(self, startPostureName, jointNames):
@@ -741,64 +413,42 @@ class IKPlanner(object):
             return self.createLockedLeftArmPostureConstraint(startPostureName)
 
 
-    def planPoseGoal(self, startPose, goalPoseJoints):
+    def getMergedPostureFromDatabase(self, startPose, poseGroup, poseName, side=None):
+        postureJoints = RobotPoseGUIWrapper.getPose(poseGroup, poseName, side=side)
+        return self.mergePostures(startPose, postureJoints)
 
-        startPoseName = 'posture_goal_start'
-        self.jointController.addPose(startPoseName, startPose)
-        self.ikServer.sendPoseToServer(startPose, startPoseName)
 
+    def mergePostures(self, startPose, postureJoints, referencePose=None):
+        '''
+        postureJoints is either a dict of jointName-->jointPosition or a
+        list of jointName.  If postureJoints is a list, then referencePose
+        is used to lookup joint positions.
+        '''
         endPose = np.array(startPose)
-        for name, position in goalPoseJoints.iteritems():
-            jointId = robotstate.getDrakePoseJointNames().index(name)
-            endPose[jointId] = position
 
-        endPoseName = 'posture_goal_end'
-        self.jointController.addPose(endPoseName, endPose)
-        self.ikServer.sendPoseToServer(endPose, endPoseName)
+        if referencePose is None:
 
-        postureConstraint = self.createPostureConstraint(endPoseName, robotstate.matchJoints('.*'))
+            for name, position in postureJoints.iteritems():
+                jointId = robotstate.getDrakePoseJointNames().index(name)
+                endPose[jointId] = position
+        else:
 
-        endPose, info = self.ikServer.runIk([postureConstraint], seedPostureName=endPoseName)
+            for name in postureJoints:
+                jointId = robotstate.getDrakePoseJointNames().index(name)
+                endPose[jointId] = referencePose[jointId]
 
-        print 'pose goal info:', info
-
-        self.jointController.addPose(endPoseName, endPose)
-        return self.computePostureGoal(startPoseName, endPoseName)
+        return endPose
 
 
-    def mergePostures(self, startPose, postureJoints):
-        startPose = np.array(startPose)
-        for name, position in postureJoints.iteritems():
-            jointId = robotstate.getDrakePoseJointNames().index(name)
-            startPose[jointId] = position
-        return startPose
+    def getPalmOffsetFrame(self, dist):
+        t = copyFrame(self.getPalmToHandLink())
+        t.PreMultiply()
+        t.Translate(0.0, dist, 0.0)
+        t.PostMultiply()
+        return t
 
 
-    def planPostureGoal(self, startPose, endPose, armJoints):
-
-        startPoseName = 'posture_goal_start'
-
-        self.jointController.addPose(startPoseName, startPose)
-        self.ikServer.sendPoseToServer(startPose, startPoseName)
-
-        constraints = []
-        constraints.append(self.createLockedArmPostureConstraint(startPoseName))
-        constraints.extend(self.createMovingReachConstraints(startPoseName))
-
-        endPose = self.mergePostures(endPose, armJoints)
-        endPoseName = 'posture_goal_end'
-        self.jointController.addPose(endPoseName, endPose)
-        self.ikServer.sendPoseToServer(endPose, endPoseName)
-
-        constraints.append(self.createPostureConstraint(endPoseName, robotstate.matchJoints('.*')))
-        constraints[-1].tspan = [1.0, 1.0]
-
-        print 'computing traj for prereach crouch'
-
-        return self.runIkTraj(constraints, startPoseName, endPoseName)
-
-
-    def planEndEffectorGoal(self, startPose, side, graspFrame, lockTorso=False, planTraj=True):
+    def planEndEffectorDelta(self, startPose, side, worldDeltaVector, constraints=None):
 
         self.reachingSide = side
 
@@ -806,46 +456,101 @@ class IKPlanner(object):
         self.jointController.addPose(startPoseName, startPose)
         self.ikServer.sendPoseToServer(startPose, startPoseName)
 
-        constraints = []
-
-        if lockTorso:
-            constraints.append(self.createLockedTorsoPostureConstraint(startPoseName))
-            constraints.append(self.createLockedArmPostureConstraint(startPoseName))
-        else:
+        if constraints is None:
+            constraints = []
             constraints.extend(self.createMovingReachConstraints(startPoseName))
 
-        constraints.extend(self.createReachConstraints(graspFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0))
+
+        linkConstraintFrame = self.getPalmToHandLink()
+
+        self.jointController.setPose('start_pose', startPose)
+        linkFrame = self.robotModel.getLinkFrame(self.getHandLink())
+
+        targetFrame = vtk.vtkTransform()
+        targetFrame.PostMultiply()
+        targetFrame.Concatenate(linkConstraintFrame)
+        targetFrame.Concatenate(linkFrame)
+        targetFrame.Translate(worldDeltaVector)
+
+        constraints.extend(self.createMoveOnLineConstraints(startPose, targetFrame, linkConstraintFrame))
 
         constraints[-2].tspan = [1.0, 1.0]
-        constraints[-1].tspan = [1.0, 1.0]
+        constraints[-3].tspan = [1.0, 1.0]
 
-        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
-        print 'end effector goal info:', info
+        endPoseName = 'reach_end'
+        constraintSet = ConstraintSet(self, constraints, self.jointController, None, endPoseName, startPoseName)
+        return constraintSet
+
+
+    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, dist=0.0, lockTorso=False, lockArm=True, planTraj=True):
+
+        self.reachingSide = side
+
+        startPoseName = 'reach_start'
+        self.addPose(startPose, startPoseName)
+
+        if constraints is None:
+            constraints = []
+
+            if lockTorso:
+                constraints.append(self.createLockedTorsoPostureConstraint(startPoseName))
+                constraints.append(self.createLockedArmPostureConstraint(startPoseName))
+            else:
+                constraints.extend(self.createMovingReachConstraints(startPoseName, lockArm=lockArm))
+
+
+        positionConstraint, orientationConstraint = self.createReachConstraints(graspFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0)
+        positionConstraint.tspan = [1.0, 1.0]
+        orientationConstraint.tspan = [1.0, 1.0]
+
+        constraints.append(positionConstraint)
+        constraints.append(orientationConstraint)
+
+
+        endPoseName = 'reach_end'
+        constraintSet = ConstraintSet(self, constraints, self.jointController, None, endPoseName, startPoseName)
+        endPose, info = constraintSet.runIk()
 
         if not planTraj:
             return endPose
 
-        endPoseName = 'reach_end'
-        self.jointController.addPose(endPoseName, endPose)
-        self.ikServer.sendPoseToServer(endPose, endPoseName)
-
-        #return self.computePostureGoal(startPoseName, endPoseName)
-        return self.runIkTraj(constraints, startPoseName, endPoseName)
+        plan = constraintSet.runIkTraj()
+        return plan
 
 
+    def planGraspOrbitReachPlan(self, startPose, side, graspFrame, constraints=None, dist=0.0, lockTorso=False, lockArm=True, planTraj=True):
 
-    def newReachStartPosture(self):
-
-        if self.planFromCurrentRobotState:
-            startPose = np.array(self.sensorJointController.q)
-        else:
-            startPose = np.array(self.jointController.q)
+        self.reachingSide = side
 
         startPoseName = 'reach_start'
         self.jointController.addPose(startPoseName, startPose)
         self.ikServer.sendPoseToServer(startPose, startPoseName)
 
-        return startPoseName
+        if constraints is None:
+            constraints = []
+
+            if lockTorso:
+                constraints.append(self.createLockedTorsoPostureConstraint(startPoseName))
+                constraints.append(self.createLockedArmPostureConstraint(startPoseName))
+            else:
+                constraints.extend(self.createMovingReachConstraints(startPoseName, lockArm=lockArm))
+
+        linkConstraintFrame = self.getPalmOffsetFrame(dist)
+
+        constraints.extend(self.createGraspOrbitConstraints(graspFrame, linkConstraintFrame))
+
+        constraints[-3].tspan = [1.0, 1.0]
+        constraints[-2].tspan = [1.0, 1.0]
+        constraints[-1].tspan = [1.0, 1.0]
+
+        endPoseName = 'reach_end'
+        constraintSet = ConstraintSet(self, constraints, self.jointController, None, endPoseName, startPoseName)
+        return constraintSet
+
+
+    def addPose(self, pose, poseName):
+        self.jointController.addPose(poseName, pose)
+        self.ikServer.sendPoseToServer(pose, poseName)
 
 
     def newReachConstraints(self, startPoseName, lockBack=False, lockBase=False, lockLeftArm=False, lockRightArm=False):
@@ -861,12 +566,14 @@ class IKPlanner(object):
         return constraints
 
 
-    def newReachGoal(self, targetFrame=None, linkConstraintFrame=None, lockTorso=True, lockOrient=True, constraints=None, runIk=True, showPoseFunction=None):
-
-        startPoseName = self.newReachStartPosture()
+    def newReachGoal(self, startPoseName, targetFrame=None, linkConstraintFrame=None, lockTorso=True, lockOrient=True, constraints=None, runIk=True, showPoseFunction=None):
 
         if linkConstraintFrame is None:
-            linkConstraintFrame = self.getPalmToHandLink()
+            linkConstraintFrame = copyFrame(self.getPalmToHandLink())
+
+            # remove me
+            #linkConstraintFrame.PostMultiply()
+            #linkConstraintFrame.Translate(0,0.25,0)
 
         if targetFrame is None:
             self.jointController.setPose(startPoseName)
@@ -888,104 +595,82 @@ class IKPlanner(object):
                                lockLeftArm=self.reachingSide=='right', lockRightArm=self.reachingSide=='left')
 
         positionConstraint, orientationConstraint = self.createReachConstraints(targetFrame, linkConstraintFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0)
+        #positionConstraint, orientationConstraint = self.createGraspOrbitConstraints(targetFrame, linkConstraintFrame)
+
+        positionConstraint.tspan = [1.0, 1.0]
+        orientationConstraint.tspan = [1.0, 1.0]
 
         constraints.append(positionConstraint)
         if lockOrient:
             constraints.append(orientationConstraint)
 
-        showPoseFunction = showPoseFunction or self.showPoseFunction
+        else:
+            t = vtk.vtkTransform()
+            t.Concatenate(targetFrame.transform)
+            t.Concatenate(linkConstraintFrame.GetLinearInverse())
 
-        def runIkCallback(frame):
-            endPose, info = self.ikServer.runIk(constraints)
-            self.jointController.addPose('reach_end', endPose)
-            showPoseFunction(endPose)
-            print 'info:', info
-
-        if runIk:
-            runIkCallback(targetFrame)
-        targetFrame.onTransformModifiedCallback = runIkCallback
+            graspXAxis = [0.0, 1.0, 0.0]
+            t.TransformVector(graspXAxis)
+            graspXAxis = np.array(graspXAxis)/np.linalg.norm(graspXAxis)
 
 
-    def computePreGraspTraj(self):
-        self.computeGraspTraj(poseStart='q_start', poseEnd='pre_grasp_end_pose', timeSamples=[0.0, 0.35, 0.7])
+#            g = ik.WorldGazeOrientConstraint()
+#            g.linkName = self.getHandLink()
+#            g.quaternion = t
+#            g.axis = graspXAxis
+#            g.coneThreshold = math.radians(0)
+#            g.threshold = math.radians(180)
 
-    def computeEndGraspTraj(self):
-        self.computeGraspTraj(poseStart='pre_grasp_end_pose', poseEnd='grasp_end_pose', timeSamples=[0.7, 1.0])
+            g = ik.WorldGazeDirConstraint()
+            g.linkName = self.getHandLink()
+            g.targetFrame = t
+            g.targetAxis = graspXAxis
+            g.bodyAxis = graspXAxis
+            g.coneThreshold = math.radians(0)
+
+
+            g.tspan = [1.0, 1.0]
+            constraints.append(g)
+            self.g = g
+
+        constraintSet = ConstraintSet(self, constraints, self.jointController, showPoseFunction, 'reach_end', startPoseName)
+        targetFrame.connectFrameModified(constraintSet.onFrameModified)
+        return constraintSet
+
+
+    def computeMultiPostureGoal(self, poses, feetOnGround=True):
+
+        assert len(poses) >= 2
+
+        constraints = []
+        poseNames = []
+        for i, pose in enumerate(poses):
+
+            if isinstance(pose, str):
+                poseName, pose = pose, self.jointController.getPose(pose)
+            else:
+                poseName = 'posture_goal_%d' % i
+
+            self.addPose(pose, poseName)
+            p = self.createPostureConstraint(poseName, robotstate.matchJoints('.*'))
+            p.tspan = np.array([float(i), float(i)])
+            constraints.append(p)
+            poseNames.append(poseName)
+
+        if feetOnGround:
+            constraints.extend(self.createFixedFootConstraints(poseNames[0]))
+
+        return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1])
+
+
+    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True):
+        return self.computeMultiPostureGoal([poseStart, poseEnd], feetOnGround)
+
 
     def getManipPlanListener(self):
         responseChannel = 'CANDIDATE_MANIP_PLAN'
         responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
         return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
-
-
-    def computeGraspTraj(self, poseStart='q_start', poseEnd='grasp_end_pose', timeSamples=None):
-
-        constraints = []
-        constraints.extend(self.createMovingReachConstraints(poseStart))
-
-        movingBaseConstraint = constraints[-2]
-        assert isinstance(movingBaseConstraint, ik.PostureConstraint)
-        assert 'base_x' in movingBaseConstraint.joints
-        movingBaseConstraint.tspan = [self.tspanStart[0], self.tspanPreGrasp[1]]
-
-        preReachPosition = self.createPreReachConstraint()
-        preReachPosition.tspan = self.tspanPreReach
-
-        graspPosture = self.createLockedTorsoPostureConstraint('grasp_end_pose')
-        graspPosture.tspan = self.tspanPreGraspToEnd
-
-        preGraspPosition, preGraspOrientation = self.createPreGraspConstraints()
-        preGraspPosition.tspan = self.tspanPreGrasp
-        preGraspOrientation.tspan = self.tspanPreGrasp
-
-        graspPosition, graspOrientation = self.createGraspConstraints()
-        graspPosition.tspan = self.tspanEnd
-        graspOrientation.tspan = self.tspanEnd
-
-        constraints.extend([
-            preReachPosition,
-            graspPosture,
-            preGraspPosition,
-            preGraspOrientation,
-            graspPosition,
-            graspOrientation,
-            ])
-
-        if timeSamples is None:
-            timeSamples=[0.0, 0.35, 0.7, 1.0]
-
-        self.runIkTraj(constraints, poseStart, poseEnd, timeSamples)
-
-
-    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True):
-
-        if isinstance(poseStart, str):
-            startPoseName = poseStart
-        else:
-            startPoseName = 'posture_goal_start'
-            self.jointController.addPose(startPoseName, poseStart)
-
-        if isinstance(poseEnd, str):
-            endPoseName = poseEnd
-        else:
-            endPoseName = 'posture_goal_end'
-            self.jointController.addPose(endPoseName, poseEnd)
-
-        self.ikServer.sendPoseToServer(self.jointController.getPose(startPoseName), startPoseName)
-        self.ikServer.sendPoseToServer(self.jointController.getPose(endPoseName), endPoseName)
-
-        pStart = self.createPostureConstraint(startPoseName, robotstate.matchJoints('.*'))
-        pStart.tspan = np.array([0.0, 0.0])
-
-        pEnd = self.createPostureConstraint(endPoseName, robotstate.matchJoints('.*'))
-        pEnd.tspan = np.array([1.0, 1.0])
-
-        constraints = [pEnd]
-
-        if feetOnGround:
-            constraints.extend(self.createFixedFootConstraints(startPoseName))
-
-        return self.runIkTraj(constraints, startPoseName, endPoseName)
 
 
     def runIkTraj(self, constraints, poseStart, poseEnd, timeSamples=None):
@@ -1000,48 +685,6 @@ class IKPlanner(object):
         return self.lastManipPlan
 
 
-    def playManipPlan(self):
-        self.planPlaybackFunction([self.lastManipPlan])
-
-
-    def showPreGraspEndPose(self):
-        self.showPoseFunction(self.jointController.getPose('pre_grasp_end_pose'))
-
-
-    def showGraspEndPose(self):
-        self.showPoseFunction(self.jointController.getPose('grasp_end_pose'))
-
-
-    def useGraspEndPoseOption(self, index):
-
-        side, graspSample = self.endPoses[index][3]
-        self.reachingSide = side
-        self.graspSample = graspSample
-        self.updateGraspEndPose()
-        self.showGraspEndPose()
-
-
-    def updateGraspEndPose(self, enableSearch=True):
-
-        self.computeInitialState()
-        self.findAffordance()
-
-        if enableSearch:
-            om.removeFromObjectModel(self.findAffordanceChild('desired grasp frame'))
-            om.removeFromObjectModel(self.findAffordanceChild('desired grasp hand'))
-
-        if not self.findAffordanceChild('desired grasp frame'):
-            self.computeGraspFrameSamples()
-            self.computeGraspFrame()
-            self.computeGraspEndPoseSearch()
-            self.computeGraspEndPoseFrames()
-        else:
-            self.computeGraspEndPose()
-
-        self.computePreGraspFrame()
-        self.computePreGraspEndPose()
-
-
     def computePostureCost(self, pose):
 
         joints = robotstate.getDrakePoseJointNames()
@@ -1054,47 +697,52 @@ class IKPlanner(object):
         return np.sum(np.abs(pose - nominalPose)*cost)
 
 
-    def endPoseSearch(self):
-
-        self.findAffordance()
-        self.computeGraspFrameSamples()
-        self.endPoses = []
-
-        for side in ['left', 'right']:
-        #for side in ['left']:
-
-            sampleCount = 0
-
-            while self.findAffordanceChild('sample grasp frame %d' % sampleCount):
-                self.reachingSide = side
-                self.graspSample = sampleCount
-                sampleCount += 1
-
-                self.updateGraspEndPose()
-
-                if self.graspEndPoseInfo == 1 and self.preGraspEndPoseInfo == 1:
-                    params = [self.reachingSide, self.graspSample]
-                    score = self.computePostureCost(self.graspEndPose)
-                    print 'score:', score
-                    print 'params:', self.reachingSide, self.graspSample
-                    self.endPoses.append((score, self.graspEndPose, self.preGraspEndPose, params))
-
-        if not self.endPoses:
-            print 'failed to find suitable grasp end pose'
-            return 0
-
-        self.endPoses.sort(key=lambda x: x[0])
-        self.useGraspEndPoseOption(0)
-
-        print '\n\nfound %d suitable end poses' % len(self.endPoses)
-        return len(self.endPoses)
 
 
-    def updateGraspPlan(self, enableSearch=True):
+sys.path.append(os.path.join(app.getDRCBase(), 'software/tools/tools/scripts'))
+import RobotPoseGUI as rpg
 
-        if enableSearch:
-            if self.endPoseSearch():
-                self.computePreGraspTraj()
-        else:
-            self.updateGraspEndPose()
-            self.computePreGraspTraj()
+
+class RobotPoseGUIWrapper(object):
+
+    initialized = False
+    main = None
+
+    @classmethod
+    def init(cls):
+        if cls.initialized:
+            return True
+
+        rpg.lcmWrapper = rpg.LCMWrapper()
+        cls.main = rpg.MainWindow()
+        cls.initialized = True
+
+    @classmethod
+    def show(cls):
+        cls.main.show()
+
+    @classmethod
+    def getPose(cls, groupName, poseName, side=None):
+
+        cls.init()
+
+        config = rpg.loadConfig(cls.main.getPoseConfigFile())
+        assert groupName in config
+
+        poses = {}
+        for pose in config[groupName]:
+            poses[pose['name']] = pose
+
+        assert poseName in poses
+        pose = poses[poseName]
+        joints = pose['joints']
+
+        if side is not None:
+            sides = ('left', 'right')
+            assert side in sides
+            assert pose['nominal_handedness'] in sides
+
+            if pose['nominal_handedness'] != side:
+                joints = rpg.applyMirror(joints)
+
+        return joints
