@@ -1,8 +1,8 @@
 function test_collision_reach(scenario,iktraj_collision_constraint_type,visualize)
-
-
+  if nargin < 1 || isempty(scenario)
     scenario = 1;
-  if nargin < 2
+  end
+  if nargin < 2 || isempty(iktraj_collision_constraint_type)
     iktraj_collision_constraint_type = 'integrated_mex';
   end
   if nargin < 3
@@ -100,8 +100,9 @@ r = r.replaceContactShapesWithCHull([l_hand, r_hand]);
 
 
 r = compile(r);
-
-v = r.constructVisualizer(struct('use_contact_shapes',false));
+if visualize
+  v = r.constructVisualizer(struct('use_contact_shapes',false));
+end
 
 
 
@@ -169,7 +170,8 @@ lcmgl.glColor4f(0.7,0.7,0.7,1)
 quat_constraint_9 = WorldQuatConstraint(r, l_hand, [0.69586839433919834; -0.099715900534340721; 0.700040526813002; 0.12556742316296038], 0.0, [1.0, 1.0]);
 
 % collision constraint
-collision_constraint = AllBodiesClosestDistanceConstraint(r, 0.05, 1e3);
+min_distance = 0.05;
+collision_constraint = AllBodiesClosestDistanceConstraint(r, min_distance, 1e3);
 
 %active_constraints = { qsc_constraint_0, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_5, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
 active_constraints = { qsc_constraint_0, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
@@ -179,9 +181,9 @@ active_constraints = { qsc_constraint_0, position_constraint_1, quat_constraint_
 q_seed = reach_start;
 [q_end, info, infeasible_constraint] = inverseKin(r, q_seed, q_nom, active_constraints{:}, s.ikoptions);
 disp(info);
-if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;
+if (info > 10), display(infeasibleConstraintMsg(infeasible_constraint)); end;
 if visualize
-v.draw(0, q_end);
+  v.draw(0, q_end);
 end
 lcmgl.switchBuffers();
 %drawConstraint(collision_constraint, q_end, lcmgl);
@@ -194,13 +196,13 @@ if (info > 10)
   return
 end;
 if visualize
-v.draw(0, q_end);
+  v.draw(0, q_end);
 end
 
 reach_end = q_end;
 
 if visualize
-v.draw(0, q_end);
+  v.draw(0, q_end);
 end
 
 
@@ -213,21 +215,23 @@ q_seed_traj_spline = PPTrajectory(spline([tspan(1), tspan(end)], [zeros(nq,1), r
 
 q_seed_traj = q_nom_traj_foh;
 q_nom_traj = q_nom_traj_foh;
-num_collision_check_samples = 500;
-t_fine = linspace(tspan(1), tspan(end), num_collision_check_samples);
 options.frozen_groups = {'pelvis','r_arm'};
 %options.visualize = true;
 options.quiet = false;
+options.collision_constraint_type = iktraj_collision_constraint_type;
+options.min_distance = min_distance;
+
+% Back fixed
+%active_constraints = {q0_constraint,iktraj_collision_constraint, qsc_constraint_0, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_5, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
+
+% Back free
+active_constraints = {qsc_constraint_0, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
 
 [xtraj,info,infeasible_constraint,xtraj_feasible,info_feasible] = collisionFreePlanner(r,tspan,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);
 if (info > 10) 
   fprintf('collisionFreePlanner returned with info = %d\n',info);
   if info == 13, display(infeasibleConstraintMsg(infeasible_constraint)); end;
 end
-
-%ikoptions = ikoptions.setQa(1e-6*eye(nq));
-%[xtraj, info, infeasible_constraint] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, ikoptions);
-%disp(info);
 
 %-----------------------------
 % this code here just runs ik traj once
@@ -240,15 +244,12 @@ end
 %-------------------------------
 
 q_end = xtraj.eval(tspan(end));
-q_end = q_end(1:nq);
 
-
-%drawConstraint(collision_constraint, q_end, lcmgl);
 if visualize
-xtraj = xtraj.setOutputFrame(v.getInputFrame());
-v.playback_speed = 0.25;
-playback(v, xtraj, struct('slider',true));
-
+  xtraj = xtraj.setOutputFrame(v.getInputFrame());
+  v.playback_speed = 0.25;
+  playback(v, xtraj, struct('slider',true));
+end
 max_degrees_per_second = 30.000000;
 plan_time = s.getPlanTimeForJointVelocity(xtraj, max_degrees_per_second);
 s.publishTraj(plan_publisher, r, xtraj, info, plan_time);
