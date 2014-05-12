@@ -43,6 +43,9 @@ class EndEffectorTeleopPanel(object):
         self.ui.fixBaseCheck.connect('clicked()', self.fixBaseChanged)
         self.ui.fixBackCheck.connect('clicked()', self.fixBackChanged)
         self.ui.fixOrientCheck.connect('clicked()', self.fixOrientChanged)
+        self.ui.updateIkButton.connect('clicked()', self.onUpdateIkClicked)
+        self.ui.interactiveCheckbox.visible = False
+        self.ui.updateIkButton.visible = False
         self.ui.eeTeleopSideCombo.connect('currentIndexChanged(const QString&)', self.sideChanged)
         self.constraintSet = None
 
@@ -97,9 +100,11 @@ class EndEffectorTeleopPanel(object):
 
 
     def onGoalFrameModified(self, frame):
-        if self.constraintSet:
+        if self.constraintSet and self.ui.interactiveCheckbox.checked:
             self.updateIk()
 
+    def onUpdateIkClicked(self):
+        self.updateIk()
 
     def updateIk(self):
         self.constraintSet.runIk()
