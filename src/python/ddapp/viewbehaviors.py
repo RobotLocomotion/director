@@ -185,15 +185,15 @@ def toggleFootstepWidget(displayPoint, view):
     return True
 
 
-def reachToHand(pickedObj):
-    side = 'left'
-    frame = pickedObj.getChildFrame()
-    assert frame
-
-    goalFrame = teleoppanel.panel.endEffectorTeleop.newReachTeleop(frame.transform, side)
+def reachToFrame(frameObj, side):
+    goalFrame = teleoppanel.panel.endEffectorTeleop.newReachTeleop(frameObj.transform, side)
     goalFrame.frameSync = vis.FrameSync()
     goalFrame.frameSync.addFrame(goalFrame, ignoreIncoming=True)
-    goalFrame.frameSync.addFrame(frame)
+    goalFrame.frameSync.addFrame(frameObj)
+
+
+def getAsFrame(obj):
+    return obj if isinstance(obj, vis.FrameItem) else obj.getChildFrame()
 
 
 def showRightClickMenu(displayPoint, view):
@@ -227,8 +227,11 @@ def showRightClickMenu(displayPoint, view):
     def onSelect():
         om.setActiveObject(pickedObj)
 
-    def onTouch():
-        reachToHand(pickedObj)
+    reachFrame = getAsFrame(pickedObj)
+    def onReachLeft():
+        reachToFrame(reachFrame, 'left')
+    def onReachRight():
+        reachToFrame(reachFrame, 'right')
 
     def onSpline():
         splinewidget.newSpline(pickedObj, view)
@@ -245,6 +248,7 @@ def showRightClickMenu(displayPoint, view):
             return None
         if obj and obj.polyData.GetNumberOfPoints() and (obj.polyData.GetNumberOfCells() == obj.polyData.GetNumberOfVerts()):
             return obj
+
 
     pointCloudObj = getPointCloud(pickedObj)
 
@@ -274,6 +278,9 @@ def showRightClickMenu(displayPoint, view):
 
         vis.showClusterObjects(data.clusters, parent='segmentation')
 
+    def onSegmentationEditor():
+        segmentationpanel.activateSegmentationMode(pointCloudObj.polyData)
+
 
     actions = [
       (None, None),
@@ -282,11 +289,12 @@ def showRightClickMenu(displayPoint, view):
       ('Select', onSelect)
       ]
 
-    if 'robotiq' in objectName.lower():
+    if reachFrame is not None:
         actions.extend([
             (None, None),
-            ('Touch', onTouch),
-            ('Spline', onSpline),
+            ('Reach Left', onReachLeft),
+            ('Reach Right', onReachRight),
+            #('Spline', onSpline),
             ])
 
     if pointCloudObj:
@@ -294,7 +302,9 @@ def showRightClickMenu(displayPoint, view):
             (None, None),
             ('Copy Pointcloud', onCopyPointCloud),
             ('Segment Ground', onSegmentGround),
-            ('Segment Table', onSegmentTableScene)
+            ('Segment Table', onSegmentTableScene),
+            (None, None),
+            ('Open Segmentation Editor', onSegmentationEditor)
             ])
 
     for actionName, func in actions:
@@ -346,9 +356,6 @@ class ViewEventFilter(object):
 
         #if highlightSelectedLink(displayPoint, self.view):
         #    return
-
-        if segmentationpanel.activateSegmentationMode():
-            return
 
     def onRightClick(self, event):
         displayPoint = vis.mapMousePosition(self.view, event)
