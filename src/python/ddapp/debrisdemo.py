@@ -205,7 +205,7 @@ class GraspSearchPlanner(object):
             return self.createSearchGraspConstraintsBoard()
         else:
             targetFrame = self.getAffordanceChild('grasp frame')
-            return self.createReachConstraints(targetFrame, positionTolerance=0.0025, angleToleranceInDegrees=1.0)
+            return self.createPositionOrientationGraspConstraints(self.reachingSide, targetFrame, positionTolerance=0.0025, angleToleranceInDegrees=1.0)
 
 
     def createSearchGraspConstraintsBoard(self):
@@ -213,7 +213,7 @@ class GraspSearchPlanner(object):
         targetFrame = self.getAffordanceChild('grasp frame')
         boardHalfLength = self.affordance.params['zwidth']/2.0 - 0.08
 
-        graspPosition, graspOrientation = self.createReachConstraints(targetFrame, positionTolerance=0.0025, angleToleranceInDegrees=1.0)
+        graspPosition, graspOrientation = self.createPositionOrientationGraspConstraints(self.reachingSide, targetFrame, positionTolerance=0.0025, angleToleranceInDegrees=1.0)
         graspPosition.lowerBound = np.array([-boardHalfLength, 0.0, 0.0])
         graspPosition.upperBound = np.array([boardHalfLength, 0.0, 0.0])
 
@@ -230,17 +230,17 @@ class GraspSearchPlanner(object):
         t.Translate(0.0, 0.0, 0.25)
         retractFrame = vis.updateFrame(copyFrame(t), 'retract frame', scale=0.2, visible=False, parent=self.affordance)
 
-        return self.createReachConstraints(retractFrame, positionTolerance=0.03, angleToleranceInDegrees=5.0)
+        return self.createPositionOrientationGraspConstraints(self.reachingSide, retractFrame, positionTolerance=0.03, angleToleranceInDegrees=5.0)
 
 
     def createGraspConstraints(self):
         targetFrame = self.getAffordanceChild('desired grasp frame')
-        return self.createReachConstraints(targetFrame, positionTolerance=0.005, angleToleranceInDegrees=3.0)
+        return self.createPositionOrientationGraspConstraints(self.reachingSide, targetFrame, positionTolerance=0.005, angleToleranceInDegrees=3.0)
 
 
     def createPreGraspConstraints(self):
         targetFrame = self.getAffordanceChild('pre grasp frame')
-        return self.createReachConstraints(targetFrame, positionTolerance=0.02, angleToleranceInDegrees=7.0)
+        return self.createPositionOrientationGraspConstraints(self.reachingSide, targetFrame, positionTolerance=0.02, angleToleranceInDegrees=7.0)
 
 
     def createPreReachConstraint(self):

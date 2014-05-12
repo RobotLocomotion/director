@@ -226,7 +226,8 @@ class DrillPlannerDemo(object):
             planState = self.walkingPlan.plan[-1]
             startPose = robotstate.convertStateMessageToDrakePose(planState)
 
-        endPose = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, planTraj=False)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame)
+        endPose, info = constraintSet.runIk()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'arm up pregrasp', side=self.graspingHand)
 
         self.preGraspPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
@@ -257,8 +258,9 @@ class DrillPlannerDemo(object):
             planState = self.preGraspPlan.plan[-1]
             startPose = robotstate.convertStateMessageToDrakePose(planState)
 
-        self.graspPlan = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, lockTorso=True)
-
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, lockTorso=True)
+        endPose, info = constraintSet.runIk()
+        self.graspPlan = constraintSet.runIkTraj()
 
     def commitFootstepPlan(self):
         self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
