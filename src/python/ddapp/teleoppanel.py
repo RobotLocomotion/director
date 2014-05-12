@@ -6,6 +6,7 @@ from ddapp import robotstate
 from ddapp import visualization as vis
 from ddapp import transformUtils
 from ddapp import ikplanner
+
 import math
 import numpy as np
 
@@ -43,7 +44,7 @@ class EndEffectorTeleopPanel(object):
         self.ui.fixBackCheck.connect('clicked()', self.fixBackChanged)
         self.ui.fixOrientCheck.connect('clicked()', self.fixOrientChanged)
         self.ui.eeTeleopSideCombo.connect('currentIndexChanged(const QString&)', self.sideChanged)
-        self.frameSync = None
+        self.constraintSet = None
 
     def getSide(self):
         return str(self.ui.eeTeleopSideCombo.currentText)
@@ -67,19 +68,23 @@ class EndEffectorTeleopPanel(object):
         self.updateConstraints()
 
     def sideChanged(self):
+        side = self.getSide()
+        if side == 'left':
+            om.removeFromObjectModel(self.getGoalFrame('right'))
+        elif side == 'right':
+            om.removeFromObjectModel(self.getGoalFrame('left'))
+        self.createGoalFrames()
         self.updateConstraints()
 
     def removeGoals(self):
-        om.removeFromObjectModel(om.findObjectByName('reach goal left'))
-        om.removeFromObjectModel(om.findObjectByName('reach goal right'))
-        self.frameSync = None
+        for side in ['left', 'right']:
+            om.removeFromObjectModel(self.getGoalFrame(side))
 
     def getGoalFrame(self, side):
-        goal = om.findObjectByName('reach goal %s' % side)
-        return transformUtils.copyFrame(goal.transform) if goal is not None else None
+        return om.findObjectByName('reach goal %s' % side)
 
     def updateGoalFrame(self, transform, side):
-        goalFrame = om.findObjectByName('reach goal %s' % side)
+        goalFrame = self.getGoalFrame(side)
         if not goalFrame:
             return
 
@@ -91,27 +96,14 @@ class EndEffectorTeleopPanel(object):
         return goalFrame
 
 
-    def updateHandModels(self):
-
-        def syncHandFrame(handModel, goalFrame):
-
-            handObj = handModel.newPolyData('reach goal left hand', self.panel.teleopRobotModel.views[0], parent=goalFrame)
-            handFrame = handObj.children()[0]
-            handFrame.copyFrame(goalFrame.transform)
-
-            frameSync = vis.FrameSync()
-            frameSync.addFrame(goalFrame)
-            frameSync.addFrame(handFrame)
-            return frameSync
+    def onGoalFrameModified(self, frame):
+        if self.constraintSet:
+            self.updateIk()
 
 
-        leftGoal = om.findObjectByName('reach goal left')
-        rightGoal = om.findObjectByName('reach goal right')
-
-        if leftGoal:
-            self.leftFrameSync = syncHandFrame(self.panel.lhandModel, leftGoal)
-        if rightGoal:
-            self.rightFrameSync = syncHandFrame(self.panel.rhandModel, rightGoal)
+    def updateIk(self):
+        self.constraintSet.runIk()
+        self.panel.showPose(self.constraintSet.endPose)
 
 
     def updateConstraints(self):
@@ -119,9 +111,6 @@ class EndEffectorTeleopPanel(object):
         if not self.ui.eeTeleopButton.checked:
             return
 
-        leftGoal = self.getGoalFrame('left')
-        rightGoal = self.getGoalFrame('right')
-        self.removeGoals()
 
         side = self.getSide()
         lockBack = self.getBackFixed()
@@ -134,18 +123,17 @@ class EndEffectorTeleopPanel(object):
         startPose = np.array(self.panel.robotStateJointController.q)
         ikPlanner.addPose(startPose, startPoseName)
 
-        constraints = ikPlanner.newReachConstraints(startPoseName, lockBack=lockBack, lockBase=lockBase, lockLeftArm=side=='right', lockRightArm=side=='left')
+        constraints = ikPlanner.createMovingBodyConstraints(startPoseName, lockBack=lockBack, lockBase=lockBase, lockLeftArm=side=='right', lockRightArm=side=='left')
 
         sides = ['left', 'right'] if side == 'both' else [side]
 
         for side in sides:
-            ikPlanner.reachingSide = side
-            constraintSet = ikPlanner.newReachGoal(startPoseName, constraints=constraints, lockOrient=lockOrient, runIk=False, showPoseFunction=self.panel.showPose)
+            goalFrame = self.getGoalFrame(side)
+            assert goalFrame
+            constraintSet = ikPlanner.newReachGoal(startPoseName, side, goalFrame, constraints, lockOrient=lockOrient)
             self.constraintSet = constraintSet
 
-        self.updateHandModels()
-        self.updateGoalFrame(leftGoal, 'left')
-        self.updateGoalFrame(rightGoal, 'right')
+        self.onGoalFrameModified(None)
 
 
     def planClicked(self):
@@ -172,6 +160,8 @@ class EndEffectorTeleopPanel(object):
         self.ui.eeTeleopButton.checked = True
         self.ui.eeTeleopButton.blockSignals(False)
         self.panel.endEffectorTeleopActivated()
+
+        self.createGoalFrames()
         self.updateConstraints()
 
 
@@ -181,6 +171,43 @@ class EndEffectorTeleopPanel(object):
         self.ui.eeTeleopButton.blockSignals(False)
         self.removeGoals()
         self.panel.endEffectorTeleopDeactivated()
+
+
+    def createGoalFrames(self):
+
+        def addHandMesh(handModel, goalFrame):
+
+            handObj = handModel.newPolyData('reach goal left hand', self.panel.teleopRobotModel.views[0], parent=goalFrame)
+            handFrame = handObj.children()[0]
+            handFrame.copyFrame(frame.transform)
+
+            frameSync = vis.FrameSync()
+            frameSync.addFrame(frame)
+            frameSync.addFrame(handFrame)
+            frame.sync = frameSync
+
+        handModels = {'left':self.panel.lhandModel, 'right':self.panel.rhandModel}
+
+        ikPlanner = self.panel.ikPlanner
+
+        side = self.getSide()
+        sides = ['left', 'right'] if side == 'both' else [side]
+
+        startPose = np.array(self.panel.robotStateJointController.q)
+
+        for side in sides:
+            if self.getGoalFrame(side):
+                continue
+
+            startPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side)
+
+            t = ikPlanner.newGraspToWorldFrame(startPose, side, ikPlanner.getPalmToHandLink(side))
+            frameName = 'reach goal %s' % side
+            om.removeFromObjectModel(om.findObjectByName(frameName))
+            frame = vis.showFrame(t, frameName, scale=0.2, parent=om.getOrCreateContainer('planning'))
+            frame.setProperty('Edit', True)
+            frame.connectFrameModified(self.onGoalFrameModified)
+            addHandMesh(handModels[side], frame)
 
 
     def newReachTeleop(self, frame, side):
