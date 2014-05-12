@@ -1,5 +1,13 @@
+function test_collision_reach(scenario,iktraj_collision_constraint_type,visualize)
 
 
+    scenario = 1;
+  if nargin < 2
+    iktraj_collision_constraint_type = 'integrated_mex';
+  end
+  if nargin < 3
+    visualize = false;
+  end
 % setup
 do_setup = true;
 
@@ -49,32 +57,47 @@ joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
 plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, r.getStateFrame.coordinates(1:nq));
 
 
-% main table
-table = RigidBodyBox([0.8,2.0,0.05],[-0.6;0.8;1.0],[0;0;140*pi/180.0]);
-r = r.addShapeToBody(findLinkInd(r,'world'), table);
-%r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
-
-% obstacle on table
-table = RigidBodyBox([0.55, 0.4, 2.5],[-0.9;0.2;1.07],[5*pi/180;0;140*pi/180.0]);
-r = r.addShapeToBody(findLinkInd(r,'world'), table);
-
-table = RigidBodyBox([0.5, 0.4, 4.5],[-0.9;0.2;2.4],[140;0;140]*pi/180.0);
-r = r.addShapeToBody(findLinkInd(r,'world'), table);
-
-%r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+switch scenario
+  case 0 % No objects in the world
+  case 1 
+    % main table
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+  case 2
+    % main table
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    % obstacle on table
+    height = 0.5;
+    obstacle = RigidBodyBox([0.5, 0.35, height],[-0.9;0.2;1.025+height/2],[0;0;140]*pi/180);
+    r = r.addShapeToBody(findLinkInd(r,'world'), obstacle);
+  case 3
+    % main table
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    % obstacle on table
+    table = RigidBodyBox([0.5, 0.3, 2.5],[-0.9;0.2;1.07],[0*pi/180;0;140*pi/180.0]);
+    r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    table = RigidBodyBox([0.65, 0.4, 4.5],[-0.9;0.2;2.1],[130;0;140]*pi/180.0);
+    r = r.addShapeToBody(findLinkInd(r,'world'), table);
+  case 4
+    % main table
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    % obstacle on table
+    table = RigidBodyBox([0.5, 0.3, 2.5],[-0.9;0.2;1.07],[0*pi/180;0;140*pi/180.0]);
+    r = r.addShapeToBody(findLinkInd(r,'world'), table);
+  case 5
+    % main table
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    % obstacle on table
+    table = RigidBodyBox([2.75, 0.4, 2.5],[-0.9;0.1;1.07],[0*pi/180;0;140*pi/180.0]);
+    r = r.addShapeToBody(findLinkInd(r,'world'), table);
+end
 
 r = r.replaceContactShapesWithCHull([l_hand, r_hand]);
 
-%r = r.addLinksToCollisionFilterGroup(setdiff(1:r.getNumBodies(),[l_hand,l_farm,world]),'no_collision',1);
-%r = r.addToIgnoredListOfCollisionFilterGroup({'r_leg','r_uleg','l_leg','l_uleg','r_arm'},'core');
-%r = r.addToIgnoredListOfCollisionFilterGroup({'r_leg','r_uleg','l_leg','l_uleg','r_arm'},'ignore_core');
-%r = r.addToIgnoredListOfCollisionFilterGroup({'r_leg','r_arm','core','ignore_core'},'l_leg');
-%r = r.addToIgnoredListOfCollisionFilterGroup({'l_leg','r_arm','core','ignore_core'},'r_leg');
-%r = r.addToIgnoredListOfCollisionFilterGroup({'l_leg','r_leg','core','ignore_core'},'r_arm');
-%r = r.addToIgnoredListOfCollisionFilterGroup({'r_leg','r_uleg','l_leg','l_uleg'},'core');
-%r = r.addToIgnoredListOfCollisionFilterGroup({'r_leg','r_uleg','l_leg','l_uleg'},'ignore_core');
-%r = r.addToIgnoredListOfCollisionFilterGroup({'r_leg','core','ignore_core'},'l_leg');
-%r = r.addToIgnoredListOfCollisionFilterGroup({'l_leg','core','ignore_core'},'r_leg');
 
 r = compile(r);
 
@@ -138,6 +161,10 @@ ref_frame = [-0.011647833880822878, -0.31436714535882543, 0.94923001737451806, -
 lower_bounds = [0.0; 0.0; 0.0] + [-0; -0; -0];
 upper_bounds = [0.0; 0.0; 0.0] + [0.0; 0.0; 0.0];
 position_constraint_8 = WorldPositionInFrameConstraint(r, l_hand, point_in_link_frame, ref_frame, lower_bounds, upper_bounds, [1.0, 1.0]);
+grasp_point = ref_frame(1:3,4);
+lcmgl.glColor4f(0,1,0,0.5);
+lcmgl.sphere(grasp_point,0.05,20,20);
+lcmgl.glColor4f(0.7,0.7,0.7,1)
 
 quat_constraint_9 = WorldQuatConstraint(r, l_hand, [0.69586839433919834; -0.099715900534340721; 0.700040526813002; 0.12556742316296038], 0.0, [1.0, 1.0]);
 
@@ -153,8 +180,11 @@ q_seed = reach_start;
 [q_end, info, infeasible_constraint] = inverseKin(r, q_seed, q_nom, active_constraints{:}, s.ikoptions);
 disp(info);
 if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;
+if visualize
 v.draw(0, q_end);
-drawConstraint(collision_constraint, q_end, lcmgl);
+end
+lcmgl.switchBuffers();
+%drawConstraint(collision_constraint, q_end, lcmgl);
 active_constraints = { qsc_constraint_0, collision_constraint, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
 q_seed = q_end;
 [q_end, info, infeasible_constraint] = inverseKin(r, q_seed, q_nom, active_constraints{:}, s.ikoptions);
@@ -163,27 +193,26 @@ if (info > 10)
   display(infeasibleConstraintMsg(infeasible_constraint)); 
   return
 end;
+if visualize
 v.draw(0, q_end);
-drawConstraint(collision_constraint, q_end, lcmgl);
+end
 
 reach_end = q_end;
 
+if visualize
 v.draw(0, q_end);
-drawConstraint(collision_constraint, q_end, lcmgl);
-
-
-%active_constraints = {collision_constraint, qsc_constraint_0, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_5, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
-active_constraints = {collision_constraint, qsc_constraint_0, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
+end
 
 
 
 % compute seed trajector for ik traj
 tspan = [0.0, 1.0];
-q_seed_traj_foh = PPTrajectory(foh([tspan(1), tspan(end)], [reach_start, reach_end]));
+q_nom_traj_foh = PPTrajectory(foh([tspan(1), tspan(end)], [reach_start, reach_end]));
+q_seed_traj_foh = PPTrajectory(foh([tspan(end), tspan(end)], [reach_start, reach_start]));
 q_seed_traj_spline = PPTrajectory(spline([tspan(1), tspan(end)], [zeros(nq,1), reach_start, reach_start, zeros(nq,1)]));
 
-q_seed_traj = q_seed_traj_foh;
-q_nom_traj = q_seed_traj_foh;
+q_seed_traj = q_nom_traj_foh;
+q_nom_traj = q_nom_traj_foh;
 num_collision_check_samples = 500;
 t_fine = linspace(tspan(1), tspan(end), num_collision_check_samples);
 options.frozen_groups = {'pelvis','r_arm'};
@@ -192,7 +221,7 @@ options.quiet = false;
 
 [xtraj,info,infeasible_constraint,xtraj_feasible,info_feasible] = collisionFreePlanner(r,tspan,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);
 if (info > 10) 
-  fprintf('collisionFreePlanner returned with info = %d',info);
+  fprintf('collisionFreePlanner returned with info = %d\n',info);
   if info == 13, display(infeasibleConstraintMsg(infeasible_constraint)); end;
 end
 
@@ -215,7 +244,9 @@ q_end = q_end(1:nq);
 
 
 %drawConstraint(collision_constraint, q_end, lcmgl);
+if visualize
 xtraj = xtraj.setOutputFrame(v.getInputFrame());
+v.playback_speed = 0.25;
 playback(v, xtraj, struct('slider',true));
 
 max_degrees_per_second = 30.000000;
