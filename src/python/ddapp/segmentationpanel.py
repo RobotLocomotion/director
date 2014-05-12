@@ -484,11 +484,11 @@ def installEventFilter(view, func):
 
 
 
-def activateSegmentationMode(debug=False):
+def activateSegmentationMode(polyData=None, debug=False):
 
     if debug:
         polyData = getDebugRevolutionData()
-    else:
+    elif polyData is None:
         if not perception._multisenseItem.getProperty('Visible'):
             return False
         polyData = getCurrentMapServerData() or getCurrentRevolutionData()
