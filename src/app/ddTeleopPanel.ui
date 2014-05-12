@@ -124,6 +124,23 @@
         </property>
        </spacer>
       </item>
+      <item row="2" column="0" colspan="2">
+       <widget class="QCheckBox" name="interactiveCheckbox">
+        <property name="text">
+         <string>interactive</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2" colspan="4">
+       <widget class="QPushButton" name="updateIkButton">
+        <property name="text">
+         <string>Update IK</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
