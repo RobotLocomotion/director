@@ -50,6 +50,8 @@ class ValvePlannerDemo(object):
         self.preGraspPlan = None
         self.graspPlan = None
         
+        self.constraintSet = None
+
         self.plans = []
         
         
@@ -97,12 +99,9 @@ class ValvePlannerDemo(object):
 
     def computeValveFrame(self, robotModel):
 
-        position = [1.5, 0.0, 0.9]
-        rpy = [1, 1, 1]
 
-        # drill close to origin
         position = [0.85, 0.4, 1.2] #0.65 backwards # 0.85 optimal # 1.25 forward
-        rpy = [181, -91, 1]
+        rpy = [180, -90, 0]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(self.computeGroundFrame(robotModel))
@@ -145,9 +144,9 @@ class ValvePlannerDemo(object):
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(self.valveFrame.transform)
 
-        self.pointerTipFrameDesired = vis.updateFrame(t, 'pointer tip frame desired', parent=self.valveAffordance, visible=True, scale=0.2)
+        self.pointerTipFrameDesired = vis.showFrame(t, 'pointer tip frame desired', parent=self.valveAffordance, visible=True, scale=0.2)
 
-        self.frameSync.addFrame(self.pointerTipFrameDesired, ignoreIncoming=True)
+        #self.frameSync.addFrame(self.pointerTipFrameDesired, ignoreIncoming=True)
 
         #print "mfallon"
         #pointerTipLinkName = self.getEndEffectorLinkName() + '_pointer_tip'
@@ -235,7 +234,8 @@ class ValvePlannerDemo(object):
         #    startPose = robotstate.convertStateMessageToDrakePose(planState)
         startPose = self.getPlanningStartPose()
 
-        endPose = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, planTraj=False)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame)
+        endPose, info = constraintSet.runIk()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'arm up pregrasp', side=self.graspingHand)
 
         self.preGraspPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
@@ -264,23 +264,48 @@ class ValvePlannerDemo(object):
 
     def computeGraspPlan(self):
 
-        #if self.planFromCurrentRobotState:
-        #    startPose = self.getEstimatedRobotStatePose()
-        #else:
-        #    planState = self.preGraspPlan.plan[-1]
-        #    startPose = robotstate.convertStateMessageToDrakePose(planState)
+        startPose = self.getPlanningStartPose()
 
-        print "getting plan"
-        startPose = self.getPlanningStartPose()
-            
-        self.graspPlan = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, lockTorso=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, lockTorso=True)
+        endPose, info = constraintSet.runIk()
+        self.graspPlan = constraintSet.runIkTraj()
+
         self.addPlan(self.graspPlan)
-        
-    def computeGazePlan(self, goalFrame):
-        
+
+
+    def initGazeConstraintSet(self):
         startPose = self.getPlanningStartPose()
-            
-        plan = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, goalFrame, lockTorso=False)
+        startPoseName = 'gaze_plan_start'
+        endPoseName = 'gaze_plan_end'
+        self.ikPlanner.addPose(startPose, startPoseName)
+        self.ikPlanner.addPose(startPose, endPoseName)
+        constraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBack=False, lockBase=False, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
+        self.constraintSet = ikplanner.ConstraintSet(self.ikPlanner, constraints, startPoseName, endPoseName)
+        self.constraintSet.endPose = startPose
+
+
+    def appendGazeConstraintsForTargetFrame(self, goalFrame, t):
+
+        if self.constraintSet is None:
+            self.initGazeConstraintSet()
+
+        graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
+
+        positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, graspToHandLinkFrame)
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, graspToHandLinkFrame)
+
+        positionConstraint.tspan = [t, t]
+        gazeConstraint.tspan = [t, t]
+
+        self.constraintSet.constraints.extend([positionConstraint, gazeConstraint])
+
+
+    def planGazeTrajectory(self):
+
+        self.ikPlanner.ikServer.usePointwise = False
+        plan = self.constraintSet.runIkTraj()
+        self.constraintSet = None
+
         self.addPlan(plan)
 
 
@@ -377,7 +402,7 @@ class ValvePlannerDemo(object):
         self.valveFrame = om.findObjectByName('valve frame')
 
     def getEstimatedRobotStatePose(self):
-        return self.sensorJointController.getPose('EST_ROBOT_STATE')
+        return np.array(self.sensorJointController.getPose('EST_ROBOT_STATE'))
 
 
     def getPlanningStartPose(self):
@@ -429,18 +454,28 @@ class ValvePlannerDemo(object):
         self.computePreGraspPose()
         self.computeGraspPlan()
 
-        
+
+
+
         self.computePointerTipFrame(0)
-        self.computeGazePlan(self.pointerTipFrameDesired)
+        self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, 1)
+        self.computePointerTipFrame(1)
+        self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, 2)
+        self.planGazeTrajectory()
+
 
         noScribeSamples =12
         noTurns=2
         for i in range(0,noScribeSamples*noTurns):
             self.computePointerTipFrame(1)
-            self.computeGazePlan(self.pointerTipFrameDesired)
+            self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, i+1)
             self.nextScribeAngle = self.nextScribeAngle + self.scribeDirection*360.0/noScribeSamples
             print i , self.nextScribeAngle
-        
+
+        self.planGazeTrajectory()
+
+
+
         self.playNominalPlan()
 
     def sendPlanWithHeightMode(self):
