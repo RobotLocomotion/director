@@ -2295,7 +2295,7 @@ class PointPicker(TimerCallback):
         if not self.enabled:
             return
 
-        self.hoverPos = pickPoint(self.lastMovePos, obj='pointcloud snapshot')
+        self.hoverPos = pickPoint(self.lastMovePos, getSegmentationView(), obj='pointcloud snapshot')
         self.draw()
 
 
