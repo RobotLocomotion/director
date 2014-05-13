@@ -136,7 +136,9 @@ classdef IKServer
             qdot_desired = maxDegreesPerSecond*pi/180;
 
             nq = obj.robot.getNumDOF();
-            sfine = linspace(0, 1, 50);
+            ts = xtraj.pp.breaks;
+
+            sfine = linspace(ts(1), ts(end), 50);
             coords = obj.robot.getStateFrame.coordinates(1:nq);
             neck_idx = strcmp(coords, 'neck_ay');
             back_joints = cellfun(@(s) ~isempty(strfind(s,'back_bk')), coords);
