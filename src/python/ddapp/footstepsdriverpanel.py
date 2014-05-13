@@ -7,7 +7,6 @@ from ddapp import objectmodel as om
 from ddapp import transformUtils
 from ddapp import roboturdf
 from ddapp import visualization as vis
-from ddapp.depthimageprovider import DepthImageProvider
 from ddapp.timercallback import TimerCallback
 from ddapp.debugVis import DebugData
 from irispy.terrain import TerrainSegmentation
@@ -40,7 +39,7 @@ class WidgetDict(object):
 
 class FootstepsPanel(object):
 
-    def __init__(self, driver, robotModel, jointController):
+    def __init__(self, driver, robotModel, jointController, mapServerSource):
 
         self.driver = driver
         self.robotModel = robotModel
@@ -52,7 +51,7 @@ class FootstepsPanel(object):
 
         self.widget = loader.load(uifile)
 
-        self.depth_provider = DepthImageProvider()
+        self.depth_provider = mapServerSource
         self.terrain_segmentation = TerrainSegmentation(bounding_box_width=2)
         self.region_seed_frames = []
 
@@ -209,12 +208,12 @@ class FootstepsPanel(object):
 def _getAction():
     return app.getToolBarActions()['ActionFootstepPanel']
 
-def init(driver, robotModel, jointController):
+def init(*args, **kwargs):
 
     global panel
     global dock
 
-    panel = FootstepsPanel(driver, robotModel, jointController)
+    panel = FootstepsPanel(*args, **kwargs)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 

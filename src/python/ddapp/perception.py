@@ -485,7 +485,9 @@ def init(view):
         mapsServerContainer.source = mapServerSource
         om.addToObjectModel(mapsServerContainer, parentObj=sensorsFolder)
         mapServerSource.start()
+    else:
+        mapServerSource = None
 
-    return _multisenseItem
+    return _multisenseItem, mapServerSource
 
 
