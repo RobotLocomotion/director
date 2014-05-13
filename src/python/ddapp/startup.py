@@ -143,7 +143,7 @@ if useRobotState:
 
 if usePerception:
 
-    perception.init(view)
+    multisenseDriver, mapServerSource = perception.init(view)
     segmentationpanel.init()
     cameraview.init()
     colorize.init()
@@ -166,7 +166,7 @@ if useHands:
 
 if useFootsteps:
     footstepsDriver = footstepsdriver.FootstepsDriver(robotStateJointController)
-    footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController)
+    footstepsPanel = footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController, mapServerSource)
 
 
 if useLCMGL:

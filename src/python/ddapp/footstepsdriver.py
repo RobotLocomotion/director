@@ -11,6 +11,8 @@ from ddapp import vtkAll as vtk
 from ddapp.simpletimer import SimpleTimer
 from ddapp.shallowCopy import shallowCopy
 from ddapp import roboturdf
+from ddapp import segmentation
+import ddapp.vtkNumpy as vnp
 
 import os
 import numpy as np
@@ -81,6 +83,13 @@ def getFootstepsFolder():
         om.collapse(obj)
     return obj
 
+def getWalkingVolumesFolder():
+    obj = om.findObjectByName('walking volumes')
+    if obj is None:
+        obj = om.getOrCreateContainer('walking volumes')
+        om.collapse(obj)
+    return obj
+
 def getBDIAdjustedFootstepsFolder():
     obj = om.findObjectByName('BDI adj footstep plan')
     if obj is None:
@@ -100,7 +109,10 @@ class FootstepsDriver(object):
         self.lastWalkingPlan = None
         self.walkingPlanCallback = None
         self.default_step_params = DEFAULT_STEP_PARAMS
+        self.safe_terrain_regions = []
         self._setupProperties()
+        self.contact_slices = {}
+        self.show_contact_slices = False
 
         ### Stuff pertaining to rendering BDI-frame steps
         self.pose_bdi = None
@@ -191,11 +203,13 @@ class FootstepsDriver(object):
         self.lastFootstepPlan = None
         folder = getFootstepsFolder()
         om.removeFromObjectModel(folder)
-
+        volFolder = getWalkingVolumesFolder()
+        om.removeFromObjectModel(volFolder)
 
     def drawFootstepPlan(self, msg, folder,left_color=None, right_color=None):
 
         allTransforms = []
+        volFolder = getWalkingVolumesFolder()
 
         for i, footstep in enumerate(msg.footsteps):
             trans = footstep.pos.translation
@@ -203,6 +217,19 @@ class FootstepsDriver(object):
             quat = footstep.pos.rotation
             quat = [quat.w, quat.x, quat.y, quat.z]
             footstepTransform = transformUtils.transformFromPose(trans, quat)
+
+            if self.show_contact_slices:
+                for zs, xy in self.contact_slices.iteritems():
+                    points0 = np.vstack((xy, zs[0] + np.zeros((1,xy.shape[1]))))
+                    points1 = np.vstack((xy, zs[1] + np.zeros((1,xy.shape[1]))))
+                    points = np.hstack((points0, points1))
+                    points = points + np.array([[0.05],[0],[-0.0811]])
+                    points = points.T
+                    polyData = vnp.getVtkPolyDataFromNumpyPoints(points.copy())
+                    mesh = segmentation.computeDelaunay3D(polyData)
+                    obj = vis.showPolyData(mesh, 'walking volume', parent=volFolder, alpha=0.5)
+                    obj.actor.SetUserTransform(footstepTransform)
+
             allTransforms.append(footstepTransform)
 
             if i < 2:
@@ -343,6 +370,7 @@ class FootstepsDriver(object):
         msg.goal_pos = transformUtils.positionMessageFromFrame(goalFrame)
 
         msg = self.applyParams(msg)
+        msg = self.applySafeRegions(msg)
         return msg
 
     def applyParams(self, msg):
@@ -362,6 +390,12 @@ class FootstepsDriver(object):
         msg.params.map_command = self.map_command_lcm_map[self.params.properties.map_command]
         msg.params.leading_foot = msg.params.LEAD_AUTO
         msg.default_step_params = self.getDefaultStepParams()
+        return msg
+
+    def applySafeRegions(self, msg):
+        msg.num_iris_regions = len(self.safe_terrain_regions)
+        for r in self.safe_terrain_regions:
+            msg.iris_regions.append(r.to_iris_region_t())
         return msg
 
     def sendFootstepPlanRequest(self, request, waitForResponse=False, waitTimeout=5000):
