@@ -457,6 +457,7 @@ class ValvePlannerDemo(object):
 
 
 
+        # reach into valve:
         self.computePointerTipFrame(0)
         self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, 1)
         self.computePointerTipFrame(1)
@@ -464,6 +465,7 @@ class ValvePlannerDemo(object):
         self.planGazeTrajectory()
 
 
+        # scribe the pointer around
         noScribeSamples =12
         noTurns=2
         for i in range(0,noScribeSamples*noTurns):
@@ -475,8 +477,20 @@ class ValvePlannerDemo(object):
         self.planGazeTrajectory()
 
 
+        # retract it
+        self.computePointerTipFrame(1)
+        self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, 1)
+        self.computePointerTipFrame(0)
+        self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, 2)
+        self.planGazeTrajectory()
+
+        # retract back to stored posture:
+        self.computePreGraspPose()
 
         self.playNominalPlan()
+
+        # empty list of plans
+        self.plans = []
 
     def sendPlanWithHeightMode(self):
         self.atlasDriver.sendPlanUsingBdiHeight(True)
