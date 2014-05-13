@@ -9,11 +9,17 @@ from ddapp import roboturdf
 from ddapp import visualization as vis
 from ddapp.timercallback import TimerCallback
 from ddapp.debugVis import DebugData
-from irispy.terrain import TerrainSegmentation
 from irispy.utils import lcon_to_vert, InfeasiblePolytopeError
 from scipy.spatial import ConvexHull
 from ddapp import segmentation
 import ddapp.vtkNumpy as vnp
+try:
+    import mosek
+    from irispy.terrain import TerrainSegmentation
+    _mosekEnabled = True
+except ImportError:
+    print "Warning: mosek python bindings not found. Terrain segmentation disabled."
+    _mosekEnabled = False
 
 import numpy as np
 import math
@@ -52,7 +58,11 @@ class FootstepsPanel(object):
         self.widget = loader.load(uifile)
 
         self.depth_provider = mapServerSource
-        self.terrain_segmentation = TerrainSegmentation(bounding_box_width=2)
+        if _mosekEnabled:
+            self.terrain_segmentation = TerrainSegmentation(bounding_box_width=2)
+            self.driver.contact_slices = self.terrain_segmentation.contact_slices
+        else:
+            self.terrain_segmentation = None
         self.region_seed_frames = []
 
         self.ui = WidgetDict(self.widget.children())
@@ -72,7 +82,6 @@ class FootstepsPanel(object):
         self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
         self._setupPropertiesPanel()
 
-        self.driver.contact_slices = self.terrain_segmentation.contact_slices
 
     def onShowWalkingVolumes(self):
         self.driver.show_contact_slices = self.ui.showWalkingVolumesCheck.checked
@@ -86,21 +95,25 @@ class FootstepsPanel(object):
             om.removeFromObjectModel(om.findObjectByName('walking volumes'))
 
     def onNewRegionSeed(self):
-        t = self.newWalkingGoalFrame(self.robotModel)
-        idx = len(self.region_seed_frames)
-        frameObj = vis.updateFrame(t, 'region seed {:d}'.format(idx), parent='planning', scale=0.25)
-        frameObj.index = idx
-        frameObj.setProperty('Edit', True)
-        frameObj.connectFrameModified(self.onRegionSeedModified)
-        self.region_seed_frames.append(frameObj)
-        heights, world2px = self.depth_provider.getSceneHeightData()
-        heights[np.isinf(heights)] = np.nan
-        print heights.shape
-        print world2px
-        px2world = np.linalg.inv(world2px)
-        self.terrain_segmentation.setHeights(heights, px2world)
+        if not _mosekEnabled:
+            print "Warning: Mosek python bindings not found. Terrain segmentation is disabled."
+            return
+        if self.terrain_segmentation is not None:
+            t = self.newWalkingGoalFrame(self.robotModel)
+            idx = len(self.region_seed_frames)
+            frameObj = vis.updateFrame(t, 'region seed {:d}'.format(idx), parent='planning', scale=0.25)
+            frameObj.index = idx
+            frameObj.setProperty('Edit', True)
+            frameObj.connectFrameModified(self.onRegionSeedModified)
+            self.region_seed_frames.append(frameObj)
+            heights, world2px = self.depth_provider.getSceneHeightData()
+            heights[np.isinf(heights)] = np.nan
+            print heights.shape
+            print world2px
+            px2world = np.linalg.inv(world2px)
+            self.terrain_segmentation.setHeights(heights, px2world)
 
-        self.onRegionSeedModified(frameObj)
+            self.onRegionSeedModified(frameObj)
 
     def onRegionSeedModified(self, frame):
         pos, wxyz = transformUtils.poseFromTransform(frame.transform)
