@@ -9,13 +9,14 @@ from ddapp import roboturdf
 from ddapp import visualization as vis
 from ddapp.timercallback import TimerCallback
 from ddapp.debugVis import DebugData
-from irispy.utils import lcon_to_vert, InfeasiblePolytopeError
 from scipy.spatial import ConvexHull
 from ddapp import segmentation
 import ddapp.vtkNumpy as vnp
 try:
     import mosek
+    import cdd
     from irispy.terrain import TerrainSegmentation
+    from irispy.utils import lcon_to_vert, InfeasiblePolytopeError
     _mosekEnabled = True
 except ImportError:
     print "Warning: mosek python bindings not found. Terrain segmentation disabled."
