@@ -8,6 +8,12 @@ from ddapp import transformUtils
 from ddapp import roboturdf
 from ddapp import visualization as vis
 from ddapp.timercallback import TimerCallback
+from ddapp.debugVis import DebugData
+from irispy.terrain import TerrainSegmentation
+from irispy.utils import lcon_to_vert, InfeasiblePolytopeError
+from scipy.spatial import ConvexHull
+from ddapp import segmentation
+import ddapp.vtkNumpy as vnp
 
 import numpy as np
 import math
@@ -33,7 +39,7 @@ class WidgetDict(object):
 
 class FootstepsPanel(object):
 
-    def __init__(self, driver, robotModel, jointController):
+    def __init__(self, driver, robotModel, jointController, mapServerSource):
 
         self.driver = driver
         self.robotModel = robotModel
@@ -45,6 +51,10 @@ class FootstepsPanel(object):
 
         self.widget = loader.load(uifile)
 
+        self.depth_provider = mapServerSource
+        self.terrain_segmentation = TerrainSegmentation(bounding_box_width=2)
+        self.region_seed_frames = []
+
         self.ui = WidgetDict(self.widget.children())
 
         self.ui.walkingGoalButton.connect("clicked()", self.onNewWalkingGoal)
@@ -54,11 +64,73 @@ class FootstepsPanel(object):
         self.ui.stopButton.connect("clicked()", self.onStop)
         self.ui.BDIDefaultsButton.connect("clicked()", lambda: self.applyDefaults('BDI'))
         self.ui.drakeDefaultsButton.connect("clicked()", lambda: self.applyDefaults('drake'))
+        self.ui.showWalkingVolumesCheck.connect("clicked()", self.onShowWalkingVolumes)
 
         ### BDI frame logic
         self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
         self.ui.showBDIButton.connect("clicked()", self.onShowBDIButton)
+        self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
         self._setupPropertiesPanel()
+
+        self.driver.contact_slices = self.terrain_segmentation.contact_slices
+
+    def onShowWalkingVolumes(self):
+        self.driver.show_contact_slices = self.ui.showWalkingVolumesCheck.checked
+
+        # TODO: instead of deleting or regernating these, we can just
+        # show/hide them in the om. This requires a feature that Pat will
+        # implement soon, to show/hide an entire folder's contents
+        if self.ui.showWalkingVolumesCheck.checked:
+            self.driver.updateRequest()
+        else:
+            om.removeFromObjectModel(om.findObjectByName('walking volumes'))
+
+    def onNewRegionSeed(self):
+        t = self.newWalkingGoalFrame(self.robotModel)
+        idx = len(self.region_seed_frames)
+        frameObj = vis.updateFrame(t, 'region seed {:d}'.format(idx), parent='planning', scale=0.25)
+        frameObj.index = idx
+        frameObj.setProperty('Edit', True)
+        frameObj.connectFrameModified(self.onRegionSeedModified)
+        self.region_seed_frames.append(frameObj)
+        heights, world2px = self.depth_provider.getSceneHeightData()
+        heights[np.isinf(heights)] = np.nan
+        print heights.shape
+        print world2px
+        px2world = np.linalg.inv(world2px)
+        self.terrain_segmentation.setHeights(heights, px2world)
+
+        self.onRegionSeedModified(frameObj)
+
+    def onRegionSeedModified(self, frame):
+        pos, wxyz = transformUtils.poseFromTransform(frame.transform)
+        rpy = transformUtils.rollPitchYawFromTransform(frame.transform)
+        pose = np.hstack((pos, rpy))
+        safe_region = self.terrain_segmentation.findSafeRegion(pose, iter_limit=2)
+        debug = DebugData()
+        om_name = 'IRIS region boundary {:d}'.format(frame.index)
+        om.removeFromObjectModel(om.findObjectByName(om_name))
+        try:
+            V = lcon_to_vert(safe_region.A, safe_region.b)
+            hull = ConvexHull(V[:2,:].T)
+            z = pos[2]
+            for j, v in enumerate(hull.vertices):
+                p1 = np.hstack((V[:2,hull.vertices[j]], z))
+                if j < len(hull.vertices) - 1:
+                    p2 = np.hstack((V[:2,hull.vertices[j+1]], z))
+                else:
+                    p2 = np.hstack((V[:2,hull.vertices[0]], z))
+                debug.addLine(p1, p2, color=[.8,.8,.2])
+            vis.showPolyData(debug.getPolyData(), om_name, parent='planning', color=[.8,.8,.2])
+        except InfeasiblePolytopeError:
+            print "Infeasible polytope"
+
+        if frame.index < len(self.driver.safe_terrain_regions):
+            self.driver.safe_terrain_regions[frame.index] = safe_region
+        else:
+            assert frame.index == len(self.driver.safe_terrain_regions)
+            self.driver.safe_terrain_regions.append(safe_region)
+
 
     def _setupPropertiesPanel(self):
         l = QtGui.QVBoxLayout(self.ui.paramsContainer)
@@ -136,12 +208,12 @@ class FootstepsPanel(object):
 def _getAction():
     return app.getToolBarActions()['ActionFootstepPanel']
 
-def init(driver, robotModel, jointController):
+def init(*args, **kwargs):
 
     global panel
     global dock
 
-    panel = FootstepsPanel(driver, robotModel, jointController)
+    panel = FootstepsPanel(*args, **kwargs)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
