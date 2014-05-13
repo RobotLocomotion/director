@@ -1,30 +1,19 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-from ddapp import lcmUtils
 from ddapp import applogic as app
-from ddapp.utime import getUtime
 from ddapp import objectmodel as om
 from ddapp import transformUtils
-from ddapp import roboturdf
 from ddapp import visualization as vis
-from ddapp.timercallback import TimerCallback
 from ddapp.debugVis import DebugData
-from scipy.spatial import ConvexHull
-from ddapp import segmentation
-import ddapp.vtkNumpy as vnp
 try:
     import mosek
-    import cdd
-    from irispy.terrain import TerrainSegmentation
-    from irispy.utils import lcon_to_vert, InfeasiblePolytopeError
+    from ddapp.terrain import TerrainSegmentation
     _mosekEnabled = True
 except ImportError:
     print "Warning: mosek python bindings not found. Terrain segmentation disabled."
     _mosekEnabled = False
 
 import numpy as np
-import math
-
 
 def _makeButton(text, func):
 
@@ -113,7 +102,6 @@ class FootstepsPanel(object):
             print world2px
             px2world = np.linalg.inv(world2px)
             self.terrain_segmentation.setHeights(heights, px2world)
-
             self.onRegionSeedModified(frameObj)
 
     def onRegionSeedModified(self, frame):
@@ -124,20 +112,16 @@ class FootstepsPanel(object):
         debug = DebugData()
         om_name = 'IRIS region boundary {:d}'.format(frame.index)
         om.removeFromObjectModel(om.findObjectByName(om_name))
-        try:
-            V = lcon_to_vert(safe_region.A, safe_region.b)
-            hull = ConvexHull(V[:2,:].T)
+        xy_verts = safe_region.xy_polytope()
+        for j in range(xy_verts.shape[1]):
             z = pos[2]
-            for j, v in enumerate(hull.vertices):
-                p1 = np.hstack((V[:2,hull.vertices[j]], z))
-                if j < len(hull.vertices) - 1:
-                    p2 = np.hstack((V[:2,hull.vertices[j+1]], z))
-                else:
-                    p2 = np.hstack((V[:2,hull.vertices[0]], z))
-                debug.addLine(p1, p2, color=[.8,.8,.2])
-            vis.showPolyData(debug.getPolyData(), om_name, parent='planning', color=[.8,.8,.2])
-        except InfeasiblePolytopeError:
-            print "Infeasible polytope"
+            p1 = np.hstack((xy_verts[:,j], z))
+            if j < xy_verts.shape[1] - 1:
+                p2 = np.hstack((xy_verts[:,j+1], z))
+            else:
+                p2 = np.hstack((xy_verts[:,0], z))
+            debug.addLine(p1, p2, color=[.8,.8,.2])
+        vis.showPolyData(debug.getPolyData(), om_name, parent='planning', color=[.8,.8,.2])
 
         if frame.index < len(self.driver.safe_terrain_regions):
             self.driver.safe_terrain_regions[frame.index] = safe_region

@@ -62,6 +62,7 @@ set(python_files
   ddapp/tabledemo.py
   ddapp/tdx.py
   ddapp/teleoppanel.py
+  ddapp/terrain.py
   ddapp/timercallback.py
   ddapp/transformUtils.py
   ddapp/utime.py
