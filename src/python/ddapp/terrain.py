@@ -176,11 +176,11 @@ class SafeTerrainRegion:
         """
         Project the 3D c-space polytope Ax <= b to a list of vertices in the xy plane
         """
-        try:
-            V = lcon_to_vert(self.A, self.b)
+        V = lcon_to_vert(self.A, self.b)
+        if V is not None and V.size > 0:
             hull = ConvexHull(V[:2,:].T)
             return V[:2,hull.vertices]
-        except InfeasiblePolytopeError:
+        else:
             print "Infeasible polytope"
             return np.zeros((2,0))
 
