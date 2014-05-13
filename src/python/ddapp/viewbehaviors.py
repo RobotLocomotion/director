@@ -193,7 +193,10 @@ def reachToFrame(frameObj, side):
 
 
 def getAsFrame(obj):
-    return obj if isinstance(obj, vis.FrameItem) else obj.getChildFrame()
+    if isinstance(obj, vis.FrameItem):
+        return obj
+    elif hasattr(obj, 'getChildFrame'):
+        return obj.getChildFrame()
 
 
 def showRightClickMenu(displayPoint, view):
