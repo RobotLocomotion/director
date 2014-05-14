@@ -72,7 +72,7 @@ class RobotiqHandDriver(object):
         msg = lcmrobotiq.command_t()
         msg.utime = getUtime()
         msg.activate = 0
-        msg.emergency_drop = 0
+        msg.emergency_release = 0
         msg.do_move = 0
         msg.mode = 0
         msg.position = 0
@@ -88,8 +88,8 @@ class RobotiqHandDriver(object):
     def sendDrop(self):
         msg = lcmrobotiq.command_t()
         msg.utime = getUtime()
-        msg.activate = 0
-        msg.emergency_drop = 1
+        msg.activate = 1
+        msg.emergency_release = 1
         msg.do_move = 0
         msg.mode = 0
         msg.position = 0
@@ -107,7 +107,7 @@ class RobotiqHandDriver(object):
         msg = lcmrobotiq.command_t()
         msg.utime = getUtime()
         msg.activate = 1
-        msg.emergency_drop = 0
+        msg.emergency_release = 0
         msg.do_move = 1
         msg.position = int(254 * (percentage/100.0))
         msg.force = 255
@@ -124,7 +124,7 @@ class RobotiqHandDriver(object):
         msg = lcmrobotiq.command_t()
         msg.utime = getUtime()
         msg.activate = 1
-        msg.emergency_drop = 0
+        msg.emergency_release = 0
         msg.do_move = 1
         msg.position = int(254 * (position/100.0))
         msg.force = int(255 * (force/100.0))
@@ -152,7 +152,7 @@ class RobotiqHandDriver(object):
         msg = lcmrobotiq.command_t()
         msg.utime = getUtime()
         msg.activate = 1
-        msg.emergency_drop = 0
+        msg.emergency_release = 0
         msg.do_move = 0
         msg.position = 0
         msg.force = 0
