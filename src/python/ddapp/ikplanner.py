@@ -590,7 +590,7 @@ class IKPlanner(object):
         return constraintSet
 
 
-    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockTorso=False, lockArm=True, planTraj=True):
+    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockTorso=False, lockArm=True):
 
         self.reachingSide = side
 
