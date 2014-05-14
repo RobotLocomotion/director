@@ -133,6 +133,19 @@ class RobotiqHandDriver(object):
         channel = 'ROBOTIQ_%s_COMMAND' % self.side.upper()
         lcmUtils.publish(channel, msg)
 
+    def sendRegrasp(self, position, force, velocity, mode):
+
+        if position > 1:
+            self.sendCustom(self, position-2, force, velocity, mode):
+        else:
+            self.sendCustom(self, position, force, velocity, mode):
+
+        time.sleep(0.1)
+
+        self.sendCustom(self, position, force, velocity, mode):
+
+
+
     def setMode(self, mode):
         assert 0 <= int(mode) <= 4
 
