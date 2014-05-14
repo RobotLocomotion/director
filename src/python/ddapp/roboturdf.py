@@ -232,10 +232,19 @@ class HandFactory(object):
 
     def __init__(self, robotModel, defaultLeftHandType=None, defaultRightHandType=None):
 
+        handTypesMap = {
+          'LR' : 'left_robotiq',
+          'LP' : 'left_pointer',
+          'LI' : 'left_irobot',
+          'RR' : 'right_robotiq',
+          'RP' : 'right_pointer',
+          'RI' : 'right_irobot',
+          }
+
         if not defaultLeftHandType:
-            defaultLeftHandType = 'left_%s' % ('robotiq' if 'LR' in defaultUrdfHands else 'irobot')
+            defaultLeftHandType = handTypesMap[defaultUrdfHands.split('_')[0]]
         if not defaultRightHandType:
-            defaultRightHandType = 'right_%s' % ('robotiq' if 'RR' in defaultUrdfHands else 'irobot')
+            defaultRightHandType = handTypesMap[defaultUrdfHands.split('_')[1]]
 
         self.robotModel = robotModel
         self.loaders = {}
@@ -315,52 +324,48 @@ class HandLoader(object):
             self.palmToHandLink = self.handLinkToPalm.GetLinearInverse()
 
 
-
         elif self.handType == 'robotiq':
 
             self.robotUrdf = 'model_LR_RR.urdf'
             self.handLinkName = '%s_hand' % self.side[0]
             self.handUrdf = 'robotiq_hand_%s.urdf' % self.side
             self.handJointName = '%s_robotiq_hand_joint' % self.side
-            self.baseToPalm = [0.0, -0.070, 0.0, 0.0, -math.radians(90), 0.0]
 
             handRootLink = '%s_palm' % self.side
             robotMountLink = '%s_hand_force_torque' % self.side[0]
             palmLink = '%s_hand_face' % self.side[0]
-            robotMountToPalm = self.getLinkToLinkTransform(robotModel, robotMountLink, palmLink)
-
-            self.loadHandModel()
-
-            baseToHandRoot = self.getLinkToLinkTransform(self.handModel, 'plane::xy::base', handRootLink)
-            robotMountToHandRoot = self.getLinkToLinkTransform(robotModel, robotMountLink, handRootLink)
-            robotMountToHandLink = self.getLinkToLinkTransform(robotModel, robotMountLink, self.handLinkName)
-
-            t = vtk.vtkTransform()
-            t.PostMultiply()
-            t.Concatenate(baseToHandRoot)
-            t.Concatenate(robotMountToHandRoot.GetLinearInverse())
-            t.Concatenate(robotMountToPalm)
-            self.modelToPalm = t
-
-            self.handLinkToPalm = self.getLinkToLinkTransform(robotModel, self.handLinkName, palmLink)
-            self.palmToHandLink = self.handLinkToPalm.GetLinearInverse()
 
 
-        elif self.handType == 'hook':
+        elif self.handType == 'pointer':
 
             self.robotUrdf = 'model_LP_RP.urdf'
             self.handLinkName = '%s_hand' % self.side[0]
             self.handUrdf = 'inert_hand_%s.urdf' % self.side
             self.handJointName = '%s_hook_hand_joint' % self.side
 
-            if self.side == 'left':
-                self.baseToPalm = [-0.040, -0.185, 0.0, -math.radians(90), math.radians(90), 0.0]
-            else:
-                self.baseToPalm = [-0.040, -0.185, 0.0, -math.radians(90), -math.radians(90), 0.0]
+            handRootLink = '%s_base_link' % self.side
+            robotMountLink = '%s_hand_force_torque' % self.side[0]
+            palmLink = '%s_pointer_tip' % self.side
 
         else:
             raise Exception('Unexpected hand type: %s' % self.handType)
 
+        self.loadHandModel()
+
+        baseToHandRoot = self.getLinkToLinkTransform(self.handModel, 'plane::xy::base', handRootLink)
+        robotMountToHandRoot = self.getLinkToLinkTransform(robotModel, robotMountLink, handRootLink)
+        robotMountToHandLink = self.getLinkToLinkTransform(robotModel, robotMountLink, self.handLinkName)
+        robotMountToPalm = self.getLinkToLinkTransform(robotModel, robotMountLink, palmLink)
+
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Concatenate(baseToHandRoot)
+        t.Concatenate(robotMountToHandRoot.GetLinearInverse())
+        t.Concatenate(robotMountToPalm)
+        self.modelToPalm = t
+
+        self.handLinkToPalm = self.getLinkToLinkTransform(robotModel, self.handLinkName, palmLink)
+        self.palmToHandLink = self.handLinkToPalm.GetLinearInverse()
 
     def getHandUrdf(self):
         urdfBase = os.path.join(getDRCBaseDir(), 'software/models/mit_gazebo_models')
