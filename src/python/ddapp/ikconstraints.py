@@ -231,6 +231,48 @@ class RelativePositionConstraint(ConstraintBase):
             ''.format(**formatArgs))
 
 
+class PointToPointDistanceConstraint(ConstraintBase):
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            bodyNameA = '',
+            bodyNameB = '',
+            pointInBodyA    = np.zeros(3),
+            pointInBodyB    = np.zeros(3),
+            lowerBound     = np.zeros(1),
+            upperBound     = np.zeros(1),
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+        assert self.bodyNameA
+        assert self.bodyNameB
+
+        varName = 'point_to_point_distance_constraint%s' % suffix
+        constraintNames.append(varName)
+
+        pointInBodyA = self.toPosition(self.pointInBodyA)
+        pointInBodyB = self.toPosition(self.pointInBodyB)
+
+        formatArgs = dict(varName=varName,
+                          robotArg=self.robotArg,
+                          tspan=self.getTSpanString(),
+                          bodyNameA=self.bodyNameA,
+                          bodyNameB=self.bodyNameB,
+                          pointInBodyA=self.toColumnVectorString(pointInBodyA),
+                          pointInBodyB=self.toColumnVectorString(pointInBodyB),
+                          lowerBound=self.toColumnVectorString(self.lowerBound),
+                          upperBound=self.toColumnVectorString(self.upperBound))
+
+        commands.append(
+            '{varName} = Point2PointDistanceConstraint({robotArg}, {bodyNameA}, {bodyNameB}, {pointInBodyA}, {pointInBodyB}, '
+            '{lowerBound}, {upperBound}, {tspan});'
+            ''.format(**formatArgs))
+
+
 class QuatConstraint(ConstraintBase):
 
 
@@ -372,9 +414,7 @@ class WorldGazeDirConstraint(ConstraintBase):
         constraintNames.append(varName)
 
         worldAxis = np.array(self.targetAxis)
-        print 'worldAxis: ', worldAxis
         self.targetFrame.TransformVector(worldAxis, worldAxis)
-        print 'transformed: ', worldAxis
 
         formatArgs = dict(varName=varName,
                           robotArg=self.robotArg,
