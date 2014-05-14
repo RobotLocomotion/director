@@ -136,13 +136,13 @@ class RobotiqHandDriver(object):
     def sendRegrasp(self, position, force, velocity, mode):
 
         if position > 1:
-            self.sendCustom(self, position-2, force, velocity, mode):
+            self.sendCustom(self, position-2, force, velocity, mode)
         else:
-            self.sendCustom(self, position, force, velocity, mode):
+            self.sendCustom(self, position, force, velocity, mode)
 
         time.sleep(0.1)
 
-        self.sendCustom(self, position, force, velocity, mode):
+        self.sendCustom(self, position, force, velocity, mode)
 
 
 
