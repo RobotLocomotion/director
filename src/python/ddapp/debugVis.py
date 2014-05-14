@@ -69,7 +69,7 @@ class DebugData(object):
             self.addLine(origin, origin+axis, radius=tubeRadius, color=color)
 
     def addCircle(self, origin, normal, radius, color=[1,1,1]):
-        self.addCone(origin, normal, radius, height, color=color, fill=False)
+        self.addCone(origin, normal, radius, height=0, color=color, fill=False)
 
     def addCone(self, origin, normal, radius, height, color=[1,1,1], fill=True):
         cone = vtk.vtkConeSource()
