@@ -8,6 +8,7 @@ import sys
 import PythonQt
 from PythonQt import QtCore, QtGui
 from time import time
+import imp
 import ddapp.applogic as app
 from ddapp import botpy
 from ddapp import vtkAll as vtk
@@ -18,6 +19,7 @@ from ddapp import cameracontrol
 from ddapp import debrisdemo
 from ddapp import drilldemo
 from ddapp import tabledemo
+from ddapp import valvedemo
 from ddapp import ik
 from ddapp import ikplanner
 from ddapp import objectmodel as om
@@ -213,6 +215,13 @@ if usePlanning:
         om.removeFromObjectModel(om.findObjectByName('debug'))
         segmentation.findAndFitDrillBarrel(pd,  getLinkFrame('utorso'))
 
+
+    def fitValveMultisense():
+        pd = om.findObjectByName('Multisense').model.revPolyData
+        om.removeFromObjectModel(om.findObjectByName('debug'))
+        segmentation.findAndFitDrillBarrel(pd,  getLinkFrame('utorso'))
+
+
     def refitBlocks(autoApprove=True):
         polyData = om.findObjectByName('Multisense').model.revPolyData
         segmentation.updateBlockAffordances(polyData)
@@ -273,8 +282,8 @@ if usePlanning:
     playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
                                       robotStateModel, robotStateJointController, manipPlanner)
 
-    footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
-    manipPlanner.manipPlanCallback = playbackPanel.setPlan
+    #footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
+    #manipPlanner.manipPlanCallback = playbackPanel.setPlan
 
 
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
@@ -295,6 +304,15 @@ if usePlanning:
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
 
+    def initValveDemo():
+      imp.reload(valvedemo)
+      global valveDemo
+      valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
+                                        lHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                                        fitValveMultisense, robotStateJointController,
+                                        playPlans, showPose)
+
+    initValveDemo()
 
     splinewidget.init(view, handFactory, robotStateModel)
 
@@ -364,3 +382,26 @@ viewBehaviors = viewbehaviors.ViewBehaviors(view, handFactory, robotStateModel, 
 
 if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
+
+
+
+
+
+
+polyData = io.readPolyData(os.path.expanduser('~/Desktop/table-and-door-scene.vtp'))
+
+# transform point cloud
+#t = vtk.vtkTransform()
+#t.RotateZ(180)
+#t.Translate(0, 0, -0.43)
+#t.Translate(0, 0, -0.1)
+#polyData = segmentation.transformPolyData(polyData, t)
+
+obj = vis.showPolyData(polyData, 'scene', parent=None, alpha=1.0)
+obj.colorBy('z', scalarRange=[-0.2, 3.0])
+
+# move robot
+#robotStateJointController.q[5] = math.radians(120)
+#robotStateJointController.q[0] = -1.0
+#robotStateJointController.q[1] = 1.5
+#robotStateJointController.push()
