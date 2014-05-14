@@ -126,7 +126,7 @@ if useIk:
 
     def startIkServer():
         ikServer.startServerAsync()
-        #ikServer.comm.echoCommandsToStdOut = True
+        ikServer.comm.writeCommandsToLogFile = True
 
     startIkServer()
 
@@ -282,8 +282,8 @@ if usePlanning:
     playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
                                       robotStateModel, robotStateJointController, manipPlanner)
 
-    #footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
-    #manipPlanner.manipPlanCallback = playbackPanel.setPlan
+    footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
+    manipPlanner.manipPlanCallback = playbackPanel.setPlan
 
 
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
@@ -313,6 +313,9 @@ if usePlanning:
                                         playPlans, showPose)
 
     initValveDemo()
+    v = valveDemo
+    v.spawnValveAffordance()
+    v.moveRobotToStanceFrame()
 
     splinewidget.init(view, handFactory, robotStateModel)
 
@@ -388,7 +391,7 @@ if useImageWidget:
 
 
 
-polyData = io.readPolyData(os.path.expanduser('~/Desktop/table-and-door-scene.vtp'))
+#polyData = io.readPolyData(os.path.expanduser('~/Desktop/table-and-door-scene.vtp'))
 
 # transform point cloud
 #t = vtk.vtkTransform()
@@ -397,8 +400,8 @@ polyData = io.readPolyData(os.path.expanduser('~/Desktop/table-and-door-scene.vt
 #t.Translate(0, 0, -0.1)
 #polyData = segmentation.transformPolyData(polyData, t)
 
-obj = vis.showPolyData(polyData, 'scene', parent=None, alpha=1.0)
-obj.colorBy('z', scalarRange=[-0.2, 3.0])
+#obj = vis.showPolyData(polyData, 'scene', parent=None, alpha=1.0)
+#obj.colorBy('z', scalarRange=[-0.2, 3.0])
 
 # move robot
 #robotStateJointController.q[5] = math.radians(120)
