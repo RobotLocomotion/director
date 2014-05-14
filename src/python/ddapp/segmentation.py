@@ -968,7 +968,7 @@ def segmentValve(expectedValveRadius, point1, point2):
     d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
 
     name = 'valve affordance'
-    obj = showPolyData(d.getPolyData(), name, cls=CylinderAffordanceItem, parent='affordances')
+    obj = showPolyData(d.getPolyData(), name, cls=CylinderAffordanceItem, parent='affordances', color=[0,1,0])
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
     refitWallCallbacks.append(functools.partial(refitValveAffordance, obj))
@@ -980,7 +980,7 @@ def segmentValve(expectedValveRadius, point1, point2):
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
 
-    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
+    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, scale=radius, visible=False)
     frameObj.addToView(app.getDRCView())
 
 
@@ -1018,18 +1018,18 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     searchRegion = cropToLineSegment(searchRegion, point1, point2)
     searchRegion = cropToLineSegment(searchRegion, point3, point4)
 
-    updatePolyData(searchRegion, 'valve search region', parent=getDebugFolder(), visible=False)
+    updatePolyData(searchRegion, 'valve search region', parent=getDebugFolder(), color=[1,0,0], visible=False)
 
 
     searchRegion, origin, _  = applyPlaneFit(searchRegion, expectedNormal=normal, perpendicularAxis=normal, returnOrigin=True)
     searchRegion = thresholdPoints(searchRegion, 'dist_to_plane', [-0.015, 0.015])
 
-    updatePolyData(searchRegion, 'valve search region 2', parent=getDebugFolder(), visible=False)
+    updatePolyData(searchRegion, 'valve search region 2', parent=getDebugFolder(), color=[0,1,0], visible=False)
 
 
     largestCluster = extractLargestCluster(searchRegion, minClusterSize=1)
 
-    updatePolyData(largestCluster, 'valve cluster', parent=getDebugFolder(), visible=False)
+    updatePolyData(largestCluster, 'valve cluster', parent=getDebugFolder(), color=[0,1,0], visible=False)
 
 
     #radiusLimit = [expectedValveRadius - 0.01, expectedValveRadius + 0.01] if expectedValveRadius else None
@@ -1061,7 +1061,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     updatePolyData(d.getPolyData(), 'valve axes', parent=getDebugFolder(), visible=False)
 
 
-    zaxis = circleNormal
+    zaxis = -circleNormal
     xaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
     xaxis = np.cross(yaxis, zaxis)
@@ -1071,13 +1071,13 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     t.PostMultiply()
     t.Translate(origin)
 
-    zwidth = 0.03
+    zwidth = 0.02
 
     d = DebugData()
     d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
 
-    name = 'valve affordance'
-    obj = showPolyData(d.getPolyData(), name, cls=CylinderAffordanceItem, parent='affordances')
+    name = 'valve'
+    obj = showPolyData(d.getPolyData(), name, cls=CylinderAffordanceItem, parent='affordances', color=[0,1,0])
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
     refitWallCallbacks.append(functools.partial(refitValveAffordance, obj))
@@ -1089,7 +1089,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
 
-    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False)
+    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False, scale=radius)
     frameObj.addToView(app.getDRCView())
 
 
