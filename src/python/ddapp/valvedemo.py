@@ -23,6 +23,7 @@ from ddapp.utime import getUtime
 from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
+from ddapp import planplayback
 
 import drc as lcmdrc
 
@@ -44,27 +45,40 @@ class ValvePlannerDemo(object):
         self.planPlaybackFunction = planPlaybackFunction
         self.showPoseFunction = showPoseFunction
         self.graspingHand = 'left'
-        self.planFromCurrentRobotState = False
+
+        self.planFromCurrentRobotState = True
+        self.visOnly = True
+        self.useFootstepPlanner = False
+
+
         self.userPromptEnabled = True
         self.walkingPlan = None
         self.preGraspPlan = None
         self.graspPlan = None
-        
         self.constraintSet = None
 
         self.plans = []
-        
-        
-        
+
+        self.scribeInAir = False
+
         self.valveRadius = 0.154 #foam valves
-        self.scribeRadius = 0.1 # radius to arc the pointer around
+        self.valveRadius = 0.2032 # 8in radius metal valve
+        self.valveHeight = 1.2192 # 4ft
+
+
+        if self.scribeInAir:
+            self.scribeRadius = self.valveRadius - 0.08
+        else:
+            self.scribeRadius = self.valveRadius - 0.08
+
+
         self.scribeDirection = -1 # 1 = clockwise | -1 = anticlockwise
-        
-        self.startAngle = 20 # 
+        self.startAngle = -90 # 
         self.nextScribeAngle = self.startAngle
-        
+
+
     def addPlan(self, plan):
-        self.plans.append(plan)        
+        self.plans.append(plan)
 
 
     def computeGroundFrame(self, robotModel):
@@ -99,8 +113,7 @@ class ValvePlannerDemo(object):
 
     def computeValveFrame(self, robotModel):
 
-
-        position = [0.85, 0.4, 1.2] #0.65 backwards # 0.85 optimal # 1.25 forward
+        position = [0.85, 0.4, self.valveHeight]
         rpy = [180, -90, 0]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
@@ -111,10 +124,6 @@ class ValvePlannerDemo(object):
     def computeGraspFrame(self):
 
         assert self.valveAffordance
-
-        # for left_base_link
-        #position = [-0.12, 0.0, 0.025]
-        #rpy = [0, 90, 0]
 
         # reach to center and back - for palm point
         position = [0.0, 0.0, -0.1]
@@ -128,11 +137,17 @@ class ValvePlannerDemo(object):
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(self.graspFrame)
         self.frameSync.addFrame(self.valveFrame)
-        
-        
+
+
+    def removePointerTipFrames(self):
+        for obj in om.getObjects():
+            if obj.getProperty('Name') == 'pointer tip frame desired':
+                om.removeFromObjectModel(obj)
+
+
     def computePointerTipFrame(self, engagedTip):
         if engagedTip:
-            tipDepth = 0.02 # + is inside the wheel
+            tipDepth = 0.0
         else:
             tipDepth = -0.1 # - is outside the wheel
 
@@ -140,22 +155,12 @@ class ValvePlannerDemo(object):
 
         position = [ self.scribeRadius*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius*math.sin( math.radians( self.nextScribeAngle ))  , tipDepth]
         rpy = [90, 0, 180]
-        #rpy = [0.0,0.0,0.0]
+
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(self.valveFrame.transform)
 
         self.pointerTipFrameDesired = vis.showFrame(t, 'pointer tip frame desired', parent=self.valveAffordance, visible=True, scale=0.2)
 
-        #self.frameSync.addFrame(self.pointerTipFrameDesired, ignoreIncoming=True)
-
-        #print "mfallon"
-        #pointerTipLinkName = self.getEndEffectorLinkName() + '_pointer_tip'
-        #print pointerTipLinkName
-        #pointerTipFrame = self.robotModel.getLinkFrame(  pointerTipLinkName )
-        #print pointerTipFrame
-        #vis.updateFrame(pointerTipFrame, 'pointer tip frame', parent=self.valveAffordance, visible=True, scale=0.2)
-        
-        
 
     def computeStanceFrame(self):
 
@@ -181,8 +186,13 @@ class ValvePlannerDemo(object):
         graspGroundFrame.PostMultiply()
         graspGroundFrame.Translate(graspPosition[0], graspPosition[1], groundHeight)
 
-        position = [-0.67, -0.4, 0.0]
-        rpy = [0, 0, 0]
+
+        if self.scribeInAir:
+            position = [-0.6, -0.4, 0.0] # stand further away when scribing in air
+        else:
+            position = [-0.48, -0.4, 0.0]
+
+        rpy = [0, 0, 16]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(graspGroundFrame)
@@ -192,74 +202,36 @@ class ValvePlannerDemo(object):
         self.frameSync.addFrame(self.graspStanceFrame)
 
 
-    def computeFootstepPlan(self):
+    def moveRobotToStanceFrame(self):
+        frame = self.graspStanceFrame.transform
 
-        #startPose = self.getEstimatedRobotStatePose()
+        self.sensorJointController.setPose('q_nom')
+        stancePosition = frame.GetPosition()
+        stanceOrientation = frame.GetOrientation()
+
+        self.sensorJointController.q[:2] = [stancePosition[0], stancePosition[1]]
+        self.sensorJointController.q[5] = math.radians(stanceOrientation[2])
+        self.sensorJointController.push()
+
+
+    def computeFootstepPlan(self):
         startPose = self.getPlanningStartPose()
         goalFrame = self.graspStanceFrame.transform
-
         request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
 
 
     def computeWalkingPlan(self):
-
-        #startPose = self.getEstimatedRobotStatePose()
         startPose = self.getPlanningStartPose()
         self.walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
         self.addPlan(self.walkingPlan)
 
-    def computeEndPose(self):
-        graspLinks = {
-            'l_hand' : 'left_base_link',
-            'r_hand' : 'right_base_link',
-           }
-        linkName = graspLinks[self.getEndEffectorLinkName()]
-        #startPose = self.getEstimatedRobotStatePose()
+
+    def computePreGraspPlan(self):
         startPose = self.getPlanningStartPose()
-        self.endPosePlan = self.manipPlanner.sendEndPoseGoal(startPose, linkName, self.graspFrame.transform, waitForResponse=True)
-        self.showEndPose()
-
-    def showEndPose(self):
-        endPose = robotstate.convertStateMessageToDrakePose(self.endPosePlan)
-        self.showPoseFunction(endPose)
-
-
-    def computePreGraspPose(self):
-
-        #if self.planFromCurrentRobotState:
-        #    startPose = self.getEstimatedRobotStatePose()
-        #else:
-        #    planState = self.walkingPlan.plan[-1]
-        #    startPose = robotstate.convertStateMessageToDrakePose(planState)
-        startPose = self.getPlanningStartPose()
-
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame)
-        endPose, info = constraintSet.runIk()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'arm up pregrasp', side=self.graspingHand)
-
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
         self.preGraspPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(self.preGraspPlan)
-
-
-    def planPostureGoal(self, groupName, poseName, side=None):
-
-        #startPose = self.getEstimatedRobotStatePose()
-        startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, groupName, poseName, side=side)
-        self.posturePlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.planPlaybackFunction([self.posturePlan])
-
-
-    def getEndEffectorLinkName(self):
-        linkMap = {
-                      'left' : 'l_hand',
-                      'right': 'r_hand'
-                  }
-        return linkMap[self.graspingHand]
-
-        
-
 
 
     def computeGraspPlan(self):
@@ -273,69 +245,67 @@ class ValvePlannerDemo(object):
         self.addPlan(self.graspPlan)
 
 
-    def initGazeConstraintSet(self):
+    def initGazeConstraintSet(self, goalFrame):
+
+        # create constraint set
         startPose = self.getPlanningStartPose()
         startPoseName = 'gaze_plan_start'
         endPoseName = 'gaze_plan_end'
         self.ikPlanner.addPose(startPose, startPoseName)
         self.ikPlanner.addPose(startPose, endPoseName)
-        constraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBack=False, lockBase=False, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
-        self.constraintSet = ikplanner.ConstraintSet(self.ikPlanner, constraints, startPoseName, endPoseName)
+        self.constraintSet = ikplanner.ConstraintSet(self.ikPlanner, [], startPoseName, endPoseName)
         self.constraintSet.endPose = startPose
 
+        # add body constraints
+        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=True, lockBack=False, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
+        self.constraintSet.constraints.extend(bodyConstraints)
 
-    def appendGazeConstraintsForTargetFrame(self, goalFrame, t):
+        # add gaze constraint
+        self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
+        self.constraintSet.constraints.insert(0, gazeConstraint)
 
-        if self.constraintSet is None:
-            self.initGazeConstraintSet()
 
-        graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
+    def appendDistanceConstraint(self):
 
-        positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, graspToHandLinkFrame)
-        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, graspToHandLinkFrame)
+        # add point to point distance constraint
+        c = ikplanner.ik.PointToPointDistanceConstraint()
+        c.bodyNameA = self.ikPlanner.getHandLink(self.graspingHand)
+        c.bodyNameB = 'world'
+        c.pointInBodyA = self.graspToHandLinkFrame
+        c.pointInBodyB = self.valveFrame.transform
+        c.lowerBound = [self.scribeRadius]
+        c.upperBound = [self.scribeRadius]
+        self.constraintSet.constraints.insert(0, c)
 
-        positionConstraint.tspan = [t, t]
+
+    def appendGazeConstraintForTargetFrame(self, goalFrame, t):
+
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
         gazeConstraint.tspan = [t, t]
+        self.constraintSet.constraints.append(gazeConstraint)
 
-        self.constraintSet.constraints.extend([positionConstraint, gazeConstraint])
+
+    def appendPositionConstraintForTargetFrame(self, goalFrame, t):
+        positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
+        positionConstraint.tspan = [t, t]
+        self.constraintSet.constraints.append(positionConstraint)
 
 
     def planGazeTrajectory(self):
 
         self.ikPlanner.ikServer.usePointwise = False
-        plan = self.constraintSet.runIkTraj()
-        self.constraintSet = None
 
+        plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
 
     def commitFootstepPlan(self):
         self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
 
-    def commitPreGraspPlan(self):
-        self.manipPlanner.commitManipPlan(self.preGraspPlan)
 
-    def commitGraspPlan(self):
-        self.manipPlanner.commitManipPlan(self.graspPlan)
-
-    def commitStandPlan(self):
-        self.manipPlanner.commitManipPlan(self.standPlan)
-
-    def sendPelvisCrouch(self):
-        self.atlasDriver.sendPelvisHeightCommand(0.7)
-
-    def sendPelvisStand(self):
-        self.atlasDriver.sendPelvisHeightCommand(0.8)
-
-    def computeStandPlan(self):
-        startPose = self.getPlanningStartPose()
-        self.standPlan = self.ikPlanner.computeStandPlan(startPose)
-
-    def sendOpenHand(self):
-        self.handDriver.sendOpen()
-
-    def sendCloseHand(self):
-        self.handDriver.sendClose(60)
+    def commitManipPlan(self):
+            self.manipPlanner.commitManipPlan(self.plans[-1])
 
     def sendNeckPitchLookDown(self):
         self.multisenseDriver.setNeckPitch(40)
@@ -386,7 +356,7 @@ class ValvePlannerDemo(object):
 
         folder = om.getOrCreateContainer('affordances')
         z = DebugData()
-        z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius= self.valveRadius) #foam valves
+        z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius= self.valveRadius)
         valveMesh = z.getPolyData()
 
         self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=vis.AffordanceItem, parent=folder, alpha=0.3)
@@ -413,258 +383,165 @@ class ValvePlannerDemo(object):
                 return robotstate.convertStateMessageToDrakePose(self.plans[-1].plan[-1])
             else:
                 return self.getEstimatedRobotStatePose()
-                
-    #def getPlanningStartPose(self):
-    #    if self.planFromCurrentRobotState:
-    #        return self.getEstimatedRobotStatePose()
-    #    else:
-    #        assert False
 
 
-    def cleanupFootstepPlans(self):
-        om.removeFromObjectModel(om.findObjectByName('walking goal'))
+    def removeFootstepPlan(self):
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
+        self.footstepPlan = None
+
 
     def playNominalPlan(self):
-        #plans = [self.walkingPlan, self.preGraspPlan, self.graspPlan]
-        #plans = [self.preGraspPlan, self.graspPlan]
         assert None not in self.plans
         self.planPlaybackFunction(self.plans)
 
-    def playPreGraspPlan(self):
-        self.planPlaybackFunction([self.preGraspPlan])
 
-    def playGraspPlan(self):
-        self.planPlaybackFunction([self.graspPlan])
+    def computePreGraspPlanGaze(self):
+
+        self.computePointerTipFrame(0)
+        self.initGazeConstraintSet(self.pointerTipFrameDesired)
+        self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
+        self.planGazeTrajectory()
 
 
-    def playStandPlan(self):
-        self.planPlaybackFunction([self.standPlan])
+    def computeInsertPlan(self):
+        self.computePointerTipFrame(1)
+        self.initGazeConstraintSet(self.pointerTipFrameDesired)
+        self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
+        self.planGazeTrajectory()
+
+
+    def computeTurnPlan(self, turnDegrees=360, numberOfSamples=12):
+
+        degreeStep = float(turnDegrees) / numberOfSamples
+        tipMode = 0 if self.scribeInAir else 1
+
+        self.computePointerTipFrame(tipMode)
+        self.initGazeConstraintSet(self.pointerTipFrameDesired)
+        self.appendDistanceConstraint()
+
+        for i in xrange(numberOfSamples):
+            self.nextScribeAngle += self.scribeDirection*degreeStep
+            self.computePointerTipFrame(tipMode)
+            self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, i+1)
+
+        self.planGazeTrajectory()
+
+
+    def computeStandPlan(self):
+        startPose = self.getPlanningStartPose()
+        self.standPlan = self.ikPlanner.computeNominalPlan(startPose)
+        self.addPlan(self.standPlan)
+
 
     def computeNominalPlan(self):
 
-        # False if simulating
-        self.planFromCurrentRobotState = False
+        self.plans = []
 
-        self.findValveAffordance()
-        self.computeGraspFrame()
-        self.computeStanceFrame()
-        #self.computeFootstepPlan()
-        #self.computeWalkingPlan()
-        self.computePreGraspPose()
-        self.computeGraspPlan()
+        self.removeFootstepPlan()
+        self.removePointerTipFrames()
 
+#        self.findValveAffordance()
+#        self.computeGraspFrame()
+#        self.computeStanceFrame()
 
+#        if self.useFootstepPlanner:
+#            self.computeFootstepPlan()
+#            self.computeWalkingPlan()
+#        else:
+#            self.moveRobotToStanceFrame()
 
+        self.computePreGraspPlan()
+        self.computePreGraspPlanGaze()
 
-        # reach into valve:
-        self.computePointerTipFrame(0)
-        self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, 1)
-        self.computePointerTipFrame(1)
-        self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, 2)
-        self.planGazeTrajectory()
+        if not self.scribeInAir:
+            self.computeInsertPlan()
 
+        self.computeTurnPlan()
+        self.computePreGraspPlanGaze()
+        self.computePreGraspPlan()
+        self.computeStandPlan()
 
-        # scribe the pointer around
-        noScribeSamples =12
-        noTurns=2
-        for i in range(0,noScribeSamples*noTurns):
-            self.computePointerTipFrame(1)
-            self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, i+1)
-            self.nextScribeAngle = self.nextScribeAngle + self.scribeDirection*360.0/noScribeSamples
-            print i , self.nextScribeAngle
-
-        self.planGazeTrajectory()
-
-
-        # retract it
-        self.computePointerTipFrame(1)
-        self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, 1)
-        self.computePointerTipFrame(0)
-        self.appendGazeConstraintsForTargetFrame(self.pointerTipFrameDesired, 2)
-        self.planGazeTrajectory()
-
-        # retract back to stored posture:
-        self.computePreGraspPose()
 
         self.playNominalPlan()
 
-        # empty list of plans
-        self.plans = []
 
-    def sendPlanWithHeightMode(self):
-        self.atlasDriver.sendPlanUsingBdiHeight(True)
+    def waitForPlanExecution(self, plan):
+        planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
+        print 'waiting for plan execution:', planElapsedTime
+
+        return self.delay(planElapsedTime + 1.0)
+
+
+    def animateLastPlan(self):
+        plan = self.plans[-1]
+
+        if not self.visOnly:
+            self.commitManipPlan()
+
+        return self.waitForPlanExecution(plan)
+
+
+    def addWalkingTasksToQueue(self, taskQueue, planFunc, walkFunc):
+
+        if self.useFootstepPlanner:
+            taskQueue.addTask(planFunc)
+
+            if self.visOnly:
+                taskQueue.addTask(self.computeWalkingPlan)
+                taskQueue.addTask(self.animateLastPlan)
+            else:
+
+                taskQueue.addTask(self.userPrompt('send stand command. continue? y/n: '))
+                taskQueue.addTask(self.atlasDriver.sendStandCommand)
+                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
+
+                taskQueue.addTask(self.userPrompt('commit footsteps. continue? y/n: '))
+                taskQueue.addTask(self.commitFootstepPlan)
+                taskQueue.addTask(self.waitForAtlasBehaviorAsync('step'))
+                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
+
+            taskQueue.addTask(self.removeFootstepPlan)
+        else:
+            taskQueue.addTask(walkFunc)
+
+
 
     def autonomousExecute(self):
 
-        self.planFromCurrentRobotState = True
 
         taskQueue = AsyncTaskQueue()
 
-        # stand and open hand
-        taskQueue.addTask(self.userPrompt('stand and open hand. continue? y/n: '))
-        taskQueue.addTask(self.atlasDriver.sendStandCommand)
-        taskQueue.addTask(self.sendOpenHand)
-        taskQueue.addTask(self.sendPlanWithHeightMode)
 
-        # user prompt
-        taskQueue.addTask(self.userPrompt('sending neck pitch forward. continue? y/n: '))
-
-        # set neck pitch
-        taskQueue.addTask(self.printAsync('neck pitch forward'))
-        taskQueue.addTask(self.sendNeckPitchLookForward)
-        taskQueue.addTask(self.delay(1.0))
-
-        # user prompt
-        taskQueue.addTask(self.userPrompt('perception and fitting. continue? y/n: '))
-
-        # perception & fitting
-        taskQueue.addTask(self.printAsync('waiting for clean lidar sweep'))
-        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-
-
-        taskQueue.addTask(self.printAsync('fitting valve affordance'))
-        taskQueue.addTask(self.affordanceFitFunction)
-        taskQueue.addTask(self.findValveAffordance)
-
-        # compute grasp & stance
         taskQueue.addTask(self.printAsync('computing grasp and stance frames'))
+        taskQueue.addTask(self.removePointerTipFrames)
+        taskQueue.addTask(self.findValveAffordance)
         taskQueue.addTask(self.computeGraspFrame)
         taskQueue.addTask(self.computeStanceFrame)
 
-        # footstep plan
-        taskQueue.addTask(self.printAsync('compute footstep plan'))
-        taskQueue.addTask(self.computeFootstepPlan)
 
-        # user prompt
-        taskQueue.addTask(self.userPrompt('sending footstep plan. continue? y/n: '))
+        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
+        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
 
-        # walk
-        taskQueue.addTask(self.printAsync('walking'))
-        taskQueue.addTask(self.commitFootstepPlan)
-        taskQueue.addTask(self.waitForAtlasBehaviorAsync('step'))
-        taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
-
-        # user prompt
-        taskQueue.addTask(self.userPrompt('sending neck pitch. continue? y/n: '))
-
-        # set neck pitch
-        taskQueue.addTask(self.printAsync('neck pitch down'))
-        taskQueue.addTask(self.sendNeckPitchLookDown)
-        taskQueue.addTask(self.delay(1.0))
-
-        # user prompt
-        #taskQueue.addTask(self.userPrompt('crouch. continue? y/n: '))
-
-        # crouch
-        #taskQueue.addTask(self.printAsync('send manip mode'))
-        #taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        #taskQueue.addTask(self.delay(1.0))
-        #taskQueue.addTask(self.printAsync('crouching'))
-        #taskQueue.addTask(self.sendPelvisCrouch)
-        #taskQueue.addTask(self.delay(3.0))
-
-
-        # user prompt
-        taskQueue.addTask(self.userPrompt('plan pre grasp. continue? y/n: '))
-
-
-        # compute pre grasp plan
-        taskQueue.addTask(self.printAsync('computing pre grasp plan'))
-        taskQueue.addTask(self.computePreGraspPose)
-        taskQueue.addTask(self.playPreGraspPlan)
-
-        # user prompt
-        taskQueue.addTask(self.userPrompt('commit manip plan. continue? y/n: '))
-
-        # commit pre grasp plan
         taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        taskQueue.addTask(self.delay(1.0))
-        taskQueue.addTask(self.printAsync('commit pre grasp plan'))
-        taskQueue.addTask(self.commitPreGraspPlan)
-        taskQueue.addTask(self.delay(10.0))
+        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
 
 
-        # user prompt
-        taskQueue.addTask(self.userPrompt('perception and fitting. continue? y/n: '))
-
-        # perception & fitting
-        taskQueue.addTask(self.printAsync('waiting for clean lidar sweep'))
-        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-
-        taskQueue.addTask(self.printAsync('fitting valve affordance'))
-        taskQueue.addTask(self.affordanceFitFunction)
-        taskQueue.addTask(self.findValveAffordance)
-
-        # compute valve grasp frame
-        taskQueue.addTask(self.printAsync('computing valve grasp frame'))
-        taskQueue.addTask(self.computeGraspFrame)
+        planningFunctions = [
+                    self.computePreGraspPlan,
+                    self.computePreGraspPlanGaze,
+                    self.computeInsertPlan,
+                    self.computeTurnPlan,
+                    self.computePreGraspPlanGaze,
+                    self.computePreGraspPlan,
+                    self.computeStandPlan,
+                    ]
 
 
-        # compute grasp plan
-        taskQueue.addTask(self.printAsync('computing grasp plan'))
-        taskQueue.addTask(self.computeGraspPlan)
-        taskQueue.addTask(self.playGraspPlan)
+        for planFunc in planningFunctions:
+            taskQueue.addTask(planFunc)
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
 
-        # user prompt
-        taskQueue.addTask(self.userPrompt('commit manip plan. continue? y/n: '))
-
-        # commit grasp plan
-        taskQueue.addTask(self.printAsync('commit grasp plan'))
-        taskQueue.addTask(self.commitGraspPlan)
-        taskQueue.addTask(self.delay(10.0))
-
-        # recompute grasp plan
-        taskQueue.addTask(self.printAsync('recompute grasp plan'))
-        taskQueue.addTask(self.computeGraspPlan)
-        taskQueue.addTask(self.playGraspPlan)
-
-        # user prompt
-        taskQueue.addTask(self.userPrompt('commit manip plan. continue? y/n: '))
-
-        # commit grasp plan
-        taskQueue.addTask(self.printAsync('commit grasp plan'))
-        taskQueue.addTask(self.commitGraspPlan)
-        taskQueue.addTask(self.delay(3.0))
-
-
-        # user prompt
-        taskQueue.addTask(self.userPrompt('closing hand. continue? y/n: '))
-
-        # close hand
-        taskQueue.addTask(self.printAsync('close hand'))
-        taskQueue.addTask(self.sendCloseHand)
-        taskQueue.addTask(self.delay(3.0))
-
-
-        taskQueue.addTask(self.userPrompt('send stand command. continue? y/n: '))
-        taskQueue.addTask(self.atlasDriver.sendStandCommand)
-        taskQueue.addTask(self.delay(5.0))
-        taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        taskQueue.addTask(self.delay(1.0))
-
-        '''
-        # user prompt
-        taskQueue.addTask(self.userPrompt('compute stand plan. continue? y/n: '))
-
-        # stand
-        taskQueue.addTask(self.computeStandPlan)
-        taskQueue.addTask(self.playStandPlan)
-
-        taskQueue.addTask(self.userPrompt('commit stand. continue? y/n: '))
-
-        # compute pre grasp plan
-        taskQueue.addTask(self.commitStandPlan)
-        taskQueue.addTask(self.delay(10.0))
-        '''
-
-        # user prompt
-        #taskQueue.addTask(self.userPrompt('commit manip plan. continue? y/n: '))
-
-        # commit pre grasp plan
-        #taskQueue.addTask(self.printAsync('commit pre grasp plan'))
-        #taskQueue.addTask(self.commitPreGraspPlan)
-        #taskQueue.addTask(self.delay(10.0))
 
         taskQueue.addTask(self.printAsync('done!'))
 
