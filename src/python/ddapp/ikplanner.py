@@ -365,8 +365,7 @@ class IKPlanner(object):
         endPose, info = self.computeNominalPose(startPose)
         print 'info:', info
 
-        self.jointController.addPose('stand_end', endPose)
-        return self.computePostureGoal(startPoseName, 'stand_end')
+        return self.computePostureGoal(startPose, endPose)
 
 
     def computeStandPose(self, startPose):
@@ -393,8 +392,7 @@ class IKPlanner(object):
         endPose, info = self.computeStandPose(startPose)
         print 'info:', info
 
-        self.jointController.addPose('stand_end', endPose)
-        return self.computePostureGoal(startPoseName, 'stand_end')
+        return self.computePostureGoal(startPose, endPose)
 
 
     def createPostureConstraint(self, startPostureName, jointNames):
@@ -592,7 +590,7 @@ class IKPlanner(object):
         return constraintSet
 
 
-    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockTorso=False, lockArm=True, planTraj=True):
+    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockTorso=False, lockArm=True):
 
         self.reachingSide = side
 
