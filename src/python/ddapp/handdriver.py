@@ -72,6 +72,7 @@ class RobotiqHandDriver(object):
         msg = lcmrobotiq.command_t()
         msg.utime = getUtime()
         msg.activate = 0
+        msg.emergency_release = 0
         msg.do_move = 0
         msg.mode = 0
         msg.position = 0
@@ -84,6 +85,19 @@ class RobotiqHandDriver(object):
         msg.activate = 1
         lcmUtils.publish(channel, msg)
 
+    def sendDrop(self):
+        msg = lcmrobotiq.command_t()
+        msg.utime = getUtime()
+        msg.activate = 1
+        msg.emergency_release = 1
+        msg.do_move = 0
+        msg.mode = 0
+        msg.position = 0
+        msg.force = 0
+        msg.velocity = 0
+        channel = 'ROBOTIQ_%s_COMMAND' % self.side.upper()
+        lcmUtils.publish(channel, msg)
+
     def sendOpen(self, percentage=100.0):
         self.sendClose(100.0 - percentage)
 
@@ -93,6 +107,7 @@ class RobotiqHandDriver(object):
         msg = lcmrobotiq.command_t()
         msg.utime = getUtime()
         msg.activate = 1
+        msg.emergency_release = 0
         msg.do_move = 1
         msg.position = int(254 * (percentage/100.0))
         msg.force = 255
@@ -109,6 +124,7 @@ class RobotiqHandDriver(object):
         msg = lcmrobotiq.command_t()
         msg.utime = getUtime()
         msg.activate = 1
+        msg.emergency_release = 0
         msg.do_move = 1
         msg.position = int(254 * (position/100.0))
         msg.force = int(255 * (force/100.0))
@@ -117,12 +133,34 @@ class RobotiqHandDriver(object):
         channel = 'ROBOTIQ_%s_COMMAND' % self.side.upper()
         lcmUtils.publish(channel, msg)
 
+    def sendRegrasp(self, position, force, velocity, mode):
+
+        channel = 'ROBOTIQ_%s_STATUS' % self.side.upper()
+        statusMsg = lcmUtils.captureMessage(channel, lcmrobotiq.status_t)
+
+        print "got a message", statusMsg.positionA, statusMsg.positionB, statusMsg.positionC
+        avgPosition = (statusMsg.positionA +
+                       statusMsg.positionB +
+                       statusMsg.positionC)/3.0
+        print avgPosition
+
+        newPosition = avgPosition/255.0  * 100.0
+        print newPosition
+        if newPosition > 5.0:
+            self.sendCustom(newPosition-5.0, force, velocity, mode)
+        else:
+            self.sendCustom(newPosition, force, velocity, mode)
+
+        time.sleep(0.3)
+        self.sendCustom(position, force, velocity, mode)
+
     def setMode(self, mode):
         assert 0 <= int(mode) <= 4
 
         msg = lcmrobotiq.command_t()
         msg.utime = getUtime()
         msg.activate = 1
+        msg.emergency_release = 0
         msg.do_move = 0
         msg.position = 0
         msg.force = 0

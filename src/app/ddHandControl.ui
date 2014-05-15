@@ -287,16 +287,16 @@
           <item>
            <widget class="QDoubleSpinBox" name="repeatRateSpinner">
             <property name="minimum">
-             <double>0.050000000000000</double>
+             <double>0.025000000000000</double>
             </property>
             <property name="maximum">
-             <double>5.000000000000000</double>
+             <double>1.000000000000000</double>
             </property>
             <property name="singleStep">
-             <double>0.050000000000000</double>
+             <double>0.025000000000000</double>
             </property>
             <property name="value">
-             <double>3.000000000000000</double>
+             <double>1.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -324,6 +324,20 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="setModeButton">
+          <property name="text">
+           <string>Set Mode</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="regraspButton">
+          <property name="text">
+           <string>Re-Grasp</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <item>
            <widget class="QPushButton" name="calibrateButton">
@@ -333,16 +347,16 @@
            </widget>
           </item>
           <item>
-           <widget class="Line" name="line_5">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
+           <widget class="QPushButton" name="dropButton">
+            <property name="text">
+             <string>Emergency Drop</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="setModeButton">
-            <property name="text">
-             <string>Set Mode</string>
+           <widget class="Line" name="line_5">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
             </property>
            </widget>
           </item>

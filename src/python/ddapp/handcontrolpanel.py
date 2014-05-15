@@ -49,6 +49,8 @@ class HandControlPanel(object):
         self.widget.advanced.sendButton.clicked.connect(self.sendClicked)
         self.widget.advanced.calibrateButton.clicked.connect(self.calibrateClicked)
         self.widget.advanced.setModeButton.clicked.connect(self.setModeClicked)
+        self.widget.advanced.regraspButton.clicked.connect(self.regraspClicked)
+        self.widget.advanced.dropButton.clicked.connect(self.dropClicked)
         self.widget.advanced.repeatRateSpinner.valueChanged.connect(self.rateSpinnerChanged)
 
         # create a timer to repeat commands
@@ -137,6 +139,30 @@ class HandControlPanel(object):
 
         self.drivers[side].sendCalibrate()
         self.storedCommand[side] = None
+
+    def dropClicked(self):
+        if self.widget.handSelect.leftButton.checked:
+            side = 'left'
+        else:
+            side = 'right'
+
+        self.drivers[side].sendDrop()
+        self.storedCommand[side] = None
+
+    def regraspClicked(self):
+        if self.widget.handSelect.leftButton.checked:
+            side = 'left'
+        else:
+            side = 'right'
+
+        position = float(self.widget.advanced.closePercentSpinner.value)
+        force = float(self.widget.advanced.forcePercentSpinner.value)
+        velocity = float(self.widget.advanced.velocityPercentSpinner.value)
+
+        mode = self.getModeInt(self.widget.advanced.modeBox.currentText)
+
+        self.drivers[side].sendRegrasp(position, force, velocity, mode)
+        self.storedCommand[side] = (position, force, velocity, mode)
 
     def rateSpinnerChanged(self):
         self.updateTimer.targetFps = self.ui.repeatRateSpinner.value
