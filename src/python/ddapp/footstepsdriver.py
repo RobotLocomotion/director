@@ -388,7 +388,7 @@ class FootstepsDriver(object):
         msg.params.planning_mode = msg.params.MODE_AUTO
         msg.params.behavior = self.behavior_lcm_map[self.params.properties.behavior]
         msg.params.map_command = self.map_command_lcm_map[self.params.properties.map_command]
-        msg.params.leading_foot = msg.params.LEAD_AUTO
+        msg.params.leading_foot = msg.params.LEAD_RIGHT
         msg.default_step_params = self.getDefaultStepParams()
         return msg
 
