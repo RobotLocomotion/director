@@ -168,8 +168,6 @@ class SafeTerrainRegion:
         msg.m_times_n = msg.m * msg.n
         msg.A = self.A.flatten(order='F') # column-major
         msg.b = self.b
-        print self.A
-        print self.b
         return msg
 
     def xy_polytope(self):
@@ -181,7 +179,7 @@ class SafeTerrainRegion:
             hull = ConvexHull(V[:2,:].T)
             return V[:2,hull.vertices]
         else:
-            print "Infeasible polytope"
+            # print "Infeasible polytope"
             return np.zeros((2,0))
 
 

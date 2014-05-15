@@ -98,8 +98,6 @@ class FootstepsPanel(object):
             self.region_seed_frames.append(frameObj)
             heights, world2px = self.depth_provider.getSceneHeightData()
             heights[np.isinf(heights)] = np.nan
-            print heights.shape
-            print world2px
             px2world = np.linalg.inv(world2px)
             self.terrain_segmentation.setHeights(heights, px2world)
             self.onRegionSeedModified(frameObj)
