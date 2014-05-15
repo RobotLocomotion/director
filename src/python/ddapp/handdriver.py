@@ -138,16 +138,21 @@ class RobotiqHandDriver(object):
         channel = 'ROBOTIQ_%s_STATUS' % self.side.upper()
         statusMsg = lcmUtils.captureMessage(channel, lcmrobotiq.status_t)
 
-        newPosition = (statusMsg.posRequestA +
-                    statusMsg.posRequestB +
-                    statusMsg.posRequestC)/3.0
-        newPosition /= 255.0
+        print "got a message", statusMsg.positionA, statusMsg.positionB, statusMsg.positionC
+        avgPosition = (statusMsg.positionA +
+                       statusMsg.positionB +
+                       statusMsg.positionC)/3.0
+        print avgPosition
 
-        if newPosition > 1.0:
-            self.sendCustom(self, newPosition-2.0, force, velocity, mode)
+        newPosition = avgPosition/255.0  * 100.0
+        print newPosition
+        if newPosition > 5.0:
+            self.sendCustom(newPosition-5.0, force, velocity, mode)
         else:
-            self.sendCustom(self, newPosition, force, velocity, mode)
+            self.sendCustom(newPosition, force, velocity, mode)
 
+        time.sleep(0.3)
+        self.sendCustom(position, force, velocity, mode)
 
     def setMode(self, mode):
         assert 0 <= int(mode) <= 4
