@@ -135,15 +135,18 @@ class RobotiqHandDriver(object):
 
     def sendRegrasp(self, position, force, velocity, mode):
 
-        if position > 1:
-            self.sendCustom(self, position-2, force, velocity, mode)
+        channel = 'ROBOTIQ_%s_STATUS' % self.side.upper()
+        statusMsg = lcmUtils.captureMessage(channel, lcmrobotiq.status_t)
+
+        newPosition = (statusMsg.posRequestA +
+                    statusMsg.posRequestB +
+                    statusMsg.posRequestC)/3.0
+        newPosition /= 255.0
+
+        if newPosition > 1.0:
+            self.sendCustom(self, newPosition-2.0, force, velocity, mode)
         else:
-            self.sendCustom(self, position, force, velocity, mode)
-
-        time.sleep(0.1)
-
-        self.sendCustom(self, position, force, velocity, mode)
-
+            self.sendCustom(self, newPosition, force, velocity, mode)
 
 
     def setMode(self, mode):
