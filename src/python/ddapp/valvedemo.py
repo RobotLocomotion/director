@@ -371,6 +371,11 @@ class ValvePlannerDemo(object):
         self.valveAffordance = om.findObjectByName('valve')
         self.valveFrame = om.findObjectByName('valve frame')
 
+        self.computeGraspFrame()
+        self.computeStanceFrame()
+        self.computePointerTipFrame(0)
+
+
     def getEstimatedRobotStatePose(self):
         return np.array(self.sensorJointController.getPose('EST_ROBOT_STATE'))
 
@@ -417,12 +422,16 @@ class ValvePlannerDemo(object):
 
         self.computePointerTipFrame(tipMode)
         self.initGazeConstraintSet(self.pointerTipFrameDesired)
-        self.appendDistanceConstraint()
+        #self.appendDistanceConstraint()
 
         for i in xrange(numberOfSamples):
             self.nextScribeAngle += self.scribeDirection*degreeStep
             self.computePointerTipFrame(tipMode)
             self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, i+1)
+
+        gazeConstraint = self.constraintSet.constraints[0]
+        assert isinstance(gazeConstraint, ikplanner.ik.WorldGazeDirConstraint)
+        gazeConstraint.tspan = [1.0, numberOfSamples]
 
         self.planGazeTrajectory()
 
