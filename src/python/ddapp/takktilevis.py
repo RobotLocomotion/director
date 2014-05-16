@@ -42,11 +42,12 @@ sensorLocationRight = {}
 
 class TakktileVis(object):
 
-    def __init__(self, name, topic, sensorLocations, windowSize = 10, pubRate = 6):
+    def __init__(self, name, topic, sensorLocations, windowSize = 10):
         self.name = name
         self.sensorLocations = sensorLocations
 
-        lcmUtils.addSubscriber(topic, takktile.state_t, self.drawBlips)
+        sub = lcmUtils.addSubscriber(topic, takktile.state_t, self.drawBlips)
+        sub.setSpeedLimit(30)
 
         self.active = False
         self.doTare = True
@@ -54,9 +55,6 @@ class TakktileVis(object):
         self.taredSensorValues = {}
         self.tareCount = 0
         self.tareWindow = windowSize
-
-        self.pubRate = pubRate
-        self.pubCount = 0
 
     def tare(self):
         self.doTare = True
@@ -80,28 +78,23 @@ class TakktileVis(object):
             self.tareData(data)
 
         elif self.active:
-            self.pubCount +=1
 
-            if self.pubCount >= self.pubRate:
-                self.pubCount = 0
-                sensorValues = {}
-                for i in range(data.data_length):
-                    sensorValues[data.id[i]] = data.force[i]
+            sensorValues = {}
+            for i in range(data.data_length):
+                sensorValues[data.id[i]] = data.force[i]
 
-                d = DebugData()
-                for x in sensorValues.keys():
-                    frame, pos, rpy = sensorLocation[x]
-                    f = robotStateModel.getLinkFrame(frame)
-                    t = transformUtils.frameFromPositionAndRPY(pos, rpy)
-                    t.PostMultiply()
-                    t.Concatenate(f)
-                    redColor = 1.0 - (sensorValues[x] / self.taredSensorValues[x])
-                    greenColor = 1 - redColor
-                    d.addSphere(t.GetPosition(),
-                                radius=0.005,
-                                color=[redColor,greenColor,0])
-                vis.updatePolyData(d.getPolyData(), self.name, colorByName='RGB255')
+            d = DebugData()
+            for x in sensorValues.keys():
+                frame, pos, rpy = sensorLocation[x]
+                f = robotStateModel.getLinkFrame(frame)
+                t = transformUtils.frameFromPositionAndRPY(pos, rpy)
+                t.PostMultiply()
+                t.Concatenate(f)
+                redColor = 1.0 - (sensorValues[x] / self.taredSensorValues[x])
+                greenColor = 1 - redColor
+                d.addSphere(t.GetPosition(),
+                            radius=0.005,
+                            color=[redColor,greenColor,0])
+            vis.updatePolyData(d.getPolyData(), self.name, colorByName='RGB255')
 
-            else:
-                return
 
