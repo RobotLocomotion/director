@@ -113,12 +113,19 @@ class VideoPlayer(object):
         self.view.renderer().SetBackground([0,0,0])
         self.view.renderer().SetBackground2([0,0,0])
 
-        self.ui.timeLabel.visible = False
+        self.ui.logSyncButton.visible = True
+        self.ui.reviewButton.visible = True
+        self.ui.resumeButton.visible = False
+        self.ui.playbackControlsFrame.visible = False
+        self.ui.playbackSliderFrame.visible = False
         self.ui.seekForwardButton.visible = False
         self.ui.seekBackwardButton.visible = False
+        self.ui.timeLabel.visible = False
 
         self.ui.slider.connect('valueChanged(int)', self.onSliderChanged)
         self.ui.resumeButton.connect('clicked()', self.onResumeClicked)
+        self.ui.logSyncButton.connect('clicked()', self.onLogSyncClicked)
+        self.ui.reviewButton.connect('clicked()', self.onReviewClicked)
         self.ui.playButton.connect('clicked()', self.onPlayClicked)
 
         self.ui.mainWidget.layout().addWidget(self.view)
@@ -138,31 +145,52 @@ class VideoPlayer(object):
     def onResumeClicked(self):
         self.enableLiveMode()
 
+    def onLogSyncClicked(self):
+        self.enableLogSyncMode()
+
+    def onReviewClicked(self):
+        self.enableReviewMode()
 
     def enableReviewMode(self):
+        self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='review')
         self.cameraView.setImageName('VIDEO_PLAYBACK_IMAGE')
-        self.ui.resumeButton.setEnabled(True)
-        self.ui.playButton.setEnabled(True)
 
+        self.ui.logSyncButton.visible = False
+        self.ui.reviewButton.visible = False
+        self.ui.resumeButton.visible = True
+        self.ui.playbackControlsFrame.visible = True
+        self.ui.playbackSliderFrame.visible = True
 
-    def enableLiveMode(self):
-        self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='resume')
         self.ui.slider.blockSignals(True)
         self.ui.slider.setValue(self.ui.slider.maximum)
         self.ui.slider.blockSignals(False)
-        self.cameraView.setImageName(CAPTURE_CHANNEL)
-        self.ui.resumeButton.setEnabled(False)
-        self.ui.playButton.setEnabled(False)
 
+    def enableLiveMode(self):
+        self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='resume')
+        self.cameraView.setImageName(CAPTURE_CHANNEL)
+
+        self.ui.logSyncButton.visible = True
+        self.ui.reviewButton.visible = True
+        self.ui.resumeButton.visible = False
+        self.ui.playbackControlsFrame.visible = False
+        self.ui.playbackSliderFrame.visible = False
+
+    def enableLogSyncMode(self):
+        self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='log-sync')
+        self.cameraView.setImageName('VIDEO_PLAYBACK_IMAGE')
+
+        self.ui.logSyncButton.visible = False
+        self.ui.reviewButton.visible = False
+        self.ui.resumeButton.visible = True
+        self.ui.playbackControlsFrame.visible = False
+        self.ui.playbackSliderFrame.visible = False
 
     def getSliderValue(self):
         return (self.ui.slider.value/float(self.ui.slider.maximum))
 
     def onSliderChanged(self, sliderValue):
-        self.enableReviewMode()
         self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='request_frame', value=self.getSliderValue(), pid=self.pid)
         self.cameraView.setImageName('VIDEO_PLAYBACK_IMAGE')
-
 
     def onPlayClicked(self):
         self.sendCommand('VIDEO_PLAYBACK_CONTROL', command='play', value=self.getSliderValue(), pid=self.pid, speed=self.ui.playbackSpeedSpin.value)
