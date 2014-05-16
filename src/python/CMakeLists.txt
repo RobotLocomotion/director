@@ -26,6 +26,7 @@ set(python_files
   ddapp/framevisualization.py
   ddapp/handcontrolpanel.py
   ddapp/handdriver.py
+  ddapp/takktilevis.py
   ddapp/ik.py
   ddapp/ikconstraints.py
   ddapp/ikplanner.py

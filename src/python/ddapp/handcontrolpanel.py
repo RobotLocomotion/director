@@ -4,6 +4,7 @@ from ddapp import lcmUtils
 from ddapp import applogic as app
 from ddapp.utime import getUtime
 from ddapp.timercallback import TimerCallback
+from ddapp import takktilevis
 
 import numpy as np
 import math
@@ -30,6 +31,9 @@ class HandControlPanel(object):
         self.drivers['left'] = lDriver
         self.drivers['right'] = rDriver
 
+        self.takktileVizLeft = takktilevis.TakktileVis('l_takktile', 'TAKKTILE_RAW_LEFT', takktilevis.sensorLocationLeft)
+        self.takktileVizRight = takktilevis.TakktileVis('r_takktile', 'TAKKTILE_RAW_RIGHT', takktilevis.sensorLocationRight)
+
         self.storedCommand = {'left': None, 'right': None}
 
         loader = QtUiTools.QUiLoader()
@@ -52,6 +56,8 @@ class HandControlPanel(object):
         self.widget.advanced.regraspButton.clicked.connect(self.regraspClicked)
         self.widget.advanced.dropButton.clicked.connect(self.dropClicked)
         self.widget.advanced.repeatRateSpinner.valueChanged.connect(self.rateSpinnerChanged)
+        self.widget.sensors.leftTareButton.clicked.connect(self.takktileVizLeft.tare)
+        self.widget.sensors.rightTareButton.clicked.connect(self.takktileVizRight.tare)
 
         # create a timer to repeat commands
         self.updateTimer = TimerCallback()
@@ -168,6 +174,9 @@ class HandControlPanel(object):
         self.updateTimer.targetFps = self.ui.repeatRateSpinner.value
 
     def updatePanel(self):
+        self.takktileVizLeft.active = self.leftVisCheck.value
+        self.takktileVizRight.active = self.rightVisCheck.value
+
         if self.ui.repeaterCheckBox.checked and self.storedCommand['left']:
             position, force, velocity, mode = self.storedCommand['left']
             self.drivers['left'].sendCustom(position, force, velocity, mode)
