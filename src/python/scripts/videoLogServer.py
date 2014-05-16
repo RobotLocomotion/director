@@ -7,13 +7,14 @@ import threading
 import glob
 import json
 import re
+import select
 import numpy as np
 
 from ddapp import lcmspy as spy
 
 
-logCatalog = {}
-utimeMap = {}
+VIDEO_LCM_URL = 'udpm://239.255.76.50:7650?ttl=1'
+
 
 class FieldData(object):
 
@@ -25,7 +26,7 @@ class FieldData(object):
         return 'FieldData(%s)' % ', '.join(['%s=%r' % (k,v) for k, v in self.__dict__.iteritems()])
 
 
-def getRecentUtimes(utimeMap, seconds=60):
+def getRecentUtimes(utimeMap, seconds):
 
     utimes = np.array(utimeMap.keys())
     if not len(utimes):
@@ -37,12 +38,22 @@ def getRecentUtimes(utimeMap, seconds=60):
     startIndex = utimes.searchsorted(startTime)
     utimes = utimes[startIndex:]
 
-    #print utimes
-
     if not len(utimes):
         return None
 
     return utimes
+
+
+class LCMPoller(object):
+
+    def __init__(self, lc):
+        self.lc = lc
+        self.poll = select.poll()
+        self.poll.register(self.lc.fileno())
+
+    def handleLCM(self, timeout=100):
+        if self.poll.poll(timeout):
+            self.lc.handle()
 
 
 class LogLookup(object):
@@ -94,6 +105,7 @@ class PlayThread(object):
 
     def stop(self):
         self.shouldStop = True
+        self.thread.join()
 
     def mainLoop(self):
         startTime = time.time()
@@ -119,17 +131,26 @@ class PlayThread(object):
 
 class ServerThread(object):
 
-    def __init__(self):
+    def __init__(self, sharedUtimeMap):
 
+        self.sharedUtimeMap = sharedUtimeMap
         self.utimes = None
         self.playbackThread = None
+        self.syncThread = None
+        self.timeWindow = 60
         self.logLookup = LogLookup()
-        self.lc = lcm.LCM()
+        self.lc = lcm.LCM(VIDEO_LCM_URL)
+        self.lc.subscribe('VIDEO_PLAYBACK_CONTROL', self.onControlMessage)
 
     def start(self):
         self.thread = threading.Thread(target=self.mainLoop)
         self.thread.daemon = True
+        self.shouldStop = False
         self.thread.start()
+
+    def stop(self):
+        self.shouldStop = True
+        self.thread.join()
 
     def getUtimeIndex(self, data):
 
@@ -143,8 +164,8 @@ class ServerThread(object):
 
         if self.utimes is None:
 
-            self.logLookup.setUtimeMap(dict(utimeMap))
-            self.utimes = getRecentUtimes(self.logLookup.utimeMap)
+            self.logLookup.setUtimeMap(dict(self.sharedUtimeMap))
+            self.utimes = getRecentUtimes(self.logLookup.utimeMap, seconds=self.timeWindow)
 
             if self.utimes is None:
                 print 'no utimes cataloged'
@@ -157,7 +178,7 @@ class ServerThread(object):
         utimeRequest = self.utimes[utimeIndex]
         image, filename = self.logLookup.getImage(utimeRequest)
 
-        print 'index: %d    timeDelta:  %.3f    file: %s' % (utimeIndex, (self.utimes[-1] - self.utimes[utimeIndex])*1e-6, os.path.basename(filename))
+        print 'location: %.2f  index: %d  utime: %d   timeDelta:  %.3f    file: %s' % (data.value, utimeIndex, utimeRequest, (self.utimes[-1] - self.utimes[utimeIndex])*1e-6, os.path.basename(filename))
 
         self.lc.publish('VIDEO_PLAYBACK_IMAGE', image.encode())
 
@@ -170,11 +191,12 @@ class ServerThread(object):
 
 
     def onPlay(self, data):
+
+        self.stopPlaybackThread()
+
         if self.utimes is None:
             print 'cannot play.  no utimes available'
             return
-
-        self.stopPlaybackThread()
 
         startIndex = self.getUtimeIndex(data)
         playbackUtimes = self.utimes[startIndex:]
@@ -186,6 +208,15 @@ class ServerThread(object):
         if self.playbackThread:
             self.playbackThread.stop()
         self.playbackThread = None
+
+        if self.syncThread:
+            self.syncThread.stop()
+        self.syncThread = None
+
+
+    def onLogSync(self):
+        self.syncThread = LogSyncThread(self.sharedUtimeMap)
+        self.syncThread.start()
 
 
     def unwrapCommand(self, msgBytes):
@@ -205,156 +236,220 @@ class ServerThread(object):
             self.onResume(data)
         elif data.command == 'play':
             self.onPlay(data)
+        elif data.command == 'log-sync':
+            self.onLogSync()
 
 
     def mainLoop(self):
+        poll = LCMPoller(self.lc)
+        while not self.shouldStop:
+            poll.handleLCM()
 
-        self.lc.subscribe('VIDEO_PLAYBACK_CONTROL', self.onControlMessage)
 
-        print 'starting lcm handle loop'
+class LogSyncThread(object):
+
+    def __init__(self, sharedUtimeMap):
+
+        self.sharedUtimeMap = sharedUtimeMap
+        self.utimes = None
+        self.logLookup = LogLookup()
+        self.lastPublishTime = time.time()
+        self.publishFrequency = 1/60.0
+        self.lcListen = lcm.LCM()
+        self.lc = lcm.LCM(VIDEO_LCM_URL)
+        self.lcListen.subscribe('EST_ROBOT_STATE', self.onControlMessage)
+
+
+    def start(self):
+        self.thread = threading.Thread(target=self.mainLoop)
+        self.thread.daemon = True
+        self.shouldStop = False
+        self.thread.start()
+
+    def stop(self):
+        self.shouldStop = True
+        self.logLookup.closeLogs()
+        self.thread.join()
+
+    def updateLastPublishTime(self):
+        self.lastPublishTime = time.time()
+
+    def getLastPublishElapsedTime(self):
+        return time.time() - self.lastPublishTime
+
+
+    def onFrameRequest(self, utimeRequest):
+
+        if self.logLookup.utimeMap is None:
+
+            self.logLookup.setUtimeMap(dict(self.sharedUtimeMap))
+            assert len(self.logLookup.utimeMap)
+
+            self.utimes = np.array(self.logLookup.utimeMap.keys())
+            self.utimes.sort()
+
+
+        requestIndex = self.utimes.searchsorted(utimeRequest)
+        utimeFrame =  self.utimes[requestIndex]
+
+
+        image, filename = self.logLookup.getImage(utimeFrame)
+
+        print 'utime request: %d   utime frame:  %d   delta:  %f   file: %s' % (utimeRequest, utimeFrame,  (utimeFrame-utimeRequest)*1e-6, os.path.basename(filename))
+
+        self.lc.publish('VIDEO_PLAYBACK_IMAGE', image.encode())
+        self.updateLastPublishTime()
+
+
+    def onControlMessage(self, channel, msgBytes):
+
+        if self.getLastPublishElapsedTime() > self.publishFrequency:
+            msg = spy.decodeMessage(msgBytes)
+            self.onFrameRequest(msg.utime)
+
+
+    def mainLoop(self):
+        poll = LCMPoller(self.lcListen)
+        while not self.shouldStop:
+          poll.handleLCM()
+
+
+class CatalogThread(object):
+
+
+    def __init__(self, logDir, videoChannel):
+
+        self.videoChannel = videoChannel
+        self.logDir = logDir
+
+        self.pruneEnabled = True
+        self.maxNumberOfFiles = 30
+        self.cropTimeWindow = 60*30
+        self.utimeMap = {}
+        self.catalog = {}
+
+
+    def start(self):
+        self.thread = threading.Thread(target=self.mainLoop)
+        self.thread.daemon = True
+        self.shouldStop = False
+        self.thread.start()
+
+    def stop(self):
+        self.shouldStop = True
+        self.thread.join()
+
+    def mainLoop(self):
+        while not self.shouldStop:
+            self.updateCatalog()
+            time.sleep(0.3)
+
+
+    def updateCatalog(self):
+
+        logFiles = self.getExistingLogFiles(self.logDir)
+
+        if self.pruneEnabled:
+            logFiles = self.pruneLogFiles(logFiles, self.maxNumberOfFiles)
+
+        for logFile in logFiles:
+            self.updateLogInfo(logFile)
+
+
+    def updateLogInfo(self, filename):
+
+        fieldData = self.catalog.get(filename)
+
+        if not fieldData:
+            print 'discovered new file:', filename
+            fieldData = FieldData(filename=filename, fileSize=0, lastFilePos=0, channelTypes={})
+            self.catalog[filename] = fieldData
+            self.cropUtimeMap(self.utimeMap, self.cropTimeWindow)
+
+
+        log = lcm.EventLog(filename, 'r')
+        fileSize = log.size()
+
+        # if the log file is the same size as the last time it was inspected
+        # then there is no more work to do, return.
+        if fileSize == fieldData.fileSize:
+            return
+
+        fieldData.fileSize = fileSize
+
+        # seek to the last processed event, if one exists, then read past it
+        if fieldData.lastFilePos > 0:
+            log.seek(fieldData.lastFilePos)
+            event = log.read_next_event()
+
+
         while True:
-          self.lc.handle()
+
+            filepos = log.tell()
+            event = log.read_next_event()
+            if not event:
+                break
+
+            fieldData.lastFilePos = filepos
+            timestamp = event.timestamp
+            channel = event.channel
+
+            if channel == self.videoChannel:
+                self.utimeMap[timestamp] = (filename, filepos)
 
 
-def cropUtimeMap():
-
-    global utimeMap
-
-    if not len(utimeMap):
-        return
-
-    utimes = getRecentUtimes(utimeMap)
-    cropTime = utimes[0]
-    newMap = {}
-
-    for utime, value in utimeMap.iteritems():
-        if utime >= cropTime:
-            newMap[utime] = value
-
-    #print 'cropped utime map.  %d --> %d elements.' % (len(utimeMap), len(newMap))
-    utimeMap = newMap
+            # maintain a catalog of channelName->messageType
+            #if channel not in fieldData.channelTypes:
+            #    messageClass = spy.getMessageClass(event.data)
+            #    fieldData.channelTypes[channel] = messageClass
 
 
-def updateLogInfo(filename, catalog):
-
-    fieldData = catalog.get(filename)
-
-    if not fieldData:
-        print 'discovered new file:', filename
-        fieldData = FieldData(filename=filename, fileSize=0, lastFilePos=0, channelTypes={}, imageStreams={})
-        logCatalog[filename] = fieldData
-        cropUtimeMap()
+        log.close()
 
 
-    log = lcm.EventLog(filename, 'r')
-    fileSize = log.size()
-    if fileSize == fieldData.fileSize:
-        #print '  file size not changed, done.'
-        return
+    @staticmethod
+    def getExistingLogFiles(dirName):
 
-    fieldData.fileSize = fileSize
+        # sort log filenames by splitting string into
+        # list of strings and numbers.
+        # Example filename: lcmlog-2014-04-16.25
+        # sort implementation taken from: http://stackoverflow.com/a/5967539
 
-    if fieldData.lastFilePos > 0:
-        #print '  lastFilePos:', fieldData.lastFilePos, 'seeking and skipping next event'
-        log.seek(fieldData.lastFilePos)
-        event = log.read_next_event()
+        def atoi(text):
+            return int(text) if text.isdigit() else text
 
+        def splitKeys(text):
+            return [atoi(c) for c in re.split('(\d+)', text)]
 
-    #print 'reading file:', filename
-
-    channelTypes = fieldData.channelTypes
-    imageStreams = fieldData.imageStreams
-
-    newPacketsCount = 0
-
-    while True:
-
-        filepos = log.tell()
-        event = log.read_next_event()
-        if not event:
-            break
-
-        timestamp = event.timestamp
-        channel = event.channel
-
-        if channel not in channelTypes:
-            messageClass = spy.getMessageClass(event.data)
-            channelTypes[channel] = messageClass
-
-            if messageClass and messageClass.__name__ in ('image_t', 'images_t'):
-                #print '  discovered image channel:', channel, messageClass.__name__
-                imageStreams.setdefault(channel, [])
-
-        positions = imageStreams.get(channel)
-        if positions is not None:
-            #positions.append((timestamp, filepos))
-            utimeMap[timestamp] = (fieldData.filename, filepos)
-
-        fieldData.lastFilePos = filepos
-        newPacketsCount += 1
-
-    log.close()
-    #print '  processed new packets:', newPacketsCount
-    #for channelName, streamData in imageStreams.iteritems():
-    #    print '%s: %d frames' % (channelName, len(streamData))
+        filenames = glob.glob(dirName + '/lcmlog-*')
+        return sorted(filenames, key=splitKeys)
 
 
+    @staticmethod
+    def pruneLogFiles(logFiles, maxNumberOfFiles):
 
-def getExistingLogFiles(dirName):
+        logFiles = list(logFiles)
 
-    # sort log filenames by splitting string into
-    # list of strings and numbers.
-    # Example filename: lcmlog-2014-04-16.25
-    # sort implementation taken from: http://stackoverflow.com/a/5967539
+        while len(logFiles) > maxNumberOfFiles:
+            filename = logFiles.pop(0)
+            print 'deleting:', filename
+            os.remove(filename)
 
-    def atoi(text):
-        return int(text) if text.isdigit() else text
-
-    def splitKeys(text):
-        return [atoi(c) for c in re.split('(\d+)', text)]
-
-    filenames = glob.glob(dirName + '/lcmlog-*')
-    return sorted(filenames, key=splitKeys)
+        return logFiles
 
 
-def pruneLogFiles(logFiles):
+    @staticmethod
+    def cropUtimeMap(utimeMap, timeWindow):
 
-    maxNumberOfLogs = 20
+        if not len(utimeMap):
+            return
 
-    logFiles = list(logFiles)
-    while len(logFiles) > maxNumberOfLogs:
-        filename = logFiles.pop(0)
-        print 'deleting:', filename
-        os.remove(filename)
+        utimes = getRecentUtimes(utimeMap, timeWindow)
+        cropTime = utimes[0]
 
-    return logFiles
-
-
-def updateLogCatalog(dirName, logCatalog):
-
-
-    logFiles = getExistingLogFiles(dirName)
-    logFiles = pruneLogFiles(logFiles)
-
-    if not logFiles:
-        return
-
-    for logFile in logFiles:
-        updateLogInfo(logFile, logCatalog)
-
-
-def watchThreadMainLoop(dirName):
-
-    while True:
-        updateLogCatalog(dirName, logCatalog)
-        time.sleep(0.3)
-
-
-def startWatchThread(dirName):
-    watchThread = threading.Thread(target=watchThreadMainLoop, args=[dirName])
-    watchThread.daemon = True
-    watchThread.start()
-    return watchThread
+        for utime in utimeMap.keys():
+            if utime < cropTime:
+                del utimeMap[utime]
 
 
 def main():
@@ -367,13 +462,16 @@ def main():
 
     spy.findLCMModulesInSysPath()
 
-    watchThread = startWatchThread(logFileDir)
-    serverThread = ServerThread()
+    catalogThread = CatalogThread(logFileDir, 'DECKLINK_VIDEO_CAPTURE')
+    catalogThread.start()
+
+
+    serverThread = ServerThread(catalogThread.utimeMap)
     serverThread.start()
 
     try:
-        while watchThread.is_alive():
-            time.sleep(0.1)
+        while True:
+            time.sleep(1)
     except KeyboardInterrupt:
         pass
 
