@@ -375,7 +375,7 @@ class FootstepsDriver(object):
 
     def applyParams(self, msg):
         msg.params = lcmdrc.footstep_plan_params_t()
-        msg.params.max_num_steps = 20
+        msg.params.max_num_steps = 12
         msg.params.min_num_steps = 0
         msg.params.min_step_width = 0.20
         msg.params.nom_step_width = self.params.properties.nominal_step_width

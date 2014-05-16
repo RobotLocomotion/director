@@ -7,7 +7,7 @@ from scipy.spatial import ConvexHull
 import drc
 from irispy.cspace import rotmat
 from irispy.iris import inflate_region
-from irispy.utils import lcon_to_vert, InfeasiblePolytopeError
+from irispy.utils import lcon_to_vert
 
 DEFAULT_FOOT_CONTACTS = np.array([[-0.1170, -0.1170, 0.1170, 0.1170],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
