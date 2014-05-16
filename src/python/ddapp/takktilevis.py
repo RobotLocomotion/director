@@ -2,6 +2,8 @@ import math
 import takktile
 from time import sleep
 
+from ddapp import lcmUtils
+
 sensorLocationLeft = {}
 
 sensorLocationLeft[10] = ['left_finger_middle_link_3', [0.01,  0.015, -0.008], [0.0, 0.0, 0.0]]
@@ -35,7 +37,8 @@ sensorLocationLeft[72] = ['l_hand_face', [ 0.04, 0.0,  0.01], [0.0, 0.0, 0.0]]
 sensorLocationLeft[73] = ['l_hand_face', [ 0.04, 0.0,  0.00], [0.0, 0.0, 0.0]]
 sensorLocationLeft[74] = ['l_hand_face', [ 0.04, 0.0, -0.01], [0.0, 0.0, 0.0]]
 
-
+sensorLocationRight = {}
+#Fill this in
 
 class TakktileVis(object):
 
@@ -43,7 +46,7 @@ class TakktileVis(object):
         self.name = name
         self.sensorLocations = sensorLocations
 
-        lcmUtils.addSubscriber('TAKKTILE_RAW_LEFT', takktile.state_t, self.drawBlips)
+        lcmUtils.addSubscriber(topic, takktile.state_t, self.drawBlips)
 
         self.active = False
         self.doTare = True
@@ -55,17 +58,21 @@ class TakktileVis(object):
         self.pubRate = pubRate
         self.pubCount = 0
 
-    def tareData(self, data):
+    def tare(self):
+        self.doTare = True
 
+    def tareData(self, data):
         if self.doTare:
             for i in range(data.data_length):
-                self.taredSensorValues[data.id[i]] = data.force[i] / self.tareWindow
+                if data.id[i] in self.taredSensorValues:
+                    self.taredSensorValues[data.id[i]] += data.force[i] / self.tareWindow
+                else:
+                    self.taredSensorValues[data.id[i]] = data.force[i] / self.tareWindow
             self.tareCount += 1
 
         if self.tareCount >= self.tareWindow:
             self.doTare = False
             self.tareCount = 0
-
 
     def drawBlips(self, data):
 
