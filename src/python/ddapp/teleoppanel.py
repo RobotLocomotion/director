@@ -204,7 +204,7 @@ class EndEffectorTeleopPanel(object):
             if self.getGoalFrame(side):
                 continue
 
-            startPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side)
+            #startPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side)
 
             t = ikPlanner.newGraspToWorldFrame(startPose, side, ikPlanner.getPalmToHandLink(side))
             frameName = 'reach goal %s' % side
