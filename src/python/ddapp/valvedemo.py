@@ -56,6 +56,9 @@ class ValvePlannerDemo(object):
         self.preGraspPlan = None
         self.graspPlan = None
         self.constraintSet = None
+        
+        self.pointerTipTransformLocal = None
+        self.pointerTipPath = []
 
         self.plans = []
 
@@ -82,7 +85,7 @@ class ValvePlannerDemo(object):
 
     def setScribeAngleToCurrent(self):
         '''
-        Compute the current angle of the pointer relative to the valve
+        Compute the current angle of the robot's pointer relative to the valve
         '''
 
         for obj in om.getObjects():
@@ -181,6 +184,10 @@ class ValvePlannerDemo(object):
             if obj.getProperty('Name') == 'pointer tip frame desired':
                 om.removeFromObjectModel(obj)
 
+    def removePointerTipPath(self):
+        for obj in om.getObjects():
+            if obj.getProperty('Name') == 'pointer tip path':
+                om.removeFromObjectModel(obj)
 
     def computePointerTipFrame(self, engagedTip):
         if engagedTip:
@@ -194,11 +201,24 @@ class ValvePlannerDemo(object):
         rpy = [90, 0, 180]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        self.pointerTipTransformLocal = transformUtils.copyFrame(t)
+        
         t.Concatenate(self.valveFrame.transform)
+        self.pointerTipFrameDesired = vis.showFrame(t, 'pointer tip frame desired', parent=self.valveAffordance, visible=False, scale=0.2)
 
-        self.pointerTipFrameDesired = vis.showFrame(t, 'pointer tip frame desired', parent=self.valveAffordance, visible=True, scale=0.2)
-
-
+        
+    def drawPointerTipPath(self):
+      
+        path = DebugData()
+        for i in range(1,len(self.pointerTipPath)):
+          p0 = self.pointerTipPath[i-1].GetPosition()
+          p1 = self.pointerTipPath[i].GetPosition()
+          path.addLine ( np.array( p0 ) , np.array(  p1 ), radius= 0.005)
+          
+        pathMesh = path.getPolyData()
+        self.pointerTipLinePath = vis.showPolyData(pathMesh, 'pointer tip path', color=[0.0, 0.3, 1.0], cls=vis.AffordanceItem, parent=self.valveAffordance, alpha=0.6)
+        self.pointerTipLinePath.actor.SetUserTransform(self.valveFrame.transform) 
+        
     def computeStanceFrame(self):
 
         graspFrame = self.graspFrame.transform
@@ -491,6 +511,9 @@ class ValvePlannerDemo(object):
 
 
     def computeTurnPlan(self, turnDegrees=360, numberOfSamples=12):
+        self.pointerTipPath = []
+        self.removePointerTipFrames()
+        self.removePointerTipPath()
 
         degreeStep = float(turnDegrees) / numberOfSamples
         tipMode = 0 if self.scribeInAir else 1
@@ -498,16 +521,19 @@ class ValvePlannerDemo(object):
         self.computePointerTipFrame(tipMode)
         self.initGazeConstraintSet(self.pointerTipFrameDesired)
         #self.appendDistanceConstraint()
+        self.pointerTipPath.append(self.pointerTipTransformLocal)
 
         for i in xrange(numberOfSamples):
             self.nextScribeAngle += self.scribeDirection*degreeStep
             self.computePointerTipFrame(tipMode)
             self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, i+1)
+            self.pointerTipPath.append(self.pointerTipTransformLocal)
 
         gazeConstraint = self.constraintSet.constraints[0]
         assert isinstance(gazeConstraint, ikplanner.ik.WorldGazeDirConstraint)
         gazeConstraint.tspan = [1.0, numberOfSamples]
 
+        self.drawPointerTipPath()
         self.planGazeTrajectory()
 
 
@@ -523,6 +549,7 @@ class ValvePlannerDemo(object):
 
         self.removeFootstepPlan()
         self.removePointerTipFrames()
+        self.removePointerTipPath()
 
 #        self.findValveAffordance()
 #        self.computeGraspFrame()
@@ -598,6 +625,7 @@ class ValvePlannerDemo(object):
 
         taskQueue.addTask(self.printAsync('computing grasp and stance frames'))
         taskQueue.addTask(self.removePointerTipFrames)
+        taskQueue.addTask(self.removePointerTipPath)
         taskQueue.addTask(self.findValveAffordance)
         taskQueue.addTask(self.computeGraspFrame)
         taskQueue.addTask(self.computeStanceFrame)
