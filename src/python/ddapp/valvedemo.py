@@ -452,7 +452,7 @@ class ValvePlannerDemo(object):
         self.valveAffordance = om.findObjectByName('valve')
         self.valveFrame = om.findObjectByName('valve frame')
 
-        self.valveRadius = self.valveAffordance.params.get('radius')
+        #self.valveRadius = self.valveAffordance.params.get('radius')
 
         self.computeGraspFrame()
         self.computeStanceFrame()
