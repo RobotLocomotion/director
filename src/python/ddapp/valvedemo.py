@@ -80,6 +80,44 @@ class ValvePlannerDemo(object):
         self.plans.append(plan)
 
 
+    def setScribeAngleToCurrent(self):
+        '''
+        Compute the current angle of the pointer relative to the valve
+        '''
+
+        for obj in om.getObjects():
+            if obj.getProperty('Name') == 'pointer tip angle':
+                om.removeFromObjectModel(obj)
+
+        if (self.graspingHand == 'left'):
+            tipFrame = self.robotModel.getLinkFrame('left_pointer_tip')
+        else:
+            tipFrame = self.robotModel.getLinkFrame('right_pointer_tip')
+        #vis.updateFrame(tipFrame, 'pointer tip current', visible=True, scale=0.2)
+
+        # Get the relative position of the pointer from the valve
+        valveTransform =  transformUtils.copyFrame(self.valveFrame.transform)
+        #print valveTransform.GetPosition()
+        tipFrame.Concatenate(valveTransform.GetLinearInverse())
+        #vis.updateFrame(tipFrame, 'point relative', visible=True, scale=0.1)
+
+        # Set the Scribe angle to be the current angle
+        tPosition = tipFrame.GetPosition()
+        angle =  math.degrees(  math.atan2(tPosition[1], tPosition[0])  )
+        radius = math.sqrt( tPosition[0]*tPosition[0] + tPosition[1]*tPosition[1] )
+        print 'Current Scribe Angle: ', angle , ' and Radius: ' , radius
+        self.nextScribeAngle = angle
+
+        d = DebugData()
+        d.addSphere(tPosition, radius=0.01)
+        tPosition =[tPosition[0], tPosition[1], 0] # interested in the point on the plane too
+        d.addSphere(tPosition, radius=0.01)
+
+        currentTipMesh = d.getPolyData()
+        self.currentTipPosition = vis.showPolyData(currentTipMesh, 'pointer tip angle', color=[1.0, 0.5, 0.0], cls=vis.AffordanceItem, parent=self.valveAffordance, alpha=0.5)
+        self.currentTipPosition.actor.SetUserTransform(self.valveFrame.transform)
+
+
     def computeGroundFrame(self, robotModel):
         '''
         Given a robol model, returns a vtkTransform at a position between
