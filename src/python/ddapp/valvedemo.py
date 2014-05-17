@@ -60,22 +60,21 @@ class ValvePlannerDemo(object):
         self.plans = []
 
         self.scribeInAir = False
+        self.scribeDirection = 1 # 1 = clockwise | -1 = anticlockwise
+        self.startAngle = -30 # suitable for both types of valve
+        self.nextScribeAngle = self.startAngle
 
-        self.valveRadius = 0.154 #foam valves
-        self.valveRadius = 0.2032 # 8in radius metal valve
+        self.valveRadius = 0.19558 # nominal initial value. 7.7in radius metal valve
+        
+        ### Testing Parameters:
         self.valveHeight = 1.2192 # 4ft
 
 
+    def scribeRadius(self):
         if self.scribeInAir:
-            self.scribeRadius = self.valveRadius - 0.08
+            return self.valveRadius - 0.08
         else:
-            self.scribeRadius = self.valveRadius - 0.08
-
-
-        self.scribeDirection = -1 # 1 = clockwise | -1 = anticlockwise
-        self.startAngle = -90 # 
-        self.nextScribeAngle = self.startAngle
-
+            return self.valveRadius - 0.08
 
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -153,7 +152,7 @@ class ValvePlannerDemo(object):
 
         assert self.valveAffordance
 
-        position = [ self.scribeRadius*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius*math.sin( math.radians( self.nextScribeAngle ))  , tipDepth]
+        position = [ self.scribeRadius()*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius()*math.sin( math.radians( self.nextScribeAngle ))  , tipDepth]
         rpy = [90, 0, 180]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
@@ -274,8 +273,8 @@ class ValvePlannerDemo(object):
         c.bodyNameB = 'world'
         c.pointInBodyA = self.graspToHandLinkFrame
         c.pointInBodyB = self.valveFrame.transform
-        c.lowerBound = [self.scribeRadius]
-        c.upperBound = [self.scribeRadius]
+        c.lowerBound = [self.scribeRadius()]
+        c.upperBound = [self.scribeRadius()]
         self.constraintSet.constraints.insert(0, c)
 
 
