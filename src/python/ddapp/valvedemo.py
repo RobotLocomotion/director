@@ -361,14 +361,52 @@ class ValvePlannerDemo(object):
         self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=vis.AffordanceItem, parent=folder, alpha=0.3)
         self.valveAffordance.actor.SetUserTransform(valveFrame)
         self.valveFrame = vis.showFrame(valveFrame, 'valve frame', parent=self.valveAffordance, visible=False, scale=0.2)
+        # TODO: do I need to add a param dict?
+
+        self.computeGraspFrame()
+        self.computeStanceFrame()
+        self.computePointerTipFrame(0)
+        
+    def spawnValveLeverAffordance(self):
+
+        valveFrame = self.computeValveFrame(self.robotModel)
+
+        folder = om.getOrCreateContainer('affordances')
+        pipe_radius = 0.01
+        z = DebugData()
+        z.addLine([0,0,0], [ self.valveRadius , 0, 0], radius=pipe_radius)
+        valveMesh = z.getPolyData()        
+        
+        #z = DebugData()
+        #z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius= self.valveRadius)
+        #valveMesh = z.getPolyData()
+
+        self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=vis.AffordanceItem, parent=folder, alpha=0.3)
+        self.valveAffordance.actor.SetUserTransform(valveFrame)
+        self.valveFrame = vis.showFrame(valveFrame, 'valve frame', parent=self.valveAffordance, visible=False, scale=0.2)
+        # TODO: do I need to add a param dict?
+
+        self.computeGraspFrame()
+        self.computeStanceFrame()
+        self.computePointerTipFrame(0)        
+
+    def findValveAffordance(self):
+        self.valveAffordance = om.findObjectByName('valve')
+        self.valveFrame = om.findObjectByName('valve frame')
+
+        self.valveRadius = self.valveAffordance.params.get('radius')
 
         self.computeGraspFrame()
         self.computeStanceFrame()
         self.computePointerTipFrame(0)
 
-    def findValveAffordance(self):
-        self.valveAffordance = om.findObjectByName('valve')
-        self.valveFrame = om.findObjectByName('valve frame')
+
+    def findValveLeverAffordance(self):
+        self.valveAffordance = om.findObjectByName('valve lever')
+        self.valveFrame = om.findObjectByName('lever frame')
+
+        # length of lever is equivalent to radius of valve
+        self.valveRadius = self.valveAffordance.params.get('length')
 
         self.computeGraspFrame()
         self.computeStanceFrame()
