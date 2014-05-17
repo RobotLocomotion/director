@@ -1159,6 +1159,7 @@ def segmentLeverValve(point1, point2):
     radius = 0.01
     length = 0.33
 
+    normal = -normal # set z to face into wall
     zaxis = normal
     xaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
