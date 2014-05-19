@@ -546,35 +546,92 @@ class ValvePlannerDemo(object):
         self.addPlan(self.standPlan)
 
 
-    def computeNominalPlan(self):
-
-        self.plans = []
+    def computeNominalPlan(self, mode='valve'):
 
         self.removeFootstepPlan()
         self.removePointerTipFrames()
         self.removePointerTipPath()
 
-#        self.findValveAffordance()
-#        self.computeGraspFrame()
-#        self.computeStanceFrame()
+        if (mode=='valve'):
+            self.graspingHand='left'
+            self.findValveAffordance()
+            turn_angle = 360
+        else:
+            self.graspingHand='right'
+            self.findValveLeverAffordance()
+            turn_angle = 90
 
-#        if self.useFootstepPlanner:
-#            self.computeFootstepPlan()
-#            self.computeWalkingPlan()
-#        else:
-#            self.moveRobotToStanceFrame()
+        self.plans = []
+
+        if self.useFootstepPlanner:
+            self.computeFootstepPlan()
+            self.computeWalkingPlan()
+        else:
+            self.moveRobotToStanceFrame()
 
         self.computePreGraspPlan()
         self.computePreGraspPlanGaze()
 
-        if not self.scribeInAir:
-            self.computeInsertPlan()
+        self.computeInsertPlan()
 
-        self.computeTurnPlan()
+        self.computeTurnPlan(turn_angle)
         self.computePreGraspPlanGaze()
         self.computePreGraspPlan()
         self.computeStandPlan()
 
+        self.playNominalPlan()
+
+
+    def computeNominalPlanBoth(self):
+
+        self.removeFootstepPlan()
+        self.removePointerTipFrames()
+        self.removePointerTipPath()
+
+        self.graspingHand='right'
+        self.findValveLeverAffordance()
+        turn_angle = 90
+
+        self.plans = []
+
+        if self.useFootstepPlanner:
+            self.computeFootstepPlan()
+            self.computeWalkingPlan()
+        else:
+            self.moveRobotToStanceFrame()
+
+        self.computePreGraspPlan()
+        self.computePreGraspPlanGaze()
+
+        self.computeInsertPlan()
+
+        self.computeTurnPlan(turn_angle)
+        self.computePreGraspPlanGaze()
+        self.computePreGraspPlan()
+        self.computeStandPlan()
+
+        # plan valve affordance:
+        self.graspingHand='left'
+        self.findValveAffordance()
+        turn_angle = 360
+
+        #self.plans = []
+
+        if self.useFootstepPlanner:
+            self.computeFootstepPlan()
+            self.computeWalkingPlan()
+        else:
+            self.moveRobotToStanceFrame()
+
+        self.computePreGraspPlan()
+        self.computePreGraspPlanGaze()
+
+        self.computeInsertPlan()
+
+        self.computeTurnPlan(turn_angle)
+        self.computePreGraspPlanGaze()
+        self.computePreGraspPlan()
+        self.computeStandPlan()
 
         self.playNominalPlan()
 
