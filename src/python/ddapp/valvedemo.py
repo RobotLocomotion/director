@@ -231,6 +231,11 @@ class ValvePlannerDemo(object):
 
         rpy = [0, 0, 16]
 
+        # mirror stance frame for right hand:
+        if (self.graspingHand == 'right'):
+          position[1] = -position[1]
+          rpy[2] = -rpy[2]
+        
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(graspGroundFrame)
 
