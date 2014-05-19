@@ -411,48 +411,48 @@ class ValvePlannerDemo(object):
     def spawnValveAffordance(self):
         spawn_height = 1.2192 # 4ft
         radius = 0.19558 # nominal initial value. 7.7in radius metal valve
+        zwidth = 0.03
 
         valveFrame = self.spawnValveFrame(self.robotModel, spawn_height)
 
         folder = om.getOrCreateContainer('affordances')
         z = DebugData()
-        z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius= self.valveRadius)
+        z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius=radius)
         valveMesh = z.getPolyData()
 
-        self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=vis.AffordanceItem, parent=folder, alpha=0.3)
+        self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=vis.FrameAffordanceItem, parent=folder, alpha=0.3)
         self.valveAffordance.actor.SetUserTransform(valveFrame)
         self.valveFrame = vis.showFrame(valveFrame, 'valve frame', parent=self.valveAffordance, visible=False, scale=0.2)
-        # TODO: do I need to add a param dict?
 
-        self.computeGraspFrame()
-        self.computeStanceFrame()
-        self.computePointerTipFrame(0)
+        params = dict(radius=radius, length=zwidth, xwidth=radius, ywidth=radius, zwidth=zwidth,
+                      otdf_type='steering_cyl', friendly_name='valve')
+        self.valveAffordance.setAffordanceParams(params)
+        self.valveAffordance.updateParamsFromActorTransform()        
+
         
     def spawnValveLeverAffordance(self):
         spawn_height = 1.06 # 3.5ft
         pipe_radius = 0.01
+        lever_length = 0.33
 
         valveFrame = self.spawnValveFrame(self.robotModel, spawn_height)
         folder = om.getOrCreateContainer('affordances')
-        pipe_radius = 0.01
         z = DebugData()
-        z.addLine([0,0,0], [ self.valveRadius , 0, 0], radius=pipe_radius)
+        z.addLine([0,0,0], [ lever_length , 0, 0], radius=pipe_radius)
         valveMesh = z.getPolyData()        
         
-        #z = DebugData()
-        #z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius= self.valveRadius)
-        #valveMesh = z.getPolyData()
-
-        self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=vis.AffordanceItem, parent=folder, alpha=0.3)
+        self.valveAffordance = vis.showPolyData(valveMesh, 'valve lever', color=[0.0, 1.0, 0.0], cls=vis.FrameAffordanceItem, parent=folder, alpha=0.3)
         self.valveAffordance.actor.SetUserTransform(valveFrame)
-        self.valveFrame = vis.showFrame(valveFrame, 'valve frame', parent=self.valveAffordance, visible=False, scale=0.2)
-        # TODO: do I need to add a param dict?
+        self.valveFrame = vis.showFrame(valveFrame, 'lever frame', parent=self.valveAffordance, visible=False, scale=0.2)
+        
+        otdfType = 'lever_valve'
+        params = dict( radius=pipe_radius, length=lever_length, friendly_name=otdfType, otdf_type=otdfType)
+        self.valveAffordance.setAffordanceParams(params)
+        self.valveAffordance.updateParamsFromActorTransform()
 
-        self.computeGraspFrame()
-        self.computeStanceFrame()
-        self.computePointerTipFrame(0)        
-
+        
     def findValveAffordance(self):
+      
         self.valveAffordance = om.findObjectByName('valve')
         self.valveFrame = om.findObjectByName('valve frame')
 
