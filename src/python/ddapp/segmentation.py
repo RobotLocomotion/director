@@ -1242,7 +1242,7 @@ def segmentLeverByWallPlane(point1, point2):
 
 
     # 5. compute the rotation angle of the lever and, using that, its frame
-    zaxis = -normal
+    zaxis = normal
     xaxis =  [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
     xaxis = np.cross(yaxis, zaxis)
@@ -1252,7 +1252,7 @@ def segmentLeverByWallPlane(point1, point2):
     t.PostMultiply()
     t.Translate(lever_center) # nominal frame at lever center
 
-    rotationAngle = computeSignedAngleBetweenVectors(lineDirection,  [0, 0, 1], normal)
+    rotationAngle = -computeSignedAngleBetweenVectors(lineDirection,  [0, 0, 1], normal)
     t_lever = transformUtils.frameFromPositionAndRPY( [0,0,0], [0,0, math.degrees( rotationAngle )  ] )
     t_lever.PostMultiply()
     t_lever.Concatenate(t)
