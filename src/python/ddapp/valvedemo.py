@@ -252,9 +252,10 @@ class ValvePlannerDemo(object):
         stancePosition = frame.GetPosition()
         stanceOrientation = frame.GetOrientation()
 
-        self.sensorJointController.q[:2] = [stancePosition[0], stancePosition[1]]
-        self.sensorJointController.q[5] = math.radians(stanceOrientation[2])
-        self.sensorJointController.push()
+        q = self.sensorJointController.q.copy()
+        q[:2] = [stancePosition[0], stancePosition[1]]
+        q[5] = math.radians(stanceOrientation[2])
+        self.sensorJointController.setPose('EST_ROBOT_STATE', q)
 
 
     def computeFootstepPlan(self):
