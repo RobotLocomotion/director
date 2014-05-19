@@ -1176,13 +1176,9 @@ def segmentLeverByWallPlane(point1, point2):
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
-    cameraPos = np.array(getSegmentationView().camera().GetPosition())
+    # NB: this doesn't use the cameraPos while segmentValveByWallPlane does
+    polyData, origin, normal = applyPlaneFit(polyData, returnOrigin=True)
 
-    #bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
-    bodyX = centerPoint - cameraPos
-    bodyX /= np.linalg.norm(bodyX)
-
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-bodyX, searchOrigin=point1, searchRadius=0.2, returnOrigin=True)
 
     # 2. Crop the cloud down to the lever only using the wall plane
     perpLine = np.cross(point2 - point1, normal)
@@ -1198,7 +1194,7 @@ def segmentLeverByWallPlane(point1, point2):
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     updatePolyData(wallPoints, 'lever valve wall', parent=getDebugFolder(), visible=False)
 
-    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.12, 0.2]) # very tight threshold
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [-0.2, -0.12]) # very tight threshold
     searchRegion = cropToLineSegment(searchRegion, point1, point2)
     searchRegion = cropToLineSegment(searchRegion, point3, point4)
     updatePolyData(searchRegion, 'lever search region', parent=getDebugFolder(), color=[1,0,0], visible=False)
@@ -1263,6 +1259,8 @@ def segmentLeverByWallPlane(point1, point2):
 
 
     d = DebugData()
+    # d.addSphere( point1 , radius=0.1)
+    # d.addSphere( wall_point_lower_left , radius=0.1)
     d.addSphere(lever_center, radius=0.04)
     d.addSphere(lever_tip, radius=0.01)
     d.addLine(lever_center, lever_tip)
