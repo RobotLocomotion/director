@@ -460,10 +460,10 @@ class ValvePlannerDemo(object):
 
         self.computeGraspFrame()
         self.computeStanceFrame()
-        self.computePointerTipFrame(0)
 
 
     def findValveLeverAffordance(self):
+
         self.valveAffordance = om.findObjectByName('valve lever')
         self.valveFrame = om.findObjectByName('lever frame')
 
@@ -472,7 +472,6 @@ class ValvePlannerDemo(object):
 
         self.computeGraspFrame()
         self.computeStanceFrame()
-        self.computePointerTipFrame(0)
 
 
     def getEstimatedRobotStatePose(self):
