@@ -64,8 +64,7 @@ class ValvePlannerDemo(object):
 
         self.scribeInAir = False
         self.scribeDirection = 1 # 1 = clockwise | -1 = anticlockwise
-        self.startAngle = -30 # suitable for both types of valve
-        self.nextScribeAngle = self.startAngle
+        self.nextScribeAngle = -30 # suitable for both types of valve
         self.scribeRadius = None
 
         
@@ -452,6 +451,7 @@ class ValvePlannerDemo(object):
 
         
     def findValveAffordance(self):
+        self.nextScribeAngle = -30 # reset angle when a new valve is found
       
         self.valveAffordance = om.findObjectByName('valve')
         self.valveFrame = om.findObjectByName('valve frame')
@@ -463,6 +463,7 @@ class ValvePlannerDemo(object):
 
 
     def findValveLeverAffordance(self):
+        self.nextScribeAngle = -30 # reset angle when a new valve is found
 
         self.valveAffordance = om.findObjectByName('valve lever')
         self.valveFrame = om.findObjectByName('lever frame')
