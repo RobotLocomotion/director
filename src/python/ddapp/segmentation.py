@@ -1371,10 +1371,11 @@ def segmentLeverValve(point1, point2):
     leverP2 = point2 + xaxis * length
     d = DebugData()
     d.addLine([0,0,0], [length, 0, 0], radius=radius)
+    d.addSphere ( [0, 0, 0], 0.02)
     geometry = d.getPolyData()
 
 
-    obj = showPolyData(geometry, 'valve lever', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    obj = showPolyData(geometry, 'valve lever', cls=FrameAffordanceItem, parent='affordances', color=[0,1,0], visible=True)
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
     frameObj = showFrame(t, 'lever frame', parent=obj, visible=False)
