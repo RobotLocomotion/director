@@ -152,9 +152,9 @@ class ValvePlannerDemo(object):
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(self.valveFrame.transform)
 
-        self.graspFrame = vis.updateFrame(t, 'valve grasp frame', parent=self.valveAffordance, visible=False, scale=0.2)
-
         self.frameSync = vis.FrameSync()
+        om.removeFromObjectModel( self.valveAffordance.findChild('valve grasp frame') )
+        self.graspFrame = vis.showFrame(t, 'valve grasp frame', parent=self.valveAffordance, visible=False, scale=0.2)
         self.frameSync.addFrame(self.graspFrame)
         self.frameSync.addFrame(self.valveFrame)
 
@@ -234,7 +234,8 @@ class ValvePlannerDemo(object):
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t.Concatenate(graspGroundFrame)
 
-        self.graspStanceFrame = vis.updateFrame(t, 'valve grasp stance', parent=self.valveAffordance, visible=False, scale=0.2)
+        om.removeFromObjectModel( self.valveAffordance.findChild('valve grasp stance') )
+        self.graspStanceFrame = vis.showFrame(t, 'valve grasp stance', parent=self.valveAffordance, visible=False, scale=0.2)
 
         self.frameSync.addFrame(self.graspStanceFrame)
 
