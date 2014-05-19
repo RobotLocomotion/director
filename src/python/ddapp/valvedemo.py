@@ -151,16 +151,6 @@ class ValvePlannerDemo(object):
         return t
 
 
-    def computeValveFrame(self, robotModel):
-
-        position = [0.85, 0.4, self.valveHeight]
-        rpy = [180, -90, 0]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(self.computeGroundFrame(robotModel))
-        return t
-
-
     def computeGraspFrame(self):
 
         assert self.valveAffordance
@@ -407,9 +397,25 @@ class ValvePlannerDemo(object):
             yield
 
 
-    def spawnValveAffordance(self):
+    def spawnValveFrame(self, robotModel, height):
 
-        valveFrame = self.computeValveFrame(self.robotModel)
+        position = [0.7, 0.22, height]
+        rpy = [180, -90, -16]
+
+        if (self.graspingHand == 'right'):
+          position[1] = -position[1]
+          rpy[2] = -rpy[2]
+
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t.Concatenate(self.computeGroundFrame(robotModel))
+        return t
+
+
+    def spawnValveAffordance(self):
+        spawn_height = 1.2192 # 4ft
+        radius = 0.19558 # nominal initial value. 7.7in radius metal valve
+
+        valveFrame = self.spawnValveFrame(self.robotModel, spawn_height)
 
         folder = om.getOrCreateContainer('affordances')
         z = DebugData()
@@ -426,9 +432,10 @@ class ValvePlannerDemo(object):
         self.computePointerTipFrame(0)
         
     def spawnValveLeverAffordance(self):
+        spawn_height = 1.06 # 3.5ft
+        pipe_radius = 0.01
 
-        valveFrame = self.computeValveFrame(self.robotModel)
-
+        valveFrame = self.spawnValveFrame(self.robotModel, spawn_height)
         folder = om.getOrCreateContainer('affordances')
         pipe_radius = 0.01
         z = DebugData()
