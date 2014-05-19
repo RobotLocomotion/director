@@ -66,19 +66,9 @@ class ValvePlannerDemo(object):
         self.scribeDirection = 1 # 1 = clockwise | -1 = anticlockwise
         self.startAngle = -30 # suitable for both types of valve
         self.nextScribeAngle = self.startAngle
+        self.scribeRadius = None
 
-        self.valveRadius = 0.19558 # nominal initial value. 7.7in radius metal valve
         
-        ### Testing Parameters:
-        self.valveHeight = 1.2192 # 4ft
-
-
-    def scribeRadius(self):
-        if self.scribeInAir:
-            return self.valveRadius - 0.08
-        else:
-            return self.valveRadius - 0.08
-
     def addPlan(self, plan):
         self.plans.append(plan)
 
@@ -187,7 +177,7 @@ class ValvePlannerDemo(object):
 
         assert self.valveAffordance
 
-        position = [ self.scribeRadius()*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius()*math.sin( math.radians( self.nextScribeAngle ))  , tipDepth]
+        position = [ self.scribeRadius*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius*math.sin( math.radians( self.nextScribeAngle ))  , tipDepth]
         rpy = [90, 0, 180]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
@@ -321,8 +311,8 @@ class ValvePlannerDemo(object):
         c.bodyNameB = 'world'
         c.pointInBodyA = self.graspToHandLinkFrame
         c.pointInBodyB = self.valveFrame.transform
-        c.lowerBound = [self.scribeRadius()]
-        c.upperBound = [self.scribeRadius()]
+        c.lowerBound = [self.scribeRadius]
+        c.upperBound = [self.scribeRadius]
         self.constraintSet.constraints.insert(0, c)
 
 
@@ -459,7 +449,7 @@ class ValvePlannerDemo(object):
         self.valveAffordance = om.findObjectByName('valve')
         self.valveFrame = om.findObjectByName('valve frame')
 
-        #self.valveRadius = self.valveAffordance.params.get('radius')
+        self.scribeRadius = self.valveAffordance.params.get('radius') - 0.08
 
         self.computeGraspFrame()
         self.computeStanceFrame()
@@ -471,7 +461,7 @@ class ValvePlannerDemo(object):
         self.valveFrame = om.findObjectByName('lever frame')
 
         # length of lever is equivalent to radius of valve
-        self.valveRadius = self.valveAffordance.params.get('length')
+        self.scribeRadius = self.valveAffordance.params.get('length') - 0.08
 
         self.computeGraspFrame()
         self.computeStanceFrame()
