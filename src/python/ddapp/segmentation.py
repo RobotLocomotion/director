@@ -1093,6 +1093,77 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     frameObj.addToView(app.getDRCView())
 
 
+def segmentValveWallAuto(expectedValveRadius, mode='both'):
+    '''
+    Segment the valve wall where the left hand side has a valve and right has a lever
+    '''
+
+    # find the valve wall and its center
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    _ , polyData =  removeGround(polyData)
+    polyData, origin, normal = applyPlaneFit(polyData, returnOrigin=True)
+
+    wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    wallPoints = applyVoxelGrid(wallPoints, leafSize=0.03)
+    wallPoints = extractLargestCluster(wallPoints, minClusterSize=100)
+
+    updatePolyData(wallPoints, 'auto valve wall', parent=getDebugFolder(), visible=False)
+
+    xvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,0]
+    xmedian = np.median(xvalues)
+    yvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,1]
+    ymedian = np.median(yvalues)
+    zvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,2]
+    zmedian = np.median(zvalues)
+    point1 =np.array([ xmedian, ymedian, zmedian]) # center of the valve wall
+
+    zaxis = normal
+    xaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(point1)
+
+    normalObj = showFrame(t, 'valve wall frame', parent=getDebugFolder(), visible=False)
+    normalObj.addToView(app.getDRCView())
+
+
+    # determine boxes relative to the center, inside of which the two affordances lie
+    valve_point2 = [ 0 , -0.6 , 0]
+    valveTransform2 = transformUtils.frameFromPositionAndRPY(valve_point2, [0,0,0])
+    valveTransform2.Concatenate(t)
+    point2 =valveTransform2.GetPosition() # left of wall
+
+    valve_point2b = [ 0 , 1.0 , 0] # lever can over hang
+    valveTransform2b = transformUtils.frameFromPositionAndRPY(valve_point2b, [0,0,0])
+    valveTransform2b.Concatenate(t)
+    point2b =valveTransform2b.GetPosition() # right of wall
+
+
+    d = DebugData()
+    origin = np.array([ xmedian, ymedian, zmedian ])
+    d.addSphere(point2, radius=0.01)
+    d.addSphere(point1, radius=0.03)
+    d.addSphere(point2b, radius=0.01)
+    updatePolyData(d.getPolyData(), 'auto wall points', parent=getDebugFolder(), visible=False)
+
+    if (mode=='valve'):
+      segmentValveByWallPlane(expectedValveRadius, point1, point2)
+    elif (mode=='lever'):
+      segmentLeverByWallPlane(point1, point2b)
+    elif (mode=='both'):
+      segmentValveByWallPlane(expectedValveRadius, point1, point2)
+      segmentLeverByWallPlane(point1, point2b)
+    else:
+        raise Exception('unexpected segmentation mode: ' + mode)
+
+
+
 def segmentLeverByWallPlane(point1, point2):
     '''
     determine the position (including rotation of a lever near a wall
