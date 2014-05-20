@@ -7,19 +7,26 @@ from ddapp.debugVis import DebugData
 from ddapp import roboturdf
 from ddapp import transformUtils
 from ddapp import visualization as vis
+from ddapp import vtkAll as vtk
 
 sensorLocationLeft = {}
 
+# This finger is colloquially called the "thumb"
 sensorLocationLeft[10] = ['left_finger_middle_link_3', [0.01,  0.015, -0.008], [0.0, 0.0, 0.0]]
 sensorLocationLeft[11] = ['left_finger_middle_link_3', [0.022, 0.022, -0.008], [0.0, 0.0, 0.0]]
 sensorLocationLeft[12] = ['left_finger_middle_link_3', [0.01,  0.015,  0.008], [0.0, 0.0, 0.0]]
 sensorLocationLeft[13] = ['left_finger_middle_link_3', [0.022, 0.022,  0.008], [0.0, 0.0, 0.0]]
 
+# Fingers 1 and 2 below are the two fingers that have the base 'scissor' joint
 sensorLocationLeft[20] = ['left_finger_1_link_3', [0.01,  0.015, -0.008], [0.0, 0.0, 0.0]]
 sensorLocationLeft[21] = ['left_finger_1_link_3', [0.022, 0.022, -0.008], [0.0, 0.0, 0.0]]
 sensorLocationLeft[22] = ['left_finger_1_link_3', [0.01,  0.015,  0.008], [0.0, 0.0, 0.0]]
 sensorLocationLeft[23] = ['left_finger_1_link_3', [0.022, 0.022,  0.008], [0.0, 0.0, 0.0]]
 
+# NOTE: the locations of this sensors is slightly different, thats because this is one of
+# the sensors where the wire comes out the other side (relative to the two pads above), resulting
+# in a sensor that is rotated 180 degrees. The wires are on the other side to allow for cable
+# routing down the ouside of the finger.
 sensorLocationLeft[33] = ['left_finger_2_link_3', [0.01,  0.015, -0.008], [0.0, 0.0, 0.0]]
 sensorLocationLeft[32] = ['left_finger_2_link_3', [0.022, 0.022, -0.008], [0.0, 0.0, 0.0]]
 sensorLocationLeft[31] = ['left_finger_2_link_3', [0.01,  0.015,  0.008], [0.0, 0.0, 0.0]]
@@ -41,18 +48,39 @@ sensorLocationLeft[72] = ['l_hand_face', [ 0.04, 0.0,  0.01], [0.0, 0.0, 0.0]]
 sensorLocationLeft[73] = ['l_hand_face', [ 0.04, 0.0,  0.00], [0.0, 0.0, 0.0]]
 sensorLocationLeft[74] = ['l_hand_face', [ 0.04, 0.0, -0.01], [0.0, 0.0, 0.0]]
 
+
+# NOTE: These sensor locations for a 'right' hand are currently the one and only
+# sensor pad connected via the USB interface instead of the ethernet interface.
+# for some reason the numbers
+# Only the palm works when connected to USB, the finger pads don't work
 sensorLocationRight = {}
-#Fill this in
+sensorLocationRight[25] = ['r_hand_face', [-0.04, 0.0,  0.03], [0.0, 0.0, 0.0]]
+sensorLocationRight[26] = ['r_hand_face', [-0.04, 0.0,  0.02], [0.0, 0.0, 0.0]]
+sensorLocationRight[27] = ['r_hand_face', [-0.04, 0.0,  0.01], [0.0, 0.0, 0.0]]
+sensorLocationRight[28] = ['r_hand_face', [-0.04, 0.0,  0.00], [0.0, 0.0, 0.0]]
+sensorLocationRight[29] = ['r_hand_face', [-0.04, 0.0, -0.01], [0.0, 0.0, 0.0]]
+sensorLocationRight[30] = ['r_hand_face', [-0.02, 0.0,  0.00], [0.0, 0.0, 0.0]]
+sensorLocationRight[31] = ['r_hand_face', [-0.01, 0.0,  0.00], [0.0, 0.0, 0.0]]
+sensorLocationRight[32] = ['r_hand_face', [ 0.00, 0.0,  0.00], [0.0, 0.0, 0.0]]
+sensorLocationRight[33] = ['r_hand_face', [ 0.01, 0.0,  0.00], [0.0, 0.0, 0.0]]
+sensorLocationRight[34] = ['r_hand_face', [ 0.02, 0.0,  0.00], [0.0, 0.0, 0.0]]
+sensorLocationRight[35] = ['r_hand_face', [ 0.04, 0.0,  0.03], [0.0, 0.0, 0.0]]
+sensorLocationRight[36] = ['r_hand_face', [ 0.04, 0.0,  0.02], [0.0, 0.0, 0.0]]
+sensorLocationRight[37] = ['r_hand_face', [ 0.04, 0.0,  0.01], [0.0, 0.0, 0.0]]
+sensorLocationRight[38] = ['r_hand_face', [ 0.04, 0.0,  0.00], [0.0, 0.0, 0.0]]
+sensorLocationRight[39] = ['r_hand_face', [ 0.04, 0.0, -0.01], [0.0, 0.0, 0.0]]
+
 
 class TakktileVis(object):
 
     def __init__(self, name, topic, sensorLocations, model, windowSize = 10):
         self.name = name
         self.sensorLocations = sensorLocations
+        self.frameNames = self.getFrameNames()
         self.robotStateModel = model
 
-        sub = lcmUtils.addSubscriber(topic, takktile.state_t, self.drawBlips)
-        sub.setSpeedLimit(30)
+        sub = lcmUtils.addSubscriber(topic, takktile.state_t, self.drawSpheres)
+        sub.setSpeedLimit(60)
 
         self.active = False
         self.doTare = True
@@ -63,66 +91,83 @@ class TakktileVis(object):
 
         self.frames = {}
 
-    def getFrameNames
-    # get frame names from sensor location dict
+    def getFrameNames(self):
+        names = []
+        for key in self.sensorLocations.keys():
+            if not self.sensorLocations[key][0] in names:
+                names.append(self.sensorLocations[key][0])
+        return names
 
     def updateFrames(self):
         if not self.frames:
-            for name in self.getFrameNames():
+            for name in self.frameNames:
                 self.frames[name] = vtk.vtkTransform()
         for name, frame in self.frames.iteritems():
             frame.SetMatrix(self.robotStateModel.getLinkFrame(name).GetMatrix())
 
-    def createSpheres(self):
-        self.d = DebugData()
+    def createSpheres(self, sensorValues):
+        d = DebugData()
 
-        for x in sensorValues.keys():
-            frame, pos, rpy = self.sensorLocations[x]
+        for key in sensorValues.keys():
+            frame, pos, rpy = self.sensorLocations[key]
 
             t = transformUtils.frameFromPositionAndRPY(pos, rpy)
             t.PostMultiply()
             t.Concatenate(self.frames[frame])
+            d.addSphere(t.GetPosition(),
+                        radius=0.005,
+                        color=self.getColor(sensorValues[key], key),
+                        resolution=8)
+        vis.updatePolyData(d.getPolyData(), self.name, colorByName='RGB255')
 
+    def extractSensorData(self, message):
+        sensorValues = {}
+        for i in range(message.data_length):
+            sensorValues[message.id[i]] = message.force[i]
+        return sensorValues
+
+    def getColor(self, currentValue, sensorId):
+        green = 0.0
+        blue = 0.0
+        red = 0.0
+
+        delta = float(currentValue) / self.taredSensorValues[sensorId]
+        if delta > 1.0:
+            green = 1.0/(2*delta)
+            blue = 1.0-green
+            red = 0.0
+        else:
+            green = delta
+            red = 1.0-green
+            blue = 0.0
+
+        return [red, green, blue]
 
     def tare(self):
         self.taredSensorValues = {}
         self.doTare = True
 
-    def tareData(self, data):
+    def updateTare(self, data):
         if self.doTare:
             for i in range(data.data_length):
                 if data.id[i] in self.taredSensorValues:
-                    self.taredSensorValues[data.id[i]] += data.force[i] / self.tareWindow
+                    self.taredSensorValues[data.id[i]] += float(data.force[i]+1) / self.tareWindow
                 else:
-                    self.taredSensorValues[data.id[i]] = data.force[i] / self.tareWindow
+                    self.taredSensorValues[data.id[i]] = float(data.force[i]+1) / self.tareWindow
             self.tareCount += 1
 
         if self.tareCount >= self.tareWindow:
             self.doTare = False
             self.tareCount = 0
 
-    def drawBlips(self, data):
+    def drawSpheres(self, message):
 
         if self.doTare:
-            self.tareData(data)
+            self.updateTare(message)
 
         elif self.active:
-            sensorValues = {}
-            for i in range(data.data_length):
-                sensorValues[data.id[i]] = data.force[i]
-
-            for x in sensorValues.keys():
-                frame, pos, rpy = self.sensorLocations[x]
-
-                t = transformUtils.frameFromPositionAndRPY(pos, rpy)
-                t.PostMultiply()
-                t.Concatenate(f)
-                redColor = 1.0 - (sensorValues[x] / self.taredSensorValues[x])
-                greenColor = 1 - redColor
-                d.addSphere(t.GetPosition(),
-                            radius=0.005,
-                            color=[redColor,greenColor,0],
-                            resolution=8)
-            vis.updatePolyData(d.getPolyData(), self.name, colorByName='RGB255')
+            self.updateFrames()
+            sensorValues = self.extractSensorData(message)
+            self.createSpheres(sensorValues)
 
 
