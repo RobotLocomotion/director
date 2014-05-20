@@ -1138,7 +1138,7 @@ def segmentValveWallAuto(expectedValveRadius, mode='both'):
 
 
     # determine boxes relative to the center, inside of which the two affordances lie
-    valve_point2 = [ 0 , -0.6 , 0]
+    valve_point2 = [ 0 , -0.8 , 0]
     valveTransform2 = transformUtils.frameFromPositionAndRPY(valve_point2, [0,0,0])
     valveTransform2.Concatenate(t)
     point2 =valveTransform2.GetPosition() # left of wall
