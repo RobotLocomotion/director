@@ -1021,6 +1021,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
     updatePolyData(searchRegion, 'valve search region', parent=getDebugFolder(), color=[1,0,0], visible=False)
 
+    searchRegionSpokes = shallowCopy(searchRegion)
 
     searchRegion, origin, _  = applyPlaneFit(searchRegion, expectedNormal=normal, perpendicularAxis=normal, returnOrigin=True)
     searchRegion = thresholdPoints(searchRegion, 'dist_to_plane', [-0.015, 0.015])
@@ -1092,6 +1093,52 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
     frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False, scale=radius)
     frameObj.addToView(app.getDRCView())
+
+
+    # Spoke angle fitting:
+    if (1==1):
+        # extract the relative positon of the points to the valve axis:
+        searchRegionSpokes = labelDistanceToLine(searchRegionSpokes, origin, [origin + circleNormal])
+        searchRegionSpokes = thresholdPoints(searchRegionSpokes, 'distance_to_line', [0.05, radius-0.04])
+        updatePolyData(searchRegionSpokes, 'valve spoke search', parent=getDebugFolder(), visible=False)
+        searchRegionSpokesLocal = transformPolyData(searchRegionSpokes, t.GetLinearInverse() )
+        points = vtkNumpy.getNumpyFromVtk(searchRegionSpokesLocal , 'Points')
+
+        spoke_angle = findValveSpokeAngle(points)
+        spokeAngleTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,spoke_angle])
+
+        spokeTransform = transformUtils.copyFrame(t)
+        spokeAngleTransform.Concatenate(spokeTransform)
+
+        #spokeObj = showFrame(spokeAngleTransform, 'spoke frame', parent=getDebugFolder(), visible=True)
+        #spokeObj.addToView(app.getDRCView())
+        spokeObj = showFrame(spokeAngleTransform, 'spoke frame', parent=obj, visible=True, scale=radius)
+        spokeObj.addToView(app.getDRCView())
+
+
+def findValveSpokeAngle(points):
+    '''
+    Determine the location of the valve spoke angle
+    By binning the spoke returns. returns angle in degrees
+    '''
+
+    #np.savetxt("/home/mfallon/Desktop/spoke_points.csv", points, delimiter=",")
+
+
+    # convert all points to degrees in range [0,120]
+    angle = np.degrees( np.arctan2( points[:,1] ,  points[:,0] ) )
+    qq = np.where(angle < 0)[0]
+    angle[qq] += 360
+    angle = np.mod( angle, 120)
+
+    # find the spoke as the max of a histogram:
+    bins = range(0,130,10)  # 0,10,...130
+    freq, bins = np.histogram(angle, bins)
+    amax = np.argmax(freq)
+    spoke_angle = bins[amax] + 5 # correct for 5deg offset
+    print spoke_angle
+
+    return spoke_angle
 
 
 def segmentValveWallAuto(expectedValveRadius, mode='both'):
