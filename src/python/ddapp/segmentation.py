@@ -992,13 +992,14 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
-    cameraPos = np.array(getSegmentationView().camera().GetPosition())
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, returnOrigin=True)
 
-    #bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
-    bodyX = centerPoint - cameraPos
-    bodyX /= np.linalg.norm(bodyX)
-
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-bodyX, searchOrigin=point1, searchRadius=0.2, returnOrigin=True)
+    #cameraPos = np.array(getSegmentationView().camera().GetPosition())
+    ##bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
+    #bodyX = centerPoint - cameraPos
+    #bodyX /= np.linalg.norm(bodyX)
+    #polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-bodyX, searchOrigin=point1, searchRadius=0.2, returnOrigin=True)
 
 
     perpLine = np.cross(point2 - point1, normal)
