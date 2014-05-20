@@ -102,12 +102,12 @@ class DebugData(object):
             self.addCone(origin=end, normal=normal, radius=headRadius,
                          height=headRadius, color=color, fill=True)
 
-    def addSphere(self, center, radius=0.05, color=[1,1,1]):
+    def addSphere(self, center, radius=0.05, color=[1,1,1], resolution=24):
 
         sphere = vtk.vtkSphereSource()
         sphere.SetCenter(center)
-        sphere.SetThetaResolution(24)
-        sphere.SetPhiResolution(24)
+        sphere.SetThetaResolution(resolution)
+        sphere.SetPhiResolution(resolution)
         sphere.SetRadius(radius)
         sphere.Update()
         self.addPolyData(sphere.GetOutput(), color)
