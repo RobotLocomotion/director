@@ -3,6 +3,10 @@ import takktile
 from time import sleep
 
 from ddapp import lcmUtils
+from ddapp.debugVis import DebugData
+from ddapp import roboturdf
+from ddapp import transformUtils
+from ddapp import visualization as vis
 
 sensorLocationLeft = {}
 
@@ -42,9 +46,10 @@ sensorLocationRight = {}
 
 class TakktileVis(object):
 
-    def __init__(self, name, topic, sensorLocations, windowSize = 10):
+    def __init__(self, name, topic, sensorLocations, model, windowSize = 10):
         self.name = name
         self.sensorLocations = sensorLocations
+        self.robotStateModel = model
 
         sub = lcmUtils.addSubscriber(topic, takktile.state_t, self.drawBlips)
         sub.setSpeedLimit(30)
@@ -56,7 +61,31 @@ class TakktileVis(object):
         self.tareCount = 0
         self.tareWindow = windowSize
 
+        self.frames = {}
+
+    def getFrameNames
+    # get frame names from sensor location dict
+
+    def updateFrames(self):
+        if not self.frames:
+            for name in self.getFrameNames():
+                self.frames[name] = vtk.vtkTransform()
+        for name, frame in self.frames.iteritems():
+            frame.SetMatrix(self.robotStateModel.getLinkFrame(name).GetMatrix())
+
+    def createSpheres(self):
+        self.d = DebugData()
+
+        for x in sensorValues.keys():
+            frame, pos, rpy = self.sensorLocations[x]
+
+            t = transformUtils.frameFromPositionAndRPY(pos, rpy)
+            t.PostMultiply()
+            t.Concatenate(self.frames[frame])
+
+
     def tare(self):
+        self.taredSensorValues = {}
         self.doTare = True
 
     def tareData(self, data):
@@ -78,15 +107,13 @@ class TakktileVis(object):
             self.tareData(data)
 
         elif self.active:
-
             sensorValues = {}
             for i in range(data.data_length):
                 sensorValues[data.id[i]] = data.force[i]
 
-            d = DebugData()
             for x in sensorValues.keys():
-                frame, pos, rpy = sensorLocation[x]
-                f = robotStateModel.getLinkFrame(frame)
+                frame, pos, rpy = self.sensorLocations[x]
+
                 t = transformUtils.frameFromPositionAndRPY(pos, rpy)
                 t.PostMultiply()
                 t.Concatenate(f)
@@ -94,7 +121,8 @@ class TakktileVis(object):
                 greenColor = 1 - redColor
                 d.addSphere(t.GetPosition(),
                             radius=0.005,
-                            color=[redColor,greenColor,0])
+                            color=[redColor,greenColor,0],
+                            resolution=8)
             vis.updatePolyData(d.getPolyData(), self.name, colorByName='RGB255')
 
 
