@@ -172,7 +172,7 @@ class ValvePlannerDemo(object):
         if engagedTip:
             tipDepth = 0.0
         else:
-            tipDepth = -0.1 # - is outside the wheel
+            tipDepth = -0.12 # - is outside the wheel, was 10
 
         assert self.valveAffordance
 
