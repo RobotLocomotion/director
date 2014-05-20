@@ -408,3 +408,20 @@ if useImageWidget:
 #robotStateJointController.q[0] = -1.0
 #robotStateJointController.q[1] = 1.5
 #robotStateJointController.push()
+
+if (1==0):
+  #polyData = io.readPolyData(os.path.expanduser('~/Desktop/table-and-door-scene.vtp'))
+  #polyData = io.readPolyData(os.path.expanduser('~/Desktop/valve-lever-scene.vtp')) # different position
+  polyData = io.readPolyData(os.path.expanduser('~/Desktop/valve-lever-scene-90.vtp'))
+
+
+  obj = vis.showPolyData(polyData, 'scene', parent=None, alpha=0.3)
+  obj.colorBy('z', scalarRange=[-0.2, 3.0])
+
+  segmentationpanel.activateSegmentationMode(polyData)
+  segmentation.segmentValveWallAuto(.2,'valve')
+  segmentation.switchToView( 'DRC View')
+
+  #v.graspingHand = 'right'
+  #v.findValveLeverAffordance()
+  #v.moveRobotToStanceFrame()
