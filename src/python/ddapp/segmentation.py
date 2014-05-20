@@ -1103,7 +1103,10 @@ def segmentValveWallAuto(expectedValveRadius, mode='both'):
     polyData = inputObj.polyData
 
     _ , polyData =  removeGround(polyData)
-    polyData, origin, normal = applyPlaneFit(polyData, returnOrigin=True)
+
+    #polyData, origin, normal = applyPlaneFit(polyData, returnOrigin=True)
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, returnOrigin=True)
 
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     wallPoints = applyVoxelGrid(wallPoints, leafSize=0.03)
@@ -1119,7 +1122,7 @@ def segmentValveWallAuto(expectedValveRadius, mode='both'):
     zmedian = np.median(zvalues)
     point1 =np.array([ xmedian, ymedian, zmedian]) # center of the valve wall
 
-    zaxis = normal
+    zaxis = -normal
     xaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
     xaxis = np.cross(yaxis, zaxis)
@@ -1177,11 +1180,13 @@ def segmentLeverByWallPlane(point1, point2):
     polyData = inputObj.polyData
 
     # NB: this doesn't use the cameraPos while segmentValveByWallPlane does
-    polyData, origin, normal = applyPlaneFit(polyData, returnOrigin=True)
-
+    #polyData, origin, normal = applyPlaneFit(polyData, returnOrigin=True)
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
+    
 
     # 2. Crop the cloud down to the lever only using the wall plane
-    perpLine = np.cross(point2 - point1, normal)
+    perpLine = np.cross(point2 - point1, -normal)
     #perpLine /= np.linalg.norm(perpLine)
     #perpLine * np.linalg.norm(point2 - point1)/2.0
     point3, point4 = centerPoint + perpLine/2.0, centerPoint - perpLine/2.0
@@ -1194,7 +1199,7 @@ def segmentLeverByWallPlane(point1, point2):
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     updatePolyData(wallPoints, 'lever valve wall', parent=getDebugFolder(), visible=False)
 
-    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [-0.2, -0.12]) # very tight threshold
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.12, 0.2]) # very tight threshold
     searchRegion = cropToLineSegment(searchRegion, point1, point2)
     searchRegion = cropToLineSegment(searchRegion, point3, point4)
     updatePolyData(searchRegion, 'lever search region', parent=getDebugFolder(), color=[1,0,0], visible=False)
@@ -1227,7 +1232,7 @@ def segmentLeverByWallPlane(point1, point2):
     t.Translate(point1)
 
     # a distant point down and left from wall
-    wall_point_lower_left = [ -20 , -20.0 , 0]
+    wall_point_lower_left = [ -20 , 20.0 , 0]
     wall_point_lower_left_Transform = transformUtils.frameFromPositionAndRPY(wall_point_lower_left, [0,0,0])
     wall_point_lower_left_Transform.Concatenate(t)
     wall_point_lower_left = wall_point_lower_left_Transform.GetPosition()
@@ -1260,7 +1265,7 @@ def segmentLeverByWallPlane(point1, point2):
 
     d = DebugData()
     # d.addSphere( point1 , radius=0.1)
-    # d.addSphere( wall_point_lower_left , radius=0.1)
+    d.addSphere( wall_point_lower_left , radius=0.1)
     d.addSphere(lever_center, radius=0.04)
     d.addSphere(lever_tip, radius=0.01)
     d.addLine(lever_center, lever_tip)
@@ -1344,7 +1349,6 @@ def segmentLeverValve(point1, point2):
     polyData = inputObj.polyData
 
     viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
-
     polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
 
 
