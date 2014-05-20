@@ -1180,11 +1180,8 @@ def segmentLeverByWallPlane(point1, point2):
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
-    # NB: this doesn't use the cameraPos while segmentValveByWallPlane does
-    #polyData, origin, normal = applyPlaneFit(polyData, returnOrigin=True)
     viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
-    
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, returnOrigin=True)
 
     # 2. Crop the cloud down to the lever only using the wall plane
     perpLine = np.cross(point2 - point1, -normal)
