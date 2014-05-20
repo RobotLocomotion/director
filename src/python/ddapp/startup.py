@@ -309,13 +309,13 @@ if usePlanning:
       global valveDemo
       valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                         lHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                                        fitValveMultisense, robotStateJointController,
+                                        segmentation.segmentValveWallAuto, robotStateJointController,
                                         playPlans, showPose)
 
     initValveDemo()
     v = valveDemo
-    v.spawnValveAffordance()
-    v.moveRobotToStanceFrame()
+    #v.spawnValveAffordance()
+    #v.moveRobotToStanceFrame()
 
     splinewidget.init(view, handFactory, robotStateModel)
 
