@@ -1219,7 +1219,7 @@ def segmentLeverByWallPlane(point1, point2):
 
 
     # 4. determine which lever point is closest to the lower left of the wall. That's the lever_center point
-    zaxis = normal
+    zaxis = -normal
     xaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
     xaxis = np.cross(yaxis, zaxis)
@@ -1230,7 +1230,7 @@ def segmentLeverByWallPlane(point1, point2):
     t.Translate(point1)
 
     # a distant point down and left from wall
-    wall_point_lower_left = [ -20 , 20.0 , 0]
+    wall_point_lower_left = [ -20 , -20.0 , 0]
     wall_point_lower_left_Transform = transformUtils.frameFromPositionAndRPY(wall_point_lower_left, [0,0,0])
     wall_point_lower_left_Transform.Concatenate(t)
     wall_point_lower_left = wall_point_lower_left_Transform.GetPosition()
@@ -1245,7 +1245,7 @@ def segmentLeverByWallPlane(point1, point2):
 
 
     # 5. compute the rotation angle of the lever and, using that, its frame
-    zaxis = normal
+    zaxis = -normal
     xaxis =  [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
     xaxis = np.cross(yaxis, zaxis)
@@ -1255,7 +1255,7 @@ def segmentLeverByWallPlane(point1, point2):
     t.PostMultiply()
     t.Translate(lever_center) # nominal frame at lever center
 
-    rotationAngle = -computeSignedAngleBetweenVectors(lineDirection,  [0, 0, 1], normal)
+    rotationAngle = -computeSignedAngleBetweenVectors(lineDirection,  [0, 0, 1], -normal)
     t_lever = transformUtils.frameFromPositionAndRPY( [0,0,0], [0,0, math.degrees( rotationAngle )  ] )
     t_lever.PostMultiply()
     t_lever.Concatenate(t)
