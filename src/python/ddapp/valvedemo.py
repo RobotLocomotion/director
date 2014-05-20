@@ -50,6 +50,9 @@ class ValvePlannerDemo(object):
         self.visOnly = True
         self.useFootstepPlanner = False
 
+        # For autonomousExecute
+        #self.visOnly = False
+        #self.useFootstepPlanner = True
 
         self.userPromptEnabled = True
         self.walkingPlan = None
@@ -71,6 +74,10 @@ class ValvePlannerDemo(object):
     def addPlan(self, plan):
         self.plans.append(plan)
 
+    def segmentValveWallAuto(self):
+        om.removeFromObjectModel(om.findObjectByName('affordances'))
+        vis.updatePolyData(segmentation.getCurrentRevolutionData(), 'pointcloud snapshot', parent='segmentation')
+        self.affordanceFitFunction(.195)
 
     def setScribeAngleToCurrent(self):
         '''
@@ -456,8 +463,9 @@ class ValvePlannerDemo(object):
         self.valveAffordance = om.findObjectByName('valve')
         self.valveFrame = om.findObjectByName('valve frame')
 
-        self.scribeRadius = self.valveAffordance.params.get('radius') - 0.08
+        self.scribeRadius = self.valveAffordance.params.get('radius') - 0.06
 
+        self.graspingHand = 'left'
         self.computeGraspFrame()
         self.computeStanceFrame()
 
@@ -469,8 +477,9 @@ class ValvePlannerDemo(object):
         self.valveFrame = om.findObjectByName('lever frame')
 
         # length of lever is equivalent to radius of valve
-        self.scribeRadius = self.valveAffordance.params.get('length') - 0.08
+        self.scribeRadius = self.valveAffordance.params.get('length') - 0.07
 
+        self.graspingHand = 'right'
         self.computeGraspFrame()
         self.computeStanceFrame()
 
@@ -538,7 +547,9 @@ class ValvePlannerDemo(object):
         gazeConstraint.tspan = [1.0, numberOfSamples]
 
         self.drawPointerTipPath()
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
         self.planGazeTrajectory()
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
 
 
     def computeStandPlan(self):
@@ -683,20 +694,59 @@ class ValvePlannerDemo(object):
 
         taskQueue = AsyncTaskQueue()
 
-
         taskQueue.addTask(self.printAsync('computing grasp and stance frames'))
         taskQueue.addTask(self.removePointerTipFrames)
         taskQueue.addTask(self.removePointerTipPath)
+        taskQueue.addTask(self.segmentValveWallAuto)
         taskQueue.addTask(self.findValveAffordance)
-        taskQueue.addTask(self.computeGraspFrame)
-        taskQueue.addTask(self.computeStanceFrame)
+        taskQueue.addTask(self.userPrompt('continue? y/n: '))
 
 
+        taskQueue.addTask(self.sendNeckPitchLookDown)
         self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
-        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
-
         taskQueue.addTask(self.atlasDriver.sendManipCommand)
         taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
+
+
+        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
+        taskQueue.addTask(self.segmentValveWallAuto)
+        taskQueue.addTask(self.findValveAffordance)
+        taskQueue.addTask(self.userPrompt('continue? y/n: '))
+
+
+        planningFunctions = [
+                    self.computePreGraspPlan,
+                    self.computePreGraspPlanGaze,
+                    self.computeInsertPlan,
+                    self.computeTurnPlan,
+                    self.computePreGraspPlanGaze,
+                    self.computePreGraspPlan,
+                    self.computeStandPlan,
+                    ]
+
+
+        for planFunc in planningFunctions:
+            taskQueue.addTask(planFunc)
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+
+        ############################################################################
+        ############################################################################
+        taskQueue.addTask(self.findValveLeverAffordance)
+        taskQueue.addTask(self.userPrompt('continue? y/n: '))
+
+
+        taskQueue.addTask(self.sendNeckPitchLookDown)
+        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
+        taskQueue.addTask(self.atlasDriver.sendManipCommand)
+        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
+
+
+        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
+        taskQueue.addTask(self.segmentValveWallAuto)
+        taskQueue.addTask(self.findValveAffordance)
+        taskQueue.addTask(self.userPrompt('continue? y/n: '))
 
 
         planningFunctions = [
