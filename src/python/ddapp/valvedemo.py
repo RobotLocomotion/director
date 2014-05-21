@@ -693,16 +693,15 @@ class ValvePlannerDemo(object):
 
 
         taskQueue = AsyncTaskQueue()
-
-        taskQueue.addTask(self.printAsync('computing grasp and stance frames'))
         taskQueue.addTask(self.removePointerTipFrames)
         taskQueue.addTask(self.removePointerTipPath)
+        
         taskQueue.addTask(self.segmentValveWallAuto)
+        taskQueue.addTask(self.userPrompt('Accept valve fit, continue? y/n: '))
         taskQueue.addTask(self.findValveAffordance)
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
 
 
-        taskQueue.addTask(self.sendNeckPitchLookDown)
+        taskQueue.addTask(self.sendNeckPitchLookForward)
         self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
         taskQueue.addTask(self.atlasDriver.sendManipCommand)
         taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
@@ -710,8 +709,8 @@ class ValvePlannerDemo(object):
 
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
         taskQueue.addTask(self.segmentValveWallAuto)
+        taskQueue.addTask(self.userPrompt('Accept valve re-fit, continue? y/n: '))
         taskQueue.addTask(self.findValveAffordance)
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
 
 
         planningFunctions = [
@@ -727,17 +726,18 @@ class ValvePlannerDemo(object):
 
         for planFunc in planningFunctions:
             taskQueue.addTask(planFunc)
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.userPrompt('c continue? y/n: '))
             taskQueue.addTask(self.animateLastPlan)
 
 
         ############################################################################
         ############################################################################
+        taskQueue.addTask(self.segmentValveWallAuto)
+        taskQueue.addTask(self.userPrompt('Accept lever fit, continue? y/n: '))
         taskQueue.addTask(self.findValveLeverAffordance)
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
 
 
-        taskQueue.addTask(self.sendNeckPitchLookDown)
+        taskQueue.addTask(self.sendNeckPitchLookForward)
         self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
         taskQueue.addTask(self.atlasDriver.sendManipCommand)
         taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
@@ -745,8 +745,8 @@ class ValvePlannerDemo(object):
 
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
         taskQueue.addTask(self.segmentValveWallAuto)
-        taskQueue.addTask(self.findValveAffordance)
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
+        taskQueue.addTask(self.userPrompt('Accept lever re-fit, continue? y/n: '))
+        taskQueue.addTask(self.findValveLeverAffordance)
 
 
         planningFunctions = [
@@ -762,7 +762,7 @@ class ValvePlannerDemo(object):
 
         for planFunc in planningFunctions:
             taskQueue.addTask(planFunc)
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.userPrompt('f continue? y/n: '))
             taskQueue.addTask(self.animateLastPlan)
 
 
