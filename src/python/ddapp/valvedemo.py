@@ -70,6 +70,9 @@ class ValvePlannerDemo(object):
         self.nextScribeAngle = -30 # suitable for both types of valve
         self.scribeRadius = None
 
+        # IK server speed:
+        self.speedSlow = 10
+        self.speedHigh = 30
         
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -468,6 +471,8 @@ class ValvePlannerDemo(object):
         self.graspingHand = 'left'
         self.computeGraspFrame()
         self.computeStanceFrame()
+        
+        self.turnDegrees = 360
 
 
     def findValveLeverAffordance(self):
@@ -482,6 +487,8 @@ class ValvePlannerDemo(object):
         self.graspingHand = 'right'
         self.computeGraspFrame()
         self.computeStanceFrame()
+        
+        self.turnDegrees = 90
 
 
     def getEstimatedRobotStatePose(self):
@@ -513,17 +520,24 @@ class ValvePlannerDemo(object):
         self.computePointerTipFrame(0)
         self.initGazeConstraintSet(self.pointerTipFrameDesired)
         self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
         self.planGazeTrajectory()
-
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def computeInsertPlan(self):
         self.computePointerTipFrame(1)
         self.initGazeConstraintSet(self.pointerTipFrameDesired)
         self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
         self.planGazeTrajectory()
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
 
     def computeTurnPlan(self, turnDegrees=360, numberOfSamples=12):
+
+        numberOfSamples = 20
+        turnDegrees = self.turnDegrees
+      
         self.pointerTipPath = []
         self.removePointerTipFrames()
         self.removePointerTipPath()
@@ -547,9 +561,9 @@ class ValvePlannerDemo(object):
         gazeConstraint.tspan = [1.0, numberOfSamples]
 
         self.drawPointerTipPath()
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
         self.planGazeTrajectory()
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
 
     def computeStandPlan(self):
