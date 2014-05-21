@@ -215,13 +215,6 @@ if usePlanning:
         om.removeFromObjectModel(om.findObjectByName('debug'))
         segmentation.findAndFitDrillBarrel(pd,  getLinkFrame('utorso'))
 
-
-    def fitValveMultisense():
-        pd = om.findObjectByName('Multisense').model.revPolyData
-        om.removeFromObjectModel(om.findObjectByName('debug'))
-        segmentation.findAndFitDrillBarrel(pd,  getLinkFrame('utorso'))
-
-
     def refitBlocks(autoApprove=True):
         polyData = om.findObjectByName('Multisense').model.revPolyData
         segmentation.updateBlockAffordances(polyData)
