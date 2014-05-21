@@ -47,12 +47,14 @@ class ValvePlannerDemo(object):
         self.graspingHand = 'left'
 
         self.planFromCurrentRobotState = True
-        self.visOnly = True
-        self.useFootstepPlanner = False
+        
+        # For testing:
+        #self.visOnly = True
+        #self.useFootstepPlanner = False
 
         # For autonomousExecute
-        #self.visOnly = False
-        #self.useFootstepPlanner = True
+        self.visOnly = False
+        self.useFootstepPlanner = True
 
         self.userPromptEnabled = True
         self.walkingPlan = None
