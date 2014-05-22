@@ -76,13 +76,9 @@ class FootstepsPanel(object):
     def onShowWalkingVolumes(self):
         self.driver.show_contact_slices = self.ui.showWalkingVolumesCheck.checked
 
-        # TODO: instead of deleting or regernating these, we can just
-        # show/hide them in the om. This requires a feature that Pat will
-        # implement soon, to show/hide an entire folder's contents
-        if self.ui.showWalkingVolumesCheck.checked:
-            self.driver.updateRequest()
-        else:
-            om.removeFromObjectModel(om.findObjectByName('walking volumes'))
+        folder = om.findObjectByName('walking volumes')
+        for obj in folder.children():
+            obj.setProperty('Visible', self.driver.show_contact_slices)
 
     def onNewRegionSeed(self):
         if not _mosekEnabled:
