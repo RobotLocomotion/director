@@ -3,7 +3,6 @@ import ddapp.applogic as app
 from ddapp import affordance
 from shallowCopy import shallowCopy
 import ddapp.vtkAll as vtk
-from ddapp.debugVis import DebugData
 from ddapp.timercallback import TimerCallback
 from ddapp import transformUtils
 from ddapp import callbacks
