@@ -297,18 +297,11 @@ if usePlanning:
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
 
-    def initValveDemo():
-      imp.reload(valvedemo)
-      global valveDemo
-      valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
-                                        lHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                                        segmentation.segmentValveWallAuto, robotStateJointController,
-                                        playPlans, showPose)
+    valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
+                                      lHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                                      segmentation.segmentValveWallAuto, robotStateJointController,
+                                      playPlans, showPose)
 
-    initValveDemo()
-    v = valveDemo
-    #v.spawnValveAffordance()
-    #v.moveRobotToStanceFrame()
 
     splinewidget.init(view, handFactory, robotStateModel)
 
@@ -378,43 +371,3 @@ viewBehaviors = viewbehaviors.ViewBehaviors(view, handFactory, robotStateModel, 
 
 if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
-
-
-
-
-
-
-#polyData = io.readPolyData(os.path.expanduser('~/Desktop/table-and-door-scene.vtp'))
-
-# transform point cloud
-#t = vtk.vtkTransform()
-#t.RotateZ(180)
-#t.Translate(0, 0, -0.43)
-#t.Translate(0, 0, -0.1)
-#polyData = segmentation.transformPolyData(polyData, t)
-
-#obj = vis.showPolyData(polyData, 'scene', parent=None, alpha=1.0)
-#obj.colorBy('z', scalarRange=[-0.2, 3.0])
-
-# move robot
-#robotStateJointController.q[5] = math.radians(120)
-#robotStateJointController.q[0] = -1.0
-#robotStateJointController.q[1] = 1.5
-#robotStateJointController.push()
-
-if (1==0):
-  #polyData = io.readPolyData(os.path.expanduser('~/Desktop/table-and-door-scene.vtp'))
-  #polyData = io.readPolyData(os.path.expanduser('~/Desktop/valve-lever-scene.vtp')) # different position
-  polyData = io.readPolyData(os.path.expanduser('~/Desktop/valve-lever-scene-90.vtp'))
-
-
-  obj = vis.showPolyData(polyData, 'scene', parent=None, alpha=0.3)
-  obj.colorBy('z', scalarRange=[-0.2, 3.0])
-
-  segmentationpanel.activateSegmentationMode(polyData)
-  segmentation.segmentValveWallAuto(.2,'valve')
-  segmentation.switchToView( 'DRC View')
-
-  #v.graspingHand = 'right'
-  #v.findValveLeverAffordance()
-  #v.moveRobotToStanceFrame()
