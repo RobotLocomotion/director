@@ -4,6 +4,7 @@ from ddapp import lcmUtils
 from ddapp import applogic as app
 from ddapp.utime import getUtime
 from ddapp.timercallback import TimerCallback
+from ddapp import takktilevis
 
 import numpy as np
 import math
@@ -24,11 +25,15 @@ class WidgetDict(object):
 
 class HandControlPanel(object):
 
-    def __init__(self, lDriver, rDriver):
+    def __init__(self, lDriver, rDriver, robotStateModel):
 
+        self.robotStateModel = robotStateModel
         self.drivers = {}
         self.drivers['left'] = lDriver
         self.drivers['right'] = rDriver
+
+        self.takktileVizLeft = takktilevis.TakktileVis('l_takktile', 'TAKKTILE_RAW_LEFT', takktilevis.sensorLocationLeft, robotStateModel)
+        self.takktileVizRight = takktilevis.TakktileVis('r_takktile', 'TAKKTILE_RAW_RIGHT', takktilevis.sensorLocationRight, robotStateModel)
 
         self.storedCommand = {'left': None, 'right': None}
 
@@ -52,6 +57,8 @@ class HandControlPanel(object):
         self.widget.advanced.regraspButton.clicked.connect(self.regraspClicked)
         self.widget.advanced.dropButton.clicked.connect(self.dropClicked)
         self.widget.advanced.repeatRateSpinner.valueChanged.connect(self.rateSpinnerChanged)
+        self.widget.sensors.leftTareButton.clicked.connect(self.takktileVizLeft.tare)
+        self.widget.sensors.rightTareButton.clicked.connect(self.takktileVizRight.tare)
 
         # create a timer to repeat commands
         self.updateTimer = TimerCallback()
@@ -168,6 +175,9 @@ class HandControlPanel(object):
         self.updateTimer.targetFps = self.ui.repeatRateSpinner.value
 
     def updatePanel(self):
+        self.takktileVizLeft.active = self.ui.leftVisCheck.isChecked()
+        self.takktileVizRight.active = self.ui.rightVisCheck.isChecked()
+
         if self.ui.repeaterCheckBox.checked and self.storedCommand['left']:
             position, force, velocity, mode = self.storedCommand['left']
             self.drivers['left'].sendCustom(position, force, velocity, mode)
@@ -181,12 +191,12 @@ def _getAction():
     return app.getToolBarActions()['ActionHandControlPanel']
 
 
-def init(driverL, driverR):
+def init(driverL, driverR, model):
 
     global panel
     global dock
 
-    panel = HandControlPanel(driverL, driverR)
+    panel = HandControlPanel(driverL, driverR, model)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
