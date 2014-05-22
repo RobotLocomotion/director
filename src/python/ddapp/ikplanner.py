@@ -257,7 +257,7 @@ class IKPlanner(object):
         g.targetFrame = t
         g.targetAxis = gazeAxis
         g.bodyAxis = gazeAxis
-        g.coneThreshold = math.radians(0)
+        g.coneThreshold = math.radians(5)
         g.tspan = [1.0, 1.0]
         return g
 
