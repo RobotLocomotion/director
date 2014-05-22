@@ -161,7 +161,7 @@ if useGrid:
 if useHands:
     rHandDriver = handdriver.RobotiqHandDriver(side='right')
     lHandDriver = handdriver.RobotiqHandDriver(side='left')
-    handcontrolpanel.init(lHandDriver, rHandDriver)
+    handcontrolpanel.init(lHandDriver, rHandDriver, robotStateModel)
 
 
 if useFootsteps:
@@ -364,3 +364,5 @@ viewBehaviors = viewbehaviors.ViewBehaviors(view, handFactory, robotStateModel, 
 
 if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
+
+
