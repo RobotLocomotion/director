@@ -992,13 +992,14 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
-    cameraPos = np.array(getSegmentationView().camera().GetPosition())
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, returnOrigin=True)
 
-    #bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
-    bodyX = centerPoint - cameraPos
-    bodyX /= np.linalg.norm(bodyX)
-
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-bodyX, searchOrigin=point1, searchRadius=0.2, returnOrigin=True)
+    #cameraPos = np.array(getSegmentationView().camera().GetPosition())
+    ##bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
+    #bodyX = centerPoint - cameraPos
+    #bodyX /= np.linalg.norm(bodyX)
+    #polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-bodyX, searchOrigin=point1, searchRadius=0.2, returnOrigin=True)
 
 
     perpLine = np.cross(point2 - point1, normal)
@@ -1020,6 +1021,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
     updatePolyData(searchRegion, 'valve search region', parent=getDebugFolder(), color=[1,0,0], visible=False)
 
+    searchRegionSpokes = shallowCopy(searchRegion)
 
     searchRegion, origin, _  = applyPlaneFit(searchRegion, expectedNormal=normal, perpendicularAxis=normal, returnOrigin=True)
     searchRegion = thresholdPoints(searchRegion, 'dist_to_plane', [-0.015, 0.015])
@@ -1093,6 +1095,249 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     frameObj.addToView(app.getDRCView())
 
 
+    # Spoke angle fitting:
+    if (1==1):
+        # extract the relative positon of the points to the valve axis:
+        searchRegionSpokes = labelDistanceToLine(searchRegionSpokes, origin, [origin + circleNormal])
+        searchRegionSpokes = thresholdPoints(searchRegionSpokes, 'distance_to_line', [0.05, radius-0.04])
+        updatePolyData(searchRegionSpokes, 'valve spoke search', parent=getDebugFolder(), visible=False)
+        searchRegionSpokesLocal = transformPolyData(searchRegionSpokes, t.GetLinearInverse() )
+        points = vtkNumpy.getNumpyFromVtk(searchRegionSpokesLocal , 'Points')
+
+        spoke_angle = findValveSpokeAngle(points)
+        spokeAngleTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,spoke_angle])
+
+        spokeTransform = transformUtils.copyFrame(t)
+        spokeAngleTransform.Concatenate(spokeTransform)
+
+        #spokeObj = showFrame(spokeAngleTransform, 'spoke frame', parent=getDebugFolder(), visible=True)
+        #spokeObj.addToView(app.getDRCView())
+        spokeObj = showFrame(spokeAngleTransform, 'spoke frame', parent=obj, visible=True, scale=radius)
+        spokeObj.addToView(app.getDRCView())
+
+
+def findValveSpokeAngle(points):
+    '''
+    Determine the location of the valve spoke angle
+    By binning the spoke returns. returns angle in degrees
+    '''
+
+    #np.savetxt("/home/mfallon/Desktop/spoke_points.csv", points, delimiter=",")
+
+
+    # convert all points to degrees in range [0,120]
+    angle = np.degrees( np.arctan2( points[:,1] ,  points[:,0] ) )
+    qq = np.where(angle < 0)[0]
+    angle[qq] += 360
+    angle = np.mod( angle, 120)
+
+    # find the spoke as the max of a histogram:
+    bins = range(0,130,10)  # 0,10,...130
+    freq, bins = np.histogram(angle, bins)
+    amax = np.argmax(freq)
+    spoke_angle = bins[amax] + 5 # correct for 5deg offset
+    print spoke_angle
+
+    return spoke_angle
+
+
+def segmentValveWallAuto(expectedValveRadius, mode='both'):
+    '''
+    Segment the valve wall where the left hand side has a valve and right has a lever
+    '''
+
+    # find the valve wall and its center
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    _ , polyData =  removeGround(polyData)
+
+    #polyData, origin, normal = applyPlaneFit(polyData, returnOrigin=True)
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, returnOrigin=True)
+
+    wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    wallPoints = applyVoxelGrid(wallPoints, leafSize=0.03)
+    wallPoints = extractLargestCluster(wallPoints, minClusterSize=100)
+
+    updatePolyData(wallPoints, 'auto valve wall', parent=getDebugFolder(), visible=False)
+
+    xvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,0]
+    xmedian = np.median(xvalues)
+    yvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,1]
+    ymedian = np.median(yvalues)
+    zvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,2]
+    zmedian = np.median(zvalues)
+    point1 =np.array([ xmedian, ymedian, zmedian]) # center of the valve wall
+
+    zaxis = -normal
+    xaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(point1)
+
+    normalObj = showFrame(t, 'valve wall frame', parent=getDebugFolder(), visible=False)
+    normalObj.addToView(app.getDRCView())
+
+
+    # determine boxes relative to the center, inside of which the two affordances lie
+    valve_point2 = [ 0 , -0.8 , 0]
+    valveTransform2 = transformUtils.frameFromPositionAndRPY(valve_point2, [0,0,0])
+    valveTransform2.Concatenate(t)
+    point2 =valveTransform2.GetPosition() # left of wall
+
+    valve_point2b = [ 0 , 1.0 , 0] # lever can over hang
+    valveTransform2b = transformUtils.frameFromPositionAndRPY(valve_point2b, [0,0,0])
+    valveTransform2b.Concatenate(t)
+    point2b =valveTransform2b.GetPosition() # right of wall
+
+
+    d = DebugData()
+    origin = np.array([ xmedian, ymedian, zmedian ])
+    d.addSphere(point2, radius=0.01)
+    d.addSphere(point1, radius=0.03)
+    d.addSphere(point2b, radius=0.01)
+    updatePolyData(d.getPolyData(), 'auto wall points', parent=getDebugFolder(), visible=False)
+
+    if (mode=='valve'):
+      segmentValveByWallPlane(expectedValveRadius, point1, point2)
+    elif (mode=='lever'):
+      segmentLeverByWallPlane(point1, point2b)
+    elif (mode=='both'):
+      segmentValveByWallPlane(expectedValveRadius, point1, point2)
+      segmentLeverByWallPlane(point1, point2b)
+    else:
+        raise Exception('unexpected segmentation mode: ' + mode)
+
+
+
+def segmentLeverByWallPlane(point1, point2):
+    '''
+    determine the position (including rotation of a lever near a wall
+    input is as for the valve - to points on the wall either side of the lever
+    '''
+
+    # 1. determine the wall plane and normal
+    centerPoint = (point1 + point2) / 2.0
+
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, returnOrigin=True)
+
+    # 2. Crop the cloud down to the lever only using the wall plane
+    perpLine = np.cross(point2 - point1, -normal)
+    #perpLine /= np.linalg.norm(perpLine)
+    #perpLine * np.linalg.norm(point2 - point1)/2.0
+    point3, point4 = centerPoint + perpLine/2.0, centerPoint - perpLine/2.0
+
+    d = DebugData()
+    d.addLine(point1, point2)
+    d.addLine(point3, point4)
+    updatePolyData(d.getPolyData(), 'lever crop lines', parent=getDebugFolder(), visible=False)
+
+    wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
+    updatePolyData(wallPoints, 'lever valve wall', parent=getDebugFolder(), visible=False)
+
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.12, 0.2]) # very tight threshold
+    searchRegion = cropToLineSegment(searchRegion, point1, point2)
+    searchRegion = cropToLineSegment(searchRegion, point3, point4)
+    updatePolyData(searchRegion, 'lever search region', parent=getDebugFolder(), color=[1,0,0], visible=False)
+
+
+    # 3. fit line to remaining points - all assumed to be the lever
+    linePoint, lineDirection, _ = applyLineFit(searchRegion, distanceThreshold=0.02)
+    #if np.dot(lineDirection, forwardDirection) < 0:
+    #    lineDirection = -lineDirection
+
+    d = DebugData()
+    d.addSphere(linePoint, radius=0.02)
+    updatePolyData(d.getPolyData(), 'lever point', parent=getDebugFolder(), visible=False)
+
+    pts = vtkNumpy.getNumpyFromVtk(searchRegion, 'Points')
+    dists = np.dot(pts-linePoint, lineDirection)
+    lever_center = linePoint + lineDirection*np.min(dists)
+    lever_tip = linePoint + lineDirection*np.max(dists)
+
+
+    # 4. determine which lever point is closest to the lower left of the wall. That's the lever_center point
+    zaxis = -normal
+    xaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(point1)
+
+    # a distant point down and left from wall
+    wall_point_lower_left = [ -20 , -20.0 , 0]
+    wall_point_lower_left_Transform = transformUtils.frameFromPositionAndRPY(wall_point_lower_left, [0,0,0])
+    wall_point_lower_left_Transform.Concatenate(t)
+    wall_point_lower_left = wall_point_lower_left_Transform.GetPosition()
+    d1 =   np.sqrt( np.sum((wall_point_lower_left- projectPointToPlane(lever_center, origin, normal) )**2) )
+    d2 =   np.sqrt( np.sum((wall_point_lower_left- projectPointToPlane(lever_tip, origin, normal) )**2) )
+
+    if (d2 < d1): # flip the points to match variable names
+        p_temp = lever_center
+        lever_center = lever_tip
+        lever_tip = p_temp
+        lineDirection = -lineDirection
+
+
+    # 5. compute the rotation angle of the lever and, using that, its frame
+    zaxis = -normal
+    xaxis =  [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(lever_center) # nominal frame at lever center
+
+    rotationAngle = -computeSignedAngleBetweenVectors(lineDirection,  [0, 0, 1], -normal)
+    t_lever = transformUtils.frameFromPositionAndRPY( [0,0,0], [0,0, math.degrees( rotationAngle )  ] )
+    t_lever.PostMultiply()
+    t_lever.Concatenate(t)
+
+
+    d = DebugData()
+    # d.addSphere( point1 , radius=0.1)
+    d.addSphere( wall_point_lower_left , radius=0.1)
+    d.addSphere(lever_center, radius=0.04)
+    d.addSphere(lever_tip, radius=0.01)
+    d.addLine(lever_center, lever_tip)
+    updatePolyData(d.getPolyData(), 'lever end points', color=[0,1,0], parent=getDebugFolder(), visible=False)
+
+
+    radius = 0.01
+    length = np.sqrt( np.sum((lever_tip - lever_center )**2) )
+
+    d = DebugData()
+    d.addLine([0,0,0], [length, 0, 0], radius=radius)
+    d.addSphere ( [0, 0, 0], 0.02)
+    geometry = d.getPolyData()
+
+    obj = showPolyData(geometry, 'valve lever', cls=FrameAffordanceItem, parent='affordances' , color=[0,1,0], visible=True)
+    obj.actor.SetUserTransform(t_lever)
+    obj.addToView(app.getDRCView())
+    frameObj = showFrame(t_lever, 'lever frame', parent=obj, visible=False)
+    frameObj.addToView(app.getDRCView())
+
+    otdfType = 'lever_valve'
+    params = dict(origin=np.array(t_lever.GetPosition()), xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1, radius=radius, length=length, friendly_name=otdfType, otdf_type=otdfType)
+    obj.setAffordanceParams(params)
+    obj.updateParamsFromActorTransform()
+
+
+
 def applyICP(source, target):
 
     icp = vtk.vtkIterativeClosestPointTransform()
@@ -1149,7 +1394,6 @@ def segmentLeverValve(point1, point2):
     polyData = inputObj.polyData
 
     viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
-
     polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, searchOrigin=point1, searchRadius=0.2, angleEpsilon=0.7, returnOrigin=True)
 
 
@@ -1159,6 +1403,7 @@ def segmentLeverValve(point1, point2):
     radius = 0.01
     length = 0.33
 
+    normal = -normal # set z to face into wall
     zaxis = normal
     xaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
@@ -1173,10 +1418,11 @@ def segmentLeverValve(point1, point2):
     leverP2 = point2 + xaxis * length
     d = DebugData()
     d.addLine([0,0,0], [length, 0, 0], radius=radius)
+    d.addSphere ( [0, 0, 0], 0.02)
     geometry = d.getPolyData()
 
 
-    obj = showPolyData(geometry, 'valve lever', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    obj = showPolyData(geometry, 'valve lever', cls=FrameAffordanceItem, parent='affordances', color=[0,1,0], visible=True)
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
     frameObj = showFrame(t, 'lever frame', parent=obj, visible=False)

@@ -8,6 +8,7 @@ import sys
 import PythonQt
 from PythonQt import QtCore, QtGui
 from time import time
+import imp
 import ddapp.applogic as app
 from ddapp import botpy
 from ddapp import vtkAll as vtk
@@ -18,6 +19,7 @@ from ddapp import cameracontrol
 from ddapp import debrisdemo
 from ddapp import drilldemo
 from ddapp import tabledemo
+from ddapp import valvedemo
 from ddapp import ik
 from ddapp import ikplanner
 from ddapp import objectmodel as om
@@ -124,7 +126,7 @@ if useIk:
 
     def startIkServer():
         ikServer.startServerAsync()
-        #ikServer.comm.echoCommandsToStdOut = True
+        ikServer.comm.writeCommandsToLogFile = True
 
     startIkServer()
 
@@ -294,6 +296,11 @@ if usePlanning:
                                         lHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                         fitDrillMultisense, robotStateJointController,
                                         playPlans, showPose)
+
+    valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
+                                      lHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                                      segmentation.segmentValveWallAuto, robotStateJointController,
+                                      playPlans, showPose)
 
 
     splinewidget.init(view, handFactory, robotStateModel)
