@@ -5,6 +5,7 @@ from ddapp import objectmodel as om
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp.debugVis import DebugData
+from ddapp.terrainitem import TerrainRegionItem
 try:
     import mosek
     from ddapp.terrain import TerrainSegmentation
@@ -85,44 +86,20 @@ class FootstepsPanel(object):
             print "Warning: Mosek python bindings not found. Terrain segmentation is disabled."
             return
         if self.terrain_segmentation is not None:
-            t = self.newWalkingGoalFrame(self.robotModel)
-            idx = len(self.region_seed_frames)
-            frameObj = vis.updateFrame(t, 'region seed {:d}'.format(idx), parent='planning', scale=0.25)
-            frameObj.index = idx
-            frameObj.setProperty('Edit', True)
-            frameObj.connectFrameModified(self.onRegionSeedModified)
-            self.region_seed_frames.append(frameObj)
             heights, world2px = self.depth_provider.getSceneHeightData()
+            if heights is None:
+                heights = np.zeros((100,100))
+                world2px = np.eye(4)
             heights[np.isinf(heights)] = np.nan
             px2world = np.linalg.inv(world2px)
             self.terrain_segmentation.setHeights(heights, px2world)
-            self.onRegionSeedModified(frameObj)
 
-    def onRegionSeedModified(self, frame):
-        pos, wxyz = transformUtils.poseFromTransform(frame.transform)
-        rpy = transformUtils.rollPitchYawFromTransform(frame.transform)
-        pose = np.hstack((pos, rpy))
-        safe_region = self.terrain_segmentation.findSafeRegion(pose, iter_limit=2)
-        debug = DebugData()
-        om_name = 'IRIS region boundary {:d}'.format(frame.index)
-        om.removeFromObjectModel(om.findObjectByName(om_name))
-        xy_verts = safe_region.xy_polytope()
-        for j in range(xy_verts.shape[1]):
-            z = pos[2]
-            p1 = np.hstack((xy_verts[:,j], z))
-            if j < xy_verts.shape[1] - 1:
-                p2 = np.hstack((xy_verts[:,j+1], z))
-            else:
-                p2 = np.hstack((xy_verts[:,0], z))
-            debug.addLine(p1, p2, color=[.8,.8,.2])
-        vis.showPolyData(debug.getPolyData(), om_name, parent='planning', color=[.8,.8,.2])
-
-        if frame.index < len(self.driver.safe_terrain_regions):
-            self.driver.safe_terrain_regions[frame.index] = safe_region
-        else:
-            assert frame.index == len(self.driver.safe_terrain_regions)
-            self.driver.safe_terrain_regions.append(safe_region)
-
+            t = self.newWalkingGoalFrame(self.robotModel)
+            view = app.getCurrentRenderView()
+            item = TerrainRegionItem('IRIS region', view, t,
+                                     self.terrain_segmentation)
+            parentObj = om.getOrCreateContainer('Safe terrain regions')
+            om.addToObjectModel(item, parentObj)
 
     def _setupPropertiesPanel(self):
         l = QtGui.QVBoxLayout(self.ui.paramsContainer)

@@ -182,6 +182,3 @@ class SafeTerrainRegion:
             # print "Infeasible polytope"
             return np.zeros((2,0))
 
-
-
-

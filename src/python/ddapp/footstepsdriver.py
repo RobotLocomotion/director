@@ -109,7 +109,6 @@ class FootstepsDriver(object):
         self.lastWalkingPlan = None
         self.walkingPlanCallback = None
         self.default_step_params = DEFAULT_STEP_PARAMS
-        self.safe_terrain_regions = []
         self._setupProperties()
         self.contact_slices = {}
         self.show_contact_slices = False
@@ -392,8 +391,14 @@ class FootstepsDriver(object):
         return msg
 
     def applySafeRegions(self, msg):
-        msg.num_iris_regions = len(self.safe_terrain_regions)
-        for r in self.safe_terrain_regions:
+        safe_regions_folder = om.findObjectByName('Safe terrain regions')
+        safe_terrain_regions = []
+        if safe_regions_folder:
+            for obj in safe_regions_folder.children():
+                if obj.getProperty('Enabled for Walking'):
+                    safe_terrain_regions.append(obj.safe_region)
+        msg.num_iris_regions = len(safe_terrain_regions)
+        for r in safe_terrain_regions:
             msg.iris_regions.append(r.to_iris_region_t())
         return msg
 
