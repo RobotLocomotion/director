@@ -59,6 +59,12 @@ class HandControlPanel(object):
         self.widget.advanced.repeatRateSpinner.valueChanged.connect(self.rateSpinnerChanged)
         self.widget.sensors.leftTareButton.clicked.connect(self.takktileVizLeft.tare)
         self.widget.sensors.rightTareButton.clicked.connect(self.takktileVizRight.tare)
+        self.ui.fingerControlButton.clicked.connect(self.fingerControlButton)
+        PythonQt.dd.ddGroupBoxHider(self.ui.sensors)
+        PythonQt.dd.ddGroupBoxHider(self.ui.fingerControl)
+
+        # Bug fix... for some reason one slider is set as disabled
+        self.ui.fingerASlider.setEnabled(True)
 
         # create a timer to repeat commands
         self.updateTimer = TimerCallback()
@@ -173,6 +179,30 @@ class HandControlPanel(object):
 
     def rateSpinnerChanged(self):
         self.updateTimer.targetFps = self.ui.repeatRateSpinner.value
+
+    def fingerControlButton(self):
+        if self.widget.handSelect.leftButton.checked:
+            side = 'left'
+        else:
+            side = 'right'
+
+        if not self.ui.scissorControl.isChecked():
+            self.drivers[side].sendFingerControl(int(self.ui.fingerAValue.text),
+                                                 int(self.ui.fingerBValue.text),
+                                                 int(self.ui.fingerCValue.text),
+                                                 float(self.widget.advanced.forcePercentSpinner.value),
+                                                 float(self.widget.advanced.velocityPercentSpinner.value),
+                                                 None,
+                                                 self.getModeInt(self.widget.advanced.modeBox.currentText))
+        else:
+            self.drivers[side].sendFingerControl(int(self.ui.fingerAValue.text),
+                                                 int(self.ui.fingerBValue.text),
+                                                 int(self.ui.fingerCValue.text),
+                                                 float(self.widget.advanced.forcePercentSpinner.value),
+                                                 float(self.widget.advanced.velocityPercentSpinner.value),
+                                                 int(self.ui.scissorValue.text),
+                                                 0)  # can ignore mode because scissor will override
+        self.storedCommand[side] = None
 
     def updatePanel(self):
         self.takktileVizLeft.active = self.ui.leftVisCheck.isChecked()
