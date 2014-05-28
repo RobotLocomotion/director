@@ -735,8 +735,12 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
     return;
   }
 
-  MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
-  this->Internal->JointPositions.resize(model->num_dof);
+  if (this->Internal->JointPositions.size() != model->num_dof)
+  {
+    std::cout << "Internal joint positions vector has inconsistent size." << std::endl;
+    return;
+  }
+
   for (int i = 0; i < jointNames.size(); ++i)
   {
     const QString& dofName = jointNames[i];
@@ -749,13 +753,10 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
     }
 
     int dofId = itr->second;
-    q(dofId, 0) = jointPositions[i];
     this->Internal->JointPositions[dofId] = jointPositions[i];
   }
 
-  model->doKinematics(q.data());
-  model->updateModel();
-  emit this->modelChanged();
+  this->setJointPositions(this->Internal->JointPositions);
 }
 
 //-----------------------------------------------------------------------------
