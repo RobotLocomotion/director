@@ -11,6 +11,7 @@
 #include <vtkPolyDataNormals.h>
 #include <vtkRenderer.h>
 #include <vtkOBJReader.h>
+#include <vtkSTLReader.h>
 #include <vtkSphereSource.h>
 #include <vtkCylinderSource.h>
 #include <vtkCubeSource.h>
@@ -141,19 +142,33 @@ vtkSmartPointer<vtkPolyData> transformPolyData(vtkPolyData* polyData, vtkTransfo
   return shallowCopy(transformFilter->GetOutput());
 }
 
+bool endsWith(std::string const &fullString, std::string const &ending)
+{
+  if (fullString.length() >= ending.length())
+  {
+    return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+  } else
+  {
+    return false;
+  }
+}
+
 vtkSmartPointer<vtkPolyData> loadPolyData(const std::string filename)
 {
-  vtkSmartPointer<vtkOBJReader> reader = vtkSmartPointer<vtkOBJReader>::New();
-  reader->SetFileName(filename.c_str());
+  vtkSmartPointer<vtkPolyDataAlgorithm> reader;
 
-  /*
-  std::string chullFilename = filename;
-  boost::algorithm::replace_last(chullFilename, ".obj", "_chull.obj");
-  if (boost::filesystem::exists(chullFilename))
+  if (endsWith(filename, "obj"))
   {
-    reader->SetFileName(chullFilename.c_str());
+    vtkSmartPointer<vtkOBJReader> objReader = vtkSmartPointer<vtkOBJReader>::New();
+    objReader->SetFileName(filename.c_str());
+    reader = objReader;
   }
-  */
+  else if (endsWith(filename, "stl"))
+  {
+    vtkSmartPointer<vtkSTLReader> stlReader = vtkSmartPointer<vtkSTLReader>::New();
+    stlReader->SetFileName(filename.c_str());
+    reader = stlReader;
+  }
 
   reader->Update();
   if (!reader->GetOutput()->GetNumberOfPoints())
@@ -310,7 +325,7 @@ public:
     string ext = mypath.extension().native();
     boost::to_lower(ext);
 
-    if (mypath.extension().native() != ".obj")
+    if (mypath.extension().native() != ".obj" && mypath.extension().native() != ".stl")
     {
       std::string fnameAsObj = mypath.replace_extension(".obj").native();
       if ( boost::filesystem::exists( fnameAsObj ) )
