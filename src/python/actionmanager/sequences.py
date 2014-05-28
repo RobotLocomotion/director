@@ -121,5 +121,32 @@ test_seq = {'manip_mode'    : [ChangeMode,      'cam_delta',     'fail', {'NewMo
 
 sequenceDict['CamDeltaMove'] = [test_seq, 'cam_delta']
 
+
+pf_start = {'pf_start' : [PFGraspCommand, 'goal', 'fail', {'CommandType': '1', 'Channel' : 'REACH_TARGET_POSE'}]}
+
+sequenceDict['PfStart'] = [pf_start, 'pf_start']
+
+pf_iter = {'pf_iter'      : [PFGraspCommand,  'pf_move_plan', 'fail', {'CommandType' : '3', 'Channel' : 'REACH_TARGET_POSE'}],
+           'pf_move_plan' : [CameraDeltaPlan, 'pf_move',      'fail', {'TargetFrame': 'left robotiq', 'Hand': 'left', 'Style': 'Local', 'MoveCommand':'pf_iter'} ],
+           'pf_move'      : [JointMove,       'goal',         'fail', {'JointPlan': 'pf_move_plan'} ] }
+
+sequenceDict['PfMove'] = [pf_iter, 'pf_iter']
+
+pf_iter_full = {'manip_mode'    : [ChangeMode,      'pf_start',     'fail',         {'NewMode' : 'manip'} ],
+                'pf_start'      : [PFGraspCommand,  'pf_iter',      'fail',         {'CommandType': '1', 'Channel' : 'REACH_TARGET_POSE'}],
+                'pf_iter'       : [PFGraspCommand,  'delta1',       'pf_move_plan', {'CommandType' : '3', 'Channel' : 'REACH_TARGET_POSE'}],
+                'pf_move_plan'  : [CameraDeltaPlan, 'pf_move',      'fail',         {'TargetFrame': 'left robotiq', 'Hand': 'left', 'Style': 'Local', 'MoveCommand':'pf_iter'} ],
+                'pf_move'       : [JointMove,       'pf_iter',      'fail',         {'JointPlan': 'pf_move_plan'} ],
+                'delta1'        : [DeltaReachPlan,  'delta1_move',  'fail',         {'TargetFrame': 'l_hand_face', 'Hand': 'left', 'Style': 'Local', 'Direction':'Y', 'Amount':'0.25'} ],
+                'delta1_move'   : [JointMoveGuarded,'grip',         'fail',         {'JointPlan': 'delta1', 'Hand':'left'} ],
+                'grip'          : [Grip,            'delta2',       'fail',         {'Hand': 'left'} ],
+                'delta2'        : [DeltaReachPlan,  'delta2_move',  'fail',         {'TargetFrame': 'l_hand_face', 'Hand': 'left', 'Style': 'Global', 'Direction':'Z', 'Amount':'0.10'} ],
+                'delta2_move'   : [JointMove,       'delta3',       'fail',         {'JointPlan': 'delta2'} ],
+                'delta3'        : [DeltaReachPlan,  'delta3_move',  'fail',         {'TargetFrame': 'l_hand_face', 'Hand': 'left', 'Style': 'Local', 'Direction':'Y', 'Amount':'-0.20'} ],
+                'delta3_move'   : [JointMove,       'goal',         'fail',         {'JointPlan': 'delta3'} ]}
+
+sequenceDict['PfFull'] = [pf_iter_full, 'manip_mode']
+sequenceDict['PfFull2'] = [pf_iter_full, 'delta1']
+
 #Make a list out of the sequence ditionary, don't touch this line, just add to the dictionary
 sequenceList = [[key]+sequenceDict[key] for key in sequenceDict.keys()]
