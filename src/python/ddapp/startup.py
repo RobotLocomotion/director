@@ -42,7 +42,7 @@ from ddapp import atlasdriverpanel
 from ddapp import multisensepanel
 from ddapp import navigationpanel
 from ddapp import handcontrolpanel
-from ddapp import actionmanagerpanel
+
 from ddapp import robotplanlistener
 from ddapp import handdriver
 from ddapp import planplayback
@@ -61,7 +61,6 @@ from ddapp import lcmUtils
 from ddapp.utime import getUtime
 from ddapp.shallowCopy import shallowCopy
 
-from actionmanager import actionmanager
 
 import drc as lcmdrc
 
@@ -96,6 +95,7 @@ usePerception = True
 useGrid = True
 useSpreadsheet = True
 useFootsteps = True
+useActionManager = False
 useHands = True
 usePlanning = True
 useAtlasDriver = True
@@ -306,6 +306,26 @@ if usePlanning:
     splinewidget.init(view, handFactory, robotStateModel)
 
 
+    def onPostureGoal(msg):
+
+        goalPoseJoints = {}
+        for name, position in zip(msg.joint_name, msg.joint_position):
+            goalPoseJoints[name] = position
+
+        startPose = np.array(robotStateJointController.q)
+        endPose = ikPlanner.mergePostures(startPose, goalPoseJoints)
+        posturePlan = ikPlanner.computePostureGoal(startPose, endPose)
+
+        playbackPanel.setPlan(posturePlan)
+
+    lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
+
+
+if useActionManager:
+
+    from ddapp import actionmanagerpanel
+    from actionmanager import actionmanager
+
     actionManager = actionmanager.ActionManager(objectModel = om,
                                                 robotModel = robotStateModel,
                                                 sensorJointController = robotStateJointController,
@@ -320,20 +340,6 @@ if usePlanning:
                                                 fsmDebug = True)
 
     ampanel = actionmanagerpanel.init(actionManager)
-
-    def onPostureGoal(msg):
-
-        goalPoseJoints = {}
-        for name, position in zip(msg.joint_name, msg.joint_position):
-            goalPoseJoints[name] = position
-
-        startPose = np.array(robotStateJointController.q)
-        endPose = ikPlanner.mergePostures(startPose, goalPoseJoints)
-        posturePlan = ikPlanner.computePostureGoal(startPose, endPose)
-
-        playbackPanel.setPlan(posturePlan)
-
-    lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
 
 
 if useNavigationPanel:
