@@ -232,12 +232,6 @@ inf = np.inf
 
 class JointTeleopPanel(object):
 
-
-    jointLimitsMin = [-inf, -inf, -inf, -inf, -inf, -inf, -0.663225, -0.262, -0.698132, -1.5708, -1.5708, 0.0, 0.0, 0.0, -0.174533, -0.523599, -1.72072, 0.0, -1.0, -0.8, -1.1781, -1.5708, -1.5708, 0.0, -2.35619, 0.0, -1.22173, -0.523599, -1.72072, 0.0, -1.0, -0.8, -1.1781, -0.602139]
-    jointLimitsMax = [inf, inf, inf, inf, inf, inf, 0.663225, 0.524, 0.698132, 0.785398, 1.5708, 3.14159, 2.35619, 3.14159, 1.22173, 0.523599, 0.524821, 2.38569, 0.7, 0.8, 1.1781, 0.785398, 1.5708, 3.14159, 0.0, 3.14159, 0.174533, 0.523599, 0.524821, 2.38569, 0.7, 0.8, 1.1781, 1.14494]
-
-    jointNames = ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw', 'back_bkz', 'back_bky', 'back_bkx', 'l_arm_usy', 'l_arm_shx', 'l_arm_ely', 'l_arm_elx', 'l_arm_uwy', 'l_leg_hpz', 'l_leg_hpx', 'l_leg_hpy', 'l_leg_kny', 'l_leg_aky', 'l_leg_akx', 'l_arm_mwx', 'r_arm_usy', 'r_arm_shx', 'r_arm_ely', 'r_arm_elx', 'r_arm_uwy', 'r_leg_hpz', 'r_leg_hpx', 'r_leg_hpy', 'r_leg_kny', 'r_leg_aky', 'r_leg_akx', 'r_arm_mwx', 'neck_ay']
-
     def __init__(self, panel):
         self.panel = panel
         self.ui = panel.ui
@@ -247,6 +241,9 @@ class JointTeleopPanel(object):
 
         self.timerCallback = TimerCallback()
         self.timerCallback.callback = self.onTimerCallback
+
+        self.jointLimitsMin = [self.panel.teleopRobotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()]
+        self.jointLimitsMax = [self.panel.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()]
 
         self.slidersMap = {
             'back_bkx' : self.ui.backRollSlider,
