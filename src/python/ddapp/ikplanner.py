@@ -501,7 +501,7 @@ class IKPlanner(object):
         constraints[-3].tspan = [1.0, 1.0]
 
         endPoseName = 'reach_end'
-        constraintSet = ConstraintSet(self, constraints, None, endPoseName, startPoseName)
+        constraintSet = ConstraintSet(self, constraints, endPoseName, startPoseName)
         return constraintSet
 
 
@@ -530,7 +530,7 @@ class IKPlanner(object):
         constraints[-1].tspan = [1.0, 1.0]
 
         endPoseName = 'reach_end'
-        constraintSet = ConstraintSet(self, constraints, None, endPoseName, startPoseName)
+        constraintSet = ConstraintSet(self, constraints, endPoseName, startPoseName)
         return constraintSet
 
 
