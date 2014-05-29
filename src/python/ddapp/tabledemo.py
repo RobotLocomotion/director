@@ -33,12 +33,16 @@ class TableDemo(object):
         self.sensorJointController = sensorJointController
         self.view = view
 
-        self.visOnly = True
-        self.planFromCurrentRobotState = False
+        self.visOnly = False
+        self.planFromCurrentRobotState = True
         self.userPromptEnabled = False
+        self.useFootstepPlanner = True
 
         self.plans = []
         self.frameSyncs = {}
+
+        self.useLeftArm = False
+        self.useRightArm = True
 
         self.tableData = None
         self.binFrame = None
@@ -509,9 +513,9 @@ class TableDemo(object):
         print s
 
 
-    def userPrompt(self, message):
+    def userPrompt(self, message, force=False):
 
-        if not self.userPromptEnabled:
+        if not self.userPromptEnabled and not force:
             return
 
         yield
@@ -558,11 +562,7 @@ class TableDemo(object):
 
     def addWalkingTasksToQueue(self, taskQueue, planFunc, walkFunc):
 
-        useFootstepPlanner = False
-
-
-
-        if useFootstepPlanner:
+        if self.useFootstepPlanner:
             taskQueue.addTask(planFunc)
 
             if self.visOnly:
@@ -585,6 +585,70 @@ class TableDemo(object):
 
 
 
+    def addTablePickTasksToQueue(self, taskQueue):
+
+        taskQueue.addTask(functools.partial(self.openHand, 'left'))
+        taskQueue.addTask(functools.partial(self.openHand, 'right'))
+
+        taskQueue.addTask(self.atlasDriver.sendManipCommand)
+        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
+
+
+        taskQueue.addTask(self.userPrompt('wait for lidar. continue? y/n: '))
+        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
+
+        taskQueue.addTask(self.segmentTableObjects)
+
+
+        if self.useLeftArm:
+
+            taskQueue.addTask(functools.partial(self.reachToTableObject, 'left'))
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+            taskQueue.addTask(functools.partial(self.touchTableObject, 'left'))
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+            taskQueue.addTask(functools.partial(self.closeHand, 'left'))
+            taskQueue.addTask(functools.partial(self.graspTableObject, 'left'))
+
+            taskQueue.addTask(functools.partial(self.liftTableObject, 'left'))
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+        if self.useRightArm:
+
+            taskQueue.addTask(functools.partial(self.reachToTableObject, 'right'))
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+            taskQueue.addTask(functools.partial(self.touchTableObject, 'right'))
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+            taskQueue.addTask(functools.partial(self.closeHand, 'right'))
+            taskQueue.addTask(functools.partial(self.graspTableObject, 'right'))
+
+            taskQueue.addTask(functools.partial(self.liftTableObject, 'right'))
+            taskQueue.addTask(self.animateLastPlan)
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+
+            taskQueue.addTask(functools.partial(self.lowerArmAndStand, 'right'))
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+
+        else:
+            taskQueue.addTask(functools.partial(self.lowerArmAndStand, 'left'))
+            taskQueue.addTask(self.userPrompt('continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+
+        taskQueue.addTask(functools.partial(self.addTablePickTasksToQueue, taskQueue))
+
+
+
     def addLoopTasksToQueue(self, taskQueue):
 
 
@@ -598,57 +662,10 @@ class TableDemo(object):
         self.addWalkingTasksToQueue(taskQueue, self.computeTableFootstepPlan, self.moveRobotToTableStanceFrame)
 
 
-        taskQueue.addTask(functools.partial(self.openHand, 'left'))
-        taskQueue.addTask(functools.partial(self.openHand, 'right'))
-
-        taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
-
-        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-
-        taskQueue.addTask(self.segmentTableObjects)
-
-        taskQueue.addTask(functools.partial(self.reachToTableObject, 'left'))
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
-        taskQueue.addTask(self.animateLastPlan)
+        self.addTablePickTasksToQueue(taskQueue)
 
 
-        taskQueue.addTask(functools.partial(self.touchTableObject, 'left'))
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
-        taskQueue.addTask(self.animateLastPlan)
-
-        taskQueue.addTask(functools.partial(self.closeHand, 'left'))
-        taskQueue.addTask(functools.partial(self.graspTableObject, 'left'))
-
-        taskQueue.addTask(functools.partial(self.liftTableObject, 'left'))
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
-        taskQueue.addTask(self.animateLastPlan)
-
-        # not needed because the next reachToTableObject lowers the non-reaching arm
-        #taskQueue.addTask(functools.partial(self.lowerArmAndStand, 'left'))
-
-        taskQueue.addTask(functools.partial(self.reachToTableObject, 'right'))
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
-        taskQueue.addTask(self.animateLastPlan)
-
-        taskQueue.addTask(functools.partial(self.touchTableObject, 'right'))
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
-        taskQueue.addTask(self.animateLastPlan)
-
-        taskQueue.addTask(functools.partial(self.closeHand, 'right'))
-        taskQueue.addTask(functools.partial(self.graspTableObject, 'right'))
-
-
-        taskQueue.addTask(functools.partial(self.liftTableObject, 'right'))
-        taskQueue.addTask(self.animateLastPlan)
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
-
-        taskQueue.addTask(functools.partial(self.lowerArmAndStand, 'right'))
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
-        taskQueue.addTask(self.animateLastPlan)
-
-
-
+        '''
         self.addWalkingTasksToQueue(taskQueue, self.computeStartFootstepPlan, self.moveRobotToStartStanceFrame)
 
         self.addWalkingTasksToQueue(taskQueue, self.computeBinFootstepPlan, self.moveRobotToBinStanceFrame)
@@ -688,6 +705,8 @@ class TableDemo(object):
 
 
         taskQueue.addTask(functools.partial(self.addLoopTasksToQueue, taskQueue))
+
+        '''
 
 
 
