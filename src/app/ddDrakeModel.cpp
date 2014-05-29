@@ -811,6 +811,36 @@ const QVector<double>& ddDrakeModel::getJointPositions() const
 }
 
 //-----------------------------------------------------------------------------
+QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
+{
+  QVector<double> limits;
+  limits << 0.0 << 0.0;
+
+  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+
+  if (!model)
+  {
+    std::cout << "ddDrakeModel::getJointLimits(): model is null" << std::endl;
+    return limits;
+  }
+
+  const std::map<std::string, int> dofMap = model->dof_map[0];
+
+  std::map<std::string, int>::const_iterator itr = dofMap.find(jointName.toAscii().data());
+  if (itr == dofMap.end())
+  {
+    printf("Could not find URDF model dof with name: %s\n", qPrintable(jointName));
+    return limits;
+  }
+
+  int dofId = itr->second;
+
+  limits[0] = this->Internal->Model->joint_limit_min[dofId];
+  limits[1] = this->Internal->Model->joint_limit_max[dofId];
+  return limits;
+}
+
+//-----------------------------------------------------------------------------
 bool ddDrakeModel::getLinkToWorld(const QString& linkName, vtkTransform* transform)
 {
   if (!transform || !this->Internal->Model)

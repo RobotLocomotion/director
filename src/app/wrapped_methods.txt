@@ -46,6 +46,7 @@ int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QVector<double>&);
 void ddDrakeModel::setJointPositions(const QVector<double>&, const QStringList&);
 QVector<double> ddDrakeModel::getJointPositions() const;
+QVector<double> ddDrakeModel::getJointLimits(const QString&) const;
 bool ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
 QString ddDrakeModel::getLinkNameForMesh(vtkPolyData*);
 QStringList ddDrakeModel::getLinkNames();
