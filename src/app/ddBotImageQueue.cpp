@@ -1,5 +1,6 @@
 #include "ddBotImageQueue.h"
 
+#include <zlib.h>
 
 //-----------------------------------------------------------------------------
 ddBotImageQueue::ddBotImageQueue(QObject* parent) : QObject(parent)
@@ -356,6 +357,7 @@ void ddBotImageQueue::onImagesMessage(const QByteArray& data, const QString& cha
       return;
     }
 
+
     CameraData* cameraData = this->getCameraData(cameraName);
 
     QMutexLocker locker(&cameraData->mMutex);
@@ -407,12 +409,27 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
     return vtkSmartPointer<vtkImageData>::New();
   }
 
+  int nComponents = 3;
+  int componentType = VTK_UNSIGNED_CHAR;
+
   if (!cameraData->mImageBuffer.size())
   {
     if (cameraData->mImageMessage.pixelformat == bot_core::image_t::PIXEL_FORMAT_RGB)
     {
       cameraData->mImageBuffer = cameraData->mImageMessage.data;
     }
+    /*
+    else if (cameraData->mImageMessage.pixelformat == bot_core::image_t::PIXEL_FORMAT_GRAY)
+    {
+      cameraData->mImageBuffer.resize(w*h*2);
+      unsigned long len = cameraData->mImageBuffer.size();
+
+      uncompress(cameraData->mImageBuffer.data(), &len, cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size);
+
+      componentType = VTK_UNSIGNED_SHORT;
+      nComponents = 1;
+    }
+    */
     else if (cameraData->mImageMessage.pixelformat != bot_core::image_t::PIXEL_FORMAT_MJPEG)
     {
       printf("Error: expected PIXEL_FORMAT_MJPEG for camera %s\n", cameraData->mName.c_str());
@@ -420,7 +437,6 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
     }
     else
     {
-
       //printf("jpeg decompress: %s\n", cameraData->mName.c_str());
       cameraData->mImageBuffer.resize(buf_size);
       jpeg_decompress_8u_rgb(cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size, cameraData->mImageBuffer.data(), w, h, w*3);
@@ -434,8 +450,8 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
   image->SetSpacing(1.0, 1.0, 1.0);
   image->SetOrigin(0.0, 0.0, 0.0);
   image->SetExtent(image->GetWholeExtent());
-  image->SetNumberOfScalarComponents(3);
-  image->SetScalarType(VTK_UNSIGNED_CHAR);
+  image->SetNumberOfScalarComponents(nComponents);
+  image->SetScalarType(componentType);
   image->AllocateScalars();
 
   unsigned char* outPtr = static_cast<unsigned char*>(image->GetScalarPointer(0, 0, 0));

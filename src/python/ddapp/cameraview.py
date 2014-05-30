@@ -16,6 +16,7 @@ from ddapp.simpletimer import SimpleTimer
 from ddapp import ioUtils
 import sys
 import drc as lcmdrc
+import multisense as lcmmultisense
 
 
 def clipRange(dataObj, arrayName, thresholdRange):
@@ -509,6 +510,8 @@ def init():
     cameraView = CameraView(imageManager)
 
     addCameraView('CAMERA_LEFT', 'Head camera')
+    #addCameraView('CAMERA', 'Head camera right', 'CAMERA_RIGHT', lcmmultisense.images_t.RIGHT)
+    #addCameraView('CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmmultisense.images_t.DISPARITY_ZIPPED)
     addCameraView('CAMERACHEST_LEFT', 'Chest left')
     addCameraView('CAMERACHEST_RIGHT', 'Chest right')
 

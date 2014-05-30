@@ -1929,6 +1929,10 @@ def computeDelaunay3D(polyData):
 
 def makePolyDataFields(pd):
     mesh = computeDelaunay3D(pd)
+
+    if not mesh.GetNumberOfPoints():
+        return None
+
     origin, edges, wireframe = getOrientedBoundingBox(mesh)
 
     edgeLengths = np.array([np.linalg.norm(edge) for edge in edges])
@@ -1964,7 +1968,7 @@ def segmentTable(polyData, searchPoint):
     tablePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
 
     tablePoints = labelDistanceToPoint(tablePoints, searchPoint)
-    tablePointsClusters = extractClusters(tablePoints)
+    tablePointsClusters = extractClusters(tablePoints, minClusterSize=10, clusterTolerance=0.2)
     tablePointsClusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
 
     tablePoints = tablePointsClusters[0]
@@ -1980,7 +1984,7 @@ def filterClusterObjects(clusters):
     result = []
     for cluster in clusters:
 
-        if np.dot(cluster.axes[0], [0,0,1]) < 0.5:
+        if np.abs(np.dot(cluster.axes[0], [0,0,1])) < 0.5:
             continue
 
         if cluster.dims[0] < 0.1:
@@ -2002,6 +2006,7 @@ def segmentTableScene(polyData, searchPoint):
     objectClusters = extractClusters(searchRegion, clusterTolerance=0.03, minClusterSize=10)
 
     clusters = [makePolyDataFields(cluster) for cluster in objectClusters]
+    clusters = [cluster for cluster in clusters if cluster is not None]
     clusters = filterClusterObjects(clusters)
 
     return FieldContainer(table=makePolyDataFields(tablePoints), clusters=clusters)
