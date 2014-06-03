@@ -39,6 +39,7 @@ class RobotModelItem(om.ObjectModelItem):
         self.model = model
         model.connect('modelChanged()', self.onModelChanged)
         self.modelChangedCallback = None
+        self.useUrdfColors = False
 
         self.addProperty('Filename', model.filename())
         self.addProperty('Visible', model.visible())
@@ -55,7 +56,8 @@ class RobotModelItem(om.ObjectModelItem):
         elif propertyName == 'Visible':
             self.model.setVisible(self.getProperty(propertyName))
         elif propertyName == 'Color':
-            self.model.setColor(self.getProperty(propertyName))
+            if not self.useUrdfColors:
+                self.model.setColor(self.getProperty(propertyName))
 
         self._renderAllViews()
 
@@ -91,7 +93,8 @@ class RobotModelItem(om.ObjectModelItem):
         self.model = model
         self.model.setAlpha(self.getProperty('Alpha'))
         self.model.setVisible(self.getProperty('Visible'))
-        self.model.setColor(self.getProperty('Color'))
+        if not self.useUrdfColors:
+            self.model.setColor(self.getProperty('Color'))
         self.setProperty('Filename', model.filename())
         model.connect('modelChanged()', self.onModelChanged)
 

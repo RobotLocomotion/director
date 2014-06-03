@@ -403,6 +403,14 @@ public:
           {
             meshVisual->Name = l->second->name;
             mesh_map[vptr] = meshVisual;
+
+            if (vptr->material)
+            {
+            meshVisual->Actor->GetProperty()->SetColor(vptr->material->color.r,
+                                                       vptr->material->color.g,
+                                                       vptr->material->color.b);
+            }
+
           }
 
 
