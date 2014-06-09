@@ -31,6 +31,7 @@ QStringList ddBotImageQueue::getBotFrameNames() const;
 bool ddBotImageQueue::addCameraStream(const QString&);
 bool ddBotImageQueue::addCameraStream(const QString&, const QString&, int);
 QList<double> ddBotImageQueue::getCameraFrustumBounds(const QString&);
+QList<double> ddBotImageQueue::unprojectPixel(const QString&, int, int);
 
 
 ddGroupBoxHider::ddGroupBoxHider(QGroupBox*);

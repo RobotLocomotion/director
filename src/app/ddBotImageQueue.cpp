@@ -545,6 +545,22 @@ void ddBotImageQueue::colorizePoints(vtkPolyData* polyData, CameraData* cameraDa
 }
 
 //-----------------------------------------------------------------------------
+QList<double> ddBotImageQueue::unprojectPixel(const QString& cameraName, int px, int py)
+{
+  double xyz[3];
+  CameraData* cameraData = this->getCameraData(cameraName);
+  if (!cameraData)
+  {
+    return QList<double>();
+  }
+
+  bot_camtrans_unproject_pixel(cameraData->mCamTrans, px, py, xyz);
+  QList<double> result;
+  result << xyz[0] << xyz[1] << xyz[2];
+  return result;
+}
+
+//-----------------------------------------------------------------------------
 QList<double> ddBotImageQueue::getCameraFrustumBounds(CameraData* cameraData)
 {
   double width = bot_camtrans_get_image_width(cameraData->mCamTrans);
