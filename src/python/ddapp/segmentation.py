@@ -217,6 +217,62 @@ def segmentGroundPlane():
     #updatePolyData(scenePoints, 'scene points', colorByName='cluster_labels')
 
 
+def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None):
+
+    useVoxelGrid = True
+    voxelGridSize = 0.03
+    distanceToPlaneThreshold = 0.02
+
+    if useVoxelGrid:
+        polyData = applyVoxelGrid(polyData, leafSize=voxelGridSize)
+
+    _, polyData = removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.04)
+
+    cropped = cropToSphere(polyData, searchPoint, searchRadius)
+    updatePolyData(cropped, 'crop to sphere', visible=False, colorByName='distance_to_point')
+
+    polyData, normal = applyPlaneFit(polyData, distanceToPlaneThreshold, searchOrigin=searchPoint, searchRadius=searchRadius)
+
+    if searchRadiusEnd is not None:
+        polyData, normal = applyPlaneFit(polyData, distanceToPlaneThreshold, perpendicularAxis=normal, angleEpsilon=math.radians(5), searchOrigin=searchPoint, searchRadius=searchRadiusEnd)
+
+    fitPoints = thresholdPoints(polyData, 'dist_to_plane', [-distanceToPlaneThreshold, distanceToPlaneThreshold])
+
+    updatePolyData(fitPoints, 'fitPoints', visible=False)
+
+    fitPoints = labelDistanceToPoint(fitPoints, searchPoint)
+    clusters = extractClusters(fitPoints, clusterTolerance=0.05, minClusterSize=3)
+    clusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
+    fitPoints = clusters[0]
+
+    return fitPoints
+
+
+    normalEstimationSearchRadius = 0.065
+
+    f = pcl.vtkPCLNormalEstimation()
+    f.SetSearchRadius(normalEstimationSearchRadius)
+    f.SetInput(polyData)
+    f.Update()
+    scenePoints = shallowCopy(f.GetOutput())
+
+    normals = vtkNumpy.getNumpyFromVtk(scenePoints, 'normals')
+    normalsDotPlaneNormal = np.abs(np.dot(normals, normal))
+    vtkNumpy.addNumpyToVtk(scenePoints, normalsDotPlaneNormal, 'normals_dot_plane_normal')
+
+    showPolyData(scenePoints, 'scene_with_normals', parent=getDebugFolder(), colorByName='normals_dot_plane_normal')
+
+    surfaces = thresholdPoints(scenePoints, 'normals_dot_plane_normal', [0.95, 1.0])
+
+    clusters = extractClusters(surfaces, clusterTolerance=0.1, minClusterSize=5)
+    clusters = clusters[:10]
+
+    for i, cluster in enumerate(clusters):
+        showPolyData(cluster, 'plane cluster %i' % i, parent=getDebugFolder(), visible=False)
+
+    return fitPoints
+
+
 def getMajorPlanes(polyData, useVoxelGrid=True):
 
     voxelGridSize = 0.01
