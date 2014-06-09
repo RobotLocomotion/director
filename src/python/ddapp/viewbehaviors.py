@@ -281,6 +281,18 @@ def showRightClickMenu(displayPoint, view):
 
         vis.showClusterObjects(data.clusters, parent='segmentation')
 
+
+    def onLocalPlaneFit():
+        result = segmentation.applyLocalPlaneFit(pointCloudObj.polyData, pickedPoint, searchRadius=0.1, searchRadiusEnd=0.2)
+        vis.showPolyData(result, 'local plane fit', color=[0,1,0])
+
+
+    def onDiskGlyph():
+        result = segmentation.applyDiskGlyphs(pointCloudObj.polyData)
+        obj = vis.showPolyData(result, 'disks', color=[0.8,0.8,0.8])
+        om.setActiveObject(obj)
+        pickedObj.setProperty('Visible', False)
+
     def onSegmentationEditor():
         segmentationpanel.activateSegmentationMode(pointCloudObj.polyData)
 
@@ -306,6 +318,8 @@ def showRightClickMenu(displayPoint, view):
             ('Copy Pointcloud', onCopyPointCloud),
             ('Segment Ground', onSegmentGround),
             ('Segment Table', onSegmentTableScene),
+            ('Local Plane Fit', onLocalPlaneFit),
+            ('Disk Glyph', onDiskGlyph),
             (None, None),
             ('Open Segmentation Editor', onSegmentationEditor)
             ])
