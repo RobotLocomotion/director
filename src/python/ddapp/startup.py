@@ -55,7 +55,7 @@ from ddapp import viewbehaviors
 from ddapp import visualization as vis
 from ddapp import actionhandlers
 from ddapp.timercallback import TimerCallback
-from ddapp.pointpicker import PointPicker
+from ddapp.pointpicker import PointPicker, ImagePointPicker
 from ddapp import segmentationpanel
 from ddapp import lcmUtils
 from ddapp.utime import getUtime
@@ -103,6 +103,7 @@ useLCMGL = True
 useDrakeVisualizer = True
 useNavigationPanel = True
 useImageWidget = False
+useImageViewDemo = False
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -377,5 +378,18 @@ viewBehaviors = viewbehaviors.ViewBehaviors(view, handFactory, robotStateModel, 
 
 if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
+
+
+if useImageViewDemo:
+    imageView = cameraview.views['CAMERA_LEFT']
+    imageView.view.hide()
+    imageView.view.setParent(view)
+    imageView.view.resize(600, 600)
+    imageView.view.move(0,0)
+    imageView.view.show()
+    imageView.rayCallback = segmentation.extractPointsAlongClickRay
+
+    p = ImagePointPicker(imageView)
+    p.start()
 
 
