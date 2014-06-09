@@ -137,7 +137,7 @@ class AsyncIKCommunicator():
         self.fetchPoseFromServer('q_trajPose')
 
 
-    def runIkTraj(self, constraints, poseStart='q_start', poseEnd='q_end', timeSamples=None, additionalTimeSamples=0):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, timeSamples=None, additionalTimeSamples=0):
 
         if timeSamples is None:
             timeSamples = np.hstack([constraint.tspan for constraint in constraints])
@@ -156,7 +156,7 @@ class AsyncIKCommunicator():
         commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
         commands.append('t = [%s];' % ', '.join([repr(x) for x in timeSamples]))
         commands.append('nt = size(t, 2);')
-        commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(q_nom, 1, nt)));')
+        commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(%s, 1, nt)));' % nominalPose)
         #commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
         commands.append('q_seed_traj = PPTrajectory(spline([t(1), t(end)], [zeros(nq,1), %s, %s, zeros(nq,1)]));' % (poseStart, poseEnd))
         commands.append('clear xtraj;')
