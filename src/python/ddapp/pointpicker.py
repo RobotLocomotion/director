@@ -254,3 +254,92 @@ class ImagePointPicker(object):
             self.hoverPos = None
 
         self.draw()
+
+
+class PlacerWidget(object):
+
+    def __init__(self, view, handle, points):
+
+        assert handle.actor
+        assert handle.actor.GetUserTransform()
+
+        self.view = view
+        self.handle = handle
+        self.points = points
+        self.moving = False
+
+    def start(self):
+        self.installEventFilter()
+
+    def stop(self):
+        self.removeEventFilter()
+
+    def installEventFilter(self):
+
+        self.eventFilter = PythonQt.dd.ddPythonEventFilter()
+        self.view.vtkWidget().installEventFilter(self.eventFilter)
+
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseMove)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonPress)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonRelease)
+        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
+
+    def removeEventFilter(self):
+        self.view.vtkWidget().removeEventFilter(self.eventFilter)
+
+    def onEvent(self, obj, event):
+
+        if event.type() == QtCore.QEvent.MouseMove:
+            self.onMouseMove(vis.mapMousePosition(obj, event), event.modifiers())
+        elif event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.LeftButton:
+            self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
+        elif event.type() == QtCore.QEvent.MouseButtonRelease and event.button() == QtCore.Qt.LeftButton:
+            self.onMouseRelease(vis.mapMousePosition(obj, event), event.modifiers())
+
+    def onMouseMove(self, displayPoint, modifiers=None):
+
+        self.updateHighlight(displayPoint)
+
+        if not self.moving:
+            return
+
+
+        self.eventFilter.setEventHandlerResult(True)
+
+        pickPoint = self.getPointPick(displayPoint)
+        print pickPoint
+
+        if pickPoint is not None:
+            t = self.handle.actor.GetUserTransform()
+            assert t
+            currentPos = np.array(t.GetPosition())
+            t.Translate(np.array(pickPoint - currentPos))
+            t.Modified()
+            self.handle._renderAllViews()
+
+    def onMousePress(self, displayPoint, modifiers=None):
+
+        picked = self.getHandlePick(displayPoint)
+        if picked is not None:
+            self.moving = True
+            self.eventFilter.setEventHandlerResult(True)
+
+    def onMouseRelease(self, displayPoint, modifiers=None):
+
+        if self.moving:
+            self.eventFilter.setEventHandlerResult(True)
+            self.moving = False
+
+    def updateHighlight(self, displayPoint):
+        if self.getHandlePick(displayPoint) is not None:
+            self.handle.actor.GetProperty().SetAmbient(0.5)
+            self.handle._renderAllViews()
+        else:
+            self.handle.actor.GetProperty().SetAmbient(0.0)
+            self.handle._renderAllViews()
+
+    def getHandlePick(self, displayPoint):
+        return vis.pickPoint(displayPoint, self.view, obj=self.handle, pickType='cells', tolerance=0.01)
+
+    def getPointPick(self, displayPoint):
+        return vis.pickPoint(displayPoint, self.view, obj=self.points, pickType='points', tolerance=0.01)
