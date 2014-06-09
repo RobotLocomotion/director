@@ -4,6 +4,7 @@ import numpy as np
 
 import ddapp.objectmodel as om
 import ddapp.visualization as vis
+from scipy.spatial.qhull import QhullError
 from ddapp import transformUtils
 from ddapp.debugVis import DebugData
 from PythonQt import QtGui
@@ -33,19 +34,24 @@ class TerrainRegionItem(vis.PolyDataItem):
         pos, wxyz = transformUtils.poseFromTransform(frame.transform)
         rpy = transformUtils.rollPitchYawFromTransform(frame.transform)
         pose = np.hstack((pos, rpy))
-        self.safe_region = self.terrain_segmentation.findSafeRegion(pose, iter_limit=2)
         debug = DebugData()
-        xy_verts = self.safe_region.xy_polytope()
-        for j in range(xy_verts.shape[1]):
-            z = pos[2]
-            p1 = np.hstack((xy_verts[:,j], z))
-            if j < xy_verts.shape[1] - 1:
-                p2 = np.hstack((xy_verts[:,j+1], z))
-            else:
-                p2 = np.hstack((xy_verts[:,0], z))
-            debug.addLine(p1, p2, color=[.8,.8,.2])
-        debug.addSphere(pos, color=[.8, .8, .2])
-        self.setPolyData(debug.getPolyData())
+        safe_region = self.terrain_segmentation.findSafeRegion(pose, iter_limit=2)
+        try:
+            xy_verts = safe_region.xy_polytope()
+            for j in range(xy_verts.shape[1]):
+                z = pos[2]
+                p1 = np.hstack((xy_verts[:,j], z))
+                if j < xy_verts.shape[1] - 1:
+                    p2 = np.hstack((xy_verts[:,j+1], z))
+                else:
+                    p2 = np.hstack((xy_verts[:,0], z))
+                debug.addLine(p1, p2, color=[.8,.8,.2])
+            debug.addSphere(pos, color=[.8, .8, .2])
+            self.setPolyData(debug.getPolyData())
+            self.safe_region = safe_region
+        except QhullError:
+            print "Could not generate convex hull (polytope is likely unbounded)."
+
 
     def _onPropertyChanged(self, propertySet, propertyName):
         vis.PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
