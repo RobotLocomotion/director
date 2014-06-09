@@ -120,6 +120,31 @@ class IKPlanner(object):
             q = ik.QuatConstraint(linkName=linkName, quaternion=linkFrame)
             constraints.append(p)
             constraints.append(q)
+
+        return constraints
+
+
+    def createMovingFootConstraints(self, startPose):
+
+        self.jointController.setPose(startPose)
+        constraints = []
+        for linkName in ['l_foot', 'r_foot']:
+            linkFrame = self.robotModel.getLinkFrame(linkName)
+            p = ik.PositionConstraint(linkName=linkName, positionTarget=linkFrame)
+            p.lowerBound = [-np.inf, -np.inf, 0.0]
+            p.upperBound = [np.inf, np.inf, 0.0]
+
+            g = ik.WorldGazeDirConstraint()
+            g.linkName = linkName
+            g.targetFrame = vtk.vtkTransform()
+            g.targetAxis = [0,0,1]
+            g.bodyAxis = [0,0,1]
+            g.coneThreshold = 0.0
+
+            constraints.append(p)
+            constraints.append(g)
+            #constraints.append(WorldFixedBodyPoseConstraint(linkName=linkName))
+
         return constraints
 
 
