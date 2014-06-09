@@ -92,6 +92,8 @@ public:
   // edges of the camera frustum.
   QList<double> getCameraFrustumBounds(const QString& cameraName);
 
+  QList<double> unprojectPixel(const QString& cameraName, int px, int py);
+
   void colorizePoints(const QString& cameraName, vtkPolyData* polyData);
 
   void computeTextureCoords(const QString& cameraName, vtkPolyData* polyData);
