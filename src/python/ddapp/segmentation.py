@@ -1983,6 +1983,13 @@ def computeDelaunay3D(polyData):
     return shallowCopy(clean.GetOutput())
 
 
+def computeDelaunay2D(polyData):
+    f = vtk.vtkDelaunay2D()
+    f.SetInput(polyData)
+    f.Update()
+    return shallowCopy(f.GetOutput())
+
+
 def makePolyDataFields(pd):
     mesh = computeDelaunay3D(pd)
 
