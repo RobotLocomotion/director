@@ -6,6 +6,7 @@ from ddapp import robotstate
 from ddapp import visualization as vis
 from ddapp import transformUtils
 from ddapp import ikplanner
+import ddapp.applogic as app
 
 import math
 import numpy as np
@@ -107,8 +108,9 @@ class EndEffectorTeleopPanel(object):
         self.updateIk()
 
     def updateIk(self):
-        self.constraintSet.runIk()
+        endPose, info = self.constraintSet.runIk()
         self.panel.showPose(self.constraintSet.endPose)
+        app.displaySnoptInfo(info)
 
 
     def updateConstraints(self):

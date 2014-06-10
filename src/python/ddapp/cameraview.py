@@ -99,8 +99,8 @@ def rayDebug(position, ray):
     d = vis.DebugData()
     d.addLine(position, position+ray*5.0)
     drcView = app.getViewManager().findView('DRC View')
-    vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView)
-
+    obj = vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView, color=[0,1,0])
+    obj.actor.GetProperty().SetLineWidth(2)
 
 
 class ImageManager(object):
@@ -366,32 +366,47 @@ class CameraImageView(object):
         self.imageName = imageName
         self.imageInitialized = False
         self.updateUtime = 0
+        self.rayCallback = rayDebug
         self.initView(view)
         self.initEventFilter()
 
+
     def onViewDoubleClicked(self, displayPoint):
-
-        obj, pickedPoint = vis.findPickedObject(displayPoint, self.view)
-
-        if pickedPoint is None or not obj:
+        dataset, pickedPoint = vis.pickImage(displayPoint, self.view)
+        if pickedPoint is None or not dataset:
             return
 
-        imageName = obj.getProperty('Name')
-        imageUtime = self.imageUtimes[imageName]
+
+    def getImagePixel(self, displayPoint):
+
+        worldPoint = [0.0, 0.0, 0.0, 0.0]
+        vtk.vtkInteractorObserver.ComputeDisplayToWorld(self.view.renderer(), displayPoint[0], displayPoint[1], 0, worldPoint)
+
+        imageDimensions = self.getImage().GetDimensions()
+
+        if 0.0 <= worldPoint[0] <= imageDimensions[0] and 0.0 <= worldPoint[1] <= imageDimensions[1]:
+            return [worldPoint[0], worldPoint[1], 0.0]
+        else:
+            return None
+
+
+    def rayDebug(self, displayPoint):
+
+        pickedPoint = self.getImagePixel(displayPoint)
+        imageUtime = self.imageManager.getUtime(self.imageName)
+        pickedPoint = self.imageManager.queue.unprojectPixel(self.imageName, pickedPoint[0], pickedPoint[1])
 
         cameraToLocal = vtk.vtkTransform()
-        self.queue.getTransform(imageName, 'local', imageUtime, cameraToLocal)
-
-        utorsoToLocal = vtk.vtkTransform()
-        self.queue.getTransform('utorso', 'local', imageUtime, utorsoToLocal)
-
-        drcView = app.getViewManager().findView('DRC View')
+        self.imageManager.queue.getTransform(self.imageName, 'local', imageUtime, cameraToLocal)
 
         p = range(3)
-        utorsoToLocal.TransformPoint(pickedPoint, p)
-        d = vis.DebugData()
-        d.addLine(cameraToLocal.GetPosition(), p)
-        vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView)
+        cameraToLocal.TransformPoint(pickedPoint, p)
+        ray = np.array(p) - np.array(cameraToLocal.GetPosition())
+        ray /= np.linalg.norm(ray)
+
+        if self.rayCallback:
+            self.rayCallback(np.array(cameraToLocal.GetPosition()), ray)
+
 
     def filterEvent(self, obj, event):
         if self.eventFilterEnabled and event.type() == QtCore.QEvent.MouseButtonDblClick:

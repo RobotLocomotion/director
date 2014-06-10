@@ -513,6 +513,32 @@ class QuasiStaticConstraint(ConstraintBase):
             commands.append('{varName} = {varName}.addContact(r_foot, r_foot_pts);'.format(**formatArgs))
 
 
+class WorldFixedBodyPoseConstraint(ConstraintBase):
+
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            linkName = '',
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+        varName = 'fixed_body_constraint%s' % suffix
+        constraintNames.append(varName)
+
+        formatArgs = dict(varName=varName,
+                          robotArg=self.robotArg,
+                          tspan=self.getTSpanString(),
+                          linkName=self.linkName)
+
+        commands.append(
+            '{varName} = WorldFixedBodyPoseConstraint({robotArg}, {linkName}, {tspan});\n'
+            ''.format(**formatArgs))
+
+
 class ContactConstraint(ConstraintBase):
 
 
