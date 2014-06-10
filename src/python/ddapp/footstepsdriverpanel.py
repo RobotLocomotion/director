@@ -94,7 +94,7 @@ class FootstepsPanel(object):
             px2world = np.linalg.inv(world2px)
             self.terrain_segmentation.setHeights(heights, px2world)
 
-            t = self.newWalkingGoalFrame(self.robotModel)
+            t = self.newWalkingGoalFrame(self.robotModel, distanceForward=0.5)
             view = app.getCurrentRenderView()
             item = TerrainRegionItem('IRIS region', view, t,
                                      self.terrain_segmentation)

@@ -307,7 +307,7 @@ class PlacerWidget(object):
         self.eventFilter.setEventHandlerResult(True)
 
         pickPoint = self.getPointPick(displayPoint)
-        print pickPoint
+        # print displayPoint, pickPoint
 
         if pickPoint is not None:
             t = self.handle.actor.GetUserTransform()
