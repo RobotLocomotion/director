@@ -39,6 +39,7 @@ class ConstraintSet(object):
         self.constraints = constraints
         self.endPoseName = endPoseName
         self.startPoseName = startPoseName
+        self.nominalPoseName = 'q_nom'
 
     def runIk(self):
 
@@ -47,10 +48,9 @@ class ConstraintSet(object):
 
         return self.endPose, self.info
 
-
     def runIkTraj(self):
         self.ikPlanner.addPose(self.endPose, self.endPoseName)
-        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName)
+        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, self.nominalPoseName)
         return self.plan
 
     def planEndPoseGoal(self):
@@ -120,6 +120,31 @@ class IKPlanner(object):
             q = ik.QuatConstraint(linkName=linkName, quaternion=linkFrame)
             constraints.append(p)
             constraints.append(q)
+
+        return constraints
+
+
+    def createMovingFootConstraints(self, startPose):
+
+        self.jointController.setPose(startPose)
+        constraints = []
+        for linkName in ['l_foot', 'r_foot']:
+            linkFrame = self.robotModel.getLinkFrame(linkName)
+            p = ik.PositionConstraint(linkName=linkName, positionTarget=linkFrame)
+            p.lowerBound = [-np.inf, -np.inf, 0.0]
+            p.upperBound = [np.inf, np.inf, 0.0]
+
+            g = ik.WorldGazeDirConstraint()
+            g.linkName = linkName
+            g.targetFrame = vtk.vtkTransform()
+            g.targetAxis = [0,0,1]
+            g.bodyAxis = [0,0,1]
+            g.coneThreshold = 0.0
+
+            constraints.append(p)
+            constraints.append(g)
+            #constraints.append(WorldFixedBodyPoseConstraint(linkName=linkName))
+
         return constraints
 
 
@@ -638,11 +663,11 @@ class IKPlanner(object):
         return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, timeSamples=None):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None):
 
         listener = self.getManipPlanListener()
 
-        info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
+        info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
         print 'traj info:', info
 
         self.lastManipPlan = listener.waitForResponse()
