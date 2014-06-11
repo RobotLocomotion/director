@@ -19,6 +19,8 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkAxesActor.h>
 #include <vtkEventQtSlotConnect.h>
+#include <vtkCaptionActor2D.h>
+#include <vtkTextProperty.h>
 
 #include <QVTKWidget.h>
 #include <QVBoxLayout>
@@ -267,6 +269,16 @@ void ddQVTKWidgetView::setCameraManipulationStyle()
   this->renderWindow()->GetInteractor()->SetInteractorStyle(vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New());
 }
 
+namespace {
+void SetTextProperty(vtkTextProperty* prop)
+{
+  prop->ShadowOff();
+  prop->BoldOff();
+  prop->ItalicOff();
+  //prop->SetColor(0,0,0);
+}
+}
+
 //-----------------------------------------------------------------------------
 vtkOrientationMarkerWidget* ddQVTKWidgetView::orientationMarkerWidget() const
 {
@@ -278,6 +290,10 @@ void ddQVTKWidgetView::setupOrientationMarker()
 {
   this->renderWindow()->GetInteractor()->Disable();
   vtkSmartPointer<vtkAxesActor> axesActor = vtkSmartPointer<vtkAxesActor>::New();
+  SetTextProperty(axesActor->GetXAxisCaptionActor2D()->GetCaptionTextProperty());
+  SetTextProperty(axesActor->GetYAxisCaptionActor2D()->GetCaptionTextProperty());
+  SetTextProperty(axesActor->GetZAxisCaptionActor2D()->GetCaptionTextProperty());
+
   vtkSmartPointer<vtkOrientationMarkerWidget> widget = vtkSmartPointer<vtkOrientationMarkerWidget>::New();
   widget->SetOutlineColor(1.0, 1.0, 1.0);
   widget->SetOrientationMarker(axesActor);
