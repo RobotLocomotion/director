@@ -17,9 +17,17 @@
 #include <vtkCubeSource.h>
 #include <vtkTransformPolyDataFilter.h>
 #include <vtkTransform.h>
+#include <vtkStringArray.h>
+#include <vtkFieldData.h>
 #include <vtkMath.h>
 //#include <vtkQuaternion.h>
 #include <vtkProperty.h>
+#include <vtkXMLPolyDataReader.h>
+#include <vtkXMLMultiBlockDataReader.h>
+#include <vtkMultiBlockDataSet.h>
+#include <vtkJPEGReader.h>
+#include <vtkPNGReader.h>
+#include <vtkImageData.h>
 
 #include <map>
 #include <vector>
@@ -153,31 +161,106 @@ bool endsWith(std::string const &fullString, std::string const &ending)
   }
 }
 
-vtkSmartPointer<vtkPolyData> loadPolyData(const std::string filename)
+vtkSmartPointer<vtkImageData> loadImage(const std::string& filename)
 {
-  vtkSmartPointer<vtkPolyDataAlgorithm> reader;
+  vtkSmartPointer<vtkImageData> image;
 
-  if (endsWith(filename, "obj"))
+  if (endsWith(boost::to_lower_copy(filename), "jpg"))
   {
-    vtkSmartPointer<vtkOBJReader> objReader = vtkSmartPointer<vtkOBJReader>::New();
-    objReader->SetFileName(filename.c_str());
-    reader = objReader;
+    vtkSmartPointer<vtkJPEGReader> reader = vtkSmartPointer<vtkJPEGReader>::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+    image = reader->GetOutput();
   }
-  else if (endsWith(filename, "stl"))
+  else if (endsWith(boost::to_lower_copy(filename), "png"))
   {
-    vtkSmartPointer<vtkSTLReader> stlReader = vtkSmartPointer<vtkSTLReader>::New();
-    stlReader->SetFileName(filename.c_str());
-    reader = stlReader;
+    vtkSmartPointer<vtkPNGReader> reader = vtkSmartPointer<vtkPNGReader>::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+    image = reader->GetOutput();
   }
 
-  reader->Update();
-  if (!reader->GetOutput()->GetNumberOfPoints())
+  if (!image->GetNumberOfPoints())
   {
     std::cout << "Failed to load data from: " << filename << std::endl;
     return 0;
   }
 
-  return shallowCopy(reader->GetOutput());
+  return image;
+
+}
+
+std::vector<vtkSmartPointer<vtkPolyData> > loadPolyData(const std::string& filename)
+{
+  std::vector<vtkSmartPointer<vtkPolyData> > polyDataList;
+
+
+  if (endsWith(boost::to_lower_copy(filename), "obj"))
+  {
+    vtkSmartPointer<vtkOBJReader> reader = vtkSmartPointer<vtkOBJReader>::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+
+    if (!reader->GetOutput()->GetNumberOfPoints())
+    {
+      std::cout << "Failed to load data from: " << filename << std::endl;
+    }
+    else
+    {
+      polyDataList.push_back(shallowCopy(reader->GetOutput()));
+    }
+  }
+  else if (endsWith(boost::to_lower_copy(filename), "stl"))
+  {
+    vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+
+    if (!reader->GetOutput()->GetNumberOfPoints())
+    {
+      std::cout << "Failed to load data from: " << filename << std::endl;
+    }
+    else
+    {
+      polyDataList.push_back(shallowCopy(reader->GetOutput()));
+    }
+  }
+  else if (endsWith(boost::to_lower_copy(filename), "vtp"))
+  {
+    vtkSmartPointer<vtkXMLPolyDataReader> reader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+
+    if (!reader->GetOutput()->GetNumberOfPoints())
+    {
+      std::cout << "Failed to load data from: " << filename << std::endl;
+    }
+    else
+    {
+      polyDataList.push_back(shallowCopy(reader->GetOutput()));
+    }
+  }
+  else if (endsWith(boost::to_lower_copy(filename), "vtm"))
+  {
+    vtkSmartPointer<vtkXMLMultiBlockDataReader> reader = vtkSmartPointer<vtkXMLMultiBlockDataReader>::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+
+    vtkMultiBlockDataSet* mb = vtkMultiBlockDataSet::SafeDownCast(reader->GetOutput());
+    if (mb)
+    {
+      for (int i = 0; i < mb->GetNumberOfBlocks(); ++i)
+      {
+        vtkPolyData* polyData = vtkPolyData::SafeDownCast(mb->GetBlock(i));
+        if (polyData && polyData->GetNumberOfPoints())
+        {
+        polyDataList.push_back(shallowCopy(polyData));
+        }
+      }
+    }
+  }
+
+  return polyDataList;
 }
 
 /*
@@ -188,6 +271,58 @@ void QuaternionToAngleAxis(double wxyz[4], double angleAxis[4])
   angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
 }
 */
+
+namespace {
+
+typedef std::map<std::string, vtkSmartPointer<vtkTexture> > TextureMapType;
+TextureMapType TextureMap;
+
+}
+
+vtkSmartPointer<vtkTexture> getTextureForMesh(vtkSmartPointer<vtkPolyData> polyData, const std::string& meshFileName)
+{
+  vtkStringArray* textureArray = vtkStringArray::SafeDownCast(polyData->GetFieldData()->GetAbstractArray("texture_filename"));
+  if (!textureArray)
+  {
+    return 0;
+  }
+
+  std::string textureFileName = textureArray->GetValue(0);
+  if (boost::filesystem::path(textureFileName).is_relative())
+  {
+    std::string baseDir = boost::filesystem::path(meshFileName).parent_path().native();
+    textureFileName = baseDir + "/" + textureFileName;
+  }
+
+  if (!boost::filesystem::exists(textureFileName))
+  {
+    printf("cannot find texture file: %s\n", textureFileName.c_str());
+    return 0;
+  }
+
+
+
+  TextureMapType::const_iterator itr = TextureMap.find(textureFileName);
+  if (itr != TextureMap.end())
+  {
+    return itr->second;
+  }
+
+
+  vtkSmartPointer<vtkImageData> image = loadImage(textureFileName);
+  if (!image)
+  {
+    return 0;
+  }
+
+  vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+  texture->SetInput(image);
+  texture->EdgeClampOn();
+  texture->RepeatOn();
+  TextureMap[textureFileName] = texture;
+
+  return texture;
+}
 
 ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
 {
@@ -207,15 +342,25 @@ ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
   return visual;
 }
 
-ddMeshVisual::Ptr loadMeshVisual(const std::string& filename)
+std::vector<ddMeshVisual::Ptr> loadMeshVisuals(const std::string& filename)
 {
-  vtkSmartPointer<vtkPolyData> polyData = loadPolyData(filename);
-  if (!polyData)
+  std::vector<ddMeshVisual::Ptr> visuals;
+
+  std::vector<vtkSmartPointer<vtkPolyData> > polyDataList = loadPolyData(filename);
+
+  for (size_t i = 0; i < polyDataList.size(); ++i)
   {
-    return ddMeshVisual::Ptr();
+    ddMeshVisual::Ptr visual = visualFromPolyData(polyDataList[i]);
+    if (!visual)
+    {
+      continue;
+    }
+
+    visual->Actor->SetTexture(getTextureForMesh(polyDataList[i], filename));
+    visuals.push_back(visual);
   }
 
-  return visualFromPolyData(polyData);
+  return visuals;
 }
 
 ddMeshVisual::Ptr makeSphereVisual(double radius)
@@ -256,7 +401,7 @@ class URDFRigidBodyManipulatorVTK : public URDFRigidBodyManipulator
 {
 public:
 
-  typedef std::map<boost::shared_ptr<urdf::Visual>, ddMeshVisual::Ptr> MeshMapType;
+  typedef std::map<boost::shared_ptr<urdf::Visual>, std::vector<ddMeshVisual::Ptr> > MeshMapType;
 
   MeshMapType mesh_map;
 
@@ -277,7 +422,10 @@ public:
     std::vector<ddMeshVisual::Ptr> visuals;
     for (MeshMapType::iterator itr = mesh_map.begin(); itr != mesh_map.end(); ++itr)
     {
-      visuals.push_back(itr->second);
+      for (size_t i = 0; i < itr->second.size(); ++i)
+      {
+        visuals.push_back(itr->second[i]);
+      }
     }
     return visuals;
   }
@@ -322,26 +470,33 @@ public:
     }
 
     boost::filesystem::path mypath(fname);
-    string ext = mypath.extension().native();
-    boost::to_lower(ext);
+    //std::string fileExtension = boost::to_lower_copy(mypath.extension().native());
 
-    if (mypath.extension().native() != ".obj" && mypath.extension().native() != ".stl")
+    std::vector<std::string> supportedExtensions;
+    supportedExtensions.push_back(".vtm");
+    supportedExtensions.push_back(".vtp");
+    supportedExtensions.push_back(".obj");
+    supportedExtensions.push_back(".stl");
+
+    for (size_t i = 0; i < supportedExtensions.size(); ++i)
     {
-      std::string fnameAsObj = mypath.replace_extension(".obj").native();
-      if ( boost::filesystem::exists( fnameAsObj ) )
+      std::string fileWithExtension = mypath.replace_extension(supportedExtensions[i]).native();
+
+      if (boost::filesystem::exists(fileWithExtension))
       {
-        return fnameAsObj;
+        return fileWithExtension;
       }
-      else
+
+      fileWithExtension = mypath.replace_extension(boost::to_upper_copy(supportedExtensions[i])).native();
+      if (boost::filesystem::exists(fileWithExtension))
       {
-        cerr << "Warning: Mesh " << fname << " ignored because it does not have extension .obj (nor can I find a juxtaposed file with a .obj extension)" << endl;
-        return std::string();
+        return fileWithExtension;
       }
+
     }
-    else
-    {
-      return fname;
-    }
+
+    cerr << "Warning: Mesh " << fname << " ignored because it does not have supported file extension (obj, stl)" << endl;
+    return std::string();
   }
 
 
@@ -370,6 +525,8 @@ public:
           boost::shared_ptr<urdf::Visual> vptr = visuals[iv];
 
           int visualType = vptr->geometry->type;
+
+          std::vector<ddMeshVisual::Ptr> loadedVisuals;
           ddMeshVisual::Ptr meshVisual;
 
           if (visualType == urdf::Geometry::MESH)
@@ -379,30 +536,31 @@ public:
             std::string filename = locateMeshFile(mesh, root_dir);
             if (filename.size())
             {
-              meshVisual = loadMeshVisual(filename);
+              loadedVisuals = loadMeshVisuals(filename);
             }
           }
           else if (visualType == urdf::Geometry::SPHERE)
           {
             boost::shared_ptr<urdf::Sphere> sphere(boost::dynamic_pointer_cast<urdf::Sphere>(vptr->geometry));
             double radius = sphere->radius;
-            meshVisual =  makeSphereVisual(radius);
+            loadedVisuals.push_back(makeSphereVisual(radius));
           }
           else if (visualType == urdf::Geometry::BOX)
           {
             boost::shared_ptr<urdf::Box> box(boost::dynamic_pointer_cast<urdf::Box>(vptr->geometry));
-            meshVisual =  makeBoxVisual(box->dim.x, box->dim.y, box->dim.z);
+            loadedVisuals.push_back(makeBoxVisual(box->dim.x, box->dim.y, box->dim.z));
           }
           else if (visualType == urdf::Geometry::CYLINDER)
           {
             boost::shared_ptr<urdf::Cylinder> cyl(boost::dynamic_pointer_cast<urdf::Cylinder>(vptr->geometry));
-            meshVisual =  makeCylinderVisual(cyl->radius, cyl->length);
+            loadedVisuals.push_back(makeCylinderVisual(cyl->radius, cyl->length));
           }
 
-          if (meshVisual)
+          for (size_t mvi = 0; mvi < loadedVisuals.size(); ++mvi)
           {
+            ddMeshVisual::Ptr meshVisual = loadedVisuals[mvi];
             meshVisual->Name = l->second->name;
-            mesh_map[vptr] = meshVisual;
+            mesh_map[vptr].push_back(meshVisual);
 
             if (vptr->material)
             {
@@ -567,8 +725,11 @@ public:
           MeshMapType::iterator iter = mesh_map.find(vptr);
           if (iter!= mesh_map.end())
           {
-            ddMeshVisual::Ptr meshVisual = iter->second;
-            meshVisual->Transform->SetMatrix(worldToVisual->GetMatrix());
+            for (size_t i = 0; i < iter->second.size(); ++i)
+            {
+              ddMeshVisual::Ptr meshVisual = iter->second[i];
+              meshVisual->Transform->SetMatrix(worldToVisual->GetMatrix());
+            }
           }
 
         } // end loop over visuals
