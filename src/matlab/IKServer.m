@@ -118,16 +118,12 @@ classdef IKServer
 
         function pts = getLeftFootPoints(obj)
             bodyIndex = obj.robot.findLinkInd('l_foot');
-            toe = obj.robot.body(bodyIndex).getContactPoints('toe');
-            heel = obj.robot.body(bodyIndex).getContactPoints('heel');
-            pts = [toe, heel];
+            pts = obj.robot.body(bodyIndex).getTerrainContactPoints();
         end
 
         function pts = getRightFootPoints(obj)
             bodyIndex = obj.robot.findLinkInd('r_foot');
-            toe = obj.robot.body(bodyIndex).getContactPoints('toe');
-            heel = obj.robot.body(bodyIndex).getContactPoints('heel');
-            pts = [toe, heel];
+            pts = obj.robot.body(bodyIndex).getTerrainContactPoints();
         end
 
 
