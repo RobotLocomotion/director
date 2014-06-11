@@ -1191,6 +1191,22 @@ void ddDrakeModel::setColor(const QColor& color)
 }
 
 //-----------------------------------------------------------------------------
+QColor ddDrakeModel::getLinkColor(const QString& linkName) const
+{
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    if (visuals[i]->Name == linkName.toAscii().data())
+    {
+      double* rgb = visuals[i]->Actor->GetProperty()->GetColor();
+      double alpha = visuals[i]->Actor->GetProperty()->GetOpacity();
+      return QColor(rgb[0]*255, rgb[1]*255, rgb[2]*255, alpha*255);
+    }
+  }
+  return QColor();
+}
+
+//-----------------------------------------------------------------------------
 void ddDrakeModel::setLinkColor(const QString& linkName, const QColor& color)
 {
   double red = color.redF();
