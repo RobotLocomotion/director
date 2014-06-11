@@ -79,7 +79,7 @@ def setBackgroundColor(color, color2=None, view=None):
 
     if color2 is None:
         color2 = color
-    ren = view.renderer()
+    ren = view.backgroundRenderer()
     ren.SetBackground(color)
     ren.SetBackground2(color2)
 
