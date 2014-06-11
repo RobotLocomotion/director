@@ -100,6 +100,7 @@ useHands = True
 usePlanning = True
 useAtlasDriver = True
 useLCMGL = True
+useLightColorScheme = False
 useDrakeVisualizer = True
 useNavigationPanel = True
 useImageWidget = False
@@ -156,9 +157,13 @@ if usePerception:
 
 
 if useGrid:
-    vis.showGrid(view)
+    vis.showGrid(view, color=[0,0,0] if useLightColorScheme else [1,1,1])
     view.connect('computeBoundsRequest(ddQVTKWidgetView*)', vis.computeViewBoundsNoGrid)
     app.toggleCameraTerrainMode(view)
+
+
+if useLightColorScheme:
+    app.setBackgroundColor([0.3, 0.3, 0.35], [1,1,1])
 
 
 if useHands:
@@ -382,6 +387,7 @@ if useImageWidget:
 
 if useImageViewDemo:
     imageView = cameraview.views['CAMERA_LEFT']
+    #imageView = cameraview.cameraView
     imageView.view.hide()
     imageView.view.setParent(view)
     imageView.view.resize(600, 600)
