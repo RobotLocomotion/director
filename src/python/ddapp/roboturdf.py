@@ -40,6 +40,7 @@ class RobotModelItem(om.ObjectModelItem):
         model.connect('modelChanged()', self.onModelChanged)
         self.modelChangedCallback = None
         self.useUrdfColors = False
+        self.useUrdfTextures = False
 
         self.addProperty('Filename', model.filename())
         self.addProperty('Visible', model.visible())
@@ -56,7 +57,9 @@ class RobotModelItem(om.ObjectModelItem):
         elif propertyName == 'Visible':
             self.model.setVisible(self.getProperty(propertyName))
         elif propertyName == 'Color':
-            if not self.useUrdfColors:
+            if self.useUrdfTextures:
+                self.setupTextureColors()
+            elif not self.useUrdfColors:
                 self.model.setColor(self.getProperty(propertyName))
 
         self._renderAllViews()
@@ -95,12 +98,25 @@ class RobotModelItem(om.ObjectModelItem):
         self.model.setVisible(self.getProperty('Visible'))
         if not self.useUrdfColors:
             self.model.setColor(self.getProperty('Color'))
+        self.setupTextureColors()
         self.setProperty('Filename', model.filename())
         model.connect('modelChanged()', self.onModelChanged)
 
         for view in views:
             self.addToView(view)
         self.onModelChanged()
+
+    def setupTextureColors(self):
+        if not self.useUrdfTextures:
+            return
+
+        # custom colors for non-textured robotiq hand
+        for name in self.model.getLinkNames():
+            strs = name.split('_')
+            if len(strs) >= 2 and strs[0] in ['left', 'right'] and strs[1] in ('finger', 'palm'):
+                self.model.setLinkColor(name, QtGui.QColor(90, 90, 90) if strs[1] == 'finger' else QtGui.QColor(20,20,20))
+            else:
+                self.model.setLinkColor(name, QtGui.QColor(255,255,255))
 
     def addToView(self, view):
         if view in self.views:
