@@ -43,6 +43,8 @@ class PlaybackPanel(object):
         self.robotStateJointController = robotStateJointController
         self.manipPlanner = manipPlanner
 
+        self.autoPlay = True
+
         self.planFramesObj = None
         self.plan = None
         self.poseInterpolator = None
@@ -129,7 +131,7 @@ class PlaybackPanel(object):
 
         if self.plan:
 
-            if self.getViewMode() == 'continuous':
+            if self.getViewMode() == 'continuous' and self.autoPlay:
                 self.startAnimation()
             else:
                 self.ui.playbackSlider.value = 0
@@ -316,7 +318,8 @@ class PlaybackPanel(object):
         else:
             self.viewModeChanged()
 
-        self.widget.parent().show()
+        if self.autoPlay:
+            self.widget.parent().show()
 
 
 
