@@ -69,6 +69,7 @@ public:
   QVTKWidget* VTKWidget;
 
   vtkSmartPointer<vtkRenderer> Renderer;
+  vtkSmartPointer<vtkRenderer> RendererBase;
   vtkSmartPointer<vtkRenderWindow> RenderWindow;
 
   vtkSmartPointer<vtkOrientationMarkerWidget> OrientationWidget;
@@ -109,14 +110,20 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->TDxInteractor = vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
   vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor()->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
 
+  this->Internal->RenderWindow->SetNumberOfLayers(2);
+
+  this->Internal->RendererBase = vtkSmartPointer<vtkRenderer>::New();
+  this->Internal->RenderWindow->AddRenderer(this->Internal->RendererBase);
+
   this->Internal->Renderer = vtkSmartPointer<vtkRenderer>::New();
+  this->Internal->Renderer->SetLayer(1);
   this->Internal->RenderWindow->AddRenderer(this->Internal->Renderer);
 
   //vtkMapper::SetResolveCoincidentTopologyToPolygonOffset();
 
-  this->Internal->Renderer->GradientBackgroundOn();
-  this->Internal->Renderer->SetBackground(0.0, 0.0, 0.0);
-  this->Internal->Renderer->SetBackground2(0.3, 0.3, 0.3);
+  this->Internal->RendererBase->GradientBackgroundOn();
+  this->Internal->RendererBase->SetBackground(0.0, 0.0, 0.0);
+  this->Internal->RendererBase->SetBackground2(0.3, 0.3, 0.3);
 
   this->Internal->Connector->Connect(this->Internal->Renderer, vtkCommand::StartEvent, this, SLOT(onStartRender()));
   this->Internal->Connector->Connect(this->Internal->Renderer, vtkCommand::EndEvent, this, SLOT(onEndRender()));
@@ -162,7 +169,7 @@ vtkRenderer* ddQVTKWidgetView::renderer() const
 //-----------------------------------------------------------------------------
 vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const
 {
-  return this->Internal->Renderer;
+  return this->Internal->RendererBase;
 }
 
 //-----------------------------------------------------------------------------
