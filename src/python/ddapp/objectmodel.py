@@ -49,7 +49,7 @@ class ObjectModelItem(object):
         self.properties.setProperty(propertyName, propertyValue)
 
     def getPropertyAttribute(self, propertyName, propertyAttribute):
-        self.properties.getPropertyAttribute(propertyName, propertyAttribute)
+        return self.properties.getPropertyAttribute(propertyName, propertyAttribute)
 
     def setPropertyAttribute(self, propertyName, propertyAttribute, value):
         self.properties.setPropertyAttribute(propertyName, propertyAttribute, value)
