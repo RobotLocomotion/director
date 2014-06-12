@@ -245,7 +245,7 @@ class TableDemo(object):
         frameSync.addFrame(objFrame)
         self.frameSyncs[linkName] = frameSync
 
-        self.playbackRobotModel.modelChangedCallback = self.onRobotModelChanged
+        self.playbackRobotModel.connectModelChanged(self.onRobotModelChanged)
 
 
     def dropTableObject(self, side):
