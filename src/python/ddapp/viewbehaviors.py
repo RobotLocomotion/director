@@ -5,6 +5,7 @@ import ddapp.objectmodel as om
 import ddapp.visualization as vis
 from ddapp import lcmUtils
 from ddapp import cameracontrol
+from ddapp import propertyset
 from ddapp import splinewidget
 from ddapp import transformUtils
 from ddapp import teleoppanel
@@ -284,10 +285,27 @@ def showRightClickMenu(displayPoint, view):
     menu = QtGui.QMenu(view)
 
     widgetAction = QtGui.QWidgetAction(menu)
-    label = QtGui.QLabel('  ' + objectName + '  ')
+    label = QtGui.QLabel('<b>%s</b>' % objectName)
+    label.setContentsMargins(9,9,6,6)
     widgetAction.setDefaultWidget(label)
     menu.addAction(widgetAction)
     menu.addSeparator()
+
+    def onPropertyChanged(prop):
+        if prop.isSubProperty():
+            return
+        pickedObj.setProperty(prop.propertyName(), prop.value())
+
+    propertiesPanel = PythonQt.dd.ddPropertiesPanel()
+    propertiesPanel.setBrowserModeToWidget()
+    propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
+    propertyset.PropertyPanelHelper.addPropertiesToPanel(pickedObj.properties, propertiesPanel)
+
+    propertiesMenu = menu.addMenu('Properties')
+    propertiesWidgetAction = QtGui.QWidgetAction(propertiesMenu)
+    propertiesWidgetAction.setDefaultWidget(propertiesPanel)
+    propertiesMenu.addAction(propertiesWidgetAction)
+
 
     def onDelete():
         om.removeFromObjectModel(pickedObj)
@@ -398,6 +416,7 @@ def showRightClickMenu(displayPoint, view):
         else:
             action = menu.addAction(actionName)
             action.connect('triggered()', func)
+
 
     selectedAction = menu.popup(globalPos)
 
