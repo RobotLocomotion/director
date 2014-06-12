@@ -1,6 +1,7 @@
 import os
 import PythonQt
 from PythonQt import QtCore, QtGui
+from ddapp import callbacks
 import ddapp.applogic as app
 import ddapp.objectmodel as om
 import ddapp.visualization as vis
@@ -31,6 +32,8 @@ def getRobotOrangeColor():
 
 class RobotModelItem(om.ObjectModelItem):
 
+    MODEL_CHANGED_SIGNAL = 'MODEL_CHANGED_SIGNAL'
+
     def __init__(self, model):
 
         modelName = os.path.basename(model.filename())
@@ -38,7 +41,7 @@ class RobotModelItem(om.ObjectModelItem):
 
         self.model = model
         model.connect('modelChanged()', self.onModelChanged)
-        self.modelChangedCallback = None
+        self.callbacks = callbacks.CallbackRegistry([self.MODEL_CHANGED_SIGNAL])
         self.useUrdfColors = False
         self.useUrdfTextures = False
 
@@ -67,10 +70,11 @@ class RobotModelItem(om.ObjectModelItem):
     def hasDataSet(self, dataSet):
         return len(self.model.getLinkNameForMesh(dataSet)) != 0
 
-    def onModelChanged(self):
-        if self.modelChangedCallback:
-            self.modelChangedCallback(self)
+    def connectModelChanged(self, func):
+        return self.callbacks.connect(self.MODEL_CHANGED_SIGNAL, func)
 
+    def onModelChanged(self):
+        self.callbacks.process(self.MODEL_CHANGED_SIGNAL, self)
         if self.getProperty('Visible'):
             self._renderAllViews()
 
