@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>306</width>
-    <height>530</height>
+    <height>786</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -43,11 +43,11 @@
         <x>0</x>
         <y>0</y>
         <width>306</width>
-        <height>530</height>
+        <height>786</height>
        </rect>
       </property>
-      <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
+      <layout class="QVBoxLayout" name="verticalLayout_4">
+       <item>
         <widget class="QGroupBox" name="botFramesGroup">
          <property name="title">
           <string>Bot Frames</string>
@@ -91,23 +91,51 @@
          </layout>
         </widget>
        </item>
-       <item row="0" column="1">
-        <spacer name="horizontalSpacer">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+       <item>
+        <widget class="QGroupBox" name="linkFramesGroup">
+         <property name="title">
+          <string>Link Frames</string>
          </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
+         <property name="checkable">
+          <bool>true</bool>
          </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>1</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QLineEdit" name="linkFramesFilterEdit">
+            <property name="inputMask">
+             <string/>
+            </property>
+            <property name="placeholderText">
+             <string>Name Filter Regexp</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QListWidget" name="linkFramesListWidget">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>2</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>300</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>400</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </item>
-       <item row="1" column="0">
+       <item>
         <spacer name="verticalSpacer_2">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -125,8 +153,8 @@
        </item>
       </layout>
       <zorder>verticalSpacer_2</zorder>
-      <zorder>horizontalSpacer</zorder>
       <zorder>botFramesGroup</zorder>
+      <zorder>linkFramesGroup</zorder>
      </widget>
     </widget>
    </item>
