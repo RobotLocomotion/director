@@ -122,7 +122,6 @@ class FootstepsPanel(object):
 
     def newWalkingGoalFrame(self, robotModel, distanceForward=1.0):
         t = self.driver.getFeetMidPoint(robotModel)
-        t = transformUtils.frameFromPositionAndRPY(t.GetPosition(), [0.0, 0.0, t.GetOrientation()[2]])
         t.PreMultiply()
         t.Translate(distanceForward, 0.0, 0.0)
         t.PostMultiply()
