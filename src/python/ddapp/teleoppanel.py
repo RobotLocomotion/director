@@ -6,6 +6,7 @@ from ddapp import robotstate
 from ddapp import visualization as vis
 from ddapp import transformUtils
 from ddapp import ikplanner
+from ddapp import footstepsdriver
 import ddapp.applogic as app
 
 import math
@@ -244,16 +245,24 @@ class JointTeleopPanel(object):
         self.timerCallback = TimerCallback()
         self.timerCallback.callback = self.onTimerCallback
 
-        self.jointLimitsMin = [self.panel.teleopRobotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()]
-        self.jointLimitsMax = [self.panel.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()]
+        self.jointLimitsMin = np.array([self.panel.teleopRobotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
+        self.jointLimitsMax = np.array([self.panel.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
+
+        self.jointLimitsMin[0:6] = [-0.1, -0.1, 0.61, -math.radians(20),  -math.radians(20),  -math.radians(20)]
+        self.jointLimitsMax[0:6] = [0.1, 0.1, 0.92, math.radians(20),  math.radians(20),  math.radians(20)]
 
         self.slidersMap = {
             'back_bkx' : self.ui.backRollSlider,
             'back_bky' : self.ui.backPitchSlider,
             'back_bkz' : self.ui.backYawSlider,
 
-            'l_leg_kny' : self.ui.leftKneeSlider,
-            'r_leg_kny' : self.ui.rightKneeSlider,
+            'base_x' : self.ui.baseXSlider,
+            'base_y' : self.ui.baseYSlider,
+            'base_z' : self.ui.baseZSlider,
+
+            'base_roll' : self.ui.baseRollSlider,
+            'base_pitch' : self.ui.basePitchSlider,
+            'base_yaw' : self.ui.baseYawSlider,
 
             'l_arm_usy' : self.ui.leftShoulderXSlider,
             'l_arm_shx' : self.ui.leftShoulderYSlider,
@@ -275,8 +284,13 @@ class JointTeleopPanel(object):
             self.ui.backPitchSlider : self.ui.backPitchLabel,
             self.ui.backYawSlider : self.ui.backYawLabel,
 
-            self.ui.leftKneeSlider : self.ui.leftKneeLabel,
-            self.ui.rightKneeSlider : self.ui.rightKneeLabel,
+            self.ui.baseXSlider : self.ui.baseXLabel,
+            self.ui.baseYSlider : self.ui.baseYLabel,
+            self.ui.baseZSlider : self.ui.baseZLabel,
+
+            self.ui.baseRollSlider : self.ui.baseRollLabel,
+            self.ui.basePitchSlider : self.ui.basePitchLabel,
+            self.ui.baseYawSlider : self.ui.baseYawLabel,
 
             self.ui.leftShoulderXSlider : self.ui.leftShoulderXLabel,
             self.ui.leftShoulderYSlider : self.ui.leftShoulderYLabel,
@@ -389,18 +403,34 @@ class JointTeleopPanel(object):
         jointName = self.toJointName(joint) if isinstance(joint, int) else joint
         return self.slidersMap[jointName]
 
+
+    def computeBaseJointOffsets(self):
+
+        baseReferenceFrame = footstepsdriver.FootstepsDriver.getFeetMidPoint(self.panel.ikPlanner.getRobotModelAtPose(self.startPose))
+        baseReferenceWorldPos = np.array(baseReferenceFrame.GetPosition())
+        baseReferenceWorldYaw = math.radians(baseReferenceFrame.GetOrientation()[2])
+
+        self.baseJointOffsets = {
+          'base_x'   : baseReferenceWorldPos[0],
+          'base_y'   : baseReferenceWorldPos[1],
+          'base_z'   : baseReferenceWorldPos[2],
+          'base_yaw' : baseReferenceWorldYaw,
+          }
+
+
     def computeEndPose(self):
 
         self.startPose = np.array(self.panel.robotStateJointController.q)
         self.endPose = self.startPose.copy()
 
-        hasKnee = False
+        hasBase = False
         for jointIndex, jointValue in self.userJoints.iteritems():
+            jointName = self.toJointName(jointIndex)
             self.endPose[jointIndex] = jointValue
-            if 'kny' in self.toJointName(jointIndex):
-                hasKnee = True
+            if 'base' in jointName:
+                hasBase = True
 
-        if hasKnee:
+        if hasBase:
 
             ikPlanner = self.panel.ikPlanner
 
@@ -411,13 +441,19 @@ class JointTeleopPanel(object):
             ikPlanner.addPose(self.endPose, endPoseName)
 
             jointNames = self.slidersMap.keys()
+
+            # uncomment to constraint only joints adjusted by user
+            #jointNames = [self.toJointName(jointIndex) for jointIndex in sorted(self.userJoints.keys())]
+
             p = ikPlanner.createPostureConstraint(endPoseName, jointNames)
 
             constraints = [p]
             constraints.extend(ikPlanner.createFixedFootConstraints(startPoseName))
-            constraints.append(ikPlanner.createMovingBasePostureConstraint(startPoseName))
+            #constraints.append(ikPlanner.createMovingBasePostureConstraint(startPoseName))
+            constraints.append(ikPlanner.createQuasiStaticConstraint())
 
             self.endPose, info = ikPlanner.ikServer.runIk(constraints, seedPostureName=startPoseName)
+            app.displaySnoptInfo(info)
 
 
     def getJointValue(self, jointIndex):
@@ -431,36 +467,37 @@ class JointTeleopPanel(object):
         jointValue = self.toJointValue(jointIndex, slider.value / 99.0)
 
         self.userJoints[jointIndex] = jointValue
-
-        if 'kny' in jointName:
-            self.userJoints[self.toJointIndex('r_leg_kny')] = jointValue
-            self.userJoints[self.toJointIndex('l_leg_kny')] = jointValue
-            self.updateSliders()
+        if 'base' in jointName:
+            self.computeBaseJointOffsets()
+            self.userJoints[jointIndex] += self.baseJointOffsets.get(jointName, 0.0)
 
         self.computeEndPose()
         self.panel.showPose(self.endPose)
-        self.updateLabels()
+        self.updateLabel(jointName, jointValue)
 
+    def updateLabel(self, jointName, jointValue):
 
-    def updateLabels(self):
+        slider = self.slidersMap[jointName]
+        label = self.labelMap[slider]
 
-        for jointName, slider in self.slidersMap.iteritems():
-            jointIndex = self.toJointIndex(jointName)
-            jointValue = self.getJointValue(jointIndex)
-            label = self.labelMap[slider]
+        if jointName in ['base_x', 'base_y', 'base_z']:
+            label.text = str('%.3f' % jointValue).center(5, ' ')
+        else:
             label.text = str('%.1f' % math.degrees(jointValue)).center(5, ' ')
+
 
     def updateSliders(self):
 
+        self.computeBaseJointOffsets()
+
         for jointName, slider in self.slidersMap.iteritems():
             jointIndex = self.toJointIndex(jointName)
-            jointValue = self.getJointValue(jointIndex)
+            jointValue = self.getJointValue(jointIndex) - self.baseJointOffsets.get(jointName, 0.0)
 
             slider.blockSignals(True)
             slider.setValue(self.toSliderValue(jointIndex, jointValue)*99)
             slider.blockSignals(False)
-
-        self.updateLabels()
+            self.updateLabel(jointName, jointValue)
 
 
 class TeleopPanel(object):
