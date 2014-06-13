@@ -365,6 +365,9 @@ class IKPlanner(object):
         self.jointController.setPose('user_pose', pose)
         return self.robotModel.getLinkFrame(linkName)
 
+    def getRobotModelAtPose(self, pose):
+        self.jointController.setPose('user_pose', pose)
+        return self.robotModel
 
     def computeNominalPose(self, startPose):
 
@@ -649,6 +652,9 @@ class IKPlanner(object):
 
         if feetOnGround:
             constraints.extend(self.createFixedFootConstraints(poseNames[0]))
+
+        #if self.useQuasiStaticConstraint:
+        #    constraints.append(self.createQuasiStaticConstraint())
 
         return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1])
 
