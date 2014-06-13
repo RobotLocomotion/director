@@ -19,6 +19,8 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkAxesActor.h>
 #include <vtkEventQtSlotConnect.h>
+#include <vtkCaptionActor2D.h>
+#include <vtkTextProperty.h>
 
 #include <QVTKWidget.h>
 #include <QVBoxLayout>
@@ -67,6 +69,7 @@ public:
   QVTKWidget* VTKWidget;
 
   vtkSmartPointer<vtkRenderer> Renderer;
+  vtkSmartPointer<vtkRenderer> RendererBase;
   vtkSmartPointer<vtkRenderWindow> RenderWindow;
 
   vtkSmartPointer<vtkOrientationMarkerWidget> OrientationWidget;
@@ -107,14 +110,20 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->TDxInteractor = vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
   vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor()->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
 
+  this->Internal->RenderWindow->SetNumberOfLayers(2);
+
+  this->Internal->RendererBase = vtkSmartPointer<vtkRenderer>::New();
+  this->Internal->RenderWindow->AddRenderer(this->Internal->RendererBase);
+
   this->Internal->Renderer = vtkSmartPointer<vtkRenderer>::New();
+  this->Internal->Renderer->SetLayer(1);
   this->Internal->RenderWindow->AddRenderer(this->Internal->Renderer);
 
   //vtkMapper::SetResolveCoincidentTopologyToPolygonOffset();
 
-  this->Internal->Renderer->GradientBackgroundOn();
-  this->Internal->Renderer->SetBackground(0.0, 0.0, 0.0);
-  this->Internal->Renderer->SetBackground2(0.3, 0.3, 0.3);
+  this->Internal->RendererBase->GradientBackgroundOn();
+  this->Internal->RendererBase->SetBackground(0.0, 0.0, 0.0);
+  this->Internal->RendererBase->SetBackground2(0.3, 0.3, 0.3);
 
   this->Internal->Connector->Connect(this->Internal->Renderer, vtkCommand::StartEvent, this, SLOT(onStartRender()));
   this->Internal->Connector->Connect(this->Internal->Renderer, vtkCommand::EndEvent, this, SLOT(onEndRender()));
@@ -160,7 +169,7 @@ vtkRenderer* ddQVTKWidgetView::renderer() const
 //-----------------------------------------------------------------------------
 vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const
 {
-  return this->Internal->Renderer;
+  return this->Internal->RendererBase;
 }
 
 //-----------------------------------------------------------------------------
@@ -267,6 +276,16 @@ void ddQVTKWidgetView::setCameraManipulationStyle()
   this->renderWindow()->GetInteractor()->SetInteractorStyle(vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New());
 }
 
+namespace {
+void SetTextProperty(vtkTextProperty* prop)
+{
+  prop->ShadowOff();
+  prop->BoldOff();
+  prop->ItalicOff();
+  //prop->SetColor(0,0,0);
+}
+}
+
 //-----------------------------------------------------------------------------
 vtkOrientationMarkerWidget* ddQVTKWidgetView::orientationMarkerWidget() const
 {
@@ -278,6 +297,10 @@ void ddQVTKWidgetView::setupOrientationMarker()
 {
   this->renderWindow()->GetInteractor()->Disable();
   vtkSmartPointer<vtkAxesActor> axesActor = vtkSmartPointer<vtkAxesActor>::New();
+  SetTextProperty(axesActor->GetXAxisCaptionActor2D()->GetCaptionTextProperty());
+  SetTextProperty(axesActor->GetYAxisCaptionActor2D()->GetCaptionTextProperty());
+  SetTextProperty(axesActor->GetZAxisCaptionActor2D()->GetCaptionTextProperty());
+
   vtkSmartPointer<vtkOrientationMarkerWidget> widget = vtkSmartPointer<vtkOrientationMarkerWidget>::New();
   widget->SetOutlineColor(1.0, 1.0, 1.0);
   widget->SetOrientationMarker(axesActor);

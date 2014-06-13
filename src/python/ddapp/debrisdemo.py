@@ -335,7 +335,7 @@ class GraspSearchPlanner(object):
                 affordanceFrame = self.getAffordanceFrame()
                 affordanceFrame.copyFrame(t)
 
-        self.playbackRobotModel.modelChangedCallback = onRobotModelChanged
+        self.playbackRobotModel.connectModelChanged(onRobotModelChanged)
 
         graspFrame = updateGraspFrame(affordanceFrame, create=True)
         affordanceFrame.onTransformModifiedCallback = updateGraspFrame

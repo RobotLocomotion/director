@@ -2,6 +2,7 @@ import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 from ddapp import applogic as app
 from ddapp import visualization as vis
+from ddapp.debugVis import DebugData
 from ddapp.timercallback import TimerCallback
 from ddapp.simpletimer import FPSCounter
 from ddapp import cameraview
@@ -24,118 +25,110 @@ class WidgetDict(object):
 
 
 
-class FrameVisualizationPanel(object):
-
-    def __init__(self, view):
-
-        self.view = view
-
-        loader = QtUiTools.QUiLoader()
-        uifile = QtCore.QFile(':/ui/ddFrameVisualization.ui')
-        assert uifile.open(uifile.ReadOnly)
+class FrameUpdater(object):
 
 
-        self.widget = loader.load(uifile)
-        self.ui = WidgetDict(self.widget.children())
+    def __init__(self, folderName, listWidget):
 
-
-        self.botFrameItems = {}
+        self.folderName = folderName
+        self.listWidget = listWidget
+        self.itemMap = {}
         self.initListWidget()
 
-        self.eventFilter = PythonQt.dd.ddPythonEventFilter()
-        self.ui.scrollArea.installEventFilter(self.eventFilter)
-        self.eventFilter.addFilteredEventType(QtCore.QEvent.Resize)
-        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
+        self.trace = {}
 
-        PythonQt.dd.ddGroupBoxHider(self.ui.botFramesGroup)
+    def getFrameTransform(self, frameName):
+        return vtk.vtkTransform()
 
-        self.updateTimer = TimerCallback(targetFps=60)
-        self.updateTimer.callback = self.updateFrames
-        self.updateTimer.start()
-
-
-    def onEvent(self, obj, event):
-        minSize = self.ui.scrollArea.widget().minimumSizeHint.width() + self.ui.scrollArea.verticalScrollBar().width
-        self.ui.scrollArea.setMinimumWidth(minSize)
+    def getFramesNames(self):
+        return []
 
     def initListWidget(self):
 
-        listWidget = self.ui.botFramesListWidget
-        frameNames = self.getBotFramesNames()
+        frameNames = self.getFramesNames()
         for name in frameNames:
             item = QtGui.QListWidgetItem(name)
             item.setData(QtCore.Qt.CheckStateRole, QtCore.Qt.Unchecked)
-            listWidget.addItem(item)
-            self.botFrameItems[name] = item
+            self.listWidget.addItem(item)
+            self.itemMap[name] = item
 
-        listWidget.connect('itemChanged(QListWidgetItem*)', self.onItemChecked)
+        self.listWidget.connect('itemChanged(QListWidgetItem*)', self.onItemChecked)
 
     def onItemChecked(self, item):
         name = str(item.text())
         isChecked = item.checkState() == QtCore.Qt.Checked
 
-        for frameObj in self.getBotFrameObjects():
+        for frameObj in self.getFrameObjects():
             if frameObj.getProperty('Name') == name:
                 frameObj.setProperty('Visible', isChecked)
-
-
-    def getNameFilter(self):
-        return str(self.ui.botFramesFilterEdit.text)
-
-    def onNameFilterChanged(self):
-        filter = self.getNameFilter()
+                break
+        else:
+            if isChecked:
+                self.addFrame(name)
 
     def getEnabledFrameNames(self):
-
         enabledFrames = set()
-        for name, item in self.botFrameItems.iteritems():
+        for name, item in self.itemMap.iteritems():
             isChecked = item.checkState() == QtCore.Qt.Checked
             if isChecked:
                 enabledFrames.add(name)
-
         return set(enabledFrames)
 
-    def getBotFrameTransform(self, frameName):
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        cameraview.imageManager.queue.getTransform(frameName, 'local', t)
-        return t 
+
+    def updateTrace(self, frameName, frameObj, pt1, pt2):
+        d = self.trace.get(frameName)
+
+        traceName = frameName + ' trace'
+        traceObj = frameObj.findChild(traceName)
+
+        if d is None or traceObj is None:
+            d = DebugData()
+            self.trace[frameName] = d
+
+        d.addLine(pt1, pt2)
+        if traceObj:
+            traceObj.setPolyData(d.getPolyData())
+        else:
+            vis.showPolyData(d.getPolyData(), traceName, parent=frameObj)
+
 
     def updateFrame(self, frameName, frameObj):
-        t = self.getBotFrameTransform(frameName)
+        t = self.getFrameTransform(frameName)
+        pt1 = frameObj.transform.GetPosition()
         frameObj.copyFrame(t)
+        pt2 = frameObj.transform.GetPosition()
+        if pt1 != pt2:
+            self.updateTrace(frameName, frameObj, pt1, pt2)
+
 
     def addFrame(self, frameName):
-        t = self.getBotFrameTransform(frameName)
-        folder = self.getBotFramesFolder()
+        t = self.getFrameTransform(frameName)
+        folder = self.getFramesFolder()
         vis.showFrame(t, frameName, parent=folder, scale=0.2)
 
-    def getBotFramesNames(self):
-        return cameraview.imageManager.queue.getBotFrameNames()
 
-    def getBotFramesFolder(self):
-        return om.getOrCreateContainer('Bot Frames')
+    def getFramesFolder(self):
+        return om.getOrCreateContainer(self.folderName)
 
-    def getBotFrameObjects(self):
-        if not om.findObjectByName('Bot Frames'):
+    def getFrameObjects(self):
+        if not om.findObjectByName(self.folderName):
             return []
-        return self.getBotFramesFolder().children()
+        return self.getFramesFolder().children()
 
     def hideAllFrames(self):
-        for frame in self.getBotFrameObjects():
+        for frame in self.getFrameObjects():
             frame.setProperty('Visible', False)
 
-
     def updateFrames(self):
-        frames = self.getBotFrameObjects()
+
+        frames = self.getFrameObjects()
         enabledFrames = self.getEnabledFrameNames()
 
         for frame in frames:
 
             frameName = frame.getProperty('Name')
-
             isChecked = QtCore.Qt.Checked if frame.getProperty('Visible') else QtCore.Qt.Unchecked
-            self.botFrameItems[frameName].setCheckState(isChecked)
+            self.itemMap[frameName].setCheckState(isChecked)
 
             try:
                 enabledFrames.remove(frameName)
@@ -150,6 +143,84 @@ class FrameVisualizationPanel(object):
         # add new frames if needed
         for frameName in enabledFrames:
             self.addFrame(frameName)
+
+
+
+class BotFrameUpdater(FrameUpdater):
+
+    def __init__(self, listWidget):
+        FrameUpdater.__init__(self, 'Bot Frames', listWidget)
+
+    def getFrameTransform(self, frameName):
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        cameraview.imageManager.queue.getTransform(frameName, 'local', t)
+        return t
+
+    def getFramesNames(self):
+        return cameraview.imageManager.queue.getBotFrameNames()
+
+
+class LinkFrameUpdater(FrameUpdater):
+
+    def __init__(self, robotModel, listWidget):
+        self.robotModel = robotModel
+        FrameUpdater.__init__(self, 'Link Frames', listWidget)
+        robotModel.connectModelChanged(self.onModelChanged)
+
+    def getFrameTransform(self, frameName):
+        return self.robotModel.getLinkFrame(frameName)
+
+    def getFramesNames(self):
+        return sorted(list(self.robotModel.model.getLinkNames()))
+
+    def onModelChanged(self, model):
+        self.updateFrames()
+
+
+class FrameVisualizationPanel(object):
+
+    def __init__(self, view):
+
+        self.view = view
+
+        loader = QtUiTools.QUiLoader()
+        uifile = QtCore.QFile(':/ui/ddFrameVisualization.ui')
+        assert uifile.open(uifile.ReadOnly)
+
+
+        self.widget = loader.load(uifile)
+        self.ui = WidgetDict(self.widget.children())
+
+        self.botFrameUpdater = BotFrameUpdater(self.ui.botFramesListWidget)
+
+        robotModel = om.findObjectByName('robot state model')
+        self.linkFrameUpdater = LinkFrameUpdater(robotModel, self.ui.linkFramesListWidget)
+
+        self.eventFilter = PythonQt.dd.ddPythonEventFilter()
+        self.ui.scrollArea.installEventFilter(self.eventFilter)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.Resize)
+        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
+
+        PythonQt.dd.ddGroupBoxHider(self.ui.botFramesGroup)
+        PythonQt.dd.ddGroupBoxHider(self.ui.linkFramesGroup)
+
+        self.updateTimer = TimerCallback(targetFps=60)
+        self.updateTimer.callback = self.updateFrames
+        self.updateTimer.start()
+
+    def onEvent(self, obj, event):
+        minSize = self.ui.scrollArea.widget().minimumSizeHint.width() + self.ui.scrollArea.verticalScrollBar().width
+        self.ui.scrollArea.setMinimumWidth(minSize)
+
+    def updateFrames(self):
+        self.botFrameUpdater.updateFrames()
+
+    def getNameFilter(self):
+        return str(self.ui.botFramesFilterEdit.text)
+
+    def onNameFilterChanged(self):
+        filter = self.getNameFilter()
 
 
 
