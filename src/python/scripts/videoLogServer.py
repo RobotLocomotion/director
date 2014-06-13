@@ -257,7 +257,7 @@ class LogSyncThread(object):
         self.publishFrequency = 1/60.0
         self.lcListen = lcm.LCM()
         self.lc = lcm.LCM(VIDEO_LCM_URL)
-        self.lcListen.subscribe('EST_ROBOT_STATE', self.onControlMessage)
+        self.sub = self.lcListen.subscribe('EST_ROBOT_STATE', self.onControlMessage)
 
 
     def start(self):
@@ -270,6 +270,8 @@ class LogSyncThread(object):
         self.shouldStop = True
         self.logLookup.closeLogs()
         self.thread.join()
+        self.lcListen.unsubscribe(self.sub)
+
 
     def updateLastPublishTime(self):
         self.lastPublishTime = time.time()
