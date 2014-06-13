@@ -290,6 +290,10 @@ class LogSyncThread(object):
 
 
         requestIndex = self.utimes.searchsorted(utimeRequest)
+
+        if requestIndex >= len(self.utimes):
+            requestIndex = len(self.utimes)-1
+
         utimeFrame =  self.utimes[requestIndex]
 
 
