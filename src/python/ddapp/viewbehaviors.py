@@ -298,8 +298,8 @@ def showRightClickMenu(displayPoint, view):
 
     propertiesPanel = PythonQt.dd.ddPropertiesPanel()
     propertiesPanel.setBrowserModeToWidget()
-    propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
     propertyset.PropertyPanelHelper.addPropertiesToPanel(pickedObj.properties, propertiesPanel)
+    propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
 
     propertiesMenu = menu.addMenu('Properties')
     propertiesWidgetAction = QtGui.QWidgetAction(propertiesMenu)
