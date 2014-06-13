@@ -49,6 +49,7 @@ public:
   void setColor(const QColor& color);
 
   void setLinkColor(const QString& linkName, const QColor& color);
+  QColor getLinkColor(const QString& linkName) const;
 
   static void addPackageSearchPath(const QString& searchPath);
   static QString findPackageDirectory(const QString& packageName);
