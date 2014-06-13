@@ -274,7 +274,8 @@ class FootstepsDriver(object):
             frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
             obj.actor.SetUserTransform(footstepTransform)
 
-    def getContactPts(self):
+    @staticmethod
+    def getContactPts():
         '''
         hard coded Location of the Drake contact points relative to foot frame. this should be read from URDF
         '''
@@ -285,17 +286,44 @@ class FootstepsDriver(object):
         contact_pts[3,:] = [0.178,  -0.0624435, -0.081119]
         return contact_pts
 
-    def getFeetMidPoint(self, model):
-        contact_pts = self.getContactPts()
+    @staticmethod
+    def getFeetMidPoint(model):
+        '''
+        Returns a frame in world coordinate system that is the average of the left
+        and right foot reference point positions in world frame, the average of the
+        left and right foot yaw in world frame, and Z axis aligned with world Z.
+        The foot reference point is the average of the foot contact points in the foot frame.
+        '''
+        contact_pts = FootstepsDriver.getContactPts()
         contact_pts_mid = np.mean(contact_pts, axis=0) # mid point on foot relative to foot frame
 
         t_lf_mid = model.getLinkFrame('l_foot')
+        t_lf_mid.PreMultiply()
         t_lf_mid.Translate(contact_pts_mid)
 
         t_rf_mid = model.getLinkFrame('r_foot')
+        t_rf_mid.PreMultiply()
         t_rf_mid.Translate(contact_pts_mid)
         t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
-        return t_feet_mid
+        return transformUtils.frameFromPositionAndRPY(t_feet_mid.GetPosition(), [0.0, 0.0, t_feet_mid.GetOrientation()[2]])
+
+    @staticmethod
+    def debugDrawFootPoints(model):
+        pts = FootstepsDriver.getContactPts()
+        footMidPoint = np.mean(pts, axis=0)
+        d = DebugData()
+
+        for linkName in ['l_foot', 'r_foot']:
+
+            t = model.getLinkFrame(linkName)
+            d.addFrame(t, scale=0.2)
+
+            for p in pts.tolist() + [footMidPoint.tolist()]:
+                t.TransformPoint(p, p)
+                d.addSphere(p, radius=0.015)
+
+        d.addFrame(FootstepsDriver.getFeetMidPoint(model), scale=0.2)
+        vis.showPolyData(d.getPolyData(), 'foot points debug', parent='debug', colorByName='RGB255')
 
     def createGoalSteps(self, model, pose):
         distanceForward = 1.0
