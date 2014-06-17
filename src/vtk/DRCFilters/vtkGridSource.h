@@ -60,7 +60,11 @@ public:
   vtkGetMacro(ArcsEnabled, bool);
   vtkBooleanMacro(ArcsEnabled, bool);
 
-  static vtkSmartPointer<vtkPolyData> CreateGrid(int gridSize, double scale, double origin[3], double normal[3], bool useCircles);
+  vtkSetMacro(SurfaceEnabled, bool);
+  vtkGetMacro(SurfaceEnabled, bool);
+  vtkBooleanMacro(SurfaceEnabled, bool);
+
+  static vtkSmartPointer<vtkPolyData> CreateGrid(int gridSize, double scale, double origin[3], double normal[3], bool useCircles, bool useSurface);
 
 protected:
   vtkGridSource();
@@ -71,6 +75,7 @@ protected:
                   vtkInformationVector *);
 
   bool ArcsEnabled;
+  bool SurfaceEnabled;
   int GridSize;
   double Scale;
   double Origin[3];

@@ -590,18 +590,22 @@ class FrameSync(object):
 
 
 
-def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=None):
+def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=None, useSurface=False):
 
     grid = vtk.vtkGridSource()
     grid.SetScale(cellSize)
     grid.SetGridSize(numberOfCells)
+    grid.SetSurfaceEnabled(useSurface)
     grid.Update()
-    #color = [0.33,0.66,0]
+
     color = color or [1, 1, 1]
     gridObj = showPolyData(grid.GetOutput(), 'grid', view=view, alpha=0.10, color=color, visible=True, parent=parent)
     gridObj.gridSource = grid
     gridObj.actor.GetProperty().LightingOff()
     gridObj.actor.SetPickable(False)
+
+    if useSurface:
+        gridObj.actor.GetProperty().EdgeVisibilityOn()
 
     def computeViewBoundsNoGrid():
         if not gridObj.getProperty('Visible'):
@@ -616,7 +620,6 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
             view.addCustomBounds([-1, 1, -1, 1, -1, 1])
 
     view.connect('computeBoundsRequest(ddQVTKWidgetView*)', computeViewBoundsNoGrid)
-
     return gridObj
 
 
