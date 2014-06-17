@@ -289,11 +289,11 @@ vtkSmartPointer<vtkTexture> getTextureForMesh(vtkSmartPointer<vtkPolyData> polyD
   }
 
   std::string textureFileName = textureArray->GetValue(0);
-  if (boost::filesystem::path(textureFileName).is_relative())
-  {
+  //if (boost::filesystem::path(textureFileName).is_relative())
+  //{
     std::string baseDir = boost::filesystem::path(meshFileName).parent_path().native();
     textureFileName = baseDir + "/" + textureFileName;
-  }
+  //}
 
   if (!boost::filesystem::exists(textureFileName))
   {
