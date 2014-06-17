@@ -23,6 +23,7 @@ public:
   QtAbstractPropertyBrowser* Browser;
 
   QMap<QString, QtVariantProperty*> Properties;
+  QMap<QtVariantProperty*, QtVariantProperty*> SubPropertyMap;
 };
 
 
@@ -96,10 +97,11 @@ QtAbstractPropertyBrowser* ddPropertiesPanel::propertyBrowser() const
 }
 
 //-----------------------------------------------------------------------------
-QtVariantProperty* ddPropertiesPanel::addGroup(const QString& name)
+QtVariantProperty* ddPropertiesPanel::addGroup(const QString& name, const QString& description)
 {
-  QtVariantProperty* property = this->Internal->Manager->addProperty(QtVariantPropertyManager::groupTypeId(), name);
+  QtVariantProperty* property = this->Internal->Manager->addProperty(QtVariantPropertyManager::groupTypeId(), description);
   this->Internal->Browser->addProperty(property);
+  this->Internal->Properties[name] = property;
   return property;
 }
 
@@ -160,17 +162,18 @@ QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString& name, const 
   property->setValue(value);
 
   parent->addSubProperty(property);
+  this->Internal->SubPropertyMap[property] = parent;
   return property;
 }
 
 //-----------------------------------------------------------------------------
-QtVariantProperty* ddPropertiesPanel::findProperty(const QString& name) const
+QtVariantProperty* ddPropertiesPanel::getProperty(const QString& name) const
 {
   return this->Internal->Properties.value(name);
 }
 
 //-----------------------------------------------------------------------------
-QtVariantProperty* ddPropertiesPanel::findSubProperty(const QString& name, QtVariantProperty* parent) const
+QtVariantProperty* ddPropertiesPanel::getSubProperty(QtVariantProperty* parent, const QString& name) const
 {
   if (!parent)
   {
@@ -190,8 +193,44 @@ QtVariantProperty* ddPropertiesPanel::findSubProperty(const QString& name, QtVar
 }
 
 //-----------------------------------------------------------------------------
+QtVariantProperty* ddPropertiesPanel::getSubProperty(QtVariantProperty* parent, int childIndex) const
+{
+  if (!parent)
+  {
+    return 0;
+  }
+
+  QList<QtProperty*> subProperties = parent->subProperties();
+  if (childIndex >= 0 && childIndex < subProperties.size())
+  {
+    return static_cast<QtVariantProperty*>(subProperties[childIndex]);
+  }
+
+  return 0;
+}
+
+//-----------------------------------------------------------------------------
+int ddPropertiesPanel::getSubPropertyIndex(QtVariantProperty* property) const
+{
+  QtVariantProperty* parent = this->getParentProperty(property);
+  if (!parent)
+  {
+    return 0;
+  }
+
+  return parent->subProperties().indexOf(property);
+}
+
+//-----------------------------------------------------------------------------
+QtVariantProperty* ddPropertiesPanel::getParentProperty(QtVariantProperty* property) const
+{
+  return this->Internal->SubPropertyMap.value(property);
+}
+
+//-----------------------------------------------------------------------------
 void ddPropertiesPanel::clear()
 {
   this->Internal->Manager->clear();
   this->Internal->Properties.clear();
+  this->Internal->SubPropertyMap.clear();
 }
