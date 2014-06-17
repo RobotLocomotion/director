@@ -25,37 +25,189 @@
      <property name="lineWidth">
       <number>2</number>
      </property>
-     <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="0" colspan="3">
-       <widget class="QPushButton" name="eeTeleopButton">
+     <layout class="QGridLayout" name="gridLayout_8">
+      <item row="3" column="1">
+       <widget class="QComboBox" name="rhandCombo">
+        <item>
+         <property name="text">
+          <string>arm fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ee fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>position</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>free</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>gaze</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>orbit</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>End Effector Teleop</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
+         <string>l_hand</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="3" colspan="2">
-       <widget class="QComboBox" name="eeTeleopSideCombo">
+      <item row="1" column="2">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>back</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="3" colspan="2">
+       <widget class="QComboBox" name="lfootCombo">
         <item>
          <property name="text">
-          <string>left</string>
+          <string>fixed</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>right</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>both</string>
+          <string>sliding</string>
          </property>
         </item>
        </widget>
       </item>
-      <item row="0" column="5" colspan="2">
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>base</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>r_hand</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3" colspan="2">
+       <widget class="QComboBox" name="backCombo">
+        <item>
+         <property name="text">
+          <string>fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>limited</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>free</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="0" column="0" colspan="4">
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="1">
+         <widget class="QPushButton" name="updateIkButton">
+          <property name="text">
+           <string>Update IK</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QPushButton" name="eeTeleopButton">
+          <property name="text">
+           <string>End Effector Teleop</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QCheckBox" name="interactiveCheckbox">
+          <property name="text">
+           <string>interactive</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="baseCombo">
+        <item>
+         <property name="text">
+          <string>fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>constrained</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>limited</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>xyz only</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>z only</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>free</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="3" colspan="2">
+       <widget class="QComboBox" name="rfootCombo">
+        <item>
+         <property name="text">
+          <string>fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>sliding</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>l_foot</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
        <spacer name="horizontalSpacer_12">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -65,81 +217,65 @@
         </property>
         <property name="sizeHint" stdset="0">
          <size>
-          <width>10</width>
-          <height>20</height>
+          <width>107</width>
+          <height>17</height>
          </size>
         </property>
        </spacer>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label">
+      <item row="2" column="1">
+       <widget class="QComboBox" name="lhandCombo">
+        <item>
+         <property name="text">
+          <string>arm fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ee fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>position</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>free</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>gaze</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>orbit</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QLabel" name="label_6">
         <property name="text">
-         <string>fix:</string>
+         <string>r_foot</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QCheckBox" name="fixBaseCheck">
-        <property name="text">
-         <string>base</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2" colspan="2">
-       <widget class="QCheckBox" name="fixBackCheck">
-        <property name="text">
-         <string>back</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="4" colspan="2">
-       <widget class="QCheckBox" name="fixOrientCheck">
-        <property name="text">
-         <string>orient</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="6">
+      <item row="2" column="5">
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Expanding</enum>
-        </property>
         <property name="sizeHint" stdset="0">
          <size>
-          <width>10</width>
+          <width>40</width>
           <height>20</height>
          </size>
         </property>
        </spacer>
-      </item>
-      <item row="2" column="0" colspan="2">
-       <widget class="QCheckBox" name="interactiveCheckbox">
-        <property name="text">
-         <string>interactive</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="2" colspan="4">
-       <widget class="QPushButton" name="updateIkButton">
-        <property name="text">
-         <string>Update IK</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </widget>
