@@ -284,6 +284,7 @@ if usePlanning:
     footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
     manipPlanner.manipPlanCallback = playbackPanel.setPlan
 
+    playbackPanel.visOnly = False
 
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, handFactory.getLoader('left'), handFactory.getLoader('right'), playbackPanel.setPlan)
@@ -398,4 +399,19 @@ if useImageViewDemo:
     p = ImagePointPicker(imageView)
     p.start()
 
+
+
+def onFootContact(msg):
+
+    leftInContact = msg.left_contact > 0.0
+    rightInContact = msg.right_contact > 0.0
+
+    contactColor = QtGui.QColor(255,0,0)
+    noContactColor = QtGui.QColor(180, 180, 180)
+
+    robotStateModel.model.setLinkColor('l_foot', contactColor if leftInContact else noContactColor)
+    robotStateModel.model.setLinkColor('r_foot', contactColor if rightInContact else noContactColor)
+
+sub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContact)
+sub.setSpeedLimit(60)
 

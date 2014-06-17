@@ -129,6 +129,11 @@ class AtlasDriver(object):
     def sendStandCommand(self):
         self.sendBehaviorCommand('stand')
 
+    def sendMITStandCommand(self):
+        msg = lcmdrc.utime_t()
+        msg.utime = getUtime()
+        lcmUtils.publish('START_MIT_STAND', msg)
+
     def sendManipCommand(self):
         self.sendBehaviorCommand('manip')
 
