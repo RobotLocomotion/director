@@ -7,6 +7,7 @@ from ddapp import visualization as vis
 from ddapp import transformUtils
 from ddapp import ikplanner
 from ddapp import footstepsdriver
+from ddapp import vtkAll as vtk
 import ddapp.applogic as app
 
 import math
@@ -42,64 +43,81 @@ class EndEffectorTeleopPanel(object):
         self.ui = panel.ui
         self.ui.eeTeleopButton.connect('clicked()', self.teleopButtonClicked)
         self.ui.planButton.connect('clicked()', self.planClicked)
-        self.ui.fixBaseCheck.connect('clicked()', self.fixBaseChanged)
-        self.ui.fixBackCheck.connect('clicked()', self.fixBackChanged)
-        self.ui.fixOrientCheck.connect('clicked()', self.fixOrientChanged)
         self.ui.updateIkButton.connect('clicked()', self.onUpdateIkClicked)
-        self.ui.interactiveCheckbox.visible = False
-        self.ui.updateIkButton.visible = False
-        self.ui.eeTeleopSideCombo.connect('currentIndexChanged(const QString&)', self.sideChanged)
+        self.ui.baseCombo.connect('currentIndexChanged(const QString&)', self.baseComboChanged)
+        self.ui.backCombo.connect('currentIndexChanged(const QString&)', self.backComboChanged)
+        self.ui.lhandCombo.connect('currentIndexChanged(const QString&)', self.lhandComboChanged)
+        self.ui.rhandCombo.connect('currentIndexChanged(const QString&)', self.rhandComboChanged)
+        self.ui.lfootCombo.connect('currentIndexChanged(const QString&)', self.lfootComboChanged)
+        self.ui.rfootCombo.connect('currentIndexChanged(const QString&)', self.rfootComboChanged)
+
         self.constraintSet = None
 
-    def getSide(self):
-        return str(self.ui.eeTeleopSideCombo.currentText)
+        #self.ui.interactiveCheckbox.visible = False
+        #self.ui.updateIkButton.visible = False
 
-    def getBaseFixed(self):
-        return self.ui.fixBaseCheck.checked
 
-    def getBackFixed(self):
-        return self.ui.fixBackCheck.checked
+    def setComboText(self, combo, text):
+        index = combo.findText(text)
+        assert index >= 0
+        combo.setCurrentIndex(index)
 
-    def getOrientFixed(self):
-        return self.ui.fixOrientCheck.checked
+    def getComboText(self, combo):
+        return str(combo.currentText)
 
-    def fixBaseChanged(self):
+    def getBaseConstraint(self):
+        return self.getComboText(self.ui.baseCombo)
+
+    def setBaseConstraint(self, value):
+        return self.setComboText(self.ui.baseCombo, value)
+
+    def getBackConstraint(self):
+        return self.getComboText(self.ui.backCombo)
+
+    def setBackConstraint(self, value):
+        return self.setComboText(self.ui.backCombo, value)
+
+    def getLHandConstraint(self):
+        return self.getComboText(self.ui.lhandCombo)
+
+    def setLHandConstraint(self, value):
+        return self.setComboText(self.ui.lhandCombo, value)
+
+    def getRHandConstraint(self):
+        return self.getComboText(self.ui.rhandCombo)
+
+    def setRHandConstraint(self, value):
+        return self.setComboText(self.ui.rhandCombo, value)
+
+    def getLFootConstraint(self):
+        return self.getComboText(self.ui.lfootCombo)
+
+    def setLFootConstraint(self, value):
+        return self.setComboText(self.ui.lfootCombo, value)
+
+    def getRFootConstraint(self):
+        return self.getComboText(self.ui.rfootCombo)
+
+    def setRFootConstraint(self, value):
+        return self.setComboText(self.ui.rfootCombo, value)
+
+    def baseComboChanged(self):
         self.updateConstraints()
 
-    def fixBackChanged(self):
+    def backComboChanged(self):
         self.updateConstraints()
 
-    def fixOrientChanged(self):
+    def lhandComboChanged(self):
         self.updateConstraints()
 
-    def sideChanged(self):
-        side = self.getSide()
-        if side == 'left':
-            om.removeFromObjectModel(self.getGoalFrame('right'))
-        elif side == 'right':
-            om.removeFromObjectModel(self.getGoalFrame('left'))
-        self.createGoalFrames()
+    def rhandComboChanged(self):
         self.updateConstraints()
 
-    def removeGoals(self):
-        for side in ['left', 'right']:
-            om.removeFromObjectModel(self.getGoalFrame(side))
+    def lfootComboChanged(self):
+        self.updateConstraints()
 
-    def getGoalFrame(self, side):
-        return om.findObjectByName('reach goal %s' % side)
-
-    def updateGoalFrame(self, transform, side):
-        goalFrame = self.getGoalFrame(side)
-        if not goalFrame:
-            return
-
-        if transform is not None:
-            goalFrame.copyFrame(transform)
-        else:
-            goalFrame.transform.Modified()
-
-        return goalFrame
-
+    def rfootComboChanged(self):
+        self.updateConstraints()
 
     def onGoalFrameModified(self, frame):
         if self.constraintSet and self.ui.interactiveCheckbox.checked:
@@ -114,40 +132,9 @@ class EndEffectorTeleopPanel(object):
         app.displaySnoptInfo(info)
 
 
-    def updateConstraints(self):
-
-        if not self.ui.eeTeleopButton.checked:
-            return
-
-
-        side = self.getSide()
-        lockBack = self.getBackFixed()
-        lockBase = self.getBaseFixed()
-        lockOrient = self.getOrientFixed()
-
-        ikPlanner = self.panel.ikPlanner
-
-        startPoseName = 'reach_start'
-        startPose = np.array(self.panel.robotStateJointController.q)
-        ikPlanner.addPose(startPose, startPoseName)
-
-        constraints = ikPlanner.createMovingBodyConstraints(startPoseName, lockBack=lockBack, lockBase=lockBase, lockLeftArm=side=='right', lockRightArm=side=='left')
-
-        sides = ['left', 'right'] if side == 'both' else [side]
-
-        for side in sides:
-            goalFrame = self.getGoalFrame(side)
-            assert goalFrame
-            constraintSet = ikPlanner.newReachGoal(startPoseName, side, goalFrame, constraints, lockOrient=lockOrient)
-            self.constraintSet = constraintSet
-
-        self.onGoalFrameModified(None)
-
-
     def planClicked(self):
         if not self.ui.eeTeleopButton.checked:
             return
-
         self.generatePlan()
 
     def generatePlan(self):
@@ -172,63 +159,275 @@ class EndEffectorTeleopPanel(object):
         self.createGoalFrames()
         self.updateConstraints()
 
-
     def deactivate(self):
         self.ui.eeTeleopButton.blockSignals(True)
         self.ui.eeTeleopButton.checked = False
         self.ui.eeTeleopButton.blockSignals(False)
-        self.removeGoals()
+        self.removePlanFolder()
         self.panel.endEffectorTeleopDeactivated()
 
 
-    def createGoalFrames(self):
+    def getGoalFrame(self, linkName):
+        return om.findObjectByName('%s constraint frame' % linkName)
 
-        def addHandMesh(handModel, goalFrame):
 
-            handObj = handModel.newPolyData('reach goal left hand', self.panel.teleopRobotModel.views[0], parent=goalFrame)
-            handFrame = handObj.children()[0]
-            handFrame.copyFrame(frame.transform)
+    def updateGoalFrame(self, linkName, transform):
+        goalFrame = self.getGoalFrame(linkName)
+        if not goalFrame:
+            return
 
-            frameSync = vis.FrameSync()
-            frameSync.addFrame(frame)
-            frameSync.addFrame(handFrame)
-            frame.sync = frameSync
+        goalFrame.copyFrame(transform)
+        return goalFrame
 
-        handModels = {'left':self.panel.lhandModel, 'right':self.panel.rhandModel}
+
+
+    def updateConstraints(self):
+
+        if not self.ui.eeTeleopButton.checked:
+            return
+
 
         ikPlanner = self.panel.ikPlanner
 
-        side = self.getSide()
-        sides = ['left', 'right'] if side == 'both' else [side]
-
+        startPoseName = 'reach_start'
         startPose = np.array(self.panel.robotStateJointController.q)
+        ikPlanner.addPose(startPose, startPoseName)
 
-        for side in sides:
-            if self.getGoalFrame(side):
+
+        constraints = []
+        constraints.append(ikPlanner.createQuasiStaticConstraint())
+
+        if self.getLFootConstraint() == 'fixed':
+            constraints.extend(ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot', tspan=[0.0, 1.0]))
+        elif self.getLFootConstraint() == 'sliding':
+            constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[:2])
+
+        if self.getRFootConstraint() == 'fixed':
+            constraints.extend(ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot', tspan=[0.0, 1.0]))
+        elif self.getRFootConstraint() == 'sliding':
+            constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
+
+
+        if self.getBackConstraint() == 'fixed':
+            constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
+        elif self.getBackConstraint() == 'limited':
+            constraints.append(ikPlanner.createMovingBackLimitedPostureConstraint())
+        elif self.getBackConstraint() == 'free':
+            constraints.append(ikPlanner.createMovingBackPostureConstraint())
+
+
+        if self.getBaseConstraint() == 'fixed':
+            constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName, lockLegs=False))
+        if self.getBaseConstraint() == 'constrained':
+            constraints.extend(ikPlanner.createFixedLinkConstraints(startPoseName, 'pelvis', tspan=[1.0, 1.0]))
+        elif self.getBaseConstraint() == 'xyz only':
+            constraints.append(ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
+        elif self.getBaseConstraint() == 'z only':
+            constraints.append(ikPlanner.createZMovingBasePostureConstraint(startPoseName))
+        elif self.getBaseConstraint() == 'limited':
+            constraints.append(ikPlanner.createMovingBaseSafeLimitsConstraint())
+        elif self.getBaseConstraint() == 'free':
+            pass
+
+
+        side = 'left'
+        linkName = ikPlanner.getHandLink(side)
+        graspToPalm = vtk.vtkTransform()
+        graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
+        #graspToWorld = ikPlanner.newGraspToWorldFrame(startPose, side, graspToHand)
+        graspToWorld = self.getGoalFrame(linkName)
+
+        p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
+        g = ikPlanner.createLinkGazeConstraint(startPose, linkName, gazeAxis=[0,1,0])
+
+        p.tspan = [1.0, 1.0]
+        q.tspan = [1.0, 1.0]
+        g.tspan = [1.0, 1.0]
+
+
+
+        if self.getLHandConstraint() == 'arm fixed':
+            constraints.append(ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
+
+        elif self.getLHandConstraint() == 'ee fixed':
+            constraints.extend([p, q])
+
+        elif self.getLHandConstraint() == 'position':
+            constraints.extend([p])
+
+        elif self.getLHandConstraint() == 'gaze':
+            constraints.extend([p, g])
+
+        elif self.getLHandConstraint() == 'orbit':
+            graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
+            constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
+
+        elif self.getLHandConstraint() == 'free':
+            pass
+
+
+        side = 'right'
+        linkName = ikPlanner.getHandLink(side)
+        graspToPalm = vtk.vtkTransform()
+        graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
+        #graspToWorld = ikPlanner.newGraspToWorldFrame(startPose, side, graspToHand)
+        graspToWorld = self.getGoalFrame(linkName)
+
+        p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
+        g = ikPlanner.createLinkGazeConstraint(startPose, linkName, gazeAxis=[0,1,0])
+
+        p.tspan = [1.0, 1.0]
+        q.tspan = [1.0, 1.0]
+        g.tspan = [1.0, 1.0]
+
+
+
+        if self.getRHandConstraint() == 'arm fixed':
+            constraints.append(ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+
+        elif self.getRHandConstraint() == 'ee fixed':
+            constraints.extend([p, q])
+
+        elif self.getRHandConstraint() == 'position':
+            constraints.extend([p])
+
+        elif self.getRHandConstraint() == 'gaze':
+            constraints.extend([p, g])
+
+        elif self.getRHandConstraint() == 'orbit':
+            graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
+            constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
+
+        elif self.getLHandConstraint() == 'free':
+            pass
+
+
+        self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
+
+
+        for constraint in constraints:
+            if hasattr(constraint, 'linkName') and constraint.linkName in ('l_hand', 'r_hand'):
                 continue
 
-            #startPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side)
+            if isinstance(constraint, ikplanner.ik.PositionConstraint):
+                frameObj = self.getGoalFrame(constraint.linkName)
+                if frameObj:
+                    constraint.referenceFrame = frameObj.transform
 
-            t = ikPlanner.newGraspToWorldFrame(startPose, side, ikPlanner.getPalmToHandLink(side))
-            frameName = 'reach goal %s' % side
+            elif isinstance(constraint, ikplanner.ik.QuatConstraint):
+                frameObj = self.getGoalFrame(constraint.linkName)
+                if frameObj:
+                    constraint.quaternion = frameObj.transform
+
+            elif isinstance(constraint, ikplanner.ik.WorldGazeDirConstraint):
+                frameObj = self.getGoalFrame(constraint.linkName)
+                if frameObj:
+                    constraint.targetFrame = frameObj.transform
+
+
+        self.onGoalFrameModified(None)
+
+
+
+        om.removeFromObjectModel(self.getConstraintFolder())
+        folder = self.getConstraintFolder()
+
+        for i, pc in enumerate(constraints):
+
+            linkStr = '(%s)' % pc.linkName if hasattr(pc, 'linkName') else ''
+
+            p = om.ObjectModelItem('%s %s' % (type(pc).__name__, linkStr))
+            om.addToObjectModel(p, parentObj=folder)
+
+            for propertyName, propertyValue in pc:
+
+                if isinstance(propertyValue, np.ndarray):
+                    propertyValue = propertyValue.tolist()
+
+                if isinstance(propertyValue, vtk.vtkTransform):
+                    propertyValue = list(propertyValue.GetPosition()) + list(propertyValue.GetOrientation())
+
+                #print p.getProperty('Name'), propertyName, type(propertyValue)
+                p.addProperty(propertyName, propertyValue, attributes=om.PropertyAttributes(decimals=3, minimum=-100, maximum=100))
+
+
+
+
+    def addHandMesh(self, handModel, goalFrame):
+
+        handObj = handModel.newPolyData('reach goal left hand', self.panel.teleopRobotModel.views[0], parent=goalFrame)
+        handFrame = handObj.children()[0]
+        handFrame.copyFrame(goalFrame.transform)
+
+        frameSync = vis.FrameSync()
+        frameSync.addFrame(goalFrame)
+        frameSync.addFrame(handFrame)
+        goalFrame.sync = frameSync
+
+        #handModels = {'left':self.panel.lhandModel, 'right':self.panel.rhandModel}
+
+
+    def removePlanFolder(self):
+        om.removeFromObjectModel(om.findObjectByName('teleop plan'))
+
+    def getConstraintFrameFolder(self):
+        return om.getOrCreateContainer('constraint frames', parentObj=om.getOrCreateContainer('teleop plan', parentObj=om.findObjectByName('planning')))
+
+    def getConstraintFolder(self):
+        return om.getOrCreateContainer('ik constraints', parentObj=om.getOrCreateContainer('teleop plan', parentObj=om.findObjectByName('planning')))
+
+    def createGoalFrames(self):
+
+        ikPlanner = self.panel.ikPlanner
+        startPose = np.array(self.panel.robotStateJointController.q)
+
+        self.removePlanFolder()
+        folder = self.getConstraintFrameFolder()
+
+        for side in ['left', 'right']:
+
+            linkName = ikPlanner.getHandLink(side)
+            frameName = '%s constraint frame' % linkName
+
+            graspToPalm = vtk.vtkTransform()
+            graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
+            graspToWorld = ikPlanner.newGraspToWorldFrame(startPose, side, graspToHand)
+
             om.removeFromObjectModel(om.findObjectByName(frameName))
-            frame = vis.showFrame(t, frameName, scale=0.2, parent=om.getOrCreateContainer('planning'))
-            frame.setProperty('Edit', True)
+            frame = vis.showFrame(graspToWorld, frameName, parent=folder, scale=0.2)
+            #frame.setProperty('Edit', True)
             frame.connectFrameModified(self.onGoalFrameModified)
-            addHandMesh(handModels[side], frame)
+            #addHandMesh(handModels[side], frame)
+
+
+        #for linkName in ['l_foot', 'r_foot', 'pelvis', 'utorso', 'head']:
+        for linkName in ['l_foot', 'r_foot', 'pelvis']:
+            frameName = linkName + ' constraint frame'
+            om.removeFromObjectModel(om.findObjectByName(frameName))
+            frame = vis.showFrame(ikPlanner.getLinkFrameAtPose(linkName, startPose), frameName, parent=folder, scale=0.2)
+            frame.connectFrameModified(self.onGoalFrameModified)
 
 
     def newReachTeleop(self, frame, side):
         self.panel.jointTeleop.deactivate()
 
         self.deactivate()
-        self.ui.fixBaseCheck.checked = False
-        self.ui.fixBackCheck.checked = False
-        self.ui.fixOrientCheck.checked = True
-        self.ui.eeTeleopSideCombo.setCurrentIndex(self.ui.eeTeleopSideCombo.findText(side))
+
+        self.setBaseConstraint('z only')
+        self.setBackConstraint('limited')
+        self.setLFootConstraint('fixed')
+        self.setRFootConstraint('fixed')
+
+        self.setLHandConstraint('arm fixed')
+        self.setRHandConstraint('arm fixed')
+
+        if side == 'left':
+            self.setLHandConstraint('ee fixed')
+        elif side == 'right':
+            self.setRHandConstraint('ee fixed')
 
         self.activate()
-        return self.updateGoalFrame(frame, side)
+        return self.updateGoalFrame(self.panel.ikPlanner.getHandLink(side), frame)
 
 
 inf = np.inf
@@ -248,8 +447,8 @@ class JointTeleopPanel(object):
         self.jointLimitsMin = np.array([self.panel.teleopRobotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.panel.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
 
-        self.jointLimitsMin[0:6] = [-0.1, -0.1, 0.61, -math.radians(20),  -math.radians(20),  -math.radians(20)]
-        self.jointLimitsMax[0:6] = [0.1, 0.1, 0.92, math.radians(20),  math.radians(20),  math.radians(20)]
+        self.jointLimitsMin[0:6] = [-0.25, -0.25, 0.61, -math.radians(20),  -math.radians(20),  -math.radians(20)]
+        self.jointLimitsMax[0:6] = [0.25, 0.25, 0.92, math.radians(20),  math.radians(20),  math.radians(20)]
 
         self.slidersMap = {
             'back_bkx' : self.ui.backRollSlider,
@@ -309,9 +508,11 @@ class JointTeleopPanel(object):
 
         self.signalMapper = QtCore.QSignalMapper()
 
+        self.sliderMax = 1000.0
         for jointName, slider in self.slidersMap.iteritems():
             slider.connect('valueChanged(int)', self.signalMapper, 'map()')
             self.signalMapper.setMapping(slider, jointName)
+            slider.setMaximum(self.sliderMax)
 
         self.signalMapper.connect('mapped(const QString&)', self.sliderChanged)
 
@@ -449,10 +650,9 @@ class JointTeleopPanel(object):
 
             constraints = [p]
             constraints.extend(ikPlanner.createFixedFootConstraints(startPoseName))
-            #constraints.append(ikPlanner.createMovingBasePostureConstraint(startPoseName))
             constraints.append(ikPlanner.createQuasiStaticConstraint())
 
-            self.endPose, info = ikPlanner.ikServer.runIk(constraints, seedPostureName=startPoseName)
+            self.endPose, info = ikPlanner.ikServer.runIk(constraints, nominalPostureName=startPoseName, seedPostureName='q_end')
             app.displaySnoptInfo(info)
 
 
@@ -464,7 +664,7 @@ class JointTeleopPanel(object):
 
         slider = self.slidersMap[jointName]
         jointIndex = self.toJointIndex(jointName)
-        jointValue = self.toJointValue(jointIndex, slider.value / 99.0)
+        jointValue = self.toJointValue(jointIndex, slider.value / float(self.sliderMax))
 
         self.userJoints[jointIndex] = jointValue
         if 'base' in jointName:
@@ -495,7 +695,7 @@ class JointTeleopPanel(object):
             jointValue = self.getJointValue(jointIndex) - self.baseJointOffsets.get(jointName, 0.0)
 
             slider.blockSignals(True)
-            slider.setValue(self.toSliderValue(jointIndex, jointValue)*99)
+            slider.setValue(self.toSliderValue(jointIndex, jointValue)*self.sliderMax)
             slider.blockSignals(False)
             self.updateLabel(jointName, jointValue)
 
