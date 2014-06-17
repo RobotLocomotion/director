@@ -9,6 +9,9 @@
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkInteractorStyle.h>
+#include <vtkLight.h>
+#include <vtkLightKit.h>
+#include <vtkLightCollection.h>
 #include <vtkObjectFactory.h>
 #include <vtkActor.h>
 #include <vtkPolyDataMapper.h>
@@ -71,6 +74,7 @@ public:
   vtkSmartPointer<vtkRenderer> Renderer;
   vtkSmartPointer<vtkRenderer> RendererBase;
   vtkSmartPointer<vtkRenderWindow> RenderWindow;
+  vtkSmartPointer<vtkLightKit> LightKit;
 
   vtkSmartPointer<vtkOrientationMarkerWidget> OrientationWidget;
 
@@ -107,6 +111,10 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
   this->Internal->RenderWindow->StereoUpdate();
   this->Internal->VTKWidget->SetRenderWindow(this->Internal->RenderWindow);
 
+  this->Internal->LightKit = vtkSmartPointer<vtkLightKit>::New();
+  this->Internal->LightKit->SetKeyLightWarmth(0.5);
+  this->Internal->LightKit->SetFillLightWarmth(0.5);
+
   this->Internal->TDxInteractor = vtkSmartPointer<vtkTDxInteractorStyleCallback>::New();
   vtkInteractorStyle::SafeDownCast(this->Internal->RenderWindow->GetInteractor()->GetInteractorStyle())->SetTDxStyle(this->Internal->TDxInteractor);
 
@@ -134,6 +142,7 @@ ddQVTKWidgetView::ddQVTKWidgetView(QWidget* parent) : ddViewBase(parent)
 
   this->connect(&this->Internal->RenderTimer, SIGNAL(timeout()), SLOT(onRenderTimer()));
   this->Internal->RenderTimer.start();
+  this->setLightKitEnabled(true);
 }
 
 //-----------------------------------------------------------------------------
@@ -170,6 +179,13 @@ vtkRenderer* ddQVTKWidgetView::renderer() const
 vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const
 {
   return this->Internal->RendererBase;
+}
+
+
+//-----------------------------------------------------------------------------
+vtkLightKit* ddQVTKWidgetView::lightKit() const
+{
+  return this->Internal->LightKit;
 }
 
 //-----------------------------------------------------------------------------
@@ -220,6 +236,16 @@ void ddQVTKWidgetView::onRenderTimer()
 void ddQVTKWidgetView::addCustomBounds(const QList<double>& bounds)
 {
   this->Internal->CustomBounds.append(bounds);
+}
+
+//-----------------------------------------------------------------------------
+void ddQVTKWidgetView::setLightKitEnabled(bool enabled)
+{
+  this->renderer()->RemoveAllLights();
+  if (enabled)
+  {
+    this->Internal->LightKit->AddLightsToRenderer(this->renderer());
+  }
 }
 
 //-----------------------------------------------------------------------------
