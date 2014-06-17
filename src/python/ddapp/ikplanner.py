@@ -31,6 +31,9 @@ from PythonQt import QtCore, QtGui
 
 copyFrame = transformUtils.copyFrame
 
+def getIkOptions():
+    return om.findObjectByName('IK Planner Options').properties
+
 
 class ConstraintSet(object):
 
@@ -39,28 +42,85 @@ class ConstraintSet(object):
         self.constraints = constraints
         self.endPoseName = endPoseName
         self.startPoseName = startPoseName
-        self.nominalPoseName = 'q_nom'
+        self.endPose = None
+        self.seedPoseName = None
+        self.nominalPoseName = None
 
     def runIk(self):
 
-        self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, nominalPostureName=self.startPoseName, seedPostureName=self.startPoseName)
-        print 'info:', self.info
+        seedPoseName = self.seedPoseName
+        if not seedPoseName:
+            seedPoseName = getIkOptions().getPropertyEnumValue('Seed pose')
+            if seedPoseName == 'q_start':
+                seedPoseName = self.startPoseName
 
+        nominalPoseName = self.nominalPoseName
+        if not nominalPoseName:
+            nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
+            if nominalPoseName == 'q_start':
+                nominalPoseName = self.startPoseName
+
+        self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
+        print 'info:', self.info
         return self.endPose, self.info
 
     def runIkTraj(self):
+        assert self.endPose is not None
         self.ikPlanner.addPose(self.endPose, self.endPoseName)
-        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, self.nominalPoseName)
+
+        nominalPoseName = self.nominalPoseName
+        if not nominalPoseName:
+            nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
+            if nominalPoseName == 'q_start':
+                nominalPoseName = self.startPoseName
+
+        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName)
         return self.plan
 
     def planEndPoseGoal(self):
+        assert self.endPose is not None
         self.ikPlanner.addPose(self.endPose, self.endPoseName)
         self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName)
         return self.plan
 
-
     def onFrameModified(self, frame):
         self.runIk()
+
+
+class IkOptionsItem(om.ObjectModelItem):
+
+    def __init__(self, ikServer, ikPlanner):
+        om.ObjectModelItem.__init__(self, 'IK Planner Options')
+
+        self.ikServer = ikServer
+        self.ikPlanner = ikPlanner
+
+        self.addProperty('Use pointwise', ikServer.usePointwise)
+        #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
+        self.addProperty('Quasistatic shrink factor', ik.QuasiStaticConstraint.shrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
+        self.addProperty('Max joint degrees/s', ikServer.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
+        self.addProperty('Nominal pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
+        self.addProperty('Seed pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
+        #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Use pointwise':
+            self.ikServer.usePointwise = self.getProperty(propertyName)
+
+        elif propertyName == 'Use quasistatic constraint':
+            self.ikPlanner.useQuasiStaticConstraint = self.getProperty(propertyName)
+
+        elif propertyName == 'Quasistatic shrink factor':
+            ik.QuasiStaticConstraint.shrinkFactor = self.getProperty(propertyName)
+
+        elif propertyName == 'Max joint degrees/s':
+            self.ikServer.maxDegreesPerSecond = self.getProperty(propertyName)
+
+        elif propertyName == 'Additional time samples':
+            self.ikPlanner.additionalTimeSamples = self.getProperty(propertyName)
 
 
 class IKPlanner(object):
@@ -76,6 +136,8 @@ class IKPlanner(object):
 
         self.additionalTimeSamples = 0
         self.useQuasiStaticConstraint = True
+
+        om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
 
 
     def getHandModel(self, side=None):
@@ -110,33 +172,53 @@ class IKPlanner(object):
         return ik.QuasiStaticConstraint()
 
 
-    def createFixedFootConstraints(self, startPose):
+    def createFixedFootConstraints(self, startPose, **kwargs):
 
-        self.jointController.setPose(startPose)
         constraints = []
         for linkName in ['l_foot', 'r_foot']:
-            linkFrame = self.robotModel.getLinkFrame(linkName)
-            p = ik.PositionConstraint(linkName=linkName, positionTarget=linkFrame)
-            q = ik.QuatConstraint(linkName=linkName, quaternion=linkFrame)
-            constraints.append(p)
-            constraints.append(q)
+            p, q = self.createFixedLinkConstraints(startPose, linkName, **kwargs)
 
+            # sliding foot
+            #if linkName == 'l_foot':
+            #    p.lowerBound = [-np.inf, -np.inf, 0.0]
+            #    p.upperBound = [np.inf, np.inf, 0.0]
+
+            constraints.extend([p, q])
         return constraints
 
 
-    def createMovingFootConstraints(self, startPose):
+    def createFixedLinkConstraints(self, startPose, linkName, **kwargs):
+        linkFrame = self.getLinkFrameAtPose(linkName, startPose)
+        p = ik.PositionConstraint(linkName=linkName, referenceFrame=linkFrame, **kwargs)
+        q = ik.QuatConstraint(linkName=linkName, quaternion=linkFrame, **kwargs)
+        return [p, q]
 
-        self.jointController.setPose(startPose)
+
+    def createLinkGazeConstraint(self, startPose, linkName, gazeAxis):
+        linkFrame = self.getLinkFrameAtPose(linkName, startPose)
+        g = ik.WorldGazeDirConstraint()
+        g.linkName = linkName
+        g.targetFrame = linkFrame
+        g.targetAxis = gazeAxis
+        g.bodyAxis = gazeAxis
+        g.coneThreshold = 0.0
+        return g
+
+
+    def createSlidingFootConstraints(self, startPose):
+
         constraints = []
         for linkName in ['l_foot', 'r_foot']:
-            linkFrame = self.robotModel.getLinkFrame(linkName)
-            p = ik.PositionConstraint(linkName=linkName, positionTarget=linkFrame)
+
+            linkFrame = self.getLinkFrameAtPose(linkName, startPose)
+
+            p = ik.PositionConstraint(linkName=linkName, referenceFrame=linkFrame)
             p.lowerBound = [-np.inf, -np.inf, 0.0]
             p.upperBound = [np.inf, np.inf, 0.0]
 
             g = ik.WorldGazeDirConstraint()
             g.linkName = linkName
-            g.targetFrame = vtk.vtkTransform()
+            g.targetFrame = linkFrame
             g.targetAxis = [0,0,1]
             g.bodyAxis = [0,0,1]
             g.coneThreshold = 0.0
@@ -164,16 +246,40 @@ class IKPlanner(object):
         return self.createKneePostureConstraint([0.0, 2.1])
 
 
-    def createMovingBasePostureConstraint(self, startPostureName):
+    def createZMovingBasePostureConstraint(self, startPostureName):
         joints = ['base_x', 'base_y', 'base_roll', 'base_pitch', 'base_yaw']
         return self.createPostureConstraint(startPostureName, joints)
+
+
+    def createXYZMovingBasePostureConstraint(self, startPostureName):
+        joints = ['base_roll', 'base_pitch', 'base_yaw']
+        return self.createPostureConstraint(startPostureName, joints)
+
+
+    def createMovingBasePostureConstraint(self, startPostureName):
+        return self.createZMovingBasePostureConstraint(startPostureName)
+
+
+    def createMovingBaseSafeLimitsConstraint(self):
+        p = ik.PostureConstraint()
+        p.joints = ['base_roll', 'base_pitch', 'base_yaw']
+        p.jointsLowerBound = [-math.radians(5), -math.radians(5), -np.inf]
+        p.jointsUpperBound = [math.radians(5), math.radians(15), np.inf]
+        return p
 
 
     def createMovingBackPostureConstraint(self):
         p = ik.PostureConstraint()
         p.joints = ['back_bkx', 'back_bky', 'back_bkz']
-        p.jointsLowerBound = [-0.2, -0.1, -0.6]
-        p.jointsUpperBound = [0.2, 0.3, 0.6]
+        p.jointsLowerBound = [-math.radians(15), -math.radians(5), -np.inf]
+        p.jointsUpperBound = [math.radians(15), math.radians(25), np.inf]
+        return p
+
+    def createMovingBackLimitedPostureConstraint(self):
+        p = ik.PostureConstraint()
+        p.joints = ['back_bkx', 'back_bky', 'back_bkz']
+        p.jointsLowerBound = [-math.radians(5), -math.radians(5), -np.inf]
+        p.jointsUpperBound = [math.radians(5), math.radians(5), np.inf]
         return p
 
 
@@ -203,7 +309,7 @@ class IKPlanner(object):
         return positionConstraint, orientationConstraint
 
 
-    def createAxisInPlaneConstraint(self, targetFrame, graspToHandLinkFrame):
+    def createAxisInPlaneConstraint(self, side, targetFrame, graspToHandLinkFrame):
         '''
         Constrain the X axis of targetFrame to be in the XY plane of graspToHandLinkFrame in hand link.
         Returns two relative position constraints.
@@ -218,7 +324,7 @@ class IKPlanner(object):
 
         p = ik.RelativePositionConstraint()
         p.bodyNameA = 'world'
-        p.bodyNameB = self.getHandLink()
+        p.bodyNameB = self.getHandLink(side)
         p.frameInBodyB = graspToHandLinkFrame
         p.pointInBodyA = makeOffsetTransform([0.25, 0.0, 0.0])
         p.positionTarget = np.zeros(3)
@@ -228,7 +334,7 @@ class IKPlanner(object):
 
         p = ik.RelativePositionConstraint()
         p.bodyNameA = 'world'
-        p.bodyNameB = self.getHandLink()
+        p.bodyNameB = self.getHandLink(side)
         p.frameInBodyB = graspToHandLinkFrame
         p.pointInBodyA = makeOffsetTransform([-0.25, 0.0, 0.0])
         p.positionTarget = np.zeros(3)
@@ -239,13 +345,13 @@ class IKPlanner(object):
         return rollConstraint1, rollConstraint2
 
 
-    def createGraspOrbitConstraints(self, targetFrame, graspToHandLinkFrame=None):
+    def createGraspOrbitConstraints(self, side, targetFrame, graspToHandLinkFrame=None):
 
         if graspToHandLinkFrame is None:
-            graspToHandLinkFrame = self.getPalmToHandLink()
+            graspToHandLinkFrame = self.getPalmToHandLink(side)
 
         p = ik.PositionConstraint()
-        p.linkName = self.getHandLink()
+        p.linkName = self.getHandLink(side)
         p.pointInLink = np.array(graspToHandLinkFrame.GetPosition())
         p.referenceFrame = targetFrame.transform
         p.lowerBound = [0.0, 0.0, 0.0] #np.zeros(3)
@@ -334,6 +440,7 @@ class IKPlanner(object):
         constraints = []
         if self.useQuasiStaticConstraint:
             constraints.append(self.createQuasiStaticConstraint())
+
         constraints.extend(self.createFixedFootConstraints(startPoseName))
 
         if lockBack:
@@ -344,8 +451,9 @@ class IKPlanner(object):
         if lockBase:
             constraints.append(self.createLockedBasePostureConstraint(startPoseName))
         else:
-            constraints.append(self.createMovingBasePostureConstraint(startPoseName))
             #constraints.append(self.createMovingKneePostureConstraint())
+            constraints.append(self.createMovingBasePostureConstraint(startPoseName))
+
 
         if lockLeftArm:
             constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
@@ -362,8 +470,12 @@ class IKPlanner(object):
 
 
     def getLinkFrameAtPose(self, linkName, pose):
-        self.jointController.setPose('user_pose', pose)
+        if isinstance(pose, str):
+            self.jointController.setPose(pose)
+        else:
+            self.jointController.setPose('user_pose', pose)
         return self.robotModel.getLinkFrame(linkName)
+
 
     def getRobotModelAtPose(self, pose):
         self.jointController.setPose('user_pose', pose)
@@ -441,11 +553,12 @@ class IKPlanner(object):
         return self.createPostureConstraint(startPostureName, joints)
 
 
-    def createLockedBasePostureConstraint(self, startPostureName):
+    def createLockedBasePostureConstraint(self, startPostureName, lockLegs=True):
         joints = []
         joints += robotstate.matchJoints('base_.*')
-        joints += robotstate.matchJoints('r_leg_.*')
-        joints += robotstate.matchJoints('l_leg_.*')
+        if lockLegs:
+            joints += robotstate.matchJoints('r_leg_.*')
+            joints += robotstate.matchJoints('l_leg_.*')
         return self.createPostureConstraint(startPostureName, joints)
 
 
@@ -551,7 +664,7 @@ class IKPlanner(object):
 
         graspToHandLinkFrame = self.newPalmOffsetGraspToHandFrame(side, dist)
 
-        constraints.extend(self.createGraspOrbitConstraints(graspFrame, graspToHandLinkFrame))
+        constraints.extend(self.createGraspOrbitConstraints(side, graspFrame, graspToHandLinkFrame))
 
         constraints[-3].tspan = [1.0, 1.0]
         constraints[-2].tspan = [1.0, 1.0]
@@ -651,22 +764,59 @@ class IKPlanner(object):
             poseNames.append(poseName)
 
         if feetOnGround:
-            constraints.extend(self.createFixedFootConstraints(poseNames[0]))
+            constraints.extend(self.createFixedFootConstraints(poseNames[-1]))
 
         #if self.useQuasiStaticConstraint:
         #    constraints.append(self.createQuasiStaticConstraint())
 
-        return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1])
+        return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1], nominalPoseName=poseNames[0])
 
 
     def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True):
         return self.computeMultiPostureGoal([poseStart, poseEnd], feetOnGround)
 
 
+    def computeJointPostureGoal(self, startPose, postureJoints):
+
+        startPoseName = 'posture_goal_start'
+        self.addPose(startPose, startPoseName)
+
+        p = ik.PostureConstraint()
+        p.joints = postureJoints.keys()
+        p.jointsLowerBound = postureJoints.values()
+        p.jointsUpperBound = postureJoints.values()
+        p.tspan = [1, 1]
+
+        constraints = [p]
+        constraints.extend(self.createFixedFootConstraints(startPoseName))
+        #constraints.append(self.createMovingBasePostureConstraint(startPoseName))
+        constraints.append(self.createQuasiStaticConstraint())
+
+        constraintSet = ConstraintSet(self, constraints, 'posture_goal_end', startPoseName)
+        endPose, info = constraintSet.runIk()
+        return constraintSet.runIkTraj()
+
+
     def getManipPlanListener(self):
         responseChannel = 'CANDIDATE_MANIP_PLAN'
         responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
         return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
+
+
+    def onPostureGoalMessage(self, stateJointController, msg):
+
+        goalPoseJoints = {}
+        for name, position in zip(msg.joint_name, msg.joint_position):
+            goalPoseJoints[name] = position
+
+        startPose = np.array(stateJointController.q)
+        endPose = self.mergePostures(startPose, goalPoseJoints)
+        self.computePostureGoal(startPose, endPose)
+        #self.computeJointPostureGoal(startPose, goalPoseJoints)
+
+
+    def addPostureGoalListener(self, stateJointController):
+        lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, functools.partial(self.onPostureGoalMessage, stateJointController))
 
 
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None):

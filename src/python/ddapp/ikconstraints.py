@@ -10,12 +10,12 @@ import math
 class ConstraintBase(FieldContainer):
 
     __isfrozen = False
+    robotArg = 'r'
 
     def __init__(self, **kwargs):
         self._add_fields(
+          enabled  = True,
           tspan    = [-np.inf, np.inf],
-          robotArg = 'r',
-          joints   = []
           )
 
         self._set_fields(**kwargs)
@@ -72,20 +72,8 @@ class ConstraintBase(FieldContainer):
     def getTSpanString(self):
         return self.toRowVectorString(self.tspan)
 
-    def getJointsString(self):
-        return '[%s]' % '; '.join(['joints.%s' % jointName for jointName in self.joints])
-
-    def addRightLegJoints(self):
-        self.joints += robotstate.matchJoints('r_leg_.*')
-
-    def addLeftLegJoints(self):
-        self.joints += robotstate.matchJoints('l_leg_.*')
-
-    def addLeftArmJoints(self):
-        self.joints += robotstate.matchJoints('l_arm_.*')
-
-    def addRightArmJoints(self):
-        self.joints += robotstate.matchJoints('r_arm_.*')
+    def getJointsString(self, joints):
+        return '[%s]' % '; '.join(['joints.%s' % jointName for jointName in joints])
 
 
 class PostureConstraint(ConstraintBase):
@@ -94,6 +82,7 @@ class PostureConstraint(ConstraintBase):
 
         self._add_fields(
             postureName      = 'q_zero',
+            joints           = [],
             jointsLowerBound = [],
             jointsUpperBound = [],
             )
@@ -116,7 +105,7 @@ class PostureConstraint(ConstraintBase):
                           upperLimit='joints_upper_limit',
                           lowerBound=self.toColumnVectorString(self.jointsLowerBound),
                           upperBound=self.toColumnVectorString(self.jointsUpperBound),
-                          jointInds=self.getJointsString())
+                          jointInds=self.getJointsString(self.joints))
 
         commands.append(
             '{varName} = PostureConstraint({robotArg}, {tspan});\n'
@@ -413,8 +402,11 @@ class WorldGazeDirConstraint(ConstraintBase):
         varName = 'gaze_dir_constraint%s' % suffix
         constraintNames.append(varName)
 
-        worldAxis = np.array(self.targetAxis)
+        worldAxis = list(self.targetAxis)
+        print 'in:', worldAxis
         self.targetFrame.TransformVector(worldAxis, worldAxis)
+
+        print 'out:', worldAxis
 
         formatArgs = dict(varName=varName,
                           robotArg=self.robotArg,
@@ -476,13 +468,14 @@ class WorldGazeTargetConstraint(ConstraintBase):
 
 class QuasiStaticConstraint(ConstraintBase):
 
+    shrinkFactor = 0.5
 
     def __init__(self, **kwargs):
 
         self._add_fields(
             leftFootEnabled  = True,
             rightFootEnabled = True,
-            shrinkFactor     = 0.5,
+            #shrinkFactor     = 0.5,
             )
 
         ConstraintBase.__init__(self, **kwargs)

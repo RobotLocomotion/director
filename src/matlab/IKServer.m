@@ -25,23 +25,23 @@ classdef IKServer
             obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(500);
             obj.ikoptions = obj.ikoptions.setMex(true);
 
-            leftLegCost = 10;
-            rightLegCost = 10;
+            leftLegCost = 1e3;
+            rightLegCost = 1e3;
             leftArmCost = 1;
             rightArmCost = 1;
-            backCost = 100;
+            backCost = 1e4;
             neckCost = 1e6;
 
             nq = obj.robot.getNumDOF();
 
             cost = Point(obj.robot.getStateFrame(), 1);
 
-            cost.base_x = 10;
-            cost.base_y = 10;
+            cost.base_x = 0;
+            cost.base_y = 0;
             cost.base_z = 0;
-            cost.base_roll = 10;
-            cost.base_pitch = 10;
-            cost.base_yaw = 10;
+            cost.base_roll = 1e3;
+            cost.base_pitch = 1e3;
+            cost.base_yaw = 0;
 
             cost.back_bkz = backCost;
             cost.back_bky = backCost;
