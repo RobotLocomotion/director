@@ -49,6 +49,7 @@ vtkStandardNewMacro(vtkGridSource);
 vtkGridSource::vtkGridSource()
 {
   this->ArcsEnabled = false;
+  this->SurfaceEnabled = false;
   this->GridSize = 10;
   this->Scale = 10.0;
 
@@ -70,7 +71,7 @@ vtkGridSource::~vtkGridSource()
 }
 
 //-----------------------------------------------------------------------------
-vtkSmartPointer<vtkPolyData> vtkGridSource::CreateGrid(int gridSize, double scale, double origin[3], double normal[3], bool useCircles)
+vtkSmartPointer<vtkPolyData> vtkGridSource::CreateGrid(int gridSize, double scale, double origin[3], double normal[3], bool useCircles, bool useSurface)
 {
   vtkNew<vtkPlaneSource> plane;
   vtkNew<vtkExtractEdges> edges;
@@ -84,7 +85,15 @@ vtkSmartPointer<vtkPolyData> vtkGridSource::CreateGrid(int gridSize, double scal
   plane->SetNormal(normal);
 
   edges->SetInputConnection(plane->GetOutputPort());
-  append->AddInputConnection(edges->GetOutputPort());
+
+  if (useSurface)
+    {
+    append->AddInputConnection(plane->GetOutputPort());
+    }
+  else
+    {
+    append->AddInputConnection(edges->GetOutputPort());
+    }
 
   //double arcStartVector[3];
   //vtkMath::Perpendiculars (normal, arcStartVector, NULL, 0);
@@ -135,7 +144,7 @@ int vtkGridSource::RequestData(vtkInformation *request,
     return 0;
     }
 
-  output->ShallowCopy(this->CreateGrid(this->GridSize, this->Scale, this->Origin, this->Normal, this->ArcsEnabled));
+  output->ShallowCopy(this->CreateGrid(this->GridSize, this->Scale, this->Origin, this->Normal, this->ArcsEnabled, this->SurfaceEnabled));
   return 1;
 }
 
