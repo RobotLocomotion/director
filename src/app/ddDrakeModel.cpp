@@ -71,6 +71,7 @@ class ddMeshVisual
   vtkSmartPointer<vtkActor> Actor;
   vtkSmartPointer<vtkActor> ShadowActor;
   vtkSmartPointer<vtkTransform> Transform;
+  vtkSmartPointer<vtkTexture> Texture;
   std::string Name;
 
 private:
@@ -377,7 +378,8 @@ std::vector<ddMeshVisual::Ptr> loadMeshVisuals(const std::string& filename)
       continue;
     }
 
-    visual->Actor->SetTexture(getTextureForMesh(polyDataList[i], filename));
+    visual->Texture = getTextureForMesh(polyDataList[i], filename);
+    //visual->Actor->SetTexture(visual->Texture);
     visuals.push_back(visual);
   }
 
@@ -883,6 +885,7 @@ public:
   ddInternal()
   {
     this->Visible = true;
+    this->TexturesEnabled = false;
     this->Alpha = 1.0;
     this->Color = QColor(GRAY_DEFAULT, GRAY_DEFAULT, GRAY_DEFAULT);
   }
@@ -891,6 +894,7 @@ public:
 
   QString FileName;
   bool Visible;
+  bool TexturesEnabled = false;
   double Alpha;
   QColor Color;
   QVector<double> JointPositions;
@@ -1216,6 +1220,27 @@ void ddDrakeModel::setColor(const QColor& color)
     visuals[i]->Actor->GetProperty()->SetColor(red, green, blue);
   }
   this->setAlpha(alpha);
+  emit this->displayChanged();
+}
+
+//-----------------------------------------------------------------------------
+bool ddDrakeModel::texturesEnabled() const
+{
+  return this->Internal->TexturesEnabled;
+}
+
+//-----------------------------------------------------------------------------
+void ddDrakeModel::setTexturesEnabled(bool enabled)
+{
+  this->Internal->TexturesEnabled = enabled;
+
+
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    visuals[i]->Actor->SetTexture(enabled ? visuals[i]->Texture : NULL);
+  }
+
   emit this->displayChanged();
 }
 

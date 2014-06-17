@@ -44,12 +44,12 @@ class RobotModelItem(om.ObjectModelItem):
         model.connect('displayChanged()', self.onDisplayChanged)
         self.callbacks = callbacks.CallbackRegistry([self.MODEL_CHANGED_SIGNAL])
         self.useUrdfColors = False
-        self.useUrdfTextures = False
 
         self.addProperty('Filename', model.filename())
         self.addProperty('Visible', model.visible())
         self.addProperty('Alpha', model.alpha(),
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
+        self.addProperty('Textures', False)
         self.addProperty('Color', model.color())
         self.views = []
 
@@ -60,11 +60,11 @@ class RobotModelItem(om.ObjectModelItem):
             self.model.setAlpha(self.getProperty(propertyName))
         elif propertyName == 'Visible':
             self.model.setVisible(self.getProperty(propertyName))
+        elif propertyName == 'Textures':
+            self.model.setTexturesEnabled(self.getProperty(propertyName))
+            self._updateModelColor()
         elif propertyName == 'Color':
-            if self.useUrdfTextures:
-                self.setupTextureColors()
-            elif not self.useUrdfColors:
-                self.model.setColor(self.getProperty(propertyName))
+            self._updateModelColor()
 
         self._renderAllViews()
 
@@ -108,9 +108,9 @@ class RobotModelItem(om.ObjectModelItem):
         self.model = model
         self.model.setAlpha(self.getProperty('Alpha'))
         self.model.setVisible(self.getProperty('Visible'))
-        if not self.useUrdfColors:
-            self.model.setColor(self.getProperty('Color'))
-        self.setupTextureColors()
+        self.model.setTexturesEnabled(self.getProperty('Textures'))
+        self._updateModelColor()
+
         self.setProperty('Filename', model.filename())
         model.connect('modelChanged()', self.onModelChanged)
 
@@ -118,9 +118,13 @@ class RobotModelItem(om.ObjectModelItem):
             self.addToView(view)
         self.onModelChanged()
 
-    def setupTextureColors(self):
-        if not self.useUrdfTextures:
-            return
+    def _updateModelColor(self):
+        if self.getProperty('Textures'):
+            self._setupTextureColors()
+        elif not self.useUrdfColors:
+            self.model.setColor(self.getProperty('Color'))
+
+    def _setupTextureColors(self):
 
         # custom colors for non-textured robotiq hand
         for name in self.model.getLinkNames():
