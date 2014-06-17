@@ -1966,30 +1966,6 @@ def segmentDrill(point1, point2, point3):
     aff.addToView(app.getDRCView())
 
 
-def computeDelaunay3D(polyData):
-    f = vtk.vtkDelaunay3D()
-    f.SetInput(polyData)
-    f.SetOffset(100.0)
-    f.Update()
-
-    surface = vtk.vtkGeometryFilter()
-    surface.SetInput(f.GetOutput())
-    surface.Update()
-
-    clean = vtk.vtkCleanPolyData()
-    clean.SetInput(surface.GetOutput())
-    clean.Update()
-
-    return shallowCopy(clean.GetOutput())
-
-
-def computeDelaunay2D(polyData):
-    f = vtk.vtkDelaunay2D()
-    f.SetInput(polyData)
-    f.Update()
-    return shallowCopy(f.GetOutput())
-
-
 def makePolyDataFields(pd):
     mesh = computeDelaunay3D(pd)
 
