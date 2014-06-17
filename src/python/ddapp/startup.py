@@ -276,6 +276,7 @@ if usePlanning:
     handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
 
     ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)
+    ikPlanner.addPostureGoalListener(robotStateJointController)
 
 
     playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
@@ -311,21 +312,6 @@ if usePlanning:
 
 
     splinewidget.init(view, handFactory, robotStateModel)
-
-
-    def onPostureGoal(msg):
-
-        goalPoseJoints = {}
-        for name, position in zip(msg.joint_name, msg.joint_position):
-            goalPoseJoints[name] = position
-
-        startPose = np.array(robotStateJointController.q)
-        endPose = ikPlanner.mergePostures(startPose, goalPoseJoints)
-        posturePlan = ikPlanner.computePostureGoal(startPose, endPose)
-
-        playbackPanel.setPlan(posturePlan)
-
-    lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, onPostureGoal)
 
 
 if useActionManager:

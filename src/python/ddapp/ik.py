@@ -103,6 +103,8 @@ class AsyncIKCommunicator():
         commands.append('\n%-------- runIk --------\n')
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
+            if not constraint.enabled:
+                continue
             constraint.getCommands(commands, constraintNames, suffix='_%d' % constraintId)
             commands.append('\n')
 
@@ -110,12 +112,13 @@ class AsyncIKCommunicator():
         seedPostureName = seedPostureName or self.seedName
 
         commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
-        commands.append('q_seed = %s;' % seedPostureName)
+        commands.append('ik_seed_pose = %s;' % seedPostureName)
+        commands.append('ik_nominal_pose = %s;' % nominalPostureName)
         commands.append('clear q_end;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
         commands.append('\n')
-        commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, q_seed, %s, active_constraints{:}, s.ikoptions);' % nominalPostureName)
+        commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, ik_seed_pose, ik_nominal_pose, active_constraints{:}, s.ikoptions);')
         commands.append('\n')
         commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
         commands.append('\n%-------- runIk end --------\n')
@@ -150,6 +153,8 @@ class AsyncIKCommunicator():
 
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
+            if not constraint.enabled:
+                continue
             constraint.getCommands(commands, constraintNames, suffix='_%d' % constraintId)
             commands.append('\n')
 

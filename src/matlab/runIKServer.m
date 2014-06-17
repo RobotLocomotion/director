@@ -24,6 +24,7 @@ l_hand = r.findLinkInd('l_hand');
 r_hand = r.findLinkInd('r_hand');
 utorso = r.findLinkInd('utorso');
 pelvis = r.findLinkInd('pelvis');
+head = r.findLinkInd('head');
 l_foot_pts = s.getLeftFootPoints();
 r_foot_pts = s.getRightFootPoints();
 
