@@ -291,14 +291,13 @@ def showRightClickMenu(displayPoint, view):
     menu.addAction(widgetAction)
     menu.addSeparator()
 
-    def onPropertyChanged(prop):
-        if prop.isSubProperty():
-            return
-        pickedObj.setProperty(prop.propertyName(), prop.value())
 
     propertiesPanel = PythonQt.dd.ddPropertiesPanel()
     propertiesPanel.setBrowserModeToWidget()
     propertyset.PropertyPanelHelper.addPropertiesToPanel(pickedObj.properties, propertiesPanel)
+
+    def onPropertyChanged(prop):
+        om.PropertyPanelHelper.setPropertyFromPanel(prop, propertiesPanel, pickedObj.properties)
     propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
 
     propertiesMenu = menu.addMenu('Properties')
@@ -458,8 +457,8 @@ class ViewEventFilter(object):
         if toggleFrameWidget(displayPoint, self.view):
             return
 
-        #if highlightSelectedLink(displayPoint, self.view):
-        #    return
+        if highlightSelectedLink(displayPoint, self.view):
+            return
 
     def onRightClick(self, event):
         displayPoint = vis.mapMousePosition(self.view, event)

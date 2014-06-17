@@ -166,11 +166,11 @@ class ObjectModelTree(object):
         if self._blockSignals:
             return
 
-        if prop.isSubProperty():
-            return
+        propertiesPanel = self.getPropertiesPanel()
+        propertySet = self.getActiveObject().properties
 
-        obj = self.getActiveObject()
-        obj.setProperty(prop.propertyName(), prop.value())
+        PropertyPanelHelper.setPropertyFromPanel(prop, propertiesPanel, propertySet)
+
 
     def _onTreeSelectionChanged(self):
 
