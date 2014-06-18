@@ -655,7 +655,7 @@ def showClusterObjects(clusters, parent):
 
     for i, cluster in enumerate(clusters):
         name = 'object %d' % i
-        color = colors[i]
+        color = colors[i % len(colors)]
         clusterObj = showPolyData(cluster.mesh, name, color=color, parent=parent, alpha=0.25)
         clusterFrame = showFrame(cluster.frame, name + ' frame', scale=0.2, visible=False, parent=clusterObj)
         clusterObj.actor.GetProperty().EdgeVisibilityOn()
