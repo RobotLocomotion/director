@@ -23,11 +23,11 @@ defaultUrdfHands = 'LR_RR'
 
 
 def getRobotGrayColor():
-    return QtGui.QColor(190, 190, 190)
+    return QtGui.QColor(177, 180, 190)
 
 
 def getRobotOrangeColor():
-    return QtGui.QColor(255, 180, 0)
+    return QtGui.QColor(255, 190, 0)
 
 
 class RobotModelItem(om.ObjectModelItem):
