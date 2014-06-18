@@ -7,6 +7,7 @@ class vtkCamera;
 class vtkOrientationMarkerWidget;
 class vtkRenderer;
 class vtkRenderWindow;
+class vtkLightKit;
 class QVTKWidget;
 
 class ddQVTKWidgetView : public ddViewBase
@@ -22,6 +23,7 @@ public:
   vtkRenderer* renderer() const;
   vtkRenderer* backgroundRenderer() const;
   vtkCamera* camera() const;
+  vtkLightKit* lightKit() const;
 
   QList<double> lastTDxMotion() const;
 
@@ -31,6 +33,8 @@ public:
   void installImageInteractor();
 
   void addCustomBounds(const QList<double>& bounds);
+
+  void setLightKitEnabled(bool enabled);
 
 signals:
 

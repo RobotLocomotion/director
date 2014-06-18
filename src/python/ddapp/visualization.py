@@ -655,7 +655,7 @@ def showClusterObjects(clusters, parent):
 
     for i, cluster in enumerate(clusters):
         name = 'object %d' % i
-        color = colors[i]
+        color = colors[i % len(colors)]
         clusterObj = showPolyData(cluster.mesh, name, color=color, parent=parent, alpha=0.25)
         clusterFrame = showFrame(cluster.frame, name + ' frame', scale=0.2, visible=False, parent=clusterObj)
         clusterObj.actor.GetProperty().EdgeVisibilityOn()
@@ -669,6 +669,59 @@ def showClusterObjects(clusters, parent):
             obj.actor.SetUserTransform(cluster.frame)
 
     return objects
+
+
+captionWidget = None
+
+def hideCaptionWidget():
+    global captionWidget
+    if captionWidget is not None:
+        captionWidget.Off()
+        captionWidget.Render()
+
+
+def showCaptionWidget(position, text, view=None):
+
+    view = view or app.getCurrentRenderView()
+    assert view
+
+    global captionWidget
+
+    if not captionWidget:
+        rep = vtk.vtkCaptionRepresentation()
+        rep.SetPosition(0.2, 0.8)
+        w = vtk.vtkCaptionWidget()
+        w.SetInteractor(view.renderWindow().GetInteractor())
+        w.SetRepresentation(rep)
+        w.On()
+        captionWidget = w
+
+    rep = captionWidget.GetRepresentation()
+    rep.SetAnchorPosition(position)
+    rep.GetCaptionActor2D().SetCaption(text)
+
+    a = rep.GetCaptionActor2D()
+
+    pr = a.GetTextActor().GetTextProperty()
+    pr.SetJustificationToCentered()
+    pr.SetVerticalJustificationToCentered()
+    pr.SetItalic(0)
+    pr.SetBold(0)
+    pr.SetShadow(0)
+    pr.SetFontFamilyToArial()
+
+    c2 = rep.GetPosition2Coordinate()
+    c2.SetCoordinateSystemToDisplay()
+    c2.SetValue(12*len(text),30)
+
+    # disable border
+    #rep.SetShowBorder(0)
+
+    a.SetThreeDimensionalLeader(0)
+    a.SetLeaderGlyphSize(0.005)
+
+    captionWidget.On()
+    captionWidget.Render()
 
 
 def pickImage(displayPoint, view, obj=None):

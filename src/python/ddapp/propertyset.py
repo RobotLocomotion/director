@@ -72,6 +72,10 @@ class PropertySet(object):
         assert self.hasProperty(propertyName)
         return self._properties[propertyName]
 
+    def getPropertyEnumValue(self, propertyName):
+        assert self.hasProperty(propertyName)
+        return self._attributes[propertyName].enumNames[self._properties[propertyName]]
+
     def addProperty(self, propertyName, propertyValue, attributes=None):
         alternateName = cleanPropertyName(propertyName)
         if propertyName not in self._properties and alternateName in self._alternateNames:
@@ -103,7 +107,7 @@ class PropertySet(object):
         attributes = self._attributes[propertyName]
         assert hasattr(attributes, propertyAttribute)
         setattr(attributes, propertyAttribute, value)
-        self.callbacks.process(self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL, self, propertyName. propertyAttribute)
+        self.callbacks.process(self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL, self, propertyName, propertyAttribute)
 
     def __getattribute__(self, name):
         try:
@@ -129,9 +133,47 @@ class PropertyPanelHelper(object):
 
     @staticmethod
     def onPropertyValueChanged(panel, properties, propertyName):
-        prop = panel.findProperty(propertyName)
+        prop = panel.getProperty(propertyName)
+
         if prop is not None:
-            prop.setValue(properties.getProperty(propertyName))
+
+            propertyValue = properties.getProperty(propertyName)
+            if isinstance(propertyValue, list):
+                for i, subValue in enumerate(propertyValue):
+                    panel.getSubProperty(prop, i).setValue(subValue)
+
+                groupName = PropertyPanelHelper.getPropertyGroupName(propertyName, propertyValue)
+                prop.setPropertyName(groupName)
+
+            else:
+                prop.setValue(propertyValue)
+
+    @staticmethod
+    def setPropertyFromPanel(prop, propertiesPanel, propertySet):
+
+        if prop.isSubProperty():
+            if not propertiesPanel.getParentProperty(prop):
+                return
+
+            propertyIndex = propertiesPanel.getSubPropertyIndex(prop)
+            propertyName = prop.propertyName()
+            propertyName = propertyName[:propertyName.index('[')]
+
+            propertyValue = propertySet.getProperty(propertyName)
+            propertyValue = list(propertyValue)
+            propertyValue[propertyIndex] = prop.value()
+
+            propertySet.setProperty(propertyName, propertyValue)
+
+            groupName = PropertyPanelHelper.getPropertyGroupName(propertyName, propertyValue)
+            propertiesPanel.getParentProperty(prop).setPropertyName(groupName)
+
+        else:
+
+            propertyName = prop.propertyName()
+            propertyValue = prop.value()
+            propertySet.setProperty(propertyName, propertyValue)
+
 
     @staticmethod
     def _setPropertyAttributes(prop, attributes):
@@ -144,11 +186,16 @@ class PropertyPanelHelper(object):
             prop.setAttribute('enumNames', attributes.enumNames)
 
     @staticmethod
+    def getPropertyGroupName(name, value):
+        return '%s [%s]' % (name, ', '.join(['%.2f' % v if isinstance(v, float) else str(v) for v in value]))
+
+
+    @staticmethod
     def _addProperty(panel, name, attributes, value):
 
-        if isinstance(value, list) and not isinstance(value[0], str):
-            groupName = '%s [%s]' % (name, ', '.join([str(v) for v in value]))
-            groupProp = panel.addGroup(groupName)
+        if isinstance(value, list):
+            groupName = PropertyPanelHelper.getPropertyGroupName(name, value)
+            groupProp = panel.addGroup(name, groupName)
             for v in value:
                 p = panel.addSubProperty(name, v, groupProp)
                 PropertyPanelHelper._setPropertyAttributes(p, attributes)
@@ -156,6 +203,8 @@ class PropertyPanelHelper(object):
         elif attributes.enumNames:
             p = panel.addEnumProperty(name, value)
             PropertyPanelHelper._setPropertyAttributes(p, attributes)
+            p.setValue(value)
+            print name, value
             return p
         else:
             p = panel.addProperty(name, value)

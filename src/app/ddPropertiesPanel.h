@@ -24,12 +24,15 @@ public:
   QtVariantPropertyManager* propertyManager() const;
   QtAbstractPropertyBrowser* propertyBrowser() const;
 
-  QtVariantProperty* addGroup(const QString& name);
+  QtVariantProperty* addGroup(const QString& name, const QString& description);
   QtVariantProperty* addProperty(const QString& name, const QVariant& value);
   QtVariantProperty* addEnumProperty(const QString& name, const QVariant& value);
   QtVariantProperty* addSubProperty(const QString& name, const QVariant& value, QtVariantProperty* parent);
-  QtVariantProperty* findProperty(const QString& name) const;
-  QtVariantProperty* findSubProperty(const QString& name, QtVariantProperty* parent) const;
+  QtVariantProperty* getProperty(const QString& name) const;
+  QtVariantProperty* getSubProperty(QtVariantProperty* parent, const QString& name) const;
+  QtVariantProperty* getSubProperty(QtVariantProperty* parent, int childIndex) const;
+  int getSubPropertyIndex(QtVariantProperty* property) const;
+  QtVariantProperty* getParentProperty(QtVariantProperty* parent) const;
 
 public slots:
 
