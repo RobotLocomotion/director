@@ -1966,30 +1966,6 @@ def segmentDrill(point1, point2, point3):
     aff.addToView(app.getDRCView())
 
 
-def computeDelaunay3D(polyData):
-    f = vtk.vtkDelaunay3D()
-    f.SetInput(polyData)
-    f.SetOffset(100.0)
-    f.Update()
-
-    surface = vtk.vtkGeometryFilter()
-    surface.SetInput(f.GetOutput())
-    surface.Update()
-
-    clean = vtk.vtkCleanPolyData()
-    clean.SetInput(surface.GetOutput())
-    clean.Update()
-
-    return shallowCopy(clean.GetOutput())
-
-
-def computeDelaunay2D(polyData):
-    f = vtk.vtkDelaunay2D()
-    f.SetInput(polyData)
-    f.Update()
-    return shallowCopy(f.GetOutput())
-
-
 def makePolyDataFields(pd):
     mesh = computeDelaunay3D(pd)
 
@@ -2031,7 +2007,7 @@ def segmentTable(polyData, searchPoint):
     tablePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
 
     tablePoints = labelDistanceToPoint(tablePoints, searchPoint)
-    tablePointsClusters = extractClusters(tablePoints, minClusterSize=10, clusterTolerance=0.2)
+    tablePointsClusters = extractClusters(tablePoints, minClusterSize=10, clusterTolerance=0.1)
     tablePointsClusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
 
     tablePoints = tablePointsClusters[0]

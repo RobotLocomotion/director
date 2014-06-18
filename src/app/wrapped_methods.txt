@@ -79,11 +79,13 @@ vtkCamera* ddQVTKWidgetView::camera() const;
 vtkRenderWindow* ddQVTKWidgetView::renderWindow() const;
 vtkRenderer* ddQVTKWidgetView::renderer() const;
 vtkRenderer* ddQVTKWidgetView::backgroundRenderer() const;
+vtkLightKit* ddQVTKWidgetView::lightKit() const;
 QVTKWidget* ddQVTKWidgetView::vtkWidget() const;
 vtkOrientationMarkerWidget* ddQVTKWidgetView::orientationMarkerWidget() const;
 QList<double> ddQVTKWidgetView::lastTDxMotion() const;
 void ddQVTKWidgetView::installImageInteractor();
 void ddQVTKWidgetView::addCustomBounds(const QList<double>&);
+void ddQVTKWidgetView::setLightKitEnabled(bool);
 
 ddMainWindow::ddMainWindow();
 ddMainWindow::~ddMainWindow();
@@ -132,6 +134,7 @@ void ddSpreadsheetView::removeRow(int);
 
 
 QString QtVariantProperty::propertyName();
+void QtVariantProperty::setPropertyName(const QString&);
 QVariant QtVariantProperty::value();
 void QtVariantProperty::setValue(const QVariant &);
 void QtVariantProperty::setAttribute(const QString &, const QVariant &);
@@ -139,12 +142,16 @@ bool QtVariantProperty::isSubProperty() const;
 
 ddPropertiesPanel::ddPropertiesPanel();
 ddPropertiesPanel::~ddPropertiesPanel();
-QtVariantProperty* ddPropertiesPanel::addGroup(const QString&);
+QtVariantProperty* ddPropertiesPanel::addGroup(const QString&, const QString&);
 QtVariantProperty* ddPropertiesPanel::addProperty(const QString&, const QVariant&);
 QtVariantProperty* ddPropertiesPanel::addEnumProperty(const QString&, const QVariant&);
 QtVariantProperty* ddPropertiesPanel::addSubProperty(const QString&, const QVariant&, QtVariantProperty*);
-QtVariantProperty* ddPropertiesPanel::findProperty(const QString&) const;
-QtVariantProperty* ddPropertiesPanel::findSubProperty(const QString&, QtVariantProperty*) const;
+QtVariantProperty* ddPropertiesPanel::getProperty(const QString&) const;
+QtVariantProperty* ddPropertiesPanel::getParentProperty(QtVariantProperty*) const;
+QtVariantProperty* ddPropertiesPanel::getSubProperty(QtVariantProperty*, const QString&) const;
+QtVariantProperty* ddPropertiesPanel::getSubProperty(QtVariantProperty*, int) const;
+int ddPropertiesPanel::getSubPropertyIndex(QtVariantProperty*) const;
+
 void ddPropertiesPanel::setBrowserModeToTree();
 void ddPropertiesPanel::setBrowserModeToWidget();
 
