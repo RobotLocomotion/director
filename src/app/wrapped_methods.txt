@@ -110,6 +110,7 @@ ddLumberSelection::ddLumberSelection();
 ddLumberSelection::~ddLumberSelection();
 
 void ddPythonManager::setupConsole(QWidget*);
+ctkPythonConsole* ddPythonManager::consoleWidget() const;
 
 ddPythonEventFilter::ddPythonEventFilter();
 ddPythonEventFilter::~ddPythonEventFilter();
