@@ -2007,7 +2007,7 @@ def segmentTable(polyData, searchPoint):
     tablePoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
 
     tablePoints = labelDistanceToPoint(tablePoints, searchPoint)
-    tablePointsClusters = extractClusters(tablePoints, minClusterSize=10, clusterTolerance=0.2)
+    tablePointsClusters = extractClusters(tablePoints, minClusterSize=10, clusterTolerance=0.1)
     tablePointsClusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
 
     tablePoints = tablePointsClusters[0]
