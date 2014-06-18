@@ -119,71 +119,18 @@ def highlightSelectedLink(displayPoint, view):
 
     if linkName == selectedLink:
         selectedLink = None
-        hideCaptionActor()
+        vis.hideCaptionWidget()
+        om.removeFromObjectModel(om.findObjectByName('selected link frame'))
 
     else:
         selectedLink = linkName
         linkColor = model.getLinkColor(selectedLink)
         linkColor.setAlphaF(1.0)
         model.setLinkColor(selectedLink, linkColor)
-        showLinkCaption(robotModel, selectedLink, view)
-
-
+        vis.showCaptionWidget(robotModel.getLinkFrame(selectedLink).GetPosition(), selectedLink, view=view)
+        vis.updateFrame(robotModel.getLinkFrame(selectedLink), 'selected link frame', scale=0.2, parent=robotModel)
 
     return True
-
-
-captionWidget = None
-
-def hideCaptionActor():
-    global captionWidget
-    if captionWidget is not None:
-        captionWidget.Off()
-
-    om.removeFromObjectModel(om.findObjectByName('selected link frame'))
-
-
-def showLinkCaption(model, linkName, view):
-
-    global captionWidget
-
-    if not captionWidget:
-        rep = vtk.vtkCaptionRepresentation()
-        rep.SetPosition(0.2, 0.8)
-        w = vtk.vtkCaptionWidget()
-        w.SetInteractor(view.renderWindow().GetInteractor())
-        w.SetRepresentation(rep)
-        w.On()
-        captionWidget = w
-
-    rep = captionWidget.GetRepresentation()
-    rep.SetAnchorPosition(model.getLinkFrame(linkName).GetPosition())
-    rep.GetCaptionActor2D().SetCaption(linkName)
-
-    a = rep.GetCaptionActor2D()
-
-    pr = a.GetTextActor().GetTextProperty()
-    pr.SetJustificationToCentered()
-    pr.SetVerticalJustificationToCentered()
-    pr.SetItalic(0)
-    pr.SetBold(0)
-    pr.SetShadow(0)
-    pr.SetFontFamilyToArial()
-
-    c2 = rep.GetPosition2Coordinate()
-    c2.SetCoordinateSystemToDisplay()
-    c2.SetValue(12*len(linkName),30)
-
-    # disable border
-    #rep.SetShowBorder(0)
-
-    a.SetThreeDimensionalLeader(0)
-    a.SetLeaderGlyphSize(0.005)
-
-    captionWidget.On()
-
-    vis.updateFrame(model.getLinkFrame(linkName), 'selected link frame', scale=0.2, parent=model)
-    captionWidget.Render()
 
 
 def toggleFrameWidget(displayPoint, view):
