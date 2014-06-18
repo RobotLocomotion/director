@@ -3,6 +3,8 @@
 
 #include <ctkAbstractPythonManager.h>
 
+class ctkPythonConsole;
+
 class ddPythonManager : public ctkAbstractPythonManager
 {
     Q_OBJECT
@@ -13,6 +15,8 @@ public:
   virtual ~ddPythonManager();
 
   void setupConsole(QWidget* parent);
+
+  ctkPythonConsole* consoleWidget() const;
 
   static QString appSitePackagesDir();
 

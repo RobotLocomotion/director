@@ -45,6 +45,14 @@ def getOutputConsole():
     return getMainWindow().outputConsole()
 
 
+def getPythonConsole():
+    return PythonQt.dd._pythonManager.consoleWidget()
+
+
+def showPythonConsole():
+    getPythonConsole().show()
+
+
 def addWidgetToDock(widget, dockArea=QtCore.Qt.RightDockWidgetArea, action=None):
 
     dock = QtGui.QDockWidget()

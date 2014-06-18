@@ -65,6 +65,9 @@ void ddPythonManager::preInitialization()
   {
     PythonQt::self()->addSysPath(this->appSitePackagesDir());
   }
+
+  PythonQtObjectPtr mod = PythonQt::self()->importModule("PythonQt.dd");
+  mod.addObject("_pythonManager", this);
 }
 
 //-----------------------------------------------------------------------------
@@ -94,6 +97,12 @@ QStringList ddPythonManager::pythonPaths()
 void ddPythonManager::executeInitializationScripts()
 {
 
+}
+
+//-----------------------------------------------------------------------------
+ctkPythonConsole* ddPythonManager::consoleWidget() const
+{
+  return this->Internal->Console;
 }
 
 //-----------------------------------------------------------------------------
