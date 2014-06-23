@@ -20,6 +20,7 @@ from ddapp import mapsregistrar
 from ddapp.visualization import *
 from ddapp.filterUtils import *
 from ddapp.fieldcontainer import FieldContainer
+from ddapp.segmentationroutines import *
 
 import numpy as np
 import vtkNumpy
@@ -27,7 +28,6 @@ from debugVis import DebugData
 from shallowCopy import shallowCopy
 import affordance
 import ioUtils
-import pointCloudUtils
 
 import vtkPCLFiltersPython as pcl
 
@@ -59,12 +59,7 @@ def getCurrentView():
     return app.getCurrentRenderView()
 
 
-def getDebugFolder():
-    obj = om.findObjectByName('debug')
-    if obj is None:
-        obj = om.getOrCreateContainer('debug', om.getOrCreateContainer('segmentation'))
-        om.collapse(obj)
-    return obj
+
 
 
 def cropToLineSegment(polyData, point1, point2):
@@ -73,7 +68,7 @@ def cropToLineSegment(polyData, point1, point2):
     length = np.linalg.norm(line)
     axis = line / length
 
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, axis, origin=point1, resultArrayName='dist_along_line')
+    polyData = labelPointDistanceAlongAxis(polyData, axis, origin=point1, resultArrayName='dist_along_line')
     return thresholdPoints(polyData, 'dist_along_line', [0.0, length])
 
 
@@ -164,18 +159,6 @@ def extractLargestCluster(polyData, minClusterSize=100):
     return thresholdPoints(polyData, 'cluster_labels', [1, 1])
 
 
-def extractClusters(polyData, **kwargs):
-
-    if not polyData.GetNumberOfPoints():
-        return []
-
-    polyData = applyEuclideanClustering(polyData, **kwargs)
-    clusterLabels = vtkNumpy.getNumpyFromVtk(polyData, 'cluster_labels')
-    clusters = []
-    for i in xrange(1, clusterLabels.max() + 1):
-        cluster = thresholdPoints(polyData, 'cluster_labels', [i, i])
-        clusters.append(cluster)
-    return clusters
 
 
 
@@ -353,17 +336,6 @@ def cropToSphere(polyData, origin, radius):
     return thresholdPoints(polyData, 'distance_to_point', [0, radius])
 
 
-def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100, maxClusterSize=1e6):
-
-    f = pcl.vtkPCLEuclideanClusterExtraction()
-    f.SetInput(dataObj)
-    f.SetClusterTolerance(clusterTolerance)
-    f.SetMinClusterSize(int(minClusterSize))
-    f.SetMaxClusterSize(int(maxClusterSize))
-    f.Update()
-    return shallowCopy(f.GetOutput())
-
-
 def labelOutliers(dataObj, searchRadius=0.03, neighborsInSearchRadius=10):
 
     f = pcl.vtkPCLRadiusOutlierRemoval()
@@ -412,16 +384,7 @@ def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpend
         return polyData, normal
 
 
-def applyLineFit(dataObj, distanceThreshold=0.02):
 
-    f = pcl.vtkPCLSACSegmentationLine()
-    f.SetInput(dataObj)
-    f.SetDistanceThreshold(distanceThreshold)
-    f.Update()
-    origin = np.array(f.GetLineOrigin())
-    direction = np.array(f.GetLineDirection())
-
-    return origin, direction, shallowCopy(f.GetOutput())
 
 
 def normalEstimation(dataObj, searchCloud=None, searchRadius=0.05, useVoxelGrid=False, voxelGridLeafSize=0.05):
@@ -451,9 +414,9 @@ def addCoordArraysToPolyData(polyData):
     bodyX = bodyFrame.TransformVector([1.0, 0.0, 0.0])
     bodyY = bodyFrame.TransformVector([0.0, 1.0, 0.0])
     bodyZ = bodyFrame.TransformVector([0.0, 0.0, 1.0])
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, bodyX, origin=bodyOrigin, resultArrayName='distance_along_robot_x')
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, bodyY, origin=bodyOrigin, resultArrayName='distance_along_robot_y')
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, bodyZ, origin=bodyOrigin, resultArrayName='distance_along_robot_z')
+    polyData = labelPointDistanceAlongAxis(polyData, bodyX, origin=bodyOrigin, resultArrayName='distance_along_robot_x')
+    polyData = labelPointDistanceAlongAxis(polyData, bodyY, origin=bodyOrigin, resultArrayName='distance_along_robot_y')
+    polyData = labelPointDistanceAlongAxis(polyData, bodyZ, origin=bodyOrigin, resultArrayName='distance_along_robot_z')
 
     return polyData
 
@@ -2035,22 +1998,92 @@ def filterClusterObjects(clusters):
     return result
 
 
+    
+
+
+def segmentTableThenFindDrills(polyData,pickedPoint):
+    ''' Given a point cloud of a table with drills on it.
+        Find all clusters and fit drills
+        Assumes that all clusters are of drills
+        Nothing else is ever on a table ;)
+    '''
+
+    # 1 segment a table and return clusters and the plane normal 
+    clusters, plane_origin, plane_normal = segmentTableSceneClusters(polyData, pickedPoint, True)
+
+    # 2 Detect drills within the clusters:
+    robotFrame = getLinkFrame('utorso')
+    robotOrigin = np.array(robotFrame.GetPosition())
+    forwardDirection = np.array([1.0, 0.0, 0.0])
+    robotFrame.TransformVector(forwardDirection, forwardDirection)
+    robotForward =forwardDirection
+
+    fitResults=[]
+
+    for clusterObj in clusters:
+        # vis.showPolyData(clusterObj, 'cluster debug')
+        drillFrame = fitDrillBarrel (clusterObj, robotForward, plane_origin, plane_normal)
+
+        if drillFrame is not None:
+            fitResults.append((clusterObj, drillFrame))
+
+    if not fitResults:
+        return
+
+
+    for i, fitResult in enumerate(fitResults):
+        cluster, drillFrame = fitResult
+        drillOrigin = np.array(drillFrame.GetPosition())
+        drillMesh = getDrillBarrelMesh()
+
+        #drill = om.findObjectByName('drill')
+        name= "drill%d" % i
+        name2= "drill frame %d" % i
+        drill = showPolyData(drillMesh, name, color=[0, 1, 0], visible=True)
+        drillFrame = updateFrame(drillFrame, name2, parent=drill, visible=False)
+
+        drill.actor.SetUserTransform(drillFrame.transform)
+
+        drill.setSolidColor([0, 1, 0])
+        #cluster.setProperty('Visible', True)
+
+
+
+
 def segmentTableScene(polyData, searchPoint):
+    ''' This seems to be unused, depreciated? '''
 
-    polyData, tablePoints, origin, normal = segmentTable(polyData, searchPoint)
-
-    tableCentroid = computeCentroid(tablePoints)
-
-    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.5])
-    searchRegion = cropToSphere(searchRegion, tableCentroid, 0.50)
-
-    objectClusters = extractClusters(searchRegion, clusterTolerance=0.03, minClusterSize=10)
+    objectClusters, _, _ = segmentTableSceneClusters(polyData, searchPoint)
 
     clusters = [makePolyDataFields(cluster) for cluster in objectClusters]
     clusters = [cluster for cluster in clusters if cluster is not None]
     clusters = filterClusterObjects(clusters)
 
     return FieldContainer(table=makePolyDataFields(tablePoints), clusters=clusters)
+
+
+def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
+    ''' Given a point cloud of a table with some objects on it
+        and a point on that table
+        determine the plane of the table and
+        extract clusters above the table
+    '''
+    
+    polyData, tablePoints, plane_origin, plane_normal = segmentTable(polyData, searchPoint)
+
+    tableCentroid = computeCentroid(tablePoints)
+
+    searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.5])
+    searchRegion = cropToSphere(searchRegion, tableCentroid, 0.50)
+
+    objectClusters = extractClusters(searchRegion, clusterInXY, clusterTolerance=0.03, minClusterSize=10)
+
+    #print 'got %d clusters' % len(objectClusters)
+    #for i,c in enumerate(objectClusters):
+    #    name= "cluster %d" % i
+    #    showPolyData(c, name, color=getRandomColor(), visible=False, parent=getDebugFolder())
+
+    return objectClusters, plane_origin, plane_normal
 
 
 def segmentTableEdge(polyData, searchPoint, edgePoint):
@@ -2294,7 +2327,7 @@ def segmentDrillBarrelFrame(point1, polyData, forwardDirection):
     if not polyData.GetNumberOfPoints():
         return
 
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=expectedNormal,
+    polyData, plane_origin, plane_normal = applyPlaneFit(polyData, expectedNormal=expectedNormal,
         perpendicularAxis=expectedNormal, searchOrigin=point1,
         searchRadius=tableClusterSearchRadius, angleEpsilon=0.2, returnOrigin=True)
 
@@ -2321,62 +2354,12 @@ def segmentDrillBarrelFrame(point1, polyData, forwardDirection):
 
     searchRegion = cropToSphere(searchRegion, point1, drillClusterSearchRadius)
     #drillPoints = extractLargestCluster(searchRegion, minClusterSize=1)
-    drillPoints = searchRegion
 
-    if not drillPoints.GetNumberOfPoints():
-        return
-
-    updatePolyData(drillPoints, 'drill cluster', parent=getDebugFolder(), visible=False)
-    drillBarrelPoints = thresholdPoints(drillPoints, 'dist_to_plane', [0.177, 0.30])
-
-    if not drillBarrelPoints.GetNumberOfPoints():
-        return
-
-
-    # fit line to drill barrel points
-    linePoint, lineDirection, _ = applyLineFit(drillBarrelPoints, distanceThreshold=0.5)
-
-    if np.dot(lineDirection, forwardDirection) < 0:
-        lineDirection = -lineDirection
-
-    updatePolyData(drillBarrelPoints, 'drill barrel points', parent=getDebugFolder(), visible=False)
-
-
-    pts = vtkNumpy.getNumpyFromVtk(drillBarrelPoints, 'Points')
-
-    dists = np.dot(pts-linePoint, lineDirection)
-
-    p1 = linePoint + lineDirection*np.min(dists)
-    p2 = linePoint + lineDirection*np.max(dists)
-
-    p1 = projectPointToPlane(p1, origin, normal)
-    p2 = projectPointToPlane(p2, origin, normal)
-
-
-    d = DebugData()
-    d.addSphere(p1, radius=0.01)
-    d.addSphere(p2, radius=0.01)
-    d.addLine(p1, p2)
-    updatePolyData(d.getPolyData(), 'drill debug points', color=[0,1,0], parent=getDebugFolder(), visible=False)
-
-
-    drillToBasePoint = np.array([-0.07,  0.0  , -0.12])
-
-    zaxis = normal
-    xaxis = lineDirection
-    xaxis /= np.linalg.norm(xaxis)
-    yaxis = np.cross(zaxis, xaxis)
-    yaxis /= np.linalg.norm(yaxis)
-    xaxis = np.cross(yaxis, zaxis)
-    xaxis /= np.linalg.norm(xaxis)
-
-    t = getTransformFromAxes(xaxis, yaxis, zaxis)
-    t.PreMultiply()
-    t.Translate(-drillToBasePoint)
-    t.PostMultiply()
-    t.Translate(p1)
-
+    t = fitDrillBarrel (searchRegion, forwardDirection, plane_origin, plane_normal)
     return t
+
+
+
 
 
 def segmentDrillBarrel(point1):
@@ -2716,8 +2699,8 @@ def getPlaneEquationFromPolyData(polyData, expectedNormal):
 
 def computeEdge(polyData, edgeAxis, perpAxis, binWidth=0.03):
 
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, edgeAxis, resultArrayName='dist_along_edge')
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, perpAxis, resultArrayName='dist_perp_to_edge')
+    polyData = labelPointDistanceAlongAxis(polyData, edgeAxis, resultArrayName='dist_along_edge')
+    polyData = labelPointDistanceAlongAxis(polyData, perpAxis, resultArrayName='dist_perp_to_edge')
 
 
     polyData, bins = binByScalar(polyData, 'dist_along_edge', binWidth)
@@ -2742,7 +2725,7 @@ def computeCentroid(polyData):
 
 def computeCentroids(polyData, axis, binWidth=0.025):
 
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, axis, resultArrayName='dist_along_axis')
+    polyData = labelPointDistanceAlongAxis(polyData, axis, resultArrayName='dist_along_axis')
 
     polyData, bins = binByScalar(polyData, 'dist_along_axis', binWidth)
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
@@ -2761,7 +2744,7 @@ def computeCentroids(polyData, axis, binWidth=0.025):
 
 def computePointCountsAlongAxis(polyData, axis, binWidth=0.025):
 
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, axis, resultArrayName='dist_along_axis')
+    polyData = labelPointDistanceAlongAxis(polyData, axis, resultArrayName='dist_along_axis')
 
     polyData, bins = binByScalar(polyData, 'dist_along_axis', binWidth)
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
@@ -2905,13 +2888,6 @@ def segmentBlockByAnnotation(blockDimensions, p1, p2, p3):
     params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis)
     obj.setAffordanceParams(params)
     obj.updateParamsFromActorTransform()
-
-
-def projectPointToPlane(point, origin, normal):
-    projectedPoint = np.zeros(3)
-    vtk.vtkPlane.ProjectPoint(point, origin, normal, projectedPoint)
-    return projectedPoint
-
 
 
 
@@ -3076,7 +3052,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
     # make right handed
     zaxis = np.cross(xaxis, yaxis)
 
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, xaxis, resultArrayName='dist_along_line')
+    polyData = labelPointDistanceAlongAxis(polyData, xaxis, resultArrayName='dist_along_line')
     pts = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
 
     dists = np.dot(pts-linePoint, zaxis)
@@ -3850,7 +3826,7 @@ def extractPointsAlongClickRay(position, ray):
     # extract points near line
     polyData = thresholdPoints(polyData, 'distance_to_line', [0.0, distanceToLineThreshold])
 
-    polyData = pointCloudUtils.labelPointDistanceAlongAxis(polyData, ray, origin=position, resultArrayName='dist_along_line')
+    polyData = labelPointDistanceAlongAxis(polyData, ray, origin=position, resultArrayName='dist_along_line')
     polyData = thresholdPoints(polyData, 'dist_along_line', [0.20, 1e6])
 
     updatePolyData(polyData, 'ray points', colorByName='distance_to_line')

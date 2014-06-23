@@ -1,3 +1,5 @@
+''' Convienence methods on VTK routines only '''
+
 import ddapp.vtkAll as vtk
 from ddapp.shallowCopy import shallowCopy
 import numpy as np
@@ -44,3 +46,12 @@ def computeDelaunay2D(polyData):
     f.SetInput(polyData)
     f.Update()
     return shallowCopy(f.GetOutput())
+
+
+def appendPolyData(polyDataList):
+    assert(len(polyDataList))
+    append = vtk.vtkAppendPolyData()
+    for polyData in polyDataList:
+        append.AddInput(polyData)
+    append.Update()
+    return shallowCopy(append.GetOutput())
