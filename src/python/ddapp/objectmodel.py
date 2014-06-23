@@ -411,5 +411,12 @@ def addContainer(name, parentObj=None):
 def getOrCreateContainer(name, parentObj=None):
     return _t.getOrCreateContainer(name, parentObj)
 
-def init(objectTree, propertiesPanel):
+def init(objectTree=None, propertiesPanel=None):
+
+    if _t._treeWidget:
+        return
+
+    objectTree = objectTree or QtGui.QTreeWidget()
+    propertiesPanel = propertiesPanel or PythonQt.dd.ddPropertiesPanel()
+
     _t.init(objectTree, propertiesPanel)
