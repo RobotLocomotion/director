@@ -543,8 +543,9 @@ def removeMajorPlane(polyData, distanceThreshold=0.02):
 
 def removeGroundSimple(polyData, groundThickness=0.02, sceneHeightFromGround=0.05):
     ''' Simple ground plane removal algorithm. Uses ground height
-        and does simple z distance filtering. (Default args should be relaxed)
+        and does simple z distance filtering. 
         Suitable for noisy data e.g. kinect/stereo camera
+        (Default args should be relaxed, filtering simplfied)
     '''
     groundHeight = SegmentationContext.getGlobalInstance().getGroundHeight()
     origin = [0, 0, groundHeight]
@@ -561,6 +562,9 @@ def removeGroundSimple(polyData, groundThickness=0.02, sceneHeightFromGround=0.0
 
 
 def removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.05):
+    ''' A More complex ground removal algorithm. Works when plane isn't
+    preceisely flat. First clusters on z to find approx ground height, then fits a plane there
+    '''
 
     searchRegionThickness = 0.5
 
@@ -1032,14 +1036,9 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
-    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, returnOrigin=True)
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
 
-    #cameraPos = np.array(getSegmentationView().camera().GetPosition())
-    ##bodyX = perception._multisenseItem.model.getAxis('body', [1.0, 0.0, 0.0])
-    #bodyX = centerPoint - cameraPos
-    #bodyX /= np.linalg.norm(bodyX)
-    #polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-bodyX, searchOrigin=point1, searchRadius=0.2, returnOrigin=True)
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-viewDirection, returnOrigin=True)
 
 
     perpLine = np.cross(point2 - point1, normal)
@@ -1181,7 +1180,7 @@ def findValveSpokeAngle(points):
     return spoke_angle
 
 
-def segmentValveWallAuto(expectedValveRadius, mode='both'):
+def segmentValveWallAuto(expectedValveRadius, mode='both', removeGroundMethod=removeGround ):
     '''
     Segment the valve wall where the left hand side has a valve and right has a lever
     '''
@@ -1190,11 +1189,10 @@ def segmentValveWallAuto(expectedValveRadius, mode='both'):
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
-    _ , polyData =  removeGround(polyData)
+    _ , polyData =  removeGroundMethod(polyData)
 
-    #polyData, origin, normal = applyPlaneFit(polyData, returnOrigin=True)
-    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, returnOrigin=True)
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-viewDirection, returnOrigin=True)
 
     wallPoints = thresholdPoints(polyData, 'dist_to_plane', [-0.01, 0.01])
     wallPoints = applyVoxelGrid(wallPoints, leafSize=0.03)
@@ -1203,12 +1201,14 @@ def segmentValveWallAuto(expectedValveRadius, mode='both'):
     updatePolyData(wallPoints, 'auto valve wall', parent=getDebugFolder(), visible=False)
 
     xvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,0]
-    xmedian = np.median(xvalues)
+    xcenter = np.median(xvalues)
     yvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,1]
-    ymedian = np.median(yvalues)
-    zvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,2]
-    zmedian = np.median(zvalues)
-    point1 =np.array([ xmedian, ymedian, zmedian]) # center of the valve wall
+    ycenter = np.median(yvalues)
+    # not used, not very reliable
+    #zvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,2]
+    #zcenter = np.median(zvalues)
+    zcenter = SegmentationContext.getGlobalInstance().getGroundHeight() + 1.2192 # valves are 4ft from ground
+    point1 =np.array([ xcenter, ycenter, zcenter  ]) # center of the valve wall
 
     zaxis = -normal
     xaxis = [0, 0, 1]
@@ -1220,7 +1220,7 @@ def segmentValveWallAuto(expectedValveRadius, mode='both'):
     t.PostMultiply()
     t.Translate(point1)
 
-    normalObj = showFrame(t, 'valve wall frame', parent=getDebugFolder(), visible=False)
+    normalObj = showFrame(t, 'valve wall frame', parent=getDebugFolder(), visible=False) # z direction out of wall
     normalObj.addToView(app.getDRCView())
 
 
