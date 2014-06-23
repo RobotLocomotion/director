@@ -13,6 +13,7 @@ set(python_files
   ddapp/cameracontrol.py
   ddapp/cameraview.py
   ddapp/colorize.py
+  ddapp/consoleapp.py
   ddapp/debrisdemo.py
   ddapp/debugVis.py
   ddapp/depthimageprovider.py
@@ -50,6 +51,7 @@ set(python_files
   ddapp/propertyset.py
   ddapp/robotstate.py
   ddapp/robotplanlistener.py
+  ddapp/robotsystem.py
   ddapp/roboturdf.py
   ddapp/screengrabberpanel.py
   ddapp/segmentation.py
