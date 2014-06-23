@@ -11,7 +11,8 @@ set(python_tests
   testPropertiesPanel.py
 )
 
-set(python_test args
+set(python_test_args
+  --testing --data-dir ${CMAKE_SOURCE_DIR}/../../../drc-testing-data --output-dir ${CMAKE_BINARY_DIR}/Testing/Temporary
 )
 
 set(python_exe ${CMAKE_BINARY_DIR}/bin/ddConsoleApp)
