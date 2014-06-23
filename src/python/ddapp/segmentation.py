@@ -2029,10 +2029,9 @@ def segmentTableThenFindDrills(polyData,pickedPoint):
     clusters, plane_origin, plane_normal = segmentTableSceneClusters(polyData, pickedPoint, True)
 
     # 2 Detect drills within the clusters:
-    robotFrame = getLinkFrame('utorso')
-    robotOrigin = np.array(robotFrame.GetPosition())
+    viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
     forwardDirection = np.array([1.0, 0.0, 0.0])
-    robotFrame.TransformVector(forwardDirection, forwardDirection)
+    viewFrame.TransformVector(forwardDirection, forwardDirection)
     robotForward =forwardDirection
 
     fitResults=[]
