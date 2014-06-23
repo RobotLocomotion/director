@@ -12,11 +12,9 @@ class TimerCallback(object):
         self.targetFps = targetFps
         self.timer = QtCore.QTimer()
         self.timer.setSingleShot(True)
-        self.timer.connect('timeout()', self._timerEvent)
 
         self.singleShotTimer = QtCore.QTimer()
         self.singleShotTimer.setSingleShot(True)
-        self.singleShotTimer.connect('timeout()', self._singleShotTimerEvent)
         self.callback = None
 
     def start(self):
@@ -25,6 +23,7 @@ class TimerCallback(object):
         '''
         self.startTime = time.time()
         self.lastTickTime = self.startTime
+        self.timer.connect('timeout()', self._timerEvent)
         self.timer.start(0)
 
     def stop(self):
@@ -32,6 +31,7 @@ class TimerCallback(object):
         Stop the timer.
         '''
         self.timer.stop()
+        self.timer.disconnect('timeout()', self._timerEvent)
 
     def tick(self):
         '''
@@ -45,10 +45,12 @@ class TimerCallback(object):
                 return False
 
     def singleShot(self, timeoutInSeconds):
+        self.singleShotTimer.connect('timeout()', self._singleShotTimerEvent)
         self.singleShotTimer.start(int(timeoutInSeconds * 1000))
 
     def _singleShotTimerEvent(self):
         self.tick()
+        self.singleShotTimer.disconnect('timeout()', self._singleShotTimerEvent)
 
     def _schedule(self, elapsedTimeInSeconds):
         '''
@@ -69,5 +71,7 @@ class TimerCallback(object):
         if self.tick() is not False:
             self.lastTickTime = startTime
             self._schedule(time.time() - startTime)
+        else:
+            self.stop()
 
 
