@@ -152,10 +152,12 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     if not urdfFile:
         urdfFile = os.path.join(getRobotModelDir(), 'model_%s.urdf' % defaultUrdfHands)
 
-    folder = om.getOrCreateContainer(parent)
+    if isinstance(parent, str):
+        parent = om.getOrCreateContainer(parent)
+
     model = loadRobotModelFromFile(urdfFile)
     obj = RobotModelItem(model)
-    om.addToObjectModel(obj, folder)
+    om.addToObjectModel(obj, parent)
 
     obj.setProperty('Visible', visible)
     obj.setProperty('Name', name)
