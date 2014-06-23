@@ -11,6 +11,7 @@ set(python_tests
   testPythonConsole.py
   testPropertiesPanel.py
   testRobotSystem.py
+  testTaskQueue.py
 )
 
 set(python_test_args
