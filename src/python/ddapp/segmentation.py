@@ -541,6 +541,25 @@ def removeMajorPlane(polyData, distanceThreshold=0.02):
     return polyData, f
 
 
+def removeGroundSimple(polyData, groundThickness=0.02, sceneHeightFromGround=0.05):
+    ''' Simple ground plane removal algorithm. Uses ground height
+        and does simple z distance filtering. (Default args should be relaxed)
+        Suitable for noisy data e.g. kinect/stereo camera
+    '''
+    groundHeight = SegmentationContext.getGlobalInstance().getGroundHeight()
+    origin = [0, 0, groundHeight]
+    normal = [0, 0, 1]
+
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    dist = np.dot(points - origin, normal)
+    vtkNumpy.addNumpyToVtk(polyData, dist, 'dist_to_plane')
+
+    groundPoints = thresholdPoints(polyData, 'dist_to_plane', [-groundThickness/2.0, groundThickness/2.0])
+    scenePoints = thresholdPoints(polyData, 'dist_to_plane', [sceneHeightFromGround, 100])
+
+    return groundPoints, scenePoints
+
+
 def removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.05):
 
     searchRegionThickness = 0.5
