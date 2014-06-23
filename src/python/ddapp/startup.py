@@ -158,7 +158,6 @@ if usePerception:
 
 if useGrid:
     vis.showGrid(view, color=[0,0,0] if useLightColorScheme else [1,1,1])
-    view.connect('computeBoundsRequest(ddQVTKWidgetView*)', vis.computeViewBoundsNoGrid)
     app.toggleCameraTerrainMode(view)
 
 
