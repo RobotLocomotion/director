@@ -409,3 +409,139 @@ def onFootContact(msg):
 sub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContact)
 sub.setSpeedLimit(60)
 
+
+if (1==1):
+    polyData = io.readPolyData('/home/mfallon/Desktop/rgbd_data/multisense_20_local_sparse.pcd')
+    #polyData = io.readPolyData('~/Desktop/rgbd_data/table_sparse.pcd')
+
+    vis.showPolyData(polyData, 'depth point cloud', colorByName='rgb_colors')
+
+
+    # strips color out
+    polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+    
+    polyData = segmentation.labelOutliers(polyData)
+    vis.showPolyData(polyData, 'is_outlier', colorByName='is_outlier', visible=False, parent=segmentation.getDebugFolder())
+
+    polyData = segmentation.thresholdPoints(polyData, 'is_outlier', [0.0, 0.0])    
+
+    
+    polyData = segmentation.addCoordArraysToPolyData(polyData)
+    
+    vis.showPolyData(polyData, 'workspace', colorByName='z', visible=True, parent=segmentation.getDebugFolder())
+    
+    #segmentationpanel.activateSegmentationMode(polyData)
+    #segmentation.segmentValveWallAuto(.2) #,'valve')
+    #segmentation.switchToView( 'DRC View')
+    
+    
+if (1==0):
+    robotStateJointController.q[5] = -0.63677# math.radians(120)
+    robotStateJointController.q[0] = 0.728
+    robotStateJointController.q[1] = -0.7596
+    robotStateJointController.q[2] = 0.79788
+    robotStateJointController.push()
+
+
+
+    polyData = io.readPolyData('/home/mfallon/Desktop/rgbd_data/multisense_20_sparse.pcd')
+    #polyData = io.readPolyData('~/Desktop/rgbd_data/table_sparse.pcd')
+
+    #vis.showPolyData(polyData, 'depth point cloud', colorByName='rgb_colors')
+
+    points = vnp.getNumpyFromVtk(polyData, 'Points')
+    rgb = vnp.getNumpyFromVtk(polyData, 'rgb_colors')
+
+    print points.shape
+    print rgb.shape
+
+    cameraToLocal = transformUtils.transformFromPose([ 0.92912804, -0.86441896,  1.63176906], [ 0.22322877, -0.39282596,  0.77466717, -0.44243355])
+
+    polyData = segmentation.transformPolyData(polyData, cameraToLocal)
+
+    # strips color out
+    polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+
+    polyData_original = shallowCopy(polyData)
+
+    vis.showPolyData(polyData, 'voxel', visible=False, parent=segmentation.getDebugFolder())
+
+    polyData = segmentation.addCoordArraysToPolyData(polyData)
+
+    #polyData = segmentation.thresholdPoints(polyData, 'z', [0.5, 2.0])
+    polyData = segmentation.thresholdPoints(polyData, 'z', [0.0, 2.0])
+
+    polyData = segmentation.thresholdPoints(polyData, 'x', [0.0, 2.0])
+    polyData = segmentation.thresholdPoints(polyData, 'y', [-2, 0.0])
+
+    vis.showPolyData(polyData, 'nearby', visible=False, parent=segmentation.getDebugFolder())
+
+    #polyData = segmentation.applyEuclideanClustering(polyData)
+    #polyData = segmentation.thresholdPoints(polyData, 'cluster_labels', [1.0, np.inf])
+
+
+    polyData = segmentation.labelOutliers(polyData)
+    vis.showPolyData(polyData, 'is_outlier', colorByName='is_outlier', visible=False, parent=segmentation.getDebugFolder())
+
+    polyData = segmentation.thresholdPoints(polyData, 'is_outlier', [0.0, 0.0])
+
+
+    vis.showPolyData(polyData, 'workspace', colorByName='z', visible=True, parent=segmentation.getDebugFolder())
+
+
+
+
+    if (1==1):
+        segmentation.segmentTableThenFindDrills(polyData, [1.2864902,  -0.93351376,  1.10208917])
+    elif (1==0):
+        segmentation.findAndFitDrillBarrel(polyData, getLinkFrame('utorso'))
+    elif (1==0):
+        segmentation.segmentTable(polyData, [1.2864902,  -0.93351376,  1.10208917])
+
+
+# pcd file is 1024x1024
+
+#cameraview.imageManager.updateImages()
+#imageUtime = cameraview.imageManager.getUtime("CAMERA_LEFT")
+
+#cameraToLocal = vtk.vtkTransform()
+#cameraview.imageManager.queue.getTransform("CAMERA_LEFT", 'local', imageUtime, cameraToLocal)
+#polyData = segmentation.transformPolyData(polyData, cameraToLocal)
+
+
+#array = transformUtils.poseFromTransform(cameraToLocal)
+#(array([ 0.92912804, -0.86441896,  1.63176906]), array([ 0.22322877, -0.39282596,  0.77466717, -0.44243355]))
+
+
+
+# segmentation.findAndFitDrillBarrel(polyData, getLinkFrame('utorso'))
+
+'''
+>>> 
+>>> o = om.getActiveObject()
+>>> o
+<ddapp.visualization.PolyDataItem object at 0x21f140d0>
+>>> o
+<ddapp.visualization.PolyDataItem object at 0x21f140d0>
+>>> o.polyData
+(vtkPolyData)0x21f078e8
+>>> o.getArrayNames()
+['rgb_colors', 'x', 'y', 'z', 'distance_along_robot_x', 'distance_along_robot_y', 'distance_along_robot_z']
+>>> o.colorBy('x')
+>>> 
+>>> help(o.colorBy)
+Help on method colorBy in module ddapp.visualization:
+
+colorBy(self, arrayName, scalarRange=None, lut=None) method of ddapp.visualization.PolyDataItem instance
+
+>>> 
+>>> 
+>>> o.colorBy('x', scalarRange=[0,1])
+>>> 
+>>> o.colorBy('x', scalarRange=[0.0,1.0])
+>>> o.colorBy('distance_along_robot_x', scalarRange=[0.0,1.0])
+>>> 
+>>> o.colorBy(None)
+>>> 
+>>> o.colorBy('distance_along_robot_x', scalarRange=[0.0,1.0])
+'''

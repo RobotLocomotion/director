@@ -46,7 +46,6 @@ set(python_files
   ddapp/perception.py
   ddapp/planplayback.py
   ddapp/playbackpanel.py
-  ddapp/pointCloudUtils.py
   ddapp/pointpicker.py
   ddapp/propertyset.py
   ddapp/robotstate.py
@@ -56,6 +55,7 @@ set(python_files
   ddapp/screengrabberpanel.py
   ddapp/segmentation.py
   ddapp/segmentationpanel.py
+  ddapp/segmentationroutines.py
   ddapp/shallowCopy.py
   ddapp/simpletimer.py
   ddapp/splinewidget.py
