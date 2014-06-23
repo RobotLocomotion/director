@@ -409,14 +409,14 @@ def addCoordArraysToPolyData(polyData):
     vtkNumpy.addNumpyToVtk(polyData, points[:,1].copy(), 'y')
     vtkNumpy.addNumpyToVtk(polyData, points[:,2].copy(), 'z')
 
-    bodyFrame = perception._multisenseItem.model.getFrame('body')
-    bodyOrigin = bodyFrame.TransformPoint([0.0, 0.0, 0.0])
-    bodyX = bodyFrame.TransformVector([1.0, 0.0, 0.0])
-    bodyY = bodyFrame.TransformVector([0.0, 1.0, 0.0])
-    bodyZ = bodyFrame.TransformVector([0.0, 0.0, 1.0])
-    polyData = labelPointDistanceAlongAxis(polyData, bodyX, origin=bodyOrigin, resultArrayName='distance_along_robot_x')
-    polyData = labelPointDistanceAlongAxis(polyData, bodyY, origin=bodyOrigin, resultArrayName='distance_along_robot_y')
-    polyData = labelPointDistanceAlongAxis(polyData, bodyZ, origin=bodyOrigin, resultArrayName='distance_along_robot_z')
+    viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
+    viewOrigin = viewFrame.TransformPoint([0.0, 0.0, 0.0])
+    viewX = viewFrame.TransformVector([1.0, 0.0, 0.0])
+    viewY = viewFrame.TransformVector([0.0, 1.0, 0.0])
+    viewZ = viewFrame.TransformVector([0.0, 0.0, 1.0])
+    polyData = labelPointDistanceAlongAxis(polyData, viewX, origin=viewOrigin, resultArrayName='distance_along_view_x')
+    polyData = labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_view_y')
+    polyData = labelPointDistanceAlongAxis(polyData, viewZ, origin=viewOrigin, resultArrayName='distance_along_view_z')
 
     return polyData
 
