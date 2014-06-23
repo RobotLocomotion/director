@@ -73,6 +73,9 @@ class RobotModelItem(om.ObjectModelItem):
     def connectModelChanged(self, func):
         return self.callbacks.connect(self.MODEL_CHANGED_SIGNAL, func)
 
+    def disconnectModelChanged(self, callbackId):
+        self.callbacks.disconnect(callbackId)
+
     def onModelChanged(self):
         self.callbacks.process(self.MODEL_CHANGED_SIGNAL, self)
         if self.getProperty('Visible'):
