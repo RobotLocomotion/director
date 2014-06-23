@@ -336,14 +336,7 @@ def cropToSphere(polyData, origin, radius):
     return thresholdPoints(polyData, 'distance_to_point', [0, radius])
 
 
-def labelOutliers(dataObj, searchRadius=0.03, neighborsInSearchRadius=10):
 
-    f = pcl.vtkPCLRadiusOutlierRemoval()
-    f.SetInput(dataObj)
-    f.SetSearchRadius(searchRadius)
-    f.SetNeighborsInSearchRadius(int(neighborsInSearchRadius))
-    f.Update()
-    return shallowCopy(f.GetOutput())
 
 
 def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpendicularAxis=None, angleEpsilon=0.2, returnOrigin=False, searchOrigin=None, searchRadius=None):
@@ -462,13 +455,6 @@ def getCurrentMapServerData():
 
 useVoxelGrid = False
 
-def applyVoxelGrid(polyData, leafSize=0.01):
-
-    v = pcl.vtkPCLVoxelGrid()
-    v.SetLeafSize(leafSize, leafSize, leafSize)
-    v.SetInput(polyData)
-    v.Update()
-    return shallowCopy(v.GetOutput())
 
 
 
