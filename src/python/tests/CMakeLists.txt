@@ -5,10 +5,12 @@ endif()
 include(python-coverage/setup.cmake)
 
 set(python_tests
+  testConsoleApp.py
   testFrameSync.py
   testObjectModel.py
   testPythonConsole.py
   testPropertiesPanel.py
+  testRobotSystem.py
 )
 
 set(python_test_args
