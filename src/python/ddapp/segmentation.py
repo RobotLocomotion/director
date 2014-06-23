@@ -125,15 +125,18 @@ def lockAffordanceToHand(aff, hand='l_hand'):
     aff.publish()
 
 
-handAffUpdater = TimerCallback()
-handAffUpdater.targetFps = 30
-handAffUpdater.callback = None
-
+handAffUpdater = None
 
 def lockToHandOn():
     aff = getDefaultAffordanceObject()
     if not aff:
         return
+
+    global handAffUpdater
+    if handAffUpdater is None:
+        handAffUpdater = TimerCallback()
+        handAffUpdater.targetFps = 30
+
     handAffUpdater.callback = functools.partial(lockAffordanceToHand, aff)
     handAffUpdater.start()
 
