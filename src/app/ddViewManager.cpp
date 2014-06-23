@@ -1,7 +1,6 @@
 #include "ddViewManager.h"
 #include "ddGLWidgetView.h"
 #include "ddQVTKWidgetView.h"
-#include "ddDRCView.h"
 #include "ddSpreadsheetView.h"
 #include "ddMacros.h"
 

@@ -31,7 +31,6 @@ qt4_wrap_cpp(moc_srcs
   ${decorator_file}
   ddBotImageQueue.h
   ddDrakeModel.h
-  ddDRCView.h
   ddLCMSubscriber.h
   ddLCMThread.h
   ddLumberSelection.h
@@ -70,7 +69,6 @@ set(srcs
 
   ddBotImageQueue.cpp
   ddDrakeModel.cpp
-  ddDRCView.cpp
   ddLumberSelection.cpp
   ddLCMThread.cpp
   ddGLWidgetView.cpp
