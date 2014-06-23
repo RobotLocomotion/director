@@ -2209,7 +2209,7 @@ def segmentDrillAuto(point1):
 
 
 
-def findAndFitDrillBarrel(polyData=None, robotFrame=None):
+def findAndFitDrillBarrel(polyData=None):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = polyData or inputObj.polyData
@@ -2245,9 +2245,11 @@ def findAndFitDrillBarrel(polyData=None, robotFrame=None):
 
     fitResults = []
 
-    robotOrigin = np.array(robotFrame.GetPosition())
-    robotForward = np.array([1.0, 0.0, 0.0])
-    robotFrame.TransformVector(robotForward, robotForward)
+    viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
+    forwardDirection = np.array([1.0, 0.0, 0.0])
+    viewFrame.TransformVector(forwardDirection, forwardDirection)
+    robotOrigin = viewFrame.GetPosition()
+    robotForward =forwardDirection
 
     #print 'robot origin:', robotOrigin
     #print 'robot forward:', robotForward
