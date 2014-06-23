@@ -12,6 +12,7 @@ set(python_tests
   testPropertiesPanel.py
   testRobotSystem.py
   testTaskQueue.py
+  testValveFit.py
 )
 
 set(python_test_args
