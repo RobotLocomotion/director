@@ -237,8 +237,42 @@ def extractClusters(polyData, clusterInXY=False, **kwargs):
         cluster = thresholdPoints(polyData, 'cluster_labels', [i, i])
         clusters.append(cluster)
     return clusters
+
+
+def applyVoxelGrid(polyData, leafSize=0.01):
+
+    v = pcl.vtkPCLVoxelGrid()
+    v.SetLeafSize(leafSize, leafSize, leafSize)
+    v.SetInput(polyData)
+    v.Update()
+    return shallowCopy(v.GetOutput())
+
+
+def labelOutliers(dataObj, searchRadius=0.03, neighborsInSearchRadius=10):
+
+    f = pcl.vtkPCLRadiusOutlierRemoval()
+    f.SetInput(dataObj)
+    f.SetSearchRadius(searchRadius)
+    f.SetNeighborsInSearchRadius(int(neighborsInSearchRadius))
+    f.Update()
+    return shallowCopy(f.GetOutput())
+
+
+def sparsifyStereoCloud(polyData):
+    ''' Take in a typical Stereo Camera Point Cloud
+    Filter it down to about the density of a lidar point cloud
+    and remove outliers
+    '''
+
+    # >>> strips color out <<<
+    polyData = applyVoxelGrid(polyData, leafSize=0.01)
     
-    
+    # remove outliers
+    polyData = labelOutliers(polyData)
+    vis.showPolyData(polyData, 'is_outlier', colorByName='is_outlier', visible=False, parent=getDebugFolder())
+    polyData = thresholdPoints(polyData, 'is_outlier', [0.0, 0.0])
+    return polyData
+
 def fitDrillBarrel ( drillPoints, forwardDirection, plane_origin, plane_normal):
     ''' Given a point cloud which ONLY contains points from a barrell drill, standing upright
         and the equations of a table its resting on, and the general direction of the robot
