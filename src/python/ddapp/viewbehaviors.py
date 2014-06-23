@@ -17,13 +17,22 @@ from ddapp import segmentation
 import numpy as np
 
 
+# todo: refactor these global variables
+# several functions in this module depend on these global variables
+# which are set by calling ViewBehaviors.addRobotBehaviors().
+# These could be refactored to be members of a new behaviors class.
+robotModel = None
+handFactory = None
+footstepsDriver = None
 
-def resetCameraToRobot():
+
+def resetCameraToRobot(view):
     t = robotModel.getLinkFrame('utorso')
     focalPoint = [0.0, 0.0, 0.0]
     position = [-4.0, -2.0, 2.0]
     t.TransformPoint(focalPoint, focalPoint)
     t.TransformPoint(position, position)
+    flyer = cameracontrol.Flyer(view)
     flyer.zoomTo(focalPoint, position)
 
 
@@ -51,8 +60,10 @@ def resetCameraToHeadView():
 
 def zoomToPick(displayPoint, view):
     pickedPoint, prop, _ = vis.pickProp(displayPoint, view)
-    if prop:
-        flyer.zoomTo(pickedPoint)
+    if not prop:
+        return
+    flyer = cameracontrol.Flyer(view)
+    flyer.zoomTo(pickedPoint)
 
 
 def getChildFrame(obj):
@@ -101,7 +112,11 @@ selectedLink = None
 
 def highlightSelectedLink(displayPoint, view):
 
+    if robotModel is None:
+        return False
+
     model = robotModel.model
+
     pickedPoint, _, polyData = vis.pickProp(displayPoint, view)
 
     linkName = model.getLinkNameForMesh(polyData)
@@ -436,10 +451,15 @@ class KeyEventFilter(object):
                 zoomToPick(self.getCursorDisplayPosition(), self.view)
             elif str(event.text()).lower() == 'r':
                 self.eventFilter.setEventHandlerResult(True)
-                resetCameraToRobot()
+                if robotModel is not None:
+                    resetCameraToRobot(self.view)
+                else:
+                    self.view.resetCamera()
+                    self.view.render()
             elif str(event.text()).lower() == 's':
                 self.eventFilter.setEventHandlerResult(True)
-                placeHandModel(self.getCursorDisplayPosition(), self.view)
+                if handFactory is not None:
+                    placeHandModel(self.getCursorDisplayPosition(), self.view)
 
     def getCursorDisplayPosition(self):
         cursorPos = self.view.mapFromGlobal(QtGui.QCursor.pos())
@@ -451,8 +471,6 @@ class KeyEventFilter(object):
         qvtkwidget.installEventFilter(self.eventFilter)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
-
-
 
 
 class KeyPressLogCommander(object):
@@ -485,7 +503,6 @@ class KeyPressLogCommander(object):
 
             self.eventFilter.setEventHandlerResult(consumed)
 
-
     def initEventFilter(self):
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
         self.widget.installEventFilter(self.eventFilter)
@@ -493,28 +510,18 @@ class KeyPressLogCommander(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
 
-def setupGlobals(handFactory_, robotModel_, footstepsDriver_, flyer_):
-
-    global handFactory, robotModel, footstepsDriver, flyer
-
-    handFactory = handFactory_
-    robotModel = robotModel_
-    footstepsDriver = footstepsDriver_
-    flyer = flyer_
-
 
 class ViewBehaviors(object):
 
-    def __init__(self, view, handFactory, robotModel, footstepsDriver):
+    def __init__(self, view):
         self.view = view
-        self.handFactory = handFactory
-        self.robotModel = robotModel
-
         self.keyEventFilter = KeyEventFilter(view)
         self.mouseEventFilter = ViewEventFilter(view)
-        self.flyer = cameracontrol.Flyer(view)
         self.logCommander = KeyPressLogCommander(view.vtkWidget())
 
-        setupGlobals(handFactory, robotModel, footstepsDriver, self.flyer)
-
-
+    @staticmethod
+    def addRobotBehaviors(_robotModel=None, _handFactory=None, _footstepsDriver=None):
+        global robotModel, handFactory, footstepsDriver
+        robotModel = _robotModel
+        handFactory = _handFactory
+        footstepsDriver = _footstepsDriver
