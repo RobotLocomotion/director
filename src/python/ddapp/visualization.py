@@ -567,7 +567,7 @@ def showFrame(frame, name, view=None, parent='segmentation', scale=0.35, visible
     else:
         parentObj = parent
 
-    item = FrameItem(name, frame, app.getCurrentRenderView())
+    item = FrameItem(name, frame, view)
     om.addToObjectModel(item, parentObj)
     item.setProperty('Visible', visible)
     item.setProperty('Scale', scale)
