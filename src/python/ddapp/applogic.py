@@ -158,6 +158,12 @@ def addToolbarMacro(name, func):
     action.connect('triggered()', func)
 
 
+def addShortcut(widget, keySequence, func):
+    shortcut = QtGui.QShortcut(QtGui.QKeySequence(keySequence), widget)
+    shortcut.connect('activated()', func)
+    return shortcut
+
+
 def setupActions():
     botApyAction = getToolsMenuActions()['ActionBotSpy']
     botApyAction.connect(botApyAction, 'triggered()', botspy.startBotSpy)
