@@ -10,6 +10,7 @@ from ddapp import getDRCBaseDir as getDRCBase
 from ddapp import botspy
 
 _mainWindow = None
+_defaultRenderView = None
 
 def getMainWindow():
     return _mainWindow
@@ -24,7 +25,7 @@ def getViewManager():
 
 
 def getDRCView():
-    return getMainWindow().viewManager().findView('DRC View')
+    return _defaultRenderView or getMainWindow().viewManager().findView('DRC View')
 
 
 def getSpreadsheetView():
@@ -32,7 +33,7 @@ def getSpreadsheetView():
 
 
 def getCurrentView():
-    return getMainWindow().viewManager().currentView()
+    return _defaultRenderView or getMainWindow().viewManager().currentView()
 
 
 def getCurrentRenderView():

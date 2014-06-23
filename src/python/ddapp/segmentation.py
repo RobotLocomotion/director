@@ -43,13 +43,12 @@ DRILL_TRIANGLE_BOTTOM_RIGHT = 'bottom right'
 DRILL_TRIANGLE_TOP_LEFT = 'top left'
 DRILL_TRIANGLE_TOP_RIGHT = 'top right'
 
-
+_defaultSegmentationView = None
 def getSegmentationView():
-    return app.getViewManager().findView('Segmentation View')
-
+    return _defaultSegmentationView or app.getViewManager().findView('Segmentation View')
 
 def getDRCView():
-    return app.getViewManager().findView('DRC View')
+    return app.getDRCView()
 
 
 def switchToView(viewName):
@@ -57,7 +56,7 @@ def switchToView(viewName):
 
 
 def getCurrentView():
-    return app.getViewManager().currentView()
+    return app.getCurrentRenderView()
 
 
 def getDebugFolder():
