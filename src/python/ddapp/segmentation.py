@@ -1037,7 +1037,6 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     polyData = inputObj.polyData
 
     viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
-
     polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-viewDirection, returnOrigin=True)
 
 
@@ -1237,7 +1236,6 @@ def segmentValveWallAuto(expectedValveRadius, mode='both', removeGroundMethod=re
 
 
     d = DebugData()
-    origin = np.array([ xmedian, ymedian, zmedian ])
     d.addSphere(point2, radius=0.01)
     d.addSphere(point1, radius=0.03)
     d.addSphere(point2b, radius=0.01)
@@ -1267,8 +1265,8 @@ def segmentLeverByWallPlane(point1, point2):
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
-    viewPlaneNormal = np.array(getSegmentationView().camera().GetViewPlaneNormal())
-    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=viewPlaneNormal, returnOrigin=True)
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+    polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-viewDirection, returnOrigin=True)
 
     # 2. Crop the cloud down to the lever only using the wall plane
     perpLine = np.cross(point2 - point1, -normal)
