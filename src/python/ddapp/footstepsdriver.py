@@ -11,7 +11,7 @@ from ddapp import vtkAll as vtk
 from ddapp.simpletimer import SimpleTimer
 from ddapp.shallowCopy import shallowCopy
 from ddapp import roboturdf
-from ddapp import segmentation
+from ddapp import filterUtils
 import ddapp.vtkNumpy as vnp
 
 import os
@@ -224,7 +224,7 @@ class FootstepsDriver(object):
                 points = points + np.array([[0.05],[0],[-0.0811]])
                 points = points.T
                 polyData = vnp.getVtkPolyDataFromNumpyPoints(points.copy())
-                mesh = segmentation.computeDelaunay3D(polyData)
+                mesh = filterUtils.computeDelaunay3D(polyData)
                 obj = vis.showPolyData(mesh, 'walking volume', parent=volFolder, alpha=0.5, visible=self.show_contact_slices)
                 obj.actor.SetUserTransform(footstepTransform)
 
