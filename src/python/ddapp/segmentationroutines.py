@@ -11,11 +11,151 @@ from ddapp.filterUtils import *
 import ddapp.visualization as vis
 from ddapp import objectmodel as om
 from ddapp.transformUtils import getTransformFromAxes
+
+
+from ddapp.footstepsdriver import FootstepsDriver
+
 import vtkNumpy
 import numpy as np
 import vtkPCLFiltersPython as pcl
 from shallowCopy import shallowCopy
 from debugVis import DebugData
+
+
+
+class SegmentationContext(object):
+    '''
+       Maintains an abstraction between the fitting scene and a robot
+       Assumes point cloud is world aligned, with z up
+       Provides access to (1) ground height,
+       (2) location of the head frame, (3) view direction
+
+       Can be configured:
+       (a) Default mode: populated continously by EST_ROBOT_STATE
+           (2) and (3) set seperately
+       (b) Autonomy: where (2) gives (3)
+       (c) Populated programmatically. e.g:
+           - for unit testing
+           - where ground plane from feet cannot be used
+    '''
+
+    def __init__(self, groundHeightProvider, viewProvider):
+        self.groundHeightProvider = groundHeightProvider
+        self.viewProvider = viewProvider
+
+    def getGroundHeight(self):
+        return self.groundHeightProvider.getGroundHeight()
+
+    def getViewFrame(self):
+        return self.viewProvider.getViewFrame()
+
+    def getViewOrigin(self):
+        return self.viewProvider.getViewOrigin()
+
+    def getViewDirection(self):
+        return self.viewProvider.getViewDirection()
+
+    '''
+    These static methods are provided for convenience to initialize
+    a globalally accessible instance of the SegmentationContext.
+    '''
+
+    _globalSegmentationContext = None
+
+    @staticmethod
+    def installGlobalInstance(inst):
+        if SegmentationContext._globalSegmentationContext is not None:
+            raise Exception('Error, a global segmentation context instance is already installed.')
+
+        SegmentationContext._globalSegmentationContext = inst
+
+    @staticmethod
+    def getGlobalInstance():
+        if SegmentationContext._globalSegmentationContext is None:
+            raise Exception('Error, the global segmentation context instance has not been initialized.')
+        return SegmentationContext._globalSegmentationContext
+
+    @staticmethod
+    def initWithRobot(model):
+        sc = SegmentationContext(RobotModelGroundHeightProvider(model), RobotModelViewProvider(model))
+        SegmentationContext.installGlobalInstance(sc)
+
+    @staticmethod
+    def initWithCamera(camera, userGroundHeight):
+        sc = SegmentationContext(UserGroundHeightProvider(userGroundHeight), CameraViewProvider(camera))
+        SegmentationContext.installGlobalInstance(sc)
+
+    @staticmethod
+    def initWithUser(userGroundHeight, userViewFrame):
+        sc = SegmentationContext(UserGroundHeightProvider(userGroundHeight), UserViewProvider(userViewFrame))
+        SegmentationContext.installGlobalInstance(sc)
+
+
+class RobotModelGroundHeightProvider(object):
+
+    def __init__(self, model):
+        self.model = model
+
+    def getGroundHeight(self):
+        return FootstepsDriver.getFeetMidPoint(self.model).GetPosition()[2]
+
+
+class RobotModelViewProvider(object):
+
+    def __init__(self, model):
+        self.model = model
+
+    def getViewFrame(self):
+        return self.model.getLinkFrame('head')
+
+    def getViewOrigin(self):
+        headFrame = self.model.getLinkFrame('head')
+        return np.array(headFrame.GetPosition())
+
+    def getViewDirection(self):
+        headFrame = self.model.getLinkFrame('head')
+        viewDirection = [1,0,0]
+        headFrame.TransformVector(viewDirection, viewDirection)
+        return np.array(viewDirection)
+
+class UserGroundHeightProvider(object):
+
+    def __init__(self, groundHeight):
+        self.groundHeight = groundHeight
+
+    def getGroundHeight():
+        return self.groundHeight
+
+class UserViewProvider(object):
+
+    def __init__(self, viewFrame):
+        self.viewFrame = viewFrame
+
+    def getViewFrame(self):
+        return self.viewFrame
+
+    def getViewOrigin(self):
+        return np.array( self.viewFrame.GetPosition())
+
+    def getViewDirection(self):
+        viewDirection = [1,0,0]
+        self.viewFrame.TransformVector(viewDirection, viewDirection)
+        return np.array(viewDirection)
+
+class CameraViewProvider(object):
+
+    def __init__(self, camera):
+        self.camera = camera
+
+    def getViewFrame(self):
+        return  self.camera.GetViewTransformObject()
+
+    def getViewOrigin(self):
+        return np.array(self.camera.GetViewPosition())
+
+    def getViewDirection(self):
+        return np.array(self.camera.GetViewDirection())
+
 
 
 def getDebugFolder():
