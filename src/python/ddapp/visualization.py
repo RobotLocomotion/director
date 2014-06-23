@@ -509,6 +509,21 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
     gridObj.gridSource = grid
     gridObj.actor.GetProperty().LightingOff()
     gridObj.actor.SetPickable(False)
+
+    def computeViewBoundsNoGrid():
+        if not gridObj.getProperty('Visible'):
+            return
+
+        gridObj.actor.SetUseBounds(False)
+        bounds = view.renderer().ComputeVisiblePropBounds()
+        gridObj.actor.SetUseBounds(True)
+        if vtk.vtkMath.AreBoundsInitialized(bounds):
+            view.addCustomBounds(bounds)
+        else:
+            view.addCustomBounds([-1, 1, -1, 1, -1, 1])
+
+    view.connect('computeBoundsRequest(ddQVTKWidgetView*)', computeViewBoundsNoGrid)
+
     return gridObj
 
 
@@ -528,17 +543,6 @@ def createScalarBarWidget(view, lookupTable, title):
     rep.SetPosition2(0.20, 0.07)
 
     return w
-
-
-def computeViewBoundsNoGrid(view):
-    grid = om.findObjectByName('grid')
-    if not grid or not grid.getProperty('Visible'):
-        return
-
-    grid.actor.SetUseBounds(False)
-    bounds = view.renderer().ComputeVisiblePropBounds()
-    grid.actor.SetUseBounds(True)
-    view.addCustomBounds(bounds)
 
 
 def updatePolyData(polyData, name, **kwargs):
