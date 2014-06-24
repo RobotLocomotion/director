@@ -18,28 +18,20 @@ segmentation._defaultSegmentationView = view
 robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
 segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
 
-# Move robot to near to valve wall:
-# 0degrees
-#robotStateJointController.q[5] = math.radians(120)
-#robotStateJointController.q[0] = 0
-#robotStateJointController.q[1] = 0
-# 30,60,90
-robotStateJointController.q [5] = math.radians(-120)
-robotStateJointController.q [0] = 1
-robotStateJointController.q [1] = 1
-
-robotStateJointController.q[2] = 0.85
+# Move robot to near to table:
+robotStateJointController.q [5] = math.radians(120)
+robotStateJointController.q[0] = -1.5
+robotStateJointController.q[1] = 2
+robotStateJointController.q[2] = 0.95
 robotStateJointController.push()
 
 # load poly data
 dataDir = app.getTestingDataDirectory()
-#polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/valve-lever-scene.vtp'))
-#polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/valve-lever-scene-30.vtp'))
-#polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/valve-lever-scene-60.vtp'))
-polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/valve-lever-scene-90.vtp'))
+polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/table-and-bin-scene.vtp'))
 vis.showPolyData(polyData, 'pointcloud snapshot')
 
-segmentation.segmentValveWallAuto(.2, mode='both', removeGroundMethod=segmentation.removeGround )
+#segmentation.segmentTableScene(polyData, [-1.58661389,  2.91242337,  0.79958105] )
+segmentation.segmentTableSceneClusters(polyData, [-1.58661389,  2.91242337,  0.79958105], clusterInXY=True )
 
 if app.getTestingInteractiveEnabled():
     view.show()
