@@ -13,6 +13,9 @@ set(python_tests
   testRobotSystem.py
   testTaskQueue.py
   testValveFit.py
+  testTableFit.py
+  testValveFitStereo.py
+  testTableFitStereo.py
 )
 
 set(python_test_args
