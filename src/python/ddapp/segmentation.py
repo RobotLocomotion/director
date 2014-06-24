@@ -2012,7 +2012,7 @@ def segmentTableThenFindDrills(polyData,pickedPoint):
     '''
 
     # 1 segment a table and return clusters and the plane normal 
-    clusters, plane_origin, plane_normal = segmentTableSceneClusters(polyData, pickedPoint, True)
+    clusters, tablePoints, plane_origin, plane_normal = segmentTableSceneClusters(polyData, pickedPoint, True)
 
     # 2 Detect drills within the clusters:
     viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
@@ -2055,7 +2055,7 @@ def segmentTableThenFindDrills(polyData,pickedPoint):
 def segmentTableScene(polyData, searchPoint):
     ''' This seems to be unused, depreciated? '''
 
-    objectClusters, _, _ = segmentTableSceneClusters(polyData, searchPoint)
+    objectClusters, tablePoints, _, _ = segmentTableSceneClusters(polyData, searchPoint)
 
     clusters = [makePolyDataFields(cluster) for cluster in objectClusters]
     clusters = [cluster for cluster in clusters if cluster is not None]
@@ -2081,11 +2081,11 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
     objectClusters = extractClusters(searchRegion, clusterInXY, clusterTolerance=0.03, minClusterSize=10)
 
     #print 'got %d clusters' % len(objectClusters)
-    #for i,c in enumerate(objectClusters):
-    #    name= "cluster %d" % i
-    #    showPolyData(c, name, color=getRandomColor(), visible=False, parent=getDebugFolder())
+    for i,c in enumerate(objectClusters):
+        name= "cluster %d" % i
+        showPolyData(c, name, color=getRandomColor(), visible=False, parent=getDebugFolder())
 
-    return objectClusters, plane_origin, plane_normal
+    return objectClusters, tablePoints, plane_origin, plane_normal
 
 
 def segmentTableEdge(polyData, searchPoint, edgePoint):
