@@ -112,6 +112,21 @@ class DebugData(object):
         sphere.Update()
         self.addPolyData(sphere.GetOutput(), color)
 
+    def addCube(self, dimensions, center, color=[1,1,1]):
+
+        cube = vtk.vtkCubeSource()
+        cube.SetXLength(dimensions[0])
+        cube.SetYLength(dimensions[1])
+        cube.SetZLength(dimensions[2])
+        cube.SetCenter(center)
+        cube.Update()
+        self.addPolyData(cube.GetOutput(), color)
+
+    def addCylinder(self, center, axis, length, radius, color=[1,1,1]):
+        axis = np.array(axis)
+        axis /= np.linalg.norm(axis)
+        center = np.array(center)
+        self.addLine(center - 0.5*length*axis, center + 0.5*length*axis, radius=radius, color=color)
 
     def getPolyData(self):
 
