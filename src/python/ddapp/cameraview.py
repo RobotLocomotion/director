@@ -161,7 +161,7 @@ class ImageManager(object):
 
 class CameraView(object):
 
-    def __init__(self, imageManager):
+    def __init__(self, imageManager, view=None):
 
         self.imageManager = imageManager
         self.updateUtimes = {}
@@ -175,7 +175,7 @@ class CameraView(object):
             imageManager.addImage(name)
             self.updateUtimes[name] = 0
 
-        self.initView()
+        self.initView(view)
         self.initEventFilter()
         self.rayCallback = rayDebug
 
@@ -228,9 +228,9 @@ class CameraView(object):
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
-    def initView(self):
+    def initView(self, view):
 
-        self.view = app.getViewManager().createView('Camera View', 'VTK View')
+        self.view = view or app.getViewManager().createView('Camera View', 'VTK View')
         app.setCameraTerrainModeEnabled(self.view, True)
         self.resetCamera()
 
@@ -239,6 +239,7 @@ class CameraView(object):
         self.view.camera().SetPosition(-7.5, 0.0, 5.0)
         self.view.camera().SetFocalPoint(0.0, 0.0, 0.0)
         self.view.camera().SetViewUp(0.0, 0.0, 1.0)
+        self.view.render()
 
     def getSphereGeometry(self, imageName):
 
