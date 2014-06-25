@@ -184,7 +184,7 @@ class AtlasDriver(object):
 
 
 
-def init(outputConsole):
+def init(outputConsole=None):
 
     global driver
     driver = AtlasDriver()
