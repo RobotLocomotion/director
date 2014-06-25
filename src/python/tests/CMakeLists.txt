@@ -5,6 +5,7 @@ endif()
 include(python-coverage/setup.cmake)
 
 set(python_tests
+  testAtlasDriver.py
   testConsoleApp.py
   testFrameSync.py
   testObjectModel.py
