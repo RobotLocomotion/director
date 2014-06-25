@@ -1,8 +1,10 @@
 from __future__ import division
 
+import sys
 import numpy as np
 from scipy import ndimage
 from scipy.spatial import ConvexHull
+from scipy.io import loadmat, savemat
 
 import drc
 from irispy.cspace import rotmat
@@ -85,8 +87,14 @@ class TerrainSegmentation:
 
         for hts, bot in self.contact_slices.iteritems():
             body_obs_xyz = terrain_body_obs(self.heights, self.px2world_2x3, pose, hts)
+            # print hts, body_obs_xyz
             if body_obs_xyz.size > 0:
                 c_obs = np.dstack((c_obs, self.getCObs(start, body_obs_xyz[:2,:], A_bounds, b_bounds, bot=bot)))
+                # b = body_obs_xyz
+                # c = self.getCObs(start, body_obs_xyz[:2,:], A_bounds, b_bounds, bot=bot)
+                # print c
+                # print "=========="
+                # import pdb; pdb.set_trace()
 
         A, b, C, d, results = inflate_region(c_obs, A_bounds, b_bounds, start, **kwargs)
         return SafeTerrainRegion(A, b, C, d, pose)
@@ -99,7 +107,7 @@ class TerrainSegmentation:
         b_bounds = np.hstack((-lb, ub))
         return A_bounds, b_bounds
 
-    def getCObs(self, start, obs_pts, A_bounds, b_bounds, bot=None):
+    def getCObs(self, start, obs_pts, A_bounds, b_bounds, bot=None, theta_steps=8):
 
         start = np.array(start).reshape((3,))
 
@@ -115,7 +123,6 @@ class TerrainSegmentation:
         # Fast c-obs computation for all point obstacles
         assert(obs_pts.shape[1] == 1)
         n_active_obs = np.sum(obs_mask)
-        theta_steps = 5
         thetas = np.linspace(start[2]-np.pi, start[2]+np.pi, num=theta_steps)
         c_bot = -np.array(bot)
         c_obs = []
@@ -182,3 +189,24 @@ class SafeTerrainRegion:
             # print "Infeasible polytope"
             return np.zeros((2,0))
 
+
+def mat_interface(fname):
+    """
+    Use a .mat file to take in the heights and seed pose, and then return the resulting A, b, C, d in the same file. This allows us to call this code from external programs like Matlab
+    """
+    matvars = loadmat(fname, mat_dtype=True)
+    heights = matvars['heights']
+    pose = np.reshape(matvars['pose'], (-1,))
+    px2world = matvars['px2world']
+    bounding_box_width = matvars['bounding_box_width'][0]
+    t = TerrainSegmentation(bounding_box_width=bounding_box_width)
+    t.setHeights(heights, px2world)
+    r = t.findSafeRegion(pose, iter_limit=2, require_containment=True)
+    savemat(fname, {'A': r.A,
+                    'b': r.b,
+                    'C': r.C,
+                    'd': r.d,
+                    'V': r.xy_polytope()})
+
+if __name__ == '__main__':
+    mat_interface(sys.argv[1])
