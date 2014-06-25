@@ -295,7 +295,10 @@ class ObjectModelTree(object):
 
 
     def getOrCreateContainer(self, name, parentObj=None):
-        containerObj = self.findObjectByName(name)
+        if parentObj:
+            containerObj = parentObj.findChild(name)
+        else:
+            containerObj = self.findObjectByName(name)
         if not containerObj:
             containerObj = self.addContainer(name, parentObj)
         return containerObj
