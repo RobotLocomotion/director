@@ -15,12 +15,23 @@ int main(int argc, char **argv)
   QApplication app(argc, argv);
 #endif
 
-  ddPythonManager pythonManager;
+  ddPythonManager* pythonManager = new ddPythonManager;
 
-  ddMainWindow window;
-  window.setPythonManager(&pythonManager);
-  window.resize(1800, 1000);
-  window.show();
+  ddMainWindow* window = new ddMainWindow;
+  window->setPythonManager(pythonManager);
+  window->resize(1800, 1000);
+  window->show();
 
-  return app.exec();
+  int result = app.exec();
+
+  delete window;
+
+#ifdef Q_OS_MAC
+  // On MacOSX, there is a crash during PythonQt's finalization cleanup
+  // while destructing class metadata objects.
+#else
+  delete pythonManager;
+#endif
+
+  return result;
 }
