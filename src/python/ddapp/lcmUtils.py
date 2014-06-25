@@ -178,6 +178,31 @@ def loadMessage(filename):
     return cls.decode(bytes)
 
 
+class MessageCollector(object):
+
+    def __init__(self, channel, messageClass=None):
+        self.messages = []
+        self.channel = channel
+        self.messageClass = messageClass
+        self.subscriber = None
+
+    def __del__(self):
+        self.stop()
+
+    def start(self):
+        self.subscriber = addSubscriber(self.channel, messageClass=self.messageClass, callback=self.onMessage)
+
+    def stop(self):
+        if self.subscriber:
+            removeSubscriber(self.subscriber)
+
+    def clear(self):
+        del self.messages[:]
+
+    def onMessage(self, msg):
+        self.messages.append(msg)
+
+
 class LogPlayerCommander(object):
 
     def __init__(self):
