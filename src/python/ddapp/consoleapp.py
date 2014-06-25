@@ -48,34 +48,38 @@ class ConsoleApp(object):
             model = om.getDefaultObjectModel()
             l.addWidget(model.getTreeWidget())
             l.addWidget(model.getPropertiesPanel())
-            w.show()
+            applogic.addShortcut(w, 'Ctrl+Q', self.quit)
             self.objectModelWidget = w
             self.objectModelWidget.resize(350, 700)
+
         self.objectModelWidget.show()
+        self.objectModelWidget.raise_()
+        self.objectModelWidget.activateWindow()
 
-    @staticmethod
-    def showPythonConsole():
-        applogic.showPythonConsole()
-
-    @staticmethod
-    def createView():
+    def createView(self, useGrid=True):
         view = PythonQt.dd.ddQVTKWidgetView()
         view.resize(600, 400)
 
         applogic.setCameraTerrainModeEnabled(view, True)
-        vis.showGrid(view)
+        if useGrid:
+            vis.showGrid(view)
 
         applogic.resetCamera(viewDirection=[-1,-1,-0.3], view=view)
         viewBehaviors = viewbehaviors.ViewBehaviors(view)
         applogic._defaultRenderView = view
 
-        applogic.addShortcut(view, 'Ctrl+Q', ConsoleApp.quit)
-        applogic.addShortcut(view, 'F8', ConsoleApp.showPythonConsole)
+        applogic.addShortcut(view, 'Ctrl+Q', self.quit)
+        applogic.addShortcut(view, 'F8', self.showPythonConsole)
+        applogic.addShortcut(view, 'F9', self.showObjectModel)
 
         view.setWindowIcon(om.Icons.Robot)
         view.setWindowTitle('View')
 
         return view
+
+    @staticmethod
+    def showPythonConsole():
+        applogic.showPythonConsole()
 
     def setupGlobals(self, globalsDict):
 
@@ -95,7 +99,8 @@ class ConsoleApp(object):
       parser.add_argument('-o', '--output-dir', type=str, help='output directory for writing test output', required=outputDirRequired)
       parser.add_argument('-i', '--interactive', action='store_true', help='enable interactive testing mode')
 
-      return parser.parse_args()
+      args, unknown = parser.parse_known_args()
+      return args
 
     @staticmethod
     def getTestingDataDirectory():
