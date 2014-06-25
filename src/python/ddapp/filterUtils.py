@@ -49,9 +49,17 @@ def computeDelaunay2D(polyData):
 
 
 def appendPolyData(polyDataList):
-    assert(len(polyDataList))
+    assert len(polyDataList)
     append = vtk.vtkAppendPolyData()
     for polyData in polyDataList:
         append.AddInput(polyData)
     append.Update()
     return shallowCopy(append.GetOutput())
+
+
+def computeNormals(polyData, featureAngle=45):
+    normals = vtk.vtkPolyDataNormals()
+    normals.SetFeatureAngle(featureAngle)
+    normals.SetInput(polyData)
+    normals.Update()
+    return shallowCopy(normals.GetOutput())
