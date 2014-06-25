@@ -204,7 +204,6 @@ class PropertyPanelHelper(object):
             p = panel.addEnumProperty(name, value)
             PropertyPanelHelper._setPropertyAttributes(p, attributes)
             p.setValue(value)
-            print name, value
             return p
         else:
             p = panel.addProperty(name, value)
