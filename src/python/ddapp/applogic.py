@@ -106,19 +106,30 @@ def toggleStereoRender():
     view.render()
 
 
+def getCameraTerrainModeEnabled(view):
+    return isinstance(view.renderWindow().GetInteractor().GetInteractorStyle(), vtk.vtkInteractorStyleTerrain)
+
+
+def setCameraTerrainModeEnabled(view, enabled):
+
+    if getCameraTerrainModeEnabled(view) == enabled:
+        return
+
+    if enabled:
+        view.renderWindow().GetInteractor().SetInteractorStyle(vtk.vtkInteractorStyleTerrain())
+        view.camera().SetViewUp(0,0,1)
+    else:
+        view.renderWindow().GetInteractor().SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
+
+    view.render()
+
+
 def toggleCameraTerrainMode(view = None):
 
     view = view or getCurrentRenderView()
-    assert(view)
+    assert view
 
-    iren = view.renderWindow().GetInteractor()
-    if isinstance(iren.GetInteractorStyle(), vtk.vtkInteractorStyleTerrain):
-        iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
-    else:
-        iren.SetInteractorStyle(vtk.vtkInteractorStyleTerrain())
-        view.camera().SetViewUp(0,0,1)
-
-    view.render()
+    setCameraTerrainModeEnabled(view, not getCameraTerrainModeEnabled(view))
     updateToggleTerrainAction(view)
 
 

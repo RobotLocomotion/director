@@ -159,7 +159,6 @@ if usePerception:
 
 if useGrid:
     vis.showGrid(view, color=[0,0,0] if useLightColorScheme else [1,1,1])
-    app.toggleCameraTerrainMode(view)
 
 
 if useLightColorScheme:
@@ -364,6 +363,7 @@ def sendEstRobotState(pose=None):
     lcmUtils.publish('EST_ROBOT_STATE', msg)
 
 
+app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view)
 viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
