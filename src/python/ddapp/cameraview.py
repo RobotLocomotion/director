@@ -231,7 +231,7 @@ class CameraView(object):
     def initView(self):
 
         self.view = app.getViewManager().createView('Camera View', 'VTK View')
-        app.toggleCameraTerrainMode(self.view)
+        app.setCameraTerrainModeEnabled(self.view, True)
         self.resetCamera()
 
     def resetCamera(self):

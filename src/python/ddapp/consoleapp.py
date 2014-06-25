@@ -62,7 +62,7 @@ class ConsoleApp(object):
         view = PythonQt.dd.ddQVTKWidgetView()
         view.resize(600, 400)
 
-        applogic.toggleCameraTerrainMode(view)
+        applogic.setCameraTerrainModeEnabled(view, True)
         vis.showGrid(view)
 
         applogic.resetCamera(viewDirection=[-1,-1,-0.3], view=view)
