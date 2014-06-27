@@ -441,8 +441,11 @@ sub.setSpeedLimit(60)
 segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
 
 
+# to be removed from startup.py: 
+from ddapp.filterUtils import *
+
 lastDisparityUtime = 0
-def showDisparityPointCloud(decimation=8):
+def showDisparityPointCloud(decimation=4):
 
 
     q = cameraview.imageManager.queue
@@ -458,19 +461,14 @@ def showDisparityPointCloud(decimation=8):
 
     cameraToLocal = vtk.vtkTransform()
     q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
-
-    #pts = vnp.getNumpyFromVtk(p, 'Points')
-    #isInf = np.isinf(pts)
-    #isInf = np.any(isInf, axis=1)
-    #isInf = np.array(isInf, dtype=int)
-    #vnp.addNumpyToVtk(p, isInf, 'is_inf')
-    #p = segmentation.thresholdPoints(p, 'is_inf', (0,0))
-
     p = segmentation.transformPolyData(p, cameraToLocal)
+
+    # remove outliers
+    p = segmentationroutines.labelOutliers(p)
+    p = thresholdPoints(p, 'is_outlier', [0.0, 0.0])
 
     vis.updatePolyData(p, 'disparity point cloud', colorByName='rgb_colors')
 
 disparityTimer = TimerCallback(targetFps=30)
 disparityTimer.callback = showDisparityPointCloud
 disparityTimer.start()
-
