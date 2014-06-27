@@ -167,6 +167,9 @@ if (USE_DRC)
   find_package(LibBot REQUIRED)
   include_directories(${LIBBOT_INCLUDE_DIRS})
 
+  find_package(PCL REQUIRED)
+  include_directories(${PCL_INCLUDE_DIRS})
+
   set(moc_srcs)
   qt4_wrap_cpp(moc_srcs
     ddBotImageQueue.h
@@ -183,10 +186,11 @@ if (USE_DRC)
 
   list (APPEND deps
     ${LIBBOT_LIBRARIES}
+    ${PCL_LIBRARIES}
   )
 
   list(APPEND pkg_deps
-    image-utils
+    image-utils multisense_utils
   )
 
 endif()
