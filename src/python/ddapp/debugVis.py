@@ -128,6 +128,25 @@ class DebugData(object):
         center = np.array(center)
         self.addLine(center - 0.5*length*axis, center + 0.5*length*axis, radius=radius, color=color)
 
+    def addTorus(self, radius, thickness, resolution=30):
+
+        q = vtk.vtkSuperquadricSource()
+        q.SetToroidal(1)
+        q.SetSize(radius)
+        q.SetThetaResolution(resolution)
+        # thickness doesnt seem to match to Eucliean units. 0 is none. 1 is full. .1 is a good valve
+        q.SetThickness(thickness)
+        q.Update()
+
+        # rotate Torus so that the hole axis (internally y), is set to be z, which we use for valves
+        transform = vtk.vtkTransform()
+        transform.RotateWXYZ(90,1,0,0)
+        transformFilter=vtk.vtkTransformPolyDataFilter()
+        transformFilter.SetTransform(transform)
+        transformFilter.SetInputConnection(q.GetOutputPort())
+        transformFilter.Update()
+        self.addPolyData(transformFilter.GetOutput())
+
     def getPolyData(self):
 
         if self.append.GetNumberOfInputConnections(0):
