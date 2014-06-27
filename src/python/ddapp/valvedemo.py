@@ -75,13 +75,20 @@ class ValvePlannerDemo(object):
         # IK server speed:
         self.speedSlow = 10
         self.speedHigh = 30
+
+        self.useLidar = True # else use stereo depth
         
     def addPlan(self, plan):
         self.plans.append(plan)
 
     def segmentValveWallAuto(self):
         om.removeFromObjectModel(om.findObjectByName('affordances'))
-        vis.updatePolyData(segmentation.getCurrentRevolutionData(), 'pointcloud snapshot', parent='segmentation')
+
+        if (self.useLidar is True):
+            vis.updatePolyData(segmentation.getCurrentRevolutionData(), 'pointcloud snapshot', parent='segmentation')
+        else:
+            vis.updatePolyData(segmentation.getDisparityPointCloud(4), 'pointcloud snapshot', parent='segmentation')
+
         self.affordanceFitFunction(.195)
 
     def setScribeAngleToCurrent(self):
