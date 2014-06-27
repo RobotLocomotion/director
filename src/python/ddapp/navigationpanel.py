@@ -149,7 +149,7 @@ class NavigationPanel(object):
 
     def onRestartNavButton(self):
         ready_init = lcmdrc.utime_t()
-        ready_init.utime = lcmUtils.timestamp_now()
+        ready_init.utime = getUtime()
         lcmUtils.publish('STATE_EST_RESTART', ready_init)
 
 
@@ -175,14 +175,14 @@ class NavigationPanel(object):
         
     def sendReadyMessage(self):
         ready_init = lcmdrc.utime_t()
-        ready_init.utime = lcmUtils.timestamp_now()
+        ready_init.utime = getUtime()
         lcmUtils.publish('STATE_EST_READY', ready_init)
         sleep(1) # sleep needed to give SE time to restart
         
 
     def sendInitMessage(self, pos, yaw):
         init = indexed_measurement_t()
-        init.utime = lcmUtils.timestamp_now()
+        init.utime = getUtime()
         init.state_utime = init.utime
         init.measured_dim = 4
         init.z_effective = [ pos[0], pos[1], pos[2] , yaw ]
@@ -226,13 +226,13 @@ class NavigationPanel(object):
         
     def onEnableLaserButton(self):   
         msg = lcmdrc.utime_t()
-        msg.utime = lcmUtils.timestamp_now()
+        msg.utime = getUtime()
         lcmUtils.publish('STATE_EST_LASER_ENABLE', msg)
         
 
     def onDisableLaserButton(self):   
         msg = lcmdrc.utime_t()
-        msg.utime = lcmUtils.timestamp_now()
+        msg.utime = getUtime()
         lcmUtils.publish('STATE_EST_LASER_DISABLE', msg)
     
     def onStartNewMapButton(self):   
@@ -240,7 +240,7 @@ class NavigationPanel(object):
         Send a trigger to the Create Octomap process to start a new map
         '''
         msg = lcmdrc.utime_t()
-        msg.utime = lcmUtils.timestamp_now()
+        msg.utime = getUtime()
         lcmUtils.publish('STATE_EST_START_NEW_MAP', msg)    
 
     
@@ -249,7 +249,7 @@ class NavigationPanel(object):
         Send a trigger to the GPF to use the newly created map
         '''
         msg = lcmdrc.utime_t()
-        msg.utime = lcmUtils.timestamp_now()
+        msg.utime = getUtime()
         lcmUtils.publish('STATE_EST_USE_NEW_MAP', msg)    
         
     def pointPickerDemoOriginal(self,p1, p2):
