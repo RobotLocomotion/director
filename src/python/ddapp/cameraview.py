@@ -3,6 +3,7 @@ import ddapp.applogic as app
 from ddapp import lcmUtils
 from ddapp import transformUtils
 from ddapp import visualization as vis
+from ddapp import filterUtils
 from ddapp.shallowCopy import shallowCopy
 from ddapp.timercallback import TimerCallback
 from ddapp import vtkNumpy
@@ -516,6 +517,18 @@ def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     views[channel] = view
     return view
 
+def getStereoPointCloud(decimation=4):
+    q = imageManager.queue
+
+    utime = q.getCurrentImageTime('CAMERA_LEFT')
+
+    p = vtk.vtkPolyData()
+    q.getPointCloudFromImages('CAMERA', p, decimation)
+    cameraToLocal = vtk.vtkTransform()
+    q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
+    p = filterUtils.transformPolyData(p, cameraToLocal)
+
+    return p
 
 def init():
 

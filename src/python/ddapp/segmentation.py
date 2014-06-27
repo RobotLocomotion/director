@@ -21,6 +21,7 @@ from ddapp.visualization import *
 from ddapp.filterUtils import *
 from ddapp.fieldcontainer import FieldContainer
 from ddapp.segmentationroutines import *
+from ddapp import cameraview
 
 import numpy as np
 import vtkNumpy
@@ -440,6 +441,15 @@ def getCurrentRevolutionData():
 
     return addCoordArraysToPolyData(revPolyData)
 
+
+def getDisparityPointCloud(decimation=4, removeOutliers=True):
+    p = cameraview.getStereoPointCloud(decimation)
+
+    if (removeOutliers is True):# remove outliers
+        p = labelOutliers(p)
+        p = thresholdPoints(p, 'is_outlier', [0.0, 0.0])
+
+    return p
 
 def getCurrentMapServerData():
     mapServer = om.findObjectByName('Map Server')
