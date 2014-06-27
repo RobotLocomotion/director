@@ -1107,10 +1107,31 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     t.PostMultiply()
     t.Translate(origin)
 
-    zwidth = 0.02
+
+    # Spoke angle fitting:
+    if (1==1):
+        # extract the relative positon of the points to the valve axis:
+        searchRegionSpokes = labelDistanceToLine(searchRegionSpokes, origin, [origin + circleNormal])
+        searchRegionSpokes = thresholdPoints(searchRegionSpokes, 'distance_to_line', [0.05, radius-0.04])
+        updatePolyData(searchRegionSpokes, 'valve spoke search', parent=getDebugFolder(), visible=False)
+        searchRegionSpokesLocal = transformPolyData(searchRegionSpokes, t.GetLinearInverse() )
+        points = vtkNumpy.getNumpyFromVtk(searchRegionSpokesLocal , 'Points')
+
+        spoke_angle = findValveSpokeAngle(points)
+        spokeAngleTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,spoke_angle])
+
+        spokeTransform = transformUtils.copyFrame(t)
+        spokeAngleTransform.Concatenate(spokeTransform)
+        spokeObj = showFrame(spokeAngleTransform, 'spoke frame', parent=getDebugFolder(), visible=False, scale=radius)
+        spokeObj.addToView(app.getDRCView())
+        t = spokeAngleTransform
+
+    zwidth = 0.0175
 
     d = DebugData()
-    d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
+    #d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
+    d.addTorus(radius, 0.1)
+    d.addLine(np.array([0,0,0]), np.array([radius-zwidth,0,0]), radius=zwidth) # main bar
 
     name = 'valve'
     obj = showPolyData(d.getPolyData(), name, cls=CylinderAffordanceItem, parent='affordances', color=[0,1,0])
@@ -1129,25 +1150,10 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     frameObj.addToView(app.getDRCView())
 
 
-    # Spoke angle fitting:
-    if (1==1):
-        # extract the relative positon of the points to the valve axis:
-        searchRegionSpokes = labelDistanceToLine(searchRegionSpokes, origin, [origin + circleNormal])
-        searchRegionSpokes = thresholdPoints(searchRegionSpokes, 'distance_to_line', [0.05, radius-0.04])
-        updatePolyData(searchRegionSpokes, 'valve spoke search', parent=getDebugFolder(), visible=False)
-        searchRegionSpokesLocal = transformPolyData(searchRegionSpokes, t.GetLinearInverse() )
-        points = vtkNumpy.getNumpyFromVtk(searchRegionSpokesLocal , 'Points')
 
-        spoke_angle = findValveSpokeAngle(points)
-        spokeAngleTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,spoke_angle])
 
-        spokeTransform = transformUtils.copyFrame(t)
-        spokeAngleTransform.Concatenate(spokeTransform)
 
-        #spokeObj = showFrame(spokeAngleTransform, 'spoke frame', parent=getDebugFolder(), visible=True)
-        #spokeObj.addToView(app.getDRCView())
-        spokeObj = showFrame(spokeAngleTransform, 'spoke frame', parent=obj, visible=True, scale=radius)
-        spokeObj.addToView(app.getDRCView())
+
 
 
 def findValveSpokeAngle(points):
@@ -1170,12 +1176,11 @@ def findValveSpokeAngle(points):
     freq, bins = np.histogram(angle, bins)
     amax = np.argmax(freq)
     spoke_angle = bins[amax] + 5 # correct for 5deg offset
-    print spoke_angle
 
     return spoke_angle
 
 
-def segmentValveWallAuto(expectedValveRadius, mode='both', removeGroundMethod=removeGround ):
+def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMethod=removeGround ):
     '''
     Segment the valve wall where the left hand side has a valve and right has a lever
     '''
