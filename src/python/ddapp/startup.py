@@ -440,3 +440,37 @@ sub.setSpeedLimit(60)
 
 segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
 
+
+lastDisparityUtime = 0
+def showDisparityPointCloud(decimation=8):
+
+
+    q = cameraview.imageManager.queue
+
+    utime = q.getCurrentImageTime('CAMERA_LEFT')
+    global lastDisparityUtime
+    if utime == lastDisparityUtime:
+        return
+
+    lastDisparityUtime = utime
+    p = vtk.vtkPolyData()
+    q.getPointCloudFromImages('CAMERA', p, decimation)
+
+    cameraToLocal = vtk.vtkTransform()
+    q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
+
+    #pts = vnp.getNumpyFromVtk(p, 'Points')
+    #isInf = np.isinf(pts)
+    #isInf = np.any(isInf, axis=1)
+    #isInf = np.array(isInf, dtype=int)
+    #vnp.addNumpyToVtk(p, isInf, 'is_inf')
+    #p = segmentation.thresholdPoints(p, 'is_inf', (0,0))
+
+    p = segmentation.transformPolyData(p, cameraToLocal)
+
+    vis.updatePolyData(p, 'disparity point cloud', colorByName='rgb_colors')
+
+disparityTimer = TimerCallback(targetFps=30)
+disparityTimer.callback = showDisparityPointCloud
+disparityTimer.start()
+

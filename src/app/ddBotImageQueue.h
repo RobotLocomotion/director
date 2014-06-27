@@ -98,6 +98,11 @@ public:
 
   void computeTextureCoords(const QString& cameraName, vtkPolyData* polyData);
 
+  // Computes a point cloud with rgb and copies it into the given polyData.
+  // The channel argument names an lcm channel where an images message are received
+  // that contains disparity and color images.
+  void getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation);
+
   void getBodyToCameraTransform(const QString& cameraName, vtkTransform* transform);
 
   int getTransform(const QString& fromFrame, const QString& toFrame, qint64 utime, vtkTransform* transform);
@@ -131,6 +136,7 @@ protected:
 
   ddLCMThread* mLCM;
   QMap<QString, QMap<int, QString> > mChannelMap;
+  QMap<QString, multisense::images_t> mImagesMessageMap;
   QMap<QString, ddLCMSubscriber*> mSubscribers;
   QMap<QString, CameraData*> mCameraData;
 };

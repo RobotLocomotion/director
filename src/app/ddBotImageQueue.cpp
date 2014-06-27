@@ -2,6 +2,12 @@
 
 #include <zlib.h>
 
+#include <vtkIdTypeArray.h>
+#include <vtkCellArray.h>
+#include <vtkNew.h>
+
+#include <multisense_utils/multisense_utils.hpp>
+
 //-----------------------------------------------------------------------------
 ddBotImageQueue::ddBotImageQueue(QObject* parent) : QObject(parent)
 {
@@ -332,7 +338,7 @@ ddBotImageQueue::CameraData* ddBotImageQueue::getCameraData(const QString& camer
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::onImagesMessage(const QByteArray& data, const QString& channel)
 {
-  multisense::images_t message;
+  multisense::images_t& message = this->mImagesMessageMap[channel];
   message.decode(data.data(), 0, data.size());
 
   const QMap<int, QString> cameraNameMap = mChannelMap[channel];
@@ -459,6 +465,95 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
   std::copy(cameraData->mImageBuffer.begin(), cameraData->mImageBuffer.end(), outPtr);
 
   return image;
+}
+
+namespace {
+
+//----------------------------------------------------------------------------
+vtkSmartPointer<vtkCellArray> NewVertexCells(vtkIdType numberOfVerts)
+{
+  vtkNew<vtkIdTypeArray> cells;
+  cells->SetNumberOfValues(numberOfVerts*2);
+  vtkIdType* ids = cells->GetPointer(0);
+  for (vtkIdType i = 0; i < numberOfVerts; ++i)
+    {
+    ids[i*2] = 1;
+    ids[i*2+1] = i;
+    }
+
+  vtkSmartPointer<vtkCellArray> cellArray = vtkSmartPointer<vtkCellArray>::New();
+  cellArray->SetCells(numberOfVerts, cells.GetPointer());
+  return cellArray;
+}
+
+//----------------------------------------------------------------------------
+vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud)
+{
+  vtkIdType nr_points = cloud->points.size();
+
+  vtkNew<vtkPoints> points;
+  points->SetDataTypeToFloat();
+  points->SetNumberOfPoints(nr_points);
+
+  vtkNew<vtkUnsignedCharArray> rgbArray;
+  rgbArray->SetName("rgb_colors");
+  rgbArray->SetNumberOfComponents(3);
+  rgbArray->SetNumberOfTuples(nr_points);
+
+  vtkIdType j = 0;    // true point index
+  for (vtkIdType i = 0; i < nr_points; ++i)
+  {
+    // Check if the point is invalid
+    if (!pcl_isfinite (cloud->points[i].x) ||
+        !pcl_isfinite (cloud->points[i].y) ||
+        !pcl_isfinite (cloud->points[i].z))
+      continue;
+
+    float point[3] = {cloud->points[i].x, cloud->points[i].y, cloud->points[i].z};
+    unsigned char color[3] = {cloud->points[i].r, cloud->points[i].g, cloud->points[i].b};
+    points->SetPoint(j, point);
+    rgbArray->SetTupleValue(j, color);
+    j++;
+  }
+  nr_points = j;
+  points->SetNumberOfPoints(nr_points);
+  rgbArray->SetNumberOfTuples(nr_points);
+
+  vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+  polyData->SetPoints(points.GetPointer());
+  polyData->GetPointData()->AddArray(rgbArray.GetPointer());
+  polyData->SetVerts(NewVertexCells(nr_points));
+  return polyData;
+}
+
+
+};
+
+//-----------------------------------------------------------------------------
+void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation)
+{
+  if (!this->mImagesMessageMap.contains(channel))
+  {
+    printf("no images received on channel: %s\n", qPrintable(channel));
+    return;
+  }
+
+  multisense::images_t& msg = this->mImagesMessageMap[channel];
+
+  cv::Mat_<double> Q_(4, 4, 0.0);
+  Q_(0,0) = Q_(1,1) = 1.0;
+  Q_(3,2) = 14.26672796348671; //1.0 / baseline;
+  Q_(0,3) = -512; //-stereo_params_.right.cx;
+  Q_(1,3) = -512;//-stereo_params_.right.cy;
+  Q_(2,3) = 591.909423828125;// stereo_params_.right.fx;
+  Q_(3,3) = 0;//(stereo_params_.right.cx - stereo_params_.left.cx ) / baseline;
+
+  multisense_utils m;
+  m.set_decimate(decimation);
+
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+  m.unpack_multisense(&msg, Q_, cloud);
+  polyData->ShallowCopy(PolyDataFromPointCloud(cloud));
 }
 
 //-----------------------------------------------------------------------------
