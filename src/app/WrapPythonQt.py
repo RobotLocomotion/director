@@ -3,15 +3,17 @@ import re
 import sys
 import argparse
 
-def wrap(inFileName, outFileName, exportSymbol, exportHeader, classNamePrefixes, qtClassNamePrefixes, moduleName):
+def wrap(inFileNames, outFileName, exportSymbol, exportHeader, classNamePrefixes, qtClassNamePrefixes, moduleName):
 
 
     if not outFileName.endswith('.h'):
         raise Exception('Error: output file extension must be .h')
 
-    inFile = open(inFileName, 'r')
-    lines = inFile.read().splitlines()
-    inFile.close()
+    lines = []
+    for inFileName in inFileNames:
+        inFile = open(inFileName, 'r')
+        lines += inFile.read().splitlines()
+        inFile.close()
 
     classNameRegexes = [re.compile('\\b%s[a-zA-Z0-9]*' % prefix) for prefix in classNamePrefixes]
     qtClassNamePrefixes = tuple(qtClassNamePrefixes)
@@ -171,7 +173,7 @@ def main():
 
 
     parser = argparse.ArgumentParser(description='Generate a PythonQt decorator class file from a list of method signatures.')
-    parser.add_argument('--input-file', '-i', required=True, help='A text file with method signatures, one per line.')
+    parser.add_argument('--input-file', '-i', nargs='+', required=True, help='A text file with method signatures, one per line.')
     parser.add_argument('--output-file', '-o', required=True, help='The output filename.  The file extension should be .h')
     parser.add_argument('--module-name', default='', help='The Python module name under which Qt classes will be registered.')
     parser.add_argument('--export-symbol', default='', help='An export symbol that will be added to the class declaration.')

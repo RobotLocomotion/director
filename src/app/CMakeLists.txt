@@ -27,6 +27,10 @@ include_directories(${LCM_INCLUDE_DIRS})
 
 set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
+set(wrap_files
+  wrapped_methods.txt
+  )
+
 qt4_wrap_cpp(moc_srcs
   ${decorator_file}
   ddBotImageQueue.h
@@ -125,8 +129,8 @@ install(TARGETS drake-designer ddConsoleApp ddApp
 
 add_custom_command(OUTPUT ${decorator_file}
   COMMAND ${PYTHON_EXECUTABLE} WrapPythonQt.py
-  -i wrapped_methods.txt -o "${decorator_file}"
+  -i ${wrap_files} -o "${decorator_file}"
   --class-prefixes vtk dd QVTK --qt-class-prefixes dd QVTK
   --module-name dd
-  DEPENDS wrapped_methods.txt WrapPythonQt.py
+  DEPENDS ${wrap_files} WrapPythonQt.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
