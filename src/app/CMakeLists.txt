@@ -1,17 +1,16 @@
 setup_qt4()
-use_cpp11()
+
+if(USE_DRC)
+  use_cpp11()
+endif()
 
 find_package(PythonLibs REQUIRED)
 find_package(PythonInterp REQUIRED)
 find_package(PythonQt REQUIRED)
 find_package(CTKPythonConsole REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(Drake REQUIRED)
-find_package(Eigen REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system thread filesystem regex)
 find_package(VTK REQUIRED)
 find_package(QtPropertyBrowser REQUIRED)
-find_package(LCM REQUIRED)
 
 include(${VTK_USE_FILE})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -21,9 +20,6 @@ include_directories(${QTPROPERTYBROWSER_INCLUDE_DIRS})
 include_directories(${CTK_PYTHONCONSOLE_INCLUDE_DIRS})
 include_directories(${PYTHONQT_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIRS})
-include_directories(${EIGEN_INCLUDE_DIRS})
-include_directories(${DRAKE_INCLUDE_DIRS})
-include_directories(${LCM_INCLUDE_DIRS})
 
 set(decorator_file ${CMAKE_CURRENT_BINARY_DIR}/ddPythonQtDecorators.h)
 
@@ -33,10 +29,6 @@ set(wrap_files
 
 qt4_wrap_cpp(moc_srcs
   ${decorator_file}
-  ddBotImageQueue.h
-  ddDrakeModel.h
-  ddLCMSubscriber.h
-  ddLCMThread.h
   ddLumberSelection.h
   ddGLWidgetView.h
   ddGroupBoxHider.h
@@ -66,15 +58,13 @@ qt4_add_resources(resource_srcs
   images/resources.qrc
   )
 
+
 set(srcs
   ${moc_srcs}
   ${ui_srcs}
   ${resource_srcs}
 
-  ddBotImageQueue.cpp
-  ddDrakeModel.cpp
   ddLumberSelection.cpp
-  ddLCMThread.cpp
   ddGLWidgetView.cpp
   ddMacrosManager.cpp
   ddMainWindow.cpp
@@ -94,6 +84,7 @@ set(srcs
   vtkTDxInteractorStyleCallback.cxx
   )
 
+
 set(VTK_LIBRARIES
   QVTK
   vtkPythonCore
@@ -106,15 +97,110 @@ set(deps
   ${QTPROPERTYBROWSER_LIBRARY}
   ${OPENGL_LIBRARIES}
   ${VTK_LIBRARIES}
-  ${DRAKE_LIBRARIES}
-  ${Boost_LIBRARIES}
-  ${LCM_LIBRARIES}
   )
+
+set(pkg_deps)
+
+
+
+
+#####
+
+if (USE_DRAKE)
+
+  find_package(Drake REQUIRED)
+  find_package(Boost REQUIRED COMPONENTS system thread filesystem regex)
+  include_directories(${DRAKE_INCLUDE_DIRS})
+
+  set(moc_srcs)
+  qt4_wrap_cpp(moc_srcs
+    ddDrakeModel.h
+  )
+
+  list(APPEND srcs
+    ${moc_srcs}
+    ddDrakeModel.cpp
+  )
+
+  list(APPEND wrap_files
+    wrapped_methods_drake.txt
+  )
+
+  list(APPEND deps
+    ${DRAKE_LIBRARIES}
+    ${Boost_LIBRARIES}
+  )
+
+endif()
+
+if (USE_LCM)
+
+  find_package(LCM REQUIRED)
+  include_directories(${LCM_INCLUDE_DIRS})
+
+  set(moc_srcs)
+  qt4_wrap_cpp(moc_srcs
+    ddLCMSubscriber.h
+    ddLCMThread.h
+  )
+
+  list(APPEND srcs
+    ${moc_srcs}
+    ddLCMThread.cpp
+  )
+
+  list(APPEND deps
+    ${LCM_LIBRARIES}
+  )
+
+  list(APPEND wrap_files
+    wrapped_methods_lcm.txt
+  )
+
+endif()
+
+if (USE_DRC)
+
+  find_package(Eigen REQUIRED)
+  include_directories(${EIGEN_INCLUDE_DIRS})
+
+  find_package(LibBot REQUIRED)
+  include_directories(${LIBBOT_INCLUDE_DIRS})
+
+  set(moc_srcs)
+  qt4_wrap_cpp(moc_srcs
+    ddBotImageQueue.h
+  )
+
+  list(APPEND srcs
+    ${moc_srcs}
+    ddBotImageQueue.cpp
+  )
+
+  list(APPEND wrap_files
+    wrapped_methods_drc.txt
+  )
+
+  list (APPEND deps
+    ${LIBBOT_LIBRARIES}
+  )
+
+  list(APPEND pkg_deps
+    image-utils
+  )
+
+endif()
+
+#####
+
 
 
 add_library(ddApp ${srcs})
 target_link_libraries(ddApp ${deps})
-use_pkg(ddApp ddApp_pkg_dep bot2-core bot2-frames bot2-param-client image-utils)
+
+if(pkg_deps)
+  use_pkg(ddApp ddApp_pkg_dep ${pkg_deps})
+endif()
 
 add_executable(drake-designer main.cpp)
 target_link_libraries(drake-designer ddApp)
