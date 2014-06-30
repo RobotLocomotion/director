@@ -445,6 +445,9 @@ def getCurrentRevolutionData():
 def getDisparityPointCloud(decimation=4, removeOutliers=True):
     p = cameraview.getStereoPointCloud(decimation)
 
+    if (p is None):
+      return p
+
     if (removeOutliers is True):# remove outliers
         p = labelOutliers(p)
         p = thresholdPoints(p, 'is_outlier', [0.0, 0.0])
