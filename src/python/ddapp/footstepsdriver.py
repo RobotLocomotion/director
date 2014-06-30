@@ -29,13 +29,13 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Nominal Step Width': 0.26,
                                'Behavior': 0,
                                'Drake Swing Speed': 0.2,
                                'Drake Min Hold Time': 2.0},
-                       'drake': {'Nominal Step Width': 0.28,
-                                 'Nominal Forward Step': 0.25,
-                                 'Max Forward Step': 0.30,
+                       'drake': {'Nominal Step Width': 0.30,
+                                 'Nominal Forward Step': 0.19,
+                                 'Max Forward Step': 0.28,
                                  'Max Step Width': 0.32,
                                  'Behavior': 2,
-                                 'Drake Swing Speed': 0.2,
-                                 'Drake Min Hold Time': 2.0}}
+                                 'Drake Swing Speed': 0.1,
+                                 'Drake Min Hold Time': 3.0}}
 
 import ddapp.applogic as app
 
