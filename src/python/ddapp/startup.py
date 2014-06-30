@@ -62,6 +62,7 @@ from ddapp.utime import getUtime
 from ddapp.shallowCopy import shallowCopy
 
 from ddapp import segmentationroutines
+from ddapp import trackers
 
 import drc as lcmdrc
 

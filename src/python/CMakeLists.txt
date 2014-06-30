@@ -69,6 +69,7 @@ set(python_files
   ddapp/terrainitem.py
   ddapp/timercallback.py
   ddapp/transformUtils.py
+  ddapp/trackers.py
   ddapp/utime.py
   ddapp/valvedemo.py
   ddapp/viewbehaviors.py
