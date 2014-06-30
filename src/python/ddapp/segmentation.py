@@ -2214,6 +2214,9 @@ def segmentDrillAuto(point1):
 
 
 def findAndFitDrillBarrel(polyData=None):
+    ''' Find the horizontal surfaces
+    on the horizontal surfaces, find all the drills
+    '''
 
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = polyData or inputObj.polyData
@@ -2257,6 +2260,7 @@ def findAndFitDrillBarrel(polyData=None):
 
     #print 'robot origin:', robotOrigin
     #print 'robot forward:', robotForward
+    centroid =[]
 
     for clusterId, cluster in enumerate(clusters):
         clusterObj = updatePolyData(cluster, 'surface cluster %d' % clusterId, color=[1,1,0], parent=getDebugFolder(), visible=False)
@@ -2287,6 +2291,11 @@ def findAndFitDrillBarrel(polyData=None):
     if not fitResults:
         return
 
+    sortFittedDrills(fitResults, robotOrigin, robotForward)
+
+    return centroid
+
+def sortFittedDrills(fitResults, robotOrigin, robotForward):
 
     angleToFitResults = []
 
@@ -2315,7 +2324,7 @@ def findAndFitDrillBarrel(polyData=None):
             drill.actor.SetUserTransform(drillFrame.transform)
 
             drill.setSolidColor([0, 1, 0])
-            cluster.setProperty('Visible', True)
+            #cluster.setProperty('Visible', True)
 
         else:
 
