@@ -26,6 +26,15 @@ include(cmake/dd-macros.cmake)
 include(cmake/dd-testing.cmake)
 include(cmake/dd-version.cmake)
 
+# dependency options
+option(USE_PORTMIDI "Build drake-designer with portmidi dependency." ON)
+option(USE_LIBBOT "Build drake-designer with libbot dependency." ON)
+option(USE_DRAKE "Build drake-designer with drake dependency." ON)
+option(USE_DRC "Build drake-designer with drc dependency." ON)
+option(USE_DRC_MAPS "Build drake-designer with drc maps dependency." ON)
+option(USE_LCM "Build drake-designer with lcm dependency." ON)
+option(USE_LCM_GL "Build drake-designer with bot lcm gl dependency." ON)
+
 # build project
 add_subdirectory(src)
 
