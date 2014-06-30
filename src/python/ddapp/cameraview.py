@@ -522,6 +522,10 @@ def getStereoPointCloud(decimation=4):
 
     utime = q.getCurrentImageTime('CAMERA_LEFT')
 
+    if (utime == 0):
+        # print "No Stereo Depth Available"
+        return None
+
     p = vtk.vtkPolyData()
     q.getPointCloudFromImages('CAMERA', p, decimation)
     cameraToLocal = vtk.vtkTransform()
