@@ -63,9 +63,9 @@ class Geometry(object):
         return filterUtils.transformPolyData(filterUtils.computeNormals(polyData), t)
 
 
-    def __init__(self, geom, parentTransform):
+    def __init__(self, name, geom, parentTransform):
         polyData = self.createPolyData(geom)
-        self.polyDataItem = vis.PolyDataItem('geometry_data', polyData, view=None)
+        self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
         self.polyDataItem.setProperty('Color', QtGui.QColor(geom.color[0]*255, geom.color[1]*255, geom.color[2]*255))
         self.polyDataItem.setProperty('Alpha', geom.color[3])
         self.polyDataItem.actor.SetUserTransform(parentTransform)
@@ -75,7 +75,7 @@ class Link(object):
 
     def __init__(self, link):
         self.transform = vtk.vtkTransform()
-        self.geometry = [Geometry(g, self.transform) for g in link.geom]
+        self.geometry = [Geometry(link.name + ' geometry data', g, self.transform) for g in link.geom]
 
     def setTransform(self, pos, quat):
         trans = transformUtils.transformFromPose(pos, quat)
@@ -101,7 +101,7 @@ class DrakeVisualizer(object):
         self.sendStatusMessage('successfully loaded robot')
 
     def getRootFolder(self):
-        return om.getOrCreateContainer('drake viewer')
+        return om.getOrCreateContainer('drake viewer', parentObj=om.findObjectByName('scene'))
 
     def getRobotFolder(self, robotNum):
         return om.getOrCreateContainer('robot %d' % robotNum, parentObj=self.getRootFolder())
