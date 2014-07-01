@@ -117,9 +117,9 @@ class DrakeVisualizer(object):
             om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
 
             if linkName == 'world':
-                geom.polyDataItem.actor.SetUseBounds(False)
+                #geom.polyDataItem.actor.SetUseBounds(False)
+                #geom.polyDataItem.actor.GetProperty().LightingOff()
                 geom.polyDataItem.actor.GetProperty().SetSpecular(0.0)
-                geom.polyDataItem.actor.GetProperty().LightingOff()
             else:
                 geom.polyDataItem.actor.GetProperty().SetSpecular(0.9)
                 geom.polyDataItem.actor.GetProperty().SetSpecularPower(20)
