@@ -172,6 +172,7 @@ def addToolbarMacro(name, func):
 def addShortcut(widget, keySequence, func):
     shortcut = QtGui.QShortcut(QtGui.QKeySequence(keySequence), widget)
     shortcut.connect('activated()', func)
+    shortcut.connect('activatedAmbiguously()', func)
     return shortcut
 
 
