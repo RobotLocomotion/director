@@ -98,6 +98,14 @@ class ContainerItem(ObjectModelItem):
 
     def __init__(self, name):
         ObjectModelItem.__init__(self, name, Icons.Directory)
+        self.addProperty('Visible', True)
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+        if propertyName == 'Visible':
+            visible = self.getProperty(propertyName)
+            for child in self.children():
+                child.setProperty(propertyName, visible)
 
 
 class ObjectModelTree(object):
