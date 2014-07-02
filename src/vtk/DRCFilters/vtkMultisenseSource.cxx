@@ -170,7 +170,7 @@ public:
 
     if (useBotParamFromFile)
       {
-      std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_02.cfg";
+      std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_02_mit.cfg";
       botparam_ = bot_param_new_from_file(configFile.c_str());
       }
     else

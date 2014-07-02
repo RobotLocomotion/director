@@ -1,7 +1,5 @@
 import os
 from ddapp import lcmUtils
-from ddapp import jointcontrol
-from ddapp import roboturdf
 
 import ddapp.objectmodel as om
 import ddapp.applogic as app
@@ -65,9 +63,9 @@ class Geometry(object):
         return filterUtils.transformPolyData(filterUtils.computeNormals(polyData), t)
 
 
-    def __init__(self, geom, parentTransform):
+    def __init__(self, name, geom, parentTransform):
         polyData = self.createPolyData(geom)
-        self.polyDataItem = vis.PolyDataItem('geometry_data', polyData, view=None)
+        self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
         self.polyDataItem.setProperty('Color', QtGui.QColor(geom.color[0]*255, geom.color[1]*255, geom.color[2]*255))
         self.polyDataItem.setProperty('Alpha', geom.color[3])
         self.polyDataItem.actor.SetUserTransform(parentTransform)
@@ -77,7 +75,7 @@ class Link(object):
 
     def __init__(self, link):
         self.transform = vtk.vtkTransform()
-        self.geometry = [Geometry(g, self.transform) for g in link.geom]
+        self.geometry = [Geometry(link.name + ' geometry data', g, self.transform) for g in link.geom]
 
     def setTransform(self, pos, quat):
         trans = transformUtils.transformFromPose(pos, quat)
@@ -103,7 +101,7 @@ class DrakeVisualizer(object):
         self.sendStatusMessage('successfully loaded robot')
 
     def getRootFolder(self):
-        return om.getOrCreateContainer('drake viewer')
+        return om.getOrCreateContainer('drake viewer', parentObj=om.findObjectByName('scene'))
 
     def getRobotFolder(self, robotNum):
         return om.getOrCreateContainer('robot %d' % robotNum, parentObj=self.getRootFolder())
@@ -119,9 +117,9 @@ class DrakeVisualizer(object):
             om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
 
             if linkName == 'world':
-                geom.polyDataItem.actor.SetUseBounds(False)
+                #geom.polyDataItem.actor.SetUseBounds(False)
+                #geom.polyDataItem.actor.GetProperty().LightingOff()
                 geom.polyDataItem.actor.GetProperty().SetSpecular(0.0)
-                geom.polyDataItem.actor.GetProperty().LightingOff()
             else:
                 geom.polyDataItem.actor.GetProperty().SetSpecular(0.9)
                 geom.polyDataItem.actor.GetProperty().SetSpecularPower(20)
@@ -154,52 +152,3 @@ class DrakeVisualizer(object):
             link.setTransform(pos, quat)
 
         self.view.render()
-
-
-class DrakeVisualizerOld(object):
-
-    def __init__(self, view):
-        lcmUtils.addSubscriber('DRAKE_VIEWER_COMMAND', lcmdrake.lcmt_viewer_command, self.onViewerCommand)
-        lcmUtils.addSubscriber('DRAKE_VIEWER_STATE', lcmdrake.lcmt_robot_state, self.onViewerState)
-
-        self.view = view
-        self.models = []
-        self.jointControllers = []
-        self.filenames = []
-
-    def onViewerCommand(self, msg):
-        if msg.command_type == lcmdrake.lcmt_viewer_command.LOAD_URDF:
-            msg.command_type = msg.STATUS
-            lcmUtils.publish('DRAKE_VIEWER_STATUS', msg)
-            urdfFile = msg.command_data
-            for model in self.models:
-                if model.model.filename() == urdfFile:
-                    return
-            self.loadURDF(urdfFile)
-
-    def addRobotModelItem(self, model):
-        obj = roboturdf.RobotModelItem(model)
-        om.addToObjectModel(obj, om.getOrCreateContainer('Drake Viewer Models'))
-        obj.setProperty('Color', QtGui.QColor(255, 180, 0))
-        obj.addToView(self.view)
-        return obj
-
-    def loadURDF(self, filename):
-        model = roboturdf.loadRobotModelFromFile(filename)
-        jointController = jointcontrol.JointController([model])
-        jointController.setZeroPose()
-        obj = self.addRobotModelItem(model)
-        self.models.append(obj)
-        self.jointControllers.append(jointController)
-
-    def onViewerState(self, msg):
-
-          if not self.models:
-              return
-
-          if self.models[0] not in om.getObjects():
-              self.models[0] = self.addRobotModelItem(self.models[0].model)
-
-          assert msg.num_robots == 1
-          pose = msg.joint_position
-          self.jointControllers[0].setPose('drake_viewer_pose', pose)
