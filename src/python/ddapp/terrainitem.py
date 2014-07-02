@@ -14,9 +14,9 @@ from PythonQt import QtGui
 class TerrainRegionItem(vis.PolyDataItem):
     def __init__(self, name, view, seed_pose, terrain_segmentation):
 
-        vis.PolyDataItem.__init__(self, name, None, view)
-        self.transform = seed_pose
         d = DebugData()
+        vis.PolyDataItem.__init__(self, name, d.getPolyData(), view)
+        self.transform = seed_pose
         d.addSphere((0,0,0), radius=0.02)
         self.seedObj = vis.showPolyData(d.getPolyData(), 'region seed', color=[.8,.8,.1], parent=om.getOrCreateContainer('IRIS region seeds'))
         self.seedObj.actor.SetUserTransform(self.transform)
