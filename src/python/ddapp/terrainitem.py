@@ -57,7 +57,7 @@ class TerrainRegionItem(vis.PolyDataItem):
                     p2 = np.hstack((xy_verts[:,j+1], z))
                 else:
                     p2 = np.hstack((xy_verts[:,0], z))
-                debug.addLine(p1, p2, color=[.8,.8,.2])
+                debug.addLine(p1, p2, color=[.8,.8,.2], radius=0.01)
             self.setPolyData(debug.getPolyData())
             self.safe_region = safe_region
         except QhullError:
