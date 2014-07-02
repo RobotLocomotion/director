@@ -319,19 +319,13 @@ def showRightClickMenu(displayPoint, view):
 
     def onSegmentTableScene():
         data = segmentation.segmentTableScene(pointCloudObj.polyData, pickedPoint)
-        tableObj = vis.showPolyData(data.table.mesh, 'table', color=[0,1,0], parent='segmentation')
-        tableFrame = vis.showFrame(data.table.frame, 'table frame', scale=0.2, visible=False, parent=tableObj)
-        tableBox = vis.showPolyData(data.table.box, 'table box', color=[0,1,0], parent=tableObj, alpha=0.6)
-        tablePoints = vis.showPolyData(data.table.points, 'table points', color=[0,1,0], parent=tableObj, visible=False)
-        for obj in [tableObj, tableBox, tablePoints]:
-            obj.actor.SetUserTransform(data.table.frame)
-
-        vis.showClusterObjects(data.clusters, parent='segmentation')
+        vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
 
 
     def onLocalPlaneFit():
         result = segmentation.applyLocalPlaneFit(pointCloudObj.polyData, pickedPoint, searchRadius=0.1, searchRadiusEnd=0.2)
-        vis.showPolyData(result, 'local plane fit', color=[0,1,0])
+        obj = vis.showPolyData(result, 'local plane fit', color=[0,1,0])
+        obj.setProperty('Point Size', 7)
 
 
     def onDiskGlyph():

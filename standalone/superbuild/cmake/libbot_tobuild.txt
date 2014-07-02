@@ -1,0 +1,10 @@
+# list of subdirectories to build, one one each line.  Empty lines
+# and lines starting with '#' are ignored
+
+bot2-core
+#bot2-vis
+#bot2-procman
+#bot2-lcmgl
+#bot2-lcm-utils
+bot2-param
+bot2-frames

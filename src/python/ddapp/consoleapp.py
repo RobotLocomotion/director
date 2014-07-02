@@ -62,7 +62,7 @@ class ConsoleApp(object):
 
         applogic.setCameraTerrainModeEnabled(view, True)
         if useGrid:
-            vis.showGrid(view)
+            vis.showGrid(view, parent='scene')
 
         applogic.resetCamera(viewDirection=[-1,-1,-0.3], view=view)
         viewBehaviors = viewbehaviors.ViewBehaviors(view)

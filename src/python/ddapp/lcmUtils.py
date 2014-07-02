@@ -30,10 +30,7 @@ class GlobalLCM(object):
           cls._lcmThread.delete()
           cls._lcmThread = None
 
-# Produces utime equivalent to libbot          
-def timestamp_now ():
-    return int (time.time () * 1000000)          
-          
+
 def getGlobalLCM():
     return GlobalLCM.get()
 
@@ -185,16 +182,19 @@ class MessageCollector(object):
         self.channel = channel
         self.messageClass = messageClass
         self.subscriber = None
+        self.start()
 
     def __del__(self):
         self.stop()
 
     def start(self):
-        self.subscriber = addSubscriber(self.channel, messageClass=self.messageClass, callback=self.onMessage)
+        if not self.subscriber:
+            self.subscriber = addSubscriber(self.channel, messageClass=self.messageClass, callback=self.onMessage)
 
     def stop(self):
         if self.subscriber:
             removeSubscriber(self.subscriber)
+            self.subscriber = None
 
     def clear(self):
         del self.messages[:]

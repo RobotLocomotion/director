@@ -39,13 +39,23 @@ class PolyDataItem(om.ObjectModelItem):
         self.mapper.SetInput(self.polyData)
         self.actor = vtk.vtkActor()
         self.actor.SetMapper(self.mapper)
+        self.scalarBarWidget = None
 
+        self.addProperty('Color By', 0, attributes=om.PropertyAttributes(enumNames=['Solid Color']))
         self.addProperty('Visible', True)
-        self.addProperty('Point Size', self.actor.GetProperty().GetPointSize(),
-                         attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
         self.addProperty('Alpha', 1.0,
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
+        self.addProperty('Point Size', self.actor.GetProperty().GetPointSize(),
+                         attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
+
+        self.addProperty('Surface Mode', 0,
+                         attributes=om.PropertyAttributes(enumNames=['Surface', 'Wireframe', 'Surface with edges', 'Points'], hidden=True))
+
         self.addProperty('Color', QtGui.QColor(255,255,255))
+        self.addProperty('Show Scalar Bar', False)
+
+        self._updateColorByProperty()
+        self._updateSurfaceProperty()
 
         if view is not None:
             self.addToView(view)
@@ -64,6 +74,10 @@ class PolyDataItem(om.ObjectModelItem):
         self.polyData = polyData
         self.mapper.SetInput(polyData)
         self.colorBy(arrayName, lut=self.mapper.GetLookupTable())
+
+        self._updateSurfaceProperty()
+        self._updateColorByProperty()
+
 
         if self.getProperty('Visible'):
             self._renderAllViews()
@@ -84,6 +98,10 @@ class PolyDataItem(om.ObjectModelItem):
         self.setProperty('Color', QtGui.QColor(*color))
         self.colorBy(None)
 
+
+    def _isPointCloud(self):
+        return self.polyData.GetNumberOfPoints() and (self.polyData.GetNumberOfCells() == self.polyData.GetNumberOfVerts())
+
     def colorBy(self, arrayName, scalarRange=None, lut=None):
 
         if not arrayName:
@@ -100,23 +118,14 @@ class PolyDataItem(om.ObjectModelItem):
 
         self.polyData.GetPointData().SetActiveScalars(arrayName)
 
-
         if not lut:
-            if scalarRange is None:
-                scalarRange = array.GetRange()
-
-            lut = vtk.vtkLookupTable()
-            lut.SetNumberOfColors(256)
-            lut.SetHueRange(0.667, 0)
-            lut.SetRange(scalarRange)
-            lut.Build()
-
+            lut = self._getDefaultColorMap(array, scalarRange)
 
         #self.mapper.SetColorModeToMapScalars()
         self.mapper.ScalarVisibilityOn()
         self.mapper.SetUseLookupTableScalarRange(True)
         self.mapper.SetLookupTable(lut)
-        self.mapper.InterpolateScalarsBeforeMappingOff()
+        self.mapper.SetInterpolateScalarsBeforeMapping(not self._isPointCloud())
 
         if self.getProperty('Visible'):
             self._renderAllViews()
@@ -142,12 +151,107 @@ class PolyDataItem(om.ObjectModelItem):
             self.actor.GetProperty().SetOpacity(self.getProperty(propertyName))
         elif propertyName == 'Visible':
             self.actor.SetVisibility(self.getProperty(propertyName))
+        elif propertyName == 'Surface Mode':
+            mode = self.properties.getPropertyEnumValue(propertyName)
+            prop =  self.actor.GetProperty()
+            if mode == 'Surface':
+                prop.SetRepresentationToSurface()
+                prop.EdgeVisibilityOff()
+            if mode == 'Wireframe':
+                prop.SetRepresentationToWireframe()
+            elif mode == 'Surface with edges':
+                prop.SetRepresentationToSurface()
+                prop.EdgeVisibilityOn()
+            elif mode == 'Points':
+                prop.SetRepresentationToPoints()
+
         elif propertyName == 'Color':
             color = self.getProperty(propertyName)
             color = [color.red()/255.0, color.green()/255.0, color.blue()/255.0]
             self.actor.GetProperty().SetColor(color)
 
+        elif propertyName == 'Color By':
+            self._updateColorBy()
+
+        elif propertyName == 'Show Scalar Bar':
+            self._updateScalarBar()
+
         self._renderAllViews()
+
+    def _updateSurfaceProperty(self):
+        enableSurfaceMode = self.polyData.GetNumberOfPolys() or self.polyData.GetNumberOfStrips()
+        self.properties.setPropertyAttribute('Surface Mode', 'hidden', not enableSurfaceMode)
+
+    def _updateColorBy(self):
+
+        arrayName = self.properties.getPropertyEnumValue('Color By')
+        if arrayName == 'Solid Color':
+            self.colorBy(None)
+
+        else:
+            scalarRange = None
+            self.colorBy(arrayName, scalarRange=scalarRange)
+
+        self._updateScalarBar()
+
+    def _updateColorByProperty(self):
+        enumNames = ['Solid Color'] + self.getArrayNames()
+        currentValue = self.properties.getProperty('Color By')
+        if currentValue >= len(enumNames):
+            self.setProperty('Color By', 0)
+        self.properties.setPropertyAttribute('Color By', 'enumNames', enumNames)
+
+    def _updateScalarBar(self):
+        barEnabled = self.getProperty('Show Scalar Bar')
+        colorBy = self.getProperty('Color By')
+        if barEnabled and colorBy != 0:
+            self._showScalarBar()
+        else:
+            self._hideScalarBar()
+
+    def _hideScalarBar(self):
+        if self.scalarBarWidget:
+            self.scalarBarWidget.Off()
+            self.scalarBarWidget.SetInteractor(None)
+            self.scalarBarWidget = None
+            self._renderAllViews()
+
+    def _showScalarBar(self):
+        title = self.properties.getPropertyEnumValue('Color By')
+        view = self.views[0]
+        lut = self.mapper.GetLookupTable()
+        self.scalarBarWidget = createScalarBarWidget(view, lut, title)
+        self._renderAllViews()
+
+    def _getDefaultColorMap(self, array, scalarRange=None, hueRange=None):
+
+        name = array.GetName()
+
+        blueToRed = (0.667, 0)
+        redtoBlue = (0, 0.667)
+
+        hueMap = {
+            'Axes' : redtoBlue
+        }
+
+        rangeMap = {
+            'intensity' : (400, 4000),
+            #'z' : (0.0, 2.0),
+            #'distance' : (0.5, 4.0),
+            'spindle_angle' : (0, 360),
+            'azimuth' : (-2.5, 2.5),
+            'scan_delta' : (0.0, 0.3)
+            }
+
+        scalarRange = scalarRange or rangeMap.get(name, array.GetRange())
+        hueRange = hueRange or hueMap.get(name, blueToRed)
+
+        lut = vtk.vtkLookupTable()
+        lut.SetNumberOfColors(256)
+        lut.SetHueRange(hueRange)
+        lut.SetRange(scalarRange)
+        lut.Build()
+        return lut
 
     def onRemoveFromObjectModel(self):
         self.removeFromAllViews()
@@ -156,6 +260,7 @@ class PolyDataItem(om.ObjectModelItem):
         for view in list(self.views):
             self.removeFromView(view)
         assert len(self.views) == 0
+        self._hideScalarBar()
 
     def removeFromView(self, view):
         assert view in self.views
@@ -300,10 +405,7 @@ class FrameItem(PolyDataItem):
 
         PolyDataItem.__init__(self, name, polyData, view)
 
-        self.colorBy('Axes')
-        lut = self.mapper.GetLookupTable()
-        lut.SetHueRange(0, 0.667)
-        lut.Build()
+        self.setProperty('Color By', 'Axes')
 
         self._blockSignals = False
 
@@ -598,8 +700,13 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
         color = [component * 255 for component in color]
         item.setProperty('Color', QtGui.QColor(*color))
         item.colorBy(None)
-    else:
-        item.colorBy(colorByName, colorByRange)
+    elif colorByName:
+        if colorByName in item.getArrayNames():
+            item.setProperty('Color By', colorByName)
+            item.colorBy(colorByName, colorByRange)
+        else:
+            print 'showPolyData(colorByName=%s): array not found' % colorByName
+
     return item
 
 
@@ -645,9 +752,9 @@ def showClusterObjects(clusters, parent):
     colors =  [ QtCore.Qt.red,
                 QtCore.Qt.blue,
                 QtCore.Qt.yellow,
+                QtCore.Qt.green,
                 QtCore.Qt.magenta,
                 QtCore.Qt.cyan,
-                QtCore.Qt.green,
                 QtCore.Qt.darkCyan,
                 QtCore.Qt.darkGreen,
                 QtCore.Qt.darkMagenta ]
@@ -660,11 +767,10 @@ def showClusterObjects(clusters, parent):
     for i, cluster in enumerate(clusters):
         name = 'object %d' % i
         color = colors[i % len(colors)]
-        clusterObj = showPolyData(cluster.mesh, name, color=color, parent=parent, alpha=0.25)
+        clusterObj = showPolyData(cluster.mesh, name, color=color, parent=parent, alpha=1.0)
         clusterFrame = showFrame(cluster.frame, name + ' frame', scale=0.2, visible=False, parent=clusterObj)
-        clusterObj.actor.GetProperty().EdgeVisibilityOn()
-        clusterBox = showPolyData(cluster.box, name + ' box', color=color, parent=clusterObj, alpha=0.6)
-        clusterPoints = showPolyData(cluster.points, name + ' points', color=color, parent=clusterObj, visible=True, alpha=1.0)
+        clusterBox = showPolyData(cluster.box, name + ' box', color=color, parent=clusterObj, alpha=0.6, visible=False)
+        clusterPoints = showPolyData(cluster.points, name + ' points', color=color, parent=clusterObj, visible=False, alpha=1.0)
         clusterPoints.setProperty('Point Size', 7)
         clusterPoints.colorBy(None)
         objects.append(clusterObj)

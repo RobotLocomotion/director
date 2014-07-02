@@ -204,11 +204,11 @@ class ScreenGrabberPanel(object):
 
         msg = 'Recorded %d frames.  For encoding, use this command line:\n\n\n' % self.frameCount
         msg += '    cd "%s"\n\n' % self.movieOutputDirectory()
-        msg += '    ffmpeg -r %d -i frame_%%07d.tiff \\\n' % self.captureRate()
+        msg += '    avconv -r %d -i frame_%%07d.tiff \\\n' % self.captureRate()
         msg += '           -vcodec libx264 \\\n'
         msg += '           -preset slow \\\n'
-        msg += '           -crf 22 \\\n'
-        msg += '           output.mkv\n\n\n'
+        msg += '           -crf 18 \\\n'
+        msg += '           output.mp4\n\n\n'
 
         app.showInfoMessage(msg, title='Recording Stopped')
 

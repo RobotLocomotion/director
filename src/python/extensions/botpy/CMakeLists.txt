@@ -1,10 +1,11 @@
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
+find_package(LibBot REQUIRED)
+include_directories(${LIBBOT_INCLUDE_DIRS})
 
 add_library(botpy SHARED botpy.c)
-target_link_libraries(botpy ${PYTHON_LIBRARIES})
-use_pkg(botpy botpy_pkgconfig_deps bot2-frames)
+target_link_libraries(botpy ${PYTHON_LIBRARIES} ${LIBBOT_LIBRARIES})
 
 
 if(WIN32 AND NOT CYGWIN)
