@@ -11,12 +11,12 @@ from irispy.cspace import rotmat
 from irispy.iris import inflate_region
 from irispy.utils import lcon_to_vert
 
-DEFAULT_FOOT_CONTACTS = np.array([[-0.1170, -0.1170, 0.1170, 0.1170],
+DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.13, 0.13],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 DEFAULT_BOUNDING_BOX_WIDTH = 1
-DEFAULT_CONTACT_SLICES = {(0.05, 0.35): np.array([[-0.1170, -0.1170, 0.1170, 0.1170],
+DEFAULT_CONTACT_SLICES = {(0.05, 0.35): np.array([[-0.13, -0.13, 0.13, 0.13],
                                           [0.0562, -0.0562, 0.0562, -0.0562]]),
-                          (0.35, .75): np.array([[-0.1170, -0.1170, 0.25, 0.25],
+                          (0.35, .75): np.array([[-0.13, -0.13, 0.25, 0.25],
                                           [.25, -.25, .25, -.25]]),
                           (0.75, 1.15): np.array([[-0.2, -0.2, 0.25, 0.25],
                                           [.4, -.4, .4, -.4]]),
