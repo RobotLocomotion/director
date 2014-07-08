@@ -41,6 +41,15 @@ class PolyDataItem(om.ObjectModelItem):
         self.actor.SetMapper(self.mapper)
         self.scalarBarWidget = None
 
+        self.rangeMap = {
+            'intensity' : (400, 4000),
+            #'z' : (0.0, 2.0),
+            #'distance' : (0.5, 4.0),
+            'spindle_angle' : (0, 360),
+            'azimuth' : (-2.5, 2.5),
+            'scan_delta' : (0.0, 0.3)
+            }
+
         self.addProperty('Color By', 0, attributes=om.PropertyAttributes(enumNames=['Solid Color']))
         self.addProperty('Visible', True)
         self.addProperty('Alpha', 1.0,
@@ -54,8 +63,8 @@ class PolyDataItem(om.ObjectModelItem):
         self.addProperty('Color', QtGui.QColor(255,255,255))
         self.addProperty('Show Scalar Bar', False)
 
-        self._updateColorByProperty()
         self._updateSurfaceProperty()
+        self._updateColorByProperty()
 
         if view is not None:
             self.addToView(view)
@@ -69,24 +78,16 @@ class PolyDataItem(om.ObjectModelItem):
 
     def setPolyData(self, polyData):
 
-        arrayName = self.getColorByArrayName()
-
         self.polyData = polyData
         self.mapper.SetInput(polyData)
-        self.colorBy(arrayName, lut=self.mapper.GetLookupTable())
 
         self._updateSurfaceProperty()
         self._updateColorByProperty()
-
+        self._updateColorBy(retainColorMap=True)
 
         if self.getProperty('Visible'):
             self._renderAllViews()
 
-    def getColorByArrayName(self):
-        if self.polyData:
-            scalars = self.polyData.GetPointData().GetScalars()
-            if scalars:
-                return scalars.GetName()
 
     def getArrayNames(self):
         pointData = self.polyData.GetPointData()
@@ -182,15 +183,14 @@ class PolyDataItem(om.ObjectModelItem):
         enableSurfaceMode = self.polyData.GetNumberOfPolys() or self.polyData.GetNumberOfStrips()
         self.properties.setPropertyAttribute('Surface Mode', 'hidden', not enableSurfaceMode)
 
-    def _updateColorBy(self):
+    def _updateColorBy(self, retainColorMap=False):
 
-        arrayName = self.properties.getPropertyEnumValue('Color By')
+        arrayName = self.getPropertyEnumValue('Color By')
         if arrayName == 'Solid Color':
             self.colorBy(None)
-
         else:
-            scalarRange = None
-            self.colorBy(arrayName, scalarRange=scalarRange)
+            lut = self.mapper.GetLookupTable() if retainColorMap else None
+            self.colorBy(arrayName, lut=lut)
 
         self._updateScalarBar()
 
@@ -234,16 +234,7 @@ class PolyDataItem(om.ObjectModelItem):
             'Axes' : redtoBlue
         }
 
-        rangeMap = {
-            'intensity' : (400, 4000),
-            #'z' : (0.0, 2.0),
-            #'distance' : (0.5, 4.0),
-            'spindle_angle' : (0, 360),
-            'azimuth' : (-2.5, 2.5),
-            'scan_delta' : (0.0, 0.3)
-            }
-
-        scalarRange = scalarRange or rangeMap.get(name, array.GetRange())
+        scalarRange = scalarRange or self.rangeMap.get(name, array.GetRange())
         hueRange = hueRange or hueMap.get(name, blueToRed)
 
         lut = vtk.vtkLookupTable()
@@ -696,16 +687,20 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     om.addToObjectModel(item, parentObj)
     item.setProperty('Visible', visible)
     item.setProperty('Alpha', alpha)
-    if color:
+
+    if colorByName and colorByName not in item.getArrayNames():
+        print 'showPolyData(colorByName=%s): array not found' % colorByName
+        colorByName = None
+
+    if colorByName:
+        item.setProperty('Color By', colorByName)
+        item.colorBy(colorByName, colorByRange)
+
+    else:
+        color = [1.0, 1.0, 1.0] if color is None else color
         color = [component * 255 for component in color]
         item.setProperty('Color', QtGui.QColor(*color))
         item.colorBy(None)
-    elif colorByName:
-        if colorByName in item.getArrayNames():
-            item.setProperty('Color By', colorByName)
-            item.colorBy(colorByName, colorByRange)
-        else:
-            print 'showPolyData(colorByName=%s): array not found' % colorByName
 
     return item
 

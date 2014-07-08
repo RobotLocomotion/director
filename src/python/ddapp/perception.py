@@ -18,23 +18,6 @@ import drc as lcmdrc
 import multisense as lcmmultisense
 import lcmUtils
 
-_view = None
-def getRenderView():
-    return _view
-
-
-_debugItem = None
-
-def updateDebugItem(polyData):
-    global _debugItem
-    if not _debugItem:
-        _debugItem = vis.PolyDataItem('spindle axis', polyData, getRenderView())
-        _debugItem.setProperty('Color', QtGui.QColor(0, 255, 0))
-        _debugItem.setProperty('Visible', False)
-        om.addToObjectModel(_debugItem, om.findObjectByName('sensors'))
-    else:
-        _debugItem.setPolyData(polyData)
-
 
 class MultisenseItem(om.ObjectModelItem):
 
@@ -101,13 +84,13 @@ class MultisenseItem(om.ObjectModelItem):
         elif propertyName == 'Show Scalar Bar':
             self._updateScalarBar()
 
-        _view.render()
+        self.model.polyDataObj._renderAllViews()
 
 
     def _updateColorBy(self):
 
         arrayMap = {
-          0 : None,
+          0 : 'Solid Color',
           1 : 'intensity',
           2 : 'z',
           3 : 'distance',
@@ -117,52 +100,61 @@ class MultisenseItem(om.ObjectModelItem):
           7 : 'scan_delta'
           }
 
-        rangeMap = {
-            1 : (400, 4000),
-            2 : (0.0, 2.0),
-            3 : (0.5, 4.0),
-            4 : (0, 360),
-            5 : (-2.5, 2.5),
-            7 : (0.0, 0.3)
-        }
-
         colorBy = self.getProperty('Color By')
-        scalarRange = rangeMap.get(colorBy)
         arrayName = arrayMap.get(colorBy)
 
-        if arrayName:
-            if arrayName == 'rgb' and arrayName not in self.model.polyDataObj.getArrayNames():
-                self.model.colorizeCallback()
-            self.model.polyDataObj.colorBy(arrayName, scalarRange=scalarRange)
-        else:
-            self.model.polyDataObj.colorBy(None)
-
+        if arrayName == 'rgb' and arrayName not in self.model.polyDataObj.getArrayNames():
+            self.model.colorizeCallback()
+            self.model.polyDataObj._updateColorByProperty()
+        self.model.polyDataObj.setProperty('Color By', arrayName)
         self._updateScalarBar()
 
     def hasDataSet(self, dataSet):
         return self.model.polyDataObj.hasDataSet(dataSet)
 
     def _updateScalarBar(self):
-        barEnabled = self.getProperty('Show Scalar Bar')
-        colorBy = self.getProperty('Color By')
-        if barEnabled and colorBy not in (0, 6):
-            self._showScalarBar()
-        else:
-            self._hideScalarBar()
+        self.model.polyDataObj.setProperty('Show Scalar Bar', self.getProperty('Show Scalar Bar'))
 
-    def _hideScalarBar(self):
-        if self.scalarBarWidget:
-            self.scalarBarWidget.Off()
-            self.scalarBarWidget.SetInteractor(None)
-            self.scalarBarWidget = None
-            self.model.polyDataObj._renderAllViews()
 
-    def _showScalarBar(self):
-        title = self.getPropertyAttribute('Color By', 'enumNames')[self.getProperty('Color By')]
-        view = self.model.polyDataObj.views[0]
-        lut = self.model.polyDataObj.mapper.GetLookupTable()
-        self.scalarBarWidget = vis.createScalarBarWidget(view, lut, title)
-        self.model.polyDataObj._renderAllViews()
+
+class SpindleAxisDebug(vis.PolyDataItem):
+
+    def __init__(self, frameProvider):
+        vis.PolyDataItem.__init__(self, 'spindle axis', vtk.vtkPolyData(), view=None)
+        self.frameProvider = frameProvider
+        self.timer = TimerCallback()
+        self.timer.callback = self.update
+        self.setProperty('Color', QtGui.QColor(0, 255, 0))
+        self.setProperty('Visible', False)
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        vis.PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Visible':
+            if self.getProperty(propertyName):
+                self.timer.start()
+            else:
+                self.timer.stop()
+
+    def onRemoveFromObjectModel(self):
+        vis.PolyDataItem.onRemoveFromObjectModel(self)
+        self.timer.stop()
+
+    def update(self):
+
+        t = self.frameProvider.getFrame('SCAN')
+
+        p1 = [0.0, 0.0, 0.0]
+        p2 = [2.0, 0.0, 0.0]
+
+        p1 = t.TransformPoint(p1)
+        p2 = t.TransformPoint(p2)
+
+        d = DebugData()
+        d.addSphere(p1, radius=0.01, color=[0,1,0])
+        d.addLine(p1, p2, color=[0,1,0])
+        self.setPolyData(d.getPolyData())
+
 
 
 class MultiSenseSource(TimerCallback):
@@ -213,17 +205,16 @@ class MultiSenseSource(TimerCallback):
 
     def showRevolution(self, revId):
 
-        colorByArray = self.polyDataObj.getColorByArrayName()
         self.reader.GetDataForRevolution(revId, self.revPolyData)
-
         self.displayedRevolution = revId
 
         if self.showRevolutionCallback:
             self.showRevolutionCallback()
-        if self.colorizeCallback and colorByArray == 'rgb':
+        if self.colorizeCallback and self.polyDataObj.getPropertyEnumValue('Color By') == 'rgb':
             self.colorizeCallback()
 
-        self.polyDataObj.colorBy(colorByArray, lut=self.polyDataObj.mapper.GetLookupTable())
+        self.polyDataObj._updateColorByProperty()
+        self.polyDataObj._updateColorBy()
 
         if self.polyDataObj.getProperty('Visible'):
             self.view.render()
@@ -301,26 +292,7 @@ class MultiSenseSource(TimerCallback):
         self.reader.GetTransform(name, relativeTo, self.reader.GetCurrentScanTime(), t)
         return t
 
-
-    def updateDebugItems(self):
-
-        t = self.getFrame('SCAN')
-
-        p1 = [0.0, 0.0, 0.0]
-        p2 = [2.0, 0.0, 0.0]
-
-        p1 = t.TransformPoint(p1)
-        p2 = t.TransformPoint(p2)
-
-        d = DebugData()
-        d.addSphere(p1, radius=0.01, color=[0,1,0])
-        d.addLine(p1, p2, color=[0,1,0])
-        updateDebugItem(d.getPolyData())
-
-
     def tick(self):
-
-        self.updateDebugItems()
         self.updateRevolution()
         self.updateScanLines()
 
@@ -464,10 +436,8 @@ class MapServerSource(TimerCallback):
 
 def init(view):
     global _multisenseItem
-    global _view
     global multisenseDriver
 
-    _view = view
 
     m = MultiSenseSource(view)
     m.start()
@@ -487,6 +457,12 @@ def init(view):
         mapServerSource.start()
     else:
         mapServerSource = None
+
+
+    spindleDebug = SpindleAxisDebug(multisenseDriver)
+    spindleDebug.addToView(view)
+    om.addToObjectModel(spindleDebug, sensorsFolder)
+
 
     return _multisenseItem, mapServerSource
 
