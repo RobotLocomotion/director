@@ -14,7 +14,7 @@ public:
   {
     mAlpha = 0.9;
     mTimeWindow = 1.0;
-    mAverageFPS = 1.0;
+    mAverageFPS = 0.0;
     mFramesThisWindow = 0;
     mTime.restart();
   }
