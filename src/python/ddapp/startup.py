@@ -106,6 +106,7 @@ useDrakeVisualizer = True
 useNavigationPanel = True
 useImageWidget = False
 useImageViewDemo = True
+useControllerRate = True
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -338,6 +339,32 @@ if useNavigationPanel:
     thispanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
     picker = PointPicker(view, callback=thispanel.pointPickerDemo, numberOfPoints=2)
     #picker.start()
+
+
+if useControllerRate:
+
+    class LCMMessageRateDisplay(object):
+        '''
+        Displays an LCM message frequency in a status bar widget or label widget
+        '''
+
+        def __init__(self, channel, messageTemplate, statusBar=None):
+
+            self.sub = lcmUtils.addSubscriber(channel)
+            self.label = QtGui.QLabel('')
+            statusBar.addPermanentWidget(self.label)
+
+            self.timer = TimerCallback(targetFps=1)
+            self.timer.callback = self.showRate
+            self.timer.start()
+
+        def __del__(self):
+            lcmUtils.removeSubscriber(self.sub)
+
+        def showRate(self):
+            self.label.text = 'Controller rate: %.2f hz' % self.sub.getMessageRate()
+
+    rateComputer = LCMMessageRateDisplay('ATLAS_COMMAND', 'Controller rate: %.2 hz', app.getMainWindow().statusBar())
 
 
 screengrabberpanel.init(view)
