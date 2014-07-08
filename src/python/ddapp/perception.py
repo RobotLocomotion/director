@@ -18,23 +18,6 @@ import drc as lcmdrc
 import multisense as lcmmultisense
 import lcmUtils
 
-_view = None
-def getRenderView():
-    return _view
-
-
-_debugItem = None
-
-def updateDebugItem(polyData):
-    global _debugItem
-    if not _debugItem:
-        _debugItem = vis.PolyDataItem('spindle axis', polyData, getRenderView())
-        _debugItem.setProperty('Color', QtGui.QColor(0, 255, 0))
-        _debugItem.setProperty('Visible', False)
-        om.addToObjectModel(_debugItem, om.findObjectByName('sensors'))
-    else:
-        _debugItem.setPolyData(polyData)
-
 
 class MultisenseItem(om.ObjectModelItem):
 
@@ -131,6 +114,46 @@ class MultisenseItem(om.ObjectModelItem):
 
     def _updateScalarBar(self):
         self.model.polyDataObj.setProperty('Show Scalar Bar', self.getProperty('Show Scalar Bar'))
+
+
+
+class SpindleAxisDebug(vis.PolyDataItem):
+
+    def __init__(self, frameProvider):
+        vis.PolyDataItem.__init__(self, 'spindle axis', vtk.vtkPolyData(), view=None)
+        self.frameProvider = frameProvider
+        self.timer = TimerCallback()
+        self.timer.callback = self.update
+        self.setProperty('Color', QtGui.QColor(0, 255, 0))
+        self.setProperty('Visible', False)
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        vis.PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Visible':
+            if self.getProperty(propertyName):
+                self.timer.start()
+            else:
+                self.timer.stop()
+
+    def onRemoveFromObjectModel(self):
+        vis.PolyDataItem.onRemoveFromObjectModel(self)
+        self.timer.stop()
+
+    def update(self):
+
+        t = self.frameProvider.getFrame('SCAN')
+
+        p1 = [0.0, 0.0, 0.0]
+        p2 = [2.0, 0.0, 0.0]
+
+        p1 = t.TransformPoint(p1)
+        p2 = t.TransformPoint(p2)
+
+        d = DebugData()
+        d.addSphere(p1, radius=0.01, color=[0,1,0])
+        d.addLine(p1, p2, color=[0,1,0])
+        self.setPolyData(d.getPolyData())
 
 
 
@@ -269,26 +292,7 @@ class MultiSenseSource(TimerCallback):
         self.reader.GetTransform(name, relativeTo, self.reader.GetCurrentScanTime(), t)
         return t
 
-
-    def updateDebugItems(self):
-
-        t = self.getFrame('SCAN')
-
-        p1 = [0.0, 0.0, 0.0]
-        p2 = [2.0, 0.0, 0.0]
-
-        p1 = t.TransformPoint(p1)
-        p2 = t.TransformPoint(p2)
-
-        d = DebugData()
-        d.addSphere(p1, radius=0.01, color=[0,1,0])
-        d.addLine(p1, p2, color=[0,1,0])
-        updateDebugItem(d.getPolyData())
-
-
     def tick(self):
-
-        self.updateDebugItems()
         self.updateRevolution()
         self.updateScanLines()
 
@@ -432,10 +436,8 @@ class MapServerSource(TimerCallback):
 
 def init(view):
     global _multisenseItem
-    global _view
     global multisenseDriver
 
-    _view = view
 
     m = MultiSenseSource(view)
     m.start()
@@ -455,6 +457,12 @@ def init(view):
         mapServerSource.start()
     else:
         mapServerSource = None
+
+
+    spindleDebug = SpindleAxisDebug(multisenseDriver)
+    spindleDebug.addToView(view)
+    om.addToObjectModel(spindleDebug, sensorsFolder)
+
 
     return _multisenseItem, mapServerSource
 
