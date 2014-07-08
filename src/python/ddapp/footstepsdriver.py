@@ -46,7 +46,11 @@ def loadFootMeshes():
         d = DebugData()
         d.addPolyData(ioUtils.readPolyData(os.path.join(meshDir, '%s_talus.stl' % foot), computeNormals=True))
         d.addPolyData(ioUtils.readPolyData(os.path.join(meshDir, '%s_foot.stl' % foot), computeNormals=True))
-        meshes.append(d.getPolyData())
+
+        t = vtk.vtkTransform()
+        t.Scale(0.98, 0.98, 0.98)
+        pd = filterUtils.transformPolyData(d.getPolyData(), t)
+        meshes.append(pd)
     return meshes
 
 
@@ -249,7 +253,8 @@ class FootstepsDriver(object):
                 else:
                     color = left_color
 
-            if footstep.infeasibility > 1e-6:
+            if False:
+            # if footstep.infeasibility > 1e-6:
                 d = DebugData()
                 # normal = np.array(allTransforms[i-1].GetPosition()) - np.array(footstepTransform.GetPosition())
                 # normal = normal / np.linalg.norm(normal)
@@ -404,7 +409,7 @@ class FootstepsDriver(object):
 
     def applyParams(self, msg):
         msg.params = lcmdrc.footstep_plan_params_t()
-        msg.params.max_num_steps = 20
+        msg.params.max_num_steps = 12
         msg.params.min_num_steps = 0
         msg.params.min_step_width = 0.20
         msg.params.nom_step_width = self.params.properties.nominal_step_width
