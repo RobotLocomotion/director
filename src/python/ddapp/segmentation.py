@@ -14,6 +14,7 @@ from ddapp import perception
 from ddapp import lcmUtils
 from ddapp import roboturdf
 from ddapp import transformUtils
+from ddapp import visualization as vis
 from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
 from ddapp import mapsregistrar
@@ -144,6 +145,56 @@ def lockToHandOff():
 
     handAffUpdater.stop()
     aff.handToAffT = None
+
+
+
+class DisparityPointCloudItem(vis.PolyDataItem):
+
+    def __init__(self, name, imageManager):
+        vis.PolyDataItem.__init__(self, name, vtk.vtkPolyData(), view=None)
+
+        self.addProperty('Decimation', 2, attributes=om.PropertyAttributes(enumNames=['1', '2', '4', '8', '16']))
+        self.addProperty('Remove outliers', False)
+
+        self.timer = TimerCallback()
+        self.timer.callback = self.update
+        self.lastUtime = 0
+        self.imageManager = imageManager
+        self.cameraName = 'CAMERA_LEFT'
+        self.setProperty('Visible', False)
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        vis.PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Visible':
+            if self.getProperty(propertyName):
+                self.timer.start()
+            else:
+                self.timer.stop()
+
+        elif propertyName in ('Decimation', 'Remove outliers'):
+            self.lastUtime = 0
+
+
+    def onRemoveFromObjectModel(self):
+        vis.PolyDataItem.onRemoveFromObjectModel(self)
+        self.timer.stop()
+
+    def update(self):
+
+        utime = self.imageManager.queue.getCurrentImageTime(self.cameraName)
+        if utime == self.lastUtime:
+            return
+
+        decimation = int(self.properties.getPropertyEnumValue('Decimation'))
+        removeOutliers = self.getProperty('Remove outliers')
+        polyData = getDisparityPointCloud(decimation, removeOutliers=removeOutliers)
+        self.setPolyData(polyData)
+
+        if not self.lastUtime:
+            self.setProperty('Color By', 'rgb_colors')
+
+        self.lastUtime = utime
 
 
 def getRandomColor():
@@ -443,16 +494,17 @@ def getCurrentRevolutionData():
 
 
 def getDisparityPointCloud(decimation=4, removeOutliers=True):
+
     p = cameraview.getStereoPointCloud(decimation)
+    if not p:
+      return None
 
-    if (p is None):
-      return p
-
-    if (removeOutliers is True):# remove outliers
+    if removeOutliers:
         p = labelOutliers(p)
         p = thresholdPoints(p, 'is_outlier', [0.0, 0.0])
 
     return p
+
 
 def getCurrentMapServerData():
     mapServer = om.findObjectByName('Map Server')

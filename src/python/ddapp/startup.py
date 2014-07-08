@@ -105,6 +105,7 @@ useLCMGL = True
 useLightColorScheme = False
 useDrakeVisualizer = True
 useNavigationPanel = True
+useFootContactVis = True
 useImageWidget = False
 useImageViewDemo = True
 useControllerRate = True
@@ -147,6 +148,8 @@ if useRobotState:
     roboturdf.startModelPublisherListener([(robotStateModel, robotStateJointController)])
     robotStateJointController.addLCMUpdater('EST_ROBOT_STATE')
 
+    segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
+
 
 if usePerception:
 
@@ -157,6 +160,10 @@ if usePerception:
 
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
     multisensepanel.init(perception.multisenseDriver)
+
+    disparityPointCloud = segmentation.DisparityPointCloudItem('stereo point cloud', cameraview.imageManager)
+    disparityPointCloud.addToView(view)
+    om.addToObjectModel(disparityPointCloud, parentObj=om.findObjectByName('sensors'))
 
 
 if useGrid:
@@ -286,8 +293,6 @@ if usePlanning:
     footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
     manipPlanner.manipPlanCallback = playbackPanel.setPlan
 
-    playbackPanel.visOnly = False
-
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, handFactory.getLoader('left'), handFactory.getLoader('right'), playbackPanel.setPlan)
 
@@ -368,33 +373,22 @@ if useControllerRate:
     rateComputer = LCMMessageRateDisplay('ATLAS_COMMAND', 'Controller rate: %.2 hz', app.getMainWindow().statusBar())
 
 
-screengrabberpanel.init(view)
-framevisualization.init(view)
+if useFootContactVis:
 
+    def onFootContact(msg):
 
-def getLinkFrame(linkName, model=None):
-    model = model or robotStateModel
-    return model.getLinkFrame(linkName)
+        leftInContact = msg.left_contact > 0.0
+        rightInContact = msg.right_contact > 0.0
 
+        contactColor = QtGui.QColor(255,0,0)
+        noContactColor = QtGui.QColor(180, 180, 180)
 
-def showLinkFrame(linkName, model=None):
-    frame = getLinkFrame(linkName, model)
-    if not frame:
-        raise Exception('Link not found: ' + linkName)
-    return vis.updateFrame(frame, linkName, parent='link frames')
+        robotStateModel.model.setLinkColor('l_foot', contactColor if leftInContact else noContactColor)
+        robotStateModel.model.setLinkColor('r_foot', contactColor if rightInContact else noContactColor)
 
+    footContactSub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContact)
+    footContactSub.setSpeedLimit(60)
 
-def sendEstRobotState(pose=None):
-    if pose is None:
-        pose = robotStateJointController.q
-    msg = robotstate.drakePoseToRobotState(pose)
-    lcmUtils.publish('EST_ROBOT_STATE', msg)
-
-
-app.setCameraTerrainModeEnabled(view, True)
-app.resetCamera(viewDirection=[-1,0,0], view=view)
-viewBehaviors = viewbehaviors.ViewBehaviors(view)
-viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
 
 if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
@@ -424,52 +418,32 @@ if useImageViewDemo:
     #showImageOverlay()
 
 
-def onFootContact(msg):
-
-    leftInContact = msg.left_contact > 0.0
-    rightInContact = msg.right_contact > 0.0
-
-    contactColor = QtGui.QColor(255,0,0)
-    noContactColor = QtGui.QColor(180, 180, 180)
-
-    robotStateModel.model.setLinkColor('l_foot', contactColor if leftInContact else noContactColor)
-    robotStateModel.model.setLinkColor('r_foot', contactColor if rightInContact else noContactColor)
-
-sub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContact)
-sub.setSpeedLimit(60)
+screengrabberpanel.init(view)
+framevisualization.init(view)
 
 
-segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
+def getLinkFrame(linkName, model=None):
+    model = model or robotStateModel
+    return model.getLinkFrame(linkName)
 
 
-# to be removed from startup.py: 
-from ddapp.filterUtils import *
+def showLinkFrame(linkName, model=None):
+    frame = getLinkFrame(linkName, model)
+    if not frame:
+        raise Exception('Link not found: ' + linkName)
+    return vis.updateFrame(frame, linkName, parent='link frames')
 
-lastDisparityUtime = 0
-def showDisparityPointCloud(decimation=4):
+
+def sendEstRobotState(pose=None):
+    if pose is None:
+        pose = robotStateJointController.q
+    msg = robotstate.drakePoseToRobotState(pose)
+    lcmUtils.publish('EST_ROBOT_STATE', msg)
 
 
-    q = cameraview.imageManager.queue
+app.setCameraTerrainModeEnabled(view, True)
+app.resetCamera(viewDirection=[-1,0,0], view=view)
+viewBehaviors = viewbehaviors.ViewBehaviors(view)
+viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
 
-    utime = q.getCurrentImageTime('CAMERA_LEFT')
-    global lastDisparityUtime
-    if utime == lastDisparityUtime:
-        return
 
-    lastDisparityUtime = utime
-    p = vtk.vtkPolyData()
-    q.getPointCloudFromImages('CAMERA', p, decimation)
-
-    cameraToLocal = vtk.vtkTransform()
-    q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
-    p = segmentation.transformPolyData(p, cameraToLocal)
-
-    # remove outliers
-    p = segmentationroutines.labelOutliers(p)
-    p = thresholdPoints(p, 'is_outlier', [0.0, 0.0])
-
-    vis.updatePolyData(p, 'disparity point cloud', colorByName='rgb_colors')
-
-disparityTimer = TimerCallback(targetFps=30)
-disparityTimer.callback = showDisparityPointCloud
-disparityTimer.start()

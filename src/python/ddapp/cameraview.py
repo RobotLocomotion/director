@@ -517,22 +517,26 @@ def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     views[channel] = view
     return view
 
+
 def getStereoPointCloud(decimation=4):
+
     q = imageManager.queue
+    imagesChannel = 'CAMERA'
+    cameraName = 'CAMERA_LEFT'
 
-    utime = q.getCurrentImageTime('CAMERA_LEFT')
-
-    if (utime == 0):
-        # print "No Stereo Depth Available"
+    utime = q.getCurrentImageTime(cameraName)
+    if utime == 0:
         return None
 
     p = vtk.vtkPolyData()
-    q.getPointCloudFromImages('CAMERA', p, decimation)
     cameraToLocal = vtk.vtkTransform()
-    q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
+
+    q.getPointCloudFromImages(imagesChannel, p, decimation)
+    q.getTransform(cameraName, 'local', utime, cameraToLocal)
     p = filterUtils.transformPolyData(p, cameraToLocal)
 
     return p
+
 
 def init():
 
