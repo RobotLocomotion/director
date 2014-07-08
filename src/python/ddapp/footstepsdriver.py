@@ -29,10 +29,10 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Nominal Step Width': 0.26,
                                'Behavior': 0,
                                'Drake Swing Speed': 0.2,
                                'Drake Min Hold Time': 2.0},
-                       'drake': {'Nominal Step Width': 0.30,
-                                 'Nominal Forward Step': 0.19,
-                                 'Max Forward Step': 0.28,
-                                 'Max Step Width': 0.32,
+                       'drake': {'Nominal Step Width': 0.28,
+                                 'Nominal Forward Step': 0.15,
+                                 'Max Forward Step': 0.3,
+                                 'Max Step Width': 0.35,
                                  'Behavior': 2,
                                  'Drake Swing Speed': 0.1,
                                  'Drake Min Hold Time': 3.0}}
@@ -173,7 +173,7 @@ class FootstepsDriver(object):
         default_step_params.constrain_full_foot_pose = True
         default_step_params.bdi_step_duration = 2.0
         default_step_params.bdi_sway_duration = 0.0
-        default_step_params.bdi_lift_height = 0.05
+        default_step_params.bdi_lift_height = 0.065
         default_step_params.bdi_toe_off = 1
         default_step_params.bdi_knee_nominal = 0.0
         default_step_params.bdi_max_foot_vel = 0.0
