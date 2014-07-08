@@ -42,6 +42,9 @@ class ObjectModelItem(object):
     def getProperty(self, propertyName):
         return self.properties.getProperty(propertyName)
 
+    def getPropertyEnumValue(self, propertyName):
+        return self.properties.getPropertyEnumValue(propertyName)
+
     def addProperty(self, propertyName, propertyValue, attributes=None):
         self.properties.addProperty(propertyName, propertyValue, attributes)
 
