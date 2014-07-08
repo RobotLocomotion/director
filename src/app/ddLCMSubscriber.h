@@ -14,6 +14,8 @@
 
 #include <lcm/lcm-cpp.hpp>
 
+#include "ddFPSCounter.h"
+
 namespace lcm
 {
   class LCM;
@@ -75,6 +77,11 @@ public:
     }
   }
 
+  double getMessageRate()
+  {
+    return this->mFPSCounter.averageFPS();
+  }
+
   QByteArray getNextMessage(int timeout)
   {
 
@@ -125,6 +132,8 @@ protected:
 
     QByteArray messageBytes = QByteArray((char*)rbuf->data, rbuf->data_size);
 
+    mFPSCounter.update();
+
     if (this->mEmitMessages)
     {
       if (this->mRequiredElapsedMilliseconds == 0 || mTimer.elapsed() > this->mRequiredElapsedMilliseconds)
@@ -158,6 +167,7 @@ protected:
   mutable QMutex mMutex;
   QWaitCondition mWaitCondition;
   QByteArray mLastMessage;
+  ddFPSCounter mFPSCounter;
   QTime mTimer;
   QString mChannel;
   lcm::Subscription* mSubscription;
