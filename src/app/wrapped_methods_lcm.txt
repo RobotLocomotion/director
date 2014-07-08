@@ -12,4 +12,5 @@ void ddLCMSubscriber::setCallbackEnabled(bool);
 bool ddLCMSubscriber::callbackIsEnabled() const;
 void ddLCMSubscriber::setSpeedLimit(double);
 QString ddLCMSubscriber::channel() const;
+double ddLCMSubscriber::getMessageRate();
 ddLCMSubscriber::~ddLCMSubscriber();
