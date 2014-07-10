@@ -6,8 +6,9 @@ from ddapp import lcmUtils
 # support lcmgl, but it can still be imported in a disabled state
 try:
     import bot_lcmgl
+    LCMGL_AVAILABLE = True
 except ImportError:
-    pass
+    LCMGL_AVAILABLE = False
 
 
 class LCMGLObject(om.ObjectModelItem):
@@ -63,6 +64,7 @@ managerInstance = None
 class LCMGLManager(object):
 
     def __init__(self, view):
+        assert LCMGL_AVAILABLE
         self.view = view
         self.subscriber = None
         self.enable()
