@@ -1,8 +1,8 @@
 
 
 option(USE_PCL "Build PCL." OFF)
-option(USE_LIBBOT "Build libbot." OFF)
-option(USE_LCM "Build lcm." OFF)
+option(USE_LIBBOT "Build libbot." ON)
+option(USE_LCM "Build lcm." ON)
 set(USE_EIGEN ${USE_PCL})
 
 
@@ -33,29 +33,6 @@ set(python_args
 
 
 ###############################################################################
-# libbot
-
-if(USE_LIBBOT)
-
-  ExternalProject_Add(libbot
-    GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
-    GIT_TAG 5561ed5
-    CONFIGURE_COMMAND ""
-    INSTALL_COMMAND ""
-    BUILD_COMMAND $(MAKE) BUILD_PREFIX=${install_prefix} BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    BUILD_IN_SOURCE 1
-    )
-
-  ExternalProject_Add_Step(libbot edit_libbot_tobuild
-    COMMAND ${CMAKE_COMMAND} -E copy ${Superbuild_SOURCE_DIR}/cmake/libbot_tobuild.txt ${source_prefix}/libbot/tobuild.txt
-    DEPENDEES download
-    DEPENDERS configure)
-
-  set(libbot_depends libbot)
-
-endif()
-
-###############################################################################
 # eigen
 
 if (USE_EIGEN)
@@ -80,6 +57,7 @@ set(eigen_args
 
 endif()
 
+
 ###############################################################################
 # lcm
 
@@ -93,6 +71,32 @@ if (USE_LCM)
   )
 
   set(lcm_depends lcm)
+
+endif()
+
+
+###############################################################################
+# libbot
+
+if(USE_LIBBOT)
+
+  if(NOT USE_LCM)
+    message(SEND_ERROR "Error, USE_LIBBOT is enabled but USE_LCM is OFF.")
+  endif()
+
+  ExternalProject_Add(libbot
+    GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
+    GIT_TAG 5561ed5
+    CONFIGURE_COMMAND ""
+    INSTALL_COMMAND ""
+    BUILD_COMMAND $(MAKE) BUILD_PREFIX=${install_prefix} BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    BUILD_IN_SOURCE 1
+
+    DEPENDS
+      lcm
+    )
+
+  set(libbot_depends libbot)
 
 endif()
 

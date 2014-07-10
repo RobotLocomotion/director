@@ -33,7 +33,6 @@ option(USE_DRAKE "Build drake-designer with drake dependency." ON)
 option(USE_DRC "Build drake-designer with drc dependency." ON)
 option(USE_DRC_MAPS "Build drake-designer with drc maps dependency." ON)
 option(USE_LCM "Build drake-designer with lcm dependency." ON)
-option(USE_LCM_GL "Build drake-designer with bot lcm gl dependency." ON)
 
 # build project
 add_subdirectory(src)

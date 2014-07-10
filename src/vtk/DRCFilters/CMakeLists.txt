@@ -68,9 +68,14 @@ if (USE_DRC_MAPS)
 endif()
 
 
-if(USE_LCM_GL)
+if(USE_LIBBOT)
+
+  find_package(LibBot REQUIRED)
+  include_directories(${LIBBOT_INCLUDE_DIRS})
+
   list(APPEND sources vtkLCMGLProp.cxx)
-  list(APPEND pkg_deps bot2-lcmgl-renderer)
+  list(APPEND deps ${LIBBOT_LIBRARIES})
+
 endif()
 
 set(library_name vtkDRCFilters)
