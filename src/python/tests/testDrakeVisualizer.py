@@ -1,9 +1,9 @@
 from ddapp.consoleapp import ConsoleApp
 from ddapp.screengrabberpanel import ScreenGrabberPanel
 from ddapp.drakevisualizer import DrakeVisualizer
+from ddapp.lcmgl import LCMGLManager
 from ddapp import objectmodel as om
 from ddapp import applogic
-
 from PythonQt import QtCore, QtGui
 
 
@@ -22,6 +22,7 @@ class DrakeVisualizerApp(ConsoleApp):
         self.mainWindow.setWindowIcon(QtGui.QIcon(':/images/drake_logo.png'))
 
         self.drakeVisualizer = DrakeVisualizer(self.view)
+        self.lcmglManager = LCMGLManager(self.view)
 
         self.screenGrabberPanel = ScreenGrabberPanel(self.view)
         self.screenGrabberDock = self.addWidgetToDock(self.screenGrabberPanel.widget, QtCore.Qt.RightDockWidgetArea)
