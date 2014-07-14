@@ -58,6 +58,7 @@ set(python_files
   ddapp/segmentationroutines.py
   ddapp/shallowCopy.py
   ddapp/simpletimer.py
+  ddapp/skybox.py
   ddapp/splinewidget.py
   ddapp/spreadsheet.py
   ddapp/startup.py
