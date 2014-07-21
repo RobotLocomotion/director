@@ -4,7 +4,7 @@ from shallowCopy import shallowCopy
 
 def readPolyData(filename, computeNormals=False):
 
-    ext = os.path.splitext(filename)[1]
+    ext = os.path.splitext(filename)[1].lower()
 
     readers = {
             '.vtp' : vtk.vtkXMLPolyDataReader,
@@ -31,7 +31,7 @@ def readPolyData(filename, computeNormals=False):
 
 def readImage(filename):
 
-    ext = os.path.splitext(filename)[1]
+    ext = os.path.splitext(filename)[1].lower()
 
     readers = {
             '.png' : vtk.vtkPNGReader,
@@ -50,7 +50,7 @@ def readImage(filename):
 
 def writePolyData(polyData, filename):
 
-    ext = os.path.splitext(filename)[1]
+    ext = os.path.splitext(filename)[1].lower()
 
     writers = {
             '.vtp' : vtk.vtkXMLPolyDataWriter,
@@ -68,7 +68,7 @@ def writePolyData(polyData, filename):
 
 def writeImage(image, filename):
 
-    ext = os.path.splitext(filename)[1]
+    ext = os.path.splitext(filename)[1].lower()
 
     writers = {
             '.png' : vtk.vtkPNGWriter,
