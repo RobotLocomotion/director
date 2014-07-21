@@ -238,7 +238,7 @@ class EndEffectorTeleopPanel(object):
         graspToWorld = self.getGoalFrame(linkName)
 
         p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
-        g = ikPlanner.createLinkGazeConstraint(startPose, linkName, gazeAxis=[0,1,0])
+        g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand)
 
         p.tspan = [1.0, 1.0]
         q.tspan = [1.0, 1.0]
@@ -274,7 +274,7 @@ class EndEffectorTeleopPanel(object):
         graspToWorld = self.getGoalFrame(linkName)
 
         p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
-        g = ikPlanner.createLinkGazeConstraint(startPose, linkName, gazeAxis=[0,1,0])
+        g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand)
 
         p.tspan = [1.0, 1.0]
         q.tspan = [1.0, 1.0]
