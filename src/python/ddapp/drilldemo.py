@@ -44,12 +44,30 @@ class DrillPlannerDemo(object):
         self.planPlaybackFunction = planPlaybackFunction
         self.showPoseFunction = showPoseFunction
         self.graspingHand = 'left'
-        self.planFromCurrentRobotState = False
+
+        self.planFromCurrentRobotState = True # False for operation, True for development
+
+        # For testing:
+        self.visOnly = True
+        self.useFootstepPlanner = False
+
+        # For autonomousExecute
+        #self.visOnly = False
+        #self.useFootstepPlanner = True
+
         self.userPromptEnabled = True
         self.walkingPlan = None
         self.preGraspPlan = None
         self.graspPlan = None
+        self.constraintSet = None
 
+        self.plans = []
+
+        self.drillWallXYZ = [0.45, 0.25, 1.1]
+        self.drillWallRPY = [0,0,60]
+
+    def addPlan(self, plan):
+        self.plans.append(plan)
 
     def computeGroundFrame(self, robotModel):
         '''
@@ -188,18 +206,16 @@ class DrillPlannerDemo(object):
 
 
     def computeFootstepPlan(self):
-
-        startPose = self.getEstimatedRobotStatePose()
+        startPose = self.getPlanningStartPose()
         goalFrame = self.graspStanceFrame.transform
-
         request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
 
 
     def computeWalkingPlan(self):
-
-        startPose = self.getEstimatedRobotStatePose()
+        startPose = self.getPlanningStartPose()
         self.walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
+        self.addPlan(self.walkingPlan)
 
 
     def computeEndPose(self):
@@ -250,17 +266,13 @@ class DrillPlannerDemo(object):
 
     def computeGraspPlan(self):
 
-        linkName = self.getEndEffectorLinkName()
-
-        if self.planFromCurrentRobotState:
-            startPose = self.getEstimatedRobotStatePose()
-        else:
-            planState = self.preGraspPlan.plan[-1]
-            startPose = robotstate.convertStateMessageToDrakePose(planState)
+        startPose = self.getPlanningStartPose()
 
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, lockTorso=True)
         endPose, info = constraintSet.runIk()
         self.graspPlan = constraintSet.runIkTraj()
+
+        self.addPlan(self.graspPlan)
 
     def commitFootstepPlan(self):
         self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
@@ -282,7 +294,8 @@ class DrillPlannerDemo(object):
 
     def computeStandPlan(self):
         startPose = self.getPlanningStartPose()
-        self.standPlan = self.ikPlanner.computeStandPlan(startPose)
+        self.standPlan = self.ikPlanner.computeNominalPlan(startPose)
+        self.addPlan(self.standPlan)
 
     def sendOpenHand(self):
         self.handDriver.sendOpen()
@@ -347,6 +360,118 @@ class DrillPlannerDemo(object):
         self.computeStanceFrame()
         self.computeDrillTipFrame()
 
+
+    ###############################################################################################
+    def spawnDrillWallAffordance(self):
+        rightAngleLocation = "bottom left"
+        trianglePose = transformUtils.frameFromPositionAndRPY(self.drillWallXYZ, self.drillWallRPY)
+        segmentation.createDrillWall(rightAngleLocation, trianglePose)
+
+
+    def moveDrillToHand(self):
+        hand = 'left'
+        rotation = 0
+        offset = .0
+        drillFlip = False
+        drillOffset = segmentation.getDrillInHandOffset(rotation, offset, drillFlip)
+
+        # create a drill and put it in the hand:
+        segmentation.moveDrillToHand(drillOffset, hand)
+
+        self.drillAffordance = om.findObjectByName('drill')
+        self.drillFrame = om.findObjectByName('drill frame')
+
+        #if self.drillAffordance:
+        #    self.drillAffordance.publish()
+
+
+    def addDrillButtonFrame(self):
+        buttonXYZ = [ self.drillAffordance.params['button_x'], self.drillAffordance.params['button_y'], self.drillAffordance.params['button_z'] ]
+        buttonNormal = np.array([ self.drillAffordance.params['button_nx'], self.drillAffordance.params['button_ny'], self.drillAffordance.params['button_nz'] ])
+
+        yaxis = -buttonNormal
+        xaxis = [0, 0, 1]
+        zaxis = np.cross(yaxis, xaxis)
+        xaxis = np.cross(zaxis, yaxis)
+        xaxis /= np.linalg.norm(xaxis)
+        zaxis /= np.linalg.norm(zaxis)
+        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        t.PostMultiply()
+        t.Translate(buttonXYZ)
+
+        #t = transformUtils.frameFromPositionAndRPY(buttonXYZ, buttonRPY)
+        t.Concatenate( self.drillFrame.transform)
+        self.drillButtonFrame = vis.showFrame(t, 'drill button', parent=self.drillAffordance, visible=True, scale=0.2)
+
+
+    def computeDrillRaisePowerOnPlan(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill in camera - 2014', side=self.graspingHand)
+        raisePlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(raisePlan)
+
+
+    def pointerHand(self):
+        if (self.graspingHand == 'left'):
+            return 'right'
+        else:
+            return 'left'
+
+    def computePointerRaisePowerOnPlan(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill in camera - 2014 pointer', side=self.pointerHand() )
+        raisePlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(raisePlan)
+
+
+    def initGazeConstraintSet(self, goalFrame, gazeHand):
+
+        # create constraint set
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'gaze_plan_start'
+        endPoseName = 'gaze_plan_end'
+        self.ikPlanner.addPose(startPose, startPoseName)
+        self.ikPlanner.addPose(startPose, endPoseName)
+        self.constraintSet = ikplanner.ConstraintSet(self.ikPlanner, [], startPoseName, endPoseName)
+        self.constraintSet.endPose = startPose
+
+        # add body constraints
+        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=True, lockBack=False, lockLeftArm=gazeHand=='right', lockRightArm=gazeHand=='left')
+        self.constraintSet.constraints.extend(bodyConstraints)
+
+        # add gaze constraint
+        self.gazeToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(gazeHand)
+
+        print "mfallon"
+        print gazeHand
+        print goalFrame
+        print self.gazeToHandLinkFrame
+
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(gazeHand, goalFrame, self.gazeToHandLinkFrame, coneThresholdDegrees= 0.0)
+        self.constraintSet.constraints.insert(0, gazeConstraint)
+
+    def appendPositionConstraintForTargetFrame(self, goalFrame, t, gazeHand):
+        positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(gazeHand, goalFrame, self.gazeToHandLinkFrame)
+        positionConstraint.tspan = [t, t]
+        self.constraintSet.constraints.append(positionConstraint)
+
+
+    def planGazeTrajectory(self):
+        self.ikPlanner.ikServer.usePointwise = False
+        plan = self.constraintSet.runIkTraj()
+        self.addPlan(plan)
+
+    def computePointerPressGaze(self):
+        gazeHand = self.pointerHand()
+        self.initGazeConstraintSet(self.drillButtonFrame, gazeHand)
+        self.appendPositionConstraintForTargetFrame(self.drillButtonFrame, 1, gazeHand)
+        #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
+        self.planGazeTrajectory()
+        #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+
+
+    ###############################################################################################
+
     def findDrillAffordance(self):
         self.drillAffordance = om.findObjectByName('drill')
         self.drillFrame = om.findObjectByName('drill frame')
@@ -359,7 +484,10 @@ class DrillPlannerDemo(object):
         if self.planFromCurrentRobotState:
             return self.getEstimatedRobotStatePose()
         else:
-            assert False
+            if self.plans:
+                return robotstate.convertStateMessageToDrakePose(self.plans[-1].plan[-1])
+            else:
+                return self.getEstimatedRobotStatePose()
 
 
     def cleanupFootstepPlans(self):
@@ -367,9 +495,9 @@ class DrillPlannerDemo(object):
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
 
     def playNominalPlan(self):
-        plans = [self.walkingPlan, self.preGraspPlan, self.graspPlan]
-        assert None not in plans
-        self.planPlaybackFunction(plans)
+        assert None not in self.plans
+        self.planPlaybackFunction(self.plans)
+
 
     def playPreGraspPlan(self):
         self.planPlaybackFunction([self.preGraspPlan])
@@ -393,6 +521,24 @@ class DrillPlannerDemo(object):
         self.computePreGraspPose()
         self.computeGraspPlan()
         self.playNominalPlan()
+
+
+    def computeNominalPlanTurnOn(self):
+
+        self.planFromCurrentRobotState = False
+
+        #self.findDrillAffordance()
+        self.moveDrillToHand()
+        self.addDrillButtonFrame()
+        self.computeDrillRaisePowerOnPlan()
+        self.moveDrillToHand()
+        self.computePointerRaisePowerOnPlan()
+        self.computePointerPressGaze()
+        self.computePointerRaisePowerOnPlan()
+        self.computeStandPlan()
+        self.moveDrillToHand()
+        self.playNominalPlan()
+
 
     def sendPlanWithHeightMode(self):
         self.atlasDriver.sendPlanUsingBdiHeight(True)

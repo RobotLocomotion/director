@@ -1850,6 +1850,15 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
     t.PostMultiply()
     t.Translate(triangleOrigin)
 
+    createDrillWall(rightAngleLocation, t)
+
+
+def createDrillWall(rightAngleLocation, trianglePose):
+
+    # recover the origin and axes from the pose:
+    triangleOrigin = trianglePose.GetPosition()
+    xaxis, yaxis, zaxis = transformUtils.getAxesFromTransform( trianglePose )
+
 
     edgeRight = np.array([0.0, -1.0, 0.0]) * (24 * .0254)
     edgeUp = np.array([0.0, 0.0, 1.0]) * (12 * .0254)
@@ -1890,9 +1899,9 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
         d.addLine(a, b, radius=0.0025)
 
     aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
-    aff.actor.SetUserTransform(t)
+    aff.actor.SetUserTransform(trianglePose)
     refitWallCallbacks.append(functools.partial(refitDrillWall, aff))
-    frameObj = showFrame(t, 'wall frame', parent=aff, visible=False)
+    frameObj = showFrame(trianglePose, 'wall frame', parent=aff, visible=False)
     frameObj.addToView(app.getDRCView())
 
     params = dict(origin=triangleOrigin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
@@ -1911,7 +1920,7 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
     tt.PostMultiply()
     tt.Translate(rfoot.GetPosition())
     showFrame(tt, 'rfoot with wall orientation')
-    aff.footToAffTransform = computeAToB(tt, t)
+    aff.footToAffTransform = computeAToB(tt, trianglePose)
 
     footToAff = list(aff.footToAffTransform.GetPosition())
     tt.TransformVector(footToAff, footToAff)
@@ -2612,7 +2621,7 @@ def moveDrillToHand(drillOffset, hand='right'):
 
     assert hand in ('right', 'left')
     drillTransform = drill.actor.GetUserTransform()
-    rightBaseLink = getLinkFrame('%s_base_link' % hand)
+    rightBaseLink = getLinkFrame('%s_palm' % hand)
     drillTransform.PostMultiply()
     drillTransform.Identity()
     drillTransform.Concatenate(drillOffset)
