@@ -324,7 +324,7 @@ class ValvePlannerDemo(object):
 
         # add gaze constraint
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
-        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees=5.0)
         self.constraintSet.constraints.insert(0, gazeConstraint)
 
 
@@ -343,7 +343,7 @@ class ValvePlannerDemo(object):
 
     def appendGazeConstraintForTargetFrame(self, goalFrame, t):
 
-        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees=5.0)
         gazeConstraint.tspan = [t, t]
         self.constraintSet.constraints.append(gazeConstraint)
 
@@ -367,7 +367,7 @@ class ValvePlannerDemo(object):
 
 
     def commitManipPlan(self):
-            self.manipPlanner.commitManipPlan(self.plans[-1])
+        self.manipPlanner.commitManipPlan(self.plans[-1])
 
     def sendNeckPitchLookDown(self):
         self.multisenseDriver.setNeckPitch(40)
