@@ -36,11 +36,9 @@ def getTransformFromAxes(xaxis, yaxis, zaxis):
 
 
 def getAxesFromTransform(t):
-    xaxis = [1,0,0]
-    yaxis = [0,1,0]
-    zaxis = [0,0,1]
-    for axis in (xaxis, yaxis, zaxis):
-        t.TransformVector(axis, axis)
+    xaxis = t.TransformNormal(1,0,0)
+    yaxis = t.TransformNormal(0,1,0)
+    zaxis = t.TransformNormal(0,0,1)
     return xaxis, yaxis, zaxis
 
 
