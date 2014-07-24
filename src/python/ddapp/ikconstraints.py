@@ -532,23 +532,18 @@ class WorldFixedBodyPoseConstraint(ConstraintBase):
             ''.format(**formatArgs))
 
 
-class ContactConstraint(ConstraintBase):
+class MinDistanceConstraint(ConstraintBase):
 
 
     def __init__(self, **kwargs):
 
         self._add_fields(
-            lowerBound  = 0.01,
-            upperBound = 1e6,
+            minDistance = 0.05
             )
 
         ConstraintBase.__init__(self, **kwargs)
 
     def _getCommands(self, commands, constraintNames, suffix):
-
-
-        if not (self.leftFootEnabled or self.rightFootEnabled):
-            return
 
         varName = 'contact_constraint%s' % suffix
         constraintNames.append(varName)
@@ -556,10 +551,9 @@ class ContactConstraint(ConstraintBase):
         formatArgs = dict(varName=varName,
                           robotArg=self.robotArg,
                           tspan=self.getTSpanString(),
-                          lowerBound=repr(self.lowerBound),
-                          upperBound=repr(self.upperBound))
+                          minDistance=repr(self.minDistance))
 
         commands.append(
-            '{varName} = AllBodiesClosestDistanceConstraint({robotArg}, {lowerBound}, {upperBound}, {tspan});\n'
+            '{varName} = MinDistanceConstraint({robotArg}, {minDistance}, {tspan});\n'
             ''.format(**formatArgs))
 

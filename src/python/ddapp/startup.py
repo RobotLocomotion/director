@@ -34,6 +34,7 @@ from ddapp import colorize
 from ddapp import drakevisualizer
 from ddapp import robotstate
 from ddapp import roboturdf
+from ddapp import filterUtils
 from ddapp import footstepsdriver
 from ddapp import footstepsdriverpanel
 from ddapp import framevisualization
@@ -93,6 +94,7 @@ updatePolyData = segmentation.updatePolyData
 
 
 useIk = True
+useAtlasConvexHull = False
 useRobotState = True
 usePerception = True
 useGrid = True
@@ -199,6 +201,12 @@ if usePlanning:
 
     playbackRobotModel, playbackJointController = roboturdf.loadRobotModel('playback model', view, parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
     teleopRobotModel, teleopJointController = roboturdf.loadRobotModel('teleop model', view, parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
+
+    if useAtlasConvexHull:
+        chullRobotModel, chullJointController = roboturdf.loadRobotModel('convex hull atlas', view, parent='planning',
+            urdfFile=os.path.join(ddapp.getDRCBaseDir(), 'software/drake/examples/Atlas/urdf/atlas_convex_hull.urdf'),
+            color=roboturdf.getRobotOrangeColor(), visible=False)
+        playbackJointController.models.append(chullRobotModel)
 
 
     manipPlanner = robotplanlistener.ManipulationPlanDriver()
@@ -452,6 +460,27 @@ def sendEstRobotState(pose=None):
         pose = robotStateJointController.q
     msg = robotstate.drakePoseToRobotState(pose)
     lcmUtils.publish('EST_ROBOT_STATE', msg)
+
+
+def addCollisionObjectToWorld():
+    obj = om.getActiveObject()
+    assert obj and obj.polyData
+    polyData = filterUtils.transformPolyData(obj.polyData, obj.actor.GetUserTransform())
+    pts = vnp.getNumpyFromVtk(polyData, 'Points')
+    pts = pts.transpose()
+    ikServer.addCollisionObject(pts)
+
+
+def addCollisionObjectToLink(robotModel, linkName):
+    obj = om.getActiveObject()
+    assert obj and obj.polyData
+    pts = vnp.getNumpyFromVtk(obj.polyData, 'Points')
+    pts = pts.transpose()
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    t.Concatenate(obj.actor.GetUserTransform())
+    t.Concatenate(robotModel.getLinkFrame(linkName).GetLinearInverse())
+    ikServer.addCollisionObjectToLink(pts, linkName, t)
 
 
 app.setCameraTerrainModeEnabled(view, True)
