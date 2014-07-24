@@ -9,7 +9,12 @@ classdef IKServer
     methods
 
         function obj = IKServer()
-            obj.robot = RigidBodyManipulator();
+
+            options.floating = true;
+            options.ignore_terrain_collisions = true;
+            options.terrain = [];
+
+            obj.robot = RigidBodyManipulator('', options);
         end
 
         function obj = loadNominalData(obj)
@@ -24,6 +29,7 @@ classdef IKServer
             obj.ikoptions = IKoptions(obj.robot);
             obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(500);
             obj.ikoptions = obj.ikoptions.setMex(true);
+            % obj.ikoptions = obj.ikoptions.setDebug(true);
 
             leftLegCost = 1e3;
             rightLegCost = 1e3;
@@ -93,7 +99,10 @@ classdef IKServer
 
         function obj = addRobot(obj, filename)
 
-            options = struct('floating', true);
+            options.floating = true;
+            options.ignore_terrain_collisions = true;
+            options.terrain = [];
+
             xyz = zeros(3,1);
             rpy = zeros(3,1);
             obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
