@@ -1187,7 +1187,7 @@ void ddDrakeModel::setColor(const QColor& color)
     visuals[i]->Actor->GetProperty()->SetColor(red, green, blue);
   }
   this->setAlpha(alpha);
-  emit this->modelChanged();
+  emit this->displayChanged();
 }
 
 //-----------------------------------------------------------------------------
@@ -1224,7 +1224,7 @@ void ddDrakeModel::setLinkColor(const QString& linkName, const QColor& color)
       visuals[i]->Actor->GetProperty()->SetOpacity(alpha);
     }
   }
-  emit this->modelChanged();
+  emit this->displayChanged();
 }
 
 //-----------------------------------------------------------------------------
@@ -1242,7 +1242,7 @@ void ddDrakeModel::setAlpha(double alpha)
     visuals[i]->Actor->GetProperty()->SetOpacity(alpha);
   }
   this->Internal->Alpha = alpha;
-  emit this->modelChanged();
+  emit this->displayChanged();
 }
 
 //-----------------------------------------------------------------------------
@@ -1255,7 +1255,7 @@ void ddDrakeModel::setVisible(bool visible)
     visuals[i]->Actor->SetVisibility(visible);
   }
   this->Internal->Visible = visible;
-  emit this->modelChanged();
+  emit this->displayChanged();
 }
 
 //-----------------------------------------------------------------------------
