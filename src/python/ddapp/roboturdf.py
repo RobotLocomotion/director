@@ -41,6 +41,7 @@ class RobotModelItem(om.ObjectModelItem):
 
         self.model = model
         model.connect('modelChanged()', self.onModelChanged)
+        model.connect('displayChanged()', self.onDisplayChanged)
         self.callbacks = callbacks.CallbackRegistry([self.MODEL_CHANGED_SIGNAL])
         self.useUrdfColors = False
         self.useUrdfTextures = False
@@ -78,6 +79,10 @@ class RobotModelItem(om.ObjectModelItem):
 
     def onModelChanged(self):
         self.callbacks.process(self.MODEL_CHANGED_SIGNAL, self)
+        if self.getProperty('Visible'):
+            self._renderAllViews()
+
+    def onDisplayChanged(self):
         if self.getProperty('Visible'):
             self._renderAllViews()
 

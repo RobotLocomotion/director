@@ -57,6 +57,7 @@ public:
 signals:
 
   void modelChanged();
+  void displayChanged();
 
 protected:
 
