@@ -102,7 +102,7 @@ class IkOptionsItem(om.ObjectModelItem):
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
         self.addProperty('Quasistatic shrink factor', ik.QuasiStaticConstraint.shrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
         self.addProperty('Max joint degrees/s', ikServer.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
-        self.addProperty('Nominal pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
+        self.addProperty('Nominal pose', 1, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Seed pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
 
