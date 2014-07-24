@@ -44,6 +44,7 @@ class PlaybackPanel(object):
         self.manipPlanner = manipPlanner
 
         self.autoPlay = True
+        self.robotModelDisplayAlpha = 0.1
 
         self.planFramesObj = None
         self.plan = None
@@ -257,7 +258,7 @@ class PlaybackPanel(object):
 
     def showPlaybackModel(self):
         self.robotStateModel.setProperty('Visible', True)
-        self.robotStateModel.setProperty('Alpha', 0.1)
+        self.robotStateModel.setProperty('Alpha', self.robotModelDisplayAlpha)
         self.playbackRobotModel.setProperty('Visible', True)
         if self.planFramesObj:
             self.planFramesObj.setProperty('Visible', False)
