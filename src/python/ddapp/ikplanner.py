@@ -96,6 +96,9 @@ class IkOptionsItem(om.ObjectModelItem):
         self.ikPlanner = ikPlanner
 
         self.addProperty('Use pointwise', ikServer.usePointwise)
+        self.addProperty('Use collision', ikServer.useCollision)
+        self.addProperty('Collision min distance', ikServer.collisionMinDistance)
+        self.addProperty('Add knots', ikServer.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
         self.addProperty('Quasistatic shrink factor', ik.QuasiStaticConstraint.shrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
         self.addProperty('Max joint degrees/s', ikServer.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
@@ -109,6 +112,17 @@ class IkOptionsItem(om.ObjectModelItem):
 
         if propertyName == 'Use pointwise':
             self.ikServer.usePointwise = self.getProperty(propertyName)
+
+        if propertyName == 'Use collision':
+            self.ikServer.useCollision = self.getProperty(propertyName)
+            if self.ikServer.useCollision:
+                self.setProperty('Use pointwise', False)
+
+        if propertyName == 'Collision min distance':
+            self.ikServer.collisionMinDistance = self.getProperty(propertyName)
+
+        if propertyName == 'Add knots':
+            self.ikServer.numberOfAddedKnots = self.getProperty(propertyName)
 
         elif propertyName == 'Use quasistatic constraint':
             self.ikPlanner.useQuasiStaticConstraint = self.getProperty(propertyName)

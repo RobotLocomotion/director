@@ -22,6 +22,9 @@ class AsyncIKCommunicator():
 
         self.maxDegreesPerSecond = 30.0
         self.usePointwise = True
+        self.useCollision = False
+        self.numberOfAddedKnots = 0
+        self.collisionMinDistance = 0.05
 
 
     def getStartupCommands(self):
@@ -59,6 +62,9 @@ class AsyncIKCommunicator():
         self.taskQueue.start()
 
 
+    def interact(self):
+        self.comm.interact()
+
 
     def fetchPoseFromServer(self, poseName):
         return self.comm.getFloatArray(poseName)
@@ -68,8 +74,45 @@ class AsyncIKCommunicator():
         self.comm.assignFloatArray(pose, poseName)
 
 
-    def interact(self):
-        self.comm.interact()
+    def addCollisionObject(self, vertices):
+        self.comm.assignFloatArray(vertices, 'collision_object_vertices')
+        commands = []
+        commands.append('collision_object = RigidBodyMeshPoints(collision_object_vertices);')
+        commands.append('r = addShapeToBody(r, world, collision_object);')
+        commands.append('r = compile(r);')
+        self.comm.sendCommands(commands)
+
+
+    def addCollisionObjectToLink(self, vertices, linkName, transform):
+        self.comm.assignFloatArray(vertices, 'collision_object_vertices')
+        transformString = ConstraintBase.toMatrixString(transform)
+
+        commands = []
+        commands.append('collision_object = RigidBodyMeshPoints(collision_object_vertices);')
+        commands.append('collision_object.T = %s;' % transformString)
+        commands.append('r = addShapeToBody(r, %s, collision_object);' % linkName)
+        commands.append('r = compile(r);')
+        self.comm.sendCommands(commands)
+
+
+    def constructVisualizer(self):
+        commands = []
+        commands.append("v = r.constructVisualizer(struct('use_contact_shapes', true));")
+        self.comm.sendCommands(commands)
+
+
+    def draw(self):
+        commands = []
+        commands.append('v.draw(0, q_end);');
+        self.comm.sendCommands(commands)
+
+
+    def resetCollisionObjects(self):
+        commands = []
+        commands.append('r = s.robot;')
+        commands.append('r = r.replaceContactShapesWithCHull([l_hand, r_hand, head]);')
+        commands.append('r = compile(r);')
+        self.comm.sendCommands(commands)
 
 
     def getConstraintCommands(self, constraintNames):
@@ -121,6 +164,16 @@ class AsyncIKCommunicator():
         commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, ik_seed_pose, ik_nominal_pose, active_constraints{:}, s.ikoptions);')
         commands.append('\n')
         commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
+
+
+        if self.useCollision:
+            commands.append('\n')
+            commands.append('collision_constraint = MinDistanceConstraint(r, %f);' % self.collisionMinDistance)
+            commands.append('ik_seed_pose = q_end;')
+            commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, ik_seed_pose, ik_nominal_pose, collision_constraint, active_constraints{:}, s.ikoptions);')
+            commands.append('\n')
+            commands.append('if (info > 10) disp(\'inverseKin with collision constraint infeasible.\'); display(infeasibleConstraintMsg(infeasible_constraint)); end;')
+
         commands.append('\n%-------- runIk end --------\n')
 
         self.comm.sendCommands(commands)
@@ -146,7 +199,10 @@ class AsyncIKCommunicator():
             timeSamples = np.hstack([constraint.tspan for constraint in constraints])
             timeSamples = [x for x in timeSamples if x not in [-np.inf, np.inf]]
             timeSamples.append(0.0)
-            timeSamples = np.unique(timeSamples)
+            timeSamples = np.unique(timeSamples).tolist()
+            timeSamples += np.linspace(timeSamples[0], timeSamples[-1], self.numberOfAddedKnots + 2).tolist()
+            timeSamples = np.unique(timeSamples).tolist()
+
 
         commands = []
         commands.append('\n%-------- runIkTraj --------\n')
@@ -161,9 +217,6 @@ class AsyncIKCommunicator():
         commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
         commands.append('t = [%s];' % ', '.join([repr(x) for x in timeSamples]))
         commands.append('nt = size(t, 2);')
-        commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(%s, 1, nt)));' % nominalPose)
-        #commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
-        commands.append('q_seed_traj = PPTrajectory(spline([t(1), t(end)], [zeros(nq,1), %s, %s, zeros(nq,1)]));' % (poseStart, poseEnd))
         commands.append('clear xtraj;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
@@ -171,20 +224,39 @@ class AsyncIKCommunicator():
             commands.append('additionalTimeSamples = linspace(t(1), t(end), %d);' % additionalTimeSamples)
         else:
             commands.append('additionalTimeSamples = [];')
-
         commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
+        commands.append('\n')
 
-        commands.append('\n')
-        commands.append('[xtraj, info, infeasible_constraint] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, ikoptions);')
-        commands.append('\n')
-        commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
+        if self.useCollision:
+            commands.append('collision_options.quiet = false;')
+            commands.append('collision_options.allow_ikoptions_modification = true;')
+            commands.append('collision_options.min_distance = %s;' % self.collisionMinDistance)
+            #commands.append("collision_options.frozen_groups = {'pelvis','r_arm'};")
+            commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
+            commands.append('q_nom_traj = q_seed_traj;')
+            commands.append('\n')
+            commands.append('[xtraj,info,infeasible_constraint,xtraj_feasible,info_feasible] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,collision_options,active_constraints{:},s.ikoptions);')
+            commands.append('t_fine = linspace(xtraj.tspan(1),xtraj.tspan(2));')
+            commands.append('xtraj = PPTrajectory(foh(t_fine,xtraj.eval(t_fine)));')
+            commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
+            commands.append("if (info_feasible > 10) disp('info_feasible infeasible'); display(infeasibleConstraintMsg(infeasible_constraint)); end;")
+
+        else:
+            commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(%s, 1, nt)));' % nominalPose)
+            commands.append('q_seed_traj = PPTrajectory(spline([t(1), t(end)], [zeros(nq,1), %s, %s, zeros(nq,1)]));' % (poseStart, poseEnd))
+            commands.append('\n')
+            commands.append('[xtraj, info, infeasible_constraint] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, ikoptions);')
+            commands.append('\n')
+            commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
+
         commands.append('qtraj = xtraj(1:nq);')
         commands.append('max_degrees_per_second = %f;' % self.maxDegreesPerSecond)
         commands.append('plan_time = s.getPlanTimeForJointVelocity(xtraj, max_degrees_per_second);')
 
 
         if self.usePointwise:
+            assert not self.useCollision
             commands.append('\n%--- pointwise ik --------\n')
             commands.append('num_pointwise_time_points = 20;')
             commands.append('pointwise_time_points = linspace(t(1), t(end), num_pointwise_time_points);')
