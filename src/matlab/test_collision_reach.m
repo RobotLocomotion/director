@@ -50,6 +50,7 @@ l_larm = r.findLinkInd('l_larm');
 r_hand = r.findLinkInd('r_hand');
 utorso = r.findLinkInd('utorso');
 pelvis = r.findLinkInd('pelvis');
+head = r.findLinkInd('head');
 l_foot_pts = s.getLeftFootPoints();
 r_foot_pts = s.getRightFootPoints();
 
@@ -63,30 +64,44 @@ switch scenario
     % main table
     table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
     r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    table.toLCMGL(lcmgl);
   case 2
     % main table
     table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
-    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    %table_chull = RigidBodyMeshPoints(table.getPoints());
+    %r = r.addContactShapeToBody(findLinkInd(r,'world'), table_chull);
+    %r = r.addVisualShapeToBody(findLinkInd(r,'world'), table);
+    r = r.addShapeToBody(findLinkInd(r,'world'), table);
     % obstacle on table
     height = 0.5;
-    obstacle = RigidBodyBox([0.5, 0.35, height],[-0.9;0.2;1.025+height/2],[0;0;140]*pi/180);
+    obstacle = RigidBodyBox([0.5, 0.3, height],[-0.9;0.2;1.025+height/2],[0;0;140]*pi/180);
+    %obstacle_chull = RigidBodyMeshPoints(obstacle.getPoints());
+    %r = r.addContactShapeToBody(findLinkInd(r,'world'), obstacle_chull);
+    %r = r.addVisualShapeToBody(findLinkInd(r,'world'), obstacle);
     r = r.addShapeToBody(findLinkInd(r,'world'), obstacle);
+    table.toLCMGL(lcmgl);
+    obstacle.toLCMGL(lcmgl);
   case 3
     % main table
     table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
     r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
     % obstacle on table
-    table = RigidBodyBox([0.5, 0.3, 2.5],[-0.9;0.2;1.07],[0*pi/180;0;140*pi/180.0]);
-    r = r.addShapeToBody(findLinkInd(r,'world'), table);
-    table = RigidBodyBox([0.65, 0.4, 4.5],[-0.9;0.2;2.1],[130;0;140]*pi/180.0);
-    r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    obstacle1 = RigidBodyBox([0.5, 0.3, 2.5],[-0.9;0.2;1.07],[0*pi/180;0;140*pi/180.0]);
+    r = r.addShapeToBody(findLinkInd(r,'world'), obstacle1);
+    obstacle2 = RigidBodyBox([0.65, 0.4, 4.5],[-0.9;0.2;2.1],[130;0;140]*pi/180.0);
+    r = r.addShapeToBody(findLinkInd(r,'world'), obstacle2);
+    table.toLCMGL(lcmgl);
+    obstacle1.toLCMGL(lcmgl);
+    obstacle2.toLCMGL(lcmgl);
   case 4
     % main table
     table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
     r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
     % obstacle on table
-    table = RigidBodyBox([0.5, 0.3, 2.5],[-0.9;0.2;1.07],[0*pi/180;0;140*pi/180.0]);
-    r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    obstacle = RigidBodyBox([0.5, 0.3, 2.5],[-0.9;0.2;1.07],[0*pi/180;0;140*pi/180.0]);
+    r = r.addShapeToBody(findLinkInd(r,'world'), obstacle);
+    table.toLCMGL(lcmgl);
+    obstacle.toLCMGL(lcmgl);
   case 5
     % main table
     table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
@@ -96,7 +111,7 @@ switch scenario
     r = r.addShapeToBody(findLinkInd(r,'world'), table);
 end
 
-r = r.replaceContactShapesWithCHull([l_hand, r_hand]);
+r = r.replaceContactShapesWithCHull([l_hand, r_hand, head]);
 
 
 r = compile(r);
@@ -144,9 +159,9 @@ posture_constraint_5 = posture_constraint_5.setJointLimits(joint_inds, joints_lo
 
 % fixed lower body (legs, base cannot move)
 posture_constraint_6 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.base_x; joints.base_y; joints.base_z; joints.base_roll; joints.base_pitch; joints.base_yaw; joints.r_leg_hpz; joints.r_leg_hpx; joints.r_leg_hpy; joints.r_leg_kny; joints.r_leg_aky; joints.r_leg_akx; joints.l_leg_hpz; joints.l_leg_hpx; joints.l_leg_hpy; joints.l_leg_kny; joints.l_leg_aky; joints.l_leg_akx];
-joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
-joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
+joint_inds = [joints.base_x; joints.base_y; joints.base_z; joints.base_roll; joints.base_pitch; joints.base_yaw; joints.r_leg_hpz; joints.r_leg_hpx; joints.r_leg_hpy; joints.r_leg_kny; joints.r_leg_aky; joints.r_leg_akx; joints.l_leg_hpz; joints.l_leg_hpx; joints.l_leg_hpy; joints.l_leg_kny; joints.l_leg_aky; joints.l_leg_akx;joints.neck_ay];
+joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
+joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
 posture_constraint_6 = posture_constraint_6.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
 
 % fixed right arm
@@ -215,14 +230,18 @@ q_seed_traj_spline = PPTrajectory(spline([tspan(1), tspan(end)], [zeros(nq,1), r
 
 q_seed_traj = q_nom_traj_foh;
 q_nom_traj = q_nom_traj_foh;
+%options.frozen_groups = {'pelvis','r_arm'};
 options.frozen_groups = {'pelvis','r_arm'};
 %options.visualize = true;
 options.quiet = false;
 options.collision_constraint_type = iktraj_collision_constraint_type;
 options.min_distance = min_distance;
+options.allow_ikoptions_modification = true;
+options.position_cost = 1e-1;
+options.acceleration_cost = 1e-6;
 
 % Back fixed
-%active_constraints = {q0_constraint,iktraj_collision_constraint, qsc_constraint_0, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_5, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
+%active_constraints = {qsc_constraint_0, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_5, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
 
 % Back free
 active_constraints = {qsc_constraint_0, position_constraint_1, quat_constraint_2, position_constraint_3, quat_constraint_4, posture_constraint_6, posture_constraint_7, position_constraint_8, quat_constraint_9};
@@ -230,7 +249,8 @@ active_constraints = {qsc_constraint_0, position_constraint_1, quat_constraint_2
 [xtraj,info,infeasible_constraint,xtraj_feasible,info_feasible] = collisionFreePlanner(r,tspan,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);
 if (info > 10) 
   fprintf('collisionFreePlanner returned with info = %d\n',info);
-  if info == 13, display(infeasibleConstraintMsg(infeasible_constraint)); end;
+  %if info == 13, display(infeasibleConstraintMsg(infeasible_constraint)); end;
+  display(infeasibleConstraintMsg(infeasible_constraint));
 end
 
 %-----------------------------
