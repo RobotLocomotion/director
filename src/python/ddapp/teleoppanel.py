@@ -140,6 +140,9 @@ class EndEffectorTeleopPanel(object):
     def generatePlan(self):
 
         self.updateConstraints()
+        if not self.ui.interactiveCheckbox.checked:
+            self.updateIk()
+
         #plan = self.constraintSet.runIkTraj()
         plan = self.constraintSet.planEndPoseGoal()
         self.panel.showPlan(plan)
