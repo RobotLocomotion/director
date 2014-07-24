@@ -4,13 +4,17 @@ warning('off','Drake:RigidBodyManipulator:UnsupportedVelocityLimits');
 warning('off','Drake:RigidBodyManipulator:UnsupportedContactPoints');
 warning('off','Drake:RigidBodyManipulator:UnsupportedJointLimits');
 
-robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_point_hands.urdf'];
+drakeExamplePath = [getenv('DRC_BASE'), '/software/drake/examples/'];
+
+%robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_point_hands.urdf'];
+robotURDF = [drakeExamplePath, 'Atlas/urdf/atlas_convex_hull.urdf'];
 
 s = s.addRobot(robotURDF);
 s = s.setupCosts();
 s = s.loadNominalData();
 
 r = s.robot;
+
 nq = r.getNumDOF();
 q_nom = s.q_nom;
 q_zero = zeros(nq, 1);
@@ -30,3 +34,6 @@ r_foot_pts = s.getRightFootPoints();
 
 joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
 plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, r.getStateFrame.coordinates(1:nq));
+
+r = r.replaceContactShapesWithCHull([l_hand, r_hand, head]);
+r = compile(r);
