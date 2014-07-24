@@ -20,6 +20,15 @@ def getTransformFromAxes(xaxis, yaxis, zaxis):
     return t
 
 
+def getAxesFromTransform(t):
+    xaxis = [1,0,0]
+    yaxis = [0,1,0]
+    zaxis = [0,0,1]
+    for axis in (xaxis, yaxis, zaxis):
+        t.TransformVector(axis, axis)
+    return xaxis, yaxis, zaxis
+
+
 def getTransformFromOriginAndNormal(origin, normal, normalAxis=2):
 
     normal = np.array(normal)
@@ -65,7 +74,6 @@ def rollPitchYawFromTransform(t):
     return rpy
 
 
-
 def frameInterpolate(trans_a, trans_b, weight_b):
     '''
     Interpolate two frames where weight_b=[0,1]
@@ -75,6 +83,7 @@ def frameInterpolate(trans_a, trans_b, weight_b):
     pos_c = pos_a *(1-weight_b) + pos_b * weight_b;
     quat_c = botpy.quat_interpolate(quat_a,quat_b, weight_b)
     return transformFromPose(pos_c, quat_c)
+
 
 def transformFromPose(position, quaternion):
     '''
