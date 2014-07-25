@@ -1759,9 +1759,9 @@ def segmentDrillWall(point1, point2, point3):
     for a, b in zip(pointsInWallFrame, pointsInWallFrame[1:] + [pointsInWallFrame[0]]):
         d.addLine(a, b, radius=0.015)
 
-    aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    aff = showPolyData(d.getPolyData(), 'drill target', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     aff.actor.SetUserTransform(t)
-    showFrame(t, 'wall frame', parent=aff, visible=False)
+    showFrame(t, 'drill target frame', parent=aff, visible=False)
     refitWallCallbacks.append(functools.partial(refitDrillWall, aff))
 
     params = dict(origin=points[0], xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
@@ -1860,7 +1860,7 @@ def createDrillWall(rightAngleLocation, trianglePose):
     xaxis, yaxis, zaxis = transformUtils.getAxesFromTransform( trianglePose )
 
 
-    edgeRight = np.array([0.0, -1.0, 0.0]) * (24 * .0254)
+    edgeRight = np.array([0.0, 1.0, 0.0]) * (24 * .0254)
     edgeUp = np.array([0.0, 0.0, 1.0]) * (12 * .0254)
 
 
@@ -1885,7 +1885,7 @@ def createDrillWall(rightAngleLocation, trianglePose):
         raise Exception('unexpected value for right angle location: ', + rightAngleLocation)
 
     center = pointsInWallFrame.sum(axis=0)/3.0
-    shrinkFactor = 0.90
+    shrinkFactor = 1#0.90
     shrinkPoints = (pointsInWallFrame - center) * shrinkFactor + center
 
     d = DebugData()
@@ -1898,10 +1898,10 @@ def createDrillWall(rightAngleLocation, trianglePose):
     for a, b in zip(shrinkPoints, np.vstack((shrinkPoints[1:], shrinkPoints[0]))):
         d.addLine(a, b, radius=0.0025)
 
-    aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    aff = showPolyData(d.getPolyData(), 'drill target', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     aff.actor.SetUserTransform(trianglePose)
     refitWallCallbacks.append(functools.partial(refitDrillWall, aff))
-    frameObj = showFrame(trianglePose, 'wall frame', parent=aff, visible=False)
+    frameObj = showFrame(trianglePose, 'drill target frame', parent=aff, visible=False)
     frameObj.addToView(app.getDRCView())
 
     params = dict(origin=triangleOrigin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
@@ -1935,11 +1935,11 @@ def createDrillWall(rightAngleLocation, trianglePose):
 def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis):
 
     params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
-                  button_x=0.035,
-                  button_y=0.007,
+                  button_x=0.007, # 0.035
+                  button_y=-0.035, # 0.007
                   button_z=-0.06,
-                  guard_x=0.0,
-                  guard_y=-0.01,
+                  guard_x=-0.01,   # 0
+                  guard_y=0.0, # -0.01
                   guard_z=0.15,
                   guard_nx=0.0,
                   guard_ny=0.0,
@@ -1954,7 +1954,8 @@ def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis):
 
 def getDrillMesh():
 
-    button = np.array([0.035, 0.007, -0.06])
+    #button = np.array([0.035, 0.007, -0.06])
+    button = np.array([0.007, -0.035, -0.06])
 
     drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
     d = DebugData()
