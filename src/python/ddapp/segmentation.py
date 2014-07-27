@@ -1898,10 +1898,11 @@ def createDrillWall(rightAngleLocation, trianglePose):
     for a, b in zip(shrinkPoints, np.vstack((shrinkPoints[1:], shrinkPoints[0]))):
         d.addLine(a, b, radius=0.0025)
 
-    aff = showPolyData(d.getPolyData(), 'drill target', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    folder = om.getOrCreateContainer('affordances')
+    aff = showPolyData(d.getPolyData(), 'wall', cls=FrameAffordanceItem, color=[0,1,0], visible=True, parent=folder)
     aff.actor.SetUserTransform(trianglePose)
     refitWallCallbacks.append(functools.partial(refitDrillWall, aff))
-    frameObj = showFrame(trianglePose, 'drill target frame', parent=aff, visible=False)
+    frameObj = showFrame(trianglePose, 'wall frame', parent=aff, visible=False)
     frameObj.addToView(app.getDRCView())
 
     params = dict(origin=triangleOrigin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
