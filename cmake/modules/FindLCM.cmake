@@ -32,4 +32,4 @@ macro(pkg_config_find_module varname pkgname header library pathsuffix)
 endmacro()
 
 
-pkg_config_find_module(LCM lcm lcm.h lcm lcm)
+pkg_config_find_module(LCM lcm lcm/lcm.h lcm lcm)
