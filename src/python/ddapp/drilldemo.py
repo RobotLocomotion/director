@@ -23,6 +23,7 @@ from ddapp.utime import getUtime
 from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
+from ddapp import affordancegraspupdater
 
 import drc as lcmdrc
 
@@ -43,37 +44,67 @@ class Drill(object):
         # relative to drill frame:
         self.stanceFrame = None
         self.buttonFrame = None
-        self.tipFrame = None # not used for pointing the drill - out of date
-        self.guardFrame = None
+        self.bitFrame = None
+        self.graspFrame = None
+        self.reachFrame = None
 
-        self.drillToGuardTransform = None # used for pointing the drill
-        self.palmToDrillTransform = None
-
+        self.drillToButtonTransform = None # used for turning on the drill
+        self.drillToBitTransform = None # used for cutting with the drill
+        self.faceToDrillTransform = None
         self.frameSync = None
+
+        # params:
+        self.faceToDrillRotation = 90
+        self.faceToDrillOffset = 0
+        self.faceToDrillFlip = False
+
+        # initial drill position (requires walking)
+        self.initXYZ = [1.5, 0.6, 0.9] # height requires crouching
+        self.initRPY = [1,1,1]
+
+        self.graspFrameXYZ = [-0.04, 0.0, 0.01]
+        self.graspFrameRPY = [0, 90, -90]
+
+        # where to stand relative to the drill on a table:
+        self.relativeStanceXYZ = [-0.67, -0.4, 0.0]
+        self.relativeStanceRPY = [0, 0, 0]
+        self.relativeStanceTransform = transformUtils.frameFromPositionAndRPY( self.relativeStanceXYZ , self.relativeStanceRPY )
+
 
 class Wall(object):
     def __init__(self):
         self.affordance = None
 
-        # at startup location (no walking)
-        #self.init_XYZ = [0.5, 0.3, 1.1]
-        #self.init_RPY = [0,0,240]
-        # away from robot - requires walking
-        self.initXYZ = [1.65, -0.40, 1.1]
-        self.initRPY = [0,0,-180]
-
         self.transform = None
-
         self.stanceFrame = None
         self.cutPointFrames = []
 
         self.frameSync = None
 
+        # params:
+        # at startup location (no walking)
+        #self.init_XYZ = [0.5, 0.3, 1.1]
+        #self.init_RPY = [0,0,240]
+        # away from robot - requires walking
+        self.initXYZ = [1.65, -0.40, 1.1]
+        self.initRPY = [0,0,0]
+
+        # where to stand relative to the wall target:
+        self.relativeStanceXYZ = [0.28, 0.45, 0.0]
+        self.relativeStanceRPY = [0, 0, 210]
+        self.relativeStanceTransform = transformUtils.frameFromPositionAndRPY( self.relativeStanceXYZ , self.relativeStanceRPY )
+        # where to stand relative to the wall target - but distant - for button pressing
+        self.relativeStanceFarXYZ = [0.28, 1.0, 0.0]
+        self.relativeStanceFarRPY = [0, 0, 210]
+        self.relativeStanceFarTransform = transformUtils.frameFromPositionAndRPY( self.relativeStanceFarXYZ , self.relativeStanceFarRPY )
+
 
 class DrillPlannerDemo(object):
 
-    def __init__(self, robotModel, footstepPlanner, manipPlanner, ikPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
+    def __init__(self, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
         self.robotModel = robotModel
+        self.playbackRobotModel = playbackRobotModel # not used inside the demo
+        self.teleopRobotModel = teleopRobotModel # not used inside the demo
         self.footstepPlanner = footstepPlanner
         self.manipPlanner = manipPlanner
         self.ikPlanner = ikPlanner
@@ -86,7 +117,7 @@ class DrillPlannerDemo(object):
         self.showPoseFunction = showPoseFunction
         self.graspingHand = 'left'
 
-        self.planFromCurrentRobotState = True # False for operation, True for development
+        self.planFromCurrentRobotState = False # False for development, True for operation
 
         # For testing:
         self.visOnly = True
@@ -105,7 +136,14 @@ class DrillPlannerDemo(object):
         self.wall = Wall()
 
         # params:
-        self.retractDepthNominal = 0.055 # depth to move drill away from wall
+        self.reachDepth = 0.12 # depth to reach to before going for grasp
+        self.cutLength = 0.05 # length to cut each time
+        self.retractDepthNominal = -0.055 # depth to move drill away from wall
+        self.goalThreshold = 0.05 # how close we need to get to the cut goal (the triangle corners
+
+        extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
+        self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
+
 
 
     def addPlan(self, plan):
@@ -141,15 +179,45 @@ class DrillPlannerDemo(object):
         return t
 
 
+    def computeRobotStanceFrame(self, objectTransform, relativeStanceTransform ):
+        '''
+        Given a robot model, determine the height of the ground
+        using an XY and Yaw standoff, combined to determine the relative 6DOF standoff
+        For a grasp or approach stance
+        '''
+
+        groundFrame = self.computeGroundFrame(self.robotModel)
+        groundHeight = groundFrame.GetPosition()[2]
+
+        graspPosition = np.array(objectTransform.GetPosition())
+        graspYAxis = [0.0, 1.0, 0.0]
+        graspZAxis = [0.0, 0.0, 1.0]
+        objectTransform.TransformVector(graspYAxis, graspYAxis)
+        objectTransform.TransformVector(graspZAxis, graspZAxis)
+
+        xaxis = graspYAxis
+        #xaxis = graspZAxis
+        zaxis = [0, 0, 1]
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        xaxis = np.cross(yaxis, zaxis)
+
+        graspGroundTransform = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        graspGroundTransform.PostMultiply()
+        graspGroundTransform.Translate(graspPosition[0], graspPosition[1], groundHeight)
+
+        #transformUtils.frameFromPositionAndRPY( self.wall.stanceFrameXYZ , self.wall.stanceFrameRPY )
+        robotStance = transformUtils.copyFrame( relativeStanceTransform )
+        robotStance.Concatenate(graspGroundTransform)
+
+        return robotStance
+
     ### Drill Focused Functions ######################################################################
-    def computeDrillFrame(self, robotModel):
-
-        # drill close to origin (default)
-        #position = [0.65, 0.4, 0.9]
-        #rpy = [1, 1, 1]
-
+    def computeConvenientDrillFrame(self, robotModel):
+        # makes a drill in front of the robot
         # drill further away - requires walking
-        position = [1.5, 0.6, 1.2]
+        # position = [1.5, 0.6, 1.2]
+        position = [1.5, 0.6, 0.9]
         rpy = [1, 1, 1]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
@@ -158,205 +226,155 @@ class DrillPlannerDemo(object):
 
 
     def computeDrillGraspFrame(self):
-        self.computeDrillGraspFrameBarrel()
-
-
-    def computeDrillGraspFrameRotary(self):
-
-        assert self.drill.affordance
-
-        position = [0.0,-0.18,0.0]
-        rpy = [-90,90,0]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t = transformUtils.frameFromPositionAndRPY( self.drill.graspFrameXYZ , self.drill.graspFrameRPY )
         t.Concatenate(self.drill.frame.transform)
+        self.drill.graspFrame = vis.updateFrame(t, 'grasp frame', parent=self.drill.affordance, visible=False, scale=0.2)
 
-        self.drill.graspFrame = vis.updateFrame(t, 'grasp frame', parent=self.drill.affordance, visible=False, scale=0.3)
-
-
-    def computeDrillGraspFrameBarrel(self):
-
-        assert self.drill.affordance
-
-        # for left_base_link
-        #position = [-0.12, 0.0, 0.025]
-        #rpy = [0, 90, 0]
-
-        # for palm point
-        position = [-0.04, 0.0, 0.01]
-        rpy = [0, 90, -90]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+    def computeDrillReachFrame(self):
+        ''' Reach ~10cm short of the grasp frame '''
+        reachXYZ = self.drill.graspFrameXYZ
+        reachXYZ[0] = reachXYZ[0] - self.reachDepth
+        t = transformUtils.frameFromPositionAndRPY( reachXYZ , self.drill.graspFrameRPY )
         t.Concatenate(self.drill.frame.transform)
-
-        self.drill.graspFrame = vis.updateFrame(t, 'grasp frame', parent=self.drill.affordance, visible=True, scale=0.2)
-        self.drill.sampleGraspFrame = vis.updateFrame(transformUtils.copyFrame(t), 'sample grasp frame 0', parent=self.drill.affordance, visible=False, scale=0.2)
-
-        self.drill.frameSync = vis.FrameSync()
-        self.drill.frameSync.addFrame(self.drill.graspFrame)
-        self.drill.frameSync.addFrame(self.drill.sampleGraspFrame)
-        self.drill.frameSync.addFrame(self.drill.frame)
-
-
-    def computeDrillTipFrame(self):
-
-        assert self.drill.affordance
-
-        position = [0.18, 0.0, 0.13]
-        rpy = [0, 0, 0]
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(self.drill.frame.transform)
-
-        self.drill.tipFrame = vis.updateFrame(t, 'drill tip frame', parent=self.drill.affordance, visible=False, scale=0.2)
-
-        self.drill.frameSync.addFrame(self.drill.frame)
-        self.drill.frameSync.addFrame(self.drill.tipFrame)
-
+        self.drill.reachFrame = vis.updateFrame(t, 'reach frame', parent=self.drill.affordance, visible=False, scale=0.2)
 
     def computeDrillStanceFrame(self):
-
-        graspFrame = self.drill.graspFrame.transform
-
-        groundFrame = self.computeGroundFrame(self.robotModel)
-        groundHeight = groundFrame.GetPosition()[2]
-
-        graspPosition = np.array(graspFrame.GetPosition())
-        graspYAxis = [0.0, 1.0, 0.0]
-        graspZAxis = [0.0, 0.0, 1.0]
-        graspFrame.TransformVector(graspYAxis, graspYAxis)
-        graspFrame.TransformVector(graspZAxis, graspZAxis)
-
-        xaxis = graspYAxis
-        #xaxis = graspZAxis
-        zaxis = [0, 0, 1]
-        yaxis = np.cross(zaxis, xaxis)
-        yaxis /= np.linalg.norm(yaxis)
-        xaxis = np.cross(yaxis, zaxis)
-
-        graspGroundFrame = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-        graspGroundFrame.PostMultiply()
-        graspGroundFrame.Translate(graspPosition[0], graspPosition[1], groundHeight)
-
-        position = [-0.67, -0.4, 0.0]
-        rpy = [0, 0, 0]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(graspGroundFrame)
-
-        self.drill.stanceFrame = vis.updateFrame(t, 'drill stance', parent=self.drill.affordance, visible=False, scale=0.2)
-
-        self.drill.frameSync.addFrame(self.drill.frame)
-        self.drill.frameSync.addFrame(self.drill.stanceFrame)
+        objectTransform = self.drill.graspFrame.transform
+        robotStance = self.computeRobotStanceFrame( objectTransform, self.drill.relativeStanceTransform )
+        self.drill.stanceFrame = vis.updateFrame(robotStance, 'drill stance', parent=self.drill.affordance, visible=False, scale=0.2)
 
 
     def computeDrillButtonFrame(self):
-        buttonXYZ = [ self.drill.affordance.params['button_x'], self.drill.affordance.params['button_y'], self.drill.affordance.params['button_z'] ]
-        buttonNormal = np.array([ self.drill.affordance.params['button_nx'], self.drill.affordance.params['button_ny'], self.drill.affordance.params['button_nz'] ])
+        position = [ self.drill.affordance.params['button_x'], self.drill.affordance.params['button_y'], self.drill.affordance.params['button_z'] ]
+        rpy = np.array([ self.drill.affordance.params['button_roll'], self.drill.affordance.params['button_pitch'], self.drill.affordance.params['button_yaw'] ])
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
 
-        yaxis = -buttonNormal
-        xaxis = [0, 0, 1]
-        zaxis = np.cross(yaxis, xaxis)
-        xaxis = np.cross(zaxis, yaxis)
-        xaxis /= np.linalg.norm(xaxis)
-        zaxis /= np.linalg.norm(zaxis)
-        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-        t.PostMultiply()
-        t.Translate(buttonXYZ)
-
-        #t = transformUtils.frameFromPositionAndRPY(buttonXYZ, buttonRPY)
-        t.Concatenate( self.drill.frame.transform)
-        self.drill.buttonFrame = vis.showFrame(t, 'drill button', parent=self.drill.affordance, visible=True, scale=0.2)
+        self.drill.drillToButtonTransform = transformUtils.copyFrame( t )
+        t.Concatenate( transformUtils.copyFrame(self.drill.frame.transform))
+        self.drill.buttonFrame = vis.updateFrame(t, 'drill button', parent=self.drill.affordance, visible=False, scale=0.2)
 
 
-    def computeDrillGuardFrame(self):
-        guardXYZ = [ self.drill.affordance.params['guard_x'], self.drill.affordance.params['guard_y'], self.drill.affordance.params['guard_z'] ]
-        guardNormal = np.array([ self.drill.affordance.params['guard_nx'], self.drill.affordance.params['guard_ny'], self.drill.affordance.params['guard_nz'] ])
+    def computeDrillBitFrame(self):
+        position = [ self.drill.affordance.params['bit_x'], self.drill.affordance.params['bit_y'], self.drill.affordance.params['bit_z'] ]
+        rpy = np.array([ self.drill.affordance.params['bit_roll'], self.drill.affordance.params['bit_pitch'], self.drill.affordance.params['bit_yaw'] ])
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
 
-        # this is kind of hacked up to put the normal in the direction of the palm frame:
-        xaxis = -guardNormal
-        zaxis = [0, 0, 1]
-        yaxis = np.cross(xaxis, zaxis)
-        zaxis = np.cross(yaxis, xaxis)
-        #zaxis /= np.linalg.norm(zaxis)
-        #yaxis /= np.linalg.norm(yaxis)
-
-        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-        t.PostMultiply()
-        t.Translate(guardXYZ)
-        self.drill.drillToGuardTransform = transformUtils.copyFrame(t)
-        t.Concatenate( self.drill.frame.transform)
-        self.drill.guardFrame = vis.updateFrame(t, 'drill guard', parent=self.drill.affordance, visible=True, scale=0.2)
+        self.drill.drillToBitTransform = transformUtils.copyFrame(t)
+        t.Concatenate(transformUtils.copyFrame( self.drill.frame.transform))
+        self.drill.bitFrame = vis.updateFrame(t, 'drill bit', parent=self.drill.affordance, visible=True, scale=0.2)
 
 
-    def spawnDrillAffordance(self, drillType="Button"):
+    def computeFaceToDrillTransform(self):
+        # if the drill is held in the hand
+        # what will be its position, relative to the l_hand_face (or other)
+        self.drill.faceToDrillTransform = segmentation.getDrillInHandOffset(self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillFlip)
 
-        drillFrame = self.computeDrillFrame(self.robotModel)
+
+    def spawnDrillAffordance(self, drillType="dewalt_button"):
+
+        drillTransform = transformUtils.frameFromPositionAndRPY(self.drill.initXYZ, self.drill.initRPY)
+        #drillTransform = self.computeConvenientDrillFrame(self.robotModel)
 
         folder = om.getOrCreateContainer('affordances')
-        if (drillType=="Button"):
+        if (drillType=="dewalt_button"):
             drillMesh = segmentation.getDrillMesh()
-            params = segmentation.getDrillAffordanceParams(np.array(drillFrame.GetPosition()), [1,0,0], [0,1,0], [0,0,1])
+            params = segmentation.getDrillAffordanceParams(np.array(drillTransform.GetPosition()), [1,0,0], [0,1,0], [0,0,1])
         else:
             drillMesh = segmentation.getDrillBarrelMesh()
-            params =[]
+            params = segmentation.getDrillAffordanceParams(np.array(drillTransform.GetPosition()), [1,0,0], [0,1,0], [0,0,1], 'dewalt_barrel')
 
         self.drill.affordance = vis.showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=vis.FrameAffordanceItem, parent=folder)
-        self.drill.affordance.actor.SetUserTransform(drillFrame)
-        self.drill.frame = vis.showFrame(drillFrame, 'drill frame', parent=self.drill.affordance, visible=False, scale=0.2)
+        self.drill.affordance.actor.SetUserTransform(drillTransform)
+        self.drill.frame = vis.showFrame(drillTransform, 'drill frame', parent=self.drill.affordance, visible=False, scale=0.2)
         self.drill.affordance.setAffordanceParams(params)
 
         self.computeDrillGraspFrame()
+        self.computeDrillReachFrame()
         self.computeDrillStanceFrame()
-        self.computeDrillTipFrame()
         self.computeDrillButtonFrame()
-        self.computeDrillGuardFrame()
+        self.computeDrillBitFrame()
+        self.computeFaceToDrillTransform()
+
+        self.drill.frameSync = vis.FrameSync()
+        self.drill.frameSync.addFrame(self.drill.frame)
+        self.drill.frameSync.addFrame(self.drill.graspFrame)
+        self.drill.frameSync.addFrame(self.drill.reachFrame)
+        self.drill.frameSync.addFrame(self.drill.stanceFrame)
+        self.drill.frameSync.addFrame(self.drill.buttonFrame)
+        self.drill.frameSync.addFrame(self.drill.bitFrame)
 
 
     def moveDrillToHand(self):
-        hand = 'left'
-        rotation = 90
-        offset = .0
-        drillFlip = False
-        self.drill.palmToDrillTransform = segmentation.getDrillInHandOffset(rotation, offset, drillFlip)
-
-        # create a drill and put it in the hand:
-        segmentation.moveDrillToHand(self.drill.palmToDrillTransform, hand)
+        # This function moves the drill to the hand using the pose used for planning
+        # It is similar to segmentation.moveDrillToHand() other wise
+        # TODO: deprecate segmentation.moveDrillToHand()
 
         self.drill.affordance = om.findObjectByName('drill')
         self.drill.frame = om.findObjectByName('drill frame')
 
-        self.computeDrillButtonFrame()
-        self.computeDrillGuardFrame()
+        drillTransform = self.drill.affordance.actor.GetUserTransform()
+        drillTransform.PostMultiply()
+        drillTransform.Identity()
+        drillTransform.Concatenate( self.drill.faceToDrillTransform )
+        startPose = self.getPlanningStartPose()
+        drillTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand_face' , startPose) )
 
 
-    def getHandToGuard(self):
+    def getHandToBit(self, startPose):
         gazeToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
 
-        handToPalmTransform = vtk.vtkTransform()
-        handToPalmTransform.PostMultiply()
-        handToPalmTransform.Concatenate( self.robotModel.getLinkFrame('left_palm') )
-        handToPalmTransform.Concatenate( self.robotModel.getLinkFrame('l_hand').GetLinearInverse() )
+        handToFaceTransform = vtk.vtkTransform()
+        handToFaceTransform.PostMultiply()
+        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand_face' , startPose) )
+        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose).GetLinearInverse() )
+        self.handToFaceTransform = handToFaceTransform
 
         # planning is done in drill tip frame - which is relative to the hand link:
-        # drill-to-hand = tip-to-drill * drill-to-palm * palm-to-hand
-        handToGuard = vtk.vtkTransform()
-        handToGuard.PostMultiply()
-        handToGuard.Concatenate( self.drill.drillToGuardTransform )
-        handToGuard.Concatenate( self.drill.palmToDrillTransform )
-        handToGuard.Concatenate( handToPalmTransform )
-        return handToGuard
+        # drill-to-hand = tip-to-drill * drill-to-face * face-to-hand
+        handToBit = vtk.vtkTransform()
+        handToBit.PostMultiply()
+        handToBit.Concatenate( self.drill.drillToBitTransform )
+        handToBit.Concatenate( self.drill.faceToDrillTransform )
+        handToBit.Concatenate( handToFaceTransform )
+        return handToBit
 
 
-    def getWorldToGuard(self):
-        handToGuard = self.getHandToGuard()
-        worldToGuard = transformUtils.copyFrame( handToGuard)
-        worldToGuard.Concatenate( self.robotModel.getLinkFrame('l_hand')  )
-        return worldToGuard
+    def getWorldToBit(self, startPose):
+        handToBit = self.getHandToBit(startPose)
+        worldToBit = transformUtils.copyFrame( handToBit)
+        worldToBit.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose)  )
+        return worldToBit
+
+
+    def getHandToButton(self, startPose):
+        gazeToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
+
+        handToFaceTransform = vtk.vtkTransform()
+        handToFaceTransform.PostMultiply()
+        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand_face' , startPose) )
+        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose).GetLinearInverse() )
+        self.handToFaceTransform = handToFaceTransform
+
+        # button-to-hand = button-to-drill * drill-to-face * face-to-hand
+        handToButton = vtk.vtkTransform()
+        handToButton.PostMultiply()
+        handToButton.Concatenate( self.drill.drillToButtonTransform )
+        handToButton.Concatenate( self.drill.faceToDrillTransform )
+        handToButton.Concatenate( handToFaceTransform )
+        return handToButton
+
+
+    def getWorldToButton(self, startPose):
+        handToButton = self.getHandToButton(startPose)
+        worldToButton = transformUtils.copyFrame( handToButton)
+        worldToButton.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose)  )
+        return worldToButton
 
 
     def findDrillAffordance(self):
         self.drill.affordance = om.findObjectByName('drill')
         self.drill.frame = om.findObjectByName('drill frame')
+
 
     def spawnWallAffordance(self):
         rightAngleLocation = "bottom left"
@@ -364,39 +382,17 @@ class DrillPlannerDemo(object):
         segmentation.createDrillWall(rightAngleLocation, self.wall.transform)
         self.wall.affordance = om.getOrCreateContainer('wall')
 
-        graspFrame = self.wall.transform
+        objectTransform = self.wall.transform
+        robotStance = self.computeRobotStanceFrame( objectTransform, self.wall.relativeStanceTransform )
+        self.wall.stanceFrame = vis.updateFrame(robotStance, 'wall stance', parent=self.wall.affordance, visible=True, scale=0.2)
 
-        groundFrame = self.computeGroundFrame(self.robotModel)
-        groundHeight = groundFrame.GetPosition()[2]
-
-        graspPosition = np.array(  graspFrame.GetPosition())
-        graspYAxis = [0.0, 1.0, 0.0]
-        graspZAxis = [0.0, 0.0, 1.0]
-        graspFrame.TransformVector(graspYAxis, graspYAxis)
-        graspFrame.TransformVector(graspZAxis, graspZAxis)
-
-        xaxis = graspYAxis
-        #xaxis = graspZAxis
-        zaxis = [0, 0, 1]
-        yaxis = np.cross(zaxis, xaxis)
-        yaxis /= np.linalg.norm(yaxis)
-        xaxis = np.cross(yaxis, zaxis)
-
-        graspGroundFrame = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-        graspGroundFrame.PostMultiply()
-        graspGroundFrame.Translate(graspPosition[0], graspPosition[1], groundHeight)
-
-        position = [-0.28, -0.53, 0.0]
-        rpy = [0, 0, 30]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(graspGroundFrame)
-
-        self.wall.stanceFrame = vis.updateFrame(t, 'wall stance', parent=self.wall.affordance, visible=True, scale=0.2)
+        robotStanceFar = self.computeRobotStanceFrame( objectTransform, self.wall.relativeStanceFarTransform )
+        self.wall.stanceFarFrame = vis.updateFrame(robotStanceFar, 'wall stance far', parent=self.wall.affordance, visible=True, scale=0.2)
 
         self.wall.frameSync= vis.FrameSync()
         self.wall.frameSync.addFrame(self.wall.affordance.getChildFrame())
         self.wall.frameSync.addFrame(self.wall.stanceFrame)
+
 
     ### End Drill Focused Functions ###############################################################
     ### Planning Functions ###############################################################
@@ -431,9 +427,16 @@ class DrillPlannerDemo(object):
         self.showEndPose()
 
 
+    def planReach(self):
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.drill.reachFrame, lockTorso=False)
+        endPose, info = constraintSet.runIk()
+        graspPlan = constraintSet.runIkTraj()
+        self.addPlan(graspPlan)
+
     def planGrasp(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.drill.graspFrame, lockTorso=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.drill.graspFrame, lockTorso=False)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
@@ -464,7 +467,7 @@ class DrillPlannerDemo(object):
         self.addPlan(newPlan)
 
 
-    def initGazeConstraintSet(self, goalFrame, gazeHand, gazeToHandLinkFrame, gazeAxis=[-1.0, 0.0, 0.0] ):
+    def initGazeConstraintSet(self, goalFrame, gazeHand, gazeToHandLinkFrame, gazeAxis=[-1.0, 0.0, 0.0], lockBase=False, lockBack=False):
 
         # create constraint set
         startPose = self.getPlanningStartPose()
@@ -476,7 +479,7 @@ class DrillPlannerDemo(object):
         self.constraintSet.endPose = startPose
 
         # add body constraints
-        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=True, lockBack=False, lockLeftArm=gazeHand=='right', lockRightArm=gazeHand=='left')
+        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockLeftArm=gazeHand=='right', lockRightArm=gazeHand=='left')
         self.constraintSet.constraints.extend(bodyConstraints)
 
         gazeConstraint = self.ikPlanner.createGazeGraspConstraint(gazeHand, goalFrame, gazeToHandLinkFrame, coneThresholdDegrees= 0.0 , gazeAxis=[-1,0,0])
@@ -497,12 +500,15 @@ class DrillPlannerDemo(object):
 
     def planPointerPressGaze(self):
         gazeHand = self.pointerHand()
-        self.moveDrillToHand()
 
-        # add gaze constraint
+        # add gaze constraint for pointer along the
         gazeToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(gazeHand)
-        self.initGazeConstraintSet(self.drill.buttonFrame, gazeHand, gazeToHandLinkFrame, gazeAxis=[0.0, 1.0, 0.0])
-        self.appendPositionConstraintForTargetFrame(self.drill.buttonFrame, 1, gazeHand, gazeToHandLinkFrame)
+
+        worldToButton = self.getWorldToButton( self.getPlanningStartPose() )
+        worldToButtonFrame = vis.updateFrame(worldToButton, 'test button', visible=False, scale=0.2, parent=om.getOrCreateContainer('affordances'))
+
+        self.initGazeConstraintSet(worldToButtonFrame, gazeHand, gazeToHandLinkFrame, gazeAxis=[0.0, 1.0, 0.0], lockBase=True, lockBack=True)
+        self.appendPositionConstraintForTargetFrame(worldToButtonFrame, 1, gazeHand, gazeToHandLinkFrame)
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
         self.planGazeTrajectory()
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
@@ -510,9 +516,8 @@ class DrillPlannerDemo(object):
 
     def planNextCut(self, getNextAction , argument1=None ):
         if (argument1 is None):
-            self.moveDrillToHand
             success = getNextAction()
-            print success
+            #print success
         else:
             success = getNextAction(argument1)
 
@@ -523,7 +528,23 @@ class DrillPlannerDemo(object):
         return success
 
 
-    def planFirstCutDesired(self, engagedTip=True):
+    def updateNextCutPoseGoal(self):
+        nextCutPoseGoal = transformUtils.frameFromPositionAndRPY( self.cutPoints[ self.currentCutGoal ] , self.cutOrientation )
+        self.nextCutGoalFrame = vis.updateFrame(nextCutPoseGoal, 'next cut goal', visible=True, scale=0.2, parent=self.wall.affordance)
+        d_dot = DebugData()
+        d_dot.addSphere( self.nextCutGoalFrame.transform.GetPosition() , radius=0.02)
+        aff = vis.updatePolyData(d_dot.getPolyData(), 'next cut goal dot', color=[1,0.5,0], visible=True, parent=self.wall.affordance)
+        return nextCutPoseGoal
+
+
+    def updateNextCutPose(self, nextCutPose):
+        self.nextCutFrame = vis.updateFrame(nextCutPose, 'next cut', visible=True, scale=0.2, parent=self.wall.affordance)
+        d_dot2 = DebugData()
+        d_dot2.addSphere( self.nextCutFrame.transform.GetPosition() , radius=0.015)
+        aff2 = vis.updatePolyData(d_dot2.getPolyData(), 'next cut dot', color=[1,0.5,0], visible=True, parent=self.wall.affordance)
+
+
+    def computeFirstCutDesired(self, engagedTip=True):
 
         t0 = transformUtils.copyFrame( self.wall.transform )
 
@@ -543,32 +564,30 @@ class DrillPlannerDemo(object):
         self.cutOrientation = self.wall.transform.GetOrientation()
         self.cutPoints = [t0.GetPosition() , t1.GetPosition(), t2.GetPosition(), t0.GetPosition() ]
         self.currentCutGoal = 0
-
-        nextCutPoseGoal = transformUtils.frameFromPositionAndRPY( self.cutPoints[ self.currentCutGoal ] , self.cutOrientation )
-        self.nextCutGoalFrame = vis.updateFrame(nextCutPoseGoal, 'next cut goal', visible=True, scale=0.2, parent=om.getOrCreateContainer('affordances'))
+        nextCutPoseGoal = self.updateNextCutPoseGoal()
 
         if (engagedTip == False):
-            nextCutPose = transformUtils.frameFromPositionAndRPY( [0.055, 0, 0] , [0,0,0] )
+            nextCutPose = transformUtils.frameFromPositionAndRPY( [ self.retractDepthNominal , 0, 0] , [0,0,0] )
             nextCutPose.Concatenate( nextCutPoseGoal )
         else:
             nextCutPose = transformUtils.copyFrame( nextCutPoseGoal )
 
-        self.nextCutFrame = vis.updateFrame(nextCutPose, 'next cut', visible=True, scale=0.2, parent=om.getOrCreateContainer('affordances'))
+        self.updateNextCutPose(nextCutPose)
 
 
-    def computeRetractionDesired(self, retractGuard=True):
-        self.worldToGuard = self.getWorldToGuard()
+    def computeRetractionDesired(self, retractBit=True):
+        self.worldToBit = self.getWorldToBit( self.getPlanningStartPose() )
 
         # relative position of g
-        goalToGuard = transformUtils.copyFrame( self.worldToGuard )
-        goalToGuard.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
+        goalToBit = transformUtils.copyFrame( self.worldToBit )
+        goalToBit.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
 
-        if (retractGuard == True):
+        if (retractBit == True):
             retractDepth = self.retractDepthNominal
         else: # this can be used to insert where we are located:
             retractDepth = 0.0
 
-        self.goalToNextCut = transformUtils.frameFromPositionAndRPY( [retractDepth, goalToGuard.GetPosition()[1], goalToGuard.GetPosition()[2] ] , [0,0,0] )
+        self.goalToNextCut = transformUtils.frameFromPositionAndRPY( [retractDepth, goalToBit.GetPosition()[1], goalToBit.GetPosition()[2] ] , [0,0,0] )
         self.worldToNextCut = transformUtils.copyFrame( self.goalToNextCut )
         self.worldToNextCut.Concatenate( self.nextCutGoalFrame.transform )
         self.nextCutFrame = vis.updateFrame(self.worldToNextCut, 'next cut', visible=True, scale=0.2)
@@ -583,56 +602,63 @@ class DrillPlannerDemo(object):
         # move in the direction of the goal
         #   find a point thats x cm closer to the goal in the plane of the target
 
-        self.worldToGuard = self.getWorldToGuard()
+        self.worldToBit = self.getWorldToBit( self.getPlanningStartPose() )
 
-        # relative position of guard
-        goalToGuard = transformUtils.copyFrame( self.worldToGuard )
-        goalToGuard.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
+        # relative position of bit
+        goalToBit = transformUtils.copyFrame( self.worldToBit )
+        goalToBit.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
 
-        distToGoal2D = np.linalg.norm( goalToGuard.GetPosition()[1:3] )
+        distToGoal2D = np.linalg.norm( goalToBit.GetPosition()[1:3] )
         print "distToGoal2D", distToGoal2D , "from" , self.currentCutGoal
 
-        if (distToGoal2D < 0.05):
+        if (distToGoal2D < self.goalThreshold ): # typically 5cm
             if ( self.currentCutGoal == len(self.cutPoints) -1):
                 print distToGoal2D , " - within threshold of last goal", self.currentCutGoal
                 return False
 
             self.currentCutGoal=self.currentCutGoal+1
-            nextCutPose = transformUtils.frameFromPositionAndRPY( self.cutPoints[ self.currentCutGoal ] , self.cutOrientation )
-            self.nextCutGoalFrame = vis.updateFrame(nextCutPose, 'next cut goal', visible=True, scale=0.2)
+            nextCutPoseGoal = self.updateNextCutPoseGoal()
+
+            # switch to follow to the new goal:
+            goalToBit = transformUtils.copyFrame( self.worldToBit )
+            goalToBit.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
             #print distToGoal2D , " - within threshold. Moving to", self.currentCutGoal
 
         # TODO: change this to a metric movement towards a goal:
-        self.goalToNextCut = transformUtils.frameFromPositionAndRPY( [0, goalToGuard.GetPosition()[1] *0.5 , goalToGuard.GetPosition()[2] *0.5] , [0,0,0] )
-        #printTF(self.goalToNextCut, "goalToNextCut")
+        distToGoal2D = np.linalg.norm( goalToBit.GetPosition()[1:3])
+
+        if (distToGoal2D < self.cutLength): # finish the cut to the goal
+            self.goalToNextCut = transformUtils.frameFromPositionAndRPY( [0, goalToBit.GetPosition()[1], goalToBit.GetPosition()[2] ] , [0,0,0] )
+        else:
+            # this is kind of odd - but it works. the distance to the goal that the cut to finish at
+            cutsLeft = distToGoal2D/self.cutLength
+            goalToBit.GetPosition()[1]
+            scale = (cutsLeft-1)/cutsLeft
+            self.goalToNextCut = transformUtils.frameFromPositionAndRPY( [0,  scale*goalToBit.GetPosition()[1] ,  scale*goalToBit.GetPosition()[2]  ] , [0,0,0] )
+
         self.worldToNextCut = transformUtils.copyFrame( self.goalToNextCut )
         self.worldToNextCut.Concatenate( self.nextCutGoalFrame.transform )
-        #printTF(self.worldToNextCut, "worldToNextCut")
-        self.nextCutFrame = vis.updateFrame(self.worldToNextCut, 'next cut', visible=True, scale=0.2)
 
+        self.updateNextCutPose( self.worldToNextCut )
         return True
 
 
     def planDrillingGaze(self):
-        # sets the designer's position of the robot to the last sample in the plan
-        # this is required when playing planNominalCut() so that the hand-to-drill transform can be correctly determined. REMOVE!
-        self.sensorJointController.setPose("EST_ROBOT_STATE",  robotstate.convertStateMessageToDrakePose( self.plans[-1].plan[-1] ) )
-        # required to move drill to hand
-        self.moveDrillToHand() # should not required, remove when not needed
 
-        handToGuard = self.getHandToGuard()
+        startPose = self.getPlanningStartPose()
+        handToBit = self.getHandToBit(startPose)
 
         if (1==0):
-            vis.updateFrame(self.robotModel.getLinkFrame('l_hand'), 'l_hand mfallon', visible=True, scale=0.2)
-            worldToGuard = self.getWorldToGuard()
-            vis.updateFrame(worldToGuard, 'world to drill guard', visible=True, scale=0.2)
+            vis.updateFrame( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose)  , 'l_hand testing', visible=True, scale=0.2)
+            worldToBit = self.getWorldToBit(startPose)
+            vis.updateFrame(worldToBit, 'world to drill bit', visible=True, scale=0.2)
 
-            print "handToGuard"
-            print handToGuard.GetPosition()
-            print handToGuard.GetOrientation()
+            print "handToBit"
+            print handToBit.GetPosition()
+            print handToBit.GetOrientation()
 
-        self.initGazeConstraintSet(self.nextCutFrame, self.graspingHand, handToGuard, gazeAxis=[-1.0, 0.0, 0.0])
-        self.appendPositionConstraintForTargetFrame(self.nextCutFrame, 1, self.graspingHand, handToGuard)
+        self.initGazeConstraintSet(self.nextCutFrame, self.graspingHand, handToBit, gazeAxis=[1.0, 0.0, 0.0])
+        self.appendPositionConstraintForTargetFrame(self.nextCutFrame, 1, self.graspingHand, handToBit)
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
         self.planGazeTrajectory()
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
@@ -762,20 +788,19 @@ class DrillPlannerDemo(object):
     ######### Nominal Plans and Execution  #################################################################
     def planNominalPickUp(self, playbackNominal=True):
 
+        ikplanner.getIkOptions().setProperty('Use pointwise', False)
+        ikplanner.getIkOptions().setProperty('Quasistatic shrink factor', 0.1)
+
         self.planFromCurrentRobotState = False
         self.plans = []
 
         # self.findDrillAffordance()
         if (om.findObjectByName('drill') is None):
-            #self.moveDrillToHand() # should not required, remove when not needed
             self.spawnDrillAffordance()
 
         if (om.findObjectByName('wall') is None):
             self.spawnWallAffordance()
 
-
-        self.computeDrillGraspFrame()
-        self.computeDrillStanceFrame()
 
         if self.useFootstepPlanner:
             self.planFootsteps( self.drill.stanceFrame.transform )
@@ -784,7 +809,10 @@ class DrillPlannerDemo(object):
             self.moveRobotToStanceFrame(self.drill.stanceFrame.transform)
 
         self.planPreGrasp()
+        self.planReach()
         self.planGrasp()
+
+        # self.affordanceUpdater.graspAffordance('drill', 'left')
 
         self.planPreGrasp()
         self.planStand()
@@ -796,39 +824,27 @@ class DrillPlannerDemo(object):
     def planNominalTurnOn(self, playbackNominal=True):
 
         self.planFromCurrentRobotState = False
-
         if (self.flushNominalPlanSequence):
             self.plans = []
-
+        if (om.findObjectByName('drill') is None):
+            self.spawnDrillAffordance()
+            #self.affordanceUpdater.graspAffordance('drill', 'left')
         if (om.findObjectByName('wall') is None):
             self.spawnWallAffordance()
 
-        # sets the designer's position of the robot to the last sample in the plan
-        # this is required when playing planNominalCut() so that the hand-to-drill transform can be correctly determined. REMOVE!
-        self.sensorJointController.setPose("EST_ROBOT_STATE",  robotstate.convertStateMessageToDrakePose( self.plans[-1].plan[-1] ) )
-
         if self.useFootstepPlanner:
-            self.planFootsteps( self.wall.stanceFrame.transform )
+            self.planFootsteps( self.wall.stanceFarFrame.transform )
             self.planWalking()
         else:
-            self.moveRobotToStanceFrame( self.wall.stanceFrame.transform )
+            self.moveRobotToStanceFrame( self.wall.stanceFarFrame.transform )
 
         self.planDrillRaisePowerOn()
         self.planPointerRaisePowerOn()
 
-        # sets the designer's position of the robot to the last sample in the plan
-        # this is required when playing planNominalCut() so that the hand-to-drill transform can be correctly determined. REMOVE!
-        self.sensorJointController.setPose("EST_ROBOT_STATE",  robotstate.convertStateMessageToDrakePose( self.plans[-1].plan[-1] ) )
-        # required to move drill to hand
-        self.moveDrillToHand() # should not required, remove when not needed
         self.planPointerPressGaze()
         self.planPointerRaisePowerOn()
 
-        # lower again
-        #self.planStand()
-
-        # required to move drill to hand
-        #self.moveDrillToHand() # should not required, remove when not needed
+        self.planDrillRaiseForCutting()
 
         if (playbackNominal is True):
             self.playNominalPlan()
@@ -836,30 +852,27 @@ class DrillPlannerDemo(object):
 
     def planNominalCut(self, playbackNominal=True):
 
-        # sets the designer's position of the robot to the last sample in the plan
-        # this is required when playing planNominalCut() so that the hand-to-drill transform can be correctly determined. REMOVE!
-        self.sensorJointController.setPose("EST_ROBOT_STATE",  robotstate.convertStateMessageToDrakePose( self.plans[-1].plan[-1] ) )
-
         self.planFromCurrentRobotState = False
-
         if (self.flushNominalPlanSequence):
             self.plans = []
+        if (om.findObjectByName('drill') is None):
+            self.spawnDrillAffordance()
+            #self.affordanceUpdater.graspAffordance('drill', 'left')
+        if (om.findObjectByName('wall') is None):
+            self.spawnWallAffordance()
 
-        #if (om.findObjectByName('drill') is None):
-        #    #self.moveDrillToHand() # should not required, remove when not needed
-        #    self.spawnDrillAffordance()
+        # Walking:
+        if self.useFootstepPlanner:
+            self.planFootsteps( self.wall.stanceFrame.transform )
+            self.planWalking()
+        else:
+            self.moveRobotToStanceFrame( self.wall.stanceFrame.transform )
 
-        #if (om.findObjectByName('wall') is None):
-        #    self.spawnWallAffordance()
+        ikplanner.getIkOptions().setProperty('Use pointwise', True)
+        ikplanner.getIkOptions().setProperty('Quasistatic shrink factor', 0.5)
 
-        #self.spawnWallAffordance()
-
-        self.planDrillRaiseForCutting()
-
-        self.moveDrillToHand()
-
-        self.planNextCut( self.planFirstCutDesired, False )
-        self.planNextCut( self.planFirstCutDesired, True )
+        self.planNextCut( self.computeFirstCutDesired, False )
+        self.planNextCut( self.computeFirstCutDesired, True )
 
         success = True
         while (success is True):
@@ -867,6 +880,11 @@ class DrillPlannerDemo(object):
             print " "
 
         self.planNextCut( self.computeRetractionDesired, True )
+
+        ikplanner.getIkOptions().setProperty('Use pointwise', False)
+        ikplanner.getIkOptions().setProperty('Quasistatic shrink factor', 0.1)
+
+
         self.planDrillRaiseForCutting()
         self.planStand()
 
