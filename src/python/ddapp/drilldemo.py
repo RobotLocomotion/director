@@ -454,6 +454,20 @@ class DrillPlannerDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
+    def planPointerLowerPowerOn(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'one hand down - 2014', side=self.pointerHand() )
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+
+    def planDrillLowerSafe(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'one hand down with drill - 2014', side=self.graspingHand )
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+
     def planDrillRaiseForCutting(self):
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill near target - 2014', side=self.graspingHand )
@@ -815,7 +829,7 @@ class DrillPlannerDemo(object):
         # self.affordanceUpdater.graspAffordance('drill', 'left')
 
         self.planPreGrasp()
-        self.planStand()
+        self.planDrillLowerSafe()
 
         if (playbackNominal is True):
             self.playNominalPlan()
@@ -843,6 +857,8 @@ class DrillPlannerDemo(object):
 
         self.planPointerPressGaze()
         self.planPointerRaisePowerOn()
+
+        self.planPointerLowerPowerOn()
 
         self.planDrillRaiseForCutting()
 
@@ -884,9 +900,15 @@ class DrillPlannerDemo(object):
         ikplanner.getIkOptions().setProperty('Use pointwise', False)
         ikplanner.getIkOptions().setProperty('Quasistatic shrink factor', 0.1)
 
-
         self.planDrillRaiseForCutting()
-        self.planStand()
+
+        if self.useFootstepPlanner:
+            self.planFootsteps( self.wall.stanceFarFrame.transform )
+            self.planWalking()
+        else:
+            self.moveRobotToStanceFrame( self.wall.stanceFarFrame.transform )
+
+        self.planDrillLowerSafe()
 
         if (playbackNominal is True):
             self.playNominalPlan()
