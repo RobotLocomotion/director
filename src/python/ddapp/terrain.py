@@ -25,12 +25,14 @@ DEFAULT_CONTACT_SLICES = {(0.05, 0.35): np.array([[-0.13, -0.13, 0.13, 0.13],
                           }
 
 def classify_terrain(heights, px2world):
-    # heights[np.isnan(heights)] = 0 # TODO: make sure these are filled properly
+    # heights[np.isnan(heights)] = np.min(heights) # TODO: make sure these are filled properly
+    # TODO: actually fill in missing height data
+    heights[np.isnan(heights)] = 0
     sx = ndimage.sobel(heights, axis=0, mode='constant')
     sy = ndimage.sobel(heights, axis=1, mode='constant')
     sob = np.hypot(sx, sy)
     # sob[np.isnan(sob)] = np.inf
-    sob[np.isnan(sob)] = 0
+    # sob[np.isnan(sob)] = 0
     edges = sob > 0.5 # TODO: maybe not just a magic constant?
     edges[np.isnan(heights)] = False
     feas = np.logical_not(edges)
@@ -77,7 +79,7 @@ class TerrainSegmentation:
             self.px2world = px2world
         C, R = np.meshgrid(range(heights.shape[1]), range(heights.shape[0]))
         self.heights = self.px2world[2,:].dot(np.vstack((C.flatten(), R.flatten(), heights.flatten(), np.ones((1,C.flatten().shape[0]))))).reshape(heights.shape)
-        self.feas = classify_terrain(heights, self.px2world)
+        self.feas = classify_terrain(self.heights, self.px2world)
         self.edge_pts_xy = terrain_edge_obs(self.feas, self.px2world_2x3)
 
     def findSafeRegion(self, pose, **kwargs):
