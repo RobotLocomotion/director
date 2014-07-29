@@ -4,8 +4,10 @@ import numpy as np
 
 import ddapp.objectmodel as om
 import ddapp.visualization as vis
+import ddapp.vtkNumpy as vnp
 from scipy.spatial.qhull import QhullError
 from ddapp import transformUtils
+from ddapp import filterUtils
 from ddapp.debugVis import DebugData
 # from ddapp import vtkAll as vtk
 from ddapp.pointpicker import PlacerWidget
@@ -18,7 +20,7 @@ class TerrainRegionItem(vis.PolyDataItem):
         vis.PolyDataItem.__init__(self, name, d.getPolyData(), view)
         self.transform = seed_pose
         d.addSphere((0,0,0), radius=0.02)
-        self.seedObj = vis.showPolyData(d.getPolyData(), 'region seed', color=[.8,.8,.1], parent=om.getOrCreateContainer('IRIS region seeds'))
+        self.seedObj = vis.showPolyData(d.getPolyData(), 'region seed', parent=om.getOrCreateContainer('IRIS region seeds'))
         self.seedObj.actor.SetUserTransform(self.transform)
         self.frameObj = vis.showFrame(self.transform, 'region seed frame',
                                       scale=0.2,
@@ -37,10 +39,11 @@ class TerrainRegionItem(vis.PolyDataItem):
         self.safe_region = None
         self.addProperty('Visible', True)
         self.addProperty('Enabled for Walking', True)
-        self.addProperty('Color', QtGui.QColor(200,200,20))
         self.addProperty('Alpha', 1.0)
+        self.addProperty('Color', QtGui.QColor(200,200,20))
         self.onFrameModified(self.frameObj)
-        self.setProperty('Color', QtGui.QColor(200,200,20))
+        self.setProperty('Alpha', 0.5)
+        self.setProperty('Color', QtGui.QColor(220,220,220))
 
     def onFrameModified(self, frame):
         pos, wxyz = transformUtils.poseFromTransform(frame.transform)
@@ -50,14 +53,24 @@ class TerrainRegionItem(vis.PolyDataItem):
         safe_region = self.terrain_segmentation.findSafeRegion(pose, iter_limit=2)
         try:
             xy_verts = safe_region.xy_polytope()
+            if xy_verts.shape[1] == 0:
+                raise QhullError("No points returned")
+            print xy_verts.shape
+            xyz_verts = np.vstack((xy_verts, pos[2] + 0.02 + np.zeros((1, xy_verts.shape[1]))))
+            xyz_verts = np.hstack((xyz_verts, np.vstack((xy_verts, pos[2] + 0.015 + np.zeros((1, xy_verts.shape[1]))))))
+            # print xyz_verts.shape
+            polyData = vnp.getVtkPolyDataFromNumpyPoints(xyz_verts.T.copy())
+            vol_mesh = filterUtils.computeDelaunay3D(polyData)
             for j in range(xy_verts.shape[1]):
-                z = pos[2]
+                z = pos[2] + 0.005
                 p1 = np.hstack((xy_verts[:,j], z))
                 if j < xy_verts.shape[1] - 1:
                     p2 = np.hstack((xy_verts[:,j+1], z))
                 else:
                     p2 = np.hstack((xy_verts[:,0], z))
-                debug.addLine(p1, p2, color=[.8,.8,.2], radius=0.01)
+                debug.addLine(p1, p2, color=[.7,.7,.7], radius=0.003)
+            debug.addPolyData(vol_mesh)
+            # self.setPolyData(vol_mesh)
             self.setPolyData(debug.getPolyData())
             self.safe_region = safe_region
         except QhullError:
@@ -68,9 +81,9 @@ class TerrainRegionItem(vis.PolyDataItem):
 
         if propertyName == 'Enabled for Walking':
             if self.getProperty('Enabled for Walking'):
-                self.setProperty('Alpha', 1.0)
+                self.setProperty('Alpha', 0.2)
             else:
-                self.setProperty('Alpha', 0.25)
+                self.setProperty('Alpha', 0.05)
         if propertyName == 'Visible':
             self.seedObj.setProperty('Visible', self.getProperty('Visible'))
 
