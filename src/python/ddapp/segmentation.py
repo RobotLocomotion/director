@@ -1860,7 +1860,7 @@ def createDrillWall(rightAngleLocation, trianglePose):
     xaxis, yaxis, zaxis = transformUtils.getAxesFromTransform( trianglePose )
 
 
-    edgeRight = np.array([0.0, 1.0, 0.0]) * (24 * .0254)
+    edgeRight = np.array([0.0, -1.0, 0.0]) * (24 * .0254)
     edgeUp = np.array([0.0, 0.0, 1.0]) * (12 * .0254)
 
 
@@ -1890,13 +1890,13 @@ def createDrillWall(rightAngleLocation, trianglePose):
 
     d = DebugData()
     for p in pointsInWallFrame:
-        d.addSphere(p, radius=0.02)
+        d.addSphere(p, radius=0.015)
 
     for a, b in zip(pointsInWallFrame, np.vstack((pointsInWallFrame[1:], pointsInWallFrame[0]))):
-        d.addLine(a, b, radius=0.01)
+        d.addLine(a, b, radius=0.005)#01)
 
     for a, b in zip(shrinkPoints, np.vstack((shrinkPoints[1:], shrinkPoints[0]))):
-        d.addLine(a, b, radius=0.0025)
+        d.addLine(a, b, radius=0.005)#0.025
 
     folder = om.getOrCreateContainer('affordances')
     aff = showPolyData(d.getPolyData(), 'wall', cls=FrameAffordanceItem, color=[0,1,0], visible=True, parent=folder)
@@ -1933,31 +1933,45 @@ def createDrillWall(rightAngleLocation, trianglePose):
     '''
 
 
-def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis):
+def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis, drillType="dewalt_button"):
 
-    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
-                  button_x=0.007, # 0.035
-                  button_y=-0.035, # 0.007
+    if (drillType=="dewalt_button"):
+        params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
+                  button_x=0.007,
+                  button_y=-0.035,
                   button_z=-0.06,
-                  guard_x=-0.01,   # 0
-                  guard_y=0.0, # -0.01
-                  guard_z=0.15,
-                  guard_nx=0.0,
-                  guard_ny=0.0,
-                  guard_nz=1.0,
-                  button_nx=1.0,
-                  button_ny=0.0,
-                  button_nz=0.0,
+                  button_roll=-90.0,
+                  button_pitch=-90.0,
+                  button_yaw=0.0,
+                  bit_x=-0.01,
+                  bit_y=0.0,
+                  bit_z=0.15,
+                  bit_roll=0,
+                  bit_pitch=-90,
+                  bit_yaw=0,
                   friendly_name='dewalt_button', otdf_type='dewalt_button')
+    else:
+        params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
+                  button_x=0.007,
+                  button_y=-0.035,
+                  button_z=-0.06,
+                  button_roll=0.0,
+                  button_pitch=0.0,
+                  button_yaw=0.0,
+                  bit_x=0.18,
+                  bit_y=0.0,
+                  bit_z=0.13,
+                  bit_roll=0,
+                  bit_pitch=0,
+                  bit_yaw=0,
+                  friendly_name='dewalt_barrel', otdf_type='dewalt_barrel')
 
     return params
 
 
 def getDrillMesh():
 
-    #button = np.array([0.035, 0.007, -0.06])
     button = np.array([0.007, -0.035, -0.06])
-
     drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
     d = DebugData()
     d.addPolyData(drillMesh)
@@ -2612,7 +2626,9 @@ def getDrillInHandOffset(zRotation=0.0, zTranslation=0.0, flip=False):
     if flip:
         drillOffset.RotateY(180)
     drillOffset.RotateZ(zRotation)
-    drillOffset.Translate(0, 0.09, zTranslation - 0.015)
+    drillOffset.RotateY(-90)
+    #drillOffset.Translate(0, 0.09, zTranslation - 0.015)
+    drillOffset.Translate(zTranslation - 0.015, 0.035, 0.0)
     return drillOffset
 
 
@@ -2623,7 +2639,7 @@ def moveDrillToHand(drillOffset, hand='right'):
 
     assert hand in ('right', 'left')
     drillTransform = drill.actor.GetUserTransform()
-    rightBaseLink = getLinkFrame('%s_palm' % hand)
+    rightBaseLink = getLinkFrame('%s_hand_face' % hand[0])
     drillTransform.PostMultiply()
     drillTransform.Identity()
     drillTransform.Concatenate(drillOffset)
