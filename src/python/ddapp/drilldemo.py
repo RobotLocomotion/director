@@ -115,7 +115,8 @@ class DrillPlannerDemo(object):
         self.sensorJointController = sensorJointController
         self.planPlaybackFunction = planPlaybackFunction
         self.showPoseFunction = showPoseFunction
-        self.graspingHand = 'left'
+
+        self.setGraspingHand(graspingHand="left")
 
         self.planFromCurrentRobotState = False # False for development, True for operation
 
@@ -145,6 +146,14 @@ class DrillPlannerDemo(object):
         self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
 
 
+    def setGraspingHand(self, graspingHand="left"):
+        self.graspingHand = graspingHand
+        self.graspingFaceLink = '%s_hand_face' % self.graspingHand[0]
+        self.graspingHandLink = '%s_hand' % self.graspingHand[0]
+        if (self.graspingHand == 'left'):
+            self.pointerHand='right'
+        else:
+            self.pointerHand='left'
 
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -325,8 +334,8 @@ class DrillPlannerDemo(object):
 
         handToFaceTransform = vtk.vtkTransform()
         handToFaceTransform.PostMultiply()
-        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand_face' , startPose) )
-        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose).GetLinearInverse() )
+        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingFaceLink , startPose) )
+        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose).GetLinearInverse() )
         self.handToFaceTransform = handToFaceTransform
 
         # planning is done in drill tip frame - which is relative to the hand link:
@@ -342,7 +351,7 @@ class DrillPlannerDemo(object):
     def getWorldToBit(self, startPose):
         handToBit = self.getHandToBit(startPose)
         worldToBit = transformUtils.copyFrame( handToBit)
-        worldToBit.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose)  )
+        worldToBit.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose)  )
         return worldToBit
 
 
@@ -351,8 +360,8 @@ class DrillPlannerDemo(object):
 
         handToFaceTransform = vtk.vtkTransform()
         handToFaceTransform.PostMultiply()
-        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand_face' , startPose) )
-        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose).GetLinearInverse() )
+        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingFaceLink , startPose) )
+        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose).GetLinearInverse() )
         self.handToFaceTransform = handToFaceTransform
 
         # button-to-hand = button-to-drill * drill-to-face * face-to-hand
@@ -367,7 +376,7 @@ class DrillPlannerDemo(object):
     def getWorldToButton(self, startPose):
         handToButton = self.getHandToButton(startPose)
         worldToButton = transformUtils.copyFrame( handToButton)
-        worldToButton.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose)  )
+        worldToButton.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose)  )
         return worldToButton
 
 
@@ -450,13 +459,13 @@ class DrillPlannerDemo(object):
 
     def planPointerRaisePowerOn(self):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill in camera - 2014 pointer', side=self.pointerHand() )
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill in camera - 2014 pointer', side=self.pointerHand )
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
     def planPointerLowerPowerOn(self):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'one hand down - 2014', side=self.pointerHand() )
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'one hand down - 2014', side=self.pointerHand )
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
@@ -513,7 +522,7 @@ class DrillPlannerDemo(object):
 
 
     def planPointerPressGaze(self):
-        gazeHand = self.pointerHand()
+        gazeHand = self.pointerHand
 
         # add gaze constraint for pointer along the
         gazeToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(gazeHand)
@@ -663,7 +672,7 @@ class DrillPlannerDemo(object):
         handToBit = self.getHandToBit(startPose)
 
         if (1==0):
-            vis.updateFrame( self.ikPlanner.getLinkFrameAtPose( 'l_hand' , startPose)  , 'l_hand testing', visible=True, scale=0.2)
+            vis.updateFrame( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose)  , 'hand testing', visible=True, scale=0.2)
             worldToBit = self.getWorldToBit(startPose)
             vis.updateFrame(worldToBit, 'world to drill bit', visible=True, scale=0.2)
 
@@ -766,13 +775,6 @@ class DrillPlannerDemo(object):
             yield
 
 
-    def pointerHand(self):
-        if (self.graspingHand == 'left'):
-            return 'right'
-        else:
-            return 'left'
-
-
     def getEstimatedRobotStatePose(self):
         return self.sensorJointController.getPose('EST_ROBOT_STATE')
 
@@ -826,7 +828,7 @@ class DrillPlannerDemo(object):
         self.planReach()
         self.planGrasp()
 
-        # self.affordanceUpdater.graspAffordance('drill', 'left')
+        # self.affordanceUpdater.graspAffordance('drill', self.graspingHand)
 
         self.planPreGrasp()
         self.planDrillLowerSafe()
@@ -842,7 +844,7 @@ class DrillPlannerDemo(object):
             self.plans = []
         if (om.findObjectByName('drill') is None):
             self.spawnDrillAffordance()
-            #self.affordanceUpdater.graspAffordance('drill', 'left')
+            #self.affordanceUpdater.graspAffordance('drill', self.graspingHand)
         if (om.findObjectByName('wall') is None):
             self.spawnWallAffordance()
 
@@ -873,7 +875,7 @@ class DrillPlannerDemo(object):
             self.plans = []
         if (om.findObjectByName('drill') is None):
             self.spawnDrillAffordance()
-            #self.affordanceUpdater.graspAffordance('drill', 'left')
+            #self.affordanceUpdater.graspAffordance('drill', self.graspingHand)
         if (om.findObjectByName('wall') is None):
             self.spawnWallAffordance()
 
