@@ -256,19 +256,13 @@ class FootstepsDriver(object):
                 obj = vis.showPolyData(vol_mesh, 'walking volume', parent=volFolder, alpha=0.5, visible=self.show_contact_slices, color=color)
                 obj.actor.SetUserTransform(footstepTransform)
 
-            if False:
-            # if footstep.infeasibility > 1e-6:
+            if footstep.infeasibility > 1e-6:
                 d = DebugData()
-                # normal = np.array(allTransforms[i-1].GetPosition()) - np.array(footstepTransform.GetPosition())
-                # normal = normal / np.linalg.norm(normal)
                 start = allTransforms[i-1].GetPosition()
                 end = footstepTransform.GetPosition()
                 d.addArrow(start, end, 0.02, 0.005,
                            startHead=True,
                            endHead=True)
-                # d.addCone(start, normal, 0.02, 0.02)
-                # d.addCone(end, -normal, 0.02, 0.02)
-                # d.addLine(start, end,radius=0.005)
                 vis.showPolyData(d.getPolyData(), 'infeasibility %d -> %d' % (i-2, i-1), parent=folder, color=[1, 0.2, 0.2])
 
             stepName = 'step %d' % (i-1)
