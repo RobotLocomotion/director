@@ -54,6 +54,7 @@ class Drill(object):
         self.frameSync = None
 
         # params:
+        self.model="dewalt_button"
         self.faceToDrillRotation = 90
         self.faceToDrillOffset = 0
         self.faceToDrillFlip = False
@@ -144,8 +145,18 @@ class DrillPlannerDemo(object):
         self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
 
 
+        # These changes are all that are required to run with different combinations
+        if ( self.drill.model == 'dewalt_barrel' ):
+            print "Using a Dewalt Barrel Drill"
+            self.wall.relativeStanceXYZ = [-0.3, 0.75, 0]
+            self.wall.relativeStanceRPY = [0, 0, -90]
+            self.wall.relativeStanceFarXYZ = [-0.3, 1.25, 0]
+            self.wall.relativeStanceFarRPY = [0, 0, -90]
+            if ( self.graspingHand == 'right' ):
+                self.drill.faceToDrillRotation = -90
+
         if ( self.graspingHand == 'right' ):
-            print "Flip goals on axis"
+            print "Planning with drill in the right hand"
             self.drill.relativeStanceXYZ[1] = -self.drill.relativeStanceXYZ[1]
             self.drill.graspFrameRPY = [0,-90,-90]
             self.drill.initXYZ[1] = -self.drill.initXYZ[1]
@@ -294,13 +305,13 @@ class DrillPlannerDemo(object):
         self.drill.faceToDrillTransform = segmentation.getDrillInHandOffset(self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillFlip)
 
 
-    def spawnDrillAffordance(self, drillType="dewalt_button"):
+    def spawnDrillAffordance(self):
 
         drillTransform = transformUtils.frameFromPositionAndRPY(self.drill.initXYZ, self.drill.initRPY)
         #drillTransform = self.computeConvenientDrillFrame(self.robotModel)
 
         folder = om.getOrCreateContainer('affordances')
-        if (drillType=="dewalt_button"):
+        if (self.drill.model == "dewalt_button"):
             drillMesh = segmentation.getDrillMesh()
             params = segmentation.getDrillAffordanceParams(np.array(drillTransform.GetPosition()), [1,0,0], [0,1,0], [0,0,1])
         else:
@@ -496,6 +507,10 @@ class DrillPlannerDemo(object):
     def planDrillRaiseForCutting(self):
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill near target - 2014', side=self.graspingHand )
+
+        if (self.drill.model == 'dewalt_barrel'):
+           endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
+
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
@@ -521,7 +536,8 @@ class DrillPlannerDemo(object):
         bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockLeftArm=gazeHand=='right', lockRightArm=gazeHand=='left')
         self.constraintSet.constraints.extend(bodyConstraints)
 
-        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(gazeHand, goalFrame, gazeToHandLinkFrame, coneThresholdDegrees= 0.0 , gazeAxis=[-1,0,0])
+        coneThresholdDegrees = 0.0
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(gazeHand, goalFrame, gazeToHandLinkFrame, coneThresholdDegrees , gazeAxis)
         self.constraintSet.constraints.insert(0, gazeConstraint)
 
 
@@ -546,7 +562,10 @@ class DrillPlannerDemo(object):
         worldToButton = self.getWorldToButton( self.getPlanningStartPose() )
         worldToButtonFrame = vis.updateFrame(worldToButton, 'test button', visible=False, scale=0.2, parent=om.getOrCreateContainer('affordances'))
 
-        self.initGazeConstraintSet(worldToButtonFrame, gazeHand, gazeToHandLinkFrame, gazeAxis=[0.0, 1.0, 0.0], lockBase=True, lockBack=True)
+        # was [0,1,0]
+        # all_axes = transformUtils.getAxesFromTransform(  gazeToHandLinkFrame )
+        # gazeAxis = all_axes[0]
+        self.initGazeConstraintSet(worldToButtonFrame, gazeHand, gazeToHandLinkFrame, gazeAxis=[-1.0, 0.0, 0.0], lockBase=True, lockBack=True)
         self.appendPositionConstraintForTargetFrame(worldToButtonFrame, 1, gazeHand, gazeToHandLinkFrame)
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
         self.planGazeTrajectory()
@@ -696,7 +715,10 @@ class DrillPlannerDemo(object):
             print handToBit.GetPosition()
             print handToBit.GetOrientation()
 
-        self.initGazeConstraintSet(self.nextCutFrame, self.graspingHand, handToBit, gazeAxis=[1.0, 0.0, 0.0])
+        # button drill: [1,0,0] , barrel drill: [0,1,0] - axis is along bit xaxis (this was explictly defined
+        all_axes = transformUtils.getAxesFromTransform( handToBit )
+
+        self.initGazeConstraintSet(self.nextCutFrame, self.graspingHand, handToBit, gazeAxis=all_axes[0])
         self.appendPositionConstraintForTargetFrame(self.nextCutFrame, 1, self.graspingHand, handToBit)
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
         self.planGazeTrajectory()
