@@ -1859,9 +1859,10 @@ def createDrillWall(rightAngleLocation, trianglePose):
     triangleOrigin = trianglePose.GetPosition()
     xaxis, yaxis, zaxis = transformUtils.getAxesFromTransform( trianglePose )
 
-
-    edgeRight = np.array([0.0, -1.0, 0.0]) * (24 * .0254)
-    edgeUp = np.array([0.0, 0.0, 1.0]) * (12 * .0254)
+    # 0.6096 = 24 * .0254 (m = feet)
+    # 0.3048 = 12 * .0254 (m = feet)
+    edgeRight = np.array([0.0, -1.0, 0.0]) * (0.6)
+    edgeUp = np.array([0.0, 0.0, 1.0]) * (0.3)
 
 
     pointsInWallFrame = np.zeros((3,3))
