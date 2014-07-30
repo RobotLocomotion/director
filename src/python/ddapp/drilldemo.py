@@ -68,8 +68,6 @@ class Drill(object):
         # where to stand relative to the drill on a table:
         self.relativeStanceXYZ = [-0.67, -0.4, 0.0]
         self.relativeStanceRPY = [0, 0, 0]
-        self.relativeStanceTransform = transformUtils.frameFromPositionAndRPY( self.relativeStanceXYZ , self.relativeStanceRPY )
-
 
 class Wall(object):
     def __init__(self):
@@ -82,9 +80,10 @@ class Wall(object):
         self.frameSync = None
 
         # params:
+        self.rightAngleLocation = "bottom left"
         # at startup location (no walking)
-        #self.init_XYZ = [0.5, 0.3, 1.1]
-        #self.init_RPY = [0,0,240]
+        #self.initXYZ = [0.5, 0.3, 1.1]
+        #self.initRPY = [0,0,240]
         # away from robot - requires walking
         self.initXYZ = [1.65, -0.40, 1.1]
         self.initRPY = [0,0,0]
@@ -92,11 +91,9 @@ class Wall(object):
         # where to stand relative to the wall target:
         self.relativeStanceXYZ = [0.28, 0.45, 0.0]
         self.relativeStanceRPY = [0, 0, 210]
-        self.relativeStanceTransform = transformUtils.frameFromPositionAndRPY( self.relativeStanceXYZ , self.relativeStanceRPY )
         # where to stand relative to the wall target - but distant - for button pressing
         self.relativeStanceFarXYZ = [0.28, 1.0, 0.0]
         self.relativeStanceFarRPY = [0, 0, 210]
-        self.relativeStanceFarTransform = transformUtils.frameFromPositionAndRPY( self.relativeStanceFarXYZ , self.relativeStanceFarRPY )
 
 
 class DrillPlannerDemo(object):
@@ -116,7 +113,8 @@ class DrillPlannerDemo(object):
         self.planPlaybackFunction = planPlaybackFunction
         self.showPoseFunction = showPoseFunction
 
-        self.setGraspingHand(graspingHand="left")
+        defaultGraspingHand = "left"
+        self.setGraspingHand(defaultGraspingHand)
 
         self.planFromCurrentRobotState = False # False for development, True for operation
 
@@ -144,6 +142,22 @@ class DrillPlannerDemo(object):
 
         extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
         self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
+
+
+        if ( self.graspingHand == 'right' ):
+            print "Flip goals on axis"
+            self.drill.relativeStanceXYZ[1] = -self.drill.relativeStanceXYZ[1]
+            self.drill.graspFrameRPY = [0,-90,-90]
+            self.drill.initXYZ[1] = -self.drill.initXYZ[1]
+            self.drill.faceToDrillFlip = True
+
+            self.wall.rightAngleLocation = "bottom right"
+            self.wall.initXYZ[1] = -self.wall.initXYZ[1]
+            self.wall.relativeStanceXYZ[0] = -self.wall.relativeStanceXYZ[0]
+            self.wall.relativeStanceRPY[2] = -self.wall.relativeStanceRPY[2] + 180
+
+            self.wall.relativeStanceFarXYZ[0] = -self.wall.relativeStanceFarXYZ[0]
+            self.wall.relativeStanceFarRPY[2] = -self.wall.relativeStanceFarRPY[2] + 180
 
 
     def setGraspingHand(self, graspingHand="left"):
@@ -249,6 +263,7 @@ class DrillPlannerDemo(object):
 
     def computeDrillStanceFrame(self):
         objectTransform = self.drill.graspFrame.transform
+        self.drill.relativeStanceTransform = transformUtils.frameFromPositionAndRPY( self.drill.relativeStanceXYZ , self.drill.relativeStanceRPY )
         robotStance = self.computeRobotStanceFrame( objectTransform, self.drill.relativeStanceTransform )
         self.drill.stanceFrame = vis.updateFrame(robotStance, 'drill stance', parent=self.drill.affordance, visible=False, scale=0.2)
 
@@ -270,7 +285,7 @@ class DrillPlannerDemo(object):
 
         self.drill.drillToBitTransform = transformUtils.copyFrame(t)
         t.Concatenate(transformUtils.copyFrame( self.drill.frame.transform))
-        self.drill.bitFrame = vis.updateFrame(t, 'drill bit', parent=self.drill.affordance, visible=True, scale=0.2)
+        self.drill.bitFrame = vis.updateFrame(t, 'drill bit', parent=self.drill.affordance, visible=True, scale=0.05)
 
 
     def computeFaceToDrillTransform(self):
@@ -326,7 +341,7 @@ class DrillPlannerDemo(object):
         drillTransform.Identity()
         drillTransform.Concatenate( self.drill.faceToDrillTransform )
         startPose = self.getPlanningStartPose()
-        drillTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( 'l_hand_face' , startPose) )
+        drillTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingFaceLink , startPose) )
 
 
     def getHandToBit(self, startPose):
@@ -386,21 +401,22 @@ class DrillPlannerDemo(object):
 
 
     def spawnWallAffordance(self):
-        rightAngleLocation = "bottom left"
         self.wall.transform = transformUtils.frameFromPositionAndRPY(self.wall.initXYZ, self.wall.initRPY)
-        segmentation.createDrillWall(rightAngleLocation, self.wall.transform)
+        segmentation.createDrillWall(self.wall.rightAngleLocation, self.wall.transform)
         self.wall.affordance = om.getOrCreateContainer('wall')
 
         objectTransform = self.wall.transform
+        self.wall.relativeStanceTransform = transformUtils.frameFromPositionAndRPY( self.wall.relativeStanceXYZ , self.wall.relativeStanceRPY )
         robotStance = self.computeRobotStanceFrame( objectTransform, self.wall.relativeStanceTransform )
         self.wall.stanceFrame = vis.updateFrame(robotStance, 'wall stance', parent=self.wall.affordance, visible=True, scale=0.2)
-
+        self.wall.relativeStanceFarTransform = transformUtils.frameFromPositionAndRPY( self.wall.relativeStanceFarXYZ , self.wall.relativeStanceFarRPY )
         robotStanceFar = self.computeRobotStanceFrame( objectTransform, self.wall.relativeStanceFarTransform )
         self.wall.stanceFarFrame = vis.updateFrame(robotStanceFar, 'wall stance far', parent=self.wall.affordance, visible=True, scale=0.2)
 
         self.wall.frameSync= vis.FrameSync()
         self.wall.frameSync.addFrame(self.wall.affordance.getChildFrame())
         self.wall.frameSync.addFrame(self.wall.stanceFrame)
+        self.wall.frameSync.addFrame(self.wall.stanceFarFrame)
 
 
     ### End Drill Focused Functions ###############################################################
