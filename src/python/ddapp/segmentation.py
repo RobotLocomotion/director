@@ -594,7 +594,7 @@ def removeMajorPlane(polyData, distanceThreshold=0.02):
 
 def removeGroundSimple(polyData, groundThickness=0.02, sceneHeightFromGround=0.05):
     ''' Simple ground plane removal algorithm. Uses ground height
-        and does simple z distance filtering. 
+        and does simple z distance filtering.
         Suitable for noisy data e.g. kinect/stereo camera
         (Default args should be relaxed, filtering simplfied)
     '''
@@ -1871,8 +1871,8 @@ def createDrillWall(rightAngleLocation, trianglePose):
         pointsInWallFrame[2] =  edgeRight
 
     elif rightAngleLocation == DRILL_TRIANGLE_BOTTOM_RIGHT:
-        pointsInWallFrame[1] = edgeRight + edgeUp
-        pointsInWallFrame[2] = edgeRight
+        pointsInWallFrame[1] = edgeUp      # edgeRight +edgeUp
+        pointsInWallFrame[2] = -edgeRight  # edgeRight
 
     elif rightAngleLocation == DRILL_TRIANGLE_TOP_LEFT:
         pointsInWallFrame[1] = edgeRight
@@ -2096,7 +2096,7 @@ def filterClusterObjects(clusters):
     return result
 
 
-    
+
 
 
 def segmentTableThenFindDrills(polyData,pickedPoint):
@@ -2106,7 +2106,7 @@ def segmentTableThenFindDrills(polyData,pickedPoint):
         Nothing else is ever on a table ;)
     '''
 
-    # 1 segment a table and return clusters and the plane normal 
+    # 1 segment a table and return clusters and the plane normal
     clusters, tablePoints, plane_origin, plane_normal = segmentTableSceneClusters(polyData, pickedPoint, True)
 
     # 2 Detect drills within the clusters:
@@ -2165,7 +2165,7 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
         determine the plane of the table and
         extract clusters above the table
     '''
-    
+
     polyData, tablePoints, plane_origin, plane_normal = segmentTable(polyData, searchPoint)
 
     tableCentroid = computeCentroid(tablePoints)
@@ -3366,7 +3366,7 @@ def segmentBlockByPlanes(blockDimensions):
     xwidth, ywidth = blockDimensions
     zwidth = np.linalg.norm(p2 - p1)
 
-    origin = p1 + xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0 
+    origin = p1 + xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0
 
     d = DebugData()
 
