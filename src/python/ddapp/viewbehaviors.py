@@ -473,8 +473,8 @@ class ViewEventFilter(object):
         if toggleFrameWidget(displayPoint, self.view):
             return
 
-        if highlightSelectedLink(displayPoint, self.view):
-            return
+        #if highlightSelectedLink(displayPoint, self.view):
+        #    return
 
     def onRightClick(self, event):
         displayPoint = vis.mapMousePosition(self.view, event)
