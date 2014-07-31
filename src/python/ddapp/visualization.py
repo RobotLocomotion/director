@@ -629,7 +629,7 @@ class FrameSync(object):
 
 
 
-def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=None, useSurface=False):
+def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=None, useSurface=False, gridTransform=None):
 
     grid = vtk.vtkGridSource()
     grid.SetScale(cellSize)
@@ -642,6 +642,10 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
     gridObj.gridSource = grid
     gridObj.actor.GetProperty().LightingOff()
     gridObj.actor.SetPickable(False)
+
+    gridTransform = gridTransform or vtk.vtkTransform()
+    gridObj.actor.SetUserTransform(gridTransform)
+    showFrame(gridTransform, 'grid frame', scale=0.2, visible=False, parent=gridObj)
 
     if useSurface:
         gridObj.actor.GetProperty().EdgeVisibilityOn()
