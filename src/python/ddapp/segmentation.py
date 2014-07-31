@@ -3116,7 +3116,11 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
 
     # make right handed
     zaxis = np.cross(xaxis, yaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis /= np.linalg.norm(zaxis)
 
+    expectedXAxis = np.array(xaxis)
 
     edgePoints = computeEdge(polyData, zaxis, xaxis*edgeSign)
     edgePoints = vtkNumpy.getVtkPolyDataFromNumpyPoints(edgePoints)
@@ -3134,6 +3138,9 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
 
     # make right handed
     zaxis = np.cross(xaxis, yaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis /= np.linalg.norm(zaxis)
 
     polyData = labelPointDistanceAlongAxis(polyData, xaxis, resultArrayName='dist_along_line')
     pts = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
