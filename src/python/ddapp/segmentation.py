@@ -2758,20 +2758,6 @@ def labelDistanceToPoint(polyData, point, resultArrayName='distance_to_point'):
     return polyData
 
 
-def getRayFromDisplayPoint(view, displayPoint):
-
-    worldPt1 = [0,0,0,0]
-    worldPt2 = [0,0,0,0]
-    renderer = view.renderer()
-
-    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 0, worldPt1)
-    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 1, worldPt2)
-
-    worldPt1 = np.array(worldPt1[:3])
-    worldPt2 = np.array(worldPt2[:3])
-    return worldPt1, worldPt2
-
-
 def getPlaneEquationFromPolyData(polyData, expectedNormal):
 
     _, origin, normal  = applyPlaneFit(polyData, expectedNormal=expectedNormal, returnOrigin=True)
