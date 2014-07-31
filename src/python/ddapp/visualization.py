@@ -875,6 +875,23 @@ def showCaptionWidget(position, text, view=None):
     captionWidget.Render()
 
 
+def getRayFromDisplayPoint(view, displayPoint):
+    '''
+    Given a view and an XY display point, returns two XYZ world points which
+    are the display point at the near/far clipping planes of the view.
+    '''
+    worldPt1 = [0,0,0,0]
+    worldPt2 = [0,0,0,0]
+    renderer = view.renderer()
+
+    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 0, worldPt1)
+    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 1, worldPt2)
+
+    worldPt1 = np.array(worldPt1[:3])
+    worldPt2 = np.array(worldPt2[:3])
+    return worldPt1, worldPt2
+
+
 def pickImage(displayPoint, view, obj=None):
 
     picker = vtk.vtkCellPicker()
