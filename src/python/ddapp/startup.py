@@ -234,6 +234,12 @@ if usePlanning:
     def plotManipPlan():
         planPlayback.plotPlan(manipPlanner.lastManipPlan)
 
+    def planStand():
+        ikPlanner.computeStandPlan(robotStateJointController.q)
+
+    def planNominal():
+        ikPlanner.computeNominalPlan(robotStateJointController.q)
+
     def fitDrillMultisense():
         pd = om.findObjectByName('Multisense').model.revPolyData
         om.removeFromObjectModel(om.findObjectByName('debug'))
