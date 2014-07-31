@@ -394,10 +394,9 @@ if useSkybox:
     skyboxDataDir = os.path.expanduser('~/Downloads/skybox')
     imageMap = skybox.getSkyboxImages(skyboxDataDir)
     skyboxObjs = skybox.createSkybox(imageMap, view)
-    skybox.createTextureGround(os.path.join(skyboxDataDir, 'Dirt_seamless.jpg'), view)
     skybox.connectSkyboxCamera(view)
-    view.camera().SetViewAngle(60)
-    om.findObjectByName('grid').setProperty('Visible', False)
+    #skybox.createTextureGround(os.path.join(skyboxDataDir, 'Dirt_seamless.jpg'), view)
+    #view.camera().SetViewAngle(60)
 
 
 if useFootContactVis:
