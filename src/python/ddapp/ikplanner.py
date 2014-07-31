@@ -244,6 +244,13 @@ class IKPlanner(object):
         return constraints
 
 
+    def createFixedNeckConstraint(self):
+        p = ik.PostureConstraint()
+        p.joints = ['neck_ay']
+        p.jointsLowerBound = [0.0]
+        p.jointsUpperBound = [0.0]
+        return p
+
     def createKneePostureConstraint(self, bounds):
         '''
         bounds is a size 2 vector of [lower, upper] bounds to be
