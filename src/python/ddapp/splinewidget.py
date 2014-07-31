@@ -10,239 +10,301 @@ import numpy as np
 
 
 
+class SplineEndEffectorPlanner(object):
+
+    def __init__(self, handFactory, robotModel, view):
+        self.handFactory = handFactory
+        self.robotModel = robotModel
+        self.view = view
+        self.side = None
+        self.rotationStartIndex = 0
+        self.rotationEndIndex = -2
+        self.splineWidget = vtk.vtkSplineWidget2()
+        self.splineWidget.SetInteractor(self.view.renderWindow().GetInteractor())
+        self.observerTag = self.splineWidget.AddObserver('InteractionEvent', self.onWidgetInteractionEvent)
 
 
-splineWidget = None
+    def __del__(self):
+        self.splineWidget.Off()
+        self.splineWidget.SetInteractor(None)
+        self.splineWidget = None
+
+    def getSplineWidget(self):
+        '''
+        Returns the vtkSplineWidget2 object
+        '''
+        return self.splineWidget
+
+    def getHandlePoints(self):
+        '''
+        Returns a list of xyz points that are the handle points.
+        '''
+        rep = self.splineWidget.GetRepresentation()
+
+        handlePoints = []
+        for i in xrange(rep.GetNumberOfHandles()):
+            pt = [0.0, 0.0, 0.0]
+            rep.GetHandlePosition(i, pt)
+            handlePoints.append(pt)
+
+        return handlePoints
 
 
-def computeHandleParameterization():
-
-    global splineWidget
-    rep = splineWidget.GetRepresentation()
-
-    handlePoints = []
-    for i in xrange(rep.GetNumberOfHandles()):
-        pt = [0.0, 0.0, 0.0]
-        rep.GetHandlePosition(i, pt)
-        handlePoints.append(pt)
-
-    distanceBetweenPoints = np.sqrt(np.sum(np.diff(handlePoints, axis=0)**2, axis=1))
-    totalLength = np.sum(distanceBetweenPoints)
-
-    handleParameterization = [0.0]
-    for dist in distanceBetweenPoints:
-        handleParameterization.append((handleParameterization[-1] + dist))
-
-    assert handleParameterization[-1] == totalLength
-    handleParameterization = np.array(handleParameterization) / totalLength
-    #print 'handle parameterization:', handleParameterization
-    return handleParameterization
+    def setHandlePoints(self, handlePoints):
+        '''
+        Set the spline handle points, given a list of xyz points.
+        '''
+        rep = self.splineWidget.GetRepresentation()
+        rep.SetNumberOfHandles(len(handlePoints))
+        for i, pt in enumerate(handlePoints):
+            rep.SetHandlePosition(i, pt)
 
 
-def updateSplineWidget(frame):
+    def computeHandleParameterization(self):
+        '''
+        Returns the list of handle parameterized coordinates.  A coordinate is
+        a value between 0.0 and 1.0, with 0.0 being the start and 1.0 being the
+        end.  Handles are parameterized by distance along the spline where distance
+        is computed as the straight line distance between two handle points.
+        '''
+        handlePoints = self.getHandlePoints()
+
+        distanceBetweenPoints = np.sqrt(np.sum(np.diff(handlePoints, axis=0)**2, axis=1))
+        totalLength = np.sum(distanceBetweenPoints)
+
+        handleParameterization = [0.0]
+        for dist in distanceBetweenPoints:
+            handleParameterization.append((handleParameterization[-1] + dist))
+
+        assert handleParameterization[-1] == totalLength
+        handleParameterization = np.array(handleParameterization) / totalLength
+        #print 'handle parameterization:', handleParameterization
+        return handleParameterization
+
+    @staticmethod
+    def getPalmFrame(robotModel, side):
+        linkName = '%s_hand_face' % side[0]
+        return robotModel.getLinkFrame(linkName)
 
 
-    #palmFrame = handFactory.getLoader(leftHandType).getPalmToWorldTransform()
-    palmFrame = robotModel.getLinkFrame('l_hand_face')
-    handPos = np.array(palmFrame.GetPosition())
-
-    goalFrame = frame.transform
-    goalPos = np.array(goalFrame.GetPosition())
-
-    up = np.array([0.0, 0.0, 1.0])
-
-    goalUp = [0.0, -1.0, 0.0]
-    goalFrame.TransformVector(goalUp, goalUp)
-    goalUp = np.array(goalUp)
-    offset = 0.2
-
-    global splineWidget
-    rep = splineWidget.GetRepresentation()
-
-    handlePoints = [
-        handPos,
-        handPos + offset*up,
-        #handPos + (offset+0.001)*up,
-        #handPos + (offset+0.002)*up,
-        #goalPos + (offset+0.002)*goalUp,
-        #goalPos + (offset+0.001)*goalUp,
-        goalPos + offset*goalUp,
-        goalPos,
-    ]
+    @staticmethod
+    def getReachGoalFrame(side):
+        return om.findObjectByName('%s_hand constraint frame' % side[0])
 
 
-    rep.SetNumberOfHandles(len(handlePoints))
-    for i, pt in enumerate(handlePoints):
-        rep.SetHandlePosition(i, pt)
+    def createSplineInterpolationMethod(self, palmFrame, goalFrame):
 
+        handPos = np.array(palmFrame.GetPosition())
+        goalPos = np.array(goalFrame.GetPosition())
 
-    def interpolateSplineFrame(u):
+        up = np.array([0.0, 0.0, 1.0])
 
-        assert 0.0 <= u <= 1.0
+        goalUp = [0.0, -1.0, 0.0]
+        goalFrame.TransformVector(goalUp, goalUp)
+        goalUp = np.array(goalUp)
+        offset = 0.2
 
-        pt = [0.0, 0.0, 0.0]
-        rep.GetParametricSpline().Evaluate([u,0.0,0.0], pt, range(9))
+        handlePoints = [
+            handPos,
+            handPos + offset*up,
+            #handPos + (offset+0.001)*up,
+            #handPos + (offset+0.002)*up,
+            #goalPos + (offset+0.002)*goalUp,
+            #goalPos + (offset+0.001)*goalUp,
+            goalPos + offset*goalUp,
+            goalPos,
+        ]
 
-        handleParameterization = computeHandleParameterization()
+        def interpolateSplineFrame(u):
 
-        if u >= handleParameterization[-2]:
-            #print 'using goal frame for u:', u
-            t = transformUtils.copyFrame(goalFrame)
-        #elif u <= handleParameterization[1]:
-        #    print 'using palm frame for u:', u
-        #    t = transformUtils.copyFrame(palmFrame)
-        else:
-            uu = (u - handleParameterization[0]) / (handleParameterization[-2] - handleParameterization[0])
-            #print 'rescaling u:', u, '-->', uu
+            assert 0.0 <= u <= 1.0
+
+            pt = [0.0, 0.0, 0.0]
+            self.splineWidget.GetRepresentation().GetParametricSpline().Evaluate([u,0.0,0.0], pt, range(9))
+
+            handleParameterization = self.computeHandleParameterization()
+
+            if u >= handleParameterization[self.rotationEndIndex]:
+                uu = 1.0
+
+            elif u <= handleParameterization[self.rotationStartIndex]:
+                uu = 0.0
+            else:
+                uu = (u - handleParameterization[self.rotationStartIndex]) / (handleParameterization[self.rotationEndIndex] - handleParameterization[self.rotationStartIndex])
+
+            #print 'rescaled u:', u, '-->', uu
+
             t = transformUtils.frameInterpolate(palmFrame, goalFrame, uu)
+            t.PostMultiply()
+            t.Translate(np.array(pt) - np.array(t.GetPosition()))
 
-        t.PostMultiply()
-        t.Translate(np.array(pt) - np.array(t.GetPosition()))
+            return t
 
-        return t
-
-    global splineInterp
-    splineInterp = interpolateSplineFrame
-
-    '''
-    om.removeFromObjectModel(om.findObjectByName('sampled hands'))
-    handFolder = om.getOrCreateContainer('sampled hands')
-    numberOfHandSamples = 10
-
-    for i in xrange(numberOfHandSamples):
-        t = interpolateSplineFrame(i/float(numberOfHandSamples-1))
-        handObj, f = placeHandModelWithTransform(t, view, parent=handFolder)
-        handObj.setProperty('Alpha', 0.2)
-    '''
-
-    view.render()
+        return handlePoints, interpolateSplineFrame
 
 
-def removeSplineWidget():
+    def updateSplineWidget(self, frame):
 
-    global splineWidget
-    if splineWidget:
-        splineWidget.Off()
-        splineWidget.SetInteractor(None)
-        splineWidget = None
+        palmFrame = self.getPalmFrame(self.robotModel, self.side)
+        goalFrame = frame.transform
 
+        handlePoints, self.splineInterp = self.createSplineInterpolationMethod(palmFrame, goalFrame)
 
-def createSplineWidget(view):
+        self.setHandlePoints(handlePoints)
 
-    global splineWidget
-    if splineWidget is None:
-        splineWidget = vtk.vtkSplineWidget2()
-        splineWidget.SetInteractor(view.renderWindow().GetInteractor())
-        splineWidget.On()
-        rep = splineWidget.GetRepresentation()
-        rep.SetNumberOfHandles(4)
+        self.showHandSamples()
 
-    return splineWidget
+        self.view.render()
 
 
-def newSpline(handObj, view):
+    def onWidgetInteractionEvent(self, o, e):
+        folder = om.findObjectByName('sampled hands')
+        if not folder:
+            return
 
-    removeSplineWidget()
-    createSplineWidget(view)
+        handObjs = folder.children()
+        numberOfSamples = len(handObjs)
 
-    handFrame = handObj.getChildFrame()
-    handFrame.connectFrameModified(updateSplineWidget)
-    updateSplineWidget(handFrame)
-
-
-def makeTransformInterpolator():
-
-    assert splineWidget
-
-    interp = vtk.vtkTransformInterpolator()
-    interp.GetPositionInterpolator().SetInterpolatingSpline(vtk.vtkCardinalSpline())
-    #interp.SetInterpolationTypeToLinear()
-
-    rep = splineWidget.GetRepresentation()
-
-    numberOfPoints = rep.GetNumberOfHandles()
-
-    for i in xrange(numberOfPoints):
-        pt = i/float(numberOfPoints-1)
-
-        t = getSplineFrame(i)
-        t.PreMultiply()
-        t.RotateZ(i*5)
-        t.RotateX(i*5)
-
-        interp.AddTransform(pt, t)
-
-    return interp
+        for i, handObj in enumerate(handObjs):
+            t = self.splineInterp(i/float(numberOfSamples-1))
+            handObj.children()[0].copyFrame(t)
 
 
-def interpolateReach():
+    def showHandSamples(self, numberOfSamples=15):
 
-    t = vtk.vtkTransform()
-    handObj, handFrame = handFactory.placeHandModelWithTransform(t, view, side='left', name='grasp interpolation', parent='debug')
-    handObj.setProperty('Alpha', 0.2)
-    handFrame.setProperty('Visible', True)
+        om.removeFromObjectModel(om.findObjectByName('sampled hands'))
+        handFolder = om.getOrCreateContainer('sampled hands', parentObj=om.getOrCreateContainer('debug'))
 
-    #global interp
-    #interp = makeTransformInterpolator()
+        for i in xrange(numberOfSamples):
+            t = self.splineInterp(i/float(numberOfSamples-1))
+            handObj, f = self.handFactory.placeHandModelWithTransform(t, self.view, side=self.side, name='sample %d' % i, parent=handFolder)
+            handObj.setProperty('Alpha', 0.3)
 
-    sliderMax = 100.0
+        handFolder.setProperty('Visible', False)
 
-    def sliderChanged(sliderValue):
-        sliderValue = sliderValue/float(sliderMax)
-        t = splineInterp(sliderValue)
-        handFrame.copyFrame(t)
 
-        reachGoal = om.findObjectByName('reach goal left')
-        if reachGoal:
+    def getSplineSegmentSamples(self):
+        params = self.computeHandleParameterization()
+        segments = zip(params, params[1:])
+        times = [np.linspace(segment[0], segment[1], 6) for segment in segments]
+        times = [[0.0, 0.25,  0.5], np.linspace(params[-2], params[-1], 6)]
+        #times = np.linspace(params[-2], params[-1], 6)
+
+        times = np.hstack(times)
+        times = np.unique(times)
+        return times
+
+
+    def computeIkPostures(self, samples, constraintSet):
+
+        poses = []
+        infos = []
+        for u in samples:
+            t = self.splineInterp(u)
+            print u, t.GetPosition()
+            reachGoal = self.getReachGoalFrame(self.side)
+            print 'copying frame...'
             reachGoal.copyFrame(t)
+            endPose, info = constraintSet.runIk()
+            poses.append(list(endPose))
+            infos.append(info)
+
+        return poses, np.array(infos)
 
 
-    global slider
-    slider = QtGui.QSlider(QtCore.Qt.Horizontal)
-    slider.connect('valueChanged(int)', sliderChanged)
-    slider.setMaximum(sliderMax)
-    slider.show()
-    slider.resize(500, 30)
-    sliderChanged(sliderMax)
+    def makeSplineGraspConstraints(self, ikPlanner, positionTolerance=0.03, angleToleranceInDegrees=15):
+
+        params = self.computeHandleParameterization()
+        segments = zip(params, params[1:])
+        #times = [np.linspace(segment[0], segment[1], 6) for segment in segments]
+        #times = [[0.0, 0.3, 0.5], np.linspace(params[-2], params[-1], 6)]
+
+        times = np.linspace(params[-2], params[-1], 6)
+        times = np.hstack(times)
+        times = np.unique(times)
+
+        frames = []
+        for t in times:
+            frames.append(self.splineInterp(t))
 
 
-def getSplineFrame(handleId):
-
-    assert splineWidget
-    rep = splineWidget.GetRepresentation()
-
-    goalPos = range(3)
-    rep.GetHandlePosition(handleId, goalPos)
-
-    palmFrame = robotModel.getLinkFrame('l_hand_face')
-    palmFrame.PostMultiply()
-    delta = np.array(goalPos) - np.array(palmFrame.GetPosition())
-    palmFrame.Translate(delta)
-    return palmFrame
+        folder = om.getOrCreateContainer('constraint spline samples', parentObj=om.getOrCreateContainer('debug'))
+        for f in frames:
+            vis.showFrame(f, 'frame', scale=0.1)
 
 
-def planToSplineHandle(handleId):
+        side = self.side
+        graspToPalm = vtk.vtkTransform()
+        graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
 
-    if not splineWidget:
-        return
+        constraints = []
 
-    goalFrame = om.findObjectByName('reach goal left')
-    if not goalFrame:
-        return
+        for f, t in zip(frames[:-1], times[:-1]):
+            graspToWorld = f
+            p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
 
-    goalFrame.copyFrame(getSplineFrame(handleId))
+            p.lowerBound = np.tile(-positionTolerance, 3)
+            p.upperBound = np.tile(positionTolerance, 3)
+            q.angleToleranceInDegrees = angleToleranceInDegrees
+
+            if t >= params[-2]:
+                q.angleToleranceInDegrees = 0
+                p.lowerBound = np.tile(-0.0, 3)
+                p.upperBound = np.tile(0.0, 3)
+                constraints.append(q)
+
+            p.tspan = [t, t]
+            q.tspan = [t, t]
+            constraints.append(p)
 
 
+        return constraints
 
-def init(view_, handFactory_, robotModel_):
 
-    global view
-    view = view_
+    def show(self):
+        self.splineWidget.On()
 
-    global handFactory
-    handFactory = handFactory_
+    def hide(self):
+        self.splineWidget.Off()
 
-    global robotModel
-    robotModel = robotModel_
+    def newSpline(self, handObj, side):
+        self.side = side
+        handFrame = handObj.getChildFrame()
+        handFrame.connectFrameModified(self.updateSplineWidget)
+        self.updateSplineWidget(handFrame)
+        self.show()
 
-    #app.addToolbarMacro('interpolate reach', interpolateReach)
+
+    def interpolateReach(self):
+
+        t = vtk.vtkTransform()
+        handObj, handFrame = self.handFactory.placeHandModelWithTransform(t, self.view, side=self.side, name='grasp interpolation', parent='debug')
+        handObj.setProperty('Alpha', 0.2)
+        handFrame.setProperty('Visible', True)
+
+        sliderMax = 100.0
+
+        def sliderChanged(sliderValue):
+            sliderValue = sliderValue/float(sliderMax)
+            t = self.splineInterp(sliderValue)
+            handFrame.copyFrame(t)
+
+            reachGoal = self.getReachGoalFrame(self.side)
+            if reachGoal:
+                reachGoal.copyFrame(t)
+
+
+        self.slider = QtGui.QSlider(QtCore.Qt.Horizontal)
+        self.slider.connect('valueChanged(int)', sliderChanged)
+        self.slider.setMaximum(sliderMax)
+        self.slider.show()
+        self.slider.resize(500, 30)
+        sliderChanged(sliderMax)
+
+
+def init(view, handFactory, robotModel):
+
+    global planner
+    planner = SplineEndEffectorPlanner(handFactory, robotModel, view)
+
+    #app.addToolbarMacro('interpolate reach', planner.interpolateReach)
