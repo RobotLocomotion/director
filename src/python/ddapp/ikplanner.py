@@ -308,10 +308,12 @@ class IKPlanner(object):
 
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
 
+        targetFrame = targetFrame if isinstance(targetFrame, vtk.vtkTransform) else targetFrame.transform
+
         p = ik.PositionConstraint()
         p.linkName = self.getHandLink(side)
         p.pointInLink = np.array(graspToHandLinkFrame.GetPosition())
-        p.referenceFrame = targetFrame.transform
+        p.referenceFrame = targetFrame
         p.lowerBound = np.tile(-positionTolerance, 3)
         p.upperBound = np.tile(positionTolerance, 3)
         positionConstraint = p
@@ -319,7 +321,7 @@ class IKPlanner(object):
         t = vtk.vtkTransform()
         t.PostMultiply()
         t.Concatenate(graspToHandLinkFrame.GetLinearInverse())
-        t.Concatenate(targetFrame.transform)
+        t.Concatenate(targetFrame)
 
         p = ik.QuatConstraint()
         p.linkName = self.getHandLink(side)
