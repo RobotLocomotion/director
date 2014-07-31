@@ -289,6 +289,27 @@ class IKPlanner(object):
         return p
 
 
+    def createBaseGroundHeightConstraint(self, groundHeightZ, bounds):
+        p = ik.PostureConstraint()
+        p.joints = ['base_z']
+        p.jointsLowerBound = [groundHeightZ + bounds[0]]
+        p.jointsUpperBound = [groundHeightZ + bounds[1]]
+        return p
+
+
+    def createBaseZeroConstraint(self, footReferenceFrame):
+
+        baseReferenceWorldPos = np.array(footReferenceFrame.GetPosition())
+        baseReferenceWorldYaw = math.radians(footReferenceFrame.GetOrientation()[2])
+
+        p = ik.PostureConstraint()
+        p.joints = ['base_x', 'base_y', 'base_roll', 'base_pitch', 'base_yaw']
+        p.jointsLowerBound = [baseReferenceWorldPos[0], baseReferenceWorldPos[1], 0.0, 0.0, baseReferenceWorldYaw]
+        p.jointsUpperBound = list(p.jointsLowerBound)
+
+        return p
+
+
     def createMovingBackPostureConstraint(self):
         p = ik.PostureConstraint()
         p.joints = ['back_bkx', 'back_bky', 'back_bkz']
