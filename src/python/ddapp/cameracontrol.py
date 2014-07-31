@@ -69,3 +69,44 @@ class Flyer(TimerCallback):
 
         if t > 1.0:
             return False
+
+
+class RobotModelFollower(object):
+
+    def __init__(self, view, robotModel, jointController):
+        self.view = view
+        self.robotModel = robotModel
+        self.jointController = jointController
+        self.callbackId = None
+
+    def start(self):
+        self.callbackId = self.robotModel.connectModelChanged(self.onModelChanged)
+        self.lastTrackPosition = np.array(self.jointController.q[:3])
+
+    def stop(self):
+        self.robotModel.disconnectModelChanged(self.callbackId)
+
+    def getCameraCopy(self):
+        camera = vtk.vtkCamera()
+        camera.DeepCopy(self.view.camera())
+        return camera
+
+    def onModelChanged(self, model):
+        newTrackPosition = np.array(self.jointController.q[:3])
+
+        delta = newTrackPosition - self.lastTrackPosition
+        #delta[0] = 0.0
+        #delta[1] = 0.0
+        #delta[2] = 0.0
+
+        self.lastTrackPosition = newTrackPosition
+
+        c = self.view.camera()
+
+        oldFocalPoint = np.array(c.GetFocalPoint())
+        oldPosition = np.array(c.GetPosition())
+
+        c.SetFocalPoint(oldFocalPoint + delta)
+        c.SetPosition(oldPosition + delta)
+
+        self.view.render()
