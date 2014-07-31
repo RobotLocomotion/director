@@ -69,6 +69,7 @@ class ddMeshVisual
 
   vtkSmartPointer<vtkPolyData> PolyData;
   vtkSmartPointer<vtkActor> Actor;
+  vtkSmartPointer<vtkActor> ShadowActor;
   vtkSmartPointer<vtkTransform> Transform;
   std::string Name;
 
@@ -338,6 +339,26 @@ ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
   vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   SetInputData(mapper, visual->PolyData);
   visual->Actor->SetMapper(mapper);
+
+  bool useShadows = false;
+  if (useShadows)
+  {
+    vtkSmartPointer<vtkTransform> shadowT = vtkSmartPointer<vtkTransform>::New();
+    vtkSmartPointer<vtkMatrix4x4> mat = vtkSmartPointer<vtkMatrix4x4>::New();
+    mat->DeepCopy(shadowT->GetMatrix());
+    mat->SetElement(0, 2, -1.0);
+    mat->SetElement(1, 2, -1.0);
+    mat->SetElement(2, 2, 0.0);
+    shadowT->SetMatrix(mat);
+    shadowT->PreMultiply();
+    shadowT->Concatenate(visual->Transform);
+
+    visual->ShadowActor = vtkSmartPointer<vtkActor>::New();
+    visual->ShadowActor->SetMapper(mapper);
+    visual->ShadowActor->SetUserTransform(shadowT);
+    visual->ShadowActor->GetProperty()->LightingOff();
+    visual->ShadowActor->GetProperty()->SetColor(0, 0, 0);
+  }
 
   return visual;
 }
@@ -1140,6 +1161,10 @@ void ddDrakeModel::addToRenderer(vtkRenderer* renderer)
   for (size_t i = 0; i < visuals.size(); ++i)
   {
     renderer->AddActor(visuals[i]->Actor);
+    if (visuals[i]->ShadowActor)
+    {
+      renderer->AddActor(visuals[i]->ShadowActor);
+    }
   }
 }
 
@@ -1156,6 +1181,10 @@ void ddDrakeModel::removeFromRenderer(vtkRenderer* renderer)
   for (size_t i = 0; i < visuals.size(); ++i)
   {
     renderer->RemoveActor(visuals[i]->Actor);
+    if (visuals[i]->ShadowActor)
+    {
+      renderer->RemoveActor(visuals[i]->ShadowActor);
+    }
   }
 }
 
@@ -1222,6 +1251,11 @@ void ddDrakeModel::setLinkColor(const QString& linkName, const QColor& color)
     {
       visuals[i]->Actor->GetProperty()->SetColor(red, green, blue);
       visuals[i]->Actor->GetProperty()->SetOpacity(alpha);
+
+      if (visuals[i]->ShadowActor)
+      {
+        visuals[i]->ShadowActor->GetProperty()->SetOpacity(alpha);
+      }
     }
   }
   emit this->displayChanged();
@@ -1240,6 +1274,10 @@ void ddDrakeModel::setAlpha(double alpha)
   for (size_t i = 0; i < visuals.size(); ++i)
   {
     visuals[i]->Actor->GetProperty()->SetOpacity(alpha);
+    if (visuals[i]->ShadowActor)
+    {
+      visuals[i]->ShadowActor->GetProperty()->SetOpacity(alpha);
+    }
   }
   this->Internal->Alpha = alpha;
   emit this->displayChanged();
@@ -1253,6 +1291,10 @@ void ddDrakeModel::setVisible(bool visible)
   for (size_t i = 0; i < visuals.size(); ++i)
   {
     visuals[i]->Actor->SetVisibility(visible);
+    if (visuals[i]->ShadowActor)
+    {
+      visuals[i]->ShadowActor->SetVisibility(visible);
+    }
   }
   this->Internal->Visible = visible;
   emit this->displayChanged();
