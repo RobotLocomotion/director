@@ -767,12 +767,14 @@ class IKPlanner(object):
         return self.newReachGoal(startPoseName, side, graspFrame, constraints)
 
 
-    def computeMultiPostureGoal(self, poses, feetOnGround=True):
+    def computeMultiPostureGoal(self, poses, feetOnGround=True, times=None):
 
         assert len(poses) >= 2
 
         constraints = []
         poseNames = []
+
+        times = range(len(poses)) if times is None else times
         for i, pose in enumerate(poses):
 
             if isinstance(pose, str):
@@ -782,7 +784,7 @@ class IKPlanner(object):
 
             self.addPose(pose, poseName)
             p = self.createPostureConstraint(poseName, robotstate.matchJoints('.*'))
-            p.tspan = np.array([float(i), float(i)])
+            p.tspan = np.array([float(times[i]), float(times[i])])
             constraints.append(p)
             poseNames.append(poseName)
 
