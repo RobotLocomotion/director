@@ -69,6 +69,9 @@ public:
 
   virtual void GetActors(vtkPropCollection* propCollection);
 
+  void SetTranslateAxisEnabled(int axisId, bool enabled);
+  void SetRotateAxisEnabled(int axisId, bool enabled);
+
   // Description:
   // Methods supporting, and required by, the rendering process.
   virtual void ReleaseGraphicsResources(vtkWindow*);
@@ -95,6 +98,7 @@ public:
 
   // Description:
   // Use a tube filter instead of only drawing lines.
+  vtkBooleanMacro(UseTubeFilter, bool);
   vtkSetMacro(UseTubeFilter, bool);
   vtkGetMacro(UseTubeFilter, bool);
 
@@ -104,17 +108,18 @@ protected:
   vtkFrameWidgetRepresentation();
   ~vtkFrameWidgetRepresentation();
 
-  double WorldSize;
   bool UseTubeFilter;
+  int TranslateAxis;
+  int RotateAxis;
+  double WorldSize;
+  double LastEventPosition[2];
+  double InteractionStartWorldPoint[3];
 
 
-  // Manage how the representation appears
-  double LastEventPosition[3];
 
-  // Helper methods
-  virtual void Translate(double *p1, double *p2);
-  virtual void TranslateInPlane(double *p1, double *p2);
-  virtual void Rotate(int X, int Y, double *p1, double *p2, double *vpn);
+  virtual void Translate(double e[2]);
+  virtual void TranslateInPlane(double e[2]);
+  virtual void Rotate(double e[2]);
 
 private:
 

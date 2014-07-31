@@ -29,6 +29,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkCellPicker.h"
 #include "vtkTransform.h"
 #include "vtkDoubleArray.h"
+#include "vtkLine.h"
 #include "vtkBox.h"
 #include "vtkPlanes.h"
 #include "vtkCamera.h"
@@ -221,9 +222,6 @@ class vtkFrameWidgetRepresentation::vtkInternal {
 public:
   vtkInternal()
     {
-    this->RotateAxis = -1;
-    this->TranslateAxis = -1;
-
     this->BoundingBox = vtkSmartPointer<vtkBox>::New();
 
     this->Transform = vtkSmartPointer<vtkTransform>::New();
@@ -317,8 +315,6 @@ public:
   vtkSmartPointer<vtkPolyDataMapper>   HoverMapper;
   vtkSmartPointer<vtkSphereSource>   SphereSource;
 
-  vtkSmartPointer<vtkCellLocator> CellLocator;
-
   vtkSmartPointer<vtkTransform>   Transform;
   vtkSmartPointer<vtkCellPicker>  AxesPicker;
   vtkSmartPointer<vtkBox>         BoundingBox;
@@ -327,11 +323,6 @@ public:
   std::vector<DataRep> Axes;
 
   std::vector<vtkActor*> Actors;
-
-  int TranslateAxis;
-  int RotateAxis;
-  double CirclePickPoint[3];
-  double LastOrientation[4];
 };
 
 //----------------------------------------------------------------------------
@@ -341,6 +332,13 @@ vtkFrameWidgetRepresentation::vtkFrameWidgetRepresentation()
   this->InteractionState = vtkFrameWidgetRepresentation::Outside;
   this->WorldSize = 0.5;
   this->UseTubeFilter = false;
+  this->RotateAxis = -1;
+  this->TranslateAxis = -1;
+  this->InteractionStartWorldPoint[0] = 0.0;
+  this->InteractionStartWorldPoint[1] = 0.0;
+  this->InteractionStartWorldPoint[2] = 0.0;
+  this->LastEventPosition[0] = 0.0;
+  this->LastEventPosition[1] = 0.0;
   this->Internal->RebuildActors(this->WorldSize, this->UseTubeFilter);
 }
 
@@ -348,6 +346,28 @@ vtkFrameWidgetRepresentation::vtkFrameWidgetRepresentation()
 vtkFrameWidgetRepresentation::~vtkFrameWidgetRepresentation()
 {
   delete this->Internal;
+}
+
+//----------------------------------------------------------------------
+void vtkFrameWidgetRepresentation::SetTranslateAxisEnabled(int axisId, bool enabled)
+{
+  if (axisId < 0 || axisId > 2)
+    {
+    return;
+    }
+
+  this->Internal->Axes[axisId].Actor->SetVisibility(enabled);
+}
+
+//----------------------------------------------------------------------
+void vtkFrameWidgetRepresentation::SetRotateAxisEnabled(int axisId, bool enabled)
+{
+  if (axisId < 0 || axisId > 2)
+    {
+    return;
+    }
+
+  this->Internal->Reps[axisId].Actor->SetVisibility(enabled);
 }
 
 //----------------------------------------------------------------------
@@ -361,7 +381,6 @@ void vtkFrameWidgetRepresentation::StartWidgetInteraction(double e[2])
   // Store the start position
   this->LastEventPosition[0] = e[0];
   this->LastEventPosition[1] = e[1];
-  this->LastEventPosition[2] = 0.0;
 
   this->ComputeInteractionState(static_cast<int>(e[0]),static_cast<int>(e[1]),0);
 }
@@ -369,96 +388,158 @@ void vtkFrameWidgetRepresentation::StartWidgetInteraction(double e[2])
 //----------------------------------------------------------------------
 void vtkFrameWidgetRepresentation::WidgetInteraction(double e[2])
 {
-  // Convert events to appropriate coordinate systems
-  vtkCamera *camera = this->Renderer->GetActiveCamera();
-  if ( !camera )
-    {
-    return;
-    }
-
-  double focalPoint[4], pickPoint[4], prevPickPoint[4];
-  double z, vpn[3];
-  camera->GetViewPlaneNormal(vpn);
-
-  // Compute the two points defining the motion vector
-  double pos[3];
-  this->Internal->AxesPicker->GetPickPosition(pos);
-
-  vtkInteractorObserver::ComputeWorldToDisplay(this->Renderer,
-                                               pos[0], pos[1], pos[2],
-                                               focalPoint);
-  z = focalPoint[2];
-
-  if (z >= 1.0)
-    {
-    z = 0.99;
-    }
-
-  vtkInteractorObserver::ComputeDisplayToWorld(
-                          this->Renderer,this->LastEventPosition[0],
-                          this->LastEventPosition[1], z, prevPickPoint);
-
-  vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, e[0], e[1],
-                                                            z, pickPoint);
-
-
   if ( this->InteractionState == vtkFrameWidgetRepresentation::Translating )
     {
-    this->Translate(prevPickPoint, pickPoint);
+    this->Translate(e);
     }
   else if ( this->InteractionState == vtkFrameWidgetRepresentation::TranslatingInPlane )
     {
-    this->TranslateInPlane(prevPickPoint, pickPoint);
+    this->TranslateInPlane(e);
     }
   else if ( this->InteractionState == vtkFrameWidgetRepresentation::Rotating )
     {
-    this->Rotate(static_cast<int>(e[0]), static_cast<int>(e[1]),
-                                  prevPickPoint, pickPoint, vpn);
+    this->Rotate(e);
     }
 
-  // Store the start position
   this->LastEventPosition[0] = e[0];
   this->LastEventPosition[1] = e[1];
-  this->LastEventPosition[2] = 0.0;
 }
 
 //----------------------------------------------------------------------------
-void vtkFrameWidgetRepresentation::Translate(double *p1, double *p2)
+void vtkFrameWidgetRepresentation::Translate(double e[2])
 {
-  double axis[3] = {0,0,0};
-  axis[this->Internal->TranslateAxis] = 1;
-  this->Internal->Transform->TransformVector(axis, axis);
+  double uu, vv;
 
-  double v[3] = {p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2]};
+  double origin[3] = {0.0, 0.0, 0.0};
+  double translateAxis[3] = {0.0, 0.0, 0.0};
+  translateAxis[this->TranslateAxis] = 1.0;
+  this->Internal->Transform->TransformVector(translateAxis, translateAxis);
 
-  vtkMath::ProjectVector(v, axis, v);
-  this->Internal->Transform->Translate(v[0], v[1], v[2]);
+  double linePoint[3];
+  double prevLinePoint[3];
 
+  double rayP0[3];
+  double rayP1[3];
+  double displayPoint[2];
+
+  displayPoint[0] = e[0];
+  displayPoint[1] = e[1];
+
+  double lineEnd[3];
+  lineEnd[0] = this->InteractionStartWorldPoint[0] + translateAxis[0];
+  lineEnd[1] = this->InteractionStartWorldPoint[1] + translateAxis[1];
+  lineEnd[2] = this->InteractionStartWorldPoint[2] + translateAxis[2];
+
+  vtkInteractorObserver::ComputeDisplayToWorld(
+                          this->Renderer,
+                          displayPoint[0],
+                          displayPoint[1], 0, rayP0);
+
+  vtkInteractorObserver::ComputeDisplayToWorld(
+                          this->Renderer,
+                          displayPoint[0],
+                          displayPoint[1], 1, rayP1);
+
+
+  vtkLine::Intersection(rayP0, rayP1,
+		this->InteractionStartWorldPoint, lineEnd,
+		uu, vv);
+
+  linePoint[0] = this->InteractionStartWorldPoint[0] + translateAxis[0] * vv;
+  linePoint[1] = this->InteractionStartWorldPoint[1] + translateAxis[1] * vv;
+  linePoint[2] = this->InteractionStartWorldPoint[2] + translateAxis[2] * vv;
+
+  //
+
+  displayPoint[0] = this->LastEventPosition[0];
+  displayPoint[1] = this->LastEventPosition[1];
+
+  vtkInteractorObserver::ComputeDisplayToWorld(
+                          this->Renderer,
+                          displayPoint[0],
+                          displayPoint[1], 0, rayP0);
+
+  vtkInteractorObserver::ComputeDisplayToWorld(
+                          this->Renderer,
+                          displayPoint[0],
+                          displayPoint[1], 1, rayP1);
+
+
+  vtkLine::Intersection(rayP0, rayP1,
+		this->InteractionStartWorldPoint, lineEnd,
+		uu, vv);
+
+
+  prevLinePoint[0] = this->InteractionStartWorldPoint[0] + translateAxis[0] * vv;
+  prevLinePoint[1] = this->InteractionStartWorldPoint[1] + translateAxis[1] * vv;
+  prevLinePoint[2] = this->InteractionStartWorldPoint[2] + translateAxis[2] * vv;
+
+
+  double worldDelta[3];
+  worldDelta[0] = linePoint[0] - prevLinePoint[0];
+  worldDelta[1] = linePoint[1] - prevLinePoint[1];
+  worldDelta[2] = linePoint[2] - prevLinePoint[2];
+
+  this->Internal->Transform->Translate(worldDelta[0], worldDelta[1], worldDelta[2]);
   this->Internal->Transform->Modified();
 }
 
+
 //----------------------------------------------------------------------------
-void vtkFrameWidgetRepresentation::TranslateInPlane(double *p1, double *p2)
+void vtkFrameWidgetRepresentation::TranslateInPlane(double e[2])
 {
-  double v[3] = {p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2]};
+  double t;
+  double planePoint[3];
+  double prevPlanePoint[3];
 
-  double constraintAxis1[3] = {0,0,0};
-  double constraintAxis2[3] = {0,0,0};
-  constraintAxis1[(this->Internal->RotateAxis+1) % 3] = 1;
-  constraintAxis2[(this->Internal->RotateAxis+2) % 3] = 1;
+  double planeNormal[3] = {0,0,0};
+  planeNormal[this->RotateAxis] = 1.0;
+  this->Internal->Transform->TransformVector(planeNormal, planeNormal);
 
-  this->Internal->Transform->TransformVector(constraintAxis1, constraintAxis1);
-  this->Internal->Transform->TransformVector(constraintAxis2, constraintAxis2);
+  double rayP0[3];
+  double rayP1[3];
+  double displayPoint[2];
 
-  // project vector of motion onto the constraint axes
-  double d = vtkMath::Dot(v, constraintAxis1);
-  double d2 = vtkMath::Dot(v, constraintAxis2);
 
-  v[0] = d*constraintAxis1[0] + d2*constraintAxis2[0];
-  v[1] = d*constraintAxis1[1] + d2*constraintAxis2[1];
-  v[2] = d*constraintAxis1[2] + d2*constraintAxis2[2];
+  displayPoint[0] = e[0];
+  displayPoint[1] = e[1];
 
-  this->Internal->Transform->Translate(v[0], v[1], v[2]);
+  vtkInteractorObserver::ComputeDisplayToWorld(
+                          this->Renderer,
+                          displayPoint[0],
+                          displayPoint[1], 0, rayP0);
+
+  vtkInteractorObserver::ComputeDisplayToWorld(
+                          this->Renderer,
+                          displayPoint[0],
+                          displayPoint[1], 1, rayP1);
+
+  vtkPlane::IntersectWithLine(rayP0, rayP1, planeNormal, this->InteractionStartWorldPoint, t, planePoint);
+
+
+
+  displayPoint[0] = this->LastEventPosition[0];
+  displayPoint[1] = this->LastEventPosition[1];
+
+  vtkInteractorObserver::ComputeDisplayToWorld(
+                          this->Renderer,
+                          displayPoint[0],
+                          displayPoint[1], 0, rayP0);
+
+  vtkInteractorObserver::ComputeDisplayToWorld(
+                          this->Renderer,
+                          displayPoint[0],
+                          displayPoint[1], 1, rayP1);
+
+  vtkPlane::IntersectWithLine(rayP0, rayP1, planeNormal, this->InteractionStartWorldPoint, t, prevPlanePoint);
+
+
+  double worldDelta[3];
+  worldDelta[0] = planePoint[0] - prevPlanePoint[0];
+  worldDelta[1] = planePoint[1] - prevPlanePoint[1];
+  worldDelta[2] = planePoint[2] - prevPlanePoint[2];
+
+  this->Internal->Transform->Translate(worldDelta[0], worldDelta[1], worldDelta[2]);
   this->Internal->Transform->Modified();
 }
 
@@ -476,24 +557,16 @@ double ComputeSignedAngle(double v1[3], double v2[3], double normalVector[3])
 
 
 //----------------------------------------------------------------------------
-void vtkFrameWidgetRepresentation::Rotate(int X,
-                                  int Y,
-                                  double *p1,
-                                  double *p2,
-                                  double *vpn)
+void vtkFrameWidgetRepresentation::Rotate(double e[2])
 {
-
-  double v[3]; //vector of motion
-  v[0] = p2[0] - p1[0];
-  v[1] = p2[1] - p1[1];
-  v[2] = p2[2] - p1[2];
-
-
   double centerOfRotation[3];
   this->Internal->Transform->GetPosition(centerOfRotation);
 
+  double vpn[3];
+  vtkCamera *camera = this->Renderer->GetActiveCamera();
+  camera->GetViewPlaneNormal(vpn);
 
-  if (this->Internal->RotateAxis >= 0)
+  if (this->RotateAxis >= 0)
     {
 
     // Compute the center of rotation in display coordinates
@@ -506,8 +579,8 @@ void vtkFrameWidgetRepresentation::Rotate(int X,
 
     // Compute rotation angle
     double vec1[3];
-    vec1[0] = X - displayCenterOfRotation[0];
-    vec1[1] = Y - displayCenterOfRotation[1];
+    vec1[0] = e[0] - displayCenterOfRotation[0];
+    vec1[1] = e[1] - displayCenterOfRotation[1];
     vec1[2] = 0.0;
 
     double vec2[3];
@@ -532,7 +605,7 @@ void vtkFrameWidgetRepresentation::Rotate(int X,
       }
 
     double rotateAxis[3] = {0,0,0};
-    rotateAxis[this->Internal->RotateAxis] = 1;
+    rotateAxis[this->RotateAxis] = 1;
     this->Internal->Transform->TransformVector(rotateAxis, rotateAxis);
 
     if (vtkMath::Dot(vpn, rotateAxis) > 0.0)
@@ -548,9 +621,21 @@ void vtkFrameWidgetRepresentation::Rotate(int X,
   else
     {
 
-
     double axis[3]; //axis of rotation
     double theta; //rotation angle
+    double p1[3];
+    double p2[3];
+
+    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer,
+                     this->LastEventPosition[0], this->LastEventPosition[1], 0.0, p1);
+
+    vtkInteractorObserver::ComputeDisplayToWorld(this->Renderer, e[0], e[1], 0.0, p2);
+
+    double v[3]; //vector of motion
+    v[0] = p2[0] - p1[0];
+    v[1] = p2[1] - p1[1];
+    v[2] = p2[2] - p1[2];
+
 
     // Create axis of rotation and angle of rotation
     vtkMath::Cross(vpn,v,axis);
@@ -560,17 +645,15 @@ void vtkFrameWidgetRepresentation::Rotate(int X,
       }
     int *size = this->Renderer->GetSize();
 
-    double l2 = (X-this->LastEventPosition[0])*(X-this->LastEventPosition[0])
-               + (Y-this->LastEventPosition[1])*(Y-this->LastEventPosition[1]);
+    double l2 = (e[0]-this->LastEventPosition[0])*(e[0]-this->LastEventPosition[0])
+               + (e[1]-this->LastEventPosition[1])*(e[1]-this->LastEventPosition[1]);
     theta = 360.0 * sqrt(l2/(size[0]*size[0]+size[1]*size[1]));
 
 
     this->Internal->Transform->Translate(-centerOfRotation[0], -centerOfRotation[1], -centerOfRotation[2]);
     this->Internal->Transform->RotateWXYZ(theta,axis);
     this->Internal->Transform->Translate(centerOfRotation[0], centerOfRotation[1], centerOfRotation[2]);
-
     }
-
 
   this->Internal->Transform->Modified();
 }
@@ -682,8 +765,10 @@ int vtkFrameWidgetRepresentation::ComputeInteractionState(int X, int Y, int vtkN
     return this->InteractionState;
     }
 
-  this->Internal->RotateAxis = -1;
-  this->Internal->TranslateAxis = -1;
+  this->RotateAxis = -1;
+  this->TranslateAxis = -1;
+
+  this->Internal->Transform->GetPosition(this->InteractionStartWorldPoint);
 
   // Check if the axes actor was picked
   this->Internal->AxesPicker->Pick(X,Y,0.0,this->Renderer);
@@ -691,20 +776,13 @@ int vtkFrameWidgetRepresentation::ComputeInteractionState(int X, int Y, int vtkN
   if (dataset)
     {
 
-
     for (size_t i = 0; i < this->Internal->Reps.size(); ++i)
       {
       if (this->Internal->Reps[i].PolyData.GetPointer() == dataset)
         {
-
         this->InteractionState = vtkFrameWidgetRepresentation::Rotating;
-        this->Internal->RotateAxis = i;
-        this->Internal->AxesPicker->GetPickPosition(this->Internal->CirclePickPoint);
-        this->Internal->Transform->GetOrientationWXYZ(this->Internal->LastOrientation);
-
-        this->Internal->CellLocator = vtkSmartPointer<vtkCellLocator>::New();
-        this->Internal->CellLocator->SetDataSet(this->Internal->Reps[i].PolyData);
-        this->Internal->CellLocator->BuildLocator();
+        this->TranslateAxis = i;
+        this->RotateAxis = i;
         }
       }
 
@@ -712,11 +790,11 @@ int vtkFrameWidgetRepresentation::ComputeInteractionState(int X, int Y, int vtkN
       {
       if (this->Internal->Axes[i].PolyData.GetPointer() == dataset)
         {
-        this->Internal->TranslateAxis = i;
         this->InteractionState = vtkFrameWidgetRepresentation::Translating;
+        this->TranslateAxis = i;
+        this->RotateAxis = i;
         }
       }
-
 
     }
 
@@ -777,8 +855,7 @@ void vtkFrameWidgetRepresentation::GetActors(vtkPropCollection* propCollection)
 //----------------------------------------------------------------------------
 void vtkFrameWidgetRepresentation::BuildRepresentation()
 {
-  // Rebuild only if necessary
-  if ( this->GetMTime() > this->BuildTime)
+  if (this->GetMTime() > this->BuildTime)
     {
     this->BuildTime.Modified();
     this->Internal->RebuildActors(this->WorldSize, this->UseTubeFilter);
@@ -803,7 +880,10 @@ int vtkFrameWidgetRepresentation::RenderOpaqueGeometry(vtkViewport *v)
 
   for (size_t i = 0; i < this->Internal->Actors.size(); ++i)
     {
-    count += this->Internal->Actors[i]->RenderOpaqueGeometry(v);
+    if (this->Internal->Actors[i]->GetVisibility())
+      {
+      count += this->Internal->Actors[i]->RenderOpaqueGeometry(v);
+      }
     }
 
   return count;
@@ -817,7 +897,10 @@ int vtkFrameWidgetRepresentation::RenderOverlay(vtkViewport *v)
 
   for (size_t i = 0; i < this->Internal->Actors.size(); ++i)
     {
-    count += this->Internal->Actors[i]->RenderOverlay(v);
+    if (this->Internal->Actors[i]->GetVisibility())
+      {
+      count += this->Internal->Actors[i]->RenderOverlay(v);
+      }
     }
 
   return count;
@@ -831,7 +914,10 @@ int vtkFrameWidgetRepresentation::RenderTranslucentPolygonalGeometry(vtkViewport
 
   for (size_t i = 0; i < this->Internal->Actors.size(); ++i)
     {
-    count += this->Internal->Actors[i]->RenderTranslucentPolygonalGeometry(v);
+    if (this->Internal->Actors[i]->GetVisibility())
+      {
+      count += this->Internal->Actors[i]->RenderTranslucentPolygonalGeometry(v);
+      }
     }
 
   return count;
@@ -845,7 +931,10 @@ int vtkFrameWidgetRepresentation::HasTranslucentPolygonalGeometry()
 
   for (size_t i = 0; i < this->Internal->Actors.size(); ++i)
     {
-    result |= this->Internal->Actors[i]->HasTranslucentPolygonalGeometry();
+    if (this->Internal->Actors[i]->GetVisibility())
+      {
+      result |= this->Internal->Actors[i]->HasTranslucentPolygonalGeometry();
+      }
     }
 
   return result;
