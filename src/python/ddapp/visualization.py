@@ -39,6 +39,7 @@ class PolyDataItem(om.ObjectModelItem):
         self.mapper.SetInput(self.polyData)
         self.actor = vtk.vtkActor()
         self.actor.SetMapper(self.mapper)
+        self.shadowActor = None
         self.scalarBarWidget = None
 
         self.rangeMap = {
@@ -141,6 +142,8 @@ class PolyDataItem(om.ObjectModelItem):
 
         self.views.append(view)
         view.renderer().AddActor(self.actor)
+        if self.shadowActor:
+            view.renderer().AddActor(self.shadowActor)
         view.render()
 
     def _onPropertyChanged(self, propertySet, propertyName):
@@ -150,8 +153,13 @@ class PolyDataItem(om.ObjectModelItem):
             self.actor.GetProperty().SetPointSize(self.getProperty(propertyName))
         elif propertyName == 'Alpha':
             self.actor.GetProperty().SetOpacity(self.getProperty(propertyName))
+            if self.shadowActor:
+                self.shadowActor.GetProperty().SetOpacity(self.getProperty(propertyName))
         elif propertyName == 'Visible':
             self.actor.SetVisibility(self.getProperty(propertyName))
+            if self.shadowActor:
+                self.shadowActor.SetVisibility(self.getProperty(propertyName))
+
         elif propertyName == 'Surface Mode':
             mode = self.properties.getPropertyEnumValue(propertyName)
             prop =  self.actor.GetProperty()
@@ -243,6 +251,37 @@ class PolyDataItem(om.ObjectModelItem):
         lut.SetRange(scalarRange)
         lut.Build()
         return lut
+
+    def shadowOn(self):
+
+        if self.shadowActor:
+            return
+
+        mat =  [[1, 0, -1,  0],
+                [0, 1, -1,  0],
+                [0, 0,  0,  0],
+                [0, 0,  0,  1]]
+
+        shadowT = transformUtils.getTransformFromNumpy(mat)
+
+        baseTransform = self.actor.GetUserTransform()
+        if baseTransform:
+            shadowT.PreMultiply()
+            shadowT.Concatenate(baseTransform)
+
+        self.shadowActor = vtk.vtkActor()
+        self.shadowActor.SetMapper(self.mapper)
+        self.shadowActor.SetUserTransform(shadowT)
+        self.shadowActor.GetProperty().LightingOff()
+        self.shadowActor.GetProperty().SetColor(0, 0, 0)
+
+        for view in self.views:
+            view.renderer().AddActor(self.shadowActor)
+
+    def shadowOff(self):
+        for view in self.views:
+            view.renderer().RemoveActor(self.shadowActor)
+        self.shadowActor = None
 
     def onRemoveFromObjectModel(self):
         self.removeFromAllViews()
