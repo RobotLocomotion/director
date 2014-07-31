@@ -30,12 +30,6 @@ import drc as lcmdrc
 from PythonQt import QtCore, QtGui
 
 
-def printTF(tf, msg):
-    print msg
-    print tf.GetPosition()
-    print tf.GetOrientation()
-
-
 class Drill(object):
     def __init__(self):
         self.affordance = None
