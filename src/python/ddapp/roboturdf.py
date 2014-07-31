@@ -457,6 +457,7 @@ class HandLoader(object):
         if self.side == 'right':
             color = [0.33, 1.0, 0.0]
         obj = vis.showPolyData(polyData, name, view=view, color=color, visible=False, parent=parent)
+        obj.side = self.side
         frame = vtk.vtkTransform()
         frame.PostMultiply()
         obj.actor.SetUserTransform(frame)
