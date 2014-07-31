@@ -534,10 +534,9 @@ class IKPlanner(object):
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
-        constraints.append(self.createMovingBasePostureConstraint(startPoseName))
+        constraints.append(self.createMovingBaseSafeLimitsConstraint())
         constraints.append(self.createLockedLeftArmPostureConstraint(nominalPoseName))
         constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
-        constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('.*_leg_kny')))
         constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
         endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
@@ -561,10 +560,9 @@ class IKPlanner(object):
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
-        constraints.append(self.createMovingBasePostureConstraint(startPoseName))
+        constraints.append(self.createMovingBaseSafeLimitsConstraint())
         constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
-        constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('.*_leg_kny')))
         constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
         endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
