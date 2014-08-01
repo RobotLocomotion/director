@@ -322,10 +322,19 @@ if usePlanning:
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                     perception.multisenseDriver, view, robotStateJointController)
 
-    drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
-                                        lHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                                        fitDrillMultisense, robotStateJointController,
-                                        playPlans, showPose)
+    def constructDrillDemo():
+        imp.reload(drilldemo)
+        global drillDemo, d
+        drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                                          lHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                                          fitDrillMultisense, robotStateJointController,
+                                          playPlans, showPose)
+        d = drillDemo
+    constructDrillDemo()
+
+
+
+
 
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -600,6 +609,7 @@ def doIt():
 
   ##segmentation.segmentValveWallAuto(.2,'valve')
   segmentation.switchToView( 'DRC View')
+
 
 
 
