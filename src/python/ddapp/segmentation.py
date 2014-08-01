@@ -2272,7 +2272,8 @@ def segmentDrillAuto(point1):
     xaxis /= np.linalg.norm(xaxis)
     yaxis = np.cross(zaxis, xaxis)
 
-    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    # note this hack to orient the drill correctly:
+    t = getTransformFromAxes(yaxis, -xaxis, zaxis)
     t.PreMultiply()
     t.Translate(-drillToTopPoint)
     t.PostMultiply()
