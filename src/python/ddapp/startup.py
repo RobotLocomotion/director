@@ -587,7 +587,7 @@ if (1==1):
 def doIt():
   segmentationpanel.activateSegmentationMode(polyData)
 
-  data = segmentation.segmentDrillUsingTableOrientation(viewbehaviors.lastCachedPickedPoint )
+  data = segmentation.segmentDrillAlignedWithTable(viewbehaviors.lastCachedPickedPoint )
 
   #print "seg"
   #data = segmentation.segmentTableScene(polyData, [1.83691132,  0.04082248 , 0.63584119] )

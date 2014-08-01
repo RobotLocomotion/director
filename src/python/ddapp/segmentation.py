@@ -2539,7 +2539,7 @@ def segmentDrillBarrel(point1):
 
 
 
-def segmentDrillUsingTableOrientation(point):
+def segmentDrillAlignedWithTable(point):
     '''
     Yet Another Drill Fitting Algorithm [tm]
     This one fits the button drill assuming its on the table
@@ -2559,7 +2559,7 @@ def segmentDrillUsingTableOrientation(point):
 
     drillMesh = getDrillMesh()
 
-    aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
+    aff = showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(drillTransform)
     aff.addToView(app.getDRCView())
     showFrame(drillTransform, 'drill frame', parent=aff, visible=False).addToView(app.getDRCView())
@@ -3559,6 +3559,16 @@ def startDrillAutoSegmentation():
     picker.drawLines = False
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrillAuto)
+
+
+def startDrillAutoSegmentationAlignedWithTable():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDrillAlignedWithTable)
 
 
 def startDrillBarrelSegmentation():

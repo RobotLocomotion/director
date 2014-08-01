@@ -171,6 +171,11 @@ class SegmentationPanel(object):
     def _makeDrillWizard(self):
         drillWizard = QtGui.QGroupBox('Drill Segmentation')
         l = QtGui.QVBoxLayout(drillWizard)
+
+        l.addWidget(_makeButton('segment drill aligned with table', startDrillAutoSegmentationAlignedWithTable))
+        l.addWidget(QtGui.QLabel(''))
+
+
         l.addWidget(_makeButton('segment drill on table', startDrillAutoSegmentation))
         #l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
         #l.addWidget(_makeButton('segment wall', startDrillWallSegmentation))
