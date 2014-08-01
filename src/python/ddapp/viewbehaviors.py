@@ -256,6 +256,8 @@ def getAsFrame(obj):
     elif hasattr(obj, 'getChildFrame'):
         return obj.getChildFrame()
 
+# The most recently cached PickedPoint - available as input to any other algorithm
+lastCachedPickedPoint = np.array([0,0,0])
 
 def showRightClickMenu(displayPoint, view):
 
@@ -369,6 +371,14 @@ def showRightClickMenu(displayPoint, view):
         vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
 
 
+    def onCachePickedPoint():
+        ''' Cache the Picked Point for general purpose use'''
+        global lastCachedPickedPoint
+        lastCachedPickedPoint = pickedPoint
+        #data = segmentation.segmentTableScene(pointCloudObj.polyData, pickedPoint)
+        #vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
+
+
     def onLocalPlaneFit():
         result = segmentation.applyLocalPlaneFit(pointCloudObj.polyData, pickedPoint, searchRadius=0.1, searchRadiusEnd=0.2)
         obj = vis.showPolyData(result, 'local plane fit', color=[0,1,0])
@@ -412,6 +422,7 @@ def showRightClickMenu(displayPoint, view):
             ('Segment Table', onSegmentTableScene),
             ('Local Plane Fit', onLocalPlaneFit),
             ('Disk Glyph', onDiskGlyph),
+            ('Cache Pick Point', onCachePickedPoint),
             (None, None),
             ('Open Segmentation Editor', onSegmentationEditor)
             ])
