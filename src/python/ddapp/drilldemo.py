@@ -174,6 +174,12 @@ class DrillPlannerDemo(object):
         else:
             self.pointerHand='left'
 
+    def resetDrill(self):
+        self.drill = Drill()
+
+    def resetWall(self):
+        self.wall = Wall()
+
     def addPlan(self, plan):
         self.plans.append(plan)
 
@@ -205,7 +211,6 @@ class DrillPlannerDemo(object):
         t.Translate([0.0, 0.0, -footHeight])
 
         return t
-
 
     def computeRobotStanceFrame(self, objectTransform, relativeStanceTransform ):
         '''
