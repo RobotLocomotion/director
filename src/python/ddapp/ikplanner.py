@@ -278,7 +278,7 @@ class IKPlanner(object):
 
 
     def createMovingBasePostureConstraint(self, startPostureName):
-        return self.createZMovingBasePostureConstraint(startPostureName)
+        return self.createXYZMovingBasePostureConstraint(startPostureName)
 
 
     def createMovingBaseSafeLimitsConstraint(self):
