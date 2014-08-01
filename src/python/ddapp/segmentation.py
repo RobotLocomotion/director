@@ -2539,6 +2539,35 @@ def segmentDrillBarrel(point1):
 
 
 
+def segmentDrillUsingTableOrientation(point):
+    '''
+    Yet Another Drill Fitting Algorithm [tm]
+    This one fits the button drill assuming its on the table
+    and aligned with the table frame (because the button drill orientation is difficult to find)
+    '''
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    data = segmentTableScene(polyData, point )
+    #vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
+
+    # crude use of the table frame to determine the frame of the drill on the table
+    table_xaxis, table_yaxis, table_zaxis = transformUtils.getAxesFromTransform( data.table.frame )
+    drillTransform = transformUtils.getTransformFromAxes( table_yaxis, table_xaxis,  -1*np.array( table_zaxis) )
+    drillTransform.Translate ( data.clusters[0].frame.GetPosition() )
+    #vis.updateFrame(drillTransform , 'crude drill frame', visible=True, scale=0.2)
+
+    drillMesh = getDrillMesh()
+
+    aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
+    aff.actor.SetUserTransform(drillTransform)
+    aff.addToView(app.getDRCView())
+    showFrame(drillTransform, 'drill frame', parent=aff, visible=False).addToView(app.getDRCView())
+
+    params = getDrillAffordanceParams(np.array(drillTransform.GetPosition()), [1,0,0], [0,1,0], [0,0,1], drillType="dewalt_button")
+    aff.setAffordanceParams(params)
+
+
 def segmentDrillInHand(p1, p2):
 
     inputObj = om.findObjectByName('pointcloud snapshot')

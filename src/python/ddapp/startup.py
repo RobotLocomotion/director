@@ -494,3 +494,112 @@ viewBehaviors = viewbehaviors.ViewBehaviors(view)
 viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
 
 
+
+def prepButtonPress():
+
+    q = np.array([  0.00000000e+00,   0.00000000e+00,   8.52500000e-01,
+        0.00000000e+00,   0.00000000e+00,   0.00000000e+00,
+        0.00000000e+00,   0.00000000e+00,   0.00000000e+00,
+        -2.52936989e-01,  -1.75060872e-02,   1.72317326e+00,
+        2.27700758e+00,   1.54566648e-03,   0.00000000e+00,
+        5.49999997e-02,  -4.90000010e-01,   1.00000000e+00,
+        -5.09999990e-01,  -5.99999987e-02,  -4.17805046e-01,
+        -4.10342306e-01,   7.97343493e-01,   1.85813034e+00,
+        -2.20951104e+00,   2.16407776e+00,   0.00000000e+00,
+        -5.49999997e-02,  -4.90000010e-01,   1.00000000e+00,
+        -5.09999990e-01,   5.99999987e-02,  -3.95531267e-01,
+        0.00000000e+00])
+
+    robotStateJointController.setPose("EST_ROBOT_STATE", q)
+    d.moveDrillToHand()
+    d.addDrillButtonFrame()
+
+
+def reset():
+    wall=  om.findObjectByName('wall')
+    om.removeFromObjectModel(wall)
+
+    drill=  om.findObjectByName('drill')
+    om.removeFromObjectModel(drill)
+
+
+    constructDrillDemo()
+    q = np.array([ 0.    ,  0.    ,  0.8525,  0.    ,  0.    ,  0.    ,  0.    ,
+        0.    ,  0.    ,  0.27  , -1.33  ,  2.1   ,  0.5   ,  0.    ,
+        0.    ,  0.055 , -0.49  ,  1.    , -0.51  , -0.06  ,  0.    ,
+        0.27  ,  1.33  ,  2.1   , -0.5   ,  0.    ,  0.    , -0.055 ,
+       -0.49  ,  1.    , -0.51  ,  0.06  ,  0.    ,  0.    ])
+    robotStateJointController.setPose("EST_ROBOT_STATE", q)
+
+
+def prepDrilling():
+    wall=  om.findObjectByName('wall')
+    om.removeFromObjectModel(wall)
+
+    constructDrillDemo()
+    q = np.array([  6.42492209e-03,   7.70942744e-03,   8.52836686e-01,
+        -8.95310355e-03,   1.00091533e-02,  -1.37427243e-03,
+        -2.18423404e-04,   7.05790648e-04,  -1.00478379e-03,
+         5.85000038e-01,  -1.29673553e+00,   2.54605365e+00,
+         1.63658464e+00,   1.03048101e-01,   1.96849159e-03,
+         5.39942160e-02,  -4.93786156e-01,   1.00414515e+00,
+        -5.20112395e-01,  -4.99881543e-02,   8.58246744e-01,
+         2.70000011e-01,   1.33000004e+00,   2.09999990e+00,
+        -5.00000000e-01,   0.00000000e+00,   7.10978289e-04,
+        -5.59350178e-02,  -4.86784428e-01,   9.89762068e-01,
+        -5.12869358e-01,   6.99684396e-02,   0.00000000e+00,
+         6.92082313e-06])
+
+    robotStateJointController.setPose("EST_ROBOT_STATE", q)
+    d.moveDrillToHand()
+    d.addDrillGuardFrame()
+
+    d.spawnDrillWallAffordance()
+    d.getFirstCutDesired(engagedTip=False)
+
+
+def printTF(tf, msg="transform pos and rpy"):
+    print msg
+    print tf.GetPosition()
+    print tf.GetOrientation()
+
+
+
+if (1==1):
+  #polyData = io.readPolyData(os.path.expanduser('~/Desktop/table-and-door-scene.vtp'))
+  #polyData = io.readPolyData(os.path.expanduser('~/Desktop/valve-lever-scene.vtp')) # different position
+  polyData = io.readPolyData(os.path.expanduser('~/Desktop/drill_on_table.vtp'))
+
+
+  obj = vis.showPolyData(polyData, 'scene', parent=None, alpha=0.3)
+  obj.colorBy('z', scalarRange=[-0.2, 3.0])
+
+
+def doIt():
+  segmentationpanel.activateSegmentationMode(polyData)
+
+  data = segmentation.segmentDrillUsingTableOrientation(viewbehaviors.lastCachedPickedPoint )
+
+  #print "seg"
+  #data = segmentation.segmentTableScene(polyData, [1.83691132,  0.04082248 , 0.63584119] )
+
+  #vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
+
+  ## crude use of the table frame to determine the frame of the drill on the table
+  #table_xaxis, table_yaxis, table_zaxis = transformUtils.getAxesFromTransform( data.table.frame )
+  #t = transformUtils.getTransformFromAxes( table_yaxis, table_xaxis,  -1*np.array( table_zaxis) )
+  #t.Translate ( data.clusters[0].frame.GetPosition() )
+
+
+  ##t = transformUtils.frameFromPositionAndRPY( data.clusters[0].frame.GetPosition() , data.table.frame.GetOrientation() )
+
+  ##t.Concatenate(self.drill.frame.transform)
+  ##self.drill.graspFrame =
+  #vis.updateFrame(t , 'drill frame mf', visible=True, scale=0.5)
+
+
+  ##segmentation.segmentValveWallAuto(.2,'valve')
+  segmentation.switchToView( 'DRC View')
+
+
+

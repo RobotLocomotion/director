@@ -317,6 +317,17 @@ class DrillPlannerDemo(object):
         self.drill.frame = vis.showFrame(drillTransform, 'drill frame', parent=self.drill.affordance, visible=False, scale=0.2)
         self.drill.affordance.setAffordanceParams(params)
 
+        self.findDrillAffordance()
+
+
+    def findDrillAffordance(self):
+        '''
+        find an affordance from the view graph - with a populated frame and the param
+        then populate the required frames
+        '''
+        self.drill.affordance = om.findObjectByName('drill')
+        self.drill.frame = om.findObjectByName('drill frame')
+
         self.computeDrillGraspFrame()
         self.computeDrillReachFrame()
         self.computeDrillStanceFrame()
@@ -400,13 +411,9 @@ class DrillPlannerDemo(object):
         return worldToButton
 
 
-    def findDrillAffordance(self):
-        self.drill.affordance = om.findObjectByName('drill')
-        self.drill.frame = om.findObjectByName('drill frame')
-
-
     def spawnWallAffordance(self):
         self.wall.transform = transformUtils.frameFromPositionAndRPY(self.wall.initXYZ, self.wall.initRPY)
+
         segmentation.createDrillWall(self.wall.rightAngleLocation, self.wall.transform)
         self.wall.affordance = om.getOrCreateContainer('wall')
 
@@ -842,7 +849,6 @@ class DrillPlannerDemo(object):
         self.planFromCurrentRobotState = False
         self.plans = []
 
-        # self.findDrillAffordance()
         if (om.findObjectByName('drill') is None):
             self.spawnDrillAffordance()
 
