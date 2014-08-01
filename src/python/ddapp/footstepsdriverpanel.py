@@ -158,7 +158,6 @@ class FootstepsPanel(object):
 
     ### BDI frame logic
     def onHideBDIButton(self):
-        print "hide bdi"
         self.driver.showBDIPlan = False
         self.driver.bdiRobotModel.setProperty('Visible', False)
         folder = om.getOrCreateContainer("BDI footstep plan")
@@ -167,7 +166,6 @@ class FootstepsPanel(object):
         om.removeFromObjectModel(folder)
 
     def onShowBDIButton(self):
-        print "show bdi"
         self.driver.showBDIPlan = True
         self.driver.bdiRobotModel.setProperty('Visible', True)
         self.driver.drawBDIFootstepPlan()
