@@ -111,11 +111,9 @@ class FootstepsDriver(object):
         self.lastFootstepPlan = None
         self.lastFootstepRequest = None
         self.goalSteps = None
-        self._setupSubscriptions()
         self.lastWalkingPlan = None
         self.walkingPlanCallback = None
         self.default_step_params = DEFAULT_STEP_PARAMS
-        self._setupProperties()
         self.contact_slices = {}
         self.show_contact_slices = False
 
@@ -128,6 +126,12 @@ class FootstepsDriver(object):
         self.bdiRobotModel, self.bdiJointController = roboturdf.loadRobotModel('bdi model', view, parent='bdi model', color=roboturdf.getRobotOrangeColor(), visible=False)
         self.bdiRobotModel.setProperty('Visible', False)
         self.showBDIPlan = False # hide the BDI plans when created
+        self.bdiChannel = "POSE_BDI"
+        self.bdiSubcribe = None
+
+        self._setupSubscriptions()
+        self._setupProperties()
+
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
@@ -165,10 +169,19 @@ class FootstepsDriver(object):
         lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
         ### Related to BDI-frame adjustment:
-        sub1 = lcmUtils.addSubscriber('POSE_BDI', pose_t, self.onPoseBDI)
-        sub1.setSpeedLimit(60)
+        self.bdiSubcribe = lcmUtils.addSubscriber( self.bdiChannel , pose_t, self.onPoseBDI)
+        self.bdiSubcribe.setSpeedLimit(60)
         sub2 = lcmUtils.addSubscriber('BDI_ADJUSTED_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, self.onBDIAdjustedFootstepPlan)
         sub2.setSpeedLimit(1) # was 5 but was slow rendering
+
+    def changeSubscriptionBDI(self, newBDIChannel="POSE_BDI"):
+        # used to monitor a different pose e.g. POSE_BODY_LOGGED in playback
+        self.bdiChannel = newBDIChannel
+        lcmUtils.removeSubscriber ( self.bdiSubcribe )
+
+        self.bdiSubcribe = lcmUtils.addSubscriber( self.bdiChannel , pose_t, self.onPoseBDI)
+        self.bdiSubcribe.setSpeedLimit(60)
+
 
     ##############################
 
