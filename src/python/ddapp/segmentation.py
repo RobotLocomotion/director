@@ -2545,67 +2545,69 @@ def segmentDrillAlignedWithTable(point):
     Yet Another Drill Fitting Algorithm [tm]
     This one fits the button drill assuming its on the table
     and aligned with the table frame (because the button drill orientation is difficult to find)
+    Table must have long side facing robot
     '''
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
     # segment the table and recover the precise up direction normal:
     polyDataOut, tablePoints, origin, normal = segmentTable(polyData,point)
-    print origin
-    tableCentroid = computeCentroid(tablePoints)
+    #print origin # this origin is bunk
+    #tableCentroid = computeCentroid(tablePoints)
 
     # get the bounding box edges
     OBBorigin, edges, _ = getOrientedBoundingBox(tablePoints)
-    print "OBB out"
-    print OBBorigin
-    print edges
+    #print "OBB out"
+    #print OBBorigin
+    #print edges
     edgeLengths = np.array([np.linalg.norm(edge) for edge in edges])
     axes = [edge / np.linalg.norm(edge) for edge in edges]
-    print edgeLengths
-    print axes
-    print "blurb2"
+    #print edgeLengths
+    #print axes
+
+    # check which direction the robot is facing and flip x-axis of table if necessary
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+    #print "main axes", axes[1]
+    #print "viewDirection", viewDirection
+    #dp = np.dot(axes[1], viewDirection)
+    #print dp
+
+    if np.dot(axes[1], viewDirection) < 0:
+        print "flip the x-direction"
+        axes[1] = -axes[1]
+
 
     # define the x-axis to be along the 2nd largest edge
-    xaxis = axes[1] #[1.0, 0.0, 0.0]
+    xaxis = axes[1]
     xaxis = np.array(xaxis)
     zaxis = np.array( normal )
     yaxis = np.cross(zaxis, xaxis)
     yaxis /= np.linalg.norm(yaxis)
     xaxis = np.cross(yaxis, zaxis)
-
-    # todo check which direction the robot is facing and flip x-axis of table
-    #TODO: this isnt finished
-
     tableOrientation = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-    tableTransform = transformUtils.frameFromPositionAndRPY( tableCentroid , tableOrientation.GetOrientation() )
 
-
-    updateFrame(tableTransform, 'another table frame', parent="segmentation", visible=True).addToView(app.getDRCView())
-
-    return
-
+    #tableTransform = transformUtils.frameFromPositionAndRPY( tableCentroid , tableOrientation.GetOrientation() )
+    #updateFrame(tableTransform, 'table frame [z up, x away face]', parent="segmentation", visible=True).addToView(app.getDRCView())
 
     data = segmentTableScene(polyData, point )
-    vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
+    #vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
 
     # crude use of the table frame to determine the frame of the drill on the table
-    t2 = transformUtils.frameFromPositionAndRPY([0,0,0], [180, 0 , 90] )
-    drillOrientationTransform = transformUtils.copyFrame( om.findObjectByName('object 1 frame').transform )
-    drillOrientationTransform.PreMultiply()
-    drillOrientationTransform.Concatenate(t2)
+    #t2 = transformUtils.frameFromPositionAndRPY([0,0,0], [180, 0 , 90] )
+    #drillOrientationTransform = transformUtils.copyFrame( om.findObjectByName('object 1 frame').transform )
+    #drillOrientationTransform.PreMultiply()
+    #drillOrientationTransform.Concatenate(t2)
     #vis.updateFrame(t, 'drillOrientationTransform',visible=True)
 
     #table_xaxis, table_yaxis, table_zaxis = transformUtils.getAxesFromTransform( data.table.frame )
     #drillOrientation = transformUtils.orientationFromAxes( table_yaxis, table_xaxis,  -1*np.array( table_zaxis) )
-    drillTransform = transformUtils.frameFromPositionAndRPY( data.clusters[0].frame.GetPosition() ,drillOrientationTransform.GetOrientation() )
-    vis.updateFrame(drillTransform , 'crude drill frame', visible=True, scale=0.2)
+    drillTransform = transformUtils.frameFromPositionAndRPY( data.clusters[0].frame.GetPosition() , tableOrientation.GetOrientation() )
 
     drillMesh = getDrillMesh()
-
     aff = updatePolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(drillTransform)
     aff.addToView(app.getDRCView())
-    updateFrame(drillTransform, 'drill frame', parent=aff, visible=False).addToView(app.getDRCView())
+    updateFrame(drillTransform, 'drill frame', parent=aff, scale=0.2, visible=False).addToView(app.getDRCView())
 
     params = getDrillAffordanceParams(np.array(drillTransform.GetPosition()), [1,0,0], [0,1,0], [0,0,1], drillType="dewalt_button")
     aff.setAffordanceParams(params)

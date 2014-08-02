@@ -574,11 +574,11 @@ def printTF(tf, msg="transform pos and rpy"):
 
 
 
-if (1==0):
+if (1==1):
   #polyData = io.readPolyData(os.path.expanduser('~/Desktop/table-and-door-scene.vtp'))
   #polyData = io.readPolyData(os.path.expanduser('~/Desktop/valve-lever-scene.vtp')) # different position
-  #polyData = io.readPolyData(os.path.expanduser('~/Desktop/drill_on_table.vtp'))
-  polyData = io.readPolyData(os.path.expanduser('~/Desktop/drill_on_table_flipping.vtp'))
+  polyData = io.readPolyData(os.path.expanduser('~/Desktop/drill_on_table.vtp'))
+  #polyData = io.readPolyData(os.path.expanduser('~/Desktop/drill_on_table_flipping.vtp'))
 
 
   obj = vis.showPolyData(polyData, 'scene', parent=None, alpha=0.3)
