@@ -21,8 +21,12 @@ import drc as lcmdrc
 from bot_core.pose_t import pose_t
 import functools
 
-DEFAULT_PARAM_SET = 'BDI'
-DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 10,
+
+from PythonQt import QtGui, QtCore
+
+
+DEFAULT_PARAM_SET = 'drake'
+DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
                                'Nominal Step Width': 0.26,
                                'Nominal Forward Step': 0.15,
                                'Max Forward Step': 0.40,
@@ -30,7 +34,7 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 10,
                                'Behavior': 0,
                                'Drake Swing Speed': 0.2,
                                'Drake Min Hold Time': 2.0},
-                       'drake': {'Max Num Steps': 10,
+                       'drake': {'Max Num Steps': 20,
                                  'Nominal Step Width': 0.28,
                                  'Nominal Forward Step': 0.18,
                                  'Max Forward Step': 0.2,
@@ -39,7 +43,6 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 10,
                                  'Drake Swing Speed': 0.1,
                                  'Drake Min Hold Time': 3.0}}
 
-import ddapp.applogic as app
 
 def loadFootMeshes():
     meshDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/meshes')
@@ -84,7 +87,7 @@ def getFootMeshes():
 def getFootstepsFolder():
     obj = om.findObjectByName('footstep plan')
     if obj is None:
-        obj = om.getOrCreateContainer('footstep plan')
+        obj = om.getOrCreateContainer('footstep plan', parentObj=om.getOrCreateContainer('planning'))
         obj.setIcon(om.Icons.Feet)
         om.collapse(obj)
     return obj
@@ -92,7 +95,7 @@ def getFootstepsFolder():
 def getWalkingVolumesFolder():
     obj = om.findObjectByName('walking volumes')
     if obj is None:
-        obj = om.getOrCreateContainer('walking volumes')
+        obj = om.getOrCreateContainer('walking volumes', parentObj=getFootstepsFolder())
         om.collapse(obj)
     return obj
 
@@ -118,6 +121,7 @@ class FootstepsDriver(object):
         self._setupProperties()
         self.contact_slices = {}
         self.show_contact_slices = False
+        self.toolbarWidget = None
 
         ### Stuff pertaining to rendering BDI-frame steps
         self.pose_bdi = None
@@ -201,30 +205,88 @@ class FootstepsDriver(object):
         self.drawFootstepPlan(msg, folder)
 
     def onFootstepPlan(self, msg):
-        self.clearFootstepPlan()
-        self.lastFootstepPlan = msg.decode( msg.encode() ) # decode and encode ensures deepcopy
+        #self.clearFootstepPlan()
+        self.lastFootstepPlan = msg
 
         planFolder = getFootstepsFolder()
         self.drawFootstepPlan( self.lastFootstepPlan , planFolder)
         self.transformPlanToBDIFrame( self.lastFootstepPlan )
 
+        self.showToolbarWidget()
+        self.execButton.show()
+
+
+    def showToolbarWidget(self):
+        if self.toolbarWidget:
+            return
+
+        w = QtGui.QWidget()
+        l = QtGui.QHBoxLayout(w)
+
+        label = QtGui.QLabel('Walk plan:')
+        execButton = QtGui.QPushButton('')
+        execButton.setIcon(QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_MediaPlay))
+        clearButton = QtGui.QPushButton('')
+        clearButton.setIcon(QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_TrashIcon))
+        stopButton = QtGui.QPushButton('')
+        stopButton.setIcon(QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_MediaStop))
+
+        l.addWidget(label)
+        l.addWidget(execButton)
+        l.addWidget(stopButton)
+        l.addWidget(clearButton)
+        l.setContentsMargins(0, 0, 0, 0)
+
+        execButton.setShortcut(QtGui.QKeySequence('Ctrl+Return'))
+        execButton.connect('clicked()', self.onExecClicked)
+        clearButton.connect('clicked()', self.onClearClicked)
+        stopButton.connect('clicked()', self.sendStopWalking)
+        stopButton.setVisible(False)
+
+        self.execButton = execButton
+        self.stopButton = stopButton
+        self.toolbarWidget = app.getMainWindow().toolBar().addWidget(w)
+
+
+    def onExecClicked(self):
+        self.commitFootstepPlan(self.lastFootstepPlan)
+
+        om.removeFromObjectModel(om.findObjectByName('footstep widget'))
+        walkGoal = om.findObjectByName('walking goal')
+        if walkGoal:
+            walkGoal.setProperty('Edit', False)
+        self.execButton.hide()
+        self.stopButton.show()
+
+
+    def onClearClicked(self):
+        om.removeFromObjectModel(om.findObjectByName('walking goal'))
+        om.removeFromObjectModel(om.findObjectByName('footstep widget'))
+        om.removeFromObjectModel(om.findObjectByName('LCM GL'))
+        self.clearFootstepPlan()
+
+        if self.toolbarWidget:
+            app.getMainWindow().toolBar().removeAction(self.toolbarWidget)
+            self.toolbarWidget = None
+
+
     def clearFootstepPlan(self):
         self.lastFootstepPlan = None
-        folder = getFootstepsFolder()
-        om.removeFromObjectModel(folder)
-        volFolder = getWalkingVolumesFolder()
-        om.removeFromObjectModel(volFolder)
+        om.removeFromObjectModel(getFootstepsFolder())
 
     def drawFootstepPlan(self, msg, folder,left_color=None, right_color=None):
 
         allTransforms = []
         volFolder = getWalkingVolumesFolder()
 
+        steps = folder.children()[1:]
+
         for i, footstep in enumerate(msg.footsteps):
             trans = footstep.pos.translation
             trans = [trans.x, trans.y, trans.z]
             quat = footstep.pos.rotation
             quat = [quat.w, quat.x, quat.y, quat.z]
+
             footstepTransform = transformUtils.transformFromPose(trans, quat)
 
             allTransforms.append(footstepTransform)
@@ -245,18 +307,29 @@ class FootstepsDriver(object):
                 else:
                     color = left_color
 
-            for zs, xy in self.contact_slices.iteritems():
-                points0 = np.vstack((xy, zs[0] + np.zeros((1,xy.shape[1]))))
-                points1 = np.vstack((xy, zs[1] + np.zeros((1,xy.shape[1]))))
-                points = np.hstack((points0, points1))
-                points = points + np.array([[0.05],[0],[-0.0811]])
-                points = points.T
-                polyData = vnp.getVtkPolyDataFromNumpyPoints(points.copy())
-                vol_mesh = filterUtils.computeDelaunay3D(polyData)
-                obj = vis.showPolyData(vol_mesh, 'walking volume', parent=volFolder, alpha=0.5, visible=self.show_contact_slices, color=color)
-                obj.actor.SetUserTransform(footstepTransform)
+            # add gradual shading to steps to indicate destination
+            frac = float(i)/ float(msg.num_steps-1)
+            this_color = [0,0,0]
+            this_color[0] = 0.25*color[0] + 0.75*frac*color[0]
+            this_color[1] = 0.25*color[1] + 0.75*frac*color[1]
+            this_color[2] = 0.25*color[2] + 0.75*frac*color[2]
 
-            if footstep.infeasibility > 1e-6:
+
+            if self.show_contact_slices:
+                for zs, xy in self.contact_slices.iteritems():
+                    points0 = np.vstack((xy, zs[0] + np.zeros((1,xy.shape[1]))))
+                    points1 = np.vstack((xy, zs[1] + np.zeros((1,xy.shape[1]))))
+                    points = np.hstack((points0, points1))
+                    points = points + np.array([[0.05],[0],[-0.0811]])
+                    points = points.T
+                    polyData = vnp.getVtkPolyDataFromNumpyPoints(points.copy())
+                    vol_mesh = filterUtils.computeDelaunay3D(polyData)
+                    obj = vis.showPolyData(vol_mesh, 'walking volume', parent=volFolder, alpha=0.5, visible=self.show_contact_slices, color=color)
+                    obj.actor.SetUserTransform(footstepTransform)
+
+
+            renderInfeasibility = False
+            if renderInfeasibility and footstep.infeasibility > 1e-6:
                 d = DebugData()
                 start = allTransforms[i-1].GetPosition()
                 end = footstepTransform.GetPosition()
@@ -265,19 +338,24 @@ class FootstepsDriver(object):
                            endHead=True)
                 vis.showPolyData(d.getPolyData(), 'infeasibility %d -> %d' % (i-2, i-1), parent=folder, color=[1, 0.2, 0.2])
 
+
             stepName = 'step %d' % (i-1)
 
-            # add gradual shading to steps to indicate destination
-	    frac = float(i)/ float(msg.num_steps-1)
-	    this_color = [0,0,0]
-            this_color[0] = 0.25*color[0] + 0.75*frac*color[0]
-            this_color[1] = 0.25*color[1] + 0.75*frac*color[1]
-            this_color[2] = 0.25*color[2] + 0.75*frac*color[2]
+            if steps:
+                obj = steps.pop(0)
+                assert obj.getProperty('Name') == stepName
+                frameObj = obj.children()[0]
+                frameObj.copyFrame(footstepTransform)
+                obj.setProperty('Visible', True)
+                obj.setProperty('Color', QtGui.QColor(*[255*v for v in this_color]))
+            else:
+                obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=1.0, parent=folder)
+                obj.setIcon(om.Icons.Feet)
+                frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
+                obj.actor.SetUserTransform(footstepTransform)
 
-            obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=1.0, parent=folder)
-            obj.setIcon(om.Icons.Feet)
-            frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
-            obj.actor.SetUserTransform(footstepTransform)
+        for obj in steps:
+            obj.setProperty('Visible', False)
 
     @staticmethod
     def getContactPts():
@@ -487,9 +565,6 @@ class FootstepsDriver(object):
         else:
             lcmUtils.publish(requestChannel, msg)
 
-    def sendWalkingControllerRequest(self, footstepPlan, startPose, waitForResponse=False, waitTimeout=5000):
-        self.sendWalkingPlanRequest(footstepPlan, startPose, waitForResponse, waitTimeout, req_type='controller')
-
     def sendStopWalking(self):
         msg = lcmdrc.plan_control_t()
         msg.utime = getUtime()
@@ -497,6 +572,17 @@ class FootstepsDriver(object):
         lcmUtils.publish('STOP_WALKING', msg)
 
     def commitFootstepPlan(self, footstepPlan):
+        if footstepPlan.params.behavior in (lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
+                                            lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING):
+            self._commitFootstepPlanBDI(footstepPlan)
+        elif footstepPlan.params.behavior == lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING:
+            self._commitFootstepPlanDrake(footstepPlan)
+
+    def _commitFootstepPlanDrake(self, footstepPlan):
+        startPose = self.jointController.getPose('EST_ROBOT_STATE')
+        self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='controller')
+
+    def _commitFootstepPlanBDI(self, footstepPlan):
         footstepPlan.utime = getUtime()
         lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', footstepPlan)
 

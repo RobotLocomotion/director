@@ -56,20 +56,6 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0">
-    <widget class="QPushButton" name="BDIExecuteButton">
-     <property name="text">
-      <string>BDI: Execute Walking</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QPushButton" name="drakeExecuteButton">
-     <property name="text">
-      <string>Drake: Execute Walking</string>
-     </property>
-    </widget>
-   </item>
    <item row="8" column="0">
     <widget class="QPushButton" name="BDIDefaultsButton">
      <property name="text">
@@ -140,6 +126,13 @@
       </size>
      </property>
     </spacer>
+   </item>
+   <item row="4" column="0" colspan="2">
+    <widget class="QPushButton" name="executeButton">
+     <property name="text">
+      <string>Execute Walking</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
