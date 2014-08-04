@@ -6,8 +6,8 @@ warning('off','Drake:RigidBodyManipulator:UnsupportedJointLimits');
 
 drakeExamplePath = [getenv('DRC_BASE'), '/software/drake/examples/'];
 
-%robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_point_hands.urdf'];
-robotURDF = [drakeExamplePath, 'Atlas/urdf/atlas_convex_hull.urdf'];
+robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_point_hands.urdf'];
+%robotURDF = [drakeExamplePath, 'Atlas/urdf/atlas_convex_hull.urdf'];
 
 s = s.addRobot(robotURDF);
 s = s.setupCosts();
@@ -35,5 +35,5 @@ r_foot_pts = s.getRightFootPoints();
 joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
 plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, r.getStateFrame.coordinates(1:nq));
 
-r = r.replaceContactShapesWithCHull([l_hand, r_hand, head]);
-r = compile(r);
+%r = r.replaceContactShapesWithCHull([l_hand, r_hand, head]);
+%r = compile(r);

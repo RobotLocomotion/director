@@ -2264,6 +2264,52 @@ def segmentDrillAuto(point1):
     aff.addToView(app.getDRCView())
 
 
+def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDimensionsMax=[1.3, 0.1]):
+
+    removeGroundFunc = removeGroundSimple
+
+    polyData = polyData or getCurrentRevolutionData()
+    groundPoints, scenePoints =  removeGroundFunc(polyData, groundThickness=0.02, sceneHeightFromGround=0.035)
+
+    searchRegion = thresholdPoints(scenePoints, 'dist_to_plane', [0.05, 0.2])
+
+    clusters = extractClusters(searchRegion, clusterTolerance=0.07, minClusterSize=4)
+
+    candidates = []
+    for clusterId, cluster in enumerate(clusters):
+
+
+        origin, edges, _ = getOrientedBoundingBox(cluster)
+        edgeLengths = [np.linalg.norm(edge) for edge in edges[:2]]
+
+        found = (expectedDimensionsMin[0] <= edgeLengths[0] < expectedDimensionsMax[0]
+             and expectedDimensionsMin[1] <= edgeLengths[1] < expectedDimensionsMax[1])
+
+        if not found:
+            updatePolyData(cluster, 'candidate cluster %d' % clusterId, color=[1,1,0], parent=getDebugFolder(), visible=False)
+            continue
+
+        updatePolyData(cluster, 'cluster %d' % clusterId, color=[0,1,0], parent=getDebugFolder(), visible=False)
+        candidates.append(cluster)
+
+    if not candidates:
+        return None
+
+
+    viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
+    viewOrigin = np.array(viewFrame.GetPosition())
+
+    dists = [np.linalg.norm(viewOrigin - computeCentroid(cluster)) for cluster in candidates]
+    candidates = [candidates[i] for i in np.argsort(dists)]
+
+    cluster = candidates[0]
+    obj = makePolyDataFields(cluster)
+
+    return vis.showClusterObjects([obj], parent='segmentation')[0]
+
+
+
+
 
 def findAndFitDrillBarrel(polyData=None):
     ''' Find the horizontal surfaces
@@ -2758,20 +2804,6 @@ def labelDistanceToPoint(polyData, point, resultArrayName='distance_to_point'):
     return polyData
 
 
-def getRayFromDisplayPoint(view, displayPoint):
-
-    worldPt1 = [0,0,0,0]
-    worldPt2 = [0,0,0,0]
-    renderer = view.renderer()
-
-    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 0, worldPt1)
-    vtk.vtkInteractorObserver.ComputeDisplayToWorld(renderer, displayPoint[0], displayPoint[1], 1, worldPt2)
-
-    worldPt1 = np.array(worldPt1[:3])
-    worldPt2 = np.array(worldPt2[:3])
-    return worldPt1, worldPt2
-
-
 def getPlaneEquationFromPolyData(polyData, expectedNormal):
 
     _, origin, normal  = applyPlaneFit(polyData, expectedNormal=expectedNormal, returnOrigin=True)
@@ -3116,7 +3148,11 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
 
     # make right handed
     zaxis = np.cross(xaxis, yaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis /= np.linalg.norm(zaxis)
 
+    expectedXAxis = np.array(xaxis)
 
     edgePoints = computeEdge(polyData, zaxis, xaxis*edgeSign)
     edgePoints = vtkNumpy.getVtkPolyDataFromNumpyPoints(edgePoints)
@@ -3134,6 +3170,9 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
 
     # make right handed
     zaxis = np.cross(xaxis, yaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis /= np.linalg.norm(zaxis)
 
     polyData = labelPointDistanceAlongAxis(polyData, xaxis, resultArrayName='dist_along_line')
     pts = vtkNumpy.getNumpyFromVtk(polyData, 'Points')

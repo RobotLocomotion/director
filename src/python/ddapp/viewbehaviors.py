@@ -9,6 +9,7 @@ from ddapp import propertyset
 from ddapp import splinewidget
 from ddapp import transformUtils
 from ddapp import teleoppanel
+from ddapp import footstepsdriverpanel
 from ddapp import applogic as app
 from ddapp import vtkAll as vtk
 from ddapp.shallowCopy import shallowCopy
@@ -71,9 +72,7 @@ def getChildFrame(obj):
         return obj.getChildFrame()
 
 
-def placeHandModel(displayPoint, view):
-
-    side = 'left'
+def placeHandModel(displayPoint, view, side='left'):
 
     obj, _ = vis.findPickedObject(displayPoint, view)
     if isinstance(obj, vis.FrameItem):
@@ -99,13 +98,13 @@ def placeHandModel(displayPoint, view):
     t = transformUtils.getTransformFromAxes(-zaxis, yaxis, xaxis)
     t.PostMultiply()
     t.Translate(pickedPoint)
-    _, handFrame = handFactory.placeHandModelWithTransform(t, view, side=side, parent=obj)
+    handObj, handFrame = handFactory.placeHandModelWithTransform(t, view, side=side, parent=obj)
 
     syncFrame = getChildFrame(obj)
     if syncFrame:
         handFrame.frameSync = vis.FrameSync()
-        handFrame.frameSync.addFrame(syncFrame)
         handFrame.frameSync.addFrame(handFrame, ignoreIncoming=True)
+        handFrame.frameSync.addFrame(syncFrame)
 
 
 selectedLink = None
@@ -168,6 +167,23 @@ def toggleFrameWidget(displayPoint, view):
     return True
 
 
+def newWalkingGoal(displayPoint, view):
+
+
+    worldPt1, worldPt2 = vis.getRayFromDisplayPoint(view, displayPoint)
+    groundOrigin = [0.0, 0.0, 0.0]
+    groundNormal = [0.0, 0.0, 1.0]
+    selectedGroundPoint = [0.0, 0.0, 0.0]
+
+    t = vtk.mutable(0.0)
+    vtk.vtkPlane.IntersectWithLine(worldPt1, worldPt2, groundNormal, groundOrigin, t, selectedGroundPoint)
+
+    footFrame = footstepsDriver.getFeetMidPoint(robotModel)
+    footFrame.Translate(np.array(selectedGroundPoint) - np.array(footFrame.GetPosition()))
+
+    footstepsdriverpanel.panel.onNewWalkingGoal(footFrame)
+
+
 def toggleFootstepWidget(displayPoint, view):
 
     obj, _ = vis.findPickedObject(displayPoint, view)
@@ -208,6 +224,17 @@ def toggleFootstepWidget(displayPoint, view):
     footObj.actor.SetUserTransform(frameObj.transform)
     footObj.setProperty('Color', obj.getProperty('Color'))
     frameObj.setProperty('Edit', True)
+
+    rep = frameObj.widget.GetRepresentation()
+    rep.SetTranslateAxisEnabled(2, False)
+    rep.SetRotateAxisEnabled(0, False)
+    rep.SetRotateAxisEnabled(1, False)
+    frameObj.widget.HandleRotationEnabledOff()
+
+    walkGoal = om.findObjectByName('walking goal')
+    if walkGoal:
+        walkGoal.setProperty('Edit', False)
+
 
     def onFootWidgetChanged(frame):
         footstepsDriver.onStepModified(stepIndex - 1, frame)
@@ -283,8 +310,28 @@ def showRightClickMenu(displayPoint, view):
     def onReachRight():
         reachToFrame(reachFrame, 'right')
 
-    def onSpline():
-        splinewidget.newSpline(pickedObj, view)
+    def flipHandSide():
+        for obj in [pickedObj] + pickedObj.children():
+            if not hasattr(obj, 'side'):
+                continue
+            side = 'right' if obj.side == 'left' else 'left'
+            obj.side = side
+            color = QtGui.QColor(255, 255, 0)
+            if side == 'right':
+                color = QtGui.QColor(0.33*255, 255, 0)
+            obj.setProperty('Color', color)
+
+    def flipHandThumb():
+        handFrame = pickedObj.children()[0]
+        t = transformUtils.copyFrame(handFrame.transform)
+        t.PreMultiply()
+        t.RotateY(180)
+        handFrame.copyFrame(t)
+
+    def onSplineLeft():
+        splinewidget.planner.newSpline(pickedObj, 'left')
+    def onSplineRight():
+        splinewidget.planner.newSpline(pickedObj, 'right')
 
 
     def getPointCloud(obj):
@@ -348,9 +395,13 @@ def showRightClickMenu(displayPoint, view):
     if reachFrame is not None:
         actions.extend([
             (None, None),
+            ('Flip Side', flipHandSide),
+            ('Flip Thumb', flipHandThumb),
+            (None, None),
             ('Reach Left', onReachLeft),
             ('Reach Right', onReachRight),
-            #('Spline', onSpline),
+            #('Spline Left', onSplineLeft),
+            #('Spline Right', onSplineRight),
             ])
 
     if pointCloudObj:
@@ -388,6 +439,9 @@ class ViewEventFilter(object):
         if event.type() == QtCore.QEvent.MouseButtonDblClick and event.button() == QtCore.Qt.LeftButton:
             self.onLeftDoubleClick(event)
 
+        elif event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.LeftButton:
+            self.onLeftMousePress(event)
+
         elif event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.RightButton:
             self.mouseStart = QtCore.QPoint(event.pos())
 
@@ -403,6 +457,12 @@ class ViewEventFilter(object):
     def consumeEvent(self):
         self.eventFilter.setEventHandlerResult(True)
 
+    def onLeftMousePress(self, event):
+        if event.modifiers() == QtCore.Qt.ControlModifier:
+            displayPoint = vis.mapMousePosition(self.view, event)
+            newWalkingGoal(displayPoint, self.view)
+            self.consumeEvent()
+
     def onLeftDoubleClick(self, event):
 
         displayPoint = vis.mapMousePosition(self.view, event)
@@ -413,8 +473,8 @@ class ViewEventFilter(object):
         if toggleFrameWidget(displayPoint, self.view):
             return
 
-        if highlightSelectedLink(displayPoint, self.view):
-            return
+        #if highlightSelectedLink(displayPoint, self.view):
+        #    return
 
     def onRightClick(self, event):
         displayPoint = vis.mapMousePosition(self.view, event)
@@ -453,7 +513,8 @@ class KeyEventFilter(object):
             elif str(event.text()).lower() == 's':
                 self.eventFilter.setEventHandlerResult(True)
                 if handFactory is not None:
-                    placeHandModel(self.getCursorDisplayPosition(), self.view)
+                    side = 'left' if event.modifiers() != QtCore.Qt.ShiftModifier else 'right'
+                    placeHandModel(self.getCursorDisplayPosition(), self.view, side)
 
     def getCursorDisplayPosition(self):
         cursorPos = self.view.mapFromGlobal(QtGui.QCursor.pos())

@@ -34,45 +34,42 @@ vtkFrameWidget::vtkFrameWidget()
 {
   this->WidgetState = vtkFrameWidget::Start;
   this->ManagesCursor = 1;
+  this->HandleRotationEnabled = true;
 
-
-  // Left mouse press/release for selecting the widget and starting
-  // a rotation
   this->CallbackMapper->SetCallbackMethod(vtkCommand::LeftButtonPressEvent,
                                           vtkEvent::NoModifier,
                                           0, 0, NULL,
-                                          vtkWidgetEvent::Select,
-                                          this, vtkFrameWidget::SelectAction);
+                                          vtkWidgetEvent::Translate,
+                                          this, vtkFrameWidget::TranslateAction);
 
   this->CallbackMapper->SetCallbackMethod(vtkCommand::LeftButtonReleaseEvent,
                                           vtkEvent::NoModifier,
                                           0, 0, NULL,
-                                          vtkWidgetEvent::EndSelect,
-                                          this, vtkFrameWidget::EndSelectAction);
+                                          vtkWidgetEvent::EndTranslate,
+                                          this, vtkFrameWidget::EndTranslateAction);
 
-  // Start/end widget translation on middle mouse or left mouse + control or shift.
-  this->CallbackMapper->SetCallbackMethod(vtkCommand::MiddleButtonPressEvent,
-                                          vtkWidgetEvent::Select,
-                                          this, vtkFrameWidget::SelectAction);
-
-  this->CallbackMapper->SetCallbackMethod(vtkCommand::MiddleButtonReleaseEvent,
-                                          vtkWidgetEvent::EndSelect,
-                                          this, vtkFrameWidget::EndSelectAction);
-
-
+  /*
   this->CallbackMapper->SetCallbackMethod(vtkCommand::LeftButtonPressEvent,
                                           vtkEvent::ShiftModifier,
                                           0, 0, NULL,
-                                          vtkWidgetEvent::Select,
-                                          this, vtkFrameWidget::SelectAction);
+                                          vtkWidgetEvent::Rotate,
+                                          this, vtkFrameWidget::RotateAction);
 
   this->CallbackMapper->SetCallbackMethod(vtkCommand::LeftButtonReleaseEvent,
                                             vtkEvent::ShiftModifier,
                                             0, 0, NULL,
-                                          vtkWidgetEvent::EndSelect,
-                                          this, vtkFrameWidget::EndSelectAction);
+                                          vtkWidgetEvent::EndRotate,
+                                          this, vtkFrameWidget::EndRotateAction);
+  */
 
-  // Catch mouse movement to send the movement deltas to the representation
+  this->CallbackMapper->SetCallbackMethod(vtkCommand::RightButtonPressEvent,
+                                          vtkWidgetEvent::Rotate,
+                                          this, vtkFrameWidget::RotateAction);
+
+  this->CallbackMapper->SetCallbackMethod(vtkCommand::RightButtonReleaseEvent,
+                                          vtkWidgetEvent::EndRotate,
+                                          this, vtkFrameWidget::EndRotateAction);
+
   this->CallbackMapper->SetCallbackMethod(vtkCommand::MouseMoveEvent,
                                           vtkWidgetEvent::Move,
                                           this, vtkFrameWidget::MoveAction);
@@ -80,111 +77,169 @@ vtkFrameWidget::vtkFrameWidget()
 
 //----------------------------------------------------------------------------
 vtkFrameWidget::~vtkFrameWidget()
-{  
+{
 }
 
 //----------------------------------------------------------------------
-void vtkFrameWidget::SelectAction(vtkAbstractWidget *w)
+void vtkFrameWidget::OnEndInteraction()
 {
-  // We are in a static method, cast to ourself
-  vtkFrameWidget *self = reinterpret_cast<vtkFrameWidget*>(w);
-
-  // Get the event position
-  int X = self->Interactor->GetEventPosition()[0];
-  int Y = self->Interactor->GetEventPosition()[1];
-
-  // Okay, make sure that the pick is in the current renderer
-  if ( !self->CurrentRenderer ||
-       !self->CurrentRenderer->IsInViewport(X,Y) )
-    {
-    self->WidgetState = vtkFrameWidget::Start;
-    return;
-    }
-
-  // Begin the widget interaction which has the side effect of setting the
-  // interaction state.
-  double e[2];
-  e[0] = static_cast<double>(X);
-  e[1] = static_cast<double>(Y);
-  self->WidgetRep->StartWidgetInteraction(e);
-  int interactionState = self->WidgetRep->GetInteractionState();
-  if ( interactionState == vtkFrameWidgetRepresentation::Outside )
+  if (this->WidgetState == vtkFrameWidget::Start)
     {
     return;
     }
 
-  // We are definitely selected
-  self->WidgetState = vtkFrameWidget::Active;
-  self->GrabFocus(self->EventCallbackCommand);
+  this->WidgetState = vtkFrameWidget::Start;
 
-  if (interactionState == vtkFrameWidgetRepresentation::Rotating && self->Interactor->GetShiftKey())
+  vtkFrameWidgetRepresentation* rep = vtkFrameWidgetRepresentation::SafeDownCast(this->WidgetRep);
+  rep->SetInteractionState(vtkFrameWidgetRepresentation::Outside);
+
+  this->UpdateMouseHover();
+
+  this->ReleaseFocus();
+  this->EventCallbackCommand->SetAbortFlag(1);
+  this->EndInteraction();
+  this->InvokeEvent(vtkCommand::EndInteractionEvent, NULL);
+  this->Render();
+}
+
+//----------------------------------------------------------------------
+void vtkFrameWidget::OnTranslate()
+{
+  int X = this->Interactor->GetEventPosition()[0];
+  int Y = this->Interactor->GetEventPosition()[1];
+  double e[2] = {static_cast<double>(X), static_cast<double>(Y)};
+
+  if (!this->CurrentRenderer || !this->CurrentRenderer->IsInViewport(X,Y))
+    {
+    this->WidgetState = vtkFrameWidget::Start;
+    return;
+    }
+
+  vtkFrameWidgetRepresentation* rep = vtkFrameWidgetRepresentation::SafeDownCast(this->WidgetRep);
+
+  rep->StartWidgetInteraction(e);
+  int interactionState = rep->GetInteractionState();
+  if (interactionState == vtkFrameWidgetRepresentation::Outside)
+    {
+    return;
+    }
+
+  if (interactionState == vtkFrameWidgetRepresentation::Rotating)
     {
     interactionState = vtkFrameWidgetRepresentation::TranslatingInPlane;
     }
 
-  reinterpret_cast<vtkFrameWidgetRepresentation*>(self->WidgetRep)->
-    SetInteractionState(interactionState);
+  rep->SetInteractionState(interactionState);
+  this->WidgetState = vtkFrameWidget::Active;
+  this->GrabFocus(this->EventCallbackCommand);
+  this->EventCallbackCommand->SetAbortFlag(1);
+  this->StartInteraction();
+  this->InvokeEvent(vtkCommand::StartInteractionEvent, NULL);
+  this->Render();
+}
 
-  // start the interaction
-  self->EventCallbackCommand->SetAbortFlag(1);
-  self->StartInteraction();
-  self->InvokeEvent(vtkCommand::StartInteractionEvent,NULL);
-  self->Render();
+//----------------------------------------------------------------------
+void vtkFrameWidget::OnRotate()
+{
+  int X = this->Interactor->GetEventPosition()[0];
+  int Y = this->Interactor->GetEventPosition()[1];
+  double e[2] = {static_cast<double>(X), static_cast<double>(Y)};
+
+  if (!this->CurrentRenderer || !this->CurrentRenderer->IsInViewport(X,Y))
+    {
+    this->WidgetState = vtkFrameWidget::Start;
+    return;
+    }
+
+  vtkFrameWidgetRepresentation* rep = vtkFrameWidgetRepresentation::SafeDownCast(this->WidgetRep);
+
+  rep->StartWidgetInteraction(e);
+  int interactionState = rep->GetInteractionState();
+  if (interactionState == vtkFrameWidgetRepresentation::Outside)
+    {
+    return;
+    }
+
+  if (interactionState == vtkFrameWidgetRepresentation::Translating)
+    {
+    if (this->HandleRotationEnabled)
+      {
+      interactionState = vtkFrameWidgetRepresentation::Rotating;
+      }
+    else
+      {
+      rep->SetInteractionState(vtkFrameWidgetRepresentation::Outside);
+      this->WidgetState = vtkFrameWidget::Start;
+      return;
+      }
+    }
+
+  rep->SetInteractionState(interactionState);
+  this->WidgetState = vtkFrameWidget::Active;
+  this->GrabFocus(this->EventCallbackCommand);
+  this->EventCallbackCommand->SetAbortFlag(1);
+  this->StartInteraction();
+  this->InvokeEvent(vtkCommand::StartInteractionEvent, NULL);
+  this->Render();
+}
+
+//----------------------------------------------------------------------
+void vtkFrameWidget::UpdateMouseHover()
+{
+  double e[2] = {static_cast<double>(this->Interactor->GetEventPosition()[0]),
+                 static_cast<double>(this->Interactor->GetEventPosition()[1])};
+
+  vtkFrameWidgetRepresentation* rep = vtkFrameWidgetRepresentation::SafeDownCast(this->WidgetRep);
+  rep->OnMouseHover(e);
+  this->Render();
+}
+
+//----------------------------------------------------------------------
+void vtkFrameWidget::OnMouseMove()
+{
+  if (this->WidgetState == vtkFrameWidget::Start)
+    {
+    this->UpdateMouseHover();
+    return;
+    }
+
+  double e[2] = {static_cast<double>(this->Interactor->GetEventPosition()[0]),
+                 static_cast<double>(this->Interactor->GetEventPosition()[1])};
+
+  this->WidgetRep->WidgetInteraction(e);
+  this->EventCallbackCommand->SetAbortFlag(1);
+  this->InvokeEvent(vtkCommand::InteractionEvent, NULL);
+  this->Render();
 }
 
 //----------------------------------------------------------------------
 void vtkFrameWidget::MoveAction(vtkAbstractWidget *w)
 {
-  vtkFrameWidget *self = reinterpret_cast<vtkFrameWidget*>(w);
-
-  double e[2];
-  e[0] = static_cast<double>(self->Interactor->GetEventPosition()[0]);
-  e[1] = static_cast<double>(self->Interactor->GetEventPosition()[1]);
-
-  // Return if we are not selected
-  if (self->WidgetState == vtkFrameWidget::Start)
-    {
-    static_cast<vtkFrameWidgetRepresentation*>(self->WidgetRep)->OnMouseHover(e);
-    self->Render();
-    return;
-    }
-
-
-  // Do the widget interaction
-
-  self->WidgetRep->WidgetInteraction(e);
-  self->EventCallbackCommand->SetAbortFlag(1);
-  self->InvokeEvent(vtkCommand::InteractionEvent,NULL);
-  self->Render();
+  vtkFrameWidget::SafeDownCast(w)->OnMouseMove();
 }
 
 //----------------------------------------------------------------------
-void vtkFrameWidget::EndSelectAction(vtkAbstractWidget *w)
+void vtkFrameWidget::TranslateAction(vtkAbstractWidget *w)
 {
-  vtkFrameWidget *self = reinterpret_cast<vtkFrameWidget*>(w);
-  if (self->WidgetState == vtkFrameWidget::Start)
-    {
-    return;
-    }
+  vtkFrameWidget::SafeDownCast(w)->OnTranslate();
+}
 
-  // Return state to not active
-  self->WidgetState = vtkFrameWidget::Start;
-  reinterpret_cast<vtkFrameWidgetRepresentation*>(self->WidgetRep)->
-    SetInteractionState(vtkFrameWidgetRepresentation::Outside);
+//----------------------------------------------------------------------
+void vtkFrameWidget::RotateAction(vtkAbstractWidget *w)
+{
+  vtkFrameWidget::SafeDownCast(w)->OnRotate();
+}
 
-  reinterpret_cast<vtkFrameWidgetRepresentation*>(self->WidgetRep)->HighlightOff();
+//----------------------------------------------------------------------
+void vtkFrameWidget::EndRotateAction(vtkAbstractWidget *w)
+{
+  vtkFrameWidget::SafeDownCast(w)->OnEndInteraction();
+}
 
-  double e[2];
-  e[0] = static_cast<double>(self->Interactor->GetEventPosition()[0]);
-  e[1] = static_cast<double>(self->Interactor->GetEventPosition()[1]);
-  static_cast<vtkFrameWidgetRepresentation*>(self->WidgetRep)->OnMouseHover(e);
-
-  self->ReleaseFocus();
-
-  self->EventCallbackCommand->SetAbortFlag(1);
-  self->EndInteraction();
-  self->InvokeEvent(vtkCommand::EndInteractionEvent,NULL);
-  self->Render();
+//----------------------------------------------------------------------
+void vtkFrameWidget::EndTranslateAction(vtkAbstractWidget *w)
+{
+  vtkFrameWidget::SafeDownCast(w)->OnEndInteraction();
 }
 
 //----------------------------------------------------------------------

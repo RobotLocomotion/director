@@ -35,6 +35,30 @@ def clearLayout(w):
         child.delete()
 
 
+class ConstraintItem(om.ObjectModelItem):
+
+    def __init__(self, constraint):
+
+        linkStr = '(%s)' % constraint.linkName if hasattr(constraint, 'linkName') else ''
+        name = '%s %s' % (type(constraint).__name__, linkStr)
+
+        om.ObjectModelItem.__init__(self, name)
+        self.constraint = constraint
+
+        for propertyName, propertyValue in constraint:
+
+            if isinstance(propertyValue, np.ndarray):
+                propertyValue = propertyValue.tolist()
+
+            if isinstance(propertyValue, vtk.vtkTransform):
+                propertyValue = list(propertyValue.GetPosition()) + list(propertyValue.GetOrientation())
+
+            self.addProperty(propertyName, propertyValue, attributes=om.PropertyAttributes(decimals=3, minimum=-100, maximum=100))
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+        self.constraint.__setattr__(propertyName, propertySet.getProperty(propertyName))
+
 
 class EndEffectorTeleopPanel(object):
 
@@ -335,27 +359,12 @@ class EndEffectorTeleopPanel(object):
         self.onGoalFrameModified(None)
 
 
-
         om.removeFromObjectModel(self.getConstraintFolder())
         folder = self.getConstraintFolder()
 
         for i, pc in enumerate(constraints):
-
-            linkStr = '(%s)' % pc.linkName if hasattr(pc, 'linkName') else ''
-
-            p = om.ObjectModelItem('%s %s' % (type(pc).__name__, linkStr))
-            om.addToObjectModel(p, parentObj=folder)
-
-            for propertyName, propertyValue in pc:
-
-                if isinstance(propertyValue, np.ndarray):
-                    propertyValue = propertyValue.tolist()
-
-                if isinstance(propertyValue, vtk.vtkTransform):
-                    propertyValue = list(propertyValue.GetPosition()) + list(propertyValue.GetOrientation())
-
-                #print p.getProperty('Name'), propertyName, type(propertyValue)
-                p.addProperty(propertyName, propertyValue, attributes=om.PropertyAttributes(decimals=3, minimum=-100, maximum=100))
+            constraintItem = ConstraintItem(pc)
+            om.addToObjectModel(constraintItem, parentObj=folder)
 
 
 

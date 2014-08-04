@@ -60,14 +60,15 @@ class FootstepsPanel(object):
 
         self.ui.walkingGoalButton.connect("clicked()", self.onNewWalkingGoal)
         self.ui.walkingPlanButton.connect("clicked()", self.onShowWalkingPlan)
-        self.ui.BDIExecuteButton.connect("clicked()", self.onBDIExecute)
-        self.ui.drakeExecuteButton.connect("clicked()", self.onDrakeExecute)
+        self.ui.executeButton.connect("clicked()", self.onExecute)
         self.ui.stopButton.connect("clicked()", self.onStop)
         self.ui.BDIDefaultsButton.connect("clicked()", lambda: self.applyDefaults('BDI'))
         self.ui.drakeDefaultsButton.connect("clicked()", lambda: self.applyDefaults('drake'))
         self.ui.showWalkingVolumesCheck.connect("clicked()", self.onShowWalkingVolumes)
 
         ### BDI frame logic
+        #self.ui.hideBDIButton.setVisible(False)
+        #self.ui.showBDIButton.setVisible(False)
         self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
         self.ui.showBDIButton.connect("clicked()", self.onShowBDIButton)
         self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
@@ -128,25 +129,29 @@ class FootstepsPanel(object):
         return t
 
 
-    def onNewWalkingGoal(self):
+    def onNewWalkingGoal(self, walkingGoal=None):
 
-        t = self.newWalkingGoalFrame(self.robotModel)
-        frameObj = vis.updateFrame(t, 'walking goal', parent='planning', scale=0.25)
+        walkingGoal = walkingGoal or self.newWalkingGoalFrame(self.robotModel)
+        frameObj = vis.updateFrame(walkingGoal, 'walking goal', parent='planning', scale=0.25)
         frameObj.setProperty('Edit', True)
         frameObj.connectFrameModified(self.onWalkingGoalModified)
+
+        rep = frameObj.widget.GetRepresentation()
+        rep.SetTranslateAxisEnabled(2, False)
+        rep.SetRotateAxisEnabled(0, False)
+        rep.SetRotateAxisEnabled(1, False)
+        frameObj.widget.HandleRotationEnabledOff()
+
         self.onWalkingGoalModified(frameObj)
 
     def onWalkingGoalModified(self, frame):
 
+        om.removeFromObjectModel(om.findObjectByName('footstep widget'))
         request = self.driver.constructFootstepPlanRequest(self.jointController.q, frame.transform)
         self.driver.sendFootstepPlanRequest(request)
 
-    def onBDIExecute(self):
+    def onExecute(self):
         self.driver.commitFootstepPlan(self.driver.lastFootstepPlan)
-
-    def onDrakeExecute(self):
-        startPose = self.jointController.getPose('EST_ROBOT_STATE')
-        self.driver.sendWalkingControllerRequest(self.driver.lastFootstepPlan, startPose, waitForResponse=True)
 
     def onShowWalkingPlan(self):
         startPose = self.jointController.getPose('EST_ROBOT_STATE')
