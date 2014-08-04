@@ -121,7 +121,7 @@ def createTextureGround(imageFilename, view):
     t = vtk.vtkTransform()
     t.PostMultiply()
     t.Scale(200,200,200)
-    t.Translate(0,0,0)
+    t.Translate(0,0,-0.005)
 
     pd = filterUtils.transformPolyData(pd, t)
 

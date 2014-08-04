@@ -125,7 +125,7 @@ class RobotModelItem(om.ObjectModelItem):
         # custom colors for non-textured robotiq hand
         for name in self.model.getLinkNames():
             strs = name.split('_')
-            if len(strs) >= 2 and strs[0] in ['left', 'right'] and strs[1] in ('finger', 'palm'):
+            if len(strs) >= 2 and strs[0] in ['left', 'right'] and strs[1] in ('finger', 'palm') or name.endswith('hand_force_torque'):
                 self.model.setLinkColor(name, QtGui.QColor(90, 90, 90) if strs[1] == 'finger' else QtGui.QColor(20,20,20))
             else:
                 self.model.setLinkColor(name, QtGui.QColor(255,255,255))
@@ -457,6 +457,7 @@ class HandLoader(object):
         if self.side == 'right':
             color = [0.33, 1.0, 0.0]
         obj = vis.showPolyData(polyData, name, view=view, color=color, visible=False, parent=parent)
+        obj.side = self.side
         frame = vtk.vtkTransform()
         frame.PostMultiply()
         obj.actor.SetUserTransform(frame)
@@ -506,3 +507,16 @@ class HandLoader(object):
         rpy = botpy.quat_to_roll_pitch_yaw(quat)
         pose = np.hstack((pos, rpy))
         model.model.setJointPositions(pose, ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw'])
+
+
+def setRobotiqJointsToOpenHand(robotModel):
+    for side in ['left', 'right']:
+        setRobotiqJoints(robotModel, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+
+def setRobotiqJointsToClosedHand(robotModel):
+    for side in ['left', 'right']:
+        setRobotiqJoints(robotModel, [1.0, 1.0, 1.0], [0.0, 0.0, 0.0])
+
+def setRobotiqJoints(robotModel, side, fingers=[0.0, 0.0, 0.0], palm=[0.0, 0.0, 0.0]):
+    robotModel.model.setJointPositions(np.tile(fingers, 3), ['%s_finger_%s_joint_%d' % (side, n, i+1) for n in ['1', '2', 'middle'] for i in range(3)])
+    robotModel.model.setJointPositions(palm, ['%s_palm_finger_%s_joint' % (side, n) for n in ['1', '2', 'middle']])

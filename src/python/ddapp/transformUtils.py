@@ -4,6 +4,21 @@ import math
 import numpy as np
 import drc as lcmdrc
 
+
+def getTransformFromNumpy(mat):
+    '''
+    Given a numpy 4x4 array, return a vtkTransform.
+    '''
+    m = vtk.vtkMatrix4x4()
+    for r in xrange(4):
+        for c in xrange(4):
+            m.SetElement(r, c, mat[r][c])
+
+    t = vtk.vtkTransform()
+    t.SetMatrix(m)
+    return t
+
+
 def getTransformFromAxes(xaxis, yaxis, zaxis):
 
     t = vtk.vtkTransform()

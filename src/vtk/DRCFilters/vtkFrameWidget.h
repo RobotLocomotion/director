@@ -45,16 +45,30 @@ public:
   // this is an instance of the vtkFrameWidgetRepresentation class.
   void CreateDefaultRepresentation();
 
+  // Description:
+  // Enable rotation about the frame handles.
+  vtkBooleanMacro(HandleRotationEnabled, bool);
+  vtkSetMacro(HandleRotationEnabled, bool);
+  vtkGetMacro(HandleRotationEnabled, bool);
+
 protected:
   vtkFrameWidget();
   ~vtkFrameWidget();
 
+  void OnEndInteraction();
+  void OnMouseMove();
+  void OnTranslate();
+  void OnRotate();
+  void UpdateMouseHover();
+
+  bool HandleRotationEnabled;
   int WidgetState;
   enum _WidgetState {Start=0,Active};
 
-  // These methods handle events
-  static void SelectAction(vtkAbstractWidget*);
-  static void EndSelectAction(vtkAbstractWidget*);
+  static void TranslateAction(vtkAbstractWidget*);
+  static void EndTranslateAction(vtkAbstractWidget*);
+  static void RotateAction(vtkAbstractWidget*);
+  static void EndRotateAction(vtkAbstractWidget*);
   static void MoveAction(vtkAbstractWidget*);
 
 private:

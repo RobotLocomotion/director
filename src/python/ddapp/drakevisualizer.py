@@ -16,6 +16,7 @@ import drake as lcmdrake
 from PythonQt import QtGui
 
 USE_TEXTURE_MESHES = True
+USE_SHADOWS = False
 
 class Geometry(object):
 
@@ -185,9 +186,10 @@ class Geometry(object):
             self.polyDataItem.setProperty('Color', QtGui.QColor(255, 255, 255))
 
         else:
-
             self.polyDataItem.setProperty('Color', QtGui.QColor(geom.color[0]*255, geom.color[1]*255, geom.color[2]*255))
 
+        if USE_SHADOWS:
+            self.polyDataItem.shadowOn()
 
 
 class Link(object):

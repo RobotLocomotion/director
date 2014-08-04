@@ -244,6 +244,13 @@ class IKPlanner(object):
         return constraints
 
 
+    def createFixedNeckConstraint(self):
+        p = ik.PostureConstraint()
+        p.joints = ['neck_ay']
+        p.jointsLowerBound = [0.0]
+        p.jointsUpperBound = [0.0]
+        return p
+
     def createKneePostureConstraint(self, bounds):
         '''
         bounds is a size 2 vector of [lower, upper] bounds to be
@@ -282,6 +289,27 @@ class IKPlanner(object):
         return p
 
 
+    def createBaseGroundHeightConstraint(self, groundHeightZ, bounds):
+        p = ik.PostureConstraint()
+        p.joints = ['base_z']
+        p.jointsLowerBound = [groundHeightZ + bounds[0]]
+        p.jointsUpperBound = [groundHeightZ + bounds[1]]
+        return p
+
+
+    def createBaseZeroConstraint(self, footReferenceFrame):
+
+        baseReferenceWorldPos = np.array(footReferenceFrame.GetPosition())
+        baseReferenceWorldYaw = math.radians(footReferenceFrame.GetOrientation()[2])
+
+        p = ik.PostureConstraint()
+        p.joints = ['base_x', 'base_y', 'base_roll', 'base_pitch', 'base_yaw']
+        p.jointsLowerBound = [baseReferenceWorldPos[0], baseReferenceWorldPos[1], 0.0, 0.0, baseReferenceWorldYaw]
+        p.jointsUpperBound = list(p.jointsLowerBound)
+
+        return p
+
+
     def createMovingBackPostureConstraint(self):
         p = ik.PostureConstraint()
         p.joints = ['back_bkx', 'back_bky', 'back_bkz']
@@ -301,10 +329,12 @@ class IKPlanner(object):
 
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
 
+        targetFrame = targetFrame if isinstance(targetFrame, vtk.vtkTransform) else targetFrame.transform
+
         p = ik.PositionConstraint()
         p.linkName = self.getHandLink(side)
         p.pointInLink = np.array(graspToHandLinkFrame.GetPosition())
-        p.referenceFrame = targetFrame.transform
+        p.referenceFrame = targetFrame
         p.lowerBound = np.tile(-positionTolerance, 3)
         p.upperBound = np.tile(positionTolerance, 3)
         positionConstraint = p
@@ -312,7 +342,7 @@ class IKPlanner(object):
         t = vtk.vtkTransform()
         t.PostMultiply()
         t.Concatenate(graspToHandLinkFrame.GetLinearInverse())
-        t.Concatenate(targetFrame.transform)
+        t.Concatenate(targetFrame)
 
         p = ik.QuatConstraint()
         p.linkName = self.getHandLink(side)
@@ -504,10 +534,9 @@ class IKPlanner(object):
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
-        constraints.append(self.createMovingBasePostureConstraint(startPoseName))
+        constraints.append(self.createMovingBaseSafeLimitsConstraint())
         constraints.append(self.createLockedLeftArmPostureConstraint(nominalPoseName))
         constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
-        constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('.*_leg_kny')))
         constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
         endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
@@ -531,10 +560,9 @@ class IKPlanner(object):
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
-        constraints.append(self.createMovingBasePostureConstraint(startPoseName))
+        constraints.append(self.createMovingBaseSafeLimitsConstraint())
         constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
-        constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('.*_leg_kny')))
         constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
         endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
@@ -758,12 +786,14 @@ class IKPlanner(object):
         return self.newReachGoal(startPoseName, side, graspFrame, constraints)
 
 
-    def computeMultiPostureGoal(self, poses, feetOnGround=True):
+    def computeMultiPostureGoal(self, poses, feetOnGround=True, times=None):
 
         assert len(poses) >= 2
 
         constraints = []
         poseNames = []
+
+        times = range(len(poses)) if times is None else times
         for i, pose in enumerate(poses):
 
             if isinstance(pose, str):
@@ -773,7 +803,7 @@ class IKPlanner(object):
 
             self.addPose(pose, poseName)
             p = self.createPostureConstraint(poseName, robotstate.matchJoints('.*'))
-            p.tspan = np.array([float(i), float(i)])
+            p.tspan = np.array([float(times[i]), float(times[i])])
             constraints.append(p)
             poseNames.append(poseName)
 
