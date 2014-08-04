@@ -14,9 +14,10 @@ from ddapp.debugVis import DebugData
 from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
+import time
 
 import drc as lcmdrc
-
+from mav.indexed_measurement_t import indexed_measurement_t
 
 
 class SystemStatusListener(object):
@@ -40,6 +41,10 @@ class AtlasDriver(object):
         self.lastAtlasStatusMessage = None
         self._setupSubscriptions()
         self.timer = SimpleTimer()
+
+        self.sentStandUtime = None
+
+        self.startupStage = 0
 
     def _setupSubscriptions(self):
         sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
@@ -128,6 +133,8 @@ class AtlasDriver(object):
 
     def sendStandCommand(self):
         self.sendBehaviorCommand('stand')
+        self.startupStage = 1
+        self.sentStandUtime = getUtime()
 
     def sendMITStandCommand(self):
         msg = lcmdrc.utime_t()
@@ -153,6 +160,55 @@ class AtlasDriver(object):
         msg.utime = getUtime()
         msg.mode = 1 if enabled else 0
         lcmUtils.publish('PLAN_USING_BDI_HEIGHT', msg)
+
+    # State Est Init Code
+    def sendInitAtZero(self):
+        self.sendReadyMessage()
+
+        p1 = [0,0,0.85]
+        init_frame = transformUtils.frameFromPositionAndRPY( p1 , [0,0,0] )
+        vis.updateFrame(init_frame, "init pose", parent="navigation")
+        self.sendInitMessage(p1, 0)
+
+    def sendReadyMessage(self):
+        ready_init = lcmdrc.utime_t()
+        ready_init.utime = getUtime()
+        lcmUtils.publish('STATE_EST_READY', ready_init)
+        time.sleep(1) # sleep needed to give SE time to restart
+
+
+    def sendInitMessage(self, pos, yaw):
+        init = indexed_measurement_t()
+        init.utime = getUtime()
+        init.state_utime = init.utime
+        init.measured_dim = 4
+        init.z_effective = [ pos[0], pos[1], pos[2] , yaw ]
+        init.z_indices = [9, 10, 11, 8]
+
+        init.measured_cov_dim = init.measured_dim*init.measured_dim
+        init.R_effective= [0] * init.measured_cov_dim
+        init.R_effective[0]  = 0.25
+        init.R_effective[5]  = 0.25
+        init.R_effective[10] = 0.25
+        init.R_effective[15] =  math.pow( 5*math.pi/180 , 2 )
+
+        lcmUtils.publish('MAV_STATE_EST_VIEWER_MEASUREMENT', init)
+
+
+    def updateInitLogic(self):
+        if (self.sentStandUtime is not None):
+            if (self.startupStage == 1):
+              if ( getUtime() > self.sentStandUtime + 6E6 ):
+                  print "Sending SE Init and BDI User behavior"
+                  self.sendBehaviorCommand('user')
+                  self.sendInitAtZero()
+                  self.startupStage = 2
+
+            elif (self.startupStage == 2):
+              if ( getUtime() > self.sentStandUtime + 8E6 ):
+                  self.sendMITStandCommand()
+                  print "Sending MIT Stand Command"
+                  self.startupStage = 0
 
 
     def getPelvisHeightLimits(self):
