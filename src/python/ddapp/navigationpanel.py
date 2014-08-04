@@ -153,10 +153,12 @@ class NavigationPanel(object):
         lcmUtils.publish('STATE_EST_RESTART', ready_init)
 
 
-        
     def onInitAtZeroButton(self):
+        self.sendInitAtZero()
+
+    def sendInitAtZero(self):
         self.sendReadyMessage()
-        
+
         p1 = [0,0,0.85]
         init_frame = transformUtils.frameFromPositionAndRPY( p1 , [0,0,0] )
         vis.updateFrame(init_frame, "init pose", parent="navigation")

@@ -35,19 +35,19 @@ class AtlasDriverPanel(object):
 
         self.ui.prepButton.connect('clicked()', self.onPrep)
         self.ui.standButton.connect('clicked()', self.onStand)
-        self.ui.mitStandButton.connect('clicked()', self.onMITStand)
+        #self.ui.mitStandButton.connect('clicked()', self.onMITStand)
 
-        self.ui.userButton.connect('clicked()', self.onUser)
-        self.ui.manipButton.connect('clicked()', self.onManip)
+        #self.ui.userButton.connect('clicked()', self.onUser)
+        #self.ui.manipButton.connect('clicked()', self.onManip)
 
         self.ui.stopButton.connect('clicked()', self.onStop)
         self.ui.freezeButton.connect('clicked()', self.onFreeze)
 
         self.ui.calibrateEncodersButton.connect('clicked()', self.onCalibrateEncoders)
-        self.ui.calibrateBdiButton.connect('clicked()', self.onCalibrateBdi)
+        #self.ui.calibrateBdiButton.connect('clicked()', self.onCalibrateBdi)
 
-        PythonQt.dd.ddGroupBoxHider(self.ui.calibrationGroupBox)
-        PythonQt.dd.ddGroupBoxHider(self.ui.statusGroupBox)
+        #PythonQt.dd.ddGroupBoxHider(self.ui.calibrationGroupBox)
+        #PythonQt.dd.ddGroupBoxHider(self.ui.statusGroupBox)
 
         self.updateTimer = TimerCallback(targetFps=5)
         self.updateTimer.callback = self.updatePanel
@@ -55,9 +55,11 @@ class AtlasDriverPanel(object):
         self.updatePanel()
 
     def updatePanel(self):
-        self.updateBehaviorLabel()
-        self.updateStatus()
-        self.updateButtons()
+        #self.updateBehaviorLabel()
+        #self.updateStatus()
+        #self.updateButtons()
+        self.driver.updateInitLogic()
+
 
     def updateBehaviorLabel(self):
         self.ui.behaviorLabel.text = self.driver.getCurrentBehaviorName() or '<unknown>'
