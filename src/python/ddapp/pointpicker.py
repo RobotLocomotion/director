@@ -165,7 +165,7 @@ class ImagePointPicker(object):
             if self.annotationObj:
                 self.hoverPos = None
                 self.draw()
-                self.annotationObj.setProperty('Color', QtGui.QColor(255, 255, 0))
+                self.annotationObj.setProperty('Color', QtGui.QColor(255, 255, 0)) # color overlay lines yellow
                 self.clear()
             return
 
@@ -209,13 +209,19 @@ class ImagePointPicker(object):
         # draw points
         for p in points:
             if p is not None:
-                d.addSphere(p, radius=0.008)
+                d.addSphere(p, radius=2) # radius seems to be in pixels 0.08
+
+                # add a cross-hair
+                d.addLine( [p[0] , p[1]-50 , p[2]] , [p[0] , p[1]+50 , p[2]] )
+                d.addLine( [p[0]-50 , p[1] , p[2]] , [p[0]+50 , p[1] , p[2]] )
 
         if self.drawLines:
             # draw lines
             for a, b in zip(points, points[1:]):
-                if b is not None:
-                    d.addLine(a, b)
+
+                if a is not None:
+                    if b is not None:
+                        d.addLine(a, b)
 
             # connect end points
             #if points[-1] is not None:
@@ -224,7 +230,7 @@ class ImagePointPicker(object):
         if self.annotationObj:
             self.annotationObj.setPolyData(d.getPolyData())
         else:
-            self.annotationObj = vis.showPolyData(d.getPolyData(), 'annotation', parent='segmentation', color=[1,0,0], view=self.view)
+            self.annotationObj = vis.updatePolyData(d.getPolyData(), 'annotation', parent='segmentation', color=[1,0,0], view=self.view) # draw red lines over image
             self.annotationObj.actor.SetPickable(False)
             self.annotationObj.actor.GetProperty().SetLineWidth(2)
 
