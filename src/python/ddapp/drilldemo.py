@@ -26,6 +26,7 @@ from ddapp import segmentation
 from ddapp import affordancegraspupdater
 
 import drc as lcmdrc
+import copy
 
 from PythonQt import QtCore, QtGui
 
@@ -68,7 +69,6 @@ class Wall(object):
     def __init__(self):
         self.affordance = None
 
-        self.transform = None
         self.stanceFrame = None
         self.cutPointFrames = []
 
@@ -113,7 +113,7 @@ class DrillPlannerDemo(object):
 
         # development/live flags
         self.useFootstepPlanner = True
-        self.planFromCurrentRobotState = True # False for development, True for operation
+        self.planFromCurrentRobotState = False # False for development, True for operation
         self.flushNominalPlanSequence = False
 
         self.userPromptEnabled = True
@@ -255,22 +255,25 @@ class DrillPlannerDemo(object):
 
     def computeDrillGraspFrame(self):
         t = transformUtils.frameFromPositionAndRPY( self.drill.graspFrameXYZ , self.drill.graspFrameRPY )
-        t.Concatenate(self.drill.frame.transform)
-        self.drill.graspFrame = vis.updateFrame(t, 'grasp frame', parent=self.drill.affordance, visible=False, scale=0.2)
+        t_copy = transformUtils.copyFrame(t)
+        t_copy.Concatenate(self.drill.frame.transform)
+        self.drill.graspFrame = vis.updateFrame(t_copy, 'grasp frame', parent=self.drill.affordance, visible=False, scale=0.2)
 
     def computeDrillReachFrame(self):
         ''' Reach ~10cm short of the grasp frame '''
-        reachXYZ = self.drill.graspFrameXYZ
+        reachXYZ = copy.deepcopy( self.drill.graspFrameXYZ )
         reachXYZ[0] = reachXYZ[0] - self.reachDepth
-        t = transformUtils.frameFromPositionAndRPY( reachXYZ , self.drill.graspFrameRPY )
+        reachRPY = copy.deepcopy ( self.drill.graspFrameRPY )
+
+        t = transformUtils.frameFromPositionAndRPY( reachXYZ , reachRPY )
         t.Concatenate(self.drill.frame.transform)
         self.drill.reachFrame = vis.updateFrame(t, 'reach frame', parent=self.drill.affordance, visible=False, scale=0.2)
 
     def computeDrillStanceFrame(self):
-        objectTransform = self.drill.graspFrame.transform
-        self.drill.relativeStanceTransform = transformUtils.frameFromPositionAndRPY( self.drill.relativeStanceXYZ , self.drill.relativeStanceRPY )
+        objectTransform = transformUtils.copyFrame( self.drill.graspFrame.transform )
+        self.drill.relativeStanceTransform = transformUtils.copyFrame( transformUtils.frameFromPositionAndRPY( self.drill.relativeStanceXYZ , self.drill.relativeStanceRPY ) )
         robotStance = self.computeRobotStanceFrame( objectTransform, self.drill.relativeStanceTransform )
-        self.drill.stanceFrame = vis.updateFrame(robotStance, 'drill stance', parent=self.drill.affordance, visible=False, scale=0.2)
+        self.drill.stanceFrame = vis.updateFrame(robotStance, 'drill stance', parent=self.drill.affordance, visible=True, scale=0.2)
 
 
     def computeDrillButtonFrame(self):
@@ -412,12 +415,18 @@ class DrillPlannerDemo(object):
 
 
     def spawnWallAffordance(self):
-        self.wall.transform = transformUtils.frameFromPositionAndRPY(self.wall.initXYZ, self.wall.initRPY)
+        wallTransform = transformUtils.frameFromPositionAndRPY(self.wall.initXYZ, self.wall.initRPY)
+        segmentation.createDrillWall(self.wall.rightAngleLocation, wallTransform)
+        self.findWallAffordance()
 
-        segmentation.createDrillWall(self.wall.rightAngleLocation, self.wall.transform)
-        self.wall.affordance = om.getOrCreateContainer('wall')
 
-        objectTransform = self.wall.transform
+    def findWallAffordance(self):
+        self.wall.affordance = om.findObjectByName('wall')
+        self.wall.frame = om.findObjectByName('wall frame')
+
+        objectTransform = self.wall.frame.transform
+        #objectTransform = self.wall.transform
+
         self.wall.relativeStanceTransform = transformUtils.frameFromPositionAndRPY( self.wall.relativeStanceXYZ , self.wall.relativeStanceRPY )
         robotStance = self.computeRobotStanceFrame( objectTransform, self.wall.relativeStanceTransform )
         self.wall.stanceFrame = vis.updateFrame(robotStance, 'wall stance', parent=self.wall.affordance, visible=True, scale=0.2)
@@ -605,13 +614,14 @@ class DrillPlannerDemo(object):
 
     def computeFirstCutDesired(self, engagedTip=True):
 
-        t0 = transformUtils.copyFrame( self.wall.transform )
+        #t0 = transformUtils.copyFrame( self.wall.transform )
+        t0 = transformUtils.copyFrame( self.wall.frame.transform )
 
         t1 = transformUtils.frameFromPositionAndRPY([0, self.wall.affordance.params['p2y'], self.wall.affordance.params['p2z'] ], [0,0,0])
-        t1.Concatenate(  self.wall.transform )
+        t1.Concatenate(  self.wall.frame.transform )
 
         t2 = transformUtils.frameFromPositionAndRPY([0, self.wall.affordance.params['p3y'], self.wall.affordance.params['p3z'] ], [0,0,0])
-        t2.Concatenate(  self.wall.transform )
+        t2.Concatenate(  self.wall.frame.transform )
 
         self.wall.cutPointFrames.append( vis.updateFrame(t0, 'cut point 0', parent=self.wall.affordance, visible=False, scale=0.2) )
         self.wall.cutPointFrames.append( vis.updateFrame(t1, 'cut point 1', parent=self.wall.affordance, visible=False, scale=0.2) )
@@ -620,7 +630,7 @@ class DrillPlannerDemo(object):
         self.wall.frameSync.addFrame( self.wall.cutPointFrames[1] )
         self.wall.frameSync.addFrame( self.wall.cutPointFrames[2] )
 
-        self.cutOrientation = self.wall.transform.GetOrientation()
+        self.cutOrientation = self.wall.frame.transform.GetOrientation()
         self.cutPoints = [t0.GetPosition() , t1.GetPosition(), t2.GetPosition(), t0.GetPosition() ]
         self.currentCutGoal = 0
         nextCutPoseGoal = self.updateNextCutPoseGoal()

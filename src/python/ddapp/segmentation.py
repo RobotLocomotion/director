@@ -1900,10 +1900,17 @@ def createDrillWall(rightAngleLocation, trianglePose):
         d.addLine(a, b, radius=0.005)#0.025
 
     folder = om.getOrCreateContainer('affordances')
+
+    wall = om.findObjectByName('wall')
+    om.removeFromObjectModel(wall)
+
     aff = showPolyData(d.getPolyData(), 'wall', cls=FrameAffordanceItem, color=[0,1,0], visible=True, parent=folder)
     aff.actor.SetUserTransform(trianglePose)
+    aff.addToView(app.getDRCView())
+
     refitWallCallbacks.append(functools.partial(refitDrillWall, aff))
-    frameObj = showFrame(trianglePose, 'wall frame', parent=aff, visible=False)
+
+    frameObj = showFrame(trianglePose, 'wall frame', parent=aff, scale=0.2, visible=False)
     frameObj.addToView(app.getDRCView())
 
     params = dict(origin=triangleOrigin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
@@ -1914,7 +1921,7 @@ def createDrillWall(rightAngleLocation, trianglePose):
 
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
-    aff.addToView(app.getDRCView())
+
 
     '''
     rfoot = getLinkFrame('r_foot')
@@ -2604,10 +2611,16 @@ def segmentDrillAlignedWithTable(point):
     drillTransform = transformUtils.frameFromPositionAndRPY( data.clusters[0].frame.GetPosition() , tableOrientation.GetOrientation() )
 
     drillMesh = getDrillMesh()
-    aff = updatePolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=FrameAffordanceItem, visible=True)
+
+    drill = om.findObjectByName('drill')
+    om.removeFromObjectModel(drill)
+
+    aff = showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(drillTransform)
     aff.addToView(app.getDRCView())
-    updateFrame(drillTransform, 'drill frame', parent=aff, scale=0.2, visible=False).addToView(app.getDRCView())
+
+    frameObj = updateFrame(drillTransform, 'drill frame', parent=aff, scale=0.2, visible=False)
+    frameObj.addToView(app.getDRCView())
 
     params = getDrillAffordanceParams(np.array(drillTransform.GetPosition()), [1,0,0], [0,1,0], [0,0,1], drillType="dewalt_button")
     aff.setAffordanceParams(params)
