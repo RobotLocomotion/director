@@ -133,6 +133,9 @@ class AtlasDriver(object):
 
     def sendStandCommand(self):
         self.sendBehaviorCommand('stand')
+
+    def sendCombinedStandCommand(self):
+        self.sendBehaviorCommand('stand')
         self.startupStage = 1
         self.sentStandUtime = getUtime()
 
@@ -195,7 +198,7 @@ class AtlasDriver(object):
         lcmUtils.publish('MAV_STATE_EST_VIEWER_MEASUREMENT', init)
 
 
-    def updateInitLogic(self):
+    def updateCombinedStandLogic(self):
         if (self.sentStandUtime is not None):
             if (self.startupStage == 1):
               if ( getUtime() > self.sentStandUtime + 6E6 ):
