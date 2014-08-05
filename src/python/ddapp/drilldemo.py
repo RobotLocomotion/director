@@ -111,15 +111,10 @@ class DrillPlannerDemo(object):
         defaultGraspingHand = "left"
         self.setGraspingHand(defaultGraspingHand)
 
-        self.planFromCurrentRobotState = False # False for development, True for operation
-
-        # For testing:
-        self.visOnly = True
-        self.useFootstepPlanner = True # for testing used False
+        # development/live flags
+        self.useFootstepPlanner = True
+        self.planFromCurrentRobotState = True # False for development, True for operation
         self.flushNominalPlanSequence = False
-        # For autonomousExecute
-        #self.visOnly = False
-        #self.useFootstepPlanner = True
 
         self.userPromptEnabled = True
         self.constraintSet = None
