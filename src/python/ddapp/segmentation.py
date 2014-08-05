@@ -4061,10 +4061,11 @@ def extractPointsAlongClickRay(displayPoint, distanceToLineThreshold=0.3, addDeb
     return polyData
 
 
-def extractPointsAlongClickRay(position, ray):
+def extractPointsAlongClickRay(position, ray, polyData=None):
 
     #segmentationObj = om.findObjectByName('pointcloud snapshot')
-    polyData = getCurrentRevolutionData()
+    if (polyData is None):
+      polyData = getCurrentRevolutionData()
 
     polyData = labelDistanceToLine(polyData, position, position + ray)
 
@@ -4082,8 +4083,54 @@ def extractPointsAlongClickRay(position, ray):
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
 
     d = DebugData()
-    d.addSphere(points[dists.argmin()], radius=0.01)
-    d.addLine(position, points[dists.argmin()])
+    intersectionPoint = points[dists.argmin()]
+
+    d.addSphere( intersectionPoint, radius=0.01)
+    d.addLine(position, intersectionPoint)
     obj = updatePolyData(d.getPolyData(), 'camera ray', color=[0,1,0])
     obj.actor.GetProperty().SetLineWidth(2)
 
+    return intersectionPoint
+
+
+def segmentDrillWallFromTag(position, ray):
+    '''
+    Fix the drill wall relative to a ray intersected with the wall
+    Desc: given a position and a ray (typically derived from a camera pixel)
+    Use that point to determine a position for the Drill Wall
+    This function uses a hard coded offset between the position on the wall
+    to produce the drill cutting origin
+    '''
+
+
+    #inputObj = om.findObjectByName('pointcloud snapshot')
+    #polyData = shallowCopy(inputObj.polyData)
+    polyData = getCurrentRevolutionData()
+
+    point1 = extractPointsAlongClickRay(position, ray, polyData )
+
+    # view direction is out:
+    viewDirection = -1 * SegmentationContext.getGlobalInstance().getViewDirection()
+    polyDataOut, origin, normal = applyPlaneFit(polyData, expectedNormal=viewDirection, searchOrigin=point1, searchRadius=0.3, angleEpsilon=0.3, returnOrigin=True)
+
+    # project the point on to the plane and define a frame:
+    point1_on_plane = projectPointToPlane(point1, origin, normal)
+    xaxis = -normal
+    zaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis = np.cross(xaxis, yaxis)
+    t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(point1_on_plane)
+
+    t2 = transformUtils.copyFrame(t)
+    t2.PreMultiply()
+    t3 = transformUtils.frameFromPositionAndRPY( [0,0.6,-0.25] , [0,0,0] )
+    t2.Concatenate(t3)
+
+    rightAngleLocation = 'bottom left'
+    createDrillWall(rightAngleLocation, t2)
+
+    wall=  om.findObjectByName('wall')
+    vis.updateFrame( t ,'tag frame', parent=wall, visible=True, scale=0.7)
