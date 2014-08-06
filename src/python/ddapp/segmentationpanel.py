@@ -173,6 +173,7 @@ class SegmentationPanel(object):
         l = QtGui.QVBoxLayout(drillWizard)
 
         l.addWidget(_makeButton('segment drill aligned with table', startDrillAutoSegmentationAlignedWithTable))
+        l.addWidget(_makeButton('segment target using wall center', segmentDrillWallFromWallCenter))
         l.addWidget(QtGui.QLabel(''))
 
 
