@@ -4153,4 +4153,28 @@ def segmentDrillWallFromTag(position, ray):
     createDrillWall(rightAngleLocation, t2)
 
     wall=  om.findObjectByName('wall')
-    vis.updateFrame( t ,'tag frame', parent=wall, visible=True, scale=0.7)
+    vis.updateFrame( t ,'wall fit tag', parent=wall, visible=False, scale=0.2)
+
+
+def segmentDrillWallFromWallCenter():
+    '''
+    Get the drill wall target as an offset from the center of
+    the full wall
+    '''
+
+    # find the valve wall and its center
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    # hardcoded position to target frame from center of wall
+    # conincides with the distance from the april tag to this position
+    wallFrame = transformUtils.copyFrame( findWallCenter(polyData) )
+    wallFrame.PreMultiply()
+    t3 = transformUtils.frameFromPositionAndRPY( [-0.07,-0.3276,0] , [180,-90,0] )
+    wallFrame.Concatenate(t3)
+
+    rightAngleLocation = 'bottom left'
+    createDrillWall(rightAngleLocation, wallFrame)
+
+    wall=  om.findObjectByName('wall')
+    vis.updateFrame( wallFrame ,'wall fit lidar', parent=wall, visible=False, scale=0.2)
