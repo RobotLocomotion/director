@@ -1235,14 +1235,14 @@ def findValveSpokeAngle(points):
     return spoke_angle
 
 
-def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMethod=removeGround ):
-    '''
-    Segment the valve wall where the left hand side has a valve and right has a lever
-    '''
 
-    # find the valve wall and its center
-    inputObj = om.findObjectByName('pointcloud snapshot')
-    polyData = inputObj.polyData
+def findWallCenter(polyData, removeGroundMethod=removeGround):
+    '''
+    Find a frame at the center of the valve wall
+    X&Y: average of points on the wall plane
+    Z: 4 feet off the ground (determined using robot's feet
+    Orientation: z-normal into plane, y-axis horizontal
+    '''
 
     _ , polyData =  removeGroundMethod(polyData)
 
@@ -1256,9 +1256,14 @@ def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMeth
     updatePolyData(wallPoints, 'auto valve wall', parent=getDebugFolder(), visible=False)
 
     xvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,0]
-    xcenter = np.median(xvalues)
     yvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,1]
-    ycenter = np.median(yvalues)
+
+    # median or mid of max or min?
+    #xcenter = np.median(xvalues)
+    #ycenter = np.median(yvalues)
+    xcenter = (np.max(xvalues)+np.min(xvalues))/2
+    ycenter = (np.max(yvalues)+np.min(yvalues))/2
+
     # not used, not very reliable
     #zvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,2]
     #zcenter = np.median(zvalues)
@@ -1278,6 +1283,21 @@ def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMeth
     normalObj = showFrame(t, 'valve wall frame', parent=getDebugFolder(), visible=False) # z direction out of wall
     normalObj.addToView(app.getDRCView())
 
+    return t
+
+
+def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMethod=removeGround ):
+    '''
+    Segment the valve wall where the left hand side has a valve and right has a lever
+    '''
+
+    # find the valve wall and its center
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    t = findWallCenter(polyData, removeGroundMethod)
+
+    point1 = np.array( t.GetPosition() )
 
     # determine boxes relative to the center, inside of which the two affordances lie
     valve_point2 = [ 0 , -0.8 , 0]
