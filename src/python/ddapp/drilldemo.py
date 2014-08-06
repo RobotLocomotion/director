@@ -258,6 +258,8 @@ class DrillPlannerDemo(object):
         t_copy = transformUtils.copyFrame(t)
         t_copy.Concatenate(self.drill.frame.transform)
         self.drill.graspFrame = vis.updateFrame(t_copy, 'grasp frame', parent=self.drill.affordance, visible=False, scale=0.2)
+        self.drill.graspFrame.addToView(app.getDRCView())
+
 
     def computeDrillReachFrame(self):
         ''' Reach ~10cm short of the grasp frame '''
@@ -268,12 +270,14 @@ class DrillPlannerDemo(object):
         t = transformUtils.frameFromPositionAndRPY( reachXYZ , reachRPY )
         t.Concatenate(self.drill.frame.transform)
         self.drill.reachFrame = vis.updateFrame(t, 'reach frame', parent=self.drill.affordance, visible=False, scale=0.2)
+        self.drill.reachFrame.addToView(app.getDRCView())
 
     def computeDrillStanceFrame(self):
         objectTransform = transformUtils.copyFrame( self.drill.graspFrame.transform )
         self.drill.relativeStanceTransform = transformUtils.copyFrame( transformUtils.frameFromPositionAndRPY( self.drill.relativeStanceXYZ , self.drill.relativeStanceRPY ) )
         robotStance = self.computeRobotStanceFrame( objectTransform, self.drill.relativeStanceTransform )
         self.drill.stanceFrame = vis.updateFrame(robotStance, 'drill stance', parent=self.drill.affordance, visible=True, scale=0.2)
+        self.drill.stanceFrame.addToView(app.getDRCView())
 
 
     def computeDrillButtonFrame(self):
@@ -284,6 +288,7 @@ class DrillPlannerDemo(object):
         self.drill.drillToButtonTransform = transformUtils.copyFrame( t )
         t.Concatenate( transformUtils.copyFrame(self.drill.frame.transform))
         self.drill.buttonFrame = vis.updateFrame(t, 'drill button', parent=self.drill.affordance, visible=False, scale=0.2)
+        self.drill.buttonFrame.addToView(app.getDRCView())
 
 
     def computeDrillBitFrame(self):
@@ -294,6 +299,7 @@ class DrillPlannerDemo(object):
         self.drill.drillToBitTransform = transformUtils.copyFrame(t)
         t.Concatenate(transformUtils.copyFrame( self.drill.frame.transform))
         self.drill.bitFrame = vis.updateFrame(t, 'drill bit', parent=self.drill.affordance, visible=True, scale=0.05)
+        self.drill.bitFrame.addToView(app.getDRCView())
 
 
     def computeFaceToDrillTransform(self):
@@ -430,9 +436,11 @@ class DrillPlannerDemo(object):
         self.wall.relativeStanceTransform = transformUtils.frameFromPositionAndRPY( self.wall.relativeStanceXYZ , self.wall.relativeStanceRPY )
         robotStance = self.computeRobotStanceFrame( objectTransform, self.wall.relativeStanceTransform )
         self.wall.stanceFrame = vis.updateFrame(robotStance, 'wall stance', parent=self.wall.affordance, visible=True, scale=0.2)
+        self.wall.stanceFrame.addToView(app.getDRCView())
         self.wall.relativeStanceFarTransform = transformUtils.frameFromPositionAndRPY( self.wall.relativeStanceFarXYZ , self.wall.relativeStanceFarRPY )
         robotStanceFar = self.computeRobotStanceFrame( objectTransform, self.wall.relativeStanceFarTransform )
         self.wall.stanceFarFrame = vis.updateFrame(robotStanceFar, 'wall stance far', parent=self.wall.affordance, visible=True, scale=0.2)
+        self.wall.stanceFarFrame.addToView(app.getDRCView())
 
         self.wall.frameSync= vis.FrameSync()
         self.wall.frameSync.addFrame(self.wall.affordance.getChildFrame())
