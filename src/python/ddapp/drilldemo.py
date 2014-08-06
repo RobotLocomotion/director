@@ -448,6 +448,14 @@ class DrillPlannerDemo(object):
         newPlan = self.ikPlanner.computeNominalPlan(startPose)
         self.addPlan(newPlan)
 
+    # These are operational conveniences:
+    def planFootstepsDrill(self):
+        self.planFootsteps(self.drill.stanceFrame.transform)
+    def planFootstepsTurnOn(self):
+        self.planFootsteps(self.wall.stanceFarFrame.transform)
+    def planFootstepsCut(self):
+        self.planFootsteps(self.wall.stanceFrame.transform)
+
 
     def planFootsteps(self, goalFrame):
         startPose = self.getPlanningStartPose()
@@ -867,7 +875,8 @@ class DrillPlannerDemo(object):
 
 
         if self.useFootstepPlanner:
-            self.planFootsteps( self.drill.stanceFrame.transform )
+            #self.planFootsteps( self.drill.stanceFrame.transform )
+            self.planFootstepsDrill()
             self.planWalking()
         else:
             self.moveRobotToStanceFrame(self.drill.stanceFrame.transform)
@@ -897,7 +906,8 @@ class DrillPlannerDemo(object):
             self.spawnWallAffordance()
 
         if self.useFootstepPlanner:
-            self.planFootsteps( self.wall.stanceFarFrame.transform )
+            self.planFootstepsTurnOn()
+            #self.planFootsteps( self.wall.stanceFarFrame.transform )
             self.planWalking()
         else:
             self.moveRobotToStanceFrame( self.wall.stanceFarFrame.transform )
@@ -929,6 +939,7 @@ class DrillPlannerDemo(object):
 
         # Walking:
         if self.useFootstepPlanner:
+            self.planFootstepsCut()
             self.planFootsteps( self.wall.stanceFrame.transform )
             self.planWalking()
         else:
@@ -953,7 +964,8 @@ class DrillPlannerDemo(object):
         self.planDrillRaiseForCutting()
 
         if self.useFootstepPlanner:
-            self.planFootsteps( self.wall.stanceFarFrame.transform )
+            self.planFootstepsCut()
+            #self.planFootsteps( self.wall.stanceFarFrame.transform )
             self.planWalking()
         else:
             self.moveRobotToStanceFrame( self.wall.stanceFarFrame.transform )
