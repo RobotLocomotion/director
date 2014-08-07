@@ -202,15 +202,15 @@ class AtlasDriver(object):
         if (self.sentStandUtime is not None):
             if (self.startupStage == 1):
               if ( getUtime() > self.sentStandUtime + 6E6 ):
-                  print "Sending SE Init and BDI User behavior"
-                  self.sendBehaviorCommand('user')
+                  print "Sending SE Init"
                   self.sendInitAtZero()
                   self.startupStage = 2
 
             elif (self.startupStage == 2):
-              if ( getUtime() > self.sentStandUtime + 8E6 ):
+              if ( getUtime() > self.sentStandUtime + 10E6 ):
+                  self.sendBehaviorCommand('user')
                   self.sendMITStandCommand()
-                  print "Sending MIT Stand Command"
+                  print "Sending BDI User & MIT Stand commands"
                   self.startupStage = 0
 
 
