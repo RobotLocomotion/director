@@ -772,7 +772,7 @@ class IKPlanner(object):
         return constraintSet
 
 
-    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockTorso=False, lockArm=True):
+    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
 
         self.reachingSide = side
 
@@ -780,7 +780,7 @@ class IKPlanner(object):
         self.addPose(startPose, startPoseName)
 
         if constraints is None:
-            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockTorso, lockBack=lockTorso, lockArm=lockArm)
+            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
 
         return self.newReachGoal(startPoseName, side, graspFrame, constraints)
 
