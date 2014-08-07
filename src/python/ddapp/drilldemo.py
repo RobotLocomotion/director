@@ -24,6 +24,7 @@ from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
 from ddapp import affordancegraspupdater
+from ddapp import planplayback
 
 import drc as lcmdrc
 import copy
@@ -93,14 +94,15 @@ class Wall(object):
 
 class DrillPlannerDemo(object):
 
-    def __init__(self, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
+    def __init__(self, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner, lhandDriver, rhandDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
         self.robotModel = robotModel
         self.playbackRobotModel = playbackRobotModel # not used inside the demo
         self.teleopRobotModel = teleopRobotModel # not used inside the demo
         self.footstepPlanner = footstepPlanner
         self.manipPlanner = manipPlanner
         self.ikPlanner = ikPlanner
-        self.handDriver = handDriver
+        self.lhandDriver = lhandDriver
+        self.rhandDriver = rhandDriver
         self.atlasDriver = atlasDriver
         self.multisenseDriver = multisenseDriver
         self.affordanceFitFunction = affordanceFitFunction
@@ -113,7 +115,8 @@ class DrillPlannerDemo(object):
 
         # development/live flags
         self.useFootstepPlanner = True
-        self.planFromCurrentRobotState = False # False for development, True for operation
+        self.visOnly = False # True for development, False for operation
+        self.planFromCurrentRobotState = True # False for development, True for operation
         self.flushNominalPlanSequence = False
 
         self.userPromptEnabled = True
@@ -451,10 +454,16 @@ class DrillPlannerDemo(object):
     ### End Drill Focused Functions ###############################################################
     ### Planning Functions ###############################################################
 
+    # is this used?
+    #def planStand(self):
+    #    startPose = self.getPlanningStartPose()
+    #    newPlan = self.ikPlanner.computeNominalPlan(startPose)
+    #    self.addPlan(newPlan)
+
     def planStand(self):
-        startPose = self.getPlanningStartPose()
-        newPlan = self.ikPlanner.computeNominalPlan(startPose)
-        self.addPlan(newPlan)
+        # stand at a nominal ~85cm height
+        standPlan = self.ikPlanner.computeStandPlan(self.sensorJointController.q)
+        self.addPlan(standPlan)
 
     # These are operational conveniences:
     def planFootstepsDrill(self):
@@ -467,8 +476,14 @@ class DrillPlannerDemo(object):
 
     def planFootsteps(self, goalFrame):
         startPose = self.getPlanningStartPose()
-        # goalFrame = self.drill.stanceFrame.transform
+
+        # 'typical'
         request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
+        # overcome footstep planner bug
+        #print "using footstep planner hack - drill demo"
+        #nominalPoseAtRobot = np.hstack([self.sensorJointController.q[:6], self.sensorJointController.getPose('q_nom')[6:]] )
+        #request = self.footstepPlanner.constructFootstepPlanRequest(nominalPoseAtRobot, goalFrame )
+
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
 
 
@@ -790,12 +805,17 @@ class DrillPlannerDemo(object):
     def sendPelvisStand(self):
         self.atlasDriver.sendPelvisHeightCommand(0.8)
 
+    def getHandDriver(self, side):
+        assert side in ('left', 'right')
+        return self.lhandDriver if side == 'left' else self.rhandDriver
 
-    def sendOpenHand(self):
-        self.handDriver.sendOpen()
+    def openHand(self,side):
+        #self.handDriver(side).sendOpen()
+        self.getHandDriver(side).sendCustom(0.0, 100.0, 100.0, 0)
 
-    def sendCloseHand(self):
-        self.handDriver.sendClose(60)
+    def closeHand(self, side):
+        #self.handDriver(side).sendClose(60)
+        self.getHandDriver(side).sendCustom(100.0, 100.0, 100.0, 0)
 
     def sendNeckPitchLookDown(self):
         self.multisenseDriver.setNeckPitch(40)
@@ -865,12 +885,35 @@ class DrillPlannerDemo(object):
     def sendPlanWithHeightMode(self):
         self.atlasDriver.sendPlanUsingBdiHeight(True)
 
+    def commitManipPlan(self):
+        self.manipPlanner.commitManipPlan(self.plans[-1])
+
+    def commitFootstepPlan(self):
+        self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
+
+    def waitForPlanExecution(self, plan):
+        planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
+        print 'waiting for plan execution:', planElapsedTime
+
+        return self.delay(planElapsedTime + 1.0)
+
+    def animateLastPlan(self):
+        plan = self.plans[-1]
+
+        if not self.visOnly:
+            self.commitManipPlan()
+
+        return self.waitForPlanExecution(plan)
+
+    def turnPointwiseOff(self):
+        ikplanner.getIkOptions().setProperty('Use pointwise', False)
+        ikplanner.getIkOptions().setProperty('Quasistatic shrink factor', 0.1)
+        ikplanner.getIkOptions().setProperty('Max joint degrees/s',15)
 
     ######### Nominal Plans and Execution  #################################################################
     def planNominalPickUp(self, playbackNominal=True):
 
-        ikplanner.getIkOptions().setProperty('Use pointwise', False)
-        ikplanner.getIkOptions().setProperty('Quasistatic shrink factor', 0.1)
+        self.turnPointwiseOff()
 
         self.planFromCurrentRobotState = False
         self.plans = []
@@ -993,8 +1036,44 @@ class DrillPlannerDemo(object):
     def autonomousExecute(self):
 
         self.planFromCurrentRobotState = True
+        self.visOnly = False
 
         taskQueue = AsyncTaskQueue()
+        taskQueue.addTask(self.turnPointwiseOff)
+
+        # walk up
+        taskQueue.addTask(self.printAsync('neck pitch down'))
+        taskQueue.addTask(self.sendNeckPitchLookDown)
+        taskQueue.addTask(self.userPrompt('please fit drill. continue? y/n: '))
+        taskQueue.addTask(self.findDrillAffordance)
+        taskQueue.addTask(self.planFootstepsDrill)
+        taskQueue.addTask(self.userPrompt('send footstep plan. continue? y/n: '))
+        taskQueue.addTask(self.commitFootstepPlan)
+
+        # grasp drill:
+        taskQueue.addTask(self.userPrompt('please fit drill. continue? y/n: '))
+        taskQueue.addTask(self.findDrillAffordance)
+        graspPlanFunctions = [self.planPreGrasp, self.planReach, self.planGrasp]
+        for planFunc in graspPlanFunctions:
+            taskQueue.addTask(planFunc)
+            taskQueue.addTask(self.userPrompt('grasp plan continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.closeHand, 'left'))
+
+        taskQueue.addTask(self.planStand)
+        taskQueue.addTask(self.userPrompt('lift off table? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
+
+        poseGraspPlanFunctions = [self.planPreGrasp, self.planDrillLowerSafe]
+        for planFunc in poseGraspPlanFunctions:
+            taskQueue.addTask(planFunc)
+            taskQueue.addTask(self.userPrompt('stand plan continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+        return taskQueue
+
+
+    def autonomousExecuteOld(self):
 
         # stand and open hand
         taskQueue.addTask(self.userPrompt('stand and open hand. continue? y/n: '))
@@ -1124,7 +1203,7 @@ class DrillPlannerDemo(object):
 
         # close hand
         taskQueue.addTask(self.printAsync('close hand'))
-        taskQueue.addTask(self.sendCloseHand)
+        taskQueue.addTask(self.closeHand)
         taskQueue.addTask(self.delay(3.0))
 
 

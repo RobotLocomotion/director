@@ -326,7 +326,7 @@ if usePlanning:
         imp.reload(drilldemo)
         global drillDemo, d
         drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
-                                          lHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                                          lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                           fitDrillMultisense, robotStateJointController,
                                           playPlans, showPose)
         d = drillDemo
