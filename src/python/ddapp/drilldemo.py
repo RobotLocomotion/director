@@ -938,6 +938,7 @@ class DrillPlannerDemo(object):
 
         # self.affordanceUpdater.graspAffordance('drill', self.graspingHand)
 
+        self.planStand()
         self.planPreGrasp()
         self.planDrillLowerSafe()
 
@@ -1015,7 +1016,7 @@ class DrillPlannerDemo(object):
         self.planDrillRaiseForCutting()
 
         if self.useFootstepPlanner:
-            self.planFootstepsCut()
+            self.planFootstepsTurnOn()
             #self.planFootsteps( self.wall.stanceFarFrame.transform )
             self.planWalking()
         else:
