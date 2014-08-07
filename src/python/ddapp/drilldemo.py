@@ -506,14 +506,14 @@ class DrillPlannerDemo(object):
 
     def planReach(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.drill.reachFrame, lockTorso=False)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.drill.reachFrame, lockBase=False, lockBack=True)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
 
     def planGrasp(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.drill.graspFrame, lockTorso=False)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.drill.graspFrame, lockBase=False, lockBack=True)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
