@@ -147,7 +147,13 @@ class FootstepsPanel(object):
     def onWalkingGoalModified(self, frame):
 
         om.removeFromObjectModel(om.findObjectByName('footstep widget'))
-        request = self.driver.constructFootstepPlanRequest(self.jointController.q, frame.transform)
+        # typical"
+        #request = self.driver.constructFootstepPlanRequest(self.jointController.q, frame.transform)
+        # overcome footstep planner bug
+        print "using footstep planner hack"
+        nominalPoseAtRobot = np.hstack([self.jointController.q[:6], self.jointController.getPose('q_nom')[6:]] )
+        request = self.driver.constructFootstepPlanRequest(nominalPoseAtRobot, frame.transform )
+
         self.driver.sendFootstepPlanRequest(request)
 
     def onExecute(self):
