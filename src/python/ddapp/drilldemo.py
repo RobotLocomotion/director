@@ -94,7 +94,7 @@ class Wall(object):
 
 class DrillPlannerDemo(object):
 
-    def __init__(self, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner, lhandDriver, rhandDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
+    def __init__(self, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner, lhandDriver, rhandDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction, cameraView):
         self.robotModel = robotModel
         self.playbackRobotModel = playbackRobotModel # not used inside the demo
         self.teleopRobotModel = teleopRobotModel # not used inside the demo
@@ -109,6 +109,7 @@ class DrillPlannerDemo(object):
         self.sensorJointController = sensorJointController
         self.planPlaybackFunction = planPlaybackFunction
         self.showPoseFunction = showPoseFunction
+        self.cameraView = cameraView
 
         defaultGraspingHand = "left"
         self.setGraspingHand(defaultGraspingHand)
@@ -162,6 +163,42 @@ class DrillPlannerDemo(object):
             self.wall.relativeStanceFarXYZ[0] = -self.wall.relativeStanceFarXYZ[0]
             self.wall.relativeStanceFarRPY[2] = -self.wall.relativeStanceFarRPY[2] + 180
 
+        self._setupSubscriptions()
+
+
+    def _setupSubscriptions(self):
+        sub0 = lcmUtils.addSubscriber('TAG_DETECTION', lcmdrc.tag_detection_t, self.onTagDetection)
+        sub0.setSpeedLimit(5)
+
+    def onTagDetection(self, msg):
+        # Store a tag detection for later use
+        if (msg.id != 2):
+            print "Received detection not from Drill Wall, ignoring"
+            return
+
+        pickedPoint = msg.cxy
+        self.tagImageUtime = msg.utime
+        self.tagPosition, self.tagRay = self.cameraView.views['CAMERA_LEFT'].getPositionAndRay(pickedPoint, self.tagImageUtime)
+
+        # don't want to automatically update - in case of a misdetection:
+        updateAutomatically = False
+        if (updateAutomatically):
+            self.refitDrillWallFromTag()
+
+
+    def refitDrillWallFromTag(self):
+        '''
+        Use the tag detection (previously received via LCM)
+        to re-position the drill wall affordance
+        '''
+
+        # TODO: add stale image te
+        #detectionAge = getUtime() - self.tagImageUtime
+        #if ( detectionAge > 1E6):
+        #  print detectionAge
+
+        segmentation.segmentDrillWallFromTag( self.tagPosition, self.tagRay )
+        self.findWallAffordance()
 
     def setGraspingHand(self, graspingHand="left"):
         self.graspingHand = graspingHand
