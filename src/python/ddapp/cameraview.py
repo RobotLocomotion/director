@@ -8,6 +8,7 @@ from ddapp.shallowCopy import shallowCopy
 from ddapp.timercallback import TimerCallback
 from ddapp import vtkNumpy
 import ddapp.vtkAll as vtk
+from ddapp.debugVis import DebugData
 
 import PythonQt
 from PythonQt import QtCore, QtGui
@@ -97,7 +98,7 @@ def testColorize():
 
 
 def rayDebug(position, ray):
-    d = vis.DebugData()
+    d = DebugData()
     d.addLine(position, position+ray*5.0)
     drcView = app.getViewManager().findView('DRC View')
     obj = vis.updatePolyData(d.getPolyData(), 'camera ray', view=drcView, color=[0,1,0])
@@ -396,6 +397,16 @@ class CameraImageView(object):
 
         pickedPoint = self.getImagePixel(displayPoint)
         imageUtime = self.imageManager.getUtime(self.imageName)
+
+        position,ray = self.getPositionAndRay(pickedPoint, imageUtime)
+
+
+        if self.rayCallback:
+            self.rayCallback(position, ray)
+
+
+    def getPositionAndRay(self, pickedPoint, imageUtime):
+        # input is pixel u,v, output is unit x,y,z in camera coordinates
         pickedPoint = self.imageManager.queue.unprojectPixel(self.imageName, pickedPoint[0], pickedPoint[1])
 
         cameraToLocal = vtk.vtkTransform()
@@ -406,8 +417,9 @@ class CameraImageView(object):
         ray = np.array(p) - np.array(cameraToLocal.GetPosition())
         ray /= np.linalg.norm(ray)
 
-        if self.rayCallback:
-            self.rayCallback(np.array(cameraToLocal.GetPosition()), ray)
+        position = np.array(cameraToLocal.GetPosition())
+
+        return position, ray
 
 
     def filterEvent(self, obj, event):
