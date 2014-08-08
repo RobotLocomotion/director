@@ -450,7 +450,7 @@ if useImageViewDemo:
         imageView.view.show()
         imagePicker.stop()
 
-    #showImageOverlay()
+    showImageOverlay()
 
 
 screengrabberpanel.init(view)
@@ -617,4 +617,4 @@ def doIt():
 def activateImageWallFitting():
   ''' Set the ImageWidget to fit walls '''
   cameraview.rayCallback = segmentation.segmentDrillWallFromTag
-  imageView.rayCallback = segmentation.segmentDrillWallFromTag
+  # imageView.rayCallback = segmentation.segmentDrillWallFromTag

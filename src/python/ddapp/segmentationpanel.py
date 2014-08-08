@@ -239,8 +239,8 @@ class SegmentationPanel(object):
         l.addWidget(QtGui.QLabel(''))
 
 
-        self.drillTaskPanel = drilltaskpanel.DrillTaskPanel()
-        l.addWidget(self.drillTaskPanel.widget)
+        #self.drillTaskPanel = drilltaskpanel.DrillTaskPanel()
+        #l.addWidget(self.drillTaskPanel.widget)
 
         l.addStretch()
         return drillWizard
