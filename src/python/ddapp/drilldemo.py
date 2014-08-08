@@ -63,7 +63,7 @@ class Drill(object):
         self.graspFrameRPY = [0, 90, -90]
 
         # where to stand relative to the drill on a table:
-        self.relativeStanceXYZ = [-0.67, -0.4, 0.0]
+        self.relativeStanceXYZ = [-0.69, -0.4, 0.0] # was -0.67, due to drift set to -0.69
         self.relativeStanceRPY = [0, 0, 0]
 
 class Wall(object):
@@ -118,6 +118,11 @@ class DrillPlannerDemo(object):
         self.useFootstepPlanner = True
         self.visOnly = False # True for development, False for operation
         self.planFromCurrentRobotState = True # False for development, True for operation
+        useDevelopment = True
+        if (useDevelopment):
+            self.visOnly = True # True for development, False for operation
+            self.planFromCurrentRobotState = False # False for development, True for operation
+
         self.flushNominalPlanSequence = False
 
         self.userPromptEnabled = True
@@ -498,9 +503,10 @@ class DrillPlannerDemo(object):
     #    self.addPlan(newPlan)
 
     def planStand(self):
-        # stand at a nominal ~85cm height
-        standPlan = self.ikPlanner.computeStandPlan(self.sensorJointController.q)
-        self.addPlan(standPlan)
+        # stand at a nominal ~85cm height with hands in current configuration
+        startPose = self.getPlanningStartPose()
+        self.standPlan = self.ikPlanner.computeStandPlan(startPose)
+        self.addPlan(self.standPlan)
 
     # These are operational conveniences:
     def planFootstepsDrill(self):
