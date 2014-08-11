@@ -1,11 +1,11 @@
 ''' Routines and Fitting algorithms
-   Fitting: means where ALL other non-object points 
+   Fitting: means where ALL other non-object points
    have been removed, determining the transform frame
    of the object
-   
+
    Segment: means seperating clusters from a single cloud
 '''
-   
+
 
 from ddapp.filterUtils import *
 import ddapp.visualization as vis
@@ -184,6 +184,25 @@ def projectPointToPlane(point, origin, normal):
     return projectedPoint
 
 
+def intersectLineWithPlane(line_point, line_ray, plane_point, plane_normal ):
+    '''
+    Find the intersection between a line and a plane
+    http://www.scratchapixel.com/lessons/3d-basic-lessons/lesson-7-intersecting-simple-shapes/ray-plane-and-ray-disk-intersection/
+    '''
+    denom = np.dot( plane_normal , line_ray )
+
+    # TODO: implement this check
+    #if (denom > 1E-6):
+    #    # ray is very close to parallel to plane
+    #    return None
+
+    p0l0 = plane_point - line_point
+    t = np.dot(p0l0, plane_normal) / denom
+
+    intersection_point = line_point + t*line_ray
+    return intersection_point
+
+
 def labelPointDistanceAlongAxis(polyData, axis, origin=None, resultArrayName='distance_along_axis'):
 
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
@@ -230,8 +249,8 @@ def extractClusters(polyData, clusterInXY=False, **kwargs):
     else:
         polyData = applyEuclideanClustering(polyData, **kwargs)
         clusterLabels = vtkNumpy.getNumpyFromVtk(polyData, 'cluster_labels')
-        
-    
+
+
     clusters = []
     for i in xrange(1, clusterLabels.max() + 1):
         cluster = thresholdPoints(polyData, 'cluster_labels', [i, i])
@@ -266,7 +285,7 @@ def sparsifyStereoCloud(polyData):
 
     # >>> strips color out <<<
     polyData = applyVoxelGrid(polyData, leafSize=0.01)
-    
+
     # remove outliers
     polyData = labelOutliers(polyData)
     vis.showPolyData(polyData, 'is_outlier', colorByName='is_outlier', visible=False, parent=getDebugFolder())

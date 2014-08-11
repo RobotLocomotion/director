@@ -4107,8 +4107,14 @@ def extractPointsAlongClickRay(position, ray, polyData=None):
 
     d.addSphere( intersectionPoint, radius=0.01)
     d.addLine(position, intersectionPoint)
-    obj = updatePolyData(d.getPolyData(), 'camera ray', color=[0,1,0])
+    obj = updatePolyData(d.getPolyData(), 'intersecting ray', visible=True, color=[0,1,0])
     obj.actor.GetProperty().SetLineWidth(2)
+
+    d2 = DebugData()
+    end_of_ray = position + 2*ray
+    d2.addLine(position, end_of_ray)
+    obj2 = updatePolyData(d2.getPolyData(), 'camera ray', visible=False, color=[1,0,0])
+    obj2.actor.GetProperty().SetLineWidth(2)
 
     return intersectionPoint
 
@@ -4127,14 +4133,22 @@ def segmentDrillWallFromTag(position, ray):
     #polyData = shallowCopy(inputObj.polyData)
     polyData = getCurrentRevolutionData()
 
+    if (polyData is None): # no data yet
+        print "no LIDAR data yet"
+        return False
+
     point1 = extractPointsAlongClickRay(position, ray, polyData )
 
     # view direction is out:
     viewDirection = -1 * SegmentationContext.getGlobalInstance().getViewDirection()
     polyDataOut, origin, normal = applyPlaneFit(polyData, expectedNormal=viewDirection, searchOrigin=point1, searchRadius=0.3, angleEpsilon=0.3, returnOrigin=True)
 
-    # project the point on to the plane and define a frame:
-    point1_on_plane = projectPointToPlane(point1, origin, normal)
+    # project the lidar point onto the plane (older, variance is >1cm)
+    #intersection_point = projectPointToPlane(point1, origin, normal)
+    # intersect the ray with the plane (variance was about 4mm from 2m away)
+    intersection_point = intersectLineWithPlane(position, ray, origin, normal)
+
+    # Define a frame:
     xaxis = -normal
     zaxis = [0, 0, 1]
     yaxis = np.cross(zaxis, xaxis)
@@ -4142,7 +4156,7 @@ def segmentDrillWallFromTag(position, ray):
     zaxis = np.cross(xaxis, yaxis)
     t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
     t.PostMultiply()
-    t.Translate(point1_on_plane)
+    t.Translate(intersection_point)
 
     t2 = transformUtils.copyFrame(t)
     t2.PreMultiply()
@@ -4154,6 +4168,13 @@ def segmentDrillWallFromTag(position, ray):
 
     wall=  om.findObjectByName('wall')
     vis.updateFrame( t ,'wall fit tag', parent=wall, visible=False, scale=0.2)
+
+
+    d = DebugData()
+    d.addSphere( intersection_point, radius=0.002)
+    obj = updatePolyData(d.getPolyData(), 'intersection', parent=wall, visible=False, color=[0,1,0]) #
+    obj.actor.GetProperty().SetLineWidth(1)
+    return True
 
 
 def segmentDrillWallFromWallCenter():
