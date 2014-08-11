@@ -186,7 +186,7 @@ class DrillPlannerDemo(object):
         self.tagPosition, self.tagRay = self.cameraView.views['CAMERA_LEFT'].getPositionAndRay(pickedPoint, self.tagImageUtime)
 
         # don't want to automatically update - in case of a misdetection:
-        updateAutomatically = False
+        updateAutomatically = True
         if (updateAutomatically):
             self.refitDrillWallFromTag()
 
@@ -202,8 +202,9 @@ class DrillPlannerDemo(object):
         #if ( detectionAge > 1E6):
         #  print detectionAge
 
-        segmentation.segmentDrillWallFromTag( self.tagPosition, self.tagRay )
-        self.findWallAffordance()
+        successfulFit = segmentation.segmentDrillWallFromTag( self.tagPosition, self.tagRay )
+        if (successfulFit):
+            self.findWallAffordance()
 
     def setGraspingHand(self, graspingHand="left"):
         self.graspingHand = graspingHand
