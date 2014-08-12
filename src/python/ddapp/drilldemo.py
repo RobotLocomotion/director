@@ -136,8 +136,10 @@ class DrillPlannerDemo(object):
         # params:
         self.reachDepth = 0.12 # depth to reach to before going for grasp
         self.cutLength = 0.05 # length to cut each time
-        self.retractDepthNominal = -0.055 # depth to move drill away from wall
+        self.retractBitDepthNominal = -0.055 # depth to move drill away from wall
         self.goalThreshold = 0.05 # how close we need to get to the cut goal (the triangle corners
+
+        self.retractPointerDepthNominal = -0.05 # depth to approach the drill button without touching it
 
         extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
         self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
@@ -606,7 +608,7 @@ class DrillPlannerDemo(object):
         self.addPlan(newPlan)
 
 
-    def initGazeConstraintSet(self, goalFrame, gazeHand, gazeToHandLinkFrame, gazeAxis=[-1.0, 0.0, 0.0], lockBase=False, lockBack=False):
+    def initGazeConstraintSet(self, goalFrame, gazeHand, gazeToHandLinkFrame, targetAxis=[-1.0, 0.0, 0.0], bodyAxis=[-1.0, 0.0, 0.0], lockBase=False, lockBack=False):
 
         # create constraint set
         startPose = self.getPlanningStartPose()
@@ -622,7 +624,7 @@ class DrillPlannerDemo(object):
         self.constraintSet.constraints.extend(bodyConstraints)
 
         coneThresholdDegrees = 0.0
-        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(gazeHand, goalFrame, gazeToHandLinkFrame, coneThresholdDegrees , gazeAxis)
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(gazeHand, goalFrame, gazeToHandLinkFrame, coneThresholdDegrees , targetAxis, bodyAxis)
         self.constraintSet.constraints.insert(0, gazeConstraint)
 
 
@@ -638,23 +640,61 @@ class DrillPlannerDemo(object):
         self.addPlan(plan)
 
 
-    def planPointerPressGaze(self):
-        gazeHand = self.pointerHand
+    def getPointerToHandFrame(self):
+        '''
+        Get the Transfrom from the pointer to the hand link
+        Specifically the frame at the very end of the pointer tip
+        The result is what mfallon has previously referred to as hand-to-pointer
+        '''
 
-        # add gaze constraint for pointer along the
-        gazeToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(gazeHand)
+        # previous method used "right_pointer_tip" internally:
+        #pointerToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(gazeHand)
 
+        # NB: uses the end of the pointer:
+        pointerFrameName = '%s_pointer_end' % self.pointerHand
+        handFrameName = '%s_hand' % self.pointerHand[0]
+
+        startPose = self.getPlanningStartPose()
+        pointerToHandLinkFrame = vtk.vtkTransform()
+        pointerToHandLinkFrame.PostMultiply()
+        pointerToHandLinkFrame.Concatenate( self.ikPlanner.getLinkFrameAtPose( pointerFrameName, startPose) )
+        pointerToHandLinkFrame.Concatenate( self.ikPlanner.getLinkFrameAtPose( handFrameName , startPose).GetLinearInverse() )
+
+        return pointerToHandLinkFrame
+
+
+    def planPointerPressGaze(self, pressButton=True):
+
+        # change the nominal pose to the start pose ... q_nom was unreliable when used repeated
+        ikplanner.getIkOptions().setProperty('Nominal pose', 'q_start')
+
+        # 1. determine the goal position
         worldToButton = self.getWorldToButton( self.getPlanningStartPose() )
-        worldToButtonFrame = vis.updateFrame(worldToButton, 'test button', visible=False, scale=0.2, parent=om.getOrCreateContainer('affordances'))
+        # move to just back from the button or go stright for the press
+        if (pressButton is False):
+            worldToPress = transformUtils.copyFrame(worldToButton)
+            worldToPress.PreMultiply()
+            t3 = transformUtils.frameFromPositionAndRPY( [0,0.0, self.retractPointerDepthNominal] , [0,0,0] )
+            worldToPress.Concatenate(t3)
+        else:
+            worldToPress = transformUtils.copyFrame(worldToButton)
 
-        # was [0,1,0]
-        # all_axes = transformUtils.getAxesFromTransform(  gazeToHandLinkFrame )
-        # gazeAxis = all_axes[0]
-        self.initGazeConstraintSet(worldToButtonFrame, gazeHand, gazeToHandLinkFrame, gazeAxis=[-1.0, 0.0, 0.0], lockBase=True, lockBack=True)
-        self.appendPositionConstraintForTargetFrame(worldToButtonFrame, 1, gazeHand, gazeToHandLinkFrame)
+        worldToPressFrame = vis.updateFrame(worldToPress, 'button press goal', visible=False, scale=0.2, parent=om.getOrCreateContainer('affordances'))
+
+        # 2. add gaze constraint along the pointer tip hand
+        pointerToHandLinkFrame = self.getPointerToHandFrame()
+        # this mirrors the y-axis pointer for left and right:
+        bodyAxisTip = self.ikPlanner.getPalmToHandLink(self.pointerHand).TransformVector([0,1,0])
+        #was: bodyAxisTip =[0.0, -1.0, 0.0]
+
+        self.initGazeConstraintSet(worldToPressFrame, self.pointerHand, pointerToHandLinkFrame, targetAxis=[0.0, 0.0, 1.0], bodyAxis=bodyAxisTip, lockBase=True, lockBack=True)
+        # self.initGazeConstraintSet(worldToPressFrame, self.pointerHand, pointerToHandLinkFrame, gazeAxis=[-1.0, 0.0, 0.0], lockBase=True, lockBack=True)
+        self.appendPositionConstraintForTargetFrame(worldToPressFrame, 1, self.pointerHand, pointerToHandLinkFrame)
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
         self.planGazeTrajectory()
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+
+        ikplanner.getIkOptions().setProperty('Nominal pose', 'q_nom')
 
 
     def planNextCut(self, getNextAction , argument1=None ):
@@ -711,7 +751,7 @@ class DrillPlannerDemo(object):
         nextCutPoseGoal = self.updateNextCutPoseGoal()
 
         if (engagedTip == False):
-            nextCutPose = transformUtils.frameFromPositionAndRPY( [ self.retractDepthNominal , 0, 0] , [0,0,0] )
+            nextCutPose = transformUtils.frameFromPositionAndRPY( [ self.retractBitDepthNominal , 0, 0] , [0,0,0] )
             nextCutPose.Concatenate( nextCutPoseGoal )
         else:
             nextCutPose = transformUtils.copyFrame( nextCutPoseGoal )
@@ -727,7 +767,7 @@ class DrillPlannerDemo(object):
         goalToBit.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
 
         if (retractBit == True):
-            retractDepth = self.retractDepthNominal
+            retractDepth = self.retractBitDepthNominal
         else: # this can be used to insert where we are located:
             retractDepth = 0.0
 
@@ -804,7 +844,7 @@ class DrillPlannerDemo(object):
         # button drill: [1,0,0] , barrel drill: [0,1,0] - axis is along bit xaxis (this was explictly defined
         all_axes = transformUtils.getAxesFromTransform( handToBit )
 
-        self.initGazeConstraintSet(self.nextCutFrame, self.graspingHand, handToBit, gazeAxis=all_axes[0])
+        self.initGazeConstraintSet(self.nextCutFrame, self.graspingHand, handToBit, targetAxis=all_axes[0], bodyAxis=all_axes[0])
         self.appendPositionConstraintForTargetFrame(self.nextCutFrame, 1, self.graspingHand, handToBit)
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
         self.planGazeTrajectory()
@@ -1012,6 +1052,11 @@ class DrillPlannerDemo(object):
         self.planPointerRaisePowerOn()
 
         self.planPointerPressGaze()
+        self.planPointerPressGaze(False)
+        self.planPointerPressGaze()
+        self.planPointerPressGaze(False)
+        self.planPointerPressGaze()
+        self.planPointerPressGaze(False)
         self.planPointerRaisePowerOn()
 
         self.planPointerLowerPowerOn()
