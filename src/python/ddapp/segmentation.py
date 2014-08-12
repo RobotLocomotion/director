@@ -4143,9 +4143,9 @@ def segmentDrillWallFromTag(position, ray):
     viewDirection = -1 * SegmentationContext.getGlobalInstance().getViewDirection()
     polyDataOut, origin, normal = applyPlaneFit(polyData, expectedNormal=viewDirection, searchOrigin=point1, searchRadius=0.3, angleEpsilon=0.3, returnOrigin=True)
 
-    # project the lidar point onto the plane (older, variance is >1cm)
+    # project the lidar point onto the plane (older, variance is >1cm with robot 2m away)
     #intersection_point = projectPointToPlane(point1, origin, normal)
-    # intersect the ray with the plane (variance was about 4mm from 2m away)
+    # intersect the ray with the plane (variance was about 4mm with robot 2m away)
     intersection_point = intersectLineWithPlane(position, ray, origin, normal)
 
     # Define a frame:
