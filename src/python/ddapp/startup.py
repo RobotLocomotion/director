@@ -450,7 +450,7 @@ if useImageViewDemo:
         imageView.view.show()
         imagePicker.stop()
 
-    showImageOverlay()
+    #showImageOverlay()
 
 
 screengrabberpanel.init(view)
@@ -520,8 +520,8 @@ def prepButtonPress():
         0.00000000e+00])
 
     robotStateJointController.setPose("EST_ROBOT_STATE", q)
+    d.spawnDrillAffordance()
     d.moveDrillToHand()
-    d.addDrillButtonFrame()
 
 
 def reset():
