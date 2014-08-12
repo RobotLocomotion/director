@@ -407,7 +407,7 @@ class IKPlanner(object):
         return positionConstraint, rollConstraint1, rollConstraint2
 
 
-    def createGazeGraspConstraint(self, side, targetFrame, graspToHandLinkFrame=None, coneThresholdDegrees=0.0, gazeAxis=[0.0, 1.0, 0.0] ):
+    def createGazeGraspConstraint(self, side, targetFrame, graspToHandLinkFrame=None, coneThresholdDegrees=0.0, targetAxis=[0.0, 1.0, 0.0] , bodyAxis=[0.0, 1.0, 0.0] ):
 
 
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
@@ -429,8 +429,8 @@ class IKPlanner(object):
         g = ik.WorldGazeDirConstraint()
         g.linkName = self.getHandLink(side)
         g.targetFrame = t
-        g.targetAxis = gazeAxis
-        g.bodyAxis = gazeAxis
+        g.targetAxis = targetAxis
+        g.bodyAxis = bodyAxis
         g.coneThreshold = math.radians(coneThresholdDegrees)
         g.tspan = [1.0, 1.0]
         return g
