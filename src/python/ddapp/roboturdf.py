@@ -373,7 +373,7 @@ class HandLoader(object):
 
             self.robotUrdf = 'model_LP_RP.urdf'
             self.handLinkName = '%s_hand' % self.side[0]
-            self.handUrdf = 'inert_hand_%s.urdf' % self.side
+            self.handUrdf = 'pointer_hand_%s.urdf' % self.side
             self.handJointName = '%s_hook_hand_joint' % self.side
 
             handRootLink = '%s_base_link' % self.side
