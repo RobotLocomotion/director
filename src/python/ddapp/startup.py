@@ -328,7 +328,7 @@ if usePlanning:
         drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                                           lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                           fitDrillMultisense, robotStateJointController,
-                                          playPlans, showPose, cameraview)
+                                          playPlans, showPose, cameraview, segmentationpanel)
         d = drillDemo
     constructDrillDemo()
 
