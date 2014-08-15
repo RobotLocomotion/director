@@ -202,7 +202,7 @@ class SegmentationPanel(object):
         self.drillRotationSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
         self.drillRotationSlider.setMinimum(0)
         self.drillRotationSlider.setMaximum(100)
-        self.drillRotationSlider.setValue(0)
+        self.drillRotationSlider.setValue(25)
 
         self.drillOffsetSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
         self.drillOffsetSlider.setMinimum(0)
@@ -352,12 +352,17 @@ class SegmentationPanel(object):
         rightAngleLocation = str(self.rightAngleCombo.currentText)
         startDrillWallSegmentationConstrained(rightAngleLocation)
 
-    def moveDrillToHand(self):
-        hand = self.handCombo.currentText
+    def getDrillInHandParams(self):
         rotation = (self.drillRotationSlider.value / 100.0) * 360
         offset = (self.drillOffsetSlider.value / 100.0) * 0.10 - 0.05
+        flip=self.drillFlip
+        return rotation, offset, flip
 
-        self.drillOffset = getDrillInHandOffset(zRotation=rotation, zTranslation=offset, flip=self.drillFlip)
+    def moveDrillToHand(self):
+        hand = self.handCombo.currentText
+        rotation, offset, flip = self.getDrillInHandParams()
+
+        self.drillOffset = getDrillInHandOffset(zRotation=rotation, zTranslation=offset, flip=flip)
         moveDrillToHand(self.drillOffset, hand)
 
         aff = om.findObjectByName('drill')

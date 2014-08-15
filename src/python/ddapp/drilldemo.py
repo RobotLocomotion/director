@@ -26,6 +26,8 @@ from ddapp import segmentation
 from ddapp import affordancegraspupdater
 from ddapp import planplayback
 
+from ddapp import segmentationpanel
+
 import drc as lcmdrc
 import copy
 
@@ -94,7 +96,9 @@ class Wall(object):
 
 class DrillPlannerDemo(object):
 
-    def __init__(self, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner, lhandDriver, rhandDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction, cameraView):
+    def __init__(self, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner,
+                 lhandDriver, rhandDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController,
+                 planPlaybackFunction, showPoseFunction, cameraView, segmentationpanel):
         self.robotModel = robotModel
         self.playbackRobotModel = playbackRobotModel # not used inside the demo
         self.teleopRobotModel = teleopRobotModel # not used inside the demo
@@ -110,6 +114,8 @@ class DrillPlannerDemo(object):
         self.planPlaybackFunction = planPlaybackFunction
         self.showPoseFunction = showPoseFunction
         self.cameraView = cameraView
+        self.segmentationpanel = segmentationpanel
+        self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
         defaultGraspingHand = "left"
         self.setGraspingHand(defaultGraspingHand)
@@ -353,6 +359,11 @@ class DrillPlannerDemo(object):
     def computeFaceToDrillTransform(self):
         # if the drill is held in the hand
         # what will be its position, relative to the l_hand_face (or other)
+        # Updated to read the settings from the gui panel.
+        # TODO: should I avoid calling to faceToDrillTransform and only use computeFaceToDrillTransform to avoid inconsistance?
+
+        self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillFlip = self.segmentationpanel._segmentationPanel.getDrillInHandParams()
+
         self.drill.faceToDrillTransform = segmentation.getDrillInHandOffset(self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillFlip)
 
 
@@ -409,6 +420,7 @@ class DrillPlannerDemo(object):
         self.drill.affordance = om.findObjectByName('drill')
         self.drill.frame = om.findObjectByName('drill frame')
 
+        self.computeFaceToDrillTransform()
         drillTransform = self.drill.affordance.actor.GetUserTransform()
         drillTransform.PostMultiply()
         drillTransform.Identity()
@@ -428,6 +440,7 @@ class DrillPlannerDemo(object):
 
         # planning is done in drill tip frame - which is relative to the hand link:
         # drill-to-hand = tip-to-drill * drill-to-face * face-to-hand
+        self.computeFaceToDrillTransform()
         handToBit = vtk.vtkTransform()
         handToBit.PostMultiply()
         handToBit.Concatenate( self.drill.drillToBitTransform )
@@ -453,6 +466,7 @@ class DrillPlannerDemo(object):
         self.handToFaceTransform = handToFaceTransform
 
         # button-to-hand = button-to-drill * drill-to-face * face-to-hand
+        self.computeFaceToDrillTransform()
         handToButton = vtk.vtkTransform()
         handToButton.PostMultiply()
         handToButton.Concatenate( self.drill.drillToButtonTransform )
