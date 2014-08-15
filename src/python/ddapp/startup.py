@@ -618,3 +618,44 @@ def activateImageWallFitting():
   ''' Set the ImageWidget to fit walls '''
   cameraview.rayCallback = segmentation.segmentDrillWallFromTag
   # imageView.rayCallback = segmentation.segmentDrillWallFromTag
+
+
+
+def drillProjectTest():
+
+    t2 = transformUtils.copyFrame( getLinkFrame( 'l_hand_face') )
+    handFactory.placeHandModelWithTransform( t2 , app.getCurrentView(), 'left')
+    drillDemo.spawnDrillAffordance()
+    drillDemo.moveDrillToHand()
+
+    imageView = cameraview.views['CAMERA_LEFT']
+    imageView.imageActor.SetOpacity(.5)
+
+    v = imageView.view
+    q = cameraview.imageManager.queue
+    localToCameraT = vtk.vtkTransform()
+    q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+
+    robotiq = om.findObjectByName('left robotiq')
+    robotiqToLocalT = transformUtils.copyFrame(robotiq.actor.GetUserTransform())
+    robotiqPolyDataOriginal = robotiq.polyData
+    rpd = robotiqPolyDataOriginal
+    rpd = filterUtils.transformPolyData(rpd, robotiqToLocalT)
+    rpd = filterUtils.transformPolyData(rpd, localToCameraT)
+    q.projectPoints('CAMERA_LEFT', rpd)
+    vis.showPolyData(rpd, 'robotiq in camera', view=v, color=[1,1,0])
+
+    drill = om.findObjectByName('drill')
+    drillToLocalT = transformUtils.copyFrame(drill.actor.GetUserTransform())
+    drillPolyDataOriginal = drill.polyData
+    pd = drillPolyDataOriginal
+    pd = filterUtils.transformPolyData(pd, drillToLocalT)
+    pd = filterUtils.transformPolyData(pd, localToCameraT)
+    q.projectPoints('CAMERA_LEFT', pd)
+    vis.showPolyData(pd, 'object in camera', view=v, color=[0,1,0])
+
+    #robotMesh = vtk.vtkPolyData()
+    #robotStateModel.model.getModelMesh(robotMesh)
+    #pd = robotMesh
+
+    v.render()
