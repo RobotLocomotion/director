@@ -55,6 +55,7 @@ class Drill(object):
         self.model="dewalt_button"
         self.faceToDrillRotation = 90
         self.faceToDrillOffset = 0
+        self.faceToDrillDepthOffset = 0
         self.faceToDrillFlip = False
 
         # initial drill position (requires walking)
@@ -147,9 +148,11 @@ class DrillPlannerDemo(object):
 
         self.retractPointerDepthNominal = -0.05 # depth to approach the drill button without touching it
 
-        extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
-        self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
+        #extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
+        #self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
 
+        extraModels = [self.robotModel]
+        self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.robotModel, extraModels)
 
         # These changes are all that are required to run with different combinations
         if ( self.drill.model == 'dewalt_barrel' ):
@@ -362,9 +365,9 @@ class DrillPlannerDemo(object):
         # Updated to read the settings from the gui panel.
         # TODO: should I avoid calling to faceToDrillTransform and only use computeFaceToDrillTransform to avoid inconsistance?
 
-        self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillFlip = self.segmentationpanel._segmentationPanel.getDrillInHandParams()
+        self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillDepthOffset , self.drill.faceToDrillFlip = self.segmentationpanel._segmentationPanel.getDrillInHandParams()
 
-        self.drill.faceToDrillTransform = segmentation.getDrillInHandOffset(self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillFlip)
+        self.drill.faceToDrillTransform = segmentation.getDrillInHandOffset(self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillDepthOffset, self.drill.faceToDrillFlip)
 
 
     def spawnDrillAffordance(self):
@@ -678,6 +681,7 @@ class DrillPlannerDemo(object):
 
 
     def planPointerPressGaze(self, pressButton=True):
+        self.moveDrillToHand()
 
         # change the nominal pose to the start pose ... q_nom was unreliable when used repeated
         ikplanner.getIkOptions().setProperty('Nominal pose', 'q_start')
