@@ -30,7 +30,9 @@ int main(int argc, char **argv)
   // On MacOSX, there is a crash during PythonQt's finalization cleanup
   // while destructing class metadata objects.
 #else
-  delete pythonManager;
+  // crashes on Ubuntu 14.04 with Qt version 4.8.6
+  // this is a bug in PythonQt's finalize I think, to be investigated
+  //delete pythonManager;
 #endif
 
   return result;
