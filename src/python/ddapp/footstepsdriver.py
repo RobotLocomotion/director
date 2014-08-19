@@ -33,6 +33,7 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
                                'Max Step Width': 0.4,
                                'Behavior': 0,
                                'Drake Swing Speed': 0.2,
+                               'Drake Instep Shift': 0.0275,
                                'Drake Min Hold Time': 2.0},
                        'drake': {'Max Num Steps': 20,
                                  'Nominal Step Width': 0.28,
@@ -41,6 +42,7 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
                                  'Max Step Width': 0.32,
                                  'Behavior': 2,
                                  'Drake Swing Speed': 0.15,
+                                 'Drake Instep Shift': 0.0275,
                                  'Drake Min Hold Time': 1.5}}
 
 
@@ -157,6 +159,7 @@ class FootstepsDriver(object):
         self.params.addProperty('Max Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.05, maximum=5.0, singleStep=0.05))
         self.params.addProperty('Drake Min Hold Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=5.0, singleStep=0.05))
+        self.params.addProperty('Drake Instep Shift', None, attributes=om.PropertyAttributes(decimals=4, minimum=-0.3, maximum=0.3, singleStep=0.0005))
         self.applyDefaults(DEFAULT_PARAM_SET)
         self.behavior_lcm_map = {
                               0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
@@ -193,6 +196,7 @@ class FootstepsDriver(object):
         default_step_params = lcmdrc.footstep_params_t()
         default_step_params.step_speed = self.params.properties.drake_swing_speed
         default_step_params.drake_min_hold_time = self.params.properties.drake_min_hold_time
+        default_step_params.drake_instep_shift = self.params.properties.drake_instep_shift
         default_step_params.step_height = 0.05
         default_step_params.constrain_full_foot_pose = True
         default_step_params.bdi_step_duration = 2.0
