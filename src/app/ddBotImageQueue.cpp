@@ -1,3 +1,5 @@
+#include <boost/thread.hpp>
+
 #include "ddBotImageQueue.h"
 
 #include <zlib.h>
