@@ -559,7 +559,7 @@ void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyDat
   Q_(2,3) = bot_camtrans_get_focal_length_x( cameraData->mCamTrans ); // fx
   Q_(3,3) = 0;//(stereo_params_.right.cx - stereo_params_.left.cx ) / baseline;
 
-  multisense_utils m;
+  static multisense_utils m;
   m.set_decimate(decimation);
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
