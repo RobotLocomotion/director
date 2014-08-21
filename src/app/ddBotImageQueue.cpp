@@ -102,6 +102,7 @@ void ddBotImageQueue::init(ddLCMThread* lcmThread)
   this->addCameraStream("CAMERACHEST_RIGHT");
   this->addCameraStream("CAMERA_LEFT");
   this->addCameraStream("CAMERA", "CAMERA_LEFT", multisense::images_t::LEFT);
+  this->addCameraStream("CAMERA_FUSED", "CAMERA_TSDF", multisense::images_t::LEFT);
   //this->addCameraStream("CAMERA", "CAMERA_RIGHT", multisense::images_t::RIGHT);
 }
 
@@ -542,12 +543,20 @@ void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyDat
 
   multisense::images_t& msg = this->mImagesMessageMap[channel];
 
+  // Read the camera calibration from params (including baseline:
+  CameraData* cameraData = this->getCameraData("CAMERA_LEFT");
+  QString key = QString("coordinate_frames.CAMERA_RIGHT.initial_transform.translation");
+  double baseline = 0.07; // an approximate value
+  if (!bot_param_get_double(mBotParam, key.toAscii().data(), &baseline) == 0){
+    printf("CAMERA_RIGHT baseline not found\n");
+    return;
+  }
   cv::Mat_<double> Q_(4, 4, 0.0);
   Q_(0,0) = Q_(1,1) = 1.0;
-  Q_(3,2) = 14.26672796348671; //1.0 / baseline;
-  Q_(0,3) = -512; //-stereo_params_.right.cx;
-  Q_(1,3) = -512;//-stereo_params_.right.cy;
-  Q_(2,3) = 591.909423828125;// stereo_params_.right.fx;
+  Q_(3,2) = 1.0 / baseline;
+  Q_(0,3) = -bot_camtrans_get_principal_x( cameraData->mCamTrans ); // cx
+  Q_(1,3) = -bot_camtrans_get_principal_y( cameraData->mCamTrans ); // cy
+  Q_(2,3) = bot_camtrans_get_focal_length_x( cameraData->mCamTrans ); // fx
   Q_(3,3) = 0;//(stereo_params_.right.cx - stereo_params_.left.cx ) / baseline;
 
   multisense_utils m;
