@@ -19,12 +19,7 @@ import numpy as np
 
 
 
-#defaultUrdfHands = 'LR_RR'
-
-# use for dev: drill in left hand
-defaultUrdfHands = 'LR_RP'
-# flipped side: drill in right
-#defaultUrdfHands = 'LP_RR'
+defaultUrdfHands = 'LR_RR'
 
 
 def getRobotGrayColor():
