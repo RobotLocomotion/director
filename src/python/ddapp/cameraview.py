@@ -518,10 +518,9 @@ def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     return view
 
 
-def getStereoPointCloud(decimation=4):
+def getStereoPointCloud(decimation=4, imagesChannel='CAMERA'):
 
     q = imageManager.queue
-    imagesChannel = 'CAMERA'
     cameraName = 'CAMERA_LEFT'
 
     utime = q.getCurrentImageTime(cameraName)
