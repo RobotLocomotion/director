@@ -79,7 +79,7 @@ void ddBotImageQueue::init(ddLCMThread* lcmThread)
 
   if (useBotParamFromFile)
   {
-    std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_05_mit.cfg";
+    std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_02_mit.cfg";
     mBotParam = bot_param_new_from_file(configFile.c_str());
   }
   else
