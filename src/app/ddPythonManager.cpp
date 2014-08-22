@@ -81,6 +81,7 @@ QStringList ddPythonManager::pythonPaths()
 {
   QStringList searchDirs;
   searchDirs << this->appSitePackagesDir();
+  searchDirs << this->appSitePackagesDir().replace("dist-packages", "site-packages");
 
   QStringList paths;
   foreach (const QString& dirname, searchDirs)
