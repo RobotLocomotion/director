@@ -216,6 +216,7 @@ class DrakeVisualizer(object):
 
         self.view = view
         self.robots = {}
+        self.sendStatusMessage('loaded')
 
     def onViewerLoadRobot(self, msg):
         self.removeAllRobots()
