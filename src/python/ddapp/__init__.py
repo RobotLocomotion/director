@@ -30,6 +30,12 @@ def _locateExternals():
     raise Exception('Failed to locate externals dir.')
 
 
+def updateSysPath(path):
+    if path and os.path.isdir(path) and path not in sys.path:
+        sys.path.insert(0, path)
+        return True
+    return False
+
 def _updateSysPath():
 
     libraries = [
@@ -47,8 +53,7 @@ def _updateSysPath():
 
     for library in libraries:
         path = findFileInPaths(library, searchPaths)
-        if path and path not in sys.path:
-            sys.path.insert(0, path)
+        if updateSysPath(path):
             continue
 
 
