@@ -278,7 +278,7 @@ class IKPlanner(object):
 
 
     def createMovingBasePostureConstraint(self, startPostureName):
-        return self.createZMovingBasePostureConstraint(startPostureName)
+        return self.createXYZMovingBasePostureConstraint(startPostureName)
 
 
     def createMovingBaseSafeLimitsConstraint(self):
@@ -407,7 +407,7 @@ class IKPlanner(object):
         return positionConstraint, rollConstraint1, rollConstraint2
 
 
-    def createGazeGraspConstraint(self, side, targetFrame, graspToHandLinkFrame=None, coneThresholdDegrees=5):
+    def createGazeGraspConstraint(self, side, targetFrame, graspToHandLinkFrame=None, coneThresholdDegrees=0.0, targetAxis=[0.0, 1.0, 0.0] , bodyAxis=[0.0, 1.0, 0.0] ):
 
 
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
@@ -418,7 +418,6 @@ class IKPlanner(object):
         t.Concatenate(targetFrame.transform)
 
 
-        gazeAxis = [0.0, 1.0, 0.0]
 
 #        g = ik.WorldGazeOrientConstraint()
 #        g.linkName = self.getHandLink()
@@ -430,8 +429,8 @@ class IKPlanner(object):
         g = ik.WorldGazeDirConstraint()
         g.linkName = self.getHandLink(side)
         g.targetFrame = t
-        g.targetAxis = gazeAxis
-        g.bodyAxis = gazeAxis
+        g.targetAxis = targetAxis
+        g.bodyAxis = bodyAxis
         g.coneThreshold = math.radians(coneThresholdDegrees)
         g.tspan = [1.0, 1.0]
         return g
@@ -773,7 +772,7 @@ class IKPlanner(object):
         return constraintSet
 
 
-    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockTorso=False, lockArm=True):
+    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
 
         self.reachingSide = side
 
@@ -781,7 +780,7 @@ class IKPlanner(object):
         self.addPose(startPose, startPoseName)
 
         if constraints is None:
-            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockTorso, lockBack=lockTorso, lockArm=lockArm)
+            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
 
         return self.newReachGoal(startPoseName, side, graspFrame, constraints)
 

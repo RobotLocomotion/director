@@ -594,7 +594,7 @@ def removeMajorPlane(polyData, distanceThreshold=0.02):
 
 def removeGroundSimple(polyData, groundThickness=0.02, sceneHeightFromGround=0.05):
     ''' Simple ground plane removal algorithm. Uses ground height
-        and does simple z distance filtering. 
+        and does simple z distance filtering.
         Suitable for noisy data e.g. kinect/stereo camera
         (Default args should be relaxed, filtering simplfied)
     '''
@@ -1235,14 +1235,14 @@ def findValveSpokeAngle(points):
     return spoke_angle
 
 
-def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMethod=removeGround ):
-    '''
-    Segment the valve wall where the left hand side has a valve and right has a lever
-    '''
 
-    # find the valve wall and its center
-    inputObj = om.findObjectByName('pointcloud snapshot')
-    polyData = inputObj.polyData
+def findWallCenter(polyData, removeGroundMethod=removeGround):
+    '''
+    Find a frame at the center of the valve wall
+    X&Y: average of points on the wall plane
+    Z: 4 feet off the ground (determined using robot's feet
+    Orientation: z-normal into plane, y-axis horizontal
+    '''
 
     _ , polyData =  removeGroundMethod(polyData)
 
@@ -1256,9 +1256,14 @@ def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMeth
     updatePolyData(wallPoints, 'auto valve wall', parent=getDebugFolder(), visible=False)
 
     xvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,0]
-    xcenter = np.median(xvalues)
     yvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,1]
-    ycenter = np.median(yvalues)
+
+    # median or mid of max or min?
+    #xcenter = np.median(xvalues)
+    #ycenter = np.median(yvalues)
+    xcenter = (np.max(xvalues)+np.min(xvalues))/2
+    ycenter = (np.max(yvalues)+np.min(yvalues))/2
+
     # not used, not very reliable
     #zvalues = vtkNumpy.getNumpyFromVtk(wallPoints, 'Points')[:,2]
     #zcenter = np.median(zvalues)
@@ -1278,6 +1283,21 @@ def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMeth
     normalObj = showFrame(t, 'valve wall frame', parent=getDebugFolder(), visible=False) # z direction out of wall
     normalObj.addToView(app.getDRCView())
 
+    return t
+
+
+def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMethod=removeGround ):
+    '''
+    Segment the valve wall where the left hand side has a valve and right has a lever
+    '''
+
+    # find the valve wall and its center
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    t = findWallCenter(polyData, removeGroundMethod)
+
+    point1 = np.array( t.GetPosition() )
 
     # determine boxes relative to the center, inside of which the two affordances lie
     valve_point2 = [ 0 , -0.8 , 0]
@@ -1759,9 +1779,9 @@ def segmentDrillWall(point1, point2, point3):
     for a, b in zip(pointsInWallFrame, pointsInWallFrame[1:] + [pointsInWallFrame[0]]):
         d.addLine(a, b, radius=0.015)
 
-    aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
+    aff = showPolyData(d.getPolyData(), 'drill target', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
     aff.actor.SetUserTransform(t)
-    showFrame(t, 'wall frame', parent=aff, visible=False)
+    showFrame(t, 'drill target frame', parent=aff, visible=False)
     refitWallCallbacks.append(functools.partial(refitDrillWall, aff))
 
     params = dict(origin=points[0], xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
@@ -1850,9 +1870,19 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
     t.PostMultiply()
     t.Translate(triangleOrigin)
 
+    createDrillWall(rightAngleLocation, t)
 
-    edgeRight = np.array([0.0, -1.0, 0.0]) * (24 * .0254)
-    edgeUp = np.array([0.0, 0.0, 1.0]) * (12 * .0254)
+
+def createDrillWall(rightAngleLocation, trianglePose):
+
+    # recover the origin and axes from the pose:
+    triangleOrigin = trianglePose.GetPosition()
+    xaxis, yaxis, zaxis = transformUtils.getAxesFromTransform( trianglePose )
+
+    # 0.6096 = 24 * .0254 (m = feet)
+    # 0.3048 = 12 * .0254 (m = feet)
+    edgeRight = np.array([0.0, -1.0, 0.0]) * (0.6)
+    edgeUp = np.array([0.0, 0.0, 1.0]) * (0.3)
 
 
     pointsInWallFrame = np.zeros((3,3))
@@ -1862,8 +1892,8 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
         pointsInWallFrame[2] =  edgeRight
 
     elif rightAngleLocation == DRILL_TRIANGLE_BOTTOM_RIGHT:
-        pointsInWallFrame[1] = edgeRight + edgeUp
-        pointsInWallFrame[2] = edgeRight
+        pointsInWallFrame[1] = edgeUp      # edgeRight +edgeUp
+        pointsInWallFrame[2] = -edgeRight  # edgeRight
 
     elif rightAngleLocation == DRILL_TRIANGLE_TOP_LEFT:
         pointsInWallFrame[1] = edgeRight
@@ -1876,23 +1906,31 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
         raise Exception('unexpected value for right angle location: ', + rightAngleLocation)
 
     center = pointsInWallFrame.sum(axis=0)/3.0
-    shrinkFactor = 0.90
+    shrinkFactor = 1#0.90
     shrinkPoints = (pointsInWallFrame - center) * shrinkFactor + center
 
     d = DebugData()
     for p in pointsInWallFrame:
-        d.addSphere(p, radius=0.02)
+        d.addSphere(p, radius=0.015)
 
     for a, b in zip(pointsInWallFrame, np.vstack((pointsInWallFrame[1:], pointsInWallFrame[0]))):
-        d.addLine(a, b, radius=0.01)
+        d.addLine(a, b, radius=0.005)#01)
 
     for a, b in zip(shrinkPoints, np.vstack((shrinkPoints[1:], shrinkPoints[0]))):
-        d.addLine(a, b, radius=0.0025)
+        d.addLine(a, b, radius=0.005)#0.025
 
-    aff = showPolyData(d.getPolyData(), 'drill targets', cls=FrameAffordanceItem, color=[0,1,0], visible=True)
-    aff.actor.SetUserTransform(t)
+    folder = om.getOrCreateContainer('affordances')
+
+    wall = om.findObjectByName('wall')
+    om.removeFromObjectModel(wall)
+
+    aff = showPolyData(d.getPolyData(), 'wall', cls=FrameAffordanceItem, color=[0,1,0], visible=True, parent=folder)
+    aff.actor.SetUserTransform(trianglePose)
+    aff.addToView(app.getDRCView())
+
     refitWallCallbacks.append(functools.partial(refitDrillWall, aff))
-    frameObj = showFrame(t, 'wall frame', parent=aff, visible=False)
+
+    frameObj = showFrame(trianglePose, 'wall frame', parent=aff, scale=0.2, visible=False)
     frameObj.addToView(app.getDRCView())
 
     params = dict(origin=triangleOrigin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
@@ -1903,7 +1941,7 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
 
     aff.setAffordanceParams(params)
     aff.updateParamsFromActorTransform()
-    aff.addToView(app.getDRCView())
+
 
     '''
     rfoot = getLinkFrame('r_foot')
@@ -1911,7 +1949,7 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
     tt.PostMultiply()
     tt.Translate(rfoot.GetPosition())
     showFrame(tt, 'rfoot with wall orientation')
-    aff.footToAffTransform = computeAToB(tt, t)
+    aff.footToAffTransform = computeAToB(tt, trianglePose)
 
     footToAff = list(aff.footToAffTransform.GetPosition())
     tt.TransformVector(footToAff, footToAff)
@@ -1923,30 +1961,45 @@ def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
     '''
 
 
-def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis):
+def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis, drillType="dewalt_button"):
 
-    params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
-                  button_x=0.035,
-                  button_y=0.007,
+    if (drillType=="dewalt_button"):
+        params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
+                  button_x=0.007,
+                  button_y=-0.035,
                   button_z=-0.06,
-                  guard_x=0.0,
-                  guard_y=-0.01,
-                  guard_z=0.15,
-                  guard_nx=0.0,
-                  guard_ny=0.0,
-                  guard_nz=1.0,
-                  button_nx=1.0,
-                  button_ny=0.0,
-                  button_nz=0.0,
+                  button_roll=-90.0,
+                  button_pitch=-90.0,
+                  button_yaw=0.0,
+                  bit_x=-0.01,
+                  bit_y=0.0,
+                  bit_z=0.15,
+                  bit_roll=0,
+                  bit_pitch=-90,
+                  bit_yaw=0,
                   friendly_name='dewalt_button', otdf_type='dewalt_button')
+    else:
+        params = dict(origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, xwidth=0.1, ywidth=0.1, zwidth=0.1,
+                  button_x=0.007,
+                  button_y=-0.035,
+                  button_z=-0.06,
+                  button_roll=0.0,
+                  button_pitch=0.0,
+                  button_yaw=0.0,
+                  bit_x=0.18,
+                  bit_y=0.0,
+                  bit_z=0.13,
+                  bit_roll=0,
+                  bit_pitch=0,
+                  bit_yaw=0,
+                  friendly_name='dewalt_barrel', otdf_type='dewalt_barrel')
 
     return params
 
 
 def getDrillMesh():
 
-    button = np.array([0.035, 0.007, -0.06])
-
+    button = np.array([0.007, -0.035, -0.06])
     drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
     d = DebugData()
     d.addPolyData(drillMesh)
@@ -2071,7 +2124,7 @@ def filterClusterObjects(clusters):
     return result
 
 
-    
+
 
 
 def segmentTableThenFindDrills(polyData,pickedPoint):
@@ -2081,7 +2134,7 @@ def segmentTableThenFindDrills(polyData,pickedPoint):
         Nothing else is ever on a table ;)
     '''
 
-    # 1 segment a table and return clusters and the plane normal 
+    # 1 segment a table and return clusters and the plane normal
     clusters, tablePoints, plane_origin, plane_normal = segmentTableSceneClusters(polyData, pickedPoint, True)
 
     # 2 Detect drills within the clusters:
@@ -2140,7 +2193,7 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
         determine the plane of the table and
         extract clusters above the table
     '''
-    
+
     polyData, tablePoints, plane_origin, plane_normal = segmentTable(polyData, searchPoint)
 
     tableCentroid = computeCentroid(tablePoints)
@@ -2246,7 +2299,8 @@ def segmentDrillAuto(point1):
     xaxis /= np.linalg.norm(xaxis)
     yaxis = np.cross(zaxis, xaxis)
 
-    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    # note this hack to orient the drill correctly:
+    t = getTransformFromAxes(yaxis, -xaxis, zaxis)
     t.PreMultiply()
     t.Translate(-drillToTopPoint)
     t.PostMultiply()
@@ -2513,6 +2567,85 @@ def segmentDrillBarrel(point1):
 
 
 
+def segmentDrillAlignedWithTable(point):
+    '''
+    Yet Another Drill Fitting Algorithm [tm]
+    This one fits the button drill assuming its on the table
+    and aligned with the table frame (because the button drill orientation is difficult to find)
+    Table must have long side facing robot
+    '''
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    # segment the table and recover the precise up direction normal:
+    polyDataOut, tablePoints, origin, normal = segmentTable(polyData,point)
+    #print origin # this origin is bunk
+    #tableCentroid = computeCentroid(tablePoints)
+
+    # get the bounding box edges
+    OBBorigin, edges, _ = getOrientedBoundingBox(tablePoints)
+    #print "OBB out"
+    #print OBBorigin
+    #print edges
+    edgeLengths = np.array([np.linalg.norm(edge) for edge in edges])
+    axes = [edge / np.linalg.norm(edge) for edge in edges]
+    #print edgeLengths
+    #print axes
+
+    # check which direction the robot is facing and flip x-axis of table if necessary
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+    #print "main axes", axes[1]
+    #print "viewDirection", viewDirection
+    #dp = np.dot(axes[1], viewDirection)
+    #print dp
+
+    if np.dot(axes[1], viewDirection) < 0:
+        print "flip the x-direction"
+        axes[1] = -axes[1]
+
+
+    # define the x-axis to be along the 2nd largest edge
+    xaxis = axes[1]
+    xaxis = np.array(xaxis)
+    zaxis = np.array( normal )
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    tableOrientation = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+
+    #tableTransform = transformUtils.frameFromPositionAndRPY( tableCentroid , tableOrientation.GetOrientation() )
+    #updateFrame(tableTransform, 'table frame [z up, x away face]', parent="segmentation", visible=True).addToView(app.getDRCView())
+
+    data = segmentTableScene(polyData, point )
+    #vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
+
+    # crude use of the table frame to determine the frame of the drill on the table
+    #t2 = transformUtils.frameFromPositionAndRPY([0,0,0], [180, 0 , 90] )
+    #drillOrientationTransform = transformUtils.copyFrame( om.findObjectByName('object 1 frame').transform )
+    #drillOrientationTransform.PreMultiply()
+    #drillOrientationTransform.Concatenate(t2)
+    #vis.updateFrame(t, 'drillOrientationTransform',visible=True)
+
+    #table_xaxis, table_yaxis, table_zaxis = transformUtils.getAxesFromTransform( data.table.frame )
+    #drillOrientation = transformUtils.orientationFromAxes( table_yaxis, table_xaxis,  -1*np.array( table_zaxis) )
+    drillTransform = transformUtils.frameFromPositionAndRPY( data.clusters[0].frame.GetPosition() , tableOrientation.GetOrientation() )
+
+    drillMesh = getDrillMesh()
+
+    drill = om.findObjectByName('drill')
+    om.removeFromObjectModel(drill)
+
+    aff = showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=FrameAffordanceItem, visible=True)
+    aff.actor.SetUserTransform(drillTransform)
+    aff.addToView(app.getDRCView())
+
+    frameObj = updateFrame(drillTransform, 'drill frame', parent=aff, scale=0.2, visible=False)
+    frameObj.addToView(app.getDRCView())
+
+    params = getDrillAffordanceParams(np.array(drillTransform.GetPosition()), [1,0,0], [0,1,0], [0,0,1], drillType="dewalt_button")
+    aff.setAffordanceParams(params)
+
+
 def segmentDrillInHand(p1, p2):
 
     inputObj = om.findObjectByName('pointcloud snapshot')
@@ -2594,14 +2727,17 @@ def getLinkFrame(linkName):
     return t
 
 
-def getDrillInHandOffset(zRotation=0.0, zTranslation=0.0, flip=False):
+def getDrillInHandOffset(zRotation=0.0, zTranslation=0.0, xTranslation=0.0, flip=False):
 
     drillOffset = vtk.vtkTransform()
     drillOffset.PostMultiply()
     if flip:
         drillOffset.RotateY(180)
     drillOffset.RotateZ(zRotation)
-    drillOffset.Translate(0, 0.09, zTranslation - 0.015)
+    drillOffset.RotateY(-90)
+    #drillOffset.Translate(0, 0.09, zTranslation - 0.015)
+    #drillOffset.Translate(zTranslation - 0.015, 0.035 + xTranslation, 0.0)
+    drillOffset.Translate(zTranslation - 0.015, 0.045 + xTranslation, 0.0)
     return drillOffset
 
 
@@ -2612,7 +2748,7 @@ def moveDrillToHand(drillOffset, hand='right'):
 
     assert hand in ('right', 'left')
     drillTransform = drill.actor.GetUserTransform()
-    rightBaseLink = getLinkFrame('%s_base_link' % hand)
+    rightBaseLink = getLinkFrame('%s_hand_face' % hand[0])
     drillTransform.PostMultiply()
     drillTransform.Identity()
     drillTransform.Concatenate(drillOffset)
@@ -3339,7 +3475,7 @@ def segmentBlockByPlanes(blockDimensions):
     xwidth, ywidth = blockDimensions
     zwidth = np.linalg.norm(p2 - p1)
 
-    origin = p1 + xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0 
+    origin = p1 + xaxis*xwidth/2.0 + yaxis*ywidth/2.0 + zaxis*zwidth/2.0
 
     d = DebugData()
 
@@ -3502,6 +3638,16 @@ def startDrillAutoSegmentation():
     picker.drawLines = False
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrillAuto)
+
+
+def startDrillAutoSegmentationAlignedWithTable():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDrillAlignedWithTable)
 
 
 def startDrillBarrelSegmentation():
@@ -3936,10 +4082,11 @@ def extractPointsAlongClickRay(displayPoint, distanceToLineThreshold=0.3, addDeb
     return polyData
 
 
-def extractPointsAlongClickRay(position, ray):
+def extractPointsAlongClickRay(position, ray, polyData=None):
 
     #segmentationObj = om.findObjectByName('pointcloud snapshot')
-    polyData = getCurrentRevolutionData()
+    if (polyData is None):
+      polyData = getCurrentRevolutionData()
 
     polyData = labelDistanceToLine(polyData, position, position + ray)
 
@@ -3957,8 +4104,99 @@ def extractPointsAlongClickRay(position, ray):
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
 
     d = DebugData()
-    d.addSphere(points[dists.argmin()], radius=0.01)
-    d.addLine(position, points[dists.argmin()])
-    obj = updatePolyData(d.getPolyData(), 'camera ray', color=[0,1,0])
+    intersectionPoint = points[dists.argmin()]
+
+    d.addSphere( intersectionPoint, radius=0.01)
+    d.addLine(position, intersectionPoint)
+    obj = updatePolyData(d.getPolyData(), 'intersecting ray', visible=True, color=[0,1,0])
     obj.actor.GetProperty().SetLineWidth(2)
 
+    d2 = DebugData()
+    end_of_ray = position + 2*ray
+    d2.addLine(position, end_of_ray)
+    obj2 = updatePolyData(d2.getPolyData(), 'camera ray', visible=False, color=[1,0,0])
+    obj2.actor.GetProperty().SetLineWidth(2)
+
+    return intersectionPoint
+
+
+def segmentDrillWallFromTag(position, ray):
+    '''
+    Fix the drill wall relative to a ray intersected with the wall
+    Desc: given a position and a ray (typically derived from a camera pixel)
+    Use that point to determine a position for the Drill Wall
+    This function uses a hard coded offset between the position on the wall
+    to produce the drill cutting origin
+    '''
+
+
+    #inputObj = om.findObjectByName('pointcloud snapshot')
+    #polyData = shallowCopy(inputObj.polyData)
+    polyData = getCurrentRevolutionData()
+
+    if (polyData is None): # no data yet
+        print "no LIDAR data yet"
+        return False
+
+    point1 = extractPointsAlongClickRay(position, ray, polyData )
+
+    # view direction is out:
+    viewDirection = -1 * SegmentationContext.getGlobalInstance().getViewDirection()
+    polyDataOut, origin, normal = applyPlaneFit(polyData, expectedNormal=viewDirection, searchOrigin=point1, searchRadius=0.3, angleEpsilon=0.3, returnOrigin=True)
+
+    # project the lidar point onto the plane (older, variance is >1cm with robot 2m away)
+    #intersection_point = projectPointToPlane(point1, origin, normal)
+    # intersect the ray with the plane (variance was about 4mm with robot 2m away)
+    intersection_point = intersectLineWithPlane(position, ray, origin, normal)
+
+    # Define a frame:
+    xaxis = -normal
+    zaxis = [0, 0, 1]
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis = np.cross(xaxis, yaxis)
+    t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(intersection_point)
+
+    t2 = transformUtils.copyFrame(t)
+    t2.PreMultiply()
+    t3 = transformUtils.frameFromPositionAndRPY( [0,0.6,-0.25] , [0,0,0] )
+    t2.Concatenate(t3)
+
+    rightAngleLocation = 'bottom left'
+    createDrillWall(rightAngleLocation, t2)
+
+    wall=  om.findObjectByName('wall')
+    vis.updateFrame( t ,'wall fit tag', parent=wall, visible=False, scale=0.2)
+
+
+    d = DebugData()
+    d.addSphere( intersection_point, radius=0.002)
+    obj = updatePolyData(d.getPolyData(), 'intersection', parent=wall, visible=False, color=[0,1,0]) #
+    obj.actor.GetProperty().SetLineWidth(1)
+    return True
+
+
+def segmentDrillWallFromWallCenter():
+    '''
+    Get the drill wall target as an offset from the center of
+    the full wall
+    '''
+
+    # find the valve wall and its center
+    inputObj = om.findObjectByName('pointcloud snapshot')
+    polyData = inputObj.polyData
+
+    # hardcoded position to target frame from center of wall
+    # conincides with the distance from the april tag to this position
+    wallFrame = transformUtils.copyFrame( findWallCenter(polyData) )
+    wallFrame.PreMultiply()
+    t3 = transformUtils.frameFromPositionAndRPY( [-0.07,-0.3276,0] , [180,-90,0] )
+    wallFrame.Concatenate(t3)
+
+    rightAngleLocation = 'bottom left'
+    createDrillWall(rightAngleLocation, wallFrame)
+
+    wall=  om.findObjectByName('wall')
+    vis.updateFrame( wallFrame ,'wall fit lidar', parent=wall, visible=False, scale=0.2)
