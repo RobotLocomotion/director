@@ -31,7 +31,6 @@ from shallowCopy import shallowCopy
 import affordance
 import ioUtils
 
-import vtkPCLFiltersPython as pcl
 
 import drc as lcmdrc
 import bot_core as lcmbotcore
@@ -287,7 +286,7 @@ def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None
 
     normalEstimationSearchRadius = 0.065
 
-    f = pcl.vtkPCLNormalEstimation()
+    f = vtk.vtkPCLNormalEstimation()
     f.SetSearchRadius(normalEstimationSearchRadius)
     f.SetInput(polyData)
     f.Update()
@@ -401,7 +400,7 @@ def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpend
         fitInput = cropToSphere(fitInput, searchOrigin, searchRadius)
 
     # perform plane segmentation
-    f = pcl.vtkPCLSACSegmentationPlane()
+    f = vtk.vtkPCLSACSegmentationPlane()
     f.SetInput(fitInput)
     f.SetDistanceThreshold(distanceThreshold)
     if perpendicularAxis is not None:
@@ -434,7 +433,7 @@ def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpend
 
 def normalEstimation(dataObj, searchCloud=None, searchRadius=0.05, useVoxelGrid=False, voxelGridLeafSize=0.05):
 
-    f = pcl.vtkPCLNormalEstimation()
+    f = vtk.vtkPCLNormalEstimation()
     f.SetSearchRadius(searchRadius)
     f.SetInput(dataObj)
     if searchCloud:
@@ -568,7 +567,7 @@ def segmentGroundPlanes():
 
 def extractCircle(polyData, distanceThreshold=0.04, radiusLimit=None):
 
-    circleFit = pcl.vtkPCLSACSegmentationCircle()
+    circleFit = vtk.vtkPCLSACSegmentationCircle()
     circleFit.SetDistanceThreshold(distanceThreshold)
     circleFit.SetInput(polyData)
     if radiusLimit is not None:
@@ -583,7 +582,7 @@ def extractCircle(polyData, distanceThreshold=0.04, radiusLimit=None):
 def removeMajorPlane(polyData, distanceThreshold=0.02):
 
     # perform plane segmentation
-    f = pcl.vtkPCLSACSegmentationPlane()
+    f = vtk.vtkPCLSACSegmentationPlane()
     f.SetInput(polyData)
     f.SetDistanceThreshold(distanceThreshold)
     f.Update()
@@ -2382,7 +2381,7 @@ def findAndFitDrillBarrel(polyData=None):
 
     normalEstimationSearchRadius = 0.10
 
-    f = pcl.vtkPCLNormalEstimation()
+    f = vtk.vtkPCLNormalEstimation()
     f.SetSearchRadius(normalEstimationSearchRadius)
     f.SetInput(scenePoints)
     f.Update()
@@ -3036,7 +3035,7 @@ def showObbs(polyData):
     labelsArrayName = 'cluster_labels'
     assert polyData.GetPointData().GetArray(labelsArrayName)
 
-    f = pcl.vtkAnnotateOBBs()
+    f = vtk.vtkAnnotateOBBs()
     f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, labelsArrayName)
     f.SetInput(polyData)
     f.Update()
@@ -3055,7 +3054,7 @@ def getOrientedBoundingBox(polyData):
     labels = np.ones(nPoints)
     vtkNumpy.addNumpyToVtk(polyData, labels, labelsArrayName)
 
-    f = pcl.vtkAnnotateOBBs()
+    f = vtk.vtkAnnotateOBBs()
     f.SetInputArrayToProcess(0,0,0, vtk.vtkDataObject.FIELD_ASSOCIATION_POINTS, labelsArrayName)
     f.SetInput(polyData)
     f.Update()
