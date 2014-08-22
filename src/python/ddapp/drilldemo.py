@@ -20,6 +20,7 @@ from ddapp import ikplanner
 from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
+from ddapp import affordanceitems
 from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
@@ -383,7 +384,7 @@ class DrillPlannerDemo(object):
             drillMesh = segmentation.getDrillBarrelMesh()
             params = segmentation.getDrillAffordanceParams(np.array(drillTransform.GetPosition()), [1,0,0], [0,1,0], [0,0,1], 'dewalt_barrel')
 
-        self.drill.affordance = vis.showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=vis.FrameAffordanceItem, parent=folder)
+        self.drill.affordance = vis.showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder)
         self.drill.affordance.actor.SetUserTransform(drillTransform)
         self.drill.frame = vis.showFrame(drillTransform, 'drill frame', parent=self.drill.affordance, visible=False, scale=0.2)
         self.drill.affordance.setAffordanceParams(params)
