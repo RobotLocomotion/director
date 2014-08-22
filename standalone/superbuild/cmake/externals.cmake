@@ -1,13 +1,17 @@
 
 
 option(USE_PCL "Build PCL." OFF)
-option(USE_LIBBOT "Build libbot." ON)
-option(USE_LCM "Build lcm." ON)
+option(USE_LIBBOT "Build libbot." OFF)
+option(USE_LCM "Build lcm." OFF)
 set(USE_EIGEN ${USE_PCL})
+
+option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
+option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
+option(USE_SYSTEM_LIBBOT "Use system version of libbot.  If off, libbot will be built." OFF)
 
 
 set(default_cmake_args
-  "-DCMAKE_PREFIX_PATH:PATH=${install_prefix}"
+  "-DCMAKE_PREFIX_PATH:PATH=${install_prefix};${CMAKE_PREFIX_PATH}"
   "-DCMAKE_INSTALL_PREFIX:PATH=${install_prefix}"
   "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}"
   "-DBUILD_SHARED_LIBS:BOOL=ON"
@@ -15,19 +19,31 @@ set(default_cmake_args
   "-DENABLE_TESTING:BOOL=OFF"
   )
 
-
 # Find required external dependencies
 find_package(Qt4 4.8 REQUIRED)
-find_package(PythonInterp REQUIRED)
-find_package(PythonLibs REQUIRED)
 
 set(qt_args
   -DQT_QMAKE_EXECUTABLE:PATH=${QT_QMAKE_EXECUTABLE}
   )
 
+if(APPLE)
+  find_program(PYTHON_CONFIG_EXECUTABLE python-config)
+  if (NOT PYTHON_CONFIG_EXECUTABLE)
+    message(SEND_ERROR "python-config executable not found, but python is required.")
+  endif()
+  # using "python-config --prefix" so that cmake always uses the python that is
+  # in the users path, this is a fix for homebrew on Mac:
+  # https://github.com/Homebrew/homebrew/issues/25118
+  execute_process(COMMAND ${PYTHON_CONFIG_EXECUTABLE} --prefix OUTPUT_VARIABLE python_prefix OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(PYTHON_INCLUDE_DIR ${python_prefix}/include/python2.7)
+  set(PYTHON_LIBRARY ${python_prefix}/lib/libpython2.7${CMAKE_SHARED_LIBRARY_SUFFIX})
+else()
+  find_package(PythonLibs 2.7 REQUIRED)
+endif()
+
 set(python_args
-  -DPYTHON_EXECUTABLE:PATH=${PYTHON_EXECUTABLE}
   -DPYTHON_INCLUDE_DIR:PATH=${PYTHON_INCLUDE_DIR}
+  -DPYTHON_INCLUDE_DIR2:PATH=${PYTHON_INCLUDE_DIR}
   -DPYTHON_LIBRARY:PATH=${PYTHON_LIBRARY}
   )
 
@@ -35,7 +51,7 @@ set(python_args
 ###############################################################################
 # eigen
 
-if (USE_EIGEN)
+if (USE_EIGEN AND NOT USE_SYSTEM_EIGEN)
 
 ExternalProject_Add(
   eigen
@@ -55,13 +71,15 @@ set(eigen_args
   -DEIGEN3_INCLUDE_DIR:PATH=${install_prefix}/include/eigen3
   )
 
+set(eigen_depends eigen)
+
 endif()
 
 
 ###############################################################################
 # lcm
 
-if (USE_LCM)
+if (USE_LCM AND NOT USE_SYSTEM_LCM)
 
   ExternalProject_Add(
     lcm
@@ -78,7 +96,7 @@ endif()
 ###############################################################################
 # libbot
 
-if(USE_LIBBOT)
+if(USE_LIBBOT AND NOT USE_SYSTEM_LIBBOT)
 
   if(NOT USE_LCM)
     message(SEND_ERROR "Error, USE_LIBBOT is enabled but USE_LCM is OFF.")
@@ -132,7 +150,7 @@ ExternalProject_Add(ctkPythonConsole
 # QtPropertyBrowser
 ExternalProject_Add(QtPropertyBrowser
   GIT_REPOSITORY https://github.com/patmarion/QtPropertyBrowser
-  GIT_TAG origin/master
+  GIT_TAG 02671ee
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -142,9 +160,9 @@ ExternalProject_Add(QtPropertyBrowser
 ###############################################################################
 # vtk
 set(use_system_vtk_default ON)
-if(APPLE)
-  set(use_system_vtk_default OFF)
-endif()
+#if(APPLE)
+#  set(use_system_vtk_default ON)
+#endif()
 
 option(USE_SYSTEM_VTK "Use system version of VTK.  If off, VTK will be built." ${use_system_vtk_default})
 
@@ -168,6 +186,13 @@ if(NOT USE_SYSTEM_VTK)
 
   set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/vtk-5.10)
   set(vtk_depends vtk)
+else()
+
+  set(vtk_homebrew_dir /usr/local/opt/vtk5/lib/vtk-5.10)
+  if (APPLE AND IS_DIRECTORY ${vtk_homebrew_dir})
+    set(vtk_args -DVTK_DIR:PATH=${vtk_homebrew_dir})
+  endif()
+
 endif()
 
 
@@ -236,8 +261,8 @@ if(USE_PCL)
 
     DEPENDS
       ${vtk_depends}
+      ${eigen_depends}
       flann
-      eigen
   )
 
   set(pcl_depends pcl)
@@ -278,12 +303,11 @@ ExternalProject_Add(ddapp
   CMAKE_CACHE_ARGS
 
     -DUSE_PORTMIDI:BOOL=OFF
-		-DUSE_DRC:BOOL=OFF
-		-DUSE_DRC_MAPS:BOOL=OFF
-		-DUSE_DRAKE:BOOL=OFF
-    -DUSE_LCM_GL:BOOL=OFF
-
-		-DUSE_LIBBOT:BOOL=${USE_LIBBOT}
+    -DUSE_DRC:BOOL=OFF
+    -DUSE_DRC_MAPS:BOOL=OFF
+    -DUSE_DRAKE:BOOL=OFF
+    -DUSE_LCM_GL:BOOL=${USE_LIBBOT}
+    -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
     -DUSE_LCM:BOOL=${USE_LCM}
 
     ${default_cmake_args}
@@ -298,6 +322,7 @@ ExternalProject_Add(ddapp
 
     ${vtk_depends}
     ${pcl_depends}
+    ${eigen_depends}
     ${lcm_depends}
     ${libbot_depends}
     PythonQt

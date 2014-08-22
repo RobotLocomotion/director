@@ -10,10 +10,15 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+option(USE_EXTERNAL_INSTALL "If enabled, install dependencies to CMAKE_INSTALL_PREFIX." OFF)
+mark_as_advanced(USE_EXTERNAL_INSTALL)
 
 include(ExternalProject)
 set_property(DIRECTORY PROPERTY EP_PREFIX ${Superbuild_BINARY_DIR})
 
 set(source_prefix ${Superbuild_BINARY_DIR}/src)
 set(install_prefix ${Superbuild_BINARY_DIR}/install)
+if (USE_EXTERNAL_INSTALL)
+  set(install_prefix ${CMAKE_INSTALL_PREFIX})
+endif()
 include(cmake/externals.cmake)
