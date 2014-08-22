@@ -103,6 +103,11 @@ public:
   // that contains disparity and color images.
   void getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation);
 
+  // Project the points of the given polydata into image space.  The points must
+  // already be in the camera coordinate system.  The points will be written to
+  // in place.
+  int projectPoints(const QString& cameraName, vtkPolyData* polyData);
+
   void getBodyToCameraTransform(const QString& cameraName, vtkTransform* transform);
 
   int getTransform(const QString& fromFrame, const QString& toFrame, qint64 utime, vtkTransform* transform);
