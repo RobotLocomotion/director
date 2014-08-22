@@ -568,6 +568,41 @@ void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyDat
 }
 
 //-----------------------------------------------------------------------------
+int ddBotImageQueue::projectPoints(const QString& cameraName, vtkPolyData* polyData)
+{
+
+  CameraData* cameraData = this->getCameraData(cameraName);
+
+  if (!cameraData->mHasCalibration)
+  {
+    printf("Error: computeTextureCoords, no calibration data for: %s\n", cameraData->mName.c_str());
+    return -1;
+  }
+
+  const vtkIdType nPoints = polyData->GetNumberOfPoints();
+  for (vtkIdType i = 0; i < nPoints; ++i)
+  {
+    Eigen::Vector3d ptLocal;
+    polyData->GetPoint(i, ptLocal.data());
+
+    //Eigen::Vector3d pt = cameraData->mLocalToCamera * ptLocal;
+    //Eigen::Vector3d pt = cameraData->mBodyToCamera * ptLocal;
+
+    Eigen::Vector3d pt = ptLocal;
+
+    double in[] = {pt[0], pt[1], pt[2]};
+    double pix[3];
+
+    if (bot_camtrans_project_point(cameraData->mCamTrans, in, pix) == 0)
+    {
+      polyData->GetPoints()->SetPoint(i, pix);
+    }
+  }
+
+  return 1;
+}
+
+//-----------------------------------------------------------------------------
 void ddBotImageQueue::colorizePoints(vtkPolyData* polyData, CameraData* cameraData)
 {
   if (!cameraData->mHasCalibration)

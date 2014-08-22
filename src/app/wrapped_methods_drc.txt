@@ -8,6 +8,7 @@ qint64 ddBotImageQueue::getImage(const QString&, vtkImageData*);
 qint64 ddBotImageQueue::getCurrentImageTime(const QString&);
 void ddBotImageQueue::getBodyToCameraTransform(const QString&, vtkTransform*);
 void ddBotImageQueue::getPointCloudFromImages(const QString&, vtkPolyData*, int);
+int ddBotImageQueue::projectPoints(const QString&, vtkPolyData*);
 int ddBotImageQueue::getTransform(const QString&, const QString&, qint64, vtkTransform*);
 int ddBotImageQueue::getTransform(const QString&, const QString&, vtkTransform*);
 QStringList ddBotImageQueue::getBotFrameNames() const;
