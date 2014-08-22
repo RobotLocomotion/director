@@ -171,6 +171,12 @@ class SegmentationPanel(object):
     def _makeDrillWizard(self):
         drillWizard = QtGui.QGroupBox('Drill Segmentation')
         l = QtGui.QVBoxLayout(drillWizard)
+
+        l.addWidget(_makeButton('segment drill aligned with table', startDrillAutoSegmentationAlignedWithTable))
+        l.addWidget(_makeButton('segment target using wall center', segmentDrillWallFromWallCenter))
+        l.addWidget(QtGui.QLabel(''))
+
+
         l.addWidget(_makeButton('segment drill on table', startDrillAutoSegmentation))
         #l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
         #l.addWidget(_makeButton('segment wall', startDrillWallSegmentation))
@@ -196,20 +202,27 @@ class SegmentationPanel(object):
         self.drillRotationSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
         self.drillRotationSlider.setMinimum(0)
         self.drillRotationSlider.setMaximum(100)
-        self.drillRotationSlider.setValue(0)
+        self.drillRotationSlider.setValue(25)
 
         self.drillOffsetSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
         self.drillOffsetSlider.setMinimum(0)
         self.drillOffsetSlider.setMaximum(100)
         self.drillOffsetSlider.setValue(50)
 
+        self.drillDepthOffsetSlider = QtGui.QSlider(QtCore.Qt.Horizontal)
+        self.drillDepthOffsetSlider.setMinimum(0)
+        self.drillDepthOffsetSlider.setMaximum(100)
+        self.drillDepthOffsetSlider.setValue(50)
+
         hw = QtGui.QWidget()
         hl = QtGui.QHBoxLayout(hw)
         hl.setMargin(0)
         hl.addWidget(self.drillRotationSlider)
         hl.addWidget(self.drillOffsetSlider)
+        hl.addWidget(self.drillDepthOffsetSlider)
         hw.connect(self.drillRotationSlider, 'valueChanged(int)', self.moveDrillToHand)
         hw.connect(self.drillOffsetSlider, 'valueChanged(int)', self.moveDrillToHand)
+        hw.connect(self.drillDepthOffsetSlider, 'valueChanged(int)', self.moveDrillToHand)
         l.addWidget(hw)
 
 
@@ -233,8 +246,8 @@ class SegmentationPanel(object):
         l.addWidget(QtGui.QLabel(''))
 
 
-        self.drillTaskPanel = drilltaskpanel.DrillTaskPanel()
-        l.addWidget(self.drillTaskPanel.widget)
+        #self.drillTaskPanel = drilltaskpanel.DrillTaskPanel()
+        #l.addWidget(self.drillTaskPanel.widget)
 
         l.addStretch()
         return drillWizard
@@ -346,12 +359,18 @@ class SegmentationPanel(object):
         rightAngleLocation = str(self.rightAngleCombo.currentText)
         startDrillWallSegmentationConstrained(rightAngleLocation)
 
+    def getDrillInHandParams(self):
+        rotation = (self.drillRotationSlider.value / 100.0) * 360
+        offset = (self.drillOffsetSlider.value / 100.0) * 0.20 - 0.1
+        depthoffset = (self.drillDepthOffsetSlider.value / 100.0) * 0.1 - 0.05
+        flip=self.drillFlip
+        return rotation, offset, depthoffset, flip
+
     def moveDrillToHand(self):
         hand = self.handCombo.currentText
-        rotation = (self.drillRotationSlider.value / 100.0) * 360
-        offset = (self.drillOffsetSlider.value / 100.0) * 0.10 - 0.05
+        rotation, offset, depthoffset, flip = self.getDrillInHandParams()
 
-        self.drillOffset = getDrillInHandOffset(zRotation=rotation, zTranslation=offset, flip=self.drillFlip)
+        self.drillOffset = getDrillInHandOffset(zRotation=rotation, zTranslation=offset, xTranslation=depthoffset, flip=flip)
         moveDrillToHand(self.drillOffset, hand)
 
         aff = om.findObjectByName('drill')

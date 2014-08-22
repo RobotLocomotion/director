@@ -322,10 +322,10 @@ if usePlanning:
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                     perception.multisenseDriver, view, robotStateJointController)
 
-    drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
-                                        lHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                                        fitDrillMultisense, robotStateJointController,
-                                        playPlans, showPose)
+    drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                    lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                    fitDrillMultisense, robotStateJointController,
+                    playPlans, showPose, cameraview, segmentationpanel)
 
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -492,5 +492,4 @@ app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view)
 viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
-
 

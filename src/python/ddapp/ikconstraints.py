@@ -403,10 +403,10 @@ class WorldGazeDirConstraint(ConstraintBase):
         constraintNames.append(varName)
 
         worldAxis = list(self.targetAxis)
-        print 'in:', worldAxis
+        #print 'in:', worldAxis
         self.targetFrame.TransformVector(worldAxis, worldAxis)
 
-        print 'out:', worldAxis
+        #print 'out:', worldAxis
 
         formatArgs = dict(varName=varName,
                           robotArg=self.robotArg,
