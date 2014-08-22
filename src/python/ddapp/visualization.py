@@ -645,7 +645,7 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
 
     gridTransform = gridTransform or vtk.vtkTransform()
     gridObj.actor.SetUserTransform(gridTransform)
-    showFrame(gridTransform, 'grid frame', scale=0.2, visible=False, parent=gridObj)
+    showFrame(gridTransform, 'grid frame', scale=0.2, visible=False, parent=gridObj, view=view)
 
     if useSurface:
         gridObj.actor.GetProperty().EdgeVisibilityOn()
