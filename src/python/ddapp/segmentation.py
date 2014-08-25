@@ -2320,6 +2320,22 @@ def segmentDrillAuto(point1):
     aff.addToView(app.getDRCView())
 
 
+
+def segmentDrillButton(point1):
+    d = DebugData()
+    d.addSphere(point1, radius=0.005)
+    obj = updatePolyData(d.getPolyData(), 'sensed drill button', color=[1,0,0], visible=True)
+    obj.addToView(app.getDRCView())
+
+
+def segmentPointerTip(point1):
+    d = DebugData()
+    d.addSphere(point1, radius=0.005)
+    obj = updatePolyData(d.getPolyData(), 'sensed pointer tip', color=[0,0.5,0.5], visible=True)
+    obj.addToView(app.getDRCView())
+
+
+
 def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDimensionsMax=[1.3, 0.1]):
 
     removeGroundFunc = removeGroundSimple
@@ -3717,6 +3733,26 @@ def startDrillAutoSegmentation():
     picker.drawLines = False
     picker.start()
     picker.annotationFunc = functools.partial(segmentDrillAuto)
+
+
+def startDrillButtonSegmentation():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentDrillButton)
+
+
+def startPointerTipSegmentation():
+
+    picker = PointPicker(numberOfPoints=1)
+    addViewPicker(picker)
+    picker.enabled = True
+    picker.drawLines = False
+    picker.start()
+    picker.annotationFunc = functools.partial(segmentPointerTip)
 
 
 def startDrillAutoSegmentationAlignedWithTable():
