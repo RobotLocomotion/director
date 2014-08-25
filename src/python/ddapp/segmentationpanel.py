@@ -174,12 +174,6 @@ class SegmentationPanel(object):
 
         l.addWidget(_makeButton('segment drill aligned with table', startDrillAutoSegmentationAlignedWithTable))
         l.addWidget(_makeButton('segment target using wall center', segmentDrillWallFromWallCenter))
-        l.addWidget(QtGui.QLabel(''))
-
-
-        l.addWidget(_makeButton('segment drill on table', startDrillAutoSegmentation))
-        #l.addWidget(_makeButton('segment drill in hand', startDrillInHandSegmentation))
-        #l.addWidget(_makeButton('segment wall', startDrillWallSegmentation))
 
         self.drillUpdater = TimerCallback()
         self.drillUpdater.targetFps = 30
@@ -225,6 +219,15 @@ class SegmentationPanel(object):
         hw.connect(self.drillDepthOffsetSlider, 'valueChanged(int)', self.moveDrillToHand)
         l.addWidget(hw)
 
+        hw = QtGui.QWidget()
+        hl = QtGui.QHBoxLayout(hw)
+        hl.setMargin(0)
+        hl.addWidget( _makeButton('segment button', startDrillButtonSegmentation) )
+        hl.addWidget( _makeButton('segment tip', startPointerTipSegmentation) )
+        self.drillFlip = False
+        l.addWidget(hw)
+
+        l.addWidget(QtGui.QLabel(''))
 
         hw = QtGui.QWidget()
         hl = QtGui.QHBoxLayout(hw)
@@ -238,6 +241,7 @@ class SegmentationPanel(object):
         hl.addWidget(self.rightAngleCombo)
         l.addWidget(hw)
 
+        l.addWidget(_makeButton('segment drill on table', startDrillAutoSegmentation))
         l.addWidget(_makeButton('segment wall', self.segmentDrillWallConstrained))
         l.addWidget(_makeButton('refit wall', startRefitWall))
 
