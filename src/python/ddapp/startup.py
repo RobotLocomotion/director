@@ -504,3 +504,84 @@ app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view)
 viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
+
+
+
+
+#polyData = io.readPolyData(os.path.expanduser('~/Desktop/pointer_tip.vtp'))
+#obj = vis.showPolyData(polyData, 'pointcloud snapshot', colorByName='rgb_colors', visible=True, parent="segmentation")#.getDebugFolder())
+#obj.addToView(segmentation.getSegmentationView())
+
+
+
+
+#d = DebugData()
+#pointer_tip = ([ 0.53968638, -0.1111497 ,  1.31205988])
+#d.addSphere(pointer_tip, radius=0.005)
+#segmentation.showPolyData(d.getPolyData(), 'pointer tip', color=[1,0,0], visible=True)
+
+ms= om.findObjectByName( 'Multisense' )
+ms.setProperty('Visible',False)
+
+
+spc = om.findObjectByName( 'stereo point cloud' )
+spc.setProperty('Visible',True)
+spc.setProperty('Decimation',"2")
+
+def projectHand():
+    imageView = cameraview.views['CAMERA_LEFT']
+    imageView.imageActor.SetOpacity(.5)
+    v = imageView.view
+    q = cameraview.imageManager.queue
+    localToCameraT = vtk.vtkTransform()
+    q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+    robotiq = om.findObjectByName('left robotiq')
+    robotiqToLocalT = transformUtils.copyFrame(robotiq.actor.GetUserTransform())
+    robotiqPolyDataOriginal = robotiq.polyData
+    rpd = robotiqPolyDataOriginal
+    rpd = filterUtils.transformPolyData(rpd, robotiqToLocalT)
+    rpd = filterUtils.transformPolyData(rpd, localToCameraT)
+    q.projectPoints('CAMERA_LEFT', rpd)
+    vis.showPolyData(rpd, 'robotiq in camera', view=v, color=[1,1,0])
+    v.render()
+
+
+def drillProjectTest():
+
+    t2 = transformUtils.copyFrame( getLinkFrame( 'l_hand_face') )
+    handFactory.placeHandModelWithTransform( t2 , app.getCurrentView(), 'left')
+    drillDemo.spawnDrillAffordance()
+    drillDemo.moveDrillToHand()
+
+    imageView = cameraview.views['CAMERA_LEFT']
+    imageView.imageActor.SetOpacity(.5)
+
+    v = imageView.view
+    q = cameraview.imageManager.queue
+    localToCameraT = vtk.vtkTransform()
+    q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+
+    robotiq = om.findObjectByName('left robotiq')
+    robotiqToLocalT = transformUtils.copyFrame(robotiq.actor.GetUserTransform())
+    robotiqPolyDataOriginal = robotiq.polyData
+    rpd = robotiqPolyDataOriginal
+    rpd = filterUtils.transformPolyData(rpd, robotiqToLocalT)
+    rpd = filterUtils.transformPolyData(rpd, localToCameraT)
+    q.projectPoints('CAMERA_LEFT', rpd)
+    vis.showPolyData(rpd, 'robotiq in camera', view=v, color=[1,1,0])
+
+    drill = om.findObjectByName('drill')
+    drillToLocalT = transformUtils.copyFrame(drill.actor.GetUserTransform())
+    drillPolyDataOriginal = drill.polyData
+    pd = drillPolyDataOriginal
+    pd = filterUtils.transformPolyData(pd, drillToLocalT)
+    pd = filterUtils.transformPolyData(pd, localToCameraT)
+    q.projectPoints('CAMERA_LEFT', pd)
+    vis.showPolyData(pd, 'object in camera', view=v, color=[0,1,0])
+
+    #robotMesh = vtk.vtkPolyData()
+    #robotStateModel.model.getModelMesh(robotMesh)
+    #pd = robotMesh
+
+    v.render()
+>>>>>>> cruft
