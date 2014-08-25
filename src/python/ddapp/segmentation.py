@@ -500,7 +500,9 @@ def getDisparityPointCloud(decimation=4, removeOutliers=True):
       return None
 
     if removeOutliers:
-        p = labelOutliers(p)
+        # attempt to scale outlier filtering, best tuned for decimation of 2 or 4
+        scaling = (10*16)/(decimation*decimation)
+        p = labelOutliers(p, searchRadius=0.06, neighborsInSearchRadius=scaling)
         p = thresholdPoints(p, 'is_outlier', [0.0, 0.0])
 
     return p
