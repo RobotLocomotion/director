@@ -2750,7 +2750,7 @@ def addDrillAffordance():
 
 
 def getLinkFrame(linkName):
-    robotStateModel = om.findObjectByName('model publisher')
+    robotStateModel = om.findObjectByName('robot state model')
     robotStateModel = robotStateModel or getVisibleRobotModel()
     assert robotStateModel
     t = vtk.vtkTransform()
@@ -2864,6 +2864,11 @@ class PointPicker(TimerCallback):
     def tick(self):
 
         if not self.enabled:
+            return
+
+        if not om.findObjectByName('pointcloud snapshot'):
+            self.annotationFunc = None
+            self.finish()
             return
 
         self.hoverPos = pickPoint(self.lastMovePos, getSegmentationView(), obj='pointcloud snapshot')
