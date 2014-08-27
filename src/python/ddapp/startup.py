@@ -334,10 +334,21 @@ if usePlanning:
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                     perception.multisenseDriver, view, robotStateJointController)
 
-    drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+    #drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+    #                lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+    #                fitDrillMultisense, robotStateJointController,
+    #                playPlans, showPose, cameraview, segmentationpanel)
+
+    def constructDrillDemo():
+        imp.reload(drilldemo)
+        global drillDemo, d
+        drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
+        d = drillDemo
+    constructDrillDemo()
+
 
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -453,7 +464,7 @@ if useImageViewDemo:
         imageView.view.show()
         imagePicker.stop()
 
-    #showImageOverlay()
+    showImageOverlay()#700)
 
 
 screengrabberpanel.init(view)
@@ -525,8 +536,34 @@ ms.setProperty('Visible',False)
 
 
 spc = om.findObjectByName( 'stereo point cloud' )
+spc.setProperty('Point Size',4)
 spc.setProperty('Visible',True)
-spc.setProperty('Decimation',"2")
+spc.setProperty('Decimation',"1")
+
+
+def prepDrill():
+    segmentation.segmentPointerTip([0.7237524390220642, -0.12707303034860637, 1.306993426103352])
+    segmentation.segmentDrillButton([0.7672672271728516, -0.05982359126210213, 1.2797166109085083])
+
+    drillDemo.spawnDrillAffordance()
+    # correct:
+    #segmentationpanel._segmentationPanel.setDrillInHandParams(97.2,
+    #                                                              0.03,
+    #                                                              0.04,
+    #                                                              -0.023,
+    #                                                              False)
+
+    segmentationpanel._segmentationPanel.setDrillInHandParams(80,
+                                                                  -0.025,
+                                                                  -0.235,
+                                                                  -0.20,
+                                                                  False)
+
+
+    #drillDemo.drill.initXYZ = [0.7661142141309257, -0.057907154817146415, 1.3391287511643526]
+    #drillDemo.drill.initRPY = [-1.034571619393171, 2.146372188183555, -58.31938760953152]
+
+    drillDemo.moveDrillToHand()
 
 def projectHand():
     imageView = cameraview.views['CAMERA_LEFT']
@@ -545,43 +582,91 @@ def projectHand():
     vis.showPolyData(rpd, 'robotiq in camera', view=v, color=[1,1,0])
     v.render()
 
+def spawnHandFrame(side='left'):
+    if (side is 'left'):
+        tf = transformUtils.copyFrame( getLinkFrame( 'l_hand_face') )
+        handFactory.placeHandModelWithTransform( tf , app.getCurrentView(), 'left')
+    else:
+        tf = transformUtils.copyFrame( getLinkFrame( 'right_pointer_tip') )
+        handFactory.placeHandModelWithTransform( tf , app.getCurrentView(), 'right')
 
-def drillProjectTest():
 
-    t2 = transformUtils.copyFrame( getLinkFrame( 'l_hand_face') )
-    handFactory.placeHandModelWithTransform( t2 , app.getCurrentView(), 'left')
-    drillDemo.spawnDrillAffordance()
-    drillDemo.moveDrillToHand()
 
-    imageView = cameraview.views['CAMERA_LEFT']
-    imageView.imageActor.SetOpacity(.5)
+def drawFrameInCamera(t, frameName='new frame',visible=True):
 
     v = imageView.view
     q = cameraview.imageManager.queue
     localToCameraT = vtk.vtkTransform()
     q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
 
-    robotiq = om.findObjectByName('left robotiq')
-    robotiqToLocalT = transformUtils.copyFrame(robotiq.actor.GetUserTransform())
-    robotiqPolyDataOriginal = robotiq.polyData
-    rpd = robotiqPolyDataOriginal
-    rpd = filterUtils.transformPolyData(rpd, robotiqToLocalT)
-    rpd = filterUtils.transformPolyData(rpd, localToCameraT)
-    q.projectPoints('CAMERA_LEFT', rpd)
-    vis.showPolyData(rpd, 'robotiq in camera', view=v, color=[1,1,0])
+    res = vis.showFrame( vtk.vtkTransform() , 'temp',view=v, visible=True, scale = 0.2)
+    om.removeFromObjectModel(res)
+    pd = res.polyData
+    pd = filterUtils.transformPolyData(pd, t)
+    pd = filterUtils.transformPolyData(pd, localToCameraT)
+    q.projectPoints('CAMERA_LEFT', pd )
+    vis.showPolyData(pd, ('overlay ' + frameName), view=v, colorByName='Axes',parent='camera overlay',visible=visible)
 
-    drill = om.findObjectByName('drill')
-    drillToLocalT = transformUtils.copyFrame(drill.actor.GetUserTransform())
-    drillPolyDataOriginal = drill.polyData
-    pd = drillPolyDataOriginal
-    pd = filterUtils.transformPolyData(pd, drillToLocalT)
+def drawObjectInCamera(objectName,visible=True):
+    v = imageView.view
+    q = cameraview.imageManager.queue
+    localToCameraT = vtk.vtkTransform()
+    q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+
+    obj = om.findObjectByName(objectName)
+    if obj is None:
+        return
+    objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform() or vtk.vtkTransform())
+    objPolyDataOriginal = obj.polyData
+    pd = objPolyDataOriginal
+    pd = filterUtils.transformPolyData(pd, objToLocalT)
     pd = filterUtils.transformPolyData(pd, localToCameraT)
     q.projectPoints('CAMERA_LEFT', pd)
-    vis.showPolyData(pd, 'object in camera', view=v, color=[0,1,0])
+    vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)
 
-    #robotMesh = vtk.vtkPolyData()
-    #robotStateModel.model.getModelMesh(robotMesh)
-    #pd = robotMesh
 
+def projectDrillDemoInCamera():
+    q = om.findObjectByName('camera overlay')
+    om.removeFromObjectModel(q)
+
+    imageView = cameraview.views['CAMERA_LEFT']
+    imageView.imageActor.SetOpacity(.2)
+
+    drawFrameInCamera(drillDemo.drill.frame.transform, 'drill frame',visible=False)
+
+    tf = transformUtils.copyFrame( drillDemo.drill.frame.transform )
+    tf.PreMultiply()
+    tf.Concatenate( drillDemo.drill.drillToButtonTransform )
+    drawFrameInCamera(tf, 'drill button')
+
+
+    tf2 = transformUtils.copyFrame( tf )
+    tf2.PreMultiply()
+    tf2.Concatenate( transformUtils.frameFromPositionAndRPY( [0,0,0] , [180,0,0] ) )
+    drawFrameInCamera(tf2, 'drill button flip')
+
+    drawObjectInCamera('drill',visible=False)
+
+    drawObjectInCamera('sensed pointer tip')
+    obj = om.findObjectByName('sensed pointer tip frame')
+    if (obj is not None):
+        drawFrameInCamera(obj.transform, 'sensed pointer tip frame',visible=False)
+
+    #drawObjectInCamera('left robotiq',visible=False)
+    #drawObjectInCamera('right pointer',visible=False)
+
+    v = imageView.view
     v.render()
->>>>>>> cruft
+
+
+# test([0,0,0],[40,0,0])
+# test([1024,1024,0],[40,0,0])
+def test(pos, rpy):
+
+
+    imageView = cameraview.views['CAMERA_LEFT']
+    imageView.imageActor.SetOpacity(.15)
+    v = imageView.view
+    tf = transformUtils.frameFromPositionAndRPY(pos,rpy)
+    vis.showFrame( tf , 'dfsd',view=v, visible=True, scale = 400)
+    v.render()>>>>>>> cruft
