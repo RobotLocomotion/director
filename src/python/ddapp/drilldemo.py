@@ -54,10 +54,6 @@ class Drill(object):
 
         # params:
         self.model="dewalt_button"
-        self.faceToDrillRotation = 90
-        self.faceToDrillOffset = 0
-        self.faceToDrillDepthOffset = 0
-        self.faceToDrillFlip = False
 
         # initial drill position (requires walking)
         self.initXYZ = [1.5, 0.6, 0.9] # height requires crouching
@@ -162,15 +158,15 @@ class DrillPlannerDemo(object):
             self.wall.relativeStanceRPY = [0, 0, -90]
             self.wall.relativeStanceFarXYZ = [-0.3, 1.25, 0]
             self.wall.relativeStanceFarRPY = [0, 0, -90]
-            if ( self.graspingHand == 'right' ):
-                self.drill.faceToDrillRotation = -90
+            #if ( self.graspingHand == 'right' ):
+            #    self.drill.faceToDrillRotation = -90
 
         if ( self.graspingHand == 'right' ):
             print "Planning with drill in the right hand"
             self.drill.relativeStanceXYZ[1] = -self.drill.relativeStanceXYZ[1]
             self.drill.graspFrameRPY = [0,-90,-90]
             self.drill.initXYZ[1] = -self.drill.initXYZ[1]
-            self.drill.faceToDrillFlip = True
+            #self.drill.faceToDrillFlip = True
 
             self.wall.rightAngleLocation = "bottom right"
             self.wall.initXYZ[1] = -self.wall.initXYZ[1]
@@ -365,10 +361,8 @@ class DrillPlannerDemo(object):
         # what will be its position, relative to the l_hand_face (or other)
         # Updated to read the settings from the gui panel.
         # TODO: should I avoid calling to faceToDrillTransform and only use computeFaceToDrillTransform to avoid inconsistance?
-
-        self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillDepthOffset , self.drill.faceToDrillFlip = self.segmentationpanel._segmentationPanel.getDrillInHandParams()
-
-        self.drill.faceToDrillTransform = segmentation.getDrillInHandOffset(self.drill.faceToDrillRotation, self.drill.faceToDrillOffset, self.drill.faceToDrillDepthOffset, self.drill.faceToDrillFlip)
+        rotation, offset, depthOffset, lateralOffset, flip = self.segmentationpanel._segmentationPanel.getDrillInHandParams()
+        self.drill.faceToDrillTransform = segmentation.getDrillInHandOffset(rotation, offset, depthOffset, lateralOffset, flip)
 
 
     def spawnDrillAffordance(self):

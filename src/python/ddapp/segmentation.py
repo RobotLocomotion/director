@@ -2745,7 +2745,7 @@ def getLinkFrame(linkName):
     return t
 
 
-def getDrillInHandOffset(zRotation=0.0, zTranslation=0.0, xTranslation=0.0, flip=False):
+def getDrillInHandOffset(zRotation=0.0, zTranslation=0.0, xTranslation=0.0, yTranslation=0.0,flip=False):
 
     drillOffset = vtk.vtkTransform()
     drillOffset.PostMultiply()
@@ -2755,7 +2755,7 @@ def getDrillInHandOffset(zRotation=0.0, zTranslation=0.0, xTranslation=0.0, flip
     drillOffset.RotateY(-90)
     #drillOffset.Translate(0, 0.09, zTranslation - 0.015)
     #drillOffset.Translate(zTranslation - 0.015, 0.035 + xTranslation, 0.0)
-    drillOffset.Translate(zTranslation - 0.015, 0.045 + xTranslation, 0.0)
+    drillOffset.Translate(zTranslation, xTranslation, 0.0 + yTranslation)
     return drillOffset
 
 
