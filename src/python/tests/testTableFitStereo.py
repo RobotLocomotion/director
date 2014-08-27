@@ -7,7 +7,7 @@ from ddapp import segmentationroutines
 from ddapp import applogic
 from ddapp import visualization as vis
 
-from ddapp import roboturdf
+#from ddapp import roboturdf
 
 
 app = ConsoleApp()
@@ -17,7 +17,7 @@ view = app.createView()
 segmentation._defaultSegmentationView = view
 
 
-
+'''
 robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
 
 segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
@@ -29,6 +29,12 @@ robotStateJointController.q[1] = -0.7596
 robotStateJointController.q[2] = 0.79788
 robotStateJointController.q[33] = 0.5 # head down
 robotStateJointController.push()
+'''
+
+groundHeight = 0.0
+viewFrame = segmentation.transformUtils.frameFromPositionAndRPY([1, -1, groundHeight + 1.5], [0, 0, -35])
+
+segmentationroutines.SegmentationContext.initWithUser(groundHeight, viewFrame)
 
 # load poly data
 dataDir = app.getTestingDataDirectory()

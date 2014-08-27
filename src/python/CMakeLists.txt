@@ -4,6 +4,7 @@ set(python_files
   ddapp/actionmanagerpanel.py
   ddapp/affordance.py
   ddapp/affordancegraspupdater.py
+  ddapp/affordanceitems.py
   ddapp/affordancelistener.py
   ddapp/applogic.py
   ddapp/asynctaskqueue.py
@@ -111,7 +112,8 @@ foreach(file ${python_files})
                      COMMENT "source copy")
 
   get_filename_component(tgt_we ${tgt} NAME_WE)
-  install(FILES ${tgt} ${tgtDir}/${tgt_we}.pyc DESTINATION ${DD_INSTALL_PYTHON_DIR}/ddapp COMPONENT Runtime)
+  get_filename_component(installDirSuffix ${file} PATH)
+  install(FILES ${tgt} ${tgtDir}/${tgt_we}.pyc DESTINATION ${DD_INSTALL_PYTHON_DIR}/${installDirSuffix} COMPONENT Runtime)
 endforeach(file)
 
 
