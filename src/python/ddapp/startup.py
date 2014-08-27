@@ -254,7 +254,7 @@ if usePlanning:
     def approveRefit():
 
         for obj in om.getObjects():
-            if isinstance(obj, vis.BlockAffordanceItem):
+            if isinstance(obj, segmentation.BlockAffordanceItem):
                 if 'refit' in obj.getProperty('Name'):
                     originalObj = om.findObjectByName(obj.getProperty('Name').replace(' refit', ''))
                     if originalObj:

@@ -10,10 +10,14 @@ def readPolyData(filename, computeNormals=False):
             '.vtp' : vtk.vtkXMLPolyDataReader,
             '.vtk' : vtk.vtkPolyDataReader,
             '.ply' : vtk.vtkPLYReader,
-            '.pcd' : vtk.vtkPCDReader,
             '.obj' : vtk.vtkOBJReader,
             '.stl' : vtk.vtkSTLReader,
               }
+
+    try:
+        readers['.pcd'] = vtk.vtkPCDReader
+    except AttributeError:
+        pass
 
     if ext not in readers:
         raise Exception('Unknown file extension in readPolyData: %s' % filename)

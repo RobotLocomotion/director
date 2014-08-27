@@ -15,6 +15,7 @@ from ddapp.asynctaskqueue import AsyncTaskQueue
 from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
+from ddapp import affordanceitems
 from ddapp.debugVis import DebugData
 from ddapp import ikplanner
 from ddapp import ioUtils
@@ -125,7 +126,7 @@ class ValvePlannerDemo(object):
         d.addSphere(tPosition, radius=0.01)
 
         currentTipMesh = d.getPolyData()
-        self.currentTipPosition = vis.showPolyData(currentTipMesh, 'pointer tip angle', color=[1.0, 0.5, 0.0], cls=vis.AffordanceItem, parent=self.valveAffordance, alpha=0.5)
+        self.currentTipPosition = vis.showPolyData(currentTipMesh, 'pointer tip angle', color=[1.0, 0.5, 0.0], cls=affordanceitems.AffordanceItem, parent=self.valveAffordance, alpha=0.5)
         self.currentTipPosition.actor.SetUserTransform(self.valveFrame.transform)
 
 
@@ -214,7 +215,7 @@ class ValvePlannerDemo(object):
           path.addLine ( np.array( p0 ) , np.array(  p1 ), radius= 0.005)
           
         pathMesh = path.getPolyData()
-        self.pointerTipLinePath = vis.showPolyData(pathMesh, 'pointer tip path', color=[0.0, 0.3, 1.0], cls=vis.AffordanceItem, parent=self.valveAffordance, alpha=0.6)
+        self.pointerTipLinePath = vis.showPolyData(pathMesh, 'pointer tip path', color=[0.0, 0.3, 1.0], cls=affordanceitems.AffordanceItem, parent=self.valveAffordance, alpha=0.6)
         self.pointerTipLinePath.actor.SetUserTransform(self.valveFrame.transform) 
         
     def computeStanceFrame(self):
@@ -438,7 +439,7 @@ class ValvePlannerDemo(object):
         z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius=radius)
         valveMesh = z.getPolyData()
 
-        self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=vis.FrameAffordanceItem, parent=folder, alpha=0.3)
+        self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
         self.valveAffordance.actor.SetUserTransform(valveFrame)
         self.valveFrame = vis.showFrame(valveFrame, 'valve frame', parent=self.valveAffordance, visible=False, scale=0.2)
 
@@ -459,7 +460,7 @@ class ValvePlannerDemo(object):
         z.addLine([0,0,0], [ lever_length , 0, 0], radius=pipe_radius)
         valveMesh = z.getPolyData()        
         
-        self.valveAffordance = vis.showPolyData(valveMesh, 'valve lever', color=[0.0, 1.0, 0.0], cls=vis.FrameAffordanceItem, parent=folder, alpha=0.3)
+        self.valveAffordance = vis.showPolyData(valveMesh, 'valve lever', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
         self.valveAffordance.actor.SetUserTransform(valveFrame)
         self.valveFrame = vis.showFrame(valveFrame, 'lever frame', parent=self.valveAffordance, visible=False, scale=0.2)
         

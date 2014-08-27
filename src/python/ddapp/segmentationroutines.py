@@ -11,13 +11,13 @@ from ddapp.filterUtils import *
 import ddapp.visualization as vis
 from ddapp import objectmodel as om
 from ddapp.transformUtils import getTransformFromAxes
+from ddapp import vtkAll as vtk
 
 
 from ddapp.footstepsdriver import FootstepsDriver
 
 import vtkNumpy
 import numpy as np
-import vtkPCLFiltersPython as pcl
 from shallowCopy import shallowCopy
 from debugVis import DebugData
 
@@ -168,7 +168,7 @@ def getDebugFolder():
 
 def applyLineFit(dataObj, distanceThreshold=0.02):
 
-    f = pcl.vtkPCLSACSegmentationLine()
+    f = vtk.vtkPCLSACSegmentationLine()
     f.SetInput(dataObj)
     f.SetDistanceThreshold(distanceThreshold)
     f.Update()
@@ -218,7 +218,7 @@ def labelPointDistanceAlongAxis(polyData, axis, origin=None, resultArrayName='di
 
 def applyEuclideanClustering(dataObj, clusterTolerance=0.05, minClusterSize=100, maxClusterSize=1e6):
 
-    f = pcl.vtkPCLEuclideanClusterExtraction()
+    f = vtk.vtkPCLEuclideanClusterExtraction()
     f.SetInput(dataObj)
     f.SetClusterTolerance(clusterTolerance)
     f.SetMinClusterSize(int(minClusterSize))
@@ -260,7 +260,7 @@ def extractClusters(polyData, clusterInXY=False, **kwargs):
 
 def applyVoxelGrid(polyData, leafSize=0.01):
 
-    v = pcl.vtkPCLVoxelGrid()
+    v = vtk.vtkPCLVoxelGrid()
     v.SetLeafSize(leafSize, leafSize, leafSize)
     v.SetInput(polyData)
     v.Update()
@@ -269,7 +269,7 @@ def applyVoxelGrid(polyData, leafSize=0.01):
 
 def labelOutliers(dataObj, searchRadius=0.03, neighborsInSearchRadius=10):
 
-    f = pcl.vtkPCLRadiusOutlierRemoval()
+    f = vtk.vtkPCLRadiusOutlierRemoval()
     f.SetInput(dataObj)
     f.SetSearchRadius(searchRadius)
     f.SetNeighborsInSearchRadius(int(neighborsInSearchRadius))
