@@ -2323,17 +2323,30 @@ def segmentDrillAuto(point1):
 
 def segmentDrillButton(point1):
     d = DebugData()
-    d.addSphere(point1, radius=0.005)
-    obj = updatePolyData(d.getPolyData(), 'sensed drill button', color=[1,0,0], visible=True)
+    d.addSphere([0,0,0], radius=0.005)
+    obj = updatePolyData(d.getPolyData(), 'sensed drill button', color=[0,0.5,0.5], visible=True)
+
+    # there is no orientation, but this allows the XYZ point to be queried
+    pointerTipFrame = transformUtils.frameFromPositionAndRPY(point1, [0,0,0])
+    obj.actor.SetUserTransform(pointerTipFrame)
     obj.addToView(app.getDRCView())
+
+    frameObj = updateFrame(obj.actor.GetUserTransform(), 'sensed drill button frame', parent=obj, scale=0.2, visible=False)
+    frameObj.addToView(app.getDRCView())
 
 
 def segmentPointerTip(point1):
     d = DebugData()
-    d.addSphere(point1, radius=0.005)
-    obj = updatePolyData(d.getPolyData(), 'sensed pointer tip', color=[0,0.5,0.5], visible=True)
+    d.addSphere([0,0,0], radius=0.005)
+    obj = updatePolyData(d.getPolyData(), 'sensed pointer tip', color=[0.5,0.5,0.0], visible=True)
+
+    # there is no orientation, but this allows the XYZ point to be queried
+    pointerTipFrame = transformUtils.frameFromPositionAndRPY(point1, [0,0,0])
+    obj.actor.SetUserTransform(pointerTipFrame)
     obj.addToView(app.getDRCView())
 
+    frameObj = updateFrame(obj.actor.GetUserTransform(), 'sensed pointer tip frame', parent=obj, scale=0.2, visible=False)
+    frameObj.addToView(app.getDRCView())
 
 
 def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDimensionsMax=[1.3, 0.1]):
