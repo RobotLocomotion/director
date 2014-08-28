@@ -20,7 +20,7 @@ classdef IKServer
         function obj = loadNominalData(obj)
             %nom_data = load([getDrakePath() '/examples/Atlas/data/atlas_bdi_fp.mat']);
             nom_data = load([getenv('DRC_BASE'), '/software/control/matlab/data/atlas_bdi_fp.mat']);
-            nq = obj.robot.getNumDOF();
+            nq = obj.robot.getNumPositions();
             obj.q_nom = nom_data.xstar(1:nq);
         end
 
@@ -38,7 +38,7 @@ classdef IKServer
             backCost = 1e4;
             neckCost = 1e6;
 
-            nq = obj.robot.getNumDOF();
+            nq = obj.robot.getNumPositions();
 
             cost = Point(obj.robot.getStateFrame(), 1);
 
@@ -140,7 +140,7 @@ classdef IKServer
 
             qdot_desired = maxDegreesPerSecond*pi/180;
 
-            nq = obj.robot.getNumDOF();
+            nq = obj.robot.getNumPositions();
             ts = xtraj.pp.breaks;
 
             sfine = linspace(ts(1), ts(end), 50);

@@ -35,7 +35,7 @@ if (do_setup)
 end;
 
 r = s.robot;
-nq = r.getNumDOF();
+nq = r.getNumPositions();
 q_nom = s.q_nom;
 q_zero = zeros(nq, 1);
 q_start = q_nom;
