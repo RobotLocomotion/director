@@ -286,7 +286,16 @@ if usePlanning:
     def sendSceneDepthRequest(repeatTime=0.0):
         sendDataRequest(lcmdrc.data_request_t.DEPTH_MAP_SCENE, repeatTime)
 
+    def sendFusedDepthRequest(repeatTime=0.0):
+        sendDataRequest(lcmdrc.data_request_t.FUSED_DEPTH, repeatTime)
+
+    def sendFusedHeightRequest(repeatTime=0.0):
+        sendDataRequest(lcmdrc.data_request_t.FUSED_HEIGHT, repeatTime)
+
     app.addToolbarMacro('scene height', sendSceneHeightRequest)
+    #app.addToolbarMacro('scene depth', sendSceneDepthRequest)
+    #app.addToolbarMacro('stereo height', sendFusedHeightRequest)
+    #app.addToolbarMacro('stereo depth', sendFusedDepthRequest)
 
 
     def drillTrackerOn():
