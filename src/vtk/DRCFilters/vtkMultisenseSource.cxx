@@ -166,7 +166,7 @@ public:
       std::cerr <<"ERROR: lcm is not good()" <<std::endl;
     }
 
-    bool useBotParamFromFile = true;
+    bool useBotParamFromFile = false;
 
     if (useBotParamFromFile)
       {
