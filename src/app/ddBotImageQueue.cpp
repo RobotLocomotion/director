@@ -75,7 +75,7 @@ bool ddBotImageQueue::initCameraData(const QString& cameraName, CameraData* came
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::init(ddLCMThread* lcmThread)
 {
-  bool useBotParamFromFile = true;
+  bool useBotParamFromFile = false;
 
   if (useBotParamFromFile)
   {
