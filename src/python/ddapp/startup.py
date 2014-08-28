@@ -204,7 +204,7 @@ if usePlanning:
 
     if useAtlasConvexHull:
         chullRobotModel, chullJointController = roboturdf.loadRobotModel('convex hull atlas', view, parent='planning',
-            urdfFile=os.path.join(ddapp.getDRCBaseDir(), 'software/drake/examples/Atlas/urdf/atlas_convex_hull.urdf'),
+            urdfFile=os.path.join(ddapp.getDRCBaseDir(), 'software/models/mit_gazebo_models/mit_robot_drake/model_convex_hull_robotiq_hands.urdf'),
             color=roboturdf.getRobotOrangeColor(), visible=False)
         playbackJointController.models.append(chullRobotModel)
 
