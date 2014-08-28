@@ -155,6 +155,7 @@ class DisparityPointCloudItem(vis.PolyDataItem):
 
         self.addProperty('Decimation', 2, attributes=om.PropertyAttributes(enumNames=['1', '2', '4', '8', '16']))
         self.addProperty('Remove outliers', False)
+        self.addProperty('Target FPS', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=10.0, singleStep=0.1))
 
         self.timer = TimerCallback()
         self.timer.callback = self.update
@@ -184,6 +185,9 @@ class DisparityPointCloudItem(vis.PolyDataItem):
 
         utime = self.imageManager.queue.getCurrentImageTime(self.cameraName)
         if utime == self.lastUtime:
+            return
+
+        if (utime - self.lastUtime < 1E6/self.getProperty('Target FPS')):
             return
 
         decimation = int(self.properties.getPropertyEnumValue('Decimation'))
@@ -2631,7 +2635,7 @@ def segmentDrillAlignedWithTable(point):
     #print dp
 
     if np.dot(axes[1], viewDirection) < 0:
-        print "flip the x-direction"
+        #print "flip the x-direction"
         axes[1] = -axes[1]
 
 
