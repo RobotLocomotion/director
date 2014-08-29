@@ -187,7 +187,9 @@ class DisparityPointCloudItem(vis.PolyDataItem):
         if utime == self.lastUtime:
             return
 
-        if (utime - self.lastUtime < 1E6/self.getProperty('Target FPS')):
+        if (utime < self.lastUtime ):
+            temp=0 # dummy
+        elif (utime - self.lastUtime < 1E6/self.getProperty('Target FPS')):
             return
 
         decimation = int(self.properties.getPropertyEnumValue('Decimation'))
