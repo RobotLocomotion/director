@@ -169,6 +169,9 @@ if usePerception:
     disparityPointCloud.addToView(view)
     om.addToObjectModel(disparityPointCloud, parentObj=om.findObjectByName('sensors'))
 
+    def createPointerTracker():
+        return trackers.PointerTracker(robotStateModel, disparityPointCloud)
+
 
 if useGrid:
     vis.showGrid(view, color=[0,0,0] if useLightColorScheme else [1,1,1], useSurface=useLightColorScheme)
@@ -501,4 +504,3 @@ app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view)
 viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
-
