@@ -66,7 +66,7 @@ def getCurrentView():
 
 def cropToLineSegment(polyData, point1, point2):
 
-    line = point2 - point1
+    line = np.array(point2) - np.array(point1)
     length = np.linalg.norm(line)
     axis = line / length
 
@@ -2917,8 +2917,8 @@ def distanceToLine(x0, x1, x2):
 def labelDistanceToLine(polyData, linePoint1, linePoint2, resultArrayName='distance_to_line'):
 
     x0 = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
-    x1 = linePoint1
-    x2 = linePoint2
+    x1 = np.array(linePoint1)
+    x2 = np.array(linePoint2)
 
     numerator = np.sqrt(np.sum(np.cross((x0 - x1), (x0-x2))**2, axis=1))
     denom = np.linalg.norm(x2-x1)
