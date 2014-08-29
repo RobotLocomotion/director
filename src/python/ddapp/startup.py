@@ -334,21 +334,10 @@ if usePlanning:
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                     perception.multisenseDriver, view, robotStateJointController)
 
-    #drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
-    #                lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-    #                fitDrillMultisense, robotStateJointController,
-    #                playPlans, showPose, cameraview, segmentationpanel)
-
-    def constructDrillDemo():
-        imp.reload(drilldemo)
-        global drillDemo, d
-        drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+    drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
-        d = drillDemo
-    constructDrillDemo()
-
 
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -464,7 +453,7 @@ if useImageViewDemo:
         imageView.view.show()
         imagePicker.stop()
 
-    showImageOverlay()#700)
+    #showImageOverlay()
 
 
 screengrabberpanel.init(view)
@@ -536,7 +525,7 @@ ms.setProperty('Visible',False)
 
 
 spc = om.findObjectByName( 'stereo point cloud' )
-spc.setProperty('Point Size',4)
+spc.setProperty('Point Size',2)
 spc.setProperty('Visible',True)
 spc.setProperty('Decimation',"1")
 
@@ -656,17 +645,4 @@ def projectDrillDemoInCamera():
     #drawObjectInCamera('right pointer',visible=False)
 
     v = imageView.view
-    v.render()
-
-
-# test([0,0,0],[40,0,0])
-# test([1024,1024,0],[40,0,0])
-def test(pos, rpy):
-
-
-    imageView = cameraview.views['CAMERA_LEFT']
-    imageView.imageActor.SetOpacity(.15)
-    v = imageView.view
-    tf = transformUtils.frameFromPositionAndRPY(pos,rpy)
-    vis.showFrame( tf , 'dfsd',view=v, visible=True, scale = 400)
     v.render()
