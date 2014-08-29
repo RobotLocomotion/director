@@ -575,36 +575,41 @@ class DrillPlannerDemo(object):
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
 
+    def planBothRaisePowerOn(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'both raise power on', side=self.graspingHand)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
 
     def planDrillRaisePowerOn(self):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill in camera - 2014', side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill raise power on', side=self.graspingHand)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
     def planPointerRaisePowerOn(self):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill in camera - 2014 pointer', side=self.pointerHand )
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'pointer raise power on', side=self.pointerHand )
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
     def planPointerLowerPowerOn(self):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'one hand down - 2014', side=self.pointerHand )
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'pointer down', side=self.pointerHand )
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
 
     def planDrillLowerSafe(self):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'one hand down with drill - 2014', side=self.graspingHand )
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill down', side=self.graspingHand )
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
 
     def planDrillRaiseForCutting(self):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill near target - 2014', side=self.graspingHand )
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill raise for cutting', side=self.graspingHand )
 
         if (self.drill.model == 'dewalt_barrel'):
            endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
