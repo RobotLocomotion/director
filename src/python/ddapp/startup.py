@@ -669,4 +669,4 @@ def test(pos, rpy):
     v = imageView.view
     tf = transformUtils.frameFromPositionAndRPY(pos,rpy)
     vis.showFrame( tf , 'dfsd',view=v, visible=True, scale = 400)
-    v.render()>>>>>>> cruft
+    v.render()

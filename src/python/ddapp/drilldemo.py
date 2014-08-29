@@ -676,9 +676,9 @@ class DrillPlannerDemo(object):
             pointerSensedTransformTemp = transformUtils.copyFrame(om.findObjectByName("sensed pointer tip").actor.GetUserTransform())
             pointerSensedTransform = transformUtils.frameFromPositionAndRPY(pointerSensedTransformTemp.GetPosition() ,  np.array(transformUtils.rollPitchYawFromTransform(pointerTransform))*180/np.pi )
 
-            vis.updateFrame(handTransform, "handTransform", visible=True)
-            vis.updateFrame(pointerTransform, "pointerTransform", visible=True)
-            vis.updateFrame(pointerSensedTransform, "pointerSensedTransform", visible=True)
+            vis.updateFrame(handTransform, "handTransform", visible=False)
+            vis.updateFrame(pointerTransform, "pointerTransform", visible=False)
+            vis.updateFrame(pointerSensedTransform, "pointerSensedTransform", visible=False)
             pointerTransform = transformUtils.copyFrame(pointerSensedTransform)
 
         pointerToHandLinkFrame = vtk.vtkTransform()
