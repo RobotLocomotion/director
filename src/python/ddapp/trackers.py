@@ -78,5 +78,5 @@ class PointerTracker(object):
         if self.tipPosition is None:
             self.cleanup()
 
-    def getPointerTip():
+    def getPointerTip(self):
         return self.tipPosition
