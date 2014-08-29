@@ -1,6 +1,7 @@
 ''' Convienence methods on VTK routines only '''
 
 import ddapp.vtkAll as vtk
+import ddapp.vtkNumpy as vnp
 from ddapp.shallowCopy import shallowCopy
 import numpy as np
 
@@ -63,3 +64,25 @@ def computeNormals(polyData, featureAngle=45):
     normals.SetInput(polyData)
     normals.Update()
     return shallowCopy(normals.GetOutput())
+
+
+def cleanPolyData(polyData):
+    clean = vtk.vtkCleanPolyData()
+    clean.SetInput(polyData)
+    clean.Update()
+    return shallowCopy(clean.GetOutput())
+
+
+def addNanLabels(polyData):
+    '''
+    adds is_nan label to polyData
+    '''
+    pts = vnp.getNumpyFromVtk(polyData, 'Points')
+    labels = np.isnan(pts).any(axis=1)
+    vnp.addNumpyToVtk(polyData, np.array(labels, dtype=np.int32), 'is_nan')
+
+
+def removeNanPoints(polyData):
+    polyData = shallowCopy(polyData)
+    addNanLabels(polyData)
+    return thresholdPoints(polyData, 'is_nan', [0, 0])
