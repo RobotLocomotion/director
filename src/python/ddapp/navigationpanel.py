@@ -160,8 +160,8 @@ class NavigationPanel(object):
         self.sendReadyMessage()
 
         p1 = [0,0,0.85]
-        init_frame = transformUtils.frameFromPositionAndRPY( p1 , [0,0,0] )
-        vis.updateFrame(init_frame, "init pose", parent="navigation")
+        #init_frame = transformUtils.frameFromPositionAndRPY( p1 , [0,0,0] )
+        #vis.updateFrame(init_frame, "init pose", parent="navigation")
         self.sendInitMessage(p1, 0)
 
 
@@ -170,8 +170,8 @@ class NavigationPanel(object):
 
         yaw = math.atan2( p2[1] - p1[1] , p2[0] - p1[0] )
         p1[2] = p1[2] + 0.85
-        init_frame = transformUtils.frameFromPositionAndRPY(p1, [0,0,yaw*180/math.pi])
-        vis.updateFrame(init_frame, "init pose", parent="navigation")
+        #init_frame = transformUtils.frameFromPositionAndRPY(p1, [0,0,yaw*180/math.pi])
+        #vis.updateFrame(init_frame, "init pose", parent="navigation")
         self.sendInitMessage(p1, yaw)
 
 
