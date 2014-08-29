@@ -506,80 +506,14 @@ viewBehaviors = viewbehaviors.ViewBehaviors(view)
 viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
 
 
-
-
-#polyData = io.readPolyData(os.path.expanduser('~/Desktop/pointer_tip.vtp'))
-#obj = vis.showPolyData(polyData, 'pointcloud snapshot', colorByName='rgb_colors', visible=True, parent="segmentation")#.getDebugFolder())
-#obj.addToView(segmentation.getSegmentationView())
-
-
-
-
-#d = DebugData()
-#pointer_tip = ([ 0.53968638, -0.1111497 ,  1.31205988])
-#d.addSphere(pointer_tip, radius=0.005)
-#segmentation.showPolyData(d.getPolyData(), 'pointer tip', color=[1,0,0], visible=True)
-
-ms= om.findObjectByName( 'Multisense' )
-ms.setProperty('Visible',False)
-
-
-spc = om.findObjectByName( 'stereo point cloud' )
-spc.setProperty('Point Size',2)
-spc.setProperty('Visible',True)
-spc.setProperty('Decimation',"1")
-
-
-def prepDrill():
-    segmentation.segmentPointerTip([0.7237524390220642, -0.12707303034860637, 1.306993426103352])
-    segmentation.segmentDrillButton([0.7672672271728516, -0.05982359126210213, 1.2797166109085083])
-
-    drillDemo.spawnDrillAffordance()
-    # correct:
-    #segmentationpanel._segmentationPanel.setDrillInHandParams(97.2,
-    #                                                              0.03,
-    #                                                              0.04,
-    #                                                              -0.023,
-    #                                                              False)
-
-    segmentationpanel._segmentationPanel.setDrillInHandParams(80,
-                                                                  -0.025,
-                                                                  -0.235,
-                                                                  -0.20,
-                                                                  False)
-
-
-    #drillDemo.drill.initXYZ = [0.7661142141309257, -0.057907154817146415, 1.3391287511643526]
-    #drillDemo.drill.initRPY = [-1.034571619393171, 2.146372188183555, -58.31938760953152]
-
-    drillDemo.moveDrillToHand()
-
-def projectHand():
-    imageView = cameraview.views['CAMERA_LEFT']
-    imageView.imageActor.SetOpacity(.5)
-    v = imageView.view
-    q = cameraview.imageManager.queue
-    localToCameraT = vtk.vtkTransform()
-    q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
-    robotiq = om.findObjectByName('left robotiq')
-    robotiqToLocalT = transformUtils.copyFrame(robotiq.actor.GetUserTransform())
-    robotiqPolyDataOriginal = robotiq.polyData
-    rpd = robotiqPolyDataOriginal
-    rpd = filterUtils.transformPolyData(rpd, robotiqToLocalT)
-    rpd = filterUtils.transformPolyData(rpd, localToCameraT)
-    q.projectPoints('CAMERA_LEFT', rpd)
-    vis.showPolyData(rpd, 'robotiq in camera', view=v, color=[1,1,0])
-    v.render()
-
-def spawnHandFrame(side='left'):
+# Drill Demo Functions for in-image rendering:
+def spawnHandAtCurrentLocation(side='left'):
     if (side is 'left'):
         tf = transformUtils.copyFrame( getLinkFrame( 'l_hand_face') )
         handFactory.placeHandModelWithTransform( tf , app.getCurrentView(), 'left')
     else:
         tf = transformUtils.copyFrame( getLinkFrame( 'right_pointer_tip') )
         handFactory.placeHandModelWithTransform( tf , app.getCurrentView(), 'right')
-
-
 
 def drawFrameInCamera(t, frameName='new frame',visible=True):
 
@@ -612,7 +546,6 @@ def drawObjectInCamera(objectName,visible=True):
     pd = filterUtils.transformPolyData(pd, localToCameraT)
     q.projectPoints('CAMERA_LEFT', pd)
     vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)
-
 
 def projectDrillDemoInCamera():
     q = om.findObjectByName('camera overlay')
