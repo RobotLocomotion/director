@@ -401,7 +401,7 @@ class HistoricalLCMLoader(object):
         Try to decode an LCM message using its historical definitions. Uses a MRU (most recently used) queue of commit SHAs to try to ensure that repeated calls for messages of the same type are fast
         """
         if not self._initialized:
-            print "Warning: Possible out-of-date LCM message received. I will not try to decode the message using older versions of the type definition. This will be slow the first time it happens."
+            print "Warning: Possible out-of-date LCM message received. I will now try to decode the message using older versions of the type definition. This will be slow the first time it happens."
             self._initialized = True
         i = 0
         if not type_name in self._mru_shas_cache:
