@@ -32,6 +32,7 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
                                'Max Forward Step': 0.40,
                                'Max Step Width': 0.4,
                                'Behavior': 0,
+                               'Leading Foot': 1,
                                'Drake Swing Speed': 0.2,
                                'Drake Instep Shift': 0.0275,
                                'Drake Min Hold Time': 2.0},
@@ -41,6 +42,7 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
                                  'Max Forward Step': 0.17,
                                  'Max Step Width': 0.32,
                                  'Behavior': 2,
+                                 'Leading Foot': 1,
                                  'Drake Swing Speed': 0.15,
                                  'Drake Instep Shift': 0.015,
                                  'Drake Min Hold Time': 1.4}}
@@ -142,6 +144,9 @@ class FootstepsDriver(object):
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
         self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
+        self.params.addProperty('Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
+        self.leading_foot_map = {0: lcmdrc.footstep_plan_params_t.LEAD_LEFT,
+                                 1: lcmdrc.footstep_plan_params_t.LEAD_RIGHT}
         # self.params.addProperty('Map Command', 0, attributes=om.PropertyAttributes(enumNames=['Full Heightmap', 'Flat Ground', 'Z Normals']))
         self.params.addProperty('Map Mode', 0, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
         self.map_mode_map = [
@@ -516,7 +521,7 @@ class FootstepsDriver(object):
         # msg.params.use_map_normals = self.params.properties.normals_source == 0
         msg.params.map_mode = self.map_mode_map[self.params.properties.map_mode]
         # msg.params.map_command = self.map_command_lcm_map[self.params.properties.map_command]
-        msg.params.leading_foot = msg.params.LEAD_RIGHT
+        msg.params.leading_foot = self.leading_foot_map[self.params.properties.leading_foot]
         msg.default_step_params = self.getDefaultStepParams()
         return msg
 
