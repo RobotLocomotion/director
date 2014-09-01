@@ -257,20 +257,36 @@ class HistoricalLCMLoader(object):
         self.package_name = package_name
         self.lcmtypes_path = lcmtypes_path
         self.repo_path = repo_path
-        self.tmpdir = os.path.join(tempfile.gettempdir(), 'temporary_lcmtypes')
-        if not os.path.exists(self.tmpdir):
-            os.mkdir(self.tmpdir)
         self.type_cache = {}
         self._mru_shas_cache = {}
         self._initialized = False
+        self._build_dir = None
+        self._tmpdir = None
+        self._source_dir = None
 
-        self.build_dir = os.path.join(self.tmpdir, 'build')
-        if not os.path.exists(self.build_dir):
-            os.mkdir(self.build_dir)
+    @property
+    def build_dir(self):
+        if self._build_dir is None:
+            self._build_dir = os.path.join(self.tmpdir, 'build')
+            if not os.path.exists(self._build_dir):
+                os.mkdir(self._build_dir)
+        return self._build_dir
 
-        self.source_dir = os.path.join(self.tmpdir, 'source')
-        if not os.path.exists(self.source_dir):
-            os.mkdir(self.source_dir)
+    @property
+    def source_dir(self):
+        if self._source_dir is None:
+            self._source_dir = os.path.join(self.tmpdir, 'source')
+            if not os.path.exists(self._source_dir):
+                os.mkdir(self._source_dir)
+        return self._source_dir
+
+    @property
+    def tmpdir(self):
+        if self._tmpdir is None:
+            self._tmpdir = os.path.join(tempfile.gettempdir(), 'temporary_lcmtypes')
+            if not os.path.exists(self._tmpdir):
+                os.mkdir(self._tmpdir)
+        return self._tmpdir
 
     def buildTypeAtSHA(self, type_name, sha):
         """
