@@ -69,11 +69,11 @@ class PropertySet(object):
         self.callbacks.disconnect(callbackId)
 
     def getProperty(self, propertyName):
-        assert self.hasProperty(propertyName)
+        assert self.hasProperty(propertyName), "Missing property: {:s}".format(propertyName)
         return self._properties[propertyName]
 
     def getPropertyEnumValue(self, propertyName):
-        assert self.hasProperty(propertyName)
+        assert self.hasProperty(propertyName), "Missing property: {:s}".format(propertyName)
         return self._attributes[propertyName].enumNames[self._properties[propertyName]]
 
     def addProperty(self, propertyName, propertyValue, attributes=None):
@@ -87,7 +87,7 @@ class PropertySet(object):
         self.callbacks.process(self.PROPERTY_ADDED_SIGNAL, self, propertyName)
 
     def setProperty(self, propertyName, propertyValue):
-        assert self.hasProperty(propertyName)
+        assert self.hasProperty(propertyName), "Missing property: {:s}".format(propertyName)
 
         names = self.getPropertyAttribute(propertyName, 'enumNames')
         if names and type(propertyValue) != int:
@@ -99,13 +99,13 @@ class PropertySet(object):
         self.callbacks.process(self.PROPERTY_CHANGED_SIGNAL, self, propertyName)
 
     def getPropertyAttribute(self, propertyName, propertyAttribute):
-        assert self.hasProperty(propertyName)
+        assert self.hasProperty(propertyName), "Missing property: {:s}".format(propertyName)
         return getattr(self._attributes[propertyName], propertyAttribute)
 
     def setPropertyAttribute(self, propertyName, propertyAttribute, value):
-        assert self.hasProperty(propertyName)
+        assert self.hasProperty(propertyName), "Missing property: {:s}".format(propertyName)
         attributes = self._attributes[propertyName]
-        assert hasattr(attributes, propertyAttribute)
+        assert hasattr(attributes, propertyAttribute), "Missing attribute: {:s}".format(propertyAttribute)
         setattr(attributes, propertyAttribute, value)
         self.callbacks.process(self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL, self, propertyName, propertyAttribute)
 
