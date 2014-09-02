@@ -15,7 +15,9 @@ set(DRAKE_LIBRARIES
   )
 
 set(DRAKE_INCLUDE_DIRS
+  ${DRAKE_SOURCE_DIR}/util
   ${DRAKE_SOURCE_DIR}/systems/plants
+  ${DRAKE_SOURCE_DIR}/systems/plants/joints
   ${DRAKE_SOURCE_DIR}/systems/plants/tinyxml
   )
 
