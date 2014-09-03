@@ -395,31 +395,37 @@ class CameraImageView(object):
 
     def rayDebug(self, displayPoint):
 
-        pickedPoint = self.getImagePixel(displayPoint)
-        imageUtime = self.imageManager.getUtime(self.imageName)
-
-        position,ray = self.getPositionAndRay(pickedPoint, imageUtime)
-
+        imagePixel = self.getImagePixel(displayPoint)
+        cameraPosition, ray = self.getWorldPositionAndRay(imagePixel)
 
         if self.rayCallback:
-            self.rayCallback(position, ray)
+            self.rayCallback(cameraPosition, ray)
 
 
-    def getPositionAndRay(self, pickedPoint, imageUtime):
+    def getWorldPositionAndRay(self, imagePixel, imageUtime=None):
+        '''
+        Given an XY image pixel, computes an equivalent ray in the world
+        coordinate system using the camera to local transform at the given
+        imageUtime.  If imageUtime is None, then the utime of the most recent
+        image is used.
+
+        Returns the camera xyz position in world, and a ray unit vector.
+        '''
+        if imageUtime is None:
+            imageUtime = self.imageManager.getUtime(self.imageName)
+
         # input is pixel u,v, output is unit x,y,z in camera coordinates
-        pickedPoint = self.imageManager.queue.unprojectPixel(self.imageName, pickedPoint[0], pickedPoint[1])
+        cameraPoint = self.imageManager.queue.unprojectPixel(self.imageName, imagePixel[0], imagePixel[1])
 
         cameraToLocal = vtk.vtkTransform()
         self.imageManager.queue.getTransform(self.imageName, 'local', imageUtime, cameraToLocal)
 
-        p = range(3)
-        cameraToLocal.TransformPoint(pickedPoint, p)
-        ray = np.array(p) - np.array(cameraToLocal.GetPosition())
+        p = np.array(cameraToLocal.TransformPoint(cameraPoint))
+        cameraPosition = np.array(cameraToLocal.GetPosition())
+        ray = p - cameraPosition
         ray /= np.linalg.norm(ray)
 
-        position = np.array(cameraToLocal.GetPosition())
-
-        return position, ray
+        return cameraPosition, ray
 
 
     def filterEvent(self, obj, event):

@@ -190,7 +190,7 @@ class DrillPlannerDemo(object):
 
         pickedPoint = msg.cxy
         self.tagImageUtime = msg.utime
-        self.tagPosition, self.tagRay = self.cameraView.views['CAMERA_LEFT'].getPositionAndRay(pickedPoint, self.tagImageUtime)
+        self.tagPosition, self.tagRay = self.cameraView.views['CAMERA_LEFT'].getWorldPositionAndRay(pickedPoint, self.tagImageUtime)
 
         # don't want to automatically update - in case of a misdetection:
         updateAutomatically = True
