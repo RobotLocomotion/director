@@ -329,7 +329,7 @@ class DrillPlannerDemo(object):
         objectTransform = transformUtils.copyFrame( self.drill.graspFrame.transform )
         self.drill.relativeStanceTransform = transformUtils.copyFrame( transformUtils.frameFromPositionAndRPY( self.drill.relativeStanceXYZ , self.drill.relativeStanceRPY ) )
         robotStance = self.computeRobotStanceFrame( objectTransform, self.drill.relativeStanceTransform )
-        self.drill.stanceFrame = vis.updateFrame(robotStance, 'drill stance', parent=self.drill.affordance, visible=True, scale=0.2)
+        self.drill.stanceFrame = vis.updateFrame(robotStance, 'drill stance', parent=self.drill.affordance, visible=False, scale=0.2)
         self.drill.stanceFrame.addToView(app.getDRCView())
 
 
@@ -351,7 +351,7 @@ class DrillPlannerDemo(object):
 
         self.drill.drillToBitTransform = transformUtils.copyFrame(t)
         t.Concatenate(transformUtils.copyFrame( self.drill.frame.transform))
-        self.drill.bitFrame = vis.updateFrame(t, 'drill bit', parent=self.drill.affordance, visible=True, scale=0.05)
+        self.drill.bitFrame = vis.updateFrame(t, 'drill bit', parent=self.drill.affordance, visible=False, scale=0.05)
         self.drill.bitFrame.addToView(app.getDRCView())
 
 
