@@ -73,6 +73,11 @@ def cleanPolyData(polyData):
     return shallowCopy(clean.GetOutput())
 
 
+def hasNanPoints(polyData):
+    pts = vnp.getNumpyFromVtk(polyData, 'Points')
+    return np.isnan(pts).any()
+
+
 def addNanLabels(polyData):
     '''
     adds is_nan label to polyData
