@@ -133,6 +133,7 @@ class ImagePointPicker(object):
         self.drawLines = drawLines
         self.annotationObj = None
         self.annotationFunc = callback
+        self.doubleClickCallback = None
         self.clear()
 
     def start(self):
@@ -149,6 +150,7 @@ class ImagePointPicker(object):
 
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseMove)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonPress)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyRelease)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
@@ -157,6 +159,10 @@ class ImagePointPicker(object):
         self.view.vtkWidget().removeEventFilter(self.eventFilter)
 
     def onEvent(self, obj, event):
+
+        if event.type() == QtCore.QEvent.MouseButtonDblClick and event.button() == QtCore.Qt.LeftButton:
+            if self.doubleClickCallback:
+                self.doubleClickCallback(vis.mapMousePosition(obj, event), event.modifiers(), self.imageView)
 
         if event.type() in (QtCore.QEvent.MouseMove, QtCore.QEvent.MouseButtonPress, QtCore.QEvent.Wheel):
             self.updateCursor(vis.mapMousePosition(obj, event))
@@ -174,11 +180,11 @@ class ImagePointPicker(object):
 
         if event.type() == QtCore.QEvent.MouseMove:
             self.onMouseMove(vis.mapMousePosition(obj, event), event.modifiers())
-
             self.imageView.rayDebug(vis.mapMousePosition(obj, event))
 
         elif event.type() == QtCore.QEvent.MouseButtonPress:
             self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
+
 
     def clear(self):
         self.annotationObj = None
@@ -192,6 +198,7 @@ class ImagePointPicker(object):
 
     def onMousePress(self, displayPoint, modifiers=None):
         self.points.append(self.hoverPos)
+
 
     def finish(self):
         points = [p.copy() for p in self.points]
