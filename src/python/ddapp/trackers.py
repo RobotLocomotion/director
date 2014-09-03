@@ -62,13 +62,14 @@ class PointerTracker(object):
     def cleanup(self):
         om.removeFromObjectModel(om.findObjectByName('segmentation'))
 
-    def updateFit(self):
+    def updateFit(self, polyData=None):
 
         #if not self.stereoPointCloudItem.getProperty('Visible'):
         #    return
 
-        self.stereoPointCloudItem.update()
-        polyData = self.stereoPointCloudItem.polyData
+        if not polyData:
+            self.stereoPointCloudItem.update()
+            polyData = self.stereoPointCloudItem.polyData
 
         if not polyData or not polyData.GetNumberOfPoints():
             self.cleanup()
