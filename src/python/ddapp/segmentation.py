@@ -4224,18 +4224,26 @@ def extractPointsAlongClickRay(displayPoint, distanceToLineThreshold=0.3, addDeb
 def extractPointsAlongClickRay(position, ray, polyData=None):
 
     #segmentationObj = om.findObjectByName('pointcloud snapshot')
-    if (polyData is None):
+    if polyData is None:
       polyData = getCurrentRevolutionData()
+
+    if not polyData or not polyData.GetNumberOfPoints():
+        return None
 
     polyData = labelDistanceToLine(polyData, position, position + ray)
 
-    distanceToLineThreshold = 0.05
+    distanceToLineThreshold = 0.025
 
     # extract points near line
     polyData = thresholdPoints(polyData, 'distance_to_line', [0.0, distanceToLineThreshold])
+    if not polyData.GetNumberOfPoints():
+        return None
+
 
     polyData = labelPointDistanceAlongAxis(polyData, ray, origin=position, resultArrayName='dist_along_line')
     polyData = thresholdPoints(polyData, 'dist_along_line', [0.20, 1e6])
+    if not polyData.GetNumberOfPoints():
+        return None
 
     updatePolyData(polyData, 'ray points', colorByName='distance_to_line')
 
@@ -4245,7 +4253,7 @@ def extractPointsAlongClickRay(position, ray, polyData=None):
     d = DebugData()
     intersectionPoint = points[dists.argmin()]
 
-    d.addSphere( intersectionPoint, radius=0.01)
+    d.addSphere( intersectionPoint, radius=0.005)
     d.addLine(position, intersectionPoint)
     obj = updatePolyData(d.getPolyData(), 'intersecting ray', visible=True, color=[0,1,0])
     obj.actor.GetProperty().SetLineWidth(2)
