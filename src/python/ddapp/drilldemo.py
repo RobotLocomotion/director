@@ -621,7 +621,7 @@ class DrillPlannerDemo(object):
 
     def planBothRaisePowerOn(self):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'both raise power on', side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'both raise power on')
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
@@ -1218,6 +1218,41 @@ class DrillPlannerDemo(object):
         self.planNominalTurnOn(playbackNominal=False)
         self.planNominalCut(playbackNominal=False)
         self.playNominalPlan()
+
+
+
+    def autonomousExecutePickup(self):
+
+        self.planFromCurrentRobotState = True
+        self.visOnly = False
+
+        taskQueue = AsyncTaskQueue()
+        taskQueue.addTask(self.turnPointwiseOff)
+
+        # walk up
+        taskQueue.addTask(self.printAsync('neck pitch down'))
+        taskQueue.addTask(self.sendNeckPitchLookDown)
+        taskQueue.addTask(self.userPrompt('please fit drill. continue? y/n: '))
+        taskQueue.addTask(self.findDrillAffordance)
+
+        graspPlanFunctions = [self.planPreGrasp, self.planReach, self.planGrasp]
+        for planFunc in graspPlanFunctions:
+            taskQueue.addTask(planFunc)
+            taskQueue.addTask(self.userPrompt('grasp plan continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.closeHand, 'left'))
+
+        taskQueue.addTask(self.planStand)
+        taskQueue.addTask(self.userPrompt('lift off table? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
+
+
+        taskQueue.addTask(self.planBothRaisePowerOn)
+        taskQueue.addTask(self.userPrompt('raise for pressing? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
+
+        return taskQueue
+
 
     def autonomousExecute(self):
 
