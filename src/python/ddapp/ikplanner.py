@@ -854,8 +854,8 @@ class IKPlanner(object):
 
         startPose = np.array(stateJointController.q)
         endPose = self.mergePostures(startPose, goalPoseJoints)
-        self.computePostureGoal(startPose, endPose)
-        #self.computeJointPostureGoal(startPose, goalPoseJoints)
+        #self.computePostureGoal(startPose, endPose)
+        self.computeJointPostureGoal(startPose, goalPoseJoints)
 
 
     def addPostureGoalListener(self, stateJointController):

@@ -114,6 +114,7 @@ class DrillPlannerDemo(object):
         self.cameraView = cameraView
         self.segmentationpanel = segmentationpanel
         self.pointerTracker = None
+        self.projectCallback = None
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
         defaultGraspingHand = "left"
@@ -236,6 +237,9 @@ class DrillPlannerDemo(object):
             d.addSphere((0,0,0), radius=0.005)
             obj = vis.updatePolyData(d.getPolyData(), 'sensed pointer tip', parent='segmentation', color=[1,0,0])
             obj.actor.SetUserTransform(t)
+
+        if self.projectCallback:
+            self.projectCallback()
 
 
     def refitDrillWallFromTag(self):
