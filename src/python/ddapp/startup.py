@@ -439,7 +439,7 @@ if useImageViewDemo:
     imagePicker = ImagePointPicker(imageView)
 
     _prevParent = imageView.view.parent()
-    def showImageOverlay(size=400):
+    def showImageOverlay(size=600):
         imageView.view.hide()
         imageView.view.setParent(view)
         imageView.view.resize(size, size)
@@ -455,6 +455,7 @@ if useImageViewDemo:
 
     #showImageOverlay()
 
+    imagePicker.doubleClickCallback = drillDemo.onImageViewDoubleClick
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
@@ -579,3 +580,26 @@ def projectDrillDemoInCamera():
 
     v = imageView.view
     v.render()
+
+
+showImageOverlay()
+drillDemo.pointerTracker = createPointerTracker()
+drillDemo.projectCallback = projectDrillDemoInCamera
+drillYawPreTransform = vtk.vtkTransform()
+drillYawPreTransform.PostMultiply()
+def onDrillYawSliderChanged(value):
+    yawOffset = value - 180.0
+    drillButtonFrame = om.findObjectByName('drill button')
+    buttonPitch = drillButtonFrame.transform().GetOrientation()[0]
+
+
+
+app.getMainWindow().macrosToolBar().addWidget(QtGui.QLabel('drill yaw:'))
+slider = QtGui.QSlider(QtCore.Qt.Horizontal)
+slider.setMaximum(360)
+slider.setValue(180)
+slider.setMaximumWidth(200)
+#slider.connect('valueChanged(int)', onDrillYawSliderChanged)
+
+app.getMainWindow().macrosToolBar().addWidget(slider)
+
