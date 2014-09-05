@@ -298,6 +298,99 @@ class PolyDataItem(om.ObjectModelItem):
         view.render()
 
 
+
+class TextItem(om.ObjectModelItem):
+
+    def __init__(self, name, text='', view=None):
+
+        om.ObjectModelItem.__init__(self, name)
+
+        self.views = []
+        self.actor = vtk.vtkTextActor()
+        prop = self.actor.GetTextProperty()
+        prop.SetFontSize(18)
+        self.actor.SetPosition(10,10)
+        self.actor.SetInput(text)
+
+        self.addProperty('Visible', True)
+        self.addProperty('Text', text)
+        self.addProperty('Position', [10, 10], attributes=om.PropertyAttributes(minimum=0, maximum=3000, singleStep=1))
+        self.addProperty('Font Size', 18, attributes=om.PropertyAttributes(minimum=6, maximum=128, singleStep=1))
+        self.addProperty('Bold', False)
+        self.addProperty('Italic', False)
+
+        if view:
+            self.addToView(view)
+
+
+    def addToView(self, view):
+        if view in self.views:
+            return
+
+        self.views.append(view)
+        view.renderer().AddActor(self.actor)
+        view.render()
+
+    def _renderAllViews(self):
+        for view in self.views:
+            view.render()
+
+    def onRemoveFromObjectModel(self):
+        self.removeFromAllViews()
+
+    def removeFromAllViews(self):
+        for view in list(self.views):
+            self.removeFromView(view)
+
+    def removeFromView(self, view):
+        assert view in self.views
+        self.views.remove(view)
+        view.renderer().RemoveActor(self.actor)
+        view.render()
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Visible':
+            self.actor.SetVisibility(self.getProperty(propertyName))
+            self._renderAllViews()
+        elif propertyName == 'Text':
+            view = app.getCurrentRenderView()
+            self.actor.SetInput(self.getProperty(propertyName))
+        elif propertyName == 'Position':
+            pos = self.getProperty(propertyName)
+            self.actor.SetPosition(pos[0], pos[1])
+        elif propertyName == 'Font Size':
+            self.actor.GetTextProperty().SetFontSize(self.getProperty(propertyName))
+        elif propertyName == 'Bold Size':
+            self.actor.GetTextProperty().SetBold(self.getProperty(propertyName))
+        elif propertyName == 'Italic':
+            self.actor.GetTextProperty().SetItalic(self.getProperty(propertyName))
+
+
+        if self.getProperty('Visible'):
+            self._renderAllViews()
+
+
+def showText(text, name, fontSize=18, position=(10, 10), parent=None, view=None):
+
+    view = view or app.getCurrentRenderView()
+    assert view
+
+    item = TextItem(name, text, view=view)
+    item.setProperty('Font Size', fontSize)
+    item.setProperty('Position', list(position))
+
+    if isinstance(parent, str):
+        parentObj = om.getOrCreateContainer(parent)
+    else:
+        parentObj = parent
+
+    om.addToObjectModel(item, parentObj)
+    return item
+
+
 class FrameItem(PolyDataItem):
 
     def __init__(self, name, transform, view):
