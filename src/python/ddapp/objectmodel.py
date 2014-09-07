@@ -17,15 +17,16 @@ class Icons(object):
 
 class ObjectModelItem(object):
 
-    def __init__(self, name, icon=Icons.Robot, tree=None, properties=None):
 
+    def __init__(self, name, icon=Icons.Robot, properties=None):
+
+        self._tree = None
         self.properties = properties or PropertySet()
         self.properties.connectPropertyChanged(self._onPropertyChanged)
         self.properties.connectPropertyAdded(self._onPropertyAdded)
         self.properties.connectPropertyAttributeChanged(self._onPropertyAttributeChanged)
 
         self.icon = icon
-        self._tree = tree
         self.addProperty('Name', name, attributes=PropertyAttributes(hidden=True))
 
     def setIcon(self, icon):
