@@ -26,9 +26,19 @@ class Icons(object):
 
 class ObjectModelItem(object):
 
+    def __getstate__(self):
+        #print 'getstate called on:', self
+        d = dict(properties=self.properties)
+        return d
+
+    def __setstate__(self, state):
+        #print 'setstate called on:', self
+        self._tree = None
+        self.properties = state['properties']
 
     def __init__(self, name, icon=Icons.Robot, properties=None):
 
+        #print 'init called on:', self
         self._tree = None
         self.properties = properties or PropertySet()
         self.properties.connectPropertyChanged(self._onPropertyChanged)
