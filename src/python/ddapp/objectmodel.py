@@ -5,15 +5,24 @@ from ddapp.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelp
 
 class Icons(object):
 
-  Directory = QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_DirIcon)
-  Eye = QtGui.QIcon(':/images/eye_icon.png')
-  EyeOff = QtGui.QIcon(':/images/eye_icon_gray.png')
-  Matlab = QtGui.QIcon(':/images/matlab_logo.png')
-  Robot = QtGui.QIcon(':/images/robot_icon.png')
-  Laser = QtGui.QIcon(':/images/laser_icon.jpg')
-  Feet = QtGui.QIcon(':/images/feet.png')
-  Hand = QtGui.QIcon(':/images/claw.png')
+  Directory = int(QtGui.QStyle.SP_DirIcon)
+  Eye = ':/images/eye_icon.png'
+  EyeOff = ':/images/eye_icon_gray.png'
+  Matlab = ':/images/matlab_logo.png'
+  Robot = ':/images/robot_icon.png'
+  Laser = ':/images/laser_icon.jpg'
+  Feet = ':/images/feet.png'
+  Hand = ':/images/claw.png'
 
+  @staticmethod
+  def getIcon(iconId):
+      '''
+      Return a QIcon given an icon id as a string or int.
+      '''
+      if type(iconId) == int:
+          return QtGui.QApplication.style().standardIcon(iconId)
+      else:
+          return QtGui.QIcon(iconId)
 
 class ObjectModelItem(object):
 
@@ -26,13 +35,11 @@ class ObjectModelItem(object):
         self.properties.connectPropertyAdded(self._onPropertyAdded)
         self.properties.connectPropertyAttributeChanged(self._onPropertyAttributeChanged)
 
-        self.icon = icon
+        self.addProperty('Icon', icon, attributes=PropertyAttributes(hidden=True))
         self.addProperty('Name', name, attributes=PropertyAttributes(hidden=True))
 
     def setIcon(self, icon):
-        self.icon = icon
-        if self._tree:
-            self._tree.updateObjectIcon(self)
+        self.setProperty('Icon', icon)
 
     def propertyNames(self):
         return self.properties.propertyNames()
@@ -206,13 +213,12 @@ class ObjectModelTree(object):
             return
 
         isVisible = obj.getProperty('Visible')
-        icon = Icons.Eye if isVisible else Icons.EyeOff
         item = self._getItemForObject(obj)
-        item.setIcon(1, icon)
+        item.setIcon(1, Icons.getIcon(Icons.Eye if isVisible else Icons.EyeOff))
 
     def updateObjectIcon(self, obj):
         item = self._getItemForObject(obj)
-        item.setIcon(0, obj.icon)
+        item.setIcon(0, Icons.getIcon(obj.getProperty('Icon')))
 
     def updateObjectName(self, obj):
         item = self._getItemForObject(obj)
@@ -224,6 +230,8 @@ class ObjectModelTree(object):
             self.updateVisIcon(obj)
         elif propertyName == 'Name':
             self.updateObjectName(obj)
+        elif propertyName == 'Icon':
+            self.updateObjectIcon(obj)
 
         if obj == self.getActiveObject():
             self._blockSignals = True
@@ -276,7 +284,7 @@ class ObjectModelTree(object):
         objName = obj.getProperty('Name')
 
         item = QtGui.QTreeWidgetItem(parentItem, [objName])
-        item.setIcon(0, obj.icon)
+        item.setIcon(0, Icons.getIcon(obj.getProperty('Icon')))
 
         obj._tree = self
 
@@ -370,7 +378,7 @@ class ObjectModelTree(object):
 
         treeWidget.setColumnCount(2)
         treeWidget.setHeaderLabels(['Name', ''])
-        treeWidget.headerItem().setIcon(1, Icons.Eye)
+        treeWidget.headerItem().setIcon(1, Icons.getIcon(Icons.Eye))
         treeWidget.header().setVisible(True)
         treeWidget.header().setStretchLastSection(False)
         treeWidget.header().setResizeMode(0, QtGui.QHeaderView.Stretch)
