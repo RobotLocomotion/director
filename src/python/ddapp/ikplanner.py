@@ -402,7 +402,7 @@ class IKPlanner(object):
         p.upperBound = [0.07, 0.0, 0.0] #np.zeros(3)
         positionConstraint = p
 
-        rollConstraint1, rollConstraint2 = self.createAxisInPlaneConstraint(targetFrame.transform, graspToHandLinkFrame)
+        rollConstraint1, rollConstraint2 = self.createAxisInPlaneConstraint(side, targetFrame.transform, graspToHandLinkFrame)
 
         return positionConstraint, rollConstraint1, rollConstraint2
 
