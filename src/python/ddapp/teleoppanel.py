@@ -424,12 +424,17 @@ class EndEffectorTeleopPanel(object):
             frame.connectFrameModified(self.onGoalFrameModified)
 
 
-    def newReachTeleop(self, frame, side):
+    def newReachTeleop(self, frame, side, reachTargetObject=None):
+        '''
+        reachTarget is the object we are reaching to.  For some types of plans
+        this object may be treated in a special way, for example, when doing
+        planning with collision avoidance.
+        '''
         self.panel.jointTeleop.deactivate()
 
         self.deactivate()
 
-        self.setBaseConstraint('z only')
+        self.setBaseConstraint('xyz only')
         self.setBackConstraint('limited')
         self.setLFootConstraint('fixed')
         self.setRFootConstraint('fixed')
@@ -442,8 +447,10 @@ class EndEffectorTeleopPanel(object):
         elif side == 'right':
             self.setRHandConstraint('ee fixed')
 
+        self.reachTargetObject = reachTargetObject
         self.activate()
         return self.updateGoalFrame(self.panel.ikPlanner.getHandLink(side), frame)
+
 
 
 inf = np.inf

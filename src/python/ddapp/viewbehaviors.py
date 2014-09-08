@@ -243,8 +243,8 @@ def toggleFootstepWidget(displayPoint, view):
     return True
 
 
-def reachToFrame(frameObj, side):
-    goalFrame = teleoppanel.panel.endEffectorTeleop.newReachTeleop(frameObj.transform, side)
+def reachToFrame(frameObj, side, collisionObj):
+    goalFrame = teleoppanel.panel.endEffectorTeleop.newReachTeleop(frameObj.transform, side, collisionObj)
     goalFrame.frameSync = vis.FrameSync()
     goalFrame.frameSync.addFrame(goalFrame, ignoreIncoming=True)
     goalFrame.frameSync.addFrame(frameObj)
@@ -255,6 +255,24 @@ def getAsFrame(obj):
         return obj
     elif hasattr(obj, 'getChildFrame'):
         return obj.getChildFrame()
+
+
+def isGraspSeed(obj):
+    return hasattr(obj, 'side')
+
+
+def getCollisionParent(obj):
+    '''
+    If obj is an affordance, return obj
+    If obj is a frame or a grasp seed, return first parent.
+    '''
+    if isinstance(obj, vis.FrameItem):
+        return obj.parent()
+    if isGraspSeed(obj):
+        return obj.parent()
+    else
+        return obj
+
 
 # The most recently cached PickedPoint - available as input to any other algorithm
 lastCachedPickedPoint = np.array([0,0,0])
@@ -307,14 +325,15 @@ def showRightClickMenu(displayPoint, view):
         om.setActiveObject(pickedObj)
 
     reachFrame = getAsFrame(pickedObj)
+    collisionParent = getCollisionParent(pickedObj)
     def onReachLeft():
-        reachToFrame(reachFrame, 'left')
+        reachToFrame(reachFrame, 'left', collisionParent)
     def onReachRight():
-        reachToFrame(reachFrame, 'right')
+        reachToFrame(reachFrame, 'right', collisionParent)
 
     def flipHandSide():
         for obj in [pickedObj] + pickedObj.children():
-            if not hasattr(obj, 'side'):
+            if not isGraspSeed(obj):
                 continue
             side = 'right' if obj.side == 'left' else 'left'
             obj.side = side
