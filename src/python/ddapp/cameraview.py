@@ -1,9 +1,9 @@
 import ddapp.applogic as app
-
 from ddapp import lcmUtils
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import filterUtils
+from ddapp import drcargs
 from ddapp.shallowCopy import shallowCopy
 from ddapp.timercallback import TimerCallback
 from ddapp import vtkNumpy
@@ -114,7 +114,8 @@ class ImageManager(object):
         self.textures = {}
 
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
-        self.queue.init(lcmUtils.getGlobalLCMThread())
+        self.queue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
+
 
     def addImage(self, name):
 
