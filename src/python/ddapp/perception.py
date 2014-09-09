@@ -5,6 +5,7 @@ import math
 import PythonQt
 from PythonQt import QtCore, QtGui
 import ddapp.objectmodel as om
+from ddapp import drcargs
 from ddapp import robotstate
 from ddapp.timercallback import TimerCallback
 from ddapp.utime import getUtime
@@ -240,6 +241,7 @@ class MultiSenseSource(TimerCallback):
     def start(self):
         if self.reader is None:
             self.reader = drc.vtkMultisenseSource()
+            self.reader.InitBotConfig(drcargs.args().config_file)
             self.reader.SetDistanceRange(0.25, 4.0)
             self.reader.Start()
 

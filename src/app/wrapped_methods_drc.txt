@@ -1,7 +1,7 @@
 ddBotImageQueue::ddBotImageQueue(QObject*);
 ddBotImageQueue::ddBotImageQueue();
 ddBotImageQueue::~ddBotImageQueue();
-void ddBotImageQueue::init(ddLCMThread*);
+void ddBotImageQueue::init(ddLCMThread*, const QString&);
 void ddBotImageQueue::colorizePoints(const QString&, vtkPolyData*);
 void ddBotImageQueue::computeTextureCoords(const QString&, vtkPolyData*);
 qint64 ddBotImageQueue::getImage(const QString&, vtkImageData*);
