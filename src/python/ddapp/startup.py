@@ -589,9 +589,8 @@ drillYawPreTransform = vtk.vtkTransform()
 drillYawPreTransform.PostMultiply()
 def onDrillYawSliderChanged(value):
     yawOffset = value - 180.0
-    drillButtonFrame = om.findObjectByName('drill button')
-    buttonPitch = drillButtonFrame.transform().GetOrientation()[0]
-
+    drillDemo.drillYawSliderValue = yawOffset
+    drillDemo.updateDrillToHand()
 
 
 app.getMainWindow().macrosToolBar().addWidget(QtGui.QLabel('drill yaw:'))
@@ -599,7 +598,7 @@ slider = QtGui.QSlider(QtCore.Qt.Horizontal)
 slider.setMaximum(360)
 slider.setValue(180)
 slider.setMaximumWidth(200)
-#slider.connect('valueChanged(int)', onDrillYawSliderChanged)
+slider.connect('valueChanged(int)', onDrillYawSliderChanged)
 
 app.getMainWindow().macrosToolBar().addWidget(slider)
 

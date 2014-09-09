@@ -115,6 +115,7 @@ class DrillPlannerDemo(object):
         self.segmentationpanel = segmentationpanel
         self.pointerTracker = None
         self.projectCallback = None
+        self.drillYawSliderValue = 0.0
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
         defaultGraspingHand = "left"
@@ -220,14 +221,9 @@ class DrillPlannerDemo(object):
         obj = vis.updatePolyData(d.getPolyData(), 'sensed drill button', parent='segmentation', color=[1,0,0])
         obj.actor.SetUserTransform(buttonT)
 
-        om.removeFromObjectModel(om.findObjectByName('drill'))
 
         om.findObjectByName('intersecting ray').setProperty('Visible', False)
         om.findObjectByName('ray points').setProperty('Visible', False)
-
-        self.spawnDrillAffordance()
-        self.moveDrillToHand()
-        self.moveDrillToSensedButton()
 
         if self.pointerTracker:
             self.pointerTracker.updateFit(polyData)
@@ -238,6 +234,15 @@ class DrillPlannerDemo(object):
             obj = vis.updatePolyData(d.getPolyData(), 'sensed pointer tip', parent='segmentation', color=[1,0,0])
             obj.actor.SetUserTransform(t)
 
+        self.updateDrillToHand()
+
+
+    def updateDrillToHand(self):
+
+        om.removeFromObjectModel(om.findObjectByName('drill'))
+        self.spawnDrillAffordance()
+        self.moveDrillToHand()
+        self.moveDrillToSensedButton()
         if self.projectCallback:
             self.projectCallback()
 
@@ -405,6 +410,7 @@ class DrillPlannerDemo(object):
         # Updated to read the settings from the gui panel.
         # TODO: should I avoid calling to faceToDrillTransform and only use computeFaceToDrillTransform to avoid inconsistance?
         rotation, offset, depthOffset, lateralOffset, flip = self.segmentationpanel._segmentationPanel.getDrillInHandParams()
+        rotation += self.drillYawSliderValue
         self.drill.faceToDrillTransform = segmentation.getDrillInHandOffset(rotation, offset, depthOffset, lateralOffset, flip)
 
 
