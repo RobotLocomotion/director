@@ -614,3 +614,12 @@ slider.setMaximumWidth(200)
 
 app.getMainWindow().macrosToolBar().addWidget(slider)
 
+
+def sendPointerPrep():
+     drillDemo.planPointerPressGaze(-0.05)
+
+def sendPointerPress():
+     drillDemo.planPointerPressGaze(0.005)
+
+app.addToolbarMacro('pointer prep', sendPointerPrep)
+app.addToolbarMacro('pointer press', sendPointerPress)
