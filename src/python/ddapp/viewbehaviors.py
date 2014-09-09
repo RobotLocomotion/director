@@ -370,6 +370,8 @@ def showRightClickMenu(displayPoint, view):
         data = segmentation.segmentTableScene(pointCloudObj.polyData, pickedPoint)
         vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
 
+    def onSegmentDrillAlignedWithTable():
+        segmentation.segmentDrillAlignedWithTable(pickedPoint)
 
     def onCachePickedPoint():
         ''' Cache the Picked Point for general purpose use'''
@@ -420,6 +422,7 @@ def showRightClickMenu(displayPoint, view):
             ('Copy Pointcloud', onCopyPointCloud),
             ('Segment Ground', onSegmentGround),
             ('Segment Table', onSegmentTableScene),
+            ('Segment Drill Aligned', onSegmentDrillAlignedWithTable),
             ('Local Plane Fit', onLocalPlaneFit),
             ('Disk Glyph', onDiskGlyph),
             ('Cache Pick Point', onCachePickedPoint),
