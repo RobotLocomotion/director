@@ -620,5 +620,6 @@ def sendPointerPrep():
 def sendPointerPress():
      drillDemo.planPointerPressGaze(0.005)
 
+app.addToolbarMacro('drill posture', drillDemo.planBothRaisePowerOn)
 app.addToolbarMacro('pointer prep', sendPointerPrep)
 app.addToolbarMacro('pointer press', sendPointerPress)
