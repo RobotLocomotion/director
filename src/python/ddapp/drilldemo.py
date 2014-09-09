@@ -750,7 +750,11 @@ class DrillPlannerDemo(object):
         # pointerDepth is negative is away from the drill and positive is inside drill
 
         # change the nominal pose to the start pose ... q_nom was unreliable when used repeated
+
+        nominalPoseOld = ikplanner.getIkOptions().getProperty('Nominal pose')
+        jointSpeedOld = ikplanner.getIkOptions().getProperty('Max joint degrees/s')
         ikplanner.getIkOptions().setProperty('Nominal pose', 'q_start')
+        ikplanner.getIkOptions().setProperty('Max joint degrees/s', 3)
 
         # 1. determine the goal position
         #worldToButton = self.getWorldToButton( self.getPlanningStartPose() )
@@ -775,7 +779,8 @@ class DrillPlannerDemo(object):
         self.planGazeTrajectory()
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
-        ikplanner.getIkOptions().setProperty('Nominal pose', 'q_nom')
+        ikplanner.getIkOptions().setProperty('Nominal pose', nominalPoseOld)
+        ikplanner.getIkOptions().setProperty('Max joint degrees/s', jointSpeedOld)
 
 
     def planNextCut(self, getNextAction , argument1=None ):
