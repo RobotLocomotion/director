@@ -4,6 +4,7 @@ import subprocess
 import select
 import os
 
+import ddapp
 from ddapp.simpletimer import SimpleTimer
 
 import numpy as np
@@ -21,7 +22,7 @@ def _readAllSoFar(proc, retVal=''):
 
 
 def getAppMatlabDir():
-    return os.path.join(os.path.dirname(__file__), '../../../../../src/matlab')
+    return os.path.join(ddapp.getDRCBaseDir(), 'software/ddapp/src/matlab')
 
 
 class MatlabCommunicator(object):
