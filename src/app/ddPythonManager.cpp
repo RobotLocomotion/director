@@ -95,6 +95,16 @@ QStringList ddPythonManager::pythonPaths()
 }
 
 //-----------------------------------------------------------------------------
+void ddPythonManager::setSysArgv(const QStringList& args)
+{
+  PythonQtObjectPtr mod = PythonQt::self()->importModule("sys");
+  if (mod)
+    {
+    return PythonQt::self()->addVariable(mod, "argv", args);
+    }
+}
+
+//-----------------------------------------------------------------------------
 void ddPythonManager::executeInitializationScripts()
 {
 
