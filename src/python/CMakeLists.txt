@@ -20,6 +20,7 @@ set(python_files
   ddapp/debugVis.py
   ddapp/depthimageprovider.py
   ddapp/drakevisualizer.py
+  ddapp/drcargs.py
   ddapp/drilldemo.py
   ddapp/drilltaskpanel.py
   ddapp/fieldcontainer.py

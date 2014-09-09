@@ -10,6 +10,7 @@ from PythonQt import QtCore, QtGui
 from time import time
 import imp
 import ddapp.applogic as app
+from ddapp import drcargs
 from ddapp import botpy
 from ddapp import vtkAll as vtk
 from ddapp import matlab
@@ -76,6 +77,7 @@ from ddapp.debugVis import DebugData
 from ddapp import ioUtils as io
 
 
+drcargs.args()
 app.startup(globals())
 om.init(app.getMainWindow().objectTree(), app.getMainWindow().propertiesPanel())
 actionhandlers.init()
