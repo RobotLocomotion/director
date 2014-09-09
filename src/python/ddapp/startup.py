@@ -115,6 +115,7 @@ useImageWidget = False
 useImageViewDemo = True
 useControllerRate = True
 useSkybox = False
+useDataFiles = True
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -428,6 +429,14 @@ if useFootContactVis:
 
     footContactSub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContact)
     footContactSub.setSpeedLimit(60)
+
+
+if useDataFiles:
+
+    for filename in drcargs.args().data_files:
+        polyData = io.readPolyData(filename)
+        if polyData:
+            vis.showPolyData(polyData, os.path.basename(filename))
 
 
 if useImageWidget:
