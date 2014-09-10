@@ -579,15 +579,3 @@ def projectDrillDemoInCamera():
 
     v = imageView.view
     v.render()
-
-
-
-def cameraFused():
-    pd = cameraview.getStereoPointCloud(2,"CAMERA_FUSED")
-    if (pd is None):
-        return
-    vis.updatePolyData(pd,'stereo')
-
-timerCloud = TimerCallback(targetFps=5)
-timerCloud.callback = cameraFused
-timerCloud.start()
