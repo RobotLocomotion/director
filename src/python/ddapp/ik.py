@@ -24,7 +24,9 @@ class AsyncIKCommunicator():
         self.usePointwise = True
         self.useCollision = False
         self.numberOfAddedKnots = 0
+        self.numberOfInterpolatedCollisionChecks = 2
         self.collisionMinDistance = 0.05
+        self.majorIterationsLimit = 100
 
 
     def getStartupCommands(self):

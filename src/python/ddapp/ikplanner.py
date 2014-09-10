@@ -97,13 +97,14 @@ class IkOptionsItem(om.ObjectModelItem):
 
         self.addProperty('Use pointwise', ikServer.usePointwise)
         self.addProperty('Use collision', ikServer.useCollision)
-        self.addProperty('Collision min distance', ikServer.collisionMinDistance)
+        self.addProperty('Collision min distance', ikServer.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikServer.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
         self.addProperty('Quasistatic shrink factor', ik.QuasiStaticConstraint.shrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
         self.addProperty('Max joint degrees/s', ikServer.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
         self.addProperty('Nominal pose', 1, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Seed pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
+        self.addProperty('Major iterations limit', ikServer.majorIterationsLimit)
         #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
 
     def _onPropertyChanged(self, propertySet, propertyName):
@@ -117,6 +118,9 @@ class IkOptionsItem(om.ObjectModelItem):
             self.ikServer.useCollision = self.getProperty(propertyName)
             if self.ikServer.useCollision:
                 self.setProperty('Use pointwise', False)
+
+        if propertyName == 'Major iterations limit':
+            self.ikServer.majorIterationsLimit = self.getProperty(propertyName)
 
         if propertyName == 'Collision min distance':
             self.ikServer.collisionMinDistance = self.getProperty(propertyName)
