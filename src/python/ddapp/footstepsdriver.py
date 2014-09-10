@@ -180,6 +180,7 @@ class FootstepsDriver(object):
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
         lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
+        lcmUtils.addSubscriber('WALKING_SIMULATION_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
         ### Related to BDI-frame adjustment:
         self.bdiSubcribe = lcmUtils.addSubscriber( self.bdiChannel , pose_t, self.onPoseBDI)
@@ -574,9 +575,12 @@ class FootstepsDriver(object):
             requestChannel = 'WALKING_CONTROLLER_PLAN_REQUEST'
             responseChannel = 'WALKING_CONTROLLER_PLAN_RESPONSE'
             response_type = lcmdrc.walking_plan_t
+        elif req_type == 'simulate_drake':
+            requestChannel = 'WALKING_SIMULATION_DRAKE_REQUEST'
+            responseChannel = 'WALKING_SIMULATION_TRAJ_RESPONSE'
+            response_type = lcmdrc.robot_plan_t
         else:
             raise ValueError("Invalid request type: {:s}".format(req_type))
-
 
         if waitForResponse:
             if waitTimeout == 0:
@@ -608,6 +612,11 @@ class FootstepsDriver(object):
     def _commitFootstepPlanBDI(self, footstepPlan):
         footstepPlan.utime = getUtime()
         lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', footstepPlan)
+
+    def sendHaltSimulationDrakeRequest(self):
+        msg = lcmdrc.utime_t()
+        msg.utime = getUtime()
+        lcmUtils.publish('HALT_DRAKE_SIMULATION', msg)
 
 
     ####################### BDI Adjustment Logic and Visualization ##################
