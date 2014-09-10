@@ -155,7 +155,7 @@ class DisparityPointCloudItem(vis.PolyDataItem):
 
         self.addProperty('Decimation', 2, attributes=om.PropertyAttributes(enumNames=['1', '2', '4', '8', '16']))
         self.addProperty('Remove outliers', False)
-        self.addProperty('Target FPS', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=10.0, singleStep=0.1))
+        self.addProperty('Target FPS', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=30.0, singleStep=0.1))
 
         self.timer = TimerCallback()
         self.timer.callback = self.update
