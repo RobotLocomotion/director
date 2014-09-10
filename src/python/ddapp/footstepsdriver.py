@@ -178,7 +178,9 @@ class FootstepsDriver(object):
             self.params.setProperty(k, v)
 
     def _setupSubscriptions(self):
-        lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan)
+        lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan,
+                               lcmUtils.HistoricalLCMLoader("drc", "software/drc_lcmtypes/lcmtypes",
+                                                            os.getenv("DRC_BASE")))
         lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
         ### Related to BDI-frame adjustment:
