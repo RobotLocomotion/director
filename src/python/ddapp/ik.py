@@ -257,26 +257,13 @@ class AsyncIKCommunicator():
         if self.useCollision:
             commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
-            commands.append('options.n_interp_points = 3;')
-            commands.append('planning_time = tic;')
-            commands.append('problem = LeggedRobotPlanningProblem(r,options);')
-            commands.append('problem.Q = ikoptions.Q;')
-            commands.append('problem.v_max = %f*pi/180;' % self.maxDegreesPerSecond)
-            commands.append('problem = problem.addRigidBodyConstraint(active_constraints);')
-            commands.append('prog = problem.generateQuasiStaticPlanner(nt,[0,20],q_nom_traj,reach_start);')
-            commands.append('prog = prog.setSolverOptions(\'snopt\',\'MajorIterationsLimit\',50);')
-            commands.append('prog = prog.setSolverOptions(\'snopt\',\'SuperBasicsLimit\',2e3);')
-            commands.append('prog = prog.setSolverOptions(\'snopt\',\'MajorOptimalityTolerance\',1e-3);')
-            commands.append('prog = prog.setSolverOptions(\'snopt\',\'MajorFeasibilityTolerance\',5e-6);')
-            commands.append('prog = prog.setSolverOptions(\'snopt\',\'IterationsLimit\',5e5);')
-            commands.append('nlp_time = tic;')
-            commands.append('[xtraj,z,F,info,infeasible_constraint] = prog.solveTraj(t,q_seed_traj);')
-            commands.append('fprintf(\'NLP time: %f\\n\',toc(nlp_time))')
-            commands.append('fprintf(\'Total time: %f\\n\',toc(planning_time))')
-            commands.append('t_fine = linspace(xtraj.tspan(1),xtraj.tspan(2));')
-            commands.append('xtraj = PPTrajectory(foh(t_fine,xtraj.eval(t_fine)));')
+            commands.append('options.n_interp_points = %s;' % self.numberOfInterpolatedCollisionChecks)
+            commands.append('options.min_distance = 0.03;')
+            commands.append('options.excluded_collision_groups = excluded_collision_groups;')
+            commands.append('options.major_iterations_limit = %s;' % self.majorIterationsLimit)
+            commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
+            commands.append('[xtraj,info] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);')
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
-            commands.append("if (info_feasible > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;")
         else:
             commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(%s, 1, nt)));' % nominalPose)
             commands.append('q_seed_traj = PPTrajectory(spline([t(1), t(end)], [zeros(nq,1), %s, %s, zeros(nq,1)]));' % (poseStart, poseEnd))
@@ -286,8 +273,8 @@ class AsyncIKCommunicator():
             commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
         commands.append('qtraj = xtraj(1:nq);')
-        if self.useCollision
-            commands.append('plan_time = 1')
+        if self.useCollision:
+            commands.append('plan_time = 1;')
         else:
             commands.append('max_degrees_per_second = %f;' % self.maxDegreesPerSecond)
             commands.append('plan_time = s.getPlanTimeForJointVelocity(xtraj, max_degrees_per_second);')
