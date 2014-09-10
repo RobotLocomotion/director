@@ -24,6 +24,7 @@ class DRCArgParser(object):
 
     def parseArgs(self):
         parser = self.getParser()
+        sys.argv = [str(v) for v in sys.argv]
         self._args = parser.parse_args()
 
 
