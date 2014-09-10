@@ -490,13 +490,25 @@ def sendEstRobotState(pose=None):
     lcmUtils.publish('EST_ROBOT_STATE', msg)
 
 
-def addCollisionObjectToWorld():
-    obj = om.getActiveObject()
-    assert obj and obj.polyData
-    polyData = filterUtils.transformPolyData(obj.polyData, obj.actor.GetUserTransform())
-    pts = vnp.getNumpyFromVtk(polyData, 'Points')
-    pts = pts.transpose()
-    ikServer.addCollisionObject(pts)
+def addCollisionObjectToWorld(obj = None, name = None):
+    if obj is None:
+        obj = [om.getActiveObject()]
+    if type(obj) is not list:
+        obj = [obj]
+    if name is None:
+        name = [obj_i.parent().getProperty('Name') for obj_i in obj]
+    if type(name) is not list:
+        name = [name]
+
+    assert len(obj) == len(name)
+    pts = []
+    for obj_i in obj:
+        assert obj_i and obj_i.polyData
+        polyData = filterUtils.transformPolyData(obj_i.polyData, obj_i.actor.GetUserTransform())
+        pts_i = vnp.getNumpyFromVtk(polyData, 'Points')
+        pts.append(pts_i.transpose());
+
+    ikServer.addCollisionObject(pts,name)
 
 
 def addCollisionObjectToLink(robotModel, linkName):
