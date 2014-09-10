@@ -118,6 +118,9 @@ class IkOptionsItem(om.ObjectModelItem):
             self.ikServer.useCollision = self.getProperty(propertyName)
             if self.ikServer.useCollision:
                 self.setProperty('Use pointwise', False)
+                self.setProperty('Add knots', 2)
+            else:
+                self.setProperty('Add knots', 0)
 
         if propertyName == 'Major iterations limit':
             self.ikServer.majorIterationsLimit = self.getProperty(propertyName)
