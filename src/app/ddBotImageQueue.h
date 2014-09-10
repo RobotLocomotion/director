@@ -82,7 +82,7 @@ public:
   // is used to extract image_t message from images_t.
   bool addCameraStream(const QString& channel, const QString& cameraName, int imageType);
 
-  void init(ddLCMThread* lcmThread);
+  void init(ddLCMThread* lcmThread, const QString& botConfigFile);
 
   qint64 getImage(const QString& cameraName, vtkImageData* image);
   qint64 getCurrentImageTime(const QString& cameraName);
