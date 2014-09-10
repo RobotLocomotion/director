@@ -10,6 +10,7 @@ from PythonQt import QtCore, QtGui
 from time import time
 import imp
 import ddapp.applogic as app
+from ddapp import drcargs
 from ddapp import botpy
 from ddapp import vtkAll as vtk
 from ddapp import matlab
@@ -76,6 +77,7 @@ from ddapp.debugVis import DebugData
 from ddapp import ioUtils as io
 
 
+drcargs.args()
 app.startup(globals())
 om.init(app.getMainWindow().objectTree(), app.getMainWindow().propertiesPanel())
 actionhandlers.init()
@@ -113,6 +115,7 @@ useImageWidget = False
 useImageViewDemo = True
 useControllerRate = True
 useSkybox = False
+useDataFiles = True
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -426,6 +429,14 @@ if useFootContactVis:
 
     footContactSub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContact)
     footContactSub.setSpeedLimit(60)
+
+
+if useDataFiles:
+
+    for filename in drcargs.args().data_files:
+        polyData = io.readPolyData(filename)
+        if polyData:
+            vis.showPolyData(polyData, os.path.basename(filename))
 
 
 if useImageWidget:

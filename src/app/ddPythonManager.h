@@ -20,6 +20,8 @@ public:
 
   static QString appSitePackagesDir();
 
+  void setSysArgv(const QStringList& args);
+
 public slots:
 
   void showConsole();

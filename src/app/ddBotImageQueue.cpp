@@ -73,19 +73,18 @@ bool ddBotImageQueue::initCameraData(const QString& cameraName, CameraData* came
 }
 
 //-----------------------------------------------------------------------------
-void ddBotImageQueue::init(ddLCMThread* lcmThread)
+void ddBotImageQueue::init(ddLCMThread* lcmThread, const QString& botConfigFile)
 {
-  bool useBotParamFromFile = true;
-
-  if (useBotParamFromFile)
+  if (botConfigFile.length())
   {
-    std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_02_mit.cfg";
-    mBotParam = bot_param_new_from_file(configFile.c_str());
+    mBotParam = bot_param_new_from_file(botConfigFile.toAscii().data());
   }
   else
   {
     while (!mBotParam)
+    {
       mBotParam = bot_param_new_from_server(lcmThread->lcmHandle()->getUnderlyingLCM(), 0);
+    }
   }
 
   mBotFrames = bot_frames_get_global(lcmThread->lcmHandle()->getUnderlyingLCM(), mBotParam);

@@ -26,6 +26,7 @@
 #include "vtkTransform.h"
 #include "vtkMatrix4x4.h"
 #include "vtkMath.h"
+#include "vtkSetGet.h"
 
 #include <boost/thread/thread.hpp>
 
@@ -166,12 +167,22 @@ public:
       std::cerr <<"ERROR: lcm is not good()" <<std::endl;
     }
 
+    this->LCMHandle->subscribe("SCAN", &LCMListener::lidarHandler, this);
+  }
+
+
+  void lidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const bot_core::planar_lidar_t* msg)
+  {
+    this->HandleNewData(msg);
+  }
+
+  void InitBotConfig(const char* filename)
+  {
     bool useBotParamFromFile = true;
 
-    if (useBotParamFromFile)
+    if (filename && filename[0])
       {
-      std::string configFile = std::string(getenv("DRC_BASE")) + "/software/config/drc_robot_02_mit.cfg";
-      botparam_ = bot_param_new_from_file(configFile.c_str());
+      botparam_ = bot_param_new_from_file(filename);
       }
     else
       {
@@ -182,14 +193,6 @@ public:
       }
 
     botframes_ = bot_frames_get_global(this->LCMHandle->getUnderlyingLCM(), botparam_);
-
-    this->LCMHandle->subscribe( "SCAN", &LCMListener::lidarHandler, this);
-  }
-
-
-  void lidarHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const bot_core::planar_lidar_t* msg)
-  {
-    this->HandleNewData(msg);
   }
 
   bool CheckForNewData()
@@ -357,6 +360,13 @@ public:
   int get_trans_with_utime(std::string from_frame, std::string to_frame,
                                  vtkIdType utime, Eigen::Isometry3d & mat)
   {
+    if (!botframes_)
+    {
+      std::cout << "vtkMultisenseSource::LCMListener: botframe is not initialized" << std::endl;
+      mat = mat.matrix().Identity();
+      return 0;
+    }
+
     int status;
     double matx[16];
     status = bot_frames_get_trans_mat_4x4_with_utime( botframes_, from_frame.c_str(),  to_frame.c_str(), utime, matx);
@@ -580,6 +590,12 @@ void vtkMultisenseSource::Poll()
 }
 
 //-----------------------------------------------------------------------------
+void vtkMultisenseSource::InitBotConfig(const char* filename)
+{
+  this->Internal->Listener->InitBotConfig(filename);
+}
+
+//-----------------------------------------------------------------------------
 void vtkMultisenseSource::GetBotRollPitchYaw(vtkTransform* transform, double rpy[3])
 {
   double angleAxis[4];
@@ -684,21 +700,15 @@ int vtkMultisenseSource::RequestInformation(vtkInformation *request,
 {
   vtkInformation *info = outputVector->GetInformationObject(0);
 
-  printf("requst info\n");
-
   std::vector<double> timesteps = this->Internal->Listener->GetTimesteps();
   if (timesteps.size())
     {
     double timeRange[2] = {timesteps.front(), timesteps.back()};
-
-    printf("time range: [%f, %f]\n", timeRange[0], timeRange[1]);
-
     info->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timesteps.front(), timesteps.size());
     info->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
     }
   else
     {
-    printf("no timesteps available\n");
     info->Remove(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
     info->Remove(vtkStreamingDemandDrivenPipeline::TIME_RANGE());
     }
@@ -712,8 +722,6 @@ int vtkMultisenseSource::RequestData(
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
-  printf("request data\n");
-
   vtkInformation *info = outputVector->GetInformationObject(0);
   vtkDataSet *output = vtkDataSet::SafeDownCast(info->Get(vtkDataObject::DATA_OBJECT()));
 
@@ -728,12 +736,7 @@ int vtkMultisenseSource::RequestData(
   vtkSmartPointer<vtkPolyData> polyData = this->Internal->Listener->GetDataForRevolution(timestep);
   if (polyData)
     {
-    printf("output has %d points\n", polyData->GetNumberOfPoints());
     output->ShallowCopy(polyData);
-    }
-  else
-    {
-    printf("no data\n");
     }
 
   return 1;
