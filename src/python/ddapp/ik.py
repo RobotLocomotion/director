@@ -168,6 +168,7 @@ class AsyncIKCommunicator():
         commands = []
         commands.append('\n%-------- runIk --------\n')
         constraintNames = []
+        commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
         for constraintId, constraint in enumerate(constraints):
             if not constraint.enabled:
                 continue
@@ -192,6 +193,7 @@ class AsyncIKCommunicator():
         if self.useCollision:
             commands.append('\n')
             commands.append('collision_constraint = MinDistanceConstraint(r, %f);' % self.collisionMinDistance)
+            commands.append('collision_constraint  = collision_constraint.excludeCollisionGroups({excluded_collision_groups.name});')
             commands.append('ik_seed_pose = q_end;')
             commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, ik_seed_pose, ik_nominal_pose, collision_constraint, active_constraints{:}, s.ikoptions);')
             commands.append('\n')
@@ -229,6 +231,7 @@ class AsyncIKCommunicator():
 
         commands = []
         commands.append('\n%-------- runIkTraj --------\n')
+        commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
 
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
