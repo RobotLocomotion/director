@@ -62,6 +62,8 @@ class FootstepsPanel(object):
         self.ui.walkingPlanButton.connect("clicked()", self.onShowWalkingPlan)
         self.ui.executeButton.connect("clicked()", self.onExecute)
         self.ui.stopButton.connect("clicked()", self.onStop)
+        self.ui.simulateDrakeButton.connect("clicked()", self.onSimulateDrake)
+        self.ui.haltSimulationDrakeButton.connect("clicked()", self.onHaltSimulationDrake)
         self.ui.BDIDefaultsButton.connect("clicked()", lambda: self.applyDefaults('BDI'))
         self.ui.drakeDefaultsButton.connect("clicked()", lambda: self.applyDefaults('drake'))
         self.ui.showWalkingVolumesCheck.connect("clicked()", self.onShowWalkingVolumes)
@@ -160,6 +162,15 @@ class FootstepsPanel(object):
     def onStop(self):
         self.driver.sendStopWalking()
 
+    def onSimulateDrake(self):
+        startPose = self.jointController.getPose('EST_ROBOT_STATE')
+        self.robotModel.setProperty('Visible', False);
+        self.driver.sendWalkingPlanRequest(self.driver.lastFootstepPlan, startPose, waitForResponse=False, req_type='simulate_drake')
+
+    def onHaltSimulationDrake(self):
+        om.findObjectByName("drake viewer").findChild("robot 1").setProperty("Visible", False)
+        self.robotModel.setProperty('Visible', True);
+        self.driver.sendHaltSimulationDrakeRequest()
 
     ### BDI frame logic
     def onHideBDIButton(self):
