@@ -480,6 +480,16 @@ class IKPlanner(object):
         axisConstraint = p
 
         return positionConstraint, orientationConstraint, axisConstraint
+    def setArmLocked(self, side, isLocked):
+        setattr(self.ikServer,side+"ArmLocked",isLocked)
+
+
+    def setBaseLocked(self, isLocked):
+        setattr(self.ikServer, "baseLocked", isLocked)
+
+
+    def setBackLocked(self, isLocked):
+        setattr(self.ikServer, "backLocked", isLocked)
 
 
     def createMovingBodyConstraints(self, startPoseName, lockBase=False, lockBack=False, lockLeftArm=False, lockRightArm=False):

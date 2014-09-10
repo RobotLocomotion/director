@@ -108,6 +108,21 @@ class AsyncIKCommunicator():
         commands.append("v = r.constructVisualizer(struct('use_contact_shapes', true));")
         self.comm.sendCommands(commands)
 
+    def getFrozenGroupString(self):
+        frozenGroups = []
+        if getattr(self,"leftArmLocked",False):
+            frozenGroups.append("l_arm")
+        if getattr(self,"rightArmLocked",False):
+            frozenGroups.append("r_arm")
+        if getattr(self,"baseLocked",False):
+            frozenGroups.append("pelvis")
+        if getattr(self,"backLocked",False):
+            frozenGroups.append("back")
+        if frozenGroups:
+            return "{'" + "','".join(frozenGroups) + "'}"
+        else:
+            return "{}"
+
 
     def draw(self):
         commands = []
