@@ -480,6 +480,17 @@ class IKPlanner(object):
         axisConstraint = p
 
         return positionConstraint, orientationConstraint, axisConstraint
+
+
+    def createExcludeReachTargetCollisionGroupConstraint(self, reachTargetName):
+        p = ik.ExcludeCollisionGroupConstraint()
+        p.tspan = [1.0, 1.0]
+        p.excludedGroupName = reachTargetName
+        excludeReachTargetCollisionGroupConstraint = p;
+
+        return excludeReachTargetCollisionGroupConstraint
+
+
     def setArmLocked(self, side, isLocked):
         setattr(self.ikServer,side+"ArmLocked",isLocked)
 
