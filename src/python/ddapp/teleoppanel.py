@@ -479,9 +479,15 @@ class EndEffectorTeleopPanel(object):
         self.setRHandConstraint('arm fixed')
 
         if side == 'left':
+          if self.panel.ikPlanner.ikServer.useCollision:
             self.setLHandConstraint('orbit')
+          else:
+            self.setLHandConstraint('ee fixed')
         elif side == 'right':
+          if self.panel.ikPlanner.ikServer.useCollision:
             self.setRHandConstraint('orbit')
+          else:
+            self.setRHandConstraint('ee fixed')
 
         self.reachTargetObject = reachTargetObject
         self.activate()
