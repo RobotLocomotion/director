@@ -371,7 +371,7 @@ def showRightClickMenu(displayPoint, view):
         vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
 
     def onSegmentDrillAlignedWithTable():
-        segmentation.segmentDrillAlignedWithTable(pickedPoint)
+        segmentation.segmentDrillAlignedWithTable(pickedPoint, pointCloudObj.polyData)
 
     def onCachePickedPoint():
         ''' Cache the Picked Point for general purpose use'''
