@@ -270,7 +270,7 @@ def getCollisionParent(obj):
         return obj.parent()
     if isGraspSeed(obj):
         return obj.parent()
-    else
+    else:
         return obj
 
 
