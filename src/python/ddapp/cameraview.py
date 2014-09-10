@@ -537,10 +537,9 @@ def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     return view
 
 
-def getStereoPointCloud(decimation=4, imagesChannel='CAMERA'):
+def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT'):
 
     q = imageManager.queue
-    cameraName = 'CAMERA_LEFT'
 
     utime = q.getCurrentImageTime(cameraName)
     if utime == 0:
@@ -550,7 +549,7 @@ def getStereoPointCloud(decimation=4, imagesChannel='CAMERA'):
     cameraToLocal = vtk.vtkTransform()
 
     q.getPointCloudFromImages(imagesChannel, p, decimation)
-    q.getTransform(cameraName, 'local', utime, cameraToLocal)
+    q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
     p = filterUtils.transformPolyData(p, cameraToLocal)
 
     return p
@@ -570,3 +569,4 @@ def init():
     addCameraView('CAMERACHEST_LEFT', 'Chest left')
     addCameraView('CAMERACHEST_RIGHT', 'Chest right')
 
+    addCameraView('CAMERA_TSDF', 'Head camera tsdf')

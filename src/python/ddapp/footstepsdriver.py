@@ -19,6 +19,7 @@ import numpy as np
 from ddapp import botpy
 import drc as lcmdrc
 from bot_core.pose_t import pose_t
+from drc.robot_state_t import robot_state_t
 import functools
 
 
@@ -136,6 +137,8 @@ class FootstepsDriver(object):
         self.showBDIPlan = False # hide the BDI plans when created
         self.bdiChannel = "POSE_BDI"
         self.bdiSubcribe = None
+        #enable this to used the bdi model to render a different state
+        #self.bdiJointController.addLCMUpdater("EST_ROBOT_STATE_ALT")
 
         self._setupSubscriptions()
         self._setupProperties()
