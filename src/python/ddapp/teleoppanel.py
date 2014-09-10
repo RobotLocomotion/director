@@ -284,8 +284,8 @@ class EndEffectorTeleopPanel(object):
         g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand)
 
         p.tspan = [1.0, 1.0]
-        q.tspan = [0.5, 1.0]
-        g.tspan = [0.5, 1.0]
+        q.tspan = [1.0, 1.0]
+        g.tspan = [1.0, 1.0]
 
 
 
@@ -309,8 +309,14 @@ class EndEffectorTeleopPanel(object):
             graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
             constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
             constraints[-3].tspan = [1.0, 1.0]
-            constraints[-2].tspan = [0.5, 1.0]
-            constraints[-1].tspan = [0.5, 1.0]
+
+            if ikPlanner.ikServer.useCollision:
+                constraints[-2].tspan = [0.5, 1.0]
+                constraints[-1].tspan = [0.5, 1.0]
+            else:
+                constraints[-2].tspan = [1.0, 1.0]
+                constraints[-1].tspan = [1.0, 1.0]
+
             ikPlanner.setArmLocked(side,False)
 
         elif self.getLHandConstraint() == 'free':
@@ -332,8 +338,8 @@ class EndEffectorTeleopPanel(object):
         g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand)
 
         p.tspan = [1.0, 1.0]
-        q.tspan = [0.5, 1.0]
-        g.tspan = [0.5, 1.0]
+        q.tspan = [1.0, 1.0]
+        g.tspan = [1.0, 1.0]
 
 
 
@@ -357,8 +363,14 @@ class EndEffectorTeleopPanel(object):
             graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
             constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
             constraints[-3].tspan = [1.0, 1.0]
-            constraints[-2].tspan = [0.5, 1.0]
-            constraints[-1].tspan = [0.5, 1.0]
+
+            if ikPlanner.ikServer.useCollision:
+                constraints[-2].tspan = [0.5, 1.0]
+                constraints[-1].tspan = [0.5, 1.0]
+            else:
+                constraints[-2].tspan = [1.0, 1.0]
+                constraints[-1].tspan = [1.0, 1.0]
+
             ikPlanner.setArmLocked(side,False)
 
         elif self.getLHandConstraint() == 'free':
