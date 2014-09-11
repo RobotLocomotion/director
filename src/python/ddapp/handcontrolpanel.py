@@ -122,12 +122,10 @@ class HandControlPanel(object):
         self.storedCommand[side] = (position, force, velocity, mode)
 
     def waitOpenClicked(self):
-        print "sleeping 10 seconds - then opening, haul ass!"
         sleep(10)
         self.openClicked()
 
     def waitCloseClicked(self):
-        print "sleeping 10 seconds - then closing, haul ass!"
         sleep(10)
         self.closeClicked()
 
