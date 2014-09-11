@@ -619,6 +619,7 @@ def sendPointerPrep():
 
 def sendPointerPress():
      drillDemo.planPointerPressGaze(0.01)
+
 def sendPointerPressDeep():
      drillDemo.planPointerPressGaze(0.015)
 

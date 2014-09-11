@@ -1354,12 +1354,6 @@ class DrillPlannerDemo(object):
         #taskQueue.addTask(self.userPrompt('raise for pressing? y/n: '))
         taskQueue.addTask(self.animateLastPlan)
 
-        #poseGraspPlanFunctions = [self.planPreGrasp, self.planDrillLowerSafe]
-        #for planFunc in poseGraspPlanFunctions:
-        #    taskQueue.addTask(planFunc)
-        #    taskQueue.addTask(self.userPrompt('stand plan continue? y/n: '))
-        #    taskQueue.addTask(self.animateLastPlan)
-
         return taskQueue
 
 
@@ -1396,7 +1390,6 @@ class DrillPlannerDemo(object):
         taskQueue.addTask(self.planDrillLowerSafe)
         #taskQueue.addTask(self.userPrompt('lower? y/n: '))
         taskQueue.addTask(self.animateLastPlan)
-
         return taskQueue
 
 
