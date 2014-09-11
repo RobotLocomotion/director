@@ -326,12 +326,13 @@ class MultiSenseSource(TimerCallback):
         lcmUtils.publish('MULTISENSE_COMMAND', m)
 
     @staticmethod
-    def setMultisenseCommand(fps, gain, agc, rpm, led_flash, led_duty):
+    def setMultisenseCommand(fps, gain, exposure, agc, rpm, led_flash, led_duty):
 
         m = lcmmultisense.command_t()
         m.utime = getUtime()
         m.fps = fps
         m.gain = gain
+        m.exposure_us = exposure
         m.agc = agc
         m.rpm = rpm
         m.leds_flash = led_flash
