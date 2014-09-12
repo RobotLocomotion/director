@@ -85,9 +85,9 @@ class AsyncIKCommunicator():
         if type(name) is not list: name = [name]
 
         for vertices_i, name_i in zip(vertices,name):
-            self.comm.assignFloatArray(vertices_i, 'collision_object_vertices')
-            commands.append('collision_object = RigidBodyMeshPoints(collision_object_vertices);')
-            commands.append('r = addShapeToBody(r, world, collision_object,\'%s\');' % name_i)
+            self.comm.assignFloatArray(vertices_i, '%s_vertices' % name_i.replace(' ','_'))
+            commands.append('collision_object_%s = RigidBodyMeshPoints(%s_vertices);' % (name_i.replace(' ','_'),name_i.replace(' ','_')))
+            commands.append('r = addShapeToBody(r, world, collision_object_%s,\'%s\');' % (name_i.replace(' ','_'), name_i))
 
         commands.append('r = compile(r);')
         self.comm.sendCommands(commands)
