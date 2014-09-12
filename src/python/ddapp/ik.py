@@ -21,11 +21,13 @@ class AsyncIKCommunicator():
         self.infoFunc = None
 
         self.maxDegreesPerSecond = 30.0
+        self.maxBaseMetersPerSecond = 0.1
+        self.maxPlanDuration = 30.0
         self.usePointwise = True
         self.useCollision = False
         self.numberOfAddedKnots = 0
         self.numberOfInterpolatedCollisionChecks = 2
-        self.collisionMinDistance = 0.05
+        self.collisionMinDistance = 0.03
         self.majorIterationsLimit = 100
 
 
@@ -258,7 +260,10 @@ class AsyncIKCommunicator():
             commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
             commands.append('options.n_interp_points = %s;' % self.numberOfInterpolatedCollisionChecks)
-            commands.append('options.min_distance = 0.03;')
+            commands.append('options.min_distance = %s;' % self.collisionMinDistance)
+            commands.append('options.joint_v_max = %s*pi/180;' % self.maxDegreesPerSecond)
+            commands.append('options.xyz_v_max = %s;' % self.maxBaseMetersPerSecond)
+            commands.append('options.t_max = %s;' % self.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
             commands.append('options.major_iterations_limit = %s;' % self.majorIterationsLimit)
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
