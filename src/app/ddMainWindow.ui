@@ -73,7 +73,16 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents">
     <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="margin">
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
       <number>0</number>
      </property>
      <item>
@@ -120,7 +129,16 @@
      <property name="spacing">
       <number>0</number>
      </property>
-     <property name="margin">
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
       <number>0</number>
      </property>
      <item>
@@ -137,7 +155,7 @@
           <x>0</x>
           <y>0</y>
           <width>256</width>
-          <height>215</height>
+          <height>219</height>
          </rect>
         </property>
        </widget>
@@ -155,7 +173,16 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_3">
     <layout class="QVBoxLayout" name="verticalLayout_2">
-     <property name="margin">
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
       <number>0</number>
      </property>
      <item>
@@ -208,6 +235,7 @@
    <addaction name="ActionTeleopPanel"/>
    <addaction name="ActionActionManagerPanel"/>
    <addaction name="ActionScreenGrabberPanel"/>
+   <addaction name="ActionSensorDataRequestPanel"/>
   </widget>
   <action name="ActionQuit">
    <property name="text">
@@ -449,6 +477,24 @@
    </property>
    <property name="toolTip">
     <string>Navigation Panel</string>
+   </property>
+  </action>
+  <action name="ActionSensorDataRequestPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/download_icon.png</normaloff>:/images/download_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Sensor Data Control</string>
+   </property>
+   <property name="toolTip">
+    <string>Sensor Data Control</string>
+   </property>
+   <property name="shortcut">
+    <string/>
    </property>
   </action>
  </widget>
