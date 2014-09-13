@@ -488,10 +488,10 @@
      <normaloff>:/images/download_icon.png</normaloff>:/images/download_icon.png</iconset>
    </property>
    <property name="text">
-    <string>Sensor Data Control</string>
+    <string>Sensor Data Request</string>
    </property>
    <property name="toolTip">
-    <string>Sensor Data Control</string>
+    <string>Sensor Data Request</string>
    </property>
    <property name="shortcut">
     <string/>
