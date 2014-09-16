@@ -12,5 +12,6 @@
     <file>ddScreenGrabber.ui</file>
     <file>ddTeleopPanel.ui</file>
     <file>ddVideoPlayer.ui</file>
+    <file>ddSensorDataRequest.ui</file>
   </qresource>
 </RCC>

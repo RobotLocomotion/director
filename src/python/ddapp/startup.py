@@ -45,6 +45,7 @@ from ddapp import atlasdriverpanel
 from ddapp import multisensepanel
 from ddapp import navigationpanel
 from ddapp import handcontrolpanel
+from ddapp import sensordatarequestpanel
 
 from ddapp import robotplanlistener
 from ddapp import handdriver
@@ -167,6 +168,7 @@ if usePerception:
 
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
     multisensepanel.init(perception.multisenseDriver)
+    sensordatarequestpanel.init()
 
     disparityPointCloud = segmentation.DisparityPointCloudItem('stereo point cloud', cameraview.imageManager)
     disparityPointCloud.addToView(view)
