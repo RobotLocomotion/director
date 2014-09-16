@@ -59,6 +59,7 @@ set(python_files
   ddapp/segmentation.py
   ddapp/segmentationpanel.py
   ddapp/segmentationroutines.py
+  ddapp/sensordatarequestpanel.py
   ddapp/shallowCopy.py
   ddapp/simpletimer.py
   ddapp/skybox.py
