@@ -125,10 +125,12 @@ class DrillPlannerDemo(object):
         self.useFootstepPlanner = True
         self.visOnly = False # True for development, False for operation
         self.planFromCurrentRobotState = True # False for development, True for operation
+        self.usePointerPerceptionOffset = True # True for development, False for operation
         useDevelopment = False
         if (useDevelopment):
             self.visOnly = True # True for development, False for operation
             self.planFromCurrentRobotState = False # False for development, True for operation
+            self.usePointerPerceptionOffset = False
 
         self.flushNominalPlanSequence = False
 
@@ -145,7 +147,6 @@ class DrillPlannerDemo(object):
         self.cutLength = 0.05 # length to cut each time
         self.retractBitDepthNominal = -0.055 # depth to move drill away from wall
         self.goalThreshold = 0.05 # how close we need to get to the cut goal (the triangle corners
-        self.usePointerPerceptionOffset = True
 
         #extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
         #self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
