@@ -374,17 +374,14 @@ class FootstepsDriver(object):
             # to get this sole transform
             # foot_sole_shift = np.array([0.048, 0.0, -0.0811])
 
-            # T_terrain_to_world = transformUtils.frameFromPositionAndRPY(np.hstack((trans[:2] + foot_sole_shift[:2], 0)), [0, 0, math.degrees(yaw)])
             T_terrain_to_world = transformUtils.frameFromPositionAndRPY([trans_prev[0], trans_prev[1], 0], [0, 0, math.degrees(yaw)])
             path_dist = np.array(footstep.terrain_path_dist)
             height = np.array(footstep.terrain_height)
-            # if np.any(height >= footstep.params.step_height):
-            if True:
+            if np.any(height >= footstep.params.step_height):
                 terrain_pts_in_local = np.vstack((path_dist, np.zeros(len(footstep.terrain_path_dist)), height))
                 d = DebugData()
                 for j in range(terrain_pts_in_local.shape[1]-1):
                     d.addLine(terrain_pts_in_local[:,j], terrain_pts_in_local[:,j+1], radius=0.01)
-                # polyData = vnp.getVtkPolyDataFromNumpyPoints(terrain_pts_in_local.T.copy())
                 obj = vis.showPolyData(d.getPolyData(), 'terrain slice', parent=slicesFolder, visible=True, color=[.8,.8,.3])
                 obj.actor.SetUserTransform(T_terrain_to_world)
 
