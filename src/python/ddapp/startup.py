@@ -39,6 +39,7 @@ from ddapp import filterUtils
 from ddapp import footstepsdriver
 from ddapp import footstepsdriverpanel
 from ddapp import framevisualization
+from ddapp import lcmloggerwidget
 from ddapp import lcmgl
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
@@ -109,6 +110,7 @@ usePlanning = True
 useAtlasDriver = True
 useLCMGL = True
 useLightColorScheme = False
+useLoggingWidget = True
 useDrakeVisualizer = True
 useNavigationPanel = True
 useFootContactVis = True
@@ -378,6 +380,14 @@ if useNavigationPanel:
     thispanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
     picker = PointPicker(view, callback=thispanel.pointPickerDemo, numberOfPoints=2)
     #picker.start()
+
+
+if useLoggingWidget:
+    w = lcmloggerwidget.LCMLoggerWidget(statusBar=app.getMainWindow().statusBar())
+    app.getMainWindow().statusBar().addPermanentWidget(w.button)
+    baseDir = os.path.expanduser('~/logs/raw')
+    if os.path.isdir(baseDir):
+        w.manager.baseDir = baseDir
 
 
 if useControllerRate:
