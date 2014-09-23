@@ -132,11 +132,88 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXY
 }
 
 //----------------------------------------------------------------------------
+void AddZCoordinateArray(vtkPolyData* polyData)
+{
+  const vtkIdType nPoints = polyData->GetNumberOfPoints();
+
+  vtkSmartPointer<vtkDoubleArray> zcoord = vtkSmartPointer<vtkDoubleArray>::New();
+  zcoord->SetName("z");
+  zcoord->SetNumberOfComponents(1);
+  zcoord->SetNumberOfTuples(nPoints);
+
+  for (vtkIdType i = 0; i < nPoints; ++i)
+  {
+    double z = polyData->GetPoint(i)[2];
+    if (!pcl_isfinite(z))
+    {
+      z = 0.0;
+    }
+    zcoord->SetValue(i, z);
+  }
+
+  polyData->GetPointData()->AddArray(zcoord);
+}
+
+//----------------------------------------------------------------------------
+vtkSmartPointer<vtkPolyData> ConvertMesh(maps::TriangleMesh::Ptr mesh)
+{
+  const size_t nPoints = mesh->mVertices.size();
+  const size_t nTris = mesh->mFaces.size();
+  const bool hasNormals = (mesh->mNormals.size() != 0);
+
+  vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+  points->SetDataTypeToDouble();
+  points->SetNumberOfPoints(nPoints);
+
+  vtkSmartPointer<vtkDoubleArray> normalsArray = vtkSmartPointer<vtkDoubleArray>::New();
+  normalsArray->SetName("Normals");
+  normalsArray->SetNumberOfComponents(3);
+  normalsArray->SetNumberOfTuples(nPoints);
+
+  for (size_t i = 0; i < nPoints; ++i)
+  {
+    points->SetPoint(i, mesh->mVertices[i].data());
+  }
+
+  if (hasNormals)
+  {
+    for (size_t i = 0; i < nPoints; ++i)
+    {
+      normalsArray->SetTuple(i, mesh->mNormals[i].data());
+    }
+  }
+
+
+  vtkSmartPointer<vtkCellArray> cellArray = vtkSmartPointer<vtkCellArray>::New();
+
+  vtkIdType ids[3];
+  for (vtkIdType i = 0; i < nTris; ++i)
+    {
+    ids[0] = mesh->mFaces[i][0];
+    ids[1] = mesh->mFaces[i][1];
+    ids[2] = mesh->mFaces[i][2];
+    cellArray->InsertNextCell(3, ids);
+    }
+
+  vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+  polyData->SetPoints(points);
+  polyData->SetPolys(cellArray);
+
+  if (hasNormals)
+  {
+    polyData->GetPointData()->SetNormals(normalsArray);
+  }
+
+  return polyData;
+}
+
+//----------------------------------------------------------------------------
 class MapData
 {
 public:
   uint64_t Id;
   vtkSmartPointer<vtkPolyData> Data;
+  vtkSmartPointer<vtkPolyData> Mesh;
   vtkSmartPointer<vtkImageData> DepthImage;
   vtkSmartPointer<vtkTransform> Transform;
 };
@@ -338,6 +415,24 @@ public:
       }
   }
 
+  void GetMeshForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData)
+  {
+    if (!polyData)
+      {
+      return;
+      }
+
+    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    for (size_t i = 0; i < datasets.size(); ++i)
+      {
+      if (datasets[i].Id == mapId)
+        {
+        polyData->DeepCopy(datasets[i].Mesh);
+        }
+      }
+  }
+
   void GetDataForMapId(int viewId, vtkIdType mapId, vtkImageData* imageData, vtkTransform* transform)
   {
     if (!imageData || !transform)
@@ -456,10 +551,13 @@ protected:
     maps::LcmTranslator::fromLcm(*msg, depthImageView);
 
     maps::PointCloud::Ptr pointCloud = depthImageView.getAsPointCloud();
+    maps::TriangleMesh::Ptr mesh = depthImageView.getAsMesh();
 
     MapData mapData;
     mapData.Data = PolyDataFromPointCloud(pointCloud);
     mapData.DepthImage = this->ConvertDepthImage(depthImageView.getDepthImage());
+    mapData.Mesh = ConvertMesh(mesh);
+    AddZCoordinateArray(mapData.Mesh);
     mapData.Transform = this->ToVtkTransform(depthImageView.getTransform());
 
     //printf("storing depth map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
@@ -587,6 +685,12 @@ vtkIdType vtkMapServerSource::GetCurrentMapId(int viewId)
 void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData)
 {
   this->Internal->Listener->GetDataForMapId(viewId, mapId, polyData);
+}
+
+//-----------------------------------------------------------------------------
+void vtkMapServerSource::GetMeshForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData)
+{
+  this->Internal->Listener->GetMeshForMapId(viewId, mapId, polyData);
 }
 
 //-----------------------------------------------------------------------------
