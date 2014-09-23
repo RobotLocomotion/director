@@ -45,6 +45,7 @@ public:
 
   vtkIdType GetCurrentMapId(int viewId);
   void GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData);
+  void GetMeshForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData);
   void GetDataForMapId(int viewId, vtkIdType mapId, vtkImageData* imageData, vtkTransform* transform);
 
   vtkIntArray* GetViewIds();
