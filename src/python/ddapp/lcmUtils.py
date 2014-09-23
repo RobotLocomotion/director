@@ -1,5 +1,6 @@
 import lcm
 import PythonQt
+import datetime
 import pickle
 import atexit
 import socket
@@ -436,3 +437,70 @@ class HistoricalLCMLoader(object):
             self._mru_shas_cache[type_name].insert(0, sha)
             return msg_obj
         raise ValueError("Unable to decode message data with any available type definitions.")
+
+
+class LCMLoggerManager(object):
+    '''
+    This class provides some convenient methods for managing instances of
+    the lcm-logger process.  You can start/stop instances of the lcm-logger
+    process, and search for existing instances of the process.  It also has
+    support for parsing command lines to attempt to extract log file names
+    from running instances of lcm-logger.
+    '''
+
+    def __init__(self):
+        self.filePatternPrefix = 'lcmlog'
+        self.baseDir = '/tmp'
+        self.existingLoggerProcesses = {}
+
+    @staticmethod
+    def getTimeTag():
+        return datetime.datetime.now().isoformat()
+        # timestamp style from drc-lcm-logger.sh:
+        # return datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
+
+
+    def startNewLogger(self, tag='', baseDir=None):
+        filePattern = [self.filePatternPrefix, self.getTimeTag()]
+        if tag:
+            filePattern.append(tag)
+        filePattern = '-'.join(filePattern)
+
+        if baseDir is None:
+            baseDir = self.baseDir
+
+        fileArg = os.path.join(baseDir, filePattern)
+        command = ['lcm-logger', fileArg]
+
+        devnull = open(os.devnull, 'w')
+        p = subprocess.Popen(command, stdout=devnull, stderr=devnull)
+        return p.pid
+
+    def updateExistingLoggerProcesses(self):
+        output = subprocess.check_output(['ps', '-eo', 'pid,command'])
+        self.existingLoggerProcesses = {}
+        for line in output.splitlines()[1:]:
+            fields = line.split()
+            pid = int(fields[0])
+            processName = fields[1].strip()
+            args = fields[2:]
+            if 'lcm-logger' in processName:
+                self.existingLoggerProcesses[pid] = (processName, args)
+        return self.existingLoggerProcesses
+
+    def getActiveLoggerPids(self):
+        return sorted(self.existingLoggerProcesses.keys())
+
+    def getActiveLogFilenames(self):
+        files = []
+        for pid, command in self.existingLoggerProcesses.iteritems():
+            processName, args = command
+            for arg in args:
+                if os.path.isfile(arg):
+                    files.append(arg)
+        return files
+
+    def killAllLoggingProcesses(self):
+        for pid, command in self.existingLoggerProcesses.iteritems():
+            processName, args = command
+            os.system('kill %d' % pid)
