@@ -362,6 +362,7 @@ class MapServerSource(TimerCallback):
         self.targetFps = 10
         self.callbackFunc = callbackFunc
         self.colorizeCallback = None
+        self.useMeshes = True
 
     def getNameForViewId(self, viewId):
 
@@ -388,7 +389,12 @@ class MapServerSource(TimerCallback):
 
     def showMap(self, viewId, mapId):
         polyData = vtk.vtkPolyData()
-        self.reader.GetDataForMapId(viewId, mapId, polyData)
+
+        if self.useMeshes:
+            self.reader.GetMeshForMapId(viewId, mapId, polyData)
+        else:
+            self.reader.GetDataForMapId(viewId, mapId, polyData)
+
         self.updatePolyData(viewId, polyData)
         self.displayedMapIds[viewId] = mapId
 
