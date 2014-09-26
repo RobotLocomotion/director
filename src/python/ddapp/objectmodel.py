@@ -108,7 +108,8 @@ class ContainerItem(ObjectModelItem):
         if propertyName == 'Visible':
             visible = self.getProperty(propertyName)
             for child in self.children():
-                child.setProperty(propertyName, visible)
+                if child.hasProperty(propertyName):
+                    child.setProperty(propertyName, visible)
 
 
 class ObjectModelTree(object):
