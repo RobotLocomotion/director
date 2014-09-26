@@ -468,7 +468,7 @@ class WorldGazeTargetConstraint(ConstraintBase):
 
 class QuasiStaticConstraint(ConstraintBase):
 
-    shrinkFactor = 0.5
+    shrinkFactor = 0.2
 
     def __init__(self, **kwargs):
 
