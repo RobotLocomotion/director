@@ -160,6 +160,9 @@ if useRobotState:
 
     segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
 
+    def getNeckPitch():
+        return robotStateJointController.q[robotstate.getDrakePoseJointNames().index('neck_ay')]
+
 
 if usePerception:
 
@@ -178,6 +181,8 @@ if usePerception:
 
     def createPointerTracker():
         return trackers.PointerTracker(robotStateModel, disparityPointCloud)
+
+    neckDriver = perception.NeckDriver(view, getNeckPitch)
 
 
 if useGrid:
@@ -538,7 +543,7 @@ def addCollisionObjectToLink(robotModel, linkName):
 app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view)
-viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
+viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver, neckDriver)
 
 
 # Drill Demo Functions for in-image rendering:
