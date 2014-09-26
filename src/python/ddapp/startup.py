@@ -619,3 +619,10 @@ def projectDrillDemoInCamera():
 
     v = imageView.view
     v.render()
+
+
+#
+mapping = cameraview.KintinuousMapping()
+timerCloud = TimerCallback(targetFps=5)
+timerCloud.callback = mapping.cameraFusedCallback
+timerCloud.start()
