@@ -378,7 +378,7 @@ if useActionManager:
 
 if useNavigationPanel:
     thispanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
-    picker = PointPicker(view, callback=thispanel.pointPickerDemo, numberOfPoints=2)
+    picker = PointPicker(view, callback=thispanel.pointPickerStoredFootsteps, numberOfPoints=2)
     #picker.start()
 
 
