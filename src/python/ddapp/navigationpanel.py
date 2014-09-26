@@ -370,7 +370,7 @@ class NavigationPanel(object):
 #                           [ blockl*-0.5+ 0.04 , -sep , 0       , 0 , 0 , 0, r],
 #                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
 
-# up 3 blocks
+# up 5 blocks
         r =1
         flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
                            [ blockl*-0.5       , -sep , 0       , 0 , 0 , 0, r],
@@ -379,7 +379,11 @@ class NavigationPanel(object):
                            [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
                            [ blockl*1.5 + 0.0  ,-sep  , 2*blockh, 0 , 0 , 0, r],
                            [ blockl*2.5 - 0.03 , sep  , 3*blockh, 0 , 0 , 0, 0],
-                           [ blockl*2.5 + 0.03  ,-sep , 3*blockh, 0 , 0 , 0, r]])
+                           [ blockl*2.5 + 0.03  ,-sep , 3*blockh, 0 , 0 , 0, r],
+                           [ blockl*3.5 - 0.03 , (sep-0.01)  , 4*blockh, 0 , 0 , 0, 0],
+                           [ blockl*3.5 + 0.03  ,(-sep-0.01) , 4*blockh, 0 , 0 , 0, r],
+                           [ blockl*4.5 - 0.03 , (sep-0.02)  , 5*blockh, 0 , 0 , 0, 0],
+                           [ blockl*4.5 + 0.03  ,(-sep-0.02) , 5*blockh, 0 , 0 , 0, r]])
                            #[ blockl*3.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
                            #[ blockl*3.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
                            #[ blockl*4.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
