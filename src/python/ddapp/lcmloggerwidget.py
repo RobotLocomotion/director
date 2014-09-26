@@ -17,7 +17,6 @@ class LCMLoggerWidget(object):
         self.userTag = ''
 
         self.button = QtGui.QPushButton('')
-        self.button.checkable = True
         self.button.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.button.connect('customContextMenuRequested(const QPoint&)', self.showContextMenu)
         self.button.connect('clicked()', self.onClick)
