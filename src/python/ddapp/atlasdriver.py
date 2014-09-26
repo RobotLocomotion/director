@@ -167,10 +167,7 @@ class AtlasDriver(object):
     # State Est Init Code
     def sendInitAtZero(self):
         self.sendReadyMessage()
-
         p1 = [0,0,0.85]
-        init_frame = transformUtils.frameFromPositionAndRPY( p1 , [0,0,0] )
-        vis.updateFrame(init_frame, "init pose", parent="navigation")
         self.sendInitMessage(p1, 0)
 
     def sendReadyMessage(self):
