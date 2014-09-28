@@ -128,4 +128,4 @@ class LCMLoggerWidget(object):
             devnull = open(os.devnull, 'w')
             subprocess.Popen('drake-designer', stdout=devnull, stderr=devnull, env=newEnv)
             subprocess.Popen(['lcm-logplayer-gui', self.lastActiveLogFile], stdout=devnull, stderr=devnull, env=newEnv)
-            subprocess.Popen(['bot-procman-sheriff', '-o', stdout=devnull, stderr=devnull, env=newEnv)
+            subprocess.Popen(['bot-procman-sheriff', '-o'], stdout=devnull, stderr=devnull, env=newEnv)
