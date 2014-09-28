@@ -539,7 +539,7 @@ class KeyEventFilter(object):
     def filterEvent(self, obj, event):
 
         consumed = False
-        if event.type() == QtCore.QEvent.KeyPress:
+        if event.type() == QtCore.QEvent.KeyPress and not event.isAutoRepeat():
             key = str(event.text()).lower()
             if key == 'f':
                 zoomToPick(self.getCursorDisplayPosition(), self.view)
@@ -568,7 +568,7 @@ class KeyEventFilter(object):
                 # block vtk keypress handler 3d mode
                 consumed = True
 
-        elif event.type() == QtCore.QEvent.KeyRelease:
+        elif event.type() == QtCore.QEvent.KeyRelease and not event.isAutoRepeat():
             if str(event.text()).lower() == 'n':
                 if neckDriver:
                     neckDriver.deactivateNeckControl()
