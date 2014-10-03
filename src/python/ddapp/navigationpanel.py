@@ -348,7 +348,7 @@ class NavigationPanel(object):
 #                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
 
 
-# up and down 2 blocks (used in vicon)
+# up and down 2 blocks (used in vicon april 2014)
 #        r =1
 #        flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
 #                           [ blockl*-0.5       , -sep , 0       , 0 , 0 , 0, r], # start
@@ -370,35 +370,22 @@ class NavigationPanel(object):
 #                           [ blockl*-0.5+ 0.04 , -sep , 0       , 0 , 0 , 0, r],
 #                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
 
-# up 3 blocks
+# up 3 blocks (used in 
         r =1
         flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
-                           [ blockl*-0.5       , -sep , 0       , 0 , 0 , 0, r],
+                           [ blockl*-0.5       ,-sep  , 0       , 0 , 0 , 0, r],
                            [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
                            [ blockl*0.5 + 0.0  ,-sep  , blockh  , 0 , 0 , 0, r],
                            [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
                            [ blockl*1.5 + 0.0  ,-sep  , 2*blockh, 0 , 0 , 0, r],
                            [ blockl*2.5 - 0.03 , sep  , 3*blockh, 0 , 0 , 0, 0],
-                           [ blockl*2.5 + 0.03  ,-sep , 3*blockh, 0 , 0 , 0, r]])
-                           #[ blockl*3.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
-                           #[ blockl*3.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
-                           #[ blockl*4.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
-                           #[ blockl*4.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r],
-                           #[ blockl*5.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0],
-                           #[ blockl*5.5 + 0.03  ,-sep , 0       , 0 , 0 , 0, r], # half
-                           #[ blockl*5.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0], # extra step for planner
-                           #[ blockl*4.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r], # invert order
-                           #[ blockl*4.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
-                           #[ blockl*3.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
-                           #[ blockl*3.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
-                           #[ blockl*2.5 + 0.03  ,-sep , 3*blockh, 0 , 0 , 0, r], # top
-                           #[ blockl*2.5 - 0.06 , sep  , 3*blockh, 0 , 0 , 0, 0], # top
-                           #[ blockl*1.5 + 0.04 ,-sep  , 2*blockh, 0 , 0 , 0, r],
-                           #[ blockl*1.5 - 0.06 , sep  , 2*blockh, 0 , 0 , 0, 0],
-                           #[ blockl*0.5 + 0.04 ,-sep  , blockh  , 0 , 0 , 0, r],
-                           #[ blockl*0.5 - 0.06 , sep  , blockh  , 0 , 0 , 0, 0],
-                           #[ blockl*-0.5+ 0.04 , -sep , 0       , 0 , 0 , 0, r],
-                           #[ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
+                           [ blockl*2.5 + 0.03 ,-sep  , 3*blockh, 0 , 0 , 0, r]])
+                           [ blockl*2.5 + 0.03 ,-sep  , 3*blockh, 0 , 0 , 0, r],
+                           [ blockl*3.5 - 0.03 , sep  , 4*blockh, 0 , 0 , 0, 0],
+                           [ blockl*3.5 + 0.03 ,-sep  , 4*blockh, 0 , 0 , 0, r],
+                           [ blockl*4.5 - 0.03 , sep  , 5*blockh, 0 , 0 , 0, 0],
+                           [ blockl*4.5 + 0.03 ,-sep  , 5*blockh, 0 , 0 , 0, r]])
+
 
         contact_pts = self.footstepDriver.getContactPts()
         contact_pts_mid = np.mean(contact_pts, axis=0) # mid point on foot relative to foot frame
