@@ -165,7 +165,7 @@ class NavigationPanel(object):
         self.sendInitMessage(p1, 0)
 
 
-    def pointPickerDemo(self,p1, p2):
+    def pointPickerNavigationInit(self,p1, p2):
         self.sendReadyMessage()
 
         yaw = math.atan2( p2[1] - p1[1] , p2[0] - p1[0] )
@@ -254,7 +254,7 @@ class NavigationPanel(object):
         msg.utime = getUtime()
         lcmUtils.publish('STATE_EST_USE_NEW_MAP', msg)
 
-    def pointPickerDemoOriginal(self,p1, p2):
+    def pointPickerStoredFootsteps(self,p1, p2):
 
         yaw = math.atan2( p2[1] - p1[1] , p2[0] - p1[0] )*180/math.pi + 90
         frame_p1 = transformUtils.frameFromPositionAndRPY(p1, [0,0,yaw])
@@ -272,7 +272,7 @@ class NavigationPanel(object):
 
 
 
-# Original: 1 up/down
+# up/down 1 block (Original)
 #        flist = np.array( [[ blockl*-0.5 , .1  , 0      , 0 , 0 , 0] ,
 #                           [ blockl*-0.5 , -.1 , 0      , 0 , 0 , 0] ,
 #                           [ blockl*0.5 - 0.03 , .1  , blockh , 0 , 0 , 0] ,
@@ -280,8 +280,7 @@ class NavigationPanel(object):
 #                           [ blockl*1.5        , .1  , 0      , 0 , 0 , 0] ,
 #                           [ blockl*1.5 +0.03  ,-.1  , 0      , 0 , 0 , 0]])
 
-
-# Newer: 1 up/down
+# up/down 1 block (Newer)
 #        flist = np.array( [[ blockl*-0.5       , .1  , 0      , 0 , 0 , 0] ,
 #                           [ blockl*-0.5       , -.1 , 0      , 0 , 0 , 0] ,
 #	                   [ blockl*0.5 - 0.03 , .1  , blockh , 0 , 0 , 0] ,
@@ -289,7 +288,7 @@ class NavigationPanel(object):
 #                           [ blockl*1.5 - 0.03 , .1  , 0      , 0 , 0 , 0] ,
 #                           [ blockl*1.5 + 0.00 ,-.1  , 0      , 0 , 0 , 0]])
 
-# 3 up
+# up 3 blocks
 #        flist = np.array( [[ blockl*-0.5       , .1  , 0      , 0 , 0 , 0] ,
 #                           [ blockl*-0.5       , -.1 , 0      , 0 , 0 , 0] ,
 #	                   [ blockl*0.5 - 0.03 , .1  , blockh , 0 , 0 , 0] ,
@@ -299,7 +298,7 @@ class NavigationPanel(object):
 #                           [ blockl*2.5 - 0.03 , .1  , 3*blockh, 0 , 0 , 0] ,
 #                           [ blockl*2.5 + 0.0  ,-.1  , 3*blockh, 0 , 0 , 0]])
 
-# 3 up and down (original)
+# up and down 3 blocks (original)
 #        flist = np.array( [[ blockl*-0.5       , .1  , 0       , 0 , 0 , 0] ,
 #                           [ blockl*-0.5       , -.1 , 0       , 0 , 0 , 0] ,
 #	                   [ blockl*0.5 - 0.03 , .1  , blockh  , 0 , 0 , 0] ,
@@ -316,59 +315,74 @@ class NavigationPanel(object):
 #                           [ blockl*5.5 + 0.03  ,-.1 , 0       , 0 , 0 , 0]])
 
 
-# 3 up and down
+# up and down 3 blocks (used in video)
+#        r =1
+#        flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
+#                          [ blockl*-0.5       , -sep , 0       , 0 , 0 , 0, r],
+#                          [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
+#                           [ blockl*0.5 + 0.0  ,-sep  , blockh  , 0 , 0 , 0, r],
+#                           [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*1.5 + 0.0  ,-sep  , 2*blockh, 0 , 0 , 0, r],
+#                           [ blockl*2.5 - 0.03 , sep  , 3*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*2.5 + 0.03  ,-sep , 3*blockh, 0 , 0 , 0, r],
+#                           [ blockl*3.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*3.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
+#                           [ blockl*4.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*4.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r],
+#                           [ blockl*5.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0],
+#                           [ blockl*5.5 + 0.03  ,-sep , 0       , 0 , 0 , 0, r], # half
+#                           [ blockl*5.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0], # extra step for planner
+#                           [ blockl*4.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r], # invert order
+#                           [ blockl*4.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*3.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
+#                           [ blockl*3.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*2.5 + 0.03  ,-sep , 3*blockh, 0 , 0 , 0, r], # top
+#                           [ blockl*2.5 - 0.06 , sep  , 3*blockh, 0 , 0 , 0, 0], # top
+#                           [ blockl*1.5 + 0.04 ,-sep  , 2*blockh, 0 , 0 , 0, r],
+#                           [ blockl*1.5 - 0.06 , sep  , 2*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*0.5 + 0.04 ,-sep  , blockh  , 0 , 0 , 0, r],
+#                           [ blockl*0.5 - 0.06 , sep  , blockh  , 0 , 0 , 0, 0],
+#                           [ blockl*-0.5+ 0.04 , -sep , 0       , 0 , 0 , 0, r],
+#                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
+
+
+# up and down 2 blocks (used in vicon april 2014)
+#        r =1
+#        flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
+#                           [ blockl*-0.5       , -sep , 0       , 0 , 0 , 0, r], # start
+#                           [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
+#                           [ blockl*0.5 + 0.0  ,-sep  , blockh  , 0 , 0 , 0, r], # 1
+#                           [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*1.5 + 0.03 ,-sep  , 2*blockh, 0 , 0 , 0, r], # 2
+#                           [ blockl*2.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*2.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r], # 1d
+#                           [ blockl*3.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0],
+#                           [ blockl*3.5 + 0.03  ,-sep , 0       , 0 , 0 , 0, r], # half
+#                           [ blockl*3.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0], # extra step for planner
+#                           [ blockl*2.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r], # invert order
+#                           [ blockl*2.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*1.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
+#                           [ blockl*1.5 - 0.06 , sep  , 2*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*0.5 + 0.04 ,-sep  , blockh  , 0 , 0 , 0, r],
+#                           [ blockl*0.5 - 0.06 , sep  , blockh  , 0 , 0 , 0, 0],
+#                           [ blockl*-0.5+ 0.04 , -sep , 0       , 0 , 0 , 0, r],
+#                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
+
+# up 3 blocks (used in outdoor demo, sept 2014)
         r =1
         flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
-                           [ blockl*-0.5       , -sep , 0       , 0 , 0 , 0, r],
-	                   [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
+                           [ blockl*-0.5       ,-sep  , 0       , 0 , 0 , 0, r],
+                           [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
                            [ blockl*0.5 + 0.0  ,-sep  , blockh  , 0 , 0 , 0, r],
                            [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
                            [ blockl*1.5 + 0.0  ,-sep  , 2*blockh, 0 , 0 , 0, r],
                            [ blockl*2.5 - 0.03 , sep  , 3*blockh, 0 , 0 , 0, 0],
-                           [ blockl*2.5 + 0.03  ,-sep , 3*blockh, 0 , 0 , 0, r],
-                           [ blockl*3.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
-                           [ blockl*3.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
-                           [ blockl*4.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
-                           [ blockl*4.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r],
-                           [ blockl*5.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0],
-                           [ blockl*5.5 + 0.03  ,-sep , 0       , 0 , 0 , 0, r], # half
-                           [ blockl*5.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0], # extra step for planner
-                           [ blockl*4.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r], # invert order
-                           [ blockl*4.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
-                           [ blockl*3.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
-                           [ blockl*3.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
-                           [ blockl*2.5 + 0.03  ,-sep , 3*blockh, 0 , 0 , 0, r], # top
-                           [ blockl*2.5 - 0.06 , sep  , 3*blockh, 0 , 0 , 0, 0], # top
-                           [ blockl*1.5 + 0.04 ,-sep  , 2*blockh, 0 , 0 , 0, r],
-                           [ blockl*1.5 - 0.06 , sep  , 2*blockh, 0 , 0 , 0, 0],
-                           [ blockl*0.5 + 0.04 ,-sep  , blockh  , 0 , 0 , 0, r],
-	                   [ blockl*0.5 - 0.06 , sep  , blockh  , 0 , 0 , 0, 0],
-                           [ blockl*-0.5+ 0.04 , -sep , 0       , 0 , 0 , 0, r],
-                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
-
-
-# 2 up and down
-        r =1
-        flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
-                           [ blockl*-0.5       , -sep , 0       , 0 , 0 , 0, r], # start
-	                   [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
-                           [ blockl*0.5 + 0.0  ,-sep  , blockh  , 0 , 0 , 0, r], # 1
-                           [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
-                           [ blockl*1.5 + 0.03 ,-sep  , 2*blockh, 0 , 0 , 0, r], # 2
-                           [ blockl*2.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
-                           [ blockl*2.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r], # 1d
-                           [ blockl*3.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0],
-                           [ blockl*3.5 + 0.03  ,-sep , 0       , 0 , 0 , 0, r], # half
-                           [ blockl*3.5 - 0.03 , sep  , 0       , 0 , 0 , 0, 0], # extra step for planner
-                           [ blockl*2.5 + 0.03  ,-sep , 1*blockh, 0 , 0 , 0, r], # invert order
-                           [ blockl*2.5 - 0.03 , sep  , 1*blockh, 0 , 0 , 0, 0],
-                           [ blockl*1.5 + 0.03  ,-sep , 2*blockh, 0 , 0 , 0, r],
-                           [ blockl*1.5 - 0.06 , sep  , 2*blockh, 0 , 0 , 0, 0],
-                           [ blockl*0.5 + 0.04 ,-sep  , blockh  , 0 , 0 , 0, r],
-	                   [ blockl*0.5 - 0.06 , sep  , blockh  , 0 , 0 , 0, 0],
-                           [ blockl*-0.5+ 0.04 , -sep , 0       , 0 , 0 , 0, r],
-                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
-
+                           [ blockl*2.5 + 0.03 ,-sep  , 3*blockh, 0 , 0 , 0, r]])
+                           [ blockl*2.5 + 0.03 ,-sep  , 3*blockh, 0 , 0 , 0, r],
+                           [ blockl*3.5 - 0.03 , sep  , 4*blockh, 0 , 0 , 0, 0],
+                           [ blockl*3.5 + 0.03 ,-sep  , 4*blockh, 0 , 0 , 0, r],
+                           [ blockl*4.5 - 0.03 , sep  , 5*blockh, 0 , 0 , 0, 0],
+                           [ blockl*4.5 + 0.03 ,-sep  , 5*blockh, 0 , 0 , 0, r]])
 
 
         contact_pts = self.footstepDriver.getContactPts()
