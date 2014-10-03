@@ -377,7 +377,7 @@ class NavigationPanel(object):
                            [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
                            [ blockl*1.5 + 0.0  ,-sep  , 2*blockh, 0 , 0 , 0, r],
                            [ blockl*2.5 - 0.03 , sep  , 3*blockh, 0 , 0 , 0, 0],
-                           [ blockl*2.5 + 0.03 ,-sep  , 3*blockh, 0 , 0 , 0, r]])
+                           [ blockl*2.5 + 0.03 ,-sep  , 3*blockh, 0 , 0 , 0, r],
                            [ blockl*2.5 + 0.03 ,-sep  , 3*blockh, 0 , 0 , 0, r],
                            [ blockl*3.5 - 0.03 , sep  , 4*blockh, 0 , 0 , 0, 0],
                            [ blockl*3.5 + 0.03 ,-sep  , 4*blockh, 0 , 0 , 0, r],
