@@ -370,7 +370,7 @@ class NavigationPanel(object):
 #                           [ blockl*-0.5+ 0.04 , -sep , 0       , 0 , 0 , 0, r],
 #                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
 
-# up 3 blocks (used in 
+# up 3 blocks (used in outdoor demo, sept 2014)
         r =1
         flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
                            [ blockl*-0.5       ,-sep  , 0       , 0 , 0 , 0, r],
