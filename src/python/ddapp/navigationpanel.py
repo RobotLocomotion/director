@@ -166,8 +166,6 @@ class NavigationPanel(object):
 
 
     def pointPickerNavigationInit(self,p1, p2):
-        print p1
-        print p2
         self.sendReadyMessage()
 
         yaw = math.atan2( p2[1] - p1[1] , p2[0] - p1[0] )
