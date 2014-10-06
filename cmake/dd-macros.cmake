@@ -37,3 +37,9 @@ macro(use_pkg target cachevar)
   target_link_libraries(${target} ${${cachevar}_pkgconfig_LIBRARIES})
 
 endmacro()
+
+macro(setup_pods_pkg_config_path)
+  set(ENV{PKG_CONFIG_PATH} "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}")
+endmacro()
+
+setup_pods_pkg_config_path()
