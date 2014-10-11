@@ -2400,10 +2400,9 @@ def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDi
 
 
 def findHorizontalSurfaces(polyData):
-    ''' Find the horizontal surfaces
-    tuned to work with
     '''
-
+    Find the horizontal surfaces, tuned to work with walking terrain
+    '''
 
     searchZ = [0.0, 2.0]
     normalsDotUpRange = [0.95, 1.0]
