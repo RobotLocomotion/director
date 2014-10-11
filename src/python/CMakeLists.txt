@@ -96,6 +96,9 @@ set(python_files
   actionmanager/actionmanager.py
   actionmanager/simplefsm.py
   actionmanager/sequences.py
+
+  ddapp/qhull_2d.py
+  ddapp/min_bounding_rect.py
   )
 
 
