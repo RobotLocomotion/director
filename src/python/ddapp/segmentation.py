@@ -2400,14 +2400,19 @@ def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDi
 
 
 def findHorizontalSurfaces(polyData):
+    ''' Find the horizontal surfaces
+    tuned to work with
+    '''
+
 
     searchZ = [0.0, 2.0]
     normalsDotUpRange = [0.95, 1.0]
-    normalEstimationSearchRadius = 0.10
-    voxelGridLeafSize = 0.005
+    normalEstimationSearchRadius = 0.05 #0.10
+    voxelGridLeafSize = 0.01 #0.005
     clusterTolerance=0.025
-    minClusterSize = 20
+    minClusterSize = 150 # 20
     distanceToPlaneThreshold = 0.0025
+    verboseFlag = False
 
     groundPoints, scenePoints =  removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.05)
 
@@ -2421,6 +2426,7 @@ def findHorizontalSurfaces(polyData):
     f.SetInput(scenePoints)
     f.SetInput(1, applyVoxelGrid(scenePoints, voxelGridLeafSize))
 
+    # Duration 0.2 sec for V1 log:
     f.Update()
     scenePoints = shallowCopy(f.GetOutput())
 
@@ -2430,28 +2436,36 @@ def findHorizontalSurfaces(polyData):
     vtkNumpy.addNumpyToVtk(scenePoints, normalsDotUp, 'normals_dot_up')
     surfaces = thresholdPoints(scenePoints, 'normals_dot_up', normalsDotUpRange)
 
-
-    updatePolyData(groundPoints, 'ground points', parent=getDebugFolder(), visible=False)
-    updatePolyData(scenePoints, 'scene points', parent=getDebugFolder(), colorByName='normals_dot_up', visible=False)
-    updatePolyData(surfaces, 'surfaces', parent=getDebugFolder(), colorByName='normals_dot_up', visible=False)
+    updatePolyData(groundPoints, 'ground points', parent=getDebugFolder(), visible=verboseFlag)
+    updatePolyData(scenePoints, 'scene points', parent=getDebugFolder(), colorByName='normals_dot_up', visible=verboseFlag)
+    # this fails - TODO: figure out why
+    #updatePolyData(surfaces, 'surfaces', parent=getDebugFolder(), colorByName='normals_dot_up', visible=verboseFlag)
 
     clusters = extractClusters(surfaces, clusterTolerance=clusterTolerance, minClusterSize=minClusterSize)
     planeClusters = []
+    clustersLarge = []
 
-    print 'got %d clusters' % len(clusters)
+    if (verboseFlag):
+        print 'got %d clusters' % len(clusters)
+    om.removeFromObjectModel(om.findObjectByName('surfaces'))
     folder = om.getOrCreateContainer('surfaces', parentObj=getDebugFolder())
+
     for i, cluster in enumerate(clusters):
+        updatePolyData(cluster, 'surface cluster %d' % i, parent=getDebugFolder(), colorByName='normals_dot_up', visible=verboseFlag)
 
-        updatePolyData(cluster, 'surface cluster %d' % i, parent=getDebugFolder(), colorByName='normals_dot_up', visible=False)
-
+    for i, cluster in enumerate(clusters):
         planePoints, _ = applyPlaneFit(cluster, distanceToPlaneThreshold)
         planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-distanceToPlaneThreshold, distanceToPlaneThreshold])
 
         if planePoints.GetNumberOfPoints() > minClusterSize:
+            clustersLarge.append(cluster)
             obj = makePolyDataFields(planePoints)
             planeClusters.append(obj)
 
-    vis.showClusterObjects(planeClusters, parent=folder)
+    if (verboseFlag):
+        vis.showClusterObjects(planeClusters, parent=folder)
+
+    return clustersLarge
 
 
 def findAndFitDrillBarrel(polyData=None):
