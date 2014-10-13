@@ -2399,10 +2399,11 @@ def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDi
     return vis.showClusterObjects([obj], parent='segmentation')[0]
 
 
-def findHorizontalSurfaces(polyData):
+def findHorizontalSurfaces(polyData, removeGroundFirst=True):
     '''
     Find the horizontal surfaces, tuned to work with walking terrain
     '''
+    removeGroundFirst = False
 
     searchZ = [0.0, 2.0]
     normalsDotUpRange = [0.95, 1.0]
@@ -2413,9 +2414,14 @@ def findHorizontalSurfaces(polyData):
     distanceToPlaneThreshold = 0.0025
     verboseFlag = False
 
-    groundPoints, scenePoints =  removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.05)
+    if (removeGroundFirst):
+        groundPoints, scenePoints =  removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.05)
+        scenePoints = thresholdPoints(scenePoints, 'dist_to_plane', searchZ)
+        updatePolyData(groundPoints, 'ground points', parent=getDebugFolder(), visible=verboseFlag)
+    else:
+        scenePoints = polyData
 
-    scenePoints = thresholdPoints(scenePoints, 'dist_to_plane', searchZ)
+
 
     if not scenePoints.GetNumberOfPoints():
         return
@@ -2435,7 +2441,6 @@ def findHorizontalSurfaces(polyData):
     vtkNumpy.addNumpyToVtk(scenePoints, normalsDotUp, 'normals_dot_up')
     surfaces = thresholdPoints(scenePoints, 'normals_dot_up', normalsDotUpRange)
 
-    updatePolyData(groundPoints, 'ground points', parent=getDebugFolder(), visible=verboseFlag)
     updatePolyData(scenePoints, 'scene points', parent=getDebugFolder(), colorByName='normals_dot_up', visible=verboseFlag)
     # this fails - TODO: figure out why
     #updatePolyData(surfaces, 'surfaces', parent=getDebugFolder(), colorByName='normals_dot_up', visible=verboseFlag)
