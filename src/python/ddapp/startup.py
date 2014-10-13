@@ -458,6 +458,7 @@ if useDataFiles:
 
 if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
+    #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_TSDF', view)
 
 
 if useImageViewDemo:
@@ -631,6 +632,16 @@ import time
 import vtkNumpy
 from ddapp import qhull_2d
 from ddapp import min_bounding_rect
+# is this required?
+#import operator
+
+
+lastContactState = "none"
+outstandingPlanRequest = False
+requestedNumSteps = 0
+# Stereo or Lidar?
+processContinuousStereo = False
+footstepsPanel.driver.applyDefaults('BDI')
 
 
 def getRecedingTerrainRegion(polyData, linkFrame):
@@ -654,7 +665,7 @@ def getRecedingTerrainRegion(polyData, linkFrame):
     polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.4, 0.4])
     polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.4])
 
-    vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='continuous', visible=True)
+    vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='cont debug', visible=True)
     return polyData
 
 
@@ -666,7 +677,7 @@ def findFarRightCorner(polyData, linkFrame):
 
     diagonalTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,45])
     diagonalTransform.Concatenate(linkFrame)
-    vis.updateFrame(diagonalTransform, 'diagonal frame', parent='continuous', visible=False)
+    vis.updateFrame(diagonalTransform, 'diagonal frame', parent='cont debug', visible=False)
 
     #polyData = shallowCopy(polyData)
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
@@ -682,7 +693,7 @@ def findFarRightCorner(polyData, linkFrame):
     polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
     #polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewZ, origin=viewOrigin, resultArrayName='distance_along_foot_z')
 
-    vis.updatePolyData( polyData, 'cornerPoints', parent='continuous', visible=False)
+    vis.updatePolyData( polyData, 'cornerPoints', parent='cont debug', visible=False)
     farRightIndex = vtkNumpy.getNumpyFromVtk(polyData, 'distance_along_foot_y').argmin()
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
     return points[farRightIndex,:]
@@ -708,21 +719,21 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
 
     # Originally From: https://github.com/dbworth/minimum-area-bounding-rectangle
     polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.02)
-    #vis.updatePolyData( polyData, 'block top', parent='continuous', visible=False)
+    #vis.updatePolyData( polyData, 'block top', parent='cont debug', visible=False)
     polyDataCentroid = segmentation.computeCentroid(polyData)
     pts =vtkNumpy.getNumpyFromVtk( polyData , 'Points' )
 
     xy_points =  pts[:,[0,1]]
-    vis.updatePolyData( get2DAsPolyData(xy_points) , 'xy_points', parent='continuous', visible=False)
+    vis.updatePolyData( get2DAsPolyData(xy_points) , 'xy_points', parent='cont debug', visible=False)
     hull_points = qhull_2d.qhull2D(xy_points)
-    vis.updatePolyData( get2DAsPolyData(hull_points) , 'hull_points', parent='continuous', visible=False)
+    vis.updatePolyData( get2DAsPolyData(hull_points) , 'hull_points', parent='cont debug', visible=False)
     # Reverse order of points, to match output from other qhull implementations
     hull_points = hull_points[::-1]
     # print 'Convex hull points: \n', hull_points, "\n"
 
     # Find minimum area bounding rectangle
-    (rot_angle, area, width, height, center_point, corner_points_ground) = min_bounding_rect.minBoundingRect(hull_points)
-    vis.updatePolyData( get2DAsPolyData(corner_points_ground) , 'corner_points_ground', parent='continuous', visible=False)
+    (rot_angle, rectArea, rectDepth, rectWidth, center_point, corner_points_ground) = min_bounding_rect.minBoundingRect(hull_points)
+    vis.updatePolyData( get2DAsPolyData(corner_points_ground) , 'corner_points_ground', parent='cont debug', visible=False)
     cornerPoints = np.vstack((corner_points_ground.T, polyDataCentroid[2]*np.ones( corner_points_ground.shape[0]) )).T
     cornerPolyData = vtkNumpy.getVtkPolyDataFromNumpyPoints(cornerPoints)
 
@@ -742,6 +753,10 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
     values = abs(blockAngleAll - robotYaw)
     #print values
     min_idx = np.argmin(values)
+    if ( (min_idx==1) or (min_idx==3) ):
+        #print "flip rectDepth and rectWidth as angle is not away from robot"
+        temp = rectWidth ; rectWidth = rectDepth ; rectDepth = temp
+
     #print "best angle", blockAngleAll[min_idx]
     rot_angle = blockAngleAll[min_idx]*math.pi/180.0
 
@@ -749,49 +764,161 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
 
     #print "Minimum area bounding box:"
     #print "Rotation angle:", rot_angle, "rad  (", rot_angle*(180/math.pi), "deg )"
-    #print "Width:", width, " Height:", height, "  Area:", area
+    #print "rectDepth:", rectDepth, " rectWidth:", rectWidth, "  Area:", rectArea
     #print "Center point: \n", center_point # numpy array
     #print "Corner points: \n", cornerPoints, "\n"  # numpy array
-    return cornerTransform
+    return cornerTransform, rectDepth, rectWidth, rectArea
 
 
-def extractRectanglesFromSurfaces(clusters, linkFrame):
+class BlockTop():
+    def __init__(self, cornerTransform, rectDepth, rectWidth, rectArea):
+        self.cornerTransform = cornerTransform # location of far right corner
+        self.rectDepth = rectDepth # length of face away from robot
+        self.rectWidth = rectWidth # length of face perpendicular to robot's toes
+        self.rectArea = rectArea
+
+class Footstep():
+    def __init__(self, transform, is_right_foot):
+        self.transform = transform
+        self.is_right_foot = is_right_foot
+
+def extractBlocksFromSurfaces(clusters, linkFrame):
     ''' find the corners of the minimum bounding rectangles '''
     om.removeFromObjectModel(om.findObjectByName('block corners'))
     om.removeFromObjectModel(om.findObjectByName('foot placements'))
     om.removeFromObjectModel(om.findObjectByName('steps'))
+    om.getOrCreateContainer('block corners',om.getOrCreateContainer('continuous'))
+    om.getOrCreateContainer('foot placements',om.getOrCreateContainer('continuous'))
+    om.getOrCreateContainer('steps',om.getOrCreateContainer('continuous'))
+
+    # get the rectangles from the clusters:
+    blocks = []
     for i, cluster in enumerate(clusters):
-        cornerTransform = findMinimumBoundingRectangle( cluster, linkFrame )
-        vis.updateFrame(cornerTransform, 'block corners %d' % i , parent='block corners', scale=0.2, visible=False)
+            cornerTransform, rectDepth, rectWidth, rectArea = findMinimumBoundingRectangle( cluster, linkFrame )
+            block = BlockTop(cornerTransform, rectDepth, rectWidth, rectArea)
+            blocks.append(block)
 
+    # filter out blocks that are too big or small
+    # TODO: pull out these parameters
+    blocksGood = []
+    groundPlane = None
+    for i, block in enumerate(blocks):
+        if ((block.rectWidth<0.34) or (block.rectDepth<0.30)):
+            #print "removed block",i,block.rectWidth,block.rectDepth
+            foobar=[]
+        elif ((block.rectWidth>0.45) or (block.rectDepth>0.45)):
+            #print " ground plane",i,block.rectWidth,block.rectDepth
+            groundPlane = block
+        else:
+            blocksGood.append(block)
+            #print "keeping block",i,block.rectWidth,block.rectDepth
+    blocks = blocksGood
+
+    # order by distance from robot's foot
+    for i, block in enumerate(blocks):
+         block.distToRobot = np.linalg.norm(np.array(linkFrame.GetPosition()) - np.array(block.cornerTransform.GetPosition()))
+    blocks.sort(key=operator.attrgetter('distToRobot'))
+
+    # draw blocks including the ground plane:
+    om.removeFromObjectModel(om.findObjectByName('blocks'))
+    blocksFolder=om.getOrCreateContainer('blocks',om.getOrCreateContainer('continuous'))
+    for i, block in enumerate(blocks):
+        vis.updateFrame(block.cornerTransform, 'block corners %d' % i , parent='block corners', scale=0.2, visible=True)
+
+        blockCenter = transformUtils.frameFromPositionAndRPY([-block.rectDepth/2,block.rectWidth/2,0.0], [0,0,0])
+        blockCenter.Concatenate(block.cornerTransform)
+
+        d = DebugData()
+        d.addCube([ block.rectDepth, block.rectWidth,0.005],[0,0,0])
+        obj = vis.showPolyData(d.getPolyData(),'block %d' % i, color=[1,0,1],parent=blocksFolder)
+        obj.actor.SetUserTransform(blockCenter)
+
+    if (groundPlane is not None):
+        vis.updateFrame(groundPlane.cornerTransform, 'ground plane', parent='block corners', scale=0.2, visible=True)
+
+        blockCenter = transformUtils.frameFromPositionAndRPY([-groundPlane.rectDepth/2,groundPlane.rectWidth/2,0.0], [0,0,0])
+        blockCenter.Concatenate(groundPlane.cornerTransform)
+
+        d = DebugData()
+        d.addCube([ groundPlane.rectDepth, groundPlane.rectWidth,0.005],[0,0,0])
+        obj = vis.showPolyData(d.getPolyData(),'ground plane', color=[1,1,0],alpha=0.1, parent=blocksFolder)
+        obj.actor.SetUserTransform(blockCenter)
+
+    return blocks,groundPlane
+
+
+def placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame):
+
+    footsteps = []
+    for i, block in enumerate(blocks):
         nextLeftTransform = transformUtils.frameFromPositionAndRPY([-0.27,0.29,0.08], [0,0,0])
-        nextLeftTransform.Concatenate(cornerTransform)
-        vis.updateFrame(nextLeftTransform, 'left foot placement %d' % i , parent='foot placements', scale=0.2, visible=False)
-
-        leftMesh = footstepsdriver.getLeftFootMesh()
-        obj = vis.showPolyData(leftMesh, 'left step %d' % i, color=[1.0,1.0,0.0], alpha=1.0, parent='steps')
-        #frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
-        obj.actor.SetUserTransform(nextLeftTransform)
+        nextLeftTransform.Concatenate(block.cornerTransform)
+        footsteps.append(Footstep(nextLeftTransform,False))
 
         nextRightTransform = transformUtils.frameFromPositionAndRPY([-0.23,0.1,0.08], [0,0,0])
-        nextRightTransform.Concatenate(cornerTransform)
-        vis.updateFrame(nextRightTransform, 'right foot placement %d' % i , parent='foot placements', scale=0.2, visible=False)
+        nextRightTransform.Concatenate(block.cornerTransform)
+        footsteps.append(Footstep(nextRightTransform,True))
 
-        rightMesh = footstepsdriver.getRightFootMesh()
-        obj = vis.showPolyData(leftMesh, 'right step %d' % i, color=[0.33,1.0,0.0], alpha=1.0, parent='steps')
+    footOnGround = False
+    if (groundPlane):
+        # TODO: 0.08 is distance from foot frames to sole. remove hard coding!
+        distOffGround = abs(groundPlane.cornerTransform.GetPosition()[2]-standingFootFrame.GetPosition()[2] + 0.08)
+        #print "distOffGround",distOffGround
+        footOnGround = (distOffGround < 0.05)
+        if (footOnGround):
+            # the robot is standing on the ground plane
+            nextRightTransform = transformUtils.frameFromPositionAndRPY([(-0.23-0.38),0.1,0.08-0.13], [0,0,0])
+            nextRightTransform.Concatenate(blocks[0].cornerTransform)
+            footsteps = [Footstep(nextRightTransform,True)] + footsteps
+
+    if (footOnGround is False):
+      # if we are standing on right foot, we can see the next block.
+      # but the next left step has been committed - so remove it from the this lsit
+      if (standingFootName is 'r_foot'):
+          footsteps = footsteps[1:]
+          #print "removing the first left step"
+    return footsteps
+
+
+def drawFittedSteps(footsteps):
+    ''' Draw the footsteps fitted to the blocks
+    These are NOT the steps placed by the planner
+    '''
+    left_color=None
+    right_color=None
+
+    for i, footstep in enumerate(footsteps):
+        if footstep.is_right_foot:
+            mesh = footstepsdriver.getRightFootMesh()
+            if (right_color is None):
+                color = footstepsdriver.getRightFootColor()
+            else:
+                color = right_color
+        else:
+            mesh = footstepsdriver.getLeftFootMesh()
+            if (left_color is None):
+                color = footstepsdriver.getLeftFootColor()
+            else:
+                color = left_color
+
+        vis.updateFrame(footstep.transform, 'foot placement %d' % i , parent='foot placements', scale=0.2, visible=False)
+        obj = vis.showPolyData(mesh, 'left step %d' % i, color=color, alpha=1.0, parent='steps')
         #frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
-        obj.actor.SetUserTransform(nextRightTransform)
+        obj.actor.SetUserTransform(footstep.transform)
 
 
-def replanFootsteps(polyData, linkName):
-    vis.updatePolyData( polyData, 'walking snapshot', parent='continuous', visible=False)
+def replanFootsteps(polyData, standingFootName):
+    obj = om.getOrCreateContainer('continuous')
+    om.getOrCreateContainer('cont debug', obj)
 
-    linkFrame = robotStateModel.getLinkFrame(linkName)
-    vis.updateFrame(linkFrame, linkName, parent='continuous', visible=False)
+    vis.updatePolyData( polyData, 'walking snapshot', parent='cont debug', visible=False)
+
+    standingFootFrame = robotStateModel.getLinkFrame(standingFootName)
+    vis.updateFrame(standingFootFrame, standingFootName, parent='cont debug', visible=False)
     # TODO: remove the pitch and roll of this frame to support it being on uneven ground
 
     # Step 1: filter the data down to a box in front of the robot:
-    polyData = getRecedingTerrainRegion(polyData, linkFrame)
+    polyData = getRecedingTerrainRegion(polyData, standingFootFrame)
 
     # Step 2: find all the surfaces in front of the robot (about 0.75sec)
     clusters = segmentation.findHorizontalSurfaces(polyData)
@@ -800,12 +927,57 @@ def replanFootsteps(polyData, linkName):
         return
 
     # Step 3: find the corners of the minimum bounding rectangles
-    extractRectanglesFromSurfaces(clusters, linkFrame)
+    blocks,groundPlane = extractBlocksFromSurfaces(clusters, standingFootFrame)
+
+    footsteps = placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame)
+
+    # drawFittedSteps(footsteps)
+    sendPlanningRequest(footsteps)
 
 
-lastContactState = "none"
-def onFootContactContinous(msg):
-    global lastContactState
+def sendPlanningRequest(footsteps):
+    global outstandingPlanRequest, requestedNumSteps
+
+    goalSteps = []
+
+    #for i in range(flist_shape[0]):
+    for i, footstep in enumerate(footsteps):
+        #step_t = vtk.vtkTransform()
+        #step_t.PostMultiply()
+        #step_t.Concatenate(transformUtils.frameFromPositionAndRPY(flist[i,0:3] , flist[i,3:6]))
+        #step_t.Concatenate(foot_to_sole)
+        #step_t.Concatenate(frame_pt_to_centerline)
+        step_t = footstep.transform
+
+        step = lcmdrc.footstep_t()
+        step.pos = transformUtils.positionMessageFromFrame(step_t)
+        step.is_right_foot =  footstep.is_right_foot # flist[i,6] # is_right_foot
+        step.params = footstepsPanel.driver.getDefaultStepParams()
+
+        # Visualization via triads
+        #vis.updateFrame(step_t, str(i), parent="navigation")
+        goalSteps.append(step)
+
+    startPose = robotStateJointController.q # self.jointController.q
+    request = footstepsPanel.driver.constructFootstepPlanRequest(startPose)
+    request.num_goal_steps = len(goalSteps)
+    request.goal_steps = goalSteps
+
+    # force correct planning parameters:
+    request.params.planning_mode = 1 # 0 auto, 1 left, 2 right
+    request.params.nom_forward_step = 0.28
+    request.params.map_mode = 1 #  2 footplane, 0 h+n, 1 h+zup, 3 hori
+    request.params.max_num_steps = len(goalSteps)
+    request.params.min_num_steps = len(goalSteps)-2
+
+    lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
+
+    outstandingPlanRequest = True
+    requestedNumSteps = len(goalSteps)
+
+
+def onFootContactContinuous(msg):
+    global lastContactState, processContinuousStereo
 
     leftInContact = msg.left_contact > 0.0
     rightInContact = msg.right_contact > 0.0
@@ -820,27 +992,74 @@ def onFootContactContinous(msg):
         contactState="none"
         print "No foot contacts. Error!"
 
+    replanNow = False
     if (lastContactState is "both") and (contactState is "left"):
-        #print "trigger left"
-        replanFootsteps(segmentation.getCurrentRevolutionData(), 'l_foot')
-
+        replanNow = True
+        standingFootName = 'l_foot'
     if (lastContactState is "both") and (contactState is "right"):
-        #print "trigger right"
-        replanFootsteps(segmentation.getCurrentRevolutionData(), 'r_foot')
+        replanNow = True
+        standingFootName = 'r_foot'
+
+    if (replanNow):
+        if (processContinuousStereo):
+            polyData = cameraview.getStereoPointCloud(2,'CAMERA_FUSED')
+            polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+        else:
+            polyData = segmentation.getCurrentRevolutionData()
+
+        replanFootsteps(polyData, standingFootName)
 
     lastContactState = contactState
 
-footContactSubContinous = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContactContinous)
-footContactSubContinous.setSpeedLimit(60)
+
+def onFootstepPlanContinuous(msg):
+    global outstandingPlanRequest, requestedNumSteps
+    #print "outstandingPlanRequest",outstandingPlanRequest
+    if (outstandingPlanRequest):
+        requestedSteps = []
+        #print "received plan with num_steps ",msg.num_steps
+        #print "requested ", requestedNumSteps
+
+        # Stick in the two standing posture steps robin uses:
+        requestedSteps.append( msg.footsteps[0])
+        requestedSteps.append( msg.footsteps[1])
+
+        for i in range( msg.num_steps - requestedNumSteps ,msg.num_steps):
+            requestedSteps.append( msg.footsteps[i])
+
+        #print "new set to be sent:",len(requestedSteps)
+        msg.footsteps = requestedSteps
+        msg.num_steps = len(requestedSteps)
+        lcmUtils.publish('FOOTSTEP_PLAN_RESPONSE', msg)
+        outstandingPlanRequest = False
+
+
+footContactSubContinuous = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContactContinuous)
+footContactSubContinuous.setSpeedLimit(60)
+
+lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, onFootstepPlanContinuous)# additional decode stuff removed
+
 
 
 # Test stippets:
 def processSnippet():
-    polyData = io.readPolyData('/home/mfallon/Desktop/continuous_walking/snippet.vtp')
-    vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='segmentation')
+    global processContinuousStereo
 
-    linkFrame = robotStateModel.getLinkFrame('l_foot')
-    vis.updateFrame(linkFrame, 'l_foot', parent='continuous', visible=False)
+    obj = om.getOrCreateContainer('continuous')
+    om.getOrCreateContainer('cont debug', obj)
+
+    if (processContinuousStereo):
+        polyData = io.readPolyData('/home/mfallon/Desktop/continuous_walking/snippet_stereo.vtp')
+        polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+    else:
+        polyData = io.readPolyData('/home/mfallon/Desktop/continuous_walking/snippet.vtp')
+
+
+    vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='continuous')
+    standingFootName = 'l_foot'
+
+    standingFootFrame = robotStateModel.getLinkFrame(standingFootName)
+    vis.updateFrame(standingFootFrame, standingFootName, parent='continuous', visible=False)
 
     # Step 2: find all the surfaces in front of the robot (about 0.75sec)
     clusters = segmentation.findHorizontalSurfaces(polyData)
@@ -849,7 +1068,12 @@ def processSnippet():
         return
 
     # Step 3: find the corners of the minimum bounding rectangles
-    extractRectanglesFromSurfaces(clusters)
+    blocks,groundPlane = extractBlocksFromSurfaces(clusters, standingFootFrame)
+
+    footsteps = placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame)
+
+    drawFittedSteps(footsteps)
+    sendPlanningRequest(footsteps)
 
 
 def processSingleBlock():
