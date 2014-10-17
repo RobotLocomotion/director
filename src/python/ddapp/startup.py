@@ -120,6 +120,7 @@ useImageViewDemo = True
 useControllerRate = True
 useSkybox = False
 useDataFiles = True
+useContinuousWalking = False
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -357,7 +358,8 @@ if usePlanning:
                                       segmentation.segmentValveWallAuto, robotStateJointController,
                                       playPlans, showPose)
 
-    continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController)
+    if (useContinuousWalking):
+        continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController)
 
 
     splinewidget.init(view, handFactory, robotStateModel)
