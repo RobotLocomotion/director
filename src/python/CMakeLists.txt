@@ -16,6 +16,7 @@ set(python_files
   ddapp/cameraview.py
   ddapp/colorize.py
   ddapp/consoleapp.py
+  ddapp/continuouswalkingdemo.py
   ddapp/debrisdemo.py
   ddapp/debugVis.py
   ddapp/depthimageprovider.py
@@ -97,8 +98,9 @@ set(python_files
   actionmanager/simplefsm.py
   actionmanager/sequences.py
 
-  ddapp/qhull_2d.py
-  ddapp/min_bounding_rect.py
+  ddapp/thirdparty/__init__.py
+  ddapp/thirdparty/qhull_2d.py
+  ddapp/thirdparty/min_bounding_rect.py
   )
 
 

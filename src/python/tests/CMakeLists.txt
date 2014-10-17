@@ -8,6 +8,7 @@ set(python_tests
   testAtlasDriver.py
   testCameraView.py
   testConsoleApp.py
+  testContinuousWalking.py
   testDrakeVisualizer.py
   testFrameSync.py
   testImageView.py
