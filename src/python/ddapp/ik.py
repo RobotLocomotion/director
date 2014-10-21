@@ -8,6 +8,7 @@ from ddapp.asynctaskqueue import AsyncTaskQueue
 from ddapp.jointcontrol import JointController
 from ddapp.ikconstraints import *
 
+from ddapp import drcargs
 
 class AsyncIKCommunicator():
 
@@ -37,27 +38,35 @@ class AsyncIKCommunicator():
         commands.append('\n%-------- startup --------\n')
         commands.append('format long e')
         commands.append('addpath_control')
-        commands.append("addpath('%s')" % matlab.getAppMatlabDir())
+        commands.append("addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])")
         commands.append('runIKServer')
         commands.append('\n%------ startup end ------\n')
         return commands
 
+    def _createMatlabClient(self):
+
+        hostname = drcargs.args().matlab_host
+        if hostname is not None:
+            return matlab.MatlabSocketClient(host=hostname)
+        else:
+            return matlab.MatlabPipeClient()
+
     def startServer(self):
 
-        proc = matlab.startMatlab()
-        self.comm = matlab.MatlabCommunicator(proc)
+        self.comm = matlab.MatlabCommunicator(self._createMatlabClient())
         self.comm.outputConsole = self.outputConsole
+        self.comm.sendCommands(['\n'])
         self.comm.waitForResult()
         self.comm.printResult()
         self.comm.sendCommands(self._startupCommands())
 
     def startServerAsync(self):
 
-        proc = matlab.startMatlab()
-        self.comm = matlab.MatlabCommunicator(proc)
+        self.comm = matlab.MatlabCommunicator(self._createMatlabClient())
         self.comm.outputConsole = self.outputConsole
 
         taskQueue = AsyncTaskQueue()
+        taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, ['\n']))
         taskQueue.addTask(self.comm.waitForResultAsync)
         taskQueue.addTask(self.comm.printResult)
         taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, self.getStartupCommands()))
