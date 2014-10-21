@@ -37,6 +37,9 @@ class DRCArgParser(object):
         parser.add_argument('-c', '--config_file', type=str, help='Robot cfg file',
                             default=self.getDefaultBotConfigFile())
 
+        parser.add_argument('--matlab-host', type=str, help='Hostname to use external matlab server',
+                            default=None)
+
         parser.add_argument('data_files', type=str, nargs='*',
                             help='data files to load at startup')
 
