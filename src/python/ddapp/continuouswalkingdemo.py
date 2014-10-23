@@ -66,7 +66,7 @@ class ContinousWalkingDemo(object):
         footContactSubContinuous = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, self.onFootContactContinuous)
         footContactSubContinuous.setSpeedLimit(60)
 
-        lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
+        # lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
 
 
     def getRecedingTerrainRegion(self, polyData, linkFrame):
@@ -416,6 +416,7 @@ class ContinousWalkingDemo(object):
         self.lastContactState = contactState
 
 
+    # i think this should be removed, according to robin
     def onFootstepPlanContinuous(self, msg):
         #print "outstandingPlanRequest",self.outstandingPlanRequest
         if (self.outstandingPlanRequest):
