@@ -124,7 +124,7 @@ useImageViewDemo = True
 useControllerRate = True
 useSkybox = False
 useDataFiles = True
-useContinuousWalking = False
+useContinuousWalking = True
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
