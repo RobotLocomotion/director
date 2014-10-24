@@ -434,7 +434,7 @@ class ContinousWalkingDemo(object):
             contactState="right"
         else:
             contactState="none"
-            print "No foot contacts. Error!"
+            #print "No foot contacts. Error!"
 
         replanNow = False
         if (self.lastContactState is "both") and (contactState is "left"):
