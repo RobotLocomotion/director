@@ -46,17 +46,15 @@ class Footstep():
 
 class ContinousWalkingDemo(object):
 
-    def __init__(self, robotStateModel, footstepsPanel, robotStateJointController, ikPlanner, teleopJointController):
+    def __init__(self, robotStateModel, footstepsPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel):
         self.footstepsPanel = footstepsPanel
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
         self.ikPlanner = ikPlanner
         self.teleopJointController = teleopJointController
+        self.navigationPanel = navigationPanel
 
         self.lastContactState = "none"
-
-        self.outstandingPlanRequest = False
-        self.requestedNumSteps = 0
         # Stereo or Lidar?
         self.processContinuousStereo = False
         self.committedStep = None
@@ -74,7 +72,7 @@ class ContinousWalkingDemo(object):
         footContactSubContinuous = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, self.onFootContactContinuous)
         footContactSubContinuous.setSpeedLimit(60)
 
-        # lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
+        lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
 
 
     def getRecedingTerrainRegion(self, polyData, linkFrame):
@@ -215,12 +213,12 @@ class ContinousWalkingDemo(object):
         blocksGood = []
         groundPlane = None
         for i, block in enumerate(blocks):
-            if ((block.rectWidth<0.34) or (block.rectDepth<0.30)):
-                #print "removed block",i,block.rectWidth,block.rectDepth
-                foobar=[]
-            elif ((block.rectWidth>0.45) or (block.rectDepth>0.45)):
+            if ((block.rectWidth>0.45) or (block.rectDepth>0.45)):
                 #print " ground plane",i,block.rectWidth,block.rectDepth
                 groundPlane = block
+            elif ((block.rectWidth<0.34) or (block.rectDepth<0.30)):
+                #print "removed block",i,block.rectWidth,block.rectDepth
+                foobar=[]
             else:
                 blocksGood.append(block)
                 #print "keeping block",i,block.rectWidth,block.rectDepth
@@ -417,8 +415,10 @@ class ContinousWalkingDemo(object):
 
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
 
-        self.outstandingPlanRequest = True
-        self.requestedNumSteps = len(goalSteps)
+        #if (self.navigationPanel.automaticContinuousWalkingEnabled):
+        #    print "Requested Footstep Plan, it will be AUTOMATICALLY EXECUTED"
+        #else:
+        #    print "Requested Footstep Plan, it will be not be executed"
 
 
     def onFootContactContinuous(self,msg):
@@ -464,26 +464,19 @@ class ContinousWalkingDemo(object):
 
     # i think this should be removed, according to robin
     def onFootstepPlanContinuous(self, msg):
-        #print "outstandingPlanRequest",self.outstandingPlanRequest
-        if (self.outstandingPlanRequest):
-            requestedSteps = []
-            #print "received plan with num_steps ",msg.num_steps
-            #print "requested ", self.requestedNumSteps
+        if (self.navigationPanel.automaticContinuousWalkingEnabled):
+            print "Committing Footstep Plan for AUTOMATIC EXECUTION"
+            lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
 
-            # Stick in the two standing posture steps robin uses:
-            requestedSteps.append( msg.footsteps[0])
-            requestedSteps.append( msg.footsteps[1])
+        else:
+            print "Received Footstep Plan, it will be not be executed"
 
-            for i in range( msg.num_steps - self.requestedNumSteps ,msg.num_steps):
-                requestedSteps.append( msg.footsteps[i])
 
-            #print "new set to be sent:",len(requestedSteps)
-            msg.footsteps = requestedSteps
-            msg.num_steps = len(requestedSteps)
-            lcmUtils.publish('FOOTSTEP_PLAN_RESPONSE', msg)
-            self.outstandingPlanRequest = False
+
+
 
     def testDouble():
+
         lfootTransform  = transformUtils.frameFromPositionAndRPY( [0.1, 0.13, 0.08], [0, 0, 0])
         rfootTransform  = transformUtils.frameFromPositionAndRPY( [-0.1, -0.16, 0.08], [0, 0, 0])
         nextDoubleSupportPose = self.getNextDoubleSupportPose(lfootTransform, rfootTransform)
