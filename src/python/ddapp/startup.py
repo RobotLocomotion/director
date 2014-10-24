@@ -554,111 +554,114 @@ viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, foot
 
 
 # Drill Demo Functions for in-image rendering:
-def spawnHandAtCurrentLocation(side='left'):
-    if (side is 'left'):
-        tf = transformUtils.copyFrame( getLinkFrame( 'l_hand_face') )
-        handFactory.placeHandModelWithTransform( tf , app.getCurrentView(), 'left')
-    else:
-        tf = transformUtils.copyFrame( getLinkFrame( 'right_pointer_tip') )
-        handFactory.placeHandModelWithTransform( tf , app.getCurrentView(), 'right')
+useDrillDemo = False
+if useDrillDemo:
 
-def drawFrameInCamera(t, frameName='new frame',visible=True):
+    def spawnHandAtCurrentLocation(side='left'):
+        if (side is 'left'):
+            tf = transformUtils.copyFrame( getLinkFrame( 'l_hand_face') )
+            handFactory.placeHandModelWithTransform( tf , app.getCurrentView(), 'left')
+        else:
+            tf = transformUtils.copyFrame( getLinkFrame( 'right_pointer_tip') )
+            handFactory.placeHandModelWithTransform( tf , app.getCurrentView(), 'right')
 
-    v = imageView.view
-    q = cameraview.imageManager.queue
-    localToCameraT = vtk.vtkTransform()
-    q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+    def drawFrameInCamera(t, frameName='new frame',visible=True):
 
-    res = vis.showFrame( vtk.vtkTransform() , 'temp',view=v, visible=True, scale = 0.2)
-    om.removeFromObjectModel(res)
-    pd = res.polyData
-    pd = filterUtils.transformPolyData(pd, t)
-    pd = filterUtils.transformPolyData(pd, localToCameraT)
-    q.projectPoints('CAMERA_LEFT', pd )
-    vis.showPolyData(pd, ('overlay ' + frameName), view=v, colorByName='Axes',parent='camera overlay',visible=visible)
+        v = imageView.view
+        q = cameraview.imageManager.queue
+        localToCameraT = vtk.vtkTransform()
+        q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
 
-def drawObjectInCamera(objectName,visible=True):
-    v = imageView.view
-    q = cameraview.imageManager.queue
-    localToCameraT = vtk.vtkTransform()
-    q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+        res = vis.showFrame( vtk.vtkTransform() , 'temp',view=v, visible=True, scale = 0.2)
+        om.removeFromObjectModel(res)
+        pd = res.polyData
+        pd = filterUtils.transformPolyData(pd, t)
+        pd = filterUtils.transformPolyData(pd, localToCameraT)
+        q.projectPoints('CAMERA_LEFT', pd )
+        vis.showPolyData(pd, ('overlay ' + frameName), view=v, colorByName='Axes',parent='camera overlay',visible=visible)
 
-    obj = om.findObjectByName(objectName)
-    if obj is None:
-        return
-    objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform() or vtk.vtkTransform())
-    objPolyDataOriginal = obj.polyData
-    pd = objPolyDataOriginal
-    pd = filterUtils.transformPolyData(pd, objToLocalT)
-    pd = filterUtils.transformPolyData(pd, localToCameraT)
-    q.projectPoints('CAMERA_LEFT', pd)
-    vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)
+    def drawObjectInCamera(objectName,visible=True):
+        v = imageView.view
+        q = cameraview.imageManager.queue
+        localToCameraT = vtk.vtkTransform()
+        q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
 
-def projectDrillDemoInCamera():
-    q = om.findObjectByName('camera overlay')
-    om.removeFromObjectModel(q)
+        obj = om.findObjectByName(objectName)
+        if obj is None:
+            return
+        objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform() or vtk.vtkTransform())
+        objPolyDataOriginal = obj.polyData
+        pd = objPolyDataOriginal
+        pd = filterUtils.transformPolyData(pd, objToLocalT)
+        pd = filterUtils.transformPolyData(pd, localToCameraT)
+        q.projectPoints('CAMERA_LEFT', pd)
+        vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)
 
-    imageView = cameraview.views['CAMERA_LEFT']
-    imageView.imageActor.SetOpacity(.2)
+    def projectDrillDemoInCamera():
+        q = om.findObjectByName('camera overlay')
+        om.removeFromObjectModel(q)
 
-    drawFrameInCamera(drillDemo.drill.frame.transform, 'drill frame',visible=False)
+        imageView = cameraview.views['CAMERA_LEFT']
+        imageView.imageActor.SetOpacity(.2)
 
-    tf = transformUtils.copyFrame( drillDemo.drill.frame.transform )
-    tf.PreMultiply()
-    tf.Concatenate( drillDemo.drill.drillToButtonTransform )
-    drawFrameInCamera(tf, 'drill button')
+        drawFrameInCamera(drillDemo.drill.frame.transform, 'drill frame',visible=False)
 
-
-    tf2 = transformUtils.copyFrame( tf )
-    tf2.PreMultiply()
-    tf2.Concatenate( transformUtils.frameFromPositionAndRPY( [0,0,0] , [180,0,0] ) )
-    drawFrameInCamera(tf2, 'drill button flip')
-
-    drawObjectInCamera('drill',visible=False)
-
-    drawObjectInCamera('sensed pointer tip')
-    obj = om.findObjectByName('sensed pointer tip frame')
-    if (obj is not None):
-        drawFrameInCamera(obj.transform, 'sensed pointer tip frame',visible=False)
-
-    #drawObjectInCamera('left robotiq',visible=False)
-    #drawObjectInCamera('right pointer',visible=False)
-
-    v = imageView.view
-    v.render()
+        tf = transformUtils.copyFrame( drillDemo.drill.frame.transform )
+        tf.PreMultiply()
+        tf.Concatenate( drillDemo.drill.drillToButtonTransform )
+        drawFrameInCamera(tf, 'drill button')
 
 
-showImageOverlay()
-drillDemo.pointerTracker = createPointerTracker()
-drillDemo.projectCallback = projectDrillDemoInCamera
-drillYawPreTransform = vtk.vtkTransform()
-drillYawPreTransform.PostMultiply()
-def onDrillYawSliderChanged(value):
-    yawOffset = value - 180.0
-    drillDemo.drillYawSliderValue = yawOffset
-    drillDemo.updateDrillToHand()
+        tf2 = transformUtils.copyFrame( tf )
+        tf2.PreMultiply()
+        tf2.Concatenate( transformUtils.frameFromPositionAndRPY( [0,0,0] , [180,0,0] ) )
+        drawFrameInCamera(tf2, 'drill button flip')
+
+        drawObjectInCamera('drill',visible=False)
+
+        drawObjectInCamera('sensed pointer tip')
+        obj = om.findObjectByName('sensed pointer tip frame')
+        if (obj is not None):
+            drawFrameInCamera(obj.transform, 'sensed pointer tip frame',visible=False)
+
+        #drawObjectInCamera('left robotiq',visible=False)
+        #drawObjectInCamera('right pointer',visible=False)
+
+        v = imageView.view
+        v.render()
 
 
-app.getMainWindow().macrosToolBar().addWidget(QtGui.QLabel('drill yaw:'))
-slider = QtGui.QSlider(QtCore.Qt.Horizontal)
-slider.setMaximum(360)
-slider.setValue(180)
-slider.setMaximumWidth(200)
-slider.connect('valueChanged(int)', onDrillYawSliderChanged)
+    showImageOverlay()
+    drillDemo.pointerTracker = createPointerTracker()
+    drillDemo.projectCallback = projectDrillDemoInCamera
+    drillYawPreTransform = vtk.vtkTransform()
+    drillYawPreTransform.PostMultiply()
+    def onDrillYawSliderChanged(value):
+        yawOffset = value - 180.0
+        drillDemo.drillYawSliderValue = yawOffset
+        drillDemo.updateDrillToHand()
 
-app.getMainWindow().macrosToolBar().addWidget(slider)
+
+    app.getMainWindow().macrosToolBar().addWidget(QtGui.QLabel('drill yaw:'))
+    slider = QtGui.QSlider(QtCore.Qt.Horizontal)
+    slider.setMaximum(360)
+    slider.setValue(180)
+    slider.setMaximumWidth(200)
+    slider.connect('valueChanged(int)', onDrillYawSliderChanged)
+
+    app.getMainWindow().macrosToolBar().addWidget(slider)
 
 
-def sendPointerPrep():
-     drillDemo.planPointerPressGaze(-0.05)
+    def sendPointerPrep():
+         drillDemo.planPointerPressGaze(-0.05)
 
-def sendPointerPress():
-     drillDemo.planPointerPressGaze(0.01)
+    def sendPointerPress():
+         drillDemo.planPointerPressGaze(0.01)
 
-def sendPointerPressDeep():
-     drillDemo.planPointerPressGaze(0.015)
+    def sendPointerPressDeep():
+         drillDemo.planPointerPressGaze(0.015)
 
-app.addToolbarMacro('drill posture', drillDemo.planBothRaisePowerOn)
-app.addToolbarMacro('pointer prep', sendPointerPrep)
-app.addToolbarMacro('pointer press', sendPointerPress)
-app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
+    app.addToolbarMacro('drill posture', drillDemo.planBothRaisePowerOn)
+    app.addToolbarMacro('pointer prep', sendPointerPrep)
+    app.addToolbarMacro('pointer press', sendPointerPress)
+    app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
