@@ -24,6 +24,7 @@ import numpy as np
 # These could be refactored to be members of a new behaviors class.
 robotModel = None
 handFactory = None
+neckDriver = None
 footstepsDriver = None
 
 
@@ -243,8 +244,8 @@ def toggleFootstepWidget(displayPoint, view):
     return True
 
 
-def reachToFrame(frameObj, side):
-    goalFrame = teleoppanel.panel.endEffectorTeleop.newReachTeleop(frameObj.transform, side)
+def reachToFrame(frameObj, side, collisionObj):
+    goalFrame = teleoppanel.panel.endEffectorTeleop.newReachTeleop(frameObj.transform, side, collisionObj)
     goalFrame.frameSync = vis.FrameSync()
     goalFrame.frameSync.addFrame(goalFrame, ignoreIncoming=True)
     goalFrame.frameSync.addFrame(frameObj)
@@ -255,6 +256,24 @@ def getAsFrame(obj):
         return obj
     elif hasattr(obj, 'getChildFrame'):
         return obj.getChildFrame()
+
+
+def isGraspSeed(obj):
+    return hasattr(obj, 'side')
+
+
+def getCollisionParent(obj):
+    '''
+    If obj is an affordance, return obj
+    If obj is a frame or a grasp seed, return first parent.
+    '''
+    if isinstance(obj, vis.FrameItem):
+        return obj.parent()
+    if isGraspSeed(obj):
+        return obj.parent()
+    else:
+        return obj
+
 
 # The most recently cached PickedPoint - available as input to any other algorithm
 lastCachedPickedPoint = np.array([0,0,0])
@@ -307,14 +326,15 @@ def showRightClickMenu(displayPoint, view):
         om.setActiveObject(pickedObj)
 
     reachFrame = getAsFrame(pickedObj)
+    collisionParent = getCollisionParent(pickedObj)
     def onReachLeft():
-        reachToFrame(reachFrame, 'left')
+        reachToFrame(reachFrame, 'left', collisionParent)
     def onReachRight():
-        reachToFrame(reachFrame, 'right')
+        reachToFrame(reachFrame, 'right', collisionParent)
 
     def flipHandSide():
         for obj in [pickedObj] + pickedObj.children():
-            if not hasattr(obj, 'side'):
+            if not isGraspSeed(obj):
                 continue
             side = 'right' if obj.side == 'left' else 'left'
             obj.side = side
@@ -468,8 +488,15 @@ class ViewEventFilter(object):
             self.mouseStart = None
             self.onRightClick(event)
 
+        elif event.type() == QtCore.QEvent.Wheel:
+            self.onWheelEvent(event)
+
     def consumeEvent(self):
         self.eventFilter.setEventHandlerResult(True)
+
+    def onWheelEvent(self, event):
+        if neckDriver:
+            neckDriver.onWheelDelta(event.delta())
 
     def onLeftMousePress(self, event):
         if event.modifiers() == QtCore.Qt.ControlModifier:
@@ -502,6 +529,7 @@ class ViewEventFilter(object):
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonPress)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonRelease)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseMove)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.Wheel)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
 
@@ -513,22 +541,43 @@ class KeyEventFilter(object):
 
     def filterEvent(self, obj, event):
 
-        if event.type() == QtCore.QEvent.KeyPress:
-            if str(event.text()).lower() == 'f':
-                self.eventFilter.setEventHandlerResult(True)
+        consumed = False
+        if event.type() == QtCore.QEvent.KeyPress and not event.isAutoRepeat():
+            key = str(event.text()).lower()
+            if key == 'f':
                 zoomToPick(self.getCursorDisplayPosition(), self.view)
-            elif str(event.text()).lower() == 'r':
-                self.eventFilter.setEventHandlerResult(True)
+                consumed = True
+            elif key == 'r':
+                consumed = True
                 if robotModel is not None:
                     resetCameraToRobot(self.view)
                 else:
                     self.view.resetCamera()
                     self.view.render()
-            elif str(event.text()).lower() == 's':
-                self.eventFilter.setEventHandlerResult(True)
+            elif key == 's':
+                consumed = True
                 if handFactory is not None:
                     side = 'left' if event.modifiers() != QtCore.Qt.ShiftModifier else 'right'
                     placeHandModel(self.getCursorDisplayPosition(), self.view, side)
+            elif key == 'n':
+                if neckDriver:
+                    neckDriver.activateNeckControl()
+
+            elif key in ['0', '1', '2', '3']:
+                if neckDriver:
+                    consumed = neckDriver.applyNeckPitchPreset(int(key))
+
+            if key == '3':
+                # block vtk keypress handler 3d mode
+                consumed = True
+
+        elif event.type() == QtCore.QEvent.KeyRelease and not event.isAutoRepeat():
+            if str(event.text()).lower() == 'n':
+                if neckDriver:
+                    neckDriver.deactivateNeckControl()
+
+        self.eventFilter.setEventHandlerResult(consumed)
+
 
     def getCursorDisplayPosition(self):
         cursorPos = self.view.mapFromGlobal(QtGui.QCursor.pos())
@@ -539,6 +588,7 @@ class KeyEventFilter(object):
         qvtkwidget = self.view.vtkWidget()
         qvtkwidget.installEventFilter(self.eventFilter)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyRelease)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
 
@@ -584,13 +634,14 @@ class ViewBehaviors(object):
 
     def __init__(self, view):
         self.view = view
-        self.keyEventFilter = KeyEventFilter(view)
         self.mouseEventFilter = ViewEventFilter(view)
         self.logCommander = KeyPressLogCommander(view.vtkWidget())
+        self.keyEventFilter = KeyEventFilter(view)
 
     @staticmethod
-    def addRobotBehaviors(_robotModel=None, _handFactory=None, _footstepsDriver=None):
-        global robotModel, handFactory, footstepsDriver
+    def addRobotBehaviors(_robotModel=None, _handFactory=None, _footstepsDriver=None, _neckDriver=None):
+        global robotModel, handFactory, footstepsDriver, neckDriver
         robotModel = _robotModel
         handFactory = _handFactory
         footstepsDriver = _footstepsDriver
+        neckDriver = _neckDriver

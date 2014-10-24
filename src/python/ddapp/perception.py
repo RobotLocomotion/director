@@ -326,12 +326,13 @@ class MultiSenseSource(TimerCallback):
         lcmUtils.publish('MULTISENSE_COMMAND', m)
 
     @staticmethod
-    def setMultisenseCommand(fps, gain, agc, rpm, led_flash, led_duty):
+    def setMultisenseCommand(fps, gain, exposure, agc, rpm, led_flash, led_duty):
 
         m = lcmmultisense.command_t()
         m.utime = getUtime()
         m.fps = fps
         m.gain = gain
+        m.exposure_us = exposure
         m.agc = agc
         m.rpm = rpm
         m.leds_flash = led_flash
@@ -349,6 +350,68 @@ class MultiSenseSource(TimerCallback):
         lcmUtils.publish('DESIRED_NECK_PITCH', m)
 
 
+class NeckDriver(object):
+
+    def __init__(self, view, getNeckPitchFunction):
+        self.active = False
+        self.view = view
+        self.delta = 0
+        self.textObj = None
+        self._getNeckPitchFunction = getNeckPitchFunction
+        self.presetMap = {0:0, 1:80, 2:60, 3:30}
+
+    def showText(self, neckPitch):
+        if not self.view:
+            return
+        self.textObj = vis.updateText('Neck pitch: %d' % neckPitch, 'Neck Pitch Annotation', parent='spindle axis')
+
+    def cleanupText(self):
+        if self.textObj:
+            om.removeFromObjectModel(self.textObj)
+            self.textObj = None
+
+    def activateNeckControl(self):
+        if not self.active:
+            self.active = True
+            self.delta = 0
+
+    def getNeckPitchDegrees(self):
+        return math.degrees(self._getNeckPitchFunction())
+
+    def applyNeckPitchPreset(self, presetId):
+        if not self.active:
+            return False
+        self.setNeckPitch(self.presetMap[presetId])
+        return True
+
+
+    def applyNeckPitchDelta(self, delta):
+        if delta == 0:
+            return
+
+        neckPitch = self.getNeckPitchDegrees() + delta
+        neckPitch = np.clip(neckPitch, -90, 90)
+        self.setNeckPitch(neckPitch)
+
+    def setNeckPitch(self, neckPitch):
+        MultiSenseSource.setNeckPitch(neckPitch)
+
+    def deactivateNeckControl(self):
+        if self.active:
+            self.active = False
+            self.applyNeckPitchDelta(self.delta)
+            self.cleanupText()
+            self.delta = 0
+
+    def onWheelDelta(self, delta):
+        if not self.active:
+            return False
+
+        self.delta += np.clip(delta, -1, 1)
+        neckPitch = self.getNeckPitchDegrees() + self.delta
+        self.showText(neckPitch)
+        return True
+
 
 class MapServerSource(TimerCallback):
 
@@ -361,6 +424,7 @@ class MapServerSource(TimerCallback):
         self.targetFps = 10
         self.callbackFunc = callbackFunc
         self.colorizeCallback = None
+        self.useMeshes = True
 
     def getNameForViewId(self, viewId):
 
@@ -387,7 +451,12 @@ class MapServerSource(TimerCallback):
 
     def showMap(self, viewId, mapId):
         polyData = vtk.vtkPolyData()
-        self.reader.GetDataForMapId(viewId, mapId, polyData)
+
+        if self.useMeshes:
+            self.reader.GetMeshForMapId(viewId, mapId, polyData)
+        else:
+            self.reader.GetDataForMapId(viewId, mapId, polyData)
+
         self.updatePolyData(viewId, polyData)
         self.displayedMapIds[viewId] = mapId
 

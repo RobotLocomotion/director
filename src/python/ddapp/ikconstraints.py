@@ -468,7 +468,7 @@ class WorldGazeTargetConstraint(ConstraintBase):
 
 class QuasiStaticConstraint(ConstraintBase):
 
-    shrinkFactor = 0.5
+    shrinkFactor = 0.2
 
     def __init__(self, **kwargs):
 
@@ -557,3 +557,22 @@ class MinDistanceConstraint(ConstraintBase):
             '{varName} = MinDistanceConstraint({robotArg}, {minDistance}, {tspan});\n'
             ''.format(**formatArgs))
 
+class ExcludeCollisionGroupConstraint(ConstraintBase):
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            excludedGroupName = ''
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+        
+        formatArgs = dict(name=self.excludedGroupName,
+                          tspan=self.getTSpanString()
+                          )
+
+        commands.append(
+            'excluded_collision_groups = struct(\'name\',\'{name}\',\'tspan\',{tspan});\n'
+            ''.format(**formatArgs))

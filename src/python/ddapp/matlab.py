@@ -35,7 +35,7 @@ class MatlabCommunicator(object):
         self.echoCommandsToStdOut = False
         self.writeCommandsToLogFile = False
         self.logFile = None
-        self.logFileName = 'matlab_commands.m'
+        self.logFileName = '/tmp/matlab_commands.m'
         self.clearResult()
 
     def checkForResult(self):

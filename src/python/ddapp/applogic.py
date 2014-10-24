@@ -8,6 +8,7 @@ from PythonQt import QtCore
 from PythonQt import QtGui
 from ddapp import getDRCBaseDir as getDRCBase
 from ddapp import botspy
+import functools
 
 _mainWindow = None
 _defaultRenderView = None
@@ -54,16 +55,33 @@ def showPythonConsole():
     getPythonConsole().show()
 
 
+_exclusiveDockWidgets = {}
+
+def hideDockWidgets(action):
+    for a, w in _exclusiveDockWidgets.iteritems():
+        if a is not action:
+            dock, widget = w
+            if not dock.isFloating():
+                dock.hide()
+
+
 def addWidgetToDock(widget, dockArea=QtCore.Qt.RightDockWidgetArea, action=None):
 
     dock = QtGui.QDockWidget()
     dock.setWidget(widget)
     dock.setWindowTitle(widget.windowTitle)
     getMainWindow().addDockWidget(dockArea, dock)
+
+    if dockArea == QtCore.Qt.RightDockWidgetArea and action:
+        _exclusiveDockWidgets[action] = (dock, widget)
+        action.connect('triggered()', functools.partial(hideDockWidgets, action))
+
     if action is None:
         getMainWindow().addWidgetToViewMenu(dock)
     else:
         getMainWindow().addWidgetToViewMenu(dock, action)
+
+
     return dock
 
 

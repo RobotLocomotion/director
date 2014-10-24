@@ -53,10 +53,12 @@ class MultisensePanel(object):
         self.queued_data['scanDuration'] = 6
         self.queued_data['headCamFps'] = 5
         self.queued_data['headCamGain'] = 1.0
+        self.queued_data['exposure'] = 0
         self.queued_data['autoGain'] = True
         self.queued_data['ledOn'] = False
         self.queued_data['ledBrightness'] = 0.0
         self.widget.headCamGainSpinner.setEnabled(False)
+        self.widget.headCamExposureSpinner.setEnabled(False)
 
         for key in self.queued_data.keys():
             self.sent_data[key] = None
@@ -68,6 +70,7 @@ class MultisensePanel(object):
 
         self.widget.headCamFpsSpinner.valueChanged.connect(self.headCamFpsChange)
         self.widget.headCamGainSpinner.valueChanged.connect(self.headCamGainChange)
+        self.widget.headCamExposureSpinner.valueChanged.connect(self.headCamExposureChange)
         self.widget.headAutoGainCheck.clicked.connect(self.headCamAutoGainChange)
         self.widget.ledOnCheck.clicked.connect(self.ledOnCheckChange)
         self.widget.ledBrightnessSpinner.valueChanged.connect(self.ledBrightnessChange)
@@ -82,10 +85,14 @@ class MultisensePanel(object):
     def ledOnCheckChange(self, event):
         self.queued_data['ledOn'] = self.widget.ledOnCheck.isChecked()
 
+    def headCamExposureChange(self, event):
+        self.queued_data['exposure'] = 1000*self.widget.headCamExposureSpinner.value
+
     def headCamAutoGainChange(self, event):
         self.queued_data['autoGain'] = self.widget.headAutoGainCheck.isChecked()
 
         self.widget.headCamGainSpinner.setEnabled(not self.queued_data['autoGain'])
+        self.widget.headCamExposureSpinner.setEnabled(not self.queued_data['autoGain'])
 
     def neckPitchChange(self, event):
         self.queued_data['neckPitch'] = self.widget.neckPitchSpinner.value
@@ -150,14 +157,16 @@ class MultisensePanel(object):
 
         fps = self.queued_data['headCamFps']
         camGain = self.queued_data['headCamGain']
+        exposure = self.queued_data['exposure']
         ledFlash = self.queued_data['ledOn']
         ledDuty = self.queued_data['ledBrightness']
         if self.queued_data['autoGain']:
             autoGain = 1
         else:
             autoGain = 0
+        
 
-        self.driver.setMultisenseCommand(fps, camGain, autoGain, self.queued_data['spinRate'], ledFlash, ledDuty)
+        self.driver.setMultisenseCommand(fps, camGain, exposure, autoGain, self.queued_data['spinRate'], ledFlash, ledDuty)
         self.sent_data = deepcopy(self.queued_data)
 
 
