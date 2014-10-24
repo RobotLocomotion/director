@@ -19,7 +19,7 @@ import numpy as np
 
 
 
-defaultUrdfHands = 'LR_RP'
+defaultUrdfHands = 'LR_RR'
 
 
 def getRobotGrayColor():
