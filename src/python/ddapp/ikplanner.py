@@ -97,13 +97,14 @@ class IkOptionsItem(om.ObjectModelItem):
 
         self.addProperty('Use pointwise', ikServer.usePointwise)
         self.addProperty('Use collision', ikServer.useCollision)
-        self.addProperty('Collision min distance', ikServer.collisionMinDistance)
+        self.addProperty('Collision min distance', ikServer.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikServer.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
         self.addProperty('Quasistatic shrink factor', ik.QuasiStaticConstraint.shrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
         self.addProperty('Max joint degrees/s', ikServer.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
         self.addProperty('Nominal pose', 1, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Seed pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
+        self.addProperty('Major iterations limit', ikServer.majorIterationsLimit)
         #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
 
     def _onPropertyChanged(self, propertySet, propertyName):
@@ -117,6 +118,14 @@ class IkOptionsItem(om.ObjectModelItem):
             self.ikServer.useCollision = self.getProperty(propertyName)
             if self.ikServer.useCollision:
                 self.setProperty('Use pointwise', False)
+                self.setProperty('Add knots', 2)
+                self.setProperty('Quasistatic shrink factor', 0.2)
+            else:
+                self.setProperty('Add knots', 0)
+                self.setProperty('Quasistatic shrink factor', 0.5)
+
+        if propertyName == 'Major iterations limit':
+            self.ikServer.majorIterationsLimit = self.getProperty(propertyName)
 
         if propertyName == 'Collision min distance':
             self.ikServer.collisionMinDistance = self.getProperty(propertyName)
@@ -402,7 +411,7 @@ class IKPlanner(object):
         p.upperBound = [0.07, 0.0, 0.0] #np.zeros(3)
         positionConstraint = p
 
-        rollConstraint1, rollConstraint2 = self.createAxisInPlaneConstraint(targetFrame.transform, graspToHandLinkFrame)
+        rollConstraint1, rollConstraint2 = self.createAxisInPlaneConstraint(side, targetFrame.transform, graspToHandLinkFrame)
 
         return positionConstraint, rollConstraint1, rollConstraint2
 
@@ -476,6 +485,27 @@ class IKPlanner(object):
         axisConstraint = p
 
         return positionConstraint, orientationConstraint, axisConstraint
+
+
+    def createExcludeReachTargetCollisionGroupConstraint(self, reachTargetName):
+        p = ik.ExcludeCollisionGroupConstraint()
+        p.tspan = [1.0, 1.0]
+        p.excludedGroupName = reachTargetName
+        excludeReachTargetCollisionGroupConstraint = p;
+
+        return excludeReachTargetCollisionGroupConstraint
+
+
+    def setArmLocked(self, side, isLocked):
+        setattr(self.ikServer,side+"ArmLocked",isLocked)
+
+
+    def setBaseLocked(self, isLocked):
+        setattr(self.ikServer, "baseLocked", isLocked)
+
+
+    def setBackLocked(self, isLocked):
+        setattr(self.ikServer, "backLocked", isLocked)
 
 
     def createMovingBodyConstraints(self, startPoseName, lockBase=False, lockBack=False, lockLeftArm=False, lockRightArm=False):

@@ -373,6 +373,14 @@ class TextItem(om.ObjectModelItem):
             self._renderAllViews()
 
 
+def updateText(text, name, **kwargs):
+
+    obj = om.findObjectByName(name)
+    obj = obj or showText(text, name, **kwargs)
+    obj.setProperty('Text', text)
+    return obj
+
+
 def showText(text, name, fontSize=18, position=(10, 10), parent=None, view=None):
 
     view = view or app.getCurrentRenderView()

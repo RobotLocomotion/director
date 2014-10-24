@@ -21,6 +21,7 @@ from ddapp import debrisdemo
 from ddapp import drilldemo
 from ddapp import tabledemo
 from ddapp import valvedemo
+from ddapp import continuouswalkingdemo
 from ddapp import ik
 from ddapp import ikplanner
 from ddapp import objectmodel as om
@@ -39,12 +40,14 @@ from ddapp import filterUtils
 from ddapp import footstepsdriver
 from ddapp import footstepsdriverpanel
 from ddapp import framevisualization
+from ddapp import lcmloggerwidget
 from ddapp import lcmgl
 from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import multisensepanel
 from ddapp import navigationpanel
 from ddapp import handcontrolpanel
+from ddapp import sensordatarequestpanel
 
 from ddapp import robotplanlistener
 from ddapp import handdriver
@@ -108,6 +111,7 @@ usePlanning = True
 useAtlasDriver = True
 useLCMGL = True
 useLightColorScheme = False
+useLoggingWidget = True
 useDrakeVisualizer = True
 useNavigationPanel = True
 useFootContactVis = True
@@ -116,6 +120,7 @@ useImageViewDemo = True
 useControllerRate = True
 useSkybox = False
 useDataFiles = True
+useContinuousWalking = False
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -157,6 +162,9 @@ if useRobotState:
 
     segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
 
+    def getNeckPitch():
+        return robotStateJointController.q[robotstate.getDrakePoseJointNames().index('neck_ay')]
+
 
 if usePerception:
 
@@ -167,6 +175,7 @@ if usePerception:
 
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
     multisensepanel.init(perception.multisenseDriver)
+    sensordatarequestpanel.init()
 
     disparityPointCloud = segmentation.DisparityPointCloudItem('stereo point cloud', cameraview.imageManager)
     disparityPointCloud.addToView(view)
@@ -174,6 +183,8 @@ if usePerception:
 
     def createPointerTracker():
         return trackers.PointerTracker(robotStateModel, disparityPointCloud)
+
+    neckDriver = perception.NeckDriver(view, getNeckPitch)
 
 
 if useGrid:
@@ -347,6 +358,9 @@ if usePlanning:
                                       segmentation.segmentValveWallAuto, robotStateJointController,
                                       playPlans, showPose)
 
+    if (useContinuousWalking):
+        continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController)
+
 
     splinewidget.init(view, handFactory, robotStateModel)
 
@@ -374,8 +388,16 @@ if useActionManager:
 
 if useNavigationPanel:
     thispanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
-    picker = PointPicker(view, callback=thispanel.pointPickerDemo, numberOfPoints=2)
+    picker = PointPicker(view, callback=thispanel.pointPickerStoredFootsteps, numberOfPoints=2)
     #picker.start()
+
+
+if useLoggingWidget:
+    w = lcmloggerwidget.LCMLoggerWidget(statusBar=app.getMainWindow().statusBar())
+    app.getMainWindow().statusBar().addPermanentWidget(w.button)
+    baseDir = os.path.expanduser('~/logs/raw')
+    if os.path.isdir(baseDir):
+        w.manager.baseDir = baseDir
 
 
 if useControllerRate:
@@ -441,6 +463,7 @@ if useDataFiles:
 
 if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
+    #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_TSDF', view)
 
 
 if useImageViewDemo:
@@ -491,13 +514,25 @@ def sendEstRobotState(pose=None):
     lcmUtils.publish('EST_ROBOT_STATE', msg)
 
 
-def addCollisionObjectToWorld():
-    obj = om.getActiveObject()
-    assert obj and obj.polyData
-    polyData = filterUtils.transformPolyData(obj.polyData, obj.actor.GetUserTransform())
-    pts = vnp.getNumpyFromVtk(polyData, 'Points')
-    pts = pts.transpose()
-    ikServer.addCollisionObject(pts)
+def addCollisionObjectToWorld(obj = None, name = None):
+    if obj is None:
+        obj = [om.getActiveObject()]
+    if type(obj) is not list:
+        obj = [obj]
+    if name is None:
+        name = [obj_i.parent().getProperty('Name') for obj_i in obj]
+    if type(name) is not list:
+        name = [name]
+
+    assert len(obj) == len(name)
+    pts = []
+    for obj_i in obj:
+        assert obj_i and obj_i.polyData
+        polyData = filterUtils.transformPolyData(obj_i.polyData, obj_i.actor.GetUserTransform())
+        pts_i = vnp.getNumpyFromVtk(polyData, 'Points')
+        pts.append(pts_i.transpose());
+
+    ikServer.addCollisionObject(pts,name)
 
 
 def addCollisionObjectToLink(robotModel, linkName):
@@ -515,7 +550,7 @@ def addCollisionObjectToLink(robotModel, linkName):
 app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view)
-viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
+viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver, neckDriver)
 
 
 # Drill Demo Functions for in-image rendering:

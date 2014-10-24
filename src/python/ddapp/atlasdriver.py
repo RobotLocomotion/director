@@ -167,10 +167,7 @@ class AtlasDriver(object):
     # State Est Init Code
     def sendInitAtZero(self):
         self.sendReadyMessage()
-
         p1 = [0,0,0.85]
-        init_frame = transformUtils.frameFromPositionAndRPY( p1 , [0,0,0] )
-        vis.updateFrame(init_frame, "init pose", parent="navigation")
         self.sendInitMessage(p1, 0)
 
     def sendReadyMessage(self):
@@ -202,7 +199,7 @@ class AtlasDriver(object):
         if (self.sentStandUtime is not None):
             if (self.startupStage == 1):
               if ( getUtime() > self.sentStandUtime + 6E6 ):
-                  print "Sending SE Init"
+                  # print "Sending SE Init"
                   self.sendInitAtZero()
                   self.startupStage = 2
 
@@ -210,7 +207,7 @@ class AtlasDriver(object):
               if ( getUtime() > self.sentStandUtime + 10E6 ):
                   self.sendBehaviorCommand('user')
                   self.sendMITStandCommand()
-                  print "Sending BDI User & MIT Stand commands"
+                  # print "Sending BDI User & MIT Stand commands"
                   self.startupStage = 0
 
 

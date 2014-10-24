@@ -241,24 +241,36 @@ class EndEffectorTeleopPanel(object):
 
         if self.getBackConstraint() == 'fixed':
             constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
+            ikPlanner.setBackLocked(True)
         elif self.getBackConstraint() == 'limited':
             constraints.append(ikPlanner.createMovingBackLimitedPostureConstraint())
+            ikPlanner.setBackLocked(False)
         elif self.getBackConstraint() == 'free':
             constraints.append(ikPlanner.createMovingBackPostureConstraint())
+            ikPlanner.setBackLocked(False)
 
 
         if self.getBaseConstraint() == 'fixed':
             constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName, lockLegs=False))
+            ikPlanner.setBaseLocked(True)
         if self.getBaseConstraint() == 'constrained':
             constraints.extend(ikPlanner.createFixedLinkConstraints(startPoseName, 'pelvis', tspan=[1.0, 1.0]))
+            ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'xyz only':
             constraints.append(ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
+            constraints.append(ikPlanner.createKneePostureConstraint([0.7, 2.1]))
+            ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'z only':
             constraints.append(ikPlanner.createZMovingBasePostureConstraint(startPoseName))
+            constraints.append(ikPlanner.createKneePostureConstraint([0.7, 2.1]))
+            ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'limited':
             constraints.append(ikPlanner.createMovingBaseSafeLimitsConstraint())
+            constraints.append(ikPlanner.createKneePostureConstraint([0.7, 2.1]))
+            ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'free':
-            pass
+            constraints.append(ikPlanner.createKneePostureConstraint([0.7, 2.1]))
+            ikPlanner.setBaseLocked(False)
 
 
         side = 'left'
@@ -279,22 +291,40 @@ class EndEffectorTeleopPanel(object):
 
         if self.getLHandConstraint() == 'arm fixed':
             constraints.append(ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
+            ikPlanner.setArmLocked(side,True)
 
         elif self.getLHandConstraint() == 'ee fixed':
             constraints.extend([p, q])
+            ikPlanner.setArmLocked(side,False)
 
         elif self.getLHandConstraint() == 'position':
             constraints.extend([p])
+            ikPlanner.setArmLocked(side,False)
 
         elif self.getLHandConstraint() == 'gaze':
             constraints.extend([p, g])
+            ikPlanner.setArmLocked(side,False)
 
         elif self.getLHandConstraint() == 'orbit':
             graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
             constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
+            constraints[-3].tspan = [1.0, 1.0]
+
+            if ikPlanner.ikServer.useCollision:
+                constraints[-2].tspan = [0.5, 1.0]
+                constraints[-1].tspan = [0.5, 1.0]
+            else:
+                constraints[-2].tspan = [1.0, 1.0]
+                constraints[-1].tspan = [1.0, 1.0]
+
+            ikPlanner.setArmLocked(side,False)
 
         elif self.getLHandConstraint() == 'free':
-            pass
+            ikPlanner.setArmLocked(side,False)
+
+        
+        if self.getLHandConstraint() != 'free' and hasattr(self,'reachTargetObject'):
+            constraints.append(ikPlanner.createExcludeReachTargetCollisionGroupConstraint(self.reachTargetObject.getProperty('Name')))
 
 
         side = 'right'
@@ -315,22 +345,40 @@ class EndEffectorTeleopPanel(object):
 
         if self.getRHandConstraint() == 'arm fixed':
             constraints.append(ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+            ikPlanner.setArmLocked(side,True)
 
         elif self.getRHandConstraint() == 'ee fixed':
             constraints.extend([p, q])
+            ikPlanner.setArmLocked(side,False)
 
         elif self.getRHandConstraint() == 'position':
             constraints.extend([p])
+            ikPlanner.setArmLocked(side,False)
 
         elif self.getRHandConstraint() == 'gaze':
             constraints.extend([p, g])
+            ikPlanner.setArmLocked(side,False)
 
         elif self.getRHandConstraint() == 'orbit':
             graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
             constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
+            constraints[-3].tspan = [1.0, 1.0]
+
+            if ikPlanner.ikServer.useCollision:
+                constraints[-2].tspan = [0.5, 1.0]
+                constraints[-1].tspan = [0.5, 1.0]
+            else:
+                constraints[-2].tspan = [1.0, 1.0]
+                constraints[-1].tspan = [1.0, 1.0]
+
+            ikPlanner.setArmLocked(side,False)
 
         elif self.getLHandConstraint() == 'free':
-            pass
+            ikPlanner.setArmLocked(side,False)
+            
+
+        if self.getRHandConstraint() != 'free' and hasattr(self,'reachTargetObject'):
+            constraints.append(ikPlanner.createExcludeReachTargetCollisionGroupConstraint(self.reachTargetObject.getProperty('Name')))
 
 
         self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
@@ -424,12 +472,17 @@ class EndEffectorTeleopPanel(object):
             frame.connectFrameModified(self.onGoalFrameModified)
 
 
-    def newReachTeleop(self, frame, side):
+    def newReachTeleop(self, frame, side, reachTargetObject=None):
+        '''
+        reachTarget is the object we are reaching to.  For some types of plans
+        this object may be treated in a special way, for example, when doing
+        planning with collision avoidance.
+        '''
         self.panel.jointTeleop.deactivate()
 
         self.deactivate()
 
-        self.setBaseConstraint('z only')
+        self.setBaseConstraint('xyz only')
         self.setBackConstraint('limited')
         self.setLFootConstraint('fixed')
         self.setRFootConstraint('fixed')
@@ -438,12 +491,20 @@ class EndEffectorTeleopPanel(object):
         self.setRHandConstraint('arm fixed')
 
         if side == 'left':
+          if self.panel.ikPlanner.ikServer.useCollision:
+            self.setLHandConstraint('orbit')
+          else:
             self.setLHandConstraint('ee fixed')
         elif side == 'right':
+          if self.panel.ikPlanner.ikServer.useCollision:
+            self.setRHandConstraint('orbit')
+          else:
             self.setRHandConstraint('ee fixed')
 
+        self.reachTargetObject = reachTargetObject
         self.activate()
         return self.updateGoalFrame(self.panel.ikPlanner.getHandLink(side), frame)
+
 
 
 inf = np.inf

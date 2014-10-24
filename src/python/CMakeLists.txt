@@ -16,6 +16,7 @@ set(python_files
   ddapp/cameraview.py
   ddapp/colorize.py
   ddapp/consoleapp.py
+  ddapp/continuouswalkingdemo.py
   ddapp/debrisdemo.py
   ddapp/debugVis.py
   ddapp/depthimageprovider.py
@@ -37,6 +38,7 @@ set(python_files
   ddapp/__init__.py
   ddapp/ioUtils.py
   ddapp/jointcontrol.py
+  ddapp/lcmloggerwidget.py
   ddapp/lcmgl.py
   ddapp/lcmspy.py
   ddapp/lcmUtils.py
@@ -59,6 +61,7 @@ set(python_files
   ddapp/segmentation.py
   ddapp/segmentationpanel.py
   ddapp/segmentationroutines.py
+  ddapp/sensordatarequestpanel.py
   ddapp/shallowCopy.py
   ddapp/simpletimer.py
   ddapp/skybox.py
@@ -94,6 +97,10 @@ set(python_files
   actionmanager/actionmanager.py
   actionmanager/simplefsm.py
   actionmanager/sequences.py
+
+  ddapp/thirdparty/__init__.py
+  ddapp/thirdparty/qhull_2d.py
+  ddapp/thirdparty/min_bounding_rect.py
   )
 
 

@@ -7,6 +7,7 @@ from ddapp import drcargs
 from ddapp.shallowCopy import shallowCopy
 from ddapp.timercallback import TimerCallback
 from ddapp import vtkNumpy
+from ddapp import objectmodel as om
 import ddapp.vtkAll as vtk
 from ddapp.debugVis import DebugData
 
@@ -553,6 +554,113 @@ def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA
     p = filterUtils.transformPolyData(p, cameraToLocal)
 
     return p
+
+
+
+class KintinuousMapping(object):
+
+    def __init__(self):
+
+        self.lastUtime = 0
+        self.lastCameraToLocal = vtk.vtkTransform()
+
+        self.cameraToLocalFusedTransforms = []
+        self.cameraToLocalTransforms = []
+        self.pointClouds = []
+
+    def getStereoPointCloudElapsed(self,decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT'):
+        q = imageManager.queue
+
+        utime = q.getCurrentImageTime(cameraName)
+        if utime == 0:
+            return None, None, None
+
+        if (utime - self.lastUtime < 1E6):
+            return None, None, None
+
+        p = vtk.vtkPolyData()
+        cameraToLocalFused = vtk.vtkTransform()
+        q.getTransform('CAMERA_LEFT_ALT', 'local', utime, cameraToLocalFused)
+        cameraToLocal = vtk.vtkTransform()
+        q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
+        prevToCurrentCameraTransform = vtk.vtkTransform()
+        prevToCurrentCameraTransform.PostMultiply()
+        prevToCurrentCameraTransform.Concatenate( cameraToLocal )
+        prevToCurrentCameraTransform.Concatenate( self.lastCameraToLocal.GetLinearInverse() )
+        distTravelled = np.linalg.norm( prevToCurrentCameraTransform.GetPosition() )
+
+        # 0.2 heavy overlap
+        # 0.5 quite a bit of overlap
+        # 1.0 is good
+        if (distTravelled  < 0.2 ):
+            return None, None, None
+
+        q.getPointCloudFromImages(imagesChannel, p, decimation)
+
+        self.lastCameraToLocal = cameraToLocal
+        self.lastUtime = utime
+        return p, cameraToLocalFused, cameraToLocal
+
+
+    def showFusedMaps(self):
+        om.removeFromObjectModel(om.findObjectByName('stereo'))
+        om.getOrCreateContainer('stereo')
+
+        q = imageManager.queue
+        cameraToLocalNow = vtk.vtkTransform()
+        utime = q.getCurrentImageTime('CAMERA_TSDF')
+
+        q.getTransform('CAMERA_LEFT','local', utime,cameraToLocalNow)
+        cameraToLocalFusedNow = vtk.vtkTransform()
+        q.getTransform('CAMERA_LEFT_ALT','local', utime,cameraToLocalFusedNow)
+
+        for i in range(len(self.pointClouds)):
+
+            fusedNowToLocalNow = vtk.vtkTransform()
+            fusedNowToLocalNow.PreMultiply()
+            fusedNowToLocalNow.Concatenate( cameraToLocalNow)
+            fusedNowToLocalNow.Concatenate( cameraToLocalFusedNow.GetLinearInverse() )
+
+
+            fusedTransform = vtk.vtkTransform()
+            fusedTransform.PreMultiply()
+            fusedTransform.Concatenate( fusedNowToLocalNow)
+            fusedTransform.Concatenate( self.cameraToLocalFusedTransforms[i] )
+
+            pd = filterUtils.transformPolyData(self.pointClouds[i], fusedTransform)
+            vis.showFrame(fusedTransform, ('cloud frame ' + str(i)), visible=True, scale=0.2, parent='stereo')
+            vis.showPolyData(pd, ('stereo ' + str(i)), parent='stereo', colorByName='rgb_colors')
+
+            # Without compensation for fusion motion estimation:
+            #pd = filterUtils.transformPolyData(self.pointClouds[i], self.cameraToLocalTransforms[i])
+            #vis.showFrame(self.cameraToLocalTransforms[i], ('cloud frame ' + str(i)), visible=True, scale=0.2)
+            #vis.showPolyData(pd, ('stereo ' + str(i)) )
+
+            # in fusion coordinate frame:
+            #pd = filterUtils.transformPolyData(self.pointClouds[i], self.cameraToLocalFusedTransforms[i])
+            #vis.showFrame(self.cameraToLocalFusedTransforms[i], ('cloud frame ' + str(i)), visible=True, scale=0.2)
+            #vis.showPolyData(pd, ('stereo ' + str(i)) )
+
+    def cameraFusedCallback(self):
+        #pd = cameraview.getStereoPointCloud(2,"CAMERA_FUSED")
+        pd, cameraToLocalFused, cameraToLocal = self.getStereoPointCloudElapsed(2,"CAMERA_FUSED")
+        #vis.updateFrame(cameraToLocal, 'cloud frame now', visible=True, scale=0.2)
+
+        if (pd is None):
+            return
+
+        self.pointClouds.append(pd)
+        self.cameraToLocalFusedTransforms.append( cameraToLocalFused )
+        self.cameraToLocalTransforms.append( cameraToLocal )
+
+        #pdCopy = vtk.vtkPolyData()
+        #pdCopy.DeepCopy(pd)
+        #cameraToLocalCopy = transformUtils.copyFrame(cameraToLocalFused)
+        #pdCopy = filterUtils.transformPolyData(pdCopy, cameraToLocalCopy)
+        #vis.showFrame(cameraToLocalCopy, 'cloud frame', visible=True, scale=0.2)
+        #vis.showPolyData(pdCopy,'stereo')
+
+        self.showFusedMaps()
 
 
 def init():
