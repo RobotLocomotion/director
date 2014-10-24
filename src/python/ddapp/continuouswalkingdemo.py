@@ -408,11 +408,12 @@ class ContinousWalkingDemo(object):
         request.goal_steps = goalSteps
 
         # force correct planning parameters:
-        request.params.planning_mode = 1 # 0 auto, 1 left, 2 right
+        request.params.leading_foot = goalSteps[0].is_right_foot
+        request.params.planning_mode = 1
         request.params.nom_forward_step = 0.28
         request.params.map_mode = 1 #  2 footplane, 0 h+n, 1 h+zup, 3 hori
         request.params.max_num_steps = len(goalSteps)
-        request.params.min_num_steps = len(goalSteps)-2
+        request.params.min_num_steps = len(goalSteps)
 
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
 
