@@ -105,6 +105,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.addProperty('Nominal pose', 1, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Seed pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Major iterations limit', ikServer.majorIterationsLimit)
+        self.addProperty('Goal planning mode', 0, attributes=om.PropertyAttributes(enumNames=['fix end pose', 'fix goal joints']))
         #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
 
     def _onPropertyChanged(self, propertySet, propertyName):
@@ -883,9 +884,13 @@ class IKPlanner(object):
             goalPoseJoints[name] = position
 
         startPose = np.array(stateJointController.q)
-        endPose = self.mergePostures(startPose, goalPoseJoints)
-        #self.computePostureGoal(startPose, endPose)
-        self.computeJointPostureGoal(startPose, goalPoseJoints)
+
+        goalMode = getIkOptions().getProperty('Goal planning mode')
+        if goalMode == 0:
+            endPose = self.mergePostures(startPose, goalPoseJoints)
+            self.computePostureGoal(startPose, endPose)
+        else:
+            self.computeJointPostureGoal(startPose, goalPoseJoints)
 
 
     def addPostureGoalListener(self, stateJointController):

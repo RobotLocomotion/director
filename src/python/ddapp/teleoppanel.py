@@ -168,7 +168,8 @@ class EndEffectorTeleopPanel(object):
             self.updateIk()
 
         # todo- need an option here
-        if ikplanner.getIkOptions().getProperty('Use collision'):
+        goalMode = ikplanner.getIkOptions().getProperty('Goal planning mode')
+        if goalMode == 1 or ikplanner.getIkOptions().getProperty('Use collision'):
             plan = self.constraintSet.runIkTraj()
         else:
             plan = self.constraintSet.planEndPoseGoal()
