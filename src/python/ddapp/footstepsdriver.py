@@ -27,14 +27,14 @@ import functools
 from PythonQt import QtGui, QtCore
 
 
-DEFAULT_PARAM_SET = 'drake'
-DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
+DEFAULT_PARAM_SET = 'BDI'
+DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 4,
                                'Nominal Step Width': 0.26,
                                'Nominal Forward Step': 0.15,
                                'Max Forward Step': 0.40,
                                'Max Step Width': 0.4,
                                'Behavior': 0,
-                               'Leading Foot': 0,
+                               'Leading Foot': 1,
                                'Drake Swing Speed': 0.2,
                                'Drake Instep Shift': 0.0275,
                                'Drake Min Hold Time': 2.0},
@@ -170,7 +170,7 @@ class FootstepsDriver(object):
                                  lcmdrc.footstep_plan_params_t.LEAD_LEFT,
                                  lcmdrc.footstep_plan_params_t.LEAD_RIGHT]
         # self.params.addProperty('Map Command', 0, attributes=om.PropertyAttributes(enumNames=['Full Heightmap', 'Flat Ground', 'Z Normals']))
-        self.params.addProperty('Map Mode', 0, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
+        self.params.addProperty('Map Mode', 2, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
         self.map_mode_map = [
                              lcmdrc.footstep_plan_params_t.FOOT_PLANE,
                              lcmdrc.footstep_plan_params_t.TERRAIN_HEIGHTS_AND_NORMALS,
