@@ -369,22 +369,28 @@ class NavigationPanel(object):
 #                           [ blockl*-0.5 - 0.03, sep  , 0       , 0 , 0 , 0, 0]])
 
 # up 6 blocks (used in journal paper in oct 2014)
-        r =1
-        flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
-                           [ blockl*-0.5       ,-sep  , 0       , 0 , 0 , 0, r],
-                           [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
-                           [ blockl*0.5 - 0.02 ,-sep  , blockh  , 0 , 0 , 0, r],
-                           [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
-                           [ blockl*1.5 - 0.02 ,-sep  , 2*blockh, 0 , 0 , 0, r],
-                           [ blockl*2.5 - 0.03 , sep  , 3*blockh, 0 , 0 , 0, 0],
-                           [ blockl*2.5 - 0.02 ,-sep  , 3*blockh, 0 , 0 , 0, r],
-                           [ blockl*3.5 - 0.03 , sep  , 4*blockh, 0 , 0 , 0, 0],
-                           [ blockl*3.5 - 0.02 ,-sep  , 4*blockh, 0 , 0 , 0, r],
-                           [ blockl*4.5 - 0.03 , sep  , 5*blockh, 0 , 0 , 0, 0],
-                           [ blockl*4.5 - 0.02 ,-sep  , 5*blockh, 0 , 0 , 0, r],
-                           [ blockl*5.5 - 0.03 , sep  , 6*blockh, 0 , 0 , 0, 0],
-                           [ blockl*5.5 - 0.02 ,-sep  , 6*blockh, 0 , 0 , 0, r]])
+#        r =1
+#        flist = np.array( [[ blockl*-0.5       , sep  , 0       , 0 , 0 , 0, 0],
+#                           [ blockl*-0.5       ,-sep  , 0       , 0 , 0 , 0, r],
+#                           [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
+#                           [ blockl*0.5 - 0.02 ,-sep  , blockh  , 0 , 0 , 0, r],
+#                           [ blockl*1.5 - 0.03 , sep  , 2*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*1.5 - 0.02 ,-sep  , 2*blockh, 0 , 0 , 0, r],
+#                           [ blockl*2.5 - 0.03 , sep  , 3*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*2.5 - 0.02 ,-sep  , 3*blockh, 0 , 0 , 0, r],
+#                           [ blockl*3.5 - 0.03 , sep  , 4*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*3.5 - 0.02 ,-sep  , 4*blockh, 0 , 0 , 0, r],
+#                           [ blockl*4.5 - 0.03 , sep  , 5*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*4.5 - 0.02 ,-sep  , 5*blockh, 0 , 0 , 0, r],
+#                           [ blockl*5.5 - 0.03 , sep  , 6*blockh, 0 , 0 , 0, 0],
+#                           [ blockl*5.5 - 0.02 ,-sep  , 6*blockh, 0 , 0 , 0, r]])
 
+# continuous walking - first two blocks up
+        r =1
+        flist = np.array( [[ blockl*-0.5  - 0.03     , sep  , 0       , 0 , 0 , 0, 0],
+                           [ blockl*-0.5  + 0.03      ,-sep  , 0       , 0 , 0 , 0, r],
+                           [ blockl*0.5 - 0.03 , sep  , blockh  , 0 , 0 , 0, 0],
+                           [ blockl*0.5 + 0.03 ,-sep  , blockh  , 0 , 0 , 0, r]])
 
         contact_pts = self.footstepDriver.getContactPts()
         contact_pts_mid = np.mean(contact_pts, axis=0) # mid point on foot relative to foot frame
