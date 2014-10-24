@@ -363,7 +363,7 @@ if usePlanning:
                                       playPlans, showPose)
 
     if (useContinuousWalking):
-        continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController)
+        continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController, ikPlanner, teleopJointController)
 
 
     splinewidget.init(view, handFactory, robotStateModel)
