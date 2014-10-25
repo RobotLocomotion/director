@@ -92,7 +92,7 @@ class ContinousWalkingDemo(object):
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewZ, origin=viewOrigin, resultArrayName='distance_along_foot_z')
 
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.20, 1.5])
+        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.20, 1.3])
         polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.4, 0.4])
         polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.4])
 
@@ -257,7 +257,7 @@ class ContinousWalkingDemo(object):
         return blocks,groundPlane
 
 
-    def placeStepsOnBlocks(self, blocks, groundPlane, standingFootName, standingFootFrame):
+    def placeStepsOnBlocks(self, blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep = True):
 
         footsteps = []
         for i, block in enumerate(blocks):
@@ -269,7 +269,7 @@ class ContinousWalkingDemo(object):
             nextRightTransform.Concatenate(block.cornerTransform)
             footsteps.append(Footstep(nextRightTransform,True))
 
-        footOnGround = False
+        #footOnGround = False
         #if (groundPlane):
         #    # TODO: 0.08 is distance from foot frames to sole. remove hard coding!
         #    distOffGround = abs(groundPlane.cornerTransform.GetPosition()[2]-standingFootFrame.GetPosition()[2] + 0.08)
@@ -281,11 +281,13 @@ class ContinousWalkingDemo(object):
         #        nextRightTransform.Concatenate(blocks[0].cornerTransform)
         #        footsteps = [Footstep(nextRightTransform,True)] + footsteps
 
-        if (footOnGround is False):
-          # if we are standing on right foot, we can see the next block.
-          # but the next left step has been committed - so remove it from the the list
-          if (standingFootName is 'r_foot'):
-              footsteps = footsteps[1:]
+        #if (footOnGround is False):
+        #  # if we are standing on right foot, we can see the next block.
+        #  # but the next left step has been committed - so remove it from the the list
+
+        if (removeFirstLeftStep is True):
+            if (standingFootName is 'r_foot'):
+                footsteps = footsteps[1:]
               #print "removing the first left step"
 
         return footsteps
@@ -318,7 +320,7 @@ class ContinousWalkingDemo(object):
             obj.actor.SetUserTransform(footstep.transform)
 
 
-    def replanFootsteps(self, polyData, standingFootName):
+    def replanFootsteps(self, polyData, standingFootName, removeFirstLeftStep=True):
         obj = om.getOrCreateContainer('continuous')
         om.getOrCreateContainer('cont debug', obj)
 
@@ -340,7 +342,11 @@ class ContinousWalkingDemo(object):
         # Step 3: find the corners of the minimum bounding rectangles
         blocks,groundPlane = self.extractBlocksFromSurfaces(clusters, standingFootFrame)
 
-        footsteps = self.placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame)
+        footsteps = self.placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep)
+
+        if (len(footsteps) ==0):
+            print "no steps to plan, returning"
+            return
 
         # Step 5: Find the two foot positions we should plan with: the next committed tool and the current standing foot
         if (self.committedStep is not None):
@@ -440,17 +446,20 @@ class ContinousWalkingDemo(object):
         if (self.lastContactState is "both") and (contactState is "left"):
             replanNow = True
             standingFootName = 'l_foot'
-        if (self.lastContactState is "both") and (contactState is "right"):
-            replanNow = True
-            standingFootName = 'r_foot'
+        #if (self.lastContactState is "both") and (contactState is "right"):
+        #    replanNow = True
+        #    standingFootName = 'r_foot'
 
         if (replanNow):
-            self.makeReplanRequest(standingFootName)
+            if (self.navigationPanel.automaticContinuousWalkingEnabled):
+                self.makeReplanRequest(standingFootName)
+            else:
+                print "not enabled, not planning"
 
         self.lastContactState = contactState
 
 
-    def makeReplanRequest(self, standingFootName):
+    def makeReplanRequest(self, standingFootName, removeFirstLeftStep = True):
 
         if (self.processContinuousStereo):
             polyData = cameraview.getStereoPointCloud(2,'CAMERA_FUSED')
@@ -458,8 +467,11 @@ class ContinousWalkingDemo(object):
         else:
             polyData = segmentation.getCurrentRevolutionData()
 
-        self.replanFootsteps(polyData, standingFootName)
+        self.replanFootsteps(polyData, standingFootName, removeFirstLeftStep)
 
+
+    def makeStandingRequest(self):
+        self.makeReplanRequest('r_foot', removeFirstLeftStep = False)
 
 
     # i think this should be removed, according to robin
