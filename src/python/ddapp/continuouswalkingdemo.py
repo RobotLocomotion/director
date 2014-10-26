@@ -74,6 +74,8 @@ class ContinousWalkingDemo(object):
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
 
+        #stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
+        #stepParamsSub.setSpeedLimit(60)
 
     def getRecedingTerrainRegion(self, polyData, linkFrame):
         ''' Find the point cloud in front of the foot frame'''
@@ -446,9 +448,9 @@ class ContinousWalkingDemo(object):
         if (self.lastContactState is "both") and (contactState is "left"):
             replanNow = True
             standingFootName = 'l_foot'
-        #if (self.lastContactState is "both") and (contactState is "right"):
-        #    replanNow = True
-        #    standingFootName = 'r_foot'
+        if (self.lastContactState is "both") and (contactState is "right"):
+            replanNow = True
+            standingFootName = 'r_foot'
 
         if (replanNow):
             if (self.navigationPanel.automaticContinuousWalkingEnabled):
@@ -457,6 +459,25 @@ class ContinousWalkingDemo(object):
                 print "not enabled, not planning"
 
         self.lastContactState = contactState
+
+
+    def onAtlasStepParams(self,msg):
+        if (msg.desired_step_spec.foot_index ==1):
+            is_right_foot = True
+        else:
+            is_right_foot = False
+        #print msg.desired_step_spec.foot_index , " and " , is_right_foot
+        foot = msg.desired_step_spec.foot
+        footTransform  = transformUtils.frameFromPositionAndRPY( foot.position , [0, 0, foot.yaw*180/math.pi])
+
+        mesh,color = self.getMeshAndColor(is_right_foot)
+        #color[1] = 0.75 ; color[2] = 0.25
+        vis.updateFrame(footTransform, 'bdi foot', parent='foot placements', scale=0.2, visible=False)
+
+        bdi_step_mesh = om.findObjectByName('bdi step')
+        om.removeFromObjectModel(bdi_step_mesh)
+        obj = vis.showPolyData(mesh, 'bdi step', color=color, alpha=1.0, parent='steps')
+        obj.actor.SetUserTransform(footTransform)
 
 
     def makeReplanRequest(self, standingFootName, removeFirstLeftStep = True):
