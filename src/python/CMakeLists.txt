@@ -92,6 +92,12 @@ set(python_files
   ddapp/macros/segmentation_view/ortho_z.py
   ddapp/macros/segmentation_view/perspective.py
 
+  ddapp/tasks/__init__.py
+  ddapp/tasks/robottasks.py
+  ddapp/tasks/taskmanagerwidget.py
+  ddapp/tasks/descriptions/__init__.py
+  ddapp/tasks/descriptions/drillTask.py
+
   actionmanager/__init__.py
   actionmanager/actions.py
   actionmanager/actionmanager.py
