@@ -517,6 +517,18 @@ def sendEstRobotState(pose=None):
     lcmUtils.publish('EST_ROBOT_STATE', msg)
 
 
+def enableArmEncoders():
+    msg = lcmdrc.utime_t()
+    msg.utime = 1
+    lcmUtils.publish('ENABLE_ENCODERS', msg)
+
+
+def disableArmEncoders():
+    msg = lcmdrc.utime_t()
+    msg.utime = -1
+    lcmUtils.publish('ENABLE_ENCODERS', msg)
+
+
 def addCollisionObjectToWorld(obj = None, name = None):
     if obj is None:
         obj = [om.getActiveObject()]
