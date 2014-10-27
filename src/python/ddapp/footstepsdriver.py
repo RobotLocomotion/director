@@ -15,6 +15,7 @@ from ddapp import filterUtils
 import ddapp.vtkNumpy as vnp
 
 import os
+import math
 import numpy as np
 from ddapp import botpy
 import drc as lcmdrc
@@ -102,6 +103,11 @@ def getWalkingVolumesFolder():
     if obj is None:
         obj = om.getOrCreateContainer('walking volumes', parentObj=getFootstepsFolder())
         om.collapse(obj)
+    return obj
+
+def getTerrainSlicesFolder():
+    obj = om.getOrCreateContainer('terrain slices', parentObj=getFootstepsFolder())
+    om.collapse(obj)
     return obj
 
 def getBDIAdjustedFootstepsFolder():
@@ -307,8 +313,11 @@ class FootstepsDriver(object):
 
         allTransforms = []
         volFolder = getWalkingVolumesFolder()
+        map(om.removeFromObjectModel, volFolder.children())
+        slicesFolder = getTerrainSlicesFolder()
+        map(om.removeFromObjectModel, slicesFolder.children())
 
-        steps = folder.children()[1:]
+        steps = folder.children()[2:]
 
         for i, footstep in enumerate(msg.footsteps):
             trans = footstep.pos.translation
@@ -319,6 +328,7 @@ class FootstepsDriver(object):
             footstepTransform = transformUtils.transformFromPose(trans, quat)
 
             allTransforms.append(footstepTransform)
+
 
             if i < 2:
                 continue
@@ -356,6 +366,24 @@ class FootstepsDriver(object):
                     obj = vis.showPolyData(vol_mesh, 'walking volume', parent=volFolder, alpha=0.5, visible=self.show_contact_slices, color=color)
                     obj.actor.SetUserTransform(footstepTransform)
 
+            trans_prev = msg.footsteps[i-2].pos.translation
+            trans_prev = [trans_prev.x, trans_prev.y, trans_prev.z]
+            yaw = np.arctan2(trans[1]-trans_prev[1], trans[0]-trans_prev[0])
+
+            # TODO: when Drake frames are supported in the C++ interface, use them
+            # to get this sole transform
+            # foot_sole_shift = np.array([0.048, 0.0, -0.0811])
+
+            T_terrain_to_world = transformUtils.frameFromPositionAndRPY([trans_prev[0], trans_prev[1], 0], [0, 0, math.degrees(yaw)])
+            path_dist = np.array(footstep.terrain_path_dist)
+            height = np.array(footstep.terrain_height)
+            if np.any(height >= trans[2]):
+                terrain_pts_in_local = np.vstack((path_dist, np.zeros(len(footstep.terrain_path_dist)), height))
+                d = DebugData()
+                for j in range(terrain_pts_in_local.shape[1]-1):
+                    d.addLine(terrain_pts_in_local[:,j], terrain_pts_in_local[:,j+1], radius=0.01)
+                obj = vis.showPolyData(d.getPolyData(), 'terrain slice', parent=slicesFolder, visible=True, color=[.8,.8,.3])
+                obj.actor.SetUserTransform(T_terrain_to_world)
 
             renderInfeasibility = False
             if renderInfeasibility and footstep.infeasibility > 1e-6:
