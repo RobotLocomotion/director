@@ -295,6 +295,8 @@ class PolyDataItem(om.ObjectModelItem):
         assert view in self.views
         self.views.remove(view)
         view.renderer().RemoveActor(self.actor)
+        if self.shadowActor:
+            view.renderer().RemoveActor(self.shadowActor)
         view.render()
 
 
