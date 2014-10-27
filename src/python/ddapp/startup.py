@@ -413,7 +413,8 @@ if useNavigationPanel:
     picker.start()
 
 if (useContinuousWalking and useNavigationPanel):
-    continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel)
+    continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController, ikPlanner,
+                                                                       teleopJointController, navigationPanel, cameraview)
 
 
 if useLoggingWidget:

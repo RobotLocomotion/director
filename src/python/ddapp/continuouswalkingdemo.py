@@ -46,17 +46,19 @@ class Footstep():
 
 class ContinousWalkingDemo(object):
 
-    def __init__(self, robotStateModel, footstepsPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel):
+    def __init__(self, robotStateModel, footstepsPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView):
         self.footstepsPanel = footstepsPanel
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
         self.ikPlanner = ikPlanner
         self.teleopJointController = teleopJointController
         self.navigationPanel = navigationPanel
+        self.cameraView = cameraView
 
         self.lastContactState = "none"
-        # Stereo or Lidar?
+        # Smooth Stereo or Raw or Lidar?
         self.processContinuousStereo = False
+        self.processRawStereo = False
         self.committedStep = None
 
         if (self.footstepsPanel is not None):
@@ -483,7 +485,10 @@ class ContinousWalkingDemo(object):
     def makeReplanRequest(self, standingFootName, removeFirstLeftStep = True):
 
         if (self.processContinuousStereo):
-            polyData = cameraview.getStereoPointCloud(2,'CAMERA_FUSED')
+            polyData = self.cameraView.getStereoPointCloud(2,'CAMERA_FUSED')
+            polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+        elif (self.processRawStereo):
+            polyData = self.cameraView.getStereoPointCloud(2,'CAMERA')
             polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
         else:
             polyData = segmentation.getCurrentRevolutionData()
