@@ -521,8 +521,8 @@ def showRightClickMenu(displayPoint, view):
 
 
     def onLocalPlaneFit():
-        result = segmentation.applyLocalPlaneFit(pointCloudObj.polyData, pickedPoint, searchRadius=0.1, searchRadiusEnd=0.2)
-        obj = vis.showPolyData(result, 'local plane fit', color=[0,1,0])
+        planePoints, normal = segmentation.applyLocalPlaneFit(pointCloudObj.polyData, pickedPoint, searchRadius=0.1, searchRadiusEnd=0.2)
+        obj = vis.showPolyData(planePoints, 'local plane fit', color=[0,1,0])
         obj.setProperty('Point Size', 7)
 
 
