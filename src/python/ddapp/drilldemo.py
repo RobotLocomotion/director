@@ -757,23 +757,29 @@ class DrillPlannerDemo(object):
 
         # NB: uses the end of the pointer:
         startPose = self.getPlanningStartPose()
-        pointerFrameName = '%s_pointer_end' % self.pointerHand
+
         handFrameName = '%s_hand' % self.pointerHand[0]
         handTransform= self.ikPlanner.getLinkFrameAtPose( handFrameName, startPose)
+        ftFrameName = '%s_hand_force_torque' % self.pointerHand[0]
+        ftTransform= self.ikPlanner.getLinkFrameAtPose( ftFrameName, startPose)
 
-        if (self.usePointerPerceptionOffset is False): # actually attempt to move the FK poker to the mark
-            pointerTransform= self.ikPlanner.getLinkFrameAtPose( pointerFrameName, startPose)
-            #vis.updateFrame(handTransform, "handTransform", visible=True)
-            #vis.updateFrame(pointerTransform, "pointerTransform", visible=True)
-        else: # move a point near to but facing in the same axis as the FK poker to the mark
-            pointerTransform= self.ikPlanner.getLinkFrameAtPose( pointerFrameName, startPose)
-            pointerSensedTransformTemp = transformUtils.copyFrame(om.findObjectByName("sensed pointer tip").actor.GetUserTransform())
-            pointerSensedTransform = transformUtils.frameFromPositionAndRPY(pointerSensedTransformTemp.GetPosition() ,  np.array(transformUtils.rollPitchYawFromTransform(pointerTransform))*180/np.pi )
+        if (self.usePointerPerceptionOffset is False):
+            # actually use FK to move the pointer to the mark - with an approximation of the thumb pointer Oct 2014
+            ftToPointerTransform = transformUtils.frameFromPositionAndRPY( [0,0.22,-0.06] ,  [0,0,0] )
+            pointerSensedTransform = vtk.vtkTransform()
+            pointerSensedTransform.PostMultiply()
+            pointerSensedTransform.Concatenate( ftToPointerTransform )
+            pointerSensedTransform.Concatenate( ftTransform )
 
-            vis.updateFrame(handTransform, "handTransform", visible=False)
-            vis.updateFrame(pointerTransform, "pointerTransform", visible=False)
-            vis.updateFrame(pointerSensedTransform, "pointerSensedTransform", visible=False)
-            pointerTransform = transformUtils.copyFrame(pointerSensedTransform)
+        else:
+            # move a point near to but facing in the same axis as the FT axis to the mark
+            pointerSensedTransformXYZ = transformUtils.copyFrame(om.findObjectByName("sensed pointer tip").actor.GetUserTransform())
+            pointerSensedTransform = transformUtils.frameFromPositionAndRPY(pointerSensedTransformXYZ.GetPosition() ,  np.array(transformUtils.rollPitchYawFromTransform(ftTransform))*180/np.pi )
+
+        vis.updateFrame(handTransform, "handTransform", visible=False)
+        vis.updateFrame(ftTransform, "ftTransform", visible=False)
+        vis.updateFrame(pointerSensedTransform, "pointerSensedTransform", visible=False)
+        pointerTransform = transformUtils.copyFrame(pointerSensedTransform)
 
         pointerToHandLinkFrame = vtk.vtkTransform()
         pointerToHandLinkFrame.PostMultiply()
