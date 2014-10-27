@@ -147,10 +147,6 @@ class ObjectModelTree(object):
     def getPropertiesPanel(self):
         return self._propertiesPanel
 
-    def getActiveItem(self):
-        items = self.getTreeWidget().selectedItems()
-        return items[0] if len(items) == 1 else None
-
     def getObjectParent(self, obj):
         item = self._getItemForObject(obj)
         if item.parent():
@@ -160,8 +156,12 @@ class ObjectModelTree(object):
         item = self._getItemForObject(obj)
         return [self._getObjectForItem(item.child(i)) for i in xrange(item.childCount())]
 
+    def getTopLevelObjects(self):
+        return [self._getObjectForItem(self._treeWidget.topLevelItem(i))
+                  for i in xrange(self._treeWidget.topLevelItemCount)]
+
     def getActiveObject(self):
-        item = self.getActiveItem()
+        item = self._getSelectedItem()
         return self._objects[item] if item is not None else None
 
     def setActiveObject(self, obj):
@@ -170,9 +170,18 @@ class ObjectModelTree(object):
             tree = self.getTreeWidget()
             tree.setCurrentItem(item)
             tree.scrollToItem(item)
+        else:
+            self.clearSelection()
+
+    def clearSelection(self):
+        self.getTreeWidget().setCurrentItem(None)
 
     def getObjects(self):
         return self._objects.values()
+
+    def _getSelectedItem(self):
+        items = self.getTreeWidget().selectedItems()
+        return items[0] if len(items) == 1 else None
 
     def _getItemForObject(self, obj):
         for item, itemObj in self._objects.iteritems():
@@ -415,14 +424,14 @@ _t = ObjectModelTree()
 def getDefaultObjectModel():
     return _t
 
-def getActiveItem():
-    return _t.getActiveItem()
-
 def getActiveObject():
     return _t.getActiveObject()
 
 def setActiveObject(obj):
     _t.setActiveObject(obj)
+
+def clearSelection():
+    _t.clearSelection()
 
 def getObjects():
     return _t.getObjects()
