@@ -76,8 +76,8 @@ class ContinousWalkingDemo(object):
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
 
-        #stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
-        #stepParamsSub.setSpeedLimit(60)
+        stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
+        stepParamsSub.setSpeedLimit(60)
 
     def getRecedingTerrainRegion(self, polyData, linkFrame):
         ''' Find the point cloud in front of the foot frame'''
