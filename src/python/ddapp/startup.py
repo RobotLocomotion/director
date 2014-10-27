@@ -467,13 +467,17 @@ if useImageWidget:
 
 
 if useImageViewDemo:
-    imageView = cameraview.views['CAMERA_LEFT']
-    #imageView = cameraview.cameraView
-    imageView.rayCallback = segmentation.extractPointsAlongClickRay
-    imagePicker = ImagePointPicker(imageView)
 
-    _prevParent = imageView.view.parent()
-    def showImageOverlay(size=600):
+    def showImageOverlay(size=400, viewName='CAMERA_LEFT'):
+
+        global _prevParent, imageView, imagePicker
+        imageView = cameraview.views[viewName]
+        _prevParent = imageView.view.parent()
+
+        imageView.rayCallback = segmentation.extractPointsAlongClickRay
+        imagePicker = ImagePointPicker(imageView)
+        imagePicker.doubleClickCallback = drillDemo.onImageViewDoubleClick
+
         imageView.view.hide()
         imageView.view.setParent(view)
         imageView.view.resize(size, size)
@@ -489,7 +493,6 @@ if useImageViewDemo:
 
     #showImageOverlay()
 
-    imagePicker.doubleClickCallback = drillDemo.onImageViewDoubleClick
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
