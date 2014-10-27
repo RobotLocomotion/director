@@ -66,6 +66,9 @@ class ObjectModelItem(object):
     def addProperty(self, propertyName, propertyValue, attributes=None):
         self.properties.addProperty(propertyName, propertyValue, attributes)
 
+    def removeProperty(self, propertyName):
+        self.properties.removeProperty(propertyName)
+
     def setProperty(self, propertyName, propertyValue):
         self.properties.setProperty(propertyName, propertyValue)
 
