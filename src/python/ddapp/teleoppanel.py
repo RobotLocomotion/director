@@ -507,7 +507,36 @@ class EndEffectorTeleopPanel(object):
 
 
 
-inf = np.inf
+class JointLimitChecker(object):
+
+    def __init__(self, robotModel, sensorJointController):
+
+        self.robotModel = robotModel
+        self.sensorJointController = sensorJointController
+        self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
+        self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
+        self.armJoints = robotstate.matchJoints('_arm_')
+        self.timer = TimerCallback(targetFps=1)
+        self.timer.callback = self.update
+        self.timer.start()
+
+    def update(self):
+        self.checkJointLimits()
+
+    def checkJointLimits(self):
+
+        for jointName in self.armJoints:
+            jointIndex = self.toJointIndex(jointName)
+            jointPosition = self.sensorJointController.q[jointIndex]
+            jointMin, jointMax = self.jointLimitsMin[jointIndex], self.jointLimitsMax[jointIndex]
+            if not (jointMin <= jointPosition <= jointMax):
+                epsilon = jointPosition - np.clip(jointPosition, jointMin, jointMax)
+                print 'detected joint outside limit:', jointName, ' by %.3f degrees' % np.degrees(epsilon)
+
+    def toJointIndex(self, jointName):
+        return robotstate.getDrakePoseJointNames().index(jointName)
+
+
 
 class JointTeleopPanel(object):
 
