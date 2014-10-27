@@ -479,9 +479,8 @@ class EndEffectorTeleopPanel(object):
         this object may be treated in a special way, for example, when doing
         planning with collision avoidance.
         '''
-        self.panel.jointTeleop.deactivate()
-
         self.deactivate()
+        self.panel.jointTeleop.deactivate()
 
         self.setBaseConstraint('xyz only')
         self.setBackConstraint('limited')
@@ -629,6 +628,9 @@ class JointTeleopPanel(object):
 
 
     def deactivate(self):
+        self.ui.jointTeleopButton.blockSignals(True)
+        self.ui.jointTeleopButton.checked = False
+        self.ui.jointTeleopButton.blockSignals(False)
         self.timerCallback.stop()
         self.panel.jointTeleopDeactivated()
         self.updateWidgetState()
