@@ -288,7 +288,7 @@ def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None
     clusters.sort(key=lambda x: vtkNumpy.getNumpyFromVtk(x, 'distance_to_point').min())
     fitPoints = clusters[0]
 
-    return fitPoints
+    return fitPoints, normal
 
 
     normalEstimationSearchRadius = 0.065
