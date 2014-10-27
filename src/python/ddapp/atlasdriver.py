@@ -39,6 +39,7 @@ class AtlasDriver(object):
     def __init__(self):
 
         self.lastAtlasStatusMessage = None
+        self.lastControllerStatusMessage = None
         self._setupSubscriptions()
         self.timer = SimpleTimer()
 
@@ -47,11 +48,15 @@ class AtlasDriver(object):
         self.startupStage = 0
 
     def _setupSubscriptions(self):
+        lcmUtils.addSubscriber('CONTROLLER_STATUS', lcmdrc.controller_status_t, self.onControllerStatus)
         sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
         sub.setSpeedLimit(60)
 
     def onAtlasStatus(self, message):
         self.lastAtlasStatusMessage = message
+
+    def onControllerStatus(self, message):
+        self.lastControllerStatusMessage = message
 
     def getBehaviorMap(self):
         '''
@@ -87,6 +92,17 @@ class AtlasDriver(object):
         behaviorId = self.lastAtlasStatusMessage.behavior
         assert behaviorId in behaviors
         return behaviors[behaviorId]
+
+    def getControllerStatus(self):
+        '''
+        Returns the current controller status as an integer value from the
+        most recently received controller_status_t.state field.
+        Returns None if no status message has been received.
+        '''
+        if not self.lastControllerStatusMessage:
+            return None
+
+        return self.lastControllerStatusMessage.state
 
     def getCurrentInletPressure(self):
         if self.lastAtlasStatusMessage:

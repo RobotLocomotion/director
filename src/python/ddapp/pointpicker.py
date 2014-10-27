@@ -9,7 +9,7 @@ import numpy as np
 
 class PointPicker(object):
 
-    def __init__(self, view, obj=None, callback=None, numberOfPoints=2, drawLines=True):
+    def __init__(self, view, obj=None, callback=None, numberOfPoints=2, drawLines=True, abortCallback=None):
 
         self.view = view
         self.obj = obj
@@ -17,6 +17,9 @@ class PointPicker(object):
         self.drawLines = drawLines
         self.annotationObj = None
         self.annotationFunc = callback
+        self.abortFunc = abortCallback
+        self.annotationName = 'annotation'
+        self.annotationFolder = 'segmentation'
         self.clear()
 
     def start(self):
@@ -41,6 +44,13 @@ class PointPicker(object):
         self.view.vtkWidget().removeEventFilter(self.eventFilter)
 
     def onEvent(self, obj, event):
+
+        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Escape:
+            self.stop()
+            self.clear()
+            if self.abortFunc is not None:
+                self.abortFunc()
+            return
 
         if event.modifiers() != QtCore.Qt.ShiftModifier:
             if self.annotationObj:
@@ -105,7 +115,7 @@ class PointPicker(object):
             if points[-1] is not None:
                 d.addLine(points[0], points[-1])
 
-        self.annotationObj = vis.updatePolyData(d.getPolyData(), 'annotation', parent='segmentation')
+        self.annotationObj = vis.updatePolyData(d.getPolyData(), self.annotationName, parent=self.annotationFolder)
         self.annotationObj.setProperty('Color', QtGui.QColor(255, 0, 0))
         self.annotationObj.actor.SetPickable(False)
 

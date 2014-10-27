@@ -25,6 +25,7 @@ from ddapp import transformUtils
 from ddapp import tdx
 from ddapp import perception
 from ddapp import segmentation
+from ddapp import segmentationroutines
 from ddapp import cameraview
 from ddapp import colorize
 from ddapp import drakevisualizer
@@ -122,6 +123,7 @@ class RobotSystem(object):
             robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_nom'))
             roboturdf.startModelPublisherListener([(robotStateModel, robotStateJointController)])
             robotStateJointController.addLCMUpdater('EST_ROBOT_STATE')
+            segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
 
 
         if usePerception:
