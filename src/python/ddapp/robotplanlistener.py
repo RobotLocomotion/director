@@ -14,6 +14,11 @@ from ddapp import robotstate
 import drc as lcmdrc
 
 
+
+class ManipulationPlanItem(om.ObjectModelItem):
+    pass
+
+
 class ManipulationPlanDriver(object):
 
     PLAN_RECEIVED = 'PLAN_RECEIVED'
