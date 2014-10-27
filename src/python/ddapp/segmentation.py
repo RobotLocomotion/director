@@ -2170,10 +2170,10 @@ def segmentTableThenFindDrills(polyData,pickedPoint):
         drillMesh = getDrillBarrelMesh()
 
         #drill = om.findObjectByName('drill')
-        name= "drill%d" % i
-        name2= "drill frame %d" % i
-        drill = showPolyData(drillMesh, name, color=[0, 1, 0], visible=True)
-        drillFrame = updateFrame(drillFrame, name2, parent=drill, visible=False)
+        name= 'drill %d' % i
+        name2= 'drill %d frame' % i
+        drill = showPolyData(drillMesh, name, cls=FrameAffordanceItem, color=[0, 1, 0], visible=True)
+        drillFrame = updateFrame(drillFrame, name2, parent=drill, scale=0.2, visible=False)
 
         drill.actor.SetUserTransform(drillFrame.transform)
 
@@ -2264,11 +2264,11 @@ def segmentTableEdge(polyData, searchPoint, edgePoint):
     return FieldContainer(points=tablePoints, box=wireframe, mesh=tableMesh, frame=t, dims=edgeLengths, axes=axes)
 
 
-def segmentDrillAuto(point1):
+def segmentDrillAuto(point1, polyData=None):
 
-
-    inputObj = om.findObjectByName('pointcloud snapshot')
-    polyData = inputObj.polyData
+    if polyData is None:
+        inputObj = om.findObjectByName('pointcloud snapshot')
+        polyData = inputObj.polyData
 
     expectedNormal = np.array([0.0, 0.0, 1.0])
 
@@ -2318,7 +2318,7 @@ def segmentDrillAuto(point1):
 
     aff = showPolyData(drillMesh, 'drill', cls=FrameAffordanceItem, visible=True)
     aff.actor.SetUserTransform(t)
-    showFrame(t, 'drill frame', parent=aff, visible=False).addToView(app.getDRCView())
+    showFrame(t, 'drill frame', parent=aff, visible=False, scale=0.2).addToView(app.getDRCView())
 
     params = getDrillAffordanceParams(origin, xaxis, yaxis, zaxis)
     aff.setAffordanceParams(params)
@@ -2578,9 +2578,12 @@ def sortFittedDrills(fitResults, robotOrigin, robotForward):
         if i == 0:
 
             drill = om.findObjectByName('drill')
-            drill = updatePolyData(drillMesh, 'drill', color=[0, 1, 0], visible=True)
+            drill = updatePolyData(drillMesh, 'drill', color=[0, 1, 0], cls=FrameAffordanceItem, visible=True)
             drillFrame = updateFrame(drillFrame, 'drill frame', parent=drill, visible=False)
             drill.actor.SetUserTransform(drillFrame.transform)
+
+            drill.setAffordanceParams(dict(otdf_type='dewalt_button', friendly_name='dewalt_button'))
+            drill.updateParamsFromActorTransform()
 
             drill.setSolidColor([0, 1, 0])
             #cluster.setProperty('Visible', True)
