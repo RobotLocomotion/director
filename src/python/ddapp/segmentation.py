@@ -3633,8 +3633,10 @@ def estimatePointerTip(robotModel, polyData):
     None on failure.
     '''
     palmFrame = robotModel.getLinkFrame('r_hand_force_torque')
-    p1 = [0.0, 0.01, 0.0]
-    p2 = [0.0, 0.19, 0.0]
+    #p1 = [0.0, 0.01, 0.0]
+    #p2 = [0.0, 0.19, 0.0]
+    p1 = [0.0, 0.14, -0.06]
+    p2 = [0.0, 0.24, -0.06]
 
     palmFrame.TransformPoint(p1, p1)
     palmFrame.TransformPoint(p2, p2)
