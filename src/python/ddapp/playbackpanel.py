@@ -42,6 +42,7 @@ class PlaybackPanel(object):
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
         self.manipPlanner = manipPlanner
+        manipPlanner.connectPlanCommitted(self.onPlanCommitted)
 
         self.autoPlay = True
         self.robotModelDisplayAlpha = 0.1
@@ -199,9 +200,12 @@ class PlaybackPanel(object):
         if visOnly:
             _, poses = self.planPlayback.getPlanPoses(self.plan)
             self.robotStateJointController.setPose('EST_ROBOT_STATE', poses[-1])
+            self.onPlanCommitted(self.plan)
         else:
             self.manipPlanner.commitManipPlan(self.plan)
 
+
+    def onPlanCommitted(self, plan):
         self.setPlan(None)
         self.hideClicked()
 
