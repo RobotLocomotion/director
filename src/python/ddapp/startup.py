@@ -79,7 +79,7 @@ import numpy as np
 from ddapp.debugVis import DebugData
 from ddapp import ioUtils as io
 
-
+drcargs.requireStrict()
 drcargs.args()
 app.startup(globals())
 om.init(app.getMainWindow().objectTree(), app.getMainWindow().propertiesPanel())
