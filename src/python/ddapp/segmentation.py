@@ -2399,20 +2399,16 @@ def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDi
     return vis.showClusterObjects([obj], parent='segmentation')[0]
 
 
-def findHorizontalSurfaces(polyData, removeGroundFirst=True):
+def findHorizontalSurfaces(polyData, removeGroundFirst=True, normalEstimationSearchRadius=0.02,
+                          clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0]):
     '''
     Find the horizontal surfaces, tuned to work with walking terrain
     '''
-    removeGroundFirst = False
 
     searchZ = [0.0, 2.0]
-    normalsDotUpRange = [0.95, 1.0]
-    normalEstimationSearchRadius = 0.05 #0.10
-    voxelGridLeafSize = 0.01 #0.005
-    clusterTolerance=0.025
-    minClusterSize = 150 # 20
-    distanceToPlaneThreshold = 0.0025
-    verboseFlag = False
+    voxelGridLeafSize = 0.01
+    minClusterSize = 150
+    verboseFlag = True
 
     if (removeGroundFirst):
         groundPoints, scenePoints =  removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.05)
@@ -2442,31 +2438,29 @@ def findHorizontalSurfaces(polyData, removeGroundFirst=True):
     surfaces = thresholdPoints(scenePoints, 'normals_dot_up', normalsDotUpRange)
 
     updatePolyData(scenePoints, 'scene points', parent=getDebugFolder(), colorByName='normals_dot_up', visible=verboseFlag)
-    # this fails - TODO: figure out why
-    #updatePolyData(surfaces, 'surfaces', parent=getDebugFolder(), colorByName='normals_dot_up', visible=verboseFlag)
+    updatePolyData(surfaces, 'surfaces points', parent=getDebugFolder(), colorByName='normals_dot_up', visible=verboseFlag)
 
     clusters = extractClusters(surfaces, clusterTolerance=clusterTolerance, minClusterSize=minClusterSize)
     planeClusters = []
     clustersLarge = []
 
-    if (verboseFlag):
-        print 'got %d clusters' % len(clusters)
-    om.removeFromObjectModel(om.findObjectByName('surfaces'))
-    folder = om.getOrCreateContainer('surfaces', parentObj=getDebugFolder())
+    om.removeFromObjectModel(om.findObjectByName('surface clusters'))
+    folder = om.getOrCreateContainer('surface clusters', parentObj=getDebugFolder())
 
     for i, cluster in enumerate(clusters):
-        updatePolyData(cluster, 'surface cluster %d' % i, parent=getDebugFolder(), colorByName='normals_dot_up', visible=verboseFlag)
 
-    for i, cluster in enumerate(clusters):
+        updatePolyData(cluster, 'surface cluster %d' % i, parent=folder, colorByName='normals_dot_up', visible=verboseFlag)
         planePoints, _ = applyPlaneFit(cluster, distanceToPlaneThreshold)
         planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-distanceToPlaneThreshold, distanceToPlaneThreshold])
 
         if planePoints.GetNumberOfPoints() > minClusterSize:
             clustersLarge.append(cluster)
             obj = makePolyDataFields(planePoints)
-            planeClusters.append(obj)
+            if obj is not None:
+                planeClusters.append(obj)
 
-    if (verboseFlag):
+    folder = om.getOrCreateContainer('surface objects', parentObj=getDebugFolder())
+    if verboseFlag:
         vis.showClusterObjects(planeClusters, parent=folder)
 
     return clustersLarge
