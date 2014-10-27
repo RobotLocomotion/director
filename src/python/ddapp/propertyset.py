@@ -91,6 +91,13 @@ class PropertySet(object):
         self.assertProperty(propertyName)
         return self._attributes[propertyName].enumNames[self._properties[propertyName]]
 
+    def removeProperty(self, propertyName):
+        assert self.hasProperty(propertyName)
+        alternateName = cleanPropertyName(propertyName)
+        del self._alternateNames[alternateName]
+        del self._properties[propertyName]
+        del self._attributes[propertyName]
+
     def addProperty(self, propertyName, propertyValue, attributes=None):
         alternateName = cleanPropertyName(propertyName)
         if propertyName not in self._properties and alternateName in self._alternateNames:
