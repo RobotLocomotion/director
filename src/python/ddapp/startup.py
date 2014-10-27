@@ -34,6 +34,7 @@ from ddapp import segmentation
 from ddapp import cameraview
 from ddapp import colorize
 from ddapp import drakevisualizer
+from ddapp.fieldcontainer import FieldContainer
 from ddapp import robotstate
 from ddapp import roboturdf
 from ddapp import filterUtils
@@ -70,6 +71,9 @@ from ddapp.shallowCopy import shallowCopy
 from ddapp import segmentationroutines
 from ddapp import trackers
 
+from ddapp.tasks import robottasks as rt
+from ddapp.tasks import taskmanagerwidget
+from ddapp.tasks.descriptions import loadTaskDescriptions
 import drc as lcmdrc
 
 import functools
@@ -364,6 +368,26 @@ if usePlanning:
 
     splinewidget.init(view, handFactory, robotStateModel)
 
+    robotSystem = FieldContainer(
+        robotStateModel=robotStateModel,
+        robotStateJointController=robotStateJointController,
+        playbackRobotModel=playbackRobotModel,
+        ikPlanner=ikPlanner,
+        manipPlanner=manipPlanner,
+        footstepsDriver=footstepsDriver,
+        atlasDriver=atlasDriver,
+        lHandDriver=lHandDriver,
+        rHandDriver=rHandDriver,
+        multisenseDriver=multisenseDriver,
+        drillDemo=drillDemo,
+        view=view)
+
+
+    rt.robotSystem = robotSystem
+    taskManagerPanel = taskmanagerwidget.init()
+
+    for taskDescription in loadTaskDescriptions():
+        taskManagerPanel.taskQueueWidget.loadTaskDescription(taskDescription[0], taskDescription[1])
 
 if useActionManager:
 
