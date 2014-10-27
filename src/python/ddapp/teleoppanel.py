@@ -479,9 +479,8 @@ class EndEffectorTeleopPanel(object):
         this object may be treated in a special way, for example, when doing
         planning with collision avoidance.
         '''
-        self.panel.jointTeleop.deactivate()
-
         self.deactivate()
+        self.panel.jointTeleop.deactivate()
 
         self.setBaseConstraint('xyz only')
         self.setBackConstraint('limited')
@@ -508,7 +507,36 @@ class EndEffectorTeleopPanel(object):
 
 
 
-inf = np.inf
+class JointLimitChecker(object):
+
+    def __init__(self, robotModel, sensorJointController):
+
+        self.robotModel = robotModel
+        self.sensorJointController = sensorJointController
+        self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
+        self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
+        self.armJoints = robotstate.matchJoints('_arm_')
+        self.timer = TimerCallback(targetFps=1)
+        self.timer.callback = self.update
+        self.timer.start()
+
+    def update(self):
+        self.checkJointLimits()
+
+    def checkJointLimits(self):
+
+        for jointName in self.armJoints:
+            jointIndex = self.toJointIndex(jointName)
+            jointPosition = self.sensorJointController.q[jointIndex]
+            jointMin, jointMax = self.jointLimitsMin[jointIndex], self.jointLimitsMax[jointIndex]
+            if not (jointMin <= jointPosition <= jointMax):
+                epsilon = jointPosition - np.clip(jointPosition, jointMin, jointMax)
+                print 'detected joint outside limit:', jointName, ' by %.3f degrees' % np.degrees(epsilon)
+
+    def toJointIndex(self, jointName):
+        return robotstate.getDrakePoseJointNames().index(jointName)
+
+
 
 class JointTeleopPanel(object):
 
@@ -629,6 +657,9 @@ class JointTeleopPanel(object):
 
 
     def deactivate(self):
+        self.ui.jointTeleopButton.blockSignals(True)
+        self.ui.jointTeleopButton.checked = False
+        self.ui.jointTeleopButton.blockSignals(False)
         self.timerCallback.stop()
         self.panel.jointTeleopDeactivated()
         self.updateWidgetState()
@@ -681,7 +712,6 @@ class JointTeleopPanel(object):
     def getSlider(self, joint):
         jointName = self.toJointName(joint) if isinstance(joint, int) else joint
         return self.slidersMap[jointName]
-
 
     def computeBaseJointOffsets(self):
 
@@ -780,7 +810,7 @@ class JointTeleopPanel(object):
 
 class TeleopPanel(object):
 
-    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction):
+    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction, hidePlanFunction):
 
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
@@ -791,6 +821,9 @@ class TeleopPanel(object):
         self.ikPlanner = ikPlanner
         self.manipPlanner = manipPlanner
         self.showPlanFunction = showPlanFunction
+        self.hidePlanFunction = hidePlanFunction
+
+        manipPlanner.connectPlanCommitted(self.onPlanCommitted)
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddTeleopPanel.ui')
@@ -832,6 +865,9 @@ class TeleopPanel(object):
         self.ui.endEffectorTeleopFrame.setEnabled(True)
         self.ui.jointTeleopFrame.setEnabled(True)
 
+    def onPlanCommitted(self, plan):
+        self.hideTeleopModel()
+
     def hideTeleopModel(self):
         self.teleopRobotModel.setProperty('Visible', False)
         self.robotStateModel.setProperty('Visible', True)
@@ -844,6 +880,7 @@ class TeleopPanel(object):
 
     def showPose(self, pose):
         self.teleopJointController.setPose('teleop_pose', pose)
+        self.hidePlanFunction()
         self.showTeleopModel()
 
     def showPlan(self, plan):
@@ -855,12 +892,12 @@ def _getAction():
     return app.getToolBarActions()['ActionTeleopPanel']
 
 
-def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction):
+def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction, hidePlanFunction):
 
     global panel
     global dock
 
-    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction)
+    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction, hidePlanFunction)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 

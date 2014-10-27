@@ -34,6 +34,7 @@ from ddapp import segmentation
 from ddapp import cameraview
 from ddapp import colorize
 from ddapp import drakevisualizer
+from ddapp.fieldcontainer import FieldContainer
 from ddapp import robotstate
 from ddapp import roboturdf
 from ddapp import filterUtils
@@ -70,6 +71,9 @@ from ddapp.shallowCopy import shallowCopy
 from ddapp import segmentationroutines
 from ddapp import trackers
 
+from ddapp.tasks import robottasks as rt
+from ddapp.tasks import taskmanagerwidget
+from ddapp.tasks.descriptions import loadTaskDescriptions
 import drc as lcmdrc
 
 import functools
@@ -79,7 +83,7 @@ import numpy as np
 from ddapp.debugVis import DebugData
 from ddapp import ioUtils as io
 
-
+drcargs.requireStrict()
 drcargs.args()
 app.startup(globals())
 om.init(app.getMainWindow().objectTree(), app.getMainWindow().propertiesPanel())
@@ -333,10 +337,10 @@ if usePlanning:
                                       robotStateModel, robotStateJointController, manipPlanner)
 
     footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
-    manipPlanner.manipPlanCallback = playbackPanel.setPlan
+    manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                     ikPlanner, manipPlanner, handFactory.getLoader('left'), handFactory.getLoader('right'), playbackPanel.setPlan)
+                     ikPlanner, manipPlanner, handFactory.getLoader('left'), handFactory.getLoader('right'), playbackPanel.setPlan, playbackPanel.hidePlan)
 
 
 
@@ -364,6 +368,26 @@ if usePlanning:
 
     splinewidget.init(view, handFactory, robotStateModel)
 
+    robotSystem = FieldContainer(
+        robotStateModel=robotStateModel,
+        robotStateJointController=robotStateJointController,
+        playbackRobotModel=playbackRobotModel,
+        ikPlanner=ikPlanner,
+        manipPlanner=manipPlanner,
+        footstepsDriver=footstepsDriver,
+        atlasDriver=atlasDriver,
+        lHandDriver=lHandDriver,
+        rHandDriver=rHandDriver,
+        multisenseDriver=multisenseDriver,
+        drillDemo=drillDemo,
+        view=view)
+
+
+    rt.robotSystem = robotSystem
+    taskManagerPanel = taskmanagerwidget.init()
+
+    for taskDescription in loadTaskDescriptions():
+        taskManagerPanel.taskQueueWidget.loadTaskDescription(taskDescription[0], taskDescription[1])
 
 if useActionManager:
 
@@ -467,13 +491,17 @@ if useImageWidget:
 
 
 if useImageViewDemo:
-    imageView = cameraview.views['CAMERA_LEFT']
-    #imageView = cameraview.cameraView
-    imageView.rayCallback = segmentation.extractPointsAlongClickRay
-    imagePicker = ImagePointPicker(imageView)
 
-    _prevParent = imageView.view.parent()
-    def showImageOverlay(size=600):
+    def showImageOverlay(size=400, viewName='CAMERA_LEFT'):
+
+        global _prevParent, imageView, imagePicker
+        imageView = cameraview.views[viewName]
+        _prevParent = imageView.view.parent()
+
+        imageView.rayCallback = segmentation.extractPointsAlongClickRay
+        imagePicker = ImagePointPicker(imageView)
+        imagePicker.doubleClickCallback = drillDemo.onImageViewDoubleClick
+
         imageView.view.hide()
         imageView.view.setParent(view)
         imageView.view.resize(size, size)
@@ -489,7 +517,6 @@ if useImageViewDemo:
 
     #showImageOverlay()
 
-    imagePicker.doubleClickCallback = drillDemo.onImageViewDoubleClick
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
@@ -512,6 +539,18 @@ def sendEstRobotState(pose=None):
         pose = robotStateJointController.q
     msg = robotstate.drakePoseToRobotState(pose)
     lcmUtils.publish('EST_ROBOT_STATE', msg)
+
+
+def enableArmEncoders():
+    msg = lcmdrc.utime_t()
+    msg.utime = 1
+    lcmUtils.publish('ENABLE_ENCODERS', msg)
+
+
+def disableArmEncoders():
+    msg = lcmdrc.utime_t()
+    msg.utime = -1
+    lcmUtils.publish('ENABLE_ENCODERS', msg)
 
 
 def addCollisionObjectToWorld(obj = None, name = None):

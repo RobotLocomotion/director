@@ -2,6 +2,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 import subprocess
 import select
+import socket
 import os
 
 import ddapp
@@ -21,14 +22,108 @@ def _readAllSoFar(proc, retVal=''):
     return retVal
 
 
-def getAppMatlabDir():
-    return os.path.join(ddapp.getDRCBaseDir(), 'software/ddapp/src/matlab')
+
+
+DEFALUT_MATLAB_SERVER_PORT=41576
+
+class MatlabServer(object):
+
+    def __init__(self, port=DEFALUT_MATLAB_SERVER_PORT):
+        self.port = port
+        self.proc = None
+        self.sock = None
+
+    def start(self):
+        self.proc = startMatlab()
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.bind(('', self.port))
+        self.sock.listen(1)
+
+        while True:
+            print 'waiting for client...'
+            conn, addr = self.sock.accept()
+            print 'client connected.'
+            self.serve(conn)
+
+    def serve(self, sock):
+
+        sock.settimeout(0.001)
+        while True:
+            data = _readAllSoFar(self.proc, '')
+            if data:
+                sock.send(data)
+            try:
+                inData = sock.recv(1024)
+                if inData:
+                    self.proc.stdin.write(inData)
+                else:
+                    sock.close()
+                    return
+            except socket.timeout as e:
+                pass
+
+
+class MatlabSocketClient(object):
+
+    def __init__(self, host='127.0.0.1', port=DEFALUT_MATLAB_SERVER_PORT):
+        self.host = host
+        self.port = port
+        self.sock = None
+        self.connect()
+
+    def connect(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        try:
+            self.sock.connect((self.host, self.port))
+        except socket.error:
+            self.sock = None
+        else:
+            self.sock.settimeout(0.001)
+
+
+    def send(self, data):
+        self.sock.send(data)
+
+    def receive(self):
+        if not self.isAlive():
+            return ''
+
+        try:
+            inData = self.sock.recv(1024)
+            if inData:
+                return inData
+            else:
+                self.sock.close()
+                self.sock = None
+                return ''
+        except socket.timeout as e:
+            return ''
+
+    def isAlive(self):
+        return (self.sock is not None)
+
+
+class MatlabPipeClient(object):
+
+    def __init__(self):
+        self.proc = startMatlab()
+
+    def send(self, data):
+        self.proc.stdin.write(data)
+
+    def receive(self):
+        return _readAllSoFar(self.proc, '')
+
+    def isAlive(self):
+        return (self.proc.poll() is None)
 
 
 class MatlabCommunicator(object):
 
-    def __init__(self, proc):
-        self.proc = proc
+    def __init__(self, matlabClient):
+        self.client = matlabClient
         self.prompt = '>> '
         self.outputConsole = None
         self.echoToStdOut = True
@@ -39,7 +134,7 @@ class MatlabCommunicator(object):
         self.clearResult()
 
     def checkForResult(self):
-        self.accumulatedOutput = _readAllSoFar(self.proc, self.accumulatedOutput)
+        self.accumulatedOutput = self.accumulatedOutput + self.client.receive()
         if  self.accumulatedOutput.endswith(self.prompt):
             self.outputLines = self.accumulatedOutput.split('\n')[:-1]
             return self.outputLines
@@ -52,7 +147,7 @@ class MatlabCommunicator(object):
         return self.logFile
 
     def isAlive(self):
-        return (self.proc.poll() is None)
+        return self.client.isAlive()
 
     def waitForResult(self, timeout=None):
 
@@ -109,7 +204,7 @@ class MatlabCommunicator(object):
     def send(self, command):
         assert self.isAlive()
         self.clearResult()
-        self.proc.stdin.write(command + '\n')
+        self.client.send(command + '\n')
         if self.echoCommandsToStdOut:
             print command
         if self.writeCommandsToLogFile:
@@ -191,3 +286,8 @@ class MatlabCommunicator(object):
             self.printResult()
 
         self.echoToStdOut = previousEchoMode
+
+
+if __name__ == '__main__':
+    server = MatlabServer()
+    server.start()

@@ -35,7 +35,19 @@ class PropertySet(object):
     PROPERTY_ADDED_SIGNAL = 'PROPERTY_ADDED_SIGNAL'
     PROPERTY_ATTRIBUTE_CHANGED_SIGNAL = 'PROPERTY_ATTRIBUTE_CHANGED_SIGNAL'
 
+    def __getstate__(self):
+        d = dict(_properties=self._properties, _attributes=self._attributes)
+        return d
+
+    def __setstate__(self, state):
+        self.__init__()
+        attrs = state['_attributes']
+        for propName, propValue in state['_properties'].iteritems():
+            self.addProperty(propName, propValue, attributes=attrs.get(propName))
+
+
     def __init__(self):
+
         self.callbacks = callbacks.CallbackRegistry([self.PROPERTY_CHANGED_SIGNAL,
                                                      self.PROPERTY_ADDED_SIGNAL,
                                                      self.PROPERTY_ATTRIBUTE_CHANGED_SIGNAL])
@@ -78,6 +90,13 @@ class PropertySet(object):
     def getPropertyEnumValue(self, propertyName):
         self.assertProperty(propertyName)
         return self._attributes[propertyName].enumNames[self._properties[propertyName]]
+
+    def removeProperty(self, propertyName):
+        assert self.hasProperty(propertyName)
+        alternateName = cleanPropertyName(propertyName)
+        del self._alternateNames[alternateName]
+        del self._properties[propertyName]
+        del self._attributes[propertyName]
 
     def addProperty(self, propertyName, propertyValue, attributes=None):
         alternateName = cleanPropertyName(propertyName)
