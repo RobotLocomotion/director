@@ -10,6 +10,7 @@ class DRCArgParser(object):
     def __init__(self):
         self._args = None
         self._parser = None
+        self.strict = False
 
     def getArgs(self):
         if self._args is None:
@@ -25,7 +26,11 @@ class DRCArgParser(object):
     def parseArgs(self):
         parser = self.getParser()
         sys.argv = [str(v) for v in sys.argv]
-        self._args = parser.parse_args()
+
+        if not self.strict:
+            self._args, unknown = parser.parse_known_args()
+        else:
+            self._args = parser.parse_args()
 
 
     def getDefaultBotConfigFile(self):
@@ -50,6 +55,10 @@ def getGlobalArgParser():
         _argParser = DRCArgParser()
     return _argParser
 
+def requireStrict():
+    global _argParser
+    _argParser = None
+    getGlobalArgParser().strict = True
 
 def args():
     return getGlobalArgParser().getArgs()
