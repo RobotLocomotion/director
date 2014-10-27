@@ -760,25 +760,25 @@ class FitWallFrameFromAnnotation(PointCloudAlgorithmBase):
         properties.addProperty('Annotation input name', '')
 
 
-    def getAnnotationInputPoint(self):
+    def getAnnotationInput(self):
         obj = om.findObjectByName(self.properties.getProperty('Annotation input name'))
         if obj is None:
             self.fail('user annotation not found')
-        return obj.annotationPoints[0]
+        return obj
 
 
     def run(self):
 
         polyData = self.getPointCloud()
-        annotationPoint = self.getAnnotationInputPoint()
+        annotation = self.getAnnotationInput()
+        annotationPoint = annotation.annotationPoints[0]
         planePoints, normal = segmentation.applyLocalPlaneFit(polyData, annotationPoint, searchRadius=0.1, searchRadiusEnd=0.2)
         viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
 
         if np.dot(normal, viewDirection) < 0:
             normal = -normal
 
-
-        xaxis = -normal
+        xaxis = normal
         zaxis = [0, 0, 1]
         yaxis = np.cross(zaxis, xaxis)
         xaxis = np.cross(yaxis, zaxis)
@@ -789,7 +789,14 @@ class FitWallFrameFromAnnotation(PointCloudAlgorithmBase):
         t.PostMultiply()
         t.Translate(annotationPoint)
 
-        vis.updateFrame(t, 'wall frame', scale=0.2)
+        polyData = annotation.polyData
+        polyData = segmentation.transformPolyData(polyData, t.GetLinearInverse())
+
+        annotation.setProperty('Visible', False)
+        om.removeFromObjectModel(om.findObjectByName('wall'))
+        obj = vis.showPolyData(polyData, 'wall')
+        obj.actor.SetUserTransform(t)
+        vis.showFrame(t, 'wall frame', scale=0.2, parent=obj)
 
 
 class SpawnValveAffordance(AsyncTask):

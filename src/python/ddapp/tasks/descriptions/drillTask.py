@@ -14,6 +14,17 @@ drillTaskRight = [
           [rt.FitWallFrameFromAnnotation, {'Annotation input name':'wall annotation'}],
         ]],
 
+        ['walk to wall', [
+          [rt.ComputeRobotFootFrame, {}],
+          [rt.ProjectAffordanceToGround, {'Affordance name':'wall', 'Ground frame name':'robot foot frame', 'Frame output name':'wall ground frame'}],
+          [rt.TransformFrame, {'Frame input name':'wall ground frame', 'Frame output name':'wall stance frame', 'Translation':[-0.7, -0.3, 0.0]}],
+          [rt.RequestFootstepPlan, {'Stance frame name':'wall stance frame'}],
+          [rt.RequestWalkingPlan, {'Footstep plan name':'wall stance frame footstep plan'}],
+          [rt.UserPromptTask, {'Message':'Commit footstep plan?'}],
+          [rt.CommitFootstepPlan, {'Plan name':'wall stance frame footstep plan'}],
+          [rt.WaitForWalkExecution, {}]
+        ]],
+
         ['plan drill trajectory', [
           [rt.TransformFrame, {'Frame input name':'wall frame', 'Frame output name':'wall gaze frame', 'Translation':[0.0, 0.0, 0.0], 'Rotation':[0, 0, 90]}],
           [rt.PlanGazeTrajectory, {'Target frame name':'wall gaze frame', 'Annotation input name':'wall annotation'}],
