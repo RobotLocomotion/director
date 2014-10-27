@@ -713,7 +713,6 @@ class JointTeleopPanel(object):
         jointName = self.toJointName(joint) if isinstance(joint, int) else joint
         return self.slidersMap[jointName]
 
-
     def computeBaseJointOffsets(self):
 
         baseReferenceFrame = footstepsdriver.FootstepsDriver.getFeetMidPoint(self.panel.ikPlanner.getRobotModelAtPose(self.startPose))
@@ -811,7 +810,7 @@ class JointTeleopPanel(object):
 
 class TeleopPanel(object):
 
-    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction):
+    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction, hidePlanFunction):
 
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
@@ -822,6 +821,9 @@ class TeleopPanel(object):
         self.ikPlanner = ikPlanner
         self.manipPlanner = manipPlanner
         self.showPlanFunction = showPlanFunction
+        self.hidePlanFunction = hidePlanFunction
+
+        manipPlanner.connectPlanCommitted(self.onPlanCommitted)
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddTeleopPanel.ui')
@@ -863,6 +865,9 @@ class TeleopPanel(object):
         self.ui.endEffectorTeleopFrame.setEnabled(True)
         self.ui.jointTeleopFrame.setEnabled(True)
 
+    def onPlanCommitted(self, plan):
+        self.hideTeleopModel()
+
     def hideTeleopModel(self):
         self.teleopRobotModel.setProperty('Visible', False)
         self.robotStateModel.setProperty('Visible', True)
@@ -875,6 +880,7 @@ class TeleopPanel(object):
 
     def showPose(self, pose):
         self.teleopJointController.setPose('teleop_pose', pose)
+        self.hidePlanFunction()
         self.showTeleopModel()
 
     def showPlan(self, plan):
@@ -886,12 +892,12 @@ def _getAction():
     return app.getToolBarActions()['ActionTeleopPanel']
 
 
-def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction):
+def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction, hidePlanFunction):
 
     global panel
     global dock
 
-    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction)
+    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction, hidePlanFunction)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
