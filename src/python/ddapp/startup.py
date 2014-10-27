@@ -554,7 +554,7 @@ viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, foot
 
 
 # Drill Demo Functions for in-image rendering:
-useDrillDemo = True
+useDrillDemo = False
 if useDrillDemo:
 
     def spawnHandAtCurrentLocation(side='left'):
