@@ -659,7 +659,7 @@ class RequestWalkingPlan(AsyncTask):
 def _addPlanItem(plan, name, itemClass):
         item = itemClass(name)
         item.plan = plan
-        om.removeFromObjectModel(name)
+        om.removeFromObjectModel(om.findObjectByName(name))
         om.addToObjectModel(item, om.getOrCreateContainer('segmentation'))
         return item
 
