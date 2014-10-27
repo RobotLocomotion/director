@@ -1,67 +1,135 @@
 import types
+import traceback
 from PythonQt import QtCore, QtGui
 from ddapp.timercallback import TimerCallback
 from ddapp.simpletimer import SimpleTimer
+from ddapp import callbacks
 
 
 class AsyncTaskQueue(object):
+
+    TASK_STARTED_SIGNAL = 'TASK_STARTED_SIGNAL'
+    TASK_ENDED_SIGNAL = 'TASK_ENDED_SIGNAL'
+    TASK_PAUSED_SIGNAL = 'TASK_PAUSED_SIGNAL'
+    TASK_EXCEPTION_SIGNAL = 'TASK_EXCEPTION_SIGNAL'
 
     class PauseException(Exception):
         pass
 
     def __init__(self):
         self.tasks = []
+        self.generators = []
         self.timer = TimerCallback(targetFps=10)
         self.timer.callback = self.callbackLoop
+        self.callbacks = callbacks.CallbackRegistry([self.TASK_STARTED_SIGNAL,
+                                                     self.TASK_ENDED_SIGNAL,
+                                                     self.TASK_PAUSED_SIGNAL,
+                                                     self.TASK_EXCEPTION_SIGNAL])
         self.currentTask = None
+        self.isRunning = False
+
+    def reset(self):
+        assert not self.isRunning
+        assert not self.generators
+        self.tasks = []
 
     def start(self):
+        self.isRunning = True
         self.timer.start()
 
     def stop(self):
+        self.isRunning = False
+        self.currentTask = None
+        self.generators = []
         self.timer.stop()
 
+    def wrapGenerator(self, generator):
+        def generatorWrapper():
+            return generator
+        return generatorWrapper
+
     def addTask(self, task):
+
+        if isinstance(task, types.GeneratorType):
+            task = self.wrapGenerator(task)
+
+        assert hasattr(task, '__call__')
         self.tasks.append(task)
 
     def callbackLoop(self):
 
-        #if self.currentTask:
-        #    print self.currentTask
-
-        for i in xrange(10):
+        try:
+            for i in xrange(10):
+                self.doWork()
             if not self.tasks:
-                break
-            task = self.tasks[0]
+                self.stop()
 
-            try:
-                self.handleAsyncTask(task)
-            except AsyncTaskQueue.PauseException:
-                print 'pausing task queue'
-                return False
+        except AsyncTaskQueue.PauseException:
+            assert self.currentTask
+            self.callbacks.process(self.TASK_PAUSED_SIGNAL, self, self.currentTask)
+            self.stop()
+        except:
+            assert self.currentTask
+            print traceback.format_exc()
+            self.callbacks.process(self.TASK_EXCEPTION_SIGNAL, self, self.currentTask)
+            self.stop()
 
-        return len(self.tasks)
+        return self.isRunning
 
-    def handleAsyncTask(self, task):
+    def popTask(self):
+        assert not self.isRunning
+        assert not self.currentTask
+        if self.tasks:
+            self.tasks.pop(0)
 
-        if hasattr(task, '__call__'):
-            self.tasks.remove(task)
-            result = task()
-            self.currentTask = task
+    def completePreviousTask(self):
+        assert self.currentTask
+        self.tasks.remove(self.currentTask)
+        self.callbacks.process(self.TASK_ENDED_SIGNAL, self, self.currentTask)
+        self.currentTask = None
+
+    def startNextTask(self):
+        self.currentTask = self.tasks[0]
+        self.callbacks.process(self.TASK_STARTED_SIGNAL, self, self.currentTask)
+        result = self.currentTask()
+        if isinstance(result, types.GeneratorType):
+            self.generators.insert(0, result)
+
+    def doWork(self):
+        if self.generators:
+            self.handleGenerator(self.generators[0])
+        else:
+            if self.currentTask:
+                self.completePreviousTask()
+            if self.tasks:
+                self.startNextTask()
+
+    def handleGenerator(self, generator):
+        try:
+            result = generator.next()
+        except StopIteration:
+            self.generators.remove(generator)
+        else:
             if isinstance(result, types.GeneratorType):
-                self.tasks.insert(0, result)
-            else:
-                self.currentTask = None
+                self.generators.insert(0, result)
 
-        elif isinstance(task, types.GeneratorType):
-            try:
-                task.next()
-            except StopIteration:
-                self.tasks.remove(task)
-                self.currentTask = None
+    def connectTaskStarted(self, func):
+        return self.callbacks.connect(self.TASK_STARTED_SIGNAL, func)
 
-        return len(self.tasks)
+    def disconnectTaskStarted(self, callbackId):
+        self.callbacks.disconnect(callbackId)
 
+    def connectTaskEnded(self, func):
+        return self.callbacks.connect(self.TASK_ENDED_SIGNAL, func)
+
+    def disconnectTaskEnded(self, callbackId):
+        self.callbacks.disconnect(callbackId)
+
+    def connectTaskPaused(self, func):
+        return self.callbacks.connect(self.TASK_PAUSED_SIGNAL, func)
+
+    def disconnectTaskPaused(self, callbackId):
+        self.callbacks.disconnect(callbackId)
 
 
 class AsyncTask(object):
