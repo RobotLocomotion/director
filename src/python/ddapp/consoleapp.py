@@ -70,9 +70,9 @@ class ConsoleApp(object):
 
         applogic.addShortcut(view, 'Ctrl+Q', self.quit)
         applogic.addShortcut(view, 'F8', self.showPythonConsole)
-        applogic.addShortcut(view, 'F9', self.showObjectModel)
+        applogic.addShortcut(view, 'F1', self.showObjectModel)
 
-        view.setWindowIcon(om.Icons.Robot)
+        view.setWindowIcon(om.Icons.getIcon(om.Icons.Robot))
         view.setWindowTitle('View')
 
         return view

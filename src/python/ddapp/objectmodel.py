@@ -5,33 +5,51 @@ from ddapp.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelp
 
 class Icons(object):
 
-  Directory = QtGui.QApplication.style().standardIcon(QtGui.QStyle.SP_DirIcon)
-  Eye = QtGui.QIcon(':/images/eye_icon.png')
-  EyeOff = QtGui.QIcon(':/images/eye_icon_gray.png')
-  Matlab = QtGui.QIcon(':/images/matlab_logo.png')
-  Robot = QtGui.QIcon(':/images/robot_icon.png')
-  Laser = QtGui.QIcon(':/images/laser_icon.jpg')
-  Feet = QtGui.QIcon(':/images/feet.png')
-  Hand = QtGui.QIcon(':/images/claw.png')
+  Directory = int(QtGui.QStyle.SP_DirIcon)
+  Eye = ':/images/eye_icon.png'
+  EyeOff = ':/images/eye_icon_gray.png'
+  Matlab = ':/images/matlab_logo.png'
+  Robot = ':/images/robot_icon.png'
+  Laser = ':/images/laser_icon.jpg'
+  Feet = ':/images/feet.png'
+  Hand = ':/images/claw.png'
 
+  @staticmethod
+  def getIcon(iconId):
+      '''
+      Return a QIcon given an icon id as a string or int.
+      '''
+      if type(iconId) == int:
+          return QtGui.QApplication.style().standardIcon(iconId)
+      else:
+          return QtGui.QIcon(iconId)
 
 class ObjectModelItem(object):
 
-    def __init__(self, name, icon=Icons.Robot, tree=None, properties=None):
+    def __getstate__(self):
+        #print 'getstate called on:', self
+        d = dict(properties=self.properties)
+        return d
 
+    def __setstate__(self, state):
+        #print 'setstate called on:', self
+        self._tree = None
+        self.properties = state['properties']
+
+    def __init__(self, name, icon=Icons.Robot, properties=None):
+
+        #print 'init called on:', self
+        self._tree = None
         self.properties = properties or PropertySet()
         self.properties.connectPropertyChanged(self._onPropertyChanged)
         self.properties.connectPropertyAdded(self._onPropertyAdded)
         self.properties.connectPropertyAttributeChanged(self._onPropertyAttributeChanged)
 
-        self.icon = icon
-        self._tree = tree
+        self.addProperty('Icon', icon, attributes=PropertyAttributes(hidden=True))
         self.addProperty('Name', name, attributes=PropertyAttributes(hidden=True))
 
     def setIcon(self, icon):
-        self.icon = icon
-        if self._tree:
-            self._tree.updateObjectIcon(self)
+        self.setProperty('Icon', icon)
 
     def propertyNames(self):
         return self.properties.propertyNames()
@@ -47,6 +65,9 @@ class ObjectModelItem(object):
 
     def addProperty(self, propertyName, propertyValue, attributes=None):
         self.properties.addProperty(propertyName, propertyValue, attributes)
+
+    def removeProperty(self, propertyName):
+        self.properties.removeProperty(propertyName)
 
     def setProperty(self, propertyName, propertyValue):
         self.properties.setProperty(propertyName, propertyValue)
@@ -126,10 +147,6 @@ class ObjectModelTree(object):
     def getPropertiesPanel(self):
         return self._propertiesPanel
 
-    def getActiveItem(self):
-        items = self.getTreeWidget().selectedItems()
-        return items[0] if len(items) == 1 else None
-
     def getObjectParent(self, obj):
         item = self._getItemForObject(obj)
         if item.parent():
@@ -139,8 +156,12 @@ class ObjectModelTree(object):
         item = self._getItemForObject(obj)
         return [self._getObjectForItem(item.child(i)) for i in xrange(item.childCount())]
 
+    def getTopLevelObjects(self):
+        return [self._getObjectForItem(self._treeWidget.topLevelItem(i))
+                  for i in xrange(self._treeWidget.topLevelItemCount)]
+
     def getActiveObject(self):
-        item = self.getActiveItem()
+        item = self._getSelectedItem()
         return self._objects[item] if item is not None else None
 
     def setActiveObject(self, obj):
@@ -149,9 +170,18 @@ class ObjectModelTree(object):
             tree = self.getTreeWidget()
             tree.setCurrentItem(item)
             tree.scrollToItem(item)
+        else:
+            self.clearSelection()
+
+    def clearSelection(self):
+        self.getTreeWidget().setCurrentItem(None)
 
     def getObjects(self):
         return self._objects.values()
+
+    def _getSelectedItem(self):
+        items = self.getTreeWidget().selectedItems()
+        return items[0] if len(items) == 1 else None
 
     def _getItemForObject(self, obj):
         for item, itemObj in self._objects.iteritems():
@@ -205,13 +235,12 @@ class ObjectModelTree(object):
             return
 
         isVisible = obj.getProperty('Visible')
-        icon = Icons.Eye if isVisible else Icons.EyeOff
         item = self._getItemForObject(obj)
-        item.setIcon(1, icon)
+        item.setIcon(1, Icons.getIcon(Icons.Eye if isVisible else Icons.EyeOff))
 
     def updateObjectIcon(self, obj):
         item = self._getItemForObject(obj)
-        item.setIcon(0, obj.icon)
+        item.setIcon(0, Icons.getIcon(obj.getProperty('Icon')))
 
     def updateObjectName(self, obj):
         item = self._getItemForObject(obj)
@@ -223,6 +252,8 @@ class ObjectModelTree(object):
             self.updateVisIcon(obj)
         elif propertyName == 'Name':
             self.updateObjectName(obj)
+        elif propertyName == 'Icon':
+            self.updateObjectIcon(obj)
 
         if obj == self.getActiveObject():
             self._blockSignals = True
@@ -275,7 +306,7 @@ class ObjectModelTree(object):
         objName = obj.getProperty('Name')
 
         item = QtGui.QTreeWidgetItem(parentItem, [objName])
-        item.setIcon(0, obj.icon)
+        item.setIcon(0, Icons.getIcon(obj.getProperty('Icon')))
 
         obj._tree = self
 
@@ -369,7 +400,7 @@ class ObjectModelTree(object):
 
         treeWidget.setColumnCount(2)
         treeWidget.setHeaderLabels(['Name', ''])
-        treeWidget.headerItem().setIcon(1, Icons.Eye)
+        treeWidget.headerItem().setIcon(1, Icons.getIcon(Icons.Eye))
         treeWidget.header().setVisible(True)
         treeWidget.header().setStretchLastSection(False)
         treeWidget.header().setResizeMode(0, QtGui.QHeaderView.Stretch)
@@ -393,14 +424,14 @@ _t = ObjectModelTree()
 def getDefaultObjectModel():
     return _t
 
-def getActiveItem():
-    return _t.getActiveItem()
-
 def getActiveObject():
     return _t.getActiveObject()
 
 def setActiveObject(obj):
     _t.setActiveObject(obj)
+
+def clearSelection():
+    _t.clearSelection()
 
 def getObjects():
     return _t.getObjects()

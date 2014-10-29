@@ -10,6 +10,7 @@ class DRCArgParser(object):
     def __init__(self):
         self._args = None
         self._parser = None
+        self.strict = False
 
     def getArgs(self):
         if self._args is None:
@@ -25,7 +26,11 @@ class DRCArgParser(object):
     def parseArgs(self):
         parser = self.getParser()
         sys.argv = [str(v) for v in sys.argv]
-        self._args = parser.parse_args()
+
+        if not self.strict:
+            self._args, unknown = parser.parse_known_args()
+        else:
+            self._args = parser.parse_args()
 
 
     def getDefaultBotConfigFile(self):
@@ -37,6 +42,9 @@ class DRCArgParser(object):
         parser.add_argument('-c', '--config_file', type=str, help='Robot cfg file',
                             default=self.getDefaultBotConfigFile())
 
+        parser.add_argument('--matlab-host', type=str, help='Hostname to use external matlab server',
+                            default=None)
+
         parser.add_argument('data_files', type=str, nargs='*',
                             help='data files to load at startup')
 
@@ -47,6 +55,10 @@ def getGlobalArgParser():
         _argParser = DRCArgParser()
     return _argParser
 
+def requireStrict():
+    global _argParser
+    _argParser = None
+    getGlobalArgParser().strict = True
 
 def args():
     return getGlobalArgParser().getArgs()

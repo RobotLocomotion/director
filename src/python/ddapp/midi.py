@@ -48,6 +48,11 @@ def findInputDevice(deviceName):
 def findTriggerFinger():
     return findInputDevice('USB Trigger Finger MIDI')
 
+def findKorgNanoKontrol2():
+    deviceId = findInputDevice('nanoKONTROL2 SLIDER/KNOB')
+    if deviceId is None:
+        deviceId = findInputDevice('nanoKONTROL2 MIDI 1')
+    return deviceId
 
 class MidiReader(object):
 
