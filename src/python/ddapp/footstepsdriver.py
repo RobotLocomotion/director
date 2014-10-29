@@ -39,15 +39,15 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
                                'Drake Instep Shift': 0.0275,
                                'Drake Min Hold Time': 2.0},
                        'drake': {'Max Num Steps': 20,
-                                 'Nominal Step Width': 0.28,
-                                 'Nominal Forward Step': 0.17,
-                                 'Max Forward Step': 0.17,
+                                 'Nominal Step Width': 0.26,
+                                 'Nominal Forward Step': 0.25,
+                                 'Max Forward Step': 0.30,
                                  'Max Step Width': 0.32,
                                  'Behavior': 2,
                                  'Leading Foot': 0,
-                                 'Drake Swing Speed': 0.15,
-                                 'Drake Instep Shift': 0.015,
-                                 'Drake Min Hold Time': 1.4}}
+                                 'Drake Swing Speed': 0.4,
+                                 'Drake Instep Shift': 0.014,
+                                 'Drake Min Hold Time': 0.9}}
 
 
 def loadFootMeshes():
