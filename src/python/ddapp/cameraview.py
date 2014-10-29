@@ -676,5 +676,5 @@ def init():
     #addCameraView('CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmmultisense.images_t.DISPARITY_ZIPPED)
     addCameraView('CAMERACHEST_LEFT', 'Chest left')
     addCameraView('CAMERACHEST_RIGHT', 'Chest right')
-
     addCameraView('CAMERA_TSDF', 'Head camera tsdf')
+    addCameraView('CAMERALHAND')
