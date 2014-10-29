@@ -19,6 +19,7 @@ from ddapp import callbacks
 from ddapp import cameracontrol
 from ddapp import debrisdemo
 from ddapp import drilldemo
+from ddapp import pfgraspdemo
 from ddapp import tabledemo
 from ddapp import valvedemo
 from ddapp import continuouswalkingdemo
@@ -352,7 +353,12 @@ if usePlanning:
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
-
+    
+    pfgraspDemo = pfgraspdemo.PFGraspDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                    lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                    fitDrillMultisense, robotStateJointController,
+                    playPlans, showPose, cameraview, segmentationpanel)
+                    
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                       segmentation.segmentValveWallAuto, robotStateJointController,
@@ -487,7 +493,7 @@ if useImageViewDemo:
         imageView.view.show()
         imagePicker.stop()
 
-    #showImageOverlay()
+    #showImageOverlay(viewName='CAMERALHAND')
 
     imagePicker.doubleClickCallback = drillDemo.onImageViewDoubleClick
 
@@ -665,3 +671,6 @@ if useDrillDemo:
     app.addToolbarMacro('pointer prep', sendPointerPrep)
     app.addToolbarMacro('pointer press', sendPointerPress)
     app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
+
+
+showImageOverlay(viewName='CAMERALHAND')
