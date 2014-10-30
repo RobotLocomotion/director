@@ -67,11 +67,15 @@ class ContinousWalkingDemo(object):
         else:
             self.queryPlanner = False
 
+        # For development - dont need to query planner
+        #self.queryPlanner = False
+
         self._setupSubscriptions()
 
 
     def _setupSubscriptions(self):
-        footContactSubContinuous = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, self.onFootContactContinuous)
+        # use a different classifier to scott:
+        footContactSubContinuous = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE_SLOW', lcmdrc.foot_contact_estimate_t, self.onFootContactContinuous)
         footContactSubContinuous.setSpeedLimit(60)
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
@@ -338,7 +342,8 @@ class ContinousWalkingDemo(object):
         polyData = self.getRecedingTerrainRegion(polyData, standingFootFrame)
 
         # Step 2: find all the surfaces in front of the robot (about 0.75sec)
-        clusters = segmentation.findHorizontalSurfaces(polyData)
+        clusters = segmentation.findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSearchRadius=0.05,
+                                                       clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0])
         if (clusters is None):
             print "No cluster found, stop walking now!"
             return
@@ -455,6 +460,7 @@ class ContinousWalkingDemo(object):
             standingFootName = 'r_foot'
 
         if (replanNow):
+            #print "contact: ", self.lastContactState, " to ", contactState
             if (self.navigationPanel.automaticContinuousWalkingEnabled):
                 self.makeReplanRequest(standingFootName)
             else:
