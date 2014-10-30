@@ -111,6 +111,9 @@ class PolygonSegmentation(IRISInterface):
     def __init__(self, polygon_vertices, bot_pts=DEFAULT_FOOT_CONTACTS,
                  bounding_box_width=DEFAULT_BOUNDING_BOX_WIDTH):
         polygon_vertices = np.asarray(polygon_vertices)
+        hull = ConvexHull(polygon_vertices.T)
+        polygon_vertices = polygon_vertices[:2,hull.vertices]
+
         nvert = polygon_vertices.shape[1]
 
         p1 = polygon_vertices.reshape((2, 1, nvert))
