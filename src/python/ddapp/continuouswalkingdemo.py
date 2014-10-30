@@ -337,7 +337,7 @@ class ContinousWalkingDemo(object):
             obj.actor.SetUserTransform(footstep.transform)
 
 
-    def replanFootsteps(self, polyData, standingFootName, removeFirstLeftStep=True):
+    def replanFootsteps(self, polyData, standingFootName, removeFirstLeftStep=True, doStereoFiltering=True):
         obj = om.getOrCreateContainer('continuous')
         om.getOrCreateContainer('cont debug', obj)
 
@@ -349,6 +349,13 @@ class ContinousWalkingDemo(object):
 
         # Step 1: filter the data down to a box in front of the robot:
         polyData = self.getRecedingTerrainRegion(polyData, standingFootFrame)
+        if (doStereoFiltering is True):
+            # used for stereo data:
+            polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+            polyData = segmentation.labelOutliers(polyData, searchRadius=0.06, neighborsInSearchRadius=15) # 0.06 and 10 originally
+            vis.updatePolyData(polyData, 'voxel plane points', parent='cont debug', colorByName='is_outlier', visible=False)
+            polyData = segmentation.thresholdPoints(polyData, 'is_outlier', [0, 0])
+            vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='cont debug', visible=True)
 
         # Step 2: find all the surfaces in front of the robot (about 0.75sec)
         clusters = segmentation.findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSearchRadius=0.05,
@@ -501,14 +508,18 @@ class ContinousWalkingDemo(object):
 
         if (self.processContinuousStereo):
             polyData = self.cameraView.getStereoPointCloud(2,'CAMERA_FUSED')
-            polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+            #polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+            doStereoFiltering = True
         elif (self.processRawStereo):
             polyData = self.cameraView.getStereoPointCloud(2,'CAMERA')
-            polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+            doStereoFiltering = True
+            print "makeReplanRequest processRawStereo"
+            #polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
         else:
             polyData = segmentation.getCurrentRevolutionData()
+            doStereoFiltering = False
 
-        self.replanFootsteps(polyData, standingFootName, removeFirstLeftStep)
+        self.replanFootsteps(polyData, standingFootName, removeFirstLeftStep, doStereoFiltering)
 
 
     def startContinuousWalking(self):
