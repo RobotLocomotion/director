@@ -233,7 +233,7 @@ class ContinousWalkingDemo(object):
             if ((block.rectWidth>0.45) or (block.rectDepth>0.45)):
                 #print " ground plane",i,block.rectWidth,block.rectDepth
                 groundPlane = block
-            elif ((block.rectWidth<0.34) or (block.rectDepth<0.30)):
+            elif ((block.rectWidth<0.30) or (block.rectDepth<0.20)): # was 0.34 and 0.30 for 13 block successful walk with lidar
                 #print "removed block",i,block.rectWidth,block.rectDepth
                 foobar=[]
             else:
