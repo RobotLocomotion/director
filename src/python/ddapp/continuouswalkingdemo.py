@@ -71,10 +71,14 @@ class ContinousWalkingDemo(object):
         else:
             self.queryPlanner = False
 
-        # For development - dont need to query planner
-        #self.queryPlanner = False
 
         self._setupSubscriptions()
+
+        ###########################################
+        # For development/limited use: (comment all out for typical behavior)
+        #self.queryPlanner = False
+        self.fixBlockYawWithInitial = True
+        self.processRawStereo = True
 
 
     def _setupSubscriptions(self):
