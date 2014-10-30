@@ -61,6 +61,10 @@ class ContinousWalkingDemo(object):
         self.processRawStereo = False
         self.committedStep = None
 
+        # overwrite all of the above with the yaw of the robt when it was standing in front of the blocks:
+        self.fixBlockYawWithInitial = False
+        self.initialRobotYaw = np.Inf
+
         if (self.footstepsPanel is not None):
             self.queryPlanner = True
             self.footstepsPanel.driver.applyDefaults('BDI')
@@ -189,6 +193,11 @@ class ContinousWalkingDemo(object):
 
         #print "best angle", blockAngleAll[min_idx]
         rot_angle = blockAngleAll[min_idx]*math.pi/180.0
+
+
+        # Optional: overwrite all of the above with the yaw of the robt when it was standing in front of the blocks:
+        if (self.fixBlockYawWithInitial):
+            rot_angle = self.initialRobotYaw
 
         cornerTransform = transformUtils.frameFromPositionAndRPY( farRightCorner , [0,0, np.rad2deg(rot_angle) ] )
 
@@ -505,6 +514,8 @@ class ContinousWalkingDemo(object):
     def makeStandingRequest(self):
         self.makeReplanRequest('r_foot', removeFirstLeftStep = False)
 
+        if (self.fixBlockYawWithInitial):
+            self.initialRobotYaw = self.robotStateJointController.q[5]
 
     # i think this should be removed, according to robin
     def onFootstepPlanContinuous(self, msg):
