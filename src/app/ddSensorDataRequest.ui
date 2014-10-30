@@ -61,7 +61,7 @@
       </widget>
      </item>
      <item row="10" column="0">
-      <widget class="QPushButton" name="mapStereoHeightButton">
+      <widget class="QPushButton" name="mapFusedStereoHeightButton">
        <property name="text">
         <string/>
        </property>
@@ -163,14 +163,14 @@
       </widget>
      </item>
      <item row="10" column="1">
-      <widget class="QCheckBox" name="mapStereoHeightCheck">
+      <widget class="QCheckBox" name="mapFusedStereoHeightCheck">
        <property name="text">
-        <string>Stereo Height</string>
+        <string>Fused Stereo</string>
        </property>
       </widget>
      </item>
      <item row="10" column="2">
-      <widget class="QSpinBox" name="mapStereoHeightSpinner">
+      <widget class="QSpinBox" name="mapFusedStereoHeightSpinner">
        <property name="minimum">
         <number>1</number>
        </property>
