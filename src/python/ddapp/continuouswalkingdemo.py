@@ -511,7 +511,8 @@ class ContinousWalkingDemo(object):
         self.replanFootsteps(polyData, standingFootName, removeFirstLeftStep)
 
 
-    def makeStandingRequest(self):
+    def startContinuousWalking(self):
+        self.committedStep = None
         self.makeReplanRequest('r_foot', removeFirstLeftStep = False)
 
         if (self.fixBlockYawWithInitial):
