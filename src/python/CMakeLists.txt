@@ -50,6 +50,7 @@ set(python_files
   ddapp/objectmodel.py
   ddapp/perception.py
   ddapp/pfgraspdemo.py
+  ddapp/easygui.py
   ddapp/planplayback.py
   ddapp/playbackpanel.py
   ddapp/pointpicker.py

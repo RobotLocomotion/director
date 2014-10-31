@@ -362,7 +362,7 @@ if usePlanning:
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
-                    
+    #pfgraspDemo.start()                
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                       segmentation.segmentValveWallAuto, robotStateJointController,
@@ -711,8 +711,5 @@ if useDrillDemo:
     app.addToolbarMacro('pointer press', sendPointerPress)
     app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
 
-
-showImageOverlay()
-hideImageOverlay()
 
 showImageOverlay(viewName='CAMERALHAND')
