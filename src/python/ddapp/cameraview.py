@@ -10,6 +10,8 @@ from ddapp import vtkNumpy
 from ddapp import objectmodel as om
 import ddapp.vtkAll as vtk
 from ddapp.debugVis import DebugData
+from ddapp.utime import getUtime
+import lcm
 
 import PythonQt
 from PythonQt import QtCore, QtGui
@@ -116,8 +118,9 @@ class ImageManager(object):
 
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
         self.queue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
-
-
+        self.TLDResultMsg = lcmdrc.image_roi_t()
+        self.tldsub = lcmUtils.addSubscriber('TLD_OBJECT_ROI_RESULT', lcmdrc.image_roi_t, self.TLDReceived)
+        
     def addImage(self, name):
 
         if name in self.images:
@@ -143,9 +146,56 @@ class ImageManager(object):
         imageUtime = self.queue.getCurrentImageTime(imageName)
         if imageUtime != self.imageUtimes[imageName]:
             image = self.images[imageName]
+            
+            #lcmUtils.getGlobalLCM().handle_timeout(100)
+            #msg = lcmUtils.getNextMessage(self.tldsub, lcmdrc.image_roi_t, 100)
             self.imageUtimes[imageName] = self.queue.getImage(imageName, image)
+            
+            #print 'msg',msg
+            #if msg is not None:
+            #    self.TLDResultMsg = msg
+            if imageName == 'CAMERALHAND' and self.TLDResultMsg is not None:
+                e = image.GetExtent()
+                canvas = vtk.vtkImageCanvasSource2D()
+                canvas.SetNumberOfScalarComponents(3)
+                canvas.SetScalarTypeToUnsignedChar()
+                canvas.SetExtent(e[0], e[1],e[2],e[3],e[4],e[5])
+                canvas.DrawImage(0, 0, image)
+                canvas.SetDrawColor(255.0, 0, 0)
+                x1 = self.TLDResultMsg.roi.x * e[1]
+                y1 = self.TLDResultMsg.roi.y * e[3]
+                x2 = (self.TLDResultMsg.roi.x+self.TLDResultMsg.roi.width) * e[1]
+                y2 = (self.TLDResultMsg.roi.y+self.TLDResultMsg.roi.height) * e[3]
+                
+                xc = (self.TLDResultMsg.roi.x+self.TLDResultMsg.roi.width/2) * e[1]
+                yc = (self.TLDResultMsg.roi.y+self.TLDResultMsg.roi.height/2) * e[3]
+                
+                #print 'x1s', x1,y1,x2,y2,xc,yc
+                crossRadius = 10
+                canvas.DrawSegment(x1, y1, x1, y2)
+                canvas.DrawSegment(x1, y2, x2, y2)
+                canvas.DrawSegment(x2, y2, x2, y1)
+                canvas.DrawSegment(x2, y1, x1, y1)
+                
+                canvas.DrawSegment(xc-crossRadius, yc, xc+crossRadius, yc)
+                canvas.DrawSegment(xc, yc-crossRadius, xc, yc+crossRadius)
+                canvas.DrawCircle(xc, yc, 5)
+                
+                canvas.Update()
+                #canvas.
+                image.DeepCopy(canvas.GetOutput())
+                #self.images[imageName] = canvas.GetOutput()
+            
         return imageUtime
 
+
+    def TLDReceived(self, data):
+        #print 'TLD received', data
+        self.TLDResultMsg.roi.x = data.roi.x
+        self.TLDResultMsg.roi.y = data.roi.y
+        self.TLDResultMsg.roi.width = data.roi.width
+        self.TLDResultMsg.roi.height = data.roi.height
+        
     def updateImages(self):
         for imageName in self.images.keys():
             self.updateImage(imageName)
@@ -444,8 +494,20 @@ class CameraImageView(object):
 
     def onRubberBandPick(self, obj, event):
         displayPoints = self.interactorStyle.GetStartPosition(), self.interactorStyle.GetEndPosition()
+        
         imagePoints = [vis.pickImage(point, self.view)[1] for point in displayPoints]
-        sendFOVRequest(self.imageName, imagePoints)
+        print imagePoints
+        msg = lcmdrc.image_roi_t()
+        msg.utime = getUtime()
+        dims = self.getImage().GetDimensions()
+        
+        w, h = dims[0], dims[1]
+        msg.roi.x = imagePoints[0][0] / float(w)
+        msg.roi.y = imagePoints[0][1] / float(h)
+        msg.roi.width = (imagePoints[1][0]-imagePoints[0][0]) / float(w) 
+        msg.roi.height = (imagePoints[1][1]-imagePoints[0][1]) / float(h)
+        lcmUtils.publish('TLD_OBJECT_ROI', msg)
+        #sendFOVRequest(self.imageName, imagePoints)
 
     def getImage(self):
         return self.imageManager.getImage(self.imageName)
@@ -515,6 +577,7 @@ class CameraImageView(object):
             return
 
         currentUtime = self.imageManager.updateImage(self.imageName)
+        
         if currentUtime != self.updateUtime:
             self.updateUtime = currentUtime
             self.view.render()
