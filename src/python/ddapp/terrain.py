@@ -12,7 +12,7 @@ from irispy.iris import inflate_region
 from irispy.utils import lcon_to_vert
 from py_drake_utils.utils import rpy2rotmat
 
-DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.13, 0.13],
+DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.15, 0.15],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 DEFAULT_BOUNDING_BOX_WIDTH = 1
 DEFAULT_CONTACT_SLICES = {(0.05, 0.35): np.array([[-0.13, -0.13, 0.13, 0.13],
