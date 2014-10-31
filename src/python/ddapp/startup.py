@@ -707,6 +707,7 @@ if useDrillDemo:
     app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
 
 
+
 def cameraFused():
     pd = cameraview.getStereoPointCloud(1,"CAMERA_FUSED", cameraName='CAMERA_TSDF')
     if (pd is None):
@@ -716,3 +717,68 @@ def cameraFused():
 timerCloud = TimerCallback(targetFps=5)
 timerCloud.callback = cameraFused
 timerCloud.start()
+
+
+
+import ddapp.terrain
+
+
+def convertStepToSafeRegion(step, rpySeed):
+
+    shapeVertices = np.array(step).transpose()[:2,:]
+    s = ddapp.terrain.PolygonSegmentation(shapeVertices)
+
+    stepCenter = np.mean(step, axis=0)
+    startSeed = np.hstack([stepCenter, rpySeed])
+
+    r = s.findSafeRegion(startSeed)
+
+    # draw step
+    d = DebugData()
+    for p1, p2 in zip(step, step[1:]):
+        d.addLine(p1, p2)
+    d.addLine(step[-1], step[0])
+
+
+    folder = om.getOrCreateContainer('Safe terrain regions')
+    obj = vis.showPolyData(d.getPolyData(), 'step region %d' % len(folder.children()), parent=folder)
+    obj.properties.addProperty('Enabled for Walking', True)
+    obj.safe_region = r
+
+
+def testPlan():
+
+    stepWidth = 0.5
+    stepLength = 0.4
+
+    stepPoints = np.array([
+      [-stepLength/2.0, -stepWidth/2.0, 0.0],
+      [-stepLength/2.0, stepWidth/2.0, 0.0],
+      [stepLength/2.0, stepWidth/2.0, 0.0],
+      [stepLength/2.0, -stepWidth/2.0, 0.0]
+    ])
+
+    t = vtk.vtkTransform()
+    t.RotateZ(4.5)
+
+    for i in xrange(len(stepPoints)):
+        stepPoints[i] = np.array(t.TransformPoint(stepPoints[i]))
+
+    stepOffset = np.array([0.5, 0.0, 0.15])
+
+    numSteps = 3
+
+    goalFrame = transformUtils.frameFromPositionAndRPY([0.4, 0.0, 0.1], [0,0,0])
+    vis.showFrame(goalFrame, 'goal frame', scale=0.2)
+
+    rpySeed = np.radians(goalFrame.GetOrientation())
+    for i in xrange(numSteps):
+
+        step = stepPoints + (i+1)*stepOffset
+        convertStepToSafeRegion(step, rpySeed)
+
+
+    footstepsPanel.onNewWalkingGoal(goalFrame)
+
+
+#testPlan()

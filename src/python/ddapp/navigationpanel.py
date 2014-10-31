@@ -82,7 +82,7 @@ class NavigationPanel(object):
         self.octomap_cloud = None
 
         # used by continuousWalkingDemo
-        self.automaticContinuousWalkingEnabled = False
+        self.automaticContinuousWalkingEnabled = True
 
     ###############################
 
