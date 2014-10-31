@@ -13,6 +13,7 @@ from ddapp import transformUtils
 from ddapp import footstepsdriver
 from ddapp.debugVis import DebugData
 from ddapp import ikplanner
+import ddapp.terrain
 
 import drc as lcmdrc
 
@@ -37,6 +38,30 @@ class BlockTop():
         self.rectWidth = rectWidth # length of face perpendicular to robot's toes
         self.rectArea = rectArea
 
+    def getCorners(self):
+        '''
+        Return a 4x3 numpy array representing the world xyz positions of the
+        four corners of the block top.  Corners are listed clockwise from far right.
+        '''
+
+
+        width = self.rectWidth
+        depth = self.rectDepth
+
+        width = max(width, 0.60)
+        #depth = max(depth, 0.40)
+
+        xaxis, yaxis, zaxis = transformUtils.getAxesFromTransform(self.cornerTransform)
+        xedge = np.array(xaxis)*depth
+        yedge = np.array(yaxis)*width
+
+        c1 = np.array(self.cornerTransform.GetPosition()) - yedge*0.15
+        c2 = c1 - xedge
+        c3 = c1 - xedge + yedge
+        c4 = c1 + yedge
+
+        return np.array([c3, c4, c1, c2])
+
 
 class Footstep():
     def __init__(self, transform, is_right_foot):
@@ -60,6 +85,7 @@ class ContinousWalkingDemo(object):
         self.processContinuousStereo = False
         self.processRawStereo = False
         self.committedStep = None
+        self.useManualFootstepPlacement = False
 
         # overwrite all of the above with the yaw of the robt when it was standing in front of the blocks:
         self.fixBlockYawWithInitial = False
@@ -348,7 +374,93 @@ class ContinousWalkingDemo(object):
             obj.actor.SetUserTransform(footstep.transform)
 
 
+    def computeFootstepPlanSafeRegions(self, blocks, robotPose, standingFootName):
+
+        print 'planning with safe regions.  %d blocks.' % len(blocks)
+
+        folder = om.getOrCreateContainer('Safe terrain regions')
+        om.removeFromObjectModel(folder)
+
+        footsteps = []
+
+        for i, block in enumerate(blocks):
+            corners = block.getCorners()
+            rpy = np.radians(block.cornerTransform.GetOrientation())
+            print 'rpy seed:', np.degrees(rpy)
+            #rpy = [0.0, 0.0, 0.0]
+            self.convertStepToSafeRegion(corners, rpy)
+
+        lastBlock = blocks[-1]
+        goalFrame = transformUtils.copyFrame(lastBlock.cornerTransform)
+        goalOffset = vtk.vtkTransform()
+        goalOffset.Translate(0.3, lastBlock.rectWidth/2.0, 0.0)
+        goalFrame.PreMultiply()
+        goalFrame.Concatenate(goalOffset)
+
+        vis.updateFrame(goalFrame, 'footstep plan goal', scale=0.2)
+
+        request = self.footstepsPanel.driver.constructFootstepPlanRequest(robotPose, goalFrame)
+
+        assert standingFootName in ('l_foot', 'r_foot')
+        if standingFootName == 'r_foot':
+            leadingFoot = lcmdrc.footstep_plan_params_t.LEAD_RIGHT
+        else:
+            leadingFoot = lcmdrc.footstep_plan_params_t.LEAD_LEFT
+
+        request.params.leading_foot = leadingFoot
+        request.params.max_forward_step = 0.5
+        request.params.nom_forward_step = 0.2
+        request.params.nom_step_width = 0.20
+        request.params.max_num_steps = 2*len(blocks)
+
+        plan = self.footstepsPanel.driver.sendFootstepPlanRequest(request, waitForResponse=True)
+
+        if not plan:
+            return []
+
+        #print 'received footstep plan with %d steps.' % len(plan.footsteps)
+
+        footsteps = []
+        for i, footstep in enumerate(plan.footsteps):
+            trans = footstep.pos.translation
+            trans = [trans.x, trans.y, trans.z]
+            quat = footstep.pos.rotation
+            quat = [quat.w, quat.x, quat.y, quat.z]
+            footstepTransform = transformUtils.transformFromPose(trans, quat)
+
+            footsteps.append(Footstep(footstepTransform, footstep.is_right_foot))
+
+        return footsteps[2:]
+
+    @staticmethod
+    def convertStepToSafeRegion(step, rpySeed):
+        assert step.shape[0] >= 3
+        assert step.shape[1] == 3
+
+        shapeVertices = np.array(step).transpose()[:2,:]
+        s = ddapp.terrain.PolygonSegmentation(shapeVertices)
+
+        stepCenter = np.mean(step, axis=0)
+        startSeed = np.hstack([stepCenter, rpySeed])
+
+        r = s.findSafeRegion(startSeed)
+
+        # draw step
+        d = DebugData()
+        for p1, p2 in zip(step, step[1:]):
+            d.addLine(p1, p2)
+        d.addLine(step[-1], step[0])
+
+        folder = om.getOrCreateContainer('Safe terrain regions')
+        obj = vis.showPolyData(d.getPolyData(), 'step region %d' % len(folder.children()), parent=folder)
+        obj.properties.addProperty('Enabled for Walking', True)
+        obj.safe_region = r
+
+
     def replanFootsteps(self, polyData, standingFootName, removeFirstLeftStep=True, doStereoFiltering=True):
+
+        #print 'replan footsteps with standingFootName:', standingFootName
+
         obj = om.getOrCreateContainer('continuous')
         om.getOrCreateContainer('cont debug', obj)
 
@@ -378,12 +490,6 @@ class ContinousWalkingDemo(object):
         # Step 3: find the corners of the minimum bounding rectangles
         blocks,groundPlane = self.extractBlocksFromSurfaces(clusters, standingFootFrame)
 
-        footsteps = self.placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep)
-
-        if (len(footsteps) ==0):
-            print "no steps to plan, returning"
-            return
-
         # Step 5: Find the two foot positions we should plan with: the next committed tool and the current standing foot
         if (self.committedStep is not None):
           #print "i got a committedStep. is_right_foot?" , self.committedStep.is_right_foot
@@ -411,10 +517,23 @@ class ContinousWalkingDemo(object):
 
         self.displayExpectedPose(nextDoubleSupportPose)
 
-        if (self.queryPlanner):
-            self.sendPlanningRequest(footsteps, nextDoubleSupportPose)
+
+        if not self.useManualFootstepPlacement:
+            footsteps = self.computeFootstepPlanSafeRegions(blocks, nextDoubleSupportPose, standingFootName)
+
         else:
-            self.drawFittedSteps(footsteps)
+
+            footsteps = self.placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep)
+
+            if (len(footsteps) ==0):
+                print "no steps to plan, returning"
+                return
+
+            if self.queryPlanner:
+                self.sendPlanningRequest(footsteps, nextDoubleSupportPose)
+            else:
+                self.drawFittedSteps(footsteps)
+
 
         # retain the first step as it will be the committed step for execution
         if (len(footsteps) > 0):
@@ -487,7 +606,7 @@ class ContinousWalkingDemo(object):
             standingFootName = 'r_foot'
 
         if (replanNow):
-            #print "contact: ", self.lastContactState, " to ", contactState
+            print "contact: ", self.lastContactState, " to ", contactState
             if (self.navigationPanel.automaticContinuousWalkingEnabled):
                 self.makeReplanRequest(standingFootName)
             else:
@@ -535,7 +654,7 @@ class ContinousWalkingDemo(object):
 
     def startContinuousWalking(self):
         self.committedStep = None
-        self.makeReplanRequest('r_foot', removeFirstLeftStep = False)
+        self.makeReplanRequest('l_foot', removeFirstLeftStep = False)
 
         if (self.fixBlockYawWithInitial):
             self.initialRobotYaw = self.robotStateJointController.q[5]
