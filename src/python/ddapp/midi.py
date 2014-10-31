@@ -1,6 +1,6 @@
 
 
-import pypm
+#import pypm
 import array
 import time
 
@@ -15,7 +15,7 @@ _initialized = False
 def init():
     global _initialized
     if not _initialized:
-        pypm.Initialize()
+        #pypm.Initialize()
         _initialized = True
 
 
