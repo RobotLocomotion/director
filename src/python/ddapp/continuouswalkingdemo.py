@@ -55,7 +55,7 @@ class BlockTop():
         xedge = np.array(xaxis)*depth
         yedge = np.array(yaxis)*width
 
-        c1 = np.array(self.cornerTransform.GetPosition()) - yedge*0.15
+        c1 = np.array(self.cornerTransform.GetPosition()) + (np.array(yaxis)*self.rectWidth*0.5) - yedge*0.5
         c2 = c1 - xedge
         c3 = c1 - xedge + yedge
         c4 = c1 + yedge
@@ -409,7 +409,7 @@ class ContinousWalkingDemo(object):
 
         request.params.leading_foot = leadingFoot
         request.params.max_forward_step = 0.5
-        request.params.nom_forward_step = 0.2
+        request.params.nom_forward_step = 0.18
         request.params.nom_step_width = 0.20
         request.params.max_num_steps = 2*len(blocks)
 
@@ -652,9 +652,9 @@ class ContinousWalkingDemo(object):
         self.replanFootsteps(polyData, standingFootName, removeFirstLeftStep, doStereoFiltering)
 
 
-    def startContinuousWalking(self):
+    def startContinuousWalking(self, leadFoot='l_foot'):
         self.committedStep = None
-        self.makeReplanRequest('l_foot', removeFirstLeftStep = False)
+        self.makeReplanRequest(leadFoot, removeFirstLeftStep = False)
 
         if (self.fixBlockYawWithInitial):
             self.initialRobotYaw = self.robotStateJointController.q[5]
