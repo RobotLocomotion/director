@@ -236,6 +236,7 @@
    <addaction name="ActionActionManagerPanel"/>
    <addaction name="ActionScreenGrabberPanel"/>
    <addaction name="ActionSensorDataRequestPanel"/>
+   <addaction name="ActionPFGraspPanel"/>
   </widget>
   <action name="ActionQuit">
    <property name="text">
@@ -492,6 +493,24 @@
    </property>
    <property name="toolTip">
     <string>Sensor Data Request</string>
+   </property>
+   <property name="shortcut">
+    <string/>
+   </property>
+  </action>
+  <action name="ActionPFGraspPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/eye_in_hand.gif</normaloff>:/images/eye_in_hand.gif</iconset>
+   </property>
+   <property name="text">
+    <string>PFGrasp</string>
+   </property>
+   <property name="toolTip">
+    <string>PFGrasp</string>
    </property>
    <property name="shortcut">
     <string/>
