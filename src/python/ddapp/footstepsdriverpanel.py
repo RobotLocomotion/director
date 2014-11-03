@@ -5,7 +5,12 @@ from ddapp import objectmodel as om
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp.debugVis import DebugData
+from ddapp.pointpicker import PlacerWidget
 from ddapp.terrainitem import TerrainRegionItem
+from ddapp import segmentation
+from ddapp import filterUtils
+from ddapp import vtkNumpy as vnp
+
 try:
     import mosek
     from ddapp.terrain import TerrainSegmentation
@@ -47,6 +52,8 @@ class FootstepsPanel(object):
         assert uifile.open(uifile.ReadOnly)
 
         self.widget = loader.load(uifile)
+
+        self.placer = None
 
         self.depth_provider = mapServerSource
         if _mosekEnabled:
@@ -136,7 +143,7 @@ class FootstepsPanel(object):
         walkingGoal = walkingGoal or self.newWalkingGoalFrame(self.robotModel)
         frameObj = vis.updateFrame(walkingGoal, 'walking goal', parent='planning', scale=0.25)
         frameObj.setProperty('Edit', True)
-        frameObj.connectFrameModified(self.onWalkingGoalModified)
+
 
         rep = frameObj.widget.GetRepresentation()
         rep.SetTranslateAxisEnabled(2, False)
@@ -144,6 +151,31 @@ class FootstepsPanel(object):
         rep.SetRotateAxisEnabled(1, False)
         frameObj.widget.HandleRotationEnabledOff()
 
+        if self.placer:
+            self.placer.stop()
+
+        terrain = om.findObjectByName('HEIGHT_MAP_SCENE')
+        if terrain:
+
+            pos = np.array(frameObj.transform.GetPosition())
+
+            polyData = filterUtils.removeNanPoints(terrain.polyData)
+            if polyData.GetNumberOfPoints():
+                polyData = segmentation.labelDistanceToLine(polyData, pos, pos+[0,0,1])
+                polyData = segmentation.thresholdPoints(polyData, 'distance_to_line', [0.0, 0.1])
+                if polyData.GetNumberOfPoints():
+                    pos[2] = np.nanmax(vnp.getNumpyFromVtk(polyData, 'Points')[:,2])
+                    frameObj.transform.Translate(pos - np.array(frameObj.transform.GetPosition()))
+
+            d = DebugData()
+            d.addSphere((0,0,0), radius=0.03)
+            handle = vis.showPolyData(d.getPolyData(), 'walking goal terrain handle', parent=frameObj, visible=True, color=[1,1,0])
+            handle.actor.SetUserTransform(frameObj.transform)
+            self.placer = PlacerWidget(app.getCurrentRenderView(), handle, terrain)
+            self.placer.start()
+
+
+        frameObj.connectFrameModified(self.onWalkingGoalModified)
         self.onWalkingGoalModified(frameObj)
 
     def onWalkingGoalModified(self, frame):

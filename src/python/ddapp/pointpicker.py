@@ -365,4 +365,4 @@ class PlacerWidget(object):
         return vis.pickPoint(displayPoint, self.view, obj=self.handle, pickType='cells', tolerance=0.01)
 
     def getPointPick(self, displayPoint):
-        return vis.pickPoint(displayPoint, self.view, obj=self.points, pickType='points', tolerance=0.01)
+        return vis.pickPoint(displayPoint, self.view, obj=self.points, pickType='cells', tolerance=0.01)
