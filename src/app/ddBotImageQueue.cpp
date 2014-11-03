@@ -532,7 +532,7 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXY
 };
 
 //-----------------------------------------------------------------------------
-void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation)
+void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize)
 {
   if (!this->mImagesMessageMap.contains(channel))
   {
@@ -560,6 +560,7 @@ void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyDat
 
   static multisense_utils m;
   m.set_decimate(decimation);
+  m.set_remove_size( removeSize );
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
   m.unpack_multisense(&msg, Q_, cloud);

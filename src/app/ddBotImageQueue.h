@@ -101,7 +101,9 @@ public:
   // Computes a point cloud with rgb and copies it into the given polyData.
   // The channel argument names an lcm channel where an images message are received
   // that contains disparity and color images.
-  void getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation);
+  // decimation: power of 2 to reduce the data by (1,2,4,8...)
+  // removeSize: remove disconnected components smaller than this size (in pixels), set=0 to skip
+  void getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize);
 
   // Project the points of the given polydata into image space.  The points must
   // already be in the camera coordinate system.  The points will be written to

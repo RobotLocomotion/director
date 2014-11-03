@@ -538,7 +538,7 @@ def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     return view
 
 
-def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT'):
+def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT', removeSize=0):
 
     q = imageManager.queue
 
@@ -549,7 +549,7 @@ def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA
     p = vtk.vtkPolyData()
     cameraToLocal = vtk.vtkTransform()
 
-    q.getPointCloudFromImages(imagesChannel, p, decimation)
+    q.getPointCloudFromImages(imagesChannel, p, decimation, removeSize)
     q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
     p = filterUtils.transformPolyData(p, cameraToLocal)
 
@@ -568,7 +568,7 @@ class KintinuousMapping(object):
         self.cameraToLocalTransforms = []
         self.pointClouds = []
 
-    def getStereoPointCloudElapsed(self,decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT'):
+    def getStereoPointCloudElapsed(self,decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT', removeSize=0):
         q = imageManager.queue
 
         utime = q.getCurrentImageTime(cameraName)
@@ -595,7 +595,7 @@ class KintinuousMapping(object):
         if (distTravelled  < 0.2 ):
             return None, None, None
 
-        q.getPointCloudFromImages(imagesChannel, p, decimation)
+        q.getPointCloudFromImages(imagesChannel, p, decimation, removeSize)
 
         self.lastCameraToLocal = cameraToLocal
         self.lastUtime = utime
