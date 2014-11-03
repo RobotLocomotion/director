@@ -106,8 +106,11 @@ def getWalkingVolumesFolder():
     return obj
 
 def getTerrainSlicesFolder():
-    obj = om.getOrCreateContainer('terrain slices', parentObj=getFootstepsFolder())
-    om.collapse(obj)
+    obj = om.findObjectByName('terrain slices')
+    if obj is None:
+        obj = om.getOrCreateContainer('terrain slices', parentObj=getFootstepsFolder())
+        obj.setProperty('Visible', False)
+        om.collapse(obj)
     return obj
 
 def getBDIAdjustedFootstepsFolder():
@@ -386,13 +389,13 @@ class FootstepsDriver(object):
             T_terrain_to_world = transformUtils.frameFromPositionAndRPY([trans_prev[0], trans_prev[1], 0], [0, 0, math.degrees(yaw)])
             path_dist = np.array(footstep.terrain_path_dist)
             height = np.array(footstep.terrain_height)
-            if np.any(height >= trans[2]):
-                terrain_pts_in_local = np.vstack((path_dist, np.zeros(len(footstep.terrain_path_dist)), height))
-                d = DebugData()
-                for j in range(terrain_pts_in_local.shape[1]-1):
-                    d.addLine(terrain_pts_in_local[:,j], terrain_pts_in_local[:,j+1], radius=0.01)
-                obj = vis.showPolyData(d.getPolyData(), 'terrain slice', parent=slicesFolder, visible=True, color=[.8,.8,.3])
-                obj.actor.SetUserTransform(T_terrain_to_world)
+            # if np.any(height >= trans[2]):
+            terrain_pts_in_local = np.vstack((path_dist, np.zeros(len(footstep.terrain_path_dist)), height))
+            d = DebugData()
+            for j in range(terrain_pts_in_local.shape[1]-1):
+                d.addLine(terrain_pts_in_local[:,j], terrain_pts_in_local[:,j+1], radius=0.01)
+            obj = vis.showPolyData(d.getPolyData(), 'terrain slice', parent=slicesFolder, visible=slicesFolder.getProperty('Visible'), color=[.8,.8,.3])
+            obj.actor.SetUserTransform(T_terrain_to_world)
 
             renderInfeasibility = False
             if renderInfeasibility and footstep.infeasibility > 1e-6:
