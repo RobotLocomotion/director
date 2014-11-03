@@ -503,7 +503,7 @@ def getCurrentRevolutionData():
 
 def getDisparityPointCloud(decimation=4, removeOutliers=True, removeSize=0):
 
-    p = cameraview.getStereoPointCloud(decimation, imagesChannel='CAMERA', cameraName='CAMERA_LEFT', removeSize=remove_size)
+    p = cameraview.getStereoPointCloud(decimation, imagesChannel='CAMERA', cameraName='CAMERA_LEFT', removeSize=removeSize)
     if not p:
       return None
 
