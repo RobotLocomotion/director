@@ -684,7 +684,7 @@ class IKPlanner(object):
 
 
 
-    def planEndEffectorDelta(self, startPose, side, worldDeltaVector, constraints=None):
+    def planEndEffectorDelta(self, startPose, side, DeltaVector, constraints=None, LocalOrWorldDelta='World'):
 
         self.reachingSide = side
 
@@ -702,11 +702,18 @@ class IKPlanner(object):
         self.jointController.setPose('start_pose', startPose)
         linkFrame = self.robotModel.getLinkFrame(self.getHandLink())
 
-        targetFrame = vtk.vtkTransform()
-        targetFrame.PostMultiply()
-        targetFrame.Concatenate(graspToHandLinkFrame)
-        targetFrame.Concatenate(linkFrame)
-        targetFrame.Translate(worldDeltaVector)
+        if LocalOrWorldDelta == 'World':
+            targetFrame = vtk.vtkTransform()
+            targetFrame.PostMultiply()
+            targetFrame.Concatenate(graspToHandLinkFrame)
+            targetFrame.Concatenate(linkFrame)
+            targetFrame.Translate(DeltaVector)
+        else:
+            targetFrame = vtk.vtkTransform()
+            targetFrame.PostMultiply()
+            targetFrame.Translate(DeltaVector)
+            targetFrame.Concatenate(graspToHandLinkFrame)
+            targetFrame.Concatenate(linkFrame)
 
         constraints.extend(self.createMoveOnLineConstraints(startPose, targetFrame, graspToHandLinkFrame))
 

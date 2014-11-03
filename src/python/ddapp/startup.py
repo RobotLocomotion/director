@@ -19,7 +19,6 @@ from ddapp import callbacks
 from ddapp import cameracontrol
 from ddapp import debrisdemo
 from ddapp import drilldemo
-from ddapp import pfgraspdemo
 from ddapp import tabledemo
 from ddapp import valvedemo
 from ddapp import continuouswalkingdemo
@@ -50,6 +49,8 @@ from ddapp import multisensepanel
 from ddapp import navigationpanel
 from ddapp import handcontrolpanel
 from ddapp import sensordatarequestpanel
+from ddapp import pfgrasp
+from ddapp import pfgrasppanel
 
 from ddapp import robotplanlistener
 from ddapp import handdriver
@@ -126,6 +127,7 @@ useControllerRate = True
 useSkybox = False
 useDataFiles = True
 useContinuousWalking = False
+usePFGrasp = True
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -358,11 +360,6 @@ if usePlanning:
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
     
-    pfgraspDemo = pfgraspdemo.PFGraspDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
-                    lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                    fitDrillMultisense, robotStateJointController,
-                    playPlans, showPose, cameraview, segmentationpanel)
-    #pfgraspDemo.start()                
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                       segmentation.segmentValveWallAuto, robotStateJointController,
@@ -514,14 +511,15 @@ if useImageViewDemo:
         imageView.view.move(0,0)
         imageView.view.show()
         imagePicker.start()
-
+    
     def hideImageOverlay():
         imageView.view.hide()
         imageView.view.setParent(_prevParent)
         imageView.view.show()
         imagePicker.stop()
 
-    #showImageOverlay(viewName='CAMERALHAND')
+    showImageOverlay()
+    hideImageOverlay()
 
 
 screengrabberpanel.init(view)
@@ -676,7 +674,6 @@ if useDrillDemo:
         v.render()
 
 
-    showImageOverlay()
     drillDemo.pointerTracker = createPointerTracker()
     drillDemo.projectCallback = projectDrillDemoInCamera
     drillYawPreTransform = vtk.vtkTransform()
@@ -711,5 +708,12 @@ if useDrillDemo:
     app.addToolbarMacro('pointer press', sendPointerPress)
     app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
 
-
-showImageOverlay(viewName='CAMERALHAND')
+if usePFGrasp:
+    pfgrasper = pfgrasp.PFGrasp(om, robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                fitDrillMultisense, robotStateJointController,
+                playPlans, showPose, cameraview, segmentationpanel)
+    
+    global _prevParent, imageView, imagePicker, cameraview  # for image overlay
+    pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)
+    

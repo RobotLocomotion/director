@@ -13,5 +13,6 @@
     <file>ddTeleopPanel.ui</file>
     <file>ddVideoPlayer.ui</file>
     <file>ddSensorDataRequest.ui</file>
+    <file>ddPFGrasp.ui</file>
   </qresource>
 </RCC>
