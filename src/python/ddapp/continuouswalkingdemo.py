@@ -511,14 +511,13 @@ class ContinousWalkingDemo(object):
     def makeReplanRequest(self, standingFootName, removeFirstLeftStep = True):
 
         if (self.processContinuousStereo):
-            polyData = self.cameraView.getStereoPointCloud(2,'CAMERA_FUSED')
-            #polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+            polyData = self.cameraView.getStereoPointCloud(2,'CAMERA_FUSED', cameraName='CAMERA_TSDF', removeSize=4000)
             doStereoFiltering = True
+            print "makeReplanRequest processContinuousStereo"
         elif (self.processRawStereo):
             polyData = self.cameraView.getStereoPointCloud(2,'CAMERA')
             doStereoFiltering = True
             print "makeReplanRequest processRawStereo"
-            #polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
         else:
             polyData = segmentation.getCurrentRevolutionData()
             doStereoFiltering = False
