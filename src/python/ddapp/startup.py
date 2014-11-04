@@ -705,3 +705,14 @@ if useDrillDemo:
     app.addToolbarMacro('pointer prep', sendPointerPrep)
     app.addToolbarMacro('pointer press', sendPointerPress)
     app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
+
+
+def cameraFused():
+    pd = cameraview.getStereoPointCloud(1,"CAMERA_FUSED", cameraName='CAMERA_TSDF')
+    if (pd is None):
+        return
+    vis.updatePolyData(pd,'fused')
+
+timerCloud = TimerCallback(targetFps=5)
+timerCloud.callback = cameraFused
+timerCloud.start()
