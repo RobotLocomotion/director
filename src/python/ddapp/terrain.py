@@ -123,6 +123,18 @@ class PolygonSegmentation(IRISInterface):
         self.bounding_box_width = bounding_box_width
         self.bot_pts = bot_pts
 
+    def getBoundingPolytope(self, start):
+        """
+        Return A, b describing a bounding box on [x, y, yaw] into which the IRIS region must be contained.
+        The format is A [x;y;yaw] <= b
+        """
+        start = np.array(start).reshape((3,))
+        lb = np.hstack((start[:2] - self.bounding_box_width / 2, start[2] - np.pi/8))
+        ub = np.hstack((start[:2] + self.bounding_box_width / 2, start[2] + np.pi/8))
+        A_bounds = np.vstack((-np.eye(3), np.eye(3)))
+        b_bounds = np.hstack((-lb, ub))
+        return A_bounds, b_bounds
+
 
 class TerrainSegmentation(IRISInterface):
     def __init__(self, bot_pts=DEFAULT_FOOT_CONTACTS,
