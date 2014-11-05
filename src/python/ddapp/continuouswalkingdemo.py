@@ -49,7 +49,7 @@ class BlockTop():
         width = self.rectWidth
         depth = self.rectDepth
 
-        width = max(width, 0.60)
+        width = max(width, 0.50)
         #depth = max(depth, 0.40)
 
         xaxis, yaxis, zaxis = transformUtils.getAxesFromTransform(self.cornerTransform)
