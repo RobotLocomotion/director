@@ -77,8 +77,8 @@ class ContinousWalkingDemo(object):
         ###########################################
         # For development/limited use: (comment all out for typical behavior)
         #self.queryPlanner = False
-        self.fixBlockYawWithInitial = True
-        self.processContinuousStereo = True
+        #self.fixBlockYawWithInitial = True
+        #self.processContinuousStereo = True
 
 
     def _setupSubscriptions(self):
@@ -284,11 +284,16 @@ class ContinousWalkingDemo(object):
         for i, block in enumerate(blocks):
             # move back less for stereo:
             # lidar: -0.27 and -0.23
-            nextLeftTransform = transformUtils.frameFromPositionAndRPY([-0.24,0.29,0.08], [0,0,0])
+            if self.processContinuousStereo or self.processRawStereo:
+                nextLeftTransform = transformUtils.frameFromPositionAndRPY([-0.24,0.29,0.08], [0,0,0])
+                nextRightTransform = transformUtils.frameFromPositionAndRPY([-0.20,0.1,0.08], [0,0,0])
+            else:
+                nextLeftTransform = transformUtils.frameFromPositionAndRPY([-0.27,0.29,0.08], [0,0,0])
+                nextRightTransform = transformUtils.frameFromPositionAndRPY([-0.23,0.1,0.08], [0,0,0])
+
             nextLeftTransform.Concatenate(block.cornerTransform)
             footsteps.append(Footstep(nextLeftTransform,False))
 
-            nextRightTransform = transformUtils.frameFromPositionAndRPY([-0.20,0.1,0.08], [0,0,0])
             nextRightTransform.Concatenate(block.cornerTransform)
             footsteps.append(Footstep(nextRightTransform,True))
 
@@ -507,6 +512,7 @@ class ContinousWalkingDemo(object):
         #bdi_step_mesh = om.findObjectByName('bdi step')
         #om.removeFromObjectModel(bdi_step_mesh)
         obj = vis.updatePolyData(mesh, 'bdi step', color=color, alpha=1.0, parent='foot placements', visible=False)
+        obj.setProperty("Color",QtGui.QColor(color[0]*255.0,color[1]*255.0,color[2]*255.0))
         obj.actor.SetUserTransform(footTransform)
 
 
