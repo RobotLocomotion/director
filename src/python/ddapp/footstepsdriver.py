@@ -28,9 +28,9 @@ from PythonQt import QtGui, QtCore
 
 
 DEFAULT_PARAM_SET = 'BDI'
-DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 4,
-                               'Nominal Step Width': 0.26,
-                               'Nominal Forward Step': 0.4,
+DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 8,
+                               'Nominal Step Width': 0.21,
+                               'Nominal Forward Step': 0.18,
                                'Max Forward Step': 0.5,
                                'Max Step Width': 0.4,
                                'Behavior': 0,
