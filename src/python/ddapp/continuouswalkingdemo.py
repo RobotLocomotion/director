@@ -135,7 +135,7 @@ class ContinousWalkingDemo(object):
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewZ, origin=viewOrigin, resultArrayName='distance_along_foot_z')
 
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.20, 1.3])
+        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.12, 1.3])
         polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.4, 0.4])
         polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.4])
 
@@ -261,7 +261,7 @@ class ContinousWalkingDemo(object):
         blocksGood = []
         groundPlane = None
         for i, block in enumerate(blocks):
-            if ((block.rectWidth>0.45) or (block.rectDepth>0.45)):
+            if ((block.rectWidth>0.45) or (block.rectDepth>0.90)):
                 #print " ground plane",i,block.rectWidth,block.rectDepth
                 groundPlane = block
             elif ((block.rectWidth<0.30) or (block.rectDepth<0.20)): # was 0.34 and 0.30 for 13 block successful walk with lidar
@@ -412,7 +412,7 @@ class ContinousWalkingDemo(object):
         request.params.max_forward_step = 0.5
         request.params.nom_forward_step = 0.18
         request.params.nom_step_width = 0.20
-        request.params.max_num_steps = 2*len(blocks)
+        request.params.max_num_steps = 8 #2*len(blocks)
 
         plan = self.footstepsPanel.driver.sendFootstepPlanRequest(request, waitForResponse=True)
 
@@ -472,7 +472,7 @@ class ContinousWalkingDemo(object):
         # TODO: remove the pitch and roll of this frame to support it being on uneven ground
 
         # Step 1: filter the data down to a box in front of the robot:
-        polyData = self.getRecedingTerrainRegion(polyData, standingFootFrame)
+        polyData = self.getRecedingTerrainRegion(polyData, footstepsdriver.FootstepsDriver.getFeetMidPoint(self.robotStateModel))
         if (doStereoFiltering is True):
             # used for stereo data:
             polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
