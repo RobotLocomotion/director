@@ -20,6 +20,7 @@ import drc as lcmdrc
 from thirdparty import qhull_2d
 from thirdparty import min_bounding_rect
 
+from PythonQt import QtCore,QtGui
 
 
 def get2DAsPolyData(xy_points):
@@ -631,7 +632,7 @@ class ContinousWalkingDemo(object):
         #bdi_step_mesh = om.findObjectByName('bdi step')
         #om.removeFromObjectModel(bdi_step_mesh)
         obj = vis.updatePolyData(mesh, 'bdi step', color=color, alpha=1.0, parent='foot placements', visible=False)
-        obj.setProperty("Color",QtGui.QColor(color[0]*255.0,color[1]*255.0,color[2]*255.0))
+        obj.setProperty('Color',QtGui.QColor(color[0]*255.0,color[1]*255.0,color[2]*255.0))
         obj.actor.SetUserTransform(footTransform)
 
 
