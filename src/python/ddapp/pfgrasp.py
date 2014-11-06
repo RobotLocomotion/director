@@ -175,7 +175,9 @@ class PFGrasp(object):
         constraintSet = self.ikPlanner.planEndEffectorDelta(startPose, self.graspingHand, 
                         delta.GetPosition(), constraints=None, LocalOrWorldDelta=LocalOrWorld)
         
-        endPose, info = constraintSet.runIk()        
+        endPose, info = constraintSet.runIk()    
+        if info>10:
+            return None    
         graspPlan = constraintSet.runIkTraj()
         return graspPlan
         
@@ -243,9 +245,17 @@ class PFGrasp(object):
         self.contactDetector = None
         
     def guardedMoveForwardAndGraspHoldRetreat(self):
-        self.log('in guardedMoveForwardAndGraspHoldRetreat')
-        plan = self.planDeltaMove('Y', 'Local', 0.25)
+        self.log('in guardedMoveForward')
+        for forwardDist in np.linspace(0.5, 0.1, num=5):
+            plan = self.planDeltaMove('Y', 'Local', forwardDist)
+            if plan is not None:
+                self.log('in guardedMoveForward: forward %f' % forwardDist)
+                break
         
+        if plan is None:
+            self.log('in guardedMoveForward: Bad move')
+            return
+            
         self.contactDetector = FTContactSensor(self.onContactCallback)
         if self.autoMode:
             self.manipPlanner.commitManipPlan(plan)
