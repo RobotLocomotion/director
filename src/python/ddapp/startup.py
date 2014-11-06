@@ -709,7 +709,7 @@ if useDrillDemo:
     app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
 
 if usePFGrasp:
-    pfgrasper = pfgrasp.PFGrasp(om, robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+    pfgrasper = pfgrasp.PFGrasp(drillDemo, robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                 lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                 fitDrillMultisense, robotStateJointController,
                 playPlans, showPose, cameraview, segmentationpanel)
