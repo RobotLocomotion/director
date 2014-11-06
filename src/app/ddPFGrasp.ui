@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>318</width>
+    <width>239</width>
     <height>651</height>
    </rect>
   </property>
@@ -49,9 +49,37 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="spawnDrillButton">
+     <property name="text">
+      <string>Spawn Drill</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="projectDrillButton">
+     <property name="text">
+      <string>Project Drill</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="reachDrillButton">
+     <property name="text">
+      <string>Plan Reach Drill</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="Line" name="line_6">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QLabel" name="statusLabel_3">
      <property name="text">
-      <string>Do Autonomous Grasping with Hand Camera:</string>
+      <string>Autonomous Grasping:</string>
      </property>
     </widget>
    </item>
@@ -59,12 +87,12 @@
     <widget class="QComboBox" name="selectHandBox">
      <item>
       <property name="text">
-       <string>Left</string>
+       <string>left</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Right</string>
+       <string>right</string>
       </property>
      </item>
     </widget>

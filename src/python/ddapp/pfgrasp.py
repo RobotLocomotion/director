@@ -6,16 +6,21 @@ import subprocess
 from threading import Thread
 import time
 from vtk import vtkTransform
-from PythonQt import QtCore, QtGui
+from ddapp import objectmodel as om
+from ddapp import segmentation
+import vtk
+from ddapp import affordanceitems
 
 import bot_frames
-from ddapp import botpy
+
+from PythonQt import QtCore, QtGui
+from ddapp import botpy, filterUtils
 from ddapp import lcmUtils
 from ddapp import planplayback
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp.simpletimer import SimpleTimer
-
+from ddapp.drilldemo import Drill
 import drc as lcmdrc
 import numpy as np
 
@@ -76,18 +81,16 @@ class FTContactSensor(object):
         
 
 class PFGrasp(object):
-    side = 'L'
-    planFrame = ''
-    cameraChannel = ''
     graspingHand = 'left'
     TLDResultMsg = None
     ui = None
     contactDetector = None
+    drill = None
 
-    def __init__(self, om, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner,
+    def __init__(self, drillDemo, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner,
                  lhandDriver, rhandDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController,
                  planPlaybackFunction, showPoseFunction, cameraView, segmentationpanel):
-        self.om = om
+        self.drillDemo = drillDemo
         self.robotModel = robotModel
         self.playbackRobotModel = playbackRobotModel # not used inside the demo
         self.teleopRobotModel = teleopRobotModel # not used inside the demo
@@ -112,12 +115,12 @@ class PFGrasp(object):
         self.defaultGraspingHand = "left"
         #self.setGraspingHand(defaultGraspingHand)
         
-        self.planFrame = 'CAMERALHAND'
-        self.cameraChannel = 'CAMERALHAND'
         self.TLDResultMsg = lcmdrc.image_roi_t()
         self.tldsub = lcmUtils.addSubscriber('TLD_OBJECT_ROI_RESULT', lcmdrc.image_roi_t, self.TLDReceived)
         self.targetsub = lcmUtils.addSubscriber('REACH_TARGET_POSE', bot_frames.update_t, self.TargetReceived)
         self.autoMode = False
+        
+        self.drill = Drill()
 
     def log(self, str):
         if self.ui is not None:
@@ -265,7 +268,9 @@ class PFGrasp(object):
         self.TLDResultMsg = deepcopy(data)
         
     def TargetReceived(self, data):
-        self.log( 'Target received %s, %s' % (data.trans, data.quat) )
+        self.log( 'Target received (%.3f,%.3f,%.3f), (%.3f,%.3f,%.3f,%.3f)' % \
+                  (data.trans[0], data.trans[1], data.trans[2], \
+                   data.quat[0], data.quat[1], data.quat[2], data.quat[3]) )
         if math.isnan(data.trans[0]):
             self.log('Getting NaN target, stop')
             return
@@ -284,11 +289,11 @@ class PFGrasp(object):
         targetToWorld_XYZ = targetToWorld.GetPosition()
         dist = sqrt( (handToWorld_XYZ[0]-targetToWorld_XYZ[0])**2 + (handToWorld_XYZ[1]-targetToWorld_XYZ[1])**2 + (handToWorld_XYZ[2]-targetToWorld_XYZ[2])**2 )
         
-        self.log( "dist %f" % dist )
+        self.log( "dist %.3f" % dist )
         threshold = float(self.ui.criterionEdit.text)
         if(dist < threshold):
             #easygui.msgbox("The correction movement is less than 0.015, you can go grasp it", title="Done")
-            self.log("The correction movement is %f less than %.3f, you can go grasp it" % (dist, threshold))
+            self.log("The correction movement is %.3f less than %.3f, you can go grasp it" % (dist, threshold))
             
             if self.autoMode: self.guardedMoveForwardAndGraspHoldRetreat()
         else:
@@ -309,5 +314,38 @@ class PFGrasp(object):
                 self.waitForPlanExecution(graspPlan) 
                 self.runoneiter()
 
-            
+    def drawObjectInCamera(self,objectName,visible=True):
+        
+        imageView = self.cameraView.views['CAMERALHAND']
+        v = imageView.view
+        q = self.cameraView.imageManager.queue
+        localToCameraT = vtk.vtkTransform()
+        q.getTransform('local', 'CAMERALHAND', localToCameraT)
+
+        obj = om.findObjectByName(objectName)
+        if obj is None:
+            return
+        objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform() or vtk.vtkTransform())
+        objPolyDataOriginal = obj.polyData
+        pd = objPolyDataOriginal
+        pd = filterUtils.transformPolyData(pd, objToLocalT)
+        pd = filterUtils.transformPolyData(pd, localToCameraT)
+        q.projectPoints('CAMERALHAND', pd)
+        vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)
+
          
+    def drawDrill(self):
+        q = om.findObjectByName('camera overlay')
+        om.removeFromObjectModel(q)
+
+        imageView = self.cameraView.views['CAMERALHAND']
+        imageView.imageActor.SetOpacity(.2)
+
+        self.drawObjectInCamera('drill',visible=True)
+
+        #drawObjectInCamera('left robotiq',visible=False)
+        #drawObjectInCamera('right pointer',visible=False)
+
+        v = imageView.view
+        v.render()
+    

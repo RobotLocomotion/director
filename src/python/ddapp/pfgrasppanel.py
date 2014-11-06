@@ -53,7 +53,11 @@ class PFGraspPanel(object):
         self.ui.runOneIterButton.clicked.connect(self.runOneIterButtonClicked)   
         self.ui.stopButton.clicked.connect(self.stopButtonClicked)  
         self.ui.startGraspButton.clicked.connect(self.startGraspButtonClicked)  
-
+        self.ui.spawnDrillButton.clicked.connect(self.spawnDrillButtonClicked)  
+        self.ui.projectDrillButton.clicked.connect(self.projectDrillButtonClicked)  
+        self.ui.reachDrillButton.clicked.connect(self.reachDrillButtonClicked)  
+        
+        
     def showLHandCameraButtonClicked(self, event):
         if self.ui.showLHandCameraButton.checked:
             self.ui.selectHandBox.setCurrentIndex(0)
@@ -69,9 +73,11 @@ class PFGraspPanel(object):
             self.hideImageOverlay()
            
     def startStepButtonClicked(self, event):
+        self.pfgrasper.graspingHand = str(self.ui.selectHandBox.currentText)
         self.pfgrasper.start(autoMode=False)
         
     def startAutoButtonClicked(self, event):
+        self.pfgrasper.graspingHand = str(self.ui.selectHandBox.currentText)
         self.pfgrasper.start(autoMode=True)
         
     def runOneIterButtonClicked(self, event):
@@ -85,6 +91,18 @@ class PFGraspPanel(object):
     def startGraspButtonClicked(self, event):
         self.pfgrasper.autoMode = False
         self.pfgrasper.guardedMoveForwardAndGraspHoldRetreat()
+        
+        
+    def spawnDrillButtonClicked(self, event):
+        self.pfgrasper.drillDemo.spawnDrillAffordance()
+        self.pfgrasper.drillDemo.moveDrillToHand()
+        
+    def projectDrillButtonClicked(self, event):
+        self.pfgrasper.drawDrill()
+        
+        
+    def reachDrillButtonClicked(self, event):
+        self.pfgrasper.drillDemo.planReach()
     
     ## adapted from startup
     def showImageOverlay(self, size=400, viewName='CAMERA_LEFT'):
