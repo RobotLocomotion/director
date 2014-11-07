@@ -3,13 +3,11 @@ from math import sqrt
 import math
 import os
 import subprocess
-from threading import Thread
 import time
+import vtk
 from vtk import vtkTransform
 from ddapp import objectmodel as om
-from ddapp import segmentation
-import vtk
-from ddapp import affordanceitems
+from ddapp import ikplanner
 
 import bot_frames
 
@@ -44,7 +42,7 @@ class FTContactSensor(object):
     count = 0
     ncount = 10
     resetting = True # mode
-    threshold = 0.1
+    threshold = 0.05
     
     onContactCallback = None
     
@@ -179,7 +177,7 @@ class PFGrasp(object):
         handfaceToWorld = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
         # constraint orientation
         p,q = self.ikPlanner.createPositionOrientationGraspConstraints('left',handfaceToWorld)
-        q.tspan=[0.1,np.inf]
+        q.tspan=[0.5,np.inf]
         
         constraintSet.constraints.append(q)
         ##
@@ -308,7 +306,7 @@ class PFGrasp(object):
     def guardedMoveForwardAndGraspHoldRetreat(self):
         self.log('in guardedMoveForward')
         max_dist = float(self.ui.disttomoveEdit.text)
-        for forwardDist in np.linspace(0.5, 0.1, num=5):
+        for forwardDist in np.linspace(max_dist, 0.01, num=5):
             plan = self.planDeltaMove('Y', 'Local', forwardDist)
             if plan is not None:
                 self.log('in guardedMoveForward: forward %f' % forwardDist)
@@ -372,21 +370,28 @@ class PFGrasp(object):
                 self.manipPlanner.commitManipPlan(graspPlan)
                 self.waitForPlanExecution(graspPlan) 
                 self.runoneiter()
-                
+
+    def turnPointwiseOffSlow(self):
+        ikplanner.getIkOptions().setProperty('Use pointwise', False)
+        ikplanner.getIkOptions().setProperty('Quasistatic shrink factor', 0.1)
+        ikplanner.getIkOptions().setProperty('Max joint degrees/s',15)
+    
     def planGraspLineMotion(self):
+        self.turnPointwiseOffSlow()
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, om.findObjectByName('grasp frame'), \
                                                             lockBase=False, lockBack=True)
         # constraint orientation
         p,q = self.ikPlanner.createPositionOrientationGraspConstraints('left',om.findObjectByName('grasp frame'))
-        q.tspan=[0.1,np.inf]
+        q.tspan=[0.5,np.inf]
         
         constraintSet.constraints.append(q)
-        ##
-        constraintSet.constraints.extend(self.ikPlanner.createMoveOnLineConstraints(startPose, om.findObjectByName('grasp frame').actor.GetUserTransform()))
-        constraintSet.constraints[-2].tspan = [1.0, 1.0]
-        constraintSet.constraints[-3].tspan = [1.0, 1.0]
         
+        # constraint line axis 
+        positionConstraint, orientationConstraint, axisConstraint = self.ikPlanner.createMoveOnLineConstraints(startPose, om.findObjectByName('grasp frame').actor.GetUserTransform())
+        
+        constraintSet.constraints.append(axisConstraint)
+        constraintSet.constraints[-1].tspan = [0.5,np.inf]
         endPose, info = constraintSet.runIk()
         
         if info > 10:
@@ -429,16 +434,28 @@ class PFGrasp(object):
         q.projectPoints('CAMERALHAND', pd)
         vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)         
 
-    def drawDrill(self):
+    def drawDrill(self, mustVisible = False):
+        # on creation
         visible = True
         visibleframe = False
-        # know previous preference to be visible or not
-        overlayobj = om.findObjectByName('overlay ' + 'drill')
-        if overlayobj is not None:
-            visible = overlayobj.getProperty('Visible')
-        q = om.findObjectByName('camera overlay')
         
-        om.removeFromObjectModel(q)
+        if mustVisible:    
+            visible = True
+        else:
+            # know previous preference to be visible or not
+            overlayobj = om.findObjectByName('overlay ' + 'drill')
+            if overlayobj is not None:
+                visible = overlayobj.getProperty('Visible')
+            q = om.findObjectByName('camera overlay')
+        
+        # get preference on visibility
+        overlayobj = om.findObjectByName('overlay ' + 'grasp frame')
+        if overlayobj is not None:
+            visibleframe = overlayobj.getProperty('Visible')
+        ###
+        
+        q = om.findObjectByName('camera overlay')
+        if q is not None: om.removeFromObjectModel(q)
 
         imageView = self.cameraView.views['CAMERALHAND']
         imageView.imageActor.SetOpacity(.5)
@@ -450,12 +467,10 @@ class PFGrasp(object):
             return
         
         objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform())
-        # get preference on visibility
-        overlayobj = om.findObjectByName('overlay ' + 'grasp frame')
-        if overlayobj is not None:
-            visibleframe = overlayobj.getProperty('Visible')
-        ###
+
         self.drawFrameInCamera(objToLocalT, 'grasp frame',visible=visibleframe)
+
+        q = om.findObjectByName('camera overlay')
 
         v = imageView.view
         v.render()
