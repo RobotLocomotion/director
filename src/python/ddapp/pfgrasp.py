@@ -368,7 +368,27 @@ class PFGrasp(object):
                 self.manipPlanner.commitManipPlan(graspPlan)
                 self.waitForPlanExecution(graspPlan) 
                 self.runoneiter()
-
+                
+    def planGraspLineMotion(self):
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, om.findObjectByName('grasp frame'), \
+                                                            lockBase=False, lockBack=True)
+        # constraint orientation
+        p,q = self.ikPlanner.createPositionOrientationGraspConstraints('left',om.findObjectByName('grasp frame'))
+        q.tspan=[0.1,np.inf]
+        
+        constraintSet.constraints.append(q)
+        ##
+        constraintSet.constraints.extend(self.ikPlanner.createMoveOnLineConstraints(startPose, om.findObjectByName('grasp frame').actor.GetUserTransform()))
+        constraintSet.constraints[-2].tspan = [1.0, 1.0]
+        constraintSet.constraints[-3].tspan = [1.0, 1.0]
+        
+        endPose, info = constraintSet.runIk()
+        
+        if info > 10:
+            self.log("in Target received: Bad movement")
+            return
+        graspPlan = constraintSet.runIkTraj()
     def drawFrameInCamera(self, t, frameName='new frame',visible=True):
 
         imageView = self.cameraView.views['CAMERALHAND']
