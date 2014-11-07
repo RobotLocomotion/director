@@ -98,7 +98,7 @@ class PFGraspPanel(object):
         self.pfgrasper.spawnDrillAffordance()
         
     def projectDrillButtonClicked(self, event):
-        self.pfgrasper.drawDrill()
+        self.pfgrasper.drawDrill(mustVisible = True)
         
     def apply3DFitButtonClicked(self):
         self.pfgrasper.apply3DFit()
