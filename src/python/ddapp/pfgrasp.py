@@ -85,7 +85,6 @@ class PFGrasp(object):
     TLDResultMsg = None
     ui = None
     contactDetector = None
-    drill = None
 
     def __init__(self, drillDemo, robotModel, playbackRobotModel, teleopRobotModel, footstepPlanner, manipPlanner, ikPlanner,
                  lhandDriver, rhandDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController,
@@ -165,7 +164,7 @@ class PFGrasp(object):
         linkMap = { 'left' : 'l_hand_face', 'right': 'r_hand_face'}
         linkName = linkMap[self.graspingHand]
 
-        handToWorld = self.robotModel.getLinkFrame(linkName)
+        #handToWorld = self.robotModel.getLinkFrame(linkName)
 
         if Direction == 'X':
             delta = transformUtils.frameFromPositionAndRPY([Amount,0,0],[0,0,0])
@@ -177,7 +176,13 @@ class PFGrasp(object):
         startPose = self.getPlanningStartPose() 
         constraintSet = self.ikPlanner.planEndEffectorDelta(startPose, self.graspingHand, 
                         delta.GetPosition(), constraints=None, LocalOrWorldDelta=LocalOrWorld)
+        handfaceToWorld = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
+        # constraint orientation
+        p,q = self.ikPlanner.createPositionOrientationGraspConstraints('left',handfaceToWorld)
+        q.tspan=[0.1,np.inf]
         
+        constraintSet.constraints.append(q)
+        ##
         endPose, info = constraintSet.runIk()    
         if info>10:
             return None    
@@ -230,8 +235,57 @@ class PFGrasp(object):
             self.delay(1.5)
             self.rhandDriver.sendClose(100)
     
+    def spawnDrillAffordance(self):
+        if om.findObjectByName('drill') is None: 
+            self.drillDemo.spawnDrillAffordance()
+        
+        self.moveDrill()
+        
+    def apply3DFit(self):
+        if om.findObjectByName('drill') is None: 
+            self.log('No 3D fit of drill. Click Spawn Drill button to provide a fit.')
+        
+        msg = lcmdrc.pfgrasp_command_t()
+        msg.command = lcmdrc.pfgrasp_command_t.RUN_ONE_ITER_W_3D_PRIOR
+        affordanceReach = om.findObjectByName('grasp frame')
+        affordanceReach.actor.GetUserTransform().GetPosition(msg.pos)
+        lcmUtils.publish('PFGRASP_CMD', msg)
+    
+    def moveDrill(self,Pos=[0.1,0,0],RPY=[0,0,0],Style='Local'):
+        linkMap = { 'left' : 'l_hand_face', 'right': 'r_hand_face'}
+        linkName = linkMap[self.graspingHand]
+        
+        affordance = om.findObjectByName('drill')
+        affordanceReach = om.findObjectByName('reach frame')
+        frame = om.findObjectByName('drill frame')
+
+        
+        drillTransform = affordance.actor.GetUserTransform()
+        reach = transformUtils.copyFrame(affordanceReach.actor.GetUserTransform())
+        drillTransformCopy = transformUtils.copyFrame(affordance.actor.GetUserTransform())
+        drillToReach = vtkTransform()
+        drillToReach.Identity()
+        drillToReach.PostMultiply()
+        drillToReach.Concatenate(drillTransformCopy)
+        drillToReach.Concatenate(reach.GetLinearInverse())
+        
+        handfaceToWorld = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
+        
+        # find a transform that move forward wrt hand palm
+        delta = transformUtils.frameFromPositionAndRPY(Pos, RPY)
+        drillTransform.Identity()
+        drillTransform.PostMultiply()
+        drillTransform.Concatenate(drillToReach)
+        #drillTransform.Concatenate(delta)
+        drillTransform.Concatenate(handfaceToWorld)
+        
+        #drillTransform.Concatenate(drillTransformCopy)
+        
     def stop(self):
         self.manipPlanner.sendPlanPause()
+        self.contactDetector.onContactCallback = None
+        self.contactDetector = None
+        
     
     def onContactCallback(self):
         self.log('in onContactCallback')
@@ -249,6 +303,7 @@ class PFGrasp(object):
         
     def guardedMoveForwardAndGraspHoldRetreat(self):
         self.log('in guardedMoveForward')
+        max_dist = float(self.ui.disttomoveEdit.text)
         for forwardDist in np.linspace(0.5, 0.1, num=5):
             plan = self.planDeltaMove('Y', 'Local', forwardDist)
             if plan is not None:
@@ -314,6 +369,22 @@ class PFGrasp(object):
                 self.waitForPlanExecution(graspPlan) 
                 self.runoneiter()
 
+    def drawFrameInCamera(self, t, frameName='new frame',visible=True):
+
+        imageView = self.cameraView.views['CAMERALHAND']
+        v = imageView.view
+        q = self.cameraView.imageManager.queue
+        localToCameraT = vtk.vtkTransform()
+        q.getTransform('local', 'CAMERALHAND', localToCameraT)
+
+        res = vis.showFrame( vtk.vtkTransform() , 'temp', view=v, visible=True, scale = 0.2)
+        om.removeFromObjectModel(res)
+        pd = res.polyData
+        pd = filterUtils.transformPolyData(pd, t)
+        pd = filterUtils.transformPolyData(pd, localToCameraT)
+        q.projectPoints('CAMERALHAND', pd )
+        vis.showPolyData(pd, ('overlay ' + frameName), view=v, colorByName='Axes',parent='camera overlay',visible=visible)
+
     def drawObjectInCamera(self,objectName,visible=True):
         
         imageView = self.cameraView.views['CAMERALHAND']
@@ -331,20 +402,23 @@ class PFGrasp(object):
         pd = filterUtils.transformPolyData(pd, objToLocalT)
         pd = filterUtils.transformPolyData(pd, localToCameraT)
         q.projectPoints('CAMERALHAND', pd)
-        vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)
+        vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)         
 
-         
     def drawDrill(self):
         q = om.findObjectByName('camera overlay')
         om.removeFromObjectModel(q)
 
         imageView = self.cameraView.views['CAMERALHAND']
-        imageView.imageActor.SetOpacity(.2)
-
+        imageView.imageActor.SetOpacity(.5)
+        
         self.drawObjectInCamera('drill',visible=True)
-
-        #drawObjectInCamera('left robotiq',visible=False)
-        #drawObjectInCamera('right pointer',visible=False)
+        
+        obj = om.findObjectByName('reach frame')
+        if obj is None:
+            return
+        
+        objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform())
+        self.drawFrameInCamera(objToLocalT, 'reach frame',visible=False)
 
         v = imageView.view
         v.render()
