@@ -782,3 +782,16 @@ def testPlan():
 
 
 #testPlan()
+
+def useShortFoot():
+    continuouswalkingDemo.footContactPoints = continuouswalkingDemo.SHORT_FOOT_CONTACT_POINTS
+
+def useLongFoot():
+    continuouswalkingDemo.footContactPoints = continuouswalkingDemo.LONG_FOOT_CONTACT_POINTS
+
+app.addToolbarMacro('start continuous walk', continuouswalkingDemo.startContinuousWalking)
+
+app.addToolbarMacro('short foot', useShortFoot)
+app.addToolbarMacro('long foot', useLongFoot)
+
+
