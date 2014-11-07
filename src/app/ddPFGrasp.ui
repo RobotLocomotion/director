@@ -124,7 +124,7 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>Stopping Criterion:</string>
+        <string>Stop Criterion:</string>
        </property>
       </widget>
      </item>

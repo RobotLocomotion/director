@@ -235,11 +235,15 @@ class PFGrasp(object):
             self.delay(1.5)
             self.rhandDriver.sendClose(100)
     
+    def onModifiedDrillFrame(self, frame):
+        self.drawDrill()
+    
     def spawnDrillAffordance(self):
         if om.findObjectByName('drill') is None: 
             self.drillDemo.spawnDrillAffordance()
         
         self.moveDrill()
+        om.findObjectByName('drill frame').connectFrameModified(self.onModifiedDrillFrame)
         
     def apply3DFit(self):
         if om.findObjectByName('drill') is None: 
@@ -416,6 +420,7 @@ class PFGrasp(object):
         obj = om.findObjectByName(objectName)
         if obj is None:
             return
+        
         objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform() or vtk.vtkTransform())
         objPolyDataOriginal = obj.polyData
         pd = objPolyDataOriginal
@@ -425,20 +430,32 @@ class PFGrasp(object):
         vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)         
 
     def drawDrill(self):
+        visible = True
+        visibleframe = False
+        # know previous preference to be visible or not
+        overlayobj = om.findObjectByName('overlay ' + 'drill')
+        if overlayobj is not None:
+            visible = overlayobj.getProperty('Visible')
         q = om.findObjectByName('camera overlay')
+        
         om.removeFromObjectModel(q)
 
         imageView = self.cameraView.views['CAMERALHAND']
         imageView.imageActor.SetOpacity(.5)
         
-        self.drawObjectInCamera('drill',visible=True)
+        self.drawObjectInCamera('drill',visible=visible)
         
-        obj = om.findObjectByName('reach frame')
+        obj = om.findObjectByName('grasp frame')
         if obj is None:
             return
         
         objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform())
-        self.drawFrameInCamera(objToLocalT, 'reach frame',visible=False)
+        # get preference on visibility
+        overlayobj = om.findObjectByName('overlay ' + 'grasp frame')
+        if overlayobj is not None:
+            visibleframe = overlayobj.getProperty('Visible')
+        ###
+        self.drawFrameInCamera(objToLocalT, 'grasp frame',visible=visibleframe)
 
         v = imageView.view
         v.render()
