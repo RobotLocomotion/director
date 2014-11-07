@@ -81,6 +81,13 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="graspDrillButton">
+     <property name="text">
+      <string>Plan Grasp Drill</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="Line" name="line_6">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -215,7 +222,6 @@
   <zorder>line_4</zorder>
   <zorder>spawnDrillButton</zorder>
   <zorder>projectDrillButton</zorder>
-  <zorder>reachDrillButton</zorder>
   <zorder>line_6</zorder>
   <zorder>startStepButton</zorder>
   <zorder>runOneIterButton</zorder>
@@ -226,12 +232,9 @@
   <zorder>statusLabel</zorder>
   <zorder>statusTextEdit</zorder>
   <zorder>apply3DFitButton</zorder>
-  <zorder>gridLayoutWidget</zorder>
-  <zorder>horizontalLayoutWidget</zorder>
-  <zorder>label</zorder>
-  <zorder>horizontalLayoutWidget_2</zorder>
   <zorder>statusLabel_4</zorder>
-  <zorder>horizontalLayoutWidget_3</zorder>
+  <zorder>reachDrillButton</zorder>
+  <zorder>graspDrillButton</zorder>
  </widget>
  <resources/>
  <connections/>

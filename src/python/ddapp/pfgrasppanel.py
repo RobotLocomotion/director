@@ -56,7 +56,7 @@ class PFGraspPanel(object):
         self.ui.spawnDrillButton.clicked.connect(self.spawnDrillButtonClicked)  
         self.ui.projectDrillButton.clicked.connect(self.projectDrillButtonClicked)  
         self.ui.reachDrillButton.clicked.connect(self.reachDrillButtonClicked)  
-        self.ui.reachDrillButton.clicked.connect(self.reachDrillButtonClicked)  
+        self.ui.graspDrillButton.clicked.connect(self.graspDrillButtonClicked)  
         self.ui.apply3DFitButton.clicked.connect(self.apply3DFitButtonClicked)  
         
     def showLHandCameraButtonClicked(self, event):
@@ -106,6 +106,9 @@ class PFGraspPanel(object):
     def reachDrillButtonClicked(self, event):
         self.pfgrasper.drillDemo.planReach()
     
+    def graspDrillButtonClicked(self, event):
+        self.pfgrasper.planGraspLineMotion()
+        
     ## adapted from startup
     def showImageOverlay(self, size=400, viewName='CAMERA_LEFT'):
         self.imageView = self.cameraview.views[viewName]
