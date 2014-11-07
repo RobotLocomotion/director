@@ -56,7 +56,8 @@ class PFGraspPanel(object):
         self.ui.spawnDrillButton.clicked.connect(self.spawnDrillButtonClicked)  
         self.ui.projectDrillButton.clicked.connect(self.projectDrillButtonClicked)  
         self.ui.reachDrillButton.clicked.connect(self.reachDrillButtonClicked)  
-        
+        self.ui.reachDrillButton.clicked.connect(self.reachDrillButtonClicked)  
+        self.ui.apply3DFitButton.clicked.connect(self.apply3DFitButtonClicked)  
         
     def showLHandCameraButtonClicked(self, event):
         if self.ui.showLHandCameraButton.checked:
@@ -94,12 +95,13 @@ class PFGraspPanel(object):
         
         
     def spawnDrillButtonClicked(self, event):
-        self.pfgrasper.drillDemo.spawnDrillAffordance()
-        self.pfgrasper.drillDemo.moveDrillToHand()
+        self.pfgrasper.spawnDrillAffordance()
         
     def projectDrillButtonClicked(self, event):
         self.pfgrasper.drawDrill()
         
+    def apply3DFitButtonClicked(self):
+        self.pfgrasper.apply3DFit()
         
     def reachDrillButtonClicked(self, event):
         self.pfgrasper.drillDemo.planReach()
