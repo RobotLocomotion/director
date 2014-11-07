@@ -15,7 +15,7 @@ import polyhedron._cdd
 from polyhedron import Vrep, Hrep
 from py_drake_utils.utils import rpy2rotmat
 
-DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.17, 0.17],
+DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.155, 0.155],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 DEFAULT_BOUNDING_BOX_WIDTH = 1
 DEFAULT_CONTACT_SLICES = {(0.05, 0.35): np.array([[-0.13, -0.13, 0.13, 0.13],
@@ -177,11 +177,23 @@ class PolygonSegmentationNonIRIS(IRISInterface):
 
         A = np.vstack(c_region['A'])
         b = np.hstack(c_region['b'])
-        self.c_space_polyhedron = Vrep(Hrep(A, b).generators)
 
-        return SafeTerrainRegion(self.c_space_polyhedron.A,
-                                 self.c_space_polyhedron.b,
-                                 [], [], pose)
+        print "WARNING: this is implicitly assuming that the global yaw of the seed pose is 0. I think the fix is commented out below. -rdeits"
+        # b = b + A.dot(np.array([0,0,-pose[5]]))
+
+        generators = Hrep(A, b).generators
+
+        if len(generators) > 0:
+            # Use cddlib to simplify our polyhedral representation
+            self.c_space_polyhedron = Vrep(generators)
+
+            return SafeTerrainRegion(self.c_space_polyhedron.A,
+                                     self.c_space_polyhedron.b,
+                                     [], [], pose)
+        else:
+            # system is inconsitent, return None
+            return None
+
 
     def drawSamples(self, nsamples):
         import matplotlib.pyplot as plt
