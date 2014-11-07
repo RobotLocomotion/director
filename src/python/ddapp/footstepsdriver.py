@@ -170,7 +170,7 @@ class FootstepsDriver(object):
                                  lcmdrc.footstep_plan_params_t.LEAD_LEFT,
                                  lcmdrc.footstep_plan_params_t.LEAD_RIGHT]
         # self.params.addProperty('Map Command', 0, attributes=om.PropertyAttributes(enumNames=['Full Heightmap', 'Flat Ground', 'Z Normals']))
-        self.params.addProperty('Map Mode', 2, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
+        self.params.addProperty('Map Mode', 1, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
         self.map_mode_map = [
                              lcmdrc.footstep_plan_params_t.FOOT_PLANE,
                              lcmdrc.footstep_plan_params_t.TERRAIN_HEIGHTS_AND_NORMALS,
@@ -555,13 +555,13 @@ class FootstepsDriver(object):
         msg.params = lcmdrc.footstep_plan_params_t()
         msg.params.max_num_steps = self.params.properties.max_num_steps
         msg.params.min_num_steps = 0
-        msg.params.min_step_width = 0.20
+        msg.params.min_step_width = 0.15
         msg.params.nom_step_width = self.params.properties.nominal_step_width
         msg.params.max_step_width = self.params.properties.max_step_width
         msg.params.nom_forward_step = self.params.properties.nominal_forward_step
         msg.params.max_forward_step = self.params.properties.max_forward_step
         msg.params.nom_upward_step = 0.25;
-        msg.params.nom_downward_step = 0.15;
+        msg.params.nom_downward_step = 0.25;
         msg.params.planning_mode = msg.params.MODE_AUTO
         msg.params.behavior = self.behavior_lcm_map[self.params.properties.behavior]
         # msg.params.use_map_heights = self.params.properties.heights_source == 0
