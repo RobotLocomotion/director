@@ -106,7 +106,7 @@ class PFGraspPanel(object):
         self.pfgrasper.apply3DFit()
         
     def reachDrillButtonClicked(self, event):
-        self.pfgrasper.drillDemo.planReach()
+        self.pfgrasper.planReach()
     
     def graspDrillButtonClicked(self, event):
         self.pfgrasper.planGraspLineMotion()

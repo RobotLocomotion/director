@@ -9,6 +9,7 @@ from vtk import vtkTransform
 from ddapp import objectmodel as om
 from ddapp import ikplanner
 
+from ddapp import ik
 import bot_frames
 
 from PythonQt import QtCore, QtGui
@@ -293,8 +294,9 @@ class PFGrasp(object):
         
     def stop(self):
         self.manipPlanner.sendPlanPause()
-        self.contactDetector.onContactCallback = None
-        self.contactDetector = None
+        if self.contactDetector is not None:
+            self.contactDetector.onContactCallback = None
+            self.contactDetector = None
         
     
     def onContactCallback(self):
@@ -398,14 +400,45 @@ class PFGrasp(object):
         # constraint line axis 
         positionConstraint, orientationConstraint, axisConstraint = self.ikPlanner.createMoveOnLineConstraints(startPose, om.findObjectByName('grasp frame').actor.GetUserTransform())
         
+        ## broken robot arm has a new joint limit
+        if self.graspingHand == 'left':
+            constraintSet.constraints.append(self.createBrokenArmConstraint())
+        
         constraintSet.constraints.append(axisConstraint)
         constraintSet.constraints[-1].tspan = [0.5,np.inf]
         endPose, info = constraintSet.runIk()
-        
+        print endPose
         if info > 10:
             self.log("in Target received: Bad movement")
             return
         graspPlan = constraintSet.runIkTraj()
+
+    def createBrokenArmConstraint(self):
+        p = ik.PostureConstraint()
+        p.joints = ['l_arm_elx']
+        p.jointsLowerBound = [0.6539]
+        p.jointsUpperBound = [np.inf]
+        p.tspan = [0.1, np.inf]
+        return p
+        
+
+    def planReach(self):
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, om.findObjectByName('reach frame'), lockBase=False, lockBack=False)
+        
+        ## broken robot arm has a new joint limit
+        if self.graspingHand == 'left':
+            constraintSet.constraints.append(self.createBrokenArmConstraint())
+            
+        endPose, info = constraintSet.runIk()
+        print endPose
+        
+        if info > 10:
+            self.log("in Target received: Bad movement")
+            return
+        reachPlan = constraintSet.runIkTraj()
+        print reachPlan
+
     def drawFrameInCamera(self, t, frameName='new frame',visible=True):
 
         imageView = self.cameraView.views[self.imageViewName]
