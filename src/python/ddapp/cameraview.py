@@ -147,14 +147,10 @@ class ImageManager(object):
         if imageUtime != self.imageUtimes[imageName]:
             image = self.images[imageName]
             
-            #lcmUtils.getGlobalLCM().handle_timeout(100)
-            #msg = lcmUtils.getNextMessage(self.tldsub, lcmdrc.image_roi_t, 100)
             self.imageUtimes[imageName] = self.queue.getImage(imageName, image)
             
-            #print 'msg',msg
-            #if msg is not None:
-            #    self.TLDResultMsg = msg
-            if imageName == 'CAMERALHAND' and self.TLDResultMsg is not None:
+            # TODO: do better here
+            if (imageName == 'CAMERALHAND' or imageName == 'CAMERARHAND') and self.TLDResultMsg is not None:
                 e = image.GetExtent()
                 canvas = vtk.vtkImageCanvasSource2D()
                 canvas.SetNumberOfScalarComponents(3)
@@ -182,9 +178,7 @@ class ImageManager(object):
                 canvas.DrawCircle(xc, yc, 5)
                 
                 canvas.Update()
-                #canvas.
                 image.DeepCopy(canvas.GetOutput())
-                #self.images[imageName] = canvas.GetOutput()
             
         return imageUtime
 
@@ -741,3 +735,4 @@ def init():
     addCameraView('CAMERACHEST_RIGHT', 'Chest right')
     addCameraView('CAMERA_TSDF', 'Head camera tsdf')
     addCameraView('CAMERALHAND')
+    addCameraView('CAMERARHAND')

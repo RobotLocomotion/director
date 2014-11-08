@@ -63,6 +63,7 @@ class PFGraspPanel(object):
         if self.ui.showLHandCameraButton.checked:
             self.ui.selectHandBox.setCurrentIndex(0)
             self.showImageOverlay(size=400, viewName='CAMERALHAND')
+            self.pfgrasper.setGraspingHand('left')
         else:
             self.hideImageOverlay()
             
@@ -70,6 +71,7 @@ class PFGraspPanel(object):
         if self.ui.showRHandCameraButton.checked:
             self.ui.selectHandBox.setCurrentIndex(1)
             self.showImageOverlay(size=400, viewName='CAMERARHAND')
+            self.pfgrasper.setGraspingHand('right')
         else:
             self.hideImageOverlay()
            
@@ -110,7 +112,7 @@ class PFGraspPanel(object):
         self.pfgrasper.planGraspLineMotion()
         
     ## adapted from startup
-    def showImageOverlay(self, size=400, viewName='CAMERA_LEFT'):
+    def showImageOverlay(self, size=400, viewName='CAMERALHAND'):
         self.imageView = self.cameraview.views[viewName]
         _prevParent = self.imageView.view.parent()
 
