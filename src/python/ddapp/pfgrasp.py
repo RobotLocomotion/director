@@ -408,27 +408,27 @@ class PFGrasp(object):
         graspPlan = constraintSet.runIkTraj()
     def drawFrameInCamera(self, t, frameName='new frame',visible=True):
 
-        imageView = self.cameraView.views[self.cameraViewName]
+        imageView = self.cameraView.views[self.imageViewName]
         v = imageView.view
         q = self.cameraView.imageManager.queue
         localToCameraT = vtk.vtkTransform()
-        q.getTransform('local', self.cameraViewName, localToCameraT)
+        q.getTransform('local', self.imageViewName, localToCameraT)
 
         res = vis.showFrame( vtk.vtkTransform() , 'temp', view=v, visible=True, scale = 0.2)
         om.removeFromObjectModel(res)
         pd = res.polyData
         pd = filterUtils.transformPolyData(pd, t)
         pd = filterUtils.transformPolyData(pd, localToCameraT)
-        q.projectPoints(self.cameraViewName, pd )
+        q.projectPoints(self.imageViewName, pd )
         vis.showPolyData(pd, ('overlay ' + frameName), view=v, colorByName='Axes',parent='camera overlay',visible=visible)
 
     def drawObjectInCamera(self,objectName,visible=True):
         
-        imageView = self.cameraView.views[self.cameraViewName]
+        imageView = self.cameraView.views[self.imageViewName]
         v = imageView.view
         q = self.cameraView.imageManager.queue
         localToCameraT = vtk.vtkTransform()
-        q.getTransform('local', self.cameraViewName, localToCameraT)
+        q.getTransform('local', self.imageViewName, localToCameraT)
 
         obj = om.findObjectByName(objectName)
         if obj is None:
@@ -439,7 +439,7 @@ class PFGrasp(object):
         pd = objPolyDataOriginal
         pd = filterUtils.transformPolyData(pd, objToLocalT)
         pd = filterUtils.transformPolyData(pd, localToCameraT)
-        q.projectPoints(self.cameraViewName, pd)
+        q.projectPoints(self.imageViewName, pd)
         vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)         
 
     def drawDrill(self, mustVisible = False):
@@ -465,7 +465,7 @@ class PFGrasp(object):
         q = om.findObjectByName('camera overlay')
         if q is not None: om.removeFromObjectModel(q)
 
-        imageView = self.cameraView.views[self.cameraViewName]
+        imageView = self.cameraView.views[self.imageViewName]
         imageView.imageActor.SetOpacity(.5)
         
         self.drawObjectInCamera('drill',visible=visible)
