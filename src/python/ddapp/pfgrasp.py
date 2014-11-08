@@ -47,10 +47,12 @@ class FTContactSensor(object):
     onContactCallback = None
     
     lcmsub = None
+    GraspingHand = None 
     
-    def __init__(self, onContactCallback):
+    def __init__(self, onContactCallback, GraspingHand):
         lcmUtils.addSubscriber('WRIST_STRAIN_GAUGES', lcmdrc.atlas_strain_gauges_t, self.handleFTSignal)
         self.onContactCallback = onContactCallback
+        self.GraspingHand = GraspingHand
     
     def handleFTSignal(self, data):
         if self.resetting:
@@ -62,7 +64,10 @@ class FTContactSensor(object):
         else:  # detecting mode
             filtered = data.strain_gauges - self.offset
             #print 'detecting mode', filtered[0:3]
-            if filtered[2] < -0.05:  # this is the threshold for detecting hitting a drill on a table, [2] means the z axis which is parallel to hand direction
+            if self.GraspingHand == 'left': index = 2
+            else : index = 8
+            
+            if filtered[index] < -0.05:  # this is the threshold for detecting hitting a drill on a table, [2] means the z axis which is parallel to hand direction
                 if self.onContactCallback is not None:
                     self.onContactCallback() 
                     self.onContactCallback = None                
@@ -110,7 +115,8 @@ class PFGrasp(object):
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
         self.defaultGraspingHand = "left"
-        #self.setGraspingHand(defaultGraspingHand)
+        self.imageViewName = 'CAMERALHAND'
+        self.setGraspingHand(self.defaultGraspingHand)
         
         self.TLDResultMsg = lcmdrc.image_roi_t()
         self.tldsub = lcmUtils.addSubscriber('TLD_OBJECT_ROI_RESULT', lcmdrc.image_roi_t, self.TLDReceived)
@@ -119,6 +125,13 @@ class PFGrasp(object):
         
         self.drill = Drill()
 
+    def setGraspingHand(self, GraspingHand):
+        self.GraspingHand = GraspingHand
+        if GraspingHand == 'left':
+            self.imageViewName = 'CAMERALHAND'
+        else:
+            self.imageViewName = 'CAMERARHAND'
+        
     def log(self, str):
         if self.ui is not None:
             self.ui.statusTextEdit.plainText = self.ui.statusTextEdit.plainText + '\n' + str 
@@ -137,11 +150,6 @@ class PFGrasp(object):
 
         # start pfgrasp c++ program  
         startPfgraspHere = False 
-        if startPfgraspHere == True:
-            FNULL = open(os.devnull, 'w')
-            self.pfgraspCpp = subprocess.Popen(["drc-pfgrasp","-c","CAMERALHAND","-s","0.25","-g","LHAND_FORCE_TORQUE"],stdout=FNULL,stderr=FNULL)
-            #pfgraspCpp = subprocess.Popen(["drc-pfgrasp","-c","CAMERALHAND","-s","0.25","-g","LHAND_FORCE_TORQUE"])
-            time.sleep(1)
             
         # initialize pfgrasp particles
         msg = lcmdrc.pfgrasp_command_t()
@@ -176,7 +184,7 @@ class PFGrasp(object):
                         delta.GetPosition(), constraints=None, LocalOrWorldDelta=LocalOrWorld)
         handfaceToWorld = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
         # constraint orientation
-        p,q = self.ikPlanner.createPositionOrientationGraspConstraints('left',handfaceToWorld)
+        p,q = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand,handfaceToWorld)
         q.tspan=[0.5,np.inf]
         
         constraintSet.constraints.append(q)
@@ -316,7 +324,7 @@ class PFGrasp(object):
             self.log('in guardedMoveForward: Bad move')
             return
             
-        self.contactDetector = FTContactSensor(self.onContactCallback)
+        self.contactDetector = FTContactSensor(self.onContactCallback, self.graspingHand)
         if self.autoMode:
             self.manipPlanner.commitManipPlan(plan)
                         
@@ -382,7 +390,7 @@ class PFGrasp(object):
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, om.findObjectByName('grasp frame'), \
                                                             lockBase=False, lockBack=True)
         # constraint orientation
-        p,q = self.ikPlanner.createPositionOrientationGraspConstraints('left',om.findObjectByName('grasp frame'))
+        p,q = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, om.findObjectByName('grasp frame'))
         q.tspan=[0.5,np.inf]
         
         constraintSet.constraints.append(q)
@@ -400,27 +408,27 @@ class PFGrasp(object):
         graspPlan = constraintSet.runIkTraj()
     def drawFrameInCamera(self, t, frameName='new frame',visible=True):
 
-        imageView = self.cameraView.views['CAMERALHAND']
+        imageView = self.cameraView.views[self.cameraViewName]
         v = imageView.view
         q = self.cameraView.imageManager.queue
         localToCameraT = vtk.vtkTransform()
-        q.getTransform('local', 'CAMERALHAND', localToCameraT)
+        q.getTransform('local', self.cameraViewName, localToCameraT)
 
         res = vis.showFrame( vtk.vtkTransform() , 'temp', view=v, visible=True, scale = 0.2)
         om.removeFromObjectModel(res)
         pd = res.polyData
         pd = filterUtils.transformPolyData(pd, t)
         pd = filterUtils.transformPolyData(pd, localToCameraT)
-        q.projectPoints('CAMERALHAND', pd )
+        q.projectPoints(self.cameraViewName, pd )
         vis.showPolyData(pd, ('overlay ' + frameName), view=v, colorByName='Axes',parent='camera overlay',visible=visible)
 
     def drawObjectInCamera(self,objectName,visible=True):
         
-        imageView = self.cameraView.views['CAMERALHAND']
+        imageView = self.cameraView.views[self.cameraViewName]
         v = imageView.view
         q = self.cameraView.imageManager.queue
         localToCameraT = vtk.vtkTransform()
-        q.getTransform('local', 'CAMERALHAND', localToCameraT)
+        q.getTransform('local', self.cameraViewName, localToCameraT)
 
         obj = om.findObjectByName(objectName)
         if obj is None:
@@ -431,7 +439,7 @@ class PFGrasp(object):
         pd = objPolyDataOriginal
         pd = filterUtils.transformPolyData(pd, objToLocalT)
         pd = filterUtils.transformPolyData(pd, localToCameraT)
-        q.projectPoints('CAMERALHAND', pd)
+        q.projectPoints(self.cameraViewName, pd)
         vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)         
 
     def drawDrill(self, mustVisible = False):
@@ -457,7 +465,7 @@ class PFGrasp(object):
         q = om.findObjectByName('camera overlay')
         if q is not None: om.removeFromObjectModel(q)
 
-        imageView = self.cameraView.views['CAMERALHAND']
+        imageView = self.cameraView.views[self.cameraViewName]
         imageView.imageActor.SetOpacity(.5)
         
         self.drawObjectInCamera('drill',visible=visible)
