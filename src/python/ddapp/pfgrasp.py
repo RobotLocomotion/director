@@ -48,12 +48,12 @@ class FTContactSensor(object):
     onContactCallback = None
     
     lcmsub = None
-    GraspingHand = None 
+    graspingHand = None 
     
-    def __init__(self, onContactCallback, GraspingHand):
+    def __init__(self, onContactCallback, graspingHand):
         lcmUtils.addSubscriber('WRIST_STRAIN_GAUGES', lcmdrc.atlas_strain_gauges_t, self.handleFTSignal)
         self.onContactCallback = onContactCallback
-        self.GraspingHand = GraspingHand
+        self.graspingHand = graspingHand
     
     def handleFTSignal(self, data):
         if self.resetting:
@@ -65,7 +65,7 @@ class FTContactSensor(object):
         else:  # detecting mode
             filtered = data.strain_gauges - self.offset
             #print 'detecting mode', filtered[0:3]
-            if self.GraspingHand == 'left': index = 2
+            if self.graspingHand == 'left': index = 2
             else : index = 8
             
             if filtered[index] < -0.05:  # this is the threshold for detecting hitting a drill on a table, [2] means the z axis which is parallel to hand direction
@@ -126,9 +126,10 @@ class PFGrasp(object):
         
         self.drill = Drill()
 
-    def setGraspingHand(self, GraspingHand):
-        self.GraspingHand = GraspingHand
-        if GraspingHand == 'left':
+    def setGraspingHand(self, graspingHand):
+        self.graspingHand = graspingHand
+	self.drillDemo.setGraspingHand(graspingHand)
+        if graspingHand == 'left':
             self.imageViewName = 'CAMERALHAND'
         else:
             self.imageViewName = 'CAMERARHAND'
@@ -248,8 +249,12 @@ class PFGrasp(object):
     def spawnDrillAffordance(self):
         if om.findObjectByName('drill') is None: 
             self.drillDemo.spawnDrillAffordance()
-        
-        self.moveDrill()
+       
+        if self.graspingHand == 'left':
+            self.moveDrill()
+        else:
+            self.moveDrill(RPY=[0,180,0])
+
         om.findObjectByName('drill frame').connectFrameModified(self.onModifiedDrillFrame)
         
     def apply3DFit(self):
@@ -262,7 +267,7 @@ class PFGrasp(object):
         affordanceReach.actor.GetUserTransform().GetPosition(msg.pos)
         lcmUtils.publish('PFGRASP_CMD', msg)
     
-    def moveDrill(self,Pos=[0.1,0,0],RPY=[0,0,0],Style='Local'):
+    def moveDrill(self,Pos=[0,0,0],RPY=[0,0,0],Style='Local'):
         linkMap = { 'left' : 'l_hand_face', 'right': 'r_hand_face'}
         linkName = linkMap[self.graspingHand]
         
@@ -287,10 +292,9 @@ class PFGrasp(object):
         drillTransform.Identity()
         drillTransform.PostMultiply()
         drillTransform.Concatenate(drillToReach)
-        #drillTransform.Concatenate(delta)
+        drillTransform.Concatenate(delta)
         drillTransform.Concatenate(handfaceToWorld)
         
-        #drillTransform.Concatenate(drillTransformCopy)
         
     def stop(self):
         self.manipPlanner.sendPlanPause()
@@ -389,16 +393,24 @@ class PFGrasp(object):
     def planGraspLineMotion(self):
         self.turnPointwiseOffSlow()
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, om.findObjectByName('grasp frame'), \
+
+        graspFrame = vtk.vtkTransform()
+        graspFrame.Identity()
+        graspFrame.PostMultiply()
+        if self.graspingHand == 'right':
+            graspFrame.Concatenate(transformUtils.frameFromPositionAndRPY([0,0,0], [0,180,0]))
+        graspFrame.Concatenate(transformUtils.copyFrame(om.findObjectByName('grasp frame').actor.GetUserTransform()))
+
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, graspFrame, \
                                                             lockBase=False, lockBack=True)
         # constraint orientation
-        p,q = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, om.findObjectByName('grasp frame'))
-        q.tspan=[0.5,np.inf]
+        p,q = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, graspFrame)
+        q.tspan=[0.5,1]
         
         constraintSet.constraints.append(q)
         
         # constraint line axis 
-        positionConstraint, orientationConstraint, axisConstraint = self.ikPlanner.createMoveOnLineConstraints(startPose, om.findObjectByName('grasp frame').actor.GetUserTransform())
+        positionConstraint, orientationConstraint, axisConstraint = self.ikPlanner.createMoveOnLineConstraints(startPose, graspFrame)
         
         ## broken robot arm has a new joint limit
         if self.graspingHand == 'left':
@@ -407,7 +419,7 @@ class PFGrasp(object):
         constraintSet.constraints.append(axisConstraint)
         constraintSet.constraints[-1].tspan = [0.5,np.inf]
         endPose, info = constraintSet.runIk()
-        print endPose
+        #print endPose
         if info > 10:
             self.log("in Target received: Bad movement")
             return
@@ -416,28 +428,34 @@ class PFGrasp(object):
     def createBrokenArmConstraint(self):
         p = ik.PostureConstraint()
         p.joints = ['l_arm_elx']
-        p.jointsLowerBound = [0.6539]
+        p.jointsLowerBound = [0.673677]
         p.jointsUpperBound = [np.inf]
-        p.tspan = [0.1, np.inf]
+        p.tspan = [1, 1]
         return p
         
-
     def planReach(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, om.findObjectByName('reach frame'), lockBase=False, lockBack=False)
+	
+        reachFrame = vtk.vtkTransform()
+        reachFrame.Identity()
+        reachFrame.PostMultiply()
+        if self.graspingHand == 'right':
+            reachFrame.Concatenate(transformUtils.frameFromPositionAndRPY([0,0,0], [0,180,0]))    
+        reachFrame.Concatenate(transformUtils.copyFrame(om.findObjectByName('reach frame').actor.GetUserTransform()))
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, reachFrame, lockBase=False, lockBack=True)
         
         ## broken robot arm has a new joint limit
         if self.graspingHand == 'left':
             constraintSet.constraints.append(self.createBrokenArmConstraint())
             
         endPose, info = constraintSet.runIk()
-        print endPose
+        #print endPose
         
         if info > 10:
             self.log("in Target received: Bad movement")
             return
         reachPlan = constraintSet.runIkTraj()
-        print reachPlan
+        #print reachPlan
 
     def drawFrameInCamera(self, t, frameName='new frame',visible=True):
 
