@@ -20,6 +20,7 @@ from ddapp import callbacks
 from ddapp import camerabookmarks
 from ddapp import cameracontrol
 from ddapp import debrisdemo
+from ddapp import bihandeddemo
 from ddapp import drilldemo
 from ddapp import tabledemo
 from ddapp import valvedemo
@@ -354,6 +355,15 @@ if usePlanning:
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     robotStateJointController,
                     playPlans, showPose)
+
+    bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                    lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                    fitDrillMultisense, robotStateJointController,
+                    playPlans, showPose, cameraview, segmentationpanel)
+
+    if (useContinuousWalking):
+        continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController)
+
 
     splinewidget.init(view, handFactory, robotStateModel)
 
