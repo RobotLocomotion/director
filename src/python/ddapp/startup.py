@@ -726,3 +726,6 @@ def sendMatlabSigint():
 
 
 app.addToolbarMacro('Ctrl+C MATLAB', sendMatlabSigint)
+
+
+
