@@ -359,7 +359,7 @@ if usePlanning:
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
-    
+
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                       segmentation.segmentValveWallAuto, robotStateJointController,
@@ -511,16 +511,14 @@ if useImageViewDemo:
         imageView.view.move(0,0)
         imageView.view.show()
         imagePicker.start()
-    
+
     def hideImageOverlay():
         imageView.view.hide()
         imageView.view.setParent(_prevParent)
         imageView.view.show()
         imagePicker.stop()
 
-    showImageOverlay()
-    hideImageOverlay()
-
+    #showImageOverlay()
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
@@ -674,6 +672,7 @@ if useDrillDemo:
         v.render()
 
 
+    showImageOverlay()
     drillDemo.pointerTracker = createPointerTracker()
     drillDemo.projectCallback = projectDrillDemoInCamera
     drillYawPreTransform = vtk.vtkTransform()
@@ -713,7 +712,7 @@ if usePFGrasp:
                 lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                 fitDrillMultisense, robotStateJointController,
                 playPlans, showPose, cameraview, segmentationpanel)
-    
-    global _prevParent, imageView, imagePicker, cameraview  # for image overlay
+
+    showImageOverlay()
+    hideImageOverlay()
     pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)
-    
