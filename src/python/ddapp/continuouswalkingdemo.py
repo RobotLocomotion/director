@@ -404,7 +404,6 @@ class ContinousWalkingDemo(object):
         for i, block in enumerate(blocks):
             corners = block.getCorners()
             rpy = np.radians(block.cornerTransform.GetOrientation())
-            print 'rpy seed:', np.degrees(rpy)
             #rpy = [0.0, 0.0, 0.0]
             self.convertStepToSafeRegion(corners, rpy)
 
@@ -472,7 +471,7 @@ class ContinousWalkingDemo(object):
         startSeed = np.hstack([stepCenter, rpySeed])
 
         r = s.findSafeRegion(startSeed)
-        
+
         if r is not None:
             # draw step
             d = DebugData()
@@ -487,8 +486,6 @@ class ContinousWalkingDemo(object):
 
 
     def replanFootsteps(self, polyData, standingFootName, removeFirstLeftStep=True, doStereoFiltering=True, nextDoubleSupportPose=None):
-
-        print 'replan footsteps with standingFootName:', standingFootName
 
         obj = om.getOrCreateContainer('continuous')
         om.getOrCreateContainer('cont debug', obj)
@@ -557,8 +554,7 @@ class ContinousWalkingDemo(object):
 
             footsteps = self.placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep)
 
-            if (len(footsteps) ==0):
-                print "no steps to plan, returning"
+            if not len(footsteps):
                 return
 
             if self.queryPlanner:
@@ -697,15 +693,11 @@ class ContinousWalkingDemo(object):
     def onFootstepPlanContinuous(self, msg):
 
         if msg.num_steps <= 2:
-            print 'received empty footstep plan, skipping'
+            return
 
-        if (self.navigationPanel.automaticContinuousWalkingEnabled):
+        if self.navigationPanel.automaticContinuousWalkingEnabled:
             print "Committing Footstep Plan for AUTOMATIC EXECUTION"
             lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
-
-        else:
-            print "Received Footstep Plan, it will be not be executed"
-
 
 
     def onNextExpectedDoubleSupport(self, msg):
