@@ -62,12 +62,12 @@ class Flyer(TimerCallback):
     def tick(self):
 
         elapsed = time.time() - self.startTime
-        t = elapsed / float(self.flyTime)
+        t = (elapsed / float(self.flyTime)) if self.flyTime > 0 else 1.0
 
         self.interp.InterpolateCamera(t, self.view.camera())
         self.view.render()
 
-        if t > 1.0:
+        if t >= 1.0:
             return False
 
 
