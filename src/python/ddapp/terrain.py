@@ -7,9 +7,10 @@ from scipy.spatial import ConvexHull
 from scipy.io import loadmat, savemat
 
 import drc
-from irispy.cspace import rotmat
+from irispy.cspace import rotmat, cspace3
 from irispy.iris import inflate_region
 from irispy.utils import lcon_to_vert
+from py_drake_utils.utils import rpy2rotmat
 
 DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.13, 0.13],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
@@ -60,7 +61,70 @@ def terrain_body_obs(heights, px2world_2x3, pose, ht_range):
     return obs
 
 
-class TerrainSegmentation:
+class IRISInterface:
+    def findSafeRegion(self, pose, **kwargs):
+        """
+        Return a SafeTerrainRegion seeded at the given 6-DOF pose
+        """
+        pose = np.asarray(pose)
+        start = pose[[0,1,5]] # x y yaw
+        A_bounds, b_bounds = self.getBoundingPolytope(start)
+        c_obs = self.getCObs(start, self.obs_pts_xy, A_bounds, b_bounds)
+        A, b, C, d, results = inflate_region(c_obs, A_bounds, b_bounds, start, **kwargs)
+        return SafeTerrainRegion(A, b, C, d, pose)
+
+    def getBoundingPolytope(self, start):
+        """
+        Return A, b describing a bounding box on [x, y, yaw] into which the IRIS region must be contained.
+        The format is A [x;y;yaw] <= b
+        """
+        start = np.array(start).reshape((3,))
+        lb = np.hstack((start[:2] - self.bounding_box_width / 2, start[2] - np.pi))
+        ub = np.hstack((start[:2] + self.bounding_box_width / 2, start[2] + np.pi))
+        A_bounds = np.vstack((-np.eye(3), np.eye(3)))
+        b_bounds = np.hstack((-lb, ub))
+        return A_bounds, b_bounds
+
+    def getCObs(self, start, obs_pts, A_bounds, b_bounds, bot=None, theta_steps=8):
+        """
+        Convert task-space obstacles to x,y,yaw configuration-space obstacles.
+        start: 3-element vector of x, y, yaw
+        obs_pts: [2 x m x n] matrix of x y vertices corresponding to n obstacles with m vertices each.
+        A_bounds, b_bounds: bounding polytope for IRIS (used to avoid dealing with obstacles which are outside the bounding area)
+        bot: [2 x k] matrix of vertices corresponding to the x, y poses of the vertices of the foot. These are expressed in the frame of the sole of the foot, in which x points forward and y points to the left.
+        theta_steps: the number of slices of theta to use in the approximation of the c-space
+        """
+        start = np.array(start).reshape((3,))
+
+        if bot is None:
+            bot = self.bot_pts
+        Ax = A_bounds.dot(np.vstack((obs_pts.reshape((2,-1)),
+                                     start[2] + np.zeros(obs_pts.shape[1]*obs_pts.shape[2]))))
+        obs_pt_mask = np.all(Ax - b_bounds.reshape((-1,1)) - np.max(np.abs(bot)) < 0,
+                             axis=0).reshape(obs_pts.shape[1:])
+        obs_mask = np.any(obs_pt_mask, axis=0)
+
+        return cspace3(obs_pts[:,:,obs_mask], bot, theta_steps)
+
+
+class PolygonSegmentation(IRISInterface):
+    def __init__(self, polygon_vertices, bot_pts=DEFAULT_FOOT_CONTACTS,
+                 bounding_box_width=DEFAULT_BOUNDING_BOX_WIDTH):
+        polygon_vertices = np.asarray(polygon_vertices)
+        hull = ConvexHull(polygon_vertices.T)
+        polygon_vertices = polygon_vertices[:2,hull.vertices]
+
+        nvert = polygon_vertices.shape[1]
+
+        p1 = polygon_vertices.reshape((2, 1, nvert))
+        p2 = polygon_vertices[:,range(1,nvert)+[0]].reshape((2,1,nvert))
+
+        self.obs_pts_xy = np.hstack((p1, p2))
+        self.bounding_box_width = bounding_box_width
+        self.bot_pts = bot_pts
+
+
+class TerrainSegmentation(IRISInterface):
     def __init__(self, bot_pts=DEFAULT_FOOT_CONTACTS,
                  bounding_box_width=DEFAULT_BOUNDING_BOX_WIDTH,
                  contact_slices=DEFAULT_CONTACT_SLICES):
@@ -72,7 +136,6 @@ class TerrainSegmentation:
         self.feas = None
         self.edge_pts_xy = None
         self.obs_pts_xyz = None
-        self.last_obs_mask = None
 
     def setHeights(self, heights, px2world=None):
         if px2world is not None:
@@ -101,14 +164,6 @@ class TerrainSegmentation:
         A, b, C, d, results = inflate_region(c_obs, A_bounds, b_bounds, start, **kwargs)
         return SafeTerrainRegion(A, b, C, d, pose)
 
-    def getBoundingPolytope(self, start):
-        start = np.array(start).reshape((3,))
-        lb = np.hstack((start[:2] - self.bounding_box_width / 2, start[2] - np.pi))
-        ub = np.hstack((start[:2] + self.bounding_box_width / 2, start[2] + np.pi))
-        A_bounds = np.vstack((-np.eye(3), np.eye(3)))
-        b_bounds = np.hstack((-lb, ub))
-        return A_bounds, b_bounds
-
     def getCObs(self, start, obs_pts, A_bounds, b_bounds, bot=None, theta_steps=8):
 
         start = np.array(start).reshape((3,))
@@ -120,7 +175,6 @@ class TerrainSegmentation:
         obs_pt_mask = np.all(Ax - b_bounds.reshape((-1,1)) - np.max(np.abs(bot)) < 0,
                              axis=0).reshape(obs_pts.shape[1:])
         obs_mask = np.any(obs_pt_mask, axis=0)
-        self.last_obs_mask = obs_mask
 
         # Fast c-obs computation for all point obstacles
         assert(obs_pts.shape[1] == 1)
@@ -154,7 +208,14 @@ class TerrainSegmentation:
         return self.px2world[:2,[0,1,3]]
 
 class SafeTerrainRegion:
-    __slots__ = ['A', 'b', 'C', 'd']
+    __slots__ = ['A', 'b', 'C', 'd','pose']
+    """
+    Container for describing an IRIS safe region of terrain.
+    Format:
+        A, b: linear constraints on [x,y,z,yaw] of the center of the foot, A[x;y;z;yaw] <= b
+        C, d: ellipsoidal constraints on [x,y,z,yaw] of the center of the foot. Not currently used.
+        pose: a pose on the terrain within the region, from which we extract a plane. [x;y;z;roll;pitch;yaw]
+    """
     def __init__(self, A, b, C, d, pose):
         self.A = A
         self.b = b
@@ -166,8 +227,7 @@ class SafeTerrainRegion:
         msg = drc.iris_region_t()
         msg.lin_con = self.to_lin_con_t()
         msg.point = self.pose[:3]
-        print "Warning: normal not set"
-        msg.normal = [0,0,1] # TODO: set normal from pose
+        msg.normal = rpy2rotmat(self.pose[3:]).dot([0,0,1])
         return msg
 
     def to_lin_con_t(self):
