@@ -776,6 +776,40 @@ class ContinousWalkingDemo(object):
         om.getOrCreateContainer('teleop model').setProperty('Visible',True)
 
 
+    def makeDebugRegions(self):
+
+        stepWidth = 0.5
+        stepLength = 0.4
+
+        stepPoints = np.array([
+          [-stepLength/2.0, -stepWidth/2.0, 0.0],
+          [-stepLength/2.0, stepWidth/2.0, 0.0],
+          [stepLength/2.0, stepWidth/2.0, 0.0],
+          [stepLength/2.0, -stepWidth/2.0, 0.0]
+        ])
+
+        t = vtk.vtkTransform()
+        t.RotateZ(4.5)
+
+        for i in xrange(len(stepPoints)):
+            stepPoints[i] = np.array(t.TransformPoint(stepPoints[i]))
+
+        stepOffset = np.array([0.5, 0.0, 0.15])
+
+        numSteps = 3
+
+        goalFrame = transformUtils.frameFromPositionAndRPY([0.4, 0.0, 0.1], [0,0,0])
+        vis.showFrame(goalFrame, 'goal frame', scale=0.2)
+
+        rpySeed = np.radians(goalFrame.GetOrientation())
+        for i in xrange(numSteps):
+
+            step = stepPoints + (i+1)*stepOffset
+            self.convertStepToSafeRegion(step, rpySeed)
+
+        self.footstepsPanel.onNewWalkingGoal(goalFrame)
+
+
     def addToolbarMacros(self):
 
         def useShortFoot():
