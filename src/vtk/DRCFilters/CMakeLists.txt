@@ -9,6 +9,8 @@ set(sources
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
 
+  vtkInteractorStyleTerrain2.cxx
+
   vtkDepthImageProcessingPass.cxx
   vtkEDLShading.cxx
   )
