@@ -15,7 +15,7 @@ import polyhedron._cdd
 from polyhedron import Vrep, Hrep
 from py_drake_utils.utils import rpy2rotmat
 
-DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.155, 0.155],
+DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.13, 0.13],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 DEFAULT_BOUNDING_BOX_WIDTH = 1
 DEFAULT_CONTACT_SLICES = {(0.05, 0.35): np.array([[-0.13, -0.13, 0.13, 0.13],
