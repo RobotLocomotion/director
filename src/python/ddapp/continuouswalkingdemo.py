@@ -13,6 +13,8 @@ from ddapp import transformUtils
 from ddapp import footstepsdriver
 from ddapp.debugVis import DebugData
 from ddapp import ikplanner
+from ddapp import applogic
+
 import ddapp.terrain
 
 import drc as lcmdrc
@@ -772,3 +774,16 @@ class ContinousWalkingDemo(object):
     def displayExpectedPose(self, nextDoubleSupportPose):
         self.teleopJointController.setPose('double_support_pose', nextDoubleSupportPose)
         om.getOrCreateContainer('teleop model').setProperty('Visible',True)
+
+
+    def addToolbarMacros(self):
+
+        def useShortFoot():
+            self.footContactPoints = self.SHORT_FOOT_CONTACT_POINTS
+
+        def useLongFoot():
+            self.footContactPoints = self.LONG_FOOT_CONTACT_POINTS
+
+        applogic.addToolbarMacro('start continuous walk', self.startContinuousWalking)
+        applogic.addToolbarMacro('short foot', useShortFoot)
+        applogic.addToolbarMacro('long foot', useLongFoot)
