@@ -110,7 +110,7 @@ class ContinousWalkingDemo(object):
             self.queryPlanner = False
 
 
-        self._setupSubscriptions()
+        self._subscriptionsInitialized = False
 
         ###########################################
         # For development/limited use: (comment all out for typical behavior)
@@ -124,10 +124,11 @@ class ContinousWalkingDemo(object):
         #footContactSubContinuous = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE_SLOW', lcmdrc.foot_contact_estimate_t, self.onFootContactContinuous)
         #footContactSubContinuous.setSpeedLimit(60)
 
+        if self._subscriptionsInitialized:
+            return
+
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
-
         lcmUtils.addSubscriber('NEXT_EXPECTED_DOUBLE_SUPPORT', lcmdrc.footstep_plan_t, self.onNextExpectedDoubleSupport)
-
         stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
         stepParamsSub.setSpeedLimit(60)
 
@@ -681,6 +682,9 @@ class ContinousWalkingDemo(object):
 
 
     def startContinuousWalking(self, leadFoot='l_foot'):
+
+        self._setupSubscriptions()
+
         self.committedStep = None
 
         startPose = self.robotStateJointController.getPose('EST_ROBOT_STATE')
