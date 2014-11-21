@@ -16,6 +16,7 @@ from ddapp import vtkAll as vtk
 from ddapp import matlab
 from ddapp import jointcontrol
 from ddapp import callbacks
+from ddapp import camerabookmarks
 from ddapp import cameracontrol
 from ddapp import debrisdemo
 from ddapp import drilldemo
@@ -524,6 +525,7 @@ if useImageViewDemo:
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
+camerabookmarks.init(view)
 
 
 def getLinkFrame(linkName, model=None):
