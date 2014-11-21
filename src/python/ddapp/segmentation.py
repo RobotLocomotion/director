@@ -2401,7 +2401,7 @@ def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDi
     return vis.showClusterObjects([obj], parent='segmentation')[0]
 
 def findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSearchRadius=0.05,
-                          clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0]):
+                          clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0], showClusters=False):
     '''
     Find the horizontal surfaces, tuned to work with walking terrain
     '''
@@ -2450,7 +2450,7 @@ def findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSe
 
     for i, cluster in enumerate(clusters):
 
-        updatePolyData(cluster, 'surface cluster %d' % i, parent=folder, colorByName='normals_dot_up', visible=verboseFlag)
+        updatePolyData(cluster, 'surface cluster %d' % i, parent=folder, color=getRandomColor(), visible=verboseFlag)
         planePoints, _ = applyPlaneFit(cluster, distanceToPlaneThreshold)
         planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-distanceToPlaneThreshold, distanceToPlaneThreshold])
 
@@ -2461,7 +2461,7 @@ def findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSe
                 planeClusters.append(obj)
 
     folder = om.getOrCreateContainer('surface objects', parentObj=getDebugFolder())
-    if verboseFlag:
+    if showClusters:
         vis.showClusterObjects(planeClusters, parent=folder)
 
     return clustersLarge
