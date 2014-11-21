@@ -91,46 +91,40 @@ class ContinousWalkingDemo(object):
 
         self.lastContactState = "none"
         # Smooth Stereo or Raw or Lidar?
-        self.processContinuousStereo = False
+        self.processContinuousStereo = True
         self.processRawStereo = False
         self.committedStep = None
         self.useManualFootstepPlacement = False
+        self.queryPlanner = True
 
         # overwrite all of the above with the yaw of the robt when it was standing in front of the blocks:
         self.fixBlockYawWithInitial = False
         self.initialRobotYaw = np.Inf
 
-
         self.footContactPoints = self.LONG_FOOT_CONTACT_POINTS
-
-        if (self.footstepsPanel is not None):
-            self.queryPlanner = True
-            self.footstepsPanel.driver.applyDefaults('BDI')
-        else:
-            self.queryPlanner = False
+        self._setupComplete = False
 
 
-        self._subscriptionsInitialized = False
+    def _setupOnce(self):
+        '''
+        This is setup code that is called that first time continuous walking is
+        executed.
+        '''
 
-        ###########################################
-        # For development/limited use: (comment all out for typical behavior)
-        #self.queryPlanner = False
-        self.fixBlockYawWithInitial = False
-        self.processContinuousStereo = True
+        if self._setupComplete:
+            return
 
-
-    def _setupSubscriptions(self):
         # use a different classifier to scott:
         #footContactSubContinuous = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE_SLOW', lcmdrc.foot_contact_estimate_t, self.onFootContactContinuous)
         #footContactSubContinuous.setSpeedLimit(60)
-
-        if self._subscriptionsInitialized:
-            return
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
         lcmUtils.addSubscriber('NEXT_EXPECTED_DOUBLE_SUPPORT', lcmdrc.footstep_plan_t, self.onNextExpectedDoubleSupport)
         stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
         stepParamsSub.setSpeedLimit(60)
+
+        self.footstepsPanel.driver.applyDefaults('BDI')
+
 
     def getRecedingTerrainRegion(self, polyData, linkFrame):
         ''' Find the point cloud in front of the foot frame'''
@@ -683,15 +677,15 @@ class ContinousWalkingDemo(object):
 
     def startContinuousWalking(self, leadFoot='l_foot'):
 
-        self._setupSubscriptions()
+        self._setupOnce()
 
         self.committedStep = None
 
         startPose = self.robotStateJointController.getPose('EST_ROBOT_STATE')
-        self.makeReplanRequest(leadFoot, removeFirstLeftStep = False, nextDoubleSupportPose=startPose)
+        if self.fixBlockYawWithInitial:
+            self.initialRobotYaw = startPose[5]
 
-        if (self.fixBlockYawWithInitial):
-            self.initialRobotYaw = self.robotStateJointController.q[5]
+        self.makeReplanRequest(leadFoot, removeFirstLeftStep = False, nextDoubleSupportPose=startPose)
 
 
     def onFootstepPlanContinuous(self, msg):
