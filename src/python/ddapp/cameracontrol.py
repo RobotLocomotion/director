@@ -77,6 +77,7 @@ class RobotModelFollower(object):
         self.view = view
         self.robotModel = robotModel
         self.jointController = jointController
+        self.followAxes = [True, True, True]
         self.callbackId = None
 
     def start(self):
@@ -95,9 +96,9 @@ class RobotModelFollower(object):
         newTrackPosition = np.array(self.jointController.q[:3])
 
         delta = newTrackPosition - self.lastTrackPosition
-        #delta[0] = 0.0
-        #delta[1] = 0.0
-        #delta[2] = 0.0
+        for i in xrange(3):
+            if not self.followAxes[i]:
+                delta[i] = 0.0
 
         self.lastTrackPosition = newTrackPosition
 
