@@ -449,6 +449,9 @@ class MapServerSource(TimerCallback):
         else:
             obj.setPolyData(polyData)
 
+        if self.colorizeCallback:
+            self.colorizeCallback(obj)
+
     def showMap(self, viewId, mapId):
         polyData = vtk.vtkPolyData()
 
@@ -459,9 +462,6 @@ class MapServerSource(TimerCallback):
 
         self.updatePolyData(viewId, polyData)
         self.displayedMapIds[viewId] = mapId
-
-        #if self.colorizeCallback:
-        #    self.colorizeCallback()
 
         if self.callbackFunc:
             self.callbackFunc()
