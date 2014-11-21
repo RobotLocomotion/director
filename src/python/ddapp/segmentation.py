@@ -2093,6 +2093,37 @@ def makePolyDataFields(pd):
     return FieldContainer(points=pd, box=wireframe, mesh=mesh, frame=t, dims=edgeLengths, axes=axes)
 
 
+def makeMovable(obj, initialTransform=None):
+    '''
+    Adds a child frame to the given PolyDataItem.  If initialTransform is not
+    given, then an origin frame is computed for the polydata using the
+    center and orientation of the oriented bounding of the polydata.  The polydata
+    is transformed using the inverse of initialTransform and then a child frame
+    is assigned to the object to reposition it.
+    '''
+    pd = obj.polyData
+    t = initialTransform
+
+    if t is None:
+        origin, edges, wireframe = getOrientedBoundingBox(pd)
+        edgeLengths = np.array([np.linalg.norm(edge) for edge in edges])
+        axes = [edge / np.linalg.norm(edge) for edge in edges]
+        boxCenter = computeCentroid(wireframe)
+        t = getTransformFromAxes(axes[0], axes[1], axes[2])
+        t.PostMultiply()
+        t.Translate(boxCenter)
+
+    pd = transformPolyData(pd, t.GetLinearInverse())
+    obj.setPolyData(pd)
+
+    frame = obj.getChildFrame()
+    if frame:
+        frame.copyFrame(t)
+    else:
+        frame = vis.showFrame(t, obj.getProperty('Name') + ' frame', parent=obj, scale=0.2, visible=False)
+        obj.actor.SetUserTransform(t)
+
+
 def segmentTable(polyData, searchPoint):
     '''
     Segment a horizontal table surface (perpendicular to +Z) in the given polyData
