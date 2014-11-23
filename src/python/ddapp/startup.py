@@ -197,6 +197,8 @@ if usePerception:
 if useGrid:
     vis.showGrid(view, color=[0,0,0] if useLightColorScheme else [1,1,1], useSurface=useLightColorScheme)
 
+om.addToObjectModel(vis.ViewOptionsItem(view), parentObj=om.findObjectByName('sensors'))
+
 
 if useLightColorScheme:
     app.setBackgroundColor([0.3, 0.3, 0.35], [0.95,0.95,1])
