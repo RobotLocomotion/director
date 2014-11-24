@@ -336,14 +336,17 @@ class IKPlanner(object):
 
 
     def createPositionOrientationGraspConstraints(self, side, targetFrame, graspToHandLinkFrame=None, positionTolerance=0.0, angleToleranceInDegrees=0.0):
-
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
+        linkName = self.getHandLink(side)
+        return self.createPositionOrientationConstraint(linkName, targetFrame, graspToHandLinkFrame)
+
+    def createPositionOrientationConstraint(self, linkName, targetFrame, linkOffsetFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0):
 
         targetFrame = targetFrame if isinstance(targetFrame, vtk.vtkTransform) else targetFrame.transform
 
         p = ik.PositionConstraint()
-        p.linkName = self.getHandLink(side)
-        p.pointInLink = np.array(graspToHandLinkFrame.GetPosition())
+        p.linkName = linkName
+        p.pointInLink = np.array(linkOffsetFrame.GetPosition())
         p.referenceFrame = targetFrame
         p.lowerBound = np.tile(-positionTolerance, 3)
         p.upperBound = np.tile(positionTolerance, 3)
@@ -351,11 +354,11 @@ class IKPlanner(object):
 
         t = vtk.vtkTransform()
         t.PostMultiply()
-        t.Concatenate(graspToHandLinkFrame.GetLinearInverse())
+        t.Concatenate(linkOffsetFrame.GetLinearInverse())
         t.Concatenate(targetFrame)
 
         p = ik.QuatConstraint()
-        p.linkName = self.getHandLink(side)
+        p.linkName = linkName
         p.quaternion = t
         p.angleToleranceInDegrees = angleToleranceInDegrees
         orientationConstraint = p
@@ -684,7 +687,7 @@ class IKPlanner(object):
 
 
 
-    def planEndEffectorDelta(self, startPose, side, worldDeltaVector, constraints=None):
+    def planEndEffectorDelta(self, startPose, side, DeltaVector, constraints=None, LocalOrWorldDelta='World'):
 
         self.reachingSide = side
 
@@ -702,11 +705,18 @@ class IKPlanner(object):
         self.jointController.setPose('start_pose', startPose)
         linkFrame = self.robotModel.getLinkFrame(self.getHandLink())
 
-        targetFrame = vtk.vtkTransform()
-        targetFrame.PostMultiply()
-        targetFrame.Concatenate(graspToHandLinkFrame)
-        targetFrame.Concatenate(linkFrame)
-        targetFrame.Translate(worldDeltaVector)
+        if LocalOrWorldDelta == 'World':
+            targetFrame = vtk.vtkTransform()
+            targetFrame.PostMultiply()
+            targetFrame.Concatenate(graspToHandLinkFrame)
+            targetFrame.Concatenate(linkFrame)
+            targetFrame.Translate(DeltaVector)
+        else:
+            targetFrame = vtk.vtkTransform()
+            targetFrame.PostMultiply()
+            targetFrame.Translate(DeltaVector)
+            targetFrame.Concatenate(graspToHandLinkFrame)
+            targetFrame.Concatenate(linkFrame)
 
         constraints.extend(self.createMoveOnLineConstraints(startPose, targetFrame, graspToHandLinkFrame))
 

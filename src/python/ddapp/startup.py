@@ -49,6 +49,8 @@ from ddapp import multisensepanel
 from ddapp import navigationpanel
 from ddapp import handcontrolpanel
 from ddapp import sensordatarequestpanel
+from ddapp import pfgrasp
+from ddapp import pfgrasppanel
 
 from ddapp import robotplanlistener
 from ddapp import handdriver
@@ -125,6 +127,7 @@ useControllerRate = True
 useSkybox = False
 useDataFiles = True
 useContinuousWalking = False
+usePFGrasp = True
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -362,9 +365,6 @@ if usePlanning:
                                       segmentation.segmentValveWallAuto, robotStateJointController,
                                       playPlans, showPose)
 
-    if (useContinuousWalking):
-        continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController)
-
 
     splinewidget.init(view, handFactory, robotStateModel)
 
@@ -411,9 +411,12 @@ if useActionManager:
 
 
 if useNavigationPanel:
-    thispanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
-    picker = PointPicker(view, callback=thispanel.pointPickerStoredFootsteps, numberOfPoints=2)
+    navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver, playbackRobotModel, playbackJointController)
+    picker = PointPicker(view, callback=navigationPanel.pointPickerStoredFootsteps, numberOfPoints=2)
     #picker.start()
+
+    continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController, ikPlanner,
+                                                                       teleopJointController, navigationPanel, cameraview)
 
 
 if useLoggingWidget:
@@ -516,7 +519,6 @@ if useImageViewDemo:
         imagePicker.stop()
 
     #showImageOverlay()
-
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
@@ -704,3 +706,13 @@ if useDrillDemo:
     app.addToolbarMacro('pointer prep', sendPointerPrep)
     app.addToolbarMacro('pointer press', sendPointerPress)
     app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
+
+if usePFGrasp:
+    pfgrasper = pfgrasp.PFGrasp(drillDemo, robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                fitDrillMultisense, robotStateJointController,
+                playPlans, showPose, cameraview, segmentationpanel)
+
+    showImageOverlay()
+    hideImageOverlay()
+    pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)

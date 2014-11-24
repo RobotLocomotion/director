@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>333</height>
+    <height>369</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -37,6 +37,19 @@
       <string>Init Nav At Zero</string>
      </property>
     </widget>
+   </item>
+   <item row="18" column="0" colspan="2">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
    <item row="1" column="1">
     <widget class="QComboBox" name="comboBox"/>
@@ -84,19 +97,6 @@
       <string>visualize</string>
      </property>
     </widget>
-   </item>
-   <item row="16" column="0" colspan="2">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
    </item>
    <item row="1" column="0">
     <widget class="QLabel" name="label">
@@ -151,6 +151,30 @@
     <widget class="QPushButton" name="hideMapButton">
      <property name="text">
       <string>Hide Map</string>
+     </property>
+    </widget>
+   </item>
+   <item row="17" column="1">
+    <widget class="QPushButton" name="disableContinuousButton">
+     <property name="text">
+      <string>Disable Continuous</string>
+     </property>
+    </widget>
+   </item>
+   <item row="17" column="0">
+    <widget class="QPushButton" name="enableContinuousButton">
+     <property name="text">
+      <string>Enable Continuous</string>
+     </property>
+    </widget>
+   </item>
+   <item row="16" column="0" colspan="2">
+    <widget class="Line" name="line_4">
+     <property name="midLineWidth">
+      <number>10</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
