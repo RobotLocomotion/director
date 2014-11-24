@@ -8,8 +8,45 @@ set(sources
   vtkGridSource.cxx
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
+
+  vtkDepthImageProcessingPass.cxx
+  vtkEDLShading.cxx
   )
 
+
+#####
+
+set(GLSL_RESOURCES_DIR
+    edl_resources/Shaders
+    )
+
+set(GLSL_SRCS
+  edl_compose
+  edl_shade
+  bilateral_filter
+  depth_compose
+  )
+
+# -----------------------------------------------------------------------------
+# Create custom commands to encode each glsl file into a C string literal
+# in a header file
+# -----------------------------------------------------------------------------
+set(EXTRA_SRCS)
+
+foreach(file ${GLSL_SRCS})
+  set(src ${CMAKE_CURRENT_SOURCE_DIR}/${GLSL_RESOURCES_DIR}/${file}.glsl)
+  set(res ${CMAKE_CURRENT_BINARY_DIR}/${file}.cxx)
+  add_custom_command(
+    OUTPUT ${res}
+    DEPENDS ${src}
+    COMMAND ${VTK_ENCODESTRING_EXE}
+    ARGS ${res} ${src} ${file}
+    )
+  set(EXTRA_SRCS ${EXTRA_SRCS} ${res})
+endforeach(file)
+
+
+#####
 
 set(VTK_LIBRARIES
   vtkFiltering
@@ -81,7 +118,7 @@ if(USE_LIBBOT)
 endif()
 
 set(library_name vtkDRCFilters)
-add_library(${library_name} ${sources})
+add_library(${library_name} ${sources} ${EXTRA_SRCS})
 target_link_libraries(${library_name} ${deps})
 
 if(pkg_deps)

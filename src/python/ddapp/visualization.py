@@ -230,6 +230,17 @@ class PolyDataItem(om.ObjectModelItem):
         self.scalarBarWidget = createScalarBarWidget(view, lut, title)
         self._renderAllViews()
 
+    def getCoolToWarmColorMap(self, scalarRange):
+
+        f = vtk.vtkDiscretizableColorTransferFunction()
+        f.DiscretizeOn()
+        f.SetColorSpaceToDiverging()
+        f.SetNumberOfValues(256)
+        f.AddRGBPoint(scalarRange[0],  0.23, 0.299, 0.754)
+        f.AddRGBPoint(scalarRange[1], 0.706, 0.016, 0.15)
+        f.Build()
+        return f
+
     def _getDefaultColorMap(self, array, scalarRange=None, hueRange=None):
 
         name = array.GetName()
@@ -249,7 +260,9 @@ class PolyDataItem(om.ObjectModelItem):
         lut.SetHueRange(hueRange)
         lut.SetRange(scalarRange)
         lut.Build()
+
         return lut
+        #return self.getCoolToWarmColorMap(scalarRange)
 
     def shadowOn(self):
 
@@ -979,6 +992,43 @@ def findPickedObject(displayPoint, view):
     pickedPoint, pickedProp, pickedDataset = pickProp(displayPoint, view)
     obj = getObjectByProp(pickedProp)
     return obj, pickedPoint
+
+
+def enableEyeDomeLighting(view):
+
+    seq = vtk.vtkSequencePass()
+    opaque = vtk.vtkOpaquePass()
+
+    peeling = vtk.vtkDepthPeelingPass()
+    peeling.SetMaximumNumberOfPeels(200)
+    peeling.SetOcclusionRatio(0.1)
+
+    translucent = vtk.vtkTranslucentPass()
+    peeling.SetTranslucentPass(translucent)
+
+    volume = vtk.vtkVolumetricPass()
+    overlay = vtk.vtkOverlayPass()
+    lights = vtk.vtkLightsPass()
+
+    passes=vtk.vtkRenderPassCollection()
+    passes.AddItem(lights)
+    passes.AddItem(opaque)
+    #passes.AddItem(peeling)
+    passes.AddItem(translucent)
+    #passes.AddItem(volume)
+    #passes.AddItem(overlay)
+    seq.SetPasses(passes)
+
+    edlPass = vtk.vtkEDLShading()
+    cameraPass = vtk.vtkCameraPass()
+
+    edlPass.SetDelegatePass(cameraPass)
+    cameraPass.SetDelegatePass(seq)
+    view.renderer().SetPass(edlPass)
+
+
+def disableEyeDomeLighting(view):
+    view.renderer().SetPass(None)
 
 
 def showImage(filename):
