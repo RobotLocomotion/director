@@ -100,9 +100,9 @@ void ddBotImageQueue::init(ddLCMThread* lcmThread, const QString& botConfigFile)
   this->addCameraStream("CAMERACHEST_LEFT");
   this->addCameraStream("CAMERACHEST_RIGHT");
   this->addCameraStream("CAMERA_LEFT");
-  this->addCameraStream("CAMERA", "CAMERA_LEFT", multisense::images_t::LEFT);
-  this->addCameraStream("CAMERA_FUSED", "CAMERA_TSDF", multisense::images_t::LEFT);
-  //this->addCameraStream("CAMERA", "CAMERA_RIGHT", multisense::images_t::RIGHT);
+  this->addCameraStream("CAMERA", "CAMERA_LEFT", bot_core::images_t::LEFT);
+  this->addCameraStream("CAMERA_FUSED", "CAMERA_TSDF", bot_core::images_t::LEFT);
+  //this->addCameraStream("CAMERA", "CAMERA_RIGHT", bot_core::images_t::RIGHT);
 }
 
 //-----------------------------------------------------------------------------
@@ -340,7 +340,7 @@ ddBotImageQueue::CameraData* ddBotImageQueue::getCameraData(const QString& camer
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::onImagesMessage(const QByteArray& data, const QString& channel)
 {
-  multisense::images_t& message = this->mImagesMessageMap[channel];
+  bot_core::images_t& message = this->mImagesMessageMap[channel];
   message.decode(data.data(), 0, data.size());
 
   const QMap<int, QString> cameraNameMap = mChannelMap[channel];
@@ -540,7 +540,7 @@ void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyDat
     return;
   }
 
-  multisense::images_t& msg = this->mImagesMessageMap[channel];
+  bot_core::images_t& msg = this->mImagesMessageMap[channel];
 
   // Read the camera calibration from params (including baseline:
   CameraData* cameraData = this->getCameraData("CAMERA_LEFT");

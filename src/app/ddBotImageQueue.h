@@ -13,7 +13,7 @@
 #include <Eigen/Geometry>
 #include <lcm/lcm-cpp.hpp>
 #include <lcmtypes/bot_core/image_t.hpp>
-#include <lcmtypes/multisense/images_t.hpp>
+#include <lcmtypes/bot_core/images_t.hpp>
 
 #include <bot_core/camtrans.h>
 #include <bot_param/param_client.h>
@@ -143,7 +143,7 @@ protected:
 
   ddLCMThread* mLCM;
   QMap<QString, QMap<int, QString> > mChannelMap;
-  QMap<QString, multisense::images_t> mImagesMessageMap;
+  QMap<QString, bot_core::images_t> mImagesMessageMap;
   QMap<QString, ddLCMSubscriber*> mSubscribers;
   QMap<QString, CameraData*> mCameraData;
 };
