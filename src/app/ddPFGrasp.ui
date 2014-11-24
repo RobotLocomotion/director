@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PFGrasp</class>
+ <widget class="QWidget" name="PFGrasp">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>268</width>
+    <height>661</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Servo Grasping</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="statusLabel_2">
+     <property name="text">
+      <string>Show:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QPushButton" name="showLHandCameraButton">
+       <property name="text">
+        <string>Left Camera</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="showRHandCameraButton">
+       <property name="text">
+        <string>Right Camera</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="Line" name="line_4">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="statusLabel_4">
+     <property name="text">
+      <string>Fit Model with hand camera:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="spawnDrillButton">
+     <property name="text">
+      <string>Spawn Drill</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="projectDrillButton">
+     <property name="text">
+      <string>Project Drill</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="reachDrillButton">
+     <property name="text">
+      <string>Plan Reach Drill</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="graspDrillButton">
+     <property name="text">
+      <string>Plan Grasp Drill</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="Line" name="line_6">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="1">
+      <widget class="QComboBox" name="selectHandBox">
+       <item>
+        <property name="text">
+         <string>left</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>right</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="statusLabel_3">
+       <property name="text">
+        <string>Autonomous Grasping:</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Stop Criterion:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="criterionEdit">
+       <property name="text">
+        <string>0.015</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QPushButton" name="startStepButton">
+     <property name="text">
+      <string>Start Step-by-Step</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="apply3DFitButton">
+     <property name="text">
+      <string>Apply 3D Fit</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="runOneIterButton">
+     <property name="text">
+      <string>Run One Iteration</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="startGraspButton">
+       <property name="text">
+        <string>Move Forward and Grasp</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="disttomoveEdit">
+       <property name="toolTip">
+        <string>max distance to move</string>
+       </property>
+       <property name="text">
+        <string>0.5</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="Line" name="line_5">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="startAutoButton">
+     <property name="text">
+      <string>Start Full Autonomy</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="stopButton">
+     <property name="text">
+      <string>Stop</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="Line" name="line_3">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="statusLabel">
+     <property name="text">
+      <string>Status:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTextEdit" name="statusTextEdit"/>
+   </item>
+  </layout>
+  <zorder>statusLabel_2</zorder>
+  <zorder>line_4</zorder>
+  <zorder>spawnDrillButton</zorder>
+  <zorder>projectDrillButton</zorder>
+  <zorder>line_6</zorder>
+  <zorder>startStepButton</zorder>
+  <zorder>runOneIterButton</zorder>
+  <zorder>line_5</zorder>
+  <zorder>startAutoButton</zorder>
+  <zorder>stopButton</zorder>
+  <zorder>line_3</zorder>
+  <zorder>statusLabel</zorder>
+  <zorder>statusTextEdit</zorder>
+  <zorder>apply3DFitButton</zorder>
+  <zorder>statusLabel_4</zorder>
+  <zorder>reachDrillButton</zorder>
+  <zorder>graspDrillButton</zorder>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

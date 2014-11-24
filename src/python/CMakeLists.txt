@@ -49,6 +49,8 @@ set(python_files
   ddapp/navigationpanel.py
   ddapp/objectmodel.py
   ddapp/perception.py
+  ddapp/pfgrasp.py
+  ddapp/pfgrasppanel.py
   ddapp/planplayback.py
   ddapp/playbackpanel.py
   ddapp/pointpicker.py
