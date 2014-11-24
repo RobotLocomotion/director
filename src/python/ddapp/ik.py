@@ -63,6 +63,7 @@ class AsyncIKCommunicator():
     def startServerAsync(self):
 
         self.comm = matlab.MatlabCommunicator(self._createMatlabClient())
+        self.comm.echoToStdOut = False
         self.comm.outputConsole = self.outputConsole
 
         taskQueue = AsyncTaskQueue()
@@ -70,6 +71,7 @@ class AsyncIKCommunicator():
         taskQueue.addTask(self.comm.waitForResultAsync)
         taskQueue.addTask(self.comm.printResult)
         taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, self.getStartupCommands()))
+        taskQueue.addTask(functools.partial(setattr, self.comm, 'echoToStdOut', True))
 
         self.taskQueue = taskQueue
         self.taskQueue.start()
