@@ -535,6 +535,9 @@ def showRightClickMenu(displayPoint, view):
     def onSegmentationEditor():
         segmentationpanel.activateSegmentationMode(pointCloudObj.polyData)
 
+    def addMovableFrame():
+        segmentation.makeMovable(pickedObj)
+
 
     actions = [
       (None, None),
@@ -543,11 +546,20 @@ def showRightClickMenu(displayPoint, view):
       ('Select', onSelect)
       ]
 
-    if reachFrame is not None:
+    if isinstance(pickedObj, vis.PolyDataItem) and not pickedObj.getChildFrame():
+        actions.extend([
+            ('Add Frame', addMovableFrame),
+        ])
+
+    if isGraspSeed(pickedObj):
         actions.extend([
             (None, None),
             ('Flip Side', flipHandSide),
             ('Flip Thumb', flipHandThumb),
+        ])
+
+    if reachFrame is not None:
+        actions.extend([
             (None, None),
             ('Reach Left', onReachLeft),
             ('Reach Right', onReachRight),
