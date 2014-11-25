@@ -14,6 +14,15 @@ from ddapp import drcargs
 from ddapp import botpy
 from ddapp import vtkAll as vtk
 from ddapp import matlab
+
+# Stupid hack: if we try to import mosek *after* importing pypm, then it will fail with:
+# ImportError: Failed to import dll "libmosekxx7_0.so"
+# But if we import mosek.fusion first, then we can import pypm later and everything will be fine.
+try:
+    import mosek.fusion
+except ImportError:
+    pass
+
 from ddapp import jointcontrol
 from ddapp import callbacks
 from ddapp import cameracontrol
