@@ -8,6 +8,7 @@ import ddapp.vtkNumpy as vnp
 from scipy.spatial.qhull import QhullError
 from ddapp import transformUtils
 from ddapp import filterUtils
+from ddapp import segmentation
 from ddapp.debugVis import DebugData
 # from ddapp import vtkAll as vtk
 from ddapp.pointpicker import PlacerWidget
@@ -26,14 +27,32 @@ class TerrainRegionItem(vis.PolyDataItem):
                                       scale=0.2,
                                       visible=False,
                                       parent=self.seedObj)
-        self.frameObj.connectFrameModified(self.onFrameModified)
+        self.frameObj.setProperty('Edit', True)
+
+        self.frameObj.widget.HandleRotationEnabledOff()
+
         terrain = om.findObjectByName('HEIGHT_MAP_SCENE')
         if terrain:
+            rep = self.frameObj.widget.GetRepresentation()
+            rep.SetTranslateAxisEnabled(2, False)
+            rep.SetRotateAxisEnabled(0, False)
+            rep.SetRotateAxisEnabled(1, False)
+
+            pos = np.array(self.frameObj.transform.GetPosition())
+            polyData = filterUtils.removeNanPoints(terrain.polyData)
+            if polyData.GetNumberOfPoints():
+                polyData = segmentation.labelDistanceToLine(polyData, pos, pos+[0,0,1])
+                polyData = segmentation.thresholdPoints(polyData, 'distance_to_line', [0.0, 0.1])
+                if polyData.GetNumberOfPoints():
+                    pos[2] = np.nanmax(vnp.getNumpyFromVtk(polyData, 'Points')[:,2])
+                    self.frameObj.transform.Translate(pos - np.array(self.frameObj.transform.GetPosition()))
+
             self.placer = PlacerWidget(view, self.seedObj, terrain)
             self.placer.start()
         else:
             self.frameObj.setProperty('Edit', True)
             self.frameObj.setProperty('Visible', True)
+
 
         self.terrain_segmentation = terrain_segmentation
         self.safe_region = None
@@ -41,7 +60,10 @@ class TerrainRegionItem(vis.PolyDataItem):
         self.addProperty('Enabled for Walking', True)
         self.addProperty('Alpha', 1.0)
         self.addProperty('Color', QtGui.QColor(200,200,20))
+
+        self.frameObj.connectFrameModified(self.onFrameModified)
         self.onFrameModified(self.frameObj)
+
         self.setProperty('Alpha', 0.5)
         self.setProperty('Color', QtGui.QColor(220,220,220))
 
@@ -55,7 +77,6 @@ class TerrainRegionItem(vis.PolyDataItem):
             xy_verts = safe_region.xy_polytope()
             if xy_verts.shape[1] == 0:
                 raise QhullError("No points returned")
-            print xy_verts.shape
             xyz_verts = np.vstack((xy_verts, pos[2] + 0.02 + np.zeros((1, xy_verts.shape[1]))))
             xyz_verts = np.hstack((xyz_verts, np.vstack((xy_verts, pos[2] + 0.015 + np.zeros((1, xy_verts.shape[1]))))))
             # print xyz_verts.shape
