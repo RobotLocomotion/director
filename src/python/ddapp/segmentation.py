@@ -150,19 +150,21 @@ def lockToHandOff():
 
 class DisparityPointCloudItem(vis.PolyDataItem):
 
-    def __init__(self, name, imageManager):
+    def __init__(self, name, imagesChannel, cameraName, imageManager):
         vis.PolyDataItem.__init__(self, name, vtk.vtkPolyData(), view=None)
+
+        self.addProperty('Channel', imagesChannel)
+        self.addProperty('Camera name', cameraName)
 
         self.addProperty('Decimation', 2, attributes=om.PropertyAttributes(enumNames=['1', '2', '4', '8', '16']))
         self.addProperty('Remove Size', 1000, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=100000.0, singleStep=1000))
-        self.addProperty('Remove outliers', False)
         self.addProperty('Target FPS', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=30.0, singleStep=0.1))
 
         self.timer = TimerCallback()
         self.timer.callback = self.update
         self.lastUtime = 0
         self.imageManager = imageManager
-        self.cameraName = 'CAMERA_LEFT'
+        self.cameraName = cameraName
         self.setProperty('Visible', False)
 
     def _onPropertyChanged(self, propertySet, propertyName):
@@ -194,9 +196,9 @@ class DisparityPointCloudItem(vis.PolyDataItem):
             return
 
         decimation = int(self.properties.getPropertyEnumValue('Decimation'))
-        removeOutliers = self.getProperty('Remove outliers')
         removeSize = int(self.properties.getProperty('Remove Size'))
-        polyData = getDisparityPointCloud(decimation, removeOutliers=removeOutliers, removeSize=removeSize )
+        polyData = getDisparityPointCloud(decimation, imagesChannel=self.getProperty('Channel'), cameraName=self.getProperty('Camera name'),
+                                          removeOutliers=False, removeSize=removeSize)
         self.setPolyData(polyData)
 
         if not self.lastUtime:
@@ -501,9 +503,9 @@ def getCurrentRevolutionData():
     return addCoordArraysToPolyData(revPolyData)
 
 
-def getDisparityPointCloud(decimation=4, removeOutliers=True, removeSize=0):
+def getDisparityPointCloud(decimation=4, removeOutliers=True, removeSize=0, imagesChannel='CAMERA', cameraName='CAMERA_LEFT'):
 
-    p = cameraview.getStereoPointCloud(decimation, imagesChannel='CAMERA', cameraName='CAMERA_LEFT', removeSize=removeSize)
+    p = cameraview.getStereoPointCloud(decimation, imagesChannel=imagesChannel, cameraName=cameraName, removeSize=removeSize)
     if not p:
       return None
 
@@ -2091,6 +2093,37 @@ def makePolyDataFields(pd):
     return FieldContainer(points=pd, box=wireframe, mesh=mesh, frame=t, dims=edgeLengths, axes=axes)
 
 
+def makeMovable(obj, initialTransform=None):
+    '''
+    Adds a child frame to the given PolyDataItem.  If initialTransform is not
+    given, then an origin frame is computed for the polydata using the
+    center and orientation of the oriented bounding of the polydata.  The polydata
+    is transformed using the inverse of initialTransform and then a child frame
+    is assigned to the object to reposition it.
+    '''
+    pd = obj.polyData
+    t = initialTransform
+
+    if t is None:
+        origin, edges, wireframe = getOrientedBoundingBox(pd)
+        edgeLengths = np.array([np.linalg.norm(edge) for edge in edges])
+        axes = [edge / np.linalg.norm(edge) for edge in edges]
+        boxCenter = computeCentroid(wireframe)
+        t = getTransformFromAxes(axes[0], axes[1], axes[2])
+        t.PostMultiply()
+        t.Translate(boxCenter)
+
+    pd = transformPolyData(pd, t.GetLinearInverse())
+    obj.setPolyData(pd)
+
+    frame = obj.getChildFrame()
+    if frame:
+        frame.copyFrame(t)
+    else:
+        frame = vis.showFrame(t, obj.getProperty('Name') + ' frame', parent=obj, scale=0.2, visible=False)
+        obj.actor.SetUserTransform(t)
+
+
 def segmentTable(polyData, searchPoint):
     '''
     Segment a horizontal table surface (perpendicular to +Z) in the given polyData
@@ -2401,7 +2434,7 @@ def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDi
     return vis.showClusterObjects([obj], parent='segmentation')[0]
 
 def findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSearchRadius=0.05,
-                          clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0]):
+                          clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0], showClusters=False):
     '''
     Find the horizontal surfaces, tuned to work with walking terrain
     '''
@@ -2450,7 +2483,7 @@ def findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSe
 
     for i, cluster in enumerate(clusters):
 
-        updatePolyData(cluster, 'surface cluster %d' % i, parent=folder, colorByName='normals_dot_up', visible=verboseFlag)
+        updatePolyData(cluster, 'surface cluster %d' % i, parent=folder, color=getRandomColor(), visible=verboseFlag)
         planePoints, _ = applyPlaneFit(cluster, distanceToPlaneThreshold)
         planePoints = thresholdPoints(planePoints, 'dist_to_plane', [-distanceToPlaneThreshold, distanceToPlaneThreshold])
 
@@ -2461,7 +2494,7 @@ def findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSe
                 planeClusters.append(obj)
 
     folder = om.getOrCreateContainer('surface objects', parentObj=getDebugFolder())
-    if verboseFlag:
+    if showClusters:
         vis.showClusterObjects(planeClusters, parent=folder)
 
     return clustersLarge

@@ -230,6 +230,17 @@ class PolyDataItem(om.ObjectModelItem):
         self.scalarBarWidget = createScalarBarWidget(view, lut, title)
         self._renderAllViews()
 
+    def getCoolToWarmColorMap(self, scalarRange):
+
+        f = vtk.vtkDiscretizableColorTransferFunction()
+        f.DiscretizeOn()
+        f.SetColorSpaceToDiverging()
+        f.SetNumberOfValues(256)
+        f.AddRGBPoint(scalarRange[0],  0.23, 0.299, 0.754)
+        f.AddRGBPoint(scalarRange[1], 0.706, 0.016, 0.15)
+        f.Build()
+        return f
+
     def _getDefaultColorMap(self, array, scalarRange=None, hueRange=None):
 
         name = array.GetName()
@@ -249,7 +260,9 @@ class PolyDataItem(om.ObjectModelItem):
         lut.SetHueRange(hueRange)
         lut.SetRange(scalarRange)
         lut.Build()
+
         return lut
+        #return self.getCoolToWarmColorMap(scalarRange)
 
     def shadowOn(self):
 
@@ -603,6 +616,88 @@ class FrameSync(object):
 
         self._blockCallbacks = False
 
+
+class ViewOptionsItem(om.ObjectModelItem):
+
+    def __init__(self, view):
+        om.ObjectModelItem.__init__(self, 'view options')
+
+        self.view = view
+        self.addProperty('Camera projection', 0, attributes=om.PropertyAttributes(enumNames=['Perspective', 'Parallel']))
+        self.addProperty('View angle', view.camera().GetViewAngle(), attributes=om.PropertyAttributes(minimum=2, maximum=180))
+        self.addProperty('Key light intensity', view.lightKit().GetKeyLightIntensity(), attributes=om.PropertyAttributes(minimum=0, maximum=5, singleStep=0.1, decimals=2))
+        self.addProperty('Light kit', True)
+        self.addProperty('Eye dome lighting', False)
+        self.addProperty('Orientation widget', True)
+        self.addProperty('Interactive render', True)
+        self.addProperty('Gradient background', True)
+        self.addProperty('Background color', self._toQColor(view.backgroundRenderer().GetBackground()))
+        self.addProperty('Background color 2', self._toQColor(view.backgroundRenderer().GetBackground2()))
+
+    @staticmethod
+    def _toQColor(color):
+        return QtGui.QColor(color[0]*255, color[1]*255, color[2]*255)
+
+    @staticmethod
+    def _toFloatColor(color):
+        return [color.red()/255.0, color.green()/255.0, color.blue()/255.0]
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName in ('Gradient background', 'Background color', 'Background color 2'):
+            colors = [self.getProperty('Background color'), self.getProperty('Background color 2')]
+            colors = [self._toFloatColor(c) for c in colors]
+
+            if not self.getProperty('Gradient background'):
+                colors[1] = colors[0]
+
+            self.view.renderer().SetBackground(colors[0])
+            self.view.renderer().SetBackground2(colors[1])
+
+        elif propertyName == 'Camera projection':
+
+            if self.getPropertyEnumValue(propertyName) == 'Perspective':
+                self.view.camera().ParallelProjectionOff()
+            else:
+                self.view.camera().ParallelProjectionOn()
+
+        elif propertyName == 'Orientation widget':
+
+            if self.getProperty(propertyName):
+                self.view.orientationMarkerWidget().On()
+            else:
+                self.view.orientationMarkerWidget().Off()
+
+        elif propertyName == 'View angle':
+
+            angle = self.getProperty(propertyName)
+            self.view.camera().SetViewAngle(angle)
+
+        elif propertyName == 'Key light intensity':
+
+            intensity = self.getProperty(propertyName)
+            self.view.lightKit().SetKeyLightIntensity(intensity)
+
+        elif propertyName == 'Light kit':
+
+            self.view.setLightKitEnabled(self.getProperty(propertyName))
+
+        elif propertyName == 'Eye dome lighting':
+
+            if self.getProperty(propertyName):
+                enableEyeDomeLighting(self.view)
+            else:
+                disableEyeDomeLighting(self.view)
+
+        elif propertyName == 'Interactive render':
+            if self.getProperty(propertyName):
+                self.view.renderWindow().GetInteractor().EnableRenderOn()
+            else:
+                self.view.renderWindow().GetInteractor().EnableRenderOff()
+
+        self.view.render()
 
 
 def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=None, useSurface=False, gridTransform=None):
@@ -979,6 +1074,43 @@ def findPickedObject(displayPoint, view):
     pickedPoint, pickedProp, pickedDataset = pickProp(displayPoint, view)
     obj = getObjectByProp(pickedProp)
     return obj, pickedPoint
+
+
+def enableEyeDomeLighting(view):
+
+    seq = vtk.vtkSequencePass()
+    opaque = vtk.vtkOpaquePass()
+
+    peeling = vtk.vtkDepthPeelingPass()
+    peeling.SetMaximumNumberOfPeels(200)
+    peeling.SetOcclusionRatio(0.1)
+
+    translucent = vtk.vtkTranslucentPass()
+    peeling.SetTranslucentPass(translucent)
+
+    volume = vtk.vtkVolumetricPass()
+    overlay = vtk.vtkOverlayPass()
+    lights = vtk.vtkLightsPass()
+
+    passes=vtk.vtkRenderPassCollection()
+    passes.AddItem(lights)
+    passes.AddItem(opaque)
+    #passes.AddItem(peeling)
+    passes.AddItem(translucent)
+    #passes.AddItem(volume)
+    #passes.AddItem(overlay)
+    seq.SetPasses(passes)
+
+    edlPass = vtk.vtkEDLShading()
+    cameraPass = vtk.vtkCameraPass()
+
+    edlPass.SetDelegatePass(cameraPass)
+    cameraPass.SetDelegatePass(seq)
+    view.renderer().SetPass(edlPass)
+
+
+def disableEyeDomeLighting(view):
+    view.renderer().SetPass(None)
 
 
 def showImage(filename):

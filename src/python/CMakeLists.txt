@@ -12,6 +12,7 @@ set(python_files
   ddapp/atlasdriverpanel.py
   ddapp/botspy.py
   ddapp/callbacks.py
+  ddapp/camerabookmarks.py
   ddapp/cameracontrol.py
   ddapp/cameraview.py
   ddapp/colorize.py

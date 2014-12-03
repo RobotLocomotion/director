@@ -42,6 +42,9 @@ public:
   void setAlpha(double alpha);
   double alpha() const;
 
+  void setTexturesEnabled(bool enabled);
+  bool texturesEnabled() const;
+
   void setVisible(bool visible);
   bool visible() const;
 

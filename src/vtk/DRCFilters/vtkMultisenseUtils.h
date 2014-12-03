@@ -209,6 +209,31 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
       }
     }
 
+    /*
+    const int n = msg.nranges;
+    for (int i = 1; i < n-1; ++i) {
+      double theta1 = msg.rad0 + (i-1)*msg.radstep;
+      double theta2 = msg.rad0 + i*msg.radstep;
+      double theta3 = msg.rad0 + (i+1)*msg.radstep;
+      double r1 = msg.ranges[i-1];
+      double r2 = msg.ranges[i];
+      double r3 = msg.ranges[i+1];
+      Eigen::Vector2d p1(r1*std::cos(theta1), r1*std::sin(theta1));
+      Eigen::Vector2d p2(r2*std::cos(theta2), r2*std::sin(theta2));
+      Eigen::Vector2d p3(r3*std::cos(theta3), r3*std::sin(theta3));
+      Eigen::Vector2d pointDelta1 = (p1-p2).normalized();
+      Eigen::Vector2d pointDelta2 = (p3-p2).normalized();
+      Eigen::Vector2d ray = p2.normalized();
+      double angle1 = std::acos(ray.dot(pointDelta1));
+      if (angle1 > kPi/2) angle1 = kPi - angle1;
+      double angle2 = std::acos(ray.dot(pointDelta2));
+      if (angle2 > kPi/2) angle2 = kPi - angle2;
+      if ((angle1 < kAngleThresh) && (angle2 < kAngleThresh)) {
+        msg.ranges[i] = 0;
+      }
+    }
+    */
+
     Eigen::Vector3d pt(ranges[i] * cos(theta), ranges[i] * sin(theta), 0.0);
 
     Eigen::Quaterniond q = q0.slerp(t, q1);

@@ -25,6 +25,7 @@ except ImportError:
 
 from ddapp import jointcontrol
 from ddapp import callbacks
+from ddapp import camerabookmarks
 from ddapp import cameracontrol
 from ddapp import debrisdemo
 from ddapp import drilldemo
@@ -193,7 +194,8 @@ if usePerception:
     multisensepanel.init(perception.multisenseDriver)
     sensordatarequestpanel.init()
 
-    disparityPointCloud = segmentation.DisparityPointCloudItem('stereo point cloud', cameraview.imageManager)
+    # for kintinuous, use 'CAMERA_FUSED', 'CAMERA_TSDF'
+    disparityPointCloud = segmentation.DisparityPointCloudItem('stereo point cloud', 'CAMERA', 'CAMERA_LEFT', cameraview.imageManager)
     disparityPointCloud.addToView(view)
     om.addToObjectModel(disparityPointCloud, parentObj=om.findObjectByName('sensors'))
 
@@ -205,6 +207,8 @@ if usePerception:
 
 if useGrid:
     vis.showGrid(view, color=[0,0,0] if useLightColorScheme else [1,1,1], useSurface=useLightColorScheme)
+
+om.addToObjectModel(vis.ViewOptionsItem(view), parentObj=om.findObjectByName('sensors'))
 
 
 if useLightColorScheme:
@@ -531,6 +535,7 @@ if useImageViewDemo:
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
+camerabookmarks.init(view)
 
 
 def getLinkFrame(linkName, model=None):

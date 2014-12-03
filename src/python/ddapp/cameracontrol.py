@@ -62,12 +62,12 @@ class Flyer(TimerCallback):
     def tick(self):
 
         elapsed = time.time() - self.startTime
-        t = elapsed / float(self.flyTime)
+        t = (elapsed / float(self.flyTime)) if self.flyTime > 0 else 1.0
 
         self.interp.InterpolateCamera(t, self.view.camera())
         self.view.render()
 
-        if t > 1.0:
+        if t >= 1.0:
             return False
 
 
@@ -77,6 +77,7 @@ class RobotModelFollower(object):
         self.view = view
         self.robotModel = robotModel
         self.jointController = jointController
+        self.followAxes = [True, True, True]
         self.callbackId = None
 
     def start(self):
@@ -95,9 +96,9 @@ class RobotModelFollower(object):
         newTrackPosition = np.array(self.jointController.q[:3])
 
         delta = newTrackPosition - self.lastTrackPosition
-        #delta[0] = 0.0
-        #delta[1] = 0.0
-        #delta[2] = 0.0
+        for i in xrange(3):
+            if not self.followAxes[i]:
+                delta[i] = 0.0
 
         self.lastTrackPosition = newTrackPosition
 

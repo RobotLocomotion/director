@@ -256,11 +256,17 @@ class MatlabCommunicator(object):
 
     def assignFloatArray(self, array, arrayName):
 
+        def joinFloats(values, sep):
+            maxLength = 180.0
+            pieces = np.array_split(values, np.ceil(len(values)/maxLength))
+            pieces = [sep.join([repr(float(x)) for x in piece]) for piece in pieces]
+            return str(sep + '...\n').join(pieces)
+
         if np.ndim(array) == 1:
-            arrayStr = '[%s]' % ';'.join([repr(float(x)) for x in array])
+            arrayStr = '[%s]' % joinFloats(array, ';')
         else:
             assert np.ndim(array) == 2
-            arrayStr = '[%s]' % '; '.join([', '.join([repr(x) for x in row]) for row in array])
+            arrayStr = '[%s]' % ';...\n'.join([joinFloats(row, ',') for row in array])
 
         self.send('%s = %s;' % (arrayName, arrayStr))
         self.waitForResult()

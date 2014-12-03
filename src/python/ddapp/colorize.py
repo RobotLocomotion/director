@@ -43,24 +43,20 @@ def colorizeSegmentationLidar(enabled):
     setVisProperties(obj, enabled)
 
 
-def colorizeMapCallback():
-    obj = om.findObjectByName('Map Server')
-    colorizePoints(obj.polyData)
-    obj.colorBy('rgb')
+def colorizeMapCallback(obj):
+    if obj and obj == om.findObjectByName('HEIGHT_MAP_SCENE'):
+        colorizePoints(obj.polyData)
+        obj._updateColorByProperty()
+        obj.setProperty('Color By', 'rgb')
 
 
 def colorizeMaps(enabled):
-    mapServerObj = om.findObjectByName('Map Server')
-    if not mapServerObj:
-        return
 
     if enabled:
-        colorizeMapCallback()
-        mapServerObj.source.colorizeCallback = colorizeMapCallback
+        om.findObjectByName('Map Server').source.colorizeCallback = colorizeMapCallback
+        colorizeMapCallback(om.findObjectByName('HEIGHT_MAP_SCENE'))
     else:
-        mapServerObj.source.colorizeCallback = None
-
-    setVisProperties(mapServerObj, enabled)
+        om.findObjectByName('Map Server').source.colorizeCallback = None
 
 
 def colorizeMultisense(enabled):
@@ -84,7 +80,7 @@ def colorizeMapsOff():
 def onColorizeLidar():
 
     colorizeEnabled = app.getToolBarActions()[actionName].checked
-    #colorizeMaps(colorizeEnabled)
+    colorizeMaps(colorizeEnabled)
     colorizeMultisense(colorizeEnabled)
     colorizeSegmentationLidar(colorizeEnabled)
 
