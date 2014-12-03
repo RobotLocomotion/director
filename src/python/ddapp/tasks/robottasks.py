@@ -543,6 +543,8 @@ class FindHorizontalSurfaces(PointCloudAlgorithmBase):
     def run(self):
         polyData = self.getPointCloud()
         segmentation.findHorizontalSurfaces(polyData,
+          removeGroundFirst=True,
+          showClusters=True,
           normalEstimationSearchRadius=self.properties.getProperty('Normal estimation search radius'),
           clusterTolerance=self.properties.getProperty('Cluster tolerance'),
           distanceToPlaneThreshold=self.properties.getProperty('Distance to plane threshold'),
