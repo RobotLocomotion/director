@@ -2185,14 +2185,15 @@ def segmentTableThenFindDrills(polyData,pickedPoint):
 
 
 
-def segmentTableScene(polyData, searchPoint):
+def segmentTableScene(polyData, searchPoint, filterClustering = True):
     ''' This seems to be unused, depreciated? '''
 
     objectClusters, tablePoints, _, _ = segmentTableSceneClusters(polyData, searchPoint)
 
     clusters = [makePolyDataFields(cluster) for cluster in objectClusters]
     clusters = [cluster for cluster in clusters if cluster is not None]
-    clusters = filterClusterObjects(clusters)
+    if (filterClustering):
+        clusters = filterClusterObjects(clusters)
 
     return FieldContainer(table=makePolyDataFields(tablePoints), clusters=clusters)
 
@@ -2209,9 +2210,9 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
     tableCentroid = computeCentroid(tablePoints)
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.5])
-    searchRegion = cropToSphere(searchRegion, tableCentroid, 0.50)
+    searchRegion = cropToSphere(searchRegion, tableCentroid, 1.0)
 
-    objectClusters = extractClusters(searchRegion, clusterInXY, clusterTolerance=0.03, minClusterSize=10)
+    objectClusters = extractClusters(searchRegion, clusterInXY, clusterTolerance=0.02, minClusterSize=10)
 
     #print 'got %d clusters' % len(objectClusters)
     for i,c in enumerate(objectClusters):
