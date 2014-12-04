@@ -33,10 +33,10 @@ robotStateJointController.push()
 
 # load poly data
 dataDir = app.getTestingDataDirectory()
-#polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/valve-lever-scene.vtp'))
-#polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/valve-lever-scene-30.vtp'))
-#polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/valve-lever-scene-60.vtp'))
-polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/valve-lever-scene-90.vtp'))
+#polyData = ioUtils.readPolyData(os.path.join(dataDir, 'valve/valve-lever-scene.vtp'))
+#polyData = ioUtils.readPolyData(os.path.join(dataDir, 'valve/valve-lever-scene-30.vtp'))
+#polyData = ioUtils.readPolyData(os.path.join(dataDir, 'valve/valve-lever-scene-60.vtp'))
+polyData = ioUtils.readPolyData(os.path.join(dataDir, 'valve/valve-lever-scene-90.vtp'))
 vis.showPolyData(polyData, 'pointcloud snapshot')
 
 segmentation.segmentValveWallAuto(.2, mode='both', removeGroundMethod=segmentation.removeGround )

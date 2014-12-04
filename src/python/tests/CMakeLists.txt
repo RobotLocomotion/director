@@ -21,6 +21,7 @@ set(python_tests
   testTaskQueue.py
   testValveFit.py
   testValveFitStereo.py
+  testAmazonPod.py
 )
 
 set(python_test_args
