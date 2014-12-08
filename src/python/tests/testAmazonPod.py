@@ -9,49 +9,14 @@ from ddapp import applogic
 from ddapp import visualization as vis
 from ddapp import transformUtils
 from ddapp import filterUtils
+from ddapp import roboturdf
+from ddapp import vtkNumpy as vnp
 
 import numpy as np
-#import vtkNumpy
-from ddapp import roboturdf
-
-try:
-    from vtk.util import numpy_support
-except ImportError:
-    from paraview import numpy_support
-
-def getNumpyFromVtk(dataObj, arrayName):
-    if arrayName == 'Points':
-        vtkArray = dataObj.GetPoints().GetData()
-    else:
-        vtkArray = dataObj.GetPointData().GetArray(arrayName)
-
-    if not vtkArray:
-        raise KeyError('Array not found')
-
-    return numpy_support.vtk_to_numpy(vtkArray)
-
-def getVtkFromNumpy(numpyArray):
-
-    def MakeCallback(numpyArray):
-        def Closure(caller, event):
-            closureArray = numpyArray
-        return Closure
-
-    vtkArray = numpy_support.numpy_to_vtk(numpyArray)
-    vtkArray.AddObserver('DeleteEvent', MakeCallback(numpyArray))
-    return vtkArray
-
-def addNumpyToVtk(dataObj, numpyArray, arrayName):
-    assert dataObj.GetNumberOfPoints() == numpyArray.shape[0]
-
-    vtkArray = getVtkFromNumpy(numpyArray)
-    vtkArray.SetName(arrayName)
-    dataObj.GetPointData().AddArray(vtkArray)
-
 
 def removePlaneAndBeyond(polyData, expectedNormal=[1,0,0], filterRange=[-np.inf, -0.03], whichAxis=1, whichAxisLetter='y', percentile = 95):
 
-    yvalues = getNumpyFromVtk(polyData, 'Points')[:, whichAxis]
+    yvalues = vnp.getNumpyFromVtk(polyData, 'Points')[:, whichAxis]
     backY = np.percentile(yvalues, percentile)
 
     if ( percentile > 50):
@@ -64,9 +29,9 @@ def removePlaneAndBeyond(polyData, expectedNormal=[1,0,0], filterRange=[-np.inf,
     # find the plane of the back wall, remove it and the points behind it:
     _, origin, normal = segmentation.applyPlaneFit(searchRegion, distanceThreshold=0.02, expectedNormal=expectedNormal, perpendicularAxis=expectedNormal, returnOrigin=True)
 
-    points = getNumpyFromVtk(polyData, 'Points')
+    points = vnp.getNumpyFromVtk(polyData, 'Points')
     dist = np.dot(points - origin, normal)
-    addNumpyToVtk(polyData, dist, 'dist_to_plane')
+    vnp.addNumpyToVtk(polyData, dist, 'dist_to_plane')
 
     backFrame = transformUtils.getTransformFromOriginAndNormal(origin, normal, normalAxis=2)
     vis.updateFrame(backFrame, 'back frame', parent='segmentation', scale=0.15 , visible=False)
@@ -90,9 +55,9 @@ def fitObjectsOnShelf(polyData, maxHeight = 0.25):
     vis.showFrame(shelfFrame, 'shelfFrame', parent='segmentation', scale=0.15 , visible=False)
 
     # find the points near to the shelf plane and find objects on it:
-    points = getNumpyFromVtk(polyData, 'Points')
+    points = vnp.getNumpyFromVtk(polyData, 'Points')
     dist = np.dot(points - origin, normal)
-    addNumpyToVtk(polyData, dist, 'dist_to_plane')
+    vnp.addNumpyToVtk(polyData, dist, 'dist_to_plane')
     shelfPoints = segmentation.thresholdPoints(polyData, 'dist_to_plane', [-0.01, maxHeight])
     vis.updatePolyData(shelfPoints, 'shelf', parent='segmentation', visible=False)
 
@@ -100,9 +65,9 @@ def fitObjectsOnShelf(polyData, maxHeight = 0.25):
     vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
 
     # remove the points that we considered from the orginal cloud
-    dists = getNumpyFromVtk(polyData, 'dist_to_plane')
+    dists = vnp.getNumpyFromVtk(polyData, 'dist_to_plane')
     diffShelf = ( ((dists > maxHeight) + (dists < -0.01))) + 0.1 -0.1
-    addNumpyToVtk(polyData, diffShelf, 'diff_shelf')
+    vnp.addNumpyToVtk(polyData, diffShelf, 'diff_shelf')
     polyData = segmentation.thresholdPoints(polyData, 'diff_shelf', [1, 1])
 
     vis.updatePolyData(polyData, 'rest', parent='segmentation', visible=False)
