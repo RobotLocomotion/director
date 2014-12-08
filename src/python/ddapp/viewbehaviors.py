@@ -532,10 +532,6 @@ def showRightClickMenu(displayPoint, view):
     def onOrientAndSave():
         polyData, planeFrame = segmentation.orientToMajorPlane(pointCloudObj.polyData, pickedPoint=pickedPoint)
         vis.updatePolyData(polyData, 'pointcloud snapshot', colorByName='rgb_colors')
-        filenameOut = '~/Desktop/designer-output.vtp'
-        filenameOutFull = os.path.expanduser(filenameOut)
-        print "saving polydata to", filenameOutFull
-        ioUtils.writePolyData(polyData,filenameOutFull)
 
 
     def onDiskGlyph():
