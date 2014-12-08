@@ -326,19 +326,22 @@ def orientToMajorPlane(polyData, pickedPoint):
     distanceToPlaneThreshold=0.02
     searchRadius = 0.5
 
+
     planePoints, origin, normal = applyPlaneFit(polyData, distanceToPlaneThreshold, searchOrigin=pickedPoint, searchRadius=searchRadius, returnOrigin=True)
-
-    # randomly flip the point cloud if the cloud/normal is upside down
-    # TODO: determine if the 50 percentile point is above or below the plane and use that instead
-    if (np.random.rand()  > 0.5):
-        normal = -normal
-
     vis.updatePolyData(planePoints, 'local plane fit', color=[0,1,0], parent=getDebugFolder(), visible=False)
 
     planeFrame = transformUtils.getTransformFromOriginAndNormal(pickedPoint, normal)
     vis.updateFrame(planeFrame, 'plane frame', scale=0.15, parent=getDebugFolder(), visible=False)
 
     polyData = transformPolyData(polyData, planeFrame.GetLinearInverse() )
+
+    # if the mean point is below the horizontal plane, flip the cloud
+    zvalues = vtkNumpy.getNumpyFromVtk(polyData, 'Points')[:,2]
+    midCloudHeight = np.mean(zvalues)
+    if (midCloudHeight < 0):
+      flipTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,180,0])
+      polyData = transformPolyData(polyData, flipTransform )
+
     return polyData, planeFrame
 
 
