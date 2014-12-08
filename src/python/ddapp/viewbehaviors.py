@@ -529,9 +529,9 @@ def showRightClickMenu(displayPoint, view):
         obj.setProperty('Point Size', 7)
 
 
-    def onOrientAndSave():
+    def onOrientToMajorPlane():
         polyData, planeFrame = segmentation.orientToMajorPlane(pointCloudObj.polyData, pickedPoint=pickedPoint)
-        vis.updatePolyData(polyData, 'pointcloud snapshot', colorByName='rgb_colors')
+        pointCloudObj.setPolyData(polyData)
 
 
     def onDiskGlyph():
@@ -571,7 +571,7 @@ def showRightClickMenu(displayPoint, view):
             ('Segment Table', onSegmentTableScene),
             ('Segment Drill Aligned', onSegmentDrillAlignedWithTable),
             ('Local Plane Fit', onLocalPlaneFit),
-            ('Orient and Save', onOrientAndSave),
+            ('Orient with Horizontal', onOrientToMajorPlane),
             ('Disk Glyph', onDiskGlyph),
             ('Cache Pick Point', onCachePickedPoint),
             (None, None),
