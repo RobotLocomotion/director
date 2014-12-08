@@ -22,7 +22,6 @@ from ddapp import drcargs
 from ddapp import botpy
 from ddapp import vtkAll as vtk
 from ddapp import matlab
-
 from ddapp import jointcontrol
 from ddapp import callbacks
 from ddapp import camerabookmarks
