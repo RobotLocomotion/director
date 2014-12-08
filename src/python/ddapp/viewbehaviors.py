@@ -19,6 +19,9 @@ from ddapp.shallowCopy import shallowCopy
 from ddapp import segmentationpanel
 from ddapp import segmentation
 import numpy as np
+import ioUtils
+import os
+
 
 
 # todo: refactor these global variables
@@ -526,6 +529,15 @@ def showRightClickMenu(displayPoint, view):
         obj.setProperty('Point Size', 7)
 
 
+    def onOrientAndSave():
+        polyData, planeFrame = segmentation.orientToMajorPlane(pointCloudObj.polyData, pickedPoint=pickedPoint)
+        vis.updatePolyData(polyData, 'pointcloud snapshot', colorByName='rgb_colors')
+        filenameOut = '~/Desktop/designer-output.vtp'
+        filenameOutFull = os.path.expanduser(filenameOut)
+        print "saving polydata to", filenameOutFull
+        ioUtils.writePolyData(polyData,filenameOutFull)
+
+
     def onDiskGlyph():
         result = segmentation.applyDiskGlyphs(pointCloudObj.polyData)
         obj = vis.showPolyData(result, 'disks', color=[0.8,0.8,0.8])
@@ -563,6 +575,7 @@ def showRightClickMenu(displayPoint, view):
             ('Segment Table', onSegmentTableScene),
             ('Segment Drill Aligned', onSegmentDrillAlignedWithTable),
             ('Local Plane Fit', onLocalPlaneFit),
+            ('Orient and Save', onOrientAndSave),
             ('Disk Glyph', onDiskGlyph),
             ('Cache Pick Point', onCachePickedPoint),
             (None, None),

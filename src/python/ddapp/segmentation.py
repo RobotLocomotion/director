@@ -318,6 +318,30 @@ def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None
     return fitPoints
 
 
+def orientToMajorPlane(polyData, pickedPoint):
+    '''
+    Find the largest plane and transform the cloud to align that plane
+    Use the given point as the origin
+    '''
+    distanceToPlaneThreshold=0.02
+    searchRadius = 0.5
+
+    planePoints, origin, normal = applyPlaneFit(polyData, distanceToPlaneThreshold, searchOrigin=pickedPoint, searchRadius=searchRadius, returnOrigin=True)
+
+    # randomly flip the point cloud if the cloud/normal is upside down
+    # TODO: determine if the 50 percentile point is above or below the plane and use that instead
+    if (np.random.rand()  > 0.5):
+        normal = -normal
+
+    vis.updatePolyData(planePoints, 'local plane fit', color=[0,1,0], parent=getDebugFolder(), visible=False)
+
+    planeFrame = transformUtils.getTransformFromOriginAndNormal(pickedPoint, normal)
+    vis.updateFrame(planeFrame, 'plane frame', scale=0.15, parent=getDebugFolder(), visible=False)
+
+    polyData = transformPolyData(polyData, planeFrame.GetLinearInverse() )
+    return polyData, planeFrame
+
+
 def getMajorPlanes(polyData, useVoxelGrid=True):
 
     voxelGridSize = 0.01
