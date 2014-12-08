@@ -320,6 +320,33 @@ def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None
     return fitPoints
 
 
+def orientToMajorPlane(polyData, pickedPoint):
+    '''
+    Find the largest plane and transform the cloud to align that plane
+    Use the given point as the origin
+    '''
+    distanceToPlaneThreshold=0.02
+    searchRadius = 0.5
+
+
+    planePoints, origin, normal = applyPlaneFit(polyData, distanceToPlaneThreshold, searchOrigin=pickedPoint, searchRadius=searchRadius, returnOrigin=True)
+    vis.updatePolyData(planePoints, 'local plane fit', color=[0,1,0], parent=getDebugFolder(), visible=False)
+
+    planeFrame = transformUtils.getTransformFromOriginAndNormal(pickedPoint, normal)
+    vis.updateFrame(planeFrame, 'plane frame', scale=0.15, parent=getDebugFolder(), visible=False)
+
+    polyData = transformPolyData(polyData, planeFrame.GetLinearInverse() )
+
+    # if the mean point is below the horizontal plane, flip the cloud
+    zvalues = vtkNumpy.getNumpyFromVtk(polyData, 'Points')[:,2]
+    midCloudHeight = np.mean(zvalues)
+    if (midCloudHeight < 0):
+      flipTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,180,0])
+      polyData = transformPolyData(polyData, flipTransform )
+
+    return polyData, planeFrame
+
+
 def getMajorPlanes(polyData, useVoxelGrid=True):
 
     voxelGridSize = 0.01

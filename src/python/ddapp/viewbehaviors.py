@@ -19,6 +19,9 @@ from ddapp.shallowCopy import shallowCopy
 from ddapp import segmentationpanel
 from ddapp import segmentation
 import numpy as np
+import ioUtils
+import os
+
 
 
 # todo: refactor these global variables
@@ -484,7 +487,7 @@ def showRightClickMenu(displayPoint, view):
             obj.polyData
         except AttributeError:
             return None
-        if obj and obj.polyData.GetNumberOfPoints() and (obj.polyData.GetNumberOfCells() == obj.polyData.GetNumberOfVerts()):
+        if obj and obj.polyData.GetNumberOfPoints():# and (obj.polyData.GetNumberOfCells() == obj.polyData.GetNumberOfVerts()):
             return obj
 
 
@@ -524,6 +527,11 @@ def showRightClickMenu(displayPoint, view):
         planePoints, normal = segmentation.applyLocalPlaneFit(pointCloudObj.polyData, pickedPoint, searchRadius=0.1, searchRadiusEnd=0.2)
         obj = vis.showPolyData(planePoints, 'local plane fit', color=[0,1,0])
         obj.setProperty('Point Size', 7)
+
+
+    def onOrientToMajorPlane():
+        polyData, planeFrame = segmentation.orientToMajorPlane(pointCloudObj.polyData, pickedPoint=pickedPoint)
+        pointCloudObj.setPolyData(polyData)
 
 
     def onDiskGlyph():
@@ -575,6 +583,7 @@ def showRightClickMenu(displayPoint, view):
             ('Segment Table', onSegmentTableScene),
             ('Segment Drill Aligned', onSegmentDrillAlignedWithTable),
             ('Local Plane Fit', onLocalPlaneFit),
+            ('Orient with Horizontal', onOrientToMajorPlane),
             ('Disk Glyph', onDiskGlyph),
             ('Cache Pick Point', onCachePickedPoint),
             (None, None),
