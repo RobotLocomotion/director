@@ -175,6 +175,18 @@ class AsyncIKCommunicator():
         commands.append('\n%-------- plot joints end --------\n')
         self.comm.sendCommands(commands)
 
+    def updateJointLimits(self, limitData):
+        commands = []
+        commands.append('joint_limit_min_new = r.joint_limit_min;')
+        commands.append('joint_limit_max_new = r.joint_limit_max;')
+
+        for jointName, epsilon in limitData:
+            arrayName = 'joint_limit_min_new' if epsilon < 0 else 'joint_limit_max_new'
+            commands.append('%s(joints.%s) = %s(joints.%s) + %f;' % (arrayName, jointName, arrayName, jointName, epsilon))
+
+        commands.append('r = r.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
+        commands.append('r = r.compile();')
+        self.comm.sendCommands(commands)
 
     def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):
 
