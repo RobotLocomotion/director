@@ -335,6 +335,11 @@ if usePlanning:
     #app.addToolbarMacro('stereo depth', sendFusedDepthRequest)
 
 
+    jointLimitChecker = teleoppanel.JointLimitChecker(robotStateModel, robotStateJointController)
+    jointLimitChecker.setupMenuAction()
+    jointLimitChecker.start()
+
+
     def drillTrackerOn():
         om.findObjectByName('Multisense').model.showRevolutionCallback = fitDrillMultisense
 
