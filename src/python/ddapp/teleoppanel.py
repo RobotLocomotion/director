@@ -376,7 +376,7 @@ class EndEffectorTeleopPanel(object):
 
         elif self.getLHandConstraint() == 'free':
             ikPlanner.setArmLocked(side,False)
-            
+
 
         if self.getRHandConstraint() != 'free' and hasattr(self,'reachTargetObject'):
             constraints.append(ikPlanner.createExcludeReachTargetCollisionGroupConstraint(self.reachTargetObject.getProperty('Name')))
@@ -515,23 +515,76 @@ class JointLimitChecker(object):
         self.sensorJointController = sensorJointController
         self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
-        self.armJoints = robotstate.matchJoints('_arm_')
+        self.joints = robotstate.matchJoints('^(?!base_)') # all but base joints
+        self.inflationAmount = np.radians(0.1)
         self.timer = TimerCallback(targetFps=1)
         self.timer.callback = self.update
-        self.timer.start()
+        self.action = None
 
     def update(self):
         self.checkJointLimits()
 
+    def start(self):
+        self.action.checked = True
+        self.timer.start()
+
+    def stop(self):
+        self.action.checked = False
+        self.timer.stop()
+
+    def setupMenuAction(self):
+        self.action = app.addMenuAction('Tools', 'Joint Limit Checker')
+        self.action.setCheckable(True)
+        self.action.checked = self.timer.isActive()
+        self.action.connect('triggered()', self.onActionChanged)
+
+    def onActionChanged(self):
+        if self.action.checked:
+            self.start()
+        else:
+            self.stop()
+
+    def notifyUser(self, limitData):
+
+        message = '\n'.join(['%s by %.2f degrees' % (name, np.degrees(epsilon)) for name, epsilon in limitData])
+        message = 'The following joints have been detected to exceed joint limts specified by the model:\n\n' + message + '\n\n'
+        message += 'Would to like to update the joint limits used by the planning robot model?  If you select no '\
+                   'then the joint limit checker will be disabled (use the Tools menu to re-enable).'
+
+        choice = QtGui.QMessageBox.warning(app.getMainWindow(), 'Joint Limit Exceeded', message,
+                  QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
+                  QtGui.QMessageBox.Yes)
+
+        if choice == QtGui.QMessageBox.No:
+            self.stop()
+        else:
+
+            # inflate the epsilon
+            limitData = [(jointName, epsilon+np.sign(epsilon)*self.inflationAmount) for jointName, epsilon in limitData]
+
+            # update limits on server
+            panel.ikPlanner.ikServer.updateJointLimits(limitData)
+
+            # update limits on checker
+            for jointName, epsilon in limitData:
+                limitsArray = self.jointLimitsMin if epsilon < 0 else self.jointLimitsMax
+                limitsArray[self.toJointIndex(jointName)] += epsilon
+
     def checkJointLimits(self):
 
-        for jointName in self.armJoints:
+        limitData = []
+
+        for jointName in self.joints:
             jointIndex = self.toJointIndex(jointName)
             jointPosition = self.sensorJointController.q[jointIndex]
             jointMin, jointMax = self.jointLimitsMin[jointIndex], self.jointLimitsMax[jointIndex]
             if not (jointMin <= jointPosition <= jointMax):
                 epsilon = jointPosition - np.clip(jointPosition, jointMin, jointMax)
-                print 'detected joint outside limit:', jointName, ' by %.3f degrees' % np.degrees(epsilon)
+                #print 'detected joint outside limit:', jointName, ' by %.3f degrees' % np.degrees(epsilon)
+                limitData.append((jointName, epsilon))
+
+        if limitData:
+            self.notifyUser(limitData)
 
     def toJointIndex(self, jointName):
         return robotstate.getDrakePoseJointNames().index(jointName)
