@@ -151,6 +151,20 @@ def toggleCameraTerrainMode(view = None):
     updateToggleTerrainAction(view)
 
 
+def findMenu(menuTitle, mainWindow=None):
+    mainWindow = mainWindow or getMainWindow()
+    menus = mainWindow.findChildren('QMenu')
+    for menu in menus:
+        if menu.title == menuTitle:
+            return menu
+
+
+def addMenuAction(menuTitle, actionName):
+    menu = findMenu(menuTitle)
+    assert menu
+    return menu.addAction(actionName)
+
+
 def getToolBarActions():
     return getActionsDict(getMainWindow().toolBarActions())
 
