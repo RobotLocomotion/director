@@ -13,7 +13,7 @@ class CameraBookmarks(object):
         self.flyer.flyTime = 1.0
 
     def storeCameraBookmark(self, key):
-        camera = view.camera()
+        camera = self.view.camera()
         focal, position = camera.GetFocalPoint(), camera.GetPosition()
         self.bookmarks[key] = (focal, position)
 
