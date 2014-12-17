@@ -44,6 +44,12 @@ class TimerCallback(object):
                 print traceback.format_exc()
                 return False
 
+    def isActive(self):
+        '''
+        Return whether or not the timer is active.
+        '''
+        return self.timer.isActive()
+
     def singleShot(self, timeoutInSeconds):
         self.singleShotTimer.connect('timeout()', self._singleShotTimerEvent)
         self.singleShotTimer.start(int(timeoutInSeconds * 1000))
