@@ -10,10 +10,11 @@ try:
     import mosek.fusion
 except ImportError:
     pass
-    
+
 import os
 import sys
 import PythonQt
+import json
 from PythonQt import QtCore, QtGui
 from time import time
 import imp
@@ -142,6 +143,12 @@ usePFGrasp = True
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 
+with open(drcargs.args().urdf_config) as urdf_config_file:
+    urdf_config = json.load(urdf_config_file)['urdfConfig']
+    urdf_config_path = os.path.dirname(os.path.abspath(urdf_config_file.name))
+    for key, urdf in list(urdf_config.items()):
+        urdf_config[key] = os.path.join(urdf_config_path, urdf)
+
 
 if useSpreadsheet:
     spreadsheet.init(poseCollection, costCollection)
@@ -149,12 +156,12 @@ if useSpreadsheet:
 
 if useIk:
 
-    ikRobotModel, ikJointController = roboturdf.loadRobotModel('ik model', view, parent='IK Server', color=roboturdf.getRobotOrangeColor(), visible=False)
+    ikRobotModel, ikJointController = roboturdf.loadRobotModel('ik model', view, parent='IK Server', urdfFile=urdf_config['ik'], color=roboturdf.getRobotOrangeColor(), visible=False)
     ikJointController.addPose('q_end', ikJointController.getPose('q_nom'))
     ikJointController.addPose('q_start', ikJointController.getPose('q_nom'))
     om.removeFromObjectModel(om.findObjectByName('IK Server'))
 
-    ikServer = ik.AsyncIKCommunicator()
+    ikServer = ik.AsyncIKCommunicator(urdf_config['ik'])
     ikServer.outputConsole = app.getOutputConsole()
     ikServer.infoFunc = app.displaySnoptInfo
 
@@ -171,7 +178,7 @@ if useAtlasDriver:
 
 
 if useRobotState:
-    robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
+    robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, urdfFile=urdf_config['robotState'], parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
     robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_nom'))
     roboturdf.startModelPublisherListener([(robotStateModel, robotStateJointController)])
     robotStateJointController.addLCMUpdater('EST_ROBOT_STATE')
@@ -235,12 +242,11 @@ if useDrakeVisualizer:
 
 if usePlanning:
 
-    playbackRobotModel, playbackJointController = roboturdf.loadRobotModel('playback model', view, parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
-    teleopRobotModel, teleopJointController = roboturdf.loadRobotModel('teleop model', view, parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
+    playbackRobotModel, playbackJointController = roboturdf.loadRobotModel('playback model', view, urdfFile=urdf_config['playback'], parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
+    teleopRobotModel, teleopJointController = roboturdf.loadRobotModel('teleop model', view, urdfFile=urdf_config['teleop'], parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
 
     if useAtlasConvexHull:
-        chullRobotModel, chullJointController = roboturdf.loadRobotModel('convex hull atlas', view, parent='planning',
-            urdfFile=os.path.join(ddapp.getDRCBaseDir(), 'software/models/mit_gazebo_models/mit_robot_drake/model_convex_hull_robotiq_hands.urdf'),
+        chullRobotModel, chullJointController = roboturdf.loadRobotModel('convex hull atlas', view, urdfFile=urdf_config['chull'], parent='planning',
             color=roboturdf.getRobotOrangeColor(), visible=False)
         playbackJointController.models.append(chullRobotModel)
 

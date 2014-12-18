@@ -1,3 +1,4 @@
+import json
 from PythonQt import QtCore, QtGui, QtUiTools
 import ddapp.applogic as app
 import ddapp.objectmodel as om
@@ -8,12 +9,15 @@ from ddapp import transformUtils
 from ddapp import ikplanner
 from ddapp import footstepsdriver
 from ddapp import vtkAll as vtk
+from ddapp import drcargs
 import ddapp.applogic as app
 
 import math
 import numpy as np
 
 
+with open(drcargs.args().urdf_config) as urdf_config_file:
+    jointMap = json.load(urdf_config_file)['teleopJointMap']
 
 def addWidgetsToDict(widgets, d):
 
@@ -323,7 +327,7 @@ class EndEffectorTeleopPanel(object):
         elif self.getLHandConstraint() == 'free':
             ikPlanner.setArmLocked(side,False)
 
-        
+
         if self.getLHandConstraint() != 'free' and hasattr(self,'reachTargetObject'):
             constraints.append(ikPlanner.createExcludeReachTargetCollisionGroupConstraint(self.reachTargetObject.getProperty('Name')))
 
@@ -610,32 +614,32 @@ class JointTeleopPanel(object):
         self.jointLimitsMax[0:6] = [0.25, 0.25, 0.92, math.radians(20),  math.radians(20),  math.radians(20)]
 
         self.slidersMap = {
-            'back_bkx' : self.ui.backRollSlider,
-            'back_bky' : self.ui.backPitchSlider,
-            'back_bkz' : self.ui.backYawSlider,
+            jointMap['backRoll'] : self.ui.backRollSlider,
+            jointMap['backPitch'] : self.ui.backPitchSlider,
+            jointMap['backYaw'] : self.ui.backYawSlider,
 
-            'base_x' : self.ui.baseXSlider,
-            'base_y' : self.ui.baseYSlider,
-            'base_z' : self.ui.baseZSlider,
+            jointMap['baseX'] : self.ui.baseXSlider,
+            jointMap['baseY'] : self.ui.baseYSlider,
+            jointMap['baseZ'] : self.ui.baseZSlider,
 
-            'base_roll' : self.ui.baseRollSlider,
-            'base_pitch' : self.ui.basePitchSlider,
-            'base_yaw' : self.ui.baseYawSlider,
+            jointMap['baseRoll'] : self.ui.baseRollSlider,
+            jointMap['basePitch'] : self.ui.basePitchSlider,
+            jointMap['baseYaw'] : self.ui.baseYawSlider,
 
-            'l_arm_usy' : self.ui.leftShoulderXSlider,
-            'l_arm_shx' : self.ui.leftShoulderYSlider,
-            'l_arm_ely' : self.ui.leftShoulderZSlider,
-            'l_arm_elx' : self.ui.leftElbowSlider,
-            'l_arm_uwy' : self.ui.leftWristXSlider,
-            'l_arm_mwx' : self.ui.leftWristYSlider,
+            jointMap['leftShoulderX'] : self.ui.leftShoulderXSlider,
+            jointMap['leftShoulderY'] : self.ui.leftShoulderYSlider,
+            jointMap['leftShoulderZ'] : self.ui.leftShoulderZSlider,
+            jointMap['leftElbow'] : self.ui.leftElbowSlider,
+            jointMap['leftWristX'] : self.ui.leftWristXSlider,
+            jointMap['leftWristY'] : self.ui.leftWristYSlider,
 
-            'r_arm_usy' : self.ui.rightShoulderXSlider,
-            'r_arm_shx' : self.ui.rightShoulderYSlider,
-            'r_arm_ely' : self.ui.rightShoulderZSlider,
-            'r_arm_elx' : self.ui.rightElbowSlider,
-            'r_arm_uwy' : self.ui.rightWristXSlider,
-            'r_arm_mwx' : self.ui.rightWristYSlider,
-            }
+            jointMap['rightShoulderX'] : self.ui.rightShoulderXSlider,
+            jointMap['rightShoulderY'] : self.ui.rightShoulderYSlider,
+            jointMap['rightShoulderZ'] : self.ui.rightShoulderZSlider,
+            jointMap['rightElbow'] : self.ui.rightElbowSlider,
+            jointMap['rightWristX'] : self.ui.rightWristXSlider,
+            jointMap['rightWristY'] : self.ui.rightWristYSlider,
+        }
 
         self.labelMap = {
             self.ui.backRollSlider : self.ui.backRollLabel,
