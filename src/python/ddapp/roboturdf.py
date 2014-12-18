@@ -12,10 +12,18 @@ from ddapp import getDRCBaseDir
 from ddapp import lcmUtils
 from ddapp import filterUtils
 from ddapp import transformUtils
+from ddapp import drcargs
 
 import drc as lcmdrc
 import math
 import numpy as np
+import json
+
+with open(drcargs.args().urdf_config) as urdf_config_file:
+    urdf_config = json.load(urdf_config_file)['urdfConfig']
+    urdf_config_path = os.path.dirname(os.path.abspath(urdf_config_file.name))
+    for key, urdf in list(urdf_config.items()):
+        urdf_config[key] = os.path.join(urdf_config_path, urdf)
 
 
 
@@ -159,7 +167,8 @@ class RobotModelItem(om.ObjectModelItem):
 def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True):
 
     if not urdfFile:
-        urdfFile = os.path.join(getRobotModelDir(), 'model_%s.urdf' % defaultUrdfHands)
+        #urdfFile = os.path.join(getRobotModelDir(), 'model_%s.urdf' % defaultUrdfHands)
+        urdfFile = urdf_config['default']
 
     if isinstance(parent, str):
         parent = om.getOrCreateContainer(parent)

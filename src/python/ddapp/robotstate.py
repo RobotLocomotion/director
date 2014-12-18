@@ -3,9 +3,13 @@ import drc as lcmdrc
 import numpy as np
 import time
 import re
+import json
+from ddapp import drcargs
 
 _robotStateToDrakePoseJointMap = None
 _drakePoseToRobotStateJointMap = None
+_drakePoseJointNames = None
+_robotStateJointNames = None
 
 
 def getRollPitchYawFromRobotState(robotState):
@@ -147,71 +151,23 @@ def matchJoints(regex):
 
 
 def getDrakePoseJointNames():
-    return [
-      'base_x',
-      'base_y',
-      'base_z',
-      'base_roll',
-      'base_pitch',
-      'base_yaw',
-      'back_bkz',
-      'back_bky',
-      'back_bkx',
-      'l_arm_usy',
-      'l_arm_shx',
-      'l_arm_ely',
-      'l_arm_elx',
-      'l_arm_uwy',
-      'l_leg_hpz',
-      'l_leg_hpx',
-      'l_leg_hpy',
-      'l_leg_kny',
-      'l_leg_aky',
-      'l_leg_akx',
-      'l_arm_mwx',
-      'r_arm_usy',
-      'r_arm_shx',
-      'r_arm_ely',
-      'r_arm_elx',
-      'r_arm_uwy',
-      'r_leg_hpz',
-      'r_leg_hpx',
-      'r_leg_hpy',
-      'r_leg_kny',
-      'r_leg_aky',
-      'r_leg_akx',
-      'r_arm_mwx',
-      'neck_ay',
-      ]
+    global _drakePoseJointNames
+
+    if _drakePoseJointNames:
+        return _drakePoseJointNames
+    else:
+        with open(drcargs.args().urdf_config) as urdf_config_file:
+            _drakePoseJointNames = json.load(urdf_config_file)['drakeJointNames']
+
+        return _drakePoseJointNames
 
 def getRobotStateJointNames():
-    return [
-      'back_bkz',
-      'back_bky',
-      'back_bkx',
-      'neck_ay',
-      'l_leg_hpz',
-      'l_leg_hpx',
-      'l_leg_hpy',
-      'l_leg_kny',
-      'l_leg_aky',
-      'l_leg_akx',
-      'r_leg_hpz',
-      'r_leg_hpx',
-      'r_leg_hpy',
-      'r_leg_kny',
-      'r_leg_aky',
-      'r_leg_akx',
-      'l_arm_usy',
-      'l_arm_shx',
-      'l_arm_ely',
-      'l_arm_elx',
-      'l_arm_uwy',
-      'l_arm_mwx',
-      'r_arm_usy',
-      'r_arm_shx',
-      'r_arm_ely',
-      'r_arm_elx',
-      'r_arm_uwy',
-      'r_arm_mwx'
-      ]
+    global _robotStateJointNames
+
+    if _robotStateJointNames:
+        return _robotStateJointNames
+    else:
+        with open(drcargs.args().urdf_config) as urdf_config_file:
+            _robotStateJointNames = json.load(urdf_config_file)['robotStateJointNames']
+
+        return _robotStateJointNames

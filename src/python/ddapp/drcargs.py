@@ -36,6 +36,10 @@ class DRCArgParser(object):
     def getDefaultBotConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(), 'software/config/drc_robot_02_mit.cfg')
 
+    def getDefaultUrdfConfigFile(self):
+        return os.path.join(ddapp.getDRCBaseDir(),
+                            'software/models/atlas_v4/urdf_config.json')
+
 
     def addDefaultArgs(self, parser):
 
@@ -45,8 +49,12 @@ class DRCArgParser(object):
         parser.add_argument('--matlab-host', type=str, help='Hostname to use external matlab server',
                             default=None)
 
+        parser.add_argument('--urdf_config', type=str, help='JSON file specifying which urdfs to use',
+                            default=self.getDefaultUrdfConfigFile())
+
         parser.add_argument('data_files', type=str, nargs='*',
                             help='data files to load at startup')
+
 
 _argParser = None
 def getGlobalArgParser():

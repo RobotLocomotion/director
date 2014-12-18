@@ -18,6 +18,7 @@ import os
 import math
 import numpy as np
 from ddapp import botpy
+from ddapp import drcargs
 import drc as lcmdrc
 from bot_core.pose_t import pose_t
 from drc.robot_state_t import robot_state_t
