@@ -16,8 +16,8 @@ import math
 import numpy as np
 
 
-with open(drcargs.args().urdf_config) as urdf_config_file:
-    jointMap = json.load(urdf_config_file)['teleopJointMap']
+with open(drcargs.args().directorConfigFile) as directorConfigFile:
+    jointMap = json.load(directorConfigFile)['teleopJointMap']
 
 def addWidgetsToDict(widgets, d):
 

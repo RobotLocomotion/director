@@ -156,8 +156,8 @@ def getDrakePoseJointNames():
     if _drakePoseJointNames:
         return _drakePoseJointNames
     else:
-        with open(drcargs.args().urdf_config) as urdf_config_file:
-            _drakePoseJointNames = json.load(urdf_config_file)['drakeJointNames']
+        with open(drcargs.args().directorConfigFile) as directorConfigFile:
+            _drakePoseJointNames = json.load(directorConfigFile)['drakeJointNames']
 
         return _drakePoseJointNames
 
@@ -167,7 +167,7 @@ def getRobotStateJointNames():
     if _robotStateJointNames:
         return _robotStateJointNames
     else:
-        with open(drcargs.args().urdf_config) as urdf_config_file:
-            _robotStateJointNames = json.load(urdf_config_file)['robotStateJointNames']
+        with open(drcargs.args().directorConfigFile) as directorConfigFile:
+            _robotStateJointNames = json.load(directorConfigFile)['robotStateJointNames']
 
         return _robotStateJointNames
