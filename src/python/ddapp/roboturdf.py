@@ -20,8 +20,10 @@ import numpy as np
 import json
 
 with open(drcargs.args().urdf_config) as urdf_config_file:
-    urdf_config = json.load(urdf_config_file)['urdfConfig']
+    jsonConfig = json.load(urdf_config_file)
     urdf_config_path = os.path.dirname(os.path.abspath(urdf_config_file.name))
+    fixedPointFile = os.path.join(urdf_config_path, jsonConfig['fixedPointFile'])
+    urdf_config = jsonConfig['urdfConfig']
     for key, urdf in list(urdf_config.items()):
         urdf_config[key] = os.path.join(urdf_config_path, urdf)
 
@@ -183,7 +185,7 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     if view is not None:
         obj.addToView(view)
 
-    jointController = jointcontrol.JointController([obj])
+    jointController = jointcontrol.JointController([obj], fixedPointFile)
     jointController.setNominalPose()
 
     return obj, jointController

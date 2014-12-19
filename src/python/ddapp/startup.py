@@ -144,8 +144,10 @@ poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 
 with open(drcargs.args().urdf_config) as urdf_config_file:
-    urdf_config = json.load(urdf_config_file)['urdfConfig']
+    jsonConfig = json.load(urdf_config_file)
     urdf_config_path = os.path.dirname(os.path.abspath(urdf_config_file.name))
+    fixedPointFile = os.path.join(urdf_config_path, jsonConfig['fixedPointFile'])
+    urdf_config = jsonConfig['urdfConfig']
     for key, urdf in list(urdf_config.items()):
         urdf_config[key] = os.path.join(urdf_config_path, urdf)
 
@@ -161,7 +163,7 @@ if useIk:
     ikJointController.addPose('q_start', ikJointController.getPose('q_nom'))
     om.removeFromObjectModel(om.findObjectByName('IK Server'))
 
-    ikServer = ik.AsyncIKCommunicator(urdf_config['ik'])
+    ikServer = ik.AsyncIKCommunicator(urdf_config['ik'], fixedPointFile)
     ikServer.outputConsole = app.getOutputConsole()
     ikServer.infoFunc = app.displaySnoptInfo
 
@@ -281,6 +283,40 @@ if usePlanning:
 
     def planNominal():
         ikPlanner.computeNominalPlan(robotStateJointController.q)
+
+    def addCollisionObjectToWorld(obj = None, name = None):
+        if obj is None:
+            obj = [om.getActiveObject()]
+        if type(obj) is not list:
+            obj = [obj]
+        if name is None:
+            name = [obj_i.parent().getProperty('Name') for obj_i in obj]
+        if type(name) is not list:
+            name = [name]
+
+        assert len(obj) == len(name)
+        pts = []
+        for obj_i in obj:
+            assert obj_i and obj_i.polyData
+            polyData = filterUtils.transformPolyData(obj_i.polyData, obj_i.actor.GetUserTransform())
+            pts_i = vnp.getNumpyFromVtk(polyData, 'Points')
+            pts.append(pts_i.transpose());
+
+        ikServer.addCollisionObject(pts,name)
+
+    def addCollisionObjectToLink(robotModel, linkName):
+        obj = om.getActiveObject()
+        assert obj and obj.polyData
+        pts = vnp.getNumpyFromVtk(obj.polyData, 'Points')
+        pts = pts.transpose()
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Concatenate(obj.actor.GetUserTransform())
+        t.Concatenate(robotModel.getLinkFrame(linkName).GetLinearInverse())
+        ikServer.addCollisionObjectToLink(pts, linkName, t)
+
+    app.addToolbarMacro('Reset Collision Objects', ikServer.resetCollisionObjects)
+    app.addToolbarMacro('Add Collision Object', addCollisionObjectToWorld)
 
     def fitDrillMultisense():
         pd = om.findObjectByName('Multisense').model.revPolyData
@@ -579,39 +615,6 @@ def disableArmEncoders():
     lcmUtils.publish('ENABLE_ENCODERS', msg)
 
 
-def addCollisionObjectToWorld(obj = None, name = None):
-    if obj is None:
-        obj = [om.getActiveObject()]
-    if type(obj) is not list:
-        obj = [obj]
-    if name is None:
-        name = [obj_i.parent().getProperty('Name') for obj_i in obj]
-    if type(name) is not list:
-        name = [name]
-
-    assert len(obj) == len(name)
-    pts = []
-    for obj_i in obj:
-        assert obj_i and obj_i.polyData
-        polyData = filterUtils.transformPolyData(obj_i.polyData, obj_i.actor.GetUserTransform())
-        pts_i = vnp.getNumpyFromVtk(polyData, 'Points')
-        pts.append(pts_i.transpose());
-
-    ikServer.addCollisionObject(pts,name)
-
-
-def addCollisionObjectToLink(robotModel, linkName):
-    obj = om.getActiveObject()
-    assert obj and obj.polyData
-    pts = vnp.getNumpyFromVtk(obj.polyData, 'Points')
-    pts = pts.transpose()
-    t = vtk.vtkTransform()
-    t.PostMultiply()
-    t.Concatenate(obj.actor.GetUserTransform())
-    t.Concatenate(robotModel.getLinkFrame(linkName).GetLinearInverse())
-    ikServer.addCollisionObjectToLink(pts, linkName, t)
-
-
 app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view)
@@ -740,3 +743,4 @@ if usePFGrasp:
     showImageOverlay()
     hideImageOverlay()
     pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)
+
