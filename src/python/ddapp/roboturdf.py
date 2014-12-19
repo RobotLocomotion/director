@@ -19,13 +19,13 @@ import math
 import numpy as np
 import json
 
-with open(drcargs.args().urdf_config) as urdf_config_file:
-    jsonConfig = json.load(urdf_config_file)
-    urdf_config_path = os.path.dirname(os.path.abspath(urdf_config_file.name))
-    fixedPointFile = os.path.join(urdf_config_path, jsonConfig['fixedPointFile'])
-    urdf_config = jsonConfig['urdfConfig']
-    for key, urdf in list(urdf_config.items()):
-        urdf_config[key] = os.path.join(urdf_config_path, urdf)
+with open(drcargs.args().directorConfigFile) as directorConfigFile:
+    directorConfig = json.load(directorConfigFile)
+    directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
+    fixedPointFile = os.path.join(directorConfigDirectory, directorConfig['fixedPointFile'])
+    urdfConfig = directorConfig['urdfConfig']
+    for key, urdf in list(urdfConfig.items()):
+        urdfConfig[key] = os.path.join(directorConfigDirectory, urdf)
 
 
 
@@ -170,7 +170,7 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
 
     if not urdfFile:
         #urdfFile = os.path.join(getRobotModelDir(), 'model_%s.urdf' % defaultUrdfHands)
-        urdfFile = urdf_config['default']
+        urdfFile = urdfConfig['default']
 
     if isinstance(parent, str):
         parent = om.getOrCreateContainer(parent)

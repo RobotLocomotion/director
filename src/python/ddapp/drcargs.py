@@ -36,21 +36,42 @@ class DRCArgParser(object):
     def getDefaultBotConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(), 'software/config/drc_robot_02_mit.cfg')
 
-    def getDefaultUrdfConfigFile(self):
+    def getDefaultDirectorConfigFile(self):
+        return os.path.join(ddapp.getDRCBaseDir(),
+                            'software/models/mit_gazebo_models/mit_robot/director_config.json')
+
+    def getDefaultAtlasV3DirectorConfigFile(self):
+        return os.path.join(ddapp.getDRCBaseDir(),
+                            'software/models/mit_gazebo_models/mit_robot/director_config.json')
+
+    def getDefaultAtlasV4DirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
                             'software/models/atlas_v4/urdf_config.json')
 
 
     def addDefaultArgs(self, parser):
-
         parser.add_argument('-c', '--config_file', type=str, help='Robot cfg file',
                             default=self.getDefaultBotConfigFile())
 
         parser.add_argument('--matlab-host', type=str, help='Hostname to use external matlab server',
                             default=None)
 
-        parser.add_argument('--urdf_config', type=str, help='JSON file specifying which urdfs to use',
-                            default=self.getDefaultUrdfConfigFile())
+        directorConfig = parser.add_mutually_exclusive_group(required=False)
+        directorConfig.add_argument('-v3', '--atlas_v3', dest='directorConfigFile',
+                            action='store_const',
+                            const=self.getDefaultAtlasV3DirectorConfigFile(),
+                            help='Use Atlas V3')
+
+        directorConfig.add_argument('-v4', '--atlas_v4', dest='directorConfigFile',
+                            action='store_const',
+                            const=self.getDefaultAtlasV4DirectorConfigFile(),
+                            help='Use Atlas V4')
+
+        directorConfig.add_argument('--director_config', dest='directorConfigFile',
+                            type=str,
+                            help='JSON file specifying which urdfs to use')
+
+        parser.set_defaults(directorConfigFile=self.getDefaultDirectorConfigFile())
 
         parser.add_argument('data_files', type=str, nargs='*',
                             help='data files to load at startup')

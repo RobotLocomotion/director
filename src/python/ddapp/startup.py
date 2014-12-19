@@ -143,13 +143,13 @@ usePFGrasp = True
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 
-with open(drcargs.args().urdf_config) as urdf_config_file:
-    jsonConfig = json.load(urdf_config_file)
-    urdf_config_path = os.path.dirname(os.path.abspath(urdf_config_file.name))
-    fixedPointFile = os.path.join(urdf_config_path, jsonConfig['fixedPointFile'])
-    urdf_config = jsonConfig['urdfConfig']
-    for key, urdf in list(urdf_config.items()):
-        urdf_config[key] = os.path.join(urdf_config_path, urdf)
+with open(drcargs.args().directorConfigFile) as directorConfigFile:
+    directorConfig = json.load(directorConfigFile)
+    directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
+    fixedPointFile = os.path.join(directorConfigDirectory, directorConfig['fixedPointFile'])
+    urdfConfig = directorConfig['urdfConfig']
+    for key, urdf in list(urdfConfig.items()):
+        urdfConfig[key] = os.path.join(directorConfigDirectory, urdf)
 
 
 if useSpreadsheet:
@@ -158,12 +158,12 @@ if useSpreadsheet:
 
 if useIk:
 
-    ikRobotModel, ikJointController = roboturdf.loadRobotModel('ik model', view, parent='IK Server', urdfFile=urdf_config['ik'], color=roboturdf.getRobotOrangeColor(), visible=False)
+    ikRobotModel, ikJointController = roboturdf.loadRobotModel('ik model', view, parent='IK Server', urdfFile=urdfConfig['ik'], color=roboturdf.getRobotOrangeColor(), visible=False)
     ikJointController.addPose('q_end', ikJointController.getPose('q_nom'))
     ikJointController.addPose('q_start', ikJointController.getPose('q_nom'))
     om.removeFromObjectModel(om.findObjectByName('IK Server'))
 
-    ikServer = ik.AsyncIKCommunicator(urdf_config['ik'], fixedPointFile)
+    ikServer = ik.AsyncIKCommunicator(urdfConfig['ik'], fixedPointFile)
     ikServer.outputConsole = app.getOutputConsole()
     ikServer.infoFunc = app.displaySnoptInfo
 
@@ -180,7 +180,7 @@ if useAtlasDriver:
 
 
 if useRobotState:
-    robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, urdfFile=urdf_config['robotState'], parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
+    robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, urdfFile=urdfConfig['robotState'], parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
     robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_nom'))
     roboturdf.startModelPublisherListener([(robotStateModel, robotStateJointController)])
     robotStateJointController.addLCMUpdater('EST_ROBOT_STATE')
@@ -244,11 +244,11 @@ if useDrakeVisualizer:
 
 if usePlanning:
 
-    playbackRobotModel, playbackJointController = roboturdf.loadRobotModel('playback model', view, urdfFile=urdf_config['playback'], parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
-    teleopRobotModel, teleopJointController = roboturdf.loadRobotModel('teleop model', view, urdfFile=urdf_config['teleop'], parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
+    playbackRobotModel, playbackJointController = roboturdf.loadRobotModel('playback model', view, urdfFile=urdfConfig['playback'], parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
+    teleopRobotModel, teleopJointController = roboturdf.loadRobotModel('teleop model', view, urdfFile=urdfConfig['teleop'], parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
 
     if useAtlasConvexHull:
-        chullRobotModel, chullJointController = roboturdf.loadRobotModel('convex hull atlas', view, urdfFile=urdf_config['chull'], parent='planning',
+        chullRobotModel, chullJointController = roboturdf.loadRobotModel('convex hull atlas', view, urdfFile=urdfConfig['chull'], parent='planning',
             color=roboturdf.getRobotOrangeColor(), visible=False)
         playbackJointController.models.append(chullRobotModel)
 
