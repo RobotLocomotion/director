@@ -12,10 +12,13 @@ from ddapp import drcargs
 
 class AsyncIKCommunicator():
 
-    def __init__(self):
+    def __init__(self, robotURDF, fixedPointFile):
 
         self.comm = None
         self.outputConsole = None
+
+        self.robotURDF = robotURDF
+        self.fixedPointFile = fixedPointFile
 
         self.seedName = 'q_nom'
         self.nominalName = 'q_nom'
@@ -39,6 +42,8 @@ class AsyncIKCommunicator():
         commands.append('format long e')
         commands.append('addpath_control')
         commands.append("addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])")
+        commands.append("robotURDF = '%s';" % self.robotURDF)
+        commands.append("fixed_point_file = '%s';" % self.fixedPointFile)
         commands.append('runIKServer')
         commands.append('\n%------ startup end ------\n')
         return commands
@@ -98,7 +103,7 @@ class AsyncIKCommunicator():
         for vertices_i, name_i in zip(vertices,name):
             self.comm.assignFloatArray(vertices_i, '%s_vertices' % name_i.replace(' ','_'))
             commands.append('collision_object_%s = RigidBodyMeshPoints(%s_vertices);' % (name_i.replace(' ','_'),name_i.replace(' ','_')))
-            commands.append('r = addShapeToBody(r, world, collision_object_%s,\'%s\');' % (name_i.replace(' ','_'), name_i))
+            commands.append('r = addGeometryToBody(r, world, collision_object_%s,\'%s\');' % (name_i.replace(' ','_'), name_i))
 
         commands.append('r = compile(r);')
         self.comm.sendCommands(commands)
@@ -111,7 +116,7 @@ class AsyncIKCommunicator():
         commands = []
         commands.append('collision_object = RigidBodyMeshPoints(collision_object_vertices);')
         commands.append('collision_object.T = %s;' % transformString)
-        commands.append('r = addShapeToBody(r, %s, collision_object);' % linkName)
+        commands.append('r = addGeometryToBody(r, %s, collision_object);' % linkName)
         commands.append('r = compile(r);')
         self.comm.sendCommands(commands)
 
@@ -146,7 +151,7 @@ class AsyncIKCommunicator():
     def resetCollisionObjects(self):
         commands = []
         commands.append('r = s.robot;')
-        commands.append('r = r.replaceContactShapesWithCHull([l_hand, r_hand, head]);')
+        commands.append('r = r.replaceCollisionGeometryWithConvexHull([l_hand, r_hand, head]);')
         commands.append('r = compile(r);')
         self.comm.sendCommands(commands)
 
@@ -186,6 +191,8 @@ class AsyncIKCommunicator():
 
         commands.append('r = r.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
         commands.append('r = r.compile();')
+        commands.append('s.robot = s.robot.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
+        commands.append('s.robot = s.robot.compile();')
         self.comm.sendCommands(commands)
 
     def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):

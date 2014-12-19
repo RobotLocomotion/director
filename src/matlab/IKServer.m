@@ -17,9 +17,13 @@ classdef IKServer
             obj.robot = RigidBodyManipulator('', options);
         end
 
-        function obj = loadNominalData(obj)
+        function obj = loadNominalData(obj,filename)
+            if nargin < 1 
+                filename = [getenv('DRC_BASE'), ...
+                            '/software/control/matlab/data/atlas_bdi_fp.mat']; 
+            end
             %nom_data = load([getDrakePath() '/examples/Atlas/data/atlas_bdi_fp.mat']);
-            nom_data = load([getenv('DRC_BASE'), '/software/control/matlab/data/atlas_bdi_fp.mat']);
+            nom_data = load(filename);
             nq = obj.robot.getNumPositions();
             obj.q_nom = nom_data.xstar(1:nq);
         end
@@ -55,35 +59,19 @@ classdef IKServer
 
             cost.neck_ay =  neckCost;
 
-            cost.l_arm_usy = leftArmCost;
-            cost.l_arm_shx = leftArmCost;
-            cost.l_arm_ely = leftArmCost;
-            cost.l_arm_elx = leftArmCost;
-            cost.l_arm_uwy = leftArmCost;
-            cost.l_arm_mwx = leftArmCost;
-
-            cost.r_arm_usy = rightArmCost;
-            cost.r_arm_shx = rightArmCost;
-            cost.r_arm_ely = rightArmCost;
-            cost.r_arm_elx = rightArmCost;
-            cost.r_arm_uwy = rightArmCost;
-            cost.r_arm_mwx = rightArmCost;
-
-            cost.l_leg_hpz = leftLegCost;
-            cost.l_leg_hpx = leftLegCost;
-            cost.l_leg_hpy = leftLegCost;
-            cost.l_leg_kny = leftLegCost;
-            cost.l_leg_aky = leftLegCost;
-            cost.l_leg_akx = leftLegCost;
-
-            cost.r_leg_hpz = rightLegCost;
-            cost.r_leg_hpx = rightLegCost;
-            cost.r_leg_hpy = rightLegCost;
-            cost.r_leg_kny = rightLegCost;
-            cost.r_leg_aky = rightLegCost;
-            cost.r_leg_akx = rightLegCost;
-
             cost = double(cost);
+
+            l_arm_indices = findPositionIndices(obj.robot, 'l_arm');
+            cost(l_arm_indices) = leftArmCost;
+
+            r_arm_indices = findPositionIndices(obj.robot, 'r_arm');
+            cost(r_arm_indices) = rightArmCost;
+
+            l_leg_indices = findPositionIndices(obj.robot, 'l_leg');
+            cost(l_leg_indices) = leftLegCost;
+
+            r_leg_indices = findPositionIndices(obj.robot, 'r_leg');
+            cost(r_leg_indices) = rightLegCost;
 
             vel_cost = cost*0.05;
             accel_cost = cost*0.05;

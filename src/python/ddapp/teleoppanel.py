@@ -263,18 +263,18 @@ class EndEffectorTeleopPanel(object):
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'xyz only':
             constraints.append(ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
-            constraints.append(ikPlanner.createKneePostureConstraint([0.7, 2.1]))
+            constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'z only':
             constraints.append(ikPlanner.createZMovingBasePostureConstraint(startPoseName))
-            constraints.append(ikPlanner.createKneePostureConstraint([0.7, 2.1]))
+            constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'limited':
             constraints.append(ikPlanner.createMovingBaseSafeLimitsConstraint())
-            constraints.append(ikPlanner.createKneePostureConstraint([0.7, 2.1]))
+            constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'free':
-            constraints.append(ikPlanner.createKneePostureConstraint([0.7, 2.1]))
+            constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
             ikPlanner.setBaseLocked(False)
 
 
