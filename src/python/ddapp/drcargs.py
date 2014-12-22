@@ -46,7 +46,7 @@ class DRCArgParser(object):
 
     def getDefaultAtlasV4DirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
-                            'software/models/atlas_v4/urdf_config.json')
+                            'software/models/atlas_v4/director_config.json')
 
 
     def addDefaultArgs(self, parser):
