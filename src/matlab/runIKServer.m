@@ -21,14 +21,14 @@ q_zero = zeros(nq, 1);
 q_start = q_nom;
 q_end = q_nom;
 
-world = r.findLinkInd('world');
-l_foot = r.findLinkInd('l_foot');
-r_foot = r.findLinkInd('r_foot');
-l_hand = r.findLinkInd('l_hand');
-r_hand = r.findLinkInd('r_hand');
-utorso = r.findLinkInd('utorso');
-pelvis = r.findLinkInd('pelvis');
-head = r.findLinkInd('head');
+world = r.findLinkId('world');
+l_foot = r.findLinkId('l_foot');
+r_foot = r.findLinkId('r_foot');
+l_hand = r.findLinkId('l_hand');
+r_hand = r.findLinkId('r_hand');
+utorso = r.findLinkId('utorso');
+pelvis = r.findLinkId('pelvis');
+head = r.findLinkId('head');
 l_foot_pts = s.getLeftFootPoints();
 r_foot_pts = s.getRightFootPoints();
 

@@ -41,16 +41,16 @@ q_zero = zeros(nq, 1);
 q_start = q_nom;
 q_end = q_nom;
 
-world = r.findLinkInd('world');
-l_foot = r.findLinkInd('l_foot');
-r_foot = r.findLinkInd('r_foot');
-l_hand = r.findLinkInd('l_hand');
-l_farm = r.findLinkInd('l_farm');
-l_larm = r.findLinkInd('l_larm');
-r_hand = r.findLinkInd('r_hand');
-utorso = r.findLinkInd('utorso');
-pelvis = r.findLinkInd('pelvis');
-head = r.findLinkInd('head');
+world = r.findLinkId('world');
+l_foot = r.findLinkId('l_foot');
+r_foot = r.findLinkId('r_foot');
+l_hand = r.findLinkId('l_hand');
+l_farm = r.findLinkId('l_farm');
+l_larm = r.findLinkId('l_larm');
+r_hand = r.findLinkId('r_hand');
+utorso = r.findLinkId('utorso');
+pelvis = r.findLinkId('pelvis');
+head = r.findLinkId('head');
 l_foot_pts = s.getLeftFootPoints();
 r_foot_pts = s.getRightFootPoints();
 
@@ -62,53 +62,53 @@ switch scenario
   case 0 % No objects in the world
   case 1 
     % main table
-    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
-    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkId(r,'world'), table);
+    r = r.addContactShapeToBody(findLinkId(r,'world'), table);
     table.toLCMGL(lcmgl);
   case 2
     % main table
-    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkId(r,'world'), table);
     %table_chull = RigidBodyMeshPoints(table.getPoints());
-    %r = r.addContactShapeToBody(findLinkInd(r,'world'), table_chull);
-    %r = r.addVisualShapeToBody(findLinkInd(r,'world'), table);
-    r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    %r = r.addContactShapeToBody(findLinkId(r,'world'), table_chull);
+    %r = r.addVisualShapeToBody(findLinkId(r,'world'), table);
+    r = r.addShapeToBody(findLinkId(r,'world'), table);
     % obstacle on table
     height = 0.5;
     obstacle = RigidBodyBox([0.5, 0.3, height],[-0.9;0.2;1.025+height/2],[0;0;140]*pi/180);
     %obstacle_chull = RigidBodyMeshPoints(obstacle.getPoints());
-    %r = r.addContactShapeToBody(findLinkInd(r,'world'), obstacle_chull);
-    %r = r.addVisualShapeToBody(findLinkInd(r,'world'), obstacle);
-    r = r.addShapeToBody(findLinkInd(r,'world'), obstacle);
+    %r = r.addContactShapeToBody(findLinkId(r,'world'), obstacle_chull);
+    %r = r.addVisualShapeToBody(findLinkId(r,'world'), obstacle);
+    r = r.addShapeToBody(findLinkId(r,'world'), obstacle);
     table.toLCMGL(lcmgl);
     obstacle.toLCMGL(lcmgl);
   case 3
     % main table
-    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
-    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkId(r,'world'), table);
+    r = r.addContactShapeToBody(findLinkId(r,'world'), table);
     % obstacle on table
     obstacle1 = RigidBodyBox([0.5, 0.3, 2.5],[-0.9;0.2;1.07],[0*pi/180;0;140*pi/180.0]);
-    r = r.addShapeToBody(findLinkInd(r,'world'), obstacle1);
+    r = r.addShapeToBody(findLinkId(r,'world'), obstacle1);
     obstacle2 = RigidBodyBox([0.65, 0.4, 4.5],[-0.9;0.2;2.1],[130;0;140]*pi/180.0);
-    r = r.addShapeToBody(findLinkInd(r,'world'), obstacle2);
+    r = r.addShapeToBody(findLinkId(r,'world'), obstacle2);
     table.toLCMGL(lcmgl);
     obstacle1.toLCMGL(lcmgl);
     obstacle2.toLCMGL(lcmgl);
   case 4
     % main table
-    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
-    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkId(r,'world'), table);
+    r = r.addContactShapeToBody(findLinkId(r,'world'), table);
     % obstacle on table
     obstacle = RigidBodyBox([0.5, 0.3, 2.5],[-0.9;0.2;1.07],[0*pi/180;0;140*pi/180.0]);
-    r = r.addShapeToBody(findLinkInd(r,'world'), obstacle);
+    r = r.addShapeToBody(findLinkId(r,'world'), obstacle);
     table.toLCMGL(lcmgl);
     obstacle.toLCMGL(lcmgl);
   case 5
     % main table
-    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkInd(r,'world'), table);
-    r = r.addContactShapeToBody(findLinkInd(r,'world'), table);
+    table = RigidBodyBox([0.8,2.0,0.1],[-0.6;0.8;0.975],[0;0;140*pi/180.0]); r = r.addShapeToBody(findLinkId(r,'world'), table);
+    r = r.addContactShapeToBody(findLinkId(r,'world'), table);
     % obstacle on table
     table = RigidBodyBox([2.75, 0.4, 2.5],[-0.9;0.1;1.07],[0*pi/180;0;140*pi/180.0]);
-    r = r.addShapeToBody(findLinkInd(r,'world'), table);
+    r = r.addShapeToBody(findLinkId(r,'world'), table);
 end
 
 r = r.replaceContactShapesWithCHull([l_hand, r_hand, head]);
