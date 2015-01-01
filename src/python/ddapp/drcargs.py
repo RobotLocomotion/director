@@ -37,8 +37,7 @@ class DRCArgParser(object):
         return os.path.join(ddapp.getDRCBaseDir(), 'software/config/drc_robot_02_mit.cfg')
 
     def getDefaultDirectorConfigFile(self):
-        return os.path.join(ddapp.getDRCBaseDir(),
-                            'software/models/mit_gazebo_models/mit_robot/director_config.json')
+        return self.getDefaultAtlasV4DirectorConfigFile();
 
     def getDefaultAtlasV3DirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
