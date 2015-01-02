@@ -259,6 +259,7 @@ def setupPackagePaths():
         'ros_workspace/mit_drcsim_scripts',
         'ros_workspace/sandia-hand/ros/sandia_hand_description',
         'software/models/atlas_v4',
+        'software/models/atlas_v5',
         'software/models/common_components/robotiq_hand_description/',
         'software/models/common_components/multisense_sl/',
         'software/models/mit_gazebo_models/mit_robot',
