@@ -47,6 +47,10 @@ class DRCArgParser(object):
         return os.path.join(ddapp.getDRCBaseDir(),
                             'software/models/atlas_v4/director_config.json')
 
+    def getDefaultAtlasV5DirectorConfigFile(self):
+        return os.path.join(ddapp.getDRCBaseDir(),
+                            'software/models/atlas_v5/director_config.json')
+
 
     def addDefaultArgs(self, parser):
         parser.add_argument('-c', '--config_file', type=str, help='Robot cfg file',
@@ -65,6 +69,11 @@ class DRCArgParser(object):
                             action='store_const',
                             const=self.getDefaultAtlasV4DirectorConfigFile(),
                             help='Use Atlas V4')
+
+        directorConfig.add_argument('-v5', '--atlas_v5', dest='directorConfigFile',
+                            action='store_const',
+                            const=self.getDefaultAtlasV5DirectorConfigFile(),
+                            help='Use Atlas V5')
 
         directorConfig.add_argument('--director_config', dest='directorConfigFile',
                             type=str,
