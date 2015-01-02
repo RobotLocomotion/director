@@ -66,13 +66,13 @@ def convertStateMessageToDrakePose(msg):
     rpy = botpy.quat_to_roll_pitch_yaw(quat)
 
     pose = np.hstack((trans, rpy, jointPositions))
-    assert len(pose) == 34
+    assert len(pose) == len(getDrakePoseJointNames())
     return pose
 
 
 def robotStateToDrakePose(robotState):
 
-    drakePose = range(34)
+    drakePose = range(len(getDrakePoseJointNames()))
     jointIndexMap = getRobotStateToDrakePoseJointMap()
 
     pos = getPositionFromRobotState(robotState)
