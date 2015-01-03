@@ -133,7 +133,6 @@ def drakePoseToRobotState(drakePose):
     m.twist.linear_velocity = lcmdrc.vector_3d_t()
     m.twist.angular_velocity = lcmdrc.vector_3d_t()
     m.num_joints = getNumJoints()
-    print m.num_joints
     m.joint_name = getRobotStateJointNames()
     m.joint_position = robotState
     m.joint_velocity = np.zeros(getNumJoints())
