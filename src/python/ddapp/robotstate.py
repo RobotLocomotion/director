@@ -10,6 +10,7 @@ _robotStateToDrakePoseJointMap = None
 _drakePoseToRobotStateJointMap = None
 _drakePoseJointNames = None
 _robotStateJointNames = None
+_numPositions = None
 
 
 def getRollPitchYawFromRobotState(robotState):
@@ -66,20 +67,20 @@ def convertStateMessageToDrakePose(msg):
     rpy = botpy.quat_to_roll_pitch_yaw(quat)
 
     pose = np.hstack((trans, rpy, jointPositions))
-    assert len(pose) == len(getDrakePoseJointNames())
+    assert len(pose) == getNumPositions()
     return pose
 
 
 def robotStateToDrakePose(robotState):
 
-    drakePose = range(len(getDrakePoseJointNames()))
+    drakePose = range(getNumPositions())
     jointIndexMap = getRobotStateToDrakePoseJointMap()
 
     pos = getPositionFromRobotState(robotState)
     rpy = getRollPitchYawFromRobotState(robotState)
     robotState = robotState[7:]
 
-    assert len(jointIndexMap) == 28
+    assert len(jointIndexMap) == getNumJoints()
     assert len(robotState) >= len(jointIndexMap)
 
     for jointIdx in xrange(len(jointIndexMap)):
@@ -114,7 +115,7 @@ def getPoseLCMFromXYZRPY(xyz, rpy):
 
 def drakePoseToRobotState(drakePose):
 
-    robotState = range(28)
+    robotState = range(getNumJoints())
     jointIndexMap = getDrakePoseToRobotStateJointMap()
 
     for jointIdx, jointAngle in enumerate(drakePose):
@@ -131,11 +132,12 @@ def drakePoseToRobotState(drakePose):
     m.twist = lcmdrc.twist_t()
     m.twist.linear_velocity = lcmdrc.vector_3d_t()
     m.twist.angular_velocity = lcmdrc.vector_3d_t()
-    m.num_joints = 28
+    m.num_joints = getNumJoints()
+    print m.num_joints
     m.joint_name = getRobotStateJointNames()
     m.joint_position = robotState
-    m.joint_velocity = np.zeros(28)
-    m.joint_effort = np.zeros(28)
+    m.joint_velocity = np.zeros(getNumJoints())
+    m.joint_effort = np.zeros(getNumJoints())
     m.force_torque = lcmdrc.force_torque_t()
     m.force_torque.l_hand_force = np.zeros(3)
     m.force_torque.l_hand_torque = np.zeros(3)
@@ -171,3 +173,14 @@ def getRobotStateJointNames():
             _robotStateJointNames = json.load(directorConfigFile)['robotStateJointNames']
 
         return _robotStateJointNames
+
+def getNumPositions():
+    global _numPositions
+
+    if _numPositions is None:
+        _numPositions = len(getDrakePoseJointNames())
+
+    return _numPositions
+
+def getNumJoints():
+    return getNumPositions() - 6
