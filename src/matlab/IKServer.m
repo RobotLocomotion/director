@@ -53,12 +53,6 @@ classdef IKServer
             cost.base_pitch = 1e3;
             cost.base_yaw = 0;
 
-            cost.back_bkz = backCost;
-            cost.back_bky = backCost;
-            cost.back_bkx = backCost;
-
-            cost.neck_ay =  neckCost;
-
             cost = double(cost);
 
             l_arm_indices = findPositionIndices(obj.robot, 'l_arm');
@@ -72,6 +66,12 @@ classdef IKServer
 
             r_leg_indices = findPositionIndices(obj.robot, 'r_leg');
             cost(r_leg_indices) = rightLegCost;
+
+            back_indices = findPositionIndices(obj.robot, 'back');
+            cost(back_indices) = backCost;
+
+            neck_indices = findPositionIndices(obj.robot, 'neck');
+            cost(neck_indices) = neckCost;
 
             vel_cost = cost*0.05;
             accel_cost = cost*0.05;
