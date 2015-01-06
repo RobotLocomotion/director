@@ -24,8 +24,12 @@ r_hand = r.findLinkId('r_hand');
 utorso = r.findLinkId('utorso');
 pelvis = r.findLinkId('pelvis');
 head = r.findLinkId('head');
-l_foot_pts = s.getLeftFootPoints();
-r_foot_pts = s.getRightFootPoints();
+try
+  l_foot_pts = s.getLeftFootPoints();
+  r_foot_pts = s.getRightFootPoints();
+catch
+  % no-op
+end
 
 joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
 plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, r.getStateFrame.coordinates(1:nq));
