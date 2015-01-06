@@ -387,9 +387,12 @@ if usePlanning:
     def drillTrackerOff():
         om.findObjectByName('Multisense').model.showRevolutionCallback = None
 
-
-    handFactory = roboturdf.HandFactory(robotStateModel)
-    handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
+    if 'l_hand' in robotStateModel.model.getLinkNames():
+        handFactory = roboturdf.HandFactory(robotStateModel)
+        handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
+    else:
+        handFactory = None
+        handModels = []
 
     ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)
     ikPlanner.addPostureGoalListener(robotStateJointController)
