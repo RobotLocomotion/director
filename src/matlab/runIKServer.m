@@ -16,19 +16,18 @@ q_zero = zeros(nq, 1);
 q_start = q_nom;
 q_end = q_nom;
 
-world = r.findLinkId('world');
-l_foot = r.findLinkId('l_foot');
-r_foot = r.findLinkId('r_foot');
-l_hand = r.findLinkId('l_hand');
-r_hand = r.findLinkId('r_hand');
-utorso = r.findLinkId('utorso');
-pelvis = r.findLinkId('pelvis');
-head = r.findLinkId('head');
 try
   l_foot_pts = s.getLeftFootPoints();
   r_foot_pts = s.getRightFootPoints();
 catch
   % no-op
+end
+
+links = struct();
+linknames = s.getLinkNames();
+for i = 1:size(linknames, 1)
+  nameComponents = strsplit(linknames{i}, '+');
+  links.(nameComponents{1}) = i;
 end
 
 joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
