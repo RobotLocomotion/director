@@ -402,7 +402,7 @@ if usePlanning:
     manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                     ikPlanner, manipPlanner, handFactory.getLoader('left'), handFactory.getLoader('right'), playbackPanel.setPlan, playbackPanel.hidePlan)
+                     ikPlanner, manipPlanner, playbackPanel.setPlan, playbackPanel.hidePlan)
 
 
 
