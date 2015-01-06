@@ -91,10 +91,6 @@ class JointController(object):
         lcmUtils.removeSubscriber(self.subscriber)
         self.subscriber = None
 
-    @staticmethod
-    def getNominalPoseMatFile():
-        #return os.path.join(getDRCBaseDir(), 'software/drake/examples/Atlas/data/atlas_fp.mat')
-        return os.path.join(getDRCBaseDir(), 'software/control/matlab/data/atlas_bdi_fp.mat')
 
 class MidiJointControl(TimerCallback):
 
