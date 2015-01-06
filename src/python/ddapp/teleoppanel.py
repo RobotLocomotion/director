@@ -433,8 +433,6 @@ class EndEffectorTeleopPanel(object):
         frameSync.addFrame(handFrame)
         goalFrame.sync = frameSync
 
-        #handModels = {'left':self.panel.lhandModel, 'right':self.panel.rhandModel}
-
 
     def removePlanFolder(self):
         om.removeFromObjectModel(om.findObjectByName('teleop plan'))
@@ -867,14 +865,12 @@ class JointTeleopPanel(object):
 
 class TeleopPanel(object):
 
-    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction, hidePlanFunction):
+    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, showPlanFunction, hidePlanFunction):
 
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
         self.teleopRobotModel = teleopRobotModel
         self.teleopJointController = teleopJointController
-        self.lhandModel = lhandModel
-        self.rhandModel = rhandModel
         self.ikPlanner = ikPlanner
         self.manipPlanner = manipPlanner
         self.showPlanFunction = showPlanFunction
@@ -949,12 +945,12 @@ def _getAction():
     return app.getToolBarActions()['ActionTeleopPanel']
 
 
-def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction, hidePlanFunction):
+def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, showPlanFunction, hidePlanFunction):
 
     global panel
     global dock
 
-    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, lhandModel, rhandModel, showPlanFunction, hidePlanFunction)
+    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, showPlanFunction, hidePlanFunction)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
