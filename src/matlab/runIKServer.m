@@ -4,11 +4,6 @@ warning('off','Drake:RigidBodyManipulator:UnsupportedVelocityLimits');
 warning('off','Drake:RigidBodyManipulator:UnsupportedContactPoints');
 warning('off','Drake:RigidBodyManipulator:UnsupportedJointLimits');
 
-drakeExamplePath = [getenv('DRC_BASE'), '/software/drake/examples/'];
-
-%robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_minimal_contact_point_hands.urdf'];
-%robotURDF = [getenv('DRC_PATH'), '/models/mit_gazebo_models/mit_robot_drake/model_convex_hull_robotiq_hands.urdf'];
-
 s = s.addRobot(robotURDF);
 s = s.setupCosts();
 s = s.loadNominalData(fixed_point_file);
