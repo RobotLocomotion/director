@@ -103,7 +103,7 @@ class AsyncIKCommunicator():
         for vertices_i, name_i in zip(vertices,name):
             self.comm.assignFloatArray(vertices_i, '%s_vertices' % name_i.replace(' ','_'))
             commands.append('collision_object_%s = RigidBodyMeshPoints(%s_vertices);' % (name_i.replace(' ','_'),name_i.replace(' ','_')))
-            commands.append('r = addGeometryToBody(r, world, collision_object_%s,\'%s\');' % (name_i.replace(' ','_'), name_i))
+            commands.append('r = addGeometryToBody(r, links.world, collision_object_%s,\'%s\');' % (name_i.replace(' ','_'), name_i))
 
         commands.append('r = compile(r);')
         self.comm.sendCommands(commands)
@@ -116,7 +116,7 @@ class AsyncIKCommunicator():
         commands = []
         commands.append('collision_object = RigidBodyMeshPoints(collision_object_vertices);')
         commands.append('collision_object.T = %s;' % transformString)
-        commands.append('r = addGeometryToBody(r, %s, collision_object);' % linkName)
+        commands.append('r = addGeometryToBody(r, links.%s, collision_object);' % linkName)
         commands.append('r = compile(r);')
         self.comm.sendCommands(commands)
 
@@ -151,7 +151,7 @@ class AsyncIKCommunicator():
     def resetCollisionObjects(self):
         commands = []
         commands.append('r = s.robot;')
-        commands.append('r = r.replaceCollisionGeometryWithConvexHull([l_hand, r_hand, head]);')
+        commands.append('r = r.replaceCollisionGeometryWithConvexHull([links.l_hand, links.r_hand, links.head]);')
         commands.append('r = compile(r);')
         self.comm.sendCommands(commands)
 

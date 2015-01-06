@@ -164,7 +164,7 @@ class PositionConstraint(ConstraintBase):
             'ref_frame = {refFrame};\n'
             'lower_bounds = {positionTarget} + {lowerBound};\n'
             'upper_bounds = {positionTarget} + {upperBound};\n'
-            '{varName} = WorldPositionInFrameConstraint({robotArg}, {linkName}, '
+            '{varName} = WorldPositionInFrameConstraint({robotArg}, links.{linkName}, '
             'point_in_link_frame, ref_frame, lower_bounds, upper_bounds, {tspan});'
             ''.format(**formatArgs))
 
@@ -216,7 +216,7 @@ class RelativePositionConstraint(ConstraintBase):
             'lower_bounds = {positionTarget} + {lowerBound};\n'
             'upper_bounds = {positionTarget} + {upperBound};\n'
             '{varName} = RelativePositionConstraint({robotArg}, point_in_body_a, lower_bounds, '
-            'upper_bounds, {bodyNameA}, {bodyNameB}, frame_in_body_b, {tspan});'
+            'upper_bounds, links.{bodyNameA}, links.{bodyNameB}, frame_in_body_b, {tspan});'
             ''.format(**formatArgs))
 
 
@@ -257,7 +257,7 @@ class PointToPointDistanceConstraint(ConstraintBase):
                           upperBound=self.toColumnVectorString(self.upperBound))
 
         commands.append(
-            '{varName} = Point2PointDistanceConstraint({robotArg}, {bodyNameA}, {bodyNameB}, {pointInBodyA}, {pointInBodyB}, '
+            '{varName} = Point2PointDistanceConstraint({robotArg}, links.{bodyNameA}, links.{bodyNameB}, {pointInBodyA}, {pointInBodyB}, '
             '{lowerBound}, {upperBound}, {tspan});'
             ''.format(**formatArgs))
 
@@ -295,7 +295,7 @@ class QuatConstraint(ConstraintBase):
                           tolerance=repr(math.radians(self.angleToleranceInDegrees)))
 
         commands.append(
-            '{varName} = WorldQuatConstraint({robotArg}, {linkName}, '
+            '{varName} = WorldQuatConstraint({robotArg}, links.{linkName}, '
             '{quat}, {tolerance}, {tspan});'
             ''.format(**formatArgs))
 
@@ -334,7 +334,7 @@ class EulerConstraint(ConstraintBase):
                           upperBound=self.toColumnVectorString(self.upperBound))
 
         commands.append(
-            '{varName} = WorldEulerConstraint({robotArg}, {linkName}, '
+            '{varName} = WorldEulerConstraint({robotArg}, links.{linkName}, '
             '{orientation} + {lowerBound}, {orientation} + {upperBound}, {tspan});'
             ''.format(**formatArgs))
 
@@ -375,7 +375,7 @@ class WorldGazeOrientConstraint(ConstraintBase):
                           threshold=repr(self.threshold))
 
         commands.append(
-            '{varName} = WorldGazeOrientConstraint({robotArg}, {linkName}, {axis}, '
+            '{varName} = WorldGazeOrientConstraint({robotArg}, links.{linkName}, {axis}, '
             '{quat}, {coneThreshold}, {threshold}, {tspan});'
             ''.format(**formatArgs))
 
@@ -417,7 +417,7 @@ class WorldGazeDirConstraint(ConstraintBase):
                           coneThreshold=repr(self.coneThreshold))
 
         commands.append(
-            '{varName} = WorldGazeDirConstraint({robotArg}, {linkName}, {bodyAxis}, '
+            '{varName} = WorldGazeDirConstraint({robotArg}, links.{linkName}, {bodyAxis}, '
             '{worldAxis}, {coneThreshold}, {tspan});'
             ''.format(**formatArgs))
 
@@ -461,7 +461,7 @@ class WorldGazeTargetConstraint(ConstraintBase):
                           coneThreshold=repr(self.coneThreshold))
 
         commands.append(
-            '{varName} = WorldGazeTargetConstraint({robotArg}, {linkName}, {axis}, '
+            '{varName} = WorldGazeTargetConstraint({robotArg}, links.{linkName}, {axis}, '
             '{worldPoint}, {bodyPoint}, {coneThreshld}, {tspan});'
             ''.format(**formatArgs))
 
@@ -501,9 +501,9 @@ class QuasiStaticConstraint(ConstraintBase):
             ''.format(**formatArgs))
 
         if self.leftFootEnabled:
-            commands.append('{varName} = {varName}.addContact(l_foot, l_foot_pts);'.format(**formatArgs))
+            commands.append('{varName} = {varName}.addContact(links.l_foot, l_foot_pts);'.format(**formatArgs))
         if self.rightFootEnabled:
-            commands.append('{varName} = {varName}.addContact(r_foot, r_foot_pts);'.format(**formatArgs))
+            commands.append('{varName} = {varName}.addContact(links.r_foot, r_foot_pts);'.format(**formatArgs))
 
 
 class WorldFixedBodyPoseConstraint(ConstraintBase):
@@ -528,7 +528,7 @@ class WorldFixedBodyPoseConstraint(ConstraintBase):
                           linkName=self.linkName)
 
         commands.append(
-            '{varName} = WorldFixedBodyPoseConstraint({robotArg}, {linkName}, {tspan});\n'
+            '{varName} = WorldFixedBodyPoseConstraint({robotArg}, links.{linkName}, {tspan});\n'
             ''.format(**formatArgs))
 
 
@@ -568,7 +568,7 @@ class ExcludeCollisionGroupConstraint(ConstraintBase):
         ConstraintBase.__init__(self, **kwargs)
 
     def _getCommands(self, commands, constraintNames, suffix):
-        
+
         formatArgs = dict(name=self.excludedGroupName,
                           tspan=self.getTSpanString()
                           )
