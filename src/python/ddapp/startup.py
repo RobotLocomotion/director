@@ -451,6 +451,10 @@ if usePlanning:
     for taskDescription in loadTaskDescriptions():
         taskManagerPanel.taskQueueWidget.loadTaskDescription(taskDescription[0], taskDescription[1])
 
+    for obj in om.getObjects():
+        obj.setProperty('Deletable', False)
+
+
 if useActionManager:
 
     from ddapp import actionmanagerpanel
