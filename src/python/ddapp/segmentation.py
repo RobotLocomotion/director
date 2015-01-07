@@ -1245,8 +1245,18 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
 
 
+def showHistogram(polyData, arrayName, numberOfBins=100):
 
+    import matplotlib.pyplot as plt
 
+    x = vnp.getNumpyFromVtk(polyData, arrayName)
+    hist, bins = np.histogram(x, bins=numberOfBins)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[:-1] + bins[1:]) / 2
+    plt.bar(center, hist, align='center', width=width)
+    plt.show()
+
+    return bins[np.argmax(hist)] + (bins[1] - bins[0])/2.0
 
 
 
@@ -1535,6 +1545,23 @@ def applyDiskGlyphs(polyData):
     glyph.OrientOn()
     glyph.SetSource(disk)
     glyph.SetInput(pd)
+    glyph.SetVectorModeToUseNormal()
+    glyph.Update()
+
+    return shallowCopy(glyph.GetOutput())
+
+
+def applyArrowGlyphs(polyData):
+
+    assert polyData.GetPointData().GetNormals()
+
+    arrow = vtk.vtkArrowSource()
+    arrow.Update()
+
+    glyph = vtk.vtkGlyph3D()
+    glyph.SetScaleFactor(0.015)
+    glyph.SetSource(arrow.GetOutput())
+    glyph.SetInput(polyData)
     glyph.SetVectorModeToUseNormal()
     glyph.Update()
 
