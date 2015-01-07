@@ -1,4 +1,5 @@
 from ddapp.tasks.robottasks import *
+from ddapp.tasks.descriptions import loadTaskDescription
 import ddapp.applogic as app
 
 
@@ -13,30 +14,20 @@ class TaskItem(om.ObjectModelItem):
 class TaskLibraryWidget(object):
 
     def __init__(self):
+
+        self.taskTree = TaskTree()
+
         self.widget = QtGui.QWidget()
-        l = QtGui.QGridLayout(self.widget)
-
-        self.treeWidget = QtGui.QTreeWidget()
-
-
-        self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         self.addButton = QtGui.QPushButton('add task')
 
-        l.addWidget(self.treeWidget, 0, 0)
-        l.addWidget(self.propertiesPanel, 1, 0)
+        l = QtGui.QGridLayout(self.widget)
+        l.addWidget(self.taskTree.treeWidget, 0, 0)
+        l.addWidget(self.taskTree.propertiesPanel, 1, 0)
         l.addWidget(self.addButton, 2, 0)
 
 
         self.widget.setWindowTitle('Task Library')
-
-        self.objectModel = om.ObjectModelTree()
-        self.objectModel.init(self.treeWidget, self.propertiesPanel)
-
-        self.treeWidget.setColumnCount(1)
-        self.treeWidget.setHeaderLabels(['Tasks'])
-
         self.addButton.connect('clicked()', self.onAddTaskClicked)
-
         self.callbacks = callbacks.CallbackRegistry(['OnAddTask'])
 
 
@@ -47,81 +38,24 @@ class TaskLibraryWidget(object):
 
         #item.setBackground(0, QtGui.QBrush(QtCore.Qt.green))
 
-
     def onAddTaskClicked(self):
-        task = self.objectModel.getActiveObject().task
-        self.callbacks.process('OnAddTask', task)
+        task = self.taskTree.getSelectedTask()
+        if task:
+            self.callbacks.process('OnAddTask', task.task)
 
-    def addTask(self, task, groupName=None):
-        groupName = groupName or self.defaultTaskGroupName
-        folder = self.objectModel.getOrCreateContainer(groupName)
-        obj = TaskItem(task)
-        self.objectModel.addToObjectModel(obj, parentObj=folder)
-        if len(self.objectModel.getTopLevelObjects()) == 1:
-            self.objectModel.setActiveObject(obj)
+    def addTask(self, task, parent=None):
+        self.taskTree.onAddTask(task, parent)
 
 
-class TaskQueueWidget(object):
-
-    def __del__(self):
-      self.timer.stop()
+class TaskTree(object):
 
 
     def __init__(self):
-
-        self.taskQueue = atq.AsyncTaskQueue()
-        self.taskQueue.connectTaskStarted(self.onTaskStarted)
-        self.taskQueue.connectTaskEnded(self.onTaskEnded)
-        self.completedTasks = []
-
-        self.timer = TimerCallback(targetFps=5)
-        self.timer.callback = self.updateDisplay
-        self.timer.start()
-
-        self.widget = QtGui.QWidget()
-        l = QtGui.QGridLayout(self.widget)
-
         self.treeWidget = QtGui.QTreeWidget()
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
-        self.startButton = QtGui.QPushButton('start')
-        self.stepButton = QtGui.QPushButton('step')
-        self.clearButton = QtGui.QPushButton('clear')
-        self.currentTaskLabel = QtGui.QLabel('')
-        self.statusTaskLabel = QtGui.QLabel('')
-        self.statusTaskLabel.visible = False
-
-        l.addWidget(self.treeWidget, 0, 0)
-        l.addWidget(self.propertiesPanel, 1, 0)
-        l.addWidget(self.startButton, 2, 0)
-        l.addWidget(self.stepButton, 3, 0)
-        l.addWidget(self.clearButton, 4, 0)
-        l.addWidget(self.currentTaskLabel, 5, 0)
-        l.addWidget(self.statusTaskLabel, 6, 0)
-
-        self.widget.setWindowTitle('Task Queue')
-
         self.objectModel = om.ObjectModelTree()
         self.objectModel.init(self.treeWidget, self.propertiesPanel)
-
         self.treeWidget.setColumnCount(1)
-        #self.treeWidget.setHeaderLabels(['Tasks', 'Break'])
-
-        self.startButton.connect('clicked()', self.onStart)
-        self.stepButton.connect('clicked()', self.onStep)
-        self.clearButton.connect('clicked()', self.onClear)
-
-
-    def getChildItems(self, item):
-        return []
-
-    def serializeObject(self, obj):
-        state = []
-        state.append(pickle.dumps(obj.task))
-
-        for child in obj.children():
-            state.append(self.serializeObject(child))
-
-        return state
 
     def onSave(self):
 
@@ -159,8 +93,7 @@ class TaskQueueWidget(object):
 
         helper(state[0], state[1])
 
-
-    def loadTaskDescription(self, name, description):
+    def loadTaskDescription(self, description):
 
         taskQueue = self
 
@@ -183,7 +116,6 @@ class TaskQueueWidget(object):
 
         helper(None, description)
 
-
     def assureSelection(self):
       objs = self.objectModel.getTopLevelObjects()
       if len(objs) == 1:
@@ -201,16 +133,9 @@ class TaskQueueWidget(object):
         self.assureSelection()
         return obj
 
-    def onClear(self):
-
-        assert not self.taskQueue.isRunning
-
-        self.taskQueue.reset()
-
+    def removeAllTasks(self):
         for obj in self.objectModel.getObjects():
             self.objectModel.removeFromObjectModel(obj)
-        self.updateDisplay()
-
 
     def findTaskItem(self, task):
         for obj in self.objectModel.getObjects():
@@ -221,6 +146,11 @@ class TaskQueueWidget(object):
         obj = self.findTaskItem(task)
         if obj:
             self.objectModel.setActiveObject(obj)
+
+    def getSelectedTask():
+        if not isinstance(self.objectModel.getActiveObject(), TaskItem):
+            return None
+        return self.objectModel.getActiveObject().task
 
     def getSelectedTasks(self):
         obj = self.objectModel.getActiveObject()
@@ -233,16 +163,115 @@ class TaskQueueWidget(object):
 
         return tasks
 
+    def getTasks(self, parent=None):
+
+        def helper(objs, tasks):
+            for obj in objs:
+                if isinstance(obj, om.ContainerItem):
+                    helper(obj.children(), tasks)
+                    continue
+                tasks.append(obj)
+            return tasks
+
+        return helper(self.objectModel.getTopLevelObjects() if parent is None else parent.children(), [])
+
+
+class TaskQueueWidget(object):
+
+    def __del__(self):
+      self.timer.stop()
+
+
+    def __init__(self):
+
+        self.taskTree = TaskTree()
+
+        self.taskQueue = atq.AsyncTaskQueue()
+        self.taskQueue.connectTaskStarted(self.onTaskStarted)
+        self.taskQueue.connectTaskEnded(self.onTaskEnded)
+        self.completedTasks = []
+
+        self.timer = TimerCallback(targetFps=5)
+        self.timer.callback = self.updateDisplay
+        self.timer.start()
+
+        self.widget = QtGui.QWidget()
+        l = QtGui.QGridLayout(self.widget)
+
+        self.queueCombo = QtGui.QComboBox()
+        self.startButton = QtGui.QPushButton('start')
+        self.stepButton = QtGui.QPushButton('step')
+        self.clearButton = QtGui.QPushButton('clear')
+        self.currentTaskLabel = QtGui.QLabel('')
+        self.statusTaskLabel = QtGui.QLabel('')
+        self.statusTaskLabel.visible = False
+
+        l.addWidget(self.queueCombo, 0, 0)
+        l.addWidget(self.taskTree.treeWidget, 1, 0)
+        l.addWidget(self.taskTree.propertiesPanel, 2, 0)
+        l.addWidget(self.startButton, 3, 0)
+        l.addWidget(self.stepButton, 4, 0)
+        l.addWidget(self.clearButton, 5, 0)
+        l.addWidget(self.currentTaskLabel, 6, 0)
+        l.addWidget(self.statusTaskLabel, 7, 0)
+
+        self.widget.setWindowTitle('Task Queue')
+
+
+        self.descriptions = {}
+        self.queueCombo.insertSeparator(0)
+        self.queueCombo.addItem('Create new...')
+
+        self.queueCombo.connect('currentIndexChanged(const QString&)', self.onQueueComboChanged)
+        self.startButton.connect('clicked()', self.onStart)
+        self.stepButton.connect('clicked()', self.onStep)
+        self.clearButton.connect('clicked()', self.onClear)
+
+
+
+    def loadTaskDescription(self, name, description):
+
+        self.descriptions[name] = description
+        insertIndex = self.queueCombo.count - 2
+        self.queueCombo.insertItem(insertIndex, name)
+        #self.onQueueComboChanged(name)
+
+
+    def onQueueComboChanged(self, name):
+
+        self.taskTree.removeAllTasks()
+
+        if name == 'Create new...':
+            return
+        elif not name:
+            return
+        else:
+            description = self.descriptions[name]
+
+        self.taskTree.loadTaskDescription(description)
+
+
+    def onClear(self):
+
+        assert not self.taskQueue.isRunning
+
+        self.taskQueue.reset()
+
+        self.taskTree.removeAllTasks()
+
+        self.updateDisplay()
+
+
     def onTaskStarted(self, taskQueue, task):
         print 'starting task:', task.properties.getProperty('Name')
-        self.selectTask(task)
-        item = self.findTaskItem(task)
+        self.taskTree.selectTask(task)
+        item = self.taskTree.findTaskItem(task)
         #if item.getProperty('Visible'):
         #    raise atq.AsyncTaskQueue.PauseException()
 
     def onTaskEnded(self, taskQueue, task):
         self.completedTasks.append(task)
-        self.selectTask(self.completedTasks[0])
+        self.taskTree.selectTask(self.completedTasks[0])
 
     def updateStatusMessage(self):
 
@@ -259,7 +288,7 @@ class TaskQueueWidget(object):
     def updateDisplay(self):
 
         isRunning = self.taskQueue.isRunning
-        isEmpty = len(self.objectModel._objects) == 0
+        isEmpty = len(self.taskTree.objectModel._objects) == 0
 
         if isRunning:
             self.startButton.text = 'stop'
@@ -280,25 +309,13 @@ class TaskQueueWidget(object):
         self.updateStatusMessage()
 
 
-    def getTasks(self, parent=None):
-
-        def helper(objs, tasks):
-            for obj in objs:
-                if isinstance(obj, om.ContainerItem):
-                    helper(obj.children(), tasks)
-                    continue
-                tasks.append(obj)
-            return tasks
-
-        return helper(self.objectModel.getTopLevelObjects() if parent is None else parent.children(), [])
-
     def onStep(self):
         assert not self.taskQueue.isRunning
 
-        if not isinstance(self.objectModel.getActiveObject(), TaskItem):
+        task = taskTree.getSelectedTask()
+        if not task:
             return
 
-        task = self.objectModel.getActiveObject().task
         self.completedTasks = []
         self.taskQueue.reset()
         self.taskQueue.addTask(task)
@@ -318,7 +335,7 @@ class TaskQueueWidget(object):
 
             self.completedTasks = []
             self.taskQueue.reset()
-            for obj in self.getSelectedTasks():
+            for obj in self.taskTree.getSelectedTasks():
                 #print 'adding task:', obj.task.properties.name
                 self.taskQueue.addTask(obj.task)
 
@@ -333,25 +350,14 @@ class TaskWidgetManager(object):
 
         self.taskLibraryWidget = TaskLibraryWidget()
         self.taskQueueWidget = TaskQueueWidget()
-        self.taskLibraryWidget.callbacks.connect('OnAddTask', self.taskQueueWidget.onAddTask)
+        self.taskLibraryWidget.callbacks.connect('OnAddTask', self.taskQueueWidget.taskTree.onAddTask)
         self.addDefaultTasksToLibrary()
 
 
     def addDefaultTasksToLibrary(self):
 
-        self.taskLibraryWidget.addTask(PrintTask(), 'utils')
-        self.taskLibraryWidget.addTask(UserPromptTask(), 'utils')
-        self.taskLibraryWidget.addTask(DelayTask(), 'utils')
-        self.taskLibraryWidget.addTask(PauseTask(), 'utils')
-        self.taskLibraryWidget.addTask(QuitTask(), 'utils')
-        self.taskLibraryWidget.addTask(WaitForMultisenseLidar(), 'perception')
-        self.taskLibraryWidget.addTask(SnapshotSelectedPointcloud(), 'perception')
-        self.taskLibraryWidget.addTask(SnapshotMultisensePointcloud(), 'perception')
-        self.taskLibraryWidget.addTask(SnapshotStereoPointcloud(), 'perception')
-        self.taskLibraryWidget.addTask(FitDrill(), 'perception')
-        self.taskLibraryWidget.addTask(FindHorizontalSurfaces(), 'perception')
-        self.taskLibraryWidget.addTask(PublishAffordance(), 'affordances')
-
+        desc = loadTaskDescription('taskLibrary')
+        self.taskLibraryWidget.taskTree.loadTaskDescription(desc)
 
 
 def init():
@@ -361,5 +367,7 @@ def init():
     panel = TaskWidgetManager()
     dock = app.addWidgetToDock(panel.taskQueueWidget.widget, action=app.getToolBarActions()['ActionActionManagerPanel'])
     dock.hide()
+
+    dock = app.addWidgetToDock(panel.taskLibraryWidget.widget)
     return panel
 

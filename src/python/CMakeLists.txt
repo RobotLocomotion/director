@@ -100,6 +100,7 @@ set(python_files
   ddapp/tasks/taskmanagerwidget.py
   ddapp/tasks/descriptions/__init__.py
   ddapp/tasks/descriptions/drillTask.py
+  ddapp/tasks/descriptions/taskLibrary.py
 
   actionmanager/__init__.py
   actionmanager/actions.py
