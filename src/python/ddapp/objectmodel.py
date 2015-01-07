@@ -2,6 +2,7 @@ import os
 import PythonQt
 from PythonQt import QtCore, QtGui
 from ddapp.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelper
+from ddapp import callbacks
 
 class Icons(object):
 
@@ -46,6 +47,7 @@ class ObjectModelItem(object):
         self.properties.connectPropertyAttributeChanged(self._onPropertyAttributeChanged)
 
         self.addProperty('Icon', icon, attributes=PropertyAttributes(hidden=True))
+        self.addProperty('Deletable', True, attributes=PropertyAttributes(hidden=True))
         self.addProperty('Name', name, attributes=PropertyAttributes(hidden=True))
 
     def setIcon(self, icon):
@@ -135,11 +137,15 @@ class ContainerItem(ObjectModelItem):
 
 class ObjectModelTree(object):
 
+    ACTION_SELECTED = 'ACTION_SELECTED'
+
     def __init__(self):
         self._treeWidget = None
         self._propertiesPanel = None
         self._objects = {}
         self._blockSignals = False
+        self.actions = []
+        self.callbacks = callbacks.CallbackRegistry([self.ACTION_SELECTED])
 
     def getTreeWidget(self):
         return self._treeWidget
@@ -351,36 +357,62 @@ class ObjectModelTree(object):
 
         obj = self.getActiveObject()
         if not obj:
-            return
+            self._onTreeContextMenu(clickPosition)
+        else:
+            self._onObjectContextMenu(obj, clickPosition)
+
+
+    def _showMenu(self, actions, clickPosition):
+
+        if not actions:
+            return None
 
         globalPos = self.getTreeWidget().viewport().mapToGlobal(clickPosition)
 
         menu = QtGui.QMenu()
 
-        actions = obj.getActionNames()
-
-        for actionName in obj.getActionNames():
-            if not actionName:
+        for name in actions:
+            if not name:
                 menu.addSeparator()
             else:
-                menu.addAction(actionName)
-
-        menu.addSeparator()
-        menu.addAction("Remove")
+                menu.addAction(name)
 
         selectedAction = menu.exec_(globalPos)
-        if selectedAction is None:
-            return
 
-        if selectedAction.text == "Remove":
-            self.removeFromObjectModel(obj)
+        if selectedAction is not None:
+            return selectedAction.text
         else:
-            obj.onAction(selectedAction.text)
+            return None
+
+
+    def _onTreeContextMenu(self, clickPosition):
+
+        selectedAction = self._showMenu(self.actions, clickPosition)
+        if selectedAction:
+            self.callbacks.process(self.ACTION_SELECTED, self, selectedAction)
+
+
+    def _onObjectContextMenu(self, obj, clickPosition):
+
+        actions = list(obj.getActionNames())
+
+        if obj.hasProperty('Deletable') and obj.getProperty('Deletable'):
+            actions.append(None)
+            actions.append('Remove')
+
+        selectedAction = self._showMenu(actions, clickPosition)
+
+        if selectedAction == 'Remove':
+            self.removeFromObjectModel(obj)
+        elif selectedAction:
+            obj.onAction(selectedAction)
 
 
     def removeSelectedItems(self):
         for item in self.getTreeWidget().selectedItems():
-            self._removeItemFromObjectModel(item)
+            obj = self._getObjectForItem(item)
+            if (not obj.hasProperty('Deletable')) or obj.getProperty('Deletable'):
+                self._removeItemFromObjectModel(item)
 
 
     def _filterEvent(self, obj, event):
