@@ -19,9 +19,16 @@ def loadTaskDescriptionsFromFile(descriptionFile):
 
     return descriptions
 
+def getDefaultSearchDirectory():
+    return os.path.dirname(__file__)
+
+def loadTaskDescription(name, searchDir=None):
+    searchDir = searchDir or getDefaultSearchDirectory()
+    filename = os.path.join(searchDir, name + '.py')
+    return loadTaskDescriptionsFromFile(filename)[0][1]
 
 def loadTaskDescriptions(searchDir=None):
-    searchDir = searchDir or os.path.dirname(__file__)
+    searchDir = searchDir or getDefaultSearchDirectory()
     descriptionFiles = getTaskDescriptionFiles(searchDir)
     descriptions = []
     for filename in descriptionFiles:
