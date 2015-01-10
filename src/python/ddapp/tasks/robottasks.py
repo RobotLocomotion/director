@@ -11,10 +11,12 @@ from ddapp import ikplanner
 from ddapp import callbacks
 from ddapp import robotsystem
 from ddapp import transformUtils
+from ddapp import affordanceitems
 from ddapp import vtkNumpy as vnp
 from ddapp.debugVis import DebugData
 from ddapp.robotplanlistener import ManipulationPlanItem
 from ddapp.footstepsdriver import FootstepPlanItem
+from ddapp import vtkAll as vtk
 import numpy as np
 import copy
 import pickle
@@ -516,6 +518,9 @@ class UserAnnotatePointCloud(PointCloudAlgorithmBase):
         self.picker = pointpicker.PointPicker(view, numberOfPoints=self.properties.getProperty('Number of points'), drawLines=True, callback=self.onAnnotationComplete, abortCallback=self.onAnnotationAborted)
         self.picker.annotationName = self.properties.getProperty('Annotation name')
         self.picker.annotationFolder = 'annotations'
+
+        self.picker.pickType = 'points' if polyData.GetNumberOfCells() == polyData.GetNumberOfVerts() else 'render'
+
         self.aborted = False
         self.picker.start()
 
@@ -801,6 +806,35 @@ class FitWallFrameFromAnnotation(PointCloudAlgorithmBase):
         vis.showFrame(t, 'wall frame', scale=0.2, parent=obj)
 
 
+class FitShelfItem(PointCloudAlgorithmBase):
+
+    @staticmethod
+    def getDefaultProperties(properties):
+        properties.addProperty('Annotation input name', '')
+        properties.addProperty('Cluster tolerance', 0.02, attributes=propertyset.PropertyAttributes(decimals=3, minimum=0.0, maximum=10))
+
+    def getAnnotationInput(self):
+        obj = om.findObjectByName(self.properties.getProperty('Annotation input name'))
+        if obj is None:
+            self.fail('user annotation not found')
+        return obj
+
+
+    def run(self):
+
+        polyData = self.getPointCloud()
+        annotation = self.getAnnotationInput()
+        annotationPoint = annotation.annotationPoints[0]
+
+        mesh = segmentation.fitShelfItem(polyData, annotationPoint, clusterTolerance=self.properties.getProperty('Cluster tolerance'))
+
+        annotation.setProperty('Visible', False)
+        om.removeFromObjectModel(om.findObjectByName('shelf item'))
+        obj = vis.showPolyData(mesh, 'shelf item', color=[0,1,0])
+        t = transformUtils.frameFromPositionAndRPY(segmentation.computeCentroid(mesh), [0,0,0])
+        segmentation.makeMovable(obj, t)
+
+
 class SpawnValveAffordance(AsyncTask):
 
     @staticmethod
@@ -811,8 +845,14 @@ class SpawnValveAffordance(AsyncTask):
         properties.addProperty('Rotation',  [180, -90, 16], attributes=om.PropertyAttributes(decimals=2, minimum=-360, maximum=360))
 
     def getGroundFrame(self):
+        return vtk.vtkTransform()
+
         robotModel = robotSystem.robotStateModel
-        return robotSystem.footstepsDriver.getFeetMidPoint(robotModel)
+        baseLinkFrame = robotModel.model.getLinkFrame(robotModel.model.getLinkNames()[0])
+        #baseLinkFrame.PostMultiply()
+        #baseLinkFrame.Translate(0,0,-baseLinkFrame.GetPosition()[2])
+        return baseLinkFrame
+        #return robotSystem.footstepsDriver.getFeetMidPoint(robotModel)
 
     def computeValveFrame(self):
         position = self.properties.getProperty('Position')
@@ -824,24 +864,99 @@ class SpawnValveAffordance(AsyncTask):
     def run(self):
 
         radius = self.properties.getProperty('Radius')
-        zwidth = 0.03
-
-        valveFrame = self.computeValveFrame()
+        thickness = 0.03
 
         folder = om.getOrCreateContainer('affordances')
-        z = DebugData()
-        z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius=radius)
-        valveMesh = z.getPolyData()
+        frame = self.computeValveFrame()
+        d = DebugData()
+        d.addLine(np.array([0, 0, -thickness/2.0]), np.array([0, 0, thickness/2.0]), radius=radius)
+        mesh = d.getPolyData()
+        params = dict(radius=radius, length=thickness, xwidth=radius, ywidth=radius, zwidth=thickness, otdf_type='steering_cyl', friendly_name='valve')
 
-        om.removeFromObjectModel(om.findObjectByName('valve'))
-        valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
-        valveAffordance.actor.SetUserTransform(valveFrame)
-        valveFrame = vis.showFrame(valveFrame, 'valve frame', parent=self.valveAffordance, visible=False, scale=0.2)
+        affordance = vis.showPolyData(mesh, 'valve', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=1.0)
+        frame = vis.showFrame(frame, 'valve frame', parent=affordance, visible=False, scale=radius)
+        affordance.actor.SetUserTransform(frame.transform)
+        affordance.setAffordanceParams(params)
+        affordance.updateParamsFromActorTransform()
 
-        params = dict(radius=radius, length=zwidth, xwidth=radius, ywidth=radius, zwidth=zwidth,
-                      otdf_type='steering_cyl', friendly_name='valve')
-        self.valveAffordance.setAffordanceParams(params)
-        self.valveAffordance.updateParamsFromActorTransform()
+
+class SpawnDrillBarrelAffordance(AsyncTask):
+
+    @staticmethod
+    def getDefaultProperties(properties):
+
+        properties.addProperty('Position', [0.5, -0.22, 1.2], attributes=om.PropertyAttributes(decimals=3, minimum=-1e4, maximum=1e4))
+        properties.addProperty('Rotation',  [0, 0, 0], attributes=om.PropertyAttributes(decimals=2, minimum=-360, maximum=360))
+
+    def getGroundFrame(self):
+        return vtk.vtkTransform()
+
+        robotModel = robotSystem.robotStateModel
+        baseLinkFrame = robotModel.model.getLinkFrame(robotModel.model.getLinkNames()[0])
+        #baseLinkFrame.PostMultiply()
+        #baseLinkFrame.Translate(0,0,-baseLinkFrame.GetPosition()[2])
+        return baseLinkFrame
+        #return robotSystem.footstepsDriver.getFeetMidPoint(robotModel)
+
+    def computeAffordanceFrame(self):
+        position = self.properties.getProperty('Position')
+        rpy = self.properties.getProperty('Rotation')
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t.Concatenate(self.getGroundFrame())
+        return t
+
+    def run(self):
+
+        folder = om.getOrCreateContainer('affordances')
+
+        frame = self.computeAffordanceFrame()
+        mesh = segmentation.getDrillBarrelMesh()
+        params = segmentation.getDrillAffordanceParams(np.array(frame.GetPosition()), [1,0,0], [0,1,0], [0,0,1], 'dewalt_barrel')
+
+        affordance = vis.showPolyData(mesh, 'drill', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder)
+        frame = vis.showFrame(frame, 'drill frame', parent=affordance, visible=False, scale=0.2)
+        affordance.actor.SetUserTransform(frame.transform)
+        affordance.setAffordanceParams(params)
+        affordance.updateParamsFromActorTransform()
+
+
+class SpawnDrillRotaryAffordance(AsyncTask):
+
+    @staticmethod
+    def getDefaultProperties(properties):
+
+        properties.addProperty('Position', [0.5, -0.22, 1.2], attributes=om.PropertyAttributes(decimals=3, minimum=-1e4, maximum=1e4))
+        properties.addProperty('Rotation',  [0, 0, 0], attributes=om.PropertyAttributes(decimals=2, minimum=-360, maximum=360))
+
+    def getGroundFrame(self):
+        return vtk.vtkTransform()
+
+        robotModel = robotSystem.robotStateModel
+        baseLinkFrame = robotModel.model.getLinkFrame(robotModel.model.getLinkNames()[0])
+        #baseLinkFrame.PostMultiply()
+        #baseLinkFrame.Translate(0,0,-baseLinkFrame.GetPosition()[2])
+        return baseLinkFrame
+        #return robotSystem.footstepsDriver.getFeetMidPoint(robotModel)
+
+    def computeAffordanceFrame(self):
+        position = self.properties.getProperty('Position')
+        rpy = self.properties.getProperty('Rotation')
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t.Concatenate(self.getGroundFrame())
+        return t
+
+    def run(self):
+
+        folder = om.getOrCreateContainer('affordances')
+        frame = self.computeAffordanceFrame()
+        mesh = segmentation.getDrillMesh()
+        params = segmentation.getDrillAffordanceParams(np.array(frame.GetPosition()), [1,0,0], [0,1,0], [0,0,1])
+
+        affordance = vis.showPolyData(mesh, 'drill', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder)
+        frame = vis.showFrame(frame, 'drill frame', parent=affordance, visible=False, scale=0.2)
+        affordance.actor.SetUserTransform(frame.transform)
+        affordance.setAffordanceParams(params)
+        affordance.updateParamsFromActorTransform()
 
 
 class PlanGazeTrajectory(AsyncTask):

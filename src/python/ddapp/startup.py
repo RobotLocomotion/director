@@ -450,6 +450,7 @@ if usePlanning:
 
     for taskDescription in loadTaskDescriptions():
         taskManagerPanel.taskQueueWidget.loadTaskDescription(taskDescription[0], taskDescription[1])
+    taskManagerPanel.taskQueueWidget.setCurrentQueue('Task library')
 
     for obj in om.getObjects():
         obj.setProperty('Deletable', False)
