@@ -13,6 +13,8 @@ class PointPicker(object):
 
         self.view = view
         self.obj = obj
+        self.pickType = 'points'
+        self.tolerance = 0.01
         self.numberOfPoints = numberOfPoints
         self.drawLines = drawLines
         self.annotationObj = None
@@ -123,11 +125,11 @@ class PointPicker(object):
     def tick(self):
 
         if self.obj is None:
-            self.hoverPos, prop, _ = vis.pickPoint(self.lastMovePos, self.view, pickType='points', tolerance=0.01)
+            self.hoverPos, prop, _ = vis.pickPoint(self.lastMovePos, self.view, pickType=self.pickType, tolerance=self.tolerance)
             if prop is None:
                 self.hoverPos = None
         else:
-            self.hoverPos = vis.pickPoint(self.lastMovePos, self.view, obj=self.obj, pickType='points', tolerance=0.01)
+            self.hoverPos = vis.pickPoint(self.lastMovePos, self.view, obj=self.obj, pickType=self.pickType, tolerance=self.tolerance)
 
         self.draw()
 
