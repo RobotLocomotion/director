@@ -169,7 +169,6 @@ class RobotModelItem(om.ObjectModelItem):
 def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True):
 
     if not urdfFile:
-        #urdfFile = os.path.join(getRobotModelDir(), 'model_%s.urdf' % defaultUrdfHands)
         urdfFile = urdfConfig['default']
 
     if isinstance(parent, str):
@@ -189,10 +188,6 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     jointController.setNominalPose()
 
     return obj, jointController
-
-
-def getRobotModelDir():
-    return os.path.join(getDRCBaseDir(), 'software/models/mit_gazebo_models/mit_robot')
 
 
 def loadRobotModelFromFile(filename):
@@ -260,14 +255,11 @@ def setupPackagePaths():
         'ros_workspace/sandia-hand/ros/sandia_hand_description',
         'software/models/atlas_v4',
         'software/models/atlas_v5',
-        'software/models/common_components/robotiq_hand_description/',
-        'software/models/common_components/multisense_sl/',
         'software/models/mit_gazebo_models/mit_robot',
         'software/models/mit_gazebo_models/V1',
         'software/models/mit_gazebo_models/irobot_hand',
         'software/models/mit_gazebo_models/multisense_sl',
         'software/models/mit_gazebo_models/handle_description',
-        'software/models/mit_gazebo_models/hook_description',
         'software/models/mit_gazebo_models/hook_description',
         'software/models/mit_gazebo_models/robotiq_hand_description',
                   ]
