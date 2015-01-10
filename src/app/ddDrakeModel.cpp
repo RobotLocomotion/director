@@ -1334,7 +1334,11 @@ bool ddDrakeModel::visible() const
 //-----------------------------------------------------------------------------
 void ddDrakeModel::addPackageSearchPath(const QString& searchPath)
 {
-  PackageSearchPaths[QDir(searchPath).dirName()] = searchPath;
+  QString packageName = QDir(searchPath).dirName();
+  if (!PackageSearchPaths.contains(packageName))
+  {
+    PackageSearchPaths[packageName] = searchPath;
+  }
 }
 
 //-----------------------------------------------------------------------------
