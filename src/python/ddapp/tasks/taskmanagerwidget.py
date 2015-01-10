@@ -3,6 +3,11 @@ from ddapp.tasks.descriptions import loadTaskDescription
 import ddapp.applogic as app
 
 
+def _splitCamelCase(name):
+    name = re.sub('(.)([A-Z][a-z]+)', r'\1 \2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1 \2', name)
+
+
 class TaskItem(om.ObjectModelItem):
 
     def __init__(self, task):
@@ -41,7 +46,7 @@ class TaskLibraryWidget(object):
     def onAddTaskClicked(self):
         task = self.taskTree.getSelectedTask()
         if task:
-            self.callbacks.process('OnAddTask', task.task)
+            self.callbacks.process('OnAddTask', task)
 
     def addTask(self, task, parent=None):
         self.taskTree.onAddTask(task, parent)
@@ -105,6 +110,7 @@ class TaskTree(object):
                     child, grandChildren = child
                     group = taskQueue.addGroup(child, obj)
                     helper(group, grandChildren)
+                    self.objectModel.collapse(group)
                 else:
                     taskClass, args = child
                     assert isinstance(args, dict)
@@ -123,6 +129,7 @@ class TaskTree(object):
 
     def onAddTask(self, task, parent=None):
         obj = TaskItem(task.copy())
+        parent = parent or self.getSelectedFolder()
         self.objectModel.addToObjectModel(obj, parentObj=parent)
         self.assureSelection()
         return obj
@@ -130,6 +137,7 @@ class TaskTree(object):
     def addGroup(self, groupName, parent=None):
         obj = self.objectModel.addContainer(groupName, parent)
         obj.removeProperty('Visible')
+        obj.setPropertyAttribute('Name', 'hidden', False)
         self.assureSelection()
         return obj
 
@@ -147,18 +155,24 @@ class TaskTree(object):
         if obj:
             self.objectModel.setActiveObject(obj)
 
-    def getSelectedTask():
+    def getSelectedTask(self):
         if not isinstance(self.objectModel.getActiveObject(), TaskItem):
             return None
         return self.objectModel.getActiveObject().task
 
-    def getSelectedTasks(self):
+    def getSelectedFolder(self):
         obj = self.objectModel.getActiveObject()
-        assert obj
+        if obj is None:
+            return None
 
         container = obj if isinstance(obj, om.ContainerItem) else obj.parent()
-        tasks = self.getTasks(container)
-        if obj != container:
+        return container
+
+    def getSelectedTasks(self):
+        obj = self.objectModel.getActiveObject()
+        folder = self.getSelectedFolder()
+        tasks = self.getTasks(folder)
+        if obj != folder:
             tasks = tasks[tasks.index(obj):]
 
         return tasks
@@ -231,24 +245,59 @@ class TaskQueueWidget(object):
 
     def loadTaskDescription(self, name, description):
 
+        name = _splitCamelCase(name).capitalize()
+
         self.descriptions[name] = description
         insertIndex = self.queueCombo.count - 2
-        self.queueCombo.insertItem(insertIndex, name)
-        #self.onQueueComboChanged(name)
 
+        self.queueCombo.blockSignals(True)
+        self.queueCombo.insertItem(insertIndex, name)
+        self.queueCombo.blockSignals(False)
+
+
+    def onAddQueue(self):
+        inputDialog = QtGui.QInputDialog()
+        inputDialog.setInputMode(inputDialog.TextInput)
+        inputDialog.setLabelText('New queue name:')
+        inputDialog.setWindowTitle('Enter Name')
+        inputDialog.setTextValue('')
+        result = inputDialog.exec_()
+
+        if not result:
+            return
+
+        name = inputDialog.textValue()
+
+        if name in self.descriptions:
+            return
+
+        emptyDescription = [
+            ['empty', [
+            ]],
+        ]
+
+        self.descriptions[name] = emptyDescription
+        insertIndex = self.queueCombo.count - 2
+
+        self.queueCombo.blockSignals(True)
+        self.queueCombo.insertItem(insertIndex, name)
+        self.queueCombo.blockSignals(False)
+        self.setCurrentQueue(name)
+
+    def setCurrentQueue(self, name):
+        assert name in self.descriptions
+        self.queueCombo.setCurrentIndex(self.queueCombo.findText(name))
 
     def onQueueComboChanged(self, name):
 
+        assert len(name)
         self.taskTree.removeAllTasks()
 
         if name == 'Create new...':
-            return
-        elif not name:
-            return
+            self.onAddQueue()
         else:
             description = self.descriptions[name]
-
-        self.taskTree.loadTaskDescription(description)
+            self.taskTree.loadTaskDescription(description)
 
 
     def onClear(self):
@@ -312,7 +361,7 @@ class TaskQueueWidget(object):
     def onStep(self):
         assert not self.taskQueue.isRunning
 
-        task = taskTree.getSelectedTask()
+        task = self.taskTree.getSelectedTask()
         if not task:
             return
 
@@ -363,11 +412,12 @@ class TaskWidgetManager(object):
 def init():
 
     global panel
-    global dock
+
     panel = TaskWidgetManager()
     dock = app.addWidgetToDock(panel.taskQueueWidget.widget, action=app.getToolBarActions()['ActionActionManagerPanel'])
     dock.hide()
 
     dock = app.addWidgetToDock(panel.taskLibraryWidget.widget)
+    dock.hide()
     return panel
 
