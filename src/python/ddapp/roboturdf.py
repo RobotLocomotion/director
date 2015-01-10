@@ -204,6 +204,14 @@ def loadRobotModelFromString(xmlString):
     return model
 
 
+def openUrdf(filename, view):
+    model = loadRobotModelFromFile(filename)
+    if model:
+        model = RobotModelItem(model)
+        om.addToObjectModel(model)
+        model.addToView(view)
+
+
 def getExistingRobotModels():
     return [obj for obj in om.getObjects() if isinstance(obj, RobotModelItem)]
 
