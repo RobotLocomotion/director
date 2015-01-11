@@ -47,19 +47,17 @@ class ValvePlannerDemo(object):
         self.showPoseFunction = showPoseFunction
         self.graspingHand = 'left'
 
-        self.planFromCurrentRobotState = True
         
-        # For testing:
-        #self.visOnly = True
-        #self.useFootstepPlanner = False
-
-        # For autonomousExecute
-        self.visOnly = False
+        # live operation flags
         self.useFootstepPlanner = True
+        self.visOnly = True
+        self.planFromCurrentRobotState = True
+        useDevelopment = True
+        if (useDevelopment):
+            self.visOnly = True
+            self.planFromCurrentRobotState = False
 
         self.userPromptEnabled = True
-        self.walkingPlan = None
-        self.preGraspPlan = None
         self.graspPlan = None
         self.constraintSet = None
         
@@ -68,9 +66,11 @@ class ValvePlannerDemo(object):
 
         self.plans = []
 
+
         self.scribeInAir = False
-        self.scribeDirection = 1 # 1 = clockwise | -1 = anticlockwise
-        self.nextScribeAngle = -30 # suitable for both types of valve
+        self.scribeDirection = -1 # 1 = clockwise | -1 = anticlockwise
+        self.nextScribeAngle = -60 # where to put the pointer before turning
+        self.palmInAngle = 30 # how much should the palm face the axis - 0 not at all, 90 entirely
         self.scribeRadius = None
 
         # IK server speed:
@@ -196,8 +196,13 @@ class ValvePlannerDemo(object):
 
         assert self.valveAffordance
 
+        print self.valveAffordance.params.get('radius')
+        print self.scribeRadius
+
         position = [ self.scribeRadius*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius*math.sin( math.radians( self.nextScribeAngle ))  , tipDepth]
-        rpy = [90, 0, 180]
+        # roll angle governs how much the palm points along towards the axis
+        # yaw ensures thumb faces the axis
+        rpy = [90+self.palmInAngle, 0, 180+ (90+self.nextScribeAngle)]
 
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         self.pointerTipTransformLocal = transformUtils.copyFrame(t)
@@ -259,14 +264,13 @@ class ValvePlannerDemo(object):
         t.Concatenate(graspGroundFrame)
 
         om.removeFromObjectModel( self.valveAffordance.findChild('valve grasp stance') )
-        self.graspStanceFrame = vis.showFrame(t, 'valve grasp stance', parent=self.valveAffordance, visible=False, scale=0.2)
+        self.stanceFrame = vis.showFrame(t, 'valve grasp stance', parent=self.valveAffordance, visible=False, scale=0.2)
 
-        self.frameSync.addFrame(self.graspStanceFrame)
+        self.frameSync.addFrame(self.stanceFrame)
 
 
-    def moveRobotToStanceFrame(self):
-        frame = self.graspStanceFrame.transform
-
+    def moveRobotToStanceFrame(self, frame):
+        #frame = self.stanceFrame.transform
         self.sensorJointController.setPose('q_nom')
         stancePosition = frame.GetPosition()
         stanceOrientation = frame.GetOrientation()
@@ -276,25 +280,26 @@ class ValvePlannerDemo(object):
         q[5] = math.radians(stanceOrientation[2])
         self.sensorJointController.setPose('EST_ROBOT_STATE', q)
 
+    def planFootstepsToStance(self):
+        self.planFootsteps(self.stanceFrame.transform)
 
-    def computeFootstepPlan(self):
+    def planFootsteps(self, goalFrame):
         startPose = self.getPlanningStartPose()
-        goalFrame = self.graspStanceFrame.transform
         request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
 
 
-    def computeWalkingPlan(self):
+    def planWalking(self):
         startPose = self.getPlanningStartPose()
-        self.walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
-        self.addPlan(self.walkingPlan)
+        walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
+        self.addPlan(walkingPlan)
 
 
     def computePreGraspPlan(self):
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
-        self.preGraspPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.addPlan(self.preGraspPlan)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
 
 
     def computeGraspPlan(self):
@@ -415,8 +420,11 @@ class ValvePlannerDemo(object):
 
     def spawnValveFrame(self, robotModel, height):
 
+        # poker:
+        #position = [0.7, 0.22, height]
+        #rpy = [180, -90, -16]
         position = [0.7, 0.22, height]
-        rpy = [180, -90, -16]
+        rpy = [180, -90, 0]
 
         if (self.graspingHand == 'right'):
           position[1] = -position[1]
@@ -431,12 +439,16 @@ class ValvePlannerDemo(object):
         spawn_height = 1.2192 # 4ft
         radius = 0.19558 # nominal initial value. 7.7in radius metal valve
         zwidth = 0.03
+        thickness = 0.0254 # i think zwidth and thickness are duplicates
 
         valveFrame = self.spawnValveFrame(self.robotModel, spawn_height)
 
         folder = om.getOrCreateContainer('affordances')
+
         z = DebugData()
-        z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius=radius)
+        #z.addLine ( np.array([0, 0, -thickness]) , np.array([0, 0, thickness]), radius=radius)
+        z.addTorus( radius, 0.127 )
+        #z.addLine(np.array([0,0,0]), np.array([radius-zwidth,0,0]), radius=zwidth) # main bar
         valveMesh = z.getPolyData()
 
         self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
@@ -446,9 +458,9 @@ class ValvePlannerDemo(object):
         params = dict(radius=radius, length=zwidth, xwidth=radius, ywidth=radius, zwidth=zwidth,
                       otdf_type='steering_cyl', friendly_name='valve')
         self.valveAffordance.setAffordanceParams(params)
-        self.valveAffordance.updateParamsFromActorTransform()        
+        self.valveAffordance.updateParamsFromActorTransform()
 
-        
+
     def spawnValveLeverAffordance(self):
         spawn_height = 1.06 # 3.5ft
         pipe_radius = 0.01
@@ -471,18 +483,16 @@ class ValvePlannerDemo(object):
 
         
     def findValveAffordance(self):
-        self.nextScribeAngle = -30 # reset angle when a new valve is found
+        self.nextScribeAngle = -60 # reset angle when a new valve is found
       
         self.valveAffordance = om.findObjectByName('valve')
         self.valveFrame = om.findObjectByName('valve frame')
 
-        self.scribeRadius = self.valveAffordance.params.get('radius') - 0.06
+        self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was - 0.06
 
         self.graspingHand = 'left'
         self.computeGraspFrame()
         self.computeStanceFrame()
-        
-        self.turnDegrees = 360
 
 
     def findValveLeverAffordance(self):
@@ -497,8 +507,6 @@ class ValvePlannerDemo(object):
         self.graspingHand = 'right'
         self.computeGraspFrame()
         self.computeStanceFrame()
-        
-        self.turnDegrees = 90
 
 
     def getEstimatedRobotStatePose(self):
@@ -546,7 +554,6 @@ class ValvePlannerDemo(object):
     def computeTurnPlan(self, turnDegrees=360, numberOfSamples=12):
 
         numberOfSamples = 20
-        turnDegrees = self.turnDegrees
       
         self.pointerTipPath = []
         self.removePointerTipFrames()
@@ -588,10 +595,12 @@ class ValvePlannerDemo(object):
         self.removePointerTipFrames()
         self.removePointerTipPath()
 
+        self.planFromCurrentRobotState = False
+
         if (mode=='valve'):
             self.graspingHand='left'
             self.findValveAffordance()
-            turn_angle = 360
+            turn_angle = 60
         else:
             self.graspingHand='right'
             self.findValveLeverAffordance()
@@ -600,10 +609,10 @@ class ValvePlannerDemo(object):
         self.plans = []
 
         if self.useFootstepPlanner:
-            self.computeFootstepPlan()
-            self.computeWalkingPlan()
+            self.planFootstepsToStance()
+            self.planWalking()
         else:
-            self.moveRobotToStanceFrame()
+            self.moveRobotToStanceFrame(self.stanceFrame.transform )
 
         self.computePreGraspPlan()
         self.computePreGraspPlanGaze()
@@ -631,10 +640,10 @@ class ValvePlannerDemo(object):
         self.plans = []
 
         if self.useFootstepPlanner:
-            self.computeFootstepPlan()
-            self.computeWalkingPlan()
+            self.planFootstepsToStance()
+            self.planWalking()
         else:
-            self.moveRobotToStanceFrame()
+            self.moveRobotToStanceFrame( self.stanceFrame.transform )
 
         self.computePreGraspPlan()
         self.computePreGraspPlanGaze()
@@ -654,10 +663,10 @@ class ValvePlannerDemo(object):
         #self.plans = []
 
         if self.useFootstepPlanner:
-            self.computeFootstepPlan()
-            self.computeWalkingPlan()
+            self.planFootstepsToStance()
+            self.planWalking()
         else:
-            self.moveRobotToStanceFrame()
+            self.moveRobotToStanceFrame( self.stanceFrame.transform)
 
         self.computePreGraspPlan()
         self.computePreGraspPlanGaze()
@@ -688,28 +697,6 @@ class ValvePlannerDemo(object):
         return self.waitForPlanExecution(plan)
 
 
-    def addWalkingTasksToQueue(self, taskQueue, planFunc, walkFunc):
-
-        if self.useFootstepPlanner:
-            taskQueue.addTask(planFunc)
-
-            if self.visOnly:
-                taskQueue.addTask(self.computeWalkingPlan)
-                taskQueue.addTask(self.animateLastPlan)
-            else:
-
-                taskQueue.addTask(self.userPrompt('send stand command. continue? y/n: '))
-                taskQueue.addTask(self.atlasDriver.sendStandCommand)
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
-
-                taskQueue.addTask(self.userPrompt('commit footsteps. continue? y/n: '))
-                taskQueue.addTask(self.commitFootstepPlan)
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('step'))
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
-
-            taskQueue.addTask(self.removeFootstepPlan)
-        else:
-            taskQueue.addTask(walkFunc)
 
 
 
@@ -726,7 +713,7 @@ class ValvePlannerDemo(object):
 
 
         taskQueue.addTask(self.sendNeckPitchLookForward)
-        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
+        # removed walking queue
         taskQueue.addTask(self.atlasDriver.sendManipCommand)
         taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
 
@@ -762,7 +749,7 @@ class ValvePlannerDemo(object):
 
 
         taskQueue.addTask(self.sendNeckPitchLookForward)
-        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
+        # removed walking queue
         taskQueue.addTask(self.atlasDriver.sendManipCommand)
         taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
 
