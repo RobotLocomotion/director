@@ -121,7 +121,7 @@ class DrillPlannerDemo(object):
         defaultGraspingHand = "left"
         self.setGraspingHand(defaultGraspingHand)
 
-        # development/live flags
+        # live operation flags
         self.useFootstepPlanner = True
         self.visOnly = False # True for development, False for operation
         self.planFromCurrentRobotState = True # False for development, True for operation
@@ -583,14 +583,7 @@ class DrillPlannerDemo(object):
 
     def planFootsteps(self, goalFrame):
         startPose = self.getPlanningStartPose()
-
-        # 'typical'
         request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
-        # overcome footstep planner bug
-        #print "using footstep planner hack - drill demo"
-        #nominalPoseAtRobot = np.hstack([self.sensorJointController.q[:6], self.sensorJointController.getPose('q_nom')[6:]] )
-        #request = self.footstepPlanner.constructFootstepPlanRequest(nominalPoseAtRobot, goalFrame )
-
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
 
 
