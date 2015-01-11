@@ -1224,7 +1224,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
     d = DebugData()
     #d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
-    d.addTorus(radius, 0.1)
+    d.addTorus(radius, 0.127)
     d.addLine(np.array([0,0,0]), np.array([radius-zwidth,0,0]), radius=zwidth) # main bar
 
     name = 'valve'
