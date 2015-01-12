@@ -419,23 +419,10 @@ if usePlanning:
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
 
-    #valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
-    #                                  lHandDriver, atlasdriver.driver, perception.multisenseDriver,
-    #                                  segmentation.segmentValveWallAuto, robotStateJointController,
-    #                                  playPlans, showPose)
-
-    def constructValveDemo():
-        imp.reload(valvedemo)
-        global valveDemo, v
-        valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
+    valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                       segmentation.segmentValveWallAuto, robotStateJointController,
                                       playPlans, showPose)
-        v = valveDemo
-        v.spawnValveAffordance()
-        v.findValveAffordance()
-        
-    constructValveDemo()
 
 
     splinewidget.init(view, handFactory, robotStateModel)
