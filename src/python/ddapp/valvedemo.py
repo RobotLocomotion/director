@@ -15,12 +15,12 @@ from ddapp.asynctaskqueue import AsyncTaskQueue
 from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
-from ddapp import affordanceitems
 from ddapp.debugVis import DebugData
 from ddapp import ikplanner
 from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
+from ddapp import affordanceitems
 from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
@@ -45,90 +45,61 @@ class ValvePlannerDemo(object):
         self.sensorJointController = sensorJointController
         self.planPlaybackFunction = planPlaybackFunction
         self.showPoseFunction = showPoseFunction
-        self.graspingHand = 'left'
+        ##self.graspingHand = 'left'
 
-        self.planFromCurrentRobotState = True
         
-        # For testing:
-        #self.visOnly = True
-        #self.useFootstepPlanner = False
-
-        # For autonomousExecute
-        self.visOnly = False
+        # live operation flags
         self.useFootstepPlanner = True
+        self.visOnly = True
+        self.planFromCurrentRobotState = True
+        useDevelopment = True
+        if (useDevelopment):
+            self.visOnly = True
+            self.planFromCurrentRobotState = False
 
-        self.userPromptEnabled = True
-        self.walkingPlan = None
-        self.preGraspPlan = None
-        self.graspPlan = None
+        self.optionalUserPromptEnabled = False
+        self.requiredUserPromptEnabled = True
         self.constraintSet = None
-        
-        self.pointerTipTransformLocal = None
-        self.pointerTipPath = []
 
         self.plans = []
 
+        self.faceTransformLocal = None
+        self.facePath = []
+
         self.scribeInAir = False
-        self.scribeDirection = 1 # 1 = clockwise | -1 = anticlockwise
-        self.nextScribeAngle = -30 # suitable for both types of valve
+        self.scribeDirection = -1 # 1 = clockwise | -1 = anticlockwise
+        self.nextScribeAngle = -60 # where to put the pointer before turning
+        self.palmInAngle = 30 # how much should the palm face the axis - 0 not at all, 90 entirely
         self.scribeRadius = None
 
         # IK server speed:
-        self.speedSlow = 10
+        self.speedLow = 10
         self.speedHigh = 30
 
+        # for simulated dev
+        self.speedLow = 60
+        self.speedHigh = 60
+
         self.useLidar = True # else use stereo depth
-        
-    def addPlan(self, plan):
-        self.plans.append(plan)
+        self.executionSimFactor = 3.0 # hack to wait enough time in simulation
 
-    def segmentValveWallAuto(self):
-        om.removeFromObjectModel(om.findObjectByName('affordances'))
+        # reach to center and back - for palm point
+        self.clenchFrameXYZ = [0.0, 0.0, -0.1]
+        self.clenchFrameRPY = [90, 0, 180]
 
-        if (self.useLidar is True):
-            vis.updatePolyData(segmentation.getCurrentRevolutionData(), 'pointcloud snapshot', parent='segmentation')
-        else:
-            vis.updatePolyData(segmentation.getDisparityPointCloud(4), 'pointcloud snapshot', parent='segmentation')
+        self.reachDepth = -0.12 # outside the wheel, was 10
+        self.valveIsLever = False # typical valve by default
 
-        self.affordanceFitFunction(.195)
-
-    def setScribeAngleToCurrent(self):
-        '''
-        Compute the current angle of the robot's pointer relative to the valve
-        '''
-
+    def resetTurnPath(self):
         for obj in om.getObjects():
-            if obj.getProperty('Name') == 'pointer tip angle':
+            if obj.getProperty('Name') == 'face frame desired':
+                om.removeFromObjectModel(obj)
+        for obj in om.getObjects():
+            if obj.getProperty('Name') == 'face frame desired path':
                 om.removeFromObjectModel(obj)
 
-        if (self.graspingHand == 'left'):
-            tipFrame = self.robotModel.getLinkFrame('left_pointer_tip')
-        else:
-            tipFrame = self.robotModel.getLinkFrame('right_pointer_tip')
-        #vis.updateFrame(tipFrame, 'pointer tip current', visible=True, scale=0.2)
-
-        # Get the relative position of the pointer from the valve
-        valveTransform =  transformUtils.copyFrame(self.valveFrame.transform)
-        #print valveTransform.GetPosition()
-        tipFrame.Concatenate(valveTransform.GetLinearInverse())
-        #vis.updateFrame(tipFrame, 'point relative', visible=True, scale=0.1)
-
-        # Set the Scribe angle to be the current angle
-        tPosition = tipFrame.GetPosition()
-        angle =  math.degrees(  math.atan2(tPosition[1], tPosition[0])  )
-        radius = math.sqrt( tPosition[0]*tPosition[0] + tPosition[1]*tPosition[1] )
-        print 'Current Scribe Angle: ', angle , ' and Radius: ' , radius
-        self.nextScribeAngle = angle
-
-        d = DebugData()
-        d.addSphere(tPosition, radius=0.01)
-        tPosition =[tPosition[0], tPosition[1], 0] # interested in the point on the plane too
-        d.addSphere(tPosition, radius=0.01)
-
-        currentTipMesh = d.getPolyData()
-        self.currentTipPosition = vis.showPolyData(currentTipMesh, 'pointer tip angle', color=[1.0, 0.5, 0.0], cls=affordanceitems.AffordanceItem, parent=self.valveAffordance, alpha=0.5)
-        self.currentTipPosition.actor.SetUserTransform(self.valveFrame.transform)
-
+    def addPlan(self, plan):
+        self.plans.append(plan)
 
     def computeGroundFrame(self, robotModel):
         '''
@@ -159,77 +130,21 @@ class ValvePlannerDemo(object):
 
         return t
 
-
-    def computeGraspFrame(self):
-
-        assert self.valveAffordance
-
-        # reach to center and back - for palm point
-        position = [0.0, 0.0, -0.1]
-        rpy = [90, 0, 180]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(self.valveFrame.transform)
-
-        self.frameSync = vis.FrameSync()
-        om.removeFromObjectModel( self.valveAffordance.findChild('valve grasp frame') )
-        self.graspFrame = vis.showFrame(t, 'valve grasp frame', parent=self.valveAffordance, visible=False, scale=0.2)
-        self.frameSync.addFrame(self.graspFrame)
-        self.frameSync.addFrame(self.valveFrame)
-
-
-    def removePointerTipFrames(self):
-        for obj in om.getObjects():
-            if obj.getProperty('Name') == 'pointer tip frame desired':
-                om.removeFromObjectModel(obj)
-
-    def removePointerTipPath(self):
-        for obj in om.getObjects():
-            if obj.getProperty('Name') == 'pointer tip path':
-                om.removeFromObjectModel(obj)
-
-    def computePointerTipFrame(self, engagedTip):
-        if engagedTip:
-            tipDepth = 0.0
-        else:
-            tipDepth = -0.12 # - is outside the wheel, was 10
-
-        assert self.valveAffordance
-
-        position = [ self.scribeRadius*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius*math.sin( math.radians( self.nextScribeAngle ))  , tipDepth]
-        rpy = [90, 0, 180]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        self.pointerTipTransformLocal = transformUtils.copyFrame(t)
-        
-        t.Concatenate(self.valveFrame.transform)
-        self.pointerTipFrameDesired = vis.showFrame(t, 'pointer tip frame desired', parent=self.valveAffordance, visible=False, scale=0.2)
-
-        
-    def drawPointerTipPath(self):
-      
-        path = DebugData()
-        for i in range(1,len(self.pointerTipPath)):
-          p0 = self.pointerTipPath[i-1].GetPosition()
-          p1 = self.pointerTipPath[i].GetPosition()
-          path.addLine ( np.array( p0 ) , np.array(  p1 ), radius= 0.005)
-          
-        pathMesh = path.getPolyData()
-        self.pointerTipLinePath = vis.showPolyData(pathMesh, 'pointer tip path', color=[0.0, 0.3, 1.0], cls=affordanceitems.AffordanceItem, parent=self.valveAffordance, alpha=0.6)
-        self.pointerTipLinePath.actor.SetUserTransform(self.valveFrame.transform) 
-        
-    def computeStanceFrame(self):
-
-        graspFrame = self.graspFrame.transform
+    def computeRobotStanceFrame(self, objectTransform, relativeStanceTransform):
+        '''
+        Given a robot model, determine the height of the ground
+        using an XY and Yaw standoff, combined to determine the relative 6DOF standoff
+        For a grasp or approach stance
+        '''
 
         groundFrame = self.computeGroundFrame(self.robotModel)
         groundHeight = groundFrame.GetPosition()[2]
 
-        graspPosition = np.array(graspFrame.GetPosition())
+        graspPosition = np.array(objectTransform.GetPosition())
         graspYAxis = [0.0, 1.0, 0.0]
         graspZAxis = [0.0, 0.0, 1.0]
-        graspFrame.TransformVector(graspYAxis, graspYAxis)
-        graspFrame.TransformVector(graspZAxis, graspZAxis)
+        objectTransform.TransformVector(graspYAxis, graspYAxis)
+        objectTransform.TransformVector(graspZAxis, graspZAxis)
 
         xaxis = graspYAxis
         #xaxis = graspZAxis
@@ -238,75 +153,291 @@ class ValvePlannerDemo(object):
         yaxis /= np.linalg.norm(yaxis)
         xaxis = np.cross(yaxis, zaxis)
 
-        graspGroundFrame = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-        graspGroundFrame.PostMultiply()
-        graspGroundFrame.Translate(graspPosition[0], graspPosition[1], groundHeight)
+        graspGroundTransform = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        graspGroundTransform.PostMultiply()
+        graspGroundTransform.Translate(graspPosition[0], graspPosition[1], groundHeight)
 
+        robotStance = transformUtils.copyFrame( relativeStanceTransform )
+        robotStance.Concatenate(graspGroundTransform)
+
+        return robotStance
+
+
+
+    ### Valve Focused Functions ######################################################################
+    def segmentValveWallAuto(self, mode):
+        om.removeFromObjectModel(om.findObjectByName('affordances'))
+
+        if (self.useLidar is True):
+            vis.updatePolyData(segmentation.getCurrentRevolutionData(), 'pointcloud snapshot', parent='segmentation')
+        else:
+            vis.updatePolyData(segmentation.getDisparityPointCloud(4), 'pointcloud snapshot', parent='segmentation')
+
+        self.affordanceFitFunction(.195, mode=mode)
+
+    def computeValveStanceFrame(self):
+        objectTransform = transformUtils.copyFrame( self.clenchFrame.transform )
+        self.relativeStanceTransform = transformUtils.copyFrame( transformUtils.frameFromPositionAndRPY( self.relativeStanceXYZ , self.relativeStanceRPY ) )
+        robotStance = self.computeRobotStanceFrame(objectTransform, self.relativeStanceTransform)
+        self.stanceFrame = vis.updateFrame(robotStance, 'valve grasp stance', parent=self.valveAffordance, visible=False, scale=0.2)
+        self.stanceFrame.addToView(app.getDRCView())
+
+    def spawnValveFrame(self, robotModel, height):
+
+        position = [0.7, 0.22, height]
+        rpy = [180, -90, 0]
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t.Concatenate(self.computeGroundFrame(robotModel))
+        return t
+
+    def spawnValveAffordance(self):
+        spawn_height = 1.2192 # 4ft
+        radius = 0.19558 # nominal initial value. 7.7in radius metal valve
+        zwidth = 0.02
+        thickness = 0.0254 # i think zwidth and thickness are duplicates
+
+        valveFrame = self.spawnValveFrame(self.robotModel, spawn_height)
+        folder = om.getOrCreateContainer('affordances')
+        z = DebugData()
+        #z.addLine ( np.array([0, 0, -thickness]) , np.array([0, 0, thickness]), radius=radius)
+        z.addTorus( radius, 0.127 )
+        z.addLine(np.array([0,0,0]), np.array([radius-zwidth,0,0]), radius=zwidth) # main bar
+        valveMesh = z.getPolyData()
+
+        self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
+        self.valveAffordance.actor.SetUserTransform(valveFrame)
+        self.valveFrame = vis.showFrame(valveFrame, 'valve frame', parent=self.valveAffordance, visible=False, scale=0.2)
+
+        params = dict(radius=radius, length=zwidth, xwidth=radius, ywidth=radius, zwidth=zwidth,
+                      otdf_type='steering_cyl', friendly_name='valve')
+        self.valveAffordance.setAffordanceParams(params)
+        self.valveAffordance.updateParamsFromActorTransform()
+
+    def spawnValveLeverAffordance(self):
+        spawn_height = 1.06 # 3.5ft
+        pipe_radius = 0.01
+        lever_length = 0.33
+
+        valveFrame = self.spawnValveFrame(self.robotModel, spawn_height)
+        folder = om.getOrCreateContainer('affordances')
+        z = DebugData()
+        z.addLine([0,0,0], [ lever_length , 0, 0], radius=pipe_radius)
+        valveMesh = z.getPolyData()
+
+        self.valveAffordance = vis.showPolyData(valveMesh, 'lever', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
+        self.valveAffordance.actor.SetUserTransform(valveFrame)
+        self.valveFrame = vis.showFrame(valveFrame, 'lever frame', parent=self.valveAffordance, visible=False, scale=0.2)
+
+        otdfType = 'lever_valve'
+        params = dict( radius=pipe_radius, length=lever_length, friendly_name=otdfType, otdf_type=otdfType)
+        self.valveAffordance.setAffordanceParams(params)
+        self.valveAffordance.updateParamsFromActorTransform()
+
+    def findValveAffordance(self):
+        self.valveIsLever = False
+        self.nextScribeAngle = -60 # reach 60 degrees left of the valve spoke
 
         if self.scribeInAir:
-            position = [-0.6, -0.4, 0.0] # stand further away when scribing in air
+            self.relativeStanceXYZ = [-0.6, -0.2, 0.0] # stand further away when scribing in air
         else:
-            position = [-0.48, -0.4, 0.0]
+            self.relativeStanceXYZ = [-0.48, -0.2, 0.0]
+        self.relativeStanceRPY = [0, 0, 16]
 
-        rpy = [0, 0, 16]
 
-        # mirror stance frame for right hand:
-        if (self.graspingHand == 'right'):
-          position[1] = -position[1]
-          rpy[2] = -rpy[2]
+        # mirror stance and rotation direction for right hand:
+        if (self.graspingHand is 'right'):
+            self.nextScribeAngle = -self.nextScribeAngle
+            self.scribeDirection = -self.scribeDirection
+            self.relativeStanceXYZ[1] = -self.relativeStanceXYZ[1]
+            self.relativeStanceRPY[2] = -self.relativeStanceRPY[2]
+
+        self.valveAffordance = om.findObjectByName('valve')
+        self.valveFrame = om.findObjectByName('valve frame')
+
+        self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was - 0.06
+
+        self.computeClenchFrame()
+        self.computeValveStanceFrame()
+
+        self.frameSync = vis.FrameSync()
+        self.frameSync.addFrame(self.valveFrame)
+        self.frameSync.addFrame(self.clenchFrame)
+        self.frameSync.addFrame(self.stanceFrame)
+
+
+    def findValveLeverAffordance(self):
+        self.valveIsLever = True
+        self.nextScribeAngle = 0 # reach right into the valve axis
+
+        if self.scribeInAir:
+            self.relativeStanceXYZ = [-0.6, -0.4, 0.0] # stand further away when scribing in air
+        else:
+            self.relativeStanceXYZ = [-0.48, -0.4, 0.0]
+        self.relativeStanceRPY = [0, 0, 16]
+
+        # mirror stance and rotation direction for right hand:
+        if (self.graspingHand is 'right'):
+            self.nextScribeAngle = -self.nextScribeAngle
+            self.scribeDirection = -self.scribeDirection
+            self.relativeStanceXYZ[1] = -self.relativeStanceXYZ[1]
+            self.relativeStanceRPY[2] = -self.relativeStanceRPY[2]
+
+        self.valveAffordance = om.findObjectByName('lever')
+        self.valveFrame = om.findObjectByName('lever frame')
+
+        # length of lever is equivalent to radius of valve
+        self.scribeRadius = self.valveAffordance.params.get('length') - 0.10
+
+        self.computeClenchFrame()
+        self.computeValveStanceFrame()
+
+        self.frameSync = vis.FrameSync()
+        self.frameSync.addFrame(self.valveFrame)
+        self.frameSync.addFrame(self.clenchFrame)
+        self.frameSync.addFrame(self.stanceFrame)
+
+    def computeClenchFrame(self):
+        t = transformUtils.frameFromPositionAndRPY(self.clenchFrameXYZ, self.clenchFrameRPY)
+        t_copy = transformUtils.copyFrame(t)
+        t_copy.Concatenate(self.valveFrame.transform)
+        self.clenchFrame = vis.updateFrame(t_copy, 'valve clench frame', parent=self.valveAffordance, visible=False, scale=0.2)
+        self.clenchFrame.addToView(app.getDRCView())
+
+    def computeTouchFrame(self, touchValve):
+        if touchValve:
+            faceDepth = 0.0
+        else:
+            faceDepth = self.reachDepth
+
+        assert self.valveAffordance
+
+        t = transformUtils.frameFromPositionAndRPY([0,faceDepth,0], [0,0,0])
+
+        position = [ self.scribeRadius*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius*math.sin( math.radians( self.nextScribeAngle ))  , 0]
+        # roll angle governs how much the palm points along towards the rotation axis
+        # yaw ensures thumb faces the axis
+        if (self.valveIsLever is False):
+            # valve, left and right
+            rpy = [90+self.palmInAngle, 0, (270+self.nextScribeAngle)]
+        else:
+            if (self.graspingHand is 'left'): # lever left
+                rpy = [90, 0, (180+self.nextScribeAngle)]
+            else:
+                rpy = [90, 0, self.nextScribeAngle]
+
+        t2 = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t.Concatenate(t2)
+        self.faceTransformLocal = transformUtils.copyFrame(t)
+
+        t.Concatenate(self.valveFrame.transform)
+        self.faceFrameDesired = vis.showFrame(t, 'face frame desired', parent=self.valveAffordance, visible=False, scale=0.2)
+
+    def drawFacePath(self):
+      
+        path = DebugData()
+        for i in range(1,len(self.facePath)):
+          p0 = self.facePath[i-1].GetPosition()
+          p1 = self.facePath[i].GetPosition()
+          path.addLine ( np.array( p0 ) , np.array(  p1 ), radius= 0.005)
+          
+        pathMesh = path.getPolyData()
+        self.pointerTipLinePath = vis.showPolyData(pathMesh, 'face frame desired path', color=[0.0, 0.3, 1.0], cls=affordanceitems.AffordanceItem, parent=self.valveAffordance, alpha=0.6)
+        self.pointerTipLinePath.actor.SetUserTransform(self.valveFrame.transform)
+
         
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(graspGroundFrame)
-
-        om.removeFromObjectModel( self.valveAffordance.findChild('valve grasp stance') )
-        self.graspStanceFrame = vis.showFrame(t, 'valve grasp stance', parent=self.valveAffordance, visible=False, scale=0.2)
-
-        self.frameSync.addFrame(self.graspStanceFrame)
-
-
-    def moveRobotToStanceFrame(self):
-        frame = self.graspStanceFrame.transform
-
-        self.sensorJointController.setPose('q_nom')
-        stancePosition = frame.GetPosition()
-        stanceOrientation = frame.GetOrientation()
-
-        q = self.sensorJointController.q.copy()
-        q[:2] = [stancePosition[0], stancePosition[1]]
-        q[5] = math.radians(stanceOrientation[2])
-        self.sensorJointController.setPose('EST_ROBOT_STATE', q)
-
-
-    def computeFootstepPlan(self):
+    ### End Valve Focused Functions ###############################################################
+    ### Planning Functions ###############################################################
+    def planNominal(self):
         startPose = self.getPlanningStartPose()
-        goalFrame = self.graspStanceFrame.transform
+        self.standPlan = self.ikPlanner.computeNominalPlan(startPose)
+        self.addPlan(self.standPlan)
+
+    # These are operational conveniences:
+    def planFootstepsToStance(self):
+        self.planFootsteps(self.stanceFrame.transform)
+
+    def planFootsteps(self, goalFrame):
+        startPose = self.getPlanningStartPose()
         request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
 
-
-    def computeWalkingPlan(self):
+    def planWalking(self):
         startPose = self.getPlanningStartPose()
-        self.walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
-        self.addPlan(self.walkingPlan)
+        walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
+        self.addPlan(walkingPlan)
 
-
-    def computePreGraspPlan(self):
+    def planPreGrasp(self):
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
-        self.preGraspPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.addPlan(self.preGraspPlan)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
 
+    def planReach(self):
+        self.computeTouchFrame(False) # 0 = not in contact
+        self.computeTouchPlan()
 
-    def computeGraspPlan(self):
+    def planGrasp(self):
+        self.computeTouchFrame(True)
+        self.computeTouchPlan()
 
+    def computeTouchPlan(self):
+        # new full 6 dof constraint:
         startPose = self.getPlanningStartPose()
+        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.faceFrameDesired, lockBase=True, lockBack=False)
+        endPose, info = self.constraintSet.runIk()
 
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.graspFrame, lockTorso=True)
-        endPose, info = constraintSet.runIk()
-        self.graspPlan = constraintSet.runIkTraj()
+        # old gaze constraint:
+        #self.initGazeConstraintSet(self.faceFrameDesired)
+        #self.appendPositionConstraintForTargetFrame(self.faceFrameDesired, 1)
 
-        self.addPlan(self.graspPlan)
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
+        self.planGazeTrajectory()
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
+    def planValveTurn(self, turnDegrees=360):
+        # 10deg per sample
+        numberOfSamples = int(round(turnDegrees/10.0))
+
+        self.facePath = []
+        self.resetTurnPath()
+
+        degreeStep = float(turnDegrees) / numberOfSamples
+        tipMode = False if self.scribeInAir else True
+
+        ######### was:
+        #self.computeTouchFrame(tipMode)
+        #self.initGazeConstraintSet(self.faceFrameDesired)
+        ##self.appendDistanceConstraint()
+        #self.facePath.append(self.faceTransformLocal)
+
+        #for i in xrange(numberOfSamples):
+            #self.nextScribeAngle += self.scribeDirection*degreeStep
+            #self.computeTouchFrame(tipMode)
+            #self.appendPositionConstraintForTargetFrame(self.faceFrameDesired, i+1)
+            #self.facePath.append(self.faceTransformLocal)
+
+        #gazeConstraint = self.constraintSet.constraints[0]
+        #assert isinstance(gazeConstraint, ikplanner.ik.WorldGazeDirConstraint)
+        #gazeConstraint.tspan = [1.0, numberOfSamples]
+
+        self.computeTouchFrame(tipMode)
+        startPose = self.getPlanningStartPose()
+        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.faceFrameDesired, lockBase=True, lockBack=False)
+        endPose, info = self.constraintSet.runIk()
+
+        self.facePath.append(self.faceTransformLocal)
+
+        for i in xrange(numberOfSamples):
+            self.nextScribeAngle += self.scribeDirection*degreeStep
+            self.computeTouchFrame(tipMode)
+            self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.faceFrameDesired, lockBase=True, lockBack=False)
+            self.facePath.append(self.faceTransformLocal)
+            endPose, info = self.constraintSet.runIk()
+
+        self.drawFacePath()
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
+        self.planGazeTrajectory()
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def initGazeConstraintSet(self, goalFrame):
 
@@ -328,7 +459,6 @@ class ValvePlannerDemo(object):
         gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees=5.0)
         self.constraintSet.constraints.insert(0, gazeConstraint)
 
-
     def appendDistanceConstraint(self):
 
         # add point to point distance constraint
@@ -341,34 +471,45 @@ class ValvePlannerDemo(object):
         c.upperBound = [self.scribeRadius]
         self.constraintSet.constraints.insert(0, c)
 
-
     def appendGazeConstraintForTargetFrame(self, goalFrame, t):
 
         gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees=5.0)
         gazeConstraint.tspan = [t, t]
         self.constraintSet.constraints.append(gazeConstraint)
 
-
     def appendPositionConstraintForTargetFrame(self, goalFrame, t):
         positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
         positionConstraint.tspan = [t, t]
         self.constraintSet.constraints.append(positionConstraint)
 
-
     def planGazeTrajectory(self):
-
         self.ikPlanner.ikServer.usePointwise = False
-
         plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
 
-    def commitFootstepPlan(self):
-        self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
+    ########## Glue Functions ####################################
+    def moveRobotToStanceFrame(self, frame):
+        self.sensorJointController.setPose('q_nom')
+        stancePosition = frame.GetPosition()
+        stanceOrientation = frame.GetOrientation()
 
+        q = self.sensorJointController.q.copy()
+        q[:2] = [stancePosition[0], stancePosition[1]]
+        q[5] = math.radians(stanceOrientation[2])
+        self.sensorJointController.setPose('EST_ROBOT_STATE', q)
 
-    def commitManipPlan(self):
-        self.manipPlanner.commitManipPlan(self.plans[-1])
+    def getHandDriver(self, side):
+        assert side in ('left', 'right')
+        return self.lhandDriver if side == 'left' else self.rhandDriver
+
+    def openHand(self,side):
+        #self.handDriver(side).sendOpen()
+        self.getHandDriver(side).sendCustom(0.0, 100.0, 100.0, 0)
+
+    def closeHand(self, side):
+        #self.handDriver(side).sendClose(60)
+        self.getHandDriver(side).sendCustom(100.0, 100.0, 100.0, 0)
 
     def sendNeckPitchLookDown(self):
         self.multisenseDriver.setNeckPitch(40)
@@ -376,21 +517,17 @@ class ValvePlannerDemo(object):
     def sendNeckPitchLookForward(self):
         self.multisenseDriver.setNeckPitch(15)
 
-
     def waitForAtlasBehaviorAsync(self, behaviorName):
         assert behaviorName in self.atlasDriver.getBehaviorMap().values()
         while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
             yield
 
-
     def printAsync(self, s):
         yield
         print s
 
-
-    def userPrompt(self, message):
-
-        if not self.userPromptEnabled:
+    def optionalUserPrompt(self, message):
+        if not self.optionalUserPromptEnabled:
             return
 
         yield
@@ -398,6 +535,14 @@ class ValvePlannerDemo(object):
         if result != 'y':
             raise Exception('user abort.')
 
+    def requiredUserPrompt(self, message):
+        if not self.requiredUserPromptEnabled:
+            return
+
+        yield
+        result = raw_input(message)
+        if result != 'y':
+            raise Exception('user abort.')
 
     def delay(self, delayTimeInSeconds):
         yield
@@ -405,105 +550,14 @@ class ValvePlannerDemo(object):
         while t.elapsed() < delayTimeInSeconds:
             yield
 
-
     def waitForCleanLidarSweepAsync(self):
         currentRevolution = self.multisenseDriver.displayedRevolution
         desiredRevolution = currentRevolution + 2
         while self.multisenseDriver.displayedRevolution < desiredRevolution:
             yield
 
-
-    def spawnValveFrame(self, robotModel, height):
-
-        position = [0.7, 0.22, height]
-        rpy = [180, -90, -16]
-
-        if (self.graspingHand == 'right'):
-          position[1] = -position[1]
-          rpy[2] = -rpy[2]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(self.computeGroundFrame(robotModel))
-        return t
-
-
-    def spawnValveAffordance(self):
-        spawn_height = 1.2192 # 4ft
-        radius = 0.19558 # nominal initial value. 7.7in radius metal valve
-        zwidth = 0.03
-
-        valveFrame = self.spawnValveFrame(self.robotModel, spawn_height)
-
-        folder = om.getOrCreateContainer('affordances')
-        z = DebugData()
-        z.addLine ( np.array([0, 0, -0.0254]) , np.array([0, 0, 0.0254]), radius=radius)
-        valveMesh = z.getPolyData()
-
-        self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
-        self.valveAffordance.actor.SetUserTransform(valveFrame)
-        self.valveFrame = vis.showFrame(valveFrame, 'valve frame', parent=self.valveAffordance, visible=False, scale=0.2)
-
-        params = dict(radius=radius, length=zwidth, xwidth=radius, ywidth=radius, zwidth=zwidth,
-                      otdf_type='steering_cyl', friendly_name='valve')
-        self.valveAffordance.setAffordanceParams(params)
-        self.valveAffordance.updateParamsFromActorTransform()        
-
-        
-    def spawnValveLeverAffordance(self):
-        spawn_height = 1.06 # 3.5ft
-        pipe_radius = 0.01
-        lever_length = 0.33
-
-        valveFrame = self.spawnValveFrame(self.robotModel, spawn_height)
-        folder = om.getOrCreateContainer('affordances')
-        z = DebugData()
-        z.addLine([0,0,0], [ lever_length , 0, 0], radius=pipe_radius)
-        valveMesh = z.getPolyData()        
-        
-        self.valveAffordance = vis.showPolyData(valveMesh, 'valve lever', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
-        self.valveAffordance.actor.SetUserTransform(valveFrame)
-        self.valveFrame = vis.showFrame(valveFrame, 'lever frame', parent=self.valveAffordance, visible=False, scale=0.2)
-        
-        otdfType = 'lever_valve'
-        params = dict( radius=pipe_radius, length=lever_length, friendly_name=otdfType, otdf_type=otdfType)
-        self.valveAffordance.setAffordanceParams(params)
-        self.valveAffordance.updateParamsFromActorTransform()
-
-        
-    def findValveAffordance(self):
-        self.nextScribeAngle = -30 # reset angle when a new valve is found
-      
-        self.valveAffordance = om.findObjectByName('valve')
-        self.valveFrame = om.findObjectByName('valve frame')
-
-        self.scribeRadius = self.valveAffordance.params.get('radius') - 0.06
-
-        self.graspingHand = 'left'
-        self.computeGraspFrame()
-        self.computeStanceFrame()
-        
-        self.turnDegrees = 360
-
-
-    def findValveLeverAffordance(self):
-        self.nextScribeAngle = -30 # reset angle when a new valve is found
-
-        self.valveAffordance = om.findObjectByName('valve lever')
-        self.valveFrame = om.findObjectByName('lever frame')
-
-        # length of lever is equivalent to radius of valve
-        self.scribeRadius = self.valveAffordance.params.get('length') - 0.07
-
-        self.graspingHand = 'right'
-        self.computeGraspFrame()
-        self.computeStanceFrame()
-        
-        self.turnDegrees = 90
-
-
     def getEstimatedRobotStatePose(self):
-        return np.array(self.sensorJointController.getPose('EST_ROBOT_STATE'))
-
+        return self.sensorJointController.getPose('EST_ROBOT_STATE')
 
     def getPlanningStartPose(self):
         if self.planFromCurrentRobotState:
@@ -514,284 +568,154 @@ class ValvePlannerDemo(object):
             else:
                 return self.getEstimatedRobotStatePose()
 
-
-    def removeFootstepPlan(self):
+    def cleanupFootstepPlans(self):
+        om.removeFromObjectModel(om.findObjectByName('walking goal'))
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
         self.footstepPlan = None
 
-
-    def playNominalPlan(self):
+    def playSequenceNominal(self):
         assert None not in self.plans
         self.planPlaybackFunction(self.plans)
 
+    def commitManipPlan(self):
+        self.manipPlanner.commitManipPlan(self.plans[-1])
 
-    def computePreGraspPlanGaze(self):
+    def commitFootstepPlan(self):
+        self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
 
-        self.computePointerTipFrame(0)
-        self.initGazeConstraintSet(self.pointerTipFrameDesired)
-        self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
-        self.planGazeTrajectory()
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+    def waitForPlanExecution(self, plan):
+        planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
+        print 'waiting for plan execution:', planElapsedTime
+        return self.delay(planElapsedTime*self.executionSimFactor + 1.0)
 
-    def computeInsertPlan(self):
-        self.computePointerTipFrame(1)
-        self.initGazeConstraintSet(self.pointerTipFrameDesired)
-        self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
-        self.planGazeTrajectory()
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
-
-
-    def computeTurnPlan(self, turnDegrees=360, numberOfSamples=12):
-
-        numberOfSamples = 20
-        turnDegrees = self.turnDegrees
-      
-        self.pointerTipPath = []
-        self.removePointerTipFrames()
-        self.removePointerTipPath()
-
-        degreeStep = float(turnDegrees) / numberOfSamples
-        tipMode = 0 if self.scribeInAir else 1
-
-        self.computePointerTipFrame(tipMode)
-        self.initGazeConstraintSet(self.pointerTipFrameDesired)
-        #self.appendDistanceConstraint()
-        self.pointerTipPath.append(self.pointerTipTransformLocal)
-
-        for i in xrange(numberOfSamples):
-            self.nextScribeAngle += self.scribeDirection*degreeStep
-            self.computePointerTipFrame(tipMode)
-            self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, i+1)
-            self.pointerTipPath.append(self.pointerTipTransformLocal)
-
-        gazeConstraint = self.constraintSet.constraints[0]
-        assert isinstance(gazeConstraint, ikplanner.ik.WorldGazeDirConstraint)
-        gazeConstraint.tspan = [1.0, numberOfSamples]
-
-        self.drawPointerTipPath()
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
-        self.planGazeTrajectory()
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+    def animateLastPlan(self):
+        plan = self.plans[-1]
+        if not self.visOnly:
+            self.commitManipPlan()
+        return self.waitForPlanExecution(plan)
 
 
-    def computeStandPlan(self):
-        startPose = self.getPlanningStartPose()
-        self.standPlan = self.ikPlanner.computeNominalPlan(startPose)
-        self.addPlan(self.standPlan)
+    ######### Nominal Plans and Execution  #################################################################
+    def planSequence(self, mode='valve', hand='left'):
 
+        self.cleanupFootstepPlans()
+        self.resetTurnPath()
 
-    def computeNominalPlan(self, mode='valve'):
+        self.planFromCurrentRobotState = False
 
-        self.removeFootstepPlan()
-        self.removePointerTipFrames()
-        self.removePointerTipPath()
-
+        self.graspingHand=hand
         if (mode=='valve'):
-            self.graspingHand='left'
             self.findValveAffordance()
-            turn_angle = 360
+            turn_angle = 60
         else:
-            self.graspingHand='right'
             self.findValveLeverAffordance()
             turn_angle = 90
 
         self.plans = []
 
+        # Approach valve:
         if self.useFootstepPlanner:
-            self.computeFootstepPlan()
-            self.computeWalkingPlan()
+            self.planFootstepsToStance()
+            self.planWalking()
         else:
-            self.moveRobotToStanceFrame()
+            self.moveRobotToStanceFrame(self.stanceFrame.transform )
 
-        self.computePreGraspPlan()
-        self.computePreGraspPlanGaze()
+        # Reach and Turn:
+        self.planPreGrasp()
+        self.planReach()
+        self.planGrasp()
+        self.planValveTurn(turn_angle)
 
-        self.computeInsertPlan()
-
-        self.computeTurnPlan(turn_angle)
-        self.computePreGraspPlanGaze()
-        self.computePreGraspPlan()
-        self.computeStandPlan()
-
-        self.playNominalPlan()
-
-
-    def computeNominalPlanBoth(self):
-
-        self.removeFootstepPlan()
-        self.removePointerTipFrames()
-        self.removePointerTipPath()
-
-        self.graspingHand='right'
-        self.findValveLeverAffordance()
-        turn_angle = 90
-
-        self.plans = []
-
-        if self.useFootstepPlanner:
-            self.computeFootstepPlan()
-            self.computeWalkingPlan()
-        else:
-            self.moveRobotToStanceFrame()
-
-        self.computePreGraspPlan()
-        self.computePreGraspPlanGaze()
-
-        self.computeInsertPlan()
-
-        self.computeTurnPlan(turn_angle)
-        self.computePreGraspPlanGaze()
-        self.computePreGraspPlan()
-        self.computeStandPlan()
-
-        # plan valve affordance:
-        self.graspingHand='left'
-        self.findValveAffordance()
-        turn_angle = 360
-
-        #self.plans = []
-
-        if self.useFootstepPlanner:
-            self.computeFootstepPlan()
-            self.computeWalkingPlan()
-        else:
-            self.moveRobotToStanceFrame()
-
-        self.computePreGraspPlan()
-        self.computePreGraspPlanGaze()
-
-        self.computeInsertPlan()
-
-        self.computeTurnPlan(turn_angle)
-        self.computePreGraspPlanGaze()
-        self.computePreGraspPlan()
-        self.computeStandPlan()
-
-        self.playNominalPlan()
+        # Dereach and Stand
+        self.planReach()
+        self.planPreGrasp()
+        self.planNominal()
+        self.playSequenceNominal()
 
 
-    def waitForPlanExecution(self, plan):
-        planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
-        print 'waiting for plan execution:', planElapsedTime
+     def autonomousExecute(self):
 
-        return self.delay(planElapsedTime + 1.0)
-
-
-    def animateLastPlan(self):
-        plan = self.plans[-1]
-
-        if not self.visOnly:
-            self.commitManipPlan()
-
-        return self.waitForPlanExecution(plan)
-
-
-    def addWalkingTasksToQueue(self, taskQueue, planFunc, walkFunc):
-
-        if self.useFootstepPlanner:
-            taskQueue.addTask(planFunc)
-
-            if self.visOnly:
-                taskQueue.addTask(self.computeWalkingPlan)
-                taskQueue.addTask(self.animateLastPlan)
-            else:
-
-                taskQueue.addTask(self.userPrompt('send stand command. continue? y/n: '))
-                taskQueue.addTask(self.atlasDriver.sendStandCommand)
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
-
-                taskQueue.addTask(self.userPrompt('commit footsteps. continue? y/n: '))
-                taskQueue.addTask(self.commitFootstepPlan)
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('step'))
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
-
-            taskQueue.addTask(self.removeFootstepPlan)
-        else:
-            taskQueue.addTask(walkFunc)
-
-
-
-    def autonomousExecute(self):
-
+        self.planFromCurrentRobotState = True
+        self.visOnly = False
 
         taskQueue = AsyncTaskQueue()
-        taskQueue.addTask(self.removePointerTipFrames)
-        taskQueue.addTask(self.removePointerTipPath)
+        taskQueue.addTask(self.resetTurnPath)
         
-        taskQueue.addTask(self.segmentValveWallAuto)
-        taskQueue.addTask(self.userPrompt('Accept valve fit, continue? y/n: '))
+        # Approach valve:
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'valve') )
+        taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
         taskQueue.addTask(self.findValveAffordance)
 
+        taskQueue.addTask(self.planFootstepsToStance)
+        taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
+        taskQueue.addTask(self.commitFootstepPlan)
+        taskQueue.addTask(self.requiredUserPrompt('Wait to arrive: '))
 
-        taskQueue.addTask(self.sendNeckPitchLookForward)
-        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
-        taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
-
-
+        # Reach and Grasp Valve:
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-        taskQueue.addTask(self.segmentValveWallAuto)
-        taskQueue.addTask(self.userPrompt('Accept valve re-fit, continue? y/n: '))
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'valve') )
+        taskQueue.addTask(self.optionalUserPrompt('Accept valve re-fit, continue? y/n: '))
         taskQueue.addTask(self.findValveAffordance)
-
 
         planningFunctions = [
-                    self.computePreGraspPlan,
-                    self.computePreGraspPlanGaze,
-                    self.computeInsertPlan,
-                    self.computeTurnPlan,
-                    self.computePreGraspPlanGaze,
-                    self.computePreGraspPlan,
-                    self.computeStandPlan,
+                    self.planPreGrasp,
+                    self.planReach,
+                    self.planGrasp,
+                    functools.partial( self.planValveTurn, 60),
+                    self.planReach,
+                    self.planPreGrasp,
+                    self.planNominal,
                     ]
-
 
         for planFunc in planningFunctions:
             taskQueue.addTask(planFunc)
-            taskQueue.addTask(self.userPrompt('c continue? y/n: '))
+            taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
             taskQueue.addTask(self.animateLastPlan)
-
-
-        ############################################################################
-        ############################################################################
-        taskQueue.addTask(self.segmentValveWallAuto)
-        taskQueue.addTask(self.userPrompt('Accept lever fit, continue? y/n: '))
-        taskQueue.addTask(self.findValveLeverAffordance)
-
-
-        taskQueue.addTask(self.sendNeckPitchLookForward)
-        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
-        taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
-
-
-        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-        taskQueue.addTask(self.segmentValveWallAuto)
-        taskQueue.addTask(self.userPrompt('Accept lever re-fit, continue? y/n: '))
-        taskQueue.addTask(self.findValveLeverAffordance)
-
-
-        planningFunctions = [
-                    self.computePreGraspPlan,
-                    self.computePreGraspPlanGaze,
-                    self.computeInsertPlan,
-                    self.computeTurnPlan,
-                    self.computePreGraspPlanGaze,
-                    self.computePreGraspPlan,
-                    self.computeStandPlan,
-                    ]
-
-
-        for planFunc in planningFunctions:
-            taskQueue.addTask(planFunc)
-            taskQueue.addTask(self.userPrompt('f continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
 
         taskQueue.addTask(self.printAsync('done!'))
 
         return taskQueue
 
 
+     def autonomousExecuteLever(self):
+
+        self.planFromCurrentRobotState = True
+        self.visOnly = False
+
+        taskQueue = AsyncTaskQueue()
+        taskQueue.addTask(self.resetTurnPath)
+
+        # Approach valve:
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'lever') )
+        taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
+        taskQueue.addTask(self.findValveLeverAffordance)
+
+        taskQueue.addTask(self.planFootstepsToStance)
+        taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
+        taskQueue.addTask(self.commitFootstepPlan)
+        taskQueue.addTask(self.requiredUserPrompt('Wait to arrive: '))
+
+        # Reach and Grasp Valve:
+        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'lever') )
+        taskQueue.addTask(self.optionalUserPrompt('Accept valve re-fit, continue? y/n: '))
+        taskQueue.addTask(self.findValveAffordance)
+
+        planningFunctions = [
+                    self.planPreGrasp,
+                    self.planReach,
+                    self.planGrasp,
+                    functools.partial( self.planValveTurn, 90),
+                    self.planReach,
+                    self.planPreGrasp,
+                    self.planNominal,
+                    ]
+
+        for planFunc in planningFunctions:
+            taskQueue.addTask(planFunc)
+            taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
+            taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(self.printAsync('done!'))
+
+        return taskQueue

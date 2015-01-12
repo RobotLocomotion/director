@@ -24,9 +24,8 @@ from ddapp import affordanceitems
 from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
-from ddapp import affordancegraspupdater
 from ddapp import planplayback
-
+from ddapp import affordancegraspupdater
 from ddapp import segmentationpanel
 
 import drc as lcmdrc
@@ -121,7 +120,7 @@ class DrillPlannerDemo(object):
         defaultGraspingHand = "left"
         self.setGraspingHand(defaultGraspingHand)
 
-        # development/live flags
+        # live operation flags
         self.useFootstepPlanner = True
         self.visOnly = False # True for development, False for operation
         self.planFromCurrentRobotState = True # False for development, True for operation
@@ -310,7 +309,7 @@ class DrillPlannerDemo(object):
 
         return t
 
-    def computeRobotStanceFrame(self, objectTransform, relativeStanceTransform ):
+    def computeRobotStanceFrame(self, objectTransform, relativeStanceTransform):
         '''
         Given a robot model, determine the height of the ground
         using an XY and Yaw standoff, combined to determine the relative 6DOF standoff
@@ -337,7 +336,6 @@ class DrillPlannerDemo(object):
         graspGroundTransform.PostMultiply()
         graspGroundTransform.Translate(graspPosition[0], graspPosition[1], groundHeight)
 
-        #transformUtils.frameFromPositionAndRPY( self.wall.stanceFrameXYZ , self.wall.stanceFrameRPY )
         robotStance = transformUtils.copyFrame( relativeStanceTransform )
         robotStance.Concatenate(graspGroundTransform)
 
@@ -559,17 +557,9 @@ class DrillPlannerDemo(object):
 
     ### End Drill Focused Functions ###############################################################
     ### Planning Functions ###############################################################
-
-    # is this used?
-    #def planStand(self):
-    #    startPose = self.getPlanningStartPose()
-    #    newPlan = self.ikPlanner.computeNominalPlan(startPose)
-    #    self.addPlan(newPlan)
-
-    def planStand(self):
-        # stand at a nominal ~85cm height with hands in current configuration
+    def planNominal(self):
         startPose = self.getPlanningStartPose()
-        self.standPlan = self.ikPlanner.computeStandPlan(startPose)
+        self.standPlan = self.ikPlanner.computeNominalPlan(startPose)
         self.addPlan(self.standPlan)
 
     # These are operational conveniences:
@@ -580,36 +570,21 @@ class DrillPlannerDemo(object):
     def planFootstepsCut(self):
         self.planFootsteps(self.wall.stanceFrame.transform)
 
-
     def planFootsteps(self, goalFrame):
         startPose = self.getPlanningStartPose()
-
-        # 'typical'
         request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
-        # overcome footstep planner bug
-        #print "using footstep planner hack - drill demo"
-        #nominalPoseAtRobot = np.hstack([self.sensorJointController.q[:6], self.sensorJointController.getPose('q_nom')[6:]] )
-        #request = self.footstepPlanner.constructFootstepPlanRequest(nominalPoseAtRobot, goalFrame )
-
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
-
 
     def planWalking(self):
         startPose = self.getPlanningStartPose()
         walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
         self.addPlan(walkingPlan)
 
-
-    def planEndPose(self):
-        graspLinks = {
-            'l_hand' : 'left_base_link',
-            'r_hand' : 'right_base_link',
-           }
-        linkName = graspLinks[self.getEndEffectorLinkName()]
-        startPose = self.getEstimatedRobotStatePose()
-        self.endPosePlan = self.manipPlanner.sendEndPoseGoal(startPose, linkName, self.drill.graspFrame.transform, waitForResponse=True)
-        self.showEndPose()
-
+    def planPreGrasp(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
 
     def planReach(self):
         startPose = self.getPlanningStartPose()
@@ -633,10 +608,7 @@ class DrillPlannerDemo(object):
         self.placeFrame = vis.updateFrame(placeTransform, 'place frame', parent="affordances", visible=False, scale=0.2)
         self.dereachFrame = vis.updateFrame(dereachTransform, 'dereach frame', parent="affordances", visible=False, scale=0.2)
 
-
-
     def planGraspLift(self):
-
         t3 = transformUtils.frameFromPositionAndRPY( [0.00,0.0, 0.04] , [0,0,0] )
         liftTransform = transformUtils.copyFrame(self.drill.graspFrame.transform)
         liftTransform.Concatenate(t3)
@@ -647,8 +619,6 @@ class DrillPlannerDemo(object):
         endPose, info = constraintSet.runIk()
         liftPlan = constraintSet.runIkTraj()
         self.addPlan(liftPlan)
-
-
 
     def planPlace(self):
         startPose = self.getPlanningStartPose()
@@ -706,13 +676,6 @@ class DrillPlannerDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
-    def planPreGrasp(self):
-        startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.addPlan(newPlan)
-
-
     def initGazeConstraintSet(self, goalFrame, gazeHand, gazeToHandLinkFrame, targetAxis=[-1.0, 0.0, 0.0], bodyAxis=[-1.0, 0.0, 0.0], lockBase=False, lockBack=False):
 
         # create constraint set
@@ -737,7 +700,6 @@ class DrillPlannerDemo(object):
         positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(gazeHand, goalFrame, gazeToHandLinkFrame)
         positionConstraint.tspan = [t, t]
         self.constraintSet.constraints.append(positionConstraint)
-
 
     def planGazeTrajectory(self):
         self.ikPlanner.ikServer.usePointwise = False
@@ -1005,7 +967,6 @@ class DrillPlannerDemo(object):
 
     ########## Glue Functions ####################################
     def moveRobotToStanceFrame(self, frame):
-        #frame = self.drill.stanceFrame.transform
         self.sensorJointController.setPose('q_nom')
         stancePosition = frame.GetPosition()
         stanceOrientation = frame.GetOrientation()
@@ -1014,32 +975,6 @@ class DrillPlannerDemo(object):
         q[:2] = [stancePosition[0], stancePosition[1]]
         q[5] = math.radians(stanceOrientation[2])
         self.sensorJointController.setPose('EST_ROBOT_STATE', q)
-
-
-    def showEndPose(self):
-        endPose = robotstate.convertStateMessageToDrakePose(self.endPosePlan)
-        self.showPoseFunction(endPose)
-
-
-    def planPostureGoal(self, groupName, poseName, side=None):
-        startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, groupName, poseName, side=side)
-        self.posturePlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-
-
-    def getEndEffectorLinkName(self):
-        linkMap = {
-                      'left' : 'l_hand',
-                      'right': 'r_hand'
-                  }
-        return linkMap[self.graspingHand]
-
-
-    def sendPelvisCrouch(self):
-        self.atlasDriver.sendPelvisHeightCommand(0.7)
-
-    def sendPelvisStand(self):
-        self.atlasDriver.sendPelvisHeightCommand(0.8)
 
     def getHandDriver(self, side):
         assert side in ('left', 'right')
@@ -1059,20 +994,16 @@ class DrillPlannerDemo(object):
     def sendNeckPitchLookForward(self):
         self.multisenseDriver.setNeckPitch(15)
 
-
     def waitForAtlasBehaviorAsync(self, behaviorName):
         assert behaviorName in self.atlasDriver.getBehaviorMap().values()
         while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
             yield
 
-
     def printAsync(self, s):
         yield
         print s
 
-
     def userPrompt(self, message):
-
         if not self.userPromptEnabled:
             return
 
@@ -1088,17 +1019,14 @@ class DrillPlannerDemo(object):
         while t.elapsed() < delayTimeInSeconds:
             yield
 
-
     def waitForCleanLidarSweepAsync(self):
         currentRevolution = self.multisenseDriver.displayedRevolution
         desiredRevolution = currentRevolution + 2
         while self.multisenseDriver.displayedRevolution < desiredRevolution:
             yield
 
-
     def getEstimatedRobotStatePose(self):
         return self.sensorJointController.getPose('EST_ROBOT_STATE')
-
 
     def getPlanningStartPose(self):
         if self.planFromCurrentRobotState:
@@ -1109,17 +1037,14 @@ class DrillPlannerDemo(object):
             else:
                 return self.getEstimatedRobotStatePose()
 
-
     def cleanupFootstepPlans(self):
         om.removeFromObjectModel(om.findObjectByName('walking goal'))
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
+        self.footstepPlan = None
 
-    def playNominalPlan(self):
+    def playSequenceNominal(self):
         assert None not in self.plans
         self.planPlaybackFunction(self.plans)
-
-    def sendPlanWithHeightMode(self):
-        self.atlasDriver.sendPlanUsingBdiHeight(True)
 
     def commitManipPlan(self):
         self.manipPlanner.commitManipPlan(self.plans[-1])
@@ -1130,15 +1055,12 @@ class DrillPlannerDemo(object):
     def waitForPlanExecution(self, plan):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
         print 'waiting for plan execution:', planElapsedTime
-
         return self.delay(planElapsedTime + 1.0)
 
     def animateLastPlan(self):
         plan = self.plans[-1]
-
         if not self.visOnly:
             self.commitManipPlan()
-
         return self.waitForPlanExecution(plan)
 
     def turnPointwiseOff(self):
@@ -1152,7 +1074,7 @@ class DrillPlannerDemo(object):
         ikplanner.getIkOptions().setProperty('Max joint degrees/s',15)
 
     ######### Nominal Plans and Execution  #################################################################
-    def planNominalPickUp(self, playbackNominal=True):
+    def planSequencePickUp(self, playbackNominal=True):
 
         self.turnPointwiseOff()
 
@@ -1179,15 +1101,15 @@ class DrillPlannerDemo(object):
 
         # self.affordanceUpdater.graspAffordance('drill', self.graspingHand)
 
-        self.planStand()
+        self.planNominal()
         self.planPreGrasp()
         self.planDrillLowerSafe()
 
         if (playbackNominal is True):
-            self.playNominalPlan()
+            self.playSequenceNominal()
 
 
-    def planNominalTurnOn(self, playbackNominal=True):
+    def planSequenceTurnOn(self, playbackNominal=True):
 
         self.planFromCurrentRobotState = False
         if (self.flushNominalPlanSequence):
@@ -1221,10 +1143,10 @@ class DrillPlannerDemo(object):
         self.planDrillRaiseForCutting()
 
         if (playbackNominal is True):
-            self.playNominalPlan()
+            self.playSequenceNominal()
 
 
-    def planNominalCut(self, playbackNominal=True):
+    def planSequenceCut(self, playbackNominal=True):
 
         self.planFromCurrentRobotState = False
         if (self.flushNominalPlanSequence):
@@ -1271,14 +1193,14 @@ class DrillPlannerDemo(object):
         self.planDrillLowerSafe()
 
         if (playbackNominal is True):
-            self.playNominalPlan()
+            self.playSequenceNominal()
 
 
-    def planNominal(self, playbackNominal=True):
-        self.planNominalPickUp(playbackNominal=False)
-        self.planNominalTurnOn(playbackNominal=False)
-        self.planNominalCut(playbackNominal=False)
-        self.playNominalPlan()
+    def planSequence(self, playbackNominal=True):
+        self.planSequencePickUp(playbackNominal=False)
+        self.planSequenceTurnOn(playbackNominal=False)
+        self.planSequenceCut(playbackNominal=False)
+        self.playSequenceNominal()
 
 
 
@@ -1303,7 +1225,7 @@ class DrillPlannerDemo(object):
             taskQueue.addTask(self.animateLastPlan)
         taskQueue.addTask(functools.partial(self.closeHand, 'left'))
 
-        taskQueue.addTask(self.planStand)
+        taskQueue.addTask(self.planNominal)
         taskQueue.addTask(self.userPrompt('lift off table? y/n: '))
         taskQueue.addTask(self.animateLastPlan)
 
@@ -1352,7 +1274,7 @@ class DrillPlannerDemo(object):
 
         taskQueue.addTask(functools.partial(self.closeHand, 'left'))
 
-        #taskQueue.addTask(self.planStand)
+        #taskQueue.addTask(self.planNominal)
         taskQueue.addTask(self.planGraspLift)
         #taskQueue.addTask(self.userPrompt('lift off table? y/n: '))
         taskQueue.addTask(self.animateLastPlan)
@@ -1406,7 +1328,6 @@ class DrillPlannerDemo(object):
         taskQueue.addTask(self.userPrompt('stand and open hand. continue? y/n: '))
         taskQueue.addTask(self.atlasDriver.sendStandCommand)
         taskQueue.addTask(self.sendOpenHand)
-        taskQueue.addTask(self.sendPlanWithHeightMode)
 
         # user prompt
         taskQueue.addTask(self.userPrompt('sending neck pitch forward. continue? y/n: '))
@@ -1455,14 +1376,6 @@ class DrillPlannerDemo(object):
 
         # user prompt
         #taskQueue.addTask(self.userPrompt('crouch. continue? y/n: '))
-
-        # crouch
-        #taskQueue.addTask(self.printAsync('send manip mode'))
-        #taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        #taskQueue.addTask(self.delay(1.0))
-        #taskQueue.addTask(self.printAsync('crouching'))
-        #taskQueue.addTask(self.sendPelvisCrouch)
-        #taskQueue.addTask(self.delay(3.0))
 
 
         # user prompt
