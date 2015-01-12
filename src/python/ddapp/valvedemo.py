@@ -633,7 +633,7 @@ class ValvePlannerDemo(object):
         self.playSequenceNominal()
 
 
-     def autonomousExecute(self):
+    def autonomousExecute(self):
 
         self.planFromCurrentRobotState = True
         self.visOnly = False
@@ -677,7 +677,7 @@ class ValvePlannerDemo(object):
         return taskQueue
 
 
-     def autonomousExecuteLever(self):
+    def autonomousExecuteLever(self):
 
         self.planFromCurrentRobotState = True
         self.visOnly = False
