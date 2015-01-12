@@ -1126,6 +1126,8 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     inputObj = om.findObjectByName('pointcloud snapshot')
     polyData = inputObj.polyData
 
+    _ , polyData =  removeGround(polyData)
+
     viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
     polyData, origin, normal = applyPlaneFit(polyData, expectedNormal=-viewDirection, returnOrigin=True)
 
