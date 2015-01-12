@@ -57,7 +57,8 @@ class ValvePlannerDemo(object):
             self.visOnly = True
             self.planFromCurrentRobotState = False
 
-        self.userPromptEnabled = True
+        self.optionalUserPromptEnabled = False
+        self.requiredUserPromptEnabled = True
         self.graspPlan = None
         self.constraintSet = None
         
@@ -74,15 +75,19 @@ class ValvePlannerDemo(object):
         self.scribeRadius = None
 
         # IK server speed:
-        self.speedSlow = 10
+        self.speedLow = 10
         self.speedHigh = 30
+
+        # for simulated dev
+        self.speedLow = 60
+        self.speedHigh = 60
 
         self.useLidar = True # else use stereo depth
         
     def addPlan(self, plan):
         self.plans.append(plan)
 
-    def segmentValveWallAuto(self):
+    def segmentValveWallAuto(self, mode):
         om.removeFromObjectModel(om.findObjectByName('affordances'))
 
         if (self.useLidar is True):
@@ -90,7 +95,7 @@ class ValvePlannerDemo(object):
         else:
             vis.updatePolyData(segmentation.getDisparityPointCloud(4), 'pointcloud snapshot', parent='segmentation')
 
-        self.affordanceFitFunction(.195)
+        self.affordanceFitFunction(.195, mode=mode)
 
     def setScribeAngleToCurrent(self):
         '''
@@ -196,9 +201,6 @@ class ValvePlannerDemo(object):
 
         assert self.valveAffordance
 
-        print self.valveAffordance.params.get('radius')
-        print self.scribeRadius
-
         position = [ self.scribeRadius*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius*math.sin( math.radians( self.nextScribeAngle ))  , tipDepth]
         # roll angle governs how much the palm points along towards the axis
         # yaw ensures thumb faces the axis
@@ -249,9 +251,9 @@ class ValvePlannerDemo(object):
 
 
         if self.scribeInAir:
-            position = [-0.6, -0.4, 0.0] # stand further away when scribing in air
+            position = [-0.6, -0.2, 0.0] # stand further away when scribing in air
         else:
-            position = [-0.48, -0.4, 0.0]
+            position = [-0.48, -0.2, 0.0]
 
         rpy = [0, 0, 16]
 
@@ -393,9 +395,9 @@ class ValvePlannerDemo(object):
         print s
 
 
-    def userPrompt(self, message):
+    def optionalUserPrompt(self, message):
 
-        if not self.userPromptEnabled:
+        if not self.optionalUserPromptEnabled:
             return
 
         yield
@@ -403,6 +405,15 @@ class ValvePlannerDemo(object):
         if result != 'y':
             raise Exception('user abort.')
 
+    def requiredUserPrompt(self, message):
+
+        if not self.requiredUserPromptEnabled:
+            return
+
+        yield
+        result = raw_input(message)
+        if result != 'y':
+            raise Exception('user abort.')
 
     def delay(self, delayTimeInSeconds):
         yield
@@ -489,8 +500,8 @@ class ValvePlannerDemo(object):
         self.valveFrame = om.findObjectByName('valve frame')
 
         self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was - 0.06
-
         self.graspingHand = 'left'
+
         self.computeGraspFrame()
         self.computeStanceFrame()
 
@@ -534,27 +545,47 @@ class ValvePlannerDemo(object):
 
 
     def computePreGraspPlanGaze(self):
+        print "computePreGraspPlanGaze"
 
         self.computePointerTipFrame(0)
-        self.initGazeConstraintSet(self.pointerTipFrameDesired)
-        self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
+
+        # new full 6 dof constraint:
+        startPose = self.getPlanningStartPose()
+        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.pointerTipFrameDesired, lockBase=True, lockBack=False)
+        endPose, info = self.constraintSet.runIk()
+
+        # old gaze constraint:
+        #self.initGazeConstraintSet(self.pointerTipFrameDesired)
+        #self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
+
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
         self.planGazeTrajectory()
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def computeInsertPlan(self):
         self.computePointerTipFrame(1)
-        self.initGazeConstraintSet(self.pointerTipFrameDesired)
-        self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
+
+        # new full 6 dof constraint:
+        startPose = self.getPlanningStartPose()
+        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.pointerTipFrameDesired, lockBase=True, lockBack=False)
+        endPose, info = self.constraintSet.runIk()
+
+        # old gaze constraint:
+        #self.initGazeConstraintSet(self.pointerTipFrameDesired)
+        #self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, 1)
+
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
         self.planGazeTrajectory()
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
 
-    def computeTurnPlan(self, turnDegrees=360, numberOfSamples=12):
+    def computeTurnPlan(self, turnDegrees=360):
 
-        numberOfSamples = 20
-      
+        # 10deg per sample
+        numberOfSamples = int(round(turnDegrees/10.0))
+        print turnDegrees
+        print numberOfSamples
+
         self.pointerTipPath = []
         self.removePointerTipFrames()
         self.removePointerTipPath()
@@ -562,23 +593,40 @@ class ValvePlannerDemo(object):
         degreeStep = float(turnDegrees) / numberOfSamples
         tipMode = 0 if self.scribeInAir else 1
 
+        ######### was:
+        #self.computePointerTipFrame(tipMode)
+        #self.initGazeConstraintSet(self.pointerTipFrameDesired)
+        ##self.appendDistanceConstraint()
+        #self.pointerTipPath.append(self.pointerTipTransformLocal)
+
+        #for i in xrange(numberOfSamples):
+            #self.nextScribeAngle += self.scribeDirection*degreeStep
+            #self.computePointerTipFrame(tipMode)
+            #self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, i+1)
+            #self.pointerTipPath.append(self.pointerTipTransformLocal)
+
+        #gazeConstraint = self.constraintSet.constraints[0]
+        #assert isinstance(gazeConstraint, ikplanner.ik.WorldGazeDirConstraint)
+        #gazeConstraint.tspan = [1.0, numberOfSamples]
+
+
         self.computePointerTipFrame(tipMode)
-        self.initGazeConstraintSet(self.pointerTipFrameDesired)
-        #self.appendDistanceConstraint()
+        startPose = self.getPlanningStartPose()
+        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.pointerTipFrameDesired, lockBase=True, lockBack=False)
+        endPose, info = self.constraintSet.runIk()
+
         self.pointerTipPath.append(self.pointerTipTransformLocal)
 
         for i in xrange(numberOfSamples):
             self.nextScribeAngle += self.scribeDirection*degreeStep
             self.computePointerTipFrame(tipMode)
-            self.appendPositionConstraintForTargetFrame(self.pointerTipFrameDesired, i+1)
+            self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.pointerTipFrameDesired, lockBase=True, lockBack=False)
             self.pointerTipPath.append(self.pointerTipTransformLocal)
+            endPose, info = self.constraintSet.runIk()
 
-        gazeConstraint = self.constraintSet.constraints[0]
-        assert isinstance(gazeConstraint, ikplanner.ik.WorldGazeDirConstraint)
-        gazeConstraint.tspan = [1.0, numberOfSamples]
 
         self.drawPointerTipPath()
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
         self.planGazeTrajectory()
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
@@ -685,7 +733,8 @@ class ValvePlannerDemo(object):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
         print 'waiting for plan execution:', planElapsedTime
 
-        return self.delay(planElapsedTime + 1.0)
+        ihmcSimFractor = 3.0 # hack to wait enough
+        return self.delay(planElapsedTime*ihmcSimFractor + 1.0)
 
 
     def animateLastPlan(self):
@@ -702,25 +751,28 @@ class ValvePlannerDemo(object):
 
     def autonomousExecute(self):
 
+        self.planFromCurrentRobotState = True
+        self.visOnly = False
 
         taskQueue = AsyncTaskQueue()
         taskQueue.addTask(self.removePointerTipFrames)
         taskQueue.addTask(self.removePointerTipPath)
         
-        taskQueue.addTask(self.segmentValveWallAuto)
-        taskQueue.addTask(self.userPrompt('Accept valve fit, continue? y/n: '))
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'valve') )
+        taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
         taskQueue.addTask(self.findValveAffordance)
 
+        taskQueue.addTask(self.planFootstepsToStance)
+        taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
+        taskQueue.addTask(self.commitFootstepPlan)
 
-        taskQueue.addTask(self.sendNeckPitchLookForward)
         # removed walking queue
-        taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
+        taskQueue.addTask(self.requiredUserPrompt('Wait to arrive: '))
 
 
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-        taskQueue.addTask(self.segmentValveWallAuto)
-        taskQueue.addTask(self.userPrompt('Accept valve re-fit, continue? y/n: '))
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'valve') )
+        taskQueue.addTask(self.optionalUserPrompt('Accept valve re-fit, continue? y/n: '))
         taskQueue.addTask(self.findValveAffordance)
 
 
@@ -728,7 +780,7 @@ class ValvePlannerDemo(object):
                     self.computePreGraspPlan,
                     self.computePreGraspPlanGaze,
                     self.computeInsertPlan,
-                    self.computeTurnPlan,
+                    functools.partial( self.computeTurnPlan, 60),
                     self.computePreGraspPlanGaze,
                     self.computePreGraspPlan,
                     self.computeStandPlan,
@@ -737,14 +789,24 @@ class ValvePlannerDemo(object):
 
         for planFunc in planningFunctions:
             taskQueue.addTask(planFunc)
-            taskQueue.addTask(self.userPrompt('c continue? y/n: '))
+            taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
             taskQueue.addTask(self.animateLastPlan)
 
+        taskQueue.addTask(self.printAsync('done!'))
 
-        ############################################################################
-        ############################################################################
+        return taskQueue
+
+    def autonomousExecuteLever(self):
+
+        self.planFromCurrentRobotState = True
+        self.visOnly = False
+
+        taskQueue = AsyncTaskQueue()
+        taskQueue.addTask(self.removePointerTipFrames)
+        taskQueue.addTask(self.removePointerTipPath)
+
         taskQueue.addTask(self.segmentValveWallAuto)
-        taskQueue.addTask(self.userPrompt('Accept lever fit, continue? y/n: '))
+        taskQueue.addTask(self.optionalUserPrompt('Accept lever fit, continue? y/n: '))
         taskQueue.addTask(self.findValveLeverAffordance)
 
 
@@ -756,7 +818,7 @@ class ValvePlannerDemo(object):
 
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
         taskQueue.addTask(self.segmentValveWallAuto)
-        taskQueue.addTask(self.userPrompt('Accept lever re-fit, continue? y/n: '))
+        taskQueue.addTask(self.optionalUserPrompt('Accept lever re-fit, continue? y/n: '))
         taskQueue.addTask(self.findValveLeverAffordance)
 
 
@@ -773,7 +835,7 @@ class ValvePlannerDemo(object):
 
         for planFunc in planningFunctions:
             taskQueue.addTask(planFunc)
-            taskQueue.addTask(self.userPrompt('f continue? y/n: '))
+            taskQueue.addTask(self.optionalUserPrompt('f continue? y/n: '))
             taskQueue.addTask(self.animateLastPlan)
 
 
