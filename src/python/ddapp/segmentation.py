@@ -1203,7 +1203,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
 
     # Spoke angle fitting:
-    if (1==1):
+    if (1==0): # disabled jan 2015
         # extract the relative positon of the points to the valve axis:
         searchRegionSpokes = labelDistanceToLine(searchRegionSpokes, origin, [origin + circleNormal])
         searchRegionSpokes = thresholdPoints(searchRegionSpokes, 'distance_to_line', [0.05, radius-0.04])
@@ -1212,13 +1212,15 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
         points = vtkNumpy.getNumpyFromVtk(searchRegionSpokesLocal , 'Points')
 
         spoke_angle = findValveSpokeAngle(points)
-        spokeAngleTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,spoke_angle])
+    else:
+        spoke_angle = 0
 
-        spokeTransform = transformUtils.copyFrame(t)
-        spokeAngleTransform.Concatenate(spokeTransform)
-        spokeObj = showFrame(spokeAngleTransform, 'spoke frame', parent=getDebugFolder(), visible=False, scale=radius)
-        spokeObj.addToView(app.getDRCView())
-        t = spokeAngleTransform
+    spokeAngleTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,spoke_angle])
+    spokeTransform = transformUtils.copyFrame(t)
+    spokeAngleTransform.Concatenate(spokeTransform)
+    spokeObj = showFrame(spokeAngleTransform, 'spoke frame', parent=getDebugFolder(), visible=False, scale=radius)
+    spokeObj.addToView(app.getDRCView())
+    t = spokeAngleTransform
 
     zwidth = 0.0175
 
