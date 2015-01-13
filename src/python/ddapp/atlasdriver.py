@@ -50,6 +50,7 @@ class AtlasDriver(object):
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('CONTROLLER_STATUS', lcmdrc.controller_status_t, self.onControllerStatus)
+        lcmUtils.addSubscriber('ATLAS_BATTERY_DATA', lcmdrc.atlas_battery_data_t, self.onAtlasBatteryData)
         sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
         sub.setSpeedLimit(60)
 
@@ -58,6 +59,9 @@ class AtlasDriver(object):
 
     def onControllerStatus(self, message):
         self.lastControllerStatusMessage = message
+
+    def onAtlasBatteryData(self, message):
+        self.lastAtlasBatteryDataMessage = message
 
     def getBehaviorMap(self):
         '''
