@@ -894,7 +894,7 @@ public:
 
   QString FileName;
   bool Visible;
-  bool TexturesEnabled = false;
+  bool TexturesEnabled;
   double Alpha;
   QColor Color;
   QVector<double> JointPositions;
