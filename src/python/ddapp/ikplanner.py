@@ -254,13 +254,6 @@ class IKPlanner(object):
         return constraints
 
 
-    def createFixedNeckConstraint(self):
-        p = ik.PostureConstraint()
-        p.joints = ['neck_ay']
-        p.jointsLowerBound = [0.0]
-        p.jointsUpperBound = [0.0]
-        return p
-
     def createKneePostureConstraint(self, bounds):
         '''
         bounds is a size 2 vector of [lower, upper] bounds to be
@@ -617,6 +610,11 @@ class IKPlanner(object):
         p.jointsLowerBound = np.tile(0.0, len(p.joints))
         p.jointsUpperBound = np.tile(0.0, len(p.joints))
         return p
+
+
+    def createLockedNeckPostureConstraint(self, startPostureName):
+        joints = robotstate.matchJoints('neck_.*')
+        return self.createPostureConstraint(startPostureName, joints)
 
 
     def createLockedTorsoPostureConstraint(self, startPostureName):
