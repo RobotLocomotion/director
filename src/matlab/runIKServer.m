@@ -27,7 +27,9 @@ links = struct();
 linknames = s.getLinkNames();
 for i = 1:size(linknames, 1)
   nameComponents = strsplit(linknames{i}, '+');
-  links.(nameComponents{1}) = i;
+  for name = nameComponents
+    links.(name{1}) = i;
+  end
 end
 
 joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
