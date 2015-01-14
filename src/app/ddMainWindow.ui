@@ -350,9 +350,6 @@
    <property name="text">
     <string>&amp;Colorize Lidar</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+C</string>
-   </property>
   </action>
   <action name="ActionMultisensePanel">
    <property name="checkable">
