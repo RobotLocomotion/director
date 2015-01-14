@@ -49,9 +49,8 @@ class RobotModelItem(om.ObjectModelItem):
         modelName = os.path.basename(model.filename())
         om.ObjectModelItem.__init__(self, modelName, om.Icons.Robot)
 
-        self.model = model
-        model.connect('modelChanged()', self.onModelChanged)
-        model.connect('displayChanged()', self.onDisplayChanged)
+        self.views = []
+        self.model = None
         self.callbacks = callbacks.CallbackRegistry([self.MODEL_CHANGED_SIGNAL])
         self.useUrdfColors = False
 
@@ -59,9 +58,12 @@ class RobotModelItem(om.ObjectModelItem):
         self.addProperty('Visible', model.visible())
         self.addProperty('Alpha', model.alpha(),
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
-        self.addProperty('Textures', False)
+        self.addProperty('Textures', True)
         self.addProperty('Color', model.color())
-        self.views = []
+
+
+
+        self.setModel(model)
 
     def _onPropertyChanged(self, propertySet, propertyName):
         om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
@@ -113,8 +115,11 @@ class RobotModelItem(om.ObjectModelItem):
         if model == self.model:
             return
 
+        model.disconnect('modelChanged()', self.onModelChanged)
+        model.disconnect('displayChanged()', self.onDisplayChanged)
         views = list(self.views)
         self.removeFromAllViews()
+
         self.model = model
         self.model.setAlpha(self.getProperty('Alpha'))
         self.model.setVisible(self.getProperty('Visible'))
@@ -123,6 +128,7 @@ class RobotModelItem(om.ObjectModelItem):
 
         self.setProperty('Filename', model.filename())
         model.connect('modelChanged()', self.onModelChanged)
+        model.connect('displayChanged()', self.onDisplayChanged)
 
         for view in views:
             self.addToView(view)
