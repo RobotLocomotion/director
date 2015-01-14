@@ -229,6 +229,7 @@ class EndEffectorTeleopPanel(object):
 
         constraints = []
         constraints.append(ikPlanner.createQuasiStaticConstraint())
+        constraints.append(ikPlanner.createLockedNeckPostureConstraint(startPoseName))
 
         if self.getLFootConstraint() == 'fixed':
             constraints.extend(ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot', tspan=[0.0, 1.0]))
