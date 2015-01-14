@@ -45,7 +45,8 @@ class ValvePlannerDemo(object):
         self.sensorJointController = sensorJointController
         self.planPlaybackFunction = planPlaybackFunction
         self.showPoseFunction = showPoseFunction
-        ##self.graspingHand = 'left'
+        self.graspingObject='valve'
+        self.graspingHand='left'
 
         
         # live operation flags
@@ -67,28 +68,52 @@ class ValvePlannerDemo(object):
         self.facePath = []
 
         self.scribeInAir = False
-        self.scribeDirection = -1 # 1 = clockwise | -1 = anticlockwise
-        self.nextScribeAngle = -60 # where to put the pointer before turning
         self.palmInAngle = 30 # how much should the palm face the axis - 0 not at all, 90 entirely
         self.scribeRadius = None
+        self.useLidar = True # else use stereo depth
 
         # IK server speed:
         self.speedLow = 10
         self.speedHigh = 30
 
-        # for simulated dev
-        self.speedLow = 60
-        self.speedHigh = 60
+        if (useDevelopment): # for simulated dev
+            self.speedLow = 60
+            self.speedHigh = 60
 
-        self.useLidar = True # else use stereo depth
         self.executionSimFactor = 3.0 # hack to wait enough time in simulation
 
         # reach to center and back - for palm point
         self.clenchFrameXYZ = [0.0, 0.0, -0.1]
         self.clenchFrameRPY = [90, 0, 180]
+        self.reachDepth = -0.12 # distance away from valve for palm face on approach reach
 
-        self.reachDepth = -0.12 # outside the wheel, was 10
-        self.valveIsLever = False # typical valve by default
+        self.setupStance()
+
+    def setupStance(self):
+
+        if (self.graspingObject == 'valve'):
+            self.nextScribeAngleInitial = -60 # reach 60 degrees left of the valve spoke
+            self.turnAngle=60
+            if self.scribeInAir:
+                self.relativeStanceXYZInitial = [-0.6, -0.2, 0.0] # stand further away when scribing in air
+            else:
+                self.relativeStanceXYZInitial = [-0.48, -0.2, 0.0]
+            self.relativeStanceRPYInitial = [0, 0, 16]
+        else:
+            self.nextScribeAngleInitial = 0 # reach right into the valve axis
+            self.turnAngle=90
+            if self.scribeInAir:
+                self.relativeStanceXYZInitial = [-0.6, -0.4, 0.0] # stand further away when scribing in air
+            else:
+                self.relativeStanceXYZInitial = [-0.48, -0.4, 0.0]
+            self.relativeStanceRPYInitial = [0, 0, 16]
+
+        if (self.graspingHand is 'left'): # -1 = anticlockwise (left, default) | 1 = clockwise
+            self.scribeDirection = -1
+        else:
+            self.scribeDirection = 1
+
+
 
     def resetTurnPath(self):
         for obj in om.getObjects():
@@ -191,6 +216,7 @@ class ValvePlannerDemo(object):
         return t
 
     def spawnValveAffordance(self):
+        self.graspingObject = 'valve'
         spawn_height = 1.2192 # 4ft
         radius = 0.19558 # nominal initial value. 7.7in radius metal valve
         zwidth = 0.02
@@ -214,6 +240,7 @@ class ValvePlannerDemo(object):
         self.valveAffordance.updateParamsFromActorTransform()
 
     def spawnValveLeverAffordance(self):
+        self.graspingObject = 'lever'
         spawn_height = 1.06 # 3.5ft
         pipe_radius = 0.01
         lever_length = 0.33
@@ -233,28 +260,33 @@ class ValvePlannerDemo(object):
         self.valveAffordance.setAffordanceParams(params)
         self.valveAffordance.updateParamsFromActorTransform()
 
-    def findValveAffordance(self):
-        self.valveIsLever = False
-        self.nextScribeAngle = -60 # reach 60 degrees left of the valve spoke
-
-        if self.scribeInAir:
-            self.relativeStanceXYZ = [-0.6, -0.2, 0.0] # stand further away when scribing in air
+    def findAffordance(self):
+        self.setupAffordanceParams()
+        if (self.graspingObject is 'valve'):
+            self.findValveAffordance()
         else:
-            self.relativeStanceXYZ = [-0.48, -0.2, 0.0]
-        self.relativeStanceRPY = [0, 0, 16]
+            self.findValveLeverAffordance()
 
+    def setupAffordanceParams(self):
+        self.setupStance()
+
+        self.relativeStanceXYZ = self.relativeStanceXYZInitial
+        self.relativeStanceRPY = self.relativeStanceRPYInitial
+        self.nextScribeAngle = self.nextScribeAngleInitial
 
         # mirror stance and rotation direction for right hand:
         if (self.graspingHand is 'right'):
-            self.nextScribeAngle = -self.nextScribeAngle
-            self.scribeDirection = -self.scribeDirection
             self.relativeStanceXYZ[1] = -self.relativeStanceXYZ[1]
             self.relativeStanceRPY[2] = -self.relativeStanceRPY[2]
+            self.nextScribeAngle = -self.nextScribeAngle
+
+
+    def findValveAffordance(self):
 
         self.valveAffordance = om.findObjectByName('valve')
         self.valveFrame = om.findObjectByName('valve frame')
 
-        self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was - 0.06
+        self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was (radius - 0.06)
 
         self.computeClenchFrame()
         self.computeValveStanceFrame()
@@ -266,21 +298,6 @@ class ValvePlannerDemo(object):
 
 
     def findValveLeverAffordance(self):
-        self.valveIsLever = True
-        self.nextScribeAngle = 0 # reach right into the valve axis
-
-        if self.scribeInAir:
-            self.relativeStanceXYZ = [-0.6, -0.4, 0.0] # stand further away when scribing in air
-        else:
-            self.relativeStanceXYZ = [-0.48, -0.4, 0.0]
-        self.relativeStanceRPY = [0, 0, 16]
-
-        # mirror stance and rotation direction for right hand:
-        if (self.graspingHand is 'right'):
-            self.nextScribeAngle = -self.nextScribeAngle
-            self.scribeDirection = -self.scribeDirection
-            self.relativeStanceXYZ[1] = -self.relativeStanceXYZ[1]
-            self.relativeStanceRPY[2] = -self.relativeStanceRPY[2]
 
         self.valveAffordance = om.findObjectByName('lever')
         self.valveFrame = om.findObjectByName('lever frame')
@@ -316,7 +333,7 @@ class ValvePlannerDemo(object):
         position = [ self.scribeRadius*math.cos( math.radians( self.nextScribeAngle )) ,  self.scribeRadius*math.sin( math.radians( self.nextScribeAngle ))  , 0]
         # roll angle governs how much the palm points along towards the rotation axis
         # yaw ensures thumb faces the axis
-        if (self.valveIsLever is False):
+        if (self.graspingObject is 'valve'):
             # valve, left and right
             rpy = [90+self.palmInAngle, 0, (270+self.nextScribeAngle)]
         else:
@@ -596,20 +613,13 @@ class ValvePlannerDemo(object):
 
 
     ######### Nominal Plans and Execution  #################################################################
-    def planSequence(self, mode='valve', hand='left'):
+    def planSequence(self):
 
         self.cleanupFootstepPlans()
         self.resetTurnPath()
 
         self.planFromCurrentRobotState = False
-
-        self.graspingHand=hand
-        if (mode=='valve'):
-            self.findValveAffordance()
-            turn_angle = 60
-        else:
-            self.findValveLeverAffordance()
-            turn_angle = 90
+        self.findAffordance()
 
         self.plans = []
 
@@ -624,7 +634,7 @@ class ValvePlannerDemo(object):
         self.planPreGrasp()
         self.planReach()
         self.planGrasp()
-        self.planValveTurn(turn_angle)
+        self.planValveTurn(self.turnAngle)
 
         # Dereach and Stand
         self.planReach()
@@ -642,9 +652,9 @@ class ValvePlannerDemo(object):
         taskQueue.addTask(self.resetTurnPath)
         
         # Approach valve:
-        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'valve') )
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, self.graspingObject) )
         taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
-        taskQueue.addTask(self.findValveAffordance)
+        taskQueue.addTask(self.findAffordance)
 
         taskQueue.addTask(self.planFootstepsToStance)
         taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
@@ -653,59 +663,15 @@ class ValvePlannerDemo(object):
 
         # Reach and Grasp Valve:
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'valve') )
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, self.graspingObject) )
         taskQueue.addTask(self.optionalUserPrompt('Accept valve re-fit, continue? y/n: '))
-        taskQueue.addTask(self.findValveAffordance)
+        taskQueue.addTask(self.findAffordance)
 
         planningFunctions = [
                     self.planPreGrasp,
                     self.planReach,
                     self.planGrasp,
-                    functools.partial( self.planValveTurn, 60),
-                    self.planReach,
-                    self.planPreGrasp,
-                    self.planNominal,
-                    ]
-
-        for planFunc in planningFunctions:
-            taskQueue.addTask(planFunc)
-            taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
-        taskQueue.addTask(self.printAsync('done!'))
-
-        return taskQueue
-
-
-    def autonomousExecuteLever(self):
-
-        self.planFromCurrentRobotState = True
-        self.visOnly = False
-
-        taskQueue = AsyncTaskQueue()
-        taskQueue.addTask(self.resetTurnPath)
-
-        # Approach valve:
-        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'lever') )
-        taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
-        taskQueue.addTask(self.findValveLeverAffordance)
-
-        taskQueue.addTask(self.planFootstepsToStance)
-        taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
-        taskQueue.addTask(self.commitFootstepPlan)
-        taskQueue.addTask(self.requiredUserPrompt('Wait to arrive: '))
-
-        # Reach and Grasp Valve:
-        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 'lever') )
-        taskQueue.addTask(self.optionalUserPrompt('Accept valve re-fit, continue? y/n: '))
-        taskQueue.addTask(self.findValveAffordance)
-
-        planningFunctions = [
-                    self.planPreGrasp,
-                    self.planReach,
-                    self.planGrasp,
-                    functools.partial( self.planValveTurn, 90),
+                    functools.partial( self.planValveTurn, self.turnAngle),
                     self.planReach,
                     self.planPreGrasp,
                     self.planNominal,
