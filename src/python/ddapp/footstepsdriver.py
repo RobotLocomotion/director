@@ -683,6 +683,9 @@ class FootstepsDriver(object):
         #    print "not showing adjusted bdi plan"
 
     def transformPlanToBDIFrame(self, plan):
+        if (self.pose_bdi is None):
+            # print "haven't received POSE_BDI"
+            return
 
         # TODO: This transformation should be rewritten using the LOCAL_TO_LOCAL_BDI frame
         # instead of using FK here
