@@ -193,7 +193,8 @@ class AsyncIKCommunicator():
         commands.append('r = r.compile();')
         commands.append('s.robot = s.robot.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
         commands.append('s.robot = s.robot.compile();')
-        self.comm.sendCommands(commands)
+        self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
+        self.taskQueue.start()
 
     def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):
 
