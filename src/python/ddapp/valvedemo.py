@@ -87,6 +87,10 @@ class ValvePlannerDemo(object):
         self.clenchFrameRPY = [90, 0, 180]
         self.reachDepth = -0.12 # distance away from valve for palm face on approach reach
 
+        # top level switch between BDI (locked base) and MIT (moving base and back)
+        self.lockBack = False
+        self.lockBase = False
+
         self.setupStance()
 
     def setupStance(self):
@@ -400,15 +404,11 @@ class ValvePlannerDemo(object):
     def computeTouchPlan(self):
         # new full 6 dof constraint:
         startPose = self.getPlanningStartPose()
-        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.faceFrameDesired, lockBase=True, lockBack=False)
+        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.faceFrameDesired, lockBase=self.lockBase, lockBack=self.lockBack)
         endPose, info = self.constraintSet.runIk()
 
-        # old gaze constraint:
-        #self.initGazeConstraintSet(self.faceFrameDesired)
-        #self.appendPositionConstraintForTargetFrame(self.faceFrameDesired, 1)
-
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.planGazeTrajectory()
+        self.planTrajectory()
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def planValveTurn(self, turnDegrees=360):
@@ -421,42 +421,22 @@ class ValvePlannerDemo(object):
         degreeStep = float(turnDegrees) / numberOfSamples
         tipMode = False if self.scribeInAir else True
 
-        ######### was:
-        #self.computeTouchFrame(tipMode)
-        #self.initGazeConstraintSet(self.faceFrameDesired)
-        ##self.appendDistanceConstraint()
-        #self.facePath.append(self.faceTransformLocal)
-
-        #for i in xrange(numberOfSamples):
-            #self.nextScribeAngle += self.scribeDirection*degreeStep
-            #self.computeTouchFrame(tipMode)
-            #self.appendPositionConstraintForTargetFrame(self.faceFrameDesired, i+1)
-            #self.facePath.append(self.faceTransformLocal)
-
-        #gazeConstraint = self.constraintSet.constraints[0]
-        #assert isinstance(gazeConstraint, ikplanner.ik.WorldGazeDirConstraint)
-        #gazeConstraint.tspan = [1.0, numberOfSamples]
-
         self.computeTouchFrame(tipMode)
-        startPose = self.getPlanningStartPose()
-        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.faceFrameDesired, lockBase=True, lockBack=False)
-        endPose, info = self.constraintSet.runIk()
-
+        self.initConstraintSet(self.faceFrameDesired)
         self.facePath.append(self.faceTransformLocal)
 
         for i in xrange(numberOfSamples):
             self.nextScribeAngle += self.scribeDirection*degreeStep
             self.computeTouchFrame(tipMode)
-            self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.faceFrameDesired, lockBase=True, lockBack=False)
+            self.appendPositionOrientationConstraintForTargetFrame(self.faceFrameDesired, i+1)
             self.facePath.append(self.faceTransformLocal)
-            endPose, info = self.constraintSet.runIk()
 
         self.drawFacePath()
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.planGazeTrajectory()
+        self.planTrajectory()
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
-    def initGazeConstraintSet(self, goalFrame):
+    def initConstraintSet(self, goalFrame):
 
         # create constraint set
         startPose = self.getPlanningStartPose()
@@ -468,10 +448,10 @@ class ValvePlannerDemo(object):
         self.constraintSet.endPose = startPose
 
         # add body constraints
-        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=True, lockBack=False, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
+        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=self.lockBase, lockBack=self.lockBack, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
         self.constraintSet.constraints.extend(bodyConstraints)
 
-        # add gaze constraint
+        # add gaze constraint - TODO: this gaze constraint shouldn't be necessary, fix
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
         gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees=5.0)
         self.constraintSet.constraints.insert(0, gazeConstraint)
@@ -488,18 +468,14 @@ class ValvePlannerDemo(object):
         c.upperBound = [self.scribeRadius]
         self.constraintSet.constraints.insert(0, c)
 
-    def appendGazeConstraintForTargetFrame(self, goalFrame, t):
-
-        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees=5.0)
-        gazeConstraint.tspan = [t, t]
-        self.constraintSet.constraints.append(gazeConstraint)
-
-    def appendPositionConstraintForTargetFrame(self, goalFrame, t):
-        positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
+    def appendPositionOrientationConstraintForTargetFrame(self, goalFrame, t):
+        positionConstraint, orientationConstraint = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
         positionConstraint.tspan = [t, t]
+        orientationConstraint.tspan = [t, t]
         self.constraintSet.constraints.append(positionConstraint)
+        self.constraintSet.constraints.append(orientationConstraint)
 
-    def planGazeTrajectory(self):
+    def planTrajectory(self):
         self.ikPlanner.ikServer.usePointwise = False
         plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
