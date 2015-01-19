@@ -216,6 +216,7 @@ def openUrdf(filename, view):
         model = RobotModelItem(model)
         om.addToObjectModel(model)
         model.addToView(view)
+        return model
 
 
 def getExistingRobotModels():
@@ -276,6 +277,7 @@ def setupPackagePaths():
         'software/models/mit_gazebo_models/handle_description',
         'software/models/mit_gazebo_models/hook_description',
         'software/models/mit_gazebo_models/robotiq_hand_description',
+        'software/models/otdf',
                   ]
 
     for path in searchPaths:

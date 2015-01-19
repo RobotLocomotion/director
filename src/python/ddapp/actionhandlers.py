@@ -6,6 +6,8 @@ import ddapp.applogic as app
 import ddapp.objectmodel as om
 import ddapp.ioUtils as io
 import ddapp.visualization as vis
+from ddapp import roboturdf
+from ddapp import otdfmodel
 
 _lastDir = None
 
@@ -21,14 +23,27 @@ def storeDefaultDirectory(filename):
     if os.path.isdir(filename):
         _lastDir = filename
 
+
 def onFileOpen():
 
     mainWindow = app.getMainWindow()
 
-    fileFilters = "Geometry Files (*.obj *.pcd *.ply *.stl *.vtk *.vtp)";
+    fileFilters = "Data Files (*.obj *.pcd *.ply *.stl *.vtk *.vtp *.urdf *.otdf)";
     filename = QtGui.QFileDialog.getOpenFileName(mainWindow, "Open...", getDefaultDirectory(), fileFilters)
     if not filename:
         return
+
+    storeDefaultDirectory(filename)
+
+    if filename.lower().endswith('urdf'):
+        onOpenUrdf(filename)
+    if filename.lower().endswith('otdf'):
+        onOpenOtdf(filename)
+    else:
+        onOpenGeometry(filename)
+
+
+def onOpenGeometry(filename):
 
     polyData = io.readPolyData(filename)
 
@@ -37,7 +52,17 @@ def onFileOpen():
         return
 
     vis.showPolyData(polyData, os.path.basename(filename), parent='files')
-    storeDefaultDirectory(filename)
+
+
+def onOpenUrdf(filename):
+
+    model = roboturdf.openUrdf(filename, app.getCurrentRenderView())
+    if not model:
+        app.showErrorMessage('Failed to read urdf file: %s' % filename, title='Read urdf error')
+
+
+def onOpenOtdf(filename):
+    model = otdfmodel.openOtdf(filename, app.getCurrentRenderView())
 
 
 def onFileSaveData():
