@@ -455,16 +455,13 @@ class LCMLoggerManager(object):
 
     @staticmethod
     def getTimeTag():
-        return datetime.datetime.now().isoformat()
-        # timestamp style from drc-lcm-logger.sh:
-        # return datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
-
+        return datetime.datetime.now().strftime('%Y-%m-%d__%H-%M-%S-%f')
 
     def startNewLogger(self, tag='', baseDir=None):
         filePattern = [self.filePatternPrefix, self.getTimeTag()]
         if tag:
             filePattern.append(tag)
-        filePattern = '-'.join(filePattern)
+        filePattern = '__'.join(filePattern)
 
         if baseDir is None:
             baseDir = self.baseDir
