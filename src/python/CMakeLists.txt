@@ -111,6 +111,7 @@ set(python_files
   ddapp/thirdparty/__init__.py
   ddapp/thirdparty/qhull_2d.py
   ddapp/thirdparty/min_bounding_rect.py
+  ddapp/thirdparty/NumericStringParser.py
   )
 
 
