@@ -450,7 +450,7 @@ class LCMLoggerManager(object):
 
     def __init__(self):
         self.filePatternPrefix = 'lcmlog'
-        self.baseDir = '/tmp'
+        self.baseDir = os.path.expanduser('~/logs/raw')
         self.existingLoggerProcesses = {}
 
     @staticmethod

@@ -489,9 +489,6 @@ if useNavigationPanel:
 if useLoggingWidget:
     w = lcmloggerwidget.LCMLoggerWidget(statusBar=app.getMainWindow().statusBar())
     app.getMainWindow().statusBar().addPermanentWidget(w.button)
-    baseDir = os.path.expanduser('~/logs/raw')
-    if os.path.isdir(baseDir):
-        w.manager.baseDir = baseDir
 
 
 if useControllerRate:
