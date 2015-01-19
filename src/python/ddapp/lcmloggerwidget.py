@@ -52,7 +52,7 @@ class LCMLoggerWidget(object):
 
     def onClick(self):
         if self.numProcesses == 0:
-            self.manager.startNewLogger()
+            self.manager.startNewLogger(tag=self.userTag)
             self.updateState()
             self.showStatusMessage('start logging: ' + self.lastActiveLogFile)
         else:
@@ -76,7 +76,7 @@ class LCMLoggerWidget(object):
         action = menu.addAction('Stop and delete log file')
         action.enabled = (self.numProcesses > 0 and self.lastActiveLogFile)
 
-        action = menu.addAction('Start logger with tag')
+        action = menu.addAction('Set logger tag')
         action.enabled = (self.numProcesses == 0)
 
         action = menu.addAction('Copy log filename')
@@ -107,7 +107,7 @@ class LCMLoggerWidget(object):
             os.remove(logFileToRemove)
             self.showStatusMessage('deleted: ' + logFileToRemove)
 
-        elif selectedAction.text == 'Start logger with tag':
+        elif selectedAction.text == 'Set logger tag':
             inputDialog = QtGui.QInputDialog()
             inputDialog.setInputMode(inputDialog.TextInput)
             inputDialog.setLabelText('Log file tag:')
@@ -118,9 +118,7 @@ class LCMLoggerWidget(object):
             if result:
                 tag = inputDialog.textValue()
                 self.userTag = tag
-                self.manager.startNewLogger(tag=tag)
-                self.updateState()
-                self.showStatusMessage('start logging: ' + self.lastActiveLogFile)
+                self.showStatusMessage('Set lcm logger tag: ' + self.userTag)
 
         elif selectedAction.text == 'Review log':
             newEnv = dict(os.environ)
