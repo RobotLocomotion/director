@@ -481,7 +481,7 @@ class LCMLoggerManager(object):
             pid = int(fields[0])
             processName = fields[1].strip()
             args = fields[2:]
-            if 'lcm-logger' in processName:
+            if 'lcm-logger' in processName and len(args) == 1 and 'lcmlog__' in args[0]:
                 self.existingLoggerProcesses[pid] = (processName, args)
         return self.existingLoggerProcesses
 
