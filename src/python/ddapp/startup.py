@@ -133,7 +133,8 @@ useNavigationPanel = True
 useFootContactVis = True
 useImageWidget = False
 useImageViewDemo = True
-useControllerRate = True
+useControllerRate = False
+useForceDisplay = True
 useSkybox = False
 useDataFiles = True
 useContinuousWalking = False
@@ -515,6 +516,41 @@ if useControllerRate:
             self.label.text = 'Controller rate: %.2f hz' % self.sub.getMessageRate()
 
     rateComputer = LCMMessageRateDisplay('ATLAS_COMMAND', 'Controller rate: %.2 hz', app.getMainWindow().statusBar())
+
+
+if useForceDisplay:
+
+    class LCMForceDisplay(object):
+        '''
+        Displays an feet force sensor signals in a status bar widget or label widget
+        '''
+
+
+        def onAtlasState(self,msg):
+            self.l_foot_force_z = msg.force_torque.l_foot_force_z
+            self.r_foot_force_z = msg.force_torque.r_foot_force_z
+
+        def __init__(self, channel, statusBar=None):
+
+            self.sub = lcmUtils.addSubscriber(channel, lcmdrc.atlas_state_t, self.onAtlasState)
+            self.label = QtGui.QLabel('')
+            statusBar.addPermanentWidget(self.label)
+
+            self.timer = TimerCallback(targetFps=10)
+            self.timer.callback = self.showRate
+            self.timer.start()
+
+            self.l_foot_force_z = 0
+            self.r_foot_force_z = 0
+
+        def __del__(self):
+            lcmUtils.removeSubscriber(self.sub)
+
+        def showRate(self):
+            global leftInContact, rightInContact
+            self.label.text = '%.2f | %.2f' % (self.l_foot_force_z,self.r_foot_force_z)
+
+    rateComputer = LCMForceDisplay('ATLAS_STATE', app.getMainWindow().statusBar())
 
 
 if useSkybox:
