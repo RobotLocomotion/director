@@ -18,9 +18,9 @@ classdef IKServer
     end
 
     function obj = loadNominalData(obj,filename)
-      if nargin < 1 
+      if nargin < 1
         filename = [getenv('DRC_BASE'), ...
-          '/software/control/matlab/data/atlas_bdi_fp.mat']; 
+          '/software/control/matlab/data/atlas_bdi_fp.mat'];
       end
       %nom_data = load([getDrakePath() '/examples/Atlas/data/atlas_bdi_fp.mat']);
       nom_data = load(filename);
