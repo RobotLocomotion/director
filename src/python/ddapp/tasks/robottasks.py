@@ -298,40 +298,39 @@ class WaitForAtlasBehavior(AsyncTask):
 class WaitForWalkExecution(AsyncTask):
 
     def run(self):
-        # wait for controller status WALK
-        while robotSystem.atlasDriver.getControllerStatus() != 2:
+        self.statusMessage = 'Waiting for walking to begin...'
+        while robotSystem.atlasDriver.getControllerStatus() != 'walking':
             yield
 
-        # wait for controller status STAND
-        while robotSystem.atlasDriver.getControllerStatus() != 1:
+        self.statusMessage = 'Waiting for walk execution...'
+        while robotSystem.atlasDriver.getControllerStatus() == 'walking':
             yield
 
 class WaitForWalkExecutionBDI(AsyncTask):
 
     def run(self):
+
+        self.statusMessage = 'Waiting for walking to begin...'
         while robotSystem.atlasDriver.getCurrentBehaviorName() != 'step':
             yield
 
+        self.statusMessage = 'Waiting for walk execution...'
         while robotSystem.atlasDriver.getCurrentBehaviorName() != 'stand':
             yield
 
 class WaitForManipulationPlanExecution(AsyncTask):
 
     def run(self):
-        plan = robotSystem.manipPlanner.committedPlans[-1]
-        delayTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
 
-        t = SimpleTimer()
-
-        while True:
-
-            elapsed = t.elapsed()
-            if elapsed >= delayTime:
-                break
-
-            self.statusMessage = 'Waiting for execution: %.1f seconds' % (delayTime - elapsed)
+        # wait for controller status MANIPULATE
+        self.statusMessage = 'Waiting for manip begin...'
+        while robotSystem.atlasDriver.getControllerStatus() != 'manipulating':
             yield
 
+        # wait for controller status STAND
+        self.statusMessage = 'Waiting for manip execution...'
+        while robotSystem.atlasDriver.getControllerStatus() == 'manipulating':
+            yield
 
 class UserSelectAffordanceCandidate(AsyncTask):
 
