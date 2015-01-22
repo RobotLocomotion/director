@@ -95,33 +95,6 @@ class AsyncIKCommunicator():
         self.comm.assignFloatArray(pose, poseName)
 
 
-    def addCollisionObject(self, vertices, name = 'default'):
-        commands = []
-
-        if type(vertices) is not list: vertices = [vertices]
-        if type(name) is not list: name = [name]
-
-        for vertices_i, name_i in zip(vertices,name):
-            self.comm.assignFloatArray(vertices_i, '%s_vertices' % name_i.replace(' ','_'))
-            commands.append('collision_object_%s = RigidBodyMeshPoints(%s_vertices);' % (name_i.replace(' ','_'),name_i.replace(' ','_')))
-            commands.append('r = addGeometryToBody(r, links.world, collision_object_%s,\'%s\');' % (name_i.replace(' ','_'), name_i))
-
-        commands.append('r = compile(r);')
-        self.comm.sendCommands(commands)
-
-
-    def addCollisionObjectToLink(self, vertices, linkName, transform):
-        self.comm.assignFloatArray(vertices, 'collision_object_vertices')
-        transformString = ConstraintBase.toMatrixString(transform)
-
-        commands = []
-        commands.append('collision_object = RigidBodyMeshPoints(collision_object_vertices);')
-        commands.append('collision_object.T = %s;' % transformString)
-        commands.append('r = addGeometryToBody(r, links.%s, collision_object);' % linkName)
-        commands.append('r = compile(r);')
-        self.comm.sendCommands(commands)
-
-
     def constructVisualizer(self):
         commands = []
         commands.append("v = r.constructVisualizer(struct('use_contact_shapes', true));")
@@ -148,13 +121,6 @@ class AsyncIKCommunicator():
         commands.append('v.draw(0, q_end);');
         self.comm.sendCommands(commands)
 
-
-    def resetCollisionObjects(self):
-        commands = []
-        commands.append('r = s.robot;')
-        commands.append('r = r.replaceCollisionGeometryWithConvexHull([links.l_hand, links.r_hand, links.head]);')
-        commands.append('r = compile(r);')
-        self.comm.sendCommands(commands)
 
 
     def getConstraintCommands(self, constraintNames):
