@@ -6,6 +6,7 @@ classdef IKServer
     environment_urdf_string = []
     ikoptions
     q_nom
+    plan_publisher
   end
 
   methods
@@ -96,6 +97,7 @@ classdef IKServer
       xyz = zeros(3,1);
       rpy = zeros(3,1);
       obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
+      obj.plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, obj.robot.getPositionFrame.coordinates);
       obj = obj.compile();
     end
 
@@ -167,23 +169,19 @@ classdef IKServer
 
     end
 
-    function publishTraj(obj, plan_pub, atlas, xtraj, snopt_info, timeInSeconds)
-
-      for i = 1:atlas.getNumStates
-        atlas2robotFrameIndMap(i) = find(strcmp(atlas.getStateFrame.coordinates{i}, obj.robot.getStateFrame.coordinates));
-      end
+    function publishTraj(obj, xtraj, snopt_info, timeInSeconds)
 
       utime = now() * 24 * 60 * 60;
-      nq_atlas = length(atlas2robotFrameIndMap)/2;
+      nq_atlas = obj.robot.getNumPositions;
       ts = xtraj.pp.breaks;
       q = xtraj.eval(ts);
       xtraj_atlas = zeros(2+2*nq_atlas,length(ts));
-      xtraj_atlas(2+(1:nq_atlas),:) = q(atlas2robotFrameIndMap(1:nq_atlas),:);
+      xtraj_atlas(2+(1:nq_atlas),:) = q(1:nq_atlas,:);
       snopt_info_vector = snopt_info*ones(1, size(xtraj_atlas,2));
 
       ts = ts*timeInSeconds;
       ts = ts - ts(1);
-      plan_pub.publish(xtraj_atlas, ts, utime, snopt_info_vector);
+      obj.plan_publisher.publish(xtraj_atlas, ts, utime, snopt_info_vector);
 
     end
 

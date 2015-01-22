@@ -33,4 +33,3 @@ for i = 1:size(linknames, 1)
 end
 
 joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
-plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, r.getStateFrame.coordinates(1:nq));
