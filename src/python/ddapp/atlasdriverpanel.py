@@ -60,13 +60,16 @@ class AtlasDriverPanel(object):
 
     def updatePanel(self):
         self.updateBehaviorLabel()
+        self.updateControllerStatusLabel()
         self.updateStatus()
         self.updateButtons()
         self.driver.updateCombinedStandLogic()
 
-
     def updateBehaviorLabel(self):
         self.ui.behaviorLabel.text = self.driver.getCurrentBehaviorName() or '<unknown>'
+
+    def updateControllerStatusLabel(self):
+        self.ui.controllerStatusLabel.text = self.driver.getControllerStatus() or '<unknown>'
 
     def updateStatus(self):
         self.ui.inletPressure.value = self.driver.getCurrentInletPressure()
