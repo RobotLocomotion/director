@@ -101,6 +101,12 @@ classdef IKServer
       obj = obj.compile();
     end
 
+    function obj = setJointLimits(obj, joint_limit_min_new, joint_limit_max_new)
+      obj.robot = obj.robot.setJointLimits(joint_limit_min_new, ...
+                                           joint_limit_max_new);
+      obj = obj.compile();
+    end
+
     function obj = compile(obj)
       obj.robot = obj.robot.compile();
       if isempty(obj.environment_urdf_string)
