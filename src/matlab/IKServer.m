@@ -2,6 +2,8 @@ classdef IKServer
 
   properties
     robot
+    robot_and_environment
+    environment_urdf_string = []
     ikoptions
     q_nom
   end
@@ -14,7 +16,7 @@ classdef IKServer
       options.ignore_terrain_collisions = true;
       options.terrain = [];
 
-      obj.robot = RigidBodyManipulator('', options);
+      obj.robot = RigidBodyManipulator([], options);
     end
 
     function obj = loadNominalData(obj,filename)
@@ -30,7 +32,7 @@ classdef IKServer
 
     function obj = setupCosts(obj)
 
-      obj.ikoptions = IKoptions(obj.robot);
+      obj.ikoptions = IKoptions(obj.robot_and_environment);
       obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(500);
       obj.ikoptions = obj.ikoptions.setMex(true);
       % obj.ikoptions = obj.ikoptions.setDebug(true);
@@ -42,9 +44,9 @@ classdef IKServer
       backCost = 1e4;
       neckCost = 1e6;
 
-      nq = obj.robot.getNumPositions();
+      nq = obj.ikoptions.robot.getNumPositions();
 
-      cost = Point(obj.robot.getStateFrame(), 1);
+      cost = Point(obj.ikoptions.robot.getStateFrame(), 1);
 
       cost.base_x = 0;
       cost.base_y = 0;
@@ -55,22 +57,22 @@ classdef IKServer
 
       cost = double(cost);
 
-      l_arm_indices = findPositionIndices(obj.robot, 'l_arm');
+      l_arm_indices = findPositionIndices(obj.ikoptions.robot, 'l_arm');
       cost(l_arm_indices) = leftArmCost;
 
-      r_arm_indices = findPositionIndices(obj.robot, 'r_arm');
+      r_arm_indices = findPositionIndices(obj.ikoptions.robot, 'r_arm');
       cost(r_arm_indices) = rightArmCost;
 
-      l_leg_indices = findPositionIndices(obj.robot, 'l_leg');
+      l_leg_indices = findPositionIndices(obj.ikoptions.robot, 'l_leg');
       cost(l_leg_indices) = leftLegCost;
 
-      r_leg_indices = findPositionIndices(obj.robot, 'r_leg');
+      r_leg_indices = findPositionIndices(obj.ikoptions.robot, 'r_leg');
       cost(r_leg_indices) = rightLegCost;
 
-      back_indices = findPositionIndices(obj.robot, 'back');
+      back_indices = findPositionIndices(obj.ikoptions.robot, 'back');
       cost(back_indices) = backCost;
 
-      neck_indices = findPositionIndices(obj.robot, 'neck');
+      neck_indices = findPositionIndices(obj.ikoptions.robot, 'neck');
       cost(neck_indices) = neckCost;
 
       vel_cost = cost*0.05;
@@ -96,9 +98,21 @@ classdef IKServer
       obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
       %obj.robot = weldFingerJoints(obj.robot);
       obj.robot = compile(obj.robot);
+      obj = obj.setEnvironment();
 
     end
 
+    function obj = setEnvironment(obj, urdf_string)
+      if nargin < 2 || isempty(urdf_string)
+        obj.robot_and_environment = obj.robot;
+        obj.environment_urdf_string = [];
+      elseif ~strcmp(obj.environment_urdf_string, urdf_string)
+        obj.robot_and_environment = obj.robot.addRobotFromURDFString(urdf_string);
+        obj.environment_urdf_string = urdf_string;
+        obj.robot_and_environment = obj.robot_and_environment.compile();
+      end
+      obj = obj.setupCosts();
+    end
 
     function obj = addAffordance(obj, affordanceName)
       filename = [getenv('DRC_PATH'), '/drake/systems/plants/test/', affordanceName, '.urdf'];
