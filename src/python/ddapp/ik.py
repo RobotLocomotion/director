@@ -7,6 +7,7 @@ from ddapp import matlab
 from ddapp.asynctaskqueue import AsyncTaskQueue
 from ddapp.jointcontrol import JointController
 from ddapp.ikconstraints import *
+from lxml import etree
 
 from ddapp import drcargs
 
@@ -196,6 +197,19 @@ class AsyncIKCommunicator():
         self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
         self.taskQueue.start()
 
+
+    def setEnvironment(self, environment_urdf):
+        commands = []
+        urdf_lines = etree.tostring(environment_urdf).splitlines()
+        urdf_lines = ["'%s'" % x for x in urdf_lines]
+        urdf_lines = '...\n'.join(urdf_lines)
+        print urdf_lines
+        self.comm.send('environment_urdf_string = [%s];' % urdf_lines )
+        self.comm.waitForResult()
+        commands.append('s = s.setEnvironment(environment_urdf_string);')
+        commands.append('r = s.robot_and_environment;')
+        self.comm.sendCommands(commands)
+
     def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):
 
         commands = []
@@ -214,6 +228,8 @@ class AsyncIKCommunicator():
         commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
         commands.append('ik_seed_pose = %s;' % seedPostureName)
         commands.append('ik_nominal_pose = %s;' % nominalPostureName)
+        commands.append('ik_seed_pose = [ik_seed_pose; zeros(r.getNumPositions()-numel(ik_seed_pose),1)]')
+        commands.append('ik_nominal_pose = [ik_nominal_pose; zeros(r.getNumPositions()-numel(ik_nominal_pose),1)]')
         commands.append('clear q_end;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
@@ -232,6 +248,7 @@ class AsyncIKCommunicator():
             commands.append('\n')
             commands.append('if (info > 10) disp(\'inverseKin with collision constraint infeasible.\'); display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
+        commands.append('q_end(s.robot.getNumPositions()+1:end) = [];')
         commands.append('\n%-------- runIk end --------\n')
 
         self.comm.sendCommands(commands)

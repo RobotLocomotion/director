@@ -8,7 +8,7 @@ s = s.addRobot(robotURDF);
 s = s.setupCosts();
 s = s.loadNominalData(fixed_point_file);
 
-r = s.robot;
+r = s.robot_and_environment;
 
 nq = r.getNumPositions();
 q_nom = s.q_nom;
