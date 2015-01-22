@@ -188,6 +188,8 @@ class AsyncIKCommunicator():
         nominalPostureName = nominalPostureName or self.nominalName
         seedPostureName = seedPostureName or self.seedName
 
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(nominalPostureName))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(seedPostureName))
         commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
         commands.append('ik_seed_pose = %s;' % seedPostureName)
         commands.append('ik_nominal_pose = %s;' % nominalPostureName)
@@ -244,6 +246,9 @@ class AsyncIKCommunicator():
 
         commands = []
         commands.append('\n%-------- runIkTraj --------\n')
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(poseStart))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(poseEnd))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(nominalPose))
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
 
         constraintNames = []
@@ -282,13 +287,13 @@ class AsyncIKCommunicator():
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:
             commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(%s, 1, nt)));' % nominalPose)
-            commands.append('q_seed_traj = PPTrajectory(spline([t(1), t(end)], [zeros(nq,1), %s, %s, zeros(nq,1)]));' % (poseStart, poseEnd))
+            commands.append('q_seed_traj = PPTrajectory(spline([t(1), t(end)], [zeros(r.getNumPositions(),1), %s, %s, zeros(r.getNumPositions(),1)]));' % (poseStart, poseEnd))
             commands.append('\n')
             commands.append('[xtraj, info, infeasible_constraint] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, ikoptions);')
             commands.append('\n')
             commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
-        commands.append('qtraj = xtraj(1:nq);')
+        commands.append('qtraj = xtraj(1:r.getNumPositions());')
         if self.useCollision:
             commands.append('plan_time = 1;')
         else:
@@ -304,7 +309,7 @@ class AsyncIKCommunicator():
             #commands.append('spline_traj = PPTrajectory(spline(t, [ zeros(size(xtraj, 1),1), xtraj.eval(t), zeros(size(xtraj, 1),1)]));')
             #commands.append('q_seed_pointwise = spline_traj.eval(pointwise_time_points);')
             commands.append('q_seed_pointwise = xtraj.eval(pointwise_time_points);')
-            commands.append('q_seed_pointwise = q_seed_pointwise(1:nq,:);')
+            commands.append('q_seed_pointwise = q_seed_pointwise(1:r.getNumPositions(),:);')
             commands.append('[xtraj_pw, info_pw] = inverseKinPointwise(r, pointwise_time_points, q_seed_pointwise, q_seed_pointwise, active_constraints{:}, ikoptions);')
             commands.append('xtraj_pw = PPTrajectory(foh(pointwise_time_points, xtraj_pw));')
             commands.append('info = info_pw(end);')
