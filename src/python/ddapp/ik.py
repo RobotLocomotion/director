@@ -317,7 +317,7 @@ class AsyncIKCommunicator():
 
         publish = True
         if publish:
-            commands.append('s.publishTraj(plan_publisher, r, %s, info, plan_time);' % ('xtraj_pw' if self.usePointwise else 'xtraj'))
+            commands.append('s.publishTraj(%s, info, plan_time);' % ('xtraj_pw' if self.usePointwise else 'xtraj'))
 
         commands.append('\n%--- runIKTraj end --------\n')
         self.comm.sendCommands(commands)
