@@ -1052,16 +1052,24 @@ class DrillPlannerDemo(object):
     def commitFootstepPlan(self):
         self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
 
-    def waitForPlanExecution(self, plan):
+    def waitForPlanExecution(self):
+        while self.atlasDriver.getControllerStatus() != 'manipulating':
+            yield
+        while self.atlasDriver.getControllerStatus() == 'manipulating':
+            yield
+
+    def waitForPlanAnimation(self, plan):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
-        print 'waiting for plan execution:', planElapsedTime
-        return self.delay(planElapsedTime + 1.0)
+        print 'waiting for plan animation:', planElapsedTime
+        return self.delay(planElapsedTime)
 
     def animateLastPlan(self):
         plan = self.plans[-1]
-        if not self.visOnly:
+        if self.visOnly:
+            return self.waitForPlanAnimation(plan)
+        else:
             self.commitManipPlan()
-        return self.waitForPlanExecution(plan)
+            return self.waitForPlanExecution()
 
     def turnPointwiseOff(self):
         ikplanner.getIkOptions().setProperty('Use pointwise', False)

@@ -80,8 +80,6 @@ class ValvePlannerDemo(object):
             self.speedLow = 60
             self.speedHigh = 60
 
-        self.executionSimFactor = 3.0 # hack to wait enough time in simulation
-
         # reach to center and back - for palm point
         self.clenchFrameXYZ = [0.0, 0.0, -0.1]
         self.clenchFrameRPY = [90, 0, 180]
@@ -576,17 +574,24 @@ class ValvePlannerDemo(object):
     def commitFootstepPlan(self):
         self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
 
-    def waitForPlanExecution(self, plan):
+    def waitForPlanExecution(self):
+        while self.atlasDriver.getControllerStatus() != 'manipulating':
+            yield
+        while self.atlasDriver.getControllerStatus() == 'manipulating':
+            yield
+
+    def waitForPlanAnimation(self, plan):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
-        print 'waiting for plan execution:', planElapsedTime
-        return self.delay(planElapsedTime*self.executionSimFactor + 1.0)
+        print 'waiting for plan animation:', planElapsedTime
+        return self.delay(planElapsedTime)
 
     def animateLastPlan(self):
         plan = self.plans[-1]
-        if not self.visOnly:
+        if self.visOnly:
+            return self.waitForPlanAnimation(plan)
+        else:
             self.commitManipPlan()
-        return self.waitForPlanExecution(plan)
-
+            return self.waitForPlanExecution()
 
     ######### Nominal Plans and Execution  #################################################################
     def planSequence(self):
