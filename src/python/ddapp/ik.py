@@ -156,10 +156,7 @@ class AsyncIKCommunicator():
             arrayName = 'joint_limit_min_new' if epsilon < 0 else 'joint_limit_max_new'
             commands.append('%s(joints.%s) = %s(joints.%s) + %f;' % (arrayName, jointName, arrayName, jointName, epsilon))
 
-        commands.append('r = r.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
-        commands.append('r = r.compile();')
-        commands.append('s.robot = s.robot.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
-        commands.append('s.robot = s.robot.compile();')
+        commands.append('s = s.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
         self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
         self.taskQueue.start()
 
