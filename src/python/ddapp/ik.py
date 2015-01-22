@@ -33,7 +33,9 @@ class AsyncIKCommunicator():
         self.numberOfAddedKnots = 0
         self.numberOfInterpolatedCollisionChecks = 2
         self.collisionMinDistance = 0.03
-        self.majorIterationsLimit = 100
+        self.majorIterationsLimit = 500
+        self.majorOptimalityTolerance = 1e-4
+        self.majorFeasibilityTolerance = 1e-6
 
 
     def getStartupCommands(self):
@@ -195,6 +197,11 @@ class AsyncIKCommunicator():
         commands.append('ik_nominal_pose = %s;' % nominalPostureName)
         commands.append('ik_seed_pose = [ik_seed_pose; zeros(r.getNumPositions()-numel(ik_seed_pose),1)]')
         commands.append('ik_nominal_pose = [ik_nominal_pose; zeros(r.getNumPositions()-numel(ik_nominal_pose),1)]')
+        commands.append('options = struct();')
+        commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
+        commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
+        commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
+        commands.append('s = s.setupOptions(options);')
         commands.append('clear q_end;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
@@ -268,6 +275,11 @@ class AsyncIKCommunicator():
             commands.append('additionalTimeSamples = linspace(t(1), t(end), %d);' % additionalTimeSamples)
         else:
             commands.append('additionalTimeSamples = [];')
+        commands.append('options = struct();')
+        commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
+        commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
+        commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
+        commands.append('s = s.setupOptions(options);')
         commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
         commands.append('\n')
@@ -281,7 +293,6 @@ class AsyncIKCommunicator():
             commands.append('options.xyz_v_max = %s;' % self.maxBaseMetersPerSecond)
             commands.append('options.t_max = %s;' % self.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
-            commands.append('options.major_iterations_limit = %s;' % self.majorIterationsLimit)
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
             commands.append('[xtraj,info] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);')
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
