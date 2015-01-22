@@ -96,22 +96,30 @@ classdef IKServer
       xyz = zeros(3,1);
       rpy = zeros(3,1);
       obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
-      %obj.robot = weldFingerJoints(obj.robot);
-      obj.robot = compile(obj.robot);
-      obj = obj.setEnvironment();
+      obj = obj.compile();
+    end
 
+    function obj = compile(obj)
+      obj.robot = obj.robot.compile();
+      if isempty(obj.environment_urdf_string)
+        obj.robot_and_environment = obj.robot;
+      else
+        obj.robot_and_environment = ...
+          obj.robot.addRobotFromURDFString(obj.environment_urdf_string);
+      end
+      obj = obj.setupCosts();
     end
 
     function obj = setEnvironment(obj, urdf_string)
       if nargin < 2 || isempty(urdf_string)
-        obj.robot_and_environment = obj.robot;
         obj.environment_urdf_string = [];
-      elseif ~strcmp(obj.environment_urdf_string, urdf_string)
-        obj.robot_and_environment = obj.robot.addRobotFromURDFString(urdf_string);
-        obj.environment_urdf_string = urdf_string;
-        obj.robot_and_environment = obj.robot_and_environment.compile();
+      else
+        typecheck(urdf_string, 'char'); 
+        if ~strcmp(obj.environment_urdf_string, urdf_string)
+          obj.environment_urdf_string = urdf_string;
+        end
       end
-      obj = obj.setupCosts();
+      obj = obj.compile();
     end
 
     function obj = addAffordance(obj, affordanceName)
