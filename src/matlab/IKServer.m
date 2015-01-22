@@ -18,6 +18,8 @@ classdef IKServer
       options.terrain = [];
 
       obj.robot = RigidBodyManipulator([], options);
+
+      obj = obj.compile();
     end
 
     function obj = loadNominalData(obj,filename)
@@ -31,13 +33,35 @@ classdef IKServer
       obj.q_nom = nom_data.xstar(1:nq);
     end
 
+    function obj = setupOptions(obj, options)
+      if isempty(obj.ikoptions)
+        obj.ikoptions = IKoptions(obj.robot_and_environment);
+      end
+      if nargin < 2
+        ikoptions_old = obj.ikoptions;
+        obj.ikoptions = obj.ikoptions.updateRobot(obj.robot_and_environment);
+        obj.ikoptions = obj.ikoptions.setMex(ikoptions_old.use_mex);
+        obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(ikoptions_old.SNOPT_MajorIterationsLimit);
+        obj.ikoptions = obj.ikoptions.setIterationsLimit(ikoptions_old.SNOPT_IterationsLimit);
+        obj.ikoptions = obj.ikoptions.setMajorFeasibilityTolerance(ikoptions_old.SNOPT_MajorFeasibilityTolerance);
+        obj.ikoptions = obj.ikoptions.setMajorOptimalityTolerance(ikoptions_old.SNOPT_MajorOptimalityTolerance);
+      else
+        if isfield(options, 'MajorIterationsLimit')
+          obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(options.MajorIterationsLimit);
+        end
+        if isfield(options, 'IterationsLimit')
+          obj.ikoptions = obj.ikoptions.setIterationsLimit(options.IterationsLimit);
+        end
+        if isfield(options, 'MajorFeasibilityTolerance')
+          obj.ikoptions = obj.ikoptions.setMajorFeasibilityTolerance(options.MajorFeasibilityTolerance);
+        end
+        if isfield(options, 'MajorOptimalityTolerance')
+          obj.ikoptions = obj.ikoptions.setMajorOptimalityTolerance(options.MajorOptimalityTolerance);
+        end
+      end
+    end
+
     function obj = setupCosts(obj)
-
-      obj.ikoptions = IKoptions(obj.robot_and_environment);
-      obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(500);
-      obj.ikoptions = obj.ikoptions.setMex(true);
-      % obj.ikoptions = obj.ikoptions.setDebug(true);
-
       leftLegCost = 1e3;
       rightLegCost = 1e3;
       leftArmCost = 1;
@@ -47,43 +71,54 @@ classdef IKServer
 
       nq = obj.ikoptions.robot.getNumPositions();
 
-      cost = Point(obj.ikoptions.robot.getStateFrame(), 1);
+      if nq > 0
+        cost = ones(nq,1);
 
-      cost.base_x = 0;
-      cost.base_y = 0;
-      cost.base_z = 0;
-      cost.base_roll = 1e3;
-      cost.base_pitch = 1e3;
-      cost.base_yaw = 0;
+        base_x_index = findPositionIndices(obj.ikoptions.robot, 'base_x');
+        cost(base_x_index) = 0;
 
-      cost = double(cost);
+        base_y_index = findPositionIndices(obj.ikoptions.robot, 'base_y');
+        cost(base_y_index) = 0;
 
-      l_arm_indices = findPositionIndices(obj.ikoptions.robot, 'l_arm');
-      cost(l_arm_indices) = leftArmCost;
+        base_z_index = findPositionIndices(obj.ikoptions.robot, 'base_z');
+        cost(base_z_index) = 0;
 
-      r_arm_indices = findPositionIndices(obj.ikoptions.robot, 'r_arm');
-      cost(r_arm_indices) = rightArmCost;
+        base_roll_index = findPositionIndices(obj.ikoptions.robot, 'base_roll');
+        cost(base_roll_index) = 1e3;
 
-      l_leg_indices = findPositionIndices(obj.ikoptions.robot, 'l_leg');
-      cost(l_leg_indices) = leftLegCost;
+        base_pitch_index = findPositionIndices(obj.ikoptions.robot, 'base_pitch');
+        cost(base_pitch_index) = 1e3;
 
-      r_leg_indices = findPositionIndices(obj.ikoptions.robot, 'r_leg');
-      cost(r_leg_indices) = rightLegCost;
+        base_yaw_index = findPositionIndices(obj.ikoptions.robot, 'base_yaw');
+        cost(base_yaw_index) = 0;
 
-      back_indices = findPositionIndices(obj.ikoptions.robot, 'back');
-      cost(back_indices) = backCost;
+        l_arm_indices = findPositionIndices(obj.ikoptions.robot, 'l_arm');
+        cost(l_arm_indices) = leftArmCost;
 
-      neck_indices = findPositionIndices(obj.ikoptions.robot, 'neck');
-      cost(neck_indices) = neckCost;
+        r_arm_indices = findPositionIndices(obj.ikoptions.robot, 'r_arm');
+        cost(r_arm_indices) = rightArmCost;
 
-      vel_cost = cost*0.05;
-      accel_cost = cost*0.05;
+        l_leg_indices = findPositionIndices(obj.ikoptions.robot, 'l_leg');
+        cost(l_leg_indices) = leftLegCost;
 
-      obj.ikoptions = obj.ikoptions.setQ(diag(cost(1:nq)));
-      obj.ikoptions = obj.ikoptions.setQa(diag(vel_cost(1:nq)));
-      obj.ikoptions = obj.ikoptions.setQv(diag(accel_cost(1:nq)));
-      obj.ikoptions = obj.ikoptions.setqd0(zeros(nq,1), zeros(nq,1)); % upper and lower bnd on initial velocity.
-      obj.ikoptions = obj.ikoptions.setqdf(zeros(nq,1), zeros(nq,1)); % upper and lower bnd on final velocity.
+        r_leg_indices = findPositionIndices(obj.ikoptions.robot, 'r_leg');
+        cost(r_leg_indices) = rightLegCost;
+
+        back_indices = findPositionIndices(obj.ikoptions.robot, 'back');
+        cost(back_indices) = backCost;
+
+        neck_indices = findPositionIndices(obj.ikoptions.robot, 'neck');
+        cost(neck_indices) = neckCost;
+
+        vel_cost = cost*0.05;
+        accel_cost = cost*0.05;
+
+        obj.ikoptions = obj.ikoptions.setQ(diag(cost(1:nq)));
+        obj.ikoptions = obj.ikoptions.setQa(diag(vel_cost(1:nq)));
+        obj.ikoptions = obj.ikoptions.setQv(diag(accel_cost(1:nq)));
+        obj.ikoptions = obj.ikoptions.setqd0(zeros(nq,1), zeros(nq,1)); % upper and lower bnd on initial velocity.
+        obj.ikoptions = obj.ikoptions.setqdf(zeros(nq,1), zeros(nq,1)); % upper and lower bnd on final velocity.
+      end
 
     end
 
@@ -115,6 +150,7 @@ classdef IKServer
         obj.robot_and_environment = ...
           obj.robot.addRobotFromURDFString(obj.environment_urdf_string);
       end
+      obj = obj.setupOptions();
       obj = obj.setupCosts();
     end
 
