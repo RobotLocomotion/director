@@ -63,6 +63,16 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
                                  'Drake Instep Shift': 0.014,
                                  'Drake Min Hold Time': 0.9}}
 
+DEFAULT_CONTACT_SLICES = {(0.05, 0.3): np.array([[-0.13, -0.13, 0.13, 0.13],
+                                          [0.0562, -0.0562, 0.0562, -0.0562]]),
+                          (0.3, .75): np.array([[-0.13, -0.13, 0.25, 0.25],
+                                          [.25, -.25, .25, -.25]]),
+                          (0.75, 1.05): np.array([[-0.2, -0.2, 0.25, 0.25],
+                                          [.4, -.4, .4, -.4]]),
+                          (1.05, 1.85): np.array([[-0.35, -0.35, 0.28, 0.28],
+                                          [.4, -.4, .4, -.4]])
+                          }
+
 
 def loadFootMeshes():
     meshes = []
@@ -153,7 +163,7 @@ class FootstepsDriver(object):
         self.lastWalkingPlan = None
         self.walkingPlanCallback = None
         self.default_step_params = DEFAULT_STEP_PARAMS
-        self.contact_slices = {}
+        self.contact_slices = DEFAULT_CONTACT_SLICES
         self.show_contact_slices = False
         self.toolbarWidget = None
 
@@ -357,7 +367,7 @@ class FootstepsDriver(object):
             allTransforms.append(footstepTransform)
 
 
-            if i < 1:
+            if i < 2:
                 continue
 
             if footstep.is_right_foot:
