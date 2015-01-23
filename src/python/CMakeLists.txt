@@ -42,6 +42,7 @@ set(python_files
   ddapp/__init__.py
   ddapp/ioUtils.py
   ddapp/irisUtils.py
+  ddapp/irisdriver.py
   ddapp/jointcontrol.py
   ddapp/lcmloggerwidget.py
   ddapp/lcmgl.py
