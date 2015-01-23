@@ -47,12 +47,10 @@ class WidgetDict(object):
 
 class NavigationPanel(object):
 
-    def __init__(self, jointController, footstepDriver, playbackRobotModel, playbackJointController):
+    def __init__(self, jointController, footstepDriver):
 
         self.jointController = jointController
         self.footstepDriver = footstepDriver
-        self.playbackRobotModel = playbackRobotModel
-        self.playbackJointController = playbackJointController
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddNavigation.ui')
@@ -434,12 +432,12 @@ def _getAction():
     return app.getToolBarActions()['ActionNavigationPanel']
 
 
-def init(jointController, footstepDriver, playbackRobotModel, playbackJointController):
+def init(jointController, footstepDriver):
 
     global panel
     global dock
 
-    panel = NavigationPanel(jointController, footstepDriver, playbackRobotModel, playbackJointController)
+    panel = NavigationPanel(jointController, footstepDriver)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
