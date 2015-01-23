@@ -1,16 +1,20 @@
 from __future__ import division
 
 import sys
+import math
 import numpy as np
 from scipy import ndimage
 from scipy.spatial import ConvexHull
 from scipy.io import loadmat, savemat
 
-import drc
-import ddapp.transformUtils
+import drc as lcmdrc
+from ddapp import irisUtils
+from ddapp import lcmUtils
+from ddapp import transformUtils
 from irispy.cspace import rotmat, cspace3
 from irispy.iris import inflate_region
 from irispy.utils import lcon_to_vert, sample_convex_polytope
+from ddapp.utime import getUtime
 import polyhedron._cdd
 from polyhedron import Vrep, Hrep
 from py_drake_utils.utils import rpy2rotmat
@@ -18,13 +22,23 @@ from py_drake_utils.utils import rpy2rotmat
 DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.13, 0.13],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 DEFAULT_BOUNDING_BOX_WIDTH = 1
-DEFAULT_CONTACT_SLICES = {(0.05, 0.35): np.array([[-0.13, -0.13, 0.13, 0.13],
+DEFAULT_CONTACT_SLICES_v3 = {(0.05, 0.35): np.array([[-0.13, -0.13, 0.13, 0.13],
                                           [0.0562, -0.0562, 0.0562, -0.0562]]),
                           (0.35, .75): np.array([[-0.13, -0.13, 0.25, 0.25],
                                           [.25, -.25, .25, -.25]]),
                           (0.75, 1.15): np.array([[-0.2, -0.2, 0.25, 0.25],
                                           [.4, -.4, .4, -.4]]),
                           (1.15, 1.85): np.array([[-0.35, -0.35, 0.25, 0.25],
+                                          [.4, -.4, .4, -.4]])
+                          }
+
+DEFAULT_CONTACT_SLICES = {(0.05, 0.3): np.array([[-0.13, -0.13, 0.13, 0.13],
+                                          [0.0562, -0.0562, 0.0562, -0.0562]]),
+                          (0.3, .75): np.array([[-0.13, -0.13, 0.25, 0.25],
+                                          [.25, -.25, .25, -.25]]),
+                          (0.75, 1.05): np.array([[-0.2, -0.2, 0.25, 0.25],
+                                          [.4, -.4, .4, -.4]]),
+                          (1.05, 1.85): np.array([[-0.35, -0.35, 0.28, 0.28],
                                           [.4, -.4, .4, -.4]])
                           }
 
@@ -74,7 +88,8 @@ class IRISInterface:
         A_bounds, b_bounds = self.getBoundingPolytope(start)
         c_obs = self.getCObs(start, self.obs_pts_xy, A_bounds, b_bounds)
         A, b, C, d, results = inflate_region(c_obs, A_bounds, b_bounds, start, **kwargs)
-        return SafeTerrainRegion(A, b, C, d, pose)
+        point, normal = get_point_and_normal(pose)
+        return SafeTerrainRegion(A, b, C, d, point, normal)
 
     def getBoundingPolytope(self, start):
         """
@@ -149,7 +164,7 @@ class PolygonSegmentationNonIRIS(IRISInterface):
 
     def findSafeRegion(self, pose):
         pose = np.asarray(pose)
-        t = ddapp.transformUtils.frameFromPositionAndRPY([0,0,0], pose[3:] * 180 / np.pi)
+        t = transformUtils.frameFromPositionAndRPY([0,0,0], pose[3:] * 180 / np.pi)
 
         contact_pts_on_plane = np.zeros((2, self.bot_pts.shape[1]))
         for j in range(self.bot_pts.shape[1]):
@@ -187,9 +202,10 @@ class PolygonSegmentationNonIRIS(IRISInterface):
             # Use cddlib to simplify our polyhedral representation
             self.c_space_polyhedron = Vrep(generators)
 
+            point, normal = get_point_and_normal(pose)
             return SafeTerrainRegion(self.c_space_polyhedron.A,
                                      self.c_space_polyhedron.b,
-                                     [], [], pose)
+                                     [], [], point, normal)
         else:
             # system is inconsitent, return None
             return None
@@ -215,6 +231,33 @@ class PolygonSegmentationNonIRIS(IRISInterface):
             V = V + samples[:2, i].reshape((2,1))
             plt.plot(V[0,:], V[1,:], 'k-')
         plt.show()
+
+
+class IRISLCMInterface(IRISInterface):
+    def __init__(self, depth_provider, request_channel='IRIS_REGION_REQUEST',
+                 response_channel='IRIS_REGION_RESPONSE',
+                 bounding_box_width=2):
+        self.depth_provider = depth_provider
+        self.bounding_box_width = bounding_box_width
+        self.request_channel = request_channel
+        self.response_channel = response_channel
+
+    def findSafeRegion(self, pose, **kwargs):
+        A_bounds, b_bounds = self.getBoundingPolytope(pose[[0,1,5]])
+        msg = lcmdrc.iris_region_request_t()
+        msg.utime = getUtime();
+        msg.view_id = lcmdrc.data_request_t.HEIGHT_MAP_SCENE
+        msg.map_id = self.depth_provider.reader.GetCurrentMapId(msg.view_id)
+        msg.num_seed_poses = 1
+        msg.seed_poses = [transformUtils.positionMessageFromFrame(transformUtils.frameFromPositionAndRPY(pose[:3], [math.degrees(r) for r in pose[3:]]))]
+        msg.xy_bounds = [irisUtils.encodeLinCon(A_bounds, b_bounds)]
+        response = self.sendIRISRegionRequest(msg)
+        print response
+        return SafeTerrainRegion.from_iris_region_t(response.iris_regions[0])
+
+    def sendIRISRegionRequest(self, request, waitTimeout=5000):
+        return lcmUtils.MessageResponseHelper.publishAndWait(self.request_channel,
+            request, self.response_channel, lcmdrc.iris_region_response_t, waitTimeout)
 
 
 class TerrainSegmentation(IRISInterface):
@@ -255,7 +298,8 @@ class TerrainSegmentation(IRISInterface):
                 # import pdb; pdb.set_trace()
 
         A, b, C, d, results = inflate_region(c_obs, A_bounds, b_bounds, start, **kwargs)
-        return SafeTerrainRegion(A, b, C, d, pose)
+        point, normal = get_point_and_normal(pose)
+        return SafeTerrainRegion(A, b, C, d, point, normal)
 
     def getCObs(self, start, obs_pts, A_bounds, b_bounds, bot=None, theta_steps=8):
 
@@ -300,6 +344,13 @@ class TerrainSegmentation(IRISInterface):
     def px2world_2x3(self):
         return self.px2world[:2,[0,1,3]]
 
+
+def get_point_and_normal(pose):
+    point = pose[:3]
+    normal = rpy2rotmat(pose[3:]).dot([0,0,1])
+    return point, normal
+
+
 class SafeTerrainRegion:
     __slots__ = ['A', 'b', 'C', 'd','pose']
     """
@@ -309,27 +360,23 @@ class SafeTerrainRegion:
         C, d: ellipsoidal constraints on [x,y,z,yaw] of the center of the foot. Not currently used.
         pose: a pose on the terrain within the region, from which we extract a plane. [x;y;z;roll;pitch;yaw]
     """
-    def __init__(self, A, b, C, d, pose):
+    def __init__(self, A, b, C, d, point, normal):
         self.A = A
         self.b = b
         self.C = C
         self.d = d
-        self.pose = pose
+        self.point = point
+        self.normal = normal
 
     def to_iris_region_t(self):
-        msg = drc.iris_region_t()
+        msg = lcmdrc.iris_region_t()
         msg.lin_con = self.to_lin_con_t()
-        msg.point = self.pose[:3]
-        msg.normal = rpy2rotmat(self.pose[3:]).dot([0,0,1])
+        msg.point = self.point
+        msg.normal = self.normal
         return msg
 
     def to_lin_con_t(self):
-        msg = drc.lin_con_t()
-        msg.m = self.A.shape[0]
-        msg.n = self.A.shape[1]
-        msg.m_times_n = msg.m * msg.n
-        msg.A = self.A.flatten(order='F') # column-major
-        msg.b = self.b
+        msg = irisUtils.encodeLinCon(self.A, self.b)
         return msg
 
     def xy_polytope(self):
@@ -343,6 +390,17 @@ class SafeTerrainRegion:
         else:
             # print "Infeasible polytope"
             return np.zeros((2,0))
+
+    @staticmethod
+    def from_iris_region_t(msg):
+        A, b = irisUtils.decodeLinCon(msg.lin_con)
+        C = []
+        d = []
+        point = msg.point
+        normal = msg.normal
+        return SafeTerrainRegion(A, b, C, d, point, normal)
+
+
 
 
 def mat_interface(fname):
