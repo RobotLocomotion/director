@@ -466,7 +466,9 @@ def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpend
         return polyData, normal
 
 
-
+def flipNormalsWithViewDirection(polyData, viewDirection):
+    normals = vnp.getNumpyFromVtk(polyData, 'normals')
+    normals[np.dot(normals, viewDirection) > 0] *= -1
 
 
 def normalEstimation(dataObj, searchCloud=None, searchRadius=0.05, useVoxelGrid=False, voxelGridLeafSize=0.05):
@@ -481,6 +483,7 @@ def normalEstimation(dataObj, searchCloud=None, searchRadius=0.05, useVoxelGrid=
     f.Update()
     dataObj = shallowCopy(f.GetOutput())
     dataObj.GetPointData().SetNormals(dataObj.GetPointData().GetArray('normals'))
+
     return dataObj
 
 
@@ -1555,7 +1558,15 @@ def applyDiskGlyphs(polyData):
     return shallowCopy(glyph.GetOutput())
 
 
-def applyArrowGlyphs(polyData):
+def applyArrowGlyphs(polyData, computeNormals=True, voxelGridLeafSize=0.03, normalEstimationSearchRadius=0.05, arrowSize=0.02):
+
+    polyData = applyVoxelGrid(polyData, leafSize=0.02)
+
+    if computeNormals:
+        voxelData = applyVoxelGrid(polyData, leafSize=voxelGridLeafSize)
+        polyData = normalEstimation(polyData, searchRadius=normalEstimationSearchRadius, searchCloud=voxelData)
+        polyData = removeNonFinitePoints(polyData, 'normals')
+        flipNormalsWithViewDirection(polyData, SegmentationContext.getGlobalInstance().getViewDirection())
 
     assert polyData.GetPointData().GetNormals()
 
@@ -1563,7 +1574,7 @@ def applyArrowGlyphs(polyData):
     arrow.Update()
 
     glyph = vtk.vtkGlyph3D()
-    glyph.SetScaleFactor(0.015)
+    glyph.SetScaleFactor(arrowSize)
     glyph.SetSource(arrow.GetOutput())
     glyph.SetInput(polyData)
     glyph.SetVectorModeToUseNormal()
