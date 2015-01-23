@@ -323,7 +323,7 @@ class PlaybackPanel(object):
         else:
             self.viewModeChanged()
 
-        if self.autoPlay:
+        if self.autoPlay and self.widget.parent() is not None:
             self.widget.parent().show()
 
 

@@ -807,4 +807,5 @@ class ViewBehaviors(object):
         handFactory = _handFactory
         footstepsDriver = _footstepsDriver
         neckDriver = _neckDriver
-        robotLinkSelector = RobotLinkSelector()
+        if app.getMainWindow() is not None:
+            robotLinkSelector = RobotLinkSelector()
