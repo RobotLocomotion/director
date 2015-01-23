@@ -557,6 +557,10 @@ def showRightClickMenu(displayPoint, view):
         om.setActiveObject(obj)
         pickedObj.setProperty('Visible', False)
 
+    def onArrowGlyph():
+        result = segmentation.applyArrowGlyphs(pointCloudObj.polyData)
+        obj = vis.showPolyData(result, 'disks')
+
     def onSegmentationEditor():
         segmentationpanel.activateSegmentationMode(pointCloudObj.polyData)
 
@@ -601,6 +605,7 @@ def showRightClickMenu(displayPoint, view):
             ('Segment Drill Aligned', onSegmentDrillAlignedWithTable),
             ('Local Plane Fit', onLocalPlaneFit),
             ('Orient with Horizontal', onOrientToMajorPlane),
+            ('Arrow Glyph', onArrowGlyph),
             ('Disk Glyph', onDiskGlyph),
             ('Cache Pick Point', onCachePickedPoint),
             (None, None),
