@@ -47,6 +47,7 @@ from ddapp import drakevisualizer
 from ddapp.fieldcontainer import FieldContainer
 from ddapp import robotstate
 from ddapp import roboturdf
+from ddapp import robotsystem
 from ddapp import filterUtils
 from ddapp import footstepsdriver
 from ddapp import footstepsdriverpanel
@@ -114,6 +115,11 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
+robotSystem = {}
+robotsystem.create(view, robotSystem)
+globals().update(robotSystem)
+
+
 useIk = True
 useAtlasConvexHull = False
 useRobotState = True
@@ -126,7 +132,7 @@ useHands = True
 usePlanning = True
 useAtlasDriver = True
 useLCMGL = True
-useLightColorScheme = False
+useLightColorScheme = True
 useLoggingWidget = True
 useDrakeVisualizer = True
 useNavigationPanel = True
@@ -144,13 +150,7 @@ usePFGrasp = True
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 
-with open(drcargs.args().directorConfigFile) as directorConfigFile:
-    directorConfig = json.load(directorConfigFile)
-    directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
-    fixedPointFile = os.path.join(directorConfigDirectory, directorConfig['fixedPointFile'])
-    urdfConfig = directorConfig['urdfConfig']
-    for key, urdf in list(urdfConfig.items()):
-        urdfConfig[key] = os.path.join(directorConfigDirectory, urdf)
+
 
 
 if useSpreadsheet:
@@ -158,43 +158,18 @@ if useSpreadsheet:
 
 
 if useIk:
-
-    ikRobotModel, ikJointController = roboturdf.loadRobotModel('ik model', view, parent='IK Server', urdfFile=urdfConfig['ik'], color=roboturdf.getRobotOrangeColor(), visible=False)
-    ikJointController.addPose('q_end', ikJointController.getPose('q_nom'))
-    ikJointController.addPose('q_start', ikJointController.getPose('q_nom'))
-    om.removeFromObjectModel(om.findObjectByName('IK Server'))
-
-    ikServer = ik.AsyncIKCommunicator(urdfConfig['ik'], fixedPointFile)
     ikServer.outputConsole = app.getOutputConsole()
     ikServer.infoFunc = app.displaySnoptInfo
-
-    def startIkServer():
-        ikServer.startServerAsync()
-        ikServer.comm.writeCommandsToLogFile = True
-
     startIkServer()
 
-
 if useAtlasDriver:
-    atlasDriver = atlasdriver.init(app.getOutputConsole())
-    atlasdriverpanel.init(atlasdriver.driver)
+    atlasdriver.systemStatus.outputConsole = app.getOutputConsole()
+    atlasdriverpanel.init(atlasDriver)
 
-
-if useRobotState:
-    robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, urdfFile=urdfConfig['robotState'], parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
-    robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_nom'))
-    roboturdf.startModelPublisherListener([(robotStateModel, robotStateJointController)])
-    robotStateJointController.addLCMUpdater('EST_ROBOT_STATE')
-
-    segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
-
-    def getNeckPitch():
-        return robotStateJointController.q[robotstate.getDrakePoseJointNames().index('neck_ay')]
 
 
 if usePerception:
 
-    multisenseDriver, mapServerSource = perception.init(view)
     segmentationpanel.init()
     cameraview.init()
     colorize.init()
@@ -211,8 +186,6 @@ if usePerception:
     def createPointerTracker():
         return trackers.PointerTracker(robotStateModel, disparityPointCloud)
 
-    neckDriver = perception.NeckDriver(view, getNeckPitch)
-
 
 if useGrid:
     vis.showGrid(view, color=[0,0,0] if useLightColorScheme else [1,1,1], useSurface=useLightColorScheme)
@@ -223,15 +196,11 @@ om.addToObjectModel(vis.ViewOptionsItem(view), parentObj=om.findObjectByName('se
 if useLightColorScheme:
     app.setBackgroundColor([0.3, 0.3, 0.35], [0.95,0.95,1])
 
-
 if useHands:
-    rHandDriver = handdriver.RobotiqHandDriver(side='right')
-    lHandDriver = handdriver.RobotiqHandDriver(side='left')
     handcontrolpanel.init(lHandDriver, rHandDriver, robotStateModel)
 
 
 if useFootsteps:
-    footstepsDriver = footstepsdriver.FootstepsDriver(robotStateJointController)
     footstepsPanel = footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController, mapServerSource)
 
 
@@ -244,18 +213,6 @@ if useDrakeVisualizer:
 
 
 if usePlanning:
-
-    playbackRobotModel, playbackJointController = roboturdf.loadRobotModel('playback model', view, urdfFile=urdfConfig['playback'], parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
-    teleopRobotModel, teleopJointController = roboturdf.loadRobotModel('teleop model', view, urdfFile=urdfConfig['teleop'], parent='planning', color=roboturdf.getRobotOrangeColor(), visible=False)
-
-    if useAtlasConvexHull:
-        chullRobotModel, chullJointController = roboturdf.loadRobotModel('convex hull atlas', view, urdfFile=urdfConfig['chull'], parent='planning',
-            color=roboturdf.getRobotOrangeColor(), visible=False)
-        playbackJointController.models.append(chullRobotModel)
-
-
-    manipPlanner = robotplanlistener.ManipulationPlanDriver()
-    planPlayback = planplayback.PlanPlayback()
 
 
     def showPose(pose):
@@ -388,14 +345,8 @@ if usePlanning:
     def drillTrackerOff():
         om.findObjectByName('Multisense').model.showRevolutionCallback = None
 
-    if 'l_hand' in robotStateModel.model.getLinkNames():
-        handFactory = roboturdf.HandFactory(robotStateModel)
-        handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
-    else:
-        handFactory = None
-        handModels = []
 
-    ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)
+
     ikPlanner.addPostureGoalListener(robotStateJointController)
 
 
@@ -455,27 +406,6 @@ if usePlanning:
 
     for obj in om.getObjects():
         obj.setProperty('Deletable', False)
-
-
-if useActionManager:
-
-    from ddapp import actionmanagerpanel
-    from actionmanager import actionmanager
-
-    actionManager = actionmanager.ActionManager(objectModel = om,
-                                                robotModel = robotStateModel,
-                                                sensorJointController = robotStateJointController,
-                                                playbackFunction = playPlans,
-                                                manipPlanner = manipPlanner,
-                                                ikPlanner = ikPlanner,
-                                                footstepPlanner = footstepsDriver,
-                                                handDriver = lHandDriver,
-                                                atlasDriver = atlasdriver.driver,
-                                                multisenseDriver = perception.multisenseDriver,
-                                                affordanceServer = None,
-                                                fsmDebug = True)
-
-    ampanel = actionmanagerpanel.init(actionManager)
 
 
 if useNavigationPanel:
@@ -659,7 +589,6 @@ def disableArmEncoders():
 app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
 viewBehaviors = viewbehaviors.ViewBehaviors(view)
-viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver, neckDriver)
 
 
 # Drill Demo Functions for in-image rendering:
