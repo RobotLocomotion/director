@@ -6,16 +6,14 @@ import ddapp.objectmodel as om
 import ddapp.visualization as vis
 import ddapp.vtkNumpy as vnp
 from scipy.spatial.qhull import QhullError
-from ddapp import transformUtils
 from ddapp import filterUtils
 from ddapp import segmentation
 from ddapp.debugVis import DebugData
-# from ddapp import vtkAll as vtk
 from ddapp.pointpicker import PlacerWidget
 from PythonQt import QtGui
 
 class TerrainRegionItem(vis.PolyDataItem):
-    def __init__(self, name, view, seed_pose, terrain_segmentation):
+    def __init__(self, name, view, seed_pose, irisDriver):
 
         d = DebugData()
         vis.PolyDataItem.__init__(self, name, d.getPolyData(), view)
@@ -54,7 +52,7 @@ class TerrainRegionItem(vis.PolyDataItem):
             self.frameObj.setProperty('Visible', True)
 
 
-        self.terrain_segmentation = terrain_segmentation
+        self.driver = irisDriver
         self.safe_region = None
         self.addProperty('Visible', True)
         self.addProperty('Enabled for Walking', True)
@@ -67,12 +65,9 @@ class TerrainRegionItem(vis.PolyDataItem):
         self.setProperty('Alpha', 0.5)
         self.setProperty('Color', QtGui.QColor(220,220,220))
 
-    def onFrameModified(self, frame):
-        pos, wxyz = transformUtils.poseFromTransform(frame.transform)
-        rpy = transformUtils.rollPitchYawFromTransform(frame.transform)
-        pose = np.hstack((pos, rpy))
+    def onNewRegion(self, safe_region):
         debug = DebugData()
-        safe_region = self.terrain_segmentation.findSafeRegion(pose, iter_limit=2)
+        pos = safe_region.point
         try:
             xy_verts = safe_region.xy_polytope()
             if xy_verts.shape[1] == 0:
@@ -96,6 +91,10 @@ class TerrainRegionItem(vis.PolyDataItem):
             self.safe_region = safe_region
         except QhullError:
             print "Could not generate convex hull (polytope is likely unbounded)."
+
+
+    def onFrameModified(self, frame):
+        self.driver.requestIRISRegion(frame.transform, self.onNewRegion)
 
     def _onPropertyChanged(self, propertySet, propertyName):
         vis.PolyDataItem._onPropertyChanged(self, propertySet, propertyName)

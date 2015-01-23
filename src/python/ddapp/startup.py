@@ -3,14 +3,6 @@
 
 import ddapp
 
-# Stupid hack: if we try to import mosek *after* importing pypm, then it will fail with:
-# ImportError: Failed to import dll "libmosekxx7_0.so"
-# But if we import mosek.fusion first, then we can import pypm later and everything will be fine.
-try:
-    import mosek.fusion
-except ImportError:
-    pass
-
 import os
 import sys
 import PythonQt
@@ -201,7 +193,7 @@ if useHands:
 
 
 if useFootsteps:
-    footstepsPanel = footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController, mapServerSource)
+    footstepsPanel = footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController, irisDriver)
 
 
 if useLCMGL:
