@@ -357,7 +357,7 @@ class FootstepsDriver(object):
             allTransforms.append(footstepTransform)
 
 
-            if i < 2:
+            if i < 1:
                 continue
 
             if footstep.is_right_foot:

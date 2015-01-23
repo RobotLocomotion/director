@@ -13,7 +13,7 @@ from ddapp import vtkNumpy as vnp
 
 try:
     import mosek
-    from ddapp.terrain import TerrainSegmentation
+    from ddapp.terrain import TerrainSegmentation, IRISLCMInterface
     _mosekEnabled = True
 except ImportError:
     print "Warning: mosek python bindings not found. Terrain segmentation disabled."
@@ -57,8 +57,8 @@ class FootstepsPanel(object):
 
         self.depth_provider = mapServerSource
         if _mosekEnabled:
-            self.terrain_segmentation = TerrainSegmentation(bounding_box_width=2)
-            self.driver.contact_slices = self.terrain_segmentation.contact_slices
+            self.terrain_segmentation = IRISLCMInterface(self.depth_provider,bounding_box_width=2)
+            # self.driver.contact_slices = self.terrain_segmentation.contact_slices
         else:
             self.terrain_segmentation = None
         self.region_seed_frames = []
@@ -102,7 +102,7 @@ class FootstepsPanel(object):
                 world2px = np.eye(4)
             heights[np.isinf(heights)] = np.nan
             px2world = np.linalg.inv(world2px)
-            self.terrain_segmentation.setHeights(heights, px2world)
+            # self.terrain_segmentation.setHeights(heights, px2world)
 
             t = self.newWalkingGoalFrame(self.robotModel, distanceForward=0.5)
             view = app.getCurrentRenderView()
