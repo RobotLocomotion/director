@@ -3,8 +3,10 @@ set(python_files
   ddapp/actionhandlers.py
   ddapp/actionmanagerpanel.py
   ddapp/affordance.py
+  ddapp/affordancecollection.py
   ddapp/affordancegraspupdater.py
   ddapp/affordanceitems.py
+  ddapp/affordancemanager.py
   ddapp/applogic.py
   ddapp/asynctaskqueue.py
   ddapp/atlasdriver.py

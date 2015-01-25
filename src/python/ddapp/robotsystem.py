@@ -42,6 +42,8 @@ from ddapp import multisensepanel
 from ddapp import navigationpanel
 from ddapp import handcontrolpanel
 from ddapp import sensordatarequestpanel
+from ddapp import affordancecollection
+from ddapp import affordancemanager
 
 from ddapp import robotplanlistener
 from ddapp import handdriver
@@ -186,6 +188,9 @@ class RobotSystem(object):
             tableDemo = tabledemo.TableDemo(robotStateModel, None,
                             ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                             perception.multisenseDriver, view, robotStateJointController)
+
+            affordanceCollection = affordancecollection.AffordanceCollection()
+            affordanceObjectManager = affordancemanager.AffordanceObjectModelManager(affordanceCollection, view)
 
 
         applogic.resetCamera(viewDirection=[-1,0,0], view=view)
