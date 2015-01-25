@@ -33,9 +33,9 @@ segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
 
 def processSingleBlock(robotStateModel, whichFile=0):
     if (whichFile == 0):
-        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/table_top_45.vtp'))
+        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'tabletop/table_top_45.vtp'))
     else:
-        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/block_top.vtp'))
+        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'terrain/block_top.vtp'))
 
     standingFootName = 'l_foot'
     standingFootFrame = robotStateModel.getLinkFrame(standingFootName)
@@ -48,10 +48,10 @@ def processSnippet():
     om.getOrCreateContainer('cont debug', obj)
 
     if (continuouswalkingDemo.processContinuousStereo):
-        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'stereo/block_snippet_stereo.vtp'))
+        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'terrain/block_snippet_stereo.vtp'))
         polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
     else:
-        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/block_snippet.vtp'))
+        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'terrain/block_snippet.vtp'))
 
 
     vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='continuous')

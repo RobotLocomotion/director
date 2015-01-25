@@ -27,7 +27,7 @@ robotStateJointController.push()
 
 # load poly data
 dataDir = app.getTestingDataDirectory()
-polyData = ioUtils.readPolyData(os.path.join(dataDir, 'lidar/table-and-bin-scene.vtp'))
+polyData = ioUtils.readPolyData(os.path.join(dataDir, 'tabletop/table-and-bin-scene.vtp'))
 vis.showPolyData(polyData, 'pointcloud snapshot')
 
 #segmentation.segmentTableScene(polyData, [-1.58661389,  2.91242337,  0.79958105] )
