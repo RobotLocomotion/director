@@ -52,6 +52,20 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
 
 
 def loadFootMeshes():
+    return loadValkyrieFootMeshes()
+    #return loadAtlasFootMeshes()
+
+
+def loadValkyrieFootMeshes():
+    meshDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/V1/models/V1/meshes/2013_05_16')
+    meshes = []
+    for foot in ['Left', 'Right']:
+        d = DebugData()
+        d.addPolyData(ioUtils.readPolyData(os.path.join(meshDir, 'lj6_%s.stl' % foot), computeNormals=True))
+        meshes.append(d.getPolyData())
+    return meshes
+
+def loadAtlasFootMeshes():
     meshDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/meshes')
     meshes = []
     for foot in ['l', 'r']:
