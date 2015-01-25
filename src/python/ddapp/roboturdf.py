@@ -29,7 +29,7 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
 
 
 
-defaultUrdfHands = 'LR_RR'
+defaultUrdfHands = 'LV_RV'
 
 
 def getRobotGrayColor():
@@ -304,9 +304,11 @@ class HandFactory(object):
           'LR' : 'left_robotiq',
           'LP' : 'left_pointer',
           'LI' : 'left_irobot',
+          'LV' : 'left_valkyrie',
           'RR' : 'right_robotiq',
           'RP' : 'right_pointer',
           'RI' : 'right_irobot',
+          'RV' : 'left_valkyrie',
           }
 
         if not defaultLeftHandType:
@@ -411,6 +413,19 @@ class HandLoader(object):
             handRootLink = '%s_base_link' % self.side
             robotMountLink = '%s_hand_force_torque' % self.side[0]
             palmLink = '%s_pointer_tip' % self.side
+
+
+        elif self.handType == 'valkyrie':
+
+            self.robotUrdf = 'model_LV_RV.urdf'
+            self.handLinkName = '%s_hand' % self.side[0]
+            self.handUrdf = 'valkyrie_hand_%s.urdf' % self.side
+            self.handJointName = '%s_valkyrie_hand_joint' % self.side
+
+            handRootLink = '%s_palm' % self.side
+            robotMountLink = '%s_hand_force_torque' % self.side[0]
+            palmLink = '%s_hand_face' % self.side[0]
+
 
         else:
             raise Exception('Unexpected hand type: %s' % self.handType)
