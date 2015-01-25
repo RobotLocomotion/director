@@ -81,6 +81,7 @@ set(python_files
   ddapp/transformUtils.py
   ddapp/trackers.py
   ddapp/utime.py
+  ddapp/uuidutil.py
   ddapp/valvedemo.py
   ddapp/viewbehaviors.py
   ddapp/visualization.py
