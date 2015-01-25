@@ -23,13 +23,10 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
     directorConfig = json.load(directorConfigFile)
     directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
     fixedPointFile = os.path.join(directorConfigDirectory, directorConfig['fixedPointFile'])
+    handCombination = directorConfig['handCombination']
     urdfConfig = directorConfig['urdfConfig']
     for key, urdf in list(urdfConfig.items()):
         urdfConfig[key] = os.path.join(directorConfigDirectory, urdf)
-
-
-
-defaultUrdfHands = 'LV_RV'
 
 
 def getRobotGrayColor():
@@ -312,9 +309,9 @@ class HandFactory(object):
           }
 
         if not defaultLeftHandType:
-            defaultLeftHandType = handTypesMap[defaultUrdfHands.split('_')[0]]
+            defaultLeftHandType = handTypesMap[handCombination.split('_')[0]]
         if not defaultRightHandType:
-            defaultRightHandType = handTypesMap[defaultUrdfHands.split('_')[1]]
+            defaultRightHandType = handTypesMap[handCombination.split('_')[1]]
 
         self.robotModel = robotModel
         self.loaders = {}
