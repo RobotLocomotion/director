@@ -1,7 +1,6 @@
 import ddapp.objectmodel as om
 from ddapp import affordance
 from ddapp.visualization import PolyDataItem
-from ddapp.affordancelistener import listener as affListener
 from ddapp import vtkAll as vtk
 import numpy as np
 
@@ -10,9 +9,6 @@ class AffordanceItem(PolyDataItem):
     def __init__(self, name, polyData, view):
         PolyDataItem.__init__(self, name, polyData, view)
         self.params = {}
-        affListener.registerAffordance(self)
-        self.addProperty('uid', 0, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=1e6, singleStep=1, hidden=False))
-        self.addProperty('Server updates enabled', False)
 
     def publish(self):
         pass
@@ -27,19 +23,9 @@ class AffordanceItem(PolyDataItem):
         else:
             PolyDataItem.onAction(self, action)
 
-    def onServerAffordanceUpdate(self, serverAff):
-        if not self.params.get('uid'):
-            self.params['uid'] = serverAff.uid
-            self.setProperty('uid', serverAff.uid)
-
-        if self.getProperty('Server updates enabled'):
-            quat = transformUtils.botpy.roll_pitch_yaw_to_quat(serverAff.origin_rpy)
-            t = transformUtils.transformFromPose(serverAff.origin_xyz, quat)
-            self.actor.GetUserTransform().SetMatrix(t.GetMatrix())
 
     def onRemoveFromObjectModel(self):
         PolyDataItem.onRemoveFromObjectModel(self)
-        affListener.unregisterAffordance(self)
 
 
 

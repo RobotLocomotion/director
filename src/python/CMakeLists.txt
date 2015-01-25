@@ -5,7 +5,6 @@ set(python_files
   ddapp/affordance.py
   ddapp/affordancegraspupdater.py
   ddapp/affordanceitems.py
-  ddapp/affordancelistener.py
   ddapp/applogic.py
   ddapp/asynctaskqueue.py
   ddapp/atlasdriver.py
