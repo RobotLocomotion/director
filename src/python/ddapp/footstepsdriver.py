@@ -33,12 +33,12 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
     directorConfig = json.load(directorConfigFile)
     directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
 
-    _footMeshFiles=[]
-    _footMeshFiles.append( directorConfig['leftFootMeshFiles'] )
-    _footMeshFiles.append( directorConfig['rightFootMeshFiles'] )
-    for j in range(0,2):
-        for i in range(len(_footMeshFiles[j])):
-            _footMeshFiles[j][i] = os.path.join(directorConfigDirectory, _footMeshFiles[j][i])
+    if 'leftFootMeshFiles' in directorConfig:
+        _footMeshFiles.append( directorConfig['leftFootMeshFiles'] )
+        _footMeshFiles.append( directorConfig['rightFootMeshFiles'] )
+        for j in range(0,2):
+            for i in range(len(_footMeshFiles[j])):
+                _footMeshFiles[j][i] = os.path.join(directorConfigDirectory, _footMeshFiles[j][i])
 
 
 DEFAULT_PARAM_SET = 'drake'

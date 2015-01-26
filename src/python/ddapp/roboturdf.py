@@ -23,7 +23,7 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
     directorConfig = json.load(directorConfigFile)
     directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
     fixedPointFile = os.path.join(directorConfigDirectory, directorConfig['fixedPointFile'])
-    handCombination = directorConfig['handCombination']
+    handCombination = directorConfig.get('handCombination')
     urdfConfig = directorConfig['urdfConfig']
     for key, urdf in list(urdfConfig.items()):
         urdfConfig[key] = os.path.join(directorConfigDirectory, urdf)
