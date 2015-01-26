@@ -45,7 +45,11 @@ class Board(object):
         self.buttonFrame = None
         self.bitFrame = None
         self.graspFrame = None
+        self.graspLeftFrame = None
+        self.graspRightFrame = None
         self.reachFrame = None
+        self.reachLeftFrame = None
+        self.reachRightFrame = None
 
         self.drillToButtonTransform = None # used for turning on the drill
         self.drillToBitTransform = None # used for cutting with the drill
@@ -57,7 +61,10 @@ class Board(object):
         self.initRPY = [1,1,1]
 
         self.graspLeftHandFrameXYZ = [-0.045, 0.0, -0.35] #-0.0275
-        self.graspLeftHandFrameRPY = [0, -90, -90]
+        self.graspLeftHandFrameRPY = [0, 90, -90]
+        
+        self.graspRightHandFrameXYZ = [-0.045, 0.0, 0.35]
+        self.graspRightHandFrameRPY = [0, 90, -90]
 
         # where to stand relative to the drill on a table:
         self.relativeStanceXYZ = [-0.69, -0.4, 0.0] # was -0.67, due to drift set to -0.69
@@ -91,6 +98,11 @@ class BihandedPlannerDemo(object):
         self.drillYawSliderValue = 0.0
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
+        board = om.findObjectByName('board')
+        while board is not None:
+            om.removeFromObjectModel(board)
+            board = om.findObjectByName('board')
+            
         defaultGraspingHand = "left"
         self.setGraspingHand(defaultGraspingHand)
 
@@ -99,7 +111,7 @@ class BihandedPlannerDemo(object):
         self.visOnly = False # True for development, False for operation
         self.planFromCurrentRobotState = True # False for development, True for operation
         self.usePointerPerceptionOffset = True # True for development, False for operation
-        useDevelopment = False
+        useDevelopment = True
         if (useDevelopment):
             self.visOnly = True # True for development, False for operation
             self.planFromCurrentRobotState = False # False for development, True for operation
@@ -110,7 +122,7 @@ class BihandedPlannerDemo(object):
         self.userPromptEnabled = True
         self.constraintSet = None
 
-        self.plans = []
+        self.plans = []   
 
         self.board = Board()
 
@@ -131,43 +143,6 @@ class BihandedPlannerDemo(object):
             self.board.initXYZ[1] = -self.board.initXYZ[1]
             #self.board.faceToDrillFlip = True
 
-
-    def onImageViewDoubleClick(self, displayPoint, modifiers, imageView):
-
-        if modifiers != QtCore.Qt.ControlModifier:
-            return
-
-        imagePixel = imageView.getImagePixel(displayPoint)
-        cameraPos, ray = imageView.getWorldPositionAndRay(imagePixel)
-
-
-        polyData = segmentation.getDisparityPointCloud(decimation=1, removeOutliers=False)
-        pickPoint = segmentation.extractPointsAlongClickRay(cameraPos, ray, polyData)
-
-        buttonT = vtk.vtkTransform()
-        buttonT.Translate(pickPoint)
-
-        d = DebugData()
-        d.addSphere((0,0,0), radius=0.005)
-        obj = vis.updatePolyData(d.getPolyData(), 'sensed drill button', parent='segmentation', color=[1,0,0])
-        obj.actor.SetUserTransform(buttonT)
-
-
-        om.findObjectByName('intersecting ray').setProperty('Visible', False)
-        om.findObjectByName('ray points').setProperty('Visible', False)
-
-        if self.pointerTracker:
-            self.pointerTracker.updateFit(polyData)
-            pointerTip = self.pointerTracker.getPointerTip()
-            t = vtk.vtkTransform()
-            t.Translate(pointerTip)
-            d.addSphere((0,0,0), radius=0.005)
-            obj = vis.updatePolyData(d.getPolyData(), 'sensed pointer tip', parent='segmentation', color=[1,0,0])
-            obj.actor.SetUserTransform(t)
-
-        self.updateDrillToHand()
-
-
     def updateDrillToHand(self):
 
         om.removeFromObjectModel(om.findObjectByName('drill'))
@@ -187,7 +162,16 @@ class BihandedPlannerDemo(object):
             self.pointerHand='right'
         else:
             self.pointerHand='left'
-
+        
+        if om.findObjectByName('board') is not None:           
+            if (self.graspingHand == 'left'):
+                self.board.reachFrame = self.board.reachLeftFrame
+                self.board.graspFrame = self.board.graspLeftFrame
+            else:
+                self.board.reachFrame = self.board.reachRightFrame
+                self.board.graspFrame = self.board.graspRightFrame
+            
+            
     def resetDrill(self):
         self.drill = Drill()
 
@@ -255,7 +239,7 @@ class BihandedPlannerDemo(object):
 
         return robotStance
 
-    ### Drill Focused Functions ######################################################################
+    ### Board Focused Functions ######################################################################
     def computeConvenientDrillFrame(self, robotModel):
         # makes a drill in front of the robot
         # drill further away - requires walking
@@ -268,53 +252,57 @@ class BihandedPlannerDemo(object):
         return t
 
 
-    def computeLeftHandBoardGraspFrame(self):
+    def computeBoardGraspFrames(self):
         t = transformUtils.frameFromPositionAndRPY( self.board.graspLeftHandFrameXYZ , self.board.graspLeftHandFrameRPY )
         t_copy = transformUtils.copyFrame(t)
         t_copy.Concatenate(self.board.frame.transform)
-        self.board.graspFrame = vis.updateFrame(t_copy, 'grasp frame', parent=self.board.affordance, visible=False, scale=0.2)
-        self.board.graspFrame.addToView(app.getDRCView())
+        self.board.graspLeftFrame = vis.updateFrame(t_copy, 'grasp left frame', parent=self.board.affordance, visible=False, scale=0.2)
+        self.board.graspLeftFrame.addToView(app.getDRCView())
+        
+        t = transformUtils.frameFromPositionAndRPY( self.board.graspRightHandFrameXYZ , self.board.graspRightHandFrameRPY )
+        t_copy = transformUtils.copyFrame(t)
+        t_copy.Concatenate(self.board.frame.transform)
+        self.board.graspRightFrame = vis.updateFrame(t_copy, 'grasp right frame', parent=self.board.affordance, visible=False, scale=0.2)
+        self.board.graspRightFrame.addToView(app.getDRCView())
+        
+        if (self.graspingHand == 'left'):
+            self.board.graspFrame = self.board.graspLeftFrame
+        else:
+            self.board.graspFrame = self.board.graspRightFrame
 
 
-    def computeDrillReachFrame(self):
+    def computeBoardReachFrames(self):
         ''' Reach ~10cm short of the grasp frame '''
-        reachXYZ = copy.deepcopy( self.board.graspLeftHandFrameXYZ )
-        reachXYZ[0] = reachXYZ[0] - self.reachDepth
-        reachRPY = copy.deepcopy ( self.board.graspLeftHandFrameRPY )
+        reachLeftXYZ = copy.deepcopy( self.board.graspLeftHandFrameXYZ )
+        reachLeftXYZ[0] = reachLeftXYZ[0] - self.reachDepth
+        reachLeftRPY = copy.deepcopy ( self.board.graspLeftHandFrameRPY )
 
-        t = transformUtils.frameFromPositionAndRPY( reachXYZ , reachRPY )
+        t = transformUtils.frameFromPositionAndRPY( reachLeftXYZ , reachLeftRPY )
         t.Concatenate(self.board.frame.transform)
-        self.board.reachFrame = vis.updateFrame(t, 'reach frame', parent=self.board.affordance, visible=False, scale=0.2)
-        self.board.reachFrame.addToView(app.getDRCView())
+        self.board.reachLeftFrame = vis.updateFrame(t, 'reach left frame', parent=self.board.affordance, visible=False, scale=0.2)
+        self.board.reachLeftFrame.addToView(app.getDRCView())
+        
+        reachRightXYZ = copy.deepcopy( self.board.graspRightHandFrameXYZ )
+        reachRightXYZ[0] = reachRightXYZ[0] - self.reachDepth
+        reachRightRPY = copy.deepcopy ( self.board.graspRightHandFrameRPY )
 
-    def computeDrillStanceFrame(self):
-        objectTransform = transformUtils.copyFrame( self.board.graspFrame.transform )
+        t = transformUtils.frameFromPositionAndRPY( reachRightXYZ , reachRightRPY )
+        t.Concatenate(self.board.frame.transform)
+        self.board.reachRightFrame = vis.updateFrame(t, 'reach right frame', parent=self.board.affordance, visible=False, scale=0.2)
+        self.board.reachRightFrame.addToView(app.getDRCView())
+        
+        if (self.graspingHand == 'left'):
+            self.board.reachFrame = self.board.reachLeftFrame
+        else:
+            self.board.reachFrame = self.board.reachRightFrame
+
+
+    def computeBoardStanceFrame(self):
+        objectTransform = transformUtils.copyFrame( self.board.graspLeftFrame.transform )
         self.board.relativeStanceTransform = transformUtils.copyFrame( transformUtils.frameFromPositionAndRPY( self.board.relativeStanceXYZ , self.board.relativeStanceRPY ) )
         robotStance = self.computeRobotStanceFrame( objectTransform, self.board.relativeStanceTransform )
         self.board.stanceFrame = vis.updateFrame(robotStance, 'drill stance', parent=self.board.affordance, visible=False, scale=0.2)
         self.board.stanceFrame.addToView(app.getDRCView())
-
-
-    def computeDrillButtonFrame(self):
-        position = [ self.board.affordance.params['button_x'], self.board.affordance.params['button_y'], self.board.affordance.params['button_z'] ]
-        rpy = np.array([ self.board.affordance.params['button_roll'], self.board.affordance.params['button_pitch'], self.board.affordance.params['button_yaw'] ])
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-
-        self.board.drillToButtonTransform = transformUtils.copyFrame( t )
-        t.Concatenate( transformUtils.copyFrame(self.board.frame.transform))
-        self.board.buttonFrame = vis.updateFrame(t, 'drill button', parent=self.board.affordance, visible=False, scale=0.2)
-        self.board.buttonFrame.addToView(app.getDRCView())
-
-
-    def computeDrillBitFrame(self):
-        position = [ self.board.affordance.params['bit_x'], self.board.affordance.params['bit_y'], self.board.affordance.params['bit_z'] ]
-        rpy = np.array([ self.board.affordance.params['bit_roll'], self.board.affordance.params['bit_pitch'], self.board.affordance.params['bit_yaw'] ])
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-
-        self.board.drillToBitTransform = transformUtils.copyFrame(t)
-        t.Concatenate(transformUtils.copyFrame( self.board.frame.transform))
-        self.board.bitFrame = vis.updateFrame(t, 'drill bit', parent=self.board.affordance, visible=False, scale=0.05)
-        self.board.bitFrame.addToView(app.getDRCView())
 
 
     def computeFaceToDrillTransform(self):
@@ -325,24 +313,6 @@ class BihandedPlannerDemo(object):
         rotation, offset, depthOffset, lateralOffset, flip = self.segmentationpanel._segmentationPanel.getDrillInHandParams()
         rotation += self.drillYawSliderValue
         self.board.faceToDrillTransform = segmentation.getDrillInHandOffset(rotation, offset, depthOffset, lateralOffset, flip)
-
-
-    def spawnDrillAffordance(self):
-
-        drillTransform = transformUtils.frameFromPositionAndRPY(self.board.initXYZ, self.board.initRPY)
-        #drillTransform = self.computeConvenientDrillFrame(self.robotModel)
-
-        folder = om.getOrCreateContainer('affordances')
-
-        drillMesh = segmentation.getDrillMesh()
-        params = segmentation.getDrillAffordanceParams(np.array(drillTransform.GetPosition()), [1,0,0], [0,1,0], [0,0,1])
-
-        self.board.affordance = vis.showPolyData(drillMesh, 'drill', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder)
-        self.board.affordance.actor.SetUserTransform(drillTransform)
-        self.board.frame = vis.showFrame(drillTransform, 'drill frame', parent=self.board.affordance, visible=False, scale=0.2)
-        self.board.affordance.setAffordanceParams(params)
-
-        self.findDrillAffordance()
 
 
     def spawnBoardAffordance(self, randomize=False):
@@ -384,35 +354,10 @@ class BihandedPlannerDemo(object):
         self.board.affordance = om.findObjectByName('board')
         self.board.frame = om.findObjectByName('board frame')
 
-        self.computeLeftHandBoardGraspFrame()
-        self.computeDrillReachFrame()
-        self.computeDrillStanceFrame()
+        self.computeBoardGraspFrames()
+        self.computeBoardReachFrames()
+        self.computeBoardStanceFrame()
 
-
-
-
-    def findDrillAffordance(self):
-        '''
-        find an affordance from the view graph - with a populated frame and the param
-        then populate the required frames
-        '''
-        self.board.affordance = om.findObjectByName('drill')
-        self.board.frame = om.findObjectByName('drill frame')
-
-        self.computeLeftHandBoardGraspFrame()
-        self.computeDrillReachFrame()
-        self.computeDrillStanceFrame()
-        self.computeDrillButtonFrame()
-        self.computeDrillBitFrame()
-        self.computeFaceToDrillTransform()
-
-        self.board.frameSync = vis.FrameSync()
-        self.board.frameSync.addFrame(self.board.frame)
-        self.board.frameSync.addFrame(self.board.graspFrame)
-        self.board.frameSync.addFrame(self.board.reachFrame)
-        self.board.frameSync.addFrame(self.board.stanceFrame)
-        self.board.frameSync.addFrame(self.board.buttonFrame)
-        self.board.frameSync.addFrame(self.board.bitFrame)
 
     def moveDrillToHand(self):
         # This function moves the drill to the hand using the pose used for planning
@@ -430,62 +375,7 @@ class BihandedPlannerDemo(object):
         startPose = self.getPlanningStartPose()
         drillTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingFaceLink , startPose) )
 
-
-    def getHandToBit(self, startPose):
-        gazeToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
-
-        handToFaceTransform = vtk.vtkTransform()
-        handToFaceTransform.PostMultiply()
-        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingFaceLink , startPose) )
-        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose).GetLinearInverse() )
-        self.handToFaceTransform = handToFaceTransform
-
-        # planning is done in drill tip frame - which is relative to the hand link:
-        # drill-to-hand = tip-to-drill * drill-to-face * face-to-hand
-        self.computeFaceToDrillTransform()
-        handToBit = vtk.vtkTransform()
-        handToBit.PostMultiply()
-        handToBit.Concatenate( self.board.drillToBitTransform )
-        handToBit.Concatenate( self.board.faceToDrillTransform )
-        handToBit.Concatenate( handToFaceTransform )
-        return handToBit
-
-
-    def getWorldToBit(self, startPose):
-        handToBit = self.getHandToBit(startPose)
-        worldToBit = transformUtils.copyFrame( handToBit)
-        worldToBit.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose)  )
-        return worldToBit
-
-
-    def getHandToButton(self, startPose):
-        gazeToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
-
-        handToFaceTransform = vtk.vtkTransform()
-        handToFaceTransform.PostMultiply()
-        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingFaceLink , startPose) )
-        handToFaceTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose).GetLinearInverse() )
-        self.handToFaceTransform = handToFaceTransform
-
-        # button-to-hand = button-to-drill * drill-to-face * face-to-hand
-        self.computeFaceToDrillTransform()
-        handToButton = vtk.vtkTransform()
-        handToButton.PostMultiply()
-        handToButton.Concatenate( self.board.drillToButtonTransform )
-        handToButton.Concatenate( self.board.faceToDrillTransform )
-        handToButton.Concatenate( handToFaceTransform )
-        return handToButton
-
-
-    def getWorldToButton(self, startPose):
-        handToButton = self.getHandToButton(startPose)
-        worldToButton = transformUtils.copyFrame( handToButton)
-        worldToButton.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose)  )
-        return worldToButton
-
-
-
-    ### End Drill Focused Functions ###############################################################
+    ### End Board Focused Functions ###############################################################
     ### Planning Functions ###############################################################
 
     # is this used?
@@ -537,11 +427,18 @@ class BihandedPlannerDemo(object):
 
     def planReach(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.reachFrame, lockBase=False, lockBack=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.reachFrame, lockBase=True, lockBack=True)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
-
+        
+    def planGrasp(self):
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.graspFrame, lockBase=False, lockBack=True)
+        endPose, info = constraintSet.runIk()
+        graspPlan = constraintSet.runIkTraj()
+        self.addPlan(graspPlan)       
+    '''
     def planGrasp(self):
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.graspFrame, lockBase=False, lockBack=True)
@@ -556,11 +453,9 @@ class BihandedPlannerDemo(object):
         dereachTransform.Concatenate(t3)
         self.placeFrame = vis.updateFrame(placeTransform, 'place frame', parent="affordances", visible=False, scale=0.2)
         self.dereachFrame = vis.updateFrame(dereachTransform, 'dereach frame', parent="affordances", visible=False, scale=0.2)
-
-
+    '''
 
     def planGraspLift(self):
-
         t3 = transformUtils.frameFromPositionAndRPY( [0.00,0.0, 0.04] , [0,0,0] )
         liftTransform = transformUtils.copyFrame(self.board.graspFrame.transform)
         liftTransform.Concatenate(t3)
@@ -571,8 +466,6 @@ class BihandedPlannerDemo(object):
         endPose, info = constraintSet.runIk()
         liftPlan = constraintSet.runIkTraj()
         self.addPlan(liftPlan)
-
-
 
     def planPlace(self):
         startPose = self.getPlanningStartPose()
@@ -587,12 +480,6 @@ class BihandedPlannerDemo(object):
         endPose, info = constraintSet.runIk()
         dereachPlan = constraintSet.runIkTraj()
         self.addPlan(dereachPlan)
-
-    def planBothRaisePowerOn(self):
-        startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'both raise power on')
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.addPlan(newPlan)
 
     def planDrillRaisePowerOn(self):
         startPose = self.getPlanningStartPose()
@@ -629,7 +516,7 @@ class BihandedPlannerDemo(object):
 
     def planPreGrasp(self):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'bihanded', 'board pregrasp', side=self.graspingHand)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
@@ -664,219 +551,6 @@ class BihandedPlannerDemo(object):
         self.ikPlanner.ikServer.usePointwise = False
         plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
-
-
-    def getPointerToHandFrame(self):
-        '''
-        Get the Transfrom from the pointer to the hand link
-        Specifically the frame at the very end of the pointer tip
-        The result is what mfallon has previously referred to as hand-to-pointer
-        '''
-
-        # previous method used "right_pointer_tip" internally:
-        #pointerToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(gazeHand)
-
-        # NB: uses the end of the pointer:
-        startPose = self.getPlanningStartPose()
-
-        handFrameName = '%s_hand' % self.pointerHand[0]
-        handTransform= self.ikPlanner.getLinkFrameAtPose( handFrameName, startPose)
-        ftFrameName = '%s_hand_force_torque' % self.pointerHand[0]
-        ftTransform= self.ikPlanner.getLinkFrameAtPose( ftFrameName, startPose)
-
-        if (self.usePointerPerceptionOffset is False):
-            # actually use FK to move the pointer to the mark - with an approximation of the thumb pointer Oct 2014
-            ftToPointerTransform = transformUtils.frameFromPositionAndRPY( [0,0.22,-0.06] ,  [0,0,0] )
-            pointerSensedTransform = vtk.vtkTransform()
-            pointerSensedTransform.PostMultiply()
-            pointerSensedTransform.Concatenate( ftToPointerTransform )
-            pointerSensedTransform.Concatenate( ftTransform )
-
-        else:
-            # move a point near to but facing in the same axis as the FT axis to the mark
-            pointerSensedTransformXYZ = transformUtils.copyFrame(om.findObjectByName("sensed pointer tip").actor.GetUserTransform())
-            pointerSensedTransform = transformUtils.frameFromPositionAndRPY(pointerSensedTransformXYZ.GetPosition() ,  np.array(transformUtils.rollPitchYawFromTransform(ftTransform))*180/np.pi )
-
-        vis.updateFrame(handTransform, "handTransform", visible=False)
-        vis.updateFrame(ftTransform, "ftTransform", visible=False)
-        vis.updateFrame(pointerSensedTransform, "pointerSensedTransform", visible=False)
-        pointerTransform = transformUtils.copyFrame(pointerSensedTransform)
-
-        pointerToHandLinkFrame = vtk.vtkTransform()
-        pointerToHandLinkFrame.PostMultiply()
-        pointerToHandLinkFrame.Concatenate( pointerTransform )
-        pointerToHandLinkFrame.Concatenate( handTransform.GetLinearInverse() )
-
-
-        return pointerToHandLinkFrame
-
-
-    def planPointerPressGaze(self, pointerDepth=0.00):
-        # move to a point along the button axis
-        # pointerDepth is negative is away from the drill and positive is inside drill
-
-        # change the nominal pose to the start pose ... q_nom was unreliable when used repeated
-
-        nominalPoseOld = ikplanner.getIkOptions().getProperty('Nominal pose')
-        jointSpeedOld = ikplanner.getIkOptions().getProperty('Max joint degrees/s')
-        ikplanner.getIkOptions().setProperty('Nominal pose', 'q_start')
-        ikplanner.getIkOptions().setProperty('Max joint degrees/s', 3)
-
-        # 1. determine the goal position
-        #worldToButton = self.getWorldToButton( self.getPlanningStartPose() )
-        #worldToPress = transformUtils.copyFrame(worldToButton)
-        worldToPress = transformUtils.copyFrame(self.board.buttonFrame.transform)
-        worldToPress.PreMultiply()
-        t3 = transformUtils.frameFromPositionAndRPY( [0,0.0, pointerDepth] , [0,0,0] )
-        worldToPress.Concatenate(t3)
-
-        worldToPressFrame = vis.updateFrame(worldToPress, 'button press goal', visible=False, scale=0.2, parent=om.getOrCreateContainer('affordances'))
-
-        # 2. add gaze constraint along the pointer tip hand
-        pointerToHandLinkFrame = self.getPointerToHandFrame()
-
-        # this mirrors the y-axis pointer for left and right:
-        bodyAxisTip = self.ikPlanner.getPalmToHandLink(self.pointerHand).TransformVector([0,1,0])
-
-        self.initGazeConstraintSet(worldToPressFrame, self.pointerHand, pointerToHandLinkFrame, targetAxis=[0.0, 0.0, 1.0], bodyAxis=bodyAxisTip, lockBase=True, lockBack=True)
-        # self.initGazeConstraintSet(worldToPressFrame, self.pointerHand, pointerToHandLinkFrame, gazeAxis=[-1.0, 0.0, 0.0], lockBase=True, lockBack=True)
-        self.appendPositionConstraintForTargetFrame(worldToPressFrame, 1, self.pointerHand, pointerToHandLinkFrame)
-        #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
-        self.planGazeTrajectory()
-        #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
-
-        ikplanner.getIkOptions().setProperty('Nominal pose', nominalPoseOld)
-        ikplanner.getIkOptions().setProperty('Max joint degrees/s', jointSpeedOld)
-
-
-    def planNextCut(self, getNextAction , argument1=None ):
-        if (argument1 is None):
-            success = getNextAction()
-            #print success
-        else:
-            success = getNextAction(argument1)
-
-        if (success is False):
-            return success
-
-        self.planDrillingGaze()
-        return success
-
-
-
-
-
-    def computeRetractionDesired(self, retractBit=True):
-        self.worldToBit = self.getWorldToBit( self.getPlanningStartPose() )
-
-        # relative position of g
-        goalToBit = transformUtils.copyFrame( self.worldToBit )
-        goalToBit.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
-
-        if (retractBit == True):
-            retractDepth = self.retractBitDepthNominal
-        else: # this can be used to insert where we are located:
-            retractDepth = 0.0
-
-        self.goalToNextCut = transformUtils.frameFromPositionAndRPY( [retractDepth, goalToBit.GetPosition()[1], goalToBit.GetPosition()[2] ] , [0,0,0] )
-        self.worldToNextCut = transformUtils.copyFrame( self.goalToNextCut )
-        self.worldToNextCut.Concatenate( self.nextCutGoalFrame.transform )
-        self.nextCutFrame = vis.updateFrame(self.worldToNextCut, 'next cut', visible=True, scale=0.2)
-
-
-    def moveDrillToSensedButton(self):
-        ''' Take the position of the sensed button and the current orientation of the drill aff
-            Move the drill the the position inferred by the sensed button
-        '''
-        buttonSensedTransform = transformUtils.copyFrame(om.findObjectByName("sensed drill button").actor.GetUserTransform())
-        drillTransformOriginal = self.board.affordance.actor.GetUserTransform()
-        buttonTransformOriginal = transformUtils.copyFrame( drillTransformOriginal )
-        buttonTransformOriginal.PreMultiply()
-        buttonTransformOriginal.Concatenate(self.board.drillToButtonTransform)
-
-        buttonTransformNew = transformUtils.frameFromPositionAndRPY(buttonSensedTransform.GetPosition() ,  np.array(transformUtils.rollPitchYawFromTransform( buttonTransformOriginal ))*180/np.pi )
-        drillTransformNew = transformUtils.copyFrame(buttonTransformNew)
-        drillTransformNew.PreMultiply()
-        t3 = transformUtils.copyFrame ( self.board.drillToButtonTransform.GetLinearInverse() )
-        drillTransformNew.Concatenate(t3)
-
-        self.board.affordance.actor.SetUserTransform(drillTransformNew)
-        self.board.frame = vis.updateFrame(drillTransformNew, 'drill frame', parent=self.board.affordance, visible=False, scale=0.2)
-
-
-
-    def computeNextCutDesired(self):
-        # determine the next cutting position (self.nextCutFrame)
-        #
-        # Overview:
-        # if close to the current goal, switch to the next goal
-        #    if there are no more goals, you are finished
-        # move in the direction of the goal
-        #   find a point thats x cm closer to the goal in the plane of the target
-
-        self.worldToBit = self.getWorldToBit( self.getPlanningStartPose() )
-
-        # relative position of bit
-        goalToBit = transformUtils.copyFrame( self.worldToBit )
-        goalToBit.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
-
-        distToGoal2D = np.linalg.norm( goalToBit.GetPosition()[1:3] )
-        print "distToGoal2D", distToGoal2D , "from" , self.currentCutGoal
-
-        if (distToGoal2D < self.goalThreshold ): # typically 5cm
-            if ( self.currentCutGoal == len(self.cutPoints) -1):
-                print distToGoal2D , " - within threshold of last goal", self.currentCutGoal
-                return False
-
-            self.currentCutGoal=self.currentCutGoal+1
-            nextCutPoseGoal = self.updateNextCutPoseGoal()
-
-            # switch to follow to the new goal:
-            goalToBit = transformUtils.copyFrame( self.worldToBit )
-            goalToBit.Concatenate( self.nextCutGoalFrame.transform.GetLinearInverse() )
-            #print distToGoal2D , " - within threshold. Moving to", self.currentCutGoal
-
-        # TODO: change this to a metric movement towards a goal:
-        distToGoal2D = np.linalg.norm( goalToBit.GetPosition()[1:3])
-
-        if (distToGoal2D < self.cutLength): # finish the cut to the goal
-            self.goalToNextCut = transformUtils.frameFromPositionAndRPY( [0, goalToBit.GetPosition()[1], goalToBit.GetPosition()[2] ] , [0,0,0] )
-        else:
-            # this is kind of odd - but it works. the distance to the goal that the cut to finish at
-            cutsLeft = distToGoal2D/self.cutLength
-            goalToBit.GetPosition()[1]
-            scale = (cutsLeft-1)/cutsLeft
-            self.goalToNextCut = transformUtils.frameFromPositionAndRPY( [0,  scale*goalToBit.GetPosition()[1] ,  scale*goalToBit.GetPosition()[2]  ] , [0,0,0] )
-
-        self.worldToNextCut = transformUtils.copyFrame( self.goalToNextCut )
-        self.worldToNextCut.Concatenate( self.nextCutGoalFrame.transform )
-
-        self.updateNextCutPose( self.worldToNextCut )
-        return True
-
-
-    def planDrillingGaze(self):
-
-        startPose = self.getPlanningStartPose()
-        handToBit = self.getHandToBit(startPose)
-
-        if (1==0):
-            vis.updateFrame( self.ikPlanner.getLinkFrameAtPose( self.graspingHandLink , startPose)  , 'hand testing', visible=True, scale=0.2)
-            worldToBit = self.getWorldToBit(startPose)
-            vis.updateFrame(worldToBit, 'world to drill bit', visible=True, scale=0.2)
-
-            print "handToBit"
-            print handToBit.GetPosition()
-            print handToBit.GetOrientation()
-
-        # button drill: [1,0,0] , barrel drill: [0,1,0] - axis is along bit xaxis (this was explictly defined
-        all_axes = transformUtils.getAxesFromTransform( handToBit )
-
-        self.initGazeConstraintSet(self.nextCutFrame, self.graspingHand, handToBit, targetAxis=all_axes[0], bodyAxis=all_axes[0])
-        self.appendPositionConstraintForTargetFrame(self.nextCutFrame, 1, self.graspingHand, handToBit)
-        #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedSlow
-        self.planGazeTrajectory()
-        #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
 
     ########## Glue Functions ####################################
@@ -1028,6 +702,7 @@ class BihandedPlannerDemo(object):
         ikplanner.getIkOptions().setProperty('Max joint degrees/s',15)
 
     ######### Nominal Plans and Execution  #################################################################
+    '''
     def planNominalPickUp(self, playbackNominal=True):
 
         self.turnPointwiseOff()
@@ -1059,7 +734,28 @@ class BihandedPlannerDemo(object):
 
         if (playbackNominal is True):
             self.playNominalPlan()
+    '''
 
+    def planBihandedGraspingSequence(self, playbackNominal = True):
+        
+        self.plans = []
+
+        if (om.findObjectByName('board') is None):
+            print "spawn board"
+            self.spawnBoardAffordance()
+        
+        for hand in ['left', 'right']:
+            self.setGraspingHand(hand)
+            self.planPreGrasp()
+            self.planReach()
+        
+        for hand in ['left', 'right']:
+            self.setGraspingHand(hand)
+            self.planGrasp()
+
+        if (playbackNominal is True):
+            self.playNominalPlan()
+        
 
 
     def planNominal(self, playbackNominal=True):
