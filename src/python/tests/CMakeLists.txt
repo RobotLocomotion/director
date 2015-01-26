@@ -13,6 +13,7 @@ set(python_tests
   testFrameSync.py
   testImageView.py
   testObjectModel.py
+  testOtdfParser.py
   testPropertiesPanel.py
   testPythonConsole.py
   testRobotSystem.py
