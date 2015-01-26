@@ -45,6 +45,7 @@ signals:
   void toggleCameraTerrainMode();
   void fileOpen();
   void fileSaveData();
+  void fileExportUrdf();
 
 
 protected slots:
