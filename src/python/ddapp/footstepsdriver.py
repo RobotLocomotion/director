@@ -271,13 +271,15 @@ class FootstepsDriver(object):
         planFolder = getFootstepsFolder()
         self.drawFootstepPlan( self.lastFootstepPlan , planFolder)
         self.transformPlanToBDIFrame( self.lastFootstepPlan )
-
         self.showToolbarWidget()
-        self.execButton.show()
-
 
     def showToolbarWidget(self):
+
+        if app.getMainWindow() is None:
+            return
+
         if self.toolbarWidget:
+            self.execButton.show()
             return
 
         w = QtGui.QWidget()
@@ -306,7 +308,7 @@ class FootstepsDriver(object):
         self.execButton = execButton
         self.stopButton = stopButton
         self.toolbarWidget = app.getMainWindow().toolBar().addWidget(w)
-
+        self.execButton.show()
 
     def onExecClicked(self):
         self.commitFootstepPlan(self.lastFootstepPlan)

@@ -112,7 +112,8 @@ def setBackgroundColor(color, color2=None, view=None):
 
 
 def displaySnoptInfo(info):
-    getMainWindow().statusBar().showMessage('Info: %d' % info)
+    if getMainWindow() is not None:
+        getMainWindow().statusBar().showMessage('Info: %d' % info)
 
 
 def toggleStereoRender():

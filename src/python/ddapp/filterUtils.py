@@ -73,21 +73,21 @@ def cleanPolyData(polyData):
     return shallowCopy(clean.GetOutput())
 
 
-def hasNanPoints(polyData):
-    pts = vnp.getNumpyFromVtk(polyData, 'Points')
-    return np.isnan(pts).any()
+def hasNonFinitePoints(polyData, arrayName='Points'):
+    pts = vnp.getNumpyFromVtk(polyData, arrayName)
+    return np.isfinite(pts).any()
 
 
-def addNanLabels(polyData):
+def labelNonFinitePoints(polyData, arrayName='Points'):
     '''
-    adds is_nan label to polyData
+    adds is_nonfinite label to polyData.  non finite includes nan and +/- inf.
     '''
-    pts = vnp.getNumpyFromVtk(polyData, 'Points')
-    labels = np.isnan(pts).any(axis=1)
-    vnp.addNumpyToVtk(polyData, np.array(labels, dtype=np.int32), 'is_nan')
+    pts = vnp.getNumpyFromVtk(polyData, arrayName)
+    labels = np.logical_not(np.isfinite(pts)).any(axis=1)
+    vnp.addNumpyToVtk(polyData, np.array(labels, dtype=np.int32), 'is_nonfinite')
 
 
-def removeNanPoints(polyData):
+def removeNonFinitePoints(polyData, arrayName='Points'):
     polyData = shallowCopy(polyData)
-    addNanLabels(polyData)
-    return thresholdPoints(polyData, 'is_nan', [0, 0])
+    labelNonFinitePoints(polyData, arrayName)
+    return thresholdPoints(polyData, 'is_nonfinite', [0, 0])

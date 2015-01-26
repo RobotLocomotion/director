@@ -1,18 +1,26 @@
 import ddapp.objectmodel as om
 from ddapp import affordance
 from ddapp.visualization import PolyDataItem
-from ddapp.affordancelistener import listener as affListener
 from ddapp import vtkAll as vtk
+from ddapp import transformUtils
+from ddapp.debugVis import DebugData
 import numpy as np
+
+import uuid
+from collections import OrderedDict
+
+
+def newUUID():
+    return str(uuid.uuid1())
+
 
 class AffordanceItem(PolyDataItem):
 
     def __init__(self, name, polyData, view):
         PolyDataItem.__init__(self, name, polyData, view)
         self.params = {}
-        affListener.registerAffordance(self)
-        self.addProperty('uid', 0, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=1e6, singleStep=1, hidden=False))
-        self.addProperty('Server updates enabled', False)
+        self.addProperty('uuid', newUUID(), attributes=om.PropertyAttributes(hidden=True))
+        self.addProperty('Server updates enabled', True, attributes=om.PropertyAttributes(hidden=True))
 
     def publish(self):
         pass
@@ -27,20 +35,55 @@ class AffordanceItem(PolyDataItem):
         else:
             PolyDataItem.onAction(self, action)
 
-    def onServerAffordanceUpdate(self, serverAff):
-        if not self.params.get('uid'):
-            self.params['uid'] = serverAff.uid
-            self.setProperty('uid', serverAff.uid)
+    def getDescription(self):
+        d = OrderedDict()
+        d['classname'] = type(self).__name__
+        d.update(self.properties._properties)
+        del d['Color']
+        pose = transformUtils.poseFromTransform(self.getChildFrame().transform)
+        d['pose'] = pose
+        return d
 
-        if self.getProperty('Server updates enabled'):
-            quat = transformUtils.botpy.roll_pitch_yaw_to_quat(serverAff.origin_rpy)
-            t = transformUtils.transformFromPose(serverAff.origin_xyz, quat)
-            self.actor.GetUserTransform().SetMatrix(t.GetMatrix())
+    def repositionFromDescription(self, desc):
+        position, quat = desc['pose']
+        t = transformUtils.transformFromPose(position, quat)
+        self.getChildFrame().copyFrame(t)
+
+    def loadDescription(self, desc):
+        self.syncProperties(desc)
+        self.repositionFromDescription(desc)
+
+    def syncProperties(self, desc):
+        for propertyName, propertyValue in desc.iteritems():
+            if self.hasProperty(propertyName):
+                self.setProperty(propertyName, propertyValue)
 
     def onRemoveFromObjectModel(self):
         PolyDataItem.onRemoveFromObjectModel(self)
-        affListener.unregisterAffordance(self)
 
+
+
+class BoxAffordanceItem(AffordanceItem):
+
+    def __init__(self, name, view):
+        AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
+        self.addProperty('Dimensions', [0.5, 0.5, 0.5], attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+        self.updateGeometryFromProperties()
+
+    def loadDescription(self, desc):
+        AffordanceItem.loadDescription(self, desc)
+        self.updateGeometryFromProperties()
+
+    def updateGeometryFromProperties(self):
+        d = DebugData()
+        d.addCube(self.getProperty('Dimensions'), (0,0,0))
+        self.setPolyData(d.getPolyData())
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        AffordanceItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Dimensions':
+            self.updateGeometryFromProperties()
 
 
 class BlockAffordanceItem(AffordanceItem):

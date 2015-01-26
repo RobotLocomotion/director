@@ -822,6 +822,33 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
     return item
 
 
+def addChildFrame(obj, initialTransform=None):
+    '''
+    Adds a child frame to the given PolyDataItem.  If initialTransform is given,
+    the object's polydata is transformed using the inverse of initialTransform
+    and then a child frame is assigned to the object to maintain its original
+    position.
+    '''
+    pd = obj.polyData
+    t = initialTransform
+
+    if t is None:
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+    else:
+        pd = transformPolyData(pd, t.GetLinearInverse())
+        obj.setPolyData(pd)
+
+    frame = obj.getChildFrame()
+    if frame:
+        frame.copyFrame(t)
+    else:
+        frame = showFrame(t, obj.getProperty('Name') + ' frame', parent=obj, scale=0.2, visible=False)
+        obj.actor.SetUserTransform(t)
+
+    return frame
+
+
 def showHandCloud(hand='left', view=None):
 
     view = view or app.getCurrentRenderView()
