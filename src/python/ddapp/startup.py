@@ -285,40 +285,6 @@ if usePlanning:
     def planNominal():
         ikPlanner.computeNominalPlan(robotStateJointController.q)
 
-    def addCollisionObjectToWorld(obj = None, name = None):
-        if obj is None:
-            obj = [om.getActiveObject()]
-        if type(obj) is not list:
-            obj = [obj]
-        if name is None:
-            name = [obj_i.parent().getProperty('Name') for obj_i in obj]
-        if type(name) is not list:
-            name = [name]
-
-        assert len(obj) == len(name)
-        pts = []
-        for obj_i in obj:
-            assert obj_i and obj_i.polyData
-            polyData = filterUtils.transformPolyData(obj_i.polyData, obj_i.actor.GetUserTransform())
-            pts_i = vnp.getNumpyFromVtk(polyData, 'Points')
-            pts.append(pts_i.transpose());
-
-        ikServer.addCollisionObject(pts,name)
-
-    def addCollisionObjectToLink(robotModel, linkName):
-        obj = om.getActiveObject()
-        assert obj and obj.polyData
-        pts = vnp.getNumpyFromVtk(obj.polyData, 'Points')
-        pts = pts.transpose()
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Concatenate(obj.actor.GetUserTransform())
-        t.Concatenate(robotModel.getLinkFrame(linkName).GetLinearInverse())
-        ikServer.addCollisionObjectToLink(pts, linkName, t)
-
-    app.addToolbarMacro('Reset Collision Objects', ikServer.resetCollisionObjects)
-    app.addToolbarMacro('Add Collision Object', addCollisionObjectToWorld)
-
     def fitDrillMultisense():
         pd = om.findObjectByName('Multisense').model.revPolyData
         om.removeFromObjectModel(om.findObjectByName('debug'))

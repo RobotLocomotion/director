@@ -7,6 +7,7 @@ from ddapp import matlab
 from ddapp.asynctaskqueue import AsyncTaskQueue
 from ddapp.jointcontrol import JointController
 from ddapp.ikconstraints import *
+from lxml import etree
 
 from ddapp import drcargs
 
@@ -32,7 +33,9 @@ class AsyncIKCommunicator():
         self.numberOfAddedKnots = 0
         self.numberOfInterpolatedCollisionChecks = 2
         self.collisionMinDistance = 0.03
-        self.majorIterationsLimit = 100
+        self.majorIterationsLimit = 500
+        self.majorOptimalityTolerance = 1e-4
+        self.majorFeasibilityTolerance = 1e-6
 
 
     def getStartupCommands(self):
@@ -94,33 +97,6 @@ class AsyncIKCommunicator():
         self.comm.assignFloatArray(pose, poseName)
 
 
-    def addCollisionObject(self, vertices, name = 'default'):
-        commands = []
-
-        if type(vertices) is not list: vertices = [vertices]
-        if type(name) is not list: name = [name]
-
-        for vertices_i, name_i in zip(vertices,name):
-            self.comm.assignFloatArray(vertices_i, '%s_vertices' % name_i.replace(' ','_'))
-            commands.append('collision_object_%s = RigidBodyMeshPoints(%s_vertices);' % (name_i.replace(' ','_'),name_i.replace(' ','_')))
-            commands.append('r = addGeometryToBody(r, links.world, collision_object_%s,\'%s\');' % (name_i.replace(' ','_'), name_i))
-
-        commands.append('r = compile(r);')
-        self.comm.sendCommands(commands)
-
-
-    def addCollisionObjectToLink(self, vertices, linkName, transform):
-        self.comm.assignFloatArray(vertices, 'collision_object_vertices')
-        transformString = ConstraintBase.toMatrixString(transform)
-
-        commands = []
-        commands.append('collision_object = RigidBodyMeshPoints(collision_object_vertices);')
-        commands.append('collision_object.T = %s;' % transformString)
-        commands.append('r = addGeometryToBody(r, links.%s, collision_object);' % linkName)
-        commands.append('r = compile(r);')
-        self.comm.sendCommands(commands)
-
-
     def constructVisualizer(self):
         commands = []
         commands.append("v = r.constructVisualizer(struct('use_contact_shapes', true));")
@@ -147,13 +123,6 @@ class AsyncIKCommunicator():
         commands.append('v.draw(0, q_end);');
         self.comm.sendCommands(commands)
 
-
-    def resetCollisionObjects(self):
-        commands = []
-        commands.append('r = s.robot;')
-        commands.append('r = r.replaceCollisionGeometryWithConvexHull([links.l_hand, links.r_hand, links.head]);')
-        commands.append('r = compile(r);')
-        self.comm.sendCommands(commands)
 
 
     def getConstraintCommands(self, constraintNames):
@@ -189,12 +158,22 @@ class AsyncIKCommunicator():
             arrayName = 'joint_limit_min_new' if epsilon < 0 else 'joint_limit_max_new'
             commands.append('%s(joints.%s) = %s(joints.%s) + %f;' % (arrayName, jointName, arrayName, jointName, epsilon))
 
-        commands.append('r = r.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
-        commands.append('r = r.compile();')
-        commands.append('s.robot = s.robot.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
-        commands.append('s.robot = s.robot.compile();')
+        commands.append('s = s.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
         self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
         self.taskQueue.start()
+
+
+    def setEnvironment(self, environment_urdf):
+        commands = []
+        urdf_lines = etree.tostring(environment_urdf).splitlines()
+        urdf_lines = ["'%s'" % x for x in urdf_lines]
+        urdf_lines = '...\n'.join(urdf_lines)
+        print urdf_lines
+        self.comm.send('environment_urdf_string = [%s];' % urdf_lines )
+        self.comm.waitForResult()
+        commands.append('s = s.setEnvironment(environment_urdf_string);')
+        commands.append('r = s.robot_and_environment;')
+        self.comm.sendCommands(commands)
 
     def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):
 
@@ -211,9 +190,18 @@ class AsyncIKCommunicator():
         nominalPostureName = nominalPostureName or self.nominalName
         seedPostureName = seedPostureName or self.seedName
 
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(nominalPostureName))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(seedPostureName))
         commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
         commands.append('ik_seed_pose = %s;' % seedPostureName)
         commands.append('ik_nominal_pose = %s;' % nominalPostureName)
+        commands.append('ik_seed_pose = [ik_seed_pose; zeros(r.getNumPositions()-numel(ik_seed_pose),1)];')
+        commands.append('ik_nominal_pose = [ik_nominal_pose; zeros(r.getNumPositions()-numel(ik_nominal_pose),1)];')
+        commands.append('options = struct();')
+        commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
+        commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
+        commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
+        commands.append('s = s.setupOptions(options);')
         commands.append('clear q_end;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
@@ -232,6 +220,7 @@ class AsyncIKCommunicator():
             commands.append('\n')
             commands.append('if (info > 10) disp(\'inverseKin with collision constraint infeasible.\'); display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
+        commands.append('q_end(s.robot.getNumPositions()+1:end) = [];')
         commands.append('\n%-------- runIk end --------\n')
 
         self.comm.sendCommands(commands)
@@ -264,6 +253,9 @@ class AsyncIKCommunicator():
 
         commands = []
         commands.append('\n%-------- runIkTraj --------\n')
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(poseStart))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(poseEnd))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(nominalPose))
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
 
         constraintNames = []
@@ -283,6 +275,11 @@ class AsyncIKCommunicator():
             commands.append('additionalTimeSamples = linspace(t(1), t(end), %d);' % additionalTimeSamples)
         else:
             commands.append('additionalTimeSamples = [];')
+        commands.append('options = struct();')
+        commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
+        commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
+        commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
+        commands.append('s = s.setupOptions(options);')
         commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
         commands.append('\n')
@@ -296,19 +293,18 @@ class AsyncIKCommunicator():
             commands.append('options.xyz_v_max = %s;' % self.maxBaseMetersPerSecond)
             commands.append('options.t_max = %s;' % self.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
-            commands.append('options.major_iterations_limit = %s;' % self.majorIterationsLimit)
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
             commands.append('[xtraj,info] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);')
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:
             commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(%s, 1, nt)));' % nominalPose)
-            commands.append('q_seed_traj = PPTrajectory(spline([t(1), t(end)], [zeros(nq,1), %s, %s, zeros(nq,1)]));' % (poseStart, poseEnd))
+            commands.append('q_seed_traj = PPTrajectory(spline([t(1), t(end)], [zeros(r.getNumPositions(),1), %s, %s, zeros(r.getNumPositions(),1)]));' % (poseStart, poseEnd))
             commands.append('\n')
             commands.append('[xtraj, info, infeasible_constraint] = inverseKinTraj(r, t, q_seed_traj, q_nom_traj, active_constraints{:}, ikoptions);')
             commands.append('\n')
             commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
-        commands.append('qtraj = xtraj(1:nq);')
+        commands.append('qtraj = xtraj(1:r.getNumPositions());')
         if self.useCollision:
             commands.append('plan_time = 1;')
         else:
@@ -324,7 +320,7 @@ class AsyncIKCommunicator():
             #commands.append('spline_traj = PPTrajectory(spline(t, [ zeros(size(xtraj, 1),1), xtraj.eval(t), zeros(size(xtraj, 1),1)]));')
             #commands.append('q_seed_pointwise = spline_traj.eval(pointwise_time_points);')
             commands.append('q_seed_pointwise = xtraj.eval(pointwise_time_points);')
-            commands.append('q_seed_pointwise = q_seed_pointwise(1:nq,:);')
+            commands.append('q_seed_pointwise = q_seed_pointwise(1:r.getNumPositions(),:);')
             commands.append('[xtraj_pw, info_pw] = inverseKinPointwise(r, pointwise_time_points, q_seed_pointwise, q_seed_pointwise, active_constraints{:}, ikoptions);')
             commands.append('xtraj_pw = PPTrajectory(foh(pointwise_time_points, xtraj_pw));')
             commands.append('info = info_pw(end);')
@@ -334,7 +330,7 @@ class AsyncIKCommunicator():
 
         publish = True
         if publish:
-            commands.append('s.publishTraj(plan_publisher, r, %s, info, plan_time);' % ('xtraj_pw' if self.usePointwise else 'xtraj'))
+            commands.append('s.publishTraj(%s, info, plan_time);' % ('xtraj_pw' if self.usePointwise else 'xtraj'))
 
         commands.append('\n%--- runIKTraj end --------\n')
         self.comm.sendCommands(commands)
