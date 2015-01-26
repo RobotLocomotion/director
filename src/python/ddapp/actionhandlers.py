@@ -65,24 +65,58 @@ def onOpenOtdf(filename):
     model = otdfmodel.openOtdf(filename, app.getCurrentRenderView())
 
 
-def onFileSaveData():
-
+def onFileExportUrdf():
     obj = om.getActiveObject()
-    if not obj or not hasattr(obj, 'polyData'):
-        app.showErrorMessage('Please select an object that contains geometry data', title='Geometry object not selected')
+    if not obj or not isinstance(obj, otdfmodel.OtdfModelItem):
+        app.showErrorMessage('Please select an OTDF object', title='OTDF object not selected')
         return
 
     mainWindow = app.getMainWindow()
-    fileFilters = "PLY (*.ply);;STL (*.stl);;VTP (*.vtp)";
-    filename = QtGui.QFileDialog.getSaveFileName(mainWindow, "Save Data...", getDefaultDirectory(), fileFilters, 'VTP (*.vtp)')
-
-    if not filename:
-        return
+    filename = QtGui.QFileDialog.getSaveFileName(mainWindow, "Save Data...", getDefaultDirectory(), 'URDF (*.urdf)', 'URDF (*.urdf)')
 
     if not os.path.splitext(filename)[1]:
-        filename += '.vtp'
+        filename += '.urdf'
 
-    polyData = io.writePolyData(obj.polyData, filename)
+    storeDefaultDirectory(filename)
+    urdfString = obj.parser.getUrdfFromOtdf()
+    urdfFile = open(filename, 'w')
+    urdfFile.write(urdfString)
+    urdfFile.close()
+
+def onFileSaveData():
+
+    obj = om.getActiveObject()
+    if not obj:
+        app.showErrorMessage('Please select an object', title='No object selected')
+        return
+    if isinstance(obj, otdfmodel.OtdfModelItem):
+        mainWindow = app.getMainWindow()
+        filename = QtGui.QFileDialog.getSaveFileName(mainWindow, "Save Data...", getDefaultDirectory(), 'OTDF (*.otdf)', 'OTDF (*.otdf)')
+
+        if not os.path.splitext(filename)[1]:
+            filename += '.otdf'
+
+        storeDefaultDirectory(filename)
+        otdfString = obj.parser.getUpdatedOtdf()
+        otdfFile = open(filename, 'w')
+        otdfFile.write(otdfString)
+        otdfFile.close()
+    elif hasattr(obj, 'polyData'):
+        mainWindow = app.getMainWindow()
+        fileFilters = "PLY (*.ply);;STL (*.stl);;VTP (*.vtp)";
+        filename = QtGui.QFileDialog.getSaveFileName(mainWindow, "Save Data...", getDefaultDirectory(), fileFilters, 'VTP (*.vtp)')
+
+        if not filename:
+            return
+
+        if not os.path.splitext(filename)[1]:
+            filename += '.vtp'
+
+        polyData = io.writePolyData(obj.polyData, filename)
+    else:
+        app.showErrorMessage('Please select an object that contains geometry data or an OTDF object', title='Invalid object selected')
+        return
+
     storeDefaultDirectory(filename)
 
 
@@ -91,3 +125,4 @@ def init():
 
     mainWindow.connect('fileOpen()', onFileOpen)
     mainWindow.connect('fileSaveData()', onFileSaveData)
+    mainWindow.connect('fileExportUrdf()', onFileExportUrdf)

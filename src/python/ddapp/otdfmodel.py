@@ -101,6 +101,17 @@ class OtdfParser(object):
         return xmlDoc.toxml()
 
 
+    def getUpdatedOtdf(self):
+
+        xmlDoc = xml.dom.minidom.parseString(self.otdfString)
+
+        paramElements = xmlDoc.getElementsByTagName('param')
+        for param in paramElements:
+            paramValue = self.getParamValue(param.getAttribute('name'))
+            param.setAttribute('default_value', str(float(paramValue)))
+
+        return xmlDoc.toxml()
+
 class OtdfModelItem(roboturdf.RobotModelItem):
 
     def __init__(self, filename):
