@@ -190,13 +190,13 @@ class AsyncIKCommunicator():
         nominalPostureName = nominalPostureName or self.nominalName
         seedPostureName = seedPostureName or self.seedName
 
-        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(nominalPostureName))
-        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(seedPostureName))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(nominalPostureName))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(seedPostureName))
         commands.append('active_constraints = {%s};' % ', '.join(constraintNames))
         commands.append('ik_seed_pose = %s;' % seedPostureName)
         commands.append('ik_nominal_pose = %s;' % nominalPostureName)
-        commands.append('ik_seed_pose = [ik_seed_pose; zeros(r.getNumPositions()-numel(ik_seed_pose),1)]')
-        commands.append('ik_nominal_pose = [ik_nominal_pose; zeros(r.getNumPositions()-numel(ik_nominal_pose),1)]')
+        commands.append('ik_seed_pose = [ik_seed_pose; zeros(r.getNumPositions()-numel(ik_seed_pose),1)];')
+        commands.append('ik_nominal_pose = [ik_nominal_pose; zeros(r.getNumPositions()-numel(ik_nominal_pose),1)];')
         commands.append('options = struct();')
         commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
         commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
@@ -253,9 +253,9 @@ class AsyncIKCommunicator():
 
         commands = []
         commands.append('\n%-------- runIkTraj --------\n')
-        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(poseStart))
-        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(poseEnd))
-        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)]'.format(nominalPose))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(poseStart))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(poseEnd))
+        commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(nominalPose))
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
 
         constraintNames = []
