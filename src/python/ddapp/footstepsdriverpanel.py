@@ -159,7 +159,7 @@ class FootstepsPanel(object):
 
             pos = np.array(frameObj.transform.GetPosition())
 
-            polyData = filterUtils.removeNanPoints(terrain.polyData)
+            polyData = filterUtils.removeNonFinitePoints(terrain.polyData)
             if polyData.GetNumberOfPoints():
                 polyData = segmentation.labelDistanceToLine(polyData, pos, pos+[0,0,1])
                 polyData = segmentation.thresholdPoints(polyData, 'distance_to_line', [0.0, 0.1])

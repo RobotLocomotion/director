@@ -55,7 +55,7 @@ class JointController(object):
 
     def addPose(self, poseName, poseData):
         assert len(poseData) == self.numberOfJoints
-        self.poses[poseName] = poseData
+        self.poses[poseName] = np.asarray(poseData)
         if self.poseCollection is not None:
             self.poseCollection.setItem(poseName, poseData)
 

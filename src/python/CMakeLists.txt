@@ -3,9 +3,10 @@ set(python_files
   ddapp/actionhandlers.py
   ddapp/actionmanagerpanel.py
   ddapp/affordance.py
+  ddapp/affordancecollection.py
   ddapp/affordancegraspupdater.py
   ddapp/affordanceitems.py
-  ddapp/affordancelistener.py
+  ddapp/affordancemanager.py
   ddapp/applogic.py
   ddapp/asynctaskqueue.py
   ddapp/atlasdriver.py
@@ -82,6 +83,7 @@ set(python_files
   ddapp/transformUtils.py
   ddapp/trackers.py
   ddapp/utime.py
+  ddapp/uuidutil.py
   ddapp/valvedemo.py
   ddapp/viewbehaviors.py
   ddapp/visualization.py
@@ -113,6 +115,7 @@ set(python_files
   ddapp/thirdparty/qhull_2d.py
   ddapp/thirdparty/min_bounding_rect.py
   ddapp/thirdparty/NumericStringParser.py
+  ddapp/thirdparty/numpyjsoncoder.py
   )
 
 
