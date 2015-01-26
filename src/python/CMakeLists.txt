@@ -49,6 +49,7 @@ set(python_files
   ddapp/multisensepanel.py
   ddapp/navigationpanel.py
   ddapp/objectmodel.py
+  ddapp/otdfmodel.py
   ddapp/perception.py
   ddapp/pfgrasp.py
   ddapp/pfgrasppanel.py
@@ -111,6 +112,7 @@ set(python_files
   ddapp/thirdparty/__init__.py
   ddapp/thirdparty/qhull_2d.py
   ddapp/thirdparty/min_bounding_rect.py
+  ddapp/thirdparty/NumericStringParser.py
   )
 
 
