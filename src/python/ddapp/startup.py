@@ -357,9 +357,24 @@ if usePlanning:
                     playPlans, showPose)
 
     bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+
+    #bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+    #                lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+    #                fitDrillMultisense, robotStateJointController,
+    #                playPlans, showPose, cameraview, segmentationpanel)
+                    
+    def constructBihandedDemo():
+        imp.reload(bihandeddemo)                
+        global bihandedDemo,b        
+        
+        bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
+                
+        b = bihandedDemo
+        
+    constructBihandedDemo()
 
     if (useContinuousWalking):
         continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController)
