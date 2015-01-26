@@ -33,6 +33,7 @@
     </property>
     <addaction name="ActionOpen"/>
     <addaction name="ActionSaveData"/>
+    <addaction name="ActionExportUrdf"/>
     <addaction name="separator"/>
     <addaction name="ActionQuit"/>
    </widget>
@@ -329,6 +330,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="ActionExportUrdf">
+   <property name="text">
+    <string>&amp;Export to URDF...</string>
    </property>
   </action>
   <action name="ActionBotSpy">

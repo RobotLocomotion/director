@@ -56,6 +56,7 @@ ddMainWindow::ddMainWindow()
   this->connect(this->Internal->ActionToggleCameraTerrainMode, SIGNAL(triggered()), this, SIGNAL(toggleCameraTerrainMode()));
   this->connect(this->Internal->ActionOpen, SIGNAL(triggered()), this, SIGNAL(fileOpen()));
   this->connect(this->Internal->ActionSaveData, SIGNAL(triggered()), this, SIGNAL(fileSaveData()));
+  this->connect(this->Internal->ActionExportUrdf, SIGNAL(triggered()), this, SIGNAL(fileExportUrdf()));
 
   QTimer::singleShot(0, this, SLOT(startup()));
 
