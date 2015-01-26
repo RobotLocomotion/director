@@ -8,7 +8,7 @@ s = s.addRobot(robotURDF);
 s = s.setupCosts();
 s = s.loadNominalData(fixed_point_file);
 
-r = s.robot;
+r = s.robot_and_environment;
 
 nq = r.getNumPositions();
 q_nom = s.q_nom;
@@ -33,4 +33,3 @@ for i = 1:size(linknames, 1)
 end
 
 joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
-plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, r.getStateFrame.coordinates(1:nq));
