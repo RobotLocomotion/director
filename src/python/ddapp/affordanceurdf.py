@@ -1,6 +1,6 @@
 from ddapp import transformUtils
 from ddapp import affordanceitems
-from ddapp.thirdparty.urdf_parser_py import urdf
+from urdf_parser_py import urdf
 
 
 def geometryFromAffordance(aff):
