@@ -118,6 +118,13 @@ set(python_files
   ddapp/thirdparty/min_bounding_rect.py
   ddapp/thirdparty/NumericStringParser.py
   ddapp/thirdparty/numpyjsoncoder.py
+
+  urdf_parser_py/__init__.py
+  urdf_parser_py/sdf.py
+  urdf_parser_py/urdf.py
+  urdf_parser_py/xml_reflection/__init__.py
+  urdf_parser_py/xml_reflection/basics.py
+  urdf_parser_py/xml_reflection/core.py
   )
 
 
