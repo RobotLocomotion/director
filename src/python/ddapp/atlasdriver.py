@@ -44,8 +44,9 @@ class AtlasDriver(object):
         self.timer = SimpleTimer()
 
         self.sentStandUtime = None
-
         self.startupStage = 0
+        self._behaviorMap = None
+        self._controllerStatusMap = None
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('CONTROLLER_STATUS', lcmdrc.controller_status_t, self.onControllerStatus)
@@ -62,8 +63,9 @@ class AtlasDriver(object):
         '''
         Return a dict that maps behavior ids (int) to behavior names (string).
         '''
-        msg = lcmdrc.atlas_status_t
-        behaviors = {
+        if not self._behaviorMap:
+            msg = lcmdrc.atlas_status_t
+            self._behaviorMap = {
                     msg.BEHAVIOR_NONE        : 'none',
                     msg.BEHAVIOR_FREEZE      : 'freeze',
                     msg.BEHAVIOR_STAND_PREP  : 'prep',
@@ -72,10 +74,29 @@ class AtlasDriver(object):
                     msg.BEHAVIOR_STEP        : 'step',
                     msg.BEHAVIOR_MANIPULATE  : 'manip',
                     msg.BEHAVIOR_USER        : 'user',
-                    8                        : 'calibrate',
-                    9                        : 'stop',
+                    msg.BEHAVIOR_CALIBRATE   : 'calibrate',
+                    msg.BEHAVIOR_SOFT_STOP   : 'stop',
                     }
-        return behaviors
+        return self._behaviorMap
+
+    def getControllerStatusMap(self):
+        '''
+        Return a dict that maps controller status ids (int) to names (string).
+        '''
+        if not self._controllerStatusMap:
+            msg = lcmdrc.controller_status_t
+            self._controllerStatusMap = {
+                    msg.UNKNOWN       : 'unknown',
+                    msg.STANDING      : 'standing',
+                    msg.WALKING       : 'walking',
+                    msg.HARNESSED     : 'harnessed',
+                    msg.QUASISTATIC   : 'quasistatic',
+                    msg.BRACING       : 'bracing',
+                    msg.CRAWLING      : 'crawling',
+                    msg.DUMMY         : 'dummy',
+                    msg.MANIPULATING  : 'manipulating',
+                    }
+        return self._controllerStatusMap
 
     def getCurrentBehaviorName(self):
         '''
@@ -95,14 +116,18 @@ class AtlasDriver(object):
 
     def getControllerStatus(self):
         '''
-        Returns the current controller status as an integer value from the
-        most recently received controller_status_t.state field.
-        Returns None if no status message has been received.
+        Returns the current controller status as a string.  The possible string
+        values are the values of the dict returned by getControllerStatusMap().
+        None is returned if no controller status message has been received or
+        the status is not among those handled by this driver.
         '''
         if not self.lastControllerStatusMessage:
             return None
 
-        return self.lastControllerStatusMessage.state
+        statusMap = self.getControllerStatusMap()
+        state = self.lastControllerStatusMessage.state
+        assert state in statusMap
+        return statusMap[state]
 
     def getCurrentInletPressure(self):
         if self.lastAtlasStatusMessage:
