@@ -1,6 +1,7 @@
 <RCC>
   <qresource prefix="/ui">
     <file>ddActionManager.ui</file>
+    <file>ddAffordancePanel.ui</file>
     <file>ddHandControl.ui</file>
     <file>ddIKEditor.ui</file>
     <file>ddMultisense.ui</file>

@@ -48,6 +48,7 @@ from ddapp.fieldcontainer import FieldContainer
 from ddapp import robotstate
 from ddapp import roboturdf
 from ddapp import robotsystem
+from ddapp import affordancepanel
 from ddapp import filterUtils
 from ddapp import footstepsdriver
 from ddapp import footstepsdriverpanel
@@ -503,6 +504,7 @@ if useImageViewDemo:
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
+affordancepanel.init(view, affordanceManager, ikServer, robotStateJointController)
 camerabookmarks.init(view)
 
 
@@ -664,4 +666,3 @@ if usePFGrasp:
     showImageOverlay()
     hideImageOverlay()
     pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)
-
