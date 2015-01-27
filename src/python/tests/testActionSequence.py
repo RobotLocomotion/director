@@ -23,9 +23,7 @@ view.show()
 
 useRobotSystem = False
 if useRobotSystem:
-    robotSystem = dict()
-    robotsystem.create(view, robotSystem)
-    robotSystem = FieldContainer(**robotSystem)
+    robotSystem = robotsystem.create(view)
     rt.robotSystem = robotSystem
 
 
