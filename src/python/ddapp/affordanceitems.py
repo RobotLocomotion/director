@@ -23,7 +23,7 @@ class AffordanceItem(PolyDataItem):
         PolyDataItem.__init__(self, name, polyData, view)
         self.params = {}
         self.addProperty('uuid', newUUID(), attributes=om.PropertyAttributes(hidden=True))
-        self.addProperty('Server updates enabled', True, attributes=om.PropertyAttributes(hidden=True))
+        self.addProperty('Collision Enabled', False)
 
     def publish(self):
         pass
@@ -71,7 +71,7 @@ class BoxAffordanceItem(AffordanceItem):
 
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
-        self.addProperty('Dimensions', [0.5, 0.5, 0.5], attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+        self.addProperty('Dimensions', [0.25, 0.25, 0.25], attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.updateGeometryFromProperties()
 
     def loadDescription(self, desc):
@@ -93,7 +93,7 @@ class SphereAffordanceItem(AffordanceItem):
 
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
-        self.addProperty('Radius', 0.5, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+        self.addProperty('Radius', 0.15, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.updateGeometryFromProperties()
 
     def loadDescription(self, desc):
