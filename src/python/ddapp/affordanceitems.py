@@ -24,6 +24,7 @@ class AffordanceItem(PolyDataItem):
         self.params = {}
         self.addProperty('uuid', newUUID(), attributes=om.PropertyAttributes(hidden=True))
         self.addProperty('Collision Enabled', False)
+        self.properties.setPropertyIndex('Collision Enabled', 0)
 
     def publish(self):
         pass
@@ -72,6 +73,7 @@ class BoxAffordanceItem(AffordanceItem):
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
         self.addProperty('Dimensions', [0.25, 0.25, 0.25], attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+        self.properties.setPropertyIndex('Dimensions', 0)
         self.updateGeometryFromProperties()
 
     def loadDescription(self, desc):
@@ -94,6 +96,7 @@ class SphereAffordanceItem(AffordanceItem):
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
         self.addProperty('Radius', 0.15, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+        self.properties.setPropertyIndex('Radius', 0)
         self.updateGeometryFromProperties()
 
     def loadDescription(self, desc):
@@ -117,6 +120,8 @@ class CylinderAffordanceItem(AffordanceItem):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
         self.addProperty('Radius', 0.03, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.addProperty('Length', 0.5, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+        self.properties.setPropertyIndex('Radius', 0)
+        self.properties.setPropertyIndex('Length', 1)
         self.updateGeometryFromProperties()
 
     def loadDescription(self, desc):
@@ -147,6 +152,8 @@ class CapsuleAffordanceItem(AffordanceItem):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
         self.addProperty('Radius', 0.03, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.addProperty('Length', 0.5, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+        self.properties.setPropertyIndex('Radius', 0)
+        self.properties.setPropertyIndex('Length', 1)
         self.updateGeometryFromProperties()
 
     def loadDescription(self, desc):
@@ -172,6 +179,11 @@ class CapsuleRingAffordanceItem(AffordanceItem):
         self.addProperty('Radius', 0.15, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.addProperty('Tube Radius', 0.02, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.addProperty('Segments', 8, attributes=om.PropertyAttributes(decimals=3, singleStep=1, minimum=3, maximum=100))
+
+        self.properties.setPropertyIndex('Radius', 0)
+        self.properties.setPropertyIndex('Tube Radius', 1)
+        self.properties.setPropertyIndex('Segments', 2)
+
         self.updateGeometryFromProperties()
 
     def loadDescription(self, desc):
@@ -201,6 +213,7 @@ class MeshAffordanceItem(AffordanceItem):
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
         self.addProperty('Filename', '')
+        self.properties.setPropertyIndex('Filename', 0)
 
     def loadDescription(self, desc):
         AffordanceItem.loadDescription(self, desc)
