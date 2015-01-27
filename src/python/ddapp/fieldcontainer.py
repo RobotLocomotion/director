@@ -24,8 +24,6 @@ def _fields_repr(self, indent=4):
 def _dict_repr(self, indent=4):
     indent_str = ' '*indent
     field_names = self.keys()
-    for n in field_names:
-        assert isinstance(n, str)
     field_names.sort()
     fill_length = _max_length(field_names) + 3
 
