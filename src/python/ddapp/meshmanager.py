@@ -28,7 +28,6 @@ class MeshManager(object):
         if meshId in self.meshes:
             filename = os.path.join(self.cacheDirectory, '%s.%s' % (meshId, self.cacheDataType))
             if not os.path.isfile(filename):
-                print 'caching mesh:', filename
                 ioUtils.writePolyData(self.get(meshId), filename)
             return filename
         return None
