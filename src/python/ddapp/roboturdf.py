@@ -48,7 +48,7 @@ class RobotModelItem(om.ObjectModelItem):
 
         self.views = []
         self.model = None
-        self.callbacks = callbacks.CallbackRegistry([self.MODEL_CHANGED_SIGNAL])
+        self.callbacks.addSignal(self.MODEL_CHANGED_SIGNAL)
         self.useUrdfColors = False
 
         self.addProperty('Filename', model.filename())
@@ -155,6 +155,7 @@ class RobotModelItem(om.ObjectModelItem):
         view.render()
 
     def onRemoveFromObjectModel(self):
+        om.ObjectModelItem.onRemoveFromObjectModel(self)
         self.removeFromAllViews()
 
     def removeFromAllViews(self):

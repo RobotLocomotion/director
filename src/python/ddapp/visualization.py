@@ -296,6 +296,7 @@ class PolyDataItem(om.ObjectModelItem):
         self.shadowActor = None
 
     def onRemoveFromObjectModel(self):
+        om.ObjectModelItem.onRemoveFromObjectModel(self)
         self.removeFromAllViews()
 
     def removeFromAllViews(self):
@@ -351,6 +352,7 @@ class TextItem(om.ObjectModelItem):
             view.render()
 
     def onRemoveFromObjectModel(self):
+        om.ObjectModelItem.onRemoveFromObjectModel(self)
         self.removeFromAllViews()
 
     def removeFromAllViews(self):
@@ -440,7 +442,7 @@ class FrameItem(PolyDataItem):
         self.addProperty('Scale', scale, attributes=om.PropertyAttributes(decimals=2, minimum=0.01, maximum=100, singleStep=0.1, hidden=False))
         self.addProperty('Edit', False)
 
-        self.callbacks = callbacks.CallbackRegistry(['FrameModified'])
+        self.callbacks.addSignal('FrameModified')
         self.onTransformModifiedCallback = None
         self.observerTag = self.transform.AddObserver('ModifiedEvent', self.onTransformModified)
 

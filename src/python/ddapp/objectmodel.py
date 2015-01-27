@@ -27,6 +27,8 @@ class Icons(object):
 
 class ObjectModelItem(object):
 
+    REMOVED_FROM_OBJECT_MODEL = 'REMOVED_FROM_OBJECT_MODEL'
+
     def __getstate__(self):
         #print 'getstate called on:', self
         d = dict(properties=self.properties)
@@ -41,6 +43,7 @@ class ObjectModelItem(object):
 
         #print 'init called on:', self
         self._tree = None
+        self.callbacks = callbacks.CallbackRegistry([self.REMOVED_FROM_OBJECT_MODEL])
         self.properties = properties or PropertySet()
         self.properties.connectPropertyChanged(self._onPropertyChanged)
         self.properties.connectPropertyAdded(self._onPropertyAdded)
@@ -104,6 +107,12 @@ class ObjectModelItem(object):
 
     def onRemoveFromObjectModel(self):
         pass
+
+    def connectRemovedFromObjectModel(self, func):
+        return self.callbacks.connect(self.REMOVED_FROM_OBJECT_MODEL, func)
+
+    def disconnectRemovedFromObjectModel(self, callbackId):
+        self.callbacks.disconnect(callbackId)
 
     def parent(self):
         if self._tree is not None:
@@ -284,6 +293,7 @@ class ObjectModelTree(object):
         except KeyError:
             return
 
+        obj.callbacks.process(obj.REMOVED_FROM_OBJECT_MODEL, self, obj)
         obj.onRemoveFromObjectModel()
         obj._tree = None
 
