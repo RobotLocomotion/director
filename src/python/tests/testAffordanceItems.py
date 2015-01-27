@@ -1,6 +1,7 @@
 from ddapp.consoleapp import ConsoleApp
 from ddapp import robotsystem
 from ddapp import affordanceitems
+from ddapp import affordanceurdf
 from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import lcmUtils
@@ -25,32 +26,30 @@ view.show()
 robotsystem.create(view, globals())
 
 
+def affordanceFromDescription(desc):
+    affordanceManager.collection.updateDescription(desc)
+    return affordanceManager.getAffordanceById(desc['uuid'])
 
 def newBox():
     desc = dict(classname='BoxAffordanceItem', Name='test box', Dimensions=[0.5, 0.2, 0.1], uuid=newUUID(), pose=((0.5,0.0,1.0), (1,0,0,0)))
-    affordanceManager.collection.updateDescription(desc)
-    return affordanceManager.getAffordanceById(desc['uuid'])
+    return affordanceFromDescription(desc)
 
 def newSphere():
     desc = dict(classname='SphereAffordanceItem', Name='test sphere', Radius=0.2, uuid=newUUID(), pose=((0.5,0.0,1.0), (1,0,0,0)))
-    affordanceManager.collection.updateDescription(desc)
-    return affordanceManager.getAffordanceById(desc['uuid'])
+    return affordanceFromDescription(desc)
 
 def newCylinder():
     desc = dict(classname='CylinderAffordanceItem', Name='test cylinder', Radius=0.05, Length=0.5, uuid=newUUID(), pose=((0.5,0.0,1.0), (1,0,0,0)))
-    affordanceManager.collection.updateDescription(desc)
-    return affordanceManager.getAffordanceById(desc['uuid'])
+    return affordanceFromDescription(desc)
 
 def newCapsule():
     desc = dict(classname='CapsuleAffordanceItem', Name='test capsule', Radius=0.05, Length=0.5, uuid=newUUID(), pose=((0.5,0.0,1.0), (1,0,0,0)))
-    affordanceManager.collection.updateDescription(desc)
-    return affordanceManager.getAffordanceById(desc['uuid'])
+    return affordanceFromDescription(desc)
 
 
 def newCapsuleRing():
     desc = dict(classname='CapsuleRingAffordanceItem', Name='test capsule ring', uuid=newUUID(), pose=((0.5,0.0,1.0), (1,0,0,0)))
-    affordanceManager.collection.updateDescription(desc)
-    return affordanceManager.getAffordanceById(desc['uuid'])
+    return affordanceFromDescription(desc)
 
 
 def newMesh():
@@ -61,13 +60,19 @@ def newMesh():
     meshId = affordanceitems.MeshAffordanceItem.getMeshManager().add(pd)
 
     desc = dict(classname='MeshAffordanceItem', Name='test mesh', Filename=meshId, uuid=newUUID(), pose=((0.5,0.0,1.0), (1,0,0,0)))
-    affordanceManager.collection.updateDescription(desc)
+    return affordanceFromDescription(desc)
 
 
-def loadTableTopData():
+def loadTableTopPointCloud():
     dataDir = app.getTestingDataDirectory()
     polyData = ioUtils.readPolyData(os.path.join(dataDir, 'tabletop/table-and-door-scene.vtp'))
     return vis.showPolyData(polyData, 'pointcloud snapshot')
+
+def segmentTableTopPointCloud():
+    polyData = om.findObjectByName('pointcloud snapshot').polyData
+    pickPoint = [-0.70420271,  0.64272028,  1.07856214]
+    data = segmentation.segmentTableScene(polyData, pickPoint)
+    vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
 
 
 def testCollection():
@@ -84,21 +89,21 @@ def testCollection():
     assert len(affordanceCollection.collection) == 0
 
 
+def testAffordanceToUrdf():
 
-#testCollection()
+    affs = [func() for func in newSphere, newBox, newCylinder, newCapsule, newMesh]
+    print affordanceurdf.urdfStringFromAffordances(affs)
+
+    for aff in affs:
+        om.removeFromObjectModel(aff)
 
 
+testCollection()
+testAffordanceToUrdf()
 
+loadTableTopPointCloud()
+segmentTableTopPointCloud()
 
-
-###
-
-#loadTableTopData()
-
-#data = segmentation.segmentTableScene(polyData, [-0.70420271,  0.64272028,  1.07856214])
-#vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
-
-###
 
 
 app.start()
