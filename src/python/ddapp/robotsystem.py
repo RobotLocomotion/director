@@ -78,7 +78,7 @@ from ddapp import ioUtils as io
 
 def create(view=None, globalsDict=None):
     s = RobotSystem()
-    s.init(view, globalsDict)
+    return s.init(view, globalsDict)
 
 
 class RobotSystem(object):
@@ -194,7 +194,7 @@ class RobotSystem(object):
 
 
         applogic.resetCamera(viewDirection=[-1,0,0], view=view)
-        viewbehaviors.ViewBehaviors.addRobotBehaviors(robotStateModel, handFactory, footstepsDriver)
+
 
 
 
@@ -209,10 +209,15 @@ class RobotSystem(object):
             footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
             manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
+        robotSystemArgs = dict(locals())
+        for arg in ['globalsDict', 'self']:
+            del robotSystemArgs[arg]
 
         if globalsDict is not None:
-            globalsDict.update(locals())
-            for arg in ['globalsDict', 'self']:
-                del globalsDict[arg]
+            globalsDict.update(robotSystemArgs)
+
+        robotSystem = FieldContainer(**robotSystemArgs)
+        viewbehaviors.ViewBehaviors.addRobotBehaviors(robotSystem)
+        return robotSystem
 
 

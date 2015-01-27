@@ -115,9 +115,8 @@ updatePolyData = segmentation.updatePolyData
 ###############################################################################
 
 
-robotSystem = {}
-robotsystem.create(view, robotSystem)
-globals().update(robotSystem)
+robotSystem = robotsystem.create(view)
+globals().update(dict(robotSystem))
 
 
 useIk = True
@@ -347,20 +346,6 @@ if usePlanning:
 
 
     splinewidget.init(view, handFactory, robotStateModel)
-
-    robotSystem = FieldContainer(
-        robotStateModel=robotStateModel,
-        robotStateJointController=robotStateJointController,
-        playbackRobotModel=playbackRobotModel,
-        ikPlanner=ikPlanner,
-        manipPlanner=manipPlanner,
-        footstepsDriver=footstepsDriver,
-        atlasDriver=atlasDriver,
-        lHandDriver=lHandDriver,
-        rHandDriver=rHandDriver,
-        multisenseDriver=multisenseDriver,
-        drillDemo=drillDemo,
-        view=view)
 
 
     rt.robotSystem = robotSystem

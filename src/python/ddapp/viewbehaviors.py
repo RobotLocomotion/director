@@ -801,11 +801,12 @@ class ViewBehaviors(object):
         self.keyEventFilter = KeyEventFilter(view)
 
     @staticmethod
-    def addRobotBehaviors(_robotModel=None, _handFactory=None, _footstepsDriver=None, _neckDriver=None):
-        global robotModel, handFactory, footstepsDriver, neckDriver, robotLinkSelector
-        robotModel = _robotModel
-        handFactory = _handFactory
-        footstepsDriver = _footstepsDriver
-        neckDriver = _neckDriver
+    def addRobotBehaviors(_robotSystem):
+        global robotSystem, robotModel, handFactory, footstepsDriver, neckDriver, robotLinkSelector
+        robotSystem = _robotSystem
+        robotModel = robotSystem.robotStateModel
+        handFactory = robotSystem.handFactory
+        footstepsDriver = robotSystem.footstepsDriver
+        neckDriver = robotSystem.neckDriver
         if app.getMainWindow() is not None:
             robotLinkSelector = RobotLinkSelector()
