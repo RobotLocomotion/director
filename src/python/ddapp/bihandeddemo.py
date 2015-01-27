@@ -36,7 +36,8 @@ from PythonQt import QtCore, QtGui
 
 
 class Board(object):
-    def __init__(self):
+    def __init__(self, b): #b is the BihandedPlannerDemo instance. This is to get access to its functions in the Board class
+        self.b = b
         self.affordance = None
         self.frame = None
 
@@ -60,15 +61,115 @@ class Board(object):
         self.initXYZ = [1.5, 0.6, 0.9] # height requires crouching
         self.initRPY = [1,1,1]
 
-        self.graspLeftHandFrameXYZ = [-0.045, 0.0, -0.35] #-0.0275
+        self.graspLeftHandFrameXYZ = [-0.045, 0.0, -0.4] #-0.0275
         self.graspLeftHandFrameRPY = [0, 90, -90]
         
-        self.graspRightHandFrameXYZ = [-0.045, 0.0, 0.35]
+        self.graspRightHandFrameXYZ = [-0.045, 0.0, 0.4]
         self.graspRightHandFrameRPY = [0, 90, -90]
 
         # where to stand relative to the drill on a table:
         self.relativeStanceXYZ = [-0.69, -0.4, 0.0] # was -0.67, due to drift set to -0.69
         self.relativeStanceRPY = [0, 0, 0]
+        
+        self.reachDepth = 0.12 # depth to reach to before going for grasp
+        
+        self.spawnBoardAffordance()
+
+
+    def spawnBoardAffordance(self, randomize=False):
+
+        if randomize:
+
+            position = [random.uniform(0.5, 0.8), random.uniform(-0.2, 0.2), random.uniform(0.5, 0.8)]
+            rpy = [random.choice((random.uniform(-35, 35), random.uniform(70, 110))), random.uniform(-10, 10),  random.uniform(-5, 5)]
+            zwidth = random.uniform(0.5, 1.0)
+
+        else:
+
+            position = [0.6, 0.0, 1.2]
+            rpy = [90, 1, 0]
+            zwidth = 1.00 # length of the board
+
+        xwidth = 3.75 * .0254
+        ywidth = 1.75 * .0254
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t.Concatenate(self.b.computeGroundFrame(self.b.robotModel))
+        xaxis = [1,0,0]
+        yaxis = [0,1,0]
+        zaxis = [0,0,1]
+        for axis in (xaxis, yaxis, zaxis):
+            t.TransformVector(axis, axis)
+
+        self.affordance = segmentation.createBlockAffordance(t.GetPosition(), xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, 'board', parent='affordances')
+        self.affordance.setProperty('Color', QtGui.QColor(200, 150, 100))
+        t = self.affordance.actor.GetUserTransform()
+        self.frame = vis.showFrame(t, 'board frame', parent=self.affordance, visible=False, scale=0.2)
+
+        self.computeBoardGraspFrames()        
+        self.computeBoardReachFrames()
+        
+        self.computeBoardStanceFrame()
+
+        self.frameSync = vis.FrameSync()
+        self.frameSync.addFrame(self.frame)
+        self.frameSync.addFrame(self.graspLeftFrame)
+        self.frameSync.addFrame(self.graspRightFrame)
+        self.frameSync.addFrame(self.reachLeftFrame)
+        self.frameSync.addFrame(self.reachRightFrame)
+        self.frameSync.addFrame(self.stanceFrame)
+
+
+    def computeBoardGraspFrames(self):
+        t = transformUtils.frameFromPositionAndRPY( self.graspLeftHandFrameXYZ , self.graspLeftHandFrameRPY )
+        t_copy = transformUtils.copyFrame(t)
+        t_copy.Concatenate(self.frame.transform)
+        self.graspLeftFrame = vis.updateFrame(t_copy, 'grasp left frame', parent=self.affordance, visible=False, scale=0.2)
+        self.graspLeftFrame.addToView(app.getDRCView())
+        
+        t = transformUtils.frameFromPositionAndRPY( self.graspRightHandFrameXYZ , self.graspRightHandFrameRPY )
+        t_copy = transformUtils.copyFrame(t)
+        t_copy.Concatenate(self.frame.transform)
+        self.graspRightFrame = vis.updateFrame(t_copy, 'grasp right frame', parent=self.affordance, visible=False, scale=0.2)
+        self.graspRightFrame.addToView(app.getDRCView())
+        
+        if (self.b.graspingHand == 'left'):
+            self.graspFrame = self.graspLeftFrame
+        else:
+            self.graspFrame = self.graspRightFrame
+
+
+    def computeBoardReachFrames(self):
+        ''' Reach ~10cm short of the grasp frame '''
+        reachLeftXYZ = copy.deepcopy( self.graspLeftHandFrameXYZ )
+        reachLeftXYZ[0] = reachLeftXYZ[0] - self.reachDepth
+        reachLeftRPY = copy.deepcopy ( self.graspLeftHandFrameRPY )
+
+        t = transformUtils.frameFromPositionAndRPY( reachLeftXYZ , reachLeftRPY )
+        t.Concatenate(self.frame.transform)
+        self.reachLeftFrame = vis.updateFrame(t, 'reach left frame', parent=self.affordance, visible=False, scale=0.2)
+        self.reachLeftFrame.addToView(app.getDRCView())
+        
+        reachRightXYZ = copy.deepcopy( self.graspRightHandFrameXYZ )
+        reachRightXYZ[0] = reachRightXYZ[0] - self.reachDepth
+        reachRightRPY = copy.deepcopy ( self.graspRightHandFrameRPY )
+
+        t = transformUtils.frameFromPositionAndRPY( reachRightXYZ , reachRightRPY )
+        t.Concatenate(self.frame.transform)
+        self.reachRightFrame = vis.updateFrame(t, 'reach right frame', parent=self.affordance, visible=False, scale=0.2)
+        self.reachRightFrame.addToView(app.getDRCView())
+        
+        if (self.b.graspingHand == 'left'):
+            self.reachFrame = self.reachLeftFrame
+        else:
+            self.reachFrame = self.reachRightFrame
+
+
+    def computeBoardStanceFrame(self):
+        objectTransform = transformUtils.copyFrame( self.graspLeftFrame.transform )
+        self.relativeStanceTransform = transformUtils.copyFrame( transformUtils.frameFromPositionAndRPY( self.relativeStanceXYZ , self.relativeStanceRPY ) )
+        robotStance = self.b.computeRobotStanceFrame( objectTransform, self.relativeStanceTransform )
+        self.stanceFrame = vis.updateFrame(robotStance, 'board stance', parent=self.affordance, visible=False, scale=0.2)
+        self.stanceFrame.addToView(app.getDRCView())
 
 
 
@@ -124,10 +225,9 @@ class BihandedPlannerDemo(object):
 
         self.plans = []   
 
-        self.board = Board()
+        self.board = Board(self)
 
         # params:
-        self.reachDepth = 0.12 # depth to reach to before going for grasp
 
         #extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
         #self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
@@ -240,6 +340,7 @@ class BihandedPlannerDemo(object):
         return robotStance
 
     ### Board Focused Functions ######################################################################
+    '''
     def computeConvenientDrillFrame(self, robotModel):
         # makes a drill in front of the robot
         # drill further away - requires walking
@@ -252,59 +353,6 @@ class BihandedPlannerDemo(object):
         return t
 
 
-    def computeBoardGraspFrames(self):
-        t = transformUtils.frameFromPositionAndRPY( self.board.graspLeftHandFrameXYZ , self.board.graspLeftHandFrameRPY )
-        t_copy = transformUtils.copyFrame(t)
-        t_copy.Concatenate(self.board.frame.transform)
-        self.board.graspLeftFrame = vis.updateFrame(t_copy, 'grasp left frame', parent=self.board.affordance, visible=False, scale=0.2)
-        self.board.graspLeftFrame.addToView(app.getDRCView())
-        
-        t = transformUtils.frameFromPositionAndRPY( self.board.graspRightHandFrameXYZ , self.board.graspRightHandFrameRPY )
-        t_copy = transformUtils.copyFrame(t)
-        t_copy.Concatenate(self.board.frame.transform)
-        self.board.graspRightFrame = vis.updateFrame(t_copy, 'grasp right frame', parent=self.board.affordance, visible=False, scale=0.2)
-        self.board.graspRightFrame.addToView(app.getDRCView())
-        
-        if (self.graspingHand == 'left'):
-            self.board.graspFrame = self.board.graspLeftFrame
-        else:
-            self.board.graspFrame = self.board.graspRightFrame
-
-
-    def computeBoardReachFrames(self):
-        ''' Reach ~10cm short of the grasp frame '''
-        reachLeftXYZ = copy.deepcopy( self.board.graspLeftHandFrameXYZ )
-        reachLeftXYZ[0] = reachLeftXYZ[0] - self.reachDepth
-        reachLeftRPY = copy.deepcopy ( self.board.graspLeftHandFrameRPY )
-
-        t = transformUtils.frameFromPositionAndRPY( reachLeftXYZ , reachLeftRPY )
-        t.Concatenate(self.board.frame.transform)
-        self.board.reachLeftFrame = vis.updateFrame(t, 'reach left frame', parent=self.board.affordance, visible=False, scale=0.2)
-        self.board.reachLeftFrame.addToView(app.getDRCView())
-        
-        reachRightXYZ = copy.deepcopy( self.board.graspRightHandFrameXYZ )
-        reachRightXYZ[0] = reachRightXYZ[0] - self.reachDepth
-        reachRightRPY = copy.deepcopy ( self.board.graspRightHandFrameRPY )
-
-        t = transformUtils.frameFromPositionAndRPY( reachRightXYZ , reachRightRPY )
-        t.Concatenate(self.board.frame.transform)
-        self.board.reachRightFrame = vis.updateFrame(t, 'reach right frame', parent=self.board.affordance, visible=False, scale=0.2)
-        self.board.reachRightFrame.addToView(app.getDRCView())
-        
-        if (self.graspingHand == 'left'):
-            self.board.reachFrame = self.board.reachLeftFrame
-        else:
-            self.board.reachFrame = self.board.reachRightFrame
-
-
-    def computeBoardStanceFrame(self):
-        objectTransform = transformUtils.copyFrame( self.board.graspLeftFrame.transform )
-        self.board.relativeStanceTransform = transformUtils.copyFrame( transformUtils.frameFromPositionAndRPY( self.board.relativeStanceXYZ , self.board.relativeStanceRPY ) )
-        robotStance = self.computeRobotStanceFrame( objectTransform, self.board.relativeStanceTransform )
-        self.board.stanceFrame = vis.updateFrame(robotStance, 'drill stance', parent=self.board.affordance, visible=False, scale=0.2)
-        self.board.stanceFrame.addToView(app.getDRCView())
-
-
     def computeFaceToDrillTransform(self):
         # if the drill is held in the hand
         # what will be its position, relative to the l_hand_face (or other)
@@ -313,50 +361,6 @@ class BihandedPlannerDemo(object):
         rotation, offset, depthOffset, lateralOffset, flip = self.segmentationpanel._segmentationPanel.getDrillInHandParams()
         rotation += self.drillYawSliderValue
         self.board.faceToDrillTransform = segmentation.getDrillInHandOffset(rotation, offset, depthOffset, lateralOffset, flip)
-
-
-    def spawnBoardAffordance(self, randomize=False):
-
-        if randomize:
-
-            position = [random.uniform(0.5, 0.8), random.uniform(-0.2, 0.2), random.uniform(0.5, 0.8)]
-            rpy = [random.choice((random.uniform(-35, 35), random.uniform(70, 110))), random.uniform(-10, 10),  random.uniform(-5, 5)]
-            zwidth = random.uniform(0.5, 1.0)
-
-        else:
-
-            position = [0.7, 0.0, 1.2]
-            rpy = [90, 1, 0]
-            zwidth = 1.00 # length of the board
-
-        xwidth = 3.75 * .0254
-        ywidth = 1.75 * .0254
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(self.computeGroundFrame(self.robotModel))
-        xaxis = [1,0,0]
-        yaxis = [0,1,0]
-        zaxis = [0,0,1]
-        for axis in (xaxis, yaxis, zaxis):
-            t.TransformVector(axis, axis)
-
-        affordance = segmentation.createBlockAffordance(t.GetPosition(), xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, 'board', parent='affordances')
-        affordance.setProperty('Color', QtGui.QColor(200, 150, 100))
-        t = affordance.actor.GetUserTransform()
-        affordanceFrame = vis.showFrame(t, 'board frame', parent=affordance, visible=False, scale=0.2)
-
-        self.findBoardAffordance()
-
-    def findBoardAffordance(self):
-        '''
-        find an affordance from the view graph - with a populated frame and the param
-        then populate the required frames
-        '''
-        self.board.affordance = om.findObjectByName('board')
-        self.board.frame = om.findObjectByName('board frame')
-
-        self.computeBoardGraspFrames()
-        self.computeBoardReachFrames()
-        self.computeBoardStanceFrame()
 
 
     def moveDrillToHand(self):
@@ -374,6 +378,7 @@ class BihandedPlannerDemo(object):
         drillTransform.Concatenate( self.board.faceToDrillTransform )
         startPose = self.getPlanningStartPose()
         drillTransform.Concatenate( self.ikPlanner.getLinkFrameAtPose( self.graspingFaceLink , startPose) )
+    '''
 
     ### End Board Focused Functions ###############################################################
     ### Planning Functions ###############################################################
@@ -434,7 +439,7 @@ class BihandedPlannerDemo(object):
         
     def planGrasp(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.graspFrame, lockBase=False, lockBack=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.graspFrame, lockBase=True, lockBack=True)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)       
