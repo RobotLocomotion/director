@@ -3183,10 +3183,6 @@ def computeEdge(polyData, edgeAxis, perpAxis, binWidth=0.03):
     return np.array(edgePoints)
 
 
-def computeCentroid(polyData):
-    return np.average(vtkNumpy.getNumpyFromVtk(polyData, 'Points'), axis=0)
-
-
 def computeCentroids(polyData, axis, binWidth=0.025):
 
     polyData = labelPointDistanceAlongAxis(polyData, axis, resultArrayName='dist_along_axis')

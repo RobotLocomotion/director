@@ -49,6 +49,10 @@ def computeDelaunay2D(polyData):
     return shallowCopy(f.GetOutput())
 
 
+def computeCentroid(polyData):
+    return np.average(vnp.getNumpyFromVtk(polyData, 'Points'), axis=0)
+
+
 def appendPolyData(polyDataList):
     assert len(polyDataList)
     append = vtk.vtkAppendPolyData()
