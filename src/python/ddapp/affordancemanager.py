@@ -1,6 +1,6 @@
 from ddapp import objectmodel as om
 from ddapp import affordanceitems
-from ddapp import affordancecollection as ac
+from ddapp import lcmobjectcollection
 from ddapp import visualization as vis
 from ddapp.timercallback import TimerCallback
 from ddapp import vtkAll as vtk
@@ -9,12 +9,12 @@ from ddapp.thirdparty import numpyjsoncoder
 
 class AffordanceObjectModelManager(object):
 
-    def __init__(self, affordanceCollection, view):
-        self.affordanceCollection = affordanceCollection
-        self.affordanceCollection.connectDescriptionUpdated(self._onDescriptionUpdated)
-        self.affordanceCollection.connectDescriptionRemoved(self._onDescriptionRemoved)
+    def __init__(self, view):
+        self.collection = lcmobjectcollection.LCMObjectCollection(channel='AFFORDANCE_COLLECTION_COMMAND')
+        self.collection.connectDescriptionUpdated(self._onDescriptionUpdated)
+        self.collection.connectDescriptionRemoved(self._onDescriptionRemoved)
         self.view = view
-        self.notifyFrequency = 5 # throttle to 5 lcm messages per second for affordance updates
+        self.notifyFrequency = 30 # throttle lcm messages per second sent for affordance updates
         self._ignoreChanges = False
 
         self._pendingUpdates = set()
@@ -37,15 +37,19 @@ class AffordanceObjectModelManager(object):
         return aff.getDescription()
 
     def registerAffordance(self, aff, notify=True):
+        aff.connectRemovedFromObjectModel(self._onAffordanceRemovedFromObjectModel)
         aff.properties.connectPropertyChanged(self._onAffordancePropertyChanged)
         aff.getChildFrame().connectFrameModified(self._onAffordanceFrameChanged)
         if notify:
             self.notifyAffordanceUpdate(aff)
 
     def removeAffordance(self, aff):
-        self.affordanceCollection.removeDescription(aff.getProperty('uuid'))
+        self.collection.removeDescription(aff.getProperty('uuid'), notify=False)
 
     def notifyAffordanceUpdate(self, aff):
+
+        if not isinstance(aff, affordanceitems.AffordanceItem):
+            return
 
         shouldNotify = not self._pendingUpdates and not self.timer.singleShotTimer.isActive()
         self._pendingUpdates.add(aff)
@@ -58,7 +62,7 @@ class AffordanceObjectModelManager(object):
             self.timer.singleShot(1.0/self.notifyFrequency)
 
         for aff in self._pendingUpdates:
-            self.affordanceCollection.updateDescription(self.getAffordanceDescription(aff), notify=False)
+            self.collection.updateDescription(self.getAffordanceDescription(aff), notify=False)
         self._pendingUpdates.clear()
 
     def _onAffordancePropertyChanged(self, propertySet, propertyName):
@@ -72,6 +76,11 @@ class AffordanceObjectModelManager(object):
         aff = frameObj.parent()
         self.notifyAffordanceUpdate(aff)
 
+    def _onAffordanceRemovedFromObjectModel(self, objectModel, aff):
+        if self._ignoreChanges:
+            return
+        self.removeAffordance(aff)
+
     def _loadAffordanceFromDescription(self, desc):
         className = desc['classname']
         cls = getattr(affordanceitems, className)
@@ -81,9 +90,9 @@ class AffordanceObjectModelManager(object):
         aff.loadDescription(desc)
         self.registerAffordance(aff, notify=False)
 
-    def _onDescriptionUpdated(self, affordanceCollection, descriptionId):
+    def _onDescriptionUpdated(self, collection, descriptionId):
         aff = self.getAffordanceById(descriptionId)
-        desc = affordanceCollection.collection[descriptionId]
+        desc = collection.getDescription(descriptionId)
 
         if aff:
             self._ignoreChanges = True
@@ -93,5 +102,7 @@ class AffordanceObjectModelManager(object):
         else:
             aff = self._loadAffordanceFromDescription(desc)
 
-    def _onDescriptionRemoved(self, affordanceCollection, descriptionId):
+    def _onDescriptionRemoved(self, collection, descriptionId):
+        self._ignoreChanges = True
         om.removeFromObjectModel(self.getAffordanceById(descriptionId))
+        self._ignoreChanges = False

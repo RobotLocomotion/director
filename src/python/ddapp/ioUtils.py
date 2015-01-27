@@ -66,6 +66,11 @@ def writePolyData(polyData, filename):
         raise Exception('Unknown file extension in writePolyData: %s' % filename)
 
     writer = writers[ext]()
+
+    if ext in ('.ply', '.stl'):
+        polyData = _triangulate(polyData)
+        writer.SetFileTypeToASCII()
+
     writer.SetFileName(filename)
     writer.SetInput(polyData)
     writer.Update()
@@ -95,6 +100,12 @@ def writeImage(image, filename):
 def _computeNormals(polyData):
     normals = vtk.vtkPolyDataNormals()
     normals.SetFeatureAngle(45)
+    normals.SetInput(polyData)
+    normals.Update()
+    return shallowCopy(normals.GetOutput())
+
+def _triangulate(polyData):
+    normals = vtk.vtkTriangleFilter()
     normals.SetInput(polyData)
     normals.Update()
     return shallowCopy(normals.GetOutput())

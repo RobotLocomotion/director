@@ -11,17 +11,17 @@ from ddapp.uuidutil import newUUID
 import drc as lcmdrc
 
 
-class AffordanceCollection(object):
+class LCMObjectCollection(object):
 
     DESCRIPTION_UPDATED_SIGNAL = 'DESCRIPTION_UPDATED_SIGNAL'
     DESCRIPTION_REMOVED_SIGNAL = 'DESCRIPTION_REMOVED_SIGNAL'
 
-    def __init__(self):
+    def __init__(self, channel):
         self.collection = OrderedDict()
         self.collectionId = newUUID()
         self.sentCommands = set()
         self.sentRequest = None
-        self.channel = 'AFFORDANCE_COLLECTION_COMMAND'
+        self.channel = channel
 
         self.callbacks = callbacks.CallbackRegistry([self.DESCRIPTION_UPDATED_SIGNAL,
                                                      self.DESCRIPTION_REMOVED_SIGNAL])
@@ -49,6 +49,9 @@ class AffordanceCollection(object):
 
     def prettyPrintCollection(self):
         print json.dumps(json.loads(numpyjsoncoder.encode(self.collection)), indent=2)
+
+    def getDescription(self, descriptionId):
+        return self.collection[descriptionId]
 
     def updateDescription(self, desc, publish=True, notify=True):
         self.collection[self.getDescriptionId(desc)] = desc
