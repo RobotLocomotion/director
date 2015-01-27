@@ -836,13 +836,22 @@ class IKPlanner(object):
             graspToHandLinkFrame = self.newGraspToHandFrame(side)
 
         positionConstraint, orientationConstraint = self.createPositionOrientationGraspConstraints(side, targetFrame, graspToHandLinkFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0)
-
         positionConstraint.tspan = [1.0, 1.0]
         orientationConstraint.tspan = [1.0, 1.0]
 
         constraints.append(positionConstraint)
         if lockOrient:
             constraints.append(orientationConstraint)
+
+
+        positionConstraintRight, orientationConstraint = self.createPositionOrientationGraspConstraints(side, targetFrame, graspToHandLinkFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0)
+        positionConstraint.tspan = [1.0, 1.0]
+        orientationConstraint.tspan = [1.0, 1.0]
+
+        constraints.append(positionConstraint)
+        if lockOrient:
+            constraints.append(orientationConstraint)
+
 
         constraintSet = ConstraintSet(self, constraints, 'reach_end', startPoseName)
         return constraintSet

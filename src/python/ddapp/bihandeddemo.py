@@ -61,7 +61,7 @@ class Board(object):
         self.initXYZ = [1.5, 0.6, 0.9] # height requires crouching
         self.initRPY = [1,1,1]
 
-        self.graspLeftHandFrameXYZ = [-0.045, 0.0, -0.4] #-0.0275
+        self.graspLeftHandFrameXYZ = [-0.045, 0.0, -0.4]
         self.graspLeftHandFrameRPY = [0, 90, -90]
         
         self.graspRightHandFrameXYZ = [-0.045, 0.0, 0.4]
@@ -86,7 +86,7 @@ class Board(object):
 
         else:
 
-            position = [0.6, 0.0, 1.2]
+            position = [0.6, 0.0, 1.]
             rpy = [90, 1, 0]
             zwidth = 1.00 # length of the board
 
