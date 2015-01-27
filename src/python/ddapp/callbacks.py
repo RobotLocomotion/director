@@ -50,8 +50,10 @@ class CallbackRegistry:
 
     def __init__(self, signals):
         '*signals* is a sequence of valid signals'
-        self.signals = set(signals)
-        self.callbacks = dict([(s, dict()) for s in signals])
+        self.signals = set()
+        self.callbacks = dict()
+        for s in signals:
+            self.addSignal(s)
         self._cid = 0
 
     def _check_signal(self, s):
@@ -60,6 +62,11 @@ class CallbackRegistry:
             signals = list(self.signals)
             signals.sort()
             raise ValueError('Unknown signal "%s"; valid signals are %s'%(s, signals))
+
+    def addSignal(self, sig):
+        if sig not in self.signals:
+            self.signals.add(sig)
+            self.callbacks[sig] = dict()
 
     def connect(self, s, func):
         """
