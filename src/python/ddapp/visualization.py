@@ -60,7 +60,7 @@ class PolyDataItem(om.ObjectModelItem):
         self.addProperty('Surface Mode', 0,
                          attributes=om.PropertyAttributes(enumNames=['Surface', 'Wireframe', 'Surface with edges', 'Points'], hidden=True))
 
-        self.addProperty('Color', QtGui.QColor(255,255,255))
+        self.addProperty('Color', [1.0, 1.0, 1.0])
         self.addProperty('Show Scalar Bar', False)
 
         self._updateSurfaceProperty()
@@ -94,9 +94,7 @@ class PolyDataItem(om.ObjectModelItem):
         return [pointData.GetArrayName(i) for i in xrange(pointData.GetNumberOfArrays())]
 
     def setSolidColor(self, color):
-
-        color = [component * 255 for component in color]
-        self.setProperty('Color', QtGui.QColor(*color))
+        self.setProperty('Color', [float(c) for c in color])
         self.colorBy(None)
 
 
@@ -175,7 +173,6 @@ class PolyDataItem(om.ObjectModelItem):
 
         elif propertyName == 'Color':
             color = self.getProperty(propertyName)
-            color = [color.red()/255.0, color.green()/255.0, color.blue()/255.0]
             self.actor.GetProperty().SetColor(color)
 
         elif propertyName == 'Color By':
@@ -633,16 +630,8 @@ class ViewOptionsItem(om.ObjectModelItem):
         self.addProperty('Orientation widget', True)
         self.addProperty('Interactive render', True)
         self.addProperty('Gradient background', True)
-        self.addProperty('Background color', self._toQColor(view.backgroundRenderer().GetBackground()))
-        self.addProperty('Background color 2', self._toQColor(view.backgroundRenderer().GetBackground2()))
-
-    @staticmethod
-    def _toQColor(color):
-        return QtGui.QColor(color[0]*255, color[1]*255, color[2]*255)
-
-    @staticmethod
-    def _toFloatColor(color):
-        return [color.red()/255.0, color.green()/255.0, color.blue()/255.0]
+        self.addProperty('Background color', view.backgroundRenderer().GetBackground())
+        self.addProperty('Background color 2', view.backgroundRenderer().GetBackground2())
 
     def _onPropertyChanged(self, propertySet, propertyName):
 
@@ -650,7 +639,6 @@ class ViewOptionsItem(om.ObjectModelItem):
 
         if propertyName in ('Gradient background', 'Background color', 'Background color 2'):
             colors = [self.getProperty('Background color'), self.getProperty('Background color 2')]
-            colors = [self._toFloatColor(c) for c in colors]
 
             if not self.getProperty('Gradient background'):
                 colors[1] = colors[0]
@@ -817,8 +805,7 @@ def showPolyData(polyData, name, color=None, colorByName=None, colorByRange=None
 
     else:
         color = [1.0, 1.0, 1.0] if color is None else color
-        color = [component * 255 for component in color]
-        item.setProperty('Color', QtGui.QColor(*color))
+        item.setProperty('Color', [float(c) for c in color])
         item.colorBy(None)
 
     return item

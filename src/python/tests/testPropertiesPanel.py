@@ -27,7 +27,7 @@ def main():
 
     obj.addProperty('str list', 0, attributes=om.PropertyAttributes(enumNames=['value 1', 'value 2', 'value 3']))
 
-    obj.addProperty('color', QtGui.QColor(255, 200, 0))
+    obj.addProperty('color', [1.0, 0.5, 0.0])
 
     panel = PythonQt.dd.ddPropertiesPanel()
     panel.setBrowserModeToWidget()
