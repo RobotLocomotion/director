@@ -477,9 +477,9 @@ def showRightClickMenu(displayPoint, view):
                 continue
             side = 'right' if obj.side == 'left' else 'left'
             obj.side = side
-            color = QtGui.QColor(255, 255, 0)
+            color = [1.0, 1.0, 0.0]
             if side == 'right':
-                color = QtGui.QColor(0.33*255, 255, 0)
+                color = [0.33, 1.0, 0.0]
             obj.setProperty('Color', color)
 
     def flipHandThumb():
@@ -488,6 +488,7 @@ def showRightClickMenu(displayPoint, view):
         t.PreMultiply()
         t.RotateY(180)
         handFrame.copyFrame(t)
+        pickedObj._renderAllViews()
 
     def onSplineLeft():
         splinewidget.planner.newSpline(pickedObj, 'left')

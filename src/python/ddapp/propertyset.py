@@ -28,6 +28,19 @@ class PropertyAttributes(FieldContainer):
 
         self._set_fields(**kwargs)
 
+from PythonQt import QtGui
+
+def fromQColor(propertyName, propertyValue):
+    if isinstance(propertyValue, QtGui.QColor):
+        return [propertyValue.red()/255.0, propertyValue.green()/255.0, propertyValue.blue()/255.0]
+    else:
+        return propertyValue
+
+def toQColor(propertyName, propertyValue):
+    if 'color' in propertyName.lower() and isinstance(propertyValue, (list, tuple)) and len(propertyValue) == 3:
+        return QtGui.QColor(propertyValue[0]*255.0, propertyValue[1]*255.0, propertyValue[2]*255.0)
+    else:
+        return propertyValue
 
 class PropertySet(object):
 
@@ -102,6 +115,9 @@ class PropertySet(object):
         alternateName = cleanPropertyName(propertyName)
         if propertyName not in self._properties and alternateName in self._alternateNames:
             raise ValueError('Adding this property would conflict with a different existing property with alternate name {:s}'.format(alternateName))
+
+        propertyValue = fromQColor(propertyName, propertyValue)
+
         self._alternateNames[alternateName] = propertyName
         self._properties[propertyName] = propertyValue
         self._attributes[propertyName] = attributes or PropertyAttributes()
@@ -110,6 +126,7 @@ class PropertySet(object):
 
     def setProperty(self, propertyName, propertyValue):
         self.assertProperty(propertyName)
+        propertyValue = fromQColor(propertyName, propertyValue)
 
         names = self.getPropertyAttribute(propertyName, 'enumNames')
         if names and type(propertyValue) != int:
@@ -160,6 +177,8 @@ class PropertyPanelHelper(object):
         if prop is not None:
 
             propertyValue = properties.getProperty(propertyName)
+            propertyValue = toQColor(propertyName, propertyValue)
+
             if isinstance(propertyValue, list):
                 for i, subValue in enumerate(propertyValue):
                     panel.getSubProperty(prop, i).setValue(subValue)
@@ -194,6 +213,7 @@ class PropertyPanelHelper(object):
 
             propertyName = prop.propertyName()
             propertyValue = prop.value()
+            propertyValue = fromQColor(propertyName, propertyValue)
             propertySet.setProperty(propertyName, propertyValue)
 
 
@@ -214,6 +234,8 @@ class PropertyPanelHelper(object):
 
     @staticmethod
     def _addProperty(panel, name, attributes, value):
+
+        value = toQColor(name, value)
 
         if isinstance(value, list):
             groupName = PropertyPanelHelper.getPropertyGroupName(name, value)
