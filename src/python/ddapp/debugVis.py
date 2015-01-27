@@ -128,6 +128,13 @@ class DebugData(object):
         center = np.array(center)
         self.addLine(center - 0.5*length*axis, center + 0.5*length*axis, radius=radius, color=color)
 
+    def addCapsule(self, center, axis, length, radius, color=[1,1,1]):
+        axis /= np.linalg.norm(axis)
+        center = np.array(center)
+        self.addCylinder(center=center, axis=axis, radius=radius, length=length)
+        self.addSphere(center=center-0.5*length*axis, radius=radius)
+        self.addSphere(center=center+0.5*length*axis, radius=radius)
+
     def addTorus(self, radius, thickness, resolution=30):
 
         q = vtk.vtkSuperquadricSource()
