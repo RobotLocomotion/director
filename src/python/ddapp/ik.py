@@ -163,9 +163,9 @@ class AsyncIKCommunicator():
         self.taskQueue.start()
 
 
-    def setEnvironment(self, environment_urdf):
+    def setEnvironment(self, urdf_string):
         commands = []
-        urdf_lines = etree.tostring(environment_urdf).splitlines()
+        urdf_lines = urdf_string.splitlines()
         urdf_lines = ["'%s'" % x for x in urdf_lines]
         urdf_lines = '...\n'.join(urdf_lines)
         print urdf_lines
@@ -174,6 +174,9 @@ class AsyncIKCommunicator():
         commands.append('s = s.setEnvironment(environment_urdf_string);')
         commands.append('r = s.robot_and_environment;')
         self.comm.sendCommands(commands)
+
+    def clearEnvironment(self):
+        self.setEnvironment('')
 
     def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):
 
