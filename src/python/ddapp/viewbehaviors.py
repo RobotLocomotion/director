@@ -4,6 +4,7 @@ import re
 import ddapp.objectmodel as om
 import ddapp.visualization as vis
 from ddapp.timercallback import TimerCallback
+from ddapp import affordanceitems
 from ddapp import lcmUtils
 from ddapp import callbacks
 from ddapp import cameracontrol
@@ -568,6 +569,9 @@ def showRightClickMenu(displayPoint, view):
     def addMovableFrame():
         segmentation.makeMovable(pickedObj)
 
+    def onPromoteToAffordance():
+        affObj = affordanceitems.MeshAffordanceItem.promotePolyDataItem(pickedObj)
+        robotSystem.affordanceManager.registerAffordance(affObj)
 
     actions = [
       (None, None),
@@ -575,6 +579,11 @@ def showRightClickMenu(displayPoint, view):
       ('Delete', onDelete),
       ('Select', onSelect)
       ]
+
+    if type(pickedObj) == vis.PolyDataItem:
+        actions.extend([
+            ('Promote to Affordance', onPromoteToAffordance),
+        ])
 
     if isinstance(pickedObj, vis.PolyDataItem) and not pickedObj.getChildFrame():
         actions.extend([

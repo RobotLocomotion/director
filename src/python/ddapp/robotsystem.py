@@ -15,6 +15,7 @@ from ddapp import callbacks
 from ddapp import cameracontrol
 from ddapp import debrisdemo
 from ddapp import drilldemo
+from ddapp.fieldcontainer import FieldContainer
 from ddapp import tabledemo
 from ddapp import valvedemo
 from ddapp import ik
@@ -42,7 +43,7 @@ from ddapp import multisensepanel
 from ddapp import navigationpanel
 from ddapp import handcontrolpanel
 from ddapp import sensordatarequestpanel
-from ddapp import affordancecollection
+from ddapp import affordanceitems
 from ddapp import affordancemanager
 
 from ddapp import robotplanlistener
@@ -189,8 +190,10 @@ class RobotSystem(object):
                             ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                             perception.multisenseDriver, view, robotStateJointController)
 
-            affordanceCollection = affordancecollection.AffordanceCollection()
-            affordanceObjectManager = affordancemanager.AffordanceObjectModelManager(affordanceCollection, view)
+
+            affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
+            affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
+            affordanceManager.collection.sendEchoRequest()
 
 
         applogic.resetCamera(viewDirection=[-1,0,0], view=view)

@@ -3,7 +3,6 @@ set(python_files
   ddapp/actionhandlers.py
   ddapp/actionmanagerpanel.py
   ddapp/affordance.py
-  ddapp/affordancecollection.py
   ddapp/affordancegraspupdater.py
   ddapp/affordanceitems.py
   ddapp/affordancemanager.py
@@ -43,10 +42,12 @@ set(python_files
   ddapp/jointcontrol.py
   ddapp/lcmloggerwidget.py
   ddapp/lcmgl.py
+  ddapp/lcmobjectcollection.py
   ddapp/lcmspy.py
   ddapp/lcmUtils.py
   ddapp/mapsregistrar.py
   ddapp/matlab.py
+  ddapp/meshmanager.py
   ddapp/midi.py
   ddapp/multisensepanel.py
   ddapp/navigationpanel.py
