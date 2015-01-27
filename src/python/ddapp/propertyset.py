@@ -124,6 +124,15 @@ class PropertySet(object):
 
         self.callbacks.process(self.PROPERTY_ADDED_SIGNAL, self, propertyName)
 
+    def setPropertyIndex(self, propertyName, newIndex):
+        assert self.hasProperty(propertyName)
+        currentIndex = self._properties.keys().index(propertyName)
+        inds = range(len(self._properties))
+        inds.remove(currentIndex)
+        inds.insert(newIndex, currentIndex)
+        items = self._properties.items()
+        self._properties = OrderedDict([items[i] for i in inds])
+
     def setProperty(self, propertyName, propertyValue):
         self.assertProperty(propertyName)
         propertyValue = fromQColor(propertyName, propertyValue)
