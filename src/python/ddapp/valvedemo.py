@@ -360,7 +360,7 @@ class ValvePlannerDemo(object):
           path.addLine ( np.array( p0 ) , np.array(  p1 ), radius= 0.005)
           
         pathMesh = path.getPolyData()
-        self.pointerTipLinePath = vis.showPolyData(pathMesh, 'face frame desired path', color=[0.0, 0.3, 1.0], cls=affordanceitems.AffordanceItem, parent=self.valveAffordance, alpha=0.6)
+        self.pointerTipLinePath = vis.showPolyData(pathMesh, 'face frame desired path', color=[0.0, 0.3, 1.0], parent=self.valveAffordance, alpha=0.6)
         self.pointerTipLinePath.actor.SetUserTransform(self.valveFrame.transform)
 
         
