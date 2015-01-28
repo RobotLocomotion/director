@@ -2,7 +2,6 @@ import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 from ddapp import applogic as app
 from ddapp import objectmodel as om
-from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp.debugVis import DebugData
 from ddapp.pointpicker import PlacerWidget
@@ -10,14 +9,6 @@ from ddapp.terrainitem import TerrainRegionItem
 from ddapp import segmentation
 from ddapp import filterUtils
 from ddapp import vtkNumpy as vnp
-
-try:
-    import mosek
-    from ddapp.terrain import TerrainSegmentation
-    _mosekEnabled = True
-except ImportError:
-    print "Warning: mosek python bindings not found. Terrain segmentation disabled."
-    _mosekEnabled = False
 
 import numpy as np
 
@@ -41,7 +32,7 @@ class WidgetDict(object):
 
 class FootstepsPanel(object):
 
-    def __init__(self, driver, robotModel, jointController, mapServerSource):
+    def __init__(self, driver, robotModel, jointController, irisDriver):
 
         self.driver = driver
         self.robotModel = robotModel
@@ -55,12 +46,7 @@ class FootstepsPanel(object):
 
         self.placer = None
 
-        self.depth_provider = mapServerSource
-        if _mosekEnabled:
-            self.terrain_segmentation = TerrainSegmentation(bounding_box_width=2)
-            self.driver.contact_slices = self.terrain_segmentation.contact_slices
-        else:
-            self.terrain_segmentation = None
+        self.irisDriver = irisDriver
         self.region_seed_frames = []
 
         self.ui = WidgetDict(self.widget.children())
@@ -92,24 +78,11 @@ class FootstepsPanel(object):
             obj.setProperty('Visible', self.driver.show_contact_slices)
 
     def onNewRegionSeed(self):
-        if not _mosekEnabled:
-            print "Warning: Mosek python bindings not found. Terrain segmentation is disabled."
-            return
-        if self.terrain_segmentation is not None:
-            heights, world2px = self.depth_provider.getSceneHeightData()
-            if heights is None:
-                heights = np.zeros((100,100))
-                world2px = np.eye(4)
-            heights[np.isinf(heights)] = np.nan
-            px2world = np.linalg.inv(world2px)
-            self.terrain_segmentation.setHeights(heights, px2world)
-
-            t = self.newWalkingGoalFrame(self.robotModel, distanceForward=0.5)
-            view = app.getCurrentRenderView()
-            item = TerrainRegionItem('IRIS region', view, t,
-                                     self.terrain_segmentation)
-            parentObj = om.getOrCreateContainer('Safe terrain regions')
-            om.addToObjectModel(item, parentObj)
+        t = self.newWalkingGoalFrame(self.robotModel, distanceForward=0.5)
+        view = app.getCurrentRenderView()
+        item = TerrainRegionItem('IRIS region', view, t, self.irisDriver)
+        parentObj = om.getOrCreateContainer('Safe terrain regions')
+        om.addToObjectModel(item, parentObj)
 
     def _setupPropertiesPanel(self):
         l = QtGui.QVBoxLayout(self.ui.paramsContainer)
