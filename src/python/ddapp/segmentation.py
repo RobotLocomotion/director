@@ -1105,7 +1105,7 @@ def segmentValve(expectedValveRadius, point1, point2):
     d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
 
     name = 'valve affordance'
-    obj = showPolyData(d.getPolyData(), name, cls=CylinderAffordanceItem, parent='affordances', color=[0,1,0])
+    obj = showPolyData(d.getPolyData(), name, cls=FrameAffordanceItem, parent='affordances', color=[0,1,0])
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
     refitWallCallbacks.append(functools.partial(refitValveAffordance, obj))
@@ -1235,7 +1235,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     d.addLine(np.array([0,0,0]), np.array([radius-zwidth,0,0]), radius=zwidth) # main bar
 
     name = 'valve'
-    obj = showPolyData(d.getPolyData(), name, cls=CylinderAffordanceItem, parent='affordances', color=[0,1,0])
+    obj = showPolyData(d.getPolyData(), name, cls=FrameAffordanceItem, parent='affordances', color=[0,1,0])
     obj.actor.SetUserTransform(t)
     obj.addToView(app.getDRCView())
     refitWallCallbacks.append(functools.partial(refitValveAffordance, obj))
