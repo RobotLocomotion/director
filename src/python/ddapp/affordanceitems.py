@@ -264,6 +264,8 @@ class MeshAffordanceItem(AffordanceItem):
             t = vtk.vtkTransform()
             t.PostMultiply()
             t.Translate(filterUtils.computeCentroid(polyData))
+            polyData = filterUtils.transformPolyData(polyData, t.GetLinearInverse())
+
         children = [c for c in obj.children() if c is not childFrame]
 
         meshId = cls.getMeshManager().add(polyData)
