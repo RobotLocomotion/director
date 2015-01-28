@@ -22,6 +22,7 @@ from ddapp.utime import getUtime
 from ddapp import robotstate
 from ddapp import planplayback
 from ddapp import segmentation
+from ddapp import drcargs
 
 from ddapp import ik
 
@@ -959,6 +960,7 @@ class RobotPoseGUIWrapper(object):
         if cls.initialized:
             return True
 
+        rpg.setDirectorConfigFile(drcargs.args().directorConfigFile)
         rpg.lcmWrapper = rpg.LCMWrapper()
         cls.main = rpg.MainWindow()
         cls.initialized = True
