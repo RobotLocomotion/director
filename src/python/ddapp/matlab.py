@@ -181,7 +181,7 @@ class MatlabCommunicator(object):
             return
 
         if self.outputConsole:
-            self.outputConsole.append('<pre>' + 
+            self.outputConsole.append('<pre>' +
                 '<br/>'.join([self._colorReplace(line) for line in self.outputLines]) + '</pre>')
 
         if self.echoToStdOut or not self.outputConsole:
