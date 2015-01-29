@@ -135,7 +135,7 @@ class RobotModelItem(om.ObjectModelItem):
         if self.getProperty('Textures'):
             self._setupTextureColors()
         elif not self.useUrdfColors:
-            color = QtGui.QColor([c*255 for c in self.getProperty('Color')])
+            color = QtGui.QColor(*[c*255 for c in self.getProperty('Color')])
             self.model.setColor(color)
 
     def _setupTextureColors(self):
