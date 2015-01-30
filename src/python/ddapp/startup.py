@@ -496,7 +496,8 @@ if useImageViewDemo:
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
-affordancepanel.init(view, affordanceManager, ikServer, robotStateJointController)
+affordancePanel = affordancepanel.init(view, affordanceManager, ikServer, robotStateJointController)
+
 camerabookmarks.init(view)
 
 
@@ -658,3 +659,35 @@ if usePFGrasp:
     showImageOverlay()
     hideImageOverlay()
     pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)
+
+
+from affordancepanel import newUUID
+from ddapp import affordanceurdf
+
+boxes = []
+
+def spawn_boxes():
+    for j in range(5):
+        desc = dict(classname='BoxAffordanceItem', Name='box', uuid=newUUID(), pose=(np.hstack((np.random.randn(2), 0)), [1,0,0,0]), Dimension=[1,1,1])
+        boxes.append(affordancePanel.affordanceFromDescription(desc))
+
+def request_raycast():
+    urdfStr = affordanceurdf.urdfStringFromAffordances(boxes)
+    msg = lcmdrc.terrain_raycast_request_t()
+    msg.urdf = lcmdrc.robot_urdf_t()
+    msg.urdf.robot_name = "collision_environment"
+    msg.urdf.urdf_xml_string = urdfStr
+    msg.x_min = -2
+    msg.x_step = 0.02
+    msg.x_max = 2
+    msg.y_min = -2
+    msg.y_step = 0.02
+    msg.y_max = 2
+    msg.scanner_height = 10
+    lcmUtils.publish('TERRAIN_RAYCAST_REQUEST', msg)
+
+app.addToolbarMacro('spawn boxes', spawn_boxes)
+
+app.addToolbarMacro('request raycast', request_raycast)
+
+
