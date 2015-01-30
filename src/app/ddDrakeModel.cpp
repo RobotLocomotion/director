@@ -468,7 +468,7 @@ public:
       QString packageDir = ddDrakeModel::findPackageDirectory(package.c_str());
       if (packageDir.isEmpty())
       {
-        std::cout << "Failed to locate package: " << package << std::endl;
+        std::cout << "Failed to locate package: " << package << " in filename: " << fname << std::endl;
         return std::string();
       }
 
