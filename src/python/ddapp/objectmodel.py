@@ -7,10 +7,12 @@ from ddapp import callbacks
 class Icons(object):
 
   Directory = int(QtGui.QStyle.SP_DirIcon)
+  Axes = ':/images/axes_icon.png'
   Eye = ':/images/eye_icon.png'
   EyeOff = ':/images/eye_icon_gray.png'
   Matlab = ':/images/matlab_logo.png'
   Robot = ':/images/robot_icon.png'
+  Hammer = ':/images/hammer_icon.png'
   Laser = ':/images/laser_icon.jpg'
   Feet = ':/images/feet.png'
   Hand = ':/images/claw.png'

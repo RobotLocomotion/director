@@ -424,7 +424,7 @@ class FrameItem(PolyDataItem):
         PolyDataItem.__init__(self, name, polyData, view)
 
         self.setProperty('Color By', 'Axes')
-
+        self.setProperty('Icon', om.Icons.Axes)
         self._blockSignals = False
 
         self.actor.SetUserTransform(transform)
