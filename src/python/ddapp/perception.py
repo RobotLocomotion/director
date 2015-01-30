@@ -535,6 +535,6 @@ def init(view):
     om.addToObjectModel(spindleDebug, sensorsFolder)
 
 
-    return _multisenseItem, mapServerSource
+    return multisenseDriver, mapServerSource
 
 
