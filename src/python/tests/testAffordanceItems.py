@@ -98,10 +98,10 @@ def testAffordanceToUrdf():
         om.removeFromObjectModel(aff)
 
 
-#testCollection()
-#testAffordanceToUrdf()
-#loadTableTopPointCloud()
-#segmentTableTopPointCloud()
+testCollection()
+testAffordanceToUrdf()
+loadTableTopPointCloud()
+segmentTableTopPointCloud()
 
 from ddapp import affordancepanel
 panel = affordancepanel.AffordancePanel(view, affordanceManager, ikServer, robotStateJointController)
