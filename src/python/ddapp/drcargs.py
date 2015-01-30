@@ -41,7 +41,7 @@ class DRCArgParser(object):
 
     def getDefaultAtlasV3DirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
-                            'software/models/mit_gazebo_models/mit_robot/director_config.json')
+                            'software/models/atlas_v3/director_config.json')
 
     def getDefaultAtlasV4DirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
@@ -53,7 +53,7 @@ class DRCArgParser(object):
 
     def getDefaultValkyrieDirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
-                            'software/models/mit_gazebo_models/V1/models/V1/director_config.json')
+                            'software/models/valkyrie/director_config.json')
 
 
     def addDefaultArgs(self, parser):
