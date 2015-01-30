@@ -25,6 +25,7 @@ class AffordanceItem(PolyDataItem):
         self.addProperty('uuid', newUUID(), attributes=om.PropertyAttributes(hidden=True))
         self.addProperty('Collision Enabled', False)
         self.properties.setPropertyIndex('Collision Enabled', 0)
+        self.setProperty('Icon', om.Icons.Hammer)
 
     def publish(self):
         pass
