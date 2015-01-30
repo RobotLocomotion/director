@@ -668,7 +668,7 @@ boxes = []
 
 def spawn_boxes():
     for j in range(5):
-        desc = dict(classname='BoxAffordanceItem', Name='box', uuid=newUUID(), pose=(np.hstack((np.random.randn(2), 0)), [1,0,0,0]), Dimension=[1,1,1])
+        desc = dict(classname='BoxAffordanceItem', Name='box', uuid=newUUID(), pose=(np.hstack(((np.random.random(2) - 0.5) * 4, 0.1)), [1,0,0,0]), Dimensions=[0.5,0.5,0.2])
         boxes.append(affordancePanel.affordanceFromDescription(desc))
 
 def request_raycast():
