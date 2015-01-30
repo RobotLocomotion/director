@@ -1,17 +1,25 @@
-import base64
 from ddapp import vtkAll as vtk
-from ddapp.shallowCopy import shallowCopy
+from ddapp import vtkNumpy as vnp
+import numpy as np
 
 def encodePolyData(polyData):
-    w = vtk.vtkPolyDataWriter()
-    w.WriteToOutputStringOn()
-    w.SetInput(polyData)
-    w.Write()
-    return base64.b64encode(w.GetOutputStdString())
+    '''Given a vtkPolyData, returns a numpy int8 array that contains
+    the serialization of the data.  This array can be passed to the
+    decodePolyData function to construct a new vtkPolyData object from
+    the serialized data.'''
+
+    charArray = vtk.vtkCharArray()
+    vtk.vtkCommunicator.MarshalDataObject(polyData, charArray)
+    numpyArray = vnp.numpy_support.vtk_to_numpy(charArray)
+    assert numpyArray.dtype == np.int8
+    return numpyArray
 
 def decodePolyData(data):
-    r = vtk.vtkPolyDataReader()
-    r.ReadFromInputStringOn()
-    r.SetInputString(base64.b64decode(data))
-    r.Update()
-    return shallowCopy(r.GetOutput())
+    '''Given a numpy int8 array, deserializes the data to construct a new
+    vtkPolyData object and returns the result.'''
+
+    charArray = vnp.getVtkFromNumpy(data)
+    assert isinstance(charArray, vtk.vtkCharArray)
+    polyData = vtk.vtkPolyData()
+    vtk.vtkCommunicator.UnMarshalDataObject(charArray, polyData)
+    return polyData
