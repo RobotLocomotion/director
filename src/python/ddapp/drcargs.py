@@ -53,7 +53,7 @@ class DRCArgParser(object):
 
     def getDefaultValkyrieDirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
-                            'software/models/mit_gazebo_models/V1/models/V1/director_config.json')
+                            'software/models/valkyrie/director_config.json')
 
 
     def addDefaultArgs(self, parser):
