@@ -5,7 +5,9 @@ from ddapp import robotsystem
 app = ConsoleApp()
 
 app.setupGlobals(globals())
-app.showPythonConsole()
+
+if app.getTestingInteractiveEnabled():
+    app.showPythonConsole()
 
 view = app.createView()
 view.show()
