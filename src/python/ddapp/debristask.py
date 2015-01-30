@@ -62,7 +62,7 @@ def showBoardDebug(affs=None):
 
 
 def loadFeet():
-    meshDir = os.path.join(app.getDRCBase(), 'software/models/mit_gazebo_models/mit_robot/meshes')
+    meshDir = os.path.join(app.getDRCBase(), 'software/models/atlas_v3/meshes')
     meshes = []
     for foot in ['l', 'r']:
         d = DebugData()
