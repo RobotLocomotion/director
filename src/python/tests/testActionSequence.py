@@ -21,7 +21,7 @@ app.showPythonConsole()
 view = app.createView()
 view.show()
 
-useRobotSystem = False
+useRobotSystem = True
 if useRobotSystem:
     robotSystem = robotsystem.create(view)
     rt.robotSystem = robotSystem
@@ -52,11 +52,12 @@ actions = [
 
 
 m.taskQueueWidget.loadTaskDescription('ground pick', actions)
+m.taskQueueWidget.loadTaskDescription('ground pick copy', actions)
 
 
-data = m.taskQueueWidget.onSave()
-m.taskQueueWidget.onClear()
-m.taskQueueWidget.onLoad(data)
+m.taskQueueWidget.setCurrentQueue('Ground pick copy')
+m.taskQueueWidget.setCurrentQueue('Ground pick')
+
 
 m.taskQueueWidget.widget.show()
 m.taskLibraryWidget.widget.show()

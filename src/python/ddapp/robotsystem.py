@@ -187,11 +187,6 @@ class RobotSystem(object):
             ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)
 
 
-            tableDemo = tabledemo.TableDemo(robotStateModel, None,
-                            ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
-                            perception.multisenseDriver, view, robotStateJointController)
-
-
             affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
             affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
             affordanceManager.collection.sendEchoRequest()
