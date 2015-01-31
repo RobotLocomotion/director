@@ -447,8 +447,8 @@ class HandLoader(object):
         self.palmToHandLink = self.handLinkToPalm.GetLinearInverse()
 
     def getHandUrdf(self):
-        urdfBase = os.path.join(getDRCBaseDir(), 'software/models/mit_gazebo_models')
-        return os.path.join(urdfBase, 'mit_robot_hands', self.handUrdf)
+        urdfBase = os.path.join(getDRCBaseDir(), 'software/models/common_components')
+        return os.path.join(urdfBase, 'hand_factory', self.handUrdf)
 
     @staticmethod
     def getLinkToLinkTransform(model, linkA, linkB):
