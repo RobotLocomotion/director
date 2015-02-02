@@ -663,16 +663,3 @@ if usePFGrasp:
     hideImageOverlay()
     pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)
 
-
-from affordancepanel import newUUID
-
-boxes = []
-
-def spawn_boxes():
-    for j in range(5):
-        desc = dict(classname='BoxAffordanceItem', Name='box', uuid=newUUID(), pose=(np.hstack(((np.random.random(2) - 0.5) * 4, 0.1)), [1,0,0,0]), Dimensions=[0.5,0.5,0.2])
-        desc.update({'Collision Enabled': True})
-        boxes.append(affordancePanel.affordanceFromDescription(desc))
-
-app.addToolbarMacro('spawn boxes', spawn_boxes)
-
