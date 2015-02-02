@@ -64,6 +64,7 @@ set(python_files
   ddapp/playbackpanel.py
   ddapp/pointpicker.py
   ddapp/propertyset.py
+  ddapp/raycastdriver.py
   ddapp/robotstate.py
   ddapp/robotplanlistener.py
   ddapp/robotsystem.py
