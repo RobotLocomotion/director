@@ -33,3 +33,4 @@ for i = 1:size(linknames, 1)
 end
 
 joints = Point(r.getStateFrame, (1:r.getStateFrame.dim)');
+ikServerStarted = true;
