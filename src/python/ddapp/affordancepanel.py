@@ -30,12 +30,13 @@ class WidgetDict(object):
 
 class AffordancePanel(object):
 
-    def __init__(self, view, affordanceManager, ikServer, jointController):
+    def __init__(self, view, affordanceManager, ikServer, jointController, raycastDriver):
 
         self.view = view
         self.affordanceManager = affordanceManager
         self.ikServer = ikServer
         self.jointController = jointController
+        self.raycastDriver = raycastDriver
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddAffordancePanel.ui')
@@ -53,6 +54,7 @@ class AffordancePanel(object):
         self.ui.spawnRingButton.connect('clicked()', self.onSpawnRing)
         self.ui.spawnMeshButton.connect('clicked()', self.onSpawnMesh)
         self.ui.updateCollisionButton.connect('clicked()', self.onUpdateCollisionEnvironment)
+        self.ui.getRaycastTerrainButton.connect('clicked()', self.onGetRaycastTerrain)
 
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
         self.ui.scrollArea.installEventFilter(self.eventFilter)
@@ -93,6 +95,10 @@ class AffordancePanel(object):
         else:
             urdfStr = affordanceurdf.urdfStringFromAffordances(affs)
             self.ikServer.setEnvironment(urdfStr)
+
+    def onGetRaycastTerrain(self):
+        affs = self.getCollisionAffordances()
+        self.raycastDriver.requestRaycast(affs)
 
     def affordanceFromDescription(self, desc):
         self.affordanceManager.collection.updateDescription(desc)
@@ -138,12 +144,12 @@ class AffordancePanel(object):
 def _getAction():
     return None
 
-def init(view, affordanceManager, ikServer, jointController):
+def init(view, affordanceManager, ikServer, jointController, raycastDriver):
 
     global panel
     global dock
 
-    panel = AffordancePanel(view, affordanceManager, ikServer, jointController)
+    panel = AffordancePanel(view, affordanceManager, ikServer, jointController, raycastDriver)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
