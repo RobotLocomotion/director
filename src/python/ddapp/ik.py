@@ -4,6 +4,7 @@ import functools
 import numpy as np
 from ddapp.timercallback import TimerCallback
 from ddapp import matlab
+from ddapp import callbacks
 from ddapp.asynctaskqueue import AsyncTaskQueue
 from ddapp.jointcontrol import JointController
 from ddapp.ikconstraints import *
@@ -12,11 +13,13 @@ from ddapp import drcargs
 
 class AsyncIKCommunicator():
 
+    STARTUP_COMPLETED = 'STARTUP_COMPLETED'
+
     def __init__(self, robotURDF, fixedPointFile):
 
         self.comm = None
         self.outputConsole = None
-
+        self.ready = False
         self.robotURDF = robotURDF
         self.fixedPointFile = fixedPointFile
 
@@ -35,6 +38,8 @@ class AsyncIKCommunicator():
         self.majorIterationsLimit = 500
         self.majorOptimalityTolerance = 1e-4
         self.majorFeasibilityTolerance = 1e-6
+
+        self.callbacks = callbacks.CallbackRegistry([self.STARTUP_COMPLETED])
 
 
     def getStartupCommands(self):
@@ -58,15 +63,6 @@ class AsyncIKCommunicator():
         else:
             return matlab.MatlabPipeClient()
 
-    def startServer(self):
-
-        self.comm = matlab.MatlabCommunicator(self._createMatlabClient())
-        self.comm.outputConsole = self.outputConsole
-        self.comm.sendCommands(['\n'])
-        self.comm.waitForResult()
-        self.comm.printResult()
-        self.comm.sendCommands(self._startupCommands())
-
     def startServerAsync(self):
 
         self.comm = matlab.MatlabCommunicator(self._createMatlabClient())
@@ -75,14 +71,28 @@ class AsyncIKCommunicator():
 
         taskQueue = AsyncTaskQueue()
         taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, ['\n']))
-        taskQueue.addTask(self.comm.waitForResultAsync)
-        taskQueue.addTask(self.comm.printResult)
         taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, self.getStartupCommands()))
+        taskQueue.addTask(self._checkServerStartup)
         taskQueue.addTask(functools.partial(setattr, self.comm, 'echoToStdOut', True))
 
         self.taskQueue = taskQueue
         self.taskQueue.start()
 
+    def connectStartupCompleted(self, func):
+        return self.callbacks.connect(self.STARTUP_COMPLETED, func)
+
+    def disconnectStartupCompleted(self, callbackId):
+        self.callbacks.disconnect(callbackId)
+
+    def _checkServerStartup(self):
+        try:
+            self.ready = self.comm.getFloatArray('ikServerStarted')[0] == 1
+        except:
+            self.ready = False
+        self._notifyStartupCompleted()
+
+    def _notifyStartupCompleted(self):
+        self.callbacks.process(self.STARTUP_COMPLETED, self, self.ready)
 
     def interact(self):
         self.comm.interact()
