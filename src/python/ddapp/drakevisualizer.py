@@ -211,12 +211,36 @@ class Link(object):
 class DrakeVisualizer(object):
 
     def __init__(self, view):
-        lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmdrake.lcmt_viewer_load_robot, self.onViewerLoadRobot)
-        lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmdrake.lcmt_viewer_draw, self.onViewerDraw)
 
+        self.subscribers = []
         self.view = view
         self.robots = {}
         self.sendStatusMessage('loaded')
+        self.enable()
+
+    def _addSubscribers(self):
+        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmdrake.lcmt_viewer_load_robot, self.onViewerLoadRobot))
+        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmdrake.lcmt_viewer_draw, self.onViewerDraw))
+
+    def _removeSubscribers(self):
+        for sub in self.subscribers:
+            lcmUtils.removeSubscriber(sub)
+        self.subscribers = []
+
+    def isEnabled(self):
+        return bool(self.subscribers)
+
+    def setEnabled(self, enabled):
+        if enabled and not self.isEnabled():
+            self._addSubscribers()
+        elif not enabled and self.isEnabled():
+            self._removeSubscribers()
+
+    def enable(self):
+        self.setEnabled(True)
+
+    def disable(self):
+        self.setEnabled(False)
 
     def onViewerLoadRobot(self, msg):
         self.removeAllRobots()
