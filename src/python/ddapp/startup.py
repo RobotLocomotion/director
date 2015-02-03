@@ -151,14 +151,23 @@ if useSpreadsheet:
 
 
 if useIk:
+
+    def onIkStartup(ikServer, startSuccess):
+        if startSuccess:
+            app.getMainWindow().statusBar().showMessage('Planning server started.', 2000)
+        else:
+            app.showErrorMessage('Error detected while starting the matlab planning server. '
+                                 'Please check the output console for more information.', title='Error starting matlab')
+
     ikServer.outputConsole = app.getOutputConsole()
     ikServer.infoFunc = app.displaySnoptInfo
+    ikServer.connectStartupCompleted(onIkStartup)
     startIkServer()
+
 
 if useAtlasDriver:
     atlasdriver.systemStatus.outputConsole = app.getOutputConsole()
     atlasdriverpanel.init(atlasDriver)
-
 
 
 if usePerception:
