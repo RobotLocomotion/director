@@ -15,6 +15,15 @@ from ddapp.timercallback import TimerCallback
 
 import numpy as np
 
+import sys
+import traceback
+
+
+def _consoleAppExceptionHook(exc_type, exc_value, exc_traceback):
+    msg =  ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    sys.stderr.write(msg)
+    ConsoleApp.exit(1)
+
 
 class ConsoleApp(object):
 
@@ -23,18 +32,47 @@ class ConsoleApp(object):
         self.objectModelWidget = None
 
     @staticmethod
-    def start():
+    def start(enableAutomaticQuit=True):
+        '''
+        In testing mode, the application will quit automatically after starting
+        unless enableAutomaticQuit is set to False.  Tests that need to perform
+        work after the QApplication has started can set this flag to False and
+        call quit or exit themselves.
+
+        In testing mode, this function will register an exception hook so that
+        tests will return on error code if an unhandled exception is raised.
+        '''
+        if enableAutomaticQuit:
+            ConsoleApp.startTestingModeQuitTimer()
 
         if ConsoleApp.getTestingEnabled() and not ConsoleApp.getTestingInteractiveEnabled():
-            quitTimer = TimerCallback()
-            quitTimer.callback = ConsoleApp.quit
-            quitTimer.singleShot(0.1)
+            sys.excepthook = _consoleAppExceptionHook
 
-        ConsoleApp.applicationInstance().exec_()
+        result = ConsoleApp.applicationInstance().exec_()
+
+        if ConsoleApp.getTestingEnabled() and not ConsoleApp.getTestingInteractiveEnabled():
+            print 'TESTING PROGRAM RETURNING EXIT CODE:', result
+            sys.exit(result)
+
+
+    @staticmethod
+    def startTestingModeQuitTimer(timeoutInSeconds=0.1):
+        if ConsoleApp.getTestingEnabled() and not ConsoleApp.getTestingInteractiveEnabled():
+            ConsoleApp.startQuitTimer(timeoutInSeconds)
+
+    @staticmethod
+    def startQuitTimer(timeoutInSeconds):
+        quitTimer = TimerCallback()
+        quitTimer.callback = ConsoleApp.quit
+        quitTimer.singleShot(timeoutInSeconds)
 
     @staticmethod
     def quit():
         ConsoleApp.applicationInstance().quit()
+
+    @staticmethod
+    def exit(exitCode=0):
+        ConsoleApp.applicationInstance().exit(exitCode)
 
     @staticmethod
     def applicationInstance():
@@ -84,7 +122,7 @@ class ConsoleApp(object):
     def setupGlobals(self, globalsDict):
 
         quit = ConsoleApp.quit
-        exit = quit
+        exit = ConsoleApp.exit
 
         globalsDict.update(locals())
         for arg in ['globalsDict', 'self']:
