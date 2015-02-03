@@ -201,7 +201,7 @@ class MenuActionToggleHelper(object):
         self.getEnabled = getEnabledFunc
         self.setEnabled = setEnabledFunc
 
-        self.action = app.addMenuAction(menuName, actionName)
+        self.action = addMenuAction(menuName, actionName)
         self.action.setCheckable(True)
         self.action.checked = getEnabledFunc()
         self.action.connect('triggered()', self.onActionChanged)
