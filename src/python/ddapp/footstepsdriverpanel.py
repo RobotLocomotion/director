@@ -5,7 +5,6 @@ from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp.debugVis import DebugData
 from ddapp.pointpicker import PlacerWidget
-from ddapp.terrainitem import TerrainRegionItem
 from ddapp import segmentation
 from ddapp import filterUtils
 from ddapp import vtkNumpy as vnp
@@ -67,6 +66,7 @@ class FootstepsPanel(object):
         self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
         self.ui.showBDIButton.connect("clicked()", self.onShowBDIButton)
         self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
+        self.ui.autoIRISSegmentationButton.connect("clicked()", self.onAutoIRISSegmentation)
         self._setupPropertiesPanel()
 
 
@@ -79,10 +79,10 @@ class FootstepsPanel(object):
 
     def onNewRegionSeed(self):
         t = self.newWalkingGoalFrame(self.robotModel, distanceForward=0.5)
-        view = app.getCurrentRenderView()
-        item = TerrainRegionItem('IRIS region', view, t, self.irisDriver)
-        parentObj = om.getOrCreateContainer('Safe terrain regions')
-        om.addToObjectModel(item, parentObj)
+        self.irisDriver.newIRISRegion(t)
+
+    def onAutoIRISSegmentation(self):
+        self.irisDriver.autoIRISSegmentation()
 
     def _setupPropertiesPanel(self):
         l = QtGui.QVBoxLayout(self.ui.paramsContainer)

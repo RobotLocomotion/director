@@ -13,7 +13,7 @@ from ddapp.pointpicker import PlacerWidget
 from PythonQt import QtGui
 
 class TerrainRegionItem(vis.PolyDataItem):
-    def __init__(self, name, view, seed_pose, irisDriver):
+    def __init__(self, name, view, seed_pose, irisDriver, existing_region=None):
 
         d = DebugData()
         vis.PolyDataItem.__init__(self, name, d.getPolyData(), view)
@@ -60,7 +60,10 @@ class TerrainRegionItem(vis.PolyDataItem):
         self.addProperty('Color', QtGui.QColor(200,200,20))
 
         self.frameObj.connectFrameModified(self.onFrameModified)
-        self.onFrameModified(self.frameObj)
+        if existing_region is None:
+            self.onFrameModified(self.frameObj)
+        else:
+            self.onNewRegion(existing_region)
 
         self.setProperty('Alpha', 0.5)
         self.setProperty('Color', QtGui.QColor(220,220,220))
