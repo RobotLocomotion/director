@@ -21,9 +21,11 @@ class TimerCallback(object):
         '''
         Start the timer.
         '''
+        if not self.timer.isActive():
+            self.timer.connect('timeout()', self._timerEvent)
+
         self.startTime = time.time()
         self.lastTickTime = self.startTime
-        self.timer.connect('timeout()', self._timerEvent)
         self.timer.start(0)
 
     def stop(self):
@@ -38,11 +40,7 @@ class TimerCallback(object):
         Timer event callback method.  Subclasses can override this method.
         '''
         if self.callback:
-            try:
-                return self.callback()
-            except:
-                print traceback.format_exc()
-                return False
+            return self.callback()
 
     def isActive(self):
         '''
@@ -51,7 +49,8 @@ class TimerCallback(object):
         return self.timer.isActive()
 
     def singleShot(self, timeoutInSeconds):
-        self.singleShotTimer.connect('timeout()', self._singleShotTimerEvent)
+        if not self.singleShotTimer.isActive():
+            self.singleShotTimer.connect('timeout()', self._singleShotTimerEvent)
         self.singleShotTimer.start(int(timeoutInSeconds * 1000))
 
     def _singleShotTimerEvent(self):
@@ -74,10 +73,14 @@ class TimerCallback(object):
         '''
         startTime = time.time()
         self.elapsed = startTime - self.lastTickTime
-        if self.tick() is not False:
+
+        try:
+            result = self.tick()
+        except:
+            self.stop()
+            raise
+
+        if result is not False:
             self.lastTickTime = startTime
             self._schedule(time.time() - startTime)
-        else:
-            self.stop()
-
 

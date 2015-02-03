@@ -70,9 +70,9 @@ class AsyncTaskQueue(object):
             self.stop()
         except:
             assert self.currentTask
-            print traceback.format_exc()
             self.callbacks.process(self.TASK_EXCEPTION_SIGNAL, self, self.currentTask)
             self.stop()
+            raise
 
         return self.isRunning
 
