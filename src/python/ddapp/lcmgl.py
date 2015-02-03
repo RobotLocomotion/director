@@ -69,12 +69,21 @@ class LCMGLManager(object):
         self.subscriber = None
         self.enable()
 
+    def isEnabled(self):
+        return self.subscriber is not None
+
+    def setEnabled(self, enabled):
+        if enabled and not self.subscriber:
+            self.subscriber = lcmUtils.addSubscriber('LCMGL.*', callback=self.onMessage)
+        elif not enabled and self.subscriber:
+            lcmUtils.removeSubscriber(self.subscriber)
+            self.subscriber = None
+
     def enable(self):
-        self.subscriber = lcmUtils.addSubscriber('LCMGL.*', callback=self.onMessage)
+        self.setEnabled(True)
 
     def disable(self):
-        if self.subscriber:
-            lcmUtils.removeSubscriber(self.subscriber)
+        self.setEnabled(False)
 
     def onMessage(self, msgBytes, channel):
 
