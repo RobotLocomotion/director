@@ -198,11 +198,12 @@ if useFootsteps:
 
 
 if useLCMGL:
-    lcmgl.init(view)
-
+    lcmglManager = lcmgl.init(view)
+    app.MenuActionToggleHelper('Tools', 'Renderer - LCM GL', lcmglManager.isEnabled, lcmglManager.setEnabled)
 
 if useDrakeVisualizer:
-    drakeVis = drakevisualizer.DrakeVisualizer(view)
+    drakeVisualizer = drakevisualizer.DrakeVisualizer(view)
+    app.MenuActionToggleHelper('Tools', 'Renderer - Drake', drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
 
 
 if usePlanning:
