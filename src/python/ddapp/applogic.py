@@ -191,6 +191,32 @@ def updateToggleTerrainAction(view):
     getToolBarActions()['ActionToggleCameraTerrainMode'].checked = isTerrainMode
 
 
+class MenuActionToggleHelper(object):
+    '''
+    This class manages a checkable menu action and  forwards checked events
+    to user selected callbacks.
+    '''
+
+    def __init__(self, menuName, actionName, getEnabledFunc, setEnabledFunc):
+        self.getEnabled = getEnabledFunc
+        self.setEnabled = setEnabledFunc
+
+        self.action = app.addMenuAction(menuName, actionName)
+        self.action.setCheckable(True)
+        self.action.checked = getEnabledFunc()
+        self.action.connect('triggered()', self.onActionChanged)
+
+    def updateAction(self):
+        self.action.checked = self.getEnabled()
+
+    def onActionChanged(self):
+        if self.action.checked:
+            self.setEnabled(True)
+        else:
+            self.setEnabled(False)
+        self.updateAction()
+
+
 def onCurrentViewChanged(previousView, currentView):
     updateToggleTerrainAction(currentView)
 
@@ -241,4 +267,4 @@ def startup(globals):
     setupActions()
 
     vm = getViewManager()
-    vm.connect('currentViewChanged(ddViewBase*, ddViewBase*)', onCurrentViewChanged);
+    vm.connect('currentViewChanged(ddViewBase*, ddViewBase*)', onCurrentViewChanged)
