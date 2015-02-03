@@ -22,6 +22,7 @@ set(python_tests
   testTableFit.py
   testTableFitStereo.py
   testTaskQueue.py
+  testTeleopPanel.py
   testValveFit.py
   testValveFitStereo.py
   testAmazonPod.py
