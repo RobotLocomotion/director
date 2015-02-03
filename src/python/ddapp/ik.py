@@ -7,7 +7,6 @@ from ddapp import matlab
 from ddapp.asynctaskqueue import AsyncTaskQueue
 from ddapp.jointcontrol import JointController
 from ddapp.ikconstraints import *
-from lxml import etree
 
 from ddapp import drcargs
 
