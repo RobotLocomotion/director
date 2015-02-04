@@ -96,6 +96,16 @@ class ValvePlannerDemo(object):
 
         self.setupStance()
 
+        self._setupSubscriptions()
+
+    def _setupSubscriptions(self):
+        sub0 = lcmUtils.addSubscriber('AUTONOMOUS_TEST_VALVE', lcmdrc.utime_t, self.autonmousTest)
+
+    def autonmousTest(self, msg):
+        print "got the autonmous test message, executing sequence"
+        q = self.autonomousExecuteNoWalking()
+        q.start()
+
     def setupStance(self):
 
         if (self.graspingObject == 'valve'):
@@ -634,6 +644,12 @@ class ValvePlannerDemo(object):
         self.playSequenceNominal()
 
 
+    def sendAutonmousTestDone(self):
+        msg = lcmdrc.utime_t()
+        msg.utime = getUtime()
+        lcmUtils.publish('AUTONOMOUS_TEST_VALVE_DONE', msg)
+
+
     def autonomousExecute(self):
 
         self.planFromCurrentRobotState = True
@@ -691,9 +707,12 @@ class ValvePlannerDemo(object):
         taskQueue.addTask(self.resetTurnPath)
 
         # Approach valve:
+        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
         taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
         taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
         taskQueue.addTask(self.findAffordance)
+
+        taskQueue.addTask(self.sendAutonmousTestDone)
 
         #taskQueue.addTask(self.planFootstepsToStance)
         #taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
