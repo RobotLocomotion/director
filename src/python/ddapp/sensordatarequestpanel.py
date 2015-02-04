@@ -41,7 +41,7 @@ class SensorDataRequestPanel(object):
         self.registerType('camChestRight',data_request_t.CAMERA_IMAGE_RCHEST)
         self.registerType('mapSceneHeight',data_request_t.HEIGHT_MAP_SCENE)
         self.registerType('mapSceneDepth',data_request_t.DEPTH_MAP_SCENE)
-        self.registerType('mapWorkspaceDepth',data_request_t.DEPTH_MAP_WORKSPACE)
+        self.registerType('mapWorkspaceDepth',data_request_t.DEPTH_MAP_WORKSPACE_C)
         self.registerType('mapFusedStereoHeight',data_request_t.FUSED_HEIGHT)
 
         self.widget.applyAllButton.clicked.connect(self.applyAllButtonClicked)
