@@ -335,7 +335,7 @@ if usePlanning:
                     playPlans, showPose, cameraview, segmentationpanel)
 
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
-                                      lHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                                      lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                       segmentation.segmentValveWallAuto, robotStateJointController,
                                       playPlans, showPose)
 
