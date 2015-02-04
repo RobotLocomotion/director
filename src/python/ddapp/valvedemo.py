@@ -33,12 +33,13 @@ from PythonQt import QtCore, QtGui
 
 class ValvePlannerDemo(object):
 
-    def __init__(self, robotModel, footstepPlanner, manipPlanner, ikPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
+    def __init__(self, robotModel, footstepPlanner, manipPlanner, ikPlanner, lhandDriver, rhandDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
         self.robotModel = robotModel
         self.footstepPlanner = footstepPlanner
         self.manipPlanner = manipPlanner
         self.ikPlanner = ikPlanner
-        self.handDriver = handDriver
+        self.lhandDriver = lhandDriver
+        self.rhandDriver = rhandDriver
         self.atlasDriver = atlasDriver
         self.multisenseDriver = multisenseDriver
         self.affordanceFitFunction = affordanceFitFunction
@@ -80,6 +81,10 @@ class ValvePlannerDemo(object):
             self.speedLow = 60
             self.speedHigh = 60
 
+        self.speedLow = 60
+        self.speedHigh = 60
+
+
         # reach to center and back - for palm point
         self.clenchFrameXYZ = [0.0, 0.0, -0.1]
         self.clenchFrameRPY = [90, 0, 180]
@@ -96,11 +101,15 @@ class ValvePlannerDemo(object):
         if (self.graspingObject == 'valve'):
             self.nextScribeAngleInitial = -60 # reach 60 degrees left of the valve spoke
             self.turnAngle=60
-            if self.scribeInAir:
-                self.relativeStanceXYZInitial = [-0.6, -0.2, 0.0] # stand further away when scribing in air
-            else:
-                self.relativeStanceXYZInitial = [-0.48, -0.2, 0.0]
-            self.relativeStanceRPYInitial = [0, 0, 16]
+            #if self.scribeInAir:
+            #    self.relativeStanceXYZInitial = [-0.6, -0.2, 0.0] # stand further away when scribing in air
+            #else:
+            #    self.relativeStanceXYZInitial = [-0.48, -0.2, 0.0]
+            #self.relativeStanceRPYInitial = [0, 0, 16]
+
+            self.relativeStanceXYZInitial = [-0.6, 0.0, 0.0]
+            self.relativeStanceRPYInitial = [0, 0, 0]
+
         else:
             self.nextScribeAngleInitial = 0 # reach right into the valve axis
             self.turnAngle=90
@@ -115,7 +124,8 @@ class ValvePlannerDemo(object):
         else:
             self.scribeDirection = 1
 
-
+    def setNextScribeAngle(self, nextScribeAngle):
+        self.nextScribeAngle = nextScribeAngle
 
     def resetTurnPath(self):
         for obj in om.getObjects():
@@ -192,7 +202,7 @@ class ValvePlannerDemo(object):
 
 
     ### Valve Focused Functions ######################################################################
-    def segmentValveWallAuto(self, mode):
+    def segmentValveWallAuto(self, expectedValveRadius=0.195, mode='both'):
         om.removeFromObjectModel(om.findObjectByName('affordances'))
 
         if (self.useLidar is True):
@@ -200,7 +210,7 @@ class ValvePlannerDemo(object):
         else:
             vis.updatePolyData(segmentation.getDisparityPointCloud(4), 'pointcloud snapshot', parent='segmentation')
 
-        self.affordanceFitFunction(.195, mode=mode)
+        self.affordanceFitFunction(expectedValveRadius=expectedValveRadius, mode=mode)
 
     def computeValveStanceFrame(self):
         objectTransform = transformUtils.copyFrame( self.clenchFrame.transform )
@@ -628,41 +638,112 @@ class ValvePlannerDemo(object):
 
         self.planFromCurrentRobotState = True
         self.visOnly = False
+        self.palmInAngle = 70
+        self.nextScribeAngle = 45
+        self.turnAngle=70
+        self.graspingHand='right'
 
         taskQueue = AsyncTaskQueue()
         taskQueue.addTask(self.resetTurnPath)
-        
+
         # Approach valve:
-        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, self.graspingObject) )
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
         taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
         taskQueue.addTask(self.findAffordance)
 
         taskQueue.addTask(self.planFootstepsToStance)
         taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
         taskQueue.addTask(self.commitFootstepPlan)
-        taskQueue.addTask(self.requiredUserPrompt('Wait to arrive: '))
 
         # Reach and Grasp Valve:
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, self.graspingObject) )
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
         taskQueue.addTask(self.optionalUserPrompt('Accept valve re-fit, continue? y/n: '))
         taskQueue.addTask(self.findAffordance)
 
-        planningFunctions = [
-                    self.planPreGrasp,
-                    self.planReach,
-                    self.planGrasp,
-                    functools.partial( self.planValveTurn, self.turnAngle),
-                    self.planReach,
-                    self.planPreGrasp,
-                    self.planNominal,
-                    ]
+        # Move arm to pregrasp:
+        taskQueue.addTask(self.printAsync('Pre grasp'))
+        taskQueue.addTask(self.planPreGrasp)
+        taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
 
-        for planFunc in planningFunctions:
-            taskQueue.addTask(planFunc)
-            taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
+        taskQueue.addTask(self.printAsync('Turn 1'))
+        taskQueue = self.addAutomousValveTurn(taskQueue)
+        taskQueue.addTask(self.printAsync('Turn 2'))
+        taskQueue = self.addAutomousValveTurn(taskQueue)
+        taskQueue.addTask(self.printAsync('Turn 3'))
+        taskQueue = self.addAutomousValveTurn(taskQueue)
         taskQueue.addTask(self.printAsync('done!'))
 
+        return taskQueue
+
+
+    def autonomousExecuteNoWalking(self):
+
+        self.planFromCurrentRobotState = True
+        self.visOnly = False
+        self.palmInAngle = 70
+        self.nextScribeAngle = 45
+        self.turnAngle=70
+        self.graspingHand='right'
+
+        taskQueue = AsyncTaskQueue()
+        taskQueue.addTask(self.resetTurnPath)
+
+        # Approach valve:
+        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
+        taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
+        taskQueue.addTask(self.findAffordance)
+
+        #taskQueue.addTask(self.planFootstepsToStance)
+        #taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
+        #taskQueue.addTask(self.commitFootstepPlan)
+        ##taskQueue.addTask(self.requiredUserPrompt('Wait to arrive: '))
+
+        # Reach and Grasp Valve:
+        #taskQueue.addTask(self.waitForCleanLidarSweepAsync)
+        #taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
+        #taskQueue.addTask(self.optionalUserPrompt('Accept valve re-fit, continue? y/n: '))
+        #taskQueue.addTask(self.findAffordance)
+
+        # Move arm to pregrasp:
+        taskQueue.addTask(self.printAsync('Pre grasp'))
+        taskQueue.addTask(self.planPreGrasp)
+        taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(self.printAsync('Turn 1'))
+        taskQueue = self.addAutomousValveTurn(taskQueue)
+        taskQueue.addTask(self.printAsync('Turn 2'))
+        taskQueue = self.addAutomousValveTurn(taskQueue)
+        taskQueue.addTask(self.printAsync('Turn 3'))
+        taskQueue = self.addAutomousValveTurn(taskQueue)
+        taskQueue.addTask(self.printAsync('done!'))
+
+        return taskQueue
+
+    def addAutomousValveTurn(self,taskQueue):
+        #----- Loop Here
+        taskQueue.addTask(functools.partial( self.setNextScribeAngle, 45))
+        taskQueue.addTask(self.printAsync('Reach'))
+        taskQueue.addTask(self.planReach)
+        taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(self.printAsync('Reach'))
+        taskQueue.addTask(self.planGrasp)
+        taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.closeHand,self.graspingHand))
+
+        taskQueue.addTask(self.printAsync('Turn'))
+        taskQueue.addTask(functools.partial( self.planValveTurn, self.turnAngle))
+        taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.openHand,self.graspingHand))
+
+        taskQueue.addTask(self.printAsync('Dereach'))
+        taskQueue.addTask(self.planReach)
+        taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
         return taskQueue
