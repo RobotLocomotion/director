@@ -42,7 +42,7 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
 
 
 DEFAULT_PARAM_SET = 'drake'
-DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
+DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 12,
                                'Nominal Step Width': 0.26,
                                'Nominal Forward Step': 0.15,
                                'Max Forward Step': 0.40,
@@ -52,7 +52,7 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 20,
                                'Drake Swing Speed': 0.2,
                                'Drake Instep Shift': 0.0275,
                                'Drake Min Hold Time': 2.0},
-                       'drake': {'Max Num Steps': 20,
+                       'drake': {'Max Num Steps': 12,
                                  'Nominal Step Width': 0.26,
                                  'Nominal Forward Step': 0.25,
                                  'Max Forward Step': 0.30,
@@ -215,6 +215,7 @@ class FootstepsDriver(object):
                               0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
                               1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
                               2: lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING}
+        self.params.addProperty('Planner Mode', 0, attributes=om.PropertyAttributes(enumNames=['Summer2014', 'GlobalRotation']))
 
     def applyDefaults(self, set_name):
         defaults = self.default_step_params[set_name]
@@ -587,7 +588,7 @@ class FootstepsDriver(object):
         msg.params.max_forward_step = self.params.properties.max_forward_step
         msg.params.nom_upward_step = 0.25;
         msg.params.nom_downward_step = 0.15;
-        msg.params.planning_mode = msg.params.MODE_AUTO
+        msg.params.planning_mode = self.params.properties.planner_mode
         msg.params.behavior = self.behavior_lcm_map[self.params.properties.behavior]
         # msg.params.use_map_heights = self.params.properties.heights_source == 0
         # msg.params.use_map_normals = self.params.properties.normals_source == 0
