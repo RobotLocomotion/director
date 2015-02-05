@@ -146,7 +146,7 @@ class RobotSystem(object):
 
         if useFootsteps:
             footstepsDriver = footstepsdriver.FootstepsDriver(robotStateJointController)
-            irisDriver = irisdriver.IRISDriver(mapServerSource)
+            irisDriver = irisdriver.IRISDriver(robotStateJointController)
 
         if usePlanning:
 

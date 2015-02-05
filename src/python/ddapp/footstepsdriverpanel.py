@@ -79,7 +79,7 @@ class FootstepsPanel(object):
 
     def onNewRegionSeed(self):
         t = self.newWalkingGoalFrame(self.robotModel, distanceForward=0.5)
-        self.irisDriver.newIRISRegion(t)
+        self.irisDriver.newTerrainItem(t)
 
     def onAutoIRISSegmentation(self):
         self.irisDriver.autoIRISSegmentation()
@@ -97,6 +97,7 @@ class FootstepsPanel(object):
     def onPropertyChanged(self, prop):
         self.driver.params.setProperty(prop.propertyName(), prop.value())
         self.driver.updateRequest()
+        self.irisDriver.params.setProperty(prop.propertyName(), prop.value())
 
     def applyDefaults(self, set_name):
         for k, v in self.driver.default_step_params[set_name].iteritems():
