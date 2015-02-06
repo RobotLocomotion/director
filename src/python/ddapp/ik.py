@@ -168,6 +168,7 @@ class AsyncIKCommunicator():
             commands.append('%s(joints.%s) = %s(joints.%s) + %f;' % (arrayName, jointName, arrayName, jointName, epsilon))
 
         commands.append('s = s.setJointLimits(joint_limit_min_new, joint_limit_max_new);')
+        commands.append('r = s.robot_and_environment;')
         self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
         self.taskQueue.start()
 
