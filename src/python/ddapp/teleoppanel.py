@@ -516,7 +516,7 @@ class JointLimitChecker(object):
         self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.joints = robotstate.matchJoints('^(?!base_)') # all but base joints
-        self.inflationAmount = np.radians(0.1)
+        self.inflationAmount = np.radians(0.3)
         self.timer = TimerCallback(targetFps=1)
         self.timer.callback = self.update
         self.warningButton = None
