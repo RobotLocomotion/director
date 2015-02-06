@@ -97,7 +97,10 @@ class FootstepsPanel(object):
     def onPropertyChanged(self, prop):
         self.driver.params.setProperty(prop.propertyName(), prop.value())
         self.driver.updateRequest()
-        self.irisDriver.params.setProperty(prop.propertyName(), prop.value())
+        try:
+            self.irisDriver.params.setProperty(prop.propertyName(), prop.value())
+        except AssertionError: # fires when property is not present in irisDriver params
+            pass
 
     def applyDefaults(self, set_name):
         for k, v in self.driver.default_step_params[set_name].iteritems():
