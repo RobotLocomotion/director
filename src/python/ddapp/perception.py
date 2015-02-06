@@ -440,8 +440,10 @@ class MapServerSource(TimerCallback):
         if obj not in om.getObjects():
             obj = None
         if not obj:
+            visibleDefault = False if viewId == 9999 else True
             obj = vis.PolyDataItem(self.getNameForViewId(viewId), polyData, self.view)
             obj.setProperty('Color', QtGui.QColor(0, 175, 255))
+            obj.setProperty('Visible', visibleDefault)
             folder = om.findObjectByName('Map Server')
             om.addToObjectModel(obj, folder)
             om.expand(folder)
