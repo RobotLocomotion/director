@@ -98,7 +98,8 @@ class AffordancePanel(object):
 
     def onGetRaycastTerrain(self):
         affs = self.getCollisionAffordances()
-        self.raycastDriver.requestRaycast(affs)
+        xy = self.jointController.q[:2]
+        self.raycastDriver.requestRaycast(affs, xy-2, xy+2)
 
     def affordanceFromDescription(self, desc):
         self.affordanceManager.collection.updateDescription(desc)
