@@ -136,7 +136,6 @@ useControllerRate = True
 useForceDisplay = False
 useSkybox = False
 useDataFiles = True
-useContinuousWalking = False
 usePFGrasp = True
 
 
