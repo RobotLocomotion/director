@@ -96,6 +96,7 @@ set(python_files
   ddapp/visualization.py
   ddapp/vtkAll.py
   ddapp/vtkNumpy.py
+  ddapp/walkingtestdemo.py
 
   ddapp/macros/popout.py
   ddapp/macros/publish.py
