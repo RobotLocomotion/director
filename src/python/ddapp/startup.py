@@ -24,6 +24,7 @@ from ddapp import drilldemo
 from ddapp import tabledemo
 from ddapp import valvedemo
 from ddapp import continuouswalkingdemo
+from ddapp import walkingtestdemo
 from ddapp import ik
 from ddapp import ikplanner
 from ddapp import objectmodel as om
@@ -347,6 +348,10 @@ if usePlanning:
                                       segmentation.segmentValveWallAuto, robotStateJointController,
                                       playPlans, showPose)
 
+    walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                    lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                    robotStateJointController,
+                    playPlans, showPose)
 
     splinewidget.init(view, handFactory, robotStateModel)
 
