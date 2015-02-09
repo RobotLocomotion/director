@@ -31,6 +31,7 @@ public:
   {
     mChannel = channel;
     this->mEmitMessages = true;
+    this->mNotifyAllMessages = false;
     this->mRequiredElapsedMilliseconds = 0;
     this->connect(this, SIGNAL(messageReceivedInQueue(const QString&)), SLOT(onMessageInQueue(const QString&)));
   }
@@ -63,6 +64,26 @@ public:
   bool callbackIsEnabled() const
   {
     return this->mEmitMessages;
+  }
+
+  // See notifyAllMessagesIsEnabled()
+  void setNotifyAllMessagesEnabled(bool enabled)
+  {
+    this->mNotifyAllMessages = enabled;
+  }
+
+  // If the main thread is busy while several LCM messages are received by this
+  // subscriber on the LCM thread, then this flag determines which messages the
+  // main thread will see when it becomes ready to process messages.  If this
+  // flag is true, then the main thread will be notified, via the messageReceived()
+  // signal, for each message.  If this flag is false, then the main thread will
+  // be notified only once with the most recently received message.  Set this
+  // flag to true if it is important to never miss a message.  The default is
+  // false, meaning that messages will be dropped if the main thread is not
+  // available to process them before a new message is received.
+  bool notifyAllMessagesIsEnabled() const
+  {
+    return this->mNotifyAllMessages;
   }
 
   void setSpeedLimit(double hertz)
@@ -137,20 +158,27 @@ protected:
     if (this->mEmitMessages)
     {
       if (this->mRequiredElapsedMilliseconds == 0 || mTimer.elapsed() > this->mRequiredElapsedMilliseconds)
-        {
+      {
         this->mTimer.restart();
 
-        this->mMutex.lock();
-        bool doEmit = !this->mLastMessage.size();
-        this->mLastMessage = messageBytes;
-        this->mMutex.unlock();
-
-        if (doEmit)
+        if (this->mNotifyAllMessages)
         {
-          emit this->messageReceivedInQueue(QString(channel.c_str()));
+          emit this->messageReceived(messageBytes, QString(channel.c_str()));
+        }
+        else
+        {
+          this->mMutex.lock();
+          bool doEmit = !this->mLastMessage.size();
+          this->mLastMessage = messageBytes;
+          this->mMutex.unlock();
+
+          if (doEmit)
+          {
+            emit this->messageReceivedInQueue(QString(channel.c_str()));
+          }
         }
 
-        }
+      }
     }
     else
     {
@@ -163,6 +191,7 @@ protected:
   }
 
   bool mEmitMessages;
+  bool mNotifyAllMessages;
   int mRequiredElapsedMilliseconds;
   mutable QMutex mMutex;
   QWaitCondition mWaitCondition;
