@@ -1167,8 +1167,8 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     updatePolyData(largestCluster, 'valve cluster', parent=getDebugFolder(), color=[0,1,0], visible=False)
 
 
-    #radiusLimit = [expectedValveRadius - 0.01, expectedValveRadius + 0.01] if expectedValveRadius else None
-    radiusLimit = None
+    radiusLimit = [expectedValveRadius - 0.01, expectedValveRadius + 0.01] if expectedValveRadius else None
+    #radiusLimit = None
 
     polyData, circleFit = extractCircle(largestCluster, distanceThreshold=0.01, radiusLimit=radiusLimit)
     updatePolyData(polyData, 'circle fit', parent=getDebugFolder(), visible=False)
@@ -1344,7 +1344,7 @@ def findWallCenter(polyData, removeGroundMethod=removeGround):
 
 def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMethod=removeGround ):
     '''
-    Segment the valve wall where the left hand side has a valve and right has a lever
+    Automatically segment a valve hanging in front of the wall at the center
     '''
 
     # find the valve wall and its center
@@ -1353,33 +1353,35 @@ def segmentValveWallAuto(expectedValveRadius=.195, mode='both', removeGroundMeth
 
     t = findWallCenter(polyData, removeGroundMethod)
 
-    point1 = np.array( t.GetPosition() )
+    valve_point1 = [ 0 , 0.6 , 0]
+    valveTransform1 = transformUtils.frameFromPositionAndRPY(valve_point1, [0,0,0])
+    valveTransform1.Concatenate(t)
+    point1 = np.array(valveTransform1.GetPosition()) # left of wall
 
-    # determine boxes relative to the center, inside of which the two affordances lie
-    valve_point2 = [ 0 , -0.8 , 0]
+    valve_point2 = [ 0 , -0.6 , 0]
     valveTransform2 = transformUtils.frameFromPositionAndRPY(valve_point2, [0,0,0])
     valveTransform2.Concatenate(t)
-    point2 =valveTransform2.GetPosition() # left of wall
+    point2 = np.array(valveTransform2.GetPosition()) # left of wall
 
-    valve_point2b = [ 0 , 1.0 , 0] # lever can over hang
-    valveTransform2b = transformUtils.frameFromPositionAndRPY(valve_point2b, [0,0,0])
-    valveTransform2b.Concatenate(t)
-    point2b =valveTransform2b.GetPosition() # right of wall
+    valve_point3 = [ 0 , 1.0 , 0] # lever can over hang
+    valveTransform3 = transformUtils.frameFromPositionAndRPY(valve_point3, [0,0,0])
+    valveTransform3.Concatenate(t)
+    point3 =valveTransform3.GetPosition() # right of wall
 
 
     d = DebugData()
     d.addSphere(point2, radius=0.01)
     d.addSphere(point1, radius=0.03)
-    d.addSphere(point2b, radius=0.01)
+    d.addSphere(point3, radius=0.01)
     updatePolyData(d.getPolyData(), 'auto wall points', parent=getDebugFolder(), visible=False)
 
     if (mode=='valve'):
       segmentValveByWallPlane(expectedValveRadius, point1, point2)
     elif (mode=='lever'):
-      segmentLeverByWallPlane(point1, point2b)
+      segmentLeverByWallPlane(point1, point3)
     elif (mode=='both'):
       segmentValveByWallPlane(expectedValveRadius, point1, point2)
-      segmentLeverByWallPlane(point1, point2b)
+      segmentLeverByWallPlane(point1, point3)
     else:
         raise Exception('unexpected segmentation mode: ' + mode)
 
