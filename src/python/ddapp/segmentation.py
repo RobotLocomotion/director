@@ -2631,7 +2631,7 @@ def fitVerticalPosts(polyData):
         pose = transformUtils.poseFromTransform(t)
 
         desc = dict(classname='CylinderAffordanceItem', Name='post %d' % postId,
-                    uuid=newUUID(), pose=pose, Radius=0.05, Length=lineLength, Color=[0.0, 1.0, 0.0])
+                    uuid=newUUID(), pose=pose, Radius=0.05, Length=float(lineLength), Color=[0.0, 1.0, 0.0])
         desc['Collision Enabled'] = True
 
         import affordancepanel
