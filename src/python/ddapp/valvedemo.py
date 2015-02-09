@@ -98,13 +98,9 @@ class ValvePlannerDemo(object):
 
         self._setupSubscriptions()
 
-    def _setupSubscriptions(self):
-        sub0 = lcmUtils.addSubscriber('AUTONOMOUS_TEST_VALVE', lcmdrc.utime_t, self.autonmousTest)
 
-    def autonmousTest(self, msg):
-        print "Got the autonmous test message, executing test sequence"
-        q = self.autonomousExecute()
-        q.start()
+    def _setupSubscriptions(self):
+        sub0 = lcmUtils.addSubscriber('AUTONOMOUS_TEST_VALVE', lcmdrc.utime_t, self.autonomousTest)
 
     def setupStance(self):
 
@@ -649,6 +645,10 @@ class ValvePlannerDemo(object):
         self.planNominal()
         self.playSequenceNominal()
 
+    def autonomousTest(self, msg):
+        print "Got the autonomousTest message, executing valve test sequence"
+        q = self.autonomousExecute()
+        q.start()
 
     def sendAutonmousTestDone(self):
         msg = lcmdrc.utime_t()
