@@ -600,6 +600,12 @@ class ValvePlannerDemo(object):
         while self.atlasDriver.getControllerStatus() == 'manipulating':
             yield
 
+    def waitForWalkExecution(self):
+        while self.atlasDriver.getControllerStatus() != 'walking':
+            yield
+        while self.atlasDriver.getControllerStatus() == 'walking':
+            yield
+
     def waitForPlanAnimation(self, plan):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
         print 'waiting for plan animation:', planElapsedTime
@@ -670,6 +676,7 @@ class ValvePlannerDemo(object):
         taskQueue.addTask(self.planFootstepsToStance)
         taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
         taskQueue.addTask(self.commitFootstepPlan)
+        taskQueue.addTask(self.waitForWalkExecution)
 
         # Reach and Grasp Valve:
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
