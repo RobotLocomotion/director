@@ -265,18 +265,15 @@ def startModelPublisherListener(modelsToReload):
 def setupPackagePaths():
 
     searchPaths = [
-        'ros_workspace/mit_drcsim_scripts',
-        'ros_workspace/sandia-hand/ros/sandia_hand_description',
         'software/models/atlas_v3',
         'software/models/atlas_v4',
         'software/models/atlas_v5',
         'software/models/valkyrie',
         'software/models/mit_gazebo_models/mit_robot',
-        'software/models/mit_gazebo_models/irobot_hand',
-        'software/models/mit_gazebo_models/multisense_sl',
-        'software/models/mit_gazebo_models/handle_description',
-        'software/models/mit_gazebo_models/hook_description',
-        'software/models/mit_gazebo_models/robotiq_hand_description',
+        'software/models/common_components/multisense_sl',
+        'software/models/common_components/irobot_hand',
+        'software/models/common_components/handle_description',
+        'software/models/common_components/robotiq_hand_description',
         'software/models/otdf',
                   ]
 
@@ -450,8 +447,8 @@ class HandLoader(object):
         self.palmToHandLink = self.handLinkToPalm.GetLinearInverse()
 
     def getHandUrdf(self):
-        urdfBase = os.path.join(getDRCBaseDir(), 'software/models/mit_gazebo_models')
-        return os.path.join(urdfBase, 'mit_robot_hands', self.handUrdf)
+        urdfBase = os.path.join(getDRCBaseDir(), 'software/models/common_components')
+        return os.path.join(urdfBase, 'hand_factory', self.handUrdf)
 
     @staticmethod
     def getLinkToLinkTransform(model, linkA, linkB):
