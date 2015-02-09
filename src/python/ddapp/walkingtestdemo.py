@@ -54,7 +54,8 @@ class walkingTestDemo(object):
         self.showPoseFunction = showPoseFunction
 
         self.goalTransform1 = transformUtils.frameFromPositionAndRPY([1,0,0],[0,0,0])
-        self.goalTransform2 = transformUtils.frameFromPositionAndRPY([1,1,0],[0,0,90])
+        self.goalTransform2 = transformUtils.frameFromPositionAndRPY([2,0,0],[0,0,10])
+        #self.goalTransform2 = transformUtils.frameFromPositionAndRPY([1,1,0],[0,0,90])
 
         self.visOnly = False # True for development, False for operation
         self.planFromCurrentRobotState = True # False for development, True for operation
@@ -63,11 +64,18 @@ class walkingTestDemo(object):
             self.visOnly = True # True for development, False for operation
             self.planFromCurrentRobotState = False # False for development, True for operation
 
-        self.userPromptEnabled = True
+        self.optionalUserPromptEnabled = False
+        self.requiredUserPromptEnabled = True
+
         self.constraintSet = None
 
         self.plans = []
 
+        self._setupSubscriptions()
+
+
+    def _setupSubscriptions(self):
+        sub0 = lcmUtils.addSubscriber('AUTONOMOUS_TEST_WALKING', lcmdrc.utime_t, self.autonomousTest)
 
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -112,8 +120,17 @@ class walkingTestDemo(object):
         yield
         print s
 
-    def userPrompt(self, message):
-        if not self.userPromptEnabled:
+    def optionalUserPrompt(self, message):
+        if not self.optionalUserPromptEnabled:
+            return
+
+        yield
+        result = raw_input(message)
+        if result != 'y':
+            raise Exception('user abort.')
+
+    def requiredUserPrompt(self, message):
+        if not self.requiredUserPromptEnabled:
             return
 
         yield
@@ -162,6 +179,12 @@ class walkingTestDemo(object):
         while self.atlasDriver.getControllerStatus() == 'manipulating':
             yield
 
+    def waitForWalkExecution(self):
+        while self.atlasDriver.getControllerStatus() != 'walking':
+            yield
+        while self.atlasDriver.getControllerStatus() == 'walking':
+            yield
+
     def waitForPlanAnimation(self, plan):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
         print 'waiting for plan animation:', planElapsedTime
@@ -195,6 +218,19 @@ class walkingTestDemo(object):
         if (playbackNominal is True):
             self.playSequenceNominal()
 
+
+    def autonomousTest(self, msg):
+        print "Got the autonomousTest message, executing walking test sequence"
+        q = self.autonomousExecute()
+        q.start()
+
+
+    def sendAutonmousTestDone(self):
+        msg = lcmdrc.utime_t()
+        msg.utime = getUtime()
+        lcmUtils.publish('AUTONOMOUS_TEST_WALKING_DONE', msg)
+
+
     def autonomousExecute(self):
 
         self.planFromCurrentRobotState = True
@@ -202,12 +238,18 @@ class walkingTestDemo(object):
 
         taskQueue = AsyncTaskQueue()
 
-        taskQueue.addTask(self.userPrompt('make and commit footstep plan 1. continue? y/n: '))
+        taskQueue.addTask(self.printAsync('Plan and execute walking'))
         taskQueue.addTask( functools.partial(self.planFootsteps, self.goalTransform1) )
+        taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
         taskQueue.addTask(self.commitFootstepPlan)
+        taskQueue.addTask(self.waitForWalkExecution)
 
-        taskQueue.addTask(self.userPrompt('make and commit footstep plan 2. continue? y/n: '))
+        taskQueue.addTask(self.printAsync('Plan and execute walking'))
         taskQueue.addTask( functools.partial(self.planFootsteps, self.goalTransform2) )
+        taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
         taskQueue.addTask(self.commitFootstepPlan)
+        taskQueue.addTask(self.waitForWalkExecution)
+
+        taskQueue.addTask(self.sendAutonmousTestDone)
 
         return taskQueue
