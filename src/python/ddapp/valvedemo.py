@@ -102,8 +102,8 @@ class ValvePlannerDemo(object):
         sub0 = lcmUtils.addSubscriber('AUTONOMOUS_TEST_VALVE', lcmdrc.utime_t, self.autonmousTest)
 
     def autonmousTest(self, msg):
-        print "got the autonmous test message, executing sequence"
-        q = self.autonomousExecuteNoWalking()
+        print "Got the autonmous test message, executing test sequence"
+        q = self.autonomousExecute()
         q.start()
 
     def setupStance(self):
@@ -669,16 +669,19 @@ class ValvePlannerDemo(object):
         taskQueue.addTask(self.resetTurnPath)
 
         # Approach valve:
+        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
         taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
         taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
         taskQueue.addTask(self.findAffordance)
 
+        taskQueue.addTask(self.printAsync('Plan and execute walking'))
         taskQueue.addTask(self.planFootstepsToStance)
         taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
         taskQueue.addTask(self.commitFootstepPlan)
         taskQueue.addTask(self.waitForWalkExecution)
 
         # Reach and Grasp Valve:
+        taskQueue.addTask(self.printAsync('Wait for sweep'))
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
         taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
         taskQueue.addTask(self.optionalUserPrompt('Accept valve re-fit, continue? y/n: '))
@@ -698,53 +701,7 @@ class ValvePlannerDemo(object):
         taskQueue = self.addAutomousValveTurn(taskQueue)
         taskQueue.addTask(self.printAsync('done!'))
 
-        return taskQueue
-
-
-    def autonomousExecuteNoWalking(self):
-
-        self.planFromCurrentRobotState = True
-        self.visOnly = False
-        self.palmInAngle = 70
-        self.nextScribeAngle = 45
-        self.turnAngle=70
-        self.graspingHand='right'
-
-        taskQueue = AsyncTaskQueue()
-        taskQueue.addTask(self.resetTurnPath)
-
-        # Approach valve:
-        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-        taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
-        taskQueue.addTask(self.optionalUserPrompt('Accept valve fit, continue? y/n: '))
-        taskQueue.addTask(self.findAffordance)
-
         taskQueue.addTask(self.sendAutonmousTestDone)
-
-        #taskQueue.addTask(self.planFootstepsToStance)
-        #taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
-        #taskQueue.addTask(self.commitFootstepPlan)
-        ##taskQueue.addTask(self.requiredUserPrompt('Wait to arrive: '))
-
-        # Reach and Grasp Valve:
-        #taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-        #taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
-        #taskQueue.addTask(self.optionalUserPrompt('Accept valve re-fit, continue? y/n: '))
-        #taskQueue.addTask(self.findAffordance)
-
-        # Move arm to pregrasp:
-        taskQueue.addTask(self.printAsync('Pre grasp'))
-        taskQueue.addTask(self.planPreGrasp)
-        taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
-        taskQueue.addTask(self.animateLastPlan)
-
-        taskQueue.addTask(self.printAsync('Turn 1'))
-        taskQueue = self.addAutomousValveTurn(taskQueue)
-        taskQueue.addTask(self.printAsync('Turn 2'))
-        taskQueue = self.addAutomousValveTurn(taskQueue)
-        taskQueue.addTask(self.printAsync('Turn 3'))
-        taskQueue = self.addAutomousValveTurn(taskQueue)
-        taskQueue.addTask(self.printAsync('done!'))
 
         return taskQueue
 
