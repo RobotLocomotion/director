@@ -144,18 +144,18 @@ class Board(object):
         reachLeftXYZ[0] = reachLeftXYZ[0] - self.reachDepth
         reachLeftRPY = copy.deepcopy ( self.graspLeftHandFrameRPY )
 
-        t = transformUtils.frameFromPositionAndRPY( reachLeftXYZ , reachLeftRPY )
-        t.Concatenate(self.frame.transform)
-        self.reachLeftFrame = vis.updateFrame(t, 'reach left frame', parent=self.affordance, visible=False, scale=0.2)
+        tl = transformUtils.frameFromPositionAndRPY( reachLeftXYZ , reachLeftRPY )
+        tl.Concatenate(self.frame.transform)
+        self.reachLeftFrame = vis.updateFrame(tl, 'reach left frame', parent=self.affordance, visible=False, scale=0.2)
         self.reachLeftFrame.addToView(app.getDRCView())
         
         reachRightXYZ = copy.deepcopy( self.graspRightHandFrameXYZ )
         reachRightXYZ[0] = reachRightXYZ[0] - self.reachDepth
         reachRightRPY = copy.deepcopy ( self.graspRightHandFrameRPY )
 
-        t = transformUtils.frameFromPositionAndRPY( reachRightXYZ , reachRightRPY )
-        t.Concatenate(self.frame.transform)
-        self.reachRightFrame = vis.updateFrame(t, 'reach right frame', parent=self.affordance, visible=False, scale=0.2)
+        tr = transformUtils.frameFromPositionAndRPY( reachRightXYZ , reachRightRPY )
+        tr.Concatenate(self.frame.transform)
+        self.reachRightFrame = vis.updateFrame(tr, 'reach right frame', parent=self.affordance, visible=False, scale=0.2)
         self.reachRightFrame.addToView(app.getDRCView())
         
         if (self.b.graspingHand == 'left'):
@@ -276,6 +276,8 @@ class BihandedPlannerDemo(object):
         self.drill = Drill()
 
     def addPlan(self, plan):
+        print self.plans
+        print "ADDED\n", plan
         self.plans.append(plan)
 
     def computeGroundFrame(self, robotModel):
@@ -433,6 +435,13 @@ class BihandedPlannerDemo(object):
     def planReach(self):
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.reachFrame, lockBase=True, lockBack=True)
+        endPose, info = constraintSet.runIk()
+        graspPlan = constraintSet.runIkTraj()
+        self.addPlan(graspPlan)
+
+    def planReach2(self):
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal2(startPose, self.board.reachRightFrame, self.board.reachLeftFrame, lockBase=True, lockBack=True)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
