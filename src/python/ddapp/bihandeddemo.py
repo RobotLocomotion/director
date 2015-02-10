@@ -61,10 +61,10 @@ class Board(object):
         self.initXYZ = [1.5, 0.6, 0.9] # height requires crouching
         self.initRPY = [1,1,1]
 
-        self.graspLeftHandFrameXYZ = [-0.045, 0.0, -0.4]
+        self.graspLeftHandFrameXYZ = [-0.045, 0.0, -0.75]
         self.graspLeftHandFrameRPY = [0, 90, -90]
         
-        self.graspRightHandFrameXYZ = [-0.045, 0.0, 0.4]
+        self.graspRightHandFrameXYZ = [-0.045, 0.0, 0.75]
         self.graspRightHandFrameRPY = [0, 90, -90]
 
         # where to stand relative to the drill on a table:
@@ -88,7 +88,7 @@ class Board(object):
 
             position = [0.6, 0.0, 1.]
             rpy = [90, 1, 0]
-            zwidth = 1.00 # length of the board
+            zwidth = 1.50 # length of the board
 
         xwidth = 3.75 * .0254
         ywidth = 1.75 * .0254
@@ -162,7 +162,7 @@ class Board(object):
             self.reachFrame = self.reachLeftFrame
         else:
             self.reachFrame = self.reachRightFrame
-
+        
 
     def computeBoardStanceFrame(self):
         objectTransform = transformUtils.copyFrame( self.graspLeftFrame.transform )
@@ -276,8 +276,6 @@ class BihandedPlannerDemo(object):
         self.drill = Drill()
 
     def addPlan(self, plan):
-        print self.plans
-        print "ADDED\n", plan
         self.plans.append(plan)
 
     def computeGroundFrame(self, robotModel):
@@ -439,9 +437,9 @@ class BihandedPlannerDemo(object):
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
 
-    def planReach2(self):
+    def planBihandedReach(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal2(startPose, self.board.reachRightFrame, self.board.reachLeftFrame, lockBase=True, lockBack=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoals(startPose, self.board.reachRightFrame, self.board.reachLeftFrame, lockBase=True, lockBack=True, lockArm = False)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
@@ -451,23 +449,23 @@ class BihandedPlannerDemo(object):
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.graspFrame, lockBase=True, lockBack=True)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
-        self.addPlan(graspPlan)       
-    '''
-    def planGrasp(self):
+        self.addPlan(graspPlan)  
+        
+    def planBihandedGrasp(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.graspFrame, lockBase=False, lockBack=True)
-        endPose, info = constraintSet.runIk()
-        graspPlan = constraintSet.runIkTraj()
-        self.addPlan(graspPlan)
-
-        t3 = transformUtils.frameFromPositionAndRPY( [0.00,0.0, 0.025] , [0,0,0] )
-        placeTransform = transformUtils.copyFrame(self.board.graspFrame.transform)
-        placeTransform.Concatenate(t3)
-        dereachTransform = transformUtils.copyFrame( self.board.reachFrame.transform )
-        dereachTransform.Concatenate(t3)
-        self.placeFrame = vis.updateFrame(placeTransform, 'place frame', parent="affordances", visible=False, scale=0.2)
-        self.dereachFrame = vis.updateFrame(dereachTransform, 'dereach frame', parent="affordances", visible=False, scale=0.2)
-    '''
+        self.constraintSet = self.ikPlanner.planEndEffectorGoalLine(startPose, self.board.graspRightFrame, self.board.graspLeftFrame,
+                                                               lockBase=True, lockBack=True, lockArm = False)
+        endPose, info = self.constraintSet.runIk()
+        graspPlan = self.constraintSet.runIkTraj()
+        self.addPlan(graspPlan)     
+        
+    def planAssymetricGrasp(self):
+        startPose = self.getPlanningStartPose()
+        self.constraintSet = self.ikPlanner.planAssymetricGoal(startPose, self.board.graspRightFrame, self.board.graspLeftFrame,
+                                                               lockBase=True, lockBack=True, lockArm = False)
+        endPose, info = self.constraintSet.runIk()
+        graspPlan = self.constraintSet.runIkTraj()
+        self.addPlan(graspPlan)   
 
     def planGraspLift(self):
         t3 = transformUtils.frameFromPositionAndRPY( [0.00,0.0, 0.04] , [0,0,0] )
@@ -531,6 +529,12 @@ class BihandedPlannerDemo(object):
     def planPreGrasp(self):
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'bihanded', 'board pregrasp', side=self.graspingHand)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+    def planBihandedPreGrasp(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'bihanded', 'board pregrasp both')
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
@@ -716,47 +720,10 @@ class BihandedPlannerDemo(object):
         ikplanner.getIkOptions().setProperty('Max joint degrees/s',15)
 
     ######### Nominal Plans and Execution  #################################################################
-    '''
-    def planNominalPickUp(self, playbackNominal=True):
 
-        self.turnPointwiseOff()
-
-        self.planFromCurrentRobotState = False
-        self.plans = []
-
-        if (om.findObjectByName('board') is None):
-            self.spawnBoardAffordance()
-
-
-
-        if self.useFootstepPlanner:
-            #self.planFootsteps( self.board.stanceFrame.transform )
-            self.planFootstepsBoard()
-            self.planWalking()
-        else:
-            self.moveRobotToStanceFrame(self.board.stanceFrame.transform)
-
-        self.planPreGrasp()
-        self.planReach()
-        self.planGrasp()
-
-        # self.affordanceUpdater.graspAffordance('drill', self.graspingHand)
-
-        #self.planStand()
-        #self.planPreGrasp()
-        #self.planDrillLowerSafe()
-
-        if (playbackNominal is True):
-            self.playNominalPlan()
-    '''
-
-    def planBihandedGraspingSequence(self, playbackNominal = True):
+    def planSeparateGraspingSequence(self, playbackNominal = True):
         
         self.plans = []
-
-        if (om.findObjectByName('board') is None):
-            print "spawn board"
-            self.spawnBoardAffordance()
         
         for hand in ['left', 'right']:
             self.setGraspingHand(hand)
@@ -766,6 +733,28 @@ class BihandedPlannerDemo(object):
         for hand in ['left', 'right']:
             self.setGraspingHand(hand)
             self.planGrasp()
+
+        if (playbackNominal is True):
+            self.playNominalPlan()
+
+    def planBihandedGraspingSequence(self, playbackNominal = True):
+        
+        self.plans = []
+        
+        self.planBihandedPreGrasp()
+        #self.planBihandedReach()
+        self.planBihandedGrasp()
+
+        if (playbackNominal is True):
+            self.playNominalPlan()
+
+    def planBihandedAssymetricGraspingSequence(self, playbackNominal = True):
+        
+        self.plans = []
+        
+        self.planBihandedPreGrasp()
+        #self.planBihandedReach()
+        self.planAssymetricGrasp()
 
         if (playbackNominal is True):
             self.playNominalPlan()
