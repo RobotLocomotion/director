@@ -364,8 +364,14 @@ if usePlanning:
     #                playPlans, showPose, cameraview, segmentationpanel)
                     
     def constructBihandedDemo():
-        imp.reload(bihandeddemo)                
-        global bihandedDemo,b        
+        imp.reload(bihandeddemo)   
+        imp.reload(ikplanner)             
+        global bihandedDemo,b     
+        
+        tree = om.getOrCreateContainer('planning').getObjectTree()
+        tree.removeFromObjectModel(tree.findObjectByName('IK Planner Options'))
+        
+        ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)   
         
         bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
