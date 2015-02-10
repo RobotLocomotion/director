@@ -839,18 +839,35 @@ class IKPlanner(object):
         positionConstraint.tspan = [1.0, 1.0]
         orientationConstraint.tspan = [1.0, 1.0]
 
-        constraints.append(positionConstraint)
+        #constraints.append(positionConstraint)
         if lockOrient:
             constraints.append(orientationConstraint)
 
+        constraintSet = ConstraintSet(self, constraints, 'reach_end', startPoseName)
+        return constraintSet
 
-        positionConstraintRight, orientationConstraint = self.createPositionOrientationGraspConstraints(side, targetFrame, graspToHandLinkFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0)
-        positionConstraint.tspan = [1.0, 1.0]
-        orientationConstraint.tspan = [1.0, 1.0]
 
-        constraints.append(positionConstraint)
+    def newReachGoal2(self, startPoseName, rightFrame, leftFrame, constraints, graspToHandLinkFrame=None, lockOrient=True):
+
+        graspToHandLeftLinkFrame = self.newGraspToHandFrame('left')
+
+        positionLeftConstraint, orientationLeftConstraint = self.createPositionOrientationGraspConstraints('left', leftFrame, graspToHandLeftLinkFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0)
+        positionLeftConstraint.tspan = [1.0, 1.0]
+        orientationLeftConstraint.tspan = [1.0, 1.0]
+
+        #constraints.append(positionLeftConstraint)
         if lockOrient:
-            constraints.append(orientationConstraint)
+            constraints.append(orientationLeftConstraint)
+
+        graspToHandRightLinkFrame = self.newGraspToHandFrame('right')
+
+        positionRightConstraint, orientationRightConstraint = self.createPositionOrientationGraspConstraints('right', rightFrame, graspToHandRightLinkFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0)
+        positionRightConstraint.tspan = [1.0, 1.0]
+        orientationRightConstraint.tspan = [1.0, 1.0]
+
+        #constraints.append(positionRightConstraint)
+        if lockOrient:
+            constraints.append(orientationRightConstraint)
 
 
         constraintSet = ConstraintSet(self, constraints, 'reach_end', startPoseName)
@@ -868,6 +885,19 @@ class IKPlanner(object):
             constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
 
         return self.newReachGoal(startPoseName, side, graspFrame, constraints)
+        
+
+
+    def planEndEffectorGoal2(self, startPose, rightFrame, leftFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
+
+
+        startPoseName = 'reach_start'
+        self.addPose(startPose, startPoseName)
+
+        if constraints is None:
+            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
+
+        return self.newReachGoal2(startPoseName, rightFrame, leftFrame, constraints)
 
 
     def computeMultiPostureGoal(self, poses, feetOnGround=True, times=None):
