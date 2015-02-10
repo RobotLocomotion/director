@@ -908,6 +908,7 @@ class TeleopPanel(object):
         self.jointTeleop = JointTeleopPanel(self)
 
     def onPostureDatabaseClicked(self):
+        ikplanner.RobotPoseGUIWrapper.initCaptureMethods(self.robotStateJointController, self.teleopJointController)
         ikplanner.RobotPoseGUIWrapper.show()
 
     def disableJointTeleop(self):

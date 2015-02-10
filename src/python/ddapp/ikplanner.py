@@ -966,6 +966,21 @@ class RobotPoseGUIWrapper(object):
         cls.initialized = True
 
     @classmethod
+    def initCaptureMethods(cls, robotStateJointController, teleopJointController):
+        cls.init()
+        panel = cls.main.capturePanel
+
+        if panel.getCaptureMethod('Teleop state'):
+            return
+
+        def capturePose(jointController):
+            return dict(zip(jointController.jointNames, jointController.q.tolist()))
+
+        panel.captureMethods = []
+        panel.addCaptureMethod('Robot state', functools.partial(capturePose, robotStateJointController))
+        panel.addCaptureMethod('Teleop state', functools.partial(capturePose, teleopJointController))
+
+    @classmethod
     def show(cls):
         cls.init()
         cls.main.show()
