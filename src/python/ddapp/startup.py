@@ -297,7 +297,7 @@ if usePlanning:
     def sendFusedHeightRequest(repeatTime=0.0):
         sendDataRequest(lcmdrc.data_request_t.FUSED_HEIGHT, repeatTime)
 
-    app.addToolbarMacro('scene height', sendSceneHeightRequest)
+    #app.addToolbarMacro('scene height', sendSceneHeightRequest)
     #app.addToolbarMacro('scene depth', sendSceneDepthRequest)
     #app.addToolbarMacro('stereo height', sendFusedHeightRequest)
     #app.addToolbarMacro('stereo depth', sendFusedDepthRequest)
