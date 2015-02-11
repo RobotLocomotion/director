@@ -42,7 +42,7 @@ public:
   QTabWidget* TabWidget;
 
   QMap<QString, ddViewBase*> Views;
-
+  QMap<ddViewBase*, int> PageIndexCache;
   QList<QSplitter*> Splitters;
 };
 
@@ -124,6 +124,7 @@ void ddViewManager::popOut(ddViewBase* view)
   view->show();
   view->installEventFilter(this);
   this->Internal->TabWidget->removeTab(pageIndex);
+  this->Internal->PageIndexCache[view] = pageIndex;
 }
 
 //-----------------------------------------------------------------------------
@@ -141,20 +142,19 @@ void ddViewManager::onCurrentTabChanged(int currentIndex)
 //-----------------------------------------------------------------------------
 void ddViewManager::addView(ddViewBase* view, const QString& viewName, int pageIndex)
 {
-  QSplitter* splitter = 0;
-  if (pageIndex >= 0 && pageIndex < this->Internal->Splitters.length())
+  QSplitter* splitter = splitter = new QSplitter();
+  this->Internal->Splitters.append(splitter);
+
+  if (pageIndex >= 0)
   {
-    splitter = this->Internal->Splitters[pageIndex];
+    this->tabWidget()->insertTab(pageIndex, splitter, viewName);
   }
   else
   {
-    splitter = new QSplitter();
-    this->Internal->Splitters.append(splitter);
     this->tabWidget()->addTab(splitter, viewName);
   }
 
   splitter->addWidget(view);
-
   this->Internal->Views[viewName] = view;
   static_cast<MyTabWidget*>(this->tabWidget())->updateTabBar();
 }
@@ -195,7 +195,9 @@ bool ddViewManager::eventFilter(QObject* obj, QEvent* event)
   {
     view->removeEventFilter(this);
     QString viewName = this->Internal->Views.key(view);
-    this->addView(view, viewName);
+    int pageIndex = this->Internal->PageIndexCache[view];
+    this->addView(view, viewName, pageIndex);
+    this->Internal->TabWidget->setCurrentIndex(pageIndex);
     event->ignore();
     return true;
   }

@@ -247,6 +247,37 @@ def showErrorMessage(message, title='Error'):
 def showInfoMessage(message, title='Info'):
     QtGui.QMessageBox.information(getMainWindow(), title, message)
 
+
+def showViewTabContextMenu(view, tabBar, menuPosition):
+
+    def onPopOut():
+        getViewManager().popOut(view)
+
+    menu = QtGui.QMenu(tabBar)
+    menu.addAction('Pop out').connect('triggered()', onPopOut)
+    menu.popup(menuPosition)
+
+
+def onTabWidgetContextMenu(mouseClick):
+
+    tabBar = getViewManager().findChildren('QTabBar')[0]
+    tabIndex = tabBar.tabAt(mouseClick)
+    viewName = tabBar.tabText(tabIndex)
+    view = getViewManager().findView(viewName)
+    if view:
+        showViewTabContextMenu(view, tabBar, tabBar.mapToGlobal(mouseClick))
+
+
+def setupViewManager():
+
+    vm = getViewManager()
+    vm.connect('currentViewChanged(ddViewBase*, ddViewBase*)', onCurrentViewChanged)
+
+    tabBar = vm.findChildren('QTabBar')[0]
+    tabBar.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+    tabBar.connect('customContextMenuRequested(const QPoint &)', onTabWidgetContextMenu)
+
+
 def startup(globals):
 
     global _mainWindow
@@ -265,6 +296,4 @@ def startup(globals):
     _mainWindow.connect('toggleCameraTerrainMode()', toggleCameraTerrainMode)
 
     setupActions()
-
-    vm = getViewManager()
-    vm.connect('currentViewChanged(ddViewBase*, ddViewBase*)', onCurrentViewChanged)
+    setupViewManager()
