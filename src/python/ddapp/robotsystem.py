@@ -21,6 +21,7 @@ from ddapp import valvedemo
 from ddapp import ik
 from ddapp import ikplanner
 from ddapp import irisdriver
+from ddapp import raycastdriver
 from ddapp import objectmodel as om
 from ddapp import spreadsheet
 from ddapp import transformUtils
@@ -147,6 +148,7 @@ class RobotSystem(object):
         if useFootsteps:
             footstepsDriver = footstepsdriver.FootstepsDriver(robotStateJointController)
             irisDriver = irisdriver.IRISDriver(robotStateJointController, footstepsDriver.params)
+            raycastDriver = raycastdriver.RaycastDriver()
 
         if usePlanning:
 
