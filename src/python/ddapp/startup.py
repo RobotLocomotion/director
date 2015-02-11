@@ -314,7 +314,9 @@ if usePlanning:
     def drillTrackerOff():
         om.findObjectByName('Multisense').model.showRevolutionCallback = None
 
-
+    def fitPosts():
+        segmentation.fitVerticalPosts(segmentation.getCurrentRevolutionData())
+        affordancePanel.onGetRaycastTerrain()
 
     ikPlanner.addPostureGoalListener(robotStateJointController)
 
@@ -707,4 +709,3 @@ if usePFGrasp:
     showImageOverlay()
     hideImageOverlay()
     pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)
-

@@ -27,6 +27,7 @@ class LCMObjectCollection(object):
                                                      self.DESCRIPTION_REMOVED_SIGNAL])
 
         self.sub = lcmUtils.addSubscriber(self.channel, messageClass=lcmdrc.affordance_collection_t, callback=self._onCommandMessage)
+        self.sub.setNotifyAllMessagesEnabled(True)
         self._modified()
 
     def __del__(self):
@@ -128,7 +129,7 @@ class LCMObjectCollection(object):
         elif command == 'remove':
             self.removeDescription(data['descriptionId'], publish=False)
 
-        if command == 'echo_request':
+        elif command == 'echo_request':
             self.handleEchoRequest(data['requestId'])
 
         elif command == 'echo_response':
