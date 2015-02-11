@@ -27,7 +27,7 @@ polyData = segmentationroutines.sparsifyStereoCloud( polyData )
 vis.showPolyData(polyData, 'pointcloud snapshot')
 
 # fit valve and lever
-segmentation.segmentValveWallAuto(.2, mode='both', removeGroundMethod=segmentation.removeGroundSimple )
+segmentation.segmentValveWallAuto(.2, mode='valve', removeGroundMethod=segmentation.removeGroundSimple )
 
 if app.getTestingInteractiveEnabled():
 
