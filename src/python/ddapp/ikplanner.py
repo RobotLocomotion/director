@@ -248,7 +248,7 @@ class IKPlanner(object):
 
     def createFixedLinkConstraints(self, startPose, linkName, **kwargs):
         linkFrame = self.getLinkFrameAtPose(linkName, startPose)
-        p = ik.PositionConstraint(linkName=linkName, referenceFrame=linkFrame, **kwargs)
+        p = ik.PositionConstraint(linkName=linkName, referenceFrame=linkFrame, lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3),**kwargs)
         q = ik.QuatConstraint(linkName=linkName, quaternion=linkFrame, **kwargs)
         return [p, q]
 
