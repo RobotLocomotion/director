@@ -10,6 +10,8 @@ ddLCMSubscriber::ddLCMSubscriber(const QString&, QObject*);
 QByteArray ddLCMSubscriber::getNextMessage(int) const;
 void ddLCMSubscriber::setCallbackEnabled(bool);
 bool ddLCMSubscriber::callbackIsEnabled() const;
+void ddLCMSubscriber::setNotifyAllMessagesEnabled(bool);
+bool ddLCMSubscriber::notifyAllMessagesIsEnabled() const;
 void ddLCMSubscriber::setSpeedLimit(double);
 QString ddLCMSubscriber::channel() const;
 double ddLCMSubscriber::getMessageRate();
