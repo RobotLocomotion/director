@@ -31,7 +31,7 @@ from debugVis import DebugData
 from shallowCopy import shallowCopy
 import affordance
 import ioUtils
-
+from ddapp.uuidutil import newUUID
 
 import drc as lcmdrc
 import bot_core as lcmbotcore
@@ -2570,6 +2570,86 @@ def findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSe
         vis.showClusterObjects(planeClusters, parent=folder)
 
     return clustersLarge
+
+
+def fitVerticalPosts(polyData):
+
+    groundPoints, scenePoints =  removeGround(polyData)
+    scenePoints = thresholdPoints(scenePoints, 'dist_to_plane', [0.1, 4.0])
+
+    if not scenePoints.GetNumberOfPoints():
+        return
+
+    scenePoints = applyVoxelGrid(scenePoints, leafSize=0.03)
+    clusters = extractClusters(scenePoints, clusterTolerance=0.15, minClusterSize=10)
+
+
+
+
+    def isPostCluster(cluster, lineDirection):
+
+        up = [0,0,1]
+        minPostLength = 1.0
+        maxRadius = 0.3
+        angle = math.degrees(math.acos(np.dot(up,lineDirection) / (np.linalg.norm(up) * np.linalg.norm(lineDirection))))
+
+        if angle > 15:
+            return False
+
+        origin, edges, _ = getOrientedBoundingBox(cluster)
+        edgeLengths = [np.linalg.norm(edge) for edge in edges]
+
+        if edgeLengths[0] < minPostLength:
+            return False
+
+        # extract top half
+        zvalues = vtkNumpy.getNumpyFromVtk(cluster, 'Points')[:,2].copy()
+        vtkNumpy.addNumpyToVtk(cluster, zvalues, 'z')
+
+        minZ = np.min(zvalues)
+        maxZ = np.max(zvalues)
+
+        cluster = thresholdPoints(cluster, 'z', [(minZ + maxZ)/2.0, maxZ])
+        origin, edges, _ = getOrientedBoundingBox(cluster)
+        edgeLengths = [np.linalg.norm(edge) for edge in edges]
+
+        if edgeLengths[1] > maxRadius or edgeLengths[2] > maxRadius:
+            return False
+
+        return True
+
+    def makeCylinderAffordance(linePoints, lineDirection, lineOrigin, postId):
+
+        pts = vtkNumpy.getNumpyFromVtk(linePoints, 'Points')
+        dists = np.dot(pts-lineOrigin, lineDirection)
+        p1 = lineOrigin + lineDirection*np.min(dists)
+        p2 = lineOrigin + lineDirection*np.max(dists)
+
+        origin = (p1+p2)/2.0
+        lineLength = np.linalg.norm(p2-p1)
+        t  = transformUtils.getTransformFromOriginAndNormal(origin, lineDirection)
+        pose = transformUtils.poseFromTransform(t)
+
+        desc = dict(classname='CylinderAffordanceItem', Name='post %d' % postId,
+                    uuid=newUUID(), pose=pose, Radius=0.05, Length=lineLength, Color=[0.0, 1.0, 0.0])
+        desc['Collision Enabled'] = True
+
+        import affordancepanel
+        return affordancepanel.panel.affordanceFromDescription(desc)
+
+
+    rejectFolder = om.getOrCreateContainer('nonpost clusters', parentObj=getDebugFolder())
+    keepFolder = om.getOrCreateContainer('post clusters', parentObj=getDebugFolder())
+
+    for i, cluster in enumerate(clusters):
+
+        linePoint, lineDirection, linePoints = applyLineFit(cluster, distanceThreshold=0.1)
+        if isPostCluster(cluster, lineDirection):
+            vis.showPolyData(cluster, 'cluster %d' % i, visible=False, color=getRandomColor(), alpha=0.5, parent=keepFolder)
+            makeCylinderAffordance(linePoints, lineDirection, linePoint, i)
+        else:
+            vis.showPolyData(cluster, 'cluster %d' % i, visible=False, color=getRandomColor(), alpha=0.5, parent=rejectFolder)
+
 
 
 def findAndFitDrillBarrel(polyData=None):
