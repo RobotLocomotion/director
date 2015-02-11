@@ -99,8 +99,6 @@ set(python_files
   ddapp/vtkNumpy.py
   ddapp/walkingtestdemo.py
 
-  ddapp/macros/popout.py
-  ddapp/macros/publish.py
 
   ddapp/macros/segmentation_view/ortho_x.py
   ddapp/macros/segmentation_view/ortho_y.py
@@ -171,6 +169,21 @@ add_custom_command(
 
 add_custom_target(python_byte_compile ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/compile_complete")
 
+# cleanup old python files if needed
+set(cleanup_files
+  ddapp/macros/popout.py
+  ddapp/macros/publish.py
+)
+foreach(file ${cleanup_files})
+  foreach(search_dir "${python_module_dir}" "${CMAKE_INSTALL_PREFIX}/${DD_INSTALL_PYTHON_DIR}")
+    if (EXISTS "${search_dir}/${file}")
+      file(REMOVE "${search_dir}/${file}")
+    endif()
+    if (EXISTS "${search_dir}/${file}c")
+      file(REMOVE "${search_dir}/${file}c")
+    endif()
+  endforeach()
+endforeach()
 
 
 add_subdirectory(extensions)
