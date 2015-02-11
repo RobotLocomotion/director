@@ -14,6 +14,7 @@ set(python_tests
   testDrakeVisualizer.py
   testFrameSync.py
   testImageView.py
+  testKinematicPose.py
   testObjectModel.py
   testOtdfParser.py
   testPropertiesPanel.py
@@ -27,6 +28,8 @@ set(python_tests
   testValveFitStereo.py
   testAmazonPod.py
 )
+
+set(testKinematicPose_extra_args -v5)
 
 set(python_test_args
   --testing --data-dir ${CMAKE_SOURCE_DIR}/../../../drc-testing-data --output-dir ${CMAKE_BINARY_DIR}/Testing/Temporary

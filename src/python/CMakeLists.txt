@@ -44,6 +44,7 @@ set(python_files
   ddapp/irisUtils.py
   ddapp/irisdriver.py
   ddapp/jointcontrol.py
+  ddapp/kinematicposeplanner.py
   ddapp/lcmloggerwidget.py
   ddapp/lcmgl.py
   ddapp/lcmobjectcollection.py
