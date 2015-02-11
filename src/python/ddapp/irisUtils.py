@@ -1,5 +1,6 @@
 import numpy as np
 import drc as lcmdrc
+from ddapp import transformUtils
 from irispy.utils import lcon_to_vert
 from scipy.spatial import ConvexHull
 
@@ -11,21 +12,19 @@ class SafeTerrainRegion:
     Format:
         A, b: linear constraints on [x,y,z,yaw] of the center of the foot, A[x;y;z;yaw] <= b
         C, d: ellipsoidal constraints on [x,y,z,yaw] of the center of the foot. Not currently used.
-        pose: a pose on the terrain within the region, from which we extract a plane. [x;y;z;roll;pitch;yaw]
+        tform: a pose on the terrain within the region, from which we extract a plane.
     """
-    def __init__(self, A, b, C, d, point, normal):
+    def __init__(self, A, b, C, d, tform):
         self.A = A
         self.b = b
         self.C = C
         self.d = d
-        self.point = point
-        self.normal = normal
+        self.tform = tform
 
     def to_iris_region_t(self):
         msg = lcmdrc.iris_region_t()
         msg.lin_con = self.to_lin_con_t()
-        msg.point = self.point
-        msg.normal = self.normal
+        msg.seed_pose = transformUtils.positionMessageFromFrame(self.tform)
         return msg
 
     def to_lin_con_t(self):
@@ -49,10 +48,18 @@ class SafeTerrainRegion:
         A, b = decodeLinCon(msg.lin_con)
         C = []
         d = []
-        point = msg.point
-        normal = msg.normal
-        return SafeTerrainRegion(A, b, C, d, point, normal)
+        tform = transformUtils.frameFromPositionMessage(msg.seed_pose)
+        return SafeTerrainRegion(A, b, C, d, tform)
 
+    @property
+    def point(self):
+        point = self.tform.GetPosition()
+        print "point", point
+        return self.tform.GetPosition()
+
+    @property
+    def normal(self):
+        return self.tform.TransformNormal(np.array([0,0,1]))
 
 
 def encodeLinCon(A, b):
