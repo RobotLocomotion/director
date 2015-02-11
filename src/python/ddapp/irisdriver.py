@@ -68,7 +68,7 @@ class IRISDriver(object):
             new_region = irisUtils.SafeTerrainRegion.from_iris_region_t(msg.iris_regions[i])
             uid = msg.region_id[i]
             if uid not in self.regions:
-                tform = transformUtils.getTransformFromOriginAndNormal(new_region.point, new_region.normal)
+                tform = new_region.tform
                 item = self.newTerrainItem(tform, uid, new_region)
             else:
                 item = self.regions[uid]
