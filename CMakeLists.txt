@@ -19,7 +19,7 @@ set(CMAKE_INSTALL_NAME_DIR ${CMAKE_INSTALL_RPATH})
 
 # declare options
 option(BUILD_SHARED_LIBS "Build drake-designer with shared libraries." ON)
-option(BUILD_TESTING "Build drake-designer with tests enabled." OFF)
+option(BUILD_TESTING "Build drake-designer with tests enabled." ON)
 
 # include cmake scripts
 include(cmake/dd-macros.cmake)
