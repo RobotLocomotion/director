@@ -14,11 +14,11 @@ from ddapp.utime import getUtime
 
 class IRISDriver(object):
     def __init__(self, jointController,
+                 footstepParams,
                  request_channel='IRIS_REGION_REQUEST',
                  response_channel='IRIS_REGION_RESPONSE'):
         self.jointController = jointController
-        self.params = om.ObjectModelItem('IRIS Params')
-        self.params.addProperty('Map Mode', 0, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
+        self.params = footstepParams
         self.map_mode_map = [
                              lcmdrc.footstep_plan_params_t.FOOT_PLANE,
                              lcmdrc.footstep_plan_params_t.TERRAIN_HEIGHTS_AND_NORMALS,
