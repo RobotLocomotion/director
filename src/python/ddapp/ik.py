@@ -275,6 +275,8 @@ class AsyncIKCommunicator():
         commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(poseEnd))
         commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(nominalPose))
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
+        commands.append("end_effector_name = '';")
+        commands.append("end_effector_pt = [];")
 
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
@@ -311,6 +313,8 @@ class AsyncIKCommunicator():
             commands.append('options.xyz_v_max = %s;' % self.maxBaseMetersPerSecond)
             commands.append('options.t_max = %s;' % self.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
+            commands.append('options.end_effector_name = end_effector_name;')
+            commands.append('options.end_effector_pt = end_effector_pt;')
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
             commands.append('options.RRTMaxEdgeLength = %s;' % self.rrtMaxEdgeLength)
             commands.append('options.RRTOrientationWeight = %s;' % self.rrtOrientationWeight)

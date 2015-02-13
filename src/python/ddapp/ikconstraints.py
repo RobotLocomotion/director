@@ -557,6 +557,7 @@ class MinDistanceConstraint(ConstraintBase):
             '{varName} = MinDistanceConstraint({robotArg}, {minDistance}, {tspan});\n'
             ''.format(**formatArgs))
 
+
 class ExcludeCollisionGroupConstraint(ConstraintBase):
 
     def __init__(self, **kwargs):
@@ -576,3 +577,20 @@ class ExcludeCollisionGroupConstraint(ConstraintBase):
         commands.append(
             'excluded_collision_groups = struct(\'name\',\'{name}\',\'tspan\',{tspan});\n'
             ''.format(**formatArgs))
+
+
+class ActiveEndEffectorConstraint(ConstraintBase):
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            endEffectorName = '',
+            endEffectorPoint = np.zeros(3)
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+        commands.append("end_effector_name = '%s';" % self.endEffectorName)
+        commands.append("end_effector_pt = %s;" % self.toColumnVectorString(self.endEffectorPoint))
