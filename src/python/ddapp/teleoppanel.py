@@ -383,6 +383,14 @@ class EndEffectorTeleopPanel(object):
         #if self.getRHandConstraint() != 'free' and hasattr(self,'reachTargetObject'):
         #    constraints.append(ikPlanner.createExcludeReachTargetCollisionGroupConstraint(self.reachTargetObject.getProperty('Name')))
 
+        if hasattr(self,'reachSide'):
+            if self.reachSide == 'left':
+                endEffectorName = 'l_hand'
+            else:
+                endEffectorName = 'r_hand'
+
+            constraints.append(ikPlanner.createActiveEndEffectorConstraint(endEffectorName,ikPlanner.getPalmPoint(self.reachSide)))
+
 
         self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
 
@@ -492,16 +500,17 @@ class EndEffectorTeleopPanel(object):
 
         if side == 'left':
           if self.panel.ikPlanner.ikServer.useCollision:
-            self.setLHandConstraint('orbit')
+            self.setLHandConstraint('ee fixed')
           else:
             self.setLHandConstraint('ee fixed')
         elif side == 'right':
           if self.panel.ikPlanner.ikServer.useCollision:
-            self.setRHandConstraint('orbit')
+            self.setRHandConstraint('ee fixed')
           else:
             self.setRHandConstraint('ee fixed')
 
         self.reachTargetObject = reachTargetObject
+        self.reachSide = side
         self.activate()
         return self.updateGoalFrame(self.panel.ikPlanner.getHandLink(side), frame)
 

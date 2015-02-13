@@ -527,6 +527,14 @@ class IKPlanner(object):
 
         return excludeReachTargetCollisionGroupConstraint
 
+    def createActiveEndEffectorConstraint(self, endEffectorName, endEffectorPoint):
+        p = ik.ActiveEndEffectorConstraint()
+        p.endEffectorName = endEffectorName
+        p.endEffectorPoint = endEffectorPoint
+        excludeReachTargetCollisionGroupConstraint = p;
+
+        return excludeReachTargetCollisionGroupConstraint
+
 
     def setArmLocked(self, side, isLocked):
         setattr(self.ikServer,side+"ArmLocked",isLocked)
