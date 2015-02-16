@@ -83,7 +83,11 @@ class PlanPlayback(object):
         return self.getPoseInterpolator(poseTimes, poses)
 
 
-    def getPoseInterpolator(self, poseTimes, poses):
+    def getPoseInterpolator(self, poseTimes, poses, unwrap_rpy=True):
+        if unwrap_rpy:
+            poses = np.array(poses, copy=True)
+            poses[:,3:6] = np.unwrap(poses[:,3:6],axis=0)
+
         if self.interpolationMethod in ['slinear', 'quadratic', 'cubic']:
             f = scipy.interpolate.interp1d(poseTimes, poses, axis=0, kind=self.interpolationMethod)
         elif self.interpolationMethod == 'pchip':
