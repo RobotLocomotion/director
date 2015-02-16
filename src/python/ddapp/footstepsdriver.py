@@ -215,7 +215,7 @@ class FootstepsDriver(object):
                               0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
                               1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
                               2: lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING}
-        self.params.addProperty('Planner Mode', 0, attributes=om.PropertyAttributes(enumNames=['Summer2014', 'GlobalRotation']))
+        self.params.addProperty('Planner Mode', 0, attributes=om.PropertyAttributes(enumNames=['Fast MIQP', 'Slow MISOCP']))
 
     def applyDefaults(self, set_name):
         defaults = self.default_step_params[set_name]
