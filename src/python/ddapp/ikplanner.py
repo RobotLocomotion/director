@@ -235,22 +235,20 @@ class IKPlanner(object):
 
         constraints = []
         for linkName in ['l_foot', 'r_foot']:
-            p, q = self.createFixedLinkConstraints(startPose, linkName, **kwargs)
+            p = self.createFixedLinkConstraints(startPose, linkName, **kwargs)
 
             # sliding foot
             #if linkName == 'l_foot':
             #    p.lowerBound = [-np.inf, -np.inf, 0.0]
             #    p.upperBound = [np.inf, np.inf, 0.0]
 
-            constraints.extend([p, q])
+            constraints.append(p)
         return constraints
 
 
     def createFixedLinkConstraints(self, startPose, linkName, **kwargs):
-        linkFrame = self.getLinkFrameAtPose(linkName, startPose)
-        p = ik.PositionConstraint(linkName=linkName, referenceFrame=linkFrame, lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3),**kwargs)
-        q = ik.QuatConstraint(linkName=linkName, quaternion=linkFrame, **kwargs)
-        return [p, q]
+        p = ik.FixedLinkFromRobotPoseConstraint(linkName=linkName, poseName=startPose, **kwargs)
+        return p
 
 
     def createLinkGazeConstraint(self, startPose, linkName, gazeAxis):
