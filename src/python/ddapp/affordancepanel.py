@@ -53,7 +53,6 @@ class AffordancePanel(object):
         self.ui.spawnCapsuleButton.connect('clicked()', self.onSpawnCapsule)
         self.ui.spawnRingButton.connect('clicked()', self.onSpawnRing)
         self.ui.spawnMeshButton.connect('clicked()', self.onSpawnMesh)
-        self.ui.updateCollisionButton.connect('clicked()', self.onUpdateCollisionEnvironment)
         self.ui.getRaycastTerrainButton.connect('clicked()', self.onGetRaycastTerrain)
 
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
@@ -81,20 +80,6 @@ class AffordancePanel(object):
         frame.Translate(0.5, 0.0, 0.3)
         return frame
 
-    def getCollisionAffordances(self):
-        affs = []
-        for aff in self.affordanceManager.getAffordances():
-            if aff.getProperty('Collision Enabled'):
-                affs.append(aff)
-        return affs
-
-    def onUpdateCollisionEnvironment(self):
-        affs = self.getCollisionAffordances()
-        if not affs:
-            self.ikServer.clearEnvironment()
-        else:
-            urdfStr = affordanceurdf.urdfStringFromAffordances(affs)
-            self.ikServer.setEnvironment(urdfStr)
 
     def onGetRaycastTerrain(self):
         affs = self.getCollisionAffordances()

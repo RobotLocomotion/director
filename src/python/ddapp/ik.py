@@ -183,7 +183,6 @@ class AsyncIKCommunicator():
         urdf_lines = urdf_string.splitlines()
         urdf_lines = ["'%s'" % x for x in urdf_lines]
         urdf_lines = '...\n'.join(urdf_lines)
-        print urdf_lines
         self.comm.send('environment_urdf_string = [%s];' % urdf_lines )
         self.comm.waitForResult()
         commands.append('s = s.setEnvironment(environment_urdf_string);')

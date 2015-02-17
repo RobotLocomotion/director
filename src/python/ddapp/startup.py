@@ -328,7 +328,7 @@ if usePlanning:
     manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                     ikPlanner, manipPlanner, playbackPanel.setPlan, playbackPanel.hidePlan)
+                     ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
 
 
@@ -570,7 +570,7 @@ def sendDesiredPumpPsi(desiredPsi):
     msg.psi_i_max = 0.0  # Max. abs. value to which the integral psi error is clamped (psi s)
     msg.rpm_i_max = 0.0  # Max. abs. value to which the integral rpm error is clamped (rpm s)
 
-    # Max. command output (A). Default is 60 Amps. 
+    # Max. command output (A). Default is 60 Amps.
     # This value may need to be lower than the default in order to avoid
     # causing the motor driver to fault.
     msg.cmd_max = 60

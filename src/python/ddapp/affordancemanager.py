@@ -25,6 +25,14 @@ class AffordanceObjectModelManager(object):
     def getAffordances(self):
         return [obj for obj in om.getObjects() if isinstance(obj, affordanceitems.AffordanceItem)]
 
+
+    def getCollisionAffordances(self):
+        affs = []
+        for aff in self.getAffordances():
+            if aff.getProperty('Collision Enabled'):
+                affs.append(aff)
+        return affs
+
     def getAffordanceId(self, aff):
         return aff.getProperty('uuid')
 

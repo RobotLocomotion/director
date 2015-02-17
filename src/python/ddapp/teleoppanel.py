@@ -10,6 +10,7 @@ from ddapp import ikplanner
 from ddapp import footstepsdriver
 from ddapp import vtkAll as vtk
 from ddapp import drcargs
+from ddapp import affordanceurdf
 import ddapp.applogic as app
 
 import math
@@ -157,9 +158,18 @@ class EndEffectorTeleopPanel(object):
         app.displaySnoptInfo(info)
 
 
+    def updateCollisionEnvironment(self):
+        affs = self.panel.affordanceManager.getCollisionAffordances()
+        if not affs:
+            self.panel.ikPlanner.ikServer.clearEnvironment()
+        else:
+            urdfStr = affordanceurdf.urdfStringFromAffordances(affs)
+            self.panel.ikPlanner.ikServer.setEnvironment(urdfStr)
+
     def planClicked(self):
         if not self.ui.eeTeleopButton.checked:
             return
+        self.updateCollisionEnvironment()
         self.generatePlan()
 
     def generatePlan(self):
@@ -890,7 +900,7 @@ class JointTeleopPanel(object):
 
 class TeleopPanel(object):
 
-    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, showPlanFunction, hidePlanFunction):
+    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction):
 
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
@@ -898,6 +908,7 @@ class TeleopPanel(object):
         self.teleopJointController = teleopJointController
         self.ikPlanner = ikPlanner
         self.manipPlanner = manipPlanner
+        self.affordanceManager = affordanceManager
         self.showPlanFunction = showPlanFunction
         self.hidePlanFunction = hidePlanFunction
 
@@ -971,12 +982,12 @@ def _getAction():
     return app.getToolBarActions()['ActionTeleopPanel']
 
 
-def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, showPlanFunction, hidePlanFunction):
+def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction):
 
     global panel
     global dock
 
-    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, showPlanFunction, hidePlanFunction)
+    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
