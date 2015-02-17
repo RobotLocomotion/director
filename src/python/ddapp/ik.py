@@ -330,7 +330,7 @@ class AsyncIKCommunicator():
             commands.append('\n')
             commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
-        commands.append('qtraj = xtraj(1:r.getNumPositions());')
+        commands.append('if ~isempty(xtraj), qtraj = xtraj(1:r.getNumPositions()); end;')
         if self.useCollision:
             commands.append('plan_time = 1;')
         else:
@@ -356,7 +356,7 @@ class AsyncIKCommunicator():
 
         publish = True
         if publish:
-            commands.append('s.publishTraj(%s, info, plan_time);' % ('xtraj_pw' if self.usePointwise else 'xtraj'))
+            commands.append('if ~isempty(xtraj), s.publishTraj(%s, info, plan_time); end;' % ('xtraj_pw' if self.usePointwise else 'xtraj'))
 
         commands.append('\n%--- runIKTraj end --------\n')
         #self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
@@ -366,7 +366,6 @@ class AsyncIKCommunicator():
         info = self.comm.getFloatArray('info')[0]
         if self.infoFunc:
             self.infoFunc(info)
-        info = -1
 
         return info
 
