@@ -242,12 +242,12 @@ class EndEffectorTeleopPanel(object):
         constraints.append(ikPlanner.createLockedNeckPostureConstraint(startPoseName))
 
         if self.getLFootConstraint() == 'fixed':
-            constraints.extend(ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot', tspan=[0.0, 1.0]))
+            constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot', tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
         elif self.getLFootConstraint() == 'sliding':
             constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[:2])
 
         if self.getRFootConstraint() == 'fixed':
-            constraints.extend(ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot', tspan=[0.0, 1.0]))
+            constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot', tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
         elif self.getRFootConstraint() == 'sliding':
             constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
 
@@ -267,7 +267,7 @@ class EndEffectorTeleopPanel(object):
             constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName, lockLegs=False))
             ikPlanner.setBaseLocked(True)
         if self.getBaseConstraint() == 'constrained':
-            constraints.extend(ikPlanner.createFixedLinkConstraints(startPoseName, 'pelvis', tspan=[1.0, 1.0]))
+            constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, 'pelvis', tspan=[1.0, 1.0]))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'xyz only':
             constraints.append(ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
