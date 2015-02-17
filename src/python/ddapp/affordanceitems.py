@@ -23,7 +23,7 @@ class AffordanceItem(PolyDataItem):
         PolyDataItem.__init__(self, name, polyData, view)
         self.params = {}
         self.addProperty('uuid', newUUID(), attributes=om.PropertyAttributes(hidden=True))
-        self.addProperty('Collision Enabled', False)
+        self.addProperty('Collision Enabled', True)
         self.properties.setPropertyIndex('Collision Enabled', 0)
         self.setProperty('Icon', om.Icons.Hammer)
 
