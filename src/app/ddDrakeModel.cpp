@@ -860,8 +860,11 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
     if (!mypath.empty() && mypath.has_parent_path())  
       pathname = mypath.parent_path().native();
 
-    // parse URDF to get model
-    model->addURDFfromXML(xml_string,pathname);
+    if (!model->addURDFfromXML(xml_string, pathname))
+    {
+      return URDFRigidBodyManipulatorVTK::Ptr();
+    }
+
   }
 
   return model;
@@ -871,7 +874,10 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
 URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromXML(const string &xmlString)
 {
   URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
-  model->addURDFfromXML(xmlString, "");
+  if (!model->addURDFfromXML(xmlString, ""))
+  {
+    return URDFRigidBodyManipulatorVTK::Ptr();
+  }
   return model;
 }
 
