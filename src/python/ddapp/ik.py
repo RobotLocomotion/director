@@ -38,6 +38,11 @@ class AsyncIKCommunicator():
         self.majorIterationsLimit = 500
         self.majorOptimalityTolerance = 1e-4
         self.majorFeasibilityTolerance = 1e-6
+        self.rrtMaxEdgeLength = 0.1
+        self.rrtOrientationWeight = 1.0
+        self.rrtGoalBias = 1.0
+        self.rrtMaxNumVertices = 5000
+        self.rrtNSmoothingPasses = 5;
 
         self.callbacks = callbacks.CallbackRegistry([self.STARTUP_COMPLETED])
 
@@ -178,7 +183,6 @@ class AsyncIKCommunicator():
         urdf_lines = urdf_string.splitlines()
         urdf_lines = ["'%s'" % x for x in urdf_lines]
         urdf_lines = '...\n'.join(urdf_lines)
-        print urdf_lines
         self.comm.send('environment_urdf_string = [%s];' % urdf_lines )
         self.comm.waitForResult()
         commands.append('s = s.setEnvironment(environment_urdf_string);')
@@ -270,6 +274,8 @@ class AsyncIKCommunicator():
         commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(poseEnd))
         commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(nominalPose))
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
+        commands.append("end_effector_name = '';")
+        commands.append("end_effector_pt = [];")
 
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
@@ -306,7 +312,14 @@ class AsyncIKCommunicator():
             commands.append('options.xyz_v_max = %s;' % self.maxBaseMetersPerSecond)
             commands.append('options.t_max = %s;' % self.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
+            commands.append('options.end_effector_name = end_effector_name;')
+            commands.append('options.end_effector_pt = end_effector_pt;')
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
+            commands.append('options.RRTMaxEdgeLength = %s;' % self.rrtMaxEdgeLength)
+            commands.append('options.RRTOrientationWeight = %s;' % self.rrtOrientationWeight)
+            commands.append('options.RRTGoalBias = %s;' % self.rrtGoalBias)
+            commands.append('options.N = %s;' % self.rrtMaxNumVertices)
+            commands.append('options.n_smoothing_passes = %s;' % self.rrtNSmoothingPasses)
             commands.append('[xtraj,info] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);')
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:
@@ -346,11 +359,14 @@ class AsyncIKCommunicator():
             commands.append('s.publishTraj(%s, info, plan_time);' % ('xtraj_pw' if self.usePointwise else 'xtraj'))
 
         commands.append('\n%--- runIKTraj end --------\n')
+        #self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
+        #self.taskQueue.start()
         self.comm.sendCommands(commands)
 
         info = self.comm.getFloatArray('info')[0]
         if self.infoFunc:
             self.infoFunc(info)
+        info = -1
 
         return info
 
