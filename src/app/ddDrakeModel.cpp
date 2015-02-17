@@ -526,9 +526,10 @@ public:
   virtual bool addURDF(boost::shared_ptr<urdf::ModelInterface> _urdf_model,
                        std::map<std::string, int> jointname_to_jointnum,
                        std::map<std::string,int> dofname_to_dofnum,
-                       const std::string & root_dir=".")
+                       const string& xml_string,
+                       const std::string& root_dir=".")
   {
-    if (!URDFRigidBodyManipulator::addURDF(_urdf_model, jointname_to_jointnum, dofname_to_dofnum, root_dir))
+    if (!URDFRigidBodyManipulator::addURDF(_urdf_model, jointname_to_jointnum, dofname_to_dofnum, xml_string, root_dir))
       return false;
 
     for (map<string, boost::shared_ptr<urdf::Link> >::iterator l=_urdf_model->links_.begin(); l!=_urdf_model->links_.end(); l++)
