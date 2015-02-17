@@ -52,13 +52,6 @@
             <widget class="QListWidget" name="affordanceListWidget"/>
            </item>
            <item>
-            <widget class="QPushButton" name="updateCollisionButton">
-             <property name="text">
-              <string>Update collision environment</string>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QPushButton" name="getRaycastTerrainButton">
              <property name="text">
               <string>Get raycast terrain from env.</string>

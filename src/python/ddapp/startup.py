@@ -328,7 +328,7 @@ if usePlanning:
     manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
     teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                     ikPlanner, manipPlanner, playbackPanel.setPlan, playbackPanel.hidePlan)
+                     ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
 
 
@@ -570,7 +570,7 @@ def sendDesiredPumpPsi(desiredPsi):
     msg.psi_i_max = 0.0  # Max. abs. value to which the integral psi error is clamped (psi s)
     msg.rpm_i_max = 0.0  # Max. abs. value to which the integral rpm error is clamped (rpm s)
 
-    # Max. command output (A). Default is 60 Amps. 
+    # Max. command output (A). Default is 60 Amps.
     # This value may need to be lower than the default in order to avoid
     # causing the motor driver to fault.
     msg.cmd_max = 60
@@ -709,3 +709,19 @@ if usePFGrasp:
     showImageOverlay()
     hideImageOverlay()
     pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)
+
+import signal
+def sendMatlabSigint():
+    ikServer.comm.client.proc.send_signal(signal.SIGINT)
+
+
+app.addToolbarMacro('Ctrl+C MATLAB', sendMatlabSigint)
+#polyData = io.readPolyData('/home/avalenzu/Downloads/table-and-bin-scene-cropped.vtp')
+#data = segmentation.segmentTableScene(polyData, [-1.77,2.6,0.79])
+#vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
+
+
+#q = robotStateJointController.q.copy()
+#q[:2] = [-1.25,2.5]
+#q[5] = math.radians(120)
+#robotStateJointController.setPose('EST_ROBOT_STATE',q)
