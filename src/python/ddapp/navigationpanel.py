@@ -199,7 +199,7 @@ class NavigationPanel(object):
         init.R_effective[0]  = 0.25
         init.R_effective[5]  = 0.25
         init.R_effective[10] = 0.25
-        init.R_effective[15] =  math.pow( 5*math.pi/180 , 2 )
+        init.R_effective[15] =  math.pow( 50*math.pi/180 , 2 )
 
         lcmUtils.publish('MAV_STATE_EST_VIEWER_MEASUREMENT', init)
 
