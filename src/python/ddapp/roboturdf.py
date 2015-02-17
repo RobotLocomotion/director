@@ -310,7 +310,7 @@ class HandFactory(object):
           'RR' : 'right_robotiq',
           'RP' : 'right_pointer',
           'RI' : 'right_irobot',
-          'RV' : 'left_valkyrie',
+          'RV' : 'right_valkyrie',
           }
 
         if not defaultLeftHandType:

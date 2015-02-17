@@ -900,7 +900,8 @@ class IKPlanner(object):
 
         return self.newReachGoals(startPoseName, rightFrame, leftFrame, constraints)
         
-    def planEndEffectorGoalLine(self, startPose, rightGraspFrame, leftGraspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
+    def planEndEffectorGoalLine(self, startPose, rightGraspFrame, leftGraspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True,
+                                angleToleranceInDegrees=0.0):
         
         startPoseName = 'reach_start'
         self.addPose(startPose, startPoseName)
@@ -911,7 +912,7 @@ class IKPlanner(object):
         for hand in ['left', 'right']:
             graspToHandLinkFrame = self.newGraspToHandFrame(hand)
             posConstraint, quatConstraint = self.createSegmentConstraint(self.getHandLink(hand), rightGraspFrame,
-                                                                         leftGraspFrame, graspToHandLinkFrame)
+                                                                         leftGraspFrame, graspToHandLinkFrame, angleToleranceInDegrees)
             posConstraint.tspan = [1.0, 1.0]
             quatConstraint.tspan = [1.0, 1.0]
             constraints.extend([posConstraint, quatConstraint])
@@ -919,7 +920,7 @@ class IKPlanner(object):
         constraintSet = ConstraintSet(self, constraints, 'reach_end', startPoseName)
         return constraintSet
     
-    def planAssymetricGoal(self, startPose, rightGraspFrame, leftGraspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
+    def planAsymmetricGoal(self, startPose, rightGraspFrame, leftGraspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
         
         startPoseName = 'reach_start'
         self.addPose(startPose, startPoseName)
@@ -954,7 +955,7 @@ class IKPlanner(object):
         constraintSet = ConstraintSet(self, constraints, 'reach_end', startPoseName)
         return constraintSet
         
-    def createSegmentConstraint(self, linkName, firstFrame, secondFrame, linkOffsetFrame):
+    def createSegmentConstraint(self, linkName, firstFrame, secondFrame, linkOffsetFrame, angleToleranceInDegrees=0.0):
 
         firstFrame = firstFrame if isinstance(firstFrame, vtk.vtkTransform) else firstFrame.transform
         secondFrame = secondFrame if isinstance(secondFrame, vtk.vtkTransform) else secondFrame.transform
@@ -963,13 +964,15 @@ class IKPlanner(object):
         vis.updateFrame(targetFrame, 'target frame', parent=None, visible=False, scale=0.2)
         
         distance = np.sqrt(vtk.vtkMath().Distance2BetweenPoints(firstFrame.GetPosition(), secondFrame.GetPosition()))
+        distance = distance/2 * 0.9
 
         p = ik.PositionConstraint()
         p.linkName = linkName
         p.pointInLink = np.array(linkOffsetFrame.GetPosition())
         p.referenceFrame = targetFrame
-        p.lowerBound = np.array([-distance/2*0.8, 0.0, 0.0])
-        p.upperBound = np.array([distance/2*0.8, 0.0, 0.0])
+        
+        p.lowerBound = np.array([-distance, 0.0, 0.0])
+        p.upperBound = np.array([distance, 0.0, 0.0])
         positionConstraint = p
 
         t = vtk.vtkTransform()
@@ -980,7 +983,7 @@ class IKPlanner(object):
         p = ik.QuatConstraint()
         p.linkName = linkName
         p.quaternion = t
-        p.angleToleranceInDegrees = 0.0
+        p.angleToleranceInDegrees = angleToleranceInDegrees
         orientationConstraint = p
 
         return positionConstraint, orientationConstraint

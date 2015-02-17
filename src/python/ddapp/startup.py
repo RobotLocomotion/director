@@ -356,8 +356,6 @@ if usePlanning:
                     robotStateJointController,
                     playPlans, showPose)
 
-    bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
-
     #bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
     #                lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
     #                fitDrillMultisense, robotStateJointController,
@@ -382,9 +380,7 @@ if usePlanning:
         
     constructBihandedDemo()
 
-    if (useContinuousWalking):
-        continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController)
-
+    
 
     splinewidget.init(view, handFactory, robotStateModel)
 
