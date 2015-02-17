@@ -28,7 +28,7 @@ class AsyncIKCommunicator():
         self.infoFunc = None
 
         self.maxDegreesPerSecond = 30.0
-        self.maxBaseMetersPerSecond = 0.1
+        self.maxBaseMetersPerSecond = 0.05
         self.maxPlanDuration = 30.0
         self.usePointwise = True
         self.useCollision = False
@@ -38,11 +38,11 @@ class AsyncIKCommunicator():
         self.majorIterationsLimit = 500
         self.majorOptimalityTolerance = 1e-4
         self.majorFeasibilityTolerance = 1e-6
-        self.rrtMaxEdgeLength = 0.1
+        self.rrtMaxEdgeLength = 0.05
         self.rrtOrientationWeight = 1.0
         self.rrtGoalBias = 1.0
         self.rrtMaxNumVertices = 5000
-        self.rrtNSmoothingPasses = 5;
+        self.rrtNSmoothingPasses = 10;
 
         self.callbacks = callbacks.CallbackRegistry([self.STARTUP_COMPLETED])
 
