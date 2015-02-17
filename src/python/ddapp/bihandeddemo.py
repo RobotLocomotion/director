@@ -60,14 +60,22 @@ class Board(object):
         # initial drill position (requires walking)
         self.initXYZ = [1.5, 0.6, 0.9] # height requires crouching
         self.initRPY = [1,1,1]
-
-        self.graspLeftHandFrameXYZ = [-0.045, 0.0, -0.75]
-        self.graspLeftHandFrameRPY = [0, 90, -90]
         
-        self.graspRightHandFrameXYZ = [-0.045, 0.0, 0.75]
-        self.graspRightHandFrameRPY = [0, 90, -90]
-
-        # where to stand relative to the drill on a table:
+        self.boardLength = 1.5
+        
+        if self.b.val:
+            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -self.boardLength/2]
+            self.graspLeftHandFrameRPY = [0, -90, -90]
+            
+            self.graspRightHandFrameXYZ = [-0.045, 0.0, self.boardLength/2]
+            self.graspRightHandFrameRPY = [0, -90, -90]
+        else:                
+            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -self.boardLength/2]
+            self.graspLeftHandFrameRPY = [0, 90, -90]
+            
+            self.graspRightHandFrameXYZ = [-0.045, 0.0, self.boardLength/2]
+            self.graspRightHandFrameRPY = [0, 90, -90]
+            
         self.relativeStanceXYZ = [-0.69, -0.4, 0.0] # was -0.67, due to drift set to -0.69
         self.relativeStanceRPY = [0, 0, 0]
         
@@ -85,10 +93,13 @@ class Board(object):
             zwidth = random.uniform(0.5, 1.0)
 
         else:
-
-            position = [0.6, 0.0, 1.]
+            if self.b.val:
+                position = [0.4, 0.0, 1.]
+            else:
+                position = [0.6, 0.0, 1.]
+                
             rpy = [90, 1, 0]
-            zwidth = 1.50 # length of the board
+            zwidth = self.boardLength
 
         xwidth = 3.75 * .0254
         ywidth = 1.75 * .0254
@@ -203,6 +214,16 @@ class BihandedPlannerDemo(object):
         while board is not None:
             om.removeFromObjectModel(board)
             board = om.findObjectByName('board')
+        
+        if robotModel.model.filename() == '/home/marco/drc/software/models/valkyrie/./V1_sim_mit.urdf':
+            self.val = True
+            self.v4 = False
+        elif robotModel.model.filename() == '/home/marco/drc/software/models/atlas_v4/./model_LR_RR.urdf':
+            self.v4 = True
+            self.val = False
+        else:
+            self.val = False
+            self.v4 = False
             
         defaultGraspingHand = "left"
         self.setGraspingHand(defaultGraspingHand)
@@ -439,10 +460,19 @@ class BihandedPlannerDemo(object):
 
     def planBihandedReach(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoals(startPose, self.board.reachRightFrame, self.board.reachLeftFrame, lockBase=True, lockBack=True, lockArm = False)
+        constraintSet = self.ikPlanner.planEndEffectorGoalLine(startPose, self.board.reachRightFrame, self.board.reachLeftFrame,
+                                                               lockBase=True, lockBack=True, lockArm = False, angleToleranceInDegrees = 10)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
+
+    def planAsymmetricReach(self):
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planAsymmetricGoal(startPose, self.board.reachRightFrame, self.board.reachLeftFrame,
+                                                         lockBase=True, lockBack=True, lockArm = False)
+        endPose, info = constraintSet.runIk()
+        reachPlan = constraintSet.runIkTraj()
+        self.addPlan(reachPlan)
         
     def planGrasp(self):
         startPose = self.getPlanningStartPose()
@@ -459,9 +489,9 @@ class BihandedPlannerDemo(object):
         graspPlan = self.constraintSet.runIkTraj()
         self.addPlan(graspPlan)     
         
-    def planAssymetricGrasp(self):
+    def planAsymmetricGrasp(self):
         startPose = self.getPlanningStartPose()
-        self.constraintSet = self.ikPlanner.planAssymetricGoal(startPose, self.board.graspRightFrame, self.board.graspLeftFrame,
+        self.constraintSet = self.ikPlanner.planAsymmetricGoal(startPose, self.board.graspRightFrame, self.board.graspLeftFrame,
                                                                lockBase=True, lockBack=True, lockArm = False)
         endPose, info = self.constraintSet.runIk()
         graspPlan = self.constraintSet.runIkTraj()
@@ -739,22 +769,24 @@ class BihandedPlannerDemo(object):
 
     def planBihandedGraspingSequence(self, playbackNominal = True):
         
-        self.plans = []
+        self.plans = []        
         
-        self.planBihandedPreGrasp()
-        #self.planBihandedReach()
+        if not self.val:
+            self.planBihandedPreGrasp()
+        self.planBihandedReach()
         self.planBihandedGrasp()
 
         if (playbackNominal is True):
             self.playNominalPlan()
 
-    def planBihandedAssymetricGraspingSequence(self, playbackNominal = True):
+    def planBihandedAsymmetricGraspingSequence(self, playbackNominal = True):
         
         self.plans = []
         
-        self.planBihandedPreGrasp()
-        #self.planBihandedReach()
-        self.planAssymetricGrasp()
+        if not self.val:
+            self.planBihandedPreGrasp()
+        self.planAsymmetricReach()
+        self.planAsymmetricGrasp()
 
         if (playbackNominal is True):
             self.playNominalPlan()
