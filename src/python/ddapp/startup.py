@@ -716,12 +716,3 @@ def sendMatlabSigint():
 
 
 app.addToolbarMacro('Ctrl+C MATLAB', sendMatlabSigint)
-#polyData = io.readPolyData('/home/avalenzu/Downloads/table-and-bin-scene-cropped.vtp')
-#data = segmentation.segmentTableScene(polyData, [-1.77,2.6,0.79])
-#vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
-
-
-#q = robotStateJointController.q.copy()
-#q[:2] = [-1.25,2.5]
-#q[5] = math.radians(120)
-#robotStateJointController.setPose('EST_ROBOT_STATE',q)
