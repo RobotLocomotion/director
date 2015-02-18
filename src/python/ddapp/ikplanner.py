@@ -407,7 +407,7 @@ class IKPlanner(object):
         p.bodyNameA = 'world'
         p.bodyNameB = self.getHandLink(side)
         p.frameInBodyB = graspToHandLinkFrame
-        p.pointInBodyA = makeOffsetTransform([0.0, 0.0, 0.25])
+        p.pointInBodyA = makeOffsetTransform([0.0, 0.0, 0.05])
         p.positionTarget = np.zeros(3)
         p.lowerBound = np.array([0.0, 0.0, np.nan])
         p.upperBound = np.array([0.0, 0.0, np.nan])
@@ -417,7 +417,7 @@ class IKPlanner(object):
         p.bodyNameA = 'world'
         p.bodyNameB = self.getHandLink(side)
         p.frameInBodyB = graspToHandLinkFrame
-        p.pointInBodyA = makeOffsetTransform([0.0, 0.0, -0.25])
+        p.pointInBodyA = makeOffsetTransform([0.0, 0.0, -0.05])
         p.positionTarget = np.zeros(3)
         p.lowerBound = np.array([0.0, 0.0, np.nan])
         p.upperBound = np.array([0.0, 0.0, np.nan])

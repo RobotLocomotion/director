@@ -62,20 +62,23 @@ class Board(object):
         self.initRPY = [1,1,1]
         
         self.boardLength = 1.5
-        
+
+        # so as not to grasp at the tips:
+        graspLength = self.boardLength/2 - 0.05
+
         if self.b.val:
-            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -self.boardLength/2]
+            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -graspLength]
             self.graspLeftHandFrameRPY = [0, -90, -90]
-            
-            self.graspRightHandFrameXYZ = [-0.045, 0.0, self.boardLength/2]
+
+            self.graspRightHandFrameXYZ = [-0.045, 0.0, graspLength]
             self.graspRightHandFrameRPY = [0, -90, -90]
         else:                
-            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -self.boardLength/2]
+            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -graspLength]
             self.graspLeftHandFrameRPY = [0, 90, -90]
-            
-            self.graspRightHandFrameXYZ = [-0.045, 0.0, self.boardLength/2]
+
+            self.graspRightHandFrameXYZ = [-0.045, 0.0, graspLength]
             self.graspRightHandFrameRPY = [0, 90, -90]
-            
+
         self.relativeStanceXYZ = [-0.69, -0.4, 0.0] # was -0.67, due to drift set to -0.69
         self.relativeStanceRPY = [0, 0, 0]
         
