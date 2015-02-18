@@ -184,6 +184,9 @@ class FootstepsDriver(object):
         self._setupSubscriptions()
         self._setupProperties()
 
+        self.footstepPlanIsStale = True
+        self.allowStaleFootstepPlans = False
+
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
@@ -277,6 +280,7 @@ class FootstepsDriver(object):
 
     def onFootstepPlan(self, msg):
         #self.clearFootstepPlan()
+        self.footstepPlanIsStale = False
         self.lastFootstepPlan = msg
 
         planFolder = getFootstepsFolder()
@@ -670,11 +674,16 @@ class FootstepsDriver(object):
         lcmUtils.publish('STOP_WALKING', msg)
 
     def commitFootstepPlan(self, footstepPlan):
+        if self.footstepPlanIsStale and not self.allowStaleFootstepPlans:
+            print "Footstep plan is stale (was already executed). Execution of the plan is no longer allowed for safety reasons. You should request a new footstep plan. To proceed anyway, set self.allowStaleFootstepPlans = True and try again."
+            return
+
         if footstepPlan.params.behavior in (lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
                                             lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING):
             self._commitFootstepPlanBDI(footstepPlan)
         elif footstepPlan.params.behavior == lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING:
             self._commitFootstepPlanDrake(footstepPlan)
+        self.footstepPlanIsStale = True
 
     def _commitFootstepPlanDrake(self, footstepPlan):
         startPose = self.jointController.getPose('EST_ROBOT_STATE')
