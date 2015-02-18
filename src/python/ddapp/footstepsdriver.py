@@ -184,8 +184,7 @@ class FootstepsDriver(object):
         self._setupSubscriptions()
         self._setupProperties()
 
-        self.footstepPlanIsStale = True
-        self.allowStaleFootstepPlans = False
+        self.committedPlans = []
 
 
     def _setupProperties(self):
@@ -280,7 +279,6 @@ class FootstepsDriver(object):
 
     def onFootstepPlan(self, msg):
         #self.clearFootstepPlan()
-        self.footstepPlanIsStale = False
         self.lastFootstepPlan = msg
 
         planFolder = getFootstepsFolder()
@@ -351,7 +349,7 @@ class FootstepsDriver(object):
         self.lastFootstepPlan = None
         om.removeFromObjectModel(getFootstepsFolder())
 
-    def drawFootstepPlan(self, msg, folder,left_color=None, right_color=None):
+    def drawFootstepPlan(self, msg, folder,left_color=None, right_color=None, alpha=1.0):
 
         allTransforms = []
         volFolder = getWalkingVolumesFolder()
@@ -447,6 +445,7 @@ class FootstepsDriver(object):
                 frameObj.copyFrame(footstepTransform)
                 obj.setProperty('Visible', True)
                 obj.setProperty('Color', QtGui.QColor(*[255*v for v in this_color]))
+                obj.setProperty('Alpha', alpha)
             else:
                 obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=1.0, parent=folder)
                 obj.setIcon(om.Icons.Feet)
@@ -674,16 +673,16 @@ class FootstepsDriver(object):
         lcmUtils.publish('STOP_WALKING', msg)
 
     def commitFootstepPlan(self, footstepPlan):
-        if self.footstepPlanIsStale and not self.allowStaleFootstepPlans:
-            print "Footstep plan is stale (was already executed). Execution of the plan is no longer allowed for safety reasons. You should request a new footstep plan. To proceed anyway, set self.allowStaleFootstepPlans = True and try again."
-            return
+        if footstepPlan in self.committedPlans:
+            raise Exception("Footstep plan was already executed. Execution of the plan is no longer allowed for safety reasons. You should request a new footstep plan.")
+        self.drawFootstepPlan(footstepPlan, getFootstepsFolder(), alpha=0.3)
 
         if footstepPlan.params.behavior in (lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
                                             lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING):
             self._commitFootstepPlanBDI(footstepPlan)
         elif footstepPlan.params.behavior == lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING:
             self._commitFootstepPlanDrake(footstepPlan)
-        self.footstepPlanIsStale = True
+        self.committedPlans.append(footstepPlan)
 
     def _commitFootstepPlanDrake(self, footstepPlan):
         startPose = self.jointController.getPose('EST_ROBOT_STATE')
