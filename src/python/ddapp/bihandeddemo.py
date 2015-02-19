@@ -228,7 +228,7 @@ class BihandedPlannerDemo(object):
             self.val = False
         else:
             self.val = False
-            self.v4 = False
+            self.v4 = True
             
         defaultGraspingHand = "left"
         self.setGraspingHand(defaultGraspingHand)
@@ -261,6 +261,9 @@ class BihandedPlannerDemo(object):
         extraModels = [self.robotModel]
         self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.robotModel, extraModels)
 
+        # top level switch between BDI (locked base) and MIT (moving base and back)
+        self.lockBack = False
+        self.lockBase = False
 
         if ( self.graspingHand == 'right' ):
             print "Planning with drill in the right hand"
@@ -458,7 +461,7 @@ class BihandedPlannerDemo(object):
 
     def planReach(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.reachFrame, lockBase=True, lockBack=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.reachFrame, lockBase=self.lockBase, lockBack=self.lockBack)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
@@ -466,7 +469,7 @@ class BihandedPlannerDemo(object):
     def planBihandedReach(self):
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoalLine(startPose, self.board.reachRightFrame, self.board.reachLeftFrame,
-                                                               lockBase=True, lockBack=True, lockArm = False, angleToleranceInDegrees = 10)
+                                                               lockBase=self.lockBase, lockBack=self.lockBack, lockArm = False, angleToleranceInDegrees = 10)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
@@ -474,14 +477,14 @@ class BihandedPlannerDemo(object):
     def planAsymmetricReach(self):
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planAsymmetricGoal(startPose, self.board.reachRightFrame, self.board.reachLeftFrame,
-                                                         lockBase=True, lockBack=True, lockArm = False)
+                                                         lockBase=self.lockBase, lockBack=self.lockBack, lockArm = False)
         endPose, info = constraintSet.runIk()
         reachPlan = constraintSet.runIkTraj()
         self.addPlan(reachPlan)
         
     def planGrasp(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.graspFrame, lockBase=True, lockBack=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.graspFrame, lockBase=self.lockBase, lockBack=self.lockBack)
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)  
@@ -489,7 +492,7 @@ class BihandedPlannerDemo(object):
     def planBihandedGrasp(self):
         startPose = self.getPlanningStartPose()
         self.constraintSet = self.ikPlanner.planEndEffectorGoalLine(startPose, self.board.graspRightFrame, self.board.graspLeftFrame,
-                                                               lockBase=True, lockBack=True, lockArm = False)
+                                                               lockBase=self.lockBase, lockBack=self.lockBack, lockArm = False)
         endPose, info = self.constraintSet.runIk()
         graspPlan = self.constraintSet.runIkTraj()
         self.addPlan(graspPlan)     
@@ -497,7 +500,7 @@ class BihandedPlannerDemo(object):
     def planAsymmetricGrasp(self):
         startPose = self.getPlanningStartPose()
         self.constraintSet = self.ikPlanner.planAsymmetricGoal(startPose, self.board.graspRightFrame, self.board.graspLeftFrame,
-                                                               lockBase=True, lockBack=True, lockArm = False)
+                                                               lockBase=self.lockBase, lockBack=self.lockBack, lockArm = False)
         endPose, info = self.constraintSet.runIk()
         graspPlan = self.constraintSet.runIkTraj()
         self.addPlan(graspPlan)   
@@ -509,21 +512,21 @@ class BihandedPlannerDemo(object):
 
         self.board.liftFrame = vis.updateFrame(liftTransform, 'lift frame', parent="affordances", visible=False, scale=0.2)
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.liftFrame, lockBase=False, lockBack=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.board.liftFrame, lockBase=self.lockBase, lockBack=self.lockBack)
         endPose, info = constraintSet.runIk()
         liftPlan = constraintSet.runIkTraj()
         self.addPlan(liftPlan)
 
     def planPlace(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.placeFrame, lockBase=False, lockBack=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.placeFrame, lockBase=self.lockBase, lockBack=self.lockBack)
         endPose, info = constraintSet.runIk()
         placePlan = constraintSet.runIkTraj()
         self.addPlan(placePlan)
 
     def planDereach(self):
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.dereachFrame, lockBase=False, lockBack=True)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.dereachFrame, lockBase=self.lockBase, lockBack=self.lockBack)
         endPose, info = constraintSet.runIk()
         dereachPlan = constraintSet.runIkTraj()
         self.addPlan(dereachPlan)
