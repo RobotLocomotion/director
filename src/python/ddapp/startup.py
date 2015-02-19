@@ -376,6 +376,8 @@ if usePlanning:
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
                 
+        bihandedDemo.board.spawnBoardAffordance()
+        bihandedDemo.board.findBoardAffordance()
         b = bihandedDemo
         
     constructBihandedDemo()
