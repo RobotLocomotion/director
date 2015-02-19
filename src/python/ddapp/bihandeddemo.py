@@ -61,33 +61,8 @@ class Board(object):
         self.initXYZ = [1.5, 0.6, 0.9] # height requires crouching
         self.initRPY = [1,1,1]
         
-        self.boardLength = 1.5
-
-        # so as not to grasp at the tips:
-        graspLength = self.boardLength/2 - 0.05
-
-        if self.b.val:
-            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -graspLength]
-            self.graspLeftHandFrameRPY = [0, -90, -90]
-
-            self.graspRightHandFrameXYZ = [-0.045, 0.0, graspLength]
-            self.graspRightHandFrameRPY = [0, -90, -90]
-        else:                
-            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -graspLength]
-            self.graspLeftHandFrameRPY = [0, 90, -90]
-
-            self.graspRightHandFrameXYZ = [-0.045, 0.0, graspLength]
-            self.graspRightHandFrameRPY = [0, 90, -90]
-
-        self.relativeStanceXYZ = [-0.69, -0.4, 0.0] # was -0.67, due to drift set to -0.69
-        self.relativeStanceRPY = [0, 0, 0]
-        
-        self.reachDepth = 0.12 # depth to reach to before going for grasp
-        
-        self.spawnBoardAffordance()
-
-
     def spawnBoardAffordance(self, randomize=False):
+        self.boardLength = 1.5
 
         if randomize:
 
@@ -119,7 +94,34 @@ class Board(object):
         t = self.affordance.actor.GetUserTransform()
         self.frame = vis.showFrame(t, 'board frame', parent=self.affordance, visible=False, scale=0.2)
 
-        self.computeBoardGraspFrames()        
+    def findBoardAffordance(self):
+        self.affordance = om.findObjectByName('board')
+        self.frame = om.findObjectByName('board frame')
+
+        self.boardLength = self.affordance.params.get('zwidth')
+
+        # so as not to grasp at the tips:
+        graspLength = self.boardLength/2 - 0.05
+
+        if self.b.val:
+            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -graspLength]
+            self.graspLeftHandFrameRPY = [0, -90, -90]
+
+            self.graspRightHandFrameXYZ = [-0.045, 0.0, graspLength]
+            self.graspRightHandFrameRPY = [0, -90, -90]
+        else:
+            self.graspLeftHandFrameXYZ = [-0.045, 0.0, -graspLength]
+            self.graspLeftHandFrameRPY = [0, 90, -90]
+
+            self.graspRightHandFrameXYZ = [-0.045, 0.0, graspLength]
+            self.graspRightHandFrameRPY = [0, 90, -90]
+
+        self.relativeStanceXYZ = [-0.69, -0.4, 0.0] # was -0.67, due to drift set to -0.69
+        self.relativeStanceRPY = [0, 0, 0]
+
+        self.reachDepth = 0.12 # depth to reach to before going for grasp
+
+        self.computeBoardGraspFrames()
         self.computeBoardReachFrames()
         
         self.computeBoardStanceFrame()
