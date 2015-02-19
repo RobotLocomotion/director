@@ -180,6 +180,9 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
         parent = om.getOrCreateContainer(parent)
 
     model = loadRobotModelFromFile(urdfFile)
+    if not model:
+        raise Exception('Error loading robot model from file: %s' % urdfFile)
+
     obj = RobotModelItem(model)
     om.addToObjectModel(obj, parent)
 

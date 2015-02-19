@@ -37,7 +37,7 @@ def onFileOpen():
 
     if filename.lower().endswith('urdf'):
         onOpenUrdf(filename)
-    if filename.lower().endswith('otdf'):
+    elif filename.lower().endswith('otdf'):
         onOpenOtdf(filename)
     else:
         onOpenGeometry(filename)
