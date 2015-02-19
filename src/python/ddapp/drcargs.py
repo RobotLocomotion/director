@@ -2,6 +2,7 @@ import ddapp
 import os
 import sys
 import argparse
+import json
 
 
 
@@ -108,3 +109,11 @@ def requireStrict():
 
 def args():
     return getGlobalArgParser().getArgs()
+
+_directorConfig = None
+def getDirectorConfig():
+    global _directorConfig
+    if not _directorConfig:
+        with open(args().directorConfigFile) as directorConfigFile:
+            _directorConfig = json.load(directorConfigFile)
+    return _directorConfig

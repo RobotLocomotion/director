@@ -1,4 +1,3 @@
-import json
 from PythonQt import QtCore, QtGui, QtUiTools
 import ddapp.applogic as app
 import ddapp.objectmodel as om
@@ -209,10 +208,9 @@ class EndEffectorTeleopPanel(object):
         self.removePlanFolder()
         self.panel.endEffectorTeleopDeactivated()
 
-
-    def getGoalFrame(self, linkName):
+    @staticmethod
+    def getGoalFrame(linkName):
         return om.findObjectByName('%s constraint frame' % linkName)
-
 
     def updateGoalFrame(self, linkName, transform):
         goalFrame = self.getGoalFrame(linkName)
@@ -221,8 +219,6 @@ class EndEffectorTeleopPanel(object):
 
         goalFrame.copyFrame(transform)
         return goalFrame
-
-
 
     def updateConstraints(self):
 
@@ -449,14 +445,16 @@ class EndEffectorTeleopPanel(object):
         frameSync.addFrame(handFrame)
         goalFrame.sync = frameSync
 
-
-    def removePlanFolder(self):
+    @staticmethod
+    def removePlanFolder():
         om.removeFromObjectModel(om.findObjectByName('teleop plan'))
 
-    def getConstraintFrameFolder(self):
+    @staticmethod
+    def getConstraintFrameFolder():
         return om.getOrCreateContainer('constraint frames', parentObj=om.getOrCreateContainer('teleop plan', parentObj=om.findObjectByName('planning')))
 
-    def getConstraintFolder(self):
+    @staticmethod
+    def getConstraintFolder():
         return om.getOrCreateContainer('ik constraints', parentObj=om.getOrCreateContainer('teleop plan', parentObj=om.findObjectByName('planning')))
 
     def createGoalFrames(self):
@@ -635,6 +633,106 @@ class JointLimitChecker(object):
 
 
 
+
+class GeneralEndEffectorTeleopPanel(object):
+
+    def __init__(self, ikPlanner, teleopPanel, robotStateModel, robotStateJointController):
+        self.ikPlanner = ikPlanner
+        self.teleopPanel = teleopPanel
+        self.robotStateModel = robotStateModel
+        self.robotStateJointController = robotStateJointController
+
+        self.widget = QtGui.QWidget()
+        l = QtGui.QVBoxLayout(self.widget)
+
+        h = QtGui.QHBoxLayout()
+        l.addLayout(h)
+        h.addWidget(QtGui.QLabel('End effector:'))
+        self.endEffectorCombo = QtGui.QComboBox()
+        h.addWidget(self.endEffectorCombo)
+
+        def addButton(name, func):
+            b = QtGui.QPushButton(name)
+            b.connect('clicked()', func)
+            l.addWidget(b)
+
+        addButton('start ik', self.startIk)
+        addButton('end ik', self.endIk)
+        addButton('plan', self.planIk)
+
+        config = drcargs.getDirectorConfig()['endEffectorConfig']
+        self.endEffectorLinkNames = config['endEffectorLinkNames']
+        self.graspOffsetFrame = transformUtils.frameFromPositionAndRPY(config['graspOffsetFrame'][0], np.degrees(config['graspOffsetFrame'][1]))
+        self.fixedJoints = config['fixedJoints']
+
+        for linkName in self.endEffectorLinkNames:
+            self.endEffectorCombo.addItem(linkName)
+
+
+    def planIk(self):
+
+        startPoseName = 'reach_start'
+        endPoseName = 'reach_end'
+        startPose = np.array(self.robotStateJointController.q)
+        self.ikPlanner.addPose(startPose, startPoseName)
+
+        plan = self.constraintSet.runIkTraj()
+        self.teleopPanel.showPlan(plan)
+
+    def endIk(self):
+        self.teleopPanel.hideTeleopModel()
+        EndEffectorTeleopPanel.removePlanFolder()
+
+    def startIk(self, reachGoal=None):
+
+        EndEffectorTeleopPanel.removePlanFolder()
+
+        ikPlanner = self.ikPlanner
+
+        startPoseName = 'reach_start'
+        endPoseName = 'reach_end'
+        startPose = np.array(self.robotStateJointController.q)
+        ikPlanner.addPose(startPose, startPoseName)
+
+        endEffectorLinkName = str(self.endEffectorCombo.currentText)
+
+        if reachGoal is None:
+            endEffectorLinkFrame = self.robotStateModel.getLinkFrame(endEffectorLinkName)
+            assert endEffectorLinkFrame is not None
+            graspToWorld = vtk.vtkTransform()
+            graspToWorld.PostMultiply()
+            graspToWorld.Concatenate(self.graspOffsetFrame)
+            graspToWorld.Concatenate(endEffectorLinkFrame)
+            reachGoal = graspToWorld
+
+        om.removeFromObjectModel('reach goal')
+        goalFrame = vis.showFrame(reachGoal, 'reach goal', scale=0.1, parent=EndEffectorTeleopPanel.getConstraintFrameFolder())
+        goalFrame.setProperty('Edit', True)
+
+        constraints = []
+        for pattern in self.fixedJoints:
+            constraints.append(ikPlanner.createPostureConstraint(startPoseName, robotstate.matchJoints(pattern)))
+
+        constraints.extend(ikPlanner.createPositionOrientationConstraint(endEffectorLinkName, goalFrame, self.graspOffsetFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0))
+        constraints[-1].tspan = [1.0, 1.0]
+        constraints[-2].tspan = [1.0, 1.0]
+
+        self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+
+        def onGoalFrameModified(frame):
+            endPose, info = self.constraintSet.runIk()
+            self.teleopPanel.showPose(self.constraintSet.endPose)
+            app.displaySnoptInfo(info)
+
+        goalFrame.connectFrameModified(onGoalFrameModified)
+        onGoalFrameModified()
+
+        folder = EndEffectorTeleopPanel.getConstraintFolder()
+        for i, constraint in enumerate(constraints):
+            constraintItem = ConstraintItem(constraint)
+            om.addToObjectModel(constraintItem, parentObj=folder)
+
+
 class JointTeleopPanel(object):
 
     def __init__(self, panel, jointGroups=None):
@@ -654,8 +752,7 @@ class JointTeleopPanel(object):
         self.jointLimitsMax[0:6] = [0.25, 0.25, 0.92, math.radians(20),  math.radians(20),  math.radians(20)]
 
         if jointGroups is None:
-            with open(drcargs.args().directorConfigFile) as directorConfigFile:
-                jointGroups = json.load(directorConfigFile)['teleopJointGroups']
+            jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
 
         self.buildTabWidget(jointGroups)
 
@@ -926,6 +1023,11 @@ class TeleopPanel(object):
 
         self.endEffectorTeleop = EndEffectorTeleopPanel(self)
         self.jointTeleop = JointTeleopPanel(self)
+
+        if 'endEffectorConfig' in drcargs.getDirectorConfig():
+            self.ui.endEffectorTeleopFrame.setVisible(False)
+            self.generalEndEffectorTeleopPanel = GeneralEndEffectorTeleopPanel(ikPlanner, self, robotStateModel, robotStateJointController)
+            self.widget.layout().addWidget(self.generalEndEffectorTeleopPanel.widget, 0, 0, 1, 2)
 
     def onPostureDatabaseClicked(self):
         ikplanner.RobotPoseGUIWrapper.initCaptureMethods(self.robotStateJointController, self.teleopJointController)
