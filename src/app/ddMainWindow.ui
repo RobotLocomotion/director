@@ -46,6 +46,7 @@
     <addaction name="ActionMatlabConsole"/>
     <addaction name="separator"/>
     <addaction name="ActionBotSpy"/>
+    <addaction name="ActionSignalScope"/>
     <addaction name="ActionToggleStereoRender"/>
    </widget>
    <widget class="QMenu" name="ViewMenu">
@@ -343,6 +344,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+B</string>
+   </property>
+  </action>
+  <action name="ActionSignalScope">
+   <property name="text">
+    <string>&amp;Signal Scope</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
    </property>
   </action>
   <action name="ActionColorizeLidar">
