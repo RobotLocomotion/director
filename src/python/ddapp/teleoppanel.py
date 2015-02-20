@@ -263,7 +263,7 @@ class EndEffectorTeleopPanel(object):
             constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName, lockLegs=False))
             ikPlanner.setBaseLocked(True)
         if self.getBaseConstraint() == 'constrained':
-            constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, 'pelvis', tspan=[1.0, 1.0]))
+            constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, 'pelvis', tspan=[1.0, 1.0]))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'xyz only':
             constraints.append(ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))

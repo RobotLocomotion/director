@@ -237,14 +237,14 @@ class IKPlanner(object):
         for linkName in ['l_foot', 'r_foot']:
             p = self.createFixedLinkConstraints(startPose, linkName, **kwargs)
 
-            # sliding foot
-            #if linkName == 'l_foot':
-            #    p.lowerBound = [-np.inf, -np.inf, 0.0]
-            #    p.upperBound = [np.inf, np.inf, 0.0]
-
             constraints.append(p)
         return constraints
 
+    def createSixDofLinkConstraints(self, startPose, linkName, **kwargs):
+        linkFrame = self.getLinkFrameAtPose(linkName, startPose)
+        p = ik.PositionConstraint(linkName=linkName, referenceFrame=linkFrame, lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3),**kwargs)
+        q = ik.QuatConstraint(linkName=linkName, quaternion=linkFrame, **kwargs)
+        return [p, q]
 
     def createFixedLinkConstraints(self, startPose, linkName, **kwargs):
         p = ik.FixedLinkFromRobotPoseConstraint(linkName=linkName, poseName=startPose, **kwargs)
