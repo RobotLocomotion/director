@@ -58,6 +58,7 @@ set(python_files
   ddapp/navigationpanel.py
   ddapp/objectmodel.py
   ddapp/otdfmodel.py
+  ddapp/openscope.py
   ddapp/perception.py
   ddapp/pfgrasp.py
   ddapp/pfgrasppanel.py
