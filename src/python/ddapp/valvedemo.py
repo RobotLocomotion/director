@@ -54,7 +54,7 @@ class ValvePlannerDemo(object):
         self.useFootstepPlanner = True
         self.visOnly = True
         self.planFromCurrentRobotState = True
-        useDevelopment = True
+        useDevelopment = False
         if (useDevelopment):
             self.visOnly = True
             self.planFromCurrentRobotState = False
@@ -74,16 +74,12 @@ class ValvePlannerDemo(object):
         self.useLidar = True # else use stereo depth
 
         # IK server speed:
-        self.speedLow = 10
+        self.speedLow = 5
         self.speedHigh = 30
 
         if (useDevelopment): # for simulated dev
             self.speedLow = 60
             self.speedHigh = 60
-
-        self.speedLow = 60
-        self.speedHigh = 60
-
 
         # reach to center and back - for palm point
         self.clenchFrameXYZ = [0.0, 0.0, -0.1]
@@ -660,7 +656,6 @@ class ValvePlannerDemo(object):
 
         self.planFromCurrentRobotState = True
         self.visOnly = False
-        self.palmInAngle = 70
         self.nextScribeAngle = 45
         self.turnAngle=70
         self.graspingHand='right'
@@ -680,7 +675,7 @@ class ValvePlannerDemo(object):
         taskQueue.addTask(self.commitFootstepPlan)
         taskQueue.addTask(self.waitForWalkExecution)
 
-        # Reach and Grasp Valve:
+        # Fit the Valve:
         taskQueue.addTask(self.printAsync('Wait for sweep'))
         taskQueue.addTask(self.waitForCleanLidarSweepAsync)
         taskQueue.addTask( functools.partial(self.segmentValveWallAuto, 0.23, self.graspingObject) )
@@ -694,20 +689,40 @@ class ValvePlannerDemo(object):
         taskQueue.addTask(self.animateLastPlan)
 
         taskQueue.addTask(self.printAsync('Turn 1'))
-        taskQueue = self.addAutomousValveTurn(taskQueue)
+        taskQueue = self.addAutomousValveTurn(taskQueue, self.nextScribeAngle)
         taskQueue.addTask(self.printAsync('Turn 2'))
-        taskQueue = self.addAutomousValveTurn(taskQueue)
+        taskQueue = self.addAutomousValveTurn(taskQueue, self.nextScribeAngle)
         taskQueue.addTask(self.printAsync('Turn 3'))
-        taskQueue = self.addAutomousValveTurn(taskQueue)
+        taskQueue = self.addAutomousValveTurn(taskQueue, self.nextScribeAngle)
         taskQueue.addTask(self.printAsync('done!'))
 
         taskQueue.addTask(self.sendAutonmousTestDone)
 
         return taskQueue
 
-    def addAutomousValveTurn(self,taskQueue):
-        #----- Loop Here
-        taskQueue.addTask(functools.partial( self.setNextScribeAngle, 45))
+    def autonomousExecuteTurn(self):
+        '''
+        Turn a valve by the turnAngle and then retract
+        As initial conditions: assumes robot has hand in reach or pregrasp position
+        '''
+
+        self.planFromCurrentRobotState = True
+        self.visOnly = False
+        self.graspingHand='left'
+        self.scribeDirection = 1
+
+        taskQueue = AsyncTaskQueue()
+        taskQueue.addTask(self.resetTurnPath)
+
+        taskQueue.addTask(self.printAsync('Turn 1'))
+        taskQueue = self.addAutomousValveTurn(taskQueue, self.nextScribeAngle)
+        taskQueue.addTask(self.printAsync('done!'))
+
+        return taskQueue
+
+
+    def addAutomousValveTurn(self,taskQueue, nextScribeAngle):
+        taskQueue.addTask(functools.partial( self.setNextScribeAngle, nextScribeAngle))
         taskQueue.addTask(self.printAsync('Reach'))
         taskQueue.addTask(self.planReach)
         taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
