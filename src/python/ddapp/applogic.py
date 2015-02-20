@@ -8,6 +8,7 @@ from PythonQt import QtCore
 from PythonQt import QtGui
 from ddapp import getDRCBaseDir as getDRCBase
 from ddapp import botspy
+from ddapp import openscope
 import functools
 
 _mainWindow = None
@@ -238,6 +239,8 @@ def addShortcut(widget, keySequence, func):
 def setupActions():
     botApyAction = getToolsMenuActions()['ActionBotSpy']
     botApyAction.connect(botApyAction, 'triggered()', botspy.startBotSpy)
+    scopeAction = getToolsMenuActions()['ActionSignalScope']
+    scopeAction.connect(scopeAction, 'triggered()', openscope.startSignalScope)
 
 
 def showErrorMessage(message, title='Error'):
