@@ -239,11 +239,15 @@ class EndEffectorTeleopPanel(object):
 
         if self.getLFootConstraint() == 'fixed':
             constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot', tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
+        elif self.getLFootConstraint() == 'constrained':
+            constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, 'l_foot', tspan=[1.0, 1.0]))
         elif self.getLFootConstraint() == 'sliding':
             constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[:2])
 
         if self.getRFootConstraint() == 'fixed':
             constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot', tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
+        elif self.getRFootConstraint() == 'constrained':
+            constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, 'r_foot', tspan=[1.0, 1.0]))
         elif self.getRFootConstraint() == 'sliding':
             constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
 
