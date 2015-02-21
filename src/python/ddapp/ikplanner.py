@@ -78,10 +78,10 @@ class ConstraintSet(object):
         self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName)
         return self.plan
 
-    def planEndPoseGoal(self):
+    def planEndPoseGoal(self, feetOnGround = True):
         assert self.endPose is not None
         self.ikPlanner.addPose(self.endPose, self.endPoseName)
-        self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName)
+        self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName, feetOnGround)
         return self.plan
 
     def onFrameModified(self, frame):
