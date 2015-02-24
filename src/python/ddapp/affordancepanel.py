@@ -82,7 +82,7 @@ class AffordancePanel(object):
 
 
     def onGetRaycastTerrain(self):
-        affs = self.getCollisionAffordances()
+        affs = self.affordanceManager.getCollisionAffordances()
         xy = self.jointController.q[:2]
         self.raycastDriver.requestRaycast(affs, xy-2, xy+2)
 
