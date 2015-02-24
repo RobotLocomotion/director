@@ -36,8 +36,8 @@ class MultisenseItem(om.ObjectModelItem):
                          attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
         self.addProperty('Max Range', model.reader.GetDistanceRange()[1],
                          attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
-        self.addProperty('Edge Filter Distance', model.reader.GetEdgeDistanceThreshold(),
-                         attributes=om.PropertyAttributes(decimals=3, minimum=0.0, maximum=10.0, singleStep=0.01, hidden=False))
+        self.addProperty('Edge Filter Angle', model.reader.GetEdgeAngleThreshold(),
+                         attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=60.0, singleStep=1, hidden=False))
         self.addProperty('Number of Scan Lines', model.numberOfScanLines,
                          attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=100, singleStep=1, hidden=False))
         self.addProperty('Visible', model.visible)
@@ -58,8 +58,8 @@ class MultisenseItem(om.ObjectModelItem):
             else:
                 self.model.stop()
 
-        elif propertyName == 'Edge Filter Distance':
-            self.model.reader.SetEdgeDistanceThreshold(self.getProperty('Edge Filter Distance'))
+        elif propertyName == 'Edge Filter Angle':
+            self.model.reader.SetEdgeAngleThreshold(self.getProperty('Edge Filter Angle'))
             self.model.showRevolution(self.model.displayedRevolution)
 
         elif propertyName == 'Alpha':

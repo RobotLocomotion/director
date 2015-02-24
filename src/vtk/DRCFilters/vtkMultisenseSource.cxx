@@ -159,7 +159,7 @@ public:
 
     this->DistanceRange[0] = 0.0;
     this->DistanceRange[1] = 30.0;
-    this->EdgeDistanceThreshold = 0.03;
+    this->EdgeAngleThreshold = 30;  // degrees
 
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
@@ -341,7 +341,7 @@ public:
     std::vector<ScanLineData> scanLines;
     this->GetScanLine(scanLines, scanLine);
 
-    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeDistanceThreshold);
+    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold);
   }
 
   vtkSmartPointer<vtkPolyData> GetDataForRevolution(int revolution)
@@ -354,7 +354,7 @@ public:
     std::vector<ScanLineData> scanLines;
     this->GetScanLinesForRevolution(scanLines, revolution);
 
-    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeDistanceThreshold);
+    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold);
   }
 
   int get_trans_with_utime(std::string from_frame, std::string to_frame,
@@ -384,14 +384,14 @@ public:
     this->DistanceRange[1] = distanceRange[1];
   }
 
-  void SetEdgeDistanceThreshold(double edgeDistanceThreshold)
+  void SetEdgeAngleThreshold(double edgeAngleThreshold)
   {
-    this->EdgeDistanceThreshold = edgeDistanceThreshold;
+    this->EdgeAngleThreshold = edgeAngleThreshold;
   }
 
-  double GetEdgeDistanceThreshold()
+  double GetEdgeAngleThreshold()
   {
-    return this->EdgeDistanceThreshold;
+    return this->EdgeAngleThreshold;
   }
 
   vtkIdType GetCurrentScanTime()
@@ -502,7 +502,7 @@ protected:
   double SplitRange;
   double LastOffsetSpindleAngle;
 
-  double EdgeDistanceThreshold;
+  double EdgeAngleThreshold;
   double DistanceRange[2];
 
   vtkSmartPointer<vtkPolyData> SweepPolyData;
@@ -640,21 +640,21 @@ void vtkMultisenseSource::GetTransform(const char* fromFrame, const char* toFram
 }
 
 //-----------------------------------------------------------------------------
-void vtkMultisenseSource::SetEdgeDistanceThreshold(double threshold)
+void vtkMultisenseSource::SetEdgeAngleThreshold(double threshold)
 {
-  if (threshold == this->GetEdgeDistanceThreshold())
+  if (threshold == this->GetEdgeAngleThreshold())
     {
-    return;
+      return;
     }
 
-  this->Internal->Listener->SetEdgeDistanceThreshold(threshold);
+  this->Internal->Listener->SetEdgeAngleThreshold(threshold);
   this->Modified();
 }
 
 //-----------------------------------------------------------------------------
-double vtkMultisenseSource::GetEdgeDistanceThreshold()
+double vtkMultisenseSource::GetEdgeAngleThreshold()
 {
-  return this->Internal->Listener->GetEdgeDistanceThreshold();
+  return this->Internal->Listener->GetEdgeAngleThreshold();
 }
 
 //-----------------------------------------------------------------------------

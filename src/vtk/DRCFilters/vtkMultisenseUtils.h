@@ -159,7 +159,7 @@ DataArrays CreateData(vtkIdType numberOfPoints)
 }
 
 
-void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double distanceRange[2], double edgeDistanceThreshold)
+void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double distanceRange[2], double edgeAngleThreshold)
 {
 
   const bot_core::planar_lidar_t* msg = &scanLine.msg;
@@ -185,6 +185,9 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
   Eigen::Vector3d pos0(scanLine.ScanToLocalStart.translation());
   Eigen::Vector3d pos1(scanLine.ScanToLocalEnd.translation());
 
+  const bool doFilter = (edgeAngleThreshold > 0);
+  const float angleThresh = edgeAngleThreshold*M_PI/180;
+
   for (int i = 0; i < numPoints; ++i, t += tStep, theta += thetaStep)
   {
     if (ranges[i] < distanceRange[0] || ranges[i] > distanceRange[1])
@@ -195,44 +198,28 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 
     // Edge effect filter
     float scanDelta = 0.0;
-    if ( (i > 0) && ( i+1 < numPoints))
+    if ( (i > 0) && ( i+1 < numPoints) && doFilter)
     {
-      float rightDiff = fabs(ranges[i] - ranges[i-1]);
-      float leftDiff = fabs(ranges[i] - ranges[i+1]);
-      scanDelta = std::max(rightDiff, leftDiff);
-      if (( rightDiff > edgeDistanceThreshold) || (leftDiff > edgeDistanceThreshold ))
-      {
-        if (ranges[i] < edgeFilterEnabledRange)
-        {
-          continue;
-        }
+      float theta1 = msg->rad0 + (i-1)*msg->radstep;
+      float theta2 = msg->rad0 + i*msg->radstep;
+      float theta3 = msg->rad0 + (i+1)*msg->radstep;
+      float r1 = ranges[i-1];
+      float r2 = ranges[i];
+      float r3 = ranges[i+1];
+      Eigen::Vector2f p1(r1*std::cos(theta1), r1*std::sin(theta1));
+      Eigen::Vector2f p2(r2*std::cos(theta2), r2*std::sin(theta2));
+      Eigen::Vector2f p3(r3*std::cos(theta3), r3*std::sin(theta3));
+      Eigen::Vector2f pointDelta1 = (p1-p2).normalized();
+      Eigen::Vector2f pointDelta2 = (p3-p2).normalized();
+      Eigen::Vector2f ray = p2.normalized();
+      float angle1 = std::acos(ray.dot(pointDelta1));
+      if (angle1 > M_PI/2) angle1 = M_PI-angle1;
+      float angle2 = std::acos(ray.dot(pointDelta2));
+      if (angle2 > M_PI/2) angle2 = M_PI-angle2;
+      if ((angle1 < angleThresh) && (angle2 < angleThresh)) {
+        continue;
       }
     }
-
-    /*
-    const int n = msg.nranges;
-    for (int i = 1; i < n-1; ++i) {
-      double theta1 = msg.rad0 + (i-1)*msg.radstep;
-      double theta2 = msg.rad0 + i*msg.radstep;
-      double theta3 = msg.rad0 + (i+1)*msg.radstep;
-      double r1 = msg.ranges[i-1];
-      double r2 = msg.ranges[i];
-      double r3 = msg.ranges[i+1];
-      Eigen::Vector2d p1(r1*std::cos(theta1), r1*std::sin(theta1));
-      Eigen::Vector2d p2(r2*std::cos(theta2), r2*std::sin(theta2));
-      Eigen::Vector2d p3(r3*std::cos(theta3), r3*std::sin(theta3));
-      Eigen::Vector2d pointDelta1 = (p1-p2).normalized();
-      Eigen::Vector2d pointDelta2 = (p3-p2).normalized();
-      Eigen::Vector2d ray = p2.normalized();
-      double angle1 = std::acos(ray.dot(pointDelta1));
-      if (angle1 > kPi/2) angle1 = kPi - angle1;
-      double angle2 = std::acos(ray.dot(pointDelta2));
-      if (angle2 > kPi/2) angle2 = kPi - angle2;
-      if ((angle1 < kAngleThresh) && (angle2 < kAngleThresh)) {
-        msg.ranges[i] = 0;
-      }
-    }
-    */
 
     Eigen::Vector3d pt(ranges[i] * cos(theta), ranges[i] * sin(theta), 0.0);
 
@@ -254,14 +241,14 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 
 }
 
-vtkSmartPointer<vtkPolyData> GetPointCloudFromScanLines(const std::vector<ScanLineData>& scanLines, double distanceRange[2], double edgeDistanceThreshold)
+vtkSmartPointer<vtkPolyData> GetPointCloudFromScanLines(const std::vector<ScanLineData>& scanLines, double distanceRange[2], double edgeAngleThreshold)
 {
   //printf("GetPointCloud, given %d scan lines\n", scanLines.size());
   DataArrays dataArrays = CreateData(800 * scanLines.size());
 
   for (size_t i = 0; i < scanLines.size(); ++i)
   {
-    AddScanLine(scanLines[i], dataArrays, distanceRange, edgeDistanceThreshold);
+    AddScanLine(scanLines[i], dataArrays, distanceRange, edgeAngleThreshold);
   }
 
   dataArrays.Dataset->SetVerts(NewVertexCells(dataArrays.Dataset->GetNumberOfPoints()));
