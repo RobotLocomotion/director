@@ -42,8 +42,8 @@ public:
   vtkGetVector2Macro(DistanceRange, double);
   vtkSetVector2Macro(DistanceRange, double);
 
-  void SetEdgeDistanceThreshold(double threshold);
-  double GetEdgeDistanceThreshold();
+  void SetEdgeAngleThreshold(double threshold);
+  double GetEdgeAngleThreshold();
 
   int GetCurrentRevolution();
   void GetDataForRevolution(int revolution, vtkPolyData* polyData);
@@ -74,7 +74,7 @@ protected:
   virtual ~vtkMultisenseSource();
 
   double DistanceRange[2];
-  double EdgeDistanceThreshold;
+  double EdgeAngleThreshold;
 
 private:
   vtkMultisenseSource(const vtkMultisenseSource&);  // Not implemented.
