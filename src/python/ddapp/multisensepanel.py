@@ -25,9 +25,12 @@ class WidgetDict(object):
 
 class MultisensePanel(object):
 
-    def __init__(self, driver):
+    def __init__(self, multisenseDriver, neckDriver):
 
-        self.driver = driver
+        self.multisenseDriver = multisenseDriver
+        self.neckDriver = neckDriver
+        self.neckPitchChanged = False
+        self.multisenseChanged = False
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddMultisense.ui')
@@ -36,38 +39,18 @@ class MultisensePanel(object):
         self.widget = loader.load(uifile)
 
         self.ui = WidgetDict(self.widget.children())
-        self._updateBlocked = True
 
-        self.updateTimer = TimerCallback()
+        self.updateTimer = TimerCallback(targetFps=2)
         self.updateTimer.callback = self.updatePanel
         self.updateTimer.start()
 
-        self.widget.sendButton.setEnabled(True)
-
-        #internal data, queued up to be sent
-        self.queued_data = {}
-        self.sent_data = {}
-
-        self.queued_data['neckPitch'] = 0
-        self.queued_data['spinRate'] = 5
-        self.queued_data['scanDuration'] = 6
-        self.queued_data['headCamFps'] = 5
-        self.queued_data['headCamGain'] = 1.0
-        self.queued_data['exposure'] = 0
-        self.queued_data['autoGain'] = True
-        self.queued_data['ledOn'] = False
-        self.queued_data['ledBrightness'] = 0.0
         self.widget.headCamGainSpinner.setEnabled(False)
         self.widget.headCamExposureSpinner.setEnabled(False)
-
-        for key in self.queued_data.keys():
-            self.sent_data[key] = None
 
         #connect the callbacks
         self.widget.neckPitchSpinner.valueChanged.connect(self.neckPitchChange)
         self.widget.spinRateSpinner.valueChanged.connect(self.spinRateChange)
         self.widget.scanDurationSpinner.valueChanged.connect(self.scanDurationChange)
-
         self.widget.headCamFpsSpinner.valueChanged.connect(self.headCamFpsChange)
         self.widget.headCamGainSpinner.valueChanged.connect(self.headCamGainChange)
         self.widget.headCamExposureSpinner.valueChanged.connect(self.headCamExposureChange)
@@ -79,107 +62,124 @@ class MultisensePanel(object):
 
         self.updatePanel()
 
+
+    def getCameraFps(self):
+        return self.widget.headCamFpsSpinner.value
+
+    def getCameraGain(self):
+        return self.widget.headCamGainSpinner.value
+
+    def getCameraExposure(self):
+        return self.widget.headCamExposureSpinner.value
+
+    def getCameraLedOn(self):
+        return self.widget.ledOnCheck.isChecked()
+
+    def getCameraLedBrightness(self):
+        return self.widget.headCamFpsSpinner.value
+
+    def getCameraAutoGain(self):
+        return self.widget.headAutoGainCheck.isChecked()
+
+    def getSpinRate(self):
+        return self.widget.spinRateSpinner.value
+
+    def getScanDuration(self):
+        return self.widget.scanDurationSpinner.value
+
+    def getNeckPitch(self):
+        return self.widget.neckPitchSpinner.value
+
     def ledBrightnessChange(self, event):
-        self.queued_data['ledBrightness'] = self.widget.ledBrightnessSpinner.value
+        self.multisenseChanged = True
 
     def ledOnCheckChange(self, event):
-        self.queued_data['ledOn'] = self.widget.ledOnCheck.isChecked()
+        self.multisenseChanged = True
 
     def headCamExposureChange(self, event):
-        self.queued_data['exposure'] = 1000*self.widget.headCamExposureSpinner.value
+        self.multisenseChanged = True
 
     def headCamAutoGainChange(self, event):
-        self.queued_data['autoGain'] = self.widget.headAutoGainCheck.isChecked()
-
-        self.widget.headCamGainSpinner.setEnabled(not self.queued_data['autoGain'])
-        self.widget.headCamExposureSpinner.setEnabled(not self.queued_data['autoGain'])
+        self.multisenseChanged = True
+        self.widget.headCamGainSpinner.setEnabled(not self.getCameraAutoGain())
+        self.widget.headCamExposureSpinner.setEnabled(not self.getCameraAutoGain())
 
     def neckPitchChange(self, event):
-        self.queued_data['neckPitch'] = self.widget.neckPitchSpinner.value
+        self.neckPitchChanged = True
+        self.updateTimer.stop()
 
     def headCamFpsChange(self, event):
-        self.queued_data['headCamFps'] = self.widget.headCamFpsSpinner.value
+        self.multisenseChanged = True
 
     def headCamGainChange(self, event):
-        self.queued_data['headCamGain'] = self.widget.headCamGainSpinner.value
+        self.multisenseChanged = True
 
     def spinRateChange(self, event):
-        if self.queued_data['spinRate'] == self.widget.spinRateSpinner.value:
-            return
-        else:
-            self.queued_data['spinRate'] = self.widget.spinRateSpinner.value
+        self.multisenseChanged = True
+        spinRate = self.getSpinRate()
 
-            #calculate spin duration
-            if self.queued_data['spinRate'] == 0.0:
-                self.queued_data['scanDuration'] = 240.0
-            if self.queued_data['spinRate'] != 0.0 and not self.queued_data['scanDuration'] == 60.0 / self.queued_data['spinRate'] / 2.0:
-                self.queued_data['scanDuration'] = 60.0 / self.queued_data['spinRate'] / 2.0
-                if self.queued_data['scanDuration'] > 240.0:
-                    self.queued_data['scanDuration'] = 240.0
-                self.widget.scanDurationSpinner.value = self.queued_data['scanDuration']
+        if spinRate == 0.0:
+            scanDuration = 240.0
+        else:
+            scanDuration = 60.0 / (spinRate * 2)
+        if scanDuration > 240.0:
+            scanDuration = 240.0
+
+        self.widget.scanDurationSpinner.blockSignals(True)
+        self.widget.scanDurationSpinner.value = scanDuration
+        self.widget.scanDurationSpinner.blockSignals(False)
 
     def scanDurationChange(self, event):
-        if self.queued_data['scanDuration'] == self.widget.scanDurationSpinner.value:
-            return
-        else:
-            self.queued_data['scanDuration'] = self.widget.scanDurationSpinner.value
+        self.multisenseChanged = True
+        scanDuration = self.getScanDuration()
 
-            #Calculate spin rate
-            if not self.queued_data['spinRate'] == 60.0 / self.queued_data['scanDuration'] / 2.0:
-                self.queued_data['spinRate'] = 60.0 / self.queued_data['scanDuration'] / 2.0
-                self.widget.spinRateSpinner.value = self.queued_data['spinRate']
+        spinRate = 60.0 / (scanDuration * 2)
+
+        self.widget.spinRateSpinner.blockSignals(True)
+        self.widget.spinRateSpinner.value = spinRate
+        self.widget.spinRateSpinner.blockSignals(False)
+
 
     def sendButtonClicked(self, event):
-        self.publishCommand(self.queued_data)
-
+        self.publishCommand()
 
     def updatePanel(self):
         if not self.widget.isVisible():
             return
 
-        if self.checkNewData():
-            self.widget.sendButton.setEnabled(False)
-        else:
-            self.widget.sendButton.setEnabled(True)
+        if not self.neckPitchChanged:
+            self.widget.neckPitchSpinner.blockSignals(True)
+            self.widget.neckPitchSpinner.setValue(self.neckDriver.getNeckPitchDegrees())
+            self.widget.neckPitchSpinner.blockSignals(False)
 
-    def checkNewData(self):
-        match = True
-        for key in self.queued_data.keys():
-            if self.queued_data[key] != self.sent_data[key]:
-                match = False
+    def publishCommand(self):
 
-        return match
+        fps = self.getCameraFps()
+        camGain = self.getCameraGain()
+        exposure = self.getCameraExposure()
+        ledFlash = self.getCameraLedOn()
+        ledDuty = self.getCameraLedBrightness()
+        spinRate = self.getSpinRate()
+        autoGain = 1 if self.getCameraAutoGain() else 0
 
-    def publishCommand(self, data):
+        self.multisenseDriver.sendMultisenseCommand(fps, camGain, exposure, autoGain, spinRate, ledFlash, ledDuty)
+        self.neckDriver.setNeckPitch(self.getNeckPitch())
 
-        if self.queued_data['neckPitch'] != self.sent_data['neckPitch']:
-            self.driver.setNeckPitch(self.queued_data['neckPitch'])
-
-        fps = self.queued_data['headCamFps']
-        camGain = self.queued_data['headCamGain']
-        exposure = self.queued_data['exposure']
-        ledFlash = self.queued_data['ledOn']
-        ledDuty = self.queued_data['ledBrightness']
-        if self.queued_data['autoGain']:
-            autoGain = 1
-        else:
-            autoGain = 0
-        
-
-        self.driver.setMultisenseCommand(fps, camGain, exposure, autoGain, self.queued_data['spinRate'], ledFlash, ledDuty)
-        self.sent_data = deepcopy(self.queued_data)
+        self.multisenseChanged = False
+        self.neckPitchChanged = False
+        self.updateTimer.start()
 
 
 def _getAction():
     return app.getToolBarActions()['ActionMultisensePanel']
 
 
-def init(driver):
+def init(driver, neckDriver):
 
     global panel
     global dock
 
-    panel = MultisensePanel(driver)
+    panel = MultisensePanel(driver, neckDriver)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
