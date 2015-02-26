@@ -39,7 +39,6 @@ class AsyncIKCommunicator():
         self.majorOptimalityTolerance = 1e-4
         self.majorFeasibilityTolerance = 1e-6
         self.rrtMaxEdgeLength = 0.05
-        self.rrtOrientationWeight = 1.0
         self.rrtGoalBias = 1.0
         self.rrtMaxNumVertices = 5000
         self.rrtNSmoothingPasses = 10;
@@ -307,7 +306,6 @@ class AsyncIKCommunicator():
             commands.append('options.end_effector_pt = end_effector_pt;')
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
             commands.append('options.RRTMaxEdgeLength = %s;' % self.rrtMaxEdgeLength)
-            commands.append('options.RRTOrientationWeight = %s;' % self.rrtOrientationWeight)
             commands.append('options.RRTGoalBias = %s;' % self.rrtGoalBias)
             commands.append('options.N = %s;' % self.rrtMaxNumVertices)
             commands.append('options.n_smoothing_passes = %s;' % self.rrtNSmoothingPasses)
