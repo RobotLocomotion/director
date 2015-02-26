@@ -39,7 +39,6 @@ class AsyncIKCommunicator():
         self.majorOptimalityTolerance = 1e-4
         self.majorFeasibilityTolerance = 1e-6
         self.rrtMaxEdgeLength = 0.05
-        self.rrtOrientationWeight = 1.0
         self.rrtGoalBias = 1.0
         self.rrtMaxNumVertices = 5000
         self.rrtNSmoothingPasses = 10;
@@ -218,24 +217,15 @@ class AsyncIKCommunicator():
         commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
         commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
         commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
+        commands.append('options.MinDistance = %f;' % self.collisionMinDistance)
         commands.append('s = s.setupOptions(options);')
         commands.append('clear q_end;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
         commands.append('\n')
-        commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, ik_seed_pose, ik_nominal_pose, active_constraints{:}, s.ikoptions);')
+        commands.append('use_collision = %s;' % ('true' if self.useCollision else 'false'))
+        commands.append('[q_end, info, infeasible_constraint] = s.runIk(ik_seed_pose, ik_nominal_pose, active_constraints, use_collision);')
         commands.append('\n')
-        commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
-
-
-        if self.useCollision:
-            commands.append('\n')
-            commands.append('collision_constraint = MinDistanceConstraint(r, %f);' % self.collisionMinDistance)
-            commands.append('collision_constraint  = collision_constraint.excludeCollisionGroups({excluded_collision_groups.name});')
-            commands.append('ik_seed_pose = q_end;')
-            commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, ik_seed_pose, ik_nominal_pose, collision_constraint, active_constraints{:}, s.ikoptions);')
-            commands.append('\n')
-            commands.append('if (info > 10) disp(\'inverseKin with collision constraint infeasible.\'); display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
         commands.append('q_end(s.robot.getNumPositions()+1:end) = [];')
         commands.append('\n%-------- runIk end --------\n')
@@ -316,7 +306,6 @@ class AsyncIKCommunicator():
             commands.append('options.end_effector_pt = end_effector_pt;')
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
             commands.append('options.RRTMaxEdgeLength = %s;' % self.rrtMaxEdgeLength)
-            commands.append('options.RRTOrientationWeight = %s;' % self.rrtOrientationWeight)
             commands.append('options.RRTGoalBias = %s;' % self.rrtGoalBias)
             commands.append('options.N = %s;' % self.rrtMaxNumVertices)
             commands.append('options.n_smoothing_passes = %s;' % self.rrtNSmoothingPasses)

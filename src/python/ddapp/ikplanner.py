@@ -109,7 +109,6 @@ class IkOptionsItem(om.ObjectModelItem):
         self.addProperty('Major feasibility tolerance', ikServer.majorFeasibilityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-5))
         self.addProperty('Major optimality tolerance', ikServer.majorOptimalityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-4))
         self.addProperty('RRT max edge length', ikServer.rrtMaxEdgeLength, attributes=om.PropertyAttributes(decimals=2, minimum=1e-2, maximum=1.0, singleStep=1e-2))
-        self.addProperty('RRT orientation weight', ikServer.rrtOrientationWeight, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=1e-2))
         self.addProperty('RRT max vertices', ikServer.rrtMaxNumVertices, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e5, singleStep=1e1))
         self.addProperty('RRT no. of smoothing passes', ikServer.rrtNSmoothingPasses, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e2, singleStep=1e0))
         self.addProperty('RRT goal bias', ikServer.rrtGoalBias, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=1e-2))
@@ -150,9 +149,6 @@ class IkOptionsItem(om.ObjectModelItem):
 
         if propertyName == 'RRT max edge length':
             self.ikServer.rrtMaxEdgeLength = self.getProperty(propertyName)
-
-        if propertyName == 'RRT orientation weight':
-            self.ikServer.rrtOrientationWeight = self.getProperty(propertyName)
 
         if propertyName == 'RRT max vertices':
             self.ikServer.rrtMaxNumVertices = self.getProperty(propertyName)

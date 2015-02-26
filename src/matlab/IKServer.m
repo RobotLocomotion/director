@@ -7,6 +7,7 @@ classdef IKServer
     ikoptions
     q_nom
     plan_publisher
+    min_distance = 1;
   end
 
   methods
@@ -57,6 +58,9 @@ classdef IKServer
         end
         if isfield(options, 'MajorOptimalityTolerance')
           obj.ikoptions = obj.ikoptions.setMajorOptimalityTolerance(options.MajorOptimalityTolerance);
+        end
+        if isfield(options, 'MinDistance')
+          obj.min_distance = options.MinDistance;
         end
       end
     end
@@ -189,6 +193,27 @@ classdef IKServer
       pts = obj.robot.body(bodyIndex).getTerrainContactPoints();
     end
 
+    function [q, info, infeasible_constraint] = runIk(obj, ik_seed_pose, ik_nominal_pose, constraints, use_collision)
+      if nargin < 5, use_collision = false; end
+      [q, info, infeasible_constraint] = inverseKin(obj.robot_and_environment, ik_seed_pose, ik_nominal_pose, constraints{:}, obj.ikoptions);
+      if (info > 10) 
+        display(infeasibleConstraintMsg(infeasible_constraint)); 
+        return;
+      end;
+      if use_collision
+        [phi, ~, ~, ~, idxA, idxB] = obj.robot_and_environment.collisionDetect(q);
+        if any(phi < obj.min_distance);
+          active_collision_options.body_idx = union(idxA(phi < 2*obj.min_distance), idxB(phi < 2*obj.min_distance)); 
+          collision_constraint = MinDistanceConstraint(obj.robot_and_environment, 1.2*obj.min_distance, active_collision_options); 
+          [q, info, infeasible_constraint] = obj.runIk(q, ik_nominal_pose, [constraints, {collision_constraint}],false);
+          phi = obj.robot_and_environment.collisionDetect(q);
+          if info < 10 && any(phi < obj.min_distance);
+            info = 13;
+            display('Could not satisfiy collision avoidance constraints.');
+          end
+        end
+      end
+    end
 
     function plan_time = getPlanTimeForJointVelocity(obj, xtraj, maxDegreesPerSecond)
 
