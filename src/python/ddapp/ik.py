@@ -218,24 +218,15 @@ class AsyncIKCommunicator():
         commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
         commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
         commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
+        commands.append('options.MinDistance = %f;' % self.collisionMinDistance)
         commands.append('s = s.setupOptions(options);')
         commands.append('clear q_end;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
         commands.append('\n')
-        commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, ik_seed_pose, ik_nominal_pose, active_constraints{:}, s.ikoptions);')
+        commands.append('use_collision = %s;' % ('true' if self.useCollision else 'false'))
+        commands.append('[q_end, info, infeasible_constraint] = s.runIk(ik_seed_pose, ik_nominal_pose, active_constraints, use_collision);')
         commands.append('\n')
-        commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
-
-
-        if self.useCollision:
-            commands.append('\n')
-            commands.append('collision_constraint = MinDistanceConstraint(r, %f);' % self.collisionMinDistance)
-            commands.append('collision_constraint  = collision_constraint.excludeCollisionGroups({excluded_collision_groups.name});')
-            commands.append('ik_seed_pose = q_end;')
-            commands.append('[q_end, info, infeasible_constraint] = inverseKin(r, ik_seed_pose, ik_nominal_pose, collision_constraint, active_constraints{:}, s.ikoptions);')
-            commands.append('\n')
-            commands.append('if (info > 10) disp(\'inverseKin with collision constraint infeasible.\'); display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
         commands.append('q_end(s.robot.getNumPositions()+1:end) = [];')
         commands.append('\n%-------- runIk end --------\n')
