@@ -122,7 +122,7 @@ class LCMLoggerWidget(object):
 
         elif selectedAction.text == 'Review log':
             newEnv = dict(os.environ)
-            newEnv['LCM_DEFAULT_URL'] = 'udpm://239.255.74.52:7452?ttl=0'
+            newEnv['LCM_DEFAULT_URL'] = newEnv['LCM_REVIEW_DEFAULT_URL']
             devnull = open(os.devnull, 'w')
             subprocess.Popen('drake-designer', stdout=devnull, stderr=devnull, env=newEnv)
             subprocess.Popen(['lcm-logplayer-gui', self.lastActiveLogFile], stdout=devnull, stderr=devnull, env=newEnv)
