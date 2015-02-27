@@ -100,7 +100,7 @@ class FootLockEstimator(object):
         position, quat = transformUtils.poseFromTransform(pelvisToWorld)
 
         msg = lcmbot.pose_t()
-        msg.utime = getUtime()
+        msg.utime = robotStateJointController.lastRobotStateMessage.utime
         msg.pos = [0.0, 0.0, 0.0]
         msg.orientation = quat.tolist()
 
