@@ -177,7 +177,7 @@ if usePerception:
     colorize.init()
 
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
-    multisensepanel.init(perception.multisenseDriver)
+    multisensepanel.init(perception.multisenseDriver, neckDriver)
     sensordatarequestpanel.init()
 
     # for kintinuous, use 'CAMERA_FUSED', 'CAMERA_TSDF'
