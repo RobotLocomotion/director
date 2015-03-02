@@ -989,7 +989,7 @@ class IKPlanner(object):
 
     def createAxisInPlaneConstraintAsymmetric(self, side, targetFrame, graspToHandLinkFrame):
         '''
-        Constrain the X axis of targetFrame to be in the XY plane of graspToHandLinkFrame in hand link.
+        Constrain the ?? axis of targetFrame to be in the ?? plane of graspToHandLinkFrame in hand link.
         Returns two relative position constraints.
         '''
 
