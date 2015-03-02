@@ -849,6 +849,20 @@ class IKPlanner(object):
         return constraintSet
 
 
+    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
+
+        self.reachingSide = side
+
+        startPoseName = 'reach_start'
+        self.addPose(startPose, startPoseName)
+
+        if constraints is None:
+            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
+
+        return self.newReachGoal(startPoseName, side, graspFrame, constraints)
+        
+
+
     def newReachGoals(self, startPoseName, rightFrame, leftFrame, constraints, graspToHandLinkFrame=None, lockOrient=True):
         
         graspToHandLeftLinkFrame = self.newGraspToHandFrame('left')
@@ -874,21 +888,6 @@ class IKPlanner(object):
         constraintSet = ConstraintSet(self, constraints, 'reach_end', startPoseName)
         
         return constraintSet
-
-
-    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
-
-        self.reachingSide = side
-
-        startPoseName = 'reach_start'
-        self.addPose(startPose, startPoseName)
-
-        if constraints is None:
-            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
-
-        return self.newReachGoal(startPoseName, side, graspFrame, constraints)
-        
-
 
     def planEndEffectorGoals(self, startPose, rightFrame, leftFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
         
