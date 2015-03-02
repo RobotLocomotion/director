@@ -356,33 +356,11 @@ if usePlanning:
                     robotStateJointController,
                     playPlans, showPose)
 
-    #bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
-    #                lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-    #                fitDrillMultisense, robotStateJointController,
-    #                playPlans, showPose, cameraview, segmentationpanel)
-                    
-    def constructBihandedDemo():
-        imp.reload(bihandeddemo)   
-        imp.reload(ikplanner)             
-        global bihandedDemo,b     
-        
-        tree = om.getOrCreateContainer('planning').getObjectTree()
-        tree.removeFromObjectModel(tree.findObjectByName('IK Planner Options'))
-        
-        ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)   
-        
-        bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+    bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
-                
-        bihandedDemo.board.spawnBoardAffordance()
-        bihandedDemo.board.findBoardAffordance()
-        b = bihandedDemo
-        
-    constructBihandedDemo()
 
-    
 
     splinewidget.init(view, handFactory, robotStateModel)
 
