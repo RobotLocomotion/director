@@ -180,6 +180,16 @@ if (USE_DRC)
     ddBotImageQueue.cpp
   )
 
+  set(moc_srcs)
+  qt4_wrap_cpp(moc_srcs
+    ddKinectLCM.h
+  )
+
+  list(APPEND srcs
+    ${moc_srcs}
+    ddKinectLCM.cpp
+  )
+
   list(APPEND wrap_files
     wrapped_methods_drc.txt
   )
@@ -187,10 +197,11 @@ if (USE_DRC)
   list (APPEND deps
     ${LIBBOT_LIBRARIES}
     ${PCL_LIBRARIES}
+    lcmtypes_kinect
   )
 
   list(APPEND pkg_deps
-    image-utils multisense_utils
+    image-utils multisense_utils kinect-utils
   )
 
 endif()
