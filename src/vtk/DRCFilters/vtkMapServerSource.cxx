@@ -44,6 +44,7 @@
 //#include <lcmtypes/drc_lcmtypes.hpp>
 #include <lcmtypes/drc/map_image_t.hpp>
 #include <lcmtypes/drc/map_cloud_t.hpp>
+#include <lcmtypes/drc/map_scans_t.hpp>
 #include <lcmtypes/drc/data_request_t.hpp>
 
 
@@ -51,6 +52,7 @@
 #include <maps/DepthImageView.hpp>
 #include <maps/DepthImage.hpp>
 #include <maps/PointCloudView.hpp>
+#include <maps/ScanBundleView.hpp>
 
 
 #include <sys/select.h>
@@ -229,6 +231,7 @@ public:
     this->NewData = false;
     this->MaxNumberOfDatasets = 20;
     this->ViewIds = vtkSmartPointer<vtkIntArray>::New();
+    this->LastScanBundleUtime = 0;
 
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
@@ -239,6 +242,7 @@ public:
     this->LCMHandle->subscribe( "MAP_DEPTH", &LCMListener::depthHandler, this);
     this->LCMHandle->subscribe( "MAP_DEBUG", &LCMListener::depthHandler, this);
     this->LCMHandle->subscribe( "MAP_CLOUD", &LCMListener::cloudHandler, this);
+    this->LCMHandle->subscribe( "MAP_SCANS", &LCMListener::scanBundleHandler, this);
   }
 
 
@@ -248,6 +252,11 @@ public:
   }
 
   void depthHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_image_t* msg)
+  {
+    this->HandleNewData(msg);
+  }
+
+  void scanBundleHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_scans_t* msg)
   {
     this->HandleNewData(msg);
   }
@@ -593,6 +602,33 @@ protected:
     this->NewData = true;
   }
 
+  void HandleNewData(const drc::map_scans_t* msg)
+  {
+    if (msg->utime == this->LastScanBundleUtime) return;
+    this->LastScanBundleUtime = msg->utime;
+
+    if (msg->num_scans == 0) return;
+
+    int viewId = msg->view_id;
+    maps::ScanBundleView bundleView;
+    maps::LcmTranslator::fromLcm(*msg, bundleView);
+
+    maps::PointCloud::Ptr pointCloud = bundleView.getAsPointCloud();
+
+    MapData mapData;
+    mapData.Data = PolyDataFromPointCloud(pointCloud);
+    mapData.Transform = this->ToVtkTransform(bundleView.getTransform());
+    mapData.Mesh = mapData.Data;
+
+    // store data
+    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    mapData.Id = this->GetNextMapId(viewId);
+    datasets.push_back(mapData);
+    this->UpdateDequeSize(datasets);
+    this->NewData = true;
+  }
+
   bool NewData;
   bool ShouldStop;
   int MaxNumberOfDatasets;
@@ -600,6 +636,7 @@ protected:
   vtkSmartPointer<vtkIntArray> ViewIds;
 
   boost::mutex Mutex;
+  int64_t LastScanBundleUtime;
 
   std::map<int, std::deque<MapData> > Datasets;
   std::map<int, vtkIdType> CurrentMapIds;
