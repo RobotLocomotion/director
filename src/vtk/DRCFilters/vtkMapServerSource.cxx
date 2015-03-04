@@ -44,6 +44,7 @@
 //#include <lcmtypes/drc_lcmtypes.hpp>
 #include <lcmtypes/drc/map_image_t.hpp>
 #include <lcmtypes/drc/map_cloud_t.hpp>
+#include <lcmtypes/drc/map_octree_t.hpp>
 #include <lcmtypes/drc/map_scans_t.hpp>
 #include <lcmtypes/drc/data_request_t.hpp>
 
@@ -52,6 +53,7 @@
 #include <maps/DepthImageView.hpp>
 #include <maps/DepthImage.hpp>
 #include <maps/PointCloudView.hpp>
+#include <maps/OctreeView.hpp>
 #include <maps/ScanBundleView.hpp>
 
 
@@ -242,6 +244,7 @@ public:
     this->LCMHandle->subscribe( "MAP_DEPTH", &LCMListener::depthHandler, this);
     this->LCMHandle->subscribe( "MAP_DEBUG", &LCMListener::depthHandler, this);
     this->LCMHandle->subscribe( "MAP_CLOUD", &LCMListener::cloudHandler, this);
+    this->LCMHandle->subscribe( "MAP_OCTREE", &LCMListener::octreeHandler, this);
     this->LCMHandle->subscribe( "MAP_SCANS", &LCMListener::scanBundleHandler, this);
   }
 
@@ -252,6 +255,11 @@ public:
   }
 
   void depthHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_image_t* msg)
+  {
+    this->HandleNewData(msg);
+  }
+
+  void octreeHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_octree_t* msg)
   {
     this->HandleNewData(msg);
   }
@@ -592,6 +600,28 @@ protected:
     mapData.Data = PolyDataFromPointCloud(pointCloud);
 
     //printf("storing cloud map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
+
+    // store data
+    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::deque<MapData>& datasets = this->Datasets[viewId];
+    mapData.Id = this->GetNextMapId(viewId);
+    datasets.push_back(mapData);
+    this->UpdateDequeSize(datasets);
+    this->NewData = true;
+  }
+
+  void HandleNewData(const drc::map_octree_t* msg)
+  {
+    int viewId = msg->view_id;
+    maps::OctreeView octreeView;
+    maps::LcmTranslator::fromLcm(*msg, octreeView);
+
+    maps::PointCloud::Ptr pointCloud = octreeView.getAsPointCloud();
+
+    MapData mapData;
+    mapData.Data = PolyDataFromPointCloud(pointCloud);
+    mapData.Transform = this->ToVtkTransform(octreeView.getTransform());
+    mapData.Mesh = mapData.Data;
 
     // store data
     boost::lock_guard<boost::mutex> lock(this->Mutex);
