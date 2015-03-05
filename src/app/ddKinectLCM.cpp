@@ -114,6 +114,9 @@ void ddKinectLCM::init(ddLCMThread* lcmThread, const QString& botConfigFile)
 
   decimate_ =1.0;
 
+  this->polyDataKinect = vtkPolyData::New();
+
+
 
 
 }
@@ -300,25 +303,7 @@ void unpack_kinect_frame(const kinect_frame_msg_t *msg, uint8_t* rgb_data, Kinec
 
 
 
-void ddKinectLCM::onKinectFrame(const QByteArray& data, const QString& channel)
-{
-  
-  kinect_frame_msg_t message;
-  //message.decode(data.data(), 0, data.size());
-  kinect_frame_msg_t_decode (data.data(), 0, 1e9, &message);
 
-  printf("got kinect frame %d\n", message.timestamp);
-
-  //convert to pcl object
-
-
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-  unpack_kinect_frame(&message, rgb_buf_, kcal, decimate_,  cloud);
-  //polyData->ShallowCopy(PolyDataFromPointCloud(cloud));
-  printf("Decoded point cloud with %u\n", cloud->size());
-  
-
-}
 
 
 
@@ -750,6 +735,33 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXY
 };
 
 //-----------------------------------------------------------------------------
+
+void ddKinectLCM::onKinectFrame(const QByteArray& data, const QString& channel)
+{
+  
+  kinect_frame_msg_t message;
+  //message.decode(data.data(), 0, data.size());
+  kinect_frame_msg_t_decode (data.data(), 0, 1e9, &message);
+
+  printf("got kinect frame %d\n", message.timestamp);
+
+  //convert to pcl object
+
+
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+  unpack_kinect_frame(&message, rgb_buf_, kcal, decimate_,  cloud);
+  //polyData->ShallowCopy(PolyDataFromPointCloud(cloud));
+  printf("Decoded point cloud with %u\n", cloud->size());
+
+  //vtkPolyData* polyDataKinectq;
+  polyDataKinect->DeepCopy(PolyDataFromPointCloud(cloud));
+  
+  
+
+}
+
+//-----------------------------------------------------------------------------
+
 void ddKinectLCM::getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize)
 {
   if (!this->mImagesMessageMap.contains(channel))

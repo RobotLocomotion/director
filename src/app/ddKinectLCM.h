@@ -154,6 +154,8 @@ protected:
   int decimate_;
     
   uint8_t* rgb_buf_ ;
+
+  vtkPolyData* polyDataKinect;
 };
 
 #endif
