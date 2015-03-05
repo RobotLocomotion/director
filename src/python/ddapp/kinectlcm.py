@@ -24,9 +24,21 @@ import multisense as lcmmultisense
 
 
 def init():
+    global KinectQueue
     KinectQueue = PythonQt.dd.ddKinectLCM(lcmUtils.getGlobalLCMThread())
     KinectQueue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
 
+
+def renderKinectPointCloud():
+    # view = view or app.getCurrentRenderView()
+    # if view is None:
+    #     return
+    p = vtk.vtkPolyData()
+    print("will grab the last point cloud in python \n")
+    KinectQueue.getPointCloudFromKinect(p)
+    print("grabbed the last point cloud in python, will render now \n")
+    obj = vis.showPolyData (p, 'kinect cloud')
+    print("director rendered last point cloud \n")
 
 # def clipRange(dataObj, arrayName, thresholdRange):
 #     if not dataObj.GetPointData().GetArray(arrayName):

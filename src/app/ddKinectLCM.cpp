@@ -797,6 +797,15 @@ void ddKinectLCM::getPointCloudFromImages(const QString& channel, vtkPolyData* p
   polyData->ShallowCopy(PolyDataFromPointCloud(cloud));
 }
 
+
+//-----------------------------------------------------------------------------
+
+void ddKinectLCM::getPointCloudFromKinect(vtkPolyData* polyDataRender)
+{
+  polyDataRender->DeepCopy(polyDataKinect);
+}
+
+
 //-----------------------------------------------------------------------------
 int ddKinectLCM::projectPoints(const QString& cameraName, vtkPolyData* polyData)
 {

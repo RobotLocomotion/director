@@ -85,6 +85,7 @@ public:
   bool addCameraStream(const QString& channel, const QString& cameraName, int imageType);
 
   void init(ddLCMThread* lcmThread, const QString& botConfigFile);
+  void getPointCloudFromKinect(vtkPolyData* polyDataRender);
 
   qint64 getImage(const QString& cameraName, vtkImageData* image);
   qint64 getCurrentImageTime(const QString& cameraName);
@@ -124,6 +125,7 @@ protected slots:
   void onImagesMessage(const QByteArray& data, const QString& channel);
   void onImageMessage(const QByteArray& data, const QString& channel);
   void onKinectFrame(const QByteArray& data, const QString& channel);
+
 
 protected:
 

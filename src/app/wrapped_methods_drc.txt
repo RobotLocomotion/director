@@ -20,3 +20,4 @@ ddKinectLCM::ddKinectLCM(QObject*);
 ddKinectLCM::ddKinectLCM();
 ddKinectLCM::~ddBotImageQueue();
 void ddKinectLCM::init(ddLCMThread*, const QString&);
+void ddKinectLCM::getPointCloudFromKinect(vtkPolyData*)
