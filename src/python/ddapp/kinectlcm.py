@@ -46,7 +46,9 @@ def init():
     global KinectQueue
     KinectQueue = PythonQt.dd.ddKinectLCM(lcmUtils.getGlobalLCMThread())
     KinectQueue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
-    startKinectLCM()
+    #startKinectLCM()
+
+
     # global app, view
     # app = ConsoleApp()
     # app.setupGlobals(globals())
