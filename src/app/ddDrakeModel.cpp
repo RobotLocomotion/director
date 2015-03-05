@@ -928,7 +928,7 @@ int ddDrakeModel::numberOfJoints()
     return 0;
   }
 
-  return this->Internal->Model->num_dof;
+  return this->Internal->Model->num_positions;
 }
 
 //-----------------------------------------------------------------------------
@@ -951,7 +951,7 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
     return;
   }
 
-  if (this->Internal->JointPositions.size() != model->num_dof)
+  if (this->Internal->JointPositions.size() != model->num_positions)
   {
     std::cout << "Internal joint positions vector has inconsistent size." << std::endl;
     return;
@@ -986,21 +986,21 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
     return;
   }
 
-  if (jointPositions.size() != model->num_dof)
+  if (jointPositions.size() != model->num_positions)
   {
     std::cout << "ddDrakeModel::setJointPositions(): input jointPositions size "
-              << jointPositions.size() << " != " << model->num_dof << std::endl;
+              << jointPositions.size() << " != " << model->num_positions << std::endl;
     return;
   }
 
-  MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
+  MatrixXd q = MatrixXd::Zero(model->num_positions, 1);
   for (int i = 0; i < jointPositions.size(); ++i)
   {
     q(i, 0) = jointPositions[i];
   }
 
   this->Internal->JointPositions = jointPositions;
-  model->doKinematics(q.data());
+  model->doKinematics(q);
   model->updateModel();
   emit this->modelChanged();
 }
@@ -1115,7 +1115,7 @@ bool ddDrakeModel::loadFromFile(const QString& filename)
   this->Internal->FileName = filename;
   this->Internal->Model = model;
 
-  this->setJointPositions(QVector<double>(model->num_dof, 0.0));
+  this->setJointPositions(QVector<double>(model->num_positions, 0.0));
   return true;
 }
 
@@ -1131,7 +1131,7 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
   this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
 
-  this->setJointPositions(QVector<double>(model->num_dof, 0.0));
+  this->setJointPositions(QVector<double>(model->num_positions, 0.0));
   return true;
 }
 
