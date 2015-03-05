@@ -20,6 +20,25 @@ from ddapp import ioUtils
 import sys
 import drc as lcmdrc
 import multisense as lcmmultisense
+from ddapp.consoleapp import ConsoleApp
+
+
+
+pointCloudTransform = transformUtils.transformFromPose([-0.17790587, -1.24393384, 0.22335996], [0.71466764, -0.64979598,  0.17682733, -0.18906994])
+
+f = vis.showFrame(pointCloudTransform, 'point cloud transform', scale=0.2, visible=False)
+
+w = vis.showFrame(vtk.vtkTransform(), 'widget', scale=0.7)
+frameSync = vis.FrameSync()
+frameSync.addFrame(f)
+frameSync.addFrame(w)
+
+def zeroWidget():
+    frameSync.removeFrame(w)
+    w.copyFrame(transformUtils.frameFromPositionAndRPY(w.transform.GetPosition(), [0.0, 0.0, 0.0]))
+    frameSync.addFrame(w)
+
+app.addToolbarMacro('zero widget', zeroWidget)
 
 
 
@@ -27,9 +46,18 @@ def init():
     global KinectQueue
     KinectQueue = PythonQt.dd.ddKinectLCM(lcmUtils.getGlobalLCMThread())
     KinectQueue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
+    startKinectLCM()
+    # global app, view
+    # app = ConsoleApp()
+    # app.setupGlobals(globals())
+    # app.showPythonConsole()
+    # view = app.createView()
+    # view.show()
+    # app.start()
 
 
-def renderKinectPointCloud():
+
+def renderLastKinectPointCloud():
     # view = view or app.getCurrentRenderView()
     # if view is None:
     #     return
@@ -39,6 +67,65 @@ def renderKinectPointCloud():
     print("grabbed the last point cloud in python, will render now \n")
     obj = vis.showPolyData (p, 'kinect cloud')
     print("director rendered last point cloud \n")
+
+
+
+
+
+def startKinectLCM():
+
+    global source, obj, t
+    p = vtk.vtkPolyData()
+    
+    #obj = vis.showPolyData (p, 'kinect cloud')
+    
+
+    source = vtk.vtkPCLOpenNISource()
+
+    source.Update()
+
+    KinectQueue.getPointCloudFromKinect(p)
+    obj = vis.showPolyData(shallowCopy(p), 'kinect source')
+
+
+
+    print obj.getArrayNames()
+    obj.initialized = False
+
+    def updateSource():
+
+        p = vtk.vtkPolyData()
+        KinectQueue.getPointCloudFromKinect(p)
+
+        if not p.GetNumberOfPoints():
+            return
+
+        p = filterUtils.transformPolyData(p,pointCloudTransform)
+        obj.setPolyData(p)
+
+        if not obj.initialized:
+            obj.setProperty('Color By', 'rgb_colors')
+            obj.initialized = True
+
+        #print source.GetOutput().GetNumberOfPoints()
+
+
+    global timerCallback
+    timerCallback = TimerCallback(targetFps=30)
+    timerCallback.callback = updateSource
+    timerCallback.start()
+
+    source.StartGrabber()    
+
+
+
+
+
+
+
+
+
+
 
 # def clipRange(dataObj, arrayName, thresholdRange):
 #     if not dataObj.GetPointData().GetArray(arrayName):
