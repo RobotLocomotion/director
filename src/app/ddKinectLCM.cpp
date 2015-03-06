@@ -747,6 +747,8 @@ void ddKinectLCM::onKinectFrame(const QByteArray& data, const QString& channel)
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
   unpack_kinect_frame(&message, rgb_buf_, kcal, decimate_,  cloud);
   //polyData->ShallowCopy(PolyDataFromPointCloud(cloud));
+
+  kinect_frame_msg_t_decode_cleanup(&message);
   printf("Decoded point cloud with %u\n", cloud->size());
 
   //vtkPolyData* polyDataKinectq;
