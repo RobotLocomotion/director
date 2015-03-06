@@ -420,17 +420,17 @@ ddMeshVisual::Ptr makeBoxVisual(double x, double y, double z)
   return visualFromPolyData(shallowCopy(cube->GetOutput()));
 }
 
-class URDFRigidBodyManipulatorVTK : public URDFRigidBodyManipulator
+class URDFRigidBodyManipulatorVTK : public RigidBodyManipulator
 {
 public:
 
-  typedef std::map<boost::shared_ptr<urdf::Visual>, std::vector<ddMeshVisual::Ptr> > MeshMapType;
+  //typedef std::map<boost::shared_ptr<urdf::Visual>, std::vector<ddMeshVisual::Ptr> > MeshMapType;
 
-  MeshMapType mesh_map;
+  //MeshMapType mesh_map;
 
   ddPtrMacro(URDFRigidBodyManipulatorVTK);
 
-  URDFRigidBodyManipulatorVTK()
+  URDFRigidBodyManipulatorVTK() : RigidBodyManipulator(1)
   {
 
   }
@@ -443,6 +443,7 @@ public:
   std::vector<ddMeshVisual::Ptr> meshVisuals()
   {
     std::vector<ddMeshVisual::Ptr> visuals;
+    /*
     for (MeshMapType::iterator itr = mesh_map.begin(); itr != mesh_map.end(); ++itr)
     {
       for (size_t i = 0; i < itr->second.size(); ++i)
@@ -450,14 +451,16 @@ public:
         visuals.push_back(itr->second[i]);
       }
     }
+    */
     return visuals;
   }
 
-  std::string locateMeshFile(boost::shared_ptr<urdf::Mesh> mesh, std::string root_dir)
+  //std::string locateMeshFile(boost::shared_ptr<urdf::Mesh> mesh, std::string root_dir)
+  std::string locateMeshFile(const std::string& meshFilename, const std::string& root_dir)
   {
 
-    string fname = mesh->filename;
-    bool has_package = boost::find_first(mesh->filename,"package://");
+    string fname = meshFilename;
+    bool has_package = boost::find_first(meshFilename,"package://");
 
     if (has_package)
     {
@@ -480,7 +483,7 @@ public:
     }
     else
     {
-      fname = root_dir + "/" + mesh->filename;
+      fname = root_dir + "/" + meshFilename;
     }
 
     if (!boost::filesystem::exists(fname))
@@ -522,7 +525,7 @@ public:
     return std::string();
   }
 
-
+  /*
   virtual bool addURDF(boost::shared_ptr<urdf::ModelInterface> _urdf_model,
                        std::map<std::string, int> jointname_to_jointnum,
                        std::map<std::string,int> dofname_to_dofnum,
@@ -603,7 +606,7 @@ public:
 
     return true;
   }
-
+  */
 
   virtual void updateModel()
   {
@@ -611,6 +614,38 @@ public:
     double theta, axis[3], quat[4];
     double angleAxis[4];
     Matrix<double,7,1> pose;
+
+    RigidBodyManipulator* model = this;
+
+    //std::cout << "====================" << std::endl;
+    //std::cout << "num positions: " << model->num_positions << std::endl;
+
+    for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
+    {
+
+      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+
+      /*
+      std::cout << "-----------------------------" << std::endl;
+      std::cout << "body linkname: " << body->linkname << std::endl;
+      std::cout << "body body_index: " << body->body_index << std::endl;
+      std::cout << "body robotnum: " << body->robotnum << std::endl;
+      std::cout << "body jointname: " << body->jointname << std::endl;
+      std::cout << "body position_num_start: " << body->position_num_start << std::endl;
+      if (body->hasParent())
+	    {
+	      std::cout << "body joint getname: " << body->getJoint().getName() << std::endl;
+	    }
+          else
+	    {
+	      std::cout << "body no parent. " << std::endl;
+	    }
+      */
+
+      model->forwardKin(body->body_index, zero, 2, pose);
+    }
+
+    #if 0
 
     // iterate over each model
     for (int robot=0; robot< urdf_model.size(); robot++)
@@ -759,6 +794,9 @@ public:
         } // end loop over visuals
       } // end loop over links
     } // end loop over robots
+
+    #endif
+
   }
 
 
@@ -766,6 +804,18 @@ public:
   {
     QMap<QString, int> linkMap;
 
+
+    RigidBodyManipulator* model = this;
+
+    for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
+    {
+      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+      //std::cout << "body linkname: " << body->linkname << std::endl;
+      //std::cout << "body body_index: " << body->body_index << std::endl;
+      linkMap[body->linkname.c_str()] = body->body_index;
+    }
+
+    /*
     // iterate over each model
     for (int robot=0; robot< urdf_model.size(); robot++)
     {
@@ -792,6 +842,8 @@ public:
       }
     }
 
+    */
+
     return linkMap;
 
   }
@@ -812,7 +864,8 @@ public:
     double angleAxis[4];
     Matrix<double, 7 ,1> pose;
 
-    forwardKin(linkMap.value(linkName), zero, 2, pose);
+    RigidBodyManipulator* model = this;
+    model->forwardKin(linkMap.value(linkName), zero, 2, pose);
 
     double* posedata = pose.data();
     bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
@@ -860,7 +913,7 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
     if (!mypath.empty() && mypath.has_parent_path())  
       pathname = mypath.parent_path().native();
 
-    if (!model->addURDFfromXML(xml_string, pathname))
+    if (!model->addRobotFromURDFString(xml_string, pathname))
     {
       return URDFRigidBodyManipulatorVTK::Ptr();
     }
@@ -874,7 +927,7 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
 URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromXML(const string &xmlString)
 {
   URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
-  if (!model->addURDFfromXML(xmlString, ""))
+  if (!model->addRobotFromURDFString(xmlString, ""))
   {
     return URDFRigidBodyManipulatorVTK::Ptr();
   }
@@ -942,7 +995,7 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
     return;
   }
 
-  const std::map<std::string, int> dofMap = model->dof_map[0];
+  //const std::map<std::string, int> dofMap = model->dof_map[0];
 
   if (jointPositions.size() != jointNames.size())
   {
@@ -961,14 +1014,19 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
   {
     const QString& dofName = jointNames[i];
 
-    std::map<std::string, int>::const_iterator itr = dofMap.find(dofName.toAscii().data());
-    if (itr == dofMap.end())
-    {
-      printf("Could not find URDF model dof with name: %s\n", qPrintable(dofName));
-      continue;
-    }
+    //std::map<std::string, int>::const_iterator itr = dofMap.find(dofName.toAscii().data());
+    //if (itr == dofMap.end())
+    //{
+    //  printf("Could not find URDF model dof with name: %s\n", qPrintable(dofName));
+    //  continue;
+    //}
 
-    int dofId = itr->second;
+    //int dofId = itr->second;
+
+    // todo: use body num_position_start to map joint name to q index
+    // for base xyz rpy, need to find body with linkname and no parent (i.e., pelvis)
+    int dofId = i;
+
     this->Internal->JointPositions[dofId] = jointPositions[i];
   }
 
@@ -993,10 +1051,10 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
     return;
   }
 
-  MatrixXd q = MatrixXd::Zero(model->num_positions, 1);
+  VectorXd q = VectorXd::Zero(model->num_positions);
   for (int i = 0; i < jointPositions.size(); ++i)
   {
-    q(i, 0) = jointPositions[i];
+    q(i) = jointPositions[i];
   }
 
   this->Internal->JointPositions = jointPositions;
@@ -1025,6 +1083,7 @@ QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
     return limits;
   }
 
+  /*
   const std::map<std::string, int> dofMap = model->dof_map[0];
 
   std::map<std::string, int>::const_iterator itr = dofMap.find(jointName.toAscii().data());
@@ -1035,6 +1094,22 @@ QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
   }
 
   int dofId = itr->second;
+  */
+
+  // todo: need correct dof map here
+  //std::cout << "looking for dof id of: " << jointName.toAscii().data() << std::endl;
+
+  int dofId = 0;
+  for (size_t i = 0; i < model->bodies.size(); ++i)
+    {
+      std::shared_ptr<RigidBody> body = model->bodies[i];
+      if (body->jointname == jointName.toAscii().data())
+	    {
+	    dofId = i;
+	    //std::cout << " found: " << dofId << std::endl;
+	    break;
+	    }
+    }
 
   limits[0] = this->Internal->Model->joint_limit_min[dofId];
   limits[1] = this->Internal->Model->joint_limit_max[dofId];
@@ -1078,12 +1153,22 @@ QList<QString> ddDrakeModel::getJointNames()
 
   QList<QString> names;
 
+  /*
   const std::map<std::string, int> dofMap = this->Internal->Model->dof_map[0];
   std::map<std::string, int>::const_iterator itr;
   for(itr = dofMap.begin(); itr != dofMap.end(); ++itr)
   {
     names.append(itr->first.c_str());
   }
+  */
+
+  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+
+  for (size_t i = 0; i < model->bodies.size(); ++i)
+    {
+      std::shared_ptr<RigidBody> body = model->bodies[i];
+      names.append(body->jointname.c_str()); 
+    }
 
   return names;
 }
