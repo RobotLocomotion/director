@@ -24,21 +24,6 @@ from ddapp.consoleapp import ConsoleApp
 
 
 
-pointCloudTransform = transformUtils.transformFromPose([-0.17790587, -1.24393384, 0.22335996], [0.71466764, -0.64979598,  0.17682733, -0.18906994])
-
-f = vis.showFrame(pointCloudTransform, 'point cloud transform', scale=0.2, visible=False)
-
-w = vis.showFrame(vtk.vtkTransform(), 'widget', scale=0.7)
-frameSync = vis.FrameSync()
-frameSync.addFrame(f)
-frameSync.addFrame(w)
-
-def zeroWidget():
-    frameSync.removeFrame(w)
-    w.copyFrame(transformUtils.frameFromPositionAndRPY(w.transform.GetPosition(), [0.0, 0.0, 0.0]))
-    frameSync.addFrame(w)
-
-app.addToolbarMacro('zero widget', zeroWidget)
 
 
 
@@ -46,7 +31,7 @@ def init():
     global KinectQueue
     KinectQueue = PythonQt.dd.ddKinectLCM(lcmUtils.getGlobalLCMThread())
     KinectQueue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
-    #startKinectLCM()
+    
 
 
     # global app, view
@@ -117,11 +102,29 @@ def startKinectLCM():
     timerCallback.callback = updateSource
     timerCallback.start()
 
-    source.StartGrabber()    
+    source.StartGrabber()  
+
+def startButton():
+    init()
+    startKinectLCM()
 
 
+pointCloudTransform = transformUtils.transformFromPose([-0.17790587, -1.24393384, 0.22335996], [0.71466764, -0.64979598,  0.17682733, -0.18906994])
 
+f = vis.showFrame(pointCloudTransform, 'point cloud transform', scale=0.2, visible=False)
 
+w = vis.showFrame(vtk.vtkTransform(), 'widget', scale=0.7)
+frameSync = vis.FrameSync()
+frameSync.addFrame(f)
+frameSync.addFrame(w)
+
+def zeroWidget():
+    frameSync.removeFrame(w)
+    w.copyFrame(transformUtils.frameFromPositionAndRPY(w.transform.GetPosition(), [0.0, 0.0, 0.0]))
+    frameSync.addFrame(w)
+
+app.addToolbarMacro('zero widget', zeroWidget)      
+app.addToolbarMacro('start live kinect', startButton)
 
 
 
