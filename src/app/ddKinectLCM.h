@@ -157,7 +157,9 @@ protected:
     
   uint8_t* rgb_buf_ ;
 
-  vtkPolyData* polyDataKinect;
+  vtkSmartPointer<vtkPolyData> mPolyData;
+  QMutex mPolyDataMutex;
+
 };
 
 #endif

@@ -18,6 +18,8 @@ ddKinectLCM::ddKinectLCM(QObject* parent) : QObject(parent)
 {
   mBotParam = 0;
   mBotFrames = 0;
+
+  mPolyData = vtkSmartPointer<vtkPolyData>::New();
 }
 
 //-----------------------------------------------------------------------------
@@ -113,12 +115,6 @@ void ddKinectLCM::init(ddLCMThread* lcmThread, const QString& botConfigFile)
 
 
   decimate_ =1.0;
-
-  this->polyDataKinect = vtkPolyData::New();
-
-
-
-
 }
 
 
@@ -754,10 +750,11 @@ void ddKinectLCM::onKinectFrame(const QByteArray& data, const QString& channel)
   printf("Decoded point cloud with %u\n", cloud->size());
 
   //vtkPolyData* polyDataKinectq;
-  polyDataKinect->DeepCopy(PolyDataFromPointCloud(cloud));
-  
-  
 
+  vtkSmartPointer<vtkPolyData> polyData = PolyDataFromPointCloud(cloud);
+
+  QMutexLocker locker(&this->mPolyDataMutex);
+  this->mPolyData = polyData;
 }
 
 //-----------------------------------------------------------------------------
@@ -799,10 +796,10 @@ void ddKinectLCM::getPointCloudFromImages(const QString& channel, vtkPolyData* p
 
 
 //-----------------------------------------------------------------------------
-
 void ddKinectLCM::getPointCloudFromKinect(vtkPolyData* polyDataRender)
 {
-  polyDataRender->DeepCopy(polyDataKinect);
+  QMutexLocker locker(&this->mPolyDataMutex);
+  polyDataRender->ShallowCopy(this->mPolyData);
 }
 
 
