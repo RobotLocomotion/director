@@ -328,7 +328,7 @@ if usePlanning:
     footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
     manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
-    teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
+    teleopPanel = teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
 
