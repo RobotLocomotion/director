@@ -272,6 +272,7 @@ def setupPackagePaths():
         'software/models/atlas_v4',
         'software/models/atlas_v5',
         'software/models/valkyrie',
+        'software/models/lwr_defs',
         'software/models/mit_gazebo_models/mit_robot',
         'software/models/common_components/multisense_sl',
         'software/models/common_components/irobot_hand',
