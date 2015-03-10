@@ -63,13 +63,6 @@ def startKinectLCM():
 
     global source, obj, t
     p = vtk.vtkPolyData()
-    
-    #obj = vis.showPolyData (p, 'kinect cloud')
-    
-
-    source = vtk.vtkPCLOpenNISource()
-
-    source.Update()
 
     KinectQueue.getPointCloudFromKinect(p)
     obj = vis.showPolyData(shallowCopy(p), 'kinect source')
@@ -94,15 +87,12 @@ def startKinectLCM():
             obj.setProperty('Color By', 'rgb_colors')
             obj.initialized = True
 
-        #print source.GetOutput().GetNumberOfPoints()
-
 
     global timerCallback
     timerCallback = TimerCallback(targetFps=30)
     timerCallback.callback = updateSource
     timerCallback.start()
-
-    source.StartGrabber()  
+     
 
 def startButton():
     init()
