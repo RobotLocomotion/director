@@ -498,6 +498,31 @@ public:
       }
 
     }
+
+
+
+    std::cout << "====================" << std::endl;
+    std::cout << "num positions: " << model->num_positions << std::endl;
+
+     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
+     {
+
+       std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+
+      std::cout << "-----------------------------" << std::endl;
+      std::cout << "body linkname: " << body->linkname << std::endl;
+      std::cout << "body body_index: " << body->body_index << std::endl;
+      std::cout << "body robotnum: " << body->robotnum << std::endl;
+      std::cout << "body position_num_start: " << body->position_num_start << std::endl;
+      if (body->hasParent())
+	    {
+	      std::cout << "body joint name: " << body->getJoint().getName() << std::endl;
+	      std::cout << "body joint num positions: " << body->getJoint().getNumPositions() << std::endl;
+	    }
+
+    }
+
+
   }
 
   virtual ~URDFRigidBodyManipulatorVTK()

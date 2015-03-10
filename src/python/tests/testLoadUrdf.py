@@ -7,6 +7,9 @@ view = app.createView()
 
 robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
 
+robotStateModel.addToView(view)
+
 if app.getTestingInteractiveEnabled():
+
     view.show()
     app.start()
