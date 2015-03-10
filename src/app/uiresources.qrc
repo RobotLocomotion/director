@@ -12,6 +12,7 @@
     <file>ddAtlasDriverPanel.ui</file>
     <file>ddScreenGrabber.ui</file>
     <file>ddTeleopPanel.ui</file>
+    <file>ddValveTaskPanel.ui</file>
     <file>ddVideoPlayer.ui</file>
     <file>ddSensorDataRequest.ui</file>
     <file>ddPFGrasp.ui</file>
