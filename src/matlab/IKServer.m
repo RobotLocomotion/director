@@ -236,7 +236,7 @@ classdef IKServer
 
     end
 
-    function publishTraj(obj, xtraj, snopt_info, timeInSeconds)
+    function publishTraj(obj, xtraj, snopt_info)
 
       utime = now() * 24 * 60 * 60;
       nq_atlas = obj.robot.getNumPositions;
@@ -246,7 +246,6 @@ classdef IKServer
       xtraj_atlas(2+(1:nq_atlas),:) = q(1:nq_atlas,:);
       snopt_info_vector = snopt_info*ones(1, size(xtraj_atlas,2));
 
-      ts = ts*timeInSeconds;
       ts = ts - ts(1);
       obj.plan_publisher.publish(xtraj_atlas, ts, utime, snopt_info_vector);
 
