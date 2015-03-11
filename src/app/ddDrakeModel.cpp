@@ -450,14 +450,8 @@ public:
 
   ddPtrMacro(URDFRigidBodyManipulatorVTK);
 
-  URDFRigidBodyManipulatorVTK() : RigidBodyManipulator(0,0,1,0)
-  {
-    bodies[0]->linkname = "world";
-    bodies[0]->robotnum = 0;
-    bodies[0]->body_index = 0;
-
-    //use_new_kinsol = true;
-  }
+  URDFRigidBodyManipulatorVTK() : RigidBodyManipulator()
+  {}
 
   void computeDofMap()
   {
@@ -619,7 +613,7 @@ public:
   void loadVisuals(const std::string& root_dir=".")
   {
 
-    printf("load visuals...\n");
+    //printf("load visuals...\n");
     RigidBodyManipulator* model = this;
 
     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
@@ -627,17 +621,17 @@ public:
 
       std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
 
-      printf("body: %s\n", body->linkname.c_str());
+      //printf("body: %s\n", body->linkname.c_str());
 
       for (size_t visualIndex = 0 ; visualIndex < body->visual_elements.size(); ++visualIndex)
       {
-        printf("vi %d\n", visualIndex);
+        //printf("vi %d\n", visualIndex);
 
         const DrakeShapes::VisualElement& visual = body->visual_elements[visualIndex];
 
         const DrakeShapes::Shape visualType = visual.getShape();
 
-        printf("shape: %d\n", visualType);
+        //printf("shape: %d\n", visualType);
 
         std::vector<ddMeshVisual::Ptr> loadedVisuals;
 
@@ -645,37 +639,37 @@ public:
         if (visualType == DrakeShapes::MESH)
         {
 
-          const DrakeShapes::Mesh* mesh = static_cast<const DrakeShapes::Mesh*>(visual.getGeometry());
+          const DrakeShapes::Mesh& mesh = static_cast<const DrakeShapes::Mesh&>(visual.getGeometry());
 
-          std::string filename = locateMeshFile(mesh->filename, root_dir);
+          std::string filename = locateMeshFile(mesh.filename, root_dir);
           if (filename.size())
           {
-            printf("loading mesh: %s\n", filename.c_str());
+            //printf("loading mesh: %s\n", filename.c_str());
             loadedVisuals = loadMeshVisuals(filename);
           }
 
         }
         else if (visualType == DrakeShapes::SPHERE)
         {
-          const DrakeShapes::Sphere* sphere = static_cast<const DrakeShapes::Sphere*>(visual.getGeometry());
-          double radius = sphere->radius;
+          const DrakeShapes::Sphere& sphere = static_cast<const DrakeShapes::Sphere&>(visual.getGeometry());
+          double radius = sphere.radius;
           loadedVisuals.push_back(makeSphereVisual(radius));
         }
         else if (visualType == DrakeShapes::BOX)
         {
-          const DrakeShapes::Box* box = static_cast<const DrakeShapes::Box*>(visual.getGeometry());
+          const DrakeShapes::Box& box = static_cast<const DrakeShapes::Box&>(visual.getGeometry());
 
-          loadedVisuals.push_back(makeBoxVisual(box->size[0], box->size[1], box->size[2]));
+          loadedVisuals.push_back(makeBoxVisual(box.size[0], box.size[1], box.size[2]));
         }
         else if (visualType == DrakeShapes::CYLINDER)
         {
-          const DrakeShapes::Cylinder* cyl = static_cast<const DrakeShapes::Cylinder*>(visual.getGeometry());
-          loadedVisuals.push_back(makeCylinderVisual(cyl->radius, cyl->length));
+          const DrakeShapes::Cylinder& cyl = static_cast<const DrakeShapes::Cylinder&>(visual.getGeometry());
+          loadedVisuals.push_back(makeCylinderVisual(cyl.radius, cyl.length));
         }
         else if (visualType == DrakeShapes::CAPSULE)
         {
-          const DrakeShapes::Capsule* cyl = static_cast<const DrakeShapes::Capsule*>(visual.getGeometry());
-          loadedVisuals.push_back(makeCylinderVisual(cyl->radius, cyl->length));
+          const DrakeShapes::Capsule& cyl = static_cast<const DrakeShapes::Capsule&>(visual.getGeometry());
+          loadedVisuals.push_back(makeCylinderVisual(cyl.radius, cyl.length));
         }
 
         for (size_t mvi = 0; mvi < loadedVisuals.size(); ++mvi)
@@ -695,7 +689,7 @@ public:
       }
     }
 
-    printf("done\n");
+    //printf("done\n");
 
   }
 
@@ -722,7 +716,11 @@ public:
         continue;
       }
 
-      model->forwardKin(body->body_index, zero, 2, pose);
+      //model->forwardKin(body->body_index, zero, 2, pose);
+      //auto pt = model->forwardKinNew(Vector3d::Zero().eval(), body->body_index, 0, 2, 0);
+      //pose = pt.value();
+
+      pose = model->forwardKinNew(Vector3d::Zero().eval(), body->body_index, 0, 2, 0).value();
 
       double* posedata = pose.data();
 
@@ -734,7 +732,7 @@ public:
       linkToWorld->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
       linkToWorld->Translate(pose(0), pose(1), pose(2));
 
-      printf("%s to world: %f %f %f\n", body->linkname.c_str(), pose(0), pose(1), pose(2));
+      //printf("%s to world: %f %f %f\n", body->linkname.c_str(), pose(0), pose(1), pose(2));
 
       for (size_t visualIndex = 0; visualIndex < itr->second.size(); ++visualIndex)
       {
@@ -743,7 +741,7 @@ public:
 
         vtkSmartPointer<vtkTransform> visualToWorld = vtkSmartPointer<vtkTransform>::New();
         visualToWorld->PostMultiply();
-        //visualToWorld->Concatenate(meshVisual->VisualToLink);
+        visualToWorld->Concatenate(meshVisual->VisualToLink);
         visualToWorld->Concatenate(linkToWorld);
         meshVisual->Transform->SetMatrix(visualToWorld->GetMatrix());
 
@@ -955,7 +953,7 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
     int dofId = itr->second;
     this->Internal->JointPositions[dofId] = jointPositions[i];
 
-    printf("setJoint %s --> %d, %f\n", qPrintable(dofName), dofId, jointPositions[i]);
+    //printf("setJoint %s --> %d, %f\n", qPrintable(dofName), dofId, jointPositions[i]);
   }
 
   this->setJointPositions(this->Internal->JointPositions);
@@ -980,13 +978,14 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
   }
 
   VectorXd q = VectorXd::Zero(model->num_positions);
+  VectorXd v = VectorXd::Zero(model->num_velocities);
   for (int i = 0; i < jointPositions.size(); ++i)
   {
     q(i) = jointPositions[i];
   }
 
   this->Internal->JointPositions = jointPositions;
-  model->doKinematics(q);
+  model->doKinematicsNew(q, v, false, false);
   model->updateModel();
   emit this->modelChanged();
 }
