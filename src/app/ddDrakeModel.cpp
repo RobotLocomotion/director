@@ -789,7 +789,8 @@ public:
     Matrix<double, 7 ,1> pose;
 
     RigidBodyManipulator* model = this;
-    model->forwardKin(linkMap.value(linkName), zero, 2, pose);
+
+    pose = model->forwardKinNew(Vector3d::Zero().eval(), linkMap.value(linkName), 0, 2, 0).value();
 
     double* posedata = pose.data();
     bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
