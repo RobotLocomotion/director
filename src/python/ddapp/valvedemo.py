@@ -778,6 +778,8 @@ class ValveTaskPanel(object):
 
         self.valveDemo = valveDemo
 
+        self.valveDemo.reachDepth = -0.24
+        self.valveDemo.speedLow = 20 
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddValveTaskPanel.ui')
