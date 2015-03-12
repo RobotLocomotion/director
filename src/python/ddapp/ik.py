@@ -29,7 +29,7 @@ class AsyncIKCommunicator():
 
         self.maxDegreesPerSecond = 30.0
         self.maxBaseMetersPerSecond = 0.05
-        self.accelerationParam = 3;
+        self.accelerationParam = 2;
         self.maxPlanDuration = 30.0
         self.usePointwise = True
         self.useCollision = False
