@@ -17,6 +17,7 @@ set(python_tests
   testKinematicPose.py
   testObjectModel.py
   testOtdfParser.py
+  testPlanConstraints.py
   testPropertiesPanel.py
   testPythonConsole.py
   testRobotSystem.py
