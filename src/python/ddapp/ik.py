@@ -320,25 +320,25 @@ class AsyncIKCommunicator():
             commands.append('\n')
             commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
-        commands.append('if ~isempty(xtraj), qtraj = xtraj(1:r.getNumPositions()); end;')
-        commands.append('joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-3, 1);' % self.maxDegreesPerSecond)
-        commands.append('xyz_v_max = repmat(%s, 3, 1);' % self.maxBaseMetersPerSecond)
-        commands.append('v_max = [xyz_v_max; joint_v_max];')
-        commands.append('qtraj = rescalePlanTiming(qtraj, v_max, %s);' % self.accelerationParam)
+        commands.append('if ~isempty(xtraj), qtraj = xtraj(1:r.getNumPositions()); else, qtraj = []; end;')
+        commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-3, 1); end;' % self.maxDegreesPerSecond)
+        commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % self.maxBaseMetersPerSecond)
+        commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; joint_v_max]; end;')
+        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s); end;' % self.accelerationParam)
 
         if self.usePointwise:
             assert not self.useCollision
             commands.append('\n%--- pointwise ik --------\n')
-            commands.append('num_pointwise_time_points = 20;')
-            commands.append('pointwise_time_points = linspace(qtraj.tspan(1), qtraj.tspan(2), num_pointwise_time_points);')
+            commands.append('if ~isempty(qtraj), num_pointwise_time_points = 20; end;')
+            commands.append('if ~isempty(qtraj), pointwise_time_points = linspace(qtraj.tspan(1), qtraj.tspan(2), num_pointwise_time_points); end;')
             #commands.append('spline_traj = PPTrajectory(spline(t, [ zeros(size(xtraj, 1),1), xtraj.eval(t), zeros(size(xtraj, 1),1)]));')
             #commands.append('q_seed_pointwise = spline_traj.eval(pointwise_time_points);')
-            commands.append('q_seed_pointwise = qtraj.eval(pointwise_time_points);')
-            commands.append('q_seed_pointwise = q_seed_pointwise(1:r.getNumPositions(),:);')
-            commands.append('[qtraj_pw, info_pw] = inverseKinPointwise(r, pointwise_time_points, q_seed_pointwise, q_seed_pointwise, active_constraints{:}, ikoptions);')
-            commands.append('qtraj_pw = PPTrajectory(foh(pointwise_time_points, qtraj_pw));')
-            commands.append('info = info_pw(end);')
-            commands.append('if (any(info_pw > 10)) disp(\'pointwise info:\'); disp(info_pw); end;')
+            commands.append('if ~isempty(qtraj), q_seed_pointwise = qtraj.eval(pointwise_time_points); end;')
+            commands.append('if ~isempty(qtraj), q_seed_pointwise = q_seed_pointwise(1:r.getNumPositions(),:); end;')
+            commands.append('if ~isempty(qtraj), [qtraj_pw, info_pw] = inverseKinPointwise(r, pointwise_time_points, q_seed_pointwise, q_seed_pointwise, active_constraints{:}, ikoptions); else, qtraj_pw = []; end;')
+            commands.append('if ~isempty(qtraj_pw), qtraj_pw = PPTrajectory(foh(pointwise_time_points, qtraj_pw)); end;')
+            commands.append('if ~isempty(qtraj_pw), info = info_pw(end); end;')
+            commands.append('if ~isempty(qtraj_pw), if (any(info_pw > 10)) disp(\'pointwise info:\'); disp(info_pw); end; end;')
             commands.append('\n%--- pointwise ik end --------\n')
 
 
