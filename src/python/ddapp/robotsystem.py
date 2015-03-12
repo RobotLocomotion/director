@@ -178,7 +178,10 @@ class RobotSystem(object):
 
             if 'l_hand' in robotStateModel.model.getLinkNames():
                 handFactory = roboturdf.HandFactory(robotStateModel)
-                handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
+                if 'r_hand' in robotStateModel.model.getLinkNames(): # both left and right
+                    handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
+                else:
+                    handModels = [handFactory.getLoader(side) for side in ['left']]
             else:
                 handFactory = None
                 handModels = []
