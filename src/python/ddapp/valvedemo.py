@@ -417,7 +417,17 @@ class ValvePlannerDemo(object):
     def computeTouchPlan(self):
         # new full 6 dof constraint:
         startPose = self.getPlanningStartPose()
+
+        nominalPose, _ = self.ikPlanner.computeNominalPose(startPose)
+        self.ikPlanner.addPose(nominalPose, 'nominal_at_stance')
+        reachNominalPose = self.ikPlanner.getMergedPostureFromDatabase(nominalPose, 'General', 'arm up pregrasp', side=self.graspingHand)
+        self.ikPlanner.addPose(reachNominalPose, 'reach_nominal_at_stance')
+
         self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.faceFrameDesired, lockBase=self.lockBase, lockBack=self.lockBack)
+
+        self.constraintSet.nominalPoseName = 'reach_nominal_at_stance'
+        self.constraintSet.seedPoseName = 'reach_nominal_at_stance'
+
         endPose, info = self.constraintSet.runIk()
 
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
@@ -464,10 +474,12 @@ class ValvePlannerDemo(object):
         bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=self.lockBase, lockBack=self.lockBack, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
         self.constraintSet.constraints.extend(bodyConstraints)
 
+        self.constraintSet.constraints.append(self.ikPlanner.createKneePostureConstraint([0.6, 2.5]))
+
         # add gaze constraint - TODO: this gaze constraint shouldn't be necessary, fix
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
-        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees=5.0)
-        self.constraintSet.constraints.insert(0, gazeConstraint)
+        #gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees=5.0)
+        #self.constraintSet.constraints.insert(0, gazeConstraint)
 
     def appendDistanceConstraint(self):
 
