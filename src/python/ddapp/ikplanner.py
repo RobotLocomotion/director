@@ -193,6 +193,9 @@ class IKPlanner(object):
         self.useQuasiStaticConstraint = True
         self.pushToMatlab = True
 
+        # Is this robot an arm on a fixed base e.g. ABB or Kuka?
+        self.fixedBaseArm = False
+
         om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
 
 
@@ -567,6 +570,11 @@ class IKPlanner(object):
             constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
         if lockRightArm:
             constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
+
+        # Remove all except the fixed base constraint if you only have an arm:
+        if (self.fixedBaseArm==True):
+            constraints = []
+            constraints.append(self.createLockedBasePostureConstraint(startPoseName))
 
         return constraints
 
