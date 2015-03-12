@@ -30,6 +30,7 @@ class AsyncIKCommunicator():
         self.maxDegreesPerSecond = 30.0
         self.maxBaseMetersPerSecond = 0.05
         self.accelerationParam = 2;
+        self.accelerationFraction = 0.3;
         self.maxPlanDuration = 30.0
         self.usePointwise = True
         self.useCollision = False
@@ -324,7 +325,7 @@ class AsyncIKCommunicator():
         commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-3, 1); end;' % self.maxDegreesPerSecond)
         commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % self.maxBaseMetersPerSecond)
         commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; joint_v_max]; end;')
-        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s); end;' % self.accelerationParam)
+        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s); end;' % (self.accelerationParam, self.accelerationFraction))
 
         if self.usePointwise:
             assert not self.useCollision
