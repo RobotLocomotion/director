@@ -494,7 +494,7 @@ public:
     }
 
 
-
+    /*
     std::cout << "====================" << std::endl;
     std::cout << "num positions: " << model->num_positions << std::endl;
 
@@ -515,6 +515,7 @@ public:
 	    }
 
     }
+    */
 
 
   }
@@ -808,8 +809,6 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
 {
   // urdf_filename can be a list of urdf files seperated by a :
   URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
-
-  printf("loading file: %s\n", urdf_filename.c_str());
 
   string token;
   istringstream iss(urdf_filename);
