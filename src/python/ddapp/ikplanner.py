@@ -191,6 +191,7 @@ class IKPlanner(object):
 
         self.additionalTimeSamples = 0
         self.useQuasiStaticConstraint = True
+        self.pushToMatlab = True
 
         om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
 
@@ -592,8 +593,7 @@ class IKPlanner(object):
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
-        self.jointController.addPose(startPoseName, startPose)
-        self.ikServer.sendPoseToServer(startPose, startPoseName)
+        self.addPose(startPoseName, startPose)
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
@@ -618,8 +618,7 @@ class IKPlanner(object):
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
-        self.jointController.addPose(startPoseName, startPose)
-        self.ikServer.sendPoseToServer(startPose, startPoseName)
+        self.addPose(startPoseName, startPose)
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
@@ -727,8 +726,7 @@ class IKPlanner(object):
         self.reachingSide = side
 
         startPoseName = 'reach_start'
-        self.jointController.addPose(startPoseName, startPose)
-        self.ikServer.sendPoseToServer(startPose, startPoseName)
+        self.addPose(startPoseName, startPose)
 
         if constraints is None:
             constraints = []
@@ -794,7 +792,9 @@ class IKPlanner(object):
 
     def addPose(self, pose, poseName):
         self.jointController.addPose(poseName, pose)
-        self.ikServer.sendPoseToServer(pose, poseName)
+
+        if self.pushToMatlab:
+            self.ikServer.sendPoseToServer(pose, poseName)
 
 
     def newPalmOffsetGraspToHandFrame(self, side, distance):
