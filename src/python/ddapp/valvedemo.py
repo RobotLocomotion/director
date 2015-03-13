@@ -85,6 +85,7 @@ class ValvePlannerDemo(object):
         self.clenchFrameXYZ = [0.0, 0.0, -0.1]
         self.clenchFrameRPY = [90, 0, 180]
         self.reachDepth = -0.12 # distance away from valve for palm face on approach reach
+        self.touchDepth = -0.06 # distance away from valve for palm face on approach reach
 
         # top level switch between BDI (locked base) and MIT (moving base and back)
         self.lockBack = False
@@ -336,7 +337,7 @@ class ValvePlannerDemo(object):
 
     def computeTouchFrame(self, touchValve):
         if touchValve:
-            faceDepth = 0.0
+            faceDepth = self.touchDepth
         else:
             faceDepth = self.reachDepth
 
