@@ -296,19 +296,19 @@ class ValvePlannerDemo(object):
 
 
     def findValveAffordance(self):
-
         self.valveAffordance = om.findObjectByName('valve')
-        self.valveFrame = om.findObjectByName('valve frame')
+        if self.valveAffordance is not None:
+            self.valveFrame = om.findObjectByName('valve frame')
 
-        self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was (radius - 0.06)
+            self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was (radius - 0.06)
 
-        self.computeClenchFrame()
-        self.computeValveStanceFrame()
+            self.computeClenchFrame()
+            self.computeValveStanceFrame()
 
-        self.frameSync = vis.FrameSync()
-        self.frameSync.addFrame(self.valveFrame)
-        self.frameSync.addFrame(self.clenchFrame)
-        self.frameSync.addFrame(self.stanceFrame)
+            self.frameSync = vis.FrameSync()
+            self.frameSync.addFrame(self.valveFrame)
+            self.frameSync.addFrame(self.clenchFrame)
+            self.frameSync.addFrame(self.stanceFrame)
 
 
     def findValveLeverAffordance(self):
@@ -800,7 +800,7 @@ class ValveTaskPanel(object):
         self.widget = loader.load(uifile)
         self.ui = WidgetDict(self.widget.children())
 
-        self.ui.startButton.connect('clicked()', self.valveDemo.findAffordance)
+        self.ui.startButton.connect('clicked()', self.onStartClicked)
         self.ui.footstepsButton.connect('clicked()', self.valveDemo.planFootstepsToStance)
         self.ui.raiseArmButton.connect('clicked()', self.valveDemo.planPreGrasp)
         self.ui.reachButton.connect('clicked()', self.reach)
@@ -816,6 +816,12 @@ class ValveTaskPanel(object):
         self._setupPropertiesPanel()
         self._syncProperties()
 
+    def onStartClicked(self):
+      self.valveDemo.findAffordance()
+      if self.valveDemo.valveAffordance is not None:
+          print 'Valve Demo: Start - Ready to proceed'
+      else:
+          print 'Valve Demo: Start - VALVE AFFORDANCE NOT FOUND'
 
     def closeHand(self):
       self.valveDemo.closeHand(self.valveDemo.graspingHand)
