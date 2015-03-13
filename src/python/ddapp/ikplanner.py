@@ -593,7 +593,7 @@ class IKPlanner(object):
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
-        self.addPose(startPoseName, startPose)
+        self.addPose(startPose, startPoseName)
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
@@ -618,7 +618,7 @@ class IKPlanner(object):
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
-        self.addPose(startPoseName, startPose)
+        self.addPose(startPose, startPoseName)
 
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
@@ -726,7 +726,7 @@ class IKPlanner(object):
         self.reachingSide = side
 
         startPoseName = 'reach_start'
-        self.addPose(startPoseName, startPose)
+        self.addPose(startPose, startPoseName)
 
         if constraints is None:
             constraints = []
