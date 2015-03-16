@@ -58,7 +58,7 @@ playbackPanel = playbackpanel.PlaybackPanel(planPlayback, playbackRobotModel, pl
                                   robotStateModel, robotStateJointController, manipPlanner)
 
 teleopPanel = teleoppanel.TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                 ikPlanner, manipPlanner, playbackPanel.setPlan, playbackPanel.hidePlan)
+                 ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
 manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
