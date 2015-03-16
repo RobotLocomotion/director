@@ -319,7 +319,10 @@ class EndEffectorTeleopPanel(object):
             g.tspan = [1.0, 1.0]
 
             if thisHandConstraint == 'arm fixed':
-                constraints.append(ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+                if (side == "left"):
+                    constraints.append(ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
+                elif (side == "right"):
+                    constraints.append(ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
                 ikPlanner.setArmLocked(side,True)
 
             elif thisHandConstraint == 'ee fixed':
