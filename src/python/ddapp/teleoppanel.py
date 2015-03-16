@@ -302,9 +302,6 @@ class EndEffectorTeleopPanel(object):
             elif (side == "right"):
                 thisHandConstraint = self.getRHandConstraint()
 
-            print side
-            print thisHandConstraint
-
             linkName = ikPlanner.getHandLink(side)
             graspToPalm = vtk.vtkTransform()
             graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
