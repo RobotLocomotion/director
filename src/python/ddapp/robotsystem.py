@@ -175,13 +175,12 @@ class RobotSystem(object):
             manipPlanner = robotplanlistener.ManipulationPlanDriver()
             planPlayback = planplayback.PlanPlayback()
 
-
-            if 'l_hand' in robotStateModel.model.getLinkNames():
+            if (roboturdf.numberOfHands == 1):
                 handFactory = roboturdf.HandFactory(robotStateModel)
-                if 'r_hand' in robotStateModel.model.getLinkNames(): # both left and right
-                    handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
-                else:
-                    handModels = [handFactory.getLoader(side) for side in ['left']]
+                handModels = [handFactory.getLoader(side) for side in ['left']]
+            elif (roboturdf.numberOfHands == 2):
+                handFactory = roboturdf.HandFactory(robotStateModel)
+                handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
             else:
                 handFactory = None
                 handModels = []
