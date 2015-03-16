@@ -81,7 +81,7 @@ class EndEffectorTeleopPanel(object):
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
 
-        self.fixedBaseArm = True
+        self.fixedBaseArm = False
 
 
     def setComboText(self, combo, text):
@@ -301,6 +301,9 @@ class EndEffectorTeleopPanel(object):
                 thisHandConstraint = self.getLHandConstraint()
             elif (side == "right"):
                 thisHandConstraint = self.getRHandConstraint()
+
+            print side
+            print thisHandConstraint
 
             linkName = ikPlanner.getHandLink(side)
             graspToPalm = vtk.vtkTransform()
