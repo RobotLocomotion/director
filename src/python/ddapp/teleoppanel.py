@@ -81,6 +81,8 @@ class EndEffectorTeleopPanel(object):
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
 
+        self.fixedBaseArm = True
+
 
     def setComboText(self, combo, text):
         index = combo.findText(text)
@@ -286,112 +288,66 @@ class EndEffectorTeleopPanel(object):
             ikPlanner.setBaseLocked(False)
 
 
-        side = 'left'
-        linkName = ikPlanner.getHandLink(side)
-        graspToPalm = vtk.vtkTransform()
-        graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
-        #graspToWorld = ikPlanner.newGraspToWorldFrame(startPose, side, graspToHand)
-        graspToWorld = self.getGoalFrame(linkName)
-
-        p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
-        g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand)
-
-        p.tspan = [1.0, 1.0]
-        q.tspan = [1.0, 1.0]
-        g.tspan = [1.0, 1.0]
+        # Remove all except the fixed base constraint if you only have an arm:
+        if (self.fixedBaseArm==True):
+          constraints = []
+          constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
+          ikPlanner.fixedBaseArm = self.fixedBaseArm
 
 
+        for handModel in ikPlanner.handModels:
+            side = handModel.side
+            if (side == "left"):
+                thisHandConstraint = self.getLHandConstraint()
+            elif (side == "right"):
+                thisHandConstraint = self.getRHandConstraint()
 
-        if self.getLHandConstraint() == 'arm fixed':
-            constraints.append(ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-            ikPlanner.setArmLocked(side,True)
+            linkName = ikPlanner.getHandLink(side)
+            graspToPalm = vtk.vtkTransform()
+            graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
+            #graspToWorld = ikPlanner.newGraspToWorldFrame(startPose, side, graspToHand)
+            graspToWorld = self.getGoalFrame(linkName)
 
-        elif self.getLHandConstraint() == 'ee fixed':
-            constraints.extend([p, q])
-            ikPlanner.setArmLocked(side,False)
+            p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
+            g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand)
 
-        elif self.getLHandConstraint() == 'position':
-            constraints.extend([p])
-            ikPlanner.setArmLocked(side,False)
+            p.tspan = [1.0, 1.0]
+            q.tspan = [1.0, 1.0]
+            g.tspan = [1.0, 1.0]
 
-        elif self.getLHandConstraint() == 'gaze':
-            constraints.extend([p, g])
-            ikPlanner.setArmLocked(side,False)
+            if thisHandConstraint == 'arm fixed':
+                constraints.append(ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+                ikPlanner.setArmLocked(side,True)
 
-        elif self.getLHandConstraint() == 'orbit':
-            graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
-            constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
-            constraints[-3].tspan = [1.0, 1.0]
+            elif thisHandConstraint == 'ee fixed':
+                constraints.extend([p, q])
+                ikPlanner.setArmLocked(side,False)
 
-            if ikPlanner.ikServer.useCollision:
-                constraints[-2].tspan = [0.5, 1.0]
-                constraints[-1].tspan = [0.5, 1.0]
-            else:
-                constraints[-2].tspan = [1.0, 1.0]
-                constraints[-1].tspan = [1.0, 1.0]
+            elif thisHandConstraint == 'position':
+                constraints.extend([p])
+                ikPlanner.setArmLocked(side,False)
 
-            ikPlanner.setArmLocked(side,False)
+            elif thisHandConstraint == 'gaze':
+                constraints.extend([p, g])
+                ikPlanner.setArmLocked(side,False)
 
-        elif self.getLHandConstraint() == 'free':
-            ikPlanner.setArmLocked(side,False)
+            elif thisHandConstraint == 'orbit':
+                graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
+                constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
+                constraints[-3].tspan = [1.0, 1.0]
 
+                if ikPlanner.ikServer.useCollision:
+                    constraints[-2].tspan = [0.5, 1.0]
+                    constraints[-1].tspan = [0.5, 1.0]
+                else:
+                    constraints[-2].tspan = [1.0, 1.0]
+                    constraints[-1].tspan = [1.0, 1.0]
 
-        #if self.getLHandConstraint() != 'free' and hasattr(self,'reachTargetObject'):
-        #    constraints.append(ikPlanner.createExcludeReachTargetCollisionGroupConstraint(self.reachTargetObject.getProperty('Name')))
+                ikPlanner.setArmLocked(side,False)
 
+            elif thisHandConstraint == 'free':
+                ikPlanner.setArmLocked(side,False)
 
-        side = 'right'
-        linkName = ikPlanner.getHandLink(side)
-        graspToPalm = vtk.vtkTransform()
-        graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
-        #graspToWorld = ikPlanner.newGraspToWorldFrame(startPose, side, graspToHand)
-        graspToWorld = self.getGoalFrame(linkName)
-
-        p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
-        g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand)
-
-        p.tspan = [1.0, 1.0]
-        q.tspan = [1.0, 1.0]
-        g.tspan = [1.0, 1.0]
-
-
-
-        if self.getRHandConstraint() == 'arm fixed':
-            constraints.append(ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
-            ikPlanner.setArmLocked(side,True)
-
-        elif self.getRHandConstraint() == 'ee fixed':
-            constraints.extend([p, q])
-            ikPlanner.setArmLocked(side,False)
-
-        elif self.getRHandConstraint() == 'position':
-            constraints.extend([p])
-            ikPlanner.setArmLocked(side,False)
-
-        elif self.getRHandConstraint() == 'gaze':
-            constraints.extend([p, g])
-            ikPlanner.setArmLocked(side,False)
-
-        elif self.getRHandConstraint() == 'orbit':
-            graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
-            constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
-            constraints[-3].tspan = [1.0, 1.0]
-
-            if ikPlanner.ikServer.useCollision:
-                constraints[-2].tspan = [0.5, 1.0]
-                constraints[-1].tspan = [0.5, 1.0]
-            else:
-                constraints[-2].tspan = [1.0, 1.0]
-                constraints[-1].tspan = [1.0, 1.0]
-
-            ikPlanner.setArmLocked(side,False)
-
-        elif self.getLHandConstraint() == 'free':
-            ikPlanner.setArmLocked(side,False)
-
-
-        #if self.getRHandConstraint() != 'free' and hasattr(self,'reachTargetObject'):
-        #    constraints.append(ikPlanner.createExcludeReachTargetCollisionGroupConstraint(self.reachTargetObject.getProperty('Name')))
 
         if hasattr(self,'reachSide'):
             if self.reachSide == 'left':
@@ -469,7 +425,8 @@ class EndEffectorTeleopPanel(object):
         self.removePlanFolder()
         folder = self.getConstraintFrameFolder()
 
-        for side in ['left', 'right']:
+        for handModel in ikPlanner.handModels:
+            side = handModel.side
 
             linkName = ikPlanner.getHandLink(side)
             frameName = '%s constraint frame' % linkName
@@ -485,12 +442,12 @@ class EndEffectorTeleopPanel(object):
             #addHandMesh(handModels[side], frame)
 
 
-        #for linkName in ['l_foot', 'r_foot', 'pelvis', 'utorso', 'head']:
-        for linkName in ['l_foot', 'r_foot', 'pelvis']:
-            frameName = linkName + ' constraint frame'
-            om.removeFromObjectModel(om.findObjectByName(frameName))
-            frame = vis.showFrame(ikPlanner.getLinkFrameAtPose(linkName, startPose), frameName, parent=folder, scale=0.2)
-            frame.connectFrameModified(self.onGoalFrameModified)
+        if (not self.fixedBaseArm):
+            for linkName in ['l_foot', 'r_foot', 'pelvis']:
+                frameName = linkName + ' constraint frame'
+                om.removeFromObjectModel(om.findObjectByName(frameName))
+                frame = vis.showFrame(ikPlanner.getLinkFrameAtPose(linkName, startPose), frameName, parent=folder, scale=0.2)
+                frame.connectFrameModified(self.onGoalFrameModified)
 
 
     def newReachTeleop(self, frame, side, reachTargetObject=None):
