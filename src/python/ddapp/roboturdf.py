@@ -23,10 +23,13 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
     directorConfig = json.load(directorConfigFile)
     directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
     fixedPointFile = os.path.join(directorConfigDirectory, directorConfig['fixedPointFile'])
-    handCombination = directorConfig.get('handCombination')
     urdfConfig = directorConfig['urdfConfig']
     for key, urdf in list(urdfConfig.items()):
         urdfConfig[key] = os.path.join(directorConfigDirectory, urdf)
+
+    handCombinations = directorConfig['handCombinations']
+    numberOfHands = len(handCombinations)
+
 
 
 def getRobotGrayColor():
@@ -303,28 +306,24 @@ class HandFactory(object):
 
     def __init__(self, robotModel, defaultLeftHandType=None, defaultRightHandType=None):
 
-        handTypesMap = {
-          'LR' : 'left_robotiq',
-          'LP' : 'left_pointer',
-          'LI' : 'left_irobot',
-          'LV' : 'left_valkyrie',
-          'RR' : 'right_robotiq',
-          'RP' : 'right_pointer',
-          'RI' : 'right_irobot',
-          'RV' : 'right_valkyrie',
-          }
-
-        if not defaultLeftHandType:
-            defaultLeftHandType = handTypesMap[handCombination.split('_')[0]]
-        if not defaultRightHandType:
-            defaultRightHandType = handTypesMap[handCombination.split('_')[1]]
-
         self.robotModel = robotModel
         self.loaders = {}
-        self.defaultHandTypes = {
-            'left' : defaultLeftHandType,
-            'right' : defaultRightHandType
-            }
+
+        if (numberOfHands==0):
+            self.defaultHandTypes = {}
+        elif (numberOfHands==1):
+            if not defaultLeftHandType:
+                defaultLeftHandType = handCombinations[0]['handType']
+            self.defaultHandTypes = { 'left' : defaultLeftHandType }
+        elif (numberOfHands==2):
+            if not defaultLeftHandType:
+                defaultLeftHandType = handCombinations[0]['handType']
+            if not defaultRightHandType:
+                defaultRightHandType = handCombinations[1]['handType']
+            self.defaultHandTypes = {
+              'left' : defaultLeftHandType,
+              'right' : defaultRightHandType
+              }
 
 
     def getLoader(self, side):
@@ -353,7 +352,9 @@ class HandFactory(object):
 class HandLoader(object):
 
     def __init__(self, handType, robotModel):
-
+        '''
+        handType is of the form 'left_robotiq' or 'right_valkyrie'
+        '''
 
         def toFrame(xyzrpy):
             rpy = [math.degrees(rad) for rad in xyzrpy[3:]]
@@ -363,75 +364,21 @@ class HandLoader(object):
         self.side, self.handType = handType.split('_')
         assert self.side in ('left', 'right')
 
-        if self.handType == 'irobot':
+        thisCombination = None
+        for i in range(0, numberOfHands ):
+          if (handCombinations[i]['side'] == self.side):
+            thisCombination = handCombinations[i]
+            break
+        assert thisCombination is not None
 
-            self.handLinkName = '%s_hand' % self.side[0]
-            self.handUrdf = 'irobot_hand_%s.urdf' % self.side
-            self.handJointName = '%s_irobot_hand_joint' % self.side
+        self.handLinkName = thisCombination['handLinkName']
+        self.handUrdf = thisCombination['handUrdf']
+        self.handJointName = thisCombination['handJointName']
 
-            if self.side == 'left':
-                baseToPalm = [0.0, -0.20516, -0.015, 0.0, 0.0, 0.0]
-            else:
-                baseToPalm = [0.0, -0.20516, 0.015, 0.0, 0.0, math.radians(180)]
+        handRootLink = thisCombination['handRootLink']
+        robotMountLink = thisCombination['robotMountLink']
+        palmLink = thisCombination['palmLink']
 
-
-            handRootLink = '%s_base_link' % self.side
-            robotMountLink = '%s_hand' % self.side[0]
-            palmLink = '%s_hand_face' % self.side[0]
-            robotMountToPalm = toFrame(baseToPalm)
-
-            self.loadHandModel()
-
-            baseToHandRoot = self.getLinkToLinkTransform(self.handModel, 'plane::xy::base', handRootLink)
-            robotMountToHandRoot = self.getLinkToLinkTransform(robotModel, robotMountLink, handRootLink)
-
-            t = vtk.vtkTransform()
-            t.PostMultiply()
-            t.Concatenate(baseToHandRoot)
-            t.Concatenate(robotMountToHandRoot.GetLinearInverse())
-            t.Concatenate(robotMountToPalm)
-            self.modelToPalm = t
-
-            self.handLinkToPalm = robotMountToPalm
-            self.palmToHandLink = self.handLinkToPalm.GetLinearInverse()
-
-
-        elif self.handType == 'robotiq':
-
-            self.handLinkName = '%s_hand' % self.side[0]
-            self.handUrdf = 'robotiq_hand_%s.urdf' % self.side
-            self.handJointName = '%s_robotiq_hand_joint' % self.side
-
-            handRootLink = '%s_palm' % self.side
-            robotMountLink = '%s_hand_force_torque' % self.side[0]
-            palmLink = '%s_hand_face' % self.side[0]
-
-
-        elif self.handType == 'pointer':
-
-            self.handLinkName = '%s_hand' % self.side[0]
-            self.handUrdf = 'pointer_hand_%s.urdf' % self.side
-            self.handJointName = '%s_hook_hand_joint' % self.side
-
-            handRootLink = '%s_base_link' % self.side
-            robotMountLink = '%s_hand_force_torque' % self.side[0]
-            palmLink = '%s_pointer_tip' % self.side
-
-
-        elif self.handType == 'valkyrie':
-
-            self.robotUrdf = 'model_LV_RV.urdf'
-            self.handLinkName = '%s_hand' % self.side[0]
-            self.handUrdf = 'valkyrie_hand_%s.urdf' % self.side
-            self.handJointName = '%s_valkyrie_hand_joint' % self.side
-
-            handRootLink = '%s_palm' % self.side
-            robotMountLink = '%s_hand_force_torque' % self.side[0]
-            palmLink = '%s_hand_face' % self.side[0]
-
-
-        else:
-            raise Exception('Unexpected hand type: %s' % self.handType)
 
         self.loadHandModel()
 
