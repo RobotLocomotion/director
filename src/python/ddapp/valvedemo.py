@@ -378,10 +378,6 @@ class ValvePlannerDemo(object):
         
     ### End Valve Focused Functions ###############################################################
     ### Planning Functions ###############################################################
-    def planNominal(self):
-        startPose = self.getPlanningStartPose()
-        self.standPlan = self.ikPlanner.computeNominalPlan(startPose)
-        self.addPlan(self.standPlan)
 
     # These are operational conveniences:
     def planFootstepsToStance(self):
@@ -400,6 +396,13 @@ class ValvePlannerDemo(object):
     def planPreGrasp(self):
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+    def planNominal(self):
+        startPose = self.getPlanningStartPose()
+        endPose, info = self.ikPlanner.computeStandPose(startPose)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'safe nominal')
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
@@ -745,3 +748,110 @@ class ValvePlannerDemo(object):
         taskQueue.addTask(self.optionalUserPrompt('Continue? y/n: '))
         taskQueue.addTask(self.animateLastPlan)
         return taskQueue
+
+
+
+
+
+
+
+import PythonQt
+from PythonQt import QtCore, QtGui, QtUiTools
+
+def addWidgetsToDict(widgets, d):
+
+    for widget in widgets:
+        if widget.objectName:
+            d[str(widget.objectName)] = widget
+        addWidgetsToDict(widget.children(), d)
+
+
+class WidgetDict(object):
+
+    def __init__(self, widgets):
+        addWidgetsToDict(widgets, self.__dict__)
+
+
+class ValveTaskPanel(object):
+
+    def __init__(self, valveDemo):
+
+        self.valveDemo = valveDemo
+
+
+        loader = QtUiTools.QUiLoader()
+        uifile = QtCore.QFile(':/ui/ddValveTaskPanel.ui')
+        assert uifile.open(uifile.ReadOnly)
+
+        self.widget = loader.load(uifile)
+        self.ui = WidgetDict(self.widget.children())
+
+        self.ui.startButton.connect('clicked()', self.valveDemo.findAffordance)
+        self.ui.footstepsButton.connect('clicked()', self.valveDemo.planFootstepsToStance)
+        self.ui.raiseArmButton.connect('clicked()', self.valveDemo.planPreGrasp)
+        self.ui.reachButton.connect('clicked()', self.reach)
+        self.ui.touchButton.connect('clicked()', self.grasp)
+        self.ui.closeHandButton.connect('clicked()', self.closeHand)
+        self.ui.turnButton.connect('clicked()', self.turnValve)
+        self.ui.openHandButton.connect('clicked()', self.openHand)
+        self.ui.retractButton.connect('clicked()', self.retract)
+        self.ui.nominalButton.connect('clicked()', self.valveDemo.planNominal)
+
+
+        self._setupParams()
+        self._setupPropertiesPanel()
+        self._syncProperties()
+
+
+    def closeHand(self):
+      self.valveDemo.closeHand(self.valveDemo.graspingHand)
+
+    def openHand(self):
+      self.valveDemo.openHand(self.valveDemo.graspingHand)
+
+    def reach(self):
+        self.valveDemo.nextScribeAngle = self.params.getProperty('Start angle (deg)')
+        self.valveDemo.planReach()
+
+    def grasp(self):
+        self.valveDemo.nextScribeAngle = self.params.getProperty('Start angle (deg)')
+        self.valveDemo.planGrasp()
+
+    def turnValve(self):
+        self.valveDemo.nextScribeAngle = self.params.getProperty('Start angle (deg)')
+        self.valveDemo.planValveTurn(self.params.getProperty('Turn amount (deg)'))
+
+    def retract(self):
+        self.valveDemo.nextScribeAngle = self.params.getProperty('Start angle (deg)') + self.params.getProperty('Turn amount (deg)')
+        self.valveDemo.planReach()
+
+    def _setupParams(self):
+        self.params = om.ObjectModelItem('Valve Task Params')
+        self.params.addProperty('Hand', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
+        self.params.addProperty('Start angle (deg)', 60)
+        self.params.addProperty('Turn amount (deg)', 60)
+        self.params.addProperty('Turn direction', 0, attributes=om.PropertyAttributes(enumNames=['Clockwise', 'Counter clockwise']))
+
+
+    def _setupPropertiesPanel(self):
+        l = QtGui.QVBoxLayout(self.ui.propertyFrame)
+        l.setMargin(0)
+        self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
+        self.propertiesPanel.setBrowserModeToWidget()
+        om.PropertyPanelHelper.addPropertiesToPanel(self.params.properties, self.propertiesPanel)
+        l.addWidget(self.propertiesPanel)
+        self.propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
+
+    def onPropertyChanged(self, prop):
+        self.params.setProperty(prop.propertyName(), prop.value())
+        self._syncProperties()
+
+    def _syncProperties(self):
+
+        self.valveDemo.planFromCurrentRobotState = True
+        self.valveDemo.visOnly = False
+        self.valveDemo.graspingHand = self.params.getPropertyEnumValue('Hand').lower()
+        self.valveDemo.scribeDirection = 1 if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise' else -1
+        self.valveDemo.turnAngle = self.params.getProperty('Turn amount (deg)')
+
+

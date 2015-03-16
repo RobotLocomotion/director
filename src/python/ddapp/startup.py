@@ -328,7 +328,7 @@ if usePlanning:
     footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
     manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
-    teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
+    teleopPanel = teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
 
@@ -350,6 +350,8 @@ if usePlanning:
                                       lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                       segmentation.segmentValveWallAuto, robotStateJointController,
                                       playPlans, showPose)
+    valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
+    valveTaskPanel.widget.show()
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
