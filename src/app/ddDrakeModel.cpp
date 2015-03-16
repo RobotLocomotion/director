@@ -86,7 +86,7 @@ namespace
 
 const int GRAY_DEFAULT = 190;
 
-QMap<QString, QString> PackageSearchPaths;
+std::map<std::string, std::string> PackageSearchPaths;
 
 int feq (double a, double b)
 {
@@ -492,32 +492,6 @@ public:
       }
 
     }
-
-
-    /*
-    std::cout << "====================" << std::endl;
-    std::cout << "num positions: " << model->num_positions << std::endl;
-
-     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
-     {
-
-       std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
-
-      std::cout << "-----------------------------" << std::endl;
-      std::cout << "body linkname: " << body->linkname << std::endl;
-      std::cout << "body body_index: " << body->body_index << std::endl;
-      std::cout << "body robotnum: " << body->robotnum << std::endl;
-      std::cout << "body position_num_start: " << body->position_num_start << std::endl;
-      if (body->hasParent())
-	    {
-	      std::cout << "body joint name: " << body->getJoint().getName() << std::endl;
-	      std::cout << "body joint num positions: " << body->getJoint().getNumPositions() << std::endl;
-	    }
-
-    }
-    */
-
-
   }
 
   virtual ~URDFRigidBodyManipulatorVTK()
@@ -838,7 +812,7 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
     if (!mypath.empty() && mypath.has_parent_path())  
       pathname = mypath.parent_path().native();
 
-    if (!model->addRobotFromURDFString(xml_string, pathname))
+    if (!model->addRobotFromURDFString(xml_string, PackageSearchPaths, pathname))
     {
       return URDFRigidBodyManipulatorVTK::Ptr();
     }
@@ -854,7 +828,7 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
 URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromXML(const string &xmlString)
 {
   URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
-  if (!model->addRobotFromURDFString(xmlString, ""))
+  if (!model->addRobotFromURDFString(xmlString,PackageSearchPaths, ""))
   {
     return URDFRigidBodyManipulatorVTK::Ptr();
   }
@@ -1325,15 +1299,20 @@ bool ddDrakeModel::visible() const
 //-----------------------------------------------------------------------------
 void ddDrakeModel::addPackageSearchPath(const QString& searchPath)
 {
-  QString packageName = QDir(searchPath).dirName();
-  if (!PackageSearchPaths.contains(packageName))
+  std::string packageName = QDir(searchPath).dirName().toAscii().data();
+  if (PackageSearchPaths.count(packageName) == 0)
   {
-    PackageSearchPaths[packageName] = searchPath;
+    PackageSearchPaths[packageName] = searchPath.toAscii().data();
   }
 }
 
 //-----------------------------------------------------------------------------
 QString ddDrakeModel::findPackageDirectory(const QString& packageName)
 {
-  return PackageSearchPaths.value(packageName);
+  auto packageDirIter = PackageSearchPaths.find(packageName.toAscii().data());
+  if (packageDirIter != PackageSearchPaths.end()) {
+    return QString::fromStdString(packageDirIter->second);
+  } else {
+    return QString();
+  }
 }
