@@ -43,6 +43,10 @@ def onIkStartup(ikServer, startSuccess):
     teleopPanel.ui.planButton.click()
     assert playbackPanel.plan is not None
 
+    teleopPanel.ikPlanner.useCollision = True;
+    teleopPanel.ui.planButton.click()
+    assert playbackPanel.plan is not None
+
     frame.setProperty('Edit', True)
     app.startTestingModeQuitTimer()
 
