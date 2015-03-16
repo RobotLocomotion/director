@@ -1084,6 +1084,22 @@ class TeleopPanel(object):
         self.showPlanFunction(plan)
 
 
+def extendJointLimitsForTesting(teleopPanel, jointLimitChecker):
+
+    # add +/- 3 degrees to joint teleop sliders
+    jointTeleop = teleopPanel.jointTeleop
+    extra = np.zeros(len(jointTeleop.jointLimitsMin))
+    extra += np.deg2rad(3.0)
+    jointTeleop.jointLimitsMin -= extra
+    jointTeleop.jointLimitsMax += extra
+
+    # add +/- 4 degrees to planner joint limits
+    limitDataMin = [(name, -np.deg2rad(4.0)) for name in jointLimitChecker.joints]
+    limitDataMax = [(name, np.deg2rad(4.0)) for name in jointLimitChecker.joints]
+    teleopPanel.ikPlanner.ikServer.updateJointLimits(limitDataMin)
+    teleopPanel.ikPlanner.ikServer.updateJointLimits(limitDataMax)
+
+
 def _getAction():
     return app.getToolBarActions()['ActionTeleopPanel']
 
