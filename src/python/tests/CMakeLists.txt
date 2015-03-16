@@ -15,6 +15,7 @@ set(python_tests
   testFrameSync.py
   testImageView.py
   testKinematicPose.py
+  testLoadurdf.py
   testObjectModel.py
   testOtdfParser.py
   testPlanConstraints.py
