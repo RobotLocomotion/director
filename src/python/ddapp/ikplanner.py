@@ -1055,8 +1055,9 @@ class IKPlanner(object):
             constraints.append(p)
             poseNames.append(poseName)
 
-        if feetOnGround:
-            constraints.extend(self.createFixedFootConstraints(poseNames[-1]))
+        if (not self.fixedBaseArm):
+            if feetOnGround:
+                constraints.extend(self.createFixedFootConstraints(poseNames[-1]))
 
         #if self.useQuasiStaticConstraint:
         #    constraints.append(self.createQuasiStaticConstraint())
