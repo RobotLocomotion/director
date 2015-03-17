@@ -193,7 +193,7 @@ class IKPlanner(object):
         self.useQuasiStaticConstraint = True
         self.pushToMatlab = True
 
-        # Is this robot an arm on a fixed base e.g. ABB or Kuka?
+        # If the robot an arm on a fixed base, set true e.g. ABB or Kuka?
         self.fixedBaseArm = False
 
         om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
