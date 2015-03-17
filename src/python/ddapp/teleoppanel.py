@@ -81,8 +81,6 @@ class EndEffectorTeleopPanel(object):
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
 
-        self.fixedBaseArm = True
-
 
     def setComboText(self, combo, text):
         index = combo.findText(text)
@@ -289,10 +287,9 @@ class EndEffectorTeleopPanel(object):
 
 
         # Remove all except the fixed base constraint if you only have an arm:
-        if (self.fixedBaseArm==True):
+        if (ikPlanner.fixedBaseArm==True):
           constraints = []
           constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
-          ikPlanner.fixedBaseArm = self.fixedBaseArm
 
 
         for handModel in ikPlanner.handModels:
@@ -447,8 +444,7 @@ class EndEffectorTeleopPanel(object):
             frame.connectFrameModified(self.onGoalFrameModified)
             #addHandMesh(handModels[side], frame)
 
-
-        if (not self.fixedBaseArm):
+        if (not ikPlanner.fixedBaseArm):
             for linkName in ['l_foot', 'r_foot', 'pelvis']:
                 frameName = linkName + ' constraint frame'
                 om.removeFromObjectModel(om.findObjectByName(frameName))
