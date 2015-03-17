@@ -92,9 +92,18 @@ class PlaybackPanel(object):
         menu = QtGui.QMenu()
         menu.addAction('Visualization Only')
 
+        if not self.isPlanFeasible():
+            menu.addSeparator()
+            menu.addAction('Execute infeasible plan')
+
         selectedAction = menu.exec_(globalPos)
-        if selectedAction is not None:
+        if not selectedAction:
+            return
+
+        if selectedAction.text == 'Visualization Only':
             self.executePlan(visOnly=True)
+        elif selectedAction.text == 'Execute infeasible plan':
+            self.executePlan(overrideInfeasibleCheck=True)
 
 
     def getViewMode(self):
@@ -142,7 +151,6 @@ class PlaybackPanel(object):
 
 
     def playbackSpeedChanged(self):
-        print self.getPlaybackSpeed()
         self.planPlayback.playbackSpeed = self.getPlaybackSpeed()
 
 
@@ -191,18 +199,21 @@ class PlaybackPanel(object):
 
             self.viewModeChanged()
 
+        self.updateButtonColor()
+
 
     def executeClicked(self):
         self.executePlan()
 
 
-    def executePlan(self, visOnly=False):
+    def executePlan(self, visOnly=False, overrideInfeasibleCheck=False):
         if visOnly:
             _, poses = self.planPlayback.getPlanPoses(self.plan)
             self.robotStateJointController.setPose('EST_ROBOT_STATE', poses[-1])
             self.onPlanCommitted(self.plan)
         else:
-            self.manipPlanner.commitManipPlan(self.plan)
+            if self.isPlanFeasible() or overrideInfeasibleCheck:
+                self.manipPlanner.commitManipPlan(self.plan)
 
 
     def onPlanCommitted(self, plan):
@@ -213,6 +224,10 @@ class PlaybackPanel(object):
     def stopClicked(self):
         self.stopAnimation()
         self.manipPlanner.sendPlanPause()
+
+
+    def isPlanFeasible(self):
+        return self.plan is not None and max(self.plan.plan_info) < 10
 
 
     def updatePlanFrames(self):
@@ -300,6 +315,15 @@ class PlaybackPanel(object):
         return tNow < self.endTime
 
 
+    def updateButtonColor(self):
+        if self.ui.executeButton.enabled and self.plan and not self.isPlanFeasible():
+            styleSheet = 'background-color:red'
+        else:
+            styleSheet = ''
+
+        self.ui.executeButton.setStyleSheet(styleSheet)
+
+
     def setPlan(self, plan):
 
         self.ui.playbackSlider.value = 0
@@ -307,6 +331,7 @@ class PlaybackPanel(object):
         self.ui.planNameLabel.text = ''
         self.plan = plan
         self.endTime = 1.0
+        self.updateButtonColor()
 
         if not self.plan:
             return
@@ -322,6 +347,8 @@ class PlaybackPanel(object):
             self.hideClicked()
         else:
             self.viewModeChanged()
+
+        self.updateButtonColor()
 
         if self.autoPlay and self.widget.parent() is not None:
             self.widget.parent().show()
