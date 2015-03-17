@@ -281,6 +281,7 @@ def setupPackagePaths():
         'software/models/common_components/irobot_hand',
         'software/models/common_components/handle_description',
         'software/models/common_components/robotiq_hand_description',
+        'software/models/common_components/schunk_description',
         'software/models/otdf',
                   ]
 
@@ -373,7 +374,6 @@ class HandLoader(object):
 
         self.handLinkName = thisCombination['handLinkName']
         self.handUrdf = thisCombination['handUrdf']
-        self.handJointName = thisCombination['handJointName']
 
         handRootLink = thisCombination['handRootLink']
         robotMountLink = thisCombination['robotMountLink']
