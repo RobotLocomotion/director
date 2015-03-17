@@ -351,7 +351,6 @@ if usePlanning:
                                       segmentation.segmentValveWallAuto, robotStateJointController,
                                       playPlans, showPose)
     valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
-    valveTaskPanel.widget.show()
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -724,4 +723,4 @@ def sendMatlabSigint():
     ikServer.comm.client.proc.send_signal(signal.SIGINT)
 
 
-app.addToolbarMacro('Ctrl+C MATLAB', sendMatlabSigint)
+#app.addToolbarMacro('Ctrl+C MATLAB', sendMatlabSigint)
