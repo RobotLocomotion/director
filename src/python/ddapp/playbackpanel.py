@@ -76,6 +76,7 @@ class PlaybackPanel(object):
         self.ui.animateButton.connect('clicked()', self.animateClicked)
         self.ui.hideButton.connect('clicked()', self.hideClicked)
         self.ui.executeButton.connect('clicked()', self.executeClicked)
+        self.ui.executeButton.setShortcut(QtGui.QKeySequence('Ctrl+Return'))
         self.ui.stopButton.connect('clicked()', self.stopClicked)
 
         self.ui.executeButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
