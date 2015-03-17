@@ -81,7 +81,7 @@ class EndEffectorTeleopPanel(object):
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
 
-        self.fixedBaseArm = False
+        self.fixedBaseArm = True
 
 
     def setComboText(self, combo, text):
@@ -354,9 +354,9 @@ class EndEffectorTeleopPanel(object):
 
         if hasattr(self,'reachSide'):
             if self.reachSide == 'left':
-                endEffectorName = 'l_hand'
+                endEffectorName = ikPlanner.handModels[0].handLinkName # 'l_hand'
             else:
-                endEffectorName = 'r_hand'
+                endEffectorName = ikPlanner.handModels[1].handLinkName # 'r_hand'
 
             constraints.append(ikPlanner.createActiveEndEffectorConstraint(endEffectorName,ikPlanner.getPalmPoint(self.reachSide)))
 
@@ -364,8 +364,11 @@ class EndEffectorTeleopPanel(object):
         self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
 
 
+        handLinks = []
+        for handModel in ikPlanner.handModels: handLinks.append(handModel.handLinkName)
+
         for constraint in constraints:
-            if hasattr(constraint, 'linkName') and constraint.linkName in ('l_hand', 'r_hand'):
+            if hasattr(constraint, 'linkName') and constraint.linkName in handLinks:
                 continue
 
             if isinstance(constraint, ikplanner.ik.PositionConstraint):
