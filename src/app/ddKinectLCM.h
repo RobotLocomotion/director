@@ -71,77 +71,23 @@ public:
   ddKinectLCM(QObject* parent=NULL);
 
   virtual ~ddKinectLCM();
-
-  // Adds an lcm subscriber for the given channel if one does not already exit.
-  // Assumes the camera name is the same as the given channel name.  Camera name
-  // is used to lookup camera parameters from botparam.  Not all image channels
-  // have named cameras in botparam.
-  bool addCameraStream(const QString& channel);
-
-  // Adds an lcm subscriber for the given channel if one does not already exist.
-  // Looks for camera parameters in botparam using the given cameraName.  Not
-  // all image channels have named cameras in botparam.  The imageType, if >= 0,
-  // is used to extract image_t message from images_t.
-  bool addCameraStream(const QString& channel, const QString& cameraName, int imageType);
-
+  
   void init(ddLCMThread* lcmThread, const QString& botConfigFile);
   void getPointCloudFromKinect(vtkPolyData* polyDataRender);
 
-  qint64 getImage(const QString& cameraName, vtkImageData* image);
-  qint64 getCurrentImageTime(const QString& cameraName);
-
-  // Returns four xyz vectors as a 12 element list.  The vectors are rays
-  // representing the top left, top right, bottom right, and bottom left
-  // edges of the camera frustum.
-  QList<double> getCameraFrustumBounds(const QString& cameraName);
-
-  QList<double> unprojectPixel(const QString& cameraName, int px, int py);
-
-  void colorizePoints(const QString& cameraName, vtkPolyData* polyData);
-
-  void computeTextureCoords(const QString& cameraName, vtkPolyData* polyData);
-
-  // Computes a point cloud with rgb and copies it into the given polyData.
-  // The channel argument names an lcm channel where an images message are received
-  // that contains disparity and color images.
-  // decimation: power of 2 to reduce the data by (1,2,4,8...)
-  // removeSize: remove disconnected components smaller than this size (in pixels), set=0 to skip
-  void getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize);
-
-  // Project the points of the given polydata into image space.  The points must
-  // already be in the camera coordinate system.  The points will be written to
-  // in place.
-  int projectPoints(const QString& cameraName, vtkPolyData* polyData);
-
-  void getBodyToCameraTransform(const QString& cameraName, vtkTransform* transform);
-
-  int getTransform(const QString& fromFrame, const QString& toFrame, qint64 utime, vtkTransform* transform);
-  int getTransform(const QString& fromFrame, const QString& toFrame, vtkTransform* transform);
-
-  QStringList getBotFrameNames() const;
-
 protected slots:
 
-  void onImagesMessage(const QByteArray& data, const QString& channel);
-  void onImageMessage(const QByteArray& data, const QString& channel);
+  // void onImagesMessage(const QByteArray& data, const QString& channel);
+  // void onImageMessage(const QByteArray& data, const QString& channel);
   void onKinectFrame(const QByteArray& data, const QString& channel);
 
 
 protected:
 
-  CameraData* getCameraData(const QString& cameraName);
-  bool initCameraData(const QString& cameraName, CameraData* cameraData);
+  // CameraData* getCameraData(const QString& cameraName);
+  // bool initCameraData(const QString& cameraName, CameraData* cameraData);
 
   vtkSmartPointer<vtkImageData> toVtkImage(CameraData* cameraData);
-
-  void colorizePoints(vtkPolyData* polyData, CameraData* cameraData);
-
-  void computeTextureCoords(vtkPolyData* polyData, CameraData* cameraData);
-
-  QList<double> getCameraFrustumBounds(CameraData* cameraData);
-
-  int getTransform(std::string from_frame, std::string to_frame,
-                     Eigen::Isometry3d& mat, qint64 utime);
 
   BotParam* mBotParam;
   BotFrames* mBotFrames;
