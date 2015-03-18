@@ -43,6 +43,10 @@ def onIkStartup(ikServer, startSuccess):
     teleopPanel.ui.planButton.click()
     assert playbackPanel.plan is not None
 
+    teleopPanel.ikPlanner.useCollision = True;
+    teleopPanel.ui.planButton.click()
+    assert playbackPanel.plan is not None
+
     frame.setProperty('Edit', True)
     app.startTestingModeQuitTimer()
 
@@ -58,7 +62,7 @@ playbackPanel = playbackpanel.PlaybackPanel(planPlayback, playbackRobotModel, pl
                                   robotStateModel, robotStateJointController, manipPlanner)
 
 teleopPanel = teleoppanel.TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                 ikPlanner, manipPlanner, playbackPanel.setPlan, playbackPanel.hidePlan)
+                 ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
 manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
