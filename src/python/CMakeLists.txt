@@ -100,6 +100,7 @@ set(python_files
   ddapp/vtkAll.py
   ddapp/vtkNumpy.py
   ddapp/walkingtestdemo.py
+  ddapp/kinectlcm.py
 
 
   ddapp/macros/segmentation_view/ortho_x.py
