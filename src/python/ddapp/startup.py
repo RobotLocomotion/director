@@ -715,5 +715,5 @@ def sendMatlabSigint():
     ikServer.comm.client.proc.send_signal(signal.SIGINT)
 
 
-app.addToolbarMacro('Ctrl+C MATLAB', sendMatlabSigint)
+#app.addToolbarMacro('Ctrl+C MATLAB', sendMatlabSigint)
 
