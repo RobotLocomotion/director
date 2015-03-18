@@ -104,7 +104,8 @@ loadTableTopPointCloud()
 segmentTableTopPointCloud()
 
 from ddapp import affordancepanel
-panel = affordancepanel.AffordancePanel(view, affordanceManager, ikServer, robotStateJointController)
+from ddapp import raycastdriver
+panel = affordancepanel.AffordancePanel(view, affordanceManager, ikServer, robotStateJointController, raycastdriver.RaycastDriver())
 panel.widget.show()
 
 

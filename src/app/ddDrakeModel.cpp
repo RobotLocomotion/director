@@ -1,7 +1,8 @@
 #include "ddDrakeModel.h"
 #include "ddSharedPtr.h"
 
-#include <URDFRigidBodyManipulator.h>
+#include <RigidBodyManipulator.h>
+#include <shapes/Geometry.h>
 
 #include <vtkPolyData.h>
 #include <vtkAppendPolyData.h>
@@ -35,9 +36,9 @@
 #include <sstream>
 #include <boost/shared_ptr.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/find.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/replace.hpp>
-
-#include <urdf_interface/model.h>
 
 #include <math.h>
 
@@ -71,6 +72,7 @@ class ddMeshVisual
   vtkSmartPointer<vtkActor> Actor;
   vtkSmartPointer<vtkActor> ShadowActor;
   vtkSmartPointer<vtkTransform> Transform;
+  vtkSmartPointer<vtkTransform> VisualToLink;
   vtkSmartPointer<vtkTexture> Texture;
   std::string Name;
 
@@ -84,7 +86,7 @@ namespace
 
 const int GRAY_DEFAULT = 190;
 
-QMap<QString, QString> PackageSearchPaths;
+std::map<std::string, std::string> PackageSearchPaths;
 
 int feq (double a, double b)
 {
@@ -120,6 +122,22 @@ void bot_quat_to_roll_pitch_yaw (const double q[4], double rpy[3])
     double yaw_a = 2 * (q[0]*q[3] + q[1]*q[2]);
     double yaw_b = 1 - 2 * (q[2]*q[2] + q[3]*q[3]);
     rpy[2] = atan2 (yaw_a, yaw_b);
+}
+
+vtkSmartPointer<vtkTransform> makeTransform( const Eigen::Matrix4d& mat)
+{
+  vtkSmartPointer<vtkMatrix4x4> vtkmat = vtkSmartPointer<vtkMatrix4x4>::New();
+  for (int i = 0; i < 4; ++i)
+    {
+    for (int j = 0; j < 4; ++j)
+      {
+      vtkmat->SetElement(i, j, mat(i,j));
+      }
+    }
+
+  vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+  transform->SetMatrix(vtkmat);
+  return transform;
 }
 
 vtkSmartPointer<vtkPolyData> shallowCopy(vtkPolyData* polyData)
@@ -420,19 +438,60 @@ ddMeshVisual::Ptr makeBoxVisual(double x, double y, double z)
   return visualFromPolyData(shallowCopy(cube->GetOutput()));
 }
 
-class URDFRigidBodyManipulatorVTK : public URDFRigidBodyManipulator
+class URDFRigidBodyManipulatorVTK : public RigidBodyManipulator
 {
 public:
 
-  typedef std::map<boost::shared_ptr<urdf::Visual>, std::vector<ddMeshVisual::Ptr> > MeshMapType;
+  typedef std::map<std::shared_ptr<RigidBody>, std::vector<ddMeshVisual::Ptr> > MeshMapType;
 
-  MeshMapType mesh_map;
+  MeshMapType meshMap;
+
+  std::map<std::string, int> dofMap;
 
   ddPtrMacro(URDFRigidBodyManipulatorVTK);
 
-  URDFRigidBodyManipulatorVTK()
-  {
+  URDFRigidBodyManipulatorVTK() : RigidBodyManipulator()
+  {}
 
+  void computeDofMap()
+  {
+    this->dofMap.clear();
+
+    RigidBodyManipulator* model = this;
+
+    const std::shared_ptr<RigidBody> worldBody = model->bodies[0];
+
+    for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
+    {
+
+      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+
+      if (!body->hasParent())
+      {
+        continue;
+      }
+
+
+      int dofId = body->position_num_start;
+
+      if (body->parent == worldBody)
+      {
+        //printf("dofMap base\n");
+
+        dofMap["base_x"] = dofId + 0;
+        dofMap["base_y"] = dofId + 1;
+        dofMap["base_z"] = dofId + 2;
+        dofMap["base_roll"] = dofId + 3;
+        dofMap["base_pitch"] = dofId + 4;
+        dofMap["base_yaw"] = dofId + 5;
+      }
+      else
+      {
+        //printf("dofMap[%s] = %d\n", body->getJoint().getName().c_str(), dofId);
+        dofMap[body->getJoint().getName()] = dofId;
+      }
+
+    }
   }
 
   virtual ~URDFRigidBodyManipulatorVTK()
@@ -443,21 +502,24 @@ public:
   std::vector<ddMeshVisual::Ptr> meshVisuals()
   {
     std::vector<ddMeshVisual::Ptr> visuals;
-    for (MeshMapType::iterator itr = mesh_map.begin(); itr != mesh_map.end(); ++itr)
+
+    for (MeshMapType::iterator itr = meshMap.begin(); itr != meshMap.end(); ++itr)
     {
       for (size_t i = 0; i < itr->second.size(); ++i)
       {
         visuals.push_back(itr->second[i]);
       }
     }
+
     return visuals;
   }
 
-  std::string locateMeshFile(boost::shared_ptr<urdf::Mesh> mesh, std::string root_dir)
+
+  std::string locateMeshFile(const std::string& meshFilename, const std::string& root_dir)
   {
 
-    string fname = mesh->filename;
-    bool has_package = boost::find_first(mesh->filename,"package://");
+    string fname = meshFilename;
+    bool has_package = boost::find_first(meshFilename,"package://");
 
     if (has_package)
     {
@@ -480,7 +542,7 @@ public:
     }
     else
     {
-      fname = root_dir + "/" + mesh->filename;
+      fname = root_dir + "/" + meshFilename;
     }
 
     if (!boost::filesystem::exists(fname))
@@ -523,85 +585,87 @@ public:
   }
 
 
-  virtual bool addURDF(boost::shared_ptr<urdf::ModelInterface> _urdf_model,
-                       std::map<std::string, int> jointname_to_jointnum,
-                       std::map<std::string,int> dofname_to_dofnum,
-                       const string& xml_string,
-                       const std::string& root_dir=".")
+  void loadVisuals(const std::string& root_dir=".")
   {
-    if (!URDFRigidBodyManipulator::addURDF(_urdf_model, jointname_to_jointnum, dofname_to_dofnum, xml_string, root_dir))
-      return false;
 
-    for (map<string, boost::shared_ptr<urdf::Link> >::iterator l=_urdf_model->links_.begin(); l!=_urdf_model->links_.end(); l++)
+    //printf("load visuals...\n");
+    RigidBodyManipulator* model = this;
+
+    for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
-      // load geometry
-      if (l->second->visual) // then at least one default visual tag exists
+
+      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+
+      //printf("body: %s\n", body->linkname.c_str());
+
+      for (size_t visualIndex = 0 ; visualIndex < body->visual_elements.size(); ++visualIndex)
       {
+        //printf("vi %d\n", visualIndex);
 
-        // todo: iterate over all visual groups (not just "default")
+        const DrakeShapes::VisualElement& visual = body->visual_elements[visualIndex];
 
-        map<string, boost::shared_ptr<vector<boost::shared_ptr<urdf::Visual> > > >::iterator v_grp_it = l->second->visual_groups.find("default");
-        vector<boost::shared_ptr<urdf::Visual> > visuals = (*v_grp_it->second);
+        const DrakeShapes::Shape visualType = visual.getShape();
 
-        for (size_t iv = 0;iv < v_grp_it->second->size();iv++)
+        //printf("shape: %d\n", visualType);
+
+        std::vector<ddMeshVisual::Ptr> loadedVisuals;
+
+
+        if (visualType == DrakeShapes::MESH)
         {
 
-          boost::shared_ptr<urdf::Visual> vptr = visuals[iv];
+          const DrakeShapes::Mesh& mesh = static_cast<const DrakeShapes::Mesh&>(visual.getGeometry());
 
-          int visualType = vptr->geometry->type;
-
-          std::vector<ddMeshVisual::Ptr> loadedVisuals;
-          ddMeshVisual::Ptr meshVisual;
-
-          if (visualType == urdf::Geometry::MESH)
+          std::string filename = locateMeshFile(mesh.filename, root_dir);
+          if (filename.size())
           {
-            boost::shared_ptr<urdf::Mesh> mesh(boost::dynamic_pointer_cast<urdf::Mesh>(vptr->geometry));
-
-            std::string filename = locateMeshFile(mesh, root_dir);
-            if (filename.size())
-            {
-              loadedVisuals = loadMeshVisuals(filename);
-            }
+            //printf("loading mesh: %s\n", filename.c_str());
+            loadedVisuals = loadMeshVisuals(filename);
           }
-          else if (visualType == urdf::Geometry::SPHERE)
-          {
-            boost::shared_ptr<urdf::Sphere> sphere(boost::dynamic_pointer_cast<urdf::Sphere>(vptr->geometry));
-            double radius = sphere->radius;
-            loadedVisuals.push_back(makeSphereVisual(radius));
-          }
-          else if (visualType == urdf::Geometry::BOX)
-          {
-            boost::shared_ptr<urdf::Box> box(boost::dynamic_pointer_cast<urdf::Box>(vptr->geometry));
-            loadedVisuals.push_back(makeBoxVisual(box->dim.x, box->dim.y, box->dim.z));
-          }
-          else if (visualType == urdf::Geometry::CYLINDER)
-          {
-            boost::shared_ptr<urdf::Cylinder> cyl(boost::dynamic_pointer_cast<urdf::Cylinder>(vptr->geometry));
-            loadedVisuals.push_back(makeCylinderVisual(cyl->radius, cyl->length));
-          }
-
-          for (size_t mvi = 0; mvi < loadedVisuals.size(); ++mvi)
-          {
-            ddMeshVisual::Ptr meshVisual = loadedVisuals[mvi];
-            meshVisual->Name = l->second->name;
-            mesh_map[vptr].push_back(meshVisual);
-
-            if (vptr->material)
-            {
-            meshVisual->Actor->GetProperty()->SetColor(vptr->material->color.r,
-                                                       vptr->material->color.g,
-                                                       vptr->material->color.b);
-            }
-
-          }
-
 
         }
+        else if (visualType == DrakeShapes::SPHERE)
+        {
+          const DrakeShapes::Sphere& sphere = static_cast<const DrakeShapes::Sphere&>(visual.getGeometry());
+          double radius = sphere.radius;
+          loadedVisuals.push_back(makeSphereVisual(radius));
+        }
+        else if (visualType == DrakeShapes::BOX)
+        {
+          const DrakeShapes::Box& box = static_cast<const DrakeShapes::Box&>(visual.getGeometry());
+
+          loadedVisuals.push_back(makeBoxVisual(box.size[0], box.size[1], box.size[2]));
+        }
+        else if (visualType == DrakeShapes::CYLINDER)
+        {
+          const DrakeShapes::Cylinder& cyl = static_cast<const DrakeShapes::Cylinder&>(visual.getGeometry());
+          loadedVisuals.push_back(makeCylinderVisual(cyl.radius, cyl.length));
+        }
+        else if (visualType == DrakeShapes::CAPSULE)
+        {
+          const DrakeShapes::Capsule& cyl = static_cast<const DrakeShapes::Capsule&>(visual.getGeometry());
+          loadedVisuals.push_back(makeCylinderVisual(cyl.radius, cyl.length));
+        }
+
+        for (size_t mvi = 0; mvi < loadedVisuals.size(); ++mvi)
+        {
+          ddMeshVisual::Ptr meshVisual = loadedVisuals[mvi];
+
+          meshVisual->VisualToLink = makeTransform(visual.getLocalTransform());
+
+          meshVisual->Name = body->linkname;
+          meshMap[body].push_back(meshVisual);
+
+          meshVisual->Actor->GetProperty()->SetColor(visual.getMaterial()[0],
+                                                     visual.getMaterial()[1],
+                                                     visual.getMaterial()[2]);
+        }
+
       }
     }
 
+    //printf("done\n");
 
-    return true;
   }
 
 
@@ -612,153 +676,54 @@ public:
     double angleAxis[4];
     Matrix<double,7,1> pose;
 
-    // iterate over each model
-    for (int robot=0; robot< urdf_model.size(); robot++)
+    RigidBodyManipulator* model = this;
+
+
+
+    for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
 
-      // iterate over each link and draw
-      for (map<string, boost::shared_ptr<urdf::Link> >::iterator l=urdf_model[robot]->links_.begin(); l!=urdf_model[robot]->links_.end(); l++)
+      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+
+      MeshMapType::iterator itr = meshMap.find(body);
+      if (itr == this->meshMap.end())
       {
-        if (!l->second->visual) // then at least one default visual tag exists
-        {
-          continue;
-        }
+        continue;
+      }
 
-        int body_ind;
-        if (l->second->parent_joint)
-        {
-          map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],l->second->parent_joint->name);
-          if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
-          body_ind = j2->second;
-        }
-        else
-        {
-          map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],"base");
-          if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
-          body_ind = j2->second;  // then it's attached directly to the floating base
-        }
+      //model->forwardKin(body->body_index, zero, 2, pose);
+      //auto pt = model->forwardKinNew(Vector3d::Zero().eval(), body->body_index, 0, 2, 0);
+      //pose = pt.value();
 
-        //cout << "drawing robot " << robot << " body_ind " << body_ind << ": " << bodies[body_ind].linkname << endl;
+      pose = model->forwardKinNew(Vector3d::Zero().eval(), body->body_index, 0, 2, 0).value();
 
-        forwardKin(body_ind, zero, 2, pose);
+      double* posedata = pose.data();
 
-        //cout << l->second->name << " is at " << pose.transpose() << endl;
+      bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
+      angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
 
-        double* posedata = pose.data();
+      vtkSmartPointer<vtkTransform> linkToWorld = vtkSmartPointer<vtkTransform>::New();
+      linkToWorld->PostMultiply();
+      linkToWorld->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+      linkToWorld->Translate(pose(0), pose(1), pose(2));
 
-        //bot_quat_to_angle_axis(&posedata[3], &theta, axis);
-        //glPushMatrix();
-        //glTranslatef(pose(0),pose(1),pose(2));
-        //glRotatef(theta * 180/3.141592654, axis[0], axis[1], axis[2]);
+      //printf("%s to world: %f %f %f\n", body->linkname.c_str(), pose(0), pose(1), pose(2));
+
+      for (size_t visualIndex = 0; visualIndex < itr->second.size(); ++visualIndex)
+      {
+        ddMeshVisual::Ptr meshVisual = itr->second[visualIndex];
 
 
+        vtkSmartPointer<vtkTransform> visualToWorld = vtkSmartPointer<vtkTransform>::New();
+        visualToWorld->PostMultiply();
+        visualToWorld->Concatenate(meshVisual->VisualToLink);
+        visualToWorld->Concatenate(linkToWorld);
+        meshVisual->Transform->SetMatrix(visualToWorld->GetMatrix());
 
-        //QuaternionToAngleAxis(&posedata[3], angleAxis);
-        bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
-        angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
+      }
 
-        vtkSmartPointer<vtkTransform> worldToLink = vtkSmartPointer<vtkTransform>::New();
-        worldToLink->PreMultiply();
-        worldToLink->Translate(pose(0), pose(1), pose(2));
-        worldToLink->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
+    }
 
-        //printf("link rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
-        //printf("link translation: [%f, %f, %f]\n", pose(0), pose(1), pose(2));
-
-
-        // todo: iterate over all visual groups (not just "default")
-        map<string, boost::shared_ptr<vector<boost::shared_ptr<urdf::Visual> > > >::iterator v_grp_it = l->second->visual_groups.find("default");
-        if (v_grp_it == l->second->visual_groups.end()) continue;
-
-        vector<boost::shared_ptr<urdf::Visual> > *visuals = v_grp_it->second.get();
-        for (vector<boost::shared_ptr<urdf::Visual> >::iterator viter = visuals->begin(); viter!=visuals->end(); viter++)
-        {
-          boost::shared_ptr<urdf::Visual> vptr = *viter;
-          if (!vptr) continue;
-
-          //glPushMatrix();
-
-          // handle visual material
-          if (vptr->material)
-          {
-            //glColor4f(vptr->material->color.r,
-            //    vptr->material->color.g,
-            //    vptr->material->color.b,
-            //    vptr->material->color.a);
-          }
-
-          // todo: handle textures here?
-
-          // handle visual origin
-
-          /*
-          glTranslatef(vptr->origin.position.x,
-                       vptr->origin.position.y,
-                       vptr->origin.position.z);
-
-          quat[0] = vptr->origin.rotation.w;
-          quat[1] = vptr->origin.rotation.x;
-          quat[2] = vptr->origin.rotation.y;
-          quat[3] = vptr->origin.rotation.z;
-          bot_quat_to_angle_axis(quat, &theta, axis);
-          glRotatef(theta * 180/3.141592654, axis[0], axis[1], axis[2]);
-          */
-
-          quat[0] = vptr->origin.rotation.w;
-          quat[1] = vptr->origin.rotation.x;
-          quat[2] = vptr->origin.rotation.y;
-          quat[3] = vptr->origin.rotation.z;
-
-          //QuaternionToAngleAxis(quat, angleAxis);
-          bot_quat_to_angle_axis(quat, &angleAxis[0], &angleAxis[1]);
-          angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
-
-          vtkSmartPointer<vtkTransform> linkToVisual = vtkSmartPointer<vtkTransform>::New();
-          linkToVisual->PreMultiply();
-          linkToVisual->Translate(vptr->origin.position.x,
-                                 vptr->origin.position.y,
-                                 vptr->origin.position.z);
-          linkToVisual->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
-
-          //printf("visual rotation: [%f, %f, %f, %f]\n", angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
-          //printf("visual translation: [%f, %f, %f]\n", vptr->origin.position.x, vptr->origin.position.y, vptr->origin.position.z);
-
-
-          int visualType = vptr->geometry->type;
-          if (visualType == urdf::Geometry::MESH)
-          {
-
-            boost::shared_ptr<urdf::Mesh> mesh(boost::dynamic_pointer_cast<urdf::Mesh>(vptr->geometry));
-
-            //glScalef(mesh->scale.x,mesh->scale.y,mesh->scale.z);
-
-            linkToVisual->Scale(mesh->scale.x,
-                                mesh->scale.y,
-                                mesh->scale.z);
-
-            //printf("visual scale: [%f, %f, %f]\n", mesh->scale.x, mesh->scale.y, mesh->scale.z);
-
-          }
-
-          vtkSmartPointer<vtkTransform> worldToVisual = vtkSmartPointer<vtkTransform>::New();
-          worldToVisual->PreMultiply();
-          worldToVisual->Concatenate(worldToLink);
-          worldToVisual->Concatenate(linkToVisual);
-          worldToVisual->Update();
-
-          MeshMapType::iterator iter = mesh_map.find(vptr);
-          if (iter!= mesh_map.end())
-          {
-            for (size_t i = 0; i < iter->second.size(); ++i)
-            {
-              ddMeshVisual::Ptr meshVisual = iter->second[i];
-              meshVisual->Transform->SetMatrix(worldToVisual->GetMatrix());
-            }
-          }
-
-        } // end loop over visuals
-      } // end loop over links
-    } // end loop over robots
   }
 
 
@@ -766,34 +731,20 @@ public:
   {
     QMap<QString, int> linkMap;
 
-    // iterate over each model
-    for (int robot=0; robot< urdf_model.size(); robot++)
+
+    RigidBodyManipulator* model = this;
+
+    for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
-      // iterate over each link
-      for (map<string, boost::shared_ptr<urdf::Link> >::iterator l=urdf_model[robot]->links_.begin(); l!=urdf_model[robot]->links_.end(); l++)
+      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+
+      if (body->linkname.size())
       {
-
-
-        int body_ind;
-        if (l->second->parent_joint)
-        {
-          map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],l->second->parent_joint->name);
-          if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
-          body_ind = j2->second;
-        }
-        else
-        {
-          map<string, int>::const_iterator j2 = findWithSuffix(joint_map[robot],"base");
-          if (j2 == joint_map[robot].end()) continue;  // this shouldn't happen, but just in case...
-          body_ind = j2->second;  // then it's attached directly to the floating base
-        }
-
-        linkMap[l->second->name.c_str()] = body_ind;
+        linkMap[body->linkname.c_str()] = body->body_index;
       }
     }
 
     return linkMap;
-
   }
 
   vtkSmartPointer<vtkTransform> getLinkToWorld(QString linkName)
@@ -812,7 +763,9 @@ public:
     double angleAxis[4];
     Matrix<double, 7 ,1> pose;
 
-    forwardKin(linkMap.value(linkName), zero, 2, pose);
+    RigidBodyManipulator* model = this;
+
+    pose = model->forwardKinNew(Vector3d::Zero().eval(), linkMap.value(linkName), 0, 2, 0).value();
 
     double* posedata = pose.data();
     bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
@@ -829,7 +782,6 @@ public:
 URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filename)
 {
   // urdf_filename can be a list of urdf files seperated by a :
-
   URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
 
   string token;
@@ -860,13 +812,15 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
     if (!mypath.empty() && mypath.has_parent_path())  
       pathname = mypath.parent_path().native();
 
-    if (!model->addURDFfromXML(xml_string, pathname))
+    if (!model->addRobotFromURDFString(xml_string, PackageSearchPaths, pathname))
     {
       return URDFRigidBodyManipulatorVTK::Ptr();
     }
 
   }
 
+  model->computeDofMap();
+  model->loadVisuals();
   return model;
 }
 
@@ -874,10 +828,13 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
 URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromXML(const string &xmlString)
 {
   URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
-  if (!model->addURDFfromXML(xmlString, ""))
+  if (!model->addRobotFromURDFString(xmlString,PackageSearchPaths, ""))
   {
     return URDFRigidBodyManipulatorVTK::Ptr();
   }
+
+  model->computeDofMap();
+  model->loadVisuals();
   return model;
 }
 
@@ -928,7 +885,7 @@ int ddDrakeModel::numberOfJoints()
     return 0;
   }
 
-  return this->Internal->Model->num_dof;
+  return this->Internal->Model->num_positions;
 }
 
 //-----------------------------------------------------------------------------
@@ -942,7 +899,6 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
     return;
   }
 
-  const std::map<std::string, int> dofMap = model->dof_map[0];
 
   if (jointPositions.size() != jointNames.size())
   {
@@ -951,7 +907,7 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
     return;
   }
 
-  if (this->Internal->JointPositions.size() != model->num_dof)
+  if (this->Internal->JointPositions.size() != model->num_positions)
   {
     std::cout << "Internal joint positions vector has inconsistent size." << std::endl;
     return;
@@ -961,8 +917,8 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
   {
     const QString& dofName = jointNames[i];
 
-    std::map<std::string, int>::const_iterator itr = dofMap.find(dofName.toAscii().data());
-    if (itr == dofMap.end())
+    std::map<std::string, int>::const_iterator itr = model->dofMap.find(dofName.toAscii().data());
+    if (itr == model->dofMap.end())
     {
       printf("Could not find URDF model dof with name: %s\n", qPrintable(dofName));
       continue;
@@ -970,6 +926,8 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
 
     int dofId = itr->second;
     this->Internal->JointPositions[dofId] = jointPositions[i];
+
+    //printf("setJoint %s --> %d, %f\n", qPrintable(dofName), dofId, jointPositions[i]);
   }
 
   this->setJointPositions(this->Internal->JointPositions);
@@ -986,21 +944,22 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
     return;
   }
 
-  if (jointPositions.size() != model->num_dof)
+  if (jointPositions.size() != model->num_positions)
   {
     std::cout << "ddDrakeModel::setJointPositions(): input jointPositions size "
-              << jointPositions.size() << " != " << model->num_dof << std::endl;
+              << jointPositions.size() << " != " << model->num_positions << std::endl;
     return;
   }
 
-  MatrixXd q = MatrixXd::Zero(model->num_dof, 1);
+  VectorXd q = VectorXd::Zero(model->num_positions);
+  VectorXd v = VectorXd::Zero(model->num_velocities);
   for (int i = 0; i < jointPositions.size(); ++i)
   {
-    q(i, 0) = jointPositions[i];
+    q(i) = jointPositions[i];
   }
 
   this->Internal->JointPositions = jointPositions;
-  model->doKinematics(q.data());
+  model->doKinematicsNew(q, v, false, false);
   model->updateModel();
   emit this->modelChanged();
 }
@@ -1025,16 +984,15 @@ QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
     return limits;
   }
 
-  const std::map<std::string, int> dofMap = model->dof_map[0];
-
-  std::map<std::string, int>::const_iterator itr = dofMap.find(jointName.toAscii().data());
-  if (itr == dofMap.end())
+  std::map<std::string, int>::const_iterator itr = model->dofMap.find(jointName.toAscii().data());
+  if (itr == model->dofMap.end())
   {
     printf("Could not find URDF model dof with name: %s\n", qPrintable(jointName));
     return limits;
   }
 
   int dofId = itr->second;
+
 
   limits[0] = this->Internal->Model->joint_limit_min[dofId];
   limits[1] = this->Internal->Model->joint_limit_max[dofId];
@@ -1078,9 +1036,9 @@ QList<QString> ddDrakeModel::getJointNames()
 
   QList<QString> names;
 
-  const std::map<std::string, int> dofMap = this->Internal->Model->dof_map[0];
+
   std::map<std::string, int>::const_iterator itr;
-  for(itr = dofMap.begin(); itr != dofMap.end(); ++itr)
+  for(itr = this->Internal->Model->dofMap.begin(); itr != this->Internal->Model->dofMap.end(); ++itr)
   {
     names.append(itr->first.c_str());
   }
@@ -1115,7 +1073,7 @@ bool ddDrakeModel::loadFromFile(const QString& filename)
   this->Internal->FileName = filename;
   this->Internal->Model = model;
 
-  this->setJointPositions(QVector<double>(model->num_dof, 0.0));
+  this->setJointPositions(QVector<double>(model->num_positions, 0.0));
   return true;
 }
 
@@ -1131,7 +1089,7 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
   this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
 
-  this->setJointPositions(QVector<double>(model->num_dof, 0.0));
+  this->setJointPositions(QVector<double>(model->num_positions, 0.0));
   return true;
 }
 
@@ -1341,15 +1299,20 @@ bool ddDrakeModel::visible() const
 //-----------------------------------------------------------------------------
 void ddDrakeModel::addPackageSearchPath(const QString& searchPath)
 {
-  QString packageName = QDir(searchPath).dirName();
-  if (!PackageSearchPaths.contains(packageName))
+  std::string packageName = QDir(searchPath).dirName().toAscii().data();
+  if (PackageSearchPaths.count(packageName) == 0)
   {
-    PackageSearchPaths[packageName] = searchPath;
+    PackageSearchPaths[packageName] = searchPath.toAscii().data();
   }
 }
 
 //-----------------------------------------------------------------------------
 QString ddDrakeModel::findPackageDirectory(const QString& packageName)
 {
-  return PackageSearchPaths.value(packageName);
+  auto packageDirIter = PackageSearchPaths.find(packageName.toAscii().data());
+  if (packageDirIter != PackageSearchPaths.end()) {
+    return QString::fromStdString(packageDirIter->second);
+  } else {
+    return QString();
+  }
 }
