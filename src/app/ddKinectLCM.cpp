@@ -17,20 +17,7 @@
 //-----------------------------------------------------------------------------
 ddKinectLCM::ddKinectLCM(QObject* parent) : QObject(parent)
 {
-  mBotParam = 0;
-  mBotFrames = 0;
-
   mPolyData = vtkSmartPointer<vtkPolyData>::New();
-}
-
-
-//-----------------------------------------------------------------------------
-ddKinectLCM::~ddKinectLCM()
-{
-  foreach (CameraData* cameraData, mCameraData.values())
-  {
-    delete cameraData;
-  }
 }
 
 
@@ -320,14 +307,14 @@ void ddKinectLCM::onKinectFrame(const QByteArray& data, const QString& channel)
 
   kinect_frame_msg_t_decode (data.data(), 0, 1e9, &message);
 
-  printf("got kinect frame %d\n", message.timestamp);
+  //printf("got kinect frame %d\n", message.timestamp);
 
   //convert to pcl object:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
   unpack_kinect_frame(&message, rgb_buf_, kcal, decimate_,  cloud);
 
   kinect_frame_msg_t_decode_cleanup(&message);
-  printf("Decoded point cloud with %u\n", cloud->size());
+  //printf("Decoded point cloud with %u\n", cloud->size());
 
   vtkSmartPointer<vtkPolyData> polyData = PolyDataFromPointCloud(cloud);
 
