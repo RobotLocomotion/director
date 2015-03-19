@@ -226,7 +226,7 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
     float curRange = ranges[i];
     float curDelta = (prevRange >= 0) ? (ranges[i] - prevRange) : 0;
     prevScanDelta = (std::abs(prevDelta) > std::abs(curDelta)) ?
-      prevDelta : curDelta;
+      -prevDelta : curDelta;
     prevDelta = curDelta;
     prevRange = curRange;
 
