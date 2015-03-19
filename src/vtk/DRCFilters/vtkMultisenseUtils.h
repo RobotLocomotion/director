@@ -188,6 +188,9 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
   const bool doFilter = (edgeAngleThreshold > 0);
   const float angleThresh = edgeAngleThreshold*M_PI/180;
 
+  float prevDelta = 0;
+  float prevScanDelta = 0;
+  float prevRange = -1;
   for (int i = 0; i < numPoints; ++i, t += tStep, theta += thetaStep)
   {
     if (ranges[i] < distanceRange[0] || ranges[i] > distanceRange[1])
@@ -197,7 +200,6 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 
 
     // Edge effect filter
-    float scanDelta = 0.0;
     if ( (i > 0) && ( i+1 < numPoints) && doFilter)
     {
       float theta1 = msg->rad0 + (i-1)*msg->radstep;
@@ -221,6 +223,13 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
       }
     }
 
+    float curRange = ranges[i];
+    float curDelta = (prevRange >= 0) ? (ranges[i] - prevRange) : 0;
+    prevScanDelta = (std::abs(prevDelta) > std::abs(curDelta)) ?
+      prevDelta : curDelta;
+    prevDelta = curDelta;
+    prevRange = curRange;
+
     Eigen::Vector3d pt(ranges[i] * cos(theta), ranges[i] * sin(theta), 0.0);
 
     Eigen::Quaterniond q = q0.slerp(t, q1);
@@ -235,7 +244,11 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
     dataArrays.SpindleAngle->InsertNextValue(spindleAngle);
     dataArrays.Distance->InsertNextValue(ranges[i]);
     dataArrays.ZHeight->InsertNextValue(pt[2]);
-    dataArrays.ScanDelta->InsertNextValue(scanDelta);
+    dataArrays.ScanDelta->InsertNextValue(0);
+    int numValues = dataArrays.ScanDelta->GetNumberOfTuples();
+    if (numValues > 1) {
+      dataArrays.ScanDelta->SetValue(numValues-2, prevScanDelta);
+    }
     dataArrays.Timestamp->InsertNextValue(msg->utime);
   }
 
