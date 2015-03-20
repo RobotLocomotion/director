@@ -410,10 +410,12 @@ class ValvePlannerDemo(object):
         self.addPlan(newPlan)
 
     def coaxialGetPose(self, reachDepth, extension=None, lockFeet=True, lockBack=True, preTurn=True, startPose=None):
+        _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame.transform)
         if self.graspingHand == 'left':
             scapName = 'l_scap'
             elxJoint = 'l_arm_elx'
             yJoints = ['l_arm_ely', 'l_arm_uwy']
+            yawDesired = np.arctan2(zaxis[1], zaxis[0]) - np.radians(5)
             if preTurn:
                 yJointLowerBound = [0.01, 0.01]
                 yJointUpperBound = [0.01, 0.01]
@@ -425,6 +427,7 @@ class ValvePlannerDemo(object):
             scapName = 'r_scap'
             elxJoint = 'r_arm_elx'
             yJoints = ['r_arm_ely', 'r_arm_uwy']
+            yawDesired = np.arctan2(zaxis[1], zaxis[0]) + np.radians(5)
             if preTurn:
                 yJointLowerBound = [np.pi-0.01, np.pi-0.01]
                 yJointUpperBound = [np.pi-0.01, np.pi-0.01]
@@ -435,8 +438,6 @@ class ValvePlannerDemo(object):
         if startPose is None:
             startPose = self.getPlanningStartPose()
 
-        _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame.transform)
-        yawDesired = np.arctan2(zaxis[1], zaxis[0]) - np.radians(5)
 
         nominalPose, _ = self.ikPlanner.computeNominalPose(startPose)
         nominalPose[5] = yawDesired
