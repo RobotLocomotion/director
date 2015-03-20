@@ -508,32 +508,50 @@ class ValvePlannerDemo(object):
 
     def coaxialPlanPreTouch(self, **kwargs):
         startPose = self.getPlanningStartPose()
-        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
+        if self.graspingHand == 'left':
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
+        else:
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '3 - retract 360', self.graspingHand)
         self.coaxialPlan(-0.25, startPose=seedPose, **kwargs)
 
     def coaxialPlanTouch(self, **kwargs):
         startPose = self.getPlanningStartPose()
-        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '1 - extend 0', self.graspingHand)
+        if self.graspingHand == 'left':
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '1 - extend 0', self.graspingHand)
+        else:
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '2 - extend 360', self.graspingHand)
         self.coaxialPlan(0, extension=1, startPose=seedPose, **kwargs)
 
     def coaxialPlanTurn(self, **kwargs):
         startPose = self.getPlanningStartPose()
-        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '2 - extend 360', self.graspingHand)
+        if self.graspingHand == 'left':
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '2 - extend 360', self.graspingHand)
+        else:
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '1 - extend 0', self.graspingHand)
         self.coaxialPlan(0, extension=1, preTurn=False, startPose=seedPose, **kwargs)
 
     def coaxialPlanRetract(self, **kwargs):
         startPose = self.getPlanningStartPose()
-        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '3 - retract 360', self.graspingHand)
+        if self.graspingHand == 'left':
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '3 - retract 360', self.graspingHand)
+        else:
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
         endPose, info = self.coaxialGetPose(-0.25, preTurn=False, startPose=seedPose, **kwargs)
         self.ikPlanner.computePostureGoal(startPose, endPose)
 
     def coaxialPlanUnwind(self, **kwargs):
         startPose = self.getPlanningStartPose()
         a, _ = self.coaxialGetPose(-0.25, preTurn=False, **kwargs)
-        b = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '4 - unwind 360', self.graspingHand)
-        c = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '5 - unwind 0', self.graspingHand)
-        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
-        d, _ = self.coaxialGetPose(-0.25, preTurn=True, startPose=seedPose, **kwargs)
+        if self.graspingHand == 'left':
+            b = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '4 - unwind 360', self.graspingHand)
+            c = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '5 - unwind 0', self.graspingHand)
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
+            d, _ = self.coaxialGetPose(-0.25, preTurn=True, startPose=seedPose, **kwargs)
+        else:
+            b = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '5 - unwind 0', self.graspingHand)
+            c = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '4 - unwind 360', self.graspingHand)
+            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '3 - retract 360', self.graspingHand)
+            d, _ = self.coaxialGetPose(-0.25, preTurn=True, startPose=seedPose, **kwargs)
         self.ikPlanner.computeMultiPostureGoal([startPose,b,c,d])
 
 
