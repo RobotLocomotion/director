@@ -16,6 +16,7 @@ from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp.debugVis import DebugData
+from ddapp import ik
 from ddapp import ikplanner
 from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
@@ -49,7 +50,7 @@ class ValvePlannerDemo(object):
         self.graspingObject='valve'
         self.graspingHand='left'
 
-        
+
         # live operation flags
         self.useFootstepPlanner = True
         self.visOnly = True
@@ -110,8 +111,8 @@ class ValvePlannerDemo(object):
             #    self.relativeStanceXYZInitial = [-0.48, -0.2, 0.0]
             #self.relativeStanceRPYInitial = [0, 0, 16]
 
-            self.relativeStanceXYZInitial = [-0.6, 0.0, 0.0]
-            self.relativeStanceRPYInitial = [0, 0, 0]
+            self.relativeStanceXYZInitial = [-1.05, 0.27, 0.0]
+            self.relativeStanceRPYInitial = [0, 0, 0.1]
 
         else:
             self.nextScribeAngleInitial = 0 # reach right into the valve axis
@@ -218,7 +219,8 @@ class ValvePlannerDemo(object):
     def computeValveStanceFrame(self):
         objectTransform = transformUtils.copyFrame( self.clenchFrame.transform )
         self.relativeStanceTransform = transformUtils.copyFrame( transformUtils.frameFromPositionAndRPY( self.relativeStanceXYZ , self.relativeStanceRPY ) )
-        robotStance = self.computeRobotStanceFrame(objectTransform, self.relativeStanceTransform)
+        #robotStance = self.computeRobotStanceFrame(objectTransform, self.relativeStanceTransform)
+        robotStance = self.getStanceFrameCoaxial()
         self.stanceFrame = vis.updateFrame(robotStance, 'valve grasp stance', parent=self.valveAffordance, visible=False, scale=0.2)
         self.stanceFrame.addToView(app.getDRCView())
 
@@ -365,18 +367,18 @@ class ValvePlannerDemo(object):
         self.faceFrameDesired = vis.showFrame(t, 'face frame desired', parent=self.valveAffordance, visible=False, scale=0.2)
 
     def drawFacePath(self):
-      
+
         path = DebugData()
         for i in range(1,len(self.facePath)):
           p0 = self.facePath[i-1].GetPosition()
           p1 = self.facePath[i].GetPosition()
           path.addLine ( np.array( p0 ) , np.array(  p1 ), radius= 0.005)
-          
+
         pathMesh = path.getPolyData()
         self.pointerTipLinePath = vis.showPolyData(pathMesh, 'face frame desired path', color=[0.0, 0.3, 1.0], parent=self.valveAffordance, alpha=0.6)
         self.pointerTipLinePath.actor.SetUserTransform(self.valveFrame.transform)
 
-        
+
     ### End Valve Focused Functions ###############################################################
     ### Planning Functions ###############################################################
 
@@ -406,6 +408,150 @@ class ValvePlannerDemo(object):
         endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'safe nominal')
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
+
+    def coaxialGetPose(self, reachDepth, extension=None, lockFeet=True, lockBack=True, preTurn=True, startPose=None):
+        if self.graspingHand == 'left':
+            scapName = 'l_scap'
+            elxJoint = 'l_arm_elx'
+            yJoints = ['l_arm_ely', 'l_arm_uwy']
+            if preTurn:
+                yJointLowerBound = [0.01, 0.01]
+                yJointUpperBound = [0.01, 0.01]
+            else:
+                yJointLowerBound = [np.pi-0.01, np.pi-0.01]
+                yJointUpperBound = [np.pi-0.01, np.pi-0.01]
+
+        else:
+            scapName = 'r_scap'
+            elxJoint = 'r_arm_elx'
+            yJoints = ['r_arm_ely', 'r_arm_uwy']
+            if preTurn:
+                yJointLowerBound = [np.pi-0.01, np.pi-0.01]
+                yJointUpperBound = [np.pi-0.01, np.pi-0.01]
+            else:
+                yJointLowerBound = [0.01, 0.01]
+                yJointUpperBound = [0.01, 0.01]
+
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
+
+        _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame.transform)
+        yawDesired = np.arctan2(zaxis[1], zaxis[0]) - np.radians(5)
+
+        nominalPose, _ = self.ikPlanner.computeNominalPose(startPose)
+        nominalPose[5] = yawDesired
+        nominalPoseName = 'qNomAtRobot'
+        self.ikPlanner.addPose(nominalPose, nominalPoseName)
+
+        startPoseName = 'Start'
+        startPose[5] = yawDesired
+        self.ikPlanner.addPose(startPose, startPoseName)
+        self.ikPlanner.reachingSide = self.graspingHand
+
+        constraints = []
+        #constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(startPoseName))
+        constraints.append(self.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
+        constraints.append(self.ikPlanner.createLockedArmPostureConstraint(startPoseName))
+
+        if lockFeet:
+            constraints.extend(self.ikPlanner.createFixedFootConstraints(startPoseName))
+        else:
+            constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
+
+        if lockBack:
+            constraints.append(self.ikPlanner.createLockedBackPostureConstraint(startPoseName))
+
+        if extension is not None:
+            elxAngle = (1-extension)*(np.pi/3)
+            if elxAngle < 0.01:
+                elxAngle == 0.01
+            p = ik.PostureConstraint()
+            p.joints = [elxJoint]
+            p.jointsLowerBound = [elxAngle]
+            p.jointsUpperBound = [elxAngle]
+            constraints.append(p)
+
+        shoulderOnValveAxisConstraint = ik.PositionConstraint(linkName=scapName,
+                                                              referenceFrame=self.clenchFrame.transform)
+        tol = 0.01
+        shoulderOnValveAxisConstraint.lowerBound = [tol, -np.inf, tol]
+        shoulderOnValveAxisConstraint.upperBound = [tol, np.inf, tol]
+        constraints.append(shoulderOnValveAxisConstraint)
+
+        constraints.append(self.ikPlanner.createQuasiStaticConstraint())
+
+        constraints.append(self.ikPlanner.createGazeGraspConstraint(self.graspingHand, self.clenchFrame, coneThresholdDegrees=4))
+
+        p = ik.PostureConstraint()
+        p.joints = yJoints
+        p.jointsLowerBound = yJointLowerBound
+        p.jointsUpperBound = yJointUpperBound
+        constraints.append(p)
+
+        t = transformUtils.frameFromPositionAndRPY([0,reachDepth,0], [0,0,0])
+        t.Concatenate(self.clenchFrame.transform)
+
+        constraintSet = self.ikPlanner.newReachGoal(startPoseName, self.graspingHand, t, constraints, lockOrient=False)
+        constraintSet.constraints[-1].lowerBound = np.array([-tol, 0, -tol])
+        constraintSet.constraints[-1].upperBound = np.array([tol, 0, tol])
+
+        constraintSet.nominalPoseName = nominalPoseName;
+        constraintSet.startPoseName = startPoseName;
+        return constraintSet.runIk()
+
+
+    def coaxialPlan(self, reachDepth, **kwargs):
+        startPose = self.getPlanningStartPose()
+        touchPose, info = self.coaxialGetPose(reachDepth, **kwargs)
+        self.ikPlanner.computePostureGoal(startPose, touchPose)
+
+    def coaxialPlanPreTouch(self, **kwargs):
+        startPose = self.getPlanningStartPose()
+        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
+        self.coaxialPlan(-0.25, startPose=seedPose, **kwargs)
+
+    def coaxialPlanTouch(self, **kwargs):
+        startPose = self.getPlanningStartPose()
+        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '1 - extend 0', self.graspingHand)
+        self.coaxialPlan(0, extension=1, startPose=seedPose, **kwargs)
+
+    def coaxialPlanTurn(self, **kwargs):
+        startPose = self.getPlanningStartPose()
+        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '2 - extend 360', self.graspingHand)
+        self.coaxialPlan(0, extension=1, preTurn=False, startPose=seedPose, **kwargs)
+
+    def coaxialPlanRetract(self, **kwargs):
+        startPose = self.getPlanningStartPose()
+        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '3 - retract 360', self.graspingHand)
+        endPose, info = self.coaxialGetPose(-0.25, preTurn=False, startPose=seedPose, **kwargs)
+        self.ikPlanner.computePostureGoal(startPose, endPose)
+
+    def coaxialPlanUnwind(self, **kwargs):
+        startPose = self.getPlanningStartPose()
+        a, _ = self.coaxialGetPose(-0.25, preTurn=False, **kwargs)
+        b = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '4 - unwind 360', self.graspingHand)
+        c = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '5 - unwind 0', self.graspingHand)
+        seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
+        d, _ = self.coaxialGetPose(-0.25, preTurn=True, startPose=seedPose, **kwargs)
+        self.ikPlanner.computeMultiPostureGoal([startPose,b,c,d])
+
+
+    def getStanceFrameCoaxial(self):
+        stancePose, info = self.coaxialGetPose(0, extension=1, lockFeet=False)
+        stanceRobotModel = self.ikPlanner.getRobotModelAtPose(stancePose)
+        return self.footstepPlanner.getFeetMidPoint(stanceRobotModel)
+
+
+
+        #p = ik.PostureConstraint()
+        #if self.graspingHand is 'left':
+            #p.joints = ['l_arm_uwy', 'l_arm_mwx']
+
+
+        #constraints.append(reachingArmPostureConstraint)
+        #constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
+        #return self.ikPlanner.newReachGoal(startPoseName, self.graspingHand, self.clenchFrame, constraints, lockOrient=False)
+
 
     def planReach(self):
         self.computeTouchFrame(False) # 0 = not in contact
@@ -792,7 +938,7 @@ class ValveTaskPanel(object):
         self.valveDemo = valveDemo
 
         self.valveDemo.reachDepth = -0.24
-        self.valveDemo.speedLow = 20 
+        self.valveDemo.speedLow = 20
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddValveTaskPanel.ui')
