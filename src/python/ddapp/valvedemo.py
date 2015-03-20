@@ -409,31 +409,30 @@ class ValvePlannerDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
-    def coaxialGetPose(self, reachDepth, extension=None, lockFeet=True, lockBack=True, preTurn=True, startPose=None):
+    def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=True, preTurn=True, startPose=None):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame.transform)
+        yawDesired = np.arctan2(zaxis[1], zaxis[0])
         if self.graspingHand == 'left':
-            scapName = 'l_scap'
-            elxJoint = 'l_arm_elx'
-            yJoints = ['l_arm_ely', 'l_arm_uwy']
-            yawDesired = np.arctan2(zaxis[1], zaxis[0]) - np.radians(5)
+            larmName = 'l_larm'
+            mwxJoint = 'l_arm_mwx'
+            yJoints = ['l_arm_uwy']
             if preTurn:
-                yJointLowerBound = [0.01, 0.01]
-                yJointUpperBound = [0.01, 0.01]
+                yJointLowerBound = [0.01]
+                yJointUpperBound = [0.01]
             else:
-                yJointLowerBound = [np.pi-0.01, np.pi-0.01]
-                yJointUpperBound = [np.pi-0.01, np.pi-0.01]
+                yJointLowerBound = [np.pi-0.01]
+                yJointUpperBound = [np.pi-0.01]
 
         else:
-            scapName = 'r_scap'
-            elxJoint = 'r_arm_elx'
-            yJoints = ['r_arm_ely', 'r_arm_uwy']
-            yawDesired = np.arctan2(zaxis[1], zaxis[0]) + np.radians(5)
+            larmName = 'r_larm'
+            mwxJoint = 'r_arm_mwx'
+            yJoints = ['r_arm_uwy']
             if preTurn:
-                yJointLowerBound = [np.pi-0.01, np.pi-0.01]
-                yJointUpperBound = [np.pi-0.01, np.pi-0.01]
+                yJointLowerBound = [np.pi-0.01]
+                yJointUpperBound = [np.pi-0.01]
             else:
-                yJointLowerBound = [0.01, 0.01]
-                yJointUpperBound = [0.01, 0.01]
+                yJointLowerBound = [0.01]
+                yJointUpperBound = [0.01]
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
@@ -445,39 +444,40 @@ class ValvePlannerDemo(object):
         self.ikPlanner.addPose(nominalPose, nominalPoseName)
 
         startPoseName = 'Start'
-        startPose[5] = yawDesired
+        #startPose[5] = yawDesired
         self.ikPlanner.addPose(startPose, startPoseName)
         self.ikPlanner.reachingSide = self.graspingHand
 
         constraints = []
-        #constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(startPoseName))
-        constraints.append(self.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
         constraints.append(self.ikPlanner.createLockedArmPostureConstraint(startPoseName))
 
         if lockFeet:
+            constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(startPoseName))
             constraints.extend(self.ikPlanner.createFixedFootConstraints(startPoseName))
         else:
+            constraints.append(self.ikPlanner.createXYZMovingBasePostureConstraint(nominalPoseName))
             constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
 
         if lockBack:
             constraints.append(self.ikPlanner.createLockedBackPostureConstraint(startPoseName))
+        else:
+            constraints.append(self.ikPlanner.createMovingBackLimitedPostureConstraint())
 
-        if extension is not None:
-            elxAngle = (1-extension)*(np.pi/3)
-            if elxAngle < 0.01:
-                elxAngle == 0.01
-            p = ik.PostureConstraint()
-            p.joints = [elxJoint]
-            p.jointsLowerBound = [elxAngle]
-            p.jointsUpperBound = [elxAngle]
-            constraints.append(p)
+        constraints.append(self.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
 
-        shoulderOnValveAxisConstraint = ik.PositionConstraint(linkName=scapName,
-                                                              referenceFrame=self.clenchFrame.transform)
         tol = 0.01
-        shoulderOnValveAxisConstraint.lowerBound = [tol, -np.inf, tol]
-        shoulderOnValveAxisConstraint.upperBound = [tol, np.inf, tol]
-        constraints.append(shoulderOnValveAxisConstraint)
+        if reachDepth >= 0:
+            elbowOnValveAxisConstraint = ik.PositionConstraint(linkName=larmName,
+                                                               referenceFrame=self.clenchFrame.transform)
+            elbowOnValveAxisConstraint.lowerBound = [tol, -np.inf, tol]
+            elbowOnValveAxisConstraint.upperBound = [tol, np.inf, tol]
+            constraints.append(elbowOnValveAxisConstraint)
+
+            p = ik.PostureConstraint()
+            p.joints = [mwxJoint]
+            p.jointsLowerBound = [0]
+            p.jointsUpperBound = [0]
+            constraints.append(p)
 
         constraints.append(self.ikPlanner.createQuasiStaticConstraint())
 
@@ -507,56 +507,19 @@ class ValvePlannerDemo(object):
         self.ikPlanner.computePostureGoal(startPose, touchPose)
 
     def coaxialPlanPreTouch(self, **kwargs):
-        startPose = self.getPlanningStartPose()
-        if self.graspingHand == 'left':
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
-        else:
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '3 - retract 360', self.graspingHand)
-        self.coaxialPlan(-0.25, startPose=seedPose, **kwargs)
+        self.coaxialPlan(-0.1, **kwargs)
 
     def coaxialPlanTouch(self, **kwargs):
-        startPose = self.getPlanningStartPose()
-        if self.graspingHand == 'left':
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '1 - extend 0', self.graspingHand)
-        else:
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '2 - extend 360', self.graspingHand)
-        self.coaxialPlan(0, extension=1, startPose=seedPose, **kwargs)
+        self.coaxialPlan(0.05, **kwargs)
 
     def coaxialPlanTurn(self, **kwargs):
-        startPose = self.getPlanningStartPose()
-        if self.graspingHand == 'left':
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '2 - extend 360', self.graspingHand)
-        else:
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '1 - extend 0', self.graspingHand)
-        self.coaxialPlan(0, extension=1, preTurn=False, startPose=seedPose, **kwargs)
+        self.coaxialPlan(0.05, preTurn=False, **kwargs)
 
     def coaxialPlanRetract(self, **kwargs):
-        startPose = self.getPlanningStartPose()
-        if self.graspingHand == 'left':
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '3 - retract 360', self.graspingHand)
-        else:
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
-        endPose, info = self.coaxialGetPose(-0.25, preTurn=False, startPose=seedPose, **kwargs)
-        self.ikPlanner.computePostureGoal(startPose, endPose)
-
-    def coaxialPlanUnwind(self, **kwargs):
-        startPose = self.getPlanningStartPose()
-        a, _ = self.coaxialGetPose(-0.25, preTurn=False, **kwargs)
-        if self.graspingHand == 'left':
-            b = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '4 - unwind 360', self.graspingHand)
-            c = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '5 - unwind 0', self.graspingHand)
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '0 - retract 0', self.graspingHand)
-            d, _ = self.coaxialGetPose(-0.25, preTurn=True, startPose=seedPose, **kwargs)
-        else:
-            b = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '5 - unwind 0', self.graspingHand)
-            c = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '4 - unwind 360', self.graspingHand)
-            seedPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'valve', '3 - retract 360', self.graspingHand)
-            d, _ = self.coaxialGetPose(-0.25, preTurn=True, startPose=seedPose, **kwargs)
-        self.ikPlanner.computeMultiPostureGoal([startPose,b,c,d])
-
+        self.coaxialPlan(-0.1, preTurn=False, **kwargs)
 
     def getStanceFrameCoaxial(self):
-        stancePose, info = self.coaxialGetPose(0, extension=1, lockFeet=False)
+        stancePose, info = self.coaxialGetPose(0.05, lockFeet=False)
         stanceRobotModel = self.ikPlanner.getRobotModelAtPose(stancePose)
         return self.footstepPlanner.getFeetMidPoint(stanceRobotModel)
 
