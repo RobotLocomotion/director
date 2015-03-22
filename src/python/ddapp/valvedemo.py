@@ -26,6 +26,7 @@ from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
 from ddapp import planplayback
+from ddapp import propertyset
 
 import ddapp.tasks.robottasks as rt
 import ddapp.tasks.taskmanagerwidget as tmw
@@ -52,7 +53,7 @@ class ValvePlannerDemo(object):
         self.showPoseFunction = showPoseFunction
         self.graspingObject='valve'
         self.graspingHand='left'
-
+        self.valveAffordance = None
 
         # live operation flags
         self.useFootstepPlanner = True
@@ -322,6 +323,27 @@ class ValvePlannerDemo(object):
             self.relativeStanceRPY[2] = -self.relativeStanceRPY[2]
             self.nextScribeAngle = -self.nextScribeAngle
 
+    def updateTouchAngleVisualization(self, angle):
+        if self.valveAffordance:
+
+            obj = om.findObjectByName('valve touch angle')
+
+            t = vtk.vtkTransform()
+            t.PostMultiply()
+            t.RotateX(angle)
+            t.Concatenate(self.valveAffordance.getChildFrame().transform)
+
+            if not obj:
+                pose = transformUtils.poseFromTransform(t)
+                length = self.valveAffordance.getProperty('Radius')*2
+                desc = dict(classname='CylinderAffordanceItem', Name='valve touch angle',
+                        uuid=segmentation.newUUID(), pose=pose, Radius=0.01, Length=length, Color=[1.0, 1.0, 0.0])
+
+                import affordancepanel
+                obj = affordancepanel.panel.affordanceFromDescription(desc)
+
+            obj.getChildFrame().copyFrame(t)
+
 
     def findValveAffordance(self):
         self.valveAffordance = om.findObjectByName('valve')
@@ -579,7 +601,8 @@ class ValvePlannerDemo(object):
         # this is the turn angle that the user wants.
         # this should be close to the planned touch angle, but the user may
         # adjust that value to avoid hitting the spokes.
-        pass
+
+        self.updateTouchAngleVisualization(angle)
 
     def planReach(self):
         self.computeTouchFrame(False) # 0 = not in contact
@@ -1007,6 +1030,9 @@ class ValveTaskPanel(object):
       else:
           print 'Valve Demo: Start - VALVE AFFORDANCE NOT FOUND'
 
+      # now get the planned turn angle and show it to the user
+      self.params.setProperty('Touch angle (deg)', self.valveDemo.getPlannedTouchAngleCoaxial())
+
     def closeHand(self):
       self.valveDemo.closeHand(self.valveDemo.graspingHand)
 
@@ -1028,22 +1054,22 @@ class ValveTaskPanel(object):
     def _setupParams(self):
         self.params = om.ObjectModelItem('Valve Task Params')
         self.params.addProperty('Hand', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
-        self.params.addProperty('Start angle (deg)', 0)
+        self.params.addProperty('Turn direction', 0, attributes=om.PropertyAttributes(enumNames=['Clockwise', 'Counter clockwise']))
+        self.params.addProperty('Touch angle (deg)', 0)
         #self.params.addProperty('Turn amount (deg)', 60)
-        #self.params.addProperty('Turn direction', 0, attributes=om.PropertyAttributes(enumNames=['Clockwise', 'Counter clockwise']))
-
+        self.params.properties.connectPropertyChanged(self.onPropertyChanged)
 
     def _setupPropertiesPanel(self):
         l = QtGui.QVBoxLayout(self.ui.propertyFrame)
         l.setMargin(0)
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         self.propertiesPanel.setBrowserModeToWidget()
-        om.PropertyPanelHelper.addPropertiesToPanel(self.params.properties, self.propertiesPanel)
         l.addWidget(self.propertiesPanel)
-        self.propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
 
-    def onPropertyChanged(self, prop):
-        self.params.setProperty(prop.propertyName(), prop.value())
+        self.panelConnector = propertyset.PropertyPanelConnector(self.params.properties, self.propertiesPanel)
+
+
+    def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
 
     def _syncProperties(self):
@@ -1051,7 +1077,8 @@ class ValveTaskPanel(object):
         self.valveDemo.planFromCurrentRobotState = True
         self.valveDemo.visOnly = False
         self.valveDemo.graspingHand = self.params.getPropertyEnumValue('Hand').lower()
-        #self.valveDemo.scribeDirection = 1 if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise' else -1
+        self.valveDemo.scribeDirection = 1 if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise' else -1
+        self.valveDemo.setDesiredTouchAngleCoaxial(self.params.getProperty('Touch angle (deg)'))
         #self.valveDemo.turnAngle = self.params.getProperty('Turn amount (deg)')
 
 
