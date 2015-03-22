@@ -470,7 +470,8 @@ class ValvePlannerDemo(object):
         self.addPlan(newPlan)
 
     def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=False,
-                       lockBase=True, preTurn=True, startPose=None):
+                       lockBase=True, resetBase=False,  wristAngleCW=0,
+                       startPose=None):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
         if self.graspingHand == 'left':
@@ -512,14 +513,19 @@ class ValvePlannerDemo(object):
         constraints = []
         constraints.append(self.ikPlanner.createLockedArmPostureConstraint(startPoseName))
 
+        if resetBase:
+            baseConstraintRobotPoseName = nominalPoseName
+        else:
+            baseConstraintRobotPoseName = startPoseName
+
         if lockBase:
-            constraints.append(self.ikPlanner.createLockedBasePostureConstraint(nominalPoseName))
+            constraints.append(self.ikPlanner.createLockedBasePostureConstraint(baseConstraintRobotPoseName))
         else:
             if lockFeet:
-                constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(nominalPoseName))
+                constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(baseConstraintRobotPoseName))
                 constraints.extend(self.ikPlanner.createFixedFootConstraints(startPoseName))
             else:
-                constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(nominalPoseName))
+                constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(baseConstraintRobotPoseName))
                 constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
                 headGaze = ik.WorldGazeTargetConstraint(linkName='head',
                                                         bodyPoint=np.zeros(3),
@@ -578,7 +584,7 @@ class ValvePlannerDemo(object):
         self.addPlan(plan)
 
     def coaxialPlanReach(self, **kwargs):
-        self.coaxialPlan(self.reachDepth, **kwargs)
+        self.coaxialPlan(self.reachDepth, resetBase=True, **kwargs)
 
     def coaxialPlanTouch(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
