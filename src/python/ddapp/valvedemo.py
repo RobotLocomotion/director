@@ -513,7 +513,7 @@ class ValvePlannerDemo(object):
         constraints.append(self.ikPlanner.createLockedArmPostureConstraint(startPoseName))
 
         if lockBase:
-            constraints.append(self.ikPlanner.createLockedBasePostureConstraint(startPoseName))
+            constraints.append(self.ikPlanner.createLockedBasePostureConstraint(nominalPoseName))
         else:
             if lockFeet:
                 constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(nominalPoseName))
