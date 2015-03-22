@@ -312,6 +312,10 @@ class IKPlanner(object):
         joints = ['base_roll', 'base_pitch', 'base_yaw']
         return self.createPostureConstraint(startPostureName, joints)
 
+    def createXYZYawMovingBasePostureConstraint(self, startPostureName):
+        joints = ['base_roll', 'base_pitch']
+        return self.createPostureConstraint(startPostureName, joints)
+
 
     def createMovingBasePostureConstraint(self, startPostureName):
         return self.createXYZMovingBasePostureConstraint(startPostureName)
