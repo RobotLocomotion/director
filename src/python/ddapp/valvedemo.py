@@ -274,6 +274,7 @@ class ValvePlannerDemo(object):
         self.valveAffordance = vis.showPolyData(valveMesh, 'valve', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
         self.valveAffordance.actor.SetUserTransform(valveFrame)
         self.valveFrame = vis.showFrame(valveFrame, 'valve frame', parent=self.valveAffordance, visible=False, scale=0.2)
+        self.valveFrame = self.valveFrame.transform
 
         params = dict(radius=radius, length=zwidth, xwidth=radius, ywidth=radius, zwidth=zwidth,
                       otdf_type='steering_cyl', friendly_name='valve')
@@ -324,18 +325,29 @@ class ValvePlannerDemo(object):
 
     def findValveAffordance(self):
         self.valveAffordance = om.findObjectByName('valve')
-        if self.valveAffordance is not None:
-            self.valveFrame = om.findObjectByName('valve frame')
+        if self.valveAffordance is None:
+            return
 
-            self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was (radius - 0.06)
+        valveFrame = self.valveAffordance.getChildFrame()
 
-            self.computeClenchFrame()
-            self.computeValveStanceFrame()
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.RotateX(180)
+        t.RotateY(-90)
+        t.Concatenate(valveFrame.transform)
+        self.valveFrame = t
 
-            self.frameSync = vis.FrameSync()
-            self.frameSync.addFrame(self.valveFrame)
-            self.frameSync.addFrame(self.clenchFrame)
-            self.frameSync.addFrame(self.stanceFrame)
+        self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was (radius - 0.06)
+
+        self.computeClenchFrame()
+        self.computeValveStanceFrame()
+
+        self.frameSync = vis.FrameSync()
+        self.frameSync.addFrame(valveFrame)
+        self.frameSync.addFrame(self.clenchFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.stanceFrame, ignoreIncoming=True)
+
+        # make an affordance to visualize the scribe angle
 
 
     def findValveLeverAffordance(self):
@@ -357,7 +369,7 @@ class ValvePlannerDemo(object):
     def computeClenchFrame(self):
         t = transformUtils.frameFromPositionAndRPY(self.clenchFrameXYZ, self.clenchFrameRPY)
         t_copy = transformUtils.copyFrame(t)
-        t_copy.Concatenate(self.valveFrame.transform)
+        t_copy.Concatenate(self.valveFrame)
         self.clenchFrame = vis.updateFrame(t_copy, 'valve clench frame', parent=self.valveAffordance, visible=False, scale=0.2)
         self.clenchFrame.addToView(app.getDRCView())
 
@@ -387,7 +399,7 @@ class ValvePlannerDemo(object):
         t.Concatenate(t2)
         self.faceTransformLocal = transformUtils.copyFrame(t)
 
-        t.Concatenate(self.valveFrame.transform)
+        t.Concatenate(self.valveFrame)
         self.faceFrameDesired = vis.showFrame(t, 'face frame desired', parent=self.valveAffordance, visible=False, scale=0.2)
 
     def drawFacePath(self):
@@ -400,7 +412,7 @@ class ValvePlannerDemo(object):
 
         pathMesh = path.getPolyData()
         self.pointerTipLinePath = vis.showPolyData(pathMesh, 'face frame desired path', color=[0.0, 0.3, 1.0], parent=self.valveAffordance, alpha=0.6)
-        self.pointerTipLinePath.actor.SetUserTransform(self.valveFrame.transform)
+        self.pointerTipLinePath.actor.SetUserTransform(self.valveFrame)
 
 
     ### End Valve Focused Functions ###############################################################
@@ -434,7 +446,7 @@ class ValvePlannerDemo(object):
         self.addPlan(newPlan)
 
     def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=True, preTurn=True, startPose=None):
-        _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame.transform)
+        _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
         if self.graspingHand == 'left':
             larmName = 'l_larm'
@@ -641,7 +653,7 @@ class ValvePlannerDemo(object):
         c.bodyNameA = self.ikPlanner.getHandLink(self.graspingHand)
         c.bodyNameB = 'world'
         c.pointInBodyA = self.graspToHandLinkFrame
-        c.pointInBodyB = self.valveFrame.transform
+        c.pointInBodyB = self.valveFrame
         c.lowerBound = [self.scribeRadius]
         c.upperBound = [self.scribeRadius]
         self.constraintSet.constraints.insert(0, c)
