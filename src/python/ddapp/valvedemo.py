@@ -690,6 +690,9 @@ class ValvePlannerDemo(object):
         #self.handDriver(side).sendOpen()
         self.getHandDriver(side).sendCustom(0.0, 100.0, 100.0, 0)
 
+    def openPinch(self,side):
+        self.getHandDriver(side).sendCustom(20.0, 100.0, 100.0, 1)
+
     def closeHand(self, side):
         #self.handDriver(side).sendClose(60)
         self.getHandDriver(side).sendCustom(100.0, 100.0, 100.0, 0)
@@ -970,9 +973,8 @@ class ValveTaskPanel(object):
         self.ui.raiseArmButton.connect('clicked()', self.valveDemo.planPreGrasp)
         self.ui.reachButton.connect('clicked()', self.reach)
         self.ui.touchButton.connect('clicked()', self.grasp)
-        self.ui.closeHandButton.connect('clicked()', self.closeHand)
         self.ui.turnButton.connect('clicked()', self.turnValve)
-        self.ui.openHandButton.connect('clicked()', self.openHand)
+        self.ui.fingersButton.connect('clicked()', self.setFingers)
         self.ui.retractButton.connect('clicked()', self.retract)
         self.ui.nominalButton.connect('clicked()', self.valveDemo.planNominal)
 
@@ -998,31 +1000,27 @@ class ValveTaskPanel(object):
     def closeHand(self):
       self.valveDemo.closeHand(self.valveDemo.graspingHand)
 
-    def openHand(self):
-      self.valveDemo.openHand(self.valveDemo.graspingHand)
+    def setFingers(self):
+      self.valveDemo.openPinch(self.valveDemo.graspingHand)
 
     def reach(self):
-        self.valveDemo.nextScribeAngle = self.params.getProperty('Start angle (deg)')
-        self.valveDemo.planReach()
+        self.valveDemo.coaxialPlanPreTouch()
 
     def grasp(self):
-        self.valveDemo.nextScribeAngle = self.params.getProperty('Start angle (deg)')
-        self.valveDemo.planGrasp()
+        self.valveDemo.coaxialPlanTouch()
 
     def turnValve(self):
-        self.valveDemo.nextScribeAngle = self.params.getProperty('Start angle (deg)')
-        self.valveDemo.planValveTurn(self.params.getProperty('Turn amount (deg)'))
+        self.valveDemo.coaxialPlanTurn()
 
     def retract(self):
-        self.valveDemo.nextScribeAngle = self.params.getProperty('Start angle (deg)') + self.params.getProperty('Turn amount (deg)')
-        self.valveDemo.planReach()
+        self.valveDemo.coaxialPlanRetract()
 
     def _setupParams(self):
         self.params = om.ObjectModelItem('Valve Task Params')
         self.params.addProperty('Hand', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
-        self.params.addProperty('Start angle (deg)', 60)
-        self.params.addProperty('Turn amount (deg)', 60)
-        self.params.addProperty('Turn direction', 0, attributes=om.PropertyAttributes(enumNames=['Clockwise', 'Counter clockwise']))
+        self.params.addProperty('Start angle (deg)', 0)
+        #self.params.addProperty('Turn amount (deg)', 60)
+        #self.params.addProperty('Turn direction', 0, attributes=om.PropertyAttributes(enumNames=['Clockwise', 'Counter clockwise']))
 
 
     def _setupPropertiesPanel(self):
@@ -1043,7 +1041,7 @@ class ValveTaskPanel(object):
         self.valveDemo.planFromCurrentRobotState = True
         self.valveDemo.visOnly = False
         self.valveDemo.graspingHand = self.params.getPropertyEnumValue('Hand').lower()
-        self.valveDemo.scribeDirection = 1 if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise' else -1
-        self.valveDemo.turnAngle = self.params.getProperty('Turn amount (deg)')
+        #self.valveDemo.scribeDirection = 1 if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise' else -1
+        #self.valveDemo.turnAngle = self.params.getProperty('Turn amount (deg)')
 
 
