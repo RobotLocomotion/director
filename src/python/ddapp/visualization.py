@@ -476,7 +476,8 @@ class FrameItem(PolyDataItem):
         self.transform.SetMatrix(transform.GetMatrix())
         self._blockSignals = False
         self.transform.Modified()
-        if self.getProperty('Visible'):
+        parent = self.parent()
+        if parent.getProperty('Visible') or self.getProperty('Visible'):
             self._renderAllViews()
 
     def _onPropertyChanged(self, propertySet, propertyName):
