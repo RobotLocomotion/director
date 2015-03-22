@@ -514,7 +514,7 @@ class ValvePlannerDemo(object):
             constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(startPoseName))
             constraints.extend(self.ikPlanner.createFixedFootConstraints(startPoseName))
         else:
-            constraints.append(self.ikPlanner.createXYZMovingBasePostureConstraint(nominalPoseName))
+            constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(nominalPoseName))
             constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
 
         if lockBack:
@@ -524,7 +524,13 @@ class ValvePlannerDemo(object):
 
         constraints.append(self.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
 
-        tol = 0.01
+        headGaze = ik.WorldGazeTargetConstraint(linkName='head',
+                                                bodyPoint=np.zeros(3),
+                                                worldPoint=np.array(self.valveFrame.transform.GetPosition()),
+                                                coneThreshold = np.radians(20))
+        constraints.append(headGaze)
+
+        tol = 0.02
         if reachDepth >= 0:
             elbowOnValveAxisConstraint = ik.PositionConstraint(linkName=larmName,
                                                                referenceFrame=self.clenchFrame.transform)
