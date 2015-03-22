@@ -508,7 +508,7 @@ class WorldGazeTargetConstraint(ConstraintBase):
 
         commands.append(
             '{varName} = WorldGazeTargetConstraint({robotArg}, links.{linkName}, {axis}, '
-            '{worldPoint}, {bodyPoint}, {coneThreshld}, {tspan});'
+            '{worldPoint}, {bodyPoint}, {coneThreshold}, {tspan});'
             ''.format(**formatArgs))
 
 
