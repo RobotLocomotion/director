@@ -90,8 +90,9 @@ class ValvePlannerDemo(object):
         # reach to center and back - for palm point
         self.clenchFrameXYZ = [0.0, 0.0, -0.1]
         self.clenchFrameRPY = [90, 0, 180]
-        self.reachDepth = -0.12 # distance away from valve for palm face on approach reach
-        self.touchDepth = -0.06 # distance away from valve for palm face on approach reach
+        self.reachDepth = -0.1 # distance away from valve for palm face on approach reach
+        self.retractDepth = -0.15 # distance away from valve for palm face on retraction
+        self.touchDepth = 0.05 # distance away from valve for palm face on approach reach
 
         # top level switch between BDI (locked base) and MIT (moving base and back)
         self.lockBack = False
@@ -468,7 +469,8 @@ class ValvePlannerDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
-    def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=True, preTurn=True, startPose=None):
+    def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=False,
+                       lockBase=True, preTurn=True, startPose=None):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
         if self.graspingHand == 'left':
@@ -510,12 +512,20 @@ class ValvePlannerDemo(object):
         constraints = []
         constraints.append(self.ikPlanner.createLockedArmPostureConstraint(startPoseName))
 
-        if lockFeet:
-            constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(startPoseName))
-            constraints.extend(self.ikPlanner.createFixedFootConstraints(startPoseName))
+        if lockBase:
+            constraints.append(self.ikPlanner.createLockedBasePostureConstraint(startPoseName))
         else:
-            constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(nominalPoseName))
-            constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
+            if lockFeet:
+                constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(nominalPoseName))
+                constraints.extend(self.ikPlanner.createFixedFootConstraints(startPoseName))
+            else:
+                constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(nominalPoseName))
+                constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
+                headGaze = ik.WorldGazeTargetConstraint(linkName='head',
+                                                        bodyPoint=np.zeros(3),
+                                                        worldPoint=np.array(self.clenchFrame.transform.GetPosition()),
+                                                        coneThreshold = np.radians(20))
+                constraints.append(headGaze)
 
         if lockBack:
             constraints.append(self.ikPlanner.createLockedBackPostureConstraint(startPoseName))
@@ -524,16 +534,11 @@ class ValvePlannerDemo(object):
 
         constraints.append(self.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
 
-        headGaze = ik.WorldGazeTargetConstraint(linkName='head',
-                                                bodyPoint=np.zeros(3),
-                                                worldPoint=np.array(self.valveFrame.transform.GetPosition()),
-                                                coneThreshold = np.radians(20))
-        constraints.append(headGaze)
 
-        tol = 0.02
+        tol = 0.01
         if reachDepth >= 0:
             elbowOnValveAxisConstraint = ik.PositionConstraint(linkName=larmName,
-                                                               referenceFrame=self.clenchFrame.transform)
+                                                                referenceFrame=self.clenchFrame.transform)
             elbowOnValveAxisConstraint.lowerBound = [tol, -np.inf, tol]
             elbowOnValveAxisConstraint.upperBound = [tol, np.inf, tol]
             constraints.append(elbowOnValveAxisConstraint)
@@ -546,7 +551,7 @@ class ValvePlannerDemo(object):
 
         constraints.append(self.ikPlanner.createQuasiStaticConstraint())
 
-        constraints.append(self.ikPlanner.createGazeGraspConstraint(self.graspingHand, self.clenchFrame, coneThresholdDegrees=4))
+        constraints.append(self.ikPlanner.createGazeGraspConstraint(self.graspingHand, self.clenchFrame, coneThresholdDegrees=5))
 
         p = ik.PostureConstraint()
         p.joints = yJoints
@@ -569,22 +574,35 @@ class ValvePlannerDemo(object):
     def coaxialPlan(self, reachDepth, **kwargs):
         startPose = self.getPlanningStartPose()
         touchPose, info = self.coaxialGetPose(reachDepth, **kwargs)
-        self.ikPlanner.computePostureGoal(startPose, touchPose)
+        plan = self.ikPlanner.computePostureGoal(startPose, touchPose)
+        self.addPlan(plan)
 
-    def coaxialPlanPreTouch(self, **kwargs):
-        self.coaxialPlan(-0.1, **kwargs)
+    def coaxialPlanReach(self, **kwargs):
+        self.coaxialPlan(self.reachDepth, **kwargs)
 
     def coaxialPlanTouch(self, **kwargs):
-        self.coaxialPlan(0.05, **kwargs)
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
+        self.coaxialPlan(self.touchDepth, **kwargs)
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def coaxialPlanTurn(self, **kwargs):
-        self.coaxialPlan(0.05, preTurn=False, **kwargs)
+        startPose = self.getPlanningStartPose()
+        if self.graspingHand == 'left':
+            postureJoints = {'l_arm_uwy' : np.pi - 0.01}
+        else:
+            postureJoints = {'r_arm_uwy' : 0.01}
+
+        endPose = self.ikPlanner.mergePostures(startPose, postureJoints)
+        plan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(plan)
 
     def coaxialPlanRetract(self, **kwargs):
-        self.coaxialPlan(-0.1, preTurn=False, **kwargs)
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
+        self.coaxialPlan(self.retractDepth, preTurn=False, **kwargs)
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def getStanceFrameCoaxial(self):
-        stancePose, info = self.coaxialGetPose(0.05, lockFeet=False)
+        stancePose, info = self.coaxialGetPose(self.touchDepth, lockFeet=False, lockBase=False, lockBack=True)
         stanceRobotModel = self.ikPlanner.getRobotModelAtPose(stancePose)
         return self.footstepPlanner.getFeetMidPoint(stanceRobotModel)
 
@@ -998,8 +1016,8 @@ class ValveTaskPanel(object):
 
         self.valveDemo = valveDemo
 
-        self.valveDemo.reachDepth = -0.24
-        self.valveDemo.speedLow = 20
+        self.valveDemo.reachDepth = -0.1
+        self.valveDemo.speedLow = 10
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddValveTaskPanel.ui')
@@ -1049,7 +1067,7 @@ class ValveTaskPanel(object):
       self.valveDemo.openPinch(self.valveDemo.graspingHand)
 
     def reach(self):
-        self.valveDemo.coaxialPlanPreTouch()
+        self.valveDemo.coaxialPlanReach()
 
     def grasp(self):
         self.valveDemo.coaxialPlanTouch()
