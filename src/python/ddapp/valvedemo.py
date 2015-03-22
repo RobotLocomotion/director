@@ -570,6 +570,16 @@ class ValvePlannerDemo(object):
         #constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
         #return self.ikPlanner.newReachGoal(startPoseName, self.graspingHand, self.clenchFrame, constraints, lockOrient=False)
 
+    def getPlannedTouchAngleCoaxial(self):
+        # when the pose is computed in getStanceFrameCoaxial, we could
+        # store the turn angle. This method just returns the stored value.
+        return 0.0
+
+    def setDesiredTouchAngleCoaxial(self, angle):
+        # this is the turn angle that the user wants.
+        # this should be close to the planned touch angle, but the user may
+        # adjust that value to avoid hitting the spokes.
+        pass
 
     def planReach(self):
         self.computeTouchFrame(False) # 0 = not in contact
