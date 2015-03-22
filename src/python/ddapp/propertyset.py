@@ -262,3 +262,38 @@ class PropertyPanelHelper(object):
             p = panel.addProperty(name, value)
             PropertyPanelHelper._setPropertyAttributes(p, attributes)
             return p
+
+
+class PropertyPanelConnector(object):
+    def __init__(self, propertySet, propertiesPanel):
+        self.propertySet = propertySet
+        self.propertiesPanel = propertiesPanel
+        self.propertySet.connectPropertyAdded(self._onPropertyAdded)
+        self.propertySet.connectPropertyChanged(self._onPropertyChanged)
+        self.propertySet.connectPropertyAttributeChanged(self._onPropertyAttributeChanged)
+        self.propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self._onPanelPropertyChanged)
+
+        self._blockSignals = True
+        PropertyPanelHelper.addPropertiesToPanel(self.propertySet, self.propertiesPanel)
+        self._blockSignals = False
+
+    def _onPropertyAdded(self, propertySet, propertyName):
+        self._blockSignals = True
+        self.propertiesPanel.clear()
+        PropertyPanelHelper.addPropertiesToPanel(propertySet, self.propertiesPanel)
+        self._blockSignals = False
+
+    def _onPropertyAttributeChanged(self, propertySet, propertyName, propertyAttribute):
+        self._blockSignals = True
+        self.propertiesPanel.clear()
+        PropertyPanelHelper.addPropertiesToPanel(propertySet, self.propertiesPanel)
+        self._blockSignals = False
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        self._blockSignals = True
+        PropertyPanelHelper.onPropertyValueChanged(self.propertiesPanel, propertySet, propertyName)
+        self._blockSignals = False
+
+    def _onPanelPropertyChanged(self, panelProperty):
+        if not self._blockSignals:
+            PropertyPanelHelper.setPropertyFromPanel(panelProperty, self.propertiesPanel, self.propertySet)
