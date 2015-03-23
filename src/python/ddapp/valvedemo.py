@@ -97,7 +97,7 @@ class ValvePlannerDemo(object):
 
         # top level switch between BDI (locked base) and MIT (moving base and back)
         self.lockBack = False
-        self.lockBase = False
+        self.lockBase = True
 
         self.setupStance()
 
@@ -470,12 +470,18 @@ class ValvePlannerDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
-    def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=False,
-                       lockBase=True, resetBase=False,  wristAngleCW=0,
+    def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=None,
+                       lockBase=None, resetBase=False,  wristAngleCW=0,
                        startPose=None):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         # yawDesired = np.arctan2(zaxis[1], zaxis[0])
         wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
+
+        if lockBase is None:
+            lockBase = self.lockBase
+
+        if lockBack is None:
+            lockBack = self.lockBack
 
         if self.graspingHand == 'left':
             larmName = 'l_larm'
@@ -495,7 +501,7 @@ class ValvePlannerDemo(object):
 
 
         nominalPose, _ = self.ikPlanner.computeNominalPose(startPose)
-        # nominalPose[5] = yawDesired
+        nominalPose[2] = startPose[2]
         nominalPoseName = 'qNomAtRobot'
         self.ikPlanner.addPose(nominalPose, nominalPoseName)
 
@@ -512,20 +518,21 @@ class ValvePlannerDemo(object):
         else:
             baseConstraintRobotPoseName = startPoseName
 
-        if lockBase:
-            constraints.append(self.ikPlanner.createLockedBasePostureConstraint(baseConstraintRobotPoseName))
-        else:
-            if lockFeet:
-                constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(baseConstraintRobotPoseName))
-                constraints.extend(self.ikPlanner.createFixedFootConstraints(startPoseName))
+
+        if lockFeet:
+            constraints.extend(self.ikPlanner.createFixedFootConstraints(startPoseName))
+            if lockBase:
+                constraints.append(self.ikPlanner.createLockedBasePostureConstraint(baseConstraintRobotPoseName, lockLegs=False))
             else:
-                constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(baseConstraintRobotPoseName))
-                constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
-                headGaze = ik.WorldGazeTargetConstraint(linkName='head',
-                                                        bodyPoint=np.zeros(3),
-                                                        worldPoint=np.array(self.clenchFrame.transform.GetPosition()),
-                                                        coneThreshold = np.radians(20))
-                constraints.append(headGaze)
+                constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(baseConstraintRobotPoseName))
+        else:
+            constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(baseConstraintRobotPoseName))
+            constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
+            headGaze = ik.WorldGazeTargetConstraint(linkName='head',
+                                                    bodyPoint=np.zeros(3),
+                                                    worldPoint=np.array(self.clenchFrame.transform.GetPosition()),
+                                                    coneThreshold = np.radians(20))
+            constraints.append(headGaze)
 
         if lockBack:
             constraints.append(self.ikPlanner.createLockedBackPostureConstraint(startPoseName))
