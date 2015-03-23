@@ -1297,9 +1297,9 @@ class ValveTaskPanel(object):
         addTask(rt.CloseHand(name='close left hand', side='Left'))
         addTask(rt.CloseHand(name='close right hand', side='Right'))
         addTask(rt.SetNeckPitch(name='set neck position', angle=0))
-        addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='door', postureName='narrow walking profile', side='Default'))
+        addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General', postureName='safe nominal', side='Default'))
         addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
-        addTask(rt.CommitManipulationPlan(name='execute manip plan', planName='narrow walking profile posture plan'))
+        addTask(rt.CommitManipulationPlan(name='execute manip plan', planName='safe nominal posture plan'))
         addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
 
 
@@ -1320,29 +1320,28 @@ class ValveTaskPanel(object):
         addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit value', message='Please fit and approve valve affordance.'))
         addFunc(self.resetTouchAngle, name='check valve affordance')
-        addTask(rt.UserPromptTask(name='approve spoke location', message='Please approve valve spokes and touch angle.'))
-
-        # raise arm
-        addFunc(v.planPreGrasp, name='plan arm raise')
-        addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
-        addFunc(v.animateLastPlan, name='execute manip plan')
+        #addTask(rt.UserPromptTask(name='approve spoke location', message='Please approve valve spokes and touch angle.'))
 
         # set fingers
-        addTask(rt.CloseHand(name='set finger positions', side=side, mode='Pinch', amount=20))
+        addTask(rt.CloseHand(name='set finger positions', side=side, mode='Basic', amount=20))
 
         # valve manip actions
         addFunc(v.coaxialPlanReach, name='plan reach to valve')
         addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
-        addFunc(v.animateLastPlan, name='execute manip plan')
+        addFunc(v.commitManipPlan, name='execute manip plan')
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
 
         addFunc(v.coaxialPlanTouch, name='plan insert in valve')
         addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
-        addFunc(v.animateLastPlan, name='execute manip plan')
+        addFunc(v.commitManipPlan, name='execute manip plan')
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
 
         addFunc(v.coaxialPlanTurn, name='plan turn valve')
         addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
-        addFunc(v.animateLastPlan, name='execute manip plan')
+        addFunc(v.commitManipPlan, name='execute manip plan')
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
 
         addFunc(v.coaxialPlanRetract, name='plan retract')
         addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
-        addFunc(v.animateLastPlan, name='execute manip plan')
+        addFunc(v.commitManipPlan, name='execute manip plan')
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
