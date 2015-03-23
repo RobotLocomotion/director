@@ -474,27 +474,20 @@ class ValvePlannerDemo(object):
                        startPose=None):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
+        wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
+
         if self.graspingHand == 'left':
             larmName = 'l_larm'
             mwxJoint = 'l_arm_mwx'
             yJoints = ['l_arm_uwy']
-            if preTurn:
-                yJointLowerBound = [0.01]
-                yJointUpperBound = [0.01]
-            else:
-                yJointLowerBound = [np.pi-0.01]
-                yJointUpperBound = [np.pi-0.01]
-
+            yJointLowerBound = [wristAngleCW]
+            yJointUpperBound = [wristAngleCW]
         else:
             larmName = 'r_larm'
             mwxJoint = 'r_arm_mwx'
             yJoints = ['r_arm_uwy']
-            if preTurn:
-                yJointLowerBound = [np.pi-0.01]
-                yJointUpperBound = [np.pi-0.01]
-            else:
-                yJointLowerBound = [0.01]
-                yJointUpperBound = [0.01]
+            yJointLowerBound = [np.pi - wristAngleCW]
+            yJointUpperBound = [np.pi - wristAngleCW]
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
@@ -588,7 +581,7 @@ class ValvePlannerDemo(object):
 
     def coaxialPlanTouch(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.coaxialPlan(self.touchDepth, **kwargs)
+        self.coaxialPlan(self.touchDepth, wristAngleCW=np.radians(20), **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def coaxialPlanTurn(self, **kwargs):
@@ -604,7 +597,7 @@ class ValvePlannerDemo(object):
 
     def coaxialPlanRetract(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.coaxialPlan(self.retractDepth, preTurn=False, **kwargs)
+        self.coaxialPlan(self.retractDepth, wristAngleCW=np.radians(180), **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def getStanceFrameCoaxial(self):
