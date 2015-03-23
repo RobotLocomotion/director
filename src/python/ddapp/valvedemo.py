@@ -474,7 +474,7 @@ class ValvePlannerDemo(object):
                        lockBase=True, resetBase=False,  wristAngleCW=0,
                        startPose=None):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
-        yawDesired = np.arctan2(zaxis[1], zaxis[0])
+        # yawDesired = np.arctan2(zaxis[1], zaxis[0])
         wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
 
         if self.graspingHand == 'left':
@@ -495,7 +495,7 @@ class ValvePlannerDemo(object):
 
 
         nominalPose, _ = self.ikPlanner.computeNominalPose(startPose)
-        nominalPose[5] = yawDesired
+        # nominalPose[5] = yawDesired
         nominalPoseName = 'qNomAtRobot'
         self.ikPlanner.addPose(nominalPose, nominalPoseName)
 
