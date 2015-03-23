@@ -11,9 +11,13 @@ class AsyncTaskQueue(object):
     TASK_STARTED_SIGNAL = 'TASK_STARTED_SIGNAL'
     TASK_ENDED_SIGNAL = 'TASK_ENDED_SIGNAL'
     TASK_PAUSED_SIGNAL = 'TASK_PAUSED_SIGNAL'
+    TASK_FAILED_SIGNAL = 'TASK_FAILED_SIGNAL'
     TASK_EXCEPTION_SIGNAL = 'TASK_EXCEPTION_SIGNAL'
 
     class PauseException(Exception):
+        pass
+
+    class FailException(Exception):
         pass
 
     def __init__(self):
@@ -24,6 +28,7 @@ class AsyncTaskQueue(object):
         self.callbacks = callbacks.CallbackRegistry([self.TASK_STARTED_SIGNAL,
                                                      self.TASK_ENDED_SIGNAL,
                                                      self.TASK_PAUSED_SIGNAL,
+                                                     self.TASK_FAILED_SIGNAL,
                                                      self.TASK_EXCEPTION_SIGNAL])
         self.currentTask = None
         self.isRunning = False
@@ -67,6 +72,10 @@ class AsyncTaskQueue(object):
         except AsyncTaskQueue.PauseException:
             assert self.currentTask
             self.callbacks.process(self.TASK_PAUSED_SIGNAL, self, self.currentTask)
+            self.stop()
+        except AsyncTaskQueue.FailException:
+            assert self.currentTask
+            self.callbacks.process(self.TASK_FAILED_SIGNAL, self, self.currentTask)
             self.stop()
         except:
             assert self.currentTask
@@ -129,6 +138,18 @@ class AsyncTaskQueue(object):
         return self.callbacks.connect(self.TASK_PAUSED_SIGNAL, func)
 
     def disconnectTaskPaused(self, callbackId):
+        self.callbacks.disconnect(callbackId)
+
+    def connectTaskFailed(self, func):
+        return self.callbacks.connect(self.TASK_FAILED_SIGNAL, func)
+
+    def disconnectTaskFailed(self, callbackId):
+        self.callbacks.disconnect(callbackId)
+
+    def connectTaskException(self, func):
+        return self.callbacks.connect(self.TASK_EXCEPTION_SIGNAL, func)
+
+    def disconnectTaskException(self, callbackId):
         self.callbacks.disconnect(callbackId)
 
 
