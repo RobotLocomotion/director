@@ -575,6 +575,7 @@ class ValvePlannerDemo(object):
         startPose = self.getPlanningStartPose()
         touchPose, info = self.coaxialGetPose(reachDepth, **kwargs)
         plan = self.ikPlanner.computePostureGoal(startPose, touchPose)
+        app.displaySnoptInfo(info)
         self.addPlan(plan)
 
     def coaxialPlanReach(self, **kwargs):
@@ -597,6 +598,8 @@ class ValvePlannerDemo(object):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedTurn
         plan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+        app.displaySnoptInfo(1)
+
         self.addPlan(plan)
 
     def coaxialPlanRetract(self, **kwargs):
