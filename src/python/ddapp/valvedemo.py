@@ -82,6 +82,7 @@ class ValvePlannerDemo(object):
         # IK server speed:
         self.speedLow = 5
         self.speedHigh = 30
+        self.speedTurn = 50
 
         if (useDevelopment): # for simulated dev
             self.speedLow = 60
@@ -592,7 +593,10 @@ class ValvePlannerDemo(object):
             postureJoints = {'r_arm_uwy' : 0.01}
 
         endPose = self.ikPlanner.mergePostures(startPose, postureJoints)
+
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedTurn
         plan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
         self.addPlan(plan)
 
     def coaxialPlanRetract(self, **kwargs):
