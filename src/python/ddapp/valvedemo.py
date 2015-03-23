@@ -27,12 +27,13 @@ from ddapp import robotplanlistener
 from ddapp import segmentation
 from ddapp import planplayback
 from ddapp import propertyset
+from ddapp import asynctaskqueue as atq
 
 import ddapp.tasks.robottasks as rt
 import ddapp.tasks.taskmanagerwidget as tmw
 
 import drc as lcmdrc
-
+import traceback
 from PythonQt import QtCore, QtGui
 
 
@@ -1013,15 +1014,13 @@ class ValveTaskPanel(object):
 
         l = QtGui.QVBoxLayout(self.ui.imageFrame)
 
-        self.taskTree = tmw.TaskTree()
-        self.ui.taskFrame.layout().insertWidget(0, self.taskTree.treeWidget)
-        self.ui.taskFrame.layout().insertWidget(1, self.taskTree.propertiesPanel)
+
         self._setupParams()
         self._setupPropertiesPanel()
         self._syncProperties()
 
-        self.taskTree.onAddTask(rt.PrintTask(name='print start message', message='starting valve demo'))
-        self.taskTree.onAddTask(rt.CallbackTask(callback=self.valveDemo.findAffordance, name='find affordance'), copy=False)
+        self._initTaskPanel()
+        self._initTasks()
 
     def onStartClicked(self):
       self.valveDemo.findAffordance()
@@ -1031,6 +1030,10 @@ class ValveTaskPanel(object):
           print 'Valve Demo: Start - VALVE AFFORDANCE NOT FOUND'
 
       # now get the planned turn angle and show it to the user
+      self.params.setProperty('Touch angle (deg)', self.valveDemo.getPlannedTouchAngleCoaxial())
+
+    def resetTouchAngle(self):
+      self.valveDemo.findAffordance()
       self.params.setProperty('Touch angle (deg)', self.valveDemo.getPlannedTouchAngleCoaxial())
 
     def closeHand(self):
@@ -1082,3 +1085,227 @@ class ValveTaskPanel(object):
         #self.valveDemo.turnAngle = self.params.getProperty('Turn amount (deg)')
 
 
+
+    def onContinue(self):
+
+        self.completedTasks = []
+        self.taskQueue.reset()
+        for obj in self.taskTree.getSelectedTasks():
+            self.taskQueue.addTask(obj.task)
+
+        self.taskQueue.start()
+
+
+    def onStep(self):
+
+        assert not self.taskQueue.isRunning
+
+        tasks = self.taskTree.getSelectedTasks()
+        if not tasks:
+            return
+
+        task = tasks[0].task
+        self.nextStepTask = tasks[1].task if len(tasks) > 1 else None
+
+        self.completedTasks = []
+        self.taskQueue.reset()
+        self.taskQueue.addTask(task)
+        self.taskQueue.start()
+
+
+    def onPause(self):
+
+        if not self.taskQueue.isRunning:
+            return
+
+        self.nextStepTask = None
+        currentTask = self.taskQueue.currentTask
+        self.taskQueue.stop()
+        if currentTask:
+            currentTask.stop()
+
+        self.appendMessage('<font color="red">paused</font>')
+
+
+    def onTaskStarted(self, taskQueue, task):
+        msg = task.properties.getProperty('Name')  + ' ... <font color="green">start</font>'
+        self.appendMessage(msg)
+
+        self.taskTree.selectTask(task)
+        item = self.taskTree.findTaskItem(task)
+        if len(self.completedTasks) and item.getProperty('Visible'):
+            self.appendMessage('<font color="red">paused</font>')
+            raise atq.AsyncTaskQueue.PauseException()
+
+    def onTaskEnded(self, taskQueue, task):
+        msg = task.properties.getProperty('Name') + ' ... <font color="green">end</font>'
+        self.appendMessage(msg)
+
+        self.completedTasks.append(task)
+
+        if self.taskQueue.tasks:
+            self.taskTree.selectTask(self.taskQueue.tasks[0])
+        elif self.nextStepTask:
+            self.taskTree.selectTask(self.nextStepTask)
+        #else:
+        #    self.taskTree.selectTask(self.completedTasks[0])
+
+    def onTaskFailed(self, taskQueue, task):
+        msg = task.properties.getProperty('Name')  + ' ... <font color="red">failed: %s</font>' % task.failReason
+        self.appendMessage(msg)
+
+    def onTaskPaused(self, taskQueue, task):
+        msg = task.properties.getProperty('Name')  + ' ... <font color="red">paused</font>'
+        self.appendMessage(msg)
+
+    def onTaskException(self, taskQueue, task):
+        msg = task.properties.getProperty('Name')  + ' ... <font color="red">exception:\n\n%s</font>' % traceback.format_exc()
+        self.appendMessage(msg)
+
+
+    def appendMessage(self, msg):
+        if msg == self.lastStatusMessage:
+            return
+
+        self.lastStatusMessage = msg
+        self.ui.outputConsole.append(msg.replace('\n', '<br/>'))
+        #print msg
+
+    def updateTaskStatus(self):
+
+        currentTask = self.taskQueue.currentTask
+        if not currentTask or not currentTask.statusMessage:
+            return
+
+        name = currentTask.properties.getProperty('Name')
+        status = currentTask.statusMessage
+        msg = name + ': ' + status
+        self.appendMessage(msg)
+
+    def onAcceptPrompt(self):
+        self.promptTask.accept()
+        self.promptTask = None
+        self.ui.promptLabel.text = ''
+        self.ui.promptAcceptButton.enabled = False
+        self.ui.promptRejectButton.enabled = False
+
+    def onRejectPrompt(self):
+
+        self.promptTask.reject()
+        self.promptTask = None
+        self.ui.promptLabel.text = ''
+        self.ui.promptAcceptButton.enabled = False
+        self.ui.promptRejectButton.enabled = False
+
+    def onTaskPrompt(self, task, message):
+        self.promptTask = task
+        self.ui.promptLabel.text = message
+        self.ui.promptAcceptButton.enabled = True
+        self.ui.promptRejectButton.enabled = True
+
+    def _initTaskPanel(self):
+
+        self.lastStatusMessage = ''
+        self.nextStepTask = None
+        self.completedTasks = []
+        self.taskQueue = atq.AsyncTaskQueue()
+        self.taskQueue.connectTaskStarted(self.onTaskStarted)
+        self.taskQueue.connectTaskEnded(self.onTaskEnded)
+        self.taskQueue.connectTaskPaused(self.onTaskPaused)
+        self.taskQueue.connectTaskFailed(self.onTaskFailed)
+        self.taskQueue.connectTaskException(self.onTaskException)
+        self.completedTasks = []
+
+        self.timer = TimerCallback(targetFps=2)
+        self.timer.callback = self.updateTaskStatus
+        self.timer.start()
+
+        rt.UserPromptTask.promptFunction = self.onTaskPrompt
+        rt.PrintTask.printFunction = self.appendMessage
+
+        self.taskTree = tmw.TaskTree()
+        self.ui.taskFrame.layout().insertWidget(0, self.taskTree.treeWidget)
+
+        l = QtGui.QVBoxLayout(self.ui.taskPropertiesGroupBox)
+        l.addWidget(self.taskTree.propertiesPanel)
+        PythonQt.dd.ddGroupBoxHider(self.ui.taskPropertiesGroupBox)
+
+
+        self.ui.taskStepButton.connect('clicked()', self.onStep)
+        self.ui.taskContinueButton.connect('clicked()', self.onContinue)
+        self.ui.taskPauseButton.connect('clicked()', self.onPause)
+
+        self.ui.promptAcceptButton.connect('clicked()', self.onAcceptPrompt)
+        self.ui.promptRejectButton.connect('clicked()', self.onRejectPrompt)
+        self.ui.promptAcceptButton.enabled = False
+        self.ui.promptRejectButton.enabled = False
+
+
+    def _initTasks(self):
+
+        # some helpers
+        def addTask(task):
+            self.taskTree.onAddTask(task, copy=False)
+        def addFunc(func, name):
+            addTask(rt.CallbackTask(callback=func, name=name))
+        v = self.valveDemo
+
+        self.taskTree.removeAllTasks()
+        side = self.params.getPropertyEnumValue('Hand')
+
+        ###############
+        # add the tasks
+
+        # prep
+        addTask(rt.CloseHand(name='close left hand', side='Left'))
+        addTask(rt.CloseHand(name='close right hand', side='Right'))
+        addTask(rt.SetNeckPitch(name='set neck position', angle=0))
+        addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='door', postureName='narrow walking profile', side='Default'))
+        addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+        addTask(rt.CommitManipulationPlan(name='execute manip plan', planName='narrow walking profile posture plan'))
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+
+
+        # fit
+        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        addTask(rt.UserPromptTask(name='fit valve', message='Please fit and approve valve affordance.'))
+        addTask(rt.FindAffordance(name='check valve affordance', affordanceName='valve'))
+        addFunc(self.resetTouchAngle, name='plan stance location')
+
+        # walk
+        addTask(rt.RequestFootstepPlan(name='plan walk to valve', stanceFrameName='valve grasp stance'))
+        addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'))
+        addTask(rt.CommitFootstepPlan(name='walk to valve', planName='valve grasp stance footstep plan'))
+        addTask(rt.WaitForWalkExecution(name='wait for walking'))
+
+        # refit
+        addTask(rt.SetNeckPitch(name='set neck position', angle=35))
+        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        addTask(rt.UserPromptTask(name='fit value', message='Please fit and approve valve affordance.'))
+        addFunc(self.resetTouchAngle, name='check valve affordance')
+        addTask(rt.UserPromptTask(name='approve spoke location', message='Please approve valve spokes and touch angle.'))
+
+        # raise arm
+        addFunc(v.planPreGrasp, name='plan arm raise')
+        addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+        addFunc(v.animateLastPlan, name='execute manip plan')
+
+        # set fingers
+        addTask(rt.CloseHand(name='set finger positions', side=side, mode='Pinch', amount=20))
+
+        # valve manip actions
+        addFunc(v.coaxialPlanReach, name='plan reach to valve')
+        addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+        addFunc(v.animateLastPlan, name='execute manip plan')
+
+        addFunc(v.coaxialPlanTouch, name='plan insert in valve')
+        addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+        addFunc(v.animateLastPlan, name='execute manip plan')
+
+        addFunc(v.coaxialPlanTurn, name='plan turn valve')
+        addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+        addFunc(v.animateLastPlan, name='execute manip plan')
+
+        addFunc(v.coaxialPlanRetract, name='plan retract')
+        addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+        addFunc(v.animateLastPlan, name='execute manip plan')
