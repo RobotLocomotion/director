@@ -37,10 +37,10 @@ void ddKinectLCM::init(ddLCMThread* lcmThread, const QString& botConfigFile)
 
 
   kcal = kinect_calib_new();
-  kcal->intrinsics_depth.fx = 576.09757860;
+  kcal->intrinsics_depth.fx = 528.01442863461716;//was 576.09757860;
   kcal->intrinsics_depth.cx = 321.06398107;
   kcal->intrinsics_depth.cy = 242.97676897;
-  kcal->intrinsics_rgb.fx = 576.09757860;
+  kcal->intrinsics_rgb.fx = 528.01442863461716;//576.09757860; ... 528 seems to be better, emperically, march 2015
   kcal->intrinsics_rgb.cx = 321.06398107;
   kcal->intrinsics_rgb.cy = 242.97676897;
   kcal->intrinsics_rgb.k1 = 0; // none given so far
