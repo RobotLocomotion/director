@@ -645,9 +645,12 @@ if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
     #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'KINECT_RGB', view)
 
+<<<<<<< HEAD
 if useCameraFrustumVisualizer:
     cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'CAMERA_LEFT')
 
+=======
+>>>>>>> store rgb lines if claudia wants to use them
 class ImageOverlayManager(object):
 
     def __init__(self):
@@ -660,7 +663,8 @@ class ImageOverlayManager(object):
         self.imagePicker = None
         self._prevParent = None
 
-    def show(self):
+    def showImageOverlay(size=400, viewName='CAMERA_LEFT'):
+    #def showImageOverlay(size=400, viewName='KINECT_RGB'):
 
         if self.imageView:
             return
