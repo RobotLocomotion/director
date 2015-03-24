@@ -318,13 +318,15 @@ void ddKinectLCM::onKinectFrame(const QByteArray& data, const QString& channel)
 
   QMutexLocker locker(&this->mPolyDataMutex);
   this->mPolyData = polyData;
+  this->mUtime = message.timestamp;
 }
 
 
 //-----------------------------------------------------------------------------
-void ddKinectLCM::getPointCloudFromKinect(vtkPolyData* polyDataRender)
+qint64 ddKinectLCM::getPointCloudFromKinect(vtkPolyData* polyDataRender)
 {
   QMutexLocker locker(&this->mPolyDataMutex);
   polyDataRender->ShallowCopy(this->mPolyData);
+  return this->mUtime;
 }
 

@@ -18,4 +18,4 @@ QList<double> ddBotImageQueue::getCameraFrustumBounds(const QString&);
 QList<double> ddBotImageQueue::unprojectPixel(const QString&, int, int);
 ddKinectLCM::ddKinectLCM(QObject*);
 void ddKinectLCM::init(ddLCMThread*, const QString&);
-void ddKinectLCM::getPointCloudFromKinect(vtkPolyData*)
+qint64 ddKinectLCM::getPointCloudFromKinect(vtkPolyData*)
