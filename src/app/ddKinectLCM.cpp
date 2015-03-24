@@ -207,22 +207,20 @@ void unpack_kinect_frame(const kinect_frame_msg_t *msg, uint8_t* rgb_data, Kinec
         uint8_t b = rgb_data[v*msg->depth.width*3 + u*3 + 2];
         double constant = 1.0f / kcal->intrinsics_rgb.fx ;
         double disparity_d = val[v*msg->depth.width+u]  / 1000.0; // convert to m
-        cloud->points[j2].y =  - (((double) u)- 319.50)*disparity_d*constant; //y right+ (check)
-        cloud->points[j2].z = - (((double) v)- 239.50)*disparity_d*constant;  //z up+
-        cloud->points[j2].x = disparity_d;  //x forward+
-        if (disparity_d==0){
-          double disparity_d = -0.1; // convert to m
+
+        if (disparity_d!=0){
           cloud->points[j2].y =  - (((double) u)- 319.50)*disparity_d*constant; //y right+ (check)
-          cloud->points[j2].z =  -(((double) v)- 239.50)*disparity_d*constant;  //z up+
+          cloud->points[j2].z = - (((double) v)- 239.50)*disparity_d*constant;  //z up+
           cloud->points[j2].x = disparity_d;  //x forward+
+          cloud->points[j2].b =b;
+          cloud->points[j2].r =r;
+          cloud->points[j2].g =g;
+          j2++;
         }
 
-        cloud->points[j2].b =b;
-        cloud->points[j2].r =r;
-        cloud->points[j2].g =g;
-        j2++;
       }
-    }         
+    }
+    cloud->points.resize (j2);
   }
 
   if(msg->depth.compression != KINECT_DEPTH_MSG_T_COMPRESSION_NONE) {
