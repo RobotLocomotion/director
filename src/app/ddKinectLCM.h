@@ -31,7 +31,7 @@ public:
   ddKinectLCM(QObject* parent=NULL);
   
   void init(ddLCMThread* lcmThread, const QString& botConfigFile);
-  void getPointCloudFromKinect(vtkPolyData* polyDataRender);
+  qint64 getPointCloudFromKinect(vtkPolyData* polyDataRender);
 
 protected slots:
 
@@ -48,6 +48,7 @@ protected:
   uint8_t* rgb_buf_ ;
 
   vtkSmartPointer<vtkPolyData> mPolyData;
+  int64_t mUtime;
   QMutex mPolyDataMutex;
 
 };
