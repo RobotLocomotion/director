@@ -209,9 +209,9 @@ void unpack_kinect_frame(const kinect_frame_msg_t *msg, uint8_t* rgb_data, Kinec
         double disparity_d = val[v*msg->depth.width+u]  / 1000.0; // convert to m
 
         if (disparity_d!=0){
-          cloud->points[j2].x = (((double) u)- 319.50)*disparity_d*constant; //x right+
-          cloud->points[j2].y = (((double) v)- 239.50)*disparity_d*constant; //y down+
-          cloud->points[j2].z = disparity_d;  //z forward+
+          cloud->points[j2].y =  - (((double) u)- 319.50)*disparity_d*constant; //y right+ (check)
+          cloud->points[j2].z = - (((double) v)- 239.50)*disparity_d*constant;  //z up+
+          cloud->points[j2].x = disparity_d;  //x forward+
           cloud->points[j2].b =b;
           cloud->points[j2].r =r;
           cloud->points[j2].g =g;
