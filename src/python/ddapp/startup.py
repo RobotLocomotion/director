@@ -489,12 +489,13 @@ if useDataFiles:
 
 if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
-    #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_TSDF', view)
+    #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'KINECT_RGB', view)
 
 
 if useImageViewDemo:
 
     def showImageOverlay(size=400, viewName='CAMERA_LEFT'):
+    #def showImageOverlay(size=400, viewName='KINECT_RGB'):
 
         global _prevParent, imageView, imagePicker
         imageView = cameraview.views[viewName]
