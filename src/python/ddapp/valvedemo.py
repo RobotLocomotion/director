@@ -574,7 +574,7 @@ class ValvePlannerDemo(object):
         constraintSet.constraints[-1].upperBound = np.array([tol, 0, tol])
 
         constraintSet.nominalPoseName = nominalPoseName;
-        constraintSet.startPoseName = startPoseName;
+        constraintSet.startPoseName = nominalPoseName;
         return constraintSet.runIk()
 
 
