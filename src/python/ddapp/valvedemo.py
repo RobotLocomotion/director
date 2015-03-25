@@ -615,7 +615,18 @@ class ValvePlannerDemo(object):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def getStanceFrameCoaxial(self):
-        stancePose, info = self.coaxialGetPose(self.touchDepth, lockFeet=False, lockBase=False, lockBack=True)
+        xaxis, _, _ = transformUtils.getAxesFromTransform(self.valveFrame)
+        yawDesired = np.arctan2(xaxis[1], xaxis[0])
+        seedDistance = 0.5
+
+        startPose = self.ikPlanner.jointController.getPose('q_nom')
+        startPose[0] -= seedDistance*xaxis[0]
+        startPose[1] -= seedDistance*xaxis[1]
+        startPose[5] -= yawDesired
+
+        stancePose, info = self.coaxialGetPose(self.touchDepth, lockFeet=False,
+                                               lockBase=False, lockBack=True,
+                                               startPose=startPose)
         stanceRobotModel = self.ikPlanner.getRobotModelAtPose(stancePose)
         return self.footstepPlanner.getFeetMidPoint(stanceRobotModel)
 
