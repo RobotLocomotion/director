@@ -91,6 +91,7 @@ class ValvePlannerDemo(object):
         # reach to center and back - for palm point
         self.clenchFrameXYZ = [0.0, 0.0, -0.1]
         self.clenchFrameRPY = [90, 0, 180]
+        self.reachHeight = 0.05 # distance above the valve axis for the hand center
         self.reachDepth = -0.1 # distance away from valve for palm face on approach reach
         self.retractDepth = -0.15 # distance away from valve for palm face on retraction
         self.touchDepth = 0.05 # distance away from valve for palm face on approach reach
@@ -472,7 +473,7 @@ class ValvePlannerDemo(object):
 
     def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=None,
                        lockBase=None, resetBase=False,  wristAngleCW=0,
-                       startPose=None):
+                       startPose=None, verticalOffset=0):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         # yawDesired = np.arctan2(zaxis[1], zaxis[0])
         wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
@@ -566,7 +567,7 @@ class ValvePlannerDemo(object):
         p.jointsUpperBound = yJointUpperBound
         constraints.append(p)
 
-        t = transformUtils.frameFromPositionAndRPY([0,reachDepth,0], [0,0,0])
+        t = transformUtils.frameFromPositionAndRPY([-verticalOffset,reachDepth,0], [0,0,0])
         t.Concatenate(self.clenchFrame.transform)
 
         constraintSet = self.ikPlanner.newReachGoal(startPoseName, self.graspingHand, t, constraints, lockOrient=False)
@@ -585,8 +586,10 @@ class ValvePlannerDemo(object):
         app.displaySnoptInfo(info)
         self.addPlan(plan)
 
-    def coaxialPlanReach(self, **kwargs):
-        self.coaxialPlan(self.reachDepth, resetBase=True, **kwargs)
+    def coaxialPlanReach(self, verticalOffset=None, **kwargs):
+        if verticalOffset is None:
+            verticalOffset = self.reachHeight
+        self.coaxialPlan(self.reachDepth, resetBase=True, verticalOffset=verticalOffset, **kwargs)
 
     def coaxialPlanTouch(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
