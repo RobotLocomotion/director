@@ -478,7 +478,7 @@ class ValvePlannerDemo(object):
                        lockBase=None, resetBase=False,  wristAngleCW=0,
                        startPose=None, verticalOffset=0):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
-        # yawDesired = np.arctan2(zaxis[1], zaxis[0])
+        yawDesired = np.arctan2(zaxis[1], zaxis[0])
         wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
 
         if lockBase is None:
@@ -548,6 +548,12 @@ class ValvePlannerDemo(object):
                                                     worldPoint=np.array(self.clenchFrame.transform.GetPosition()),
                                                     coneThreshold = np.radians(20))
             constraints.append(headGaze)
+
+            p = ik.PostureConstraint()
+            p.joints = ['base_yaw']
+            p.jointsLowerBound = [yawDesired - np.radians(20)]
+            p.jointsUpperBound = [yawDesired + np.radians(20)]
+            constraints.append(p)
 
         if lockBack:
             constraints.append(self.ikPlanner.createLockedBackPostureConstraint(startPoseName))
