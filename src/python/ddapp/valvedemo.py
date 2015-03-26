@@ -59,7 +59,7 @@ class ValvePlannerDemo(object):
         # live operation flags
         self.useFootstepPlanner = True
         self.visOnly = True
-        self.planFromCurrentRobotState = True
+        self.planFromCurrentRobotState = False
         useDevelopment = False
         if (useDevelopment):
             self.visOnly = True
