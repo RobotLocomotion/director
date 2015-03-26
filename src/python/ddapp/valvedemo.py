@@ -98,6 +98,8 @@ class ValvePlannerDemo(object):
         self.nominalPelvisXYZ = None
 
         self.coaxialTol = 0.001
+        self.shxMaxTorque = 40
+        self.elxMaxTorque = 10
 
         # top level switch between BDI (locked base) and MIT (moving base and back)
         self.lockBack = False
@@ -514,7 +516,7 @@ class ValvePlannerDemo(object):
 
         nominalPose, _ = self.ikPlanner.computeNominalPose(startPose)
         if self.nominalPelvisXYZ is not None:
-            nominalPose[:3] = self.nominalPelvisXYZ
+            nominalPose[2] = self.nominalPelvisXYZ[2]
         else:
             nominalPose[2] = startPose[2]
         nominalPoseName = 'qNomAtRobot'
@@ -539,7 +541,7 @@ class ValvePlannerDemo(object):
             if lockBase:
                 constraints.append(self.ikPlanner.createLockedBasePostureConstraint(baseConstraintRobotPoseName, lockLegs=False))
             else:
-                constraints.append(self.ikPlanner.createZMovingBasePostureConstraint(baseConstraintRobotPoseName))
+                constraints.append(self.ikPlanner.createXYZMovingBasePostureConstraint(baseConstraintRobotPoseName))
         else:
             constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(baseConstraintRobotPoseName))
             constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
@@ -613,6 +615,12 @@ class ValvePlannerDemo(object):
         p.jointsLowerBound = yJointLowerBound
         p.jointsUpperBound = yJointUpperBound
         constraints.append(p)
+
+        torqueConstraint = ik.GravityCompensationTorqueConstraint()
+        torqueConstraint.joints = [shxJoint, elxJoint]
+        torqueConstraint.torquesLowerBound = -np.array([self.shxMaxTorque, self.elxMaxTorque])
+        torqueConstraint.torquesUpperBound =  np.array([self.shxMaxTorque, self.elxMaxTorque])
+        constraints.append(torqueConstraint)
 
         t = transformUtils.frameFromPositionAndRPY([-verticalOffset,reachDepth,0], [0,0,0])
         t.Concatenate(self.clenchFrame.transform)
