@@ -636,7 +636,7 @@ class ValvePlannerDemo(object):
     def coaxialPlanReach(self, verticalOffset=None, **kwargs):
         if verticalOffset is None:
             verticalOffset = self.reachHeight
-        self.coaxialPlan(self.reachDepth, resetBase=True, verticalOffset=verticalOffset, **kwargs)
+        self.coaxialPlan(self.reachDepth, resetBase=True, lockBase=False, verticalOffset=verticalOffset, **kwargs)
 
     def coaxialPlanTouch(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
@@ -661,7 +661,7 @@ class ValvePlannerDemo(object):
 
     def coaxialPlanRetract(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.coaxialPlan(self.retractDepth, wristAngleCW=np.radians(180), **kwargs)
+        self.coaxialPlan(self.retractDepth, wristAngleCW=np.radians(180), lockBase=False, **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def getStanceFrameCoaxial(self):
