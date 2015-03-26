@@ -543,6 +543,22 @@ class ValvePlannerDemo(object):
         else:
             constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(baseConstraintRobotPoseName))
             constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
+
+            p = ik.RelativePositionConstraint()
+            p.bodyNameA = 'l_foot'
+            p.bodyNameB = 'r_foot'
+            p.positionTarget = np.array([0, 0.3, 0])
+            p.lowerBound = np.array([0, 0, -np.inf])
+            p.upperBound = np.array([0, 0, np.inf])
+            constraints.append(p)
+
+            p = ik.RelativePositionConstraint()
+            p.bodyNameA = 'r_foot'
+            p.bodyNameB = 'l_foot'
+            p.lowerBound = np.array([0, -np.inf, -np.inf])
+            p.upperBound = np.array([0, np.inf, np.inf])
+            constraints.append(p)
+
             headGaze = ik.WorldGazeTargetConstraint(linkName='head',
                                                     bodyPoint=np.zeros(3),
                                                     worldPoint=np.array(self.clenchFrame.transform.GetPosition()),
