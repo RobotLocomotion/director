@@ -640,3 +640,33 @@ class ActiveEndEffectorConstraint(ConstraintBase):
 
         commands.append("end_effector_name = '%s';" % self.endEffectorName)
         commands.append("end_effector_pt = %s;" % self.toColumnVectorString(self.endEffectorPoint))
+
+
+class GravityCompensationTorqueConstraint(ConstraintBase):
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            joints           = [],
+            torquesLowerBound = [],
+            torquesUpperBound = [],
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+        varName = 'gravity_compensation_torque_constraint%s' % suffix
+        constraintNames.append(varName)
+
+        formatArgs = dict(varName=varName,
+                          robotArg=self.robotArg,
+                          jointInds=self.getJointsString(self.joints),
+                          lowerBound=self.toColumnVectorString(self.torquesLowerBound),
+                          upperBound=self.toColumnVectorString(self.torquesUpperBound),
+                          tspan=self.getTSpanString())
+
+        commands.append(
+            '{varName} = GravityCompensationTorqueConstraint({robotArg}, {jointInds}, {lowerBound}, {upperBound}, {tspan});\n'
+            ''.format(**formatArgs))
