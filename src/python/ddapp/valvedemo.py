@@ -91,10 +91,12 @@ class ValvePlannerDemo(object):
         # reach to center and back - for palm point
         self.clenchFrameXYZ = [0.0, 0.0, -0.1]
         self.clenchFrameRPY = [90, 0, 180]
-        self.reachHeight = 0.05 # distance above the valve axis for the hand center
+        self.reachHeight = 0.0 # distance above the valve axis for the hand center
         self.reachDepth = -0.1 # distance away from valve for palm face on approach reach
         self.retractDepth = -0.15 # distance away from valve for palm face on retraction
         self.touchDepth = 0.05 # distance away from valve for palm face on approach reach
+
+        self.coaxialTol = 0.01
 
         # top level switch between BDI (locked base) and MIT (moving base and back)
         self.lockBack = False
@@ -487,13 +489,21 @@ class ValvePlannerDemo(object):
         if self.graspingHand == 'left':
             larmName = 'l_larm'
             mwxJoint = 'l_arm_mwx'
+            elxJoint = 'l_arm_elx'
+            shxJoint = 'l_arm_shx'
+            xJointLowerBound = [np.radians(45), -np.inf, 0];
+            xJointUpperBound = [np.inf, np.radians(-30), 0];
             yJoints = ['l_arm_uwy']
             yJointLowerBound = [wristAngleCW]
             yJointUpperBound = [wristAngleCW]
         else:
             larmName = 'r_larm'
             mwxJoint = 'r_arm_mwx'
+            elxJoint = 'r_arm_elx'
+            shxJoint = 'r_arm_shx'
             yJoints = ['r_arm_uwy']
+            xJointLowerBound = [-np.inf, np.radians(30), 0];
+            xJointUpperBound = [np.radians(-45), np.inf, 0];
             yJointLowerBound = [np.pi - wristAngleCW]
             yJointUpperBound = [np.pi - wristAngleCW]
 
@@ -543,18 +553,17 @@ class ValvePlannerDemo(object):
         constraints.append(self.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
 
 
-        tol = 0.01
         if reachDepth >= 0:
             elbowOnValveAxisConstraint = ik.PositionConstraint(linkName=larmName,
                                                                 referenceFrame=self.clenchFrame.transform)
-            elbowOnValveAxisConstraint.lowerBound = [tol, -np.inf, tol]
-            elbowOnValveAxisConstraint.upperBound = [tol, np.inf, tol]
+            elbowOnValveAxisConstraint.lowerBound = [self.coaxialTol, -np.inf, self.coaxialTol]
+            elbowOnValveAxisConstraint.upperBound = [self.coaxialTol, np.inf, self.coaxialTol]
             constraints.append(elbowOnValveAxisConstraint)
 
             p = ik.PostureConstraint()
-            p.joints = [mwxJoint]
-            p.jointsLowerBound = [0]
-            p.jointsUpperBound = [0]
+            p.joints = [shxJoint, elxJoint, mwxJoint]
+            p.jointsLowerBound = xJointLowerBound
+            p.jointsUpperBound = xJointUpperBound
             constraints.append(p)
 
         constraints.append(self.ikPlanner.createQuasiStaticConstraint())
@@ -571,8 +580,8 @@ class ValvePlannerDemo(object):
         t.Concatenate(self.clenchFrame.transform)
 
         constraintSet = self.ikPlanner.newReachGoal(startPoseName, self.graspingHand, t, constraints, lockOrient=False)
-        constraintSet.constraints[-1].lowerBound = np.array([-tol, 0, -tol])
-        constraintSet.constraints[-1].upperBound = np.array([tol, 0, tol])
+        constraintSet.constraints[-1].lowerBound = np.array([-self.coaxialTol, 0, -self.coaxialTol])
+        constraintSet.constraints[-1].upperBound = np.array([self.coaxialTol, 0, self.coaxialTol])
 
         constraintSet.nominalPoseName = nominalPoseName;
         constraintSet.startPoseName = nominalPoseName;
