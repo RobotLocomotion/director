@@ -95,6 +95,7 @@ class ValvePlannerDemo(object):
         self.reachDepth = -0.1 # distance away from valve for palm face on approach reach
         self.retractDepth = -0.15 # distance away from valve for palm face on retraction
         self.touchDepth = 0.05 # distance away from valve for palm face on approach reach
+        self.nominalPelvisXYZ = None
 
         self.coaxialTol = 0.01
 
@@ -512,7 +513,10 @@ class ValvePlannerDemo(object):
 
 
         nominalPose, _ = self.ikPlanner.computeNominalPose(startPose)
-        nominalPose[2] = startPose[2]
+        if self.nominalPelvisXYZ is not None:
+            nominalPose[:3] = self.nominalPelvisXYZ
+        else:
+            nominalPose[2] = startPose[2]
         nominalPoseName = 'qNomAtRobot'
         self.ikPlanner.addPose(nominalPose, nominalPoseName)
 
@@ -640,6 +644,7 @@ class ValvePlannerDemo(object):
                                                lockBase=False, lockBack=True,
                                                startPose=startPose)
         stanceRobotModel = self.ikPlanner.getRobotModelAtPose(stancePose)
+        self.nominalPelvisXYZ = stancePose[:3]
         return self.footstepPlanner.getFeetMidPoint(stanceRobotModel)
 
 
