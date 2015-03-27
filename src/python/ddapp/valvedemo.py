@@ -93,11 +93,12 @@ class ValvePlannerDemo(object):
         self.clenchFrameRPY = [90, 0, 180]
         self.reachHeight = 0.0 # distance above the valve axis for the hand center
         self.reachDepth = -0.1 # distance away from valve for palm face on approach reach
-        self.retractDepth = -0.15 # distance away from valve for palm face on retraction
+        self.retractDepth = -0.05 # distance away from valve for palm face on retraction
         self.touchDepth = 0.05 # distance away from valve for palm face on approach reach
         self.nominalPelvisXYZ = None
 
         self.coaxialTol = 0.001
+        self.coaxialGazeTol = 2
         self.shxMaxTorque = 40
         self.elxMaxTorque = 10
 
@@ -478,7 +479,7 @@ class ValvePlannerDemo(object):
 
     def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=None,
                        lockBase=None, resetBase=False,  wristAngleCW=0,
-                       startPose=None, verticalOffset=0):
+                       startPose=None, verticalOffset=0.01):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
         wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
@@ -584,21 +585,22 @@ class ValvePlannerDemo(object):
         if reachDepth >= 0:
             elbowTol = self.coaxialTol
             wristTol = self.coaxialTol
-            gazeDegreesTol = 5
+            gazeDegreesTol = self.coaxialGazeTol
 
-            p = ik.PostureConstraint()
-            #p.joints = [shxJoint, elxJoint, mwxJoint]
-            #p.jointsLowerBound = xJointLowerBound
-            #p.jointsUpperBound = xJointUpperBound
-            p.joints = [mwxJoint]
-            p.jointsLowerBound = [0]
-            p.jointsUpperBound = [0]
-            constraints.append(p)
+
         else:
             elbowTol = self.coaxialTol
             wristTol = self.coaxialTol
-            gazeDegreesTol = 5
-
+            gazeDegreesTol = self.coaxialGazeTol
+            
+        p = ik.PostureConstraint()
+            #p.joints = [shxJoint, elxJoint, mwxJoint]
+            #p.jointsLowerBound = xJointLowerBound
+            #p.jointsUpperBound = xJointUpperBound
+        p.joints = [mwxJoint]
+        p.jointsLowerBound = [0]
+        p.jointsUpperBound = [0]
+        constraints.append(p)
         elbowOnValveAxisConstraint = ik.PositionConstraint(linkName=larmName,
                                                             referenceFrame=self.clenchFrame.transform)
         elbowOnValveAxisConstraint.lowerBound = [elbowTol, -np.inf, elbowTol]
