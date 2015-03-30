@@ -29,6 +29,7 @@ class AsyncIKCommunicator():
 
         self.maxDegreesPerSecond = 30.0
         self.maxBaseMetersPerSecond = 0.05
+        self.maxBaseRPYDegreesPerSecond = 2
         self.accelerationParam = 2;
         self.accelerationFraction = 0.3;
         self.maxPlanDuration = 30.0
@@ -300,8 +301,6 @@ class AsyncIKCommunicator():
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
             commands.append('options.n_interp_points = %s;' % self.numberOfInterpolatedCollisionChecks)
             commands.append('options.min_distance = %s;' % self.collisionMinDistance)
-            commands.append('options.joint_v_max = %s*pi/180;' % self.maxDegreesPerSecond)
-            commands.append('options.xyz_v_max = %s;' % self.maxBaseMetersPerSecond)
             commands.append('options.t_max = %s;' % self.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
             commands.append('options.end_effector_name = end_effector_name;')
@@ -322,9 +321,10 @@ class AsyncIKCommunicator():
             commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
         commands.append('if ~isempty(xtraj), qtraj = xtraj(1:r.getNumPositions()); else, qtraj = []; end;')
-        commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-3, 1); end;' % self.maxDegreesPerSecond)
+        commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1); end;' % self.maxDegreesPerSecond)
         commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % self.maxBaseMetersPerSecond)
-        commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; joint_v_max]; end;')
+        commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % self.maxBaseRPYDegreesPerSecond)
+        commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; rpy_v_max; joint_v_max]; end;')
         commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s); end;' % (self.accelerationParam, self.accelerationFraction))
 
         if self.usePointwise:
