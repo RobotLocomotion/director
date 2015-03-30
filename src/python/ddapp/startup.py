@@ -60,6 +60,7 @@ from ddapp import atlasdriver
 from ddapp import atlasdriverpanel
 from ddapp import multisensepanel
 from ddapp import navigationpanel
+from ddapp import mappingpanel
 from ddapp import handcontrolpanel
 from ddapp import sensordatarequestpanel
 from ddapp import tasklaunchpanel
@@ -497,6 +498,13 @@ if useNavigationPanel:
 if useLoggingWidget:
     w = lcmloggerwidget.LCMLoggerWidget(statusBar=app.getMainWindow().statusBar())
     app.getMainWindow().statusBar().addPermanentWidget(w.button)
+
+
+useMappingPanel = True
+if useMappingPanel:
+    mappingPanel = mappingpanel.init(robotStateJointController, footstepsDriver)
+
+
 
 
 if useControllerRate:
