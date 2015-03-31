@@ -897,7 +897,7 @@ class IKPlanner(object):
         return constraintSet
 
 
-    def planGraspOrbitReachPlan(self, startPose, side, graspFrame, constraints=None, dist=0.0, lockTorso=False, lockArm=True):
+    def planGraspOrbitReachPlan(self, startPose, side, graspFrame, constraints=None, dist=0.0, lockBase=False, lockBack=False, lockArm=True):
 
         self.reachingSide = side
 
@@ -905,13 +905,7 @@ class IKPlanner(object):
         self.addPose(startPose, startPoseName)
 
         if constraints is None:
-            constraints = []
-
-            if lockTorso:
-                constraints.append(self.createLockedTorsoPostureConstraint(startPoseName))
-                constraints.append(self.createLockedArmPostureConstraint(startPoseName))
-            else:
-                constraints.extend(self.createMovingReachConstraints(startPoseName, lockArm=lockArm))
+            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
 
         graspToHandLinkFrame = self.newPalmOffsetGraspToHandFrame(side, dist)
 
