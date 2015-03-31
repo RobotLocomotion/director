@@ -19,8 +19,8 @@ import numpy as np
 
 class TableDemo(object):
 
-    def __init__(self, robotStateModel, playbackRobotModel, ikPlanner, manipPlanner, footstepPlanner, atlasDriver, lhandDriver, rhandDriver, multisenseDriver, view, sensorJointController):
-
+    def __init__(self, robotStateModel, playbackRobotModel, ikPlanner, manipPlanner, footstepPlanner, atlasDriver, lhandDriver, rhandDriver, multisenseDriver, view, sensorJointController, planPlaybackFunction):
+        self.planPlaybackFunction = planPlaybackFunction
         self.robotStateModel = robotStateModel
         self.playbackRobotModel = playbackRobotModel
         self.ikPlanner = ikPlanner
@@ -158,20 +158,16 @@ class TableDemo(object):
 
 
     def getPreDropHighPose(self, startPose, side):
-        return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'pre drop 1', side)
+        return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'table clearing', 'pre drop 1', side)
 
 
     def getPreDropLowPose(self, startPose, side):
-        return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'pre drop 2', side)
+        return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'table clearing', 'pre drop 2', side)
 
 
     def getLoweredArmPose(self, startPose, side):
-
-        #jointNames = robotstate.matchJoints('l_arm' if side == 'left' else 'r_arm')
-        #nominalPose = self.ikPlanner.jointController.getPose('q_nom')
-        #return self.ikPlanner.mergePostures(startPose, jointNames, nominalPose)
-
-        return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm down thumb in', side)
+        return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side)
+        #return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm down thumb in', side)
 
 
     def raiseArm(self, side):
@@ -268,7 +264,7 @@ class TableDemo(object):
         obj, frame = self.getNextTableObject(side)
         startPose = self.getPlanningStartPose()
 
-        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.25, lockTorso=False, lockArm=False)
+        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.25, lockBase=False, lockBack=False, lockArm=False)
 
 
         loweringSide = 'left' if side == 'right' else 'right'
@@ -300,7 +296,7 @@ class TableDemo(object):
         obj, frame = self.getNextTableObject(side)
 
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.05, lockTorso=False)
+        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.05, lockBase=False, lockBack=False)
 
         constraintSet.constraints[-1].tspan = [-np.inf, np.inf]
         constraintSet.constraints[-2].tspan = [-np.inf, np.inf]
@@ -412,7 +408,7 @@ class TableDemo(object):
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
 
 
-    def computeWalkingPlan(self):
+    def planWalking(self):
         startPose = self.getPlanningStartPose()
         plan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
         self.addPlan(plan)
@@ -449,7 +445,11 @@ class TableDemo(object):
     def cleanupFootstepPlans(self):
         om.removeFromObjectModel(om.findObjectByName('walking goal'))
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
+        self.footstepPlan = None
 
+    def playSequenceNominal(self):
+        assert None not in self.plans
+        self.planPlaybackFunction(self.plans)
 
     def waitForPlanExecution(self, plan):
         planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
@@ -566,7 +566,7 @@ class TableDemo(object):
             taskQueue.addTask(planFunc)
 
             if self.visOnly:
-                taskQueue.addTask(self.computeWalkingPlan)
+                taskQueue.addTask(self.planWalking)
                 taskQueue.addTask(self.animateLastPlan)
             else:
 
@@ -729,3 +729,81 @@ class TableDemo(object):
         self.addLoopTasksToQueue(taskQueue)
 
         return taskQueue
+
+
+    def setupSequence(self):
+        self.userFitTable()
+        self.onSegmentTable( np.array([-1.72105646,  2.73210716,  0.79449952]), np.array([-1.67336452,  2.63351011,  0.78698605]) )
+        self.userFitBin()
+        self.onSegmentBin( np.array([-0.02, 2.43, 0.61 ]), np.array([-0.40,  2.79,  0.61964661]) )
+        self.computeTableStanceFrame()
+        self.computeBinStanceFrame()
+
+    def planSequence(self):
+        self.useFootstepPlanner = True
+        side = 'both'
+
+
+        self.cleanupFootstepPlans()
+        self.planFromCurrentRobotState = False
+        self.segmentTableObjects()
+        self.plans = []
+
+        # Go home
+        if self.useFootstepPlanner:
+            self.computeStartFootstepPlan()
+            self.planWalking()
+        else:
+            self.moveRobotToStanceFrame(self.startStanceFrame.transform )
+
+        # Approach table:
+        if self.useFootstepPlanner:
+            self.computeTableFootstepPlan()
+            self.planWalking()
+        else:
+            self.moveRobotToStanceFrame(self.tableStanceFrame.transform )
+
+        if (side == 'left'):
+          self.planSequenceTablePick('left')
+        elif (side == 'right'):
+          self.planSequenceTablePick('right')
+        elif (side == 'both'):
+          self.planSequenceTablePick('left')
+          self.planSequenceTablePick('right')
+
+        # Go home
+        if self.useFootstepPlanner:
+            self.computeStartFootstepPlan()
+            self.planWalking()
+        else:
+            self.moveRobotToStanceFrame(self.startStanceFrame.transform )
+
+
+        if self.useFootstepPlanner:
+            self.computeBinFootstepPlan()
+            self.planWalking()
+        else:
+            self.moveRobotToStanceFrame(self.binStanceFrame.transform )
+
+
+        self.dropPosturePlanRaise('left')
+        self.dropTableObject('left')
+        self.dropPosturePlanLower('left')
+        self.dropPosturePlanRaise('right')
+        self.dropTableObject('right')
+        self.dropPosturePlanLower('right')
+
+
+        # Go home
+        if self.useFootstepPlanner:
+            self.computeStartFootstepPlan()
+            self.planWalking()
+        else:
+            self.moveRobotToStanceFrame(self.startStanceFrame.transform )
+
+
+    def planSequenceTablePick(self, side):
+        self.reachToTableObject(side)
+        self.touchTableObject(side)
+        self.graspTableObject(side)
+        self.liftTableObject(side)

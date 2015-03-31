@@ -2557,7 +2557,12 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
     tableCentroid = computeCentroid(tablePoints)
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.5])
-    searchRegion = cropToSphere(searchRegion, tableCentroid, 1.0)
+    # TODO: replace with 'all points above the table':
+    searchRegion = cropToSphere(searchRegion, tableCentroid, 0.5) # was 1.0
+
+    tableCentroidFrame = transformUtils.frameFromPositionAndRPY(tableCentroid, [0,0,0])
+    showFrame(tableCentroidFrame, 'tableCentroid', visible=False, parent=getDebugFolder(), scale=0.15)
+    showPolyData(searchRegion, 'searchRegion', color=[1,0,0], visible=False, parent=getDebugFolder())
 
     objectClusters = extractClusters(searchRegion, clusterInXY, clusterTolerance=0.02, minClusterSize=10)
 
@@ -2570,7 +2575,11 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
 
 
 def segmentTableEdge(polyData, searchPoint, edgePoint):
-
+    '''
+    segment a table using two points:
+    searchPoint is a point on the table top
+    edgePoint is a point on the edge facing the robot
+    '''
 
     polyData, tablePoints, origin, normal = segmentTable(polyData, searchPoint)
 
