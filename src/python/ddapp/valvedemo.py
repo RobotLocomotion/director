@@ -608,8 +608,62 @@ class ValvePlannerDemo(object):
         assert side in ('left', 'right')
         return self.lhandDriver if side == 'left' else self.rhandDriver
 
-    def openPinch(self, side):
+    def openHand(self,side):
+        self.getHandDriver(side).sendCustom(0.0, 100.0, 100.0, 0)
+
+    def openPinch(self,side):
         self.getHandDriver(side).sendCustom(20.0, 100.0, 100.0, 1)
+
+    def closeHand(self, side):
+        self.getHandDriver(side).sendCustom(100.0, 100.0, 100.0, 0)
+
+    def sendNeckPitchLookDown(self):
+        self.multisenseDriver.setNeckPitch(40)
+
+    def sendNeckPitchLookForward(self):
+        self.multisenseDriver.setNeckPitch(15)
+
+    def waitForAtlasBehaviorAsync(self, behaviorName):
+        assert behaviorName in self.atlasDriver.getBehaviorMap().values()
+        while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
+            yield
+
+    def printAsync(self, s):
+        yield
+        print s
+
+    def optionalUserPrompt(self, message):
+        if not self.optionalUserPromptEnabled:
+            return
+
+        yield
+        result = raw_input(message)
+        if result != 'y':
+            raise Exception('user abort.')
+
+    def requiredUserPrompt(self, message):
+        if not self.requiredUserPromptEnabled:
+            return
+
+        yield
+        result = raw_input(message)
+        if result != 'y':
+            raise Exception('user abort.')
+
+    def delay(self, delayTimeInSeconds):
+        yield
+        t = SimpleTimer()
+        while t.elapsed() < delayTimeInSeconds:
+            yield
+
+    def waitForCleanLidarSweepAsync(self):
+        currentRevolution = self.multisenseDriver.displayedRevolution
+        desiredRevolution = currentRevolution + 2
+        while self.multisenseDriver.displayedRevolution < desiredRevolution:
+            yield
+
+    def getEstimatedRobotStatePose(self):
+        return self.sensorJointController.getPose('EST_ROBOT_STATE')
 
     def getPlanningStartPose(self):
         if self.planFromCurrentRobotState:
