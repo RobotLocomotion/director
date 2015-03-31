@@ -169,6 +169,19 @@ class UserPromptTask(AsyncTask):
         if not self.result:
             raise atq.AsyncTaskQueue.PauseException()
 
+class CheckPlanInfo(UserPromptTask):
+
+    @staticmethod
+    def getDefaultProperties(properties):
+        UserPromptTask.getDefaultProperties(properties)
+        properties.setProperty('Message', 'Plan is invalid. Do you want to accept it anyway?')
+
+    def run(self):
+        if robotSystem.ikPlanner.lastManipPlan and max(robotSystem.ikPlanner.lastManipPlan.plan_info) <= 10:
+            return
+        else:
+            return UserPromptTask.run(self)
+
 
 class DelayTask(AsyncTask):
 
