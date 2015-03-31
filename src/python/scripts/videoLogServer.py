@@ -89,13 +89,13 @@ class LogLookup(object):
 
 class PlayThread(object):
 
-    def __init__(self, utimes, logLookup, lc, speed):
+    def __init__(self, utimes, logLookup, speed):
         self.fps = 60
         self.shouldStop = False
         self.utimes = utimes
         self.logLookup = logLookup
         self.speed = speed
-        self.lc = lc
+        self.lc = lcm.LCM(VIDEO_LCM_URL)
 
     def start(self):
         self.shouldStop = False
@@ -200,7 +200,7 @@ class ServerThread(object):
 
         startIndex = self.getUtimeIndex(data)
         playbackUtimes = self.utimes[startIndex:]
-        self.playbackThread = PlayThread(playbackUtimes, self.logLookup, self.lc, speed=data.speed)
+        self.playbackThread = PlayThread(playbackUtimes, self.logLookup, speed=data.speed)
         self.playbackThread.start()
 
 
