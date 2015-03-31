@@ -1362,22 +1362,22 @@ class ValveTaskPanel(object):
 
             # valve manip actions
             addFunc(v.coaxialPlanReach, name='plan reach to valve', parent=group)
-            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'), parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
 
             addFunc(v.coaxialPlanTouch, name='plan insert in valve', parent=group)
-            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'), parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
 
             addFunc(v.coaxialPlanTurn, name='plan turn valve', parent=group)
-            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'), parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
 
             addFunc(v.coaxialPlanRetract, name='plan retract', parent=group)
-            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'), parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
 
