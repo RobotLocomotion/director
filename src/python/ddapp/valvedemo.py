@@ -592,7 +592,7 @@ class ValvePlannerDemo(object):
             elbowTol = self.coaxialTol
             wristTol = self.coaxialTol
             gazeDegreesTol = self.coaxialGazeTol
-            
+
         p = ik.PostureConstraint()
             #p.joints = [shxJoint, elxJoint, mwxJoint]
             #p.jointsLowerBound = xJointLowerBound
@@ -641,6 +641,7 @@ class ValvePlannerDemo(object):
         touchPose, info = self.coaxialGetPose(reachDepth, **kwargs)
         plan = self.ikPlanner.computePostureGoal(startPose, touchPose)
         app.displaySnoptInfo(info)
+        self.ikPlanner.lastManipPlan.plan_info = [info]*len(self.ikPlanner.lastManipPlan.plan_info)
         self.addPlan(plan)
 
     def coaxialPlanReach(self, verticalOffset=None, **kwargs):
