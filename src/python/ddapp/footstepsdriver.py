@@ -195,7 +195,7 @@ class FootstepsDriver(object):
                                  lcmdrc.footstep_plan_params_t.LEAD_LEFT,
                                  lcmdrc.footstep_plan_params_t.LEAD_RIGHT]
         # self.params.addProperty('Map Command', 0, attributes=om.PropertyAttributes(enumNames=['Full Heightmap', 'Flat Ground', 'Z Normals']))
-        self.params.addProperty('Map Mode', 1, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
+        self.params.addProperty('Map Mode', 0, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
         self.map_mode_map = [
                              lcmdrc.footstep_plan_params_t.FOOT_PLANE,
                              lcmdrc.footstep_plan_params_t.TERRAIN_HEIGHTS_AND_NORMALS,
