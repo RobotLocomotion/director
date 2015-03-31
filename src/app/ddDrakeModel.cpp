@@ -32,6 +32,7 @@
 
 #include <map>
 #include <vector>
+#include <unordered_set>
 #include <string>
 #include <sstream>
 #include <boost/shared_ptr.hpp>
@@ -448,6 +449,8 @@ public:
 
   std::map<std::string, int> dofMap;
 
+  std::unordered_set<std::string> fixedDOFs;
+
   ddPtrMacro(URDFRigidBodyManipulatorVTK);
 
   URDFRigidBodyManipulatorVTK() : RigidBodyManipulator()
@@ -470,7 +473,12 @@ public:
       {
         continue;
       }
-
+      
+      if (body->getJoint().getNumPositions() == 0)
+      {
+        fixedDOFs.insert(body->getJoint().getName());
+        continue;
+      }
 
       int dofId = body->position_num_start;
 
@@ -920,7 +928,11 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
     std::map<std::string, int>::const_iterator itr = model->dofMap.find(dofName.toAscii().data());
     if (itr == model->dofMap.end())
     {
-      printf("Could not find URDF model dof with name: %s\n", qPrintable(dofName));
+      std::unordered_set<std::string>::const_iterator itr_fixed = model->fixedDOFs.find(dofName.toAscii().data());
+      if (itr_fixed == model->fixedDOFs.end())
+      {
+        printf("Could not find URDF model dof with name: %s\n", qPrintable(dofName));
+      }
       continue;
     }
 
