@@ -4,6 +4,7 @@ import ddapp.visualization as vis
 import ddapp.objectmodel as om
 from ddapp.debugVis import DebugData
 import ddapp.vtkAll as vtk
+from ddapp import callbacks
 import numpy as np
 
 
@@ -137,7 +138,11 @@ class PointPicker(object):
 
 class ImagePointPicker(object):
 
-    def __init__(self, imageView, obj=None, callback=None, drawLines=True):
+
+    DOUBLE_CLICK_EVENT = 'DOUBLE_CLICK_EVENT'
+
+
+    def __init__(self, imageView, obj=None, callback=None, numberOfPoints=1, drawLines=True):
 
         self.imageView = imageView
         self.view = imageView.view
@@ -146,6 +151,9 @@ class ImagePointPicker(object):
         self.annotationObj = None
         self.annotationFunc = callback
         self.doubleClickCallback = None
+        self.numberOfPoints = numberOfPoints
+        self.showCursor = True
+        self.callbacks = callbacks.CallbackRegistry([self.DOUBLE_CLICK_EVENT])
         self.clear()
 
     def start(self):
@@ -170,20 +178,29 @@ class ImagePointPicker(object):
     def removeEventFilter(self):
         self.view.vtkWidget().removeEventFilter(self.eventFilter)
 
+    def connectDoubleClickEvent(self, func):
+        return self.callbacks.connect(self.DOUBLE_CLICK_EVENT, func)
+
+    def disconnectDoubleClickEvent(self, callbackId):
+        self.callbacks.disconnect(callbackId)
+
     def onEvent(self, obj, event):
 
         if event.type() == QtCore.QEvent.MouseButtonDblClick and event.button() == QtCore.Qt.LeftButton:
-            if self.doubleClickCallback:
-                self.doubleClickCallback(vis.mapMousePosition(obj, event), event.modifiers(), self.imageView)
+
+            self.callbacks.process(self.DOUBLE_CLICK_EVENT, vis.mapMousePosition(obj, event), event.modifiers(), self.imageView)
+            #if self.doubleClickCallback:
+            #    self.doubleClickCallback(vis.mapMousePosition(obj, event), event.modifiers(), self.imageView)
 
         if event.type() in (QtCore.QEvent.MouseMove, QtCore.QEvent.MouseButtonPress, QtCore.QEvent.Wheel):
-            self.updateCursor(vis.mapMousePosition(obj, event))
+            if self.showCursor:
+                self.updateCursor(vis.mapMousePosition(obj, event))
 
         if event.modifiers() != QtCore.Qt.ShiftModifier:
             if self.annotationObj:
                 self.hoverPos = None
                 self.draw()
-                self.annotationObj.setProperty('Color', QtGui.QColor(255, 255, 0)) # color overlay lines yellow
+                self.annotationObj.setProperty('Color', [1, 1, 0]) # color overlay lines yellow
                 self.clear()
             return
 
@@ -192,13 +209,15 @@ class ImagePointPicker(object):
 
         if event.type() == QtCore.QEvent.MouseMove:
             self.onMouseMove(vis.mapMousePosition(obj, event), event.modifiers())
-            self.imageView.rayDebug(vis.mapMousePosition(obj, event))
+            self.imageView.onMouseMove(vis.mapMousePosition(obj, event))
 
         elif event.type() == QtCore.QEvent.MouseButtonPress:
             self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
 
 
     def clear(self):
+        if self.annotationObj:
+            self.annotationObj.setProperty('Visible', False)
         self.annotationObj = None
         self.points = []
         self.hoverPos = None
@@ -211,9 +230,12 @@ class ImagePointPicker(object):
     def onMousePress(self, displayPoint, modifiers=None):
         self.points.append(self.hoverPos)
 
+        if len(self.points) == self.numberOfPoints:
+            self.finish()
+
 
     def finish(self):
-        points = [p.copy() for p in self.points]
+        points = [np.array(p) for p in self.points]
         if self.annotationFunc is not None:
             self.annotationFunc(*points)
         self.clear()
@@ -228,11 +250,11 @@ class ImagePointPicker(object):
         # draw points
         for p in points:
             if p is not None:
-                d.addSphere(p, radius=2) # radius seems to be in pixels 0.08
+                d.addSphere(p, radius=5) # radius seems to be in pixels 0.08
 
                 # add a cross-hair
-                d.addLine( [p[0] , p[1]-50 , p[2]] , [p[0] , p[1]+50 , p[2]] )
-                d.addLine( [p[0]-50 , p[1] , p[2]] , [p[0]+50 , p[1] , p[2]] )
+                #d.addLine( [p[0] , p[1]-50 , p[2]] , [p[0] , p[1]+50 , p[2]] )
+                #d.addLine( [p[0]-50 , p[1] , p[2]] , [p[0]+50 , p[1] , p[2]] )
 
         if self.drawLines:
             # draw lines
