@@ -91,11 +91,8 @@ class ValvePlannerDemo(object):
         # reach to center and back - for palm point
         self.clenchFrameXYZ = [0.0, 0.0, -0.1]
         self.clenchFrameRPY = [90, 0, 180]
-        self.reachHeight = 0.0 # distance above the valve axis for the hand center
-        self.reachDepth = -0.1 # distance away from valve for palm face on approach reach
-        self.retractDepth = -0.05 # distance away from valve for palm face on retraction
-        self.touchDepth = 0.05 # distance away from valve for palm face on approach reach
         self.nominalPelvisXYZ = None
+        self.useLargeValveDefaults()
 
         self.coaxialTol = 0.001
         self.coaxialGazeTol = 2
@@ -109,6 +106,26 @@ class ValvePlannerDemo(object):
         self.setupStance()
 
         self._setupSubscriptions()
+
+
+    def useLargeValveDefaults(self):
+        self.reachHeight = 0.0 # distance above the valve axis for the hand center
+        self.reachDepth = -0.1 # distance away from valve for palm face on approach reach
+        self.retractDepth = -0.05 # distance away from valve for palm face on retraction
+        self.touchDepth = 0.05 # distance away from valve for palm face on approach reach
+        self.openAmount = 20
+        self.closedAmount = 20
+        self.smallValve = False
+
+
+    def useSmallValveDefaults(self):
+        self.reachHeight = 0.0 # distance above the valve axis for the hand center
+        self.reachDepth = -0.1 # distance away from valve for palm face on approach reach
+        self.retractDepth = -0.05 # distance away from valve for palm face on retraction
+        self.touchDepth = 0.01 # distance away from valve for palm face on approach reach
+        self.openAmount = 0
+        self.closedAmount = 50
+        self.smallValve = True
 
 
     def _setupSubscriptions(self):
@@ -651,15 +668,16 @@ class ValvePlannerDemo(object):
 
     def coaxialPlanTouch(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.coaxialPlan(self.touchDepth, wristAngleCW=np.radians(20), **kwargs)
+        self.coaxialPlan(self.touchDepth, **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
-    def coaxialPlanTurn(self, **kwargs):
+    def coaxialPlanTurn(self, wristAngleCW=np.pi):
         startPose = self.getPlanningStartPose()
+        wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
         if self.graspingHand == 'left':
-            postureJoints = {'l_arm_uwy' : np.pi - 0.01}
+            postureJoints = {'l_arm_uwy' : wristAngleCW}
         else:
-            postureJoints = {'r_arm_uwy' : 0.01}
+            postureJoints = {'r_arm_uwy' : np.pi - wristAngleCW}
 
         endPose = self.ikPlanner.mergePostures(startPose, postureJoints)
 
@@ -1358,29 +1376,72 @@ class ValveTaskPanel(object):
             self.taskTree.onAddTask(task, copy=False, parent=parent)
         def addFunc(func, name, parent=None):
             addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
-        def addValveTurn(parent=None):
+        def addLargeValveTurn(parent=None):
             group = self.taskTree.addGroup('Valve Turn', parent=parent)
 
+            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.pi
+            touchWristAngleCW = np.radians(20) if v.scribeDirection == 1 else np.pi-np.radians(20)
+            finalWristAngleCW = np.pi if v.scribeDirection == 1 else 0
+
             # valve manip actions
-            addFunc(v.coaxialPlanReach, name='plan reach to valve', parent=group)
+            addFunc(functools.partial(v.coaxialPlanReach,
+                                      wristAngleCW=initialWristAngleCW),
+                    name='plan reach to valve', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
 
-            addFunc(v.coaxialPlanTouch, name='plan insert in valve', parent=group)
+            addFunc(functools.partial(v.coaxialPlanTouch,
+                                      wristAngleCW=touchWristAngleCW),
+                    name='plan insert in valve', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
 
-            addFunc(v.coaxialPlanTurn, name='plan turn valve', parent=group)
+            addFunc(functools.partial(v.coaxialPlanTurn,
+                                      wristAngleCW=finalWristAngleCW),
+                    name='plan turn valve', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
 
-            addFunc(v.coaxialPlanRetract, name='plan retract', parent=group)
+            addFunc(functools.partial(v.coaxialPlanRetract,
+                                      wristAngleCW=finalWristAngleCW),
+                    name='plan retract', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
+
+        def addSmallValveTurn(parent=None):
+            group = self.taskTree.addGroup('Valve Turn', parent=parent)
+            side = 'Right' if v.graspingHand == 'right' else 'Left'
+
+            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.pi
+            finalWristAngleCW = np.pi if v.scribeDirection == 1 else 0
+
+            addFunc(functools.partial(v.coaxialPlanTurn,
+                                      wristAngleCW=initialWristAngleCW),
+                    name='plan reset hand', parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
+            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
+
+            addTask(rt.CloseHand(name='grasp valve',
+                                    side=side, mode='Basic',
+                                    amount=self.valveDemo.closedAmount), parent=group)
+
+            addFunc(functools.partial(v.coaxialPlanTurn,
+                                      wristAngleCW=finalWristAngleCW),
+                    name='plan turn valve', parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
+            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
+
+            addTask(rt.CloseHand(name='release valve',
+                                 side=side, mode='Basic',
+                                 amount=self.valveDemo.openAmount),
+                    parent=group)
+
 
         v = self.valveDemo
 
@@ -1420,9 +1481,28 @@ class ValveTaskPanel(object):
         #addTask(rt.UserPromptTask(name='approve spoke location', message='Please approve valve spokes and touch angle.'))
 
         # set fingers
-        addTask(rt.CloseHand(name='set finger positions', side=side, mode='Basic', amount=20))
+        addTask(rt.CloseHand(name='set finger positions', side=side, mode='Basic', amount=self.valveDemo.openAmount))
 
         # add valve turns
-        for i in range(0, 5):
-            addValveTurn()
+        if v.smallValve:
+            addFunc(functools.partial(v.coaxialPlanReach,
+                                      wristAngleCW=0 if v.scribeDirection == 1 else np.pi),
+                    name='plan reach to valve')
+            addTask(rt.CheckPlanInfo(name='check manip plan info'))
+            addFunc(v.commitManipPlan, name='execute manip plan')
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+
+            addFunc(functools.partial(v.coaxialPlanTouch,
+                                      wristAngleCW=np.radians(1) if v.scribeDirection == 1 else np.pi-np.radians(1)),
+                    name='plan final reach')
+            addTask(rt.CheckPlanInfo(name='check manip plan info'))
+            addFunc(v.commitManipPlan, name='execute manip plan')
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+
+            for i in range(0, 5):
+                addSmallValveTurn()
+
+        else:
+            for i in range(0, 5):
+                addLargeValveTurn()
 
