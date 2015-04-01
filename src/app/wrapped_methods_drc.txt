@@ -6,6 +6,7 @@ void ddBotImageQueue::colorizePoints(const QString&, vtkPolyData*);
 void ddBotImageQueue::computeTextureCoords(const QString&, vtkPolyData*);
 qint64 ddBotImageQueue::getImage(const QString&, vtkImageData*);
 qint64 ddBotImageQueue::getCurrentImageTime(const QString&);
+void ddBotImageQueue::getCameraProjectionTransform(const QString&, vtkTransform*);
 void ddBotImageQueue::getBodyToCameraTransform(const QString&, vtkTransform*);
 void ddBotImageQueue::getPointCloudFromImages(const QString&, vtkPolyData*, int, int);
 int ddBotImageQueue::projectPoints(const QString&, vtkPolyData*);

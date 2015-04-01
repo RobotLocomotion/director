@@ -52,24 +52,6 @@ bool ddBotImageQueue::initCameraData(const QString& cameraName, CameraData* came
     cameraData->mHasCalibration = false;
   }
   return true;
-
-  /*
-  double K00 = bot_camtrans_get_focal_length_x(sub->mCamTrans);
-  double K11 = bot_camtrans_get_focal_length_y(sub->mCamTrans);
-  double K01 = bot_camtrans_get_skew(sub->mCamTrans);
-  double K02 = bot_camtrans_get_principal_x(sub->mCamTrans);
-  double K12 = bot_camtrans_get_principal_y(sub->mCamTrans);
-  sub->mProjectionMatrix = Eigen::Matrix4f::Zero();
-  sub->mProjectionMatrix(0,0) = K00;
-  sub->mProjectionMatrix(0,1) = K01;
-  sub->mProjectionMatrix(0,2) = K02;
-  sub->mProjectionMatrix(1,1) = K11;
-  sub->mProjectionMatrix(1,2) = K12;
-  sub->mProjectionMatrix(2,3) = 1;
-  sub->mProjectionMatrix(3,2) = 1;
-  sub->mImageWidth = bot_camtrans_get_width(sub->mCamTrans);
-  sub->mImageHeight = bot_camtrans_get_width(sub->mCamTrans);
-  */
 }
 
 //-----------------------------------------------------------------------------
@@ -300,6 +282,50 @@ QList<double> ddBotImageQueue::getCameraFrustumBounds(const QString& cameraName)
   }
 
   return this->getCameraFrustumBounds(cameraData);
+}
+
+//-----------------------------------------------------------------------------
+void ddBotImageQueue::getCameraProjectionTransform(const QString& cameraName, vtkTransform* transform)
+{
+  if (!transform)
+  {
+    return;
+  }
+
+  transform->Identity();
+
+  CameraData* cameraData = this->getCameraData(cameraName);
+  if (!cameraData)
+  {
+    return;
+  }
+
+  if (!cameraData->mHasCalibration)
+  {
+    return;
+  }
+
+  QMutexLocker locker(&cameraData->mMutex);
+
+  double K00 = bot_camtrans_get_focal_length_x(cameraData->mCamTrans);
+  double K11 = bot_camtrans_get_focal_length_y(cameraData->mCamTrans);
+  double K01 = bot_camtrans_get_skew(cameraData->mCamTrans);
+  double K02 = bot_camtrans_get_principal_x(cameraData->mCamTrans);
+  double K12 = bot_camtrans_get_principal_y(cameraData->mCamTrans);
+
+  vtkSmartPointer<vtkMatrix4x4> vtkmat = vtkSmartPointer<vtkMatrix4x4>::New();
+
+  vtkmat->SetElement(0, 0, 1);
+  vtkmat->SetElement(1, 1, 1);
+  vtkmat->SetElement(2, 2, 1);
+  vtkmat->SetElement(3, 3, 1);
+  vtkmat->SetElement(0, 0, K00);
+  vtkmat->SetElement(1, 1, K11);
+  vtkmat->SetElement(0, 1, K01);
+  //vtkmat->SetElement(0, 2, K02);
+  //vtkmat->SetElement(1, 2, K12);
+
+  transform->SetMatrix(vtkmat);
 }
 
 //-----------------------------------------------------------------------------
