@@ -137,7 +137,7 @@ useControllerRate = True
 useForceDisplay = False
 useSkybox = False
 useDataFiles = True
-usePFGrasp = True
+usePFGrasp = False
 
 
 poseCollection = PythonQt.dd.ddSignalMap()
