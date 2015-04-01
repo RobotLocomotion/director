@@ -238,7 +238,6 @@
    <addaction name="ActionActionManagerPanel"/>
    <addaction name="ActionScreenGrabberPanel"/>
    <addaction name="ActionSensorDataRequestPanel"/>
-   <addaction name="ActionPFGraspPanel"/>
   </widget>
   <action name="ActionQuit">
    <property name="text">
