@@ -1,82 +1,31 @@
-import ddapp
-
-import os
-import sys
-import PythonQt
-from PythonQt import QtCore, QtGui
-from time import time
-import imp
 from ddapp import applogic
-from ddapp import botpy
 from ddapp import vtkAll as vtk
-from ddapp import matlab
-from ddapp import jointcontrol
 from ddapp import callbacks
-from ddapp import cameracontrol
-from ddapp import debrisdemo
-from ddapp import drilldemo
 from ddapp.fieldcontainer import FieldContainer
-from ddapp import tabledemo
-from ddapp import valvedemo
 from ddapp import ik
 from ddapp import ikplanner
 from ddapp import irisdriver
 from ddapp import raycastdriver
 from ddapp import objectmodel as om
-from ddapp import spreadsheet
-from ddapp import transformUtils
-from ddapp import tdx
 from ddapp import perception
 from ddapp import segmentation
 from ddapp import segmentationroutines
-from ddapp import cameraview
-from ddapp import colorize
-from ddapp import drakevisualizer
 from ddapp import robotstate
 from ddapp import roboturdf
 from ddapp import footstepsdriver
-from ddapp import footstepsdriverpanel
-from ddapp import framevisualization
-from ddapp import lcmgl
 from ddapp import drcargs
 from ddapp import atlasdriver
-from ddapp import atlasdriverpanel
-from ddapp import multisensepanel
-from ddapp import navigationpanel
-from ddapp import handcontrolpanel
-from ddapp import sensordatarequestpanel
 from ddapp import affordanceitems
 from ddapp import affordancemanager
-
 from ddapp import robotplanlistener
 from ddapp import handdriver
 from ddapp import planplayback
 from ddapp import playbackpanel
-from ddapp import screengrabberpanel
-from ddapp import splinewidget
 from ddapp import teleoppanel
-from ddapp import vtkNumpy as vnp
 from ddapp import viewbehaviors
-from ddapp import visualization as vis
-from ddapp import actionhandlers
-from ddapp.timercallback import TimerCallback
-from ddapp.pointpicker import PointPicker, ImagePointPicker
-from ddapp import segmentationpanel
-from ddapp import lcmUtils
-from ddapp.utime import getUtime
-from ddapp.shallowCopy import shallowCopy
 
-
-
-import drc as lcmdrc
-
-import functools
-import math
+import os
 import json
-
-import numpy as np
-from ddapp.debugVis import DebugData
-from ddapp import ioUtils as io
 
 
 def create(view=None, globalsDict=None):
