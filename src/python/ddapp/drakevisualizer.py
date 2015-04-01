@@ -324,6 +324,11 @@ class DrakeVisualizerApp(ConsoleApp):
         ConsoleApp.__init__(self)
 
         self.view = self.createView()
+        self.viewOptions.setProperty('Background color', [0.3, 0.3, 0.35])
+        self.viewOptions.setProperty('Background color 2', [0.95,0.95,1])
+        self.gridObj.setProperty('Surface Mode', 'Surface with edges')
+        self.gridObj.setProperty('Color', [0,0,0])
+        self.gridObj.setProperty('Alpha', 0.1)
 
         self.mainWindow = QtGui.QMainWindow()
         self.mainWindow.setCentralWidget(self.view)
