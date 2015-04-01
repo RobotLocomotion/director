@@ -140,12 +140,6 @@ class CylinderAffordanceItem(AffordanceItem):
         if propertyName in ('Length', 'Radius'):
             self.updateGeometryFromProperties()
 
-    def setAffordanceParams(self, params):
-        assert False
-
-    def updateParamsFromActorTransform(self):
-        assert False
-
 
 class CapsuleAffordanceItem(AffordanceItem):
 
@@ -290,47 +284,6 @@ class MeshAffordanceItem(AffordanceItem):
 
         if propertyName == 'Filename':
             self.updateGeometryFromProperties()
-
-
-class BlockAffordanceItem(AffordanceItem):
-
-    def setAffordanceParams(self, params):
-        self.params = params
-
-    def updateParamsFromActorTransform(self):
-
-        t = self.actor.GetUserTransform()
-
-        xaxis = np.array(t.TransformVector([1,0,0]))
-        yaxis = np.array(t.TransformVector([0,1,0]))
-        zaxis = np.array(t.TransformVector([0,0,1]))
-        self.params['xaxis'] = xaxis
-        self.params['yaxis'] = yaxis
-        self.params['zaxis'] = zaxis
-        self.params['origin'] = t.GetPosition()
-
-
-    def publish(self):
-        self.updateParamsFromActorTransform()
-        aff = affordance.createBoxAffordance(self.params)
-        affordance.publishAffordance(aff)
-
-        if hasattr(self, 'publishCallback'):
-            self.publishCallback()
-
-    def updateICPTransform(self, transform):
-        delta = computeAToB(self.icpTransformInitial, transform)
-        print 'initial:', self.icpTransformInitial.GetPosition(), self.icpTransformInitial.GetOrientation()
-        print 'latest:', transform.GetPosition(), transform.GetOrientation()
-        print 'delta:', delta.GetPosition(), delta.GetOrientation()
-        newUserTransform = vtk.vtkTransform()
-        newUserTransform.PostMultiply()
-        newUserTransform.Identity()
-        newUserTransform.Concatenate(self.baseTransform)
-        newUserTransform.Concatenate(delta.GetLinearInverse())
-
-        self.actor.SetUserTransform(newUserTransform)
-        self._renderAllViews()
 
 
 class FrameAffordanceItem(AffordanceItem):

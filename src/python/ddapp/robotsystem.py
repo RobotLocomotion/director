@@ -143,7 +143,7 @@ class RobotSystem(object):
             affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
             affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
             affordanceManager.collection.sendEchoRequest()
-
+            segmentation.affordanceManager = affordanceManager
 
         applogic.resetCamera(viewDirection=[-1,0,0], view=view)
 

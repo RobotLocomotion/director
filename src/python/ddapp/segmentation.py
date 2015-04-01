@@ -912,10 +912,10 @@ def createLine(blockDimensions, p1, p2):
     if p1[0] > p2[0]:
         p1, p2 = p2, p1
 
-    _, worldPt1 = getRayFromDisplayPoint(getSegmentationView(), p1)
-    _, worldPt2 = getRayFromDisplayPoint(getSegmentationView(), p2)
+    _, worldPt1 = getRayFromDisplayPoint(app.getCurrentRenderView(), p1)
+    _, worldPt2 = getRayFromDisplayPoint(app.getCurrentRenderView(), p2)
 
-    cameraPt = np.array(getSegmentationView().camera().GetPosition())
+    cameraPt = np.array(app.getCurrentRenderView().camera().GetPosition())
 
     leftRay = worldPt1 - cameraPt
     rightRay = worldPt2 - cameraPt
@@ -930,7 +930,10 @@ def createLine(blockDimensions, p1, p2):
     updatePolyData(d.getPolyData(), 'line annotation', parent=getDebugFolder(), visible=False)
 
     inputObj = om.findObjectByName('pointcloud snapshot')
-    polyData = shallowCopy(inputObj.polyData)
+    if inputObj:
+        polyData = shallowCopy(inputObj.polyData)
+    else:
+        polyData = getCurrentRevolutionData()
 
     origin = cameraPt
 
@@ -973,12 +976,12 @@ def createLine(blockDimensions, p1, p2):
 def updateBlockAffordances(polyData=None):
 
     for obj in om.getObjects():
-        if isinstance(obj, BlockAffordanceItem):
+        if isinstance(obj, BoxAffordanceItem):
             if 'refit' in obj.getProperty('Name'):
                 om.removeFromObjectModel(obj)
 
     for obj in om.getObjects():
-        if isinstance(obj, BlockAffordanceItem):
+        if isinstance(obj, BoxAffordanceItem):
             updateBlockFit(obj, polyData)
 
 
@@ -1028,7 +1031,7 @@ def updateBlockFit(affordanceObj, polyData=None):
 
 def startInteractiveLineDraw(blockDimensions):
 
-    picker = LineDraw(getSegmentationView())
+    picker = LineDraw(app.getCurrentRenderView())
     addViewPicker(picker)
     picker.enabled = True
     picker.start()
@@ -3146,7 +3149,7 @@ class LineDraw(TimerCallback):
         self.line.SetArrowPlacementToNone()
         self.line.GetPositionCoordinate().SetCoordinateSystemToViewport()
         self.line.GetPosition2Coordinate().SetCoordinateSystemToViewport()
-        self.line.GetProperty().SetLineWidth(2)
+        self.line.GetProperty().SetLineWidth(4)
         self.line.SetPosition(0,0)
         self.line.SetPosition2(0,0)
         self.clear()
@@ -3539,24 +3542,21 @@ def publishTriad(transform, collectionId=1234):
 
 def createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances'):
 
-    cube = vtk.vtkCubeSource()
-    cube.SetXLength(xwidth)
-    cube.SetYLength(ywidth)
-    cube.SetZLength(zwidth)
-    cube.Update()
-    cube = shallowCopy(cube.GetOutput())
-
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
     t.PostMultiply()
     t.Translate(origin)
 
-    obj = showPolyData(cube, name, cls=BlockAffordanceItem, parent=parent)
+    obj = BoxAffordanceItem(name, view=app.getCurrentRenderView())
+    obj.setProperty('Dimensions', [float(v) for v in [xwidth, ywidth, zwidth]])
     obj.actor.SetUserTransform(t)
-    obj.addToView(app.getDRCView())
 
-    params = dict(origin=origin, xwidth=xwidth, ywidth=ywidth, zwidth=zwidth, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis, friendly_name=name)
-    obj.setAffordanceParams(params)
-    obj.updateParamsFromActorTransform()
+    om.addToObjectModel(obj, parentObj=om.getOrCreateContainer(parent))
+    frameObj = vis.showFrame(t, name + ' frame', scale=0.2, visible=False, parent=obj)
+
+    obj.addToView(app.getDRCView())
+    frameObj.addToView(app.getDRCView())
+
+    affordanceManager.registerAffordance(obj)
     return obj
 
 
@@ -3644,26 +3644,7 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
     #obj.setProperty('Visible', False)
 
     obj = createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name)
-
-    icpTransform = mapsregistrar.getInitialTransform()
-
-    if icpTransform:
-        t = obj.actor.GetUserTransform()
-        objTrack = showPolyData(obj.polyData, name, cls=BlockAffordanceItem, parent=obj, color=[0.8, 1, 0.8])
-        objTrack.actor.SetUserTransform(t)
-        objTrack.baseTransform = vtk.vtkTransform()
-        objTrack.baseTransform.SetMatrix(t.GetMatrix())
-        objTrack.icpTransformInitial = icpTransform
-        objTrack.addToView(app.getDRCView())
-
-        print 'setting base transform:', objTrack.baseTransform.GetPosition()
-        print 'setting initial icp:', objTrack.icpTransformInitial.GetPosition()
-
-        mapsregistrar.addICPCallback(objTrack.updateICPTransform)
-
-
-    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, scale=0.2, visible=False)
-    frameObj.addToView(app.getDRCView())
+    obj.setProperty('Color', [222/255.0, 184/255.0, 135/255.0])
 
     computeDebrisGraspSeed(obj)
     t = computeDebrisStanceFrame(obj)
