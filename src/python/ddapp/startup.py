@@ -535,33 +535,67 @@ if useImageWidget:
     #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'KINECT_RGB', view)
 
 
-if useImageViewDemo:
+class ImageOverlayManager(object):
 
-    def showImageOverlay(size=400, viewName='CAMERA_LEFT'):
-    #def showImageOverlay(size=400, viewName='KINECT_RGB'):
+    def __init__(self):
+        self.viewName = 'CAMERA_LEFT'
+        #self.viewName = 'KINECT_RGB'
+        self.size = 400
+        self.position = [0, 0]
+        self.usePicker = False
+        self.imageView = None
+        self.imagePicker = None
+        self._prevParent = None
 
-        global _prevParent, imageView, imagePicker
-        imageView = cameraview.views[viewName]
-        _prevParent = imageView.view.parent()
+    def show(self):
 
-        imageView.rayCallback = segmentation.extractPointsAlongClickRay
-        imagePicker = ImagePointPicker(imageView)
-        imagePicker.doubleClickCallback = drillDemo.onImageViewDoubleClick
+        if self.imageView:
+            return
+
+        imageView = cameraview.views[self.viewName]
+        self.imageView = imageView
+        self._prevParent = imageView.view.parent()
 
         imageView.view.hide()
         imageView.view.setParent(view)
-        imageView.view.resize(size, size)
-        imageView.view.move(0,0)
+        imageView.view.resize(self.size, self.size)
+        imageView.view.move(*self.position)
         imageView.view.show()
-        imagePicker.start()
 
-    def hideImageOverlay():
-        imageView.view.hide()
-        imageView.view.setParent(_prevParent)
-        imageView.view.show()
-        imagePicker.stop()
+        if self.usePicker:
+            self.imagePicker = ImagePointPicker(imageView)
+            #self.imagePicker.doubleClickCallback = drillDemo.onImageViewDoubleClick
+            #imageView.rayCallback = segmentation.extractPointsAlongClickRay
+            self.imagePicker.start()
 
-    #showImageOverlay()
+    def hide(self):
+        if self.imageView:
+            self.imageView.view.hide()
+            self.imageView.view.setParent(self._prevParent)
+            self.imageView.view.show()
+            self.imageView = None
+        if self.imagePicker:
+            self.imagePicker.stop()
+
+
+class ToggleImageViewHandler(object):
+
+    def __init__(self, manager):
+        self.action = app.getToolsMenuActions()['ActionToggleImageView']
+        self.action.connect('triggered()', self.toggle)
+        self.manager = manager
+
+    def toggle(self):
+        if self.action.checked:
+            self.manager.show()
+        else:
+            self.manager.hide()
+
+
+imageOverlayManager = ImageOverlayManager()
+imageViewHandler = ToggleImageViewHandler(imageOverlayManager)
+showImageOverlay = imageOverlayManager.show
+hideImageOverlay = imageOverlayManager.hide
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
