@@ -1124,6 +1124,157 @@ def segmentValve(expectedValveRadius, point1, point2):
     frameObj.addToView(app.getDRCView())
 
 
+def segmentValveByBoundingBox(polyData, searchPoint):
+
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+
+    polyData = cropToSphere(polyData, searchPoint, radius=0.6)
+    polyData = applyVoxelGrid(polyData, leafSize=0.015)
+
+    # extract tube search region
+    polyData = labelDistanceToLine(polyData, searchPoint, np.array(searchPoint) + np.array([0,0,1]))
+    searchRegion = thresholdPoints(polyData, 'distance_to_line', [0.0, 0.2])
+    updatePolyData(searchRegion, 'valve tube search region', parent=getDebugFolder(), color=[1,0,0], visible=False)
+
+    # guess valve plane
+    _, origin, normal = applyPlaneFit(searchRegion, distanceThreshold=0.01, perpendicularAxis=viewDirection, angleEpsilon=math.radians(30), expectedNormal=-viewDirection, returnOrigin=True)
+
+    # extract plane search region
+    polyData = labelPointDistanceAlongAxis(polyData, normal, origin)
+    searchRegion = thresholdPoints(polyData, 'distance_along_axis', [-0.05, 0.05])
+    updatePolyData(searchRegion, 'valve plane search region', parent=getDebugFolder(), colorByName='distance_along_axis', visible=False)
+
+
+    valvePoints = extractLargestCluster(searchRegion, minClusterSize=1)
+    updatePolyData(valvePoints, 'valve cluster', parent=getDebugFolder(), color=[0,1,0], visible=False)
+
+
+    valvePoints, _  = applyPlaneFit(valvePoints, expectedNormal=normal, perpendicularAxis=normal, distanceThreshold=0.01)
+    valveFit = thresholdPoints(valvePoints, 'dist_to_plane', [-0.01, 0.01])
+
+    updatePolyData(valveFit, 'valve cluster', parent=getDebugFolder(), color=[0,1,0], visible=False)
+
+    points = vtkNumpy.getNumpyFromVtk(valveFit, 'Points')
+    zvalues = points[:,2].copy()
+    minZ = np.min(zvalues)
+    maxZ = np.max(zvalues)
+
+    tubeRadius = 0.017
+    radius = float((maxZ - minZ) / 2.0) - tubeRadius
+
+    fields = makePolyDataFields(valveFit)
+    origin = np.array(fields.frame.GetPosition())
+
+    #origin = computeCentroid(valveFit)
+
+    zaxis = [0,0,1]
+    xaxis = normal
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    pose = transformUtils.poseFromTransform(t)
+    desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=radius, Segments=20)
+    desc['Tube Radius'] = tubeRadius
+
+    import affordancepanel
+    obj = affordancepanel.panel.affordanceFromDescription(desc)
+    obj.params = dict(radius=radius)
+
+    return obj
+
+
+def segmentValveByRim(polyData, rimPoint1, rimPoint2):
+
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+
+    yaxis = np.array(rimPoint2) - np.array(rimPoint1)
+    zaxis = [0,0,1]
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+
+    # flip xaxis to be with view direction
+    if np.dot(xaxis, viewDirection) < 0:
+        xaxis = -xaxis
+
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+
+    origin = (np.array(rimPoint2) + np.array(rimPoint1)) / 2.0
+
+    polyData = labelPointDistanceAlongAxis(polyData, xaxis, origin)
+    polyData = thresholdPoints(polyData, 'distance_along_axis', [-0.05, 0.05])
+    updatePolyData(polyData, 'valve plane region', parent=getDebugFolder(), colorByName='distance_along_axis', visible=False)
+
+
+    polyData = cropToSphere(polyData, origin, radius=0.4)
+    polyData = applyVoxelGrid(polyData, leafSize=0.015)
+
+    updatePolyData(polyData, 'valve search region', parent=getDebugFolder(), color=[1,0,0], visible=False)
+
+
+    valveFit = extractLargestCluster(polyData, minClusterSize=1)
+    updatePolyData(valveFit, 'valve cluster', parent=getDebugFolder(), color=[0,1,0], visible=False)
+
+    points = vtkNumpy.getNumpyFromVtk(valveFit, 'Points')
+    zvalues = points[:,2].copy()
+    minZ = np.min(zvalues)
+    maxZ = np.max(zvalues)
+
+    tubeRadius = 0.017
+    radius = float((maxZ - minZ) / 2.0) - tubeRadius
+
+    fields = makePolyDataFields(valveFit)
+    origin = np.array(fields.frame.GetPosition())
+    vis.updatePolyData(transformPolyData(fields.box, fields.frame), 'valve cluster bounding box', visible=False)
+
+    #origin = computeCentroid(valveFit)
+
+    '''
+    zaxis = [0,0,1]
+    xaxis = normal
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+    '''
+
+    radius = np.max(fields.dims)/2.0 - tubeRadius
+
+
+    proj = [np.abs(np.dot(xaxis, axis)) for axis in fields.axes]
+    xaxisNew = fields.axes[np.argmax(proj)]
+    if np.dot(xaxisNew, xaxis) < 0:
+        xaxisNew = -xaxisNew
+
+    xaxis = xaxisNew
+
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    pose = transformUtils.poseFromTransform(t)
+    desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=float(radius), Segments=20)
+    desc['Tube Radius'] = tubeRadius
+
+    import affordancepanel
+    obj = affordancepanel.panel.affordanceFromDescription(desc)
+    obj.params = dict(radius=radius)
+
+    return obj
+
+
 def segmentValveByWallPlane(expectedValveRadius, point1, point2):
 
 
