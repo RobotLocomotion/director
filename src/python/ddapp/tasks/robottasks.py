@@ -42,6 +42,7 @@ class AsyncTask(object):
 
     def __init__(self, **kwargs):
         self.statusMessage = ''
+        self.failReason = ''
         self.properties = propertyset.PropertySet()
         self.properties.addProperty('Name', _splitCamelCase(self.__class__.__name__).lower())
 
@@ -62,10 +63,9 @@ class AsyncTask(object):
     def run(self):
         pass
 
-    @staticmethod
-    def fail(reason):
-        print 'task failed:', reason
-        raise atq.AsyncTaskQueue.PauseException()
+    def fail(self, reason):
+        self.failReason = reason
+        raise atq.AsyncTaskQueue.FailException(reason)
 
     def copy(self):
         return copy.deepcopy(self)
@@ -80,23 +80,53 @@ class PrintTask(AsyncTask):
     This task prints a message string.
     '''
 
+    printFunction = None
+
     @staticmethod
     def getDefaultProperties(properties):
         properties.addProperty('Message', '<empty message>')
 
     def run(self):
-      print self.properties.message
+        if self.printFunction:
+            self.printFunction(self.properties.message)
+        else:
+            print self.properties.message
+
+
+class CallbackTask(AsyncTask):
+
+    def __init__(self, callback=None, **kwargs):
+        AsyncTask.__init__(self, **kwargs)
+        self.callback = callback
+
+    def run(self):
+        if self.callback:
+            self.callback()
+
+
+class ExceptionTask(AsyncTask):
+
+
+    def run(self):
+        raise Exception('Task exception')
 
 
 class UserPromptTask(AsyncTask):
 
     promptsEnabled = True
+    promptFunction = None
 
 
     @staticmethod
     def getDefaultProperties(properties):
         properties.addProperty('Message', 'continue?')
         properties.addProperty('Always', False)
+
+    def showUserPrompt(self):
+        if self.promptFunction:
+            self.promptFunction(self, self.properties.message)
+        else:
+            self.showDialog()
 
     def showDialog(self):
 
@@ -115,13 +145,13 @@ class UserPromptTask(AsyncTask):
         self.d.setAttribute(QtCore.Qt.WA_QuitOnClose, False)
         self.d.show()
         self.d.raise_()
-        self.d.connect('accepted()', self.onYes)
-        self.d.connect('rejected()', self.onNo)
+        self.d.connect('accepted()', self.accept)
+        self.d.connect('rejected()', self.reject)
 
-    def onYes(self):
+    def accept(self):
         self.result = True
 
-    def onNo(self):
+    def reject(self):
         self.result = False
 
     def run(self):
@@ -129,9 +159,10 @@ class UserPromptTask(AsyncTask):
         if not self.promptsEnabled and not self.properties.getProperty('Always'):
             return
 
-        self.showDialog()
-
         self.result = None
+
+        self.showUserPrompt()
+
         while self.result is None:
             yield
 
@@ -394,7 +425,7 @@ class TransformFrame(AsyncTask):
         name = self.properties.getProperty('Frame input name')
         frame = om.findObjectByName(name)
         if not isinstance(frame, vis.FrameItem):
-            fail('frame not found: %s' % name)
+            self.fail('frame not found: %s' % name)
         return frame
 
     def run(self):
@@ -432,6 +463,21 @@ class ComputeRobotFootFrame(AsyncTask):
         robotModel = robotSystem.ikPlanner.getRobotModelAtPose(pose)
         footFrame = robotSystem.footstepsDriver.getFeetMidPoint(robotModel)
         vis.updateFrame(footFrame, self.properties.getProperty('Frame output name'), scale=0.2)
+
+
+
+class FindAffordance(AsyncTask):
+
+    @staticmethod
+    def getDefaultProperties(properties):
+        properties.addProperty('Affordance name', '')
+
+    def run(self):
+        affordanceName = self.properties.getProperty('Affordance name')
+        obj = om.findObjectByName(affordanceName)
+        if not obj:
+            self.fail('could not find affordance: %s' % affordanceName)
+
 
 
 class ProjectAffordanceToGround(PointCloudAlgorithmBase):
@@ -574,11 +620,23 @@ class PublishAffordance(AsyncTask):
 
 
 
+class SetNeckPitch(AsyncTask):
+
+    @staticmethod
+    def getDefaultProperties(properties):
+        properties.addProperty('Angle', 0, attributes=om.PropertyAttributes(minimum=-35, maximum=90))
+
+    def run(self):
+        robotSystem.neckDriver.setNeckPitch(self.properties.getProperty('Angle'))
+
+
 class CloseHand(AsyncTask):
 
     @staticmethod
     def getDefaultProperties(properties):
         properties.addProperty('Side', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
+        properties.addProperty('Mode', 0, attributes=om.PropertyAttributes(enumNames=['Basic', 'Pinch']))
+        properties.addProperty('Amount', 100, attributes=propertyset.PropertyAttributes(minimum=0, maximum=100))
 
     def getHandDriver(self, side):
         assert side in ('left', 'right')
@@ -586,7 +644,7 @@ class CloseHand(AsyncTask):
 
     def run(self):
         side = self.properties.getPropertyEnumValue('Side').lower()
-        self.getHandDriver(side).sendClose()
+        self.getHandDriver(side).sendCustom(self.properties.getProperty('Amount'), 100, 100, self.properties.getProperty('Mode'))
 
 
 class OpenHand(AsyncTask):
@@ -615,7 +673,7 @@ class CommitFootstepPlan(AsyncTask):
         planName = self.properties.getProperty('Plan name')
         plan = om.findObjectByName(planName)
         if not isinstance(plan, FootstepPlanItem):
-            fail('could not find footstep plan')
+            self.fail('could not find footstep plan')
         plan = plan.plan
 
         robotSystem.footstepsDriver.commitFootstepPlan(plan)
@@ -632,7 +690,7 @@ class CommitManipulationPlan(AsyncTask):
         planName = self.properties.getProperty('Plan name')
         plan = om.findObjectByName(planName)
         if not isinstance(plan, ManipulationPlanItem):
-            fail('could not find manipulation plan')
+            self.fail('could not find manipulation plan')
         plan = plan.plan
 
         robotSystem.manipPlanner.commitManipPlan(plan)
@@ -663,6 +721,7 @@ class RequestWalkingPlan(AsyncTask):
 
 
 def _addPlanItem(plan, name, itemClass):
+        assert plan is not None
         item = itemClass(name)
         item.plan = plan
         om.removeFromObjectModel(om.findObjectByName(name))
@@ -688,6 +747,9 @@ class RequestFootstepPlan(AsyncTask):
 
         request = robotSystem.footstepsDriver.constructFootstepPlanRequest(pose, goalFrame)
         footstepPlan = robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
+
+        if not footstepPlan:
+            self.fail('failed to get a footstep plan response')
 
         _addPlanItem(footstepPlan, self.properties.getProperty('Stance frame name') + ' footstep plan', FootstepPlanItem)
 
@@ -739,7 +801,7 @@ class PlanReachToFrame(AsyncTask):
         name = self.properties.getProperty('Frame input name')
         frame = om.findObjectByName(name)
         if not isinstance(frame, vis.FrameItem):
-            fail('frame not found: %s' % name)
+            self.fail('frame not found: %s' % name)
         return frame
 
 
