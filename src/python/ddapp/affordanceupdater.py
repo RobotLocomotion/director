@@ -1,5 +1,10 @@
 from ddapp import objectmodel as om
 from ddapp import visualization as vis
+from ddapp import vtkAll as vtk
+from ddapp import transformUtils
+from ddapp import filterUtils
+from ddapp.timercallback import TimerCallback
+
 
 class AffordanceGraspUpdater(object):
 
@@ -58,3 +63,108 @@ class AffordanceGraspUpdater(object):
         if not self.frameSyncs:
             om.removeFromObjectModel(om.findObjectByName('l_hand frame'))
             om.removeFromObjectModel(om.findObjectByName('r_hand frame'))
+
+
+class AffordanceInCameraUpdater(object):
+
+    def __init__(self, affordanceManager, imageView):
+        self.affordanceManager = affordanceManager
+        self.extraObjects = []
+
+        self.imageView = imageView
+        self.imageQueue = imageView.imageManager.queue
+        self.timer = TimerCallback(targetFps=10)
+        self.timer.callback = self.update
+
+
+    def setupObjectInCamera(self, obj):
+
+        imageView = self.imageView
+
+        if not hasattr(imageView, 'overlayRenderer'):
+            renWin = imageView.view.renderWindow()
+            renWin.SetNumberOfLayers(2)
+            ren = vtk.vtkRenderer()
+            ren.SetLayer(1)
+            ren.SetActiveCamera(imageView.view.camera())
+            renWin.AddRenderer(ren)
+            imageView.overlayRenderer = ren
+
+        overlayObj = vis.updatePolyData(vtk.vtkPolyData(), self.getTransformedName(obj), view=imageView.view, color=obj.getProperty('Color'), parent='camera overlay', visible=obj.getProperty('Visible'))
+        imageView.view.renderer().RemoveActor(overlayObj.actor)
+        imageView.overlayRenderer.AddActor(overlayObj.actor)
+        overlayObj.extraViewRenderers.setdefault(imageView.view, []).append(imageView.overlayRenderer)
+
+        return overlayObj
+
+    def getTransformedName(self, obj):
+        return 'overlay ' + obj.getProperty('Name')
+
+    def getFootsteps(self):
+        plan = om.findObjectByName('footstep plan')
+        if plan:
+            return [child for child in plan.children() if child.getProperty('Name').startswith('step ')]
+        else:
+            return []
+
+    def getObjectsToUpdate(self):
+        objs = self.affordanceManager.getAffordances()
+        objs += self.getFootsteps()
+        objs += self.extraObjects
+        return objs
+
+    def getObjectInCamera(self, obj):
+        overlayObj = om.findObjectByName(self.getTransformedName(obj))
+        return overlayObj or self.setupObjectInCamera(obj)
+
+    def update(self):
+
+        imageView = self.imageView
+
+        if not imageView.imageInitialized:
+            return
+
+        if not imageView.view.isVisible:
+            return
+
+        updated = set()
+
+        for obj in self.getObjectsToUpdate():
+            cameraObj = self.getObjectInCamera(obj)
+            self.updateObjectInCamera(obj, cameraObj)
+            updated.add(cameraObj)
+
+        folder = om.findObjectByName('camera overlay')
+        if folder:
+            for child in folder.children():
+                if child not in updated:
+                    om.removeFromObjectModel(child)
+
+    def updateObjectInCamera(self, obj, cameraObj):
+
+        objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform() or vtk.vtkTransform())
+
+        localToCameraT = vtk.vtkTransform()
+        self.imageQueue.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Concatenate(objToLocalT)
+        t.Concatenate(localToCameraT)
+
+        pd = filterUtils.transformPolyData(obj.polyData, t)
+
+        '''
+        normals = pd.GetPointData().GetNormals()
+        cameraToImageT = vtk.vtkTransform()
+        imageQueue.getCameraProjectionTransform('CAMERA_LEFT', cameraToImageT)
+        pd = filterUtils.transformPolyData(pd, cameraToImageT)
+        pts = vnp.getNumpyFromVtk(pd, 'Points')
+        pts[:,0] /= pts[:,2]
+        pts[:,1] /= pts[:,2]
+        pd.GetPointData().SetNormals(normals)
+        '''
+
+        self.imageQueue.projectPoints('CAMERA_LEFT', pd)
+
+        cameraObj.setPolyData(pd)
