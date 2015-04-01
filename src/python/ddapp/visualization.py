@@ -40,6 +40,7 @@ class PolyDataItem(om.ObjectModelItem):
         self.actor.SetMapper(self.mapper)
         self.shadowActor = None
         self.scalarBarWidget = None
+        self.extraViewRenderers = {}
 
         self.rangeMap = {
             'intensity' : (400, 4000),
@@ -314,6 +315,8 @@ class PolyDataItem(om.ObjectModelItem):
         view.renderer().RemoveActor(self.actor)
         if self.shadowActor:
             view.renderer().RemoveActor(self.shadowActor)
+        for renderer in self.extraViewRenderers.get(view, []):
+            renderer.RemoveActor(self.actor)
         view.render()
 
 
