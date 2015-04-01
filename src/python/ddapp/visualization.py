@@ -700,16 +700,15 @@ class ViewOptionsItem(om.ObjectModelItem):
         self.view.render()
 
 
-def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=None, useSurface=False, gridTransform=None):
+def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors', color=[1,1,1], alpha=0.05, gridTransform=None):
 
     grid = vtk.vtkGridSource()
     grid.SetScale(cellSize)
     grid.SetGridSize(numberOfCells)
-    grid.SetSurfaceEnabled(useSurface)
+    grid.SetSurfaceEnabled(True)
     grid.Update()
 
-    color = color or [1, 1, 1]
-    gridObj = showPolyData(grid.GetOutput(), 'grid', view=view, alpha=0.10, color=color, visible=True, parent=parent)
+    gridObj = showPolyData(grid.GetOutput(), 'grid', view=view, alpha=alpha, color=color, visible=True, parent=parent)
     gridObj.gridSource = grid
     gridObj.actor.GetProperty().LightingOff()
     gridObj.actor.SetPickable(False)
@@ -718,8 +717,7 @@ def showGrid(view, cellSize=0.5, numberOfCells=25, name='grid', parent='sensors'
     gridObj.actor.SetUserTransform(gridTransform)
     showFrame(gridTransform, 'grid frame', scale=0.2, visible=False, parent=gridObj, view=view)
 
-    if useSurface:
-        gridObj.actor.GetProperty().EdgeVisibilityOn()
+    gridObj.setProperty('Surface Mode', 'Wireframe')
 
     def computeViewBoundsNoGrid():
         if not gridObj.getProperty('Visible'):
