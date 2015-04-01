@@ -112,6 +112,10 @@ public:
 
   void getBodyToCameraTransform(const QString& cameraName, vtkTransform* transform);
 
+  // Initializes the given transform to the camera projection matrix.
+  // This will transform points from the camera coordinate system to image space.
+  void getCameraProjectionTransform(const QString& cameraName, vtkTransform* transform);
+
   int getTransform(const QString& fromFrame, const QString& toFrame, qint64 utime, vtkTransform* transform);
   int getTransform(const QString& fromFrame, const QString& toFrame, vtkTransform* transform);
 
