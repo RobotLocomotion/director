@@ -25,7 +25,7 @@ from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
 from ddapp import planplayback
-from ddapp import affordancegraspupdater
+from ddapp import affordanceupdater
 from ddapp import segmentationpanel
 
 import drc as lcmdrc
@@ -148,10 +148,10 @@ class DrillPlannerDemo(object):
         self.goalThreshold = 0.05 # how close we need to get to the cut goal (the triangle corners
 
         #extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
-        #self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
+        #self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
 
         extraModels = [self.robotModel]
-        self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.robotModel, extraModels)
+        self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotModel, extraModels)
 
         # These changes are all that are required to run with different combinations
         if ( self.drill.model == 'dewalt_barrel' ):

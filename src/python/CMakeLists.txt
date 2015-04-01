@@ -3,7 +3,7 @@ set(python_files
   ddapp/actionhandlers.py
   ddapp/actionmanagerpanel.py
   ddapp/affordance.py
-  ddapp/affordancegraspupdater.py
+  ddapp/affordanceupdater.py
   ddapp/affordanceitems.py
   ddapp/affordancemanager.py
   ddapp/affordancepanel.py

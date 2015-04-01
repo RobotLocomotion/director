@@ -24,7 +24,7 @@ from ddapp import affordanceitems
 from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
-from ddapp import affordancegraspupdater
+from ddapp import affordanceupdater
 from ddapp import planplayback
 
 from ddapp import segmentationpanel
@@ -239,10 +239,10 @@ class BihandedPlannerDemo(object):
         # params:
 
         #extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
-        #self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
+        #self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
 
         extraModels = [self.robotModel]
-        self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.robotModel, extraModels)
+        self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotModel, extraModels)
 
         # top level switch between BDI (locked base) and MIT (moving base and back)
         self.lockBack = False

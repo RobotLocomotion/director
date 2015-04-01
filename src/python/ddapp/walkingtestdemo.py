@@ -25,7 +25,6 @@ from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
 from ddapp import planplayback
-from ddapp import affordancegraspupdater
 
 import drc as lcmdrc
 import copy
