@@ -36,14 +36,15 @@ class TableDemo(object):
 
         # live operation flags:
         self.useFootstepPlanner = True
-        self.visOnly = True
+        self.visOnly = False
         self.planFromCurrentRobotState = True
         useDevelopment = False
         if (useDevelopment):
             self.visOnly = True
             self.planFromCurrentRobotState = False
 
-        self.userPromptEnabled = False
+        self.optionalUserPromptEnabled = False
+        self.requiredUserPromptEnabled = True
 
         self.plans = []
         self.frameSyncs = {}
@@ -54,6 +55,9 @@ class TableDemo(object):
         self.tableData = None
         self.binFrame = None
 
+        # top level switch between BDI or IHMC (locked base) and MIT (moving base and back)
+        self.lockBack = True
+        self.lockBase = True
 
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -88,6 +92,8 @@ class TableDemo(object):
         return polyData
 
     def onSegmentTable(self, p1, p2):
+        print p1
+        print p2
         self.picker.stop()
         om.removeFromObjectModel(self.picker.annotationObj)
         self.picker = None
@@ -100,6 +106,8 @@ class TableDemo(object):
         self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
 
     def onSegmentBin(self, p1, p2):
+        print p1
+        print p2
         self.picker.stop()
         om.removeFromObjectModel(self.picker.annotationObj)
         self.picker = None
@@ -245,7 +253,7 @@ class TableDemo(object):
         plan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
         self.addPlan(plan)
 
-    def walkToStance(self, stanceTransform):
+    def planWalkToStance(self, stanceTransform):
         if self.useFootstepPlanner:
             self.planFootsteps(stanceTransform)
             self.planWalking()
@@ -315,7 +323,7 @@ class TableDemo(object):
         obj, frame = self.getNextTableObject(side)
         startPose = self.getPlanningStartPose()
 
-        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.25, lockBase=False, lockBack=False, lockArm=False)
+        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.25, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
 
         loweringSide = 'left' if side == 'right' else 'right'
         armPose = self.getLoweredArmPose(startPose, loweringSide)
@@ -343,7 +351,7 @@ class TableDemo(object):
         obj, frame = self.getNextTableObject(side)
 
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.05, lockBase=False, lockBack=False)
+        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.05, lockBase=self.lockBase, lockBack=self.lockBack)
 
         constraintSet.constraints[-1].tspan = [-np.inf, np.inf]
         constraintSet.constraints[-2].tspan = [-np.inf, np.inf]
@@ -396,7 +404,6 @@ class TableDemo(object):
         self.sensorJointController.setPose('EST_ROBOT_STATE', q)
 
 
-
     def getHandDriver(self, side):
         assert side in ('left', 'right')
         return self.lhandDriver if side == 'left' else self.rhandDriver
@@ -423,8 +430,17 @@ class TableDemo(object):
         yield
         print s
 
-    def userPrompt(self, message, force=False):
-        if not self.userPromptEnabled and not force:
+    def optionalUserPrompt(self, message):
+        if not self.optionalUserPromptEnabled:
+            return
+
+        yield
+        result = raw_input(message)
+        if result != 'y':
+            raise Exception('user abort.')
+
+    def requiredUserPrompt(self, message):
+        if not self.requiredUserPromptEnabled:
             return
 
         yield
@@ -491,7 +507,7 @@ class TableDemo(object):
 
 
     ######### Nominal Plans and Execution  #################################################################
-    def testDemoSequence(self):
+    def prepTestDemoSequence(self):
         '''
         Running this function should launch a full planning sequence
         to pick to objects, walk and drop.
@@ -515,6 +531,18 @@ class TableDemo(object):
         # Actually plan the sequence:
         #self.demoSequence()
 
+
+    def prepIhmcDemoSequence(self):
+        self.userFitBin()
+        self.onSegmentBin( np.array([ 0.62, -1.33, 0.80]), np.array([ 0.89, -0.87, 0.57]) )
+        self.userFitTable()
+        self.onSegmentTable( np.array([ 1.11, 0.11, 0.85]), np.array([ 0.97, 0.044, 0.84]) )
+
+        self.segmentTableObjects()
+        self.computeBinStanceFrame()
+        self.computeTableStanceFrame()
+
+
     def planSequence(self):
         self.useFootstepPlanner = True
         side = 'both'
@@ -525,10 +553,10 @@ class TableDemo(object):
         self.plans = []
 
         # Go home
-        self.walkToStance(self.startStanceFrame.transform)
+        self.planWalkToStance(self.startStanceFrame.transform)
 
         # Pick Objects from table:
-        self.walkToStance(self.tableStanceFrame.transform)
+        self.planWalkToStance(self.tableStanceFrame.transform)
         if (side == 'left'):
           self.planSequenceTablePick('left')
         elif (side == 'right'):
@@ -538,10 +566,10 @@ class TableDemo(object):
           self.planSequenceTablePick('right')
 
         # Go home
-        self.walkToStance(self.startStanceFrame.transform)
+        self.planWalkToStance(self.startStanceFrame.transform)
 
         # Go to Bin
-        self.walkToStance(self.binStanceFrame.transform)
+        self.planWalkToStance(self.binStanceFrame.transform)
 
         # Drop into the Bin:
         self.planDropPostureRaise('left')
@@ -552,7 +580,7 @@ class TableDemo(object):
         self.planDropPostureLower('right')
 
         # Go home
-        self.walkToStance(self.startStanceFrame.transform)
+        self.planWalkToStance(self.startStanceFrame.transform)
 
 
     def planSequenceTablePick(self, side):
@@ -564,15 +592,44 @@ class TableDemo(object):
 
     def autonomousExecute(self):
 
-        taskQueue = AsyncTaskQueue()
+        self.planFromCurrentRobotState = True
+        self.visOnly = False
+        #self.ikPlanner.ikServer.usePointwise = True
+        #self.ikPlanner.ikServer.maxDegreesPerSecond = 20
 
-        self.addInitTasksToQueue(taskQueue)
-        self.addLoopTasksToQueue(taskQueue)
+        taskQueue = AsyncTaskQueue()
+        #self.addTasksToQueueInit(taskQueue)
+
+        # Go home
+        self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+
+        # Pick Objects from table:
+        self.addTasksToQueueWalking(taskQueue, self.tableStanceFrame.transform, 'Walk to Table')
+        taskQueue.addTask(self.printAsync('Pick with Left Arm'))
+        self.addTasksToQueueTablePick(taskQueue, 'left')
+        taskQueue.addTask(self.printAsync('Pick with Right Arm'))
+        self.addTasksToQueueTablePick(taskQueue, 'right')
+
+        # Go home
+        self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+
+        # Go to Bin
+        self.addTasksToQueueWalking(taskQueue, self.binStanceFrame.transform, 'Walk to Bin')
+
+        # Drop into the Bin:
+        taskQueue.addTask(self.printAsync('Drop from Left Arm'))
+        self.addTasksToQueueDropIntoBin(taskQueue, 'left')
+        taskQueue.addTask(self.printAsync('Drop from Right Arm'))
+        self.addTasksToQueueDropIntoBin(taskQueue, 'right')
+
+        # Go home
+        self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+        taskQueue.addTask(self.printAsync('done!'))
 
         return taskQueue
 
 
-    def addInitTasksToQueue(self, taskQueue):
+    def addTasksToQueueInit(self, taskQueue):
 
         taskQueue.addTask(self.printAsync('user fit table'))
         taskQueue.addTask(self.userFitTable)
@@ -586,151 +643,40 @@ class TableDemo(object):
         taskQueue.addTask(self.computeBinStanceFrame)
 
 
-    def addLoopTasksToQueue(self, taskQueue):
-
-
-        self.ikPlanner.ikServer.usePointwise = True
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 20
-
-        taskQueue.addTask(self.userPrompt('neck pitch and open hands. continue? y/n: '))
-        taskQueue.addTask(self.sendNeckPitchLookDown)
-
-
-        self.addWalkingTasksToQueue(taskQueue, self.planFootstepsToTable, self.moveRobotToTableStanceFrame)
-
-
-        self.addTablePickTasksToQueue(taskQueue)
-
-
-        '''
-        self.addWalkingTasksToQueue(taskQueue, self.planFootstepsToStart, self.moveRobotToStartStanceFrame)
-
-        self.addWalkingTasksToQueue(taskQueue, self.planFootstepsToBin, self.moveRobotToBinStanceFrame)
-
-
-        taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
-
-        taskQueue.addTask(functools.partial(self.planDropPostureRaise, 'left'))
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
+    def addTasksToQueueTablePick(self, taskQueue, side):
+        taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
+        taskQueue.addTask(functools.partial(self.planReachToTableObject, side))
         taskQueue.addTask(self.animateLastPlan)
 
-        taskQueue.addTask(functools.partial(self.openHand, 'left'))
-        taskQueue.addTask(functools.partial(self.dropTableObject, 'left'))
-
-
-        taskQueue.addTask(functools.partial(self.planDropPostureSwap, 'left', 'right'))
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
+        taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
+        taskQueue.addTask(functools.partial(self.planTouchTableObject, side))
         taskQueue.addTask(self.animateLastPlan)
 
-        taskQueue.addTask(functools.partial(self.openHand, 'right'))
-        taskQueue.addTask(functools.partial(self.dropTableObject, 'right'))
+        taskQueue.addTask(functools.partial(self.closeHand, side))
+        taskQueue.addTask(functools.partial(self.graspTableObject, side))
 
-
-        taskQueue.addTask(functools.partial(self.planDropPostureLower, 'right'))
-        taskQueue.addTask(self.userPrompt('continue? y/n: '))
+        taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
+        taskQueue.addTask(functools.partial(self.planLiftTableObject, side))
         taskQueue.addTask(self.animateLastPlan)
 
-        taskQueue.addTask(self.cleanupSegmentedObjects)
+
+    def addTasksToQueueDropIntoBin(self, taskQueue, side):
+        taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
+        taskQueue.addTask(functools.partial(self.planDropPostureRaise, side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.openHand, side))
+        taskQueue.addTask(functools.partial(self.dropTableObject, side))
+
+        taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
+        taskQueue.addTask(functools.partial(self.planDropPostureLower, side))
+        taskQueue.addTask(self.animateLastPlan)
 
 
-        taskQueue.addTask(functools.partial(self.closeHand, 'left'))
-        taskQueue.addTask(functools.partial(self.closeHand, 'right'))
-
-
-        self.addWalkingTasksToQueue(taskQueue, self.planFootstepsToStart, self.moveRobotToStartStanceFrame)
-
-
-        taskQueue.addTask(functools.partial(self.addLoopTasksToQueue, taskQueue))
-
-        '''
-
-
-    def addWalkingTasksToQueue(self, taskQueue, planFunc, walkFunc):
-
-        if self.useFootstepPlanner:
-            taskQueue.addTask(planFunc)
-
-            if self.visOnly:
-                taskQueue.addTask(self.planWalking)
-                taskQueue.addTask(self.animateLastPlan)
-            else:
-
-                taskQueue.addTask(self.userPrompt('send stand command. continue? y/n: '))
-                taskQueue.addTask(self.atlasDriver.sendStandCommand)
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
-
-                taskQueue.addTask(self.userPrompt('commit footsteps. continue? y/n: '))
-                taskQueue.addTask(self.commitFootstepPlan)
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('step'))
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
-
-            taskQueue.addTask(self.cleanupFootstepPlans)
-        else:
-            taskQueue.addTask(walkFunc)
-
-
-    def addTablePickTasksToQueue(self, taskQueue):
-
-        taskQueue.addTask(functools.partial(self.openHand, 'left'))
-        taskQueue.addTask(functools.partial(self.openHand, 'right'))
-
-        taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
-
-
-        taskQueue.addTask(self.userPrompt('wait for lidar. continue? y/n: '))
-        taskQueue.addTask(self.waitForCleanLidarSweepAsync)
-
-        taskQueue.addTask(self.segmentTableObjects)
-
-
-        if self.useLeftArm:
-
-            taskQueue.addTask(functools.partial(self.planReachToTableObject, 'left'))
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
-            taskQueue.addTask(functools.partial(self.planTouchTableObject, 'left'))
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
-            taskQueue.addTask(functools.partial(self.closeHand, 'left'))
-            taskQueue.addTask(functools.partial(self.graspTableObject, 'left'))
-
-            taskQueue.addTask(functools.partial(self.planLiftTableObject, 'left'))
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
-        if self.useRightArm:
-
-            taskQueue.addTask(functools.partial(self.planReachToTableObject, 'right'))
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
-            taskQueue.addTask(functools.partial(self.planTouchTableObject, 'right'))
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
-            taskQueue.addTask(functools.partial(self.closeHand, 'right'))
-            taskQueue.addTask(functools.partial(self.graspTableObject, 'right'))
-
-            taskQueue.addTask(functools.partial(self.planLiftTableObject, 'right'))
-            taskQueue.addTask(self.animateLastPlan)
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
-
-            taskQueue.addTask(functools.partial(self.planLowerArmAndStand, 'right'))
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
-
-        else:
-            taskQueue.addTask(functools.partial(self.planLowerArmAndStand, 'left'))
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
-
-        taskQueue.addTask(functools.partial(self.addTablePickTasksToQueue, taskQueue))
-
-
-
+    def addTasksToQueueWalking(self, taskQueue, stanceTransform, message):
+        taskQueue.addTask(self.printAsync(message))
+        taskQueue.addTask( functools.partial(self.planWalkToStance, stanceTransform ))
+        taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
+        taskQueue.addTask(self.commitFootstepPlan)
+        taskQueue.addTask(self.animateLastPlan) # ought to wait until arrival, currently doesnt wait the right amount of time
+        taskQueue.addTask(self.requiredUserPrompt('Have you arrived? y/n: '))
