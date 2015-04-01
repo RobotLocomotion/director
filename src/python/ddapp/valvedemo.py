@@ -27,6 +27,9 @@ from ddapp import robotplanlistener
 from ddapp import segmentation
 from ddapp import planplayback
 
+import ddapp.tasks.robottasks as rt
+import ddapp.tasks.taskmanagerwidget as tmw
+
 import drc as lcmdrc
 
 from PythonQt import QtCore, QtGui
@@ -204,17 +207,38 @@ class ValvePlannerDemo(object):
         return robotStance
 
 
+    def updatePointcloudSnapshot(self):
+
+        if (self.useLidar is True):
+            return vis.updatePolyData(segmentation.getCurrentRevolutionData(), 'pointcloud snapshot', parent='segmentation')
+        else:
+            return vis.updatePolyData(segmentation.getDisparityPointCloud(4), 'pointcloud snapshot', parent='segmentation')
+
 
     ### Valve Focused Functions ######################################################################
     def segmentValveWallAuto(self, expectedValveRadius=0.195, mode='both'):
         om.removeFromObjectModel(om.findObjectByName('affordances'))
 
-        if (self.useLidar is True):
-            vis.updatePolyData(segmentation.getCurrentRevolutionData(), 'pointcloud snapshot', parent='segmentation')
-        else:
-            vis.updatePolyData(segmentation.getDisparityPointCloud(4), 'pointcloud snapshot', parent='segmentation')
+        self.grabPointcloudSnapshot()
 
         self.affordanceFitFunction(expectedValveRadius=expectedValveRadius, mode=mode)
+
+
+    def onImageViewDoubleClick(self, displayPoint, modifiers, imageView):
+
+        if modifiers != QtCore.Qt.ControlModifier:
+            return
+
+        imagePixel = imageView.getImagePixel(displayPoint)
+        cameraPos, ray = imageView.getWorldPositionAndRay(imagePixel)
+
+        polyData = self.updatePointcloudSnapshot().polyData
+        pickPoint = segmentation.extractPointsAlongClickRay(cameraPos, ray, polyData)
+
+        om.removeFromObjectModel(om.findObjectByName('valve'))
+        segmentation.segmentValveByBoundingBox(polyData, pickPoint)
+        self.findAffordance()
+
 
     def computeValveStanceFrame(self):
         objectTransform = transformUtils.copyFrame( self.clenchFrame.transform )
@@ -940,10 +964,17 @@ class ValveTaskPanel(object):
         self.ui.retractButton.connect('clicked()', self.retract)
         self.ui.nominalButton.connect('clicked()', self.valveDemo.planNominal)
 
+        l = QtGui.QVBoxLayout(self.ui.imageFrame)
 
+        self.taskTree = tmw.TaskTree()
+        self.ui.taskFrame.layout().insertWidget(0, self.taskTree.treeWidget)
+        self.ui.taskFrame.layout().insertWidget(1, self.taskTree.propertiesPanel)
         self._setupParams()
         self._setupPropertiesPanel()
         self._syncProperties()
+
+        self.taskTree.onAddTask(rt.PrintTask(name='print start message', message='starting valve demo'))
+        self.taskTree.onAddTask(rt.CallbackTask(callback=self.valveDemo.findAffordance, name='find affordance'), copy=False)
 
     def onStartClicked(self):
       self.valveDemo.findAffordance()
