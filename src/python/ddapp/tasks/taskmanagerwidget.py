@@ -12,7 +12,8 @@ class TaskItem(om.ObjectModelItem):
 
     def __init__(self, task):
         om.ObjectModelItem.__init__(self, task.properties.getProperty('Name'), properties=task.properties)
-        #self.addProperty('Visible', False)
+        self.addProperty('Visible', False)
+        self.setPropertyAttribute('Visible', 'hidden', True)
         self.task = task
 
 
@@ -46,7 +47,7 @@ class TaskLibraryWidget(object):
     def onAddTaskClicked(self):
         task = self.taskTree.getSelectedTask()
         if task:
-            self.callbacks.process('OnAddTask', task)
+            self.callbacks.process('OnAddTask', task.task)
 
     def addTask(self, task, parent=None):
         self.taskTree.onAddTask(task, parent)
@@ -60,7 +61,7 @@ class TaskTree(object):
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         self.objectModel = om.ObjectModelTree()
         self.objectModel.init(self.treeWidget, self.propertiesPanel)
-        self.treeWidget.setColumnCount(1)
+        #self.treeWidget.setColumnCount(1)
 
     def onSave(self):
 
@@ -127,8 +128,12 @@ class TaskTree(object):
       if len(objs) == 1:
           self.objectModel.setActiveObject(objs[0])
 
-    def onAddTask(self, task, parent=None):
-        obj = TaskItem(task.copy())
+    def onAddTask(self, task, parent=None, copy=True):
+
+        if copy:
+            task = task.copy()
+
+        obj = TaskItem(task)
         parent = parent or self.getSelectedFolder()
         self.objectModel.addToObjectModel(obj, parentObj=parent)
         self.assureSelection()
@@ -136,7 +141,8 @@ class TaskTree(object):
 
     def addGroup(self, groupName, parent=None):
         obj = self.objectModel.addContainer(groupName, parent)
-        obj.removeProperty('Visible')
+        obj.setProperty('Visible', False)
+        obj.setPropertyAttribute('Visible', 'hidden', True)
         obj.setPropertyAttribute('Name', 'hidden', False)
         self.assureSelection()
         return obj
@@ -158,7 +164,7 @@ class TaskTree(object):
     def getSelectedTask(self):
         if not isinstance(self.objectModel.getActiveObject(), TaskItem):
             return None
-        return self.objectModel.getActiveObject().task
+        return self.objectModel.getActiveObject()
 
     def getSelectedFolder(self):
         obj = self.objectModel.getActiveObject()
@@ -315,8 +321,8 @@ class TaskQueueWidget(object):
         print 'starting task:', task.properties.getProperty('Name')
         self.taskTree.selectTask(task)
         item = self.taskTree.findTaskItem(task)
-        #if item.getProperty('Visible'):
-        #    raise atq.AsyncTaskQueue.PauseException()
+        if len(self.completedTasks) and item.getProperty('Visible'):
+            raise atq.AsyncTaskQueue.PauseException()
 
     def onTaskEnded(self, taskQueue, task):
         self.completedTasks.append(task)
@@ -367,7 +373,7 @@ class TaskQueueWidget(object):
 
         self.completedTasks = []
         self.taskQueue.reset()
-        self.taskQueue.addTask(task)
+        self.taskQueue.addTask(task.task)
         self.taskQueue.start()
         self.updateDisplay()
 
