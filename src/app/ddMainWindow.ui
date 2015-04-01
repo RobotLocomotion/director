@@ -48,6 +48,8 @@
     <addaction name="ActionBotSpy"/>
     <addaction name="ActionSignalScope"/>
     <addaction name="ActionToggleStereoRender"/>
+    <addaction name="ActionToggleBackgroundLight"/>
+    <addaction name="ActionToggleImageView"/>
    </widget>
    <widget class="QMenu" name="ViewMenu">
     <property name="title">
@@ -116,8 +118,11 @@
    <addaction name="ActionMatlabConsole"/>
    <addaction name="separator"/>
    <addaction name="ActionColorizeLidar"/>
+   <addaction name="ActionToggleImageView"/>
+   <addaction name="ActionToggleBackgroundLight"/>
    <addaction name="ActionToggleCameraTerrainMode"/>
    <addaction name="ActionResetCamera"/>
+
   </widget>
   <widget class="QDockWidget" name="PropertiesDock">
    <property name="windowTitle">
@@ -290,6 +295,36 @@
    </property>
    <property name="toolTip">
     <string>Toggle Stereo Render</string>
+   </property>
+  </action>
+  <action name="ActionToggleImageView">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/camera_lens_icon.png</normaloff>:/images/camera_lens_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Image View</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle Image View</string>
+   </property>
+  </action>
+  <action name="ActionToggleBackgroundLight">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/light_bulb_icon.png</normaloff>:/images/light_bulb_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Background Light</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle Background Light</string>
    </property>
   </action>
   <action name="ActionResetCamera">
