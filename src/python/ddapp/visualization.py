@@ -183,6 +183,12 @@ class PolyDataItem(om.ObjectModelItem):
 
         self._renderAllViews()
 
+    def setScalarRange(self, rangeMin, rangeMax):
+        arrayName = self.getPropertyEnumValue('Color By')
+        if arrayName != 'Solid Color':
+            lut = self.mapper.GetLookupTable()
+            self.colorBy(arrayName, scalarRange=(rangeMin, rangeMax))
+
     def _updateSurfaceProperty(self):
         enableSurfaceMode = self.polyData.GetNumberOfPolys() or self.polyData.GetNumberOfStrips()
         self.properties.setPropertyAttribute('Surface Mode', 'hidden', not enableSurfaceMode)
