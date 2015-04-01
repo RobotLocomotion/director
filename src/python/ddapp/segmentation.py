@@ -4451,7 +4451,7 @@ def extractPointsAlongClickRay(displayPoint, distanceToLineThreshold=0.3, addDeb
     return polyData
 
 
-def extractPointsAlongClickRay(position, ray, polyData=None):
+def extractPointsAlongClickRay(position, ray, polyData=None, distanceToLineThreshold=0.025, nearestToLine=True):
 
     #segmentationObj = om.findObjectByName('pointcloud snapshot')
     if polyData is None:
@@ -4462,36 +4462,37 @@ def extractPointsAlongClickRay(position, ray, polyData=None):
 
     polyData = labelDistanceToLine(polyData, position, position + ray)
 
-    distanceToLineThreshold = 0.025
-
     # extract points near line
     polyData = thresholdPoints(polyData, 'distance_to_line', [0.0, distanceToLineThreshold])
     if not polyData.GetNumberOfPoints():
         return None
 
 
-    polyData = labelPointDistanceAlongAxis(polyData, ray, origin=position, resultArrayName='dist_along_line')
-    polyData = thresholdPoints(polyData, 'dist_along_line', [0.20, 1e6])
+    polyData = labelPointDistanceAlongAxis(polyData, ray, origin=position, resultArrayName='distance_along_line')
+    polyData = thresholdPoints(polyData, 'distance_along_line', [0.20, 1e6])
     if not polyData.GetNumberOfPoints():
         return None
 
-    updatePolyData(polyData, 'ray points', colorByName='distance_to_line')
+    updatePolyData(polyData, 'ray points', colorByName='distance_to_line', visible=False, parent=getDebugFolder())
 
-    dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_to_line')
+    if nearestToLine:
+        dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_to_line')
+    else:
+        dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_along_line')
+
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
-
-    d = DebugData()
     intersectionPoint = points[dists.argmin()]
 
+    d = DebugData()
     d.addSphere( intersectionPoint, radius=0.005)
     d.addLine(position, intersectionPoint)
-    obj = updatePolyData(d.getPolyData(), 'intersecting ray', visible=True, color=[0,1,0])
+    obj = updatePolyData(d.getPolyData(), 'intersecting ray', visible=False, color=[0,1,0], parent=getDebugFolder())
     obj.actor.GetProperty().SetLineWidth(2)
 
     d2 = DebugData()
     end_of_ray = position + 2*ray
     d2.addLine(position, end_of_ray)
-    obj2 = updatePolyData(d2.getPolyData(), 'camera ray', visible=False, color=[1,0,0])
+    obj2 = updatePolyData(d2.getPolyData(), 'camera ray', visible=False, color=[1,0,0], parent=getDebugFolder())
     obj2.actor.GetProperty().SetLineWidth(2)
 
     return intersectionPoint
