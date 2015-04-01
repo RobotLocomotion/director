@@ -76,7 +76,7 @@ class MultisensePanel(object):
         return self.widget.ledOnCheck.isChecked()
 
     def getCameraLedBrightness(self):
-        return self.widget.headCamFpsSpinner.value
+        return self.widget.ledBrightnessSpinner.value
 
     def getCameraAutoGain(self):
         return self.widget.headAutoGainCheck.isChecked()
