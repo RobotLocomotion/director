@@ -651,10 +651,14 @@ class ViewEventFilter(object):
         elif event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.RightButton:
             self.mouseStart = QtCore.QPoint(event.pos())
 
-        elif event.type() == QtCore.QEvent.MouseMove and self.mouseStart is not None:
-            delta = QtCore.QPoint(event.pos()) - self.mouseStart
-            if delta.manhattanLength() > 3:
-                self.mouseStart = None
+        elif event.type() == QtCore.QEvent.MouseMove:
+
+            if self.mouseStart is not None:
+                delta = QtCore.QPoint(event.pos()) - self.mouseStart
+                if delta.manhattanLength() > 3:
+                    self.mouseStart = None
+            else:
+                self.onMouseMove(event)
 
         elif event.type() == QtCore.QEvent.MouseButtonRelease and event.button() == QtCore.Qt.RightButton and self.mouseStart is not None:
             self.mouseStart = None
@@ -670,10 +674,27 @@ class ViewEventFilter(object):
         if neckDriver:
             neckDriver.onWheelDelta(event.delta())
 
+    def onMouseMove(self, event):
+
+        for picker in segmentation.viewPickers:
+            if not picker.enabled:
+                continue
+
+            picker.onMouseMove(vis.mapMousePosition(self.view, event), event.modifiers())
+            self.consumeEvent()
+
+
     def onLeftMousePress(self, event):
         if event.modifiers() == QtCore.Qt.ControlModifier:
             displayPoint = vis.mapMousePosition(self.view, event)
             newWalkingGoal(displayPoint, self.view)
+            self.consumeEvent()
+
+        for picker in segmentation.viewPickers:
+            if not picker.enabled:
+                continue
+
+            picker.onMousePress(vis.mapMousePosition(self.view, event), event.modifiers())
             self.consumeEvent()
 
     def onLeftDoubleClick(self, event):
