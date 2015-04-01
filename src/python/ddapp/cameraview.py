@@ -371,7 +371,7 @@ class CameraImageView(object):
         self.imageName = imageName
         self.imageInitialized = False
         self.updateUtime = 0
-        self.rayCallback = rayDebug
+        self.rayCallback = None
         self.initView(view)
         self.initEventFilter()
 
@@ -395,7 +395,7 @@ class CameraImageView(object):
             return None
 
 
-    def rayDebug(self, displayPoint):
+    def onMouseMove(self, displayPoint):
 
         imagePixel = self.getImagePixel(displayPoint)
         cameraPosition, ray = self.getWorldPositionAndRay(imagePixel)
