@@ -127,7 +127,7 @@ class ValvePlannerDemo(object):
 
     def useSmallValveDefaults(self):
         self.reachHeight = 0.0 # distance above the valve axis for the hand center
-        self.reachDepth = -0.1 # distance away from valve for palm face on approach reach
+        self.reachDepth = -0.05 # distance away from valve for palm face on approach reach
         self.retractDepth = -0.05 # distance away from valve for palm face on retraction
         self.touchDepth = 0.01 # distance away from valve for palm face on approach reach
         self.openAmount = 0
@@ -696,7 +696,7 @@ class ValvePlannerDemo(object):
 
     def coaxialPlanRetract(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.coaxialPlan(self.retractDepth, wristAngleCW=np.radians(180), lockBase=False, **kwargs)
+        self.coaxialPlan(self.retractDepth, **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def getStanceFrameCoaxial(self):
@@ -1469,9 +1469,16 @@ class ValveTaskPanel(object):
             initialWristAngleCW = 0 if v.scribeDirection == 1 else np.pi
             finalWristAngleCW = np.pi if v.scribeDirection == 1 else 0
 
-            addFunc(functools.partial(v.coaxialPlanTurn,
+            addFunc(functools.partial(v.coaxialPlanReach,
                                       wristAngleCW=initialWristAngleCW),
-                    name='plan reset hand', parent=group)
+                    name='plan reach to valve', parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
+            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
+
+            addFunc(functools.partial(v.coaxialPlanTouch,
+                                      wristAngleCW=initialWristAngleCW),
+                    name='plan insert in valve', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
@@ -1491,6 +1498,13 @@ class ValveTaskPanel(object):
                                  side=side, mode='Basic',
                                  amount=self.valveDemo.openAmount),
                     parent=group)
+
+            addFunc(functools.partial(v.coaxialPlanRetract,
+                                      wristAngleCW=finalWristAngleCW),
+                    name='plan retract', parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
+            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
 
 
         v = self.valveDemo
@@ -1535,20 +1549,6 @@ class ValveTaskPanel(object):
 
         # add valve turns
         if v.smallValve:
-            addFunc(functools.partial(v.coaxialPlanReach,
-                                      wristAngleCW=0 if v.scribeDirection == 1 else np.pi),
-                    name='plan reach to valve')
-            addTask(rt.CheckPlanInfo(name='check manip plan info'))
-            addFunc(v.commitManipPlan, name='execute manip plan')
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
-
-            addFunc(functools.partial(v.coaxialPlanTouch,
-                                      wristAngleCW=np.radians(1) if v.scribeDirection == 1 else np.pi-np.radians(1)),
-                    name='plan final reach')
-            addTask(rt.CheckPlanInfo(name='check manip plan info'))
-            addFunc(v.commitManipPlan, name='execute manip plan')
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
-
             for i in range(0, 5):
                 addSmallValveTurn()
 
