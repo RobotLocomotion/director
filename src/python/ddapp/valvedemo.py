@@ -21,9 +21,12 @@ from ddapp import ikplanner
 from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
+from ddapp.pointpicker import ImagePointPicker
 from ddapp import affordanceitems
+from ddapp import affordanceupdater
 from ddapp import robotstate
 from ddapp import robotplanlistener
+from ddapp import cameraview
 from ddapp import segmentation
 from ddapp import planplayback
 from ddapp import propertyset
@@ -31,6 +34,10 @@ from ddapp import asynctaskqueue as atq
 
 import ddapp.tasks.robottasks as rt
 import ddapp.tasks.taskmanagerwidget as tmw
+
+import PythonQt
+from PythonQt import QtCore, QtGui, QtUiTools
+
 
 import drc as lcmdrc
 import traceback
@@ -266,7 +273,6 @@ class ValvePlannerDemo(object):
         om.removeFromObjectModel(om.findObjectByName('valve'))
         segmentation.segmentValveByBoundingBox(polyData, pickPoint)
         self.findAffordance()
-
 
     def computeValveStanceFrame(self):
         objectTransform = transformUtils.copyFrame( self.clenchFrame.transform )
@@ -1094,11 +1100,50 @@ class ValvePlannerDemo(object):
 
 
 
+class ImageBasedAffordanceFit(object):
+
+    def __init__(self, imageView=None, numberOfPoints=1):
+
+        self.imageView = imageView or cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'image view')
+        self.imagePicker = ImagePointPicker(self.imageView, numberOfPoints=2)
+        self.imagePicker.connectDoubleClickEvent(self.onImageViewDoubleClick)
+        self.imagePicker.annotationFunc = self.onImageAnnotation
+        self.imagePicker.showCursor = False
+        self.imagePicker.start()
+
+    def getPointCloud(self):
+        return segmentation.getCurrentRevolutionData()
+
+    def onImageAnnotation(self, *points):
+        polyData = self.getPointCloud()
+        points = [self.getPointCloudLocationFromImage(p, self.imageView, polyData) for p in points]
+        self.fit(polyData, points)
+
+    @staticmethod
+    def getPointCloudLocationFromImage(imagePixel, imageView, polyData):
+        cameraPos, ray = imageView.getWorldPositionAndRay(imagePixel)
+        return segmentation.extractPointsAlongClickRay(cameraPos, ray, polyData, distanceToLineThreshold=0.05, nearestToLine=False)
+
+    def onImageViewDoubleClick(self, displayPoint, modifiers, imageView):
+        pass
+
+    def fit(self, pointData, points):
+        pass
 
 
+class ValveImageFitter(ImageBasedAffordanceFit):
 
-import PythonQt
-from PythonQt import QtCore, QtGui, QtUiTools
+    def __init__(self, valveDemo):
+        ImageBasedAffordanceFit.__init__(self, numberOfPoints=2)
+        self.valveDemo = valveDemo
+
+    def onImageViewDoubleClick(self, displayPoint, modifiers, imageView):
+        self.valveDemo.onImageViewDoubleClick(displayPoint, modifiers, imageView)
+
+    def fit(self, polyData, points):
+        om.removeFromObjectModel(om.findObjectByName('valve'))
+        segmentation.segmentValveByRim(polyData, points[0], points[1])
+
 
 def addWidgetsToDict(widgets, d):
 
@@ -1119,9 +1164,14 @@ class ValveTaskPanel(object):
     def __init__(self, valveDemo):
 
         self.valveDemo = valveDemo
-
         self.valveDemo.reachDepth = -0.1
         self.valveDemo.speedLow = 10
+
+        self.fitter = ValveImageFitter(self.valveDemo)
+
+        self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, self.fitter.imageView)
+        self.affordanceUpdater.timer.start()
+
 
         loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddValveTaskPanel.ui')
@@ -1141,7 +1191,7 @@ class ValveTaskPanel(object):
         self.ui.nominalButton.connect('clicked()', self.valveDemo.planNominal)
 
         l = QtGui.QVBoxLayout(self.ui.imageFrame)
-
+        l.addWidget(self.fitter.imageView.view)
 
         self._setupParams()
         self._setupPropertiesPanel()
