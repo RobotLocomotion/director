@@ -1420,6 +1420,30 @@ def showHistogram(polyData, arrayName, numberOfBins=100):
     return bins[np.argmax(hist)] + (bins[1] - bins[0])/2.0
 
 
+def applyKmeansLabel(polyData, arrayName, numberOfClusters, whiten=False):
+
+    import scipy.cluster
+    ar = vnp.getNumpyFromVtk(polyData, arrayName).copy()
+
+    if whiten:
+        scipy.cluster.vq.whiten(ar)
+
+    codes, disturbances = scipy.cluster.vq.kmeans(ar, 2)
+
+    if arrayName == 'normals' and numberOfClusters == 2:
+        v1 = codes[0]
+        v2 = codes[1]
+        v1 /= np.linalg.norm(v1)
+        v2 /= np.linalg.norm(v2)
+        angle = np.arccos(np.dot(v1, v2))
+        print 'angle between normals:', np.degrees(angle)
+
+    code, distance = scipy.cluster.vq.vq(ar, codes)
+
+    polyData = shallowCopy(polyData)
+    vnp.addNumpyToVtk(polyData, code, '%s_kmeans_label' % arrayName)
+    return polyData
+
 
 def findValveSpokeAngle(points):
     '''
