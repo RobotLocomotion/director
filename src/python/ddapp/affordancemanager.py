@@ -3,6 +3,7 @@ from ddapp import affordanceitems
 from ddapp import lcmobjectcollection
 from ddapp import visualization as vis
 from ddapp.timercallback import TimerCallback
+from ddapp.uuidutil import newUUID
 from ddapp import vtkAll as vtk
 from ddapp.thirdparty import numpyjsoncoder
 
@@ -35,6 +36,12 @@ class AffordanceObjectModelManager(object):
 
     def getAffordanceId(self, aff):
         return aff.getProperty('uuid')
+
+    def newAffordanceFromDescription(self, desc):
+        if 'uuid' not in desc:
+            desc['uuid'] = newUUID()
+        self.collection.updateDescription(desc)
+        return self.getAffordanceById(desc['uuid'])
 
     def getAffordanceById(self, affordanceId):
         for aff in self.getAffordances():
