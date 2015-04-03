@@ -502,7 +502,7 @@ class ValvePlannerDemo(object):
 
     def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=None,
                        lockBase=None, resetBase=False,  wristAngleCW=0,
-                       startPose=None, verticalOffset=0.01):
+                       startPose=None, verticalOffset=0.01, constrainWristX=True):
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
         wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
@@ -616,14 +616,16 @@ class ValvePlannerDemo(object):
             wristTol = self.coaxialTol
             gazeDegreesTol = self.coaxialGazeTol
 
-        p = ik.PostureConstraint()
-            #p.joints = [shxJoint, elxJoint, mwxJoint]
-            #p.jointsLowerBound = xJointLowerBound
-            #p.jointsUpperBound = xJointUpperBound
-        p.joints = [mwxJoint]
-        p.jointsLowerBound = [0]
-        p.jointsUpperBound = [0]
-        constraints.append(p)
+        if constrainWristX:
+            p = ik.PostureConstraint()
+                #p.joints = [shxJoint, elxJoint, mwxJoint]
+                #p.jointsLowerBound = xJointLowerBound
+                #p.jointsUpperBound = xJointUpperBound
+            p.joints = [mwxJoint]
+            p.jointsLowerBound = [0]
+            p.jointsUpperBound = [0]
+            constraints.append(p)
+
         elbowOnValveAxisConstraint = ik.PositionConstraint(linkName=larmName,
                                                             referenceFrame=self.clenchFrame.transform)
         elbowOnValveAxisConstraint.lowerBound = [elbowTol, -np.inf, elbowTol]
@@ -696,7 +698,7 @@ class ValvePlannerDemo(object):
 
     def coaxialPlanRetract(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.coaxialPlan(self.retractDepth, **kwargs)
+        self.coaxialPlan(self.retractDepth, resetBase=True, lockBase=False, constrainWristX=False, **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def getStanceFrameCoaxial(self):
