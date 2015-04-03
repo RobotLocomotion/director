@@ -111,6 +111,7 @@ set(python_files
   ddapp/tasks/__init__.py
   ddapp/tasks/robottasks.py
   ddapp/tasks/taskmanagerwidget.py
+  ddapp/tasks/taskuserpanel.py
   ddapp/tasks/descriptions/__init__.py
   ddapp/tasks/descriptions/drillTask.py
   ddapp/tasks/descriptions/taskLibrary.py
