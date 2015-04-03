@@ -156,7 +156,7 @@ class MultisensePanel(object):
 
         fps = self.getCameraFps()
         camGain = self.getCameraGain()
-        exposure = self.getCameraExposure()
+        exposure = 1000*self.getCameraExposure()
         ledFlash = self.getCameraLedOn()
         ledDuty = self.getCameraLedBrightness()
         spinRate = self.getSpinRate()
