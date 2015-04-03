@@ -26,6 +26,7 @@ from ddapp import drcargs
 
 from ddapp import ik
 from ddapp.ikparameters import IkParameters
+from ddapp import ikconstraintencoder
 
 import drc as lcmdrc
 
@@ -64,11 +65,20 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+        if (self.ikPlanner.pushToMatlab is False):
+            # TODO: Implement IK Server Request over LCM here
+            print "push to lcm runIk"
+            self.ikPlanner.ikConstraintEncoder.publishConstraints( self.constraints )
+            self.endPose = [0] * self.ikPlanner.jointController.numberOfJoints
+            self.info = 1
+            print 'info:', self.info
+            return self.endPose, self.info
+        else:
+            ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
 
-        self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, ikParameters, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
-        print 'info:', self.info
-        return self.endPose, self.info
+            self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, ikParameters, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
+            print 'info:', self.info
+            return self.endPose, self.info
 
     def runIkTraj(self):
         assert self.endPose is not None
@@ -80,8 +90,14 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
-        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
+        if (self.ikPlanner.pushToMatlab is False):
+            # TODO: Implement IK Server Request over LCM here
+            print "push to lcm runIkTraj"
+            self.plan =[]
+        else:
+            ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+            self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
+
         return self.plan
 
     def planEndPoseGoal(self, feetOnGround = True):
@@ -201,6 +217,8 @@ class IKPlanner(object):
         self.additionalTimeSamples = 0
         self.useQuasiStaticConstraint = True
         self.pushToMatlab = True
+        # is this dodgy?
+        self.ikConstraintEncoder = ikconstraintencoder.IKConstraintEncoder(self)
 
         # If the robot an arm on a fixed base, set true e.g. ABB or Kuka?
         self.fixedBaseArm = False
