@@ -516,12 +516,7 @@ def setRobotiqJointsToPinchOpenHand(robotModel):
 
 def setRobotiqJointsToPinchClosedHand(robotModel):
     for side in ['left', 'right']:
-        setRobotiqJoints(robotModel, side, [0.25, 0.0, -0.55], [-0.15, 0.15, 0.0])
-
-def setRobotiqJointsToPinchClosedHand(robotModel):
-    for side in ['left', 'right']:
         setRobotiqJoints(robotModel, side, [0.8, 0.0, -0.55], [-0.15, 0.15, 0.0])
-
 
 def setRobotiqJoints(robotModel, side, fingers=[0.0, 0.0, 0.0], palm=[0.0, 0.0, 0.0]):
     robotModel.model.setJointPositions(np.tile(fingers, 3), ['%s_finger_%s_joint_%d' % (side, n, i+1) for n in ['1', '2', 'middle'] for i in range(3)])
