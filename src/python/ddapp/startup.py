@@ -19,8 +19,9 @@ from ddapp import jointcontrol
 from ddapp import callbacks
 from ddapp import camerabookmarks
 from ddapp import cameracontrol
-from ddapp import debrisdemo
 from ddapp import bihandeddemo
+from ddapp import debrisdemo
+from ddapp import doordemo
 from ddapp import drilldemo
 from ddapp import tabledemo
 from ddapp import valvedemo
@@ -404,6 +405,11 @@ if usePlanning:
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
+
+    doorDemo = doordemo.DoorDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
+                                      lHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                                      fitDrillMultisense, robotStateJointController,
+                                      playPlans, showPose)
 
 
     splinewidget.init(view, handFactory, robotStateModel)

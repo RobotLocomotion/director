@@ -24,6 +24,7 @@ set(python_files
   ddapp/debrisdemo.py
   ddapp/debugVis.py
   ddapp/depthimageprovider.py
+  ddapp/doordemo.py
   ddapp/drakevisualizer.py
   ddapp/drcargs.py
   ddapp/drilldemo.py
