@@ -1163,58 +1163,43 @@ class ValveImageFitter(ImageBasedAffordanceFit):
         segmentation.segmentValveByRim(polyData, points[0], points[1])
 
 
-def addWidgetsToDict(widgets, d):
-
-    for widget in widgets:
-        if widget.objectName:
-            d[str(widget.objectName)] = widget
-        addWidgetsToDict(widget.children(), d)
 
 
-class WidgetDict(object):
 
-    def __init__(self, widgets):
-        addWidgetsToDict(widgets, self.__dict__)
+from ddapp.tasks.taskuserpanel import TaskUserPanel
 
 
-class ValveTaskPanel(object):
+class ValveTaskPanel(TaskUserPanel):
 
     def __init__(self, valveDemo):
+
+        TaskUserPanel.__init__(self)
 
         self.valveDemo = valveDemo
 
         self.fitter = ValveImageFitter(self.valveDemo)
+        self.initImageView(self.fitter.imageView)
 
-        self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, self.fitter.imageView)
-        self.affordanceUpdater.timer.start()
+        self.addDefaultProperties()
+        self.addButtons()
+        self.addTasks()
 
 
-        loader = QtUiTools.QUiLoader()
-        uifile = QtCore.QFile(':/ui/ddValveTaskPanel.ui')
-        assert uifile.open(uifile.ReadOnly)
+    def addButtons(self):
 
-        self.widget = loader.load(uifile)
-        self.ui = WidgetDict(self.widget.children())
-
-        self.ui.startButton.connect('clicked()', self.onStartClicked)
-        self.ui.footstepsButton.connect('clicked()', self.valveDemo.planFootstepsToStance)
-        self.ui.raiseArmButton.connect('clicked()', self.valveDemo.planPreGrasp)
-        self.ui.reachButton.connect('clicked()', self.reach)
-        self.ui.touchButton.connect('clicked()', self.grasp)
-        self.ui.turnButton.connect('clicked()', self.turnValve)
-        self.ui.fingersButton.connect('clicked()', self.setFingers)
-        self.ui.retractButton.connect('clicked()', self.retract)
-        self.ui.nominalButton.connect('clicked()', self.valveDemo.planNominal)
-
-        l = QtGui.QVBoxLayout(self.ui.imageFrame)
-        l.addWidget(self.fitter.imageView.view)
-
-        self._setupParams()
-        self._setupPropertiesPanel()
-        self._syncProperties()
-
-        self._initTaskPanel()
-        self._initTasks()
+        self.addManualButton('Start', self.onStartClicked)
+        self.addManualSpacer()
+        self.addManualButton('Footsteps', self.valveDemo.planFootstepsToStance)
+        self.addManualSpacer()
+        self.addManualButton('Raise arm', self.valveDemo.planPreGrasp)
+        self.addManualButton('Set fingers', self.setFingers)
+        self.addManualSpacer()
+        self.addManualButton('Reach', self.reach)
+        self.addManualButton('Touch', self.grasp)
+        self.addManualButton('Turn', self.turnValve)
+        self.addManualButton('Retract', self.retract)
+        self.addManualSpacer()
+        self.addManualButton('Nominal', self.valveDemo.planNominal)
 
     def onStartClicked(self):
       self.valveDemo.findAffordance()
@@ -1248,23 +1233,13 @@ class ValveTaskPanel(object):
     def retract(self):
         self.valveDemo.coaxialPlanRetract()
 
-    def _setupParams(self):
-        self.params = om.ObjectModelItem('Valve Task Params')
+    def addDefaultProperties(self):
         self.params.addProperty('Hand', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         self.params.addProperty('Turn direction', 0, attributes=om.PropertyAttributes(enumNames=['Clockwise', 'Counter clockwise']))
         self.params.addProperty('Touch angle (deg)', 0)
         #self.params.addProperty('Turn amount (deg)', 60)
         self.params.properties.connectPropertyChanged(self.onPropertyChanged)
-
-    def _setupPropertiesPanel(self):
-        l = QtGui.QVBoxLayout(self.ui.propertyFrame)
-        l.setMargin(0)
-        self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
-        self.propertiesPanel.setBrowserModeToWidget()
-        l.addWidget(self.propertiesPanel)
-
-        self.panelConnector = propertyset.PropertyPanelConnector(self.params.properties, self.propertiesPanel)
-
+        self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
@@ -1279,163 +1254,7 @@ class ValveTaskPanel(object):
         #self.valveDemo.turnAngle = self.params.getProperty('Turn amount (deg)')
 
 
-
-    def onContinue(self):
-
-        self.completedTasks = []
-        self.taskQueue.reset()
-        for obj in self.taskTree.getSelectedTasks():
-            self.taskQueue.addTask(obj.task)
-
-        self.taskQueue.start()
-
-
-    def onStep(self):
-
-        assert not self.taskQueue.isRunning
-
-        tasks = self.taskTree.getSelectedTasks()
-        if not tasks:
-            return
-
-        task = tasks[0].task
-        self.nextStepTask = tasks[1].task if len(tasks) > 1 else None
-
-        self.completedTasks = []
-        self.taskQueue.reset()
-        self.taskQueue.addTask(task)
-        self.taskQueue.start()
-
-
-    def onPause(self):
-
-        if not self.taskQueue.isRunning:
-            return
-
-        self.nextStepTask = None
-        currentTask = self.taskQueue.currentTask
-        self.taskQueue.stop()
-        if currentTask:
-            currentTask.stop()
-
-        self.appendMessage('<font color="red">paused</font>')
-
-
-    def onTaskStarted(self, taskQueue, task):
-        msg = task.properties.getProperty('Name')  + ' ... <font color="green">start</font>'
-        self.appendMessage(msg)
-
-        self.taskTree.selectTask(task)
-        item = self.taskTree.findTaskItem(task)
-        if len(self.completedTasks) and item.getProperty('Visible'):
-            self.appendMessage('<font color="red">paused</font>')
-            raise atq.AsyncTaskQueue.PauseException()
-
-    def onTaskEnded(self, taskQueue, task):
-        msg = task.properties.getProperty('Name') + ' ... <font color="green">end</font>'
-        self.appendMessage(msg)
-
-        self.completedTasks.append(task)
-
-        if self.taskQueue.tasks:
-            self.taskTree.selectTask(self.taskQueue.tasks[0])
-        elif self.nextStepTask:
-            self.taskTree.selectTask(self.nextStepTask)
-        #else:
-        #    self.taskTree.selectTask(self.completedTasks[0])
-
-    def onTaskFailed(self, taskQueue, task):
-        msg = task.properties.getProperty('Name')  + ' ... <font color="red">failed: %s</font>' % task.failReason
-        self.appendMessage(msg)
-
-    def onTaskPaused(self, taskQueue, task):
-        msg = task.properties.getProperty('Name')  + ' ... <font color="red">paused</font>'
-        self.appendMessage(msg)
-
-    def onTaskException(self, taskQueue, task):
-        msg = task.properties.getProperty('Name')  + ' ... <font color="red">exception:\n\n%s</font>' % traceback.format_exc()
-        self.appendMessage(msg)
-
-
-    def appendMessage(self, msg):
-        if msg == self.lastStatusMessage:
-            return
-
-        self.lastStatusMessage = msg
-        self.ui.outputConsole.append(msg.replace('\n', '<br/>'))
-        #print msg
-
-    def updateTaskStatus(self):
-
-        currentTask = self.taskQueue.currentTask
-        if not currentTask or not currentTask.statusMessage:
-            return
-
-        name = currentTask.properties.getProperty('Name')
-        status = currentTask.statusMessage
-        msg = name + ': ' + status
-        self.appendMessage(msg)
-
-    def onAcceptPrompt(self):
-        self.promptTask.accept()
-        self.promptTask = None
-        self.ui.promptLabel.text = ''
-        self.ui.promptAcceptButton.enabled = False
-        self.ui.promptRejectButton.enabled = False
-
-    def onRejectPrompt(self):
-
-        self.promptTask.reject()
-        self.promptTask = None
-        self.ui.promptLabel.text = ''
-        self.ui.promptAcceptButton.enabled = False
-        self.ui.promptRejectButton.enabled = False
-
-    def onTaskPrompt(self, task, message):
-        self.promptTask = task
-        self.ui.promptLabel.text = message
-        self.ui.promptAcceptButton.enabled = True
-        self.ui.promptRejectButton.enabled = True
-
-    def _initTaskPanel(self):
-
-        self.lastStatusMessage = ''
-        self.nextStepTask = None
-        self.completedTasks = []
-        self.taskQueue = atq.AsyncTaskQueue()
-        self.taskQueue.connectTaskStarted(self.onTaskStarted)
-        self.taskQueue.connectTaskEnded(self.onTaskEnded)
-        self.taskQueue.connectTaskPaused(self.onTaskPaused)
-        self.taskQueue.connectTaskFailed(self.onTaskFailed)
-        self.taskQueue.connectTaskException(self.onTaskException)
-        self.completedTasks = []
-
-        self.timer = TimerCallback(targetFps=2)
-        self.timer.callback = self.updateTaskStatus
-        self.timer.start()
-
-        rt.UserPromptTask.promptFunction = self.onTaskPrompt
-        rt.PrintTask.printFunction = self.appendMessage
-
-        self.taskTree = tmw.TaskTree()
-        self.ui.taskFrame.layout().insertWidget(0, self.taskTree.treeWidget)
-
-        l = QtGui.QVBoxLayout(self.ui.taskPropertiesGroupBox)
-        l.addWidget(self.taskTree.propertiesPanel)
-        PythonQt.dd.ddGroupBoxHider(self.ui.taskPropertiesGroupBox)
-
-
-        self.ui.taskStepButton.connect('clicked()', self.onStep)
-        self.ui.taskContinueButton.connect('clicked()', self.onContinue)
-        self.ui.taskPauseButton.connect('clicked()', self.onPause)
-
-        self.ui.promptAcceptButton.connect('clicked()', self.onAcceptPrompt)
-        self.ui.promptRejectButton.connect('clicked()', self.onRejectPrompt)
-        self.ui.promptAcceptButton.enabled = False
-        self.ui.promptRejectButton.enabled = False
-
-
-    def _initTasks(self):
+    def addTasks(self):
 
         # some helpers
         def addTask(task, parent=None):

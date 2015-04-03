@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>valveTaskPanel</class>
- <widget class="QWidget" name="valveTaskPanel">
+ <class>userTaskPanel</class>
+ <widget class="QWidget" name="userTaskPanel">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Valve Task</string>
+   <string>Task Panel</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
@@ -162,7 +162,7 @@
     </widget>
    </item>
    <item row="0" column="2" rowspan="2">
-    <layout class="QVBoxLayout" name="verticalLayout">
+    <layout class="QVBoxLayout" name="manualButtonsLayout">
      <item>
       <widget class="Line" name="line_5">
        <property name="orientation">
@@ -174,97 +174,6 @@
       <widget class="QLabel" name="label">
        <property name="text">
         <string>Manual Commands</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="startButton">
-       <property name="text">
-        <string>Start</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="footstepsButton">
-       <property name="text">
-        <string>Footsteps</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="raiseArmButton">
-       <property name="text">
-        <string>Raise arm</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="fingersButton">
-       <property name="text">
-        <string>Set fingers</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="reachButton">
-       <property name="text">
-        <string>Reach</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="touchButton">
-       <property name="text">
-        <string>Touch</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="turnButton">
-       <property name="text">
-        <string>Turn</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="retractButton">
-       <property name="text">
-        <string>Retract</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line_4">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="nominalButton">
-       <property name="text">
-        <string>Nominal</string>
        </property>
       </widget>
      </item>
@@ -285,6 +194,12 @@
    </item>
    <item row="1" column="0">
     <widget class="QFrame" name="imageFrame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="minimumSize">
       <size>
        <width>400</width>

@@ -183,17 +183,24 @@ class TaskTree(object):
 
         return tasks
 
-    def getTasks(self, parent=None):
+    def getTasks(self, parent=None, fromSelected=False):
 
-        def helper(objs, tasks):
-            for obj in objs:
-                if isinstance(obj, om.ContainerItem):
-                    helper(obj.children(), tasks)
-                    continue
+        selected = self.objectModel.getActiveObject()
+        tasks = []
+        add = not fromSelected
+        queue = self.objectModel.getTopLevelObjects() if parent is None else parent.children()
+
+        while queue:
+            obj = queue.pop(0)
+            if obj == selected:
+                add = True
+            if isinstance(obj, om.ContainerItem):
+                queue = obj.children() + queue
+                continue
+            if add:
                 tasks.append(obj)
-            return tasks
 
-        return helper(self.objectModel.getTopLevelObjects() if parent is None else parent.children(), [])
+        return tasks
 
 
 class TaskQueueWidget(object):
