@@ -49,6 +49,7 @@ set(python_files
   ddapp/ikconstraints.py
   ddapp/ikparameters.py
   ddapp/ikplanner.py
+  ddapp/ikconstraintencoder.py
   ddapp/__init__.py
   ddapp/ioUtils.py
   ddapp/irisUtils.py
