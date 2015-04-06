@@ -50,7 +50,7 @@ class DoorDemo(object):
         self.endPose = None
 
         self.planFromCurrentRobotState = True
-        self.visOnly = True
+        self.visOnly = False
         self.useFootstepPlanner = False
         self.userPromptEnabled = True
 
@@ -61,6 +61,17 @@ class DoorDemo(object):
         self.doorHandleFrame = None
         self.doorHandleGraspFrame = None
         self.doorHingeFrame = None
+
+        self.handleTouchHeight = 0.07
+        self.handleTouchDepth = -0.07
+        self.handleTouchWidth = 0.02
+
+        self.handleTurnHeight = -0.04
+        self.handleLiftHeight = 0.12
+        self.handlePushDepth = 0.0
+        self.handleOpenDepth = 0.30
+        self.handleOpenWidth = 0.40
+
 
 
     def addPlan(self, plan):
@@ -97,34 +108,38 @@ class DoorDemo(object):
         return t
 
 
-    def computeDoorHandleFrame(self, robotModel):
 
-        position = [0.77, -0.4, 3*12*0.0254]
-        rpy = [0, 0, 20]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(self.computeGroundFrame(robotModel))
-        return t
+    def computeDoorHandleGraspFrame(self, graspOrientation=[0, -90, -90]):
 
 
+        def makeFrame(name, offset):
+            t = transformUtils.frameFromPositionAndRPY(offset, graspOrientation)
+            t.PostMultiply()
+            t.Concatenate(transformUtils.copyFrame(self.doorHandleFrame.transform))
+            return vis.updateFrame(t, name, parent=self.doorHandleAffordance, visible=False, scale=0.2)
 
-    def computeDoorHandleGraspFrame(self):
 
-        pitch = 20
-        roll = 0
-        yaw = 0
+        self.doorHandleGraspFrame = makeFrame('door handle grasp frame', [0.0, 0.0, 0.0])
 
-        position = [0.0, -0.08, 0.0]
-        rpy = [0.0 + pitch, 180 + roll, -(90 + yaw)]
+        self.doorHandleReachFrame = makeFrame('door handle reach frame', [self.handleTouchDepth, self.handleTouchWidth, self.handleTouchHeight])
 
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(transformUtils.copyFrame(self.doorHandleFrame.transform))
+        self.doorHandleTurnFrame = makeFrame('door handle turn frame', [self.handleTouchDepth, self.handleTouchWidth, self.handleTurnHeight])
+
+        self.doorHandlePushFrame = makeFrame('door handle push frame', [self.handlePushDepth, self.handleTouchWidth, self.handleTurnHeight])
+
+        self.doorHandlePushLiftFrame = makeFrame('door handle push lift frame', [self.handlePushDepth, self.handleTouchWidth, self.handleLiftHeight])
+
+        self.doorHandlePushOpenFrame = makeFrame('door handle push open frame', [self.handleOpenDepth, self.handleOpenWidth, self.handleLiftHeight])
+
 
         self.doorHandleFrame.frameSync = vis.FrameSync()
-        self.doorHandleGraspFrame = vis.updateFrame(t, 'door handle grasp frame', parent=self.doorHandleAffordance, visible=True, scale=0.2)
-
         self.doorHandleFrame.frameSync.addFrame(self.doorHandleFrame)
         self.doorHandleFrame.frameSync.addFrame(self.doorHandleGraspFrame, ignoreIncoming=True)
+        self.doorHandleFrame.frameSync.addFrame(self.doorHandleReachFrame, ignoreIncoming=True)
+        self.doorHandleFrame.frameSync.addFrame(self.doorHandleTurnFrame, ignoreIncoming=True)
+        self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushFrame, ignoreIncoming=True)
+        self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushLiftFrame, ignoreIncoming=True)
+        self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushOpenFrame, ignoreIncoming=True)
 
 
     def computeDoorHingeFrame(self):
@@ -202,9 +217,126 @@ class DoorDemo(object):
         self.sensorJointController.push()
 
 
-    def computeFootstepPlan(self):
+    def planPreReach(self):
+
+        self.ikPlanner.ikServer.usePointwise = False
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'door handle reach tuck2', side=self.graspingHand)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+
+    def planTuckArms(self):
+
+
+        self.ikPlanner.ikServer.usePointwise = False
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 50
+
+        otherSide = 'left' if self.graspingHand == 'right' else 'right'
+
+        startPose = self.getPlanningStartPose()
+
+        standPose, info = self.ikPlanner.computeStandPose(startPose)
+
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand-up-tuck', side=self.graspingHand)
+        q2 = (standPose + q2) / 2.0
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(q2, 'door', 'door handle reach tuck2', side=otherSide)
+
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand-up-tuck', side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand-up-tuck', side=otherSide)
+
+        newPlan = self.ikPlanner.computeMultiPostureGoal([startPose, q2, endPose])
+        self.addPlan(newPlan)
+
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+
+    def planReach(self):
+
+        self.ikPlanner.ikServer.usePointwise = False
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 20
+
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandleReachFrame)
+        endPose, info = constraintSet.runIk()
+        plan = constraintSet.runIkTraj()
+
+        self.addPlan(plan)
+
+
+    def planHandleTurn(self):
+
+        self.ikPlanner.ikServer.usePointwise = False
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
+        self.ikPlanner.maxBaseMetersPerSecond = 0.01
+
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandleTurnFrame)
+        endPose, info = constraintSet.runIk()
+        plan = constraintSet.runIkTraj()
+
+        self.ikPlanner.maxBaseMetersPerSecond = 0.05
+
+        self.addPlan(plan)
+
+
+    def planHandlePush(self):
+
+        self.ikPlanner.ikServer.usePointwise = False
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
+        self.ikPlanner.maxBaseMetersPerSecond = 0.01
+
+
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandlePushFrame)
+        endPose, info = constraintSet.runIk()
+        plan = constraintSet.runIkTraj()
+
+        self.ikPlanner.maxBaseMetersPerSecond = 0.05
+
+        self.addPlan(plan)
+
+
+    def planHandlePushLift(self):
+
+        self.ikPlanner.ikServer.usePointwise = False
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
+        self.ikPlanner.maxBaseMetersPerSecond = 0.01
+
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandlePushLiftFrame)
+        endPose, info = constraintSet.runIk()
+        plan = constraintSet.runIkTraj()
+
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        self.ikPlanner.maxBaseMetersPerSecond = 0.05
+
+        self.addPlan(plan)
+
+    def planHandlePushOpen(self):
+
+        self.ikPlanner.ikServer.usePointwise = False
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 20
+
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandlePushOpenFrame)
+        endPose, info = constraintSet.runIk()
+        plan = constraintSet.runIkTraj()
+
+        self.addPlan(plan)
+
+
+    def planFootstepsToDoor(self):
         startPose = self.getPlanningStartPose()
         goalFrame = self.doorHandleStanceFrame.transform
+        request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
+        self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
+
+
+    def planFootstepsThroughDoor(self):
+        startPose = self.getPlanningStartPose()
+        goalFrame = self.doorWalkFrame.transform
         request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
 
@@ -355,10 +487,13 @@ class DoorDemo(object):
         doorOffsetY = 0.0
 
         doorGroundFrame = transformUtils.frameFromPositionAndRPY([doorOffsetX, doorOffsetY, 0.0], [0.0, 0.0, 0.0])
-        doorGroundFrame.PreMultiply()
+        doorGroundFrame.PostMultiply()
         doorGroundFrame.Concatenate(groundFrame)
 
-        doorGroundFrame = vis.showFrame(doorGroundFrame, 'door ground frame')
+        stanceFrame = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+
+        doorWalkFrame = transformUtils.frameFromPositionAndRPY([doorOffsetX + 0.6, 0.0, 0.0], [0.0, 0.0, 0.0])
+
 
         doorWidth = 36 * 0.0254
         doorHeight = 81 * 0.0254
@@ -376,22 +511,22 @@ class DoorDemo(object):
 
 
         handleFrame = transformUtils.frameFromPositionAndRPY([-handleDistanceFromDoor, doorSide*(doorWidth/2.0 - handleDistanceFromEdge - handleLength/2.0), handleHeightFromGround], [0.0, 0.0, 0.0])
-        handleFrame.PreMultiply()
-        handleFrame.Concatenate(doorGroundFrame.transform)
+        handleFrame.PostMultiply()
+        handleFrame.Concatenate(doorGroundFrame)
 
 
         doorFrame = transformUtils.frameFromPositionAndRPY([0.0, 0.0, doorHeight/2.0], [0.0, 0.0, 0.0])
-        doorFrame.PreMultiply()
-        doorFrame.Concatenate(doorGroundFrame.transform)
+        doorFrame.PostMultiply()
+        doorFrame.Concatenate(doorGroundFrame)
 
 
         leftDoorJamFrame = transformUtils.frameFromPositionAndRPY([0.0, (doorWidth/2.0 + doorJamWidth/2.0), doorHeight/2.0], [0.0, 0.0, 0.0])
-        leftDoorJamFrame.PreMultiply()
-        leftDoorJamFrame.Concatenate(doorGroundFrame.transform)
+        leftDoorJamFrame.PostMultiply()
+        leftDoorJamFrame.Concatenate(doorGroundFrame)
 
         rightDoorJamFrame = transformUtils.frameFromPositionAndRPY([0.0, -(doorWidth/2.0 + doorJamWidth/2.0), doorHeight/2.0], [0.0, 0.0, 0.0])
-        rightDoorJamFrame.PreMultiply()
-        rightDoorJamFrame.Concatenate(doorGroundFrame.transform)
+        rightDoorJamFrame.PostMultiply()
+        rightDoorJamFrame.Concatenate(doorGroundFrame)
 
 
 
@@ -411,6 +546,13 @@ class DoorDemo(object):
            pose=transformUtils.poseFromTransform(rightDoorJamFrame), Dimensions=[doorJamDepth, doorJamWidth, doorHeight], Color=[0.7, 0.0, 0.0])
         rightDoorJamAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
 
+
+        doorGroundFrame = vis.showFrame(doorGroundFrame, 'door ground frame', parent=doorAffordance)
+        stanceFrame = vis.showFrame(stanceFrame, 'door stance frame', parent=doorAffordance)
+
+        doorWalkFrame = vis.showFrame(doorWalkFrame, 'door walk frame', parent=doorAffordance)
+
+
         doorFrame = doorAffordance.getChildFrame()
         handleFrame = handleAffordance.getChildFrame()
 
@@ -419,6 +561,8 @@ class DoorDemo(object):
 
         self.doorFrameSync = vis.FrameSync()
         self.doorFrameSync.addFrame(doorGroundFrame)
+        self.doorFrameSync.addFrame(stanceFrame, ignoreIncoming=True)
+        self.doorFrameSync.addFrame(doorWalkFrame, ignoreIncoming=True)
         self.doorFrameSync.addFrame(doorFrame, ignoreIncoming=True)
         self.doorFrameSync.addFrame(leftDoorJamFrame, ignoreIncoming=True)
         self.doorFrameSync.addFrame(rightDoorJamFrame, ignoreIncoming=True)
@@ -428,33 +572,19 @@ class DoorDemo(object):
         self.doorHandleFrameSync.addFrame(handleFrame, ignoreIncoming=True)
 
 
-
-    def spawnDoorHandleAffordance(self):
-
-        handleFrame = self.computeDoorHandleFrame(self.robotModel)
-
-        folder = om.getOrCreateContainer('affordances')
-        d = DebugData()
-        d.addLine ([0.0, 0.0, 0.0], [0.0, -0.15, 0.0], radius=0.015)
-        mesh = d.getPolyData()
-
-        self.doorHandleAffordance = vis.showPolyData(mesh, 'door handle', color=[0.0, 1.0, 0.0], cls=affordanceitems.AffordanceItem, parent=folder, alpha=1.0)
-        self.doorHandleAffordance.actor.SetUserTransform(handleFrame)
-        self.doorHandleFrame = vis.showFrame(handleFrame, 'door handle frame', parent=self.doorHandleAffordance, visible=True, scale=0.2)
-
-        self.computeDoorHandleGraspFrame()
-        self.computeDoorHingeFrame()
-        self.computeDoorHandleStanceFrame()
+        self.findDoorHandleAffordance()
+        self.doorHandleStanceFrame = stanceFrame
+        self.doorWalkFrame = doorWalkFrame
 
 
     def findDoorHandleAffordance(self):
 
         self.doorHandleAffordance = om.findObjectByName('door handle')
-        self.doorHandleFrame = self.doorHandleAffordance.findChild('door handle frame')
+        self.doorHandleFrame = self.doorHandleAffordance.getChildFrame()
 
         self.computeDoorHandleGraspFrame()
-        self.computeDoorHingeFrame()
-        self.computeDoorHandleStanceFrame()
+        #self.computeDoorHingeFrame()
+        #self.computeDoorHandleStanceFrame()
 
 
     def getEstimatedRobotStatePose(self):
