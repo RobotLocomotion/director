@@ -54,14 +54,14 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Max Num Steps': 12,
                                'Drake Min Hold Time': 2.0},
                        'drake': {'Max Num Steps': 12,
                                  'Nominal Step Width': 0.26,
-                                 'Nominal Forward Step': 0.24,
+                                 'Nominal Forward Step': 0.26,
                                  'Max Forward Step': 0.30,
                                  'Max Step Width': 0.32,
                                  'Behavior': 2,
                                  'Leading Foot': 0,
-                                 'Drake Swing Speed': 0.3,
+                                 'Drake Swing Speed': 0.4,
                                  'Drake Instep Shift': 0.005,
-                                 'Drake Min Hold Time': 0.9}}
+                                 'Drake Min Hold Time': 0.75}}
 
 DEFAULT_CONTACT_SLICES = {(0.05, 0.3): np.array([[-0.13, -0.13, 0.13, 0.13],
                                           [0.0562, -0.0562, 0.0562, -0.0562]]),
@@ -195,7 +195,7 @@ class FootstepsDriver(object):
                                  lcmdrc.footstep_plan_params_t.LEAD_LEFT,
                                  lcmdrc.footstep_plan_params_t.LEAD_RIGHT]
         # self.params.addProperty('Map Command', 0, attributes=om.PropertyAttributes(enumNames=['Full Heightmap', 'Flat Ground', 'Z Normals']))
-        self.params.addProperty('Map Mode', 0, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
+        self.params.addProperty('Map Mode', 3, attributes=om.PropertyAttributes(enumNames=['Foot Plane', 'Terrain Heights & Normals', 'Terrain Heights, Z Normals', 'Horizontal Plane']))
         self.map_mode_map = [
                              lcmdrc.footstep_plan_params_t.FOOT_PLANE,
                              lcmdrc.footstep_plan_params_t.TERRAIN_HEIGHTS_AND_NORMALS,
@@ -775,4 +775,3 @@ class FootstepsDriver(object):
         folder.setIcon(om.Icons.Feet)
         om.collapse(folder)
         self.drawFootstepPlan(self.bdi_plan_adjusted, folder, [1.0, 1.0, 0.0] , [0.0, 1.0, 1.0])
-
