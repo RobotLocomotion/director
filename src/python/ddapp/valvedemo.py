@@ -87,9 +87,9 @@ class ValvePlannerDemo(object):
         self.useLidar = True # else use stereo depth
 
         # IK server speed:
-        self.speedLow = 5
-        self.speedHigh = 30
-        self.speedTurn = 50
+        self.speedLow = 10
+        self.speedHigh = 60
+        self.speedTurn = 100
 
         if (useDevelopment): # for simulated dev
             self.speedLow = 60
@@ -1182,8 +1182,6 @@ class ValveTaskPanel(object):
     def __init__(self, valveDemo):
 
         self.valveDemo = valveDemo
-        self.valveDemo.reachDepth = -0.1
-        self.valveDemo.speedLow = 10
 
         self.fitter = ValveImageFitter(self.valveDemo)
 
