@@ -106,6 +106,8 @@ class ValvePlannerDemo(object):
         self.shxMaxTorque = 40
         self.elxMaxTorque = 10
 
+        self.quasiStaticShrinkFactor = 0.5
+
         # top level switch between BDI (locked base) and MIT (moving base and back)
         self.lockBack = False
         self.lockBase = True
@@ -503,6 +505,9 @@ class ValvePlannerDemo(object):
     def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=None,
                        lockBase=None, resetBase=False,  wristAngleCW=0,
                        startPose=None, verticalOffset=0.01, constrainWristX=True):
+        oldQuasiStaticShrinkFactor = ik.QuasiStaticConstraint.shrinkFactor
+        ik.QuasiStaticConstraint.shrinkFactor = self.quasiStaticShrinkFactor
+
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
         wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
@@ -658,6 +663,7 @@ class ValvePlannerDemo(object):
 
         constraintSet.nominalPoseName = nominalPoseName;
         constraintSet.startPoseName = nominalPoseName;
+        ik.QuasiStaticConstraint.shrinkFactor = oldQuasiStaticShrinkFactor
         return constraintSet.runIk()
 
 
@@ -700,6 +706,16 @@ class ValvePlannerDemo(object):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
         self.coaxialPlan(self.retractDepth, resetBase=True, lockBase=False, constrainWristX=False, **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+
+
+    def coaxialComputePelvisXYZ(self):
+        pose, info = self.coaxialGetPose(self.touchDepth, lockFeet=True,
+                                         lockBase=False, lockBack=False,
+                                         constrainWristX=False)
+        if info < 10:
+            self.nominalPelvisXYZ = pose[:3]
+
+
 
     def getStanceFrameCoaxial(self):
         xaxis, _, _ = transformUtils.getAxesFromTransform(self.valveFrame)
