@@ -243,6 +243,7 @@
    <addaction name="ActionActionManagerPanel"/>
    <addaction name="ActionScreenGrabberPanel"/>
    <addaction name="ActionSensorDataRequestPanel"/>
+   <addaction name="ActionTaskLauncher"/>
   </widget>
   <action name="ActionQuit">
    <property name="text">
@@ -539,6 +540,24 @@
    </property>
    <property name="toolTip">
     <string>Sensor Data Request</string>
+   </property>
+   <property name="shortcut">
+    <string/>
+   </property>
+  </action>
+  <action name="ActionTaskLauncher">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/task_icon.png</normaloff>:/images/task_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Task Launcher</string>
+   </property>
+   <property name="toolTip">
+    <string>Task Launcher</string>
    </property>
    <property name="shortcut">
     <string/>
