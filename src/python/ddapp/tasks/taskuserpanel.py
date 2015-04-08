@@ -62,7 +62,7 @@ class WidgetDict(object):
 
 class TaskUserPanel(object):
 
-    def __init__(self):
+    def __init__(self, windowTitle='Task Panel'):
 
 
         loader = QtUiTools.QUiLoader()
@@ -71,6 +71,7 @@ class TaskUserPanel(object):
 
         self.widget = loader.load(uifile)
         self.ui = WidgetDict(self.widget.children())
+        self.widget.setWindowTitle(windowTitle)
 
         self.manualButtons = {}
         self.imageViewLayout = QtGui.QVBoxLayout(self.ui.imageFrame)
