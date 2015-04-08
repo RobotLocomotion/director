@@ -263,12 +263,12 @@ class DoorDemo(object):
 
         standPose, info = self.ikPlanner.computeStandPose(startPose)
 
-        q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand-up-tuck', side=self.graspingHand)
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand-up-tuck2', side=self.graspingHand)
         q2 = (standPose + q2) / 2.0
         q2 = self.ikPlanner.getMergedPostureFromDatabase(q2, 'door', 'door handle reach tuck2', side=otherSide)
 
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand-up-tuck', side=self.graspingHand)
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand-up-tuck', side=otherSide)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand-up-tuck2', side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand-up-tuck2', side=otherSide)
 
         newPlan = self.ikPlanner.computeMultiPostureGoal([startPose, q2, endPose])
         self.addPlan(newPlan)
