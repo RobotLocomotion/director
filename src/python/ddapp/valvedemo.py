@@ -1173,7 +1173,7 @@ class ValveTaskPanel(TaskUserPanel):
 
     def __init__(self, valveDemo):
 
-        TaskUserPanel.__init__(self)
+        TaskUserPanel.__init__(self, windowTitle='Valve Task')
 
         self.valveDemo = valveDemo
 
