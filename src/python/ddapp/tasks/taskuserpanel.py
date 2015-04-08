@@ -127,6 +127,7 @@ class TaskUserPanel(object):
 
     def onContinue(self):
 
+        self._activatePrompts()
         self.completedTasks = []
         self.taskQueue.reset()
         for obj in self.getNextTasks():
@@ -135,9 +136,14 @@ class TaskUserPanel(object):
         self.taskQueue.start()
 
 
+    def _activatePrompts(self):
+        rt.UserPromptTask.promptFunction = self.onTaskPrompt
+        rt.PrintTask.printFunction = self.appendMessage
+
     def onStep(self):
 
         assert not self.taskQueue.isRunning
+        self._activatePrompts()
 
         tasks = self.getNextTasks()
         if not tasks:
@@ -257,9 +263,6 @@ class TaskUserPanel(object):
         self.timer = TimerCallback(targetFps=2)
         self.timer.callback = self.updateTaskStatus
         self.timer.start()
-
-        rt.UserPromptTask.promptFunction = self.onTaskPrompt
-        rt.PrintTask.printFunction = self.appendMessage
 
         self.taskTree = tmw.TaskTree()
         self.ui.taskFrame.layout().insertWidget(0, self.taskTree.treeWidget)
