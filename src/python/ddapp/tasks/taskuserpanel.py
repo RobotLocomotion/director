@@ -277,3 +277,33 @@ class TaskUserPanel(object):
         self.ui.promptRejectButton.connect('clicked()', self.onRejectPrompt)
         self.ui.promptAcceptButton.enabled = False
         self.ui.promptRejectButton.enabled = False
+
+
+class ImageBasedAffordanceFit(object):
+
+    def __init__(self, imageView=None, numberOfPoints=1):
+
+        self.imageView = imageView or cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'image view')
+        self.imagePicker = ImagePointPicker(self.imageView, numberOfPoints=numberOfPoints)
+        self.imagePicker.connectDoubleClickEvent(self.onImageViewDoubleClick)
+        self.imagePicker.annotationFunc = self.onImageAnnotation
+        self.imagePicker.start()
+
+    def getPointCloud(self):
+        return segmentation.getCurrentRevolutionData()
+
+    def onImageAnnotation(self, *points):
+        polyData = self.getPointCloud()
+        points = [self.getPointCloudLocationFromImage(p, self.imageView, polyData) for p in points]
+        self.fit(polyData, points)
+
+    @staticmethod
+    def getPointCloudLocationFromImage(imagePixel, imageView, polyData):
+        cameraPos, ray = imageView.getWorldPositionAndRay(imagePixel)
+        return segmentation.extractPointsAlongClickRay(cameraPos, ray, polyData, distanceToLineThreshold=0.05, nearestToLine=False)
+
+    def onImageViewDoubleClick(self, displayPoint, modifiers, imageView):
+        pass
+
+    def fit(self, pointData, points):
+        pass
