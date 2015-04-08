@@ -32,6 +32,9 @@ from ddapp import planplayback
 from ddapp import propertyset
 from ddapp import asynctaskqueue as atq
 
+from ddapp.tasks.taskuserpanel import TaskUserPanel
+from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
+
 import ddapp.tasks.robottasks as rt
 import ddapp.tasks.taskmanagerwidget as tmw
 
@@ -1117,38 +1120,6 @@ class ValvePlannerDemo(object):
 
 
 
-
-class ImageBasedAffordanceFit(object):
-
-    def __init__(self, imageView=None, numberOfPoints=1):
-
-        self.imageView = imageView or cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'image view')
-        self.imagePicker = ImagePointPicker(self.imageView, numberOfPoints=2)
-        self.imagePicker.connectDoubleClickEvent(self.onImageViewDoubleClick)
-        self.imagePicker.annotationFunc = self.onImageAnnotation
-        self.imagePicker.showCursor = False
-        self.imagePicker.start()
-
-    def getPointCloud(self):
-        return segmentation.getCurrentRevolutionData()
-
-    def onImageAnnotation(self, *points):
-        polyData = self.getPointCloud()
-        points = [self.getPointCloudLocationFromImage(p, self.imageView, polyData) for p in points]
-        self.fit(polyData, points)
-
-    @staticmethod
-    def getPointCloudLocationFromImage(imagePixel, imageView, polyData):
-        cameraPos, ray = imageView.getWorldPositionAndRay(imagePixel)
-        return segmentation.extractPointsAlongClickRay(cameraPos, ray, polyData, distanceToLineThreshold=0.05, nearestToLine=False)
-
-    def onImageViewDoubleClick(self, displayPoint, modifiers, imageView):
-        pass
-
-    def fit(self, pointData, points):
-        pass
-
-
 class ValveImageFitter(ImageBasedAffordanceFit):
 
     def __init__(self, valveDemo):
@@ -1161,12 +1132,6 @@ class ValveImageFitter(ImageBasedAffordanceFit):
     def fit(self, polyData, points):
         om.removeFromObjectModel(om.findObjectByName('valve'))
         segmentation.segmentValveByRim(polyData, points[0], points[1])
-
-
-
-
-
-from ddapp.tasks.taskuserpanel import TaskUserPanel
 
 
 class ValveTaskPanel(TaskUserPanel):
@@ -1238,7 +1203,6 @@ class ValveTaskPanel(TaskUserPanel):
         self.params.addProperty('Turn direction', 0, attributes=om.PropertyAttributes(enumNames=['Clockwise', 'Counter clockwise']))
         self.params.addProperty('Touch angle (deg)', 0)
         #self.params.addProperty('Turn amount (deg)', 60)
-        self.params.properties.connectPropertyChanged(self.onPropertyChanged)
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
