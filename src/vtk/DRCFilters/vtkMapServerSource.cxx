@@ -34,6 +34,7 @@
 #include <vtkPointData.h>
 #include <vtkImageData.h>
 
+#include <vtkMultisenseUtils.h>
 
 #include <Eigen/Dense>
 #include <boost/shared_ptr.hpp>
@@ -65,6 +66,7 @@ namespace
 
 const int WORKSPACE_DEPTH_VIEW_ID = drc::data_request_t::DEPTH_MAP_WORKSPACE;
 
+/* commented out due to conflict with vtkMultisenseUtils.h version
 //----------------------------------------------------------------------------
 vtkSmartPointer<vtkCellArray> NewVertexCells(vtkIdType numberOfVerts)
 {
@@ -81,6 +83,7 @@ vtkSmartPointer<vtkCellArray> NewVertexCells(vtkIdType numberOfVerts)
   cellArray->SetCells(numberOfVerts, cells.GetPointer());
   return cellArray;
 }
+*/
 
 //----------------------------------------------------------------------------
 vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud)
@@ -234,6 +237,7 @@ public:
     this->MaxNumberOfDatasets = 20;
     this->ViewIds = vtkSmartPointer<vtkIntArray>::New();
     this->LastScanBundleUtime = 0;
+    this->CurrentScanBundleId = 0;
 
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
@@ -636,6 +640,7 @@ protected:
   {
     if (msg->utime == this->LastScanBundleUtime) return;
     this->LastScanBundleUtime = msg->utime;
+    this->CurrentScanBundleId++;
 
     if (msg->num_scans == 0) return;
 
@@ -643,10 +648,35 @@ protected:
     maps::ScanBundleView bundleView;
     maps::LcmTranslator::fromLcm(*msg, bundleView);
 
-    maps::PointCloud::Ptr pointCloud = bundleView.getAsPointCloud();
+    // convert/copy scans
+    auto scans = bundleView.getScans();
+    std::vector<ScanLineData> scanLines(scans.size());
+    for (int i = 0; i < (int)scans.size(); ++i) {
+      const auto& in = scans[i];
+      auto& out = scanLines[i];
+      out.Revolution = this->CurrentScanBundleId;
+      out.ScanLineId = i;
+      out.SpindleAngle = (float)i/(scans.size()-1)*180; // TODO: this is approximate at best
+      out.ScanToLocalStart = in->getStartPose().cast<double>();
+      out.ScanToLocalEnd = in->getEndPose().cast<double>();
+
+      bot_core::planar_lidar_t msg;
+      msg.utime = in->getTimestamp();
+      msg.rad0 = in->getThetaMin();
+      msg.radstep = in->getThetaStep();
+      msg.nranges = in->getNumRanges();
+      msg.ranges = in->getRanges();
+      msg.intensities.resize(scans.size());
+      std::fill(msg.intensities.begin(), msg.intensities.end(), 0);
+      out.msg = msg;
+    }
+
+    // TODO: expose these in ui
+    double distanceRange[] = {0.25, 4};
+    double angleFilterThresh = 30;
 
     MapData mapData;
-    mapData.Data = PolyDataFromPointCloud(pointCloud);
+    mapData.Data = GetPointCloudFromScanLines(scanLines, distanceRange, angleFilterThresh);
     mapData.Transform = this->ToVtkTransform(bundleView.getTransform());
     mapData.Mesh = mapData.Data;
 
@@ -667,6 +697,7 @@ protected:
 
   boost::mutex Mutex;
   int64_t LastScanBundleUtime;
+  int32_t CurrentScanBundleId;
 
   std::map<int, std::deque<MapData> > Datasets;
   std::map<int, vtkIdType> CurrentMapIds;
