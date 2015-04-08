@@ -78,8 +78,8 @@ class DoorDemo(object):
 
         self.handleLiftHeight = 0.12
         self.handlePushDepth = 0.0
-        self.handleOpenDepth = 0.30
-        self.handleOpenWidth = 0.40
+        self.handleOpenDepth = 0.1
+        self.handleOpenWidth = 0.4
 
 
 
@@ -140,6 +140,11 @@ class DoorDemo(object):
 
         self.doorHandlePushOpenFrame = makeFrame('door handle push open frame', [self.handleOpenDepth, self.handleOpenWidth, self.handleLiftHeight])
 
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.RotateX(25)
+        t.Concatenate(self.doorHandlePushOpenFrame.transform)
+        self.doorHandlePushOpenFrame.copyFrame(t)
 
         self.doorHandleFrame.frameSync = vis.FrameSync()
         self.doorHandleFrame.frameSync.addFrame(self.doorHandleFrame)
