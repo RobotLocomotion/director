@@ -664,9 +664,10 @@ protected:
       msg.utime = in->getTimestamp();
       msg.rad0 = in->getThetaMin();
       msg.radstep = in->getThetaStep();
-      msg.nranges = in->getNumRanges();
       msg.ranges = in->getRanges();
-      msg.intensities.resize(scans.size());
+      msg.nranges = msg.ranges.size();
+      msg.nintensities = msg.nranges;
+      msg.intensities.resize(msg.nintensities);
       std::fill(msg.intensities.begin(), msg.intensities.end(), 0);
       out.msg = msg;
     }
