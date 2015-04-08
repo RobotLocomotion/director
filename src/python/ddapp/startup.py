@@ -56,6 +56,7 @@ from ddapp import multisensepanel
 from ddapp import navigationpanel
 from ddapp import handcontrolpanel
 from ddapp import sensordatarequestpanel
+from ddapp import tasklaunchpanel
 from ddapp import pfgrasp
 from ddapp import pfgrasppanel
 
@@ -85,6 +86,7 @@ from ddapp.tasks import taskmanagerwidget
 from ddapp.tasks.descriptions import loadTaskDescriptions
 import drc as lcmdrc
 
+from collections import OrderedDict
 import functools
 import math
 
@@ -412,6 +414,10 @@ if usePlanning:
                                       playPlans, showPose)
     doorTaskPanel = doordemo.DoorTaskPanel(doorDemo)
 
+    taskPanels = OrderedDict()
+    taskPanels['Door'] = doorTaskPanel.widget
+    taskPanels['Valve'] = valveTaskPanel.widget
+    tasklaunchpanel.init(taskPanels)
 
     splinewidget.init(view, handFactory, robotStateModel)
 
