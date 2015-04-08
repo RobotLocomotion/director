@@ -119,7 +119,7 @@ class PointPicker(object):
                 d.addLine(points[0], points[-1])
 
         self.annotationObj = vis.updatePolyData(d.getPolyData(), self.annotationName, parent=self.annotationFolder)
-        self.annotationObj.setProperty('Color', QtGui.QColor(255, 0, 0))
+        self.annotationObj.setProperty('Color', [1,0,0])
         self.annotationObj.actor.SetPickable(False)
 
 
@@ -152,7 +152,7 @@ class ImagePointPicker(object):
         self.annotationFunc = callback
         self.doubleClickCallback = None
         self.numberOfPoints = numberOfPoints
-        self.showCursor = True
+        self.showCursor = False
         self.callbacks = callbacks.CallbackRegistry([self.DOUBLE_CLICK_EVENT])
         self.clear()
 
@@ -195,12 +195,20 @@ class ImagePointPicker(object):
         if event.type() in (QtCore.QEvent.MouseMove, QtCore.QEvent.MouseButtonPress, QtCore.QEvent.Wheel):
             if self.showCursor:
                 self.updateCursor(vis.mapMousePosition(obj, event))
+        elif event.type() == QtCore.QEvent.KeyPress:
+            if event.key() == QtCore.Qt.Key_Shift:
+                self.showCursor = True
+
+        elif event.type() == QtCore.QEvent.KeyRelease:
+            if event.key() == QtCore.Qt.Key_Shift:
+                self.showCursor = False
+                self.hideCursor()
 
         if event.modifiers() != QtCore.Qt.ShiftModifier:
             if self.annotationObj:
                 self.hoverPos = None
                 self.draw()
-                self.annotationObj.setProperty('Color', [1, 1, 0]) # color overlay lines yellow
+                self.annotationObj.setProperty('Color', [1, 0, 0])
                 self.clear()
             return
 
@@ -213,6 +221,7 @@ class ImagePointPicker(object):
 
         elif event.type() == QtCore.QEvent.MouseButtonPress:
             self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
+
 
 
     def clear(self):
@@ -271,9 +280,13 @@ class ImagePointPicker(object):
         if self.annotationObj:
             self.annotationObj.setPolyData(d.getPolyData())
         else:
-            self.annotationObj = vis.updatePolyData(d.getPolyData(), 'annotation', parent='segmentation', color=[1,0,0], view=self.view) # draw red lines over image
+            self.annotationObj = vis.updatePolyData(d.getPolyData(), 'annotation', parent='segmentation', color=[1,0,0], view=self.view)
+            self.annotationObj.addToView(self.view)
             self.annotationObj.actor.SetPickable(False)
             self.annotationObj.actor.GetProperty().SetLineWidth(2)
+
+    def hideCursor(self):
+        om.removeFromObjectModel(self.cursorObj)
 
     def updateCursor(self, mousePos):
 
@@ -285,6 +298,7 @@ class ImagePointPicker(object):
         d.addLine(center + [0, -3000, 0], center + [0, 3000, 0])
         d.addLine(center + [-3000, 0, 0], center + [3000, 0, 0])
         self.cursorObj = vis.updatePolyData(d.getPolyData(), 'cursor', alpha=0.5, view=self.view)
+        self.cursorObj.addToView(self.view)
         self.cursorObj.actor.SetUseBounds(False)
         self.cursorObj.actor.SetPickable(False)
         self.view.render()
