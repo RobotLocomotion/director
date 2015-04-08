@@ -775,3 +775,59 @@ class FootstepsDriver(object):
         folder.setIcon(om.Icons.Feet)
         om.collapse(folder)
         self.drawFootstepPlan(self.bdi_plan_adjusted, folder, [1.0, 1.0, 0.0] , [0.0, 1.0, 1.0])
+
+
+class FootstepRequestGenerator(object):
+
+    def __init__(self, footstepsDriver):
+        self.footstepsDriver = footstepsDriver
+
+    @staticmethod
+    def getRobotStanceFrame(self, robotModel):
+        stanceFrame = self.footstepsDriver.getFeetMidPoint(robotModel)
+        stanceFrame = transformUtils.frameFromPositionAndRPY(stanceFrame.GetPosition(), [0,0,transformUtils.rollPitchYawFromTransform(stanceFrame)[2]])
+        return stanceFrame
+
+    @staticmethod
+    def makeStepFrames(stepFrames, relativeFrame=None, showFrames=False):
+
+        frames = []
+        for i, stepFrame in enumerate(stepFrames):
+
+            stepFrame = transformUtils.frameFromPositionAndRPY(stepFrame, [0,0,0])
+            stepFrame.PostMultiply()
+            if relativeFrame:
+                stepFrame.Concatenate(relativeFrame)
+
+            if showFrames:
+                obj = vis.updateFrame(stepFrame, 'step frame %d' % i, parent='step frames', scale=0.2)
+                stepFrame = obj.transform
+
+            frames.append(stepFrame)
+
+        return frames
+
+    def makeStepMessages(self, stepFrames, leadingFoot):
+
+        assert leadingFoot in ('left', 'right')
+        isRightFootOffset = 0 if leadingFoot == 'left' else 1
+
+        stepMessages = []
+        for i, stepFrame in enumerate(stepFrames):
+            step = lcmdrc.footstep_t()
+            step.pos = transformUtils.positionMessageFromFrame(stepFrame)
+            step.is_right_foot = (i + isRightFootOffset) % 2
+            step.params = self.footstepsDriver.getDefaultStepParams()
+            stepMessages.append(step)
+
+        return stepMessages
+
+    def makeFootstepRequest(self, startPose, stepFrames, leadingFoot):
+
+        stepMessages = self.makeStepMessages(stepFrames, leadingFoot)
+        request = self.footstepsDriver.constructFootstepPlanRequest(startPose)
+        request.num_goal_steps = len(stepMessages)
+        request.goal_steps = stepMessages
+        request.params.leading_foot = lcmdrc.footstep_plan_params_t.LEAD_LEFT if leadingFoot == 'left' else lcmdrc.footstep_plan_params_t.LEAD_RIGHT
+        request.params.max_num_steps = len(stepMessages)
+        return request
