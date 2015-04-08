@@ -189,6 +189,13 @@ void ddMainWindow::onCurrentViewChanged(ddViewBase* previousView, ddViewBase* cu
 }
 
 //-----------------------------------------------------------------------------
+void ddMainWindow::closeEvent(QCloseEvent *event)
+{
+  QMainWindow::closeEvent(event);
+  QCoreApplication::instance()->quit();
+}
+
+//-----------------------------------------------------------------------------
 void ddMainWindow::handleCommandLineArgs()
 {
   QStringList args = QApplication::instance()->arguments();

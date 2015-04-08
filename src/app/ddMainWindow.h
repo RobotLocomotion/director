@@ -60,6 +60,7 @@ protected:
   void handleCommandLineArgs();
   void setupPython();
   void setupViewMenu();
+  virtual void closeEvent(QCloseEvent *event);
 
   class ddInternal;
   ddInternal* Internal;
