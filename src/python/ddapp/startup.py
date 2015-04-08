@@ -407,9 +407,10 @@ if usePlanning:
                     playPlans, showPose, cameraview, segmentationpanel)
 
     doorDemo = doordemo.DoorDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
-                                      lHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                                      lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                       fitDrillMultisense, robotStateJointController,
                                       playPlans, showPose)
+    doorTaskPanel = doordemo.DoorTaskPanel(doorDemo)
 
 
     splinewidget.init(view, handFactory, robotStateModel)
