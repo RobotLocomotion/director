@@ -77,9 +77,7 @@ class AffordanceInCameraUpdater(object):
         self.timer.callback = self.update
 
 
-    def setupObjectInCamera(self, obj):
-
-        imageView = self.imageView
+    def getOverlayRenderer(self, imageView):
 
         if not hasattr(imageView, 'overlayRenderer'):
             renWin = imageView.view.renderWindow()
@@ -89,13 +87,25 @@ class AffordanceInCameraUpdater(object):
             ren.SetActiveCamera(imageView.view.camera())
             renWin.AddRenderer(ren)
             imageView.overlayRenderer = ren
+        return imageView.overlayRenderer
 
-        overlayObj = vis.updatePolyData(vtk.vtkPolyData(), self.getTransformedName(obj), view=imageView.view, color=obj.getProperty('Color'), parent='camera overlay', visible=obj.getProperty('Visible'))
-        imageView.view.renderer().RemoveActor(overlayObj.actor)
-        imageView.overlayRenderer.AddActor(overlayObj.actor)
-        overlayObj.extraViewRenderers.setdefault(imageView.view, []).append(imageView.overlayRenderer)
+    def addActorToImageOverlay(self, obj, imageView):
 
-        return overlayObj
+        obj.addToView(imageView.view)
+        imageView.view.renderer().RemoveActor(obj.actor)
+
+        renderers = obj.extraViewRenderers.setdefault(imageView.view, [])
+        overlayRenderer = self.getOverlayRenderer(imageView)
+        if overlayRenderer not in renderers:
+            overlayRenderer.AddActor(obj.actor)
+            renderers.append(overlayRenderer)
+
+    def setupObjectInCamera(self, obj):
+
+        imageView = self.imageView
+        obj = vis.updatePolyData(vtk.vtkPolyData(), self.getTransformedName(obj), view=imageView.view, color=obj.getProperty('Color'), parent='camera overlay', visible=obj.getProperty('Visible'))
+        self.addActorToImageOverlay(obj, imageView)
+        return obj
 
     def getTransformedName(self, obj):
         return 'overlay ' + obj.getProperty('Name')
@@ -142,10 +152,12 @@ class AffordanceInCameraUpdater(object):
 
     def updateObjectInCamera(self, obj, cameraObj):
 
+        imageView = self.imageView
+
         objToLocalT = transformUtils.copyFrame(obj.actor.GetUserTransform() or vtk.vtkTransform())
 
         localToCameraT = vtk.vtkTransform()
-        self.imageQueue.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+        self.imageQueue.getTransform('local', imageView.imageName, localToCameraT)
 
         t = vtk.vtkTransform()
         t.PostMultiply()
@@ -157,7 +169,7 @@ class AffordanceInCameraUpdater(object):
         '''
         normals = pd.GetPointData().GetNormals()
         cameraToImageT = vtk.vtkTransform()
-        imageQueue.getCameraProjectionTransform('CAMERA_LEFT', cameraToImageT)
+        imageQueue.getCameraProjectionTransform(imageView.imageName, cameraToImageT)
         pd = filterUtils.transformPolyData(pd, cameraToImageT)
         pts = vnp.getNumpyFromVtk(pd, 'Points')
         pts[:,0] /= pts[:,2]
@@ -165,6 +177,8 @@ class AffordanceInCameraUpdater(object):
         pd.GetPointData().SetNormals(normals)
         '''
 
-        self.imageQueue.projectPoints('CAMERA_LEFT', pd)
+        self.imageQueue.projectPoints(imageView.imageName, pd)
 
         cameraObj.setPolyData(pd)
+
+        self.addActorToImageOverlay(cameraObj, imageView)
