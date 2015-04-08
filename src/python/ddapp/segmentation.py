@@ -264,7 +264,7 @@ def segmentGroundPlane():
     #updatePolyData(scenePoints, 'scene points', colorByName='cluster_labels')
 
 
-def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None):
+def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None, removeGround=True):
 
     useVoxelGrid = True
     voxelGridSize = 0.03
@@ -273,7 +273,8 @@ def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None
     if useVoxelGrid:
         polyData = applyVoxelGrid(polyData, leafSize=voxelGridSize)
 
-    _, polyData = removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.04)
+    if removeGround:
+        _, polyData = removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.04)
 
     cropped = cropToSphere(polyData, searchPoint, searchRadius)
     updatePolyData(cropped, 'crop to sphere', visible=False, colorByName='distance_to_point')
@@ -1187,6 +1188,36 @@ def segmentValveByBoundingBox(polyData, searchPoint):
     obj.params = dict(radius=radius)
 
     return obj
+
+
+def segmentDoorPlane(polyData, doorPoint):
+
+    fitPoints, normal = applyLocalPlaneFit(polyData, doorPoint, searchRadius=0.1, searchRadiusEnd=0.2, removeGround=False)
+
+    updatePolyData(fitPoints, 'door points', visible=False, color=[0,1,0])
+
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+    if np.dot(normal, viewDirection) > 0:
+        normal = -normal
+
+    origin = computeCentroid(fitPoints)
+    #minZ = np.percentile(vnp.getNumpyFromVtk(fitPoints, 'Points')[:,2], 2)
+    minZ = np.nanmin(vnp.getNumpyFromVtk(fitPoints, 'Points')[:,2])
+    origin = [origin[0], origin[1], minZ]
+
+    xaxis = -normal
+    zaxis = [0,0,1]
+
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    xaxis = np.cross(yaxis, zaxis)
+    xaxis /= np.linalg.norm(xaxis)
+
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+
+    return t
 
 
 def segmentValveByRim(polyData, rimPoint1, rimPoint2):
