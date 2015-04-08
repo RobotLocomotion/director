@@ -86,6 +86,7 @@ set(python_files
   ddapp/startup.py
   ddapp/statelistener.py
   ddapp/tabledemo.py
+  ddapp/tasklaunchpanel.py
   ddapp/tdx.py
   ddapp/teleoppanel.py
   ddapp/terrain.py
