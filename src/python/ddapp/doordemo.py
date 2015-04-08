@@ -25,6 +25,12 @@ from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
 from ddapp import planplayback
+from ddapp.tasks.taskuserpanel import TaskUserPanel
+from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
+
+
+import ddapp.tasks.robottasks as rt
+import ddapp.tasks.taskmanagerwidget as tmw
 
 import drc as lcmdrc
 
@@ -33,12 +39,13 @@ from PythonQt import QtCore, QtGui
 
 class DoorDemo(object):
 
-    def __init__(self, robotModel, footstepPlanner, manipPlanner, ikPlanner, handDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
+    def __init__(self, robotModel, footstepPlanner, manipPlanner, ikPlanner, lhandDriver, rhandDriver, atlasDriver, multisenseDriver, affordanceFitFunction, sensorJointController, planPlaybackFunction, showPoseFunction):
         self.robotModel = robotModel
         self.footstepPlanner = footstepPlanner
         self.manipPlanner = manipPlanner
         self.ikPlanner = ikPlanner
-        self.handDriver = handDriver
+        self.lhandDriver = lhandDriver
+        self.rhandDriver = rhandDriver
         self.atlasDriver = atlasDriver
         self.multisenseDriver = multisenseDriver
         self.affordanceFitFunction = affordanceFitFunction
@@ -62,11 +69,13 @@ class DoorDemo(object):
         self.doorHandleGraspFrame = None
         self.doorHingeFrame = None
 
-        self.handleTouchHeight = 0.07
-        self.handleTouchDepth = -0.07
+        self.handleTouchHeight = 0.09
+        self.handleTouchDepth = -0.05
         self.handleTouchWidth = 0.02
 
-        self.handleTurnHeight = -0.04
+        self.handleTurnHeight = -0.07
+        self.handleTurnWidth = 0.01
+
         self.handleLiftHeight = 0.12
         self.handlePushDepth = 0.0
         self.handleOpenDepth = 0.30
@@ -123,7 +132,7 @@ class DoorDemo(object):
 
         self.doorHandleReachFrame = makeFrame('door handle reach frame', [self.handleTouchDepth, self.handleTouchWidth, self.handleTouchHeight])
 
-        self.doorHandleTurnFrame = makeFrame('door handle turn frame', [self.handleTouchDepth, self.handleTouchWidth, self.handleTurnHeight])
+        self.doorHandleTurnFrame = makeFrame('door handle turn frame', [self.handleTouchDepth, self.handleTurnWidth, self.handleTurnHeight])
 
         self.doorHandlePushFrame = makeFrame('door handle push frame', [self.handlePushDepth, self.handleTouchWidth, self.handleTurnHeight])
 
@@ -217,6 +226,14 @@ class DoorDemo(object):
         self.sensorJointController.push()
 
 
+    def planNominal(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'safe nominal')
+        endPose, info = self.ikPlanner.computeStandPose(endPose)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+
     def planPreReach(self):
 
         self.ikPlanner.ikServer.usePointwise = False
@@ -224,6 +241,7 @@ class DoorDemo(object):
 
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'door handle reach tuck2', side=self.graspingHand)
+        endPose, info = self.ikPlanner.computeStandPose(endPose)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
@@ -268,7 +286,7 @@ class DoorDemo(object):
     def planHandleTurn(self):
 
         self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 7
         self.ikPlanner.maxBaseMetersPerSecond = 0.01
 
         startPose = self.getPlanningStartPose()
@@ -338,8 +356,9 @@ class DoorDemo(object):
         startPose = self.getPlanningStartPose()
         goalFrame = self.doorWalkFrame.transform
         request = self.footstepPlanner.constructFootstepPlanRequest(startPose, goalFrame)
+        request.params.nom_step_width = 0.21
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
-
+        rt._addPlanItem(self.footstepPlan, 'door walk frame footstep plan', rt.FootstepPlanItem)
 
     def computeWalkingPlan(self):
         startPose = self.getPlanningStartPose()
@@ -478,21 +497,34 @@ class DoorDemo(object):
             yield
 
 
+    def fitDoor(self, doorGroundFrame):
+        om.removeFromObjectModel(om.findObjectByName('affordances'))
+        self.spawnDoorAffordance()
+        affordanceFrame = om.findObjectByName('door ground frame')
+        assert affordanceFrame is not None
+        affordanceFrame.copyFrame(doorGroundFrame)
+
+        om.findObjectByName('door').setProperty('Visible', False)
+
+
     def spawnDoorAffordance(self):
 
         groundFrame = self.computeGroundFrame(self.robotModel)
-        groundHeight = groundFrame.GetPosition()[2]
 
         doorOffsetX = 0.9
         doorOffsetY = 0.0
 
-        doorGroundFrame = transformUtils.frameFromPositionAndRPY([doorOffsetX, doorOffsetY, 0.0], [0.0, 0.0, 0.0])
+        doorGroundFrame = transformUtils.frameFromPositionAndRPY([doorOffsetX, 0.0, 0.0], [0.0, 0.0, 0.0])
         doorGroundFrame.PostMultiply()
         doorGroundFrame.Concatenate(groundFrame)
 
         stanceFrame = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+        stanceFrame.PostMultiply()
+        stanceFrame.Concatenate(groundFrame)
 
         doorWalkFrame = transformUtils.frameFromPositionAndRPY([doorOffsetX + 0.6, 0.0, 0.0], [0.0, 0.0, 0.0])
+        doorWalkFrame.PostMultiply()
+        doorWalkFrame.Concatenate(groundFrame)
 
 
         doorWidth = 36 * 0.0254
@@ -847,3 +879,150 @@ class DoorDemo(object):
         return taskQueue
 
 
+class DoorImageFitter(ImageBasedAffordanceFit):
+
+    def __init__(self, doorDemo):
+        ImageBasedAffordanceFit.__init__(self, numberOfPoints=1)
+        self.doorDemo = doorDemo
+
+    def fit(self, polyData, points):
+        doorGroundFrame = segmentation.segmentDoorPlane(polyData, points[0])
+        self.doorDemo.fitDoor(doorGroundFrame)
+
+
+class DoorTaskPanel(TaskUserPanel):
+
+    def __init__(self, doorDemo):
+
+        TaskUserPanel.__init__(self, windowTitle='Door Task')
+
+        self.doorDemo = doorDemo
+
+        self.fitter = DoorImageFitter(self.doorDemo)
+        self.initImageView(self.fitter.imageView)
+
+        self.addDefaultProperties()
+        self.addButtons()
+        self.addTasks()
+
+
+    def addButtons(self):
+
+        self.addManualButton('Footsteps to door', self.doorDemo.planFootstepsToDoor)
+        self.addManualSpacer()
+        self.addManualButton('Raise arm', self.doorDemo.planPreReach)
+        self.addManualButton('Finger pinch', self.fingerPinch)
+        self.addManualSpacer()
+        self.addManualButton('Reach', self.doorDemo.planReach)
+        self.addManualButton('Turn', self.doorDemo.planHandleTurn)
+        self.addManualButton('Push', self.doorDemo.planHandlePush)
+        self.addManualButton('Lift', self.doorDemo.planHandlePushLift)
+        self.addManualButton('Push Open', self.doorDemo.planHandlePushOpen)
+        self.addManualButton('Tuck Arms', self.doorDemo.planTuckArms)
+        self.addManualSpacer()
+        self.addManualButton('Footsteps through door', self.doorDemo.planFootstepsThroughDoor)
+        self.addManualButton('Show walking plan', self.doorDemo.computeWalkingPlan)
+        self.addManualSpacer()
+        self.addManualButton('Nominal', self.doorDemo.planNominal)
+        self.addManualSpacer()
+        self.addManualButton('Commit Manip', self.doorDemo.commitManipPlan)
+
+
+    def getSide(self):
+        return self.params.getPropertyEnumValue('Hand').lower()
+
+    def fingerPinch(self):
+        rt.CloseHand(side=self.getSide().capitalize(), mode='Pinch', amount=100).run()
+
+
+    def addDefaultProperties(self):
+        self.params.addProperty('Hand', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
+        self._syncProperties()
+
+    def onPropertyChanged(self, propertySet, propertyName):
+        self._syncProperties()
+
+    def _syncProperties(self):
+        pass
+
+    def addTasks(self):
+
+        # some helpers
+        self.folder = None
+        def addTask(task, parent=None):
+            parent = parent or self.folder
+            self.taskTree.onAddTask(task, copy=False, parent=parent)
+        def addFunc(func, name, parent=None):
+            addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
+        def addFolder(name, parent=None):
+            self.folder = self.taskTree.addGroup(name, parent=parent)
+            return self.folder
+
+
+        d = self.doorDemo
+
+        self.taskTree.removeAllTasks()
+        side = self.params.getPropertyEnumValue('Hand')
+
+        ###############
+        # add the tasks
+
+        # prep
+        folder = addFolder('Prep')
+        addTask(rt.CloseHand(name='close left hand', side='Left'))
+        addTask(rt.CloseHand(name='close right hand', side='Right'))
+        addTask(rt.SetNeckPitch(name='set neck position', angle=20))
+        #addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General', postureName='safe nominal', side='Default'))
+        #addTask(rt.CheckPlanInfo(name='check manip plan info'))
+        #addTask(rt.CommitManipulationPlan(name='execute manip plan', planName='safe nominal posture plan'))
+        #addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+
+
+        # fit
+        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        addTask(rt.UserPromptTask(name='fit door', message='Please fit and approve door affordance.'))
+        addTask(rt.FindAffordance(name='check door affordance', affordanceName='door'))
+
+        # walk
+        folder = addFolder('Walk and refit')
+        addTask(rt.RequestFootstepPlan(name='plan walk to door', stanceFrameName='door stance frame'))
+        addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'))
+        addTask(rt.CommitFootstepPlan(name='walk to door', planName='door stance frame footstep plan'))
+        addTask(rt.WaitForWalkExecution(name='wait for walking'))
+
+        # refit
+        addTask(rt.SetNeckPitch(name='set neck position', angle=35))
+        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        addTask(rt.UserPromptTask(name='fit door', message='Please fit and approve door handle affordance.'))
+
+        # set fingers
+        addTask(rt.CloseHand(name='set finger pinch', side=side, mode='Pinch', amount=100))
+
+
+        def addManipTask(name, planFunc, userPrompt=False):
+
+            folder = addFolder(name)
+            addFunc(planFunc, name='plan')
+            if not userPrompt:
+                addTask(rt.CheckPlanInfo(name='check manip plan info'))
+            else:
+                addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+            addFunc(d.commitManipPlan, name='execute manip plan')
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+
+
+        addManipTask('Raise Arm', d.planPreReach, userPrompt=False)
+        addManipTask('Reach', d.planReach, userPrompt=False)
+        addManipTask('Turn', d.planHandleTurn, userPrompt=True)
+        addManipTask('Push', d.planHandlePush, userPrompt=False)
+        addManipTask('Lift', d.planHandlePushLift, userPrompt=False)
+        addManipTask('Push Open', d.planHandlePushOpen, userPrompt=True)
+        addManipTask('Tuck Arms', d.planTuckArms, userPrompt=False)
+
+        # walk
+        folder = addFolder('Walk through door')
+        #addTask(rt.RequestFootstepPlan(name='plan walk through door', stanceFrameName='door walk frame'))
+        addFunc(d.planFootstepsThroughDoor, name='plan walk through door')
+        addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'))
+        addTask(rt.CommitFootstepPlan(name='walk to door', planName='door walk frame footstep plan'))
+        addTask(rt.WaitForWalkExecution(name='wait for walking'))
