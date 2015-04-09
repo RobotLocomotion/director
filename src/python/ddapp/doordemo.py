@@ -1122,7 +1122,7 @@ class DoorTaskPanel(TaskUserPanel):
         addManipTask('Raise Arm', d.planPreReach, userPrompt=False)
         addManipTask('Reach', d.planReach, userPrompt=False)
         addManipTask('Turn', d.planHandleTurn, userPrompt=True)
-        addManipTask('Push', d.planHandlePush, userPrompt=False)
+        addManipTask('Push', d.planHandlePush, userPrompt=True)
         addManipTask('Lift', d.planHandlePushLift, userPrompt=False)
         addManipTask('Push Open', d.planHandlePushOpen, userPrompt=True)
         addManipTask('Tuck Arms', d.planTuckArms, userPrompt=False)
