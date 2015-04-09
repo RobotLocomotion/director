@@ -362,7 +362,12 @@ def getMajorPlanes(polyData, useVoxelGrid=True):
 
     while len(polyDataList) < 25:
 
-        polyData, normal = applyPlaneFit(polyData, distanceToPlaneThreshold)
+        f = vtk.vtkPCLSACSegmentationPlane()
+        f.SetInput(polyData)
+        f.SetDistanceThreshold(distanceToPlaneThreshold)
+        f.Update()
+        polyData = shallowCopy(f.GetOutput())
+
         outliers = thresholdPoints(polyData, 'ransac_labels', [0, 0])
         inliers = thresholdPoints(polyData, 'ransac_labels', [1, 1])
         largestCluster = extractLargestCluster(inliers)
@@ -381,19 +386,22 @@ def getMajorPlanes(polyData, useVoxelGrid=True):
     return polyDataList
 
 
-def showMajorPlanes():
+def showMajorPlanes(polyData=None):
 
-    inputObj = om.findObjectByName('pointcloud snapshot')
-    inputObj.setProperty('Visible', False)
-    polyData = inputObj.polyData
+    if not polyData:
+        inputObj = om.findObjectByName('pointcloud snapshot')
+        inputObj.setProperty('Visible', False)
+        polyData = inputObj.polyData
 
     om.removeFromObjectModel(om.findObjectByName('major planes'))
     folderObj = om.findObjectByName('segmentation')
     folderObj = om.getOrCreateContainer('major planes', folderObj)
 
-    polyData = thresholdPoints(polyData, 'distance', [1, 4])
-    polyDataList = getMajorPlanes(polyData)
+    origin = SegmentationContext.getGlobalInstance().getViewFrame().GetPosition()
+    polyData = labelDistanceToPoint(polyData, origin)
+    polyData = thresholdPoints(polyData, 'distance_to_point', [1, 4])
 
+    polyDataList = getMajorPlanes(polyData)
 
     for i, polyData in enumerate(polyDataList):
         obj = showPolyData(polyData, 'plane %d' % i, color=getRandomColor(), visible=True, parent='major planes')
@@ -1459,7 +1467,7 @@ def applyKmeansLabel(polyData, arrayName, numberOfClusters, whiten=False):
     if whiten:
         scipy.cluster.vq.whiten(ar)
 
-    codes, disturbances = scipy.cluster.vq.kmeans(ar, 2)
+    codes, disturbances = scipy.cluster.vq.kmeans(ar, numberOfClusters)
 
     if arrayName == 'normals' and numberOfClusters == 2:
         v1 = codes[0]
