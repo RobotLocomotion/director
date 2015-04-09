@@ -12,6 +12,7 @@ from ddapp import transformUtils
 from ddapp import lcmUtils
 from ddapp.timercallback import TimerCallback
 from ddapp.asynctaskqueue import AsyncTaskQueue
+from ddapp.fieldcontainer import FieldContainer
 from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
@@ -25,6 +26,7 @@ from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
 from ddapp import planplayback
+from ddapp.footstepsdriver import FootstepRequestGenerator
 from ddapp.tasks.taskuserpanel import TaskUserPanel
 from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
 
@@ -80,6 +82,8 @@ class DoorDemo(object):
         self.handlePushDepth = 0.0
         self.handleOpenDepth = 0.1
         self.handleOpenWidth = 0.4
+
+        self.setFootstepThroughDoorParameters()
 
 
 
@@ -365,6 +369,104 @@ class DoorDemo(object):
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
         rt._addPlanItem(self.footstepPlan, 'door walk frame footstep plan', rt.FootstepPlanItem)
 
+
+    def setFootstepThroughDoorParameters(self):
+
+        bias = -0.02
+        self.doorFootstepParams = FieldContainer(
+            leadingFoot = 'right',
+            preEntryFootWidth = -0.12 +bias,
+            preEntryFootDistance = -0.6,
+            entryFootWidth = 0.07 +bias,
+            entryFootDistance = -0.26,
+            exitFootWidth = -0.08 +bias,
+            exitFootDistance = 0.12,
+            exitStepDistance = 0.3,
+            endStanceWidth = 0.26,
+            numberOfExitSteps = 1
+        )
+
+    def setTestingFootstepThroughDoorParameters(self):
+        self.doorFootstepParams = FieldContainer(
+            endStanceWidth       = 0.26,
+            entryFootDistance    = -0.26,
+            entryFootWidth       = 0.12,
+            exitFootDistance     = 0.12,
+            exitFootWidth        = -0.12,
+            exitStepDistance     = 0.3,
+            leadingFoot          = 'right',
+            numberOfExitSteps    = 1,
+            preEntryFootDistance = -0.55,
+            preEntryFootWidth    = -0.12
+        )
+
+    def getRelativeFootstepsThroughDoor(self):
+
+        p = self.doorFootstepParams
+
+        stepFrames = [
+
+            [p.preEntryFootDistance, p.preEntryFootWidth, 0.0],
+            [p.entryFootDistance, p.entryFootWidth, 0.0],
+            [p.exitFootDistance, p.exitFootWidth, 0.0],
+
+        ]
+
+        for i in xrange(p.numberOfExitSteps):
+
+            sign = -1 if (i%2) else 1
+            stepFrames.append([p.exitFootDistance + (i+1)*p.exitStepDistance, sign*p.endStanceWidth/2.0, 0.0])
+
+        lastStep = list(stepFrames[-1])
+        lastStep[1] *= -1
+        stepFrames.append(lastStep)
+
+        #print '------------'
+        #print 'step deltas:'
+        #for a,b in zip(stepFrames, stepFrames[1:]):
+        #    print b[0] - a[0], b[1] - a[1]
+
+        return FootstepRequestGenerator.makeStepFrames(stepFrames, relativeFrame=self.doorGroundFrame.transform, showFrames=False), p.leadingFoot
+
+
+
+    def planManualFootstepsTest(self, stepDistance=0.26, stanceWidth=0.26, numberOfSteps=4, leadingFoot='right'):
+
+        stepFrames = []
+        for i in xrange(numberOfSteps):
+
+            sign = -1 if leadingFoot is 'right' else 1
+            if i % 2:
+                sign = -sign
+
+            stepFrames.append([(i+1)*stepDistance, sign*stanceWidth/2.0, 0.0])
+
+        lastStep = list(stepFrames[-1])
+        lastStep[1] *= -1
+        stepFrames.append(lastStep)
+
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotModel)
+        stepFrames = FootstepRequestGenerator.makeStepFrames(stepFrames, relativeFrame=stanceFrame)
+        startPose = self.getPlanningStartPose()
+
+        helper = FootstepRequestGenerator(self.footstepPlanner)
+        request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
+
+        self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
+
+
+    def planFootstepsThroughDoorManual(self):
+
+        startPose = self.getPlanningStartPose()
+        stepFrames, leadingFoot = self.getRelativeFootstepsThroughDoor()
+
+        helper = FootstepRequestGenerator(self.footstepPlanner)
+        request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
+
+        self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
+        rt._addPlanItem(self.footstepPlan, 'door walk frame footstep plan', rt.FootstepPlanItem)
+
+
     def computeWalkingPlan(self):
         startPose = self.getPlanningStartPose()
         self.walkingPlan = self.footstepPlanner.sendWalkingPlanRequest(self.footstepPlan, startPose, waitForResponse=True)
@@ -610,6 +712,7 @@ class DoorDemo(object):
 
 
         self.findDoorHandleAffordance()
+        self.doorGroundFrame = doorGroundFrame
         self.doorHandleStanceFrame = stanceFrame
         self.doorWalkFrame = doorWalkFrame
 
@@ -1027,7 +1130,7 @@ class DoorTaskPanel(TaskUserPanel):
         # walk
         folder = addFolder('Walk through door')
         #addTask(rt.RequestFootstepPlan(name='plan walk through door', stanceFrameName='door walk frame'))
-        addFunc(d.planFootstepsThroughDoor, name='plan walk through door')
+        addFunc(d.planFootstepsThroughDoorManual, name='plan walk through door')
         addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'))
         addTask(rt.CommitFootstepPlan(name='walk to door', planName='door walk frame footstep plan'))
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
