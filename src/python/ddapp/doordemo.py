@@ -73,9 +73,9 @@ class DoorDemo(object):
 
         self.handleTouchHeight = 0.09
         self.handleTouchDepth = -0.05
-        self.handleTouchWidth = 0.02
+        self.handleTouchWidth = 0.03
 
-        self.handleTurnHeight = -0.07
+        self.handleTurnHeight = -0.08
         self.handleTurnWidth = 0.01
 
         self.handleLiftHeight = 0.12
