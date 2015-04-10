@@ -93,6 +93,7 @@ class ConsoleApp(object):
         self.objectModelWidget.show()
         self.objectModelWidget.raise_()
         self.objectModelWidget.activateWindow()
+        return self.objectModelWidget
 
     def createView(self, useGrid=True):
         view = PythonQt.dd.ddQVTKWidgetView()
