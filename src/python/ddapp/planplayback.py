@@ -165,9 +165,13 @@ class PlanPlayback(object):
 
     def plotPlan(self, msg):
 
-        import matplotlib.pyplot as plt
-
         poseTimes, poses = self.getPlanPoses(msg)
+        self.plotPoses(poseTimes, poses)
+
+
+    def plotPoses(self, poseTimes, poses):
+
+        import matplotlib.pyplot as plt
 
         poses = np.array(poses)
 
