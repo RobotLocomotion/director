@@ -28,6 +28,7 @@ from ddapp import ik
 
 import drc as lcmdrc
 
+import PythonQt
 from PythonQt import QtCore, QtGui
 
 copyFrame = transformUtils.copyFrame
@@ -1163,6 +1164,8 @@ class RobotPoseGUIWrapper(object):
         rpg.setDirectorConfigFile(drcargs.args().directorConfigFile)
         rpg.lcmWrapper = rpg.LCMWrapper()
         cls.main = rpg.MainWindow()
+        mainWindow = [w for w in QtGui.QApplication.topLevelWidgets() if isinstance(w, PythonQt.dd.ddMainWindow)][0]
+        cls.main.messageBoxWarning = functools.partial(QtGui.QMessageBox.warning, mainWindow)
         cls.initialized = True
 
     @classmethod
