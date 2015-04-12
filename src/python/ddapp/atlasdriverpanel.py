@@ -41,7 +41,8 @@ class AtlasDriverPanel(object):
         self.ui.freezeButton.connect('clicked()', self.onFreeze)
 
 
-        self.ui.calibrateBdiButton.connect('clicked()', self.onCalibrateBdi)
+        self.ui.calibrateNullBiasButton.connect('clicked()', self.onCalibrateNullBias)
+        self.ui.calibrateElectricArmsButton.connect('clicked()', self.onCalibrateElectricArms)
         self.ui.initNavButton.connect('clicked()', self.onInitNav)
         self.ui.standButton.connect('clicked()', self.onStand)
         self.ui.mitStandButton.connect('clicked()', self.onMITStand)
@@ -83,7 +84,8 @@ class AtlasDriverPanel(object):
         behavior = self.driver.getCurrentBehaviorName()
         behaviorIsFreeze = behavior == 'freeze'
 
-        self.ui.calibrateBdiButton.setEnabled(behaviorIsFreeze)
+        self.ui.calibrateNullBiasButton.setEnabled(behaviorIsFreeze)
+        self.ui.calibrateElectricArmsButton.setEnabled(behaviorIsFreeze)
         self.ui.calibrateEncodersButton.setEnabled(behaviorIsFreeze)
         self.ui.prepButton.setEnabled(behaviorIsFreeze)
         self.ui.standButton.setEnabled(behavior in ('prep', 'stand', 'user', 'manip', 'step', 'walk'))
@@ -100,8 +102,11 @@ class AtlasDriverPanel(object):
     def onCalibrateEncoders(self):
         self.driver.sendCalibrateEncodersCommand()
 
-    def onCalibrateBdi(self):
-        self.driver.sendCalibrateCommand()
+    def onCalibrateNullBias(self):
+        self.driver.sendCalibrateNullBiasCommand()
+
+    def onCalibrateElectricArms(self):
+        self.driver.sendCalibrateElectricArmsCommand()
 
     def onInitNav(self):
         self.driver.sendInitAtZero()

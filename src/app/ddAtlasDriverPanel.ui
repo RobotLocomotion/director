@@ -173,7 +173,6 @@
               </item>
              </layout>
             </item>
-
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_3">
               <property name="leftMargin">
@@ -211,7 +210,6 @@
               </item>
              </layout>
             </item>
-
            </layout>
           </item>
           <item>
@@ -234,9 +232,16 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_8">
                  <item>
-                  <widget class="QPushButton" name="calibrateBdiButton">
+                  <widget class="QPushButton" name="calibrateNullBiasButton">
                    <property name="text">
-                    <string>BDI Cal</string>
+                    <string>BDI Null Bias</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="calibrateElectricArmsButton">
+                   <property name="text">
+                    <string>BDI Electric Arms</string>
                    </property>
                   </widget>
                  </item>

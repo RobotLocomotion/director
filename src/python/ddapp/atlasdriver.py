@@ -160,8 +160,6 @@ class AtlasDriver(object):
 
     def sendBehaviorCommand(self, behaviorName):
 
-        assert behaviorName in self.getBehaviorMap().values()
-
         msg = lcmdrc.atlas_behavior_command_t()
         msg.utime = getUtime()
         msg.command = behaviorName
@@ -195,8 +193,11 @@ class AtlasDriver(object):
     def sendUserCommand(self):
         self.sendBehaviorCommand('user')
 
-    def sendCalibrateCommand(self):
-        self.sendBehaviorCommand('calibrate')
+    def sendCalibrateNullBiasCommand(self):
+        self.sendBehaviorCommand('calibrate_null_bias')
+
+    def sendCalibrateElectricArmsCommand(self):
+        self.sendBehaviorCommand('calibrate_electric_arms')
 
     def sendCalibrateEncodersCommand(self):
         msg = lcmdrc.utime_t()
