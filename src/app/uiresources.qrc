@@ -6,6 +6,7 @@
     <file>ddIKEditor.ui</file>
     <file>ddMultisense.ui</file>
     <file>ddFootsteps.ui</file>
+    <file>ddJointCommandPanel.ui</file>
     <file>ddFrameVisualization.ui</file>
     <file>ddNavigation.ui</file>
     <file>ddPlaybackPanel.ui</file>
