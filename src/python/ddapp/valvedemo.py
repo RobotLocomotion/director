@@ -1232,9 +1232,9 @@ class ValveTaskPanel(TaskUserPanel):
         def addLargeValveTurn(parent=None):
             group = self.taskTree.addGroup('Valve Turn', parent=parent)
 
-            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.pi
-            touchWristAngleCW = np.radians(20) if v.scribeDirection == 1 else np.pi-np.radians(20)
-            finalWristAngleCW = np.pi if v.scribeDirection == 1 else 0
+            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.radians(680)
+            touchWristAngleCW = np.radians(20) if v.scribeDirection == 1 else np.radians(680)-np.radians(20)
+            finalWristAngleCW = np.radians(680) if v.scribeDirection == 1 else 0
 
             # valve manip actions
             addFunc(functools.partial(v.coaxialPlanReach,
@@ -1269,8 +1269,8 @@ class ValveTaskPanel(TaskUserPanel):
             group = self.taskTree.addGroup('Valve Turn', parent=parent)
             side = 'Right' if v.graspingHand == 'right' else 'Left'
 
-            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.pi
-            finalWristAngleCW = np.pi if v.scribeDirection == 1 else 0
+            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.radians(680)
+            finalWristAngleCW = np.radians(680) if v.scribeDirection == 1 else 0
 
             addFunc(functools.partial(v.coaxialPlanReach,
                                       wristAngleCW=initialWristAngleCW),
