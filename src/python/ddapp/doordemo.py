@@ -269,7 +269,7 @@ class DoorDemo(object):
 
         q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=self.graspingHand)
         q2 = (standPose + q2) / 2.0
-        q2 = self.ikPlanner.getMergedPostureFromDatabase(q2, 'door', 'door handle pre-reach, side=otherSide)
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(q2, 'door', 'door handle pre-reach', side=otherSide)
 
         endPose = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=self.graspingHand)
         endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand up tuck', side=otherSide)
