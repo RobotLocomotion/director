@@ -20,9 +20,13 @@ class FPSCounter(object):
 
     def __init__(self):
         self.averageComputer = MovingAverageComputer()
+        self.printToConsole = False
 
     def tick(self):
+        newAverage =  self.averageComputer.timer.elapsed() > self.averageComputer.timeWindow
         self.averageComputer.update(1)
+        if newAverage and self.printToConsole:
+            print 'fps:', self.getAverageFPS()
 
     def getAverageFPS(self):
         return self.averageComputer.getAverage()
