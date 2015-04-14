@@ -11,6 +11,7 @@ class TimerCallback(object):
         '''
         self.targetFps = targetFps
         self.timer = QtCore.QTimer()
+        self.useScheduledTimer = True
         self.timer.setSingleShot(True)
 
         self.singleShotTimer = QtCore.QTimer()
@@ -26,7 +27,12 @@ class TimerCallback(object):
 
         self.startTime = time.time()
         self.lastTickTime = self.startTime
-        self.timer.start(0)
+
+        if self.useScheduledTimer:
+            self.timer.start(0)
+        else:
+            self.timer.start(int(1000.0 / self.targetFps))
+
 
     def stop(self):
         '''
@@ -47,6 +53,10 @@ class TimerCallback(object):
         Return whether or not the timer is active.
         '''
         return self.timer.isActive()
+
+    def disableScheduledTimer(self):
+        self.useScheduledTimer = False
+        self.timer.setSingleShot(False)
 
     def singleShot(self, timeoutInSeconds):
         if not self.singleShotTimer.isActive():
@@ -82,5 +92,6 @@ class TimerCallback(object):
 
         if result is not False:
             self.lastTickTime = startTime
-            self._schedule(time.time() - startTime)
+            if self.useScheduledTimer:
+                self._schedule(time.time() - startTime)
 
