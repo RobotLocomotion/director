@@ -4,6 +4,7 @@ from ddapp import robotstate
 from ddapp import planplayback
 from ddapp import simpletimer
 from ddapp import lcmUtils
+from ddapp import drcargs
 from ddapp import roboturdf
 from ddapp.timercallback import TimerCallback
 from ddapp.fieldcontainer import FieldContainer
@@ -435,6 +436,9 @@ class JointTeleopPanel(object):
         self.jointLimitsMin = np.array([self.teleopRobotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
 
+        self.mirrorArms = False
+        self.mirrorLegs = True
+
         self.buildTabWidget(jointGroups)
         self.resetPoseToRobotState()
 
@@ -525,9 +529,19 @@ class JointTeleopPanel(object):
         slider = self.slidersMap[jointName]
         jointIndex = self.toJointIndex(jointName)
         jointValue = self.toJointValue(jointIndex, slider.value / float(self.sliderMax))
+
+        if ('arm' in jointName and self.mirrorArms) or ('leg' in jointName and self.mirrorLegs):
+            mirrorJoint = jointName.replace('l_', 'r_') if jointName.startswith('l_') else jointName.replace('r_', 'l_')
+            mirrorIndex = self.toJointIndex(mirrorJoint)
+            mirrorValue = jointValue
+            if mirrorJoint in drcargs.getDirectorConfig()['mirrorJointSignFlips']:
+                mirrorValue = -mirrorValue
+            self.endPose[mirrorIndex] = mirrorValue
+
         self.endPose[jointIndex] = jointValue
         self.updateLabel(jointName, jointValue)
         self.showPose(self.endPose)
+        self.updateSliders()
 
     def updateLabel(self, jointName, jointValue):
 
