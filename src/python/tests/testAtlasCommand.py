@@ -2,13 +2,16 @@ from ddapp.consoleapp import ConsoleApp
 from ddapp import robotsystem
 from ddapp import robotstate
 from ddapp import planplayback
+from ddapp import simpletimer
 from ddapp import lcmUtils
+from ddapp import roboturdf
 from ddapp.timercallback import TimerCallback
 from ddapp.fieldcontainer import FieldContainer
 from PythonQt import QtCore, QtGui, QtUiTools
 import drc as lcmdrc
 import numpy as np
 import math
+import argparse
 
 from ddapp.utime import getUtime
 
@@ -62,6 +65,13 @@ def drakePoseToAtlasCommandPosition(drakePose):
     for jointIdx, drakeIdx in jointIndexMap.iteritems():
         robotState[jointIdx] = drakePose[drakeIdx]
     return robotState.tolist()
+
+def atlasCommandToDrakePose(msg):
+    jointIndexMap = robotstate.getRobotStateToDrakePoseJointMap()
+    drakePose = np.zeros(len(robotstate.getDrakePoseJointNames()))
+    for jointIdx, drakeIdx in jointIndexMap.iteritems():
+        drakePose[drakeIdx] = msg.position[jointIdx]
+    return drakePose.tolist()
 
 
 
@@ -132,7 +142,10 @@ def getJointGroups():
 class AtlasCommandStream(object):
 
     def __init__(self):
-        self.timer = TimerCallback(targetFps=100)
+        self.timer = TimerCallback(targetFps=500)
+        #self.timer.disableScheduledTimer()
+        self.fpsCounter = simpletimer.FPSCounter()
+        self.fpsCounter.printToConsole = True
         self.timer.callback = self._tick
         self._maxSpeed = np.deg2rad(2)
         self._initialized = False
@@ -157,9 +170,11 @@ class AtlasCommandStream(object):
     def _updateAndSendCommandMessage(self):
         self.lastCommandMessage.position = drakePoseToAtlasCommandPosition(self._currentCommandedPose)
         self.lastCommandMessage.utime = getUtime()
-        lcmUtils.publish('ATLAS_COMMAND', self.lastCommandMessage)
+        lcmUtils.publish('JOINT_POSITION_GOAL', self.lastCommandMessage)
 
     def _tick(self):
+
+        self.fpsCounter.tick()
 
         elapsed = self.timer.elapsed
         nominalElapsed = (1.0 / self.timer.targetFps)
@@ -187,6 +202,27 @@ class AtlasCommandStream(object):
 
 commandStream = AtlasCommandStream()
 
+
+class PositionGoalListener(object):
+
+    def __init__(self):
+        self.sub = lcmUtils.addSubscriber('JOINT_POSITION_GOAL', lcmdrc.atlas_command_t, self.onJointPositionGoal)
+
+        self.debug = True
+
+        if self.debug:
+            self.app = ConsoleApp()
+            self.view = self.app.createView()
+            self.robotModel, self.jointController = roboturdf.loadRobotModel('robot model', self.view)
+            self.jointController.setZeroPose()
+            self.view.show()
+
+    def onJointPositionGoal(self, msg):
+        lcmUtils.publish('ATLAS_COMMAND', msg)
+
+        if self.debug:
+            pose = atlasCommandToDrakePose(msg)
+            self.jointController.setPose('ATLAS_COMMAND', pose)
 
 
 class JointCommandPanel(object):
@@ -549,13 +585,41 @@ class AtlasCommandPanel(object):
 
 
 
+def parseArgs():
+
+    parser = argparse.ArgumentParser()
+
+    p = parser.add_mutually_exclusive_group(required=True)
+    p.add_argument('--base', dest='mode', action='store_const', const='base')
+    p.add_argument('--robot', dest='mode', action='store_const', const='robot')
+
+    args, unknown = parser.parse_known_args()
+    return args
 
 
+def main():
 
-p = AtlasCommandPanel()
-p.widget.show()
-p.widget.resize(1400, 1400*9/16.0)
-p.app.setupGlobals(globals())
-p.app.start()
+    args = parseArgs()
 
+    if args.mode == 'base':
+        baseMain()
+    else:
+        robotMain()
+
+def baseMain():
+    p = AtlasCommandPanel()
+    p.widget.show()
+    p.widget.resize(1400, 1400*9/16.0)
+    p.app.setupGlobals(globals())
+    p.app.start()
+
+
+def robotMain():
+
+    listener = PositionGoalListener()
+    ConsoleApp.start()
+
+
+if __name__ == '__main__':
+    main()
 
