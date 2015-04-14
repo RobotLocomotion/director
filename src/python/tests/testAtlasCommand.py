@@ -2,10 +2,10 @@ from ddapp.consoleapp import ConsoleApp
 from ddapp import robotsystem
 from ddapp import robotstate
 from ddapp import planplayback
-from ddapp import simpletimer
 from ddapp import lcmUtils
 from ddapp import drcargs
 from ddapp import roboturdf
+from ddapp import simpletimer
 from ddapp.timercallback import TimerCallback
 from ddapp.fieldcontainer import FieldContainer
 from PythonQt import QtCore, QtGui, QtUiTools
@@ -592,6 +592,43 @@ class AtlasCommandPanel(object):
         gl.addWidget(self.jointTeleopPanel.widget, 0, 2, -1, 1)
         gl.setRowStretch(0,1)
         gl.setColumnStretch(1,1)
+
+        self.sub = lcmUtils.addSubscriber('COMMITTED_ROBOT_PLAN', lcmdrc.robot_plan_t, self.onRobotPlan)
+
+    def onRobotPlan(self, msg):
+        playback = planplayback.PlanPlayback()
+        playback.interpolationMethod = 'pchip'
+        poseTimes, poses = playback.getPlanPoses(msg)
+        f = playback.getPoseInterpolator(poseTimes, poses)
+
+        jointController = self.robotSystem.teleopJointController
+
+        timer = simpletimer.SimpleTimer()
+
+        def setPose(pose):
+            jointController.setPose('plan_playback', pose)
+            self.jointTeleopPanel.endPose = pose
+            self.jointTeleopPanel.updateSliders()
+            commandStream.setGoalPose(pose)
+
+        def updateAnimation():
+
+            tNow = timer.elapsed()
+
+            if tNow > poseTimes[-1]:
+                pose = poses[-1]
+                setPose(pose)
+                return False
+
+            pose = f(tNow)
+            setPose(pose)
+
+
+        self.animationTimer = TimerCallback()
+        self.animationTimer.targetFps = 60
+        self.animationTimer.callback = updateAnimation
+        self.animationTimer.start()
+
 
 
     def resetJointTeleopSliders(self):
