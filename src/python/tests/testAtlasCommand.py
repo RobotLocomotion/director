@@ -237,7 +237,8 @@ class CommittedRobotPlanListener(object):
 
     def onPause(self, msg):
         commandStream.stopStreaming()
-        self.animationTimer.stop()
+        if self.animationTimer:
+            self.animationTimer.stop()
 
     def onRobotPlan(self, msg):
 
