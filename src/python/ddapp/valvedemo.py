@@ -1352,10 +1352,10 @@ class ValveTaskPanel(TaskUserPanel):
 
         # add valve turns
         if v.smallValve:
-            for i in range(0, 5):
+            for i in range(0, 2):
                 addSmallValveTurn()
 
         else:
-            for i in range(0, 5):
+            for i in range(0, 2):
                 addLargeValveTurn()
 
