@@ -513,7 +513,8 @@ class ValvePlannerDemo(object):
 
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
-        wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
+        lowerWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW))
+        upperWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW-lowerWristAngleCW))
 
         if lockBase is None:
             lockBase = self.lockBase
@@ -526,21 +527,21 @@ class ValvePlannerDemo(object):
             mwxJoint = 'l_arm_mwx'
             elxJoint = 'l_arm_elx'
             shxJoint = 'l_arm_shx'
-            xJointLowerBound = [np.radians(45), -np.inf, 0];
-            xJointUpperBound = [np.inf, np.radians(-30), 0];
-            yJoints = ['l_arm_uwy']
-            yJointLowerBound = [wristAngleCW]
-            yJointUpperBound = [wristAngleCW]
+            yJoints = ['l_arm_uwy', 'l_arm_lwy']
+            yJointLowerBound = [-np.radians(170) + upperWristAngleCW - np.radians(10),
+                                -np.radians(170) + lowerWristAngleCW - np.radians(10)]
+            yJointUpperBound = [-np.radians(170) + upperWristAngleCW + np.radians(10),
+                                -np.radians(170) + lowerWristAngleCW + np.radians(10)]
         else:
             larmName = 'r_larm'
             mwxJoint = 'r_arm_mwx'
             elxJoint = 'r_arm_elx'
             shxJoint = 'r_arm_shx'
-            yJoints = ['r_arm_uwy']
-            xJointLowerBound = [-np.inf, np.radians(30), 0];
-            xJointUpperBound = [np.radians(-45), np.inf, 0];
-            yJointLowerBound = [np.pi - wristAngleCW]
-            yJointUpperBound = [np.pi - wristAngleCW]
+            yJoints = ['r_arm_uwy', 'r_arm_lwy']
+            yJointLowerBound = [np.radians(170) - upperWristAngleCW - np.radians(10),
+                                np.radians(170) - lowerWristAngleCW - np.radians(10)]
+            yJointUpperBound = [np.radians(170) - upperWristAngleCW + np.radians(10),
+                                np.radians(170) - lowerWristAngleCW + np.radians(10)]
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
@@ -688,13 +689,16 @@ class ValvePlannerDemo(object):
         self.coaxialPlan(self.touchDepth, **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
-    def coaxialPlanTurn(self, wristAngleCW=np.pi):
+    def coaxialPlanTurn(self, wristAngleCW=np.radians(680)):
         startPose = self.getPlanningStartPose()
-        wristAngleCW = min(np.pi-0.01, max(0.01, wristAngleCW))
+        lowerWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW))
+        upperWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW-lowerWristAngleCW))
         if self.graspingHand == 'left':
-            postureJoints = {'l_arm_uwy' : wristAngleCW}
+            postureJoints = {'l_arm_uwy' : -np.radians(170) + upperWristAngleCW,
+                             'l_arm_lwy' : -np.radians(170) + lowerWristAngleCW}
         else:
-            postureJoints = {'r_arm_uwy' : np.pi - wristAngleCW}
+            postureJoints = {'r_arm_uwy' : np.radians(170) - upperWristAngleCW,
+                             'r_arm_lwy' : np.radians(170) - lowerWristAngleCW}
 
         endPose = self.ikPlanner.mergePostures(startPose, postureJoints)
 
@@ -1228,9 +1232,9 @@ class ValveTaskPanel(TaskUserPanel):
         def addLargeValveTurn(parent=None):
             group = self.taskTree.addGroup('Valve Turn', parent=parent)
 
-            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.pi
-            touchWristAngleCW = np.radians(20) if v.scribeDirection == 1 else np.pi-np.radians(20)
-            finalWristAngleCW = np.pi if v.scribeDirection == 1 else 0
+            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.radians(680)
+            touchWristAngleCW = np.radians(20) if v.scribeDirection == 1 else np.radians(680)-np.radians(20)
+            finalWristAngleCW = np.radians(680) if v.scribeDirection == 1 else 0
 
             # valve manip actions
             addFunc(functools.partial(v.coaxialPlanReach,
@@ -1265,8 +1269,8 @@ class ValveTaskPanel(TaskUserPanel):
             group = self.taskTree.addGroup('Valve Turn', parent=parent)
             side = 'Right' if v.graspingHand == 'right' else 'Left'
 
-            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.pi
-            finalWristAngleCW = np.pi if v.scribeDirection == 1 else 0
+            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.radians(680)
+            finalWristAngleCW = np.radians(680) if v.scribeDirection == 1 else 0
 
             addFunc(functools.partial(v.coaxialPlanReach,
                                       wristAngleCW=initialWristAngleCW),
@@ -1348,10 +1352,10 @@ class ValveTaskPanel(TaskUserPanel):
 
         # add valve turns
         if v.smallValve:
-            for i in range(0, 5):
+            for i in range(0, 2):
                 addSmallValveTurn()
 
         else:
-            for i in range(0, 5):
+            for i in range(0, 2):
                 addLargeValveTurn()
 
