@@ -143,13 +143,14 @@ def getJointGroups():
 class AtlasCommandStream(object):
 
     def __init__(self):
-        self.timer = TimerCallback(targetFps=500)
+        self.timer = TimerCallback(targetFps=5)
         #self.timer.disableScheduledTimer()
         self.fpsCounter = simpletimer.FPSCounter()
         self.fpsCounter.printToConsole = True
         self.timer.callback = self._tick
-        self._maxSpeed = np.deg2rad(2)
+        self._maxSpeed = np.deg2rad(10)
         self._initialized = False
+        self.publishChannel = 'JOINT_POSITION_GOAL'
         self.lastCommandMessage = newAtlasCommandMessageAtZero()
 
     def initialize(self, currentRobotPose):
@@ -168,20 +169,25 @@ class AtlasCommandStream(object):
     def setGoalPose(self, pose):
         self._goalPose = np.array(pose)
 
+    def waitForRobotState(self):
+        msg = lcmUtils.captureMessage('EST_ROBOT_STATE', lcmdrc.robot_state_t)
+        pose = robotstate.convertStateMessageToDrakePose(msg)
+        pose[:6] = np.zeros(6)
+        self.initialize(pose)
+
     def _updateAndSendCommandMessage(self):
         self.lastCommandMessage.position = drakePoseToAtlasCommandPosition(self._currentCommandedPose)
         self.lastCommandMessage.utime = getUtime()
-        lcmUtils.publish('JOINT_POSITION_GOAL', self.lastCommandMessage)
+        lcmUtils.publish(self.publishChannel, self.lastCommandMessage)
 
     def _tick(self):
 
         self.fpsCounter.tick()
 
         elapsed = self.timer.elapsed
-        nominalElapsed = (1.0 / self.timer.targetFps)
-
-        if elapsed > 2*nominalElapsed:
-            elapsed = nominalElapsed
+        #nominalElapsed = (1.0 / self.timer.targetFps)
+        #if elapsed > 2*nominalElapsed:
+        #    elapsed = nominalElapsed
 
         # move current pose toward goal pose
         startPose = self._currentCommandedPose.copy()
@@ -192,8 +198,8 @@ class AtlasCommandStream(object):
         for i in xrange(len(startPose)):
             delta = np.clip(goalPose[i] - startPose[i], -maxDelta, maxDelta)
             startPose[i] += delta
-            if np.abs(delta) > 1e-6:
-                print robotstate.getDrakePoseJointNames()[i], '-->', np.rad2deg(startPose[i])
+            #if np.abs(delta) > 1e-6:
+            #    print robotstate.getDrakePoseJointNames()[i], '-->', np.rad2deg(startPose[i])
 
         self._currentCommandedPose = startPose
 
@@ -204,26 +210,108 @@ class AtlasCommandStream(object):
 commandStream = AtlasCommandStream()
 
 
+class DebugAtlasCommandListener(object):
+
+    def __init__(self):
+
+        self.app = ConsoleApp()
+        self.view = self.app.createView()
+        self.robotModel, self.jointController = roboturdf.loadRobotModel('robot model', self.view)
+        self.jointController.setZeroPose()
+        self.view.show()
+        self.sub = lcmUtils.addSubscriber('ATLAS_COMMAND', lcmdrc.atlas_command_t, self.onAtlasCommand)
+        self.sub.setSpeedLimit(60)
+
+    def onAtlasCommand(self, msg):
+        pose = atlasCommandToDrakePose(msg)
+        self.jointController.setPose('ATLAS_COMMAND', pose)
+
+
+class CommittedRobotPlanListener(object):
+
+    def __init__(self):
+        self.sub = lcmUtils.addSubscriber('COMMITTED_ROBOT_PLAN', lcmdrc.robot_plan_t, self.onRobotPlan)
+        lcmUtils.addSubscriber('COMMITTED_PLAN_PAUSE', lcmdrc.plan_control_t, self.onPause)
+        self.animationTimer = None
+
+
+    def onPause(self, msg):
+        commandStream.stopStreaming()
+        self.animationTimer.stop()
+
+    def onRobotPlan(self, msg):
+
+
+        playback = planplayback.PlanPlayback()
+        playback.interpolationMethod = 'pchip'
+        poseTimes, poses = playback.getPlanPoses(msg)
+        f = playback.getPoseInterpolator(poseTimes, poses)
+
+        print 'received robot plan, %.2f seconds' % (poseTimes[-1] - poseTimes[0])
+
+        commandStream._maxSpeed = np.deg2rad(60)
+        commandStream.startStreaming()
+
+        timer = simpletimer.SimpleTimer()
+
+        def setPose(pose):
+            commandStream.setGoalPose(pose)
+
+        def updateAnimation():
+
+            tNow = timer.elapsed()
+
+            if tNow > poseTimes[-1]:
+                pose = poses[-1]
+                setPose(pose)
+                commandStream._maxSpeed = np.deg2rad(10)
+                print 'plan ended.'
+                return False
+
+            pose = f(tNow)
+            setPose(pose)
+
+        self.animationTimer = TimerCallback()
+        self.animationTimer.targetFps = 1000
+        self.animationTimer.callback = updateAnimation
+        self.animationTimer.start()
+
+
+
 class PositionGoalListener(object):
 
     def __init__(self):
         self.sub = lcmUtils.addSubscriber('JOINT_POSITION_GOAL', lcmdrc.atlas_command_t, self.onJointPositionGoal)
+        lcmUtils.addSubscriber('COMMITTED_PLAN_PAUSE', lcmdrc.plan_control_t, self.onPause)
 
-        self.debug = True
+        self.debug = False
 
         if self.debug:
+
             self.app = ConsoleApp()
             self.view = self.app.createView()
             self.robotModel, self.jointController = roboturdf.loadRobotModel('robot model', self.view)
-            self.jointController.setZeroPose()
+            self.jointController.setPose('ATLAS_COMMAND', commandStream._currentCommandedPose)
             self.view.show()
+            self.timer = TimerCallback(targetFps=30)
+            self.timer.callback = self.onDebug
+
+
+    def onPause(self, msg):
+        commandStream.stopStreaming()
 
     def onJointPositionGoal(self, msg):
-        lcmUtils.publish('ATLAS_COMMAND', msg)
+        #lcmUtils.publish('ATLAS_COMMAND', msg)
 
-        if self.debug:
-            pose = atlasCommandToDrakePose(msg)
-            self.jointController.setPose('ATLAS_COMMAND', pose)
+        commandStream.startStreaming()
+        pose = atlasCommandToDrakePose(msg)
+        self.setGoalPose(pose)
+
+    def setGoalPose(self, pose):
+        commandStream.setGoalPose(pose)
+
+    def onDebug(self):
+        self.jointController.setPose('ATLAS_COMMAND', commandStream._currentCommandedPose)
 
 
 class JointCommandPanel(object):
@@ -288,7 +376,15 @@ class JointCommandPanel(object):
         else:
             self.ui.previewSlider.setEnabled(True)
             self.ui.streamingButton.setText('Start Streaming')
+
+            self.sendPlanPause()
             commandStream.stopStreaming()
+
+    def sendPlanPause(self):
+        msg = lcmdrc.plan_control_t()
+        msg.utime = getUtime()
+        msg.control = lcmdrc.plan_control_t.PAUSE
+        lcmUtils.publish('COMMITTED_PLAN_PAUSE', msg)
 
     def showPreviewModels(self):
         self.robotSystem.playbackRobotModel.setProperty('Visible', True)
@@ -593,7 +689,7 @@ class AtlasCommandPanel(object):
         gl.setRowStretch(0,1)
         gl.setColumnStretch(1,1)
 
-        self.sub = lcmUtils.addSubscriber('COMMITTED_ROBOT_PLAN', lcmdrc.robot_plan_t, self.onRobotPlan)
+        #self.sub = lcmUtils.addSubscriber('COMMITTED_ROBOT_PLAN', lcmdrc.robot_plan_t, self.onRobotPlan)
 
     def onRobotPlan(self, msg):
         playback = planplayback.PlanPlayback()
@@ -643,6 +739,7 @@ def parseArgs():
     p = parser.add_mutually_exclusive_group(required=True)
     p.add_argument('--base', dest='mode', action='store_const', const='base')
     p.add_argument('--robot', dest='mode', action='store_const', const='robot')
+    p.add_argument('--debug', dest='mode', action='store_const', const='debug')
 
     args, unknown = parser.parse_known_args()
     return args
@@ -654,20 +751,37 @@ def main():
 
     if args.mode == 'base':
         baseMain()
-    else:
+    elif args.mode == 'robot':
         robotMain()
+    else:
+        debugMain()
 
 def baseMain():
     p = AtlasCommandPanel()
+
+    commandStream._maxSpeed = 1000
     p.widget.show()
     p.widget.resize(1400, 1400*9/16.0)
     p.app.setupGlobals(globals())
     p.app.start()
 
 
+def debugMain():
+
+    listener = DebugAtlasCommandListener()
+    ConsoleApp.start()
+
+
 def robotMain():
 
-    listener = PositionGoalListener()
+    print 'waiting for robot state...'
+    commandStream.waitForRobotState()
+    print 'starting.'
+    commandStream.timer.targetFps = 1000
+    commandStream.publishChannel = 'ATLAS_COMMAND'
+    commandStream.startStreaming()
+    positionListener = PositionGoalListener()
+    planListener = CommittedRobotPlanListener()
     ConsoleApp.start()
 
 
