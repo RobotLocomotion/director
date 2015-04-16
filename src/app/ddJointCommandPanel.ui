@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>397</width>
-    <height>191</height>
+    <width>1029</width>
+    <height>203</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,6 +23,13 @@
       <bool>false</bool>
      </property>
      <layout class="QGridLayout" name="gridLayout">
+      <item row="1" column="3">
+       <widget class="QCheckBox" name="mirrorLegsCheck">
+        <property name="text">
+         <string>Mirror Legs</string>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
@@ -42,11 +49,11 @@
          <double>0.100000000000000</double>
         </property>
         <property name="value">
-         <double>2.000000000000000</double>
+         <double>10.000000000000000</double>
         </property>
        </widget>
       </item>
-      <item row="0" column="2">
+      <item row="0" column="3">
        <spacer name="horizontalSpacer_2">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -70,6 +77,13 @@
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>Position gains:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QCheckBox" name="mirrorArmsCheck">
+        <property name="text">
+         <string>Mirror Arms</string>
         </property>
        </widget>
       </item>
