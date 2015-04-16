@@ -678,7 +678,14 @@ class AtlasCommandPanel(object):
         self.jointTeleopPanel = JointTeleopPanel(self.robotSystem, jointGroups)
         self.jointCommandPanel = JointCommandPanel(self.robotSystem)
 
+        self.jointCommandPanel.ui.editPositionGainsButton.setEnabled(False)
+        self.jointCommandPanel.ui.speedSpinBox.setEnabled(False)
+
+        self.jointCommandPanel.ui.mirrorArmsCheck.setChecked(self.jointTeleopPanel.mirrorArms)
+        self.jointCommandPanel.ui.mirrorLegsCheck.setChecked(self.jointTeleopPanel.mirrorLegs)
         self.jointCommandPanel.ui.resetButton.connect('clicked()', self.resetJointTeleopSliders)
+        self.jointCommandPanel.ui.mirrorArmsCheck.connect('clicked()', self.mirrorJointsChanged)
+        self.jointCommandPanel.ui.mirrorLegsCheck.connect('clicked()', self.mirrorJointsChanged)
 
         self.widget = QtGui.QWidget()
 
@@ -727,6 +734,9 @@ class AtlasCommandPanel(object):
         self.animationTimer.start()
 
 
+    def mirrorJointsChanged(self):
+        self.jointTeleopPanel.mirrorLegs = self.jointCommandPanel.ui.mirrorLegsCheck.checked
+        self.jointTeleopPanel.mirrorArms = self.jointCommandPanel.ui.mirrorArmsCheck.checked
 
     def resetJointTeleopSliders(self):
         self.jointTeleopPanel.resetPoseToRobotState()
