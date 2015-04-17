@@ -403,10 +403,13 @@ class ValvePlannerDemo(object):
         self.scribeRadius = self.valveAffordance.params.get('radius')# for pointer this was (radius - 0.06)
 
         self.computeClenchFrame()
+        self.computeValveStanceFrame()
 
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(valveFrame)
-        self.frameSync.addFrame(self.clenchFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.clenchFrame, ignoreIncoming=True)       
+        self.frameSync.addFrame(self.stanceFrame, ignoreIncoming=True)
+
 
         # make an affordance to visualize the scribe angle
 
@@ -481,8 +484,6 @@ class ValvePlannerDemo(object):
 
     # These are operational conveniences:
     def planFootstepsToStance(self):
-        self.computeValveStanceFrame()
-        self.frameSync.addFrame(self.stanceFrame, ignoreIncoming=True)
         self.planFootsteps(self.stanceFrame.transform)
 
     def planFootsteps(self, goalFrame):
@@ -539,16 +540,16 @@ class ValvePlannerDemo(object):
             elxJoint = 'l_arm_elx'
             shxJoint = 'l_arm_shx'
             yJoints = ['l_arm_lwy']
-            yJointLowerBound = [-np.radians(170) - wristAngleCW]
-            yJointUpperBound = [-np.radians(170) - wristAngleCW]
+            yJointLowerBound = [-np.radians(160) - wristAngleCW]
+            yJointUpperBound = [-np.radians(160) - wristAngleCW]
         else:
             larmName = 'r_larm'
             mwxJoint = 'r_arm_mwx'
             elxJoint = 'r_arm_elx'
             shxJoint = 'r_arm_shx'
             yJoints = ['r_arm_lwy']
-            yJointLowerBound = [np.radians(170) - wristAngleCW]
-            yJointUpperBound = [np.radians(170) - wristAngleCW]
+            yJointLowerBound = [np.radians(160) - wristAngleCW]
+            yJointUpperBound = [np.radians(160) - wristAngleCW]
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
@@ -717,8 +718,8 @@ class ValvePlannerDemo(object):
 
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
-        lowerWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW))
-        upperWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW-lowerWristAngleCW))
+        lowerWristAngleCW = min(np.radians(320)-0.01, max(0.01, wristAngleCW))
+        upperWristAngleCW = min(np.radians(320)-0.01, max(0.01, wristAngleCW-lowerWristAngleCW))
 
         if lockBase is None:
             lockBase = self.lockBase
@@ -732,20 +733,20 @@ class ValvePlannerDemo(object):
             elxJoint = 'l_arm_elx'
             shxJoint = 'l_arm_shx'
             yJoints = ['l_arm_uwy', 'l_arm_lwy']
-            yJointLowerBound = [-np.radians(170) + upperWristAngleCW - np.radians(10),
-                                -np.radians(170) + lowerWristAngleCW - np.radians(10)]
-            yJointUpperBound = [-np.radians(170) + upperWristAngleCW + np.radians(10),
-                                -np.radians(170) + lowerWristAngleCW + np.radians(10)]
+            yJointLowerBound = [-np.radians(160) + upperWristAngleCW - np.radians(10),
+                                -np.radians(160) + lowerWristAngleCW - np.radians(10)]
+            yJointUpperBound = [-np.radians(160) + upperWristAngleCW + np.radians(10),
+                                -np.radians(160) + lowerWristAngleCW + np.radians(10)]
         else:
             larmName = 'r_larm'
             mwxJoint = 'r_arm_mwx'
             elxJoint = 'r_arm_elx'
             shxJoint = 'r_arm_shx'
             yJoints = ['r_arm_uwy', 'r_arm_lwy']
-            yJointLowerBound = [np.radians(170) - upperWristAngleCW - np.radians(10),
-                                np.radians(170) - lowerWristAngleCW - np.radians(10)]
-            yJointUpperBound = [np.radians(170) - upperWristAngleCW + np.radians(10),
-                                np.radians(170) - lowerWristAngleCW + np.radians(10)]
+            yJointLowerBound = [np.radians(160) - upperWristAngleCW - np.radians(10),
+                                np.radians(160) - lowerWristAngleCW - np.radians(10)]
+            yJointUpperBound = [np.radians(160) - upperWristAngleCW + np.radians(10),
+                                np.radians(160) - lowerWristAngleCW + np.radians(10)]
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
@@ -890,13 +891,13 @@ class ValvePlannerDemo(object):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
         self.addPlan(plan)
 
-    def coaxialPlanTurn(self, wristAngleCW=np.radians(340)):
+    def coaxialPlanTurn(self, wristAngleCW=np.radians(320)):
         startPose = self.getPlanningStartPose()
-        wristAngleCW = min(np.radians(340)-0.01, max(-np.radians(170)+0.01, wristAngleCW))
+        wristAngleCW = min(np.radians(320)-0.01, max(-np.radians(160)+0.01, wristAngleCW))
         if self.graspingHand == 'left':
-            postureJoints = {'l_arm_lwy' : -np.radians(170) + wristAngleCW}
+            postureJoints = {'l_arm_lwy' : -np.radians(160) + wristAngleCW}
         else:
-            postureJoints = {'r_arm_lwy' : np.radians(170) - wristAngleCW}
+            postureJoints = {'r_arm_lwy' : np.radians(160) - wristAngleCW}
 
         endPose = self.ikPlanner.mergePostures(startPose, postureJoints)
 
@@ -912,10 +913,10 @@ class ValvePlannerDemo(object):
         startPose = self.getPlanningStartPose()
         if self.graspingHand == 'left':
             jointId = robotstate.getDrakePoseJointNames().index('l_arm_lwy')
-            wristAngleCW =  np.radians(170) + startPose[jointId]
+            wristAngleCW =  np.radians(160) + startPose[jointId]
         else:
             jointId = robotstate.getDrakePoseJointNames().index('r_arm_lwy')
-            wristAngleCW =  np.radians(170) - startPose[jointId]
+            wristAngleCW =  np.radians(160) - startPose[jointId]
         plan = self.coaxialPlanTraj(retract=True, lockBase=True, lockBack=True,
                                     lockFeet=True, planFromCurrentRobotState=True,
                                     usePoses=True, resetPoses=False,
@@ -1538,7 +1539,7 @@ class ValveTaskPanel(TaskUserPanel):
 
 
         # fit
-        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        #addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit valve', message='Please fit and approve valve affordance.'))
         addTask(rt.FindAffordance(name='check valve affordance', affordanceName='valve'))
         addFunc(self.resetTouchAngle, name='plan stance location')
@@ -1551,7 +1552,7 @@ class ValveTaskPanel(TaskUserPanel):
 
         # refit
         addTask(rt.SetNeckPitch(name='set neck position', angle=35))
-        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        #addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit value', message='Please fit and approve valve affordance.'))
         addFunc(self.resetTouchAngle, name='check valve affordance')
         #addTask(rt.UserPromptTask(name='approve spoke location', message='Please approve valve spokes and touch angle.'))
