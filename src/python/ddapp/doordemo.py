@@ -383,7 +383,10 @@ class DoorDemo(object):
             exitFootDistance = 0.12,
             exitStepDistance = 0.3,
             endStanceWidth = 0.26,
-            numberOfExitSteps = 1
+            numberOfExitSteps = 1,
+            centerStepDistance = 0.26,
+            centerStanceWidth = 0.20,
+            centerLeadingFoot = 'right'
         )
 
     def setTestingFootstepThroughDoorParameters(self):
@@ -400,7 +403,7 @@ class DoorDemo(object):
             preEntryFootWidth    = -0.12
         )
 
-    def getRelativeFootstepsThroughDoor(self):
+    def getRelativeFootstepsThroughDoorWithSway(self):
 
         p = self.doorFootstepParams
 
@@ -428,6 +431,39 @@ class DoorDemo(object):
 
         return FootstepRequestGenerator.makeStepFrames(stepFrames, relativeFrame=self.doorGroundFrame.transform, showFrames=False), p.leadingFoot
 
+
+    def getRelativeFootstepsThroughDoorCentered(self):
+
+        p = self.doorFootstepParams
+
+        stepDistance = p.centerStepDistance
+        stanceWidth = p.centerStanceWidth
+        leadingFoot = p.centerLeadingFoot
+
+
+        stepFrames = []
+        for i in xrange(30):
+
+            sign = -1 if leadingFoot is 'right' else 1
+            if i % 2:
+                sign = -sign
+
+            stepX = (i+1)*stepDistance
+            if stepX > 1.5:
+                stepX = 1.5
+            stepFrames.append([stepX, sign*stanceWidth/2.0, 0.0])
+
+            if stepX == 1.5:
+                break
+
+        lastStep = list(stepFrames[-1])
+        lastStep[1] *= -1
+        stepFrames.append(lastStep)
+
+        stepFrames[-1][1] = np.sign(stepFrames[-1][1])*(p.endStanceWidth/2.0)
+        stepFrames[-2][1] = np.sign(stepFrames[-2][1])*(p.endStanceWidth/2.0)
+
+        return FootstepRequestGenerator.makeStepFrames(stepFrames, relativeFrame=self.doorHandleStanceFrame.transform, showFrames=False), leadingFoot
 
 
     def planManualFootstepsTest(self, stepDistance=0.26, stanceWidth=0.26, numberOfSteps=4, leadingFoot='right'):
@@ -458,10 +494,11 @@ class DoorDemo(object):
     def planFootstepsThroughDoorManual(self):
 
         startPose = self.getPlanningStartPose()
-        stepFrames, leadingFoot = self.getRelativeFootstepsThroughDoor()
+        #stepFrames, leadingFoot = self.getRelativeFootstepsThroughDoorWithSway()
+        stepFrames, leadingFoot = self.getRelativeFootstepsThroughDoorCentered()
 
         helper = FootstepRequestGenerator(self.footstepPlanner)
-        request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
+        request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot, numberOfFillSteps=2)
 
         self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(request, waitForResponse=True)
         rt._addPlanItem(self.footstepPlan, 'door walk frame footstep plan', rt.FootstepPlanItem)

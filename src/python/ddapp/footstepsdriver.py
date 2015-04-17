@@ -822,12 +822,12 @@ class FootstepRequestGenerator(object):
 
         return stepMessages
 
-    def makeFootstepRequest(self, startPose, stepFrames, leadingFoot):
+    def makeFootstepRequest(self, startPose, stepFrames, leadingFoot, numberOfFillSteps=0):
 
         stepMessages = self.makeStepMessages(stepFrames, leadingFoot)
         request = self.footstepsDriver.constructFootstepPlanRequest(startPose)
         request.num_goal_steps = len(stepMessages)
         request.goal_steps = stepMessages
         request.params.leading_foot = lcmdrc.footstep_plan_params_t.LEAD_LEFT if leadingFoot == 'left' else lcmdrc.footstep_plan_params_t.LEAD_RIGHT
-        request.params.max_num_steps = len(stepMessages)
+        request.params.max_num_steps = len(stepMessages) + numberOfFillSteps
         return request
