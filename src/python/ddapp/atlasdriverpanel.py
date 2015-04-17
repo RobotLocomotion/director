@@ -48,11 +48,11 @@ class AtlasDriverPanel(object):
         self.ui.mitStandButton.connect('clicked()', self.onMITStand)
         self.ui.userButton.connect('clicked()', self.onUser)
         self.ui.manipButton.connect('clicked()', self.onManip)
-
-
+        self.setupElectricArmCheckBoxes()
 
         PythonQt.dd.ddGroupBoxHider(self.ui.calibrationGroupBox)
-        PythonQt.dd.ddGroupBoxHider(self.ui.statusGroupBox)
+        PythonQt.dd.ddGroupBoxHider(self.ui.pumpStatusGroupBox)
+        PythonQt.dd.ddGroupBoxHider(self.ui.electricArmStatusGroupBox)
 
         self.updateTimer = TimerCallback(targetFps=5)
         self.updateTimer.callback = self.updatePanel
@@ -64,6 +64,7 @@ class AtlasDriverPanel(object):
         self.updateControllerStatusLabel()
         self.updateStatus()
         self.updateButtons()
+        self.updateElectricArmStatus()
         self.driver.updateCombinedStandLogic()
 
     def updateBehaviorLabel(self):
@@ -79,6 +80,34 @@ class AtlasDriverPanel(object):
         self.ui.airSumpPressure.value = self.driver.getCurrentAirSumpPressure()
         self.ui.pumpRpm.value =  self.driver.getCurrentPumpRpm()
 
+    def getElectricArmCheckBoxes(self):
+        return [self.ui.armCheck1,
+                  self.ui.armCheck2,
+                  self.ui.armCheck3,
+                  self.ui.armCheck4,
+                  self.ui.armCheck5,
+                  self.ui.armCheck6]
+
+    def setupElectricArmCheckBoxes(self):
+        for check in self.getElectricArmCheckBoxes():
+            check.connect('clicked()', self.onEnableElectricArmChecked)
+
+    def updateElectricArmStatus(self):
+
+        temps = [self.ui.armTemp1,
+                  self.ui.armTemp2,
+                  self.ui.armTemp3,
+                  self.ui.armTemp4,
+                  self.ui.armTemp5,
+                  self.ui.armTemp6]
+
+        for i, check in enumerate(self.getElectricArmCheckBoxes()):
+            enabled = self.driver.getElectricArmEnabledStatus(i)
+            check.setText('yes' if enabled else 'no')
+
+        for i, temp in enumerate(temps):
+            temp.setValue(self.driver.getElectricArmTemperature(i))
+
     def updateButtons(self):
 
         behavior = self.driver.getCurrentBehaviorName()
@@ -92,6 +121,10 @@ class AtlasDriverPanel(object):
         self.ui.mitStandButton.setEnabled(behavior=='user')
         self.ui.manipButton.setEnabled(behavior in ('stand', 'manip'))
         self.ui.userButton.setEnabled(behavior is not None)
+
+    def onEnableElectricArmChecked(self):
+        enabledState = [bool(check.checked) for check in self.getElectricArmCheckBoxes()]
+        self.driver.sendElectricArmEnabledState(enabledState)
 
     def onFreeze(self):
         self.driver.sendFreezeCommand()
