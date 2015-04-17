@@ -59,6 +59,9 @@ classdef IKServer
         if isfield(options, 'MajorOptimalityTolerance')
           obj.ikoptions = obj.ikoptions.setMajorOptimalityTolerance(options.MajorOptimalityTolerance);
         end
+        if isfield(options, 'FixInitialState')
+          obj.ikoptions = obj.ikoptions.setFixInitialState(options.FixInitialState);
+        end
         if isfield(options, 'MinDistance')
           obj.min_distance = options.MinDistance;
         end
