@@ -531,10 +531,25 @@ def getDebugRevolutionData():
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
 
+def getCurrentScanBundle():
+    obj = om.findObjectByName('SCANS_HALF_SWEEP')
+    if not obj:
+        return None
+
+    revPolyData = obj.polyData
+    if not revPolyData or not revPolyData.GetNumberOfPoints():
+        return None
+
+    if useVoxelGrid:
+        revPolyData = applyVoxelGrid(revPolyData, leafSize=0.015)
+
+    return addCoordArraysToPolyData(revPolyData)
+
+
 def getCurrentRevolutionData():
     revPolyData = perception._multisenseItem.model.revPolyData
     if not revPolyData or not revPolyData.GetNumberOfPoints():
-        return None
+        return getCurrentScanBundle()
 
     if useVoxelGrid:
         revPolyData = applyVoxelGrid(revPolyData, leafSize=0.015)
