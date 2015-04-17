@@ -40,6 +40,8 @@ class AtlasDriver(object):
 
         self.lastAtlasStatusMessage = None
         self.lastControllerStatusMessage = None
+        self.lastAtlasBatteryDataMessage = None
+        self.lastAtlasElectricArmStatusMessage = None
         self._setupSubscriptions()
         self.timer = SimpleTimer()
 
@@ -51,6 +53,7 @@ class AtlasDriver(object):
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('CONTROLLER_STATUS', lcmdrc.controller_status_t, self.onControllerStatus)
         lcmUtils.addSubscriber('ATLAS_BATTERY_DATA', lcmdrc.atlas_battery_data_t, self.onAtlasBatteryData)
+        lcmUtils.addSubscriber('ATLAS_ELECTRIC_ARM_STATUS', lcmdrc.atlas_electric_arm_status_t, self.onAtlasElectricArmStatus)
         sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
         sub.setSpeedLimit(60)
 
@@ -62,6 +65,9 @@ class AtlasDriver(object):
 
     def onAtlasBatteryData(self, message):
         self.lastAtlasBatteryDataMessage = message
+
+    def onAtlasElectricArmStatus(self, message):
+        self.lastAtlasElectricArmStatusMessage = message
 
     def getBehaviorMap(self):
         '''
@@ -133,6 +139,25 @@ class AtlasDriver(object):
         assert state in statusMap
         return statusMap[state]
 
+
+    def getElectricArmEnabledStatus(self, i):
+        assert 0 <= i <= 5
+        if self.lastAtlasElectricArmStatusMessage:
+            return self.lastAtlasElectricArmStatusMessage.enabled[i]
+        return False
+
+    def getElectricArmTemperature(self, i):
+        assert 0 <= i <= 5
+        if self.lastAtlasElectricArmStatusMessage:
+            return self.lastAtlasElectricArmStatusMessage.temperature[i]
+        return 0.0
+
+    def getElectricArmDriveCurrent(self, i):
+        assert 0 <= i <= 5
+        if self.lastAtlasElectricArmStatusMessage:
+            return self.lastAtlasElectricArmStatusMessage.drive_current[i]
+        return 0.0
+
     def getCurrentInletPressure(self):
         if self.lastAtlasStatusMessage:
             return self.lastAtlasStatusMessage.pump_inlet_pressure
@@ -198,6 +223,14 @@ class AtlasDriver(object):
 
     def sendCalibrateElectricArmsCommand(self):
         self.sendBehaviorCommand('calibrate_electric_arms')
+
+    def sendElectricArmEnabledState(self, enabledState):
+        msg = lcmdrc.atlas_electric_arm_enable_t()
+        msg.utime = getUtime()
+        msg.num_electric_arm_joints = 6
+        assert len(enabledState) == msg.num_electric_arm_joints
+        msg.enable = enabledState
+        lcmUtils.publish('ATLAS_ELECTRIC_ARM_ENABLE', msg)
 
     def sendCalibrateEncodersCommand(self):
         msg = lcmdrc.utime_t()
