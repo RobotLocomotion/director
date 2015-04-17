@@ -1,5 +1,6 @@
 import os
 import sys
+import copy
 import vtkAll as vtk
 from ddapp import botpy
 import math
@@ -108,6 +109,8 @@ class ValvePlannerDemo(object):
         self.coaxialGazeTol = 2
         self.shxMaxTorque = 40
         self.elxMaxTorque = 10
+        self.reachPoseName = None
+        self.touchPose = None
 
         self.quasiStaticShrinkFactor = 0.5
 
@@ -404,8 +407,9 @@ class ValvePlannerDemo(object):
 
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(valveFrame)
-        self.frameSync.addFrame(self.clenchFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.clenchFrame, ignoreIncoming=True)       
         self.frameSync.addFrame(self.stanceFrame, ignoreIncoming=True)
+
 
         # make an affordance to visualize the scribe angle
 
@@ -505,6 +509,207 @@ class ValvePlannerDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
+    def coaxialPlanTraj(self, lockFeet=True, lockBack=None,
+                        lockBase=None, resetBase=False,  wristAngleCW=0,
+                        startPose=None, verticalOffset=0.01, constrainWristX=True,
+                        usePoses=False, resetPoses=True, planFromCurrentRobotState=False,
+                        retract=False):
+        QuasiStaticShrinkFactorOrig = ik.QuasiStaticConstraint.shrinkFactor
+        fixInitialStateOrig = self.ikPlanner.ikServer.fixInitialState
+        usePointwiseOrig = self.ikPlanner.ikServer.usePointwise
+        additionalTimeSamplesOrig = self.ikPlanner.additionalTimeSamples
+        numberOfAddedKnotsOrig = self.ikPlanner.ikServer.numberOfAddedKnots
+        ik.QuasiStaticConstraint.shrinkFactor = self.quasiStaticShrinkFactor
+        self.ikPlanner.ikServer.fixInitialState = planFromCurrentRobotState
+        self.ikPlanner.ikServer.usePointwise = False
+        self.ikPlanner.additionalTimeSamples = 5
+        self.ikPlanner.ikServer.numberOfAddedKnots = 1
+
+        _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
+        yawDesired = np.arctan2(zaxis[1], zaxis[0])
+
+        if lockBase is None:
+            lockBase = self.lockBase
+
+        if lockBack is None:
+            lockBack = self.lockBack
+
+        if self.graspingHand == 'left':
+            larmName = 'l_larm'
+            mwxJoint = 'l_arm_mwx'
+            elxJoint = 'l_arm_elx'
+            shxJoint = 'l_arm_shx'
+            yJoints = ['l_arm_lwy']
+            yJointLowerBound = [-np.radians(160) - wristAngleCW]
+            yJointUpperBound = [-np.radians(160) - wristAngleCW]
+        else:
+            larmName = 'r_larm'
+            mwxJoint = 'r_arm_mwx'
+            elxJoint = 'r_arm_elx'
+            shxJoint = 'r_arm_shx'
+            yJoints = ['r_arm_lwy']
+            yJointLowerBound = [np.radians(160) - wristAngleCW]
+            yJointUpperBound = [np.radians(160) - wristAngleCW]
+
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
+
+
+        #nominalPose, _ = self.ikPlanner.computeNominalPose(startPose)
+        nominalPose = self.coaxialGetNominalPose()
+        #if self.nominalPelvisXYZ is not None:
+            #nominalPose[2] = self.nominalPelvisXYZ[2]
+        #else:
+            #nominalPose[2] = startPose[2]
+        nominalPoseName = 'qNomAtRobot'
+        self.ikPlanner.addPose(nominalPose, nominalPoseName)
+
+        startPoseName = 'Start'
+        #startPose[5] = yawDesired
+        self.ikPlanner.addPose(startPose, startPoseName)
+        self.ikPlanner.reachingSide = self.graspingHand
+
+        constraints = []
+        constraints.append(self.ikPlanner.createLockedArmPostureConstraint(startPoseName))
+
+        if resetBase:
+            baseConstraintRobotPoseName = nominalPoseName
+        else:
+            baseConstraintRobotPoseName = startPoseName
+
+
+        if lockFeet:
+            constraints.extend(self.ikPlanner.createFixedFootConstraints(startPoseName))
+            if lockBase:
+                constraints.append(self.ikPlanner.createLockedBasePostureConstraint(baseConstraintRobotPoseName, lockLegs=False))
+            else:
+                constraints.append(self.ikPlanner.createXYZMovingBasePostureConstraint(baseConstraintRobotPoseName))
+                constraints.append(ik.WorldFixedBodyPoseConstraint(linkName='pelvis'))
+        else:
+            constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(baseConstraintRobotPoseName))
+            constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPose))
+            constraints.append(ik.WorldFixedBodyPoseConstraint(linkName='l_foot'))
+            constraints.append(ik.WorldFixedBodyPoseConstraint(linkName='r_foot'))
+            constraints.append(ik.WorldFixedBodyPoseConstraint(linkName='pelvis'))
+
+            p = ik.RelativePositionConstraint()
+            p.bodyNameA = 'l_foot'
+            p.bodyNameB = 'r_foot'
+            p.positionTarget = np.array([0, 0.3, 0])
+            p.lowerBound = np.array([0, 0, -np.inf])
+            p.upperBound = np.array([0, 0, np.inf])
+            constraints.append(p)
+
+            p = ik.RelativePositionConstraint()
+            p.bodyNameA = 'r_foot'
+            p.bodyNameB = 'l_foot'
+            p.lowerBound = np.array([0, -np.inf, -np.inf])
+            p.upperBound = np.array([0, np.inf, np.inf])
+            constraints.append(p)
+
+            headGaze = ik.WorldGazeTargetConstraint(linkName='head',
+                                                    bodyPoint=np.zeros(3),
+                                                    worldPoint=np.array(self.clenchFrame.transform.GetPosition()),
+                                                    coneThreshold = np.radians(20))
+            constraints.append(headGaze)
+
+            p = ik.PostureConstraint()
+            p.joints = ['base_yaw']
+            p.jointsLowerBound = [yawDesired - np.radians(20)]
+            p.jointsUpperBound = [yawDesired + np.radians(20)]
+            constraints.append(p)
+
+        if lockBack:
+            constraints.append(self.ikPlanner.createLockedBackPostureConstraint(startPoseName))
+        else:
+            constraints.append(self.ikPlanner.createMovingBackLimitedPostureConstraint())
+
+        constraints.append(self.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
+
+
+        elbowTol = self.coaxialTol
+        wristTol = self.coaxialTol
+        gazeDegreesTol = self.coaxialGazeTol
+
+
+        constraints.append(self.ikPlanner.createQuasiStaticConstraint())
+
+        constraints.append(self.ikPlanner.createGazeGraspConstraint(self.graspingHand, self.clenchFrame, coneThresholdDegrees=gazeDegreesTol))
+        constraints[-1].tspan = [0.0, 1.0]
+
+
+        p = ik.PostureConstraint()
+        p.joints = yJoints
+        p.jointsLowerBound = yJointLowerBound
+        p.jointsUpperBound = yJointUpperBound
+        constraints.append(p)
+
+        torqueConstraint = ik.GravityCompensationTorqueConstraint()
+        torqueConstraint.joints = [shxJoint, elxJoint]
+        torqueConstraint.torquesLowerBound = -np.array([self.shxMaxTorque, self.elxMaxTorque])
+        torqueConstraint.torquesUpperBound =  np.array([self.shxMaxTorque, self.elxMaxTorque])
+        constraints.append(torqueConstraint)
+
+        constraintSet = self.ikPlanner.newReachGoal(startPoseName, self.graspingHand, self.clenchFrame.transform, constraints, lockOrient=False)
+        constraintSet.constraints[-1].lowerBound = np.array([-wristTol, self.reachDepth, -wristTol])
+        constraintSet.constraints[-1].upperBound = np.array([wristTol, self.touchDepth, wristTol])
+        constraintSet.constraints[-1].tspan = [0.0, 1.0]
+
+        constraintSet = self.ikPlanner.newReachGoal(startPoseName, self.graspingHand, self.clenchFrame.transform, constraintSet.constraints, lockOrient=False)
+        if retract:
+            constraintSet.constraints[-1].lowerBound = np.array([-np.inf, self.retractDepth, -np.inf])
+            constraintSet.constraints[-1].upperBound = np.array([np.inf, self.retractDepth, np.inf])
+            constraintSet.constraints[-1].tspan = [1.0, 1.0]
+        else:
+            constraintSet.constraints[-1].lowerBound = np.array([-np.inf, self.reachDepth, -np.inf])
+            constraintSet.constraints[-1].upperBound = np.array([np.inf, self.reachDepth, np.inf])
+            constraintSet.constraints[-1].tspan = [0.0, 0.0]
+
+        constraintSet = self.ikPlanner.newReachGoal(startPoseName, self.graspingHand, self.clenchFrame.transform, constraintSet.constraints, lockOrient=False)
+        constraintSet.constraints[-1].lowerBound = np.array([-np.inf, self.touchDepth, -np.inf])
+        constraintSet.constraints[-1].upperBound = np.array([np.inf, self.touchDepth, np.inf])
+        if retract:
+            constraintSet.constraints[-1].tspan = [0.0, 0.0]
+        else:
+            constraintSet.constraints[-1].tspan = [1.0, 1.0]
+
+        constraintSet.nominalPoseName = nominalPoseName
+        if planFromCurrentRobotState:
+            constraintSet.startPoseName = startPoseName
+        else:
+            if not usePoses or self.reachPoseName is None:
+                constraintSet.startPoseName = nominalPoseName
+            else:
+                if retract:
+                    constraintSet.startPoseName = self.touchPoseName
+                else:
+                    constraintSet.startPoseName = self.reachPoseName
+
+        if not usePoses or self.touchPose is None:
+            constraintSet.endPose = nominalPose
+        else:
+            if retract:
+                constraintSet.endPose = self.reachPose
+            else:
+                constraintSet.endPose = self.touchPose
+
+        plan = constraintSet.runIkTraj()
+        if resetPoses and not retract and max(plan.plan_info) <= 10:
+            self.reachPoseName = 'q_reach'
+            self.touchPoseName = 'q_touch'
+            self.reachPose = robotstate.convertStateMessageToDrakePose(plan.plan[0])
+            self.touchPose = robotstate.convertStateMessageToDrakePose(plan.plan[-1])
+            self.ikPlanner.addPose(self.reachPose, self.reachPoseName)
+            self.ikPlanner.addPose(self.touchPose, self.touchPoseName)
+
+        ik.QuasiStaticConstraint.shrinkFactor = QuasiStaticShrinkFactorOrig
+        self.ikPlanner.ikServer.fixInitialState = fixInitialStateOrig
+        self.ikPlanner.ikServer.usePointwise = usePointwiseOrig
+        self.ikPlanner.ikServer.numberOfAddedKnots = numberOfAddedKnotsOrig
+        self.ikPlanner.additionalTimeSamples = additionalTimeSamplesOrig
+        return plan
+
+
     def coaxialGetPose(self, reachDepth, lockFeet=True, lockBack=None,
                        lockBase=None, resetBase=False,  wristAngleCW=0,
                        startPose=None, verticalOffset=0.01, constrainWristX=True):
@@ -513,8 +718,8 @@ class ValvePlannerDemo(object):
 
         _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
         yawDesired = np.arctan2(zaxis[1], zaxis[0])
-        lowerWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW))
-        upperWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW-lowerWristAngleCW))
+        lowerWristAngleCW = min(np.radians(320)-0.01, max(0.01, wristAngleCW))
+        upperWristAngleCW = min(np.radians(320)-0.01, max(0.01, wristAngleCW-lowerWristAngleCW))
 
         if lockBase is None:
             lockBase = self.lockBase
@@ -528,20 +733,20 @@ class ValvePlannerDemo(object):
             elxJoint = 'l_arm_elx'
             shxJoint = 'l_arm_shx'
             yJoints = ['l_arm_uwy', 'l_arm_lwy']
-            yJointLowerBound = [-np.radians(170) + upperWristAngleCW - np.radians(10),
-                                -np.radians(170) + lowerWristAngleCW - np.radians(10)]
-            yJointUpperBound = [-np.radians(170) + upperWristAngleCW + np.radians(10),
-                                -np.radians(170) + lowerWristAngleCW + np.radians(10)]
+            yJointLowerBound = [-np.radians(160) + upperWristAngleCW - np.radians(10),
+                                -np.radians(160) + lowerWristAngleCW - np.radians(10)]
+            yJointUpperBound = [-np.radians(160) + upperWristAngleCW + np.radians(10),
+                                -np.radians(160) + lowerWristAngleCW + np.radians(10)]
         else:
             larmName = 'r_larm'
             mwxJoint = 'r_arm_mwx'
             elxJoint = 'r_arm_elx'
             shxJoint = 'r_arm_shx'
             yJoints = ['r_arm_uwy', 'r_arm_lwy']
-            yJointLowerBound = [np.radians(170) - upperWristAngleCW - np.radians(10),
-                                np.radians(170) - lowerWristAngleCW - np.radians(10)]
-            yJointUpperBound = [np.radians(170) - upperWristAngleCW + np.radians(10),
-                                np.radians(170) - lowerWristAngleCW + np.radians(10)]
+            yJointLowerBound = [np.radians(160) - upperWristAngleCW - np.radians(10),
+                                np.radians(160) - lowerWristAngleCW - np.radians(10)]
+            yJointUpperBound = [np.radians(160) - upperWristAngleCW + np.radians(10),
+                                np.radians(160) - lowerWristAngleCW + np.radians(10)]
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
@@ -671,34 +876,28 @@ class ValvePlannerDemo(object):
         return constraintSet.runIk()
 
 
-    def coaxialPlan(self, reachDepth, **kwargs):
-        startPose = self.getPlanningStartPose()
-        touchPose, info = self.coaxialGetPose(reachDepth, **kwargs)
-        plan = self.ikPlanner.computePostureGoal(startPose, touchPose)
-        app.displaySnoptInfo(info)
-        self.ikPlanner.lastManipPlan.plan_info = [info]*len(self.ikPlanner.lastManipPlan.plan_info)
-        self.addPlan(plan)
-
     def coaxialPlanReach(self, verticalOffset=None, **kwargs):
-        if verticalOffset is None:
-            verticalOffset = self.reachHeight
-        self.coaxialPlan(self.reachDepth, resetBase=True, lockBase=False, verticalOffset=verticalOffset, **kwargs)
+        startPose = self.getPlanningStartPose()
+        self.coaxialPlanTraj(lockBase=False, lockBack=True, lockFeet=True,
+                             usePoses=True, resetPoses=True, **kwargs)
+        plan = self.ikPlanner.computePostureGoal(startPose, self.reachPose)
+        self.addPlan(plan)
 
     def coaxialPlanTouch(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.coaxialPlan(self.touchDepth, **kwargs)
+        plan = self.coaxialPlanTraj(lockBase=True, lockBack=True, lockFeet=True,
+                                    usePoses=True, resetPoses=False,
+                                    planFromCurrentRobotState=True, **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+        self.addPlan(plan)
 
-    def coaxialPlanTurn(self, wristAngleCW=np.radians(680)):
+    def coaxialPlanTurn(self, wristAngleCW=np.radians(320)):
         startPose = self.getPlanningStartPose()
-        lowerWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW))
-        upperWristAngleCW = min(np.radians(340)-0.01, max(0.01, wristAngleCW-lowerWristAngleCW))
+        wristAngleCW = min(np.radians(320)-0.01, max(-np.radians(160)+0.01, wristAngleCW))
         if self.graspingHand == 'left':
-            postureJoints = {'l_arm_uwy' : -np.radians(170) + upperWristAngleCW,
-                             'l_arm_lwy' : -np.radians(170) + lowerWristAngleCW}
+            postureJoints = {'l_arm_lwy' : -np.radians(160) + wristAngleCW}
         else:
-            postureJoints = {'r_arm_uwy' : np.radians(170) - upperWristAngleCW,
-                             'r_arm_lwy' : np.radians(170) - lowerWristAngleCW}
+            postureJoints = {'r_arm_lwy' : np.radians(160) - wristAngleCW}
 
         endPose = self.ikPlanner.mergePostures(startPose, postureJoints)
 
@@ -711,8 +910,19 @@ class ValvePlannerDemo(object):
 
     def coaxialPlanRetract(self, **kwargs):
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        self.coaxialPlan(self.retractDepth, resetBase=True, lockBase=False, constrainWristX=False, **kwargs)
+        startPose = self.getPlanningStartPose()
+        if self.graspingHand == 'left':
+            jointId = robotstate.getDrakePoseJointNames().index('l_arm_lwy')
+            wristAngleCW =  np.radians(160) + startPose[jointId]
+        else:
+            jointId = robotstate.getDrakePoseJointNames().index('r_arm_lwy')
+            wristAngleCW =  np.radians(160) - startPose[jointId]
+        plan = self.coaxialPlanTraj(retract=True, lockBase=True, lockBack=True,
+                                    lockFeet=True, planFromCurrentRobotState=True,
+                                    usePoses=True, resetPoses=False,
+                                    wristAngleCW=wristAngleCW, **kwargs)
         self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+        self.addPlan(plan)
 
 
     def coaxialComputePelvisXYZ(self):
@@ -722,21 +932,25 @@ class ValvePlannerDemo(object):
         if info < 10:
             self.nominalPelvisXYZ = pose[:3]
 
+    def coaxialGetNominalPose(self):
+        _, yaxis, _ = transformUtils.getAxesFromTransform(self.clenchFrame.transform)
+        yawDesired = np.arctan2(yaxis[1], yaxis[0])
+        seedDistance = 1
+
+        nominalPose = self.ikPlanner.jointController.getPose('q_nom')
+        nominalPose[0] = self.clenchFrame.transform.GetPosition()[0] - seedDistance*yaxis[0]
+        nominalPose[1] = self.clenchFrame.transform.GetPosition()[1] - seedDistance*yaxis[1]
+        nominalPose[5] = yawDesired
+        return nominalPose
 
 
     def getStanceFrameCoaxial(self):
-        xaxis, _, _ = transformUtils.getAxesFromTransform(self.valveFrame)
-        yawDesired = np.arctan2(xaxis[1], xaxis[0])
-        seedDistance = 0.5
+        startPose = self.coaxialGetNominalPose()
 
-        startPose = self.ikPlanner.jointController.getPose('q_nom')
-        startPose[0] -= seedDistance*xaxis[0]
-        startPose[1] -= seedDistance*xaxis[1]
-        startPose[5] -= yawDesired
-
-        stancePose, info = self.coaxialGetPose(self.touchDepth, lockFeet=False,
-                                               lockBase=False, lockBack=True,
-                                               startPose=startPose)
+        plan = self.coaxialPlanTraj(lockFeet=False,
+                                    lockBase=False, lockBack=True,
+                                    resetPoses=True, startPose=startPose)
+        stancePose = robotstate.convertStateMessageToDrakePose(plan.plan[0])
         stanceRobotModel = self.ikPlanner.getRobotModelAtPose(stancePose)
         self.nominalPelvisXYZ = stancePose[:3]
         return self.footstepPlanner.getFeetMidPoint(stanceRobotModel)
@@ -1258,9 +1472,7 @@ class ValveTaskPanel(TaskUserPanel):
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
 
-            addFunc(functools.partial(v.coaxialPlanRetract,
-                                      wristAngleCW=finalWristAngleCW),
-                    name='plan retract', parent=group)
+            addFunc(v.coaxialPlanRetract, name='plan retract', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
@@ -1302,9 +1514,7 @@ class ValveTaskPanel(TaskUserPanel):
                                  amount=self.valveDemo.openAmount),
                     parent=group)
 
-            addFunc(functools.partial(v.coaxialPlanRetract,
-                                      wristAngleCW=finalWristAngleCW),
-                    name='plan retract', parent=group)
+            addFunc(v.coaxialPlanRetract, name='plan retract', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
@@ -1329,7 +1539,7 @@ class ValveTaskPanel(TaskUserPanel):
 
 
         # fit
-        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        #addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit valve', message='Please fit and approve valve affordance.'))
         addTask(rt.FindAffordance(name='check valve affordance', affordanceName='valve'))
         addFunc(self.resetTouchAngle, name='plan stance location')
@@ -1342,7 +1552,7 @@ class ValveTaskPanel(TaskUserPanel):
 
         # refit
         addTask(rt.SetNeckPitch(name='set neck position', angle=35))
-        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        #addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit value', message='Please fit and approve valve affordance.'))
         addFunc(self.resetTouchAngle, name='check valve affordance')
         #addTask(rt.UserPromptTask(name='approve spoke location', message='Please approve valve spokes and touch angle.'))
@@ -1352,10 +1562,10 @@ class ValveTaskPanel(TaskUserPanel):
 
         # add valve turns
         if v.smallValve:
-            for i in range(0, 2):
+            for i in range(0, 3):
                 addSmallValveTurn()
 
         else:
-            for i in range(0, 2):
+            for i in range(0, 3):
                 addLargeValveTurn()
 

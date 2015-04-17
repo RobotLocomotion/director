@@ -35,6 +35,7 @@ class AsyncIKCommunicator():
         self.maxPlanDuration = 30.0
         self.usePointwise = True
         self.useCollision = False
+        self.fixInitialState = True
         self.numberOfAddedKnots = 0
         self.numberOfInterpolatedCollisionChecks = 2
         self.collisionMinDistance = 0.03
@@ -291,6 +292,7 @@ class AsyncIKCommunicator():
         commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
         commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
         commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
+        commands.append('options.FixInitialState = %s;' % ('true' if self.fixInitialState else 'false'))
         commands.append('s = s.setupOptions(options);')
         commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
