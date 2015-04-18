@@ -99,7 +99,7 @@ class ValvePlannerDemo(object):
         self.smallValve = True
 
     def setupStance(self):
-        self.relativeStanceXYZInitial = [-1.05, 0.27, 0.0]
+        self.relativeStanceXYZInitial = [-0.9, 0.3, 0.0]
         self.relativeStanceRPYInitial = [0, 0, 0.1]
         # -1 = anticlockwise (left, default) | 1 = clockwise
         if (self.graspingHand is 'left'):
@@ -110,35 +110,6 @@ class ValvePlannerDemo(object):
     def addPlan(self, plan):
         self.plans.append(plan)
 
-    def computeGroundFrame(self, robotModel):
-        '''
-        Given a robol model, returns a vtkTransform at a position between
-        the feet, on the ground, with z-axis up and x-axis aligned with the
-        robot pelvis x-axis.
-        '''
-        t1 = robotModel.getLinkFrame('l_foot')
-        t2 = robotModel.getLinkFrame('r_foot')
-        pelvisT = robotModel.getLinkFrame('pelvis')
-
-        xaxis = [1.0, 0.0, 0.0]
-        pelvisT.TransformVector(xaxis, xaxis)
-        xaxis = np.array(xaxis)
-        zaxis = np.array([0.0, 0.0, 1.0])
-        yaxis = np.cross(zaxis, xaxis)
-        yaxis /= np.linalg.norm(yaxis)
-        xaxis = np.cross(yaxis, zaxis)
-
-        stancePosition = np.array(t2.GetPosition()) + np.array(t1.GetPosition()) / 2.0
-
-        footHeight = 0.0811
-
-        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
-        t.PostMultiply()
-        t.Translate(stancePosition)
-        t.Translate([0.0, 0.0, -footHeight])
-
-        return t
-
     def computeRobotStanceFrame(self, objectTransform, relativeStanceTransform):
         '''
         Given a robot model, determine the height of the ground using an XY and
@@ -146,7 +117,7 @@ class ValvePlannerDemo(object):
         grasp or approach stance
         '''
 
-        groundFrame = self.computeGroundFrame(self.robotModel)
+        groundFrame = self.footstepPlanner.getFeetMidPoint(self.robotModel)
         groundHeight = groundFrame.GetPosition()[2]
 
         graspPosition = np.array(objectTransform.GetPosition())
@@ -200,8 +171,7 @@ class ValvePlannerDemo(object):
     def computeValveStanceFrame(self):
         objectTransform = transformUtils.copyFrame(self.clenchFrame.transform)
         self.relativeStanceTransform = transformUtils.copyFrame(
-            transformUtils.frameFromPositionAndRPY(self.relativeStanceXYZ,
-                                                   self.relativeStanceRPY))
+            transformUtils.frameFromPositionAndRPY(self.relativeStanceXYZ, self.relativeStanceRPY))
         robotStance = self.computeRobotStanceFrame(objectTransform, self.relativeStanceTransform)
         self.stanceFrame = vis.updateFrame(robotStance, 'valve grasp stance',
                                            parent=self.valveAffordance, visible=False, scale=0.2)
@@ -212,7 +182,7 @@ class ValvePlannerDemo(object):
         position = [0.7, 0.22, height]
         rpy = [180, -90, 0]
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(self.computeGroundFrame(robotModel))
+        t.Concatenate(self.footstepPlanner.getFeetMidPoint(robotModel))
         return t
 
     def findAffordance(self):
@@ -803,7 +773,6 @@ class ValveTaskPanel(TaskUserPanel):
         addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
 
         # fit
-        #addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit valve',
                                   message='Please fit and approve valve affordance.'))
         addTask(rt.FindAffordance(name='check valve affordance', affordanceName='valve'))
