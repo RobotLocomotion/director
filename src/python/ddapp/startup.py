@@ -399,9 +399,7 @@ if usePlanning:
     drillTaskPanel = drilldemo.DrillTaskPanel(drillDemo)
 
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
-                                      lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                                      segmentation.segmentValveWallAuto, robotStateJointController,
-                                      playPlans, showPose)
+                                      lHandDriver, rHandDriver, robotStateJointController)
     valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
 
     drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
