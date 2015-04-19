@@ -478,7 +478,7 @@ if useForceDisplay:
 
     class LCMForceDisplay(object):
         '''
-        Displays an feet force sensor signals in a status bar widget or label widget
+        Displays foot force sensor signals in a status bar widget or label widget
         '''
 
 
@@ -538,18 +538,33 @@ if useFootContactVis:
 
 if useFallDetectorVis:
 
-    def onFallState(msg):
+    class FallDetectorDisplay(object):
 
-        isFalling = msg.falling
+        def __init__(self):
 
-        fallingColor = QtGui.QColor(255,0,0)
-        notFallingColor = QtGui.QColor(180, 180, 180)
+            self.sub = lcmUtils.addSubscriber('ATLAS_FALL_STATE', lcmdrc.atlas_fall_detector_status_t, self.onFallState)
+            self.sub.setSpeedLimit(300)
 
-        robotStateModel.model.setLinkColor('pelvis', fallingColor if isFalling else notFallingColor)
-        robotStateModel.model.setLinkColor('utorso', fallingColor if isFalling else notFallingColor)
+            self.fallDetectorTriggerTime = 0.0 
+            self.fallDetectorVisResetTime = 3.0 # seconds
+            self.color = QtGui.QColor(180, 180, 180)
+    
+        def __del__(self):
+            lcmUtils.removeSubscriber(self.sub)
 
-    fallDetectorSub = lcmUtils.addSubscriber('ATLAS_FALL_STATE', lcmdrc.atlas_fall_detector_status_t, onFallState)
-    fallDetectorSub.setSpeedLimit(300)
+        def onFallState(self,msg):
+            isFalling = msg.falling
+            t = msg.utime / 10.0e6
+            if not isFalling and (t-self.fallDetectorTriggerTime > self.fallDetectorVisResetTime or t-self.fallDetectorTriggerTime<0):
+                self.color = QtGui.QColor(180, 180, 180)
+            elif isFalling:
+                self.color = QtGui.QColor(255,0,0)
+                self.fallDetectorTriggerTime = t
+
+            robotStateModel.model.setLinkColor('pelvis', self.color)
+            robotStateModel.model.setLinkColor('utorso', self.color)
+
+    fallDetectDisp = FallDetectorDisplay()
 
 
 if useDataFiles:
