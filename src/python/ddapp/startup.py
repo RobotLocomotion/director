@@ -134,6 +134,7 @@ useLoggingWidget = True
 useDrakeVisualizer = True
 useNavigationPanel = True
 useFootContactVis = True
+useFallDetectorVis = True
 useImageWidget = False
 useImageViewDemo = True
 useControllerRate = True
@@ -525,7 +526,7 @@ if useFootContactVis:
         leftInContact = msg.left_contact > 0.0
         rightInContact = msg.right_contact > 0.0
 
-        contactColor = QtGui.QColor(255,0,0)
+        contactColor = QtGui.QColor(0,0,255)
         noContactColor = QtGui.QColor(180, 180, 180)
 
         robotStateModel.model.setLinkColor('l_foot', contactColor if leftInContact else noContactColor)
@@ -533,6 +534,22 @@ if useFootContactVis:
 
     footContactSub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContact)
     footContactSub.setSpeedLimit(60)
+
+
+if useFallDetectorVis:
+
+    def onFallState(msg):
+
+        isFalling = msg.falling
+
+        fallingColor = QtGui.QColor(255,0,0)
+        notFallingColor = QtGui.QColor(180, 180, 180)
+
+        robotStateModel.model.setLinkColor('pelvis', fallingColor if isFalling else notFallingColor)
+        robotStateModel.model.setLinkColor('utorso', fallingColor if isFalling else notFallingColor)
+
+    fallDetectorSub = lcmUtils.addSubscriber('ATLAS_FALL_STATE', lcmdrc.atlas_fall_detector_status_t, onFallState)
+    fallDetectorSub.setSpeedLimit(300)
 
 
 if useDataFiles:
