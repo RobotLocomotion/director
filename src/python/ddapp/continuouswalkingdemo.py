@@ -768,8 +768,9 @@ class ContinousWalkingDemo(object):
 
     def makeDebugRegions(self):
 
-        stepWidth = 0.5
-        stepLength = 0.4
+        stepWidth = (15 + 3/8.0) * 0.0254
+        stepLength = (15 + 5/8.0) * 0.0254
+        stepHeight = (5 + 5/8.0) * 0.0254
 
         stepPoints = np.array([
           [-stepLength/2.0, -stepWidth/2.0, 0.0],
@@ -779,14 +780,15 @@ class ContinousWalkingDemo(object):
         ])
 
         t = vtk.vtkTransform()
+        t.Translate(0.0, 0.0, 0.0)
         t.RotateZ(4.5)
 
         for i in xrange(len(stepPoints)):
             stepPoints[i] = np.array(t.TransformPoint(stepPoints[i]))
 
-        stepOffset = np.array([0.5, 0.0, 0.15])
+        stepOffset = np.array([stepLength, 0.0, stepHeight])
 
-        numSteps = 3
+        numSteps = 5
 
         goalFrame = transformUtils.frameFromPositionAndRPY([0.4, 0.0, 0.1], [0,0,0])
         vis.showFrame(goalFrame, 'goal frame', scale=0.2)
