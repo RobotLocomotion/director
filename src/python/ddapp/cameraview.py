@@ -163,6 +163,26 @@ class ImageManager(object):
         return self.textures[imageName]
 
 
+def applyCameraTexture(self, obj, imageManager, imageName='CAMERA_LEFT'):
+
+    imageUtime = self.imageManager.getUtime(imageName)
+    cameraToLocal = vtk.vtkTransform()
+    imageManager.queue.getTransform(imageName, 'local', imageUtime, cameraToLocal)
+
+    pd = filterUtils.transformPolyData(p, cameraToLocal.GetLinearInverse())
+
+    imageManager.queue.computeTextureCoords(imageName, pd)
+
+    tcoordsArrayName = 'tcoords_%s' % imageName
+    tcoords = pd.GetPointData().GetArray(tcoordsArrayName)
+    assert tcoords
+
+    obj.polyData.GetPointData().SetTCoords(tcoords)
+
+    obj.actor.SetTexture(imageManager.getTexture(imageName))
+    obj.actor.GetProperty().LightingOff()
+
+
 class CameraView(object):
 
     def __init__(self, imageManager, view=None):

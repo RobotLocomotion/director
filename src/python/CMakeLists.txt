@@ -91,6 +91,7 @@ set(python_files
   ddapp/teleoppanel.py
   ddapp/terrain.py
   ddapp/terrainitem.py
+  ddapp/terraintask.py
   ddapp/timercallback.py
   ddapp/transformUtils.py
   ddapp/trackers.py
