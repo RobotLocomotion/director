@@ -7,6 +7,7 @@ class TaskLaunchPanel(object):
     def __init__(self, widgetMap):
 
         self.widget = QtGui.QWidget()
+        self.widget.setWindowTitle('Task Launch Panel')
         l = QtGui.QVBoxLayout(self.widget)
 
         for name, widget in widgetMap.iteritems():
