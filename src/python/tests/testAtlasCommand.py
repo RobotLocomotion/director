@@ -750,8 +750,6 @@ class AtlasCommandPanel(object):
     def resetJointTeleopSliders(self):
         self.jointTeleopPanel.resetPoseToRobotState()
 
-
-
 def parseArgs():
 
     parser = argparse.ArgumentParser()
@@ -780,7 +778,6 @@ def baseMain():
     p = AtlasCommandPanel()
 
     commandStream._maxSpeed = 1000
-    commandStream._maxAcc = 1000
     p.widget.show()
     p.widget.resize(1400, 1400*9/16.0)
     p.app.setupGlobals(globals())
