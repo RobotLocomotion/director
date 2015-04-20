@@ -264,7 +264,7 @@ def segmentGroundPlane():
     #updatePolyData(scenePoints, 'scene points', colorByName='cluster_labels')
 
 
-def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None, removeGround=True):
+def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None, removeGroundFirst=True):
 
     useVoxelGrid = True
     voxelGridSize = 0.03
@@ -273,7 +273,7 @@ def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None
     if useVoxelGrid:
         polyData = applyVoxelGrid(polyData, leafSize=voxelGridSize)
 
-    if removeGround:
+    if removeGroundFirst:
         _, polyData = removeGround(polyData, groundThickness=0.02, sceneHeightFromGround=0.04)
 
     cropped = cropToSphere(polyData, searchPoint, searchRadius)
@@ -1215,7 +1215,7 @@ def segmentValveByBoundingBox(polyData, searchPoint):
 
 def segmentDoorPlane(polyData, doorPoint):
 
-    fitPoints, normal = applyLocalPlaneFit(polyData, doorPoint, searchRadius=0.1, searchRadiusEnd=0.2, removeGround=False)
+    fitPoints, normal = applyLocalPlaneFit(polyData, doorPoint, searchRadius=0.1, searchRadiusEnd=0.2, removeGroundFirst=False)
 
     updatePolyData(fitPoints, 'door points', visible=False, color=[0,1,0])
 
