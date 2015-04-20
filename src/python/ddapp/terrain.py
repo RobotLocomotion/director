@@ -40,11 +40,12 @@ class PolygonSegmentationNonIRIS():
 
     def findSafeRegion(self, pose):
         pose = np.asarray(pose)
-        tform = transformUtils.frameFromPositionAndRPY([0,0,0], pose[3:] * 180 / np.pi)
+        tformForProjection = transformUtils.frameFromPositionAndRPY([0,0,0], pose[3:] * 180 / np.pi)
+        tform = transformUtils.frameFromPositionAndRPY(pose[:3], pose[3:] * 180 / np.pi)
 
         contact_pts_on_plane = np.zeros((2, self.bot_pts.shape[1]))
         for j in range(self.bot_pts.shape[1]):
-            contact_pts_on_plane[:,j] = tform.TransformPoint([self.bot_pts[0,j], self.bot_pts[1,j], 0])[:2]
+            contact_pts_on_plane[:,j] = tformForProjection.TransformPoint([self.bot_pts[0,j], self.bot_pts[1,j], 0])[:2]
 
         Rdot = np.array([[0, -1], [1, 0]])
         contact_vel_in_world = Rdot.dot(contact_pts_on_plane)
