@@ -354,6 +354,8 @@ if usePlanning:
     jointLimitChecker.setupMenuAction()
     jointLimitChecker.start()
 
+    postureShortcuts = teleoppanel.PosturePlanShortcuts(robotStateJointController, ikPlanner)
+
 
     def drillTrackerOn():
         om.findObjectByName('Multisense').model.showRevolutionCallback = fitDrillMultisense
