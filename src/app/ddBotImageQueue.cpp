@@ -601,7 +601,7 @@ int ddBotImageQueue::projectPoints(const QString& cameraName, vtkPolyData* polyD
 
   if (!cameraData->mHasCalibration)
   {
-    printf("Error: computeTextureCoords, no calibration data for: %s\n", cameraData->mName.c_str());
+    printf("Error: projectPoints, no calibration data for: %s\n", cameraData->mName.c_str());
     return -1;
   }
 
