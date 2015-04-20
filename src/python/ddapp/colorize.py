@@ -43,8 +43,10 @@ def colorizeSegmentationLidar(enabled):
     setVisProperties(obj, enabled)
 
 
+_colorizeMapNames = ['HEIGHT_MAP_SCENE', 'SCANS_HALF_SWEEP']
+
 def colorizeMapCallback(obj):
-    if obj and obj == om.findObjectByName('HEIGHT_MAP_SCENE'):
+    if obj and obj.getProperty('Name') in _colorizeMapNames:
         colorizePoints(obj.polyData)
         obj._updateColorByProperty()
         obj.setProperty('Color By', 'rgb')
@@ -54,7 +56,8 @@ def colorizeMaps(enabled):
 
     if enabled:
         om.findObjectByName('Map Server').source.colorizeCallback = colorizeMapCallback
-        colorizeMapCallback(om.findObjectByName('HEIGHT_MAP_SCENE'))
+        for name in _colorizeMapNames:
+            colorizeMapCallback(om.findObjectByName(name))
     else:
         om.findObjectByName('Map Server').source.colorizeCallback = None
 
