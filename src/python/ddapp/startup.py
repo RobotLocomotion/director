@@ -27,6 +27,7 @@ from ddapp import tabledemo
 from ddapp import valvedemo
 from ddapp import continuouswalkingdemo
 from ddapp import walkingtestdemo
+from ddapp import terraintask
 from ddapp import ik
 from ddapp import ikplanner
 from ddapp import objectmodel as om
@@ -417,10 +418,13 @@ if usePlanning:
                                       playPlans, showPose)
     doorTaskPanel = doordemo.DoorTaskPanel(doorDemo)
 
+    terrainTaskPanel = terraintask.TerrainTaskPanel(robotSystem)
+
     taskPanels = OrderedDict()
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
     taskPanels['Drill'] = drillTaskPanel.widget
+    taskPanels['Terrain'] = terrainTaskPanel.widget
     tasklaunchpanel.init(taskPanels)
 
     splinewidget.init(view, handFactory, robotStateModel)
@@ -818,3 +822,18 @@ def sendMatlabSigint():
 
 
 #app.addToolbarMacro('Ctrl+C MATLAB', sendMatlabSigint)
+
+def updateTexture(obj):
+    cameraview.applyCameraTexture(obj, cameraview.imageManager)
+    obj._renderAllViews()
+
+def updateTextures():
+
+    affs = affordanceManager.getAffordances()
+    for aff in affs:
+        if hasattr(aff, '_applyCameraTexture'):
+            updateTexture(aff)
+
+t = TimerCallback(targetFps=10)
+t.callback = updateTextures
+t.start()
