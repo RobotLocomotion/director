@@ -74,7 +74,9 @@ class BoxAffordanceItem(AffordanceItem):
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
         self.addProperty('Dimensions', [0.25, 0.25, 0.25], attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+        self.addProperty('Subdivisions', 0, attributes=om.PropertyAttributes(minimum=0, maximum=1000))
         self.properties.setPropertyIndex('Dimensions', 0)
+        self.properties.setPropertyIndex('Subdivisions', 1)
         self.updateGeometryFromProperties()
 
     def loadDescription(self, desc):
@@ -82,13 +84,13 @@ class BoxAffordanceItem(AffordanceItem):
 
     def updateGeometryFromProperties(self):
         d = DebugData()
-        d.addCube(self.getProperty('Dimensions'), (0,0,0))
+        d.addCube(self.getProperty('Dimensions'), (0,0,0), subdivisions=self.getProperty('Subdivisions'))
         self.setPolyData(d.getPolyData())
 
     def _onPropertyChanged(self, propertySet, propertyName):
         AffordanceItem._onPropertyChanged(self, propertySet, propertyName)
 
-        if propertyName == 'Dimensions':
+        if propertyName in ('Dimensions', 'Subdivisions'):
             self.updateGeometryFromProperties()
 
 
