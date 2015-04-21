@@ -56,12 +56,52 @@ class TerrainTask(object):
         self.robotSystem = robotSystem
 
 
+    def requestRaycastTerrain(self):
+        affs = self.robotSystem.affordanceManager.getCollisionAffordances()
+        xy = self.robotSystem.robotStateJointController.q[:2]
+        self.robotSystem.raycastDriver.requestRaycast(affs, xy-5, xy+5)
+
+
     def walkToTiltedCinderblocks(self):
         frame = om.findObjectByName('cinderblock stance frame')
         assert frame
 
         frameCopy = transformUtils.copyFrame(frame.transform)
         footstepsdriverpanel.panel.onNewWalkingGoal(frameCopy)
+
+
+    def spawnGroundAffordance(self):
+
+        polyData = segmentation.getCurrentRevolutionData()
+        groundPoints, normal = segmentation.segmentGroundPoints(polyData)
+        groundOrigin = segmentation.computeCentroid(groundPoints)
+
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        #stanceFrame.PreMultiply()
+        #stanceFrame.Translate(2.0, 0.0, 0.0)
+        origin = np.array(stanceFrame.GetPosition())
+
+        origin = segmentation.projectPointToPlane(origin, groundOrigin, normal)
+
+        zaxis = normal
+        xaxis = transformUtils.getAxesFromTransform(stanceFrame)[0]
+
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        xaxis = np.cross(yaxis, zaxis)
+        xaxis /= np.linalg.norm(xaxis)
+
+        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        t.PostMultiply()
+        t.Translate(origin)
+
+
+        om.removeFromObjectModel(om.findObjectByName('ground affordance'))
+        pose = transformUtils.poseFromTransform(t)
+        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[10, 10, 0.01], pose=pose)
+        aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        aff.setProperty('Visible', False)
+        aff.setProperty('Alpha', 0.2)
 
 
     def spawnTiltedCinderblocks(self):
@@ -254,9 +294,13 @@ class TerrainTaskPanel(TaskUserPanel):
         self.addTasks()
 
     def addButtons(self):
+        self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
         self.addManualButton('Spawn tilted steps', self.terrainTask.spawnTiltedCinderblocks)
+        self.addManualButton('Raycast terrain', self.terrainTask.requestRaycastTerrain)
         self.addManualButton('Walk to tilted steps', self.terrainTask.walkToTiltedCinderblocks)
         self.addManualButton('Compute safe regions', self.terrainTask.computeSafeRegions)
+
+
 
     def addDefaultProperties(self):
         self._syncProperties()
