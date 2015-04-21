@@ -112,13 +112,13 @@ class DebugData(object):
         sphere.Update()
         self.addPolyData(sphere.GetOutput(), color)
 
-    def addCube(self, dimensions, center, color=[1,1,1]):
+    def addCube(self, dimensions, center, color=[1,1,1], subdivisions=0):
 
-        cube = vtk.vtkCubeSource()
-        cube.SetXLength(dimensions[0])
-        cube.SetYLength(dimensions[1])
-        cube.SetZLength(dimensions[2])
-        cube.SetCenter(center)
+        bmin = np.array(center) - np.array(dimensions)/2.0
+        bmax = np.array(center) + np.array(dimensions)/2.0
+        cube = vtk.vtkTessellatedBoxSource()
+        cube.SetBounds(bmin[0], bmax[0], bmin[1], bmax[1], bmin[2], bmax[2])
+        cube.SetLevel(subdivisions)
         cube.Update()
         self.addPolyData(cube.GetOutput(), color)
 
