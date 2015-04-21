@@ -27,6 +27,7 @@ from ddapp import segmentation
 from ddapp import planplayback
 from ddapp import affordanceupdater
 from ddapp import segmentationpanel
+from ddapp import vtkNumpy as vnp
 
 from ddapp.tasks.taskuserpanel import TaskUserPanel
 from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
@@ -1500,7 +1501,53 @@ class DrillImageFitter(ImageBasedAffordanceFit):
         self.drillDemo = drillDemo
 
     def fit(self, polyData, points):
-        pass
+        planePoints, normal = segmentation.applyLocalPlaneFit(polyData, points[0], searchRadius=0.1, searchRadiusEnd=0.2)
+        obj = vis.updatePolyData(planePoints, 'local plane fit', color=[0,1,0])
+        obj.setProperty('Point Size', 7)
+
+        viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
+        if np.dot(normal, viewDirection) < 0:
+            normal = -normal
+
+        origin = segmentation.computeCentroid(planePoints)
+
+        zaxis = [0,0,1]
+        xaxis = normal
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        zaxis = np.cross(xaxis, yaxis)
+        zaxis /= np.linalg.norm(zaxis)
+
+        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        t.PostMultiply()
+        t.Translate(origin)
+
+        planePoints = segmentation.labelPointDistanceAlongAxis(planePoints, zaxis, origin=origin, resultArrayName='dist_along_z')
+        planePoints = segmentation.labelPointDistanceAlongAxis(planePoints, yaxis, origin=origin, resultArrayName='dist_along_y')
+        zdist = vnp.getNumpyFromVtk(planePoints, 'dist_along_z')
+        ydist = vnp.getNumpyFromVtk(planePoints, 'dist_along_y')
+        height = zdist.max() - zdist.min()
+        width = ydist.max() - ydist.min()
+
+        om.removeFromObjectModel(om.findObjectByName('drill plane'))
+        pose = transformUtils.poseFromTransform(t)
+        desc = dict(classname='BoxAffordanceItem', Name='drill plane', Dimensions=[0.01, width, height], pose=pose)
+        wall = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        wall.setProperty('Alpha', 0.2)
+
+        pickPointOnPlane = segmentation.projectPointToPlane(points[0], origin, normal)
+
+        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        t.PostMultiply()
+        t.Translate(pickPointOnPlane)
+        vis.updateFrame(t, 'drill wall pick point', parent=segmentation.getDebugFolder(), scale=0.2)
+
+        self.appendMessage('pick point: %r' % list(pickPointOnPlane))
+        self.appendMessage('')
+        self.appendMessage('drill wall:')
+        self.appendMessage('origin: %r' % list(pose[0]))
+        self.appendMessage('quat: %r' % list(pose[1]))
+        self.appendMessage('rpy: %r' % list(transformUtils.botpy.quat_to_roll_pitch_yaw(pose[1])))
 
 
 class DrillTaskPanel(TaskUserPanel):
@@ -1512,6 +1559,7 @@ class DrillTaskPanel(TaskUserPanel):
         self.drillDemo = drillDemo
 
         self.fitter = DrillImageFitter(self.drillDemo)
+        self.fitter.appendMessage = self.appendMessage
         self.initImageView(self.fitter.imageView)
 
         self.addDefaultProperties()
