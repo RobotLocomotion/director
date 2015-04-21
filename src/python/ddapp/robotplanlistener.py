@@ -38,7 +38,7 @@ class ManipulationPlanDriver(object):
 
     def onPlanWithSupports(self, msg):
         self.lastManipPlan = msg #does it matter that the type of msg is different here? it containts a robot_plan_t message type
-        self.callbacks.process(self.PLAN_RECEIVED,msg)
+        self.callbacks.process(self.PLAN_RECEIVED, msg)
 
     def convertKeyframePlan(self, keyframeMsg):
         msg = lcmdrc.robot_plan_t()
@@ -70,7 +70,7 @@ class ManipulationPlanDriver(object):
 
         channelMap = {lcmdrc.robot_plan_with_supports_t:'COMMITTED_ROBOT_PLAN_WITH_SUPPORTS'}
         defaultChannel = 'COMMITTED_ROBOT_PLAN'
-        channel = channelMap.get(type(manipPlan),defaultChannel)
+        channel = channelMap.get(type(manipPlan), defaultChannel)
         lcmUtils.publish(channel, manipPlan)
         self.callbacks.process(self.PLAN_COMMITTED, manipPlan)
 
