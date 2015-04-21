@@ -26,6 +26,7 @@ class ManipulationPlanDriver(object):
 
     def __init__(self):
         lcmUtils.addSubscriber('CANDIDATE_MANIP_PLAN', lcmdrc.robot_plan_w_keyframes_t, self.onManipPlan)
+        lcmUtils.addSubscriber('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS',lcmdrc.robot_plan_with_supports_t, self.onManipPlan)
         self.lastManipPlan = None
         self.committedPlans = []
         self.callbacks = callbacks.CallbackRegistry([self.PLAN_RECEIVED,
@@ -34,6 +35,7 @@ class ManipulationPlanDriver(object):
     def onManipPlan(self, msg):
         self.lastManipPlan = msg
         self.callbacks.process(self.PLAN_RECEIVED, msg)
+
 
     def convertKeyframePlan(self, keyframeMsg):
         msg = lcmdrc.robot_plan_t()
@@ -62,7 +64,11 @@ class ManipulationPlanDriver(object):
         if isinstance(manipPlan, lcmdrc.robot_plan_w_keyframes_t):
             manipPlan = self.convertKeyframePlan(manipPlan)
         manipPlan.utime = getUtime()
-        lcmUtils.publish('COMMITTED_ROBOT_PLAN', manipPlan)
+
+        channelMap = {lcmdrc.robot_plan_with_supports_t:'COMMITTED_ROBOT_PLAN_WITH_SUPPORTS'}
+        defaultChannel = 'COMMITTED_ROBOT_PLAN'
+        channel = channelMap.get(type(manipPlan), defaultChannel)
+        lcmUtils.publish(channel, manipPlan)
         self.callbacks.process(self.PLAN_COMMITTED, manipPlan)
 
 

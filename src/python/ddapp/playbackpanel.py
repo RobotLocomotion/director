@@ -5,6 +5,7 @@ import numpy as np
 from ddapp.timercallback import TimerCallback
 from ddapp.simpletimer import SimpleTimer
 from ddapp.debugVis import DebugData
+from ddapp import robotstate
 import ddapp.visualization as vis
 import ddapp.vtkAll as vtk
 import scipy.interpolate
@@ -228,7 +229,8 @@ class PlaybackPanel(object):
 
 
     def isPlanFeasible(self):
-        return self.plan is not None and max(self.plan.plan_info) < 10
+        plan = robotstate.asRobotPlan(self.plan) 
+        return plan is not None and max(plan.plan_info) < 10
 
 
     def updatePlanFrames(self):
