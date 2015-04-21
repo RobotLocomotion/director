@@ -237,7 +237,6 @@ class EndEffectorTeleopPanel(object):
         constraints.append(ikPlanner.createQuasiStaticConstraint())
         constraints.append(ikPlanner.createLockedNeckPostureConstraint(startPoseName))
 
-
         if self.getLFootConstraint() == 'fixed':
             constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot', tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
         elif self.getLFootConstraint() == 'constrained':
@@ -253,8 +252,6 @@ class EndEffectorTeleopPanel(object):
             constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
 
         
-
-
         if self.getBackConstraint() == 'fixed':
             constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
             ikPlanner.setBackLocked(True)
@@ -464,7 +461,7 @@ class EndEffectorTeleopPanel(object):
             frame.connectFrameModified(self.onGoalFrameModified)
             #addHandMesh(handModels[side], frame)
 
-        if (not ikPlanner.fixedBaseArm) and (not ikPlanner.robotNoFeet):
+        if not ikPlanner.fixedBaseArm and not ikPlanner.robotNoFeet:
             for linkName in ['l_foot', 'r_foot', 'pelvis']:
                 frameName = linkName + ' constraint frame'
                 om.removeFromObjectModel(om.findObjectByName(frameName))
