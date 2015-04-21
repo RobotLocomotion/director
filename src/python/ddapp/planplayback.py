@@ -39,7 +39,7 @@ class PlanPlayback(object):
             return allPoseTimes, allPoses
 
         else:
-            msg = msgOrList
+            msg = robotstate.asRobotPlan(msgOrList)
 
             poses = []
             poseTimes = []
@@ -51,6 +51,7 @@ class PlanPlayback(object):
 
     @staticmethod
     def getPlanElapsedTime(msg):
+        msg = robotstate.asRobotPlan(msg)
         startTime = msg.plan[0].utime
         endTime = msg.plan[-1].utime
         return (endTime - startTime) / 1e6
