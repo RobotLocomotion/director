@@ -251,7 +251,7 @@ class EndEffectorTeleopPanel(object):
         elif self.getRFootConstraint() == 'sliding':
             constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
 
-        
+
         if self.getBackConstraint() == 'fixed':
             constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
             ikPlanner.setBackLocked(True)
@@ -287,12 +287,12 @@ class EndEffectorTeleopPanel(object):
 
 
         # Remove all except the fixed base constraint if you only have an arm:
-        if (ikPlanner.fixedBaseArm==True):
+        if ikPlanner.fixedBaseArm == True:
           constraints = []
           constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
 
 
-        if (ikPlanner.robotNoFeet==True):
+        if ikPlanner.robotNoFeet == True:
             constraints = []  
             constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
             if self.getBackConstraint() == 'fixed':
