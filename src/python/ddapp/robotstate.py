@@ -78,6 +78,12 @@ def convertStateMessageToDrakePose(msg):
     return pose
 
 
+def asRobotPlan(msg):
+    if isinstance(msg,lcmdrc.robot_plan_with_supports_t):
+        return msg.plan
+    return msg
+
+
 def robotStateToDrakePose(robotState):
 
     drakePose = range(getNumPositions())
