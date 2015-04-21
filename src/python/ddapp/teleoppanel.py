@@ -288,9 +288,23 @@ class EndEffectorTeleopPanel(object):
 
 
         # Remove all except the fixed base constraint if you only have an arm:
-        if (ikPlanner.fixedBaseArm==True):
+        if ikPlanner.fixedBaseArm == True:
           constraints = []
           constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
+
+
+        if ikPlanner.robotNoFeet == True:
+            constraints = []  
+            constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
+            if self.getBackConstraint() == 'fixed':
+                constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
+                ikPlanner.setBackLocked(True)
+            elif self.getBackConstraint() == 'limited':
+                constraints.append(ikPlanner.createMovingBackLimitedPostureConstraint())
+                ikPlanner.setBackLocked(False)
+            elif self.getBackConstraint() == 'free':
+                constraints.append(ikPlanner.createMovingBackPostureConstraint())
+                ikPlanner.setBackLocked(False)
 
 
         for handModel in ikPlanner.handModels:
@@ -445,7 +459,7 @@ class EndEffectorTeleopPanel(object):
             frame.connectFrameModified(self.onGoalFrameModified)
             #addHandMesh(handModels[side], frame)
 
-        if (not ikPlanner.fixedBaseArm):
+        if not ikPlanner.fixedBaseArm and not ikPlanner.robotNoFeet:
             for linkName in ['l_foot', 'r_foot', 'pelvis']:
                 frameName = linkName + ' constraint frame'
                 om.removeFromObjectModel(om.findObjectByName(frameName))
