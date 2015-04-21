@@ -12,6 +12,7 @@ from ddapp import robotstate
 from ddapp import segmentation
 from ddapp.tasks.taskuserpanel import TaskUserPanel
 from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
+from ddapp.uuidutil import newUUID
 
 import ddapp.tasks.robottasks as rt
 
@@ -20,18 +21,21 @@ from PythonQt import QtCore
 
 class ValvePlannerDemo(object):
 
-    def __init__(self, robotModel, footstepPlanner, manipPlanner, ikPlanner, lhandDriver,
+    def __init__(self, robotModel, footstepPlanner, footstepsPanel, manipPlanner, ikPlanner, lhandDriver,
                  rhandDriver, sensorJointController):
         self.robotModel = robotModel
         self.footstepPlanner = footstepPlanner
+        self.footstepsPanel = footstepsPanel
         self.manipPlanner = manipPlanner
         self.ikPlanner = ikPlanner
         self.lhandDriver = lhandDriver
         self.rhandDriver = rhandDriver
         self.sensorJointController = sensorJointController
         self.graspingObject = 'valve'
-        self.graspingHand = 'left'
+        self.setGraspingHand('left')
         self.valveAffordance = None
+        self.graspFrame = None
+        self.stanceFrame = None
 
         # live operation flags
         self.planFromCurrentRobotState = False
@@ -44,8 +48,8 @@ class ValvePlannerDemo(object):
         self.speedTurn = 100
 
         # reach to center and back - for palm point
-        self.clenchFrameXYZ = [0.0, 0.0, -0.1]
-        self.clenchFrameRPY = [90, 0, 180]
+        self.graspFrameXYZ = [0.0, 0.0, -0.1]
+        self.graspFrameRPY = [90, 0, 180]
         self.nominalPelvisXYZ = None
         self.useLargeValveDefaults()
 
@@ -64,6 +68,10 @@ class ValvePlannerDemo(object):
         self.nominalPoseName = 'q_valve_nom'
         self.startPoseName = 'q_valve_start'
 
+        self.setupStance()
+
+    def setGraspingHand(self, side):
+        self.graspingHand = side
         self.setupStance()
 
     def useLargeValveDefaults(self):
@@ -100,12 +108,14 @@ class ValvePlannerDemo(object):
 
     def setupStance(self):
         self.relativeStanceXYZInitial = [-0.9, 0.3, 0.0]
-        self.relativeStanceRPYInitial = [0, 0, 0.1]
-        # -1 = anticlockwise (left, default) | 1 = clockwise
-        if (self.graspingHand is 'left'):
-            self.scribeDirection = -1
-        else:
-            self.scribeDirection = 1
+        self.relativeStanceRPYInitial = [0, 0, 0]
+        self.relativeStanceXYZ = self.relativeStanceXYZInitial
+        self.relativeStanceRPY = self.relativeStanceRPYInitial
+
+        # mirror stance and rotation direction for right hand:
+        if (self.graspingHand is 'right'):
+            self.relativeStanceXYZ[1] = -self.relativeStanceXYZ[1]
+            self.relativeStanceRPY[2] = -self.relativeStanceRPY[2]
 
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -168,83 +178,84 @@ class ValvePlannerDemo(object):
         segmentation.segmentValveByBoundingBox(polyData, pickPoint)
         self.findAffordance()
 
-    def computeValveStanceFrame(self):
-        objectTransform = transformUtils.copyFrame(self.clenchFrame.transform)
-        self.relativeStanceTransform = transformUtils.copyFrame(
-            transformUtils.frameFromPositionAndRPY(self.relativeStanceXYZ, self.relativeStanceRPY))
-        robotStance = self.computeRobotStanceFrame(objectTransform, self.relativeStanceTransform)
-        self.stanceFrame = vis.updateFrame(robotStance, 'valve grasp stance',
-                                           parent=self.valveAffordance, visible=False, scale=0.2)
-        self.stanceFrame.addToView(app.getDRCView())
-
-    def spawnValveFrame(self, robotModel, height):
-
-        position = [0.7, 0.22, height]
-        rpy = [180, -90, 0]
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(self.footstepPlanner.getFeetMidPoint(robotModel))
-        return t
-
     def findAffordance(self):
-        self.setupAffordanceParams()
-        self.findValveAffordance()
-
-    def setupAffordanceParams(self):
-        self.setupStance()
-
-        self.relativeStanceXYZ = self.relativeStanceXYZInitial
-        self.relativeStanceRPY = self.relativeStanceRPYInitial
-
-        # mirror stance and rotation direction for right hand:
-        if (self.graspingHand is 'right'):
-            self.relativeStanceXYZ[1] = -self.relativeStanceXYZ[1]
-            self.relativeStanceRPY[2] = -self.relativeStanceRPY[2]
-
-    def findValveAffordance(self):
         self.valveAffordance = om.findObjectByName('valve')
         if self.valveAffordance is None:
             return
 
         valveFrame = self.valveAffordance.getChildFrame()
-
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.RotateX(180)
-        t.RotateY(-90)
-        t.Concatenate(valveFrame.transform)
-        self.valveFrame = t
-
-        self.computeClenchFrame()
-        self.computeValveStanceFrame()
-
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(valveFrame)
-        self.frameSync.addFrame(self.clenchFrame, ignoreIncoming=True)
-        self.frameSync.addFrame(self.stanceFrame, ignoreIncoming=True)
 
-    def computeClenchFrame(self):
-        t = transformUtils.frameFromPositionAndRPY(self.clenchFrameXYZ,
-                                                   self.clenchFrameRPY)
+    def getValveAffordance(self):
+        if self.valveAffordance is None:
+            self.findAffordance()
+        return self.valveAffordance
+
+    def getValveFrame(self):
+        return self.getValveAffordance().getChildFrame()
+
+    def getGraspFrame(self):
+        if self.graspFrame is None:
+            self.graspFrame = self.computeGraspFrame()
+            self.frameSync.addFrame(self.graspFrame, ignoreIncoming=True)
+        return self.graspFrame
+
+    def getStanceFrame(self):
+        if self.stanceFrame is None:
+            self.stanceFrame = self.computeStanceFrame()
+            self.frameSync.addFrame(self.stanceFrame, ignoreIncoming=True)
+        return self.stanceFrame
+
+    def computeStanceFrame(self):
+        objectTransform = transformUtils.copyFrame(self.getGraspFrame().transform)
+        self.relativeStanceTransform = transformUtils.copyFrame(
+            transformUtils.frameFromPositionAndRPY(self.relativeStanceXYZ, self.relativeStanceRPY))
+        robotStance = self.computeRobotStanceFrame(objectTransform, self.relativeStanceTransform)
+        stanceFrame = vis.updateFrame(robotStance, 'valve grasp stance',
+                                           parent=self.getValveAffordance(), visible=False, scale=0.2)
+        stanceFrame.addToView(app.getDRCView())
+        return stanceFrame
+
+    def computeGraspFrame(self):
+        t = transformUtils.frameFromPositionAndRPY(self.graspFrameXYZ,
+                                                   self.graspFrameRPY)
         t_copy = transformUtils.copyFrame(t)
-        t_copy.Concatenate(self.valveFrame)
-        self.clenchFrame = vis.updateFrame(t_copy, 'valve clench frame',
-                                           parent=self.valveAffordance,
-                                           visible=False, scale=0.2)
-        self.clenchFrame.addToView(app.getDRCView())
+        t_copy.PostMultiply()
+        t_copy.RotateX(180)
+        t_copy.RotateY(-90)
+        t_copy.Concatenate(self.getValveFrame().transform)
+        graspFrame = vis.updateFrame(t_copy, 'valve grasp frame',
+                                          parent=self.getValveAffordance(),
+                                          visible=False, scale=0.2)
+        graspFrame.addToView(app.getDRCView())
+        return graspFrame
+
+
+    def spawnValveAffordance(self):
+        radius = 0.10
+        tubeRadius = 0.02
+        position = list(self.relativeStanceXYZ)
+        position[0] = -position[0]
+        position[1] = -position[1]
+        position[2] = 1.2
+        rpy = [0, 0, 0]
+        t = transformUtils.frameFromPositionAndRPY(position, rpy)
+        pose = transformUtils.poseFromTransform(t)
+        desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=float(radius), Segments=20)
+        desc['Tube Radius'] = tubeRadius
+
+        import affordancepanel
+        obj = affordancepanel.panel.affordanceFromDescription(desc)
+        obj.params = dict(radius=radius)
 
     # End Valve Focused Functions ##############################################
     # Planning Functions #######################################################
 
     # These are operational conveniences:
     def planFootstepsToStance(self):
-        self.planFootsteps(self.stanceFrame.transform)
-
-    def planFootsteps(self, goalFrame):
-        startPose = self.getPlanningStartPose()
-        request = self.footstepPlanner.constructFootstepPlanRequest(startPose,
-                                                                    goalFrame)
-        self.footstepPlan = self.footstepPlanner.sendFootstepPlanRequest(
-            request, waitForResponse=True)
+        f = transformUtils.copyFrame(self.getStanceFrame().transform)
+        self.footstepsPanel.onNewWalkingGoal(f)
 
     def planPreGrasp(self):
         startPose = self.getPlanningStartPose()
@@ -292,7 +303,7 @@ class ValvePlannerDemo(object):
 
     def createHandGazeConstraint(self):
         constraint = self.ikPlanner.createGazeGraspConstraint(
-            self.graspingHand, self.clenchFrame, coneThresholdDegrees=self.coaxialGazeTol)
+            self.graspingHand, self.getGraspFrame(), coneThresholdDegrees=self.coaxialGazeTol)
         constraint.tspan = [0.0, 1.0]
         return constraint
 
@@ -329,7 +340,7 @@ class ValvePlannerDemo(object):
             return constraints
 
     def createHeadGazeConstraint(self):
-        valveCenter = np.array(self.clenchFrame.transform.GetPosition())
+        valveCenter = np.array(self.getGraspFrame().transform.GetPosition())
         return ik.WorldGazeTargetConstraint(linkName='head', bodyPoint=np.zeros(3),
                                             worldPoint=valveCenter, coneThreshold=np.radians(20))
 
@@ -389,7 +400,7 @@ class ValvePlannerDemo(object):
         constraint = ik.PositionConstraint()
         constraint.linkName = self.ikPlanner.getHandLink(self.graspingHand)
         constraint.pointInLink = np.array(linkOffsetFrame.GetPosition())
-        constraint.referenceFrame = self.clenchFrame.transform
+        constraint.referenceFrame = self.getGraspFrame().transform
         constraint.lowerBound = np.array([-radialTol, axialLowerBound, -radialTol])
         constraint.upperBound = np.array([radialTol, axialUpperBound, radialTol])
         constraint.tspan = tspan
@@ -438,8 +449,8 @@ class ValvePlannerDemo(object):
         self.ikPlanner.ikServer.fixInitialState = planFromCurrentRobotState
         self.ikPlanner.ikServer.usePointwise = False
 
-        _, _, zaxis = transformUtils.getAxesFromTransform(self.valveFrame)
-        yawDesired = np.arctan2(zaxis[1], zaxis[0])
+        _, yaxis, _ = transformUtils.getAxesFromTransform(self.getGraspFrame().transform)
+        yawDesired = np.arctan2(yaxis[1], yaxis[0])
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
@@ -479,7 +490,7 @@ class ValvePlannerDemo(object):
 
     def planReach(self, verticalOffset=None, **kwargs):
         startPose = self.getPlanningStartPose()
-        self.planInsertTraj(lockBase=False, lockFeet=True, usePoses=True, resetPoses=True,
+        self.planInsertTraj(lockBase=True, lockFeet=True, usePoses=True, resetPoses=True,
                             **kwargs)
         plan = self.ikPlanner.computePostureGoal(startPose, self.reachPose)
         self.addPlan(plan)
@@ -524,14 +535,14 @@ class ValvePlannerDemo(object):
         self.addPlan(plan)
 
     def getNominalPose(self):
-        axes = transformUtils.getAxesFromTransform(self.clenchFrame.transform)
+        axes = transformUtils.getAxesFromTransform(self.getGraspFrame().transform)
         yaxis = axes[1]
         yawDesired = np.arctan2(yaxis[1], yaxis[0])
         seedDistance = 1
 
         nominalPose = self.ikPlanner.jointController.getPose('q_nom')
-        nominalPose[0] = (self.clenchFrame.transform.GetPosition()[0] - seedDistance*yaxis[0])
-        nominalPose[1] = (self.clenchFrame.transform.GetPosition()[1] - seedDistance*yaxis[1])
+        nominalPose[0] = (self.getGraspFrame().transform.GetPosition()[0] - seedDistance*yaxis[0])
+        nominalPose[1] = (self.getGraspFrame().transform.GetPosition()[1] - seedDistance*yaxis[1])
         nominalPose[5] = yawDesired
         return nominalPose
 
@@ -610,7 +621,7 @@ class ValveTaskPanel(TaskUserPanel):
 
     def addButtons(self):
 
-        self.addManualButton('Start', self.onStartClicked)
+        self.addManualButton('Spawn Valve', self.onSpawnValveClicked)
         self.addManualSpacer()
         self.addManualButton('Footsteps', self.valveDemo.planFootstepsToStance)
         self.addManualSpacer()
@@ -624,12 +635,8 @@ class ValveTaskPanel(TaskUserPanel):
         self.addManualSpacer()
         self.addManualButton('Nominal', self.valveDemo.planNominal)
 
-    def onStartClicked(self):
-        self.valveDemo.findAffordance()
-        if self.valveDemo.valveAffordance is not None:
-            print 'Valve Demo: Start - Ready to proceed'
-        else:
-            print 'Valve Demo: Start - VALVE AFFORDANCE NOT FOUND'
+    def onSpawnValveClicked(self):
+        self.valveDemo.spawnValveAffordance()
 
     def setFingers(self):
         self.valveDemo.openPinch(self.valveDemo.graspingHand)
@@ -652,20 +659,29 @@ class ValveTaskPanel(TaskUserPanel):
         self.params.addProperty('Turn direction', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Clockwise',
                                                                             'Counter clockwise']))
-        self.params.addProperty('Touch angle (deg)', 0)
+        self.params.addProperty('Valve size', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Large', 'Small']))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
+        self.taskTree.removeAllTasks()
+        self.addTasks()
 
     def _syncProperties(self):
 
         self.valveDemo.planFromCurrentRobotState = True
-        self.valveDemo.graspingHand = self.params.getPropertyEnumValue('Hand').lower()
+        self.valveDemo.setGraspingHand(self.params.getPropertyEnumValue('Hand').lower())
+
         if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise':
             self.valveDemo.scribeDirection = 1
         else:
             self.valveDemo.scribeDirection = -1
+
+        if self.params.getPropertyEnumValue('Valve size') == 'Large':
+            self.valveDemo.useLargeValveDefaults()
+        else:
+            self.valveDemo.useSmallValveDefaults()
 
     def addTasks(self):
 
@@ -676,6 +692,14 @@ class ValveTaskPanel(TaskUserPanel):
         def addFunc(func, name, parent=None):
             addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
 
+        def addManipulation(func, name, parent=None):
+            group = self.taskTree.addGroup(name, parent=parent)
+            addFunc(func, name='plan motion', parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
+            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
+                    parent=group)
+
         def addLargeValveTurn(parent=None):
             group = self.taskTree.addGroup('Valve Turn', parent=parent)
 
@@ -683,32 +707,13 @@ class ValveTaskPanel(TaskUserPanel):
             finalWristAngleCW = np.radians(320) if v.scribeDirection == 1 else 0
 
             # valve manip actions
-            addFunc(functools.partial(v.planReach, wristAngleCW=initialWristAngleCW),
-                    name='plan reach to valve', parent=group)
-            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
-            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
-                    parent=group)
-
-            addFunc(functools.partial(v.planTouch, wristAngleCW=initialWristAngleCW),
-                    name='plan insert in valve', parent=group)
-            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
-            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
-                    parent=group)
-
-            addFunc(functools.partial(v.planTurn, wristAngleCW=finalWristAngleCW),
-                    name='plan turn valve', parent=group)
-            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
-            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
-                    parent=group)
-
-            addFunc(v.planRetract, name='plan retract', parent=group)
-            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
-            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
-                    parent=group)
+            addManipulation(functools.partial(v.planReach, wristAngleCW=initialWristAngleCW),
+                            name='Reach to valve', parent=group)
+            addManipulation(functools.partial(v.planTouch, wristAngleCW=initialWristAngleCW),
+                            name='Insert hand', parent=group)
+            addManipulation(functools.partial(v.planTurn, wristAngleCW=finalWristAngleCW),
+                            name='Turn valve', parent=group)
+            addManipulation(v.planRetract, name='Retract hand', parent=group)
 
         def addSmallValveTurn(parent=None):
             group = self.taskTree.addGroup('Valve Turn', parent=parent)
@@ -717,40 +722,19 @@ class ValveTaskPanel(TaskUserPanel):
             initialWristAngleCW = 0 if v.scribeDirection == 1 else np.radians(680)
             finalWristAngleCW = np.radians(680) if v.scribeDirection == 1 else 0
 
-            addFunc(functools.partial(v.planReach, wristAngleCW=initialWristAngleCW),
-                    name='plan reach to valve', parent=group)
-            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
-            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
-                    parent=group)
-
-            addFunc(functools.partial(v.planTouch, wristAngleCW=initialWristAngleCW),
-                    name='plan insert in valve', parent=group)
-            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
-            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
-                    parent=group)
-
+            addManipulation(functools.partial(v.planReach, wristAngleCW=initialWristAngleCW),
+                            name='Reach to valve', parent=group)
+            addManipulation(functools.partial(v.planTouch, wristAngleCW=initialWristAngleCW),
+                    name='Insert hand', parent=group)
             addTask(rt.CloseHand(name='grasp valve', side=side, mode='Basic',
                                  amount=self.valveDemo.closedAmount),
                     parent=group)
-
-            addFunc(functools.partial(v.planTurn, wristAngleCW=finalWristAngleCW),
-                    name='plan turn valve', parent=group)
-            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
-            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
-                    parent=group)
-
+            addManipulation(functools.partial(v.planTurn, wristAngleCW=finalWristAngleCW),
+                            name='plan turn valve', parent=group)
             addTask(rt.CloseHand(name='release valve', side=side, mode='Basic',
                                  amount=self.valveDemo.openAmount),
                     parent=group)
-
-            addFunc(v.planRetract, name='plan retract', parent=group)
-            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
-            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
-                    parent=group)
+            addManipulation(v.planRetract, name='plan retract', parent=group)
 
         v = self.valveDemo
 
@@ -761,36 +745,40 @@ class ValveTaskPanel(TaskUserPanel):
         # add the tasks
 
         # prep
-        addTask(rt.CloseHand(name='close left hand', side='Left'))
-        addTask(rt.CloseHand(name='close right hand', side='Right'))
-        addTask(rt.SetNeckPitch(name='set neck position', angle=0))
+        prep = self.taskTree.addGroup('Preparation')
+        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
+        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+        addTask(rt.SetNeckPitch(name='set neck position', angle=0), parent=prep)
         addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General',
-                                   postureName='safe nominal', side='Default'))
+                                   postureName='safe nominal', side='Default'), parent=prep)
         addTask(rt.UserPromptTask(name='approve manip plan',
-                                  message='Please approve manipulation plan.'))
+                                  message='Please approve manipulation plan.'), parent=prep)
         addTask(rt.CommitManipulationPlan(name='execute manip plan',
-                                          planName='safe nominal posture plan'))
-        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+                                          planName='safe nominal posture plan'), parent=prep)
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)
 
         # fit
+        fit = self.taskTree.addGroup('Fitting')
         addTask(rt.UserPromptTask(name='fit valve',
-                                  message='Please fit and approve valve affordance.'))
-        addTask(rt.FindAffordance(name='check valve affordance', affordanceName='valve'))
-        addFunc(v.computeValveStanceFrame, name='plan stance location')
+                                  message='Please fit and approve valve affordance.'), parent=fit)
+        addTask(rt.FindAffordance(name='check valve affordance', affordanceName='valve'),
+                parent=fit)
 
         # walk
-        addTask(rt.RequestFootstepPlan(name='plan walk to valve',
-                                       stanceFrameName='valve grasp stance'))
+        walk = self.taskTree.addGroup('Approach')
+        addFunc(v.planFootstepsToStance, 'plan walk to valve', parent=walk)
         addTask(rt.UserPromptTask(name='approve footsteps',
-                                  message='Please approve footstep plan.'))
+                                  message='Please approve footstep plan.'), parent=walk)
         addTask(rt.CommitFootstepPlan(name='walk to valve',
-                                      planName='valve grasp stance footstep plan'))
-        addTask(rt.WaitForWalkExecution(name='wait for walking'))
+                                      planName='valve grasp stance footstep plan'), parent=walk)
+        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
 
         # refit
-        addTask(rt.SetNeckPitch(name='set neck position', angle=35))
-        addTask(rt.UserPromptTask(name='fit value',
-                                  message='Please fit and approve valve affordance.'))
+        refit = self.taskTree.addGroup('Re-fitting')
+        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=refit)
+        addTask(rt.UserPromptTask(name='fit valve',
+                                  message='Please fit and approve valve affordance.'),
+                parent=refit)
 
         # set fingers
         addTask(rt.CloseHand(name='set finger positions', side=side, mode='Basic',

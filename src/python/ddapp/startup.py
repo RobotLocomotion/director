@@ -398,7 +398,7 @@ if usePlanning:
                     playPlans, showPose, cameraview, segmentationpanel)
     drillTaskPanel = drilldemo.DrillTaskPanel(drillDemo)
 
-    valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
+    valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, footstepsPanel, manipPlanner, ikPlanner,
                                       lHandDriver, rHandDriver, robotStateJointController)
     valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
 
