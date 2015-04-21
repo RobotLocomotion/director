@@ -285,6 +285,7 @@ def setupPackagePaths():
         'software/models/valkyrie',
         'software/models/lwr_defs',
         'software/models/mit_gazebo_models/mit_robot',
+        'software/models/mit_gazebo_models/V1',
         'software/models/common_components/multisense_sl',
         'software/models/common_components/irobot_hand',
         'software/models/common_components/handle_description',
