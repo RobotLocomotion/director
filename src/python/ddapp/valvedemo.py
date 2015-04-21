@@ -1,3 +1,4 @@
+import pdb
 import vtkAll as vtk
 import math
 import functools
@@ -21,8 +22,8 @@ from PythonQt import QtCore
 
 class ValvePlannerDemo(object):
 
-    def __init__(self, robotModel, footstepPlanner, footstepsPanel, manipPlanner, ikPlanner, lhandDriver,
-                 rhandDriver, sensorJointController):
+    def __init__(self, robotModel, footstepPlanner, footstepsPanel, manipPlanner, ikPlanner,
+                 lhandDriver, rhandDriver, sensorJointController):
         self.robotModel = robotModel
         self.footstepPlanner = footstepPlanner
         self.footstepsPanel = footstepsPanel
@@ -107,13 +108,13 @@ class ValvePlannerDemo(object):
         self.smallValve = True
 
     def setupStance(self):
-        self.relativeStanceXYZInitial = [-0.9, 0.3, 0.0]
+        self.relativeStanceXYZInitial = [-0.9, -0.3, 0.0]
         self.relativeStanceRPYInitial = [0, 0, 0]
         self.relativeStanceXYZ = self.relativeStanceXYZInitial
         self.relativeStanceRPY = self.relativeStanceRPYInitial
 
         # mirror stance and rotation direction for right hand:
-        if (self.graspingHand is 'right'):
+        if self.graspingHand == 'right':
             self.relativeStanceXYZ[1] = -self.relativeStanceXYZ[1]
             self.relativeStanceRPY[2] = -self.relativeStanceRPY[2]
 
@@ -178,71 +179,96 @@ class ValvePlannerDemo(object):
         segmentation.segmentValveByBoundingBox(polyData, pickPoint)
         self.findAffordance()
 
-    def findAffordance(self):
-        self.valveAffordance = om.findObjectByName('valve')
-        if self.valveAffordance is None:
-            return
-
-        valveFrame = self.valveAffordance.getChildFrame()
-        self.frameSync = vis.FrameSync()
-        self.frameSync.addFrame(valveFrame)
-
     def getValveAffordance(self):
-        if self.valveAffordance is None:
-            self.findAffordance()
-        return self.valveAffordance
-
-    def getValveFrame(self):
-        return self.getValveAffordance().getChildFrame()
-
-    def getGraspFrame(self):
-        if self.graspFrame is None:
-            self.graspFrame = self.computeGraspFrame()
-            self.frameSync.addFrame(self.graspFrame, ignoreIncoming=True)
-        return self.graspFrame
-
-    def getStanceFrame(self):
-        if self.stanceFrame is None:
-            self.stanceFrame = self.computeStanceFrame()
-            self.frameSync.addFrame(self.stanceFrame, ignoreIncoming=True)
-        return self.stanceFrame
+        return om.findObjectByName('valve')
 
     def computeStanceFrame(self):
-        objectTransform = transformUtils.copyFrame(self.getGraspFrame().transform)
-        self.relativeStanceTransform = transformUtils.copyFrame(
-            transformUtils.frameFromPositionAndRPY(self.relativeStanceXYZ, self.relativeStanceRPY))
-        robotStance = self.computeRobotStanceFrame(objectTransform, self.relativeStanceTransform)
+        objectTransform = transformUtils.copyFrame(self.computeGraspFrame().transform)
+        robotStance = self.computeRobotStanceFrame(objectTransform,
+                                                   self.computeRelativeStanceTransform())
         stanceFrame = vis.updateFrame(robotStance, 'valve grasp stance',
-                                           parent=self.getValveAffordance(), visible=False, scale=0.2)
+                                      parent=self.getValveAffordance(), visible=False, scale=0.2)
         stanceFrame.addToView(app.getDRCView())
         return stanceFrame
 
+    def computeRelativeStanceTransform(self):
+        return transformUtils.copyFrame(
+            transformUtils.frameFromPositionAndRPY(self.relativeStanceXYZ, self.relativeStanceRPY))
+
+    def computeRelativeGraspTransform(self):
+        t = transformUtils.copyFrame(transformUtils.frameFromPositionAndRPY(self.graspFrameXYZ,
+                                                                            self.graspFrameRPY))
+        t.PostMultiply()
+        t.RotateX(180)
+        t.RotateY(-90)
+        return t
+
     def computeGraspFrame(self):
-        t = transformUtils.frameFromPositionAndRPY(self.graspFrameXYZ,
-                                                   self.graspFrameRPY)
-        t_copy = transformUtils.copyFrame(t)
-        t_copy.PostMultiply()
-        t_copy.RotateX(180)
-        t_copy.RotateY(-90)
-        t_copy.Concatenate(self.getValveFrame().transform)
-        graspFrame = vis.updateFrame(t_copy, 'valve grasp frame',
-                                          parent=self.getValveAffordance(),
-                                          visible=False, scale=0.2)
+        t = self.computeRelativeGraspTransform()
+        t.Concatenate(self.getValveAffordance().getChildFrame().transform)
+        graspFrame = vis.updateFrame(t, 'valve grasp frame',
+                                     parent=self.getValveAffordance(),
+                                     visible=False, scale=0.2)
         graspFrame.addToView(app.getDRCView())
         return graspFrame
-
 
     def spawnValveAffordance(self):
         radius = 0.10
         tubeRadius = 0.02
-        position = list(self.relativeStanceXYZ)
-        position[0] = -position[0]
-        position[1] = -position[1]
-        position[2] = 1.2
+        position = [0, 0, 1.2]
+        #position = np.array(self.relativeStanceXYZ)
+        #position[0] = -position[0]
+        #position[1] = -position[1]
+        #position[2] = 1.2
+        #foot_midpoint = self.footstepPlanner.getFeetMidPoint(self.robotModel)
+        # DEBUG
+        #print position
+        #print np.array(foot_midpoint.GetPosition())
+        # END_DEBUG
+        #position -= np.array(foot_midpoint.GetPosition())
+        # DEBUG
+        #print position
+        # END_DEBUG
         rpy = [0, 0, 0]
+        t_feet_mid = self.footstepPlanner.getFeetMidPoint(self.robotModel)
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        pose = transformUtils.poseFromTransform(t)
-        desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=float(radius), Segments=20)
+        t_grasp = self.computeRelativeGraspTransform()
+        # DEBUG
+        print "t_grasp"
+        print t_grasp.GetMatrix()
+        # END_DEBUG
+        t_grasp.Concatenate(t)
+        # DEBUG
+        print "t_grasp"
+        print t_grasp.GetMatrix()
+        # END_DEBUG
+        t_stance = self.computeRobotStanceFrame(t_grasp, self.computeRelativeStanceTransform())
+        # DEBUG
+        print "t_stance"
+        print t_stance.GetMatrix()
+        # END_DEBUG
+        t_valve = t_stance.GetInverse()
+        # DEBUG
+        print "t_valve"
+        print t_valve.GetMatrix()
+        # END_DEBUG
+        t_valve.Concatenate(t)
+        # DEBUG
+        print "t_valve"
+        print t_valve.GetMatrix()
+        # END_DEBUG
+        t_valve.Concatenate(t_feet_mid)
+        # DEBUG
+        print "t_valve"
+        print t_valve.GetMatrix()
+        # END_DEBUG
+        pose = transformUtils.poseFromTransform(t_valve)
+        # DEBUG
+        print "pose"
+        print pose
+        # END_DEBUG
+        desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose,
+                    Color=[0, 1, 0], Radius=float(radius), Segments=20)
         desc['Tube Radius'] = tubeRadius
 
         import affordancepanel
@@ -254,7 +280,7 @@ class ValvePlannerDemo(object):
 
     # These are operational conveniences:
     def planFootstepsToStance(self):
-        f = transformUtils.copyFrame(self.getStanceFrame().transform)
+        f = transformUtils.copyFrame(self.computeStanceFrame().transform)
         self.footstepsPanel.onNewWalkingGoal(f)
 
     def planPreGrasp(self):
@@ -303,7 +329,7 @@ class ValvePlannerDemo(object):
 
     def createHandGazeConstraint(self):
         constraint = self.ikPlanner.createGazeGraspConstraint(
-            self.graspingHand, self.getGraspFrame(), coneThresholdDegrees=self.coaxialGazeTol)
+            self.graspingHand, self.computeGraspFrame(), coneThresholdDegrees=self.coaxialGazeTol)
         constraint.tspan = [0.0, 1.0]
         return constraint
 
@@ -340,7 +366,7 @@ class ValvePlannerDemo(object):
             return constraints
 
     def createHeadGazeConstraint(self):
-        valveCenter = np.array(self.getGraspFrame().transform.GetPosition())
+        valveCenter = np.array(self.computeGraspFrame().transform.GetPosition())
         return ik.WorldGazeTargetConstraint(linkName='head', bodyPoint=np.zeros(3),
                                             worldPoint=valveCenter, coneThreshold=np.radians(20))
 
@@ -400,7 +426,7 @@ class ValvePlannerDemo(object):
         constraint = ik.PositionConstraint()
         constraint.linkName = self.ikPlanner.getHandLink(self.graspingHand)
         constraint.pointInLink = np.array(linkOffsetFrame.GetPosition())
-        constraint.referenceFrame = self.getGraspFrame().transform
+        constraint.referenceFrame = self.computeGraspFrame().transform
         constraint.lowerBound = np.array([-radialTol, axialLowerBound, -radialTol])
         constraint.upperBound = np.array([radialTol, axialUpperBound, radialTol])
         constraint.tspan = tspan
@@ -449,7 +475,7 @@ class ValvePlannerDemo(object):
         self.ikPlanner.ikServer.fixInitialState = planFromCurrentRobotState
         self.ikPlanner.ikServer.usePointwise = False
 
-        _, yaxis, _ = transformUtils.getAxesFromTransform(self.getGraspFrame().transform)
+        _, yaxis, _ = transformUtils.getAxesFromTransform(self.computeGraspFrame().transform)
         yawDesired = np.arctan2(yaxis[1], yaxis[0])
 
         if startPose is None:
@@ -535,18 +561,20 @@ class ValvePlannerDemo(object):
         self.addPlan(plan)
 
     def getNominalPose(self):
-        axes = transformUtils.getAxesFromTransform(self.getGraspFrame().transform)
+        axes = transformUtils.getAxesFromTransform(self.computeGraspFrame().transform)
         yaxis = axes[1]
         yawDesired = np.arctan2(yaxis[1], yaxis[0])
         seedDistance = 1
 
         nominalPose = self.ikPlanner.jointController.getPose('q_nom')
-        nominalPose[0] = (self.getGraspFrame().transform.GetPosition()[0] - seedDistance*yaxis[0])
-        nominalPose[1] = (self.getGraspFrame().transform.GetPosition()[1] - seedDistance*yaxis[1])
+        nominalPose[0] = (self.computeGraspFrame().transform.GetPosition()[0] -
+                          seedDistance*yaxis[0])
+        nominalPose[1] = (self.computeGraspFrame().transform.GetPosition()[1] -
+                          seedDistance*yaxis[1])
         nominalPose[5] = yawDesired
         return nominalPose
 
-    def getStanceFrameCoaxial(self):
+    def computeStanceFrameCoaxial(self):
         startPose = self.getNominalPose()
 
         plan = self.planInsertTraj(lockFeet=False, lockBase=False, resetPoses=True,
@@ -725,7 +753,7 @@ class ValveTaskPanel(TaskUserPanel):
             addManipulation(functools.partial(v.planReach, wristAngleCW=initialWristAngleCW),
                             name='Reach to valve', parent=group)
             addManipulation(functools.partial(v.planTouch, wristAngleCW=initialWristAngleCW),
-                    name='Insert hand', parent=group)
+                            name='Insert hand', parent=group)
             addTask(rt.CloseHand(name='grasp valve', side=side, mode='Basic',
                                  amount=self.valveDemo.closedAmount),
                     parent=group)
