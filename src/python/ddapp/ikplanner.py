@@ -196,6 +196,7 @@ class IKPlanner(object):
 
         # If the robot an arm on a fixed base, set true e.g. ABB or Kuka?
         self.fixedBaseArm = False
+        self.robotNoFeet = False
 
         om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
 
@@ -667,9 +668,11 @@ class IKPlanner(object):
 
 
     def createLockedTorsoPostureConstraint(self, startPostureName):
+        print("createLockedTorsoPostureConstraint")
         joints = []
         joints += robotstate.matchJoints('base_.*')
         joints += robotstate.matchJoints('back_.*')
+        joints += robotstate.matchJoints('torso_.*')
         joints += robotstate.matchJoints('r_leg_.*')
         joints += robotstate.matchJoints('l_leg_.*')
         return self.createPostureConstraint(startPostureName, joints)
@@ -685,7 +688,9 @@ class IKPlanner(object):
 
 
     def createLockedBackPostureConstraint(self, startPostureName):
+        print("createLockedBackPostureConstraint")
         joints = robotstate.matchJoints('back_.*')
+        joints += robotstate.matchJoints('torso_.*')
         return self.createPostureConstraint(startPostureName, joints)
 
 
@@ -1060,7 +1065,7 @@ class IKPlanner(object):
             constraints.append(p)
             poseNames.append(poseName)
 
-        if (not self.fixedBaseArm):
+        if ((not self.fixedBaseArm) and (not self.robotNoFeet)):
             if feetOnGround:
                 constraints.extend(self.createFixedFootConstraints(poseNames[-1]))
 
