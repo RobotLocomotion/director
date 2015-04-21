@@ -26,7 +26,7 @@ class ManipulationPlanDriver(object):
 
     def __init__(self):
         lcmUtils.addSubscriber('CANDIDATE_MANIP_PLAN', lcmdrc.robot_plan_w_keyframes_t, self.onManipPlan)
-        lcmUtils.addSubscriber('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS',lcmdrc.robot_plan_with_supports_t, self.onPlanWithSupports)
+        lcmUtils.addSubscriber('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS',lcmdrc.robot_plan_with_supports_t, self.onManipPlan)
         self.lastManipPlan = None
         self.committedPlans = []
         self.callbacks = callbacks.CallbackRegistry([self.PLAN_RECEIVED,
@@ -36,9 +36,6 @@ class ManipulationPlanDriver(object):
         self.lastManipPlan = msg
         self.callbacks.process(self.PLAN_RECEIVED, msg)
 
-    def onPlanWithSupports(self, msg):
-        self.lastManipPlan = msg #does it matter that the type of msg is different here? it containts a robot_plan_t message type
-        self.callbacks.process(self.PLAN_RECEIVED, msg)
 
     def convertKeyframePlan(self, keyframeMsg):
         msg = lcmdrc.robot_plan_t()
