@@ -2,6 +2,7 @@ from ddapp import callbacks
 from ddapp.fieldcontainer import FieldContainer
 
 import re
+import numpy as np
 from collections import OrderedDict
 
 
@@ -36,11 +37,16 @@ def fromQColor(propertyName, propertyValue):
     else:
         return propertyValue
 
-def toQColor(propertyName, propertyValue):
+def toQProperty(propertyName, propertyValue):
     if 'color' in propertyName.lower() and isinstance(propertyValue, (list, tuple)) and len(propertyValue) == 3:
         return QtGui.QColor(propertyValue[0]*255.0, propertyValue[1]*255.0, propertyValue[2]*255.0)
+    elif isinstance(propertyValue, np.float):
+        return float(propertyValue)
+    elif isinstance(propertyValue, (list, tuple, np.ndarray)) and len(propertyValue) and isinstance(propertyValue[0], np.float):
+        return [float(x) for x in propertyValue]
     else:
         return propertyValue
+
 
 class PropertySet(object):
 
@@ -186,7 +192,7 @@ class PropertyPanelHelper(object):
         if prop is not None:
 
             propertyValue = properties.getProperty(propertyName)
-            propertyValue = toQColor(propertyName, propertyValue)
+            propertyValue = toQProperty(propertyName, propertyValue)
 
             if isinstance(propertyValue, list):
                 for i, subValue in enumerate(propertyValue):
@@ -244,7 +250,7 @@ class PropertyPanelHelper(object):
     @staticmethod
     def _addProperty(panel, name, attributes, value):
 
-        value = toQColor(name, value)
+        value = toQProperty(name, value)
 
         if isinstance(value, list):
             groupName = PropertyPanelHelper.getPropertyGroupName(name, value)
