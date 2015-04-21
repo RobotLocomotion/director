@@ -687,7 +687,6 @@ class IKPlanner(object):
 
 
     def createLockedBackPostureConstraint(self, startPostureName):
-        print("createLockedBackPostureConstraint")
         joints = robotstate.matchJoints('back_.*')
         joints += robotstate.matchJoints('torso_.*')
         return self.createPostureConstraint(startPostureName, joints)
