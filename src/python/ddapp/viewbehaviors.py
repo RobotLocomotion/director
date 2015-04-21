@@ -547,6 +547,12 @@ def showRightClickMenu(displayPoint, view):
         obj = vis.showPolyData(planePoints, 'local plane fit', color=[0,1,0])
         obj.setProperty('Point Size', 7)
 
+        fields = segmentation.makePolyDataFields(obj.polyData)
+
+        pose = transformUtils.poseFromTransform(fields.frame)
+        desc = dict(classname='BoxAffordanceItem', Name='local plane', Dimensions=list(fields.dims), pose=pose)
+        box = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        box._applyCameraTexture = True
 
     def onOrientToMajorPlane():
         polyData, planeFrame = segmentation.orientToMajorPlane(pointCloudObj.polyData, pickedPoint=pickedPoint)
