@@ -1064,7 +1064,7 @@ class IKPlanner(object):
             constraints.append(p)
             poseNames.append(poseName)
 
-        if ((not self.fixedBaseArm) and (not self.robotNoFeet)):
+        if not self.fixedBaseArm and not self.robotNoFeet:
             if feetOnGround:
                 constraints.extend(self.createFixedFootConstraints(poseNames[-1]))
 
