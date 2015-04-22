@@ -829,12 +829,27 @@ class FootstepRequestGenerator(object):
         assert leadingFoot in ('left', 'right')
         isRightFootOffset = 0 if leadingFoot == 'left' else 1
 
+        footOriginToSole = -np.mean(FootstepsDriver.getContactPts(), axis=0)
+
         stepMessages = []
         for i, stepFrame in enumerate(stepFrames):
+
+            t = transformUtils.copyFrame(stepFrame)
+            t.PreMultiply()
+            t.Translate(footOriginToSole)
+
             step = lcmdrc.footstep_t()
-            step.pos = transformUtils.positionMessageFromFrame(stepFrame)
+            step.pos = transformUtils.positionMessageFromFrame(t)
             step.is_right_foot = (i + isRightFootOffset) % 2
             step.params = self.footstepsDriver.getDefaultStepParams()
+
+            step.fixed_x = True
+            step.fixed_y = True
+            step.fixed_z = True
+            step.fixed_roll = True
+            step.fixed_pitch = True
+            step.fixed_yaw = True
+
             stepMessages.append(step)
 
         return stepMessages
