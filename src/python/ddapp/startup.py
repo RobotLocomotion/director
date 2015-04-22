@@ -875,7 +875,7 @@ def drawCenterOfMass(model):
     com = list(model.model.getCenterOfMass())
     com[2] = stanceFrame.GetPosition()[2]
     d = DebugData()
-    d.addSphere(com,radius = 0.015)
+    d.addSphere(com, radius=0.015)
     obj = vis.updatePolyData(d.getPolyData(), 'COM %s' % model.getProperty('Name'), color=[1,0,0], visible=False, parent=model)
     
 def initCenterOfMassVisulization():
