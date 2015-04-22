@@ -396,7 +396,6 @@ if usePlanning:
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
     drillTaskPanel = drilldemo.DrillTaskPanel(drillDemo)
-    drillTaskPanel.widget.show()
 
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
