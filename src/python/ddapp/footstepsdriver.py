@@ -553,11 +553,12 @@ class FootstepsDriver(object):
         self.sendUpdatePlanRequest()
 
     def sendUpdatePlanRequest(self):
-        msg = self.lastFootstepRequest
-        msg.num_existing_steps = self.lastFootstepPlan.num_steps
-        msg.existing_steps = self.lastFootstepPlan.footsteps
-        msg = self.applyParams(msg)
-        self.sendFootstepPlanRequest(msg)
+        msg = lcmdrc.footstep_check_request_t()
+        msg.initial_state = self.lastFootstepRequest.initial_state
+        msg.footstep_plan = self.lastFootstepPlan
+        msg.snap_to_terrain = True
+        msg.compute_infeasibility = False
+        self.sendFootstepPlanCheckRequest(msg)
 
     def updateRequest(self):
         if self.lastFootstepRequest is not None:
@@ -612,6 +613,22 @@ class FootstepsDriver(object):
         for r in safe_terrain_regions:
             msg.iris_regions.append(r.to_iris_region_t())
         return msg
+
+    def sendFootstepPlanCheckRequest(self, request, waitForResponse=False, waitTimeout=5000):
+        assert isinstance(request, lcmdrc.footstep_check_request_t)
+
+        requestChannel = 'FOOTSTEP_CHECK_REQUEST'
+        responseChannel = 'FOOTSTEP_PLAN_RESPONSE'
+
+        if waitForResponse:
+            if waitTimeout == 0:
+                helper = lcmUtils.MessageResponseHelper(responseChannel, lcmdrc.footstep_plan_t)
+                lcmUtils.publish(requestChannel, request)
+                return helper
+            return lcmUtils.MessageResponseHelper.publishAndWait(requestChannel, request,
+                                                                 responseChannel, lcmdrc.footstep_plan_t, waitTimeout)
+        else:
+            lcmUtils.publish(requestChannel, request)
 
     def sendFootstepPlanRequest(self, request, waitForResponse=False, waitTimeout=5000):
 
