@@ -983,6 +983,17 @@ const QVector<double>& ddDrakeModel::getJointPositions() const
 }
 
 //-----------------------------------------------------------------------------
+QVector<double> ddDrakeModel::getCenterOfMass() const
+{
+  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+  Vector3d com;
+  model->getCOM(com);
+  QVector<double> ret;
+  ret << com[0] << com[1] << com[2];
+  return ret;
+}
+
+//-----------------------------------------------------------------------------
 QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
 {
   QVector<double> limits;

@@ -29,6 +29,7 @@ public:
   void setJointPositions(const QVector<double>& positions, const QList<QString>& jointNames);
   void setJointPositions(const QVector<double>& positions);
   const QVector<double>& getJointPositions() const;
+  QVector<double> getCenterOfMass() const;
   QVector<double> getJointLimits(const QString& jointName) const;
 
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
