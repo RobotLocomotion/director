@@ -406,15 +406,16 @@ class FootstepsDriver(object):
                     obj = vis.showPolyData(vol_mesh, 'walking volume', parent=volFolder, alpha=0.5, visible=self.show_contact_slices, color=color)
                     obj.actor.SetUserTransform(footstepTransform)
 
-            trans_prev = msg.footsteps[i-2].pos.translation
-            trans_prev = [trans_prev.x, trans_prev.y, trans_prev.z]
-            yaw = np.arctan2(trans[1]-trans_prev[1], trans[0]-trans_prev[0])
-
-            # TODO: when Drake frames are supported in the C++ interface, use them
-            # to get this sole transform
-            # foot_sole_shift = np.array([0.048, 0.0, -0.0811])
-
-            T_terrain_to_world = transformUtils.frameFromPositionAndRPY([trans_prev[0], trans_prev[1], 0], [0, 0, math.degrees(yaw)])
+            sole_offset = np.mean(FootstepsDriver.getContactPts(), axis=0)
+            t_sole_prev = transformUtils.frameFromPositionMessage(msg.footsteps[i-2].pos)
+            t_sole_prev.PreMultiply()
+            t_sole_prev.Translate(sole_offset)
+            t_sole = transformUtils.copyFrame(footstepTransform)
+            t_sole.Translate(sole_offset)
+            yaw = np.arctan2(t_sole.GetPosition()[1] - t_sole_prev.GetPosition()[1],
+                             t_sole.GetPosition()[0] - t_sole_prev.GetPosition()[0])
+            T_terrain_to_world = transformUtils.frameFromPositionAndRPY([t_sole_prev.GetPosition()[0], t_sole_prev.GetPosition()[1], 0],
+                                                                        [0, 0, math.degrees(yaw)])
             path_dist = np.array(footstep.terrain_path_dist)
             height = np.array(footstep.terrain_height)
             # if np.any(height >= trans[2]):
