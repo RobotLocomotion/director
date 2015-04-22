@@ -72,20 +72,8 @@ class PolygonSegmentationNonIRIS():
 
         b = b + A.dot(np.array([0,0,pose[5]]))
 
-        generators = Hrep(A, b).generators
-
-        if len(generators) > 0:
-            # Use cddlib to simplify our polyhedral representation
-            self.c_space_polyhedron = Vrep(generators)
-
-            point, normal = get_point_and_normal(pose)
-            return SafeTerrainRegion(self.c_space_polyhedron.A,
-                                     self.c_space_polyhedron.b,
-                                     [], [], tform)
-        else:
-            # system is inconsitent, return None
-            return None
-
+        self.c_space_polyhedron = Hrep(A, b)
+        return SafeTerrainRegion(A, b, [], [], tform)
 
     def drawSamples(self, nsamples):
         import matplotlib.pyplot as plt
