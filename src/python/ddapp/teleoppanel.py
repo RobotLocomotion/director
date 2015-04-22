@@ -94,6 +94,12 @@ class EndEffectorTeleopPanel(object):
         self.palmGazeAxis = [0.0, 1.0, 0.0]
         self.constraintSet = None
 
+        #self.ui.interactiveCheckbox.visible = False
+        #self.ui.updateIkButton.visible = False
+
+        self.pelvisLink = drcargs.getDirectorConfig()['pelvisLink']
+        self.kneeJointLimits = drcargs.getDirectorConfig()['kneeJointLimits']
+
     def setComboText(self, combo, text):
         index = combo.findText(text)
         assert index >= 0
@@ -438,22 +444,22 @@ class EndEffectorTeleopPanel(object):
             constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName, lockLegs=False))
             ikPlanner.setBaseLocked(True)
         if self.getBaseConstraint() == 'constrained':
-            constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, 'pelvis', tspan=[1.0, 1.0]))
+            constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, self.pelvisLink, tspan=[1.0, 1.0]))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'xyz only':
             constraints.append(ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
-            constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
+            constraints.append(ikPlanner.createKneePostureConstraint(self.kneeJointLimits))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'z only':
             constraints.append(ikPlanner.createZMovingBasePostureConstraint(startPoseName))
-            constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
+            constraints.append(ikPlanner.createKneePostureConstraint(self.kneeJointLimits))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'limited':
             constraints.append(ikPlanner.createMovingBaseSafeLimitsConstraint())
-            constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
+            constraints.append(ikPlanner.createKneePostureConstraint(self.kneeJointLimits))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'free':
-            constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
+            constraints.append(ikPlanner.createKneePostureConstraint(self.kneeJointLimits))
             ikPlanner.setBaseLocked(False)
 
         constraints.append(ikPlanner.createQuasiStaticConstraint())
@@ -628,7 +634,7 @@ class EndEffectorTeleopPanel(object):
             #addHandMesh(handModels[side], frame)
 
         if not ikPlanner.fixedBaseArm and not ikPlanner.robotNoFeet:
-            for linkName in ['l_foot', 'r_foot', 'pelvis']:
+            for linkName in ['l_foot', 'r_foot', self.pelvisLink]:
                 frameName = linkName + ' constraint frame'
                 om.removeFromObjectModel(om.findObjectByName(frameName))
                 frame = vis.showFrame(ikPlanner.getLinkFrameAtPose(linkName, startPose), frameName, parent=folder, scale=0.2)
@@ -917,6 +923,7 @@ class JointTeleopPanel(object):
         self.jointLimitsMin = np.array([self.panel.teleopRobotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.panel.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
 
+        # this need to be generalized
         self.jointLimitsMin[0:6] = [-0.25, -0.25, 0.61, -math.radians(20),  -math.radians(20),  -math.radians(20)]
         self.jointLimitsMax[0:6] = [0.25, 0.25, 0.92, math.radians(20),  math.radians(20),  math.radians(20)]
 
