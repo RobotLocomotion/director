@@ -796,7 +796,7 @@ class IKPlanner(object):
 
 
     def createLockedBasePostureConstraint(self, startPostureName, lockLegs=True):
-        joints += (item for item in self.jointGroups if item["name"] == 'Base').next()['joints']
+        joints = (item for item in self.jointGroups if item["name"] == 'Base').next()['joints']
         if lockLegs:
             joints += (item for item in self.jointGroups if item["name"] == 'Right Leg').next()['joints']
             joints += (item for item in self.jointGroups if item["name"] == 'Left Leg').next()['joints']
