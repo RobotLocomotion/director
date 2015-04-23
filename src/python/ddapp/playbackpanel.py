@@ -232,6 +232,10 @@ class PlaybackPanel(object):
         plan = robotstate.asRobotPlan(self.plan) 
         return plan is not None and max(plan.plan_info) < 10
 
+    def getPlanInfo(self, plan):
+        plan = robotstate.asRobotPlan(self.plan)
+        return max(plan.plan_info)
+
 
     def updatePlanFrames(self):
 
@@ -345,6 +349,8 @@ class PlaybackPanel(object):
         self.startTime = 0.0
         self.endTime = self.planPlayback.getPlanElapsedTime(plan)
         self.interpolationChanged()
+        info = self.getPlanInfo(plan)
+        app.displaySnoptInfo(info)
 
         if self.ui.hideButton.text == 'show':
             self.hideClicked()
