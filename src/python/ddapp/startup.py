@@ -25,6 +25,7 @@ from ddapp import doordemo
 from ddapp import drilldemo
 from ddapp import tabledemo
 from ddapp import valvedemo
+from ddapp import drivingplanner
 from ddapp import continuouswalkingdemo
 from ddapp import walkingtestdemo
 from ddapp import terraintask
@@ -403,6 +404,8 @@ if usePlanning:
                                       playPlans, showPose)
     valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
 
+    drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
+
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     robotStateJointController,
@@ -426,6 +429,7 @@ if usePlanning:
     taskPanels['Valve'] = valveTaskPanel.widget
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
+    taskPanels['Driving'] = drivingPlannerPanel.widget
     tasklaunchpanel.init(taskPanels)
 
     splinewidget.init(view, handFactory, robotStateModel)

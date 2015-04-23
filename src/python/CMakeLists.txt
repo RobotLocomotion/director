@@ -29,6 +29,7 @@ set(python_files
   ddapp/drcargs.py
   ddapp/drilldemo.py
   ddapp/drilltaskpanel.py
+  ddapp/drivingplanner.py
   ddapp/fieldcontainer.py
   ddapp/filterUtils.py
   ddapp/footstepsdriver.py
