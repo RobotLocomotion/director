@@ -275,8 +275,8 @@ class ValvePlannerDemo(object):
     def createWristAngleConstraint(self, wristAngleCW, planFromCurrentRobotState):
         if self.graspingHand == 'left':
             wristJoint = ['l_arm_lwy']
-            wristJointLowerBound = [-np.radians(160) - wristAngleCW]
-            wristJointUpperBound = [-np.radians(160) - wristAngleCW]
+            wristJointLowerBound = [-np.radians(160) + wristAngleCW]
+            wristJointUpperBound = [-np.radians(160) + wristAngleCW]
         else:
             wristJoint = ['r_arm_lwy']
             wristJointLowerBound = [np.radians(160) - wristAngleCW]
