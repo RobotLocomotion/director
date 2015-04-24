@@ -623,7 +623,7 @@ class ValveTaskPanel(TaskUserPanel):
         self.addManualButton('Set fingers', self.setFingers)
         self.addManualSpacer()
         self.addManualButton('Reach', self.reach)
-        self.addManualButton('Touch', self.grasp)
+        self.addManualButton('Touch', self.touch)
         self.addManualButton('Turn', self.turnValve)
         self.addManualButton('Retract', self.retract)
         self.addManualSpacer()
@@ -636,13 +636,14 @@ class ValveTaskPanel(TaskUserPanel):
         self.valveDemo.openPinch(self.valveDemo.graspingHand)
 
     def reach(self):
-        self.valveDemo.planReach()
+        self.valveDemo.setReachAndTouchPoses()
+        self.valveDemo.planReach(wristAngleCW=self.initialWristAngleCW)
 
-    def grasp(self):
-        self.valveDemo.planTouch()
+    def touch(self):
+        self.valveDemo.planTouch(wristAngleCW=self.initialWristAngleCW)
 
     def turnValve(self):
-        self.valveDemo.planTurn()
+        self.valveDemo.planTurn(wristAngleCW=self.finalWristAngleCW)
 
     def retract(self):
         self.valveDemo.planRetract()
@@ -669,8 +670,12 @@ class ValveTaskPanel(TaskUserPanel):
 
         if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise':
             self.valveDemo.scribeDirection = 1
+            self.initialWristAngleCW = 0
+            self.finalWristAngleCW = np.radians(320)
         else:
             self.valveDemo.scribeDirection = -1
+            self.initialWristAngleCW = np.radians(320)
+            self.finalWristAngleCW = 0
 
         if self.params.getPropertyEnumValue('Valve size') == 'Large':
             self.valveDemo.useLargeValveDefaults()
@@ -697,15 +702,12 @@ class ValveTaskPanel(TaskUserPanel):
         def addLargeValveTurn(parent=None):
             group = self.taskTree.addGroup('Valve Turn', parent=parent)
 
-            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.radians(320)
-            finalWristAngleCW = np.radians(320) if v.scribeDirection == 1 else 0
-
             # valve manip actions
-            addManipulation(functools.partial(v.planReach, wristAngleCW=initialWristAngleCW),
+            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
                             name='Reach to valve', parent=group)
-            addManipulation(functools.partial(v.planTouch, wristAngleCW=initialWristAngleCW),
+            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
                             name='Insert hand', parent=group)
-            addManipulation(functools.partial(v.planTurn, wristAngleCW=finalWristAngleCW),
+            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
                             name='Turn valve', parent=group)
             addManipulation(v.planRetract, name='Retract hand', parent=group)
 
@@ -713,17 +715,14 @@ class ValveTaskPanel(TaskUserPanel):
             group = self.taskTree.addGroup('Valve Turn', parent=parent)
             side = 'Right' if v.graspingHand == 'right' else 'Left'
 
-            initialWristAngleCW = 0 if v.scribeDirection == 1 else np.radians(680)
-            finalWristAngleCW = np.radians(680) if v.scribeDirection == 1 else 0
-
-            addManipulation(functools.partial(v.planReach, wristAngleCW=initialWristAngleCW),
+            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
                             name='Reach to valve', parent=group)
-            addManipulation(functools.partial(v.planTouch, wristAngleCW=initialWristAngleCW),
+            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
                             name='Insert hand', parent=group)
             addTask(rt.CloseHand(name='grasp valve', side=side, mode='Basic',
                                  amount=self.valveDemo.closedAmount),
                     parent=group)
-            addManipulation(functools.partial(v.planTurn, wristAngleCW=finalWristAngleCW),
+            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
                             name='plan turn valve', parent=group)
             addTask(rt.CloseHand(name='release valve', side=side, mode='Basic',
                                  amount=self.valveDemo.openAmount),
