@@ -645,7 +645,8 @@ class ValveTaskPanel(TaskUserPanel):
         self.valveDemo.spawnValveAffordance()
 
     def setFingers(self):
-        self.valveDemo.openPinch(self.valveDemo.graspingHand)
+        driver = self.valveDemo.getHandDriver(self.valveDemo.graspingHand)
+        driver.sendClose(self.valveDemo.openAmount)
 
     def reach(self):
         self.valveDemo.setReachAndTouchPoses()
