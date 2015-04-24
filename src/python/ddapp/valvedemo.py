@@ -559,16 +559,6 @@ class ValvePlannerDemo(object):
         nominalPose[5] = yawDesired
         return nominalPose
 
-    def computeStanceFrameCoaxial(self):
-        startPose = self.getNominalPose()
-
-        plan = self.planInsertTraj(lockFeet=False, lockBase=False, resetPoses=True,
-                                   startPose=startPose)
-        stancePose = robotstate.convertStateMessageToDrakePose(plan.plan[0])
-        stanceRobotModel = self.ikPlanner.getRobotModelAtPose(stancePose)
-        self.nominalPelvisXYZ = stancePose[:3]
-        return self.footstepPlanner.getFeetMidPoint(stanceRobotModel)
-
     # Glue Functions ###########################################################
     def moveRobotToStanceFrame(self, frame):
         self.sensorJointController.setPose('q_nom')
