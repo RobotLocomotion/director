@@ -181,10 +181,20 @@ class ValvePlannerDemo(object):
     def getValveAffordance(self):
         return om.findObjectByName('valve')
 
-    def computeStanceFrame(self):
+    def computeStanceFrame(self, useIkTraj=False):
         objectTransform = transformUtils.copyFrame(self.computeGraspFrame().transform)
-        robotStance = self.computeRobotStanceFrame(objectTransform,
-                                                   self.computeRelativeStanceTransform())
+        if useIkTraj:
+            startPose = self.getNominalPose()
+            plan = self.planInsertTraj(lockFeet=False, lockBase=False, resetPoses=True,
+                                       startPose=startPose)
+            stancePose = robotstate.convertStateMessageToDrakePose(plan.plan[0])
+            stanceRobotModel = self.ikPlanner.getRobotModelAtPose(stancePose)
+            self.nominalPelvisXYZ = stancePose[:3]
+            robotStance = self.footstepPlanner.getFeetMidPoint(stanceRobotModel)
+        else:
+            robotStance = self.computeRobotStanceFrame(objectTransform,
+                                                       self.computeRelativeStanceTransform())
+
         stanceFrame = vis.updateFrame(robotStance, 'valve grasp stance',
                                       parent=self.getValveAffordance(), visible=False, scale=0.2)
         stanceFrame.addToView(app.getDRCView())
@@ -241,8 +251,8 @@ class ValvePlannerDemo(object):
     # Planning Functions #######################################################
 
     # These are operational conveniences:
-    def planFootstepsToStance(self):
-        f = transformUtils.copyFrame(self.computeStanceFrame().transform)
+    def planFootstepsToStance(self, **kwargs):
+        f = transformUtils.copyFrame(self.computeStanceFrame(**kwargs).transform)
         self.footstepsPanel.onNewWalkingGoal(f)
 
     def planPreGrasp(self):
@@ -618,6 +628,9 @@ class ValveTaskPanel(TaskUserPanel):
         self.addManualButton('Spawn Valve', self.onSpawnValveClicked)
         self.addManualSpacer()
         self.addManualButton('Footsteps', self.valveDemo.planFootstepsToStance)
+        self.addManualButton('Footsteps (IK)',
+                             functools.partial(self.valveDemo.planFootstepsToStance,
+                                               useIkTraj=True))
         self.addManualSpacer()
         self.addManualButton('Raise arm', self.valveDemo.planPreGrasp)
         self.addManualButton('Set fingers', self.setFingers)
