@@ -345,6 +345,9 @@ class ValvePlannerDemo(object):
     def createBaseConstraints(self, resetBase, lockBase, lockFeet, yawDesired):
         constraints = []
 
+        if lockBase is None:
+            lockBase = self.lockBase
+
         if resetBase:
             poseName = self.nominalPoseName
         else:
@@ -429,13 +432,19 @@ class ValvePlannerDemo(object):
                                                              [1.0, 1.0]))
         return constraints
 
-    def setReachAndTouchPoses(self, plan):
-        self.reachPoseName = 'q_reach'
-        self.touchPoseName = 'q_touch'
-        self.reachPose = robotstate.convertStateMessageToDrakePose(plan.plan[0])
-        self.touchPose = robotstate.convertStateMessageToDrakePose(plan.plan[-1])
-        self.ikPlanner.addPose(self.reachPose, self.reachPoseName)
-        self.ikPlanner.addPose(self.touchPose, self.touchPoseName)
+    def setReachAndTouchPoses(self, plan=None):
+        if plan is None:
+            self.reachPoseName = None
+            self.touchPoseName = None
+            self.reachPose = None
+            self.touchPose = None
+        else:
+            self.reachPoseName = 'q_reach'
+            self.touchPoseName = 'q_touch'
+            self.reachPose = robotstate.convertStateMessageToDrakePose(plan.plan[0])
+            self.touchPose = robotstate.convertStateMessageToDrakePose(plan.plan[-1])
+            self.ikPlanner.addPose(self.reachPose, self.reachPoseName)
+            self.ikPlanner.addPose(self.touchPose, self.touchPoseName)
 
     def planInsertTraj(self, lockFeet=True, lockBase=None, resetBase=False, wristAngleCW=0,
                        startPose=None, verticalOffset=0.01, usePoses=False, resetPoses=True,
