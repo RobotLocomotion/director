@@ -216,57 +216,20 @@ class ValvePlannerDemo(object):
         radius = 0.10
         tubeRadius = 0.02
         position = [0, 0, 1.2]
-        #position = np.array(self.relativeStanceXYZ)
-        #position[0] = -position[0]
-        #position[1] = -position[1]
-        #position[2] = 1.2
-        #foot_midpoint = self.footstepPlanner.getFeetMidPoint(self.robotModel)
-        # DEBUG
-        #print position
-        #print np.array(foot_midpoint.GetPosition())
-        # END_DEBUG
-        #position -= np.array(foot_midpoint.GetPosition())
-        # DEBUG
-        #print position
-        # END_DEBUG
         rpy = [0, 0, 0]
         t_feet_mid = self.footstepPlanner.getFeetMidPoint(self.robotModel)
         t = transformUtils.frameFromPositionAndRPY(position, rpy)
         t_grasp = self.computeRelativeGraspTransform()
-        # DEBUG
-        print "t_grasp"
-        print t_grasp.GetMatrix()
-        # END_DEBUG
         t_grasp.Concatenate(t)
-        # DEBUG
-        print "t_grasp"
-        print t_grasp.GetMatrix()
-        # END_DEBUG
         t_stance = self.computeRobotStanceFrame(t_grasp, self.computeRelativeStanceTransform())
-        # DEBUG
-        print "t_stance"
-        print t_stance.GetMatrix()
-        # END_DEBUG
         t_valve = t_stance.GetInverse()
-        # DEBUG
-        print "t_valve"
-        print t_valve.GetMatrix()
-        # END_DEBUG
+
+        # This is necessary to get the inversion to actually happen. We don't know why.
+        t_valve.GetMatrix()
+
         t_valve.Concatenate(t)
-        # DEBUG
-        print "t_valve"
-        print t_valve.GetMatrix()
-        # END_DEBUG
         t_valve.Concatenate(t_feet_mid)
-        # DEBUG
-        print "t_valve"
-        print t_valve.GetMatrix()
-        # END_DEBUG
         pose = transformUtils.poseFromTransform(t_valve)
-        # DEBUG
-        print "pose"
-        print pose
-        # END_DEBUG
         desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose,
                     Color=[0, 1, 0], Radius=float(radius), Segments=20)
         desc['Tube Radius'] = tubeRadius
