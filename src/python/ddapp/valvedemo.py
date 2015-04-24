@@ -7,6 +7,7 @@ from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp import ik
+from ddapp import lcmUtils
 from ddapp import robotstate
 from ddapp import segmentation
 from ddapp.tasks.taskuserpanel import TaskUserPanel
@@ -477,9 +478,13 @@ class ValvePlannerDemo(object):
 
     def planReach(self, verticalOffset=None, **kwargs):
         startPose = self.getPlanningStartPose()
-        self.planInsertTraj(lockBase=True, lockFeet=True, usePoses=True, resetPoses=True,
-                            **kwargs)
-        plan = self.ikPlanner.computePostureGoal(startPose, self.reachPose)
+        insert_plan = self.planInsertTraj(lockBase=True, lockFeet=True, usePoses=True,
+                                          resetPoses=True, **kwargs)
+        info = max(insert_plan.plan_info)
+        reachPose = robotstate.convertStateMessageToDrakePose(insert_plan.plan[0])
+        plan = self.ikPlanner.computePostureGoal(startPose, reachPose)
+        plan.plan_info = [info]*len(plan.plan_info)
+        lcmUtils.publish('CANDIDATE_MANIP_PLAN', plan)
         self.addPlan(plan)
 
     def planTouch(self, **kwargs):
