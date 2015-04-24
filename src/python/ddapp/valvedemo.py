@@ -497,8 +497,7 @@ class ValvePlannerDemo(object):
 
     def planReach(self, verticalOffset=None, **kwargs):
         startPose = self.getPlanningStartPose()
-        insert_plan = self.planInsertTraj(lockBase=True, lockFeet=True, usePoses=True,
-                                          resetPoses=True, **kwargs)
+        insert_plan = self.planInsertTraj(lockFeet=True, usePoses=True, resetPoses=True, **kwargs)
         info = max(insert_plan.plan_info)
         reachPose = robotstate.convertStateMessageToDrakePose(insert_plan.plan[0])
         plan = self.ikPlanner.computePostureGoal(startPose, reachPose)
@@ -669,6 +668,10 @@ class ValveTaskPanel(TaskUserPanel):
                                                                             'Counter clockwise']))
         self.params.addProperty('Valve size', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Large', 'Small']))
+        self.params.addProperty('Base', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
+        self.params.addProperty('Back', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
@@ -694,6 +697,16 @@ class ValveTaskPanel(TaskUserPanel):
             self.valveDemo.useLargeValveDefaults()
         else:
             self.valveDemo.useSmallValveDefaults()
+
+        if self.params.getPropertyEnumValue('Base') == 'Fixed':
+            self.valveDemo.lockBase = True
+        else:
+            self.valveDemo.lockBase = False
+
+        if self.params.getPropertyEnumValue('Back') == 'Fixed':
+            self.valveDemo.lockBack = True
+        else:
+            self.valveDemo.lockBack = False
 
     def addTasks(self):
 
