@@ -1,5 +1,3 @@
-import pdb
-import vtkAll as vtk
 import math
 import functools
 import numpy as np
