@@ -398,10 +398,8 @@ if usePlanning:
                     playPlans, showPose, cameraview, segmentationpanel)
     drillTaskPanel = drilldemo.DrillTaskPanel(drillDemo)
 
-    valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
-                                      lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                                      segmentation.segmentValveWallAuto, robotStateJointController,
-                                      playPlans, showPose)
+    valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, footstepsPanel, manipPlanner, ikPlanner,
+                                      lHandDriver, rHandDriver, robotStateJointController)
     valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
 
     drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
