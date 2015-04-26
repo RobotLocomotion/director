@@ -29,8 +29,14 @@ from PythonQt import QtGui, QtCore
 
 _footMeshes = None
 _footMeshFiles = []
+_robotValkyrie = False
 with open(drcargs.args().directorConfigFile) as directorConfigFile:
     directorConfig = json.load(directorConfigFile)
+
+    # dodgy use of filename to find valkyrie:
+    if (directorConfigFile.name.find("valkyrie") > -1):
+        _robotValkyrie = True
+
     directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
 
     if 'leftFootMeshFiles' in directorConfig:
@@ -529,26 +535,41 @@ class FootstepsDriver(object):
         '''
         hard coded Location of the Drake contact points relative to foot frame. this should be read from URDF
         '''
-        contact_pts = np.zeros((4,3))
+        contact_pts_left = np.zeros((4,3))
+        contact_pts_right = np.zeros((4,3))
+
+        # atlas:
         if support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE:
-            contact_pts[0,:] = [-0.0876,  0.0626, -0.07645]
-            contact_pts[1,:] = [-0.0876, -0.0626, -0.07645]
-            contact_pts[2,:] = [0.1728,   0.0626, -0.07645]
-            contact_pts[3,:] = [0.1728,  -0.0626, -0.07645]
+            contact_pts_left[0,:] = [-0.0876,  0.0626, -0.07645]
+            contact_pts_left[1,:] = [-0.0876, -0.0626, -0.07645]
+            contact_pts_left[2,:] = [0.1728,   0.0626, -0.07645]
+            contact_pts_left[3,:] = [0.1728,  -0.0626, -0.07645]
         elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE:
-            contact_pts[0,:] = [-0.0008,  0.0626, -0.07645]
-            contact_pts[1,:] = [-0.0008, -0.0626, -0.07645]
-            contact_pts[2,:] = [0.1728,   0.0626, -0.07645]
-            contact_pts[3,:] = [0.1728,  -0.0626, -0.07645]
+            contact_pts_left[0,:] = [-0.0008,  0.0626, -0.07645]
+            contact_pts_left[1,:] = [-0.0008, -0.0626, -0.07645]
+            contact_pts_left[2,:] = [0.1728,   0.0626, -0.07645]
+            contact_pts_left[3,:] = [0.1728,  -0.0626, -0.07645]
         elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT:
-            contact_pts[0,:] = [-0.0876,  0.0626, -0.07645]
-            contact_pts[1,:] = [-0.0876, -0.0626, -0.07645]
-            contact_pts[2,:] = [0.086,   0.0626, -0.07645]
-            contact_pts[3,:] = [0.086,  -0.0626, -0.07645]
+            contact_pts_left[0,:] = [-0.0876,  0.0626, -0.07645]
+            contact_pts_left[1,:] = [-0.0876, -0.0626, -0.07645]
+            contact_pts_left[2,:] = [0.086,   0.0626, -0.07645]
+            contact_pts_left[3,:] = [0.086,  -0.0626, -0.07645]
         else:
             raise ValueError("Unrecognized support contact group: {:d}".format(support_contact_groups))
 
-        return contact_pts
+        contact_pts_right = contact_pts_left
+
+        if (_robotValkyrie):
+            contact_pts_left[0,:] = [0.075, 0.0624435, 0.0775]
+            contact_pts_left[1,:] = [0.075,-0.0624435, 0.0775]
+            contact_pts_left[2,:] = [0.110, 0.0624435, -0.22]
+            contact_pts_left[3,:] = [0.110,-0.0624435, -0.22]
+            contact_pts_right[0,:] = [0.075, 0.0624435, -0.0775]
+            contact_pts_right[1,:] = [0.075,-0.0624435, -0.0775]
+            contact_pts_right[2,:] = [0.110, 0.0624435, 0.22]
+            contact_pts_right[3,:] = [0.110,-0.0624435, 0.22]
+
+        return contact_pts_left, contact_pts_right
 
     @staticmethod
     def getFeetMidPoint(model, useWorldZ=True):
@@ -558,17 +579,31 @@ class FootstepsDriver(object):
         left and right foot yaw in world frame, and Z axis aligned with world Z.
         The foot reference point is the average of the foot contact points in the foot frame.
         '''
-        contact_pts = FootstepsDriver.getContactPts()
-        contact_pts_mid = np.mean(contact_pts, axis=0) # mid point on foot relative to foot frame
+        contact_pts_left, contact_pts_right = FootstepsDriver.getContactPts()
+
+        contact_pts_mid_left = np.mean(contact_pts_left, axis=0) # mid point on foot relative to foot frame
+        contact_pts_mid_right = np.mean(contact_pts_right, axis=0) # mid point on foot relative to foot frame
 
         t_lf_mid = model.getLinkFrame('l_foot')
         t_lf_mid.PreMultiply()
-        t_lf_mid.Translate(contact_pts_mid)
+        t_lf_mid.Translate(contact_pts_mid_left)
 
         t_rf_mid = model.getLinkFrame('r_foot')
         t_rf_mid.PreMultiply()
-        t_rf_mid.Translate(contact_pts_mid)
-        t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
+        t_rf_mid.Translate(contact_pts_mid_right)
+
+        if (_robotValkyrie):
+            # Valkyrie Foot orientation is silly
+            l_foot_sole = transformUtils.frameFromPositionAndRPY([0,0,0], [180.0, 82.5, 0])
+            l_foot_sole.PostMultiply()
+            l_foot_sole.Concatenate(t_lf_mid)
+            r_foot_sole = transformUtils.frameFromPositionAndRPY([0,0,0], [0.0, -82.5, 0])
+            r_foot_sole.PostMultiply()
+            r_foot_sole.Concatenate(t_rf_mid)
+            t_feet_mid = transformUtils.frameInterpolate(l_foot_sole, r_foot_sole, 0.5)
+        else:
+            t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
+
 
         if useWorldZ:
             rpy = [0.0, 0.0, np.degrees(transformUtils.rollPitchYawFromTransform(t_feet_mid)[2])]
@@ -576,10 +611,10 @@ class FootstepsDriver(object):
         else:
             return t_feet_mid
 
+
     @staticmethod
     def debugDrawFootPoints(model):
-        pts = FootstepsDriver.getContactPts()
-        footMidPoint = np.mean(pts, axis=0)
+        pts_left, pts_right = FootstepsDriver.getContactPts()
         d = DebugData()
 
         for linkName in ['l_foot', 'r_foot']:
@@ -587,11 +622,18 @@ class FootstepsDriver(object):
             t = model.getLinkFrame(linkName)
             d.addFrame(t, scale=0.2)
 
+            if (linkName is 'l_foot'):
+                pts = pts_left
+            else:
+                pts = pts_right
+
+            footMidPoint = np.mean(pts, axis=0)
             for p in pts.tolist() + [footMidPoint.tolist()]:
                 t.TransformPoint(p, p)
                 d.addSphere(p, radius=0.015)
 
-        d.addFrame(FootstepsDriver.getFeetMidPoint(model), scale=0.2)
+        midpt = FootstepsDriver.getFeetMidPoint(model)
+        d.addFrame(midpt, scale=0.2)
         vis.showPolyData(d.getPolyData(), 'foot points debug', parent='debug', colorByName='RGB255')
 
     def createGoalSteps(self, model, pose):
