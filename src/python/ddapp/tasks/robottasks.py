@@ -683,11 +683,12 @@ class CommitFootstepPlan(AsyncTask):
 
     def run(self):
 
-        planName = self.properties.getProperty('Plan name')
-        plan = om.findObjectByName(planName)
-        if not isinstance(plan, FootstepPlanItem):
-            self.fail('could not find footstep plan')
-        plan = plan.plan
+        #planName = self.properties.getProperty('Plan name')
+        #plan = om.findObjectByName(planName)
+        #if not isinstance(plan, FootstepPlanItem):
+        #    self.fail('could not find footstep plan')
+        #plan = plan.plan
+        plan = robotSystem.footstepsDriver.lastFootstepPlan
 
         robotSystem.footstepsDriver.commitFootstepPlan(plan)
 
