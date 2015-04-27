@@ -134,7 +134,7 @@ class AffordanceInCameraUpdater(object):
         if not imageView.imageInitialized:
             return
 
-        if not imageView.view.isVisible:
+        if not imageView.view.isVisible():
             return
 
         updated = set()
