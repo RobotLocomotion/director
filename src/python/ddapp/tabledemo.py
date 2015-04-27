@@ -44,7 +44,7 @@ class TableDemo(object):
             self.visOnly = True
             self.planFromCurrentRobotState = False
 
-        self.optionalUserPromptEnabled = False
+        self.optionalUserPromptEnabled = True
         self.requiredUserPromptEnabled = True
 
         self.plans = []
@@ -60,6 +60,9 @@ class TableDemo(object):
         self.lockBack = True
         self.lockBase = True
 
+        self.constraintSet = []
+
+        self.reachDist = 0.125
 
         extraModels = [self.robotStateModel]
         self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.robotStateModel, self.ikPlanner, extraModels)
@@ -165,25 +168,31 @@ class TableDemo(object):
 
     def graspTableObject(self, side):
 
-        linkName = 'l_hand' if side == 'left' else 'r_hand'
-        t = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
-        linkFrame = vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
+        #linkName = self.ikPlanner.getHandLink(side)
+        #t = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
+        #linkFrame = vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
 
-        _, objFrame = self.getNextTableObject(side)
-        frameSync = vis.FrameSync()
-        frameSync.addFrame(linkFrame)
-        frameSync.addFrame(objFrame)
-        self.frameSyncs[linkName] = frameSync
 
-        self.playbackRobotModel.connectModelChanged(self.onRobotModelChanged)
+
+        obj, objFrame = self.getNextTableObject(side)
+        #frameSync = vis.FrameSync()
+        #frameSync.addFrame(linkFrame)
+        #frameSync.addFrame(objFrame)
+        #self.frameSyncs[linkName] = frameSync
+
+        #self.playbackRobotModel.connectModelChanged(self.onRobotModelChanged)
+
+        self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
 
 
     def dropTableObject(self, side):
+
         obj, _ = self.getNextTableObject(side)
         obj.setProperty('Visible', False)
         for child in obj.children():
             child.setProperty('Visible', False)
 
+        self.affordanceUpdater.ungraspAffordance( obj.getProperty('Name'))
 
     def getNextTableObject(self, side):
 
@@ -201,7 +210,7 @@ class TableDemo(object):
 
         t = vtk.vtkTransform()
         t.PostMultiply()
-        t.Translate(-0.4, self.tableData.dims[1]*0.5, -tableHeight)
+        t.Translate(-0.35, self.tableData.dims[1]*0.5, -tableHeight)
         t.Concatenate(self.tableData.frame)
 
         self.tableStanceFrame = vis.showFrame(t, 'table stance frame', parent=self.tableObj, scale=0.2)
@@ -279,6 +288,11 @@ class TableDemo(object):
     def getLoweredArmPose(self, startPose, side):
         return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side)
 
+    def planPreGrasp(self, side):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=side)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
 
     def planDropPostureRaise(self, side):
         startPose = self.getPlanningStartPose()
@@ -329,26 +343,40 @@ class TableDemo(object):
         obj, frame = self.getNextTableObject(side)
         startPose = self.getPlanningStartPose()
 
-        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.25, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
+        self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, constraints=None, dist=self.reachDist, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
 
         loweringSide = 'left' if side == 'right' else 'right'
         armPose = self.getLoweredArmPose(startPose, loweringSide)
         armPoseName = 'lowered_arm_pose'
         self.ikPlanner.ikServer.sendPoseToServer(armPose, armPoseName)
-        armPostureConstraint = self.ikPlanner.createPostureConstraint(armPoseName, robotstate.matchJoints('l_arm' if loweringSide == 'left' else 'r_arm'))
-        armPostureConstraint.tspan = np.array([1.0, 1.0])
-        constraintSet.constraints.append(armPostureConstraint)
-        constraintSet.runIk()
 
-        armPose = self.getRaisedArmPose(startPose, side)
-        armPoseName = 'raised_arm_pose'
-        self.ikPlanner.ikServer.sendPoseToServer(armPose, armPoseName)
-        armPostureConstraint = self.ikPlanner.createPostureConstraint(armPoseName, robotstate.matchJoints('l_arm' if side == 'left' else 'r_arm'))
-        armPostureConstraint.tspan = np.array([0.5, 0.5])
-        constraintSet.constraints.append(armPostureConstraint)
+        loweringSideJoints = []
+        if (loweringSide == 'left'):
+          loweringSideJoints += self.ikPlanner.leftArmJoints
+        else:
+          loweringSideJoints += self.ikPlanner.rightArmJoints
+
+        reachingSideJoints = []
+        if (side == 'left'):
+          reachingSideJoints += self.ikPlanner.leftArmJoints
+        else:
+          reachingSideJoints += self.ikPlanner.rightArmJoints
+
+
+        armPostureConstraint = self.ikPlanner.createPostureConstraint(armPoseName, loweringSideJoints)
+        armPostureConstraint.tspan = np.array([1.0, 1.0])
+        self.constraintSet.constraints.append(armPostureConstraint)
+        self.constraintSet.runIk()
+
+        #armPose = self.getRaisedArmPose(startPose, side)
+        #armPoseName = 'raised_arm_pose'
+        #self.ikPlanner.ikServer.sendPoseToServer(armPose, armPoseName)
+        #armPostureConstraint = self.ikPlanner.createPostureConstraint(armPoseName, reachingSideJoints)
+        #armPostureConstraint.tspan = np.array([0.5, 0.5])
+        #self.constraintSet.constraints.append(armPostureConstraint)
 
         print 'planning reach to'
-        plan = constraintSet.runIkTraj()
+        plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
 
@@ -357,43 +385,50 @@ class TableDemo(object):
         obj, frame = self.getNextTableObject(side)
 
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.05, lockBase=self.lockBase, lockBack=self.lockBack)
+        self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.05, lockBase=self.lockBase, lockBack=self.lockBack)
 
-        constraintSet.constraints[-1].tspan = [-np.inf, np.inf]
-        constraintSet.constraints[-2].tspan = [-np.inf, np.inf]
-        constraintSet.runIk()
+        self.constraintSet.constraints[-1].tspan = [-np.inf, np.inf]
+        self.constraintSet.constraints[-2].tspan = [-np.inf, np.inf]
+        self.constraintSet.runIk()
 
         print 'planning touch'
-        plan = constraintSet.runIkTraj()
+        plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
 
     def planLiftTableObject(self, side):
 
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorDelta(startPose, side, [0.0, 0.0, 0.15])
+        self.constraintSet = self.ikPlanner.planEndEffectorDelta(startPose, side, [0.0, 0.0, 0.15])
 
-        constraintSet.constraints[-1].tspan[1] = 1.0
+        self.constraintSet.constraints[-1].tspan[1] = 1.0
 
-        endPose, info = constraintSet.runIk()
+        endPose, info = self.constraintSet.runIk()
         endPose = self.getRaisedArmPose(endPose, side)
+
+        reachingSideJoints = []
+        if (side == 'left'):
+          reachingSideJoints += self.ikPlanner.leftArmJoints
+        else:
+          reachingSideJoints += self.ikPlanner.rightArmJoints
+
 
         endPoseName = 'raised_arm_end_pose'
         self.ikPlanner.ikServer.sendPoseToServer(endPose, endPoseName)
-        postureConstraint = self.ikPlanner.createPostureConstraint(endPoseName, robotstate.matchJoints('l_arm' if side == 'left' else 'r_arm'))
+        postureConstraint = self.ikPlanner.createPostureConstraint(endPoseName, reachingSideJoints)
         postureConstraint.tspan = np.array([2.0, 2.0])
-        constraintSet.constraints.append(postureConstraint)
+        self.constraintSet.constraints.append(postureConstraint)
 
-        postureConstraint = self.ikPlanner.createPostureConstraint('q_nom', robotstate.matchJoints('.*_leg_kny'))
-        postureConstraint.tspan = np.array([2.0, 2.0])
-        constraintSet.constraints.append(postureConstraint)
+        #postureConstraint = self.ikPlanner.createPostureConstraint('q_nom', robotstate.matchJoints('.*_leg_kny'))
+        #postureConstraint.tspan = np.array([2.0, 2.0])
+        #self.constraintSet.constraints.append(postureConstraint)
 
-        postureConstraint = self.ikPlanner.createPostureConstraint('q_nom', robotstate.matchJoints('back'))
-        postureConstraint.tspan = np.array([2.0, 2.0])
-        constraintSet.constraints.append(postureConstraint)
+        #postureConstraint = self.ikPlanner.createPostureConstraint('q_nom', robotstate.matchJoints('back'))
+        #postureConstraint.tspan = np.array([2.0, 2.0])
+        #self.constraintSet.constraints.append(postureConstraint)
 
         print 'planning lift'
-        plan = constraintSet.runIkTraj()
+        plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
 
@@ -551,7 +586,7 @@ class TableDemo(object):
 
     def planSequence(self):
         self.useFootstepPlanner = True
-        side = 'both'
+        side = 'left' # left, right, both
 
         self.cleanupFootstepPlans()
         self.planFromCurrentRobotState = False
@@ -564,12 +599,12 @@ class TableDemo(object):
         # Pick Objects from table:
         self.planWalkToStance(self.tableStanceFrame.transform)
         if (side == 'left'):
-          self.planSequenceTablePick('left')
+            self.planSequenceTablePick('left')
         elif (side == 'right'):
-          self.planSequenceTablePick('right')
+            self.planSequenceTablePick('right')
         elif (side == 'both'):
-          self.planSequenceTablePick('left')
-          self.planSequenceTablePick('right')
+            self.planSequenceTablePick('left')
+            self.planSequenceTablePick('right')
 
         # Go home
         self.planWalkToStance(self.startStanceFrame.transform)
@@ -578,18 +613,28 @@ class TableDemo(object):
         self.planWalkToStance(self.binStanceFrame.transform)
 
         # Drop into the Bin:
-        self.planDropPostureRaise('left')
-        self.dropTableObject('left')
-        self.planDropPostureLower('left')
-        self.planDropPostureRaise('right')
-        self.dropTableObject('right')
-        self.planDropPostureLower('right')
+        if (side == 'left'):
+            self.planDropPostureRaise('left')
+            self.dropTableObject('left')
+            self.planDropPostureLower('left')
+        elif (side == 'right'):
+            self.planDropPostureRaise('right')
+            self.dropTableObject('right')
+            self.planDropPostureLower('right')
+        elif (side == 'both'):
+            self.planDropPostureRaise('left')
+            self.dropTableObject('left')
+            self.planDropPostureLower('left')
+            self.planDropPostureRaise('right')
+            self.dropTableObject('right')
+            self.planDropPostureLower('right')
 
         # Go home
         self.planWalkToStance(self.startStanceFrame.transform)
 
 
     def planSequenceTablePick(self, side):
+        self.planPreGrasp(side)
         self.planReachToTableObject(side)
         self.planTouchTableObject(side)
         self.graspTableObject(side)
@@ -613,8 +658,8 @@ class TableDemo(object):
         self.addTasksToQueueWalking(taskQueue, self.tableStanceFrame.transform, 'Walk to Table')
         taskQueue.addTask(self.printAsync('Pick with Left Arm'))
         self.addTasksToQueueTablePick(taskQueue, 'left')
-        taskQueue.addTask(self.printAsync('Pick with Right Arm'))
-        self.addTasksToQueueTablePick(taskQueue, 'right')
+        #taskQueue.addTask(self.printAsync('Pick with Right Arm'))
+        #self.addTasksToQueueTablePick(taskQueue, 'right')
 
         # Go home
         self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
@@ -625,8 +670,8 @@ class TableDemo(object):
         # Drop into the Bin:
         taskQueue.addTask(self.printAsync('Drop from Left Arm'))
         self.addTasksToQueueDropIntoBin(taskQueue, 'left')
-        taskQueue.addTask(self.printAsync('Drop from Right Arm'))
-        self.addTasksToQueueDropIntoBin(taskQueue, 'right')
+        #taskQueue.addTask(self.printAsync('Drop from Right Arm'))
+        #self.addTasksToQueueDropIntoBin(taskQueue, 'right')
 
         # Go home
         self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
@@ -651,6 +696,10 @@ class TableDemo(object):
 
     def addTasksToQueueTablePick(self, taskQueue, side):
         taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
+        taskQueue.addTask(functools.partial(self.planPreGrasp, side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
         taskQueue.addTask(functools.partial(self.planReachToTableObject, side))
         taskQueue.addTask(self.animateLastPlan)
 
@@ -658,6 +707,7 @@ class TableDemo(object):
         taskQueue.addTask(functools.partial(self.planTouchTableObject, side))
         taskQueue.addTask(self.animateLastPlan)
 
+        taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
         taskQueue.addTask(functools.partial(self.closeHand, side))
         taskQueue.addTask(functools.partial(self.graspTableObject, side))
 
@@ -684,5 +734,5 @@ class TableDemo(object):
         taskQueue.addTask( functools.partial(self.planWalkToStance, stanceTransform ))
         taskQueue.addTask(self.optionalUserPrompt('Send footstep plan. continue? y/n: '))
         taskQueue.addTask(self.commitFootstepPlan)
-        taskQueue.addTask(self.animateLastPlan) # ought to wait until arrival, currently doesnt wait the right amount of time
+        #taskQueue.addTask(self.animateLastPlan) # ought to wait until arrival, currently doesnt wait the right amount of time
         taskQueue.addTask(self.requiredUserPrompt('Have you arrived? y/n: '))
