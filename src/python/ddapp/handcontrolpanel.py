@@ -4,6 +4,8 @@ from ddapp import lcmUtils
 from ddapp import applogic as app
 from ddapp.utime import getUtime
 from ddapp.timercallback import TimerCallback
+from ddapp import visualization as vis
+from ddapp.debugVis import DebugData
 
 import numpy as np
 import math
@@ -25,9 +27,10 @@ class WidgetDict(object):
 
 class HandControlPanel(object):
 
-    def __init__(self, lDriver, rDriver, robotStateModel):
+    def __init__(self, lDriver, rDriver, robotStateModel, robotStateJointController, view):
 
         self.robotStateModel = robotStateModel
+        self.robotStateJointController = robotStateJointController
         self.drivers = {}
         self.drivers['left'] = lDriver
         self.drivers['right'] = rDriver
@@ -45,6 +48,11 @@ class HandControlPanel(object):
 
         self.widget.advanced.sendButton.setEnabled(True)
 
+        # Store calibration for wrist f/t sensors
+        self.ft_right_bias = np.array([0.]*6);
+        self.ft_left_bias = np.array([0.]*6);
+        self.view = view
+
         # connect the callbacks
         self.widget.basic.openButton.clicked.connect(self.openClicked)
         self.widget.basic.closeButton.clicked.connect(self.closeClicked)
@@ -57,6 +65,8 @@ class HandControlPanel(object):
         self.widget.advanced.dropButton.clicked.connect(self.dropClicked)
         self.widget.advanced.repeatRateSpinner.valueChanged.connect(self.rateSpinnerChanged)
         self.ui.fingerControlButton.clicked.connect(self.fingerControlButton)
+        self.widget.sensors.rightTareButton.clicked.connect(self.tareRightFT)
+        self.widget.sensors.leftTareButton.clicked.connect(self.tareLeftFT)
         PythonQt.dd.ddGroupBoxHider(self.ui.sensors)
         PythonQt.dd.ddGroupBoxHider(self.ui.fingerControl)
 
@@ -66,9 +76,53 @@ class HandControlPanel(object):
         # create a timer to repeat commands
         self.updateTimer = TimerCallback()
         self.updateTimer.callback = self.updatePanel
-        self.updateTimer.targetFps = 3
+        self.updateTimer.targetFps = 20
         self.updateTimer.start()
 
+    def tareRightFT(self):
+        if (hasattr(self.robotStateJointController, 'lastRobotStateMessage') and 
+            self.robotStateJointController.lastRobotStateMessage):
+            self.ft_right_bias = np.array(self.robotStateJointController.lastRobotStateMessage.force_torque.r_hand_force +
+                  self.robotStateJointController.lastRobotStateMessage.force_torque.r_hand_torque)
+            
+    def tareLeftFT(self):
+        if (hasattr(self.robotStateJointController, 'lastRobotStateMessage') and 
+            self.robotStateJointController.lastRobotStateMessage):
+            self.ft_left_bias = np.array(self.robotStateJointController.lastRobotStateMessage.force_torque.l_hand_force +
+                  self.robotStateJointController.lastRobotStateMessage.force_torque.l_hand_torque)
+            
+    def doFTDraw(self):
+        frames = [];
+        fts = [];
+        vis_names = [];
+        if (hasattr(self.robotStateJointController, 'lastRobotStateMessage') and 
+            self.robotStateJointController.lastRobotStateMessage):
+            if (self.ui.rightVisCheck.checked):
+                rft = np.array(self.robotStateJointController.lastRobotStateMessage.force_torque.r_hand_force +
+                  self.robotStateJointController.lastRobotStateMessage.force_torque.r_hand_torque)
+                rft -= self.ft_right_bias;
+                fts.append(rft);
+                frames.append(self.robotStateModel.getLinkFrame('r_hand_force_torque'));
+                vis_names.append('ft_right');
+            if (self.ui.leftVisCheck.checked):
+                lft = np.array(self.robotStateJointController.lastRobotStateMessage.force_torque.l_hand_force +
+                  self.robotStateJointController.lastRobotStateMessage.force_torque.l_hand_torque)
+                lft -= self.ft_left_bias;
+                fts.append(lft);
+                frames.append(self.robotStateModel.getLinkFrame('l_hand_force_torque'));
+                vis_names.append('ft_left');
+            
+        for i in range(0, len(frames)):
+            frame = frames[i];
+            ft = fts[i];
+            offset = [0., 0., 0.];
+            p1 = frame.TransformPoint(offset)
+            scale = 1.0/25.0; # todo add slider for this?
+            p2 = frame.TransformPoint(offset + ft[0:3]*scale);
+            d = DebugData()
+            d.addLine(p1, p2, color=[1.,0.,0.])
+            vis.updateFrame(frame, vis_names[i]+'frame', view=self.view);
+            vis.updatePolyData(d.getPolyData(), vis_names[i], view=self.view)
 
     def getModeInt(self, inputStr):
         if inputStr == 'Basic':
@@ -217,6 +271,8 @@ class HandControlPanel(object):
         if self.ui.repeaterCheckBox.checked and self.storedCommand['right']:
             position, force, velocity, mode = self.storedCommand['right']
             self.drivers['right'].sendCustom(position, force, velocity, mode)
+        if self.ui.rightVisCheck.checked or self.ui.leftVisCheck.checked:
+            self.doFTDraw();
 
 
 
@@ -224,12 +280,12 @@ def _getAction():
     return app.getToolBarActions()['ActionHandControlPanel']
 
 
-def init(driverL, driverR, model):
+def init(driverL, driverR, model, jc, view):
 
     global panel
     global dock
 
-    panel = HandControlPanel(driverL, driverR, model)
+    panel = HandControlPanel(driverL, driverR, model, jc, view)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
