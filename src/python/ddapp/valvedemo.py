@@ -123,6 +123,35 @@ class ValvePlannerDemo(object):
     def addPlan(self, plan):
         self.plans.append(plan)
 
+    def computeGroundFrame(self, robotModel):
+        '''
+        Given a robol model, returns a vtkTransform at a position between
+        the feet, on the ground, with z-axis up and x-axis aligned with the
+        robot pelvis x-axis.
+        '''
+        t1 = robotModel.getLinkFrame('l_foot')
+        t2 = robotModel.getLinkFrame('r_foot')
+        pelvisT = robotModel.getLinkFrame(self.ikPlanner.pelvisLink)
+
+        xaxis = [1.0, 0.0, 0.0]
+        pelvisT.TransformVector(xaxis, xaxis)
+        xaxis = np.array(xaxis)
+        zaxis = np.array([0.0, 0.0, 1.0])
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        xaxis = np.cross(yaxis, zaxis)
+
+        stancePosition = (np.array(t2.GetPosition()) + np.array(t1.GetPosition())) / 2.0
+
+        footHeight = 0.0811
+
+        t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        t.PostMultiply()
+        t.Translate(stancePosition)
+        t.Translate([0.0, 0.0, -footHeight])
+
+        return t
+
     def computeRobotStanceFrame(self, objectTransform, relativeStanceTransform):
         '''
         Given a robot model, determine the height of the ground using an XY and

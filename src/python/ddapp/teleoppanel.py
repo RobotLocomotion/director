@@ -97,7 +97,6 @@ class EndEffectorTeleopPanel(object):
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
 
-        self.pelvisLink = drcargs.getDirectorConfig()['pelvisLink']
         self.kneeJointLimits = drcargs.getDirectorConfig()['kneeJointLimits']
 
     def setComboText(self, combo, text):
@@ -444,7 +443,7 @@ class EndEffectorTeleopPanel(object):
             constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName, lockLegs=False))
             ikPlanner.setBaseLocked(True)
         if self.getBaseConstraint() == 'constrained':
-            constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, self.pelvisLink, tspan=[1.0, 1.0]))
+            constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, ikPlanner.pelvisLink, tspan=[1.0, 1.0]))
             ikPlanner.setBaseLocked(False)
         elif self.getBaseConstraint() == 'xyz only':
             constraints.append(ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
@@ -634,7 +633,7 @@ class EndEffectorTeleopPanel(object):
             #addHandMesh(handModels[side], frame)
 
         if not ikPlanner.fixedBaseArm and not ikPlanner.robotNoFeet:
-            for linkName in ['l_foot', 'r_foot', self.pelvisLink]:
+            for linkName in ['l_foot', 'r_foot', ikPlanner.pelvisLink]:
                 frameName = linkName + ' constraint frame'
                 om.removeFromObjectModel(om.findObjectByName(frameName))
                 frame = vis.showFrame(ikPlanner.getLinkFrameAtPose(linkName, startPose), frameName, parent=folder, scale=0.2)

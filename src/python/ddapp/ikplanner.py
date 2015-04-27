@@ -234,6 +234,15 @@ class IKPlanner(object):
 
         self.jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
         self.kneeJoints = drcargs.getDirectorConfig()['kneeJoints']
+        self.baseJoints     = (item for item in self.jointGroups if item["name"] == 'Base').next()['joints']
+        self.backJoints     = (item for item in self.jointGroups if item["name"] == 'Back').next()['joints']
+        self.neckJoints     = (item for item in self.jointGroups if item["name"] == 'Neck').next()['joints']
+        self.leftArmJoints  = (item for item in self.jointGroups if item["name"] == 'Left Arm').next()['joints']
+        self.rightArmJoints = (item for item in self.jointGroups if item["name"] == 'Right Arm').next()['joints']
+        self.leftLegJoints  = (item for item in self.jointGroups if item["name"] == 'Left Leg').next()['joints']
+        self.rightLegJoints = (item for item in self.jointGroups if item["name"] == 'Right Leg').next()['joints']
+
+        self.pelvisLink = drcargs.getDirectorConfig()['pelvisLink']
 
     def setIkParameters(self, ikParameterDict):
         originalIkParameterDict = {}
@@ -457,7 +466,7 @@ class IKPlanner(object):
 
     def createMovingBackPostureConstraint(self):
         p = ik.PostureConstraint()
-        p.joints = (item for item in self.jointGroups if item["name"] == 'Back').next()['joints']
+        p.joints = self.backJoints
 
         p.jointsLowerBound = [-math.radians(15), -math.radians(5), -np.inf]
         p.jointsUpperBound = [math.radians(15), math.radians(25), np.inf]
@@ -465,7 +474,7 @@ class IKPlanner(object):
 
     def createMovingBackLimitedPostureConstraint(self):
         p = ik.PostureConstraint()
-        p.joints = (item for item in self.jointGroups if item["name"] == 'Back').next()['joints']
+        p.joints = self.backJoints
 
         p.jointsLowerBound = [-math.radians(5), -math.radians(5), -np.inf]
         p.jointsUpperBound = [math.radians(5), math.radians(5), np.inf]
@@ -729,7 +738,7 @@ class IKPlanner(object):
         constraints.append(self.createMovingBaseSafeLimitsConstraint())
         constraints.append(self.createLockedLeftArmPostureConstraint(nominalPoseName))
         constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
-        backJoints = (item for item in self.jointGroups if item["name"] == 'Back').next()['joints']
+        backJoints = self.backJoints
         constraints.append(self.createPostureConstraint(nominalPoseName, backJoints))
 
         endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
@@ -757,7 +766,7 @@ class IKPlanner(object):
         constraints.append(self.createMovingBaseSafeLimitsConstraint())
         constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
-        backJoints = (item for item in self.jointGroups if item["name"] == 'Back').next()['joints']
+        backJoints = self.backJoints
         constraints.append(self.createPostureConstraint(nominalPoseName, backJoints))
 
         endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
@@ -782,39 +791,44 @@ class IKPlanner(object):
 
 
     def createLockedNeckPostureConstraint(self, startPostureName):
-        joints = (item for item in self.jointGroups if item["name"] == 'Neck').next()['joints']
+        joints = []
+        joints += self.neckJoints
         return self.createPostureConstraint(startPostureName, joints)
 
 
     def createLockedTorsoPostureConstraint(self, startPostureName):
         joints = []
-        joints += (item for item in self.jointGroups if item["name"] == 'Base').next()['joints']
-        joints += (item for item in self.jointGroups if item["name"] == 'Back').next()['joints']
-        joints += (item for item in self.jointGroups if item["name"] == 'Left Leg').next()['joints']
-        joints += (item for item in self.jointGroups if item["name"] == 'Right Leg').next()['joints']
+        joints += self.baseJoints
+        joints += self.backJoints
+        joints += self.leftLegJoints
+        joints += self.rightLegJoints
         return self.createPostureConstraint(startPostureName, joints)
 
 
     def createLockedBasePostureConstraint(self, startPostureName, lockLegs=True):
-        joints = (item for item in self.jointGroups if item["name"] == 'Base').next()['joints']
+        joints = []
+        joints += self.baseJoints
         if lockLegs:
-            joints += (item for item in self.jointGroups if item["name"] == 'Right Leg').next()['joints']
-            joints += (item for item in self.jointGroups if item["name"] == 'Left Leg').next()['joints']
+            joints += self.rightLegJoints
+            joints += self.leftLegJoints
         return self.createPostureConstraint(startPostureName, joints)
 
 
     def createLockedBackPostureConstraint(self, startPostureName):
-        joints = (item for item in self.jointGroups if item["name"] == 'Back').next()['joints']
+        joints = []
+        joints += self.backJoints
         return self.createPostureConstraint(startPostureName, joints)
 
 
     def createLockedRightArmPostureConstraint(self, startPostureName):
-        joints = (item for item in self.jointGroups if item["name"] == 'Right Arm').next()['joints']
+        joints = []
+        joints += self.rightArmJoints
         return self.createPostureConstraint(startPostureName, joints)
 
 
     def createLockedLeftArmPostureConstraint(self, startPostureName):
-        joints = (item for item in self.jointGroups if item["name"] == 'Left Arm').next()['joints']
+        joints = []
+        joints += self.leftArmJoints
         return self.createPostureConstraint(startPostureName, joints)
 
 
@@ -1296,13 +1310,9 @@ class IKPlanner(object):
         assert len(nominalPose) == len(joints)
         cost = np.zeros(len(joints))
 
-        backJoints = (item for item in self.jointGroups if item["name"] == 'Back').next()['joints']
-        cost[[joints.index(n) for n in backJoints]] = 100
-
-        leftArmJoints = (item for item in self.jointGroups if item["name"] == 'Left Arm').next()['joints']
-        cost[[joints.index(n) for n in leftArmJoints]] = 1
-        rightArmJoints = (item for item in self.jointGroups if item["name"] == 'Right Arm').next()['joints']
-        cost[[joints.index(n) for n in rightArmJoints]] = 1
+        cost[[joints.index(n) for n in self.backJoints]] = 100
+        cost[[joints.index(n) for n in self.leftArmJoints]] = 1
+        cost[[joints.index(n) for n in self.rightArmJoints]] = 1
 
         return np.sum(np.abs(pose - nominalPose)*cost)
 
