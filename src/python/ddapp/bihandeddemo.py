@@ -242,7 +242,7 @@ class BihandedPlannerDemo(object):
         #self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
 
         extraModels = [self.robotModel]
-        self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotModel, extraModels)
+        self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.robotModel, self.ikPlanner, extraModels)
 
         # top level switch between BDI (locked base) and MIT (moving base and back)
         self.lockBack = False
