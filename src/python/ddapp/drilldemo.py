@@ -313,7 +313,7 @@ class DrillPlannerDemo(object):
         '''
         t1 = robotModel.getLinkFrame('l_foot')
         t2 = robotModel.getLinkFrame('r_foot')
-        pelvisT = robotModel.getLinkFrame('pelvis')
+        pelvisT = robotModel.getLinkFrame(self.ikPlanner.pelvisLink)
 
         xaxis = [1.0, 0.0, 0.0]
         pelvisT.TransformVector(xaxis, xaxis)
