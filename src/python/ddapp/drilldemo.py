@@ -177,7 +177,7 @@ class DrillPlannerDemo(object):
         #self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
 
         extraModels = [self.playbackRobotModel, self.teleopRobotModel]
-        self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotModel, extraModels)
+        self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.robotModel, self.ikPlanner, extraModels)
 
         # These changes are all that are required to run with different combinations
         if ( self.drill.model == 'dewalt_barrel' ):

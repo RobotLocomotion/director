@@ -15,6 +15,7 @@ from ddapp import planplayback
 from ddapp.pointpicker import PointPicker
 from ddapp import vtkAll as vtk
 from ddapp.simpletimer import SimpleTimer
+from ddapp import affordancegraspupdater
 
 import ioUtils
 
@@ -58,6 +59,11 @@ class TableDemo(object):
         # top level switch between BDI or IHMC (locked base) and MIT (moving base and back)
         self.lockBack = True
         self.lockBase = True
+
+
+        extraModels = [self.robotStateModel]
+        self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.robotStateModel, self.ikPlanner, extraModels)
+
 
     def addPlan(self, plan):
         self.plans.append(plan)
