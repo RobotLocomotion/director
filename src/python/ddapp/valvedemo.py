@@ -664,6 +664,8 @@ class ValveTaskPanel(TaskUserPanel):
         self.addManualButton('Retract', self.retract)
         self.addManualSpacer()
         self.addManualButton('Nominal', self.valveDemo.planNominal)
+        self.addManualSpacer()
+        self.addManualButton('Commit Manip', self.valveDemo.commitManipPlan)
 
     def onSpawnValveClicked(self):
         self.valveDemo.spawnValveAffordance()
