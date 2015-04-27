@@ -790,11 +790,11 @@ class ValveTaskPanel(TaskUserPanel):
                                   message='Please approve footstep plan.'), parent=walk)
         addTask(rt.CommitFootstepPlan(name='walk to valve',
                                       planName='valve grasp stance footstep plan'), parent=walk)
+        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
         addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
 
         # refit
         refit = self.taskTree.addGroup('Re-fitting')
-        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=refit)
         addTask(rt.UserPromptTask(name='fit valve',
                                   message='Please fit and approve valve affordance.'),
                 parent=refit)
