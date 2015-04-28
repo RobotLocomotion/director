@@ -180,6 +180,7 @@ class TerrainTask(object):
 
     def computeSafeRegions(self):
 
+        om.removeFromObjectModel(om.findObjectByName('Safe terrain regions'))
         blocks = self.findBlockObjects()
         for block in blocks:
 
@@ -242,8 +243,6 @@ class TerrainTask(object):
         request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
 
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
-
-
 
 
     def convertStepToSafeRegion(self, step, rpySeed):
@@ -336,6 +335,14 @@ class TerrainTask(object):
         return blocks
 
 
+    def planArmsUp(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'hands-forward', side='left')
+        endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'hands-forward', side='right')
+        ikPlanner.computeMultiPostureGoal([startPose, endPose])
+
+
 class TerrainImageFitter(ImageBasedAffordanceFit):
 
     def __init__(self, drillDemo):
@@ -363,13 +370,17 @@ class TerrainTaskPanel(TaskUserPanel):
         self.addTasks()
 
     def addButtons(self):
-        self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
         self.addManualButton('Spawn tilted steps', self.terrainTask.spawnTiltedCinderblocks)
-        self.addManualButton('Raycast terrain', self.terrainTask.requestRaycastTerrain)
         self.addManualButton('Walk to tilted steps', self.terrainTask.walkToTiltedCinderblocks)
-        self.addManualButton('Compute safe regions', self.terrainTask.computeSafeRegions)
-        self.addManualButton('Reorient blocks to robot', self.terrainTask.reorientBlocks)
         self.addManualButton('Spawn manual footsteps', self.terrainTask.computeManualFootsteps)
+        self.addManualSpacer()
+        self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
+        self.addManualButton('Raycast terrain', self.terrainTask.requestRaycastTerrain)
+        self.addManualSpacer()
+        self.addManualButton('Reorient blocks to robot', self.terrainTask.reorientBlocks)
+        self.addManualButton('Compute safe regions', self.terrainTask.computeSafeRegions)
+        self.addManualSpacer()
+        self.addManualButton('Arms up', self.terrainTask.planArmsUp)
 
 
     def addDefaultProperties(self):
