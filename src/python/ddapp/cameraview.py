@@ -544,6 +544,75 @@ class CameraImageView(object):
                 self.resetCamera()
                 self.imageInitialized = True
 
+
+class CameraFrustumVisualizer(object):
+
+    def __init__(self, robotModel, imageManager, cameraName):
+        self.robotModel = robotModel
+        self.cameraName = cameraName
+        self.imageManager = imageManager
+        self.rayLength = 2.0
+        robotModel.connectModelChanged(self.update)
+        self.update(robotModel)
+
+    def getCameraToLocal(self):
+        '''
+        Returns cameraToLocal.  cameraToHead is pulled from bot frames while
+        headToLocal is pulled from the robot model forward kinematics.
+        '''
+        headToLocal = self.robotModel.getLinkFrame('head')
+        cameraToHead = vtk.vtkTransform()
+        self.imageManager.queue.getTransform(self.cameraName, 'head', 0, cameraToHead)
+        return transformUtils.concatenateTransforms([cameraToHead, headToLocal])
+
+    def getCameraFrustumRays(self):
+        '''
+        Returns (cameraPositions, rays)
+        cameraPosition is in world frame.
+        rays are four unit length vectors in world frame that point in the
+        direction of the camera frustum edges
+        '''
+
+        cameraToLocal = self.getCameraToLocal()
+        cameraPos = np.array(cameraToLocal.GetPosition())
+
+        camRays = []
+        rays = np.array(self.imageManager.queue.getCameraFrustumBounds(self.cameraName))
+        for i in xrange(4):
+            ray = np.array(cameraToLocal.TransformVector(rays[i*3:i*3+3]))
+            ray /= np.linalg.norm(ray)
+            camRays.append(ray)
+
+        return cameraPos, camRays
+
+    def getCameraFrustumGeometry(self, rayLength):
+
+        camPos, rays = self.getCameraFrustumRays()
+
+        rays = [rayLength*r for r in rays]
+
+        d = DebugData()
+        d.addLine(camPos, camPos+rays[0])
+        d.addLine(camPos, camPos+rays[1])
+        d.addLine(camPos, camPos+rays[2])
+        d.addLine(camPos, camPos+rays[3])
+        d.addLine(camPos+rays[0], camPos+rays[1])
+        d.addLine(camPos+rays[1], camPos+rays[2])
+        d.addLine(camPos+rays[2], camPos+rays[3])
+        d.addLine(camPos+rays[3], camPos+rays[0])
+        return d.getPolyData()
+
+    def update(self, robotModel):
+        name = 'camera frustum %s' % self.robotModel.getProperty('Name')
+        obj = om.findObjectByName(name)
+
+        if obj and not obj.getProperty('Visible'):
+            return
+
+        vis.updatePolyData(self.getCameraFrustumGeometry(self.rayLength), name, parent=self.robotModel, visible=False)
+
+
+
 views = {}
 
 
