@@ -138,7 +138,6 @@ useNavigationPanel = True
 useFootContactVis = True
 useFallDetectorVis = True
 useImageWidget = False
-useImageViewDemo = True
 useControllerRate = True
 useForceDisplay = False
 useSkybox = False
