@@ -8,6 +8,8 @@ from ddapp import callbacks
 
 class AsyncTaskQueue(object):
 
+    QUEUE_STARTED_SIGNAL = 'QUEUE_STARTED_SIGNAL'
+    QUEUE_STOPPED_SIGNAL = 'QUEUE_STOPPED_SIGNAL'
     TASK_STARTED_SIGNAL = 'TASK_STARTED_SIGNAL'
     TASK_ENDED_SIGNAL = 'TASK_ENDED_SIGNAL'
     TASK_PAUSED_SIGNAL = 'TASK_PAUSED_SIGNAL'
@@ -25,7 +27,9 @@ class AsyncTaskQueue(object):
         self.generators = []
         self.timer = TimerCallback(targetFps=10)
         self.timer.callback = self.callbackLoop
-        self.callbacks = callbacks.CallbackRegistry([self.TASK_STARTED_SIGNAL,
+        self.callbacks = callbacks.CallbackRegistry([self.QUEUE_STARTED_SIGNAL,
+                                                     self.QUEUE_STOPPED_SIGNAL,
+                                                     self.TASK_STARTED_SIGNAL,
                                                      self.TASK_ENDED_SIGNAL,
                                                      self.TASK_PAUSED_SIGNAL,
                                                      self.TASK_FAILED_SIGNAL,
@@ -40,6 +44,7 @@ class AsyncTaskQueue(object):
 
     def start(self):
         self.isRunning = True
+        self.callbacks.process(self.QUEUE_STARTED_SIGNAL, self)
         self.timer.start()
 
     def stop(self):
@@ -47,6 +52,7 @@ class AsyncTaskQueue(object):
         self.currentTask = None
         self.generators = []
         self.timer.stop()
+        self.callbacks.process(self.QUEUE_STOPPED_SIGNAL, self)
 
     def wrapGenerator(self, generator):
         def generatorWrapper():
@@ -121,6 +127,18 @@ class AsyncTaskQueue(object):
         else:
             if isinstance(result, types.GeneratorType):
                 self.generators.insert(0, result)
+
+    def connectQueueStarted(self, func):
+        return self.callbacks.connect(self.QUEUE_STARTED_SIGNAL, func)
+
+    def disconnectQueueStarted(self, callbackId):
+        self.callbacks.disconnect(callbackId)
+
+    def connectQueueStopped(self, func):
+        return self.callbacks.connect(self.QUEUE_STOPPED_SIGNAL, func)
+
+    def disconnectQueueStopped(self, callbackId):
+        self.callbacks.disconnect(callbackId)
 
     def connectTaskStarted(self, func):
         return self.callbacks.connect(self.TASK_STARTED_SIGNAL, func)
