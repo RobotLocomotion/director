@@ -138,6 +138,7 @@ useNavigationPanel = True
 useFootContactVis = True
 useFallDetectorVis = True
 useImageWidget = False
+useCameraFrustumVisualizer = True
 useControllerRate = True
 useForceDisplay = False
 useSkybox = False
@@ -588,6 +589,8 @@ if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
     #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'KINECT_RGB', view)
 
+if useCameraFrustumVisualizer:
+    cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'CAMERA_LEFT')
 
 class ImageOverlayManager(object):
 
@@ -878,7 +881,7 @@ def drawCenterOfMass(model):
     d = DebugData()
     d.addSphere(com, radius=0.015)
     obj = vis.updatePolyData(d.getPolyData(), 'COM %s' % model.getProperty('Name'), color=[1,0,0], visible=False, parent=model)
-    
+
 def initCenterOfMassVisulization():
     for model in [robotStateModel, teleopRobotModel, playbackRobotModel]:
         model.connectModelChanged(drawCenterOfMass)
