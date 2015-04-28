@@ -35,11 +35,34 @@ def getTransformFromAxes(xaxis, yaxis, zaxis):
     return t
 
 
+def getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, origin):
+    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    t.PostMultiply()
+    t.Translate(origin)
+    return t
+
+
 def getAxesFromTransform(t):
     xaxis = t.TransformNormal(1,0,0)
     yaxis = t.TransformNormal(0,1,0)
     zaxis = t.TransformNormal(0,0,1)
     return xaxis, yaxis, zaxis
+
+
+def findTransformAxis(transform, referenceVector):
+    '''
+    Given a vtkTransform and a reference vector, find a +/- axis of the transform
+    that most closely matches the reference vector.  Returns the matching axis
+    index, axis, and sign.
+    '''
+    refAxis = referenceVector / np.linalg.norm(referenceVector)
+    axes = getAxesFromTransform(transform)
+
+    axisProjections = np.array([np.abs(np.dot(axis, refAxis)) for axis in axes])
+    matchIndex = axisProjections.argmax()
+    matchAxis = axes[matchIndex]
+    matchSign = np.sign(np.dot(matchAxis, refAxis))
+    return matchIndex, matchAxis, matchSign
 
 
 def getTransformFromOriginAndNormal(origin, normal, normalAxis=2):
