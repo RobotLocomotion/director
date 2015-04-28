@@ -26,6 +26,7 @@ from ddapp import drilldemo
 from ddapp import tabledemo
 from ddapp import valvedemo
 from ddapp import drivingplanner
+from ddapp import polarisplatformplanner
 from ddapp import continuouswalkingdemo
 from ddapp import sitstandplanner
 from ddapp import walkingtestdemo
