@@ -35,6 +35,7 @@ set(python_files
   ddapp/footstepsdriver.py
   ddapp/footstepsdriverpanel.py
   ddapp/framevisualization.py
+  ddapp/gamepad.py
   ddapp/geometryencoder.py
   ddapp/handcontrolpanel.py
   ddapp/handdriver.py
