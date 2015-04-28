@@ -42,6 +42,18 @@ def getAxesFromTransform(t):
     return xaxis, yaxis, zaxis
 
 
+def concatenateTransforms(transformList):
+    '''
+    Given a list of vtkTransform objects, returns a new vtkTransform
+    which is a concatenation of the whole list using vtk post multiply.
+    See documentation for vtkTransform::PostMultiply.
+    '''
+    result = vtk.vtkTransform()
+    result.PostMultiply()
+    for t in transformList:
+        result.Concatenate(t)
+    return result
+
 def getTransformFromOriginAndNormal(origin, normal, normalAxis=2):
 
     normal = np.array(normal)
