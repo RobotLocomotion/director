@@ -211,8 +211,8 @@ class PlaybackPanel(object):
     def executePlan(self, visOnly=False, overrideInfeasibleCheck=False):
         if visOnly:
             _, poses = self.planPlayback.getPlanPoses(self.plan)
-            self.robotStateJointController.setPose('EST_ROBOT_STATE', poses[-1])
             self.onPlanCommitted(self.plan)
+            self.robotStateJointController.setPose('EST_ROBOT_STATE', poses[-1])
         else:
             if self.isPlanFeasible() or overrideInfeasibleCheck:
                 self.manipPlanner.commitManipPlan(self.plan)
