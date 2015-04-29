@@ -27,13 +27,16 @@ class AffordanceItem(PolyDataItem):
         self.properties.setPropertyIndex('Collision Enabled', 0)
         self.setProperty('Icon', om.Icons.Hammer)
 
+    def getPose(self):
+        childFrame = self.getChildFrame()
+        t = childFrame.transform if childFrame else vtk.vtkTransform()
+        return transformUtils.poseFromTransform(t)
 
     def getDescription(self):
         d = OrderedDict()
         d['classname'] = type(self).__name__
         d.update(self.properties._properties)
-        pose = transformUtils.poseFromTransform(self.getChildFrame().transform)
-        d['pose'] = pose
+        d['pose'] = self.getPose()
         return d
 
     def repositionFromDescription(self, desc):
