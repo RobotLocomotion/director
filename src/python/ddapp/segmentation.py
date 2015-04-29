@@ -4659,7 +4659,7 @@ def zoomToDisplayPoint(displayPoint, boundsRadius=0.5, view=None):
     view.render()
 
 
-def extractPointsAlongClickRay(position, ray, polyData=None, distanceToLineThreshold=0.025, nearestToLine=True):
+def extractPointsAlongClickRay(position, ray, polyData=None, distanceToLineThreshold=0.025, nearestToCamera=False):
 
     #segmentationObj = om.findObjectByName('pointcloud snapshot')
     if polyData is None:
@@ -4683,10 +4683,10 @@ def extractPointsAlongClickRay(position, ray, polyData=None, distanceToLineThres
 
     updatePolyData(polyData, 'ray points', colorByName='distance_to_line', visible=False, parent=getDebugFolder())
 
-    if nearestToLine:
-        dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_to_line')
-    else:
+    if nearestToCamera:
         dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_along_line')
+    else:
+        dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_to_line')
 
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
     intersectionPoint = points[dists.argmin()]
