@@ -31,6 +31,7 @@ public:
   const QVector<double>& getJointPositions() const;
   QVector<double> getCenterOfMass() const;
   QVector<double> getJointLimits(const QString& jointName) const;
+  QVector<double> getBodyContactPoints(const QString& bodyName) const;
 
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
   QList<QString> getLinkNames();

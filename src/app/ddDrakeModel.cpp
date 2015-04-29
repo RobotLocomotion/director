@@ -994,6 +994,26 @@ QVector<double> ddDrakeModel::getCenterOfMass() const
 }
 
 //-----------------------------------------------------------------------------
+QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) const
+{
+  QVector<double> ret;
+  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+
+  for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
+  {
+    std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+    if (body->linkname.c_str() == bodyName)
+    {
+      for (size_t i = 0; i < body->contact_pts.cols(); ++i)
+      {
+        ret << body->contact_pts(0,i) << body->contact_pts(1,i) << body->contact_pts(2,1);
+      }
+    }
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------------
 QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
 {
   QVector<double> limits;

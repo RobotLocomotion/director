@@ -110,6 +110,11 @@ class RobotModelItem(om.ObjectModelItem):
         else:
             return None
 
+    def getLinkContactPoints(self, linkName):
+        pts = self.model.getBodyContactPoints(linkName)
+        numberOfPoints = len(pts)/3
+        return np.array(pts).reshape(numberOfPoints, 3)
+
     def setModel(self, model):
         assert model is not None
         if model == self.model:

@@ -270,6 +270,23 @@ class TerrainTask(object):
             obj.safe_region = r
 
 
+    def spawnCinderblocksAtFeet(self):
+
+        footSoleToOrigin = np.mean(self.robotSystem.footstepsDriver.getContactPts(), axis=0)
+        startPose = self.getPlanningStartPose()
+
+        for linkName in ['l_foot', 'r_foot']:
+            blockFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose(linkName, startPose)
+            blockFrame.PreMultiply()
+            blockFrame.Translate(footSoleToOrigin)
+            blockFrame.Translate(0.0, 0.0, -blockHeight/2.0)
+
+            blockId = len(self.findBlockObjects())
+            pose = transformUtils.poseFromTransform(blockFrame)
+            desc = dict(classname='BoxAffordanceItem', Name='block %d' % blockId, Dimensions=[blockLength, blockWidth, blockHeight], pose=pose)
+            block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
+
+
     def spawnTiltedCinderblocksRow(self, relativeFrame, startSequence, numberOfBlocks):
 
         blocks = []
@@ -371,6 +388,8 @@ class TerrainTaskPanel(TaskUserPanel):
 
     def addButtons(self):
         self.addManualButton('Spawn tilted steps', self.terrainTask.spawnTiltedCinderblocks)
+        self.addManualButton('Spawn blocks at feet', self.terrainTask.spawnCinderblocksAtFeet)
+
         self.addManualButton('Walk to tilted steps', self.terrainTask.walkToTiltedCinderblocks)
         self.addManualButton('Spawn manual footsteps', self.terrainTask.computeManualFootsteps)
         self.addManualSpacer()
