@@ -171,6 +171,7 @@ class CapsuleRingAffordanceItem(AffordanceItem):
 
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
+        self.setProperty('Collision Enabled', False)
         self.addProperty('Radius', 0.15, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.addProperty('Tube Radius', 0.02, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.addProperty('Segments', 8, attributes=om.PropertyAttributes(decimals=3, singleStep=1, minimum=3, maximum=100))
@@ -207,6 +208,7 @@ class MeshAffordanceItem(AffordanceItem):
 
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
+        self.setProperty('Collision Enabled', False)
         self.addProperty('Filename', '')
         self.properties.setPropertyIndex('Filename', 0)
 
