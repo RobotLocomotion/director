@@ -27,18 +27,6 @@ class AffordanceItem(PolyDataItem):
         self.properties.setPropertyIndex('Collision Enabled', 0)
         self.setProperty('Icon', om.Icons.Hammer)
 
-    def publish(self):
-        pass
-
-    def getActionNames(self):
-        actions = ['Publish affordance']
-        return PolyDataItem.getActionNames(self) + actions
-
-    def onAction(self, action):
-        if action == 'Publish affordance':
-            self.publish()
-        else:
-            PolyDataItem.onAction(self, action)
 
     def getDescription(self):
         d = OrderedDict()
@@ -313,3 +301,13 @@ class FrameAffordanceItem(AffordanceItem):
         self.updateParamsFromActorTransform()
         aff = affordance.createFrameAffordance(self.params)
         affordance.publishAffordance(aff)
+
+    def getActionNames(self):
+        actions = ['Publish affordance']
+        return PolyDataItem.getActionNames(self) + actions
+
+    def onAction(self, action):
+        if action == 'Publish affordance':
+            self.publish()
+        else:
+            PolyDataItem.onAction(self, action)
