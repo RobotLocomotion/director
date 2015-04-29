@@ -32,6 +32,9 @@ class Gamepad(object):
 		self.endEffectorFrames = []
 		self.endEffectorIndex = 0
 
+	#todo: add keypoints for a multiPostureGoal using:
+	#qi = teleopJointController.q.copy()
+	#computeMultiPostureGoal([q1,...,qn])
 	def findEndEffectors(self):
 		planning = om.getOrCreateContainer('planning')
 		if planning is not None:
@@ -117,8 +120,8 @@ class Gamepad(object):
 		self.Z += self.Zdot * self.dt
 
 	def updateFrame(self):
-		if self.baseFrame is not None:
-			#dt = self.timer.elapsed
+		norm = np.linalg.norm(np.array([self.thetadot, self.phidot, self.yawdot, self.Xdot, self.Ydot, self.Zdot]))
+		if self.baseFrame is not None and norm > 0.1:
 			dt = 0.01
 			t = vtk.vtkTransform()
 			t.Concatenate(self.baseFrame.transform)
