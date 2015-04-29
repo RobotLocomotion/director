@@ -460,13 +460,14 @@ class IKPlanner(object):
 
     def createGazeGraspConstraint(self, side, targetFrame, graspToHandLinkFrame=None, coneThresholdDegrees=0.0, targetAxis=[0.0, 1.0, 0.0] , bodyAxis=[0.0, 1.0, 0.0] ):
 
+        targetFrame = targetFrame if isinstance(targetFrame, vtk.vtkTransform) else targetFrame.transform
 
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
 
         t = vtk.vtkTransform()
         t.PostMultiply()
         t.Concatenate(graspToHandLinkFrame.GetLinearInverse())
-        t.Concatenate(targetFrame.transform)
+        t.Concatenate(targetFrame)
 
 
 
