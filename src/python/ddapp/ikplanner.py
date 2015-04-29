@@ -253,6 +253,38 @@ class IKPlanner(object):
         return p
 
 
+    def createPlanePositionConstraint(self, linkName, linkOffsetFrame, targetFrame, planeNormalAxis, bounds):
+
+        p = ik.PositionConstraint()
+        p.linkName = linkName
+        p.pointInLink = np.array(linkOffsetFrame.GetPosition())
+        p.referenceFrame = targetFrame
+
+        p.lowerBound = np.tile(-np.inf, 3)
+        p.upperBound = np.tile(np.inf, 3)
+
+        p.lowerBound[planeNormalAxis] = bounds[0]
+        p.upperBound[planeNormalAxis] = bounds[1]
+
+        return p
+
+
+    def createLinePositionConstraint(self, linkName, linkOffsetFrame, targetFrame, lineAxis, bounds, positionTolerance=0.0):
+
+        p = ik.PositionConstraint()
+        p.linkName = linkName
+        p.pointInLink = np.array(linkOffsetFrame.GetPosition())
+        p.referenceFrame = targetFrame
+
+        p.lowerBound = np.tile(-positionTolerance, 3)
+        p.upperBound = np.tile(positionTolerance, 3)
+
+        p.lowerBound[lineAxis] = bounds[0]
+        p.upperBound[lineAxis] = bounds[1]
+
+        return p
+
+
     def createLinkGazeConstraint(self, startPose, linkName, gazeAxis):
         linkFrame = self.getLinkFrameAtPose(linkName, startPose)
         g = ik.WorldGazeDirConstraint()
