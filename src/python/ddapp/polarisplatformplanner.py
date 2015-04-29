@@ -193,6 +193,16 @@ class PolarisPlatformPlanner(object):
     def spawnGroundAffordance(self):
         self.terrainTask.spawnGroundAffordance()
 
+    def planArmsUp(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'hand up tuck', side='left')
+        endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand up tuck', side='right')
+        ikPlanner.computeMultiPostureGoal([startPose, endPose])
+
+    def getPlanningStartPose(self):
+        return self.robotSystem.robotStateJointController.q.copy()
+
 
 class PolarisPlatformPlannerPanel(TaskUserPanel):
         
@@ -211,6 +221,7 @@ class PolarisPlatformPlannerPanel(TaskUserPanel):
         self.addManualButton('Raycast Terrain', self.onRaycastTerrain)
         self.addManualButton('Start', self.onStart)
         self.addManualButton('Update Affordance', self.onUpdateAffordance)
+        self.addManualButton('Arms Up',self.platformPlanner.planArmsUp)
         self.addManualButton('Plan Turn', self.onPlanTurn)
         self.addManualButton('Plan Step Down', self.onPlanStepDown)
         self.addManualButton('Plan Weight Shift', self.onPlanWeightShift)
