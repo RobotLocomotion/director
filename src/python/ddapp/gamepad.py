@@ -17,7 +17,6 @@ import drc as lcmdrc
 
 class Gamepad(object):
     def __init__(self, teleopPanel, teleopJointController, ikPlanner, view):
-        print 'gamepad init'
         lcmUtils.addSubscriber('GAMEPAD_CHANNEL', lcmdrc.gamepad_cmd_t, self.onGamepadCommand)
         self.speedMultiplier = 1.0
         self.maxSpeedMultiplier = 3.0
