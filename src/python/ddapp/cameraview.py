@@ -391,37 +391,21 @@ class CameraImageView(object):
         self.imageName = imageName
         self.imageInitialized = False
         self.updateUtime = 0
-        self.rayCallback = None
         self.initView(view)
         self.initEventFilter()
 
 
-    def onViewDoubleClicked(self, displayPoint):
-        dataset, pickedPoint = vis.pickImage(displayPoint, self.view)
-        if pickedPoint is None or not dataset:
-            return
-
-
-    def getImagePixel(self, displayPoint):
+    def getImagePixel(self, displayPoint, restrictToImageDimensions=True):
 
         worldPoint = [0.0, 0.0, 0.0, 0.0]
         vtk.vtkInteractorObserver.ComputeDisplayToWorld(self.view.renderer(), displayPoint[0], displayPoint[1], 0, worldPoint)
 
         imageDimensions = self.getImage().GetDimensions()
 
-        if 0.0 <= worldPoint[0] <= imageDimensions[0] and 0.0 <= worldPoint[1] <= imageDimensions[1]:
+        if 0.0 <= worldPoint[0] <= imageDimensions[0] and 0.0 <= worldPoint[1] <= imageDimensions[1] or not restrictToImageDimensions:
             return [worldPoint[0], worldPoint[1], 0.0]
         else:
             return None
-
-
-    def onMouseMove(self, displayPoint):
-
-        imagePixel = self.getImagePixel(displayPoint)
-        cameraPosition, ray = self.getWorldPositionAndRay(imagePixel)
-
-        if self.rayCallback:
-            self.rayCallback(cameraPosition, ray)
 
 
     def getWorldPositionAndRay(self, imagePixel, imageUtime=None):
@@ -453,7 +437,6 @@ class CameraImageView(object):
     def filterEvent(self, obj, event):
         if self.eventFilterEnabled and event.type() == QtCore.QEvent.MouseButtonDblClick:
             self.eventFilter.setEventHandlerResult(True)
-            self.onViewDoubleClicked(vis.mapMousePosition(obj, event))
 
         elif event.type() == QtCore.QEvent.KeyPress:
             if str(event.text()).lower() == 'p':

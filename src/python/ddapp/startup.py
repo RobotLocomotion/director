@@ -658,8 +658,6 @@ class ImageOverlayManager(object):
 
         if self.usePicker:
             self.imagePicker = ImagePointPicker(imageView)
-            #self.imagePicker.doubleClickCallback = drillDemo.onImageViewDoubleClick
-            #imageView.rayCallback = segmentation.extractPointsAlongClickRay
             self.imagePicker.start()
 
     def hide(self):
