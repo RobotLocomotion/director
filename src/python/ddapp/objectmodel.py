@@ -99,10 +99,31 @@ class ObjectModelItem(object):
         return False
 
     def getActionNames(self):
-        return []
+        actions = ['Rename']
+        return actions
 
     def onAction(self, action):
-        pass
+        if action == 'Rename':
+            name = self.getProperty('Name')
+
+            inputDialog = QtGui.QInputDialog()
+            inputDialog.setInputMode(inputDialog.TextInput)
+            inputDialog.setLabelText('Name:')
+            inputDialog.setWindowTitle('Enter name')
+            inputDialog.setTextValue(name)
+            result = inputDialog.exec_()
+
+            if result:
+                self.rename(inputDialog.textValue())
+
+    def rename(self, name, renameChildren=True):
+        oldName = self.getProperty('Name')
+        if renameChildren:
+            for child in self.children():
+                childName = child.getProperty('Name')
+                if childName.startswith(oldName):
+                    child.setProperty('Name', name + childName[len(oldName):])
+        self.setProperty('Name', name)
 
     def getObjectTree(self):
         return self._tree
