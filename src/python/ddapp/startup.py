@@ -427,6 +427,8 @@ if usePlanning:
 
     sitStandPlannerPanel = sitstandplanner.SitStandPlannerPanel(robotSystem)
 
+    platformTaskPanel = polarisplatformplanner.PolarisPlatformPlannerPanel(robotSystem)
+
     taskPanels = OrderedDict()
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
@@ -434,6 +436,8 @@ if usePlanning:
     taskPanels['Terrain'] = terrainTaskPanel.widget
     taskPanels['Driving'] = drivingPlannerPanel.widget
     taskPanels['Sit/Stand'] = sitStandPlannerPanel.widget
+    taskPanels['Platform'] = platformTaskPanel.widget
+    
     tasklaunchpanel.init(taskPanels)
 
     splinewidget.init(view, handFactory, robotStateModel)
