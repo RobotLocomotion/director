@@ -151,10 +151,6 @@ useGamepad = True
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 
-if useGamepad:
-    print "using gamepad"
-    gamePad = gamepad.Gamepad()    
-
 if useSpreadsheet:
     spreadsheet.init(poseCollection, costCollection)
 
@@ -385,6 +381,9 @@ if usePlanning:
     teleopPanel = teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
+    if useGamepad:
+        print "using gamepad"
+        gamePad = gamepad.Gamepad(teleopPanel)
 
 
     debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, robotStateJointController, playbackRobotModel,
