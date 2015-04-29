@@ -77,6 +77,7 @@ class EndEffectorTeleopPanel(object):
         self.ui.lfootCombo.connect('currentIndexChanged(const QString&)', self.lfootComboChanged)
         self.ui.rfootCombo.connect('currentIndexChanged(const QString&)', self.rfootComboChanged)
 
+        self.palmOffsetDistance = 0.0
         self.constraintSet = None
 
         #self.ui.interactiveCheckbox.visible = False
@@ -315,9 +316,7 @@ class EndEffectorTeleopPanel(object):
                 thisHandConstraint = self.getRHandConstraint()
 
             linkName = ikPlanner.getHandLink(side)
-            graspToPalm = vtk.vtkTransform()
-            graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
-            #graspToWorld = ikPlanner.newGraspToWorldFrame(startPose, side, graspToHand)
+            graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, self.palmOffsetDistance)
             graspToWorld = self.getGoalFrame(linkName)
 
             p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
@@ -449,8 +448,7 @@ class EndEffectorTeleopPanel(object):
             linkName = ikPlanner.getHandLink(side)
             frameName = '%s constraint frame' % linkName
 
-            graspToPalm = vtk.vtkTransform()
-            graspToHand = ikPlanner.newGraspToHandFrame(side, graspToPalm)
+            graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, self.palmOffsetDistance)
             graspToWorld = ikPlanner.newGraspToWorldFrame(startPose, side, graspToHand)
 
             om.removeFromObjectModel(om.findObjectByName(frameName))
