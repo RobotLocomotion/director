@@ -150,9 +150,9 @@ class ImagePointPicker(object):
         self.drawLines = drawLines
         self.annotationObj = None
         self.annotationFunc = callback
-        self.doubleClickCallback = None
         self.numberOfPoints = numberOfPoints
         self.showCursor = False
+        self.cursorObj = None
         self.callbacks = callbacks.CallbackRegistry([self.DOUBLE_CLICK_EVENT])
         self.clear()
 
@@ -189,8 +189,6 @@ class ImagePointPicker(object):
         if event.type() == QtCore.QEvent.MouseButtonDblClick and event.button() == QtCore.Qt.LeftButton:
 
             self.callbacks.process(self.DOUBLE_CLICK_EVENT, vis.mapMousePosition(obj, event), event.modifiers(), self.imageView)
-            #if self.doubleClickCallback:
-            #    self.doubleClickCallback(vis.mapMousePosition(obj, event), event.modifiers(), self.imageView)
 
         if event.type() in (QtCore.QEvent.MouseMove, QtCore.QEvent.MouseButtonPress, QtCore.QEvent.Wheel):
             if self.showCursor:
@@ -217,11 +215,9 @@ class ImagePointPicker(object):
 
         if event.type() == QtCore.QEvent.MouseMove:
             self.onMouseMove(vis.mapMousePosition(obj, event), event.modifiers())
-            self.imageView.onMouseMove(vis.mapMousePosition(obj, event))
 
         elif event.type() == QtCore.QEvent.MouseButtonPress:
             self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
-
 
 
     def clear(self):
@@ -234,10 +230,16 @@ class ImagePointPicker(object):
 
     def onMouseMove(self, displayPoint, modifiers=None):
         self.lastMovePos = displayPoint
-        self.tick()
+        self.hoverPos = self.displayPointToImagePoint(self.lastMovePos)
+        self.draw()
 
     def onMousePress(self, displayPoint, modifiers=None):
-        self.points.append(self.hoverPos)
+
+        point = self.displayPointToImagePoint(displayPoint)
+        if point is None:
+            return
+
+        self.points.append(point)
 
         if len(self.points) == self.numberOfPoints:
             self.finish()
@@ -245,37 +247,28 @@ class ImagePointPicker(object):
 
     def finish(self):
         points = [np.array(p) for p in self.points]
+        self.clear()
         if self.annotationFunc is not None:
             self.annotationFunc(*points)
-        self.clear()
 
     def draw(self):
 
         d = DebugData()
 
         points = list(self.points)
-        points.append(self.hoverPos)
+        if self.hoverPos is not None:
+            points.append(self.hoverPos)
 
         # draw points
         for p in points:
-            if p is not None:
-                d.addSphere(p, radius=5) # radius seems to be in pixels 0.08
+            d.addSphere(p, radius=5)
 
-                # add a cross-hair
-                #d.addLine( [p[0] , p[1]-50 , p[2]] , [p[0] , p[1]+50 , p[2]] )
-                #d.addLine( [p[0]-50 , p[1] , p[2]] , [p[0]+50 , p[1] , p[2]] )
-
-        if self.drawLines:
-            # draw lines
+        if self.drawLines and len(points) > 1:
             for a, b in zip(points, points[1:]):
-
-                if a is not None:
-                    if b is not None:
-                        d.addLine(a, b)
+                d.addLine(a, b)
 
             # connect end points
-            #if points[-1] is not None:
-            #    d.addLine(points[0], points[-1])
+            # d.addLine(points[0], points[-1])
 
         if self.annotationObj:
             self.annotationObj.setPolyData(d.getPolyData())
@@ -286,15 +279,15 @@ class ImagePointPicker(object):
             self.annotationObj.actor.GetProperty().SetLineWidth(2)
 
     def hideCursor(self):
-        om.removeFromObjectModel(self.cursorObj)
+        if self.cursorObj:
+            om.removeFromObjectModel(self.cursorObj)
 
-    def updateCursor(self, mousePos):
+    def updateCursor(self, displayPoint):
 
-        worldPoint = [0.0, 0.0, 0.0, 0.0]
-        vtk.vtkInteractorObserver.ComputeDisplayToWorld(self.view.renderer(), mousePos[0], mousePos[1], 0, worldPoint)
+        center = self.displayPointToImagePoint(displayPoint, restrictToImageDimensions=False)
+        center = np.array(center)
 
         d = DebugData()
-        center = np.array([worldPoint[0], worldPoint[1], -1])
         d.addLine(center + [0, -3000, 0], center + [0, 3000, 0])
         d.addLine(center + [-3000, 0, 0], center + [3000, 0, 0])
         self.cursorObj = vis.updatePolyData(d.getPolyData(), 'cursor', alpha=0.5, view=self.view)
@@ -303,18 +296,11 @@ class ImagePointPicker(object):
         self.cursorObj.actor.SetPickable(False)
         self.view.render()
 
-    def tick(self):
-
-        worldPoint = [0.0, 0.0, 0.0, 0.0]
-        vtk.vtkInteractorObserver.ComputeDisplayToWorld(self.view.renderer(), self.lastMovePos[0], self.lastMovePos[1], 0, worldPoint)
-        imageDimensions = self.imageView.getImage().GetDimensions()
-
-        if 0.0 <= worldPoint[0] <= imageDimensions[0] and 0.0 <= worldPoint[1] <= imageDimensions[1]:
-            self.hoverPos = [worldPoint[0], worldPoint[1], -1.0]
-        else:
-            self.hoverPos = None
-
-        self.draw()
+    def displayPointToImagePoint(self, displayPoint, restrictToImageDimensions=True):
+        point = self.imageView.getImagePixel(displayPoint, restrictToImageDimensions)
+        if point is not None:
+            point[2] = -1.0
+            return point
 
 
 class PlacerWidget(object):
