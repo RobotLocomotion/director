@@ -702,6 +702,11 @@ class IKPlanner(object):
         return self.createPostureConstraint(startPostureName, joints)
 
 
+    def flipSide(self, side):
+        assert side in ('left', 'right')
+        return 'left' if side == 'right' else 'right'
+
+
     def createLockedArmPostureConstraint(self, startPostureName):
         if self.reachingSide == 'left':
             return self.createLockedRightArmPostureConstraint(startPostureName)
