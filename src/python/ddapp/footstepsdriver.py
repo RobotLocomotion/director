@@ -467,10 +467,10 @@ class FootstepsDriver(object):
         hard coded Location of the Drake contact points relative to foot frame. this should be read from URDF
         '''
         contact_pts = np.zeros((4,3))
-        contact_pts[0,:] = [-0.082,  0.0624435, -0.081119]
-        contact_pts[1,:] = [-0.082, -0.0624435, -0.081119]
-        contact_pts[2,:] = [0.178,   0.0624435, -0.081119]
-        contact_pts[3,:] = [0.178,  -0.0624435, -0.081119]
+        contact_pts[0,:] = [-0.0876,  0.0626, -0.07645]
+        contact_pts[1,:] = [-0.0876, -0.0626, -0.07645]
+        contact_pts[2,:] = [0.1728,   0.0626, -0.07645]
+        contact_pts[3,:] = [0.1728,  -0.0626, -0.07645]
         return contact_pts
 
     @staticmethod
