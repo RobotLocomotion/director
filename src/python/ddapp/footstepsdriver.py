@@ -229,9 +229,11 @@ class FootstepsDriver(object):
             self.params.setProperty(k, v)
 
     def _setupSubscriptions(self):
-        lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan,
-                               lcmUtils.HistoricalLCMLoader("drc", "software/drc_lcmtypes/lcmtypes",
-                                                            os.getenv("DRC_BASE")))
+
+        useHistoricalLoader = False
+        historicalLoader = lcmUtils.HistoricalLCMLoader('drc', 'software/drc_lcmtypes/lcmtypes', os.getenv('DRC_BASE')) if useHistoricalLoader else None
+
+        lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlan, historicalLoader)
         lcmUtils.addSubscriber('WALKING_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
         lcmUtils.addSubscriber('WALKING_SIMULATION_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
