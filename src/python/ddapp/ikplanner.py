@@ -585,9 +585,10 @@ class IKPlanner(object):
         return constraints
 
 
-    def createMovingReachConstraints(self, startPoseName, lockBase=False, lockBack=False, lockArm=True):
-        lockLeftArm = lockArm and (self.reachingSide == 'right')
-        lockRightArm = lockArm and (self.reachingSide == 'left')
+    def createMovingReachConstraints(self, startPoseName, lockBase=False, lockBack=False, lockArm=True, side=None):
+        side = side or self.reachingSide
+        lockLeftArm = lockArm and (side == 'right')
+        lockRightArm = lockArm and (side == 'left')
         return self.createMovingBodyConstraints(startPoseName, lockBase, lockBack, lockLeftArm=lockLeftArm, lockRightArm=lockRightArm)
 
 
@@ -707,15 +708,33 @@ class IKPlanner(object):
         return 'left' if side == 'right' else 'right'
 
 
-    def createLockedArmPostureConstraint(self, startPostureName):
-        if self.reachingSide == 'left':
+    def createLockedArmPostureConstraint(self, startPostureName, side=None):
+
+        if side is None:
+            side = self.flipSide(self.reachingSide)
+
+        if side == 'right':
             return self.createLockedRightArmPostureConstraint(startPostureName)
         else:
             return self.createLockedLeftArmPostureConstraint(startPostureName)
 
 
+    def createJointPostureConstraintFromDatabase(self, postureGroup, postureName, side=None):
+        postureJoints = self.getPostureJointsFromDatabase(postureGroup, postureName, side=side)
+        p = ik.PostureConstraint()
+        p.joints = postureJoints.keys()
+        p.jointsLowerBound = postureJoints.values()
+        p.jointsUpperBound = postureJoints.values()
+        p.tspan = [1, 1]
+        return p
+
+
+    def getPostureJointsFromDatabase(self, postureGroup, postureName, side=None):
+        return RobotPoseGUIWrapper.getPose(postureGroup, postureName, side=side)
+
+
     def getMergedPostureFromDatabase(self, startPose, poseGroup, poseName, side=None):
-        postureJoints = RobotPoseGUIWrapper.getPose(poseGroup, poseName, side=side)
+        postureJoints = self.getPostureJointsFromDatabase(poseGroup, poseName, side=side)
         return self.mergePostures(startPose, postureJoints)
 
 
