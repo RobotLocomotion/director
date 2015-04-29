@@ -382,7 +382,6 @@ if usePlanning:
                      ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
     if useGamepad:
-        print "using gamepad"
         gamePad = gamepad.Gamepad(teleopPanel, teleopJointController, ikPlanner, view)
 
 
