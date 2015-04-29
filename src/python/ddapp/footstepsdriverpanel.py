@@ -149,8 +149,16 @@ class FootstepsPanel(object):
             handle = vis.showPolyData(d.getPolyData(), 'walking goal terrain handle', parent=frameObj, visible=True, color=[1,1,0])
             handle.actor.SetUserTransform(frameObj.transform)
             self.placer = PlacerWidget(app.getCurrentRenderView(), handle, terrain)
-            self.placer.start()
 
+            def onFramePropertyModified(propertySet, propertyName):
+                if propertyName == 'Edit':
+                    if propertySet.getProperty(propertyName):
+                        self.placer.start()
+                    else:
+                        self.placer.stop()
+
+            frameObj.properties.connectPropertyChanged(onFramePropertyModified)
+            onFramePropertyModified(frameObj, 'Edit')
 
         frameObj.connectFrameModified(self.onWalkingGoalModified)
         self.onWalkingGoalModified(frameObj)
