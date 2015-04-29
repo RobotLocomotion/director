@@ -78,11 +78,8 @@ class EndEffectorTeleopPanel(object):
         self.ui.rfootCombo.connect('currentIndexChanged(const QString&)', self.rfootComboChanged)
 
         self.palmOffsetDistance = 0.0
+        self.palmGazeAxis = [0.0, 1.0, 0.0]
         self.constraintSet = None
-
-        #self.ui.interactiveCheckbox.visible = False
-        #self.ui.updateIkButton.visible = False
-
 
     def setComboText(self, combo, text):
         index = combo.findText(text)
@@ -320,7 +317,7 @@ class EndEffectorTeleopPanel(object):
             graspToWorld = self.getGoalFrame(linkName)
 
             p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
-            g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand)
+            g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand, targetAxis=list(self.palmGazeAxis), bodyAxis=list(self.palmGazeAxis))
 
             p.tspan = [1.0, 1.0]
             q.tspan = [1.0, 1.0]
