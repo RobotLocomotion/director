@@ -38,6 +38,9 @@ class AffordanceGraspUpdater(object):
         t = robotModel.getLinkFrame(linkName)
         return vis.updateFrame(t, linkFrameName, scale=0.2, visible=False, parent=self.robotModel)
 
+    def hasAffordance(self, affordanceName):
+        return affordanceName in self.frameSyncs
+
     def graspAffordance(self, affordanceName, side):
 
         if affordanceName in self.frameSyncs:
@@ -50,7 +53,7 @@ class AffordanceGraspUpdater(object):
 
         frameSync = vis.FrameSync()
         frameSync.addFrame(linkFrame)
-        frameSync.addFrame(affordanceFrame)
+        frameSync.addFrame(affordanceFrame, ignoreIncoming=True)
 
         self.frameSyncs[affordanceName] = frameSync
 
