@@ -6,7 +6,7 @@ from ddapp.timercallback import TimerCallback
 from ddapp.uuidutil import newUUID
 from ddapp import vtkAll as vtk
 from ddapp.thirdparty import numpyjsoncoder
-
+import traceback
 
 class AffordanceObjectModelManager(object):
 
@@ -77,7 +77,11 @@ class AffordanceObjectModelManager(object):
             self.timer.singleShot(1.0/self.notifyFrequency)
 
         for aff in self._pendingUpdates:
-            self.collection.updateDescription(self.getAffordanceDescription(aff), notify=False)
+            try:
+                self.collection.updateDescription(self.getAffordanceDescription(aff), notify=False)
+            except:
+                print traceback.format_exc()
+
         self._pendingUpdates.clear()
 
     def _onAffordancePropertyChanged(self, propertySet, propertyName):
