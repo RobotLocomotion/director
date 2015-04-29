@@ -83,6 +83,8 @@ from ddapp.shallowCopy import shallowCopy
 from ddapp import segmentationroutines
 from ddapp import trackers
 
+from ddapp import gamepad
+
 from ddapp.tasks import robottasks as rt
 from ddapp.tasks import taskmanagerwidget
 from ddapp.tasks.descriptions import loadTaskDescriptions
@@ -144,13 +146,10 @@ useForceDisplay = False
 useSkybox = False
 useDataFiles = True
 usePFGrasp = False
-
+useGamepad = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
-
-
-
 
 if useSpreadsheet:
     spreadsheet.init(poseCollection, costCollection)
@@ -382,6 +381,8 @@ if usePlanning:
     teleopPanel = teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
+    if useGamepad:
+        gamePad = gamepad.Gamepad(teleopPanel, teleopJointController, ikPlanner, view)
 
 
     debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, robotStateJointController, playbackRobotModel,
