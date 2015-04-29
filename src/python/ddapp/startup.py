@@ -383,7 +383,7 @@ if usePlanning:
 
     if useGamepad:
         print "using gamepad"
-        gamePad = gamepad.Gamepad(teleopPanel)
+        gamePad = gamepad.Gamepad(teleopPanel, teleopJointController, ikPlanner, view)
 
 
     debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, robotStateJointController, playbackRobotModel,

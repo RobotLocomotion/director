@@ -5,7 +5,6 @@ import time
 import types
 import numpy as np
 import vtkAll as vtk
-#from threading import Timer
 from ddapp.timercallback import TimerCallback
 
 from ddapp import transformUtils
@@ -17,9 +16,14 @@ import drc as lcmdrc
 
 
 class Gamepad(object):
-	def __init__(self, teleopPanel):
+	def __init__(self, teleopPanel, teleopJointController, ikPlanner, view):
 		print 'gamepad init'
 		lcmUtils.addSubscriber('GAMEPAD_CHANNEL', lcmdrc.gamepad_cmd_t, self.onGamepadCommand)
+		self.speedMultiplier = 1.0
+		
+		self.maxSpeedMultiplier = 3.0
+		self.minSpeedMultiplier = 0.2
+
 		self.travel = 1
 		self.angularTravel = 180
 		self.baseFrame = None
@@ -28,9 +32,20 @@ class Gamepad(object):
 		self.timer.callback = self.tick
 		self.timer.start()
 		self.teleopPanel = teleopPanel
+		self.teleopJointController = teleopJointController
+		self.ikPlanner = ikPlanner
+		self.view = view
+		self.camera = view.camera()
+		self.cameraTarget = np.asarray(self.camera.GetFocalPoint())
 
 		self.endEffectorFrames = []
 		self.endEffectorIndex = 0
+
+		self.teleopOn = False
+		self.keyFramePoses = list()
+
+		self.cameraMode = False
+
 
 	#todo: add keypoints for a multiPostureGoal using:
 	#qi = teleopJointController.q.copy()
@@ -38,17 +53,15 @@ class Gamepad(object):
 	def findEndEffectors(self):
 		planning = om.getOrCreateContainer('planning')
 		if planning is not None:
-			print 'found planning'
 			teleopFolder = planning.findChild('teleop plan')
 			if teleopFolder is not None:
-				print 'found teleop'
 				framesFolder = teleopFolder.findChild('constraint frames')
 				if framesFolder is not None:
-					print 'found frames'
 					self.endEffectorFrames = framesFolder.children()
 
 	def cycleEndEffector(self):
 		if len(self.endEffectorFrames) is not 0:
+			self.clearKeyframePoses()
 			self.endEffectorFrames[self.endEffectorIndex].setProperty('Edit', False)
 			self.endEffectorIndex = (self.endEffectorIndex + 1) % len(self.endEffectorFrames)
 			self.endEffectorFrames[self.endEffectorIndex].setProperty('Edit', True)
@@ -56,6 +69,16 @@ class Gamepad(object):
 			self.baseFrame = self.endEffectorFrames[self.endEffectorIndex]
 			self.baseTransform = transformUtils.copyFrame(self.baseFrame.transform)
 			self.resetDeltas()
+			self.addKeyframePose()
+
+	def clearKeyframePoses(self):
+		self.keyFramePoses = list()
+
+	def addKeyframePose(self):
+		self.keyFramePoses.append(self.teleopJointController.q.copy())
+	
+	def finalizeTrajectory(self):
+		self.ikPlanner.computeMultiPostureGoal(self.keyFramePoses)
 
 	def tick(self):
 		self.updateFrame()
@@ -75,21 +98,67 @@ class Gamepad(object):
 		self.Ydot = 0.0
 		self.Zdot = 0.0
 
+	def toggleTeleop(self):
+		self.teleopOn = not self.teleopOn
+
+		if self.teleopOn:
+			self.teleopPanel.endEffectorTeleop.activate()
+			self.teleopPanel.endEffectorTeleop.setLHandConstraint('ee fixed')
+			self.teleopPanel.endEffectorTeleop.setRHandConstraint('ee fixed')
+		else:
+			self.teleopPanel.endEffectorTeleop.deactivate()
+
+
+	def increaseTeleopSpeed(self):
+		self.speedMultiplier = self.clampTeleopSpeed(self.speedMultiplier + 0.2)
+		print 'teleop speed: ' + str(self.speedMultiplier)
+	
+	def decreaseTeleopSpeed(self):
+		self.speedMultiplier = self.clampTeleopSpeed(self.speedMultiplier - 0.2)
+		print 'teleop speed: ' + str(self.speedMultiplier)
+
+	def clampTeleopSpeed(self, speed):
+		return np.clip(speed, self.minSpeedMultiplier, self.maxSpeedMultiplier)
+	
+	def enableCameraMode(self):
+		print 'Gamepad camera mode on'
+		self.cameraMode = True
+	
+	def disableCameraMode(self):
+		print 'Gamepad camera mode off'
+		self.cameraMode = False
+	
+	def setCameraTarget(self):
+		if self.baseFrame is not None:
+			self.cameraTarget = np.asarray(self.baseFrame.transform.GetPosition())
 
 	def onGamepadCommand(self, msg):
+
+		if msg.button == msg.GAMEPAD_BUTTON_A and msg.button_a == 1:
+			self.finalizeTrajectory()
+
+		if msg.button == msg.GAMEPAD_DPAD_X and msg.button_dpad_x < 0:
+			self.enableCameraMode()
+
+		if msg.button == msg.GAMEPAD_DPAD_X and msg.button_dpad_x > 0:
+			self.disableCameraMode()
 
 		if msg.button == msg.GAMEPAD_BUTTON_Y and msg.button_y == 1:
 			self.findEndEffectors()
 			self.cycleEndEffector()
+			self.setCameraTarget()
 
-		if msg.button == msg.GAMEPAD_BUTTON_A and msg.button_a == 1:
-			print 'activating end effector teleop'
-			self.teleopPanel.endEffectorTeleop.activate()
-			self.teleopPanel.endEffectorTeleop.setLHandConstraint('ee fixed')
-			self.teleopPanel.endEffectorTeleop.setRHandConstraint('ee fixed')
+		if msg.button == msg.GAMEPAD_DPAD_Y and msg.button_dpad_y > 0:
+			self.increaseTeleopSpeed()
 
-		if msg.button == msg.GAMEPAD_BUTTON_B and msg.button_b == 1:
-			self.teleopPanel.endEffectorTeleop.deactivate()
+		if msg.button == msg.GAMEPAD_DPAD_Y and msg.button_dpad_y < 0:
+			self.decreaseTeleopSpeed()
+
+		if msg.button == msg.GAMEPAD_BUTTON_START and msg.button_start == 1:
+			self.toggleTeleop()
+
+		if msg.button == msg.GAMEPAD_BUTTON_X and msg.button_x == 1:
+			self.addKeyframePose()
 
 		if msg.button == msg.GAMEPAD_BUTTON_LB:
 			self.yawdot = -self.angularTravel * msg.button_lb
@@ -110,23 +179,31 @@ class Gamepad(object):
 		
 		if msg.button == msg.GAMEPAD_TRIGGER_R:
 			self.Ydot = self.travel * msg.trigger_right
-	
-	def integrateVelocities(self):
-		#todo: do this in numpy
-		self.theta += self.thetadot * self.dt
-		self.phi += self.phidot * self.dt
-		self.X += self.Xdot * self.dt
-		self.Y += self.Ydot * self.dt
-		self.Z += self.Zdot * self.dt
-
+			
 	def updateFrame(self):
 		norm = np.linalg.norm(np.array([self.thetadot, self.phidot, self.yawdot, self.Xdot, self.Ydot, self.Zdot]))
-		if self.baseFrame is not None and norm > 0.1:
-			dt = 0.01
-			t = vtk.vtkTransform()
-			t.Concatenate(self.baseFrame.transform)
-			t.RotateZ(-self.thetadot * dt)
-			t.RotateX(self.phidot * dt)
-			t.RotateY(self.yawdot * dt)
-			t.Translate(self.Xdot * dt, self.Ydot * dt, self.Zdot * dt)
-			self.baseFrame.copyFrame(t)
+		dt = 0.01 #self.timer.elapsed
+
+		if self.baseFrame is not None:
+			cameraFocus = np.asarray(self.camera.GetFocalPoint())
+			cameraInterp = cameraFocus + (self.cameraTarget - cameraFocus)*0.02
+			self.camera.SetFocalPoint(cameraInterp)
+		
+		if self.cameraMode is not True:
+			if self.baseFrame is not None and norm > 0.1:
+				t = vtk.vtkTransform()
+				t.Concatenate(self.baseFrame.transform)
+				#todo: use numpy for scaling
+				t.RotateZ(-self.thetadot * dt * self.speedMultiplier)
+				t.RotateX(self.phidot * dt * self.speedMultiplier)
+				t.RotateY(self.yawdot * dt * self.speedMultiplier)
+				t.Translate(self.Xdot * dt * self.speedMultiplier, self.Ydot * dt * self.speedMultiplier, self.Zdot * dt * self.speedMultiplier)
+				self.baseFrame.copyFrame(t)
+		else:
+			
+			self.camera.Elevation(self.Zdot * self.speedMultiplier)
+			self.camera.Azimuth(self.Xdot * self.speedMultiplier)
+			self.camera.Zoom(1.0 + self.phidot/1000.0)
+
+		self.view.render()
+
