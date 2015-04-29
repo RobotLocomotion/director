@@ -490,7 +490,7 @@ class IKPlanner(object):
         return positionConstraint, rollConstraint1, rollConstraint2
 
 
-    def createGazeGraspConstraint(self, side, targetFrame, graspToHandLinkFrame=None, coneThresholdDegrees=0.0, targetAxis=[0.0, 1.0, 0.0] , bodyAxis=[0.0, 1.0, 0.0] ):
+    def createGazeGraspConstraint(self, side, targetFrame, graspToHandLinkFrame=None, coneThresholdDegrees=0.0, targetAxis=[0.0, 1.0, 0.0], bodyAxis=[0.0, 1.0, 0.0]):
 
         targetFrame = targetFrame if isinstance(targetFrame, vtk.vtkTransform) else targetFrame.transform
 
