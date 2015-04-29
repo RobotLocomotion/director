@@ -27,6 +27,8 @@ from ddapp import segmentation
 from ddapp import planplayback
 from ddapp import affordanceupdater
 from ddapp import segmentationpanel
+from ddapp import segmentation
+from ddapp import terraintask
 from ddapp import footstepsdriverpanel
 from ddapp.footstepsdriver import FootstepRequestGenerator
 
@@ -51,6 +53,7 @@ class PolarisPlatformPlanner(object):
 	def __init__(self, ikServer, robotSystem):
 		self.ikServer = ikServer
 		self.robotSystem = robotSystem
+		self.terrainTask = terraintask.TerrainTask(robotSystem)
 		self.initializedFlag = False
 
 	def initialize(self):
@@ -180,6 +183,19 @@ class PolarisPlatformPlanner(object):
 	def setMapModeToTerrainAndNormals(self,request):
 		request.params.map_mode = lcmdrc.footstep_plan_params_t.TERRAIN_HEIGHTS_AND_NORMALS
 		return request
+
+
+	def segmentPlatform(self):
+		segmentation.startInteractiveLineDraw([0.4,0.3])
+
+	#passthrough methods to the terrain task
+	# should force updating the affordance before doing this
+	def requestRaycastTerrain(self):
+		self.terrainTask.requestRaycastTerrain()
+
+	def spawnGroundAffordance(self):
+		self.terrainTask.spawnGroundAffordance()
+
 
 
 
