@@ -366,6 +366,12 @@ class IKPlanner(object):
         p.jointsUpperBound = [math.radians(5), math.radians(5), np.inf]
         return p
 
+    def createBackZeroPostureConstraint(self):
+        p = ik.PostureConstraint()
+        p.joints = ['back_bkx', 'back_bky', 'back_bkz']
+        p.jointsLowerBound = np.zeros(3)
+        p.jointsUpperBound = np.zeros(3)
+        return p
 
     def createPositionOrientationGraspConstraints(self, side, targetFrame, graspToHandLinkFrame=None, positionTolerance=0.0, angleToleranceInDegrees=0.0):
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
