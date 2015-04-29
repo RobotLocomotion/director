@@ -149,8 +149,38 @@ class TerrainTask(object):
 
         return sorted(blocks, key=lambda x: x.getProperty('Name'))
 
+    def reorientBlocks(self):
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        forward = transformUtils.getAxesFromTransform(stanceFrame)[0]
+
+        blocks = self.findBlockObjects()
+        for block in blocks:
+
+            blockFrame = block.getChildFrame().transform
+            axes = transformUtils.getAxesFromTransform(blockFrame)
+            origin = blockFrame.GetPosition()
+            axes = [np.array(axis) for axis in axes]
+            dims = block.getProperty('Dimensions')
+            axisIndex, axis, sign = transformUtils.findTransformAxis(blockFrame, forward)
+            if axisIndex == 2:
+                continue
+
+            if axisIndex == 0 and sign < 0:
+                axes = [-axes[0], -axes[1], axes[2]]
+            elif axisIndex == 1:
+                dims = [dims[1], dims[0], dims[2]]
+                if sign > 0:
+                    axes = [axes[1], -axes[0], axes[2]]
+                else:
+                    axes = [-axes[1], axes[0], axes[2]]
+
+            t = transformUtils.getTransformFromAxesAndOrigin(axes[0], axes[1], axes[2], origin)
+            block.getChildFrame().copyFrame(t)
+            block.setProperty('Dimensions', dims)
+
     def computeSafeRegions(self):
 
+        om.removeFromObjectModel(om.findObjectByName('Safe terrain regions'))
         blocks = self.findBlockObjects()
         for block in blocks:
 
@@ -213,8 +243,6 @@ class TerrainTask(object):
         request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
 
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
-
-
 
 
     def convertStepToSafeRegion(self, step, rpySeed):
@@ -307,6 +335,14 @@ class TerrainTask(object):
         return blocks
 
 
+    def planArmsUp(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'hands-forward', side='left')
+        endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'hands-forward', side='right')
+        ikPlanner.computeMultiPostureGoal([startPose, endPose])
+
+
 class TerrainImageFitter(ImageBasedAffordanceFit):
 
     def __init__(self, drillDemo):
@@ -334,12 +370,17 @@ class TerrainTaskPanel(TaskUserPanel):
         self.addTasks()
 
     def addButtons(self):
-        self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
         self.addManualButton('Spawn tilted steps', self.terrainTask.spawnTiltedCinderblocks)
-        self.addManualButton('Raycast terrain', self.terrainTask.requestRaycastTerrain)
         self.addManualButton('Walk to tilted steps', self.terrainTask.walkToTiltedCinderblocks)
-        self.addManualButton('Compute safe regions', self.terrainTask.computeSafeRegions)
         self.addManualButton('Spawn manual footsteps', self.terrainTask.computeManualFootsteps)
+        self.addManualSpacer()
+        self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
+        self.addManualButton('Raycast terrain', self.terrainTask.requestRaycastTerrain)
+        self.addManualSpacer()
+        self.addManualButton('Reorient blocks to robot', self.terrainTask.reorientBlocks)
+        self.addManualButton('Compute safe regions', self.terrainTask.computeSafeRegions)
+        self.addManualSpacer()
+        self.addManualButton('Arms up', self.terrainTask.planArmsUp)
 
 
     def addDefaultProperties(self):
