@@ -52,7 +52,6 @@ class FootstepsPanel(object):
 
         self.ui.walkingGoalButton.connect("clicked()", self.onNewWalkingGoal)
         self.ui.walkingPlanButton.connect("clicked()", self.onShowWalkingPlan)
-        self.ui.executeButton.connect("clicked()", self.onExecute)
         self.ui.stopButton.connect("clicked()", self.onStop)
         self.ui.simulateDrakeButton.connect("clicked()", self.onSimulateDrake)
         self.ui.haltSimulationDrakeButton.connect("clicked()", self.onHaltSimulationDrake)
