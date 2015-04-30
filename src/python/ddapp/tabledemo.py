@@ -573,6 +573,15 @@ class TableDemo(object):
         #self.demoSequence()
 
 
+    def prepIhmcDemoSequenceFromFile(self):
+
+        filename = os.path.expanduser('~/drc-testing-data/ihmc_table/ihmc_table.vtp')
+        polyData = ioUtils.readPolyData( filename )
+        vis.showPolyData( polyData,'scene')
+        self.prepIhmcDemoSequence()
+
+
+
     def prepIhmcDemoSequence(self):
         self.userFitBin()
         self.onSegmentBin( np.array([ 0.62, -1.33, 0.80]), np.array([ 0.89, -0.87, 0.57]) )
