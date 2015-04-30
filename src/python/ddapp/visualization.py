@@ -426,14 +426,9 @@ class FrameItem(PolyDataItem):
 
     def __init__(self, name, transform, view):
 
-        scale = 1.0
+        PolyDataItem.__init__(self, name, vtk.vtkPolyData(), view)
+
         self.transform = transform
-        polyData = self._createAxes(scale)
-
-        PolyDataItem.__init__(self, name, polyData, view)
-
-        self.setProperty('Color By', 'Axes')
-        self.setProperty('Icon', om.Icons.Axes)
         self._blockSignals = False
 
         self.actor.SetUserTransform(transform)
@@ -442,15 +437,24 @@ class FrameItem(PolyDataItem):
         self.widget.CreateDefaultRepresentation()
         self.widget.EnabledOff()
         self.rep = self.widget.GetRepresentation()
-        self.rep.SetWorldSize(scale)
         self.rep.SetTransform(transform)
+        self.traceData = None
 
-        self.addProperty('Scale', scale, attributes=om.PropertyAttributes(decimals=2, minimum=0.01, maximum=100, singleStep=0.1, hidden=False))
+        self.addProperty('Scale', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0.01, maximum=100, singleStep=0.1, hidden=False))
         self.addProperty('Edit', False)
+        self.addProperty('Tube', False)
+
+        self.properties.setPropertyIndex('Edit', 0)
+        self.properties.setPropertyIndex('Tube', 2)
 
         self.callbacks.addSignal('FrameModified')
         self.onTransformModifiedCallback = None
         self.observerTag = self.transform.AddObserver('ModifiedEvent', self.onTransformModified)
+
+        self._updateAxesGeometry()
+        self.setProperty('Color By', 'Axes')
+        self.setProperty('Icon', om.Icons.Axes)
+
 
     def connectFrameModified(self, func):
         return self.callbacks.connect('FrameModified', func)
@@ -464,16 +468,19 @@ class FrameItem(PolyDataItem):
                 self.onTransformModifiedCallback(self)
             self.callbacks.process('FrameModified', self)
 
-    def _createAxes(self, scale):
+    def _createAxes(self, scale, useTube):
         axes = vtk.vtkAxes()
         axes.SetComputeNormals(0)
         axes.SetScaleFactor(scale)
         axes.Update()
 
-        #t = vtk.vtkTransformPolyDataFilter()
-        #t.SetTransform(transform)
-        #t.AddInputConnection(self.axes.GetOutputPort())
-        #t.Update()
+        if useTube:
+            tube = vtk.vtkTubeFilter()
+            tube.SetInput(axes.GetOutput())
+            tube.SetRadius(0.002)
+            tube.SetNumberOfSides(12)
+            tube.Update()
+            axes = tube
 
         return shallowCopy(axes.GetOutput())
 
@@ -489,19 +496,26 @@ class FrameItem(PolyDataItem):
         if parent.getProperty('Visible') or self.getProperty('Visible'):
             self._renderAllViews()
 
+    def _updateAxesGeometry(self):
+        scale = self.getProperty('Scale')
+        self.rep.SetWorldSize(scale)
+        self.setPolyData(self._createAxes(scale, self.getProperty('Tube')))
+
     def _onPropertyChanged(self, propertySet, propertyName):
         PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
 
         if propertyName == 'Scale':
             scale = self.getProperty(propertyName)
             self.rep.SetWorldSize(scale)
-            self.setPolyData(self._createAxes(scale))
+            self._updateAxesGeometry()
         elif propertyName == 'Edit':
             view = app.getCurrentRenderView()
             if view not in self.views:
                 view = self.views[0]
             self.widget.SetInteractor(view.renderWindow().GetInteractor())
             self.widget.SetEnabled(self.getProperty(propertyName))
+        elif propertyName == 'Tube':
+            self._updateAxesGeometry()
 
     def onRemoveFromObjectModel(self):
         PolyDataItem.onRemoveFromObjectModel(self)
