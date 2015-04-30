@@ -442,9 +442,11 @@ class FrameItem(PolyDataItem):
 
         self.addProperty('Scale', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0.01, maximum=100, singleStep=0.1, hidden=False))
         self.addProperty('Edit', False)
+        self.addProperty('Trace', False)
         self.addProperty('Tube', False)
 
         self.properties.setPropertyIndex('Edit', 0)
+        self.properties.setPropertyIndex('Trace', 1)
         self.properties.setPropertyIndex('Tube', 2)
 
         self.callbacks.addSignal('FrameModified')
@@ -514,6 +516,13 @@ class FrameItem(PolyDataItem):
                 view = self.views[0]
             self.widget.SetInteractor(view.renderWindow().GetInteractor())
             self.widget.SetEnabled(self.getProperty(propertyName))
+        elif propertyName == 'Trace':
+            trace = self.getProperty(propertyName)
+            if trace and not self.traceData:
+                self.traceData = FrameTraceVisualizer(self)
+            elif not trace and self.traceData:
+                om.removeFromObjectModel(self.traceData.getTraceData())
+                self.traceData = None
         elif propertyName == 'Tube':
             self._updateAxesGeometry()
 
@@ -529,6 +538,46 @@ class FrameItem(PolyDataItem):
             view.render()
 
 
+class FrameTraceVisualizer(object):
+
+    def __init__(self, frame):
+        self.frame = frame
+        self.traceName = '%s trace' % frame.getProperty('Name')
+        self.lastPosition = np.array(frame.transform.GetPosition())
+        self.lineCell = vtk.vtkLine()
+        frame.connectFrameModified(self.onFrameModified)
+
+    def getTraceData(self):
+        t = self.frame.findChild(self.traceName)
+        if not t:
+            pts = vtk.vtkPoints()
+            pts.SetDataTypeToDouble()
+            pts.InsertNextPoint(self.frame.transform.GetPosition())
+            pd = vtk.vtkPolyData()
+            pd.SetPoints(pts)
+            pd.SetLines(vtk.vtkCellArray())
+            t = showPolyData(pd, self.traceName, parent=self.frame)
+        return t
+
+    def addPoint(self, point):
+        traceData = self.getTraceData()
+        pd = traceData.polyData
+
+        pd.GetPoints().InsertNextPoint(point)
+        numberOfPoints = pd.GetNumberOfPoints()
+        line = self.lineCell
+        ids = line.GetPointIds()
+        ids.SetId(0, numberOfPoints-2)
+        ids.SetId(1, numberOfPoints-1)
+        pd.GetLines().InsertNextCell(line.GetPointIds())
+
+        pd.Modified()
+        traceData._renderAllViews()
+
+    def onFrameModified(self, frame):
+        position = np.array(frame.transform.GetPosition())
+        if not np.allclose(position, self.lastPosition):
+            self.addPoint(position)
 
 
 class FrameSync(object):

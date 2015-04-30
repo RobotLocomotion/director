@@ -24,7 +24,6 @@ class WidgetDict(object):
         addWidgetsToDict(widgets, self.__dict__)
 
 
-
 class FrameUpdater(object):
 
 
@@ -74,38 +73,15 @@ class FrameUpdater(object):
                 enabledFrames.add(name)
         return set(enabledFrames)
 
-
-    def updateTrace(self, frameName, frameObj, pt1, pt2):
-        d = self.trace.get(frameName)
-
-        traceName = frameName + ' trace'
-        traceObj = frameObj.findChild(traceName)
-
-        if d is None or traceObj is None:
-            d = DebugData()
-            self.trace[frameName] = d
-
-        d.addLine(pt1, pt2)
-        if traceObj:
-            traceObj.setPolyData(d.getPolyData())
-        else:
-            vis.showPolyData(d.getPolyData(), traceName, parent=frameObj)
-
-
     def updateFrame(self, frameName, frameObj):
         t = self.getFrameTransform(frameName)
-        pt1 = frameObj.transform.GetPosition()
         frameObj.copyFrame(t)
-        pt2 = frameObj.transform.GetPosition()
-        if pt1 != pt2:
-            self.updateTrace(frameName, frameObj, pt1, pt2)
-
 
     def addFrame(self, frameName):
         t = self.getFrameTransform(frameName)
         folder = self.getFramesFolder()
-        vis.showFrame(t, frameName, parent=folder, scale=0.2)
-
+        frame = vis.showFrame(t, frameName, parent=folder, scale=0.2)
+        frame.setProperty('Trace', True)
 
     def getFramesFolder(self):
         return om.getOrCreateContainer(self.folderName)
