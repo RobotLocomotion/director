@@ -244,8 +244,10 @@ class MeshAffordanceItem(AffordanceItem):
             if os.path.isfile(filename):
                 polyData = ioUtils.readPolyData(filename)
             else:
-                # todo: put placeholder geometry to indicate a missing mesh
-                polyData = vtk.vtkPolyData()
+                # use axes as a placeholder mesh
+                d = DebugData()
+                d.addFrame(vtk.vtkTransform(), scale=0.1, tubeRadius=0.005)
+                polyData = d.getPolyData()
 
         self.setPolyData(polyData)
 
