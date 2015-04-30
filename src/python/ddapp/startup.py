@@ -396,7 +396,7 @@ if usePlanning:
     drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
-                    playPlans, showPose, cameraview, segmentationpanel)
+                    playPlans, teleopPanel.showPose, cameraview, segmentationpanel)
     drillTaskPanel = drilldemo.DrillTaskPanel(drillDemo)
 
     valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, footstepsPanel, manipPlanner, ikPlanner,

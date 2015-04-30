@@ -124,7 +124,7 @@ class DrillPlannerDemo(object):
         self.drillYawSliderValue = 0.0
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
-        defaultGraspingHand = "left"
+        defaultGraspingHand = 'right'
         self.setGraspingHand(defaultGraspingHand)
 
         # live operation flags
@@ -145,6 +145,8 @@ class DrillPlannerDemo(object):
 
         self.plans = []
 
+        self.bitToHand = None
+
         self.drill = Drill()
         self.wall = Wall()
 
@@ -157,7 +159,7 @@ class DrillPlannerDemo(object):
         #extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
         #self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.playbackRobotModel, extraModels)
 
-        extraModels = [self.robotModel]
+        extraModels = [self.playbackRobotModel, self.teleopRobotModel]
         self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotModel, extraModels)
 
         # These changes are all that are required to run with different combinations
@@ -171,7 +173,6 @@ class DrillPlannerDemo(object):
             #    self.drill.faceToDrillRotation = -90
 
         if ( self.graspingHand == 'right' ):
-            print "Planning with drill in the right hand"
             self.drill.relativeStanceXYZ[1] = -self.drill.relativeStanceXYZ[1]
             self.drill.graspFrameRPY = [0,-90,-90]
             self.drill.initXYZ[1] = -self.drill.initXYZ[1]
@@ -592,6 +593,377 @@ class DrillPlannerDemo(object):
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
+
+
+    def planWalkWithDrillPosture(self):
+
+        '''
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'reach_start'
+        self.ikPlanner.addPose(startPose, startPoseName)
+
+        constraints = []
+        constraints.extend(self.ikPlanner.createMovingReachConstraints(startPoseName, side=self.graspingHand))
+        constraints.append(self.ikPlanner.createJointPostureConstraintFromDatabase('drill', 'drill tuck for walk', side=self.graspingHand))
+        constraints.append(self.ikPlanner.createBackZeroPostureConstraint())
+        constraints[-1].tspan = [1.0, 1.0]
+
+        constraintSet = ikplanner.ConstraintSet(self.ikPlanner, constraints, 'reach_end', startPoseName)
+
+        endPose, info = constraintSet.runIk()
+        plan = constraintSet.runIkTraj()
+
+        self.addPlan(newPlan)
+        '''
+
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill tuck for walk', side=self.graspingHand)
+        plan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(plan)
+
+    def planDrillIntoWallPrep(self):
+
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'drill wall prep', side=self.graspingHand)
+
+        self.storeDrillNominalPosture(endPose)
+
+        plan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(plan)
+
+
+    def getBitToDrillTransform(self):
+        bitToDrill = vtk.vtkTransform()
+        bitToDrill.PostMultiply()
+        bitToDrill.Translate(0.0, 0.0, 0.155)
+        return bitToDrill
+
+    def updateDrillBitFrame(self):
+
+        startPose = self.getPlanningStartPose()
+
+        bitToDrill = self.getBitToDrillTransform()
+
+        drillToWorld = transformUtils.copyFrame(om.findObjectByName('drill').getChildFrame().transform)
+
+        handToWorld = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(self.graspingHand), startPose)
+        worldToHand = handToWorld.GetLinearInverse()
+
+        bitToWorld = vtk.vtkTransform()
+        bitToWorld.PostMultiply()
+        bitToWorld.Concatenate(bitToDrill)
+        bitToWorld.Concatenate(drillToWorld)
+        bitToWorld.Update()
+
+        bitToHand = vtk.vtkTransform()
+        bitToHand.PostMultiply()
+        bitToHand.Concatenate(bitToWorld)
+        bitToHand.Concatenate(worldToHand)
+        bitToHand.Update()
+
+        self.bitToHand = bitToHand
+
+
+
+    def updateDrillTargetFrame(self, depth=0.0, offsetY=0.0, offsetZ=0.0):
+
+        drillCircle = om.findObjectByName('drill circle')
+
+        targetFrame = vtk.vtkTransform()
+        targetFrame.PostMultiply()
+        targetFrame.Translate(depth, offsetY, offsetZ)
+        targetFrame.Concatenate(drillCircle.getChildFrame().transform)
+
+        obj = vis.updateFrame(targetFrame, 'drill bit target', scale=0.2, parent=drillCircle)
+
+        obj.setProperty('Edit', True)
+        rep = obj.widget.GetRepresentation()
+        rep.SetRotateAxisEnabled(0, False)
+        rep.SetRotateAxisEnabled(1, False)
+        rep.SetRotateAxisEnabled(2, False)
+        obj.widget.HandleRotationEnabledOff()
+        obj.setProperty('Edit', False)
+
+    def storeDrillNominalPosture(self, pose):
+        self.drillNominalPose = pose
+        self.ikPlanner.addPose(pose, 'drill_nominal_pose')
+
+
+    def planDrill(self, inPlane=False, inLine=False):
+
+        targetFrame = om.findObjectByName('drill bit target')
+        assert targetFrame
+        self.planDrillTrajectory([targetFrame.transform], inPlane, inLine)
+
+    def getDrillTargetOffsetFromCircle(self):
+
+        circleToWorld = transformUtils.copyFrame(om.findObjectByName('drill circle').getChildFrame().transform)
+        targetToWorld = transformUtils.copyFrame(om.findObjectByName('drill bit target').transform)
+        targetToCircle = transformUtils.concatenateTransforms([targetToWorld, circleToWorld.GetLinearInverse()])
+
+        return np.array(targetToCircle.GetPosition())
+
+
+    def planDrillCircle(self):
+
+        drillCircle = om.findObjectByName('drill circle')
+        circleFrame = drillCircle.getChildFrame().transform
+        radius = drillCircle.getProperty('Radius')
+        numberOfTargets = drillCircle.getProperty('Segments')
+
+        depth = self.getDrillTargetOffsetFromCircle()[0]
+
+        targetFrames = []
+        for i in xrange(numberOfTargets):
+            theta = (float(i)/numberOfTargets)*(2*np.pi) + np.pi/2.0
+            horiz, vert = radius*np.cos(theta), radius*np.sin(theta)
+
+            t = transformUtils.copyFrame(circleFrame)
+            t.PreMultiply()
+            t.Translate(depth, horiz, vert)
+            targetFrames.append(t)
+            vis.updateFrame(t, 'target %d' % i, scale=0.1)
+
+        targetFrames.append(targetFrames.pop(0))
+
+        self.planDrillTrajectory(targetFrames, inPlane=True)
+
+
+    def computeDrillBitFrameAtPose(self, pose):
+        f = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(self.graspingHand), pose)
+        f.PreMultiply()
+        f.Concatenate(self.bitToHand)
+        return f
+
+    def planDrillTrajectory(self, targetFrames, inPlane=False, inLine=False):
+
+
+        self.ikPlanner.ikServer.usePointwise = False
+
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'reach_start'
+        self.ikPlanner.addPose(startPose, startPoseName)
+
+        constraints = []
+        constraints.extend(self.ikPlanner.createMovingReachConstraints(startPoseName, lockBase=True, lockBack=False, side=self.graspingHand))
+
+        bitToHand = self.bitToHand
+        handLinkName = self.ikPlanner.getHandLink(self.graspingHand)
+
+        gazeTargetFrame = targetFrames[-1]
+
+        bodyAxis = [1.0, 0.0, 0.0] if self.graspingHand == 'right' else [-1.0, 0.0, 0.0]
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, gazeTargetFrame, targetAxis=[1.0, 0.0, 0.0] , bodyAxis=bodyAxis)
+
+
+        endTime = 1.0 * len(targetFrames)
+
+        if inPlane or inLine:
+            gazeConstraint.tspan = [0.0, endTime]
+        else:
+            gazeConstraint.tspan = [endTime, endTime]
+
+        constraints.append(gazeConstraint)
+
+        lastTargetFrame = self.computeDrillBitFrameAtPose(startPose)
+
+        for i, targetFrame in enumerate(targetFrames):
+
+            positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, targetFrame, bitToHand)
+            activeTime = float(i+1)
+            positionConstraint.tspan = [activeTime, activeTime]
+            constraints.append(positionConstraint)
+
+            motionVector = np.array(targetFrame.GetPosition()) - np.array(lastTargetFrame.GetPosition())
+            motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(targetFrame.GetPosition()), motionVector)
+            #vis.updateFrame(motionTargetFrame, 'motion target frame %d' %i, scale=0.1)
+            #d = DebugData()
+            #d.addLine(np.array(targetFrame.GetPosition()), np.array(targetFrame.GetPosition()) - motionVector)
+            #vis.updatePolyData(d.getPolyData(), 'motion vector %d' % i)
+
+            p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
+            p.tspan = [activeTime-1.0, activeTime]
+            constraints.append(p)
+
+            lastTargetFrame = targetFrame
+
+
+        #if inPlane:
+        #    p = self.ikPlanner.createPlanePositionConstraint(handLinkName, bitToHand, gazeTargetFrame, planeNormalAxis=0, bounds=[-0.001, 0.001])
+        #    p.tspan = [0.0, endTime]
+        #    constraints.append(p)
+
+
+        if inLine:
+            p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, gazeTargetFrame, lineAxis=0, bounds=[-np.inf, 0.0], positionTolerance=0.001)
+            p.tspan = [0.0, endTime]
+            constraints.append(p)
+
+        if inPlane or inLine and len(targetFrames) == 1:
+            self.ikPlanner.ikServer.numberOfAddedKnots = 5 # todo, select number of knots per distance traveled?
+        else:
+            self.ikPlanner.ikServer.numberOfAddedKnots = 0
+
+
+        constraintSet = ikplanner.ConstraintSet(self.ikPlanner, constraints, 'reach_end', startPoseName)
+
+
+        #constraintSet.seedPoseName = 'q_start'
+        #constraintSet.nominalPoseName = 'q_start'
+        constraintSet.seedPoseName = 'drill_nominal_pose'
+        constraintSet.nominalPoseName = 'drill_nominal_pose'
+
+        def updateDrillIk():
+            endPose, info = constraintSet.runIk()
+
+        def updateDrillPlan():
+            plan = constraintSet.runIkTraj()
+            self.addPlan(plan)
+
+        self.constraintSet = constraintSet
+        self.updateDrillIk = updateDrillIk
+        self.updateDrillPlan = updateDrillPlan
+
+        if len(targetFrames) == 1:
+            updateDrillIk()
+        else:
+            constraintSet.endPose = startPose
+        updateDrillPlan()
+
+
+    def spawnWallAffordanceTest(self, x, y, yaw, targetHeight, targetRadius):
+
+        wallWidth = 1.0
+        wallHeight = 2.0
+
+        stanceFrame = self.footstepPlanner.getFeetMidPoint(self.robotModel)
+        stanceFrame.PreMultiply()
+        stanceFrame.Translate(x, y, wallHeight/2.0)
+        pos = np.array(stanceFrame.GetPosition())
+        stanceFrame.PostMultiply()
+        stanceFrame.Translate(-pos)
+        stanceFrame.RotateZ(yaw)
+        stanceFrame.Translate(pos)
+
+        wall = self.spawnWallAffordanceNew(stanceFrame, wallWidth, wallHeight)
+        wallFrame = transformUtils.copyFrame(wall.getChildFrame().transform)
+        wallFrame.Translate(0.0, 0.0, targetHeight - wallHeight/2.0)
+
+        self.spawnDrillCircle(wallFrame, targetRadius)
+
+
+    def spawnWallAffordanceNew(self, t, width, height):
+
+        dimensions = [0.01, width, height]
+
+        name = 'drill wall'
+        aff = om.findObjectByName(name)
+        if not aff:
+            pose = transformUtils.poseFromTransform(t)
+            desc = dict(classname='BoxAffordanceItem', Name=name, Dimensions=dimensions, pose=pose)
+            aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+            aff.setProperty('Alpha', 0.2)
+        else:
+            aff.setProperty('Dimensions', dimensions)
+            aff.getChildFrame().copyFrame(t)
+
+        return aff
+
+    def computeWallStanceFrame(self, stanceOffsetX, stanceOffsetY, stanceYaw):
+
+        footFrame = self.footstepPlanner.getFeetMidPoint(self.robotModel)
+        groundHeight = footFrame.GetPosition()[2]
+
+        wall = om.findObjectByName('drill circle')
+        assert wall
+
+        wallFrame = wall.getChildFrame().transform
+
+        wallGroundFrame = transformUtils.copyFrame(wallFrame)
+        wallGroundFrame.PreMultiply()
+        wallGroundFrame.Translate(0.0, 0.0, groundHeight - wallGroundFrame.GetPosition()[2])
+
+        vis.updateFrame(wallGroundFrame, 'wall ground frame', parent=wall, scale=0.2, visible=False)
+
+        stanceFrame = transformUtils.copyFrame(wallGroundFrame)
+        stanceFrame.PreMultiply()
+        stanceFrame.Translate(stanceOffsetX, stanceOffsetY, 0.0)
+
+        pos = np.array(stanceFrame.GetPosition())
+        stanceFrame.PostMultiply()
+        stanceFrame.Translate(-pos)
+        stanceFrame.RotateZ(stanceYaw)
+        stanceFrame.Translate(pos)
+
+        vis.updateFrame(stanceFrame, 'wall stance frame', parent=wall, scale=0.2, visible=True)
+
+
+    def spawnDrillAffordanceTest(self):
+
+        sign = 1 if self.graspingHand == 'left' else -1
+        stanceFrame = self.footstepPlanner.getFeetMidPoint(self.robotModel)
+        stanceFrame.PreMultiply()
+        stanceFrame.Translate(0.7, 0.4*sign, 1.0)
+        self.spawnDrillAffordanceNew(stanceFrame)
+
+
+    def spawnDrillAffordanceNew(self, t):
+
+        name = 'drill'
+        aff = om.findObjectByName(name)
+        if not aff:
+            pose = transformUtils.poseFromTransform(t)
+            desc = dict(classname='MeshAffordanceItem', Name=name, Filename='software/models/otdf/dewalt_drill_with_bit.vtp', Color=[0,1,0], pose=pose)
+            aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        else:
+            aff.getChildFrame().copyFrame(t)
+
+        bitFrame = om.findObjectByName('drill bit frame')
+        if not bitFrame:
+            bitToDrill = self.getBitToDrillTransform()
+            drillToWorld = transformUtils.copyFrame(t)
+            bitToWorld = transformUtils.concatenateTransforms([bitToDrill, drillToWorld])
+            bitFrame = vis.updateFrame(bitToWorld, 'drill bit frame', scale=0.1, visible=False, parent=aff)
+            aff.getChildFrame().getFrameSync().addFrame(bitFrame)
+
+        return aff
+
+
+    def moveDrillToHandNew(self, yaw, zoffset, flip):
+
+        startPose = self.getPlanningStartPose()
+        handToWorld = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(self.graspingHand), startPose)
+        palmToHand = self.ikPlanner.getPalmToHandLink(self.graspingHand)
+        drillToPalm = segmentation.getDrillInHandOffset(yaw, zoffset, xTranslation=0.025, flip=flip)
+
+        drillToWorld = vtk.vtkTransform()
+        drillToWorld.PostMultiply()
+        drillToWorld.Concatenate(drillToPalm)
+        drillToWorld.Concatenate(palmToHand)
+        drillToWorld.Concatenate(handToWorld)
+
+        drill = om.findObjectByName('drill')
+        assert drill
+        drill.getChildFrame().copyFrame(drillToWorld)
+
+
+
+    def spawnDrillCircle(self, t, radius):
+
+        name = 'drill circle'
+        aff = om.findObjectByName(name)
+        if not aff:
+            pose = transformUtils.poseFromTransform(t)
+            desc = dict(classname='CapsuleRingAffordanceItem', Name=name, Radius=radius, pose=pose)
+            desc['Segments'] = 20
+            desc['Tube Radius'] = 0.002
+            aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        else:
+            aff.setProperty('Radius', radius)
+            aff.getChildFrame().copyFrame(t)
+
+        return aff
+
 
     def planReach(self):
         startPose = self.getPlanningStartPose()
@@ -1499,10 +1871,60 @@ class DrillImageFitter(ImageBasedAffordanceFit):
     def __init__(self, drillDemo):
         ImageBasedAffordanceFit.__init__(self, numberOfPoints=1)
         self.drillDemo = drillDemo
+        self.fitFunc = None
+
+        self.pickLineRadius = 0.05
+        self.pickNearestToCamera = False
+
 
     def fit(self, polyData, points):
+        if self.fitFunc:
+            self.fitFunc(polyData, points)
+
+    def fitShelf(self, polyData, points):
+
         planePoints, normal = segmentation.applyLocalPlaneFit(polyData, points[0], searchRadius=0.1, searchRadiusEnd=0.2)
-        obj = vis.updatePolyData(planePoints, 'local plane fit', color=[0,1,0])
+        origin = segmentation.computeCentroid(planePoints)
+
+        vis.updatePolyData(planePoints, 'shelf plane points', parent=segmentation.getDebugFolder(), color=[0,1,0], visible=True)
+
+        points = [segmentation.projectPointToPlane(p, origin, normal) for p in points]
+
+        up = np.array([0,0,1])
+        perpAxis = points[1] - points[0]
+        edgeAxis = np.cross(up, perpAxis)
+        perpAxis /= np.linalg.norm(perpAxis)
+        edgeAxis /= np.linalg.norm(edgeAxis)
+
+        edgePoints = segmentation.computeEdge(planePoints, edgeAxis, perpAxis)
+        edgePoints = vnp.getVtkPolyDataFromNumpyPoints(edgePoints)
+        vis.updatePolyData(edgePoints, 'edge points', parent=segmentation.getDebugFolder(), visible=True)
+
+
+        linePoint, lineDirection, fitPoints = segmentation.applyLineFit(edgePoints)
+
+        vis.updatePolyData(fitPoints, 'line fit points', parent=segmentation.getDebugFolder(), colorByName='ransac_labels', visible=False)
+
+        linePoints = segmentation.thresholdPoints(fitPoints, 'ransac_labels', [1.0, 1.0])
+        dists = np.dot(vnp.getNumpyFromVtk(linePoints, 'Points')-linePoint, lineDirection)
+
+        p1 = linePoint + lineDirection*np.min(dists)
+        p2 = linePoint + lineDirection*np.max(dists)
+
+        d = DebugData()
+        d.addSphere(p1, radius=0.015)
+        d.addSphere(p2, radius=0.015)
+        d.addLine(p1, p2, radius=0.007)
+
+        vis.updatePolyData(d.getPolyData(), 'table edge', color=[0,1,1])
+
+
+    def fitDrillOnTable(self, polyData, points):
+        segmentation.segmentDrillAlignedWithTable(points[0], polyData)
+
+    def fitDrillWall(self, polyData, points):
+        planePoints, normal = segmentation.applyLocalPlaneFit(polyData, points[0], searchRadius=0.1, searchRadiusEnd=0.2)
+        obj = vis.updatePolyData(planePoints, 'wall plane points', color=[0,1,0], visible=False)
         obj.setProperty('Point Size', 7)
 
         viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
@@ -1529,19 +1951,22 @@ class DrillImageFitter(ImageBasedAffordanceFit):
         height = zdist.max() - zdist.min()
         width = ydist.max() - ydist.min()
 
-        om.removeFromObjectModel(om.findObjectByName('drill plane'))
-        pose = transformUtils.poseFromTransform(t)
-        desc = dict(classname='BoxAffordanceItem', Name='drill plane', Dimensions=[0.01, width, height], pose=pose)
-        wall = segmentation.affordanceManager.newAffordanceFromDescription(desc)
-        wall.setProperty('Alpha', 0.2)
+        wall = self.drillDemo.spawnWallAffordanceNew(t, width, height)
 
         pickPointOnPlane = segmentation.projectPointToPlane(points[0], origin, normal)
 
         t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
         t.PostMultiply()
         t.Translate(pickPointOnPlane)
-        vis.updateFrame(t, 'drill wall pick point', parent=segmentation.getDebugFolder(), scale=0.2)
+        vis.updateFrame(t, 'drill wall pick point', parent=segmentation.getDebugFolder(), scale=0.2, visible=False)
 
+
+        pickPoint2OnPlane = segmentation.projectPointToPlane(points[1], origin, normal)
+        radius = np.linalg.norm(pickPoint2OnPlane - pickPointOnPlane)
+
+        self.drillDemo.spawnDrillCircle(t, radius)
+
+        pose = transformUtils.poseFromTransform(t)
         self.appendMessage('pick point: %r' % list(pickPointOnPlane))
         self.appendMessage('')
         self.appendMessage('drill wall:')
@@ -1566,23 +1991,171 @@ class DrillTaskPanel(TaskUserPanel):
         self.addButtons()
         self.addTasks()
 
+        self.drillFrame = None
+        self.drillFrameCallback = None
+
+        #self.spawnWallTest()
+        #self.drillDemo.spawnDrillAffordanceTest()
+        #self.graspDrill()
+        #self.updateDrillTarget()
+
+    def fitDrillOnTable(self):
+        self.fitter.imagePicker.numberOfPoints = 1
+        self.fitter.fitFunc = self.fitter.fitDrillOnTable
+
+    def fitDrillWall(self):
+        self.fitter.imagePicker.numberOfPoints = 2
+        self.fitter.fitFunc = self.fitter.fitDrillWall
+
+    def fitShelf(self):
+        self.fitter.imagePicker.numberOfPoints = 2
+        self.fitter.fitFunc = self.fitter.fitShelf
+
+    def spawnWall(self):
+
+        self.drillDemo.spawnWallAffordanceTest(self.params.getProperty('wall offset x'), self.params.getProperty('wall offset y'),
+          self.params.getProperty('wall yaw'), self.params.getProperty('target height'), self.params.getProperty('target radius'))
+
+        self.updateDrillTarget()
+
+    def spawnDrill(self):
+        self.drillDemo.spawnDrillAffordanceTest()
+
+    def updateDrillInHand(self):
+        if not self.drillDemo.affordanceUpdater.hasAffordance('drill'):
+            return
+
+        self.ungraspDrill()
+        self.graspDrill()
+
+    def graspDrill(self):
+
+        if not om.findObjectByName('drill'):
+            self.spawnDrill()
+
+        self.ungraspDrill()
+
+        flip = self.getSide() == 'right'
+        self.drillDemo.moveDrillToHandNew(self.params.getProperty('drill hand yaw'), self.params.getProperty('drill hand z shift'), flip)
+        self.drillDemo.affordanceUpdater.graspAffordance('drill', self.drillDemo.graspingHand)
+        self.drillDemo.updateDrillBitFrame()
+
+        drillFrame = om.findObjectByName('drill').getChildFrame()
+        if drillFrame != self.drillFrame:
+            self.drillFrameCallback = drillFrame.connectFrameModified(self.onDrillFrameModified)
+            self.drillFrame = drillFrame
+
+    def onDrillFrameModified(self, frame):
+        self.drillDemo.updateDrillBitFrame()
+
+    def ungraspDrill(self):
+        self.drillDemo.affordanceUpdater.ungraspAffordance('drill')
+
+        drillFrame = om.findObjectByName('drill').getChildFrame()
+        if drillFrame and self.drillFrameCallback:
+            drillFrame.disconnectFrameModified(self.drillFrameCallback)
+
+    def resetDrillTarget(self):
+        drillCircle = om.findObjectByName('drill circle')
+        assert drillCircle
+        radius = drillCircle.getProperty('Radius')
+
+        self.params.setProperty('drilling depth', -0.05)
+        self.params.setProperty('drilling horiz offset', 0.0)
+        self.params.setProperty('drilling vert offset', radius)
+
+    def updateStanceFrame(self):
+        stanceX = -self.params.getProperty('wall offset x')
+        stanceY = -self.params.getProperty('wall offset y')
+        stanceYaw = -self.params.getProperty('wall yaw')
+        self.drillDemo.computeWallStanceFrame(stanceX, stanceY, stanceYaw)
+
+        self.drillDemo.planFootsteps( om.findObjectByName('wall stance frame').transform )
+
+    def updateDrillTarget(self):
+        self.drillDemo.updateDrillTargetFrame(self.params.getProperty('drilling depth'), self.params.getProperty('drilling horiz offset'), self.params.getProperty('drilling vert offset'))
+
+    def planDrillAlign(self):
+        self.drillDemo.planDrill()
+
+    def planDrillIn(self):
+        #self.params.setProperty('drilling depth', 0.0)
+        self.updateDrillTarget()
+        self.drillDemo.planDrill(inLine=True)
+
+    def planDrillOut(self):
+        #self.params.setProperty('drilling depth', -0.05)
+        self.updateDrillTarget()
+        self.drillDemo.planDrill(inLine=True)
+
+    def planDrillMove(self):
+        self.drillDemo.planDrill(inLine=True)
 
     def addButtons(self):
-        pass
 
+        self.addManualButton('Fit shelf', self.fitShelf)
+        self.addManualButton('Fit drill on table', self.fitDrillOnTable)
+        self.addManualButton('Fit drill wall', self.fitDrillWall)
+        self.addManualButton('Compute stance frame', self.updateStanceFrame)
+        self.addManualSpacer()
+        self.addManualButton('Spawn wall', self.spawnWall)
+        self.addManualButton('Spawn drill', self.spawnDrill)
+        self.addManualButton('Grasp drill', self.graspDrill)
+        self.addManualButton('Ungrasp drill', self.ungraspDrill)
+        self.addManualSpacer()
+        self.addManualButton('Raise arm', self.drillDemo.planPreGrasp)
+        self.addManualButton('Walk with drill posture', self.drillDemo.planWalkWithDrillPosture)
+        self.addManualButton('Drill into wall prep', self.drillDemo.planDrillIntoWallPrep)
+        self.addManualSpacer()
+        self.addManualButton('Reset drill target', self.resetDrillTarget)
+        self.addManualButton('Plan drill align', self.planDrillAlign)
+        self.addManualButton('Plan drill in', self.planDrillIn)
+        self.addManualButton('Plan drill move', self.planDrillMove)
+        self.addManualButton('Plan drill out', self.planDrillOut)
+        self.addManualSpacer()
+        self.addManualButton('Plan drill circle', self.drillDemo.planDrillCircle)
+        self.addManualSpacer()
+        self.addManualButton('Nominal', self.drillDemo.planNominal)
+        self.addManualSpacer()
+        self.addManualButton('Commit Manip', self.drillDemo.commitManipPlan)
 
     def getSide(self):
         return self.params.getPropertyEnumValue('Drill Hand').lower()
 
     def addDefaultProperties(self):
-        self.params.addProperty('Drill Hand', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
-        self._syncProperties()
+
+        self.params.addProperty('Drill Hand', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
+        #todo: use this as default
+        self.drillDemo.graspingHand = self.getSide()
+
+        self.params.addProperty('drill hand yaw', 90, attributes=om.PropertyAttributes(minimum=-360, maximum=360))
+        self.params.addProperty('drill hand z shift', 0.0, attributes=om.PropertyAttributes(minimum=-0.3, maximum=0.3, decimals=4, singleStep=0.0025))
+
+        self.params.addProperty('wall offset x', 0.7, attributes=om.PropertyAttributes(minimum=0.0, maximum=2.0, decimals=2, singleStep=0.01))
+        self.params.addProperty('wall offset y', 0.0, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=2, singleStep=0.01))
+        self.params.addProperty('wall yaw', 0, attributes=om.PropertyAttributes(minimum=-90, maximum=90))
+        self.params.addProperty('target height', 1.2, attributes=om.PropertyAttributes(minimum=0, maximum=2.0, decimals=2, singleStep=0.05))
+        self.params.addProperty('target radius', 0.2, attributes=om.PropertyAttributes(minimum=0, maximum=1.0, decimals=2, singleStep=0.01))
+
+        self.params.addProperty('drilling depth', -0.05, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025))
+        self.params.addProperty('drilling horiz offset', 0.0, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025))
+        self.params.addProperty('drilling vert offset', 0.2, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025))
+
 
     def onPropertyChanged(self, propertySet, propertyName):
-        self._syncProperties()
 
-    def _syncProperties(self):
-        pass
+        propertyName = str(propertyName)
+
+        if om.findObjectByName('drill wall') and propertyName.startswith('wall ') or propertyName.startswith('target '):
+            self.spawnWallTest()
+
+        elif propertyName.startswith('drilling '):
+            self.updateDrillTarget()
+        elif propertyName.startswith('drill hand '):
+            self.updateDrillInHand()
+        elif propertyName == 'Drill Hand':
+            self.drillDemo.graspingHand = self.getSide()
+
 
     def addTasks(self):
 
