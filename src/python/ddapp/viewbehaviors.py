@@ -511,7 +511,7 @@ def showRightClickMenu(displayPoint, view):
 
 
     pointCloudObj = getPointCloud(pickedObj)
-
+    affordanceObj = pickedObj if isinstance(pickedObj, affordanceitems.AffordanceItem) else None
 
     def onSegmentGround():
         groundPoints, scenePoints =  segmentation.removeGround(pointCloudObj.polyData)
@@ -552,7 +552,6 @@ def showRightClickMenu(displayPoint, view):
         pose = transformUtils.poseFromTransform(fields.frame)
         desc = dict(classname='BoxAffordanceItem', Name='local plane', Dimensions=list(fields.dims), pose=pose)
         box = segmentation.affordanceManager.newAffordanceFromDescription(desc)
-        box._applyCameraTexture = True
 
     def onOrientToMajorPlane():
         polyData, planeFrame = segmentation.orientToMajorPlane(pointCloudObj.polyData, pickedPoint=pickedPoint)
@@ -572,8 +571,19 @@ def showRightClickMenu(displayPoint, view):
     def onSegmentationEditor():
         segmentationpanel.activateSegmentationMode(pointCloudObj.polyData)
 
-    def addMovableFrame():
-        segmentation.makeMovable(pickedObj)
+    def addNewFrame():
+        t = transformUtils.copyFrame(affordanceObj.getChildFrame().transform)
+        t.PostMultiply()
+        t.Translate(np.array(pickedPoint) - np.array(t.GetPosition()))
+        newFrame = vis.showFrame(t, '%s frame %d' % (affordanceObj.getProperty('Name'), len(affordanceObj.children())), scale=0.2, parent=affordanceObj)
+        affordanceObj.getChildFrame().getFrameSync().addFrame(newFrame, ignoreIncoming=True)
+
+    def copyAffordance():
+        desc = dict(affordanceObj.getDescription())
+        del desc['uuid']
+        desc['Name'] = desc['Name'] + ' copy'
+        aff = robotSystem.affordanceManager.newAffordanceFromDescription(desc)
+        aff.getChildFrame().setProperty('Edit', True)
 
     def onPromoteToAffordance():
         affObj = affordanceitems.MeshAffordanceItem.promotePolyDataItem(pickedObj)
@@ -586,14 +596,16 @@ def showRightClickMenu(displayPoint, view):
       ('Select', onSelect)
       ]
 
-    if type(pickedObj) == vis.PolyDataItem:
+
+    if affordanceObj:
         actions.extend([
-            ('Promote to Affordance', onPromoteToAffordance),
+            ('Copy affordance', copyAffordance),
+            ('Add new frame', addNewFrame),
         ])
 
-    if isinstance(pickedObj, vis.PolyDataItem) and not pickedObj.getChildFrame():
+    elif type(pickedObj) == vis.PolyDataItem:
         actions.extend([
-            ('Add Frame', addMovableFrame),
+            ('Promote to Affordance', onPromoteToAffordance),
         ])
 
     if isGraspSeed(pickedObj):

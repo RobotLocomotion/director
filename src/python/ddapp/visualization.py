@@ -439,6 +439,7 @@ class FrameItem(PolyDataItem):
         self.rep = self.widget.GetRepresentation()
         self.rep.SetTransform(transform)
         self.traceData = None
+        self._frameSync = None
 
         self.addProperty('Scale', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0.01, maximum=100, singleStep=0.1, hidden=False))
         self.addProperty('Edit', False)
@@ -497,6 +498,12 @@ class FrameItem(PolyDataItem):
         parent = self.parent()
         if parent.getProperty('Visible') or self.getProperty('Visible'):
             self._renderAllViews()
+
+    def getFrameSync(self):
+        if self._frameSync is None:
+            self._frameSync = FrameSync()
+            self._frameSync.addFrame(self)
+        return self._frameSync
 
     def _updateAxesGeometry(self):
         scale = self.getProperty('Scale')
