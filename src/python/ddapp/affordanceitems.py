@@ -324,10 +324,10 @@ class FrameAffordanceItem(AffordanceItem):
 
     def getActionNames(self):
         actions = ['Publish affordance']
-        return PolyDataItem.getActionNames(self) + actions
+        return AffordanceItem.getActionNames(self) + actions
 
     def onAction(self, action):
         if action == 'Publish affordance':
             self.publish()
         else:
-            PolyDataItem.onAction(self, action)
+            AffordanceItem.onAction(self, action)
