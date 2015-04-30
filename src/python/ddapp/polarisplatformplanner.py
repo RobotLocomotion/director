@@ -156,6 +156,7 @@ class PolarisPlatformPlanner(object):
         constraints = ikPlanner.createMovingBodyConstraints(startPoseName, lockBack=True, lockLeftArm=True, lockRightArm=True)
         constraints[0].rightFootEnabled = False
         constraints[0].shrinkFactor=0.1
+        constraints.append(ikPlanner.createKneePostureConstraint([1, 2.5]))
         cs = ikplanner.ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
         endPose, info = cs.runIk()
         ikPlanner.computeMultiPostureGoal([startPose, endPose])
