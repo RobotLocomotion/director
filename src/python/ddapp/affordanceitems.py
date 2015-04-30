@@ -49,10 +49,13 @@ class AffordanceItem(PolyDataItem):
         pass
 
     def setPolyData(self, polyData):
-        originPose = self.getProperty('Origin')
-        pos, quat = originPose[:3], originPose[3:]
-        t = transformUtils.transformFromPose(pos, quat)
-        PolyDataItem.setPolyData(self, filterUtils.transformPolyData(polyData, t.GetLinearInverse()))
+
+        if polyData.GetNumberOfPoints():
+            originPose = self.getProperty('Origin')
+            pos, quat = originPose[:3], originPose[3:]
+            t = transformUtils.transformFromPose(pos, quat)
+            polyData = filterUtils.transformPolyData(polyData, t.GetLinearInverse())
+        PolyDataItem.setPolyData(self, polyData)
 
     def repositionFromDescription(self, desc):
         position, quat = desc['pose']
