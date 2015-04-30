@@ -212,7 +212,7 @@ class FootstepsDriver(object):
         self.params.addProperty('Max Step Width', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.22, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Max Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.05, maximum=5.0, singleStep=0.05))
-        self.params.addProperty('Drake Min Hold Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=5.0, singleStep=0.05))
+        self.params.addProperty('Drake Min Hold Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=10.0, singleStep=0.05))
         self.params.addProperty('Drake Instep Shift', None, attributes=om.PropertyAttributes(decimals=4, minimum=-0.3, maximum=0.3, singleStep=0.0005))
         self.behavior_lcm_map = {
                               0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
