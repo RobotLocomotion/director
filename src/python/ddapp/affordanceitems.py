@@ -77,7 +77,6 @@ class AffordanceItem(PolyDataItem):
         PolyDataItem.onRemoveFromObjectModel(self)
 
 
-
 class BoxAffordanceItem(AffordanceItem):
 
     def __init__(self, name, view):
