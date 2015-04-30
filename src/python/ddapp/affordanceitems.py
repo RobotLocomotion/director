@@ -24,6 +24,7 @@ class AffordanceItem(PolyDataItem):
         self.params = {}
         self.addProperty('uuid', newUUID(), attributes=om.PropertyAttributes(hidden=True))
         self.addProperty('Collision Enabled', True)
+        self.addProperty('Origin', [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0], attributes=om.PropertyAttributes(hidden=True))
         self.properties.setPropertyIndex('Collision Enabled', 0)
         self.setProperty('Icon', om.Icons.Hammer)
 
@@ -38,6 +39,20 @@ class AffordanceItem(PolyDataItem):
         d.update(self.properties._properties)
         d['pose'] = self.getPose()
         return d
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
+        if propertyName == 'Origin':
+            self.updateGeometryFromProperties()
+
+    def updateGeometryFromProperties():
+        pass
+
+    def setPolyData(self, polyData):
+        originPose = self.getProperty('Origin')
+        pos, quat = originPose[:3], originPose[3:]
+        t = transformUtils.transformFromPose(pos, quat)
+        PolyDataItem.setPolyData(self, filterUtils.transformPolyData(polyData, t.GetLinearInverse()))
 
     def repositionFromDescription(self, desc):
         position, quat = desc['pose']
