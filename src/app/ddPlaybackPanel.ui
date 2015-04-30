@@ -160,6 +160,11 @@
           <string>frames</string>
          </property>
         </item>
+        <item>
+         <property name="text">
+          <string>hidden</string>
+         </property>
+        </item>
        </widget>
       </item>
       <item row="0" column="0">

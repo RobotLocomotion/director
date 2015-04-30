@@ -69,6 +69,8 @@ class PlaybackPanel(object):
         self.ui = WidgetDict(self.widget.children())
 
         self.ui.viewModeCombo.connect('currentIndexChanged(const QString&)', self.viewModeChanged)
+        # disable visualization of the plan - for simulated execution:
+        self.disablePlaybackModel = False
         self.ui.playbackSpeedCombo.connect('currentIndexChanged(const QString&)', self.playbackSpeedChanged)
         self.ui.interpolationCombo.connect('currentIndexChanged(const QString&)', self.interpolationChanged)
 
@@ -83,6 +85,7 @@ class PlaybackPanel(object):
 
         self.ui.executeButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.ui.executeButton.connect('customContextMenuRequested(const QPoint&)', self.showExecuteContextMenu)
+
 
         self.setPlan(None)
         self.hideClicked()
@@ -129,7 +132,14 @@ class PlaybackPanel(object):
 
 
     def getViewMode(self):
-      return str(self.ui.viewModeCombo.currentText)
+        return str(self.ui.viewModeCombo.currentText)
+
+    def setViewMode(self, mode):
+        '''
+        Set the mode of the view widget. input arg: 'continous', 'frames', 'hidden'
+        e.g. can hide all plan playback with 'hidden'
+        '''
+        self.ui.viewModeCombo.setCurrentIndex(self.ui.viewModeCombo.findText(mode))
 
     def getPlaybackSpeed(self):
       s = str(self.ui.playbackSpeedCombo.currentText).replace('x', '')
@@ -146,10 +156,16 @@ class PlaybackPanel(object):
 
     def viewModeChanged(self):
         viewMode = self.getViewMode()
-        if viewMode == 'continuous':
+        if viewMode == 'hidden':
+            self.disablePlaybackModel = True
+            playbackVisible = True
+            samplesVisible = False
+        elif viewMode == 'continuous':
+            self.disablePlaybackModel = False
             playbackVisible = True
             samplesVisible = False
         else:
+            self.disablePlaybackModel = False
             playbackVisible = False
             samplesVisible = True
 
@@ -307,6 +323,14 @@ class PlaybackPanel(object):
 
     def showPlaybackModel(self):
         self.robotStateModel.setProperty('Visible', True)
+
+        # if executing e.g. in simulation, disable playback visualization
+        if (self.disablePlaybackModel):
+            self.robotStateModel.setProperty('Alpha', 1.0)
+            self.playbackRobotModel.setProperty('Visible', False)
+            return
+
+        self.robotStateModel.setProperty('Alpha', self.robotModelDisplayAlpha)
         self.playbackRobotModel.setProperty('Visible', True)
         self.playbackRobotModel.setProperty('Textures', self.playbackRobotModelUseTextures)
         self.robotStateModel.setProperty('Alpha', self.robotStateModelDisplayAlpha)
