@@ -300,11 +300,16 @@ class ImageBasedAffordanceFit(object):
         self.imagePicker.annotationFunc = self.onImageAnnotation
         self.imagePicker.start()
 
+        self.pointCloudSource = 'lidar'
         self.pickLineRadius = 0.05
         self.pickNearestToCamera = True
 
     def getPointCloud(self):
-        return segmentation.getCurrentRevolutionData()
+        assert self.pointCloudSource in ('lidar', 'stereo')
+        if self.pointCloudSource == 'stereo':
+            return segmentation.getDisparityPointCloud(decimation=1, removeOutliers=False)
+        else:
+            return segmentation.getCurrentRevolutionData()
 
     def onImageAnnotation(self, *points):
         polyData = self.getPointCloud()
