@@ -41,7 +41,7 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
                 _footMeshFiles[j][i] = os.path.join(directorConfigDirectory, _footMeshFiles[j][i])
 
 
-DEFAULT_PARAM_SET = 'drake'
+DEFAULT_PARAM_SET = 'Drake Nominal'
 DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                'Max Num Steps': 12,
                                'Min Step Width': 0.20,
@@ -57,8 +57,9 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                'Drake Swing Speed': 0.2,
                                'Drake Instep Shift': 0.0275,
                                'Drake Min Hold Time': 2.0,
-                               'Support Contact Groups': 0},
-                       'drake': {'Min Num Steps': 0,
+                               'Support Contact Groups': 0,
+                               'Map Mode': 3},
+                       'Drake Nominal': {'Min Num Steps': 0,
                                  'Max Num Steps': 12,
                                  'Min Step Width': 0.20,
                                  'Nominal Step Width': 0.26,
@@ -73,7 +74,16 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                  'Drake Swing Speed': 0.4,
                                  'Drake Instep Shift': 0.005,
                                  'Drake Min Hold Time': 0.75,
-                                 'Support Contact Groups': 0}}
+                                 'Support Contact Groups': 0,
+                                 'Map Mode': 3}}
+DEFAULT_STEP_PARAMS['Terrain'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
+DEFAULT_STEP_PARAMS['Terrain'].update({'Drake Min Hold Time': 2.0,
+                                       'Max Forward Step': 0.36,
+                                       'Nominal Step Width': 0.22,
+                                       'Map Mode': 1})
+DEFAULT_STEP_PARAMS['Stairs'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
+DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
+                                      'Map Mode': 2})
 
 DEFAULT_CONTACT_SLICES = {(0.05, 0.3): np.array([[-0.13, -0.13, 0.13, 0.13],
                                           [0.0562, -0.0562, 0.0562, -0.0562]]),
@@ -201,6 +211,8 @@ class FootstepsDriver(object):
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
+        self.defaults_map = ['Drake Nominal', 'Terrain', 'Stairs']
+        self.params.addProperty('Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.defaults_map))
         self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
         self.params.addProperty('Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Auto', 'Left', 'Right']))
         self.leading_foot_map = [lcmdrc.footstep_plan_params_t.LEAD_AUTO,

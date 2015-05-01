@@ -55,15 +55,15 @@ class FootstepsPanel(object):
         self.ui.stopButton.connect("clicked()", self.onStop)
         self.ui.simulateDrakeButton.connect("clicked()", self.onSimulateDrake)
         self.ui.haltSimulationDrakeButton.connect("clicked()", self.onHaltSimulationDrake)
-        self.ui.BDIDefaultsButton.connect("clicked()", lambda: self.applyDefaults('BDI'))
-        self.ui.drakeDefaultsButton.connect("clicked()", lambda: self.applyDefaults('drake'))
+        self.ui.restoreDefaultsButton.connect("clicked()", lambda: self.applyDefaults())
         self.ui.showWalkingVolumesCheck.connect("clicked()", self.onShowWalkingVolumes)
 
         ### BDI frame logic
-        #self.ui.hideBDIButton.setVisible(False)
-        #self.ui.showBDIButton.setVisible(False)
+        self.ui.hideBDIButton.setVisible(False)
+        self.ui.showBDIButton.setVisible(False)
         self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
         self.ui.showBDIButton.connect("clicked()", self.onShowBDIButton)
+
         self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
         self.ui.autoIRISSegmentationButton.connect("clicked()", self.onAutoIRISSegmentation)
         self._setupPropertiesPanel()
@@ -100,8 +100,11 @@ class FootstepsPanel(object):
             self.irisDriver.params.setProperty(prop.propertyName(), prop.value())
         except AssertionError: # fires when property is not present in irisDriver params
             pass
+        if prop.propertyName() == 'Defaults':
+            self.applyDefaults()
 
-    def applyDefaults(self, set_name):
+    def applyDefaults(self):
+        set_name = self.driver.defaults_map[self.driver.params.properties.defaults]
         for k, v in self.driver.default_step_params[set_name].iteritems():
             self.driver.params.setProperty(k, v)
             om.PropertyPanelHelper.onPropertyValueChanged(self.propertiesPanel, self.driver.params.properties, k)
