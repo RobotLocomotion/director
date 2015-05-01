@@ -190,7 +190,8 @@ class TerrainTask(object):
 
         blockRows = defaultdict(lambda: [])
 
-        blockXYZInStance = np.vstack((stanceFrame.TransformPoint(block.getChildFrame().transform.GetPosition()) for block in blocks))
+        T = stanceFrame.GetLinearInverse()
+        blockXYZInStance = np.vstack((T.TransformPoint(block.getChildFrame().transform.GetPosition()) for block in blocks))
         minBlockX = blockXYZInStance[:,0].min()
 
         # Bin by x (in stance frame)
