@@ -129,7 +129,9 @@ class DrivingPlannerPanel(TaskUserPanel):
 
     def toggleTrajectory(self):
         self.showTrajectory = not self.showTrajectory
-        om.findObjectByName('DrivingTrajectory').setProperty('Visible', self.showTrajectory)
+        traj = om.findObjectByName('DrivingTrajectory')
+        if traj is not None:
+            traj.setProperty('Visible', self.showTrajectory)
 
     def addButtons(self):
         self.addManualButton('Toggle Trajectory', self.toggleTrajectory)
