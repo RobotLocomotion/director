@@ -4659,28 +4659,7 @@ def zoomToDisplayPoint(displayPoint, boundsRadius=0.5, view=None):
     view.render()
 
 
-def extractPointsAlongClickRay(displayPoint, distanceToLineThreshold=0.3, addDebugRay=False):
-
-    worldPt1, worldPt2 = getRayFromDisplayPoint(getSegmentationView(), displayPoint)
-
-    if showDebugRay:
-        d = DebugData()
-        d.addLine(worldPt1, worldPt2)
-        showPolyData(d.getPolyData(), 'mouse click ray', visible=False)
-
-
-    segmentationObj = om.findObjectByName('pointcloud snapshot')
-    polyData = segmentationObj.polyData
-
-    polyData = labelDistanceToLine(polyData, worldPt1, worldPt2)
-
-    # extract points near line
-    polyData = thresholdPoints(polyData, 'distance_to_line', [0.0, distanceToLineThreshold])
-    showPolyData(polyData, 'selected cluster', colorByName='distance_to_line', visible=False)
-    return polyData
-
-
-def extractPointsAlongClickRay(position, ray, polyData=None, distanceToLineThreshold=0.025, nearestToLine=True):
+def extractPointsAlongClickRay(position, ray, polyData=None, distanceToLineThreshold=0.025, nearestToCamera=False):
 
     #segmentationObj = om.findObjectByName('pointcloud snapshot')
     if polyData is None:
@@ -4704,10 +4683,10 @@ def extractPointsAlongClickRay(position, ray, polyData=None, distanceToLineThres
 
     updatePolyData(polyData, 'ray points', colorByName='distance_to_line', visible=False, parent=getDebugFolder())
 
-    if nearestToLine:
-        dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_to_line')
-    else:
+    if nearestToCamera:
         dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_along_line')
+    else:
+        dists = vtkNumpy.getNumpyFromVtk(polyData, 'distance_to_line')
 
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
     intersectionPoint = points[dists.argmin()]
