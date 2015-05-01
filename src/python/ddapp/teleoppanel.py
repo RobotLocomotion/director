@@ -581,7 +581,7 @@ class JointLimitChecker(object):
         self.warningButton = QtGui.QPushButton('Joint Limit Warning')
         self.warningButton.setStyleSheet("background-color:red")
         self.warningButton.connect('clicked()', showDialog)
-        app.getMainWindow().statusBar().addWidget(self.warningButton)
+        app.getMainWindow().statusBar().insertPermanentWidget(0, self.warningButton)
 
     def notifyUserDialog(self, limitData):
 
