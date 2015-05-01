@@ -49,6 +49,7 @@ blockWidth = (15 + 3/8.0) * 0.0254
 blockLength = (15 + 5/8.0) * 0.0254
 blockHeight = (5 + 5/8.0) * 0.0254
 
+blockSafetyMargin = [0.03, 0.05]
 
 class TerrainTask(object):
 
@@ -185,6 +186,9 @@ class TerrainTask(object):
         for block in blocks:
 
             d = np.array(block.getProperty('Dimensions'))/2.0
+            d[0] -= blockSafetyMargin[0]
+            d[1] -= blockSafetyMargin[1]
+
             t = block.getChildFrame().transform
 
             pts = [
