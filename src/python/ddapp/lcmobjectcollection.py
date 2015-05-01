@@ -85,7 +85,9 @@ class LCMObjectCollection(object):
         lcmUtils.publish(self.channel, msg)
 
 
-    def handleEchoRequest(self, requestId):
+    def sendEchoResponse(self, requestId=None):
+        if requestId is None:
+            requestId = newUUID()
         msg = self._newCommandMessage('echo_response', requestId=requestId, descriptions=self.collection)
         lcmUtils.publish(self.channel, msg)
 
@@ -130,7 +132,7 @@ class LCMObjectCollection(object):
             self.removeDescription(data['descriptionId'], publish=False)
 
         elif command == 'echo_request':
-            self.handleEchoRequest(data['requestId'])
+            self.sendEchoRequest(data['requestId'])
 
         elif command == 'echo_response':
             self.handleEchoResponse(data)

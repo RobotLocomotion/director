@@ -253,6 +253,38 @@ class IKPlanner(object):
         return p
 
 
+    def createPlanePositionConstraint(self, linkName, linkOffsetFrame, targetFrame, planeNormalAxis, bounds):
+
+        p = ik.PositionConstraint()
+        p.linkName = linkName
+        p.pointInLink = np.array(linkOffsetFrame.GetPosition())
+        p.referenceFrame = targetFrame
+
+        p.lowerBound = np.tile(-np.inf, 3)
+        p.upperBound = np.tile(np.inf, 3)
+
+        p.lowerBound[planeNormalAxis] = bounds[0]
+        p.upperBound[planeNormalAxis] = bounds[1]
+
+        return p
+
+
+    def createLinePositionConstraint(self, linkName, linkOffsetFrame, targetFrame, lineAxis, bounds, positionTolerance=0.0):
+
+        p = ik.PositionConstraint()
+        p.linkName = linkName
+        p.pointInLink = np.array(linkOffsetFrame.GetPosition())
+        p.referenceFrame = targetFrame
+
+        p.lowerBound = np.tile(-positionTolerance, 3)
+        p.upperBound = np.tile(positionTolerance, 3)
+
+        p.lowerBound[lineAxis] = bounds[0]
+        p.upperBound[lineAxis] = bounds[1]
+
+        return p
+
+
     def createLinkGazeConstraint(self, startPose, linkName, gazeAxis):
         linkFrame = self.getLinkFrameAtPose(linkName, startPose)
         g = ik.WorldGazeDirConstraint()
@@ -366,6 +398,12 @@ class IKPlanner(object):
         p.jointsUpperBound = [math.radians(5), math.radians(5), np.inf]
         return p
 
+    def createBackZeroPostureConstraint(self):
+        p = ik.PostureConstraint()
+        p.joints = ['back_bkx', 'back_bky', 'back_bkz']
+        p.jointsLowerBound = np.zeros(3)
+        p.jointsUpperBound = np.zeros(3)
+        return p
 
     def createPositionOrientationGraspConstraints(self, side, targetFrame, graspToHandLinkFrame=None, positionTolerance=0.0, angleToleranceInDegrees=0.0):
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
@@ -452,15 +490,16 @@ class IKPlanner(object):
         return positionConstraint, rollConstraint1, rollConstraint2
 
 
-    def createGazeGraspConstraint(self, side, targetFrame, graspToHandLinkFrame=None, coneThresholdDegrees=0.0, targetAxis=[0.0, 1.0, 0.0] , bodyAxis=[0.0, 1.0, 0.0] ):
+    def createGazeGraspConstraint(self, side, targetFrame, graspToHandLinkFrame=None, coneThresholdDegrees=0.0, targetAxis=[0.0, 1.0, 0.0], bodyAxis=[0.0, 1.0, 0.0]):
 
+        targetFrame = targetFrame if isinstance(targetFrame, vtk.vtkTransform) else targetFrame.transform
 
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
 
         t = vtk.vtkTransform()
         t.PostMultiply()
         t.Concatenate(graspToHandLinkFrame.GetLinearInverse())
-        t.Concatenate(targetFrame.transform)
+        t.Concatenate(targetFrame)
 
 
 
@@ -585,9 +624,10 @@ class IKPlanner(object):
         return constraints
 
 
-    def createMovingReachConstraints(self, startPoseName, lockBase=False, lockBack=False, lockArm=True):
-        lockLeftArm = lockArm and (self.reachingSide == 'right')
-        lockRightArm = lockArm and (self.reachingSide == 'left')
+    def createMovingReachConstraints(self, startPoseName, lockBase=False, lockBack=False, lockArm=True, side=None):
+        side = side or self.reachingSide
+        lockLeftArm = lockArm and (side == 'right')
+        lockRightArm = lockArm and (side == 'left')
         return self.createMovingBodyConstraints(startPoseName, lockBase, lockBack, lockLeftArm=lockLeftArm, lockRightArm=lockRightArm)
 
 
@@ -702,15 +742,38 @@ class IKPlanner(object):
         return self.createPostureConstraint(startPostureName, joints)
 
 
-    def createLockedArmPostureConstraint(self, startPostureName):
-        if self.reachingSide == 'left':
+    def flipSide(self, side):
+        assert side in ('left', 'right')
+        return 'left' if side == 'right' else 'right'
+
+
+    def createLockedArmPostureConstraint(self, startPostureName, side=None):
+
+        if side is None:
+            side = self.flipSide(self.reachingSide)
+
+        if side == 'right':
             return self.createLockedRightArmPostureConstraint(startPostureName)
         else:
             return self.createLockedLeftArmPostureConstraint(startPostureName)
 
 
+    def createJointPostureConstraintFromDatabase(self, postureGroup, postureName, side=None):
+        postureJoints = self.getPostureJointsFromDatabase(postureGroup, postureName, side=side)
+        p = ik.PostureConstraint()
+        p.joints = postureJoints.keys()
+        p.jointsLowerBound = postureJoints.values()
+        p.jointsUpperBound = postureJoints.values()
+        p.tspan = [1, 1]
+        return p
+
+
+    def getPostureJointsFromDatabase(self, postureGroup, postureName, side=None):
+        return RobotPoseGUIWrapper.getPose(postureGroup, postureName, side=side)
+
+
     def getMergedPostureFromDatabase(self, startPose, poseGroup, poseName, side=None):
-        postureJoints = RobotPoseGUIWrapper.getPose(poseGroup, poseName, side=side)
+        postureJoints = self.getPostureJointsFromDatabase(poseGroup, poseName, side=side)
         return self.mergePostures(startPose, postureJoints)
 
 

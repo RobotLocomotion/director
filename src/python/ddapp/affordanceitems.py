@@ -24,29 +24,38 @@ class AffordanceItem(PolyDataItem):
         self.params = {}
         self.addProperty('uuid', newUUID(), attributes=om.PropertyAttributes(hidden=True))
         self.addProperty('Collision Enabled', True)
+        self.addProperty('Origin', [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0], attributes=om.PropertyAttributes(hidden=True))
         self.properties.setPropertyIndex('Collision Enabled', 0)
         self.setProperty('Icon', om.Icons.Hammer)
 
-    def publish(self):
-        pass
-
-    def getActionNames(self):
-        actions = ['Publish affordance']
-        return PolyDataItem.getActionNames(self) + actions
-
-    def onAction(self, action):
-        if action == 'Publish affordance':
-            self.publish()
-        else:
-            PolyDataItem.onAction(self, action)
+    def getPose(self):
+        childFrame = self.getChildFrame()
+        t = childFrame.transform if childFrame else vtk.vtkTransform()
+        return transformUtils.poseFromTransform(t)
 
     def getDescription(self):
         d = OrderedDict()
         d['classname'] = type(self).__name__
         d.update(self.properties._properties)
-        pose = transformUtils.poseFromTransform(self.getChildFrame().transform)
-        d['pose'] = pose
+        d['pose'] = self.getPose()
         return d
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        PolyDataItem._onPropertyChanged(self, propertySet, propertyName)
+        if propertyName == 'Origin':
+            self.updateGeometryFromProperties()
+
+    def updateGeometryFromProperties():
+        pass
+
+    def setPolyData(self, polyData):
+
+        if polyData.GetNumberOfPoints():
+            originPose = self.getProperty('Origin')
+            pos, quat = originPose[:3], originPose[3:]
+            t = transformUtils.transformFromPose(pos, quat)
+            polyData = filterUtils.transformPolyData(polyData, t.GetLinearInverse())
+        PolyDataItem.setPolyData(self, polyData)
 
     def repositionFromDescription(self, desc):
         position, quat = desc['pose']
@@ -68,13 +77,14 @@ class AffordanceItem(PolyDataItem):
         PolyDataItem.onRemoveFromObjectModel(self)
 
 
-
 class BoxAffordanceItem(AffordanceItem):
 
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
         self.addProperty('Dimensions', [0.25, 0.25, 0.25], attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
+        self.addProperty('Subdivisions', 0, attributes=om.PropertyAttributes(minimum=0, maximum=1000))
         self.properties.setPropertyIndex('Dimensions', 0)
+        self.properties.setPropertyIndex('Subdivisions', 1)
         self.updateGeometryFromProperties()
 
     def loadDescription(self, desc):
@@ -82,13 +92,13 @@ class BoxAffordanceItem(AffordanceItem):
 
     def updateGeometryFromProperties(self):
         d = DebugData()
-        d.addCube(self.getProperty('Dimensions'), (0,0,0))
+        d.addCube(self.getProperty('Dimensions'), (0,0,0), subdivisions=self.getProperty('Subdivisions'))
         self.setPolyData(d.getPolyData())
 
     def _onPropertyChanged(self, propertySet, propertyName):
         AffordanceItem._onPropertyChanged(self, propertySet, propertyName)
 
-        if propertyName == 'Dimensions':
+        if propertyName in ('Dimensions', 'Subdivisions'):
             self.updateGeometryFromProperties()
 
 
@@ -171,6 +181,7 @@ class CapsuleRingAffordanceItem(AffordanceItem):
 
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
+        self.setProperty('Collision Enabled', False)
         self.addProperty('Radius', 0.15, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.addProperty('Tube Radius', 0.02, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.addProperty('Segments', 8, attributes=om.PropertyAttributes(decimals=3, singleStep=1, minimum=3, maximum=100))
@@ -207,6 +218,7 @@ class MeshAffordanceItem(AffordanceItem):
 
     def __init__(self, name, view):
         AffordanceItem.__init__(self, name, vtk.vtkPolyData(), view)
+        self.setProperty('Collision Enabled', False)
         self.addProperty('Filename', '')
         self.properties.setPropertyIndex('Filename', 0)
 
@@ -234,8 +246,10 @@ class MeshAffordanceItem(AffordanceItem):
             if os.path.isfile(filename):
                 polyData = ioUtils.readPolyData(filename)
             else:
-                # todo: put placeholder geometry to indicate a missing mesh
-                polyData = vtk.vtkPolyData()
+                # use axes as a placeholder mesh
+                d = DebugData()
+                d.addFrame(vtk.vtkTransform(), scale=0.1, tubeRadius=0.005)
+                polyData = d.getPolyData()
 
         self.setPolyData(polyData)
 
@@ -309,3 +323,13 @@ class FrameAffordanceItem(AffordanceItem):
         self.updateParamsFromActorTransform()
         aff = affordance.createFrameAffordance(self.params)
         affordance.publishAffordance(aff)
+
+    def getActionNames(self):
+        actions = ['Publish affordance']
+        return AffordanceItem.getActionNames(self) + actions
+
+    def onAction(self, action):
+        if action == 'Publish affordance':
+            self.publish()
+        else:
+            AffordanceItem.onAction(self, action)

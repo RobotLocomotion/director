@@ -292,6 +292,9 @@ class ImageBasedAffordanceFit(object):
         self.imagePicker.annotationFunc = self.onImageAnnotation
         self.imagePicker.start()
 
+        self.pickLineRadius = 0.05
+        self.pickNearestToCamera = True
+
     def getPointCloud(self):
         return segmentation.getCurrentRevolutionData()
 
@@ -300,10 +303,9 @@ class ImageBasedAffordanceFit(object):
         points = [self.getPointCloudLocationFromImage(p, self.imageView, polyData) for p in points]
         self.fit(polyData, points)
 
-    @staticmethod
-    def getPointCloudLocationFromImage(imagePixel, imageView, polyData):
+    def getPointCloudLocationFromImage(self, imagePixel, imageView, polyData):
         cameraPos, ray = imageView.getWorldPositionAndRay(imagePixel)
-        return segmentation.extractPointsAlongClickRay(cameraPos, ray, polyData, distanceToLineThreshold=0.05, nearestToLine=False)
+        return segmentation.extractPointsAlongClickRay(cameraPos, ray, polyData, distanceToLineThreshold=self.pickLineRadius, nearestToCamera=self.pickNearestToCamera)
 
     def onImageViewDoubleClick(self, displayPoint, modifiers, imageView):
         pass
