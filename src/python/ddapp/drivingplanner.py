@@ -113,56 +113,6 @@ class DrivingPlanner(object):
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.q
 
-class DrivingPlannerPanel(TaskUserPanel):
-
-    def __init__(self, robotSystem):
-
-        TaskUserPanel.__init__(self, windowTitle='Driving Task')
-
-        self.robotSystem = robotSystem
-        self.drivingPlanner = DrivingPlanner(robotSystem.ikServer, robotSystem)
-        self.addDefaultProperties()
-        self.addButtons()
-        self.addTasks()
-        self.showTrajectory = True
-        self.sub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
-
-    def toggleTrajectory(self):
-        self.showTrajectory = not self.showTrajectory
-        traj = om.findObjectByName('DrivingTrajectory')
-        if traj is not None:
-            traj.setProperty('Visible', self.showTrajectory)
-
-    def addButtons(self):
-        self.addManualButton('Toggle Trajectory', self.toggleTrajectory)
-        self.addManualButton('Start', self.onStart)
-        self.addManualButton('Update Wheel Location', self.onUpdateWheelLocation)
-        self.addManualButton('Plan Safe', self.onPlanSafe)
-        self.addManualButton('Plan Pre Grasp', self.onPlanPreGrasp)
-        self.addManualButton('Plan Touch', self.onPlanTouch)
-        self.addManualButton('Plan Retract', self.onPlanRetract)
-        self.addManualButton('Plan Turn', self.onPlanTurn)
-
-    def addDefaultProperties(self):
-        self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        self.params.addProperty('Touch Depth', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        self.params.addProperty('PreGrasp Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
-        self.params.addProperty('Turn Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
-        self.params.addProperty('Speed', 1.0, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
-        self._syncProperties()
-
-    def _syncProperties(self):
-        self.preGraspDepth = self.params.getProperty('PreGrasp/Retract Depth')
-        self.touchDepth = self.params.getProperty('Touch Depth')
-        self.preGraspAngle = self.params.getProperty('PreGrasp Angle')
-        self.turnAngle = self.params.getProperty('Turn Angle')
-        self.speed = self.params.getProperty('Speed')        
-
-    def onSteeringCommand(self, msg):
-        if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:        
-            trajPoints = self.computeDrivingTrajectory(math.degrees(msg.steering_angle))
-            self.drawDrivingTrajectory(trajPoints)
-
     def computeDrivingTrajectory(self, steering_angle_degrees, numTrajPoints = 50):
         angle = steering_angle_degrees
         
@@ -192,6 +142,54 @@ class DrivingPlannerPanel(TaskUserPanel):
         
         vis.updatePolyData(d.getPolyData(), 'DrivingTrajectory')
         om.findObjectByName('DrivingTrajectory').setProperty('Color By', 1)
+
+class DrivingPlannerPanel(TaskUserPanel):
+
+    def __init__(self, robotSystem):
+
+        TaskUserPanel.__init__(self, windowTitle='Driving Task')
+
+        self.robotSystem = robotSystem
+        self.drivingPlanner = DrivingPlanner(robotSystem.ikServer, robotSystem)
+        self.addDefaultProperties()
+        self.addButtons()
+        self.addTasks()
+        self.showTrajectory = True
+        self.sub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
+
+    def addButtons(self):
+        self.addManualButton('Start', self.onStart)
+        self.addManualButton('Update Wheel Location', self.onUpdateWheelLocation)
+        self.addManualButton('Plan Safe', self.onPlanSafe)
+        self.addManualButton('Plan Pre Grasp', self.onPlanPreGrasp)
+        self.addManualButton('Plan Touch', self.onPlanTouch)
+        self.addManualButton('Plan Retract', self.onPlanRetract)
+        self.addManualButton('Plan Turn', self.onPlanTurn)
+
+    def addDefaultProperties(self):
+        self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        self.params.addProperty('Touch Depth', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        self.params.addProperty('PreGrasp Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
+        self.params.addProperty('Turn Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
+        self.params.addProperty('Speed', 1.0, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
+        self.params.addProperty('Show Trajectory', True)
+        self._syncProperties()
+
+    def _syncProperties(self):
+        self.preGraspDepth = self.params.getProperty('PreGrasp/Retract Depth')
+        self.touchDepth = self.params.getProperty('Touch Depth')
+        self.preGraspAngle = self.params.getProperty('PreGrasp Angle')
+        self.turnAngle = self.params.getProperty('Turn Angle')
+        self.speed = self.params.getProperty('Speed')
+        self.showTrajectory = self.params.getProperty('Show Trajectory')
+        traj = om.findObjectByName('DrivingTrajectory')
+        if traj is not None:
+            traj.setProperty('Visible', self.showTrajectory)
+
+    def onSteeringCommand(self, msg):
+        if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:
+            trajPoints = self.drivingPlanner.computeDrivingTrajectory(math.degrees(msg.steering_angle))
+            self.drivingPlanner.drawDrivingTrajectory(trajPoints)            
 
     def onStart(self):
         self.onUpdateWheelLocation()
