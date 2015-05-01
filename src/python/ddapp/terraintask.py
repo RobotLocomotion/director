@@ -144,7 +144,7 @@ class TerrainTask(object):
 
         blocks = []
         for obj in om.getObjects():
-            if obj.getProperty('Name').startswith('block ') and obj.getChildFrame():
+            if obj.getProperty('Name').startswith('cinderblock ') and obj.getChildFrame():
                 blocks.append(obj)
 
         return sorted(blocks, key=lambda x: x.getProperty('Name'))
@@ -283,7 +283,7 @@ class TerrainTask(object):
 
             blockId = len(self.findBlockObjects())
             pose = transformUtils.poseFromTransform(blockFrame)
-            desc = dict(classname='BoxAffordanceItem', Name='block %d' % blockId, Dimensions=[blockLength, blockWidth, blockHeight], pose=pose)
+            desc = dict(classname='BoxAffordanceItem', Name='cinderblock %d' % blockId, Dimensions=[blockLength, blockWidth, blockHeight], pose=pose)
             block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
 
 
@@ -333,7 +333,7 @@ class TerrainTask(object):
             offsetFrame.PostMultiply()
             offsetFrame.Concatenate(relativeFrame)
 
-            #vis.showFrame(offsetFrame, 'block %d' % i)
+            #vis.showFrame(offsetFrame, 'cinderblock %d' % i)
 
             '''
             footOffsetFrame = transformUtils.frameFromPositionAndRPY([0.0, 0.0, blockHeight/2.0 + 0.07], [0.0, 0.0, 0.0])
@@ -345,7 +345,7 @@ class TerrainTask(object):
 
             blockId = len(self.findBlockObjects())
             pose = transformUtils.poseFromTransform(offsetFrame)
-            desc = dict(classname='BoxAffordanceItem', Name='block %d' % blockId, Dimensions=[l, w, blockHeight], pose=pose)
+            desc = dict(classname='BoxAffordanceItem', Name='cinderblock %d' % blockId, Dimensions=[l, w, blockHeight], pose=pose)
             block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
             blocks.append(block)
 
