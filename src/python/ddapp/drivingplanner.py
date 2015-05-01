@@ -1,8 +1,12 @@
 import ddapp
+import math
+import drc as lcmdrc
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import objectmodel as om
+from ddapp import lcmUtils
 from ddapp import ik
+from ddapp.debugVis import DebugData
 
 import os
 import functools
@@ -120,8 +124,15 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
+        self.showTrajectory = True
+        self.sub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
+
+    def toggleTrajectory(self):
+        self.showTrajectory = not self.showTrajectory
+        om.findObjectByName('DrivingTrajectory').setProperty('Visible', self.showTrajectory)
 
     def addButtons(self):
+        self.addManualButton('Toggle Trajectory', self.toggleTrajectory)
         self.addManualButton('Start', self.onStart)
         self.addManualButton('Update Wheel Location', self.onUpdateWheelLocation)
         self.addManualButton('Plan Safe', self.onPlanSafe)
@@ -143,7 +154,42 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.touchDepth = self.params.getProperty('Touch Depth')
         self.preGraspAngle = self.params.getProperty('PreGrasp Angle')
         self.turnAngle = self.params.getProperty('Turn Angle')
-        self.speed = self.params.getProperty('Speed')
+        self.speed = self.params.getProperty('Speed')        
+
+    def onSteeringCommand(self, msg):
+        if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:        
+            trajPoints = self.computeDrivingTrajectory(math.degrees(msg.steering_angle))
+            self.drawDrivingTrajectory(trajPoints)
+
+    def computeDrivingTrajectory(self, steering_angle_degrees, numTrajPoints = 50):
+        angle = steering_angle_degrees
+        
+        if abs(angle) < 1:
+            angle = 0.1
+
+        turningRadius = 1.0 / (angle * (1/1700.0)) #rough guess of 10 meters per 170 degrees        
+        turningCenter = [0, turningRadius, 0]
+        trajPoints = list()
+
+        for i in range(0, numTrajPoints):
+            theta = math.radians((10/turningRadius)*i - 90)
+            trajPoint = np.asarray(turningCenter)+turningRadius*np.asarray([math.cos(theta), math.sin(theta), 0])
+            trajPoints.append(trajPoint)
+
+        return trajPoints
+
+    def drawDrivingTrajectory(self, drivingTraj):
+        d = DebugData()
+
+        numTrajPoints = len(drivingTraj)
+
+        #draw trajectory
+        for i in range(0, numTrajPoints - 1):
+            rgb = [(numTrajPoints-i)/float(numTrajPoints),1-(numTrajPoints-i)/float(numTrajPoints),1]            
+            d.addArrow(drivingTraj[i], drivingTraj[i+1], 0.02, 0.01, rgb)
+        
+        vis.updatePolyData(d.getPolyData(), 'DrivingTrajectory')
+        om.findObjectByName('DrivingTrajectory').setProperty('Color By', 1)
 
     def onStart(self):
         self.onUpdateWheelLocation()
