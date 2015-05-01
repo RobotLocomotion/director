@@ -69,20 +69,6 @@
      </property>
     </widget>
    </item>
-   <item row="7" column="0">
-    <widget class="QPushButton" name="BDIDefaultsButton">
-     <property name="text">
-      <string>Use BDI Defaults</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1">
-    <widget class="QPushButton" name="drakeDefaultsButton">
-     <property name="text">
-      <string>Use Drake Defaults</string>
-     </property>
-    </widget>
-   </item>
    <item row="9" column="0" colspan="2">
     <widget class="QGroupBox" name="paramsContainer">
      <property name="focusPolicy">
@@ -145,6 +131,13 @@
     <widget class="QPushButton" name="autoIRISSegmentationButton">
      <property name="text">
       <string>Auto Segment Terrain</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0" colspan="2">
+    <widget class="QPushButton" name="restoreDefaultsButton">
+     <property name="text">
+      <string>Restore Defaults</string>
      </property>
     </widget>
    </item>
