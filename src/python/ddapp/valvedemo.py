@@ -828,7 +828,7 @@ class ValveTaskPanel(TaskUserPanel):
 
         # set fingers
         addTask(rt.CloseHand(name='set finger positions', side=side, mode='Basic',
-                             amount=self.valveDemo.openAmount))
+                             amount=self.valveDemo.openAmount), parent=refit)
 
         # add valve turns
         if v.smallValve:
