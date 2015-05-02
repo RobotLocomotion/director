@@ -57,6 +57,7 @@ class ValvePlannerDemo(object):
         self.coaxialGazeTol = 2
         self.shxMaxTorque = 40
         self.elxMaxTorque = 10
+        self.elxLowerBoundDegrees = 30
         self.reachPoseName = None
         self.touchPose = None
 
@@ -282,6 +283,21 @@ class ValvePlannerDemo(object):
         constraint.torquesUpperBound = np.array([self.shxMaxTorque, self.elxMaxTorque])
         return constraint
 
+    def createElbowPostureConstraint(self):
+        if self.graspingHand == 'left':
+            elxJoint = 'l_arm_elx'
+            elxLowerBound = np.radians(self.elxLowerBoundDegrees)
+            elxUpperBound = 2.5
+        else:
+            elxJoint = 'r_arm_elx'
+            elxLowerBound = -2.5
+            elxUpperBound = np.radians(-self.elxLowerBoundDegrees)
+        constraint = ik.PostureConstraint()
+        constraint.joints = [elxJoint]
+        constraint.jointsLowerBound = [elxLowerBound]
+        constraint.jointsUpperBound = [elxUpperBound]
+        return constraint
+
     def createWristAngleConstraint(self, wristAngleCW, planFromCurrentRobotState):
         if self.graspingHand == 'left':
             wristJoint = ['l_arm_lwy']
@@ -304,6 +320,13 @@ class ValvePlannerDemo(object):
             self.graspingHand, self.computeGraspFrame(), coneThresholdDegrees=self.coaxialGazeTol)
         constraint.tspan = [0.0, 1.0]
         return constraint
+
+    def createHandFixedOrientConstraint(self):
+        if self.graspingHand == 'left':
+            handLink = 'l_hand'
+        else:
+            handLink = 'r_hand'
+        return ik.WorldFixedOrientConstraint(linkName=handLink)
 
     def createBackPostureConstraint(self):
         if self.lockBack:
@@ -476,8 +499,10 @@ class ValvePlannerDemo(object):
         constraints.extend(self.createFootConstraints(lockFeet))
         constraints.append(self.ikPlanner.createLockedArmPostureConstraint(self.startPoseName))
         constraints.append(self.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
+        constraints.append(self.createElbowPostureConstraint())
         constraints.append(self.createStaticTorqueConstraint())
         constraints.append(self.createHandGazeConstraint())
+        constraints.append(self.createHandFixedOrientConstraint())
         constraints.append(self.createWristAngleConstraint(wristAngleCW,
                                                            planFromCurrentRobotState))
         constraints.extend(self.createAllHandPositionConstraints(self.coaxialTol, retract))
@@ -639,6 +664,8 @@ class ValveTaskPanel(TaskUserPanel):
         self.addManualButton('Retract', self.retract)
         self.addManualSpacer()
         self.addManualButton('Nominal', self.valveDemo.planNominal)
+        self.addManualSpacer()
+        self.addManualButton('Commit Manip', self.valveDemo.commitManipPlan)
 
     def onSpawnValveClicked(self):
         self.valveDemo.spawnValveAffordance()
@@ -790,18 +817,18 @@ class ValveTaskPanel(TaskUserPanel):
                                   message='Please approve footstep plan.'), parent=walk)
         addTask(rt.CommitFootstepPlan(name='walk to valve',
                                       planName='valve grasp stance footstep plan'), parent=walk)
+        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
         addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
 
         # refit
         refit = self.taskTree.addGroup('Re-fitting')
-        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=refit)
         addTask(rt.UserPromptTask(name='fit valve',
                                   message='Please fit and approve valve affordance.'),
                 parent=refit)
 
         # set fingers
         addTask(rt.CloseHand(name='set finger positions', side=side, mode='Basic',
-                             amount=self.valveDemo.openAmount))
+                             amount=self.valveDemo.openAmount), parent=refit)
 
         # add valve turns
         if v.smallValve:
