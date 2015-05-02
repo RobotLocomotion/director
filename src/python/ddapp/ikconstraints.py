@@ -578,6 +578,32 @@ class WorldFixedBodyPoseConstraint(ConstraintBase):
             ''.format(**formatArgs))
 
 
+class WorldFixedOrientConstraint(ConstraintBase):
+
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            linkName = '',
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+        varName = 'fixed_orientation_constraint%s' % suffix
+        constraintNames.append(varName)
+
+        formatArgs = dict(varName=varName,
+                          robotArg=self.robotArg,
+                          tspan=self.getTSpanString(),
+                          linkName=self.linkName)
+
+        commands.append(
+            '{varName} = WorldFixedOrientConstraint({robotArg}, links.{linkName}, {tspan});\n'
+            ''.format(**formatArgs))
+
+
 class MinDistanceConstraint(ConstraintBase):
 
 
