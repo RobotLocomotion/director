@@ -1232,6 +1232,7 @@ class RobotPoseGUIWrapper(object):
         cls.main = rpg.MainWindow()
         mainWindow = [w for w in QtGui.QApplication.topLevelWidgets() if isinstance(w, PythonQt.dd.ddMainWindow)][0]
         cls.main.messageBoxWarning = functools.partial(QtGui.QMessageBox.warning, mainWindow)
+        cls.main.messageBoxQuestion = functools.partial(QtGui.QMessageBox.question, mainWindow)
         cls.initialized = True
 
     @classmethod
