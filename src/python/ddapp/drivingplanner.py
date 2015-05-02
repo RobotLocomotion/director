@@ -1,8 +1,12 @@
 import ddapp
+import math
+import drc as lcmdrc
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import objectmodel as om
+from ddapp import lcmUtils
 from ddapp import ik
+from ddapp.debugVis import DebugData
 
 import os
 import functools
@@ -109,6 +113,36 @@ class DrivingPlanner(object):
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.q
 
+    def computeDrivingTrajectory(self, steering_angle_degrees, numTrajPoints = 50):
+        angle = steering_angle_degrees
+        
+        if abs(angle) < 1:
+            angle = 0.1
+
+        turningRadius = 1.0 / (angle * (1/1700.0)) #rough guess of 10 meters per 170 degrees        
+        turningCenter = [0, turningRadius, 0]
+        trajPoints = list()
+
+        for i in range(0, numTrajPoints):
+            theta = math.radians((10/turningRadius)*i - 90)
+            trajPoint = np.asarray(turningCenter)+turningRadius*np.asarray([math.cos(theta), math.sin(theta), 0])
+            trajPoints.append(trajPoint)
+
+        return trajPoints
+
+    def drawDrivingTrajectory(self, drivingTraj):
+        d = DebugData()
+
+        numTrajPoints = len(drivingTraj)
+
+        #draw trajectory
+        for i in range(0, numTrajPoints - 1):
+            rgb = [(numTrajPoints-i)/float(numTrajPoints),1-(numTrajPoints-i)/float(numTrajPoints),1]            
+            d.addArrow(drivingTraj[i], drivingTraj[i+1], 0.02, 0.01, rgb)
+        
+        vis.updatePolyData(d.getPolyData(), 'DrivingTrajectory')
+        om.findObjectByName('DrivingTrajectory').setProperty('Color By', 1)
+
 class DrivingPlannerPanel(TaskUserPanel):
 
     def __init__(self, robotSystem):
@@ -120,6 +154,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
+        self.showTrajectory = True
+        self.sub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
 
     def addButtons(self):
         self.addManualButton('Start', self.onStart)
@@ -136,6 +172,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('PreGrasp Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Turn Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Speed', 1.0, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
+        self.params.addProperty('Show Trajectory', True)
         self._syncProperties()
 
     def _syncProperties(self):
@@ -144,6 +181,15 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.preGraspAngle = self.params.getProperty('PreGrasp Angle')
         self.turnAngle = self.params.getProperty('Turn Angle')
         self.speed = self.params.getProperty('Speed')
+        self.showTrajectory = self.params.getProperty('Show Trajectory')
+        traj = om.findObjectByName('DrivingTrajectory')
+        if traj is not None:
+            traj.setProperty('Visible', self.showTrajectory)
+
+    def onSteeringCommand(self, msg):
+        if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:
+            trajPoints = self.drivingPlanner.computeDrivingTrajectory(math.degrees(msg.steering_angle))
+            self.drivingPlanner.drawDrivingTrajectory(trajPoints)            
 
     def onStart(self):
         self.onUpdateWheelLocation()
