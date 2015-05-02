@@ -33,7 +33,6 @@ class TimerCallback(object):
         else:
             self.timer.start(int(1000.0 / self.targetFps))
 
-
     def stop(self):
         '''
         Stop the timer.
@@ -79,7 +78,7 @@ class TimerCallback(object):
 
     def _timerEvent(self):
         '''
-        Internal timer callback method.  Calls ticks() and measures elapsed time.
+        Internal timer callback method.  Calls tick() and measures elapsed time.
         '''
         startTime = time.time()
         self.elapsed = startTime - self.lastTickTime
@@ -94,4 +93,6 @@ class TimerCallback(object):
             self.lastTickTime = startTime
             if self.useScheduledTimer:
                 self._schedule(time.time() - startTime)
+        else:
+            self.stop()
 
