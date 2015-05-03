@@ -2,11 +2,9 @@ import math
 import types
 import functools
 import numpy as np
-from ddapp.timercallback import TimerCallback
 from ddapp import matlab
 from ddapp import callbacks
 from ddapp.asynctaskqueue import AsyncTaskQueue
-from ddapp.jointcontrol import JointController
 from ddapp.ikconstraints import *
 
 from ddapp import drcargs
