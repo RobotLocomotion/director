@@ -63,6 +63,7 @@ class PolarisPlatformPlanner(object):
         self.footstepRequestGenerator = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
         #define the frames we need relative to the box frame etc
         self.numFootsteps = 2
+        self.minHoldTime = 2
 
     def updateAffordance(self):
         self.platform = om.findObjectByName('box')
@@ -124,6 +125,17 @@ class PolarisPlatformPlanner(object):
         self.footstepYaw = np.array([-0.77413819, -0.57931552, -0.75042088, -0.68140433])
         self.footstepYaw = np.rad2deg(self.footstepYaw)
 
+    def setFootstepDataForwards(self):
+        self.footstepPositionForwards = []
+
+        self.footstepPositionForwards.append(np.array([ 0.13821272,  0.12071534,  0.01968801]))
+        self.footstepPositionForwards.append(np.array([ 0.40358344, -0.13300906, -0.09330176]))
+        self.footstepPositionForwards.append(np.array([ 0.40358344, 0.12, -0.09330176]))
+
+        self.footstepYawForwards = np.array([0, 0, 0])
+        self.footstepYawForwards = np.rad2deg(self.footstepYawForwards)
+        pass
+
     def planTurn(self):
         # request footsteps 1 and 2
         footstepsToWorldList = self.getFootstepToWorldTransforms([0,1])
@@ -161,14 +173,43 @@ class PolarisPlatformPlanner(object):
         endPose, info = cs.runIk()
         ikPlanner.computeMultiPostureGoal([startPose, endPose])
 
+    # maybe should update the frame and affordance everytime we call a method?
+    def planStepDownForwards(self):
+        # need to make us step left foot forwards
+        # set the walking defaults to be what we want
+        q = self.getPlanningStartPose()
+        footstepsToWorldList = self.getFootstepToWorldTransforms([0,1])
+        request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
+        request = self.setMapModeToTerrainAndNormals(request)
+        request = self.setMinHoldTime(request)
+        self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
+
+    def planStepOffForwards(self):
+        q = self.getPlanningStartPose()
+        footstepsToWorldList = self.getFootstepToWorldTransforms([2])
+        request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
+        request = self.setMapModeToTerrainAndNormals(request)
+        request = self.setMinHoldTime(request)
+        self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
+
+    def setMinHoldTime(self,request,minHoldTime=self.minHoldTime):
+        for stepMessages in request.goal_steps:
+            stepMessages.params.drake_min_hold_time = minHoldTime
+
+        return request
 
     #get the footsteps to world transform from footstepsToPlan transform
-    def getFootstepToWorldTransforms(self,footstepIdx):
+    def getFootstepToWorldTransforms(self,footstepIdx, stepOffDirection='sideways'):
         self.updateFramesAndAffordance()
         footstepsToWorldList = []
         for j in footstepIdx:
-            rpy = np.array([0,0,self.footstepYaw[j]])
-            position = self.footstepPosition[j]
+            if stepOffDirection == 'sideways'
+                rpy = np.array([0,0,self.footstepYaw[j]])
+                position = self.footstepPosition[j]
+            elif 
+                rpy = np.array([0,0,0], self.footstepYawForwards[j])
+                position = self.footstepPositionForwards[j]
+
             footstepToPlan = transformUtils.frameFromPositionAndRPY(position,rpy)
             footstepToWorld = footstepToPlan
             footstepToWorld.PostMultiply();
@@ -228,7 +269,14 @@ class PolarisPlatformPlannerPanel(TaskUserPanel):
         self.addManualButton('Plan Turn', self.onPlanTurn)
         self.addManualButton('Plan Step Down', self.onPlanStepDown)
         self.addManualButton('Plan Weight Shift', self.onPlanWeightShift)
-        self.addManualButton('Plan Step Off', self.onPlanStepOff)
+        self.addManualButton('Plan Step Off', self.onPlanStepOf
+
+    def addDefaultProperties(self):
+        self.params.addProperty('Step Off Direction', 'Forwards', attributes=om.PropertyAttributes(enumNames=['Forwards','Sideways']))
+        self._syncProperties()
+
+    def _syncProperties(self):
+        self.stepOffDirection = self.getPropertyEnumValue('Step Off Direction').lower()
 
     def onFitPlatformAffordance(self):
         self.platformPlanner.segmentPlatform()
