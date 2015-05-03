@@ -170,7 +170,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
-        self.showTrajectory = True
+        self.showTrajectory = False
         self.sub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
 
     def addButtons(self):
@@ -191,7 +191,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Turning Radius', 10.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Wheel Separation', 1.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Segments', 50, attributes=om.PropertyAttributes(singleStep=1, decimals=0))
-        self.params.addProperty('Show Trajectory', True)
+        self.params.addProperty('Show Trajectory', False)
         self._syncProperties()
 
     def _syncProperties(self):
