@@ -807,7 +807,7 @@ def main():
         baseMain()
     elif args.mode == 'robot':
         robotMain()
-    elif args.mode == 'robotDrivingGains'
+    elif args.mode == 'robotDrivingGains':
         robotMain(useDrivingGains=True)
     else:
         debugMain()
