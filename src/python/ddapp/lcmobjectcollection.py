@@ -132,7 +132,7 @@ class LCMObjectCollection(object):
             self.removeDescription(data['descriptionId'], publish=False)
 
         elif command == 'echo_request':
-            self.sendEchoRequest(data['requestId'])
+            self.sendEchoResponse(data['requestId'])
 
         elif command == 'echo_response':
             self.handleEchoResponse(data)
