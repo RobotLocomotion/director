@@ -60,6 +60,7 @@ class PolarisPlatformPlanner(object):
         self.initializedFlag = True
         self.updateFramesAndAffordance()
         self.setFoostepData()
+        self.setFootstepDataForwards()
         self.footstepRequestGenerator = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
         #define the frames we need relative to the box frame etc
         self.numFootsteps = 2
@@ -128,9 +129,9 @@ class PolarisPlatformPlanner(object):
     def setFootstepDataForwards(self):
         self.footstepPositionForwards = []
 
-        self.footstepPositionForwards.append(np.array([ 0.13821272,  0.12071534,  0.01968801]))
-        self.footstepPositionForwards.append(np.array([ 0.40358344, -0.13300906, -0.09330176]))
-        self.footstepPositionForwards.append(np.array([ 0.40358344, 0.12, -0.09330176]))
+        self.footstepPositionForwards.append(np.array([-0.06954156,  0.14726368,  0.07522517]))
+        self.footstepPositionForwards.append(np.array([ 0.18256867, -0.11692981,  0.01602283]))
+        self.footstepPositionForwards.append(np.array([ 0.31539397,  0.15317327,  0.04011487]))
 
         self.footstepYawForwards = np.array([0, 0, 0])
         self.footstepYawForwards = np.rad2deg(self.footstepYawForwards)
@@ -178,21 +179,26 @@ class PolarisPlatformPlanner(object):
         # need to make us step left foot forwards
         # set the walking defaults to be what we want
         q = self.getPlanningStartPose()
-        footstepsToWorldList = self.getFootstepToWorldTransforms([0,1])
+        footstepsToWorldList = self.getFootstepToWorldTransforms([0,1], stepOffDirection='forwards')
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
         request = self.setMapModeToTerrainAndNormals(request)
-        request = self.setMinHoldTime(request)
+        request = self.setMinHoldTime(request, self.minHoldTime)
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
 
     def planStepOffForwards(self):
         q = self.getPlanningStartPose()
-        footstepsToWorldList = self.getFootstepToWorldTransforms([2])
+        footstepsToWorldList = self.getFootstepToWorldTransforms([2], stepOffDirection='forwards')
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
         request = self.setMapModeToTerrainAndNormals(request)
-        request = self.setMinHoldTime(request)
+        request = self.setMinHoldTime(request, self.minHoldTime)
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
 
-    def setMinHoldTime(self,request,minHoldTime=self.minHoldTime):
+    def planWeightShiftForwards(self):
+        pass
+
+    def setMinHoldTime(self, request, minHoldTime):
+
+
         for stepMessages in request.goal_steps:
             stepMessages.params.drake_min_hold_time = minHoldTime
 
@@ -203,10 +209,10 @@ class PolarisPlatformPlanner(object):
         self.updateFramesAndAffordance()
         footstepsToWorldList = []
         for j in footstepIdx:
-            if stepOffDirection == 'sideways'
+            if stepOffDirection == 'sideways':
                 rpy = np.array([0,0,self.footstepYaw[j]])
                 position = self.footstepPosition[j]
-            elif 
+            else:
                 rpy = np.array([0,0,0], self.footstepYawForwards[j])
                 position = self.footstepPositionForwards[j]
 
@@ -235,13 +241,15 @@ class PolarisPlatformPlanner(object):
     def spawnGroundAffordance(self):
         self.terrainTask.spawnGroundAffordance()
 
-    def planArmsUp(self):
+    def planArmsUp(self, stepOffDirection):
         ikPlanner = self.robotSystem.ikPlanner
         startPose = self.getPlanningStartPose()
-        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'hand up tuck', side='left')
-        endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand up tuck', side='right')
-        # endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'general', 'polaris_step_arm_safe', side='left')
-        # endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'general', 'polaris_step_arm_safe', side='right')
+        if stepOffDirection == 'forwards':
+            endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'hands-forward', side='left')
+            endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'hands-forward', side='right')
+        else:
+            endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'polaris_step_arm_safe', side='left')
+            endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'polaris_step_arm_safe', side='right')
         ikPlanner.computeMultiPostureGoal([startPose, endPose])
 
     def getPlanningStartPose(self):
@@ -257,6 +265,7 @@ class PolarisPlatformPlannerPanel(TaskUserPanel):
         self.robotSystem = robotSystem
         self.platformPlanner = PolarisPlatformPlanner(robotSystem.ikServer, robotSystem)
         self.addButtons()
+        self.addDefaultProperties()
         self.addTasks()
 
     def addButtons(self):
@@ -265,24 +274,27 @@ class PolarisPlatformPlannerPanel(TaskUserPanel):
         self.addManualButton('Raycast Terrain', self.onRaycastTerrain)
         self.addManualButton('Start', self.onStart)
         self.addManualButton('Update Affordance', self.onUpdateAffordance)
-        self.addManualButton('Arms Up',self.platformPlanner.planArmsUp)
+        self.addManualButton('Arms Up',self.onArmsUp)
         self.addManualButton('Plan Turn', self.onPlanTurn)
         self.addManualButton('Plan Step Down', self.onPlanStepDown)
         self.addManualButton('Plan Weight Shift', self.onPlanWeightShift)
-        self.addManualButton('Plan Step Off', self.onPlanStepOf
+        self.addManualButton('Plan Step Off', self.onPlanStepOff)
 
     def addDefaultProperties(self):
-        self.params.addProperty('Step Off Direction', 'Forwards', attributes=om.PropertyAttributes(enumNames=['Forwards','Sideways']))
+        self.params.addProperty('Step Off Direction', 0, attributes=om.PropertyAttributes(enumNames=['Forwards','Sideways']))
         self._syncProperties()
 
     def _syncProperties(self):
-        self.stepOffDirection = self.getPropertyEnumValue('Step Off Direction').lower()
+        self.stepOffDirection = self.params.getPropertyEnumValue('Step Off Direction').lower()
 
     def onFitPlatformAffordance(self):
         self.platformPlanner.segmentPlatform()
 
     def onSpawnGroundAffordance(self):
         self.platformPlanner.spawnGroundAffordance()
+
+    def onArmsUp(self):
+        self.platformPlanner.planArmsUp(self.stepOffDirection)
 
     def onRaycastTerrain(self):
         self.platformPlanner.requestRaycastTerrain()
@@ -294,16 +306,29 @@ class PolarisPlatformPlannerPanel(TaskUserPanel):
         self.platformPlanner.updateFramesAndAffordance()
 
     def onPlanTurn(self):
+        self._syncProperties()
         self.platformPlanner.planTurn()
 
     def onPlanStepDown(self):
-        self.platformPlanner.planStepDown()
+        self._syncProperties()
+        if self.stepOffDirection == 'forwards':
+            self.platformPlanner.planStepDownForwards()
+        else:
+            self.platformPlanner.planStepDown()
 
     def onPlanWeightShift(self):
-        self.platformPlanner.planWeightShift()
+        self._syncProperties()
+        if self.stepOffDirection == 'forwards':
+            self.platformPlanner.planWeightShiftForwards()
+        else:
+            self.platformPlanner.planWeightShift()
 
     def onPlanStepOff(self):
-        self.platformPlanner.planStepOff()
+        self._syncProperties()
+        if self.stepOffDirection == 'forwards':
+            self.platformPlanner.planStepOffForwards()
+        else:
+            self.platformPlanner.planStepOff()
 
     def addTasks(self):
 
