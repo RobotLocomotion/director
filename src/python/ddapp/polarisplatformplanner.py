@@ -200,7 +200,7 @@ class PolarisPlatformPlanner(object):
         # endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'hand up tuck', side='left')
         # endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand up tuck', side='right')
         endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'general', 'polaris_step_arm_safe', side='left')
-        endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'polaris_step_arm_safe', side='right')
+        endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'general', 'polaris_step_arm_safe', side='right')
         ikPlanner.computeMultiPostureGoal([startPose, endPose])
 
     def getPlanningStartPose(self):
