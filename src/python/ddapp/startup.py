@@ -717,8 +717,8 @@ class ToggleImageViewHandler(object):
 
 imageOverlayManager = ImageOverlayManager()
 imageViewHandler = ToggleImageViewHandler(imageOverlayManager)
-showImageOverlay = imageOverlayManager.show
-hideImageOverlay = imageOverlayManager.hide
+#showImageOverlay = imageOverlayManager.show
+#hideImageOverlay = imageOverlayManager.hide
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
