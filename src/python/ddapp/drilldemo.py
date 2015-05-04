@@ -27,7 +27,7 @@ from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
 from ddapp import planplayback
-from ddapp import affordanceupdater
+from ddapp import affordancegraspupdater
 from ddapp import segmentationpanel
 from ddapp import footstepsdriverpanel
 from ddapp import vtkNumpy as vnp

@@ -24,7 +24,7 @@ from ddapp import affordanceitems
 from ddapp import robotstate
 from ddapp import robotplanlistener
 from ddapp import segmentation
-from ddapp import affordanceupdater
+from ddapp import affordancegraspupdater
 from ddapp import planplayback
 
 from ddapp import segmentationpanel
