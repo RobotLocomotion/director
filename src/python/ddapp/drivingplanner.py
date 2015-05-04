@@ -43,6 +43,9 @@ class DrivingPlanner(object):
       return commands
 
     def initialize(self, ikServer, success):
+        if ikServer.restarted:
+            return
+
         commands = self.getInitCommands()
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
