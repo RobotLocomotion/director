@@ -1,7 +1,9 @@
+import os
 import math
 import types
 import functools
 import numpy as np
+import ddapp
 from ddapp import matlab
 from ddapp import callbacks
 from ddapp.asynctaskqueue import AsyncTaskQueue
@@ -55,8 +57,8 @@ class AsyncIKCommunicator():
         commands.append('format long e')
         commands.append('addpath_control')
         commands.append("addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])")
-        commands.append("robotURDF = '%s';" % self.robotURDF)
-        commands.append("fixed_point_file = '%s';" % self.fixedPointFile)
+        commands.append("robotURDF = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.robotURDF, ddapp.getDRCBaseDir()))
+        commands.append("fixed_point_file = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.fixedPointFile, ddapp.getDRCBaseDir()))
         commands.append('runIKServer')
         commands.append('\n%------ startup end ------\n')
         return commands
