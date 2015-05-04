@@ -105,6 +105,7 @@ class AtlasDriver(object):
                     msg.CRAWLING      : 'crawling',
                     msg.DUMMY         : 'dummy',
                     msg.MANIPULATING  : 'manipulating',
+                    msg.RECOVERING    : 'recovering',
                     }
         return self._controllerStatusMap
 
