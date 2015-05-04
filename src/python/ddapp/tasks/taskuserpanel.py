@@ -121,7 +121,6 @@ class TaskUserPanel(object):
     def onPropertyChanged(self, propertySet, propertyName):
         pass
 
-
     def getNextTasks(self):
         return self.taskTree.getTasks(fromSelected=True)
 
@@ -157,6 +156,10 @@ class TaskUserPanel(object):
         self.taskQueue.addTask(task)
         self.taskQueue.start()
 
+    def updateTaskButtons(self):
+        self.ui.taskStepButton.setEnabled(not self.taskQueue.isRunning)
+        self.ui.taskContinueButton.setEnabled(not self.taskQueue.isRunning)
+        self.ui.taskPauseButton.setEnabled(self.taskQueue.isRunning)
 
     def onPause(self):
 
@@ -171,6 +174,12 @@ class TaskUserPanel(object):
 
         self.appendMessage('<font color="red">paused</font>')
 
+    def onQueueStarted(self, taskQueue):
+        self.updateTaskButtons()
+
+    def onQueueStopped(self, taskQueue):
+        self.clearPrompt()
+        self.updateTaskButtons()
 
     def onTaskStarted(self, taskQueue, task):
         msg = task.properties.getProperty('Name')  + ' ... <font color="green">start</font>'
@@ -214,7 +223,6 @@ class TaskUserPanel(object):
 
         self.lastStatusMessage = msg
         self.ui.outputConsole.append(msg.replace('\n', '<br/>'))
-        #print msg
 
     def updateTaskStatus(self):
 
@@ -227,20 +235,19 @@ class TaskUserPanel(object):
         msg = name + ': ' + status
         self.appendMessage(msg)
 
+    def clearPrompt(self):
+        self.promptTask = None
+        self.ui.promptLabel.text = ''
+        self.ui.promptAcceptButton.enabled = False
+        self.ui.promptRejectButton.enabled = False
+
     def onAcceptPrompt(self):
         self.promptTask.accept()
-        self.promptTask = None
-        self.ui.promptLabel.text = ''
-        self.ui.promptAcceptButton.enabled = False
-        self.ui.promptRejectButton.enabled = False
+        self.clearPrompt()
 
     def onRejectPrompt(self):
-
         self.promptTask.reject()
-        self.promptTask = None
-        self.ui.promptLabel.text = ''
-        self.ui.promptAcceptButton.enabled = False
-        self.ui.promptRejectButton.enabled = False
+        self.clearPrompt()
 
     def onTaskPrompt(self, task, message):
         self.promptTask = task
@@ -254,6 +261,8 @@ class TaskUserPanel(object):
         self.nextStepTask = None
         self.completedTasks = []
         self.taskQueue = atq.AsyncTaskQueue()
+        self.taskQueue.connectQueueStarted(self.onQueueStarted)
+        self.taskQueue.connectQueueStopped(self.onQueueStopped)
         self.taskQueue.connectTaskStarted(self.onTaskStarted)
         self.taskQueue.connectTaskEnded(self.onTaskEnded)
         self.taskQueue.connectTaskPaused(self.onTaskPaused)
@@ -278,8 +287,7 @@ class TaskUserPanel(object):
 
         self.ui.promptAcceptButton.connect('clicked()', self.onAcceptPrompt)
         self.ui.promptRejectButton.connect('clicked()', self.onRejectPrompt)
-        self.ui.promptAcceptButton.enabled = False
-        self.ui.promptRejectButton.enabled = False
+        self.clearPrompt()
 
 
 class ImageBasedAffordanceFit(object):
