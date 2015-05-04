@@ -1,12 +1,12 @@
+import os
 import math
 import types
 import functools
 import numpy as np
-from ddapp.timercallback import TimerCallback
+import ddapp
 from ddapp import matlab
 from ddapp import callbacks
 from ddapp.asynctaskqueue import AsyncTaskQueue
-from ddapp.jointcontrol import JointController
 from ddapp.ikconstraints import *
 
 from ddapp import drcargs
@@ -20,6 +20,7 @@ class AsyncIKCommunicator():
         self.comm = None
         self.outputConsole = None
         self.ready = False
+        self.restarted = False
         self.robotURDF = robotURDF
         self.fixedPointFile = fixedPointFile
 
@@ -50,18 +51,21 @@ class AsyncIKCommunicator():
         self.callbacks = callbacks.CallbackRegistry([self.STARTUP_COMPLETED])
 
 
-    def getStartupCommands(self):
+    def _sendStartupCommands(self):
+
+        if self.restarted:
+            return
 
         commands = []
         commands.append('\n%-------- startup --------\n')
         commands.append('format long e')
         commands.append('addpath_control')
         commands.append("addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])")
-        commands.append("robotURDF = '%s';" % self.robotURDF)
-        commands.append("fixed_point_file = '%s';" % self.fixedPointFile)
+        commands.append("robotURDF = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.robotURDF, ddapp.getDRCBaseDir()))
+        commands.append("fixed_point_file = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.fixedPointFile, ddapp.getDRCBaseDir()))
         commands.append('runIKServer')
         commands.append('\n%------ startup end ------\n')
-        return commands
+        return self.comm.sendCommandsAsync(commands)
 
     def _createMatlabClient(self):
 
@@ -79,8 +83,10 @@ class AsyncIKCommunicator():
 
         taskQueue = AsyncTaskQueue()
         taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, ['\n']))
-        taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, self.getStartupCommands()))
+        taskQueue.addTask(self._checkServerRestarted)
+        taskQueue.addTask(self._sendStartupCommands)
         taskQueue.addTask(self._checkServerStartup)
+        taskQueue.addTask(self._notifyStartupCompleted)
         taskQueue.addTask(functools.partial(setattr, self.comm, 'echoToStdOut', True))
 
         self.taskQueue = taskQueue
@@ -93,11 +99,12 @@ class AsyncIKCommunicator():
         self.callbacks.disconnect(callbackId)
 
     def _checkServerStartup(self):
-        try:
-            self.ready = self.comm.getFloatArray('ikServerStarted')[0] == 1
-        except:
-            self.ready = False
-        self._notifyStartupCompleted()
+        started = self.comm.getFloatArray("exist('ikServerStarted')")
+        self.ready = len(started) and started[0] == 1
+
+    def _checkServerRestarted(self):
+        self._checkServerStartup()
+        self.restarted = self.ready
 
     def _notifyStartupCompleted(self):
         self.callbacks.process(self.STARTUP_COMPLETED, self, self.ready)
