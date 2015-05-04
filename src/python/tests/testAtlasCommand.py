@@ -148,10 +148,13 @@ class AtlasCommandStream(object):
         self.fpsCounter = simpletimer.FPSCounter()
         self.fpsCounter.printToConsole = True
         self.timer.callback = self._tick
-        self._maxSpeed = np.deg2rad(10)*np.ones(len(robotstate.getDrakePoseJointNames()))
         self._initialized = False
         self.publishChannel = 'JOINT_POSITION_GOAL'
         self.lastCommandMessage = newAtlasCommandMessageAtZero()
+        self._numPositions = len(robotstate.getDrakePoseJointNames())
+        self._previousElapsedTime = 100
+        self._baseFlag = 0;
+        self.applyDefaults()
 
     def initialize(self, currentRobotPose):
         assert not self._initialized
@@ -159,8 +162,37 @@ class AtlasCommandStream(object):
         self._previousCommandedPose = np.array(currentRobotPose)
         self._goalPose = np.array(currentRobotPose)
         self._initialized = True
-        self._previousElapsedTime = 100
-        self._controlGains = np.array([4.47,3.6]) #magic numbers from LQR double integrator solution Q = [5 0; 0 1] R = 0.25
+
+    def setKp(self, Kp, jointName=None):
+        if jointName is None:
+            self._Kp = Kp*np.ones(self._numPositions)
+        else:
+            idx = robotstate.getDrakePoseJointNames().index(jointName)
+            self._maxSpeed[idx] = Kp
+
+        self.updateKd()
+
+    def setMaxSpeed(self, speed, jointName=None):
+        if jointName is None:
+            self._maxSpeed = np.deg2rad(speed)*np.ones(self._numPositions)
+        else:
+            idx = robotstate.getDrakePoseJointNames().index(jointName)
+            self._maxSpeed[idx] = np.deg2rad(speed)
+
+    def updateKd(self):
+        self._dampingRatio = 1;
+        self._Kd = 2*self._dampingRatio*np.sqrt(self._Kp)
+
+    def applyDefaults(self):
+        self.setKp(10)
+        self.setMaxSpeed(10)
+    
+    def applyDrivingDefaults(self):
+        self.setMaxSpeed(70,'l_arm_lwy')
+        self.setKp(50,'l_arm_lwy')
+        self.setMaxSpeed(100,'l_leg_aky')
+        self.setKp(50,'l_leg_aky')
+        
 
     def startStreaming(self):
         assert self._initialized
@@ -201,6 +233,10 @@ class AtlasCommandStream(object):
             self._previousElapsedTime, self._maxSpeed)
         self._currentCommandedPose = nextPose
 
+        # have the base station directly send the command through
+        if self._baseFlag:
+            self._currentCommandedPose = goalPose
+
         # publish
         self._updateAndSendCommandMessage()
 
@@ -210,7 +246,7 @@ class AtlasCommandStream(object):
 
     def _computeNextPose(self, previousPose, currentPose, goalPose, elapsed, elapsedPrevious, maxSpeed):
         v = 1.0/elapsedPrevious * (currentPose - previousPose)
-        u = -self._controlGains[0]*(currentPose - goalPose) - self._controlGains[1]*v # u = -K*x
+        u = -self._Kp*(currentPose - goalPose) - self._Kd*v # u = -K*x
         v_next = v + elapsed*u
         v_next = np.clip(v_next,-maxSpeed,maxSpeed) # velocity clamp
         nextPose = currentPose + v_next*elapsed
@@ -527,7 +563,6 @@ class GainAdjustmentPanel(object):
             self.updateLabel(jointName, jointValue)
 
 
-
 class JointTeleopPanel(object):
 
     def __init__(self, robotSystem, jointGroups):
@@ -758,6 +793,7 @@ def parseArgs():
     p.add_argument('--base', dest='mode', action='store_const', const='base')
     p.add_argument('--robot', dest='mode', action='store_const', const='robot')
     p.add_argument('--debug', dest='mode', action='store_const', const='debug')
+    p.add_argument('--robotDrivingGains', dest='mode', action='store_const', const='robotDrivingGains')
 
     args, unknown = parser.parse_known_args()
     return args
@@ -771,13 +807,14 @@ def main():
         baseMain()
     elif args.mode == 'robot':
         robotMain()
+    elif args.mode == 'robotDrivingGains':
+        robotMain(useDrivingGains=True)
     else:
         debugMain()
 
 def baseMain():
     p = AtlasCommandPanel()
-
-    commandStream._maxSpeed = 1000
+    commandStream._baseFlag = 1
     p.widget.show()
     p.widget.resize(1400, 1400*9/16.0)
     p.app.setupGlobals(globals())
@@ -790,7 +827,7 @@ def debugMain():
     ConsoleApp.start()
 
 
-def robotMain():
+def robotMain(useDrivingGains=False):
 
     print 'waiting for robot state...'
     commandStream.waitForRobotState()
@@ -798,6 +835,9 @@ def robotMain():
     commandStream.timer.targetFps = 1000
     commandStream.publishChannel = 'ATLAS_COMMAND'
     commandStream.startStreaming()
+    if useDrivingGains:
+        commandStream.applyDrivingDefaults()
+
     positionListener = PositionGoalListener()
     planListener = CommittedRobotPlanListener()
     ConsoleApp.start()
