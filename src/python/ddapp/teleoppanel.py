@@ -923,11 +923,21 @@ class JointTeleopPanel(object):
         self.jointLimitsMax = np.array([self.panel.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
 
         # this need to be generalized
-        self.jointLimitsMin[0:6] = [-0.25, -0.25, 0.61, -math.radians(20),  -math.radians(20),  -math.radians(20)]
-        self.jointLimitsMax[0:6] = [0.25, 0.25, 0.92, math.radians(20),  math.radians(20),  math.radians(20)]
+        baseZLimits = drcargs.getDirectorConfig()['baseZJointLimits']
+        self.jointLimitsMin[0:6] = [-0.25, -0.25, baseZLimits[0], -math.radians(20), -math.radians(20), -math.radians(20)]
+        self.jointLimitsMax[0:6] = [ 0.25 , 0.25, baseZLimits[1],  math.radians(20),  math.radians(20),  math.radians(20)]
+
 
         if jointGroups is None:
-            jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
+            # Add only these joint groups:
+            telopJointGroupNames = ['Back', 'Base', 'Left Arm', 'Right Arm', 'Neck']
+            allJointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
+            jointGroups = []
+            for jointGroup in allJointGroups:
+                if jointGroup['name'] in telopJointGroupNames:
+                    jointGroups.append( jointGroup )
+
+        self.jointGroups = jointGroups
 
         self.buildTabWidget(jointGroups)
 
