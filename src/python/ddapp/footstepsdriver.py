@@ -503,7 +503,7 @@ class FootstepsDriver(object):
         return contact_pts
 
     @staticmethod
-    def getFeetMidPoint(model):
+    def getFeetMidPoint(model, useWorldZ=True):
         '''
         Returns a frame in world coordinate system that is the average of the left
         and right foot reference point positions in world frame, the average of the
@@ -521,7 +521,12 @@ class FootstepsDriver(object):
         t_rf_mid.PreMultiply()
         t_rf_mid.Translate(contact_pts_mid)
         t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
-        return transformUtils.frameFromPositionAndRPY(t_feet_mid.GetPosition(), [0.0, 0.0, t_feet_mid.GetOrientation()[2]])
+
+        if useWorldZ:
+            rpy = [0.0, 0.0, np.degrees(transformUtils.rollPitchYawFromTransform(t_feet_mid)[2])]
+            return transformUtils.frameFromPositionAndRPY(t_feet_mid.GetPosition(), rpy)
+        else:
+            return t_feet_mid
 
     @staticmethod
     def debugDrawFootPoints(model):
