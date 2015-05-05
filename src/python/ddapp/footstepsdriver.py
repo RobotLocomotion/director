@@ -841,9 +841,7 @@ class FootstepRequestGenerator(object):
 
     @staticmethod
     def getRobotStanceFrame(robotModel):
-        stanceFrame = FootstepsDriver.getFeetMidPoint(robotModel)
-        stanceFrame = transformUtils.frameFromPositionAndRPY(stanceFrame.GetPosition(), [0,0,transformUtils.rollPitchYawFromTransform(stanceFrame)[2]])
-        return stanceFrame
+        return FootstepsDriver.getFeetMidPoint(robotModel)
 
     @staticmethod
     def makeStepFrames(stepFrames, relativeFrame=None, showFrames=False):
