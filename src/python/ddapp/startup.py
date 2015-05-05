@@ -432,7 +432,7 @@ if usePlanning:
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
     taskPanels['Driving'] = drivingPlannerPanel.widget
-    taskPanels['Sit & Stand'] = sitStandPlannerPanel.widget
+    taskPanels['Sit/Stand'] = sitStandPlannerPanel.widget
     tasklaunchpanel.init(taskPanels)
 
     splinewidget.init(view, handFactory, robotStateModel)

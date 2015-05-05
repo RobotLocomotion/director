@@ -64,7 +64,7 @@ class SitStandPlannerPanel(TaskUserPanel):
 
     def __init__(self, robotSystem):
 
-        TaskUserPanel.__init__(self, windowTitle='Driving Task')
+        TaskUserPanel.__init__(self, windowTitle='Sit/Stand')
 
         self.robotSystem = robotSystem
         self.sitStandPlanner = SitStandPlanner(robotSystem.ikServer, robotSystem)
