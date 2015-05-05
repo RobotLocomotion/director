@@ -60,21 +60,6 @@ def concatenateTransforms(transformList):
     for t in transformList:
         result.Concatenate(t)
     return result
-    
-def findTransformAxis(transform, referenceVector):
-    '''
-    Given a vtkTransform and a reference vector, find a +/- axis of the transform
-    that most closely matches the reference vector.  Returns the matching axis
-    index, axis, and sign.
-    '''
-    refAxis = referenceVector / np.linalg.norm(referenceVector)
-    axes = getAxesFromTransform(transform)
-
-    axisProjections = np.array([np.abs(np.dot(axis, refAxis)) for axis in axes])
-    matchIndex = axisProjections.argmax()
-    matchAxis = axes[matchIndex]
-    matchSign = np.sign(np.dot(matchAxis, refAxis))
-    return matchIndex, matchAxis, matchSign
 
 
 def findTransformAxis(transform, referenceVector):
