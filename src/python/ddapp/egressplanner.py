@@ -74,7 +74,6 @@ class EgressPanel(TaskUserPanel):
         self.sitStandPlanner.applyParams()
 
     def onStart(self):
-        self.sitStandPlanner.initialize()
         self._syncProperties()
         print 'Egress Planner Ready'
 
