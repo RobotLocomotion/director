@@ -931,3 +931,20 @@ def initCenterOfMassVisulization():
         drawCenterOfMass(model)
 
 initCenterOfMassVisulization()
+
+
+class RobotMoverWidget(object):
+    def __init__(self, jointController):
+        self.jointController = jointController
+        pos, rpy = jointController.q[:3], jointController.q[3:6]
+        t = transformUtils.frameFromPositionAndRPY(pos, np.degrees(rpy))
+        self.frame = vis.showFrame(t, 'mover widget', scale=0.3)
+        self.frame.setProperty('Edit', True)
+        self.frame.connectFrameModified(self.onFrameModified)
+
+    def onFrameModified(self, frame):
+        pos, rpy = self.frame.transform.GetPosition(), transformUtils.rollPitchYawFromTransform(self.frame.transform)
+        q = self.jointController.q.copy()
+        q[:3] = pos
+        q[3:6] = rpy
+        self.jointController.setPose('moved_pose', q)
