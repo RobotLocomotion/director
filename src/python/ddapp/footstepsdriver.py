@@ -862,7 +862,7 @@ class FootstepRequestGenerator(object):
 
         return frames
 
-    def makeStepMessages(self, stepFrames, leadingFoot):
+    def makeStepMessages(self, stepFrames, leadingFoot, snapToTerrain=False):
 
         assert leadingFoot in ('left', 'right')
         isRightFootOffset = 0 if leadingFoot == 'left' else 1
@@ -888,13 +888,18 @@ class FootstepRequestGenerator(object):
             step.fixed_pitch = True
             step.fixed_yaw = True
 
+            if snapToTerrain:
+                step.fixed_z = False
+                step.fixed_roll = False
+                step.fixed_pitch = False
+
             stepMessages.append(step)
 
         return stepMessages
 
-    def makeFootstepRequest(self, startPose, stepFrames, leadingFoot, numberOfFillSteps=0):
+    def makeFootstepRequest(self, startPose, stepFrames, leadingFoot, numberOfFillSteps=0, snapToTerrain=False):
 
-        stepMessages = self.makeStepMessages(stepFrames, leadingFoot)
+        stepMessages = self.makeStepMessages(stepFrames, leadingFoot, snapToTerrain=snapToTerrain)
         request = self.footstepsDriver.constructFootstepPlanRequest(startPose)
         request.num_goal_steps = len(stepMessages)
         request.goal_steps = stepMessages

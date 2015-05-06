@@ -26,6 +26,8 @@ from ddapp import drilldemo
 from ddapp import tabledemo
 from ddapp import valvedemo
 from ddapp import drivingplanner
+from ddapp import egressplanner
+from ddapp import polarisplatformplanner
 from ddapp import continuouswalkingdemo
 from ddapp import sitstandplanner
 from ddapp import walkingtestdemo
@@ -424,15 +426,17 @@ if usePlanning:
 
     terrainTaskPanel = terraintask.TerrainTaskPanel(robotSystem)
 
-    sitStandPlannerPanel = sitstandplanner.SitStandPlannerPanel(robotSystem)
+    egressPanel = egressplanner.EgressPanel(robotSystem)
 
     taskPanels = OrderedDict()
+    
+    taskPanels['Driving'] = drivingPlannerPanel.widget
+    taskPanels['Egress'] = egressPanel.widget
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
-    taskPanels['Driving'] = drivingPlannerPanel.widget
-    taskPanels['Sit/Stand'] = sitStandPlannerPanel.widget
+    
     tasklaunchpanel.init(taskPanels)
 
     splinewidget.init(view, handFactory, robotStateModel)
