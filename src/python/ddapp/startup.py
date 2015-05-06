@@ -426,10 +426,6 @@ if usePlanning:
 
     terrainTaskPanel = terraintask.TerrainTaskPanel(robotSystem)
 
-    sitStandPlannerPanel = sitstandplanner.SitStandPlannerPanel(robotSystem)
-
-    platformTaskPanel = polarisplatformplanner.PolarisPlatformPlannerPanel(robotSystem)
-
     egressPanel = egressplanner.EgressPanel(robotSystem)
 
     taskPanels = OrderedDict()
@@ -438,8 +434,7 @@ if usePlanning:
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
     taskPanels['Driving'] = drivingPlannerPanel.widget
-    taskPanels['Sit/Stand'] = sitStandPlannerPanel.widget
-    taskPanels['Platform'] = platformTaskPanel.widget
+
     taskPanels['Egress'] = egressPanel.widget
     
     tasklaunchpanel.init(taskPanels)

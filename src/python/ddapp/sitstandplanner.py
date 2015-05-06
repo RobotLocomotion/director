@@ -15,13 +15,15 @@ class SitStandPlanner(object):
     def __init__(self, ikServer, robotSystem):
         self.ikServer = ikServer
         self.robotSystem = robotSystem
-        self.ikServer.connectStartupCompleted(self.initialize)
+        # self.ikServer.connectStartupCompleted(self.initialize)
+        self.initializedFlag = False
         self.planOptions = dict()
 
-    def initialize(self,ikServer, success):
+    def initialize(self):
         commands = self.getInitCommands()
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
+        self.initializedFlag = True
 
     def getInitCommands(self):
 
