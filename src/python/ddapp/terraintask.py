@@ -91,14 +91,17 @@ class TerrainTask(object):
         xaxis = np.cross(yaxis, zaxis)
         xaxis /= np.linalg.norm(xaxis)
 
+        boxThickness = 0.01
+
         t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        t.PreMultiply()
+        t.Translate(0.0, 0.0, -boxThickness/2.0)
         t.PostMultiply()
         t.Translate(origin)
 
-
         om.removeFromObjectModel(om.findObjectByName('ground affordance'))
         pose = transformUtils.poseFromTransform(t)
-        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[10, 10, 0.01], pose=pose)
+        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[10, 10, boxThickness], pose=pose)
         aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         aff.setProperty('Visible', False)
         aff.setProperty('Alpha', 0.2)
