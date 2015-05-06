@@ -337,6 +337,8 @@ class DoorDemo(object):
         endPose, info = constraintSet.runIk()
         plan = constraintSet.runIkTraj()
 
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+
         self.addPlan(plan)
 
     def createHingeConstraint(self, referenceFrame, axis, linkName, startPose, tspan=[0, 1]):
@@ -401,6 +403,17 @@ class DoorDemo(object):
 
         self.addPlan(plan)
 
+    def planDoorPushOpen(self):
+
+        self.ikPlanner.ikServer.usePointwise = False
+        nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
+
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'smash', side=nonGraspingHand)
+
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
 
     def planHandlePush(self):
 
@@ -425,7 +438,7 @@ class DoorDemo(object):
         constraints = constraintSet.constraints
 
         constraints.extend(self.createHingeConstraint(self.doorHingeFrame, [0.0, 0.0, 1.0],
-                                                      self.ikPlanner.getHandLink(),
+                                                      self.ikPlanner.getHandLink(side=side),
                                                       constraintSet.startPoseName))
         constraints.append(self.ikPlanner.createLockedBasePostureConstraint(constraintSet.startPoseName))
         #constraints.append(self.ikPlanner.createLockedBackPostureConstraint(constraintSet.startPoseName))
@@ -1236,6 +1249,7 @@ class DoorTaskPanel(TaskUserPanel):
 
     def _syncProperties(self):
         self.doorDemo.graspingHand = self.params.getPropertyEnumValue('Hand').lower()
+        self.doorDemo.ikPlanner.reachingSide = self.doorDemo.graspingHand
 
     def addTasks(self):
 
@@ -1305,10 +1319,20 @@ class DoorTaskPanel(TaskUserPanel):
 
         addManipTask('Raise Arm', d.planPreReach, userPrompt=False)
         addManipTask('Reach', d.planReach, userPrompt=False)
+        addTask(rt.UserPromptTask(name='Approve hand position',
+                                  message='Please verify that the hand is ready to grasp the handle'))
+        addFunc(self.fingerPinch, name='Pinch handle')
         addManipTask('Turn', d.planHandleTurn, userPrompt=True)
-        addManipTask('Push', d.planHandlePush, userPrompt=True)
+        addTask(rt.UserPromptTask(name='Approve handle turn',
+                                  message='Please verify that the handle has turned'))
+        addManipTask('Push ajar', d.planHandlePush, userPrompt=True)
+        addTask(rt.UserPromptTask(name='Approve door position',
+                                  message='Please verify that the door is ajar'))
         addManipTask('Lift', d.planHandlePushLift, userPrompt=False)
-        addManipTask('Push Open', d.planHandlePushOpen, userPrompt=True)
+        addTask(rt.CloseHand(name='Open hand', side=side, mode='Pinch', amount=0))
+        addManipTask('Push open', d.planDoorPushOpen, userPrompt=False)
+        addTask(rt.UserPromptTask(name='Approve door position',
+                                  message='Please verify that the door is open'))
         addManipTask('Tuck Arms', d.planTuckArms, userPrompt=False)
 
         # walk
