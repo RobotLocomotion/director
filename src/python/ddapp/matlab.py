@@ -62,6 +62,10 @@ class MatlabServer(object):
                     return
             except socket.timeout as e:
                 pass
+            except socket.error as e:
+                print 'socket error:', e
+                sock.close()
+                return
 
 
 class MatlabSocketClient(object):

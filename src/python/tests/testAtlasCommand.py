@@ -742,7 +742,17 @@ class AtlasCommandPanel(object):
         gl.setColumnStretch(1,1)
 
         #self.sub = lcmUtils.addSubscriber('COMMITTED_ROBOT_PLAN', lcmdrc.robot_plan_t, self.onRobotPlan)
+        lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onDrivingControl)
 
+    def onDrivingControl(self, msg):
+        if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:        
+            steeringAngle = -msg.steering_angle
+            offset = 0.0
+            lwyJointIdx = self.jointTeleopPanel.toJointIndex('l_arm_lwy')
+            self.jointTeleopPanel.endPose[lwyJointIdx] = steeringAngle + offset
+            self.jointTeleopPanel.updateSliders()
+            self.jointTeleopPanel.sliderChanged('l_arm_lwy')
+            
     def onRobotPlan(self, msg):
         playback = planplayback.PlanPlayback()
         playback.interpolationMethod = 'pchip'
