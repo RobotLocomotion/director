@@ -30,6 +30,7 @@ set(python_files
   ddapp/drilldemo.py
   ddapp/drilltaskpanel.py
   ddapp/drivingplanner.py
+  ddapp/egressplanner.py
   ddapp/fieldcontainer.py
   ddapp/filterUtils.py
   ddapp/footstepsdriver.py
@@ -69,6 +70,7 @@ set(python_files
   ddapp/planplayback.py
   ddapp/playbackpanel.py
   ddapp/pointpicker.py
+  ddapp/polarisplatformplanner.py
   ddapp/propertyset.py
   ddapp/raycastdriver.py
   ddapp/robotstate.py
