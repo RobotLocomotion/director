@@ -79,8 +79,6 @@ class TerrainTask(object):
         groundOrigin = segmentation.computeCentroid(groundPoints)
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
-        #stanceFrame.PreMultiply()
-        #stanceFrame.Translate(2.0, 0.0, 0.0)
         origin = np.array(stanceFrame.GetPosition())
 
         origin = segmentation.projectPointToPlane(origin, groundOrigin, normal)
@@ -270,7 +268,6 @@ class TerrainTask(object):
             stepFrames.append(t)
             #obj = vis.showFrame(t, '%s step frame' % block.getProperty('Name'), parent='step frames', scale=0.2)
 
-        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         startPose = self.getPlanningStartPose()
 
         helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
