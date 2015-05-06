@@ -429,13 +429,13 @@ if usePlanning:
     egressPanel = egressplanner.EgressPanel(robotSystem)
 
     taskPanels = OrderedDict()
+    
+    taskPanels['Driving'] = drivingPlannerPanel.widget
+    taskPanels['Egress'] = egressPanel.widget
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
-    taskPanels['Driving'] = drivingPlannerPanel.widget
-
-    taskPanels['Egress'] = egressPanel.widget
     
     tasklaunchpanel.init(taskPanels)
 
