@@ -231,13 +231,15 @@ class AtlasDriver(object):
         lcmUtils.publish('RECOVERY_ENABLE', msg)
 
     def sendRecoveryTriggerOn(self):
-        msg = lcmdrc.boolean_t()
-        msg.data = True
+        msg = lcmdrc.recovery_trigger_t()
+        msg.activate = True
+        msg.override = True
         lcmUtils.publish('RECOVERY_TRIGGER', msg)
 
     def sendRecoveryTriggerOff(self):
-        msg = lcmdrc.boolean_t()
-        msg.data = False
+        msg = lcmdrc.recovery_trigger_t()
+        msg.activate = False
+        msg.override = True
         lcmUtils.publish('RECOVERY_TRIGGER', msg)
 
     def sendManipCommand(self):
