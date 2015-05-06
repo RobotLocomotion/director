@@ -106,6 +106,7 @@ set(python_files
   ddapp/vtkAll.py
   ddapp/vtkNumpy.py
   ddapp/walkingtestdemo.py
+  ddapp/wristforcetorquevisualizer.py
   ddapp/kinectlcm.py
 
 

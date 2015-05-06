@@ -249,7 +249,7 @@ if not useLightColorScheme:
     viewBackgroundLightHandler.action.trigger()
 
 if useHands:
-    handcontrolpanel.init(lHandDriver, rHandDriver, robotStateModel)
+    handcontrolpanel.init(lHandDriver, rHandDriver, robotStateModel, robotStateJointController, view)
 
 
 if useFootsteps:
