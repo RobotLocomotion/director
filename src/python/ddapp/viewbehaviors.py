@@ -357,7 +357,8 @@ def toggleFootstepWidget(displayPoint, view):
 
     footMesh = shallowCopy(obj.polyData)
     footFrame = transformUtils.copyFrame(obj.getChildFrame().transform)
-    footFrame = transformUtils.frameFromPositionAndRPY(footFrame.GetPosition(), [0.0, 0.0, footFrame.GetOrientation()[2]])
+    rpy = [0.0, 0.0, transformUtils.rollPitchYawFromTransform(footFrame)[2]]
+    footFrame = transformUtils.frameFromPositionAndRPY(footFrame.GetPosition(), np.degrees(rpy))
 
     footObj = vis.showPolyData(footMesh, 'footstep widget', parent='planning', alpha=0.2)
     footObj.stepIndex = stepIndex
