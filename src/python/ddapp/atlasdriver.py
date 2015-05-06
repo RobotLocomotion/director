@@ -244,10 +244,18 @@ class AtlasDriver(object):
         lcmUtils.publish('PLAN_USING_BDI_HEIGHT', msg)
 
     # State Est Init Code
-    def sendInitAtZero(self):
+    def sendInitAtZero(self, randomize=False):
         self.sendReadyMessage()
-        p1 = [0,0,0.85]
-        self.sendInitMessage(p1, 0)
+
+        if randomize:
+            bounds = np.array([50.0, 50.0, 50.0])
+            pos = -bounds + np.random.rand(3) * 2*bounds
+            yaw = np.random.rand()*np.pi*2
+        else:
+            pos = [0,0,0.85]
+            yaw = 0.0
+
+        self.sendInitMessage(pos, yaw)
 
     def sendReadyMessage(self):
         ready_init = lcmdrc.utime_t()
@@ -279,7 +287,7 @@ class AtlasDriver(object):
             if (self.startupStage == 1):
               if ( getUtime() > self.sentStandUtime + 6E6 ):
                   # print "Sending SE Init"
-                  self.sendInitAtZero()
+                  self.sendInitAtZero(randomize=True)
                   self.startupStage = 2
 
             elif (self.startupStage == 2):
