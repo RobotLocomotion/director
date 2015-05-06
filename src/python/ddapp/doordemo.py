@@ -297,7 +297,7 @@ class DoorDemo(object):
         self.ikPlanner.ikServer.maxDegreesPerSecond = 30
 
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'door handle pre-reach', side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'pre-reach both')
         endPose, info = self.ikPlanner.computeStandPose(endPose)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
@@ -308,6 +308,7 @@ class DoorDemo(object):
 
         self.ikPlanner.ikServer.usePointwise = False
         self.ikPlanner.ikServer.maxDegreesPerSecond = 50
+        self.ikPlanner.ikServer.numberOfAddedKnots = 0
 
         otherSide = 'left' if self.graspingHand == 'right' else 'right'
 
@@ -315,9 +316,12 @@ class DoorDemo(object):
 
         standPose, info = self.ikPlanner.computeStandPose(startPose)
 
-        q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=self.graspingHand)
-        q2 = (standPose + q2) / 2.0
-        q2 = self.ikPlanner.getMergedPostureFromDatabase(q2, 'door', 'door handle pre-reach', side=otherSide)
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=otherSide)
+        a = 0.25
+        q2 = (1.0 - a)*np.array(standPose) + a*q2
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(q2, 'door', 'hand up tuck', side=self.graspingHand)
+        a = 0.75
+        q2 = (1.0 - a)*np.array(standPose) + a*q2
 
         endPose = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=self.graspingHand)
         endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand up tuck', side=otherSide)
@@ -418,7 +422,6 @@ class DoorDemo(object):
     def planHandlePush(self):
 
         startPose = self.getPlanningStartPose()
-        graspOrientation = self.computeGraspOrientation()
         linkFrame = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(), startPose)
 
         finalGraspToReferenceTransfrom = transformUtils.concatenateTransforms(
@@ -438,7 +441,7 @@ class DoorDemo(object):
         constraints = constraintSet.constraints
 
         constraints.extend(self.createHingeConstraint(self.doorHingeFrame, [0.0, 0.0, 1.0],
-                                                      self.ikPlanner.getHandLink(side=side),
+                                                      self.ikPlanner.getHandLink(side=self.graspingHand),
                                                       constraintSet.startPoseName))
         constraints.append(self.ikPlanner.createLockedBasePostureConstraint(constraintSet.startPoseName))
         #constraints.append(self.ikPlanner.createLockedBackPostureConstraint(constraintSet.startPoseName))
@@ -499,6 +502,18 @@ class DoorDemo(object):
         #self.ikPlanner.maxBaseMetersPerSecond = 0.05
 
         #self.addPlan(plan)
+
+
+    def planDoorTouch(self):
+
+        self.ikPlanner.ikServer.usePointwise = False
+        nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
+
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'pre-smash', side=nonGraspingHand)
+
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
 
     def planHandlePushOpen(self):
 
@@ -1222,7 +1237,8 @@ class DoorTaskPanel(TaskUserPanel):
         self.addManualButton('Turn', self.doorDemo.planHandleTurn)
         self.addManualButton('Push', self.doorDemo.planHandlePush)
         self.addManualButton('Lift', self.doorDemo.planHandlePushLift)
-        self.addManualButton('Push Open', self.doorDemo.planHandlePushOpen)
+        self.addManualButton('Touch door', self.doorDemo.planDoorTouch)
+        self.addManualButton('Push Open', self.doorDemo.planDoorPushOpen)
         self.addManualButton('Tuck Arms', self.doorDemo.planTuckArms)
         self.addManualSpacer()
         self.addManualButton('Footsteps through door', self.doorDemo.planFootstepsThroughDoor)
@@ -1317,7 +1333,7 @@ class DoorTaskPanel(TaskUserPanel):
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
 
 
-        addManipTask('Raise Arm', d.planPreReach, userPrompt=False)
+        addManipTask('Raise arms', d.planPreReach, userPrompt=False)
         addManipTask('Reach', d.planReach, userPrompt=False)
         addTask(rt.UserPromptTask(name='Approve hand position',
                                   message='Please verify that the hand is ready to grasp the handle'))
@@ -1329,6 +1345,8 @@ class DoorTaskPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name='Approve door position',
                                   message='Please verify that the door is ajar'))
         addManipTask('Lift', d.planHandlePushLift, userPrompt=False)
+        addTask(rt.CloseHand(name='Open hand', side=side, mode='Pinch', amount=0))
+        addManipTask('Raise pushing hand', d.planDoorTouch, userPrompt=False)
         addTask(rt.CloseHand(name='Open hand', side=side, mode='Pinch', amount=0))
         addManipTask('Push open', d.planDoorPushOpen, userPrompt=False)
         addTask(rt.UserPromptTask(name='Approve door position',
