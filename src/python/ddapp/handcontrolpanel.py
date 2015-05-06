@@ -84,7 +84,7 @@ class HandControlPanel(object):
         # create a timer to repeat commands
         self.updateTimer = TimerCallback()
         self.updateTimer.callback = self.updatePanel
-        self.updateTimer.targetFps = 20
+        self.updateTimer.targetFps = 3
         self.updateTimer.start()
 
     def getModeInt(self, inputStr):
