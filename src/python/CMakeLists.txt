@@ -82,6 +82,7 @@ set(python_files
   ddapp/sensordatarequestpanel.py
   ddapp/shallowCopy.py
   ddapp/simpletimer.py
+  ddapp/sitstandplanner.py
   ddapp/skybox.py
   ddapp/splinewidget.py
   ddapp/spreadsheet.py

@@ -1,5 +1,6 @@
 import ddapp
 import math
+import textwrap
 import drc as lcmdrc
 from ddapp import transformUtils
 from ddapp import visualization as vis
@@ -27,18 +28,24 @@ class DrivingPlanner(object):
 
     def getInitCommands(self):
 
-      commands = ['''
+      commands = [textwrap.dedent('''
+        % ------ driving planner startup ------
+
         addpath([getenv('DRC_BASE'), '/software/control/matlab/planners/driving_planner']);
-        dpRobot = s.robot;
-        clear options;
-        options = struct('listen_to_lcm_flag',{0});
-      ''']
-      commands.append('options.qstar = q_nom;')
-      commands.append("dp = drivingPlanner(r,options);")
+        clear driving_planner_options;
+        driving_planner_options.listen_to_lcm_flag = 0;
+        driving_planner_options.qstar = q_nom;
+        dp = drivingPlanner(s.robot, driving_planner_options);
+
+        % ------ driving planner startup end ------
+      ''')]
 
       return commands
 
     def initialize(self, ikServer, success):
+        if ikServer.restarted:
+            return
+
         commands = self.getInitCommands()
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
