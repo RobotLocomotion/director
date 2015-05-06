@@ -11,8 +11,8 @@ l = QtGui.QVBoxLayout(w)
 
 Button = namedtuple('Button', ['name', 'callback', 'color']);
 buttons = [
-           Button('Stop', atlasDriver.sendStopCommand, "#D11919"),
            Button('Freeze', atlasDriver.sendFreezeCommand, None),
+           Button('Stop', atlasDriver.sendStopCommand, "#D11919"),
            Button('Reactive Recovery', atlasDriver.sendRecoveryTriggerOn, None)
            ]
 
