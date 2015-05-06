@@ -71,6 +71,10 @@ class HandControlPanel(object):
         self.widget.sensors.leftCalibButton.clicked.connect(self.wristftvis.calibLeftFT)
         self.widget.sensors.rightCalibClearButton.clicked.connect(self.wristftvis.calibRightClearFT)
         self.widget.sensors.leftCalibClearButton.clicked.connect(self.wristftvis.calibLeftClearFT)
+        self.widget.sensors.rightVisCheck.clicked.connect(self.updateWristFTVis)
+        self.widget.sensors.leftVisCheck.clicked.connect(self.updateWristFTVis)
+        self.widget.sensors.torqueVisCheck.clicked.connect(self.updateWristFTVis)
+
         PythonQt.dd.ddGroupBoxHider(self.ui.sensors)
         PythonQt.dd.ddGroupBoxHider(self.ui.fingerControl)
 
@@ -222,15 +226,16 @@ class HandControlPanel(object):
                                                  0)  # can ignore mode because scissor will override
         self.storedCommand[side] = None
 
-    def updatePanel(self):
+    def updateWristFTVis(self):
+        self.wristftvis.updateDrawSettings(self.ui.leftVisCheck.checked, self.ui.rightVisCheck.checked, self.ui.torqueVisCheck.checked);
 
+    def updatePanel(self):
         if self.ui.repeaterCheckBox.checked and self.storedCommand['left']:
             position, force, velocity, mode = self.storedCommand['left']
             self.drivers['left'].sendCustom(position, force, velocity, mode)
         if self.ui.repeaterCheckBox.checked and self.storedCommand['right']:
             position, force, velocity, mode = self.storedCommand['right']
             self.drivers['right'].sendCustom(position, force, velocity, mode)
-        self.wristftvis.doFTDraw(self.ui.leftVisCheck.checked, self.ui.rightVisCheck.checked, self.ui.torqueVisCheck.checked);
 
 
 

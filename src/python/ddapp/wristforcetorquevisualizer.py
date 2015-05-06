@@ -1,11 +1,13 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
+import ddapp.objectmodel as om
 from ddapp import lcmUtils
 from ddapp import applogic as app
 from ddapp.utime import getUtime
 from ddapp.timercallback import TimerCallback
 from ddapp import visualization as vis
 from ddapp.debugVis import DebugData
+
 
 import numpy as np
 import math
@@ -27,6 +29,12 @@ class WristForceTorqueVisualizer(object):
         self.ft_right_calib_pts = [];
         self.ft_right_calib_des = [];
         self.view = view
+
+        # Draw on robot state update
+        self.draw_left = False;
+        self.draw_right = False;
+        self.draw_torque = False;
+        self.robotStateModel.connectModelChanged(self.doFTDraw)
 
     def recomputeBiases(self):
         ft_right_bias_new = np.array([0.0]*6);
@@ -110,13 +118,19 @@ class WristForceTorqueVisualizer(object):
             self.ft_left_bias = np.array(self.robotStateJointController.lastRobotStateMessage.force_torque.l_hand_force +
                   self.robotStateJointController.lastRobotStateMessage.force_torque.l_hand_torque)
             
-    def doFTDraw(self, draw_left, draw_right, draw_torque):
+    def updateDrawSettings(self, draw_left, draw_right, draw_torque):
+        self.draw_torque = draw_torque;
+        self.draw_right = draw_right;
+        self.draw_left = draw_left;
+        om.removeFromObjectModel(om.findObjectByName("wristft"))
+
+    def doFTDraw(self, unusedrobotstate):
         frames = [];
         fts = [];
         vis_names = [];
         if (hasattr(self.robotStateJointController, 'lastRobotStateMessage') and 
             self.robotStateJointController.lastRobotStateMessage):
-            if (draw_right):
+            if (self.draw_right):
                 rft = np.array(self.robotStateJointController.lastRobotStateMessage.force_torque.r_hand_force +
                   self.robotStateJointController.lastRobotStateMessage.force_torque.r_hand_torque)
                 rft[0] = -1.*rft[0]; # right FT looks to be rotated 180deg around the z axis
@@ -127,7 +141,7 @@ class WristForceTorqueVisualizer(object):
                 fts.append(rft);
                 frames.append(self.robotStateModel.getLinkFrame('r_hand_force_torque'));
                 vis_names.append('ft_right');
-            if (draw_left):
+            if (self.draw_left):
                 lft = np.array(self.robotStateJointController.lastRobotStateMessage.force_torque.l_hand_force +
                   self.robotStateJointController.lastRobotStateMessage.force_torque.l_hand_torque)
                 lft -= self.ft_left_bias;
@@ -153,7 +167,7 @@ class WristForceTorqueVisualizer(object):
             else:
                 d.addArrow(p1, p2f, color=[1.,0.,0.])
             # torque
-            if (draw_torque):
+            if (self.draw_torque):
                 d.addCircle(p1, normalt, scalet*np.linalg.norm(ft[3:6]));
             # frame (largely for debug)
             vis.updateFrame(frame, vis_names[i]+'frame', view=self.view, parent='wristft');
