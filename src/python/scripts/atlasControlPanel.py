@@ -1,6 +1,7 @@
 from ddapp import atlasdriver
 from ddapp import consoleapp
 from PythonQt import QtCore, QtGui
+from collections import namedtuple
 
 atlasDriver = atlasdriver.init()
 
@@ -8,20 +9,19 @@ atlasDriver = atlasdriver.init()
 w = QtGui.QWidget()
 l = QtGui.QVBoxLayout(w)
 
-fb = QtGui.QPushButton('Freeze')
-sb = QtGui.QPushButton('Stop')
+Button = namedtuple('Button', ['name', 'callback']);
+buttons = [Button('Freeze', atlasDriver.sendFreezeCommand),
+           Button('Stop', atlasDriver.sendStopCommand),
+           Button('Reactive Recovery', atlasDriver.sendRecoveryTriggerOn)]
 
-fb.connect('clicked()', atlasDriver.sendFreezeCommand)
-sb.connect('clicked()', atlasDriver.sendStopCommand)
-
-fb.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-sb.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-
-l.addWidget(fb)
-l.addWidget(sb)
+for button in buttons:
+    qb = QtGui.QPushButton(button.name)
+    qb.connect('clicked()', button.callback)
+    qb.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+    l.addWidget(qb)
 
 w.setWindowTitle('Atlas Control Panel')
 w.show()
-w.resize(500,500)
+w.resize(500,600)
 
 consoleapp.ConsoleApp.start()

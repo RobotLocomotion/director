@@ -62,6 +62,7 @@ class AtlasDriverPanel(object):
     def updatePanel(self):
         self.updateBehaviorLabel()
         self.updateControllerStatusLabel()
+        self.updateRecoveryEnabledLabel()
         self.updateStatus()
         self.updateButtons()
         self.updateElectricArmStatus()
@@ -72,6 +73,9 @@ class AtlasDriverPanel(object):
 
     def updateControllerStatusLabel(self):
         self.ui.controllerStatusLabel.text = self.driver.getControllerStatus() or '<unknown>'
+
+    def updateRecoveryEnabledLabel(self):
+        self.ui.recoveryEnabledLabel.text = self.driver.getRecoveryEnabledStatus() or '<unknown>'
 
     def updateStatus(self):
         self.ui.inletPressure.value = self.driver.getCurrentInletPressure()
