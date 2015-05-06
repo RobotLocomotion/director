@@ -26,6 +26,7 @@ from ddapp import drilldemo
 from ddapp import tabledemo
 from ddapp import valvedemo
 from ddapp import drivingplanner
+from ddapp import egressplanner
 from ddapp import polarisplatformplanner
 from ddapp import continuouswalkingdemo
 from ddapp import sitstandplanner
@@ -429,6 +430,8 @@ if usePlanning:
 
     platformTaskPanel = polarisplatformplanner.PolarisPlatformPlannerPanel(robotSystem)
 
+    egressPanel = egressplanner.EgressPanel(robotSystem)
+
     taskPanels = OrderedDict()
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
@@ -437,6 +440,7 @@ if usePlanning:
     taskPanels['Driving'] = drivingPlannerPanel.widget
     taskPanels['Sit/Stand'] = sitStandPlannerPanel.widget
     taskPanels['Platform'] = platformTaskPanel.widget
+    taskPanels['Egress'] = egressPanel.widget
     
     tasklaunchpanel.init(taskPanels)
 
