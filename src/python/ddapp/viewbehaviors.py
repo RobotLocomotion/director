@@ -310,16 +310,16 @@ def toggleFrameWidget(displayPoint, view):
 
 def newWalkingGoal(displayPoint, view):
 
+    footFrame = footstepsDriver.getFeetMidPoint(robotModel)
 
     worldPt1, worldPt2 = vis.getRayFromDisplayPoint(view, displayPoint)
-    groundOrigin = [0.0, 0.0, 0.0]
+    groundOrigin = footFrame.GetPosition()
     groundNormal = [0.0, 0.0, 1.0]
     selectedGroundPoint = [0.0, 0.0, 0.0]
 
     t = vtk.mutable(0.0)
     vtk.vtkPlane.IntersectWithLine(worldPt1, worldPt2, groundNormal, groundOrigin, t, selectedGroundPoint)
 
-    footFrame = footstepsDriver.getFeetMidPoint(robotModel)
     footFrame.Translate(np.array(selectedGroundPoint) - np.array(footFrame.GetPosition()))
 
     footstepsdriverpanel.panel.onNewWalkingGoal(footFrame)
