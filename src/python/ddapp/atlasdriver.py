@@ -140,6 +140,13 @@ class AtlasDriver(object):
         assert state in statusMap
         return statusMap[state]
 
+    def getRecoveryEnabledStatus(self):
+        if not self.lastControllerStatusMessage:
+            return None
+        if self.lastControllerStatusMessage.recovery_enabled:
+            return "enabled"
+        else:
+            return "disabled"
 
     def getElectricArmEnabledStatus(self, i):
         assert 0 <= i <= 5
@@ -212,6 +219,26 @@ class AtlasDriver(object):
         msg = lcmdrc.utime_t()
         msg.utime = getUtime()
         lcmUtils.publish('START_MIT_STAND', msg)
+
+    def sendRecoveryEnable(self):
+        msg = lcmdrc.boolean_t()
+        msg.data = True
+        lcmUtils.publish('RECOVERY_ENABLE', msg)
+
+    def sendRecoveryDisable(self):
+        msg = lcmdrc.boolean_t()
+        msg.data = False
+        lcmUtils.publish('RECOVERY_ENABLE', msg)
+
+    def sendRecoveryTriggerOn(self):
+        msg = lcmdrc.boolean_t()
+        msg.data = True
+        lcmUtils.publish('RECOVERY_TRIGGER', msg)
+
+    def sendRecoveryTriggerOff(self):
+        msg = lcmdrc.boolean_t()
+        msg.data = False
+        lcmUtils.publish('RECOVERY_TRIGGER', msg)
 
     def sendManipCommand(self):
         self.sendBehaviorCommand('manip')
