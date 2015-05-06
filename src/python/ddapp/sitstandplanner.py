@@ -31,9 +31,8 @@ class SitStandPlanner(object):
         commands = ['''
         addpath([getenv('DRC_BASE'), '/software/control/matlab/planners/chair_standup']);
         pssRobot = s.robot;
-        s = warning('Off','KinematicPoseTrajectory:Terrain');
+        warning('Off','KinematicPoseTrajectory:Terrain');
         pss = PlanSitStand(pssRobot);
-        s = warning('Off','KinematicPoseTrajectory:Terrain');
       ''']
         return commands
 
