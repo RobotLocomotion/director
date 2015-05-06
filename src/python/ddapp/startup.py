@@ -948,3 +948,25 @@ class RobotMoverWidget(object):
         q[:3] = pos
         q[3:6] = rpy
         self.jointController.setPose('moved_pose', q)
+
+
+class RobotGridUpdater(object):
+
+    def __init__(self, gridFrame, robotModel, jointController):
+        self.gridFrame = gridFrame
+        self.robotModel = robotModel
+        self.jointController = jointController
+        self.robotModel.connectModelChanged(self.updateGrid)
+
+    def updateGrid(self, model):
+        pos = self.jointController.q[:3]
+
+        x = int(np.round(pos[0])) / 10
+        y = int(np.round(pos[1])) / 10
+        z = int(np.round(pos[2] - 0.85)) / 1
+
+        t = vtk.vtkTransform()
+        t.Translate((x*10,y*10,z))
+        self.gridFrame.copyFrame(t)
+
+gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
