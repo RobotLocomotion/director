@@ -51,7 +51,7 @@ class AtlasDriver(object):
         self._controllerStatusMap = None
 
     def _setupSubscriptions(self):
-        lcmUtils.addSubscriber('CONTROLLER_STATUS', lcmdrc.controller_status_t, self.onControllerStatus)
+        lcmUtils.addSubscriber('PLAN_EXECUTION_STATUS', lcmdrc.plan_status_t, self.onControllerStatus)
         lcmUtils.addSubscriber('ATLAS_BATTERY_DATA', lcmdrc.atlas_battery_data_t, self.onAtlasBatteryData)
         lcmUtils.addSubscriber('ATLAS_ELECTRIC_ARM_STATUS', lcmdrc.atlas_electric_arm_status_t, self.onAtlasElectricArmStatus)
         sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
@@ -94,7 +94,7 @@ class AtlasDriver(object):
         Return a dict that maps controller status ids (int) to names (string).
         '''
         if not self._controllerStatusMap:
-            msg = lcmdrc.controller_status_t
+            msg = lcmdrc.plan_status_t
             self._controllerStatusMap = {
                     msg.UNKNOWN       : 'unknown',
                     msg.STANDING      : 'standing',
@@ -136,7 +136,7 @@ class AtlasDriver(object):
             return None
 
         statusMap = self.getControllerStatusMap()
-        state = self.lastControllerStatusMessage.state
+        state = self.lastControllerStatusMessage.plan_type
         assert state in statusMap
         return statusMap[state]
 
