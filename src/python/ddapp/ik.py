@@ -47,6 +47,10 @@ class AsyncIKCommunicator():
         self.rrtGoalBias = 1.0
         self.rrtMaxNumVertices = 5000
         self.rrtNSmoothingPasses = 10;
+        self.maxBodyTranslationSpeed = 0.50
+        self.maxBodyRotationSpeed = 10
+        self.rescaleBodyNames = []
+        self.rescaleBodyPts = []
 
         self.callbacks = callbacks.CallbackRegistry([self.STARTUP_COMPLETED])
 
@@ -334,7 +338,13 @@ class AsyncIKCommunicator():
         commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % self.maxBaseMetersPerSecond)
         commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % self.maxBaseRPYDegreesPerSecond)
         commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; rpy_v_max; joint_v_max]; end;')
-        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s); end;' % (self.accelerationParam, self.accelerationFraction))
+
+        commands.append("max_body_translation_speed = %r;" % self.maxBodyTranslationSpeed)
+        commands.append("max_body_rotation_speed = %r;" % self.maxBodyRotationSpeed)
+        commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in self.rescaleBodyNames])))
+        commands.append('rescale_body_pts = %s;' % ConstraintBase.toColumnVectorString(self.rescaleBodyPts))
+        commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
+        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s, body_rescale_options); end;' % (self.accelerationParam, self.accelerationFraction))
 
         if self.usePointwise:
             assert not self.useCollision

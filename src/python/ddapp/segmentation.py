@@ -156,7 +156,7 @@ class DisparityPointCloudItem(vis.PolyDataItem):
         self.addProperty('Channel', imagesChannel)
         self.addProperty('Camera name', cameraName)
 
-        self.addProperty('Decimation', 2, attributes=om.PropertyAttributes(enumNames=['1', '2', '4', '8', '16']))
+        self.addProperty('Decimation', 0, attributes=om.PropertyAttributes(enumNames=['1', '2', '4', '8', '16']))
         self.addProperty('Remove Size', 1000, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=100000.0, singleStep=1000))
         self.addProperty('Target FPS', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=30.0, singleStep=0.1))
 
@@ -2312,14 +2312,24 @@ def getDrillAffordanceParams(origin, xaxis, yaxis, zaxis, drillType="dewalt_butt
     return params
 
 
-def getDrillMesh():
+def getDrillMesh(applyBitOffset=False):
 
     button = np.array([0.007, -0.035, -0.06])
     drillMesh = ioUtils.readPolyData(os.path.join(app.getDRCBase(), 'software/models/otdf/dewalt_button.obj'))
+
+    if applyBitOffset:
+        t = vtk.vtkTransform()
+        t.Translate(0.01, 0.0, 0.0)
+        drillMesh = transformPolyData(drillMesh, t)
+
     d = DebugData()
     d.addPolyData(drillMesh)
     d.addSphere(button, radius=0.005, color=[0,1,0])
-    return d.getPolyData()
+    d.addLine([0.0,0.0,0.155], [0.0, 0.0, 0.14], radius=0.001, color=[0,1,0])
+
+    return shallowCopy(d.getPolyData())
+
+
 
 
 def getDrillBarrelMesh():
