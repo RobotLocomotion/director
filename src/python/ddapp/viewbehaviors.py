@@ -524,6 +524,9 @@ def showRightClickMenu(displayPoint, view):
     def onCopyPointCloud():
         polyData = vtk.vtkPolyData()
         polyData.DeepCopy(pointCloudObj.polyData)
+        if pointCloudObj.getChildFrame():
+            polyData = segmentation.transformPolyData(polyData, pointCloudObj.getChildFrame().transform)
+        polyData = segmentation.addCoordArraysToPolyData(polyData)
         obj = vis.showPolyData(polyData, pointCloudObj.getProperty('Name') + ' copy', color=[0,1,0], parent='segmentation')
         om.setActiveObject(obj)
         pickedObj.setProperty('Visible', False)
