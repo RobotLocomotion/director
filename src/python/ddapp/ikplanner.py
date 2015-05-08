@@ -882,6 +882,15 @@ class IKPlanner(object):
         return self.newGraspToHandFrame(side, t)
 
 
+    def computeFrameToHand(self, startPose, side, frameToWorld):
+        '''
+        Given a starting pose, a side, and a frame in world, returns the relative transform
+        from the frame to the left/right hand link using forward kinematics.
+        '''
+        handToWorld = self.getLinkFrameAtPose(self.getHandLink(side), startPose)
+        worldToHand = handToWorld.GetLinearInverse()
+        return transformUtils.concatenateTransforms([frameToWorld, worldToHand])
+
     def newGraspToHandFrame(self, side, graspToPalmFrame=None):
         '''
         Creates a grasp to hand link frame given a grasp to palm transform.
