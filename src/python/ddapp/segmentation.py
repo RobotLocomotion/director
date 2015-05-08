@@ -408,33 +408,21 @@ def showMajorPlanes(polyData=None):
         obj.setProperty('Point Size', 3)
 
 
-def cropToBox(polyData, params, expansionDistance=0.1):
+def cropToBox(polyData, transform, dimensions):
 
+    origin = np.array(transform.GetPosition())
+    axes = transformUtils.getAxesFromTransform(transform)
 
-    origin = params['origin']
-
-    xwidth = params['xwidth']
-    ywidth = params['ywidth']
-    zwidth = params['zwidth']
-
-    xaxis = params['xaxis']
-    yaxis = params['yaxis']
-    zaxis = params['zaxis']
-
-
-    for axis, width in ((xaxis, xwidth), (yaxis, ywidth), (zaxis, zwidth)):
-        cropAxis = axis*(width/2.0 + expansionDistance)
+    for axis, length in zip(axes, dimensions):
+        cropAxis = np.array(axis)*(length/2.0)
         polyData = cropToLineSegment(polyData, origin - cropAxis, origin + cropAxis)
 
-    updatePolyData(polyData, 'cropped')
+    return polyData
 
 
 def cropToSphere(polyData, origin, radius):
     polyData = labelDistanceToPoint(polyData, origin)
     return thresholdPoints(polyData, 'distance_to_point', [0, radius])
-
-
-
 
 
 def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpendicularAxis=None, angleEpsilon=0.2, returnOrigin=False, searchOrigin=None, searchRadius=None):
