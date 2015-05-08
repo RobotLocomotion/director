@@ -288,6 +288,7 @@ class TaskUserPanel(object):
         self.ui.promptAcceptButton.connect('clicked()', self.onAcceptPrompt)
         self.ui.promptRejectButton.connect('clicked()', self.onRejectPrompt)
         self.clearPrompt()
+        self.updateTaskButtons()
 
 
 class ImageBasedAffordanceFit(object):
