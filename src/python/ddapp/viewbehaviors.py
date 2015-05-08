@@ -310,16 +310,16 @@ def toggleFrameWidget(displayPoint, view):
 
 def newWalkingGoal(displayPoint, view):
 
+    footFrame = footstepsDriver.getFeetMidPoint(robotModel)
 
     worldPt1, worldPt2 = vis.getRayFromDisplayPoint(view, displayPoint)
-    groundOrigin = [0.0, 0.0, 0.0]
+    groundOrigin = footFrame.GetPosition()
     groundNormal = [0.0, 0.0, 1.0]
     selectedGroundPoint = [0.0, 0.0, 0.0]
 
     t = vtk.mutable(0.0)
     vtk.vtkPlane.IntersectWithLine(worldPt1, worldPt2, groundNormal, groundOrigin, t, selectedGroundPoint)
 
-    footFrame = footstepsDriver.getFeetMidPoint(robotModel)
     footFrame.Translate(np.array(selectedGroundPoint) - np.array(footFrame.GetPosition()))
 
     footstepsdriverpanel.panel.onNewWalkingGoal(footFrame)
@@ -357,7 +357,8 @@ def toggleFootstepWidget(displayPoint, view):
 
     footMesh = shallowCopy(obj.polyData)
     footFrame = transformUtils.copyFrame(obj.getChildFrame().transform)
-    footFrame = transformUtils.frameFromPositionAndRPY(footFrame.GetPosition(), [0.0, 0.0, footFrame.GetOrientation()[2]])
+    rpy = [0.0, 0.0, transformUtils.rollPitchYawFromTransform(footFrame)[2]]
+    footFrame = transformUtils.frameFromPositionAndRPY(footFrame.GetPosition(), np.degrees(rpy))
 
     footObj = vis.showPolyData(footMesh, 'footstep widget', parent='planning', alpha=0.2)
     footObj.stepIndex = stepIndex
@@ -523,6 +524,9 @@ def showRightClickMenu(displayPoint, view):
     def onCopyPointCloud():
         polyData = vtk.vtkPolyData()
         polyData.DeepCopy(pointCloudObj.polyData)
+        if pointCloudObj.getChildFrame():
+            polyData = segmentation.transformPolyData(polyData, pointCloudObj.getChildFrame().transform)
+        polyData = segmentation.addCoordArraysToPolyData(polyData)
         obj = vis.showPolyData(polyData, pointCloudObj.getProperty('Name') + ' copy', color=[0,1,0], parent='segmentation')
         om.setActiveObject(obj)
         pickedObj.setProperty('Visible', False)
