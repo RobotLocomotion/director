@@ -1,3 +1,4 @@
+import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 import ddapp.applogic as app
 import ddapp.objectmodel as om
@@ -15,6 +16,7 @@ import ddapp.applogic as app
 import functools
 import math
 import numpy as np
+import types
 
 
 def addWidgetsToDict(widgets, d):
@@ -76,6 +78,10 @@ class EndEffectorTeleopPanel(object):
         self.ui.rhandCombo.connect('currentIndexChanged(const QString&)', self.rhandComboChanged)
         self.ui.lfootCombo.connect('currentIndexChanged(const QString&)', self.lfootComboChanged)
         self.ui.rfootCombo.connect('currentIndexChanged(const QString&)', self.rfootComboChanged)
+        self.ui.leftFootSupportCheckbox.connect('clicked()', self.leftFootSupportCheckboxChanged)
+        self.ui.rightFootSupportCheckbox.connect('clicked()', self.rightFootSupportCheckboxChanged)
+        self.ui.leftHandSupportCheckbox.connect('clicked()', self.leftHandSupportCheckboxChanged)
+        self.ui.rightHandSupportCheckbox.connect('clicked()', self.rightHandSupportCheckboxChanged)
 
         self.palmOffsetDistance = 0.0
         self.palmGazeAxis = [0.0, 1.0, 0.0]
@@ -88,6 +94,14 @@ class EndEffectorTeleopPanel(object):
 
     def getComboText(self, combo):
         return str(combo.currentText)
+
+    def setCheckboxState(self, checkbox, state):
+        assert type(value) is types.BooleanType
+        checkbox.checked = value
+
+    def getCheckboxState(self, checkbox):
+        return checkbox.checked
+
 
     def getBaseConstraint(self):
         return self.getComboText(self.ui.baseCombo)
@@ -125,6 +139,30 @@ class EndEffectorTeleopPanel(object):
     def setRFootConstraint(self, value):
         return self.setComboText(self.ui.rfootCombo, value)
 
+    def getLFootSupportEnabled(self):
+        return self.getCheckboxState(self.ui.leftFootSupportCheckbox)
+
+    def setLFootSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.leftFootSupportCheckbox, value)
+
+    def getRFootSupportEnabled(self):
+        return self.getCheckboxState(self.ui.rightFootSupportCheckbox)
+
+    def setRFootSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.rightFootSupportCheckbox, value)
+
+    def getLHandSupportEnabled(self):
+        return self.getCheckboxState(self.ui.leftHandSupportCheckbox)
+
+    def setLHandSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.leftHandSupportCheckbox, value)
+
+    def getRHandSupportEnabled(self):
+        return self.getCheckboxState(self.ui.rightHandSupportCheckbox)
+
+    def setRHandSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.rightHandSupportCheckbox, value)
+
     def baseComboChanged(self):
         self.updateConstraints()
 
@@ -141,6 +179,18 @@ class EndEffectorTeleopPanel(object):
         self.updateConstraints()
 
     def rfootComboChanged(self):
+        self.updateConstraints()
+
+    def leftFootSupportCheckboxChanged(self):
+        self.updateConstraints()
+
+    def rightFootSupportCheckboxChanged(self):
+        self.updateConstraints()
+
+    def leftHandSupportCheckboxChanged(self):
+        self.updateConstraints()
+
+    def rightHandSupportCheckboxChanged(self):
         self.updateConstraints()
 
     def onGoalFrameModified(self, frame):
@@ -233,7 +283,6 @@ class EndEffectorTeleopPanel(object):
 
 
         constraints = []
-        constraints.append(ikPlanner.createQuasiStaticConstraint())
         constraints.append(ikPlanner.createLockedNeckPostureConstraint(startPoseName))
 
         if self.getLFootConstraint() == 'fixed':
@@ -284,6 +333,13 @@ class EndEffectorTeleopPanel(object):
             constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
             ikPlanner.setBaseLocked(False)
 
+        ikPlanner.leftFootSupportEnabled = self.getLFootSupportEnabled()
+        ikPlanner.rightFootSupportEnabled = self.getRFootSupportEnabled()
+        ikPlanner.leftHandSupportEnabled = self.getLHandSupportEnabled()
+        ikPlanner.rightHandSupportEnabled = self.getRHandSupportEnabled()
+
+        if not (ikPlanner.leftHandSupportEnabled or ikPlanner.rightHandSupportEnabled):
+            constraints.append(ikPlanner.createQuasiStaticConstraint())
 
         # Remove all except the fixed base constraint if you only have an arm:
         if ikPlanner.fixedBaseArm == True:
@@ -292,7 +348,7 @@ class EndEffectorTeleopPanel(object):
 
 
         if ikPlanner.robotNoFeet == True:
-            constraints = []  
+            constraints = []
             constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
             if self.getBackConstraint() == 'fixed':
                 constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
@@ -1030,6 +1086,7 @@ class TeleopPanel(object):
             self.ui.endEffectorTeleopFrame.setVisible(False)
             self.generalEndEffectorTeleopPanel = GeneralEndEffectorTeleopPanel(ikPlanner, self, robotStateModel, robotStateJointController)
             self.widget.layout().addWidget(self.generalEndEffectorTeleopPanel.widget, 0, 0, 1, 2)
+        PythonQt.dd.ddGroupBoxHider(self.ui.paramsContainer)
 
     def onPostureDatabaseClicked(self):
         ikplanner.RobotPoseGUIWrapper.initCaptureMethods(self.robotStateJointController, self.teleopJointController)

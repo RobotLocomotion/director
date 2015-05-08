@@ -24,13 +24,14 @@ class ManipulationPlanDriver(object):
     PLAN_RECEIVED = 'PLAN_RECEIVED'
     PLAN_COMMITTED = 'PLAN_COMMITTED'
 
-    def __init__(self):
+    def __init__(self, ikPlanner):
         lcmUtils.addSubscriber('CANDIDATE_MANIP_PLAN', lcmdrc.robot_plan_w_keyframes_t, self.onManipPlan)
         lcmUtils.addSubscriber('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS',lcmdrc.robot_plan_with_supports_t, self.onManipPlan)
         self.lastManipPlan = None
         self.committedPlans = []
         self.callbacks = callbacks.CallbackRegistry([self.PLAN_RECEIVED,
                                                      self.PLAN_COMMITTED])
+        self.ikPlanner = ikPlanner
 
     def onManipPlan(self, msg):
         self.lastManipPlan = msg
@@ -55,6 +56,19 @@ class ManipulationPlanDriver(object):
 
         return msg
 
+    def convertPlanToPlanWithSupports(self, planMsg, supports, ts):
+        assert(len(supports) == len(ts))
+        msg = lcmdrc.robot_plan_with_supports_t()
+        msg.utime = planMsg.utime
+        msg.plan = planMsg
+        msg.support_sequence.utime = planMsg.utime
+        msg.support_sequence.num_ts = len(ts)
+        msg.support_sequence.ts = ts
+        msg.support_sequence.supports = supports
+
+        return msg
+
+
     def commitManipPlan(self, manipPlan):
 
         if manipPlan in self.committedPlans:
@@ -63,6 +77,9 @@ class ManipulationPlanDriver(object):
 
         if isinstance(manipPlan, lcmdrc.robot_plan_w_keyframes_t):
             manipPlan = self.convertKeyframePlan(manipPlan)
+            supports = self.ikPlanner.getSupports()
+            if supports is not None:
+                manipPlan = self.convertPlanToPlanWithSupports(manipPlan, supports, [0.0])
         manipPlan.utime = getUtime()
 
         channelMap = {lcmdrc.robot_plan_with_supports_t:'COMMITTED_ROBOT_PLAN_WITH_SUPPORTS'}
