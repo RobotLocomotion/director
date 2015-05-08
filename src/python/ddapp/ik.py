@@ -34,7 +34,6 @@ class AsyncIKCommunicator():
         self.accelerationParam = 2;
         self.accelerationFraction = 0.3;
         self.maxPlanDuration = 30.0
-        self.usePointwise = True
         self.useCollision = False
         self.fixInitialState = True
         self.numberOfAddedKnots = 0
@@ -169,14 +168,6 @@ class AsyncIKCommunicator():
         return commands
 
 
-    def plotJoints(self, jointNames, filename):
-        commands = []
-        commands.append('\n%-------- plot joints --------\n')
-        commands.append('plot_joint_ids = [%s];' % ', '.join(['joints.%s' % name for name in jointNames]))
-        commands.append("s.saveJointTrajPlot(%s, plot_joint_ids, '%s');" % ('xtraj_pw' if self.usePointwise else 'xtraj', filename))
-        commands.append('\n%-------- plot joints end --------\n')
-        self.comm.sendCommands(commands)
-
     def updateJointLimits(self, limitData):
         commands = []
         commands.append('joint_limit_min_new = r.joint_limit_min;')
@@ -262,7 +253,7 @@ class AsyncIKCommunicator():
         self.fetchPoseFromServer('q_trajPose')
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, timeSamples=None, additionalTimeSamples=0):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0):
 
         if timeSamples is None:
             timeSamples = np.hstack([constraint.tspan for constraint in constraints])
@@ -346,7 +337,7 @@ class AsyncIKCommunicator():
         commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
         commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s, body_rescale_options); end;' % (self.accelerationParam, self.accelerationFraction))
 
-        if self.usePointwise:
+        if ikParameters.usePointwise:
             assert not self.useCollision
             commands.append('\n%--- pointwise ik --------\n')
             commands.append('if ~isempty(qtraj), num_pointwise_time_points = 20; end;')
@@ -364,7 +355,7 @@ class AsyncIKCommunicator():
 
         publish = True
         if publish:
-            commands.append('if ~isempty({0}), s.publishTraj({0}, info); end;'.format('qtraj_pw' if self.usePointwise else 'qtraj'))
+            commands.append('if ~isempty({0}), s.publishTraj({0}, info); end;'.format('qtraj_pw' if ikParameters.usePointwise else 'qtraj'))
 
         commands.append('\n%--- runIKTraj end --------\n')
         #self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
