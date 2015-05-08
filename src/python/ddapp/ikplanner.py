@@ -25,6 +25,7 @@ from ddapp import segmentation
 from ddapp import drcargs
 
 from ddapp import ik
+from ddapp.ikparameters import IkParameters
 
 import drc as lcmdrc
 
@@ -97,7 +98,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.ikServer = ikServer
         self.ikPlanner = ikPlanner
 
-        self.addProperty('Use pointwise', ikServer.usePointwise)
+        self.addProperty('Use pointwise', ikPlanner.ikParameters.usePointwise)
         self.addProperty('Use collision', ikServer.useCollision)
         self.addProperty('Collision min distance', ikServer.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikServer.numberOfAddedKnots)
@@ -121,7 +122,7 @@ class IkOptionsItem(om.ObjectModelItem):
         om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
 
         if propertyName == 'Use pointwise':
-            self.ikServer.usePointwise = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.usePointwise = self.getProperty(propertyName)
 
         if propertyName == 'Use collision':
             self.ikServer.useCollision = self.getProperty(propertyName)
@@ -184,6 +185,8 @@ class IKPlanner(object):
     def __init__(self, ikServer, robotModel, jointController, handModels):
 
         self.ikServer = ikServer
+        self.defaultIkParameters = IkParameters()
+        self.defaultIkParameters.setToDefaults()
         self.robotModel = robotModel
         self.jointController = jointController
         self.handModels = handModels
@@ -1242,9 +1245,11 @@ class IKPlanner(object):
         lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, functools.partial(self.onPostureGoalMessage, stateJointController))
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=IkParameters()):
 
         listener = self.getManipPlanListener()
+
+        ikParameters.fillInWith(self.defaultIkParameters)
 
         info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
         print 'traj info:', info

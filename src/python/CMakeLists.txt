@@ -43,6 +43,7 @@ set(python_files
   ddapp/takktilevis.py
   ddapp/ik.py
   ddapp/ikconstraints.py
+  ddapp/ikparameters.py
   ddapp/ikplanner.py
   ddapp/__init__.py
   ddapp/ioUtils.py
