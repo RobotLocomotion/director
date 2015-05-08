@@ -39,7 +39,7 @@ class EgressPanel(TaskUserPanel):
         self.addManualButton('Hold Without Pelvis Contact', functools.partial(self.onPlan, 'hold_without_pelvis_contact'))
 
         # polaris step down buttons
-        self.addManualButton('Fit Platform Affordance', self.platformPlanner.segmentPlatform)
+        self.addManualButton('Fit Platform Affordance', self.platformPlanner.fitRunningBoardAtFeet)
         self.addManualButton('Spawn Ground Affordance', self.platformPlanner.spawnGroundAffordance)
         self.addManualButton('Raycast Terrain', self.platformPlanner.requestRaycastTerrain)
         self.addManualButton('Update Affordance', self.platformPlanner.updateAffordance)

@@ -23,7 +23,6 @@ from ddapp.utime import getUtime
 from ddapp import affordanceitems
 from ddapp import robotstate
 from ddapp import robotplanlistener
-from ddapp import segmentation
 from ddapp import planplayback
 from ddapp import affordanceupdater
 from ddapp import segmentationpanel
@@ -31,8 +30,8 @@ from ddapp import segmentation
 from ddapp import terraintask
 from ddapp import footstepsdriverpanel
 from ddapp.footstepsdriver import FootstepRequestGenerator
+from ddapp import vtkNumpy as vnp
 
-import ddapp.terrain
 
 from ddapp.tasks.taskuserpanel import TaskUserPanel
 from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
@@ -67,7 +66,7 @@ class PolarisPlatformPlanner(object):
         self.minHoldTime = 2
 
     def updateAffordance(self):
-        self.platform = om.findObjectByName('box')
+        self.platform = om.findObjectByName('running board')
         self.dimensions = np.array(self.platform.getProperty('Dimensions'))
 
     def updateFramesAndAffordance(self):
@@ -230,8 +229,95 @@ class PolarisPlatformPlanner(object):
         return request
 
 
-    def segmentPlatform(self):
-        segmentation.startInteractiveLineDraw([0.4,0.3])
+
+    def spawnRunningBoardAffordance(self):
+
+        boxDimensions = [0.4, 1.0, 0.05]
+        stanceFrame = self.robotSystem.footstepsDriver.getFeetMidPoint(self.robotSystem.robotStateModel, useWorldZ=False)
+
+        boxFrame = transformUtils.copyFrame(stanceFrame)
+        boxFrame.PreMultiply()
+        boxFrame.Translate(0.0, 0.0, -boxDimensions[2]/2.0)
+
+        box = om.findObjectByName('running board')
+        if not box:
+            pose = transformUtils.poseFromTransform(boxFrame)
+            desc = dict(classname='BoxAffordanceItem', Name='running board', Dimensions=boxDimensions, pose=pose)
+            box = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
+
+        return box
+
+    def fitRunningBoardAtFeet(self):
+
+        # get stance frame
+        startPose = self.getPlanningStartPose()
+        stanceFrame = self.robotSystem.footstepsDriver.getFeetMidPoint(self.robotSystem.robotStateModel, useWorldZ=False)
+        stanceFrameAxes = transformUtils.getAxesFromTransform(stanceFrame)
+
+        # get pointcloud and extract search region covering the running board
+        polyData = segmentation.getCurrentRevolutionData()
+        polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+        _, polyData = segmentation.removeGround(polyData)
+        polyData = segmentation.cropToBox(polyData, stanceFrame, [1.0, 1.0, 0.1])
+
+        if not polyData.GetNumberOfPoints():
+            print 'empty search region point cloud'
+            return
+
+        vis.updatePolyData(polyData, 'running board search points', parent=segmentation.getDebugFolder(), color=[0,1,0], visible=False)
+
+        # extract maximal points along the stance x axis
+        perpAxis = stanceFrameAxes[0]
+        edgeAxis = stanceFrameAxes[1]
+        edgePoints = segmentation.computeEdge(polyData, edgeAxis, perpAxis)
+        edgePoints = vnp.getVtkPolyDataFromNumpyPoints(edgePoints)
+        vis.updatePolyData(edgePoints, 'edge points', parent=segmentation.getDebugFolder(), visible=True)
+
+        # ransac fit a line to the edge points
+        linePoint, lineDirection, fitPoints = segmentation.applyLineFit(edgePoints)
+        if np.dot(lineDirection, stanceFrameAxes[1]) < 0:
+            lineDirection = -lineDirection
+
+        linePoints = segmentation.thresholdPoints(fitPoints, 'ransac_labels', [1.0, 1.0])
+        dists = np.dot(vnp.getNumpyFromVtk(linePoints, 'Points')-linePoint, lineDirection)
+        p1 = linePoint + lineDirection*np.min(dists)
+        p2 = linePoint + lineDirection*np.max(dists)
+        vis.updatePolyData(fitPoints, 'line fit points', parent=segmentation.getDebugFolder(), colorByName='ransac_labels', visible=False)
+
+
+        # compute a new frame that is in plane with the stance frame
+        # and matches the orientation and position of the detected edge
+        origin = np.array(stanceFrame.GetPosition())
+        normal = np.array(stanceFrameAxes[2])
+
+        # project stance origin to edge, then back to foot frame
+        originProjectedToEdge = linePoint + lineDirection*np.dot(origin - linePoint, lineDirection)
+        originProjectedToPlane = segmentation.projectPointToPlane(originProjectedToEdge, origin, normal)
+        zaxis = np.array(stanceFrameAxes[2])
+        yaxis = np.array(lineDirection)
+        xaxis = np.cross(yaxis, zaxis)
+        xaxis /= np.linalg.norm(xaxis)
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+
+        d = DebugData()
+        d.addSphere(p1, radius=0.005)
+        d.addSphere(p2, radius=0.005)
+        d.addLine(p1, p2)
+        d.addSphere(originProjectedToEdge, radius=0.001, color=[1,0,0])
+        d.addSphere(originProjectedToPlane, radius=0.001, color=[0,1,0])
+        d.addLine(originProjectedToPlane, origin, color=[0,1,0])
+        d.addLine(originProjectedToEdge, origin, color=[1,0,0])
+        vis.updatePolyData(d.getPolyData(), 'running board edge', parent=segmentation.getDebugFolder(), colorByName='RGB255', visible=False)
+
+        # update the running board box affordance position and orientation to
+        # fit the detected edge
+        box = self.spawnRunningBoardAffordance()
+        boxDimensions = box.getProperty('Dimensions')
+        t = transformUtils.getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, originProjectedToPlane)
+        t.PreMultiply()
+        t.Translate(-boxDimensions[0]/2.0, 0.0, -boxDimensions[2]/2.0)
+        box.getChildFrame().copyFrame(t)
 
     #passthrough methods to the terrain task
     # should force updating the affordance before doing this
@@ -288,7 +374,7 @@ class PolarisPlatformPlannerPanel(TaskUserPanel):
         self.stepOffDirection = self.params.getPropertyEnumValue('Step Off Direction').lower()
 
     def onFitPlatformAffordance(self):
-        self.platformPlanner.segmentPlatform()
+        self.platformPlanner.fitRunningBoardAtFeet()
 
     def onSpawnGroundAffordance(self):
         self.platformPlanner.spawnGroundAffordance()

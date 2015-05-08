@@ -496,7 +496,7 @@ class FrameItem(PolyDataItem):
         self._blockSignals = False
         self.transform.Modified()
         parent = self.parent()
-        if parent.getProperty('Visible') or self.getProperty('Visible'):
+        if (parent and parent.getProperty('Visible')) or self.getProperty('Visible'):
             self._renderAllViews()
 
     def getFrameSync(self):
