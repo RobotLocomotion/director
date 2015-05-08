@@ -56,7 +56,7 @@ class ManipulationPlanDriver(object):
 
         return msg
 
-    def convertPlanToPlanWithSupports(self, planMsg, supports, ts):
+    def convertPlanToPlanWithSupports(self, planMsg, supports, ts, isQuasistatic):
         assert(len(supports) == len(ts))
         msg = lcmdrc.robot_plan_with_supports_t()
         msg.utime = planMsg.utime
@@ -65,6 +65,7 @@ class ManipulationPlanDriver(object):
         msg.support_sequence.num_ts = len(ts)
         msg.support_sequence.ts = ts
         msg.support_sequence.supports = supports
+        msg.is_quasistatic = isQuasistatic
 
         return msg
 
@@ -79,7 +80,8 @@ class ManipulationPlanDriver(object):
             manipPlan = self.convertKeyframePlan(manipPlan)
             supports = self.ikPlanner.getSupports()
             if supports is not None:
-                manipPlan = self.convertPlanToPlanWithSupports(manipPlan, supports, [0.0])
+                manipPlan = self.convertPlanToPlanWithSupports(manipPlan, supports, [0.0],
+                                                               self.ikPlanner.plansWithSupportsAreQuasistatic)
         manipPlan.utime = getUtime()
 
         channelMap = {lcmdrc.robot_plan_with_supports_t:'COMMITTED_ROBOT_PLAN_WITH_SUPPORTS'}

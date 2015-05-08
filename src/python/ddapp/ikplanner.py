@@ -200,6 +200,7 @@ class IKPlanner(object):
 
         # HACK
         self.useSupports = False
+        self.plansWithSupportsAreQuasistatic = True
         self.leftFootSupportEnabled  = True
         self.rightFootSupportEnabled = True
         self.leftHandSupportEnabled  = False
