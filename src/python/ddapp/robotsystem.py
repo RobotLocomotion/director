@@ -122,7 +122,6 @@ class RobotSystem(object):
                 playbackJointController.models.append(chullRobotModel)
 
 
-            manipPlanner = robotplanlistener.ManipulationPlanDriver()
             planPlayback = planplayback.PlanPlayback()
 
             if (roboturdf.numberOfHands == 1):
@@ -138,6 +137,7 @@ class RobotSystem(object):
 
             ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)
 
+            manipPlanner = robotplanlistener.ManipulationPlanDriver(ikPlanner)
 
             affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
             affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()

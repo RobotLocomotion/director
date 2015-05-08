@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>349</width>
+    <width>401</width>
     <height>766</height>
    </rect>
   </property>
@@ -26,105 +26,28 @@
       <number>2</number>
      </property>
      <layout class="QGridLayout" name="gridLayout_8">
-      <item row="3" column="1">
-       <widget class="QComboBox" name="rhandCombo">
-        <item>
-         <property name="text">
-          <string>arm fixed</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>ee fixed</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>position</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>free</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>gaze</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>orbit</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label_3">
+      <item row="2" column="2">
+       <widget class="QLabel" name="label_5">
         <property name="text">
-         <string>l_hand</string>
+         <string>l_foot</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="2">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>back</string>
+      <item row="0" column="4">
+       <spacer name="horizontalSpacer_12">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
-       </widget>
-      </item>
-      <item row="2" column="3" colspan="2">
-       <widget class="QComboBox" name="lfootCombo">
-        <item>
-         <property name="text">
-          <string>fixed</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>constrained</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>sliding</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_2">
-        <property name="text">
-         <string>base</string>
+        <property name="sizeType">
+         <enum>QSizePolicy::Expanding</enum>
         </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>r_hand</string>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>107</width>
+          <height>17</height>
+         </size>
         </property>
-       </widget>
-      </item>
-      <item row="1" column="3" colspan="2">
-       <widget class="QComboBox" name="backCombo">
-        <item>
-         <property name="text">
-          <string>fixed</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>limited</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>free</string>
-         </property>
-        </item>
-       </widget>
+       </spacer>
       </item>
       <item row="0" column="0" colspan="4">
        <layout class="QGridLayout" name="gridLayout">
@@ -156,6 +79,20 @@
          </widget>
         </item>
        </layout>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>l_hand</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>back</string>
+        </property>
+       </widget>
       </item>
       <item row="1" column="1">
        <widget class="QComboBox" name="baseCombo">
@@ -190,48 +127,6 @@
          </property>
         </item>
        </widget>
-      </item>
-      <item row="3" column="3" colspan="2">
-       <widget class="QComboBox" name="rfootCombo">
-        <item>
-         <property name="text">
-          <string>fixed</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>constrained</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>sliding</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="2" column="2">
-       <widget class="QLabel" name="label_5">
-        <property name="text">
-         <string>l_foot</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="4">
-       <spacer name="horizontalSpacer_12">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Expanding</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>107</width>
-          <height>17</height>
-         </size>
-        </property>
-       </spacer>
       </item>
       <item row="2" column="1">
        <widget class="QComboBox" name="lhandCombo">
@@ -274,6 +169,13 @@
         </property>
        </widget>
       </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>r_hand</string>
+        </property>
+       </widget>
+      </item>
       <item row="2" column="5">
        <spacer name="horizontalSpacer">
         <property name="orientation">
@@ -286,6 +188,162 @@
          </size>
         </property>
        </spacer>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>base</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3" colspan="2">
+       <widget class="QComboBox" name="backCombo">
+        <item>
+         <property name="text">
+          <string>fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>limited</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>free</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="3" colspan="2">
+       <widget class="QComboBox" name="rfootCombo">
+        <item>
+         <property name="text">
+          <string>fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>constrained</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>sliding</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="rhandCombo">
+        <item>
+         <property name="text">
+          <string>arm fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ee fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>position</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>free</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>gaze</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>orbit</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="2" column="3" colspan="2">
+       <widget class="QComboBox" name="lfootCombo">
+        <item>
+         <property name="text">
+          <string>fixed</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>constrained</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>sliding</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="4" column="0" colspan="5">
+       <widget class="QGroupBox" name="paramsContainer">
+        <property name="title">
+         <string>Advanced Options</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <widget class="QGroupBox" name="groupBox_2">
+           <property name="title">
+            <string>Supports</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_2">
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="leftFootSupportCheckbox">
+              <property name="text">
+               <string>Left Foot</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QCheckBox" name="leftHandSupportCheckbox">
+              <property name="text">
+               <string>Left Hand</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QCheckBox" name="rightFootSupportCheckbox">
+              <property name="text">
+               <string>Right Foot</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QCheckBox" name="rightHandSupportCheckbox">
+              <property name="text">
+               <string>Right Hand</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </item>
      </layout>
     </widget>
