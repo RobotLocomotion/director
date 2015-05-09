@@ -145,6 +145,8 @@ class AtlasCommandStream(object):
     def __init__(self):
         self.timer = TimerCallback(targetFps=5)
         #self.timer.disableScheduledTimer()
+        self.app = ConsoleApp()
+        self.robotModel, self.jointController = roboturdf.loadRobotModel('robot model')
         self.fpsCounter = simpletimer.FPSCounter()
         self.fpsCounter.printToConsole = True
         self.timer.callback = self._tick
@@ -154,6 +156,8 @@ class AtlasCommandStream(object):
         self._numPositions = len(robotstate.getDrakePoseJointNames())
         self._previousElapsedTime = 100
         self._baseFlag = 0;
+        self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
+        self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.applyDefaults()
 
     def initialize(self, currentRobotPose):
@@ -191,9 +195,8 @@ class AtlasCommandStream(object):
         self.setMaxSpeed(70,'l_arm_lwy')
         self.setKp(50,'l_arm_lwy')
         self.setMaxSpeed(100,'l_leg_aky')
-        self.setKp(50,'l_leg_aky')
+        self.setKp(100,'l_leg_aky')
         
-
     def startStreaming(self):
         assert self._initialized
         if not self.timer.isActive():
@@ -202,8 +205,13 @@ class AtlasCommandStream(object):
     def stopStreaming(self):
         self.timer.stop()
 
-    def setGoalPose(self, pose):
-        self._goalPose = np.array(pose)
+    def setGoalPose(self, pose):         
+        self._goalPose = self.clipPoseToJointLimits(pose)
+
+    def clipPoseToJointLimits(self,pose):
+        pose = np.array(pose)
+        pose = np.clip(pose, self.jointLimitsMin, self.jointLimitsMax)
+        return pose
 
     def waitForRobotState(self):
         msg = lcmUtils.captureMessage('EST_ROBOT_STATE', lcmdrc.robot_state_t)
@@ -212,6 +220,7 @@ class AtlasCommandStream(object):
         self.initialize(pose)
 
     def _updateAndSendCommandMessage(self):
+        self._currentCommandedPose = self.clipPoseToJointLimits(self._currentCommandedPose)
         self.lastCommandMessage.position = drakePoseToAtlasCommandPosition(self._currentCommandedPose)
         self.lastCommandMessage.utime = getUtime()
         lcmUtils.publish(self.publishChannel, self.lastCommandMessage)
@@ -250,6 +259,7 @@ class AtlasCommandStream(object):
         v_next = v + elapsed*u
         v_next = np.clip(v_next,-maxSpeed,maxSpeed) # velocity clamp
         nextPose = currentPose + v_next*elapsed
+        nextPose = self.clipPoseToJointLimits(nextPose)
         return nextPose
 
 commandStream = AtlasCommandStream()
