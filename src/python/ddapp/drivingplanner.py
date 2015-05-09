@@ -66,23 +66,25 @@ class DrivingPlanner(object):
         commands.append("clear options;")
         commands.append("options.speed = %r;" % speed)
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planSafe(options,%s)" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planSafe(options,%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
 
 
-    def planPreGrasp(self, depth=0.2, xyz_des=None, angle=0, speed=1):
+    def planPreGrasp(self, depth=0.2, xyz_des=None, angle=0, speed=1, graspLocation='center', turnRadius=0.187):
         commands = []
         commands.append("clear options;")
         commands.append("options = struct('depth',{%r});" % depth)
+        commands.append("options.turn_radius = %r;" % turnRadius)
+        commands.append("options.graspLocation = '%s';" % graspLocation)
         commands.append("options.angle = %r;" % np.radians(angle))
         commands.append("options.speed = %r;" % speed)
 
         if xyz_des is not None:
             commands.append("options.xyz_des = {%s};",ik.ConstraintBase.toColumnVectorString(xyz_des))
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planPreGrasp(options, %s)" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planPreGrasp(options, %s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
@@ -93,7 +95,7 @@ class DrivingPlanner(object):
         commands.append("options = struct('depth',{%r});" % depth)
         commands.append("options.speed = %r;" % speed)
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planTouch(options, %s)" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planTouch(options, %s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
@@ -102,9 +104,9 @@ class DrivingPlanner(object):
         commands = []
         commands.append("clear options;")
         commands.append("options = struct('depth',{%r});" % depth)
-        commands.append("options.speed = %r;" % speed)
+        commands.append("options.speed = %s;" % speed)
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planRetract(options, %s)" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planRetract(options, %s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
@@ -117,6 +119,19 @@ class DrivingPlanner(object):
         commands.append("options.use_raw_angle = 1;")
         startPose = self.getPlanningStartPose()
         commands.append("dp.planTurn(options,%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
+
+        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
+        self.ikServer.taskQueue.start()
+
+    def planSteeringWheelTurn(self, speed=1, knotPoints=20, turnRadius=.187, gazeTol=0.3):
+        commands = []
+        commands.append("clear options;")
+        commands.append("options.speed = %r;" % speed)
+        commands.append("options.turn_radius = %r;" % turnRadius)
+        commands.append("options.N = %r;" % knotPoints)
+        commands.append("options.steering_gaze_tol = %r;" % gazeTol)
+        startPose = self.getPlanningStartPose()
+        commands.append("dp.planSteeringWheelTurn(options,%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
@@ -188,12 +203,17 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addManualButton('Plan Touch', self.onPlanTouch)
         self.addManualButton('Plan Retract', self.onPlanRetract)
         self.addManualButton('Plan Turn', self.onPlanTurn)
+        self.addManualButton('Plan Steering Wheel Turn', self.onPlanSteeringWheelTurn)
 
     def addDefaultProperties(self):
         self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('Touch Depth', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('PreGrasp Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Turn Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
+        self.params.addProperty('Steering Wheel Radius (meters)', 0.1873, attributes=om.PropertyAttributes(singleStep=0.01))
+        self.params.addProperty('Knot Points', 20, attributes=om.PropertyAttributes(singleStep=1))
+        self.params.addProperty('Gaze Constraint Tol', 0.3, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
+        self.params.addProperty('Grasp Location', 0, attributes=om.PropertyAttributes(enumNames=['Center','Rim']))
         self.params.addProperty('Speed', 1.0, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
         self.params.addProperty('Turning Radius', 10.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Wheel Separation', 1.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
@@ -207,6 +227,10 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.preGraspAngle = self.params.getProperty('PreGrasp Angle')
         self.turnAngle = self.params.getProperty('Turn Angle')
         self.speed = self.params.getProperty('Speed')
+        self.turnRadius = self.params.getProperty('Steering Wheel Radius (meters)')
+        self.knotPoints = self.params.getProperty('Knot Points')
+        self.gazeTol = self.params.getProperty('Gaze Constraint Tol')
+        self.graspLocation = self.params.getPropertyEnumValue('Grasp Location').lower()
         self.drivingPlanner.maxTurningRadius = self.params.getProperty('Turning Radius')
         self.drivingPlanner.trajSegments = self.params.getProperty('Trajectory Segments')
         self.drivingPlanner.wheelDistance = self.params.getProperty('Wheel Separation')
@@ -224,6 +248,7 @@ class DrivingPlannerPanel(TaskUserPanel):
 
     def onStart(self):
         self.onUpdateWheelLocation()
+        print('Driving Planner Ready')
 
     def onUpdateWheelLocation(self):
         f = om.findObjectByName('ring frame').transform
@@ -236,7 +261,8 @@ class DrivingPlannerPanel(TaskUserPanel):
 
     def onPlanPreGrasp(self):
         self._syncProperties()
-        self.drivingPlanner.planPreGrasp(depth=self.preGraspDepth, speed=self.speed, angle=self.preGraspAngle)
+        self.drivingPlanner.planPreGrasp(depth=self.preGraspDepth, speed=self.speed, angle=self.preGraspAngle,
+            graspLocation=self.graspLocation, turnRadius=self.turnRadius)
 
     def onPlanTouch(self):
         self._syncProperties()
@@ -250,8 +276,14 @@ class DrivingPlannerPanel(TaskUserPanel):
         self._syncProperties()
         self.drivingPlanner.planTurn(angle=self.turnAngle, speed=self.speed)
 
+    def onPlanSteeringWheelTurn(self):
+        self._syncProperties()
+        self.drivingPlanner.planSteeringWheelTurn(speed=self.speed, turnRadius=self.turnRadius, knotPoints=self.knotPoints, gazeTol=self.gazeTol)
+
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
+
+
 
     def addTasks(self):
 
