@@ -66,7 +66,7 @@ class DrivingPlanner(object):
         commands.append("clear options;")
         commands.append("options.speed = %r;" % speed)
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planSafe(options,%r);" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planSafe(options,%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
