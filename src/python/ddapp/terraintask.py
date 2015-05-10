@@ -75,8 +75,7 @@ class TerrainTask(object):
     def spawnGroundAffordance(self):
 
         polyData = segmentation.getCurrentRevolutionData()
-        groundPoints, normal = segmentation.segmentGroundPoints(polyData)
-        groundOrigin = segmentation.computeCentroid(groundPoints)
+        groundOrigin, normal, groundPoints, _ = segmentation.segmentGround(polyData)
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         origin = np.array(stanceFrame.GetPosition())
