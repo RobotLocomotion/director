@@ -84,7 +84,7 @@ class DoorDemo(object):
 
         self.handleLiftHeight = 0.12
         self.handlePushDepth = 0.0
-        self.handlePushAngle = 10
+        self.handlePushAngle = 5
         self.handleOpenDepth = 0.1
         self.handleOpenWidth = 0.4
 
