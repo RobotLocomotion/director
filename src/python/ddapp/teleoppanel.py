@@ -338,8 +338,7 @@ class EndEffectorTeleopPanel(object):
         ikPlanner.leftHandSupportEnabled = self.getLHandSupportEnabled()
         ikPlanner.rightHandSupportEnabled = self.getRHandSupportEnabled()
 
-        if not (ikPlanner.leftHandSupportEnabled or ikPlanner.rightHandSupportEnabled):
-            constraints.append(ikPlanner.createQuasiStaticConstraint())
+        constraints.append(ikPlanner.createQuasiStaticConstraint())
 
         # Remove all except the fixed base constraint if you only have an arm:
         if ikPlanner.fixedBaseArm == True:
