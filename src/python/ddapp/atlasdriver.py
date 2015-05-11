@@ -51,7 +51,7 @@ class AtlasDriver(object):
         self._controllerStatusMap = None
 
     def _setupSubscriptions(self):
-        lcmUtils.addSubscriber('CONTROLLER_STATUS', lcmdrc.controller_status_t, self.onControllerStatus)
+        lcmUtils.addSubscriber('PLAN_EXECUTION_STATUS', lcmdrc.plan_status_t, self.onControllerStatus)
         lcmUtils.addSubscriber('ATLAS_BATTERY_DATA', lcmdrc.atlas_battery_data_t, self.onAtlasBatteryData)
         lcmUtils.addSubscriber('ATLAS_ELECTRIC_ARM_STATUS', lcmdrc.atlas_electric_arm_status_t, self.onAtlasElectricArmStatus)
         sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
@@ -94,7 +94,7 @@ class AtlasDriver(object):
         Return a dict that maps controller status ids (int) to names (string).
         '''
         if not self._controllerStatusMap:
-            msg = lcmdrc.controller_status_t
+            msg = lcmdrc.plan_status_t
             self._controllerStatusMap = {
                     msg.UNKNOWN       : 'unknown',
                     msg.STANDING      : 'standing',
@@ -105,6 +105,7 @@ class AtlasDriver(object):
                     msg.CRAWLING      : 'crawling',
                     msg.DUMMY         : 'dummy',
                     msg.MANIPULATING  : 'manipulating',
+                    msg.RECOVERING    : 'recovering',
                     }
         return self._controllerStatusMap
 
@@ -135,10 +136,17 @@ class AtlasDriver(object):
             return None
 
         statusMap = self.getControllerStatusMap()
-        state = self.lastControllerStatusMessage.state
+        state = self.lastControllerStatusMessage.plan_type
         assert state in statusMap
         return statusMap[state]
 
+    def getRecoveryEnabledStatus(self):
+        if not self.lastControllerStatusMessage:
+            return None
+        if self.lastControllerStatusMessage.recovery_enabled:
+            return "enabled"
+        else:
+            return "disabled"
 
     def getElectricArmEnabledStatus(self, i):
         assert 0 <= i <= 5
@@ -211,6 +219,28 @@ class AtlasDriver(object):
         msg = lcmdrc.utime_t()
         msg.utime = getUtime()
         lcmUtils.publish('START_MIT_STAND', msg)
+
+    def sendRecoveryEnable(self):
+        msg = lcmdrc.boolean_t()
+        msg.data = True
+        lcmUtils.publish('RECOVERY_ENABLE', msg)
+
+    def sendRecoveryDisable(self):
+        msg = lcmdrc.boolean_t()
+        msg.data = False
+        lcmUtils.publish('RECOVERY_ENABLE', msg)
+
+    def sendRecoveryTriggerOn(self):
+        msg = lcmdrc.recovery_trigger_t()
+        msg.activate = True
+        msg.override = True
+        lcmUtils.publish('RECOVERY_TRIGGER', msg)
+
+    def sendRecoveryTriggerOff(self):
+        msg = lcmdrc.recovery_trigger_t()
+        msg.activate = False
+        msg.override = True
+        lcmUtils.publish('RECOVERY_TRIGGER', msg)
 
     def sendManipCommand(self):
         self.sendBehaviorCommand('manip')
