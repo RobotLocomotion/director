@@ -98,7 +98,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.ikServer = ikServer
         self.ikPlanner = ikPlanner
 
-        self.addProperty('Use pointwise', ikPlanner.ikParameters.usePointwise)
+        self.addProperty('Use pointwise', ikPlanner.defaultIkParameters.usePointwise)
         self.addProperty('Use collision', ikServer.useCollision)
         self.addProperty('Collision min distance', ikServer.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikServer.numberOfAddedKnots)
@@ -1245,13 +1245,15 @@ class IKPlanner(object):
         lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, functools.partial(self.onPostureGoalMessage, stateJointController))
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=IkParameters()):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
 
         listener = self.getManipPlanListener()
 
+        if ikParameters is None:
+            ikParameters = IkParameters()
         ikParameters.fillInWith(self.defaultIkParameters)
 
-        info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
+        info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
         print 'traj info:', info
 
         self.lastManipPlan = listener.waitForResponse()
