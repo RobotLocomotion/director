@@ -1361,7 +1361,7 @@ class DoorTaskPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name='fit door', message='Please fit and approve door handle affordance.'))
 
         # set fingers
-        addTask(rt.CloseHand(name='set finger pinch', side=side, mode='Pinch', amount=100))
+        addTask(rt.CloseHand(name='set finger pinch', side=side, mode='Pinch', amount=0))
 
 
         def addManipTask(name, planFunc, userPrompt=False):
@@ -1381,10 +1381,10 @@ class DoorTaskPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name='Approve hand position',
                                   message='Please verify that the hand is ready to grasp the handle'))
         addFunc(self.fingerPinch, name='Pinch handle')
-        addManipTask('Turn', d.planHandleTurn, userPrompt=True)
+        addManipTask('Turn', d.planHandleTurn, userPrompt=False)
         addTask(rt.UserPromptTask(name='Approve handle turn',
                                   message='Please verify that the handle has turned'))
-        addManipTask('Push ajar', d.planHandlePush, userPrompt=True)
+        addManipTask('Push ajar', d.planHandlePush, userPrompt=False)
         addTask(rt.UserPromptTask(name='Approve door position',
                                   message='Please verify that the door is ajar'))
         addManipTask('Lift', d.planHandlePushLift, userPrompt=False)
