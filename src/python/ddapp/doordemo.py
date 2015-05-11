@@ -73,7 +73,7 @@ class DoorDemo(object):
         self.doorHingeFrame = None
 
         self.handleTouchHeight = 0.0
-        self.handleTouchDepth = -0.6
+        self.handleTouchDepth = -0.06
         self.handleTouchWidth = 0.05
 
         self.handleReachAngle = 20
