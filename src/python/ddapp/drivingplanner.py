@@ -55,6 +55,7 @@ class DrivingPlanner(object):
         commands = []
         commands.append("dp.options.quat_tol = %r;" % self.quatTol)
         commands.append("dp.options.tol = %r;" % self.positionTol)
+        commands.append("dp.options.seed_with_current = %r;" % self.seedWithCurrent)
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
 
@@ -232,6 +233,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Position Constraint Tol', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Quat Constraint Tol', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Grasp Location', 0, attributes=om.PropertyAttributes(enumNames=['Center','Rim']))
+        self.params.addProperty('Seed with current posture', 0, attributes=om.PropertyAttributes(enumNames=['False','True']))
         self.params.addProperty('Speed', 1.0, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
         self.params.addProperty('Turning Radius', 10.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Wheel Separation', 1.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
@@ -251,6 +253,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.positionTol = self.params.getProperty('Position Constraint Tol')
         self.drivingPlanner.quatTol = self.params.getProperty('Quat Constraint Tol')
         self.graspLocation = self.params.getPropertyEnumValue('Grasp Location').lower()
+        self.drivingPlanner.seedWithCurrent = self.params.getProperty('Seed with current posture')
         self.drivingPlanner.maxTurningRadius = self.params.getProperty('Turning Radius')
         self.drivingPlanner.trajSegments = self.params.getProperty('Trajectory Segments')
         self.drivingPlanner.wheelDistance = self.params.getProperty('Wheel Separation')
