@@ -1377,7 +1377,8 @@ class DoorTaskPanel(TaskUserPanel):
 
 
         addManipTask('Raise arms', d.planPreReach, userPrompt=False)
-        addManipTask('Reach', d.planReach, userPrompt=False)
+        addManipTask('Raise pushing hand', d.planDoorTouch, userPrompt=False)
+        addManipTask('Reach', d.planReach, userPrompt=True)
         addTask(rt.UserPromptTask(name='Approve hand position',
                                   message='Please verify that the hand is ready to grasp the handle'))
         addFunc(self.fingerPinch, name='Pinch handle')
@@ -1387,13 +1388,13 @@ class DoorTaskPanel(TaskUserPanel):
         addManipTask('Push ajar', d.planHandlePush, userPrompt=False)
         addTask(rt.UserPromptTask(name='Approve door position',
                                   message='Please verify that the door is ajar'))
+        addManipTask('Push ajar again', d.planHandlePush, userPrompt=False)
         addManipTask('Lift', d.planHandlePushLift, userPrompt=False)
-        addTask(rt.CloseHand(name='Open hand', side=side, mode='Pinch', amount=0))
-        addManipTask('Raise pushing hand', d.planDoorTouch, userPrompt=False)
         addTask(rt.CloseHand(name='Open hand', side=side, mode='Pinch', amount=0))
         addManipTask('Push open', d.planDoorPushOpen, userPrompt=False)
         addTask(rt.UserPromptTask(name='Approve door position',
                                   message='Please verify that the door is open'))
+        addTask(rt.CloseHand(name='Close hand', side=side))
         addManipTask('Tuck Arms', d.planTuckArms, userPrompt=False)
 
         # walk
