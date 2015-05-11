@@ -88,9 +88,20 @@ class DoorDemo(object):
         self.handleOpenDepth = 0.1
         self.handleOpenWidth = 0.4
 
+        self.speedHigh = 60
+        self.speedLow = 20
+
         self.setFootstepThroughDoorParameters()
 
 
+    def setIkParameters(self, usePointwise=None, maxDegreesPerSecond=None):
+        usePointwiseOrig = self.ikPlanner.ikServer.usePointwise
+        maxDegreesPerSecondOrig = self.ikPlanner.ikServer.maxDegreesPerSecond
+        if usePointwise is not None:
+            self.ikPlanner.ikServer.usePointwise = usePointwise
+        if maxDegreesPerSecond is not None:
+            self.ikPlanner.ikServer.maxDegreesPerSecond = maxDegreesPerSecond
+        return (usePointwiseOrig, maxDegreesPerSecondOrig)
 
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -293,21 +304,22 @@ class DoorDemo(object):
 
     def planPreReach(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        usePointwiseOrig, maxDegreesPerSecondOrig = self.setIkParameters(usePointwise=False,
+                                                                         maxDegreesPerSecond=self.speedHigh)
 
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'pre-reach both')
         endPose, info = self.ikPlanner.computeStandPose(endPose)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
+        self.setIkParameters(usePointwiseOrig, maxDegreesPerSecondOrig)
 
 
     def planTuckArms(self):
 
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 50
+        usePointwiseOrig, maxDegreesPerSecondOrig = self.setIkParameters(usePointwise=False,
+                                                                         maxDegreesPerSecond=self.speedHigh)
         self.ikPlanner.ikServer.numberOfAddedKnots = 0
 
         otherSide = 'left' if self.graspingHand == 'right' else 'right'
@@ -329,21 +341,22 @@ class DoorDemo(object):
         newPlan = self.ikPlanner.computeMultiPostureGoal([startPose, q2, endPose])
         self.addPlan(newPlan)
 
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        self.setIkParameters(usePointwiseOrig, maxDegreesPerSecondOrig)
 
     def planReach(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 20
+        usePointwiseOrig, maxDegreesPerSecondOrig = self.setIkParameters(usePointwise=False,
+                                                                         maxDegreesPerSecond=self.speedLow)
 
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandleReachFrame)
         endPose, info = constraintSet.runIk()
         plan = constraintSet.runIkTraj()
 
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
 
         self.addPlan(plan)
+
+        self.setIkParameters(usePointwiseOrig, maxDegreesPerSecondOrig)
 
     def createHingeConstraint(self, referenceFrame, axis, linkName, startPose, tspan=[0, 1]):
 
@@ -409,7 +422,9 @@ class DoorDemo(object):
 
     def planDoorPushOpen(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
+        usePointwiseOrig, maxDegreesPerSecondOrig = self.setIkParameters(usePointwise=False,
+                                                                         maxDegreesPerSecond=self.speedLow)
+
         nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
@@ -417,6 +432,8 @@ class DoorDemo(object):
 
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
+
+        self.setIkParameters(usePointwiseOrig, maxDegreesPerSecondOrig)
 
 
     def planHandlePush(self):
@@ -506,7 +523,8 @@ class DoorDemo(object):
 
     def planDoorTouch(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
+        usePointwiseOrig, maxDegreesPerSecondOrig = self.setIkParameters(usePointwise=False,
+                                                                         maxDegreesPerSecond=self.speedHigh)
         nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
@@ -515,8 +533,12 @@ class DoorDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
+        self.setIkParameters(usePointwiseOrig, maxDegreesPerSecondOrig)
+
     def planHandlePushOpen(self):
 
+        usePointwiseOrig, maxDegreesPerSecondOrig = self.setIkParameters(usePointwise=False,
+                                                                         maxDegreesPerSecond=self.speedLow)
         self.ikPlanner.ikServer.usePointwise = False
         self.ikPlanner.ikServer.maxDegreesPerSecond = 20
 
@@ -526,6 +548,8 @@ class DoorDemo(object):
         plan = constraintSet.runIkTraj()
 
         self.addPlan(plan)
+
+        self.setIkParameters(usePointwiseOrig, maxDegreesPerSecondOrig)
 
 
     def planFootstepsToDoor(self):
