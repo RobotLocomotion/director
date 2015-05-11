@@ -607,15 +607,20 @@ if useFallDetectorVis:
             links = ['pelvis', 'utorso']
 
             isFalling = msg.falling
+            isBracing = msg.bracing
             t = msg.utime / 10.0e6
-            if not isFalling and (t-self.fallDetectorTriggerTime > self.fallDetectorVisResetTime or t-self.fallDetectorTriggerTime<0):
+            if not isFalling and not isBracing and (t-self.fallDetectorTriggerTime > self.fallDetectorVisResetTime or t-self.fallDetectorTriggerTime<0):
                 for link in links:
                     robotHighlighter.dehighlightLink(link)
 
+            elif isBracing:
+                for link in links:
+                    robotHighlighter.highlightLink(link, [1, 0, 0])
+                self.fallDetectorTriggerTime = t
+
             elif isFalling:
                 for link in links:
-                    robotHighlighter.highlightLink(link, [1,0,0])
-
+                    robotHighlighter.highlightLink(link, [1,0.4,0.0])
                 self.fallDetectorTriggerTime = t
 
 
