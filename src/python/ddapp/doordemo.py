@@ -351,9 +351,28 @@ class DoorDemo(object):
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandleReachFrame)
         endPose, info = constraintSet.runIk()
+
+        linkOffsetFrame = self.ikPlanner.getPalmToHandLink(self.graspingHand)
+        handLinkName = self.ikPlanner.getHandLink(self.graspingHand)
+        handToWorld1 = self.ikPlanner.getLinkFrameAtPose(handLinkName, startPose)
+        handToWorld2 = self.ikPlanner.getLinkFrameAtPose(handLinkName, endPose)
+        palmToWorld1 = transformUtils.concatenateTransforms([linkOffsetFrame, handToWorld1])
+        palmToWorld2 = transformUtils.concatenateTransforms([linkOffsetFrame, handToWorld2])
+
+        motionVector = np.array(palmToWorld2.GetPosition()) - np.array(palmToWorld1.GetPosition())
+        motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(palmToWorld2.GetPosition()), motionVector)
+
+
+        vis.updateFrame(motionTargetFrame, 'motion target frame', scale=0.1)
+        d = DebugData()
+        d.addLine(np.array(palmToWorld2.GetPosition()), np.array(palmToWorld2.GetPosition()) - motionVector)
+        vis.updatePolyData(d.getPolyData(), 'motion vector')
+
+
+        p = self.ikPlanner.createLinePositionConstraint(handLinkName, linkOffsetFrame, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
+        constraintSet.constraints.append(p)
+
         plan = constraintSet.runIkTraj()
-
-
         self.addPlan(plan)
 
         self.setIkParameters(usePointwiseOrig, maxDegreesPerSecondOrig)
