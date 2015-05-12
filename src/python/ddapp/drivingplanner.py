@@ -50,6 +50,15 @@ class DrivingPlanner(object):
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
 
+    # applies the properties to the driving planner object
+    def applyProperties(self):
+        commands = []
+        commands.append("dp.options.quat_tol = %r;" % self.quatTol)
+        commands.append("dp.options.tol = %r;" % self.positionTol)
+        commands.append("dp.options.seed_with_current = %r;" % self.seedWithCurrent)
+        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
+        self.ikServer.taskQueue.start()
+
     def updateWheelTransform(self, xyzquat):
 
         commands = []
@@ -136,6 +145,13 @@ class DrivingPlanner(object):
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
 
+    def planSeed(self):
+        commands = []
+        startPose = self.getPlanningStartPose()
+        commands.append("dp.planSeed(%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
+        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
+        self.ikServer.taskQueue.start()
+
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.q
 
@@ -204,6 +220,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addManualButton('Plan Retract', self.onPlanRetract)
         self.addManualButton('Plan Turn', self.onPlanTurn)
         self.addManualButton('Plan Steering Wheel Turn', self.onPlanSteeringWheelTurn)
+        self.addManualButton('Plan Seed', self.drivingPlanner.planSeed)
 
     def addDefaultProperties(self):
         self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
@@ -213,7 +230,10 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Steering Wheel Radius (meters)', 0.1873, attributes=om.PropertyAttributes(singleStep=0.01))
         self.params.addProperty('Knot Points', 20, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Gaze Constraint Tol', 0.3, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
+        self.params.addProperty('Position Constraint Tol', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
+        self.params.addProperty('Quat Constraint Tol', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Grasp Location', 0, attributes=om.PropertyAttributes(enumNames=['Center','Rim']))
+        self.params.addProperty('Seed with current posture', 0, attributes=om.PropertyAttributes(enumNames=['False','True']))
         self.params.addProperty('Speed', 1.0, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
         self.params.addProperty('Turning Radius', 10.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Wheel Separation', 1.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
@@ -230,7 +250,10 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.turnRadius = self.params.getProperty('Steering Wheel Radius (meters)')
         self.knotPoints = self.params.getProperty('Knot Points')
         self.gazeTol = self.params.getProperty('Gaze Constraint Tol')
+        self.drivingPlanner.positionTol = self.params.getProperty('Position Constraint Tol')
+        self.drivingPlanner.quatTol = self.params.getProperty('Quat Constraint Tol')
         self.graspLocation = self.params.getPropertyEnumValue('Grasp Location').lower()
+        self.drivingPlanner.seedWithCurrent = self.params.getProperty('Seed with current posture')
         self.drivingPlanner.maxTurningRadius = self.params.getProperty('Turning Radius')
         self.drivingPlanner.trajSegments = self.params.getProperty('Trajectory Segments')
         self.drivingPlanner.wheelDistance = self.params.getProperty('Wheel Separation')
@@ -239,7 +262,9 @@ class DrivingPlannerPanel(TaskUserPanel):
         traj = om.findObjectByName('DrivingTrajectory')
         if traj is not None:
             traj.setProperty('Visible', self.showTrajectory)
-        
+
+        self.drivingPlanner.applyProperties()
+      
 
     def onSteeringCommand(self, msg):
         if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:
@@ -282,7 +307,6 @@ class DrivingPlannerPanel(TaskUserPanel):
 
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
-
 
 
     def addTasks(self):
