@@ -2,11 +2,14 @@ import ddapp
 import math
 import textwrap
 import drc as lcmdrc
+import bot_core as lcmbotcore
+import vtkAll as vtk
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import objectmodel as om
 from ddapp import lcmUtils
 from ddapp import ik
+
 from ddapp.debugVis import DebugData
 
 import os
@@ -21,10 +24,13 @@ class DrivingPlanner(object):
         self.ikServer = ikServer
         self.robotSystem = robotSystem
         self.ikServer.connectStartupCompleted(self.initialize)
-        self.steeringAngleDegrees = 0.0;
-        self.maxTurningRadius = 10.0
-        self.trajSegments = 50
-        self.wheelDistance = 1.0
+        self.steeringAngleDegrees = 0.0
+        self.maxTurningRadius = 9.5
+        self.trajectoryPitch = -39
+        self.trajectoryOffset = -0.51
+        self.trajSegments = 25
+        self.wheelDistance = 1.4
+        self.tagToLocalTransform = transformUtils.transformFromPose([0,0,0],[1,0,0,0])
 
     def getInitCommands(self):
 
@@ -124,8 +130,8 @@ class DrivingPlanner(object):
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.q
 
-    def computeDrivingTrajectory(self, steeringAngleDegrees, maxTurningRadius = 10, numTrajPoints = 50):
-        
+    def computeDrivingTrajectories(self, steeringAngleDegrees, maxTurningRadius = 10, numTrajPoints = 50):
+
         angle = steeringAngleDegrees
         
         if abs(angle) < 0.1:
@@ -136,35 +142,55 @@ class DrivingPlanner(object):
         trajPoints = list()
 
         for i in range(0, numTrajPoints):
-            theta = math.radians((10 / turningRadius) * i - 90)
+            theta = math.radians((40 / turningRadius) * i - 90)
             trajPoint = np.asarray(turningCenter)+turningRadius*np.asarray([math.cos(theta), math.sin(theta), 0])
             trajPoints.append(trajPoint)
 
-        return trajPoints
+        leftTraj = list()
+        rightTraj = list()
+
+        for i in range(0, numTrajPoints - 1):
+                v1 = trajPoints[i + 1] - trajPoints[i]
+                v2 = np.cross(v1, [0, 0, 1])
+                v2 /= np.linalg.norm(v2)
+                leftTraj.append(trajPoints[i] - 0.5 * self.wheelDistance * v2)
+                rightTraj.append(trajPoints[i] + 0.5 * self.wheelDistance * v2)
+
+        return leftTraj, trajPoints, rightTraj
+
+    def transformDrivingTrajectory(self, drivingTraj):
+        transformedDrivingTraj = list()
+        transform = vtk.vtkTransform()
+        
+        self.carToTagTransform = transformUtils.transformFromPose([0,0,0],[1,0,0,0])
+        self.carToTagTransform.RotateY(self.trajectoryPitch)
+        self.carToTagTransform.Translate(0, self.trajectoryOffset, 0);
+        
+        transform.Concatenate(self.tagToLocalTransform)
+        transform.Concatenate(self.carToTagTransform)
+        for p in drivingTraj:
+            transformedPoint = transform.TransformPoint(p)
+            transformedDrivingTraj.append(np.asarray(transformedPoint))
+
+        return transformedDrivingTraj
 
     def updateAndDrawTrajectory(self):
-        trajPoints = self.computeDrivingTrajectory(self.steeringAngleDegrees, self.maxTurningRadius, self.trajSegments + 1)
-        self.drawDrivingTrajectory(trajPoints)            
+        leftTraj, centerTraj, rightTraj = self.computeDrivingTrajectories(self.steeringAngleDegrees, self.maxTurningRadius, self.trajSegments + 1)        
+        self.drawDrivingTrajectory(self.transformDrivingTrajectory(leftTraj), 'LeftDrivingTrajectory')
+        self.drawDrivingTrajectory(self.transformDrivingTrajectory(rightTraj), 'RightDrivingTrajectory')
 
-    def drawDrivingTrajectory(self, drivingTraj):
+    def drawDrivingTrajectory(self, drivingTraj, name):
         d = DebugData()
 
         numTrajPoints = len(drivingTraj)
 
         if numTrajPoints > 1:
-            for i in range(0, numTrajPoints - 1):
+            for i in range(0, numTrajPoints):
                 rgb = [(numTrajPoints - i) / float(numTrajPoints), 1 - (numTrajPoints - i) / float(numTrajPoints), 1]            
-                v1 = drivingTraj[i + 1] - drivingTraj[i]
-                v2 = np.cross(v1, [0, 0, 1])
-                v2 /= np.linalg.norm(v2)
-                d.addLine(drivingTraj[i] + 0.5 * self.wheelDistance * v2, drivingTraj[i + 1] + 0.5 * self.wheelDistance * v2,  0.01, rgb)
-                d.addLine(drivingTraj[i] - 0.5 * self.wheelDistance * v2, drivingTraj[i + 1] - 0.5 * self.wheelDistance * v2,  0.01, rgb)
-                if i == numTrajPoints - 2:
-                    d.addArrow(drivingTraj[i] + 0.5 * self.wheelDistance * v2, drivingTraj[i+1] + 0.5 * self.wheelDistance * v2, 0.02, 0.01, rgb)
-                    d.addArrow(drivingTraj[i] - 0.5 * self.wheelDistance * v2, drivingTraj[i+1] - 0.5 * self.wheelDistance * v2, 0.02, 0.01, rgb)
+                d.addSphere(drivingTraj[i], 0.05, rgb)
 
-        vis.updatePolyData(d.getPolyData(), 'DrivingTrajectory')
-        om.findObjectByName('DrivingTrajectory').setProperty('Color By', 1)
+        vis.updatePolyData(d.getPolyData(), name)
+        om.findObjectByName(name).setProperty('Color By', 1)
 
 class DrivingPlannerPanel(TaskUserPanel):
 
@@ -178,7 +204,12 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addButtons()
         self.addTasks()
         self.showTrajectory = False
-        self.sub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
+        self.steeringSub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
+        self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG', lcmbotcore.rigid_transform_t, self.onAprilTag)
+
+    def onAprilTag(self, msg):
+        self.drivingPlanner.tagToLocalTransform = transformUtils.transformFromPose(msg.trans, msg.quat)
+        self.drivingPlanner.updateAndDrawTrajectory()
 
     def addButtons(self):
         self.addManualButton('Start', self.onStart)
@@ -195,9 +226,11 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('PreGrasp Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Turn Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Speed', 1.0, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
-        self.params.addProperty('Turning Radius', 10.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
-        self.params.addProperty('Wheel Separation', 1.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
-        self.params.addProperty('Trajectory Segments', 50, attributes=om.PropertyAttributes(singleStep=1, decimals=0))
+        self.params.addProperty('Turning Radius', 9.5, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
+        self.params.addProperty('Wheel Separation', 1.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
+        self.params.addProperty('Trajectory Segments', 25, attributes=om.PropertyAttributes(singleStep=1, decimals=0))
+        self.params.addProperty('Trajectory Pitch', -39.0, attributes=om.PropertyAttributes(singleStep=1, decimals=0)),
+        self.params.addProperty('Trajectory Offset', -0.51, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Show Trajectory', False)
         self._syncProperties()
 
@@ -211,10 +244,17 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.trajSegments = self.params.getProperty('Trajectory Segments')
         self.drivingPlanner.wheelDistance = self.params.getProperty('Wheel Separation')
         self.showTrajectory = self.params.getProperty('Show Trajectory')
+        self.drivingPlanner.trajectoryPitch = self.params.getProperty('Trajectory Pitch')
+        self.drivingPlanner.trajectoryOffset = self.params.getProperty('Trajectory Offset')
         self.drivingPlanner.updateAndDrawTrajectory()
-        traj = om.findObjectByName('DrivingTrajectory')
-        if traj is not None:
-            traj.setProperty('Visible', self.showTrajectory)
+        leftTraj = om.findObjectByName('LeftDrivingTrajectory')
+        rightTraj = om.findObjectByName('RightDrivingTrajectory')
+        
+        if leftTraj is not None:
+            leftTraj.setProperty('Visible', self.showTrajectory)
+        
+        if rightTraj is not None:
+            rightTraj.setProperty('Visible', self.showTrajectory)
         
 
     def onSteeringCommand(self, msg):
@@ -227,9 +267,9 @@ class DrivingPlannerPanel(TaskUserPanel):
 
     def onUpdateWheelLocation(self):
         f = om.findObjectByName('ring frame').transform
-        xyzquat = transformUtils.poseFromTransform(f);
+        xyzquat = transformUtils.poseFromTransform(f)
         xyzquat = np.concatenate(xyzquat)
-        self.drivingPlanner.updateWheelTransform(xyzquat);
+        self.drivingPlanner.updateWheelTransform(xyzquat)
 
     def onPlanSafe(self):
         self.drivingPlanner.planSafe()
