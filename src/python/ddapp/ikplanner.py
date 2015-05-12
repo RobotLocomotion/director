@@ -1214,13 +1214,15 @@ class IKPlanner(object):
                 numBodies += 1
                 supportBodies.append(self.getFootSupportBodyMsg('right'))
             if self.leftHandSupportEnabled:
-                numBodies += 2
+                #numBodies += 2
+                numBodies += 1
                 supportBodies.append(self.getHandSupportBodyMsg('left', [0, 0, 1, 0]))
-                supportBodies.append(self.getHandSupportBodyMsg('left', [0, 0, -1, 0]))
+                #supportBodies.append(self.getHandSupportBodyMsg('left', [0, 0, -1, 0]))
             if self.rightHandSupportEnabled:
-                numBodies += 2
+                #numBodies += 2
+                numBodies += 1
                 supportBodies.append(self.getHandSupportBodyMsg('right', [0, 0, 1, 0]))
-                supportBodies.append(self.getHandSupportBodyMsg('right', [0, 0, -1, 0]))
+                #supportBodies.append(self.getHandSupportBodyMsg('right', [0, 0, -1, 0]))
             supportElement.num_bodies = numBodies
             supportElement.support_bodies = supportBodies
             return [supportElement]
