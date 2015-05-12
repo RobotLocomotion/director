@@ -306,9 +306,15 @@ class DoorDemo(object):
 
         usePointwiseOrig, maxDegreesPerSecondOrig = self.setIkParameters(usePointwise=False,
                                                                          maxDegreesPerSecond=self.speedHigh)
+        nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'pre-reach both')
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door',
+                                                              'pre-reach grasping',
+                                                              side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door',
+                                                              'pre-reach non-grasping',
+                                                              side=nonGraspingHand)
         endPose, info = self.ikPlanner.computeStandPose(endPose)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
