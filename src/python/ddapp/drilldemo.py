@@ -2451,6 +2451,8 @@ class DrillTaskPanel(TaskUserPanel):
 
         elif propertyName == 'Drill Hand':
             self.drillDemo.graspingHand = self.getSide()
+            self.taskTree.removeAllTasks()
+            self.addTasks()
 
 
     def addTasks(self):
