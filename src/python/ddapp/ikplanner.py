@@ -1179,12 +1179,17 @@ class IKPlanner(object):
         for name, position in zip(msg.joint_name, msg.joint_position):
             goalPoseJoints[name] = position
 
-        startPose = np.array(stateJointController.q)
+        feetOnGround = True
+        for jointName in goalPoseJoints.keys():
+            if 'leg' in jointName:
+                feetOnGround = False
 
+
+        startPose = np.array(stateJointController.q)
         goalMode = getIkOptions().getProperty('Goal planning mode')
         if goalMode == 0:
             endPose = self.mergePostures(startPose, goalPoseJoints)
-            self.computePostureGoal(startPose, endPose)
+            self.computePostureGoal(startPose, endPose, feetOnGround=feetOnGround)
         else:
             self.computeJointPostureGoal(startPose, goalPoseJoints)
 
