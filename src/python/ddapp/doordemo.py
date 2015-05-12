@@ -373,13 +373,6 @@ class DoorDemo(object):
         motionVector = np.array(palmToWorld2.GetPosition()) - np.array(palmToWorld1.GetPosition())
         motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(palmToWorld2.GetPosition()), motionVector)
 
-
-        vis.updateFrame(motionTargetFrame, 'motion target frame', scale=0.1)
-        d = DebugData()
-        d.addLine(np.array(palmToWorld2.GetPosition()), np.array(palmToWorld2.GetPosition()) - motionVector)
-        vis.updatePolyData(d.getPolyData(), 'motion vector')
-
-
         p = self.ikPlanner.createLinePositionConstraint(handLinkName, linkOffsetFrame, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
         constraintSet.constraints.append(p)
 
