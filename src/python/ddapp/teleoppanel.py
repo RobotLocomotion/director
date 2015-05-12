@@ -927,7 +927,13 @@ class JointTeleopPanel(object):
             endPoseName = 'posture_goal_end'
             ikPlanner.addPose(self.endPose, endPoseName)
 
-            jointNames = self.slidersMap.keys()
+            jointNamesAll = self.slidersMap.keys()
+
+            # remove leg joints
+            jointNames = []
+            for name in jointNamesAll:
+                if not 'leg' in name:
+                    jointNames.append(name)
 
             # uncomment to constraint only joints adjusted by user
             #jointNames = [self.toJointName(jointIndex) for jointIndex in sorted(self.userJoints.keys())]
