@@ -28,6 +28,7 @@ public:
   int numberOfJoints();
   void setJointPositions(const QVector<double>& positions, const QList<QString>& jointNames);
   void setJointPositions(const QVector<double>& positions);
+  QVector<double> getJointPositions(const QList<QString>& jointNames) const;
   const QVector<double>& getJointPositions() const;
   QVector<double> getCenterOfMass() const;
   QVector<double> getJointLimits(const QString& jointName) const;

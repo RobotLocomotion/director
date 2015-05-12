@@ -269,7 +269,6 @@ if useDrakeVisualizer:
 
 if usePlanning:
 
-
     def showPose(pose):
         playbackRobotModel.setProperty('Visible', True)
         playbackJointController.setPose('show_pose', pose)
@@ -348,6 +347,15 @@ if usePlanning:
 
     def sendFusedHeightRequest(repeatTime=0.0):
         sendDataRequest(lcmdrc.data_request_t.FUSED_HEIGHT, repeatTime)
+
+
+    def propagateHands(model=None):
+        if teleopRobotModel.getProperty('Visible'):
+            roboturdf.copyRobotiqJoints(robotStateModel, teleopRobotModel)
+        if playbackRobotModel.getProperty('Visible'):
+            roboturdf.copyRobotiqJoints(robotStateModel, playbackRobotModel)
+
+    robotStateModel.connectModelChanged(propagateHands)
 
     #app.addToolbarMacro('scene height', sendSceneHeightRequest)
     #app.addToolbarMacro('scene depth', sendSceneDepthRequest)
