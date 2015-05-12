@@ -26,6 +26,8 @@ from ddapp import drilldemo
 from ddapp import tabledemo
 from ddapp import valvedemo
 from ddapp import drivingplanner
+from ddapp import egressplanner
+from ddapp import polarisplatformplanner
 from ddapp import continuouswalkingdemo
 from ddapp import sitstandplanner
 from ddapp import walkingtestdemo
@@ -249,7 +251,7 @@ if not useLightColorScheme:
     viewBackgroundLightHandler.action.trigger()
 
 if useHands:
-    handcontrolpanel.init(lHandDriver, rHandDriver, robotStateModel)
+    handcontrolpanel.init(lHandDriver, rHandDriver, robotStateModel, robotStateJointController, view)
 
 
 if useFootsteps:
@@ -424,15 +426,17 @@ if usePlanning:
 
     terrainTaskPanel = terraintask.TerrainTaskPanel(robotSystem)
 
-    sitStandPlannerPanel = sitstandplanner.SitStandPlannerPanel(robotSystem)
+    egressPanel = egressplanner.EgressPanel(robotSystem)
 
     taskPanels = OrderedDict()
+    
+    taskPanels['Driving'] = drivingPlannerPanel.widget
+    taskPanels['Egress'] = egressPanel.widget
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
-    taskPanels['Driving'] = drivingPlannerPanel.widget
-    taskPanels['Sit/Stand'] = sitStandPlannerPanel.widget
+    
     tasklaunchpanel.init(taskPanels)
 
     splinewidget.init(view, handFactory, robotStateModel)
@@ -603,15 +607,20 @@ if useFallDetectorVis:
             links = ['pelvis', 'utorso']
 
             isFalling = msg.falling
+            isBracing = msg.bracing
             t = msg.utime / 10.0e6
-            if not isFalling and (t-self.fallDetectorTriggerTime > self.fallDetectorVisResetTime or t-self.fallDetectorTriggerTime<0):
+            if not isFalling and not isBracing and (t-self.fallDetectorTriggerTime > self.fallDetectorVisResetTime or t-self.fallDetectorTriggerTime<0):
                 for link in links:
                     robotHighlighter.dehighlightLink(link)
 
+            elif isBracing:
+                for link in links:
+                    robotHighlighter.highlightLink(link, [1, 0, 0])
+                self.fallDetectorTriggerTime = t
+
             elif isFalling:
                 for link in links:
-                    robotHighlighter.highlightLink(link, [1,0,0])
-
+                    robotHighlighter.highlightLink(link, [1,0.4,0.0])
                 self.fallDetectorTriggerTime = t
 
 
@@ -927,3 +936,42 @@ def initCenterOfMassVisulization():
         drawCenterOfMass(model)
 
 initCenterOfMassVisulization()
+
+
+class RobotMoverWidget(object):
+    def __init__(self, jointController):
+        self.jointController = jointController
+        pos, rpy = jointController.q[:3], jointController.q[3:6]
+        t = transformUtils.frameFromPositionAndRPY(pos, np.degrees(rpy))
+        self.frame = vis.showFrame(t, 'mover widget', scale=0.3)
+        self.frame.setProperty('Edit', True)
+        self.frame.connectFrameModified(self.onFrameModified)
+
+    def onFrameModified(self, frame):
+        pos, rpy = self.frame.transform.GetPosition(), transformUtils.rollPitchYawFromTransform(self.frame.transform)
+        q = self.jointController.q.copy()
+        q[:3] = pos
+        q[3:6] = rpy
+        self.jointController.setPose('moved_pose', q)
+
+
+class RobotGridUpdater(object):
+
+    def __init__(self, gridFrame, robotModel, jointController):
+        self.gridFrame = gridFrame
+        self.robotModel = robotModel
+        self.jointController = jointController
+        self.robotModel.connectModelChanged(self.updateGrid)
+
+    def updateGrid(self, model):
+        pos = self.jointController.q[:3]
+
+        x = int(np.round(pos[0])) / 10
+        y = int(np.round(pos[1])) / 10
+        z = int(np.round(pos[2] - 0.85)) / 1
+
+        t = vtk.vtkTransform()
+        t.Translate((x*10,y*10,z))
+        self.gridFrame.copyFrame(t)
+
+gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)

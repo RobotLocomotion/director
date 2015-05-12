@@ -3,6 +3,8 @@ from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import objectmodel as om
 from ddapp import ik
+from ddapp import polarisplatformplanner
+from ddapp import sitstandplanner
 
 import os
 import functools
@@ -10,74 +12,23 @@ import numpy as np
 import scipy.io
 from ddapp.tasks.taskuserpanel import TaskUserPanel
 
-class SitStandPlanner(object):
 
-    def __init__(self, ikServer, robotSystem):
-        self.ikServer = ikServer
-        self.robotSystem = robotSystem
-        self.ikServer.connectStartupCompleted(self.initialize)
-        self.initializedFlag = False
-        self.planOptions = dict()
-
-    def initialize(self, ikServer, success):
-        if ikServer.restarted:
-            return
-        commands = self.getInitCommands()
-        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
-        self.ikServer.taskQueue.start()
-        self.initializedFlag = True
-
-    def getInitCommands(self):
-        commands = ['''
-        addpath([getenv('DRC_BASE'), '/software/control/matlab/planners/chair_standup']);
-        pssRobot = s.robot;
-        warning('Off','KinematicPoseTrajectory:Terrain');
-        pss = PlanSitStand(pssRobot);
-      ''']
-        return commands
-
-    def applyParams(self):
-        commands = []
-        commands.append("pss.plan_options.chair_height = %s;" %self.planOptions['chair_height'])
-        commands.append("pss.plan_options.speed = %s;" %self.planOptions['speed'])
-        commands.append("pss.plan_options.back_gaze_bound = %s;" %self.planOptions['back_gaze_bound'])
-        commands.append("pss.plan_options.min_distance = %s;" %self.planOptions['min_distance'])
-        commands.append("pss.plan_options.pelvis_gaze_bound = %s;" %self.planOptions['pelvis_gaze_bound'])
-        commands.append("pss.plan_options.pelvis_gaze_angle = %s;" %self.planOptions['pelvis_gaze_angle'])
-        commands.append("pss.plan_options.sit_back_distance = %s;" %self.planOptions['sit_back_distance'])
-        commands.append("pss.plan_options.bky_angle = %s;" %self.planOptions['bky_angle'])
-
-        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
-        self.ikServer.taskQueue.start()        
-
-    def plan(self,planType):
-        self.applyParams()
-        startPose = self.getPlanningStartPose()
-        commands = []
-        commands.append("pss.planSitting(%s, '%s');" % (ik.ConstraintBase.toColumnVectorString(startPose),
-            planType))
-
-        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
-        self.ikServer.taskQueue.start()
-
-    def getPlanningStartPose(self):
-        return self.robotSystem.robotStateJointController.q
-
-
-class SitStandPlannerPanel(TaskUserPanel):
+class EgressPanel(TaskUserPanel):
 
     def __init__(self, robotSystem):
 
-        TaskUserPanel.__init__(self, windowTitle='Sit/Stand')
+        TaskUserPanel.__init__(self, windowTitle='Egress')
 
         self.robotSystem = robotSystem
-        self.sitStandPlanner = SitStandPlanner(robotSystem.ikServer, robotSystem)
+        self.sitStandPlanner = sitstandplanner.SitStandPlanner(robotSystem.ikServer, robotSystem)
+        self.platformPlanner = polarisplatformplanner.PolarisPlatformPlanner(robotSystem.ikServer, robotSystem)
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
         
 
     def addButtons(self):
+        #sit/stand buttons
         self.addManualButton('Start', self.onStart)
         self.addManualButton('Sit', functools.partial(self.onPlan, 'sit'))
         self.addManualButton('Stand', functools.partial(self.onPlan, 'stand'))
@@ -87,12 +38,16 @@ class SitStandPlannerPanel(TaskUserPanel):
         self.addManualButton('Hold With Pelvis Contact', functools.partial(self.onPlan, 'hold_with_pelvis_contact'))
         self.addManualButton('Hold Without Pelvis Contact', functools.partial(self.onPlan, 'hold_without_pelvis_contact'))
 
-    def onStart(self):
-        self._syncProperties()
-
-    def onPlan(self,planType):
-        self._syncProperties()
-        self.sitStandPlanner.plan(planType)
+        # polaris step down buttons
+        self.addManualButton('Fit Platform Affordance', self.platformPlanner.fitRunningBoardAtFeet)
+        self.addManualButton('Spawn Ground Affordance', self.platformPlanner.spawnGroundAffordance)
+        self.addManualButton('Raycast Terrain', self.platformPlanner.requestRaycastTerrain)
+        self.addManualButton('Update Affordance', self.platformPlanner.updateAffordance)
+        self.addManualButton('Arms Up',self.onArmsUp)
+        self.addManualButton('Plan Turn', self.onPlanTurn)
+        self.addManualButton('Plan Step Down', self.onPlanStepDown)
+        self.addManualButton('Plan Weight Shift', self.onPlanWeightShift)
+        self.addManualButton('Plan Step Off', self.onPlanStepOff)
 
     def addDefaultProperties(self):
         self.params.addProperty('Chair Height', 0.57, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
@@ -104,6 +59,8 @@ class SitStandPlannerPanel(TaskUserPanel):
         self.params.addProperty('Pelvis Gaze Angle', 0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('Back y Angle', -0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
 
+        self.params.addProperty('Step Off Direction', 0, attributes=om.PropertyAttributes(enumNames=['Forwards','Sideways']))
+
     def _syncProperties(self):
         self.sitStandPlanner.planOptions['chair_height'] = self.params.getProperty('Chair Height')
         self.sitStandPlanner.planOptions['sit_back_distance'] = self.params.getProperty('Sit Back Distance')
@@ -113,10 +70,53 @@ class SitStandPlannerPanel(TaskUserPanel):
         self.sitStandPlanner.planOptions['pelvis_gaze_bound']= self.params.getProperty('Pelvis Gaze Bound')
         self.sitStandPlanner.planOptions['pelvis_gaze_angle'] = self.params.getProperty('Pelvis Gaze Angle')
         self.sitStandPlanner.planOptions['bky_angle'] = self.params.getProperty('Back y Angle')
+        self.stepOffDirection = self.params.getPropertyEnumValue('Step Off Direction').lower()
         self.sitStandPlanner.applyParams()
+
+    def onStart(self):
+        self._syncProperties()
+        print 'Egress Planner Ready'
+
+    def onUpdateAffordance(self):
+        if not self.platformPlanner.initializedFlag:
+            self.platformPlanner.initialize()
+
+        self.platformPlanner.updateAffordance()
+
+    def onPlan(self,planType):
+        self._syncProperties()
+        self.sitStandPlanner.plan(planType)
+
+    def onPlanTurn(self):
+        self._syncProperties()
+        self.platformPlanner.planTurn()
+
+    def onArmsUp(self):
+        self.platformPlanner.planArmsUp(self.stepOffDirection)
 
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
+
+    def onPlanStepDown(self):
+        self._syncProperties()
+        if self.stepOffDirection == 'forwards':
+            self.platformPlanner.planStepDownForwards()
+        else:
+            self.platformPlanner.planStepDown()
+
+    def onPlanWeightShift(self):
+        self._syncProperties()
+        if self.stepOffDirection == 'forwards':
+            self.platformPlanner.planWeightShiftForwards()
+        else:
+            self.platformPlanner.planWeightShift()
+
+    def onPlanStepOff(self):
+        self._syncProperties()
+        if self.stepOffDirection == 'forwards':
+            self.platformPlanner.planStepOffForwards()
+        else:
+            self.platformPlanner.planStepOff()
 
     def addTasks(self):
 

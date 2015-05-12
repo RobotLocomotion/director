@@ -61,7 +61,7 @@ class TerrainTask(object):
     def requestRaycastTerrain(self):
         affs = self.robotSystem.affordanceManager.getCollisionAffordances()
         xy = self.robotSystem.robotStateJointController.q[:2]
-        self.robotSystem.raycastDriver.requestRaycast(affs, xy-5, xy+5)
+        self.robotSystem.raycastDriver.requestRaycast(affs, xy-4.5, xy+4.5)
 
 
     def walkToTiltedCinderblocks(self):
@@ -75,12 +75,9 @@ class TerrainTask(object):
     def spawnGroundAffordance(self):
 
         polyData = segmentation.getCurrentRevolutionData()
-        groundPoints, normal = segmentation.segmentGroundPoints(polyData)
-        groundOrigin = segmentation.computeCentroid(groundPoints)
+        groundOrigin, normal, groundPoints, _ = segmentation.segmentGround(polyData)
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
-        #stanceFrame.PreMultiply()
-        #stanceFrame.Translate(2.0, 0.0, 0.0)
         origin = np.array(stanceFrame.GetPosition())
 
         origin = segmentation.projectPointToPlane(origin, groundOrigin, normal)
@@ -93,14 +90,17 @@ class TerrainTask(object):
         xaxis = np.cross(yaxis, zaxis)
         xaxis /= np.linalg.norm(xaxis)
 
+        boxThickness = 0.01
+
         t = transformUtils.getTransformFromAxes(xaxis, yaxis, zaxis)
+        t.PreMultiply()
+        t.Translate(0.0, 0.0, -boxThickness/2.0)
         t.PostMultiply()
         t.Translate(origin)
 
-
         om.removeFromObjectModel(om.findObjectByName('ground affordance'))
         pose = transformUtils.poseFromTransform(t)
-        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[10, 10, 0.01], pose=pose)
+        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[10, 10, boxThickness], pose=pose)
         aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         aff.setProperty('Visible', False)
         aff.setProperty('Alpha', 0.2)
@@ -270,7 +270,6 @@ class TerrainTask(object):
             stepFrames.append(t)
             #obj = vis.showFrame(t, '%s step frame' % block.getProperty('Name'), parent='step frames', scale=0.2)
 
-        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         startPose = self.getPlanningStartPose()
 
         helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
