@@ -622,7 +622,12 @@ class DrillPlannerDemo(object):
 
         drillOffset = transformUtils.frameFromPositionAndRPY([reachDistance, 0.0, reachHeight], [0.0, 0.0, reachYaw])
 
-        targetFrame = transformUtils.concatenateTransforms([graspToDrillTransform, drillOffset, drillToWorld])
+        if self.graspingHand == 'right':
+            thumbSideFlip = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0], [0.0, 180, 0.0])
+        else:
+            thumbSideFlip = vtk.vtkTransform()
+
+        targetFrame = transformUtils.concatenateTransforms([thumbSideFlip, graspToDrillTransform, drillOffset, drillToWorld])
 
         vis.updateFrame(targetFrame, 'drill grasp offset frame', scale=0.2, parent='drill grasp frame')
 
@@ -652,6 +657,10 @@ class DrillPlannerDemo(object):
             handToWorld1 = self.ikPlanner.getLinkFrameAtPose(handLinkName, startPose)
             handToWorld2 = self.ikPlanner.getLinkFrameAtPose(handLinkName, endPose)
 
+            palmToHand = self.ikPlanner.getPalmToHandLink(self.graspingHand)
+            handToWorld1 = transformUtils.concatenateTransforms([palmToHand, handToWorld1])
+            handToWorld2 = transformUtils.concatenateTransforms([palmToHand, handToWorld2])
+
             motionVector = np.array(handToWorld2.GetPosition()) - np.array(handToWorld1.GetPosition())
             motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(handToWorld2.GetPosition()), motionVector)
 
@@ -662,7 +671,7 @@ class DrillPlannerDemo(object):
             vis.updatePolyData(d.getPolyData(), 'motion vector')
 
 
-            p = self.ikPlanner.createLinePositionConstraint(handLinkName, vtk.vtkTransform(), motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
+            p = self.ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
             p.tspan = np.linspace(0, 1, 5)
 
             constraintSet.constraints.append(p)
