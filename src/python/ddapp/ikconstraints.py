@@ -70,7 +70,7 @@ class ConstraintBase(FieldContainer):
         return quat
 
     def getTSpanString(self):
-        return self.toRowVectorString(self.tspan)
+        return self.toRowVectorString([self.tspan[0], self.tspan[-1]])
 
     def getJointsString(self, joints):
         return '[%s]' % '; '.join(['joints.%s' % jointName for jointName in joints])
