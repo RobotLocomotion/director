@@ -9,6 +9,7 @@ from ddapp import visualization as vis
 from ddapp import objectmodel as om
 from ddapp import lcmUtils
 from ddapp import ik
+from ddapp import cameraview
 
 from ddapp.debugVis import DebugData
 
@@ -205,10 +206,10 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addTasks()
         self.showTrajectory = False
         self.steeringSub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
-        self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG', lcmbotcore.rigid_transform_t, self.onAprilTag)
+        self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG_TO_CAMERA_LEFT', lcmbotcore.rigid_transform_t, self.onAprilTag)
 
     def onAprilTag(self, msg):
-        self.drivingPlanner.tagToLocalTransform = transformUtils.transformFromPose(msg.trans, msg.quat)
+        cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', self.drivingPlanner.tagToLocalTransform)
         self.drivingPlanner.updateAndDrawTrajectory()
 
     def addButtons(self):
