@@ -61,7 +61,7 @@ class TerrainTask(object):
     def requestRaycastTerrain(self):
         affs = self.robotSystem.affordanceManager.getCollisionAffordances()
         xy = self.robotSystem.robotStateJointController.q[:2]
-        self.robotSystem.raycastDriver.requestRaycast(affs, xy-5, xy+5)
+        self.robotSystem.raycastDriver.requestRaycast(affs, xy-4.5, xy+4.5)
 
 
     def walkToTiltedCinderblocks(self):
