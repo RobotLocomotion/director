@@ -417,13 +417,15 @@ class DoorDemo(object):
         return constraints
 
 
-    def planHandleTurn(self):
+    def planHandleTurn(self, turnAngle=None):
+
         ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow,
                            'numberOfAddedKnots': 2}
         originalIkParameterDict = self.setIkParameters(ikParameterDict)
 
+        if turnAngle is None:
+            turnAngle = self.handleTurnAngle
         startPose = self.getPlanningStartPose()
-        graspOrientation = self.computeGraspOrientation()
         linkFrame = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(), startPose)
 
         finalGraspToReferenceTransfrom = transformUtils.concatenateTransforms(
@@ -431,7 +433,7 @@ class DoorDemo(object):
              self.doorHandleAxisFrame.transform.GetInverse()])
 
         handleTurnTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0],
-                                                                     [-self.handleTurnAngle, 0, 0])
+                                                                     [-turnAngle, 0, 0])
         doorHandleTurnFrame = transformUtils.concatenateTransforms([finalGraspToReferenceTransfrom,
                                                                     handleTurnTransform,
                                                                     self.doorHandleAxisFrame.transform])
@@ -512,37 +514,7 @@ class DoorDemo(object):
 
     def planHandlePushLift(self):
 
-        startPose = self.getPlanningStartPose()
-        graspOrientation = self.computeGraspOrientation()
-        linkFrame = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(), startPose)
-
-        finalGraspToReferenceTransfrom = transformUtils.concatenateTransforms(
-            [self.ikPlanner.getPalmToHandLink(self.graspingHand), linkFrame,
-             self.doorHandlePushLiftAxisFrame.transform.GetInverse()])
-
-        handleTurnTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0],
-                                                                     [self.handleTurnAngle, 0, 0])
-        doorHandlePushLiftFrame = transformUtils.concatenateTransforms([finalGraspToReferenceTransfrom,
-                                                                    handleTurnTransform,
-                                                                    self.doorHandlePushLiftAxisFrame.transform])
-
-        vis.updateFrame(doorHandlePushLiftFrame, 'debug push lift', parent=self.doorHandleAffordance, visible=False, scale=0.2)
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand,
-                                                           doorHandlePushLiftFrame)
-        endPose, info = constraintSet.runIk()
-        constraints = constraintSet.constraints
-
-        constraints.extend(self.createHingeConstraint(self.doorHandlePushLiftAxisFrame, [1.0, 0.0, 0.0],
-                                                      self.ikPlanner.getHandLink(),
-                                                      constraintSet.startPoseName))
-        constraints.append(self.ikPlanner.createLockedBasePostureConstraint(constraintSet.startPoseName))
-        constraints.append(self.ikPlanner.createLockedBackPostureConstraint(constraintSet.startPoseName))
-        constraints.extend(self.ikPlanner.createFixedFootConstraints(constraintSet.startPoseName))
-        constraints.append(self.ikPlanner.createLockedArmPostureConstraint(constraintSet.startPoseName))
-
-        plan = constraintSet.runIkTraj()
-
-        self.addPlan(plan)
+        self.planHandleTurn(-self.handleTurnAngle)
 
 
     #def planHandlePushLift(self):
@@ -1309,6 +1281,9 @@ class DoorTaskPanel(TaskUserPanel):
         self.addManualButton('Show walking plan', self.doorDemo.computeWalkingPlan)
         self.addManualSpacer()
         self.addManualButton('Nominal', self.doorDemo.planNominal)
+        self.addManualSpacer()
+        self.addManualButton('Turn more', functools.partial(self.doorDemo.planHandleTurn, 10))
+        self.addManualButton('Turn less', functools.partial(self.doorDemo.planHandleTurn, -10))
         self.addManualSpacer()
         self.addManualButton('Commit Manip', self.doorDemo.commitManipPlan)
 
