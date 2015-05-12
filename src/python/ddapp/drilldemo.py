@@ -679,7 +679,7 @@ class DrillPlannerDemo(object):
 
     def planReachNew(self):
         self.ikPlanner.ikServer.maxDegreesPerSecond = 30
-        self.planParameterizedGrasp(-0.17, 0.3, 0.0)
+        self.planParameterizedGrasp(-0.17, 0.1, 0.0)
 
     def planGraspNew(self):
         self.ikPlanner.ikServer.maxDegreesPerSecond = 15
