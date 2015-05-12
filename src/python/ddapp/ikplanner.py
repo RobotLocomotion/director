@@ -882,6 +882,15 @@ class IKPlanner(object):
         return self.newGraspToHandFrame(side, t)
 
 
+    def computeFrameToHand(self, startPose, side, frameToWorld):
+        '''
+        Given a starting pose, a side, and a frame in world, returns the relative transform
+        from the frame to the left/right hand link using forward kinematics.
+        '''
+        handToWorld = self.getLinkFrameAtPose(self.getHandLink(side), startPose)
+        worldToHand = handToWorld.GetLinearInverse()
+        return transformUtils.concatenateTransforms([frameToWorld, worldToHand])
+
     def newGraspToHandFrame(self, side, graspToPalmFrame=None):
         '''
         Creates a grasp to hand link frame given a grasp to palm transform.
@@ -926,18 +935,15 @@ class IKPlanner(object):
         return constraintSet
 
 
-    def planEndEffectorGoal(self, startPose, side, graspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
-
-        self.reachingSide = side
+    def planEndEffectorGoal(self, startPose, side, targetFrame, graspToHandLinkFrame=None, lockBase=False, lockBack=False, lockArm=True, constraints=None):
 
         startPoseName = 'reach_start'
         self.addPose(startPose, startPoseName)
 
         if constraints is None:
-            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
+            constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm, side=side)
 
-        return self.newReachGoal(startPoseName, side, graspFrame, constraints)
-        
+        return self.newReachGoal(startPoseName, side, targetFrame, constraints, graspToHandLinkFrame)
 
 
     def newReachGoals(self, startPoseName, rightFrame, leftFrame, constraints, graspToHandLinkFrame=None, lockOrient=True):
@@ -1173,12 +1179,17 @@ class IKPlanner(object):
         for name, position in zip(msg.joint_name, msg.joint_position):
             goalPoseJoints[name] = position
 
-        startPose = np.array(stateJointController.q)
+        feetOnGround = True
+        for jointName in goalPoseJoints.keys():
+            if 'leg' in jointName:
+                feetOnGround = False
 
+
+        startPose = np.array(stateJointController.q)
         goalMode = getIkOptions().getProperty('Goal planning mode')
         if goalMode == 0:
             endPose = self.mergePostures(startPose, goalPoseJoints)
-            self.computePostureGoal(startPose, endPose)
+            self.computePostureGoal(startPose, endPose, feetOnGround=feetOnGround)
         else:
             self.computeJointPostureGoal(startPose, goalPoseJoints)
 

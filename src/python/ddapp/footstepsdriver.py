@@ -503,7 +503,7 @@ class FootstepsDriver(object):
         return contact_pts
 
     @staticmethod
-    def getFeetMidPoint(model):
+    def getFeetMidPoint(model, useWorldZ=True):
         '''
         Returns a frame in world coordinate system that is the average of the left
         and right foot reference point positions in world frame, the average of the
@@ -521,7 +521,12 @@ class FootstepsDriver(object):
         t_rf_mid.PreMultiply()
         t_rf_mid.Translate(contact_pts_mid)
         t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
-        return transformUtils.frameFromPositionAndRPY(t_feet_mid.GetPosition(), [0.0, 0.0, t_feet_mid.GetOrientation()[2]])
+
+        if useWorldZ:
+            rpy = [0.0, 0.0, np.degrees(transformUtils.rollPitchYawFromTransform(t_feet_mid)[2])]
+            return transformUtils.frameFromPositionAndRPY(t_feet_mid.GetPosition(), rpy)
+        else:
+            return t_feet_mid
 
     @staticmethod
     def debugDrawFootPoints(model):
@@ -836,9 +841,7 @@ class FootstepRequestGenerator(object):
 
     @staticmethod
     def getRobotStanceFrame(robotModel):
-        stanceFrame = FootstepsDriver.getFeetMidPoint(robotModel)
-        stanceFrame = transformUtils.frameFromPositionAndRPY(stanceFrame.GetPosition(), [0,0,transformUtils.rollPitchYawFromTransform(stanceFrame)[2]])
-        return stanceFrame
+        return FootstepsDriver.getFeetMidPoint(robotModel)
 
     @staticmethod
     def makeStepFrames(stepFrames, relativeFrame=None, showFrames=False):
@@ -859,7 +862,7 @@ class FootstepRequestGenerator(object):
 
         return frames
 
-    def makeStepMessages(self, stepFrames, leadingFoot):
+    def makeStepMessages(self, stepFrames, leadingFoot, snapToTerrain=False):
 
         assert leadingFoot in ('left', 'right')
         isRightFootOffset = 0 if leadingFoot == 'left' else 1
@@ -885,13 +888,18 @@ class FootstepRequestGenerator(object):
             step.fixed_pitch = True
             step.fixed_yaw = True
 
+            if snapToTerrain:
+                step.fixed_z = False
+                step.fixed_roll = False
+                step.fixed_pitch = False
+
             stepMessages.append(step)
 
         return stepMessages
 
-    def makeFootstepRequest(self, startPose, stepFrames, leadingFoot, numberOfFillSteps=0):
+    def makeFootstepRequest(self, startPose, stepFrames, leadingFoot, numberOfFillSteps=0, snapToTerrain=False):
 
-        stepMessages = self.makeStepMessages(stepFrames, leadingFoot)
+        stepMessages = self.makeStepMessages(stepFrames, leadingFoot, snapToTerrain=snapToTerrain)
         request = self.footstepsDriver.constructFootstepPlanRequest(startPose)
         request.num_goal_steps = len(stepMessages)
         request.goal_steps = stepMessages

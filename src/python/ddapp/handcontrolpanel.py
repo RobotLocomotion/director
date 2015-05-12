@@ -4,6 +4,9 @@ from ddapp import lcmUtils
 from ddapp import applogic as app
 from ddapp.utime import getUtime
 from ddapp.timercallback import TimerCallback
+from ddapp import visualization as vis
+from ddapp.debugVis import DebugData
+from ddapp.wristforcetorquevisualizer import WristForceTorqueVisualizer
 
 import numpy as np
 import math
@@ -25,9 +28,10 @@ class WidgetDict(object):
 
 class HandControlPanel(object):
 
-    def __init__(self, lDriver, rDriver, robotStateModel):
+    def __init__(self, lDriver, rDriver, robotStateModel, robotStateJointController, view):
 
         self.robotStateModel = robotStateModel
+        self.robotStateJointController = robotStateJointController
         self.drivers = {}
         self.drivers['left'] = lDriver
         self.drivers['right'] = rDriver
@@ -45,6 +49,9 @@ class HandControlPanel(object):
 
         self.widget.advanced.sendButton.setEnabled(True)
 
+        # Store calibration for wrist f/t sensors
+        self.wristftvis = WristForceTorqueVisualizer(robotStateModel, robotStateJointController, view)
+
         # connect the callbacks
         self.widget.basic.openButton.clicked.connect(self.openClicked)
         self.widget.basic.closeButton.clicked.connect(self.closeClicked)
@@ -57,6 +64,17 @@ class HandControlPanel(object):
         self.widget.advanced.dropButton.clicked.connect(self.dropClicked)
         self.widget.advanced.repeatRateSpinner.valueChanged.connect(self.rateSpinnerChanged)
         self.ui.fingerControlButton.clicked.connect(self.fingerControlButton)
+
+        self.widget.sensors.rightTareButton.clicked.connect(self.wristftvis.tareRightFT)
+        self.widget.sensors.leftTareButton.clicked.connect(self.wristftvis.tareLeftFT)
+        self.widget.sensors.rightCalibButton.clicked.connect(self.wristftvis.calibRightFT)
+        self.widget.sensors.leftCalibButton.clicked.connect(self.wristftvis.calibLeftFT)
+        self.widget.sensors.rightCalibClearButton.clicked.connect(self.wristftvis.calibRightClearFT)
+        self.widget.sensors.leftCalibClearButton.clicked.connect(self.wristftvis.calibLeftClearFT)
+        self.widget.sensors.rightVisCheck.clicked.connect(self.updateWristFTVis)
+        self.widget.sensors.leftVisCheck.clicked.connect(self.updateWristFTVis)
+        self.widget.sensors.torqueVisCheck.clicked.connect(self.updateWristFTVis)
+
         PythonQt.dd.ddGroupBoxHider(self.ui.sensors)
         PythonQt.dd.ddGroupBoxHider(self.ui.fingerControl)
 
@@ -68,7 +86,6 @@ class HandControlPanel(object):
         self.updateTimer.callback = self.updatePanel
         self.updateTimer.targetFps = 3
         self.updateTimer.start()
-
 
     def getModeInt(self, inputStr):
         if inputStr == 'Basic':
@@ -209,8 +226,10 @@ class HandControlPanel(object):
                                                  0)  # can ignore mode because scissor will override
         self.storedCommand[side] = None
 
-    def updatePanel(self):
+    def updateWristFTVis(self):
+        self.wristftvis.updateDrawSettings(self.ui.leftVisCheck.checked, self.ui.rightVisCheck.checked, self.ui.torqueVisCheck.checked);
 
+    def updatePanel(self):
         if self.ui.repeaterCheckBox.checked and self.storedCommand['left']:
             position, force, velocity, mode = self.storedCommand['left']
             self.drivers['left'].sendCustom(position, force, velocity, mode)
@@ -224,12 +243,12 @@ def _getAction():
     return app.getToolBarActions()['ActionHandControlPanel']
 
 
-def init(driverL, driverR, model):
+def init(driverL, driverR, model, jc, view):
 
     global panel
     global dock
 
-    panel = HandControlPanel(driverL, driverR, model)
+    panel = HandControlPanel(driverL, driverR, model, jc, view)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
