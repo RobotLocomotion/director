@@ -7,8 +7,9 @@ from ddapp.timercallback import TimerCallback
 
 class AffordanceGraspUpdater(object):
 
-    def __init__(self, robotModel, extraModels=None):
+    def __init__(self, robotModel, ikPlanner, extraModels=None):
         self.robotModel = robotModel
+        self.ikPlanner = ikPlanner
         self.frameSyncs = {}
 
         models = [robotModel]
@@ -19,7 +20,12 @@ class AffordanceGraspUpdater(object):
             model.connectModelChanged(self.onRobotModelChanged)
 
     def onRobotModelChanged(self, model):
-        for linkName in ['l_hand', 'r_hand']:
+        linkNames = []
+        for handModel in self.ikPlanner.handModels:
+            linkNames.append(handModel.handLinkName)
+        #linkNames = [self.ikPlanner.getHandLink('left') , self.ikPlanner.getHandLink('right')]
+
+        for linkName in linkNames:
             self.updateLinkFrame(model, linkName, create=False)
 
     def getAffordanceFrame(self, affordanceName):
@@ -47,7 +53,8 @@ class AffordanceGraspUpdater(object):
 
         affordanceFrame = self.getAffordanceFrame(affordanceName)
 
-        linkName = 'l_hand' if side == 'left' else 'r_hand'
+        #linkName = 'l_hand' if side == 'left' else 'r_hand'
+        linkName = self.ikPlanner.getHandLink(side)
         linkFrame = self.updateLinkFrame(self.robotModel, linkName)
 
         frameSync = vis.FrameSync()
