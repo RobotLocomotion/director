@@ -361,6 +361,7 @@ class DoorDemo(object):
 
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandleReachFrame)
+        constraintSet.nominalPoseName = 'q_start'
         endPose, info = constraintSet.runIk()
 
         linkOffsetFrame = self.ikPlanner.getPalmToHandLink(self.graspingHand)
@@ -434,6 +435,7 @@ class DoorDemo(object):
         vis.updateFrame(doorHandleTurnFrame, 'debug turn', parent=self.doorHandleAffordance, visible=False, scale=0.2)
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand,
                                                            doorHandleTurnFrame)
+        constraintSet.nominalPoseName = 'q_start'
         endPose, info = constraintSet.runIk()
         constraints = constraintSet.constraints
 
@@ -488,6 +490,7 @@ class DoorDemo(object):
         vis.updateFrame(doorHandlePushFrame, 'debug push', parent=self.doorHandleAffordance, visible=False, scale=0.2)
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand,
                                                            doorHandlePushFrame)
+        constraintSet.nominalPoseName = 'q_start'
         endPose, info = constraintSet.runIk()
         constraints = constraintSet.constraints
 
