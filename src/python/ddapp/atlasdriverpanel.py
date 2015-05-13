@@ -67,6 +67,7 @@ class AtlasDriverPanel(object):
         self.updateBehaviorLabel()
         self.updateControllerStatusLabel()
         self.updateRecoveryEnabledLabel()
+        self.updateBracingEnabledLabel()
         self.updateStatus()
         self.updateButtons()
         self.updateElectricArmStatus()
@@ -80,6 +81,9 @@ class AtlasDriverPanel(object):
 
     def updateRecoveryEnabledLabel(self):
         self.ui.recoveryEnabledLabel.text = self.driver.getRecoveryEnabledStatus() or '<unknown>'
+    
+    def updateBracingEnabledLabel(self):
+        self.ui.bracingEnabledLabel.text = self.driver.getBracingEnabledStatus() or '<unknown>'
 
     def updateStatus(self):
         self.ui.inletPressure.value = self.driver.getCurrentInletPressure()
