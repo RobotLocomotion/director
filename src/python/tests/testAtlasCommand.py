@@ -75,7 +75,6 @@ def atlasCommandToDrakePose(msg):
     return drakePose.tolist()
 
 
-
 def getJointGroups():
     return [
         { "name" : "Back",
@@ -143,7 +142,7 @@ def getJointGroups():
 class AtlasCommandStream(object):
 
     def __init__(self):
-        self.timer = TimerCallback(targetFps=5)
+        self.timer = TimerCallback(targetFps=10)
         #self.timer.disableScheduledTimer()
         self.app = ConsoleApp()
         self.robotModel, self.jointController = roboturdf.loadRobotModel('robot model')
@@ -388,6 +387,8 @@ class JointCommandPanel(object):
         self.ui.previewSlider.connect('valueChanged(int)', self.onPreviewSliderChanged)
         self.ui.speedSpinBox.connect('valueChanged(double)', self.onSpeedChanged)
         self.ui.editPositionGainsButton.connect('clicked()', self.onEditPositionGains)
+        self.ui.steeringButton.connect('clicked()', self.onSteeringButtonClicked)
+        self.ui.throttleButton.connect('clicked()', self.onThrottleButtonClicked)
         self.hidePreviewModels()
         self.gainsEditor = GainAdjustmentPanel()
 
@@ -435,6 +436,27 @@ class JointCommandPanel(object):
 
             self.sendPlanPause()
             commandStream.stopStreaming()
+
+    def onSteeringButtonClicked(self):
+        steeringControlEnabled = bool(self.ui.steeringButton.checked)
+
+        if steeringControlEnabled:
+            self.ui.steeringButton.setText('Stop Steering Control')
+            self.steeringControlEnabled = True
+        else:
+            self.ui.steeringButton.setText('Start Steering Control')
+            self.steeringControlEnabled = False
+
+    def onThrottleButtonClicked(self):
+        throttleControlEnabled = bool(self.ui.throttleButton.checked)
+
+        if throttleControlEnabled:
+            self.ui.throttleButton.setText('Stop Throttle')
+            self.throttleControlEnabled = True
+        else:
+            self.ui.throttleButton.setText('Start Throttle')
+            self.throttleControlEnabled = False
+
 
     def sendPlanPause(self):
         msg = lcmdrc.plan_control_t()
@@ -753,8 +775,11 @@ class AtlasCommandPanel(object):
 
         #self.sub = lcmUtils.addSubscriber('COMMITTED_ROBOT_PLAN', lcmdrc.robot_plan_t, self.onRobotPlan)
         lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onDrivingControl)
+        lcmUtils.addSubscriber('THROTTLE_COMMAND', lcmdrc.throttle_control_cmd_t, self.onThrottleControl)
 
     def onDrivingControl(self, msg):
+        if ~self.jointCommandPanel.steeringControlEnabled:
+            return
         if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:        
             steeringAngle = -msg.steering_angle
             offset = 0.0
@@ -762,6 +787,16 @@ class AtlasCommandPanel(object):
             self.jointTeleopPanel.endPose[lwyJointIdx] = steeringAngle + offset
             self.jointTeleopPanel.updateSliders()
             self.jointTeleopPanel.sliderChanged('l_arm_lwy')
+
+    def onThrottleControl(self,msg):
+        if ~self.jointCommandPanel.throttleControlEnabled:
+            return
+
+        anklePosition = msg.ankle_position
+        akyIdx = self.jointTeleopPanel.toJointIndex('l_leg_aky')
+        self.jointTeleopPanel.endPose[akyIdx] = anklePosition
+        self.jointTeleopPanel.updateSliders()
+        self.jointTeleopPanel.sliderChanged('l_leg_aky')
             
     def onRobotPlan(self, msg):
         playback = planplayback.PlanPlayback()

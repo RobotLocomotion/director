@@ -12,8 +12,10 @@ from ddapp import ik
 from ddapp import cameraview
 from ddapp import affordanceupdater
 from ddapp import segmentation
-
+from ddapp import robotstate
 from ddapp.debugVis import DebugData
+from ddapp.utime import getUtime
+
 
 import os
 import functools
@@ -36,6 +38,14 @@ class DrivingPlanner(object):
         self.wheelDistance = 1.4
         self.tagToLocalTransform = transformUtils.transformFromPose([0,0,0],[1,0,0,0])
 
+        self.commandStreamChannel = 'JOINT_POSITION_GOAL'
+        self.akyIdx = robotstate.getDrakePoseJointNames().index('l_leg_aky')
+        self.anklePositions = np.array([np.nan,np.nan])
+        self.idleAngleSlack = 10
+        self.fineGrainedThrottleTravel = 10
+        self.throttlePublishChannel = 'THROTTLE_COMMAND'
+        self.addSubscribers()
+
     def getInitCommands(self):
 
       commands = [textwrap.dedent('''
@@ -51,6 +61,9 @@ class DrivingPlanner(object):
       ''')]
 
       return commands
+
+    def addSubscribers(self):
+        lcmUtils.addSubscriber('THROTTLE_SLIDER_BOARD', lcmdrc. , self.onThrottleCommand)
 
     def initialize(self, ikServer, success):
         if ikServer.restarted:
@@ -210,6 +223,34 @@ class DrivingPlanner(object):
 
         return transformedDrivingTraj
 
+    # capture the ankle position, 0 is no throttle, 1 is just starting to move
+    def captureAnklePosition(self, typeIdx):
+        msg = lcmUtils.captureMessage(self.commandStreamChannel, lcmdrc.atlas_command_t)
+        pose = robotstate.atlasCommandToDrakePose(msg)
+        anklePos = np.rad2deg(pose[self.akyIdx])
+        self.anklePositions[typeIdx] = anklePos
+
+    def onThrottleCommand(self, msg):
+        if np.isnan(self.anklePositions).any():
+            print 'you must initialize the LOW/HIGH ankle positions before streaming throttle commands'
+            print 'use the Capture Ankle Angle Low/High Buttons'
+            return
+        # slider 0 is the coarse grained slider, slider 1 is for fine grained adjustment
+        slider = self.decodeThrottleMessage(msg)
+        slope = self.anklePositions[1] - (self.anklePositions[0] - self.throttleIdleAngleSlack)
+        const = self.anklePositions[0] - self.throttleIdleAngleSlack
+        ankleGoalPosition = const + slider[0]*slope + (slider[1]-1/2.0)*self.fineGrainedThrottleTravel
+
+        ankleGoalPositionRadians = np.deg2rad(ankleGoalPosition)
+        msg = lcmdrc.throttle_control_cmd_t
+        msg.utim = getUtime()
+        msg.ankle_position = ankleGoalPositionRadians
+        lcmUtils.publish(self.throttlePublishChannel, msg)
+
+    def decodeThrottleMessage(self,msg):
+
+
+
 class DrivingPlannerPanel(TaskUserPanel):
 
     def __init__(self, robotSystem):
@@ -243,6 +284,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addManualButton('Plan Turn', self.onPlanTurn)
         self.addManualButton('Plan Steering Wheel Turn', self.onPlanSteeringWheelTurn)
         self.addManualButton('Plan Seed', self.drivingPlanner.planSeed)
+        self.addManualButton('Capture Ankle Angle Low', functools.partial(self.drivingPlanner.captureAnklePosition, 1))
+        self.addManualButton('Capture Ankle Angle High', functools.partial(self.drivingPlanner.captureAnklePosition, 1))
 
     def addDefaultProperties(self):
         self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
@@ -257,6 +300,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Grasp Location', 0, attributes=om.PropertyAttributes(enumNames=['Center','Rim']))
         self.params.addProperty('Seed with current posture', 0, attributes=om.PropertyAttributes(enumNames=['False','True']))
         self.params.addProperty('Speed', 1.0, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
+        self.params.addProperty('Throttle Idle Angle Slack', 10, attributes=om.PropertyAttributes(singleStep=1))
+        self.params.addProperty('Fine Grained Throttle Travel', attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Turning Radius', 9.5, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Wheel Separation', 1.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Segments', 25, attributes=om.PropertyAttributes(singleStep=1, decimals=0))
@@ -279,6 +324,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.quatTol = self.params.getProperty('Quat Constraint Tol')
         self.graspLocation = self.params.getPropertyEnumValue('Grasp Location').lower()
         self.drivingPlanner.seedWithCurrent = self.params.getProperty('Seed with current posture')
+        self.drivingPLanner.throttleIdleAngleSlack = self.params.getProperty('Throttle Idle Angle Slack')
+        self.drivingPlanner.fineGrainedThrottleTravel = self.params.getProperty('Fine Grained Throttle Travel')
         self.drivingPlanner.maxTurningRadius = self.params.getProperty('Turning Radius')
         self.drivingPlanner.trajSegments = self.params.getProperty('Trajectory Segments')
         self.drivingPlanner.wheelDistance = self.params.getProperty('Wheel Separation')
