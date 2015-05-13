@@ -294,7 +294,7 @@ def applyLocalPlaneFit(polyData, searchPoint, searchRadius, searchRadiusEnd=None
     polyData, normal = applyPlaneFit(polyData, distanceToPlaneThreshold, searchOrigin=searchPoint, searchRadius=searchRadius)
 
     if searchRadiusEnd is not None:
-        polyData, normal = applyPlaneFit(polyData, distanceToPlaneThreshold, perpendicularAxis=normal, angleEpsilon=math.radians(5), searchOrigin=searchPoint, searchRadius=searchRadiusEnd)
+        polyData, normal = applyPlaneFit(polyData, distanceToPlaneThreshold, perpendicularAxis=normal, angleEpsilon=math.radians(30), searchOrigin=searchPoint, searchRadius=searchRadiusEnd)
 
     fitPoints = thresholdPoints(polyData, 'dist_to_plane', [-distanceToPlaneThreshold, distanceToPlaneThreshold])
 
@@ -1193,7 +1193,7 @@ def segmentValveByBoundingBox(polyData, searchPoint):
 
 def segmentDoorPlane(polyData, doorPoint):
 
-    fitPoints, normal = applyLocalPlaneFit(polyData, doorPoint, searchRadius=0.1, searchRadiusEnd=0.2, removeGroundFirst=False)
+    fitPoints, normal = applyLocalPlaneFit(polyData, doorPoint, searchRadius=0.2, searchRadiusEnd=1.0, removeGroundFirst=False)
 
     updatePolyData(fitPoints, 'door points', visible=False, color=[0,1,0])
 
