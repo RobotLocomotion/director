@@ -468,6 +468,7 @@ class FootstepsDriver(object):
             frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
             obj.actor.SetUserTransform(footstepTransform)
             obj.addProperty('Support Contact Groups', footstep.params.support_contact_groups, attributes=om.PropertyAttributes(enumNames=['Whole Foot', 'Front 2/3', 'Back 2/3']))
+            obj.properties.setPropertyIndex('Support Contact Groups', 0)
             obj.footstep_index = i
             obj.footstep_property_callback = obj.properties.connectPropertyChanged(functools.partial(self.onFootstepPropertyChanged, obj))
 
