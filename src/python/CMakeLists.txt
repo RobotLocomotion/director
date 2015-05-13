@@ -49,6 +49,7 @@ set(python_files
   ddapp/irisUtils.py
   ddapp/irisdriver.py
   ddapp/jointcontrol.py
+  ddapp/jointpropagator.py
   ddapp/kinematicposeplanner.py
   ddapp/lcmloggerwidget.py
   ddapp/lcmgl.py
