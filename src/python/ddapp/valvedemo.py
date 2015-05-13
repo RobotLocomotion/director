@@ -507,10 +507,19 @@ class ValvePlannerDemo(object):
                                                            planFromCurrentRobotState))
         constraints.extend(self.createAllHandPositionConstraints(self.coaxialTol, retract))
 
-        startPose = self.getStartPoseName(planFromCurrentRobotState, retract, usePoses)
-        endPose = self.getEndPoseName(retract, usePoses)
+        if retract:
+            startPoseName = self.getStartPoseName(planFromCurrentRobotState, True, usePoses)
+            endPoseName = self.getEndPoseName(True, usePoses)
+            endPose = self.ikPlanner.jointController.getPose(endPoseName)
+            wristJoints = robotstate.matchJoints('lwy')
+            endPose = self.ikPlanner.mergePostures(endPose, robotstate.matchJoints('lwy'), startPose)
+            endPoseName = 'q_retract'
+            self.ikPlanner.addPose(endPose, endPoseName)
+        else:
+            startPoseName = self.getStartPoseName(planFromCurrentRobotState, retract, usePoses)
+            endPoseName = self.getEndPoseName(retract, usePoses)
 
-        plan = self.ikPlanner.runIkTraj(constraints, startPose, endPose, self.nominalPoseName)
+        plan = self.ikPlanner.runIkTraj(constraints, startPoseName, endPoseName, self.nominalPoseName)
 
         if resetPoses and not retract and max(plan.plan_info) <= 10:
             self.setReachAndTouchPoses(plan)
