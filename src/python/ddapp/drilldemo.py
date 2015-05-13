@@ -675,10 +675,10 @@ class DrillPlannerDemo(object):
             motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(handToWorld2.GetPosition()), motionVector)
 
 
-            vis.updateFrame(motionTargetFrame, 'motion target frame', scale=0.1)
-            d = DebugData()
-            d.addLine(np.array(handToWorld2.GetPosition()), np.array(handToWorld2.GetPosition()) - motionVector)
-            vis.updatePolyData(d.getPolyData(), 'motion vector')
+            #vis.updateFrame(motionTargetFrame, 'motion target frame', scale=0.1)
+            #d = DebugData()
+            #d.addLine(np.array(handToWorld2.GetPosition()), np.array(handToWorld2.GetPosition()) - motionVector)
+            #vis.updatePolyData(d.getPolyData(), 'motion vector', visible=False)
 
 
             p = self.ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
@@ -960,7 +960,9 @@ class DrillPlannerDemo(object):
             t.PreMultiply()
             t.Translate(depth, horiz, vert)
             targetFrames.append(t)
-            vis.updateFrame(t, 'target %d' % i, scale=0.1)
+            om.removeFromObjectModel(om.findObjectByName('drill target frames'))
+            folder = om.getOrCreateContainer('drill target frames', parent=segmentation.getDebugFolder())
+            vis.showFrame(t, 'target %d' % i, scale=0.1, visible=False, parent=folder)
 
         targetFrames.append(targetFrames.pop(0))
 
@@ -1112,6 +1114,7 @@ class DrillPlannerDemo(object):
             desc = dict(classname='BoxAffordanceItem', Name=name, Dimensions=dimensions, pose=pose)
             aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
             aff.setProperty('Alpha', 0.2)
+            aff.setProperty('Visible', False)
         else:
             aff.setProperty('Dimensions', dimensions)
             aff.getChildFrame().copyFrame(t)
@@ -2140,6 +2143,9 @@ class DrillImageFitter(ImageBasedAffordanceFit):
         self.pickLineRadius = 0.05
         self.pickNearestToCamera = False
 
+        self.useLocalPlaneFit = True
+        self.useVoxelGrid = True
+
 
     def fit(self, polyData, points):
         if self.fitFunc:
@@ -2220,15 +2226,42 @@ class DrillImageFitter(ImageBasedAffordanceFit):
 
 
     def fitDrillWall(self, polyData, points):
-        planePoints, normal = segmentation.applyLocalPlaneFit(polyData, points[0], searchRadius=0.1, searchRadiusEnd=0.2)
-        obj = vis.updatePolyData(planePoints, 'wall plane points', color=[0,1,0], visible=False)
-        obj.setProperty('Point Size', 7)
 
-        viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
-        if np.dot(normal, viewDirection) < 0:
-            normal = -normal
 
-        origin = segmentation.computeCentroid(planePoints)
+
+        if self.useLocalPlaneFit:
+
+            planePoints, normal = segmentation.applyLocalPlaneFit(polyData, points[0], searchRadius=np.linalg.norm(points[1] - points[0]), searchRadiusEnd=1.0)
+
+            obj = vis.updatePolyData(planePoints, 'wall plane points', color=[0,1,0], visible=False)
+            obj.setProperty('Point Size', 7)
+
+            viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
+            if np.dot(normal, viewDirection) < 0:
+                normal = -normal
+
+            origin = segmentation.computeCentroid(planePoints)
+
+        else:
+
+            viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
+
+            if self.useVoxelGrid:
+                polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.01)
+                vis.updatePolyData(polyData, 'voxel points')
+
+            polyData = segmentation.cropToSphere(polyData, points[0], np.linalg.norm(points[1] - points[0]))
+
+            vis.updatePolyData(polyData, 'crop points')
+            polyData, normal = segmentation.applyPlaneFit(polyData, 0.005, expectedNormal=viewDirection)
+
+            vis.updatePolyData(polyData, 'fit points')
+
+            polyData = segmentation.thresholdPoints(polyData, 'dist_to_plane', [-0.005, 0.005])
+            vis.updatePolyData(polyData, 'wall fit points')
+
+            origin = points[0]
+
 
         zaxis = [0,0,1]
         xaxis = normal
@@ -2241,12 +2274,17 @@ class DrillImageFitter(ImageBasedAffordanceFit):
         t.PostMultiply()
         t.Translate(origin)
 
-        planePoints = segmentation.labelPointDistanceAlongAxis(planePoints, zaxis, origin=origin, resultArrayName='dist_along_z')
-        planePoints = segmentation.labelPointDistanceAlongAxis(planePoints, yaxis, origin=origin, resultArrayName='dist_along_y')
-        zdist = vnp.getNumpyFromVtk(planePoints, 'dist_along_z')
-        ydist = vnp.getNumpyFromVtk(planePoints, 'dist_along_y')
-        height = zdist.max() - zdist.min()
-        width = ydist.max() - ydist.min()
+        if self.useLocalPlaneFit:
+            planePoints = segmentation.labelPointDistanceAlongAxis(planePoints, zaxis, origin=origin, resultArrayName='dist_along_z')
+            planePoints = segmentation.labelPointDistanceAlongAxis(planePoints, yaxis, origin=origin, resultArrayName='dist_along_y')
+            zdist = vnp.getNumpyFromVtk(planePoints, 'dist_along_z')
+            ydist = vnp.getNumpyFromVtk(planePoints, 'dist_along_y')
+            height = zdist.max() - zdist.min()
+            width = ydist.max() - ydist.min()
+        else:
+            height = 1.0
+            width = 1.0
+
 
         wall = self.drillDemo.spawnWallAffordanceNew(t, width, height)
 
