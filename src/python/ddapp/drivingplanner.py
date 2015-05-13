@@ -40,10 +40,13 @@ class DrivingPlanner(object):
 
         self.commandStreamChannel = 'JOINT_POSITION_GOAL'
         self.akyIdx = robotstate.getDrakePoseJointNames().index('l_leg_aky')
+        self.lwyIdx = robotstate.getDrakePoseJointNames().index('l_arm_lwy')
         self.anklePositions = np.array([np.nan,np.nan])
         self.idleAngleSlack = 10
         self.fineGrainedThrottleTravel = 10
-        self.throttlePublishChannel = 'THROTTLE_COMMAND'
+        self.steeringAngleOffset = 0
+        self.throttlePublishChannel = 'THROTTLE_COMMAND_POSITION_GOAL'
+        self.steeringPublishChannel = 'STEERING_COMMAND_POSITION_GOAL'
         self.addSubscribers()
 
     def getInitCommands(self):
@@ -64,6 +67,7 @@ class DrivingPlanner(object):
 
     def addSubscribers(self):
         lcmUtils.addSubscriber('THROTTLE_SLIDER_BOARD', lcmdrc. , self.onThrottleCommand)
+        lcmUtils.addSubscriber('STEERING_WHEEL', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
 
     def initialize(self, ikServer, success):
         if ikServer.restarted:
@@ -242,12 +246,27 @@ class DrivingPlanner(object):
         ankleGoalPosition = const + slider[0]*slope + (slider[1]-1/2.0)*self.fineGrainedThrottleTravel
 
         ankleGoalPositionRadians = np.deg2rad(ankleGoalPosition)
-        msg = lcmdrc.throttle_control_cmd_t
-        msg.utim = getUtime()
-        msg.ankle_position = ankleGoalPositionRadians
+        msg = lcmdrc.joint_position_goal_t
+        msg.utime = getUtime()
+        msg.joint_position = ankleGoalPositionRadians
         lcmUtils.publish(self.throttlePublishChannel, msg)
 
+    def onSteeringCommand(self, msg):
+        steeringAngle = -msg.steeringAngle
+        lwyPositionGoal = steeringAngle + self.steeringAngleOffset
+        msg = lcmdrc.joint_position_goal_t
+        msg.utime = getUtime()
+        msg.joint_position = lwyPositionGoal
+        lcmUtils.publish(self.steeringPublishChannel, msg)
+
+    def setSteeringOffset(self, msg):
+        msg = lcmUtils.captureMessage(self.commandStreamChannel, lcmdrc.atlas_command_t)
+        pose = robotstate.atlasCommandToDrakePose(msg)
+        self.steeringAngleOffset = pose[self.lwyIdx]
+
     def decodeThrottleMessage(self,msg):
+
+
 
 
 

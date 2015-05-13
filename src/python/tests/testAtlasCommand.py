@@ -774,19 +774,43 @@ class AtlasCommandPanel(object):
         gl.setColumnStretch(1,1)
 
         #self.sub = lcmUtils.addSubscriber('COMMITTED_ROBOT_PLAN', lcmdrc.robot_plan_t, self.onRobotPlan)
-        lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onDrivingControl)
-        lcmUtils.addSubscriber('THROTTLE_COMMAND', lcmdrc.throttle_control_cmd_t, self.onThrottleControl)
+        lcmUtils.addSubscriber('STEERING_COMMAND_POSITION_GOAL', lcmdrc.driving_control_cmd_t, self.onJointPositionGoal)
+        lcmUtils.addSubscriber('THROTTLE_COMMAND_POSITION_GOAL', lcmdrc.throttle_control_cmd_t, self.onJointPositionGoal)
 
     def onDrivingControl(self, msg):
         if ~self.jointCommandPanel.steeringControlEnabled:
             return
         if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:        
             steeringAngle = -msg.steering_angle
-            offset = 0.0
             lwyJointIdx = self.jointTeleopPanel.toJointIndex('l_arm_lwy')
-            self.jointTeleopPanel.endPose[lwyJointIdx] = steeringAngle + offset
+            self.jointTeleopPanel.endPose[lwyJointIdx] = steeringAngle
             self.jointTeleopPanel.updateSliders()
             self.jointTeleopPanel.sliderChanged('l_arm_lwy')
+
+    def onJointPositionGoal(self, msg):
+        jointPositionGoal = msg.joint_position
+        jointName = msg.joint_name
+        allowedJointNames = ['l_leg_aky','l_arm_lwy']
+
+        if ~ (jointName in allowedJointNames):
+            print 'Position goals are not allowed for this joint'
+            print 'ignoring this position goal'
+            print 'use the sliders instead'
+
+        if (jointName == 'l_arm_lwy') and ~self.jointCommandPanel.steeringControlEnabled:
+            print 'Steering control not enabled'
+            print 'ignoring steering command'
+            return
+
+        if (jointName == 'l_leg_aky') and ~self.jointCommandPanel.throttleControlEnabled:
+            print 'Throttle control not enabled'
+            print 'ignoring throttle command'
+            return
+            
+        jointIdx = self.jointTeleopPanel.toJointIndex('l_leg_aky')
+        self.jointTeleopPanel[jointIdx] = jointPositionGoal
+        self.jointTeleopPanel.updateSliders()
+        self.jointTeleopPanel.sliderChanged(jointName)
 
     def onThrottleControl(self,msg):
         if ~self.jointCommandPanel.throttleControlEnabled:
