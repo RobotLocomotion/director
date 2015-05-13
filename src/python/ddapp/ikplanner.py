@@ -53,14 +53,14 @@ class ConstraintSet(object):
         seedPoseName = self.seedPoseName
         if not seedPoseName:
             seedPoseName = getIkOptions().getPropertyEnumValue('Seed pose')
-            if seedPoseName == 'q_start':
-                seedPoseName = self.startPoseName
+        if seedPoseName == 'q_start':
+            seedPoseName = self.startPoseName
 
         nominalPoseName = self.nominalPoseName
         if not nominalPoseName:
             nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
-            if nominalPoseName == 'q_start':
-                nominalPoseName = self.startPoseName
+        if nominalPoseName == 'q_start':
+            nominalPoseName = self.startPoseName
 
         self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
         print 'info:', self.info
@@ -73,8 +73,8 @@ class ConstraintSet(object):
         nominalPoseName = self.nominalPoseName
         if not nominalPoseName:
             nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
-            if nominalPoseName == 'q_start':
-                nominalPoseName = self.startPoseName
+        if nominalPoseName == 'q_start':
+            nominalPoseName = self.startPoseName
 
         self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName)
         return self.plan

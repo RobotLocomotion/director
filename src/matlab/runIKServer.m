@@ -13,7 +13,6 @@ r = s.robot_and_environment;
 nq = r.getNumPositions();
 q_nom = s.q_nom;
 q_zero = zeros(nq, 1);
-q_start = q_nom;
 q_end = q_nom;
 
 try
