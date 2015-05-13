@@ -15,7 +15,7 @@ from ddapp import planplayback
 from ddapp.pointpicker import PointPicker
 from ddapp import vtkAll as vtk
 from ddapp.simpletimer import SimpleTimer
-from ddapp import affordancegraspupdater
+from ddapp import affordanceupdater
 
 import ioUtils
 
@@ -65,7 +65,7 @@ class TableDemo(object):
         self.reachDist = 0.125
 
         extraModels = [self.robotStateModel]
-        self.affordanceUpdater  = affordancegraspupdater.AffordanceGraspUpdater(self.robotStateModel, self.ikPlanner, extraModels)
+        self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotStateModel, self.ikPlanner, extraModels)
 
 
     def addPlan(self, plan):
