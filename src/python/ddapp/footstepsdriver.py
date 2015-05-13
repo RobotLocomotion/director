@@ -383,15 +383,15 @@ class FootstepsDriver(object):
         self.lastFootstepPlan = None
         om.removeFromObjectModel(getFootstepsFolder())
 
-    def drawFootstepPlan(self, msg, folder,left_color=None, right_color=None, alpha=1.0):
-
+    def drawFootstepPlan(self, msg, folder, left_color=None, right_color=None, alpha=1.0):
+        for step in folder.children():
+            om.removeFromObjectModel(step)
         allTransforms = []
         volFolder = getWalkingVolumesFolder()
         map(om.removeFromObjectModel, volFolder.children())
         slicesFolder = getTerrainSlicesFolder()
         map(om.removeFromObjectModel, slicesFolder.children())
 
-        steps = folder.children()[2:]
 
         for i, footstep in enumerate(msg.footsteps):
             trans = footstep.pos.translation
@@ -429,16 +429,7 @@ class FootstepsDriver(object):
 
 
             if self.show_contact_slices:
-                for zs, xy in self.contact_slices.iteritems():
-                    points0 = np.vstack((xy, zs[0] + np.zeros((1,xy.shape[1]))))
-                    points1 = np.vstack((xy, zs[1] + np.zeros((1,xy.shape[1]))))
-                    points = np.hstack((points0, points1))
-                    points = points + np.array([[0.05],[0],[-0.0811]])
-                    points = points.T
-                    polyData = vnp.getVtkPolyDataFromNumpyPoints(points.copy())
-                    vol_mesh = filterUtils.computeDelaunay3D(polyData)
-                    obj = vis.showPolyData(vol_mesh, 'walking volume', parent=volFolder, alpha=0.5, visible=self.show_contact_slices, color=color)
-                    obj.actor.SetUserTransform(footstepTransform)
+                self.drawContactVolumes(footstepTransform, color)
 
             sole_offset = np.mean(FootstepsDriver.getContactPts(), axis=0)
             t_sole_prev = transformUtils.frameFromPositionMessage(msg.footsteps[i-2].pos)
@@ -470,36 +461,69 @@ class FootstepsDriver(object):
                            endHead=True)
                 vis.showPolyData(d.getPolyData(), 'infeasibility %d -> %d' % (i-2, i-1), parent=folder, color=[1, 0.2, 0.2])
 
-
             stepName = 'step %d' % (i-1)
 
-            if steps:
-                obj = steps.pop(0)
-                assert obj.getProperty('Name') == stepName
-                frameObj = obj.children()[0]
-                frameObj.copyFrame(footstepTransform)
-                obj.setProperty('Visible', True)
-                obj.setProperty('Color', QtGui.QColor(*[255*v for v in this_color]))
-                obj.setProperty('Alpha', alpha)
-            else:
-                obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=1.0, parent=folder)
-                obj.setIcon(om.Icons.Feet)
-                frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
-                obj.actor.SetUserTransform(footstepTransform)
+            obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=1.0, parent=folder)
+            obj.setIcon(om.Icons.Feet)
+            frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
+            obj.actor.SetUserTransform(footstepTransform)
+            obj.addProperty('Support Contact Groups', footstep.params.support_contact_groups, attributes=om.PropertyAttributes(enumNames=['Whole Foot', 'Front 2/3', 'Back 2/3']))
+            obj.properties.setPropertyIndex('Support Contact Groups', 0)
+            obj.footstep_index = i
+            obj.footstep_property_callback = obj.properties.connectPropertyChanged(functools.partial(self.onFootstepPropertyChanged, obj))
 
-        for obj in steps:
-            obj.setProperty('Visible', False)
+            self.drawContactPts(obj, footstep)
+
+    def drawContactVolumes(self, footstepTransform, color):
+        volFolder = getWalkingVolumesFolder()
+        for zs, xy in self.contact_slices.iteritems():
+            points0 = np.vstack((xy, zs[0] + np.zeros((1,xy.shape[1]))))
+            points1 = np.vstack((xy, zs[1] + np.zeros((1,xy.shape[1]))))
+            points = np.hstack((points0, points1))
+            points = points + np.array([[0.05],[0],[-0.0811]])
+            points = points.T
+            polyData = vnp.getVtkPolyDataFromNumpyPoints(points.copy())
+            vol_mesh = filterUtils.computeDelaunay3D(polyData)
+            obj = vis.showPolyData(vol_mesh, 'walking volume', parent=volFolder, alpha=0.5, visible=self.show_contact_slices, color=color)
+            obj.actor.SetUserTransform(footstepTransform)
+
+    def onFootstepPropertyChanged(self, obj, propertySet, propertyName):
+        if propertyName == "Support Contact Groups":
+            self.lastFootstepPlan.footsteps[obj.footstep_index].params.support_contact_groups = obj.properties.support_contact_groups
+            self.sendUpdatePlanRequest()
+
+    def drawContactPts(self, obj, footstep):
+        contact_pts = self.getContactPts(footstep.params.support_contact_groups)
+        d = DebugData()
+        for pt in contact_pts:
+            d.addSphere(pt, radius=0.01)
+        d_obj = vis.showPolyData(d.getPolyData(), "contact points", parent=obj)
+        d_obj.actor.SetUserTransform(obj.actor.GetUserTransform())
 
     @staticmethod
-    def getContactPts():
+    def getContactPts(support_contact_groups = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE):
         '''
         hard coded Location of the Drake contact points relative to foot frame. this should be read from URDF
         '''
         contact_pts = np.zeros((4,3))
-        contact_pts[0,:] = [-0.0876,  0.0626, -0.07645]
-        contact_pts[1,:] = [-0.0876, -0.0626, -0.07645]
-        contact_pts[2,:] = [0.1728,   0.0626, -0.07645]
-        contact_pts[3,:] = [0.1728,  -0.0626, -0.07645]
+        if support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE:
+            contact_pts[0,:] = [-0.0876,  0.0626, -0.07645]
+            contact_pts[1,:] = [-0.0876, -0.0626, -0.07645]
+            contact_pts[2,:] = [0.1728,   0.0626, -0.07645]
+            contact_pts[3,:] = [0.1728,  -0.0626, -0.07645]
+        elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE:
+            contact_pts[0,:] = [-0.0008,  0.0626, -0.07645]
+            contact_pts[1,:] = [-0.0008, -0.0626, -0.07645]
+            contact_pts[2,:] = [0.1728,   0.0626, -0.07645]
+            contact_pts[3,:] = [0.1728,  -0.0626, -0.07645]
+        elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT:
+            contact_pts[0,:] = [-0.0876,  0.0626, -0.07645]
+            contact_pts[1,:] = [-0.0876, -0.0626, -0.07645]
+            contact_pts[2,:] = [0.086,   0.0626, -0.07645]
+            contact_pts[3,:] = [0.086,  -0.0626, -0.07645]
+        else:
+            raise ValueError("Unrecognized support contact group: {:d}".format(support_contact_groups))
+
         return contact_pts
 
     @staticmethod
