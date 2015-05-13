@@ -191,7 +191,7 @@ class DrivingPlanner(object):
                 leftTraj.append(trajPoints[i] - 0.5 * self.wheelDistance * v2)
                 rightTraj.append(trajPoints[i] + 0.5 * self.wheelDistance * v2)
 
-        return leftTraj, trajPoints, rightTraj
+        return leftTraj, rightTraj
 
     def transformDrivingTrajectory(self, drivingTraj):
         transformedDrivingTraj = list()
@@ -360,7 +360,7 @@ class DrivingPlannerPanel(TaskUserPanel):
             return self.folder
 
     def updateAndDrawTrajectory(self):
-        leftTraj, centerTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(self.drivingPlanner.steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)        
+        leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(self.drivingPlanner.steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)        
         self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(leftTraj), 'LeftDrivingTrajectory')
         self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(rightTraj), 'RightDrivingTrajectory')
 
