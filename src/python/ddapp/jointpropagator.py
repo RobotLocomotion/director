@@ -1,11 +1,5 @@
 import os
 import vtkAll as vtk
-from ddapp import botpy
-import math
-import numpy as np
-
-from ddapp import applogic as app
-import time
 
 class JointPropagator(object):
 
@@ -16,7 +10,6 @@ class JointPropagator(object):
         # Figure out which joint indices we're going to
         # be propagating
         all_joint_names = parentRobotModel.model.getJointNames()
-        print jointsToPropagate
         if childRobotModel.model.getJointNames() != all_joint_names:
             raise Exception('parent and child robot model joints don\'t match!')
         all_joint_names = [str(joint) for joint in all_joint_names]
