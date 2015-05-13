@@ -71,8 +71,8 @@ def convertStateMessageToDrakePose(msg):
     return pose
 
 def atlasCommandToDrakePose(msg):
-    jointIndexMap = robotstate.getRobotStateToDrakePoseJointMap()
-    drakePose = np.zeros(len(robotstate.getDrakePoseJointNames()))
+    jointIndexMap = getRobotStateToDrakePoseJointMap()
+    drakePose = np.zeros(len(getDrakePoseJointNames()))
     for jointIdx, drakeIdx in jointIndexMap.iteritems():
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()

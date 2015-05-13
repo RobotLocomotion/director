@@ -392,6 +392,9 @@ class JointCommandPanel(object):
         self.hidePreviewModels()
         self.gainsEditor = GainAdjustmentPanel()
 
+        self.throttleControlEnabled = False
+        self.steeringControlEnabled = False
+
     def onEditPositionGains(self):
         self.gainsEditor.widget.show()
 
@@ -441,10 +444,10 @@ class JointCommandPanel(object):
         steeringControlEnabled = bool(self.ui.steeringButton.checked)
 
         if steeringControlEnabled:
-            self.ui.steeringButton.setText('Stop Steering Control')
+            self.ui.steeringButton.setText('Stop Steering')
             self.steeringControlEnabled = True
         else:
-            self.ui.steeringButton.setText('Start Steering Control')
+            self.ui.steeringButton.setText('Start Steering')
             self.steeringControlEnabled = False
 
     def onThrottleButtonClicked(self):
@@ -774,53 +777,36 @@ class AtlasCommandPanel(object):
         gl.setColumnStretch(1,1)
 
         #self.sub = lcmUtils.addSubscriber('COMMITTED_ROBOT_PLAN', lcmdrc.robot_plan_t, self.onRobotPlan)
-        lcmUtils.addSubscriber('STEERING_COMMAND_POSITION_GOAL', lcmdrc.driving_control_cmd_t, self.onJointPositionGoal)
-        lcmUtils.addSubscriber('THROTTLE_COMMAND_POSITION_GOAL', lcmdrc.throttle_control_cmd_t, self.onJointPositionGoal)
+        lcmUtils.addSubscriber('STEERING_COMMAND_POSITION_GOAL', lcmdrc.joint_position_goal_t, self.onJointPositionGoal)
+        lcmUtils.addSubscriber('THROTTLE_COMMAND_POSITION_GOAL', lcmdrc.joint_position_goal_t, self.onJointPositionGoal)
 
-    def onDrivingControl(self, msg):
-        if ~self.jointCommandPanel.steeringControlEnabled:
-            return
-        if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:        
-            steeringAngle = -msg.steering_angle
-            lwyJointIdx = self.jointTeleopPanel.toJointIndex('l_arm_lwy')
-            self.jointTeleopPanel.endPose[lwyJointIdx] = steeringAngle
-            self.jointTeleopPanel.updateSliders()
-            self.jointTeleopPanel.sliderChanged('l_arm_lwy')
 
     def onJointPositionGoal(self, msg):
         jointPositionGoal = msg.joint_position
         jointName = msg.joint_name
         allowedJointNames = ['l_leg_aky','l_arm_lwy']
 
-        if ~ (jointName in allowedJointNames):
+        if not (jointName in allowedJointNames):
             print 'Position goals are not allowed for this joint'
             print 'ignoring this position goal'
             print 'use the sliders instead'
+            return
 
-        if (jointName == 'l_arm_lwy') and ~self.jointCommandPanel.steeringControlEnabled:
+        if (jointName == 'l_arm_lwy') and (not self.jointCommandPanel.steeringControlEnabled):
             print 'Steering control not enabled'
             print 'ignoring steering command'
             return
 
-        if (jointName == 'l_leg_aky') and ~self.jointCommandPanel.throttleControlEnabled:
+        if (jointName == 'l_leg_aky') and (not self.jointCommandPanel.throttleControlEnabled):
             print 'Throttle control not enabled'
             print 'ignoring throttle command'
             return
             
         jointIdx = self.jointTeleopPanel.toJointIndex('l_leg_aky')
-        self.jointTeleopPanel[jointIdx] = jointPositionGoal
+        self.jointTeleopPanel.endPose[jointIdx] = jointPositionGoal
         self.jointTeleopPanel.updateSliders()
         self.jointTeleopPanel.sliderChanged(jointName)
 
-    def onThrottleControl(self,msg):
-        if ~self.jointCommandPanel.throttleControlEnabled:
-            return
-
-        anklePosition = msg.ankle_position
-        akyIdx = self.jointTeleopPanel.toJointIndex('l_leg_aky')
-        self.jointTeleopPanel.endPose[akyIdx] = anklePosition
-        self.jointTeleopPanel.updateSliders()
-        self.jointTeleopPanel.sliderChanged('l_leg_aky')
             
     def onRobotPlan(self, msg):
         playback = planplayback.PlanPlayback()

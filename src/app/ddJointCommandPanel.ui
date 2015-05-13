@@ -118,6 +118,9 @@
      <property name="text">
       <string>Start Steering</string>
      </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item row="2" column="1">
@@ -176,6 +179,9 @@
     <widget class="QPushButton" name="throttleButton">
      <property name="text">
       <string>Start Throttle</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
