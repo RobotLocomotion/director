@@ -243,15 +243,24 @@ class IKPlanner(object):
 
         self.jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
         self.kneeJoints = drcargs.getDirectorConfig()['kneeJoints']
-        self.baseJoints     = (item for item in self.jointGroups if item["name"] == 'Base').next()['joints']
-        self.backJoints     = (item for item in self.jointGroups if item["name"] == 'Back').next()['joints']
-        self.neckJoints     = (item for item in self.jointGroups if item["name"] == 'Neck').next()['joints']
-        self.leftArmJoints  = (item for item in self.jointGroups if item["name"] == 'Left Arm').next()['joints']
-        self.rightArmJoints = (item for item in self.jointGroups if item["name"] == 'Right Arm').next()['joints']
-        self.leftLegJoints  = (item for item in self.jointGroups if item["name"] == 'Left Leg').next()['joints']
-        self.rightLegJoints = (item for item in self.jointGroups if item["name"] == 'Right Leg').next()['joints']
+
+        # list of joints, otherwise []
+        self.baseJoints      = self.getJointGroup('Base')
+        self.backJoints      = self.getJointGroup('Back')
+        self.neckJoints      = self.getJointGroup('Neck')
+        self.leftArmJoints   = self.getJointGroup('Left Arm')
+        self.rightArmJoints  = self.getJointGroup('Right Arm')
+        self.leftLegJoints   = self.getJointGroup('Left Leg')
+        self.rightLegJoints  = self.getJointGroup('Right Leg')
 
         self.pelvisLink = drcargs.getDirectorConfig()['pelvisLink']
+
+    def getJointGroup(self, name):
+        jointGroup = filter(lambda group: group['name'] == name, self.jointGroups)
+        if (len(jointGroup) == 1):
+            return jointGroup[0]['joints']
+        else:
+            return []
 
     def setIkParameters(self, ikParameterDict):
         originalIkParameterDict = {}

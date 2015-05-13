@@ -274,7 +274,8 @@ class AsyncIKCommunicator():
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
         commands.append("end_effector_name = '%s';" % collisionEndEffectorName)
         commands.append("end_effector_name_left = '%s';" % self.handModels[0].handLinkName)
-        commands.append("end_effector_name_right = '%s';" % self.handModels[1].handLinkName)
+        if (len(self.handModels) > 1):
+            commands.append("end_effector_name_right = '%s';" % self.handModels[1].handLinkName)
         commands.append("end_effector_pt = [];")
         commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
 
