@@ -64,6 +64,7 @@ from ddapp import sensordatarequestpanel
 from ddapp import tasklaunchpanel
 from ddapp import pfgrasp
 from ddapp import pfgrasppanel
+from ddapp.jointpropagator import JointPropagator
 
 from ddapp import robotplanlistener
 from ddapp import handdriver
@@ -349,13 +350,14 @@ if usePlanning:
         sendDataRequest(lcmdrc.data_request_t.FUSED_HEIGHT, repeatTime)
 
 
-    def propagateHands(model=None):
+    teleopJointPropagator = JointPropagator(robotStateModel, teleopRobotModel, roboturdf.getRobotiqJoints() + ['neck_ay'])
+    playbackJointPropagator = JointPropagator(robotStateModel, playbackRobotModel, roboturdf.getRobotiqJoints())
+    def doPropagation(model=None):
         if teleopRobotModel.getProperty('Visible'):
-            roboturdf.copyRobotiqJoints(robotStateModel, teleopRobotModel)
+            teleopJointPropagator.doPropagation()
         if playbackRobotModel.getProperty('Visible'):
-            roboturdf.copyRobotiqJoints(robotStateModel, playbackRobotModel)
-
-    robotStateModel.connectModelChanged(propagateHands)
+            playbackJointPropagator.doPropagation()
+    robotStateModel.connectModelChanged(doPropagation)
 
     #app.addToolbarMacro('scene height', sendSceneHeightRequest)
     #app.addToolbarMacro('scene depth', sendSceneDepthRequest)

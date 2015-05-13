@@ -527,7 +527,6 @@ def setRobotiqJoints(robotModel, side, fingers=[0.0, 0.0, 0.0], palm=[0.0, 0.0, 
     robotModel.model.setJointPositions(np.tile(fingers, 3), ['%s_finger_%s_joint_%d' % (side, n, i+1) for n in ['1', '2', 'middle'] for i in range(3)])
     robotModel.model.setJointPositions(palm, ['%s_palm_finger_%s_joint' % (side, n) for n in ['1', '2', 'middle']])
 
-def copyRobotiqJoints(parentRobotModel, childRobotModel):
-    all_finger_joints = ['%s_finger_%s_joint_%d' % (side, n, i+1) for n in ['1', '2', 'middle'] for i in range(3) for side in ['left', 'right']] + \
+def getRobotiqJoints():
+    return ['%s_finger_%s_joint_%d' % (side, n, i+1) for n in ['1', '2', 'middle'] for i in range(3) for side in ['left', 'right']] + \
         ['%s_palm_finger_%s_joint' % (side, n) for n in ['1', '2', 'middle'] for side in ['left', 'right']]
-    childRobotModel.model.setJointPositions(parentRobotModel.model.getJointPositions(all_finger_joints), all_finger_joints)

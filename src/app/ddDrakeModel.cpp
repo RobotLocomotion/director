@@ -1117,13 +1117,18 @@ QList<QString> ddDrakeModel::getJointNames()
     return QList<QString>();
   }
 
+  // For convenience when setting joint values directly,
+  // return this list of names in the same order as the list
+  // of joint values will come out.
   QList<QString> names;
-
+  names.reserve(this->Internal->Model->dofMap.size());
+  for (int i=0; i < this->Internal->Model->dofMap.size(); i++)
+    names.append(QString());
 
   std::map<std::string, int>::const_iterator itr;
   for(itr = this->Internal->Model->dofMap.begin(); itr != this->Internal->Model->dofMap.end(); ++itr)
   {
-    names.append(itr->first.c_str());
+    names[itr->second] = QString(itr->first.c_str());
   }
 
   return names;
