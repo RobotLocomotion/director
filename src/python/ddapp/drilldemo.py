@@ -620,7 +620,7 @@ class DrillPlannerDemo(object):
 
 
 
-    def computeDrillGraspPose(self, startPose, reachDistance, reachHeight, reachYaw):
+    def computeDrillGraspTargetFrame(self, reachDistance, reachHeight, reachYaw):
 
         graspToDrillTransform = self.getGraspToDrillTransform()
         drillToWorld = transformUtils.copyFrame(om.findObjectByName('drill frame').transform)
@@ -641,12 +641,43 @@ class DrillPlannerDemo(object):
 
         vis.updateFrame(targetFrame, 'drill grasp offset frame', scale=0.2, parent='drill grasp frame')
 
-        side = self.graspingHand
+        return targetFrame
 
+
+    def computeDrillGraspPose(self, startPose, reachDistance, reachHeight, reachYaw):
+
+        side = self.graspingHand
+        targetFrame = self.computeDrillGraspTargetFrame(reachDistance, reachHeight, reachYaw)
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, targetFrame, lockBase=False, lockBack=False)
 
         endPose, info = constraintSet.runIk()
         return endPose, constraintSet
+
+
+    def computeDrillGraspStanceFrame(self):
+
+        drillGraspFrame = self.computeDrillGraspTargetFrame(0.0, 0.0, 0.0)
+
+        stanceForward = transformUtils.getAxesFromTransform(drillGraspFrame)[1]
+        stanceUp = [0,0,1]
+        yaxis = np.cross(stanceUp, stanceForward)
+        yaxis /= np.linalg.norm(yaxis)
+        stanceForward = np.cross(yaxis, stanceUp)
+        stanceForward /= np.linalg.norm(stanceForward)
+
+        stanceFrame = self.footstepPlanner.getFeetMidPoint(self.robotModel)
+        drillGroundPosition = [drillGraspFrame.GetPosition()[0], drillGraspFrame.GetPosition()[1], stanceFrame.GetPosition()[2]]
+
+        stanceFrame = transformUtils.getTransformFromAxesAndOrigin(stanceForward, yaxis, stanceUp, stanceFrame.GetPosition())
+
+        stanceOffsetX = -0.80
+        stanceOffsetY = 0.4
+        stanceFrame.PostMultiply()
+        stanceFrame.Translate(drillGroundPosition - np.array(stanceFrame.GetPosition()))
+        stanceFrame.PreMultiply()
+        stanceFrame.Translate(stanceOffsetX, stanceOffsetY, 0.0)
+
+        vis.updateFrame(stanceFrame, 'drill grasp stance frame', parent=om.findObjectByName('drill'), scale=0.2, visible=True)
 
 
     def planParameterizedGrasp(self, distance=0.0, height=0.0, yaw=0.0, inLine=False):
@@ -961,7 +992,7 @@ class DrillPlannerDemo(object):
             t.Translate(depth, horiz, vert)
             targetFrames.append(t)
             om.removeFromObjectModel(om.findObjectByName('drill target frames'))
-            folder = om.getOrCreateContainer('drill target frames', parent=segmentation.getDebugFolder())
+            folder = om.getOrCreateContainer('drill target frames', parentObj=segmentation.getDebugFolder())
             vis.showFrame(t, 'target %d' % i, scale=0.1, visible=False, parent=folder)
 
         targetFrames.append(targetFrames.pop(0))
@@ -1155,7 +1186,7 @@ class DrillPlannerDemo(object):
         sign = 1 if self.graspingHand == 'left' else -1
         stanceFrame = self.footstepPlanner.getFeetMidPoint(self.robotModel)
         stanceFrame.PreMultiply()
-        stanceFrame.Translate(0.7, 0.4*sign, 1.0)
+        stanceFrame.Translate(0.85, 0.4*sign, 1.2)
         self.spawnDrillAffordanceNew(stanceFrame)
 
 
@@ -2440,6 +2471,12 @@ class DrillTaskPanel(TaskUserPanel):
         self.params.setProperty('drilling depth', -0.05)
         self.drillDemo.planDrill(inLine=True)
 
+    def setDefaultDrillInDepth(self):
+        self.params.setProperty('drilling depth', 0.01)
+
+    def setDefaultKnockOutDepth(self):
+        self.params.setProperty('drilling depth', 0.03)
+
     def planDrillMove(self):
         self.drillDemo.planDrill(inLine=True)
 
@@ -2476,7 +2513,7 @@ class DrillTaskPanel(TaskUserPanel):
 
     def addDefaultProperties(self):
 
-        self.params.addProperty('Drill Hand', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
+        self.params.addProperty('Drill Hand', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         #todo: use this as default
         self.drillDemo.graspingHand = self.getSide()
 
@@ -2560,10 +2597,12 @@ class DrillTaskPanel(TaskUserPanel):
         addFolder('Fit drill')
         addTask(rt.UserPromptTask(name='fit drill', message='Please fit and approve drill affordance.'))
         addTask(rt.FindAffordance(name='check drill affordance', affordanceName='drill'))
+        addFunc('compute walk target', self.drillDemo.computeDrillGraspStanceFrame)
+
 
         # walk to drill
         addFolder('Walk')
-        addTask(rt.RequestFootstepPlan(name='plan walk to drill', stanceFrameName='drill shelf stance frame'))
+        addTask(rt.RequestFootstepPlan(name='plan walk to drill', stanceFrameName='drill grasp stance frame'))
         addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'))
         addTask(rt.SetNeckPitch(name='set neck position', angle=35))
         addTask(rt.CommitFootstepPlan(name='walk to drill', planName='drill shelf stance frame footstep plan'))
@@ -2634,7 +2673,7 @@ class DrillTaskPanel(TaskUserPanel):
 
         # find drill depth
         addFolder('Set drill depth')
-        addTask(rt.UserPromptTask(name='set drill depth', message='Please set drill depth'))
+        addFunc('set drill in depth', self.setDefaultDrillInDepth)
         addManipTask('drill in', self.planDrillIn, userPrompt=True)
         addTask(rt.UserPromptTask(name='verify drill depth', message='Please verify drill depth'))
         addTask(rt.UserPromptTask(name='verify drill in hand fit', message='Please verify drill in hand fit'))
@@ -2652,7 +2691,9 @@ class DrillTaskPanel(TaskUserPanel):
         addManipTask('drill prep posture', self.drillDemo.planDrillIntoWallPrep, userPrompt=True)
         addFunc('set drill target to knock out', self.setDrillTargetToKnockOut)
         addManipTask('move drill to wall', self.planDrillAlign, userPrompt=True)
-        addTask(rt.UserPromptTask(name='perform knock out', message='Please adjust drill depth and perform knock out.'))
+        addFunc('set knock out depth', self.setDefaultKnockOutDepth)
+        addManipTask('drill in', self.planDrillIn, userPrompt=True)
+        addTask(rt.UserPromptTask(name='confirm knock out', message='Please confirm knock out.'))
 
         # retract
         addFolder('Retract')
