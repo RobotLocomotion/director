@@ -225,6 +225,12 @@ class AtlasDriver(object):
         msg.data = True
         lcmUtils.publish('RECOVERY_ENABLE', msg)
 
+    def sendBracingEnable(self):
+        raise NotImplementedError
+
+    def sendBracingDisable(self):
+        raise NotImplementedError
+
     def sendRecoveryDisable(self):
         msg = lcmdrc.boolean_t()
         msg.data = False
