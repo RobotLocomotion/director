@@ -709,8 +709,9 @@ class ViewEventFilter(object):
     def onLeftMousePress(self, event):
         if event.modifiers() == QtCore.Qt.ControlModifier:
             displayPoint = vis.mapMousePosition(self.view, event)
-            newWalkingGoal(displayPoint, self.view)
-            self.consumeEvent()
+            if footstepsDriver:
+                newWalkingGoal(displayPoint, self.view)
+                self.consumeEvent()
 
         for picker in segmentation.viewPickers:
             if not picker.enabled:
