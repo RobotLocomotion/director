@@ -17,6 +17,7 @@ from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp.debugVis import DebugData
+from ddapp import ik
 from ddapp import ikplanner
 from ddapp import ioUtils
 from ddapp import affordanceitems
@@ -71,25 +72,47 @@ class DoorDemo(object):
         self.doorHandleGraspFrame = None
         self.doorHingeFrame = None
 
-        self.handleTouchHeight = 0.09
-        self.handleTouchDepth = -0.05
-        self.handleTouchWidth = 0.03
+        self.handleTouchHeight = 0.0
+        self.handleTouchDepth = -0.06
+        self.handleTouchWidth = 0.05
+
+        self.handleReachAngle = 20
 
         self.handleTurnHeight = -0.08
         self.handleTurnWidth = 0.01
+        self.handleTurnAngle = 60
 
         self.handleLiftHeight = 0.12
         self.handlePushDepth = 0.0
+        self.handlePushAngle = 2
         self.handleOpenDepth = 0.1
         self.handleOpenWidth = 0.4
+
+        self.speedHigh = 60
+        self.speedLow = 20
 
         self.setFootstepThroughDoorParameters()
 
 
+    def setIkParameters(self, ikParameterDict):
+        originalIkParameterDict = {}
+        if 'usePointwise' in ikParameterDict:
+            originalIkParameterDict['usePointwise'] = self.ikPlanner.ikServer.usePointwise
+            self.ikPlanner.ikServer.usePointwise = ikParameterDict['usePointwise']
+        if 'maxDegreesPerSecond' in ikParameterDict:
+            originalIkParameterDict['maxDegreesPerSecond'] = self.ikPlanner.ikServer.maxDegreesPerSecond
+            self.ikPlanner.ikServer.maxDegreesPerSecond = ikParameterDict['maxDegreesPerSecond']
+        if 'numberOfAddedKnots' in ikParameterDict:
+            originalIkParameterDict['numberOfAddedKnots'] = self.ikPlanner.ikServer.numberOfAddedKnots
+            self.ikPlanner.ikServer.numberOfAddedKnots = ikParameterDict['numberOfAddedKnots']
+        return originalIkParameterDict
 
     def addPlan(self, plan):
         self.plans.append(plan)
 
+
+    def computeGraspOrientation(self):
+        return [180 + self.handleReachAngle, 0, 90]
 
     def computeGroundFrame(self, robotModel):
         '''
@@ -122,25 +145,60 @@ class DoorDemo(object):
 
 
 
-    def computeDoorHandleGraspFrame(self, graspOrientation=[0, -90, -90]):
+    def computeDoorHandleGraspFrame(self):
+        graspOrientation = self.computeGraspOrientation()
+        self.doorHandleAxisFrame = self.computeDoorHandleAxisFrame()
 
-
-        def makeFrame(name, offset):
+        def makeFrame(name, offset, turnAngle=0):
             t = transformUtils.frameFromPositionAndRPY(offset, graspOrientation)
             t.PostMultiply()
-            t.Concatenate(transformUtils.copyFrame(self.doorHandleFrame.transform))
+            t.Concatenate(transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0], [-turnAngle, 0, 0]))
+            t.Concatenate(transformUtils.copyFrame(self.doorHandleAxisFrame.transform))
             return vis.updateFrame(t, name, parent=self.doorHandleAffordance, visible=False, scale=0.2)
 
+        def makeFrameNew(name, transforms):
+            t = transformUtils.concatenateTransforms(transforms)
+            return vis.updateFrame(t, name, parent=self.doorHandleAffordance, visible=False, scale=0.2)
 
-        self.doorHandleGraspFrame = makeFrame('door handle grasp frame', [0.0, 0.0, 0.0])
+        graspToAxisTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0],
+                                                                      graspOrientation)
+        self.doorHandleGraspFrame = makeFrameNew('door handle grasp frame',
+                                                 [graspToAxisTransform,
+                                                  self.doorHandleAxisFrame.transform])
 
-        self.doorHandleReachFrame = makeFrame('door handle reach frame', [self.handleTouchDepth, self.handleTouchWidth, self.handleTouchHeight])
+        reachToGraspTransform = transformUtils.frameFromPositionAndRPY([self.handleTouchWidth,
+                                                                        self.handleTouchDepth,
+                                                                        -self.handleTouchHeight],
+                                                                       [0.0, 0.0, 0.0])
+        self.doorHandleReachFrame = makeFrameNew('door handle reach frame', [reachToGraspTransform,
+                                                                          self.doorHandleGraspFrame.transform])
 
-        self.doorHandleTurnFrame = makeFrame('door handle turn frame', [self.handleTouchDepth, self.handleTurnWidth, self.handleTurnHeight])
+        handleTurnTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0], [-self.handleTurnAngle, 0, 0])
+        self.doorHandleTurnFrame = makeFrameNew('door handle turn frame', [reachToGraspTransform,
+                                                                           graspToAxisTransform,
+                                                                           handleTurnTransform,
+                                                                           self.doorHandleAxisFrame.transform])
 
-        self.doorHandlePushFrame = makeFrame('door handle push frame', [self.handlePushDepth, self.handleTouchWidth, self.handleTurnHeight])
+        handlePushTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0],
+                                                                     [0, 0, self.handlePushAngle])
+        self.doorHandlePushFrame = makeFrameNew('door handle push frame',
+                                                [self.doorHandleTurnFrame.transform,
+                                                 self.doorHingeFrame.transform.GetInverse(),
+                                                 handlePushTransform,
+                                                 self.doorHingeFrame.transform])
 
-        self.doorHandlePushLiftFrame = makeFrame('door handle push lift frame', [self.handlePushDepth, self.handleTouchWidth, self.handleLiftHeight])
+        self.doorHandlePushLiftFrame = makeFrameNew('door handle push lift frame',
+                                                [self.doorHandleReachFrame.transform,
+                                                 self.doorHingeFrame.transform.GetInverse(),
+                                                 handlePushTransform,
+                                                 self.doorHingeFrame.transform])
+
+        self.doorHandlePushLiftAxisFrame = makeFrameNew('door handle push lift axis frame',
+                                                [self.doorHandleAxisFrame.transform,
+                                                 self.doorHingeFrame.transform.GetInverse(),
+                                                 handlePushTransform,
+                                                 self.doorHingeFrame.transform])
+
 
         self.doorHandlePushOpenFrame = makeFrame('door handle push open frame', [self.handleOpenDepth, self.handleOpenWidth, self.handleLiftHeight])
 
@@ -152,30 +210,35 @@ class DoorDemo(object):
 
         self.doorHandleFrame.frameSync = vis.FrameSync()
         self.doorHandleFrame.frameSync.addFrame(self.doorHandleFrame)
+        self.doorHandleFrame.frameSync.addFrame(self.doorHandleAxisFrame)
         self.doorHandleFrame.frameSync.addFrame(self.doorHandleGraspFrame, ignoreIncoming=True)
         self.doorHandleFrame.frameSync.addFrame(self.doorHandleReachFrame, ignoreIncoming=True)
         self.doorHandleFrame.frameSync.addFrame(self.doorHandleTurnFrame, ignoreIncoming=True)
         self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushFrame, ignoreIncoming=True)
         self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushLiftFrame, ignoreIncoming=True)
+        self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushLiftAxisFrame, ignoreIncoming=True)
         self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushOpenFrame, ignoreIncoming=True)
+
+    def computeDoorHandleAxisFrame(self):
+        handleLength = self.doorHandleAffordance.getProperty('Dimensions')[1]
+        t = transformUtils.frameFromPositionAndRPY([0.0, -handleLength/2.0, 0.0], [0, 0, 0])
+        t.PostMultiply()
+        t.Concatenate(transformUtils.copyFrame(self.doorHandleFrame.transform))
+        return vis.updateFrame(t, 'door handle axis frame', parent=self.doorHandleAffordance,
+                               visible=False, scale=0.2)
 
 
     def computeDoorHingeFrame(self):
-
-        position = [0.0, -35 * 0.0254, 0.0]
-        rpy = [0, 0, 0]
-
-        t = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t.Concatenate(transformUtils.copyFrame(self.doorHandleFrame.transform))
-
-        if self.doorHingeFrame:
-            self.doorHingeFrame.frameSync = None
-
-        self.doorHingeFrame = vis.updateFrame(t, 'door hinge frame', parent=self.doorHandleAffordance, visible=True, scale=0.2)
-
-        self.doorHingeFrame.frameSync = vis.FrameSync()
-        self.doorHingeFrame.frameSync.addFrame(self.doorHingeFrame)
-        self.doorHingeFrame.frameSync.addFrame(self.doorHandleFrame, ignoreIncoming=True)
+        doorAffordance = om.findObjectByName('door')
+        doorDimensions = doorAffordance.getProperty('Dimensions')
+        doorDepth = doorDimensions[0]
+        doorWidth = doorDimensions[1]
+        t = transformUtils.frameFromPositionAndRPY([doorDepth/2, doorWidth/2.0, 0.0], [0, 0, 0])
+        t.PostMultiply()
+        t.Concatenate(transformUtils.copyFrame(doorAffordance.getChildFrame().transform))
+        self.doorHingeFrame = vis.updateFrame(t, 'door hinge frame', parent=doorAffordance,
+                                              visible=False, scale=0.2)
+        return self.doorHingeFrame
 
 
     def computeDoorHandleStanceFrame(self):
@@ -245,21 +308,29 @@ class DoorDemo(object):
 
     def planPreReach(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedHigh}
+        originalIkParameterDict = self.setIkParameters(ikParameterDict)
+        nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'door handle pre-reach', side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door',
+                                                              'pre-reach grasping',
+                                                              side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door',
+                                                              'pre-reach non-grasping',
+                                                              side=nonGraspingHand)
         endPose, info = self.ikPlanner.computeStandPose(endPose)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
+        self.setIkParameters(originalIkParameterDict)
 
 
     def planTuckArms(self):
 
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 50
+        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedHigh}
+        originalIkParameterDict = self.setIkParameters(ikParameterDict)
+        self.ikPlanner.ikServer.numberOfAddedKnots = 0
 
         otherSide = 'left' if self.graspingHand == 'right' else 'right'
 
@@ -267,9 +338,12 @@ class DoorDemo(object):
 
         standPose, info = self.ikPlanner.computeStandPose(startPose)
 
-        q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=self.graspingHand)
-        q2 = (standPose + q2) / 2.0
-        q2 = self.ikPlanner.getMergedPostureFromDatabase(q2, 'door', 'door handle pre-reach', side=otherSide)
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=otherSide)
+        a = 0.25
+        q2 = (1.0 - a)*np.array(standPose) + a*q2
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(q2, 'door', 'hand up tuck', side=self.graspingHand)
+        a = 0.75
+        q2 = (1.0 - a)*np.array(standPose) + a*q2
 
         endPose = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=self.graspingHand)
         endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand up tuck', side=otherSide)
@@ -277,74 +351,201 @@ class DoorDemo(object):
         newPlan = self.ikPlanner.computeMultiPostureGoal([startPose, q2, endPose])
         self.addPlan(newPlan)
 
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        self.setIkParameters(originalIkParameterDict)
 
     def planReach(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 20
+        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow,
+                           'numberOfAddedKnots': 2}
+        originalIkParameterDict = self.setIkParameters(ikParameterDict)
 
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandleReachFrame)
         endPose, info = constraintSet.runIk()
+
+        linkOffsetFrame = self.ikPlanner.getPalmToHandLink(self.graspingHand)
+        handLinkName = self.ikPlanner.getHandLink(self.graspingHand)
+        handToWorld1 = self.ikPlanner.getLinkFrameAtPose(handLinkName, startPose)
+        handToWorld2 = self.ikPlanner.getLinkFrameAtPose(handLinkName, endPose)
+        palmToWorld1 = transformUtils.concatenateTransforms([linkOffsetFrame, handToWorld1])
+        palmToWorld2 = transformUtils.concatenateTransforms([linkOffsetFrame, handToWorld2])
+
+        motionVector = np.array(palmToWorld2.GetPosition()) - np.array(palmToWorld1.GetPosition())
+        motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(palmToWorld2.GetPosition()), motionVector)
+
+        p = self.ikPlanner.createLinePositionConstraint(handLinkName, linkOffsetFrame, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
+        constraintSet.constraints.append(p)
+
+        plan = constraintSet.runIkTraj()
+        self.addPlan(plan)
+
+        self.setIkParameters(originalIkParameterDict)
+
+
+    def createHingeConstraint(self, referenceFrame, axis, linkName, startPose, tspan=[0, 1]):
+
+        constraints = []
+        linkFrame = self.ikPlanner.getLinkFrameAtPose(linkName, startPose)
+
+        #turnTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0], [-turnAngle, 0, 0])
+        #turnTransform = vtkTransform()
+        #turnTransform.RotateWXYZ(turnAngle, axis)
+        #linkToReferenceTransfrom = tranformUtils.concatenateTransforms([linkFrame,
+                                                                        #referenceFrame.transform.GetInverse()])
+        #finalLinkFrame = transformUtils.concatenateTransforms([linkToReferenceTransfrom,
+                                                               #turnTransform,
+                                                               #referenceFrame.transform])
+        def addPivotPoint(constraints, pivotPoint):
+            constraints.append(ik.PositionConstraint())
+            constraints[-1].linkName = linkName
+            constraints[-1].referenceFrame = referenceFrame.transform
+            constraints[-1].lowerBound = np.array(pivotPoint)
+            constraints[-1].upperBound = np.array(pivotPoint)
+            pivotPointInWorld = referenceFrame.transform.TransformDoublePoint(pivotPoint)
+            constraints[-1].pointInLink = linkFrame.GetInverse().TransformDoublePoint(pivotPointInWorld)
+            constraints[-1].tspan = tspan
+
+        addPivotPoint(constraints, [0.0, 0.0, 0.0])
+        addPivotPoint(constraints, axis)
+        return constraints
+
+
+    def planHandleTurn(self, turnAngle=None):
+
+        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow,
+                           'numberOfAddedKnots': 2}
+        originalIkParameterDict = self.setIkParameters(ikParameterDict)
+
+        if turnAngle is None:
+            turnAngle = self.handleTurnAngle
+        startPose = self.getPlanningStartPose()
+        linkFrame = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(), startPose)
+
+        finalGraspToReferenceTransfrom = transformUtils.concatenateTransforms(
+            [self.ikPlanner.getPalmToHandLink(self.graspingHand), linkFrame,
+             self.doorHandleAxisFrame.transform.GetInverse()])
+
+        handleTurnTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0],
+                                                                     [-turnAngle, 0, 0])
+        doorHandleTurnFrame = transformUtils.concatenateTransforms([finalGraspToReferenceTransfrom,
+                                                                    handleTurnTransform,
+                                                                    self.doorHandleAxisFrame.transform])
+
+        vis.updateFrame(doorHandleTurnFrame, 'debug turn', parent=self.doorHandleAffordance, visible=False, scale=0.2)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand,
+                                                           doorHandleTurnFrame)
+        endPose, info = constraintSet.runIk()
+        constraints = constraintSet.constraints
+
+        constraints.extend(self.createHingeConstraint(self.doorHandleAxisFrame, [1.0, 0.0, 0.0],
+                                                      self.ikPlanner.getHandLink(),
+                                                      constraintSet.startPoseName))
+        constraints.append(self.ikPlanner.createLockedBasePostureConstraint(constraintSet.startPoseName))
+        constraints.append(self.ikPlanner.createLockedBackPostureConstraint(constraintSet.startPoseName))
+        constraints.extend(self.ikPlanner.createFixedFootConstraints(constraintSet.startPoseName))
+        constraints.append(self.ikPlanner.createLockedArmPostureConstraint(constraintSet.startPoseName))
+
         plan = constraintSet.runIkTraj()
 
         self.addPlan(plan)
 
+        self.setIkParameters(originalIkParameterDict)
 
-    def planHandleTurn(self):
+    def planDoorPushOpen(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 7
-        self.ikPlanner.maxBaseMetersPerSecond = 0.01
+        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow}
+        originalIkParameterDict = self.setIkParameters(ikParameterDict)
+
+        nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandleTurnFrame)
-        endPose, info = constraintSet.runIk()
-        plan = constraintSet.runIkTraj()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'smash', side=nonGraspingHand)
 
-        self.ikPlanner.maxBaseMetersPerSecond = 0.05
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
 
-        self.addPlan(plan)
+        self.setIkParameters(originalIkParameterDict)
 
 
     def planHandlePush(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
-        self.ikPlanner.maxBaseMetersPerSecond = 0.01
-
+        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow}
+        originalIkParameterDict = self.setIkParameters(ikParameterDict)
 
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandlePushFrame)
-        endPose, info = constraintSet.runIk()
-        plan = constraintSet.runIkTraj()
+        linkFrame = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(), startPose)
 
-        self.ikPlanner.maxBaseMetersPerSecond = 0.05
+        finalGraspToReferenceTransfrom = transformUtils.concatenateTransforms(
+            [self.ikPlanner.getPalmToHandLink(self.graspingHand), linkFrame,
+             self.doorHingeFrame.transform.GetInverse()])
+
+        handlePushTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0],
+                                                                     [0, 0, self.handlePushAngle])
+        doorHandlePushFrame = transformUtils.concatenateTransforms([finalGraspToReferenceTransfrom,
+                                                                    handlePushTransform,
+                                                                    self.doorHingeFrame.transform])
+
+        vis.updateFrame(doorHandlePushFrame, 'debug push', parent=self.doorHandleAffordance, visible=False, scale=0.2)
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand,
+                                                           doorHandlePushFrame)
+        endPose, info = constraintSet.runIk()
+        constraints = constraintSet.constraints
+
+        constraints.extend(self.createHingeConstraint(self.doorHingeFrame, [0.0, 0.0, 1.0],
+                                                      self.ikPlanner.getHandLink(side=self.graspingHand),
+                                                      constraintSet.startPoseName))
+        constraints.append(self.ikPlanner.createLockedBasePostureConstraint(constraintSet.startPoseName))
+        #constraints.append(self.ikPlanner.createLockedBackPostureConstraint(constraintSet.startPoseName))
+        constraints.extend(self.ikPlanner.createFixedFootConstraints(constraintSet.startPoseName))
+        constraints.append(self.ikPlanner.createLockedArmPostureConstraint(constraintSet.startPoseName))
+
+        plan = constraintSet.runIkTraj()
 
         self.addPlan(plan)
 
+        self.setIkParameters(originalIkParameterDict)
 
     def planHandlePushLift(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
-        self.ikPlanner.maxBaseMetersPerSecond = 0.01
+        self.planHandleTurn(-self.handleTurnAngle)
+
+
+    #def planHandlePushLift(self):
+
+        #self.ikPlanner.ikServer.usePointwise = False
+        #self.ikPlanner.ikServer.maxDegreesPerSecond = 10
+        #self.ikPlanner.maxBaseMetersPerSecond = 0.01
+
+        #startPose = self.getPlanningStartPose()
+        #constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandlePushLiftFrame)
+        #endPose, info = constraintSet.runIk()
+        #plan = constraintSet.runIkTraj()
+
+        #self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        #self.ikPlanner.maxBaseMetersPerSecond = 0.05
+
+        #self.addPlan(plan)
+
+
+    def planDoorTouch(self):
+
+        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedHigh}
+        originalIkParameterDict = self.setIkParameters(ikParameterDict)
+        nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandlePushLiftFrame)
-        endPose, info = constraintSet.runIk()
-        plan = constraintSet.runIkTraj()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'pre-smash', side=nonGraspingHand)
 
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
-        self.ikPlanner.maxBaseMetersPerSecond = 0.05
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
 
-        self.addPlan(plan)
+        self.setIkParameters(originalIkParameterDict)
 
     def planHandlePushOpen(self):
 
-        self.ikPlanner.ikServer.usePointwise = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 20
+        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow,
+                           'numberOfAddedKnots': 2}
+        originalIkParameterDict = self.setIkParameters(ikParameterDict)
 
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandlePushOpenFrame)
@@ -352,6 +553,8 @@ class DoorDemo(object):
         plan = constraintSet.runIkTraj()
 
         self.addPlan(plan)
+
+        self.setIkParameters(originalIkParameterDict)
 
 
     def planFootstepsToDoor(self):
@@ -655,7 +858,7 @@ class DoorDemo(object):
 
         groundFrame = self.computeGroundFrame(self.robotModel)
 
-        doorOffsetX = 0.9
+        doorOffsetX = 0.7
         doorOffsetY = 0.0
 
         doorGroundFrame = transformUtils.frameFromPositionAndRPY([doorOffsetX, 0.0, 0.0], [0.0, 0.0, 0.0])
@@ -759,8 +962,8 @@ class DoorDemo(object):
         self.doorHandleAffordance = om.findObjectByName('door handle')
         self.doorHandleFrame = self.doorHandleAffordance.getChildFrame()
 
+        self.computeDoorHingeFrame()
         self.computeDoorHandleGraspFrame()
-        #self.computeDoorHingeFrame()
         #self.computeDoorHandleStanceFrame()
 
 
@@ -1050,9 +1253,10 @@ class DoorTaskPanel(TaskUserPanel):
         self.addButtons()
         self.addTasks()
 
-
     def addButtons(self):
 
+        self.addManualButton('Spawn door', self.doorDemo.spawnDoorAffordance)
+        self.addManualSpacer()
         self.addManualButton('Footsteps to door', self.doorDemo.planFootstepsToDoor)
         self.addManualSpacer()
         self.addManualButton('Raise arm', self.doorDemo.planPreReach)
@@ -1062,13 +1266,17 @@ class DoorTaskPanel(TaskUserPanel):
         self.addManualButton('Turn', self.doorDemo.planHandleTurn)
         self.addManualButton('Push', self.doorDemo.planHandlePush)
         self.addManualButton('Lift', self.doorDemo.planHandlePushLift)
-        self.addManualButton('Push Open', self.doorDemo.planHandlePushOpen)
+        self.addManualButton('Touch door', self.doorDemo.planDoorTouch)
+        self.addManualButton('Push Open', self.doorDemo.planDoorPushOpen)
         self.addManualButton('Tuck Arms', self.doorDemo.planTuckArms)
         self.addManualSpacer()
         self.addManualButton('Footsteps through door', self.doorDemo.planFootstepsThroughDoor)
         self.addManualButton('Show walking plan', self.doorDemo.computeWalkingPlan)
         self.addManualSpacer()
         self.addManualButton('Nominal', self.doorDemo.planNominal)
+        self.addManualSpacer()
+        self.addManualButton('Turn more', functools.partial(self.doorDemo.planHandleTurn, 10))
+        self.addManualButton('Turn less', functools.partial(self.doorDemo.planHandleTurn, -10))
         self.addManualSpacer()
         self.addManualButton('Commit Manip', self.doorDemo.commitManipPlan)
 
@@ -1088,7 +1296,8 @@ class DoorTaskPanel(TaskUserPanel):
         self._syncProperties()
 
     def _syncProperties(self):
-        pass
+        self.doorDemo.graspingHand = self.params.getPropertyEnumValue('Hand').lower()
+        self.doorDemo.ikPlanner.reachingSide = self.doorDemo.graspingHand
 
     def addTasks(self):
 
@@ -1141,7 +1350,7 @@ class DoorTaskPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name='fit door', message='Please fit and approve door handle affordance.'))
 
         # set fingers
-        addTask(rt.CloseHand(name='set finger pinch', side=side, mode='Pinch', amount=100))
+        addTask(rt.CloseHand(name='set finger pinch', side=side, mode='Pinch', amount=0))
 
 
         def addManipTask(name, planFunc, userPrompt=False):
@@ -1156,12 +1365,25 @@ class DoorTaskPanel(TaskUserPanel):
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
 
 
-        addManipTask('Raise Arm', d.planPreReach, userPrompt=False)
-        addManipTask('Reach', d.planReach, userPrompt=False)
-        addManipTask('Turn', d.planHandleTurn, userPrompt=True)
-        addManipTask('Push', d.planHandlePush, userPrompt=True)
+        addManipTask('Raise arms', d.planPreReach, userPrompt=False)
+        addManipTask('Raise pushing hand', d.planDoorTouch, userPrompt=False)
+        addManipTask('Reach', d.planReach, userPrompt=True)
+        addTask(rt.UserPromptTask(name='Approve hand position',
+                                  message='Please verify that the hand is ready to grasp the handle'))
+        addFunc(self.fingerPinch, name='Pinch handle')
+        addManipTask('Turn', d.planHandleTurn, userPrompt=False)
+        addTask(rt.UserPromptTask(name='Approve handle turn',
+                                  message='Please verify that the handle has turned'))
+        addManipTask('Push ajar', d.planHandlePush, userPrompt=False)
+        addTask(rt.UserPromptTask(name='Approve door position',
+                                  message='Please verify that the door is ajar'))
+        addManipTask('Push ajar again', d.planHandlePush, userPrompt=False)
         addManipTask('Lift', d.planHandlePushLift, userPrompt=False)
-        addManipTask('Push Open', d.planHandlePushOpen, userPrompt=True)
+        addTask(rt.CloseHand(name='Open hand', side=side, mode='Pinch', amount=0))
+        addManipTask('Push open', d.planDoorPushOpen, userPrompt=False)
+        addTask(rt.UserPromptTask(name='Approve door position',
+                                  message='Please verify that the door is open'))
+        addTask(rt.CloseHand(name='Close hand', side=side))
         addManipTask('Tuck Arms', d.planTuckArms, userPrompt=False)
 
         # walk
