@@ -224,8 +224,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.showTrajectory = False
         self.steeringSub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
         self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG_TO_CAMERA_LEFT', lcmbotcore.rigid_transform_t, self.onAprilTag)
-        
-        self.updateAndDrawTrajectory()
         self.imageView = cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'image view')
         self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, self.imageView)
         self.affordanceUpdater.timer.start()
@@ -288,17 +286,18 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.trajectoryPitch = self.params.getProperty('Trajectory Pitch')
         self.drivingPlanner.trajectoryRoll = self.params.getProperty('Trajectory Roll')
         self.drivingPlanner.trajectoryOffset = self.params.getProperty('Trajectory Offset')
-        self.updateAndDrawTrajectory()
-        leftTraj = om.findObjectByName('LeftDrivingTrajectory')
-        rightTraj = om.findObjectByName('RightDrivingTrajectory')        
-        leftTraj.setProperty('Visible', self.showTrajectory)
-        rightTraj.setProperty('Visible', self.showTrajectory)
+        
         if hasattr(self, 'affordanceUpdater'):
             if self.showTrajectory:
+                self.updateAndDrawTrajectory()
+                leftTraj = om.findObjectByName('LeftDrivingTrajectory')
+                rightTraj = om.findObjectByName('RightDrivingTrajectory')        
+                leftTraj.setProperty('Visible', self.showTrajectory)
+                rightTraj.setProperty('Visible', self.showTrajectory)
                 self.affordanceUpdater.extraObjects = [leftTraj, rightTraj]
             else:
                 self.affordanceUpdater.extraObjects = []
-                
+
         self.drivingPlanner.applyProperties()
       
     def onSteeringCommand(self, msg):
@@ -363,6 +362,9 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(rightTraj), 'RightDrivingTrajectory')
 
     def drawDrivingTrajectory(self, drivingTraj, name):
+        if not self.showTrajectory:
+            return
+
         d = DebugData()
 
         numTrajPoints = len(drivingTraj)
