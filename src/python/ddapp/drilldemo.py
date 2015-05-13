@@ -124,8 +124,8 @@ class DrillPlannerDemo(object):
         self.drillYawSliderValue = 0.0
 
 
-        drillDemo.lockBackForDrilling = False
-        drillDemo.lockBaseForDrilling = True
+        self.lockBackForDrilling = False
+        self.lockBaseForDrilling = True
 
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
