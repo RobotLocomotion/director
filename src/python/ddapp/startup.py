@@ -608,7 +608,7 @@ if useFallDetectorVis:
 
             isFalling = msg.falling
             isBracing = msg.bracing
-            t = msg.utime / 10.0e6
+            t = msg.utime / 1.0e6
             if not isFalling and not isBracing and (t-self.fallDetectorTriggerTime > self.fallDetectorVisResetTime or t-self.fallDetectorTriggerTime<0):
                 for link in links:
                     robotHighlighter.dehighlightLink(link)
