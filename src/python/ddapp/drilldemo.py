@@ -122,6 +122,11 @@ class DrillPlannerDemo(object):
         self.pointerTracker = None
         self.projectCallback = None
         self.drillYawSliderValue = 0.0
+
+
+        drillDemo.lockBackForDrilling = False
+        drillDemo.lockBaseForDrilling = True
+
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
         defaultGraspingHand = 'right'
@@ -622,7 +627,17 @@ class DrillPlannerDemo(object):
 
         drillOffset = transformUtils.frameFromPositionAndRPY([reachDistance, 0.0, reachHeight], [0.0, 0.0, reachYaw])
 
-        targetFrame = transformUtils.concatenateTransforms([graspToDrillTransform, drillOffset, drillToWorld])
+        if self.graspingHand == 'right':
+            thumbSideFlip = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0], [0.0, 180.0, 0.0])
+        else:
+            thumbSideFlip = vtk.vtkTransform()
+
+        if self.graspingHand == 'right':
+            drillSideFlip = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0], [0.0, 0.0, 180.0])
+        else:
+            drillSideFlip = vtk.vtkTransform()
+
+        targetFrame = transformUtils.concatenateTransforms([thumbSideFlip, graspToDrillTransform, drillOffset, drillSideFlip, drillToWorld])
 
         vis.updateFrame(targetFrame, 'drill grasp offset frame', scale=0.2, parent='drill grasp frame')
 
@@ -652,6 +667,10 @@ class DrillPlannerDemo(object):
             handToWorld1 = self.ikPlanner.getLinkFrameAtPose(handLinkName, startPose)
             handToWorld2 = self.ikPlanner.getLinkFrameAtPose(handLinkName, endPose)
 
+            palmToHand = self.ikPlanner.getPalmToHandLink(self.graspingHand)
+            handToWorld1 = transformUtils.concatenateTransforms([palmToHand, handToWorld1])
+            handToWorld2 = transformUtils.concatenateTransforms([palmToHand, handToWorld2])
+
             motionVector = np.array(handToWorld2.GetPosition()) - np.array(handToWorld1.GetPosition())
             motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(handToWorld2.GetPosition()), motionVector)
 
@@ -662,7 +681,7 @@ class DrillPlannerDemo(object):
             vis.updatePolyData(d.getPolyData(), 'motion vector')
 
 
-            p = self.ikPlanner.createLinePositionConstraint(handLinkName, vtk.vtkTransform(), motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
+            p = self.ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
             p.tspan = np.linspace(0, 1, 5)
 
             constraintSet.constraints.append(p)
@@ -679,7 +698,7 @@ class DrillPlannerDemo(object):
 
     def planReachNew(self):
         self.ikPlanner.ikServer.maxDegreesPerSecond = 30
-        self.planParameterizedGrasp(-0.17, 0.3, 0.0)
+        self.planParameterizedGrasp(-0.17, 0.1, 0.0)
 
     def planGraspNew(self):
         self.ikPlanner.ikServer.maxDegreesPerSecond = 15
@@ -1159,13 +1178,17 @@ class DrillPlannerDemo(object):
         else:
             aff.getChildFrame().copyFrame(t)
 
+        self.updateDrillRelativeFrames()
+        return aff
+
+
+    def updateDrillRelativeFrames(self):
+
         self.updateDrillRelativeFrame('drill bit frame', self.getBitToDrillTransform())
         self.updateDrillRelativeFrame('drill butt frame', self.getButtToDrillTransform())
         self.updateDrillRelativeFrame('drill grasp frame', self.getGraspToDrillTransform())
         self.updateDrillRelativeFrame('drill press prep frame', self.getPressPrepToDrillTransform())
         self.updateDrillRelativeFrame('drill button frame', self.getButtonToDrillTransform(), fixed=False)
-
-        return aff
 
 
     def moveDrillToHandNew(self, yaw, zoffset, flip):
@@ -2357,7 +2380,7 @@ class DrillTaskPanel(TaskUserPanel):
 
     def setDrillTargetToDrillBit(self):
 
-        depth, horiz, vert = self.drillDemo.getDrillBitOffsetFromCircle().GetPosition()
+        depth, horiz, vert = self.drillDemo.getDrillBitOffsetFromCircle()
         self.params.setProperty('drilling depth', depth)
         self.params.setProperty('drilling horiz offset', horiz)
         self.params.setProperty('drilling vert offset', vert)
@@ -2451,6 +2474,8 @@ class DrillTaskPanel(TaskUserPanel):
 
         elif propertyName == 'Drill Hand':
             self.drillDemo.graspingHand = self.getSide()
+            self.taskTree.removeAllTasks()
+            self.addTasks()
 
 
     def addTasks(self):
@@ -2516,25 +2541,34 @@ class DrillTaskPanel(TaskUserPanel):
         addTask(rt.OpenHand(name='open hand', side=side.capitalize()))
         addManipTask('reach to drill', self.drillDemo.planReachNew, userPrompt=True)
         addManipTask('grasp drill', self.drillDemo.planGraspNew, userPrompt=True)
+        addTask(rt.CloseHand(name='close hand', side=side.capitalize()))
         addManipTask('lift drill', self.drillDemo.planLiftNew, userPrompt=True)
+        addManipTask('raise drill', self.drillDemo.planDrillRaiseNew, userPrompt=True)
+
+        # walk back
+        addFolder('Walk back')
+        addTask(rt.UserPromptTask(name='Walk back', message='Please walk back away from obstacles'), parent=None)
 
         # turn on drill
         addFolder('Turn on drill')
-        addManipTask('raise drill', self.drillDemo.planDrillRaiseNew, userPrompt=True)
+        addTask(rt.UserPromptTask(name='adjust drill in hand', message='Please adjust drill fit in hand'))
+        addTask(rt.OpenHand(name='open press hand', side=pressSide.capitalize()))
         addManipTask('pregrasp drill butt', self.drillDemo.planHandRaiseForDrillButtPreGrasp, userPrompt=True)
         addManipTask('grasp drill butt', self.drillDemo.planHandRaiseForDrillButtGrasp, userPrompt=True)
         addManipTask('thumb press prep', self.drillDemo.planThumbPressPrep, userPrompt=True)
         addFunc('fit drill button press', self.fitDrillButtonPress)
         addTask(rt.UserPromptTask(name='approve fit', message='Please fit and approve drill button press'), parent=None)
         addManipTask('thumb press', self.drillDemo.planDrillButtonPress, userPrompt=True)
-        addManipTask('thumb press exit', self.drillDemo.planHandRaiseForDrillButtPreGrasp, userPrompt=True)
-        addManipTask('thumb press exit 2', self.drillDemo.planHandRaiseForDrillButtGrasp, userPrompt=True)
+        addManipTask('thumb press exit', self.drillDemo.planHandRaiseForDrillButtGrasp, userPrompt=True)
+        addManipTask('thumb press exit 2', self.drillDemo.planHandRaiseForDrillButtPreGrasp, userPrompt=True)
+        addTask(rt.CloseHand(name='close press hand', side=pressSide.capitalize()))
+        addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
         addManipTask('hand down', functools.partial(self.drillDemo.planHandDown, pressSide), userPrompt=True)
         addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
 
-        # walk back
-        addFolder('Walk back')
-        addTask(rt.UserPromptTask(name='Walk back', message='Please walk back for wall in sight'), parent=None)
+        # walk toward wall
+        addFolder('Walk toward wall')
+        addTask(rt.UserPromptTask(name='Walk back', message='Please walk for wall in sight'), parent=None)
 
         # fit wall
         addFolder('Fit wall')
@@ -2565,6 +2599,7 @@ class DrillTaskPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name='set drill depth', message='Please set drill depth'))
         addManipTask('drill in', self.planDrillIn, userPrompt=True)
         addTask(rt.UserPromptTask(name='verify drill depth', message='Please verify drill depth'))
+        addTask(rt.UserPromptTask(name='verify drill in hand fit', message='Please verify drill in hand fit'))
 
         # drill circle
         addFolder('Drill circle')
