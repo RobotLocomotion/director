@@ -671,8 +671,7 @@ class ImageOverlayManager(object):
         self.imagePicker = None
         self._prevParent = None
 
-    def showImageOverlay(size=400, viewName='CAMERA_LEFT'):
-    #def showImageOverlay(size=400, viewName='KINECT_RGB'):
+    def show(self):
 
         if self.imageView:
             return
@@ -717,8 +716,8 @@ class ToggleImageViewHandler(object):
 
 imageOverlayManager = ImageOverlayManager()
 imageViewHandler = ToggleImageViewHandler(imageOverlayManager)
-#showImageOverlay = imageOverlayManager.show
-#hideImageOverlay = imageOverlayManager.hide
+showImageOverlay = imageOverlayManager.show
+hideImageOverlay = imageOverlayManager.hide
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
