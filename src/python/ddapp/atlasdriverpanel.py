@@ -48,6 +48,10 @@ class AtlasDriverPanel(object):
         self.ui.mitStandButton.connect('clicked()', self.onMITStand)
         self.ui.userButton.connect('clicked()', self.onUser)
         self.ui.manipButton.connect('clicked()', self.onManip)
+        self.ui.recoveryOnButton.connect('clicked()', self.driver.sendRecoveryEnable)
+        self.ui.recoveryOffButton.connect('clicked()', self.driver.sendRecoveryDisable)
+        self.ui.bracingOnButton.connect('clicked()', self.driver.sendBracingEnable)
+        self.ui.bracingOffButton.connect('clicked()', self.driver.sendBracingDisable)
         self.setupElectricArmCheckBoxes()
 
         PythonQt.dd.ddGroupBoxHider(self.ui.calibrationGroupBox)
