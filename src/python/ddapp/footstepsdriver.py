@@ -246,7 +246,7 @@ class FootstepsDriver(object):
                               1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
                               2: lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING}
         self.params.addProperty('Planner Mode', 0, attributes=om.PropertyAttributes(enumNames=['Fast MIQP', 'Slow MISOCP']))
-        self.params.addProperty('Support Contact Groups', 0, attributes=om.PropertyAttributes(enumNames=['Heel+Toe', 'Midfoot+Toe', 'Heel+Midfoot']))
+        self.params.addProperty('Support Contact Groups', 0, attributes=om.PropertyAttributes(enumNames=['Whole Foot', 'Front 2/3', 'Back 2/3']))
 
         self.applyDefaults(DEFAULT_PARAM_SET)
 
