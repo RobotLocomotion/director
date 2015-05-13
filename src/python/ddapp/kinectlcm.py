@@ -72,6 +72,8 @@ def startKinectLCM():
 
         cameraToLocalFused = vtk.vtkTransform()
         queue.getTransform('KINECT_RGB', 'local', utime, cameraToLocalFused)
+        #vis.updateFrame( cameraToLocalFused , 'cameraToLocalFused', visible=True, scale = 0.2)
+        #print utime , cameraToLocalFused.GetPosition()
         p = filterUtils.transformPolyData(p,cameraToLocalFused)
         obj.setPolyData(p)
 
