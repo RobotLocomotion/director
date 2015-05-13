@@ -29,9 +29,9 @@ class DrivingPlanner(object):
         self.ikServer.connectStartupCompleted(self.initialize)
         self.steeringAngleDegrees = 0.0
         self.maxTurningRadius = 9.5
-        self.trajectoryPitch = -39
-        self.trajectoryRoll = 180
-        self.trajectoryOffset = -0.51
+        self.trajectoryX = 0
+        self.trajectoryY = 0
+        self.trajectoryAngle = 0
         self.trajSegments = 25
         self.wheelDistance = 1.4
         self.tagToLocalTransform = transformUtils.transformFromPose([0,0,0],[1,0,0,0])
@@ -196,14 +196,17 @@ class DrivingPlanner(object):
     def transformDrivingTrajectory(self, drivingTraj):
         transformedDrivingTraj = list()
         transform = vtk.vtkTransform()
-        
-        self.carToTagTransform = transformUtils.transformFromPose([0,0,0],[1,0,0,0])
-        self.carToTagTransform.Translate(0, self.trajectoryOffset, 1.0);
-        self.carToTagTransform.RotateY(self.trajectoryPitch)
-        self.carToTagTransform.RotateX(self.trajectoryRoll)
-        
-        transform.Concatenate(self.tagToLocalTransform)
-        transform.Concatenate(self.carToTagTransform)
+
+        z_axis = self.tagToLocalTransform.TransformVector([0,0,1])
+        tag_origin = self.tagToLocalTransform.TransformPoint([0,0,0])
+
+        z_axis_proj = z_axis[0:2] / np.linalg.norm(z_axis[0:2])
+        angle = math.degrees(math.atan2(z_axis_proj[1], z_axis_proj[0]))
+
+        transform.Translate([tag_origin[0] , tag_origin[1], 0])
+        transform.RotateZ(self.trajectoryAngle + angle)
+        transform.Translate([self.trajectoryX, self.trajectoryY, 0])
+
         for p in drivingTraj:
             transformedPoint = np.asarray(transform.TransformPoint(p))
             transformedDrivingTraj.append(transformedPoint)
@@ -260,9 +263,9 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Turning Radius', 9.5, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Wheel Separation', 1.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Segments', 25, attributes=om.PropertyAttributes(singleStep=1, decimals=0))
-        self.params.addProperty('Trajectory Pitch', -39.0, attributes=om.PropertyAttributes(singleStep=1, decimals=0)),
-        self.params.addProperty('Trajectory Roll', 180.0, attributes=om.PropertyAttributes(singleStep=1, decimals=0)),
-        self.params.addProperty('Trajectory Offset', -0.51, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
+        self.params.addProperty('Trajectory X Offset', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2)),
+        self.params.addProperty('Trajectory Y Offset', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
+        self.params.addProperty('Trajectory Angle Offset', 0.0, attributes=om.PropertyAttributes(singleStep=1, decimals=0)),
         self.params.addProperty('Show Trajectory', False)
         self._syncProperties()
 
@@ -283,9 +286,9 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.trajSegments = self.params.getProperty('Trajectory Segments')
         self.drivingPlanner.wheelDistance = self.params.getProperty('Wheel Separation')
         self.showTrajectory = self.params.getProperty('Show Trajectory')
-        self.drivingPlanner.trajectoryPitch = self.params.getProperty('Trajectory Pitch')
-        self.drivingPlanner.trajectoryRoll = self.params.getProperty('Trajectory Roll')
-        self.drivingPlanner.trajectoryOffset = self.params.getProperty('Trajectory Offset')
+        self.drivingPlanner.trajectoryX = self.params.getProperty('Trajectory X Offset')
+        self.drivingPlanner.trajectoryY = self.params.getProperty('Trajectory Y Offset')
+        self.drivingPlanner.trajectoryAngle = self.params.getProperty('Trajectory Angle Offset')
         
         if hasattr(self, 'affordanceUpdater'):
             if self.showTrajectory:
