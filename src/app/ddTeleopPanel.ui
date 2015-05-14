@@ -304,39 +304,111 @@
            <property name="title">
             <string>Supports</string>
            </property>
-           <layout class="QGridLayout" name="gridLayout_2">
-            <item row="0" column="0">
-             <widget class="QCheckBox" name="leftFootSupportCheckbox">
-              <property name="text">
-               <string>Left Foot</string>
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <widget class="QGroupBox" name="groupBox">
+              <property name="title">
+               <string>Planning</string>
               </property>
-              <property name="checked">
+              <layout class="QVBoxLayout" name="verticalLayout_2">
+               <item>
+                <widget class="QCheckBox" name="leftFootPlanningSupportCheckbox">
+                 <property name="text">
+                  <string>Left Foot</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="rightFootPlanningSupportCheckbox">
+                 <property name="text">
+                  <string>Right Foot</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="leftHandPlanningSupportCheckbox">
+                 <property name="text">
+                  <string>Left Hand</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="rightHandPlanningSupportCheckbox">
+                 <property name="text">
+                  <string>Right Hand</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="pelvisPlanningSupportCheckbox">
+                 <property name="text">
+                  <string>Pelvis</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="executionSupportCheckbox">
+              <property name="title">
+               <string>Execution</string>
+              </property>
+              <property name="checkable">
                <bool>true</bool>
               </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QCheckBox" name="leftHandSupportCheckbox">
-              <property name="text">
-               <string>Left Hand</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QCheckBox" name="rightFootSupportCheckbox">
-              <property name="text">
-               <string>Right Foot</string>
-              </property>
               <property name="checked">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QCheckBox" name="rightHandSupportCheckbox">
-              <property name="text">
-               <string>Right Hand</string>
-              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_3">
+               <item>
+                <widget class="QCheckBox" name="leftFootExecutionSupportCheckbox">
+                 <property name="text">
+                  <string>Left Foot</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="rightFootExecutionSupportCheckbox">
+                 <property name="text">
+                  <string>Right Foot</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="leftHandExecutionSupportCheckbox">
+                 <property name="text">
+                  <string>Left Hand</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="rightHandExecutionSupportCheckbox">
+                 <property name="text">
+                  <string>Right Hand</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="pelvisExecutionSupportCheckbox">
+                 <property name="text">
+                  <string>Pelvis</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </widget>
             </item>
            </layout>
