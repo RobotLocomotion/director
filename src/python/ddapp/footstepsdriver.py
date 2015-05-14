@@ -463,7 +463,7 @@ class FootstepsDriver(object):
 
             stepName = 'step %d' % (i-1)
 
-            obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=1.0, parent=folder)
+            obj = vis.showPolyData(mesh, stepName, color=this_color, alpha=alpha, parent=folder)
             obj.setIcon(om.Icons.Feet)
             frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
             obj.actor.SetUserTransform(footstepTransform)
