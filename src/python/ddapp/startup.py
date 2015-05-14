@@ -439,14 +439,14 @@ if usePlanning:
     egressPanel = egressplanner.EgressPanel(robotSystem)
 
     taskPanels = OrderedDict()
-    
+
     taskPanels['Driving'] = drivingPlannerPanel.widget
     taskPanels['Egress'] = egressPanel.widget
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
-    
+
     tasklaunchpanel.init(taskPanels)
 
     splinewidget.init(view, handFactory, robotStateModel)
@@ -596,44 +596,20 @@ if useFootContactVis:
 
 
 if useFallDetectorVis:
+    def onPlanStatus(msg):
+        links = ['pelvis', 'utorso']
+        if msg.plan_type == lcmdrc.plan_status_t.RECOVERING:
+            for link in links:
+                robotHighlighter.highlightLink(link, [1,0.4,0.0])
+        elif msg.plan_type == lcmdrc.plan_status_t.BRACING:
+            for link in links:
+                robotHighlighter.highlightLink(link, [1, 0, 0])
+        else:
+            for link in links:
+                robotHighlighter.dehighlightLink(link)
 
-    class FallDetectorDisplay(object):
-
-        def __init__(self):
-
-            self.sub = lcmUtils.addSubscriber('ATLAS_FALL_STATE', lcmdrc.atlas_fall_detector_status_t, self.onFallState)
-            self.sub.setSpeedLimit(300)
-
-            self.fallDetectorTriggerTime = 0.0 
-            self.fallDetectorVisResetTime = 3.0 # seconds
-            self.color = QtGui.QColor(180, 180, 180)
-
-        def __del__(self):
-            lcmUtils.removeSubscriber(self.sub)
-
-        def onFallState(self,msg):
-            links = ['pelvis', 'utorso']
-
-            isFalling = msg.falling
-            isBracing = msg.bracing
-            t = msg.utime / 1.0e6
-            if not isFalling and not isBracing and (t-self.fallDetectorTriggerTime > self.fallDetectorVisResetTime or t-self.fallDetectorTriggerTime<0):
-                for link in links:
-                    robotHighlighter.dehighlightLink(link)
-
-            elif isBracing:
-                for link in links:
-                    robotHighlighter.highlightLink(link, [1, 0, 0])
-                self.fallDetectorTriggerTime = t
-
-            elif isFalling:
-                for link in links:
-                    robotHighlighter.highlightLink(link, [1,0.4,0.0])
-                self.fallDetectorTriggerTime = t
-
-
-    fallDetectDisp = FallDetectorDisplay()
-
+    fallDetectorSub = lcmUtils.addSubscriber("PLAN_EXECUTION_STATUS", lcmdrc.plan_status_t, onPlanStatus)
+    fallDetectorSub.setSpeedLimit(10)
 
 if useDataFiles:
 
