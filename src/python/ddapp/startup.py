@@ -479,14 +479,13 @@ if useLoggingWidget:
 
 if useControllerRate:
 
-    class LCMMessageRateDisplay(object):
+    class ControllerRateLabel(object):
         '''
-        Displays an LCM message frequency in a status bar widget or label widget
+        Displays a controller frequency in the status bar
         '''
 
-        def __init__(self, channel, messageTemplate, statusBar=None):
-
-            self.sub = lcmUtils.addSubscriber(channel)
+        def __init__(self, atlasDriver, statusBar):
+            self.atlasDriver = atlasDriver
             self.label = QtGui.QLabel('')
             statusBar.addPermanentWidget(self.label)
 
@@ -494,13 +493,12 @@ if useControllerRate:
             self.timer.callback = self.showRate
             self.timer.start()
 
-        def __del__(self):
-            lcmUtils.removeSubscriber(self.sub)
-
         def showRate(self):
-            self.label.text = 'Controller rate: %.2f hz' % self.sub.getMessageRate()
+            rate = self.atlasDriver.getControllerRate()
+            rate = 'unknown' if rate is None else '%d hz' % rate
+            self.label.text = 'Controller rate: %s' % rate
 
-    rateComputer = LCMMessageRateDisplay('ATLAS_COMMAND', 'Controller rate: %.2 hz', app.getMainWindow().statusBar())
+    controllerRateLabel = ControllerRateLabel(atlasDriver, app.getMainWindow().statusBar())
 
 
 if useForceDisplay:
