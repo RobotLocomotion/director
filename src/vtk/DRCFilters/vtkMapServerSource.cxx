@@ -666,9 +666,12 @@ protected:
       msg.radstep = in->getThetaStep();
       msg.ranges = in->getRanges();
       msg.nranges = msg.ranges.size();
+      msg.intensities = in->getIntensities();
+      if (msg.intensities.size() == 0) {
+        msg.intensities.resize(msg.nranges);
+        std::fill(msg.intensities.begin(), msg.intensities.end(), 0);
+      }
       msg.nintensities = msg.nranges;
-      msg.intensities.resize(msg.nintensities);
-      std::fill(msg.intensities.begin(), msg.intensities.end(), 0);
       out.msg = msg;
     }
 
