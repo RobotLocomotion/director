@@ -186,8 +186,8 @@ class ValvePlannerDemo(object):
         objectTransform = transformUtils.copyFrame(self.computeGraspFrame().transform)
         if useIkTraj:
             startPose = self.getNominalPose()
-            plan = self.planInsertTraj(lockFeet=False, lockBase=False, resetPoses=True,
-                                       startPose=startPose)
+            plan = self.planInsertTraj(self.speedLow, lockFeet=False, lockBase=False,
+                                       resetPoses=True, startPose=startPose)
             stancePose = robotstate.convertStateMessageToDrakePose(plan.plan[0])
             stanceRobotModel = self.ikPlanner.getRobotModelAtPose(stancePose)
             self.nominalPelvisXYZ = stancePose[:3]
@@ -469,15 +469,16 @@ class ValvePlannerDemo(object):
             self.ikPlanner.addPose(self.reachPose, self.reachPoseName)
             self.ikPlanner.addPose(self.touchPose, self.touchPoseName)
 
-    def planInsertTraj(self, lockFeet=True, lockBase=None, resetBase=False, wristAngleCW=0,
+    def planInsertTraj(self, speed, lockFeet=True, lockBase=None, resetBase=False, wristAngleCW=0,
                        startPose=None, verticalOffset=0.01, usePoses=False, resetPoses=True,
                        planFromCurrentRobotState=False, retract=False):
-        QuasiStaticShrinkFactorOrig = ik.QuasiStaticConstraint.shrinkFactor
-        fixInitialStateOrig = self.ikPlanner.ikServer.fixInitialState
-        usePointwiseOrig = self.ikPlanner.ikServer.usePointwise
-        ik.QuasiStaticConstraint.shrinkFactor = self.quasiStaticShrinkFactor
-        self.ikPlanner.ikServer.fixInitialState = planFromCurrentRobotState
-        self.ikPlanner.ikServer.usePointwise = False
+
+        ikParameterDict = {'usePointwise': False,
+                           'maxDegreesPerSecond': speed,
+                           'numberOfAddedKnots': 1,
+                           'quasiStaticShrinkFactor': self.quasiStaticShrinkFactor,
+                           'fixInitialState': planFromCurrentRobotState}
+        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
 
         _, yaxis, _ = transformUtils.getAxesFromTransform(self.computeGraspFrame().transform)
         yawDesired = np.arctan2(yaxis[1], yaxis[0])
@@ -524,14 +525,13 @@ class ValvePlannerDemo(object):
         if resetPoses and not retract and max(plan.plan_info) <= 10:
             self.setReachAndTouchPoses(plan)
 
-        ik.QuasiStaticConstraint.shrinkFactor = QuasiStaticShrinkFactorOrig
-        self.ikPlanner.ikServer.fixInitialState = fixInitialStateOrig
-        self.ikPlanner.ikServer.usePointwise = usePointwiseOrig
+        ikPlanner.setIkParameters(originalIkParameterDict)
         return plan
 
     def planReach(self, verticalOffset=None, **kwargs):
         startPose = self.getPlanningStartPose()
-        insert_plan = self.planInsertTraj(lockFeet=True, usePoses=True, resetPoses=True, **kwargs)
+        insert_plan = self.planInsertTraj(self.speedHigh, lockFeet=True, usePoses=True,
+                                          resetPoses=True, **kwargs)
         info = max(insert_plan.plan_info)
         reachPose = robotstate.convertStateMessageToDrakePose(insert_plan.plan[0])
         plan = self.ikPlanner.computePostureGoal(startPose, reachPose)
@@ -540,13 +540,13 @@ class ValvePlannerDemo(object):
         self.addPlan(plan)
 
     def planTouch(self, **kwargs):
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
-        plan = self.planInsertTraj(lockBase=True, lockFeet=True, usePoses=True, resetPoses=False,
-                                   planFromCurrentRobotState=True, **kwargs)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+        plan = self.planInsertTraj(self.speedLow, lockBase=True, lockFeet=True, usePoses=True,
+                                   resetPoses=False, planFromCurrentRobotState=True, **kwargs)
         self.addPlan(plan)
 
     def planTurn(self, wristAngleCW=np.radians(320)):
+        ikParameterDict = {'maxDegreesPerSecond': self.speedTurn}
+        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
         startPose = self.getPlanningStartPose()
         wristAngleCW = min(np.radians(320)-0.01, max(-np.radians(160)+0.01, wristAngleCW))
         if self.graspingHand == 'left':
@@ -556,15 +556,13 @@ class ValvePlannerDemo(object):
 
         endPose = self.ikPlanner.mergePostures(startPose, postureJoints)
 
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedTurn
         plan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
         app.displaySnoptInfo(1)
 
+        self.ikPlanner.setIkParameters(originalIkParameterDict)
         self.addPlan(plan)
 
     def planRetract(self, **kwargs):
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
         startPose = self.getPlanningStartPose()
         if self.graspingHand == 'left':
             jointId = robotstate.getDrakePoseJointNames().index('l_arm_lwy')
@@ -572,10 +570,9 @@ class ValvePlannerDemo(object):
         else:
             jointId = robotstate.getDrakePoseJointNames().index('r_arm_lwy')
             wristAngleCW = np.radians(160) - startPose[jointId]
-        plan = self.planInsertTraj(retract=True, lockBase=True, lockFeet=True, usePoses=True,
-                                   planFromCurrentRobotState=True, resetPoses=False,
+        plan = self.planInsertTraj(self.speedLow, retract=True, lockBase=True, lockFeet=True,
+                                   usePoses=True, planFromCurrentRobotState=True, resetPoses=False,
                                    wristAngleCW=wristAngleCW, **kwargs)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
         self.addPlan(plan)
 
     def getNominalPose(self):
