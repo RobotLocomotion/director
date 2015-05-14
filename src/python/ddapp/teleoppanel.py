@@ -78,10 +78,17 @@ class EndEffectorTeleopPanel(object):
         self.ui.rhandCombo.connect('currentIndexChanged(const QString&)', self.rhandComboChanged)
         self.ui.lfootCombo.connect('currentIndexChanged(const QString&)', self.lfootComboChanged)
         self.ui.rfootCombo.connect('currentIndexChanged(const QString&)', self.rfootComboChanged)
-        self.ui.leftFootSupportCheckbox.connect('clicked()', self.leftFootSupportCheckboxChanged)
-        self.ui.rightFootSupportCheckbox.connect('clicked()', self.rightFootSupportCheckboxChanged)
-        self.ui.leftHandSupportCheckbox.connect('clicked()', self.leftHandSupportCheckboxChanged)
-        self.ui.rightHandSupportCheckbox.connect('clicked()', self.rightHandSupportCheckboxChanged)
+        self.ui.leftFootPlanningSupportCheckbox.connect('clicked()', self.leftFootPlanningSupportCheckboxChanged)
+        self.ui.rightFootPlanningSupportCheckbox.connect('clicked()', self.rightFootPlanningSupportCheckboxChanged)
+        self.ui.leftHandPlanningSupportCheckbox.connect('clicked()', self.leftHandPlanningSupportCheckboxChanged)
+        self.ui.rightHandPlanningSupportCheckbox.connect('clicked()', self.rightHandPlanningSupportCheckboxChanged)
+        self.ui.pelvisPlanningSupportCheckbox.connect('clicked()', self.pelvisPlanningSupportCheckboxChanged)
+        self.ui.leftFootExecutionSupportCheckbox.connect('clicked()', self.leftFootExecutionSupportCheckboxChanged)
+        self.ui.rightFootExecutionSupportCheckbox.connect('clicked()', self.rightFootExecutionSupportCheckboxChanged)
+        self.ui.leftHandExecutionSupportCheckbox.connect('clicked()', self.leftHandExecutionSupportCheckboxChanged)
+        self.ui.rightHandExecutionSupportCheckbox.connect('clicked()', self.rightHandExecutionSupportCheckboxChanged)
+        self.ui.pelvisExecutionSupportCheckbox.connect('clicked()', self.pelvisExecutionSupportCheckboxChanged)
+        self.ui.executionSupportCheckbox.connect('clicked()', self.executionSupportCheckboxChanged)
 
         self.palmOffsetDistance = 0.0
         self.palmGazeAxis = [0.0, 1.0, 0.0]
@@ -139,29 +146,68 @@ class EndEffectorTeleopPanel(object):
     def setRFootConstraint(self, value):
         return self.setComboText(self.ui.rfootCombo, value)
 
-    def getLFootSupportEnabled(self):
-        return self.getCheckboxState(self.ui.leftFootSupportCheckbox)
+    def getLFootPlanningSupportEnabled(self):
+        return self.getCheckboxState(self.ui.leftFootPlanningSupportCheckbox)
 
-    def setLFootSupportEnabled(self, value):
-        self.setCheckboxState(self.ui.leftFootSupportCheckbox, value)
+    def setLFootPlanningSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.leftFootPlanningSupportCheckbox, value)
 
-    def getRFootSupportEnabled(self):
-        return self.getCheckboxState(self.ui.rightFootSupportCheckbox)
+    def getRFootPlanningSupportEnabled(self):
+        return self.getCheckboxState(self.ui.rightFootPlanningSupportCheckbox)
 
-    def setRFootSupportEnabled(self, value):
-        self.setCheckboxState(self.ui.rightFootSupportCheckbox, value)
+    def setRFootPlanningSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.rightFootPlanningSupportCheckbox, value)
 
-    def getLHandSupportEnabled(self):
-        return self.getCheckboxState(self.ui.leftHandSupportCheckbox)
+    def getLHandPlanningSupportEnabled(self):
+        return self.getCheckboxState(self.ui.leftHandPlanningSupportCheckbox)
 
-    def setLHandSupportEnabled(self, value):
-        self.setCheckboxState(self.ui.leftHandSupportCheckbox, value)
+    def setLHandPlanningSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.leftHandPlanningSupportCheckbox, value)
 
-    def getRHandSupportEnabled(self):
-        return self.getCheckboxState(self.ui.rightHandSupportCheckbox)
+    def getRHandPlanningSupportEnabled(self):
+        return self.getCheckboxState(self.ui.rightHandPlanningSupportCheckbox)
 
-    def setRHandSupportEnabled(self, value):
-        self.setCheckboxState(self.ui.rightHandSupportCheckbox, value)
+    def setRHandPlanningSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.rightHandPlanningSupportCheckbox, value)
+
+    def getPelvisPlanningSupportEnabled(self):
+        return self.getCheckboxState(self.ui.pelvisPlanningSupportCheckbox)
+
+    def setPelvisPlanningSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.pelvisPlanningSupportCheckbox, value)
+
+    def getLFootExecutionSupportEnabled(self):
+        return self.getCheckboxState(self.ui.leftFootExecutionSupportCheckbox)
+
+    def setLFootExecutionSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.leftFootExecutionSupportCheckbox, value)
+
+    def getRFootExecutionSupportEnabled(self):
+        return self.getCheckboxState(self.ui.rightFootExecutionSupportCheckbox)
+
+    def setRFootExecutionSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.rightFootExecutionSupportCheckbox, value)
+
+    def getLHandExecutionSupportEnabled(self):
+        return self.getCheckboxState(self.ui.leftHandExecutionSupportCheckbox)
+
+    def setLHandExecutionSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.leftHandExecutionSupportCheckbox, value)
+
+    def getRHandExecutionSupportEnabled(self):
+        return self.getCheckboxState(self.ui.rightHandExecutionSupportCheckbox)
+
+    def setRHandExecutionSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.rightHandExecutionSupportCheckbox, value)
+
+    def getPelvisExecutionSupportEnabled(self):
+        return self.getCheckboxState(self.ui.pelvisExecutionSupportCheckbox)
+
+    def setPelvisExecutionSupportEnabled(self, value):
+        self.setCheckboxState(self.ui.pelvisExecutionSupportCheckbox, value)
+
+    def getExecutionSupportEnabled(self):
+        return self.getCheckboxState(self.ui.executionSupportCheckbox)
 
     def baseComboChanged(self):
         self.updateConstraints()
@@ -181,16 +227,37 @@ class EndEffectorTeleopPanel(object):
     def rfootComboChanged(self):
         self.updateConstraints()
 
-    def leftFootSupportCheckboxChanged(self):
+    def leftFootExecutionSupportCheckboxChanged(self):
+        self.panel.manipPlanner.leftFootSupportEnabled = self.getLFootExecutionSupportEnabled()
+
+    def rightFootExecutionSupportCheckboxChanged(self):
+        self.panel.manipPlanner.rightFootSupportEnabled = self.getRFootExecutionSupportEnabled()
+
+    def leftHandExecutionSupportCheckboxChanged(self):
+        self.panel.manipPlanner.leftHandSupportEnabled = self.getLHandExecutionSupportEnabled()
+
+    def rightHandExecutionSupportCheckboxChanged(self):
+        self.panel.manipPlanner.rightHandSupportEnabled = self.getRHandExecutionSupportEnabled()
+
+    def pelvisExecutionSupportCheckboxChanged(self):
+        self.panel.manipPlanner.pelvisSupportEnabled = self.getPelvisExecutionSupportEnabled()
+
+    def executionSupportCheckboxChanged(self):
+        self.panel.manipPlanner.publishPlansWithSupports = self.getExecutionSupportEnabled()
+
+    def leftFootPlanningSupportCheckboxChanged(self):
         self.updateConstraints()
 
-    def rightFootSupportCheckboxChanged(self):
+    def rightFootPlanningSupportCheckboxChanged(self):
         self.updateConstraints()
 
-    def leftHandSupportCheckboxChanged(self):
+    def leftHandPlanningSupportCheckboxChanged(self):
         self.updateConstraints()
 
-    def rightHandSupportCheckboxChanged(self):
+    def rightHandPlanningSupportCheckboxChanged(self):
+        self.updateConstraints()
+
+    def pelvisPlanningSupportCheckboxChanged(self):
         self.updateConstraints()
 
     def onGoalFrameModified(self, frame):
@@ -333,10 +400,11 @@ class EndEffectorTeleopPanel(object):
             constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
             ikPlanner.setBaseLocked(False)
 
-        ikPlanner.leftFootSupportEnabled = self.getLFootSupportEnabled()
-        ikPlanner.rightFootSupportEnabled = self.getRFootSupportEnabled()
-        ikPlanner.leftHandSupportEnabled = self.getLHandSupportEnabled()
-        ikPlanner.rightHandSupportEnabled = self.getRHandSupportEnabled()
+        ikPlanner.leftFootSupportEnabled = self.getLFootPlanningSupportEnabled()
+        ikPlanner.rightFootSupportEnabled = self.getRFootPlanningSupportEnabled()
+        ikPlanner.leftHandSupportEnabled = self.getLHandPlanningSupportEnabled()
+        ikPlanner.rightHandSupportEnabled = self.getRHandPlanningSupportEnabled()
+        ikPlanner.pelvisSupportEnabled = self.getPelvisPlanningSupportEnabled()
 
         constraints.append(ikPlanner.createQuasiStaticConstraint())
 

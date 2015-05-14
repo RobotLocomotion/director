@@ -18,6 +18,7 @@ q_end = q_nom;
 try
   l_foot_pts = s.getLeftFootPoints();
   r_foot_pts = s.getRightFootPoints();
+  pelvis_pts = s.getPelvisPoints();
 catch
   % no-op
 end

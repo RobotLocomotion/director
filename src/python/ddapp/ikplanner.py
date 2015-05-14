@@ -198,15 +198,11 @@ class IKPlanner(object):
         self.fixedBaseArm = False
         self.robotNoFeet = False
 
-        # HACK
-        self.useSupports = False
-        self.plansWithSupportsAreQuasistatic = True
-        self.pelvisSupportEnabled  = False
         self.leftFootSupportEnabled  = True
         self.rightFootSupportEnabled = True
         self.leftHandSupportEnabled  = False
         self.rightHandSupportEnabled = False
-        # HACK_END
+        self.pelvisSupportEnabled  = False
 
         om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
 
@@ -1201,69 +1197,6 @@ class IKPlanner(object):
         constraintSet = ConstraintSet(self, constraints, 'posture_goal_end', startPoseName)
         endPose, info = constraintSet.runIk()
         return constraintSet.runIkTraj()
-
-    def getSupports(self):
-        if self.useSupports:
-            supportElement = lcmdrc.support_element_t()
-            supportElement.utime = getUtime()
-            numBodies = 0
-            supportBodies = []
-            if self.pelvisSupportEnabled:
-                numBodies += 1
-                supportBodies.append(self.getPelvisSupportBodyMsg())
-            if self.leftFootSupportEnabled:
-                numBodies += 1
-                supportBodies.append(self.getFootSupportBodyMsg('left'))
-            if self.rightFootSupportEnabled:
-                numBodies += 1
-                supportBodies.append(self.getFootSupportBodyMsg('right'))
-            if self.leftHandSupportEnabled:
-                #numBodies += 2
-                numBodies += 1
-                supportBodies.append(self.getHandSupportBodyMsg('left', [0, 0, 1, 0]))
-                #supportBodies.append(self.getHandSupportBodyMsg('left', [0, 0, -1, 0]))
-            if self.rightHandSupportEnabled:
-                #numBodies += 2
-                numBodies += 1
-                supportBodies.append(self.getHandSupportBodyMsg('right', [0, 0, 1, 0]))
-                #supportBodies.append(self.getHandSupportBodyMsg('right', [0, 0, -1, 0]))
-            supportElement.num_bodies = numBodies
-            supportElement.support_bodies = supportBodies
-            return [supportElement]
-
-    def getPelvisSupportBodyMsg(self):
-        linkname = 'pelvis'
-        supportBody = lcmdrc.support_body_t()
-        supportBody.utime = getUtime()
-        supportBody.body_id = int(self.ikServer.comm.getFloatArray('links.%s' % linkname)[0])
-        supportBody.contact_pts = self.robotModel.getLinkContactPoints(linkname).transpose().tolist()
-        supportBody.num_contact_pts = len(supportBody.contact_pts[0])
-        supportBody.use_support_surface = False
-        supportBody.override_contact_pts = True
-        return supportBody
-
-    def getFootSupportBodyMsg(self, side):
-        linkname = 'l_foot' if side == 'left' else 'r_foot'
-        supportBody = lcmdrc.support_body_t()
-        supportBody.utime = getUtime()
-        supportBody.body_id = int(self.ikServer.comm.getFloatArray('links.%s' % linkname)[0])
-        supportBody.contact_pts = self.robotModel.getLinkContactPoints(linkname).transpose().tolist()
-        supportBody.num_contact_pts = len(supportBody.contact_pts[0])
-        supportBody.use_support_surface = False
-        supportBody.override_contact_pts = True
-        return supportBody
-
-    def getHandSupportBodyMsg(self, side, support_surface):
-        linkname = 'l_hand' if side == 'left' else 'r_hand'
-        supportBody = lcmdrc.support_body_t()
-        supportBody.utime = getUtime()
-        supportBody.body_id = int(self.ikServer.comm.getFloatArray('links.%s' % linkname)[0])
-        supportBody.contact_pts = self.getPalmPoint(side=side).reshape(3,1)
-        supportBody.num_contact_pts = 1
-        supportBody.use_support_surface = True
-        supportBody.override_contact_pts = True
-        supportBody.support_surface = support_surface
-        return supportBody
 
     def getManipPlanListener(self):
         responseChannel = 'CANDIDATE_MANIP_PLAN'
