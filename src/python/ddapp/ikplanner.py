@@ -201,6 +201,19 @@ class IKPlanner(object):
         om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
 
 
+    def setIkParameters(self, ikParameterDict):
+        originalIkParameterDict = {}
+        if 'usePointwise' in ikParameterDict:
+            originalIkParameterDict['usePointwise'] = self.ikServer.usePointwise
+            self.ikServer.usePointwise = ikParameterDict['usePointwise']
+        if 'maxDegreesPerSecond' in ikParameterDict:
+            originalIkParameterDict['maxDegreesPerSecond'] = self.ikServer.maxDegreesPerSecond
+            self.ikServer.maxDegreesPerSecond = ikParameterDict['maxDegreesPerSecond']
+        if 'numberOfAddedKnots' in ikParameterDict:
+            originalIkParameterDict['numberOfAddedKnots'] = self.ikServer.numberOfAddedKnots
+            self.ikServer.numberOfAddedKnots = ikParameterDict['numberOfAddedKnots']
+        return originalIkParameterDict
+
     def getHandModel(self, side=None):
         side = side or self.reachingSide
         assert side in ('left', 'right')
@@ -947,7 +960,7 @@ class IKPlanner(object):
 
 
     def newReachGoals(self, startPoseName, rightFrame, leftFrame, constraints, graspToHandLinkFrame=None, lockOrient=True):
-        
+
         graspToHandLeftLinkFrame = self.newGraspToHandFrame('left')
 
         positionLeftConstraint, orientationLeftConstraint = self.createPositionOrientationGraspConstraints('left', leftFrame, graspToHandLeftLinkFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0)
@@ -969,12 +982,12 @@ class IKPlanner(object):
             constraints.append(orientationRightConstraint)
 
         constraintSet = ConstraintSet(self, constraints, 'reach_end', startPoseName)
-        
+
         return constraintSet
 
 
     def planEndEffectorGoals(self, startPose, rightFrame, leftFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
-        
+
         startPoseName = 'reach_start'
         self.addPose(startPose, startPoseName)
 
@@ -982,16 +995,16 @@ class IKPlanner(object):
             constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
 
         return self.newReachGoals(startPoseName, rightFrame, leftFrame, constraints)
-        
+
     def planEndEffectorGoalLine(self, startPose, rightGraspFrame, leftGraspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True,
                                 angleToleranceInDegrees=0.0):
-        
+
         startPoseName = 'reach_start'
         self.addPose(startPose, startPoseName)
 
         if constraints is None:
             constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
-            
+
         for hand in ['left', 'right']:
             graspToHandLinkFrame = self.newGraspToHandFrame(hand)
             posConstraint, quatConstraint = self.createSegmentConstraint(self.getHandLink(hand), rightGraspFrame,
@@ -1002,23 +1015,23 @@ class IKPlanner(object):
 
         constraintSet = ConstraintSet(self, constraints, 'reach_end', startPoseName)
         return constraintSet
-    
+
     def planAsymmetricGoal(self, startPose, rightGraspFrame, leftGraspFrame, constraints=None, lockBase=False, lockBack=False, lockArm=True):
-        
+
         startPoseName = 'reach_start'
         self.addPose(startPose, startPoseName)
 
         if constraints is None:
             constraints = self.createMovingReachConstraints(startPoseName, lockBase=lockBase, lockBack=lockBack, lockArm=lockArm)
-            
+
         graspToHandLinkFrame = self.newGraspToHandFrame('left')
         posConstraint, quatConstraint = self.createSegmentConstraint(self.getHandLink('left'), rightGraspFrame,
                                                                      leftGraspFrame, graspToHandLinkFrame)
         posConstraint.tspan = [1.0, 1.0]
         quatConstraint.tspan = [1.0, 1.0]
         constraints.extend([posConstraint, quatConstraint])
-        
-        linkName = self.getHandLink('right')            
+
+        linkName = self.getHandLink('right')
         graspToHandLinkFrame = self.newGraspToHandFrame('right')
 
         p = ik.PositionConstraint()
@@ -1028,7 +1041,7 @@ class IKPlanner(object):
         p.lowerBound = np.array([np.nan, np.nan, 0.0])
         p.upperBound = np.array([np.nan, np.nan, 0.0])
         positionConstraint = p
-            
+
         graspToHandLinkFrame = self.newGraspToHandFrame('right')
         rollConstraint1, rollConstraint2 = self.createAxisInPlaneConstraintAsymmetric('right', rightGraspFrame, graspToHandLinkFrame)
         rollConstraint1.tspan = [1.0, 1.0]
@@ -1037,15 +1050,15 @@ class IKPlanner(object):
 
         constraintSet = ConstraintSet(self, constraints, 'reach_end', startPoseName)
         return constraintSet
-        
+
     def createSegmentConstraint(self, linkName, firstFrame, secondFrame, linkOffsetFrame, angleToleranceInDegrees=0.0):
 
         firstFrame = firstFrame if isinstance(firstFrame, vtk.vtkTransform) else firstFrame.transform
         secondFrame = secondFrame if isinstance(secondFrame, vtk.vtkTransform) else secondFrame.transform
-        
+
         targetFrame = transformUtils.frameInterpolate(firstFrame, secondFrame, 0.5)
         vis.updateFrame(targetFrame, 'target frame', parent=None, visible=False, scale=0.2)
-        
+
         distance = np.sqrt(vtk.vtkMath().Distance2BetweenPoints(firstFrame.GetPosition(), secondFrame.GetPosition()))
         distance = distance/2 * 0.9
 
@@ -1053,7 +1066,7 @@ class IKPlanner(object):
         p.linkName = linkName
         p.pointInLink = np.array(linkOffsetFrame.GetPosition())
         p.referenceFrame = targetFrame
-        
+
         p.lowerBound = np.array([-distance, 0.0, 0.0])
         p.upperBound = np.array([distance, 0.0, 0.0])
         positionConstraint = p
@@ -1062,7 +1075,7 @@ class IKPlanner(object):
         t.PostMultiply()
         t.Concatenate(linkOffsetFrame.GetLinearInverse())
         t.Concatenate(targetFrame)
-        
+
         p = ik.QuatConstraint()
         p.linkName = linkName
         p.quaternion = t
