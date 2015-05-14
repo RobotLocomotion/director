@@ -68,6 +68,7 @@ class AtlasDriverPanel(object):
         self.updateControllerStatusLabel()
         self.updateRecoveryEnabledLabel()
         self.updateBracingEnabledLabel()
+        self.updateBatteryStatusLabel()
         self.updateStatus()
         self.updateButtons()
         self.updateElectricArmStatus()
@@ -79,9 +80,13 @@ class AtlasDriverPanel(object):
     def updateControllerStatusLabel(self):
         self.ui.controllerStatusLabel.text = self.driver.getControllerStatus() or '<unknown>'
 
+    def updateBatteryStatusLabel(self):
+        charge = self.driver.getBatteryChargeRemaining()
+        self.ui.batteryStatusLabel.text = '<unknown>' if charge is None else '%d%%' % charge
+
     def updateRecoveryEnabledLabel(self):
         self.ui.recoveryEnabledLabel.text = self.driver.getRecoveryEnabledStatus() or '<unknown>'
-    
+
     def updateBracingEnabledLabel(self):
         self.ui.bracingEnabledLabel.text = self.driver.getBracingEnabledStatus() or '<unknown>'
 
