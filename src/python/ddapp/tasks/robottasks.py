@@ -17,6 +17,7 @@ from ddapp.debugVis import DebugData
 from ddapp.robotplanlistener import ManipulationPlanItem
 from ddapp.footstepsdriver import FootstepPlanItem
 from ddapp import vtkAll as vtk
+import drc as lcmdrc
 import numpy as np
 import copy
 import pickle
@@ -338,18 +339,6 @@ class WaitForAtlasBehavior(AsyncTask):
         while robotSystem.atlasDriver.getCurrentBehaviorName() != behaviorName:
             yield
 
-
-class WaitForWalkExecution(AsyncTask):
-
-    def run(self):
-        self.statusMessage = 'Waiting for walking to begin...'
-        while robotSystem.atlasDriver.getControllerStatus() != 'walking':
-            yield
-
-        self.statusMessage = 'Waiting for walk execution...'
-        while robotSystem.atlasDriver.getControllerStatus() == 'walking':
-            yield
-
 class WaitForWalkExecutionBDI(AsyncTask):
 
     def run(self):
@@ -362,19 +351,75 @@ class WaitForWalkExecutionBDI(AsyncTask):
         while robotSystem.atlasDriver.getCurrentBehaviorName() != 'stand':
             yield
 
-class WaitForManipulationPlanExecution(AsyncTask):
+class WaitForPlanExecution(AsyncTask):
+
+    @staticmethod
+    def getDefaultProperties(properties):
+        properties.addProperty('Timeout', 5.0, attributes=propertyset.PropertyAttributes(minimum=0.0, maximum=1e4, singleStep=0.1, decimals=2))
+
+    def promptUserForPlanRecommit(self):
+        prompt = UserPromptTask(message='Plan appears dropped. Recommit?')
+        return prompt.run()
 
     def run(self):
 
-        # wait for controller status MANIPULATE
-        self.statusMessage = 'Waiting for manip begin...'
-        while robotSystem.atlasDriver.getControllerStatus() != 'manipulating':
+        def getMsg():
+            return robotSystem.atlasDriver.lastControllerStatusMessage
+
+        def isExecuting():
+            return getMsg().execution_status == lcmdrc.plan_status_t.EXECUTION_STATUS_EXECUTING
+
+        # wait for first status message
+        while not getMsg():
             yield
 
-        # wait for controller status STAND
-        self.statusMessage = 'Waiting for manip execution...'
-        while robotSystem.atlasDriver.getControllerStatus() == 'manipulating':
+        if isExecuting():
+            raise Exception('error, invoked during plan execution and cannot guarantee safety.')
+
+        t = SimpleTimer()
+        lastPlanStartTime = getMsg().last_plan_start_utime
+
+        # wait for next plan to begin
+        self.statusMessage = 'Waiting for %s to begin...' % self.getTypeLabel()
+        while getMsg().last_plan_start_utime == lastPlanStartTime:
+
+            if t.elapsed() > self.properties.getProperty('Timeout'):
+                yield self.promptUserForPlanRecommit()
+                t.reset()
+                self.recommitPlan()
+            else:
+                yield
+
+        # wait for execution
+        self.statusMessage = 'Waiting for %s execution...' % self.getTypeLabel()
+        while getMsg().execution_status == lcmdrc.plan_status_t.EXECUTION_STATUS_EXECUTING:
+            if getMsg().plan_type != self.getType():
+                raise Exception('error, unexpected execution plan type: %s' % getMsg().plan_type)
             yield
+
+class WaitForManipulationPlanExecution(WaitForPlanExecution):
+
+    def getType(self):
+        return lcmdrc.plan_status_t.MANIPULATING
+
+    def getTypeLabel(self):
+        return 'manipulation'
+
+    def recommitPlan(self):
+        lastPlan = robotSystem.manipPlanner.committedPlans.pop()
+        robotSystem.manipPlanner.commitManipPlan(lastPlan)
+
+class WaitForWalkExecution(WaitForPlanExecution):
+
+    def getType(self):
+        return lcmdrc.plan_status_t.WALKING
+
+    def getTypeLabel(self):
+        return 'walking'
+
+    def recommitPlan(self):
+        lastPlan = robotSystem.footstepsDriver.committedPlans.pop()
+        robotSystem.footstepsDriver.commitFootstepPlan(lastPlan)
 
 class UserSelectAffordanceCandidate(AsyncTask):
 
