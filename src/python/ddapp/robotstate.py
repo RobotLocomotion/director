@@ -70,6 +70,13 @@ def convertStateMessageToDrakePose(msg):
     assert len(pose) == getNumPositions()
     return pose
 
+def atlasCommandToDrakePose(msg):
+    jointIndexMap = getRobotStateToDrakePoseJointMap()
+    drakePose = np.zeros(len(getDrakePoseJointNames()))
+    for jointIdx, drakeIdx in jointIndexMap.iteritems():
+        drakePose[drakeIdx] = msg.position[jointIdx]
+    return drakePose.tolist()
+
 
 def asRobotPlan(msg):
     if isinstance(msg, lcmdrc.robot_plan_with_supports_t):
@@ -151,7 +158,7 @@ def drakePoseToRobotState(drakePose):
 
     return m
 
-
+    
 def matchJoints(regex):
     search = re.compile(regex).search
     return [name for name in getDrakePoseJointNames() if search(name)]
