@@ -42,6 +42,8 @@ class DrivingPlanner(object):
         self.akyIdx = robotstate.getDrakePoseJointNames().index('l_leg_aky')
         self.lwyIdx = robotstate.getDrakePoseJointNames().index('l_arm_lwy')
         self.anklePositions = np.array([np.nan,np.nan])
+        self.jointLimitsMin = np.array([self.robotSystem.teleopRobotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
+        self.jointLimitsMax = np.array([self.robotSystem.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.idleAngleSlack = 10
         self.fineGrainedThrottleTravel = 10
         self.steeringAngleOffset = 0
@@ -232,14 +234,9 @@ class DrivingPlanner(object):
 
     # capture the ankle position, 0 is no throttle, 1 is just starting to move
     def captureAnklePosition(self, typeIdx):
-        helper = lcmUtils.MessageResponseHelper(self.commandStreamChannel, lcmdrc.atlas_command_t)
-        msg = helper.waitForResponse(timeout=1000, keepAlive=False)
-        if msg is None:
-            print "Didn't receive a JOINT_POSITION_GOAL message"
-            print "Are you streaming?"
+        pose = self.captureRobotPoseFromStreaming()
+        if pose is None:
             return
-
-        pose = robotstate.atlasCommandToDrakePose(msg)
         anklePos = np.rad2deg(pose[self.akyIdx])
         self.anklePositions[typeIdx] = anklePos
 
@@ -254,8 +251,15 @@ class DrivingPlanner(object):
         slope = self.anklePositions[1] - (self.anklePositions[0] - self.throttleIdleAngleSlack)
         const = self.anklePositions[0] - self.throttleIdleAngleSlack
         ankleGoalPosition = const + slider[0]*slope + (slider[1]-1/2.0)*self.fineGrainedThrottleTravel
-
         ankleGoalPositionRadians = np.deg2rad(ankleGoalPosition)
+
+        # trip the safety if slider[3] is < 1/2, emergency come off the throttle
+        if slider[3] < 0.5:
+            print 'Emergency stop, coming off the throttle'
+            print "setting l_leg_aky to it's min value"
+            ankleGoalPositionRadians = self.jointLimitsMin[self.akyIdx]
+
+
         msg = lcmdrc.joint_position_goal_t()
         msg.utime = getUtime()
         msg.joint_position = ankleGoalPositionRadians
@@ -272,8 +276,9 @@ class DrivingPlanner(object):
         lcmUtils.publish(self.steeringPublishChannel, msg)
 
     def setSteeringOffset(self, msg):
-        msg = lcmUtils.captureMessage(self.commandStreamChannel, lcmdrc.atlas_command_t)
-        pose = robotstate.atlasCommandToDrakePose(msg)
+        pose = self.captureRobotPoseFromStreaming()
+        if pose is None:
+            return
         self.steeringAngleOffset = pose[self.lwyIdx]
 
     def decodeThrottleMessage(self,msg):
@@ -284,6 +289,18 @@ class DrivingPlanner(object):
         slider[3] = msg.slider4
 
         return slider
+
+    def captureRobotPoseFromStreaming(self):
+        helper = lcmUtils.MessageResponseHelper(self.commandStreamChannel, lcmdrc.robot_state_t)
+        msg = helper.waitForResponse(timeout=1000, keepAlive=False)
+
+        if msg is None:
+            print "Didn't receive a JOINT_POSITION_GOAL message"
+            print "Are you streaming?"
+            return None
+
+        pose = robotstate.convertStateMessageToDrakePose(msg)
+        return pose
 
 
 class DrivingPlannerPanel(TaskUserPanel):
