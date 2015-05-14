@@ -39,6 +39,9 @@ def getRobotGrayColor():
 def getRobotOrangeColor():
     return QtGui.QColor(255, 190, 0)
 
+def getRobotBlueColor():
+    return QtGui.QColor(170, 255, 255)
+
 
 class RobotModelItem(om.ObjectModelItem):
 

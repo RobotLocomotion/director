@@ -46,7 +46,7 @@ class PlaybackPanel(object):
         manipPlanner.connectPlanCommitted(self.onPlanCommitted)
 
         self.autoPlay = True
-        self.robotModelDisplayAlpha = 0.1
+        self.useOperationColors()
 
         self.planFramesObj = None
         self.plan = None
@@ -87,6 +87,15 @@ class PlaybackPanel(object):
         self.hideClicked()
 
 
+    def useDevelopmentColors(self):
+        self.robotStateModelDisplayAlpha = 0.1
+        self.playbackRobotModelUseTextures = True
+        self.playbackRobotModelDisplayAlpha = 1
+
+    def useOperationColors(self):
+        self.robotStateModelDisplayAlpha = 1
+        self.playbackRobotModelUseTextures = False
+        self.playbackRobotModelDisplayAlpha = 0.5
     def showExecuteContextMenu(self, clickPosition):
 
         globalPos = self.ui.executeButton.mapToGlobal(clickPosition)
@@ -229,7 +238,7 @@ class PlaybackPanel(object):
 
 
     def isPlanFeasible(self):
-        plan = robotstate.asRobotPlan(self.plan) 
+        plan = robotstate.asRobotPlan(self.plan)
         return plan is not None and max(plan.plan_info) < 10
 
     def getPlanInfo(self, plan):
@@ -284,8 +293,10 @@ class PlaybackPanel(object):
 
     def showPlaybackModel(self):
         self.robotStateModel.setProperty('Visible', True)
-        self.robotStateModel.setProperty('Alpha', self.robotModelDisplayAlpha)
         self.playbackRobotModel.setProperty('Visible', True)
+        self.playbackRobotModel.setProperty('Textures', self.playbackRobotModelUseTextures)
+        self.robotStateModel.setProperty('Alpha', self.robotStateModelDisplayAlpha)
+        self.playbackRobotModel.setProperty('Alpha', self.playbackRobotModelDisplayAlpha)
         if self.planFramesObj:
             self.planFramesObj.setProperty('Visible', False)
 
