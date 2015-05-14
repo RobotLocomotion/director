@@ -48,6 +48,10 @@ class AtlasDriverPanel(object):
         self.ui.mitStandButton.connect('clicked()', self.onMITStand)
         self.ui.userButton.connect('clicked()', self.onUser)
         self.ui.manipButton.connect('clicked()', self.onManip)
+        self.ui.recoveryOnButton.connect('clicked()', self.driver.sendRecoveryEnable)
+        self.ui.recoveryOffButton.connect('clicked()', self.driver.sendRecoveryDisable)
+        self.ui.bracingOnButton.connect('clicked()', self.driver.sendBracingEnable)
+        self.ui.bracingOffButton.connect('clicked()', self.driver.sendBracingDisable)
         self.setupElectricArmCheckBoxes()
 
         PythonQt.dd.ddGroupBoxHider(self.ui.calibrationGroupBox)
@@ -63,6 +67,7 @@ class AtlasDriverPanel(object):
         self.updateBehaviorLabel()
         self.updateControllerStatusLabel()
         self.updateRecoveryEnabledLabel()
+        self.updateBracingEnabledLabel()
         self.updateStatus()
         self.updateButtons()
         self.updateElectricArmStatus()
@@ -76,6 +81,9 @@ class AtlasDriverPanel(object):
 
     def updateRecoveryEnabledLabel(self):
         self.ui.recoveryEnabledLabel.text = self.driver.getRecoveryEnabledStatus() or '<unknown>'
+    
+    def updateBracingEnabledLabel(self):
+        self.ui.bracingEnabledLabel.text = self.driver.getBracingEnabledStatus() or '<unknown>'
 
     def updateStatus(self):
         self.ui.inletPressure.value = self.driver.getCurrentInletPressure()
