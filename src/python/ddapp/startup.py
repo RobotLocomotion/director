@@ -64,6 +64,7 @@ from ddapp import sensordatarequestpanel
 from ddapp import tasklaunchpanel
 from ddapp import pfgrasp
 from ddapp import pfgrasppanel
+from ddapp.jointpropagator import JointPropagator
 
 from ddapp import robotplanlistener
 from ddapp import handdriver
@@ -269,7 +270,6 @@ if useDrakeVisualizer:
 
 if usePlanning:
 
-
     def showPose(pose):
         playbackRobotModel.setProperty('Visible', True)
         playbackJointController.setPose('show_pose', pose)
@@ -348,6 +348,16 @@ if usePlanning:
 
     def sendFusedHeightRequest(repeatTime=0.0):
         sendDataRequest(lcmdrc.data_request_t.FUSED_HEIGHT, repeatTime)
+
+
+    teleopJointPropagator = JointPropagator(robotStateModel, teleopRobotModel, roboturdf.getRobotiqJoints() + ['neck_ay'])
+    playbackJointPropagator = JointPropagator(robotStateModel, playbackRobotModel, roboturdf.getRobotiqJoints())
+    def doPropagation(model=None):
+        if teleopRobotModel.getProperty('Visible'):
+            teleopJointPropagator.doPropagation()
+        if playbackRobotModel.getProperty('Visible'):
+            playbackJointPropagator.doPropagation()
+    robotStateModel.connectModelChanged(doPropagation)
 
     #app.addToolbarMacro('scene height', sendSceneHeightRequest)
     #app.addToolbarMacro('scene depth', sendSceneDepthRequest)

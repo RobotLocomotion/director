@@ -32,7 +32,6 @@ def create(view=None, globalsDict=None):
     s = RobotSystem()
     return s.init(view, globalsDict)
 
-
 class RobotSystem(object):
 
 
