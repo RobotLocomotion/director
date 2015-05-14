@@ -31,12 +31,14 @@ public:
   QVector<double> getJointPositions(const QList<QString>& jointNames) const;
   const QVector<double>& getJointPositions() const;
   QVector<double> getCenterOfMass() const;
+  QVector<double> resolveCenterOfPressure(const QVector<int>& ft_frame_ids, const QVector<double> & ft_in, const QVector<double> & normal_in, const QVector<double> & point_on_contact_plane_in) const;
   QVector<double> getJointLimits(const QString& jointName) const;
   QVector<double> getBodyContactPoints(const QString& bodyName) const;
 
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
   QList<QString> getLinkNames();
   QList<QString> getJointNames();
+  int findLinkID(const QString& linkName) const;
 
   void getModelMesh(vtkPolyData* polyData);
 
