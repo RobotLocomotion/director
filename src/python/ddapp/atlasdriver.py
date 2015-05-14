@@ -148,6 +148,14 @@ class AtlasDriver(object):
         else:
             return "disabled"
 
+    def getBracingEnabledStatus(self):
+        if not self.lastControllerStatusMessage:
+            return None
+        if self.lastControllerStatusMessage.bracing_enabled:
+            return "enabled"
+        else:
+            return "disabled"
+
     def getElectricArmEnabledStatus(self, i):
         assert 0 <= i <= 5
         if self.lastAtlasElectricArmStatusMessage:
@@ -224,6 +232,16 @@ class AtlasDriver(object):
         msg = lcmdrc.boolean_t()
         msg.data = True
         lcmUtils.publish('RECOVERY_ENABLE', msg)
+
+    def sendBracingEnable(self):
+        msg = lcmdrc.boolean_t()
+        msg.data = True
+        lcmUtils.publish('BRACING_ENABLE', msg)
+
+    def sendBracingDisable(self):
+        msg = lcmdrc.boolean_t()
+        msg.data = False
+        lcmUtils.publish('BRACING_ENABLE', msg)
 
     def sendRecoveryDisable(self):
         msg = lcmdrc.boolean_t()
