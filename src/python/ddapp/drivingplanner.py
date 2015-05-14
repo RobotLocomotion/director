@@ -237,6 +237,8 @@ class DrivingPlanner(object):
         pose = self.captureRobotPoseFromStreaming()
         if pose is None:
             return
+
+        print 'captured ankle position'
         anklePos = np.rad2deg(pose[self.akyIdx])
         self.anklePositions[typeIdx] = anklePos
 
@@ -275,10 +277,12 @@ class DrivingPlanner(object):
         msg.joint_name = 'l_arm_lwy'
         lcmUtils.publish(self.steeringPublishChannel, msg)
 
-    def setSteeringOffset(self, msg):
+    def setSteeringOffset(self):
         pose = self.captureRobotPoseFromStreaming()
         if pose is None:
             return
+
+        print 'captured steering offset'
         self.steeringAngleOffset = pose[self.lwyIdx]
 
     def decodeThrottleMessage(self,msg):
@@ -338,6 +342,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addManualButton('Plan Seed', self.drivingPlanner.planSeed)
         self.addManualButton('Capture Ankle Angle Low', functools.partial(self.drivingPlanner.captureAnklePosition, 0))
         self.addManualButton('Capture Ankle Angle High', functools.partial(self.drivingPlanner.captureAnklePosition, 1))
+        self.addManualButton('Capture Steering Offset', self.drivingPlanner.setSteeringOffset)
 
     def addDefaultProperties(self):
         self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
