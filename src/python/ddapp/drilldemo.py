@@ -2591,7 +2591,6 @@ class DrillTaskPanel(TaskUserPanel):
         addFolder('Prep')
         addTask(rt.CloseHand(name='close left hand', side='Left'))
         addTask(rt.CloseHand(name='close right hand', side='Right'))
-        addTask(rt.SetNeckPitch(name='set neck position', angle=20))
 
         # fit drill
         addFolder('Fit drill')
