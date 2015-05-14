@@ -521,6 +521,7 @@ class QuasiStaticConstraint(ConstraintBase):
         self._add_fields(
             leftFootEnabled  = True,
             rightFootEnabled = True,
+            pelvisEnabled    = False,
             #shrinkFactor     = 0.5,
             )
 
@@ -529,7 +530,7 @@ class QuasiStaticConstraint(ConstraintBase):
     def _getCommands(self, commands, constraintNames, suffix):
 
 
-        if not (self.leftFootEnabled or self.rightFootEnabled):
+        if not (self.leftFootEnabled or self.rightFootEnabled or self.pelvisEnabled):
             return
 
         varName = 'qsc_constraint%s' % suffix
@@ -550,6 +551,8 @@ class QuasiStaticConstraint(ConstraintBase):
             commands.append('{varName} = {varName}.addContact(links.l_foot, l_foot_pts);'.format(**formatArgs))
         if self.rightFootEnabled:
             commands.append('{varName} = {varName}.addContact(links.r_foot, r_foot_pts);'.format(**formatArgs))
+        if self.pelvisEnabled:
+            commands.append('{varName} = {varName}.addContact(links.pelvis, pelvis_pts);'.format(**formatArgs))
 
 
 class WorldFixedBodyPoseConstraint(ConstraintBase):
