@@ -472,7 +472,7 @@ class FootstepsDriver(object):
             obj.footstep_index = i
             obj.footstep_property_callback = obj.properties.connectPropertyChanged(functools.partial(self.onFootstepPropertyChanged, obj))
 
-            self.drawContactPts(obj, footstep)
+            self.drawContactPts(obj, footstep, color=this_color)
 
     def drawContactVolumes(self, footstepTransform, color):
         volFolder = getWalkingVolumesFolder()
@@ -492,12 +492,12 @@ class FootstepsDriver(object):
             self.lastFootstepPlan.footsteps[obj.footstep_index].params.support_contact_groups = obj.properties.support_contact_groups
             self.sendUpdatePlanRequest()
 
-    def drawContactPts(self, obj, footstep):
+    def drawContactPts(self, obj, footstep, **kwargs):
         contact_pts = self.getContactPts(footstep.params.support_contact_groups)
         d = DebugData()
         for pt in contact_pts:
             d.addSphere(pt, radius=0.01)
-        d_obj = vis.showPolyData(d.getPolyData(), "contact points", parent=obj)
+        d_obj = vis.showPolyData(d.getPolyData(), "contact points", parent=obj, **kwargs)
         d_obj.actor.SetUserTransform(obj.actor.GetUserTransform())
 
     @staticmethod
