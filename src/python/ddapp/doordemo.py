@@ -1336,7 +1336,7 @@ class DoorTaskPanel(TaskUserPanel):
 
 
         # fit
-        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        #addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit door', message='Please fit and approve door affordance.'))
         addTask(rt.FindAffordance(name='check door affordance', affordanceName='door'))
 
@@ -1349,7 +1349,7 @@ class DoorTaskPanel(TaskUserPanel):
 
         # refit
         addTask(rt.SetNeckPitch(name='set neck position', angle=35))
-        addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
+        #addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit door', message='Please fit and approve door handle affordance.'))
 
         # set fingers
@@ -1369,6 +1369,7 @@ class DoorTaskPanel(TaskUserPanel):
 
 
         addManipTask('Raise arms', d.planPreReach, userPrompt=False)
+        addTask(rt.UserPromptTask(name='verify right arm posture', message='Please verify the right arm uwy is in place.'))
         addManipTask('Raise pushing hand', d.planDoorTouch, userPrompt=False)
         addManipTask('Reach', d.planReach, userPrompt=True)
         addTask(rt.UserPromptTask(name='Approve hand position',
@@ -1396,3 +1397,13 @@ class DoorTaskPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'))
         addTask(rt.CommitFootstepPlan(name='walk to door', planName='door walk frame footstep plan'))
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
+
+
+        folder = addFolder('Prep for walking')
+        addTask(rt.CloseHand(name='close left hand', side='Left'))
+        addTask(rt.CloseHand(name='close right hand', side='Right'))
+        addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General', postureName='safe nominal', side='Default'))
+        addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manip plan.'))
+        addTask(rt.CommitManipulationPlan(name='execute manip plan', planName='safe nominal posture plan'))
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+

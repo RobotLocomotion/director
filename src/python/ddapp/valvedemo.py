@@ -803,14 +803,6 @@ class ValveTaskPanel(TaskUserPanel):
         prep = self.taskTree.addGroup('Preparation')
         addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
         addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
-        addTask(rt.SetNeckPitch(name='set neck position', angle=0), parent=prep)
-        addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General',
-                                   postureName='safe nominal', side='Default'), parent=prep)
-        addTask(rt.UserPromptTask(name='approve manip plan',
-                                  message='Please approve manipulation plan.'), parent=prep)
-        addTask(rt.CommitManipulationPlan(name='execute manip plan',
-                                          planName='safe nominal posture plan'), parent=prep)
-        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)
 
         # fit
         fit = self.taskTree.addGroup('Fitting')
@@ -847,3 +839,17 @@ class ValveTaskPanel(TaskUserPanel):
         else:
             for i in range(0, 3):
                 addLargeValveTurn()
+
+
+        # go to finishing posture
+        prep = self.taskTree.addGroup('Prep for walking')
+
+        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
+        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+        addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General',
+                                   postureName='safe nominal', side='Default'), parent=prep)
+        addTask(rt.UserPromptTask(name='approve manip plan',
+                                  message='Please approve manipulation plan.'), parent=prep)
+        addTask(rt.CommitManipulationPlan(name='execute manip plan',
+                                          planName='safe nominal posture plan'), parent=prep)
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)
