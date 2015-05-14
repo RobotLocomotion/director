@@ -257,7 +257,8 @@ class IKPlanner(object):
 
     def createQuasiStaticConstraint(self):
         return ik.QuasiStaticConstraint(leftFootEnabled=self.leftFootSupportEnabled,
-                                        rightFootEnabled=self.rightFootSupportEnabled)
+                                        rightFootEnabled=self.rightFootSupportEnabled,
+                                        pelvisEnabled=self.pelvisSupportEnabled)
 
 
     def createFixedFootConstraints(self, startPose, **kwargs):
