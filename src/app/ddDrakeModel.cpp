@@ -983,6 +983,46 @@ const QVector<double>& ddDrakeModel::getJointPositions() const
 }
 
 //-----------------------------------------------------------------------------
+QVector<double> ddDrakeModel::getJointPositions(const QList<QString>& jointNames) const
+{
+  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+  QVector<double> ret(jointNames.size());
+
+  if (!model)
+  {
+    std::cout << "ddDrakeModel::getJointPositions(): model is null" << std::endl;
+    return ret;
+  }
+
+  if (this->Internal->JointPositions.size() != model->num_positions)
+  {
+    std::cout << "Internal joint positions vector has inconsistent size." << std::endl;
+    return ret;
+  }
+
+  for (int i = 0; i < jointNames.size(); ++i)
+  {
+    const QString& dofName = jointNames[i];
+
+    std::map<std::string, int>::const_iterator itr = model->dofMap.find(dofName.toAscii().data());
+    if (itr == model->dofMap.end())
+    {
+      std::unordered_set<std::string>::const_iterator itr_fixed = model->fixedDOFs.find(dofName.toAscii().data());
+      if (itr_fixed == model->fixedDOFs.end())
+      {
+        printf("Could not find URDF model dof with name: %s\n", qPrintable(dofName));
+      }
+      continue;
+    }
+    int dofId = itr->second;
+    ret[i] = this->Internal->JointPositions[dofId];
+
+    //printf("setJoint %s --> %d, %f\n", qPrintable(dofName), dofId, jointPositions[i]);
+  }
+  return ret;
+}
+
+//-----------------------------------------------------------------------------
 QVector<double> ddDrakeModel::getCenterOfMass() const
 {
   URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
@@ -1077,13 +1117,18 @@ QList<QString> ddDrakeModel::getJointNames()
     return QList<QString>();
   }
 
+  // For convenience when setting joint values directly,
+  // return this list of names in the same order as the list
+  // of joint values will come out.
   QList<QString> names;
-
+  names.reserve(this->Internal->Model->dofMap.size());
+  for (int i=0; i < this->Internal->Model->dofMap.size(); i++)
+    names.append(QString());
 
   std::map<std::string, int>::const_iterator itr;
   for(itr = this->Internal->Model->dofMap.begin(); itr != this->Internal->Model->dofMap.end(); ++itr)
   {
-    names.append(itr->first.c_str());
+    names[itr->second] = QString(itr->first.c_str());
   }
 
   return names;

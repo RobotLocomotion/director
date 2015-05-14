@@ -7,6 +7,7 @@ void ddDrakeModel::removeFromRenderer(vtkRenderer*);
 int ddDrakeModel::numberOfJoints();
 void ddDrakeModel::setJointPositions(const QVector<double>&);
 void ddDrakeModel::setJointPositions(const QVector<double>&, const QStringList&);
+QVector<double> ddDrakeModel::getJointPositions(const QStringList&) const;
 QVector<double> ddDrakeModel::getJointPositions() const;
 QVector<double> ddDrakeModel::getCenterOfMass() const;
 QVector<double> ddDrakeModel::getJointLimits(const QString&) const;
