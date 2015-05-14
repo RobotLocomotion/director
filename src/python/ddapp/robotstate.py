@@ -157,8 +157,7 @@ def drakePoseToRobotState(drakePose):
     m.force_torque.r_hand_torque = np.zeros(3)
 
     return m
-
-
+    
 def matchJoints(regex):
     search = re.compile(regex).search
     return [name for name in getDrakePoseJointNames() if search(name)]
