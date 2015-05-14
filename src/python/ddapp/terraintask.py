@@ -72,7 +72,10 @@ class TerrainTask(object):
         footstepsdriverpanel.panel.onNewWalkingGoal(frameCopy)
 
     def requestBlockFit(self):
-        msg = lcmdrc.map_command_t()  # type doesn't matter
+        msg = lcmdrc.block_fit_request_t()
+        msg.utime = getUtime()
+        msg.dimensions = [blockWidth, blockLength, blockHeight]
+        msg.name_prefix = 'cinderblock'
         lcmUtils.publish('BLOCK_FIT_TRIGGER', msg)
 
     def spawnGroundAffordance(self):
