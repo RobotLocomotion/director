@@ -60,12 +60,15 @@ def getDefaultUserModePositionGains():
     return [10.0, 70.0, 70.0, 1000.0, 60.0, 78.0, 50.0, 140.0, 2000.0, 2000.0, 60.0, 78.0, 50.0, 140.0, 2000.0, 2000.0, 4.0, 4.0, 4.0, 4.0, 20.0, 20.0, 20.0, 4.0, 4.0, 4.0, 4.0, 20.0, 20.0, 20.0]
 
 
-def drakePoseToAtlasCommandPosition(drakePose):
+def drakePoseToAtlasCommand(drakePose):
     jointIndexMap = robotstate.getRobotStateToDrakePoseJointMap()
     robotState = np.zeros(len(jointIndexMap))
     for jointIdx, drakeIdx in jointIndexMap.iteritems():
         robotState[jointIdx] = drakePose[drakeIdx]
-    return robotState.tolist()
+    position = robotState.tolist()
+    msg = newAtlasCommandMessageAtZero()
+    msg.position = position
+    return msg
 
 def atlasCommandToDrakePose(msg):
     jointIndexMap = robotstate.getRobotStateToDrakePoseJointMap()
@@ -151,7 +154,7 @@ class AtlasCommandStream(object):
         self.timer.callback = self._tick
         self._initialized = False
         self.publishChannel = 'JOINT_POSITION_GOAL'
-        self.lastCommandMessage = newAtlasCommandMessageAtZero()
+        # self.lastCommandMessage = newAtlasCommandMessageAtZero()
         self._numPositions = len(robotstate.getDrakePoseJointNames())
         self._previousElapsedTime = 100
         self._baseFlag = 0;
@@ -220,9 +223,12 @@ class AtlasCommandStream(object):
 
     def _updateAndSendCommandMessage(self):
         self._currentCommandedPose = self.clipPoseToJointLimits(self._currentCommandedPose)
-        self.lastCommandMessage.position = drakePoseToAtlasCommandPosition(self._currentCommandedPose)
-        self.lastCommandMessage.utime = getUtime()
-        lcmUtils.publish(self.publishChannel, self.lastCommandMessage)
+        if self._baseFlag:
+            msg = robotstate.drakePoseToRobotState(self._currentCommandedPose)
+        else:
+            msg = drakePoseToAtlasCommand(self._currentCommandedPose)
+
+        lcmUtils.publish(self.publishChannel, msg)
 
     def _tick(self):
 
@@ -336,7 +342,7 @@ class CommittedRobotPlanListener(object):
 class PositionGoalListener(object):
 
     def __init__(self):
-        self.sub = lcmUtils.addSubscriber('JOINT_POSITION_GOAL', lcmdrc.atlas_command_t, self.onJointPositionGoal)
+        self.sub = lcmUtils.addSubscriber('JOINT_POSITION_GOAL', lcmdrc.robot_state_t, self.onJointPositionGoal)
         lcmUtils.addSubscriber('COMMITTED_PLAN_PAUSE', lcmdrc.plan_control_t, self.onPause)
 
         self.debug = False
@@ -359,7 +365,7 @@ class PositionGoalListener(object):
         #lcmUtils.publish('ATLAS_COMMAND', msg)
 
         commandStream.startStreaming()
-        pose = atlasCommandToDrakePose(msg)
+        pose = robotstate.convertStateMessageToDrakePose(msg)
         self.setGoalPose(pose)
 
     def setGoalPose(self, pose):
@@ -386,17 +392,12 @@ class JointCommandPanel(object):
         self.ui.hidePreviewButton.connect('clicked()', self.onHidePreviewClicked)
         self.ui.previewSlider.connect('valueChanged(int)', self.onPreviewSliderChanged)
         self.ui.speedSpinBox.connect('valueChanged(double)', self.onSpeedChanged)
-        self.ui.editPositionGainsButton.connect('clicked()', self.onEditPositionGains)
         self.ui.steeringButton.connect('clicked()', self.onSteeringButtonClicked)
         self.ui.throttleButton.connect('clicked()', self.onThrottleButtonClicked)
         self.hidePreviewModels()
-        self.gainsEditor = GainAdjustmentPanel()
 
         self.throttleControlEnabled = False
         self.steeringControlEnabled = False
-
-    def onEditPositionGains(self):
-        self.gainsEditor.widget.show()
 
     def onPreviewSliderChanged(self, value):
 
@@ -480,123 +481,6 @@ class JointCommandPanel(object):
         self.robotSystem.robotStateModel.setProperty('Alpha', 0.1)
 
 
-class GainAdjustmentPanel(object):
-
-    def __init__(self):
-
-        jointGroups = getJointGroups()
-        self.widget = QtGui.QTabWidget()
-        self.widget.setWindowTitle('Edit Position Gains')
-        self.jointLimitsMax = np.array(getDefaultUserModePositionGains())
-        self.jointLimitsMin = np.zeros(len(self.jointLimitsMax))
-        self.buildTabWidget(jointGroups)
-
-
-    def buildTabWidget(self, jointGroups):
-
-        self.slidersMap = {}
-        self.labelMap = {}
-
-        for group in jointGroups:
-            groupName = group['name']
-            joints = group['joints']
-            labels = group['labels']
-            if len(labels) != len(joints):
-                print 'error, joints/labels mismatch for joint group:', name
-                continue
-
-            jointGroupWidget = QtGui.QWidget()
-            gridLayout = QtGui.QGridLayout(jointGroupWidget)
-            gridLayout.setColumnStretch(0, 1)
-
-            for jointName, labelText in zip(joints, labels):
-                label = QtGui.QLabel(labelText)
-                numericLabel = QtGui.QLabel('0.0')
-                slider = QtGui.QSlider(QtCore.Qt.Vertical)
-                column = gridLayout.columnCount()
-                gridLayout.addWidget(label, 0, column)
-                gridLayout.addWidget(slider, 1, column)
-                gridLayout.addWidget(numericLabel, 2, column)
-                self.slidersMap[jointName] = slider
-                self.labelMap[slider] = numericLabel
-
-            gridLayout.setColumnStretch(gridLayout.columnCount(), 1)
-            self.widget.addTab(jointGroupWidget, groupName)
-
-        self.widget.usesScrollButtons = False
-        self.signalMapper = QtCore.QSignalMapper()
-
-        self.sliderMax = 1000.0
-        for jointName, slider in self.slidersMap.iteritems():
-            slider.connect('valueChanged(int)', self.signalMapper, 'map()')
-            self.signalMapper.setMapping(slider, jointName)
-            slider.setMaximum(self.sliderMax)
-
-        self.resetPoseToRobotState()
-        self.signalMapper.connect('mapped(const QString&)', self.sliderChanged)
-
-
-
-    def showPose(self, pose):
-        commandStream.lastCommandMessage.k_q_p = list(pose)
-
-    def resetPoseToRobotState(self):
-        self.endPose = np.array(getDefaultUserModePositionGains())
-        self.updateSliders()
-        self.showPose(self.endPose)
-
-    def toJointIndex(self, jointName):
-        return robotstate.getRobotStateJointNames().index(jointName)
-
-    def toJointName(self, jointIndex):
-        return robotstate.getRobotStateJointNames()[jointIndex]
-
-    def toJointValue(self, jointIndex, sliderValue):
-        assert 0.0 <= sliderValue <= 1.0
-        jointRange = self.jointLimitsMin[jointIndex], self.jointLimitsMax[jointIndex]
-        return jointRange[0] + (jointRange[1] - jointRange[0])*sliderValue
-
-    def toSliderValue(self, jointIndex, jointValue):
-        jointRange = self.jointLimitsMin[jointIndex], self.jointLimitsMax[jointIndex]
-        return (jointValue - jointRange[0]) / (jointRange[1] - jointRange[0])
-
-    def getSlider(self, joint):
-        jointName = self.toJointName(joint) if isinstance(joint, int) else joint
-        return self.slidersMap[jointName]
-
-    def getJointValue(self, jointIndex):
-        return self.endPose[jointIndex]
-
-    def sliderChanged(self, jointName):
-
-        slider = self.slidersMap[jointName]
-        jointIndex = self.toJointIndex(jointName)
-        jointValue = self.toJointValue(jointIndex, slider.value / float(self.sliderMax))
-        self.endPose[jointIndex] = jointValue
-        self.updateLabel(jointName, jointValue)
-        self.showPose(self.endPose)
-
-    def updateLabel(self, jointName, jointValue):
-
-        slider = self.slidersMap[jointName]
-        label = self.labelMap[slider]
-
-        fill = 6 if jointValue >= 0 else 5
-
-        label.text = str('%.1f' % jointValue).center(fill, ' ')
-
-
-    def updateSliders(self):
-
-        for jointName, slider in self.slidersMap.iteritems():
-            jointIndex = self.toJointIndex(jointName)
-            jointValue = self.getJointValue(jointIndex)
-
-            slider.blockSignals(True)
-            slider.setValue(self.toSliderValue(jointIndex, jointValue)*self.sliderMax)
-            slider.blockSignals(False)
-            self.updateLabel(jointName, jointValue)
-
 
 class JointTeleopPanel(object):
 
@@ -668,7 +552,6 @@ class JointTeleopPanel(object):
         self.teleopRobotModel.setProperty('Visible', True)
         self.robotStateModel.setProperty('Visible', True)
         self.robotStateModel.setProperty('Alpha', 0.1)
-
         commandStream.setGoalPose(self.teleopJointController.q)
 
 
@@ -757,7 +640,6 @@ class AtlasCommandPanel(object):
         self.jointTeleopPanel = JointTeleopPanel(self.robotSystem, jointGroups)
         self.jointCommandPanel = JointCommandPanel(self.robotSystem)
 
-        self.jointCommandPanel.ui.editPositionGainsButton.setEnabled(False)
         self.jointCommandPanel.ui.speedSpinBox.setEnabled(False)
 
         self.jointCommandPanel.ui.mirrorArmsCheck.setChecked(self.jointTeleopPanel.mirrorArms)
@@ -777,11 +659,11 @@ class AtlasCommandPanel(object):
         gl.setColumnStretch(1,1)
 
         #self.sub = lcmUtils.addSubscriber('COMMITTED_ROBOT_PLAN', lcmdrc.robot_plan_t, self.onRobotPlan)
-        lcmUtils.addSubscriber('STEERING_COMMAND_POSITION_GOAL', lcmdrc.joint_position_goal_t, self.onJointPositionGoal)
-        lcmUtils.addSubscriber('THROTTLE_COMMAND_POSITION_GOAL', lcmdrc.joint_position_goal_t, self.onJointPositionGoal)
+        lcmUtils.addSubscriber('STEERING_COMMAND_POSITION_GOAL', lcmdrc.joint_position_goal_t, self.onSingleJointPositionGoal)
+        lcmUtils.addSubscriber('THROTTLE_COMMAND_POSITION_GOAL', lcmdrc.joint_position_goal_t, self.onSingleJointPositionGoal)
 
 
-    def onJointPositionGoal(self, msg):
+    def onSingleJointPositionGoal(self, msg):
         jointPositionGoal = msg.joint_position
         jointName = msg.joint_name
         allowedJointNames = ['l_leg_aky','l_arm_lwy']
