@@ -109,7 +109,6 @@ class EndEffectorTeleopPanel(object):
     def getCheckboxState(self, checkbox):
         return checkbox.checked
 
-
     def getBaseConstraint(self):
         return self.getComboText(self.ui.baseCombo)
 
@@ -231,54 +230,78 @@ class EndEffectorTeleopPanel(object):
         if not self.getLFootExecutionSupportEnabled():
             self.setLFootPlanningSupportEnabled(False)
         self.panel.manipPlanner.leftFootSupportEnabled = self.getLFootExecutionSupportEnabled()
+        self.updateQuasistaticFlag()
 
     def rightFootExecutionSupportCheckboxChanged(self):
         if not self.getRFootExecutionSupportEnabled():
             self.setRFootPlanningSupportEnabled(False)
         self.panel.manipPlanner.rightFootSupportEnabled = self.getRFootExecutionSupportEnabled()
+        self.updateQuasistaticFlag()
 
     def leftHandExecutionSupportCheckboxChanged(self):
         if not self.getLHandExecutionSupportEnabled():
             self.setLHandPlanningSupportEnabled(False)
         self.panel.manipPlanner.leftHandSupportEnabled = self.getLHandExecutionSupportEnabled()
+        self.updateQuasistaticFlag()
 
     def rightHandExecutionSupportCheckboxChanged(self):
         if not self.getRHandExecutionSupportEnabled():
             self.setRHandPlanningSupportEnabled(False)
         self.panel.manipPlanner.rightHandSupportEnabled = self.getRHandExecutionSupportEnabled()
+        self.updateQuasistaticFlag()
 
     def pelvisExecutionSupportCheckboxChanged(self):
         if not self.getPelvisExecutionSupportEnabled():
             self.setPelvisPlanningSupportEnabled(False)
         self.panel.manipPlanner.pelvisSupportEnabled = self.getPelvisExecutionSupportEnabled()
+        self.updateQuasistaticFlag()
 
     def executionSupportCheckboxChanged(self):
+        self.updateQuasistaticFlag()
         self.panel.manipPlanner.publishPlansWithSupports = self.getExecutionSupportEnabled()
 
     def leftFootPlanningSupportCheckboxChanged(self):
         if self.getLFootPlanningSupportEnabled():
             self.setLFootExecutionSupportEnabled(True)
         self.updateConstraints()
+        self.updateQuasistaticFlag()
 
     def rightFootPlanningSupportCheckboxChanged(self):
         if self.getRFootPlanningSupportEnabled():
             self.setRFootExecutionSupportEnabled(True)
         self.updateConstraints()
+        self.updateQuasistaticFlag()
 
     def leftHandPlanningSupportCheckboxChanged(self):
         if self.getLHandPlanningSupportEnabled():
             self.setLHandExecutionSupportEnabled(True)
         self.updateConstraints()
+        self.updateQuasistaticFlag()
 
     def rightHandPlanningSupportCheckboxChanged(self):
         if self.getRHandPlanningSupportEnabled():
             self.setRHandExecutionSupportEnabled(True)
         self.updateConstraints()
+        self.updateQuasistaticFlag()
 
     def pelvisPlanningSupportCheckboxChanged(self):
         if self.getPelvisPlanningSupportEnabled():
             self.setPelvisExecutionSupportEnabled(True)
         self.updateConstraints()
+        self.updateQuasistaticFlag()
+
+    def updateQuasistaticFlag(self):
+        lfootEnabled = self.getLFootExecutionSupportEnabled()
+        rfootEnabled = self.getRFootExecutionSupportEnabled()
+        lhandEnabled = self.getLHandExecutionSupportEnabled()
+        rhandEnabled = self.getRHandExecutionSupportEnabled()
+        pelvisEnabled = self.getPelvisExecutionSupportEnabled()
+
+        if (lhandEnabled or rhandEnabled or pelvisEnabled) or (lfootEnabled and rfootEnabled):
+            self.panel.manipPlanner.plansWithSupportsAreQuasistatic = True
+        else:
+            self.panel.manipPlanner.plansWithSupportsAreQuasistatic = False
+
 
     def onGoalFrameModified(self, frame):
         if self.constraintSet and self.ui.interactiveCheckbox.checked:
