@@ -212,6 +212,13 @@ class IKPlanner(object):
         if 'numberOfAddedKnots' in ikParameterDict:
             originalIkParameterDict['numberOfAddedKnots'] = self.ikServer.numberOfAddedKnots
             self.ikServer.numberOfAddedKnots = ikParameterDict['numberOfAddedKnots']
+        if 'quasiStaticShrinkFactor' in ikParameterDict:
+            originalIkParameterDict['quasiStaticShrinkFactor'] = ik.QuasiStaticConstraint.shrinkFactor
+            ik.QuasiStaticConstraint.shrinkFactor = ikParameterDict['quasiStaticShrinkFactor']
+        if 'fixInitialState' in ikParameterDict:
+            originalIkParameterDict['fixInitialState'] = self.ikServer.fixInitialState
+            self.ikServer.fixInitialState = ikParameterDict['fixInitialState']
+
         return originalIkParameterDict
 
     def getHandModel(self, side=None):
