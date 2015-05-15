@@ -19,6 +19,9 @@ class JointController(object):
         self.poses = {}
         self.poseCollection = poseCollection
         self.currentPoseName = None
+        self.lastRobotStateMessage = None
+        self.ignoreOldStateMessages = False
+
         self.addPose('q_zero', [0.0 for i in xrange(self.numberOfJoints)])
         self.addPose('q_nom', self.loadPoseFromFile(nominalPoseMatFile))
 
@@ -72,6 +75,8 @@ class JointController(object):
         '''
 
         def onRobotStateMessage(msg):
+            if self.ignoreOldStateMessages and self.lastRobotStateMessage is not None and msg.utime < self.lastRobotStateMessage.utime:
+                return
             poseName = channelName
             pose = robotstate.convertStateMessageToDrakePose(msg)
             self.lastRobotStateMessage = msg
