@@ -129,9 +129,9 @@ class ValvePlannerDemo(object):
         the feet, on the ground, with z-axis up and x-axis aligned with the
         robot pelvis x-axis.
         '''
-        t1 = robotModel.getLinkFrame('l_foot')
-        t2 = robotModel.getLinkFrame('r_foot')
-        pelvisT = robotModel.getLinkFrame(self.ikPlanner.pelvisLink)
+        t1 = robotModel.getLinkFrame( self.ikPlanner.leftFootLink )
+        t2 = robotModel.getLinkFrame( self.ikPlanner.rightFootLink )
+        pelvisT = robotModel.getLinkFrame( self.ikPlanner.pelvisLink )
 
         xaxis = [1.0, 0.0, 0.0]
         pelvisT.TransformVector(xaxis, xaxis)
@@ -375,16 +375,16 @@ class ValvePlannerDemo(object):
             constraints.append(ik.WorldFixedBodyPoseConstraint(linkName='r_foot'))
 
             p = ik.RelativePositionConstraint()
-            p.bodyNameA = 'l_foot'
-            p.bodyNameB = 'r_foot'
+            p.bodyNameA = self.ikPlanner.leftFootLink
+            p.bodyNameB = self.ikPlanner.rightFootLink
             p.positionTarget = np.array([0, 0.3, 0])
             p.lowerBound = np.array([0, 0, -np.inf])
             p.upperBound = np.array([0, 0, np.inf])
             constraints.append(p)
 
             p = ik.RelativePositionConstraint()
-            p.bodyNameA = 'r_foot'
-            p.bodyNameB = 'l_foot'
+            p.bodyNameA = self.ikPlanner.rightFootLink
+            p.bodyNameB = self.ikPlanner.leftFootLink
             p.lowerBound = np.array([0, -np.inf, -np.inf])
             p.upperBound = np.array([0, np.inf, np.inf])
             constraints.append(p)
