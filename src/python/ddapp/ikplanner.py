@@ -254,6 +254,13 @@ class IKPlanner(object):
         self.rightLegJoints  = self.getJointGroup('Right Leg')
 
         self.pelvisLink = drcargs.getDirectorConfig()['pelvisLink']
+        if 'leftFootLink' in drcargs.getDirectorConfig():
+            self.leftFootLink =  drcargs.getDirectorConfig()['leftFootLink']
+            self.rightFootLink = drcargs.getDirectorConfig()['rightFootLink']
+        else:
+	    # print "No foot links found in config, assuming fixedBaseArm=True"
+	    self.fixedBaseArm = True
+
 
     def getJointGroup(self, name):
         jointGroup = filter(lambda group: group['name'] == name, self.jointGroups)
@@ -320,9 +327,12 @@ class IKPlanner(object):
 
 
     def createQuasiStaticConstraint(self):
-        return ik.QuasiStaticConstraint(leftFootEnabled=self.leftFootSupportEnabled,
+        p = ik.QuasiStaticConstraint(leftFootEnabled=self.leftFootSupportEnabled,
                                         rightFootEnabled=self.rightFootSupportEnabled,
                                         pelvisEnabled=self.pelvisSupportEnabled)
+        p.leftFootLinkName = self.leftFootLink
+        p.rightFootLinkName = self.rightFootLink
+        return p
 
 
     def createFixedFootConstraints(self, startPoseName, **kwargs):
@@ -330,12 +340,11 @@ class IKPlanner(object):
         constraints = []
         linknames = []
         if self.leftFootSupportEnabled:
-            linknames.append('l_foot')
+            linknames.append(self.leftFootLink)
         if self.rightFootSupportEnabled:
-            linknames.append('r_foot')
+            linknames.append(self.rightFootLink)
         for linkName in linknames:
             p = self.createFixedLinkConstraints(startPoseName, linkName, **kwargs)
-
             constraints.append(p)
         return constraints
 
@@ -396,7 +405,7 @@ class IKPlanner(object):
     def createSlidingFootConstraints(self, startPose):
 
         constraints = []
-        for linkName in ['l_foot', 'r_foot']:
+        for linkName in [self.leftFootLink, self.rightFootLink]:
 
             linkFrame = self.getLinkFrameAtPose(linkName, startPose)
 

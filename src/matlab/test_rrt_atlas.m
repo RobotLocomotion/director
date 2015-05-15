@@ -1,4 +1,6 @@
-
+% test rrt script for atlas v3 to reach around a box (unseen)
+% using the ddapp integration script - ikServer
+% (its actually a hard planning problem)
 
 
 %-------- startup --------
@@ -8,6 +10,8 @@ addpath_control
 addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])
 robotURDF = '/home/mfallon/drc/software/models/atlas_v3/./model_convex_hull_robotiq_hands.urdf';
 fixed_point_file = '/home/mfallon/drc/software/models/atlas_v3/../../control/matlab/data/atlas_bdi_fp.mat';
+left_foot_link = 'l_foot';
+right_foot_link = 'r_foot';
 runIKServer
 
 %------ startup end ------
@@ -582,6 +586,8 @@ options.end_effector_name = end_effector_name;
 options.end_effector_name_left = end_effector_name_left;
 options.end_effector_name_right = end_effector_name_right;
 options.end_effector_pt = end_effector_pt;
+options.left_foot_link = left_foot_link;
+options.right_foot_link = right_foot_link;
 options.frozen_groups = {'r_arm','pelvis','back'};
 options.RRTMaxEdgeLength = 0.05;
 options.RRTGoalBias = 1.0;
