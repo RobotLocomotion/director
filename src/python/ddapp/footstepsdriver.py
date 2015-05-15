@@ -85,6 +85,11 @@ DEFAULT_STEP_PARAMS['Stairs'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
                                       'Map Mode': 2})
 
+DEFAULT_STEP_PARAMS['Polaris Platform'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
+DEFAULT_STEP_PARAMS['Polaris Platform'].update({'Drake Min Hold Time': 2.0, 
+                                      'Drake Swing Speed': 0.2,
+                                      'Map Mode': 1})
+
 DEFAULT_CONTACT_SLICES = {(0.05, 0.3): np.array([[-0.13, -0.13, 0.13, 0.13],
                                           [0.0562, -0.0562, 0.0562, -0.0562]]),
                           (0.3, .75): np.array([[-0.13, -0.13, 0.25, 0.25],
@@ -211,7 +216,7 @@ class FootstepsDriver(object):
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
-        self.defaults_map = ['Drake Nominal', 'Terrain', 'Stairs']
+        self.defaults_map = ['Drake Nominal', 'Terrain', 'Stairs', 'Polaris Platform']
         self.params.addProperty('Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.defaults_map))
         self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
         self.params.addProperty('Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Auto', 'Left', 'Right']))
