@@ -28,7 +28,9 @@ from ddapp import segmentation
 from ddapp import planplayback
 from ddapp import affordanceupdater
 from ddapp import segmentationpanel
+from ddapp import footstepsdriver
 from ddapp import footstepsdriverpanel
+
 from ddapp.footstepsdriver import FootstepRequestGenerator
 
 import ddapp.terrain
@@ -41,6 +43,7 @@ import ddapp.tasks.taskmanagerwidget as tmw
 
 import drc as lcmdrc
 import copy
+import re
 
 from PythonQt import QtCore, QtGui
 
@@ -49,6 +52,7 @@ from PythonQt import QtCore, QtGui
 blockWidth = (15 + 3/8.0) * 0.0254
 blockLength = (15 + 5/8.0) * 0.0254
 blockHeight = (5 + 5/8.0) * 0.0254
+blockDiagonal = np.linalg.norm([blockWidth, blockLength, blockHeight])
 
 blockSafetyMargin = [0.03, 0.05]
 
@@ -56,6 +60,23 @@ class TerrainTask(object):
 
     def __init__(self, robotSystem):
         self.robotSystem = robotSystem
+        self.cinderblockPrefix = 'cinderblock'
+        self.stairPrefix = 'stair'
+
+        self.currentRow = {'left':-1, 'right':-1}
+        self.stanceBlocks = {'left':None, 'right':None}
+        self.useTextures = False
+
+        self.timer = TimerCallback(targetFps=30)
+        self.timer.callback = self.updateBlockState
+
+
+    def startBlockUpdater(self):
+        self.timer.start()
+
+
+    def stopBlockUpdater(self):
+        self.timer.stop()
 
 
     def requestRaycastTerrain(self):
@@ -117,7 +138,7 @@ class TerrainTask(object):
 
     def spawnTiltedCinderblocks(self):
 
-        for obj in self.findBlockObjects():
+        for obj in self.getCinderblockAffordances():
             om.removeFromObjectModel(obj)
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
@@ -145,23 +166,341 @@ class TerrainTask(object):
 
         self.spawnTiltedCinderblocksRow(relativeFrame, startSequence=3, numberOfBlocks=4)
 
-        for block in self.findBlockObjects():
+        for block in self.getCinderblockAffordances():
             frameSync.addFrame(block.getChildFrame(), ignoreIncoming=True)
 
-    def findBlockObjects(self):
+    def getBoxAffordancesWithNamePrefix(self, prefix):
+
+        affs = []
+        for obj in om.getObjects():
+            if isinstance(obj, affordanceitems.BoxAffordanceItem) and obj.getProperty('Name').startswith(prefix):
+                affs.append(obj)
+
+        return sorted(affs, key=lambda x: x.getProperty('Name'))
+
+    def getStairAffordances(self):
+        return self.getBoxAffordancesWithNamePrefix(self.stairPrefix)
+
+    def getCinderblockAffordances(self):
+        return self.getBoxAffordancesWithNamePrefix(self.cinderblockPrefix)
+
+    def getAffordanceDistanceToFrame(self, affordance, frame):
+        return np.linalg.norm(affordance.getChildFrame().transform.GetPosition() - np.array(frame.GetPosition()))
+
+    def sortAffordancesByDistanceToFrame(self, affordances, frame):
+        dists = [self.getAffordanceDistanceToFrame(aff, frame) for aff in affordances]
+        return [affordances[i] for i in np.argsort(dists)]
+
+    def getAffordanceClosestToFoot(self, affordances, side):
+        '''
+        Given a list of affordances and string 'left' or 'right', returns
+        the affordance closest to the foot frame.  Also returns the foot frame
+        and the distance between foot and affordance frames.
+        '''
+        linkName = {'left':'l_foot', 'right':'r_foot'}[side]
+        footFrame = self.getFootFrameAtSole(linkName)
+
+        vis.updateFrame(footFrame, 'foot frame ' + side, scale=0.2)
+
+        aff = self.sortAffordancesByDistanceToFrame(affordances, footFrame)[0]
+        return aff, footFrame, self.getAffordanceDistanceToFrame(aff, footFrame)
+
+
+    def getCinderblockUnderFoot(self, side):
+        affordances = self.getCinderblockAffordances()
+        if not affordances:
+            return None
+
+        aff, footFrame, distance = self.getAffordanceClosestToFoot(affordances, side)
+
+        blockFrame = transformUtils.copyFrame(aff.getChildFrame().transform)
+
+        footToBlock = transformUtils.concatenateTransforms([footFrame, blockFrame.GetLinearInverse()])
+
+        xyz = footToBlock.GetPosition()
+
+
+        d = DebugData()
+        d.addLine(blockFrame.GetPosition(), footFrame.GetPosition(), color=self.getFootColor(side))
+        vis.updatePolyData(d.getPolyData(), 'foot to block debug %s' % side, colorByName='RGB255')
+
+        if xyz[2] > blockHeight*0.8:
+            return None
+
+        #print 'xyz:', xyz
+        #print 'max xy offset:', max([abs(xyz[0]), abs(xyz[1])])
+        #print 'max block dim:', max([blockLength/2, blockWidth/2])
+
+        if max(np.abs(xyz[0]), abs(xyz[1])) > max(blockLength/2, blockWidth/2):
+            return None
+
+        return aff
+
+
+    def getFootColor(self, side):
+        if side == 'left':
+            return footstepsdriver.getLeftFootColor()
+        else:
+            return footstepsdriver.getRightFootColor()
+
+
+    def getBlockRowColumn(self, blockAffordance):
+        return [int(s) for s in re.findall('\d+', blockAffordance.getProperty('Name'))]
+
+    def sideToColumn(self, side):
+        return ['right', 'left'].index(side)
+
+    def columnToSide(self, column):
+        return ['right', 'left'][column]
+
+
+    def getRearBlocks(self, side):
+        row = self.currentRow[side]
+        column = self.sideToColumn(side)
+        blocks = []
+        for block in self.getCinderblockAffordances():
+            r, c = self.getBlockRowColumn(block)
+            if c == column and r < row:
+                blocks.append(block)
+        return blocks
+
+
+    def getCinderblockAffordances(self):
+        blocks = []
+        for obj in om.getObjects():
+            name = obj.getProperty('Name')
+            if re.match('^%s \(\d,\d\)$' % self.cinderblockPrefix, name):
+                blocks.append(obj)
+
+        return blocks
+
+    def getFitCinderblockAffordances(self):
 
         blocks = []
         for obj in om.getObjects():
-            if obj.getProperty('Name').startswith('cinderblock ') and obj.getChildFrame():
+            name = obj.getProperty('Name')
+            if re.match('^%s \d$' % self.cinderblockPrefix, name):
                 blocks.append(obj)
 
-        return sorted(blocks, key=lambda x: x.getProperty('Name'))
+        return blocks
 
-    def reorientBlocks(self):
+
+    def organizeFitBlocks(self):
+
+        blocks = self.getFitCinderblockAffordances()
+
+        if not blocks:
+            return
+
+        # rename with temp name
+        originalPrefix = self.cinderblockPrefix
+        tempPrefix = 'temp_%s' % originalPrefix
+        self.cinderblockPrefix = tempPrefix
+
+        for i, block in enumerate(blocks):
+            name = '%s %d' % (tempPrefix, i)
+            block.rename(name)
+
+        # reorient, sort and rename
+        self.reorientBlocks(blocks)
+        self.sortAndRenameBlocks(blocks)
+
+        # remove blocks under the feet or behind the robot
+        for side in ['left', 'right']:
+            nearBlock = self.getCinderblockUnderFoot(side)
+            om.removeFromObjectModel(nearBlock)
+            for block in self.getRearBlocks(side):
+                om.removeFromObjectModel(block)
+
+        # add current row to names and remove temp name
+        blocks = self.getCinderblockAffordances()
+        minRow = min([self.getBlockRowColumn(block)[0] for block in blocks])
+
+        for block in blocks:
+            r, c = self.getBlockRowColumn(block)
+            side = self.columnToSide(c)
+            newRow = (r - minRow) + self.currentRow[side] + 1
+            block.rename('%s (%d,%d)' % (originalPrefix, newRow , c))
+
+        self.cinderblockPrefix = originalPrefix
+
+
+    def getFrontBlocks(self, side):
+        row = self.currentRow[side]
+        column = self.sideToColumn(side)
+        blocks = []
+        for block in self.getCinderblockAffordances():
+            r, c = self.getBlockRowColumn(block)
+            if c == column and r > row:
+                blocks.append(block)
+        return blocks
+
+
+    def hideRearBlocks(self, side):
+        for block in self.getRearBlocks(side):
+            block.setProperty('Alpha', 0.1)
+
+    def textureFrontBlocks(self, side):
+        for block in self.getFrontBlocks(side):
+            block.setProperty('Camera Texture Enabled', True)
+
+    def highlightStanceBlock(self, side):
+        block = self.stanceBlocks[side]
+        if block:
+            block.setProperty('Color', self.getFootColor(side))
+
+    def resetBlockRows(self):
+        for side in ['left', 'right']:
+            self.currentRow[side] = -1
+            self.stanceBlocks[side] = None
+
+    def updateCurrentBlockRow(self, side):
+
+        block = self.getCinderblockUnderFoot(side)
+        self.stanceBlocks[side] = block
+
+        if not block:
+            return False
+
+        blockRow, blockColumn = self.getBlockRowColumn(block)
+
+        if blockColumn != self.sideToColumn(side):
+            print 'matched wrong block for side %s %s' % (side, block.getProperty('Name'))
+            return False
+
+        if blockRow > self.currentRow[side]:
+            self.currentRow[side] = blockRow
+            return True
+        return False
+
+
+    def deleteFrontBlocks(self):
+        for side in ['left', 'right']:
+            for block in self.getFrontBlocks(side):
+                om.removeFromObjectModel(block)
+
+    def updateBlockState(self):
+
+        self.resetCinderblockVisualizationProperties()
+
+        for side in ['left', 'right']:
+            self.updateCurrentBlockRow(side)
+            self.hideRearBlocks(side)
+            self.highlightStanceBlock(side)
+
+            if self.useTextures:
+                self.textureFrontBlocks(side)
+
+
+    def getCinderblockAffordanceWithRowColumn(self, row, column):
+        name = '%s (%d,%d)' % (self.cinderblockPrefix, row, column)
+        return om.findObjectByName(name)
+
+
+    def spawnFootstepsForCinderblocks(self):
+
+        def flipSide(side):
+            return 'right' if side == 'left' else 'left'
+
+
+        leadingFoot = 'right'
+
+        if self.currentRow[flipSide(leadingFoot)] < self.currentRow[leadingFoot]:
+            leadingFoot = flipSide(leadingFoot)
+
+
+        stepFrames = []
+
+        sideToRow = dict(self.currentRow)
+        nextSide = leadingFoot
+
+        om.removeFromObjectModel(om.findObjectByName('debug step frames'))
+
+        while True:
+
+            side = nextSide
+            nextSide = flipSide(side)
+            row = sideToRow[side] + 1
+            sideToRow[side] = row
+
+            #print '------------------------'
+            #print 'step side:', side
+            #print 'step row:', row
+
+            block = self.getCinderblockAffordanceWithRowColumn(row, self.sideToColumn(side))
+            neighborBlock = self.getCinderblockAffordanceWithRowColumn(row, self.sideToColumn(flipSide(side)))
+            if not block or not neighborBlock:
+                break
+
+            d = np.array(block.getProperty('Dimensions'))/2.0
+            t = transformUtils.copyFrame(block.getChildFrame().transform)
+
+            yOffset = 0.09
+            xOffset = 0.05
+            yOffsetSign = -1 if side == 'left' else 1
+            xOffsetSign = -1 if side == leadingFoot else 1
+
+            stepOffset = [xOffset*xOffsetSign, yOffset*yOffsetSign]
+
+            pt = stepOffset[0], stepOffset[1], d[2]
+            t.PreMultiply()
+            t.Translate(pt)
+            stepFrames.append(t)
+
+            #obj = vis.showFrame(t, '%s step frame' % block.getProperty('Name'), parent='step frames', scale=0.2)
+
+
+        startPose = self.getPlanningStartPose()
+
+        helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
+        request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot, snapToTerrain=True)
+
+        self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
+
+
+    def printCinderblocksUnderFoot(self):
+
+        for side in ['left', 'right']:
+            block = self.getCinderblockUnderFoot(side)
+            print side, block.getProperty('Name') if block else None
+
+
+    def getFootstepObjects(self):
+        folder = om.findObjectByName('footstep plan')
+        if not folder:
+            return []
+        steps = []
+        for obj in folder.children():
+            if re.match('^step \d$', obj.getProperty('Name')):
+                steps.append(obj)
+        return steps
+
+
+    def printFootstepOffsets(self):
+
+        blocks = self.getCinderblockAffordances()
+        steps = self.getFootstepObjects()
+
+        for step in steps:
+            stepFrame = step.getChildFrame().transform
+
+            block = self.sortAffordancesByDistanceToFrame(blocks, stepFrame)[0]
+            print '%s  --> %s' % (step.getProperty('Name'), block.getProperty('Name'))
+
+
+    def resetCinderblockVisualizationProperties(self):
+        for obj in self.getCinderblockAffordances():
+
+            obj.setProperty('Alpha', 1.0)
+            obj.setProperty('Camera Texture Enabled', False)
+            if not self.useTextures:
+                obj.setProperty('Color', [0.8, 0.8, 0.8])
+
+    def reorientBlocks(self, blocks):
+
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         forward = transformUtils.getAxesFromTransform(stanceFrame)[0]
 
-        blocks = self.findBlockObjects()
         for block in blocks:
 
             blockFrame = block.getChildFrame().transform
@@ -185,17 +524,19 @@ class TerrainTask(object):
             t = transformUtils.getTransformFromAxesAndOrigin(axes[0], axes[1], axes[2], origin)
             block.getChildFrame().copyFrame(t)
             block.setProperty('Dimensions', dims)
-        self.renameAndReorderBlocks(stanceFrame)
 
-    def renameAndReorderBlocks(self, stanceFrame):
+    def sortAndRenameBlocks(self, blocks):
         """
         Sort the blocks into row and column bins using the robot's stance frame, and rename the accordingly
         """
-        blocks = self.findBlockObjects()
+        if not blocks:
+            return
+
         blockDescriptions = [block.getDescription() for block in blocks]
 
         blockRows = defaultdict(lambda: [])
 
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         T = stanceFrame.GetLinearInverse()
         blockXYZInStance = np.vstack((T.TransformPoint(block.getChildFrame().transform.GetPosition()) for block in blocks))
         minBlockX = blockXYZInStance[:,0].min()
@@ -211,14 +552,60 @@ class TerrainTask(object):
 
         for row_id in sorted(blockRows.keys()):
             for col_id, block in enumerate(blockRows[row_id]):
-                block['Name'] = 'cinderblock ({:d},{:d})'.format(row_id, col_id)
+                block['Name'] = '%s (%d,%d)' % (self.cinderblockPrefix, row_id, col_id)
                 self.robotSystem.affordanceManager.newAffordanceFromDescription(block)
 
+
+        '''
+                if not blocks:
+                    return
+
+                stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+
+                T = stanceFrame.GetLinearInverse()
+                blockXYZInStance = np.vstack((T.TransformPoint(block.getChildFrame().transform.GetPosition()) for block in blocks))
+                minBlockX = blockXYZInStance[:,0].min()
+
+                rowToBlocks = defaultdict(lambda: [])
+
+
+                # Bin by x (in stance frame)
+                for i, block in enumerate(blocks):
+                    row = int(round((blockXYZInStance[i,0] - minBlockX) / blockLength))
+                    rowToBlocks[row].append(block)
+                    print 'block %s row bin: %d' % (block.getProperty('Name'), row)
+
+                # Then sort by y (in stance frame)
+                for row, rowBlocks in rowToBlocks.iteritems():
+                    print '---------'
+                    print 'sorting row', row
+                    for block in rowBlocks:
+                        print '  %s' % block.getProperty('Name')
+
+                    yInLocal = [blockXYZInStance[blocks.index(block), 1] for block in rowBlocks]
+                    print yInLocal
+
+                    rowBlocks = [rowBlocks[i] for i in np.argsort(yInLocal)]
+
+                    print rowBlocks
+                    rowToBlocks[row] = rowBlocks
+                    print rowToBlocks[row]
+
+
+                for row in sorted(rowToBlocks.keys()):
+                    print 'renaming by row,col for row:', row
+                    print rowToBlocks[row]
+                    for col, block in enumerate(rowToBlocks[row]):
+                        newName = '%s (%d,%d)' % (self.cinderblockPrefix, row, col)
+                        print 'renaming %s to: %s' % (block.getProperty('Name'), newName)
+                        block.rename(newName)
+        '''
 
     def computeSafeRegions(self):
 
         om.removeFromObjectModel(om.findObjectByName('Safe terrain regions'))
-        blocks = self.findBlockObjects()
+
+        blocks = self.getCinderblockAffordances() + self.getStairAffordances()
         for block in blocks:
 
             d = np.array(block.getProperty('Dimensions'))/2.0
@@ -248,7 +635,7 @@ class TerrainTask(object):
 
         blockIds = [4,0,5,1,6,2,7,3]
 
-        blocks = self.findBlockObjects()
+        blocks = self.getCinderblockAffordances()
         blocks = [blocks[i] for i in blockIds]
 
         f = 0.04
@@ -308,19 +695,22 @@ class TerrainTask(object):
             obj.properties.addProperty('Enabled for Walking', True)
             obj.safe_region = r
 
+    def getFootFrameAtSole(self, linkName):
+        footSoleToOrigin = np.mean(self.robotSystem.footstepsDriver.getContactPts(), axis=0)
+        startPose = self.getPlanningStartPose()
+        footFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose(linkName, startPose)
+        footFrame.PreMultiply()
+        footFrame.Translate(footSoleToOrigin)
+        return footFrame
 
     def spawnCinderblocksAtFeet(self):
 
-        footSoleToOrigin = np.mean(self.robotSystem.footstepsDriver.getContactPts(), axis=0)
-        startPose = self.getPlanningStartPose()
-
         for linkName in ['l_foot', 'r_foot']:
-            blockFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose(linkName, startPose)
+            blockFrame = self.getFootFrameAtSole(linkName)
             blockFrame.PreMultiply()
-            blockFrame.Translate(footSoleToOrigin)
             blockFrame.Translate(0.0, 0.0, -blockHeight/2.0)
 
-            blockId = len(self.findBlockObjects())
+            blockId = len(self.getCinderblockAffordances())
             pose = transformUtils.poseFromTransform(blockFrame)
             desc = dict(classname='BoxAffordanceItem', Name='cinderblock %d' % blockId, Dimensions=[blockLength, blockWidth, blockHeight], pose=pose)
             block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
@@ -382,7 +772,7 @@ class TerrainTask(object):
             vis.showFrame(footOffsetFrame, 'footstep %d' % i)
             '''
 
-            blockId = len(self.findBlockObjects())
+            blockId = len(self.getCinderblockAffordances())
             pose = transformUtils.poseFromTransform(offsetFrame)
             desc = dict(classname='BoxAffordanceItem', Name='cinderblock %d' % blockId, Dimensions=[l, w, blockHeight], pose=pose)
             block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
@@ -426,30 +816,39 @@ class TerrainTaskPanel(TaskUserPanel):
         self.addTasks()
 
     def addButtons(self):
-        self.addManualButton('Spawn tilted steps', self.terrainTask.spawnTiltedCinderblocks)
+        #self.addManualButton('Spawn tilted steps', self.terrainTask.spawnTiltedCinderblocks)
+        #self.addManualButton('Walk to tilted steps', self.terrainTask.walkToTiltedCinderblocks)
         self.addManualButton('Spawn blocks at feet', self.terrainTask.spawnCinderblocksAtFeet)
+        self.addManualSpacer()
 
-        self.addManualButton('Walk to tilted steps', self.terrainTask.walkToTiltedCinderblocks)
-        self.addManualButton('Spawn manual footsteps', self.terrainTask.computeManualFootsteps)
-        self.addManualSpacer()
         self.addManualButton('Fit Blocks', self.terrainTask.requestBlockFit)
-        self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
+        self.addManualButton('Organize fit blocks', self.terrainTask.organizeFitBlocks)
         self.addManualButton('Raycast terrain', self.terrainTask.requestRaycastTerrain)
+        self.addManualButton('Generate footsteps', self.generateFootsteps)
+        self.addManualButton('Print footstep offsets', self.terrainTask.printFootstepOffsets)
         self.addManualSpacer()
-        self.addManualButton('Reorient blocks to robot', self.terrainTask.reorientBlocks)
-        self.addManualButton('Compute safe regions', self.terrainTask.computeSafeRegions)
+        self.addManualButton('Delete front blocks', self.terrainTask.deleteFrontBlocks)
+
+
+        #self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
+
+        #self.addManualSpacer()
+        #self.addManualButton('Reorient blocks to robot', self.terrainTask.reorientBlocks)
+        #self.addManualButton('Compute safe regions', self.terrainTask.computeSafeRegions)
         self.addManualSpacer()
         self.addManualButton('Arms up', self.terrainTask.planArmsUp)
 
 
     def addDefaultProperties(self):
-        self._syncProperties()
+        self.params.addProperty('Camera Texture', False)
 
     def onPropertyChanged(self, propertySet, propertyName):
-        self._syncProperties()
+        if propertyName == 'Camera Texture':
+            self.terrainTask.useTextures = self.params.getProperty(propertyName)
 
-    def _syncProperties(self):
-        pass
+    def generateFootsteps(self):
+
+        self.terrainTask.spawnFootstepsForCinderblocks()
 
     def addTasks(self):
 
