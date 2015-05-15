@@ -15,7 +15,7 @@ class AsyncIKCommunicator():
 
     STARTUP_COMPLETED = 'STARTUP_COMPLETED'
 
-    def __init__(self, robotURDF, fixedPointFile):
+    def __init__(self, robotURDF, fixedPointFile, leftFootLink, rightFootLink):
 
         self.comm = None
         self.outputConsole = None
@@ -23,6 +23,8 @@ class AsyncIKCommunicator():
         self.restarted = False
         self.robotURDF = robotURDF
         self.fixedPointFile = fixedPointFile
+        self.leftFootLink = leftFootLink
+        self.rightFootLink = rightFootLink
 
         self.seedName = 'q_nom'
         self.nominalName = 'q_nom'
@@ -65,6 +67,8 @@ class AsyncIKCommunicator():
         commands.append("addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])")
         commands.append("robotURDF = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.robotURDF, ddapp.getDRCBaseDir()))
         commands.append("fixed_point_file = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.fixedPointFile, ddapp.getDRCBaseDir()))
+        commands.append("left_foot_link = '%s';" % self.leftFootLink)
+        commands.append("right_foot_link = '%s';" % self.rightFootLink)
         commands.append('runIKServer')
         commands.append('\n%------ startup end ------\n')
         return self.comm.sendCommandsAsync(commands)
@@ -317,6 +321,8 @@ class AsyncIKCommunicator():
             commands.append('options.end_effector_name_left = end_effector_name_left;')
             commands.append('options.end_effector_name_right = end_effector_name_right;')
             commands.append('options.end_effector_pt = end_effector_pt;')
+            commands.append('options.left_foot_link = left_foot_link;')
+            commands.append('options.right_foot_link = right_foot_link;')
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
             commands.append('options.RRTMaxEdgeLength = %s;' % ikParameters.rrtMaxEdgeLength)
             commands.append('options.RRTGoalBias = %s;' % ikParameters.rrtGoalBias)

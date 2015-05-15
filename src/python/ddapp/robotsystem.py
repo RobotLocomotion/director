@@ -115,7 +115,11 @@ class RobotSystem(object):
             ikJointController.addPose('q_end', ikJointController.getPose('q_nom'))
             ikJointController.addPose('q_start', ikJointController.getPose('q_nom'))
 
-            ikServer = ik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'])
+
+            if 'leftFootLink' in directorConfig:
+                ikServer = ik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'], directorConfig['leftFootLink'], directorConfig['rightFootLink'])
+            else: # assume that robot has no feet e.g. fixed base arm
+	        ikServer = ik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'], "","")
 
             def startIkServer():
                 ikServer.startServerAsync()
