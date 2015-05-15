@@ -186,13 +186,8 @@ classdef IKServer
       linkNames = {obj.robot.body.linkname}';
     end
 
-    function pts = getLeftFootPoints(obj)
-      bodyIndex = obj.robot.findLinkId('l_foot');
-      pts = obj.robot.body(bodyIndex).getTerrainContactPoints({'toe', 'heel'});
-    end
-
-    function pts = getRightFootPoints(obj)
-      bodyIndex = obj.robot.findLinkId('r_foot');
+    function pts = getLinkPoints(obj, linkName)
+      bodyIndex = obj.robot.findLinkId(linkName);
       pts = obj.robot.body(bodyIndex).getTerrainContactPoints({'toe', 'heel'});
     end
 

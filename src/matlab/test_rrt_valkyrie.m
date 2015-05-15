@@ -1,4 +1,5 @@
-
+% test rrt script for atlas v3 to reach around a box (unseen)
+% using the ddapp integration script - ikServer
 
 
 %-------- startup --------
@@ -8,6 +9,8 @@ addpath_control
 addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])
 robotURDF = '/home/mfallon/drc/software/models/valkyrie/./V1_sim_shells_reduced_polygon_count_mit.urdf';
 fixed_point_file = '/home/mfallon/drc/software/models/valkyrie/../../control/matlab/data/valkyrie_fp.mat';
+left_foot_link = 'LeftUpperFoot';
+right_foot_link = 'RightUpperFoot';
 runIKServer
 
 %------ startup end ------
@@ -91,8 +94,8 @@ excluded_collision_groups = struct('name',{},'tspan',{});
 qsc_constraint_0 = QuasiStaticConstraint(r, [-inf, inf], 1);
 qsc_constraint_0 = qsc_constraint_0.setShrinkFactor(0.2);
 qsc_constraint_0 = qsc_constraint_0.setActive(true);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.l_foot, l_foot_pts);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.r_foot, r_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.LeftUpperFoot, l_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.RightUpperFoot, r_foot_pts);
 
 
 posture_constraint_1 = PostureConstraint(r, [-inf, inf]);
@@ -104,18 +107,18 @@ posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lo
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.l_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.LeftUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_2 = WorldPositionConstraint(r, links.l_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.l_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_2 = WorldPositionConstraint(r, links.LeftUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.LeftUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.r_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.RightUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_3 = WorldPositionConstraint(r, links.r_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.r_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_3 = WorldPositionConstraint(r, links.RightUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.RightUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 posture_constraint_4 = PostureConstraint(r, [-inf, inf]);
@@ -189,8 +192,8 @@ excluded_collision_groups = struct('name',{},'tspan',{});
 qsc_constraint_0 = QuasiStaticConstraint(r, [-inf, inf], 1);
 qsc_constraint_0 = qsc_constraint_0.setShrinkFactor(0.2);
 qsc_constraint_0 = qsc_constraint_0.setActive(true);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.l_foot, l_foot_pts);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.r_foot, r_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.LeftUpperFoot, l_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.RightUpperFoot, r_foot_pts);
 
 
 posture_constraint_1 = PostureConstraint(r, [-inf, inf]);
@@ -202,18 +205,18 @@ posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lo
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.l_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.LeftUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_2 = WorldPositionConstraint(r, links.l_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.l_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_2 = WorldPositionConstraint(r, links.LeftUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.LeftUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.r_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.RightUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_3 = WorldPositionConstraint(r, links.r_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.r_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_3 = WorldPositionConstraint(r, links.RightUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.RightUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 posture_constraint_4 = PostureConstraint(r, [-inf, inf]);
@@ -286,8 +289,8 @@ excluded_collision_groups = struct('name',{},'tspan',{});
 qsc_constraint_0 = QuasiStaticConstraint(r, [-inf, inf], 1);
 qsc_constraint_0 = qsc_constraint_0.setShrinkFactor(0.2);
 qsc_constraint_0 = qsc_constraint_0.setActive(true);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.l_foot, l_foot_pts);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.r_foot, r_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.LeftUpperFoot, l_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.RightUpperFoot, r_foot_pts);
 
 
 posture_constraint_1 = PostureConstraint(r, [-inf, inf]);
@@ -299,18 +302,18 @@ posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lo
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.l_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.LeftUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_2 = WorldPositionConstraint(r, links.l_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.l_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_2 = WorldPositionConstraint(r, links.LeftUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.LeftUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.r_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.RightUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_3 = WorldPositionConstraint(r, links.r_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.r_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_3 = WorldPositionConstraint(r, links.RightUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.RightUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 posture_constraint_4 = PostureConstraint(r, [-inf, inf]);
@@ -407,8 +410,8 @@ excluded_collision_groups = struct('name',{},'tspan',{});
 qsc_constraint_0 = QuasiStaticConstraint(r, [-inf, inf], 1);
 qsc_constraint_0 = qsc_constraint_0.setShrinkFactor(0.5);
 qsc_constraint_0 = qsc_constraint_0.setActive(true);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.l_foot, l_foot_pts);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.r_foot, r_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.LeftUpperFoot, l_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.RightUpperFoot, r_foot_pts);
 
 
 posture_constraint_1 = PostureConstraint(r, [-inf, inf]);
@@ -420,18 +423,18 @@ posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lo
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.l_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.LeftUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_2 = WorldPositionConstraint(r, links.l_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.l_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_2 = WorldPositionConstraint(r, links.LeftUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.LeftUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.r_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.RightUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_3 = WorldPositionConstraint(r, links.r_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.r_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_3 = WorldPositionConstraint(r, links.RightUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.RightUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 %drawFrame(xyz_quat,'reach_start - r foot constraint', 0.1, [1,1,0]);
 
 
@@ -495,7 +498,7 @@ v.draw(0,q_end);
 
 kinsol = r.doKinematics(q_end);
 fk_opts.rotation_type = 2;
-r_foot_xyz_quat = r.forwardKin(kinsol,links.r_foot,[0,0,0]',fk_opts); 
+r_foot_xyz_quat = r.forwardKin(kinsol,links.RightUpperFoot,[0,0,0]',fk_opts); 
 %drawFrame(r_foot_xyz_quat,'reach_start - l foot fk', 0.1, [1,1,0]);
 
 q_end(s.robot.getNumPositions()+1:end) = [];
@@ -524,8 +527,8 @@ end_effector_pt = [];
 qsc_constraint_0 = QuasiStaticConstraint(r, [-inf, inf], 1);
 qsc_constraint_0 = qsc_constraint_0.setShrinkFactor(0.5);
 qsc_constraint_0 = qsc_constraint_0.setActive(true);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.l_foot, l_foot_pts);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.r_foot, r_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.LeftUpperFoot, l_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.RightUpperFoot, r_foot_pts);
 
 
 posture_constraint_1 = PostureConstraint(r, [-inf, inf]);
@@ -537,18 +540,18 @@ posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lo
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.l_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.LeftUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_2 = WorldPositionConstraint(r, links.l_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.l_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_2 = WorldPositionConstraint(r, links.LeftUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.LeftUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.r_foot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.RightUpperFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_3 = WorldPositionConstraint(r, links.r_foot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.r_foot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_3 = WorldPositionConstraint(r, links.RightUpperFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.RightUpperFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 posture_constraint_4 = PostureConstraint(r, [-inf, inf]);
@@ -607,6 +610,8 @@ options.end_effector_name = end_effector_name;
 options.end_effector_name_left = end_effector_name_left;
 options.end_effector_name_right = end_effector_name_right;
 options.end_effector_pt = end_effector_pt;
+options.left_foot_link = left_foot_link;
+options.right_foot_link = right_foot_link;
 options.frozen_groups = {'r_arm','pelvis','back'};
 options.RRTMaxEdgeLength = 0.05;
 options.RRTGoalBias = 1.0;

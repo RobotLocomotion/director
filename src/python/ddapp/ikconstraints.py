@@ -521,6 +521,8 @@ class QuasiStaticConstraint(ConstraintBase):
             rightFootEnabled = True,
             pelvisEnabled    = False,
             shrinkFactor     = None,
+            leftFootLinkName = "",
+            rightFootLinkName = "",
             )
 
         ConstraintBase.__init__(self, **kwargs)
@@ -543,6 +545,8 @@ class QuasiStaticConstraint(ConstraintBase):
                           robotArg=self.robotArg,
                           tspan=self.getTSpanString(),
                           shrinkFactor=shrinkFactor)
+                          leftFootLinkName = self.leftFootLinkName,
+                          rightFootLinkName = self.rightFootLinkName)
 
         commands.append(
             '{varName} = QuasiStaticConstraint({robotArg}, {tspan}, 1);\n'
@@ -551,9 +555,9 @@ class QuasiStaticConstraint(ConstraintBase):
             ''.format(**formatArgs))
 
         if self.leftFootEnabled:
-            commands.append('{varName} = {varName}.addContact(links.l_foot, l_foot_pts);'.format(**formatArgs))
+            commands.append('{varName} = {varName}.addContact(links.{leftFootLinkName}, l_foot_pts);'.format(**formatArgs))
         if self.rightFootEnabled:
-            commands.append('{varName} = {varName}.addContact(links.r_foot, r_foot_pts);'.format(**formatArgs))
+            commands.append('{varName} = {varName}.addContact(links.{rightFootLinkName}, r_foot_pts);'.format(**formatArgs))
         if self.pelvisEnabled:
             commands.append('{varName} = {varName}.addContact(links.pelvis, pelvis_pts);'.format(**formatArgs))
 

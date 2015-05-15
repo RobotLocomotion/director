@@ -16,8 +16,8 @@ q_zero = zeros(nq, 1);
 q_end = q_nom;
 
 try
-  l_foot_pts = s.getLeftFootPoints();
-  r_foot_pts = s.getRightFootPoints();
+  l_foot_pts = s.getLinkPoints(left_foot_link);
+  r_foot_pts = s.getLinkPoints(right_foot_link);
   pelvis_pts = s.getPelvisPoints();
 catch
   % no-op
