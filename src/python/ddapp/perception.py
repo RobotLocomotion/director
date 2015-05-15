@@ -450,6 +450,9 @@ class MapServerSource(TimerCallback):
             else:
                 obj.setProperty('Color', [0, 0.68, 1])
 
+            if viewId == lcmdrc.data_request_t.HEIGHT_MAP_SCENE:
+                obj.setProperty('Surface Mode', 'Wireframe')
+
             folder = om.findObjectByName('Map Server')
             om.addToObjectModel(obj, folder)
             om.expand(folder)
