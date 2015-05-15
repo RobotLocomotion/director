@@ -1024,3 +1024,10 @@ if useRandomWalk:
 
 if useCourseModel:
     courseModel = coursemodel.CourseModel()
+
+if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
+    import kinectlcm
+    #kinectlcm.init()
+    imageOverlayManager.viewName = "KINECT_RGB"
+    ikPlanner.fixedBaseArm = True
+    showImageOverlay()
