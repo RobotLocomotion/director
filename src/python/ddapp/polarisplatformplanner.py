@@ -149,14 +149,12 @@ class PolarisPlatformPlanner(object):
         footstepsToWorldList = self.getFootstepToWorldTransforms([3])
         q = self.robotSystem.robotStateJointController.q
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
-        # request = self.setMapModeToTerrainAndNormals(request)
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
         
     def planStepOff(self):
         footstepsToWorldList = self.getFootstepToWorldTransforms([2])
         q = self.robotSystem.robotStateJointController.q
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'right', snapToTerrain=True)
-        # request = self.setMapModeToTerrainAndNormals(request)
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
 
     def planWeightShift(self):
