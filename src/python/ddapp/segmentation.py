@@ -374,7 +374,8 @@ def getMajorPlanes(polyData, useVoxelGrid=True):
 
     while len(polyDataList) < 25:
 
-        f = vtk.vtkPCLSACSegmentationPlane()
+        #f = vtk.vtkPCLSACSegmentationPlane()
+        f = vtk.vtkPlaneSegmentation()
         f.SetInput(polyData)
         f.SetDistanceThreshold(distanceToPlaneThreshold)
         f.Update()
@@ -447,7 +448,8 @@ def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpend
         fitInput = cropToSphere(fitInput, searchOrigin, searchRadius)
 
     # perform plane segmentation
-    f = vtk.vtkPCLSACSegmentationPlane()
+    #f = vtk.vtkPCLSACSegmentationPlane()
+    f = vtk.vtkPlaneSegmentation()
     f.SetInput(fitInput)
     f.SetDistanceThreshold(distanceThreshold)
     if perpendicularAxis is not None:
@@ -649,7 +651,8 @@ def extractCircle(polyData, distanceThreshold=0.04, radiusLimit=None):
 def removeMajorPlane(polyData, distanceThreshold=0.02):
 
     # perform plane segmentation
-    f = vtk.vtkPCLSACSegmentationPlane()
+    #f = vtk.vtkPCLSACSegmentationPlane()
+    f = vtk.vtkPlaneSegmentation()
     f.SetInput(polyData)
     f.SetDistanceThreshold(distanceThreshold)
     f.Update()
