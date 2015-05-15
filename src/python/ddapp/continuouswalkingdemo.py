@@ -353,7 +353,7 @@ class ContinousWalkingDemo(object):
         #  # but the next left step has been committed - so remove it from the the list
 
         if (removeFirstLeftStep is True):
-            if (standingFootName is 'r_foot'):
+            if (standingFootName is self.ikPlanner.rightFootLink ):
                 footsteps = footsteps[1:]
               #print "removing the first left step"
 
@@ -419,8 +419,8 @@ class ContinousWalkingDemo(object):
 
         request = self.footstepsPanel.driver.constructFootstepPlanRequest(robotPose, goalFrame)
 
-        assert standingFootName in ('l_foot', 'r_foot')
-        if standingFootName == 'r_foot':
+        assert standingFootName in (self.ikPlanner.leftFootLink, self.ikPlanner.rightFootLink)
+        if standingFootName == self.ikPlanner.rightFootLink:
             leadingFoot = lcmdrc.footstep_plan_params_t.LEAD_RIGHT
         else:
             leadingFoot = lcmdrc.footstep_plan_params_t.LEAD_LEFT
@@ -516,10 +516,10 @@ class ContinousWalkingDemo(object):
         if (self.committedStep is not None):
           #print "i got a committedStep. is_right_foot?" , self.committedStep.is_right_foot
           if (self.committedStep.is_right_foot):
-              standingFootTransform = self.robotStateModel.getLinkFrame('l_foot')
+              standingFootTransform = self.robotStateModel.getLinkFrame(self.ikPlanner.leftFootLink)
               nextDoubleSupportPose = self.getNextDoubleSupportPose(standingFootTransform, self.committedStep.transform)
           else:
-              standingFootTransform = self.robotStateModel.getLinkFrame('r_foot')
+              standingFootTransform = self.robotStateModel.getLinkFrame(self.ikPlanner.rightFootLink)
               nextDoubleSupportPose = self.getNextDoubleSupportPose(self.committedStep.transform, standingFootTransform)
 
           comm_mesh,comm_color = self.getMeshAndColor(self.committedStep.is_right_foot)
@@ -623,10 +623,10 @@ class ContinousWalkingDemo(object):
         replanNow = False
         if (self.lastContactState is "both") and (contactState is "left"):
             replanNow = True
-            standingFootName = 'l_foot'
+            standingFootName = self.ikPlanner.leftFootLink
         if (self.lastContactState is "both") and (contactState is "right"):
             replanNow = True
-            standingFootName = 'r_foot'
+            standingFootName = self.ikPlanner.rightFootLink
 
         if (replanNow):
             print "contact: ", self.lastContactState, " to ", contactState
@@ -675,7 +675,10 @@ class ContinousWalkingDemo(object):
         self.replanFootsteps(polyData, standingFootName, removeFirstLeftStep, doStereoFiltering, nextDoubleSupportPose)
 
 
-    def startContinuousWalking(self, leadFoot='l_foot'):
+    def startContinuousWalking(self, leadFoot=None):
+        
+        if (leadFoot is None):
+            leadFoot=self.ikPlanner.leftFootLink #'l_foot'
 
         self._setupOnce()
 
@@ -714,7 +717,7 @@ class ContinousWalkingDemo(object):
         pose = self.getNextDoubleSupportPose(t1, t2)
         self.displayExpectedPose(pose)
 
-        standingFootName = 'r_foot' if msg.footsteps[0].is_right_foot else 'l_foot'
+        standingFootName = self.ikPlanner.rightFootLink if msg.footsteps[0].is_right_foot else self.ikPlanner.leftFootLink
         self.makeReplanRequest(standingFootName, nextDoubleSupportPose=pose)
 
 
@@ -744,13 +747,13 @@ class ContinousWalkingDemo(object):
         constraints.append(self.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
 
         nullFrame = vtk.vtkTransform()
-        positionConstraint, orientationConstraint = self.ikPlanner.createPositionOrientationConstraint('r_foot', rfootTransform, nullFrame)
+        positionConstraint, orientationConstraint = self.ikPlanner.createPositionOrientationConstraint(self.ikPlanner.rightFootLink, rfootTransform, nullFrame)
         positionConstraint.tspan = [1.0, 1.0]
         orientationConstraint.tspan = [1.0, 1.0]
         constraints.append(positionConstraint)
         constraints.append(orientationConstraint)
 
-        positionConstraint, orientationConstraint = self.ikPlanner.createPositionOrientationConstraint('l_foot', lfootTransform, nullFrame)
+        positionConstraint, orientationConstraint = self.ikPlanner.createPositionOrientationConstraint(self.ikPlanner.leftFootLink, lfootTransform, nullFrame)
         positionConstraint.tspan = [1.0, 1.0]
         orientationConstraint.tspan = [1.0, 1.0]
         constraints.append(positionConstraint)

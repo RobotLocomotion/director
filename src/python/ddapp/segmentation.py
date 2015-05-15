@@ -811,7 +811,6 @@ def generateFeetForWye():
     for obj in [lfoot, rfoot]:
         obj.addToView(app.getDRCView())
 
-    publishStickyFeet(lfootFrame, rfootFrame)
 
 
 def getFootFramesFromReferenceFrame(referenceFrame, stanceWidth, stanceRotation, stanceOffset):
@@ -854,22 +853,6 @@ def poseFromFrame(frame):
     pose.translation = trans
     pose.rotation = quat
     return pose
-
-
-def publishStickyFeet(lfootFrame, rfootFrame):
-
-    worldAffordanceId = affordance.publishWorldAffordance()
-
-    m = lcmdrc.traj_opt_constraint_t()
-    m.utime = int(time.time() * 1e6)
-    m.robot_name = worldAffordanceId
-    m.num_links = 2
-    m.link_name = ['l_foot', 'r_foot']
-    m.link_timestamps = [m.utime, m.utime]
-    m.num_joints = 0
-    m.link_origin_position = [poseFromFrame(lfootFrame), poseFromFrame(rfootFrame)]
-    #lcmUtils.publish('DESIRED_FOOT_STEP_SEQUENCE', m)
-    lcmUtils.publish('AFF_TRIGGERED_CANDIDATE_STICKY_FEET', m)
 
 
 def publishStickyHand(handFrame, affordanceItem=None):
@@ -2151,14 +2134,14 @@ def refitDrillWall(aff, point1, origin, normal):
     aff.actor.GetUserTransform().SetMatrix(t.GetMatrix())
 
 
+# this should be depreciated!
 def getGroundHeightFromFeet():
-    rfoot = getLinkFrame('r_foot')
+    rfoot = getLinkFrame( drcargs.getDirectorConfig()['rightFootLink'] )
     return np.array(rfoot.GetPosition())[2] -  0.0745342
 
-
+# this should be depreciated!
 def getTranslationRelativeToFoot(t):
-
-    rfoot = getLinkFrame('r_foot')
+    rfoot = getLinkFrame( drcargs.getDirectorConfig()['rightFootLink'] )
 
 
 def segmentDrillWallConstrained(rightAngleLocation, point1, point2):
@@ -2260,7 +2243,7 @@ def createDrillWall(rightAngleLocation, trianglePose):
 
 
     '''
-    rfoot = getLinkFrame('r_foot')
+    rfoot = getLinkFrame(drcargs.getDirectorConfig()['rightFootLink'])
     tt = getTransformFromAxes(xaxis, yaxis, zaxis)
     tt.PostMultiply()
     tt.Translate(rfoot.GetPosition())

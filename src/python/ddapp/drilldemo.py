@@ -311,9 +311,9 @@ class DrillPlannerDemo(object):
         the feet, on the ground, with z-axis up and x-axis aligned with the
         robot pelvis x-axis.
         '''
-        t1 = robotModel.getLinkFrame('l_foot')
-        t2 = robotModel.getLinkFrame('r_foot')
-        pelvisT = robotModel.getLinkFrame(self.ikPlanner.pelvisLink)
+        t1 = robotModel.getLinkFrame( self.ikPlanner.leftFootLink )
+        t2 = robotModel.getLinkFrame( self.ikPlanner.rightFootLink )
+        pelvisT = robotModel.getLinkFrame( self.ikPlanner.pelvisLink )
 
         xaxis = [1.0, 0.0, 0.0]
         pelvisT.TransformVector(xaxis, xaxis)
