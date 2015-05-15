@@ -891,20 +891,29 @@ def sendMatlabSigint():
 
 #app.addToolbarMacro('Ctrl+C MATLAB', sendMatlabSigint)
 
-def updateTexture(obj):
-    cameraview.applyCameraTexture(obj, cameraview.imageManager)
-    obj._renderAllViews()
+class AffordanceTextureUpdater(object):
 
-def updateTextures():
+    def __init__(self, affordanceManager):
+        self.affordanceManager = affordanceManager
+        self.timer = TimerCallback(targetFps=10)
+        self.timer.callback = self.updateTextures
+        self.timer.start()
 
-    affs = affordanceManager.getAffordances()
-    for aff in affs:
-        if hasattr(aff, '_applyCameraTexture'):
-            updateTexture(aff)
+    def updateTexture(self, obj):
+        if obj.getProperty('Camera Texture Enabled'):
+            cameraview.applyCameraTexture(obj, cameraview.imageManager)
+        else:
+            cameraview.disableCameraTexture(obj)
+        obj._renderAllViews()
 
-t = TimerCallback(targetFps=10)
-t.callback = updateTextures
-t.start()
+    def updateTextures(self):
+
+        for aff in affordanceManager.getAffordances():
+            self.updateTexture(aff)
+
+
+affordanceTextureUpdater = AffordanceTextureUpdater(affordanceManager)
+
 
 def drawCenterOfMass(model):
     stanceFrame = footstepsDriver.getFeetMidPoint(model)
