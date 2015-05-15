@@ -54,7 +54,7 @@ vtkLCMGLProp::~vtkLCMGLProp()
 //----------------------------------------------------------------------------
 double* vtkLCMGLProp::GetBounds()
 {
-  static double bounds[6] = {-5, 5, -5, 5, -5, 5};
+  static double bounds[6] = {-55, 55, -55, 55, -55, 55};
   return bounds;
 }
 
