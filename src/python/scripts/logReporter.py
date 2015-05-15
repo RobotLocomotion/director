@@ -16,6 +16,7 @@ def sizeof_fmt(num, suffix='B'):
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
 
+
 class LCMLogAnalyzer(object):
     def __init__(self, logFile):
         self.logFile = logFile
@@ -23,11 +24,11 @@ class LCMLogAnalyzer(object):
         self.jointVelocityNorms = list()
         self.jointVelocities = list()
         self.batteryTimes = list()
-        self.batteryVoltage = list()
-        self.N = 100 #sliding window width
+        self.batteryPercentage = list()
+        self.pressureTimes = list()
+        self.pressureReadings = list()
+        self.slidingWindowWidth = 100 
         self.movementThreshold = 0.4
-        self.minVoltage = 143
-        self.maxVoltage = 190
 
     def parseLog(self):
         log = lcm.EventLog(self.logFile, 'r')
@@ -46,17 +47,48 @@ class LCMLogAnalyzer(object):
             elif event.channel == 'ATLAS_BATTERY_DATA':
                 msg = spy.decodeMessage(event.data)
                 self.batteryTimes.append(timestamp)
-                self.batteryVoltage.append(msg.voltage)
+                self.batteryPercentage.append(msg.remaining_charge_percentage)
+            elif event.channel == 'ATLAS_STATUS':
+                msg = spy.decodeMessage(event.data)
+                self.pressureTimes.append(timestamp)
+                self.pressureReadings.append(msg.pump_supply_pressure)
 
         print 'parsed ' + str(len(self.jointVelocityNorms)) + ' robot states'
-        print 'parsed ' + str(len(self.batteryVoltage)) + ' battery states'
+        print 'parsed ' + str(len(self.batteryPercentage)) + ' battery states'
+        print 'parsed ' + str(len(self.pressureReadings)) + ' pump readings'
         
     def movingAverage(self, x):
-        N = self.N
+        N = self.slidingWindowWidth
         return np.convolve(x, np.ones((N,))/N)[(N-1):]
 
-    def getBatteryPercentage(self, voltage):
-        return (voltage - self.minVoltage) / (self.maxVoltage - self.minVoltage) * 1e2
+
+    def plotPump(self, tmin):
+        plt.title('Pump')
+        plt.ylabel('System Pressure (PSI)')
+        scaledPressureTimes = (np.asarray(self.pressureTimes) - tmin) / 1e6
+        plt.plot(scaledPressureTimes, self.pressureReadings)
+        v = plt.axis()
+        plt.axis([0, scaledPressureTimes[-1], v[2], v[3]])     
+        plt.grid(True)
+
+    def plotMovement(self, smoothed, movement, tmin):
+        plt.title('Movement')
+        scaledJointTimes = (np.asarray(self.jointVelocityTimes) - tmin) / 1e6
+        
+        plt.plot(scaledJointTimes, smoothed)
+        plt.plot(scaledJointTimes, movement, 'r--')
+        plt.axis([0, scaledJointTimes[-1], 0, 1.2])       
+        plt.ylabel('smoothed norm of xdot')
+        plt.grid(True)
+
+    def plotBattery(self, tmin):
+        plt.title('Battery')        
+        plt.ylabel('Charge Remaining (%)')
+        scaledBatteryTimes = (np.asarray(self.batteryTimes) - tmin) / 1e6
+        plt.plot(scaledBatteryTimes, self.batteryPercentage)
+        v = plt.axis()
+        plt.axis([0, scaledBatteryTimes[-1], v[2], v[3]])     
+        plt.grid(True)
 
     def plotResults(self):
         tmin = self.jointVelocityTimes[0]
@@ -68,27 +100,20 @@ class LCMLogAnalyzer(object):
         movementSeconds = float(np.count_nonzero(movement) * average_dt / 1e6)
         totalSeconds = float((tmax-tmin)/1e6)
         print("%.2f / %.2f seconds of movement ( %.2f %% continuous motion) " % (movementSeconds, totalSeconds , movementSeconds / totalSeconds * 1e2))        
-        print("Battery fell from %.2f V ( %.2f %% ) to %.2f V ( %.2f %% )" % (self.batteryVoltage[0], self.getBatteryPercentage(self.batteryVoltage[0]), self.batteryVoltage[-1], self.getBatteryPercentage(self.batteryVoltage[-1])))
+        
+        minChargePercent = np.ndarray.min(np.asarray(self.batteryPercentage))
+        print("Battery fell from %.2f %% to %.2f %% (Used %.2f %%)" % (self.batteryPercentage[0], minChargePercent , self.batteryPercentage[0] - minChargePercent))
         print 'plotting results'
         plt.figure(1)
         plt.suptitle('LCM Log Battery/Movement Analysis')
-        plt.subplot(211)
-        plt.title('Movement')
-        scaledJointTimes = (np.asarray(self.jointVelocityTimes) - tmin) / 1e6
-        scaledBatteryTimes = (np.asarray(self.batteryTimes) - tmin) / 1e6
-        plt.plot(scaledJointTimes, smoothed)
-        plt.plot(scaledJointTimes, movement, 'r--')
-        plt.axis([0, scaledJointTimes[-1], 0, 2])       
-        plt.ylabel('smoothed norm of xdot')
-        plt.grid(True)
-        batteryPlot = plt.subplot(212)
-        plt.title('Battery')
+        plt.subplot(311)
+        self.plotMovement(smoothed, movement, tmin)
+        plt.subplot(312)
+        self.plotPump(tmin)
+        plt.subplot(313)
+        self.plotBattery(tmin)
+
         plt.xlabel('Time (s)')
-        plt.ylabel('Voltage (V)')
-        plt.plot(scaledBatteryTimes, self.batteryVoltage)
-        v = plt.axis()
-        plt.axis([0, scaledJointTimes[-1], v[2], v[3]])     
-        plt.grid(True)
         plt.show()      
 
 def main(argv):
