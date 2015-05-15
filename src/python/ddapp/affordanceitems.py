@@ -25,6 +25,8 @@ class AffordanceItem(PolyDataItem):
         self.addProperty('uuid', newUUID(), attributes=om.PropertyAttributes(hidden=True))
         self.addProperty('Collision Enabled', True)
         self.addProperty('Origin', [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0], attributes=om.PropertyAttributes(hidden=True))
+        self.addProperty('Camera Texture Enabled', False)
+
         self.properties.setPropertyIndex('Collision Enabled', 0)
         self.setProperty('Icon', om.Icons.Hammer)
 
