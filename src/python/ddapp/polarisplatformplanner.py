@@ -54,6 +54,7 @@ class PolarisPlatformPlanner(object):
         self.robotSystem = robotSystem
         self.terrainTask = terraintask.TerrainTask(robotSystem)
         self.initializedFlag = False
+        self.plans = []
 
     def initialize(self):
         self.initializedFlag = True
@@ -127,14 +128,13 @@ class PolarisPlatformPlanner(object):
 
     def setFootstepDataForwards(self):
         self.footstepPositionForwards = []
-
         self.footstepPositionForwards.append(np.array([-0.06954156,  0.14726368,  0.07522517]))
         self.footstepPositionForwards.append(np.array([ 0.18256867, -0.11692981,  0.01602283]))
         self.footstepPositionForwards.append(np.array([ 0.31539397,  0.15317327,  0.04011487]))
 
         self.footstepYawForwards = np.array([0, 0, 0])
         self.footstepYawForwards = np.rad2deg(self.footstepYawForwards)
-        pass
+        
 
     def planTurn(self):
         # request footsteps 1 and 2
@@ -149,14 +149,14 @@ class PolarisPlatformPlanner(object):
         footstepsToWorldList = self.getFootstepToWorldTransforms([3])
         q = self.robotSystem.robotStateJointController.q
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
-        request = self.setMapModeToTerrainAndNormals(request)
+        # request = self.setMapModeToTerrainAndNormals(request)
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
         
     def planStepOff(self):
         footstepsToWorldList = self.getFootstepToWorldTransforms([2])
         q = self.robotSystem.robotStateJointController.q
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'right', snapToTerrain=True)
-        request = self.setMapModeToTerrainAndNormals(request)
+        # request = self.setMapModeToTerrainAndNormals(request)
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
 
     def planWeightShift(self):
@@ -227,7 +227,6 @@ class PolarisPlatformPlanner(object):
     def setMapModeToTerrainAndNormals(self,request):
         request.params.map_mode = lcmdrc.footstep_plan_params_t.TERRAIN_HEIGHTS_AND_NORMALS
         return request
-
 
 
     def spawnRunningBoardAffordance(self):
@@ -319,6 +318,8 @@ class PolarisPlatformPlanner(object):
         t.Translate(-boxDimensions[0]/2.0, 0.0, -boxDimensions[2]/2.0)
         box.getChildFrame().copyFrame(t)
 
+        self.initialize()
+
     #passthrough methods to the terrain task
     # should force updating the affordance before doing this
     def requestRaycastTerrain(self):
@@ -336,7 +337,14 @@ class PolarisPlatformPlanner(object):
         else:
             endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'polaris_step_arm_safe', side='left')
             endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'polaris_step_arm_safe', side='right')
-        ikPlanner.computeMultiPostureGoal([startPose, endPose])
+        plan = ikPlanner.computeMultiPostureGoal([startPose, endPose])
+        self.addPlan(plan)
+
+    def addPlan(self, plan):
+        self.plans.append(plan)
+
+    def commitManipPlan(self):
+        self.robotSystem.manipPlanner.commitManipPlan(self.plans[-1])
 
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.q.copy()
