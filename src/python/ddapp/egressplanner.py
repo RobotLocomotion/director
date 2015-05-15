@@ -149,12 +149,7 @@ class EgressPanel(TaskUserPanel):
 
         folder = addFolder('Prep')
         addFunc(self.onStart, 'start')
-        # addFunc(self.onArmsUp, 'plan arms up')
         addManipTask('arms up', self.onArmsUp, userPrompt=True)
-
-        # addTask(rt.UserPromptTask(name="review arms up plan", message="Please approve arms up plan"))
-        # addTask(rt.UserPromptTask(name="execute arms up plan", message="Please execute arms up plan"))
-        # addTask(rt.UserPromptTask(name="confirm arms up finished", message="Please verify we have arms up"))
         addFunc(pp.fitRunningBoardAtFeet, 'fit running board')
         addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
