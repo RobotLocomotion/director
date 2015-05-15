@@ -620,6 +620,8 @@ if useFootContactVis:
             else:
                 robotHighlighter.dehighlightLink(linkName)
 
+        #robotStateModel.model.setLinkColor(drcargs.getDirectorConfig()['leftFootLink'], contactColor if leftInContact else noContactColor)
+        #robotStateModel.model.setLinkColor(drcargs.getDirectorConfig()['rightFootLink'], contactColor if rightInContact else noContactColor)
 
     footContactSub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContact)
     footContactSub.setSpeedLimit(60)
@@ -653,12 +655,9 @@ if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
     #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'KINECT_RGB', view)
 
-<<<<<<< HEAD
 if useCameraFrustumVisualizer:
     cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'CAMERA_LEFT')
 
-=======
->>>>>>> store rgb lines if claudia wants to use them
 class ImageOverlayManager(object):
 
     def __init__(self):

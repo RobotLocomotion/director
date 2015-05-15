@@ -416,16 +416,16 @@ class EndEffectorTeleopPanel(object):
             constraints.append(ikPlanner.createLockedNeckPostureConstraint(startPoseName))
 
             if self.getLFootConstraint() == 'fixed':
-                constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot', tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
+                constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, ikPlanner.leftFootLink, tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
             elif self.getLFootConstraint() == 'constrained':
-                constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, 'l_foot', tspan=[1.0, 1.0]))
+                constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, ikPlanner.leftFootLink, tspan=[1.0, 1.0]))
             elif self.getLFootConstraint() == 'sliding':
                 constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[:2])
 
             if self.getRFootConstraint() == 'fixed':
-                constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot', tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
+                constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, ikPlanner.rightFootLink, tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
             elif self.getRFootConstraint() == 'constrained':
-                constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, 'r_foot', tspan=[1.0, 1.0]))
+                constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, ikPlanner.rightFootLink, tspan=[1.0, 1.0]))
             elif self.getRFootConstraint() == 'sliding':
                 constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
 
@@ -633,7 +633,7 @@ class EndEffectorTeleopPanel(object):
             #addHandMesh(handModels[side], frame)
 
         if not ikPlanner.fixedBaseArm and not ikPlanner.robotNoFeet:
-            for linkName in ['l_foot', 'r_foot', ikPlanner.pelvisLink]:
+            for linkName in [ikPlanner.leftFootLink, ikPlanner.rightFootLink, ikPlanner.pelvisLink]:
                 frameName = linkName + ' constraint frame'
                 om.removeFromObjectModel(om.findObjectByName(frameName))
                 frame = vis.showFrame(ikPlanner.getLinkFrameAtPose(linkName, startPose), frameName, parent=folder, scale=0.2)

@@ -30,6 +30,9 @@ from PythonQt import QtGui, QtCore
 _footMeshes = None
 _footMeshFiles = []
 _robotValkyrie = False
+_pelvisLink = '' # pelvis
+_leftFootLink = '' # l_foot
+_rightFootLink = '' # r_foot
 with open(drcargs.args().directorConfigFile) as directorConfigFile:
     directorConfig = json.load(directorConfigFile)
 
@@ -45,6 +48,11 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
         for j in range(0,2):
             for i in range(len(_footMeshFiles[j])):
                 _footMeshFiles[j][i] = os.path.join(directorConfigDirectory, _footMeshFiles[j][i])
+
+    _pelvisLink =  directorConfig['pelvisLink']
+    if 'leftFootLink' in directorConfig:
+        _leftFootLink = directorConfig['leftFootLink']
+        _rightFootLink = directorConfig['rightFootLink']
 
 
 DEFAULT_PARAM_SET = 'Drake Nominal'
@@ -584,11 +592,11 @@ class FootstepsDriver(object):
         contact_pts_mid_left = np.mean(contact_pts_left, axis=0) # mid point on foot relative to foot frame
         contact_pts_mid_right = np.mean(contact_pts_right, axis=0) # mid point on foot relative to foot frame
 
-        t_lf_mid = model.getLinkFrame('l_foot')
+        t_lf_mid = model.getLinkFrame(_leftFootLink)
         t_lf_mid.PreMultiply()
         t_lf_mid.Translate(contact_pts_mid_left)
 
-        t_rf_mid = model.getLinkFrame('r_foot')
+        t_rf_mid = model.getLinkFrame(_rightFootLink)
         t_rf_mid.PreMultiply()
         t_rf_mid.Translate(contact_pts_mid_right)
 
@@ -617,12 +625,12 @@ class FootstepsDriver(object):
         pts_left, pts_right = FootstepsDriver.getContactPts()
         d = DebugData()
 
-        for linkName in ['l_foot', 'r_foot']:
+        for linkName in [_leftFootLink, _rightFootLink]:
 
             t = model.getLinkFrame(linkName)
             d.addFrame(t, scale=0.2)
 
-            if (linkName is 'l_foot'):
+            if (linkName is _leftFootLink):
                 pts = pts_left
             else:
                 pts = pts_right
@@ -639,9 +647,9 @@ class FootstepsDriver(object):
     def createGoalSteps(self, model, pose):
         distanceForward = 1.0
 
-        fr = model.getLinkFrame('l_foot')
-        fl = model.getLinkFrame('r_foot')
-        pelvisT = model.getLinkFrame('pelvis')
+        fr = model.getLinkFrame(_leftFootLink)
+        fl = model.getLinkFrame(_rightFootLink)
+        pelvisT = model.getLinkFrame(_pelvisLink)
 
         xaxis = [1.0, 0.0, 0.0]
         pelvisT.TransformVector(xaxis, xaxis)
