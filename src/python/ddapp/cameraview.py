@@ -162,9 +162,18 @@ class ImageManager(object):
     def getTexture(self, imageName):
         return self.textures[imageName]
 
+
+def disableCameraTexture(obj):
+    obj.actor.SetTexture(None)
+    obj.actor.GetProperty().LightingOn()
+    obj.actor.GetProperty().SetColor(obj.getProperty('Color'))
+
 def applyCameraTexture(obj, imageManager, imageName='CAMERA_LEFT'):
 
     imageUtime = imageManager.getUtime(imageName)
+    if not imageUtime:
+        return
+
     cameraToLocal = vtk.vtkTransform()
     imageManager.queue.getTransform(imageName, 'local', imageUtime, cameraToLocal)
 
@@ -183,7 +192,7 @@ def applyCameraTexture(obj, imageManager, imageName='CAMERA_LEFT'):
 
     obj.actor.SetTexture(imageManager.getTexture(imageName))
     obj.actor.GetProperty().LightingOff()
-    obj.setProperty('Color', [1,1,1])
+    obj.actor.GetProperty().SetColor([1,1,1])
 
 
 class CameraView(object):
