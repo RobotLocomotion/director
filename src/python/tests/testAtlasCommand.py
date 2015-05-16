@@ -77,6 +77,30 @@ def atlasCommandToDrakePose(msg):
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()
 
+def drakePoseToQPInput(pose, atlasVersion=5):
+    if atlasVersion == 4:
+        numPositions = 34
+    else:
+        numPositions = 36
+
+    msg = lcmt_qp_controller_input()
+    msg.timestamp = getUtime()
+    msg.num_support_data = 0
+    msg.num_tracked_bodies = 0
+    msg.num_external_wrenches = 0
+    msg.num_joint_pd_overrides = 0
+    msg.param_set_name = 'position_control'
+
+    whole_body_data = lcmt_whole_body_data()
+    whole_body_data.timestamp = getUtime()
+    whole_body_data.num_positions = numPositions
+    whole_body_data.q_des = pose
+    whole_body_data.num_constrained_dofs = numPositions - 6
+    whole_body_data.constrained_dofs = range(7, numPositions+1)
+    msg.whole_body_data = whole_body_data
+
+    return msg
+
 
 def getJointGroups():
     return [
@@ -161,6 +185,7 @@ class AtlasCommandStream(object):
         self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.applyDefaults()
+        self.useControllerFlag = False
 
     def initialize(self, currentRobotPose):
         assert not self._initialized
@@ -168,6 +193,10 @@ class AtlasCommandStream(object):
         self._previousCommandedPose = np.array(currentRobotPose)
         self._goalPose = np.array(currentRobotPose)
         self._initialized = True
+
+    def useController(self):
+        self.useControllerFlag = True
+        self.publishChannel = 'QP_CONTROLLER_INPUT'
 
     def setKp(self, Kp, jointName=None):
         if jointName is None:
@@ -227,6 +256,9 @@ class AtlasCommandStream(object):
             msg = robotstate.drakePoseToRobotState(self._currentCommandedPose)
         else:
             msg = drakePoseToAtlasCommand(self._currentCommandedPose)
+
+        if self.useControllerFlag:
+            msg = drakePoseToQPInput(self._currentCommandedPose)
 
         lcmUtils.publish(self.publishChannel, msg)
 
@@ -731,43 +763,7 @@ class AtlasCommandPanel(object):
 
     def resetJointTeleopSliders(self):
         self.jointTeleopPanel.resetPoseToRobotState()
-
-class ControllerPositionGoalPublisher(object):
-
-    def __init__(self, positionGoalChannel, publishChannel, atlasVersion=5):
-        self.positionGoalChannel = positionGoalChannel
-        self.publishChannel = publishChannel
-        lcmUtils.addSubscriber('WHOLE_BODY_POSITION_GOAL', lcmdrc.atlas_command_t, self.onWholeBodyPositionGoal)
-
-        if atlasVersion == 4:
-            self.numPositions = 34
-        else:
-            self.numPositions = 36
-
-
-    def onWholeBodyPositionGoal(self, msg):
-        pose = atlasCommandToDrakePose(msg)
-        qp_input_msg = self.drakePoseToQPInput(pose)
-        lcmUtils.publish(self.publishChannel, qp_input_msg)
-
-    def drakePoseToQPInput(self, pose):
-        msg = lcmt_qp_controller_input()
-        msg.timestamp = getUtime()
-        msg.num_support_data = 0
-        msg.num_tracked_bodies = 0
-        msg.num_external_wrenches = 0
-        msg.num_joint_pd_overrides = 0
-        msg.param_set_name = 'position_control'
-
-        whole_body_data = lcmt_whole_body_data()
-        whole_body_data.timestamp = getUtime()
-        whole_body_data.num_positions = self.numPositions
-        whole_body_data.q_des = pose
-        whole_body_data.num_constrained_dofs = self.numPositions - 6
-        whole_body_data.constrained_dofs = range(7, self.numPositions+1)
-        msg.whole_body_data = whole_body_data
-
-        return msg
+  
 
 
 def parseArgs():
@@ -800,8 +796,6 @@ def main():
         robotMain(useController=True)
     elif args.mode == 'robotDrivingGainsWithController':
         robotMain(useDrivingGains=True, useController=False)
-    elif args.mode == 'controllerPublisher':
-        positionGoalPublisherMain()
     else:
         debugMain()
 
@@ -828,7 +822,7 @@ def robotMain(useDrivingGains=False, useController=False):
     commandStream.timer.targetFps = 1000
 
     if useController==True:
-        commandStream.publishChannel = 'WHOLE_BODY_POSITION_GOAL'
+        commandStream.useController()
     else:
         commandStream.publishChannel = 'ATLAS_COMMAND'
 
@@ -840,9 +834,6 @@ def robotMain(useDrivingGains=False, useController=False):
     planListener = CommittedRobotPlanListener()
     ConsoleApp.start()
 
-def positionGoalPublisherMain():
-    publisher = ControllerPositionGoalPublisher('WHOLE_BODY_POSITION_GOAL', 'QP_CONTROLLER_INPUT')
-    ConsoleApp.start()
 
 if __name__ == '__main__':
     main()
