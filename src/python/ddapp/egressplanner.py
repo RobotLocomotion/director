@@ -11,6 +11,7 @@ import functools
 import numpy as np
 import scipy.io
 from ddapp.tasks.taskuserpanel import TaskUserPanel
+import ddapp.tasks.robottasks as rt
 
 
 class EgressPanel(TaskUserPanel):
@@ -120,6 +121,8 @@ class EgressPanel(TaskUserPanel):
 
     def addTasks(self):
 
+
+
         # some helpers
         self.folder = None
         def addTask(task, parent=None):
@@ -130,3 +133,40 @@ class EgressPanel(TaskUserPanel):
         def addFolder(name, parent=None):
             self.folder = self.taskTree.addGroup(name, parent=parent)
             return self.folder
+
+        def addManipTask(name, planFunc, userPrompt=False):
+
+            folder = addFolder(name)
+            addFunc(planFunc, name='plan')
+            if not userPrompt:
+                addTask(rt.CheckPlanInfo(name='check manip plan info'))
+            else:
+                addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+            addFunc(pp.commitManipPlan, name='execute manip plan')
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+
+        pp = self.platformPlanner
+
+        folder = addFolder('Prep')
+        addFunc(self.onStart, 'start')
+        addManipTask('arms up', self.onArmsUp, userPrompt=True)
+        addFunc(pp.fitRunningBoardAtFeet, 'fit running board')
+        addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
+        addFunc(pp.requestRaycastTerrain, 'raycast terrain')
+        addTask(rt.UserPromptTask(name="set walking params", message="Please set walking params to 'Polaris Platform'"))
+
+        folder = addFolder('Step Down')
+        addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
+        addFunc(pp.requestRaycastTerrain, 'raycast terrain')
+        addFunc(self.onPlanStepDown, 'plan step down')
+        addTask(rt.UserPromptTask(name="approve/adjust footsteps", message="Please approve footsteps, modify if necessary"))
+        addTask(rt.UserPromptTask(name="execute step down", message="Please execute walking plan"))
+        addTask(rt.WaitForWalkExecution(name='wait for step down'))
+
+        folder = addFolder('Step Off')
+        addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
+        addFunc(pp.requestRaycastTerrain, 'raycast terrain')
+        addFunc(self.onPlanStepOff, 'plan step off')
+        addTask(rt.UserPromptTask(name="approve/adjust footsteps", message="Please approve footsteps, modify if necessary"))
+        addTask(rt.UserPromptTask(name="execute step off", message="Please execute walking plan"))
+
