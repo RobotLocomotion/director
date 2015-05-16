@@ -1,17 +1,49 @@
-import ddapp
+#import ddapp
+from ddapp import cameraview
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import objectmodel as om
 from ddapp import ik
 from ddapp import polarisplatformplanner
+from ddapp import segmentation
 from ddapp import sitstandplanner
+from ddapp.timercallback import TimerCallback
+from ddapp import visualization as vis
 
 import os
 import functools
 import numpy as np
 import scipy.io
+import vtkAll as vtk
 from ddapp.tasks.taskuserpanel import TaskUserPanel
 import ddapp.tasks.robottasks as rt
+from ddapp import filterUtils
+from ddapp import ioUtils
+
+
+class PolarisModel(object):
+
+    def __init__(self):
+        pose = transformUtils.poseFromTransform(vtk.vtkTransform())
+        desc = dict(classname='MeshAffordanceItem', Name='polaris',
+                    Filename='software/models/polaris/polaris_pointcloud.vtp', pose=pose)
+        self.affordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        self.aprilTagFrame = vis.updateFrame(vtk.vtkTransform(), 'grab bar april tag',
+                                             visible=True, scale=0.2)
+        self.frameSync = vis.FrameSync()
+        self.frameSync.addFrame(self.aprilTagFrame)
+        self.frameSync.addFrame(self.affordance.getChildFrame(), ignoreIncoming=True)
+
+        self.timerCallback = TimerCallback()
+        self.timerCallback.targetFps = 5
+        self.timerCallback.callback = self.updateAprilTagFrame
+        self.timerCallback.start()
+
+    def updateAprilTagFrame(self):
+        t = vtk.vtkTransform()
+        cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', t)
+        self.aprilTagFrame.copyFrame(t)
+
 
 
 class EgressPanel(TaskUserPanel):
@@ -26,7 +58,7 @@ class EgressPanel(TaskUserPanel):
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
-        
+
 
     def addButtons(self):
         #sit/stand buttons
