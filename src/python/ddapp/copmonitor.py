@@ -23,6 +23,7 @@ class COPMonitor(object):
     COLORS = [[0.0, 1.0, 0.0], [1.0, 1.0, 0.0], [1.0, 0.6, 0.0]] # defaults to red if not in any of these shrinks
     COLORS_BUTTON = ['white', 'yellow', 'orange']
 
+    UPDATE_RATE = 5
     def __init__(self, robotSystem, view):
 
         self.robotStateModel = robotSystem.robotStateModel
@@ -30,7 +31,8 @@ class COPMonitor(object):
         self.robotSystem = robotSystem
         self.lFootFtFrameId = self.robotStateModel.model.findLinkID('l_foot')
         self.rFootFtFrameId = self.robotStateModel.model.findLinkID('r_foot')
-        self.robotStateModel.connectModelChanged(self.update)
+        self.updateTimer = TimerCallback(self.UPDATE_RATE)
+        self.updateTimer.callback = self.update
         self.leftInContact = 0
         self.rightInContact = 0
         self.draw = False
@@ -42,13 +44,14 @@ class COPMonitor(object):
 
         app.getMainWindow().statusBar().insertPermanentWidget(0, self.warningButton)
         footContactSub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, self.onFootContact)
-        footContactSub.setSpeedLimit(5)
+        footContactSub.setSpeedLimit(self.UPDATE_RATE)
+        self.updateTimer.start()
 
     def onFootContact(self, msg):
         self.leftInContact = msg.left_contact > 0.0
         self.rightInContact = msg.right_contact > 0.0
 
-    def update(self, newRobotState):
+    def update(self):
         if (hasattr(self.robotStateJointController, 'lastRobotStateMessage') and 
             self.robotStateJointController.lastRobotStateMessage):
 
