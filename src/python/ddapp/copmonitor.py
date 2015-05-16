@@ -23,13 +23,13 @@ class COPMonitor(object):
     COLORS = [[0.0, 1.0, 0.0], [1.0, 1.0, 0.0], [1.0, 0.6, 0.0]] # defaults to red if not in any of these shrinks
     COLORS_BUTTON = ['white', 'yellow', 'orange']
 
-    def __init__(self, robotStateModel, robotStateJointController, robotSystem, view):
+    def __init__(self, robotSystem, view):
 
-        self.robotStateModel = robotStateModel
-        self.robotStateJointController = robotStateJointController
+        self.robotStateModel = robotSystem.robotStateModel
+        self.robotStateJointController = robotSystem.robotStateJointController
         self.robotSystem = robotSystem
-        self.lFootFtFrameId = robotStateModel.model.findLinkID('l_foot')
-        self.rFootFtFrameId = robotStateModel.model.findLinkID('r_foot')
+        self.lFootFtFrameId = self.robotStateModel.model.findLinkID('l_foot')
+        self.rFootFtFrameId = self.robotStateModel.model.findLinkID('r_foot')
         self.robotStateModel.connectModelChanged(self.update)
         self.leftInContact = 0
         self.rightInContact = 0
