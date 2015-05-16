@@ -30,9 +30,33 @@ class PolarisModel(object):
         self.affordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         self.aprilTagFrame = vis.updateFrame(vtk.vtkTransform(), 'grab bar april tag',
                                              visible=True, scale=0.2)
+
+        t = transformUtils.transformFromPose(np.array([-0.99548239, 0.04156693, 0.35259928]),
+                                             np.array([ 0.18827199, 0.84761397, 0.41552535,
+                                                       0.27100351]))
+        self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot 0', scale=0.2,visible=True)
+
+        t = transformUtils.transformFromPose(np.array([-0.93707546,  0.07409333,  0.32871604]),
+                                             np.array([ 0.22455191,  0.71396247,  0.60983921,
+                                                       0.26063418]))
+        self.leftFootEgressInsideFrame  = vis.updateFrame(t, 'left foot 1', scale=0.2,visible=True)
+
+        t = transformUtils.transformFromPose(np.array([-0.89783714,  0.23503719,  0.29039189]),
+                                             np.array([ 0.2331762 ,  0.69031269,  0.6311807,
+                                                       0.2659101]))
+        self.leftFootEgressMidFrame  = vis.updateFrame(t, 'left foot 2', scale=0.2,visible=True)
+
+        t = transformUtils.transformFromPose(np.array([-0.88436275,  0.50939115,  0.31281047]),
+                                             np.array([ 0.22600245,  0.69177731,  0.63305905,
+                                                       0.26382435]))
+        self.leftFootEgressOutsideFrame  = vis.updateFrame(t, 'left foot 3', scale=0.2,visible=True)
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(self.aprilTagFrame)
         self.frameSync.addFrame(self.affordance.getChildFrame(), ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootEgressStartFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootEgressInsideFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootEgressMidFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootEgressOutsideFrame, ignoreIncoming=True)
 
         self.timerCallback = TimerCallback()
         self.timerCallback.targetFps = 5
@@ -44,6 +68,11 @@ class PolarisModel(object):
         cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', t)
         self.aprilTagFrame.copyFrame(t)
 
+
+class EgressPlanner(object):
+
+    def spawnPolaris(self):
+        self.car = PolarisModel()
 
 
 class EgressPanel(TaskUserPanel):
