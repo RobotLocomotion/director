@@ -512,7 +512,6 @@ class ValvePlannerDemo(object):
             startPoseName = self.getStartPoseName(planFromCurrentRobotState, True, usePoses)
             endPoseName = self.getEndPoseName(True, usePoses)
             endPose = self.ikPlanner.jointController.getPose(endPoseName)
-            wristJoints = robotstate.matchJoints('lwy')
             endPose = self.ikPlanner.mergePostures(endPose, robotstate.matchJoints('lwy'), startPose)
             endPoseName = 'q_retract'
             self.ikPlanner.addPose(endPose, endPoseName)
@@ -525,7 +524,7 @@ class ValvePlannerDemo(object):
         if resetPoses and not retract and max(plan.plan_info) <= 10:
             self.setReachAndTouchPoses(plan)
 
-        ikPlanner.setIkParameters(originalIkParameterDict)
+        self.ikPlanner.setIkParameters(originalIkParameterDict)
         return plan
 
     def planReach(self, verticalOffset=None, **kwargs):
