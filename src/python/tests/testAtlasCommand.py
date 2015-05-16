@@ -15,7 +15,7 @@ import math
 import argparse
 
 from ddapp.utime import getUtime
-
+from drake import lcmt_qp_controller_input, lcmt_whole_body_data
 
 import scipy.interpolate
 
@@ -732,6 +732,44 @@ class AtlasCommandPanel(object):
     def resetJointTeleopSliders(self):
         self.jointTeleopPanel.resetPoseToRobotState()
 
+class ControllerPositionGoalPublisher(object):
+
+    def __init__(self, positionGoalChannel, publishChannel, atlasVersion=5):
+        self.positionGoalChannel = positionGoalChannel
+        self.publishChannel = publishChannel
+        lcmUtils.addSubscriber('WHOLE_BODY_POSITION_GOAL', lcmdrc.atlas_command_t, self.onWholeBodyPositionGoal)
+
+        if atlasVersion == 4:
+            self.numPositions = 34
+        else:
+            self.numPositions = 36
+
+
+    def onWholeBodyPositionGoal(self, msg):
+        pose = atlasCommandToDrakePose(msg)
+        qp_input_msg = self.drakePoseToQPInput(pose)
+        lcmUtils.publish(self.publishChannel, qp_input_msg)
+
+    def drakePoseToQPInput(self, pose):
+        msg = lcmt_qp_controller_input()
+        msg.timestamp = getUtime()
+        msg.num_support_data = 0
+        msg.num_tracked_bodies = 0
+        msg.num_external_wrenches = 0
+        msg.num_joint_pd_overrides = 0
+        msg.param_set_name = 'position_control'
+
+        whole_body_data = lcmt_whole_body_data()
+        whole_body_data.timestamp = getUtime()
+        whole_body_data.num_positions = self.numPositions
+        whole_body_data.q_des = pose
+        whole_body_data.num_constrained_dofs = self.numPositions - 6
+        whole_body_data.constrained_dofs = range(7, self.numPositions+1)
+        msg.whole_body_data = whole_body_data
+
+        return msg
+
+
 def parseArgs():
 
     parser = argparse.ArgumentParser()
@@ -741,7 +779,9 @@ def parseArgs():
     p.add_argument('--robot', dest='mode', action='store_const', const='robot')
     p.add_argument('--debug', dest='mode', action='store_const', const='debug')
     p.add_argument('--robotDrivingGains', dest='mode', action='store_const', const='robotDrivingGains')
-
+    p.add_argument('--robotWithController', dest='mode', action='store_const', const='robotWithController')
+    p.add_argument('--robotDrivingGainsWithController', dest='mode', action='store_const', const='robotDrivingGainsWithController')
+    p.add_argument('--controllerPublisher', dest='mode', action='store_const', const='controllerPublisher')
     args, unknown = parser.parse_known_args()
     return args
 
@@ -756,6 +796,12 @@ def main():
         robotMain()
     elif args.mode == 'robotDrivingGains':
         robotMain(useDrivingGains=True)
+    elif args.mode == 'robotWithController':
+        robotMain(useController=True)
+    elif args.mode == 'robotDrivingGainsWithController':
+        robotMain(useDrivingGains=True, useController=False)
+    elif args.mode == 'controllerPublisher':
+        positionGoalPublisherMain()
     else:
         debugMain()
 
@@ -774,21 +820,29 @@ def debugMain():
     ConsoleApp.start()
 
 
-def robotMain(useDrivingGains=False):
+def robotMain(useDrivingGains=False, useController=False):
 
     print 'waiting for robot state...'
     commandStream.waitForRobotState()
     print 'starting.'
     commandStream.timer.targetFps = 1000
-    commandStream.publishChannel = 'ATLAS_COMMAND'
-    commandStream.startStreaming()
+
+    if useController==True:
+        commandStream.publishChannel = 'WHOLE_BODY_POSITION_GOAL'
+    else:
+        commandStream.publishChannel = 'ATLAS_COMMAND'
+
     if useDrivingGains:
         commandStream.applyDrivingDefaults()
 
+    commandStream.startStreaming()
     positionListener = PositionGoalListener()
     planListener = CommittedRobotPlanListener()
     ConsoleApp.start()
 
+def positionGoalPublisherMain():
+    publisher = ControllerPositionGoalPublisher('WHOLE_BODY_POSITION_GOAL', 'QP_CONTROLLER_INPUT')
+    ConsoleApp.start()
 
 if __name__ == '__main__':
     main()
