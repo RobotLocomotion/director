@@ -49,7 +49,7 @@ class ConstraintSet(object):
         self.seedPoseName = None
         self.nominalPoseName = None
 
-    def runIk(self):
+    def runIk(self, ikParameters=None):
 
         seedPoseName = self.seedPoseName
         if not seedPoseName:
@@ -63,7 +63,9 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
+
+        self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, ikParameters, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
         print 'info:', self.info
         return self.endPose, self.info
 
@@ -99,7 +101,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.ikPlanner = ikPlanner
 
         self.addProperty('Use pointwise', ikPlanner.defaultIkParameters.usePointwise)
-        self.addProperty('Use collision', ikServer.useCollision)
+        self.addProperty('Use collision', ikPlanner.defaultIkParameters.useCollision)
         self.addProperty('Collision min distance', ikServer.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikServer.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
@@ -125,8 +127,8 @@ class IkOptionsItem(om.ObjectModelItem):
             self.ikPlanner.defaultIkParameters.usePointwise = self.getProperty(propertyName)
 
         if propertyName == 'Use collision':
-            self.ikServer.useCollision = self.getProperty(propertyName)
-            if self.ikServer.useCollision:
+            self.ikPlanner.defaultIkParameters.useCollision = self.getProperty(propertyName)
+            if self.ikPlanner.defaultIkParameters.useCollision:
                 self.setProperty('Use pointwise', False)
                 self.setProperty('Add knots', 2)
                 self.setProperty('Quasistatic shrink factor', 0.5)
@@ -1244,14 +1246,17 @@ class IKPlanner(object):
     def addPostureGoalListener(self, stateJointController):
         lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, functools.partial(self.onPostureGoalMessage, stateJointController))
 
+    def mergeWithDefaultIkParameters(self, ikParameters):
+        if ikParameters is None:
+            ikParameters = IkParameters()
+        ikParameters.fillInWith(self.defaultIkParameters)
+        return ikParameters
 
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
 
         listener = self.getManipPlanListener()
 
-        if ikParameters is None:
-            ikParameters = IkParameters()
-        ikParameters.fillInWith(self.defaultIkParameters)
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
         print 'traj info:', info
