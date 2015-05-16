@@ -777,7 +777,6 @@ def parseArgs():
     p.add_argument('--robotDrivingGains', dest='mode', action='store_const', const='robotDrivingGains')
     p.add_argument('--robotWithController', dest='mode', action='store_const', const='robotWithController')
     p.add_argument('--robotDrivingGainsWithController', dest='mode', action='store_const', const='robotDrivingGainsWithController')
-    p.add_argument('--controllerPublisher', dest='mode', action='store_const', const='controllerPublisher')
     args, unknown = parser.parse_known_args()
     return args
 
