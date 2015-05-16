@@ -468,7 +468,7 @@ if usePlanning:
         obj.setProperty('Deletable', False)
 
 if useCOPMonitor:
-    copMonitor = copmonitor.COPMonitor(robotStateModel, robotStateJointController, view);
+    copMonitor = copmonitor.COPMonitor(robotStateModel, robotStateJointController, robotSystem, view);
 
 if useNavigationPanel:
     navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)
