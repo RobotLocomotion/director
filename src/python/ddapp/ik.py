@@ -34,7 +34,6 @@ class AsyncIKCommunicator():
         self.accelerationParam = 2;
         self.accelerationFraction = 0.3;
         self.maxPlanDuration = 30.0
-        self.useCollision = False
         self.fixInitialState = True
         self.numberOfAddedKnots = 0
         self.numberOfInterpolatedCollisionChecks = 2
@@ -197,7 +196,7 @@ class AsyncIKCommunicator():
     def clearEnvironment(self):
         self.setEnvironment('')
 
-    def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):
+    def runIk(self, constraints, ikParameters, nominalPostureName=None, seedPostureName=None):
 
         commands = []
         commands.append('\n%-------- runIk --------\n')
@@ -229,7 +228,7 @@ class AsyncIKCommunicator():
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
         commands.append('\n')
-        commands.append('use_collision = %s;' % ('true' if self.useCollision else 'false'))
+        commands.append('use_collision = %s;' % ('true' if ikParameters.useCollision else 'false'))
         commands.append('[q_end, info, infeasible_constraint] = s.runIk(ik_seed_pose, ik_nominal_pose, active_constraints, use_collision);')
         commands.append('\n')
 
@@ -300,7 +299,7 @@ class AsyncIKCommunicator():
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
         commands.append('\n')
 
-        if self.useCollision:
+        if ikParameters.useCollision:
             commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
             commands.append('options.n_interp_points = %s;' % self.numberOfInterpolatedCollisionChecks)
@@ -338,7 +337,7 @@ class AsyncIKCommunicator():
         commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s, body_rescale_options); end;' % (self.accelerationParam, self.accelerationFraction))
 
         if ikParameters.usePointwise:
-            assert not self.useCollision
+            assert not ikParameters.useCollision
             commands.append('\n%--- pointwise ik --------\n')
             commands.append('if ~isempty(qtraj), num_pointwise_time_points = 20; end;')
             commands.append('if ~isempty(qtraj), pointwise_time_points = linspace(qtraj.tspan(1), qtraj.tspan(2), num_pointwise_time_points); end;')

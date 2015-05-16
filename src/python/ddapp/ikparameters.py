@@ -4,11 +4,13 @@ class IkParameters(FieldContainer):
 
     def __init__(self, **kwargs):
         self._add_fields(
-            usePointwise = None
+            usePointwise = None,
+            useCollision = None
         )
 
     def setToDefaults(self):
         self.usePointwise = True
+        self.useCollision = False
 
     def fillInWith(self, other):
         for field, value in self:
