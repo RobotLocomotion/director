@@ -264,31 +264,26 @@ class EndEffectorTeleopPanel(object):
         if self.getLFootPlanningSupportEnabled():
             self.setLFootExecutionSupportEnabled(True)
         self.updateConstraints()
-        self.updateQuasistaticFlag()
 
     def rightFootPlanningSupportCheckboxChanged(self):
         if self.getRFootPlanningSupportEnabled():
             self.setRFootExecutionSupportEnabled(True)
         self.updateConstraints()
-        self.updateQuasistaticFlag()
 
     def leftHandPlanningSupportCheckboxChanged(self):
         if self.getLHandPlanningSupportEnabled():
             self.setLHandExecutionSupportEnabled(True)
         self.updateConstraints()
-        self.updateQuasistaticFlag()
 
     def rightHandPlanningSupportCheckboxChanged(self):
         if self.getRHandPlanningSupportEnabled():
             self.setRHandExecutionSupportEnabled(True)
         self.updateConstraints()
-        self.updateQuasistaticFlag()
 
     def pelvisPlanningSupportCheckboxChanged(self):
         if self.getPelvisPlanningSupportEnabled():
             self.setPelvisExecutionSupportEnabled(True)
         self.updateConstraints()
-        self.updateQuasistaticFlag()
 
     def updateQuasistaticFlag(self):
         lfootEnabled = self.getLFootExecutionSupportEnabled()
