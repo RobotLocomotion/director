@@ -127,6 +127,9 @@ class DrillPlannerDemo(object):
         self.lockBackForDrilling = False
         self.lockBaseForDrilling = True
 
+        self.drillTrajectoryMaxMetersPerSecond = 0.03
+        self.drillTrajectoryMaxDegreesPerSecond = 15
+
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
         defaultGraspingHand = 'right'
@@ -1090,17 +1093,17 @@ class DrillPlannerDemo(object):
             ikServer = self.ikPlanner.ikServer
 
             ikServer.usePointwise = False
-            ikServer.maxBodyTranslationSpeed = 0.03
+            ikServer.maxBodyTranslationSpeed = self.drillTrajectoryMaxMetersPerSecond
             ikServer.rescaleBodyNames = [handLinkName]
             ikServer.rescaleBodyPts = list(bitToHand.GetPosition())
-            ikServer.maxDegreesPerSecond = 100.0
+            ikServer.maxDegreesPerSecond = self.drillTrajectoryMaxDegreesPerSecond
 
             plan = constraintSet.runIkTraj()
             self.addPlan(plan)
 
             ikServer.rescaleBodyNames = []
             ikServer.rescaleBodyPts = []
-            ikServer.maxDegreesPerSecond = 0.3
+            ikServer.maxDegreesPerSecond = 30
 
         self.constraintSet = constraintSet
         self.updateDrillIk = updateDrillIk
