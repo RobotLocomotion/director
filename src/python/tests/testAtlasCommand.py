@@ -15,7 +15,7 @@ import math
 import argparse
 
 from ddapp.utime import getUtime
-
+from drake import lcmt_qp_controller_input, lcmt_whole_body_data
 
 import scipy.interpolate
 
@@ -76,6 +76,30 @@ def atlasCommandToDrakePose(msg):
     for jointIdx, drakeIdx in jointIndexMap.iteritems():
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()
+
+def drakePoseToQPInput(pose, atlasVersion=5):
+    if atlasVersion == 4:
+        numPositions = 34
+    else:
+        numPositions = 36
+
+    msg = lcmt_qp_controller_input()
+    msg.timestamp = getUtime()
+    msg.num_support_data = 0
+    msg.num_tracked_bodies = 0
+    msg.num_external_wrenches = 0
+    msg.num_joint_pd_overrides = 0
+    msg.param_set_name = 'position_control'
+
+    whole_body_data = lcmt_whole_body_data()
+    whole_body_data.timestamp = getUtime()
+    whole_body_data.num_positions = numPositions
+    whole_body_data.q_des = pose
+    whole_body_data.num_constrained_dofs = numPositions - 6
+    whole_body_data.constrained_dofs = range(7, numPositions+1)
+    msg.whole_body_data = whole_body_data
+
+    return msg
 
 
 def getJointGroups():
@@ -161,6 +185,7 @@ class AtlasCommandStream(object):
         self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.applyDefaults()
+        self.useControllerFlag = False
 
     def initialize(self, currentRobotPose):
         assert not self._initialized
@@ -168,6 +193,10 @@ class AtlasCommandStream(object):
         self._previousCommandedPose = np.array(currentRobotPose)
         self._goalPose = np.array(currentRobotPose)
         self._initialized = True
+
+    def useController(self):
+        self.useControllerFlag = True
+        self.publishChannel = 'QP_CONTROLLER_INPUT'
 
     def setKp(self, Kp, jointName=None):
         if jointName is None:
@@ -227,6 +256,9 @@ class AtlasCommandStream(object):
             msg = robotstate.drakePoseToRobotState(self._currentCommandedPose)
         else:
             msg = drakePoseToAtlasCommand(self._currentCommandedPose)
+
+        if self.useControllerFlag:
+            msg = drakePoseToQPInput(self._currentCommandedPose)
 
         lcmUtils.publish(self.publishChannel, msg)
 
@@ -731,6 +763,8 @@ class AtlasCommandPanel(object):
 
     def resetJointTeleopSliders(self):
         self.jointTeleopPanel.resetPoseToRobotState()
+  
+
 
 def parseArgs():
 
@@ -741,7 +775,8 @@ def parseArgs():
     p.add_argument('--robot', dest='mode', action='store_const', const='robot')
     p.add_argument('--debug', dest='mode', action='store_const', const='debug')
     p.add_argument('--robotDrivingGains', dest='mode', action='store_const', const='robotDrivingGains')
-
+    p.add_argument('--robotWithController', dest='mode', action='store_const', const='robotWithController')
+    p.add_argument('--robotDrivingGainsWithController', dest='mode', action='store_const', const='robotDrivingGainsWithController')
     args, unknown = parser.parse_known_args()
     return args
 
@@ -756,6 +791,10 @@ def main():
         robotMain()
     elif args.mode == 'robotDrivingGains':
         robotMain(useDrivingGains=True)
+    elif args.mode == 'robotWithController':
+        robotMain(useController=True)
+    elif args.mode == 'robotDrivingGainsWithController':
+        robotMain(useDrivingGains=True, useController=False)
     else:
         debugMain()
 
@@ -774,17 +813,22 @@ def debugMain():
     ConsoleApp.start()
 
 
-def robotMain(useDrivingGains=False):
+def robotMain(useDrivingGains=False, useController=False):
 
     print 'waiting for robot state...'
     commandStream.waitForRobotState()
     print 'starting.'
     commandStream.timer.targetFps = 1000
-    commandStream.publishChannel = 'ATLAS_COMMAND'
-    commandStream.startStreaming()
+
+    if useController==True:
+        commandStream.useController()
+    else:
+        commandStream.publishChannel = 'ATLAS_COMMAND'
+
     if useDrivingGains:
         commandStream.applyDrivingDefaults()
 
+    commandStream.startStreaming()
     positionListener = PositionGoalListener()
     planListener = CommittedRobotPlanListener()
     ConsoleApp.start()
