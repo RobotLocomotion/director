@@ -67,7 +67,7 @@ class TerrainTask(object):
         self.stanceBlocks = {'left':None, 'right':None}
         self.useTextures = False
         self.constrainBlockSize = True
-        self.blockFitAlgo = 0
+        self.blockFitAlgo = 1
 
         self.timer = TimerCallback(targetFps=30)
         self.timer.callback = self.updateBlockState
