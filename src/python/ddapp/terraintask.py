@@ -206,7 +206,7 @@ class TerrainTask(object):
         linkName = {'left':'l_foot', 'right':'r_foot'}[side]
         footFrame = self.getFootFrameAtSole(linkName)
 
-        vis.updateFrame(footFrame, 'foot frame ' + side, scale=0.2)
+        vis.updateFrame(footFrame, 'foot frame ' + side, scale=0.2, visible=False)
 
         aff = self.sortAffordancesByDistanceToFrame(affordances, footFrame)[0]
         return aff, footFrame, self.getAffordanceDistanceToFrame(aff, footFrame)
@@ -226,18 +226,18 @@ class TerrainTask(object):
         xyz = footToBlock.GetPosition()
 
 
-        d = DebugData()
-        d.addLine(blockFrame.GetPosition(), footFrame.GetPosition(), color=self.getFootColor(side))
-        vis.updatePolyData(d.getPolyData(), 'foot to block debug %s' % side, colorByName='RGB255')
+        #d = DebugData()
+        #d.addLine(blockFrame.GetPosition(), footFrame.GetPosition(), color=self.getFootColor(side))
+        #vis.updatePolyData(d.getPolyData(), 'foot to block debug %s' % side, colorByName='RGB255')
 
-        if xyz[2] > blockHeight*0.8:
+        if not (-blockHeight*0.5 < xyz[2] < blockHeight):
             return None
 
         #print 'xyz:', xyz
         #print 'max xy offset:', max([abs(xyz[0]), abs(xyz[1])])
         #print 'max block dim:', max([blockLength/2, blockWidth/2])
 
-        if max(np.abs(xyz[0]), abs(xyz[1])) > max(blockLength/2, blockWidth/2):
+        if max(abs(xyz[0]), abs(xyz[1])) > max(blockLength/2.0, blockWidth/2.0):
             return None
 
         return aff
@@ -252,6 +252,9 @@ class TerrainTask(object):
 
     def getBlockRowColumn(self, blockAffordance):
         return [int(s) for s in re.findall('\d+', blockAffordance.getProperty('Name'))]
+
+    def sideToFootLinkName(self, side):
+        return {'left':'l_foot', 'right':'r_foot'}[side]
 
     def sideToColumn(self, side):
         return ['right', 'left'].index(side)
@@ -293,6 +296,8 @@ class TerrainTask(object):
 
     def organizeFitBlocks(self):
 
+        self.updateBlockState()
+
         blocks = self.getFitCinderblockAffordances()
 
         if not blocks:
@@ -313,6 +318,9 @@ class TerrainTask(object):
 
         # remove blocks under the feet or behind the robot
         for side in ['left', 'right']:
+            if not self.stanceBlocks[side]:
+                continue
+
             nearBlock = self.getCinderblockUnderFoot(side)
             om.removeFromObjectModel(nearBlock)
             for block in self.getRearBlocks(side):
@@ -320,16 +328,18 @@ class TerrainTask(object):
 
         # add current row to names and remove temp name
         blocks = self.getCinderblockAffordances()
-        minRow = min([self.getBlockRowColumn(block)[0] for block in blocks])
+        if blocks:
 
-        for block in blocks:
-            r, c = self.getBlockRowColumn(block)
-            side = self.columnToSide(c)
-            newRow = (r - minRow) + self.currentRow[side] + 1
-            block.rename('%s (%d,%d)' % (originalPrefix, newRow , c))
+            minRow = min([self.getBlockRowColumn(block)[0] for block in blocks])
+
+            for block in blocks:
+                r, c = self.getBlockRowColumn(block)
+                side = self.columnToSide(c)
+                newRow = (r - minRow) + self.currentRow[side] + 1
+                block.rename('%s (%d,%d)' % (originalPrefix, newRow , c))
 
         self.cinderblockPrefix = originalPrefix
-
+        self.updateBlockState()
 
     def getFrontBlocks(self, side):
         row = self.currentRow[side]
@@ -381,6 +391,9 @@ class TerrainTask(object):
 
 
     def deleteFrontBlocks(self):
+
+        self.updateBlockState()
+
         for side in ['left', 'right']:
             for block in self.getFrontBlocks(side):
                 om.removeFromObjectModel(block)
@@ -551,6 +564,7 @@ class TerrainTask(object):
         for i, block in enumerate(blocks):
             om.removeFromObjectModel(block)
             blockRows[int(round((blockXYZInStance[i,0] - minBlockX) / blockLength))].append(i)
+
         # Then sort by y (in stance frame)
         for row_id, row in blockRows.iteritems():
             yInLocal = [blockXYZInStance[i, 1] for i in row]
@@ -559,6 +573,7 @@ class TerrainTask(object):
         for row_id in sorted(blockRows.keys()):
             for col_id, block in enumerate(blockRows[row_id]):
                 block['Name'] = '%s (%d,%d)' % (self.cinderblockPrefix, row_id, col_id)
+                del block['uuid']
                 self.robotSystem.affordanceManager.newAffordanceFromDescription(block)
 
 
@@ -709,6 +724,38 @@ class TerrainTask(object):
         footFrame.Translate(footSoleToOrigin)
         return footFrame
 
+
+    def snapCinderblocksAtFeet(self):
+
+        for side in ['left', 'right']:
+            block = self.getCinderblockUnderFoot(side)
+
+            print '%s block: %s' % (side, block.getProperty('Name') if block else None)
+            if not block:
+                continue
+
+            blockFrame = block.getChildFrame()
+            footFrame = self.getFootFrameAtSole(self.sideToFootLinkName(side))
+
+            footRpy = transformUtils.rollPitchYawFromTransform(footFrame)
+            blockRpy =  transformUtils.rollPitchYawFromTransform(blockFrame.transform)
+            blockRpy[0] = footRpy[0]
+            blockRpy[1] = footRpy[1]
+
+            newBlockFrame = transformUtils.frameFromPositionAndRPY(blockFrame.transform.GetPosition(), np.degrees(blockRpy))
+            blockSurfaceFrame = transformUtils.concatenateTransforms([transformUtils.frameFromPositionAndRPY([0.0, 0.0, blockHeight/2.0], [0.0, 0.0, 0.0]), newBlockFrame])
+
+            blockSurfaceOrigin = blockSurfaceFrame.GetPosition()
+            blockSurfaceNormal = transformUtils.getAxesFromTransform(blockSurfaceFrame)[2]
+            footIntersection = segmentation.intersectLineWithPlane(np.array(footFrame.GetPosition()), np.array([0,0,1]), np.array(blockSurfaceOrigin), np.array(blockSurfaceNormal))
+            zoffset = footIntersection[2] - footFrame.GetPosition()[2]
+
+            newBlockFrame.PostMultiply()
+            newBlockFrame.Translate(0.0, 0.0, -zoffset)
+
+            blockFrame.copyFrame(newBlockFrame)
+
+
     def spawnCinderblocksAtFeet(self):
 
         for linkName in ['l_foot', 'r_foot']:
@@ -716,7 +763,7 @@ class TerrainTask(object):
             blockFrame.PreMultiply()
             blockFrame.Translate(0.0, 0.0, -blockHeight/2.0)
 
-            blockId = len(self.getCinderblockAffordances())
+            blockId = len(self.getFitCinderblockAffordances())
             pose = transformUtils.poseFromTransform(blockFrame)
             desc = dict(classname='BoxAffordanceItem', Name='cinderblock %d' % blockId, Dimensions=[blockLength, blockWidth, blockHeight], pose=pose)
             block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
@@ -834,6 +881,7 @@ class TerrainTaskPanel(TaskUserPanel):
         self.addManualButton('Print footstep offsets', self.terrainTask.printFootstepOffsets)
         self.addManualSpacer()
         self.addManualButton('Delete front blocks', self.terrainTask.deleteFrontBlocks)
+        self.addManualButton('Snap foot blocks', self.terrainTask.snapCinderblocksAtFeet)
 
 
         #self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
@@ -846,9 +894,10 @@ class TerrainTaskPanel(TaskUserPanel):
 
 
     def addDefaultProperties(self):
-        self.params.addProperty('Camera Texture', False)
         self.params.addProperty('Block Fit Algo', self.terrainTask.blockFitAlgo, attributes=om.PropertyAttributes(enumNames=['MinArea', 'ClosestSize']))
         self.params.addProperty('Constrain Block Size', self.terrainTask.constrainBlockSize)
+        self.params.addProperty('Camera Texture', False, attributes=om.PropertyAttributes(hidden=False))
+
 
     def onPropertyChanged(self, propertySet, propertyName):
         if propertyName == 'Camera Texture':
