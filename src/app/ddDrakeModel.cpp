@@ -1,7 +1,6 @@
 #include "ddDrakeModel.h"
 #include "ddSharedPtr.h"
 
-#include <ForceTorqueMeasurement.h>
 #include <shapes/Geometry.h>
 
 #include <vtkPolyData.h>

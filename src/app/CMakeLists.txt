@@ -131,7 +131,6 @@ if (USE_DRAKE)
   list(APPEND deps
     ${DRAKE_LIBRARIES}
     ${Boost_LIBRARIES}
-    drakeConvexHull
   )
 
 endif()
