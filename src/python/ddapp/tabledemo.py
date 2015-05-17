@@ -438,20 +438,24 @@ class TableDemo(object):
 
 
     ####### Module for an arm to sweep out a gaze-constrained trajectory to map an area:
+    ######### Target Focused Functions ##################################################################
     def spawnTargetAffordance(self):
         for obj in om.getObjects():
              if obj.getProperty('Name') == 'target':
                  om.removeFromObjectModel(obj)
 
+        # These are input settings that should be set in the class:
+        self.targetSweepType = 'gaze' # gaze or orientation
         length = 0.3
-        targetFrame = transformUtils.frameFromPositionAndRPY([0.6,0.2,0.6],[0,-90,0])
+        self.coneThresholdDegrees = 5.0 # 0 is ok for reaching but often too tight for a trajectory
+        targetFrame = transformUtils.frameFromPositionAndRPY([0.6,0.2,0.6],[180,0,90])
 
         folder = om.getOrCreateContainer('affordances')
         z = DebugData()
         z.addLine(np.array([0,0,0]), np.array([-length,0,0]), radius=0.02) # main bar
-        z.addLine(np.array([-length,0,0]), np.array([-length,-length,0]), radius=0.02) # main bar
-        z.addLine(np.array([-length,-length,0]), np.array([0,-length,0]), radius=0.02) # main bar
-        z.addLine(np.array([0,-length,0]), np.array([0,0,0]), radius=0.02) # main bar
+        z.addLine(np.array([-length,0,0]), np.array([-length,0,length]), radius=0.02) # main bar
+        z.addLine(np.array([-length,0,length]), np.array([0,0,length]), radius=0.02) # main bar
+        z.addLine(np.array([0,0,length]), np.array([0,0,0]), radius=0.02) # main bar
         targetMesh = z.getPolyData()
 
         self.targetAffordance = vis.showPolyData(targetMesh, 'target', color=[0.0, 1.0, 0.0], cls=affordanceitems.FrameAffordanceItem, parent=folder, alpha=0.3)
@@ -474,7 +478,7 @@ class TableDemo(object):
         self.targetPathMesh = vis.showPolyData(pathMesh, 'target frame desired path', color=[0.0, 0.3, 1.0], parent=self.targetAffordance, alpha=0.6)
         self.targetPathMesh.actor.SetUserTransform(self.targetFrame)
 
-    def resetTurnPath(self):
+    def resetTargetPath(self):
         for obj in om.getObjects():
             if obj.getProperty('Name') == 'target frame desired':
                 om.removeFromObjectModel(obj)
@@ -482,37 +486,24 @@ class TableDemo(object):
             if obj.getProperty('Name') == 'target frame desired path':
                 om.removeFromObjectModel(obj)
 
-    def computeTouchFrame(self):
+    def computeNextTargetFrame(self):
         assert self.targetAffordance
-        t = transformUtils.frameFromPositionAndRPY(self.nextPosition, [-90, 0, 90])
+        t = transformUtils.frameFromPositionAndRPY(self.nextPosition, [0, 0, 0])
         self.faceTransformLocal = transformUtils.copyFrame(t) # copy required
         t.Concatenate(self.targetFrame)
         self.faceFrameDesired = vis.showFrame(t, 'target frame desired', parent=self.targetAffordance, visible=False, scale=0.2)
 
-    def appendPositionOrientationConstraintForTargetFrame(self, goalFrame, t):
-        positionConstraint, orientationConstraint = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
-        positionConstraint.tspan = [t, t]
-        orientationConstraint.tspan = [t, t]
-        self.constraintSet.constraints.append(positionConstraint)
-        self.constraintSet.constraints.append(orientationConstraint)
 
-    def addConstraintForTargetFrame(self,t):
-        self.targetSweepType = 'orientation'
-        if (self.targetSweepType is not 'gaze'):
-            self.appendPositionOrientationConstraintForTargetFrame(self.faceFrameDesired, t)
-        else:
-            palmGazeAxis = self.ikPlanner.getPalmToHandLink(self.graspingHand).TransformVector([0,-1,0])
-            self.appendPositionGazeConstraintForTargetFrame(self.faceFrameDesired, t, targetAxis=[0.0, 0.0, -1.0], bodyAxis=palmGazeAxis)
-
+    ######### Higher Level Planning Functions ##################################################################
     def planTargetSweep(self):
         self.graspingHand = 'left'
 
         self.nextPosition =[0,0,0]
         self.targetPath = []
-        self.resetTurnPath()
+        self.resetTargetPath()
 
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
-        self.computeTouchFrame()
+        self.computeNextTargetFrame()
         self.initConstraintSet()
         self.targetPath.append(self.faceTransformLocal)
 
@@ -520,26 +511,26 @@ class TableDemo(object):
         deltaDistance = self.targetAffordance.params.get('length') / pointsPerSide # 5cm was good
         for i in xrange(pointsPerSide*0,pointsPerSide*1):
             self.nextPosition[0] += -deltaDistance
-            self.computeTouchFrame()
-            self.addConstraintForTargetFrame(i+1)
+            self.computeNextTargetFrame()
+            self.addConstraintForTargetFrame(self.faceFrameDesired, i+1)
             self.targetPath.append(self.faceTransformLocal)
 
         for i in xrange(pointsPerSide*1,pointsPerSide*2):
-            self.nextPosition[1] += -deltaDistance
-            self.computeTouchFrame()
-            self.addConstraintForTargetFrame(i+1)
+            self.nextPosition[2] += deltaDistance
+            self.computeNextTargetFrame()
+            self.addConstraintForTargetFrame(self.faceFrameDesired, i+1)
             self.targetPath.append(self.faceTransformLocal)
 
         for i in xrange(pointsPerSide*2,pointsPerSide*3):
             self.nextPosition[0] += deltaDistance
-            self.computeTouchFrame()
-            self.addConstraintForTargetFrame(i+1)
+            self.computeNextTargetFrame()
+            self.addConstraintForTargetFrame(self.faceFrameDesired, i+1)
             self.targetPath.append(self.faceTransformLocal)
 
         for i in xrange(pointsPerSide*3,pointsPerSide*4):
-            self.nextPosition[1] += deltaDistance
-            self.computeTouchFrame()
-            self.addConstraintForTargetFrame(i+1)
+            self.nextPosition[2] += -deltaDistance
+            self.computeNextTargetFrame()
+            self.addConstraintForTargetFrame(self.faceFrameDesired, i+1)
             self.targetPath.append(self.faceTransformLocal)
 
         self.drawTargetPath()
@@ -547,7 +538,18 @@ class TableDemo(object):
         self.planTrajectory()
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
-    ###################################################################################
+    def planTargetReach(self):
+        self.graspingHand='left'
+        self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
+
+        # A single one shot gaze-constrained reach: place xyz at goal and align y-axis of hand with x-axis of goal
+        worldToTargetFrame = vis.updateFrame(self.targetFrame, 'gaze goal', visible=False, scale=0.2, parent=om.getOrCreateContainer('affordances'))
+
+        self.initConstraintSet()
+        self.addConstraintForTargetFrame(worldToTargetFrame, 1)
+        self.planTrajectory()
+
+    ######### Lower Level Planning Functions ##################################################################
     def planTrajectory(self):
         self.ikPlanner.ikServer.usePointwise = False
         plan = self.constraintSet.runIkTraj()
@@ -567,9 +569,16 @@ class TableDemo(object):
         bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=self.lockBase, lockBack=self.lockBack, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
         self.constraintSet.constraints.extend(bodyConstraints)
 
+    def addConstraintForTargetFrame(self,goalFrame, t):
+        if (self.targetSweepType is 'orientation'):
+            self.appendPositionOrientationConstraintForTargetFrame(goalFrame, t)
+        elif (self.targetSweepType is 'gaze'):
+            # align the palmGazeAxis axis (on the hand) with the vector 'targetAxis' from worldToTargetFrame?
+            palmGazeAxis = self.ikPlanner.getPalmToHandLink(self.graspingHand).TransformVector([0,1,0])
+            self.appendPositionGazeConstraintForTargetFrame(goalFrame, t, targetAxis=[0.0, 0.0, 1.0], bodyAxis=palmGazeAxis)
+
     def appendPositionGazeConstraintForTargetFrame(self, goalFrame, t, targetAxis=[-1.0, 0.0, 0.0], bodyAxis=[-1.0, 0.0, 0.0]):
-        coneThresholdDegrees = 0.0
-        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees , targetAxis, bodyAxis)
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, self.coneThresholdDegrees , targetAxis, bodyAxis)
         gazeConstraint.tspan = [t, t]
         self.constraintSet.constraints.insert(0, gazeConstraint)
 
@@ -577,22 +586,12 @@ class TableDemo(object):
         positionConstraint.tspan = [t, t]
         self.constraintSet.constraints.append(positionConstraint)
 
-    def planTargetReach(self):
-        self.graspingHand='left'
-        self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
-
-        # A single one shot gaze-constrained reach: place xyz at goal and align y-axis of hand with x-axis of goal
-        worldToTargetFrame = vis.updateFrame(self.targetFrame, 'gaze goal', visible=False, scale=0.2, parent=om.getOrCreateContainer('affordances'))
-
-        self.initConstraintSet()
-
-        # align the palmGazeAxis axis (on the hand) with the vector 'targetAxis' from worldToTargetFrame
-        palmGazeAxis = self.ikPlanner.getPalmToHandLink(self.graspingHand).TransformVector([0,1,0])
-        self.appendPositionGazeConstraintForTargetFrame(worldToTargetFrame, 1, targetAxis=[1.0, 0.0, 0.0], bodyAxis=palmGazeAxis)
-
-        #self.appendPositionOrientationConstraintForTargetFrame(worldToTargetFrame, 1)
-
-        self.planTrajectory()
+    def appendPositionOrientationConstraintForTargetFrame(self, goalFrame, t):
+        positionConstraint, orientationConstraint = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
+        positionConstraint.tspan = [t, t]
+        orientationConstraint.tspan = [t, t]
+        self.constraintSet.constraints.append(positionConstraint)
+        self.constraintSet.constraints.append(orientationConstraint)
 
 
     ### End Planning Functions ####################################################################
