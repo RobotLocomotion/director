@@ -115,11 +115,13 @@ if (USE_DRAKE)
   set(moc_srcs)
   qt4_wrap_cpp(moc_srcs
     ddDrakeModel.h
+    ddDrakeWrapper.h
   )
 
   list(APPEND srcs
     ${moc_srcs}
     ddDrakeModel.cpp
+    ddDrakeWrapper.cpp
   )
 
   list(APPEND wrap_files
@@ -129,6 +131,7 @@ if (USE_DRAKE)
   list(APPEND deps
     ${DRAKE_LIBRARIES}
     ${Boost_LIBRARIES}
+    drakeConvexHull
   )
 
 endif()

@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QColor>
 #include <QVector>
+#include <RigidBodyManipulator.h>
+#include "ddSharedPtr.h"
 
 class vtkRenderer;
 class vtkTransform;
@@ -22,6 +24,8 @@ public:
   bool loadFromXML(const QString& xmlString);
   const QString& filename() const;
 
+  const ddSharedPtr<RigidBodyManipulator> getDrakeRBM() const;
+
   void addToRenderer(vtkRenderer* renderer);
   void removeFromRenderer(vtkRenderer* renderer);
 
@@ -31,7 +35,6 @@ public:
   QVector<double> getJointPositions(const QList<QString>& jointNames) const;
   const QVector<double>& getJointPositions() const;
   QVector<double> getCenterOfMass() const;
-  QVector<double> resolveCenterOfPressure(const QVector<int>& ft_frame_ids, const QVector<double> & ft_in, const QVector<double> & normal_in, const QVector<double> & point_on_contact_plane_in) const;
   QVector<double> getJointLimits(const QString& jointName) const;
   QVector<double> getBodyContactPoints(const QString& bodyName) const;
 
