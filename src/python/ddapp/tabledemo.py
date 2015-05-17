@@ -438,6 +438,7 @@ class TableDemo(object):
 
 
     ####### Module for an arm to sweep out a gaze-constrained trajectory to map an area:
+    # t.spawnTargetAffordance(), t.planTargetReach(), t.planTargetSweep()
     ######### Target Focused Functions ##################################################################
     def spawnTargetAffordance(self):
         for obj in om.getObjects():
