@@ -4,7 +4,9 @@ from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import objectmodel as om
 from ddapp import ik
+from ddapp.ikplanner import ConstraintSet
 from ddapp import polarisplatformplanner
+from ddapp import robotstate
 from ddapp import segmentation
 from ddapp import sitstandplanner
 from ddapp.timercallback import TimerCallback
@@ -26,30 +28,30 @@ class PolarisModel(object):
     def __init__(self):
         pose = transformUtils.poseFromTransform(vtk.vtkTransform())
         desc = dict(classname='MeshAffordanceItem', Name='polaris',
-                    Filename='software/models/polaris/polaris_pointcloud.vtp', pose=pose)
+                    Filename='software/models/polaris/polaris_cropped.vtp', pose=pose)
         self.affordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         self.aprilTagFrame = vis.updateFrame(vtk.vtkTransform(), 'grab bar april tag',
-                                             visible=True, scale=0.2)
+                                             visible=True, scale=0.2, parent=self.affordance)
 
         t = transformUtils.transformFromPose(np.array([-0.99548239, 0.04156693, 0.35259928]),
                                              np.array([ 0.18827199, 0.84761397, 0.41552535,
                                                        0.27100351]))
-        self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot 0', scale=0.2,visible=True)
+        self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.affordance)
 
         t = transformUtils.transformFromPose(np.array([-0.93707546,  0.07409333,  0.32871604]),
                                              np.array([ 0.22455191,  0.71396247,  0.60983921,
                                                        0.26063418]))
-        self.leftFootEgressInsideFrame  = vis.updateFrame(t, 'left foot 1', scale=0.2,visible=True)
+        self.leftFootEgressInsideFrame  = vis.updateFrame(t, 'left foot inside', scale=0.2,visible=True, parent=self.affordance)
 
         t = transformUtils.transformFromPose(np.array([-0.89783714,  0.23503719,  0.29039189]),
                                              np.array([ 0.2331762 ,  0.69031269,  0.6311807,
                                                        0.2659101]))
-        self.leftFootEgressMidFrame  = vis.updateFrame(t, 'left foot 2', scale=0.2,visible=True)
+        self.leftFootEgressMidFrame  = vis.updateFrame(t, 'left foot mid', scale=0.2,visible=True, parent=self.affordance)
 
         t = transformUtils.transformFromPose(np.array([-0.88436275,  0.50939115,  0.31281047]),
                                              np.array([ 0.22600245,  0.69177731,  0.63305905,
                                                        0.26382435]))
-        self.leftFootEgressOutsideFrame  = vis.updateFrame(t, 'left foot 3', scale=0.2,visible=True)
+        self.leftFootEgressOutsideFrame  = vis.updateFrame(t, 'left foot outside', scale=0.2,visible=True, parent=self.affordance)
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(self.aprilTagFrame)
         self.frameSync.addFrame(self.affordance.getChildFrame(), ignoreIncoming=True)
@@ -71,8 +73,58 @@ class PolarisModel(object):
 
 class EgressPlanner(object):
 
+    def __init__(self, robotSystem):
+
+        self.liftHeight = 0.1
+        self.legLiftAngle = 8
+
+        self.robotSystem = robotSystem
+        self.polaris = None
+
     def spawnPolaris(self):
-        self.car = PolarisModel()
+        self.polaris = PolarisModel()
+
+    def createLeftFootPoseConstraint(self, targetFrame, tspan=[-np.inf,np.inf]):
+        positionConstraint, orientationConstraint = self.robotSystem.ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, vtk.vtkTransform())
+        positionConstraint.tspan = tspan
+        orientationConstraint.tspan = tspan
+        return positionConstraint, orientationConstraint
+
+    def createAllButLeftLegPostureConstraint(self, poseName):
+        joints = robotstate.matchJoints('^(?!l_leg)')
+        return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
+
+
+    def getPlanningStartPose(self):
+        return self.robotSystem.robotStateJointController.getPose('EST_ROBOT_STATE')
+
+    def planFootLiftInCar(self):
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_lift_start'
+        jointId = robotstate.getDrakePoseJointNames().index('l_leg_kny')
+        knyDesired = startPose[jointId] + np.radians(self.legLiftAngle)
+        jointId = robotstate.getDrakePoseJointNames().index('l_leg_aky')
+        akyDesired = startPose[jointId] - np.radians(self.legLiftAngle)
+        postureJoints = {'l_leg_kny': knyDesired, 'l_leg_aky': akyDesired}
+        endPose = self.robotSystem.ikPlanner.mergePostures(startPose, postureJoints)
+        plan = self.robotSystem.ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
+        return plan
+
+    def planFootStartPlacement(self):
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_egress_start'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_egress_end'
+        #footFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('l_foot', startPose)
+        #t = transformUtils.frameFromPositionAndRPY([0, 0, self.liftHeight], [0, 0, 0])
+        #liftFrame = transformUtils.concatenateTransforms([t, footFrame])
+        constraints = []
+        constraints.append(self.createAllButLeftLegPostureConstraint(startPoseName))
+        constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressStartFrame, tspan=[1,1]))
+        constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
+
+        constraintSet.runIk()
+        return constraintSet.planEndPoseGoal(feetOnGround=False)
 
 
 class EgressPanel(TaskUserPanel):
