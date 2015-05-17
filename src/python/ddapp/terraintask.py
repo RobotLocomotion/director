@@ -66,6 +66,8 @@ class TerrainTask(object):
         self.currentRow = {'left':-1, 'right':-1}
         self.stanceBlocks = {'left':None, 'right':None}
         self.useTextures = False
+        self.constrainBlockSize = True
+        self.blockFitAlgo = 0
 
         self.timer = TimerCallback(targetFps=30)
         self.timer.callback = self.updateBlockState
@@ -95,8 +97,12 @@ class TerrainTask(object):
     def requestBlockFit(self):
         msg = lcmdrc.block_fit_request_t()
         msg.utime = getUtime()
-        msg.dimensions = [blockWidth, blockLength, blockHeight]
+        if self.constrainBlockSize:
+            msg.dimensions = [blockLength, blockWidth, blockHeight]
+        else:
+            msg.dimensions = [0, 0, blockHeight]
         msg.name_prefix = 'cinderblock'
+        msg.algorithm = self.blockFitAlgo
         lcmUtils.publish('BLOCK_FIT_TRIGGER', msg)
 
     def spawnGroundAffordance(self):
@@ -841,10 +847,16 @@ class TerrainTaskPanel(TaskUserPanel):
 
     def addDefaultProperties(self):
         self.params.addProperty('Camera Texture', False)
+        self.params.addProperty('Block Fit Algo', self.terrainTask.blockFitAlgo, attributes=om.PropertyAttributes(enumNames=['MinArea', 'ClosestSize']))
+        self.params.addProperty('Constrain Block Size', self.terrainTask.constrainBlockSize)
 
     def onPropertyChanged(self, propertySet, propertyName):
         if propertyName == 'Camera Texture':
             self.terrainTask.useTextures = self.params.getProperty(propertyName)
+        if propertyName == 'Block Fit Algo':
+            self.terrainTask.blockFitAlgo = self.params.getProperty(propertyName)
+        if propertyName == 'Constrain Block Size':
+            self.terrainTask.constrainBlockSize = self.params.getProperty(propertyName)
 
     def generateFootsteps(self):
 
