@@ -702,31 +702,31 @@ class IKPlanner(object):
 
     def createMovingBodyConstraints(self, startPoseName, lockBase=False, lockBack=False, lockLeftArm=False, lockRightArm=False):
 
-        constraints = []
-        if self.useQuasiStaticConstraint:
-            constraints.append(self.createQuasiStaticConstraint())
+        if (self.fixedBaseArm==False):
 
-        constraints.extend(self.createFixedFootConstraints(startPoseName))
+            constraints = []
+            if self.useQuasiStaticConstraint:
+                constraints.append(self.createQuasiStaticConstraint())
 
-        if lockBack:
-            constraints.append(self.createLockedBackPostureConstraint(startPoseName))
-        else:
-            constraints.append(self.createMovingBackPostureConstraint())
+            constraints.extend(self.createFixedFootConstraints(startPoseName))
 
-        if lockBase:
-            constraints.append(self.createLockedBasePostureConstraint(startPoseName))
-        else:
-            #constraints.append(self.createMovingKneePostureConstraint())
-            constraints.append(self.createMovingBasePostureConstraint(startPoseName))
+            if lockBack:
+                constraints.append(self.createLockedBackPostureConstraint(startPoseName))
+            else:
+                constraints.append(self.createMovingBackPostureConstraint())
 
+            if lockBase:
+                constraints.append(self.createLockedBasePostureConstraint(startPoseName))
+            else:
+                #constraints.append(self.createMovingKneePostureConstraint())
+                constraints.append(self.createMovingBasePostureConstraint(startPoseName))
 
-        if lockLeftArm:
-            constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
-        if lockRightArm:
-            constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
+            if lockLeftArm:
+                constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
+            if lockRightArm:
+                constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
 
-        # Remove all except the fixed base constraint if you only have an arm:
-        if (self.fixedBaseArm==True):
+        else: # Remove all except the fixed base constraint if you only have an arm:
             constraints = []
             constraints.append(self.createLockedBasePostureConstraint(startPoseName))
 
