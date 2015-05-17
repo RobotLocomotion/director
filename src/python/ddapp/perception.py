@@ -358,7 +358,7 @@ class NeckDriver(object):
         self.delta = 0
         self.textObj = None
         self._getNeckPitchFunction = getNeckPitchFunction
-        self.presetMap = {0:0, 1:80, 2:60, 3:30}
+        self.presetMap = {0:0, 1:60, 2:45, 3:30}
 
     def showText(self, neckPitch):
         if not self.view:
