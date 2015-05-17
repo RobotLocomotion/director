@@ -224,6 +224,15 @@ class IKPlanner(object):
         if 'fixInitialState' in ikParameterDict:
             originalIkParameterDict['fixInitialState'] = self.ikServer.fixInitialState
             self.ikServer.fixInitialState = ikParameterDict['fixInitialState']
+        if 'leftFootSupportEnabled' in ikParameterDict:
+            originalIkParameterDict['leftFootSupportEnabled'] = self.leftFootSupportEnabled
+            self.leftFootSupportEnabled = ikParameterDict['leftFootSupportEnabled']
+        if 'rightFootSupportEnabled' in ikParameterDict:
+            originalIkParameterDict['rightFootSupportEnabled'] = self.rightFootSupportEnabled
+            self.rightFootSupportEnabled = ikParameterDict['rightFootSupportEnabled']
+        if 'pelvisSupportEnabled' in ikParameterDict:
+            originalIkParameterDict['pelvisSupportEnabled'] = self.pelvisSupportEnabled
+            self.pelvisSupportEnabled = ikParameterDict['pelvisSupportEnabled']
 
         return originalIkParameterDict
 
