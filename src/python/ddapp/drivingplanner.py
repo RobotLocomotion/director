@@ -249,8 +249,8 @@ class DrivingPlanner(object):
 
     def onThrottleCommand(self, msg):
         if np.isnan(self.anklePositions).any():
-            print 'you must initialize the LOW/HIGH ankle positions before streaming throttle commands'
-            print 'use the Capture Ankle Angle Low/High Buttons'
+            # print 'you must initialize the LOW/HIGH ankle positions before streaming throttle commands'
+            # print 'use the Capture Ankle Angle Low/High Buttons'
             return
 
         # slider 0 is the coarse grained slider, slider 1 is for fine grained adjustment

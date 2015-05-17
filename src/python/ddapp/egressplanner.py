@@ -11,6 +11,8 @@ from ddapp import segmentation
 from ddapp import sitstandplanner
 from ddapp.timercallback import TimerCallback
 from ddapp import visualization as vis
+from ddapp import planplayback
+from ddapp import lcmUtils
 
 import os
 import functools
@@ -269,6 +271,95 @@ class EgressPlanner(object):
 
         self.robotSystem.ikPlanner.setIkParameters(originalIkParameterDict)
         return plan
+
+    def planLeftFootDown(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_footdown_start'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_footdown_end'
+        lFoot2World = transformUtils.copyFrame(self.polaris.leftFootEgressOutsideFrame.transform)
+        rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
+        lFoot2World.PostMultiply()
+        lFoot2World.Translate(np.array(rFoot2World.GetPosition()) - lFoot2World.GetPosition())
+        lFoot2World.PreMultiply()
+        lFoot2World.Translate([0.05, 0.26, 0.0])
+        
+        rFootRPY = transformUtils.rollPitchYawFromTransform(rFoot2World)
+        lFootRPY = transformUtils.rollPitchYawFromTransform(lFoot2World);
+        lFootxyz,_ = transformUtils.poseFromTransform(lFoot2World)
+
+        lFootRPY[0] = rFootRPY[0]
+        lFootRPY[1] = rFootRPY[1]
+        lFoot2World = transformUtils.frameFromPositionAndRPY(lFootxyz, np.rad2deg(lFootRPY))
+        
+        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
+        'quasiStaticShrinkFactor': 0.2}
+        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
+        quasiStaticConstraint = ikPlanner.createQuasiStaticConstraint()
+        rfootFixedConstraint = ikPlanner.createFixedFootConstraints(startPoseName)
+        identityFrame = vtk.vtkTransform()
+        lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', lFoot2World, identityFrame)
+        backLocked = ikPlanner.createLockedBackPostureConstraint(startPoseName)
+        armsLocked = ikPlanner.createLockedArmsPostureConstraints(startPoseName)
+
+        constraints = [quasiStaticConstraint, backLocked]
+        constraints.extend(lfootPositionOrientationConstraint)
+        constraints.extend(rfootFixedConstraint)
+        constraints.extend(armsLocked)
+        # return constraints
+        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.seedPoseName = 'q_start'
+        cs.nominalPoseName = 'q_start'
+        endPose = cs.runIk()
+        keyFramePlan = cs.planEndPoseGoal()
+        poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
+        ts = [poseTimes[0], poseTimes[-1]]
+        supportsList = [['r_foot'], ['r_foot','l_foot']]
+        self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
+
+        ikPlanner.setIkParameters(ikParametersOriginal)
+
+
+    def planCenterWeight(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_lean_right'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_egress_end'
+        ikParameterDict = {'leftFootSupportEnabled': True, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
+        'quasiStaticShrinkFactor': 0.2}
+
+        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
+        quasiStaticConstraint = ikPlanner.createQuasiStaticConstraint()
+
+        footFixedConstraints = ikPlanner.createFixedFootConstraints(startPoseName)
+        backConstraint = ikPlanner.createMovingBackLimitedPostureConstraint()
+        armsLocked = ikPlanner.createLockedArmsPostureConstraints(startPoseName)
+
+        constraints = [backConstraint, quasiStaticConstraint]
+        constraints.extend(footFixedConstraints)
+        constraints.extend(armsLocked)
+
+        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.seedPoseName = 'q_start'
+        cs.nominalPoseName = 'q_nom'
+        endPose = cs.runIk()
+        keyFramePlan = cs.planEndPoseGoal()
+        poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
+        ts = [poseTimes[0]]
+        supportsList = [['r_foot','l_foot']]
+        self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
+
+        ikPlanner.setIkParameters(ikParametersOriginal)
+
+
+    def publishPlanWithSupports(self, keyFramePlan, supportsList, ts, isQuasistatic):
+        manipPlanner = self.robotSystem.manipPlanner
+        msg_robot_plan_t = manipPlanner.convertKeyframePlan(keyFramePlan)
+        supports = manipPlanner.getSupportLCMFromListOfSupports(supportsList,ts)
+        msg_robot_plan_with_supports_t = manipPlanner.convertPlanToPlanWithSupports(msg_robot_plan_t, supports, ts, isQuasistatic)
+        lcmUtils.publish('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS', msg_robot_plan_with_supports_t)
 
 
 class EgressPanel(TaskUserPanel):

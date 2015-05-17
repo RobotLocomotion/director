@@ -77,6 +77,32 @@ class ManipulationPlanDriver(object):
         return msg
 
 
+    def getSupportLCMFromListOfSupports(self, supportsList,ts):
+        supports = [0]*len(ts)
+        for i in xrange(len(ts)):
+            supportElement = lcmdrc.support_element_t()
+            supportElement.utime = getUtime()
+            numBodies = len(supportsList[i])
+            supportElement.num_bodies = numBodies
+            supportBodies = []
+            for j in xrange(numBodies):
+                name = supportsList[i][j]
+                if name is 'l_foot':
+                    supportBodies.append(self.getFootSupportBodyMsg('left'))
+                elif name is 'r_foot':
+                    supportBodies.append(self.getFootSupportBodyMsg('right'))
+                elif name is 'pelvis':
+                    supportBodies.append(self.getPelvisSupportBodyMsg())
+                else:
+                    print "passed a support that isn't allowed"
+
+            supportElement.support_bodies = supportBodies
+            supports[i] = supportElement 
+
+        return supports           
+        
+
+
     def getSupports(self):
         if self.publishPlansWithSupports:
             supportElement = lcmdrc.support_element_t()
