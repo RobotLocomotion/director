@@ -270,7 +270,7 @@ class IKPlanner(object):
                                         pelvisEnabled=self.pelvisSupportEnabled)
 
 
-    def createFixedFootConstraints(self, startPose, **kwargs):
+    def createFixedFootConstraints(self, startPoseName, **kwargs):
 
         constraints = []
         linknames = []
@@ -279,7 +279,7 @@ class IKPlanner(object):
         if self.rightFootSupportEnabled:
             linknames.append('r_foot')
         for linkName in linknames:
-            p = self.createFixedLinkConstraints(startPose, linkName, **kwargs)
+            p = self.createFixedLinkConstraints(startPoseName, linkName, **kwargs)
 
             constraints.append(p)
         return constraints
@@ -787,6 +787,9 @@ class IKPlanner(object):
     def flipSide(self, side):
         assert side in ('left', 'right')
         return 'left' if side == 'right' else 'right'
+
+    def createLockedArmsPostureConstraints(self, startPostureName):
+        return [self.createLockedLeftArmPostureConstraint(startPostureName), self.createLockedRightArmPostureConstraint(startPostureName)]
 
 
     def createLockedArmPostureConstraint(self, startPostureName, side=None):
