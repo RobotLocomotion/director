@@ -435,6 +435,7 @@ if usePlanning:
     doorTaskPanel = doordemo.DoorTaskPanel(doorDemo)
 
     terrainTaskPanel = terraintask.TerrainTaskPanel(robotSystem)
+    terrainTask = terrainTaskPanel.terrainTask
 
     egressPanel = egressplanner.EgressPanel(robotSystem)
 
