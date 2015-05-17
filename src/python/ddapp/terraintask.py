@@ -69,9 +69,11 @@ class TerrainTask(object):
         self.constrainBlockSize = True
         self.blockFitAlgo = 1
 
-        self.timer = TimerCallback(targetFps=30)
+        self.timer = TimerCallback(targetFps=10)
         self.timer.callback = self.updateBlockState
 
+        self.defaultLeadingFoot = 'right'
+        self.removeDuringOrganize = False
 
     def startBlockUpdater(self):
         self.timer.start()
@@ -212,8 +214,7 @@ class TerrainTask(object):
         return aff, footFrame, self.getAffordanceDistanceToFrame(aff, footFrame)
 
 
-    def getCinderblockUnderFoot(self, side):
-        affordances = self.getCinderblockAffordances()
+    def getCinderblockUnderFoot(self, affordances, side):
         if not affordances:
             return None
 
@@ -317,14 +318,18 @@ class TerrainTask(object):
         self.sortAndRenameBlocks(blocks)
 
         # remove blocks under the feet or behind the robot
-        for side in ['left', 'right']:
-            if not self.stanceBlocks[side]:
-                continue
 
-            nearBlock = self.getCinderblockUnderFoot(side)
-            om.removeFromObjectModel(nearBlock)
-            for block in self.getRearBlocks(side):
-                om.removeFromObjectModel(block)
+        blocks = self.getCinderblockAffordances()
+
+        if self.removeDuringOrganize:
+            for side in ['left', 'right']:
+                if not self.stanceBlocks[side]:
+                    continue
+
+                nearBlock = self.getCinderblockUnderFoot(blocks, side)
+                om.removeFromObjectModel(nearBlock)
+                for block in self.getRearBlocks(side):
+                    om.removeFromObjectModel(block)
 
         # add current row to names and remove temp name
         blocks = self.getCinderblockAffordances()
@@ -372,7 +377,8 @@ class TerrainTask(object):
 
     def updateCurrentBlockRow(self, side):
 
-        block = self.getCinderblockUnderFoot(side)
+        blocks = self.getCinderblockAffordances()
+        block = self.getCinderblockUnderFoot(blocks, side)
         self.stanceBlocks[side] = block
 
         if not block:
@@ -422,7 +428,7 @@ class TerrainTask(object):
             return 'right' if side == 'left' else 'left'
 
 
-        leadingFoot = 'right'
+        leadingFoot = self.defaultLeadingFoot
 
         if self.currentRow[flipSide(leadingFoot)] < self.currentRow[leadingFoot]:
             leadingFoot = flipSide(leadingFoot)
@@ -454,7 +460,7 @@ class TerrainTask(object):
             d = np.array(block.getProperty('Dimensions'))/2.0
             t = transformUtils.copyFrame(block.getChildFrame().transform)
 
-            yOffset = 0.09
+            yOffset = 0.06
             xOffset = 0.05
             yOffsetSign = -1 if side == 'left' else 1
             xOffsetSign = -1 if side == leadingFoot else 1
@@ -479,8 +485,10 @@ class TerrainTask(object):
 
     def printCinderblocksUnderFoot(self):
 
+        blocks = self.getCinderblockAffordances()
+
         for side in ['left', 'right']:
-            block = self.getCinderblockUnderFoot(side)
+            block = self.getCinderblockUnderFoot(blocks, side)
             print side, block.getProperty('Name') if block else None
 
 
@@ -548,6 +556,9 @@ class TerrainTask(object):
         """
         Sort the blocks into row and column bins using the robot's stance frame, and rename the accordingly
         """
+
+        '''
+
         if not blocks:
             return
 
@@ -576,51 +587,51 @@ class TerrainTask(object):
                 del block['uuid']
                 self.robotSystem.affordanceManager.newAffordanceFromDescription(block)
 
-
         '''
-                if not blocks:
-                    return
 
-                stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        if not blocks:
+            return
 
-                T = stanceFrame.GetLinearInverse()
-                blockXYZInStance = np.vstack((T.TransformPoint(block.getChildFrame().transform.GetPosition()) for block in blocks))
-                minBlockX = blockXYZInStance[:,0].min()
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
 
-                rowToBlocks = defaultdict(lambda: [])
+        T = stanceFrame.GetLinearInverse()
+        blockXYZInStance = np.vstack((T.TransformPoint(block.getChildFrame().transform.GetPosition()) for block in blocks))
+        minBlockX = blockXYZInStance[:,0].min()
 
-
-                # Bin by x (in stance frame)
-                for i, block in enumerate(blocks):
-                    row = int(round((blockXYZInStance[i,0] - minBlockX) / blockLength))
-                    rowToBlocks[row].append(block)
-                    print 'block %s row bin: %d' % (block.getProperty('Name'), row)
-
-                # Then sort by y (in stance frame)
-                for row, rowBlocks in rowToBlocks.iteritems():
-                    print '---------'
-                    print 'sorting row', row
-                    for block in rowBlocks:
-                        print '  %s' % block.getProperty('Name')
-
-                    yInLocal = [blockXYZInStance[blocks.index(block), 1] for block in rowBlocks]
-                    print yInLocal
-
-                    rowBlocks = [rowBlocks[i] for i in np.argsort(yInLocal)]
-
-                    print rowBlocks
-                    rowToBlocks[row] = rowBlocks
-                    print rowToBlocks[row]
+        rowToBlocks = defaultdict(lambda: [])
 
 
-                for row in sorted(rowToBlocks.keys()):
-                    print 'renaming by row,col for row:', row
-                    print rowToBlocks[row]
-                    for col, block in enumerate(rowToBlocks[row]):
-                        newName = '%s (%d,%d)' % (self.cinderblockPrefix, row, col)
-                        print 'renaming %s to: %s' % (block.getProperty('Name'), newName)
-                        block.rename(newName)
-        '''
+        # Bin by x (in stance frame)
+        for i, block in enumerate(blocks):
+            row = int(round((blockXYZInStance[i,0] - minBlockX) / blockLength))
+            rowToBlocks[row].append(block)
+            print 'block %s row bin: %d' % (block.getProperty('Name'), row)
+
+        # Then sort by y (in stance frame)
+        for row, rowBlocks in rowToBlocks.iteritems():
+            print '---------'
+            print 'sorting row', row
+            for block in rowBlocks:
+                print '  %s' % block.getProperty('Name')
+
+            yInLocal = [blockXYZInStance[blocks.index(block), 1] for block in rowBlocks]
+            print yInLocal
+
+            rowBlocks = [rowBlocks[i] for i in np.argsort(yInLocal)]
+
+            print rowBlocks
+            rowToBlocks[row] = rowBlocks
+            print rowToBlocks[row]
+
+
+        for row in sorted(rowToBlocks.keys()):
+            print 'renaming by row,col for row:', row
+            print rowToBlocks[row]
+            for col, block in enumerate(rowToBlocks[row]):
+                newName = '%s (%d,%d)' % (self.cinderblockPrefix, row, col)
+                print 'renaming %s to: %s' % (block.getProperty('Name'), newName)
+                block.rename(newName)
+
 
     def computeSafeRegions(self):
 
@@ -727,8 +738,10 @@ class TerrainTask(object):
 
     def snapCinderblocksAtFeet(self):
 
+        blocks = self.getBoxAffordancesWithNamePrefix('')
+
         for side in ['left', 'right']:
-            block = self.getCinderblockUnderFoot(side)
+            block = self.getCinderblockUnderFoot(blocks, side)
 
             print '%s block: %s' % (side, block.getProperty('Name') if block else None)
             if not block:
@@ -896,16 +909,25 @@ class TerrainTaskPanel(TaskUserPanel):
     def addDefaultProperties(self):
         self.params.addProperty('Block Fit Algo', self.terrainTask.blockFitAlgo, attributes=om.PropertyAttributes(enumNames=['MinArea', 'ClosestSize']))
         self.params.addProperty('Constrain Block Size', self.terrainTask.constrainBlockSize)
+        self.params.addProperty('Manual Steps Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         self.params.addProperty('Camera Texture', False, attributes=om.PropertyAttributes(hidden=False))
+        self.params.addProperty('Auto Organize', False, attributes=om.PropertyAttributes(hidden=False))
 
 
     def onPropertyChanged(self, propertySet, propertyName):
         if propertyName == 'Camera Texture':
             self.terrainTask.useTextures = self.params.getProperty(propertyName)
-        if propertyName == 'Block Fit Algo':
+        elif propertyName == 'Block Fit Algo':
             self.terrainTask.blockFitAlgo = self.params.getProperty(propertyName)
-        if propertyName == 'Constrain Block Size':
+        elif propertyName == 'Constrain Block Size':
             self.terrainTask.constrainBlockSize = self.params.getProperty(propertyName)
+        elif propertyName == 'Manual Steps Leading Foot':
+            self.terrainTask.defaultLeadingFoot = self.params.getPropertyEnumValue(propertyName).lower()
+        elif propertyName == 'Auto Organize':
+            if self.params.getProperty(propertyName):
+                self.terrainTask.startBlockUpdater()
+            else:
+                self.terrainTask.stopBlockUpdater()
 
     def generateFootsteps(self):
 
