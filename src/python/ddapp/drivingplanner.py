@@ -219,8 +219,13 @@ class DrivingPlanner(object):
         z_axis = self.tagToLocalTransform.TransformVector([0,0,1])
         tag_origin = self.tagToLocalTransform.TransformPoint([0,0,0])
 
-        z_axis_proj = z_axis[0:2] / np.linalg.norm(z_axis[0:2])
-        angle = math.degrees(math.atan2(z_axis_proj[1], z_axis_proj[0]))
+        z_norm = np.linalg.norm(z_axis[0:2])
+        if z_norm > 1e-6:
+            z_axis_proj = z_axis[0:2] / z_norm
+            angle = math.degrees(math.atan2(z_axis_proj[1], z_axis_proj[0]))
+        else:
+            angle = 0
+        
 
         transform.Translate([tag_origin[0] , tag_origin[1], 0])
         transform.RotateZ(self.trajectoryAngle + angle)
