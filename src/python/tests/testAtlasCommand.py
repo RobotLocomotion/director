@@ -529,7 +529,7 @@ class JointTeleopPanel(object):
         self.jointLimitsMax = np.array([self.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
 
         self.mirrorArms = False
-        self.mirrorLegs = True
+        self.mirrorLegs = False
 
         self.buildTabWidget(jointGroups)
         self.resetPoseToRobotState()
