@@ -74,8 +74,12 @@ class EgressPlanner(object):
 
     def __init__(self, robotSystem):
 
+<<<<<<< HEAD
         self.pelvisLiftX = 0.0
         self.pelvisLiftZ = 0.05
+=======
+        self.liftHeight = 0.1
+>>>>>>> Update EgressPlanner
         self.legLiftAngle = 8
 
         self.robotSystem = robotSystem
@@ -116,6 +120,10 @@ class EgressPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
         #footFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('l_foot', startPose)
+<<<<<<< HEAD
+=======
+        #t = transformUtils.frameFromPositionAndRPY([0, 0, self.liftHeight], [0, 0, 0])
+>>>>>>> Update EgressPlanner
         #liftFrame = transformUtils.concatenateTransforms([t, footFrame])
         constraints = []
         constraints.append(self.createAllButLeftLegPostureConstraint(startPoseName))
@@ -124,6 +132,7 @@ class EgressPlanner(object):
 
         constraintSet.runIk()
         return constraintSet.planEndPoseGoal(feetOnGround=False)
+<<<<<<< HEAD
 
     def planEgressArms(self):
         startPose = self.getPlanningStartPose()
@@ -383,6 +392,8 @@ class EgressPlanner(object):
         msg_robot_plan_with_supports_t = manipPlanner.convertPlanToPlanWithSupports(msg_robot_plan_t, supports, ts, isQuasistatic)
         lcmUtils.publish('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS', msg_robot_plan_with_supports_t)
         return msg_robot_plan_with_supports_t
+=======
+>>>>>>> Update EgressPlanner
 
 
 class EgressPanel(TaskUserPanel):
