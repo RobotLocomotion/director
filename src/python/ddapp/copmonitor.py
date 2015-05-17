@@ -19,12 +19,7 @@ class COPMonitor(object):
                                 [-0.13, -0.0562, 0.0], 
                                 [0.17, 0.0562, 0.0],
                                 [0.17, -0.0562, 0.0]]
-    SHRINK_FACTORS = [0.4, 0.7, 0.9] # should be ascending order from most strict to least strict
-    COLORS = [[0.0, 1.0, 0.0], [1.0, 1.0, 0.0], [1.0, 0.6, 0.0]] # defaults to red if not in any of these shrinks
-    COLORS_BUTTON = ['white', 'yellow', 'orange']
-
     DESIRED_INTERIOR_DISTANCE = 0.08
-
     UPDATE_RATE = 5
     def __init__(self, robotSystem, view):
 
@@ -94,7 +89,6 @@ class COPMonitor(object):
                 dist = self.ddDrakeWrapper.drakeSignedDistanceInsideConvexHull(num_pts, allFootContacts.reshape(num_pts*2, 1), measured_cop[0:2])
 
                 inSafeSupportPolygon = dist >= 0
-                print dist
                 # map dist to color -- green if inside threshold, red if not
                 dist = min(max(0, dist), self.DESIRED_INTERIOR_DISTANCE)
                 r = int(255. - 255. * dist / self.DESIRED_INTERIOR_DISTANCE )
