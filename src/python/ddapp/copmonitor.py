@@ -23,6 +23,8 @@ class COPMonitor(object):
     COLORS = [[0.0, 1.0, 0.0], [1.0, 1.0, 0.0], [1.0, 0.6, 0.0]] # defaults to red if not in any of these shrinks
     COLORS_BUTTON = ['white', 'yellow', 'orange']
 
+    DESIRED_INTERIOR_DISTANCE = 0.08
+
     UPDATE_RATE = 5
     def __init__(self, robotSystem, view):
 
@@ -37,6 +39,7 @@ class COPMonitor(object):
         self.rightInContact = 0
         self.draw = False
         self.view = view
+        self.ddDrakeWrapper = PythonQt.dd.ddDrakeWrapper()
 
         self.warningButton = QtGui.QPushButton('COP Warning')
         self.warningButton.setStyleSheet("background-color:white")
@@ -45,6 +48,7 @@ class COPMonitor(object):
         app.getMainWindow().statusBar().insertPermanentWidget(0, self.warningButton)
         footContactSub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, self.onFootContact)
         footContactSub.setSpeedLimit(self.UPDATE_RATE)
+
         self.updateTimer.start()
 
     def onFootContact(self, msg):
@@ -75,32 +79,29 @@ class COPMonitor(object):
                 rFootOrigin = np.array(rFootTransform.TransformPoint([0, 0, -0.07645]))
                 lFootOrigin = np.array(lFootTransform.TransformPoint([0, 0, -0.07645])) # down to sole
 
-                measured_cop = self.robotStateModel.model.resolveCenterOfPressure([self.lFootFtFrameId, self.rFootFtFrameId], 
+                measured_cop = self.ddDrakeWrapper.resolveCenterOfPressure(self.robotStateModel.model, [self.lFootFtFrameId, self.rFootFtFrameId], 
                                 lFootFt + rFootFt, [0., 0., 1.], (self.rightInContact*rFootOrigin+self.leftInContact*lFootOrigin)/(self.leftInContact + self.rightInContact))
 
-                inSafeSupportPolygon = False
-                for shrink_factor_i in range(len(self.SHRINK_FACTORS)):
-                    # alternatively: can we just do distance to hull?
-                    shrink_factor = self.SHRINK_FACTORS[shrink_factor_i]
-                    allFootContacts = np.empty([0, 2])
-                    if self.rightInContact:
-                        rFootContacts = np.array([rFootTransform.TransformPoint([i*shrink_factor for i in contact_point]) for contact_point in self.LONG_FOOT_CONTACT_POINTS])
-                        allFootContacts = np.concatenate((allFootContacts, rFootContacts[:, 0:2]))
-                    if self.leftInContact:
-                        lFootContacts = np.array([lFootTransform.TransformPoint([i*shrink_factor for i in contact_point]) for contact_point in self.LONG_FOOT_CONTACT_POINTS])
-                        allFootContacts = np.concatenate((allFootContacts, lFootContacts[:, 0:2]))
-                    inSafeSupportPolygon = Delaunay(allFootContacts).find_simplex(measured_cop[0:2])>=0
+                allFootContacts = np.empty([0, 2])
+                if self.rightInContact:
+                    rFootContacts = np.array([rFootTransform.TransformPoint(contact_point) for contact_point in self.LONG_FOOT_CONTACT_POINTS])
+                    allFootContacts = np.concatenate((allFootContacts, rFootContacts[:, 0:2]))
+                if self.leftInContact:
+                    lFootContacts = np.array([lFootTransform.TransformPoint(contact_point) for contact_point in self.LONG_FOOT_CONTACT_POINTS])
+                    allFootContacts = np.concatenate((allFootContacts, lFootContacts[:, 0:2]))
 
-                    if (inSafeSupportPolygon):
-                        colorStatus = self.COLORS[shrink_factor_i]
-                        colorStatusString = self.COLORS_BUTTON[shrink_factor_i]
-                        break
-                    # otherwise check next biggest shrink region
+                num_pts = allFootContacts.shape[0]
+                dist = self.ddDrakeWrapper.drakeSignedDistanceInsideConvexHull(num_pts, allFootContacts.reshape(num_pts*2, 1), measured_cop[0:2])
 
-                if (not inSafeSupportPolygon):
-                    colorStatus = [1.0, 0.0, 0.0]
-                    colorStatusString = 'red'
-
+                inSafeSupportPolygon = dist >= 0
+                print dist
+                # map dist to color -- green if inside threshold, red if not
+                dist = min(max(0, dist), self.DESIRED_INTERIOR_DISTANCE)
+                r = int(255. - 255. * dist / self.DESIRED_INTERIOR_DISTANCE )
+                g = int(255. * dist / self.DESIRED_INTERIOR_DISTANCE )
+                b = 0
+                colorStatus = [r/255., g/255., b/255.]
+                colorStatusString = 'rgb(%d, %d, %d)' % (r, g, b)
                 self.warningButton.setStyleSheet("background-color:"+colorStatusString)
 
                 if (self.draw):

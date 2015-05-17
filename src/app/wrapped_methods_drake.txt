@@ -10,7 +10,6 @@ void ddDrakeModel::setJointPositions(const QVector<double>&, const QStringList&)
 QVector<double> ddDrakeModel::getJointPositions(const QStringList&) const;
 QVector<double> ddDrakeModel::getJointPositions() const;
 QVector<double> ddDrakeModel::getCenterOfMass() const;
-QVector<double> ddDrakeModel::resolveCenterOfPressure(const QVector<int>&, const QVector<double>&, const QVector<double>&, const QVector<double>&) const;
 QVector<double> ddDrakeModel::getJointLimits(const QString&) const;
 QVector<double> ddDrakeModel::getBodyContactPoints(const QString&) const;
 bool ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
@@ -32,3 +31,7 @@ bool ddDrakeModel::texturesEnabled() const;
 QString ddDrakeModel::filename() const;
 static void ddDrakeModel::addPackageSearchPath(const QString&);
 static QString ddDrakeModel::findPackageDirectory(const QString&);
+ddDrakeWrapper::ddDrakeWrapper();
+ddDrakeWrapper::~ddDrakeWrapper();
+QVector<double> ddDrakeWrapper::resolveCenterOfPressure(const ddDrakeModel&, const QVector<int>&, const QVector<double>&, const QVector<double>&, const QVector<double>&) const;
+double ddDrakeWrapper::drakeSignedDistanceInsideConvexHull(int, const QVector<double>&, const QVector<double>&) const;
