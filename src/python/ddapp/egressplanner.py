@@ -19,6 +19,7 @@ import functools
 import numpy as np
 import scipy.io
 import vtkAll as vtk
+import bot_core as lcmbotcore
 from ddapp.tasks.taskuserpanel import TaskUserPanel
 import ddapp.tasks.robottasks as rt
 from ddapp import filterUtils
@@ -28,6 +29,7 @@ from ddapp import ioUtils
 class PolarisModel(object):
 
     def __init__(self):
+        self.aprilTagSubsciber = lcmUtils.addSubscriber('APRIL_TAG_TO_CAMERA_LEFT', lcmbotcore.rigid_transform_t, self.onAprilTag)
         pose = transformUtils.poseFromTransform(vtk.vtkTransform())
         desc = dict(classname='MeshAffordanceItem', Name='polaris',
                     Filename='software/models/polaris/polaris_cropped.vtp', pose=pose)
@@ -62,14 +64,9 @@ class PolarisModel(object):
         self.frameSync.addFrame(self.leftFootEgressMidFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressOutsideFrame, ignoreIncoming=True)
 
-        self.timerCallback = TimerCallback()
-        self.timerCallback.targetFps = 5
-        self.timerCallback.callback = self.updateAprilTagFrame
-        self.timerCallback.start()
-
-    def updateAprilTagFrame(self):
+    def onAprilTag(self, msg):
         t = vtk.vtkTransform()
-        cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', t)
+        cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, t)
         self.aprilTagFrame.copyFrame(t)
 
 
