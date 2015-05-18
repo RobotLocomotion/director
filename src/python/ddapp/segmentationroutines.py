@@ -189,6 +189,12 @@ def intersectLineWithPlane(line_point, line_ray, plane_point, plane_normal ):
     Find the intersection between a line and a plane
     http://www.scratchapixel.com/lessons/3d-basic-lessons/lesson-7-intersecting-simple-shapes/ray-plane-and-ray-disk-intersection/
     '''
+
+    line_point = np.asarray(line_point)
+    line_ray = np.asarray(line_ray)
+    plane_point = np.asarray(plane_point)
+    plane_normal = np.asarray(plane_normal)
+
     denom = np.dot( plane_normal , line_ray )
 
     # TODO: implement this check
