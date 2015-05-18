@@ -968,3 +968,30 @@ class RobotGridUpdater(object):
         self.gridFrame.copyFrame(t)
 
 gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
+
+random_walk_subscribers = []
+
+def startRandomWalk():
+    def handleStatus(msg):
+        if msg.plan_type == msg.STANDING:
+            goal = transformUtils.frameFromPositionAndRPY(np.array([robotStateJointController.q[0] + 2 * (np.random.random() - 0.5),
+                                                     robotStateJointController.q[1] + 2 * (np.random.random() - 0.5),
+                                                     robotStateJointController.q[2] - 0.84]),
+                                           [0, 0, robotStateJointController.q[5] + 2*np.degrees(np.pi) * (np.random.random() - 0.5)])
+            request = footstepsDriver.constructFootstepPlanRequest(robotStateJointController.q, goal)
+            request.params.max_num_steps = 18
+            footstepsDriver.sendFootstepPlanRequest(request)
+            last_request_time = time()
+
+    def handleFootstepPlan(msg):
+        footstepsDriver.commitFootstepPlan(msg)
+
+    sub = lcmUtils.addSubscriber('PLAN_EXECUTION_STATUS', lcmdrc.plan_status_t, handleStatus)
+    sub.setSpeedLimit(0.2)
+    random_walk_subscribers.append(sub)
+    random_walk_subscribers.append(lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, handleFootstepPlan))
+
+def stopRandomWalk():
+    for sub in random_walk_subscribers:
+        lcmUtils.removeSubscriber(sub)
+
