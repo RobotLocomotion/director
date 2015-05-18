@@ -332,7 +332,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.imageViewLayout.addWidget(self.imageView.view)
 
     def onAprilTag(self, msg):
-        cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', self.drivingPlanner.tagToLocalTransform)
+        cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, self.drivingPlanner.tagToLocalTransform)
         self.updateAndDrawTrajectory()
 
     def addButtons(self):
