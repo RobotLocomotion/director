@@ -58,6 +58,8 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                'Drake Instep Shift': 0.0275,
                                'Drake Min Hold Time': 2.0,
                                'Support Contact Groups': 0,
+                               'Prevent Swing Undershoot': 0,
+                               'Prevent Swing Overshoot': 0,
                                'Map Mode': 3},
                        'Drake Nominal': {'Min Num Steps': 0,
                                  'Max Num Steps': 12,
@@ -75,6 +77,8 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                  'Drake Instep Shift': 0.005,
                                  'Drake Min Hold Time': 0.75,
                                  'Support Contact Groups': 0,
+                                 'Prevent Swing Undershoot': 0,
+                                 'Prevent Swing Overshoot': 0,
                                  'Map Mode': 3}}
 DEFAULT_STEP_PARAMS['Terrain'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Terrain'].update({'Drake Min Hold Time': 2.0,
@@ -86,8 +90,9 @@ DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
                                       'Map Mode': 2})
 
 DEFAULT_STEP_PARAMS['Polaris Platform'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
-DEFAULT_STEP_PARAMS['Polaris Platform'].update({'Drake Min Hold Time': 2.0, 
+DEFAULT_STEP_PARAMS['Polaris Platform'].update({'Drake Min Hold Time': 2.0,
                                       'Drake Swing Speed': 0.2,
+                                      'Prevent Swing Undershoot': 1,
                                       'Map Mode': 1})
 
 DEFAULT_CONTACT_SLICES = {(0.05, 0.3): np.array([[-0.13, -0.13, 0.13, 0.13],
@@ -252,6 +257,8 @@ class FootstepsDriver(object):
                               2: lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING}
         self.params.addProperty('Planner Mode', 0, attributes=om.PropertyAttributes(enumNames=['Fast MIQP', 'Slow MISOCP']))
         self.params.addProperty('Support Contact Groups', 0, attributes=om.PropertyAttributes(enumNames=['Whole Foot', 'Front 2/3', 'Back 2/3']))
+        self.params.addProperty('Prevent Swing Undershoot', 0, attributes=om.PropertyAttributes(enumNames=['False', 'True']))
+        self.params.addProperty('Prevent Swing Overshoot', 0, attributes=om.PropertyAttributes(enumNames=['False', 'True']))
 
         self.applyDefaults(DEFAULT_PARAM_SET)
 
@@ -303,6 +310,8 @@ class FootstepsDriver(object):
         default_step_params.bdi_step_end_dist = 0.02
         default_step_params.mu = 1.0
         default_step_params.support_contact_groups = self.params.properties.support_contact_groups
+        default_step_params.prevent_swing_undershoot = self.params.properties.prevent_swing_undershoot
+        default_step_params.prevent_swing_overshoot = self.params.properties.prevent_swing_overshoot
         return default_step_params
 
     def onWalkingPlan(self, msg):
