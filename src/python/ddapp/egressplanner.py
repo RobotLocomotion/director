@@ -77,7 +77,8 @@ class EgressPlanner(object):
 
     def __init__(self, robotSystem):
 
-        self.liftHeight = 0.1
+        self.pelvisLiftX = 0.0
+        self.pelvisLiftZ = 0.05
         self.legLiftAngle = 8
 
         self.robotSystem = robotSystem
