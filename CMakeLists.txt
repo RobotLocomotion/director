@@ -32,6 +32,7 @@ option(USE_LIBBOT "Build drake-designer with libbot dependency." ON)
 option(USE_DRAKE "Build drake-designer with drake dependency." ON)
 option(USE_DRC "Build drake-designer with drc dependency." ON)
 option(USE_DRC_MAPS "Build drake-designer with drc maps dependency." ON)
+option(USE_DRC_PLANE_SEG "Build drake-designer with drc plane segmentation." ON)
 option(USE_LCM "Build drake-designer with lcm dependency." ON)
 
 # build project
