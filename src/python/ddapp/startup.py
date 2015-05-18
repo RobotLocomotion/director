@@ -981,7 +981,6 @@ def startRandomWalk():
             request = footstepsDriver.constructFootstepPlanRequest(robotStateJointController.q, goal)
             request.params.max_num_steps = 18
             footstepsDriver.sendFootstepPlanRequest(request)
-            last_request_time = time()
 
     def handleFootstepPlan(msg):
         footstepsDriver.commitFootstepPlan(msg)
