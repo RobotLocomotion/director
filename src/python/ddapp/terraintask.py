@@ -133,7 +133,7 @@ class TerrainTask(object):
 
         om.removeFromObjectModel(om.findObjectByName('ground affordance'))
         pose = transformUtils.poseFromTransform(t)
-        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[10, 10, boxThickness], pose=pose)
+        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[100, 100, boxThickness], pose=pose)
         aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         aff.setProperty('Visible', False)
         aff.setProperty('Alpha', 0.2)
