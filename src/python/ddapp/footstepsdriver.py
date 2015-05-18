@@ -77,16 +77,19 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                  'Support Contact Groups': 0,
                                  'Map Mode': 3}}
 DEFAULT_STEP_PARAMS['Terrain'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
-DEFAULT_STEP_PARAMS['Terrain'].update({'Drake Min Hold Time': 2.0,
+DEFAULT_STEP_PARAMS['Terrain'].update({'Drake Min Hold Time': 1.0,
+                                       'Drake Swing Speed': 0.6,
                                        'Max Forward Step': 0.36,
+                                       'Max Num Steps': 6,
                                        'Nominal Step Width': 0.22,
                                        'Map Mode': 1})
 DEFAULT_STEP_PARAMS['Stairs'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
+                                      'Drake Swing Speed': 0.4,
                                       'Map Mode': 2})
 
 DEFAULT_STEP_PARAMS['Polaris Platform'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
-DEFAULT_STEP_PARAMS['Polaris Platform'].update({'Drake Min Hold Time': 2.0, 
+DEFAULT_STEP_PARAMS['Polaris Platform'].update({'Drake Min Hold Time': 2.0,
                                       'Drake Swing Speed': 0.2,
                                       'Map Mode': 1})
 
