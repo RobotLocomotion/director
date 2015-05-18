@@ -263,27 +263,27 @@ class EndEffectorTeleopPanel(object):
     def leftFootPlanningSupportCheckboxChanged(self):
         if self.getLFootPlanningSupportEnabled():
             self.setLFootExecutionSupportEnabled(True)
-        self.updateConstraints()
+        self.updatePlanningSupports()
 
     def rightFootPlanningSupportCheckboxChanged(self):
         if self.getRFootPlanningSupportEnabled():
             self.setRFootExecutionSupportEnabled(True)
-        self.updateConstraints()
+        self.updatePlanningSupports()
 
     def leftHandPlanningSupportCheckboxChanged(self):
         if self.getLHandPlanningSupportEnabled():
             self.setLHandExecutionSupportEnabled(True)
-        self.updateConstraints()
+        self.updatePlanningSupports()
 
     def rightHandPlanningSupportCheckboxChanged(self):
         if self.getRHandPlanningSupportEnabled():
             self.setRHandExecutionSupportEnabled(True)
-        self.updateConstraints()
+        self.updatePlanningSupports()
 
     def pelvisPlanningSupportCheckboxChanged(self):
         if self.getPelvisPlanningSupportEnabled():
             self.setPelvisExecutionSupportEnabled(True)
-        self.updateConstraints()
+        self.updatePlanningSupports()
 
     def updateQuasistaticFlag(self):
         lfootEnabled = self.getLFootExecutionSupportEnabled()
@@ -374,12 +374,21 @@ class EndEffectorTeleopPanel(object):
         goalFrame.copyFrame(transform)
         return goalFrame
 
+
+    def updatePlanningSupports(self):
+        self.panel.ikPlanner.leftFootSupportEnabled = self.getLFootPlanningSupportEnabled()
+        self.panel.ikPlanner.rightFootSupportEnabled = self.getRFootPlanningSupportEnabled()
+        self.panel.ikPlanner.leftHandSupportEnabled = self.getLHandPlanningSupportEnabled()
+        self.panel.ikPlanner.rightHandSupportEnabled = self.getRHandPlanningSupportEnabled()
+        self.panel.ikPlanner.pelvisSupportEnabled = self.getPelvisPlanningSupportEnabled()
+
     def updateConstraints(self):
 
         if not self.ui.eeTeleopButton.checked:
             return
 
 
+        self.updatePlanningSupports()
         ikPlanner = self.panel.ikPlanner
 
         startPoseName = 'reach_start'
@@ -437,12 +446,6 @@ class EndEffectorTeleopPanel(object):
         elif self.getBaseConstraint() == 'free':
             constraints.append(ikPlanner.createKneePostureConstraint([0.6, 2.5]))
             ikPlanner.setBaseLocked(False)
-
-        ikPlanner.leftFootSupportEnabled = self.getLFootPlanningSupportEnabled()
-        ikPlanner.rightFootSupportEnabled = self.getRFootPlanningSupportEnabled()
-        ikPlanner.leftHandSupportEnabled = self.getLHandPlanningSupportEnabled()
-        ikPlanner.rightHandSupportEnabled = self.getRHandPlanningSupportEnabled()
-        ikPlanner.pelvisSupportEnabled = self.getPelvisPlanningSupportEnabled()
 
         constraints.append(ikPlanner.createQuasiStaticConstraint())
 
