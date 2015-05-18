@@ -45,6 +45,11 @@ DRILL_TRIANGLE_BOTTOM_RIGHT = 'bottom right'
 DRILL_TRIANGLE_TOP_LEFT = 'top left'
 DRILL_TRIANGLE_TOP_RIGHT = 'top right'
 
+# using drc plane segmentation instead of PCL
+planeSegmentationFilter = vtk.vtkPlaneSegmentation
+#planeSegmentationFilter = vtk.vtkPCLSACSegmentationPlane
+
+
 _defaultSegmentationView = None
 def getSegmentationView():
     return _defaultSegmentationView or app.getViewManager().findView('Segmentation View')
@@ -374,7 +379,7 @@ def getMajorPlanes(polyData, useVoxelGrid=True):
 
     while len(polyDataList) < 25:
 
-        f = vtk.vtkPCLSACSegmentationPlane()
+        f = planeSegmentationFilter()
         f.SetInput(polyData)
         f.SetDistanceThreshold(distanceToPlaneThreshold)
         f.Update()
@@ -447,7 +452,7 @@ def applyPlaneFit(polyData, distanceThreshold=0.02, expectedNormal=None, perpend
         fitInput = cropToSphere(fitInput, searchOrigin, searchRadius)
 
     # perform plane segmentation
-    f = vtk.vtkPCLSACSegmentationPlane()
+    f = planeSegmentationFilter()
     f.SetInput(fitInput)
     f.SetDistanceThreshold(distanceThreshold)
     if perpendicularAxis is not None:
@@ -649,7 +654,7 @@ def extractCircle(polyData, distanceThreshold=0.04, radiusLimit=None):
 def removeMajorPlane(polyData, distanceThreshold=0.02):
 
     # perform plane segmentation
-    f = vtk.vtkPCLSACSegmentationPlane()
+    f = planeSegmentationFilter()
     f.SetInput(polyData)
     f.SetDistanceThreshold(distanceThreshold)
     f.Update()
