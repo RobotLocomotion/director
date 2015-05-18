@@ -151,6 +151,7 @@ useSkybox = False
 useDataFiles = True
 usePFGrasp = False
 useGamepad = True
+useRandomWalk = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -969,10 +970,12 @@ class RobotGridUpdater(object):
 
 gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
 
-random_walk_subscribers = []
 
-def startRandomWalk():
-    def handleStatus(msg):
+class RandomWalk(object):
+    def __init__(self):
+        self.subs = []
+
+    def handleStatus(self, msg):
         if msg.plan_type == msg.STANDING:
             goal = transformUtils.frameFromPositionAndRPY(np.array([robotStateJointController.q[0] + 2 * (np.random.random() - 0.5),
                                                      robotStateJointController.q[1] + 2 * (np.random.random() - 0.5),
@@ -982,15 +985,18 @@ def startRandomWalk():
             request.params.max_num_steps = 18
             footstepsDriver.sendFootstepPlanRequest(request)
 
-    def handleFootstepPlan(msg):
+    def handleFootstepPlan(self, msg):
         footstepsDriver.commitFootstepPlan(msg)
 
-    sub = lcmUtils.addSubscriber('PLAN_EXECUTION_STATUS', lcmdrc.plan_status_t, handleStatus)
-    sub.setSpeedLimit(0.2)
-    random_walk_subscribers.append(sub)
-    random_walk_subscribers.append(lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, handleFootstepPlan))
+    def start(self):
+        sub = lcmUtils.addSubscriber('PLAN_EXECUTION_STATUS', lcmdrc.plan_status_t, self.handleStatus)
+        sub.setSpeedLimit(0.2)
+        self.subs.append(sub)
+        self.subs.append(lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.handleFootstepPlan))
 
-def stopRandomWalk():
-    for sub in random_walk_subscribers:
-        lcmUtils.removeSubscriber(sub)
+    def stop(self):
+        for sub in self.subs:
+            lcmUtils.removeSubscriber(sub)
 
+if useRandomWalk:
+    randomWalk = RandomWalk()
