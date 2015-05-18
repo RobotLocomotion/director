@@ -91,16 +91,20 @@ class ManipulationPlanDriver(object):
                     supportBodies.append(self.getFootSupportBodyMsg('left'))
                 elif name is 'r_foot':
                     supportBodies.append(self.getFootSupportBodyMsg('right'))
+                elif name is 'l_hand':
+                    supportBodies.append(self.getHandSupportBodyMsg('left'))
+                elif name is 'r_hand':
+                    supportBodies.append(self.getHandSupportBodyMsg('right'))
                 elif name is 'pelvis':
                     supportBodies.append(self.getPelvisSupportBodyMsg())
                 else:
                     print "passed a support that isn't allowed"
 
             supportElement.support_bodies = supportBodies
-            supports[i] = supportElement 
+            supports[i] = supportElement
 
-        return supports           
-        
+        return supports
+
 
 
     def getSupports(self):
