@@ -514,15 +514,13 @@ class WorldGazeTargetConstraint(ConstraintBase):
 
 class QuasiStaticConstraint(ConstraintBase):
 
-    shrinkFactor = 0.2
-
     def __init__(self, **kwargs):
 
         self._add_fields(
             leftFootEnabled  = True,
             rightFootEnabled = True,
             pelvisEnabled    = False,
-            #shrinkFactor     = 0.5,
+            shrinkFactor     = None,
             )
 
         ConstraintBase.__init__(self, **kwargs)
@@ -536,10 +534,15 @@ class QuasiStaticConstraint(ConstraintBase):
         varName = 'qsc_constraint%s' % suffix
         constraintNames.append(varName)
 
+        if self.shrinkFactor is None:
+            shrinkFactor = 'default_shrink_factor'
+        else:
+            shrinkFactor = repr(self.shrinkFactor)
+
         formatArgs = dict(varName=varName,
                           robotArg=self.robotArg,
                           tspan=self.getTSpanString(),
-                          shrinkFactor=repr(self.shrinkFactor))
+                          shrinkFactor=shrinkFactor)
 
         commands.append(
             '{varName} = QuasiStaticConstraint({robotArg}, {tspan}, 1);\n'
