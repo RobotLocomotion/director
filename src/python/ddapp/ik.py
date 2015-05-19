@@ -28,9 +28,6 @@ class AsyncIKCommunicator():
         self.nominalName = 'q_nom'
         self.infoFunc = None
 
-        self.maxDegreesPerSecond = 30.0
-        self.maxBaseMetersPerSecond = 0.05
-        self.maxBaseRPYDegreesPerSecond = 2
         self.accelerationParam = 2;
         self.accelerationFraction = 0.3;
         self.maxPlanDuration = 30.0
@@ -321,9 +318,9 @@ class AsyncIKCommunicator():
             commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
         commands.append('if ~isempty(xtraj), qtraj = xtraj(1:r.getNumPositions()); else, qtraj = []; end;')
-        commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1); end;' % self.maxDegreesPerSecond)
-        commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % self.maxBaseMetersPerSecond)
-        commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % self.maxBaseRPYDegreesPerSecond)
+        commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1); end;' % ikParameters.maxDegreesPerSecond)
+        commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % ikParameters.maxBaseMetersPerSecond)
+        commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % ikParameters.maxBaseRPYDegreesPerSecond)
         commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; rpy_v_max; joint_v_max]; end;')
 
         commands.append("max_body_translation_speed = %r;" % self.maxBodyTranslationSpeed)

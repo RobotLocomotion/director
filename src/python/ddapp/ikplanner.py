@@ -106,7 +106,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.addProperty('Add knots', ikServer.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
         self.addProperty('Quasistatic shrink factor', ik.QuasiStaticConstraint.shrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
-        self.addProperty('Max joint degrees/s', ikServer.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
+        self.addProperty('Max joint degrees/s', ikPlanner.defaultIkParameters.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
         self.addProperty('Nominal pose', 1, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Seed pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Major iterations limit', ikPlanner.defaultIkParameters.majorIterationsLimit)
@@ -176,7 +176,7 @@ class IkOptionsItem(om.ObjectModelItem):
             ik.QuasiStaticConstraint.shrinkFactor = self.getProperty(propertyName)
 
         elif propertyName == 'Max joint degrees/s':
-            self.ikServer.maxDegreesPerSecond = self.getProperty(propertyName)
+            self.defaultIkParameters.maxDegreesPerSecond = self.getProperty(propertyName)
 
         elif propertyName == 'Additional time samples':
             self.ikPlanner.additionalTimeSamples = self.getProperty(propertyName)
@@ -218,7 +218,7 @@ class IKPlanner(object):
             originalIkParameterDict['usePointwise'] = self.ikServer.usePointwise
             self.ikServer.usePointwise = ikParameterDict['usePointwise']
         if 'maxDegreesPerSecond' in ikParameterDict:
-            originalIkParameterDict['maxDegreesPerSecond'] = self.ikServer.maxDegreesPerSecond
+            originalIkParameterDict['maxDegreesPerSecond'] = self.defaultIkParameters.maxDegreesPerSecond
             self.ikServer.maxDegreesPerSecond = ikParameterDict['maxDegreesPerSecond']
         if 'numberOfAddedKnots' in ikParameterDict:
             originalIkParameterDict['numberOfAddedKnots'] = self.ikServer.numberOfAddedKnots
