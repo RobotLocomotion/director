@@ -19,7 +19,7 @@ class COPMonitor(object):
                                 [-0.13, -0.0562, 0.0], 
                                 [0.17, 0.0562, 0.0],
                                 [0.17, -0.0562, 0.0]]
-    DESIRED_INTERIOR_DISTANCE = 0.08
+    DESIRED_INTERIOR_DISTANCE = 0.05
     UPDATE_RATE = 5
     def __init__(self, robotSystem, view):
 
@@ -28,33 +28,37 @@ class COPMonitor(object):
         self.robotSystem = robotSystem
         self.lFootFtFrameId = self.robotStateModel.model.findLinkID('l_foot')
         self.rFootFtFrameId = self.robotStateModel.model.findLinkID('r_foot')
-        self.updateTimer = TimerCallback(self.UPDATE_RATE)
-        self.updateTimer.callback = self.update
         self.leftInContact = 0
         self.rightInContact = 0
-        self.draw = False
         self.view = view
         self.ddDrakeWrapper = PythonQt.dd.ddDrakeWrapper()
 
-        self.warningButton = QtGui.QPushButton('COP Warning')
+        self.warningButton = QtGui.QLabel('COP Warning')
         self.warningButton.setStyleSheet("background-color:white")
-        self.warningButton.connect('clicked()', self.toggleDrawing)
+        #app.getMainWindow().statusBar().insertPermanentWidget(0, self.warningButton)
+        self.dialogVisible = False
 
-        app.getMainWindow().statusBar().insertPermanentWidget(0, self.warningButton)
-        footContactSub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, self.onFootContact)
-        footContactSub.setSpeedLimit(self.UPDATE_RATE)
+        d = DebugData()
+        vis.updatePolyData(d.getPolyData(), 'measured cop', view=self.view, parent='robot state model')
+        om.findObjectByName('measured cop').setProperty('Visible', False)
 
+        self.updateTimer = TimerCallback(self.UPDATE_RATE)
+        self.updateTimer.callback = self.update
         self.updateTimer.start()
 
-    def onFootContact(self, msg):
-        self.leftInContact = msg.left_contact > 0.0
-        self.rightInContact = msg.right_contact > 0.0
-
     def update(self):
-        if (hasattr(self.robotStateJointController, 'lastRobotStateMessage') and 
+        if (om.findObjectByName('measured cop').getProperty('Visible') and hasattr(self.robotStateJointController, 'lastRobotStateMessage') and 
             self.robotStateJointController.lastRobotStateMessage):
 
-            if (self.rightInContact or self.leftInContact):
+            if self.dialogVisible == False:
+                self.warningButton.setVisible(True)
+                app.getMainWindow().statusBar().insertPermanentWidget(0, self.warningButton)
+                self.dialogVisible = True
+
+            self.leftInContact = self.robotStateJointController.lastRobotStateMessage.force_torque.l_foot_force_z > 500
+            self.rightInContact = self.robotStateJointController.lastRobotStateMessage.force_torque.r_foot_force_z > 500
+
+            if self.rightInContact or self.leftInContact:
 
                 lFootFt =  [self.robotStateJointController.lastRobotStateMessage.force_torque.l_foot_torque_x, 
                              self.robotStateJointController.lastRobotStateMessage.force_torque.l_foot_torque_y, 
@@ -90,21 +94,20 @@ class COPMonitor(object):
 
                 inSafeSupportPolygon = dist >= 0
                 # map dist to color -- green if inside threshold, red if not
-                dist = min(max(0, dist), self.DESIRED_INTERIOR_DISTANCE)
-                r = int(255. - 255. * dist / self.DESIRED_INTERIOR_DISTANCE )
-                g = int(255. * dist / self.DESIRED_INTERIOR_DISTANCE )
+                dist = min(max(0, dist), self.DESIRED_INTERIOR_DISTANCE) / self.DESIRED_INTERIOR_DISTANCE
+                # nonlinear interpolation here to try to maintain saturation
+                r = int(255. - 255. * dist**4 )
+                g = int(255. * dist**0.25 )
                 b = 0
                 colorStatus = [r/255., g/255., b/255.]
                 colorStatusString = 'rgb(%d, %d, %d)' % (r, g, b)
                 self.warningButton.setStyleSheet("background-color:"+colorStatusString)
 
-                if (self.draw):
-                    d = DebugData()
-                    d.addSphere(measured_cop[0:3], radius=0.02)
-                    vis.updatePolyData(d.getPolyData(), 'measured cop', view=self.view, parent='COP Monitor')
-                    om.findObjectByName('measured cop').setProperty('Color', colorStatus)
-                
-    def toggleDrawing(self):
-        self.draw = not self.draw
-        if (not self.draw):
-            om.removeFromObjectModel(om.findObjectByName('COP Monitor'))
+                d = DebugData()
+                d.addSphere(measured_cop[0:3], radius=0.02)
+                vis.updatePolyData(d.getPolyData(), 'measured cop', view=self.view, parent='robot state model')
+                om.findObjectByName('measured cop').setProperty('Color', colorStatus)
+
+        elif self.dialogVisible:
+            app.getMainWindow().statusBar().removeWidget(self.warningButton)
+            self.dialogVisible = False
