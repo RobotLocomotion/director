@@ -188,7 +188,7 @@ class DrivingPlanner(object):
         return self.robotSystem.robotStateJointController.q
 
 
-    # move left leg up a bit 
+    # move left leg up a bit
     def planLegUp(self):
         ikPlanner = self.robotSystem.ikPlanner
         startPose = self.getPlanningStartPose()
@@ -203,22 +203,17 @@ class DrivingPlanner(object):
         footPoseConstraint = self.createLeftFootPoseConstraint(targetFrame)
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
 
-        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'maxDegreesPerSecond': 10}
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-        
         constraints = [allButLeftLegPostureConstraint]
         constraints.extend(footPoseConstraint)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
         cs.seedPoseName = 'q_start'
         cs.nominalPoseName = 'q_start'
         endPose = cs.runIk()
         plan = cs.planEndPoseGoal()
         self.plans.append(plan)
 
-
-        ikPlanner.setIkParameters(ikParametersOriginal)
         return plan
 
 
@@ -230,10 +225,6 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
 
-        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'maxDegreesPerSecond': 10}
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-
         legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
         legAbovePedalFrame.PreMultiply()
         legAbovePedalFrame.Translate([-0.02,0.0, 0.03])
@@ -249,6 +240,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -259,7 +251,6 @@ class DrivingPlanner(object):
         keyFramePlan = cs.runIkTraj()
         self.plans.append(keyFramePlan)
 
-        ikPlanner.setIkParameters(ikParametersOriginal)
         return keyFramePlan
 
     def planLegAbovePedal(self):
@@ -269,10 +260,6 @@ class DrivingPlanner(object):
         startPoseName = 'q_start_foot'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
-
-        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'maxDegreesPerSecond': 10}
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
 
         legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
         legAbovePedalFrame.PreMultiply()
@@ -289,13 +276,13 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
         plan = cs.planEndPoseGoal()
         self.plans.append(plan)
 
-        ikPlanner.setIkParameters(ikParametersOriginal)
         return plan
 
 
@@ -306,10 +293,6 @@ class DrivingPlanner(object):
         startPoseName = 'q_start_foot'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
-
-        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'maxDegreesPerSecond': 10}
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
 
         legUpFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
         legUpFrame.PreMultiply()
@@ -326,6 +309,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -336,7 +320,6 @@ class DrivingPlanner(object):
         keyFramePlan = cs.runIkTraj()
         self.plans.append(keyFramePlan)
 
-        ikPlanner.setIkParameters(ikParametersOriginal)
         return keyFramePlan
 
     def planLegEgressStart(self):
@@ -346,10 +329,6 @@ class DrivingPlanner(object):
         startPoseName = 'q_start_foot'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
-
-        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'maxDegreesPerSecond': 10}
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
 
         legDownFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
         identityFrame = vtk.vtkTransform()
@@ -364,13 +343,13 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
         plan = cs.planEndPoseGoal()
         self.plans.append(plan)
 
-        ikPlanner.setIkParameters(ikParametersOriginal)
         return plan
 
     def planLegPedal(self):
@@ -379,10 +358,6 @@ class DrivingPlanner(object):
         startPoseName = 'q_start_foot'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
-
-        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'quasiStaticShrinkFactor': 1, 'maxDegreesPerSecond': 10}
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
 
         lfootConstraintFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
         identityFrame = vtk.vtkTransform()
@@ -397,13 +372,13 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.ikParameters = IkParameters(quasiStaticShrinkFactor=1, maxDegreesPerSecond=10)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
         keyFramePlan = cs.planEndPoseGoal()
         self.plans.append(keyFramePlan)
 
-        ikPlanner.setIkParameters(ikParametersOriginal)
         return keyFramePlan
 
     def createLeftFootPoseConstraint(self, targetFrame, tspan=[-np.inf,np.inf]):
@@ -428,12 +403,8 @@ class DrivingPlanner(object):
         targetFrame.Translate([0.0,-depth,0.0])
 
         # need to remove the quasistatic constraint here, or just enlarge it
-        constraintSet = ikPlanner.planEndEffectorGoal(startPose, 'right', targetFrame, lockBase=True, lockBack=True, lockArm=True) 
-
-
-        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': True,
-        'quasiStaticShrinkFactor': 10}
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
+        constraintSet = ikPlanner.planEndEffectorGoal(startPose, 'right', targetFrame, lockBase=True, lockBack=True, lockArm=True)
+        constraintSet.ikParameters = IkParameters(quasiStaticShrinkFactor=10)
 
         seedPoseName = 'q_bar_grab'
         seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'bar_pre_grab', side=handName)
@@ -464,10 +435,8 @@ class DrivingPlanner(object):
             endPose = constraintSet.runIk()
             plan = constraintSet.runIkTraj()
 
-        ikPlanner.setIkParameters(ikParametersOriginal)
-
         self.plans.append(plan)
-        return plan        
+        return plan
 
     def commitManipPlan(self):
         self.robotSystem.manipPlanner.commitManipPlan(self.plans[-1])
@@ -480,7 +449,7 @@ class DrivingPlanner(object):
     def computeDrivingTrajectories(self, steeringAngleDegrees, maxTurningRadius = 10, numTrajPoints = 50):
 
         angle = steeringAngleDegrees
-        
+
         if abs(angle) < 0.1:
             angle = 1e-8
 
@@ -518,7 +487,7 @@ class DrivingPlanner(object):
             angle = math.degrees(math.atan2(z_axis_proj[1], z_axis_proj[0]))
         else:
             angle = 0
-        
+
 
         transform.Translate([tag_origin[0] , tag_origin[1], 0])
         transform.RotateZ(self.trajectoryAngle + angle)
@@ -682,12 +651,12 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.trajectoryX = self.params.getProperty('Trajectory X Offset')
         self.drivingPlanner.trajectoryY = self.params.getProperty('Trajectory Y Offset')
         self.drivingPlanner.trajectoryAngle = self.params.getProperty('Trajectory Angle Offset')
-        
+
         if hasattr(self, 'affordanceUpdater'):
             if self.showTrajectory:
                 self.updateAndDrawTrajectory()
                 leftTraj = om.findObjectByName('LeftDrivingTrajectory')
-                rightTraj = om.findObjectByName('RightDrivingTrajectory')        
+                rightTraj = om.findObjectByName('RightDrivingTrajectory')
                 leftTraj.setProperty('Visible', self.showTrajectory)
                 rightTraj.setProperty('Visible', self.showTrajectory)
                 self.affordanceUpdater.extraObjects = [leftTraj, rightTraj]
@@ -695,7 +664,7 @@ class DrivingPlannerPanel(TaskUserPanel):
                 self.affordanceUpdater.extraObjects = []
 
         self.drivingPlanner.applyProperties()
-      
+
     def onSteeringCommand(self, msg):
         if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:
             self.drivingPlanner.steeringAngleDegrees = math.degrees(msg.steering_angle)
@@ -836,7 +805,7 @@ class DrivingPlannerPanel(TaskUserPanel):
 
 
     def updateAndDrawTrajectory(self):
-        leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(self.drivingPlanner.steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)        
+        leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(self.drivingPlanner.steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)
         self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(leftTraj), 'LeftDrivingTrajectory')
         self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(rightTraj), 'RightDrivingTrajectory')
 
@@ -850,7 +819,7 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         if numTrajPoints > 1:
             for i in range(0, numTrajPoints):
-                rgb = [(numTrajPoints - i) / float(numTrajPoints), 1 - (numTrajPoints - i) / float(numTrajPoints), 1]            
+                rgb = [(numTrajPoints - i) / float(numTrajPoints), 1 - (numTrajPoints - i) / float(numTrajPoints), 1]
                 d.addSphere(drivingTraj[i], 0.05, rgb)
 
         vis.updatePolyData(d.getPolyData(), name)
