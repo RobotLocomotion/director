@@ -18,6 +18,11 @@ class IkParameters(FieldContainer):
             fixInitialState = None,
             numberOfAddedKnots = None,
             numberOfInterpolatedCollisionChecks = None,
+            collisionMinDistance = None,
+            rrtMaxEdgeLength = None,
+            rrtGoalBias = None,
+            rrtMaxNumVertices = None,
+            rrtNSmoothingPasses = None,
         )
 
     def setToDefaults(self):
@@ -35,6 +40,11 @@ class IkParameters(FieldContainer):
         self.fixInitialState = True
         self.numberOfAddedKnots = 0
         self.numberOfInterpolatedCollisionChecks = 2
+        self.collisionMinDistance = 0.03
+        self.rrtMaxEdgeLength = 0.05
+        self.rrtGoalBias = 1.0
+        self.rrtMaxNumVertices = 5000
+        self.rrtNSmoothingPasses = 10
 
     def fillInWith(self, other):
         for field, value in self:
