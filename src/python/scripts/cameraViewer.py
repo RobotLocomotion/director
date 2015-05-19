@@ -5,7 +5,6 @@ from ddapp import vtkAll as vtk
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 
-
 def addWidgetsToDict(widgets, d):
 
     for widget in widgets:
@@ -42,7 +41,7 @@ class CameraVisualizer(object):
         self.ui = WidgetDict(self.widget.children())
         self.widget.setWindowTitle("Camera Visualizer")
 
-        view = self.createCameraView('CAMERA_LEFT')
+        view = self.createCameraView('CAMERACHEST_LEFT')
         frame1Layout = QtGui.QVBoxLayout(self.ui.frame1)        
         frame1Layout.addWidget(view)
 
@@ -50,12 +49,8 @@ class CameraVisualizer(object):
         frame1Layout = QtGui.QVBoxLayout(self.ui.frame2)        
         frame1Layout.addWidget(view)
 
-        view = self.createCameraView('CAMERACHEST_LEFT')
-        frame1Layout = QtGui.QVBoxLayout(self.ui.frame3)        
-        frame1Layout.addWidget(view)
-
         view = self.createCameraView('CAMERACHEST_RIGHT')
-        frame1Layout = QtGui.QVBoxLayout(self.ui.frame4)        
+        frame1Layout = QtGui.QVBoxLayout(self.ui.frame3)        
         frame1Layout.addWidget(view)
 
 
