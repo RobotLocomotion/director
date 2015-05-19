@@ -30,6 +30,8 @@ class IkParameters(FieldContainer):
             quasiStaticShrinkFactor = None
         )
 
+        FieldContainer.__init__(self, **kwargs)
+
     def setToDefaults(self):
         self.usePointwise = True
         self.useCollision = False
