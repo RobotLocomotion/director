@@ -176,10 +176,23 @@ class TerrainTask(object):
 
         tiltAngle = 15
         tiltAngle = np.radians(tiltAngle)
-        baseVerticalOffset = blockHeight/2.0 + np.sin(tiltAngle)*blockLength/2.0
+        tiltVerticalOffset = blockHeight/2.0 + np.sin(tiltAngle)*blockLength/2.0
 
         if len(cols) == 0:
             cols = range(len(blockTypes[0]))
+
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        stanceFrame.PreMultiply()
+        stanceFrame.Translate(0.25, 0, 0.0)
+
+        f = vis.showFrame(stanceFrame, 'cinderblock stance frame', scale=0.2)
+        frameSync = vis.FrameSync()
+        frameSync.addFrame(f)
+        f.frameSync = frameSync
+
+        blockFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        blockFrame.PreMultiply()
+        blockFrame.Translate(0.25+blockLength, blockWidth*np.mean(np.array(cols)), 0)
 
         blocks = []
         for row in range(len(blockTypes)):
@@ -188,26 +201,17 @@ class TerrainTask(object):
                 blockYaw = np.radians(blockAngleMap[blockType])
                 blockLevel = blockLevels[row][col]
 
-                rpy = [0.0, tiltAngle, yaw]
-                pos = [blockLength*(row+1), blockWidth*(col+1), blockHeight*blockLevel + baseVerticalOffset]
+                rpy = np.degrees([0.0, tiltAngle, blockYaw])
+                pos = [blockLength*row, -blockWidth*col, blockHeight*blockLevel + tiltVerticalOffset]
                 
                 offsetFrame = transformUtils.frameFromPositionAndRPY(pos, rpy)
                 offsetFrame.PostMultiply()
-                offsetFrame.Concatenate(relativeFrame)
+                offsetFrame.Concatenate(blockFrame)
                 
                 pose = transformUtils.poseFromTransform(offsetFrame)
-                desc = dict(classname='BoxAffordanceItem', Name='cinderblock (%d, %d)' % (row, col), Dimensions=(blockLength, blockHeight, blockHeight)], pose=pose)
+                desc = dict(classname='BoxAffordanceItem', Name='cinderblock (%d, %d)' % (row, col), Dimensions=[blockLength, blockWidth, blockHeight], pose=pose)
                 block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
                 blocks.append(block)
-
-        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
-        stanceFrame.PreMultiply()
-        stanceFrame.Translate(0.25, 0.0, 0.0)
-
-        f = vis.showFrame(stanceFrame, 'cinderblock stance frame', scale=0.2)
-        frameSync = vis.FrameSync()
-        frameSync.addFrame(f)
-        f.frameSync = frameSync
 
         for block in self.getCinderblockAffordances():
             frameSync.addFrame(block.getChildFrame(), ignoreIncoming=True)
@@ -954,7 +958,7 @@ class TerrainTaskPanel(TaskUserPanel):
         self.addTasks()
 
     def addButtons(self):
-        #self.addManualButton('Spawn tilted steps', self.terrainTask.spawnTiltedCinderblocks)
+        self.addManualButton('Spawn terrain field', self.terrainTask.spawnCinderblockTerrain)
         #self.addManualButton('Walk to tilted steps', self.terrainTask.walkToTiltedCinderblocks)
         self.addManualButton('Spawn blocks at feet', self.terrainTask.spawnCinderblocksAtFeet)
         self.addManualSpacer()
