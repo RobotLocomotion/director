@@ -546,9 +546,6 @@
    </property>
   </action>
   <action name="ActionTaskLauncher">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
    <property name="icon">
     <iconset resource="images/resources.qrc">
      <normaloff>:/images/task_icon.png</normaloff>:/images/task_icon.png</iconset>

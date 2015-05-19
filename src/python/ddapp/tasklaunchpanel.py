@@ -6,24 +6,19 @@ class TaskLaunchPanel(object):
 
     def __init__(self, widgetMap):
 
-        self.widget = QtGui.QWidget()
-        self.widget.setWindowTitle('Task Launch Panel')
-        l = QtGui.QVBoxLayout(self.widget)
+        self.widget = QtGui.QTabWidget()
+        self.widget.setWindowTitle('Task Panel')
 
         for name, widget in widgetMap.iteritems():
-            b = QtGui.QPushButton(name)
-            b.connect('clicked()', functools.partial(self.showWidget, widget))
-            l.addWidget(b)
+            self.widget.addTab(widget, name)
 
-        l.addStretch()
 
-    def showWidget(self, widget):
+    def showTaskPanel(self):
 
+        widget = self.widget
         widget.show()
         widget.raise_()
         widget.activateWindow()
-
-        self.widget.parent().hide()
 
 
 def _getAction():
@@ -33,10 +28,8 @@ def _getAction():
 def init(widgetMap):
 
     global panel
-    global dock
 
     panel = TaskLaunchPanel(widgetMap)
-    dock = app.addWidgetToDock(panel.widget, action=_getAction())
-    dock.hide()
+    _getAction().connect('triggered()', panel.showTaskPanel)
 
     return panel
