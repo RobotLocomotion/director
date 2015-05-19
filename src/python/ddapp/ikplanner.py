@@ -102,7 +102,7 @@ class IkOptionsItem(om.ObjectModelItem):
 
         self.addProperty('Use pointwise', ikPlanner.defaultIkParameters.usePointwise)
         self.addProperty('Use collision', ikPlanner.defaultIkParameters.useCollision)
-        self.addProperty('Collision min distance', ikServer.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
+        self.addProperty('Collision min distance', ikPlanner.defaultIkParameters.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikPlanner.defaultIkParameters.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
         self.addProperty('Quasistatic shrink factor', ik.QuasiStaticConstraint.shrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
@@ -112,10 +112,10 @@ class IkOptionsItem(om.ObjectModelItem):
         self.addProperty('Major iterations limit', ikPlanner.defaultIkParameters.majorIterationsLimit)
         self.addProperty('Major feasibility tolerance', ikPlanner.defaultIkParameters.majorFeasibilityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-5))
         self.addProperty('Major optimality tolerance', ikPlanner.defaultIkParameters.majorOptimalityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-4))
-        self.addProperty('RRT max edge length', ikServer.rrtMaxEdgeLength, attributes=om.PropertyAttributes(decimals=2, minimum=1e-2, maximum=1.0, singleStep=1e-2))
-        self.addProperty('RRT max vertices', ikServer.rrtMaxNumVertices, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e5, singleStep=1e1))
-        self.addProperty('RRT no. of smoothing passes', ikServer.rrtNSmoothingPasses, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e2, singleStep=1e0))
-        self.addProperty('RRT goal bias', ikServer.rrtGoalBias, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=1e-2))
+        self.addProperty('RRT max edge length', ikPlanner.defaultIkParameters.rrtMaxEdgeLength, attributes=om.PropertyAttributes(decimals=2, minimum=1e-2, maximum=1.0, singleStep=1e-2))
+        self.addProperty('RRT max vertices', ikPlanner.defaultIkParameters.rrtMaxNumVertices, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e5, singleStep=1e1))
+        self.addProperty('RRT no. of smoothing passes', ikPlanner.defaultIkParameters.rrtNSmoothingPasses, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e2, singleStep=1e0))
+        self.addProperty('RRT goal bias', ikPlanner.defaultIkParameters.rrtGoalBias, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=1e-2))
         self.addProperty('Goal planning mode', 0, attributes=om.PropertyAttributes(enumNames=['fix end pose', 'fix goal joints']))
         #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
 
@@ -152,19 +152,19 @@ class IkOptionsItem(om.ObjectModelItem):
             self.ikPlanner.defaultIkParameters.majorOptimalityTolerance = self.getProperty(propertyName)
 
         if propertyName == 'RRT max edge length':
-            self.ikServer.rrtMaxEdgeLength = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.rrtMaxEdgeLength = self.getProperty(propertyName)
 
         if propertyName == 'RRT max vertices':
-            self.ikServer.rrtMaxNumVertices = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.rrtMaxNumVertices = self.getProperty(propertyName)
 
         if propertyName == 'RRT no. of smoothing passes':
-            self.ikServer.rrtNSmoothingPasses = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.rrtNSmoothingPasses = self.getProperty(propertyName)
 
         if propertyName == 'RRT goal bias':
-            self.ikServer.rrtGoalBias = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.rrtGoalBias = self.getProperty(propertyName)
 
         if propertyName == 'Collision min distance':
-            self.ikServer.collisionMinDistance = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.collisionMinDistance = self.getProperty(propertyName)
 
         if propertyName == 'Add knots':
             self.ikPlanner.defaultIkParameters.numberOfAddedKnots = self.getProperty(propertyName)

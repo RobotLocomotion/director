@@ -28,11 +28,6 @@ class AsyncIKCommunicator():
         self.nominalName = 'q_nom'
         self.infoFunc = None
 
-        self.collisionMinDistance = 0.03
-        self.rrtMaxEdgeLength = 0.05
-        self.rrtGoalBias = 1.0
-        self.rrtMaxNumVertices = 5000
-        self.rrtNSmoothingPasses = 10;
         self.maxBodyTranslationSpeed = 0.50
         self.maxBodyRotationSpeed = 10
         self.rescaleBodyNames = []
@@ -210,7 +205,7 @@ class AsyncIKCommunicator():
         commands.append('options.MajorIterationsLimit = %s;' % ikParameters.majorIterationsLimit)
         commands.append('options.MajorFeasibilityTolerance = %s;' % ikParameters.majorFeasibilityTolerance)
         commands.append('options.MajorOptimalityTolerance = %s;' % ikParameters.majorOptimalityTolerance)
-        commands.append('options.MinDistance = %f;' % self.collisionMinDistance)
+        commands.append('options.MinDistance = %f;' % ikParameters.collisionMinDistance)
         commands.append('s = s.setupOptions(options);')
         commands.append('clear q_end;')
         commands.append('clear info;')
@@ -291,16 +286,16 @@ class AsyncIKCommunicator():
             commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
             commands.append('options.n_interp_points = %s;' % ikParameters.numberOfInterpolatedCollisionChecks)
-            commands.append('options.min_distance = %s;' % self.collisionMinDistance)
+            commands.append('options.min_distance = %s;' % ikParameters.collisionMinDistance)
             commands.append('options.t_max = %s;' % ikParameters.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
             commands.append('options.end_effector_name = end_effector_name;')
             commands.append('options.end_effector_pt = end_effector_pt;')
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
-            commands.append('options.RRTMaxEdgeLength = %s;' % self.rrtMaxEdgeLength)
-            commands.append('options.RRTGoalBias = %s;' % self.rrtGoalBias)
-            commands.append('options.N = %s;' % self.rrtMaxNumVertices)
-            commands.append('options.n_smoothing_passes = %s;' % self.rrtNSmoothingPasses)
+            commands.append('options.RRTMaxEdgeLength = %s;' % ikParameters.rrtMaxEdgeLength)
+            commands.append('options.RRTGoalBias = %s;' % ikParameters.rrtGoalBias)
+            commands.append('options.N = %s;' % ikParameters.rrtMaxNumVertices)
+            commands.append('options.n_smoothing_passes = %s;' % ikParameters.rrtNSmoothingPasses)
             commands.append('[xtraj,info] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);')
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:
