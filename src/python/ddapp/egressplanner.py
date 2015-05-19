@@ -13,6 +13,8 @@ from ddapp.timercallback import TimerCallback
 from ddapp import visualization as vis
 from ddapp import planplayback
 from ddapp import lcmUtils
+from ddapp import affordancepanel
+from ddapp.uuidutil import newUUID
 
 import os
 import functools
@@ -33,36 +35,56 @@ class PolarisModel(object):
         pose = transformUtils.poseFromTransform(vtk.vtkTransform())
         desc = dict(classname='MeshAffordanceItem', Name='polaris',
                     Filename='software/models/polaris/polaris_cropped.vtp', pose=pose)
-        self.affordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        self.pointcloudAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         self.aprilTagFrame = vis.updateFrame(vtk.vtkTransform(), 'grab bar april tag',
-                                             visible=True, scale=0.2, parent=self.affordance)
+                                             visible=True, scale=0.2, parent=self.pointcloudAffordance)
 
         t = transformUtils.transformFromPose(np.array([-0.99548239, 0.04156693, 0.35259928]),
                                              np.array([ 0.18827199, 0.84761397, 0.41552535,
                                                        0.27100351]))
-        self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.affordance)
+        self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
         t = transformUtils.transformFromPose(np.array([-0.93707546,  0.07409333,  0.32871604]),
                                              np.array([ 0.22455191,  0.71396247,  0.60983921,
                                                        0.26063418]))
-        self.leftFootEgressInsideFrame  = vis.updateFrame(t, 'left foot inside', scale=0.2,visible=True, parent=self.affordance)
+        self.leftFootEgressInsideFrame  = vis.updateFrame(t, 'left foot inside', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
         t = transformUtils.transformFromPose(np.array([-0.89783714,  0.23503719,  0.29039189]),
                                              np.array([ 0.2331762 ,  0.69031269,  0.6311807,
                                                        0.2659101]))
-        self.leftFootEgressMidFrame  = vis.updateFrame(t, 'left foot mid', scale=0.2,visible=True, parent=self.affordance)
+        self.leftFootEgressMidFrame  = vis.updateFrame(t, 'left foot mid', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
         t = transformUtils.transformFromPose(np.array([-0.88436275,  0.50939115,  0.31281047]),
                                              np.array([ 0.22600245,  0.69177731,  0.63305905,
                                                        0.26382435]))
-        self.leftFootEgressOutsideFrame  = vis.updateFrame(t, 'left foot outside', scale=0.2,visible=True, parent=self.affordance)
+        self.leftFootEgressOutsideFrame  = vis.updateFrame(t, 'left foot outside', scale=0.2,visible=True, parent=self.pointcloudAffordance)
+
+
+        pose = [np.array([-0.43284877, -0.82362299, -0.24939116]), np.array([ 0.00764553,  0.64088459, -0.01054815,  0.7675267 ])]
+
+        desc = dict(classname='CapsuleRingAffordanceItem', Name='Steering Wheel', uuid=newUUID(), pose=pose,
+                    Color=[1, 0, 0], Radius=float(0.18), Segments=20)        
+        self.steeringWheelAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+
+        t = transformUtils.transformFromPose(np.array([-0.90059956, -0.05615547,  0.35095837]), 
+            np.array([ 0.04265926,  0.99731023,  0.04053839,  0.04369372]))
+
+        self.leftFootDrivingFrame = vis.updateFrame(t,'left foot driving', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+
+        t = transformUtils.transformFromPose(np.array([ 0.0584505 ,  0.43832744,  0.02401199]), 
+            np.array([ 0.62148369,  0.32887677, -0.32946879, -0.63011777]))
+        self.rightHandGrabFrame = vis.updateFrame(t,'right hand grab bar', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(self.aprilTagFrame)
-        self.frameSync.addFrame(self.affordance.getChildFrame(), ignoreIncoming=True)
+        self.frameSync.addFrame(self.pointcloudAffordance.getChildFrame(), ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressStartFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressInsideFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressMidFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressOutsideFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.steeringWheelAffordance.getChildFrame(), ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootDrivingFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.rightHandGrabFrame, ignoreIncoming=True)
 
     def onAprilTag(self, msg):
         t = vtk.vtkTransform()
