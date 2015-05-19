@@ -496,6 +496,87 @@ class TableDemo(object):
 
 
     ######### Higher Level Planning Functions ##################################################################
+    def computeNextRoomFrame(self):
+        assert self.targetAffordance
+        t = transformUtils.frameFromPositionAndRPY(self.nextPosition, [0, 0, 0])
+        self.faceTransformLocal = transformUtils.copyFrame(t) # copy required
+        t.Concatenate(self.targetFrame)
+        self.faceFrameDesired = vis.showFrame(t, 'target frame desired', parent=self.targetAffordance, visible=False, scale=0.2)
+
+    def planRoomReach(self):
+        # A single one shot gaze-constrained reach: place xyz at goal and align y-axis of hand with x-axis of goal
+        self.initConstraintSet()
+        self.addConstraintForTargetFrame(self.startFrame, 1)
+        self.planTrajectory()
+
+
+    def planRoomMap(self):
+        self.graspingHand = 'left'
+        self.targetSweepType = 'orientation'
+        self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
+        self.currentYawDegrees = 90
+
+        self.nextPosition =[0,0,0]
+        self.targetPath = []
+        self.resetTargetPath()
+        self.fromTop = True
+
+        blocksFolder=om.getOrCreateContainer('room mapping')
+
+
+        while (self.currentYawDegrees >= -90):
+            topFrame = transformUtils.frameFromPositionAndRPY([0.6,0.0,0.8],[160,0,90])
+            yawFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,0,self.currentYawDegrees])
+            topFrame.PostMultiply()
+            topFrame.Concatenate( yawFrame )
+
+            bottomFrame = transformUtils.frameFromPositionAndRPY([0.6,0.0,0.4],[210,0,90])
+            yawFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,0,self.currentYawDegrees])
+            bottomFrame.PostMultiply()
+            bottomFrame.Concatenate( yawFrame )
+
+            if (self.fromTop):
+                self.startFrame = vis.showFrame(topFrame, 'frame start', visible=False, scale=0.1,parent=blocksFolder)
+                self.endFrame = vis.showFrame(bottomFrame, 'frame start', visible=False, scale=0.1,parent=blocksFolder)
+            else:
+                self.startFrame = vis.showFrame(bottomFrame, 'frame start', visible=False, scale=0.1,parent=blocksFolder)
+                self.endFrame = vis.showFrame(topFrame, 'frame start', visible=False, scale=0.1,parent=blocksFolder)
+
+            self.planRoomReach()# move to next start point
+            self.planRoomSweep()        # reach down/up
+
+            self.currentYawDegrees = self.currentYawDegrees - 30
+            self.fromTop = not self.fromTop
+
+
+    def planRoomSweep(self):
+        blocksFolder=om.getOrCreateContainer('room mapping')
+
+        self.initConstraintSet()
+
+        faceFrameDesired = transformUtils.frameInterpolate(self.startFrame.transform , self.endFrame.transform, 0)
+        vis.showFrame(faceFrameDesired, 'frame 0', visible=True, scale=0.1,parent=blocksFolder)
+        self.addConstraintForTargetFrame(faceFrameDesired, 0)
+
+        faceFrameDesired = transformUtils.frameInterpolate(self.startFrame.transform , self.endFrame.transform, 1.0/3.0)
+        vis.showFrame(faceFrameDesired, 'frame 1', visible=True, scale=0.1,parent=blocksFolder)
+        self.addConstraintForTargetFrame(faceFrameDesired, 1)
+
+        faceFrameDesired = transformUtils.frameInterpolate(self.startFrame.transform , self.endFrame.transform, 2.0/3.0)
+        vis.showFrame(faceFrameDesired, 'frame 2', visible=True, scale=0.1,parent=blocksFolder)
+        self.addConstraintForTargetFrame(faceFrameDesired, 2)
+
+        faceFrameDesired = transformUtils.frameInterpolate(self.startFrame.transform , self.endFrame.transform, 3.0/3.0)
+        vis.showFrame(faceFrameDesired, 'frame 3', visible=True, scale=0.1,parent=blocksFolder)
+        self.addConstraintForTargetFrame(faceFrameDesired, 3)
+
+        #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
+        self.planTrajectory()
+        #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+
+
+
+
     def planTargetSweep(self):
         self.graspingHand = 'left'
 
