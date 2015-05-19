@@ -39,9 +39,8 @@ class PolarisModel(object):
         self.originFrame = self.pointcloudAffordance.getChildFrame()
         self.originToAprilTransform = vtk.vtkTransform() # this should be updated when we remount the April tag
 
-        t = transformUtils.transformFromPose(np.array([-0.99548239, 0.04156693, 0.35259928]),
-                                             np.array([ 0.18827199, 0.84761397, 0.41552535,
-                                                       0.27100351]))
+        t = transformUtils.transformFromPose(np.array([-0.96427236,  0.06193934,  0.3543806 ]), 
+            np.array([ 0.18153211,  0.83526159,  0.42728504,  0.29463821]))
         self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
         t = transformUtils.transformFromPose(np.array([-0.93707546,  0.07409333,  0.32871604]),
@@ -66,8 +65,13 @@ class PolarisModel(object):
                     Color=[1, 0, 0], Radius=float(0.18), Segments=20)        
         self.steeringWheelAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
 
-        t = transformUtils.transformFromPose(np.array([-0.90059956, -0.05615547,  0.35095837]), 
-            np.array([ 0.04265926,  0.99731023,  0.04053839,  0.04369372]))
+        t = transformUtils.transformFromPose(np.array([-0.95565326,  0.00645136,  0.30410111]), 
+            np.array([ 0.2638261 ,  0.88689326,  0.36270714,  0.11072339]))
+
+        self.leftFootPedalSwingFrame = vis.updateFrame(t,'left foot pedal swing', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+
+        t = transformUtils.transformFromPose(np.array([-0.90084703, -0.05962708,  0.31975967]), 
+            np.array([ 0.03968859,  0.99239755,  0.03727381,  0.11037472]))
 
         self.leftFootDrivingFrame = vis.updateFrame(t,'left foot driving', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
@@ -83,13 +87,14 @@ class PolarisModel(object):
         self.frameSync.addFrame(self.leftFootEgressMidFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressOutsideFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.steeringWheelAffordance.getChildFrame(), ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootPedalSwingFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootDrivingFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.rightHandGrabFrame, ignoreIncoming=True)
 
     def onAprilTag(self, msg):
         t = vtk.vtkTransform()
         cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, t)
-        self.originFrame = transformUtils.concatenateTransforms([self.originToAprilTransform, t])
+        self.originFrame.copyFrame(transformUtils.concatenateTransforms([self.originToAprilTransform, t]))
 
 class EgressPlanner(object):
 
@@ -392,11 +397,12 @@ class EgressPlanner(object):
         lcmUtils.publish('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS', msg_robot_plan_with_supports_t)
         return msg_robot_plan_with_supports_t
 
-    def getFrameToAprilTagTransform(self, t):
+    def getFrameToOriginTransform(self, t):
         tCopy = transformUtils.copyFrame(t)
         tCopy.PostMultiply()
-        tCopy.Concatenate(self.aprilTagFrame.GetLinearInverse())
-        print transformUtils.poseFromTransform
+        tCopy.Concatenate(self.polaris.originFrame.transform.GetLinearInverse())
+        print transformUtils.poseFromTransform(tCopy)
+        return tCopy
 
 
 
@@ -416,46 +422,19 @@ class EgressPanel(TaskUserPanel):
     def addButtons(self):
         #sit/stand buttons
         self.addManualButton('Start', self.onStart)
-        # self.addManualButton('Sit', functools.partial(self.onPlan, 'sit'))
-        # self.addManualButton('Stand', functools.partial(self.onPlan, 'stand'))
-        # self.addManualButton('Squat', functools.partial(self.onPlan, 'squat'))
-        # self.addManualButton('Stand From Squat', functools.partial(self.onPlan, 'stand_from_squat'))
-        # self.addManualButton('Sit From Current', functools.partial(self.onPlan, 'sit_from_current'))
-        # self.addManualButton('Hold With Pelvis Contact', functools.partial(self.onPlan, 'hold_with_pelvis_contact'))
-        # self.addManualButton('Hold Without Pelvis Contact', functools.partial(self.onPlan, 'hold_without_pelvis_contact'))
-
         # polaris step down buttons
         self.addManualButton('Fit Platform Affordance', self.platformPlanner.fitRunningBoardAtFeet)
         self.addManualButton('Spawn Ground Affordance', self.platformPlanner.spawnGroundAffordance)
         self.addManualButton('Raycast Terrain', self.platformPlanner.requestRaycastTerrain)
         self.addManualButton('Update Affordance', self.platformPlanner.updateAffordance)
         self.addManualButton('Arms Up',self.onArmsUp)
-        # self.addManualButton('Plan Turn', self.onPlanTurn)
         self.addManualButton('Plan Step Down', self.onPlanStepDown)
-        # self.addManualButton('Plan Weight Shift', self.onPlanWeightShift)
         self.addManualButton('Plan Step Off', self.onPlanStepOff)
 
     def addDefaultProperties(self):
-        # self.params.addProperty('Chair Height', 0.57, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        # self.params.addProperty('Sit Back Distance', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        # self.params.addProperty('Speed', 1, attributes=om.PropertyAttributes(singleStep=0.1, decimals=3))
-        # self.params.addProperty('Back Gaze Bound', 0.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        # self.params.addProperty('Min Distance', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        # self.params.addProperty('Pelvis Gaze Bound', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        # self.params.addProperty('Pelvis Gaze Angle', 0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        # self.params.addProperty('Back y Angle', -0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-
         self.params.addProperty('Step Off Direction', 0, attributes=om.PropertyAttributes(enumNames=['Forwards','Sideways']))
 
     def _syncProperties(self):
-        # self.sitStandPlanner.planOptions['chair_height'] = self.params.getProperty('Chair Height')
-        # self.sitStandPlanner.planOptions['sit_back_distance'] = self.params.getProperty('Sit Back Distance')
-        # self.sitStandPlanner.planOptions['speed'] = self.params.getProperty('Speed')
-        # self.sitStandPlanner.planOptions['back_gaze_bound'] = self.params.getProperty('Back Gaze Bound')
-        # self.sitStandPlanner.planOptions['min_distance'] = self.params.getProperty('Min Distance')
-        # self.sitStandPlanner.planOptions['pelvis_gaze_bound']= self.params.getProperty('Pelvis Gaze Bound')
-        # self.sitStandPlanner.planOptions['pelvis_gaze_angle'] = self.params.getProperty('Pelvis Gaze Angle')
-        # self.sitStandPlanner.planOptions['bky_angle'] = self.params.getProperty('Back y Angle')
         self.stepOffDirection = self.params.getPropertyEnumValue('Step Off Direction').lower()
         self.sitStandPlanner.applyParams()
 
