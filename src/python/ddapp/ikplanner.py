@@ -109,9 +109,9 @@ class IkOptionsItem(om.ObjectModelItem):
         self.addProperty('Max joint degrees/s', ikServer.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
         self.addProperty('Nominal pose', 1, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Seed pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
-        self.addProperty('Major iterations limit', ikServer.majorIterationsLimit)
-        self.addProperty('Major feasibility tolerance', ikServer.majorFeasibilityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-5))
-        self.addProperty('Major optimality tolerance', ikServer.majorOptimalityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-4))
+        self.addProperty('Major iterations limit', ikPlanner.defaultIkParameters.majorIterationsLimit)
+        self.addProperty('Major feasibility tolerance', ikPlanner.defaultIkParameters.majorFeasibilityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-5))
+        self.addProperty('Major optimality tolerance', ikPlanner.defaultIkParameters.majorOptimalityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-4))
         self.addProperty('RRT max edge length', ikServer.rrtMaxEdgeLength, attributes=om.PropertyAttributes(decimals=2, minimum=1e-2, maximum=1.0, singleStep=1e-2))
         self.addProperty('RRT max vertices', ikServer.rrtMaxNumVertices, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e5, singleStep=1e1))
         self.addProperty('RRT no. of smoothing passes', ikServer.rrtNSmoothingPasses, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e2, singleStep=1e0))
@@ -143,13 +143,13 @@ class IkOptionsItem(om.ObjectModelItem):
                 self.setProperty('Major feasibility tolerance', 1e-6)
 
         if propertyName == 'Major iterations limit':
-            self.ikServer.majorIterationsLimit = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.majorIterationsLimit = self.getProperty(propertyName)
 
         if propertyName == 'Major feasibility tolerance':
-            self.ikServer.majorFeasibilityTolerance = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.majorFeasibilityTolerance = self.getProperty(propertyName)
 
         if propertyName == 'Major optimality tolerance':
-            self.ikServer.majorOptimalityTolerance = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.majorOptimalityTolerance = self.getProperty(propertyName)
 
         if propertyName == 'RRT max edge length':
             self.ikServer.rrtMaxEdgeLength = self.getProperty(propertyName)
