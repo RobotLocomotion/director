@@ -42,6 +42,7 @@ class ConstraintSet(object):
 
     def __init__(self, ikPlanner, constraints, endPoseName, startPoseName):
         self.ikPlanner = ikPlanner
+        self.ikParameters = IkParameters
         self.constraints = constraints
         self.endPoseName = endPoseName
         self.startPoseName = startPoseName
@@ -49,7 +50,7 @@ class ConstraintSet(object):
         self.seedPoseName = None
         self.nominalPoseName = None
 
-    def runIk(self, ikParameters=None):
+    def runIk(self):
 
         seedPoseName = self.seedPoseName
         if not seedPoseName:
@@ -63,13 +64,13 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
 
         self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, ikParameters, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
         print 'info:', self.info
         return self.endPose, self.info
 
-    def runIkTraj(self, ikParameters=None):
+    def runIkTraj(self):
         assert self.endPose is not None
         self.ikPlanner.addPose(self.endPose, self.endPoseName)
 
@@ -79,13 +80,15 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
         self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
         return self.plan
 
     def planEndPoseGoal(self, feetOnGround = True):
         assert self.endPose is not None
         self.ikPlanner.addPose(self.endPose, self.endPoseName)
-        self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName, feetOnGround)
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+        self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName, feetOnGround, ikParameters=ikParameters)
         return self.plan
 
     def onFrameModified(self, frame):
