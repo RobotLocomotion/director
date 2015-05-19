@@ -28,9 +28,6 @@ class AsyncIKCommunicator():
         self.nominalName = 'q_nom'
         self.infoFunc = None
 
-        self.fixInitialState = True
-        self.numberOfAddedKnots = 0
-        self.numberOfInterpolatedCollisionChecks = 2
         self.collisionMinDistance = 0.03
         self.rrtMaxEdgeLength = 0.05
         self.rrtGoalBias = 1.0
@@ -250,7 +247,7 @@ class AsyncIKCommunicator():
             timeSamples = [x for x in timeSamples if x not in [-np.inf, np.inf]]
             timeSamples.append(0.0)
             timeSamples = np.unique(timeSamples).tolist()
-            timeSamples += np.linspace(timeSamples[0], timeSamples[-1], self.numberOfAddedKnots + 2).tolist()
+            timeSamples += np.linspace(timeSamples[0], timeSamples[-1], ikParameters.numberOfAddedKnots + 2).tolist()
             timeSamples = np.unique(timeSamples).tolist()
 
 
@@ -284,7 +281,7 @@ class AsyncIKCommunicator():
         commands.append('options.MajorIterationsLimit = %s;' % ikParameters.majorIterationsLimit)
         commands.append('options.MajorFeasibilityTolerance = %s;' % ikParameters.majorFeasibilityTolerance)
         commands.append('options.MajorOptimalityTolerance = %s;' % ikParameters.majorOptimalityTolerance)
-        commands.append('options.FixInitialState = %s;' % ('true' if self.fixInitialState else 'false'))
+        commands.append('options.FixInitialState = %s;' % ('true' if ikParameters.fixInitialState else 'false'))
         commands.append('s = s.setupOptions(options);')
         commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
@@ -293,7 +290,7 @@ class AsyncIKCommunicator():
         if ikParameters.useCollision:
             commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
-            commands.append('options.n_interp_points = %s;' % self.numberOfInterpolatedCollisionChecks)
+            commands.append('options.n_interp_points = %s;' % ikParameters.numberOfInterpolatedCollisionChecks)
             commands.append('options.min_distance = %s;' % self.collisionMinDistance)
             commands.append('options.t_max = %s;' % ikParameters.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
