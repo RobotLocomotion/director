@@ -9,12 +9,15 @@ class IkParameters(FieldContainer):
             majorIterationsLimit = None,
             majorOptimalityTolerance = None,
             majorFeasibilityTolerance = None,
-            maxDegreesPerSecond = 30.0,
-            maxBaseMetersPerSecond = 0.05,
-            maxBaseRPYDegreesPerSecond = 2,
-            accelerationParam = 2,
-            accelerationFraction = 0.3,
-            maxPlanDuration = 30.0
+            maxDegreesPerSecond = None,
+            maxBaseMetersPerSecond = None,
+            maxBaseRPYDegreesPerSecond = None,
+            accelerationParam = None,
+            accelerationFraction = None,
+            maxPlanDuration = None,
+            fixInitialState = None,
+            numberOfAddedKnots = None,
+            numberOfInterpolatedCollisionChecks = None,
         )
 
     def setToDefaults(self):
@@ -26,9 +29,12 @@ class IkParameters(FieldContainer):
         self.maxDegreesPerSecond = 30.0
         self.maxBaseMetersPerSecond = 0.05
         self.maxBaseRPYDegreesPerSecond = 2
-        self.accelerationParam = 2;
-        self.accelerationFraction = 0.3;
+        self.accelerationParam = 2
+        self.accelerationFraction = 0.3
         self.maxPlanDuration = 30.0
+        self.fixInitialState = True
+        self.numberOfAddedKnots = 0
+        self.numberOfInterpolatedCollisionChecks = 2
 
     def fillInWith(self, other):
         for field, value in self:
