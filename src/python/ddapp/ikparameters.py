@@ -9,6 +9,9 @@ class IkParameters(FieldContainer):
             majorIterationsLimit = None,
             majorOptimalityTolerance = None,
             majorFeasibilityTolerance = None,
+            maxDegreesPerSecond = 30.0,
+            maxBaseMetersPerSecond = 0.05,
+            maxBaseRPYDegreesPerSecond = 2
         )
 
     def setToDefaults(self):
@@ -17,6 +20,9 @@ class IkParameters(FieldContainer):
         self.majorIterationsLimit = 500
         self.majorOptimalityTolerance = 1e-4
         self.majorFeasibilityTolerance = 1e-6
+        self.maxDegreesPerSecond = 30.0
+        self.maxBaseMetersPerSecond = 0.05
+        self.maxBaseRPYDegreesPerSecond = 2
 
     def fillInWith(self, other):
         for field, value in self:
