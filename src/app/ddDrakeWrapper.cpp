@@ -13,24 +13,15 @@
 
 using std::vector;
 
-//-----------------------------------------------------------------------------
-class ddDrakeWrapper::ddInternal
-{
-public:
-
-};
-
 
 //-----------------------------------------------------------------------------
 ddDrakeWrapper::ddDrakeWrapper(QObject* parent) : QObject(parent)
 {
-  this->Internal = new ddInternal;
 }
 
 //-----------------------------------------------------------------------------
 ddDrakeWrapper::~ddDrakeWrapper()
 {
-  delete this->Internal;
 }
 
 //-----------------------------------------------------------------------------
