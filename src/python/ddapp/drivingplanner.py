@@ -381,11 +381,115 @@ class DrivingPlanner(object):
 
         return keyFramePlan
 
+
+    def planSteeringWheelReGrasp(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_regrasp_start'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_regrasp_end'
+        handName = 'left'
+        handLinkName = 'l_hand'
+        maxMetersPerSecond = 0.1
+
+        retractDepth = 0.15
+
+        ikServer = ikPlanner.ikServer
+        ikServer.maxBodyTranslationSpeed = maxMetersPerSecond
+        ikServer.rescaleBodyNames = [handLinkName]
+        ikServer.rescaleBodyPts = list(ikPlanner.getPalmPoint())
+
+        ikParameterDict = dict(maxDegreesPerSecond=100)
+        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
+
+
+        palmToWorld = ikPlanner.newGraspToWorldFrame(startPose, handName, ikPlanner.getPalmToHandLink(handName))
+        finalTargetFrame = transformUtils.copyFrame(palmToWorld)
+        finalTargetFrame.PreMultiply()
+        finalTargetFrame.RotateY(180)
+        finalPoseConstraint = self.createLeftPalmPoseConstraints(finalTargetFrame, tspan=[1,1])
+
+
+        retractTargetFrame = transformUtils.copyFrame(palmToWorld)
+        retractTargetFrame.PreMultiply()
+        retractTargetFrame.Translate([0.0, -retractDepth, 0.0])
+        retractPoseConstraint = self.createLeftPalmPoseConstraints(retractTargetFrame, tspan=[0.25,0.25])
+
+        preGraspTargetFrame = transformUtils.copyFrame(retractTargetFrame)
+        preGraspTargetFrame.PreMultiply()
+        preGraspTargetFrame.RotateY(180)
+        preGraspPoseConstraint = self.createLeftPalmPoseConstraints(preGraspTargetFrame, tspan=[0.75, 0.75])
+
+        allButLeftArmPostureConstraint = self.createAllButLeftArmPostureConstraint(startPoseName)
+        lockedBaseConstraint = ikPlanner.createLockedBasePostureConstraint(startPoseName)
+        lockedRightArmConstraint = ikPlanner.createLockedRightArmPostureConstraint(startPoseName)
+        lockedTorsoConstraint = ikPlanner.createLockedTorsoPostureConstraint(startPoseName)
+        constraints = [allButLeftArmPostureConstraint]
+        # constraints = [lockedTorsoConstraint, lockedRightArmConstraint]
+        constraints.extend(finalPoseConstraint)
+
+        seedPoseName = 'q_regrasp_seed'
+        # seedPose = startPose
+        # seedPose[self.lwyIdx] = startPose[self.lwyIdx] + np.pi
+
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
+        self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
+
+        constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.seedPoseName = seedPoseName
+        constraintSet.nominalPoseName = seedPoseName
+
+        for c in constraintSet.constraints:
+            print c
+
+        vis.updateFrame(palmToWorld, 'palm frame')
+        vis.updateFrame(finalTargetFrame, 'target frame')
+
+        endPose = constraintSet.runIk()
+        # plan = constraintSet.planEndPoseGoal()
+        # return
+        # cs = 
+
+        constraintSet.constraints.extend(retractPoseConstraint)
+        constraintSet.constraints.extend(preGraspPoseConstraint)
+
+        plan = constraintSet.runIkTraj()
+        self.plans.append(plan)
+
+        ikPlanner.setIkParameters(ikParametersOriginal)
+        return plan
+
+
     def createLeftFootPoseConstraint(self, targetFrame, tspan=[-np.inf,np.inf]):
         positionConstraint, orientationConstraint = self.robotSystem.ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, vtk.vtkTransform())
         positionConstraint.tspan = tspan
         orientationConstraint.tspan = tspan
         return positionConstraint, orientationConstraint
+
+    def createLeftPalmPoseConstraints(self, targetFrame, tspan=[-np.inf, np.inf]):
+        ikPlanner = self.robotSystem.ikPlanner
+        positionConstraint, orientationConstraint = ikPlanner.createPositionOrientationGraspConstraints('left', targetFrame)
+        positionConstraint.tspan = tspan
+        orientationConstraint.tspan = tspan
+        return positionConstraint, orientationConstraint
+
+
+    def createLeftHandPoseConstraintOnWheel(self, depth=0.12, tspan=[-np.inf, np.inf]):
+        targetFrame = self.getSteeringWheelPalmFrame()
+        targetFrame.PreMultiply()
+        targetFrame.Translate([0.0, depth, 0.0])
+        positionConstraint, orientationConstraint = self.robotSystem.ikPlanner.createPositionOrientationConstraint('l_hand_face', targetFrame, vtk.vtkTransform())
+        positionConstraint.tspan = tspan
+        orientationConstraint.tspan = tspan
+        return positionConstraint, orientationConstraint
+
+    def getSteeringWheelPalmFrame(self):
+        frame = transformUtils.copyFrame(om.findObjectByName('Steering Wheel frame').transform)
+        frame.PreMultiply()
+        frame.RotateX(90)
+        frame.PreMultiply()
+        frame.RotateZ(-90)
+        return frame
 
 
     def planBarGrasp(self,depth=0, preGrasp=False):
@@ -443,6 +547,10 @@ class DrivingPlanner(object):
 
     def createAllButLeftLegPostureConstraint(self, poseName):
         joints = robotstate.matchJoints('^(?!l_leg)')
+        return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
+
+    def createAllButLeftArmPostureConstraint(self, poseName):
+        joints = robotstate.matchJoints('^(?!l_arm)')
         return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
 
 
