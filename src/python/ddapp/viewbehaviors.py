@@ -16,6 +16,7 @@ from ddapp import teleoppanel
 from ddapp import footstepsdriverpanel
 from ddapp import applogic as app
 from ddapp import vtkAll as vtk
+from ddapp import filterUtils
 from ddapp.shallowCopy import shallowCopy
 from ddapp import segmentationpanel
 from ddapp import segmentation
@@ -524,10 +525,17 @@ def showRightClickMenu(displayPoint, view):
     def onCopyPointCloud():
         polyData = vtk.vtkPolyData()
         polyData.DeepCopy(pointCloudObj.polyData)
+        
         if pointCloudObj.getChildFrame():
             polyData = segmentation.transformPolyData(polyData, pointCloudObj.getChildFrame().transform)
         polyData = segmentation.addCoordArraysToPolyData(polyData)
+
         obj = vis.showPolyData(polyData, pointCloudObj.getProperty('Name') + ' copy', color=[0,1,0], parent='segmentation')
+
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Translate(filterUtils.computeCentroid(polyData))
+        segmentation.makeMovable(obj, t)
         om.setActiveObject(obj)
         pickedObj.setProperty('Visible', False)
 
