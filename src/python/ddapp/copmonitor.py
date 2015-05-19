@@ -35,7 +35,6 @@ class COPMonitor(object):
 
         self.warningButton = QtGui.QLabel('COP Warning')
         self.warningButton.setStyleSheet("background-color:white")
-        #app.getMainWindow().statusBar().insertPermanentWidget(0, self.warningButton)
         self.dialogVisible = False
 
         d = DebugData()
