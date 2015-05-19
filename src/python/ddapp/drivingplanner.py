@@ -320,112 +320,6 @@ class DrivingPlanner(object):
         ikPlanner.setIkParameters(ikParametersOriginal)
 
 
-    # def planLegOffPedal(self):
-    #     om.findObjectByName('left foot driving')
-    #     ikPlanner = self.robotSystem.ikPlanner
-    #     startPose = self.getPlanningStartPose()
-    #     startPoseName = 'q_start_foot'
-    #     self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
-    #     endPoseName = 'q_foot_end'
-
-    #     ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-    #     'maxDegreesPerSecond': 10}
-    #     ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-
-    #     targetFrame = om.findObjectByName('left foot driving').transform
-    #     targetFrame.PreMultiply()
-    #     targetFrame.Translate([-0.02,0.0, 0.03])
-    #     identityFrame = vtk.vtkTransform()
-    #     lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, identityFrame)
-
-    #     allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
-
-    #     constraints = [allButLeftLegPostureConstraint]
-    #     constraints.extend(lfootPositionOrientationConstraint)
-
-    #     seedPoseName = 'q_driving'
-    #     seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
-    #     self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
-
-    #     cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-    #     cs.seedPoseName = 'q_driving'
-    #     cs.nominalPoseName = 'q_driving'
-    #     endPose = cs.runIk()
-    #     keyFramePlan = cs.planEndPoseGoal()
-
-    #     ikPlanner.setIkParameters(ikParametersOriginal)
-
-    # def planLegSwingOut(self):
-    #     om.findObjectByName('left foot driving')
-    #     ikPlanner = self.robotSystem.ikPlanner
-    #     startPose = self.getPlanningStartPose()
-    #     startPoseName = 'q_start_foot'
-    #     self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
-    #     endPoseName = 'q_foot_end'
-
-    #     ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-    #     'maxDegreesPerSecond': 10}
-    #     ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-
-    #     targetFrame = om.findObjectByName('left foot start').transform
-    #     targetFrame.PreMultiply()
-    #     targetFrame.Translate([0.0,0.0,0.05])
-    #     identityFrame = vtk.vtkTransform()
-    #     lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, identityFrame)
-
-    #     allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
-
-    #     constraints = [allButLeftLegPostureConstraint]
-    #     constraints.extend(lfootPositionOrientationConstraint)
-
-    #     seedPoseName = 'q_driving'
-    #     seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
-    #     self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
-
-    #     cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-    #     cs.seedPoseName = 'q_driving'
-    #     cs.nominalPoseName = 'q_driving'
-    #     endPose = cs.runIk()
-    #     keyFramePlan = cs.planEndPoseGoal()
-    #     return keyFramePlan
-
-    #     ikPlanner.setIkParameters(ikParametersOriginal)
-
-    # def planLegDown(self):
-    #     om.findObjectByName('left foot driving')
-    #     ikPlanner = self.robotSystem.ikPlanner
-    #     startPose = self.getPlanningStartPose()
-    #     startPoseName = 'q_start_foot'
-    #     self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
-    #     endPoseName = 'q_foot_end'
-
-    #     ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-    #     'maxDegreesPerSecond': 10}
-    #     ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-
-    #     targetFrame = om.findObjectByName('left foot start').transform
-    #     identityFrame = vtk.vtkTransform()
-    #     lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, identityFrame)
-
-    #     allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
-
-    #     constraints = [allButLeftLegPostureConstraint]
-    #     constraints.extend(lfootPositionOrientationConstraint)
-
-    #     seedPoseName = 'q_driving'
-    #     seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
-    #     self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
-
-    #     cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-    #     cs.seedPoseName = 'q_driving'
-    #     cs.nominalPoseName = 'q_driving'
-    #     endPose = cs.runIk()
-    #     keyFramePlan = cs.planEndPoseGoal()
-    #     return keyFramePlan
-
-    #     ikPlanner.setIkParameters(ikParametersOriginal)
-
-
     def planBarGrasp(self,depth=0, preGrasp=False):
         ikPlanner = self.robotSystem.ikPlanner
         handName = 'right'
@@ -543,15 +437,6 @@ class DrivingPlanner(object):
 
         return transformedDrivingTraj
 
-    # # capture the ankle position, 0 is no throttle, 1 is just starting to move
-    # def captureAnklePosition(self, typeIdx):
-    #     pose = self.captureRobotPoseFromStreaming()
-    #     if pose is None:
-    #         return
-
-    #     print 'captured ankle position'
-    #     anklePos = np.rad2deg(pose[self.akyIdx])
-    #     self.anklePositions[typeIdx] = anklePos
 
     def onThrottleCommand(self, msg):
         if np.isnan(self.anklePositions).any():
@@ -579,7 +464,7 @@ class DrivingPlanner(object):
         lcmUtils.publish(self.throttlePublishChannel, msg)
 
     def onSteeringCommand(self, msg):
-        steeringAngle = -msg.steeringAngle
+        steeringAngle = -msg.steering_angle
         lwyPositionGoal = steeringAngle + self.steeringAngleOffset
         msg = lcmdrc.joint_position_goal_t()
         msg.utime = getUtime()
