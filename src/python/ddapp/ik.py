@@ -180,6 +180,7 @@ class AsyncIKCommunicator():
         commands.append('\n%-------- runIk --------\n')
         constraintNames = []
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
+        commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
         for constraintId, constraint in enumerate(constraints):
             if not constraint.enabled:
                 continue
@@ -249,6 +250,7 @@ class AsyncIKCommunicator():
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
         commands.append("end_effector_name = '';")
         commands.append("end_effector_pt = [];")
+        commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
 
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
