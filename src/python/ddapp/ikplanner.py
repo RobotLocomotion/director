@@ -690,7 +690,9 @@ class IKPlanner(object):
         self.jointController.setPose('user_pose', pose)
         return self.robotModel
 
-    def computeNominalPose(self, startPose):
+    def computeNominalPose(self, startPose, ikParameters=None):
+
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
@@ -703,7 +705,7 @@ class IKPlanner(object):
         constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
         constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
-        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
+        endPose, info = self.ikServer.runIk(constraints, ikParameter, seedPostureName=startPoseName)
         return endPose, info
 
 
@@ -715,7 +717,9 @@ class IKPlanner(object):
         return self.computePostureGoal(startPose, endPose)
 
 
-    def computeStandPose(self, startPose):
+    def computeStandPose(self, startPose, ikParameters=None):
+
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
@@ -728,7 +732,7 @@ class IKPlanner(object):
         constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
-        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
+        endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
         return endPose, info
 
 
