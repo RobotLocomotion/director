@@ -184,8 +184,9 @@ class AtlasCommandStream(object):
         self._baseFlag = 0;
         self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
-        self.applyDefaults()
         self.useControllerFlag = False
+        self.drivingGainsFlag = False
+        self.applyDefaults()
 
     def initialize(self, currentRobotPose):
         assert not self._initialized
@@ -221,12 +222,20 @@ class AtlasCommandStream(object):
     def applyDefaults(self):
         self.setKp(10)
         self.setMaxSpeed(10)
+
+        if self.drivingGainsFlag:
+            self.setMaxSpeed(70,'l_arm_lwy')
+            self.setKp(50,'l_arm_lwy')
+            self.setMaxSpeed(100,'l_leg_aky')
+            self.setKp(100,'l_leg_aky')
     
     def applyDrivingDefaults(self):
-        self.setMaxSpeed(70,'l_arm_lwy')
-        self.setKp(50,'l_arm_lwy')
-        self.setMaxSpeed(100,'l_leg_aky')
-        self.setKp(100,'l_leg_aky')
+        self.drivingGainsFlag = True
+        self.applyDefaults()
+
+    def applyPlanDefaults(self):
+        self.setKp(10)
+        self.setMaxSpeed(60)        
         
     def startStreaming(self):
         assert self._initialized
@@ -342,7 +351,7 @@ class CommittedRobotPlanListener(object):
 
         print 'received robot plan, %.2f seconds' % (poseTimes[-1] - poseTimes[0])
 
-        commandStream._maxSpeed = np.deg2rad(60)
+        commandStream.applyPlanDefaults()
         commandStream.startStreaming()
 
         timer = simpletimer.SimpleTimer()
@@ -357,7 +366,7 @@ class CommittedRobotPlanListener(object):
             if tNow > poseTimes[-1]:
                 pose = poses[-1]
                 setPose(pose)
-                commandStream._maxSpeed = np.deg2rad(10)
+                commandStream.applyDefaults()
                 print 'plan ended.'
                 return False
 
@@ -775,8 +784,8 @@ def parseArgs():
     p.add_argument('--robot', dest='mode', action='store_const', const='robot')
     p.add_argument('--debug', dest='mode', action='store_const', const='debug')
     p.add_argument('--robotDrivingGains', dest='mode', action='store_const', const='robotDrivingGains')
-    p.add_argument('--robotWithController', dest='mode', action='store_const', const='robotWithController')
-    p.add_argument('--robotDrivingGainsWithController', dest='mode', action='store_const', const='robotDrivingGainsWithController')
+    p.add_argument('--robotWithoutController', dest='mode', action='store_const', const='robotWithoutController')
+    p.add_argument('--robotDrivingGainsWithoutController', dest='mode', action='store_const', const='robotDrivingGainsWithoutController')
     args, unknown = parser.parse_known_args()
     return args
 
@@ -791,9 +800,9 @@ def main():
         robotMain()
     elif args.mode == 'robotDrivingGains':
         robotMain(useDrivingGains=True)
-    elif args.mode == 'robotWithController':
-        robotMain(useController=True)
-    elif args.mode == 'robotDrivingGainsWithController':
+    elif args.mode == 'robotWithoutController':
+        robotMain(useController=False)
+    elif args.mode == 'robotDrivingGainsWithoutController':
         robotMain(useDrivingGains=True, useController=False)
     else:
         debugMain()
@@ -813,7 +822,7 @@ def debugMain():
     ConsoleApp.start()
 
 
-def robotMain(useDrivingGains=False, useController=False):
+def robotMain(useDrivingGains=False, useController=True):
 
     print 'waiting for robot state...'
     commandStream.waitForRobotState()
