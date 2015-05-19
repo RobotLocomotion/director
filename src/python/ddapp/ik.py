@@ -28,30 +28,6 @@ class AsyncIKCommunicator():
         self.nominalName = 'q_nom'
         self.infoFunc = None
 
-        self.maxDegreesPerSecond = 30.0
-        self.maxBaseMetersPerSecond = 0.05
-        self.maxBaseRPYDegreesPerSecond = 2
-        self.accelerationParam = 2;
-        self.accelerationFraction = 0.3;
-        self.maxPlanDuration = 30.0
-        self.usePointwise = True
-        self.useCollision = False
-        self.fixInitialState = True
-        self.numberOfAddedKnots = 0
-        self.numberOfInterpolatedCollisionChecks = 2
-        self.collisionMinDistance = 0.03
-        self.majorIterationsLimit = 500
-        self.majorOptimalityTolerance = 1e-4
-        self.majorFeasibilityTolerance = 1e-6
-        self.rrtMaxEdgeLength = 0.05
-        self.rrtGoalBias = 1.0
-        self.rrtMaxNumVertices = 5000
-        self.rrtNSmoothingPasses = 10;
-        self.maxBodyTranslationSpeed = 0.50
-        self.maxBodyRotationSpeed = 10
-        self.rescaleBodyNames = []
-        self.rescaleBodyPts = []
-
         self.callbacks = callbacks.CallbackRegistry([self.STARTUP_COMPLETED])
 
 
@@ -169,14 +145,6 @@ class AsyncIKCommunicator():
         return commands
 
 
-    def plotJoints(self, jointNames, filename):
-        commands = []
-        commands.append('\n%-------- plot joints --------\n')
-        commands.append('plot_joint_ids = [%s];' % ', '.join(['joints.%s' % name for name in jointNames]))
-        commands.append("s.saveJointTrajPlot(%s, plot_joint_ids, '%s');" % ('xtraj_pw' if self.usePointwise else 'xtraj', filename))
-        commands.append('\n%-------- plot joints end --------\n')
-        self.comm.sendCommands(commands)
-
     def updateJointLimits(self, limitData):
         commands = []
         commands.append('joint_limit_min_new = r.joint_limit_min;')
@@ -206,12 +174,13 @@ class AsyncIKCommunicator():
     def clearEnvironment(self):
         self.setEnvironment('')
 
-    def runIk(self, constraints, nominalPostureName=None, seedPostureName=None):
+    def runIk(self, constraints, ikParameters, nominalPostureName=None, seedPostureName=None):
 
         commands = []
         commands.append('\n%-------- runIk --------\n')
         constraintNames = []
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
+        commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
         for constraintId, constraint in enumerate(constraints):
             if not constraint.enabled:
                 continue
@@ -229,16 +198,16 @@ class AsyncIKCommunicator():
         commands.append('ik_seed_pose = [ik_seed_pose; zeros(r.getNumPositions()-numel(ik_seed_pose),1)];')
         commands.append('ik_nominal_pose = [ik_nominal_pose; zeros(r.getNumPositions()-numel(ik_nominal_pose),1)];')
         commands.append('options = struct();')
-        commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
-        commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
-        commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
-        commands.append('options.MinDistance = %f;' % self.collisionMinDistance)
+        commands.append('options.MajorIterationsLimit = %s;' % ikParameters.majorIterationsLimit)
+        commands.append('options.MajorFeasibilityTolerance = %s;' % ikParameters.majorFeasibilityTolerance)
+        commands.append('options.MajorOptimalityTolerance = %s;' % ikParameters.majorOptimalityTolerance)
+        commands.append('options.MinDistance = %f;' % ikParameters.collisionMinDistance)
         commands.append('s = s.setupOptions(options);')
         commands.append('clear q_end;')
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
         commands.append('\n')
-        commands.append('use_collision = %s;' % ('true' if self.useCollision else 'false'))
+        commands.append('use_collision = %s;' % ('true' if ikParameters.useCollision else 'false'))
         commands.append('[q_end, info, infeasible_constraint] = s.runIk(ik_seed_pose, ik_nominal_pose, active_constraints, use_collision);')
         commands.append('\n')
 
@@ -262,14 +231,14 @@ class AsyncIKCommunicator():
         self.fetchPoseFromServer('q_trajPose')
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, timeSamples=None, additionalTimeSamples=0):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0):
 
         if timeSamples is None:
             timeSamples = np.hstack([constraint.tspan for constraint in constraints])
             timeSamples = [x for x in timeSamples if x not in [-np.inf, np.inf]]
             timeSamples.append(0.0)
             timeSamples = np.unique(timeSamples).tolist()
-            timeSamples += np.linspace(timeSamples[0], timeSamples[-1], self.numberOfAddedKnots + 2).tolist()
+            timeSamples += np.linspace(timeSamples[0], timeSamples[-1], ikParameters.numberOfAddedKnots + 2).tolist()
             timeSamples = np.unique(timeSamples).tolist()
 
 
@@ -281,6 +250,7 @@ class AsyncIKCommunicator():
         commands.append('excluded_collision_groups = struct(\'name\',{},\'tspan\',{});\n')
         commands.append("end_effector_name = '';")
         commands.append("end_effector_pt = [];")
+        commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
 
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
@@ -300,29 +270,29 @@ class AsyncIKCommunicator():
         else:
             commands.append('additionalTimeSamples = [];')
         commands.append('options = struct();')
-        commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
-        commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
-        commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
-        commands.append('options.FixInitialState = %s;' % ('true' if self.fixInitialState else 'false'))
+        commands.append('options.MajorIterationsLimit = %s;' % ikParameters.majorIterationsLimit)
+        commands.append('options.MajorFeasibilityTolerance = %s;' % ikParameters.majorFeasibilityTolerance)
+        commands.append('options.MajorOptimalityTolerance = %s;' % ikParameters.majorOptimalityTolerance)
+        commands.append('options.FixInitialState = %s;' % ('true' if ikParameters.fixInitialState else 'false'))
         commands.append('s = s.setupOptions(options);')
         commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
         commands.append('\n')
 
-        if self.useCollision:
+        if ikParameters.useCollision:
             commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
-            commands.append('options.n_interp_points = %s;' % self.numberOfInterpolatedCollisionChecks)
-            commands.append('options.min_distance = %s;' % self.collisionMinDistance)
-            commands.append('options.t_max = %s;' % self.maxPlanDuration)
+            commands.append('options.n_interp_points = %s;' % ikParameters.numberOfInterpolatedCollisionChecks)
+            commands.append('options.min_distance = %s;' % ikParameters.collisionMinDistance)
+            commands.append('options.t_max = %s;' % ikParameters.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
             commands.append('options.end_effector_name = end_effector_name;')
             commands.append('options.end_effector_pt = end_effector_pt;')
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
-            commands.append('options.RRTMaxEdgeLength = %s;' % self.rrtMaxEdgeLength)
-            commands.append('options.RRTGoalBias = %s;' % self.rrtGoalBias)
-            commands.append('options.N = %s;' % self.rrtMaxNumVertices)
-            commands.append('options.n_smoothing_passes = %s;' % self.rrtNSmoothingPasses)
+            commands.append('options.RRTMaxEdgeLength = %s;' % ikParameters.rrtMaxEdgeLength)
+            commands.append('options.RRTGoalBias = %s;' % ikParameters.rrtGoalBias)
+            commands.append('options.N = %s;' % ikParameters.rrtMaxNumVertices)
+            commands.append('options.n_smoothing_passes = %s;' % ikParameters.rrtNSmoothingPasses)
             commands.append('[xtraj,info] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);')
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:
@@ -334,20 +304,20 @@ class AsyncIKCommunicator():
             commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
         commands.append('if ~isempty(xtraj), qtraj = xtraj(1:r.getNumPositions()); else, qtraj = []; end;')
-        commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1); end;' % self.maxDegreesPerSecond)
-        commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % self.maxBaseMetersPerSecond)
-        commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % self.maxBaseRPYDegreesPerSecond)
+        commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1); end;' % ikParameters.maxDegreesPerSecond)
+        commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % ikParameters.maxBaseMetersPerSecond)
+        commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % ikParameters.maxBaseRPYDegreesPerSecond)
         commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; rpy_v_max; joint_v_max]; end;')
 
-        commands.append("max_body_translation_speed = %r;" % self.maxBodyTranslationSpeed)
-        commands.append("max_body_rotation_speed = %r;" % self.maxBodyRotationSpeed)
-        commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in self.rescaleBodyNames])))
-        commands.append('rescale_body_pts = %s;' % ConstraintBase.toColumnVectorString(self.rescaleBodyPts))
+        commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
+        commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
+        commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
+        commands.append('rescale_body_pts = %s;' % ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
         commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
-        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s, body_rescale_options); end;' % (self.accelerationParam, self.accelerationFraction))
+        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s, body_rescale_options); end;' % (ikParameters.accelerationParam, ikParameters.accelerationFraction))
 
-        if self.usePointwise:
-            assert not self.useCollision
+        if ikParameters.usePointwise:
+            assert not ikParameters.useCollision
             commands.append('\n%--- pointwise ik --------\n')
             commands.append('if ~isempty(qtraj), num_pointwise_time_points = 20; end;')
             commands.append('if ~isempty(qtraj), pointwise_time_points = linspace(qtraj.tspan(1), qtraj.tspan(2), num_pointwise_time_points); end;')
@@ -364,7 +334,7 @@ class AsyncIKCommunicator():
 
         publish = True
         if publish:
-            commands.append('if ~isempty({0}), s.publishTraj({0}, info); end;'.format('qtraj_pw' if self.usePointwise else 'qtraj'))
+            commands.append('if ~isempty({0}), s.publishTraj({0}, info); end;'.format('qtraj_pw' if ikParameters.usePointwise else 'qtraj'))
 
         commands.append('\n%--- runIKTraj end --------\n')
         #self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))

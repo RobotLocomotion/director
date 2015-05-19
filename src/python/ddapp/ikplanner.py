@@ -25,6 +25,7 @@ from ddapp import segmentation
 from ddapp import drcargs
 
 from ddapp import ik
+from ddapp.ikparameters import IkParameters
 
 import drc as lcmdrc
 
@@ -41,6 +42,7 @@ class ConstraintSet(object):
 
     def __init__(self, ikPlanner, constraints, endPoseName, startPoseName):
         self.ikPlanner = ikPlanner
+        self.ikParameters = IkParameters
         self.constraints = constraints
         self.endPoseName = endPoseName
         self.startPoseName = startPoseName
@@ -62,7 +64,9 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+
+        self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, ikParameters, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
         print 'info:', self.info
         return self.endPose, self.info
 
@@ -76,13 +80,15 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName)
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
         return self.plan
 
     def planEndPoseGoal(self, feetOnGround = True):
         assert self.endPose is not None
         self.ikPlanner.addPose(self.endPose, self.endPoseName)
-        self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName, feetOnGround)
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+        self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName, feetOnGround, ikParameters=ikParameters)
         return self.plan
 
     def onFrameModified(self, frame):
@@ -97,22 +103,22 @@ class IkOptionsItem(om.ObjectModelItem):
         self.ikServer = ikServer
         self.ikPlanner = ikPlanner
 
-        self.addProperty('Use pointwise', ikServer.usePointwise)
-        self.addProperty('Use collision', ikServer.useCollision)
-        self.addProperty('Collision min distance', ikServer.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
-        self.addProperty('Add knots', ikServer.numberOfAddedKnots)
+        self.addProperty('Use pointwise', ikPlanner.defaultIkParameters.usePointwise)
+        self.addProperty('Use collision', ikPlanner.defaultIkParameters.useCollision)
+        self.addProperty('Collision min distance', ikPlanner.defaultIkParameters.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
+        self.addProperty('Add knots', ikPlanner.defaultIkParameters.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
-        self.addProperty('Quasistatic shrink factor', ik.QuasiStaticConstraint.shrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
-        self.addProperty('Max joint degrees/s', ikServer.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
+        self.addProperty('Quasistatic shrink factor', ikPlanner.defaultIkParameters.quasiStaticShrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
+        self.addProperty('Max joint degrees/s', ikPlanner.defaultIkParameters.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
         self.addProperty('Nominal pose', 1, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Seed pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
-        self.addProperty('Major iterations limit', ikServer.majorIterationsLimit)
-        self.addProperty('Major feasibility tolerance', ikServer.majorFeasibilityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-5))
-        self.addProperty('Major optimality tolerance', ikServer.majorOptimalityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-4))
-        self.addProperty('RRT max edge length', ikServer.rrtMaxEdgeLength, attributes=om.PropertyAttributes(decimals=2, minimum=1e-2, maximum=1.0, singleStep=1e-2))
-        self.addProperty('RRT max vertices', ikServer.rrtMaxNumVertices, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e5, singleStep=1e1))
-        self.addProperty('RRT no. of smoothing passes', ikServer.rrtNSmoothingPasses, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e2, singleStep=1e0))
-        self.addProperty('RRT goal bias', ikServer.rrtGoalBias, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=1e-2))
+        self.addProperty('Major iterations limit', ikPlanner.defaultIkParameters.majorIterationsLimit)
+        self.addProperty('Major feasibility tolerance', ikPlanner.defaultIkParameters.majorFeasibilityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-5))
+        self.addProperty('Major optimality tolerance', ikPlanner.defaultIkParameters.majorOptimalityTolerance, attributes=om.PropertyAttributes(decimals=6, minimum=1e-6, maximum=1.0, singleStep=1e-4))
+        self.addProperty('RRT max edge length', ikPlanner.defaultIkParameters.rrtMaxEdgeLength, attributes=om.PropertyAttributes(decimals=2, minimum=1e-2, maximum=1.0, singleStep=1e-2))
+        self.addProperty('RRT max vertices', ikPlanner.defaultIkParameters.rrtMaxNumVertices, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e5, singleStep=1e1))
+        self.addProperty('RRT no. of smoothing passes', ikPlanner.defaultIkParameters.rrtNSmoothingPasses, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e2, singleStep=1e0))
+        self.addProperty('RRT goal bias', ikPlanner.defaultIkParameters.rrtGoalBias, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=1e-2))
         self.addProperty('Goal planning mode', 0, attributes=om.PropertyAttributes(enumNames=['fix end pose', 'fix goal joints']))
         #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
 
@@ -121,11 +127,11 @@ class IkOptionsItem(om.ObjectModelItem):
         om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
 
         if propertyName == 'Use pointwise':
-            self.ikServer.usePointwise = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.usePointwise = self.getProperty(propertyName)
 
         if propertyName == 'Use collision':
-            self.ikServer.useCollision = self.getProperty(propertyName)
-            if self.ikServer.useCollision:
+            self.ikPlanner.defaultIkParameters.useCollision = self.getProperty(propertyName)
+            if self.ikPlanner.defaultIkParameters.useCollision:
                 self.setProperty('Use pointwise', False)
                 self.setProperty('Add knots', 2)
                 self.setProperty('Quasistatic shrink factor', 0.5)
@@ -140,40 +146,40 @@ class IkOptionsItem(om.ObjectModelItem):
                 self.setProperty('Major feasibility tolerance', 1e-6)
 
         if propertyName == 'Major iterations limit':
-            self.ikServer.majorIterationsLimit = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.majorIterationsLimit = self.getProperty(propertyName)
 
         if propertyName == 'Major feasibility tolerance':
-            self.ikServer.majorFeasibilityTolerance = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.majorFeasibilityTolerance = self.getProperty(propertyName)
 
         if propertyName == 'Major optimality tolerance':
-            self.ikServer.majorOptimalityTolerance = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.majorOptimalityTolerance = self.getProperty(propertyName)
 
         if propertyName == 'RRT max edge length':
-            self.ikServer.rrtMaxEdgeLength = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.rrtMaxEdgeLength = self.getProperty(propertyName)
 
         if propertyName == 'RRT max vertices':
-            self.ikServer.rrtMaxNumVertices = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.rrtMaxNumVertices = self.getProperty(propertyName)
 
         if propertyName == 'RRT no. of smoothing passes':
-            self.ikServer.rrtNSmoothingPasses = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.rrtNSmoothingPasses = self.getProperty(propertyName)
 
         if propertyName == 'RRT goal bias':
-            self.ikServer.rrtGoalBias = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.rrtGoalBias = self.getProperty(propertyName)
 
         if propertyName == 'Collision min distance':
-            self.ikServer.collisionMinDistance = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.collisionMinDistance = self.getProperty(propertyName)
 
         if propertyName == 'Add knots':
-            self.ikServer.numberOfAddedKnots = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.numberOfAddedKnots = self.getProperty(propertyName)
 
         elif propertyName == 'Use quasistatic constraint':
             self.ikPlanner.useQuasiStaticConstraint = self.getProperty(propertyName)
 
         elif propertyName == 'Quasistatic shrink factor':
-            ik.QuasiStaticConstraint.shrinkFactor = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.quasiStaticShrinkFactor = self.getProperty(propertyName)
 
         elif propertyName == 'Max joint degrees/s':
-            self.ikServer.maxDegreesPerSecond = self.getProperty(propertyName)
+            self.defaultIkParameters.maxDegreesPerSecond = self.getProperty(propertyName)
 
         elif propertyName == 'Additional time samples':
             self.ikPlanner.additionalTimeSamples = self.getProperty(propertyName)
@@ -184,6 +190,8 @@ class IKPlanner(object):
     def __init__(self, ikServer, robotModel, jointController, handModels):
 
         self.ikServer = ikServer
+        self.defaultIkParameters = IkParameters()
+        self.defaultIkParameters.setToDefaults()
         self.robotModel = robotModel
         self.jointController = jointController
         self.handModels = handModels
@@ -213,7 +221,7 @@ class IKPlanner(object):
             originalIkParameterDict['usePointwise'] = self.ikServer.usePointwise
             self.ikServer.usePointwise = ikParameterDict['usePointwise']
         if 'maxDegreesPerSecond' in ikParameterDict:
-            originalIkParameterDict['maxDegreesPerSecond'] = self.ikServer.maxDegreesPerSecond
+            originalIkParameterDict['maxDegreesPerSecond'] = self.defaultIkParameters.maxDegreesPerSecond
             self.ikServer.maxDegreesPerSecond = ikParameterDict['maxDegreesPerSecond']
         if 'numberOfAddedKnots' in ikParameterDict:
             originalIkParameterDict['numberOfAddedKnots'] = self.ikServer.numberOfAddedKnots
@@ -685,7 +693,9 @@ class IKPlanner(object):
         self.jointController.setPose('user_pose', pose)
         return self.robotModel
 
-    def computeNominalPose(self, startPose):
+    def computeNominalPose(self, startPose, ikParameters=None):
+
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
@@ -698,7 +708,7 @@ class IKPlanner(object):
         constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
         constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
-        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
+        endPose, info = self.ikServer.runIk(constraints, ikParameter, seedPostureName=startPoseName)
         return endPose, info
 
 
@@ -710,7 +720,9 @@ class IKPlanner(object):
         return self.computePostureGoal(startPose, endPose)
 
 
-    def computeStandPose(self, startPose):
+    def computeStandPose(self, startPose, ikParameters=None):
+
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
@@ -723,7 +735,7 @@ class IKPlanner(object):
         constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
-        endPose, info = self.ikServer.runIk(constraints, seedPostureName=startPoseName)
+        endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
         return endPose, info
 
 
@@ -1156,7 +1168,7 @@ class IKPlanner(object):
 
 
 
-    def computeMultiPostureGoal(self, poses, feetOnGround=True, times=None):
+    def computeMultiPostureGoal(self, poses, feetOnGround=True, times=None, ikParameters=None):
 
         assert len(poses) >= 2
 
@@ -1184,14 +1196,14 @@ class IKPlanner(object):
         #if self.useQuasiStaticConstraint:
         #    constraints.append(self.createQuasiStaticConstraint())
 
-        return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1], nominalPoseName=poseNames[0])
+        return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1], nominalPoseName=poseNames[0], ikParameters=ikParameters)
 
 
-    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True):
-        return self.computeMultiPostureGoal([poseStart, poseEnd], feetOnGround)
+    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True, ikParameters=None):
+        return self.computeMultiPostureGoal([poseStart, poseEnd], feetOnGround, ikParameters=ikParameters)
 
 
-    def computeJointPostureGoal(self, startPose, postureJoints):
+    def computeJointPostureGoal(self, startPose, postureJoints, ikParameters=None):
 
         startPoseName = 'posture_goal_start'
         self.addPose(startPose, startPoseName)
@@ -1209,7 +1221,7 @@ class IKPlanner(object):
 
         constraintSet = ConstraintSet(self, constraints, 'posture_goal_end', startPoseName)
         endPose, info = constraintSet.runIk()
-        return constraintSet.runIkTraj()
+        return constraintSet.runIkTraj(ikParameters=ikParameters)
 
     def getManipPlanListener(self):
         responseChannel = 'CANDIDATE_MANIP_PLAN'
@@ -1241,12 +1253,19 @@ class IKPlanner(object):
     def addPostureGoalListener(self, stateJointController):
         lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, functools.partial(self.onPostureGoalMessage, stateJointController))
 
+    def mergeWithDefaultIkParameters(self, ikParameters):
+        if ikParameters is None:
+            ikParameters = IkParameters()
+        ikParameters.fillInWith(self.defaultIkParameters)
+        return ikParameters
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
 
         listener = self.getManipPlanListener()
 
-        info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
+
+        info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
         print 'traj info:', info
 
         self.lastManipPlan = listener.waitForResponse()

@@ -18,6 +18,7 @@ from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp.debugVis import DebugData
 from ddapp import ik
+from ddapp.ikparameters import IkParameters
 from ddapp import ikplanner
 from ddapp import ioUtils
 from ddapp import affordanceitems
@@ -131,7 +132,6 @@ class DoorDemo(object):
         return t
 
 
-
     def computeDoorHandleGraspFrame(self):
         graspOrientation = self.computeGraspOrientation()
         self.doorHandleAxisFrame = self.computeDoorHandleAxisFrame()
@@ -206,6 +206,7 @@ class DoorDemo(object):
         self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushLiftAxisFrame, ignoreIncoming=True)
         self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushOpenFrame, ignoreIncoming=True)
 
+
     def computeDoorHandleAxisFrame(self):
         handleLength = self.doorHandleAffordance.getProperty('Dimensions')[1]
         t = transformUtils.frameFromPositionAndRPY([0.0, -handleLength/2.0, 0.0], [0, 0, 0])
@@ -264,15 +265,6 @@ class DoorDemo(object):
         self.doorHandleStanceFrame = vis.updateFrame(t, 'door handle grasp stance', parent=self.doorHandleAffordance, visible=True, scale=0.2)
         #self.frameSync.addFrame(self.doorHandleStanceFrame)
 
-
-    def printRobotDistanceToDoorHandle(self):
-        pelvisFrame = self.robotModel.getLinkFrame('pelvis')
-        pelvisFrame.PostMultiply()
-        pelvisFrame.Concatenate(self.doorHandleFrame.transform.GetLinearInverse())
-        print 'translation: %.3f, %.3f, %.3f' % pelvisFrame.GetPosition()
-        print 'orientation: %.3f, %.3f, %.3f' % pelvisFrame.GetOrientation()
-
-
     def moveRobotToStanceFrame(self):
         frame = self.doorHandleStanceFrame.transform
 
@@ -295,8 +287,7 @@ class DoorDemo(object):
 
     def planPreReach(self):
 
-        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedHigh}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=self.speedHigh)
         nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
@@ -306,24 +297,21 @@ class DoorDemo(object):
         endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door',
                                                               'pre-reach non-grasping',
                                                               side=nonGraspingHand)
-        endPose, info = self.ikPlanner.computeStandPose(endPose)
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        endPose, info = self.ikPlanner.computeStandPose(endPose, ikParameters=ikParameters)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=ikParameters)
         self.addPlan(newPlan)
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
 
 
     def planTuckArms(self):
 
 
-        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedHigh}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
-        self.ikPlanner.ikServer.numberOfAddedKnots = 0
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=self.speedHigh)
 
         otherSide = 'left' if self.graspingHand == 'right' else 'right'
 
         startPose = self.getPlanningStartPose()
 
-        standPose, info = self.ikPlanner.computeStandPose(startPose)
+        standPose, info = self.ikPlanner.computeStandPose(startPose, ikParameters=ikParameters)
 
         q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=otherSide)
         a = 0.25
@@ -335,20 +323,19 @@ class DoorDemo(object):
         endPose = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=self.graspingHand)
         endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand up tuck', side=otherSide)
 
-        newPlan = self.ikPlanner.computeMultiPostureGoal([startPose, q2, endPose])
+        newPlan = self.ikPlanner.computeMultiPostureGoal([startPose, q2, endPose], ikParameters=ikParameters)
         self.addPlan(newPlan)
 
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
 
     def planReach(self):
-
-        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow,
-                           'numberOfAddedKnots': 2}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
 
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandleReachFrame)
         constraintSet.nominalPoseName = 'q_start'
+        constraintSet.ikParameters =  IkParameters(usePointwise=False,
+                                                   maxDegreesPerSecond=self.speedLow,
+                                                   numberOfAddedKnots=2)
+
         endPose, info = constraintSet.runIk()
 
         linkOffsetFrame = self.ikPlanner.getPalmToHandLink(self.graspingHand)
@@ -366,8 +353,6 @@ class DoorDemo(object):
 
         plan = constraintSet.runIkTraj()
         self.addPlan(plan)
-
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
 
 
     def createHingeConstraint(self, referenceFrame, axis, linkName, startPose, tspan=[0, 1]):
@@ -400,10 +385,6 @@ class DoorDemo(object):
 
     def planHandleTurn(self, turnAngle=None):
 
-        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow,
-                           'numberOfAddedKnots': 2}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
-
         if turnAngle is None:
             turnAngle = self.handleTurnAngle
         startPose = self.getPlanningStartPose()
@@ -422,6 +403,10 @@ class DoorDemo(object):
         vis.updateFrame(doorHandleTurnFrame, 'debug turn', parent=self.doorHandleAffordance, visible=False, scale=0.2)
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand,
                                                            doorHandleTurnFrame)
+
+        constraintSet.ikParameters = IkParameters(usePointwise=False,
+                                                  maxDegreesPerSecond=self.speedLow,
+                                                  numberOfAddedKnots=2)
         constraintSet.nominalPoseName = 'q_start'
         endPose, info = constraintSet.runIk()
         constraints = constraintSet.constraints
@@ -438,28 +423,20 @@ class DoorDemo(object):
 
         self.addPlan(plan)
 
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
-
     def planDoorPushOpen(self):
 
-        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=self.speedLow)
 
         nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'smash', side=nonGraspingHand)
 
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=ikParameters)
         self.addPlan(newPlan)
-
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
 
 
     def planHandlePush(self):
-
-        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
 
         startPose = self.getPlanningStartPose()
         linkFrame = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(), startPose)
@@ -477,6 +454,8 @@ class DoorDemo(object):
         vis.updateFrame(doorHandlePushFrame, 'debug push', parent=self.doorHandleAffordance, visible=False, scale=0.2)
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand,
                                                            doorHandlePushFrame)
+
+        constraintSet.ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=self.speedLow)
         constraintSet.nominalPoseName = 'q_start'
         endPose, info = constraintSet.runIk()
         constraints = constraintSet.constraints
@@ -492,8 +471,6 @@ class DoorDemo(object):
         plan = constraintSet.runIkTraj()
 
         self.addPlan(plan)
-
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
 
     def planHandlePushLift(self):
 
@@ -519,32 +496,27 @@ class DoorDemo(object):
 
     def planDoorTouch(self):
 
-        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedHigh}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=self.speedHigh)
         nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'pre-smash', side=nonGraspingHand)
 
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=ikParameters)
         self.addPlan(newPlan)
-
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
 
     def planHandlePushOpen(self):
 
-        ikParameterDict = {'usePointwise': False, 'maxDegreesPerSecond': self.speedLow,
-                           'numberOfAddedKnots': 2}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
-
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandlePushOpenFrame)
+        constraintSet.ikParameters = IkParameters(usePointwise=False,
+                                                  maxDegreesPerSecond=self.speedLow,
+                                                  numberOfAddedKnots=2)
+
         endPose, info = constraintSet.runIk()
         plan = constraintSet.runIkTraj()
 
         self.addPlan(plan)
-
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
 
 
     def planFootstepsToDoor(self):
@@ -703,136 +675,8 @@ class DoorDemo(object):
         self.addPlan(self.walkingPlan)
 
 
-    def computePreGraspPlan(self):
-        startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=self.graspingHand)
-        plan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.addPlan(plan)
-
-
-    def computeGraspPlan(self):
-
-        startPose = self.getPlanningStartPose()
-
-        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, self.doorHandleGraspFrame)
-        endPose, info = constraintSet.runIk()
-        plan = constraintSet.runIkTraj()
-
-        self.addPlan(plan)
-
-
-    def initConstraintSet(self, pinchDistance=None):
-
-        if pinchDistance is None:
-            pinchDistance = self.pinchDistance
-
-        # create constraint set
-        startPose = self.getPlanningStartPose()
-        endPose = self.endPose if self.endPose is not None else startPose
-        startPoseName = 'gaze_plan_start'
-        endPoseName = 'gaze_plan_end'
-        self.ikPlanner.addPose(startPose, startPoseName)
-        self.ikPlanner.addPose(endPose, endPoseName)
-        self.constraintSet = ikplanner.ConstraintSet(self.ikPlanner, [], endPoseName, startPoseName)
-        self.constraintSet.endPose = endPose
-
-        if self.endPose is not None:
-            self.constraintSet.nominalPoseName = 'gaze_plan_end'
-
-
-        # add body constraints
-        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=False, lockBack=False, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
-        self.constraintSet.constraints.extend(bodyConstraints)
-
-        self.graspToHandLinkFrame = self.ikPlanner.newPalmOffsetGraspToHandFrame(self.graspingHand, distance=pinchDistance)
-
-
-    def appendBaseConstraint(self):
-
-        p = self.ikPlanner.createKneePostureConstraint([1.745, 1.745])
-        p.tspan = [1.0, np.inf]
-        self.constraintSet.constraints.append(p)
-
-
-    def appendBackConstraint(self):
-
-        p = ikplanner.ik.PostureConstraint()
-        p.joints = ['back_bkz']
-        p.jointsLowerBound = [0.1]
-        p.jointsUpperBound = [0.1]
-        p.tspan = [1.0, np.inf]
-        self.constraintSet.constraints.append(p)
-
-
-    def appendGraspConstraintForTargetFrame(self, goalFrame, t):
-
-        positionConstraint, orientationConstraint = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
-
-        positionConstraint.tspan = [t, t]
-        orientationConstraint.tspan = [t, t]
-        self.constraintSet.constraints.append(positionConstraint)
-        self.constraintSet.constraints.append(orientationConstraint)
-
-        vis.showFrame(goalFrame, 'turn frame %d' % t, scale=0.1, visible=True, parent='debug')
-
-
-    def planGraspTrajectory(self):
-
-        self.ikPlanner.ikServer.usePointwise = False
-
-        plan = self.constraintSet.runIkTraj()
-        self.addPlan(plan)
-
-
-    def commitFootstepPlan(self):
-        self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
-
-
     def commitManipPlan(self):
             self.manipPlanner.commitManipPlan(self.plans[-1])
-
-    def sendNeckPitchLookDown(self):
-        self.multisenseDriver.setNeckPitch(40)
-
-    def sendNeckPitchLookForward(self):
-        self.multisenseDriver.setNeckPitch(15)
-
-
-    def waitForAtlasBehaviorAsync(self, behaviorName):
-        assert behaviorName in self.atlasDriver.getBehaviorMap().values()
-        while self.atlasDriver.getCurrentBehaviorName() != behaviorName:
-            yield
-
-
-    def printAsync(self, s):
-        yield
-        print s
-
-
-    def userPrompt(self, message):
-
-        if not self.userPromptEnabled:
-            return
-
-        yield
-        result = raw_input(message)
-        if result != 'y':
-            raise Exception('user abort.')
-
-
-    def delay(self, delayTimeInSeconds):
-        yield
-        t = SimpleTimer()
-        while t.elapsed() < delayTimeInSeconds:
-            yield
-
-
-    def waitForCleanLidarSweepAsync(self):
-        currentRevolution = self.multisenseDriver.displayedRevolution
-        desiredRevolution = currentRevolution + 2
-        while self.multisenseDriver.displayedRevolution < desiredRevolution:
-            yield
-
 
     def fitDoor(self, doorGroundFrame):
         om.removeFromObjectModel(om.findObjectByName('affordances'))
@@ -971,250 +815,6 @@ class DoorDemo(object):
                 return self.getEstimatedRobotStatePose()
 
 
-    def removeFootstepPlan(self):
-        om.removeFromObjectModel(om.findObjectByName('footstep plan'))
-        self.footstepPlan = None
-
-
-    def playNominalPlan(self):
-        assert None not in self.plans
-        self.planPlaybackFunction(self.plans)
-
-
-    def computePreGraspPlanReach(self, pinchDistance=0.14):
-
-        self.initConstraintSet(pinchDistance=pinchDistance)
-        self.appendGraspConstraintForTargetFrame(self.doorHandleGraspFrame.transform, 1)
-
-        self.appendBaseConstraint()
-        #self.appendBackConstraint()
-
-        self.planGraspTrajectory()
-
-
-    def computePreGraspPlanTouch(self):
-
-        self.initConstraintSet()
-        self.appendGraspConstraintForTargetFrame(self.doorHandleGraspFrame.transform, 1)
-
-        self.appendBaseConstraint()
-        #self.appendBackConstraint()
-
-        self.planGraspTrajectory()
-
-
-    def turnDoorHandle(self, degrees):
-        self.doorHandleFrame.transform.PreMultiply()
-        self.doorHandleFrame.transform.RotateX(degrees)
-        self.doorHandleFrame.transform.Modified()
-        self.doorHandleFrame.transform.PostMultiply()
-
-
-    def turnDoorHinge(self, degrees):
-        self.doorHingeFrame.transform.PreMultiply()
-        self.doorHingeFrame.transform.RotateZ(degrees)
-        self.doorHingeFrame.transform.Modified()
-        self.doorHingeFrame.transform.PostMultiply()
-
-
-    def pitchGrasp(self, degrees):
-        self.doorHandleGraspFrame.transform.PreMultiply()
-        self.doorHandleGraspFrame.transform.RotateX(degrees)
-        self.doorHandleGraspFrame.transform.Modified()
-        self.doorHandleGraspFrame.transform.PostMultiply()
-
-
-    def yawGrasp(self, degrees):
-        self.doorHandleGraspFrame.transform.PreMultiply()
-        self.doorHandleGraspFrame.transform.RotateZ(degrees)
-        self.doorHandleGraspFrame.transform.Modified()
-        self.doorHandleGraspFrame.transform.PostMultiply()
-
-
-    def computeTurnEndPose(self, turnDegrees=60, graspYawDegrees=10):
-
-        self.initConstraintSet()
-        self.appendBaseConstraint()
-        self.turnDoorHandle(turnDegrees)
-        self.yawGrasp(graspYawDegrees)
-        self.appendGraspConstraintForTargetFrame(transformUtils.copyFrame(self.doorHandleGraspFrame.transform), 1.0)
-        self.turnDoorHandle(-turnDegrees)
-        self.yawGrasp(-graspYawDegrees)
-
-        self.endPose, info = self.constraintSet.runIk()
-
-        self.ikPlanner.addPose(self.endPose, 'door_turn_end_pose')
-
-        self.showPoseFunction(self.endPose)
-
-
-    def computeTurnPlan(self, turnDegrees=60, graspYawDegrees=10, numberOfSamples=15):
-
-        degreeStep = float(turnDegrees) / numberOfSamples
-        yawDegreeStep = float(graspYawDegrees) / numberOfSamples
-
-        self.initConstraintSet()
-        self.appendBaseConstraint()
-
-        for i in xrange(numberOfSamples):
-            self.turnDoorHandle(degreeStep)
-            self.yawGrasp(yawDegreeStep)
-            self.appendGraspConstraintForTargetFrame(transformUtils.copyFrame(self.doorHandleGraspFrame.transform), i+1)
-
-        self.turnDoorHandle(-turnDegrees)
-        self.yawGrasp(-graspYawDegrees)
-
-        self.planGraspTrajectory()
-
-
-    def computeOpenPlan(self, turnDegrees=30, numberOfSamples=15, handleDegrees=60, graspYawDegrees=10, straightenDegrees=35):
-
-        degreeStep = float(turnDegrees) / numberOfSamples
-        degreeStepStraighten = float(straightenDegrees) / numberOfSamples
-
-        self.initConstraintSet()
-        self.appendBaseConstraint()
-
-        self.turnDoorHandle(handleDegrees)
-        self.yawGrasp(graspYawDegrees)
-
-        for i in xrange(numberOfSamples):
-
-            self.turnDoorHinge(degreeStep)
-            self.pitchGrasp(-degreeStepStraighten)
-
-            self.appendGraspConstraintForTargetFrame(transformUtils.copyFrame(self.doorHandleGraspFrame.transform), i+1)
-
-        self.turnDoorHinge(-turnDegrees)
-        self.turnDoorHandle(-handleDegrees)
-        self.yawGrasp(-graspYawDegrees)
-        self.pitchGrasp(straightenDegrees)
-
-
-        self.planGraspTrajectory()
-
-
-    def computeStandPlan(self):
-        startPose = self.getPlanningStartPose()
-        self.standPlan = self.ikPlanner.computeNominalPlan(startPose)
-        self.addPlan(self.standPlan)
-
-
-    def computeNominalPlan(self):
-
-        self.plans = []
-
-        self.removeFootstepPlan()
-        self.removePointerTipFrames()
-        self.removePointerTipPath()
-
-#        self.findValveAffordance()
-#        self.computeGraspFrame()
-#        self.computeStanceFrame()
-
-#        if self.useFootstepPlanner:
-#            self.computeFootstepPlan()
-#            self.computeWalkingPlan()
-#        else:
-#            self.moveRobotToStanceFrame()
-
-        self.computePreGraspPlan()
-        self.computePreGraspPlanGaze()
-
-        if not self.scribeInAir:
-            self.computeInsertPlan()
-
-        self.computeTurnPlan()
-        self.computePreGraspPlanGaze()
-        self.computePreGraspPlan()
-        self.computeStandPlan()
-
-
-        self.playNominalPlan()
-
-
-    def waitForPlanExecution(self, plan):
-        planElapsedTime = planplayback.PlanPlayback.getPlanElapsedTime(plan)
-        print 'waiting for plan execution:', planElapsedTime
-
-        return self.delay(planElapsedTime + 1.0)
-
-
-    def animateLastPlan(self):
-        plan = self.plans[-1]
-
-        if not self.visOnly:
-            self.commitManipPlan()
-
-        return self.waitForPlanExecution(plan)
-
-
-    def addWalkingTasksToQueue(self, taskQueue, planFunc, walkFunc):
-
-        if self.useFootstepPlanner:
-            taskQueue.addTask(planFunc)
-
-            if self.visOnly:
-                taskQueue.addTask(self.computeWalkingPlan)
-                taskQueue.addTask(self.animateLastPlan)
-            else:
-
-                taskQueue.addTask(self.userPrompt('send stand command. continue? y/n: '))
-                taskQueue.addTask(self.atlasDriver.sendStandCommand)
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
-
-                taskQueue.addTask(self.userPrompt('commit footsteps. continue? y/n: '))
-                taskQueue.addTask(self.commitFootstepPlan)
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('step'))
-                taskQueue.addTask(self.waitForAtlasBehaviorAsync('stand'))
-
-            taskQueue.addTask(self.removeFootstepPlan)
-        else:
-            taskQueue.addTask(walkFunc)
-
-
-
-    def autonomousExecute(self):
-
-
-        taskQueue = AsyncTaskQueue()
-
-
-        taskQueue.addTask(self.printAsync('computing grasp and stance frames'))
-        taskQueue.addTask(self.removePointerTipFrames)
-        taskQueue.addTask(self.removePointerTipPath)
-        taskQueue.addTask(self.findValveAffordance)
-        taskQueue.addTask(self.computeGraspFrame)
-        taskQueue.addTask(self.computeStanceFrame)
-
-
-        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
-        self.addWalkingTasksToQueue(taskQueue, self.computeFootstepPlan, self.moveRobotToStanceFrame)
-
-        taskQueue.addTask(self.atlasDriver.sendManipCommand)
-        taskQueue.addTask(self.waitForAtlasBehaviorAsync('manip'))
-
-
-        planningFunctions = [
-                    self.computePreGraspPlan,
-                    self.computePreGraspPlanGaze,
-                    self.computeInsertPlan,
-                    self.computeTurnPlan,
-                    self.computePreGraspPlanGaze,
-                    self.computePreGraspPlan,
-                    self.computeStandPlan,
-                    ]
-
-
-        for planFunc in planningFunctions:
-            taskQueue.addTask(planFunc)
-            taskQueue.addTask(self.userPrompt('continue? y/n: '))
-            taskQueue.addTask(self.animateLastPlan)
-
-
-        taskQueue.addTask(self.printAsync('done!'))
-
-        return taskQueue
 
 
 class DoorImageFitter(ImageBasedAffordanceFit):
