@@ -232,7 +232,10 @@ class AtlasCommandStream(object):
     def applyDrivingDefaults(self):
         self.drivingGainsFlag = True
         self.applyDefaults()
-        
+
+    def applyPlanDefaults(self):
+        self.setKp(10)
+        self.setMaxSpeed(60)        
         
     def startStreaming(self):
         assert self._initialized
@@ -348,7 +351,7 @@ class CommittedRobotPlanListener(object):
 
         print 'received robot plan, %.2f seconds' % (poseTimes[-1] - poseTimes[0])
 
-        commandStream._maxSpeed = np.deg2rad(60)
+        commandStream.applyPlanDefaults()
         commandStream.startStreaming()
 
         timer = simpletimer.SimpleTimer()
