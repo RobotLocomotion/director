@@ -36,8 +36,8 @@ class PolarisModel(object):
         desc = dict(classname='MeshAffordanceItem', Name='polaris',
                     Filename='software/models/polaris/polaris_cropped.vtp', pose=pose)
         self.pointcloudAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
-        self.aprilTagFrame = vis.updateFrame(vtk.vtkTransform(), 'grab bar april tag',
-                                             visible=True, scale=0.2, parent=self.pointcloudAffordance)
+        self.originFrame = self.pointcloudAffordance.getChildFrame()
+        self.originToAprilTransform = vtk.vtkTransform() # this should be updated when we remount the April tag
 
         t = transformUtils.transformFromPose(np.array([-0.99548239, 0.04156693, 0.35259928]),
                                              np.array([ 0.18827199, 0.84761397, 0.41552535,
@@ -76,7 +76,7 @@ class PolarisModel(object):
         self.rightHandGrabFrame = vis.updateFrame(t,'right hand grab bar', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
         self.frameSync = vis.FrameSync()
-        self.frameSync.addFrame(self.aprilTagFrame)
+        self.frameSync.addFrame(self.originFrame)
         self.frameSync.addFrame(self.pointcloudAffordance.getChildFrame(), ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressStartFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressInsideFrame, ignoreIncoming=True)
@@ -89,19 +89,15 @@ class PolarisModel(object):
     def onAprilTag(self, msg):
         t = vtk.vtkTransform()
         cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, t)
-        self.aprilTagFrame.copyFrame(t)
-
+        self.originFrame = transformUtils.concatenateTransforms([self.originToAprilTransform, t])
 
 class EgressPlanner(object):
 
     def __init__(self, robotSystem):
 
-<<<<<<< HEAD
         self.pelvisLiftX = 0.0
         self.pelvisLiftZ = 0.05
-=======
-        self.liftHeight = 0.1
->>>>>>> Update EgressPlanner
+
         self.legLiftAngle = 8
 
         self.robotSystem = robotSystem
@@ -136,25 +132,6 @@ class EgressPlanner(object):
         plan = self.robotSystem.ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
         return plan
 
-    def planFootStartPlacement(self):
-        startPose = self.getPlanningStartPose()
-        startPoseName = 'q_egress_start'
-        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
-        endPoseName = 'q_egress_end'
-        #footFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('l_foot', startPose)
-<<<<<<< HEAD
-=======
-        #t = transformUtils.frameFromPositionAndRPY([0, 0, self.liftHeight], [0, 0, 0])
->>>>>>> Update EgressPlanner
-        #liftFrame = transformUtils.concatenateTransforms([t, footFrame])
-        constraints = []
-        constraints.append(self.createAllButLeftLegPostureConstraint(startPoseName))
-        constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressStartFrame, tspan=[1,1]))
-        constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-
-        constraintSet.runIk()
-        return constraintSet.planEndPoseGoal(feetOnGround=False)
-<<<<<<< HEAD
 
     def planEgressArms(self):
         startPose = self.getPlanningStartPose()
@@ -414,8 +391,13 @@ class EgressPlanner(object):
         msg_robot_plan_with_supports_t = manipPlanner.convertPlanToPlanWithSupports(msg_robot_plan_t, supports, ts, isQuasistatic)
         lcmUtils.publish('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS', msg_robot_plan_with_supports_t)
         return msg_robot_plan_with_supports_t
-=======
->>>>>>> Update EgressPlanner
+
+    def getFrameToAprilTagTransform(self, t):
+        tCopy = transformUtils.copyFrame(t)
+        tCopy.PostMultiply()
+        tCopy.Concatenate(self.aprilTagFrame.GetLinearInverse())
+        print transformUtils.poseFromTransform
+
 
 
 class EgressPanel(TaskUserPanel):
@@ -425,7 +407,6 @@ class EgressPanel(TaskUserPanel):
         TaskUserPanel.__init__(self, windowTitle='Egress')
 
         self.robotSystem = robotSystem
-        self.sitStandPlanner = sitstandplanner.SitStandPlanner(robotSystem.ikServer, robotSystem)
         self.platformPlanner = polarisplatformplanner.PolarisPlatformPlanner(robotSystem.ikServer, robotSystem)
         self.addDefaultProperties()
         self.addButtons()
@@ -435,13 +416,13 @@ class EgressPanel(TaskUserPanel):
     def addButtons(self):
         #sit/stand buttons
         self.addManualButton('Start', self.onStart)
-        self.addManualButton('Sit', functools.partial(self.onPlan, 'sit'))
-        self.addManualButton('Stand', functools.partial(self.onPlan, 'stand'))
-        self.addManualButton('Squat', functools.partial(self.onPlan, 'squat'))
-        self.addManualButton('Stand From Squat', functools.partial(self.onPlan, 'stand_from_squat'))
-        self.addManualButton('Sit From Current', functools.partial(self.onPlan, 'sit_from_current'))
-        self.addManualButton('Hold With Pelvis Contact', functools.partial(self.onPlan, 'hold_with_pelvis_contact'))
-        self.addManualButton('Hold Without Pelvis Contact', functools.partial(self.onPlan, 'hold_without_pelvis_contact'))
+        # self.addManualButton('Sit', functools.partial(self.onPlan, 'sit'))
+        # self.addManualButton('Stand', functools.partial(self.onPlan, 'stand'))
+        # self.addManualButton('Squat', functools.partial(self.onPlan, 'squat'))
+        # self.addManualButton('Stand From Squat', functools.partial(self.onPlan, 'stand_from_squat'))
+        # self.addManualButton('Sit From Current', functools.partial(self.onPlan, 'sit_from_current'))
+        # self.addManualButton('Hold With Pelvis Contact', functools.partial(self.onPlan, 'hold_with_pelvis_contact'))
+        # self.addManualButton('Hold Without Pelvis Contact', functools.partial(self.onPlan, 'hold_without_pelvis_contact'))
 
         # polaris step down buttons
         self.addManualButton('Fit Platform Affordance', self.platformPlanner.fitRunningBoardAtFeet)
@@ -449,32 +430,32 @@ class EgressPanel(TaskUserPanel):
         self.addManualButton('Raycast Terrain', self.platformPlanner.requestRaycastTerrain)
         self.addManualButton('Update Affordance', self.platformPlanner.updateAffordance)
         self.addManualButton('Arms Up',self.onArmsUp)
-        self.addManualButton('Plan Turn', self.onPlanTurn)
+        # self.addManualButton('Plan Turn', self.onPlanTurn)
         self.addManualButton('Plan Step Down', self.onPlanStepDown)
-        self.addManualButton('Plan Weight Shift', self.onPlanWeightShift)
+        # self.addManualButton('Plan Weight Shift', self.onPlanWeightShift)
         self.addManualButton('Plan Step Off', self.onPlanStepOff)
 
     def addDefaultProperties(self):
-        self.params.addProperty('Chair Height', 0.57, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        self.params.addProperty('Sit Back Distance', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        self.params.addProperty('Speed', 1, attributes=om.PropertyAttributes(singleStep=0.1, decimals=3))
-        self.params.addProperty('Back Gaze Bound', 0.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        self.params.addProperty('Min Distance', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        self.params.addProperty('Pelvis Gaze Bound', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        self.params.addProperty('Pelvis Gaze Angle', 0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
-        self.params.addProperty('Back y Angle', -0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        # self.params.addProperty('Chair Height', 0.57, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        # self.params.addProperty('Sit Back Distance', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        # self.params.addProperty('Speed', 1, attributes=om.PropertyAttributes(singleStep=0.1, decimals=3))
+        # self.params.addProperty('Back Gaze Bound', 0.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        # self.params.addProperty('Min Distance', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        # self.params.addProperty('Pelvis Gaze Bound', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        # self.params.addProperty('Pelvis Gaze Angle', 0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        # self.params.addProperty('Back y Angle', -0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
 
         self.params.addProperty('Step Off Direction', 0, attributes=om.PropertyAttributes(enumNames=['Forwards','Sideways']))
 
     def _syncProperties(self):
-        self.sitStandPlanner.planOptions['chair_height'] = self.params.getProperty('Chair Height')
-        self.sitStandPlanner.planOptions['sit_back_distance'] = self.params.getProperty('Sit Back Distance')
-        self.sitStandPlanner.planOptions['speed'] = self.params.getProperty('Speed')
-        self.sitStandPlanner.planOptions['back_gaze_bound'] = self.params.getProperty('Back Gaze Bound')
-        self.sitStandPlanner.planOptions['min_distance'] = self.params.getProperty('Min Distance')
-        self.sitStandPlanner.planOptions['pelvis_gaze_bound']= self.params.getProperty('Pelvis Gaze Bound')
-        self.sitStandPlanner.planOptions['pelvis_gaze_angle'] = self.params.getProperty('Pelvis Gaze Angle')
-        self.sitStandPlanner.planOptions['bky_angle'] = self.params.getProperty('Back y Angle')
+        # self.sitStandPlanner.planOptions['chair_height'] = self.params.getProperty('Chair Height')
+        # self.sitStandPlanner.planOptions['sit_back_distance'] = self.params.getProperty('Sit Back Distance')
+        # self.sitStandPlanner.planOptions['speed'] = self.params.getProperty('Speed')
+        # self.sitStandPlanner.planOptions['back_gaze_bound'] = self.params.getProperty('Back Gaze Bound')
+        # self.sitStandPlanner.planOptions['min_distance'] = self.params.getProperty('Min Distance')
+        # self.sitStandPlanner.planOptions['pelvis_gaze_bound']= self.params.getProperty('Pelvis Gaze Bound')
+        # self.sitStandPlanner.planOptions['pelvis_gaze_angle'] = self.params.getProperty('Pelvis Gaze Angle')
+        # self.sitStandPlanner.planOptions['bky_angle'] = self.params.getProperty('Back y Angle')
         self.stepOffDirection = self.params.getPropertyEnumValue('Step Off Direction').lower()
         self.sitStandPlanner.applyParams()
 
@@ -563,7 +544,8 @@ class EgressPanel(TaskUserPanel):
         addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
         addFunc(self.onPlanStepDown, 'plan step down')
-        addTask(rt.UserPromptTask(name="approve/adjust footsteps", message="Please approve footsteps, modify if necessary"))
+        addTask(rt.UserPromptTask(name="approve footsteps, set support contact group",
+         message="Please approve/modify footsteps. Set the support contact group for the left foot step to be Back 2/3"))
         addTask(rt.UserPromptTask(name="execute step down", message="Please execute walking plan"))
         addTask(rt.WaitForWalkExecution(name='wait for step down'))
 
