@@ -17,5 +17,6 @@
     <file>ddVideoPlayer.ui</file>
     <file>ddSensorDataRequest.ui</file>
     <file>ddPFGrasp.ui</file>
+    <file>ddCameraPanel.ui</file>
   </qresource>
 </RCC>
