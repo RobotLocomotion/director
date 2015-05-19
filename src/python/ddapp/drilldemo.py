@@ -17,6 +17,7 @@ from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp.debugVis import DebugData
 from ddapp import ikplanner
+from ddapp.ikparameters import IkParameters
 from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
@@ -598,10 +599,10 @@ class DrillPlannerDemo(object):
         self.addPlan(walkingPlan)
 
 
-    def planPostureGoal(self, side, group, name):
+    def planPostureGoal(self, side, group, name, ikParameters=None):
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, group, name, side=side)
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=ikParameters)
         self.addPlan(newPlan)
 
 
@@ -612,17 +613,16 @@ class DrillPlannerDemo(object):
         q2 = self.ikPlanner.getMergedPostureFromDatabase(q1, 'General', 'arm up pregrasp waypoint', side=side)
         q3 = self.ikPlanner.getMergedPostureFromDatabase(q1, 'General', 'arm up pregrasp', side=side)
 
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 60
-        newPlan = self.ikPlanner.computeMultiPostureGoal([q1, q2, q3], [0.0, 0.7, 1.0])
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        newPlan = self.ikPlanner.computeMultiPostureGoal([q1, q2, q3], [0.0, 0.7, 1.0],
+                                                         ikParameters=IkParameters(maxDegreesPerSecond=60))
         self.addPlan(newPlan)
 
         #self.planPostureGoal(self.graspingHand, 'General', 'arm up pregrasp')
 
 
     def planDrillRaiseNew(self):
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
-        self.planPostureGoal(self.graspingHand, 'drill', 'new: drill raise for press 2')
+        self.planPostureGoal(self.graspingHand, 'drill', 'new: drill raise for press 2',
+                             ikParameters=IkParameters(maxDegreesPerSecond=30))
 
 
 
@@ -687,9 +687,13 @@ class DrillPlannerDemo(object):
         vis.updateFrame(stanceFrame, 'drill grasp stance frame', parent=om.findObjectByName('drill'), scale=0.2, visible=True)
 
 
-    def planParameterizedGrasp(self, distance=0.0, height=0.0, yaw=0.0, inLine=False):
+    def planParameterizedGrasp(self, distance=0.0, height=0.0, yaw=0.0, inLine=False, ikParameters=None):
         startPose = self.getPlanningStartPose()
         endPose, constraintSet = self.computeDrillGraspPose(startPose, distance, height, yaw)
+        if ikParameters:
+            constraintSet.ikParameters = ikParameters
+
+        constraintSet.ikParameters.usePointwise = False
 
         if inLine:
             '''
@@ -724,9 +728,7 @@ class DrillPlannerDemo(object):
 
             constraintSet.constraints.append(p)
 
-            self.ikPlanner.ikServer.usePointwise = False
             newPlan = constraintSet.runIkTraj()
-            self.ikPlanner.ikServer.usePointwise = True
 
         else:
             newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
@@ -735,18 +737,16 @@ class DrillPlannerDemo(object):
 
 
     def planReachNew(self):
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
-        self.planParameterizedGrasp(-0.17, 0.1, self.drillGraspYaw)
+        self.planParameterizedGrasp(-0.17, 0.1, self.drillGraspYaw,
+                                    ikParameters=IkParameters(maxDegreesPerSecond=30))
 
     def planGraspNew(self):
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 15
-        self.planParameterizedGrasp(0.0, 0.0, self.drillGraspYaw, inLine=True)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        self.planParameterizedGrasp(0.0, 0.0, self.drillGraspYaw, inLine=True,
+                                    ikParameters=IkParameters(maxDegreesPerSecond=15))
 
     def planLiftNew(self):
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 15
-        self.planParameterizedGrasp(-0.1, 0.1, self.drillGraspYaw, inLine=True)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        self.planParameterizedGrasp(-0.1, 0.1, self.drillGraspYaw, inLine=True,
+                                    ikParameters=IkParameters(maxDegreesPerSecond=15))
 
     def computeDrillButtGraspPose(self, startPose, depth):
 
@@ -776,17 +776,16 @@ class DrillPlannerDemo(object):
     def planHandRaiseForDrillButtPreGrasp(self):
         startPose = self.getPlanningStartPose()
         endPose = self.computeDrillButtGraspPose(startPose, -0.15)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose,
+                                                    ikParameters=IkParameters(maxDegreesPerSecond=30))
         self.addPlan(newPlan)
 
     def planHandRaiseForDrillButtGrasp(self):
         startPose = self.getPlanningStartPose()
         endPose = self.computeDrillButtGraspPose(startPose, -0.04)
 
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose,
+                                                    ikParameters=IkParameters(maxDegreesPerSecond=10))
 
         self.addPlan(newPlan)
 
@@ -812,16 +811,15 @@ class DrillPlannerDemo(object):
         startPose = self.getPlanningStartPose()
         endPose, info = self.computeThumbPressPrepPose(startPose)
 
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 15
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose,
+                                                    ikParameters=IkParameters(maxDegreesPerSecond=15))
 
         self.addPlan(newPlan)
 
 
     def planHandDown(self, side):
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
-        self.planPostureGoal(side, 'General', 'handdown')
+        self.planPostureGoal(side, 'General', 'handdown',
+                             ikParameters=IkParameters(maxDegreesPerSecond=30))
 
 
     def planWalkWithDrillPosture(self):
@@ -847,8 +845,8 @@ class DrillPlannerDemo(object):
 
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'drill', 'new: walk with drill', side=self.graspingHand)
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
-        plan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        plan = self.ikPlanner.computePostureGoal(startPose, endPose,
+                                                 ikParameters=IkParameters(maxDegreesPerSecond=30))
         self.addPlan(plan)
 
     def planDrillIntoWallPrep(self):
@@ -858,8 +856,9 @@ class DrillPlannerDemo(object):
 
         self.storeDrillNominalPosture(endPose)
 
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 30
-        plan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        plan = self.ikPlanner.computePostureGoal(startPose, endPose,
+                                                 ikParameters=IkParameters(maxDegreesPerSecond=30))
+
         self.addPlan(plan)
 
 
@@ -1070,8 +1069,6 @@ class DrillPlannerDemo(object):
         for i, targetFrame in enumerate(targetFrames):
 
             positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, targetFrame, bitToHand)
-            activeTime = float(i+1)
-            positionConstraint.tspan = [activeTime, activeTime]
             constraints.append(positionConstraint)
 
             motionVector = np.array(targetFrame.GetPosition()) - np.array(lastTargetFrame.GetPosition())
@@ -1117,21 +1114,14 @@ class DrillPlannerDemo(object):
             endPose, info = constraintSet.runIk()
 
         def updateDrillPlan():
-
-            ikServer = self.ikPlanner.ikServer
-
-            ikServer.usePointwise = False
-            ikServer.maxBodyTranslationSpeed = self.drillTrajectoryMaxMetersPerSecond
-            ikServer.rescaleBodyNames = [handLinkName]
-            ikServer.rescaleBodyPts = list(bitToHand.GetPosition())
-            ikServer.maxDegreesPerSecond = self.drillTrajectoryMaxDegreesPerSecond
+            constraintSet.ikParameters.usePointwise = False
+            constraintSet.ikParameters.maxBodyTranslationSpeed = self.drillTrajectoryMaxMetersPerSecond
+            constraintSet.ikParameters.rescaleBodyNames = [handLinkName]
+            constraintSet.ikParameters.rescaleBodyPts = list(bitToHand.GetPosition())
+            constraintSet.ikParameters.maxDegreesPerSecond = self.drillTrajectoryMaxDegreesPerSecond
 
             plan = constraintSet.runIkTraj()
             self.addPlan(plan)
-
-            ikServer.rescaleBodyNames = []
-            ikServer.rescaleBodyPts = []
-            ikServer.maxDegreesPerSecond = 30
 
         self.constraintSet = constraintSet
         self.updateDrillIk = updateDrillIk
@@ -1414,7 +1404,7 @@ class DrillPlannerDemo(object):
         self.constraintSet.constraints.append(positionConstraint)
 
     def planGazeTrajectory(self):
-        self.ikPlanner.ikServer.usePointwise = False
+        self.constraintSet.ikParameters.usePointwise = False
         plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
