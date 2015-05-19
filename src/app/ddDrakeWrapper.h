@@ -26,9 +26,6 @@ public:
 
 protected:
 
-  class ddInternal;
-  ddInternal* Internal;
-
   Q_DISABLE_COPY(ddDrakeWrapper);
 };
 
