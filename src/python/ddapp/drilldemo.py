@@ -863,18 +863,18 @@ class DrillPlannerDemo(object):
 
 
     def getBitToDrillTransform(self):
-        return transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.155], [0,0,0])
+        return transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.13], [0,0,0])
 
 
     def getButtonToDrillTransform(self):
-        return transformUtils.frameFromPositionAndRPY([0.007, -0.035, -0.06], [0,0,0])
+        return transformUtils.frameFromPositionAndRPY([0.0078, -0.025, -0.07], [0,0,0])
 
 
     def getButtToDrillTransform(self):
         return transformUtils.frameFromPositionAndRPY([0.0, 0.0, -0.16], [90,0,0])
 
     def getGraspToDrillTransform(self):
-        return transformUtils.frameFromPositionAndRPY([-0.04, 0.0, 0.01], [90, 90, 0.0])
+        return transformUtils.frameFromPositionAndRPY([-0.03, 0.0, 0.0], [90, 90, 0.0])
 
     def getPressPrepToDrillTransform(self):
         return transformUtils.frameFromPositionAndRPY([0.03, -0.05, -0.2], [45,0,0])
@@ -1228,7 +1228,7 @@ class DrillPlannerDemo(object):
         aff = om.findObjectByName(name)
         if not aff:
             pose = transformUtils.poseFromTransform(t)
-            desc = dict(classname='MeshAffordanceItem', Name=name, Filename='software/models/otdf/dewalt_drill_with_bit.vtp', Color=[0,1,0], pose=pose)
+            desc = dict(classname='MeshAffordanceItem', Name=name, Filename='software/models/otdf/dewalt_drill_primitive.vtp', Color=[0,1,0], pose=pose)
             aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         else:
             aff.getChildFrame().copyFrame(t)
