@@ -440,7 +440,8 @@ class MapServerSource(TimerCallback):
         if obj not in om.getObjects():
             obj = None
         if not obj:
-            visibleDefault = False if viewId in (lcmdrc.data_request_t.SCANS_HALF_SWEEP, 9999) else True
+            hiddenMapIds = [9999]
+            visibleDefault = False if viewId in hiddenMapIds else True
             obj = vis.PolyDataItem(self.getNameForViewId(viewId), polyData, self.view)
 
             obj.setProperty('Visible', visibleDefault)
