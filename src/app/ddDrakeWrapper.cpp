@@ -4,26 +4,14 @@
 #include <RigidBodyManipulator.h>
 #include <convexHull.h>
 #include <ForceTorqueMeasurement.h>
-#include <map>
 #include <vector>
-#include <unordered_set>
 #include <string>
 #include <sstream>
 #include <boost/shared_ptr.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string/find.hpp>
-#include <boost/algorithm/string/case_conv.hpp>
-#include <boost/algorithm/string/replace.hpp>
 
 #include <math.h>
 
-#include <QMap>
-#include <QDir>
-
-using std::map;
 using std::vector;
-using std::string;
-using std::istringstream;
 
 //-----------------------------------------------------------------------------
 class ddDrakeWrapper::ddInternal
