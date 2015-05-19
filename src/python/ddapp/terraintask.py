@@ -144,6 +144,78 @@ class TerrainTask(object):
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.q.copy()
 
+
+    def spawnCinderblockTerrain(self, cols=[]):
+        
+        for obj in self.getCinderblockAffordances():
+            om.removeFromObjectModel(obj)
+
+        # F=sloping up forward (+x), B=sloping up backward (-x),
+        # R=sloping up rightward (-y), L=sloping up leftward (y)
+        blockTypes = [
+            [ 'F', 'R', 'B', 'L', 'F', 'R' ],
+            [ 'L', 'F', 'R', 'B', 'L', 'F' ],
+            [ 'B', 'L', 'F', 'R', 'B', 'L' ],
+            [ 'R', 'B', 'L', 'F', 'R', 'B' ],
+            [ 'F', 'R', 'B', 'L', 'F', 'R' ],
+            [ 'L', 'F', 'R', 'B', 'L', 'F' ],
+            [ 'B', 'L', 'F', 'R', 'B', 'L' ]
+        ]
+
+        # 0=ground level, 1=one cinderblock offset, etc
+        blockLevels = [
+            [ 0, 0, 0, 0, 0, 0 ],
+            [ 0, 0, 1, 1, 0, 0 ],
+            [ 0, 0, 1, 1, 0, 0 ],
+            [ 0, 1, 1, 1, 1, 0 ],
+            [ 1, 2, 1, 1, 2, 1 ],
+            [ 1, 1, 1, 1, 1, 1 ],
+            [ 0, 0, 0, 0, 0, 0 ]
+        ]
+        blockAngleMap = { 'F': 180, 'B': 0, 'R': 270, 'L': 90 }
+
+        tiltAngle = 15
+        tiltAngle = np.radians(tiltAngle)
+        baseVerticalOffset = blockHeight/2.0 + np.sin(tiltAngle)*blockLength/2.0
+
+        if len(cols) == 0:
+            cols = range(len(blockTypes[0]))
+
+        blocks = []
+        for row in range(len(blockTypes)):
+            for col in cols:
+                blockType = blockTypes[row][col]
+                blockYaw = np.radians(blockAngleMap[blockType])
+                blockLevel = blockLevels[row][col]
+
+                rpy = [0.0, tiltAngle, yaw]
+                pos = [blockLength*(row+1), blockWidth*(col+1), blockHeight*blockLevel + baseVerticalOffset]
+                
+                offsetFrame = transformUtils.frameFromPositionAndRPY(pos, rpy)
+                offsetFrame.PostMultiply()
+                offsetFrame.Concatenate(relativeFrame)
+                
+                pose = transformUtils.poseFromTransform(offsetFrame)
+                desc = dict(classname='BoxAffordanceItem', Name='cinderblock (%d, %d)' % (row, col), Dimensions=(blockLength, blockHeight, blockHeight)], pose=pose)
+                block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
+                blocks.append(block)
+
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        stanceFrame.PreMultiply()
+        stanceFrame.Translate(0.25, 0.0, 0.0)
+
+        f = vis.showFrame(stanceFrame, 'cinderblock stance frame', scale=0.2)
+        frameSync = vis.FrameSync()
+        frameSync.addFrame(f)
+        f.frameSync = frameSync
+
+        for block in self.getCinderblockAffordances():
+            frameSync.addFrame(block.getChildFrame(), ignoreIncoming=True)
+
+        return blocks
+
+
+
     def spawnTiltedCinderblocks(self):
 
         for obj in self.getCinderblockAffordances():
