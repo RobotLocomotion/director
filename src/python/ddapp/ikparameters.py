@@ -5,12 +5,18 @@ class IkParameters(FieldContainer):
     def __init__(self, **kwargs):
         self._add_fields(
             usePointwise = None,
-            useCollision = None
+            useCollision = None,
+            majorIterationsLimit = None,
+            majorOptimalityTolerance = None,
+            majorFeasibilityTolerance = None,
         )
 
     def setToDefaults(self):
         self.usePointwise = True
         self.useCollision = False
+        self.majorIterationsLimit = 500
+        self.majorOptimalityTolerance = 1e-4
+        self.majorFeasibilityTolerance = 1e-6
 
     def fillInWith(self, other):
         for field, value in self:

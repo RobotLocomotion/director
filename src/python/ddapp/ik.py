@@ -38,9 +38,6 @@ class AsyncIKCommunicator():
         self.numberOfAddedKnots = 0
         self.numberOfInterpolatedCollisionChecks = 2
         self.collisionMinDistance = 0.03
-        self.majorIterationsLimit = 500
-        self.majorOptimalityTolerance = 1e-4
-        self.majorFeasibilityTolerance = 1e-6
         self.rrtMaxEdgeLength = 0.05
         self.rrtGoalBias = 1.0
         self.rrtMaxNumVertices = 5000
@@ -219,9 +216,9 @@ class AsyncIKCommunicator():
         commands.append('ik_seed_pose = [ik_seed_pose; zeros(r.getNumPositions()-numel(ik_seed_pose),1)];')
         commands.append('ik_nominal_pose = [ik_nominal_pose; zeros(r.getNumPositions()-numel(ik_nominal_pose),1)];')
         commands.append('options = struct();')
-        commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
-        commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
-        commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
+        commands.append('options.MajorIterationsLimit = %s;' % ikParameters.majorIterationsLimit)
+        commands.append('options.MajorFeasibilityTolerance = %s;' % ikParameters.majorFeasibilityTolerance)
+        commands.append('options.MajorOptimalityTolerance = %s;' % ikParameters.majorOptimalityTolerance)
         commands.append('options.MinDistance = %f;' % self.collisionMinDistance)
         commands.append('s = s.setupOptions(options);')
         commands.append('clear q_end;')
@@ -290,9 +287,9 @@ class AsyncIKCommunicator():
         else:
             commands.append('additionalTimeSamples = [];')
         commands.append('options = struct();')
-        commands.append('options.MajorIterationsLimit = %s;' % self.majorIterationsLimit)
-        commands.append('options.MajorFeasibilityTolerance = %s;' % self.majorFeasibilityTolerance)
-        commands.append('options.MajorOptimalityTolerance = %s;' % self.majorOptimalityTolerance)
+        commands.append('options.MajorIterationsLimit = %s;' % ikParameters.majorIterationsLimit)
+        commands.append('options.MajorFeasibilityTolerance = %s;' % ikParameters.majorFeasibilityTolerance)
+        commands.append('options.MajorOptimalityTolerance = %s;' % ikParameters.majorOptimalityTolerance)
         commands.append('options.FixInitialState = %s;' % ('true' if self.fixInitialState else 'false'))
         commands.append('s = s.setupOptions(options);')
         commands.append('ikoptions = s.ikoptions.setAdditionaltSamples(additionalTimeSamples);')
