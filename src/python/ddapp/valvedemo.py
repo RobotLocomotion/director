@@ -7,6 +7,7 @@ from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp import ik
+from ddapp.ikparameters import IkParameters
 from ddapp import lcmUtils
 from ddapp import robotstate
 from ddapp import segmentation
@@ -473,12 +474,10 @@ class ValvePlannerDemo(object):
                        startPose=None, verticalOffset=0.01, usePoses=False, resetPoses=True,
                        planFromCurrentRobotState=False, retract=False):
 
-        ikParameterDict = {'usePointwise': False,
-                           'maxDegreesPerSecond': speed,
-                           'numberOfAddedKnots': 1,
-                           'quasiStaticShrinkFactor': self.quasiStaticShrinkFactor,
-                           'fixInitialState': planFromCurrentRobotState}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=speed,
+                                    numberOfAddedKnots=1,
+                                    quasiStaticShrinkFactor=self.quasiStaticShrinkFactor,
+                                    fixInitialState=planFromCurrentRobotState)
 
         _, yaxis, _ = transformUtils.getAxesFromTransform(self.computeGraspFrame().transform)
         yawDesired = np.arctan2(yaxis[1], yaxis[0])
@@ -519,12 +518,11 @@ class ValvePlannerDemo(object):
             startPoseName = self.getStartPoseName(planFromCurrentRobotState, retract, usePoses)
             endPoseName = self.getEndPoseName(retract, usePoses)
 
-        plan = self.ikPlanner.runIkTraj(constraints, startPoseName, endPoseName, self.nominalPoseName)
+        plan = self.ikPlanner.runIkTraj(constraints, startPoseName, endPoseName, self.nominalPoseName, ikParameters=ikParameters)
 
         if resetPoses and not retract and max(plan.plan_info) <= 10:
             self.setReachAndTouchPoses(plan)
 
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
         return plan
 
     def planReach(self, verticalOffset=None, **kwargs):
@@ -544,8 +542,7 @@ class ValvePlannerDemo(object):
         self.addPlan(plan)
 
     def planTurn(self, wristAngleCW=np.radians(320)):
-        ikParameterDict = {'maxDegreesPerSecond': self.speedTurn}
-        originalIkParameterDict = self.ikPlanner.setIkParameters(ikParameterDict)
+        ikParameters = IkParameters(maxDegreesPerSecond=self.speedTurn)
         startPose = self.getPlanningStartPose()
         wristAngleCW = min(np.radians(320)-0.01, max(-np.radians(160)+0.01, wristAngleCW))
         if self.graspingHand == 'left':
@@ -555,10 +552,9 @@ class ValvePlannerDemo(object):
 
         endPose = self.ikPlanner.mergePostures(startPose, postureJoints)
 
-        plan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        plan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=ikParameters)
         app.displaySnoptInfo(1)
 
-        self.ikPlanner.setIkParameters(originalIkParameterDict)
         self.addPlan(plan)
 
     def planRetract(self, **kwargs):
