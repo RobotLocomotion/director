@@ -715,20 +715,15 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.planSafe()
 
     def onPlanPreGrasp(self, depth=None):
-        self._syncProperties()
-        if depth is None:
-            depth = self.preGraspDepth
-        self.drivingPlanner.planPreGrasp(depth=depth, speed=self.speed, angle=self.preGraspAngle,
+        self.drivingPlanner.planPreGrasp(depth=self.preGraspDepth, speed=self.speed, angle=self.preGraspAngle,
             graspLocation=self.graspLocation, turnRadius=self.turnRadius)
 
     def onPlanTouch(self):
         self._syncProperties()
         self.drivingPlanner.planTouch(depth=self.touchDepth, speed=self.speed)
 
-    def onPlanRetract(self, depth=None):
+    def onPlanRetract(self):
         self._syncProperties()
-        if depth==None:
-            depth = self.preGraspDepth
         self.drivingPlanner.planRetract(depth=self.preGraspDepth, speed=self.speed)
 
     def onPlanTurn(self):
@@ -742,7 +737,7 @@ class DrivingPlannerPanel(TaskUserPanel):
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
 
-    def onplanBarGrasp(self, depth=None):
+    def onplanBarGrasp(self):
         self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, preGrasp=True)
 
     def setParamsPreGrasp1(self):
