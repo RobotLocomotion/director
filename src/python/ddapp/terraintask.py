@@ -152,6 +152,8 @@ class TerrainTask(object):
 
         # F=sloping up forward (+x), B=sloping up backward (-x),
         # R=sloping up rightward (-y), L=sloping up leftward (y)
+        # first row is closest to robot
+        # column order is left-to-right on robot (+y to -y)
         blockTypes = [
             [ 'F', 'R', 'B', 'L', 'F', 'R' ],
             [ 'L', 'F', 'R', 'B', 'L', 'F' ],
@@ -181,15 +183,6 @@ class TerrainTask(object):
         if len(cols) == 0:
             cols = range(len(blockTypes[0]))
 
-        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
-        stanceFrame.PreMultiply()
-        stanceFrame.Translate(0.25, 0, 0.0)
-
-        f = vis.showFrame(stanceFrame, 'cinderblock stance frame', scale=0.2)
-        frameSync = vis.FrameSync()
-        frameSync.addFrame(f)
-        f.frameSync = frameSync
-
         blockFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         blockFrame.PreMultiply()
         blockFrame.Translate(0.25+blockLength, blockWidth*np.mean(np.array(cols)), 0)
@@ -209,12 +202,12 @@ class TerrainTask(object):
                 offsetFrame.Concatenate(blockFrame)
                 
                 pose = transformUtils.poseFromTransform(offsetFrame)
-                desc = dict(classname='BoxAffordanceItem', Name='cinderblock (%d, %d)' % (row, col), Dimensions=[blockLength, blockWidth, blockHeight], pose=pose)
+                desc = dict(classname='BoxAffordanceItem', Name='%s (%d,%d)' % (self.cinderblockPrefix, row, col), Dimensions=[blockLength, blockWidth, blockHeight], pose=pose)
                 block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
                 blocks.append(block)
 
-        for block in self.getCinderblockAffordances():
-            frameSync.addFrame(block.getChildFrame(), ignoreIncoming=True)
+        #for block in self.getCinderblockAffordances():
+        #    frameSync.addFrame(block.getChildFrame(), ignoreIncoming=True)
 
         return blocks
 
