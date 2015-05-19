@@ -197,29 +197,70 @@ class DrivingPlanner(object):
         endPoseName = 'q_foot_end'
         lFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('l_foot', startPose)
 
-        lfootConstraintFrame = transformUtils.copyFrame(lFoot2World)
-        lfootConstraintFrame.PreMultiply()
-        lfootConstraintFrame.Translate([0.0,0.0, 0.05])
+        targetFrame = transformUtils.copyFrame(lFoot2World)
+        targetFrame.PreMultiply()
+        targetFrame.Translate([0.0,0.0, 0.05])
+        footPoseConstraint = self.createLeftFootPoseConstraint(targetFrame)
+        allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
 
         ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
         'maxDegreesPerSecond': 10}
         ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-        # rfootFixedConstraint = ikPlanner.createFixedFootConstraints(startPoseName)
-        identityFrame = vtk.vtkTransform()
-        lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', lfootConstraintFrame, identityFrame)
-        allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
-
+        
         constraints = [allButLeftLegPostureConstraint]
-        constraints.extend(lfootPositionOrientationConstraint)
+        constraints.extend(footPoseConstraint)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
         cs.seedPoseName = 'q_start'
         cs.nominalPoseName = 'q_start'
         endPose = cs.runIk()
-        keyFramePlan = cs.planEndPoseGoal()
+        plan = cs.planEndPoseGoal()
+        self.plans.append(plan)
+
 
         ikPlanner.setIkParameters(ikParametersOriginal)
+        return plan
 
+
+    def planLegSwingIn(self):
+        om.findObjectByName('left foot driving')
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_start_foot'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_foot_end'
+
+        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
+        'maxDegreesPerSecond': 10}
+        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
+
+        legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
+        legAbovePedalFrame.PreMultiply()
+        legAbovePedalFrame.Translate([-0.02,0.0, 0.03])
+        identityFrame = vtk.vtkTransform()
+        legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1])
+        allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
+
+        constraints = [allButLeftLegPostureConstraint]
+        constraints.extend(legAbovePedalConstraint)
+
+        seedPoseName = 'q_driving'
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
+        self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
+
+        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.seedPoseName = 'q_driving'
+        cs.nominalPoseName = 'q_driving'
+        endPose = cs.runIk()
+
+
+        legSwingFrame = om.findObjectByName('left foot pedal swing').transform
+        cs.constraints.extend(self.createLeftFootPoseConstraint(legSwingFrame, tspan=[0.3,0.3]))
+        keyFramePlan = cs.runIkTraj()
+        self.plans.append(keyFramePlan)
+
+        ikPlanner.setIkParameters(ikParametersOriginal)
+        return keyFramePlan
 
     def planLegAbovePedal(self):
         om.findObjectByName('left foot driving')
@@ -233,16 +274,15 @@ class DrivingPlanner(object):
         'maxDegreesPerSecond': 10}
         ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
 
-        lfootConstraintFrame = om.findObjectByName('left foot driving').transform
-        lfootConstraintFrame.PreMultiply()
-        lfootConstraintFrame.Translate([-0.02,0.0, 0.03])
+        legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
+        legAbovePedalFrame.PreMultiply()
+        legAbovePedalFrame.Translate([-0.02,0.0, 0.03])
         identityFrame = vtk.vtkTransform()
-        lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', lfootConstraintFrame, identityFrame)
-
+        legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1])
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
 
         constraints = [allButLeftLegPostureConstraint]
-        constraints.extend(lfootPositionOrientationConstraint)
+        constraints.extend(legAbovePedalConstraint)
 
         seedPoseName = 'q_driving'
         seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
@@ -252,9 +292,86 @@ class DrivingPlanner(object):
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
-        keyFramePlan = cs.planEndPoseGoal()
+        plan = cs.planEndPoseGoal()
+        self.plans.append(plan)
 
         ikPlanner.setIkParameters(ikParametersOriginal)
+        return plan
+
+
+    def planLegSwingOut(self):
+        om.findObjectByName('left foot driving')
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_start_foot'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_foot_end'
+
+        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
+        'maxDegreesPerSecond': 10}
+        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
+
+        legUpFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
+        legUpFrame.PreMultiply()
+        legUpFrame.Translate([0.0,0.0, 0.05])
+        identityFrame = vtk.vtkTransform()
+        legUpConstraint = self.createLeftFootPoseConstraint(legUpFrame, tspan=[1,1])
+        allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
+
+        constraints = [allButLeftLegPostureConstraint]
+        constraints.extend(legUpConstraint)
+
+        seedPoseName = 'q_driving'
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
+        self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
+
+        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.seedPoseName = 'q_driving'
+        cs.nominalPoseName = 'q_driving'
+        endPose = cs.runIk()
+
+
+        legSwingFrame = om.findObjectByName('left foot pedal swing').transform
+        cs.constraints.extend(self.createLeftFootPoseConstraint(legSwingFrame, tspan=[0.7,0.7]))
+        keyFramePlan = cs.runIkTraj()
+        self.plans.append(keyFramePlan)
+
+        ikPlanner.setIkParameters(ikParametersOriginal)
+        return keyFramePlan
+
+    def planLegEgressStart(self):
+        om.findObjectByName('left foot driving')
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_start_foot'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_foot_end'
+
+        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
+        'maxDegreesPerSecond': 10}
+        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
+
+        legDownFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
+        identityFrame = vtk.vtkTransform()
+        legDownConstraint = self.createLeftFootPoseConstraint(legDownFrame)
+        allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
+
+        constraints = [allButLeftLegPostureConstraint]
+        constraints.extend(legDownConstraint)
+
+        seedPoseName = 'q_driving'
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
+        self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
+
+        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        cs.seedPoseName = 'q_driving'
+        cs.nominalPoseName = 'q_driving'
+        endPose = cs.runIk()
+        plan = cs.planEndPoseGoal()
+        self.plans.append(plan)
+
+        ikPlanner.setIkParameters(ikParametersOriginal)
+        return plan
 
     def planLegPedal(self):
         ikPlanner = self.robotSystem.ikPlanner
@@ -264,10 +381,10 @@ class DrivingPlanner(object):
         endPoseName = 'q_foot_end'
 
         ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'maxDegreesPerSecond': 10}
+        'quasiStaticShrinkFactor': 1, 'maxDegreesPerSecond': 10}
         ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
 
-        lfootConstraintFrame = om.findObjectByName('left foot driving').transform
+        lfootConstraintFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
         identityFrame = vtk.vtkTransform()
         lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', lfootConstraintFrame, identityFrame)
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
@@ -284,40 +401,48 @@ class DrivingPlanner(object):
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
         keyFramePlan = cs.planEndPoseGoal()
+        self.plans.append(keyFramePlan)
 
         ikPlanner.setIkParameters(ikParametersOriginal)
+        return keyFramePlan
 
-    def planLegEgressStart(self, shiftUp=False):
-        ikPlanner = self.robotSystem.ikPlanner
-        startPose = self.getPlanningStartPose()
-        startPoseName = 'q_start_foot'
-        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
-        endPoseName = 'q_foot_end'
-        targetFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
+    # def planLegEgressStart(self, shiftUp=False):
+    #     ikPlanner = self.robotSystem.ikPlanner
+    #     startPose = self.getPlanningStartPose()
+    #     startPoseName = 'q_start_foot'
+    #     self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+    #     endPoseName = 'q_foot_end'
+    #     targetFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
 
-        if shiftUp:
-            targetFrame.PreMultiply()
-            targetFrame.Translate([0.0, 0.0, 0.05])
+    #     if shiftUp:
+    #         targetFrame.PreMultiply()
+    #         targetFrame.Translate([0.0, 0.0, 0.05])
 
 
-        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'maxDegreesPerSecond': 10}
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-        # rfootFixedConstraint = ikPlanner.createFixedFootConstraints(startPoseName)
-        identityFrame = vtk.vtkTransform()
-        lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, identityFrame)
-        allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
+    #     ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
+    #     'maxDegreesPerSecond': 10}
+    #     ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
+    #     # rfootFixedConstraint = ikPlanner.createFixedFootConstraints(startPoseName)
+    #     identityFrame = vtk.vtkTransform()
+    #     lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, identityFrame)
+    #     allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
 
-        constraints = [allButLeftLegPostureConstraint]
-        constraints.extend(lfootPositionOrientationConstraint)
+    #     constraints = [allButLeftLegPostureConstraint]
+    #     constraints.extend(lfootPositionOrientationConstraint)
 
-        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.seedPoseName = 'q_start'
-        cs.nominalPoseName = 'q_start'
-        endPose = cs.runIk()
-        keyFramePlan = cs.planEndPoseGoal()
+    #     cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+    #     cs.seedPoseName = 'q_start'
+    #     cs.nominalPoseName = 'q_start'
+    #     endPose = cs.runIk()
+    #     keyFramePlan = cs.planEndPoseGoal()
 
-        ikPlanner.setIkParameters(ikParametersOriginal)
+    #     ikPlanner.setIkParameters(ikParametersOriginal)
+
+    def createLeftFootPoseConstraint(self, targetFrame, tspan=[-np.inf,np.inf]):
+        positionConstraint, orientationConstraint = self.robotSystem.ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, vtk.vtkTransform())
+        positionConstraint.tspan = tspan
+        orientationConstraint.tspan = tspan
+        return positionConstraint, orientationConstraint
 
 
     def planBarGrasp(self,depth=0, preGrasp=False):
@@ -720,7 +845,7 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         folder = addFolder('Move Left Foot to Pedal')
         addManipTask('Foot Up', self.drivingPlanner.planLegUp, userPrompt=True)
-        addManipTask('Leg Swing', self.drivingPlanner.planLegAbovePedal, userPrompt=True)
+        addManipTask('Leg Swing', self.drivingPlanner.planLegSwingIn, userPrompt=True)
         addManipTask('Foot on Pedal', self.drivingPlanner.planLegPedal, userPrompt=True)
 
         folder = addFolder('Driving')
@@ -728,7 +853,7 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         folder = addFolder('Foot to Egress Pose')
         addManipTask('Foot Off Pedal', self.drivingPlanner.planLegAbovePedal, userPrompt=True)
-        addManipTask('Swing leg out', functools.partial(self.drivingPlanner.planLegEgressStart, True) , userPrompt=True)
+        addManipTask('Swing leg out', self.drivingPlanner.planLegSwingOut , userPrompt=True)
         addManipTask('Foot Down', self.drivingPlanner.planLegEgressStart, userPrompt=True)
 
         folder = addFolder('Ungrasp Steering Wheel')
