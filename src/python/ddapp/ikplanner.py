@@ -29,6 +29,7 @@ from ddapp.ikparameters import IkParameters
 from ddapp import ikconstraintencoder
 
 import drc as lcmdrc
+import json
 
 import PythonQt
 from PythonQt import QtCore, QtGui
@@ -68,9 +69,19 @@ class ConstraintSet(object):
         if (self.ikPlanner.pushToMatlab is False):
             # TODO: Implement IK Server Request over LCM here
             print "push to lcm runIk"
-            self.ikPlanner.ikConstraintEncoder.publishConstraints( self.constraints )
+            listener = self.ikPlanner.getManipIKListener()
+            self.ikPlanner.ikConstraintEncoder.publishConstraints( self.constraints, messageName='IK_REQUEST')
+            ikplan = listener.waitForResponse()
+            listener.finish()
+
+            print ikplan.plan[ikplan.num_states-1].joint_position
+
             self.endPose = [0] * self.ikPlanner.jointController.numberOfJoints
-            self.info = 1
+            if ikplan.num_states>0:
+              self.endPose[len(self.endPose)-len(ikplan.plan[ikplan.num_states-1].joint_position):] = ikplan.plan[ikplan.num_states-1].joint_position
+              self.info=ikplan.plan_info[ikplan.num_states-1]
+            else: 
+              self.info = -1
             print 'info:', self.info
             return self.endPose, self.info
         else:
@@ -988,6 +999,12 @@ class IKPlanner(object):
 
         if self.pushToMatlab:
             self.ikServer.sendPoseToServer(pose, poseName)
+        else:
+            msg = lcmdrc.planner_request_t()
+            msg.utime = getUtime()
+            msg.poses = json.dumps({poseName:list(pose)})
+            msg.constraints = ''
+            lcmUtils.publish('PLANNER_SETUP_POSES', msg)
 
 
     def newPalmOffsetGraspToHandFrame(self, side, distance):
@@ -1285,6 +1302,11 @@ class IKPlanner(object):
         responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
         return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
 
+    def getManipIKListener(self):
+        responseChannel = 'CANDIDATE_MANIP_IKPLAN'
+        responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
+        return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
+
 
     def onPostureGoalMessage(self, stateJointController, msg):
 
@@ -1320,9 +1342,15 @@ class IKPlanner(object):
 
         listener = self.getManipPlanListener()
 
-        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
+        if (self.pushToMatlab is False):
+            # TODO: Implement IK Server Request over LCM here
+            constraintSet = ConstraintSet(self, constraints, poseEnd, nominalPoseName)
+            self.ikConstraintEncoder.publishConstraints( constraintSet.constraints, 'PLANNER_REQUEST')
+            info = 1
+        else:
+            ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
-        info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
+            info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
         print 'traj info:', info
 
         self.lastManipPlan = listener.waitForResponse()

@@ -50,7 +50,7 @@ class IKConstraintEncoder(object):
     def __init__(self,ikPlanner):
         self.ikPlanner = ikPlanner
 
-    def publishConstraints(self,constraints):
+    def publishConstraints(self,constraints,messageName='PLANNER_REQUEST'):
         poses = getPlanPoses(constraints, self.ikPlanner)
 
         #poseJsonStr = json.dumps(poses, indent=4)
@@ -62,7 +62,7 @@ class IKConstraintEncoder(object):
         msg.utime = getUtime()
         msg.poses = poseJsonStr
         msg.constraints = constraintsJsonStr
-        lcmUtils.publish('PLANNER_REQUEST', msg)
+        lcmUtils.publish(messageName, msg)
 
     def decodeConstraints(self,dataStream):
         return decodeConstraints(dataStream)
