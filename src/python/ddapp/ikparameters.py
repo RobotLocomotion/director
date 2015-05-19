@@ -23,6 +23,10 @@ class IkParameters(FieldContainer):
             rrtGoalBias = None,
             rrtMaxNumVertices = None,
             rrtNSmoothingPasses = None,
+            maxBodyTranslationSpeed = None,
+            maxBodyRotationSpeed = None,
+            rescaleBodyNames = None,
+            rescaleBodyPts = None,
         )
 
     def setToDefaults(self):
@@ -34,6 +38,10 @@ class IkParameters(FieldContainer):
         self.maxDegreesPerSecond = 30.0
         self.maxBaseMetersPerSecond = 0.05
         self.maxBaseRPYDegreesPerSecond = 2
+        self.maxBodyTranslationSpeed = 0.50
+        self.maxBodyRotationSpeed = 10
+        self.rescaleBodyNames = []
+        self.rescaleBodyPts = []
         self.accelerationParam = 2
         self.accelerationFraction = 0.3
         self.maxPlanDuration = 30.0
