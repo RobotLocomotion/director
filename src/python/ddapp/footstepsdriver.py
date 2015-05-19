@@ -94,7 +94,6 @@ DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
 
 DEFAULT_STEP_PARAMS['Polaris Platform'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Polaris Platform'].update({'Drake Min Hold Time': 2.0,
-                                      'Drake Swing Speed': 0.2,
                                       'Prevent Swing Undershoot': 1,
                                       'Map Mode': 1})
 
