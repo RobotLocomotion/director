@@ -69,7 +69,7 @@ class ConstraintSet(object):
         print 'info:', self.info
         return self.endPose, self.info
 
-    def runIkTraj(self):
+    def runIkTraj(self, ikParameters=None):
         assert self.endPose is not None
         self.ikPlanner.addPose(self.endPose, self.endPoseName)
 
@@ -79,7 +79,7 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName)
+        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
         return self.plan
 
     def planEndPoseGoal(self, feetOnGround = True):
@@ -1161,7 +1161,7 @@ class IKPlanner(object):
 
 
 
-    def computeMultiPostureGoal(self, poses, feetOnGround=True, times=None):
+    def computeMultiPostureGoal(self, poses, feetOnGround=True, times=None, ikParameters=None):
 
         assert len(poses) >= 2
 
@@ -1189,14 +1189,14 @@ class IKPlanner(object):
         #if self.useQuasiStaticConstraint:
         #    constraints.append(self.createQuasiStaticConstraint())
 
-        return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1], nominalPoseName=poseNames[0])
+        return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1], nominalPoseName=poseNames[0], ikParameters=ikParameters)
 
 
-    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True):
-        return self.computeMultiPostureGoal([poseStart, poseEnd], feetOnGround)
+    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True, ikParameters=None):
+        return self.computeMultiPostureGoal([poseStart, poseEnd], feetOnGround, ikParameters=ikParameters)
 
 
-    def computeJointPostureGoal(self, startPose, postureJoints):
+    def computeJointPostureGoal(self, startPose, postureJoints, ikParameters=None):
 
         startPoseName = 'posture_goal_start'
         self.addPose(startPose, startPoseName)
@@ -1214,7 +1214,7 @@ class IKPlanner(object):
 
         constraintSet = ConstraintSet(self, constraints, 'posture_goal_end', startPoseName)
         endPose, info = constraintSet.runIk()
-        return constraintSet.runIkTraj()
+        return constraintSet.runIkTraj(ikParameters=ikParameters)
 
     def getManipPlanListener(self):
         responseChannel = 'CANDIDATE_MANIP_PLAN'
