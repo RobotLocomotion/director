@@ -561,7 +561,6 @@ class DrivingPlanner(object):
 
         # slider 0 is the coarse grained slider, slider 1 is for fine grained adjustment
         slider = self.decodeThrottleMessage(msg)
-        slope = self.anklePositions[1] - (self.anklePositions[0] - self.throttleIdleAngleSlack)
         const = self.jointLimitsMin[self.akyIdx]
         ankleGoalPosition = const + slider[0]*self.coarseGrainedThrottleTravel + (slider[1]-1/2.0)*self.fineGrainedThrottleTravel
         ankleGoalPositionRadians = np.deg2rad(ankleGoalPosition)
