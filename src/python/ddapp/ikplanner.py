@@ -105,7 +105,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.addProperty('Collision min distance', ikPlanner.defaultIkParameters.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikPlanner.defaultIkParameters.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
-        self.addProperty('Quasistatic shrink factor', ik.QuasiStaticConstraint.shrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
+        self.addProperty('Quasistatic shrink factor', ikPlanner.defaultIkParameters.quasiStaticShrinkFactor, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=10.0, singleStep=0.1))
         self.addProperty('Max joint degrees/s', ikPlanner.defaultIkParameters.maxDegreesPerSecond, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=100.0, singleStep=1.0))
         self.addProperty('Nominal pose', 1, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
         self.addProperty('Seed pose', 0, attributes=om.PropertyAttributes(enumNames=['q_start', 'q_nom', 'q_end', 'q_zero']))
@@ -173,7 +173,7 @@ class IkOptionsItem(om.ObjectModelItem):
             self.ikPlanner.useQuasiStaticConstraint = self.getProperty(propertyName)
 
         elif propertyName == 'Quasistatic shrink factor':
-            ik.QuasiStaticConstraint.shrinkFactor = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.quasiStaticShrinkFactor = self.getProperty(propertyName)
 
         elif propertyName == 'Max joint degrees/s':
             self.defaultIkParameters.maxDegreesPerSecond = self.getProperty(propertyName)

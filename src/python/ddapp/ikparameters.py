@@ -27,6 +27,7 @@ class IkParameters(FieldContainer):
             maxBodyRotationSpeed = None,
             rescaleBodyNames = None,
             rescaleBodyPts = None,
+            quasiStaticShrinkFactor = None
         )
 
     def setToDefaults(self):
@@ -53,6 +54,7 @@ class IkParameters(FieldContainer):
         self.rrtGoalBias = 1.0
         self.rrtMaxNumVertices = 5000
         self.rrtNSmoothingPasses = 10
+        self.quasiStaticShrinkFactor = 0.2
 
     def fillInWith(self, other):
         for field, value in self:
