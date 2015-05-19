@@ -1,3 +1,4 @@
+from copy import deepcopy
 from ddapp.fieldcontainer import FieldContainer
 
 class IkParameters(FieldContainer):
@@ -61,4 +62,4 @@ class IkParameters(FieldContainer):
     def fillInWith(self, other):
         for field, value in self:
             if value is None:
-                setattr(self, field, getattr(other, field))
+                setattr(self, field, deepcopy(getattr(other, field)))
