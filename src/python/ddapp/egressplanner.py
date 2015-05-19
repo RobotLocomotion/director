@@ -4,6 +4,7 @@ from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import objectmodel as om
 from ddapp import ik
+from ddapp.ikparameters import IkParameters
 from ddapp.ikplanner import ConstraintSet
 from ddapp import polarisplatformplanner
 from ddapp import robotstate
@@ -39,7 +40,7 @@ class PolarisModel(object):
         self.originFrame = self.pointcloudAffordance.getChildFrame()
         self.originToAprilTransform = vtk.vtkTransform() # this should be updated when we remount the April tag
 
-        t = transformUtils.transformFromPose(np.array([-0.96427236,  0.06193934,  0.3543806 ]), 
+        t = transformUtils.transformFromPose(np.array([-0.96427236,  0.06193934,  0.3543806 ]),
             np.array([ 0.18153211,  0.83526159,  0.42728504,  0.29463821]))
         self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
@@ -62,20 +63,20 @@ class PolarisModel(object):
         pose = [np.array([-0.43284877, -0.82362299, -0.24939116]), np.array([ 0.00764553,  0.64088459, -0.01054815,  0.7675267 ])]
 
         desc = dict(classname='CapsuleRingAffordanceItem', Name='Steering Wheel', uuid=newUUID(), pose=pose,
-                    Color=[1, 0, 0], Radius=float(0.18), Segments=20)        
+                    Color=[1, 0, 0], Radius=float(0.18), Segments=20)
         self.steeringWheelAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
 
-        t = transformUtils.transformFromPose(np.array([-0.95565326,  0.00645136,  0.30410111]), 
+        t = transformUtils.transformFromPose(np.array([-0.95565326,  0.00645136,  0.30410111]),
             np.array([ 0.2638261 ,  0.88689326,  0.36270714,  0.11072339]))
 
         self.leftFootPedalSwingFrame = vis.updateFrame(t,'left foot pedal swing', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([-0.90084703, -0.05962708,  0.31975967]), 
+        t = transformUtils.transformFromPose(np.array([-0.90084703, -0.05962708,  0.31975967]),
             np.array([ 0.03968859,  0.99239755,  0.03727381,  0.11037472]))
 
         self.leftFootDrivingFrame = vis.updateFrame(t,'left foot driving', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([ 0.0584505 ,  0.43832744,  0.02401199]), 
+        t = transformUtils.transformFromPose(np.array([ 0.0584505 ,  0.43832744,  0.02401199]),
             np.array([ 0.62148369,  0.32887677, -0.32946879, -0.63011777]))
         self.rightHandGrabFrame = vis.updateFrame(t,'right hand grab bar', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
@@ -144,22 +145,17 @@ class EgressPlanner(object):
         return self.robotSystem.ikPlanner.computePostureGoal(startPose, endPose)
 
     def planGetWeightOverFeet(self):
-        ikParameterDict = {'usePointwise': False,
-                           'leftFootSupportEnabled': True,
-                           'rightFootSupportEnabled': True,
-                           'pelvisSupportEnabled': False,
-                           'maxDegreesPerSecond': 7}
-        originalIkParameterDict = self.robotSystem.ikPlanner.setIkParameters(ikParameterDict)
         startPose = self.getPlanningStartPose()
         startPoseName = 'q_egress_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
         constraints = []
-        constraints.append(self.robotSystem.ikPlanner.createQuasiStaticConstraint())
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False))
         constraints.append(self.robotSystem.ikPlanner.createLockedBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-        constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        #constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=7)
 
         constraintSet.runIk()
 
@@ -168,16 +164,10 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot', 'l_foot', 'pelvis']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-        self.robotSystem.ikPlanner.setIkParameters(originalIkParameterDict)
 
         return plan
 
     def planStandUp(self):
-        ikParameterDict = {'usePointwise': True,
-                           'leftFootSupportEnabled': True,
-                           'rightFootSupportEnabled': True,
-                           'pelvisSupportEnabled': False}
-        originalIkParameterDict = self.robotSystem.ikPlanner.setIkParameters(ikParameterDict)
         startPose = self.getPlanningStartPose()
         startPoseName = 'q_egress_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
@@ -191,13 +181,14 @@ class EgressPlanner(object):
                                   lowerBound=np.array([0.0, -np.inf, 0.0]),
                                   upperBound=np.array([np.inf, np.inf, 0.0]))
         constraints.append(p)
-        constraints.append(self.robotSystem.ikPlanner.createQuasiStaticConstraint())
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False))
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-        constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        #constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.extend(self.robotSystem.ikPlanner.createFixedFootConstraints(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(usePointwise=True)
 
         constraintSet.runIk()
         keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=False)
@@ -205,16 +196,10 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot', 'l_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-        self.robotSystem.ikPlanner.setIkParameters(originalIkParameterDict)
 
         return plan
 
     def planShiftWeightOut(self):
-        ikParameterDict = {'usePointwise': True,
-                           'leftFootSupportEnabled': False,
-                           'rightFootSupportEnabled': True,
-                           'pelvisSupportEnabled': False}
-        originalIkParameterDict = self.robotSystem.ikPlanner.setIkParameters(ikParameterDict)
 
         startPose = self.getPlanningStartPose()
         startPoseName = 'q_egress_start'
@@ -232,13 +217,15 @@ class EgressPlanner(object):
         g.coneThreshold = 0.0
         g.tspan = [1,1]
         constraints.append(g)
-        constraints.append(self.robotSystem.ikPlanner.createQuasiStaticConstraint())
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
+                                                    pelvisEnabled=False))
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot'))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(usePointwise=True)
 
         constraintSet.runIk()
         keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=False)
@@ -246,17 +233,10 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot', 'l_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-        self.robotSystem.ikPlanner.setIkParameters(originalIkParameterDict)
 
         return plan
 
     def planFootOut(self):
-        ikParameterDict = {'usePointwise': True,
-                           'leftFootSupportEnabled': False,
-                           'rightFootSupportEnabled': True,
-                           'pelvisSupportEnabled': False,
-                           'quasiStaticShrinkFactor': 0.01}
-        originalIkParameterDict = self.robotSystem.ikPlanner.setIkParameters(ikParameterDict)
 
         startPose = self.getPlanningStartPose()
         startPoseName = 'q_egress_start'
@@ -274,7 +254,8 @@ class EgressPlanner(object):
         g.coneThreshold = 0.0
         g.tspan = [1,1]
         constraints.append(g)
-        constraints.append(self.robotSystem.ikPlanner.createQuasiStaticConstraint())
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
+                                                    pelvisEnabled=False, shrinkFactor=0.01))
         constraints.append(self.robotSystem.ikPlanner.createMovingBaseSafeLimitsConstraint())
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
@@ -282,6 +263,7 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressOutsideFrame, tspan=[1,1]))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(usePointwise=True)
 
         constraintSet.runIk()
 
@@ -303,7 +285,6 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
-        self.robotSystem.ikPlanner.setIkParameters(originalIkParameterDict)
 
         return plan
 
@@ -328,10 +309,8 @@ class EgressPlanner(object):
         lFootRPY[1] = rFootRPY[1]
         lFoot2World = transformUtils.frameFromPositionAndRPY(lFootxyz, np.rad2deg(lFootRPY))
 
-        ikParameterDict = {'leftFootSupportEnabled': False, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'quasiStaticShrinkFactor': 0.2}
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-        quasiStaticConstraint = ikPlanner.createQuasiStaticConstraint()
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
+                                                    pelvisEnabled=False, shrinkFactor=0.2))
         rfootFixedConstraint = ikPlanner.createFixedFootConstraints(startPoseName)
         identityFrame = vtk.vtkTransform()
         lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', lFoot2World, identityFrame)
@@ -344,6 +323,7 @@ class EgressPlanner(object):
         constraints.extend(armsLocked)
         # return constraints
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(usePointwise=True)
         cs.seedPoseName = 'q_start'
         cs.nominalPoseName = 'q_start'
         endPose = cs.runIk()
@@ -353,8 +333,6 @@ class EgressPlanner(object):
         supportsList = [['r_foot'], ['r_foot','l_foot']]
         self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
 
-        ikPlanner.setIkParameters(ikParametersOriginal)
-
 
     def planCenterWeight(self):
         ikPlanner = self.robotSystem.ikPlanner
@@ -362,11 +340,9 @@ class EgressPlanner(object):
         startPoseName = 'q_lean_right'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
-        ikParameterDict = {'leftFootSupportEnabled': True, 'rightfootSupportEnabled':True, 'pelvisSupportEnabled': False,
-        'quasiStaticShrinkFactor': 0.2}
 
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-        quasiStaticConstraint = ikPlanner.createQuasiStaticConstraint()
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
+                                                    pelvisEnabled=False, shrinkFactor=0.2))
 
         footFixedConstraints = ikPlanner.createFixedFootConstraints(startPoseName)
         backConstraint = ikPlanner.createMovingBackLimitedPostureConstraint()
@@ -385,8 +361,6 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot','l_foot']]
         self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-
-        ikPlanner.setIkParameters(ikParametersOriginal)
 
 
     def publishPlanWithSupports(self, keyFramePlan, supportsList, ts, isQuasistatic):
