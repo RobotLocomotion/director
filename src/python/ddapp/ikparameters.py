@@ -11,7 +11,10 @@ class IkParameters(FieldContainer):
             majorFeasibilityTolerance = None,
             maxDegreesPerSecond = 30.0,
             maxBaseMetersPerSecond = 0.05,
-            maxBaseRPYDegreesPerSecond = 2
+            maxBaseRPYDegreesPerSecond = 2,
+            accelerationParam = 2,
+            accelerationFraction = 0.3,
+            maxPlanDuration = 30.0
         )
 
     def setToDefaults(self):
@@ -23,6 +26,9 @@ class IkParameters(FieldContainer):
         self.maxDegreesPerSecond = 30.0
         self.maxBaseMetersPerSecond = 0.05
         self.maxBaseRPYDegreesPerSecond = 2
+        self.accelerationParam = 2;
+        self.accelerationFraction = 0.3;
+        self.maxPlanDuration = 30.0
 
     def fillInWith(self, other):
         for field, value in self:

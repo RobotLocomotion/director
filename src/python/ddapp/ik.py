@@ -28,9 +28,6 @@ class AsyncIKCommunicator():
         self.nominalName = 'q_nom'
         self.infoFunc = None
 
-        self.accelerationParam = 2;
-        self.accelerationFraction = 0.3;
-        self.maxPlanDuration = 30.0
         self.fixInitialState = True
         self.numberOfAddedKnots = 0
         self.numberOfInterpolatedCollisionChecks = 2
@@ -298,7 +295,7 @@ class AsyncIKCommunicator():
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
             commands.append('options.n_interp_points = %s;' % self.numberOfInterpolatedCollisionChecks)
             commands.append('options.min_distance = %s;' % self.collisionMinDistance)
-            commands.append('options.t_max = %s;' % self.maxPlanDuration)
+            commands.append('options.t_max = %s;' % ikParameters.maxPlanDuration)
             commands.append('options.excluded_collision_groups = excluded_collision_groups;')
             commands.append('options.end_effector_name = end_effector_name;')
             commands.append('options.end_effector_pt = end_effector_pt;')
@@ -328,7 +325,7 @@ class AsyncIKCommunicator():
         commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in self.rescaleBodyNames])))
         commands.append('rescale_body_pts = %s;' % ConstraintBase.toColumnVectorString(self.rescaleBodyPts))
         commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
-        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s, body_rescale_options); end;' % (self.accelerationParam, self.accelerationFraction))
+        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s, body_rescale_options); end;' % (ikParameters.accelerationParam, ikParameters.accelerationFraction))
 
         if ikParameters.usePointwise:
             assert not ikParameters.useCollision
