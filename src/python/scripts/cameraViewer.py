@@ -40,18 +40,26 @@ class CameraVisualizer(object):
         self.widget = loader.load(uifile)
         self.ui = WidgetDict(self.widget.children())
         self.widget.setWindowTitle("Camera Visualizer")
+        self.ui.gridLayout_2.setSpacing(0)
+        self.ui.gridLayout_2.setMargin(0)
 
         view = self.createCameraView('CAMERACHEST_LEFT')
         frame1Layout = QtGui.QVBoxLayout(self.ui.frame1)        
+        frame1Layout.setSpacing(0)
+        frame1Layout.setMargin(0)
         frame1Layout.addWidget(view)
 
         view = self.createCameraView('CAMERA_LEFT')
-        frame1Layout = QtGui.QVBoxLayout(self.ui.frame2)        
-        frame1Layout.addWidget(view)
+        frame2Layout = QtGui.QVBoxLayout(self.ui.frame2)        
+        frame2Layout.setSpacing(0)
+        frame2Layout.setMargin(0)
+        frame2Layout.addWidget(view)
 
         view = self.createCameraView('CAMERACHEST_RIGHT')
-        frame1Layout = QtGui.QVBoxLayout(self.ui.frame3)        
-        frame1Layout.addWidget(view)
+        frame3Layout = QtGui.QVBoxLayout(self.ui.frame3)        
+        frame3Layout.setSpacing(0)
+        frame3Layout.setMargin(0)
+        frame3Layout.addWidget(view)
 
 
     def showUI(self):
