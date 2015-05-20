@@ -4,10 +4,12 @@
 #include <QObject>
 #include <QColor>
 #include <QVector>
+#include "ddSharedPtr.h"
 
 class vtkRenderer;
 class vtkTransform;
 class vtkPolyData;
+class RigidBodyManipulator;
 
 class ddDrakeModel : public QObject
 {
@@ -21,6 +23,8 @@ public:
   bool loadFromFile(const QString& filename);
   bool loadFromXML(const QString& xmlString);
   const QString& filename() const;
+
+  const ddSharedPtr<RigidBodyManipulator> getDrakeRBM() const;
 
   void addToRenderer(vtkRenderer* renderer);
   void removeFromRenderer(vtkRenderer* renderer);
@@ -37,6 +41,7 @@ public:
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
   QList<QString> getLinkNames();
   QList<QString> getJointNames();
+  int findLinkID(const QString& linkName) const;
 
   void getModelMesh(vtkPolyData* polyData);
 
