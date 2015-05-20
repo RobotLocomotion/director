@@ -6,6 +6,7 @@ from ddapp.debugVis import DebugData
 import ddapp.vtkAll as vtk
 from ddapp import callbacks
 import numpy as np
+from ddapp.affordanceitems import AffordanceItem
 
 
 class PointPicker(object):
@@ -390,3 +391,118 @@ class PlacerWidget(object):
 
     def getPointPick(self, displayPoint):
         return vis.pickPoint(displayPoint, self.view, obj=self.points, pickType='cells', tolerance=0.01)
+
+
+
+
+
+
+class AffordancePicker(object):
+
+    def __init__(self, view, manager, callback=None, numberOfObjects=1, drawLines=True, abortCallback=None, filterFunc=None, hoverColor=[1.0, 0.8, 0.8, 1.0]):
+
+        self.view = view
+        self.affordanceManager = manager
+        self.tolerance = 0.01
+        self.numberOfObjects = numberOfObjects
+        self.callbackFunc = callback
+        self.abortFunc = abortCallback
+        self.filterFunc = filterFunc
+        self.hoverColor = hoverColor[0:3]
+        self.hoverAlpha = hoverColor[3]
+        self.pickedObj = None
+        self.clear()
+
+    def start(self):
+        self.installEventFilter()
+        self.clear()
+
+    def stop(self):
+        self.removeEventFilter()
+
+    def installEventFilter(self):
+
+        self.eventFilter = PythonQt.dd.ddPythonEventFilter()
+        self.view.vtkWidget().installEventFilter(self.eventFilter)
+
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseMove)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonPress)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyRelease)
+        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
+
+    def removeEventFilter(self):
+        self.view.vtkWidget().removeEventFilter(self.eventFilter)
+
+    def onEvent(self, obj, event):
+
+        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Escape:
+            self.stop()
+            self.clear()
+            if self.abortFunc is not None:
+                self.abortFunc()
+            return
+
+        if event.type() == QtCore.QEvent.MouseMove:
+            self.onMouseMove(vis.mapMousePosition(obj, event), event.modifiers())
+        elif event.type() == QtCore.QEvent.MouseButtonPress:
+            self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
+
+    def clear(self):
+        self.objects = [None for i in xrange(self.numberOfObjects)]
+        self.hoverPos = None
+        self.lastMovePos = [0, 0]
+        if self.pickedObj is not None:
+            self.pickedObj.setProperty('Color', self.storedProps['Color'])
+            self.pickedObj.setProperty('Alpha', self.storedProps['Alpha'])
+        self.pickedObj = None
+        self.storedProps = {'Color': [0,0,0], 'Alpha':1.0}
+
+    def onMouseMove(self, displayPoint, modifiers=None):
+        self.lastMovePos = displayPoint
+        self.tick()
+
+    def onMousePress(self, displayPoint, modifiers=None):
+        for i in xrange(self.numberOfObjects):
+            if self.objects[i] is None:
+                self.objects[i] = self.pickedObj
+                break
+
+        if self.objects[-1] is not None:
+            self.finish()
+
+    def finish(self):
+        if self.callbackFunc is not None:
+            self.callbackFunc(self.objects)
+        self.clear()
+        self.stop()
+
+
+    def draw(self):
+        pass
+        # TODO
+
+    def tick(self):
+
+        # get affordances
+        affs = self.affordanceManager.getAffordances()
+        affs = [a for a in affs if a.getProperty('Visible')]
+        if self.filterFunc is not None:
+            affs = [a for a in affs if self.filterFunc(a)]
+
+        # get picked affordance
+        self.hoverPos, prop, _ = vis.pickPoint(self.lastMovePos, self.view, pickType='cells', tolerance=self.tolerance, obj=affs)
+        prevPickedObj = self.pickedObj
+        curPickedObj = vis.getObjectByProp(prop)
+        if curPickedObj is not prevPickedObj:
+            if prevPickedObj is not None:
+                prevPickedObj.setProperty('Color', self.storedProps['Color'])
+                prevPickedObj.setProperty('Alpha', self.storedProps['Alpha'])
+            if curPickedObj is not None:
+                self.storedProps['Color'] = curPickedObj.getProperty('Color')
+                self.storedProps['Alpha'] = curPickedObj.getProperty('Alpha')
+                curPickedObj.setProperty('Color', self.hoverColor)
+                curPickedObj.setProperty('Alpha', self.hoverAlpha)
+            self.pickedObj = curPickedObj
+
+        self.draw()
