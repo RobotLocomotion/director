@@ -11,6 +11,7 @@ from ddapp import lcmUtils
 from ddapp import ik
 from ddapp import cameraview
 from ddapp import affordanceupdater
+from ddapp import affordancemanager
 from ddapp import segmentation
 from ddapp import robotstate
 from ddapp.debugVis import DebugData
@@ -749,6 +750,17 @@ class DrivingPlanner(object):
         plan = ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
         self.addPlan(plan)
 
+    def planArmsEgressStart(self):
+        startPose = self.getPlanningStartPose()
+        ikPlanner = self.robotSystem.ikPlanner
+        midPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'pre_egress_left_arm', side='left')
+        midPose = ikPlanner.getMergedPostureFromDatabase(midPose, 'driving', 'pre_egress_right_arm', side='right')
+
+        endPose = ikPlanner.getMergedPostureFromDatabase(midPose, 'driving', 'egress-arms')
+        ikParameters = IkParameters(maxDegreesPerSecond=60)
+        plan = ikPlanner.computeMultiPostureGoal([startPose, midPose, endPose], feetOnGround=False, ikParameters=ikParameters)
+        self.addPlan(plan)
+
     def setSteeringWheelAndWristGraspAngles(self):
         self.graspWheelAngle = np.deg2rad(self.userSpecifiedGraspWheelAngleInDegrees)
         pose = self.getPlanningStartPose()
@@ -817,7 +829,13 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.imageViewLayout.addWidget(self.imageView.view)
         self.imageViewLayout.addWidget(self.imageViewLeft.view)
 
-        self.robotSystem.robotStateModel.connectModelChanged(lambda x: self.updateAndDrawTrajectory())
+        self.callbackId = self.robotSystem.robotStateModel.connectModelChanged(self.onModelChanged)
+
+    def onModelChanged(self, unusedrobotstate):
+        if om.findObjectByName('Steering Wheel') is None:
+            return
+        else:
+            self.updateAndDrawTrajectory()
 
     def onAprilTag(self, msg):
         cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, self.drivingPlanner.tagToLocalTransform)
@@ -866,7 +884,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Trajectory Y Offset', 0.30, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Angle Offset', 0.0, attributes=om.PropertyAttributes(singleStep=1, decimals=0)),
         self.params.addProperty('Show Trajectory', False)
-        self.params.addProperty('Show Driving/Regrasp Tasks',0, attributes=om.PropertyAttributes(enumNames=['Driving','Regrasp']))
+        self.params.addProperty('Show Driving/Regrasp Tasks',0, attributes=om.PropertyAttributes(enumNames=['Ingress','Regrasp', 'Egress']))
         self._syncProperties()
 
     def _syncProperties(self):
@@ -894,7 +912,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.trajectoryX = self.params.getProperty('Trajectory X Offset')
         self.drivingPlanner.trajectoryY = self.params.getProperty('Trajectory Y Offset')
         self.drivingPlanner.trajectoryAngle = self.params.getProperty('Trajectory Angle Offset')
-        self.showRegraspTasks = self.params.getProperty('Show Driving/Regrasp Tasks')
+        self.taskToShow = self.params.getProperty('Show Driving/Regrasp Tasks')
 
         if hasattr(self, 'affordanceUpdater'):
             if self.showTrajectory:
@@ -951,10 +969,10 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.planSteeringWheelTurn(speed=self.speed, turnRadius=self.turnRadius, knotPoints=self.knotPoints, gazeTol=self.gazeTol)
 
     def onPropertyChanged(self, propertySet, propertyName):
-        showRegraspTasksOld = self.showRegraspTasks
+        taskToShowOld = self.taskToShow
         self._syncProperties()
 
-        if not showRegraspTasksOld == self.showRegraspTasks:
+        if not taskToShowOld == self.taskToShow:
             self.addTasks()
 
  
@@ -983,13 +1001,17 @@ class DrivingPlannerPanel(TaskUserPanel):
 
     def addTasks(self):
         self.taskTree.removeAllTasks()
-        if self.showRegraspTasks:
-            self.addRegraspTasks()
-        else:
-            self.addDrivingTasks()
-            
 
-    def addDrivingTasks(self):
+        if self.taskToShow == 0:
+            self.addIngressTasks()
+        elif self.taskToShow == 1:
+            self.addRegraspTasks()
+        elif self.addEgressTasks() == 2:
+            self.addEgressTasks()
+        else:
+            return
+
+    def addIngressTasks(self):
 
         # some helpers
         self.folder = None
@@ -1058,18 +1080,54 @@ class DrivingPlannerPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
-
-
-        footToPedal = addFolder('Move Left Foot to Pedal')
+        footToDriving = addFolder('Foot to Driving Pose')
         addManipTask('Foot Up', self.drivingPlanner.planLegUp, userPrompt=True)
-        self.folder = footToPedal
-        addManipTask('Leg Swing', self.drivingPlanner.planLegSwingIn, userPrompt=True)
-        self.folder = footToPedal
-        addManipTask('Foot on Pedal', self.drivingPlanner.planLegPedal, userPrompt=True)
+        self.folder = footToDriving
+        addManipTask('Swing leg in', self.drivingPlanner.planLegSwingIn , userPrompt=True)
+        self.folder = footToDriving
+        addManipTask('Foot On Pedal', self.drivingPlanner.planLegPedal, userPrompt=True)
 
-        folder = addFolder('Driving')
-        addTask(rt.UserPromptTask(name="driving", message="Please continue when finished driving"))
+        driving = addFolder('Driving')
+        addTask(rt.UserPromptTask(name="base side streaming", message="Please start base side streaming"))
+        addTask(rt.UserPromptTask(name="launch drivers", message="Please launch throttle and steering drivers"))
+        addTask(rt.UserPromptTask(name="switch to regrasp tasks", message="Switch to regrasp task set"))
 
+    def addEgressTasks(self):
+
+        # some helpers
+        self.folder = None
+        def addTask(task, parent=None):
+            parent = parent or self.folder
+            self.taskTree.onAddTask(task, copy=False, parent=parent)
+        def addFunc(func, name, parent=None):
+            addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
+        def addFolder(name, parent=None):
+            self.folder = self.taskTree.addGroup(name, parent=parent)
+            return self.folder
+
+        def addManipTaskMatlab(name, planFunc, userPrompt=False, parentFolder=None):
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
+            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
+
+        def addManipTask(name, planFunc, userPrompt=False):
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
+            if not userPrompt:
+                addTask(rt.CheckPlanInfo(name='check manip plan info'))
+            else:
+                addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+            addFunc(dp.commitManipPlan, name='execute manip plan')
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
+
+        dp = self.drivingPlanner
+
+        
         footToEgress = addFolder('Foot to Egress Pose')
         addManipTask('Foot Off Pedal', self.drivingPlanner.planLegAbovePedal, userPrompt=True)
         self.folder = footToEgress
@@ -1094,6 +1152,14 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.folder = ungraspBar
         addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
+
+
+        armsToEgressStart = addFolder('Arms to Egress Start')
+        addManipTask('Arms To Egress Start', self.drivingPlanner.planArmsEgressStart, userPrompt=True)
+
+        prep = addFolder('Stop Streaming')
+        addTask(rt.UserPromptTask(name='stop streaming base side', message='stop streaming base side'))
+
 
 
     def addRegraspTasks(self):
@@ -1160,3 +1226,4 @@ class DrivingPlannerPanel(TaskUserPanel):
         vis.updatePolyData(d.getPolyData(), name)
         obj = om.findObjectByName(name)
         obj.setProperty('Color By', 1)
+
