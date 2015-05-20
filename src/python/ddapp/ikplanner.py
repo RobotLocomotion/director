@@ -42,7 +42,7 @@ class ConstraintSet(object):
 
     def __init__(self, ikPlanner, constraints, endPoseName, startPoseName):
         self.ikPlanner = ikPlanner
-        self.ikParameters = IkParameters
+        self.ikParameters = IkParameters()
         self.constraints = constraints
         self.endPoseName = endPoseName
         self.startPoseName = startPoseName
@@ -179,7 +179,7 @@ class IkOptionsItem(om.ObjectModelItem):
             self.ikPlanner.defaultIkParameters.quasiStaticShrinkFactor = self.getProperty(propertyName)
 
         elif propertyName == 'Max joint degrees/s':
-            self.defaultIkParameters.maxDegreesPerSecond = self.getProperty(propertyName)
+            self.ikPlanner.defaultIkParameters.maxDegreesPerSecond = self.getProperty(propertyName)
 
         elif propertyName == 'Additional time samples':
             self.ikPlanner.additionalTimeSamples = self.getProperty(propertyName)
@@ -708,7 +708,7 @@ class IKPlanner(object):
         constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
         constraints.append(self.createPostureConstraint(nominalPoseName, robotstate.matchJoints('back')))
 
-        endPose, info = self.ikServer.runIk(constraints, ikParameter, seedPostureName=startPoseName)
+        endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
         return endPose, info
 
 

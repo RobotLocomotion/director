@@ -1069,6 +1069,8 @@ class DrillPlannerDemo(object):
         for i, targetFrame in enumerate(targetFrames):
 
             positionConstraint, _ = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, targetFrame, bitToHand)
+            activeTime = float(i+1)
+            positionConstraint.tspan = [activeTime, activeTime]
             constraints.append(positionConstraint)
 
             motionVector = np.array(targetFrame.GetPosition()) - np.array(lastTargetFrame.GetPosition())

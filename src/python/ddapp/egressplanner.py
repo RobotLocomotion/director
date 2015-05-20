@@ -309,8 +309,10 @@ class EgressPlanner(object):
         lFootRPY[1] = rFootRPY[1]
         lFoot2World = transformUtils.frameFromPositionAndRPY(lFootxyz, np.rad2deg(lFootRPY))
 
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
-                                                    pelvisEnabled=False, shrinkFactor=0.2))
+        quasiStaticConstraint = ik.QuasiStaticConstraint(leftFootEnabled=False,
+                                                         rightFootEnabled=True,
+                                                         pelvisEnabled=False,
+                                                         shrinkFactor=0.2)
         rfootFixedConstraint = ikPlanner.createFixedFootConstraints(startPoseName)
         identityFrame = vtk.vtkTransform()
         lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', lFoot2World, identityFrame)
