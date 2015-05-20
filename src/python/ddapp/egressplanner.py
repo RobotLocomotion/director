@@ -380,6 +380,13 @@ class EgressPlanner(object):
         print transformUtils.poseFromTransform(tCopy)
         return tCopy
 
+    def planNominal(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'safe nominal')
+        endPose, info = self.ikPlanner.computeStandPose(endPose)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
 
 
 class EgressPanel(TaskUserPanel):
@@ -412,7 +419,6 @@ class EgressPanel(TaskUserPanel):
 
     def _syncProperties(self):
         self.stepOffDirection = self.params.getPropertyEnumValue('Step Off Direction').lower()
-        self.sitStandPlanner.applyParams()
 
     def onStart(self):
         self._syncProperties()
@@ -426,7 +432,6 @@ class EgressPanel(TaskUserPanel):
 
     def onPlan(self,planType):
         self._syncProperties()
-        self.sitStandPlanner.plan(planType)
 
     def onPlanTurn(self):
         self._syncProperties()
@@ -487,9 +492,12 @@ class EgressPanel(TaskUserPanel):
 
         pp = self.platformPlanner
 
-        folder = addFolder('Prep')
+        prep = addFolder('Prep')
         addFunc(self.onStart, 'start')
-        addManipTask('arms up', self.onArmsUp, userPrompt=True)
+        addTask(rt.SetNeckPitch(name='set neck position', angle=60))
+        # addManipTask('arms up', self.onArmsUp, userPrompt=True)
+        addTask(rt.UserPromptTask(name="confirm arms up", message="Please confirm arms up, if not use 'Arms Up' Button"))
+        self.folder = prep
         addFunc(pp.fitRunningBoardAtFeet, 'fit running board')
         addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
@@ -501,13 +509,15 @@ class EgressPanel(TaskUserPanel):
         addFunc(self.onPlanStepDown, 'plan step down')
         addTask(rt.UserPromptTask(name="approve footsteps, set support contact group",
          message="Please approve/modify footsteps. Set the support contact group for the left foot step to be Back 2/3"))
-        addTask(rt.UserPromptTask(name="execute step down", message="Please execute walking plan"))
-        addTask(rt.WaitForWalkExecution(name='wait for step down'))
+        addTask(rt.CommitFootstepPlan(name='step down', planName='step down from platform with right foot'))
+        addTask(rt.WaitForWalkExecution(name='wait for walking'))
 
         folder = addFolder('Step Off')
         addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
         addFunc(self.onPlanStepOff, 'plan step off')
         addTask(rt.UserPromptTask(name="approve/adjust footsteps", message="Please approve footsteps, modify if necessary"))
-        addTask(rt.UserPromptTask(name="execute step off", message="Please execute walking plan"))
+        addTask(rt.CommitFootstepPlan(name='step down', planName='step down from platform with right foot'))
+        addTask(rt.WaitForWalkExecution(name='wait for walking'))
+        addManipTask('plan nominal', pp.planNominal, userPrompt=True)
 
