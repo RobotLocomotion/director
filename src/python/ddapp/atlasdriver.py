@@ -293,6 +293,9 @@ class AtlasDriver(object):
     def sendCalibrateElectricArmsCommand(self):
         self.sendBehaviorCommand('calibrate_electric_arms')
 
+    def sendCalibrateElectricArmsFreezeCommand(self):
+        self.sendBehaviorCommand('calibrate_electric_arms_freeze')
+
     def sendElectricArmEnabledState(self, enabledState):
         msg = lcmdrc.atlas_electric_arm_enable_t()
         msg.utime = getUtime()
@@ -405,4 +408,3 @@ def init(outputConsole=None):
     systemStatus = SystemStatusListener(outputConsole)
 
     return driver
-
