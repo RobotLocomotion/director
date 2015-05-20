@@ -578,14 +578,26 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.showTrajectory = False
         self.steeringSub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
         self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG_TO_CAMERA_LEFT', lcmbotcore.rigid_transform_t, self.onAprilTag)
-        self.imageView = cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'image view')
+        self.imageView = cameraview.CameraImageView(cameraview.imageManager, 'CAMERACHEST_RIGHT', 'right image view')
+        self.imageViewLeft = cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'left image view')
+        
         self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, self.imageView)
-        self.affordanceUpdater.timer.start()
+        self.affordanceUpdaterLeft = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, self.imageViewLeft)
+        
+        self.affordanceUpdater.prependImageName = True
+        self.affordanceUpdaterLeft.prependImageName = True
+        
+        self.affordanceUpdater.timer.start()        
+        self.affordanceUpdaterLeft.timer.start()
+
         self.imageViewLayout.addWidget(self.imageView.view)
+        self.imageViewLayout.addWidget(self.imageViewLeft.view)
 
     def onAprilTag(self, msg):
         cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, self.drivingPlanner.tagToLocalTransform)
         self.updateAndDrawTrajectory()
+        # self.affordanceUpdater.update()
+        # self.affordanceUpdaterLeft.update()
 
     def addButtons(self):
         self.addManualButton('Start', self.onStart)
@@ -660,8 +672,10 @@ class DrivingPlannerPanel(TaskUserPanel):
                 leftTraj.setProperty('Visible', self.showTrajectory)
                 rightTraj.setProperty('Visible', self.showTrajectory)
                 self.affordanceUpdater.extraObjects = [leftTraj, rightTraj]
+                self.affordanceUpdaterLeft.extraObjects = [leftTraj, rightTraj]
             else:
                 self.affordanceUpdater.extraObjects = []
+                self.affordanceUpdaterLeft.extraObjects = []
 
         self.drivingPlanner.applyProperties()
 
