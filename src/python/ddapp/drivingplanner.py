@@ -916,7 +916,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self._syncProperties()
 
     def onplanBarGrasp(self):
-        self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, useLineConstraint=False)
+        self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, useLineConstraint=True)
 
     def onplanBarRetract(self):
         self.drivingPlanner.planBarRetract(depth=self.barGraspDepth, useLineConstraint=True)
