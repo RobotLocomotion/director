@@ -89,6 +89,7 @@ from ddapp import segmentationroutines
 from ddapp import trackers
 
 from ddapp import gamepad
+from ddapp import blackoutmonitor
 
 from ddapp.tasks import robottasks as rt
 from ddapp.tasks import taskmanagerwidget
@@ -152,6 +153,7 @@ useSkybox = False
 useDataFiles = True
 usePFGrasp = False
 useGamepad = True
+useBlackoutText = True
 useRandomWalk = True
 useCOPMonitor = True
 
@@ -399,6 +401,9 @@ if usePlanning:
 
     if useGamepad:
         gamePad = gamepad.Gamepad(teleopPanel, teleopJointController, ikPlanner, view)
+
+    if useBlackoutText:
+        blackoutMonitor = blackoutmonitor.BlackoutMonitor(robotStateJointController)
 
 
     debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, robotStateJointController, playbackRobotModel,

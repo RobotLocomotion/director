@@ -13,6 +13,7 @@ set(python_files
   ddapp/atlasdriver.py
   ddapp/atlasdriverpanel.py
   ddapp/bihandeddemo.py
+  ddapp/blackoutmonitor.py
   ddapp/botspy.py
   ddapp/callbacks.py
   ddapp/camerabookmarks.py
