@@ -732,36 +732,9 @@ def disableArmEncoders():
     lcmUtils.publish('ENABLE_ENCODERS', msg)
 
 
+
 def sendDesiredPumpPsi(desiredPsi):
-    msg = lcmdrc.atlas_pump_command_t()
-    msg.utime = getUtime()
-
-    msg.k_psi_p = 0.0  # Gain on pressure error (A/psi)
-    msg.k_psi_i = 0.0  # Gain on the integral of the pressure error (A/(psi/s)
-    msg.k_psi_d = 0.0  # Gain on the derivative of the pressure error (A/(psi s)
-
-    msg.k_rpm_p = 0.0  # Gain on rpm error (A / rpm)
-    msg.k_rpm_i = 0.0  # Gain on the integral of the rpm error (A / (rpm s))
-    msg.k_rpm_d = 0.0  # Gain on the derivative of the rpm error (A / (rpm/s)
-
-    msg.ff_rpm_d = 0.0  # Feed-forward gain on the desired rpm (A / rpm)
-    msg.ff_psi_d = 0.0  # Feed-forward gain on the desired pressure (A / psi)
-    msg.ff_const = 0.0  # Constant current term (Amps)
-
-    msg.psi_i_max = 0.0  # Max. abs. value to which the integral psi error is clamped (psi s)
-    msg.rpm_i_max = 0.0  # Max. abs. value to which the integral rpm error is clamped (rpm s)
-
-    # Max. command output (A). Default is 60 Amps.
-    # This value may need to be lower than the default in order to avoid
-    # causing the motor driver to fault.
-    msg.cmd_max = 60
-
-    msg.desired_psi = desiredPsi # default should be 1500
-    msg.desired_rpm = 5000  # default should be 5000
-
-    lcmUtils.publish('ATLAS_PUMP_COMMAND', msg)
-
-
+    atlasDriver.sendDesiredPumpPsi(desiredPsi)
 
 app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
