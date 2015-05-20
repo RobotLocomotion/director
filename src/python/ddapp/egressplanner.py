@@ -380,14 +380,6 @@ class EgressPlanner(object):
         print transformUtils.poseFromTransform(tCopy)
         return tCopy
 
-    def planNominal(self):
-        startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'safe nominal')
-        endPose, info = self.ikPlanner.computeStandPose(endPose)
-        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
-        self.addPlan(newPlan)
-
-
 
 class EgressPanel(TaskUserPanel):
 
