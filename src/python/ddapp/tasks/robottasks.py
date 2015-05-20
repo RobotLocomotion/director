@@ -397,6 +397,11 @@ class WaitForPlanExecution(AsyncTask):
                 raise Exception('error, unexpected execution plan type: %s' % getMsg().plan_type)
             yield
 
+        self.statusMessage = 'Waiting for recent robot state...'
+        while robotSystem.robotStateJointController.lastRobotStateMessage.utime < getMsg().last_plan_start_utime:
+            yield
+
+
 class WaitForManipulationPlanExecution(WaitForPlanExecution):
 
     def getType(self):
