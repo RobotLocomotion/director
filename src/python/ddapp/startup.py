@@ -403,7 +403,7 @@ if usePlanning:
         gamePad = gamepad.Gamepad(teleopPanel, teleopJointController, ikPlanner, view)
 
     if useBlackoutText:
-        blackoutMonitor = blackoutmonitor.BlackoutMonitor(robotStateJointController)
+        blackoutMonitor = blackoutmonitor.BlackoutMonitor(robotStateJointController, view, cameraview)
 
 
     debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, robotStateJointController, playbackRobotModel,
