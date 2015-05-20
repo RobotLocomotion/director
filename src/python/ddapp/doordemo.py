@@ -890,6 +890,8 @@ class DoorTaskPanel(TaskUserPanel):
 
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
+        self.taskTree.removeAllTasks()
+        self.addTasks()
 
     def _syncProperties(self):
         self.doorDemo.graspingHand = self.params.getPropertyEnumValue('Hand').lower()
