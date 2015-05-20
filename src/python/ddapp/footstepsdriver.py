@@ -221,6 +221,8 @@ class FootstepsDriver(object):
         self._setupSubscriptions()
         self._setupProperties()
 
+        self.showToolbarWidget()
+
         self.committedPlans = []
 
 
@@ -339,13 +341,14 @@ class FootstepsDriver(object):
         self.transformPlanToBDIFrame( self.lastFootstepPlan )
         self.showToolbarWidget()
 
+
     def showToolbarWidget(self):
 
         if app.getMainWindow() is None:
             return
 
         if self.toolbarWidget:
-            self.execButton.show()
+            self.execButton.setEnabled(True);
             return
 
         w = QtGui.QWidget()
@@ -369,7 +372,6 @@ class FootstepsDriver(object):
         execButton.connect('clicked()', self.onExecClicked)
         clearButton.connect('clicked()', self.onClearClicked)
         stopButton.connect('clicked()', self.sendStopWalking)
-        stopButton.setVisible(False)
 
         self.execButton = execButton
         self.stopButton = stopButton
@@ -383,8 +385,7 @@ class FootstepsDriver(object):
         walkGoal = om.findObjectByName('walking goal')
         if walkGoal:
             walkGoal.setProperty('Edit', False)
-        self.execButton.hide()
-        self.stopButton.show()
+        self.execButton.setEnabled(False)
 
 
     def onClearClicked(self):
@@ -394,8 +395,7 @@ class FootstepsDriver(object):
         self.clearFootstepPlan()
 
         if self.toolbarWidget:
-            self.execButton.setVisible(False)
-
+            self.execButton.setEnabled(False);
 
     def clearFootstepPlan(self):
         self.lastFootstepPlan = None
