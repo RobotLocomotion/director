@@ -421,7 +421,4 @@ class MappingDemo(object):
         taskQueue.addTask(self.optionalUserPrompt('execute next sweep? y/n: '))
         taskQueue.addTask(self.moveRoomSweepOnwards)                
         
-
-
-
         return taskQueue

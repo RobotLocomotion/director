@@ -24,6 +24,7 @@ from ddapp import debrisdemo
 from ddapp import doordemo
 from ddapp import drilldemo
 from ddapp import tabledemo
+from ddapp import mappingdemo
 from ddapp import valvedemo
 from ddapp import drivingplanner
 from ddapp import egressplanner
@@ -443,6 +444,10 @@ if usePlanning:
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
+
+    mappingDemo = mappingdemo.MappingDemo(robotStateModel, playbackRobotModel,
+                    ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
+                    perception.multisenseDriver, view, robotStateJointController, playPlans)
 
     doorDemo = doordemo.DoorDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
