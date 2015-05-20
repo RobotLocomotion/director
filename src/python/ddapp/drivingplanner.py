@@ -747,6 +747,11 @@ class DrivingPlanner(object):
         pose = robotstate.convertStateMessageToDrakePose(msg)
         return pose
 
+    def planCarEntryPose(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'car_entry_new')
+        ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
 
 class DrivingPlannerPanel(TaskUserPanel):
 
@@ -920,7 +925,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.setProperty('PreGrasp/Retract Depth', 0.22)
 
     def setParamsPreGrasp2(self):
-        self.params.setProperty('PreGrasp/Retract Depth', 0.12)
+        self.params.setProperty('PreGrasp/Retract Depth', 0.10)
 
     def setParamsWheelRetract(self):
         self.params.setProperty('PreGrasp/Retract Depth', 0.3)
@@ -930,7 +935,6 @@ class DrivingPlannerPanel(TaskUserPanel):
 
     def setParamsBarGrasp(self):
         self.params.setProperty('Bar Grasp/Retract Depth', 0.03)
-
 
     def addTasks(self):
 
@@ -945,70 +949,96 @@ class DrivingPlannerPanel(TaskUserPanel):
             self.folder = self.taskTree.addGroup(name, parent=parent)
             return self.folder
 
-        def addManipTaskMatlab(name, planFunc, userPrompt=False):
+        def addManipTaskMatlab(name, planFunc, userPrompt=False, parentFolder=None):
 
-            folder = addFolder(name)
-            addFunc(planFunc, name='plan')
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
             addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
 
         def addManipTask(name, planFunc, userPrompt=False):
-            folder = addFolder(name)
-            addFunc(planFunc, name='plan')
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
             if not userPrompt:
                 addTask(rt.CheckPlanInfo(name='check manip plan info'))
             else:
                 addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
             addFunc(dp.commitManipPlan, name='execute manip plan')
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
 
         dp = self.drivingPlanner
 
-        folder = addFolder('Grasp Steering Wheel')
-        addTask(rt.UserPromptTask(name="open left hand", message="Please open left hand"))
+        prep = addFolder('Prep')
+        addTask(rt.UserPromptTask(name="start streaming", message="Please start streaming"))
+        addManipTask('car entry posture', self.drivingPlanner.planCarEntryPose, userPrompt=True)
+        self.folder = prep
+        addTask(rt.UserPromptTask(name="start April tag process", message="Enable April tag detection"))
+        addTask(rt.UserPromptTask(name="spawn polaris model", message="launch egress planner and spawn polaris model"))
+        addFunc(self.onStart, 'update wheel location')
+
+        graspWheel = addFolder('Grasp Steering Wheel')
+        addTask(rt.UserPromptTask(name="approve open left hand", message="Check it is clear to open left hand"))
+        addTask(rt.OpenHand(name='open left hand', side='Left'))
         addFunc(self.setParamsPreGrasp1, 'set params')
         addManipTaskMatlab('Pre Grasp 1', self.onPlanPreGrasp)
+        self.folder = graspWheel
         addTask(rt.UserPromptTask(name="check alignment", message="Please ask field team for hand location relative to wheel, adjust wheel affordance if necessary"))
         addFunc(self.setParamsPreGrasp2, 'set params')
         addManipTaskMatlab('Pre Grasp 2', self.onPlanPreGrasp)
+        self.folder = graspWheel
         addTask(rt.UserPromptTask(name="check alignment", message="Please make any manual adjustments if necessary"))
-        addTask(rt.UserPromptTask(name="grasp", message="Please close left hand"))
+        addTask(rt.UserPromptTask(name="approve close left hand", message="Check clear to close left hand"))
+        addTask(rt.CloseHand(name='close left hand', side='Left'))
 
-
-        folder = addFolder('Bar Grasp Prep')
-        addTask(rt.UserPromptTask(name="open right hand", message="Please open right hand"))
+        graspBar = addFolder('Grasp Bar')
+        addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
+        addTask(rt.OpenHand(name='open right hand', side='Right'))
         addFunc(self.setParamsBarGrasp, 'set params')
         addManipTask('Bar Grasp', self.onplanBarGrasp, userPrompt=True)
+        self.folder = graspBar
         addTask(rt.UserPromptTask(name="check alignment and depth", message="Please check alignment and depth, make any manual adjustments"))
-        addTask(rt.UserPromptTask(name="grasp", message="Please close right hand"))
+        addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
+        addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
 
-        folder = addFolder('Move Left Foot to Pedal')
+
+        footToPedal = addFolder('Move Left Foot to Pedal')
         addManipTask('Foot Up', self.drivingPlanner.planLegUp, userPrompt=True)
+        self.folder = footToPedal
         addManipTask('Leg Swing', self.drivingPlanner.planLegSwingIn, userPrompt=True)
+        self.folder = footToPedal
         addManipTask('Foot on Pedal', self.drivingPlanner.planLegPedal, userPrompt=True)
 
         folder = addFolder('Driving')
         addTask(rt.UserPromptTask(name="driving", message="Please continue when finished driving"))
 
-        folder = addFolder('Foot to Egress Pose')
+        footToEgress = addFolder('Foot to Egress Pose')
         addManipTask('Foot Off Pedal', self.drivingPlanner.planLegAbovePedal, userPrompt=True)
+        self.folder = footToEgress
         addManipTask('Swing leg out', self.drivingPlanner.planLegSwingOut , userPrompt=True)
+        self.folder = footToEgress
         addManipTask('Foot Down', self.drivingPlanner.planLegEgressStart, userPrompt=True)
 
-        folder = addFolder('Ungrasp Steering Wheel')
-        addTask(rt.UserPromptTask(name="open left hand", message="Please open left hand"))
+        ungraspWheel = addFolder('Ungrasp Steering Wheel')
+        addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
+        addTask(rt.OpenHand(name='open left hand', side='Left'))
         addFunc(self.setParamsWheelRetract, 'set params')
         addManipTaskMatlab('Retract hand', self.onPlanRetract)
-        addTask(rt.UserPromptTask(name="close left hand", message="Please close left hand"))
+        self.folder = ungraspWheel
+        addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
+        addTask(rt.CloseHand(name='close left hand', side='Left'))
 
-        folder = addFolder('Ungrasp Bar')
-        addTask(rt.UserPromptTask(name="open right hand", message="Please open right hand"))
+        ungraspBar = addFolder('Ungrasp Bar')
+        addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
+        addTask(rt.OpenHand(name='open left hand', side='Right'))
         addFunc(self.setParamsBarRetract, 'set params')
         addManipTask('Retract hand', self.onplanBarRetract, userPrompt=True)
-        addTask(rt.UserPromptTask(name="close right hand", message="Please close right hand"))
-
-
-
+        self.folder = ungraspBar
+        addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
+        addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
 
     def updateAndDrawTrajectory(self):
