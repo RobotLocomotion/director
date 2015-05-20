@@ -33,7 +33,7 @@ class BlackoutMonitor(object):
         self.updateTimer.start()
 
     def update(self):
-        #self.lastMessageTime = self.cameraview.imageManager.queue.getCurrentImageTime('CAMERA_LEFT')
+        self.lastMessageTime = self.cameraview.imageManager.queue.getCurrentImageTime('CAMERA_LEFT')
         if self.robotStateJointController.lastRobotStateMessage:
             elapsed = (self.robotStateJointController.lastRobotStateMessage.utime - self.lastMessageTime) / (1000*1000)
             if elapsed > 1.0:
