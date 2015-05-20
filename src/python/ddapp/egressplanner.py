@@ -106,6 +106,8 @@ class EgressPlanner(object):
 
         self.legLiftAngle = 8
 
+        self.coneThreshold = np.radians(5)
+
         self.robotSystem = robotSystem
         self.polaris = None
 
@@ -214,14 +216,24 @@ class EgressPlanner(object):
         axes = transformUtils.getAxesFromTransform(self.polaris.leftFootEgressInsideFrame.transform)
         g.targetAxis = axes[0]
         g.bodyAxis = [1,0,0]
-        g.coneThreshold = 0.0
+        g.coneThreshold = self.coneThreshold
         g.tspan = [1,1]
         constraints.append(g)
+
+        g = ik.WorldGazeDirConstraint()
+        g.linkName = 'utorso'
+        g.targetFrame = vtk.vtkTransform()
+        g.targetAxis = [0,0,1]
+        g.bodyAxis = [0,0,1]
+        g.coneThreshold = self.coneThreshold
+        g.tspan = [1,1]
+        constraints.append(g)
+
         constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
                                                     pelvisEnabled=False))
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
-        constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-        constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        #constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
+        #constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot'))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
@@ -261,7 +273,25 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         #constraints.append(self.robotSystem.ikPlanner.createLockedBackPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
-        constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressOutsideFrame, tspan=[1,1]))
+
+        lFoot2World = transformUtils.copyFrame(self.polaris.leftFootEgressOutsideFrame.transform)
+        rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
+        lFoot2World.PostMultiply()
+        lFoot2World.Translate(np.array(rFoot2World.GetPosition()) - lFoot2World.GetPosition())
+        lFoot2World.PreMultiply()
+        lFoot2World.Translate([0.05, 0.26, 0.05])
+
+        rFootRPY = transformUtils.rollPitchYawFromTransform(rFoot2World)
+        lFootRPY = transformUtils.rollPitchYawFromTransform(lFoot2World);
+        lFootxyz,_ = transformUtils.poseFromTransform(lFoot2World)
+
+        lFootRPY[0] = rFootRPY[0]
+        lFootRPY[1] = rFootRPY[1]
+        lFoot2World = transformUtils.frameFromPositionAndRPY(lFootxyz, np.rad2deg(lFootRPY))
+
+        identityFrame = vtk.vtkTransform()
+        constraints.extend(self.createLeftFootPoseConstraint(lFoot2World, tspan=[1,1]))
+
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True)
 
@@ -276,9 +306,12 @@ class EgressPlanner(object):
         c.linkName = 'l_foot'
         c.tspan = [0.0, 0.1, 0.2]
         constraints.append(c)
-        constraints.extend(self.createLeftFootPoseConstraint(liftFrame, tspan=[0.2,0.2]))
+        constraints.extend(self.createLeftFootPoseConstraint(liftFrame, tspan=[0.2, 0.2]))
         #constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressInsideFrame, tspan=[0.5,0.5]))
-        constraintSet.constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressMidFrame, tspan=[0.8,0.8]))
+        constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressMidFrame, tspan=[0.5, 0.5]))
+
+        constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressOutsideFrame, tspan=[0.8, 0.8]))
+
         #plan = constraintSet.planEndPoseGoal(feetOnGround=False)
         keyFramePlan = constraintSet.runIkTraj()
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
@@ -320,6 +353,8 @@ class EgressPlanner(object):
         armsLocked = ikPlanner.createLockedArmsPostureConstraints(startPoseName)
 
         constraints = [quasiStaticConstraint, backLocked]
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
+                                                    pelvisEnabled=False, shrinkFactor=0.2))
         constraints.extend(lfootPositionOrientationConstraint)
         constraints.extend(rfootFixedConstraint)
         constraints.extend(armsLocked)
@@ -350,7 +385,7 @@ class EgressPlanner(object):
         backConstraint = ikPlanner.createMovingBackLimitedPostureConstraint()
         armsLocked = ikPlanner.createLockedArmsPostureConstraints(startPoseName)
 
-        constraints = [backConstraint, quasiStaticConstraint]
+        constraints = [backConstraint]
         constraints.extend(footFixedConstraints)
         constraints.extend(armsLocked)
 
@@ -388,6 +423,7 @@ class EgressPanel(TaskUserPanel):
         TaskUserPanel.__init__(self, windowTitle='Egress')
 
         self.robotSystem = robotSystem
+        self.planner = EgressPlanner(robotSystem)
         self.platformPlanner = polarisplatformplanner.PolarisPlatformPlanner(robotSystem.ikServer, robotSystem)
         self.addDefaultProperties()
         self.addButtons()
@@ -395,6 +431,13 @@ class EgressPanel(TaskUserPanel):
 
 
     def addButtons(self):
+        # Get onto platform buttons
+        self.addManualButton('Spawn Polaris', self.planner.spawnPolaris)
+        self.addManualButton('Get weight over feet', self.planner.planGetWeightOverFeet)
+        self.addManualButton('Stand up', self.planner.planStandUp)
+        self.addManualButton('Shift weight out', self.planner.planShiftWeightOut)
+        self.addManualButton('Move left foot out', self.planner.planFootOut)
+        self.addManualSpacer()
         #sit/stand buttons
         self.addManualButton('Start', self.onStart)
         # polaris step down buttons
