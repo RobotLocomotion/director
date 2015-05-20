@@ -285,7 +285,7 @@ class TerrainTask(object):
                 offsetFrame.Concatenate(blockFrame)
                 
                 pose = transformUtils.poseFromTransform(offsetFrame)
-                desc = dict(classname='BoxAffordanceItem', Name='%s (%d,%d)' % (self.cinderblockPrefix, row, col), Dimensions=[blockLength, blockWidth, blockHeight], pose=pose)
+                desc = dict(classname='BoxAffordanceItem', Name='%s (%d,%d)' % (self.cinderblockPrefix, row, col), Dimensions=[blockLength, blockWidth, blockHeight], pose=pose, Color=[0.4,0.6,0.4])
                 block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
                 blocks.append(block)
 
