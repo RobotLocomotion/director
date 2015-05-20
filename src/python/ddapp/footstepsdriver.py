@@ -92,7 +92,7 @@ DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
                                       'Max Num Steps': 8,
                                       'Min Num Steps': 8,
                                       'Drake Swing Speed': 0.4,
-                                      'Support Contact Groups': 1,
+                                      'Support Contact Groups': lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE,
                                       'Map Mode': 2})
 
 DEFAULT_STEP_PARAMS['Polaris Platform'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
