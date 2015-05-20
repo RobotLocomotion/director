@@ -508,7 +508,7 @@ class EgressPanel(TaskUserPanel):
         addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
         addFunc(self.onPlanStepOff, 'plan step off')
-        addTask(rt.UserPromptTask(name="approve/adjust footsteps", message="Please approve footsteps, modify if necessary"))
+        addTask(rt.UserPromptTask(name="approve footsteps", message="Please approve footsteps, modify if necessary"))
         addTask(rt.CommitFootstepPlan(name='step down', planName='step down from platform with right foot'))
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
         addManipTask('plan nominal', pp.planNominal, userPrompt=True)
