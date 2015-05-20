@@ -186,13 +186,15 @@ class TerrainTask(object):
         # which foot, block (row,col), offset (x,y), contact
         # (row,col) refer to which block
         # (x,y) are offsets wrt the block center, in meters
+        # contact is an enum indicating foot contact type
+        # TODO
         footstepData = [
-            [ 'left',  (0,1), (0.00, 0.00),  xx],
-            [ 'right', (0,2), (0.00, 0.00),  xx],
-            [ 'left',  (1,1), (-0.10, 0.00), xx],
-            [ 'right', (1,2), (0.00, 0.05),  xx],
-            [ 'left',  (2,1), (0.10, -0.05), xx],
-            [ 'right', (2,2), (0.10, 0.10),  xx]
+            [ 'left',  (0,1), (0.00, 0.00),  0 ],
+            [ 'right', (0,2), (0.00, 0.00),  0 ],
+            [ 'left',  (1,1), (-0.10, 0.00), 0 ],
+            [ 'right', (1,2), (0.00, 0.05),  0 ],
+            [ 'left',  (2,1), (0.10, -0.05), 0 ],
+            [ 'right', (2,2), (0.10, 0.10),  0 ]
         ]
 
         # check that we have required data
@@ -205,7 +207,7 @@ class TerrainTask(object):
         # generate footstep frames
         leadingFoot = footstepData[0][0]
         stepFrames = []
-        for foot, blockIndex, offset in footstepData:
+        for foot, blockIndex, offset, contactType in footstepData:
             block = blockObjectTable[blockIndex[0]][blockIndex[1]]
             if block is None:
                 print 'error: no block for footstep (%d,%d)' % blockIndex
