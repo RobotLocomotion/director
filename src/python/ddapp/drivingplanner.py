@@ -634,7 +634,7 @@ class DrivingPlanner(object):
 
     def computeDrivingTrajectories(self, steeringAngleDegrees, maxTurningRadius = 10, numTrajPoints = 50):
 
-        angle = steeringAngleDegrees
+        angle = -steeringAngleDegrees
 
         if abs(angle) < 0.1:
             angle = 1e-8
@@ -817,6 +817,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.imageViewLayout.addWidget(self.imageView.view)
         self.imageViewLayout.addWidget(self.imageViewLeft.view)
 
+        self.robotSystem.robotStateModel.connectModelChanged(lambda x: self.updateAndDrawTrajectory())
+
     def onAprilTag(self, msg):
         cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, self.drivingPlanner.tagToLocalTransform)
         self.updateAndDrawTrajectory()        
@@ -830,8 +832,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addManualButton('Plan Retract', self.onPlanRetract)
         self.addManualButton('Plan Turn', self.onPlanTurn)
         self.addManualButton('Plan Wheel Re-Grasp', self.drivingPlanner.planSteeringWheelReGrasp)
-        self.addManualButton('Plan Bar Grab', self.onplanBarGrasp)
-        self.addManualButton('Plan Bar Retract', self.onplanBarRetract)
+        self.addManualButton('Plan Bar Grab', self.onPlanBarGrasp)
+        self.addManualButton('Plan Bar Retract', self.onPlanBarRetract)
         # self.addManualButton('Plan Steering Wheel Turn', self.onPlanSteeringWheelTurn)
         # self.addManualButton('Plan Seed', self.drivingPlanner.planSeed)
         # self.addManualButton('Capture Ankle Angle Low', functools.partial(self.drivingPlanner.captureAnklePosition, 0))
@@ -958,8 +960,11 @@ class DrivingPlannerPanel(TaskUserPanel):
  
         self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, useLineConstraint=True)
 
-    def onplanBarRetract(self):
+    def onPlanBarRetract(self):
         self.drivingPlanner.planBarRetract(depth=self.barGraspDepth, useLineConstraint=True)
+
+    def onPlanBarGrasp(self):
+        self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, useLineConstraint=True)
 
     def setParamsPreGrasp1(self):
         self.params.setProperty('PreGrasp/Retract Depth', 0.22)
@@ -1047,7 +1052,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
         addTask(rt.OpenHand(name='open right hand', side='Right'))
         addFunc(self.setParamsBarGrasp, 'set params')
-        addManipTask('Bar Grasp', self.onplanBarGrasp, userPrompt=True)
+        addManipTask('Bar Grasp', self.onPlanBarGrasp, userPrompt=True)
         self.folder = graspBar
         addTask(rt.UserPromptTask(name="check alignment and depth", message="Please check alignment and depth, make any manual adjustments"))
         addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
@@ -1085,7 +1090,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
         addTask(rt.OpenHand(name='open left hand', side='Right'))
         addFunc(self.setParamsBarRetract, 'set params')
-        addManipTask('Retract hand', self.onplanBarRetract, userPrompt=True)
+        addManipTask('Retract hand', self.onPlanBarRetract, userPrompt=True)
         self.folder = ungraspBar
         addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
