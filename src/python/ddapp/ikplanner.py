@@ -318,9 +318,12 @@ class IKPlanner(object):
         return originalIkParameterDict
 
     def getHandModel(self, side=None):
-        side = side or self.reachingSide
-        assert side in ('left', 'right')
-        return self.handModels[0] if side == 'left' else self.handModels[1]
+        if self.fixedBaseArm:
+            return self.handModels[0]
+        else:
+            side = side or self.reachingSide
+            assert side in ('left', 'right')
+            return self.handModels[0] if side == 'left' else self.handModels[1]
 
 
     def getHandLink(self, side=None):
@@ -1448,6 +1451,7 @@ class RobotPoseGUIWrapper(object):
             assert pose['nominal_handedness'] in sides
 
             if pose['nominal_handedness'] != side:
-                joints = rpg.applyMirror(joints)
+                if 'leftFootLink' in drcargs.getDirectorConfig():
+                    joints = rpg.applyMirror(joints)
 
         return joints
