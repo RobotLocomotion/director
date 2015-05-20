@@ -359,12 +359,12 @@ class EgressPlanner(object):
         constraints.extend(rfootFixedConstraint)
         constraints.extend(armsLocked)
         # return constraints
-        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True)
-        cs.seedPoseName = 'q_start'
-        cs.nominalPoseName = 'q_start'
-        endPose = cs.runIk()
-        keyFramePlan = cs.planEndPoseGoal()
+        constraintSet.seedPoseName = 'q_start'
+        constraintSet.nominalPoseName = 'q_start'
+        endPose = constraintSet.runIk()
+        keyFramePlan = constraintSet.planEndPoseGoal()
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0], poseTimes[-1]]
         supportsList = [['r_foot'], ['r_foot','l_foot']]
@@ -389,11 +389,11 @@ class EgressPlanner(object):
         constraints.extend(footFixedConstraints)
         constraints.extend(armsLocked)
 
-        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.seedPoseName = 'q_start'
-        cs.nominalPoseName = 'q_nom'
-        endPose = cs.runIk()
-        keyFramePlan = cs.planEndPoseGoal()
+        constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.seedPoseName = 'q_start'
+        constraintSet.nominalPoseName = 'q_nom'
+        endPose = constraintSet.runIk()
+        keyFramePlan = constraintSet.planEndPoseGoal()
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0]]
         supportsList = [['r_foot','l_foot']]
@@ -437,6 +437,8 @@ class EgressPanel(TaskUserPanel):
         self.addManualButton('Stand up', self.planner.planStandUp)
         self.addManualButton('Shift weight out', self.planner.planShiftWeightOut)
         self.addManualButton('Move left foot out', self.planner.planFootOut)
+        self.addManualButton('Put foot down', self.planner.planLeftFootDown)
+        self.addManualButton('Center weight', self.planner.planCenterWeight)
         self.addManualSpacer()
         #sit/stand buttons
         self.addManualButton('Start', self.onStart)
