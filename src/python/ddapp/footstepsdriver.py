@@ -394,8 +394,7 @@ class FootstepsDriver(object):
         self.clearFootstepPlan()
 
         if self.toolbarWidget:
-            app.getMainWindow().toolBar().removeAction(self.toolbarWidget)
-            self.toolbarWidget = None
+            self.execButton.setVisible(False)
 
 
     def clearFootstepPlan(self):
