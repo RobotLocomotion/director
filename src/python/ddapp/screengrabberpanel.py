@@ -158,6 +158,11 @@ class ScreenGrabberPanel(object):
         self.updateRecordingStats()
 
     def onRecordMovie(self):
+        # Enforce even width number, otherwise avconv will fail
+        _width = (self.view.width if self.view.width % 2 == 0 else self.view.width + 1)
+        _height = (self.view.height if self.view.height % 2 == 0 else self.view.height + 1)
+        self.view.setFixedSize(_width, _height)
+
         if self.isRecordMode():
             self.startRecording()
         else:
