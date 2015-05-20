@@ -44,8 +44,7 @@ class COPMonitor(object):
         self.robotStateModel.connectModelChanged(self.update)
 
     def update(self, unused):
-        if (om.findObjectByName('measured cop').getProperty('Visible') and hasattr(self.robotStateJointController, 'lastRobotStateMessage') and 
-            self.robotStateJointController.lastRobotStateMessage):
+        if (om.findObjectByName('measured cop').getProperty('Visible') and self.robotStateJointController.lastRobotStateMessage):
 
             if self.dialogVisible == False:
                 self.warningButton.setVisible(True)
@@ -102,8 +101,7 @@ class COPMonitor(object):
 
                 d = DebugData()
                 d.addSphere(measured_cop[0:3], radius=0.02)
-                vis.updatePolyData(d.getPolyData(), 'measured cop', view=self.view, parent='robot state model')
-                om.findObjectByName('measured cop').setProperty('Color', colorStatus)
+                vis.updatePolyData(d.getPolyData(), 'measured cop', view=self.view, parent='robot state model').setProperty('Color', colorStatus)
 
         elif self.dialogVisible:
             app.getMainWindow().statusBar().removeWidget(self.warningButton)

@@ -4,12 +4,12 @@
 #include <QObject>
 #include <QColor>
 #include <QVector>
-#include <RigidBodyManipulator.h>
 #include "ddSharedPtr.h"
 
 class vtkRenderer;
 class vtkTransform;
 class vtkPolyData;
+class RigidBodyManipulator;
 
 class ddDrakeModel : public QObject
 {
