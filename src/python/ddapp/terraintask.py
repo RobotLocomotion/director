@@ -155,42 +155,44 @@ class TerrainTask(object):
         # first row is closest to robot
         # column order is left-to-right on robot (+y to -y)
         blockTypes = [
-            [ 'F', 'R', 'B', 'L', 'F', 'R' ],
-            [ 'L', 'F', 'R', 'B', 'L', 'F' ],
             [ 'B', 'L', 'F', 'R', 'B', 'L' ],
-            [ 'R', 'B', 'L', 'F', 'R', 'B' ],
-            [ 'F', 'R', 'B', 'L', 'F', 'R' ],
             [ 'L', 'F', 'R', 'B', 'L', 'F' ],
-            [ 'B', 'L', 'F', 'R', 'B', 'L' ]
+            [ 'F', 'R', 'B', 'L', 'F', 'R' ],
+            [ 'R', 'B', 'L', 'F', 'R', 'B' ],
+            [ 'B', 'L', 'F', 'R', 'B', 'L' ],
+            [ 'L', 'F', 'R', 'B', 'L', 'F' ],
+            [ 'F', 'R', 'B', 'L', 'F', 'R' ]
         ]
+        blockTypes.reverse()
 
         # 0=ground level, 1=one cinderblock offset, etc
         blockLevels = [
             [ 0, 0, 0, 0, 0, 0 ],
-            [ 0, 0, 1, 1, 0, 0 ],
-            [ 0, 0, 1, 1, 0, 0 ],
-            [ 0, 1, 1, 1, 1, 0 ],
-            [ 1, 2, 1, 1, 2, 1 ],
             [ 1, 1, 1, 1, 1, 1 ],
+            [ 1, 2, 1, 1, 2, 1 ],
+            [ 0, 1, 1, 1, 1, 0 ],
+            [ 0, 0, 1, 1, 0, 0 ],
+            [ 0, 0, 1, 1, 0, 0 ],
             [ 0, 0, 0, 0, 0, 0 ]
         ]
+        blockLevels.reverse()
 
-        blockAngleMap = { 'F': 180, 'B': 0, 'R': 270, 'L': 90 }
+        blockAngleMap = { 'F': 180, 'B': 0, 'R': 90, 'L': 270 }
 
         return dict(blockTypes=blockTypes, blockLevels=blockLevels, blockAngleMap=blockAngleMap)
 
     def createFootstepsForTerrain(self):
         # TODO: this is just an example
-        # which foot, block (row,col), offset (x,y)
+        # which foot, block (row,col), offset (x,y), contact
         # (row,col) refer to which block
         # (x,y) are offsets wrt the block center, in meters
         footstepData = [
-            [ 'left',  (0,1), (0.00, 0.00) ],
-            [ 'right', (0,2), (0.00, 0.00) ],
-            [ 'left',  (1,1), (-0.10, 0.00) ],
-            [ 'right', (1,2), (0.00, 0.05) ],
-            [ 'left',  (2,1), (0.10, -0.05) ],
-            [ 'right', (2,2), (0.10, 0.10) ]
+            [ 'left',  (0,1), (0.00, 0.00),  xx],
+            [ 'right', (0,2), (0.00, 0.00),  xx],
+            [ 'left',  (1,1), (-0.10, 0.00), xx],
+            [ 'right', (1,2), (0.00, 0.05),  xx],
+            [ 'left',  (2,1), (0.10, -0.05), xx],
+            [ 'right', (2,2), (0.10, 0.10),  xx]
         ]
 
         # check that we have required data
