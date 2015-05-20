@@ -1,6 +1,7 @@
 #include "ddDrakeModel.h"
 #include "ddSharedPtr.h"
 
+#include <RigidBodyManipulator.h>
 #include <shapes/Geometry.h>
 
 #include <vtkPolyData.h>
