@@ -41,4 +41,6 @@ class BlackoutMonitor(object):
                 txt.setProperty('Visible', True)
             else:
                 # not blackout!
-                om.findObjectByName('blackout text').setProperty('Visible', False)
+                txt = om.findObjectByName('blackout text')
+                if (txt):
+                    txt.setProperty('Visible', False)
