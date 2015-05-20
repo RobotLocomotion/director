@@ -52,6 +52,8 @@ class DrivingPlanner(object):
         self.throttlePublishChannel = 'THROTTLE_COMMAND_POSITION_GOAL'
         self.steeringPublishChannel = 'STEERING_COMMAND_POSITION_GOAL'
         self.addSubscribers()
+        self.graspWheelAngle = None
+        self.graspWristAngle = None
         self.plans = []
 
     def getInitCommands(self):
@@ -227,7 +229,7 @@ class DrivingPlanner(object):
 
         legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
         legAbovePedalFrame.PreMultiply()
-        legAbovePedalFrame.Translate([-0.02,0.0, 0.03])
+        legAbovePedalFrame.Translate([-0.02, 0.0, 0.03])
         identityFrame = vtk.vtkTransform()
         legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1])
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
@@ -385,6 +387,7 @@ class DrivingPlanner(object):
     def planSteeringWheelReGrasp(self, useLineConstraint=False):
         ikPlanner = self.robotSystem.ikPlanner
         startPose = self.getPlanningStartPose()
+        self.wheelAngleBeforeReGrasp = self.getSteeringWheelAngle()
         startPoseName = 'q_regrasp_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_regrasp_end'
@@ -511,7 +514,6 @@ class DrivingPlanner(object):
         handSide = 'right'
         handLinkName = 'r_hand'
         startPose = self.getPlanningStartPose()
-        print startPose
         startPoseName = 'q_grasp_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_end_grasp'
@@ -718,13 +720,6 @@ class DrivingPlanner(object):
         msg.joint_name = 'l_arm_lwy'
         lcmUtils.publish(self.steeringPublishChannel, msg)
 
-    def setSteeringOffset(self):
-        pose = self.captureRobotPoseFromStreaming()
-        if pose is None:
-            return
-
-        print 'captured steering offset'
-        self.steeringAngleOffset = pose[self.lwyIdx]
 
     def decodeThrottleMessage(self,msg):
         slider = np.zeros(4)
@@ -751,7 +746,39 @@ class DrivingPlanner(object):
         ikPlanner = self.robotSystem.ikPlanner
         startPose = self.getPlanningStartPose()
         endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'car_entry_new')
-        ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
+        plan = ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
+        self.addPlan(plan)
+
+    def setSteeringWheelAndWristGraspAngles(self):
+        self.graspWheelAngle = np.deg2rad(self.userSpecifiedGraspWheelAngleInDegrees)
+        pose = self.getPlanningStartPose()
+        self.graspWristAngle = pose[self.lwyIdx]
+
+    def getSteeringWheelAngle(self):
+        if self.graspWristAngle is None or self.graspWheelAngle is None:
+            # this means wrist and hand haven't been initialized yet
+            return 0
+
+        pose = self.getPlanningStartPose()
+        lwyAngle = pose[self.lwyIdx]
+
+        wheelAngle = self.graspWheelAngle + lwyAngle - self.graspWristAngle
+        return wheelAngle
+
+
+    # executes regrasp plan, updates graspWristAngle, graspWheelAngle
+    def updateGraspOffsets(self):
+        pose = self.getPlanningStartPose()
+        #now that plan has finished update our graspWristAngle
+        self.graspWristAngle = pose[self.lwyIdx]
+        self.graspWheelAngle = self.wheelAngleBeforeReGrasp
+
+    def printSteeringWheelAngleInDegrees(self):
+        print np.rad2deg(self.getSteeringWheelAngle())
+
+    def addPlan(self, plan):
+        self.plans.append(plan)
+
 
 class DrivingPlannerPanel(TaskUserPanel):
 
@@ -809,25 +836,27 @@ class DrivingPlannerPanel(TaskUserPanel):
         # self.addManualButton('Plan Seed', self.drivingPlanner.planSeed)
         # self.addManualButton('Capture Ankle Angle Low', functools.partial(self.drivingPlanner.captureAnklePosition, 0))
         # self.addManualButton('Capture Ankle Angle High', functools.partial(self.drivingPlanner.captureAnklePosition, 1))
-        self.addManualButton('Capture Steering Offset', self.drivingPlanner.setSteeringOffset)
+        self.addManualButton('Capture Wheel and Wrist grasp angles', self.drivingPlanner.setSteeringWheelAndWristGraspAngles)
+        self.addManualButton('Print Steering Wheel Angle', self.drivingPlanner.printSteeringWheelAngleInDegrees)
 
     def addDefaultProperties(self):
         self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('Touch Depth', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('PreGrasp Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Turn Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
-        self.params.addProperty('Steering Wheel Radius (meters)', 0.1873, attributes=om.PropertyAttributes(singleStep=0.01))
-        self.params.addProperty('Knot Points', 20, attributes=om.PropertyAttributes(singleStep=1))
-        self.params.addProperty('Gaze Constraint Tol', 0.3, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
+        # self.params.addProperty('Steering Wheel Radius (meters)', 0.1873, attributes=om.PropertyAttributes(singleStep=0.01))
+        # self.params.addProperty('Knot Points', 20, attributes=om.PropertyAttributes(singleStep=1))
+        # self.params.addProperty('Gaze Constraint Tol', 0.3, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
         self.params.addProperty('Position Constraint Tol', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Quat Constraint Tol', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Grasp Location', 0, attributes=om.PropertyAttributes(enumNames=['Center','Rim']))
         self.params.addProperty('Seed with current posture', 0, attributes=om.PropertyAttributes(enumNames=['False','True']))
         self.params.addProperty('Speed', 0.75, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
-        self.params.addProperty('Throttle Idle Angle Slack', 10, attributes=om.PropertyAttributes(singleStep=1))
+        # self.params.addProperty('Throttle Idle Angle Slack', 10, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Coarse Grained Throttle Travel', 100, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Fine Grained Throttle Travel', 10, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Bar Grasp/Retract Depth', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
+        self.params.addProperty('Steering Wheel Angle when Grasped', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Turning Radius', 9.5, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Wheel Separation', 1.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Segments', 25, attributes=om.PropertyAttributes(singleStep=1, decimals=0))
@@ -835,6 +864,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Trajectory Y Offset', 0.30, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Angle Offset', 0.0, attributes=om.PropertyAttributes(singleStep=1, decimals=0)),
         self.params.addProperty('Show Trajectory', False)
+        self.params.addProperty('Show Driving/Regrasp Tasks',0, attributes=om.PropertyAttributes(enumNames=['Driving','Regrasp']))
         self._syncProperties()
 
     def _syncProperties(self):
@@ -843,24 +873,26 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.preGraspAngle = self.params.getProperty('PreGrasp Angle')
         self.turnAngle = self.params.getProperty('Turn Angle')
         self.speed = self.params.getProperty('Speed')
-        self.turnRadius = self.params.getProperty('Steering Wheel Radius (meters)')
-        self.knotPoints = self.params.getProperty('Knot Points')
-        self.gazeTol = self.params.getProperty('Gaze Constraint Tol')
-        self.drivingPlanner.positionTol = self.params.getProperty('Position Constraint Tol')
-        self.drivingPlanner.quatTol = self.params.getProperty('Quat Constraint Tol')
-        self.graspLocation = self.params.getPropertyEnumValue('Grasp Location').lower()
+        self.turnRadius = 0.18 #self.params.getProperty('Steering Wheel Radius (meters)')
+        self.knotPoints = 20
+        self.gazeTol = 0.3
+        self.drivingPlanner.positionTol = 0.0
+        self.drivingPlanner.quatTol = 0.0
+        self.graspLocation = 'center'
         self.drivingPlanner.seedWithCurrent = self.params.getProperty('Seed with current posture')
-        self.drivingPlanner.throttleIdleAngleSlack = self.params.getProperty('Throttle Idle Angle Slack')
+        # self.drivingPlanner.throttleIdleAngleSlack = self.params.getProperty('Throttle Idle Angle Slack')
         self.drivingPlanner.fineGrainedThrottleTravel = self.params.getProperty('Fine Grained Throttle Travel')
         self.drivingPlanner.coarseGrainedThrottleTravel = self.params.getProperty('Coarse Grained Throttle Travel')
         self.barGraspDepth = self.params.getProperty('Bar Grasp/Retract Depth')
         self.drivingPlanner.maxTurningRadius = self.params.getProperty('Turning Radius')
+        self.drivingPlanner.userSpecifiedGraspWheelAngleInDegrees = self.params.getProperty('Steering Wheel Angle when Grasped')
         self.drivingPlanner.trajSegments = self.params.getProperty('Trajectory Segments')
         self.drivingPlanner.wheelDistance = self.params.getProperty('Wheel Separation')
         self.showTrajectory = self.params.getProperty('Show Trajectory')
         self.drivingPlanner.trajectoryX = self.params.getProperty('Trajectory X Offset')
         self.drivingPlanner.trajectoryY = self.params.getProperty('Trajectory Y Offset')
         self.drivingPlanner.trajectoryAngle = self.params.getProperty('Trajectory Angle Offset')
+        self.showRegraspTasks = self.params.getProperty('Show Driving/Regrasp Tasks')
 
         if hasattr(self, 'affordanceUpdater'):
             if self.showTrajectory:
@@ -876,6 +908,7 @@ class DrivingPlannerPanel(TaskUserPanel):
                 self.affordanceUpdaterLeft.extraObjects = []
 
         self.drivingPlanner.applyProperties()
+
 
     def onSteeringCommand(self, msg):
         if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:
@@ -916,9 +949,13 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.planSteeringWheelTurn(speed=self.speed, turnRadius=self.turnRadius, knotPoints=self.knotPoints, gazeTol=self.gazeTol)
 
     def onPropertyChanged(self, propertySet, propertyName):
+        showRegraspTasksOld = self.showRegraspTasks
         self._syncProperties()
 
-    def onplanBarGrasp(self):
+        if not showRegraspTasksOld == self.showRegraspTasks:
+            self.addTasks()
+
+ 
         self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, useLineConstraint=True)
 
     def onplanBarRetract(self):
@@ -940,6 +977,14 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.setProperty('Bar Grasp/Retract Depth', 0.03)
 
     def addTasks(self):
+        self.taskTree.removeAllTasks()
+        if self.showRegraspTasks:
+            self.addRegraspTasks()
+        else:
+            self.addDrivingTasks()
+            
+
+    def addDrivingTasks(self):
 
         # some helpers
         self.folder = None
@@ -995,6 +1040,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name="check alignment", message="Please make any manual adjustments if necessary"))
         addTask(rt.UserPromptTask(name="approve close left hand", message="Check clear to close left hand"))
         addTask(rt.CloseHand(name='close left hand', side='Left'))
+        addTask(rt.UserPromptTask(name="set true steering wheel angle", message="Set true steering wheel angle in spin box"))
+        addFunc(self.drivingPlanner.setSteeringWheelAndWristGraspAngles, 'capture true wheel angle and current wrist angle')
 
         graspBar = addFolder('Grasp Bar')
         addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
@@ -1044,8 +1091,51 @@ class DrivingPlannerPanel(TaskUserPanel):
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
 
+    def addRegraspTasks(self):
+        self.folder = None
+        def addTask(task, parent=None):
+            parent = parent or self.folder
+            self.taskTree.onAddTask(task, copy=False, parent=parent)
+        def addFunc(func, name, parent=None):
+            addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
+        def addFolder(name, parent=None):
+            self.folder = self.taskTree.addGroup(name, parent=parent)
+            return self.folder
+
+        def addManipTaskMatlab(name, planFunc, userPrompt=False, parentFolder=None):
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
+            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
+
+        def addManipTask(name, planFunc, userPrompt=False):
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
+            if not userPrompt:
+                addTask(rt.CheckPlanInfo(name='check manip plan info'))
+            else:
+                addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+            addFunc(dp.commitManipPlan, name='execute manip plan')
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
+
+        dp = self.drivingPlanner
+        regrasp = addFolder('Regrasp')
+        addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
+        addTask(rt.OpenHand(name='open left hand', side='Left'))
+        addManipTask('Plan Regrasp', self.drivingPlanner.planSteeringWheelReGrasp, userPrompt=True)
+        self.folder = regrasp
+        addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
+        addTask(rt.CloseHand(name='close left hand', side='Left'))
+        addFunc(self.drivingPlanner.updateGraspOffsets, 'update steering wheel grasp offsets')
+
+
     def updateAndDrawTrajectory(self):
-        leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(self.drivingPlanner.steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)
+        steeringAngleDegrees = np.rad2deg(self.drivingPlanner.getSteeringWheelAngle())
+        leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)
         self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(leftTraj), 'LeftDrivingTrajectory')
         self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(rightTraj), 'RightDrivingTrajectory')
 
