@@ -183,11 +183,11 @@ class TerrainTask(object):
 
     def createFootstepsForTerrain(self):
         # TODO: this is just an example
-        # which foot, block (row,col), offset (x,y), contact
+        # which foot, block (row,col), offset (x,y), support
         # (row,col) refer to which block
         # (x,y) are offsets wrt the block center, in meters
-        # contact is an enum indicating foot contact type
-        # TODO
+        # support is an enum indicating foot support type
+        #   0=heel-toe, 1=midfoot-toe, 2=heel-midfoot
         footstepData = [
             [ 'left',  (0,1), (0.00, 0.00),  0 ],
             [ 'right', (0,2), (0.00, 0.00),  0 ],
@@ -207,7 +207,7 @@ class TerrainTask(object):
         # generate footstep frames
         leadingFoot = footstepData[0][0]
         stepFrames = []
-        for foot, blockIndex, offset, contactType in footstepData:
+        for foot, blockIndex, offset, supportType in footstepData:
             block = blockObjectTable[blockIndex[0]][blockIndex[1]]
             if block is None:
                 print 'error: no block for footstep (%d,%d)' % blockIndex
@@ -230,6 +230,9 @@ class TerrainTask(object):
         startPose = self.getPlanningStartPose()
         helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
         request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
+        for i in range(len(footstepData)):
+            _, _, _, supportType = footstepData[i]
+            request.goal_steps[i].params.support_contact_groups = supportType
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
 
     def createBlockObjectTable(self):
