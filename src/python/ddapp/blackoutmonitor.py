@@ -14,11 +14,11 @@ from time import sleep
 
 class BlackoutMonitor(object):
     UPDATE_RATE = 5
-    def __init__(self, robotStateJointController):
+    def __init__(self, robotStateJointController, view, cameraview):
 
         self.robotStateJointController = robotStateJointController
-
-        lcmUtils.addSubscriber('SCAN', lcmmultisense.planar_lidar_t, self.resetCounter)
+        self.view = view
+        self.cameraview = cameraview
 
         self.last_message_time = 0
 
@@ -26,16 +26,19 @@ class BlackoutMonitor(object):
         self.updateTimer.callback = self.update
         self.updateTimer.start()
 
-    def resetCounter(self, msg):
-        self.last_message_time = msg.utime
-
     def update(self):
+        self.last_message_time = self.cameraview.imageManager.queue.getCurrentImageTime('CAMERA_LEFT')
         if self.robotStateJointController.lastRobotStateMessage:
             elapsed = (self.robotStateJointController.lastRobotStateMessage.utime - self.last_message_time) / (1000*1000)
             if elapsed > 1.0:
                 # blackout!
-                vis.updateText("BLACKOUT: " + str(elapsed), "blackout text", fontSize=24, position=(500, 50)).setProperty('Bold', True)
-                om.findObjectByName('blackout text').setProperty('Visible', True)
+                ssize = self.view.size
+                textstr = "BLACKOUT: " + str(elapsed) + " sec"
+                txt = vis.updateText(textstr, "blackout text", view=self.view)
+                txt.setProperty('Font Size', 24)
+                txt.setProperty('Position', (25, ssize.height()-50))
+                txt.setProperty('Bold', True)
+                txt.setProperty('Visible', True)
             else:
                 # not blackout!
                 om.findObjectByName('blackout text').setProperty('Visible', False)
