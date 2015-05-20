@@ -74,8 +74,8 @@ class TaskUserPanel(object):
         self.widget.setWindowTitle(windowTitle)
 
         self.manualButtons = {}
-        self.imageViewLayout = QtGui.QVBoxLayout(self.ui.imageFrame)
-        
+        self.imageViewLayout = QtGui.QHBoxLayout(self.ui.imageFrame)
+
         self._setupParams()
         self._setupPropertiesPanel()
         self._initTaskPanel()
