@@ -133,6 +133,7 @@ class DoorDemo(object):
 
 
     def computeDoorHandleGraspFrame(self):
+        doorSide = 1 if self.graspingHand == 'left' else -1
         graspOrientation = self.computeGraspOrientation()
         self.doorHandleAxisFrame = self.computeDoorHandleAxisFrame()
 
@@ -153,7 +154,7 @@ class DoorDemo(object):
                                                  [graspToAxisTransform,
                                                   self.doorHandleAxisFrame.transform])
 
-        reachToGraspTransform = transformUtils.frameFromPositionAndRPY([self.handleTouchWidth,
+        reachToGraspTransform = transformUtils.frameFromPositionAndRPY([-doorSide*self.handleTouchWidth,
                                                                         self.handleTouchDepth,
                                                                         -self.handleTouchHeight],
                                                                        [0.0, 0.0, 0.0])
@@ -209,7 +210,8 @@ class DoorDemo(object):
 
     def computeDoorHandleAxisFrame(self):
         handleLength = self.doorHandleAffordance.getProperty('Dimensions')[1]
-        t = transformUtils.frameFromPositionAndRPY([0.0, -handleLength/2.0, 0.0], [0, 0, 0])
+        doorSide = 1 if self.graspingHand == 'left' else -1
+        t = transformUtils.frameFromPositionAndRPY([0.0, doorSide*handleLength/2.0, 0.0], [0, 0, 0])
         t.PostMultiply()
         t.Concatenate(transformUtils.copyFrame(self.doorHandleFrame.transform))
         return vis.updateFrame(t, 'door handle axis frame', parent=self.doorHandleAffordance,
@@ -217,11 +219,12 @@ class DoorDemo(object):
 
 
     def computeDoorHingeFrame(self):
+        doorSide = 1 if self.graspingHand == 'left' else -1
         doorAffordance = om.findObjectByName('door')
         doorDimensions = doorAffordance.getProperty('Dimensions')
         doorDepth = doorDimensions[0]
         doorWidth = doorDimensions[1]
-        t = transformUtils.frameFromPositionAndRPY([doorDepth/2, doorWidth/2.0, 0.0], [0, 0, 0])
+        t = transformUtils.frameFromPositionAndRPY([doorDepth/2, -doorSide*doorWidth/2.0, 0.0], [0, 0, 0])
         t.PostMultiply()
         t.Concatenate(transformUtils.copyFrame(doorAffordance.getChildFrame().transform))
         self.doorHingeFrame = vis.updateFrame(t, 'door hinge frame', parent=doorAffordance,
@@ -385,8 +388,10 @@ class DoorDemo(object):
 
     def planHandleTurn(self, turnAngle=None):
 
+        doorSide = 1 if self.graspingHand == 'left' else -1
         if turnAngle is None:
             turnAngle = self.handleTurnAngle
+
         startPose = self.getPlanningStartPose()
         linkFrame = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(), startPose)
 
@@ -395,7 +400,7 @@ class DoorDemo(object):
              self.doorHandleAxisFrame.transform.GetInverse()])
 
         handleTurnTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0],
-                                                                     [-turnAngle, 0, 0])
+                                                                     [doorSide*turnAngle, 0, 0])
         doorHandleTurnFrame = transformUtils.concatenateTransforms([finalGraspToReferenceTransfrom,
                                                                     handleTurnTransform,
                                                                     self.doorHandleAxisFrame.transform])
@@ -438,6 +443,8 @@ class DoorDemo(object):
 
     def planHandlePush(self):
 
+        doorSide = 1 if self.graspingHand == 'left' else -1
+
         startPose = self.getPlanningStartPose()
         linkFrame = self.ikPlanner.getLinkFrameAtPose(self.ikPlanner.getHandLink(), startPose)
 
@@ -446,7 +453,7 @@ class DoorDemo(object):
              self.doorHingeFrame.transform.GetInverse()])
 
         handlePushTransform = transformUtils.frameFromPositionAndRPY([0.0, 0.0, 0.0],
-                                                                     [0, 0, self.handlePushAngle])
+                                                                     [0, 0, -doorSide*self.handlePushAngle])
         doorHandlePushFrame = transformUtils.concatenateTransforms([finalGraspToReferenceTransfrom,
                                                                     handlePushTransform,
                                                                     self.doorHingeFrame.transform])
@@ -712,8 +719,7 @@ class DoorDemo(object):
         doorHeight = 81 * 0.0254
         doorDepth = 1.5 * 0.0254
 
-        doorSide = 1 # handle on left
-        doorSide = -1 # handle on right
+        doorSide = 1 if self.graspingHand == 'left' else -1
         handleHeightFromGround = 37 * 0.0254
         handleDistanceFromEdge = 2 * 0.0254
         handleDistanceFromDoor = 3.0 * 0.0254
