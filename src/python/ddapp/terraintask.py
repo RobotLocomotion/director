@@ -152,7 +152,7 @@ class TerrainTask(object):
     def getTerrainFieldDescription(self):
         # F=sloping up forward (+x), B=sloping up backward (-x),
         # R=sloping up rightward (-y), L=sloping up leftward (+y)
-        # first row is closest to robot
+        # last row is closest to robot (robot is on bottom looking up)
         # column order is left-to-right on robot (+y to -y)
         blockTypes = [
             [ 'B', 'L', 'F', 'R', 'B', 'L' ],
