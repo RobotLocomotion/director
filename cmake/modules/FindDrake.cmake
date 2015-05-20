@@ -17,6 +17,7 @@ endmacro()
 find_drake_library(DRAKE_RBM_LIBRARY drakeRBM "Drake RBM library")
 find_drake_library(DRAKE_JOINTS_LIBRARY drakeJoints "Drake Joints library")
 find_drake_library(DRAKE_SHAPES_LIBRARY drakeShapes "Drake Shapes library")
+find_drake_library(DRAKE_CHULL_LIBRARY drakeConvexHull "Drake Convex Hull library")
 
 
 

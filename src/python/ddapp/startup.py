@@ -66,6 +66,7 @@ from ddapp import pfgrasp
 from ddapp import pfgrasppanel
 from ddapp.jointpropagator import JointPropagator
 
+from ddapp import copmonitor
 from ddapp import robotplanlistener
 from ddapp import handdriver
 from ddapp import planplayback
@@ -152,6 +153,7 @@ useDataFiles = True
 usePFGrasp = False
 useGamepad = True
 useRandomWalk = True
+useCOPMonitor = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -465,6 +467,8 @@ if usePlanning:
     for obj in om.getObjects():
         obj.setProperty('Deletable', False)
 
+if useCOPMonitor:
+    copMonitor = copmonitor.COPMonitor(robotSystem, view);
 
 if useNavigationPanel:
     navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)

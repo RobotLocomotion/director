@@ -21,6 +21,7 @@ set(python_files
   ddapp/colorize.py
   ddapp/consoleapp.py
   ddapp/continuouswalkingdemo.py
+  ddapp/copmonitor.py
   ddapp/debrisdemo.py
   ddapp/debugVis.py
   ddapp/depthimageprovider.py

@@ -886,6 +886,12 @@ ddDrakeModel::~ddDrakeModel()
 }
 
 //-----------------------------------------------------------------------------
+const ddSharedPtr<RigidBodyManipulator> ddDrakeModel::getDrakeRBM() const
+{
+  return this->Internal->Model;
+}
+
+//-----------------------------------------------------------------------------
 int ddDrakeModel::numberOfJoints()
 {
   if (!this->Internal->Model)
@@ -1107,6 +1113,12 @@ QList<QString> ddDrakeModel::getLinkNames()
     return QList<QString>();
   }
   return this->Internal->Model->getLinkIds().keys();
+}
+
+//-----------------------------------------------------------------------------
+int ddDrakeModel::findLinkID(const QString& linkName) const
+{
+  return this->Internal->Model->findLinkId(linkName.toAscii().data(), -1);
 }
 
 //-----------------------------------------------------------------------------
