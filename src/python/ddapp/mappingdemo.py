@@ -177,7 +177,7 @@ class MappingDemo(object):
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
     def moveRoomSweepOnwards(self):
-        self.currentYawDegrees = self.currentYawDegrees - 30
+        self.currentYawDegrees = self.currentYawDegrees - 20
         self.fromTop = not self.fromTop
 
     def planTargetReach(self):
@@ -353,6 +353,7 @@ class MappingDemo(object):
         self.planFromCurrentRobotState = False
         self.plans = []
         self.currentYawDegrees = 60
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
 
         self.nextPosition =[0,0,0]
         self.targetPath = []
@@ -403,7 +404,10 @@ class MappingDemo(object):
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
         self.planFromCurrentRobotState = True
         self.visOnly = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 10
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 5
+        self.currentYawDegrees = 60
+        self.fromTop = True
+        self.mapFolder=om.getOrCreateContainer('room mapping')
 
         taskQueue = AsyncTaskQueue()
         self.addTasksToQueueSweep(taskQueue)
@@ -411,14 +415,19 @@ class MappingDemo(object):
         self.addTasksToQueueSweep(taskQueue)
         self.addTasksToQueueSweep(taskQueue)
         self.addTasksToQueueSweep(taskQueue)
+        self.addTasksToQueueSweep(taskQueue)
+        self.addTasksToQueueSweep(taskQueue)
         taskQueue.addTask(self.printAsync('done!'))
+        return taskQueue
         
     def addTasksToQueueSweep(self, taskQueue):        
         taskQueue.addTask(self.getRoomSweepFrames)
         taskQueue.addTask(self.planRoomReach)        
-        taskQueue.addTask(self.optionalUserPrompt('execute next reach? y/n: '))
+        taskQueue.addTask(self.optionalUserPrompt('execute reach? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
         taskQueue.addTask(self.planRoomSweep)        
-        taskQueue.addTask(self.optionalUserPrompt('execute next sweep? y/n: '))
+        taskQueue.addTask(self.optionalUserPrompt('execute sweep? y/n: '))
+        taskQueue.addTask(self.animateLastPlan)
         taskQueue.addTask(self.moveRoomSweepOnwards)                
         
         return taskQueue
