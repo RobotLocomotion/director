@@ -2,6 +2,7 @@ import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 from ddapp import applogic as app
 from ddapp.timercallback import TimerCallback
+from functools import partial
 
 
 def addWidgetsToDict(widgets, d):
@@ -52,6 +53,9 @@ class AtlasDriverPanel(object):
         self.ui.recoveryOffButton.connect('clicked()', self.driver.sendRecoveryDisable)
         self.ui.bracingOnButton.connect('clicked()', self.driver.sendBracingEnable)
         self.ui.bracingOffButton.connect('clicked()', self.driver.sendBracingDisable)
+        for psi in [1500, 2000, 2400, 2650]:
+            self.ui.__dict__['setPressure' + str(psi) + 'Button'].connect('clicked()', partial(self.driver.sendDesiredPumpPsi, psi))
+        self.ui.sendCustomPressureButton.connect('clicked()', self.sendCustomPressure)
         self.setupElectricArmCheckBoxes()
 
         PythonQt.dd.ddGroupBoxHider(self.ui.calibrationGroupBox)
@@ -96,6 +100,7 @@ class AtlasDriverPanel(object):
         self.ui.returnPressure.value = self.driver.getCurrentReturnPressure()
         self.ui.airSumpPressure.value = self.driver.getCurrentAirSumpPressure()
         self.ui.pumpRpm.value =  self.driver.getCurrentPumpRpm()
+        self.ui.maxActuatorPressure.value = self.driver.getMaxActuatorPressure()
 
     def getElectricArmCheckBoxes(self):
         return [self.ui.armCheck1,
@@ -178,6 +183,9 @@ class AtlasDriverPanel(object):
 
     def onUser(self):
         self.driver.sendUserCommand()
+
+    def sendCustomPressure(self):
+        self.driver.sendDesiredPumpPsi(self.ui.customPumpPressure.value)
 
 
 

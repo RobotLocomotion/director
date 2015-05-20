@@ -3,6 +3,7 @@ import vtkAll as vtk
 from ddapp import botpy
 import math
 import numpy as np
+from collections import deque
 
 from ddapp import transformUtils
 from ddapp import lcmUtils
@@ -43,6 +44,8 @@ class AtlasDriver(object):
         self.lastAtlasBatteryDataMessage = None
         self.lastAtlasElectricArmStatusMessage = None
         self.lastControllerRateMessage = None
+        self.maxPressureHistory = deque([0.0], 10)
+        self.averageRecentMaxPressure = 0.0
         self._setupSubscriptions()
         self.timer = SimpleTimer()
 
@@ -58,6 +61,8 @@ class AtlasDriver(object):
         lcmUtils.addSubscriber('CONTROLLER_RATE', lcmdrc.message_rate_t, self.onControllerRate)
         sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
         sub.setSpeedLimit(60)
+        sub = lcmUtils.addSubscriber('ATLAS_STATE_EXTRA', lcmdrc.atlas_state_extra_t, self.onAtlasStateExtra)
+        sub.setSpeedLimit(5)
 
     def onAtlasStatus(self, message):
         self.lastAtlasStatusMessage = message
@@ -73,6 +78,10 @@ class AtlasDriver(object):
 
     def onAtlasElectricArmStatus(self, message):
         self.lastAtlasElectricArmStatusMessage = message
+
+    def onAtlasStateExtra(self, message):
+        self.maxPressureHistory.append(max(np.max(message.psi_pos), np.max(message.psi_neg)))
+        self.averageRecentMaxPressure = np.mean(self.maxPressureHistory)
 
     def getBehaviorMap(self):
         '''
@@ -219,6 +228,39 @@ class AtlasDriver(object):
         if self.lastAtlasStatusMessage:
             return self.lastAtlasStatusMessage.current_pump_rpm
         return 0.0
+
+    def getMaxActuatorPressure(self):
+        return self.averageRecentMaxPressure
+
+    def sendDesiredPumpPsi(self, desiredPsi):
+        msg = lcmdrc.atlas_pump_command_t()
+        msg.utime = getUtime()
+
+        msg.k_psi_p = 0.0  # Gain on pressure error (A/psi)
+        msg.k_psi_i = 0.0  # Gain on the integral of the pressure error (A/(psi/s)
+        msg.k_psi_d = 0.0  # Gain on the derivative of the pressure error (A/(psi s)
+
+        msg.k_rpm_p = 0.0  # Gain on rpm error (A / rpm)
+        msg.k_rpm_i = 0.0  # Gain on the integral of the rpm error (A / (rpm s))
+        msg.k_rpm_d = 0.0  # Gain on the derivative of the rpm error (A / (rpm/s)
+
+        msg.ff_rpm_d = 0.0  # Feed-forward gain on the desired rpm (A / rpm)
+        msg.ff_psi_d = 0.0  # Feed-forward gain on the desired pressure (A / psi)
+        msg.ff_const = 0.0  # Constant current term (Amps)
+
+        msg.psi_i_max = 0.0  # Max. abs. value to which the integral psi error is clamped (psi s)
+        msg.rpm_i_max = 0.0  # Max. abs. value to which the integral rpm error is clamped (rpm s)
+
+        # Max. command output (A). Default is 60 Amps.
+        # This value may need to be lower than the default in order to avoid
+        # causing the motor driver to fault.
+        msg.cmd_max = 60
+
+        msg.desired_psi = desiredPsi # default should be 1500
+        msg.desired_rpm = 5000  # default should be 5000
+
+        lcmUtils.publish('ATLAS_PUMP_COMMAND', msg)
+
 
     def sendBehaviorCommand(self, behaviorName):
 
