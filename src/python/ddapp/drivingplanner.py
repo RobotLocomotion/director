@@ -621,9 +621,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.affordanceUpdater.timer.start()        
         self.affordanceUpdaterLeft.timer.start()
 
-
-
-
         self.imageViewLayout.addWidget(self.imageView.view)
         self.imageViewLayout.addWidget(self.imageViewLeft.view)
 
