@@ -197,6 +197,9 @@ class TerrainTask(object):
         blockObjectTable = self.createBlockObjectTable()
         desc = self.terrainFieldDescription
 
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        stanceAxes = transformUtils.getAxesFromTransform(stanceFrame)
+
         # generate footstep frames
         leadingFoot = footstepData[0][0]
         stepFrames = []
@@ -207,10 +210,14 @@ class TerrainTask(object):
                 return
             z = np.array(block.getProperty('Dimensions'))[2]/2.0
             t = transformUtils.copyFrame(block.getChildFrame().transform)
-            theta = desc['blockAngleMap'][desc['blockTypes'][blockIndex[0]][blockIndex[1]]]
+            # TODO: should feet be aligned with forward direction or block?
+            blockAxes = transformUtils.getAxesFromTransform(t)
+            x = np.round(np.dot(stanceAxes[0], blockAxes[0]))
+            y = np.round(np.dot(stanceAxes[0], blockAxes[1]))
+            theta = np.degrees(np.arctan2(y,x))
             pt = np.array([offset[0], offset[1], z])
             t.PreMultiply()
-            t.RotateZ(-theta);
+            t.RotateZ(theta);
             t.Translate(pt)
             stepFrames.append(t)
             #obj = vis.showFrame(t, '%s step frame' % block.getProperty('Name'), parent='step frames', scale=0.2)
@@ -339,14 +346,32 @@ class TerrainTask(object):
             return
         pickedIdealBlock = pickedIdealBlock[0]
 
-        idealToDetected = self.computeAligningTransform(pickedIdealBlock, pickedDetectedBlock)
-        print 'TRANSFORM', idealToDetected
+        t1 = transformUtils.copyFrame(pickedIdealBlock.getChildFrame().transform)
+        t2 = transformUtils.copyFrame(pickedDetectedBlock.getChildFrame().transform)
+        axes1 = transformUtils.getAxesFromTransform(t1)
+        axes2 = transformUtils.getAxesFromTransform(t2)
+        R1 = np.array(axes1).T
+        R2 = np.array(axes2).T
+        R = R2.T.dot(R1)
+        permIndices = np.argmax(np.fabs(R),axis=1)
+        R2 = R2[:,permIndices]
+        values = [R[permIndices[0]][0], R[permIndices[1]][1], R[permIndices[2]][2]]
+        R2 = R2.dot(np.sign(np.diag(np.array(values))))
+        rot = R2.T.dot(R1)
         
+        correction = vtk.vtkTransform()
+        correction.PostMultiply()
+        correction.Translate(-np.array(t1.GetPosition()))
+        rotTransform = transformUtils.getTransformFromAxes(rot[0,:],rot[1,:],rot[2,:])
+        correction.Concatenate(rotTransform)
+        correction.Translate(t2.GetPosition())
+
         # move all ideal blocks
         for b in idealBlocks:
             t = b.getChildFrame().transform
             t.PostMultiply()
-            t.Concatenate(idealToDetected)
+            t.Concatenate(correction)
+            t.Modified()
 
         # associate blocks (only use xy distances)
         # TODO: this is brute force, could use table instead
@@ -354,6 +379,7 @@ class TerrainTask(object):
         for b in detectedBlocks:
             t1 = b.getChildFrame().transform
             p1 = np.array(t1.GetPosition())
+            normal1 = np.array(transformUtils.getAxesFromTransform(t1)[2])
             bestMatch = None
             minDist = 1e10
             for ib in idealBlocks:
@@ -364,34 +390,35 @@ class TerrainTask(object):
                     minDist = dist
                     bestMatch = ib
             if minDist < blockWidth/4:
-                # TODO: should sanity check angle between normal vectors
+                t2 = bestMatch.getChildFrame().transform
+                normal2 = np.array(transformUtils.getAxesFromTransform(t2)[2])
+                if np.arccos(np.dot(normal1,normal2)) > np.radians(20):
+                    print 'warning: normal mismatch between %s and %s' % (b.getProperty('Name'), bestMatch.getProperty('Name'))
+                    continue
                 matches.append((b,bestMatch))
 
         # TODO: compute and apply transform using all matches
-        idealToDetected = vtk.vtkTransform()
+        correction = vtk.vtkTransform()
         for b in idealBlocks:
             t = b.getChildFrame().transform
             t.PostMultiply()
-            t.Concatenate(idealToDetected)
+            t.Concatenate(correction)
+            t.Modified()
         
         # adjust matched blocks
         for match in matches:
-            # TODO adjustment = self.computeAligningTransform(match[1], match[0])
-            match[1].getChildFrame().transform.PostMultiply()
-            match[1].getChildFrame().transform.Concatenate(adjustment)
+            t1 = transformUtils.copyFrame(pickedIdealBlock.getChildFrame().transform)
+            t2 = transformUtils.copyFrame(pickedDetectedBlock.getChildFrame().transform)
+            correction = vtk.vtkTransform()
+            correction.PreMultiply()
+            correction.Concatenate(t2)
+            correction.Concatenate(t1.GetLinearInverse())
+            t = match[1].getChildFrame().transform
+            t.PostMultiply()
+            t.Concatenate(correction)
+            t.Modified()
 
 
-    def computeAligningTransform(self, objFrom, objTo):
-        frameFrom = transformUtils.copyFrame(objFrom.getChildFrame().transform)
-        print 'FROM', frameFrom
-        frameTo = transformUtils.copyFrame(objTo.getChildFrame().transform)
-        print 'TO', frameTo
-        transform = frameTo.GetLinearInverse()
-        print 'INV', transform
-        transform.PreMultiply()
-        transform.Concatenate(frameFrom)
-        print 'FINAL',transform
-        return transform
 
 
     def spawnTiltedCinderblocks(self):
