@@ -89,6 +89,8 @@ DEFAULT_STEP_PARAMS['Terrain'].update({'Drake Min Hold Time': 1.0,
                                        'Map Mode': 1})
 DEFAULT_STEP_PARAMS['Stairs'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
+                                      'Max Num Steps': 8,
+                                      'Min Num Steps': 8,
                                       'Drake Swing Speed': 0.4,
                                       'Map Mode': 2})
 
