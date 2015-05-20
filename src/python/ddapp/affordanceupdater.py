@@ -5,7 +5,6 @@ from ddapp import transformUtils
 from ddapp import filterUtils
 from ddapp.timercallback import TimerCallback
 
-
 class AffordanceGraspUpdater(object):
 
     def __init__(self, robotModel, extraModels=None):
@@ -78,7 +77,7 @@ class AffordanceInCameraUpdater(object):
         self.imageQueue = imageView.imageManager.queue
         self.timer = TimerCallback(targetFps=10)
         self.timer.callback = self.update
-
+        self.prependImageName = False
 
     def getOverlayRenderer(self, imageView):
 
@@ -103,15 +102,25 @@ class AffordanceInCameraUpdater(object):
             overlayRenderer.AddActor(obj.actor)
             renderers.append(overlayRenderer)
 
-    def setupObjectInCamera(self, obj):
+    def getParentName(self):
+        if self.prependImageName:
+            return self.imageView.imageName + ' camera overlay'
+        else:
+            return 'camera overlay'
 
+
+    def setupObjectInCamera(self, obj):
         imageView = self.imageView
-        obj = vis.updatePolyData(vtk.vtkPolyData(), self.getTransformedName(obj), view=imageView.view, color=obj.getProperty('Color'), parent='camera overlay', visible=obj.getProperty('Visible'))
+        obj = vis.updatePolyData(vtk.vtkPolyData(), self.getTransformedName(obj), view=imageView.view, color=obj.getProperty('Color'), parent=self.getParentName(), visible=obj.getProperty('Visible'))
         self.addActorToImageOverlay(obj, imageView)
         return obj
 
     def getTransformedName(self, obj):
-        return 'overlay ' + obj.getProperty('Name')
+        if self.prependImageName:
+            return 'overlay ' + self.imageView.imageName + ' ' + obj.getProperty('Name')
+        else:
+            return 'overlay ' + obj.getProperty('Name')
+
 
     def getFootsteps(self):
         plan = om.findObjectByName('footstep plan')
@@ -131,7 +140,6 @@ class AffordanceInCameraUpdater(object):
         return overlayObj or self.setupObjectInCamera(obj)
 
     def update(self):
-
         imageView = self.imageView
 
         if not imageView.imageInitialized:
@@ -147,7 +155,7 @@ class AffordanceInCameraUpdater(object):
             self.updateObjectInCamera(obj, cameraObj)
             updated.add(cameraObj)
 
-        folder = om.findObjectByName('camera overlay')
+        folder = om.findObjectByName(self.getParentName())
         if folder:
             for child in folder.children():
                 if child not in updated:
