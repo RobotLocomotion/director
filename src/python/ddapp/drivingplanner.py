@@ -17,7 +17,7 @@ from ddapp.debugVis import DebugData
 from ddapp.utime import getUtime
 from ddapp.ikplanner import ConstraintSet
 import ddapp.tasks.robottasks as rt
-
+from ddapp.ikparameters import IkParameters
 
 import os
 import functools
@@ -207,7 +207,7 @@ class DrivingPlanner(object):
         constraints.extend(footPoseConstraint)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_start'
         cs.nominalPoseName = 'q_start'
         endPose = cs.runIk()
@@ -240,7 +240,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -276,7 +276,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -309,7 +309,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -343,7 +343,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -372,7 +372,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(quasiStaticShrinkFactor=1, maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(quasiStaticShrinkFactor=1, maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -382,7 +382,7 @@ class DrivingPlanner(object):
         return keyFramePlan
 
 
-    def planSteeringWheelReGrasp(self):
+    def planSteeringWheelReGrasp(self, useLineConstraint=False):
         ikPlanner = self.robotSystem.ikPlanner
         startPose = self.getPlanningStartPose()
         startPoseName = 'q_regrasp_start'
@@ -391,19 +391,10 @@ class DrivingPlanner(object):
         handName = 'left'
         handLinkName = 'l_hand'
         maxMetersPerSecond = 0.1
-
         retractDepth = 0.15
+        palmToHand = ikPlanner.getPalmToHandLink(handName)
 
-        ikServer = ikPlanner.ikServer
-        ikServer.maxBodyTranslationSpeed = maxMetersPerSecond
-        ikServer.rescaleBodyNames = [handLinkName]
-        ikServer.rescaleBodyPts = list(ikPlanner.getPalmPoint())
-
-        ikParameterDict = dict(maxDegreesPerSecond=100)
-        ikParametersOriginal = ikPlanner.setIkParameters(ikParameterDict)
-
-
-        palmToWorld = ikPlanner.newGraspToWorldFrame(startPose, handName, ikPlanner.getPalmToHandLink(handName))
+        palmToWorld = ikPlanner.newGraspToWorldFrame(startPose, handName, palmToHand)
         finalTargetFrame = transformUtils.copyFrame(palmToWorld)
         finalTargetFrame.PreMultiply()
         finalTargetFrame.RotateY(180)
@@ -436,27 +427,43 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(quasiStaticShrinkFactor=10, usePointwise=False, maxDegreesPerSecond=60,
+            maxBodyTranslationSpeed=maxMetersPerSecond, rescaleBodyNames=[handLinkName], rescaleBodyPts=list(ikPlanner.getPalmPoint()))
         constraintSet.seedPoseName = seedPoseName
         constraintSet.nominalPoseName = seedPoseName
 
-        for c in constraintSet.constraints:
-            print c
+        # for c in constraintSet.constraints:
+        #     print c
 
-        vis.updateFrame(palmToWorld, 'palm frame')
-        vis.updateFrame(finalTargetFrame, 'target frame')
+        # vis.updateFrame(palmToWorld, 'palm frame')
+        # vis.updateFrame(finalTargetFrame, 'target frame')
 
         endPose = constraintSet.runIk()
-        # plan = constraintSet.planEndPoseGoal()
-        # return
-        # cs = 
 
+        # move on line constraint
+        motionVector = np.array(retractTargetFrame.GetPosition()) - np.array(palmToWorld.GetPosition())
+        motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(retractTargetFrame.GetPosition()), motionVector)
+
+        # vis.updateFrame(motionTargetFrame,'motion frame')
+        # vis.updateFrame(targetFrame, 'target')
+        # vis.updateFrame(currentFrame, 'current')
+
+        p = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0], positionTolerance=0.001)
+        p.tspan = np.array([0.12,0.9])
+
+        # p_out = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0], positionTolerance=0.001)
+        # p_out.tspan = np.linspace(,1,5)
+
+        endPose = constraintSet.runIk()
         constraintSet.constraints.extend(retractPoseConstraint)
-        constraintSet.constraints.extend(preGraspPoseConstraint)
+        constraintSet.constraints.extend(preGraspPoseConstraint)        
+        if useLineConstraint:
+            constraintSet.constraints.append(p)
+            plan = constraintSet.runIkTraj()
+        else:
+            plan = constraintSet.runIkTraj()
 
-        plan = constraintSet.runIkTraj()
-        self.plans.append(plan)
-
-        ikPlanner.setIkParameters(ikParametersOriginal)
+        self.plans.append(plan)        
         return plan
 
 
@@ -473,6 +480,13 @@ class DrivingPlanner(object):
         orientationConstraint.tspan = tspan
         return positionConstraint, orientationConstraint
 
+
+    def createPalmPoseConstraints(self, side, targetFrame, tspan=[-np.inf, np.inf]):
+        ikPlanner = self.robotSystem.ikPlanner
+        positionConstraint, orientationConstraint = ikPlanner.createPositionOrientationGraspConstraints(side, targetFrame)
+        positionConstraint.tspan = tspan
+        orientationConstraint.tspan = tspan
+        return positionConstraint, orientationConstraint
 
     def createLeftHandPoseConstraintOnWheel(self, depth=0.12, tspan=[-np.inf, np.inf]):
         targetFrame = self.getSteeringWheelPalmFrame()
@@ -492,52 +506,110 @@ class DrivingPlanner(object):
         return frame
 
 
-    def planBarGrasp(self,depth=0, preGrasp=False):
+    def planBarGrasp(self,depth=0.03, useLineConstraint=False):
         ikPlanner = self.robotSystem.ikPlanner
-        handName = 'right'
+        handSide = 'right'
         handLinkName = 'r_hand'
-        palmLinkName = 'r_hand_face'
         startPose = self.getPlanningStartPose()
-        startPoseName = 'q_start_grasp'
+        print startPose
+        startPoseName = 'q_grasp_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_end_grasp'
+
+        palmToHand = ikPlanner.getPalmToHandLink(handSide)
+        palmToWorld = transformUtils.copyFrame(ikPlanner.newGraspToWorldFrame(startPose, handSide, palmToHand))
 
         targetFrame = transformUtils.copyFrame(om.findObjectByName('right hand grab bar').transform)
         targetFrame.PreMultiply()
         targetFrame.Translate([0.0,-depth,0.0])
 
-        # need to remove the quasistatic constraint here, or just enlarge it
-        constraintSet = ikPlanner.planEndEffectorGoal(startPose, 'right', targetFrame, lockBase=True, lockBack=True, lockArm=True)
-        constraintSet.ikParameters = IkParameters(quasiStaticShrinkFactor=10)
+        finalPoseConstraints = self.createPalmPoseConstraints(handSide, targetFrame, tspan=[1,1])
+        allButRightArmPostureConstraint = self.createAllButRightArmPostureConstraint(startPoseName)
 
         seedPoseName = 'q_bar_grab'
-        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'bar_pre_grab', side=handName)
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'bar_pre_grab', side=handSide)
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
-
-        constraintSet.seedPoseName = 'q_bar_grab'
-        constraintSet.nominalPoseName = 'q_bar_grab'
+        
+        constraints = [allButRightArmPostureConstraint]
+        constraints.extend(finalPoseConstraints)
+        constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(quasiStaticShrinkFactor=10, usePointwise=False)
+        constraintSet.seedPoseName = seedPoseName
+        constraintSet.nominalPoseName = seedPoseName
 
         # move on line constraint
-        currentFrame = ikPlanner.getLinkFrameAtPose(palmLinkName,startPose)
-        motionVector = np.array(targetFrame.GetPosition()) - np.array(currentFrame.GetPosition())
+        motionVector = np.array(targetFrame.GetPosition()) - np.array(palmToWorld.GetPosition())
         motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(targetFrame.GetPosition()), motionVector)
 
         # vis.updateFrame(motionTargetFrame,'motion frame')
         # vis.updateFrame(targetFrame, 'target')
         # vis.updateFrame(currentFrame, 'current')
 
-
-        palmToHand = ikPlanner.getPalmToHandLink(handName)
-        p = ikPlanner.createLinePositionConstraint('r_hand_face', vtk.vtkTransform(), motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1.1, 0.0], positionTolerance=0.02)
-        p.tspan = np.linspace(0,1,2)
-
-        if preGrasp:
-            endPose = constraintSet.runIk()
-            plan = constraintSet.planEndPoseGoal()
-        else:
+        p = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0], positionTolerance=0.001)
+        p.tspan = np.linspace(0.2,0.8,5)
+        
+        endPose = constraintSet.runIk()
+        if useLineConstraint:
             constraintSet.constraints.append(p)
-            endPose = constraintSet.runIk()
             plan = constraintSet.runIkTraj()
+        else:
+            plan = constraintSet.planEndPoseGoal()
+
+        self.plans.append(plan)
+        return plan
+
+    def planBarRetract(self, depth=0.3, useLineConstraint=False):
+        ikPlanner = self.robotSystem.ikPlanner
+        handSide = 'right'
+        handLinkName = 'r_hand'
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_grasp_start'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_end_grasp'
+        maxBodyTranslationSpeed = 0.3
+
+        palmToHand = ikPlanner.getPalmToHandLink(handSide)
+        palmToWorld = transformUtils.copyFrame(ikPlanner.newGraspToWorldFrame(startPose, handSide, palmToHand))
+
+        targetFrame = transformUtils.copyFrame(palmToWorld)
+        targetFrame.PreMultiply()
+        targetFrame.Translate([0.0,-depth,0.0])
+
+        finalPoseConstraints = self.createPalmPoseConstraints(handSide, targetFrame, tspan=[1,1])
+        allButRightArmPostureConstraint = self.createAllButRightArmPostureConstraint(startPoseName)
+
+        
+
+        seedPoseName = 'q_bar_grab'
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'bar_pre_grab', side=handSide)
+        self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
+
+
+        
+        constraints = [allButRightArmPostureConstraint]
+        constraints.extend(finalPoseConstraints)
+        constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(quasiStaticShrinkFactor=10, usePointwise=False, maxBodyTranslationSpeed=0.3)
+        constraintSet.seedPoseName = 'q_bar_grab'
+        constraintSet.nominalPoseName = 'q_bar_grab'
+
+        # move on line constraint
+        motionVector = np.array(targetFrame.GetPosition()) - np.array(palmToWorld.GetPosition())
+        motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(targetFrame.GetPosition()), motionVector)
+
+        # vis.updateFrame(motionTargetFrame,'motion frame')
+        # vis.updateFrame(targetFrame, 'target')
+        # vis.updateFrame(currentFrame, 'current')
+
+        p = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0.0], positionTolerance=0.02)
+        p.tspan = np.linspace(0,1,5)
+        
+        endPose = constraintSet.runIk()
+        if useLineConstraint:
+            constraintSet.constraints.append(p)
+            plan = constraintSet.runIkTraj()
+        else:
+            plan = constraintSet.planEndPoseGoal()
 
         self.plans.append(plan)
         return plan
@@ -551,6 +623,10 @@ class DrivingPlanner(object):
 
     def createAllButLeftArmPostureConstraint(self, poseName):
         joints = robotstate.matchJoints('^(?!l_arm)')
+        return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
+
+    def createAllButRightArmPostureConstraint(self, poseName):
+        joints = robotstate.matchJoints('^(?!r_arm)')
         return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
 
 
@@ -835,7 +911,10 @@ class DrivingPlannerPanel(TaskUserPanel):
         self._syncProperties()
 
     def onplanBarGrasp(self):
-        self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, preGrasp=True)
+        self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, useLineConstraint=False)
+
+    def onplanBarRetract(self):
+        self.drivingPlanner.planBarRetract(depth=self.barGraspDepth, useLineConstraint=True)
 
     def setParamsPreGrasp1(self):
         self.params.setProperty('PreGrasp/Retract Depth', 0.22)
@@ -925,7 +1004,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         folder = addFolder('Ungrasp Bar')
         addTask(rt.UserPromptTask(name="open right hand", message="Please open right hand"))
         addFunc(self.setParamsBarRetract, 'set params')
-        addManipTask('Retract hand', self.onplanBarGrasp, userPrompt=True)
+        addManipTask('Retract hand', self.onplanBarRetract, userPrompt=True)
         addTask(rt.UserPromptTask(name="close right hand", message="Please close right hand"))
 
 
