@@ -34,7 +34,7 @@ class DrivingPlanner(object):
         self.steeringAngleDegrees = 0.0
         self.maxTurningRadius = 9.5
         self.trajectoryX = 0
-        self.trajectoryY = 0
+        self.trajectoryY = 0.3
         self.trajectoryAngle = 0
         self.trajSegments = 25
         self.wheelDistance = 1.4
@@ -581,6 +581,14 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.imageView = cameraview.CameraImageView(cameraview.imageManager, 'CAMERACHEST_RIGHT', 'right image view')
         self.imageViewLeft = cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'left image view')
         
+        self.imageView.view.orientationMarkerWidget().Off()
+        self.imageView.view.backgroundRenderer().SetBackground([0,0,0])
+        self.imageView.view.backgroundRenderer().SetBackground2([0,0,0])
+
+        self.imageViewLeft.view.orientationMarkerWidget().Off()
+        self.imageViewLeft.view.backgroundRenderer().SetBackground([0,0,0])
+        self.imageViewLeft.view.backgroundRenderer().SetBackground2([0,0,0])
+        
         self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, self.imageView)
         self.affordanceUpdaterLeft = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, self.imageViewLeft)
         
@@ -634,7 +642,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Wheel Separation', 1.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Segments', 25, attributes=om.PropertyAttributes(singleStep=1, decimals=0))
         self.params.addProperty('Trajectory X Offset', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2)),
-        self.params.addProperty('Trajectory Y Offset', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
+        self.params.addProperty('Trajectory Y Offset', 0.30, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Angle Offset', 0.0, attributes=om.PropertyAttributes(singleStep=1, decimals=0)),
         self.params.addProperty('Show Trajectory', False)
         self._syncProperties()
