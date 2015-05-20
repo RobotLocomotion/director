@@ -4,7 +4,6 @@ import ddapp.objectmodel as om
 from ddapp import lcmUtils
 from ddapp import applogic as app
 from ddapp.utime import getUtime
-from ddapp.timercallback import TimerCallback
 from ddapp import visualization as vis
 from ddapp.debugVis import DebugData
 from scipy.spatial import Delaunay
@@ -20,7 +19,7 @@ class COPMonitor(object):
                                 [0.17, 0.0562, 0.0],
                                 [0.17, -0.0562, 0.0]]
     DESIRED_INTERIOR_DISTANCE = 0.05
-    UPDATE_RATE = 5
+
     def __init__(self, robotSystem, view):
 
         self.robotStateModel = robotSystem.robotStateModel
@@ -41,11 +40,10 @@ class COPMonitor(object):
         vis.updatePolyData(d.getPolyData(), 'measured cop', view=self.view, parent='robot state model')
         om.findObjectByName('measured cop').setProperty('Visible', False)
 
-        self.updateTimer = TimerCallback(self.UPDATE_RATE)
-        self.updateTimer.callback = self.update
-        self.updateTimer.start()
+        
+        self.robotStateModel.connectModelChanged(self.update)
 
-    def update(self):
+    def update(self, unused):
         if (om.findObjectByName('measured cop').getProperty('Visible') and hasattr(self.robotStateJointController, 'lastRobotStateMessage') and 
             self.robotStateJointController.lastRobotStateMessage):
 
