@@ -13,7 +13,7 @@ from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp.debugVis import DebugData
 from ddapp import ioUtils
-from ddapp.simpletimer import SimpleTimer
+from ddapp.simpletimer import SimpleTimer, MovingAverageComputer
 from ddapp.utime import getUtime
 import time
 
@@ -44,8 +44,8 @@ class AtlasDriver(object):
         self.lastAtlasBatteryDataMessage = None
         self.lastAtlasElectricArmStatusMessage = None
         self.lastControllerRateMessage = None
-        self.maxPressureHistory = deque([0.0], 10)
-        self.averageRecentMaxPressure = 0.0
+
+        self.maxPressureAverager = MovingAverageComputer()
         self._setupSubscriptions()
         self.timer = SimpleTimer()
 
@@ -80,8 +80,7 @@ class AtlasDriver(object):
         self.lastAtlasElectricArmStatusMessage = message
 
     def onAtlasStateExtra(self, message):
-        self.maxPressureHistory.append(max(np.max(message.psi_pos), np.max(message.psi_neg)))
-        self.averageRecentMaxPressure = np.mean(self.maxPressureHistory)
+        self.maxPressureAverager.update(max(np.max(message.psi_pos), np.max(message.psi_neg)))
 
     def getBehaviorMap(self):
         '''
@@ -230,7 +229,7 @@ class AtlasDriver(object):
         return 0.0
 
     def getMaxActuatorPressure(self):
-        return self.averageRecentMaxPressure
+        return self.maxPressureAverager.getAverage()
 
     def sendDesiredPumpPsi(self, desiredPsi):
         msg = lcmdrc.atlas_pump_command_t()
