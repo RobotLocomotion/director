@@ -277,8 +277,8 @@ class IKPlanner(object):
             self.leftFootLink =  drcargs.getDirectorConfig()['leftFootLink']
             self.rightFootLink = drcargs.getDirectorConfig()['rightFootLink']
         else:
-	    # print "No foot links found in config, assuming fixedBaseArm=True"
-	    self.fixedBaseArm = True
+            # print "No foot links found in config, assuming fixedBaseArm=True"
+            self.fixedBaseArm = True
 
 
     def getJointGroup(self, name):
