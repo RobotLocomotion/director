@@ -557,13 +557,11 @@ def showRightClickMenu(displayPoint, view):
         polyDataInto.ShallowCopy(sel.polyData)
         if sel.getChildFrame():
             polyDataInto = segmentation.transformPolyData(polyDataInto, sel.getChildFrame().transform)
-        polyDataInto = segmentation.addCoordArraysToPolyData(polyDataInto)
 
         polyDataFrom = vtk.vtkPolyData()
         polyDataFrom.DeepCopy(pointCloudObj.polyData)
         if pointCloudObj.getChildFrame():
             polyDataFrom = segmentation.transformPolyData(polyDataFrom, pointCloudObj.getChildFrame().transform)
-        polyDataFrom = segmentation.addCoordArraysToPolyData(polyDataFrom)
 
         # Actual merge
         append = filterUtils.appendPolyData([polyDataFrom, polyDataInto])
