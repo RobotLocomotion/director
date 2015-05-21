@@ -662,7 +662,7 @@ class ImageOverlayManager(object):
         imageView.view.hide()
         imageView.view.setParent(view)
         imageView.view.resize(self.size, self.size)
-        imageView.view.move(view.size.width()-self.size, 0)
+        imageView.view.move(*self.position)
         imageView.view.show()
 
         if self.usePicker:
