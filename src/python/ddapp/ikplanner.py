@@ -230,6 +230,14 @@ class IKPlanner(object):
         self.jointController = jointController
         self.handModels = handModels
 
+        msg1 = lcmdrc.robot_state_t()
+        msg1.joint_name = list(self.jointController.jointNames)
+        msg1.num_joints = len(msg1.joint_name)
+        msg1.joint_position = [0]*msg1.num_joints
+        msg1.joint_velocity = [0]*msg1.num_joints
+        msg1.joint_effort = [0]*msg1.num_joints
+        lcmUtils.publish('PLANNER_SETUP_JOINT_NAMES', msg1) 
+
         self.ikServer.handModels = self.handModels
 
         self.reachingSide = 'left'
