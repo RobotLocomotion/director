@@ -40,6 +40,12 @@ public:
   void Start();
   void Stop();
 
+  vtkGetVector2Macro(DistanceRange, double);
+  vtkSetVector2Macro(DistanceRange, double);
+
+  void SetEdgeAngleThreshold(double threshold);
+  double GetEdgeAngleThreshold();
+
   int GetNumberOfDatasets(int viewId);
   vtkPolyData* GetDataset(int viewId, vtkIdType i);
 
@@ -64,6 +70,8 @@ protected:
   vtkMapServerSource();
   virtual ~vtkMapServerSource();
 
+  double DistanceRange[2];
+  double EdgeAngleThreshold;
 
 private:
   vtkMapServerSource(const vtkMapServerSource&);  // Not implemented.
