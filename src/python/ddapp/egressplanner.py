@@ -38,53 +38,43 @@ class PolarisModel(object):
                     Filename='software/models/polaris/polaris_cropped.vtp', pose=pose)
         self.pointcloudAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         self.originFrame = self.pointcloudAffordance.getChildFrame()
-        self.originToAprilTransform = vtk.vtkTransform() # this should be updated when we remount the April tag
+        self.originToAprilTransform = vtk.vtkTransform()
 
-        t = transformUtils.transformFromPose(np.array([-0.96427236,  0.06193934,  0.3543806 ]),
-            np.array([ 0.18153211,  0.83526159,  0.42728504,  0.29463821]))
-        self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
-
-        t = transformUtils.transformFromPose(np.array([-0.93707546,  0.07409333,  0.32871604]),
-                                             np.array([ 0.22455191,  0.71396247,  0.60983921,
-                                                       0.26063418]))
-        self.leftFootEgressInsideFrame  = vis.updateFrame(t, 'left foot inside', scale=0.2,visible=True, parent=self.pointcloudAffordance)
-
-        t = transformUtils.transformFromPose(np.array([-0.89783714,  0.23503719,  0.29039189]),
-                                             np.array([ 0.2331762 ,  0.69031269,  0.6311807,
-                                                       0.2659101]))
+        t = transformUtils.transformFromPose(np.array([ 0.26903719,  0.90783714,  0.24439189]),
+                                             np.array([ 0.35290731,  0.93443693, -0.04181263,  0.02314636]))
         self.leftFootEgressMidFrame  = vis.updateFrame(t, 'left foot mid', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([-0.88436275,  0.50939115,  0.31281047]),
-                                             np.array([ 0.22600245,  0.69177731,  0.63305905,
-                                                       0.26382435]))
+        t = transformUtils.transformFromPose(np.array([ 0.54339115,  0.89436275,  0.26681047]),
+                                             np.array([ 0.34635985,  0.93680077, -0.04152008,  0.02674412]))
         self.leftFootEgressOutsideFrame  = vis.updateFrame(t, 'left foot outside', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
 
-        pose = [np.array([-0.43284877, -0.82362299, -0.24939116]), np.array([ 0.00764553,  0.64088459, -0.01054815,  0.7675267 ])]
+        pose = [np.array([-0.78962299,  0.44284877, -0.29539116]), np.array([ 0.54812954,  0.44571517, -0.46063251,  0.53731713])]
+        t = transformUtils.transformFromPose(pose[0], pose[1])
+        pose = transformUtils.poseFromTransform(t)
 
         desc = dict(classname='CapsuleRingAffordanceItem', Name='Steering Wheel', uuid=newUUID(), pose=pose,
                     Color=[1, 0, 0], Radius=float(0.18), Segments=20)
         self.steeringWheelAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
 
-        t = transformUtils.transformFromPose(np.array([-0.95565326,  0.00645136,  0.30410111]),
-            np.array([ 0.2638261 ,  0.88689326,  0.36270714,  0.11072339]))
 
+        t = transformUtils.transformFromPose(np.array([ 0.04045136,  0.96565326,  0.25810111]),
+            np.array([ 0.26484648,  0.88360091, -0.37065556, -0.10825996]))
         self.leftFootPedalSwingFrame = vis.updateFrame(t,'left foot pedal swing', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([-0.90084703, -0.05962708,  0.31975967]),
-            np.array([ 0.03968859,  0.99239755,  0.03727381,  0.11037472]))
 
+        t = transformUtils.transformFromPose(np.array([-0.02562708,  0.91084703,  0.27375967]),
+            np.array([ 0.10611078,  0.7280876 , -0.67537447,  0.04998264]))
         self.leftFootDrivingFrame = vis.updateFrame(t,'left foot driving', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([ 0.0584505 ,  0.43832744,  0.02401199]),
-            np.array([ 0.62148369,  0.32887677, -0.32946879, -0.63011777]))
+
+        t = transformUtils.transformFromPose(np.array([ 0.47232744, -0.0484505 , -0.02198801]),
+            np.array([  6.10521653e-03,   4.18621358e-04,   4.65520611e-01, 8.85015882e-01]))
         self.rightHandGrabFrame = vis.updateFrame(t,'right hand grab bar', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(self.originFrame)
         self.frameSync.addFrame(self.pointcloudAffordance.getChildFrame(), ignoreIncoming=True)
-        self.frameSync.addFrame(self.leftFootEgressStartFrame, ignoreIncoming=True)
-        self.frameSync.addFrame(self.leftFootEgressInsideFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressMidFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressOutsideFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.steeringWheelAffordance.getChildFrame(), ignoreIncoming=True)
@@ -206,7 +196,7 @@ class EgressPlanner(object):
         g = ik.WorldGazeDirConstraint()
         g.linkName = 'utorso'
         g.targetFrame = vtk.vtkTransform()
-        axes = transformUtils.getAxesFromTransform(self.polaris.leftFootEgressInsideFrame.transform)
+        axes = transformUtils.getAxesFromTransform(self.polaris.leftFootEgressOutsideFrame.transform)
         g.targetAxis = axes[0]
         g.bodyAxis = [1,0,0]
         g.coneThreshold = self.coneThreshold
@@ -299,7 +289,7 @@ class EgressPlanner(object):
         constraintSet.runIk()
 
         footFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('l_foot', startPose)
-        t = transformUtils.frameFromPositionAndRPY([0, 0, self.polaris.leftFootEgressInsideFrame.transform.GetPosition()[2]-footFrame.GetPosition()[2]], [0, 0, 0])
+        t = transformUtils.frameFromPositionAndRPY([0, 0, self.polaris.leftFootEgressOutsideFrame.transform.GetPosition()[2]-footFrame.GetPosition()[2]], [0, 0, 0])
         liftFrame = transformUtils.concatenateTransforms([footFrame, t])
         vis.updateFrame(liftFrame, 'lift frame')
 
@@ -308,7 +298,6 @@ class EgressPlanner(object):
         c.tspan = [0.0, 0.1, 0.2]
         constraints.append(c)
         constraints.extend(self.createLeftFootPoseConstraint(liftFrame, tspan=[0.2, 0.2]))
-        #constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressInsideFrame, tspan=[0.5,0.5]))
         constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressMidFrame, tspan=[0.5, 0.5]))
 
         constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressOutsideFrame, tspan=[0.8, 0.8]))
