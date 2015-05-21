@@ -380,6 +380,10 @@ class TerrainTask(object):
             t.Concatenate(correction)
             t.Modified()
 
+        # reset color of all ideal blocks
+        for b in idealBlocks:
+            b.setProperty('Color', [0.4, 0.6, 0.4]) # TODO: add to config
+
         # associate blocks (only use xy distances)
         # TODO: this is brute force, could use table instead
         matches = []
@@ -403,6 +407,8 @@ class TerrainTask(object):
                     print 'warning: normal mismatch between %s and %s' % (b.getProperty('Name'), bestMatch.getProperty('Name'))
                     continue
                 matches.append((b,bestMatch))
+                bestMatch.setProperty('Color', [0.5, 0.8, 0.5])
+                
 
         # TODO: compute and apply transform using all matches
         correction = vtk.vtkTransform()
