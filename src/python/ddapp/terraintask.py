@@ -108,7 +108,7 @@ class TerrainTask(object):
             msg.dimensions = blockSize
         else:
             msg.dimensions = [0, 0, blockSize[2]]
-        msg.name_prefix = 'cinderblock'
+        msg.name_prefix = self.terrainConfig['blockName']
         msg.algorithm = self.blockFitAlgo
         lcmUtils.publish('BLOCK_FIT_TRIGGER', msg)
 
@@ -155,10 +155,22 @@ class TerrainTask(object):
     #
 
     def loadTerrainConfig(self, terrainType):
+        # first clear out existing affordances
+        if hasattr(self, 'terrainConfig') and self.terrainConfig is not None:
+            blocks = self.getAllBlockAffordances()
+            if blocks is not None:
+                for obj in blocks:
+                    om.removeFromObjectModel(obj)
+
+        # load file
         configDir = os.path.join(ddapp.getDRCBaseDir(), 'software/config')
         configFile = os.path.join(configDir, 'terrain', terrainType+'.py')
         self.terrainConfig = {}
         execfile(configFile, self.terrainConfig)
+        print 'loaded config from', configFile
+
+    def getAllBlockAffordances(self):
+        return [obj for obj in om.getObjects() if obj.getProperty('Name').startswith(self.terrainConfig['blockName'])]
 
     def getTabularBlockAffordances(self):
         blocks = []
@@ -221,7 +233,7 @@ class TerrainTask(object):
         table = [[None for i in range(len(types[0]))] for j in range(len(types))]
         for obj in self.getTabularBlockAffordances():
             name = obj.getProperty('Name')
-            m = re.match('cinderblock \((\d+)\,(\d+)\)', name)
+            m = re.match('%s \((\d+)\,(\d+)\)' % self.terrainConfig['blockName'], name)
             if m is not None:
                 row = int(m.group(1))
                 col = int(m.group(2))
@@ -345,14 +357,20 @@ class TerrainTask(object):
         values = [R[permIndices[0]][0], R[permIndices[1]][1], R[permIndices[2]][2]]
         R2 = R2.dot(np.sign(np.diag(np.array(values))))
         rot = R2.T.dot(R1)
+
+        # find translation so that tops of blocks align
+        d1 = pickedIdealBlock.getProperty('Dimensions')
+        d2 = pickedDetectedBlock.getProperty('Dimensions')
+        pos1 = np.array(t1.GetPosition()) + np.array(axes1[2])*d1[2]/2
+        pos2 = np.array(t2.GetPosition()) + np.array(axes2[2])*d2[2]/2
         
         # compute initial (minimal) transform between selected blocks
         correction = vtk.vtkTransform()
         correction.PostMultiply()
-        correction.Translate(-np.array(t1.GetPosition()))
+        correction.Translate(-np.array(pos1))
         rotTransform = transformUtils.getTransformFromAxes(rot[0,:],rot[1,:],rot[2,:])
         correction.Concatenate(rotTransform)
-        correction.Translate(t2.GetPosition())
+        correction.Translate(pos2)
 
         # move all ideal blocks and reset color
         for b in idealBlocks:
@@ -1180,7 +1198,7 @@ class TerrainTaskPanel(TaskUserPanel):
 
 
     def addDefaultProperties(self):
-        self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=['cinderblock','stairs']))
+        self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=['cinderblocks','stairs']))
         self.params.addProperty('Block Fit Algo', self.terrainTask.blockFitAlgo, attributes=om.PropertyAttributes(enumNames=['MinArea', 'ClosestSize']))
         self.params.addProperty('Constrain Block Size', self.terrainTask.constrainBlockSize)
         self.params.addProperty('Manual Steps Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
@@ -1192,7 +1210,7 @@ class TerrainTaskPanel(TaskUserPanel):
         if propertyName == 'Camera Texture':
             self.terrainTask.useTextures = self.params.getProperty(propertyName)
         elif propertyName == 'Terrain Type':
-            typeMap = {0:'cinderblock',1:'stairs'}
+            typeMap = {0:'cinderblocks',1:'stairs'}
             self.terrainTask.loadTerrainConfig(typeMap[self.params.getProperty(propertyName)])
         elif propertyName == 'Block Fit Algo':
             self.terrainTask.blockFitAlgo = self.params.getProperty(propertyName)
