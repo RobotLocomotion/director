@@ -381,7 +381,6 @@ class TerrainTask(object):
             b.setProperty('Color', self.terrainConfig['blockColor'])
 
         # associate blocks (only use xy distances)
-        # TODO: this is brute force, could use table instead
         matches = []
         blockSize = self.terrainConfig['blockSize']
         for b in detectedBlocks:
@@ -420,7 +419,10 @@ class TerrainTask(object):
             t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
             t2 = transformUtils.copyFrame(match[0].getChildFrame().transform)
             # adjust frames to be centered at the top face
-            # TODO
+            t1.PreMultiply()
+            t1.Translate(0, 0, -match[1].getProperty('Dimensions')[2])
+            t2.PreMultiply()
+            t2.Translate(0, 0, -match[0].getProperty('Dimensions')[2])
             correction = vtk.vtkTransform()
             correction.PreMultiply()
             correction.Concatenate(t2)
