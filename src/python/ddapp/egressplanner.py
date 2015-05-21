@@ -68,14 +68,27 @@ class PolarisModel(object):
         self.pedalAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
 
 
-        t = transformUtils.transformFromPose(np.array([ 0.04045136,  0.96565326,  0.25810111]),
-            np.array([ 0.26484648,  0.88360091, -0.37065556, -0.10825996]))
-        self.leftFootPedalSwingFrame = vis.updateFrame(t,'left foot pedal swing', scale=0.2, visible=True, parent=self.pointcloudAffordance)
-        
+        # t = transformUtils.transformFromPose(np.array([ 0.04045136,  0.96565326,  0.25810111]),
+        #     np.array([ 0.26484648,  0.88360091, -0.37065556, -0.10825996]))
 
-        t = transformUtils.transformFromPose(np.array([-0.02562708,  0.91084703,  0.27375967]),
-            np.array([ 0.10611078,  0.7280876 , -0.67537447,  0.04998264]))
+        t = transformUtils.transformFromPose(np.array([ -4.34908919e-04,   9.24901627e-01,   2.65614116e-01]), 
+            np.array([ 0.25022251,  0.913271  , -0.32136359, -0.00708626]))
+
+        self.leftFootPedalSwingFrame = vis.updateFrame(t,'left foot pedal swing', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+
+
+        t = transformUtils.transformFromPose(np.array([-0.9012598 , -0.05709763,  0.34897024]), 
+            np.array([ 0.03879584,  0.98950919,  0.03820214,  0.13381721]))
+
         self.leftFootDrivingFrame = vis.updateFrame(t,'left foot driving', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+        # t = transformUtils.transformFromPose(np.array([-0.12702725,  0.92068409,  0.27209386]), 
+        #     np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
+
+
+        t = transformUtils.transformFromPose(np.array([-0.14940375,  0.90347275,  0.23812658]), 
+            np.array([ 0.27150909,  0.91398724, -0.28877386,  0.0867167 ]))
+        self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+        
 
         t = transformUtils.transformFromPose(np.array([-0.12702725,  0.92068409,  0.27209386]),
             np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
