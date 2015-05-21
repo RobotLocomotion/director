@@ -288,7 +288,7 @@ class TerrainTask(object):
 
         # create frame for starting position
         yaw = self.terrainConfig['startingYaw']
-        pos = self.terrainConfig['startingPosition']
+        pos = np.copy(self.terrainConfig['startingPosition'])
         pos[1] -= blockSize[0]*np.mean(np.array(cols))
         self.startingStanceFrame = transformUtils.frameFromPositionAndRPY(pos, np.array([0,0,yaw]))
 
