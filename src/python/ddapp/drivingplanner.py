@@ -838,10 +838,6 @@ class DrivingPlannerPanel(TaskUserPanel):
 
     def onAprilTag(self, msg):
         cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, self.drivingPlanner.tagToLocalTransform)
-<<<<<<< HEAD
-        self.updateAndDrawTrajectory()        
-=======
->>>>>>> call updateAndDrawTrajectory on a fixed timer, rather than on model changed
 
     def addButtons(self):
         self.addManualButton('Start', self.onStart)
