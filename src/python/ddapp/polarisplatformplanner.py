@@ -128,7 +128,9 @@ class PolarisPlatformPlanner(object):
 
     def setFootstepDataForwards(self):
         self.footstepPositionForwards = []
-        self.footstepPositionForwards.append(np.array([-0.06954156,  0.14726368,  0.07522517]))
+        [-0.08774644,  0.0635555 ,  0.07771066]
+        self.footstepPositionForwards.append(np.array([-0.08774644,  0.0635555 ,  0.07771066])) # narrow first step
+        # self.footstepPositionForwards.append(np.array([-0.06954156,  0.14726368,  0.07522517])) # normal first step
         self.footstepPositionForwards.append(np.array([ 0.18256867, -0.11692981,  0.01602283]))
         self.footstepPositionForwards.append(np.array([ 0.31539397,  0.15317327,  0.04011487]))
 
@@ -178,16 +180,12 @@ class PolarisPlatformPlanner(object):
         q = self.getPlanningStartPose()
         footstepsToWorldList = self.getFootstepToWorldTransforms([0,1], stepOffDirection='forwards')
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
-        request = self.setMapModeToTerrainAndNormals(request)
-        request = self.setMinHoldTime(request, self.minHoldTime)
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
 
     def planStepOffForwards(self):
         q = self.getPlanningStartPose()
         footstepsToWorldList = self.getFootstepToWorldTransforms([2], stepOffDirection='forwards')
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
-        request = self.setMapModeToTerrainAndNormals(request)
-        request = self.setMinHoldTime(request, self.minHoldTime)
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
 
     def planWeightShiftForwards(self):
