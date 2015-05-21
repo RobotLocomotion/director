@@ -188,6 +188,13 @@ class TerrainTask(object):
                 blocks.append(obj)
         return blocks
 
+    def createStartingGoal(self):
+        if not hasattr(self, 'startingStanceFrame') or self.startingStanceFrame is None:
+            print 'error: no stance frame defined'
+            return
+        frame = transformUtils.copyFrame(self.startingStanceFrame)
+        footstepsdriverpanel.panel.onNewWalkingGoal(frame)        
+
     def createFootstepsForTerrain(self):
         footstepData = self.terrainConfig['footstepData']
 
@@ -196,36 +203,56 @@ class TerrainTask(object):
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         stanceAxes = transformUtils.getAxesFromTransform(stanceFrame)
+ 
+        # get current frames of feet
+        leftFootFrame = self.getFootFrameAtSole(self.sideToFootLinkName('left'))
+        rightFootFrame = self.getFootFrameAtSole(self.sideToFootLinkName('right'))
+        leftPos = np.array(leftFootFrame.GetPosition()[0:2])
+        leftLine = np.array(transformUtils.getAxesFromTransform(leftFootFrame)[0][0:2])
 
-        # generate footstep frames
+        leftLine = np.append(leftLine, -np.dot(leftLine,leftPos))
+        rightPos = np.array(rightFootFrame.GetPosition()[0:2])
+        rightLine = np.array(transformUtils.getAxesFromTransform(rightFootFrame)[0][0:2])
+        rightLine = np.append(rightLine, -np.dot(rightLine,rightPos))
+
+        # generate new footstep frames
         leadingFoot = footstepData[0][0]
         stepFrames = []
+        supportTypes = []
         for foot, blockIndex, offset, supportType in footstepData:
             block = blockObjectTable[blockIndex[0]][blockIndex[1]]
             if block is None:
                 print 'error: no block for footstep (%d,%d)' % blockIndex
                 return
             z = np.array(block.getProperty('Dimensions'))[2]/2.0
+            pt = np.array([offset[0], offset[1], z])
             t = transformUtils.copyFrame(block.getChildFrame().transform)
             # TODO: should feet be aligned with forward direction or block?
             blockAxes = transformUtils.getAxesFromTransform(t)
             x = np.round(np.dot(stanceAxes[0], blockAxes[0]))
             y = np.round(np.dot(stanceAxes[0], blockAxes[1]))
             theta = np.degrees(np.arctan2(y,x))
-            pt = np.array([offset[0], offset[1], z])
             t.PreMultiply()
             t.RotateZ(theta);
             t.Translate(pt)
-            stepFrames.append(t)
+
+            # only append footstep if it is forward of current foot
+            pos = np.array(t.GetPosition()[0:2])
+            if foot=='left':
+                dist = leftLine[0:2].dot(pos)+leftLine[2]
+            else:
+                dist = rightLine[0:2].dot(pos)+rightLine[2]
+            if dist > 0.1:  # arbitrary threshold
+                stepFrames.append(t)
+                supportTypes.append(supportType)
             #obj = vis.showFrame(t, '%s step frame' % block.getProperty('Name'), parent='step frames', scale=0.2)
 
         # send footstep request
         startPose = self.getPlanningStartPose()
         helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
         request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
-        for i in range(len(footstepData)):
-            _, _, _, supportType = footstepData[i]
-            request.goal_steps[i].params.support_contact_groups = supportType
+        for i in range(len(stepFrames)):
+            request.goal_steps[i].params.support_contact_groups = supportTypes[i]
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
 
     def createBlockObjectTable(self):
@@ -259,9 +286,16 @@ class TerrainTask(object):
         if len(cols) == 0:
             cols = range(len(blockTypes[0]))
 
-        blockFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        # create frame for starting position
+        yaw = self.terrainConfig['startingYaw']
+        pos = self.terrainConfig['startingPosition']
+        pos[1] -= blockSize[0]*np.mean(np.array(cols))
+        self.startingStanceFrame = transformUtils.frameFromPositionAndRPY(pos, np.array([0,0,yaw]))
+
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        blockFrame = transformUtils.copyFrame(stanceFrame)
         blockFrame.PreMultiply()
-        blockFrame.Translate(0.25+blockSize[1], blockSize[0]*np.mean(np.array(cols)), 0)
+        blockFrame.Concatenate(self.startingStanceFrame.GetLinearInverse())
 
         for row in range(len(blockTypes)):
             for col in cols:
@@ -1173,9 +1207,10 @@ class TerrainTaskPanel(TaskUserPanel):
 
     def addButtons(self):
         self.addManualButton('Fit Blocks', self.terrainTask.requestBlockFit)
-        self.addManualButton('Spawn terrain', self.terrainTask.spawnCinderblockTerrain)
-        self.addManualButton('Assign blocks', self.terrainTask.assignBlocks)
-        self.addManualButton('Prefab footsteps', self.terrainTask.createFootstepsForTerrain)
+        self.addManualButton('Spawn Terrain', self.terrainTask.spawnCinderblockTerrain)
+        self.addManualButton('Assign Blocks', self.terrainTask.assignBlocks)
+        self.addManualButton('Prefab Footsteps', self.terrainTask.createFootstepsForTerrain)
+        self.addManualButton('Set Starting Goal', self.terrainTask.createStartingGoal)
         self.addManualSpacer()
 
         #self.addManualButton('Walk to tilted steps', self.terrainTask.walkToTiltedCinderblocks)
