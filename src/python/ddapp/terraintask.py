@@ -46,6 +46,7 @@ import ddapp.tasks.taskmanagerwidget as tmw
 import drc as lcmdrc
 import copy
 import re
+import glob
 
 from PythonQt import QtCore, QtGui
 
@@ -77,7 +78,14 @@ class TerrainTask(object):
         self.defaultLeadingFoot = 'right'
         self.removeDuringOrganize = False
 
-        self.loadTerrainConfig('cinderblocks')
+        # terrain config file stuff
+        self.terrainConfigDir = os.path.join(ddapp.getDRCBaseDir(), 'software','config','terrain')
+        files = glob.glob(os.path.join(self.terrainConfigDir,'*.py'))
+        self.terrainConfigList = []
+        for f in files:
+            self.terrainConfigList.append(os.path.basename(f).split('.')[0])
+        if len(self.terrainConfigList)>0:
+            self.loadTerrainConfig(self.terrainConfigList[0])
 
     def startBlockUpdater(self):
         self.timer.start()
@@ -151,7 +159,7 @@ class TerrainTask(object):
 
 
     #
-    # TODO: TERRAIN SPAWNING STUFF STARTS HERE
+    # TERRAIN SPAWNING STUFF STARTS HERE
     #
 
     def loadTerrainConfig(self, terrainType):
@@ -163,8 +171,7 @@ class TerrainTask(object):
                     om.removeFromObjectModel(obj)
 
         # load file
-        configDir = os.path.join(ddapp.getDRCBaseDir(), 'software/config')
-        configFile = os.path.join(configDir, 'terrain', terrainType+'.py')
+        configFile = os.path.join(self.terrainConfigDir, terrainType+'.py')
         self.terrainConfig = {}
         execfile(configFile, self.terrainConfig)
         print 'loaded config from', configFile
@@ -490,7 +497,9 @@ class TerrainTask(object):
             t.Concatenate(correction)
             t.Modified()
 
-
+    #
+    # TERRAIN SPAWNING STUFF ENDS HERE
+    #
 
 
     def spawnTiltedCinderblocks(self):
@@ -1260,7 +1269,7 @@ class TerrainTaskPanel(TaskUserPanel):
 
 
     def addDefaultProperties(self):
-        self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=['cinderblocks','stairs']))
+        self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=self.terrainTask.terrainConfigList))
         self.params.addProperty('Block Fit Algo', self.terrainTask.blockFitAlgo, attributes=om.PropertyAttributes(enumNames=['MinArea', 'ClosestSize']))
         self.params.addProperty('Constrain Block Size', self.terrainTask.constrainBlockSize)
         self.params.addProperty('Manual Steps Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
@@ -1272,8 +1281,8 @@ class TerrainTaskPanel(TaskUserPanel):
         if propertyName == 'Camera Texture':
             self.terrainTask.useTextures = self.params.getProperty(propertyName)
         elif propertyName == 'Terrain Type':
-            typeMap = {0:'cinderblocks',1:'stairs'}
-            self.terrainTask.loadTerrainConfig(typeMap[self.params.getProperty(propertyName)])
+            terrainConfig = self.terrainTask.terrainConfigList[self.params.getProperty(propertyName)];
+            self.terrainTask.loadTerrainConfig(terrainConfig)
         elif propertyName == 'Block Fit Algo':
             self.terrainTask.blockFitAlgo = self.params.getProperty(propertyName)
         elif propertyName == 'Constrain Block Size':
