@@ -449,9 +449,11 @@ class TerrainTask(object):
 
         # compute and apply transform using all matches
         correction = vtk.vtkTransform()
-        if len(matches) > 2 and False:
+        if len(matches) > 2:
             pts1 = np.zeros((len(matches),3))
             pts2 = np.zeros((len(matches),3))
+            norms1 = np.zeros((len(matches),3))
+            norms2 = np.zeros((len(matches),3))
             for i in range(len(matches)):
                 match = matches[i]
                 t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
@@ -462,11 +464,15 @@ class TerrainTask(object):
                 t2.Translate(0, 0, -match[0].getProperty('Dimensions')[2])
                 pts1[i,:] = np.array(t1.GetPosition())
                 pts2[i,:] = np.array(t2.GetPosition())
+                norms1[i,:] = np.array(transformUtils.getAxesFromTransform(t1)[2])
+                norms2[i,:] = np.array(transformUtils.getAxesFromTransform(t2)[2])
             mean1 = np.mean(pts1,axis=0)
             mean2 = np.mean(pts2,axis=0)
-            pts1 = pts1-mean1
-            pts2 = pts2-mean2
-            u,_,v = np.linalg.svd(pts2.T.dot(pts1))
+            rays1 = pts1-mean1
+            rays1 = np.vstack((rays1,norms1))
+            rays2 = pts2-mean2
+            rays2 = np.vstack((rays2,norms2))
+            u,_,v = np.linalg.svd(rays2.T.dot(rays1))
             rot = u.dot(v)
             correction.PostMultiply()
             correction.Translate(-mean1)
