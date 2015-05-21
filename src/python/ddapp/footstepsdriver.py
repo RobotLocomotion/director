@@ -222,7 +222,8 @@ class FootstepsDriver(object):
         self._setupProperties()
 
         self.showToolbarWidget()
-
+        self.execButton.setEnabled(False)
+        
         self.committedPlans = []
 
 
@@ -348,7 +349,7 @@ class FootstepsDriver(object):
             return
 
         if self.toolbarWidget:
-            self.execButton.setEnabled(True);
+            self.execButton.setEnabled(True)
             return
 
         w = QtGui.QWidget()
@@ -395,7 +396,7 @@ class FootstepsDriver(object):
         self.clearFootstepPlan()
 
         if self.toolbarWidget:
-            self.execButton.setEnabled(False);
+            self.execButton.setEnabled(False)
 
     def clearFootstepPlan(self):
         self.lastFootstepPlan = None
