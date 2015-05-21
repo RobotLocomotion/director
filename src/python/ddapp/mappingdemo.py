@@ -346,7 +346,8 @@ class MappingDemo(object):
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
 
-    def planRoomMap(self):
+    # Module to sweep the kuka arm around in a sphere - for map building
+    def planSequenceRoomMap(self):
         self.graspingHand = 'left'
         self.targetSweepType = 'orientation'
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
@@ -363,19 +364,13 @@ class MappingDemo(object):
         self.mapFolder=om.getOrCreateContainer('room mapping')
         om.collapse(self.mapFolder)
 
-        # taskQueue doesnt support a while:
+        # taskQueue doesnt support a while loop:
         #while (self.currentYawDegrees >= -90):
         #    self.getRoomSweepFrames()
         #    self.planRoomReach()# move to next start point
         #    self.planRoomSweep()        # reach down/up
         #    self.currentYawDegrees = self.currentYawDegrees - 30
         #    self.fromTop = not self.fromTop
-            
-        self.getRoomSweepFrames()
-        self.planRoomReach()# move to next start point
-        self.planRoomSweep()        # reach down/up
-        self.moveRoomSweepOnwards()
-
 
         self.getRoomSweepFrames()
         self.planRoomReach()# move to next start point
@@ -391,12 +386,26 @@ class MappingDemo(object):
         self.planRoomReach()# move to next start point
         self.planRoomSweep()        # reach down/up
         self.moveRoomSweepOnwards()
-        
+
         self.getRoomSweepFrames()
         self.planRoomReach()# move to next start point
         self.planRoomSweep()        # reach down/up
         self.moveRoomSweepOnwards()
 
+        self.getRoomSweepFrames()
+        self.planRoomReach()# move to next start point
+        self.planRoomSweep()        # reach down/up
+        self.moveRoomSweepOnwards()
+
+        self.getRoomSweepFrames()
+        self.planRoomReach()# move to next start point
+        self.planRoomSweep()        # reach down/up
+        self.moveRoomSweepOnwards()
+
+        self.getRoomSweepFrames()
+        self.planRoomReach()# move to next start point
+        self.planRoomSweep()        # reach down/up
+        self.moveRoomSweepOnwards()
 
     def autonomousExecuteRoomMap(self):
         self.graspingHand = 'left'
