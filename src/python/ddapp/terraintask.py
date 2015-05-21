@@ -417,9 +417,10 @@ class TerrainTask(object):
         
         # adjust matched blocks
         for match in matches:
-            continue
             t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
             t2 = transformUtils.copyFrame(match[0].getChildFrame().transform)
+            # adjust frames to be centered at the top face
+            # TODO
             correction = vtk.vtkTransform()
             correction.PreMultiply()
             correction.Concatenate(t2)
