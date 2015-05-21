@@ -950,6 +950,21 @@ class RobotGridUpdater(object):
 gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
 
 
+class IgnoreOldStateMessagesSelector(object):
+
+    def __init__(self, jointController):
+        self.jointController = jointController
+        self.action = app.addMenuAction('Tools', 'Ignore Old State Messages')
+        self.action.setCheckable(True)
+        self.action.setChecked(self.jointController.ignoreOldStateMessages)
+        self.action.connect('triggered()', self.toggle)
+
+    def toggle(self):
+        self.jointController.ignoreOldStateMessages = bool(self.action.checked)
+
+IgnoreOldStateMessagesSelector(robotStateJointController)
+
+
 class RandomWalk(object):
     def __init__(self, max_distance_per_plan=2):
         self.subs = []
