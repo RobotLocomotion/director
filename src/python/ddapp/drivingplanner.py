@@ -805,7 +805,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
-        self.showTrajectory = False
         self.steeringSub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
         self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG_TO_CAMERA_LEFT', lcmbotcore.rigid_transform_t, self.onAprilTag)
         self.imageView = cameraview.CameraImageView(cameraview.imageManager, 'CAMERACHEST_RIGHT', 'right image view')
@@ -833,7 +832,6 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         self.timer = TimerCallback(targetFps=30)
         self.timer.callback = self.updateAndDrawTrajectory
-        self.timer.start()
 
 
     def onAprilTag(self, msg):
@@ -906,35 +904,16 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.userSpecifiedGraspWheelAngleInDegrees = self.params.getProperty('Steering Wheel Angle when Grasped')
         self.drivingPlanner.trajSegments = self.params.getProperty('Trajectory Segments')
         self.drivingPlanner.wheelDistance = self.params.getProperty('Wheel Separation')
-        self.showTrajectory = self.params.getProperty('Show Trajectory')
         self.drivingPlanner.trajectoryX = self.params.getProperty('Trajectory X Offset')
         self.drivingPlanner.trajectoryY = self.params.getProperty('Trajectory Y Offset')
         self.drivingPlanner.trajectoryAngle = self.params.getProperty('Trajectory Angle Offset')
         self.taskToShow = self.params.getProperty('Show Driving/Regrasp Tasks')
-
-        if hasattr(self, 'affordanceUpdater'):
-            leftTraj = om.findObjectByName('LeftDrivingTrajectory')
-            rightTraj = om.findObjectByName('RightDrivingTrajectory')
-            if leftTraj:
-                leftTraj.setProperty('Visible', self.showTrajectory)
-
-            if rightTraj:
-                rightTraj.setProperty('Visible', self.showTrajectory)
-            
-            if self.showTrajectory:
-                self.affordanceUpdater.extraObjects = [leftTraj, rightTraj]
-                self.affordanceUpdaterLeft.extraObjects = [leftTraj, rightTraj]
-            else:
-                self.affordanceUpdater.extraObjects = []
-                self.affordanceUpdaterLeft.extraObjects = []
-
         self.drivingPlanner.applyProperties()
 
 
     def onSteeringCommand(self, msg):
         if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:
             self.drivingPlanner.steeringAngleDegrees = math.degrees(msg.steering_angle)
-            self.updateAndDrawTrajectory()
 
     def onStart(self):
         self.onUpdateWheelLocation()
@@ -975,6 +954,17 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         if not taskToShowOld == self.taskToShow:
             self.addTasks()
+
+        if propertyName == 'Show Trajectory':
+
+            if self.params.getProperty(propertyName):
+                self.timer.start()
+            else:
+                self.timer.stop()
+                self.affordanceUpdater.extraObjects = []
+                self.affordanceUpdaterLeft.extraObjects = []
+                om.removeFromObjectModel(om.findObjectByName('driving trajectory'))
+
  
     def onPlanBarRetract(self):
         self.drivingPlanner.planBarRetract(depth=self.barGraspDepth, useLineConstraint=True)
@@ -1203,28 +1193,25 @@ class DrivingPlannerPanel(TaskUserPanel):
 
 
     def updateAndDrawTrajectory(self):
-        if not self.showTrajectory or om.findObjectByName('Steering Wheel') is None:
-            return
+        if not self.params.getProperty('Show Trajectory') or om.findObjectByName('Steering Wheel') is None:
+            return None
 
         steeringAngleDegrees = np.rad2deg(self.drivingPlanner.getSteeringWheelAngle())
         leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)
-        self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(leftTraj), 'LeftDrivingTrajectory')
-        self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(rightTraj), 'RightDrivingTrajectory')
-
-    def drawDrivingTrajectory(self, drivingTraj, name):
-        if not self.showTrajectory:
-            return
 
         d = DebugData()
 
-        numTrajPoints = len(drivingTraj)
+        for traj in [leftTraj, rightTraj]:
+            traj = self.drivingPlanner.transformDrivingTrajectory(traj)
+            numTrajPoints = len(traj)
 
-        if numTrajPoints > 1:
-            for i in range(0, numTrajPoints):
+            for i in xrange(numTrajPoints):
                 rgb = [(numTrajPoints - i) / float(numTrajPoints), 1 - (numTrajPoints - i) / float(numTrajPoints), 1]
-                d.addSphere(drivingTraj[i], 0.05, rgb)
+                d.addSphere(traj[i], 0.05, rgb, resolution=12)
 
-        vis.updatePolyData(d.getPolyData(), name)
-        obj = om.findObjectByName(name)
-        obj.setProperty('Color By', 1)
+        obj = vis.updatePolyData(d.getPolyData(), 'driving trajectory', colorByName='RGB255', parent='planning')
 
+        for updater in [self.affordanceUpdater, self.affordanceUpdaterLeft]:
+            updater.extraObjects = [obj]
+
+        return obj
