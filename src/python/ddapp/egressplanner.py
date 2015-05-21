@@ -116,6 +116,9 @@ class EgressPlanner(object):
 
         self.robotSystem = robotSystem
         self.polaris = None
+        self.quasiStaticShrinkFactor = 0.5
+        self.maxBodyTranslationSpeed = 0.1
+        self.plans = []
 
     def spawnPolaris(self):
         self.polaris = PolarisModel()
@@ -134,18 +137,11 @@ class EgressPlanner(object):
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.getPose('EST_ROBOT_STATE')
 
-    def planFootLiftInCar(self):
-        startPose = self.getPlanningStartPose()
-        startPoseName = 'q_lift_start'
-        jointId = robotstate.getDrakePoseJointNames().index('l_leg_kny')
-        knyDesired = startPose[jointId] + np.radians(self.legLiftAngle)
-        jointId = robotstate.getDrakePoseJointNames().index('l_leg_aky')
-        akyDesired = startPose[jointId] - np.radians(self.legLiftAngle)
-        postureJoints = {'l_leg_kny': knyDesired, 'l_leg_aky': akyDesired}
-        endPose = self.robotSystem.ikPlanner.mergePostures(startPose, postureJoints)
-        plan = self.robotSystem.ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
-        return plan
+    def addPlan(self, plan):
+        self.plans.append(plan)
 
+    def commitManipPlan(self):
+        self.robotSystem.manipPlanner.commitManipPlan(self.plans[-1])
 
     def planEgressArms(self):
         startPose = self.getPlanningStartPose()
@@ -158,12 +154,14 @@ class EgressPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
         constraints = []
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False))
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
+                                                    pelvisEnabled=False,
+                                                    shrinkFactor=self.quasiStaticShrinkFactor))
         constraints.append(self.robotSystem.ikPlanner.createLockedBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-        #constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-        constraintSet.ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=7)
+        constraintSet.ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=15)
 
         constraintSet.runIk()
 
@@ -172,7 +170,7 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot', 'l_foot', 'pelvis']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-
+        self.addPlan(plan)
         return plan
 
     def planStandUp(self):
@@ -189,22 +187,23 @@ class EgressPlanner(object):
                                   lowerBound=np.array([0.0, -np.inf, 0.0]),
                                   upperBound=np.array([np.inf, np.inf, 0.0]))
         constraints.append(p)
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False))
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False,
+                                                    shrinkFactor=self.quasiStaticShrinkFactor))
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-        #constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.extend(self.robotSystem.ikPlanner.createFixedFootConstraints(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True)
 
         constraintSet.runIk()
-        keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=False)
+        keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=True)
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0]]
         supportsList = [['r_foot', 'l_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-
+        self.addPlan(plan)
         return plan
 
     def createUtorsoGazeConstraints(self, tspan):
@@ -241,10 +240,11 @@ class EgressPlanner(object):
         constraints.extend(self.createUtorsoGazeConstraints([1.0, 1.0]))
 
         constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
-                                                    pelvisEnabled=False))
+                                                    pelvisEnabled=False,
+                                                    shrinkFactor=self.quasiStaticShrinkFactor))
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
-        #constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-        #constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot'))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
@@ -256,7 +256,7 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot', 'l_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-
+        self.addPlan(plan)
         return plan
 
     def computeLeftFootOverPlatformFrame(self, startPose, height):
@@ -298,7 +298,10 @@ class EgressPlanner(object):
         constraints.extend(self.createLeftFootPoseConstraint(finalLeftFootFrame, tspan=[1,1]))
 
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-        constraintSet.ikParameters = IkParameters(usePointwise=True)
+        constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
+                                                  rescaleBodyNames=['l_foot'],
+                                                  rescaleBodyPts=[0.0, 0.0, 0.0],
+                                                  maxBodyTranslationSpeed=self.maxBodyTranslationSpeed)
         #constraintSet.seedPoseName = 'q_start'
         #constraintSet.nominalPoseName = 'q_start'
 
@@ -324,7 +327,7 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
-
+        self.addPlan(plan)
         return plan
 
     def planLeftFootDown(self):
@@ -356,7 +359,9 @@ class EgressPlanner(object):
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0], poseTimes[-1]]
         supportsList = [['r_foot'], ['r_foot','l_foot']]
-        self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
+        plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
+        self.addPlan(plan)
+        return plan
 
 
     def planCenterWeight(self):
@@ -374,7 +379,8 @@ class EgressPlanner(object):
         constraints.extend(footFixedConstraints)
         constraints.extend(armsLocked)
         constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
-                                                    pelvisEnabled=False, shrinkFactor=0.2))
+                                                    pelvisEnabled=False,
+                                                    shrinkFactor=self.quasiStaticShrinkFactor))
 
         constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.seedPoseName = 'q_start'
@@ -384,15 +390,23 @@ class EgressPlanner(object):
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0]]
         supportsList = [['r_foot','l_foot']]
-        self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
+        plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
+        self.addPlan(plan)
+        return plan
 
 
     def planArmsForward(self):
         q0 = self.getPlanningStartPose()
-        q1 = self.robotSystem.ikPlanner.getMergedPostureFromDatabase(q0, 'General', 'handdown', side='right')
-        q2 = self.robotSystem.ikPlanner.getMergedPostureFromDatabase(q1, 'General', 'hands-forward', side='left')
-        q2 = self.robotSystem.ikPlanner.getMergedPostureFromDatabase(q2, 'General', 'hands-forward', side='right')
-        plan = self.robotSystem.ikPlanner.computeMultiPostureGoal([q0, q1, q2])
+        q1 = self.robotSystem.ikPlanner.getMergedPostureFromDatabase(q0, 'General', 'hands-forward', side='left')
+        q2 = self.robotSystem.ikPlanner.getMergedPostureFromDatabase(q1, 'General', 'hands-forward', side='right')
+        q1 = 0.5*(q1 + np.array(q2))
+        ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
+                                    rescaleBodyNames=['l_hand', 'r_hand'],
+                                    rescaleBodyPts=list(self.robotSystem.ikPlanner.getPalmPoint(side='left')) +
+                                                    list(self.robotSystem.ikPlanner.getPalmPoint(side='right')),
+                                    maxBodyTranslationSpeed=3*self.maxBodyTranslationSpeed)
+        plan = self.robotSystem.ikPlanner.computeMultiPostureGoal([q0, q1, q2], ikParameters=ikParameters)
+        self.addPlan(plan)
         return plan
 
     def publishPlanWithSupports(self, keyFramePlan, supportsList, ts, isQuasistatic):
@@ -418,7 +432,7 @@ class EgressPanel(TaskUserPanel):
         TaskUserPanel.__init__(self, windowTitle='Egress')
 
         self.robotSystem = robotSystem
-        self.planner = EgressPlanner(robotSystem)
+        self.egressPlanner = EgressPlanner(robotSystem)
         self.platformPlanner = polarisplatformplanner.PolarisPlatformPlanner(robotSystem.ikServer, robotSystem)
         self.addDefaultProperties()
         self.addButtons()
@@ -427,14 +441,14 @@ class EgressPanel(TaskUserPanel):
 
     def addButtons(self):
         # Get onto platform buttons
-        self.addManualButton('Spawn Polaris', self.planner.spawnPolaris)
-        self.addManualButton('Get weight over feet', self.planner.planGetWeightOverFeet)
-        self.addManualButton('Stand up', self.planner.planStandUp)
-        self.addManualButton('Shift weight out', self.planner.planShiftWeightOut)
-        self.addManualButton('Move left foot out', self.planner.planFootOut)
-        self.addManualButton('Put foot down', self.planner.planLeftFootDown)
-        self.addManualButton('Center weight', self.planner.planCenterWeight)
-        self.addManualButton('Arms forward', self.planner.planArmsForward)
+        self.addManualButton('Spawn Polaris', self.egressPlanner.spawnPolaris)
+        self.addManualButton('Get weight over feet', self.egressPlanner.planGetWeightOverFeet)
+        self.addManualButton('Stand up', self.egressPlanner.planStandUp)
+        self.addManualButton('Shift weight out', self.egressPlanner.planShiftWeightOut)
+        self.addManualButton('Move left foot out', self.egressPlanner.planFootOut)
+        self.addManualButton('Put foot down', self.egressPlanner.planLeftFootDown)
+        self.addManualButton('Center weight', self.egressPlanner.planCenterWeight)
+        self.addManualButton('Arms forward', self.egressPlanner.planArmsForward)
         self.addManualSpacer()
         #sit/stand buttons
         self.addManualButton('Start', self.onStart)
@@ -512,20 +526,35 @@ class EgressPanel(TaskUserPanel):
             self.folder = self.taskTree.addGroup(name, parent=parent)
             return self.folder
 
-        def addManipTask(name, planFunc, userPrompt=False):
+        def addManipTask(name, planFunc, userPrompt=False, planner=None):
 
-            folder = addFolder(name)
-            addFunc(planFunc, name='plan')
+            if planner is None:
+                planner = self.platformPlanner
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
             if not userPrompt:
                 addTask(rt.CheckPlanInfo(name='check manip plan info'))
             else:
                 addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
-            addFunc(pp.commitManipPlan, name='execute manip plan')
+            addFunc(planner.commitManipPlan, name='execute manip plan')
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+            self.folder = prevFolder
 
         pp = self.platformPlanner
+        ep = self.egressPlanner
 
-        prep = addFolder('Prep')
+        stepOut = addFolder('Step out of car')
+        self.folder = stepOut
+        addManipTask('Get weight over feet', ep.planGetWeightOverFeet, userPrompt=True, planner=ep)
+        addManipTask('Stand up', ep.planStandUp, userPrompt=True, planner=ep)
+        addManipTask('Shift weight out of Polaris', ep.planShiftWeightOut, userPrompt=True, planner=ep)
+        addManipTask('Move left foot out of Polaris', ep.planFootOut, userPrompt=True, planner=ep)
+        addManipTask('Put left foot down on platform', ep.planLeftFootDown, userPrompt=True, planner=ep)
+        addManipTask('Center weight over feet', ep.planCenterWeight, userPrompt=True, planner=ep)
+        addManipTask('Move arms up for walking', ep.planArmsForward, userPrompt=True, planner=ep)
+
+        prep = addFolder('Step down prep')
         addFunc(self.onStart, 'start')
         addTask(rt.SetNeckPitch(name='set neck position', angle=60))
         # addManipTask('arms up', self.onArmsUp, userPrompt=True)
