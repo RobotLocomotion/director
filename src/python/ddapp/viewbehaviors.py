@@ -20,11 +20,12 @@ from ddapp import filterUtils
 from ddapp.shallowCopy import shallowCopy
 from ddapp import segmentationpanel
 from ddapp import segmentation
+from ddapp import segmentationroutines
 import numpy as np
 import ioUtils
 import os
-
-
+import random
+import colorsys
 
 # todo: refactor these global variables
 # several functions in this module depend on these global variables
@@ -35,6 +36,7 @@ handFactory = None
 neckDriver = None
 footstepsDriver = None
 robotLinkSelector = None
+lastRandomColor = 0.0
 
 class MidiBehaviorControl(object):
 
@@ -523,6 +525,7 @@ def showRightClickMenu(displayPoint, view):
 
 
     def onCopyPointCloud():
+        global lastRandomColor
         polyData = vtk.vtkPolyData()
         polyData.DeepCopy(pointCloudObj.polyData)
         
@@ -530,7 +533,10 @@ def showRightClickMenu(displayPoint, view):
             polyData = segmentation.transformPolyData(polyData, pointCloudObj.getChildFrame().transform)
         polyData = segmentation.addCoordArraysToPolyData(polyData)
 
-        obj = vis.showPolyData(polyData, pointCloudObj.getProperty('Name') + ' copy', color=[0,1,0], parent='segmentation')
+        # generate random color, and average with a common color to make them generally similar
+        lastRandomColor = lastRandomColor + 0.1 + 0.1*random.random()
+        rgb = colorsys.hls_to_rgb(lastRandomColor, 0.7, 1.0)
+        obj = vis.showPolyData(polyData, pointCloudObj.getProperty('Name') + ' copy', color=rgb, parent='point clouds')
 
         t = vtk.vtkTransform()
         t.PostMultiply()
@@ -538,6 +544,46 @@ def showRightClickMenu(displayPoint, view):
         segmentation.makeMovable(obj, t)
         om.setActiveObject(obj)
         pickedObj.setProperty('Visible', False)
+
+    def onMergeIntoPointCloud():
+        allPointClouds = om.findObjectByName('point clouds')
+        if (allPointClouds):
+            allPointClouds = [i.getProperty('Name') for i in allPointClouds.children()]
+        sel =  QtGui.QInputDialog.getItem(None, "Point Cloud Merging", "Pick point cloud to merge into:", allPointClouds, current=0, editable=False)
+        sel = om.findObjectByName(sel)
+
+        # Make a copy of each in same frame
+        polyDataInto = vtk.vtkPolyData()
+        polyDataInto.DeepCopy(sel.polyData)
+        if sel.getChildFrame():
+            polyDataInto = segmentation.transformPolyData(polyDataInto, sel.getChildFrame().transform)
+        polyDataInto = segmentation.addCoordArraysToPolyData(polyDataInto)
+
+        polyDataFrom = vtk.vtkPolyData()
+        polyDataFrom.DeepCopy(pointCloudObj.polyData)
+        if pointCloudObj.getChildFrame():
+            polyDataFrom = segmentation.transformPolyData(polyDataFrom, pointCloudObj.getChildFrame().transform)
+        polyDataFrom = segmentation.addCoordArraysToPolyData(polyDataFrom)
+
+        # Actual merge
+        append = filterUtils.appendPolyData([polyDataFrom, polyDataInto])
+        if sel.getChildFrame():
+            polyDataInto = segmentation.transformPolyData(polyDataInto, sel.getChildFrame().transform.GetInverse())
+
+        # resample
+        append = segmentationroutines.applyVoxelGrid(append, 0.01)
+
+        # Recenter the frame
+        sel.polyData.DeepCopy(append)
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Translate(filterUtils.computeCentroid(append))
+        segmentation.makeMovable(sel, t)
+
+        # Hide the old one
+        if pointCloudObj.getProperty('Name') in allPointClouds:
+            pointCloudObj.setProperty('Visible', False)
+
 
     def onSegmentTableScene():
         data = segmentation.segmentTableScene(pointCloudObj.polyData, pickedPoint)
@@ -640,6 +686,7 @@ def showRightClickMenu(displayPoint, view):
         actions.extend([
             (None, None),
             ('Copy Pointcloud', onCopyPointCloud),
+            ('Merge Pointcloud Into', onMergeIntoPointCloud),
             ('Segment Ground', onSegmentGround),
             ('Segment Table', onSegmentTableScene),
             ('Segment Drill Aligned', onSegmentDrillAlignedWithTable),
