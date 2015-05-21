@@ -441,7 +441,7 @@ if usePlanning:
     terrainTask = terrainTaskPanel.terrainTask
 
     egressPanel = egressplanner.EgressPanel(robotSystem)
-    egressPlanner = egressPanel.planner
+    egressPlanner = egressPanel.egressPlanner
 
     taskPanels = OrderedDict()
 
