@@ -38,7 +38,12 @@ class PolarisModel(object):
                     Filename='software/models/polaris/polaris_cropped.vtp', pose=pose)
         self.pointcloudAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         self.originFrame = self.pointcloudAffordance.getChildFrame()
-        self.originToAprilTransform = vtk.vtkTransform()
+        self.originToAprilTransform = transformUtils.transformFromPose(np.array([-0.038508  , -0.00282131, -0.01000079]), 
+            np.array([  9.99997498e-01,  -2.10472556e-03,  -1.33815696e-04, 7.46246794e-04])) # offset for  . . . who knows why
+
+        t = transformUtils.transformFromPose(np.array([ 0.14376024,  0.95920689,  0.36655712]), np.array([ 0.28745842,  0.90741428, -0.28822068,  0.10438304]))
+        self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
+
 
         t = transformUtils.transformFromPose(np.array([ 0.26903719,  0.90783714,  0.24439189]),
                                              np.array([ 0.35290731,  0.93443693, -0.04181263,  0.02314636]))
@@ -49,13 +54,18 @@ class PolarisModel(object):
         self.leftFootEgressOutsideFrame  = vis.updateFrame(t, 'left foot outside', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
 
-        pose = [np.array([-0.78962299,  0.44284877, -0.29539116]), np.array([ 0.54812954,  0.44571517, -0.46063251,  0.53731713])]
-        t = transformUtils.transformFromPose(pose[0], pose[1])
-        pose = transformUtils.poseFromTransform(t)
+        # pose = [np.array([-0.78962299,  0.44284877, -0.29539116]), np.array([ 0.54812954,  0.44571517, -0.46063251,  0.53731713])] #old location
+        pose = [np.array([-0.78594663,  0.42026626, -0.23248139]), np.array([ 0.54812954,  0.44571517, -0.46063251,  0.53731713])] # updated location
 
         desc = dict(classname='CapsuleRingAffordanceItem', Name='Steering Wheel', uuid=newUUID(), pose=pose,
                     Color=[1, 0, 0], Radius=float(0.18), Segments=20)
         self.steeringWheelAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+
+
+        pose = [np.array([-0.05907324,  0.80460545,  0.45439687]), np.array([ 0.14288327,  0.685944  , -0.703969  ,  0.11615873])]
+
+        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[0.12, 0.33, 0.04], pose=pose, Color=[0,1,0])
+        self.pedalAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
 
 
         t = transformUtils.transformFromPose(np.array([ 0.04045136,  0.96565326,  0.25810111]),
@@ -67,19 +77,25 @@ class PolarisModel(object):
             np.array([ 0.10611078,  0.7280876 , -0.67537447,  0.04998264]))
         self.leftFootDrivingFrame = vis.updateFrame(t,'left foot driving', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
+        t = transformUtils.transformFromPose(np.array([-0.12702725,  0.92068409,  0.27209386]), 
+            np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
+        self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([ 0.47232744, -0.0484505 , -0.02198801]),
-            np.array([  6.10521653e-03,   4.18621358e-04,   4.65520611e-01, 8.85015882e-01]))
+        t = transformUtils.transformFromPose(np.array([ 0.4720199 , -0.06517618,  0.00233972]), np.array([  6.10521653e-03,   4.18621358e-04,   4.65520611e-01,
+                 8.85015882e-01]))
         self.rightHandGrabFrame = vis.updateFrame(t,'right hand grab bar', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(self.originFrame)
         self.frameSync.addFrame(self.pointcloudAffordance.getChildFrame(), ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootEgressStartFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressMidFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressOutsideFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.steeringWheelAffordance.getChildFrame(), ignoreIncoming=True)
+        self.frameSync.addFrame(self.pedalAffordance.getChildFrame(), ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootPedalSwingFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootDrivingFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootDrivingKneeInFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.rightHandGrabFrame, ignoreIncoming=True)
 
     def onAprilTag(self, msg):
