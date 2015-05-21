@@ -440,8 +440,32 @@ class TerrainTask(object):
                 bestMatch.setProperty('Color', self.terrainConfig['blockColorMatched'])
                 
 
-        # TODO: compute and apply transform using all matches
+        # compute and apply transform using all matches
         correction = vtk.vtkTransform()
+        if len(matches) > 2 and False:
+            pts1 = np.zeros((len(matches),3))
+            pts2 = np.zeros((len(matches),3))
+            for i in range(len(matches)):
+                match = matches[i]
+                t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
+                t2 = transformUtils.copyFrame(match[0].getChildFrame().transform)
+                t1.PreMultiply()
+                t1.Translate(0, 0, -match[1].getProperty('Dimensions')[2])
+                t2.PreMultiply()
+                t2.Translate(0, 0, -match[0].getProperty('Dimensions')[2])
+                pts1[i,:] = np.array(t1.GetPosition())
+                pts2[i,:] = np.array(t2.GetPosition())
+            mean1 = np.mean(pts1,axis=0)
+            mean2 = np.mean(pts2,axis=0)
+            pts1 = pts1-mean1
+            pts2 = pts2-mean2
+            u,_,v = np.linalg.svd(pts2.T.dot(pts1))
+            rot = u.dot(v)
+            correction.PostMultiply()
+            correction.Translate(-mean1)
+            rotTransform = transformUtils.getTransformFromAxes(rot[0,:],rot[1,:],rot[2,:])
+            correction.Concatenate(rotTransform)
+            correction.Translate(mean2)
         for b in idealBlocks:
             t = b.getChildFrame().transform
             t.PostMultiply()
