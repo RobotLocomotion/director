@@ -28,6 +28,10 @@ class BlackoutMonitor(object):
         self.inBlackout = False
         self.averageBlackoutLength = 30.0
 
+        self.txt = vis.updateText("DATA AGE: 0 sec", "Data Age Text", view=self.view)
+        self.txt.addProperty('Show Avg Duration', False)
+        self.txt.setProperty('Visible', False)
+
         self.updateTimer = TimerCallback(self.UPDATE_RATE)
         self.updateTimer.callback = self.update
         self.updateTimer.start()
@@ -36,22 +40,21 @@ class BlackoutMonitor(object):
         self.lastMessageTime = self.cameraview.imageManager.queue.getCurrentImageTime('CAMERA_LEFT')
         if self.robotStateJointController.lastRobotStateMessage:
             elapsed = (self.robotStateJointController.lastRobotStateMessage.utime - self.lastMessageTime) / (1000*1000)
+            # can't be deleted, only hidden, so this is ok
+            if (self.txt.getProperty('Visible')):
+                if (self.txt.getProperty('Show Avg Duration')):
+                    textstr = "DATA AGE: %d / %d sec" % (math.floor(elapsed), math.floor(self.averageBlackoutLength))
+                else:
+                    textstr = "DATA AGE: %d sec" % math.floor(elapsed)
+                ssize = self.view.size
+                vis.updateText(textstr, "Data Age Text", view=self.view)
+                self.txt.setProperty('Position', [10, 10])
+
+            # count out blackouts
             if elapsed > 1.0:
                 self.inBlackout = True
                 self.lastBlackoutLength = elapsed
-                # blackout!
-                ssize = self.view.size
-                textstr = "BLACKOUT: %3.2f / %3.2f sec" % (elapsed, self.averageBlackoutLength)
-                txt = vis.updateText(textstr, "blackout text", view=self.view)
-                txt.setProperty('Font Size', 24)
-                txt.setProperty('Position', (25, ssize.height()-50))
-                txt.setProperty('Bold', True)
-                txt.setProperty('Visible', True)
             else:
-                # not blackout!
-                txt = om.findObjectByName('blackout text')
-                if (txt):
-                    txt.setProperty('Visible', False)
                 if (self.inBlackout):
                     # Don't count huge time jumps due to init
                     if (self.lastBlackoutLength < 100000):
@@ -61,3 +64,4 @@ class BlackoutMonitor(object):
                     if len(self.lastBlackoutLengths) > 0:
                         self.averageBlackoutLength = sum(self.lastBlackoutLengths) / float(len(self.lastBlackoutLengths))
                     self.inBlackout = False
+
