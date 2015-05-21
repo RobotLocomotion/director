@@ -58,6 +58,7 @@ class DrivingPlanner(object):
         self.graspWheelAngle = None
         self.graspWristAngle = None
         self.kneeInPedal = 0
+        self.angleToleranceInDegrees = 10
         self.plans = []
 
     def getInitCommands(self):
@@ -78,7 +79,6 @@ class DrivingPlanner(object):
 
     def addSubscribers(self):
         lcmUtils.addSubscriber('THROTTLE_COMMAND', lcmdrc.trigger_finger_t , self.onThrottleCommand)
-        lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
 
     def initialize(self, ikServer, success):
         if ikServer.restarted:
@@ -234,7 +234,7 @@ class DrivingPlanner(object):
         if self.kneeInPedal:
             legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving knee in').transform)
             legAbovePedalFrame.PreMultiply()
-            legAbovePedalFrame.Translate([0.0, 0.01, 0.03])
+            legAbovePedalFrame.Translate([0.0, 0.0, 0.03])
         else:
             legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
             legAbovePedalFrame.PreMultiply()
@@ -242,7 +242,7 @@ class DrivingPlanner(object):
 
 
         identityFrame = vtk.vtkTransform()
-        legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1])
+        legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1], angleToleranceInDegrees=self.angleToleranceInDegrees)
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
 
         constraints = [allButLeftLegPostureConstraint]
@@ -277,7 +277,7 @@ class DrivingPlanner(object):
         if self.kneeInPedal:
             legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving knee in').transform)
             legAbovePedalFrame.PreMultiply()
-            legAbovePedalFrame.Translate([0.0, 0.01, 0.03])
+            legAbovePedalFrame.Translate([0.0, 0, 0.03])
         else:
             legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
             legAbovePedalFrame.PreMultiply()
@@ -285,7 +285,7 @@ class DrivingPlanner(object):
 
 
         identityFrame = vtk.vtkTransform()
-        legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1])
+        legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1], angleToleranceInDegrees=self.angleToleranceInDegrees)
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
 
         constraints = [allButLeftLegPostureConstraint]
@@ -490,9 +490,8 @@ class DrivingPlanner(object):
         self.plans.append(plan)        
         return plan
 
-
-    def createLeftFootPoseConstraint(self, targetFrame, tspan=[-np.inf,np.inf]):
-        positionConstraint, orientationConstraint = self.robotSystem.ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, vtk.vtkTransform())
+    def createLeftFootPoseConstraint(self, targetFrame, tspan=[-np.inf, np.inf], angleToleranceInDegrees=0.0):
+        positionConstraint, orientationConstraint = self.robotSystem.ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, vtk.vtkTransform(), angleToleranceInDegrees=angleToleranceInDegrees)
         positionConstraint.tspan = tspan
         orientationConstraint.tspan = tspan
         return positionConstraint, orientationConstraint
@@ -824,7 +823,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addButtons()
         self.addTasks()
         self.showTrajectory = False
-        self.steeringSub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
         self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG_TO_CAMERA_LEFT', lcmbotcore.rigid_transform_t, self.onAprilTag)
         self.imageView = cameraview.CameraImageView(cameraview.imageManager, 'CAMERACHEST_RIGHT', 'right image view')
         self.imageViewLeft = cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'left image view')
@@ -957,7 +955,6 @@ class DrivingPlannerPanel(TaskUserPanel):
     def onSteeringCommand(self, msg):
         if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:
             self.drivingPlanner.steeringAngleDegrees = math.degrees(msg.steering_angle)
-            self.updateAndDrawTrajectory()
 
     def onStart(self):
         self.onUpdateWheelLocation()
