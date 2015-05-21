@@ -547,14 +547,14 @@ def showRightClickMenu(displayPoint, view):
 
     def onMergeIntoPointCloud():
         allPointClouds = om.findObjectByName('point clouds')
-        if (allPointClouds):
+        if allPointClouds:
             allPointClouds = [i.getProperty('Name') for i in allPointClouds.children()]
         sel =  QtGui.QInputDialog.getItem(None, "Point Cloud Merging", "Pick point cloud to merge into:", allPointClouds, current=0, editable=False)
         sel = om.findObjectByName(sel)
 
         # Make a copy of each in same frame
         polyDataInto = vtk.vtkPolyData()
-        polyDataInto.DeepCopy(sel.polyData)
+        polyDataInto.ShallowCopy(sel.polyData)
         if sel.getChildFrame():
             polyDataInto = segmentation.transformPolyData(polyDataInto, sel.getChildFrame().transform)
         polyDataInto = segmentation.addCoordArraysToPolyData(polyDataInto)
@@ -572,9 +572,10 @@ def showRightClickMenu(displayPoint, view):
 
         # resample
         append = segmentationroutines.applyVoxelGrid(append, 0.01)
+        append = segmentation.addCoordArraysToPolyData(append)
 
         # Recenter the frame
-        sel.polyData.DeepCopy(append)
+        sel.setPolyData(append)
         t = vtk.vtkTransform()
         t.PostMultiply()
         t.Translate(filterUtils.computeCentroid(append))
