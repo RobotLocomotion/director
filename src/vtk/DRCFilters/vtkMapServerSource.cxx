@@ -238,6 +238,9 @@ public:
     this->ViewIds = vtkSmartPointer<vtkIntArray>::New();
     this->LastScanBundleUtime = 0;
     this->CurrentScanBundleId = 0;
+    this->DistanceRange[0] = 0.25;
+    this->DistanceRange[1] = 4.0;
+    this->EdgeAngleThreshold = 30;  // degrees
 
     this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
@@ -273,6 +276,21 @@ public:
     this->HandleNewData(msg);
   }
 
+  void SetDistanceRange(double distanceRange[2])
+  {
+    this->DistanceRange[0] = distanceRange[0];
+    this->DistanceRange[1] = distanceRange[1];
+  }
+
+  void SetEdgeAngleThreshold(double edgeAngleThreshold)
+  {
+    this->EdgeAngleThreshold = edgeAngleThreshold;
+  }
+
+  double GetEdgeAngleThreshold()
+  {
+    return this->EdgeAngleThreshold;
+  }
 
   bool CheckForNewData()
   {
@@ -605,7 +623,7 @@ protected:
 
     //printf("storing cloud map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
 
-    // store data
+    // store data    
     boost::lock_guard<boost::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     mapData.Id = this->GetNextMapId(viewId);
@@ -675,12 +693,8 @@ protected:
       out.msg = msg;
     }
 
-    // TODO: expose these in ui
-    double distanceRange[] = {0.25, 4};
-    double angleFilterThresh = 30;
-
     MapData mapData;
-    mapData.Data = GetPointCloudFromScanLines(scanLines, distanceRange, angleFilterThresh);
+    mapData.Data = GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold);
     mapData.Transform = this->ToVtkTransform(bundleView.getTransform());
     mapData.Mesh = mapData.Data;
 
@@ -698,6 +712,9 @@ protected:
   int MaxNumberOfDatasets;
   vtkIdType CurrentMapId;
   vtkSmartPointer<vtkIntArray> ViewIds;
+
+  double EdgeAngleThreshold;
+  double DistanceRange[2];
 
   boost::mutex Mutex;
   int64_t LastScanBundleUtime;
@@ -741,6 +758,9 @@ vtkMapServerSource::vtkMapServerSource()
   this->Internal = new vtkInternal;
   this->SetNumberOfInputPorts(0);
   this->SetNumberOfOutputPorts(1);
+  this->DistanceRange[0] = 0.25;
+  this->DistanceRange[1] = 4.0;
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
 }
 
 //----------------------------------------------------------------------------
@@ -772,44 +792,69 @@ void vtkMapServerSource::Poll()
 }
 
 //-----------------------------------------------------------------------------
+void vtkMapServerSource::SetEdgeAngleThreshold(double threshold)
+{
+  if (threshold == this->GetEdgeAngleThreshold())
+    {
+      return;
+    }
+
+  this->Internal->Listener->SetEdgeAngleThreshold(threshold);
+  this->Modified();
+}
+
+//-----------------------------------------------------------------------------
+double vtkMapServerSource::GetEdgeAngleThreshold()
+{
+  return this->Internal->Listener->GetEdgeAngleThreshold();
+}
+
+//-----------------------------------------------------------------------------
 int vtkMapServerSource::GetNumberOfDatasets(int viewId)
 {
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   return this->Internal->Listener->GetDatasets(viewId).size();
 }
 
 //-----------------------------------------------------------------------------
 vtkIdType vtkMapServerSource::GetCurrentMapId(int viewId)
 {
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   return this->Internal->Listener->GetCurrentMapId(viewId);
 }
 
 //-----------------------------------------------------------------------------
 void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData)
 {
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   this->Internal->Listener->GetDataForMapId(viewId, mapId, polyData);
 }
 
 //-----------------------------------------------------------------------------
 void vtkMapServerSource::GetMeshForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData)
 {
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   this->Internal->Listener->GetMeshForMapId(viewId, mapId, polyData);
 }
 
 //-----------------------------------------------------------------------------
 void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkImageData* imageData, vtkTransform* transform)
 {
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   this->Internal->Listener->GetDataForMapId(viewId, mapId, imageData, transform);
 }
 
 //-----------------------------------------------------------------------------
 vtkPolyData* vtkMapServerSource::GetDataset(int viewId, vtkIdType i)
 {
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   return this->Internal->Listener->GetDatasetForTime(viewId, i);
 }
 
 //-----------------------------------------------------------------------------
 vtkIntArray* vtkMapServerSource::GetViewIds()
 {
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   return this->Internal->Listener->GetViewIds();
 }
 
@@ -857,6 +902,7 @@ int vtkMapServerSource::RequestData(
     timestep = static_cast<int>(floor(timeRequest+0.5));
     }
 
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   vtkSmartPointer<vtkPolyData> polyData = this->Internal->Listener->GetDatasetForTime(WORKSPACE_DEPTH_VIEW_ID, timestep);
   if (polyData)
     {
