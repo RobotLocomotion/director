@@ -254,14 +254,14 @@ class TerrainTask(object):
 
         tiltAngle = self.terrainConfig['blockTiltAngle']
         tiltAngle = np.radians(tiltAngle)
-        tiltVerticalOffset = blockSize[2]/2.0 + np.sin(tiltAngle)*blockSize[0]/2.0
+        tiltVerticalOffset = blockSize[2]/2.0 + np.sin(tiltAngle)*blockSize[1]/2.0
 
         if len(cols) == 0:
             cols = range(len(blockTypes[0]))
 
         blockFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         blockFrame.PreMultiply()
-        blockFrame.Translate(0.25+blockSize[0], blockSize[1]*np.mean(np.array(cols)), 0)
+        blockFrame.Translate(0.25+blockSize[1], blockSize[0]*np.mean(np.array(cols)), 0)
 
         for row in range(len(blockTypes)):
             for col in cols:
@@ -270,7 +270,7 @@ class TerrainTask(object):
                 blockLevel = blockLevels[row][col]
 
                 rpy = np.degrees([0.0, tiltAngle, blockYaw])
-                pos = [blockSize[0]*row, -blockSize[1]*col, blockSize[2]*blockLevel + tiltVerticalOffset]
+                pos = [blockSize[1]*row, -blockSize[0]*col, blockSize[2]*blockLevel + tiltVerticalOffset]
                 
                 offsetFrame = transformUtils.frameFromPositionAndRPY(pos, rpy)
                 offsetFrame.PostMultiply()
