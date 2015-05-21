@@ -53,6 +53,7 @@ class BlackoutMonitor(object):
                 if (txt):
                     txt.setProperty('Visible', False)
                 if (self.inBlackout):
+                    # Don't count huge time jumps due to init
                     if (self.lastBlackoutLength < 100000):
                         self.lastBlackoutLengths.append(self.lastBlackoutLength)
                     if len(self.lastBlackoutLengths) > self.AVERAGE_N:
