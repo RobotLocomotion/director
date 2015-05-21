@@ -501,7 +501,7 @@ class EgressPanel(TaskUserPanel):
         addFunc(self.onPlanStepDown, 'plan step down')
         addTask(rt.UserPromptTask(name="approve footsteps, set support contact group",
          message="Please approve/modify footsteps. Set the support contact group for the left foot step to be Back 2/3"))
-        addTask(rt.CommitFootstepPlan(name='step down', planName='step down from platform with right foot'))
+        addFunc(self.robotSystem.footstepsDriver.onExecClicked, 'commit footstep plan')
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
 
         folder = addFolder('Step Off')
@@ -509,7 +509,7 @@ class EgressPanel(TaskUserPanel):
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
         addFunc(self.onPlanStepOff, 'plan step off')
         addTask(rt.UserPromptTask(name="approve footsteps", message="Please approve footsteps, modify if necessary"))
-        addTask(rt.CommitFootstepPlan(name='step down', planName='step down from platform with right foot'))
+        addFunc(self.robotSystem.footstepsDriver.onExecClicked, 'commit footstep plan')
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
         addManipTask('plan nominal', pp.planNominal, userPrompt=True)
 
