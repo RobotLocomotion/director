@@ -164,7 +164,7 @@ class TerrainTask(object):
         blocks = []
         for obj in om.getObjects():
             name = obj.getProperty('Name')
-            if re.match('^%s \(\d,\d\)$' % self.terrainConfig['blockName'], name):
+            if re.match('^%s \(\d+,\d+\)$' % self.terrainConfig['blockName'], name):
                 blocks.append(obj)
         return blocks
 
@@ -172,7 +172,7 @@ class TerrainTask(object):
         blocks = []
         for obj in om.getObjects():
             name = obj.getProperty('Name')
-            if re.match(r'^%s \d$' % self.terrainConfig['blockName'], name):
+            if re.match(r'^%s \d+$' % self.terrainConfig['blockName'], name):
                 blocks.append(obj)
         return blocks
 
@@ -399,6 +399,7 @@ class TerrainTask(object):
         
         # adjust matched blocks
         for match in matches:
+            continue
             t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
             t2 = transformUtils.copyFrame(match[0].getChildFrame().transform)
             correction = vtk.vtkTransform()
