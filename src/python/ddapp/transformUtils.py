@@ -43,9 +43,9 @@ def getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, origin):
 
 
 def getAxesFromTransform(t):
-    xaxis = t.TransformNormal(1,0,0)
-    yaxis = t.TransformNormal(0,1,0)
-    zaxis = t.TransformNormal(0,0,1)
+    xaxis = np.array(t.TransformNormal(1,0,0))
+    yaxis = np.array(t.TransformNormal(0,1,0))
+    zaxis = np.array(t.TransformNormal(0,0,1))
     return xaxis, yaxis, zaxis
 
 
