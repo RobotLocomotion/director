@@ -19,6 +19,8 @@ from ddapp.utime import getUtime
 from ddapp.ikplanner import ConstraintSet
 import ddapp.tasks.robottasks as rt
 from ddapp.ikparameters import IkParameters
+from ddapp.timercallback import TimerCallback
+
 
 import os
 import functools
@@ -829,17 +831,17 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.imageViewLayout.addWidget(self.imageView.view)
         self.imageViewLayout.addWidget(self.imageViewLeft.view)
 
-        self.callbackId = self.robotSystem.robotStateModel.connectModelChanged(self.onModelChanged)
+        self.timer = TimerCallback(targetFps=30)
+        self.timer.callback = self.updateAndDrawTrajectory
+        self.timer.start()
 
-    def onModelChanged(self, unusedrobotstate):
-        if om.findObjectByName('Steering Wheel') is None:
-            return
-        else:
-            self.updateAndDrawTrajectory()
 
     def onAprilTag(self, msg):
         cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, self.drivingPlanner.tagToLocalTransform)
+<<<<<<< HEAD
         self.updateAndDrawTrajectory()        
+=======
+>>>>>>> call updateAndDrawTrajectory on a fixed timer, rather than on model changed
 
     def addButtons(self):
         self.addManualButton('Start', self.onStart)
@@ -915,12 +917,15 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.taskToShow = self.params.getProperty('Show Driving/Regrasp Tasks')
 
         if hasattr(self, 'affordanceUpdater'):
-            if self.showTrajectory:
-                self.updateAndDrawTrajectory()
-                leftTraj = om.findObjectByName('LeftDrivingTrajectory')
-                rightTraj = om.findObjectByName('RightDrivingTrajectory')
+            leftTraj = om.findObjectByName('LeftDrivingTrajectory')
+            rightTraj = om.findObjectByName('RightDrivingTrajectory')
+            if leftTraj:
                 leftTraj.setProperty('Visible', self.showTrajectory)
+
+            if rightTraj:
                 rightTraj.setProperty('Visible', self.showTrajectory)
+            
+            if self.showTrajectory:
                 self.affordanceUpdater.extraObjects = [leftTraj, rightTraj]
                 self.affordanceUpdaterLeft.extraObjects = [leftTraj, rightTraj]
             else:
@@ -974,10 +979,7 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         if not taskToShowOld == self.taskToShow:
             self.addTasks()
-
  
-        self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, useLineConstraint=True)
-
     def onPlanBarRetract(self):
         self.drivingPlanner.planBarRetract(depth=self.barGraspDepth, useLineConstraint=True)
 
@@ -1205,6 +1207,9 @@ class DrivingPlannerPanel(TaskUserPanel):
 
 
     def updateAndDrawTrajectory(self):
+        if not self.showTrajectory or om.findObjectByName('Steering Wheel') is None:
+            return
+
         steeringAngleDegrees = np.rad2deg(self.drivingPlanner.getSteeringWheelAngle())
         leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)
         self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(leftTraj), 'LeftDrivingTrajectory')
