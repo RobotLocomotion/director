@@ -38,14 +38,14 @@ class PolarisModel(object):
                     Filename='software/models/polaris/polaris_cropped.vtp', pose=pose)
         self.pointcloudAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         self.originFrame = self.pointcloudAffordance.getChildFrame()
-        self.originToAprilTransform = transformUtils.transformFromPose(np.array([-0.038508  , -0.00282131, -0.01000079]), 
+        self.originToAprilTransform = transformUtils.transformFromPose(np.array([-0.038508  , -0.00282131, -0.01000079]),
             np.array([  9.99997498e-01,  -2.10472556e-03,  -1.33815696e-04, 7.46246794e-04])) # offset for  . . . who knows why
 
         t = transformUtils.transformFromPose(np.array([ 0.14376024,  0.95920689,  0.36655712]), np.array([ 0.28745842,  0.90741428, -0.28822068,  0.10438304]))
         self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
 
-        t = transformUtils.transformFromPose(np.array([ 0.26903719,  0.90783714,  0.24439189]),
+        t = transformUtils.transformFromPose(np.array([ 0.265,  0.874,  0.274]),
                                              np.array([ 0.35290731,  0.93443693, -0.04181263,  0.02314636]))
         self.leftFootEgressMidFrame  = vis.updateFrame(t, 'left foot mid', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
@@ -77,7 +77,7 @@ class PolarisModel(object):
             np.array([ 0.10611078,  0.7280876 , -0.67537447,  0.04998264]))
         self.leftFootDrivingFrame = vis.updateFrame(t,'left foot driving', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([-0.12702725,  0.92068409,  0.27209386]), 
+        t = transformUtils.transformFromPose(np.array([-0.12702725,  0.92068409,  0.27209386]),
             np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
         self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
