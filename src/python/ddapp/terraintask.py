@@ -199,8 +199,27 @@ class TerrainTask(object):
         if not hasattr(self, 'startingStanceFrame') or self.startingStanceFrame is None:
             print 'error: no stance frame defined'
             return
-        frame = transformUtils.copyFrame(self.startingStanceFrame)
-        footstepsdriverpanel.panel.onNewWalkingGoal(frame)        
+        blockTable = self.createBlockObjectTable()
+        if len(blockTable)>0 and len(blockTable[0])>0:
+            stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+            startFrame = transformUtils.copyFrame(self.startingStanceFrame)
+            firstBlockFrame = transformUtils.copyFrame(blockTable[0][0].getChildFrame().transform)
+            frame = startFrame
+            frame.PostMultiply()
+            frame.Concatenate(firstBlockFrame)
+            frame.PreMultiply()
+            frame.Translate(0,0,stanceFrame.GetPosition()[2]-frame.GetPosition()[2])
+
+            yaw = transformUtils.rollPitchYawFromTransform(frame)[2]
+            xDir = np.array([np.cos(yaw),np.sin(yaw),0])
+            yDir = np.cross(np.array([0,0,1]), xDir)
+            zDir = np.cross(xDir, yDir)
+            goalFrame = transformUtils.getTransformFromAxesAndOrigin(xDir,yDir,zDir,frame.GetPosition())
+
+            footstepsdriverpanel.panel.onNewWalkingGoal(goalFrame)
+        else:
+            print 'error: no blocks defined; use Spawn Terrain button'
+            return
 
     def createFootstepsForTerrain(self):
         footstepData = self.terrainConfig['footstepData']
@@ -297,13 +316,14 @@ class TerrainTask(object):
         yaw = self.terrainConfig['startingYaw']
         pos = np.copy(self.terrainConfig['startingPosition'])
         pos[1] -= blockSize[0]*np.mean(np.array(cols))
-        self.startingStanceFrame = transformUtils.frameFromPositionAndRPY(pos, np.array([0,0,yaw]))
+        offsetFrame = transformUtils.frameFromPositionAndRPY(pos, np.array([0,0,yaw]))
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         blockFrame = transformUtils.copyFrame(stanceFrame)
         blockFrame.PreMultiply()
-        blockFrame.Concatenate(self.startingStanceFrame.GetLinearInverse())
+        blockFrame.Concatenate(offsetFrame.GetLinearInverse())
 
+        firstBlockFrame = None
         for row in range(len(blockTypes)):
             for col in cols:
                 blockType = blockTypes[row][col]
@@ -316,10 +336,19 @@ class TerrainTask(object):
                 offsetFrame = transformUtils.frameFromPositionAndRPY(pos, rpy)
                 offsetFrame.PostMultiply()
                 offsetFrame.Concatenate(blockFrame)
+
+                if row==0 and col==0:
+                    firstBlockFrame = offsetFrame
                 
                 pose = transformUtils.poseFromTransform(offsetFrame)
                 desc = dict(classname='BoxAffordanceItem', Name='%s (%d,%d)' % (self.terrainConfig['blockName'], row, col), Dimensions=blockSize.tolist(), pose=pose, Color=self.terrainConfig['blockColor'])
                 block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
+
+        startFrame = transformUtils.copyFrame(stanceFrame)
+        startFrame.PostMultiply()
+        if firstBlockFrame is not None:
+            startFrame.Concatenate(firstBlockFrame.GetLinearInverse())
+        self.startingStanceFrame = startFrame
 
         #for block in self.getCinderblockAffordances():
         #    frameSync.addFrame(block.getChildFrame(), ignoreIncoming=True)
