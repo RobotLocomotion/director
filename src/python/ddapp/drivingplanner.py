@@ -57,6 +57,7 @@ class DrivingPlanner(object):
         self.addSubscribers()
         self.graspWheelAngle = None
         self.graspWristAngle = None
+        self.kneeInPedal = 0
         self.plans = []
 
     def getInitCommands(self):
@@ -230,9 +231,16 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
 
-        legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
-        legAbovePedalFrame.PreMultiply()
-        legAbovePedalFrame.Translate([-0.02, 0.0, 0.03])
+        if self.kneeInPedal:
+            legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving knee in').transform)
+            legAbovePedalFrame.PreMultiply()
+            legAbovePedalFrame.Translate([0.0, 0.01, 0.03])
+        else:
+            legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
+            legAbovePedalFrame.PreMultiply()
+            legAbovePedalFrame.Translate([-0.02, 0.0, 0.03])
+
+
         identityFrame = vtk.vtkTransform()
         legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1])
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
@@ -266,9 +274,16 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
 
-        legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
-        legAbovePedalFrame.PreMultiply()
-        legAbovePedalFrame.Translate([-0.02,0.0, 0.03])
+        if self.kneeInPedal:
+            legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving knee in').transform)
+            legAbovePedalFrame.PreMultiply()
+            legAbovePedalFrame.Translate([0.0, 0.01, 0.03])
+        else:
+            legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
+            legAbovePedalFrame.PreMultiply()
+            legAbovePedalFrame.Translate([-0.02, 0.0, 0.03])
+
+
         identityFrame = vtk.vtkTransform()
         legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1])
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
@@ -364,7 +379,10 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
 
-        lfootConstraintFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
+        if self.kneeInPedal:
+            lfootConstraintFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving knee in').transform)
+        else:
+            lfootConstraintFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
         identityFrame = vtk.vtkTransform()
         lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', lfootConstraintFrame, identityFrame)
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
@@ -874,6 +892,9 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Coarse Grained Throttle Travel', 100, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Fine Grained Throttle Travel', 10, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Bar Grasp/Retract Depth', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
+        self.params.addProperty('Pedal Foot Location', 0, attributes=om.PropertyAttributes(enumNames=['Standard','Knee In']))
+
+
         self.params.addProperty('Steering Wheel Angle when Grasped', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Turning Radius', 9.5, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Wheel Separation', 1.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
@@ -882,6 +903,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Trajectory Y Offset', 0.30, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Angle Offset', 0.0, attributes=om.PropertyAttributes(singleStep=1, decimals=0)),
         self.params.addProperty('Show Trajectory', False)
+
         self.params.addProperty('Show Driving/Regrasp Tasks',0, attributes=om.PropertyAttributes(enumNames=['Ingress','Regrasp', 'Egress']))
         self._syncProperties()
 
@@ -910,6 +932,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.trajectoryX = self.params.getProperty('Trajectory X Offset')
         self.drivingPlanner.trajectoryY = self.params.getProperty('Trajectory Y Offset')
         self.drivingPlanner.trajectoryAngle = self.params.getProperty('Trajectory Angle Offset')
+        self.drivingPlanner.kneeInPedal = self.params.getProperty('Pedal Foot Location')
         self.taskToShow = self.params.getProperty('Show Driving/Regrasp Tasks')
 
         if hasattr(self, 'affordanceUpdater'):
