@@ -28,6 +28,7 @@ from ddapp import valvedemo
 from ddapp import drivingplanner
 from ddapp import egressplanner
 from ddapp import polarisplatformplanner
+from ddapp import surprisetask
 from ddapp import continuouswalkingdemo
 from ddapp import sitstandplanner
 from ddapp import walkingtestdemo
@@ -448,6 +449,8 @@ if usePlanning:
     terrainTaskPanel = terraintask.TerrainTaskPanel(robotSystem)
     terrainTask = terrainTaskPanel.terrainTask
 
+    surpriseTaskPanel = surprisetask.SurpriseTaskPanel(robotSystem)
+    surpriseTask = surpriseTaskPanel.planner
     egressPanel = egressplanner.EgressPanel(robotSystem)
     egressPlanner = egressPanel.egressPlanner
 
@@ -458,6 +461,7 @@ if usePlanning:
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
     taskPanels['Drill'] = drillTaskPanel.widget
+    taskPanels['Surprise'] = surpriseTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
 
     tasklaunchpanel.init(taskPanels)

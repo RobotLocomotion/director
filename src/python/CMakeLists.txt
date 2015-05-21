@@ -95,6 +95,7 @@ set(python_files
   ddapp/spreadsheet.py
   ddapp/startup.py
   ddapp/statelistener.py
+  ddapp/surprisetask.py
   ddapp/tabledemo.py
   ddapp/tasklaunchpanel.py
   ddapp/tdx.py
