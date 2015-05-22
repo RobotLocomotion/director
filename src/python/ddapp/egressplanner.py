@@ -107,9 +107,11 @@ class PolarisModel(object):
             np.array([ 0.33484372,  0.88280787, -0.31946488,  0.08044963]))
 
         self.leftFootUpFrame = vis.updateFrame(t,'left foot up frame', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+        
 
-        t = transformUtils.transformFromPose(np.array([ 0.4720199 , -0.06517618,  0.00233972]), np.array([  6.10521653e-03,   4.18621358e-04,   4.65520611e-01,
-                 8.85015882e-01]))
+        t = transformUtils.transformFromPose(np.array([ 0.47214939, -0.04856998,  0.01375837]), 
+            np.array([  6.10521653e-03,   4.18621358e-04,   4.65520611e-01,
+         8.85015882e-01]))
         self.rightHandGrabFrame = vis.updateFrame(t,'right hand grab bar', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
         self.frameSync = vis.FrameSync()
