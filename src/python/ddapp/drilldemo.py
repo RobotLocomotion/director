@@ -2247,8 +2247,78 @@ class DrillImageFitter(ImageBasedAffordanceFit):
         vis.updatePolyData(d.getPolyData(), 'table edge', color=[0,1,1])
 
 
+    def fitDrill(self, polyData, points):
+
+        drillPoint = points[0]
+
+        searchRegion = segmentation.cropToSphere(polyData, drillPoint, 0.2)
+
+        viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
+
+        xaxis = viewDirection
+        zaxis = [0,0,1]
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        xaxis = np.cross(yaxis, zaxis)
+        xaxis /= np.linalg.norm(xaxis)
+
+        t = transformUtils.getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, drillPoint)
+
+        polyData = segmentation.cropToBounds(polyData, t, [[-0.07, 0.07], [-0.07, 0.07], [-0.2, 0.2]])
+
+        obj = vis.updatePolyData(polyData, 'cropped drill points', color=[1,0,0])
+        obj.setProperty('Point Size', 4)
+
+        centroid = segmentation.computeCentroid(polyData)
+        maxZ = np.max(segmentation.vnp.getNumpyFromVtk(polyData, 'Points')[:,2])
+
+        origin = np.array([drillPoint[0], drillPoint[1], maxZ])
+
+        drillGuardToOrigin = 0.128
+        drillHandleRadius = 0.0287
+
+        t = transformUtils.getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, origin)
+        t.PreMultiply()
+        t.Translate(drillHandleRadius, 0.0, -drillGuardToOrigin)
+
+        if self.drillDemo.graspingHand == 'right':
+            t.PreMultiply()
+            t.RotateZ(180)
+
+        drill = self.drillDemo.spawnDrillAffordanceNew(t)
+
+
     def fitDrillOnTable(self, polyData, points):
-        segmentation.segmentDrillAlignedWithTable(points[0], polyData)
+
+        self.fitDrill(polyData, points)
+
+        drillPoint = points[0]
+        tablePoint = points[1]
+
+        viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
+
+        xaxis = viewDirection
+        zaxis = [0,0,1]
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        xaxis = np.cross(yaxis, zaxis)
+        xaxis /= np.linalg.norm(xaxis)
+
+        origin = np.array([drillPoint[0], drillPoint[1], tablePoint[2]])
+
+        drillOriginToTable = 0.139
+        drillHandleRadius = 0.0287
+
+        t = transformUtils.getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, origin)
+        t.PreMultiply()
+        t.Translate(drillHandleRadius, 0.0, drillOriginToTable)
+
+        if self.drillDemo.graspingHand == 'right':
+            t.PreMultiply()
+            t.RotateZ(180)
+
+        drill = self.drillDemo.spawnDrillAffordanceNew(t)
+
 
     def fitDrillButtonPress(self, polyData, points):
         drill = om.findObjectByName('drill')
@@ -2395,8 +2465,14 @@ class DrillTaskPanel(TaskUserPanel):
         self.drillFrame = None
         self.drillFrameCallback = None
 
-    def fitDrillOnTable(self):
+
+    def fitDrill(self):
         self.fitter.imagePicker.numberOfPoints = 1
+        self.fitter.pointCloudSource = 'lidar'
+        self.fitter.fitFunc = self.fitter.fitDrill
+
+    def fitDrillOnTable(self):
+        self.fitter.imagePicker.numberOfPoints = 2
         self.fitter.pointCloudSource = 'lidar'
         self.fitter.fitFunc = self.fitter.fitDrillOnTable
 
@@ -2537,6 +2613,7 @@ class DrillTaskPanel(TaskUserPanel):
 
     def addButtons(self):
 
+        self.addManualButton('Fit drill', self.fitDrill)
         self.addManualButton('Fit drill on table', self.fitDrillOnTable)
         self.addManualButton('Fit drill button press', self.fitDrillButtonPress)
         self.addManualButton('Fit drill wall', self.fitDrillWall)
