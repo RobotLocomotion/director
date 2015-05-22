@@ -503,6 +503,9 @@ class TerrainTask(object):
             rays2 = np.vstack((rays2,norms2))
             u,_,v = np.linalg.svd(rays2.T.dot(rays1))
             rot = u.dot(v)
+            s = np.sign(np.linalg.det(rot))
+            if s < 0:
+                rot = u.dot(np.diag(np.array([1,1,-1]))).dot(v)
             correction.PostMultiply()
             correction.Translate(-mean1)
             rotTransform = transformUtils.getTransformFromAxes(rot[0,:],rot[1,:],rot[2,:])
