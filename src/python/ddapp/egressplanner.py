@@ -291,18 +291,9 @@ class EgressPlanner(object):
     def computeLeftFootOverPlatformFrame(self, startPose, height):
         lFoot2World = transformUtils.copyFrame(self.polaris.leftFootEgressOutsideFrame.transform)
         rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
-        lFoot2World.PostMultiply()
-        lFoot2World.Translate(np.array(rFoot2World.GetPosition()) - lFoot2World.GetPosition())
+        lFoot2World = transformUtils.copyFrame(rFoot2World)
         lFoot2World.PreMultiply()
         lFoot2World.Translate([0.05, 0.26, height])
-
-        rFootRPY = transformUtils.rollPitchYawFromTransform(rFoot2World)
-        lFootRPY = transformUtils.rollPitchYawFromTransform(lFoot2World);
-        lFootxyz,_ = transformUtils.poseFromTransform(lFoot2World)
-
-        lFootRPY[0] = rFootRPY[0]
-        lFootRPY[1] = rFootRPY[1]
-        lFoot2World = transformUtils.frameFromPositionAndRPY(lFootxyz, np.rad2deg(lFootRPY))
         return lFoot2World
 
     def planFootOut(self):
@@ -388,7 +379,7 @@ class EgressPlanner(object):
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0], poseTimes[-1]]
         supportsList = [['r_foot'], ['r_foot','l_foot']]
-        plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
+        plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
         self.addPlan(plan)
         return plan, endPose
 
@@ -430,16 +421,17 @@ class EgressPlanner(object):
         leftFootDownPlan, leftFootDownEndPose = self.planLeftFootDown()
         centerWeightPlan = self.planCenterWeight(startPose=leftFootDownEndPose)
 
-        # now we need to combine these plans 
+        # now we need to combine these plans
         footDownEndTime = leftFootDownPlan.plan.plan[-1].utime
 
         robotPlan = leftFootDownPlan
+        robotPlan.plan.plan_info = list(robotPlan.plan.plan_info)
         for state, info in zip(centerWeightPlan.plan.plan, centerWeightPlan.plan.plan_info):
             state.utime += footDownEndTime
             robotPlan.plan.plan.append(state)
             robotPlan.plan.plan_info.append(info)
 
-        robotPlan.num_states = len(robotPlan.plan)
+        robotPlan.plan.num_states = len(robotPlan.plan.plan)
 
 
         # make support sequence
@@ -507,8 +499,7 @@ class EgressPanel(TaskUserPanel):
         self.addManualButton('Stand up', self.egressPlanner.planStandUp)
         self.addManualButton('Shift weight out', self.egressPlanner.planShiftWeightOut)
         self.addManualButton('Move left foot out', self.egressPlanner.planFootOut)
-        self.addManualButton('Put foot down', self.egressPlanner.planLeftFootDown)
-        self.addManualButton('Center weight', self.egressPlanner.planCenterWeight)
+        self.addManualButton('Put foot down and center weight', self.egressPlanner.planFootDownAndCenterWeight)
         self.addManualButton('Arms forward', self.egressPlanner.planArmsForward)
         self.addManualSpacer()
         #sit/stand buttons
@@ -611,8 +602,7 @@ class EgressPanel(TaskUserPanel):
         addManipTask('Stand up', ep.planStandUp, userPrompt=True, planner=ep)
         addManipTask('Shift weight out of Polaris', ep.planShiftWeightOut, userPrompt=True, planner=ep)
         addManipTask('Move left foot out of Polaris', ep.planFootOut, userPrompt=True, planner=ep)
-        addManipTask('Put left foot down on platform', ep.planLeftFootDown, userPrompt=True, planner=ep)
-        addManipTask('Center weight over feet', ep.planCenterWeight, userPrompt=True, planner=ep)
+        addManipTask('Put left foot down and center weight', ep.planFootDownAndCenterWeight, userPrompt=True, planner=ep)
         addManipTask('Move arms up for walking', ep.planArmsForward, userPrompt=True, planner=ep)
 
         prep = addFolder('Step down prep')
