@@ -299,6 +299,12 @@ class TableDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
+    def planLowerArm(self, side):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side=side)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
     def planDropPostureRaise(self, side):
         startPose = self.getPlanningStartPose()
         poseA = self.getRaisedArmPose(startPose, side)
