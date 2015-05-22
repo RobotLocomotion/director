@@ -890,7 +890,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Coarse Grained Throttle Travel', 100, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Fine Grained Throttle Travel', 10, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Bar Grasp/Retract Depth', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
-        self.params.addProperty('Pedal Foot Location', 0, attributes=om.PropertyAttributes(enumNames=['Standard','Knee In']))
+        self.params.addProperty('Pedal Foot Location', 1, attributes=om.PropertyAttributes(enumNames=['Standard','Knee In']))
 
 
         self.params.addProperty('Steering Wheel Angle when Grasped', 0, attributes=om.PropertyAttributes(singleStep=10))
