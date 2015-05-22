@@ -47,6 +47,7 @@ class ValvePlannerDemo(object):
         self.speedLow = 10
         self.speedHigh = 60
         self.speedTurn = 100
+        self.maxHandTranslationSpeed = 0.3
 
         # reach to center and back - for palm point
         self.graspFrameXYZ = [0.0, 0.0, -0.1]
@@ -531,7 +532,11 @@ class ValvePlannerDemo(object):
                                           resetPoses=True, **kwargs)
         info = max(insert_plan.plan_info)
         reachPose = robotstate.convertStateMessageToDrakePose(insert_plan.plan[0])
-        plan = self.ikPlanner.computePostureGoal(startPose, reachPose)
+        ikParameters = IkParameters(maxDegreesPerSecond=2*self.speedTurn,
+                                    rescaleBodyNames=[self.ikPlanner.getHandLink(side=self.graspingHand)],
+                                    rescaleBodyPts=list(self.ikPlanner.getPalmPoint(side=self.graspingHand)),
+                                    maxBodyTranslationSpeed=self.maxHandTranslationSpeed)
+        plan = self.ikPlanner.computePostureGoal(startPose, reachPose, ikParameters=ikParameters)
         plan.plan_info = [info]*len(plan.plan_info)
         lcmUtils.publish('CANDIDATE_MANIP_PLAN', plan)
         self.addPlan(plan)
