@@ -426,13 +426,28 @@ def showMajorPlanes(polyData=None):
 
 
 def cropToBox(polyData, transform, dimensions):
-
+    '''
+    dimensions is length 3 describing box dimensions
+    '''
     origin = np.array(transform.GetPosition())
     axes = transformUtils.getAxesFromTransform(transform)
 
     for axis, length in zip(axes, dimensions):
         cropAxis = np.array(axis)*(length/2.0)
         polyData = cropToLineSegment(polyData, origin - cropAxis, origin + cropAxis)
+
+    return polyData
+
+def cropToBounds(polyData, transform, bounds):
+    '''
+    bounds is a 2x3 containing the min/max values along the transform axes to use for cropping
+    '''
+    origin = np.array(transform.GetPosition())
+    axes = transformUtils.getAxesFromTransform(transform)
+
+    for axis, bound in zip(axes, bounds):
+        axis = np.array(axis)/np.linalg.norm(axis)
+        polyData = cropToLineSegment(polyData, origin + axis*bound[0], origin + axis*bound[1])
 
     return polyData
 
