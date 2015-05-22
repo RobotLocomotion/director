@@ -1117,7 +1117,7 @@ class JointTeleopPanel(object):
             constraints.extend(ikPlanner.createFixedFootConstraints(startPoseName))
             constraints.append(ikPlanner.createQuasiStaticConstraint())
 
-            self.endPose, info = ikPlanner.ikServer.runIk(constraints, nominalPostureName=startPoseName, seedPostureName='q_end')
+            self.endPose, info = ikPlanner.ikServer.runIk(constraints, ikPlanner.defaultIkParameters, nominalPostureName=startPoseName, seedPostureName='q_end')
             app.displaySnoptInfo(info)
 
 
