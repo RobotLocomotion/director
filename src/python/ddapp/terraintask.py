@@ -46,6 +46,7 @@ import ddapp.tasks.taskmanagerwidget as tmw
 import drc as lcmdrc
 import copy
 import re
+import glob
 
 from PythonQt import QtCore, QtGui
 
@@ -77,7 +78,14 @@ class TerrainTask(object):
         self.defaultLeadingFoot = 'right'
         self.removeDuringOrganize = False
 
-        self.terrainFieldDescription = self.getTerrainFieldDescription()
+        # terrain config file stuff
+        self.terrainConfigDir = os.path.join(ddapp.getDRCBaseDir(), 'software','config','terrain')
+        files = glob.glob(os.path.join(self.terrainConfigDir,'*.py'))
+        self.terrainConfigList = []
+        for f in files:
+            self.terrainConfigList.append(os.path.basename(f).split('.')[0])
+        if len(self.terrainConfigList)>0:
+            self.loadTerrainConfig(self.terrainConfigList[0])
 
     def startBlockUpdater(self):
         self.timer.start()
@@ -101,13 +109,14 @@ class TerrainTask(object):
         footstepsdriverpanel.panel.onNewWalkingGoal(frameCopy)
 
     def requestBlockFit(self):
+        blockSize = self.terrainConfig['blockSize'].tolist()
         msg = lcmdrc.block_fit_request_t()
         msg.utime = getUtime()
         if self.constrainBlockSize:
-            msg.dimensions = [blockLength, blockWidth, blockHeight]
+            msg.dimensions = blockSize
         else:
-            msg.dimensions = [0, 0, blockHeight]
-        msg.name_prefix = 'cinderblock'
+            msg.dimensions = [0, 0, blockSize[2]]
+        msg.name_prefix = self.terrainConfig['blockName']
         msg.algorithm = self.blockFitAlgo
         lcmUtils.publish('BLOCK_FIT_TRIGGER', msg)
 
@@ -149,99 +158,135 @@ class TerrainTask(object):
         return self.robotSystem.robotStateJointController.q.copy()
 
 
-    def getTerrainFieldDescription(self):
-        # F=sloping up forward (+x), B=sloping up backward (-x),
-        # R=sloping up rightward (-y), L=sloping up leftward (+y)
-        # last row is closest to robot (robot is on bottom looking up)
-        # column order is left-to-right on robot (+y to -y)
-        blockTypes = [
-            [ 'B', 'L', 'F', 'R', 'B', 'L' ],
-            [ 'L', 'F', 'R', 'B', 'L', 'F' ],
-            [ 'F', 'R', 'B', 'L', 'F', 'R' ],
-            [ 'R', 'B', 'L', 'F', 'R', 'B' ],
-            [ 'B', 'L', 'F', 'R', 'B', 'L' ],
-            [ 'L', 'F', 'R', 'B', 'L', 'F' ],
-            [ 'F', 'R', 'B', 'L', 'F', 'R' ]
-        ]
-        blockTypes.reverse()
+    #
+    # TERRAIN SPAWNING STUFF STARTS HERE
+    #
 
-        # 0=ground level, 1=one cinderblock offset, etc
-        blockLevels = [
-            [ 0, 0, 0, 0, 0, 0 ],
-            [ 1, 1, 1, 1, 1, 1 ],
-            [ 1, 2, 1, 1, 2, 1 ],
-            [ 0, 1, 1, 1, 1, 0 ],
-            [ 0, 0, 1, 1, 0, 0 ],
-            [ 0, 0, 1, 1, 0, 0 ],
-            [ 0, 0, 0, 0, 0, 0 ]
-        ]
-        blockLevels.reverse()
+    def loadTerrainConfig(self, terrainType):
+        # first clear out existing affordances
+        if hasattr(self, 'terrainConfig') and self.terrainConfig is not None:
+            blocks = self.getAllBlockAffordances()
+            if blocks is not None:
+                for obj in blocks:
+                    om.removeFromObjectModel(obj)
 
-        blockAngleMap = { 'F': 180, 'B': 0, 'R': 90, 'L': 270 }
+        # load file
+        configFile = os.path.join(self.terrainConfigDir, terrainType+'.py')
+        self.terrainConfig = {}
+        execfile(configFile, self.terrainConfig)
+        print 'loaded config from', configFile
 
-        return dict(blockTypes=blockTypes, blockLevels=blockLevels, blockAngleMap=blockAngleMap)
+    def getAllBlockAffordances(self):
+        return [obj for obj in om.getObjects() if obj.getProperty('Name').startswith(self.terrainConfig['blockName'])]
+
+    def getTabularBlockAffordances(self):
+        blocks = []
+        for obj in om.getObjects():
+            name = obj.getProperty('Name')
+            if re.match('^%s \(\d+,\d+\)$' % self.terrainConfig['blockName'], name):
+                blocks.append(obj)
+        return blocks
+
+    def getIndexedBlockAffordances(self):
+        blocks = []
+        for obj in om.getObjects():
+            name = obj.getProperty('Name')
+            if re.match(r'^%s \d+$' % self.terrainConfig['blockName'], name):
+                blocks.append(obj)
+        return blocks
+
+    def createStartingGoal(self):
+        if not hasattr(self, 'startingStanceFrame') or self.startingStanceFrame is None:
+            print 'error: no stance frame defined'
+            return
+        blockTable = self.createBlockObjectTable()
+        if len(blockTable)>0 and len(blockTable[0])>0:
+            stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+            startFrame = transformUtils.copyFrame(self.startingStanceFrame)
+            firstBlockFrame = transformUtils.copyFrame(blockTable[0][0].getChildFrame().transform)
+            frame = startFrame
+            frame.PostMultiply()
+            frame.Concatenate(firstBlockFrame)
+            frame.PreMultiply()
+            frame.Translate(0,0,stanceFrame.GetPosition()[2]-frame.GetPosition()[2])
+
+            yaw = transformUtils.rollPitchYawFromTransform(frame)[2]
+            xDir = np.array([np.cos(yaw),np.sin(yaw),0])
+            yDir = np.cross(np.array([0,0,1]), xDir)
+            zDir = np.cross(xDir, yDir)
+            goalFrame = transformUtils.getTransformFromAxesAndOrigin(xDir,yDir,zDir,frame.GetPosition())
+
+            footstepsdriverpanel.panel.onNewWalkingGoal(goalFrame)
+        else:
+            print 'error: no blocks defined; use Spawn Terrain button'
+            return
 
     def createFootstepsForTerrain(self):
-        # TODO: this is just an example
-        # which foot, block (row,col), offset (x,y), support
-        # (row,col) refer to which block
-        # (x,y) are offsets wrt the block center, in meters
-        # support is an enum indicating foot support type
-        #   0=heel-toe, 1=midfoot-toe, 2=heel-midfoot
-        footstepData = [
-            [ 'left',  (0,1), (0.00, 0.00),  0 ],
-            [ 'right', (0,2), (0.00, 0.00),  0 ],
-            [ 'left',  (1,1), (-0.10, 0.00), 0 ],
-            [ 'right', (1,2), (0.00, 0.05),  0 ],
-            [ 'left',  (2,1), (0.10, -0.05), 0 ],
-            [ 'right', (2,2), (0.10, 0.10),  0 ]
-        ]
+        footstepData = self.terrainConfig['footstepData']
 
         # check that we have required data
         blockObjectTable = self.createBlockObjectTable()
-        desc = self.terrainFieldDescription
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         stanceAxes = transformUtils.getAxesFromTransform(stanceFrame)
+ 
+        # get current frames of feet
+        leftFootFrame = self.getFootFrameAtSole(self.sideToFootLinkName('left'))
+        rightFootFrame = self.getFootFrameAtSole(self.sideToFootLinkName('right'))
+        leftPos = np.array(leftFootFrame.GetPosition()[0:2])
+        leftLine = np.array(transformUtils.getAxesFromTransform(leftFootFrame)[0][0:2])
 
-        # generate footstep frames
+        leftLine = np.append(leftLine, -np.dot(leftLine,leftPos))
+        rightPos = np.array(rightFootFrame.GetPosition()[0:2])
+        rightLine = np.array(transformUtils.getAxesFromTransform(rightFootFrame)[0][0:2])
+        rightLine = np.append(rightLine, -np.dot(rightLine,rightPos))
+
+        # generate new footstep frames
         leadingFoot = footstepData[0][0]
         stepFrames = []
+        supportTypes = []
         for foot, blockIndex, offset, supportType in footstepData:
             block = blockObjectTable[blockIndex[0]][blockIndex[1]]
             if block is None:
                 print 'error: no block for footstep (%d,%d)' % blockIndex
                 return
             z = np.array(block.getProperty('Dimensions'))[2]/2.0
+            pt = np.array([offset[0], offset[1], z])
             t = transformUtils.copyFrame(block.getChildFrame().transform)
             # TODO: should feet be aligned with forward direction or block?
             blockAxes = transformUtils.getAxesFromTransform(t)
             x = np.round(np.dot(stanceAxes[0], blockAxes[0]))
             y = np.round(np.dot(stanceAxes[0], blockAxes[1]))
             theta = np.degrees(np.arctan2(y,x))
-            pt = np.array([offset[0], offset[1], z])
             t.PreMultiply()
             t.RotateZ(theta);
             t.Translate(pt)
-            stepFrames.append(t)
+
+            # only append footstep if it is forward of current foot
+            pos = np.array(t.GetPosition()[0:2])
+            if foot=='left':
+                dist = leftLine[0:2].dot(pos)+leftLine[2]
+            else:
+                dist = rightLine[0:2].dot(pos)+rightLine[2]
+            if dist > 0.1:  # arbitrary threshold
+                stepFrames.append(t)
+                supportTypes.append(supportType)
             #obj = vis.showFrame(t, '%s step frame' % block.getProperty('Name'), parent='step frames', scale=0.2)
 
         # send footstep request
         startPose = self.getPlanningStartPose()
         helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
         request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
-        for i in range(len(footstepData)):
-            _, _, _, supportType = footstepData[i]
-            request.goal_steps[i].params.support_contact_groups = supportType
+        for i in range(len(stepFrames)):
+            request.goal_steps[i].params.support_contact_groups = supportTypes[i]
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
 
     def createBlockObjectTable(self):
-        desc = self.terrainFieldDescription
-        types = desc['blockTypes']
+        types = self.terrainConfig['blockTypes']
         table = [[None for i in range(len(types[0]))] for j in range(len(types))]
-        for obj in self.getCinderblockAffordances():
+        for obj in self.getTabularBlockAffordances():
             name = obj.getProperty('Name')
-            m = re.match('cinderblock \((\d+)\,(\d+)\)', name)
+            m = re.match('%s \((\d+)\,(\d+)\)' % self.terrainConfig['blockName'], name)
             if m is not None:
                 row = int(m.group(1))
                 col = int(m.group(2))
@@ -251,26 +296,34 @@ class TerrainTask(object):
 
     def spawnCinderblockTerrain(self, cols=[]):
         
-        for obj in self.getCinderblockAffordances():
+        # clear old affordances
+        for obj in self.getTabularBlockAffordances():
             om.removeFromObjectModel(obj)
 
-        desc = self.terrainFieldDescription
-        blockTypes = desc['blockTypes']
-        blockLevels = desc['blockLevels']
-        blockAngleMap = desc['blockAngleMap']
+        blockTypes = self.terrainConfig['blockTypes']
+        blockLevels = self.terrainConfig['blockLevels']
+        blockAngleMap = self.terrainConfig['blockAngleMap']
+        blockSize = self.terrainConfig['blockSize']
 
-        tiltAngle = 15
+        tiltAngle = self.terrainConfig['blockTiltAngle']
         tiltAngle = np.radians(tiltAngle)
-        tiltVerticalOffset = blockHeight/2.0 + np.sin(tiltAngle)*blockLength/2.0
+        tiltVerticalOffset = blockSize[2]/2.0 + np.sin(tiltAngle)*blockSize[1]/2.0
 
         if len(cols) == 0:
             cols = range(len(blockTypes[0]))
 
-        blockFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
-        blockFrame.PreMultiply()
-        blockFrame.Translate(0.25+blockLength, blockWidth*np.mean(np.array(cols)), 0)
+        # create frame for starting position
+        yaw = self.terrainConfig['startingYaw']
+        pos = np.copy(self.terrainConfig['startingPosition'])
+        pos[1] -= blockSize[0]*np.mean(np.array(cols))
+        offsetFrame = transformUtils.frameFromPositionAndRPY(pos, np.array([0,0,yaw]))
 
-        blocks = []
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
+        blockFrame = transformUtils.copyFrame(stanceFrame)
+        blockFrame.PreMultiply()
+        blockFrame.Concatenate(offsetFrame.GetLinearInverse())
+
+        firstBlockFrame = None
         for row in range(len(blockTypes)):
             for col in cols:
                 blockType = blockTypes[row][col]
@@ -278,65 +331,67 @@ class TerrainTask(object):
                 blockLevel = blockLevels[row][col]
 
                 rpy = np.degrees([0.0, tiltAngle, blockYaw])
-                pos = [blockLength*row, -blockWidth*col, blockHeight*blockLevel + tiltVerticalOffset]
+                pos = [blockSize[1]*row, -blockSize[0]*col, blockSize[2]*blockLevel + tiltVerticalOffset]
                 
                 offsetFrame = transformUtils.frameFromPositionAndRPY(pos, rpy)
                 offsetFrame.PostMultiply()
                 offsetFrame.Concatenate(blockFrame)
+
+                if row==0 and col==0:
+                    firstBlockFrame = offsetFrame
                 
                 pose = transformUtils.poseFromTransform(offsetFrame)
-                desc = dict(classname='BoxAffordanceItem', Name='%s (%d,%d)' % (self.cinderblockPrefix, row, col), Dimensions=[blockLength, blockWidth, blockHeight], pose=pose, Color=[0.4,0.6,0.4])
+                desc = dict(classname='BoxAffordanceItem', Name='%s (%d,%d)' % (self.terrainConfig['blockName'], row, col), Dimensions=blockSize.tolist(), pose=pose, Color=self.terrainConfig['blockColor'])
                 block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
-                blocks.append(block)
+
+        startFrame = transformUtils.copyFrame(stanceFrame)
+        startFrame.PostMultiply()
+        if firstBlockFrame is not None:
+            startFrame.Concatenate(firstBlockFrame.GetLinearInverse())
+        self.startingStanceFrame = startFrame
 
         #for block in self.getCinderblockAffordances():
         #    frameSync.addFrame(block.getChildFrame(), ignoreIncoming=True)
 
-        return blocks
+    def showBlocks(self, blocks, visible):
+        for b in blocks:
+            b.setProperty('Visible', visible)
+
 
     def assignBlocks(self):
         # get list of ideal blocks and detected blocks
-        idealBlocks = []
-        detectedBlocks = []
-        for obj in self.getAllCinderblockAffordances():
-            name = obj.getProperty('Name')
-            m = re.match('cinderblock \((\d+)\,(\d+)\)', name)
-            if m is not None:
-                row = int(m.group(1))
-                col = int(m.group(2))
-                idealBlocks.append(obj)
-            m = re.match('cinderblock \d+', name)
-            if m is not None:
-                detectedBlocks.append(obj)
+        idealBlocks = self.getTabularBlockAffordances()
+        detectedBlocks = self.getIndexedBlockAffordances()
 
         # check that we have both spawned and detected blocks
         if len(detectedBlocks) == 0:
             print 'error: no blocks detected; use Fit Blocks button'
             return
         elif len(idealBlocks) == 0:
-            print 'error: no blocks spawned; use Spawn Terrain Field button'
+            print 'error: no blocks spawned; use Spawn Terrain button'
             return
 
         # hide ideal blocks, show detected blocks
-        for b in idealBlocks:
-            b.setProperty('Visible', False)
-        for b in detectedBlocks:
-            b.setProperty('Visible', True)
+        self.showBlocks(idealBlocks, False)
+        self.showBlocks(detectedBlocks, True)
 
         # pick point in detected blocks
         picker = pointpicker.AffordancePicker(app.getDRCView(), self.robotSystem.affordanceManager, filterFunc=lambda x: x in detectedBlocks)
-        picker.callbackFunc = functools.partial(self.assignBlocks2, idealBlocks, detectedBlocks)
+        picker.callbackFunc = functools.partial(self.assignBlocks2)
         picker.start()
         
-    def assignBlocks2(self, idealBlocks, detectedBlocks, pickedDetectedBlock):
+    def assignBlocks2(self, pickedDetectedBlock):
         proceed = len(pickedDetectedBlock)==1
 
-        # hide detected blocks, show ideal blocks
-        for b in detectedBlocks:
-            b.setProperty('Visible', not proceed)
-        for b in idealBlocks:
-            b.setProperty('Visible', True)
+        # get list of ideal blocks and detected blocks
+        idealBlocks = self.getTabularBlockAffordances()
+        detectedBlocks = self.getIndexedBlockAffordances()
 
+        # hide detected blocks, show ideal blocks
+        self.showBlocks(detectedBlocks, not proceed)
+        self.showBlocks(idealBlocks, True)
+
+        # TODO: make an abort function
         if not proceed:
             print 'cannot proceed: no spawned block was clicked'
             return
@@ -344,17 +399,24 @@ class TerrainTask(object):
         # pick point in ideal blocks
         pickedDetectedBlock = pickedDetectedBlock[0]
         picker = pointpicker.AffordancePicker(app.getDRCView(), self.robotSystem.affordanceManager, filterFunc=lambda x: x in idealBlocks)
-        picker.callbackFunc = functools.partial(self.assignBlocks3, idealBlocks, detectedBlocks, pickedDetectedBlock)
+        picker.callbackFunc = functools.partial(self.assignBlocks3, pickedDetectedBlock)
         picker.start()
 
-    def assignBlocks3(self, idealBlocks, detectedBlocks, pickedDetectedBlock, pickedIdealBlock):
+    def assignBlocks3(self, pickedDetectedBlock, pickedIdealBlock):
         proceed = len(pickedIdealBlock)==1
         if not proceed:
             return
         pickedIdealBlock = pickedIdealBlock[0]
 
+        # get list of ideal blocks and detected blocks
+        idealBlocks = self.getTabularBlockAffordances()
+        detectedBlocks = self.getIndexedBlockAffordances()
+
+        # grab poses of selected blocks
         t1 = transformUtils.copyFrame(pickedIdealBlock.getChildFrame().transform)
         t2 = transformUtils.copyFrame(pickedDetectedBlock.getChildFrame().transform)
+
+        # due to symmetry, find minimal of the 4 possible rotations
         axes1 = transformUtils.getAxesFromTransform(t1)
         axes2 = transformUtils.getAxesFromTransform(t2)
         R1 = np.array(axes1).T
@@ -365,24 +427,32 @@ class TerrainTask(object):
         values = [R[permIndices[0]][0], R[permIndices[1]][1], R[permIndices[2]][2]]
         R2 = R2.dot(np.sign(np.diag(np.array(values))))
         rot = R2.T.dot(R1)
+
+        # find translation so that tops of blocks align
+        d1 = pickedIdealBlock.getProperty('Dimensions')
+        d2 = pickedDetectedBlock.getProperty('Dimensions')
+        pos1 = np.array(t1.GetPosition()) + np.array(axes1[2])*d1[2]/2
+        pos2 = np.array(t2.GetPosition()) + np.array(axes2[2])*d2[2]/2
         
+        # compute initial (minimal) transform between selected blocks
         correction = vtk.vtkTransform()
         correction.PostMultiply()
-        correction.Translate(-np.array(t1.GetPosition()))
+        correction.Translate(-np.array(pos1))
         rotTransform = transformUtils.getTransformFromAxes(rot[0,:],rot[1,:],rot[2,:])
         correction.Concatenate(rotTransform)
-        correction.Translate(t2.GetPosition())
+        correction.Translate(pos2)
 
-        # move all ideal blocks
+        # move all ideal blocks and reset color
         for b in idealBlocks:
             t = b.getChildFrame().transform
             t.PostMultiply()
             t.Concatenate(correction)
             t.Modified()
+            b.setProperty('Color', self.terrainConfig['blockColor'])
 
         # associate blocks (only use xy distances)
-        # TODO: this is brute force, could use table instead
         matches = []
+        blockSize = self.terrainConfig['blockSize']
         for b in detectedBlocks:
             t1 = b.getChildFrame().transform
             p1 = np.array(t1.GetPosition())
@@ -396,16 +466,48 @@ class TerrainTask(object):
                 if dist < minDist:
                     minDist = dist
                     bestMatch = ib
-            if minDist < blockWidth/4:
+            if minDist < np.linalg.norm(blockSize[0:2])/4:
                 t2 = bestMatch.getChildFrame().transform
                 normal2 = np.array(transformUtils.getAxesFromTransform(t2)[2])
                 if np.arccos(np.dot(normal1,normal2)) > np.radians(20):
                     print 'warning: normal mismatch between %s and %s' % (b.getProperty('Name'), bestMatch.getProperty('Name'))
                     continue
                 matches.append((b,bestMatch))
+                bestMatch.setProperty('Color', self.terrainConfig['blockColorMatched'])
+                
 
-        # TODO: compute and apply transform using all matches
+        # compute and apply transform using all matches
         correction = vtk.vtkTransform()
+        if len(matches) > 2:
+            pts1 = np.zeros((len(matches),3))
+            pts2 = np.zeros((len(matches),3))
+            norms1 = np.zeros((len(matches),3))
+            norms2 = np.zeros((len(matches),3))
+            for i in range(len(matches)):
+                match = matches[i]
+                t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
+                t2 = transformUtils.copyFrame(match[0].getChildFrame().transform)
+                t1.PreMultiply()
+                t1.Translate(0, 0, -match[1].getProperty('Dimensions')[2])
+                t2.PreMultiply()
+                t2.Translate(0, 0, -match[0].getProperty('Dimensions')[2])
+                pts1[i,:] = np.array(t1.GetPosition())
+                pts2[i,:] = np.array(t2.GetPosition())
+                norms1[i,:] = np.array(transformUtils.getAxesFromTransform(t1)[2])
+                norms2[i,:] = np.array(transformUtils.getAxesFromTransform(t2)[2])
+            mean1 = np.mean(pts1,axis=0)
+            mean2 = np.mean(pts2,axis=0)
+            rays1 = pts1-mean1
+            rays1 = np.vstack((rays1,norms1))
+            rays2 = pts2-mean2
+            rays2 = np.vstack((rays2,norms2))
+            u,_,v = np.linalg.svd(rays2.T.dot(rays1))
+            rot = u.dot(v)
+            correction.PostMultiply()
+            correction.Translate(-mean1)
+            rotTransform = transformUtils.getTransformFromAxes(rot[0,:],rot[1,:],rot[2,:])
+            correction.Concatenate(rotTransform)
+            correction.Translate(mean2)
         for b in idealBlocks:
             t = b.getChildFrame().transform
             t.PostMultiply()
@@ -416,6 +518,11 @@ class TerrainTask(object):
         for match in matches:
             t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
             t2 = transformUtils.copyFrame(match[0].getChildFrame().transform)
+            # adjust frames to be centered at the top face
+            t1.PreMultiply()
+            t1.Translate(0, 0, -match[1].getProperty('Dimensions')[2])
+            t2.PreMultiply()
+            t2.Translate(0, 0, -match[0].getProperty('Dimensions')[2])
             correction = vtk.vtkTransform()
             correction.PreMultiply()
             correction.Concatenate(t2)
@@ -425,7 +532,9 @@ class TerrainTask(object):
             t.Concatenate(correction)
             t.Modified()
 
-
+    #
+    # TERRAIN SPAWNING STUFF ENDS HERE
+    #
 
 
     def spawnTiltedCinderblocks(self):
@@ -1166,9 +1275,10 @@ class TerrainTaskPanel(TaskUserPanel):
 
     def addButtons(self):
         self.addManualButton('Fit Blocks', self.terrainTask.requestBlockFit)
-        self.addManualButton('Spawn terrain field', self.terrainTask.spawnCinderblockTerrain)
-        self.addManualButton('Assign blocks', self.terrainTask.assignBlocks)
-        self.addManualButton('Prefab footsteps', self.terrainTask.createFootstepsForTerrain)
+        self.addManualButton('Spawn Terrain', self.terrainTask.spawnCinderblockTerrain)
+        self.addManualButton('Assign Blocks', self.terrainTask.assignBlocks)
+        self.addManualButton('Prefab Footsteps', self.terrainTask.createFootstepsForTerrain)
+        self.addManualButton('Set Starting Goal', self.terrainTask.createStartingGoal)
         self.addManualSpacer()
 
         #self.addManualButton('Walk to tilted steps', self.terrainTask.walkToTiltedCinderblocks)
@@ -1194,6 +1304,7 @@ class TerrainTaskPanel(TaskUserPanel):
 
 
     def addDefaultProperties(self):
+        self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=self.terrainTask.terrainConfigList))
         self.params.addProperty('Block Fit Algo', self.terrainTask.blockFitAlgo, attributes=om.PropertyAttributes(enumNames=['MinArea', 'ClosestSize']))
         self.params.addProperty('Constrain Block Size', self.terrainTask.constrainBlockSize)
         self.params.addProperty('Manual Steps Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
@@ -1204,6 +1315,9 @@ class TerrainTaskPanel(TaskUserPanel):
     def onPropertyChanged(self, propertySet, propertyName):
         if propertyName == 'Camera Texture':
             self.terrainTask.useTextures = self.params.getProperty(propertyName)
+        elif propertyName == 'Terrain Type':
+            terrainConfig = self.terrainTask.terrainConfigList[self.params.getProperty(propertyName)];
+            self.terrainTask.loadTerrainConfig(terrainConfig)
         elif propertyName == 'Block Fit Algo':
             self.terrainTask.blockFitAlgo = self.params.getProperty(propertyName)
         elif propertyName == 'Constrain Block Size':
