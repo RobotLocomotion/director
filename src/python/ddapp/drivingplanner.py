@@ -322,14 +322,14 @@ class DrivingPlanner(object):
         # legUpFrame.Translate([0.0,0.0, self.distanceAboveFootStartPose])
         legUpFrame = transformUtils.copyFrame(om.findObjectByName('left foot up frame').transform)
         identityFrame = vtk.vtkTransform()
-        legUpConstraint = self.createLeftFootPoseConstraint(legUpFrame, tspan=[1,1])
+        legUpConstraint = self.createLeftFootPoseConstraint(legUpFrame, tspan=[1,1], angleToleranceInDegrees=10)
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
 
         constraints = [allButLeftLegPostureConstraint]
         constraints.extend(legUpConstraint)
 
         seedPoseName = 'q_driving'
-        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'car_entry_new')
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
@@ -1196,9 +1196,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.folder = ungraspBar
         addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
-
-        armsToEgressStart = addFolder('Arms to Egress Start')
-        addManipTask('Arms To Egress Start', self.drivingPlanner.planArmsEgressStart, userPrompt=True)
 
         armsToEgressStart = addFolder('Arms to Egress Position')
         addManipTask('Arms To Egress Prep', self.drivingPlanner.planArmsEgressPrep, userPrompt=True)
