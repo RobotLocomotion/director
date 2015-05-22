@@ -77,7 +77,7 @@ class PolarisModel(object):
         # t = transformUtils.transformFromPose(np.array([ -4.34908919e-04,   9.24901627e-01,   2.65614116e-01]),
         #     np.array([ 0.25022251,  0.913271  , -0.32136359, -0.00708626]))
 
-        t = transformUtils.transformFromPose(np.array([ 0.06485356,  0.84452545,  0.24825151]),
+        t = transformUtils.transformFromPose(np.array([ 0.0384547 ,  0.89273742,  0.24140762]),
             np.array([ 0.26331831,  0.915796  , -0.28055337,  0.11519963]))
 
         self.leftFootPedalSwingFrame = vis.updateFrame(t,'left foot pedal swing', scale=0.2, visible=True, parent=self.pointcloudAffordance)
