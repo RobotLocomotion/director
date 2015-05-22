@@ -2285,8 +2285,8 @@ class DrillImageFitter(ImageBasedAffordanceFit):
 
         polyData = segmentation.cropToBounds(polyData, t, [[-0.07, 0.07], [-0.07, 0.07], [-0.2, 0.2]])
 
-        obj = vis.updatePolyData(polyData, 'cropped drill points', color=[1,0,0])
-        obj.setProperty('Point Size', 4)
+        obj = vis.updatePolyData(polyData, 'cropped drill points', color=[1,0,0], visible=False)
+        obj.setProperty('Point Size', 3)
 
         centroid = segmentation.computeCentroid(polyData)
         maxZ = np.max(segmentation.vnp.getNumpyFromVtk(polyData, 'Points')[:,2])
@@ -2647,7 +2647,7 @@ class DrillTaskPanel(TaskUserPanel):
         self.addManualButton('Drill into wall prep', self.drillDemo.planDrillIntoWallPrep)
         self.addManualSpacer()
         self.addManualButton('Set drill target to start', self.setDrillTargetToCircleStart)
-        self.addManualButton('Set drill target to bit', self.setDrillTargetToCircleStart)
+        self.addManualButton('Set drill target to bit', self.setDrillTargetToDrillBit)
         self.addManualSpacer()
         self.addManualButton('Plan thumb move', self.planThumbPressMove)
         self.addManualButton('Plan thumb exit', self.planThumbPressExit)
