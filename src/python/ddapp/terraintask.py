@@ -81,11 +81,11 @@ class TerrainTask(object):
         # terrain config file stuff
         self.terrainConfigDir = os.path.join(ddapp.getDRCBaseDir(), 'software','config','terrain')
         files = glob.glob(os.path.join(self.terrainConfigDir,'*.py'))
-        files.sort()
         self.terrainConfigList = []
         for f in files:
             self.terrainConfigList.append(os.path.basename(f).split('.')[0])
         if len(self.terrainConfigList)>0:
+            self.terrainConfigList.sort()
             self.loadTerrainConfig(self.terrainConfigList[0])
 
     def startBlockUpdater(self):
