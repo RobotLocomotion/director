@@ -146,7 +146,7 @@ class EgressPlanner(object):
 
         self.robotSystem = robotSystem
         self.polaris = None
-        self.quasiStaticShrinkFactor = 0.5
+        self.quasiStaticShrinkFactor = 0.1
         self.maxBodyTranslationSpeed = 0.1
         self.plans = []
 
@@ -186,7 +186,7 @@ class EgressPlanner(object):
         constraints = []
         constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
                                                     pelvisEnabled=False,
-                                                    shrinkFactor=self.quasiStaticShrinkFactor))
+                                                    shrinkFactor=0.2))
         constraints.append(self.robotSystem.ikPlanner.createLockedBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
