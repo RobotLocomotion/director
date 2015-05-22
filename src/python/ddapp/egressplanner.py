@@ -67,7 +67,7 @@ class PolarisModel(object):
 
         pose = [np.array([-0.05907324,  0.80460545,  0.45439687]), np.array([ 0.14288327,  0.685944  , -0.703969  ,  0.11615873])]
 
-        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[0.12, 0.33, 0.04], pose=pose, Color=[0,1,0])
+        desc = dict(classname='BoxAffordanceItem', Name='pedal', Dimensions=[0.12, 0.33, 0.04], pose=pose, Color=[0,1,0])
         self.pedalAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
 
 
