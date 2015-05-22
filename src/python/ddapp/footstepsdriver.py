@@ -222,7 +222,9 @@ class FootstepsDriver(object):
         self._setupProperties()
 
         self.showToolbarWidget()
-        self.execButton.setEnabled(False)
+        # If we're a consoleapp and have no main window execButton won't exist
+        if hasattr(self, 'execButton'):
+            self.execButton.setEnabled(False)
         
         self.committedPlans = []
 

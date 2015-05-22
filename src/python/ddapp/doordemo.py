@@ -56,7 +56,7 @@ class DoorDemo(object):
         self.sensorJointController = sensorJointController
         self.planPlaybackFunction = planPlaybackFunction
         self.showPoseFunction = showPoseFunction
-        self.graspingHand = 'right'
+        self.graspingHand = 'left'
 
         self.endPose = None
 
@@ -305,6 +305,19 @@ class DoorDemo(object):
         self.addPlan(newPlan)
 
 
+    def planUnReach(self):
+
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=self.speedLow)
+
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door',
+                                                              'pre-reach grasping',
+                                                              side=self.graspingHand)
+        endPose, info = self.ikPlanner.computeStandPose(endPose, ikParameters=ikParameters)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=ikParameters)
+        self.addPlan(newPlan)
+
+
     def planTuckArms(self):
 
 
@@ -430,12 +443,24 @@ class DoorDemo(object):
 
     def planDoorPushOpen(self):
 
-        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=self.speedLow)
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=15)
 
         nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
 
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'smash', side=nonGraspingHand)
+
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=ikParameters)
+        self.addPlan(newPlan)
+
+    def planDoorPushOpenTwist(self):
+
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=60)
+
+        nonGraspingHand = 'right' if self.graspingHand == 'left' else 'left'
+
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'door', 'smash 2', side=nonGraspingHand)
 
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=ikParameters)
         self.addPlan(newPlan)
@@ -695,6 +720,31 @@ class DoorDemo(object):
         om.findObjectByName('door').setProperty('Visible', False)
 
 
+    def showDoorHandlePoints(self, polyData):
+
+        doorHandle = om.findObjectByName('door handle')
+        door = om.findObjectByName('door')
+
+        doorWidth = door.getProperty('Dimensions')[1]
+        doorAxes = transformUtils.getAxesFromTransform(door.getChildFrame().transform)
+        doorOrigin = np.array(door.getChildFrame().transform.GetPosition())
+
+        handleAxes = transformUtils.getAxesFromTransform(doorHandle.getChildFrame().transform)
+        handleOrigin = np.array(doorHandle.getChildFrame().transform.GetPosition())
+
+        doorSide = 1 if self.graspingHand == 'left' else -1
+
+        polyData = segmentation.cropToLineSegment(polyData, doorOrigin - doorAxes[0]*0.02, doorOrigin - doorAxes[0]*0.1)
+        polyData = segmentation.cropToLineSegment(polyData, doorOrigin, doorOrigin + doorAxes[1]*(doorWidth*0.5-0.01)*doorSide)
+        polyData = segmentation.cropToLineSegment(polyData, handleOrigin - handleAxes[2]*0.1, handleOrigin + handleAxes[2]*0.1)
+
+        pointsName = 'door handle points'
+        existed = om.findObjectByName(pointsName) is not None
+        obj = vis.updatePolyData(polyData, pointsName, parent=doorHandle, color=[1,0,0])
+        if not existed:
+            obj.setProperty('Point Size', 10)
+
+
     def spawnDoorAffordance(self):
 
         groundFrame = self.computeGroundFrame(self.robotModel)
@@ -717,12 +767,12 @@ class DoorDemo(object):
 
         doorWidth = 36 * 0.0254
         doorHeight = 81 * 0.0254
-        doorDepth = 1.5 * 0.0254
+        doorDepth = 0.5 * 0.0254
 
         doorSide = 1 if self.graspingHand == 'left' else -1
         handleHeightFromGround = 37 * 0.0254
         handleDistanceFromEdge = 2 * 0.0254
-        handleDistanceFromDoor = 3.0 * 0.0254
+        handleDistanceFromDoor = 2.0 * 0.0254
         handleLength = 5 * 0.0254
 
         doorJamWidth = 0.5
@@ -830,9 +880,11 @@ class DoorImageFitter(ImageBasedAffordanceFit):
         self.doorDemo = doorDemo
 
     def fit(self, polyData, points):
-        doorGroundFrame = segmentation.segmentDoorPlane(polyData, points[0])
-        self.doorDemo.fitDoor(doorGroundFrame)
+        stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.doorDemo.robotModel)
 
+        doorGroundFrame = segmentation.segmentDoorPlane(polyData, points[0], stanceFrame)
+        self.doorDemo.fitDoor(doorGroundFrame)
+        self.doorDemo.showDoorHandlePoints(polyData)
 
 class DoorTaskPanel(TaskUserPanel):
 
@@ -854,25 +906,20 @@ class DoorTaskPanel(TaskUserPanel):
         self.addManualButton('Spawn door', self.doorDemo.spawnDoorAffordance)
         self.addManualSpacer()
         self.addManualButton('Footsteps to door', self.doorDemo.planFootstepsToDoor)
+        self.addManualButton('Footsteps through door', self.doorDemo.planFootstepsThroughDoor)
         self.addManualSpacer()
-        self.addManualButton('Raise arm', self.doorDemo.planPreReach)
-        self.addManualButton('Finger pinch', self.fingerPinch)
-        self.addManualSpacer()
-        self.addManualButton('Reach', self.doorDemo.planReach)
-        self.addManualButton('Turn', self.doorDemo.planHandleTurn)
-        self.addManualButton('Push', self.doorDemo.planHandlePush)
-        self.addManualButton('Lift', self.doorDemo.planHandlePushLift)
-        self.addManualButton('Touch door', self.doorDemo.planDoorTouch)
-        self.addManualButton('Push Open', self.doorDemo.planDoorPushOpen)
+        self.addManualButton('Raise arms', self.doorDemo.planPreReach)
         self.addManualButton('Tuck Arms', self.doorDemo.planTuckArms)
         self.addManualSpacer()
-        self.addManualButton('Footsteps through door', self.doorDemo.planFootstepsThroughDoor)
-        self.addManualButton('Show walking plan', self.doorDemo.computeWalkingPlan)
+        self.addManualButton('Open pinch', self.openPinch)
+        self.addManualButton('Close pinch', self.closePinch)
         self.addManualSpacer()
-        self.addManualButton('Nominal', self.doorDemo.planNominal)
+        self.addManualButton('Reach', self.doorDemo.planReach)
+        self.addManualButton('Un-reach', self.doorDemo.planUnReach)
         self.addManualSpacer()
         self.addManualButton('Turn more', functools.partial(self.doorDemo.planHandleTurn, 10))
         self.addManualButton('Turn less', functools.partial(self.doorDemo.planHandleTurn, -10))
+        self.addManualButton('Twist arm', self.doorDemo.planDoorPushOpenTwist)
         self.addManualSpacer()
         self.addManualButton('Commit Manip', self.doorDemo.commitManipPlan)
 
@@ -880,12 +927,14 @@ class DoorTaskPanel(TaskUserPanel):
     def getSide(self):
         return self.params.getPropertyEnumValue('Hand').lower()
 
-    def fingerPinch(self):
-        rt.CloseHand(side=self.getSide().capitalize(), mode='Pinch', amount=100).run()
+    def openPinch(self):
+        rt.OpenHand(side=self.getSide().capitalize(), mode='Pinch').run()
 
+    def closePinch(self):
+        rt.CloseHand(side=self.getSide().capitalize(), mode='Pinch').run()
 
     def addDefaultProperties(self):
-        self.params.addProperty('Hand', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
+        self.params.addProperty('Hand', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
@@ -948,7 +997,7 @@ class DoorTaskPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name='fit door', message='Please fit and approve door handle affordance.'))
 
         # set fingers
-        addTask(rt.CloseHand(name='set finger pinch', side=side, mode='Pinch', amount=0))
+        addTask(rt.OpenHand(name='open hand', side=side, mode='Pinch'))
 
 
         def addManipTask(name, planFunc, userPrompt=False):
@@ -964,12 +1013,11 @@ class DoorTaskPanel(TaskUserPanel):
 
 
         addManipTask('Raise arms', d.planPreReach, userPrompt=False)
-        addTask(rt.UserPromptTask(name='verify right arm posture', message='Please verify the right arm uwy is in place.'))
         addManipTask('Raise pushing hand', d.planDoorTouch, userPrompt=False)
         addManipTask('Reach', d.planReach, userPrompt=True)
-        addTask(rt.UserPromptTask(name='Approve hand position',
-                                  message='Please verify that the hand is ready to grasp the handle'))
-        addFunc(self.fingerPinch, name='Pinch handle')
+        addFunc(self.closePinch, name='Pinch handle')
+        addTask(rt.UserPromptTask(name='Approve grasp',
+                                  message='Please verify the pinch grasp'))
         addManipTask('Turn', d.planHandleTurn, userPrompt=False)
         addTask(rt.UserPromptTask(name='Approve handle turn',
                                   message='Please verify that the handle has turned'))
