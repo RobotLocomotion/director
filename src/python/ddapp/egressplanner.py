@@ -412,7 +412,7 @@ class EgressPlanner(object):
         q0 = self.getPlanningStartPose()
         q1 = self.robotSystem.ikPlanner.getMergedPostureFromDatabase(q0, 'General', 'hands-forward', side='left')
         q2 = self.robotSystem.ikPlanner.getMergedPostureFromDatabase(q1, 'General', 'hands-forward', side='right')
-        q1 = 0.5*(q1 + np.array(q2))
+        # q1 = 0.75*(q1 + np.array(q2))
         ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
                                     rescaleBodyNames=['l_hand', 'r_hand'],
                                     rescaleBodyPts=list(self.robotSystem.ikPlanner.getPalmPoint(side='left')) +
