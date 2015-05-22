@@ -1013,19 +1013,33 @@ class DrillPlannerDemo(object):
         depth = self.getDrillTargetOffsetFromCircle()[0]
 
         targetFrames = []
-        for i in xrange(numberOfTargets):
-            theta = (float(i)/numberOfTargets)*(2*np.pi) + np.pi/2.0
-            horiz, vert = radius*np.cos(theta), radius*np.sin(theta)
 
+        #om.removeFromObjectModel(om.findObjectByName('drill target frames'))
+        #folder = om.getOrCreateContainer('drill target frames', parentObj=segmentation.getDebugFolder())
+        d = DebugData()
+        lastPoint = [None]
+
+        def addTarget(x, y):
             t = transformUtils.copyFrame(circleFrame)
             t.PreMultiply()
-            t.Translate(depth, horiz, vert)
+            t.Translate(depth, x, y)
             targetFrames.append(t)
-            om.removeFromObjectModel(om.findObjectByName('drill target frames'))
-            folder = om.getOrCreateContainer('drill target frames', parentObj=segmentation.getDebugFolder())
-            vis.showFrame(t, 'target %d' % i, scale=0.1, visible=False, parent=folder)
+            #vis.showFrame(t, 'target %d' % i, scale=0.1, visible=False, parent=folder)
 
-        targetFrames.append(targetFrames.pop(0))
+            p = t.GetPosition()
+            d.addSphere(p, radius=0.002)
+            if lastPoint[0]:
+                d.addLine(p, lastPoint[0])
+            lastPoint[0] = p
+
+
+        for i in xrange(numberOfTargets):
+            theta = (float(i+1)/numberOfTargets)*(2*np.pi) + np.pi/2.0
+            x, y = radius*np.cos(theta), radius*np.sin(theta)
+            addTarget(x, y)
+
+
+        vis.updatePolyData(d.getPolyData(), 'drill target trajectory', color=[1,1,0])
 
         self.planDrillTrajectory(targetFrames, inPlane=True)
 
