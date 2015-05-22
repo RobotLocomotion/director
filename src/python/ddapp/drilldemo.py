@@ -130,7 +130,7 @@ class DrillPlannerDemo(object):
 
         self.drillTrajectoryMaxMetersPerSecond = 0.03
         self.drillTrajectoryMaxDegreesPerSecond = 15
-        self.drillGraspYaw = 15
+        self.drillGraspYaw = 20
         self.thumbPressToHandFrame = None
 
 
@@ -874,7 +874,7 @@ class DrillPlannerDemo(object):
         return transformUtils.frameFromPositionAndRPY([0.0, 0.0, -0.16], [90,0,0])
 
     def getGraspToDrillTransform(self):
-        return transformUtils.frameFromPositionAndRPY([-0.03, 0.0, 0.0], [90, 90, 0.0])
+        return transformUtils.frameFromPositionAndRPY([-0.02, 0.0, 0.0], [90, 90, 0.0])
 
     def getPressPrepToDrillTransform(self):
         return transformUtils.frameFromPositionAndRPY([0.03, -0.05, -0.2], [45,0,0])
