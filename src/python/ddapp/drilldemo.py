@@ -1076,7 +1076,7 @@ class DrillPlannerDemo(object):
         endTime = 1.0 * len(targetFrames)
 
         if inPlane or inLine:
-            gazeConstraint.tspan = [0.0, endTime]
+            gazeConstraint.tspan = [0.5, endTime]
         else:
             gazeConstraint.tspan = [endTime, endTime]
 
@@ -1098,7 +1098,7 @@ class DrillPlannerDemo(object):
             #d.addLine(np.array(targetFrame.GetPosition()), np.array(targetFrame.GetPosition()) - motionVector)
             #vis.updatePolyData(d.getPolyData(), 'motion vector %d' % i)
 
-            p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
+            p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.001], positionTolerance=0.001)
             p.tspan = [activeTime-1.0, activeTime]
             constraints.append(p)
 
@@ -1111,10 +1111,10 @@ class DrillPlannerDemo(object):
         #    constraints.append(p)
 
 
-        if inLine:
-            p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, gazeTargetFrame, lineAxis=0, bounds=[-np.inf, 0.0], positionTolerance=0.001)
-            p.tspan = [0.0, endTime]
-            constraints.append(p)
+        #if inLine:
+        #    p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, gazeTargetFrame, lineAxis=0, bounds=[-np.inf, 0.0], positionTolerance=0.001)
+        #    p.tspan = [0.0, endTime]
+        #    constraints.append(p)
 
         if (inPlane or inLine) and len(targetFrames) == 1:
             numberOfAddedKnots = 5 # todo, select number of knots per distance traveled?
@@ -1124,6 +1124,8 @@ class DrillPlannerDemo(object):
 
         constraintSet = ikplanner.ConstraintSet(self.ikPlanner, constraints, 'reach_end', startPoseName)
 
+        #for c in constraintSet.constraints:
+        #    print c
 
         #constraintSet.seedPoseName = 'q_start'
         #constraintSet.nominalPoseName = 'q_start'
