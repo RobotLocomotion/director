@@ -48,9 +48,10 @@ def renderLastKinectPointCloud():
     print("director rendered last point cloud \n")
 
 
-def startKinectLCM():
+def startKinectLCM(targetFps=30):
 
-    global source, obj, t
+    global source, obj, t, _targetFps
+    _targetFps = targetFps
     p = vtk.vtkPolyData()
 
     utime = KinectQueue.getPointCloudFromKinect(p)
@@ -83,7 +84,7 @@ def startKinectLCM():
 
 
     global timerCallback
-    timerCallback = TimerCallback(targetFps=30)
+    timerCallback = TimerCallback(targetFps=_targetFps)
     timerCallback.callback = updateSource
     timerCallback.start()
 
