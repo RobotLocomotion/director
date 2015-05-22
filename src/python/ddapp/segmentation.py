@@ -1196,8 +1196,12 @@ def segmentValveByBoundingBox(polyData, searchPoint):
     return obj
 
 
-def segmentDoorPlane(polyData, doorPoint):
+def segmentDoorPlane(polyData, doorPoint, stanceFrame):
 
+    doorPoint = np.array(doorPoint)
+    doorBand = 1.5
+
+    polyData = cropToLineSegment(polyData, doorPoint + [0.0,0.0,doorBand/2], doorPoint - [0.0,0.0,doorBand/2])
     fitPoints, normal = applyLocalPlaneFit(polyData, doorPoint, searchRadius=0.2, searchRadiusEnd=1.0, removeGroundFirst=False)
 
     updatePolyData(fitPoints, 'door points', visible=False, color=[0,1,0])
@@ -1207,9 +1211,8 @@ def segmentDoorPlane(polyData, doorPoint):
         normal = -normal
 
     origin = computeCentroid(fitPoints)
-    #minZ = np.percentile(vnp.getNumpyFromVtk(fitPoints, 'Points')[:,2], 2)
-    minZ = np.nanmin(vnp.getNumpyFromVtk(fitPoints, 'Points')[:,2])
-    origin = [origin[0], origin[1], minZ]
+    groundHeight = stanceFrame.GetPosition()[2]
+    origin = [origin[0], origin[1], groundHeight]
 
     xaxis = -normal
     zaxis = [0,0,1]

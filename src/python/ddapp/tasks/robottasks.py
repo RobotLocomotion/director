@@ -715,6 +715,8 @@ class OpenHand(AsyncTask):
     @staticmethod
     def getDefaultProperties(properties):
         properties.addProperty('Side', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
+        properties.addProperty('Mode', 0, attributes=om.PropertyAttributes(enumNames=['Basic', 'Pinch']))
+        properties.addProperty('Amount', 100, attributes=propertyset.PropertyAttributes(minimum=0, maximum=100))
 
     def getHandDriver(self, side):
         assert side in ('left', 'right')
@@ -723,6 +725,7 @@ class OpenHand(AsyncTask):
     def run(self):
         side = self.properties.getPropertyEnumValue('Side').lower()
         self.getHandDriver(side).sendOpen()
+        self.getHandDriver(side).sendCustom(100-self.properties.getProperty('Amount'), 100, 100, self.properties.getProperty('Mode'))
 
 
 class CommitFootstepPlan(AsyncTask):
