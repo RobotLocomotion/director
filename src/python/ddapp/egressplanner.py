@@ -190,7 +190,7 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-        constraintSet.ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=15)
+        constraintSet.ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=10)
 
         constraintSet.runIk()
 
@@ -224,7 +224,7 @@ class EgressPlanner(object):
         constraints.extend(self.robotSystem.ikPlanner.createFixedFootConstraints(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-        constraintSet.ikParameters = IkParameters(usePointwise=True)
+        constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseMetersPerSecond=0.02)
 
         constraintSet.runIk()
         keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=True)
@@ -277,7 +277,7 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot'))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-        constraintSet.ikParameters = IkParameters(usePointwise=True)
+        constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseMetersPerSecond=0.02)
 
         constraintSet.runIk()
         keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=False)
