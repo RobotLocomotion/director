@@ -383,19 +383,21 @@ class EgressPlanner(object):
         #constraintSet.seedPoseName = 'q_start'
         #constraintSet.nominalPoseName = 'q_start'
 
-        constraintSet.runIk()
+        endPose, _ = constraintSet.runIk()
         keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=False)
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0], poseTimes[-1]]
         supportsList = [['r_foot'], ['r_foot','l_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
         self.addPlan(plan)
-        return plan
+        return plan, endPose
 
 
-    def planCenterWeight(self):
+    def planCenterWeight(self, startPose=None):
         ikPlanner = self.robotSystem.ikPlanner
-        startPose = self.getPlanningStartPose()
+
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
         startPoseName = 'q_lean_right'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
@@ -422,6 +424,35 @@ class EgressPlanner(object):
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
         self.addPlan(plan)
         return plan
+
+
+    def planFootDownAndCenterWeight(self):
+        leftFootDownPlan, leftFootDownEndPose = self.planLeftFootDown()
+        centerWeightPlan = self.planCenterWeight(startPose=leftFootDownEndPose)
+
+        # now we need to combine these plans 
+        footDownEndTime = leftFootDownPlan.plan.plan[-1].utime
+
+        robotPlan = leftFootDownPlan
+        for state, info in zip(centerWeightPlan.plan.plan, centerWeightPlan.plan.plan_info):
+            state.utime += footDownEndTime
+            robotPlan.plan.plan.append(state)
+            robotPlan.plan.plan_info.append(info)
+
+        robotPlan.num_states = len(robotPlan.plan)
+
+
+        # make support sequence
+        for support, t in zip(centerWeightPlan.support_sequence.supports, centerWeightPlan.support_sequence.ts):
+            t += footDownEndTime
+            robotPlan.support_sequence.ts.append(t)
+            robotPlan.support_sequence.supports.append(support)
+
+        robotPlan.is_quasistatic = True
+        self.addPlan(robotPlan)
+        lcmUtils.publish('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS', robotPlan)
+        return robotPlan
+
 
 
     def planArmsForward(self):
