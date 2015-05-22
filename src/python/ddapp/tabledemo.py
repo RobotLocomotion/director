@@ -420,23 +420,26 @@ class TableDemo(object):
         startPose = self.getPlanningStartPose()
         self.constraintSet = self.ikPlanner.planEndEffectorDelta(startPose, side, [0.0, 0.0, 0.15])
 
-        self.constraintSet.constraints[-1].tspan[1] = 1.0
+        if not self.ikPlanner.fixedBaseArm:
+            self.constraintSet.constraints[-1].tspan[1] = 1.0
 
         endPose, info = self.constraintSet.runIk()
-        endPose = self.getRaisedArmPose(endPose, side)
+        
+        if not self.ikPlanner.fixedBaseArm:
+            endPose = self.getRaisedArmPose(endPose, side)
 
-        reachingSideJoints = []
-        if (side == 'left'):
-          reachingSideJoints += self.ikPlanner.leftArmJoints
-        else:
-          reachingSideJoints += self.ikPlanner.rightArmJoints
+            reachingSideJoints = []
+            if (side == 'left'):
+              reachingSideJoints += self.ikPlanner.leftArmJoints
+            else:
+              reachingSideJoints += self.ikPlanner.rightArmJoints
 
 
-        endPoseName = 'raised_arm_end_pose'
-        self.ikPlanner.ikServer.sendPoseToServer(endPose, endPoseName)
-        postureConstraint = self.ikPlanner.createPostureConstraint(endPoseName, reachingSideJoints)
-        postureConstraint.tspan = np.array([2.0, 2.0])
-        self.constraintSet.constraints.append(postureConstraint)
+            endPoseName = 'raised_arm_end_pose'
+            self.ikPlanner.ikServer.sendPoseToServer(endPose, endPoseName)
+            postureConstraint = self.ikPlanner.createPostureConstraint(endPoseName, reachingSideJoints)
+            postureConstraint.tspan = np.array([2.0, 2.0])
+            self.constraintSet.constraints.append(postureConstraint)
 
         #postureConstraint = self.ikPlanner.createPostureConstraint('q_nom', robotstate.matchJoints('.*_leg_kny'))
         #postureConstraint.tspan = np.array([2.0, 2.0])
