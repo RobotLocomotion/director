@@ -128,7 +128,8 @@ class DrillPlannerDemo(object):
         self.lockBackForDrilling = False
         self.lockBaseForDrilling = True
 
-        self.drillTrajectoryMaxMetersPerSecond = 0.03
+        self.drillTrajectoryMetersPerSecondSlow = 0.04
+        self.drillTrajectoryMetersPerSecondFast = 0.20
         self.drillTrajectoryMaxDegreesPerSecond = 15
         self.drillGraspYaw = 20
         self.thumbPressToHandFrame = None
@@ -984,11 +985,11 @@ class DrillPlannerDemo(object):
         ikplanner.getIkOptions().setProperty('Max joint degrees/s', jointSpeedOld)
 
 
-    def planDrill(self, inPlane=False, inLine=False):
+    def planDrill(self, inPlane, inLine, translationSpeed, jointSpeed):
 
         targetFrame = om.findObjectByName('drill bit target')
         assert targetFrame
-        self.planDrillTrajectory([targetFrame.transform], inPlane, inLine)
+        self.planDrillTrajectory([targetFrame.transform], inPlane, inLine, translationSpeed, jointSpeed)
 
     def getDrillTargetOffsetFromCircle(self):
 
@@ -1044,7 +1045,7 @@ class DrillPlannerDemo(object):
 
         vis.updatePolyData(d.getPolyData(), 'drill target trajectory', color=[1,1,0])
 
-        self.planDrillTrajectory(targetFrames, inPlane=True)
+        self.planDrillTrajectory(targetFrames, inPlane=True, inLine=False, translationSpeed=self.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillTrajectoryMaxDegreesPerSecond)
 
 
     def computeDrillBitFrameAtPose(self, pose, bitToHand):
@@ -1053,7 +1054,7 @@ class DrillPlannerDemo(object):
         f.Concatenate(bitToHand)
         return f
 
-    def planDrillTrajectory(self, targetFrames, inPlane=False, inLine=False):
+    def planDrillTrajectory(self, targetFrames, inPlane, inLine, translationSpeed, jointSpeed):
 
 
         startPose = self.getPlanningStartPose()
@@ -1134,10 +1135,10 @@ class DrillPlannerDemo(object):
 
         def updateDrillPlan():
             constraintSet.ikParameters.usePointwise = False
-            constraintSet.ikParameters.maxBodyTranslationSpeed = self.drillTrajectoryMaxMetersPerSecond
+            constraintSet.ikParameters.maxBodyTranslationSpeed = translationSpeed
             constraintSet.ikParameters.rescaleBodyNames = [handLinkName]
             constraintSet.ikParameters.rescaleBodyPts = list(bitToHand.GetPosition())
-            constraintSet.ikParameters.maxDegreesPerSecond = self.drillTrajectoryMaxDegreesPerSecond
+            constraintSet.ikParameters.maxDegreesPerSecond = jointSpeed
 
             plan = constraintSet.runIkTraj()
             self.addPlan(plan)
@@ -2589,14 +2590,14 @@ class DrillTaskPanel(TaskUserPanel):
         self.drillDemo.updateDrillTargetFrame(self.params.getProperty('drilling depth'), horiz, vert)
 
     def planDrillAlign(self):
-        self.drillDemo.planDrill()
+        self.drillDemo.planDrill(inPlane=False, inLine=False, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondFast, jointSpeed=30)
 
     def planDrillIn(self):
-        self.drillDemo.planDrill(inLine=True)
+        self.drillDemo.planDrill(inPlane=False, inLine=True, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillDemo.drillTrajectoryMaxDegreesPerSecond)
 
     def planDrillOut(self):
         self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
-        self.drillDemo.planDrill(inLine=True)
+        self.drillDemo.planDrill(inPlane=False, inLine=True, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillDemo.drillTrajectoryMaxDegreesPerSecond)
 
     def setDefaultDrillInDepth(self):
         self.params.setProperty('drilling depth', 0.01)
@@ -2605,7 +2606,7 @@ class DrillTaskPanel(TaskUserPanel):
         self.params.setProperty('drilling depth', 0.03)
 
     def planDrillMove(self):
-        self.drillDemo.planDrill(inLine=True)
+        self.drillDemo.planDrill(inPlane=False, inLine=True, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillDemo.drillTrajectoryMaxDegreesPerSecond)
 
     def planThumbPressPrep(self):
 
