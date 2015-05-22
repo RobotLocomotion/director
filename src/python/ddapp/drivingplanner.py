@@ -769,15 +769,25 @@ class DrivingPlanner(object):
         plan = ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
         self.addPlan(plan)
 
-    def planArmsEgressStart(self):
+    def planArmsEgressPrep(self):
         startPose = self.getPlanningStartPose()
         ikPlanner = self.robotSystem.ikPlanner
+        ikParameters = IkParameters(maxDegreesPerSecond=60)
         midPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'pre_egress_left_arm', side='left')
         midPose = ikPlanner.getMergedPostureFromDatabase(midPose, 'driving', 'pre_egress_right_arm', side='right')
 
-        endPose = ikPlanner.getMergedPostureFromDatabase(midPose, 'driving', 'egress-arms')
+        # endPose = ikPlanner.getMergedPostureFromDatabase(midPose, 'driving', 'egress-arms')
+        
+        # plan = ikPlanner.computeMultiPostureGoal([startPose, midPose, endPose], feetOnGround=False, ikParameters=ikParameters)
+
+        plan = ikPlanner.computePostureGoal(startPose, midPose, feetOnGround=False, ikParameters=ikParameters)
+        self.addPlan(plan)
+    def planArmsEgressStart(self):
+        startPose = self.getPlanningStartPose()
+        ikPlanner = self.robotSystem.ikPlanner
+        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'egress-arms')
         ikParameters = IkParameters(maxDegreesPerSecond=60)
-        plan = ikPlanner.computeMultiPostureGoal([startPose, midPose, endPose], feetOnGround=False, ikParameters=ikParameters)
+        plan = ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False, ikParameters=ikParameters)
         self.addPlan(plan)
 
     def setSteeringWheelAndWristGraspAngles(self):
@@ -872,6 +882,11 @@ class DrivingPlannerPanel(TaskUserPanel):
         # self.addManualButton('Capture Ankle Angle High', functools.partial(self.drivingPlanner.captureAnklePosition, 1))
         self.addManualButton('Capture Wheel and Wrist grasp angles', self.drivingPlanner.setSteeringWheelAndWristGraspAngles)
         self.addManualButton('Print Steering Wheel Angle', self.drivingPlanner.printSteeringWheelAngleInDegrees)
+
+        self.addManualSpacer()
+
+        self.addManualButton('Arms Egress Prep', self.drivingPlanner.planArmsEgressPrep)
+        self.addManualButton('Arms Egress Start', self.drivingPlanner.planArmsEgressStart)
 
     def addDefaultProperties(self):
         self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
@@ -1131,6 +1146,7 @@ class DrivingPlannerPanel(TaskUserPanel):
             addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
             addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
 
+
         def addManipTask(name, planFunc, userPrompt=False):
 
             prevFolder = self.folder
@@ -1143,8 +1159,8 @@ class DrivingPlannerPanel(TaskUserPanel):
             addFunc(dp.commitManipPlan, name='execute manip plan')
             addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
 
-        dp = self.drivingPlanner
 
+        dp = self.drivingPlanner
         
         footToEgress = addFolder('Foot to Egress Pose')
         addManipTask('Foot Off Pedal', self.drivingPlanner.planLegAbovePedal, userPrompt=True)
@@ -1172,7 +1188,9 @@ class DrivingPlannerPanel(TaskUserPanel):
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
 
-        armsToEgressStart = addFolder('Arms to Egress Start')
+        armsToEgressStart = addFolder('Arms to Egress Position')
+        addManipTask('Arms To Egress Prep', self.drivingPlanner.planArmsEgressPrep, userPrompt=True)
+        self.folder = armsToEgressStart
         addManipTask('Arms To Egress Start', self.drivingPlanner.planArmsEgressStart, userPrompt=True)
 
         prep = addFolder('Stop Streaming')
