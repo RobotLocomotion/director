@@ -418,6 +418,7 @@ class MapServerSource(TimerCallback):
     def __init__(self, view, callbackFunc=None):
         TimerCallback.__init__(self)
         self.reader = None
+        self.folder = None
         self.view = view
         self.displayedMapIds = {}
         self.polyDataObjects = {}
@@ -455,8 +456,15 @@ class MapServerSource(TimerCallback):
                 obj.setProperty('Surface Mode', 'Wireframe')
 
             folder = om.findObjectByName('Map Server')
+            folder.addProperty('Min Range', self.reader.GetDistanceRange()[0],
+                             attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
+            folder.addProperty('Max Range', self.reader.GetDistanceRange()[1],
+                             attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
+            folder.addProperty('Edge Filter Angle', self.reader.GetEdgeAngleThreshold(),
+                         attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=60.0, singleStep=1, hidden=False))
             om.addToObjectModel(obj, folder)
             om.expand(folder)
+            self.folder = folder
             self.polyDataObjects[viewId] = obj
         else:
             obj.setPolyData(polyData)
@@ -506,6 +514,10 @@ class MapServerSource(TimerCallback):
         TimerCallback.start(self)
 
     def updateMap(self):
+        if (self.folder):
+            self.reader.SetDistanceRange(self.folder.getProperty('Min Range'), self.folder.getProperty('Max Range'))
+            self.reader.SetEdgeAngleThreshold(self.folder.getProperty('Edge Filter Angle'))
+            
         viewIds = self.reader.GetViewIds()
         viewIds = vnp.numpy_support.vtk_to_numpy(viewIds) if viewIds.GetNumberOfTuples() else []
         for viewId in viewIds:
