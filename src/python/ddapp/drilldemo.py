@@ -163,7 +163,7 @@ class DrillPlannerDemo(object):
         # params:
         self.reachDepth = 0.12 # depth to reach to before going for grasp
         self.cutLength = 0.05 # length to cut each time
-        self.retractBitDepthNominal = -0.055 # depth to move drill away from wall
+        self.retractBitDepthNominal = -0.05 # depth to move drill away from wall
         self.goalThreshold = 0.05 # how close we need to get to the cut goal (the triangle corners
 
         #extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
@@ -2562,12 +2562,12 @@ class DrillTaskPanel(TaskUserPanel):
         assert drillCircle
         radius = drillCircle.getProperty('Radius')
 
-        self.params.setProperty('drilling depth', -0.05)
+        self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
         self.params.setProperty('drilling horiz offset', 0.0)
         self.params.setProperty('drilling vert offset', radius)
 
     def setDrillTargetToKnockOut(self):
-        self.params.setProperty('drilling depth', -0.05)
+        self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
         self.params.setProperty('drilling horiz offset', 0.0)
         self.params.setProperty('drilling vert offset', 0.0)
 
@@ -2592,7 +2592,7 @@ class DrillTaskPanel(TaskUserPanel):
         self.drillDemo.planDrill(inLine=True)
 
     def planDrillOut(self):
-        self.params.setProperty('drilling depth', -0.05)
+        self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
         self.drillDemo.planDrill(inLine=True)
 
     def setDefaultDrillInDepth(self):
@@ -2671,7 +2671,7 @@ class DrillTaskPanel(TaskUserPanel):
         self.params.addProperty('target height', 1.2, attributes=om.PropertyAttributes(minimum=0, maximum=2.0, decimals=2, singleStep=0.05, hidden=True))
         self.params.addProperty('target radius', 0.2, attributes=om.PropertyAttributes(minimum=0, maximum=1.0, decimals=2, singleStep=0.01, hidden=True))
 
-        self.params.addProperty('drilling depth', -0.05, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025))
+        self.params.addProperty('drilling depth', self.drillDemo.retractBitDepthNominal, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025))
         self.params.addProperty('drilling horiz offset', 0.0, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025, hidden=True))
         self.params.addProperty('drilling vert offset', 0.2, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025, hidden=True))
 
