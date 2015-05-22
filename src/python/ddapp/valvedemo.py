@@ -587,6 +587,10 @@ class ValvePlannerDemo(object):
         nominalPose[1] = (self.computeGraspFrame().transform.GetPosition()[1] -
                           seedDistance*yaxis[1])
         nominalPose[5] = yawDesired
+        if self.scribeDirection == 1: # Clockwise
+            nominalPose = self.ikPlanner.getMergedPostureFromDatabase(nominalPose, 'valve', 'reach-nominal-cw', side=self.graspingHand)
+        else: # Counter-clockwise
+            nominalPose = self.ikPlanner.getMergedPostureFromDatabase(nominalPose, 'valve', 'reach-nominal-ccw', side=self.graspingHand)
         return nominalPose
 
     # Glue Functions ###########################################################
