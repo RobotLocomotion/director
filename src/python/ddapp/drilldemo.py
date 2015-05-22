@@ -133,6 +133,8 @@ class DrillPlannerDemo(object):
         self.drillGraspYaw = 20
         self.thumbPressToHandFrame = None
 
+        self.drillCutTailLength = 0.02
+
 
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
 
@@ -1033,11 +1035,12 @@ class DrillPlannerDemo(object):
             lastPoint[0] = p
 
 
-        for i in xrange(numberOfTargets):
-            theta = (float(i+1)/numberOfTargets)*(2*np.pi) + np.pi/2.0
+        for i in xrange(numberOfTargets+1):
+            theta = (float(i)/numberOfTargets)*(2*np.pi) + np.pi/2.0
             x, y = radius*np.cos(theta), radius*np.sin(theta)
             addTarget(x, y)
 
+        addTarget(-self.drillCutTailLength, radius+self.drillCutTailLength)
 
         vis.updatePolyData(d.getPolyData(), 'drill target trajectory', color=[1,1,0])
 
@@ -2563,8 +2566,8 @@ class DrillTaskPanel(TaskUserPanel):
         radius = drillCircle.getProperty('Radius')
 
         self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
-        self.params.setProperty('drilling horiz offset', 0.0)
-        self.params.setProperty('drilling vert offset', radius)
+        self.params.setProperty('drilling horiz offset', self.drillDemo.drillCutTailLength)
+        self.params.setProperty('drilling vert offset', radius + self.drillDemo.drillCutTailLength)
 
     def setDrillTargetToKnockOut(self):
         self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
