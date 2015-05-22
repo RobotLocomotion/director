@@ -81,6 +81,7 @@ class TerrainTask(object):
         # terrain config file stuff
         self.terrainConfigDir = os.path.join(ddapp.getDRCBaseDir(), 'software','config','terrain')
         files = glob.glob(os.path.join(self.terrainConfigDir,'*.py'))
+        files.sort()
         self.terrainConfigList = []
         for f in files:
             self.terrainConfigList.append(os.path.basename(f).split('.')[0])
