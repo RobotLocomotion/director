@@ -41,7 +41,10 @@ class PolarisModel(object):
         self.originToAprilTransform = transformUtils.transformFromPose(np.array([-0.038508  , -0.00282131, -0.01000079]),
             np.array([  9.99997498e-01,  -2.10472556e-03,  -1.33815696e-04, 7.46246794e-04])) # offset for  . . . who knows why
 
-        t = transformUtils.transformFromPose(np.array([ 0.14376024,  0.95920689,  0.36655712]), np.array([ 0.28745842,  0.90741428, -0.28822068,  0.10438304]))
+        # t = transformUtils.transformFromPose(np.array([ 0.14376024,  0.95920689,  0.36655712]), np.array([ 0.28745842,  0.90741428, -0.28822068,  0.10438304]))
+
+        t = transformUtils.transformFromPose(np.array([ 0.07387469,  0.97640798,  0.37395914]), 
+            np.array([ 0.32997378,  0.88498408, -0.31780588,  0.08318602]))
         self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
 
@@ -71,8 +74,11 @@ class PolarisModel(object):
         # t = transformUtils.transformFromPose(np.array([ 0.04045136,  0.96565326,  0.25810111]),
         #     np.array([ 0.26484648,  0.88360091, -0.37065556, -0.10825996]))
 
-        t = transformUtils.transformFromPose(np.array([ -4.34908919e-04,   9.24901627e-01,   2.65614116e-01]), 
-            np.array([ 0.25022251,  0.913271  , -0.32136359, -0.00708626]))
+        # t = transformUtils.transformFromPose(np.array([ -4.34908919e-04,   9.24901627e-01,   2.65614116e-01]), 
+        #     np.array([ 0.25022251,  0.913271  , -0.32136359, -0.00708626]))
+
+        t = transformUtils.transformFromPose(np.array([ 0.06485356,  0.84452545,  0.24825151]), 
+            np.array([ 0.26331831,  0.915796  , -0.28055337,  0.11519963]))
 
         self.leftFootPedalSwingFrame = vis.updateFrame(t,'left foot pedal swing', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
@@ -85,14 +91,22 @@ class PolarisModel(object):
         #     np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
 
 
-        t = transformUtils.transformFromPose(np.array([-0.14940375,  0.90347275,  0.23812658]), 
-            np.array([ 0.27150909,  0.91398724, -0.28877386,  0.0867167 ]))
+        # t = transformUtils.transformFromPose(np.array([-0.14940375,  0.90347275,  0.23812658]), 
+        #     np.array([ 0.27150909,  0.91398724, -0.28877386,  0.0867167 ]))
+
+        t = transformUtils.transformFromPose(np.array([-0.17331227,  0.87879312,  0.25645152]), 
+            np.array([ 0.26344489,  0.91567196, -0.28089824,  0.11505581]))
         self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
         
 
         t = transformUtils.transformFromPose(np.array([-0.12702725,  0.92068409,  0.27209386]),
             np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
         self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+
+        t = transformUtils.transformFromPose(np.array([ 0.18112314,  0.89229407,  0.25062962]), 
+            np.array([ 0.33484372,  0.88280787, -0.31946488,  0.08044963]))
+
+        self.leftFootUpFrame = vis.updateFrame(t,'left foot up frame', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
         t = transformUtils.transformFromPose(np.array([ 0.4720199 , -0.06517618,  0.00233972]), np.array([  6.10521653e-03,   4.18621358e-04,   4.65520611e-01,
                  8.85015882e-01]))
@@ -109,6 +123,7 @@ class PolarisModel(object):
         self.frameSync.addFrame(self.leftFootPedalSwingFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootDrivingFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootDrivingKneeInFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootUpFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.rightHandGrabFrame, ignoreIncoming=True)
 
     def onAprilTag(self, msg):

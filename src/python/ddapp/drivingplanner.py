@@ -59,6 +59,8 @@ class DrivingPlanner(object):
         self.graspWristAngle = None
         self.kneeInPedal = 0
         self.angleToleranceInDegrees = 10
+        self.distanceAbovePedal = 0.05
+        self.distanceAboveFootStartPose = 0.2
         self.plans = []
 
     def getInitCommands(self):
@@ -203,9 +205,10 @@ class DrivingPlanner(object):
         endPoseName = 'q_foot_end'
         lFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('l_foot', startPose)
 
-        targetFrame = transformUtils.copyFrame(lFoot2World)
-        targetFrame.PreMultiply()
-        targetFrame.Translate([0.0,0.0, 0.05])
+        # targetFrame = transformUtils.copyFrame(lFoot2World)
+        # targetFrame.PreMultiply()
+        # targetFrame.Translate([0.0,0.0, self.distanceAboveFootStartPose])
+        targetFrame = transformUtils.copyFrame(om.findObjectByName('left foot up frame').transform)
         footPoseConstraint = self.createLeftFootPoseConstraint(targetFrame)
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
 
@@ -234,7 +237,7 @@ class DrivingPlanner(object):
         if self.kneeInPedal:
             legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving knee in').transform)
             legAbovePedalFrame.PreMultiply()
-            legAbovePedalFrame.Translate([0.0, 0.0, 0.03])
+            legAbovePedalFrame.Translate([0.0, 0.0, self.distanceAbovePedal])
         else:
             legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
             legAbovePedalFrame.PreMultiply()
@@ -258,7 +261,7 @@ class DrivingPlanner(object):
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
 
-
+        # add constraint that we hit intermediate frame, maybe doesn't have to be exact???
         legSwingFrame = om.findObjectByName('left foot pedal swing').transform
         cs.constraints.extend(self.createLeftFootPoseConstraint(legSwingFrame, tspan=[0.3,0.3]))
         keyFramePlan = cs.runIkTraj()
@@ -277,7 +280,7 @@ class DrivingPlanner(object):
         if self.kneeInPedal:
             legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving knee in').transform)
             legAbovePedalFrame.PreMultiply()
-            legAbovePedalFrame.Translate([0.0, 0, 0.03])
+            legAbovePedalFrame.Translate([0.0, 0, self.distanceAbovePedal])
         else:
             legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
             legAbovePedalFrame.PreMultiply()
@@ -314,9 +317,10 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
 
-        legUpFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
-        legUpFrame.PreMultiply()
-        legUpFrame.Translate([0.0,0.0, 0.05])
+        # legUpFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
+        # legUpFrame.PreMultiply()
+        # legUpFrame.Translate([0.0,0.0, self.distanceAboveFootStartPose])
+        legUpFrame = transformUtils.copyFrame(om.findObjectByName('left foot up frame').transform)
         identityFrame = vtk.vtkTransform()
         legUpConstraint = self.createLeftFootPoseConstraint(legUpFrame, tspan=[1,1])
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
