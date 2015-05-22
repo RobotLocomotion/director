@@ -1116,10 +1116,10 @@ class DrillPlannerDemo(object):
             p.tspan = [0.0, endTime]
             constraints.append(p)
 
-        if inPlane or inLine and len(targetFrames) == 1:
-            self.ikPlanner.ikServer.numberOfAddedKnots = 5 # todo, select number of knots per distance traveled?
+        if (inPlane or inLine) and len(targetFrames) == 1:
+            numberOfAddedKnots = 5 # todo, select number of knots per distance traveled?
         else:
-            self.ikPlanner.ikServer.numberOfAddedKnots = 0
+            numberOfAddedKnots = 0
 
 
         constraintSet = ikplanner.ConstraintSet(self.ikPlanner, constraints, 'reach_end', startPoseName)
@@ -1139,6 +1139,7 @@ class DrillPlannerDemo(object):
             constraintSet.ikParameters.rescaleBodyNames = [handLinkName]
             constraintSet.ikParameters.rescaleBodyPts = list(bitToHand.GetPosition())
             constraintSet.ikParameters.maxDegreesPerSecond = jointSpeed
+            constraintSet.ikParameters.numberOfAddedKnots = numberOfAddedKnots
 
             plan = constraintSet.runIkTraj()
             self.addPlan(plan)
