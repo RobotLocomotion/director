@@ -11,12 +11,15 @@ from ddapp import lcmUtils
 from ddapp import ik
 from ddapp import cameraview
 from ddapp import affordanceupdater
+from ddapp import affordancemanager
 from ddapp import segmentation
 from ddapp import robotstate
 from ddapp.debugVis import DebugData
 from ddapp.utime import getUtime
 from ddapp.ikplanner import ConstraintSet
 import ddapp.tasks.robottasks as rt
+from ddapp.ikparameters import IkParameters
+from ddapp.timercallback import TimerCallback
 
 
 import os
@@ -52,6 +55,8 @@ class DrivingPlanner(object):
         self.throttlePublishChannel = 'THROTTLE_COMMAND_POSITION_GOAL'
         self.steeringPublishChannel = 'STEERING_COMMAND_POSITION_GOAL'
         self.addSubscribers()
+        self.graspWheelAngle = None
+        self.graspWristAngle = None
         self.plans = []
 
     def getInitCommands(self):
@@ -207,7 +212,7 @@ class DrivingPlanner(object):
         constraints.extend(footPoseConstraint)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_start'
         cs.nominalPoseName = 'q_start'
         endPose = cs.runIk()
@@ -227,7 +232,7 @@ class DrivingPlanner(object):
 
         legAbovePedalFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
         legAbovePedalFrame.PreMultiply()
-        legAbovePedalFrame.Translate([-0.02,0.0, 0.03])
+        legAbovePedalFrame.Translate([-0.02, 0.0, 0.03])
         identityFrame = vtk.vtkTransform()
         legAbovePedalConstraint = self.createLeftFootPoseConstraint(legAbovePedalFrame, tspan=[1,1])
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
@@ -240,7 +245,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -276,7 +281,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -309,7 +314,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -343,7 +348,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -372,7 +377,7 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
 
         cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.ikParameters = IkParameters(quasiStaticShrinkFactor=1, maxDegreesPerSecond=10)
+        cs.ikParameters = IkParameters(quasiStaticShrinkFactor=1, maxDegreesPerSecond=10, usePointwise=False)
         cs.seedPoseName = 'q_driving'
         cs.nominalPoseName = 'q_driving'
         endPose = cs.runIk()
@@ -381,59 +386,235 @@ class DrivingPlanner(object):
 
         return keyFramePlan
 
+
+    def planSteeringWheelReGrasp(self, useLineConstraint=False):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        self.wheelAngleBeforeReGrasp = self.getSteeringWheelAngle()
+        startPoseName = 'q_regrasp_start'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_regrasp_end'
+        handName = 'left'
+        handLinkName = 'l_hand'
+        maxMetersPerSecond = 0.1
+        retractDepth = 0.15
+        palmToHand = ikPlanner.getPalmToHandLink(handName)
+
+        palmToWorld = ikPlanner.newGraspToWorldFrame(startPose, handName, palmToHand)
+        finalTargetFrame = transformUtils.copyFrame(palmToWorld)
+        finalTargetFrame.PreMultiply()
+        finalTargetFrame.RotateY(180)
+        finalPoseConstraint = self.createLeftPalmPoseConstraints(finalTargetFrame, tspan=[1,1])
+
+
+        retractTargetFrame = transformUtils.copyFrame(palmToWorld)
+        retractTargetFrame.PreMultiply()
+        retractTargetFrame.Translate([0.0, -retractDepth, 0.0])
+        retractPoseConstraint = self.createLeftPalmPoseConstraints(retractTargetFrame, tspan=[0.25,0.25])
+
+        preGraspTargetFrame = transformUtils.copyFrame(retractTargetFrame)
+        preGraspTargetFrame.PreMultiply()
+        preGraspTargetFrame.RotateY(180)
+        preGraspPoseConstraint = self.createLeftPalmPoseConstraints(preGraspTargetFrame, tspan=[0.75, 0.75])
+
+        allButLeftArmPostureConstraint = self.createAllButLeftArmPostureConstraint(startPoseName)
+        lockedBaseConstraint = ikPlanner.createLockedBasePostureConstraint(startPoseName)
+        lockedRightArmConstraint = ikPlanner.createLockedRightArmPostureConstraint(startPoseName)
+        lockedTorsoConstraint = ikPlanner.createLockedTorsoPostureConstraint(startPoseName)
+        constraints = [allButLeftArmPostureConstraint]
+        # constraints = [lockedTorsoConstraint, lockedRightArmConstraint]
+        constraints.extend(finalPoseConstraint)
+
+        seedPoseName = 'q_regrasp_seed'
+        # seedPose = startPose
+        # seedPose[self.lwyIdx] = startPose[self.lwyIdx] + np.pi
+
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
+        self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
+
+        constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(quasiStaticShrinkFactor=10, usePointwise=False, maxDegreesPerSecond=60,
+            maxBodyTranslationSpeed=maxMetersPerSecond, rescaleBodyNames=[handLinkName], rescaleBodyPts=list(ikPlanner.getPalmPoint()))
+        constraintSet.seedPoseName = seedPoseName
+        constraintSet.nominalPoseName = seedPoseName
+
+        # for c in constraintSet.constraints:
+        #     print c
+
+        # vis.updateFrame(palmToWorld, 'palm frame')
+        # vis.updateFrame(finalTargetFrame, 'target frame')
+
+        endPose = constraintSet.runIk()
+
+        # move on line constraint
+        motionVector = np.array(retractTargetFrame.GetPosition()) - np.array(palmToWorld.GetPosition())
+        motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(retractTargetFrame.GetPosition()), motionVector)
+
+        # vis.updateFrame(motionTargetFrame,'motion frame')
+        # vis.updateFrame(targetFrame, 'target')
+        # vis.updateFrame(currentFrame, 'current')
+
+        p = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0], positionTolerance=0.001)
+        p.tspan = np.array([0.12,0.9])
+
+        # p_out = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0], positionTolerance=0.001)
+        # p_out.tspan = np.linspace(,1,5)
+
+        endPose = constraintSet.runIk()
+        constraintSet.constraints.extend(retractPoseConstraint)
+        constraintSet.constraints.extend(preGraspPoseConstraint)        
+        if useLineConstraint:
+            constraintSet.constraints.append(p)
+            plan = constraintSet.runIkTraj()
+        else:
+            plan = constraintSet.runIkTraj()
+
+        self.plans.append(plan)        
+        return plan
+
+
     def createLeftFootPoseConstraint(self, targetFrame, tspan=[-np.inf,np.inf]):
         positionConstraint, orientationConstraint = self.robotSystem.ikPlanner.createPositionOrientationConstraint('l_foot', targetFrame, vtk.vtkTransform())
         positionConstraint.tspan = tspan
         orientationConstraint.tspan = tspan
         return positionConstraint, orientationConstraint
 
-
-    def planBarGrasp(self,depth=0, preGrasp=False):
+    def createLeftPalmPoseConstraints(self, targetFrame, tspan=[-np.inf, np.inf]):
         ikPlanner = self.robotSystem.ikPlanner
-        handName = 'right'
+        positionConstraint, orientationConstraint = ikPlanner.createPositionOrientationGraspConstraints('left', targetFrame)
+        positionConstraint.tspan = tspan
+        orientationConstraint.tspan = tspan
+        return positionConstraint, orientationConstraint
+
+
+    def createPalmPoseConstraints(self, side, targetFrame, tspan=[-np.inf, np.inf]):
+        ikPlanner = self.robotSystem.ikPlanner
+        positionConstraint, orientationConstraint = ikPlanner.createPositionOrientationGraspConstraints(side, targetFrame)
+        positionConstraint.tspan = tspan
+        orientationConstraint.tspan = tspan
+        return positionConstraint, orientationConstraint
+
+    def createLeftHandPoseConstraintOnWheel(self, depth=0.12, tspan=[-np.inf, np.inf]):
+        targetFrame = self.getSteeringWheelPalmFrame()
+        targetFrame.PreMultiply()
+        targetFrame.Translate([0.0, depth, 0.0])
+        positionConstraint, orientationConstraint = self.robotSystem.ikPlanner.createPositionOrientationConstraint('l_hand_face', targetFrame, vtk.vtkTransform())
+        positionConstraint.tspan = tspan
+        orientationConstraint.tspan = tspan
+        return positionConstraint, orientationConstraint
+
+    def getSteeringWheelPalmFrame(self):
+        frame = transformUtils.copyFrame(om.findObjectByName('Steering Wheel frame').transform)
+        frame.PreMultiply()
+        frame.RotateX(90)
+        frame.PreMultiply()
+        frame.RotateZ(-90)
+        return frame
+
+
+    def planBarGrasp(self,depth=0.03, useLineConstraint=False):
+        ikPlanner = self.robotSystem.ikPlanner
+        handSide = 'right'
         handLinkName = 'r_hand'
-        palmLinkName = 'r_hand_face'
         startPose = self.getPlanningStartPose()
-        startPoseName = 'q_start_grasp'
+        startPoseName = 'q_grasp_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_end_grasp'
+
+        palmToHand = ikPlanner.getPalmToHandLink(handSide)
+        palmToWorld = transformUtils.copyFrame(ikPlanner.newGraspToWorldFrame(startPose, handSide, palmToHand))
 
         targetFrame = transformUtils.copyFrame(om.findObjectByName('right hand grab bar').transform)
         targetFrame.PreMultiply()
         targetFrame.Translate([0.0,-depth,0.0])
 
-        # need to remove the quasistatic constraint here, or just enlarge it
-        constraintSet = ikPlanner.planEndEffectorGoal(startPose, 'right', targetFrame, lockBase=True, lockBack=True, lockArm=True)
-        constraintSet.ikParameters = IkParameters(quasiStaticShrinkFactor=10)
+        finalPoseConstraints = self.createPalmPoseConstraints(handSide, targetFrame, tspan=[1,1])
+        allButRightArmPostureConstraint = self.createAllButRightArmPostureConstraint(startPoseName)
 
         seedPoseName = 'q_bar_grab'
-        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'bar_pre_grab', side=handName)
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'bar_pre_grab', side=handSide)
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
-
-        constraintSet.seedPoseName = 'q_bar_grab'
-        constraintSet.nominalPoseName = 'q_bar_grab'
+        
+        constraints = [allButRightArmPostureConstraint]
+        constraints.extend(finalPoseConstraints)
+        constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(quasiStaticShrinkFactor=10, usePointwise=False)
+        constraintSet.seedPoseName = seedPoseName
+        constraintSet.nominalPoseName = seedPoseName
 
         # move on line constraint
-        currentFrame = ikPlanner.getLinkFrameAtPose(palmLinkName,startPose)
-        motionVector = np.array(targetFrame.GetPosition()) - np.array(currentFrame.GetPosition())
+        motionVector = np.array(targetFrame.GetPosition()) - np.array(palmToWorld.GetPosition())
         motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(targetFrame.GetPosition()), motionVector)
 
         # vis.updateFrame(motionTargetFrame,'motion frame')
         # vis.updateFrame(targetFrame, 'target')
         # vis.updateFrame(currentFrame, 'current')
 
-
-        palmToHand = ikPlanner.getPalmToHandLink(handName)
-        p = ikPlanner.createLinePositionConstraint('r_hand_face', vtk.vtkTransform(), motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1.1, 0.0], positionTolerance=0.02)
-        p.tspan = np.linspace(0,1,2)
-
-        if preGrasp:
-            endPose = constraintSet.runIk()
-            plan = constraintSet.planEndPoseGoal()
-        else:
+        p = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0], positionTolerance=0.001)
+        p.tspan = np.linspace(0.2,0.8,5)
+        
+        endPose = constraintSet.runIk()
+        if useLineConstraint:
             constraintSet.constraints.append(p)
-            endPose = constraintSet.runIk()
             plan = constraintSet.runIkTraj()
+        else:
+            plan = constraintSet.planEndPoseGoal()
+
+        self.plans.append(plan)
+        return plan
+
+    def planBarRetract(self, depth=0.3, useLineConstraint=False):
+        ikPlanner = self.robotSystem.ikPlanner
+        handSide = 'right'
+        handLinkName = 'r_hand'
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'q_grasp_start'
+        self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
+        endPoseName = 'q_end_grasp'
+        maxBodyTranslationSpeed = 0.3
+
+        palmToHand = ikPlanner.getPalmToHandLink(handSide)
+        palmToWorld = transformUtils.copyFrame(ikPlanner.newGraspToWorldFrame(startPose, handSide, palmToHand))
+
+        targetFrame = transformUtils.copyFrame(palmToWorld)
+        targetFrame.PreMultiply()
+        targetFrame.Translate([0.0,-depth,0.0])
+
+        finalPoseConstraints = self.createPalmPoseConstraints(handSide, targetFrame, tspan=[1,1])
+        allButRightArmPostureConstraint = self.createAllButRightArmPostureConstraint(startPoseName)
+
+        
+
+        seedPoseName = 'q_bar_grab'
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'bar_pre_grab', side=handSide)
+        self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
+
+
+        
+        constraints = [allButRightArmPostureConstraint]
+        constraints.extend(finalPoseConstraints)
+        constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.ikParameters = IkParameters(quasiStaticShrinkFactor=10, usePointwise=False, maxBodyTranslationSpeed=0.3)
+        constraintSet.seedPoseName = 'q_bar_grab'
+        constraintSet.nominalPoseName = 'q_bar_grab'
+
+        # move on line constraint
+        motionVector = np.array(targetFrame.GetPosition()) - np.array(palmToWorld.GetPosition())
+        motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(targetFrame.GetPosition()), motionVector)
+
+        # vis.updateFrame(motionTargetFrame,'motion frame')
+        # vis.updateFrame(targetFrame, 'target')
+        # vis.updateFrame(currentFrame, 'current')
+
+        p = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0.0], positionTolerance=0.02)
+        p.tspan = np.linspace(0,1,5)
+        
+        endPose = constraintSet.runIk()
+        if useLineConstraint:
+            constraintSet.constraints.append(p)
+            plan = constraintSet.runIkTraj()
+        else:
+            plan = constraintSet.planEndPoseGoal()
 
         self.plans.append(plan)
         return plan
@@ -445,10 +626,18 @@ class DrivingPlanner(object):
         joints = robotstate.matchJoints('^(?!l_leg)')
         return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
 
+    def createAllButLeftArmPostureConstraint(self, poseName):
+        joints = robotstate.matchJoints('^(?!l_arm)')
+        return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
+
+    def createAllButRightArmPostureConstraint(self, poseName):
+        joints = robotstate.matchJoints('^(?!r_arm)')
+        return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
+
 
     def computeDrivingTrajectories(self, steeringAngleDegrees, maxTurningRadius = 10, numTrajPoints = 50):
 
-        angle = steeringAngleDegrees
+        angle = -steeringAngleDegrees
 
         if abs(angle) < 0.1:
             angle = 1e-8
@@ -534,13 +723,6 @@ class DrivingPlanner(object):
         msg.joint_name = 'l_arm_lwy'
         lcmUtils.publish(self.steeringPublishChannel, msg)
 
-    def setSteeringOffset(self):
-        pose = self.captureRobotPoseFromStreaming()
-        if pose is None:
-            return
-
-        print 'captured steering offset'
-        self.steeringAngleOffset = pose[self.lwyIdx]
 
     def decodeThrottleMessage(self,msg):
         slider = np.zeros(4)
@@ -563,6 +745,54 @@ class DrivingPlanner(object):
         pose = robotstate.convertStateMessageToDrakePose(msg)
         return pose
 
+    def planCarEntryPose(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'car_entry_new')
+        plan = ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
+        self.addPlan(plan)
+
+    def planArmsEgressStart(self):
+        startPose = self.getPlanningStartPose()
+        ikPlanner = self.robotSystem.ikPlanner
+        midPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'pre_egress_left_arm', side='left')
+        midPose = ikPlanner.getMergedPostureFromDatabase(midPose, 'driving', 'pre_egress_right_arm', side='right')
+
+        endPose = ikPlanner.getMergedPostureFromDatabase(midPose, 'driving', 'egress-arms')
+        ikParameters = IkParameters(maxDegreesPerSecond=60)
+        plan = ikPlanner.computeMultiPostureGoal([startPose, midPose, endPose], feetOnGround=False, ikParameters=ikParameters)
+        self.addPlan(plan)
+
+    def setSteeringWheelAndWristGraspAngles(self):
+        self.graspWheelAngle = np.deg2rad(self.userSpecifiedGraspWheelAngleInDegrees)
+        pose = self.getPlanningStartPose()
+        self.graspWristAngle = pose[self.lwyIdx]
+
+    def getSteeringWheelAngle(self):
+        if self.graspWristAngle is None or self.graspWheelAngle is None:
+            # this means wrist and hand haven't been initialized yet
+            return 0
+
+        pose = self.getPlanningStartPose()
+        lwyAngle = pose[self.lwyIdx]
+
+        wheelAngle = self.graspWheelAngle + lwyAngle - self.graspWristAngle
+        return wheelAngle
+
+
+    # executes regrasp plan, updates graspWristAngle, graspWheelAngle
+    def updateGraspOffsets(self):
+        pose = self.getPlanningStartPose()
+        #now that plan has finished update our graspWristAngle
+        self.graspWristAngle = pose[self.lwyIdx]
+        self.graspWheelAngle = self.wheelAngleBeforeReGrasp
+
+    def printSteeringWheelAngleInDegrees(self):
+        print np.rad2deg(self.getSteeringWheelAngle())
+
+    def addPlan(self, plan):
+        self.plans.append(plan)
+
 
 class DrivingPlannerPanel(TaskUserPanel):
 
@@ -575,7 +805,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
-        self.showTrajectory = False
         self.steeringSub = lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t, self.onSteeringCommand)
         self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG_TO_CAMERA_LEFT', lcmbotcore.rigid_transform_t, self.onAprilTag)
         self.imageView = cameraview.CameraImageView(cameraview.imageManager, 'CAMERACHEST_RIGHT', 'right image view')
@@ -601,9 +830,12 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.imageViewLayout.addWidget(self.imageView.view)
         self.imageViewLayout.addWidget(self.imageViewLeft.view)
 
+        self.timer = TimerCallback(targetFps=30)
+        self.timer.callback = self.updateAndDrawTrajectory
+
+
     def onAprilTag(self, msg):
         cameraview.imageManager.queue.getTransform('april_tag_car_beam', 'local', msg.utime, self.drivingPlanner.tagToLocalTransform)
-        self.updateAndDrawTrajectory()        
 
     def addButtons(self):
         self.addManualButton('Start', self.onStart)
@@ -613,29 +845,34 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addManualButton('Plan Touch', self.onPlanTouch)
         self.addManualButton('Plan Retract', self.onPlanRetract)
         self.addManualButton('Plan Turn', self.onPlanTurn)
+        self.addManualButton('Plan Wheel Re-Grasp', self.drivingPlanner.planSteeringWheelReGrasp)
+        self.addManualButton('Plan Bar Grab', self.onPlanBarGrasp)
+        self.addManualButton('Plan Bar Retract', self.onPlanBarRetract)
         # self.addManualButton('Plan Steering Wheel Turn', self.onPlanSteeringWheelTurn)
         # self.addManualButton('Plan Seed', self.drivingPlanner.planSeed)
         # self.addManualButton('Capture Ankle Angle Low', functools.partial(self.drivingPlanner.captureAnklePosition, 0))
         # self.addManualButton('Capture Ankle Angle High', functools.partial(self.drivingPlanner.captureAnklePosition, 1))
-        self.addManualButton('Capture Steering Offset', self.drivingPlanner.setSteeringOffset)
+        self.addManualButton('Capture Wheel and Wrist grasp angles', self.drivingPlanner.setSteeringWheelAndWristGraspAngles)
+        self.addManualButton('Print Steering Wheel Angle', self.drivingPlanner.printSteeringWheelAngleInDegrees)
 
     def addDefaultProperties(self):
         self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('Touch Depth', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('PreGrasp Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Turn Angle', 0, attributes=om.PropertyAttributes(singleStep=10))
-        self.params.addProperty('Steering Wheel Radius (meters)', 0.1873, attributes=om.PropertyAttributes(singleStep=0.01))
-        self.params.addProperty('Knot Points', 20, attributes=om.PropertyAttributes(singleStep=1))
-        self.params.addProperty('Gaze Constraint Tol', 0.3, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
+        # self.params.addProperty('Steering Wheel Radius (meters)', 0.1873, attributes=om.PropertyAttributes(singleStep=0.01))
+        # self.params.addProperty('Knot Points', 20, attributes=om.PropertyAttributes(singleStep=1))
+        # self.params.addProperty('Gaze Constraint Tol', 0.3, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
         self.params.addProperty('Position Constraint Tol', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Quat Constraint Tol', 0.0, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Grasp Location', 0, attributes=om.PropertyAttributes(enumNames=['Center','Rim']))
         self.params.addProperty('Seed with current posture', 0, attributes=om.PropertyAttributes(enumNames=['False','True']))
         self.params.addProperty('Speed', 0.75, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
-        self.params.addProperty('Throttle Idle Angle Slack', 10, attributes=om.PropertyAttributes(singleStep=1))
+        # self.params.addProperty('Throttle Idle Angle Slack', 10, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Coarse Grained Throttle Travel', 100, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Fine Grained Throttle Travel', 10, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Bar Grasp/Retract Depth', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
+        self.params.addProperty('Steering Wheel Angle when Grasped', 0, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Turning Radius', 9.5, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Wheel Separation', 1.4, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Segments', 25, attributes=om.PropertyAttributes(singleStep=1, decimals=0))
@@ -643,6 +880,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Trajectory Y Offset', 0.30, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Trajectory Angle Offset', 0.0, attributes=om.PropertyAttributes(singleStep=1, decimals=0)),
         self.params.addProperty('Show Trajectory', False)
+        self.params.addProperty('Show Driving/Regrasp Tasks',0, attributes=om.PropertyAttributes(enumNames=['Ingress','Regrasp', 'Egress']))
         self._syncProperties()
 
     def _syncProperties(self):
@@ -651,44 +889,31 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.preGraspAngle = self.params.getProperty('PreGrasp Angle')
         self.turnAngle = self.params.getProperty('Turn Angle')
         self.speed = self.params.getProperty('Speed')
-        self.turnRadius = self.params.getProperty('Steering Wheel Radius (meters)')
-        self.knotPoints = self.params.getProperty('Knot Points')
-        self.gazeTol = self.params.getProperty('Gaze Constraint Tol')
-        self.drivingPlanner.positionTol = self.params.getProperty('Position Constraint Tol')
-        self.drivingPlanner.quatTol = self.params.getProperty('Quat Constraint Tol')
-        self.graspLocation = self.params.getPropertyEnumValue('Grasp Location').lower()
+        self.turnRadius = 0.18 #self.params.getProperty('Steering Wheel Radius (meters)')
+        self.knotPoints = 20
+        self.gazeTol = 0.3
+        self.drivingPlanner.positionTol = 0.0
+        self.drivingPlanner.quatTol = 0.0
+        self.graspLocation = 'center'
         self.drivingPlanner.seedWithCurrent = self.params.getProperty('Seed with current posture')
-        self.drivingPlanner.throttleIdleAngleSlack = self.params.getProperty('Throttle Idle Angle Slack')
+        # self.drivingPlanner.throttleIdleAngleSlack = self.params.getProperty('Throttle Idle Angle Slack')
         self.drivingPlanner.fineGrainedThrottleTravel = self.params.getProperty('Fine Grained Throttle Travel')
         self.drivingPlanner.coarseGrainedThrottleTravel = self.params.getProperty('Coarse Grained Throttle Travel')
         self.barGraspDepth = self.params.getProperty('Bar Grasp/Retract Depth')
         self.drivingPlanner.maxTurningRadius = self.params.getProperty('Turning Radius')
+        self.drivingPlanner.userSpecifiedGraspWheelAngleInDegrees = self.params.getProperty('Steering Wheel Angle when Grasped')
         self.drivingPlanner.trajSegments = self.params.getProperty('Trajectory Segments')
         self.drivingPlanner.wheelDistance = self.params.getProperty('Wheel Separation')
-        self.showTrajectory = self.params.getProperty('Show Trajectory')
         self.drivingPlanner.trajectoryX = self.params.getProperty('Trajectory X Offset')
         self.drivingPlanner.trajectoryY = self.params.getProperty('Trajectory Y Offset')
         self.drivingPlanner.trajectoryAngle = self.params.getProperty('Trajectory Angle Offset')
-
-        if hasattr(self, 'affordanceUpdater'):
-            if self.showTrajectory:
-                self.updateAndDrawTrajectory()
-                leftTraj = om.findObjectByName('LeftDrivingTrajectory')
-                rightTraj = om.findObjectByName('RightDrivingTrajectory')
-                leftTraj.setProperty('Visible', self.showTrajectory)
-                rightTraj.setProperty('Visible', self.showTrajectory)
-                self.affordanceUpdater.extraObjects = [leftTraj, rightTraj]
-                self.affordanceUpdaterLeft.extraObjects = [leftTraj, rightTraj]
-            else:
-                self.affordanceUpdater.extraObjects = []
-                self.affordanceUpdaterLeft.extraObjects = []
-
+        self.taskToShow = self.params.getProperty('Show Driving/Regrasp Tasks')
         self.drivingPlanner.applyProperties()
+
 
     def onSteeringCommand(self, msg):
         if msg.type == msg.TYPE_DRIVE_DELTA_STEERING:
             self.drivingPlanner.steeringAngleDegrees = math.degrees(msg.steering_angle)
-            self.updateAndDrawTrajectory()
 
     def onStart(self):
         self.onUpdateWheelLocation()
@@ -724,16 +949,34 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.planSteeringWheelTurn(speed=self.speed, turnRadius=self.turnRadius, knotPoints=self.knotPoints, gazeTol=self.gazeTol)
 
     def onPropertyChanged(self, propertySet, propertyName):
+        taskToShowOld = self.taskToShow
         self._syncProperties()
 
-    def onplanBarGrasp(self):
-        self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, preGrasp=True)
+        if not taskToShowOld == self.taskToShow:
+            self.addTasks()
+
+        if propertyName == 'Show Trajectory':
+
+            if self.params.getProperty(propertyName):
+                self.timer.start()
+            else:
+                self.timer.stop()
+                self.affordanceUpdater.extraObjects = []
+                self.affordanceUpdaterLeft.extraObjects = []
+                om.removeFromObjectModel(om.findObjectByName('driving trajectory'))
+
+ 
+    def onPlanBarRetract(self):
+        self.drivingPlanner.planBarRetract(depth=self.barGraspDepth, useLineConstraint=True)
+
+    def onPlanBarGrasp(self):
+        self.drivingPlanner.planBarGrasp(depth=self.barGraspDepth, useLineConstraint=True)
 
     def setParamsPreGrasp1(self):
         self.params.setProperty('PreGrasp/Retract Depth', 0.22)
 
     def setParamsPreGrasp2(self):
-        self.params.setProperty('PreGrasp/Retract Depth', 0.12)
+        self.params.setProperty('PreGrasp/Retract Depth', 0.10)
 
     def setParamsWheelRetract(self):
         self.params.setProperty('PreGrasp/Retract Depth', 0.3)
@@ -744,8 +987,19 @@ class DrivingPlannerPanel(TaskUserPanel):
     def setParamsBarGrasp(self):
         self.params.setProperty('Bar Grasp/Retract Depth', 0.03)
 
-
     def addTasks(self):
+        self.taskTree.removeAllTasks()
+
+        if self.taskToShow == 0:
+            self.addIngressTasks()
+        elif self.taskToShow == 1:
+            self.addRegraspTasks()
+        elif self.addEgressTasks() == 2:
+            self.addEgressTasks()
+        else:
+            return
+
+    def addIngressTasks(self):
 
         # some helpers
         self.folder = None
@@ -758,90 +1012,206 @@ class DrivingPlannerPanel(TaskUserPanel):
             self.folder = self.taskTree.addGroup(name, parent=parent)
             return self.folder
 
-        def addManipTaskMatlab(name, planFunc, userPrompt=False):
+        def addManipTaskMatlab(name, planFunc, userPrompt=False, parentFolder=None):
 
-            folder = addFolder(name)
-            addFunc(planFunc, name='plan')
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
             addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
 
         def addManipTask(name, planFunc, userPrompt=False):
-            folder = addFolder(name)
-            addFunc(planFunc, name='plan')
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
             if not userPrompt:
                 addTask(rt.CheckPlanInfo(name='check manip plan info'))
             else:
                 addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
             addFunc(dp.commitManipPlan, name='execute manip plan')
-            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
 
         dp = self.drivingPlanner
 
-        folder = addFolder('Grasp Steering Wheel')
-        addTask(rt.UserPromptTask(name="open left hand", message="Please open left hand"))
+        prep = addFolder('Prep')
+        addTask(rt.UserPromptTask(name="start streaming", message="Please start streaming"))
+        addManipTask('car entry posture', self.drivingPlanner.planCarEntryPose, userPrompt=True)
+        self.folder = prep
+        addTask(rt.UserPromptTask(name="start April tag process", message="Enable April tag detection"))
+        addTask(rt.UserPromptTask(name="spawn polaris model", message="launch egress planner and spawn polaris model"))
+        addFunc(self.onStart, 'update wheel location')
+
+        graspWheel = addFolder('Grasp Steering Wheel')
+        addTask(rt.UserPromptTask(name="approve open left hand", message="Check it is clear to open left hand"))
+        addTask(rt.OpenHand(name='open left hand', side='Left'))
         addFunc(self.setParamsPreGrasp1, 'set params')
         addManipTaskMatlab('Pre Grasp 1', self.onPlanPreGrasp)
+        self.folder = graspWheel
         addTask(rt.UserPromptTask(name="check alignment", message="Please ask field team for hand location relative to wheel, adjust wheel affordance if necessary"))
         addFunc(self.setParamsPreGrasp2, 'set params')
         addManipTaskMatlab('Pre Grasp 2', self.onPlanPreGrasp)
+        self.folder = graspWheel
         addTask(rt.UserPromptTask(name="check alignment", message="Please make any manual adjustments if necessary"))
-        addTask(rt.UserPromptTask(name="grasp", message="Please close left hand"))
+        addTask(rt.UserPromptTask(name="approve close left hand", message="Check clear to close left hand"))
+        addTask(rt.CloseHand(name='close left hand', side='Left'))
+        addTask(rt.UserPromptTask(name="set true steering wheel angle", message="Set true steering wheel angle in spin box"))
+        addFunc(self.drivingPlanner.setSteeringWheelAndWristGraspAngles, 'capture true wheel angle and current wrist angle')
 
-
-        folder = addFolder('Bar Grasp Prep')
-        addTask(rt.UserPromptTask(name="open right hand", message="Please open right hand"))
+        graspBar = addFolder('Grasp Bar')
+        addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
+        addTask(rt.OpenHand(name='open right hand', side='Right'))
         addFunc(self.setParamsBarGrasp, 'set params')
-        addManipTask('Bar Grasp', self.onplanBarGrasp, userPrompt=True)
+        addManipTask('Bar Grasp', self.onPlanBarGrasp, userPrompt=True)
+        self.folder = graspBar
         addTask(rt.UserPromptTask(name="check alignment and depth", message="Please check alignment and depth, make any manual adjustments"))
-        addTask(rt.UserPromptTask(name="grasp", message="Please close right hand"))
+        addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
+        addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
-
-        folder = addFolder('Move Left Foot to Pedal')
+        footToDriving = addFolder('Foot to Driving Pose')
         addManipTask('Foot Up', self.drivingPlanner.planLegUp, userPrompt=True)
-        addManipTask('Leg Swing', self.drivingPlanner.planLegSwingIn, userPrompt=True)
-        addManipTask('Foot on Pedal', self.drivingPlanner.planLegPedal, userPrompt=True)
+        self.folder = footToDriving
+        addManipTask('Swing leg in', self.drivingPlanner.planLegSwingIn , userPrompt=True)
+        self.folder = footToDriving
+        addManipTask('Foot On Pedal', self.drivingPlanner.planLegPedal, userPrompt=True)
 
-        folder = addFolder('Driving')
-        addTask(rt.UserPromptTask(name="driving", message="Please continue when finished driving"))
+        driving = addFolder('Driving')
+        addTask(rt.UserPromptTask(name="base side streaming", message="Please start base side streaming"))
+        addTask(rt.UserPromptTask(name="launch drivers", message="Please launch throttle and steering drivers"))
+        addTask(rt.UserPromptTask(name="switch to regrasp tasks", message="Switch to regrasp task set"))
 
-        folder = addFolder('Foot to Egress Pose')
+    def addEgressTasks(self):
+
+        # some helpers
+        self.folder = None
+        def addTask(task, parent=None):
+            parent = parent or self.folder
+            self.taskTree.onAddTask(task, copy=False, parent=parent)
+        def addFunc(func, name, parent=None):
+            addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
+        def addFolder(name, parent=None):
+            self.folder = self.taskTree.addGroup(name, parent=parent)
+            return self.folder
+
+        def addManipTaskMatlab(name, planFunc, userPrompt=False, parentFolder=None):
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
+            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
+
+        def addManipTask(name, planFunc, userPrompt=False):
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
+            if not userPrompt:
+                addTask(rt.CheckPlanInfo(name='check manip plan info'))
+            else:
+                addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+            addFunc(dp.commitManipPlan, name='execute manip plan')
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
+
+        dp = self.drivingPlanner
+
+        
+        footToEgress = addFolder('Foot to Egress Pose')
         addManipTask('Foot Off Pedal', self.drivingPlanner.planLegAbovePedal, userPrompt=True)
+        self.folder = footToEgress
         addManipTask('Swing leg out', self.drivingPlanner.planLegSwingOut , userPrompt=True)
+        self.folder = footToEgress
         addManipTask('Foot Down', self.drivingPlanner.planLegEgressStart, userPrompt=True)
 
-        folder = addFolder('Ungrasp Steering Wheel')
-        addTask(rt.UserPromptTask(name="open left hand", message="Please open left hand"))
+        ungraspWheel = addFolder('Ungrasp Steering Wheel')
+        addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
+        addTask(rt.OpenHand(name='open left hand', side='Left'))
         addFunc(self.setParamsWheelRetract, 'set params')
         addManipTaskMatlab('Retract hand', self.onPlanRetract)
-        addTask(rt.UserPromptTask(name="close left hand", message="Please close left hand"))
+        self.folder = ungraspWheel
+        addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
+        addTask(rt.CloseHand(name='close left hand', side='Left'))
 
-        folder = addFolder('Ungrasp Bar')
-        addTask(rt.UserPromptTask(name="open right hand", message="Please open right hand"))
+        ungraspBar = addFolder('Ungrasp Bar')
+        addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
+        addTask(rt.OpenHand(name='open left hand', side='Right'))
         addFunc(self.setParamsBarRetract, 'set params')
-        addManipTask('Retract hand', self.onplanBarGrasp, userPrompt=True)
-        addTask(rt.UserPromptTask(name="close right hand", message="Please close right hand"))
+        addManipTask('Retract hand', self.onPlanBarRetract, userPrompt=True)
+        self.folder = ungraspBar
+        addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
+        addTask(rt.CloseHand(name='close Right hand', side='Right'))
+
+
+        armsToEgressStart = addFolder('Arms to Egress Start')
+        addManipTask('Arms To Egress Start', self.drivingPlanner.planArmsEgressStart, userPrompt=True)
+
+        prep = addFolder('Stop Streaming')
+        addTask(rt.UserPromptTask(name='stop streaming base side', message='stop streaming base side'))
 
 
 
+    def addRegraspTasks(self):
+        self.folder = None
+        def addTask(task, parent=None):
+            parent = parent or self.folder
+            self.taskTree.onAddTask(task, copy=False, parent=parent)
+        def addFunc(func, name, parent=None):
+            addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
+        def addFolder(name, parent=None):
+            self.folder = self.taskTree.addGroup(name, parent=parent)
+            return self.folder
+
+        def addManipTaskMatlab(name, planFunc, userPrompt=False, parentFolder=None):
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
+            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
+
+        def addManipTask(name, planFunc, userPrompt=False):
+
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
+            if not userPrompt:
+                addTask(rt.CheckPlanInfo(name='check manip plan info'))
+            else:
+                addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
+            addFunc(dp.commitManipPlan, name='execute manip plan')
+            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
+
+        dp = self.drivingPlanner
+        regrasp = addFolder('Regrasp')
+        addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
+        addTask(rt.OpenHand(name='open left hand', side='Left'))
+        addManipTask('Plan Regrasp', self.drivingPlanner.planSteeringWheelReGrasp, userPrompt=True)
+        self.folder = regrasp
+        addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
+        addTask(rt.CloseHand(name='close left hand', side='Left'))
+        addFunc(self.drivingPlanner.updateGraspOffsets, 'update steering wheel grasp offsets')
 
 
     def updateAndDrawTrajectory(self):
-        leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(self.drivingPlanner.steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)
-        self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(leftTraj), 'LeftDrivingTrajectory')
-        self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(rightTraj), 'RightDrivingTrajectory')
+        if not self.params.getProperty('Show Trajectory') or om.findObjectByName('Steering Wheel') is None:
+            return None
 
-    def drawDrivingTrajectory(self, drivingTraj, name):
-        if not self.showTrajectory:
-            return
+        steeringAngleDegrees = np.rad2deg(self.drivingPlanner.getSteeringWheelAngle())
+        leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)
 
         d = DebugData()
 
-        numTrajPoints = len(drivingTraj)
+        for traj in [leftTraj, rightTraj]:
+            traj = self.drivingPlanner.transformDrivingTrajectory(traj)
+            numTrajPoints = len(traj)
 
-        if numTrajPoints > 1:
-            for i in range(0, numTrajPoints):
+            for i in xrange(numTrajPoints):
                 rgb = [(numTrajPoints - i) / float(numTrajPoints), 1 - (numTrajPoints - i) / float(numTrajPoints), 1]
-                d.addSphere(drivingTraj[i], 0.05, rgb)
+                d.addSphere(traj[i], 0.05, rgb, resolution=12)
 
-        vis.updatePolyData(d.getPolyData(), name)
-        obj = om.findObjectByName(name)
-        obj.setProperty('Color By', 1)
+        obj = vis.updatePolyData(d.getPolyData(), 'driving trajectory', colorByName='RGB255', parent='planning')
+
+        for updater in [self.affordanceUpdater, self.affordanceUpdaterLeft]:
+            updater.extraObjects = [obj]
+
+        return obj
