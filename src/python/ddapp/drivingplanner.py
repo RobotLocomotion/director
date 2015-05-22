@@ -1179,6 +1179,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.folder = footToEgress
         addManipTask('Foot Down', self.drivingPlanner.planLegEgressStart, userPrompt=True)
 
+        addFunc(self.onUpdateWheelLocation, 'Update wheel location')
+
         ungraspWheel = addFolder('Ungrasp Steering Wheel')
         addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
         addTask(rt.OpenHand(name='open left hand', side='Left'))
