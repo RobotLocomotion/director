@@ -394,12 +394,20 @@ class TableDemo(object):
     def planTouchTableObject(self, side):
 
         obj, frame = self.getNextTableObject(side)
-
         startPose = self.getPlanningStartPose()
-        self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.05, lockBase=self.lockBase, lockBack=self.lockBack)
 
-        self.constraintSet.constraints[-1].tspan = [-np.inf, np.inf]
-        self.constraintSet.constraints[-2].tspan = [-np.inf, np.inf]
+        if self.ikPlanner.fixedBaseArm: # includes distance hack and currently uses reachDist instead of touchDist (TODO!)
+            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist,0,0]), [0,0,-90] )
+            f.PreMultiply()
+            f.RotateY(180)
+            f.Update()
+            item = vis.FrameItem('reach_item', f, self.view)
+            self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, f, lockBase=False, lockBack=True)
+        else:
+            self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, item, dist=0.05, lockBase=self.lockBase, lockBack=self.lockBack)
+            self.constraintSet.constraints[-1].tspan = [-np.inf, np.inf]
+            self.constraintSet.constraints[-2].tspan = [-np.inf, np.inf]
+        
         self.constraintSet.runIk()
 
         print 'planning touch'
