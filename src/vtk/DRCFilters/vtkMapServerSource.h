@@ -53,6 +53,8 @@ public:
   void GetDataForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData);
   void GetMeshForMapId(int viewId, vtkIdType mapId, vtkPolyData* polyData);
   void GetDataForMapId(int viewId, vtkIdType mapId, vtkImageData* imageData, vtkTransform* transform);
+  vtkIdType GetLastScanBundleUTime();
+
 
   vtkIntArray* GetViewIds();
 
