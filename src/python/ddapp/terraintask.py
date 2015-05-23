@@ -78,6 +78,11 @@ class TerrainTask(object):
         self.defaultLeadingFoot = 'right'
         self.removeDuringOrganize = False
 
+        self.numberOfPrefabSteps = -1
+
+        self.relativeStartPos = np.array([0,0])
+        self.relativeStartYaw = 0
+
         # terrain config file stuff
         self.terrainConfigDir = os.path.join(ddapp.getDRCBaseDir(), 'software','config','terrain')
         files = glob.glob(os.path.join(self.terrainConfigDir,'*.py'))
@@ -197,26 +202,19 @@ class TerrainTask(object):
         return blocks
 
     def createStartingGoal(self):
-        if not hasattr(self, 'startingStanceFrame') or self.startingStanceFrame is None:
-            print 'error: no stance frame defined'
-            return
         blockTable = self.createBlockObjectTable()
         if len(blockTable)>0 and len(blockTable[0])>0:
             stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
-            startFrame = transformUtils.copyFrame(self.startingStanceFrame)
+            stancePos = np.array(stanceFrame.GetPosition())
             firstBlockFrame = transformUtils.copyFrame(blockTable[0][0].getChildFrame().transform)
-            frame = startFrame
-            frame.PostMultiply()
-            frame.Concatenate(firstBlockFrame)
-            frame.PreMultiply()
-            frame.Translate(0,0,stanceFrame.GetPosition()[2]-frame.GetPosition()[2])
-
-            yaw = transformUtils.rollPitchYawFromTransform(frame)[2]
-            xDir = np.array([np.cos(yaw),np.sin(yaw),0])
-            yDir = np.cross(np.array([0,0,1]), xDir)
-            zDir = np.cross(xDir, yDir)
-            goalFrame = transformUtils.getTransformFromAxesAndOrigin(xDir,yDir,zDir,frame.GetPosition())
-
+            firstBlockPos = np.array(firstBlockFrame.GetPosition())[0:2]
+            startingPos = firstBlockPos - self.relativeStartPos
+            goalFrame = vtk.vtkTransform()
+            goalFrame.PreMultiply()
+            goalFrame.Translate(np.append(startingPos, stancePos[2]))
+            relativeDir = firstBlockPos - startingPos
+            yaw = np.arctan2(relativeDir[1], relativeDir[0]) + self.relativeStartYaw
+            goalFrame.RotateZ(np.degrees(yaw))
             footstepsdriverpanel.panel.onNewWalkingGoal(goalFrame)
         else:
             print 'error: no blocks defined; use Spawn Terrain button'
@@ -274,10 +272,16 @@ class TerrainTask(object):
                 supportTypes.append(supportType)
             #obj = vis.showFrame(t, '%s step frame' % block.getProperty('Name'), parent='step frames', scale=0.2)
 
+        # remove footsteps beyond specified limit
+        if self.numberOfPrefabSteps >= 0:
+            maxNum = min(len(stepFrames), self.numberOfPrefabSteps)
+            stepFrames = stepFrames[0:maxNum]
+            supportTypes = supportTypes[0:maxNum]
+
         # send footstep request
         startPose = self.getPlanningStartPose()
         helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
-        request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
+        request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot,  snapToTerrain=False)
         for i in range(len(stepFrames)):
             request.goal_steps[i].params.support_contact_groups = supportTypes[i]
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
@@ -345,11 +349,12 @@ class TerrainTask(object):
                 desc = dict(classname='BoxAffordanceItem', Name='%s (%d,%d)' % (self.terrainConfig['blockName'], row, col), Dimensions=blockSize.tolist(), pose=pose, Color=self.terrainConfig['blockColor'])
                 block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
 
-        startFrame = transformUtils.copyFrame(stanceFrame)
-        startFrame.PostMultiply()
         if firstBlockFrame is not None:
-            startFrame.Concatenate(firstBlockFrame.GetLinearInverse())
-        self.startingStanceFrame = startFrame
+            firstBlockPos = np.array(firstBlockFrame.GetPosition())[0:2]
+            curPos = np.array(stanceFrame.GetPosition())[0:2]
+            curDir = np.array(transformUtils.getAxesFromTransform(stanceFrame)[0])
+            self.relativeStartPos = firstBlockPos - curPos
+            self.relativeStartYaw =  np.arctan2(curDir[1], curDir[0]) - np.arctan2(self.relativeStartPos[1],self.relativeStartPos[0])
 
         #for block in self.getCinderblockAffordances():
         #    frameSync.addFrame(block.getChildFrame(), ignoreIncoming=True)
@@ -357,6 +362,7 @@ class TerrainTask(object):
     def showBlocks(self, blocks, visible):
         for b in blocks:
             b.setProperty('Visible', visible)
+            b.setProperty('Collision Enabled', visible)
 
 
     def assignBlocks(self):
@@ -1308,6 +1314,7 @@ class TerrainTaskPanel(TaskUserPanel):
 
     def addDefaultProperties(self):
         self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=self.terrainTask.terrainConfigList))
+        self.params.addProperty('Number of Steps', self.terrainTask.numberOfPrefabSteps, attributes=om.PropertyAttributes(minimum=-1, maximum=100))
         self.params.addProperty('Block Fit Algo', self.terrainTask.blockFitAlgo, attributes=om.PropertyAttributes(enumNames=['MinArea', 'ClosestSize']))
         self.params.addProperty('Constrain Block Size', self.terrainTask.constrainBlockSize)
         self.params.addProperty('Manual Steps Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
@@ -1318,6 +1325,8 @@ class TerrainTaskPanel(TaskUserPanel):
     def onPropertyChanged(self, propertySet, propertyName):
         if propertyName == 'Camera Texture':
             self.terrainTask.useTextures = self.params.getProperty(propertyName)
+        elif propertyName == 'Number of Steps':
+            self.terrainTask.numberOfPrefabSteps = self.params.getProperty(propertyName)
         elif propertyName == 'Terrain Type':
             terrainConfig = self.terrainTask.terrainConfigList[self.params.getProperty(propertyName)];
             self.terrainTask.loadTerrainConfig(terrainConfig)
