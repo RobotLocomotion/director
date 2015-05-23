@@ -13,6 +13,7 @@ class IkParameters(FieldContainer):
             maxDegreesPerSecond = None,
             maxBaseMetersPerSecond = None,
             maxBaseRPYDegreesPerSecond = None,
+            maxBackDegreesPerSecond = None,
             accelerationParam = None,
             accelerationFraction = None,
             maxPlanDuration = None,
@@ -40,6 +41,7 @@ class IkParameters(FieldContainer):
         self.majorOptimalityTolerance = 1e-4
         self.majorFeasibilityTolerance = 1e-6
         self.maxDegreesPerSecond = 30.0
+        self.maxBackDegreesPerSecond = 10.0
         self.maxBaseMetersPerSecond = 0.05
         self.maxBaseRPYDegreesPerSecond = 2
         self.maxBodyTranslationSpeed = 0.50
