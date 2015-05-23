@@ -328,7 +328,7 @@ def newWalkingGoal(displayPoint, view):
     footstepsdriverpanel.panel.onNewWalkingGoal(footFrame)
 
 
-def toggleFootstepWidget(displayPoint, view):
+def toggleFootstepWidget(displayPoint, view, useHorizontalWidget=False):
 
     obj, _ = vis.findPickedObject(displayPoint, view)
 
@@ -360,8 +360,10 @@ def toggleFootstepWidget(displayPoint, view):
 
     footMesh = shallowCopy(obj.polyData)
     footFrame = transformUtils.copyFrame(obj.getChildFrame().transform)
-    rpy = [0.0, 0.0, transformUtils.rollPitchYawFromTransform(footFrame)[2]]
-    footFrame = transformUtils.frameFromPositionAndRPY(footFrame.GetPosition(), np.degrees(rpy))
+
+    if useHorizontalWidget:
+        rpy = [0.0, 0.0, transformUtils.rollPitchYawFromTransform(footFrame)[2]]
+        footFrame = transformUtils.frameFromPositionAndRPY(footFrame.GetPosition(), np.degrees(rpy))
 
     footObj = vis.showPolyData(footMesh, 'footstep widget', parent='planning', alpha=0.2)
     footObj.stepIndex = stepIndex
@@ -778,7 +780,8 @@ class ViewEventFilter(object):
 
         displayPoint = vis.mapMousePosition(self.view, event)
 
-        if toggleFootstepWidget(displayPoint, self.view):
+        useHorizontalWidget =  (event.modifiers() == QtCore.Qt.ShiftModifier)
+        if toggleFootstepWidget(displayPoint, self.view, useHorizontalWidget):
             return
 
         if toggleFrameWidget(displayPoint, self.view):
