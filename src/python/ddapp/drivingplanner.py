@@ -81,6 +81,7 @@ class DrivingPlanner(object):
 
     def addSubscribers(self):
         lcmUtils.addSubscriber('THROTTLE_COMMAND', lcmdrc.trigger_finger_t , self.onThrottleCommand)
+        lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_command_t , self.onSteeringCommand)
 
     def initialize(self, ikServer, success):
         if ikServer.restarted:
@@ -718,14 +719,10 @@ class DrivingPlanner(object):
 
 
     def onThrottleCommand(self, msg):
-        if np.isnan(self.anklePositions).any():
-            # print 'you must initialize the LOW/HIGH ankle positions before streaming throttle commands'
-            # print 'use the Capture Ankle Angle Low/High Buttons'
-            return
 
         # slider 0 is the coarse grained slider, slider 1 is for fine grained adjustment
         slider = self.decodeThrottleMessage(msg)
-        const = self.jointLimitsMin[self.akyIdx]
+        const = np.rad2deg(self.jointLimitsMin[self.akyIdx])
         ankleGoalPosition = const + slider[0]*self.coarseGrainedThrottleTravel + (slider[1]-1/2.0)*self.fineGrainedThrottleTravel
         ankleGoalPositionRadians = np.deg2rad(ankleGoalPosition)
 

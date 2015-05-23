@@ -725,7 +725,7 @@ class AtlasCommandPanel(object):
             print 'ignoring throttle command'
             return
             
-        jointIdx = self.jointTeleopPanel.toJointIndex('l_leg_aky')
+        jointIdx = self.jointTeleopPanel.toJointIndex(joint_name)
         self.jointTeleopPanel.endPose[jointIdx] = jointPositionGoal
         self.jointTeleopPanel.updateSliders()
         self.jointTeleopPanel.sliderChanged(jointName)
