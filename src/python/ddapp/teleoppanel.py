@@ -258,7 +258,7 @@ class EndEffectorTeleopPanel(object):
 
     def executionSupportCheckboxChanged(self):
         self.updateQuasistaticFlag()
-        self.panel.manipPlanner.publishPlansWithSupports = self.getExecutionSupportEnabled()
+        self.panel.manipPlanner.setPublishPlansWithSupports(self.getExecutionSupportEnabled())
 
     def leftFootPlanningSupportCheckboxChanged(self):
         if self.getLFootPlanningSupportEnabled():

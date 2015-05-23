@@ -44,6 +44,7 @@ class PlaybackPanel(object):
         self.robotStateJointController = robotStateJointController
         self.manipPlanner = manipPlanner
         manipPlanner.connectPlanCommitted(self.onPlanCommitted)
+        manipPlanner.connectUseSupports(self.updateButtonColor)
 
         self.autoPlay = True
         self.useOperationColors()
@@ -105,7 +106,13 @@ class PlaybackPanel(object):
 
         if not self.isPlanFeasible():
             menu.addSeparator()
-            menu.addAction('Execute infeasible plan')
+            if self.isPlanAPlanWithSupports():
+                menu.addAction('Execute infeasible plan with supports')
+            else:
+                menu.addAction('Execute infeasible plan')
+        elif self.isPlanAPlanWithSupports():
+            menu.addSeparator()
+            menu.addAction('Execute plan with supports')
 
         selectedAction = menu.exec_(globalPos)
         if not selectedAction:
@@ -115,6 +122,10 @@ class PlaybackPanel(object):
             self.executePlan(visOnly=True)
         elif selectedAction.text == 'Execute infeasible plan':
             self.executePlan(overrideInfeasibleCheck=True)
+        elif selectedAction.text == 'Execute plan with supports':
+            self.executePlan(overrideSupportsCheck=True)
+        elif selectedAction.text == 'Execute infeasible plan with supports':
+            self.executePlan(overrideInfeasibleCheck=True, overrideSupportsCheck=True)
 
 
     def getViewMode(self):
@@ -217,13 +228,13 @@ class PlaybackPanel(object):
         self.executePlan()
 
 
-    def executePlan(self, visOnly=False, overrideInfeasibleCheck=False):
+    def executePlan(self, visOnly=False, overrideInfeasibleCheck=False, overrideSupportsCheck=False):
         if visOnly:
             _, poses = self.planPlayback.getPlanPoses(self.plan)
             self.onPlanCommitted(self.plan)
             self.robotStateJointController.setPose('EST_ROBOT_STATE', poses[-1])
         else:
-            if self.isPlanFeasible() or overrideInfeasibleCheck:
+            if (self.isPlanFeasible() or overrideInfeasibleCheck) and (not self.isPlanAPlanWithSupports() or overrideSupportsCheck):
                 self.manipPlanner.commitManipPlan(self.plan)
 
 
@@ -245,6 +256,9 @@ class PlaybackPanel(object):
         plan = robotstate.asRobotPlan(self.plan)
         return max(plan.plan_info)
 
+
+    def isPlanAPlanWithSupports(self):
+        return hasattr(self.plan, 'support_sequence') or self.manipPlanner.publishPlansWithSupports
 
     def updatePlanFrames(self):
 
@@ -336,6 +350,8 @@ class PlaybackPanel(object):
     def updateButtonColor(self):
         if self.ui.executeButton.enabled and self.plan and not self.isPlanFeasible():
             styleSheet = 'background-color:red'
+        elif self.ui.executeButton.enabled and self.plan and self.isPlanAPlanWithSupports():
+            styleSheet = 'background-color:orange'
         else:
             styleSheet = ''
 
