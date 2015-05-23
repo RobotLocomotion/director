@@ -91,7 +91,7 @@ DEFAULT_STEP_PARAMS['Stairs'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
                                       'Max Num Steps': 8,
                                       'Min Num Steps': 8,
-                                      'Drake Swing Speed': 0.4,
+                                      'Drake Swing Speed': 0.6,
                                       'Support Contact Groups': lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE,
                                       'Map Mode': 2})
 
@@ -225,7 +225,7 @@ class FootstepsDriver(object):
         # If we're a consoleapp and have no main window execButton won't exist
         if hasattr(self, 'execButton'):
             self.execButton.setEnabled(False)
-        
+
         self.committedPlans = []
 
 
