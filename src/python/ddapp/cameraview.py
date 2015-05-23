@@ -204,8 +204,8 @@ class CameraView(object):
         self.sphereObjects = {}
         self.sphereImages = [
                 'CAMERA_LEFT',
-                'CAMERACHEST_LEFT',
-                'CAMERACHEST_RIGHT']
+                'CAMERACHEST_RIGHT',
+                'CAMERACHEST_LEFT']
 
         for name in self.sphereImages:
             imageManager.addImage(name)
@@ -267,6 +267,21 @@ class CameraView(object):
     def initView(self, view):
 
         self.view = view or app.getViewManager().createView('Camera View', 'VTK View')
+
+        self.renderers = [view.renderer()]
+        renWin = view.renderWindow()
+        renWin.SetNumberOfLayers(3)
+        for i in [1, 2]:
+            ren = vtk.vtkRenderer()
+            ren.SetLayer(2)
+            ren.SetActiveCamera(view.camera())
+            renWin.AddRenderer(ren)
+            self.renderers.append(ren)
+
+        def applyCustomBounds():
+            self.view.addCustomBounds([-100, 100, -100, 100, -100, 100])
+        self.view.connect('computeBoundsRequest(ddQVTKWidgetView*)', applyCustomBounds)
+
         app.setCameraTerrainModeEnabled(self.view, True)
         self.resetCamera()
 
@@ -288,9 +303,9 @@ class CameraView(object):
 
         sphereResolution = 50
         sphereRadii = {
-                'CAMERA_LEFT' : 9.85,
-                'CAMERACHEST_LEFT' : 9.95,
-                'CAMERACHEST_RIGHT' : 10
+                'CAMERA_LEFT' : 20,
+                'CAMERACHEST_LEFT' : 20,
+                'CAMERACHEST_RIGHT' : 20
                 }
 
         geometry = makeSphere(sphereRadii[imageName], sphereResolution)
@@ -306,6 +321,10 @@ class CameraView(object):
         sphereObj = vis.showPolyData(geometry, imageName, view=self.view, parent='cameras')
         sphereObj.actor.SetTexture(self.imageManager.getTexture(imageName))
         sphereObj.actor.GetProperty().LightingOff()
+
+        self.view.renderer().RemoveActor(sphereObj.actor)
+        rendererId = 2 - self.sphereImages.index(imageName)
+        self.renderers[rendererId].AddActor(sphereObj.actor)
 
         self.sphereObjects[imageName] = sphereObj
         return sphereObj
