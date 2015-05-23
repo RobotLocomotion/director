@@ -146,7 +146,8 @@ class EgressPlanner(object):
         self.robotSystem = robotSystem
         self.polaris = None
         self.quasiStaticShrinkFactor = 0.1
-        self.maxBodyTranslationSpeed = 0.1
+        self.maxFootTranslationSpeed = 0.05
+        self.maxHandTranslationSpeed = 0.1
         self.plans = []
 
     def spawnPolaris(self):
@@ -212,6 +213,8 @@ class EgressPlanner(object):
         liftFrame = transformUtils.concatenateTransforms([t, pelvisFrame])
 
         constraints = []
+        utorsoFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('utorso', startPose)
+        constraints.extend(self.createUtorsoGazeConstraints([1.0, 1.0]))
         p = ik.PositionConstraint(linkName='pelvis', referenceFrame=liftFrame,
                                   lowerBound=np.array([0.0, -np.inf, 0.0]),
                                   upperBound=np.array([np.inf, np.inf, 0.0]))
@@ -298,7 +301,7 @@ class EgressPlanner(object):
 
         ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
                                     rescaleBodyNames=['l_foot'], rescaleBodyPts=[0.0, 0.0, 0.0],
-                                    maxBodyTranslationSpeed=self.maxBodyTranslationSpeed)
+                                    maxBodyTranslationSpeed=self.maxFootTranslationSpeed)
 
         ikParameters = self.robotSystem.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
 
@@ -387,7 +390,7 @@ class EgressPlanner(object):
         constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
                                                   rescaleBodyNames=['l_foot'],
                                                   rescaleBodyPts=[0.0, 0.0, 0.0],
-                                                  maxBodyTranslationSpeed=self.maxBodyTranslationSpeed)
+                                                  maxBodyTranslationSpeed=self.maxFootTranslationSpeed)
         #constraintSet.seedPoseName = 'q_start'
         #constraintSet.nominalPoseName = 'q_start'
 
@@ -524,7 +527,7 @@ class EgressPlanner(object):
                                     rescaleBodyNames=['l_hand', 'r_hand'],
                                     rescaleBodyPts=list(self.robotSystem.ikPlanner.getPalmPoint(side='left')) +
                                                     list(self.robotSystem.ikPlanner.getPalmPoint(side='right')),
-                                    maxBodyTranslationSpeed=3*self.maxBodyTranslationSpeed)
+                                    maxBodyTranslationSpeed=3*self.maxHandTranslationSpeed)
         plan = self.robotSystem.ikPlanner.computeMultiPostureGoal([q0, q1, q2], ikParameters=ikParameters)
         self.addPlan(plan)
         return plan
