@@ -38,58 +38,93 @@ class PolarisModel(object):
                     Filename='software/models/polaris/polaris_cropped.vtp', pose=pose)
         self.pointcloudAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         self.originFrame = self.pointcloudAffordance.getChildFrame()
-        self.originToAprilTransform = vtk.vtkTransform() # this should be updated when we remount the April tag
+        self.originToAprilTransform = transformUtils.transformFromPose(np.array([-0.038508  , -0.00282131, -0.01000079]),
+            np.array([  9.99997498e-01,  -2.10472556e-03,  -1.33815696e-04, 7.46246794e-04])) # offset for  . . . who knows why
 
-        t = transformUtils.transformFromPose(np.array([-0.96427236,  0.06193934,  0.3543806 ]),
-            np.array([ 0.18153211,  0.83526159,  0.42728504,  0.29463821]))
+        # t = transformUtils.transformFromPose(np.array([ 0.14376024,  0.95920689,  0.36655712]), np.array([ 0.28745842,  0.90741428, -0.28822068,  0.10438304]))
+
+        t = transformUtils.transformFromPose(np.array([ 0.07387469,  0.97640798,  0.37395914]),
+            np.array([ 0.32997378,  0.88498408, -0.31780588,  0.08318602]))
         self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([-0.93707546,  0.07409333,  0.32871604]),
-                                             np.array([ 0.22455191,  0.71396247,  0.60983921,
-                                                       0.26063418]))
-        self.leftFootEgressInsideFrame  = vis.updateFrame(t, 'left foot inside', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([-0.89783714,  0.23503719,  0.29039189]),
-                                             np.array([ 0.2331762 ,  0.69031269,  0.6311807,
-                                                       0.2659101]))
+        t = transformUtils.transformFromPose(np.array([ 0.265,  0.874,  0.274]),
+                                             np.array([ 0.35290731,  0.93443693, -0.04181263,  0.02314636]))
         self.leftFootEgressMidFrame  = vis.updateFrame(t, 'left foot mid', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([-0.88436275,  0.50939115,  0.31281047]),
-                                             np.array([ 0.22600245,  0.69177731,  0.63305905,
-                                                       0.26382435]))
+        t = transformUtils.transformFromPose(np.array([ 0.54339115,  0.89436275,  0.26681047]),
+                                             np.array([ 0.34635985,  0.93680077, -0.04152008,  0.02674412]))
         self.leftFootEgressOutsideFrame  = vis.updateFrame(t, 'left foot outside', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
 
-        pose = [np.array([-0.43284877, -0.82362299, -0.24939116]), np.array([ 0.00764553,  0.64088459, -0.01054815,  0.7675267 ])]
+        # pose = [np.array([-0.78962299,  0.44284877, -0.29539116]), np.array([ 0.54812954,  0.44571517, -0.46063251,  0.53731713])] #old location
+        pose = [np.array([-0.78594663,  0.42026626, -0.23248139]), np.array([ 0.54812954,  0.44571517, -0.46063251,  0.53731713])] # updated location
 
         desc = dict(classname='CapsuleRingAffordanceItem', Name='Steering Wheel', uuid=newUUID(), pose=pose,
                     Color=[1, 0, 0], Radius=float(0.18), Segments=20)
         self.steeringWheelAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
 
-        t = transformUtils.transformFromPose(np.array([-0.95565326,  0.00645136,  0.30410111]),
-            np.array([ 0.2638261 ,  0.88689326,  0.36270714,  0.11072339]))
+
+        pose = [np.array([-0.05907324,  0.80460545,  0.45439687]), np.array([ 0.14288327,  0.685944  , -0.703969  ,  0.11615873])]
+
+        desc = dict(classname='BoxAffordanceItem', Name='pedal', Dimensions=[0.12, 0.33, 0.04], pose=pose, Color=[0,1,0])
+        self.pedalAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+
+
+        # t = transformUtils.transformFromPose(np.array([ 0.04045136,  0.96565326,  0.25810111]),
+        #     np.array([ 0.26484648,  0.88360091, -0.37065556, -0.10825996]))
+
+        # t = transformUtils.transformFromPose(np.array([ -4.34908919e-04,   9.24901627e-01,   2.65614116e-01]),
+        #     np.array([ 0.25022251,  0.913271  , -0.32136359, -0.00708626]))
+
+        t = transformUtils.transformFromPose(np.array([ 0.0384547 ,  0.89273742,  0.24140762]),
+            np.array([ 0.26331831,  0.915796  , -0.28055337,  0.11519963]))
 
         self.leftFootPedalSwingFrame = vis.updateFrame(t,'left foot pedal swing', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([-0.9012598 , -0.05709763,  0.34897024]), 
+        t = transformUtils.transformFromPose(np.array([-0.9012598 , -0.05709763,  0.34897024]),
             np.array([ 0.03879584,  0.98950919,  0.03820214,  0.13381721]))
 
         self.leftFootDrivingFrame = vis.updateFrame(t,'left foot driving', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+        # t = transformUtils.transformFromPose(np.array([-0.12702725,  0.92068409,  0.27209386]),
+        #     np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
 
-        t = transformUtils.transformFromPose(np.array([ 0.0584505 ,  0.43832744,  0.02401199]),
-            np.array([ 0.62148369,  0.32887677, -0.32946879, -0.63011777]))
+
+        # t = transformUtils.transformFromPose(np.array([-0.14940375,  0.90347275,  0.23812658]),
+        #     np.array([ 0.27150909,  0.91398724, -0.28877386,  0.0867167 ]))
+
+        t = transformUtils.transformFromPose(np.array([-0.17331227,  0.87879312,  0.25645152]),
+            np.array([ 0.26344489,  0.91567196, -0.28089824,  0.11505581]))
+        self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+
+
+        t = transformUtils.transformFromPose(np.array([-0.12702725,  0.92068409,  0.27209386]),
+            np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
+        self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+
+        t = transformUtils.transformFromPose(np.array([ 0.18112314,  0.89229407,  0.25062962]),
+            np.array([ 0.33484372,  0.88280787, -0.31946488,  0.08044963]))
+
+        self.leftFootUpFrame = vis.updateFrame(t,'left foot up frame', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+
+
+        t = transformUtils.transformFromPose(np.array([ 0.47214939, -0.04856998,  0.01375837]),
+            np.array([  6.10521653e-03,   4.18621358e-04,   4.65520611e-01,
+         8.85015882e-01]))
         self.rightHandGrabFrame = vis.updateFrame(t,'right hand grab bar', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
         self.frameSync = vis.FrameSync()
         self.frameSync.addFrame(self.originFrame)
         self.frameSync.addFrame(self.pointcloudAffordance.getChildFrame(), ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressStartFrame, ignoreIncoming=True)
-        self.frameSync.addFrame(self.leftFootEgressInsideFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressMidFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootEgressOutsideFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.steeringWheelAffordance.getChildFrame(), ignoreIncoming=True)
+        self.frameSync.addFrame(self.pedalAffordance.getChildFrame(), ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootPedalSwingFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootDrivingFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootDrivingKneeInFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootUpFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.rightHandGrabFrame, ignoreIncoming=True)
 
     def onAprilTag(self, msg):
@@ -106,8 +141,13 @@ class EgressPlanner(object):
 
         self.legLiftAngle = 8
 
+        self.coneThreshold = np.radians(5)
+
         self.robotSystem = robotSystem
         self.polaris = None
+        self.quasiStaticShrinkFactor = 0.1
+        self.maxBodyTranslationSpeed = 0.1
+        self.plans = []
 
     def spawnPolaris(self):
         self.polaris = PolarisModel()
@@ -126,18 +166,11 @@ class EgressPlanner(object):
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.getPose('EST_ROBOT_STATE')
 
-    def planFootLiftInCar(self):
-        startPose = self.getPlanningStartPose()
-        startPoseName = 'q_lift_start'
-        jointId = robotstate.getDrakePoseJointNames().index('l_leg_kny')
-        knyDesired = startPose[jointId] + np.radians(self.legLiftAngle)
-        jointId = robotstate.getDrakePoseJointNames().index('l_leg_aky')
-        akyDesired = startPose[jointId] - np.radians(self.legLiftAngle)
-        postureJoints = {'l_leg_kny': knyDesired, 'l_leg_aky': akyDesired}
-        endPose = self.robotSystem.ikPlanner.mergePostures(startPose, postureJoints)
-        plan = self.robotSystem.ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False)
-        return plan
+    def addPlan(self, plan):
+        self.plans.append(plan)
 
+    def commitManipPlan(self):
+        self.robotSystem.manipPlanner.commitManipPlan(self.plans[-1])
 
     def planEgressArms(self):
         startPose = self.getPlanningStartPose()
@@ -150,12 +183,14 @@ class EgressPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
         constraints = []
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False))
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
+                                                    pelvisEnabled=False,
+                                                    shrinkFactor=0.2))
         constraints.append(self.robotSystem.ikPlanner.createLockedBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-        #constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-        constraintSet.ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=7)
+        constraintSet.ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=10)
 
         constraintSet.runIk()
 
@@ -164,7 +199,7 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot', 'l_foot', 'pelvis']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-
+        self.addPlan(plan)
         return plan
 
     def planStandUp(self):
@@ -181,23 +216,46 @@ class EgressPlanner(object):
                                   lowerBound=np.array([0.0, -np.inf, 0.0]),
                                   upperBound=np.array([np.inf, np.inf, 0.0]))
         constraints.append(p)
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False))
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False,
+                                                    shrinkFactor=self.quasiStaticShrinkFactor))
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-        #constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.extend(self.robotSystem.ikPlanner.createFixedFootConstraints(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-        constraintSet.ikParameters = IkParameters(usePointwise=True)
+        constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseMetersPerSecond=0.02)
 
         constraintSet.runIk()
-        keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=False)
+        keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=True)
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0]]
         supportsList = [['r_foot', 'l_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-
+        self.addPlan(plan)
         return plan
+
+    def createUtorsoGazeConstraints(self, tspan):
+        constraints = []
+        g = ik.WorldGazeDirConstraint()
+        g.linkName = 'utorso'
+        g.targetFrame = vtk.vtkTransform()
+        axes = transformUtils.getAxesFromTransform(self.polaris.leftFootEgressOutsideFrame.transform)
+        g.targetAxis = axes[0]
+        g.bodyAxis = [1,0,0]
+        g.coneThreshold = self.coneThreshold
+        g.tspan = tspan
+        constraints.append(g)
+
+        g = ik.WorldGazeDirConstraint()
+        g.linkName = 'utorso'
+        g.targetFrame = vtk.vtkTransform()
+        g.targetAxis = [0,0,1]
+        g.bodyAxis = [0,0,1]
+        g.coneThreshold = self.coneThreshold
+        g.tspan = tspan
+        constraints.append(g)
+        return constraints
 
     def planShiftWeightOut(self):
 
@@ -208,24 +266,18 @@ class EgressPlanner(object):
         constraints = []
 
         utorsoFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('utorso', startPose)
-        g = ik.WorldGazeDirConstraint()
-        g.linkName = 'utorso'
-        g.targetFrame = vtk.vtkTransform()
-        axes = transformUtils.getAxesFromTransform(self.polaris.leftFootEgressInsideFrame.transform)
-        g.targetAxis = axes[0]
-        g.bodyAxis = [1,0,0]
-        g.coneThreshold = 0.0
-        g.tspan = [1,1]
-        constraints.append(g)
+        constraints.extend(self.createUtorsoGazeConstraints([1.0, 1.0]))
+
         constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
-                                                    pelvisEnabled=False))
+                                                    pelvisEnabled=False,
+                                                    shrinkFactor=self.quasiStaticShrinkFactor))
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot'))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-        constraintSet.ikParameters = IkParameters(usePointwise=True)
+        constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseMetersPerSecond=0.02)
 
         constraintSet.runIk()
         keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=False)
@@ -233,8 +285,16 @@ class EgressPlanner(object):
         ts = [poseTimes[0]]
         supportsList = [['r_foot', 'l_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
-
+        self.addPlan(plan)
         return plan
+
+    def computeLeftFootOverPlatformFrame(self, startPose, height):
+        lFoot2World = transformUtils.copyFrame(self.polaris.leftFootEgressOutsideFrame.transform)
+        rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
+        lFoot2World = transformUtils.copyFrame(rFoot2World)
+        lFoot2World.PreMultiply()
+        lFoot2World.Translate([0.05, 0.26, height])
+        return lFoot2World
 
     def planFootOut(self):
 
@@ -242,18 +302,12 @@ class EgressPlanner(object):
         startPoseName = 'q_egress_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
-        constraints = []
 
         utorsoFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('utorso', startPose)
-        g = ik.WorldGazeDirConstraint()
-        g.linkName = 'utorso'
-        g.targetFrame = vtk.vtkTransform()
-        axes = transformUtils.getAxesFromTransform(self.polaris.leftFootEgressInsideFrame.transform)
-        g.targetAxis = axes[0]
-        g.bodyAxis = [1,0,0]
-        g.coneThreshold = 0.0
-        g.tspan = [1,1]
-        constraints.append(g)
+        finalLeftFootFrame = self.computeLeftFootOverPlatformFrame(startPose, 0.05)
+
+        constraints = []
+        constraints.extend(self.createUtorsoGazeConstraints([0.0, 1.0]))
         constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
                                                     pelvisEnabled=False, shrinkFactor=0.01))
         constraints.append(self.robotSystem.ikPlanner.createMovingBaseSafeLimitsConstraint())
@@ -261,109 +315,152 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         #constraints.append(self.robotSystem.ikPlanner.createLockedBackPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
-        constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressOutsideFrame, tspan=[1,1]))
+        constraints.extend(self.createLeftFootPoseConstraint(finalLeftFootFrame, tspan=[1,1]))
+
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
-        constraintSet.ikParameters = IkParameters(usePointwise=True)
+        constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
+                                                  rescaleBodyNames=['l_foot'],
+                                                  rescaleBodyPts=[0.0, 0.0, 0.0],
+                                                  maxBodyTranslationSpeed=self.maxBodyTranslationSpeed)
+        #constraintSet.seedPoseName = 'q_start'
+        #constraintSet.nominalPoseName = 'q_start'
 
         constraintSet.runIk()
 
         footFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('l_foot', startPose)
-        t = transformUtils.frameFromPositionAndRPY([0, 0, self.polaris.leftFootEgressInsideFrame.transform.GetPosition()[2]-footFrame.GetPosition()[2]], [0, 0, 0])
-        liftFrame = transformUtils.concatenateTransforms([t, footFrame])
+        t = transformUtils.frameFromPositionAndRPY([0, 0, self.polaris.leftFootEgressOutsideFrame.transform.GetPosition()[2]-footFrame.GetPosition()[2]], [0, 0, 0])
+        liftFrame = transformUtils.concatenateTransforms([footFrame, t])
         vis.updateFrame(liftFrame, 'lift frame')
 
         c = ik.WorldFixedOrientConstraint()
         c.linkName = 'l_foot'
         c.tspan = [0.0, 0.1, 0.2]
         constraints.append(c)
-        constraints.extend(self.createLeftFootPoseConstraint(liftFrame, tspan=[0.2,0.2]))
-        #constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressInsideFrame, tspan=[0.5,0.5]))
-        constraintSet.constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressMidFrame, tspan=[0.8,0.8]))
+        constraints.extend(self.createLeftFootPoseConstraint(liftFrame, tspan=[0.2, 0.2]))
+        constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressMidFrame, tspan=[0.5, 0.5]))
+
+        constraints.extend(self.createLeftFootPoseConstraint(self.polaris.leftFootEgressOutsideFrame, tspan=[0.8, 0.8]))
+
         #plan = constraintSet.planEndPoseGoal(feetOnGround=False)
         keyFramePlan = constraintSet.runIkTraj()
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0]]
         supportsList = [['r_foot']]
         plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
-
+        self.addPlan(plan)
         return plan
 
     def planLeftFootDown(self):
-        ikPlanner = self.robotSystem.ikPlanner
         startPose = self.getPlanningStartPose()
         startPoseName = 'q_footdown_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_footdown_end'
-        lFoot2World = transformUtils.copyFrame(self.polaris.leftFootEgressOutsideFrame.transform)
-        rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
-        lFoot2World.PostMultiply()
-        lFoot2World.Translate(np.array(rFoot2World.GetPosition()) - lFoot2World.GetPosition())
-        lFoot2World.PreMultiply()
-        lFoot2World.Translate([0.05, 0.26, 0.0])
+        utorsoFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('utorso', startPose)
+        finalLeftFootFrame = self.computeLeftFootOverPlatformFrame(startPose, 0.0)
 
-        rFootRPY = transformUtils.rollPitchYawFromTransform(rFoot2World)
-        lFootRPY = transformUtils.rollPitchYawFromTransform(lFoot2World);
-        lFootxyz,_ = transformUtils.poseFromTransform(lFoot2World)
+        constraints = []
+        constraints.extend(self.createUtorsoGazeConstraints([0.0, 1.0]))
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
+                                                    pelvisEnabled=False, shrinkFactor=0.01))
+        constraints.append(self.robotSystem.ikPlanner.createMovingBaseSafeLimitsConstraint())
+        constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        #constraints.append(self.robotSystem.ikPlanner.createLockedBackPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
+        constraints.extend(self.createLeftFootPoseConstraint(finalLeftFootFrame, tspan=[1,1]))
 
-        lFootRPY[0] = rFootRPY[0]
-        lFootRPY[1] = rFootRPY[1]
-        lFoot2World = transformUtils.frameFromPositionAndRPY(lFootxyz, np.rad2deg(lFootRPY))
-
-        quasiStaticConstraint = ik.QuasiStaticConstraint(leftFootEnabled=False,
-                                                         rightFootEnabled=True,
-                                                         pelvisEnabled=False,
-                                                         shrinkFactor=0.2)
-        rfootFixedConstraint = ikPlanner.createFixedFootConstraints(startPoseName)
-        identityFrame = vtk.vtkTransform()
-        lfootPositionOrientationConstraint = ikPlanner.createPositionOrientationConstraint('l_foot', lFoot2World, identityFrame)
-        backLocked = ikPlanner.createLockedBackPostureConstraint(startPoseName)
-        armsLocked = ikPlanner.createLockedArmsPostureConstraints(startPoseName)
-
-        constraints = [quasiStaticConstraint, backLocked]
-        constraints.extend(lfootPositionOrientationConstraint)
-        constraints.extend(rfootFixedConstraint)
-        constraints.extend(armsLocked)
-        # return constraints
-        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True)
-        cs.seedPoseName = 'q_start'
-        cs.nominalPoseName = 'q_start'
-        endPose = cs.runIk()
-        keyFramePlan = cs.planEndPoseGoal()
+        #constraintSet.seedPoseName = 'q_start'
+        #constraintSet.nominalPoseName = 'q_start'
+
+        endPose, _ = constraintSet.runIk()
+        keyFramePlan = constraintSet.planEndPoseGoal(feetOnGround=False)
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0], poseTimes[-1]]
         supportsList = [['r_foot'], ['r_foot','l_foot']]
-        self.publishPlanWithSupports(keyFramePlan, supportsList, ts, False)
+        plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
+        self.addPlan(plan)
+        return plan, endPose
 
 
-    def planCenterWeight(self):
+    def planCenterWeight(self, startPose=None):
         ikPlanner = self.robotSystem.ikPlanner
-        startPose = self.getPlanningStartPose()
+
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
         startPoseName = 'q_lean_right'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
-
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
-                                                    pelvisEnabled=False, shrinkFactor=0.2))
 
         footFixedConstraints = ikPlanner.createFixedFootConstraints(startPoseName)
         backConstraint = ikPlanner.createMovingBackLimitedPostureConstraint()
         armsLocked = ikPlanner.createLockedArmsPostureConstraints(startPoseName)
 
-        constraints = [backConstraint, quasiStaticConstraint]
+        constraints = [backConstraint]
         constraints.extend(footFixedConstraints)
         constraints.extend(armsLocked)
+        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
+                                                    pelvisEnabled=False,
+                                                    shrinkFactor=self.quasiStaticShrinkFactor))
 
-        cs = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
-        cs.seedPoseName = 'q_start'
-        cs.nominalPoseName = 'q_nom'
-        endPose = cs.runIk()
-        keyFramePlan = cs.planEndPoseGoal()
+        constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
+        constraintSet.seedPoseName = 'q_start'
+        constraintSet.nominalPoseName = 'q_nom'
+        endPose = constraintSet.runIk()
+        keyFramePlan = constraintSet.planEndPoseGoal()
         poseTimes, poses = planplayback.PlanPlayback.getPlanPoses(keyFramePlan)
         ts = [poseTimes[0]]
         supportsList = [['r_foot','l_foot']]
-        self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
+        plan = self.publishPlanWithSupports(keyFramePlan, supportsList, ts, True)
+        self.addPlan(plan)
+        return plan
 
+
+    def planFootDownAndCenterWeight(self):
+        leftFootDownPlan, leftFootDownEndPose = self.planLeftFootDown()
+        centerWeightPlan = self.planCenterWeight(startPose=leftFootDownEndPose)
+
+        # now we need to combine these plans
+        footDownEndTime = leftFootDownPlan.plan.plan[-1].utime
+
+        robotPlan = leftFootDownPlan
+        robotPlan.plan.plan_info = list(robotPlan.plan.plan_info)
+        for state, info in zip(centerWeightPlan.plan.plan, centerWeightPlan.plan.plan_info):
+            state.utime += footDownEndTime
+            robotPlan.plan.plan.append(state)
+            robotPlan.plan.plan_info.append(info)
+
+        robotPlan.plan.num_states = len(robotPlan.plan.plan)
+
+
+        # make support sequence
+        for support, t in zip(centerWeightPlan.support_sequence.supports, centerWeightPlan.support_sequence.ts):
+            t += footDownEndTime
+            robotPlan.support_sequence.ts.append(t)
+            robotPlan.support_sequence.supports.append(support)
+
+        robotPlan.is_quasistatic = True
+        self.addPlan(robotPlan)
+        lcmUtils.publish('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS', robotPlan)
+        return robotPlan
+
+
+
+    def planArmsForward(self):
+        q0 = self.getPlanningStartPose()
+        q1 = self.robotSystem.ikPlanner.getMergedPostureFromDatabase(q0, 'General', 'hands-forward', side='left')
+        q2 = self.robotSystem.ikPlanner.getMergedPostureFromDatabase(q1, 'General', 'hands-forward', side='right')
+        a = 0.25
+        q1 = (1-a)*q1 + a*np.array(q2)
+        ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
+                                    rescaleBodyNames=['l_hand', 'r_hand'],
+                                    rescaleBodyPts=list(self.robotSystem.ikPlanner.getPalmPoint(side='left')) +
+                                                    list(self.robotSystem.ikPlanner.getPalmPoint(side='right')),
+                                    maxBodyTranslationSpeed=3*self.maxBodyTranslationSpeed)
+        plan = self.robotSystem.ikPlanner.computeMultiPostureGoal([q0, q1, q2], ikParameters=ikParameters)
+        self.addPlan(plan)
+        return plan
 
     def publishPlanWithSupports(self, keyFramePlan, supportsList, ts, isQuasistatic):
         manipPlanner = self.robotSystem.manipPlanner
@@ -388,6 +485,7 @@ class EgressPanel(TaskUserPanel):
         TaskUserPanel.__init__(self, windowTitle='Egress')
 
         self.robotSystem = robotSystem
+        self.egressPlanner = EgressPlanner(robotSystem)
         self.platformPlanner = polarisplatformplanner.PolarisPlatformPlanner(robotSystem.ikServer, robotSystem)
         self.addDefaultProperties()
         self.addButtons()
@@ -395,6 +493,15 @@ class EgressPanel(TaskUserPanel):
 
 
     def addButtons(self):
+        # Get onto platform buttons
+        self.addManualButton('Spawn Polaris', self.egressPlanner.spawnPolaris)
+        self.addManualButton('Get weight over feet', self.egressPlanner.planGetWeightOverFeet)
+        self.addManualButton('Stand up', self.egressPlanner.planStandUp)
+        self.addManualButton('Shift weight out', self.egressPlanner.planShiftWeightOut)
+        self.addManualButton('Move left foot out', self.egressPlanner.planFootOut)
+        self.addManualButton('Put foot down and center weight', self.egressPlanner.planFootDownAndCenterWeight)
+        self.addManualButton('Arms forward', self.egressPlanner.planArmsForward)
+        self.addManualSpacer()
         #sit/stand buttons
         self.addManualButton('Start', self.onStart)
         # polaris step down buttons
@@ -471,20 +578,34 @@ class EgressPanel(TaskUserPanel):
             self.folder = self.taskTree.addGroup(name, parent=parent)
             return self.folder
 
-        def addManipTask(name, planFunc, userPrompt=False):
+        def addManipTask(name, planFunc, userPrompt=False, planner=None):
 
-            folder = addFolder(name)
-            addFunc(planFunc, name='plan')
+            if planner is None:
+                planner = self.platformPlanner
+            prevFolder = self.folder
+            addFolder(name, prevFolder)
+            addFunc(planFunc, 'plan')
             if not userPrompt:
                 addTask(rt.CheckPlanInfo(name='check manip plan info'))
             else:
                 addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
-            addFunc(pp.commitManipPlan, name='execute manip plan')
+            addFunc(planner.commitManipPlan, name='execute manip plan')
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
+            self.folder = prevFolder
 
         pp = self.platformPlanner
+        ep = self.egressPlanner
 
-        prep = addFolder('Prep')
+        stepOut = addFolder('Step out of car')
+        self.folder = stepOut
+        addManipTask('Get weight over feet', ep.planGetWeightOverFeet, userPrompt=True, planner=ep)
+        addManipTask('Stand up', ep.planStandUp, userPrompt=True, planner=ep)
+        addManipTask('Shift weight out of Polaris', ep.planShiftWeightOut, userPrompt=True, planner=ep)
+        addManipTask('Move left foot out of Polaris', ep.planFootOut, userPrompt=True, planner=ep)
+        addManipTask('Put left foot down and center weight', ep.planFootDownAndCenterWeight, userPrompt=True, planner=ep)
+        addManipTask('Move arms up for walking', ep.planArmsForward, userPrompt=True, planner=ep)
+
+        prep = addFolder('Step down prep')
         addFunc(self.onStart, 'start')
         addTask(rt.SetNeckPitch(name='set neck position', angle=60))
         # addManipTask('arms up', self.onArmsUp, userPrompt=True)
@@ -505,8 +626,10 @@ class EgressPanel(TaskUserPanel):
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
 
         folder = addFolder('Step Off')
+        addTask(rt.UserPromptTask(name="wait for lidar sweep", message="wait for lidar sweep before spawning ground affordance"))
         addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
+        addTask(rt.UserPromptTask(name="wait for raycast terrain", message="wait for raycast terrain"))
         addFunc(self.onPlanStepOff, 'plan step off')
         addTask(rt.UserPromptTask(name="approve footsteps", message="Please approve footsteps, modify if necessary"))
         addFunc(self.robotSystem.footstepsDriver.onExecClicked, 'commit footstep plan')
