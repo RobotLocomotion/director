@@ -78,6 +78,8 @@ class TerrainTask(object):
         self.defaultLeadingFoot = 'right'
         self.removeDuringOrganize = False
 
+        self.numberOfPrefabSteps = -1
+
         # terrain config file stuff
         self.terrainConfigDir = os.path.join(ddapp.getDRCBaseDir(), 'software','config','terrain')
         files = glob.glob(os.path.join(self.terrainConfigDir,'*.py'))
@@ -274,10 +276,16 @@ class TerrainTask(object):
                 supportTypes.append(supportType)
             #obj = vis.showFrame(t, '%s step frame' % block.getProperty('Name'), parent='step frames', scale=0.2)
 
+        # remove footsteps beyond specified limit
+        if self.numberOfPrefabSteps >= 0:
+            maxNum = min(len(stepFrames), self.numberOfPrefabSteps)
+            stepFrames = stepFrames[0:maxNum]
+            supportTypes = supportTypes[0:maxNum]
+
         # send footstep request
         startPose = self.getPlanningStartPose()
         helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
-        request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot)
+        request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot,  snapToTerrain=False)
         for i in range(len(stepFrames)):
             request.goal_steps[i].params.support_contact_groups = supportTypes[i]
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
@@ -357,6 +365,7 @@ class TerrainTask(object):
     def showBlocks(self, blocks, visible):
         for b in blocks:
             b.setProperty('Visible', visible)
+            b.setProperty('Collision Enabled', visible)
 
 
     def assignBlocks(self):
@@ -1308,6 +1317,7 @@ class TerrainTaskPanel(TaskUserPanel):
 
     def addDefaultProperties(self):
         self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=self.terrainTask.terrainConfigList))
+        self.params.addProperty('Number of Steps', self.terrainTask.numberOfPrefabSteps, attributes=om.PropertyAttributes(minimum=-1, maximum=100))
         self.params.addProperty('Block Fit Algo', self.terrainTask.blockFitAlgo, attributes=om.PropertyAttributes(enumNames=['MinArea', 'ClosestSize']))
         self.params.addProperty('Constrain Block Size', self.terrainTask.constrainBlockSize)
         self.params.addProperty('Manual Steps Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
@@ -1318,6 +1328,8 @@ class TerrainTaskPanel(TaskUserPanel):
     def onPropertyChanged(self, propertySet, propertyName):
         if propertyName == 'Camera Texture':
             self.terrainTask.useTextures = self.params.getProperty(propertyName)
+        elif propertyName == 'Number of Steps':
+            self.terrainTask.numberOfPrefabSteps = self.params.getProperty(propertyName)
         elif propertyName == 'Terrain Type':
             terrainConfig = self.terrainTask.terrainConfigList[self.params.getProperty(propertyName)];
             self.terrainTask.loadTerrainConfig(terrainConfig)
