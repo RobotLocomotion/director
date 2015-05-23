@@ -178,8 +178,10 @@ class ManipulationPlanDriver(object):
 
     def commitManipPlan(self, manipPlan):
 
-        if manipPlan in self.committedPlans:
-            raise Exception('Refusing to re-commit manipulation plan.')
+        for previousPlan in self.committedPlans:
+            if previousPlan.utime == manipPlan.utime:
+                raise Exception('Refusing to re-commit manipulation plan.')
+
         self.committedPlans.append(manipPlan)
 
         if isinstance(manipPlan, lcmdrc.robot_plan_w_keyframes_t):
