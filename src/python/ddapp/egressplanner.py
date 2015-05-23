@@ -214,7 +214,8 @@ class EgressPlanner(object):
 
         constraints = []
         utorsoFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('utorso', startPose)
-        constraints.extend(self.createUtorsoGazeConstraints([1.0, 1.0]))
+        g = self.createUtorsoGazeConstraints([1.0, 1.0])
+        constraints.append(g[1])
         p = ik.PositionConstraint(linkName='pelvis', referenceFrame=liftFrame,
                                   lowerBound=np.array([0.0, -np.inf, 0.0]),
                                   upperBound=np.array([np.inf, np.inf, 0.0]))
