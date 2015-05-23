@@ -567,9 +567,7 @@ class EgressPanel(TaskUserPanel):
         self.addManualButton('Spawn Polaris', self.egressPlanner.spawnPolaris)
         self.addManualButton('Get weight over feet', self.egressPlanner.planGetWeightOverFeet)
         self.addManualButton('Stand up', self.egressPlanner.planStandUp)
-        self.addManualButton('Shift weight out', self.egressPlanner.planShiftWeightOut)
-        self.addManualButton('Move left foot out', self.egressPlanner.planFootOut)
-        self.addManualButton('Put foot down and center weight', self.egressPlanner.planFootDownAndCenterWeight)
+        self.addManualButton('Step out', self.egressPlanner.planFootEgress)
         self.addManualButton('Arms forward', self.egressPlanner.planArmsForward)
         self.addManualSpacer()
         #sit/stand buttons
@@ -666,13 +664,17 @@ class EgressPanel(TaskUserPanel):
         pp = self.platformPlanner
         ep = self.egressPlanner
 
+        stepPrep = addFolder('Prep')
+        self.folder = stepPrep
+        addTask(rt.UserPromptTask(name="Verify SE processes", message="Please confirm that all SE processes have started"))
+        addTask(rt.UserPromptTask(name="Disable recovery and bracing", message="Please disable recovery and bracing"))
+        addTask(rt.UserPromptTask(name="Run Init Nav", message='Please click "Init Nav"'))
         stepOut = addFolder('Step out of car')
         self.folder = stepOut
         addManipTask('Get weight over feet', ep.planGetWeightOverFeet, userPrompt=True, planner=ep)
         addManipTask('Stand up', ep.planStandUp, userPrompt=True, planner=ep)
         addManipTask('Shift weight out of Polaris', ep.planShiftWeightOut, userPrompt=True, planner=ep)
-        addManipTask('Move left foot out of Polaris', ep.planFootOut, userPrompt=True, planner=ep)
-        addManipTask('Put left foot down and center weight', ep.planFootDownAndCenterWeight, userPrompt=True, planner=ep)
+        addManipTask('Step out', ep.planFootEgress, userPrompt=True, planner=ep)
         addManipTask('Move arms up for walking', ep.planArmsForward, userPrompt=True, planner=ep)
 
         prep = addFolder('Step down prep')
