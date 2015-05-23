@@ -15,13 +15,15 @@ from time import sleep
 class BlackoutMonitor(object):
     UPDATE_RATE = 5
     AVERAGE_N = 5
-    def __init__(self, robotStateJointController, view, cameraview):
+    def __init__(self, robotStateJointController, view, cameraview, mapServerSource):
 
         self.robotStateJointController = robotStateJointController
         self.view = view
         self.cameraview = cameraview
+        self.mapServerSource = mapServerSource
 
-        self.lastMessageTime = 0
+        self.lastCameraMessageTime = 0
+        self.lastScanBundleMessageTime = 0
 
         self.lastBlackoutLengths = []
         self.lastBlackoutLength = 0
@@ -37,23 +39,25 @@ class BlackoutMonitor(object):
         self.updateTimer.start()
 
     def update(self):
-        self.lastMessageTime = self.cameraview.imageManager.queue.getCurrentImageTime('CAMERA_LEFT')
+        self.lastCameraMessageTime = self.cameraview.imageManager.queue.getCurrentImageTime('CAMERA_LEFT')
+        self.lastScanBundleMessageTime = self.mapServerSource.reader.GetLastScanBundleUTime()
         if self.robotStateJointController.lastRobotStateMessage:
-            elapsed = max((self.robotStateJointController.lastRobotStateMessage.utime - self.lastMessageTime) / (1000*1000), 0.0)
+            elapsedCam = max((self.robotStateJointController.lastRobotStateMessage.utime - self.lastCameraMessageTime) / (1000*1000), 0.0)
+            elapsedScan = max((self.robotStateJointController.lastRobotStateMessage.utime - self.lastScanBundleMessageTime) / (1000*1000), 0.0)
             # can't be deleted, only hidden, so this is ok
             if (self.txt.getProperty('Visible')):
                 if (self.txt.getProperty('Show Avg Duration')):
-                    textstr = "DATA AGE: %d / %d sec" % (math.floor(elapsed), math.floor(self.averageBlackoutLength))
+                    textstr = "CAM  AGE: %02d sec\nSCAN AGE: %02d sec    AVG: %02d sec" % (math.floor(elapsedCam), math.floor(elapsedScan), math.floor(self.averageBlackoutLength))
                 else:
-                    textstr = "DATA AGE: %d sec" % math.floor(elapsed)
+                    textstr = "CAM  AGE: %02d sec\nSCAN AGE: %02d sec" % (math.floor(elapsedCam), math.floor(elapsedScan))
                 ssize = self.view.size
                 self.txt.setProperty('Text', textstr)
                 self.txt.setProperty('Position', [10, 10])
 
             # count out blackouts
-            if elapsed > 1.0:
+            if elapsedCam > 1.0:
                 self.inBlackout = True
-                self.lastBlackoutLength = elapsed
+                self.lastBlackoutLength = elapsedCam
             else:
                 if (self.inBlackout):
                     # Don't count huge time jumps due to init

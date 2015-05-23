@@ -490,7 +490,10 @@ public:
         }
       }
   }
-
+  uint64_t GetLastScanBundleUTime()
+  {
+    return this->LastScanBundleUtime;
+  }
 
   vtkIntArray* GetViewIds()
   {
@@ -842,6 +845,11 @@ void vtkMapServerSource::GetDataForMapId(int viewId, vtkIdType mapId, vtkImageDa
 {
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   this->Internal->Listener->GetDataForMapId(viewId, mapId, imageData, transform);
+}
+
+vtkIdType vtkMapServerSource::GetLastScanBundleUTime()
+{
+  return this->Internal->Listener->GetLastScanBundleUTime();
 }
 
 //-----------------------------------------------------------------------------
