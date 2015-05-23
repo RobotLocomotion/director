@@ -23,6 +23,7 @@ class ManipulationPlanDriver(object):
 
     PLAN_RECEIVED = 'PLAN_RECEIVED'
     PLAN_COMMITTED = 'PLAN_COMMITTED'
+    USE_SUPPORTS = 'USE_SUPPORTS'
 
     def __init__(self, ikPlanner):
         lcmUtils.addSubscriber('CANDIDATE_MANIP_PLAN', lcmdrc.robot_plan_w_keyframes_t, self.onManipPlan)
@@ -30,7 +31,8 @@ class ManipulationPlanDriver(object):
         self.lastManipPlan = None
         self.committedPlans = []
         self.callbacks = callbacks.CallbackRegistry([self.PLAN_RECEIVED,
-                                                     self.PLAN_COMMITTED])
+                                                     self.PLAN_COMMITTED,
+                                                     self.USE_SUPPORTS])
         self.ikPlanner = ikPlanner
         self.publishPlansWithSupports = False
         self.plansWithSupportsAreQuasistatic = True
@@ -170,6 +172,10 @@ class ManipulationPlanDriver(object):
         supportBody.support_surface = support_surface
         return supportBody
 
+    def setPublishPlansWithSupports(self, useSupports):
+       self.publishPlansWithSupports = useSupports
+       self.callbacks.process(self.USE_SUPPORTS)
+
     def commitManipPlan(self, manipPlan):
 
         if manipPlan in self.committedPlans:
@@ -199,6 +205,9 @@ class ManipulationPlanDriver(object):
 
     def connectPlanReceived(self, func):
         return self.callbacks.connect(self.PLAN_RECEIVED, func)
+
+    def connectUseSupports(self, func):
+        return self.callbacks.connect(self.USE_SUPPORTS, func)
 
     def disconnectPlanReceived(self, callbackId):
         self.callbacks.disconnect(callbackId)
