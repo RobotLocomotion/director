@@ -337,7 +337,7 @@ class AsyncIKCommunicator():
 
         publish = True
         if publish:
-            commands.append('if ~isempty({0}), s.publishTraj({0}, info); end;'.format('qtraj_pw' if ikParameters.usePointwise else 'qtraj'))
+            commands.append('if ~isempty(qtraj_orig), s.publishTraj(qtraj, info); end;')
 
         commands.append('\n%--- runIKTraj end --------\n')
         #self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
