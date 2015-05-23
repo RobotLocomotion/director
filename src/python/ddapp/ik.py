@@ -308,6 +308,7 @@ class AsyncIKCommunicator():
         commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % ikParameters.maxBaseMetersPerSecond)
         commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % ikParameters.maxBaseRPYDegreesPerSecond)
         commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; rpy_v_max; joint_v_max]; end;')
+        commands.append("if ~isempty(qtraj), v_max(r.findPositionIndices('back')) = %s*pi/180; end;" % ikParameters.maxBackDegreesPerSecond)
 
         commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
         commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
