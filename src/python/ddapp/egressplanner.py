@@ -271,12 +271,12 @@ class EgressPlanner(object):
             commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
             commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
             commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
-            commands.append('rescale_body_pts = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
+            commands.append('rescale_body_pts = reshape(%s, 3, []);' % ik.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
             commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
             commands.append('trajectories = {};')
             for name in trajectoryNames:
                 commands.append('trajectories{end+1} = %s;' % name)
-            commands.append('[%s, %s] = concatAndRescaleTrajectories(trajectories, v_max, %s, %s, body_rescale_options); end;' % (concatenatedTrajectoryName, junctionTimesName, ikParameters.accelerationParam, ikParameters.accelerationFraction))
+            commands.append('[%s, %s] = concatAndRescaleTrajectories(trajectories, v_max, %s, %s, body_rescale_options);' % (concatenatedTrajectoryName, junctionTimesName, ikParameters.accelerationParam, ikParameters.accelerationFraction))
             commands.append('s.publishTraj(%s, 1);' % concatenatedTrajectoryName)
             self.robotSystem.ikServer.comm.sendCommands(commands)
             return self.robotSystem.ikServer.comm.getFloatArray(junctionTimesName)
@@ -285,14 +285,14 @@ class EgressPlanner(object):
         self.planShiftWeightOut()
         shiftWeightName = 'qtraj_shift_weight'
         saveOriginalTraj(shiftWeightName)
-        nextStartPose = robotstate.convertStateMessageToDrakePose(self.plans[-1].plan[-1])
+        nextStartPose = robotstate.convertStateMessageToDrakePose(self.plans[-1].plan.plan[-1])
 
-        self.planFootOut(nextStartPose, finalFootHeight=0.0)
+        self.planFootOut(startPose=nextStartPose, finalFootHeight=0.0)
         footOutName = 'qtraj_foot_out'
         saveOriginalTraj(footOutName)
-        nextStartPose = robotstate.convertStateMessageToDrakePose(self.plans[-1].plan[-1])
+        nextStartPose = robotstate.convertStateMessageToDrakePose(self.plans[-1].plan.plan[-1])
 
-        self.planCenterWeight(nextStartPose)
+        self.planCenterWeight(startPose=nextStartPose)
         centerWeightName = 'qtraj_center_weight'
         saveOriginalTraj(centerWeightName)
 
@@ -364,7 +364,7 @@ class EgressPlanner(object):
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
-        startPose = self.getPlanningStartPose()
+
         startPoseName = 'q_egress_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
@@ -455,6 +455,7 @@ class EgressPlanner(object):
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
+
         startPoseName = 'q_lean_right'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
