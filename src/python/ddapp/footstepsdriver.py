@@ -775,8 +775,12 @@ class FootstepsDriver(object):
         lcmUtils.publish('STOP_WALKING', msg)
 
     def commitFootstepPlan(self, footstepPlan):
-        if footstepPlan in self.committedPlans:
-            raise Exception("Footstep plan was already executed. Execution of the plan is no longer allowed for safety reasons. You should request a new footstep plan.")
+
+        for previousPlan in self.committedPlans:
+            if previousPlan.utime == footstepPlan.utime:
+                raise Exception("Footstep plan was already executed. Execution of the plan is no longer allowed for safety reasons. You should request a new footstep plan.")
+
+        self.committedPlans.append(footstepPlan)
         self.drawFootstepPlan(footstepPlan, getFootstepsFolder(), alpha=0.3)
 
         if footstepPlan.params.behavior in (lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
@@ -784,7 +788,6 @@ class FootstepsDriver(object):
             self._commitFootstepPlanBDI(footstepPlan)
         elif footstepPlan.params.behavior == lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING:
             self._commitFootstepPlanDrake(footstepPlan)
-        self.committedPlans.append(footstepPlan)
 
     def _commitFootstepPlanDrake(self, footstepPlan):
         startPose = self.jointController.getPose('EST_ROBOT_STATE')
