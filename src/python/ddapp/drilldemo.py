@@ -128,10 +128,13 @@ class DrillPlannerDemo(object):
         self.lockBackForDrilling = False
         self.lockBaseForDrilling = True
 
-        self.drillTrajectoryMaxMetersPerSecond = 0.03
+        self.drillTrajectoryMetersPerSecondSlow = 0.04
+        self.drillTrajectoryMetersPerSecondFast = 0.20
         self.drillTrajectoryMaxDegreesPerSecond = 15
-        self.drillGraspYaw = 15
+        self.drillGraspYaw = 20
         self.thumbPressToHandFrame = None
+
+        self.drillCutTailLength = 0.02
 
 
         self.segmentationpanel.init() # TODO: check with Pat. I added dependency on segmentationpanel, but am sure its appropriate
@@ -163,7 +166,7 @@ class DrillPlannerDemo(object):
         # params:
         self.reachDepth = 0.12 # depth to reach to before going for grasp
         self.cutLength = 0.05 # length to cut each time
-        self.retractBitDepthNominal = -0.055 # depth to move drill away from wall
+        self.retractBitDepthNominal = -0.05 # depth to move drill away from wall
         self.goalThreshold = 0.05 # how close we need to get to the cut goal (the triangle corners
 
         #extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
@@ -874,7 +877,7 @@ class DrillPlannerDemo(object):
         return transformUtils.frameFromPositionAndRPY([0.0, 0.0, -0.16], [90,0,0])
 
     def getGraspToDrillTransform(self):
-        return transformUtils.frameFromPositionAndRPY([-0.03, 0.0, 0.0], [90, 90, 0.0])
+        return transformUtils.frameFromPositionAndRPY([-0.02, 0.0, 0.0], [90, 90, 0.0])
 
     def getPressPrepToDrillTransform(self):
         return transformUtils.frameFromPositionAndRPY([0.03, -0.05, -0.2], [45,0,0])
@@ -982,11 +985,11 @@ class DrillPlannerDemo(object):
         ikplanner.getIkOptions().setProperty('Max joint degrees/s', jointSpeedOld)
 
 
-    def planDrill(self, inPlane=False, inLine=False):
+    def planDrill(self, inPlane, inLine, translationSpeed, jointSpeed):
 
         targetFrame = om.findObjectByName('drill bit target')
         assert targetFrame
-        self.planDrillTrajectory([targetFrame.transform], inPlane, inLine)
+        self.planDrillTrajectory([targetFrame.transform], inPlane, inLine, translationSpeed, jointSpeed)
 
     def getDrillTargetOffsetFromCircle(self):
 
@@ -1013,21 +1016,36 @@ class DrillPlannerDemo(object):
         depth = self.getDrillTargetOffsetFromCircle()[0]
 
         targetFrames = []
-        for i in xrange(numberOfTargets):
-            theta = (float(i)/numberOfTargets)*(2*np.pi) + np.pi/2.0
-            horiz, vert = radius*np.cos(theta), radius*np.sin(theta)
 
+        #om.removeFromObjectModel(om.findObjectByName('drill target frames'))
+        #folder = om.getOrCreateContainer('drill target frames', parentObj=segmentation.getDebugFolder())
+        d = DebugData()
+        lastPoint = [None]
+
+        def addTarget(x, y):
             t = transformUtils.copyFrame(circleFrame)
             t.PreMultiply()
-            t.Translate(depth, horiz, vert)
+            t.Translate(depth, x, y)
             targetFrames.append(t)
-            om.removeFromObjectModel(om.findObjectByName('drill target frames'))
-            folder = om.getOrCreateContainer('drill target frames', parentObj=segmentation.getDebugFolder())
-            vis.showFrame(t, 'target %d' % i, scale=0.1, visible=False, parent=folder)
+            #vis.showFrame(t, 'target %d' % i, scale=0.1, visible=False, parent=folder)
 
-        targetFrames.append(targetFrames.pop(0))
+            p = t.GetPosition()
+            d.addSphere(p, radius=0.002)
+            if lastPoint[0]:
+                d.addLine(p, lastPoint[0])
+            lastPoint[0] = p
 
-        self.planDrillTrajectory(targetFrames, inPlane=True)
+
+        for i in xrange(numberOfTargets+1):
+            theta = (float(i)/numberOfTargets)*(2*np.pi) + np.pi/2.0
+            x, y = radius*np.cos(theta), radius*np.sin(theta)
+            addTarget(x, y)
+
+        addTarget(-self.drillCutTailLength, radius+self.drillCutTailLength)
+
+        vis.updatePolyData(d.getPolyData(), 'drill target trajectory', color=[1,1,0])
+
+        self.planDrillTrajectory(targetFrames, inPlane=True, inLine=False, translationSpeed=self.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillTrajectoryMaxDegreesPerSecond)
 
 
     def computeDrillBitFrameAtPose(self, pose, bitToHand):
@@ -1036,7 +1054,7 @@ class DrillPlannerDemo(object):
         f.Concatenate(bitToHand)
         return f
 
-    def planDrillTrajectory(self, targetFrames, inPlane=False, inLine=False):
+    def planDrillTrajectory(self, targetFrames, inPlane, inLine, translationSpeed, jointSpeed):
 
 
         startPose = self.getPlanningStartPose()
@@ -1058,7 +1076,7 @@ class DrillPlannerDemo(object):
         endTime = 1.0 * len(targetFrames)
 
         if inPlane or inLine:
-            gazeConstraint.tspan = [0.0, endTime]
+            gazeConstraint.tspan = [0.5, endTime]
         else:
             gazeConstraint.tspan = [endTime, endTime]
 
@@ -1080,7 +1098,7 @@ class DrillPlannerDemo(object):
             #d.addLine(np.array(targetFrame.GetPosition()), np.array(targetFrame.GetPosition()) - motionVector)
             #vis.updatePolyData(d.getPolyData(), 'motion vector %d' % i)
 
-            p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.0], positionTolerance=0.001)
+            p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.001], positionTolerance=0.001)
             p.tspan = [activeTime-1.0, activeTime]
             constraints.append(p)
 
@@ -1093,19 +1111,21 @@ class DrillPlannerDemo(object):
         #    constraints.append(p)
 
 
-        if inLine:
-            p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, gazeTargetFrame, lineAxis=0, bounds=[-np.inf, 0.0], positionTolerance=0.001)
-            p.tspan = [0.0, endTime]
-            constraints.append(p)
+        #if inLine:
+        #    p = self.ikPlanner.createLinePositionConstraint(handLinkName, bitToHand, gazeTargetFrame, lineAxis=0, bounds=[-np.inf, 0.0], positionTolerance=0.001)
+        #    p.tspan = [0.0, endTime]
+        #    constraints.append(p)
 
-        if inPlane or inLine and len(targetFrames) == 1:
-            self.ikPlanner.ikServer.numberOfAddedKnots = 5 # todo, select number of knots per distance traveled?
+        if (inPlane or inLine) and len(targetFrames) == 1:
+            numberOfAddedKnots = 5 # todo, select number of knots per distance traveled?
         else:
-            self.ikPlanner.ikServer.numberOfAddedKnots = 0
+            numberOfAddedKnots = 0
 
 
         constraintSet = ikplanner.ConstraintSet(self.ikPlanner, constraints, 'reach_end', startPoseName)
 
+        #for c in constraintSet.constraints:
+        #    print c
 
         #constraintSet.seedPoseName = 'q_start'
         #constraintSet.nominalPoseName = 'q_start'
@@ -1117,10 +1137,11 @@ class DrillPlannerDemo(object):
 
         def updateDrillPlan():
             constraintSet.ikParameters.usePointwise = False
-            constraintSet.ikParameters.maxBodyTranslationSpeed = self.drillTrajectoryMaxMetersPerSecond
+            constraintSet.ikParameters.maxBodyTranslationSpeed = translationSpeed
             constraintSet.ikParameters.rescaleBodyNames = [handLinkName]
             constraintSet.ikParameters.rescaleBodyPts = list(bitToHand.GetPosition())
-            constraintSet.ikParameters.maxDegreesPerSecond = self.drillTrajectoryMaxDegreesPerSecond
+            constraintSet.ikParameters.maxDegreesPerSecond = jointSpeed
+            constraintSet.ikParameters.numberOfAddedKnots = numberOfAddedKnots
 
             plan = constraintSet.runIkTraj()
             self.addPlan(plan)
@@ -2247,8 +2268,78 @@ class DrillImageFitter(ImageBasedAffordanceFit):
         vis.updatePolyData(d.getPolyData(), 'table edge', color=[0,1,1])
 
 
+    def fitDrill(self, polyData, points):
+
+        drillPoint = points[0]
+
+        searchRegion = segmentation.cropToSphere(polyData, drillPoint, 0.2)
+
+        viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
+
+        xaxis = viewDirection
+        zaxis = [0,0,1]
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        xaxis = np.cross(yaxis, zaxis)
+        xaxis /= np.linalg.norm(xaxis)
+
+        t = transformUtils.getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, drillPoint)
+
+        polyData = segmentation.cropToBounds(polyData, t, [[-0.07, 0.07], [-0.07, 0.07], [-0.2, 0.2]])
+
+        obj = vis.updatePolyData(polyData, 'cropped drill points', color=[1,0,0], visible=False)
+        obj.setProperty('Point Size', 3)
+
+        centroid = segmentation.computeCentroid(polyData)
+        maxZ = np.max(segmentation.vnp.getNumpyFromVtk(polyData, 'Points')[:,2])
+
+        origin = np.array([drillPoint[0], drillPoint[1], maxZ])
+
+        drillGuardToOrigin = 0.128
+        drillHandleRadius = 0.0287
+
+        t = transformUtils.getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, origin)
+        t.PreMultiply()
+        t.Translate(drillHandleRadius, 0.0, -drillGuardToOrigin)
+
+        if self.drillDemo.graspingHand == 'right':
+            t.PreMultiply()
+            t.RotateZ(180)
+
+        drill = self.drillDemo.spawnDrillAffordanceNew(t)
+
+
     def fitDrillOnTable(self, polyData, points):
-        segmentation.segmentDrillAlignedWithTable(points[0], polyData)
+
+        self.fitDrill(polyData, points)
+
+        drillPoint = points[0]
+        tablePoint = points[1]
+
+        viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
+
+        xaxis = viewDirection
+        zaxis = [0,0,1]
+        yaxis = np.cross(zaxis, xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        xaxis = np.cross(yaxis, zaxis)
+        xaxis /= np.linalg.norm(xaxis)
+
+        origin = np.array([drillPoint[0], drillPoint[1], tablePoint[2]])
+
+        drillOriginToTable = 0.139
+        drillHandleRadius = 0.0287
+
+        t = transformUtils.getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, origin)
+        t.PreMultiply()
+        t.Translate(drillHandleRadius, 0.0, drillOriginToTable)
+
+        if self.drillDemo.graspingHand == 'right':
+            t.PreMultiply()
+            t.RotateZ(180)
+
+        drill = self.drillDemo.spawnDrillAffordanceNew(t)
+
 
     def fitDrillButtonPress(self, polyData, points):
         drill = om.findObjectByName('drill')
@@ -2395,8 +2486,14 @@ class DrillTaskPanel(TaskUserPanel):
         self.drillFrame = None
         self.drillFrameCallback = None
 
-    def fitDrillOnTable(self):
+
+    def fitDrill(self):
         self.fitter.imagePicker.numberOfPoints = 1
+        self.fitter.pointCloudSource = 'lidar'
+        self.fitter.fitFunc = self.fitter.fitDrill
+
+    def fitDrillOnTable(self):
+        self.fitter.imagePicker.numberOfPoints = 2
         self.fitter.pointCloudSource = 'lidar'
         self.fitter.fitFunc = self.fitter.fitDrillOnTable
 
@@ -2472,12 +2569,12 @@ class DrillTaskPanel(TaskUserPanel):
         assert drillCircle
         radius = drillCircle.getProperty('Radius')
 
-        self.params.setProperty('drilling depth', -0.05)
-        self.params.setProperty('drilling horiz offset', 0.0)
-        self.params.setProperty('drilling vert offset', radius)
+        self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
+        self.params.setProperty('drilling horiz offset', self.drillDemo.drillCutTailLength)
+        self.params.setProperty('drilling vert offset', radius + self.drillDemo.drillCutTailLength)
 
     def setDrillTargetToKnockOut(self):
-        self.params.setProperty('drilling depth', -0.05)
+        self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
         self.params.setProperty('drilling horiz offset', 0.0)
         self.params.setProperty('drilling vert offset', 0.0)
 
@@ -2496,14 +2593,14 @@ class DrillTaskPanel(TaskUserPanel):
         self.drillDemo.updateDrillTargetFrame(self.params.getProperty('drilling depth'), horiz, vert)
 
     def planDrillAlign(self):
-        self.drillDemo.planDrill()
+        self.drillDemo.planDrill(inPlane=False, inLine=False, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondFast, jointSpeed=30)
 
     def planDrillIn(self):
-        self.drillDemo.planDrill(inLine=True)
+        self.drillDemo.planDrill(inPlane=False, inLine=True, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillDemo.drillTrajectoryMaxDegreesPerSecond)
 
     def planDrillOut(self):
-        self.params.setProperty('drilling depth', -0.05)
-        self.drillDemo.planDrill(inLine=True)
+        self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
+        self.drillDemo.planDrill(inPlane=False, inLine=True, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillDemo.drillTrajectoryMaxDegreesPerSecond)
 
     def setDefaultDrillInDepth(self):
         self.params.setProperty('drilling depth', 0.01)
@@ -2512,7 +2609,7 @@ class DrillTaskPanel(TaskUserPanel):
         self.params.setProperty('drilling depth', 0.03)
 
     def planDrillMove(self):
-        self.drillDemo.planDrill(inLine=True)
+        self.drillDemo.planDrill(inPlane=False, inLine=True, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillDemo.drillTrajectoryMaxDegreesPerSecond)
 
     def planThumbPressPrep(self):
 
@@ -2537,6 +2634,7 @@ class DrillTaskPanel(TaskUserPanel):
 
     def addButtons(self):
 
+        self.addManualButton('Fit drill', self.fitDrill)
         self.addManualButton('Fit drill on table', self.fitDrillOnTable)
         self.addManualButton('Fit drill button press', self.fitDrillButtonPress)
         self.addManualButton('Fit drill wall', self.fitDrillWall)
@@ -2551,7 +2649,7 @@ class DrillTaskPanel(TaskUserPanel):
         self.addManualButton('Drill into wall prep', self.drillDemo.planDrillIntoWallPrep)
         self.addManualSpacer()
         self.addManualButton('Set drill target to start', self.setDrillTargetToCircleStart)
-        self.addManualButton('Set drill target to bit', self.setDrillTargetToCircleStart)
+        self.addManualButton('Set drill target to bit', self.setDrillTargetToDrillBit)
         self.addManualSpacer()
         self.addManualButton('Plan thumb move', self.planThumbPressMove)
         self.addManualButton('Plan thumb exit', self.planThumbPressExit)
@@ -2580,7 +2678,7 @@ class DrillTaskPanel(TaskUserPanel):
         self.params.addProperty('target height', 1.2, attributes=om.PropertyAttributes(minimum=0, maximum=2.0, decimals=2, singleStep=0.05, hidden=True))
         self.params.addProperty('target radius', 0.2, attributes=om.PropertyAttributes(minimum=0, maximum=1.0, decimals=2, singleStep=0.01, hidden=True))
 
-        self.params.addProperty('drilling depth', -0.05, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025))
+        self.params.addProperty('drilling depth', self.drillDemo.retractBitDepthNominal, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025))
         self.params.addProperty('drilling horiz offset', 0.0, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025, hidden=True))
         self.params.addProperty('drilling vert offset', 0.2, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025, hidden=True))
 
