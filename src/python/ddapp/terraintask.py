@@ -228,7 +228,7 @@ class TerrainTask(object):
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         stanceAxes = transformUtils.getAxesFromTransform(stanceFrame)
- 
+
         # get current frames of feet
         leftFootFrame = self.getFootFrameAtSole(self.sideToFootLinkName('left'))
         rightFootFrame = self.getFootFrameAtSole(self.sideToFootLinkName('right'))
@@ -300,7 +300,7 @@ class TerrainTask(object):
 
 
     def spawnCinderblockTerrain(self, cols=[]):
-        
+
         # clear old affordances
         for obj in self.getTabularBlockAffordances():
             om.removeFromObjectModel(obj)
@@ -337,14 +337,14 @@ class TerrainTask(object):
 
                 rpy = np.degrees([0.0, tiltAngle, blockYaw])
                 pos = [blockSize[1]*row, -blockSize[0]*col, blockSize[2]*blockLevel + tiltVerticalOffset]
-                
+
                 offsetFrame = transformUtils.frameFromPositionAndRPY(pos, rpy)
                 offsetFrame.PostMultiply()
                 offsetFrame.Concatenate(blockFrame)
 
                 if row==0 and col==0:
                     firstBlockFrame = offsetFrame
-                
+
                 pose = transformUtils.poseFromTransform(offsetFrame)
                 desc = dict(classname='BoxAffordanceItem', Name='%s (%d,%d)' % (self.terrainConfig['blockName'], row, col), Dimensions=blockSize.tolist(), pose=pose, Color=self.terrainConfig['blockColor'])
                 block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
@@ -386,7 +386,7 @@ class TerrainTask(object):
         picker = pointpicker.AffordancePicker(app.getDRCView(), self.robotSystem.affordanceManager, filterFunc=lambda x: x in detectedBlocks)
         picker.callbackFunc = functools.partial(self.assignBlocks2)
         picker.start()
-        
+
     def assignBlocks2(self, pickedDetectedBlock):
         proceed = len(pickedDetectedBlock)==1
 
@@ -440,7 +440,7 @@ class TerrainTask(object):
         d2 = pickedDetectedBlock.getProperty('Dimensions')
         pos1 = np.array(t1.GetPosition()) + np.array(axes1[2])*d1[2]/2
         pos2 = np.array(t2.GetPosition()) + np.array(axes2[2])*d2[2]/2
-        
+
         # compute initial (minimal) transform between selected blocks
         correction = vtk.vtkTransform()
         correction.PostMultiply()
@@ -481,7 +481,7 @@ class TerrainTask(object):
                     continue
                 matches.append((b,bestMatch))
                 bestMatch.setProperty('Color', self.terrainConfig['blockColorMatched'])
-                
+
 
         # compute and apply transform using all matches
         correction = vtk.vtkTransform()
@@ -522,7 +522,7 @@ class TerrainTask(object):
             t.PostMultiply()
             t.Concatenate(correction)
             t.Modified()
-        
+
         # adjust matched blocks
         for match in matches:
             t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
@@ -1295,6 +1295,7 @@ class TerrainTaskPanel(TaskUserPanel):
         self.addManualSpacer()
 
         self.addManualButton('Organize fit blocks', self.terrainTask.organizeFitBlocks)
+        self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
         self.addManualButton('Raycast terrain', self.terrainTask.requestRaycastTerrain)
         self.addManualButton('Generate footsteps', self.generateFootsteps)
         self.addManualButton('Print footstep offsets', self.terrainTask.printFootstepOffsets)
@@ -1303,7 +1304,6 @@ class TerrainTaskPanel(TaskUserPanel):
         self.addManualButton('Snap foot blocks', self.terrainTask.snapCinderblocksAtFeet)
 
 
-        #self.addManualButton('Fit ground affordance', self.terrainTask.spawnGroundAffordance)
 
         #self.addManualSpacer()
         #self.addManualButton('Reorient blocks to robot', self.terrainTask.reorientBlocks)
