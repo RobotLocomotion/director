@@ -626,8 +626,10 @@ class EgressPanel(TaskUserPanel):
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
 
         folder = addFolder('Step Off')
+        addTask(rt.UserPromptTask(name="wait for lidar sweep", message="wait for lidar sweep before spawning ground affordance"))
         addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
+        addTask(rt.UserPromptTask(name="wait for raycast terrain", message="wait for raycast terrain"))
         addFunc(self.onPlanStepOff, 'plan step off')
         addTask(rt.UserPromptTask(name="approve footsteps", message="Please approve footsteps, modify if necessary"))
         addFunc(self.robotSystem.footstepsDriver.onExecClicked, 'commit footstep plan')
