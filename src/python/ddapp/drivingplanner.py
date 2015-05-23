@@ -1037,7 +1037,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.setProperty('Bar Grasp/Retract Depth', 0.3)
 
     def setParamsBarGrasp(self):
-        self.params.setProperty('Bar Grasp/Retract Depth', 0.03)
+        self.params.setProperty('Bar Grasp/Retract Depth', 0.0)
 
     def addTasks(self):
         self.taskTree.removeAllTasks()
