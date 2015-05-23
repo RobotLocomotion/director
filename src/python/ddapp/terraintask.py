@@ -203,18 +203,22 @@ class TerrainTask(object):
 
     def createStartingGoal(self):
         blockTable = self.createBlockObjectTable()
-        if len(blockTable)>0 and len(blockTable[0])>0:
-            stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
-            stancePos = np.array(stanceFrame.GetPosition())
+        if len(blockTable)>1 and len(blockTable[0])>0:
             firstBlockFrame = transformUtils.copyFrame(blockTable[0][0].getChildFrame().transform)
-            firstBlockPos = np.array(firstBlockFrame.GetPosition())[0:2]
-            startingPos = firstBlockPos - self.relativeStartPos
-            goalFrame = vtk.vtkTransform()
-            goalFrame.PreMultiply()
-            goalFrame.Translate(np.append(startingPos, stancePos[2]))
-            relativeDir = firstBlockPos - startingPos
-            yaw = np.arctan2(relativeDir[1], relativeDir[0]) + self.relativeStartYaw
-            goalFrame.RotateZ(np.degrees(yaw))
+            secondBlockFrame = transformUtils.copyFrame(blockTable[1][0].getChildFrame().transform)
+
+            secondBlockDir = np.array(secondBlockFrame.GetPosition()) - np.array(firstBlockFrame.GetPosition())
+            blockXDir = transformUtils.getAxesFromTransform(firstBlockFrame)[0]
+            yawOffset = np.arctan2(secondBlockDir[1],secondBlockDir[0]) - np.arctan2(blockXDir[1],blockXDir[0])
+            yawDiff = self.relativeYawOffset - yawOffset
+            yawAngle = np.radians(90) * np.round(yawDiff / np.radians(90))
+
+            startingFrame = transformUtils.copyFrame(self.relativeStartFrame)
+            startingFrame.PostMultiply()
+            startingFrame.RotateZ(np.degrees(-yawAngle))
+            startingFrame.Concatenate(firstBlockFrame)
+
+            goalFrame = startingFrame
             footstepsdriverpanel.panel.onNewWalkingGoal(goalFrame)
         else:
             print 'error: no blocks defined; use Spawn Terrain button'
@@ -329,6 +333,7 @@ class TerrainTask(object):
         blockFrame.Concatenate(offsetFrame.GetLinearInverse())
 
         firstBlockFrame = None
+        secondBlockFrame = None
         for row in range(len(blockTypes)):
             for col in cols:
                 blockType = blockTypes[row][col]
@@ -344,17 +349,24 @@ class TerrainTask(object):
 
                 if row==0 and col==0:
                     firstBlockFrame = offsetFrame
+                if row==1 and col==0:
+                    secondBlockFrame = offsetFrame
                 
                 pose = transformUtils.poseFromTransform(offsetFrame)
                 desc = dict(classname='BoxAffordanceItem', Name='%s (%d,%d)' % (self.terrainConfig['blockName'], row, col), Dimensions=blockSize.tolist(), pose=pose, Color=self.terrainConfig['blockColor'])
                 block = self.robotSystem.affordanceManager.newAffordanceFromDescription(desc)
 
-        if firstBlockFrame is not None:
-            firstBlockPos = np.array(firstBlockFrame.GetPosition())[0:2]
-            curPos = np.array(stanceFrame.GetPosition())[0:2]
-            curDir = np.array(transformUtils.getAxesFromTransform(stanceFrame)[0])
-            self.relativeStartPos = firstBlockPos - curPos
-            self.relativeStartYaw =  np.arctan2(curDir[1], curDir[0]) - np.arctan2(self.relativeStartPos[1],self.relativeStartPos[0])
+        if firstBlockFrame is not None and secondBlockFrame is not None:
+            relativeTransform = transformUtils.copyFrame(stanceFrame)
+            relativeTransform.PostMultiply()
+            relativeTransform.Concatenate(firstBlockFrame.GetLinearInverse())
+            self.relativeStartFrame = relativeTransform
+            firstBlockPos = np.array(firstBlockFrame.GetPosition())
+            secondBlockPos = np.array(secondBlockFrame.GetPosition())
+            secondBlockDir = (secondBlockPos - firstBlockPos)[0:2]
+            blockXDir = transformUtils.getAxesFromTransform(firstBlockFrame)[0]
+            yawOffset = np.arctan2(secondBlockDir[1],secondBlockDir[0]) - np.arctan2(blockXDir[1],blockXDir[0])
+            self.relativeYawOffset = yawOffset
 
         #for block in self.getCinderblockAffordances():
         #    frameSync.addFrame(block.getChildFrame(), ignoreIncoming=True)
