@@ -304,6 +304,7 @@ class AsyncIKCommunicator():
             commands.append('if (info > 10) display(infeasibleConstraintMsg(infeasible_constraint)); end;')
 
         commands.append('if ~isempty(xtraj), qtraj = xtraj(1:r.getNumPositions()); else, qtraj = []; end;')
+        commands.append('if ~isempty(qtraj), qtraj_orig = qtraj; end;')
         commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1); end;' % ikParameters.maxDegreesPerSecond)
         commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % ikParameters.maxBaseMetersPerSecond)
         commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % ikParameters.maxBaseRPYDegreesPerSecond)
@@ -314,7 +315,6 @@ class AsyncIKCommunicator():
         commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
         commands.append('rescale_body_pts = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
         commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
-        commands.append('if ~isempty(qtraj), qtraj = rescalePlanTiming(qtraj, v_max, %s, %s, body_rescale_options); end;' % (ikParameters.accelerationParam, ikParameters.accelerationFraction))
 
         if ikParameters.usePointwise:
             assert not ikParameters.useCollision
@@ -329,7 +329,10 @@ class AsyncIKCommunicator():
             commands.append('if ~isempty(qtraj_pw), qtraj_pw = PPTrajectory(foh(pointwise_time_points, qtraj_pw)); end;')
             commands.append('if ~isempty(qtraj_pw), info = info_pw(end); end;')
             commands.append('if ~isempty(qtraj_pw), if (any(info_pw > 10)) disp(\'pointwise info:\'); disp(info_pw); end; end;')
+            commands.append('if ~isempty(qtraj_pw), qtraj_orig = qtraj_pw; end;')
             commands.append('\n%--- pointwise ik end --------\n')
+
+        commands.append('if ~isempty(qtraj_orig), qtraj = rescalePlanTiming(qtraj_orig, v_max, %s, %s, body_rescale_options); end;' % (ikParameters.accelerationParam, ikParameters.accelerationFraction))
 
 
         publish = True
