@@ -375,7 +375,13 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
 
-        legDownFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
+        lFoot2RFoot = om.findObjectByName('left foot to right foot')
+        assert lFoot2RFoot
+ 
+        rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
+        lFootGoalFrame = transformUtils.concatenateTransforms([transformUtils.copyFrame(lFoot2RFoot.transform), rFoot2World])
+
+        legDownFrame = transformUtils.copyFrame(lFootGoalFrame)
         identityFrame = vtk.vtkTransform()
         legDownConstraint = self.createLeftFootPoseConstraint(legDownFrame)
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
@@ -684,6 +690,17 @@ class DrivingPlanner(object):
         return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
 
 
+    def captureLeftFootToRightFootTransform(self):
+        startPose = self.getPlanningStartPose()
+
+        lFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('l_foot', startPose)
+        rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
+
+        lFoot2RFoot = transformUtils.concatenateTransforms([lFoot2World, rFoot2World.GetLinearInverse()])
+
+        vis.showFrame(lFoot2RFoot, 'left foot to right foot', scale=0.2, visible=False)
+
+
     def computeDrivingTrajectories(self, steeringAngleDegrees, maxTurningRadius = 10, numTrajPoints = 50):
 
         angle = -steeringAngleDegrees
@@ -740,9 +757,6 @@ class DrivingPlanner(object):
 
     def onThrottleCommand(self, msg):
 
-        if not self.throttleStreaming:
-            return
-
         # slider 0 is the coarse grained slider, slider 1 is for fine grained adjustment
         slider = self.decodeThrottleMessage(msg)
         const = np.rad2deg(self.jointLimitsMin[self.akyIdx])
@@ -782,10 +796,6 @@ class DrivingPlanner(object):
 
     def onSteeringCommand(self, msg):
 
-        if not self.steeringStreaming:
-            return
-
-        
         steeringAngle = -msg.steering_angle
         lwyPositionGoal = steeringAngle + self.steeringAngleOffset
         msg = lcmdrc.joint_position_goal_t()
@@ -959,7 +969,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Speed', 0.75, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
         # self.params.addProperty('Throttle Idle Angle Slack', 10, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Coarse Grained Throttle Travel', 100, attributes=om.PropertyAttributes(singleStep=10))
-        self.params.addProperty('Fine Grained Throttle Travel', 10, attributes=om.PropertyAttributes(singleStep=1))
+        self.params.addProperty('Fine Grained Throttle Travel', 30, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Throttle Streaming', False)
         self.params.addProperty('Steering Streaming', False)
         self.params.addProperty('Bar Grasp/Retract Depth', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
@@ -1100,7 +1110,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.setProperty('Bar Grasp/Retract Depth', 0.3)
 
     def setParamsBarGrasp(self):
-        self.params.setProperty('Bar Grasp/Retract Depth', 0.0)
+        self.params.setProperty('Bar Grasp/Retract Depth', -0.015)
 
     def addTasks(self):
         self.taskTree.removeAllTasks()
@@ -1150,15 +1160,17 @@ class DrivingPlannerPanel(TaskUserPanel):
         dp = self.drivingPlanner
 
         prep = addFolder('Prep')
+        addTask(rt.UserPromptTask(name="confirm user mode", message="Please go to User mode"))
         addTask(rt.UserPromptTask(name="start streaming", message="Please start streaming"))
         addManipTask('car entry posture', self.drivingPlanner.planCarEntryPose, userPrompt=True)
         self.folder = prep
-        addTask(rt.UserPromptTask(name="start April tag process", message="Enable April tag detection"))
+        addTask(rt.SetNeckPitch(name='set neck position', angle=30))
+        addFunc(self.drivingPlanner.captureLeftFootToRightFootTransform, 'capture lfoot to rfoot transform')
+        addTask(rt.UserPromptTask(name="start April tag process", message="Start April tag process and confirm detection"))
         addTask(rt.UserPromptTask(name="spawn polaris model", message="launch egress planner and spawn polaris model"))
         addFunc(self.onStart, 'update wheel location')
 
         graspWheel = addFolder('Grasp Steering Wheel')
-        addTask(rt.UserPromptTask(name="approve open left hand", message="Check it is clear to open left hand"))
         addTask(rt.OpenHand(name='open left hand', side='Left'))
         addFunc(self.setParamsPreGrasp1, 'set params')
         addManipTask('Pre Grasp 1', self.onPlanPreGrasp, userPrompt=True)
@@ -1168,19 +1180,16 @@ class DrivingPlannerPanel(TaskUserPanel):
         addManipTask('Pre Grasp 2', self.onPlanPreGrasp, userPrompt=True)
         self.folder = graspWheel
         addTask(rt.UserPromptTask(name="check alignment", message="Please make any manual adjustments if necessary"))
-        addTask(rt.UserPromptTask(name="approve close left hand", message="Check clear to close left hand"))
         addTask(rt.CloseHand(name='close left hand', side='Left'))
         addTask(rt.UserPromptTask(name="set true steering wheel angle", message="Set true steering wheel angle in spin box"))
         addFunc(self.drivingPlanner.setSteeringWheelAndWristGraspAngles, 'capture true wheel angle and current wrist angle')
 
         graspBar = addFolder('Grasp Bar')
-        addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
         addTask(rt.OpenHand(name='open right hand', side='Right'))
         addFunc(self.setParamsBarGrasp, 'set params')
         addManipTask('Bar Grasp', self.onPlanBarGrasp, userPrompt=True)
         self.folder = graspBar
         addTask(rt.UserPromptTask(name="check alignment and depth", message="Please check alignment and depth, make any manual adjustments"))
-        addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
         footToDriving = addFolder('Foot to Driving Pose')
@@ -1191,7 +1200,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         addManipTask('Foot On Pedal', self.drivingPlanner.planLegPedal, userPrompt=True)
 
         driving = addFolder('Driving')
-        addTask(rt.UserPromptTask(name="base side streaming", message="Please start base side streaming"))
         addTask(rt.UserPromptTask(name="launch drivers", message="Please launch throttle and steering drivers"))
         addTask(rt.UserPromptTask(name="switch to regrasp tasks", message="Switch to regrasp task set"))
 
@@ -1233,21 +1241,20 @@ class DrivingPlannerPanel(TaskUserPanel):
         addFunc(self.onUpdateWheelLocation, 'Update wheel location')
 
         ungraspWheel = addFolder('Ungrasp Steering Wheel')
-        addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
+        addTask(rt.UserPromptTask(name="Confirm pressure", message='Set pressure for prep-for-egress'))
         addTask(rt.OpenHand(name='open left hand', side='Left'))
+        addTask(rt.UserPromptTask(name="confirm hand is open", message="Confirm the left hand has opened"))
         addFunc(self.setParamsWheelRetract, 'set params')
         addManipTask('Retract hand', self.onPlanRetract, userPrompt=True)
         self.folder = ungraspWheel
-        addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
         addTask(rt.CloseHand(name='close left hand', side='Left'))
 
         ungraspBar = addFolder('Ungrasp Bar')
-        addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
-        addTask(rt.OpenHand(name='open left hand', side='Right'))
+        addTask(rt.OpenHand(name='open right hand', side='Right'))
+        addTask(rt.UserPromptTask(name="confirm hand is open", message="Confirm the right hand has opened"))
         addFunc(self.setParamsBarRetract, 'set params')
         addManipTask('Retract hand', self.onPlanBarRetract, userPrompt=True)
         self.folder = ungraspBar
-        addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
         armsToEgressStart = addFolder('Arms to Egress Position')
