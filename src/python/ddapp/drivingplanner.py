@@ -1143,15 +1143,16 @@ class DrivingPlannerPanel(TaskUserPanel):
         dp = self.drivingPlanner
 
         prep = addFolder('Prep')
+        addTask(rt.UserPromptTask(name="confirm user mode", message="Please go to User mode"))
         addTask(rt.UserPromptTask(name="start streaming", message="Please start streaming"))
         addManipTask('car entry posture', self.drivingPlanner.planCarEntryPose, userPrompt=True)
         self.folder = prep
-        addTask(rt.UserPromptTask(name="start April tag process", message="Enable April tag detection"))
+        addTask(rt.SetNeckPitch(name='set neck position', angle=30))
+        addTask(rt.UserPromptTask(name="start April tag process", message="Start April tag process and confirm detection"))
         addTask(rt.UserPromptTask(name="spawn polaris model", message="launch egress planner and spawn polaris model"))
         addFunc(self.onStart, 'update wheel location')
 
         graspWheel = addFolder('Grasp Steering Wheel')
-        addTask(rt.UserPromptTask(name="approve open left hand", message="Check it is clear to open left hand"))
         addTask(rt.OpenHand(name='open left hand', side='Left'))
         addFunc(self.setParamsPreGrasp1, 'set params')
         addManipTask('Pre Grasp 1', self.onPlanPreGrasp, userPrompt=True)
@@ -1161,19 +1162,16 @@ class DrivingPlannerPanel(TaskUserPanel):
         addManipTask('Pre Grasp 2', self.onPlanPreGrasp, userPrompt=True)
         self.folder = graspWheel
         addTask(rt.UserPromptTask(name="check alignment", message="Please make any manual adjustments if necessary"))
-        addTask(rt.UserPromptTask(name="approve close left hand", message="Check clear to close left hand"))
         addTask(rt.CloseHand(name='close left hand', side='Left'))
         addTask(rt.UserPromptTask(name="set true steering wheel angle", message="Set true steering wheel angle in spin box"))
         addFunc(self.drivingPlanner.setSteeringWheelAndWristGraspAngles, 'capture true wheel angle and current wrist angle')
 
         graspBar = addFolder('Grasp Bar')
-        addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
         addTask(rt.OpenHand(name='open right hand', side='Right'))
         addFunc(self.setParamsBarGrasp, 'set params')
         addManipTask('Bar Grasp', self.onPlanBarGrasp, userPrompt=True)
         self.folder = graspBar
         addTask(rt.UserPromptTask(name="check alignment and depth", message="Please check alignment and depth, make any manual adjustments"))
-        addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
         footToDriving = addFolder('Foot to Driving Pose')
@@ -1184,7 +1182,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         addManipTask('Foot On Pedal', self.drivingPlanner.planLegPedal, userPrompt=True)
 
         driving = addFolder('Driving')
-        addTask(rt.UserPromptTask(name="base side streaming", message="Please start base side streaming"))
         addTask(rt.UserPromptTask(name="launch drivers", message="Please launch throttle and steering drivers"))
         addTask(rt.UserPromptTask(name="switch to regrasp tasks", message="Switch to regrasp task set"))
 
@@ -1226,21 +1223,20 @@ class DrivingPlannerPanel(TaskUserPanel):
         addFunc(self.onUpdateWheelLocation, 'Update wheel location')
 
         ungraspWheel = addFolder('Ungrasp Steering Wheel')
-        addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
+        addTask(rt.UserPromptTask(name="Confirm pressure", message='Set pressure for prep-for-egress'))
         addTask(rt.OpenHand(name='open left hand', side='Left'))
+        addTask(rt.UserPromptTask(name="confirm hand is open", message="Confirm the left hand has opened"))
         addFunc(self.setParamsWheelRetract, 'set params')
         addManipTask('Retract hand', self.onPlanRetract, userPrompt=True)
         self.folder = ungraspWheel
-        addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
         addTask(rt.CloseHand(name='close left hand', side='Left'))
 
         ungraspBar = addFolder('Ungrasp Bar')
-        addTask(rt.UserPromptTask(name="approve open right hand", message="Check clear to open right hand"))
-        addTask(rt.OpenHand(name='open left hand', side='Right'))
+        addTask(rt.OpenHand(name='open right hand', side='Right'))
+        addTask(rt.UserPromptTask(name="confirm hand is open", message="Confirm the right hand has opened"))
         addFunc(self.setParamsBarRetract, 'set params')
         addManipTask('Retract hand', self.onPlanBarRetract, userPrompt=True)
         self.folder = ungraspBar
-        addTask(rt.UserPromptTask(name="approve close right hand", message="Check ok to close right hand"))
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
         armsToEgressStart = addFolder('Arms to Egress Position')
