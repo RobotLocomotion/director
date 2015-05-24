@@ -344,6 +344,7 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot'))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
+        constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseMetersPerSecond=0.02)
 
@@ -386,6 +387,7 @@ class EgressPlanner(object):
         #constraints.append(self.robotSystem.ikPlanner.createLockedBackPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraints.extend(self.createLeftFootPoseConstraint(finalLeftFootFrame, tspan=[1,1]))
+        constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
 
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
@@ -674,7 +676,6 @@ class EgressPanel(TaskUserPanel):
         self.folder = stepOut
         addManipTask('Get weight over feet', ep.planGetWeightOverFeet, userPrompt=True, planner=ep)
         addManipTask('Stand up', ep.planStandUp, userPrompt=True, planner=ep)
-        addManipTask('Shift weight out of Polaris', ep.planShiftWeightOut, userPrompt=True, planner=ep)
         addManipTask('Step out', ep.planFootEgress, userPrompt=True, planner=ep)
         addManipTask('Move arms up for walking', ep.planArmsForward, userPrompt=True, planner=ep)
 
