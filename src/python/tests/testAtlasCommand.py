@@ -174,6 +174,7 @@ class AtlasCommandStream(object):
         self.app = ConsoleApp()
         self.robotModel, self.jointController = roboturdf.loadRobotModel('robot model')
         self.fpsCounter = simpletimer.FPSCounter()
+        self.drakePoseJointNames = robotstate.getDrakePoseJointNames()
         self.fpsCounter.printToConsole = True
         self.timer.callback = self._tick
         self._initialized = False
@@ -248,6 +249,10 @@ class AtlasCommandStream(object):
     def setGoalPose(self, pose):         
         self._goalPose = self.clipPoseToJointLimits(pose)
 
+    def setIndividualJointGoalPose(self, pose, jointName):
+        jointIdx = self.drakePoseJointNames.index(jointName)
+        self._goalPose[jointIdx] = pose
+
     def clipPoseToJointLimits(self,pose):
         pose = np.array(pose)
         pose = np.clip(pose, self.jointLimitsMin, self.jointLimitsMax)
@@ -283,7 +288,7 @@ class AtlasCommandStream(object):
         # move current pose toward goal pose
         previousPose = self._previousCommandedPose.copy()
         currentPose = self._currentCommandedPose.copy()
-        goalPose = self._goalPose.copy()
+        goalPose = self.clipPoseToJointLimits(self._goalPose.copy())
         nextPose = self._computeNextPose(previousPose,currentPose, goalPose, elapsed,
             self._previousElapsedTime, self._maxSpeed)
         self._currentCommandedPose = nextPose
@@ -384,8 +389,8 @@ class PositionGoalListener(object):
 
     def __init__(self):
         self.sub = lcmUtils.addSubscriber('JOINT_POSITION_GOAL', lcmdrc.robot_state_t, self.onJointPositionGoal)
+        self.sub = lcmUtils.addSubscriber('SINGLE_JOINT_POSITION_GOAL', lcmdrc.joint_position_goal_t, self.onSingleJointPositionGoal)
         lcmUtils.addSubscriber('COMMITTED_PLAN_PAUSE', lcmdrc.plan_control_t, self.onPause)
-
         self.debug = False
 
         if self.debug:
@@ -414,6 +419,19 @@ class PositionGoalListener(object):
 
     def onDebug(self):
         self.jointController.setPose('ATLAS_COMMAND', commandStream._currentCommandedPose)
+
+    def onSingleJointPositionGoal(self, msg):
+        jointPositionGoal = msg.joint_position
+        jointName = msg.joint_name
+        allowedJointNames = ['l_leg_aky','l_arm_lwy']
+
+        if not (jointName in allowedJointNames):
+            print 'Position goals are not allowed for this joint'
+            print 'ignoring this position goal'
+            print 'use the sliders instead'
+            return
+            
+        commandStream.setIndividualJointGoalPose(jointPositionGoal, jointName)
 
 
 class JointCommandPanel(object):
