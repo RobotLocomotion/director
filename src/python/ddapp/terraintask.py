@@ -79,6 +79,7 @@ class TerrainTask(object):
         self.removeDuringOrganize = False
 
         self.numberOfPrefabSteps = -1
+        self.prefabStepStartOffset = 0
 
         self.relativeStartPos = np.array([0,0])
         self.relativeStartYaw = 0
@@ -115,6 +116,8 @@ class TerrainTask(object):
         footstepsdriverpanel.panel.onNewWalkingGoal(frameCopy)
 
     def requestBlockFit(self):
+        for block in self.getIndexedBlockAffordances():
+            om.removeFromObjectModel(block)
         blockSize = self.terrainConfig['blockSize'].tolist()
         msg = lcmdrc.block_fit_request_t()
         msg.utime = getUtime()
@@ -245,9 +248,7 @@ class TerrainTask(object):
         rightLine = np.append(rightLine, -np.dot(rightLine,rightPos))
 
         # generate new footstep frames
-        leadingFoot = footstepData[0][0]
-        stepFrames = []
-        supportTypes = []
+        steps = []
         for foot, blockIndex, offset, supportType in footstepData:
             block = blockObjectTable[blockIndex[0]][blockIndex[1]]
             if block is None:
@@ -271,23 +272,40 @@ class TerrainTask(object):
                 dist = leftLine[0:2].dot(pos)+leftLine[2]
             else:
                 dist = rightLine[0:2].dot(pos)+rightLine[2]
-            if dist > 0.1:  # arbitrary threshold
-                stepFrames.append(t)
-                supportTypes.append(supportType)
+            steps.append({'transform':t, 'foot':foot, 'support':supportType, 'dist':dist})
             #obj = vis.showFrame(t, '%s step frame' % block.getProperty('Name'), parent='step frames', scale=0.2)
+
+        # find first valid start step
+        startIndex = 0
+        for step in steps:
+            if (step['dist'] < 0.1):
+                startIndex += 1
+            else:
+                break
+
+        # adjust start index by manually specified offset
+        startIndex += self.prefabStepStartOffset
+        startIndex = max(0, startIndex)
+        startIndex = min(len(steps), startIndex)
+        steps = steps[startIndex:]
 
         # remove footsteps beyond specified limit
         if self.numberOfPrefabSteps >= 0:
-            maxNum = min(len(stepFrames), self.numberOfPrefabSteps)
-            stepFrames = stepFrames[0:maxNum]
-            supportTypes = supportTypes[0:maxNum]
+            endIndex = min(len(steps), self.numberOfPrefabSteps)
+            steps = steps[0:endIndex]
 
         # send footstep request
+        if len(steps) > 0:
+            leadingFoot = steps[0]['foot']
+        else:
+            print 'error: no footsteps'
+            return
         startPose = self.getPlanningStartPose()
         helper = FootstepRequestGenerator(self.robotSystem.footstepsDriver)
+        stepFrames = [step['transform'] for step in steps]
         request = helper.makeFootstepRequest(startPose, stepFrames, leadingFoot,  snapToTerrain=False)
         for i in range(len(stepFrames)):
-            request.goal_steps[i].params.support_contact_groups = supportTypes[i]
+            request.goal_steps[i].params.support_contact_groups = steps[i]['support']
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request, waitForResponse=True)
 
     def createBlockObjectTable(self):
@@ -1327,6 +1345,7 @@ class TerrainTaskPanel(TaskUserPanel):
     def addDefaultProperties(self):
         self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=self.terrainTask.terrainConfigList))
         self.params.addProperty('Number of Steps', self.terrainTask.numberOfPrefabSteps, attributes=om.PropertyAttributes(minimum=-1, maximum=100))
+        self.params.addProperty('Start Step Offset', self.terrainTask.prefabStepStartOffset, attributes=om.PropertyAttributes(minimum=-100, maximum=100))
         self.params.addProperty('Block Fit Algo', self.terrainTask.blockFitAlgo, attributes=om.PropertyAttributes(enumNames=['MinArea', 'ClosestSize']))
         self.params.addProperty('Constrain Block Size', self.terrainTask.constrainBlockSize)
         self.params.addProperty('Manual Steps Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
@@ -1339,6 +1358,8 @@ class TerrainTaskPanel(TaskUserPanel):
             self.terrainTask.useTextures = self.params.getProperty(propertyName)
         elif propertyName == 'Number of Steps':
             self.terrainTask.numberOfPrefabSteps = self.params.getProperty(propertyName)
+        elif propertyName == 'Start Step Offset':
+            self.terrainTask.prefabStepStartOffset = self.params.getProperty(propertyName)
         elif propertyName == 'Terrain Type':
             terrainConfig = self.terrainTask.terrainConfigList[self.params.getProperty(propertyName)];
             self.terrainTask.loadTerrainConfig(terrainConfig)
