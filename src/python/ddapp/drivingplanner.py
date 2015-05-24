@@ -375,7 +375,13 @@ class DrivingPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
 
-        legDownFrame = transformUtils.copyFrame(om.findObjectByName('left foot start').transform)
+        lFoot2RFoot = om.findObjectByName('left foot to right foot')
+        assert lFoot2RFoot
+ 
+        rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
+        lFootGoalFrame = transformUtils.concatenateTransforms([transformUtils.copyFrame(lFoot2RFoot.transform), rFoot2World])
+
+        legDownFrame = transformUtils.copyFrame(lFootGoalFrame)
         identityFrame = vtk.vtkTransform()
         legDownConstraint = self.createLeftFootPoseConstraint(legDownFrame)
         allButLeftLegPostureConstraint = self.createAllButLeftLegPostureConstraint(startPoseName)
@@ -682,6 +688,17 @@ class DrivingPlanner(object):
     def createAllButRightArmPostureConstraint(self, poseName):
         joints = robotstate.matchJoints('^(?!r_arm)')
         return self.robotSystem.ikPlanner.createPostureConstraint(poseName, joints)
+
+
+    def captureLeftFootToRightFootTransform(self):
+        startPose = self.getPlanningStartPose()
+
+        lFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('l_foot', startPose)
+        rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
+
+        lFoot2RFoot = transformUtils.concatenateTransforms([lFoot2World, rFoot2World.GetLinearInverse()])
+
+        vis.showFrame(lFoot2RFoot, 'left foot to right foot', scale=0.2, visible=False)
 
 
     def computeDrivingTrajectories(self, steeringAngleDegrees, maxTurningRadius = 10, numTrajPoints = 50):
@@ -1148,6 +1165,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         addManipTask('car entry posture', self.drivingPlanner.planCarEntryPose, userPrompt=True)
         self.folder = prep
         addTask(rt.SetNeckPitch(name='set neck position', angle=30))
+        addFunc(self.drivingPlanner.captureLeftFootToRightFootTransform, 'capture lfoot to rfoot transform')
         addTask(rt.UserPromptTask(name="start April tag process", message="Start April tag process and confirm detection"))
         addTask(rt.UserPromptTask(name="spawn polaris model", message="launch egress planner and spawn polaris model"))
         addFunc(self.onStart, 'update wheel location')
