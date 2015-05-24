@@ -681,17 +681,17 @@ class EgressPanel(TaskUserPanel):
         prep = addFolder('Step down prep')
         addFunc(self.onStart, 'start')
         addTask(rt.SetNeckPitch(name='set neck position', angle=60))
-        # addManipTask('arms up', self.onArmsUp, userPrompt=True)
-        addTask(rt.UserPromptTask(name="confirm arms up", message="Please confirm arms up, if not use 'Arms Up' Button"))
+        addTask(rt.UserPromptTask(name="set walking params", message="Please set walking params to 'Polaris Platform'"))
+        addTask(rt.UserPromptTask(name="wait for lidar", message="Please wait for next lidar sweep"))
+
         self.folder = prep
         addFunc(pp.fitRunningBoardAtFeet, 'fit running board')
+        addTask(rt.FindAffordance(name='confirm running board affordance', affordanceName='running board'))
         addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
-        addTask(rt.UserPromptTask(name="set walking params", message="Please set walking params to 'Polaris Platform'"))
+        addTask(rt.UserPromptTask(name="wait for raycast terrain", message="wait for raycast terrain"))
 
         folder = addFolder('Step Down')
-        addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
-        addFunc(pp.requestRaycastTerrain, 'raycast terrain')
         addFunc(self.onPlanStepDown, 'plan step down')
         addTask(rt.UserPromptTask(name="approve footsteps, set support contact group",
          message="Please approve/modify footsteps. Set the support contact group for the left foot step to be Back 2/3"))
@@ -708,4 +708,6 @@ class EgressPanel(TaskUserPanel):
         addFunc(self.robotSystem.footstepsDriver.onExecClicked, 'commit footstep plan')
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
         addManipTask('plan nominal', pp.planNominal, userPrompt=True)
+        addTask(rt.UserPromptTask(name="reset walking parameters", message="Please set walking parameters to drake nominal"))
+
 
