@@ -52,8 +52,8 @@ class DrivingPlanner(object):
         self.idleAngleSlack = 10
         self.fineGrainedThrottleTravel = 10
         self.steeringAngleOffset = 0
-        self.throttlePublishChannel = 'THROTTLE_COMMAND_POSITION_GOAL'
-        self.steeringPublishChannel = 'STEERING_COMMAND_POSITION_GOAL'
+        self.throttlePublishChannel = 'SINGLE_JOINT_POSITION_GOAL'
+        self.steeringPublishChannel = 'SINGLE_JOINT_POSITION_GOAL'
         self.addSubscribers()
         self.graspWheelAngle = None
         self.graspWristAngle = None
@@ -62,6 +62,14 @@ class DrivingPlanner(object):
         self.distanceAbovePedal = 0.05
         self.distanceAboveFootStartPose = 0.2
         self.plans = []
+
+        self.throttleCommandTimer = TimerCallback(targetFps=5)
+        self.throttleCommandTimer.callback = self.publishThrottleCommand
+        self.throttleCommandMsg = None
+
+        self.steeringCommandTimer = TimerCallback(targetFps=5)
+        self.steeringCommandTimer.callback = self.publishSteeringCommand
+        self.steeringCommandMsg = None
 
     def getInitCommands(self):
 
@@ -81,7 +89,7 @@ class DrivingPlanner(object):
 
     def addSubscribers(self):
         lcmUtils.addSubscriber('THROTTLE_COMMAND', lcmdrc.trigger_finger_t , self.onThrottleCommand)
-        lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_command_t , self.onSteeringCommand)
+        lcmUtils.addSubscriber('STEERING_COMMAND', lcmdrc.driving_control_cmd_t , self.onSteeringCommand)
 
     def initialize(self, ikServer, success):
         if ikServer.restarted:
@@ -136,8 +144,11 @@ class DrivingPlanner(object):
         startPose = self.getPlanningStartPose()
         commands.append("dp.planPreGrasp(options, %s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
-        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
-        self.ikServer.taskQueue.start()
+        listener = self.getManipPlanListener()
+        self.ikServer.comm.sendCommands(commands)
+        plan = listener.waitForResponse()
+        listener.finish()
+        self.addPlan(plan)
 
     def planTouch(self, depth=0, xyz_des=None, speed=1):
         commands = []
@@ -147,8 +158,11 @@ class DrivingPlanner(object):
         startPose = self.getPlanningStartPose()
         commands.append("dp.planTouch(options, %s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
-        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
-        self.ikServer.taskQueue.start()
+        listener = self.getManipPlanListener()
+        self.ikServer.comm.sendCommands(commands)
+        plan = listener.waitForResponse()
+        listener.finish()
+        self.addPlan(plan)
 
     def planRetract(self, depth=0.2, speed=1):
         commands = []
@@ -158,8 +172,11 @@ class DrivingPlanner(object):
         startPose = self.getPlanningStartPose()
         commands.append("dp.planRetract(options, %s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
-        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
-        self.ikServer.taskQueue.start()
+        listener = self.getManipPlanListener()
+        self.ikServer.comm.sendCommands(commands)
+        plan = listener.waitForResponse()
+        listener.finish()
+        self.addPlan(plan)
 
     def planTurn(self, angle=0, speed=1):
         commands = []
@@ -170,8 +187,11 @@ class DrivingPlanner(object):
         startPose = self.getPlanningStartPose()
         commands.append("dp.planTurn(options,%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
 
-        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
-        self.ikServer.taskQueue.start()
+        listener = self.getManipPlanListener()
+        self.ikServer.comm.sendCommands(commands)
+        plan = listener.waitForResponse()
+        listener.finish()
+        self.addPlan(plan)
 
     def planSteeringWheelTurn(self, speed=1, knotPoints=20, turnRadius=.187, gazeTol=0.3):
         commands = []
@@ -720,6 +740,9 @@ class DrivingPlanner(object):
 
     def onThrottleCommand(self, msg):
 
+        if not self.throttleStreaming:
+            return
+
         # slider 0 is the coarse grained slider, slider 1 is for fine grained adjustment
         slider = self.decodeThrottleMessage(msg)
         const = np.rad2deg(self.jointLimitsMin[self.akyIdx])
@@ -737,16 +760,39 @@ class DrivingPlanner(object):
         msg.utime = getUtime()
         msg.joint_position = ankleGoalPositionRadians
         msg.joint_name = 'l_leg_aky'
-        lcmUtils.publish(self.throttlePublishChannel, msg)
+        self.throttleCommandMsg = msg
+
+    def publishThrottleCommand(self):
+        if not self.throttleStreaming:
+            return
+
+        if self.throttleCommandMsg is None:
+            return
+
+        lcmUtils.publish(self.throttlePublishChannel, self.throttleCommandMsg)
+
+    def publishSteeringCommand(self):
+        if not self.throttleStreaming:
+            return
+
+        if self.steeringCommandMsg is None:
+            return
+
+        lcmUtils.publish(self.steeringPublishChannel, self.steeringCommandMsg)
 
     def onSteeringCommand(self, msg):
+
+        if not self.steeringStreaming:
+            return
+
+        
         steeringAngle = -msg.steering_angle
         lwyPositionGoal = steeringAngle + self.steeringAngleOffset
         msg = lcmdrc.joint_position_goal_t()
         msg.utime = getUtime()
         msg.joint_position = lwyPositionGoal
         msg.joint_name = 'l_arm_lwy'
-        lcmUtils.publish(self.steeringPublishChannel, msg)
+        self.steeringCommandMsg = msg
 
 
     def decodeThrottleMessage(self,msg):
@@ -793,7 +839,8 @@ class DrivingPlanner(object):
     def planArmsEgressStart(self):
         startPose = self.getPlanningStartPose()
         ikPlanner = self.robotSystem.ikPlanner
-        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'egress-arms')
+        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'egress-left-arm', side='left')
+        endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'crane', side='right')
         ikParameters = IkParameters(maxDegreesPerSecond=60)
         plan = ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False, ikParameters=ikParameters)
         self.addPlan(plan)
@@ -827,6 +874,11 @@ class DrivingPlanner(object):
 
     def addPlan(self, plan):
         self.plans.append(plan)
+
+    def getManipPlanListener(self):
+        responseChannel = 'CANDIDATE_MANIP_PLAN'
+        responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
+        return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
 
 
 class DrivingPlannerPanel(TaskUserPanel):
@@ -912,6 +964,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         # self.params.addProperty('Throttle Idle Angle Slack', 10, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Coarse Grained Throttle Travel', 100, attributes=om.PropertyAttributes(singleStep=10))
         self.params.addProperty('Fine Grained Throttle Travel', 10, attributes=om.PropertyAttributes(singleStep=1))
+        self.params.addProperty('Throttle Streaming', False)
+        self.params.addProperty('Steering Streaming', False)
         self.params.addProperty('Bar Grasp/Retract Depth', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
         self.params.addProperty('Pedal Foot Location', 1, attributes=om.PropertyAttributes(enumNames=['Standard','Knee In']))
 
@@ -944,6 +998,8 @@ class DrivingPlannerPanel(TaskUserPanel):
         # self.drivingPlanner.throttleIdleAngleSlack = self.params.getProperty('Throttle Idle Angle Slack')
         self.drivingPlanner.fineGrainedThrottleTravel = self.params.getProperty('Fine Grained Throttle Travel')
         self.drivingPlanner.coarseGrainedThrottleTravel = self.params.getProperty('Coarse Grained Throttle Travel')
+        self.drivingPlanner.throttleStreaming = self.params.getProperty('Throttle Streaming')
+        self.drivingPlanner.steeringStreaming = self.params.getProperty('Steering Streaming')
         self.barGraspDepth = self.params.getProperty('Bar Grasp/Retract Depth')
         self.drivingPlanner.maxTurningRadius = self.params.getProperty('Turning Radius')
         self.drivingPlanner.userSpecifiedGraspWheelAngleInDegrees = self.params.getProperty('Steering Wheel Angle when Grasped')
@@ -1017,6 +1073,18 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         if not taskToShowOld == self.taskToShow:
             self.addTasks()
+
+        if propertyName == 'Throttle Streaming':
+            if self.params.getProperty(propertyName):
+                self.drivingPlanner.throttleCommandTimer.start()
+            else:
+                self.drivingPlanner.throttleCommandTimer.stop()
+
+        if propertyName == 'Steering Streaming':
+            if self.params.getProperty(propertyName):
+                self.drivingPlanner.steeringCommandTimer.start()
+            else:
+                self.drivingPlanner.steeringCommandTimer.stop()
 
     def onPlanBarRetract(self):
         self.drivingPlanner.planBarRetract(depth=self.barGraspDepth, useLineConstraint=True)
@@ -1098,11 +1166,11 @@ class DrivingPlannerPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name="approve open left hand", message="Check it is clear to open left hand"))
         addTask(rt.OpenHand(name='open left hand', side='Left'))
         addFunc(self.setParamsPreGrasp1, 'set params')
-        addManipTaskMatlab('Pre Grasp 1', self.onPlanPreGrasp)
+        addManipTask('Pre Grasp 1', self.onPlanPreGrasp, userPrompt=True)
         self.folder = graspWheel
         addTask(rt.UserPromptTask(name="check alignment", message="Please ask field team for hand location relative to wheel, adjust wheel affordance if necessary"))
         addFunc(self.setParamsPreGrasp2, 'set params')
-        addManipTaskMatlab('Pre Grasp 2', self.onPlanPreGrasp)
+        addManipTask('Pre Grasp 2', self.onPlanPreGrasp, userPrompt=True)
         self.folder = graspWheel
         addTask(rt.UserPromptTask(name="check alignment", message="Please make any manual adjustments if necessary"))
         addTask(rt.UserPromptTask(name="approve close left hand", message="Check clear to close left hand"))
@@ -1145,15 +1213,6 @@ class DrivingPlannerPanel(TaskUserPanel):
             self.folder = self.taskTree.addGroup(name, parent=parent)
             return self.folder
 
-        def addManipTaskMatlab(name, planFunc, userPrompt=False, parentFolder=None):
-
-            prevFolder = self.folder
-            addFolder(name, prevFolder)
-            addFunc(planFunc, 'plan')
-            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
-            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
-
-
         def addManipTask(name, planFunc, userPrompt=False):
 
             prevFolder = self.folder
@@ -1182,7 +1241,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
         addTask(rt.OpenHand(name='open left hand', side='Left'))
         addFunc(self.setParamsWheelRetract, 'set params')
-        addManipTaskMatlab('Retract hand', self.onPlanRetract)
+        addManipTask('Retract hand', self.onPlanRetract, userPrompt=True)
         self.folder = ungraspWheel
         addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
         addTask(rt.CloseHand(name='close left hand', side='Left'))
@@ -1217,14 +1276,6 @@ class DrivingPlannerPanel(TaskUserPanel):
             self.folder = self.taskTree.addGroup(name, parent=parent)
             return self.folder
 
-        def addManipTaskMatlab(name, planFunc, userPrompt=False, parentFolder=None):
-
-            prevFolder = self.folder
-            addFolder(name, prevFolder)
-            addFunc(planFunc, 'plan')
-            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
-            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
-
         def addManipTask(name, planFunc, userPrompt=False):
 
             prevFolder = self.folder
@@ -1258,14 +1309,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         def addFolder(name, parent=None):
             self.folder = self.taskTree.addGroup(name, parent=parent)
             return self.folder
-
-        def addManipTaskMatlab(name, planFunc, userPrompt=False, parentFolder=None):
-
-            prevFolder = self.folder
-            addFolder(name, prevFolder)
-            addFunc(planFunc, 'plan')
-            addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve and commit manipulation plan.'))
-            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
 
         def addManipTask(name, planFunc, userPrompt=False):
 
