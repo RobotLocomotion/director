@@ -268,13 +268,13 @@ class CameraView(object):
 
         self.view = view or app.getViewManager().createView('Camera View', 'VTK View')
 
-        self.renderers = [view.renderer()]
-        renWin = view.renderWindow()
+        self.renderers = [self.view.renderer()]
+        renWin = self.view.renderWindow()
         renWin.SetNumberOfLayers(3)
         for i in [1, 2]:
             ren = vtk.vtkRenderer()
             ren.SetLayer(2)
-            ren.SetActiveCamera(view.camera())
+            ren.SetActiveCamera(self.view.camera())
             renWin.AddRenderer(ren)
             self.renderers.append(ren)
 
