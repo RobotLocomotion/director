@@ -43,7 +43,7 @@ class PolarisModel(object):
 
         # t = transformUtils.transformFromPose(np.array([ 0.14376024,  0.95920689,  0.36655712]), np.array([ 0.28745842,  0.90741428, -0.28822068,  0.10438304]))
 
-        t = transformUtils.transformFromPose(np.array([ 0.07387469,  0.97640798,  0.37395914]),
+        t = transformUtils.transformFromPose(np.array([ 0.10873244,  0.93162364,  0.40509084]),
             np.array([ 0.32997378,  0.88498408, -0.31780588,  0.08318602]))
         self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
@@ -102,7 +102,7 @@ class PolarisModel(object):
             np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
         self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([ 0.18112314,  0.89229407,  0.25062962]),
+        t = transformUtils.transformFromPose(np.array([ 0.17712239,  0.87619935,  0.27001509]),
             np.array([ 0.33484372,  0.88280787, -0.31946488,  0.08044963]))
 
         self.leftFootUpFrame = vis.updateFrame(t,'left foot up frame', scale=0.2, visible=True, parent=self.pointcloudAffordance)
