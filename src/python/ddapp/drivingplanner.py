@@ -740,9 +740,6 @@ class DrivingPlanner(object):
 
     def onThrottleCommand(self, msg):
 
-        if not self.throttleStreaming:
-            return
-
         # slider 0 is the coarse grained slider, slider 1 is for fine grained adjustment
         slider = self.decodeThrottleMessage(msg)
         const = np.rad2deg(self.jointLimitsMin[self.akyIdx])
@@ -782,10 +779,6 @@ class DrivingPlanner(object):
 
     def onSteeringCommand(self, msg):
 
-        if not self.steeringStreaming:
-            return
-
-        
         steeringAngle = -msg.steering_angle
         lwyPositionGoal = steeringAngle + self.steeringAngleOffset
         msg = lcmdrc.joint_position_goal_t()
