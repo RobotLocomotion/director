@@ -43,7 +43,7 @@ class PolarisModel(object):
 
         # t = transformUtils.transformFromPose(np.array([ 0.14376024,  0.95920689,  0.36655712]), np.array([ 0.28745842,  0.90741428, -0.28822068,  0.10438304]))
 
-        t = transformUtils.transformFromPose(np.array([ 0.07387469,  0.97640798,  0.37395914]),
+        t = transformUtils.transformFromPose(np.array([ 0.10873244,  0.93162364,  0.40509084]),
             np.array([ 0.32997378,  0.88498408, -0.31780588,  0.08318602]))
         self.leftFootEgressStartFrame  = vis.updateFrame(t, 'left foot start', scale=0.2,visible=True, parent=self.pointcloudAffordance)
 
@@ -102,7 +102,7 @@ class PolarisModel(object):
             np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
         self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([ 0.18112314,  0.89229407,  0.25062962]),
+        t = transformUtils.transformFromPose(np.array([ 0.17712239,  0.87619935,  0.27001509]),
             np.array([ 0.33484372,  0.88280787, -0.31946488,  0.08044963]))
 
         self.leftFootUpFrame = vis.updateFrame(t,'left foot up frame', scale=0.2, visible=True, parent=self.pointcloudAffordance)
@@ -344,7 +344,6 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot'))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
-        constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseMetersPerSecond=0.02)
 
@@ -387,7 +386,6 @@ class EgressPlanner(object):
         #constraints.append(self.robotSystem.ikPlanner.createLockedBackPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraints.extend(self.createLeftFootPoseConstraint(finalLeftFootFrame, tspan=[1,1]))
-        constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
 
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
@@ -672,6 +670,7 @@ class EgressPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name="Verify SE processes", message="Please confirm that all SE processes have started"))
         addTask(rt.UserPromptTask(name="Disable recovery and bracing", message="Please disable recovery and bracing"))
         addTask(rt.UserPromptTask(name="Run Init Nav", message='Please click "Init Nav"'))
+        addTask(rt.UserPromptTask(name="Confirm pressure", message='Set high pressure for egress'))
         stepOut = addFolder('Step out of car')
         self.folder = stepOut
         addManipTask('Get weight over feet', ep.planGetWeightOverFeet, userPrompt=True, planner=ep)
@@ -682,17 +681,17 @@ class EgressPanel(TaskUserPanel):
         prep = addFolder('Step down prep')
         addFunc(self.onStart, 'start')
         addTask(rt.SetNeckPitch(name='set neck position', angle=60))
-        # addManipTask('arms up', self.onArmsUp, userPrompt=True)
-        addTask(rt.UserPromptTask(name="confirm arms up", message="Please confirm arms up, if not use 'Arms Up' Button"))
+        addTask(rt.UserPromptTask(name="set walking params", message="Please set walking params to 'Polaris Platform'"))
+        addTask(rt.UserPromptTask(name="wait for lidar", message="Please wait for next lidar sweep"))
+
         self.folder = prep
         addFunc(pp.fitRunningBoardAtFeet, 'fit running board')
+        addTask(rt.FindAffordance(name='confirm running board affordance', affordanceName='running board'))
         addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
-        addTask(rt.UserPromptTask(name="set walking params", message="Please set walking params to 'Polaris Platform'"))
+        addTask(rt.UserPromptTask(name="wait for raycast terrain", message="wait for raycast terrain"))
 
         folder = addFolder('Step Down')
-        addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
-        addFunc(pp.requestRaycastTerrain, 'raycast terrain')
         addFunc(self.onPlanStepDown, 'plan step down')
         addTask(rt.UserPromptTask(name="approve footsteps, set support contact group",
          message="Please approve/modify footsteps. Set the support contact group for the left foot step to be Back 2/3"))
@@ -709,4 +708,6 @@ class EgressPanel(TaskUserPanel):
         addFunc(self.robotSystem.footstepsDriver.onExecClicked, 'commit footstep plan')
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
         addManipTask('plan nominal', pp.planNominal, userPrompt=True)
+        addTask(rt.UserPromptTask(name="reset walking parameters", message="Please set walking parameters to drake nominal"))
+
 
