@@ -146,7 +146,8 @@ class EgressPlanner(object):
         self.robotSystem = robotSystem
         self.polaris = None
         self.quasiStaticShrinkFactor = 0.1
-        self.maxBodyTranslationSpeed = 0.1
+        self.maxFootTranslationSpeed = 0.05
+        self.maxHandTranslationSpeed = 0.1
         self.plans = []
 
     def spawnPolaris(self):
@@ -212,6 +213,9 @@ class EgressPlanner(object):
         liftFrame = transformUtils.concatenateTransforms([t, pelvisFrame])
 
         constraints = []
+        utorsoFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('utorso', startPose)
+        g = self.createUtorsoGazeConstraints([1.0, 1.0])
+        constraints.append(g[1])
         p = ik.PositionConstraint(linkName='pelvis', referenceFrame=liftFrame,
                                   lowerBound=np.array([0.0, -np.inf, 0.0]),
                                   upperBound=np.array([np.inf, np.inf, 0.0]))
@@ -257,9 +261,73 @@ class EgressPlanner(object):
         constraints.append(g)
         return constraints
 
-    def planShiftWeightOut(self):
+    def planFootEgress(self):
+        def saveOriginalTraj(name):
+            commands = ['%s = qtraj_orig;' % name]
+            self.robotSystem.ikServer.comm.sendCommands(commands)
 
-        startPose = self.getPlanningStartPose()
+        def concatenateAndRescaleTrajectories(trajectoryNames, concatenatedTrajectoryName, junctionTimesName, ikParameters):
+            commands = []
+            commands.append('joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1);' % ikParameters.maxDegreesPerSecond)
+            commands.append('xyz_v_max = repmat(%s, 3, 1);' % ikParameters.maxBaseMetersPerSecond)
+            commands.append('rpy_v_max = repmat(%s*pi/180, 3, 1);' % ikParameters.maxBaseRPYDegreesPerSecond)
+            commands.append('v_max = [xyz_v_max; rpy_v_max; joint_v_max];')
+            commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
+            commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
+            commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
+            commands.append('rescale_body_pts = reshape(%s, 3, []);' % ik.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
+            commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
+            commands.append('trajectories = {};')
+            for name in trajectoryNames:
+                commands.append('trajectories{end+1} = %s;' % name)
+            commands.append('[%s, %s] = concatAndRescaleTrajectories(trajectories, v_max, %s, %s, body_rescale_options);' % (concatenatedTrajectoryName, junctionTimesName, ikParameters.accelerationParam, ikParameters.accelerationFraction))
+            commands.append('s.publishTraj(%s, 1);' % concatenatedTrajectoryName)
+            self.robotSystem.ikServer.comm.sendCommands(commands)
+            return self.robotSystem.ikServer.comm.getFloatArray(junctionTimesName)
+
+
+        self.planShiftWeightOut()
+        shiftWeightName = 'qtraj_shift_weight'
+        saveOriginalTraj(shiftWeightName)
+        nextStartPose = robotstate.convertStateMessageToDrakePose(self.plans[-1].plan.plan[-1])
+
+        self.planFootOut(startPose=nextStartPose, finalFootHeight=0.0)
+        footOutName = 'qtraj_foot_out'
+        saveOriginalTraj(footOutName)
+        nextStartPose = robotstate.convertStateMessageToDrakePose(self.plans[-1].plan.plan[-1])
+
+        self.planCenterWeight(startPose=nextStartPose)
+        centerWeightName = 'qtraj_center_weight'
+        saveOriginalTraj(centerWeightName)
+
+        ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
+                                    rescaleBodyNames=['l_foot'], rescaleBodyPts=[0.0, 0.0, 0.0],
+                                    maxBodyTranslationSpeed=self.maxFootTranslationSpeed)
+
+        ikParameters = self.robotSystem.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
+
+        listener = self.robotSystem.ikPlanner.getManipPlanListener()
+        supportTimes = concatenateAndRescaleTrajectories([shiftWeightName, footOutName, centerWeightName],
+                                                         'qtraj_foot_egress', 'ts', ikParameters)
+        keyFramePlan = listener.waitForResponse()
+        listener.finish()
+
+        supportsList = []
+        supportsList.append(['l_foot', 'r_foot'])
+        supportsList.append(['r_foot'])
+        supportsList.append(['l_foot', 'r_foot'])
+        supportsList.append(['l_foot', 'r_foot'])
+        plan = self.publishPlanWithSupports(keyFramePlan, supportsList, supportTimes, True)
+        self.addPlan(plan)
+
+
+
+
+
+    def planShiftWeightOut(self, startPose=None):
+
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
         startPoseName = 'q_egress_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
@@ -276,6 +344,7 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot'))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
+        constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseMetersPerSecond=0.02)
 
@@ -296,15 +365,17 @@ class EgressPlanner(object):
         lFoot2World.Translate([0.05, 0.26, height])
         return lFoot2World
 
-    def planFootOut(self):
+    def planFootOut(self, startPose=None, finalFootHeight=0.05):
 
-        startPose = self.getPlanningStartPose()
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
+
         startPoseName = 'q_egress_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
 
         utorsoFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('utorso', startPose)
-        finalLeftFootFrame = self.computeLeftFootOverPlatformFrame(startPose, 0.05)
+        finalLeftFootFrame = self.computeLeftFootOverPlatformFrame(startPose, finalFootHeight)
 
         constraints = []
         constraints.extend(self.createUtorsoGazeConstraints([0.0, 1.0]))
@@ -316,12 +387,13 @@ class EgressPlanner(object):
         #constraints.append(self.robotSystem.ikPlanner.createLockedBackPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraints.extend(self.createLeftFootPoseConstraint(finalLeftFootFrame, tspan=[1,1]))
+        constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
 
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.ikParameters = IkParameters(usePointwise=True, maxBaseRPYDegreesPerSecond=10,
                                                   rescaleBodyNames=['l_foot'],
                                                   rescaleBodyPts=[0.0, 0.0, 0.0],
-                                                  maxBodyTranslationSpeed=self.maxBodyTranslationSpeed)
+                                                  maxBodyTranslationSpeed=self.maxFootTranslationSpeed)
         #constraintSet.seedPoseName = 'q_start'
         #constraintSet.nominalPoseName = 'q_start'
 
@@ -389,6 +461,7 @@ class EgressPlanner(object):
 
         if startPose is None:
             startPose = self.getPlanningStartPose()
+
         startPoseName = 'q_lean_right'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
@@ -457,7 +530,7 @@ class EgressPlanner(object):
                                     rescaleBodyNames=['l_hand', 'r_hand'],
                                     rescaleBodyPts=list(self.robotSystem.ikPlanner.getPalmPoint(side='left')) +
                                                     list(self.robotSystem.ikPlanner.getPalmPoint(side='right')),
-                                    maxBodyTranslationSpeed=3*self.maxBodyTranslationSpeed)
+                                    maxBodyTranslationSpeed=3*self.maxHandTranslationSpeed)
         plan = self.robotSystem.ikPlanner.computeMultiPostureGoal([q0, q1, q2], ikParameters=ikParameters)
         self.addPlan(plan)
         return plan
@@ -497,9 +570,7 @@ class EgressPanel(TaskUserPanel):
         self.addManualButton('Spawn Polaris', self.egressPlanner.spawnPolaris)
         self.addManualButton('Get weight over feet', self.egressPlanner.planGetWeightOverFeet)
         self.addManualButton('Stand up', self.egressPlanner.planStandUp)
-        self.addManualButton('Shift weight out', self.egressPlanner.planShiftWeightOut)
-        self.addManualButton('Move left foot out', self.egressPlanner.planFootOut)
-        self.addManualButton('Put foot down and center weight', self.egressPlanner.planFootDownAndCenterWeight)
+        self.addManualButton('Step out', self.egressPlanner.planFootEgress)
         self.addManualButton('Arms forward', self.egressPlanner.planArmsForward)
         self.addManualSpacer()
         #sit/stand buttons
@@ -596,13 +667,16 @@ class EgressPanel(TaskUserPanel):
         pp = self.platformPlanner
         ep = self.egressPlanner
 
+        stepPrep = addFolder('Prep')
+        self.folder = stepPrep
+        addTask(rt.UserPromptTask(name="Verify SE processes", message="Please confirm that all SE processes have started"))
+        addTask(rt.UserPromptTask(name="Disable recovery and bracing", message="Please disable recovery and bracing"))
+        addTask(rt.UserPromptTask(name="Run Init Nav", message='Please click "Init Nav"'))
         stepOut = addFolder('Step out of car')
         self.folder = stepOut
         addManipTask('Get weight over feet', ep.planGetWeightOverFeet, userPrompt=True, planner=ep)
         addManipTask('Stand up', ep.planStandUp, userPrompt=True, planner=ep)
-        addManipTask('Shift weight out of Polaris', ep.planShiftWeightOut, userPrompt=True, planner=ep)
-        addManipTask('Move left foot out of Polaris', ep.planFootOut, userPrompt=True, planner=ep)
-        addManipTask('Put left foot down and center weight', ep.planFootDownAndCenterWeight, userPrompt=True, planner=ep)
+        addManipTask('Step out', ep.planFootEgress, userPrompt=True, planner=ep)
         addManipTask('Move arms up for walking', ep.planArmsForward, userPrompt=True, planner=ep)
 
         prep = addFolder('Step down prep')
