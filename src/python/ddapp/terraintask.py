@@ -227,14 +227,30 @@ class TerrainTask(object):
             print 'error: no blocks defined; use Spawn Terrain button'
             return
 
+    def correctFrameYaw(self, t1, t2):
+        R1 = np.array(transformUtils.getAxesFromTransform(t1)).T
+        R2 = np.array(transformUtils.getAxesFromTransform(t2)).T
+        R = R1.dot(np.round(R1.T.dot(R2)))
+        t = transformUtils.getTransformFromAxesAndOrigin(R[:,0],R[:,1],R[:,2],t1.GetPosition())
+        return t
+
+
     def createFootstepsForTerrain(self):
         footstepData = self.terrainConfig['footstepData']
 
         # check that we have required data
         blockObjectTable = self.createBlockObjectTable()
+        if len(blockObjectTable) == 0:
+            print 'error: no blocks available for footsteps'
+            return
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         stanceAxes = transformUtils.getAxesFromTransform(stanceFrame)
+
+        # get coord frame of first block
+        firstBlockFrame = transformUtils.copyFrame(blockObjectTable[0][0].getChildFrame().transform)
+        firstBlockFrame = self.correctFrameYaw(firstBlockFrame, stanceFrame)
+        toFirstBlock = firstBlockFrame.GetLinearInverse()
 
         # get current frames of feet
         leftFootFrame = self.getFootFrameAtSole(self.sideToFootLinkName('left'))
@@ -262,6 +278,20 @@ class TerrainTask(object):
             x = np.round(np.dot(stanceAxes[0], blockAxes[0]))
             y = np.round(np.dot(stanceAxes[0], blockAxes[1]))
             theta = np.degrees(np.arctan2(y,x))
+
+            # compute and apply lateral offset if desired
+            if self.terrainConfig['forceZeroLateralFootstepOffset']:
+                curBlockFrame = self.correctFrameYaw(t, stanceFrame)
+                curBlockToFirst = transformUtils.copyFrame(curBlockFrame)
+                R = np.array(transformUtils.getAxesFromTransform(curBlockToFirst)).T
+                curBlockToFirst.PostMultiply()
+                curBlockToFirst.Concatenate(toFirstBlock)
+                p = np.array(curBlockToFirst.GetPosition())
+                yDir = np.array(transformUtils.getAxesFromTransform(curBlockToFirst)[1])
+                dist = p[1]/yDir[1]
+                pt[1] -= dist
+
+            # compute new foot frame
             t.PreMultiply()
             t.RotateZ(theta);
             t.Translate(pt)
@@ -515,7 +545,8 @@ class TerrainTask(object):
 
         # compute and apply transform using all matches
         correction = vtk.vtkTransform()
-        if len(matches) > 2:
+        if False:
+        #if len(matches) > 2:
             pts1 = np.zeros((len(matches),3))
             pts2 = np.zeros((len(matches),3))
             norms1 = np.zeros((len(matches),3))
