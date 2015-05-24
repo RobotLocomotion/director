@@ -952,7 +952,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.addProperty('Speed', 0.75, attributes=om.PropertyAttributes(singleStep=0.1, decimals=2))
         # self.params.addProperty('Throttle Idle Angle Slack', 10, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Coarse Grained Throttle Travel', 100, attributes=om.PropertyAttributes(singleStep=10))
-        self.params.addProperty('Fine Grained Throttle Travel', 10, attributes=om.PropertyAttributes(singleStep=1))
+        self.params.addProperty('Fine Grained Throttle Travel', 30, attributes=om.PropertyAttributes(singleStep=1))
         self.params.addProperty('Throttle Streaming', False)
         self.params.addProperty('Steering Streaming', False)
         self.params.addProperty('Bar Grasp/Retract Depth', 0.1, attributes=om.PropertyAttributes(singleStep=0.01, decimals=2))
