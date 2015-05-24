@@ -545,24 +545,25 @@ class TerrainTask(object):
 
         # compute and apply transform using all matches
         correction = vtk.vtkTransform()
-        if False:
-        #if len(matches) > 2:
+        #if False:
+        if len(matches) > 2:
             pts1 = np.zeros((len(matches),3))
             pts2 = np.zeros((len(matches),3))
-            norms1 = np.zeros((len(matches),3))
-            norms2 = np.zeros((len(matches),3))
+            norms1 = np.zeros((0,3))
+            norms2 = np.zeros((0,3))
             for i in range(len(matches)):
                 match = matches[i]
                 t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
                 t2 = transformUtils.copyFrame(match[0].getChildFrame().transform)
+                t2 = self.correctFrameYaw(t2,t1)
                 t1.PreMultiply()
                 t1.Translate(0, 0, -match[1].getProperty('Dimensions')[2])
                 t2.PreMultiply()
                 t2.Translate(0, 0, -match[0].getProperty('Dimensions')[2])
                 pts1[i,:] = np.array(t1.GetPosition())
                 pts2[i,:] = np.array(t2.GetPosition())
-                norms1[i,:] = np.array(transformUtils.getAxesFromTransform(t1)[2])
-                norms2[i,:] = np.array(transformUtils.getAxesFromTransform(t2)[2])
+                norms1 = np.vstack((norms1,np.array(transformUtils.getAxesFromTransform(t1))))
+                norms2 = np.vstack((norms2,np.array(transformUtils.getAxesFromTransform(t2))))
             mean1 = np.mean(pts1,axis=0)
             mean2 = np.mean(pts2,axis=0)
             rays1 = pts1-mean1
@@ -575,7 +576,7 @@ class TerrainTask(object):
                 rot = u.dot(np.diag(np.array([1,1,-1]))).dot(v)
             correction.PostMultiply()
             correction.Translate(-mean1)
-            rotTransform = transformUtils.getTransformFromAxes(rot[0,:],rot[1,:],rot[2,:])
+            rotTransform = transformUtils.getTransformFromAxes(rot[:,0],rot[:,1],rot[:,2])
             correction.Concatenate(rotTransform)
             correction.Translate(mean2)
         for b in idealBlocks:
