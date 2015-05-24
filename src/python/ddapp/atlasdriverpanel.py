@@ -53,7 +53,7 @@ class AtlasDriverPanel(object):
         self.ui.recoveryOffButton.connect('clicked()', self.driver.sendRecoveryDisable)
         self.ui.bracingOnButton.connect('clicked()', self.driver.sendBracingEnable)
         self.ui.bracingOffButton.connect('clicked()', self.driver.sendBracingDisable)
-        for psi in [1500, 2000, 2400, 2650]:
+        for psi in [1000, 1500, 2000, 2400, 2650]:
             self.ui.__dict__['setPressure' + str(psi) + 'Button'].connect('clicked()', partial(self.driver.sendDesiredPumpPsi, psi))
         self.ui.sendCustomPressureButton.connect('clicked()', self.sendCustomPressure)
         self.setupElectricArmCheckBoxes()
