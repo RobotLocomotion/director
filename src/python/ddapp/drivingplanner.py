@@ -892,7 +892,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
-        self.showTrajectory = False
         self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG_TO_CAMERA_LEFT', lcmbotcore.rigid_transform_t, self.onAprilTag)
         self.imageView = cameraview.CameraImageView(cameraview.imageManager, 'CAMERACHEST_RIGHT', 'right image view')
         self.imageViewLeft = cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'left image view')
@@ -907,19 +906,16 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, self.imageView)
         self.affordanceUpdaterLeft = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, self.imageViewLeft)
-
         self.affordanceUpdater.prependImageName = True
         self.affordanceUpdaterLeft.prependImageName = True
-
-        self.affordanceUpdater.timer.start()
-        self.affordanceUpdaterLeft.timer.start()
+        self.affordanceUpdater.projectAffordances = False
+        self.affordanceUpdaterLeft.projectAffordances = False
 
         self.imageViewLayout.addWidget(self.imageView.view)
         self.imageViewLayout.addWidget(self.imageViewLeft.view)
 
-        self.timer = TimerCallback(targetFps=30)
+        self.timer = TimerCallback(targetFps=10)
         self.timer.callback = self.updateAndDrawTrajectory
-        self.timer.start()
 
 
     def onAprilTag(self, msg):
@@ -1010,23 +1006,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.drivingPlanner.trajectoryAngle = self.params.getProperty('Trajectory Angle Offset')
         self.drivingPlanner.kneeInPedal = self.params.getProperty('Pedal Foot Location')
         self.taskToShow = self.params.getProperty('Show Driving/Regrasp Tasks')
-
-        if hasattr(self, 'affordanceUpdater'):
-            leftTraj = om.findObjectByName('LeftDrivingTrajectory')
-            rightTraj = om.findObjectByName('RightDrivingTrajectory')
-            if leftTraj:
-                leftTraj.setProperty('Visible', self.showTrajectory)
-
-            if rightTraj:
-                rightTraj.setProperty('Visible', self.showTrajectory)
-
-            if self.showTrajectory:
-                self.affordanceUpdater.extraObjects = [leftTraj, rightTraj]
-                self.affordanceUpdaterLeft.extraObjects = [leftTraj, rightTraj]
-            else:
-                self.affordanceUpdater.extraObjects = []
-                self.affordanceUpdaterLeft.extraObjects = []
-
         self.drivingPlanner.applyProperties()
 
 
@@ -1074,17 +1053,33 @@ class DrivingPlannerPanel(TaskUserPanel):
         if not taskToShowOld == self.taskToShow:
             self.addTasks()
 
+
         if propertyName == 'Throttle Streaming':
             if self.params.getProperty(propertyName):
                 self.drivingPlanner.throttleCommandTimer.start()
             else:
                 self.drivingPlanner.throttleCommandTimer.stop()
 
-        if propertyName == 'Steering Streaming':
+        elif propertyName == 'Steering Streaming':
             if self.params.getProperty(propertyName):
                 self.drivingPlanner.steeringCommandTimer.start()
             else:
                 self.drivingPlanner.steeringCommandTimer.stop()
+
+        elif propertyName == 'Show Trajectory':
+
+            if self.params.getProperty(propertyName):
+                self.timer.start()
+                self.affordanceUpdater.timer.start()
+                self.affordanceUpdaterLeft.timer.start()
+            else:
+                self.timer.stop()
+                self.affordanceUpdater.cleanUp()
+                self.affordanceUpdaterLeft.cleanUp()
+                self.affordanceUpdater.extraObjects = []
+                self.affordanceUpdaterLeft.extraObjects = []
+                om.removeFromObjectModel(om.findObjectByName('driving trajectory'))
+
 
     def onPlanBarRetract(self):
         self.drivingPlanner.planBarRetract(depth=self.barGraspDepth, useLineConstraint=True)
@@ -1334,13 +1329,8 @@ class DrivingPlannerPanel(TaskUserPanel):
 
 
     def updateAndDrawTrajectory(self):
-        if not self.showTrajectory or om.findObjectByName('Steering Wheel') is None:
-            return
-
-        steeringAngleDegrees = np.rad2deg(self.drivingPlanner.getSteeringWheelAngle())
-        leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)
-        self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(leftTraj), 'LeftDrivingTrajectory')
-        self.drawDrivingTrajectory(self.drivingPlanner.transformDrivingTrajectory(rightTraj), 'RightDrivingTrajectory')
+        if not self.params.getProperty('Show Trajectory') or om.findObjectByName('Steering Wheel') is None:
+            return None
 
         steeringAngleDegrees = np.rad2deg(self.drivingPlanner.getSteeringWheelAngle())
         leftTraj, rightTraj = self.drivingPlanner.computeDrivingTrajectories(steeringAngleDegrees, self.drivingPlanner.maxTurningRadius, self.drivingPlanner.trajSegments + 1)
@@ -1360,7 +1350,4 @@ class DrivingPlannerPanel(TaskUserPanel):
         for updater in [self.affordanceUpdater, self.affordanceUpdaterLeft]:
             updater.extraObjects = [obj]
 
-        vis.updatePolyData(d.getPolyData(), name)
-        obj = om.findObjectByName(name)
-        obj.setProperty('Color By', 1)
-
+        return obj

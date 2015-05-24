@@ -71,13 +71,14 @@ class AffordanceInCameraUpdater(object):
 
     def __init__(self, affordanceManager, imageView):
         self.affordanceManager = affordanceManager
+        self.prependImageName = False
+        self.projectFootsteps = False
+        self.projectAffordances = True
         self.extraObjects = []
-
         self.imageView = imageView
         self.imageQueue = imageView.imageManager.queue
         self.timer = TimerCallback(targetFps=10)
         self.timer.callback = self.update
-        self.prependImageName = False
 
     def getOverlayRenderer(self, imageView):
 
@@ -102,7 +103,7 @@ class AffordanceInCameraUpdater(object):
             overlayRenderer.AddActor(obj.actor)
             renderers.append(overlayRenderer)
 
-    def getParentName(self):
+    def getFolderName(self):
         if self.prependImageName:
             return self.imageView.imageName + ' camera overlay'
         else:
@@ -111,7 +112,7 @@ class AffordanceInCameraUpdater(object):
 
     def setupObjectInCamera(self, obj):
         imageView = self.imageView
-        obj = vis.updatePolyData(vtk.vtkPolyData(), self.getTransformedName(obj), view=imageView.view, color=obj.getProperty('Color'), parent=self.getParentName(), visible=obj.getProperty('Visible'))
+        obj = vis.updatePolyData(vtk.vtkPolyData(), self.getTransformedName(obj), view=imageView.view, color=obj.getProperty('Color'), parent=self.getFolderName(), visible=obj.getProperty('Visible'))
         self.addActorToImageOverlay(obj, imageView)
         return obj
 
@@ -130,14 +131,22 @@ class AffordanceInCameraUpdater(object):
             return []
 
     def getObjectsToUpdate(self):
-        objs = self.affordanceManager.getAffordances()
-        objs += self.getFootsteps()
+        objs = []
+
+        if self.projectAffordances:
+            objs += self.affordanceManager.getAffordances()
+        if self.projectFootsteps:
+            objs += self.getFootsteps()
         objs += self.extraObjects
         return objs
 
     def getObjectInCamera(self, obj):
         overlayObj = om.findObjectByName(self.getTransformedName(obj))
         return overlayObj or self.setupObjectInCamera(obj)
+
+    def cleanUp(self):
+        self.timer.stop()
+        om.removeFromObjectModel(om.findObjectByName(self.getFolderName()))
 
     def update(self):
         imageView = self.imageView
@@ -155,7 +164,7 @@ class AffordanceInCameraUpdater(object):
             self.updateObjectInCamera(obj, cameraObj)
             updated.add(cameraObj)
 
-        folder = om.findObjectByName(self.getParentName())
+        folder = om.findObjectByName(self.getFolderName())
         if folder:
             for child in folder.children():
                 if child not in updated:
