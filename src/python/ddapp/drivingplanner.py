@@ -116,8 +116,7 @@ class DrivingPlanner(object):
         commands.append("xyzquat = %s;" % ik.ConstraintBase.toColumnVectorString(xyzquat))
         commands.append("dp = dp.updateWheelTransform(xyzquat, q0);")
 
-        self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
-        self.ikServer.taskQueue.start()
+        self.ikServer.comm.sendCommands(commands)
 
     def planSafe(self, speed=1):
         commands = []
@@ -786,7 +785,7 @@ class DrivingPlanner(object):
         lcmUtils.publish(self.throttlePublishChannel, self.throttleCommandMsg)
 
     def publishSteeringCommand(self):
-        if not self.throttleStreaming:
+        if not self.steeringStreaming:
             return
 
         if self.steeringCommandMsg is None:
