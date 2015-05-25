@@ -674,6 +674,8 @@ class TableDemo(object):
 
     def planSequenceTablePick(self, side):
         self.planPreGrasp(side)
+        if self.ikPlanner.fixedBaseArm:
+            self.planLowerArm(side)
         self.planReachToTableObject(side)
         self.planTouchTableObject(side)
         self.graspTableObject(side)
