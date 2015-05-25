@@ -376,9 +376,9 @@ class TableDemo(object):
 
             reachingSideJoints = []
             if (side == 'left'):
-              reachingSideJoints += self.ikPlanner.leftArmJoints
+                reachingSideJoints += self.ikPlanner.leftArmJoints
             else:
-              reachingSideJoints += self.ikPlanner.rightArmJoints
+                reachingSideJoints += self.ikPlanner.rightArmJoints
 
 
             armPostureConstraint = self.ikPlanner.createPostureConstraint(armPoseName, loweringSideJoints)
@@ -438,9 +438,9 @@ class TableDemo(object):
 
             reachingSideJoints = []
             if (side == 'left'):
-              reachingSideJoints += self.ikPlanner.leftArmJoints
+                reachingSideJoints += self.ikPlanner.leftArmJoints
             else:
-              reachingSideJoints += self.ikPlanner.rightArmJoints
+                reachingSideJoints += self.ikPlanner.rightArmJoints
 
 
             endPoseName = 'raised_arm_end_pose'
