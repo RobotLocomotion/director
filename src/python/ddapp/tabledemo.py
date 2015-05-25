@@ -724,20 +724,24 @@ class TableDemo(object):
         #self.addTasksToQueueInit(taskQueue)
 
         # Go home
-        self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+        if not self.ikPlanner.fixedBaseArm:
+            self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
 
         # Pick Objects from table:
-        self.addTasksToQueueWalking(taskQueue, self.tableStanceFrame.transform, 'Walk to Table')
+        if not self.ikPlanner.fixedBaseArm:
+            self.addTasksToQueueWalking(taskQueue, self.tableStanceFrame.transform, 'Walk to Table')
         taskQueue.addTask(self.printAsync('Pick with Left Arm'))
         self.addTasksToQueueTablePick(taskQueue, 'left')
         #taskQueue.addTask(self.printAsync('Pick with Right Arm'))
         #self.addTasksToQueueTablePick(taskQueue, 'right')
 
         # Go home
-        self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+        if not self.ikPlanner.fixedBaseArm:
+            self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
 
         # Go to Bin
-        self.addTasksToQueueWalking(taskQueue, self.binStanceFrame.transform, 'Walk to Bin')
+        if not self.ikPlanner.fixedBaseArm:
+            self.addTasksToQueueWalking(taskQueue, self.binStanceFrame.transform, 'Walk to Bin')
 
         # Drop into the Bin:
         taskQueue.addTask(self.printAsync('Drop from Left Arm'))
@@ -746,7 +750,8 @@ class TableDemo(object):
         #self.addTasksToQueueDropIntoBin(taskQueue, 'right')
 
         # Go home
-        self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+        if not self.ikPlanner.fixedBaseArm:
+            self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
         taskQueue.addTask(self.printAsync('done!'))
 
         return taskQueue
@@ -762,8 +767,9 @@ class TableDemo(object):
         taskQueue.addTask(self.userFitBin)
         taskQueue.addTask(self.waitForBinFit)
 
-        taskQueue.addTask(self.computeTableStanceFrame)
-        taskQueue.addTask(self.computeBinStanceFrame)
+        if not self.ikPlanner.fixedBaseArm:
+            taskQueue.addTask(self.computeTableStanceFrame)
+            taskQueue.addTask(self.computeBinStanceFrame)
 
 
     def addTasksToQueueTablePick(self, taskQueue, side):
