@@ -44,8 +44,8 @@ class TableDemo(object):
         self.useFootstepPlanner = True
         self.visOnly = False
         self.planFromCurrentRobotState = True
-        useDevelopment = False
-        if (useDevelopment):
+        self.useDevelopment = False
+        if (self.useDevelopment):
             self.visOnly = True
             self.planFromCurrentRobotState = False
 
@@ -715,8 +715,9 @@ class TableDemo(object):
 
     def autonomousExecute(self):
 
-        self.planFromCurrentRobotState = True
-        self.visOnly = False
+        '''
+        Use global variable self.useDevelopment to switch between simulation and real robot execution
+        '''
         #self.ikPlanner.ikServer.usePointwise = True
         #self.ikPlanner.ikServer.maxDegreesPerSecond = 20
 
