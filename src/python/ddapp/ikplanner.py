@@ -1451,7 +1451,7 @@ class RobotPoseGUIWrapper(object):
             assert pose['nominal_handedness'] in sides
 
             if pose['nominal_handedness'] != side:
-                if 'leftFootLink' in drcargs.getDirectorConfig():
+                if not self.fixedBaseArm:
                     joints = rpg.applyMirror(joints)
 
         return joints
