@@ -85,6 +85,7 @@ void ddBotImageQueue::init(ddLCMThread* lcmThread, const QString& botConfigFile)
   this->addCameraStream("CAMERA", "CAMERA_LEFT", bot_core::images_t::LEFT);
   this->addCameraStream("CAMERA_FUSED", "CAMERA_TSDF", bot_core::images_t::LEFT);
   //this->addCameraStream("CAMERA", "CAMERA_RIGHT", bot_core::images_t::RIGHT);
+  this->addCameraStream("KINECT_RGB");
 }
 
 //-----------------------------------------------------------------------------
