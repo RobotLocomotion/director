@@ -578,6 +578,37 @@ class TableDemo(object):
 
 
     ######### Nominal Plans and Execution  #################################################################
+    def prepKukaTestDemoSequence(self, inputFile='~/kinect_live_robot.vtp'):
+        filename = os.path.expanduser(inputFile)
+        scene = ioUtils.readPolyData(filename)
+        vis.showPolyData(scene,"scene")
+
+        self.userFitTable()
+        self.onSegmentTable( np.array([ 0.90417739,  0.16361307,  0.14244215]), np.array([ 0.96305416, -0.17700992,  0.14819359]) )
+        self.userFitBin() # TODO: actually fit bin, put bin in picture.
+        self.onSegmentBin( np.array([-0.02, 2.43, 0.61 ]), np.array([-0.40,  2.79,  0.61964661]) ) # TODO: fix bin location
+
+        self.segmentTableObjects()
+
+        # Plan sequence
+        self.plans = []
+        self.planFromCurrentRobotState = False
+        #self.planSequenceTablePick('left')
+        side = 'left'
+
+        #self.planPreGrasp(side)
+        #self.openHand(side)
+        #if self.ikPlanner.fixedBaseArm:
+        #    self.planLowerArm(side)
+        #self.planReachToTableObject(side)
+        #self.planTouchTableObject(side)
+        #self.graspTableObject(side)
+        #self.closeHand(side)
+        #self.planLiftTableObject(side)
+        #self.planPreGrasp('left')
+        #self.openHand('left')
+        #self.dropTableObject('left')
+
     def prepTestDemoSequence(self):
         '''
         Running this function should launch a full planning sequence
