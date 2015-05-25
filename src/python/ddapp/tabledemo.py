@@ -48,6 +48,11 @@ class TableDemo(object):
         if (self.useDevelopment):
             self.visOnly = True
             self.planFromCurrentRobotState = False
+            extraModels = [self.robotStateModel]
+            self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.playbackRobotModel, self.ikPlanner, extraModels)
+        else:
+            extraModels = [self.playbackRobotModel]
+            self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotStateModel, self.ikPlanner, extraModels)
 
         self.optionalUserPromptEnabled = True
         self.requiredUserPromptEnabled = True
@@ -69,8 +74,28 @@ class TableDemo(object):
 
         self.reachDist = 0.125
 
-        extraModels = [self.robotStateModel]
-        self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotStateModel, self.ikPlanner, extraModels)
+    # Switch between simulation/visualisation and real robot operation
+    def setMode(self, mode='visualization'):
+        '''
+        Switches between visualization and real robot operation.
+        mode='visualization'
+        mode='robot'
+        '''
+
+        if (mode == 'visualization'):
+            print "Setting mode to VISUALIZATION"
+            self.useDevelopment = True
+
+            self.visOnly = True
+            self.planFromCurrentRobotState = False
+            extraModels = [self.robotStateModel]
+            self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.playbackRobotModel, self.ikPlanner, extraModels)
+        else:
+            print "Setting mode to ROBOT OPERATION"
+            self.useDevelopment = False
+
+            extraModels = [self.playbackRobotModel]
+            self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotStateModel, self.ikPlanner, extraModels)
 
 
     def addPlan(self, plan):
@@ -592,22 +617,6 @@ class TableDemo(object):
 
         # Plan sequence
         self.plans = []
-        self.planFromCurrentRobotState = False
-        #self.planSequenceTablePick('left')
-        side = 'left'
-
-        #self.planPreGrasp(side)
-        #self.openHand(side)
-        #if self.ikPlanner.fixedBaseArm:
-        #    self.planLowerArm(side)
-        #self.planReachToTableObject(side)
-        #self.planTouchTableObject(side)
-        #self.graspTableObject(side)
-        #self.closeHand(side)
-        #self.planLiftTableObject(side)
-        #self.planPreGrasp('left')
-        #self.openHand('left')
-        #self.dropTableObject('left')
 
     def prepTestDemoSequence(self):
         '''
@@ -708,13 +717,13 @@ class TableDemo(object):
         if self.ikPlanner.fixedBaseArm:
             self.planLowerArm(side)
         self.planReachToTableObject(side)
-        self.planTouchTableObject(side)
+        if not self.ikPlanner.fixedBaseArm:
+            self.planTouchTableObject(side) # TODO: distance is handled by reach, hence ignore
         self.graspTableObject(side)
         self.planLiftTableObject(side)
 
 
     def autonomousExecute(self):
-
         '''
         Use global variable self.useDevelopment to switch between simulation and real robot execution
         '''
@@ -782,9 +791,10 @@ class TableDemo(object):
         taskQueue.addTask(functools.partial(self.planReachToTableObject, side))
         taskQueue.addTask(self.animateLastPlan)
 
-        taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
-        taskQueue.addTask(functools.partial(self.planTouchTableObject, side))
-        taskQueue.addTask(self.animateLastPlan)
+        if not self.ikPlanner.fixedBaseArm: # TODO: distance is handled by reach, hence ignore
+            taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
+            taskQueue.addTask(functools.partial(self.planTouchTableObject, side))
+            taskQueue.addTask(self.animateLastPlan)
 
         taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
         taskQueue.addTask(functools.partial(self.closeHand, side))
