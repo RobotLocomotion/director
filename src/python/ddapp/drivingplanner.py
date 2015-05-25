@@ -377,7 +377,7 @@ class DrivingPlanner(object):
 
         lFoot2RFoot = om.findObjectByName('left foot to right foot')
         assert lFoot2RFoot
- 
+
         rFoot2World = self.robotSystem.ikPlanner.getLinkFrameAtPose('r_foot', startPose)
         lFootGoalFrame = transformUtils.concatenateTransforms([transformUtils.copyFrame(lFoot2RFoot.transform), rFoot2World])
 
@@ -1241,7 +1241,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         addFunc(self.onUpdateWheelLocation, 'Update wheel location')
 
         ungraspWheel = addFolder('Ungrasp Steering Wheel')
-        addTask(rt.UserPromptTask(name="Confirm pressure", message='Set pressure for prep-for-egress'))
+        addTask(rt.UserPromptTask(name="Confirm pressure", message='Confirm that pressure is set for prep-for-egress (2200 psi)'))
         addTask(rt.OpenHand(name='open left hand', side='Left'))
         addTask(rt.UserPromptTask(name="confirm hand is open", message="Confirm the left hand has opened"))
         addFunc(self.setParamsWheelRetract, 'set params')
