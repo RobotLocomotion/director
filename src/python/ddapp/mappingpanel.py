@@ -91,7 +91,9 @@ class MappingPanel(object):
 
     def onShowMapButton(self):
         vis.updateFrame(self.cameraToLocalInit, 'initial cam' )
-        pd = io.readPolyData('/home/mfallon/kintinuous-project/kintinuous/build/tools/Kintinuous.pcd')
+        filename = os.path.expanduser('~/Kinect_Logs/Kintinuous.pcd')
+        print filename
+        pd = io.readPolyData(filename)
         pd = filterUtils.transformPolyData(pd, self.cameraToLocalInit )
 
         #t = transformUtils.frameFromPositionAndRPY([0,0,0],[-90,0,-90])
