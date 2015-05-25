@@ -354,29 +354,37 @@ class TableDemo(object):
         obj, frame = self.getNextTableObject(side)
         startPose = self.getPlanningStartPose()
 
-        self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, constraints=None, dist=self.reachDist, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
-
-        loweringSide = 'left' if side == 'right' else 'right'
-        armPose = self.getLoweredArmPose(startPose, loweringSide)
-        armPoseName = 'lowered_arm_pose'
-        self.ikPlanner.ikServer.sendPoseToServer(armPose, armPoseName)
-
-        loweringSideJoints = []
-        if (loweringSide == 'left'):
-          loweringSideJoints += self.ikPlanner.leftArmJoints
+        if self.ikPlanner.fixedBaseArm: # includes reachDist hack instead of in ikPlanner (TODO!)
+            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist,0,0]), [0,0,-90] )
+            f.PreMultiply()
+            f.RotateY(180)
+            f.Update()
+            item = vis.FrameItem('reach_item', f, self.view)
+            self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, f, lockBase=False, lockBack=True, dist=self.reachDist)
         else:
-          loweringSideJoints += self.ikPlanner.rightArmJoints
+            self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, constraints=None, dist=self.reachDist, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
+            loweringSide = 'left' if side == 'right' else 'right'
+            armPose = self.getLoweredArmPose(startPose, loweringSide)
+            armPoseName = 'lowered_arm_pose'
+            self.ikPlanner.ikServer.sendPoseToServer(armPose, armPoseName)
 
-        reachingSideJoints = []
-        if (side == 'left'):
-          reachingSideJoints += self.ikPlanner.leftArmJoints
-        else:
-          reachingSideJoints += self.ikPlanner.rightArmJoints
+            loweringSideJoints = []
+            if (loweringSide == 'left'):
+              loweringSideJoints += self.ikPlanner.leftArmJoints
+            else:
+              loweringSideJoints += self.ikPlanner.rightArmJoints
+
+            reachingSideJoints = []
+            if (side == 'left'):
+              reachingSideJoints += self.ikPlanner.leftArmJoints
+            else:
+              reachingSideJoints += self.ikPlanner.rightArmJoints
 
 
-        armPostureConstraint = self.ikPlanner.createPostureConstraint(armPoseName, loweringSideJoints)
-        armPostureConstraint.tspan = np.array([1.0, 1.0])
-        self.constraintSet.constraints.append(armPostureConstraint)
+            armPostureConstraint = self.ikPlanner.createPostureConstraint(armPoseName, loweringSideJoints)
+            armPostureConstraint.tspan = np.array([1.0, 1.0])
+            self.constraintSet.constraints.append(armPostureConstraint)
+        
         self.constraintSet.runIk()
 
         #armPose = self.getRaisedArmPose(startPose, side)
