@@ -7,14 +7,31 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>384</height>
+    <height>102</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Mapping</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="5" column="1">
+   <item row="6" column="0">
+    <widget class="QPushButton" name="hideMapButton">
+     <property name="text">
+      <string>Hide Map</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0" colspan="2">
+    <widget class="Line" name="line_4">
+     <property name="midLineWidth">
+      <number>10</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
     <widget class="QPushButton" name="showMapButton">
      <property name="text">
       <string>Show Map</string>
@@ -31,7 +48,7 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="0" colspan="2">
+   <item row="9" column="0" colspan="2">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -44,27 +61,17 @@
      </property>
     </spacer>
    </item>
+   <item row="5" column="1">
+    <widget class="QPushButton" name="stopMappingButton">
+     <property name="text">
+      <string>Stop Mapping</string>
+     </property>
+    </widget>
+   </item>
    <item row="5" column="0">
-    <widget class="QPushButton" name="hideMapButton">
+    <widget class="QPushButton" name="startMappingButton">
      <property name="text">
-      <string>Hide Map</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0" colspan="2">
-    <widget class="Line" name="line_4">
-     <property name="midLineWidth">
-      <number>10</number>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0" colspan="2">
-    <widget class="QPushButton" name="logButton">
-     <property name="text">
-      <string>PushButton</string>
+      <string>Start Mapping</string>
      </property>
     </widget>
    </item>

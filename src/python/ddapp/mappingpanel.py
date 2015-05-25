@@ -20,17 +20,16 @@ import ddapp.visualization as vis
 import ddapp.objectmodel as om
 from ddapp import robotstate
 from ddapp import botpy
+from ddapp import drcargs
 
 
 from ddapp import ioUtils as io
 from ddapp import vtkNumpy as vnp
 from ddapp import segmentation
 
+import ddapp.filterUtils as filterUtils
 
-# lcmtypes:
-import drc as lcmdrc
-from mav.indexed_measurement_t import indexed_measurement_t
-
+from kinect.map_command_t import map_command_t
 
 
 def addWidgetsToDict(widgets, d):
@@ -59,158 +58,47 @@ class MappingPanel(object):
         self.widget = loader.load(uifile)
         self.ui = WidgetDict(self.widget.children())
 
+        self.ui.startMappingButton.connect("clicked()", self.onStartMappingButton)
+        self.ui.stopMappingButton.connect("clicked()", self.onStopMappingButton)
+
         self.ui.showMapButton.connect("clicked()", self.onShowMapButton)
         self.ui.hideMapButton.connect("clicked()", self.onHideMapButton)
 
-        # Data Variables:
-        self.octomap_cloud = None
-
-        self.manager = lcmUtils.LCMLoggerManager()
-        #self.statusBar = statusBar
-
-        self.lastActiveLogFile = None
-        self.numProcesses = 0
-        self.numLogFiles = 0
-        self.userTag = ''
-
-        #self.button = QtGui.QPushButton('')
-        self.ui.logButton.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        #self.button.connect('customContextMenuRequested(const QPoint&)', self.showContextMenu)
-        self.ui.logButton.connect('customContextMenuRequested(const QPoint&)', self.showContextMenu)
-        self.ui.logButton.connect("clicked()", self.onClick)
-        #self.button.connect('clicked()', self.onClick)
+        self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
+        self.queue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
 
 
-        self.timer = TimerCallback(targetFps=0.25)
-        self.timer.callback = self.updateState
-        self.timer.start()
+    def onStartMappingButton(self):
+        msg = map_command_t()
+        msg.timestamp = getUtime()
+        msg.command = 0
+        lcmUtils.publish('KINECT_MAP_COMMAND', msg)
+
+        utime = self.queue.getCurrentImageTime('KINECT_RGB')
+        self.cameraToLocalInit = vtk.vtkTransform()
+        self.queue.getTransform('KINECT_RGB', 'local', utime, self.cameraToLocalInit)
+        vis.updateFrame(self.cameraToLocalInit, 'initial cam' )
+        print "starting mapping", utime
+        print self.cameraToLocalInit.GetPosition()
+        print self.cameraToLocalInit.GetOrientation()
+
+    def onStopMappingButton(self):
+        msg = map_command_t()
+        msg.timestamp = getUtime()
+        msg.command = 1
+        lcmUtils.publish('KINECT_MAP_COMMAND', msg)
 
 
-    def updateState(self):
-
-        t = SimpleTimer()
-        self.manager.updateExistingLoggerProcesses()
-
-        activeLogFiles = self.manager.getActiveLogFilenames()
-        self.numProcesses = len(self.manager.getActiveLoggerPids())
-        self.numLogFiles = len(activeLogFiles)
-
-        if self.numLogFiles == 1:
-            self.lastActiveLogFile = activeLogFiles[0]
-
-        if self.numProcesses == 0:
-            self.ui.logButton.text = 'xxstart logger'
-        elif self.numProcesses == 1:
-            self.ui.logButton.text = 'xxstop logger'
-        elif self.numProcesses > 1:
-            self.ui.logButton.text = 'xxstop all loggers'
-
-        statusDescription = 'active' if self.numProcesses else 'last'
-        logFileDescription = self.lastActiveLogFile or '<unknown>'
-        self.ui.logButton.setToolTip('%s log file: %s' % (statusDescription, logFileDescription))
-
-
-    def onClick(self):
-        if self.numProcesses == 0:
-            self.manager.startNewLogger(tag=self.userTag)
-            self.updateState()
-            self.showStatusMessage('start logging: ' + self.lastActiveLogFile)
-        else:
-            self.manager.killAllLoggingProcesses()
-            self.showStatusMessage('stopped logging')
-            self.updateState()
-
-    def showStatusMessage(self, msg, timeout=2000):
-        x = 0
-        #if self.statusBar:
-        #    self.statusBar.showMessage(msg, timeout)
-
-    def showContextMenu(self, clickPosition):
-
-        globalPos = self.ui.logButton.mapToGlobal(clickPosition)
-
-        menu = QtGui.QMenu()
-
-        action = menu.addAction('Stop logger')
-        action.enabled = (self.numProcesses > 0)
-
-        action = menu.addAction('Stop and delete log file')
-        action.enabled = (self.numProcesses > 0 and self.lastActiveLogFile)
-
-        action = menu.addAction('Set logger tag')
-        action.enabled = (self.numProcesses == 0)
-
-        action = menu.addAction('Copy log filename')
-        action.enabled = (self.lastActiveLogFile is not None)
-
-        action = menu.addAction('Review log')
-        action.enabled = (self.lastActiveLogFile is not None)
-
-
-        selectedAction = menu.exec_(globalPos)
-        if selectedAction is None:
-            return
-
-        if selectedAction.text == 'Copy log filename':
-            clipboard = QtGui.QApplication.instance().clipboard()
-            clipboard.setText(self.lastActiveLogFile)
-            self.showStatusMessage('copy to clipboard: ' + self.lastActiveLogFile)
-
-        elif selectedAction.text == 'Stop logger':
-            self.manager.killAllLoggingProcesses()
-            self.showStatusMessage('stopped logger')
-            self.updateState()
-
-        elif selectedAction.text == 'Stop and delete log file':
-            logFileToRemove = self.lastActiveLogFile
-            self.manager.killAllLoggingProcesses()
-            self.updateState()
-            os.remove(logFileToRemove)
-            self.showStatusMessage('deleted: ' + logFileToRemove)
-
-        elif selectedAction.text == 'Set logger tag':
-            inputDialog = QtGui.QInputDialog()
-            inputDialog.setInputMode(inputDialog.TextInput)
-            inputDialog.setLabelText('Log file tag:')
-            inputDialog.setWindowTitle('Enter tag')
-            inputDialog.setTextValue(self.userTag)
-            result = inputDialog.exec_()
-
-            if result:
-                tag = inputDialog.textValue()
-                self.userTag = tag
-                self.showStatusMessage('Set lcm logger tag: ' + self.userTag)
-
-        elif selectedAction.text == 'Review log':
-            newEnv = dict(os.environ)
-            newEnv['LCM_DEFAULT_URL'] = newEnv['LCM_REVIEW_DEFAULT_URL']
-            devnull = open(os.devnull, 'w')
-            print 'process ', self.lastActiveLogFile
-            subprocess.Popen(['Kintinuous','-a', '-m', '-f', '-s', '6', '-l' ,self.lastActiveLogFile ], stdout=devnull, stderr=devnull, env=newEnv)
-
-
-    ###############################
     def onShowMapButton(self):
-        # reloads the map each time - in case its changed on disk:
-        #if (self.octomap_cloud is None):
-        filename = self.lastActiveLogFile + ".pcd"
-        #filename = ddapp.getDRCBaseDir() + "/software/build/data/octomap.pcd"
-        self.octomap_cloud = io.readPolyData(filename) # c++ object called vtkPolyData
+        vis.updateFrame(self.cameraToLocalInit, 'initial cam' )
+        pd = io.readPolyData('/home/mfallon/kintinuous-project/kintinuous/build/tools/Kintinuous.pcd')
+        pd = filterUtils.transformPolyData(pd, self.cameraToLocalInit )
 
-        assert (self.octomap_cloud.GetNumberOfPoints() !=0 )
+        #t = transformUtils.frameFromPositionAndRPY([0,0,0],[-90,0,-90])
+        #pd = filterUtils.transformPolyData(pd , t)
 
-        # clip point cloud to height - doesnt work very well yet. need to know robot's height
-        #self.octomap_cloud = segmentation.cropToLineSegment(self.octomap_cloud, np.array([0,0,-10]), np.array([0,0,3]) )
-
-        # access to z values
-        #points= vnp.getNumpyFromVtk(self.octomap_cloud, 'Points')
-        #zvalues = points[:,2]
-
-        # remove previous map:
-        folder = om.getOrCreateContainer("segmentation")
-        om.removeFromObjectModel(folder)
-        vis.showPolyData(self.octomap_cloud, 'prior map', alpha=1.0, color=[0,0,0.4])
-
+        pdi = vis.updatePolyData(pd,'map')
+        pdi.setProperty('Color By', 'rgb_colors')
 
     def onHideMapButton(self):
         folder = om.getOrCreateContainer("segmentation")

@@ -57,6 +57,7 @@ void ddKinectLCM::init(ddLCMThread* lcmThread, const QString& botConfigFile)
 
 
   // This is in full agreement with Kintinuous: (calibrationAsus.yml)
+  // NB: if changing this, it should be kept in sync
   kcal = kinect_calib_new();
   kcal->intrinsics_depth.fx = 528.01442863461716;//was 576.09757860;
   kcal->intrinsics_depth.cx = 320;
