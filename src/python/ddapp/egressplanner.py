@@ -342,6 +342,7 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'l_foot'))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraintSet = ConstraintSet(self.robotSystem.ikPlanner, constraints, endPoseName, startPoseName)
@@ -384,6 +385,7 @@ class EgressPlanner(object):
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
         #constraints.append(self.robotSystem.ikPlanner.createLockedBackPostureConstraint(startPoseName))
+        constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
         constraints.append(self.robotSystem.ikPlanner.createFixedLinkConstraints(startPoseName, 'r_foot'))
         constraints.extend(self.createLeftFootPoseConstraint(finalLeftFootFrame, tspan=[1,1]))
 
@@ -474,6 +476,7 @@ class EgressPlanner(object):
         constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
                                                     pelvisEnabled=False,
                                                     shrinkFactor=self.quasiStaticShrinkFactor))
+        constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
 
         constraintSet = ConstraintSet(ikPlanner, constraints, endPoseName, startPoseName)
         constraintSet.seedPoseName = 'q_start'
