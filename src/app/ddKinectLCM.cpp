@@ -35,7 +35,8 @@ void ddKinectLCM::init(ddLCMThread* lcmThread, const QString& botConfigFile)
 
   mLCM->addSubscriber(subscriber);
 
-
+  /*
+  Originally was this:
   kcal = kinect_calib_new();
   kcal->intrinsics_depth.fx = 528.01442863461716;//was 576.09757860;
   kcal->intrinsics_depth.cx = 321.06398107;
@@ -51,7 +52,28 @@ void ddKinectLCM::init(ddLCMThread* lcmThread, const QString& botConfigFile)
   double rotation[]={0.999999, -0.000796, 0.001256, 0.000739, 0.998970, 0.045368, -0.001291, -0.045367, 0.998970};
   double depth_to_rgb_translation[] ={ -0.015756, -0.000923, 0.002316};
   memcpy(kcal->depth_to_rgb_rot, rotation, 9*sizeof(double)); 
-  memcpy(kcal->depth_to_rgb_translation, depth_to_rgb_translation  , 3*sizeof(double));  
+  memcpy(kcal->depth_to_rgb_translation, depth_to_rgb_translation  , 3*sizeof(double));
+  */
+
+
+  // This is in full agreement with Kintinuous: (calibrationAsus.yml)
+  kcal = kinect_calib_new();
+  kcal->intrinsics_depth.fx = 528.01442863461716;//was 576.09757860;
+  kcal->intrinsics_depth.cx = 320;
+  kcal->intrinsics_depth.cy = 267.0;
+  kcal->intrinsics_rgb.fx = 528.01442863461716;//576.09757860; ... 528 seems to be better, emperically, march 2015
+  kcal->intrinsics_rgb.cx = 320;
+  kcal->intrinsics_rgb.cy = 267.0;
+  kcal->intrinsics_rgb.k1 = 0; // none given so far
+  kcal->intrinsics_rgb.k2 = 0; // none given so far
+  kcal->shift_offset = 1090.0;
+  kcal->projector_depth_baseline = 0.075;
+  //double rotation[9];
+  double rotation[]={0.999999, -0.000796, 0.001256, 0.000739, 0.998970, 0.045368, -0.001291, -0.045367, 0.998970};
+  double depth_to_rgb_translation[] ={ -0.015756, -0.000923, 0.002316};
+  memcpy(kcal->depth_to_rgb_rot, rotation, 9*sizeof(double));
+  memcpy(kcal->depth_to_rgb_translation, depth_to_rgb_translation  , 3*sizeof(double));
+
 
 
   // Data buffer
@@ -209,8 +231,8 @@ void unpack_kinect_frame(const kinect_frame_msg_t *msg, uint8_t* rgb_data, Kinec
         double disparity_d = val[v*msg->depth.width+u]  / 1000.0; // convert to m
 
         if (disparity_d!=0){
-          cloud->points[j2].x = (((double) u)- 319.50)*disparity_d*constant; //x right+
-          cloud->points[j2].y = (((double) v)- 239.50)*disparity_d*constant; //y down+
+          cloud->points[j2].x = (((double) u)- kcal->intrinsics_depth.cx)*disparity_d*constant; //x right+
+          cloud->points[j2].y = (((double) v)- kcal->intrinsics_depth.cy)*disparity_d*constant; //y down+
           cloud->points[j2].z = disparity_d;  //z forward+
           cloud->points[j2].b =b;
           cloud->points[j2].r =r;
