@@ -121,6 +121,7 @@ set(python_files
   ddapp/walkingtestdemo.py
   ddapp/wristforcetorquevisualizer.py
   ddapp/kinectlcm.py
+  ddapp/plannerPublisher.py
 
 
   ddapp/macros/segmentation_view/ortho_x.py

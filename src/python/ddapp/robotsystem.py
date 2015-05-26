@@ -23,6 +23,7 @@ from ddapp import planplayback
 from ddapp import playbackpanel
 from ddapp import teleoppanel
 from ddapp import viewbehaviors
+from ddapp import plannerPublisher
 
 import os
 import json
@@ -152,6 +153,8 @@ class RobotSystem(object):
             ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)
 
             manipPlanner = robotplanlistener.ManipulationPlanDriver(ikPlanner)
+            plannerPub = plannerPublisher.PlannerPublisher(ikPlanner)
+            ikPlanner.setPublisher(plannerPub)
 
             affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
             affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
