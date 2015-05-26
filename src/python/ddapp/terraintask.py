@@ -227,14 +227,30 @@ class TerrainTask(object):
             print 'error: no blocks defined; use Spawn Terrain button'
             return
 
+    def correctFrameYaw(self, t1, t2):
+        R1 = np.array(transformUtils.getAxesFromTransform(t1)).T
+        R2 = np.array(transformUtils.getAxesFromTransform(t2)).T
+        R = R1.dot(np.round(R1.T.dot(R2)))
+        t = transformUtils.getTransformFromAxesAndOrigin(R[:,0],R[:,1],R[:,2],t1.GetPosition())
+        return t
+
+
     def createFootstepsForTerrain(self):
         footstepData = self.terrainConfig['footstepData']
 
         # check that we have required data
         blockObjectTable = self.createBlockObjectTable()
+        if len(blockObjectTable) == 0:
+            print 'error: no blocks available for footsteps'
+            return
 
         stanceFrame = FootstepRequestGenerator.getRobotStanceFrame(self.robotSystem.robotStateModel)
         stanceAxes = transformUtils.getAxesFromTransform(stanceFrame)
+
+        # get coord frame of first block
+        firstBlockFrame = transformUtils.copyFrame(blockObjectTable[0][0].getChildFrame().transform)
+        firstBlockFrame = self.correctFrameYaw(firstBlockFrame, stanceFrame)
+        toFirstBlock = firstBlockFrame.GetLinearInverse()
 
         # get current frames of feet
         leftFootFrame = self.getFootFrameAtSole(self.sideToFootLinkName('left'))
@@ -262,6 +278,20 @@ class TerrainTask(object):
             x = np.round(np.dot(stanceAxes[0], blockAxes[0]))
             y = np.round(np.dot(stanceAxes[0], blockAxes[1]))
             theta = np.degrees(np.arctan2(y,x))
+
+            # compute and apply lateral offset if desired
+            if self.terrainConfig['forceZeroLateralFootstepOffset']:
+                curBlockFrame = self.correctFrameYaw(t, stanceFrame)
+                curBlockToFirst = transformUtils.copyFrame(curBlockFrame)
+                R = np.array(transformUtils.getAxesFromTransform(curBlockToFirst)).T
+                curBlockToFirst.PostMultiply()
+                curBlockToFirst.Concatenate(toFirstBlock)
+                p = np.array(curBlockToFirst.GetPosition())
+                yDir = np.array(transformUtils.getAxesFromTransform(curBlockToFirst)[1])
+                dist = p[1]/yDir[1]
+                pt[1] -= dist
+
+            # compute new foot frame
             t.PreMultiply()
             t.RotateZ(theta);
             t.Translate(pt)
@@ -515,23 +545,25 @@ class TerrainTask(object):
 
         # compute and apply transform using all matches
         correction = vtk.vtkTransform()
+        #if False:
         if len(matches) > 2:
             pts1 = np.zeros((len(matches),3))
             pts2 = np.zeros((len(matches),3))
-            norms1 = np.zeros((len(matches),3))
-            norms2 = np.zeros((len(matches),3))
+            norms1 = np.zeros((0,3))
+            norms2 = np.zeros((0,3))
             for i in range(len(matches)):
                 match = matches[i]
                 t1 = transformUtils.copyFrame(match[1].getChildFrame().transform)
                 t2 = transformUtils.copyFrame(match[0].getChildFrame().transform)
+                t2 = self.correctFrameYaw(t2,t1)
                 t1.PreMultiply()
                 t1.Translate(0, 0, -match[1].getProperty('Dimensions')[2])
                 t2.PreMultiply()
                 t2.Translate(0, 0, -match[0].getProperty('Dimensions')[2])
                 pts1[i,:] = np.array(t1.GetPosition())
                 pts2[i,:] = np.array(t2.GetPosition())
-                norms1[i,:] = np.array(transformUtils.getAxesFromTransform(t1)[2])
-                norms2[i,:] = np.array(transformUtils.getAxesFromTransform(t2)[2])
+                norms1 = np.vstack((norms1,np.array(transformUtils.getAxesFromTransform(t1))))
+                norms2 = np.vstack((norms2,np.array(transformUtils.getAxesFromTransform(t2))))
             mean1 = np.mean(pts1,axis=0)
             mean2 = np.mean(pts2,axis=0)
             rays1 = pts1-mean1
@@ -544,7 +576,7 @@ class TerrainTask(object):
                 rot = u.dot(np.diag(np.array([1,1,-1]))).dot(v)
             correction.PostMultiply()
             correction.Translate(-mean1)
-            rotTransform = transformUtils.getTransformFromAxes(rot[0,:],rot[1,:],rot[2,:])
+            rotTransform = transformUtils.getTransformFromAxes(rot[:,0],rot[:,1],rot[:,2])
             correction.Concatenate(rotTransform)
             correction.Translate(mean2)
         for b in idealBlocks:
