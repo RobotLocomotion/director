@@ -1035,4 +1035,7 @@ if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
     #kinectlcm.init()
     imageOverlayManager.viewName = "KINECT_RGB"
     ikPlanner.fixedBaseArm = True
-    showImageOverlay()
+    #showImageOverlay()
+
+if 'exo' in drcargs.args():
+    ikPlanner.pushToMatlab = False

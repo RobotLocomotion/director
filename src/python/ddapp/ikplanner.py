@@ -53,7 +53,6 @@ class ConstraintSet(object):
         self.nominalPoseName = None
 
     def runIk(self):
-
         seedPoseName = self.seedPoseName
         if not seedPoseName:
             seedPoseName = getIkOptions().getPropertyEnumValue('Seed pose')
@@ -67,22 +66,8 @@ class ConstraintSet(object):
             nominalPoseName = self.startPoseName
 
         if (self.ikPlanner.pushToMatlab is False):
-            # TODO: Implement IK Server Request over LCM here
-            print "push to lcm runIk"
-            listener = self.ikPlanner.getManipIKListener()
-            self.ikPlanner.ikConstraintEncoder.publishConstraints( self.constraints, messageName='IK_REQUEST')
-            ikplan = listener.waitForResponse()
-            listener.finish()
-
-            print ikplan.plan[ikplan.num_states-1].joint_position
-
-            self.endPose = [0] * self.ikPlanner.jointController.numberOfJoints
-            if ikplan.num_states>0:
-              self.endPose[len(self.endPose)-len(ikplan.plan[ikplan.num_states-1].joint_position):] = ikplan.plan[ikplan.num_states-1].joint_position
-              self.info=ikplan.plan_info[ikplan.num_states-1]
-            else: 
-              self.info = -1
-            print 'info:', self.info
+            self.ikPlanner.plannerPub.publishJointNames()
+            self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints)
             return self.endPose, self.info
         else:
             ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
@@ -220,6 +205,8 @@ class IkOptionsItem(om.ObjectModelItem):
 
 
 class IKPlanner(object):
+    def setPublisher(self, pub):
+        self.plannerPub = pub
 
     def __init__(self, ikServer, robotModel, jointController, handModels):
 
@@ -229,14 +216,7 @@ class IKPlanner(object):
         self.robotModel = robotModel
         self.jointController = jointController
         self.handModels = handModels
-
-        msg1 = lcmdrc.robot_state_t()
-        msg1.joint_name = list(self.jointController.jointNames)
-        msg1.num_joints = len(msg1.joint_name)
-        msg1.joint_position = [0]*msg1.num_joints
-        msg1.joint_velocity = [0]*msg1.num_joints
-        msg1.joint_effort = [0]*msg1.num_joints
-        lcmUtils.publish('PLANNER_SETUP_JOINT_NAMES', msg1) 
+        self.plannerPub = None
 
         self.ikServer.handModels = self.handModels
 
@@ -1011,11 +991,7 @@ class IKPlanner(object):
         if self.pushToMatlab:
             self.ikServer.sendPoseToServer(pose, poseName)
         else:
-            msg = lcmdrc.planner_request_t()
-            msg.utime = getUtime()
-            msg.poses = json.dumps({poseName:list(pose)})
-            msg.constraints = ''
-            lcmUtils.publish('PLANNER_SETUP_POSES', msg)
+            self.plannerPub.processAddPose(pose, poseName)
 
 
     def newPalmOffsetGraspToHandFrame(self, side, distance):
@@ -1351,22 +1327,19 @@ class IKPlanner(object):
 
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
 
-        listener = self.getManipPlanListener()
 
         if (self.pushToMatlab is False):
-            # TODO: Implement IK Server Request over LCM here
-            constraintSet = ConstraintSet(self, constraints, poseEnd, nominalPoseName)
-            self.ikConstraintEncoder.publishConstraints( constraintSet.constraints, 'PLANNER_REQUEST')
-            info = 1
+            self.plannerPub.publishJointNames()
+            self.lastManipPlan, info = self.plannerPub.processTraj(constraints,poseEnd, nominalPoseName)
         else:
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
-
+            listener = self.getManipPlanListener()
             info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
-        print 'traj info:', info
+            self.lastManipPlan = listener.waitForResponse()
+            listener.finish()
 
-        self.lastManipPlan = listener.waitForResponse()
-        listener.finish()
-        return self.lastManipPlan
+        print 'traj info:', info
+        return self.lastManipPlan        
 
 
     def computePostureCost(self, pose):
@@ -1455,3 +1428,7 @@ class RobotPoseGUIWrapper(object):
                     joints = rpg.applyMirror(joints)
 
         return joints
+
+
+# Keep this at the end of the file!
+import plannerPublisher

@@ -1,0 +1,60 @@
+import os
+import sys
+from ddapp import botpy
+import math
+import time
+import types
+import functools
+import random
+import numpy as np
+from ddapp import ik
+from ddapp import ikconstraintencoder
+import drc as lcmdrc
+import json
+from ddapp.utime import getUtime
+from ddapp import lcmUtils
+
+class PlannerPublisher(object):
+
+  def __init__(self, ikPlanner):
+    self.ikPlanner = ikPlanner
+
+  def processIK(self, constraints):
+    listener = self.ikPlanner.getManipIKListener()
+    self.ikPlanner.ikConstraintEncoder.publishConstraints( constraints, messageName='IK_REQUEST')
+    ikplan = listener.waitForResponse()
+    listener.finish()
+
+    endPose = [0] * self.ikPlanner.jointController.numberOfJoints
+    if ikplan.num_states>0:
+      endPose[len(endPose)-len(ikplan.plan[ikplan.num_states-1].joint_position):] = ikplan.plan[ikplan.num_states-1].joint_position
+      info=ikplan.plan_info[ikplan.num_states-1]
+    else: 
+      info = -1
+    return endPose, info
+
+  def processTraj(self, constraints, poseEnd, nominalPoseName):
+    listener = self.ikPlanner.getManipPlanListener()
+    constraintSet = ikplanner.ConstraintSet(self, constraints, poseEnd, nominalPoseName)
+    self.ikPlanner.ikConstraintEncoder.publishConstraints( constraintSet.constraints, 'PLANNER_REQUEST')
+    lastManipPlan = listener.waitForResponse()
+    listener.finish()
+    return lastManipPlan, lastManipPlan.plan_info[0]
+
+  def processAddPose(self, pose, poseName):
+    msg = lcmdrc.planner_request_t()
+    msg.utime = getUtime()
+    msg.poses = json.dumps({poseName:list(pose)})
+    msg.constraints = ''
+    lcmUtils.publish('PLANNER_SETUP_POSES', msg)
+
+  def publishJointNames(self):
+    msg1 = lcmdrc.robot_state_t()
+    msg1.joint_name = list(self.ikPlanner.jointController.jointNames)
+    msg1.num_joints = len(msg1.joint_name)
+    msg1.joint_position = [0]*msg1.num_joints
+    msg1.joint_velocity = [0]*msg1.num_joints
+    msg1.joint_effort = [0]*msg1.num_joints
+    lcmUtils.publish('PLANNER_SETUP_JOINT_NAMES', msg1) 
+
+import ikplanner
