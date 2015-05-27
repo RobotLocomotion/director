@@ -600,9 +600,24 @@ class TableDemo(object):
             t = self.playbackRobotModel.getLinkFrame(linkName)
             vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
 
+    ######### Setup collision environment ####################
+    def prepCollisionEnvironment(self): # qqq
+        assert len(self.clusterObjects)
+        
+        for obj in self.clusterObjects:
+            #(origin, edges, outline) = segmentation.getOrientedBoundingBox(obj.polyData)
+            frame = obj.findChild(obj.getProperty('Name') + ' frame')
+            (origin, quat) = transformUtils.poseFromTransform(frame.transform)
+            (xaxis, yaxis, zaxis) = transformUtils.getAxesFromTransform(frame.transform)
+
+            (xwidth, ywidth, zwidth) = (.1, .1, .1) # hack
+            name = obj.getProperty('Name') + ' affordance'
+
+            boxAffordance = segmentation.createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances')
+            boxAffordance.setSolidColor(obj.getProperty('Color'))
 
     ######### Nominal Plans and Execution  #################################################################
-    def prepKukaTestDemoSequence(self, inputFile='~/kinect_live_robot.vtp'):
+    def prepKukaTestDemoSequence(self, inputFile='~/kinect_collision_environment.vtp'):
         filename = os.path.expanduser(inputFile)
         scene = ioUtils.readPolyData(filename)
         vis.showPolyData(scene,"scene")
