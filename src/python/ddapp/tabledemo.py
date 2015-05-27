@@ -641,7 +641,7 @@ class TableDemo(object):
         vis.showPolyData(scene,"scene")
 
         self.userFitTable()
-        self.onSegmentTable( np.array([ 0.90417739,  0.16361307,  0.14244215]), np.array([ 0.96305416, -0.17700992,  0.14819359]) )
+        self.onSegmentTable( np.array([ 0.75980407,  0.30087173,  0.14169464]), np.array([ 0.73494804, -0.21896157,  0.13435645]) )
         self.userFitBin() # TODO: actually fit bin, put bin in picture.
         self.onSegmentBin( np.array([-0.02, 2.43, 0.61 ]), np.array([-0.40,  2.79,  0.61964661]) ) # TODO: fix bin location
 
