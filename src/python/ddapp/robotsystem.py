@@ -161,6 +161,9 @@ class RobotSystem(object):
             affordanceManager.collection.sendEchoRequest()
             segmentation.affordanceManager = affordanceManager
 
+            plannerPub = plannerPublisher.PlannerPublisher(ikPlanner,affordanceManager)
+            ikPlanner.setPublisher(plannerPub)
+
         applogic.resetCamera(viewDirection=[-1,0,0], view=view)
 
 
