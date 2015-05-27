@@ -72,7 +72,7 @@ class TableDemo(object):
 
         self.constraintSet = []
 
-        self.reachDist = 0.125
+        self.reachDist = 0.07
 
     # Switch between simulation/visualisation and real robot operation
     def setMode(self, mode='visualization'):
