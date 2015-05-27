@@ -99,6 +99,8 @@ class KinectSource(TimerCallback):
         self.polyDataObj.actor.SetPickable(1)
         self.polyDataObj.initialized = False
 
+        om.addToObjectModel(self.polyDataObj)
+
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
         self.queue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
 
