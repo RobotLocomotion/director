@@ -374,7 +374,7 @@ class TableDemo(object):
         self.addPlan(plan)
 
 
-    def planReachToTableObject(self, side):
+    def planReachToTableObject(self, side='left'):
 
         obj, frame = self.getNextTableObject(side)
         startPose = self.getPlanningStartPose()
@@ -382,9 +382,8 @@ class TableDemo(object):
         if self.ikPlanner.fixedBaseArm: # includes reachDist hack instead of in ikPlanner (TODO!)
             f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist,0,0]), [0,0,-90] )
             f.PreMultiply()
-            f.RotateY(180)
+            f.RotateY(90)
             f.Update()
-            item = vis.FrameItem('reach_item', f, self.view)
             self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, f, lockBase=False, lockBack=True, dist=self.reachDist)
         else:
             self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, constraints=None, dist=self.reachDist, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
@@ -424,7 +423,7 @@ class TableDemo(object):
         self.addPlan(plan)
 
 
-    def planTouchTableObject(self, side):
+    def planTouchTableObject(self, side='left'):
 
         obj, frame = self.getNextTableObject(side)
         startPose = self.getPlanningStartPose()
@@ -432,7 +431,7 @@ class TableDemo(object):
         if self.ikPlanner.fixedBaseArm: # includes distance hack and currently uses reachDist instead of touchDist (TODO!)
             f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist,0,0]), [0,0,-90] )
             f.PreMultiply()
-            f.RotateY(180)
+            f.RotateY(90)
             f.Update()
             item = vis.FrameItem('reach_item', f, self.view)
             self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, f, lockBase=False, lockBack=True)
