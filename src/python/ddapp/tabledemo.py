@@ -145,6 +145,7 @@ class TableDemo(object):
         self.tableData = segmentation.segmentTableEdge(self.getInputPointCloud(), p1, p2)
         self.tableObj = vis.showPolyData(self.tableData.mesh, 'table', parent='table demo', color=[0,1,0])
         self.tableFrame = vis.showFrame(self.tableData.frame, 'table frame', parent=self.tableObj, scale=0.2)
+        self.tableBox = vis.showPolyData(self.tableData.box, 'table box', parent=self.tableObj, color=[0,1,0])
         self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
 
         if self.useCollisionEnvironment:
@@ -607,7 +608,7 @@ class TableDemo(object):
             vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
 
     ######### Setup collision environment ####################
-    def prepCollisionEnvironment(self): # qqq
+    def prepCollisionEnvironment(self):
         assert len(self.clusterObjects)
         
         for obj in self.clusterObjects:
@@ -619,7 +620,14 @@ class TableDemo(object):
         (origin, quat) = transformUtils.poseFromTransform(frame.transform)
         (xaxis, yaxis, zaxis) = transformUtils.getAxesFromTransform(frame.transform)
 
-        (xwidth, ywidth, zwidth) = (.1, .1, .1) # hack
+        # TODO: move this into transformUtils as getAxisDimensions or so
+        box = obj.findChild(obj.getProperty('Name') + ' box')
+        box_np = vtkNumpy.getNumpyFromVtk(box.polyData, 'Points')
+        box_min = np.amin(box_np, 0)
+        box_max = np.amax(box_np, 0)
+        xwidth = np.linalg.norm(box_max[0]-box_min[0])
+        ywidth = np.linalg.norm(box_max[1]-box_min[1])
+        zwidth = np.linalg.norm(box_max[2]-box_min[2])
         name = obj.getProperty('Name') + ' affordance'
 
         boxAffordance = segmentation.createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances')
