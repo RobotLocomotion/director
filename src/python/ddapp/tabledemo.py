@@ -74,6 +74,9 @@ class TableDemo(object):
 
         self.reachDist = 0.07
 
+        # Switch indicating whether to use affordances as a collision environment
+        self.useCollisionEnvironment = True
+
     # Switch between simulation/visualisation and real robot operation
     def setMode(self, mode='visualization'):
         '''
@@ -143,6 +146,9 @@ class TableDemo(object):
         self.tableObj = vis.showPolyData(self.tableData.mesh, 'table', parent='table demo', color=[0,1,0])
         self.tableFrame = vis.showFrame(self.tableData.frame, 'table frame', parent=self.tableObj, scale=0.2)
         self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
+
+        if self.useCollisionEnvironment:
+            self.addCollisionObject(self.tableObj)
 
     def onSegmentBin(self, p1, p2):
         print p1
@@ -605,16 +611,20 @@ class TableDemo(object):
         assert len(self.clusterObjects)
         
         for obj in self.clusterObjects:
-            #(origin, edges, outline) = segmentation.getOrientedBoundingBox(obj.polyData)
-            frame = obj.findChild(obj.getProperty('Name') + ' frame')
-            (origin, quat) = transformUtils.poseFromTransform(frame.transform)
-            (xaxis, yaxis, zaxis) = transformUtils.getAxesFromTransform(frame.transform)
+            self.addCollisionObject(obj)
 
-            (xwidth, ywidth, zwidth) = (.1, .1, .1) # hack
-            name = obj.getProperty('Name') + ' affordance'
+    def addCollisionObject(self, obj):
+        #(origin, edges, outline) = segmentation.getOrientedBoundingBox(obj.polyData)
+        frame = obj.findChild(obj.getProperty('Name') + ' frame')
+        (origin, quat) = transformUtils.poseFromTransform(frame.transform)
+        (xaxis, yaxis, zaxis) = transformUtils.getAxesFromTransform(frame.transform)
 
-            boxAffordance = segmentation.createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances')
-            boxAffordance.setSolidColor(obj.getProperty('Color'))
+        (xwidth, ywidth, zwidth) = (.1, .1, .1) # hack
+        name = obj.getProperty('Name') + ' affordance'
+
+        boxAffordance = segmentation.createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances')
+        boxAffordance.setSolidColor(obj.getProperty('Color'))
+        boxAffordance.setProperty('Alpha', 0.3)
 
     ######### Nominal Plans and Execution  #################################################################
     def prepKukaTestDemoSequence(self, inputFile='~/kinect_collision_environment.vtp'):
