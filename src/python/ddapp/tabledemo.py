@@ -20,6 +20,7 @@ from ddapp import affordanceupdater
 from ddapp.debugVis import DebugData
 from ddapp import affordanceitems
 from ddapp import ikplanner
+from ddapp import vtkNumpy
 
 
 import ioUtils
@@ -145,7 +146,7 @@ class TableDemo(object):
         self.tableData = segmentation.segmentTableEdge(self.getInputPointCloud(), p1, p2)
         self.tableObj = vis.showPolyData(self.tableData.mesh, 'table', parent='table demo', color=[0,1,0])
         self.tableFrame = vis.showFrame(self.tableData.frame, 'table frame', parent=self.tableObj, scale=0.2)
-        self.tableBox = vis.showPolyData(self.tableData.box, 'table box', parent=self.tableObj, color=[0,1,0])
+        self.tableBox = vis.showPolyData(self.tableData.box, 'table box', parent=self.tableObj, color=[0,1,0], visible=False)
         self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
 
         if self.useCollisionEnvironment:
@@ -231,11 +232,17 @@ class TableDemo(object):
 
         self.affordanceUpdater.ungraspAffordance( obj.getProperty('Name'))
 
-    def getNextTableObject(self, side):
+    def getNextTableObject(self, side='left'):
 
         assert len(self.clusterObjects)
         obj = self.clusterObjects[0] if side == 'left' else self.clusterObjects[-1]
         frameObj = obj.findChild(obj.getProperty('Name') + ' frame')
+
+        if self.useCollisionEnvironment:
+            self.prepCollisionEnvironment()
+            # TODO: remove obj from collision environment for reach and touch
+            # q.setProperty('Collision Enabled', False)
+
         return obj, frameObj
 
     # TODO: deprecate this function: (to end of section):
@@ -615,7 +622,9 @@ class TableDemo(object):
             self.addCollisionObject(obj)
 
     def addCollisionObject(self, obj):
-        #(origin, edges, outline) = segmentation.getOrientedBoundingBox(obj.polyData)
+        if om.getOrCreateContainer('affordances').findChild(obj.getProperty('Name') + ' affordance'):
+            return # Affordance has been created previously
+
         frame = obj.findChild(obj.getProperty('Name') + ' frame')
         (origin, quat) = transformUtils.poseFromTransform(frame.transform)
         (xaxis, yaxis, zaxis) = transformUtils.getAxesFromTransform(frame.transform)
@@ -641,7 +650,7 @@ class TableDemo(object):
         vis.showPolyData(scene,"scene")
 
         self.userFitTable()
-        self.onSegmentTable( np.array([ 0.75980407,  0.30087173,  0.14169464]), np.array([ 0.73494804, -0.21896157,  0.13435645]) )
+        self.onSegmentTable( np.array([  0.91544128,  0.06092263,  0.14906664]), np.array([ 0.73494804, -0.21896157,  0.13435645]) )
         self.userFitBin() # TODO: actually fit bin, put bin in picture.
         self.onSegmentBin( np.array([-0.02, 2.43, 0.61 ]), np.array([-0.40,  2.79,  0.61964661]) ) # TODO: fix bin location
 
