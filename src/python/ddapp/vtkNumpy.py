@@ -28,7 +28,7 @@ def numpyToPolyData(pts, pointData=None, createVertexCells=False):
 
     return pd
 
-def getNumpyFromVtk(dataObj, arrayName):
+def getNumpyFromVtk(dataObj, arrayName='Points'):
     if arrayName == 'Points':
         vtkArray = dataObj.GetPoints().GetData()
     else:
