@@ -437,7 +437,7 @@ class TableDemo(object):
             item = vis.FrameItem('reach_item', f, self.view)
             self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, f, lockBase=False, lockBack=True)
         else:
-            self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, item, dist=0.05, lockBase=self.lockBase, lockBack=self.lockBack)
+            self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, dist=0.05, lockBase=self.lockBase, lockBack=self.lockBack)
             self.constraintSet.constraints[-1].tspan = [-np.inf, np.inf]
             self.constraintSet.constraints[-2].tspan = [-np.inf, np.inf]
         
