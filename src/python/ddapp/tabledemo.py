@@ -644,7 +644,7 @@ class TableDemo(object):
         boxAffordance.setProperty('Alpha', 0.3)
 
     ######### Nominal Plans and Execution  #################################################################
-    def prepKukaTestDemoSequence(self, inputFile='~/kinect_collision_environment.vtp'):
+    def prepKukaTestDemoSequence(self, inputFile='~/drc-testing-data/tabletop/kinect_collision_environment.vtp'):
         filename = os.path.expanduser(inputFile)
         scene = ioUtils.readPolyData(filename)
         vis.showPolyData(scene,"scene")
