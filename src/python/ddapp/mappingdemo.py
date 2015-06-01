@@ -432,6 +432,9 @@ class MappingDemo(object):
         self.planRoomSweep()        # reach down/up
         self.moveRoomSweepOnwards()
 
+    def doneIndicator(self):
+        print "We are done here."
+
     def autonomousExecuteRoomMap(self):
         self.graspingHand = 'left'
         self.targetSweepType = 'orientation'
@@ -452,6 +455,7 @@ class MappingDemo(object):
         self.addTasksToQueueSweep(taskQueue)
         self.addTasksToQueueSweep(taskQueue)
         taskQueue.addTask(self.printAsync('done!'))
+        taskQueue.addTask(self.doneIndicator)
         return taskQueue
         
     def addTasksToQueueSweep(self, taskQueue, autonomous=False):        
