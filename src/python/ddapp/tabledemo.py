@@ -240,8 +240,8 @@ class TableDemo(object):
 
         if self.useCollisionEnvironment:
             self.prepCollisionEnvironment()
-            # TODO: remove obj from collision environment for reach and touch
-            # q.setProperty('Collision Enabled', False)
+            collisionObj = om.findObjectByName(obj.getProperty('Name') + ' affordance')
+            collisionObj.setProperty('Collision Enabled', False)
 
         return obj, frameObj
 
