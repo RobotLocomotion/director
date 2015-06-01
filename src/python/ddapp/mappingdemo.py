@@ -454,13 +454,15 @@ class MappingDemo(object):
         taskQueue.addTask(self.printAsync('done!'))
         return taskQueue
         
-    def addTasksToQueueSweep(self, taskQueue):        
+    def addTasksToQueueSweep(self, taskQueue, autonomous=False):        
         taskQueue.addTask(self.getRoomSweepFrames)
         taskQueue.addTask(self.planRoomReach)        
-        taskQueue.addTask(self.optionalUserPrompt('execute reach? y/n: '))
+        if not autonomous:
+            taskQueue.addTask(self.optionalUserPrompt('execute reach? y/n: '))
         taskQueue.addTask(self.animateLastPlan)
         taskQueue.addTask(self.planRoomSweep)        
-        taskQueue.addTask(self.optionalUserPrompt('execute sweep? y/n: '))
+        if not autonomous:
+            taskQueue.addTask(self.optionalUserPrompt('execute sweep? y/n: '))
         taskQueue.addTask(self.animateLastPlan)
         taskQueue.addTask(self.moveRoomSweepOnwards)                
         
