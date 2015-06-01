@@ -23,7 +23,7 @@ class PlannerPublisher(object):
   def processIK(self, constraints):
     listener = self.ikPlanner.getManipIKListener()
     self.ikPlanner.ikConstraintEncoder.publishConstraints( constraints, messageName='IK_REQUEST')
-    ikplan = listener.waitForResponse()
+    ikplan = listener.waitForResponse(timeout=12000)
     listener.finish()
 
     endPose = [0] * self.ikPlanner.jointController.numberOfJoints
