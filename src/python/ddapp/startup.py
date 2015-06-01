@@ -1039,3 +1039,22 @@ if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
 
 if 'exo' in drcargs.args():
     ikPlanner.pushToMatlab = False
+    showImageOverlay()
+
+def roomMap():
+    mappingPanel.onStartMappingButton()
+    t = mappingdemo.MappingDemo(robotStateModel, playbackRobotModel,
+                    ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
+                    perception.multisenseDriver, view, robotStateJointController, playPlans)
+    t.visOnly = False
+    q = t.autonomousExecuteRoomMap()
+    q.connectTaskEnded(mappingSweepEnded)
+    q.start()
+
+def mappingSweepEnded(taskQ, task):
+    if task.func_name == 'doneIndicator':
+        import time as qq
+        mappingPanel.onStopMappingButton()
+        qq.sleep(3)
+        mappingPanel.onShowMapButton()
+        print "DONE WITH MAPPING ROOM"
