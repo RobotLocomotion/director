@@ -39,7 +39,7 @@ class PlannerPublisher(object):
     listener = self.ikPlanner.getManipPlanListener()
     constraintSet = ikplanner.ConstraintSet(self, constraints, poseEnd, nominalPoseName)
     self.ikPlanner.ikConstraintEncoder.publishConstraints( constraintSet.constraints, 'PLANNER_REQUEST')
-    lastManipPlan = listener.waitForResponse()
+    lastManipPlan = listener.waitForResponse(timeout=20000)
     listener.finish()
     return lastManipPlan, lastManipPlan.plan_info[0]
 
