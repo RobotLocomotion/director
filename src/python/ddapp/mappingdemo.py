@@ -137,20 +137,25 @@ class MappingDemo(object):
     def getRoomSweepFrames(self):
         topFrame = transformUtils.frameFromPositionAndRPY([0.65,0.0,0.8],[160,0,90])
         yawFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,0,self.currentYawDegrees])
+        fixHandFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,-90,0])
+        topFrame.PreMultiply()
+        topFrame.Concatenate( fixHandFrame )
         topFrame.PostMultiply()
         topFrame.Concatenate( yawFrame )
 
         bottomFrame = transformUtils.frameFromPositionAndRPY([0.6,0.0,0.4],[210,0,90])
         yawFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,0,self.currentYawDegrees])
+        bottomFrame.PreMultiply()
+        bottomFrame.Concatenate( fixHandFrame )
         bottomFrame.PostMultiply()
         bottomFrame.Concatenate( yawFrame )
 
         if (self.fromTop):
             self.startFrame = vis.showFrame(topFrame, 'frame start', visible=False, scale=0.1,parent=self.mapFolder)
-            self.endFrame = vis.showFrame(bottomFrame, 'frame start', visible=False, scale=0.1,parent=self.mapFolder)
+            self.endFrame = vis.showFrame(bottomFrame, 'frame end', visible=False, scale=0.1,parent=self.mapFolder)
         else:
             self.startFrame = vis.showFrame(bottomFrame, 'frame start', visible=False, scale=0.1,parent=self.mapFolder)
-            self.endFrame = vis.showFrame(topFrame, 'frame start', visible=False, scale=0.1,parent=self.mapFolder)
+            self.endFrame = vis.showFrame(topFrame, 'frame end', visible=False, scale=0.1,parent=self.mapFolder)
 
 
     def planRoomSweep(self):
