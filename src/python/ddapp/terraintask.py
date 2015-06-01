@@ -1324,6 +1324,12 @@ class TerrainTask(object):
         endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'arm up pregrasp', side='right')
         ikPlanner.computeMultiPostureGoal([startPose, endPose])
 
+    def commitLastManipPlan(self):
+        self.robotSystem.manipPlanner.commitManipPlan(self.robotSystem.manipPlanner.lastManipPlan)
+
+    def commitLastFootstepPlan(self):
+        self.robotSystem.footstepsDriver.commitFootstepPlan(self.robotSystem.footstepsDriver.lastFootstepPlan)
+
 
 class TerrainImageFitter(ImageBasedAffordanceFit):
 
@@ -1419,6 +1425,7 @@ class TerrainTaskPanel(TaskUserPanel):
 
         self.terrainTask.spawnFootstepsForCinderblocks()
 
+
     def addTasks(self):
 
         # some helpers
@@ -1458,8 +1465,7 @@ class TerrainTaskPanel(TaskUserPanel):
                                               message='Please adjust footsteps as needed.'), parent=footsteps)
             addTask(rt.UserPromptTask(name='approve footsteps',
                                       message='Please approve footstep plan.'), parent=footsteps)
-            addTask(rt.CommitFootstepPlan(name='walk over terrain',
-                                          planName='terrain stance footstep plan'), parent=footsteps)
+            addFunc(self.terrainTask.commitLastFootstepPlan, "Commit footsteps", parent=footsteps)
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=footsteps)
 
         def addApproach():
@@ -1467,19 +1473,16 @@ class TerrainTaskPanel(TaskUserPanel):
             addFunc(self.terrainTask.createStartingGoal, "plan approach to terrain", parent=approach)
             addTask(rt.UserPromptTask(name='approve footsteps',
                                       message='Please approve footstep plan.'), parent=approach)
-            addTask(rt.CommitFootstepPlan(name='approach terrain',
-                                          planName='terrain stance footstep plan'), parent=approach)
+            addFunc(self.terrainTask.commitLastFootstepPlan, "Commit footsteps", parent=approach)
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=approach)
             addFunc(self.terrainTask.planArmsUpPre, "Arms up (pre)", parent=approach)
             addTask(rt.UserPromptTask(name='approve manip plan',
                                       message='Please approve manipulation plan.'), parent=approach)
-            addTask(rt.CommitManipulationPlan(name='execute manip plan',
-                                              planName='pre arms up plan'), parent=approach)
+            addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up (pre) plan", parent=approach)
             addFunc(self.terrainTask.planArmsUp, "Arms up", parent=approach)
             addTask(rt.UserPromptTask(name='approve manip plan',
                                       message='Please approve manipulation plan.'), parent=approach)
-            addTask(rt.CommitManipulationPlan(name='execute manip plan',
-                                              planName='arms up plan'), parent=approach)
+            addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up plan", parent=approach)
             addTask(rt.UserPromptTask(name='Disable pressure control',
                                       message='Please disable pressure control & recovery.'), parent=approach)
 
