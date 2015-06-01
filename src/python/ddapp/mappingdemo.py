@@ -63,6 +63,26 @@ class MappingDemo(object):
         self.coneThresholdDegrees = 5.0 # 0 is ok for reaching but often too tight for a trajectory
         self.boxLength = 0.3
 
+    # Switch between simulation/visualisation and real robot operation
+    def setMode(self, mode='visualization'):
+        '''
+        Switches between visualization and real robot operation.
+        mode='visualization'
+        mode='robot'
+        '''
+
+        if (mode == 'visualization'):
+            print "Setting mode to VISUALIZATION"
+            self.useDevelopment = True
+
+            self.visOnly = True
+            self.planFromCurrentRobotState = False
+        else:
+            print "Setting mode to ROBOT OPERATION"
+            self.useDevelopment = False
+
+            self.visOnly = False
+            self.planFromCurrentRobotState = True
 
     def addPlan(self, plan):
         self.plans.append(plan)
