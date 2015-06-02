@@ -673,6 +673,7 @@ class EgressPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name="Verify SE processes", message="Please confirm that all SE processes have started"))
         addTask(rt.UserPromptTask(name="Disable recovery and bracing", message="Please disable recovery and bracing"))
         addTask(rt.UserPromptTask(name="Run Init Nav", message='Please click "Init Nav"'))
+        addTask(rt.UserPromptTask(name="Stop April Tags", message='Please stop the "April Tags" process'))
         addTask(rt.UserPromptTask(name="Confirm pressure", message='Set high pressure for egress'))
         stepOut = addFolder('Step out of car')
         self.folder = stepOut
