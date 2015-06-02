@@ -1,3 +1,5 @@
+from __future__ import division # for proper float division
+
 import os
 import sys
 from ddapp import botpy
@@ -8,11 +10,13 @@ import functools
 import random
 import numpy as np
 from ddapp import ik
+from ddapp import ikconstraints
 from ddapp import ikconstraintencoder
 import drc as lcmdrc
 import json
 from ddapp.utime import getUtime
 from ddapp import lcmUtils
+
 
 class PlannerPublisher(object):
 
@@ -35,12 +39,26 @@ class PlannerPublisher(object):
     return endPose, info
 
   def processTraj(self, constraints, poseEnd, nominalPoseName):
-    # Temporary fix / HACK / TODO (should be done in exotica_json) -- HACK^2: limited to one set of constraints right now
-    #print constraints[0]
-    #print type(constraints[0])
-    if constraints[0].postureName == 'gaze_plan_start':
-      print "(gaze_plan_start) Temporary start pose rewrite hack activated"
-      constraints[0].__setattr__('postureName','reach_start')
+    # Temporary fix / HACK / TODO (should be done in exotica_json)
+    largestTspan = [0, 0]
+    for constraintIndex, _ in enumerate(constraints):
+      if isinstance(constraints[constraintIndex], ikconstraints.PostureConstraint):
+        if constraints[constraintIndex].postureName == 'gaze_plan_start':
+          print "(gaze_plan_start) Temporary start pose rewrite hack activated"
+          constraints[constraintIndex].__setattr__('postureName','reach_start')
+
+      # Get tspan extend to normalise time-span
+      if np.isfinite(constraints[constraintIndex].tspan[0]) and np.isfinite(constraints[constraintIndex].tspan[1]):
+        largestTspan[0] = constraints[constraintIndex].tspan[0] if (constraints[constraintIndex].tspan[0] < largestTspan[0]) else largestTspan[0]
+        largestTspan[1] = constraints[constraintIndex].tspan[1] if (constraints[constraintIndex].tspan[1] > largestTspan[1]) else largestTspan[1]
+
+    # Temporary fix / HACK/ TODO to normalise time spans
+    for constraintIndex, _ in enumerate(constraints):
+      if np.isfinite(constraints[constraintIndex].tspan[0]) and np.isfinite(constraints[constraintIndex].tspan[1]):
+        if largestTspan[0] != 0:
+          constraints[constraintIndex].tspan[0] = constraints[constraintIndex].tspan[0] / largestTspan[0]
+        if largestTspan[1] != 0:
+          constraints[constraintIndex].tspan[1] = constraints[constraintIndex].tspan[1] / largestTspan[1]
 
     self.publishCollisions()
     listener = self.ikPlanner.getManipPlanListener()
