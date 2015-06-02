@@ -1476,10 +1476,11 @@ class TerrainTaskPanel(TaskUserPanel):
             addTask(rt.UserPromptTask(name='Manual adjustment',
                                       message='Please adjust blocks as needed.'), parent=fit)
             addFunc(self.terrainTask.requestRaycastTerrain, "Request raycast", parent=fit)
-        def addFootsteps():
+        def addFootsteps(numSteps=-1):
             footsteps = self.taskTree.addGroup("Footsteps")
+            addFunc(functools.partial(self.params.setProperty, "Number of Steps", numSteps), "Set num steps to {:d}".format(numSteps), parent=footsteps)
             addTask(rt.UserPromptTask(name='Number of steps',
-                                      message='Please set number of steps.'),
+                                      message='Please confirm number of steps.'),
                                       parent=footsteps)
             addFunc(self.terrainTask.createFootstepsForTerrain, "Prefab steps", parent=footsteps)
             addTask(rt.UserPromptTask(name='Adjust footsteps',
@@ -1519,9 +1520,9 @@ class TerrainTaskPanel(TaskUserPanel):
         addFit()
         addApproach()
 
-        for i in range(3):
+        for n in self.terrainTask.terrainConfig["numSteps"]:
             addFit()
-            addFootsteps()
+            addFootsteps(n)
 
         finish = self.taskTree.addGroup("Finish")
         addTask(rt.UserPromptTask(name='Confirm terrain complete',
