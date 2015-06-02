@@ -2,6 +2,7 @@ import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 from ddapp import applogic as app
 from ddapp import objectmodel as om
+from ddapp import propertyset
 from ddapp import visualization as vis
 from ddapp.debugVis import DebugData
 from ddapp.pointpicker import PlacerWidget
@@ -88,26 +89,20 @@ class FootstepsPanel(object):
         l.setMargin(0)
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         self.propertiesPanel.setBrowserModeToWidget()
-        om.PropertyPanelHelper.addPropertiesToPanel(self.driver.params.properties, self.propertiesPanel)
         l.addWidget(self.propertiesPanel)
-        self.propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self.onPropertyChanged)
+        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.params.properties, self.propertiesPanel)
+        self.driver.params.properties.connectPropertyChanged(self.onPropertyChanged)
         PythonQt.dd.ddGroupBoxHider(self.ui.paramsContainer)
 
-    def onPropertyChanged(self, prop):
-        self.driver.params.setProperty(prop.propertyName(), prop.value())
+    def onPropertyChanged(self, propertySet, propertyName):
         self.driver.updateRequest()
-        try:
-            self.irisDriver.params.setProperty(prop.propertyName(), prop.value())
-        except AssertionError: # fires when property is not present in irisDriver params
-            pass
-        if prop.propertyName() == 'Defaults':
+        if propertyName == 'Defaults':
             self.applyDefaults()
 
     def applyDefaults(self):
         set_name = self.driver.defaults_map[self.driver.params.properties.defaults]
         for k, v in self.driver.default_step_params[set_name].iteritems():
             self.driver.params.setProperty(k, v)
-            om.PropertyPanelHelper.onPropertyValueChanged(self.propertiesPanel, self.driver.params.properties, k)
 
     def newWalkingGoalFrame(self, robotModel, distanceForward=1.0):
         t = self.driver.getFeetMidPoint(robotModel)
