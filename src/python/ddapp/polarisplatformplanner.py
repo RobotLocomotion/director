@@ -135,7 +135,7 @@ class PolarisPlatformPlanner(object):
 
         self.footstepYawForwards = np.array([0, 0, 0])
         self.footstepYawForwards = np.rad2deg(self.footstepYawForwards)
-        
+
 
     def planTurn(self):
         # request footsteps 1 and 2
@@ -150,9 +150,8 @@ class PolarisPlatformPlanner(object):
         footstepsToWorldList = self.getFootstepToWorldTransforms([3])
         q = self.robotSystem.robotStateJointController.q
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
-        request.goal_steps[0].params.support_contact_groups = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
-        
+
     def planStepOff(self):
         footstepsToWorldList = self.getFootstepToWorldTransforms([2])
         q = self.robotSystem.robotStateJointController.q
@@ -180,6 +179,7 @@ class PolarisPlatformPlanner(object):
         q = self.getPlanningStartPose()
         footstepsToWorldList = self.getFootstepToWorldTransforms([0,1], stepOffDirection='forwards')
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
+        request.goal_steps[0].params.support_contact_groups = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
 
     def planStepOffForwards(self):
@@ -361,7 +361,7 @@ class PolarisPlatformPlanner(object):
 
 
 class PolarisPlatformPlannerPanel(TaskUserPanel):
-        
+
     def __init__(self, robotSystem):
 
         TaskUserPanel.__init__(self, windowTitle='Platform Task')

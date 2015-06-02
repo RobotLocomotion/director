@@ -671,10 +671,11 @@ class EgressPanel(TaskUserPanel):
         stepPrep = addFolder('Prep')
         self.folder = stepPrep
         addTask(rt.UserPromptTask(name="Verify SE processes", message="Please confirm that all SE processes have started"))
-        addTask(rt.UserPromptTask(name="Disable recovery and bracing", message="Please disable recovery and bracing"))
         addTask(rt.UserPromptTask(name="Run Init Nav", message='Please click "Init Nav"'))
         addTask(rt.UserPromptTask(name="Stop April Tags", message='Please stop the "April Tags" process'))
         addTask(rt.UserPromptTask(name="Confirm pressure", message='Set high pressure for egress'))
+        addTask(rt.UserPromptTask(name="Disable recovery and bracing", message="Please disable recovery and bracing"))
+        addTask(rt.SetNeckPitch(name='set neck position', angle=60))
         stepOut = addFolder('Step out of car')
         self.folder = stepOut
         addManipTask('Get weight over feet', ep.planGetWeightOverFeet, userPrompt=True, planner=ep)
@@ -684,7 +685,6 @@ class EgressPanel(TaskUserPanel):
 
         prep = addFolder('Step down prep')
         addFunc(self.onStart, 'start')
-        addTask(rt.SetNeckPitch(name='set neck position', angle=60))
         addFunc(pp.switchToPolarisPlatformParameters, "Switch walking params to 'Polaris Platform")
         addTask(rt.UserPromptTask(name="wait for lidar", message="Please wait for next lidar sweep"))
 
