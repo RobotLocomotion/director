@@ -289,10 +289,11 @@ class DrivingPlanner(object):
 
         return keyFramePlan
 
-    def planLegAbovePedal(self):
+    def planLegAbovePedal(self, startPose=None):
         om.findObjectByName('left foot driving')
         ikPlanner = self.robotSystem.ikPlanner
-        startPose = self.getPlanningStartPose()
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
         startPoseName = 'q_start_foot'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
@@ -329,10 +330,12 @@ class DrivingPlanner(object):
         return plan
 
 
-    def planLegSwingOut(self):
+    def planLegSwingOut(self, startPose=None):
         om.findObjectByName('left foot driving')
         ikPlanner = self.robotSystem.ikPlanner
-        startPose = self.getPlanningStartPose()
+
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
         startPoseName = 'q_start_foot'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
@@ -366,10 +369,11 @@ class DrivingPlanner(object):
 
         return keyFramePlan
 
-    def planLegEgressStart(self):
+    def planLegEgressStart(self, startPose=None):
         om.findObjectByName('left foot driving')
         ikPlanner = self.robotSystem.ikPlanner
-        startPose = self.getPlanningStartPose()
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
         startPoseName = 'q_start_foot'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_foot_end'
@@ -401,6 +405,34 @@ class DrivingPlanner(object):
         self.plans.append(plan)
 
         return plan
+
+
+    def planLegEgressFull(self):
+        legAbovePedalName = 'qtraj_leg_above_pedal'
+        self.planLegAbovePedal()
+        self.saveOriginalTraj(legAbovePedalName)
+
+        nextStartPose = robotstate.convertStateMessageToDrakePose(self.plans[-1].plan[-1])
+        self.planLegSwingOut(startPose=nextStartPose)
+        legSwingOutName = 'qtraj_leg_swing_out'
+        self.saveOriginalTraj(legSwingOutName)
+
+        nextStartPose = robotstate.convertStateMessageToDrakePose(self.plans[-1].plan[-1])
+        self.planLegEgressStart(startPose=nextStartPose)
+        legEgressStartName = 'qtraj_leg_egress_start'
+        self.saveOriginalTraj(legEgressStartName)
+
+
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=10)
+        ikParameters = self.robotSystem.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
+
+        listener = self.getManipPlanListener()
+        _ = self.concatenateAndRescaleTrajectories([legAbovePedalName, legSwingOutName, legEgressStartName], 'qtraj_foot_egress_start', 'ts', ikParameters)
+
+        plan = listener.waitForResponse()
+        listener.finish()
+        self.addPlan(plan)
+
 
     def planLegPedal(self):
         ikPlanner = self.robotSystem.ikPlanner
@@ -840,14 +872,39 @@ class DrivingPlanner(object):
 
         plan = ikPlanner.computePostureGoal(startPose, midPose, feetOnGround=False, ikParameters=ikParameters)
         self.addPlan(plan)
-    def planArmsEgressStart(self):
-        startPose = self.getPlanningStartPose()
+    def planArmsEgressStart(self, startPose=None):
+        if startPose is None:
+            startPose = self.getPlanningStartPose()
+
         ikPlanner = self.robotSystem.ikPlanner
         endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'egress-left-arm', side='left')
         endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'crane', side='right')
         ikParameters = IkParameters(maxDegreesPerSecond=60)
         plan = ikPlanner.computePostureGoal(startPose, endPose, feetOnGround=False, ikParameters=ikParameters)
         self.addPlan(plan)
+
+    def planArmsEgress(self):
+        self.planArmsEgressPrep()
+        armsEgressPrepName = 'qtraj_arms_prep'
+        self.saveOriginalTraj(armsEgressPrepName)
+
+        nextStartPose = robotstate.convertStateMessageToDrakePose(self.plans[-1].plan[-1])
+
+        self.planArmsEgressStart(startPose=nextStartPose)
+        armsEgressStartName = 'qtraj_arms_egress_start'
+        self.saveOriginalTraj(armsEgressStartName)
+
+
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=60)
+        ikParameters = self.robotSystem.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
+
+        listener = self.getManipPlanListener
+        _ = self.concatenateAndRescaleTrajectories([armsEgressPrepName, armsEgressStartName], 'qtraj_arms_egress', 'ts', ikParameters)
+
+        plan = listener.waitForResponse()
+        listener.finish()
+        self.addPlan(plan)
+
 
     def setSteeringWheelAndWristGraspAngles(self):
         self.graspWheelAngle = np.deg2rad(self.userSpecifiedGraspWheelAngleInDegrees)
@@ -883,6 +940,29 @@ class DrivingPlanner(object):
         responseChannel = 'CANDIDATE_MANIP_PLAN'
         responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
         return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
+
+    def saveOriginalTraj(self, name):
+            commands = ['%s = qtraj_orig;' % name]
+            self.robotSystem.ikServer.comm.sendCommands(commands)
+
+    def concatenateAndRescaleTrajectories(self, trajectoryNames, concatenatedTrajectoryName, junctionTimesName, ikParameters):
+        commands = []
+        commands.append('joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1);' % ikParameters.maxDegreesPerSecond)
+        commands.append('xyz_v_max = repmat(%s, 3, 1);' % ikParameters.maxBaseMetersPerSecond)
+        commands.append('rpy_v_max = repmat(%s*pi/180, 3, 1);' % ikParameters.maxBaseRPYDegreesPerSecond)
+        commands.append('v_max = [xyz_v_max; rpy_v_max; joint_v_max];')
+        commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
+        commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
+        commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
+        commands.append('rescale_body_pts = reshape(%s, 3, []);' % ik.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
+        commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
+        commands.append('trajectories = {};')
+        for name in trajectoryNames:
+            commands.append('trajectories{end+1} = %s;' % name)
+        commands.append('[%s, %s] = concatAndRescaleTrajectories(trajectories, v_max, %s, %s, body_rescale_options);' % (concatenatedTrajectoryName, junctionTimesName, ikParameters.accelerationParam, ikParameters.accelerationFraction))
+        commands.append('s.publishTraj(%s, 1);' % concatenatedTrajectoryName)
+        self.robotSystem.ikServer.comm.sendCommands(commands)
+        return self.robotSystem.ikServer.comm.getFloatArray(junctionTimesName)
 
 
 class DrivingPlannerPanel(TaskUserPanel):
@@ -1231,12 +1311,14 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         dp = self.drivingPlanner
 
-        footToEgress = addFolder('Foot to Egress Pose')
-        addManipTask('Foot Off Pedal', self.drivingPlanner.planLegAbovePedal, userPrompt=True)
-        self.folder = footToEgress
-        addManipTask('Swing leg out', self.drivingPlanner.planLegSwingOut , userPrompt=True)
-        self.folder = footToEgress
-        addManipTask('Foot Down', self.drivingPlanner.planLegEgressStart, userPrompt=True)
+        # footToEgress = addFolder('Foot to Egress Pose')
+        self.folder = None
+        addManipTask('Foot to Egress Start', self.drivingPlanner.planLegEgressFull, userPrompt=True)
+        # addManipTask('Foot Off Pedal', self.drivingPlanner.planLegAbovePedal, userPrompt=True)
+        # self.folder = footToEgress
+        # addManipTask('Swing leg out', self.drivingPlanner.planLegSwingOut , userPrompt=True)
+        # self.folder = footToEgress
+        # addManipTask('Foot Down', self.drivingPlanner.planLegEgressStart, userPrompt=True)
 
         addFunc(self.onUpdateWheelLocation, 'Update wheel location')
 
@@ -1257,10 +1339,12 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.folder = ungraspBar
         addTask(rt.CloseHand(name='close Right hand', side='Right'))
 
-        armsToEgressStart = addFolder('Arms to Egress Position')
-        addManipTask('Arms To Egress Prep', self.drivingPlanner.planArmsEgressPrep, userPrompt=True)
-        self.folder = armsToEgressStart
-        addManipTask('Arms To Egress Start', self.drivingPlanner.planArmsEgressStart, userPrompt=True)
+        # armsToEgressStart = addFolder('Arms to Egress Position')
+        self.folder = None
+        addManipTask('Arms to Egress', self.drivingPlanner.planArmsEgress, userPrompt=True)
+        # addManipTask('Arms To Egress Prep', self.drivingPlanner.planArmsEgressPrep, userPrompt=True)
+        # self.folder = armsToEgressStart
+        # addManipTask('Arms To Egress Start', self.drivingPlanner.planArmsEgressStart, userPrompt=True)
 
         prep = addFolder('Stop Streaming')
         addTask(rt.UserPromptTask(name='stop streaming base side', message='stop streaming base side'))
