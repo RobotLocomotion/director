@@ -678,9 +678,11 @@ class EgressPanel(TaskUserPanel):
         stepPrep = addFolder('Prep')
         self.folder = stepPrep
         addTask(rt.UserPromptTask(name="Verify SE processes", message="Please confirm that all SE processes have started"))
-        addTask(rt.UserPromptTask(name="Disable recovery and bracing", message="Please disable recovery and bracing"))
         addTask(rt.UserPromptTask(name="Run Init Nav", message='Please click "Init Nav"'))
+        addTask(rt.UserPromptTask(name="Stop April Tags", message='Please stop the "April Tags" process'))
         addTask(rt.UserPromptTask(name="Confirm pressure", message='Set high pressure for egress'))
+        addTask(rt.UserPromptTask(name="Disable recovery and bracing", message="Please disable recovery and bracing"))
+        addTask(rt.SetNeckPitch(name='set neck position', angle=60))
         stepOut = addFolder('Step out of car')
         self.folder = stepOut
         addManipTask('Get weight over feet', ep.planGetWeightOverFeet, userPrompt=True, planner=ep)
@@ -690,8 +692,7 @@ class EgressPanel(TaskUserPanel):
 
         prep = addFolder('Step down prep')
         addFunc(self.onStart, 'start')
-        addTask(rt.SetNeckPitch(name='set neck position', angle=60))
-        addTask(rt.UserPromptTask(name="set walking params", message="Please set walking params to 'Polaris Platform'"))
+        addFunc(pp.switchToPolarisPlatformParameters, "Switch walking params to 'Polaris Platform")
         addTask(rt.UserPromptTask(name="wait for lidar", message="Please wait for next lidar sweep"))
 
         self.folder = prep
@@ -704,7 +705,7 @@ class EgressPanel(TaskUserPanel):
         folder = addFolder('Step Down')
         addFunc(self.onPlanStepDown, 'plan step down')
         addTask(rt.UserPromptTask(name="approve footsteps, set support contact group",
-         message="Please approve/modify footsteps. Set the support contact group for the left foot step to be Back 2/3"))
+         message="Please approve/modify footsteps."))
         addFunc(self.robotSystem.footstepsDriver.onExecClicked, 'commit footstep plan')
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
 
