@@ -1161,6 +1161,7 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         prep = addFolder('Prep')
         addTask(rt.UserPromptTask(name="confirm user mode", message="Please go to User mode"))
+        addTask(rt.UserPromptTask(name="Confirm pressure", message='Confirm that pressure is set for ingress (2000 psi)'))
         addTask(rt.UserPromptTask(name="start streaming", message="Please start streaming"))
         addManipTask('car entry posture', self.drivingPlanner.planCarEntryPose, userPrompt=True)
         self.folder = prep
