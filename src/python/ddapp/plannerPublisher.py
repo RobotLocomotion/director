@@ -35,6 +35,13 @@ class PlannerPublisher(object):
     return endPose, info
 
   def processTraj(self, constraints, poseEnd, nominalPoseName):
+    # Temporary fix / HACK / TODO (should be done in exotica_json) -- HACK^2: limited to one set of constraints right now
+    #print constraints[0]
+    #print type(constraints[0])
+    if constraints[0].postureName == 'gaze_plan_start':
+      print "(gaze_plan_start) Temporary start pose rewrite hack activated"
+      constraints[0].__setattr__('postureName','reach_start')
+
     self.publishCollisions()
     listener = self.ikPlanner.getManipPlanListener()
     constraintSet = ikplanner.ConstraintSet(self, constraints, poseEnd, nominalPoseName)
@@ -44,6 +51,14 @@ class PlannerPublisher(object):
     return lastManipPlan, lastManipPlan.plan_info[0]
 
   def processAddPose(self, pose, poseName):
+    # Temporary fix / HACK / TODO (should be done in exotica_json)
+    if poseName == 'gaze_plan_start':
+      print "(gaze_plan_start) Temporary start pose rewrite hack activated"
+      poseName = 'reach_start'
+    elif poseName == 'q_start':
+      print "(q_start) Temporary start pose rewrite hack activated"
+      poseName = 'reach_start'
+
     msg = lcmdrc.planner_request_t()
     msg.utime = getUtime()
     msg.poses = json.dumps({poseName:list(pose)})
