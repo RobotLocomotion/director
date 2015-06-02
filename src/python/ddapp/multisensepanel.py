@@ -121,7 +121,7 @@ class MultisensePanel(object):
         if spinRate == 0.0:
             scanDuration = 240.0
         else:
-            scanDuration = 60.0 / (spinRate * 2)
+            scanDuration = abs(60.0 / (spinRate * 2))
         if scanDuration > 240.0:
             scanDuration = 240.0
 
@@ -133,7 +133,7 @@ class MultisensePanel(object):
         self.multisenseChanged = True
         scanDuration = self.getScanDuration()
 
-        spinRate = 60.0 / (scanDuration * 2)
+        spinRate = abs(60.0 / (scanDuration * 2))
 
         self.widget.spinRateSpinner.blockSignals(True)
         self.widget.spinRateSpinner.value = spinRate
