@@ -23,6 +23,54 @@ class WidgetDict(object):
         addWidgetsToDict(widgets, self.__dict__)
 
 
+class SpindleSpinChecker(object):
+
+    def __init__(self, spindleMonitor):
+
+        self.spindleMonitor = spindleMonitor
+        self.timer = TimerCallback(targetFps=3)
+        self.timer.callback = self.update
+        self.warningButton = None
+        self.action = None
+
+    def update(self):        
+        if self.spindleMonitor.getAverageSpindleVelocity() < 0.2:
+            self.notifyUserStatusBar()
+        else:
+            self.clearStatusBarWarning()
+
+    def start(self):
+        self.action.checked = True
+        self.timer.start()
+
+    def stop(self):
+        self.action.checked = False
+        self.timer.stop()
+
+    def setupMenuAction(self):
+        self.action = app.addMenuAction('Tools', 'Spindle Stuck Warning')
+        self.action.setCheckable(True)
+        self.action.checked = self.timer.isActive()
+        self.action.connect('triggered()', self.onActionChanged)
+
+    def onActionChanged(self):
+        if self.action.checked:
+            self.start()
+        else:
+            self.stop()
+
+    def clearStatusBarWarning(self):
+        if self.warningButton:
+            self.warningButton.deleteLater()
+            self.warningButton = None
+
+    def notifyUserStatusBar(self):
+        if self.warningButton:
+            return
+        self.warningButton = QtGui.QPushButton('Spindle Stuck Warning')
+        self.warningButton.setStyleSheet("background-color:red")
+        app.getMainWindow().statusBar().insertPermanentWidget(0, self.warningButton)
+
 class MultisensePanel(object):
 
     def __init__(self, multisenseDriver, neckDriver):
