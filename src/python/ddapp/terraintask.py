@@ -362,10 +362,6 @@ class TerrainTask(object):
         blockAngleMap = self.terrainConfig['blockAngleMap']
         blockSize = self.terrainConfig['blockSize']
 
-        tiltAngle = self.terrainConfig['blockTiltAngle']
-        tiltAngle = np.radians(tiltAngle)
-        tiltVerticalOffset = blockSize[2]/2.0 + np.sin(tiltAngle)*blockSize[1]/2.0
-
         if len(cols) == 0:
             cols = range(len(blockTypes[0]))
 
@@ -385,11 +381,14 @@ class TerrainTask(object):
         for row in range(len(blockTypes)):
             for col in cols:
                 blockType = blockTypes[row][col]
-                blockYaw = np.radians(blockAngleMap[blockType])
+                blockPitch = np.radians(blockAngleMap[blockType][0])
+                blockYaw = np.radians(blockAngleMap[blockType][1])
                 blockLevel = blockLevels[row][col]
 
-                rpy = np.degrees([0.0, tiltAngle, blockYaw])
-                pos = [blockSize[1]*row, -blockSize[0]*col, blockSize[2]*blockLevel + tiltVerticalOffset]
+                verticalOffset = blockSize[2]/2.0 + np.sin(blockPitch)*blockSize[1]/2.0
+
+                rpy = np.degrees([0.0, blockPitch, blockYaw])
+                pos = [blockSize[1]*row, -blockSize[0]*col, blockSize[2]*blockLevel + verticalOffset]
 
                 offsetFrame = transformUtils.frameFromPositionAndRPY(pos, rpy)
                 offsetFrame.PostMultiply()
