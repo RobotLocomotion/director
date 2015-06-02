@@ -1166,7 +1166,6 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.folder = prep
         addTask(rt.SetNeckPitch(name='set neck position', angle=30))
         addFunc(self.drivingPlanner.captureLeftFootToRightFootTransform, 'capture lfoot to rfoot transform')
-        addTask(rt.UserPromptTask(name="start April tag process", message="Start April tag process and confirm detection"))
         addTask(rt.UserPromptTask(name="spawn polaris model", message="launch egress planner and spawn polaris model"))
         addFunc(self.onStart, 'update wheel location')
 
