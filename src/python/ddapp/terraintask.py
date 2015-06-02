@@ -1316,6 +1316,19 @@ class TerrainTask(object):
         endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'hands-forward', side='right')
         ikPlanner.computeMultiPostureGoal([startPose, endPose])
 
+    def planArmsUpPre(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side='left')
+        endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'arm up pregrasp', side='right')
+        ikPlanner.computeMultiPostureGoal([startPose, endPose])
+
+    def commitLastManipPlan(self):
+        self.robotSystem.manipPlanner.commitManipPlan(self.robotSystem.manipPlanner.lastManipPlan)
+
+    def commitLastFootstepPlan(self):
+        self.robotSystem.footstepsDriver.commitFootstepPlan(self.robotSystem.footstepsDriver.lastFootstepPlan)
+
 
 class TerrainImageFitter(ImageBasedAffordanceFit):
 
@@ -1394,6 +1407,7 @@ class TerrainTaskPanel(TaskUserPanel):
         elif propertyName == 'Terrain Type':
             terrainConfig = self.terrainTask.terrainConfigList[self.params.getProperty(propertyName)];
             self.terrainTask.loadTerrainConfig(terrainConfig)
+            self.addTasks()
         elif propertyName == 'Block Fit Algo':
             self.terrainTask.blockFitAlgo = self.params.getProperty(propertyName)
         elif propertyName == 'Constrain Block Size':
@@ -1410,6 +1424,7 @@ class TerrainTaskPanel(TaskUserPanel):
 
         self.terrainTask.spawnFootstepsForCinderblocks()
 
+
     def addTasks(self):
 
         # some helpers
@@ -1422,4 +1437,75 @@ class TerrainTaskPanel(TaskUserPanel):
         def addFolder(name, parent=None):
             self.folder = self.taskTree.addGroup(name, parent=parent)
             return self.folder
+
+        self.taskTree.removeAllTasks()
+
+        def addFit():
+            fit = self.taskTree.addGroup("Fit")
+            addTask(rt.UserPromptTask(name='Wait for lidar sweep',
+                                      message='Please wait for lidar sweep.'), parent=fit)
+            addFunc(self.terrainTask.requestBlockFit, "Fit blocks", parent=fit)
+            addTask(rt.UserPromptTask(name='approve blocks',
+                                      message='Please wait for fit blocks.'), parent=fit)
+            addFunc(self.terrainTask.spawnCinderblockTerrain, "Spawn terrain", parent=fit)
+            addFunc(self.terrainTask.assignBlocks, "Assign blocks", parent=fit)
+            addTask(rt.UserPromptTask(name='Wait for block assignments',
+                                      message='Please assign blocks.'), parent=fit)
+            addTask(rt.UserPromptTask(name='Manual adjustment',
+                                      message='Please adjust blocks as needed.'), parent=fit)
+            addFunc(self.terrainTask.requestRaycastTerrain, "Request raycast", parent=fit)
+        def addFootsteps():
+            footsteps = self.taskTree.addGroup("Footsteps")
+            addTask(rt.UserPromptTask(name='Number of steps',
+                                      message='Please set number of steps.'),
+                                      parent=footsteps)
+            addFunc(self.terrainTask.createFootstepsForTerrain, "Prefab steps", parent=footsteps)
+            addTask(rt.UserPromptTask(name='Adjust footsteps',
+                                              message='Please adjust footsteps as needed.'), parent=footsteps)
+            addTask(rt.UserPromptTask(name='approve footsteps',
+                                      message='Please approve footstep plan.'), parent=footsteps)
+            addFunc(self.terrainTask.commitLastFootstepPlan, "Commit footsteps", parent=footsteps)
+            addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=footsteps)
+
+        def addApproach():
+            approach = self.taskTree.addGroup("Approach")
+            addFunc(self.terrainTask.createStartingGoal, "plan approach to terrain", parent=approach)
+            addTask(rt.UserPromptTask(name='approve footsteps',
+                                      message='Please approve footstep plan.'), parent=approach)
+            addFunc(self.terrainTask.commitLastFootstepPlan, "Commit footsteps", parent=approach)
+            addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=approach)
+            addFunc(self.terrainTask.planArmsUpPre, "Arms up (pre)", parent=approach)
+            addTask(rt.UserPromptTask(name='approve manip plan',
+                                      message='Please approve manipulation plan.'), parent=approach)
+            addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up (pre) plan", parent=approach)
+            addFunc(self.terrainTask.planArmsUp, "Arms up", parent=approach)
+            addTask(rt.UserPromptTask(name='approve manip plan',
+                                      message='Please approve manipulation plan.'), parent=approach)
+            addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up plan", parent=approach)
+            addTask(rt.UserPromptTask(name='Disable pressure control',
+                                      message='Please disable pressure control & recovery.'), parent=approach)
+
+        addTask(rt.SetNeckPitch(name='set neck position', angle=45), parent=None)
+        addFit()
+        addApproach()
+        addTask(rt.UserPromptTask(name='Terrain params',
+                                  message='Please set footstep params.'))
+        for i in range(4):
+            addFit()
+            addFootsteps()
+
+        finish = self.taskTree.addGroup("Finish")
+        addFunc(self.terrainTask.spawnGroundAffordance, "Spawn ground", parent=finish)
+        addFunc(self.terrainTask.requestRaycastTerrain, "Request raycast", parent=finish)
+        addTask(rt.UserPromptTask(name='Enable recovery',
+                                  message='Please enable recovery.'), parent=finish)
+        addTask(rt.UserPromptTask(name='Step down',
+                                  message='Please plan and execute step-down.'), parent=finish)
+        addTask(rt.UserPromptTask(name='Restore footstep params',
+                                  message='Please set footstep defaults to nominal.'), parent=finish)
+        addTask(rt.UserPromptTask(name='Enable pressure control',
+                                  message='Please enable pressure control.'), parent=finish)
+
+
+
 
