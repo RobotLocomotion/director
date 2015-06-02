@@ -87,6 +87,16 @@ class RobotSystem(object):
                 return robotStateJointController.q[robotstate.getDrakePoseJointNames().index('neck_ay')]
             neckDriver = perception.NeckDriver(view, getNeckPitch)
 
+            def getSpindleAngleFunction():
+                if (robotStateJointController.lastRobotStateMessage):
+                    index = robotStateJointController.lastRobotStateMessage.joint_name.index('hokuyo_joint')
+                    return (float(robotStateJointController.lastRobotStateMessage.utime)/(1000*1000), 
+                        robotStateJointController.lastRobotStateMessage.joint_position[index])
+                return (0, 0)
+            spindleMonitor = perception.SpindleMonitor(getSpindleAngleFunction)
+            robotStateModel.connectModelChanged(spindleMonitor.onRobotStateChanged)
+
+
 
         if useHands:
             rHandDriver = handdriver.RobotiqHandDriver(side='right')
