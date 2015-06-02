@@ -150,6 +150,7 @@ class PolarisPlatformPlanner(object):
         footstepsToWorldList = self.getFootstepToWorldTransforms([3])
         q = self.robotSystem.robotStateJointController.q
         request = self.footstepRequestGenerator.makeFootstepRequest(q, footstepsToWorldList, 'left', snapToTerrain=True)
+        request.goal_steps[0].params.support_contact_groups = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
         self.robotSystem.footstepsDriver.sendFootstepPlanRequest(request)
         
     def planStepOff(self):

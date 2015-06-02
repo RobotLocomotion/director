@@ -698,7 +698,7 @@ class EgressPanel(TaskUserPanel):
         folder = addFolder('Step Down')
         addFunc(self.onPlanStepDown, 'plan step down')
         addTask(rt.UserPromptTask(name="approve footsteps, set support contact group",
-         message="Please approve/modify footsteps. Set the support contact group for the left foot step to be Back 2/3"))
+         message="Please approve/modify footsteps."))
         addFunc(self.robotSystem.footstepsDriver.onExecClicked, 'commit footstep plan')
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
 
