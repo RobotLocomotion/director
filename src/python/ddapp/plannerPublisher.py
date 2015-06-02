@@ -55,9 +55,8 @@ class PlannerPublisher(object):
     # Temporary fix / HACK/ TODO to normalise time spans
     for constraintIndex, _ in enumerate(constraints):
       if np.isfinite(constraints[constraintIndex].tspan[0]) and np.isfinite(constraints[constraintIndex].tspan[1]):
-        if largestTspan[0] != 0:
-          constraints[constraintIndex].tspan[0] = constraints[constraintIndex].tspan[0] / largestTspan[0]
         if largestTspan[1] != 0:
+          constraints[constraintIndex].tspan[0] = constraints[constraintIndex].tspan[0] / largestTspan[1]
           constraints[constraintIndex].tspan[1] = constraints[constraintIndex].tspan[1] / largestTspan[1]
 
     self.publishCollisions()
