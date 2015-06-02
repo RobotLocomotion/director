@@ -1343,6 +1343,14 @@ class TerrainTask(object):
     def commitLastFootstepPlan(self):
         self.robotSystem.footstepsDriver.commitFootstepPlan(self.robotSystem.footstepsDriver.lastFootstepPlan)
 
+    def switchToTerrainParameters(self):
+        self.robotSystem.footstepsDriver.params.setProperty('Defaults', 'Terrain')
+
+    def switchToStairsParameters(self):
+        self.robotSystem.footstepsDriver.params.setProperty('Defaults', 'Stairs')
+
+    def switchToNominalParameters(self):
+        self.robotSystem.footstepsDriver.params.setProperty('Defaults', 'Drake Nominal')
 
 class TerrainImageFitter(ImageBasedAffordanceFit):
 
@@ -1496,6 +1504,12 @@ class TerrainTaskPanel(TaskUserPanel):
             # addTask(rt.UserPromptTask(name='approve manip plan',
             #                           message='Please approve manipulation plan.'), parent=approach)
             # addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up (pre) plan", parent=approach)
+            addTask(rt.UserPromptTask(name='Confirm approach complete',
+                                      message='Please confirm approach is complete.'))
+            if 'stairs' in self.terrainTask.terrainConfigList[self.params.properties.terrain_type]:
+                addFunc(self.terrainTask.switchToStairsParameters, "Switch to stairs params")
+            else:
+                addFunc(self.terrainTask.switchToTerrainParameters, "Switch to terrain params")
             addTask(rt.UserPromptTask(name='Disable pressure control',
                                       message='Please disable pressure control & recovery.'), parent=approach)
             addTask(rt.UserPromptTask(name='Set high pressure',
@@ -1504,21 +1518,17 @@ class TerrainTaskPanel(TaskUserPanel):
         addTask(rt.SetNeckPitch(name='set neck position', angle=45), parent=None)
         addFit()
         addApproach()
-        addTask(rt.UserPromptTask(name='Terrain params',
-                                  message='Please set footstep params.'))
+
         for i in range(3):
             addFit()
             addFootsteps()
 
         finish = self.taskTree.addGroup("Finish")
-        addFunc(self.terrainTask.spawnGroundAffordance, "Spawn ground", parent=finish)
-        addFunc(self.terrainTask.requestRaycastTerrain, "Request raycast", parent=finish)
+        addTask(rt.UserPromptTask(name='Confirm terrain complete',
+                                  message='Please confirm terrain is complete.'), parent=finish)
+        addFunc(self.terrainTask.switchToNominalParameters, "Switch to nominal footstep params", parent=finish)
         addTask(rt.UserPromptTask(name='Enable recovery',
                                   message='Please enable recovery.'), parent=finish)
-        addTask(rt.UserPromptTask(name='Step down',
-                                  message='Please plan and execute step-down.'), parent=finish)
-        addTask(rt.UserPromptTask(name='Restore footstep params',
-                                  message='Please set footstep defaults to nominal.'), parent=finish)
         addTask(rt.UserPromptTask(name='Enable pressure control',
                                   message='Please enable pressure control.'), parent=finish)
 
