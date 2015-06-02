@@ -71,6 +71,8 @@ class AffordanceItem(PolyDataItem):
 
     def syncProperties(self, desc):
         for propertyName, propertyValue in desc.iteritems():
+            if propertyName == 'Visible':
+                continue
             if self.hasProperty(propertyName) and (self.getProperty(propertyName) != propertyValue):
                 #print 'syncing property %s: %r' % (propertyName, propertyValue)
                 self.setProperty(propertyName, propertyValue)
