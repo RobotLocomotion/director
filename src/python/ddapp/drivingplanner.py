@@ -442,7 +442,7 @@ class DrivingPlanner(object):
         endPoseName = 'q_foot_end'
 
         if self.kneeInPedal:
-            lfootConstraintFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving knee in').transform)
+            lfootConstraintFrame = transformUtils.copyFrame(om.findObjectByName('left foot on pedal').transform)
         else:
             lfootConstraintFrame = transformUtils.copyFrame(om.findObjectByName('left foot driving').transform)
         identityFrame = vtk.vtkTransform()
