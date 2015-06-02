@@ -93,14 +93,18 @@ class PolarisModel(object):
         # t = transformUtils.transformFromPose(np.array([-0.14940375,  0.90347275,  0.23812658]),
         #     np.array([ 0.27150909,  0.91398724, -0.28877386,  0.0867167 ]))
 
-        t = transformUtils.transformFromPose(np.array([-0.17331227,  0.87879312,  0.25645152]),
-            np.array([ 0.26344489,  0.91567196, -0.28089824,  0.11505581]))
-        self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+        # t = transformUtils.transformFromPose(np.array([-0.17331227,  0.87879312,  0.25645152]),
+        #     np.array([ 0.26344489,  0.91567196, -0.28089824,  0.11505581]))
+        # self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
 
         t = transformUtils.transformFromPose(np.array([-0.12702725,  0.92068409,  0.27209386]),
             np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
         self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
+
+        t = transformUtils.transformFromPose(np.array([-0.13194951,  0.89871423,  0.24956246]), 
+            np.array([ 0.21589082,  0.91727326, -0.30088849,  0.14651633]))
+        self.leftFootOnPedal = vis.updateFrame(t,'left foot on pedal', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
         t = transformUtils.transformFromPose(np.array([ 0.17712239,  0.87619935,  0.27001509]),
             np.array([ 0.33484372,  0.88280787, -0.31946488,  0.08044963]))
@@ -124,6 +128,7 @@ class PolarisModel(object):
         self.frameSync.addFrame(self.leftFootPedalSwingFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootDrivingFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootDrivingKneeInFrame, ignoreIncoming=True)
+        self.frameSync.addFrame(self.leftFootOnPedal, ignoreIncoming=True)
         self.frameSync.addFrame(self.leftFootUpFrame, ignoreIncoming=True)
         self.frameSync.addFrame(self.rightHandGrabFrame, ignoreIncoming=True)
 
