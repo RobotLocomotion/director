@@ -199,6 +199,9 @@ class PolarisPlatformPlanner(object):
 
         return request
 
+    def switchToPolarisPlatformParameters(self):
+        self.robotSystem.footstepsDriver.params.setProperty('Defaults', 'Polaris Platform')
+
     #get the footsteps to world transform from footstepsToPlan transform
     def getFootstepToWorldTransforms(self,footstepIdx, stepOffDirection='sideways'):
         self.updateFramesAndAffordance()
