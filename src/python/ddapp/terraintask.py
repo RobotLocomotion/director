@@ -1469,28 +1469,30 @@ class TerrainTaskPanel(TaskUserPanel):
 
         def addApproach():
             approach = self.taskTree.addGroup("Approach")
+            addFunc(self.terrainTask.planArmsUp, "Arms up", parent=approach)
+            addTask(rt.UserPromptTask(name='approve manip plan',
+                                      message='Please approve manipulation plan.'), parent=approach)
+            addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up plan", parent=approach)
             addFunc(self.terrainTask.createStartingGoal, "plan approach to terrain", parent=approach)
             addTask(rt.UserPromptTask(name='approve footsteps',
                                       message='Please approve footstep plan.'), parent=approach)
             addFunc(self.terrainTask.commitLastFootstepPlan, "Commit footsteps", parent=approach)
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=approach)
-            addFunc(self.terrainTask.planArmsUpPre, "Arms up (pre)", parent=approach)
-            addTask(rt.UserPromptTask(name='approve manip plan',
-                                      message='Please approve manipulation plan.'), parent=approach)
-            addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up (pre) plan", parent=approach)
-            addFunc(self.terrainTask.planArmsUp, "Arms up", parent=approach)
-            addTask(rt.UserPromptTask(name='approve manip plan',
-                                      message='Please approve manipulation plan.'), parent=approach)
-            addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up plan", parent=approach)
+            # addFunc(self.terrainTask.planArmsUpPre, "Arms up (pre)", parent=approach)
+            # addTask(rt.UserPromptTask(name='approve manip plan',
+            #                           message='Please approve manipulation plan.'), parent=approach)
+            # addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up (pre) plan", parent=approach)
             addTask(rt.UserPromptTask(name='Disable pressure control',
                                       message='Please disable pressure control & recovery.'), parent=approach)
+            addTask(rt.UserPromptTask(name='Set high pressure',
+                                      message='Please set high pressure.'), parent=approach)
 
         addTask(rt.SetNeckPitch(name='set neck position', angle=45), parent=None)
         addFit()
         addApproach()
         addTask(rt.UserPromptTask(name='Terrain params',
                                   message='Please set footstep params.'))
-        for i in range(4):
+        for i in range(3):
             addFit()
             addFootsteps()
 
