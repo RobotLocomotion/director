@@ -1293,6 +1293,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         dp = self.drivingPlanner
         regrasp = addFolder('Regrasp')
         addFunc(self.stopSteering, 'stop steering commands')
+        addTask(rt.UserPromptTask(name="high pressure", message="set pump to 2400 psi"))
         addFunc(self.onUpdateWheelLocation, 'update wheel location')
         addFunc(self.drivingPlanner.captureHandPose, 'capture hand pose')
         addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
@@ -1306,6 +1307,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
         addTask(rt.CloseHand(name='close left hand', side='Left'))
         addFunc(self.drivingPlanner.updateGraspOffsets, 'update steering wheel grasp offsets')
+        addTask(rt.UserPromptTask(name="driving pressure", message="set pump to 1500 psi"))
         addTask(rt.UserPromptTask(name="reset steering wheel", message="Set the steering wheel to approximate lwy angle"))
         addFunc(self.startSteering, 'start steering commands')
 
