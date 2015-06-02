@@ -435,7 +435,7 @@ class MappingDemo(object):
     def doneIndicator(self):
         print "We are done here."
 
-    def autonomousExecuteRoomMap(self):
+    def autonomousExecuteRoomMap(self, autonomous=False):
         self.graspingHand = 'left'
         self.targetSweepType = 'orientation'
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
