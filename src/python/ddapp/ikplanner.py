@@ -988,6 +988,10 @@ class IKPlanner(object):
     def addPose(self, pose, poseName):
         self.jointController.addPose(poseName, pose)
 
+        # HACK / TODO: make sure exotica runs with gaze_plan_start
+        if not self.pushToMatlab and poseName == 'gaze_plan_start':
+            self.jointController.addPose('reach_start', pose)
+
         if self.pushToMatlab:
             self.ikServer.sendPoseToServer(pose, poseName)
         else:
