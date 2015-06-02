@@ -898,7 +898,7 @@ class DrivingPlanner(object):
         ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=60)
         ikParameters = self.robotSystem.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
 
-        listener = self.getManipPlanListener
+        listener = self.getManipPlanListener()
         _ = self.concatenateAndRescaleTrajectories([armsEgressPrepName, armsEgressStartName], 'qtraj_arms_egress', 'ts', ikParameters)
 
         plan = listener.waitForResponse()
