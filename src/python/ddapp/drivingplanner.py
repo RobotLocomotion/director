@@ -1175,7 +1175,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.params.setProperty('PreGrasp/Retract Depth', 0.22)
 
     def setParamsPreGrasp2(self):
-        self.params.setProperty('PreGrasp/Retract Depth', 0.10)
+        self.params.setProperty('PreGrasp/Retract Depth', 0.12)
 
     def setParamsWheelRetract(self):
         self.params.setProperty('PreGrasp/Retract Depth', 0.3)

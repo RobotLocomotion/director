@@ -58,7 +58,9 @@ class PolarisModel(object):
 
 
         # pose = [np.array([-0.78962299,  0.44284877, -0.29539116]), np.array([ 0.54812954,  0.44571517, -0.46063251,  0.53731713])] #old location
-        pose = [np.array([-0.78594663,  0.42026626, -0.23248139]), np.array([ 0.54812954,  0.44571517, -0.46063251,  0.53731713])] # updated location
+        # pose = [np.array([-0.78594663,  0.42026626, -0.23248139]), np.array([ 0.54812954,  0.44571517, -0.46063251,  0.53731713])] # updated location
+
+        pose = [np.array([-0.78594663,  0.42026626, -0.23248139]), np.array([ 0.53047159,  0.46554963, -0.48086192,  0.52022615])] # update orientation
 
         desc = dict(classname='CapsuleRingAffordanceItem', Name='Steering Wheel', uuid=newUUID(), pose=pose,
                     Color=[1, 0, 0], Radius=float(0.18), Segments=20)
