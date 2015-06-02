@@ -162,6 +162,20 @@ class TerrainTask(object):
         aff.setProperty('Visible', False)
         aff.setProperty('Alpha', 0.2)
 
+    def spawnFootplaneGroundAffordance(self, side):
+        boxThickness = 0.01
+        footFrame = self.getFootFrameAtSole(self.sideToFootLinkName(side))
+        t = transformUtils.copyFrame(footFrame)
+        t.PreMultiply()
+        t.Translate(0.0, 0.0, -boxThickness/2.0)
+
+        om.removeFromObjectModel(om.findObjectByName('ground affordance'))
+        pose = transformUtils.poseFromTransform(t)
+        desc = dict(classname='BoxAffordanceItem', Name='ground affordance', Dimensions=[100, 100, boxThickness], pose=pose)
+        aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        aff.setProperty('Visible', False)
+        aff.setProperty('Alpha', 0.2)
+
 
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.q.copy()

@@ -702,8 +702,8 @@ class EgressPanel(TaskUserPanel):
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
 
         folder = addFolder('Step Off')
-        addTask(rt.UserPromptTask(name="wait for lidar sweep", message="wait for lidar sweep before spawning ground affordance"))
-        addFunc(pp.spawnGroundAffordance, 'spawn ground affordance')
+        # addTask(rt.UserPromptTask(name="wait for lidar sweep", message="wait for lidar sweep before spawning ground affordance"))
+        addFunc(pp.spawnFootplaneGroundAffordance, 'spawn footplane ground affordance')
         addFunc(pp.requestRaycastTerrain, 'raycast terrain')
         addTask(rt.UserPromptTask(name="wait for raycast terrain", message="wait for raycast terrain"))
         addFunc(self.onPlanStepOff, 'plan step off')
