@@ -72,7 +72,7 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                  'Max Downward Step': 0.18,
                                  'Behavior': 2,
                                  'Leading Foot': 0,
-                                 'Swing Height': 0.05,
+                                 'Swing Height': 0.03,
                                  'Drake Swing Speed': 0.6,
                                  'Drake Instep Shift': 0.005,
                                  'Drake Min Hold Time': 1.0,
@@ -83,12 +83,14 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
 DEFAULT_STEP_PARAMS['Terrain'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Terrain'].update({'Drake Min Hold Time': 1.0,
                                        'Drake Swing Speed': 0.6,
+                                       'Swing Height': 0.05,
                                        'Max Forward Step': 0.36,
                                        'Max Num Steps': 6,
                                        'Nominal Step Width': 0.22,
                                        'Map Mode': 1})
 DEFAULT_STEP_PARAMS['Stairs'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
+                                      'Swing Height': 0.05,
                                       'Max Num Steps': 8,
                                       'Min Num Steps': 8,
                                       'Drake Swing Speed': 0.6,
@@ -98,6 +100,7 @@ DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
 DEFAULT_STEP_PARAMS['Polaris Platform'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Polaris Platform'].update({'Drake Min Hold Time': 2.0,
                                       'Prevent Swing Undershoot': 1,
+                                      'Swing Height': 0.05,
                                       'Map Mode': 1})
 
 DEFAULT_CONTACT_SLICES = {(0.05, 0.3): np.array([[-0.13, -0.13, 0.13, 0.13],
