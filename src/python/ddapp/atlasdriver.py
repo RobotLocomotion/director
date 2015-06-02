@@ -401,7 +401,7 @@ class AtlasDriver(object):
             if (self.startupStage == 1):
               if ( getUtime() > self.sentStandUtime + 6E6 ):
                   # print "Sending SE Init"
-                  self.sendInitAtZero(randomize=True)
+                  self.sendInitAtZero()
                   self.startupStage = 2
 
             elif (self.startupStage == 2):
