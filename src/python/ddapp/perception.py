@@ -423,10 +423,16 @@ class SpindleMonitor(object):
         self._getSpindleAngleFunction = getSpindleAngleFunction
 
     def onRobotStateChanged(self, newState):
-        newAngle, t = self._getSpindleAngleFunction()
+        t, newAngle = self._getSpindleAngleFunction()
         elapsed = t - self.lastStateTime
         if (elapsed > 0.001 and elapsed < 100):
-            velocity = (newAngle - self.lastSpindleAngle) / elapsed
+            # unwrap
+            diff = newAngle - self.lastSpindleAngle
+            if (abs(diff - 2*math.pi) < abs(diff)):
+                diff = diff - 2*math.pi
+            if (abs(diff + 2*math.pi) < abs(diff)):
+                diff = diff + 2*math.pi
+            velocity = diff / elapsed
             self.spindleSpinRateAverager.update(velocity)
             # if avg veloicty is bad panic
         self.lastStateTime = t
