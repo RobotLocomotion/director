@@ -1336,7 +1336,6 @@ class IKPlanner(object):
             listener = self.getManipPlanListener()
             info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
             self.lastManipPlan = listener.waitForResponse(timeout=12000)
-            self.lastManipPlan = listener.waitForResponse()
             listener.finish()
 
         print 'traj info:', info
