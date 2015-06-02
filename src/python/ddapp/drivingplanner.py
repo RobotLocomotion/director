@@ -434,11 +434,19 @@ class DrivingPlanner(object):
 
         return keyFramePlan
 
-
-    def planSteeringWheelReGrasp(self, useLineConstraint=False):
-        ikPlanner = self.robotSystem.ikPlanner
+    def captureHandPose(self):
         startPose = self.getPlanningStartPose()
         self.wheelAngleBeforeReGrasp = self.getSteeringWheelAngle()
+        ikPlanner = self.robotSystem.ikPlanner
+
+        handName = 'left'
+        palmToHand = ikPlanner.getPalmToHandLink(handName)
+        palmToWorld = ikPlanner.newGraspToWorldFrame(startPose, handName, palmToHand)
+        self.palmToWorldBeforeRegrasp = palmToWorld
+
+    def planSteeringWheelReGrasp(self, useLineConstraint=True):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
         startPoseName = 'q_regrasp_start'
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_regrasp_end'
@@ -446,36 +454,28 @@ class DrivingPlanner(object):
         handLinkName = 'l_hand'
         maxMetersPerSecond = 0.1
         retractDepth = 0.15
-        palmToHand = ikPlanner.getPalmToHandLink(handName)
 
-        palmToWorld = ikPlanner.newGraspToWorldFrame(startPose, handName, palmToHand)
-        finalTargetFrame = transformUtils.copyFrame(palmToWorld)
+        palmToHand = ikPlanner.getPalmToHandLink(handName)
+        palmToWorldBeforeRegrasp = self.palmToWorldBeforeRegrasp
+        finalTargetFrame = transformUtils.copyFrame(palmToWorldBeforeRegrasp)
         finalTargetFrame.PreMultiply()
         finalTargetFrame.RotateY(180)
         finalPoseConstraint = self.createLeftPalmPoseConstraints(finalTargetFrame, tspan=[1,1])
 
-
-        retractTargetFrame = transformUtils.copyFrame(palmToWorld)
-        retractTargetFrame.PreMultiply()
-        retractTargetFrame.Translate([0.0, -retractDepth, 0.0])
-        retractPoseConstraint = self.createLeftPalmPoseConstraints(retractTargetFrame, tspan=[0.25,0.25])
-
-        preGraspTargetFrame = transformUtils.copyFrame(retractTargetFrame)
-        preGraspTargetFrame.PreMultiply()
-        preGraspTargetFrame.RotateY(180)
-        preGraspPoseConstraint = self.createLeftPalmPoseConstraints(preGraspTargetFrame, tspan=[0.75, 0.75])
+        palmToWorld = ikPlanner.newGraspToWorldFrame(startPose, handName, palmToHand)
+        palmPosition = palmToWorld.GetPosition()
+        _, finalPose = transformUtils.poseFromTransform(finalTargetFrame)
+        preGraspTargetFrame = transformUtils.transformFromPose(palmPosition, finalPose)
+        preGraspPoseConstraint = self.createLeftPalmPoseConstraints(preGraspTargetFrame, tspan=[0.5, 0.5])
 
         allButLeftArmPostureConstraint = self.createAllButLeftArmPostureConstraint(startPoseName)
         lockedBaseConstraint = ikPlanner.createLockedBasePostureConstraint(startPoseName)
         lockedRightArmConstraint = ikPlanner.createLockedRightArmPostureConstraint(startPoseName)
         lockedTorsoConstraint = ikPlanner.createLockedTorsoPostureConstraint(startPoseName)
         constraints = [allButLeftArmPostureConstraint]
-        # constraints = [lockedTorsoConstraint, lockedRightArmConstraint]
         constraints.extend(finalPoseConstraint)
 
         seedPoseName = 'q_regrasp_seed'
-        # seedPose = startPose
-        # seedPose[self.lwyIdx] = startPose[self.lwyIdx] + np.pi
 
         seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'driving', 'driving')
         self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
@@ -486,31 +486,26 @@ class DrivingPlanner(object):
         constraintSet.seedPoseName = seedPoseName
         constraintSet.nominalPoseName = seedPoseName
 
-        # for c in constraintSet.constraints:
-        #     print c
-
-        # vis.updateFrame(palmToWorld, 'palm frame')
-        # vis.updateFrame(finalTargetFrame, 'target frame')
 
         endPose = constraintSet.runIk()
 
         # move on line constraint
-        motionVector = np.array(retractTargetFrame.GetPosition()) - np.array(palmToWorld.GetPosition())
-        motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(retractTargetFrame.GetPosition()), motionVector)
-
-        # vis.updateFrame(motionTargetFrame,'motion frame')
-        # vis.updateFrame(targetFrame, 'target')
-        # vis.updateFrame(currentFrame, 'current')
+        motionVector = np.array(preGraspTargetFrame.GetPosition()) - np.array(finalTargetFrame.GetPosition())
+        motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(preGraspTargetFrame.GetPosition()), motionVector)
 
         p = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0], positionTolerance=0.001)
-        p.tspan = np.array([0.12,0.9])
+        p.tspan = np.linspace(0,1,5)
 
-        # p_out = ikPlanner.createLinePositionConstraint(handLinkName, palmToHand, motionTargetFrame, lineAxis=2, bounds=[-np.linalg.norm(motionVector)*1, 0], positionTolerance=0.001)
-        # p_out.tspan = np.linspace(,1,5)
 
         endPose = constraintSet.runIk()
-        constraintSet.constraints.extend(retractPoseConstraint)
         constraintSet.constraints.extend(preGraspPoseConstraint)
+
+        # orientation constraint for 0.5, 1
+        _, orientationConstraint = ikPlanner.createPositionOrientationGraspConstraints(handName, finalTargetFrame, graspToHandLinkFrame=palmToHand, positionTolerance=0.0, angleToleranceInDegrees=0.0)
+        orientationConstraint.tspan = np.array([0.5,0.6,0.8,1])
+        constraintSet.constraints.append(orientationConstraint)
+
+
         if useLineConstraint:
             constraintSet.constraints.append(p)
             plan = constraintSet.runIkTraj()
@@ -1111,6 +1106,12 @@ class DrivingPlannerPanel(TaskUserPanel):
     def setParamsBarGrasp(self):
         self.params.setProperty('Bar Grasp/Retract Depth', -0.015)
 
+    def startSteering(self):
+        self.params.setProperty('Steering Streaming', 1)
+
+    def stopSteering(self):
+        self.params.setProperty('Steering Streaming', 0)
+
     def addTasks(self):
         self.taskTree.removeAllTasks()
 
@@ -1291,47 +1292,22 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         dp = self.drivingPlanner
         regrasp = addFolder('Regrasp')
+        addFunc(self.stopSteering, 'stop steering commands')
+        addFunc(self.onUpdateWheelLocation, 'update wheel location')
+        addFunc(self.drivingPlanner.captureHandPose, 'capture hand pose')
         addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
         addTask(rt.OpenHand(name='open left hand', side='Left'))
+        addTask(rt.UserPromptTask(name="confirm hand is open", message="Confirm the left hand has opened"))
+        addFunc(self.setParamsWheelRetract, 'set params')
+        addManipTask('Retract hand', self.onPlanRetract, userPrompt=True)
+        self.folder = regrasp
         addManipTask('Plan Regrasp', self.drivingPlanner.planSteeringWheelReGrasp, userPrompt=True)
         self.folder = regrasp
         addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
         addTask(rt.CloseHand(name='close left hand', side='Left'))
         addFunc(self.drivingPlanner.updateGraspOffsets, 'update steering wheel grasp offsets')
-
-
-    def addRegraspTasks(self):
-        self.folder = None
-        def addTask(task, parent=None):
-            parent = parent or self.folder
-            self.taskTree.onAddTask(task, copy=False, parent=parent)
-        def addFunc(func, name, parent=None):
-            addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
-        def addFolder(name, parent=None):
-            self.folder = self.taskTree.addGroup(name, parent=parent)
-            return self.folder
-
-        def addManipTask(name, planFunc, userPrompt=False):
-
-            prevFolder = self.folder
-            addFolder(name, prevFolder)
-            addFunc(planFunc, 'plan')
-            if not userPrompt:
-                addTask(rt.CheckPlanInfo(name='check manip plan info'))
-            else:
-                addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manipulation plan.'))
-            addFunc(dp.commitManipPlan, name='execute manip plan')
-            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'))
-
-        dp = self.drivingPlanner
-        regrasp = addFolder('Regrasp')
-        addTask(rt.UserPromptTask(name="approve open left hand", message="Check ok to open left hand"))
-        addTask(rt.OpenHand(name='open left hand', side='Left'))
-        addManipTask('Plan Regrasp', self.drivingPlanner.planSteeringWheelReGrasp, userPrompt=True)
-        self.folder = regrasp
-        addTask(rt.UserPromptTask(name="approve close left hand", message="Check ok to close left hand"))
-        addTask(rt.CloseHand(name='close left hand', side='Left'))
-        addFunc(self.drivingPlanner.updateGraspOffsets, 'update steering wheel grasp offsets')
+        addTask(rt.UserPromptTask(name="reset steering wheel", message="Set the steering wheel to approximate lwy angle"))
+        addFunc(self.startSteering, 'start steering commands')
 
 
     def updateAndDrawTrajectory(self):
@@ -1357,3 +1333,4 @@ class DrivingPlannerPanel(TaskUserPanel):
             updater.extraObjects = [obj]
 
         return obj
+
