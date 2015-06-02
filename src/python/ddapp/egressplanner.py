@@ -685,7 +685,7 @@ class EgressPanel(TaskUserPanel):
         prep = addFolder('Step down prep')
         addFunc(self.onStart, 'start')
         addTask(rt.SetNeckPitch(name='set neck position', angle=60))
-        addTask(rt.UserPromptTask(name="set walking params", message="Please set walking params to 'Polaris Platform'"))
+        addFunc(pp.switchToPolarisPlatformParameters, "Switch walking params to 'Polaris Platform")
         addTask(rt.UserPromptTask(name="wait for lidar", message="Please wait for next lidar sweep"))
 
         self.folder = prep
