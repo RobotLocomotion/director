@@ -351,8 +351,8 @@ class PolarisPlatformPlanner(object):
         ikPlanner = self.robotSystem.ikPlanner
         startPose = self.getPlanningStartPose()
         endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'safe nominal')
-        endPose, info = ikPlanner.computeStandPose(endPose
-)        newPlan = ikPlanner.computePostureGoal(startPose, endPose)
+        endPose, info = ikPlanner.computeStandPose(endPose)
+        newPlan = ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
     def addPlan(self, plan):
