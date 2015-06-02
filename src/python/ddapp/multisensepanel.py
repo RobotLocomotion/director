@@ -34,7 +34,7 @@ class SpindleSpinChecker(object):
         self.action = None
 
     def update(self):        
-        if self.spindleMonitor.getAverageSpindleVelocity() < 0.2:
+        if abs(self.spindleMonitor.getAverageSpindleVelocity()) < 0.2:
             self.notifyUserStatusBar()
         else:
             self.clearStatusBarWarning()
