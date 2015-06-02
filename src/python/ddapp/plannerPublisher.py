@@ -44,7 +44,7 @@ class PlannerPublisher(object):
     for constraintIndex, _ in enumerate(constraints):
       if isinstance(constraints[constraintIndex], ikconstraints.PostureConstraint):
         if constraints[constraintIndex].postureName == 'gaze_plan_start':
-          print "(gaze_plan_start) Temporary start pose rewrite hack activated"
+          #print "(gaze_plan_start) Temporary start pose rewrite hack activated"
           constraints[constraintIndex].__setattr__('postureName','reach_start')
 
       # Get tspan extend to normalise time-span
@@ -70,10 +70,10 @@ class PlannerPublisher(object):
   def processAddPose(self, pose, poseName):
     # Temporary fix / HACK / TODO (should be done in exotica_json)
     if poseName == 'gaze_plan_start':
-      print "(gaze_plan_start) Temporary start pose rewrite hack activated"
+      #print "(gaze_plan_start) Temporary start pose rewrite hack activated"
       poseName = 'reach_start'
     elif poseName == 'q_start':
-      print "(q_start) Temporary start pose rewrite hack activated"
+      #print "(q_start) Temporary start pose rewrite hack activated"
       poseName = 'reach_start'
 
     msg = lcmdrc.planner_request_t()
