@@ -104,7 +104,7 @@ class PolarisModel(object):
             np.array([ 0.2062255 ,  0.92155886, -0.30781119,  0.11598529]))
         self.leftFootDrivingKneeInFrame = vis.updateFrame(t,'left foot driving knee in', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
-        t = transformUtils.transformFromPose(np.array([-0.13194951,  0.89871423,  0.24956246]), 
+        t = transformUtils.transformFromPose(np.array([-0.13194951,  0.89871423,  0.24956246]),
             np.array([ 0.21589082,  0.91727326, -0.30088849,  0.14651633]))
         self.leftFootOnPedal = vis.updateFrame(t,'left foot on pedal', scale=0.2, visible=True, parent=self.pointcloudAffordance)
 
@@ -720,5 +720,6 @@ class EgressPanel(TaskUserPanel):
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
         addManipTask('plan nominal', pp.planNominal, userPrompt=True)
         addTask(rt.UserPromptTask(name="reset walking parameters", message="Please set walking parameters to drake nominal"))
+        addTask(rt.SetNeckPitch(name='set neck position', angle=20))
 
 
