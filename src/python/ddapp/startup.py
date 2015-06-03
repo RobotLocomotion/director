@@ -1047,6 +1047,7 @@ def roomMap():
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                     perception.multisenseDriver, view, robotStateJointController, playPlans)
     t.visOnly = False
+    t.optionalUserPromptEnabled = False
     q = t.autonomousExecuteRoomMap()
     q.connectTaskEnded(mappingSweepEnded)
     q.start()
