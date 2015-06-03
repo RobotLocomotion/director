@@ -79,10 +79,11 @@ class DoorDemo(object):
         self.handleTouchWidth = 0.06
 
         self.chopDirection = 1 # 1 upwards, -1 downwards
-        self.preChopDepth = -0.05
-        self.preChopWidth = 0.08
-        self.preChopHeight = 0.1
+        self.preChopDepth = -0.06
+        self.preChopWidth = -0.08
+        self.preChopHeight = -0.05
         self.chopDistance = 0.15
+        self.chopSidewaysDistance = 0.04
 
         self.handleReachAngle = 20
 
@@ -205,8 +206,8 @@ class DoorDemo(object):
             self.doorHandlePushOpenFrame.copyFrame(t)
         else:
             reachToAxisTransform = transformUtils.frameFromPositionAndRPY([self.preChopDepth,
-                                                                        -doorSide*self.preChopWidth,
-                                                                        -self.chopDirection*self.preChopHeight],
+                                                                        doorSide*self.preChopWidth,
+                                                                        self.preChopHeight],
                                                                         [0, 90, -90])
             self.doorHandleReachFrame = makeFrameNew('door handle reach frame',
                                                      [reachToAxisTransform, self.doorHandleAxisFrame.transform])
@@ -373,17 +374,19 @@ class DoorDemo(object):
         self.addPlan(newPlan)
 
 
-    def planChop(self, deltaZ=None):
+    def planChop(self, deltaZ=None, deltaY=None):
 
         startPose = self.getPlanningStartPose()
 
         if deltaZ is None:
             deltaZ = self.chopDirection*self.chopDistance
+        if deltaY is None:
+            deltaY = self.chopSidewaysDistance
 
         linkOffsetFrame = self.ikPlanner.getPalmToHandLink(self.graspingHand)
         handLinkName = self.ikPlanner.getHandLink(self.graspingHand)
         startFrame = self.ikPlanner.getLinkFrameAtPose(handLinkName, startPose)
-        endToStartTransform = transformUtils.frameFromPositionAndRPY([deltaZ, 0.0, 0.0],
+        endToStartTransform = transformUtils.frameFromPositionAndRPY([deltaZ, 0.0, -deltaY],
                                                                      [0, 0, 0])
         endFrame = transformUtils.concatenateTransforms([endToStartTransform, startFrame]);
         vis.updateFrame(endFrame, 'debug chop', parent=self.doorHandleAffordance, visible=False, scale=0.2)
@@ -407,6 +410,12 @@ class DoorDemo(object):
 
         plan = constraintSet.runIkTraj()
         self.addPlan(plan)
+
+    def stopPushing(self):
+        startPose = self.getPlanningStartPose
+        plan = self.robotSystem.ikPlanner.computePostureGoal(startPose, startPose)
+        self.addPlan(plan)
+        self.commitManipPlan()
 
     def planReach(self, reachTargetFrame=None):
 
@@ -997,6 +1006,7 @@ class DoorTaskPanel(TaskUserPanel):
         self.addManualButton('Twist arm', self.doorDemo.planDoorPushOpenTwist)
         self.addManualSpacer()
         self.addManualButton('Commit Manip', self.doorDemo.commitManipPlan)
+        self.addManualButton('Stop pushing', self.doorDemo.stopPushing)
 
 
     def getSide(self):
@@ -1011,6 +1021,9 @@ class DoorTaskPanel(TaskUserPanel):
     def addDefaultProperties(self):
         self.params.addProperty('Hand', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         self.params.addProperty('Chop direction', 0, attributes=om.PropertyAttributes(enumNames=['Up', 'Down']))
+        self.params.addProperty('Pre-chop width', self.doorDemo.preChopWidth, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        self.params.addProperty('Pre-chop depth', self.doorDemo.preChopDepth, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        self.params.addProperty('Pre-chop height', self.doorDemo.preChopHeight, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('Chop distance', self.doorDemo.chopDistance, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self._syncProperties()
 
@@ -1018,6 +1031,7 @@ class DoorTaskPanel(TaskUserPanel):
         self._syncProperties()
         self.taskTree.removeAllTasks()
         self.addTasks()
+        self.doorDemo.findDoorHandleAffordance()
 
     def _syncProperties(self):
         self.doorDemo.graspingHand = self.params.getPropertyEnumValue('Hand').lower()
@@ -1026,6 +1040,9 @@ class DoorTaskPanel(TaskUserPanel):
         if hasattr(self.doorDemo, 'doorHandleAffordance'):
             self.doorDemo.computeDoorHandleGraspFrame()
         self.doorDemo.chopDistance = self.params.getProperty('Chop distance')
+        self.doorDemo.preChopWidth = self.params.getProperty('Pre-chop width')
+        self.doorDemo.preChopDepth = self.params.getProperty('Pre-chop depth')
+        self.doorDemo.preChopHeight = self.params.getProperty('Pre-chop height')
 
     def addTasks(self):
 
