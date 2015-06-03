@@ -97,7 +97,8 @@ class EndEffectorTeleopPanel(object):
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
 
-        self.kneeJointLimits = drcargs.getDirectorConfig()['kneeJointLimits']
+        if 'kneeJointLimits' in drcargs.getDirectorConfig():
+            self.kneeJointLimits = drcargs.getDirectorConfig()['kneeJointLimits']
 
     def setComboText(self, combo, text):
         index = combo.findText(text)
