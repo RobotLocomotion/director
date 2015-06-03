@@ -1,6 +1,8 @@
+from ddapp.consoleapp import ConsoleApp
 from ddapp import atlasdriver
 from ddapp import consoleapp
 from ddapp.timercallback import TimerCallback
+from ddapp import robotsystem
 from PythonQt import QtCore, QtGui
 from collections import namedtuple
 
@@ -9,27 +11,55 @@ LABEL_DEFAULT_STYLE_SHEET = "font: 36pt; border-style: outset; border-width: 2px
 TITLE_DEFAULT_STYLE_SHEET = "font: 24pt"
 atlasDriver = atlasdriver.init()
 
+app = ConsoleApp()
+app.setupGlobals(globals())
+view = app.createView()
+robotsystem.create(view, globals())
+
 w = QtGui.QWidget()
 l = QtGui.QHBoxLayout(w)
 
-def spawnBasicLabel(name):
-  ql = QtGui.QLabel(name)
-  ql.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-  qs = QtGui.QLabel('<>')
-  qs.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-  ql.setStyleSheet(TITLE_DEFAULT_STYLE_SHEET)
-  qs.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET)
-  qs.setAlignment(QtCore.Qt.AlignHCenter)
 
+def wrapInVTitledItem(name, items):
   box = QtGui.QGroupBox(name)
   box.setAlignment(QtCore.Qt.AlignCenter) 
   boxLayout = QtGui.QVBoxLayout(box)
-  boxLayout.addWidget(qs)
-  l.addWidget(box)
+  for item in items:
+    boxLayout.addWidget(item)
+  return box
+def wrapInHTitledItem(name, items):
+  box = QtGui.QGroupBox(name)
+  box.setAlignment(QtCore.Qt.AlignCenter) 
+  boxLayout = QtGui.QHBoxLayout(box)
+  for item in items:
+    boxLayout.addWidget(item)
+  return box
+def spawnBasicLabel(txt = "<>"):
+  qs = QtGui.QLabel(txt)
+  qs.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+  qs.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET)
+  qs.setAlignment(QtCore.Qt.AlignHCenter)
   return qs
+def spawnBasicButton(txt = "<>"):
+  qs = QtGui.QPushButton(txt)
+  qs.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+  qs.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET)
+  return qs
+def spawnBasicTextEntry():
+  qs = QtGui.QLineEdit('')
+  qs.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+  qs.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET)
+  return qs
+def spawnProgressBar(max, min):
+  ql = QtGui.QProgressBar()
+  ql.setMaximum(max)
+  ql.setMinimum(min)
+  ql.setOrientation(QtCore.Qt.Vertical)
+  return ql
 
+statusLabel = spawnBasicLabel()
+l.addWidget(wrapInVTitledItem("Behavior", [statusLabel]))
 
-statusLabel = spawnBasicLabel("Behavior")
 def statusUpdate():
   behavior = atlasDriver.getCurrentBehaviorName()
   statusLabel.setText(behavior)
@@ -41,15 +71,16 @@ statusTimer = TimerCallback(targetFps=FPS)
 statusTimer.callback =  statusUpdate
 statusTimer.start()
 
-controllerLabel = spawnBasicLabel("Controller")
+controllerLabel = spawnBasicLabel()
+l.addWidget(wrapInVTitledItem("Controller", [controllerLabel]))
 def controllerUpdate():
   status = atlasDriver.getControllerStatus()
   if not status:
     status = "Unknown"
-  if len(status) > 5:
-    status = status[0:5]
   rate = atlasDriver.getControllerRate()
-  controllerLabel.setText(status + "\n" + str(rate))
+  if not rate:
+    rate = 0.0
+  controllerLabel.setText("%s\n%06.1fhz" % (status, rate))
   if (rate < 500):
     controllerLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
   else:
@@ -57,24 +88,154 @@ def controllerUpdate():
 controllerTimer = TimerCallback(targetFps=FPS)
 controllerTimer.callback = controllerUpdate
 controllerTimer.start()
+ 
+recoveryLabel = spawnBasicLabel()
+bracingLabel = spawnBasicLabel()
+l.addWidget(wrapInVTitledItem("Unstoppable", [recoveryLabel, bracingLabel]))
+def unstoppableUpdate():
+  recovery = atlasDriver.getRecoveryEnabledStatus()
+  bracing = atlasDriver.getBracingEnabledStatus()
+  if not recovery:
+    recovery = "unknown"
+  if not bracing:
+    bracing = "unknown"
+  
+  if recovery == "enabled":
+    recoveryLabel.setText("Rec On")
+    recoveryLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+  else:
+    recoveryLabel.setText("Rec Off")
+    recoveryLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
 
-batteryLabel = spawnBasicLabel("Battery")
+  if bracing == "enabled":
+    bracingLabel.setText("Brc On")
+    bracingLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+  else:
+    bracingLabel.setText("Brc Off")
+    bracingLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
+
+unstoppableTimer = TimerCallback(targetFps=FPS)
+unstoppableTimer.callback = unstoppableUpdate
+unstoppableTimer.start()
+
+
+batteryLabel = spawnProgressBar(100, 0)
+l.addWidget(wrapInVTitledItem("Battery", [batteryLabel]))
 def batteryUpdate():
   status = atlasDriver.getBatteryChargeRemaining()
   if not status:
     status = -1
-  batteryLabel.setText(str(status) + "%")
-  if (status < 10):
-    batteryLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
-  else:
-    batteryLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+  #batteryLabel.setText(str(status) + "%")
+  batteryLabel.setValue(status)
 batteryTimer = TimerCallback(targetFps=FPS)
 batteryTimer.callback = batteryUpdate
 batteryTimer.start()
 
+spindleLabel = spawnBasicLabel()
+l.addWidget(wrapInHTitledItem("Spindle", [spindleLabel]))
+def spindleUpdate():
+  rate = spindleMonitor.getAverageSpindleVelocity()
+  if abs(rate) < 0.2:
+    spindleLabel.setText('Stop')
+    spindleLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
+  else:
+    spindleLabel.setText('Spin')
+    spindleLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+spindleTimer = TimerCallback(targetFps=FPS)
+spindleTimer.callback = spindleUpdate
+spindleTimer.start()
+
+
+pressureLabel = spawnBasicLabel()
+l.addWidget(wrapInVTitledItem("Pressure", [pressureLabel]))
+def pressureUpdate():
+  supplyp = atlasDriver.getCurrentSupplyPressure()
+  #returnp = atlasDriver.getCurrentReturnPressure()
+  pressureLabel.setText("%06.1f\npsi" % supplyp) # + "\n(" + str(returnp) + ")")
+  if (supplyp < 1450):
+    pressureLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
+  elif (supplyp < 1950):
+    pressureLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
+  elif (supplyp > 2050):
+    pressureLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
+  else:
+    pressureLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+pressureTimer = TimerCallback(targetFps=FPS)
+pressureTimer.callback = pressureUpdate
+pressureTimer.start()
+
+luwy = spawnProgressBar(100, 60)
+lmwx = spawnProgressBar(100, 60)
+llwy = spawnProgressBar(100, 60)
+ruwy = spawnProgressBar(100, 60)
+rmwx = spawnProgressBar(100, 60)
+rlwy = spawnProgressBar(100, 60)
+arms = [luwy, lmwx, llwy, ruwy, rmwx, rlwy]
+l.addWidget(wrapInHTitledItem("Arm Temp", arms))
+def armTempUpdate():
+  for i in range(6):
+    temp = atlasDriver.getElectricArmTemperature(i)
+    arms[i].setValue(temp)
+
+armTempTimer = TimerCallback(targetFps=FPS)
+armTempTimer.callback = armTempUpdate
+armTempTimer.start()
+
+lHandLabel = spawnBasicLabel()
+l.addWidget(wrapInHTitledItem("Left Hand", [lHandLabel]))
+def lHandUpdate():
+  state = robotStateJointController.lastRobotStateMessage
+  if (state):
+    status = atlasDriver.getControllerStatus()
+    isSafeStatus = (status == "standing" or status == "manipulating")
+    index = robotStateJointController.lastRobotStateMessage.joint_name.index('left_finger_1_joint_1')
+    lHandOpen = state.joint_position[index]
+    if (lHandOpen < 0.8 and isSafeStatus):
+      lHandLabel.setText("Open\n(%02.1f)" % lHandOpen)
+      lHandLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
+    elif (lHandOpen < 0.8 and not isSafeStatus):
+      lHandLabel.setText("Open\n(%02.1f)" % lHandOpen)
+      lHandLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
+    else:
+      lHandLabel.setText("Closed\n(%02.1f)" % lHandOpen)
+      lHandLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+lHandTimer = TimerCallback(targetFps=FPS)
+lHandTimer.callback = lHandUpdate
+lHandTimer.start()
+
+rHandLabel = spawnBasicLabel()
+l.addWidget(wrapInHTitledItem("Right Hand", [rHandLabel]))
+def rHandUpdate():
+  state = robotStateJointController.lastRobotStateMessage
+  if (state):
+    status = atlasDriver.getControllerStatus()
+    isSafeStatus = (status == "standing" or status == "manipulating")
+    index = robotStateJointController.lastRobotStateMessage.joint_name.index('right_finger_1_joint_1')
+    rHandOpen = state.joint_position[index]
+    if (rHandOpen < 0.8 and isSafeStatus):
+      rHandLabel.setText("Open\n(%02.1f)" % rHandOpen)
+      rHandLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
+    elif (rHandOpen < 0.8 and not isSafeStatus):
+      rHandLabel.setText("Open\n(%02.1f)" % rHandOpen)
+      rHandLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
+    else:
+      rHandLabel.setText("Closed\n(%02.1f)" % rHandOpen)
+      rHandLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+rHandTimer = TimerCallback(targetFps=FPS)
+rHandTimer.callback = rHandUpdate
+rHandTimer.start()
+
+globalTimerLabl = spawnBasicLabel()
+globalTimerSetBtn = spawnBasicButton("Set")
+globalTimerSetTxt = spawnBasicTextEntry()
+globalTimerAdjustBox = QtGui.QWidget()
+globalTimerAdjustBoxLayout = QtGui.QHBoxLayout(globalTimerAdjustBox)
+globalTimerAdjustBoxLayout.addWidget(globalTimerSetBtn)
+globalTimerAdjustBoxLayout.addWidget(globalTimerSetTxt)
+l.addWidget(wrapInVTitledItem("Run Timer", [globalTimerLabl, globalTimerAdjustBox]))
 
 w.setWindowTitle('Atlas Health Panel')
 w.show()
 w.resize(1000,100)
 
-consoleapp.ConsoleApp.start()
+app.start()
