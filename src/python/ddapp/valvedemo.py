@@ -709,14 +709,12 @@ class ValveTaskPanel(TaskUserPanel):
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        self.params.addProperty('Touch depth', self.valveDemo.touchDepth, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
-        if propertyName != 'Touch depth':
-            self.taskTree.removeAllTasks()
-            self.addTasks()
+        self.taskTree.removeAllTasks()
+        self.addTasks()
 
     def _syncProperties(self):
 
@@ -746,7 +744,6 @@ class ValveTaskPanel(TaskUserPanel):
             self.valveDemo.lockBack = True
         else:
             self.valveDemo.lockBack = False
-        self.valveDemo.touchDepth = self.params.getProperty('Touch depth')
 
     def addTasks(self):
 
