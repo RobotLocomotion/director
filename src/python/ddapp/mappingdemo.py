@@ -435,7 +435,7 @@ class MappingDemo(object):
     def doneIndicator(self):
         print "We are done here."
 
-    def autonomousExecuteRoomMap(self, autonomous=False):
+    def autonomousExecuteRoomMap(self):
         self.graspingHand = 'left'
         self.targetSweepType = 'orientation'
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
@@ -447,26 +447,24 @@ class MappingDemo(object):
         self.mapFolder=om.getOrCreateContainer('room mapping')
 
         taskQueue = AsyncTaskQueue()
-        self.addTasksToQueueSweep(taskQueue, autonomous=autonomous)
-        self.addTasksToQueueSweep(taskQueue, autonomous=autonomous)
-        self.addTasksToQueueSweep(taskQueue, autonomous=autonomous)
-        self.addTasksToQueueSweep(taskQueue, autonomous=autonomous)
-        self.addTasksToQueueSweep(taskQueue, autonomous=autonomous)
-        self.addTasksToQueueSweep(taskQueue, autonomous=autonomous)
-        self.addTasksToQueueSweep(taskQueue, autonomous=autonomous)
+        self.addTasksToQueueSweep(taskQueue)
+        self.addTasksToQueueSweep(taskQueue)
+        self.addTasksToQueueSweep(taskQueue)
+        self.addTasksToQueueSweep(taskQueue)
+        self.addTasksToQueueSweep(taskQueue)
+        self.addTasksToQueueSweep(taskQueue)
+        self.addTasksToQueueSweep(taskQueue)
         taskQueue.addTask(self.printAsync('done!'))
         taskQueue.addTask(self.doneIndicator)
         return taskQueue
         
-    def addTasksToQueueSweep(self, taskQueue, autonomous=False):        
+    def addTasksToQueueSweep(self, taskQueue):        
         taskQueue.addTask(self.getRoomSweepFrames)
         taskQueue.addTask(self.planRoomReach)        
-        if not autonomous:
-            taskQueue.addTask(self.optionalUserPrompt('execute reach? y/n: '))
+        taskQueue.addTask(self.optionalUserPrompt('execute reach? y/n: '))
         taskQueue.addTask(self.animateLastPlan)
         taskQueue.addTask(self.planRoomSweep)        
-        if not autonomous:
-            taskQueue.addTask(self.optionalUserPrompt('execute sweep? y/n: '))
+        taskQueue.addTask(self.optionalUserPrompt('execute sweep? y/n: '))
         taskQueue.addTask(self.animateLastPlan)
         taskQueue.addTask(self.moveRoomSweepOnwards)                
         
