@@ -376,7 +376,6 @@ if usePlanning:
 
     spindleSpinChecker =  multisensepanel.SpindleSpinChecker(spindleMonitor)
     spindleSpinChecker.setupMenuAction()
-    spindleSpinChecker.start()
 
     postureShortcuts = teleoppanel.PosturePlanShortcuts(robotStateJointController, ikPlanner)
 
