@@ -714,8 +714,9 @@ class ValveTaskPanel(TaskUserPanel):
 
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
-        self.taskTree.removeAllTasks()
-        self.addTasks()
+        if propertyName != 'Touch depth':
+            self.taskTree.removeAllTasks()
+            self.addTasks()
 
     def _syncProperties(self):
 
