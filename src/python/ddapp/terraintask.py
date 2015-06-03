@@ -1472,9 +1472,7 @@ class TerrainTaskPanel(TaskUserPanel):
             addFunc(self.terrainTask.spawnCinderblockTerrain, "Spawn terrain", parent=fit)
             addFunc(self.terrainTask.assignBlocks, "Assign blocks", parent=fit)
             addTask(rt.UserPromptTask(name='Wait for block assignments',
-                                      message='Please assign blocks.'), parent=fit)
-            addTask(rt.UserPromptTask(name='Manual adjustment',
-                                      message='Please adjust blocks as needed.'), parent=fit)
+                                      message='Please assign and adjust blocks.'), parent=fit)
             addFunc(self.terrainTask.requestRaycastTerrain, "Request raycast", parent=fit)
         def addFootsteps(numSteps=-1):
             footsteps = self.taskTree.addGroup("Footsteps")
@@ -1483,10 +1481,8 @@ class TerrainTaskPanel(TaskUserPanel):
                                       message='Please confirm number of steps.'),
                                       parent=footsteps)
             addFunc(self.terrainTask.createFootstepsForTerrain, "Prefab steps", parent=footsteps)
-            addTask(rt.UserPromptTask(name='Adjust footsteps',
-                                              message='Please adjust footsteps as needed.'), parent=footsteps)
             addTask(rt.UserPromptTask(name='approve footsteps',
-                                      message='Please approve footstep plan.'), parent=footsteps)
+                                      message='Please adjust and approve footstep plan.'), parent=footsteps)
             addFunc(self.terrainTask.commitLastFootstepPlan, "Commit footsteps", parent=footsteps)
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=footsteps)
 
