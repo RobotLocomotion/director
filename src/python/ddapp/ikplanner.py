@@ -252,7 +252,9 @@ class IKPlanner(object):
         self.leftLegJoints   = self.getJointGroup('Left Leg')
         self.rightLegJoints  = self.getJointGroup('Right Leg')
 
-        self.pelvisLink = drcargs.getDirectorConfig()['pelvisLink']
+        if 'pelvisLink' in drcargs.getDirectorConfig():
+            self.pelvisLink = drcargs.getDirectorConfig()['pelvisLink']
+        
         if 'leftFootLink' in drcargs.getDirectorConfig():
             self.leftFootLink =  drcargs.getDirectorConfig()['leftFootLink']
             self.rightFootLink = drcargs.getDirectorConfig()['rightFootLink']

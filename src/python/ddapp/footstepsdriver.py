@@ -49,7 +49,9 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
             for i in range(len(_footMeshFiles[j])):
                 _footMeshFiles[j][i] = os.path.join(directorConfigDirectory, _footMeshFiles[j][i])
 
-    _pelvisLink =  directorConfig['pelvisLink']
+    if 'pelvisLink' in directorConfig:
+        _pelvisLink =  directorConfig['pelvisLink']
+
     if 'leftFootLink' in directorConfig:
         _leftFootLink = directorConfig['leftFootLink']
         _rightFootLink = directorConfig['rightFootLink']
