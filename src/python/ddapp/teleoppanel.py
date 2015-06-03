@@ -924,7 +924,11 @@ class JointTeleopPanel(object):
         self.jointLimitsMax = np.array([self.panel.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
 
         # this need to be generalized
-        baseZLimits = drcargs.getDirectorConfig()['baseZJointLimits']
+        if 'baseZJointLimits' in drcargs.getDirectorConfig():
+            baseZLimits = drcargs.getDirectorConfig()['baseZJointLimits']
+        else: # TODO generalise so the base sliders are deactivated
+            baseZLimits = [-0.1, 0.1]
+
         self.jointLimitsMin[0:6] = [-0.25, -0.25, baseZLimits[0], -math.radians(20), -math.radians(20), -math.radians(20)]
         self.jointLimitsMax[0:6] = [ 0.25 , 0.25, baseZLimits[1],  math.radians(20),  math.radians(20),  math.radians(20)]
 
