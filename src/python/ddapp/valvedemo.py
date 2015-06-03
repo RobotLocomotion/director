@@ -849,8 +849,6 @@ class ValveTaskPanel(TaskUserPanel):
         addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
         addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General',
                                    postureName='safe nominal', side='Default'), parent=prep)
-        addTask(rt.UserPromptTask(name='approve manip plan',
-                                  message='Please approve manipulation plan.'), parent=prep)
         addTask(rt.CommitManipulationPlan(name='execute manip plan',
                                           planName='safe nominal posture plan'), parent=prep)
         addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)

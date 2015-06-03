@@ -78,13 +78,6 @@ class DoorDemo(object):
         self.handleTouchDepth = -0.08
         self.handleTouchWidth = 0.06
 
-        self.chopDirection = 1 # 1 upwards, -1 downwards
-        self.preChopDepth = -0.06
-        self.preChopWidth = -0.08
-        self.preChopHeight = -0.05
-        self.chopDistance = 0.15
-        self.chopSidewaysDistance = 0.04
-
         self.handleReachAngle = 20
 
         self.handleTurnHeight = -0.08
@@ -98,10 +91,20 @@ class DoorDemo(object):
         self.handleOpenWidth = 0.4
 
         self.speedHigh = 60
-        self.speedLow = 20
+        self.speedLow = 15
 
         self.setFootstepThroughDoorParameters()
 
+        self.setChopParametersToDefaults()
+
+
+    def setChopParametersToDefaults(self):
+
+        self.preChopDepth = -0.06
+        self.preChopWidth = -0.08
+        self.preChopHeight = 0.10
+        self.chopDistance = -0.15
+        self.chopSidewaysDistance = 0.03
 
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -209,8 +212,24 @@ class DoorDemo(object):
                                                                         doorSide*self.preChopWidth,
                                                                         self.preChopHeight],
                                                                         [0, 90, -90])
+
+            obj = om.findObjectByName('door handle reach frame')
             self.doorHandleReachFrame = makeFrameNew('door handle reach frame',
                                                      [reachToAxisTransform, self.doorHandleAxisFrame.transform])
+
+            # the first time the frame is created, set some display properties
+            if not obj:
+                obj = self.doorHandleReachFrame
+                obj.setProperty('Edit', True)
+                obj.setProperty('Visible', True)
+                rep = obj.widget.GetRepresentation()
+                rep.SetRotateAxisEnabled(0, False)
+                rep.SetRotateAxisEnabled(1, False)
+                rep.SetRotateAxisEnabled(2, False)
+                obj.widget.HandleRotationEnabledOff()
+                obj.setProperty('Edit', False)
+
+
             preChopToReachTransform = transformUtils.frameFromPositionAndRPY([0.0,
                                                                        -0.15,
                                                                         0.0],
@@ -230,6 +249,8 @@ class DoorDemo(object):
             self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushLiftFrame, ignoreIncoming=True)
             self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushLiftAxisFrame, ignoreIncoming=True)
             self.doorHandleFrame.frameSync.addFrame(self.doorHandlePushOpenFrame, ignoreIncoming=True)
+        else:
+            self.doorHandleFrame.frameSync.addFrame(self.doorHandlePreChopFrame, ignoreIncoming=True)
 
 
     def computeDoorHandleAxisFrame(self):
@@ -379,7 +400,7 @@ class DoorDemo(object):
         startPose = self.getPlanningStartPose()
 
         if deltaZ is None:
-            deltaZ = self.chopDirection*self.chopDistance
+            deltaZ = self.chopDistance
         if deltaY is None:
             deltaY = self.chopSidewaysDistance
 
@@ -417,10 +438,13 @@ class DoorDemo(object):
         self.addPlan(plan)
         self.commitManipPlan()
 
-    def planReach(self, reachTargetFrame=None):
+    def planReach(self, reachTargetFrame=None, jointSpeedLimit=None):
 
         if reachTargetFrame is None:
             reachTargetFrame = self.doorHandleReachFrame
+
+        if jointSpeedLimit is None:
+            jointSpeedLimit = self.speedLow
 
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, reachTargetFrame)
@@ -448,7 +472,7 @@ class DoorDemo(object):
         self.addPlan(plan)
 
     def planPreChop(self):
-        self.planReach(self.doorHandlePreChopFrame)
+        self.planReach(self.doorHandlePreChopFrame, self.speedHigh)
 
 
     def createHingeConstraint(self, referenceFrame, axis, linkName, startPose, tspan=[0, 1]):
@@ -900,7 +924,7 @@ class DoorDemo(object):
         doorGroundFrame = vis.showFrame(doorGroundFrame, 'door ground frame', parent=doorAffordance)
         stanceFrame = vis.showFrame(stanceFrame, 'door stance frame', parent=doorAffordance)
 
-        doorWalkFrame = vis.showFrame(doorWalkFrame, 'door walk frame', parent=doorAffordance)
+        doorWalkFrame = vis.showFrame(doorWalkFrame, 'door walk frame', visible=False, parent=doorAffordance)
 
 
         doorFrame = doorAffordance.getChildFrame()
@@ -1020,26 +1044,27 @@ class DoorTaskPanel(TaskUserPanel):
 
     def addDefaultProperties(self):
         self.params.addProperty('Hand', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
-        self.params.addProperty('Chop direction', 0, attributes=om.PropertyAttributes(enumNames=['Up', 'Down']))
         self.params.addProperty('Pre-chop width', self.doorDemo.preChopWidth, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('Pre-chop depth', self.doorDemo.preChopDepth, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('Pre-chop height', self.doorDemo.preChopHeight, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self.params.addProperty('Chop distance', self.doorDemo.chopDistance, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
+        self.params.addProperty('Chop sideways distance', self.doorDemo.chopSidewaysDistance, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
-        self._syncProperties()
-        self.taskTree.removeAllTasks()
-        self.addTasks()
+        if propertyName == 'Hand':
+            self.taskTree.removeAllTasks()
+            self.addTasks()
         self.doorDemo.findDoorHandleAffordance()
+        self._syncProperties()
 
     def _syncProperties(self):
         self.doorDemo.graspingHand = self.params.getPropertyEnumValue('Hand').lower()
         self.doorDemo.ikPlanner.reachingSide = self.doorDemo.graspingHand
-        self.doorDemo.chopDirection = 1 if self.params.getPropertyEnumValue('Chop direction') == 'Up' else -1
         if hasattr(self.doorDemo, 'doorHandleAffordance'):
             self.doorDemo.computeDoorHandleGraspFrame()
         self.doorDemo.chopDistance = self.params.getProperty('Chop distance')
+        self.doorDemo.chopSidewaysDistance = self.params.getProperty('Chop sideways distance')
         self.doorDemo.preChopWidth = self.params.getProperty('Pre-chop width')
         self.doorDemo.preChopDepth = self.params.getProperty('Pre-chop depth')
         self.doorDemo.preChopHeight = self.params.getProperty('Pre-chop height')
@@ -1070,7 +1095,6 @@ class DoorTaskPanel(TaskUserPanel):
         folder = addFolder('Prep')
         addTask(rt.CloseHand(name='close left hand', side='Left'))
         addTask(rt.CloseHand(name='close right hand', side='Right'))
-        addTask(rt.SetNeckPitch(name='set neck position', angle=20))
         #addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General', postureName='safe nominal', side='Default'))
         #addTask(rt.CheckPlanInfo(name='check manip plan info'))
         #addTask(rt.CommitManipulationPlan(name='execute manip plan', planName='safe nominal posture plan'))
@@ -1081,6 +1105,7 @@ class DoorTaskPanel(TaskUserPanel):
         #addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit door', message='Please fit and approve door affordance.'))
         addTask(rt.FindAffordance(name='check door affordance', affordanceName='door'))
+        addTask(rt.SetNeckPitch(name='set neck position', angle=35))
 
         # walk
         folder = addFolder('Walk and refit')
@@ -1090,7 +1115,6 @@ class DoorTaskPanel(TaskUserPanel):
         addTask(rt.WaitForWalkExecution(name='wait for walking'))
 
         # refit
-        addTask(rt.SetNeckPitch(name='set neck position', angle=35))
         #addTask(rt.WaitForMultisenseLidar(name='wait for lidar sweep'))
         addTask(rt.UserPromptTask(name='fit door', message='Please fit and approve door handle affordance.'))
 
@@ -1121,8 +1145,8 @@ class DoorTaskPanel(TaskUserPanel):
             addTask(rt.UserPromptTask(name='Approve handle turn',
                                     message='Please verify that the handle has turned'))
         else:
+            addFunc(self.doorDemo.setChopParametersToDefaults, name='re-set chop parameters')
             addFunc(self.closePinch, name='Close hand')
-            addManipTask('Pre-chop out', d.planPreChop, userPrompt=True)
             addManipTask('Reach', d.planReach, userPrompt=True)
             addManipTask('Chop', d.planChop, userPrompt=True)
 
@@ -1140,6 +1164,7 @@ class DoorTaskPanel(TaskUserPanel):
                                   message='Please verify that the door is open'))
         addTask(rt.CloseHand(name='Close hand', side=side))
         addManipTask('Tuck Arms', d.planTuckArms, userPrompt=False)
+        addTask(rt.CloseHand(name='Close fist', side=side))
 
         # walk
         folder = addFolder('Walk through door')
