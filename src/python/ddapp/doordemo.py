@@ -841,16 +841,17 @@ class DoorDemo(object):
         doorDepth = 0.5 * 0.0254
 
         doorSide = 1 if self.graspingHand == 'left' else -1
-        handleHeightFromGround = 37 * 0.0254
-        handleDistanceFromEdge = 2 * 0.0254
-        handleDistanceFromDoor = 2.0 * 0.0254
-        handleLength = 5 * 0.0254
+        handleHeightFromGround = 35 * 0.0254
+        handleDistanceFromEdge = 1.625 * 0.0254
+        handleDistanceFromDoor = 1.75 * 0.0254
+        handleLength = 4.125 * 0.0254
+        handleDepth = 0.25 * 0.0254
 
         doorJamWidth = 0.5
         doorJamDepth = 4.5 * 0.0254
 
 
-        handleFrame = transformUtils.frameFromPositionAndRPY([-handleDistanceFromDoor, doorSide*(doorWidth/2.0 - handleDistanceFromEdge - handleLength/2.0), handleHeightFromGround], [0.0, 0.0, 0.0])
+        handleFrame = transformUtils.frameFromPositionAndRPY([-handleDistanceFromDoor - doorDepth/2.0 - handleDepth/2, doorSide*(doorWidth/2.0 - handleDistanceFromEdge - handleLength/2.0), handleHeightFromGround], [0.0, 0.0, 0.0])
         handleFrame.PostMultiply()
         handleFrame.Concatenate(doorGroundFrame)
 
@@ -871,7 +872,7 @@ class DoorDemo(object):
 
 
         desc = dict(classname='BoxAffordanceItem', Name='door handle',
-           pose=transformUtils.poseFromTransform(handleFrame), Dimensions=[0.02, handleLength, 0.02], Color=[0.0, 1.0, 0.0])
+           pose=transformUtils.poseFromTransform(handleFrame), Dimensions=[handleDepth, handleLength, 0.02], Color=[0.0, 1.0, 0.0])
         handleAffordance = segmentation.affordanceManager.newAffordanceFromDescription(desc)
 
         desc = dict(classname='BoxAffordanceItem', Name='door',
