@@ -241,7 +241,9 @@ class IKPlanner(object):
         om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
 
         self.jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
-        self.kneeJoints = drcargs.getDirectorConfig()['kneeJoints']
+        
+        if 'kneeJoints' in drcargs.getDirectorConfig():
+            self.kneeJoints = drcargs.getDirectorConfig()['kneeJoints']
 
         # list of joints, otherwise []
         self.baseJoints      = self.getJointGroup('Base')
