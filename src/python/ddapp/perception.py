@@ -9,6 +9,7 @@ from ddapp import drcargs
 from ddapp import robotstate
 from ddapp.timercallback import TimerCallback
 from ddapp.utime import getUtime
+from ddapp.simpletimer import MovingAverageComputer
 import vtkDRCFiltersPython as drc
 from ddapp.debugVis import DebugData
 import ddapp.visualization as vis
@@ -411,6 +412,34 @@ class NeckDriver(object):
         neckPitch = self.getNeckPitchDegrees() + self.delta
         self.showText(neckPitch)
         return True
+
+
+class SpindleMonitor(object):
+    def __init__(self, getSpindleAngleFunction):
+        self.lastSpindleAngle = 0
+        self.lastStateTime = 0
+        self.spindleSpinRateAverager = MovingAverageComputer()
+        self.spindleSpinRateAverager.timeWindow = 0.5
+        self._getSpindleAngleFunction = getSpindleAngleFunction
+
+    def onRobotStateChanged(self, newState):
+        t, newAngle = self._getSpindleAngleFunction()
+        elapsed = t - self.lastStateTime
+        if (elapsed > 0.001 and elapsed < 100):
+            # unwrap
+            diff = newAngle - self.lastSpindleAngle
+            if (abs(diff - 2*math.pi) < abs(diff)):
+                diff = diff - 2*math.pi
+            if (abs(diff + 2*math.pi) < abs(diff)):
+                diff = diff + 2*math.pi
+            velocity = diff / elapsed
+            self.spindleSpinRateAverager.update(velocity)
+            # if avg veloicty is bad panic
+        self.lastStateTime = t
+        self.lastSpindleAngle = newAngle
+
+    def getAverageSpindleVelocity(self):
+        return self.spindleSpinRateAverager.getAverage()
 
 
 class MapServerSource(TimerCallback):
