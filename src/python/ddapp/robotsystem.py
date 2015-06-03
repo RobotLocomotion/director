@@ -90,7 +90,7 @@ class RobotSystem(object):
             def getSpindleAngleFunction():
                 if (robotStateJointController.lastRobotStateMessage):
                     index = robotStateJointController.lastRobotStateMessage.joint_name.index('hokuyo_joint')
-                    return (float(robotStateJointController.lastRobotStateMessage.utime)/(1000*1000), 
+                    return (float(robotStateJointController.lastRobotStateMessage.utime)/(1e6),
                         robotStateJointController.lastRobotStateMessage.joint_position[index])
                 return (0, 0)
             spindleMonitor = perception.SpindleMonitor(getSpindleAngleFunction)
