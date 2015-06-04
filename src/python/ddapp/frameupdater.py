@@ -3,10 +3,11 @@ from PythonQt import QtCore, QtGui
 import numpy as np
 import vtkAll as vtk
 
+#global state is fine here since this module behaves like a singleton
 lastEditedFrame = None
 
 def registerFrame(frame):
-	global lastEditedFrame 
+	global lastEditedFrame  
 	lastEditedFrame = frame
 
 def applyFrameTransform(x, y, z, yaw):
@@ -43,19 +44,24 @@ def handleKey(event):
 			shiftFrameYaw(angularDisplacement)
 		else:
 			shiftFrameX(-linearDisplacement)
+		return True
 	elif event.key() == QtCore.Qt.Key_Right:
 		if event.modifiers() & QtCore.Qt.ShiftModifier:
 			shiftFrameYaw(-angularDisplacement)
 		else:
 			shiftFrameX(linearDisplacement)
+		return True
 	elif event.key() == QtCore.Qt.Key_Up:
 		if event.modifiers() & QtCore.Qt.ShiftModifier:
 			shiftFrameZ(linearDisplacement)
 		else:
 			shiftFrameY(linearDisplacement)
+		return True
 	elif event.key() == QtCore.Qt.Key_Down:
 		if event.modifiers() & QtCore.Qt.ShiftModifier:
 			shiftFrameZ(-linearDisplacement)
 		else:
 			shiftFrameY(-linearDisplacement)
+		return True
+	
 	return False
