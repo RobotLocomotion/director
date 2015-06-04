@@ -1337,6 +1337,13 @@ class TerrainTask(object):
         endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'arm up pregrasp', side='right')
         ikPlanner.computeMultiPostureGoal([startPose, endPose])
 
+    def planArmsUpNarrow(self):
+        ikPlanner = self.robotSystem.ikPlanner
+        startPose = self.getPlanningStartPose()
+        endPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'hands-forward-narrow', side='left')
+        endPose = ikPlanner.getMergedPostureFromDatabase(endPose, 'General', 'hands-forward-narrow', side='right')
+        ikPlanner.computeMultiPostureGoal([startPose, endPose])
+
     def commitLastManipPlan(self):
         self.robotSystem.manipPlanner.commitManipPlan(self.robotSystem.manipPlanner.lastManipPlan)
 
@@ -1462,6 +1469,8 @@ class TerrainTaskPanel(TaskUserPanel):
 
         self.taskTree.removeAllTasks()
 
+        isStairs = 'stairs' in self.terrainTask.terrainConfigList[self.params.properties.terrain_type]
+
         def addFit():
             fit = self.taskTree.addGroup("Fit")
             addTask(rt.UserPromptTask(name='Wait for lidar sweep',
@@ -1474,8 +1483,18 @@ class TerrainTaskPanel(TaskUserPanel):
             addTask(rt.UserPromptTask(name='Wait for block assignments',
                                       message='Please assign and adjust blocks.'), parent=fit)
             addFunc(self.terrainTask.requestRaycastTerrain, "Request raycast", parent=fit)
+
+        def addManipExecution(planFunc, name, parent):
+            addFunc(planFunc, "Plan " + name, parent=parent)
+            addTask(rt.UserPromptTask(name='approve manip plan',
+                                      message='Please approve manipulation plan.'), parent=parent)
+            addFunc(self.terrainTask.commitLastManipPlan, "Commit " + name, parent=parent)
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=parent)
+
         def addFootsteps(numSteps=-1):
             footsteps = self.taskTree.addGroup("Footsteps")
+            if isStairs:
+                addManipExecution(self.terrainTask.planArmsUpNarrow, "arms up narrow", footsteps)
             addFunc(functools.partial(self.params.setProperty, "Number of Steps", numSteps), "Set num steps to {:d}".format(numSteps), parent=footsteps)
             addTask(rt.UserPromptTask(name='Number of steps',
                                       message='Please confirm number of steps.'),
@@ -1485,25 +1504,20 @@ class TerrainTaskPanel(TaskUserPanel):
                                       message='Please adjust and approve footstep plan.'), parent=footsteps)
             addFunc(self.terrainTask.commitLastFootstepPlan, "Commit footsteps", parent=footsteps)
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=footsteps)
+            if isStairs:
+                addManipExecution(self.terrainTask.planArmsUp, "arms up", footsteps)
 
         def addApproach():
             approach = self.taskTree.addGroup("Approach")
-            addFunc(self.terrainTask.planArmsUp, "Arms up", parent=approach)
-            addTask(rt.UserPromptTask(name='approve manip plan',
-                                      message='Please approve manipulation plan.'), parent=approach)
-            addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up plan", parent=approach)
+            addManipExecution(self.terrainTask.planArmsUp, "Arms up", approach)
             addFunc(self.terrainTask.createStartingGoal, "plan approach to terrain", parent=approach)
             addTask(rt.UserPromptTask(name='approve footsteps',
                                       message='Please approve footstep plan.'), parent=approach)
             addFunc(self.terrainTask.commitLastFootstepPlan, "Commit footsteps", parent=approach)
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=approach)
-            # addFunc(self.terrainTask.planArmsUpPre, "Arms up (pre)", parent=approach)
-            # addTask(rt.UserPromptTask(name='approve manip plan',
-            #                           message='Please approve manipulation plan.'), parent=approach)
-            # addFunc(self.terrainTask.commitLastManipPlan, "Commit arms up (pre) plan", parent=approach)
             addTask(rt.UserPromptTask(name='Confirm approach complete',
                                       message='Please confirm approach is complete.'))
-            if 'stairs' in self.terrainTask.terrainConfigList[self.params.properties.terrain_type]:
+            if isStairs:
                 addFunc(self.terrainTask.switchToStairsParameters, "Switch to stairs params")
             else:
                 addFunc(self.terrainTask.switchToTerrainParameters, "Switch to terrain params")
