@@ -19,6 +19,10 @@ from collections import OrderedDict
 
 class AffordanceItem(PolyDataItem):
 
+    COPY_MODE_ALL = 0 # copies all properties from affordance descriptions
+    COPY_MODE_SKIP_LOCAL = 1 # skips properties that should keep local values such as visibility
+    LOCAL_PROPERTY_NAMES = ('Visible')
+
     def __init__(self, name, polyData, view):
         PolyDataItem.__init__(self, name, polyData, view)
         self.params = {}
@@ -64,15 +68,17 @@ class AffordanceItem(PolyDataItem):
         t = transformUtils.transformFromPose(position, quat)
         self.getChildFrame().copyFrame(t)
 
-    def loadDescription(self, desc):
-        self.syncProperties(desc)
+    def loadDescription(self, desc, copyMode=COPY_MODE_ALL):
+        self.syncProperties(desc, copyMode)
         self.repositionFromDescription(desc)
         self._renderAllViews()
 
-    def syncProperties(self, desc):
+    def syncProperties(self, desc, copyMode=COPY_MODE_ALL):
         for propertyName, propertyValue in desc.iteritems():
-            if propertyName == 'Visible':
-                continue
+            if copyMode == self.COPY_MODE_SKIP_LOCAL:
+                if propertyName in self.LOCAL_PROPERTY_NAMES:
+                    continue
+
             if self.hasProperty(propertyName) and (self.getProperty(propertyName) != propertyValue):
                 #print 'syncing property %s: %r' % (propertyName, propertyValue)
                 self.setProperty(propertyName, propertyValue)
@@ -90,9 +96,6 @@ class BoxAffordanceItem(AffordanceItem):
         self.properties.setPropertyIndex('Dimensions', 0)
         self.properties.setPropertyIndex('Subdivisions', 1)
         self.updateGeometryFromProperties()
-
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
 
     def updateGeometryFromProperties(self):
         d = DebugData()
@@ -113,9 +116,6 @@ class SphereAffordanceItem(AffordanceItem):
         self.addProperty('Radius', 0.15, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.properties.setPropertyIndex('Radius', 0)
         self.updateGeometryFromProperties()
-
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
 
     def updateGeometryFromProperties(self):
         d = DebugData()
@@ -139,9 +139,6 @@ class CylinderAffordanceItem(AffordanceItem):
         self.properties.setPropertyIndex('Length', 1)
         self.updateGeometryFromProperties()
 
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
-
     def updateGeometryFromProperties(self):
         d = DebugData()
         length = self.getProperty('Length')
@@ -164,9 +161,6 @@ class CapsuleAffordanceItem(AffordanceItem):
         self.properties.setPropertyIndex('Radius', 0)
         self.properties.setPropertyIndex('Length', 1)
         self.updateGeometryFromProperties()
-
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
 
     def updateGeometryFromProperties(self):
         d = DebugData()
@@ -196,9 +190,6 @@ class CapsuleRingAffordanceItem(AffordanceItem):
 
         self.updateGeometryFromProperties()
 
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
-
     def updateGeometryFromProperties(self):
         radius = self.getProperty('Radius')
         circlePoints = np.linspace(0, 2*np.pi, self.getProperty('Segments')+1)
@@ -225,9 +216,6 @@ class MeshAffordanceItem(AffordanceItem):
         self.setProperty('Collision Enabled', False)
         self.addProperty('Filename', '')
         self.properties.setPropertyIndex('Filename', 0)
-
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
 
         # attempt to reload geometry if it is currently empty
         if self.getProperty('Filename') and not self.polyData.GetNumberOfPoints():
