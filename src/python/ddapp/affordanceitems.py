@@ -19,6 +19,10 @@ from collections import OrderedDict
 
 class AffordanceItem(PolyDataItem):
 
+    COPY_MODE_ALL = 0 # copies all properties from affordance descriptions
+    COPY_MODE_SKIP_LOCAL = 1 # skips properties that should keep local values such as visibility
+    LOCAL_PROPERTY_NAMES = ('Visible')
+
     def __init__(self, name, polyData, view):
         PolyDataItem.__init__(self, name, polyData, view)
         self.params = {}
@@ -64,15 +68,17 @@ class AffordanceItem(PolyDataItem):
         t = transformUtils.transformFromPose(position, quat)
         self.getChildFrame().copyFrame(t)
 
-    def loadDescription(self, desc):
-        self.syncProperties(desc)
+    def loadDescription(self, desc, copyMode=COPY_MODE_ALL):
+        self.syncProperties(desc, copyMode)
         self.repositionFromDescription(desc)
         self._renderAllViews()
 
-    def syncProperties(self, desc):
+    def syncProperties(self, desc, copyMode=COPY_MODE_ALL):
         for propertyName, propertyValue in desc.iteritems():
-            if propertyName == 'Visible':
-                continue
+            if copyMode == self.COPY_MODE_SKIP_LOCAL:
+                if propertyName in self.LOCAL_PROPERTY_NAMES:
+                    continue
+
             if self.hasProperty(propertyName) and (self.getProperty(propertyName) != propertyValue):
                 #print 'syncing property %s: %r' % (propertyName, propertyValue)
                 self.setProperty(propertyName, propertyValue)
