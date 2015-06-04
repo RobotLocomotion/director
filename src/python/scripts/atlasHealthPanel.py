@@ -264,7 +264,15 @@ globalTimerStartTime = time.time()
 globalTimerOffset = 0
 def globalTimerUpdate():
   elapsed = time.time() - globalTimerStartTime + globalTimerOffset
+  elapsed *= 100
   globalTimerLabel.setText("%02d:%02d" % (math.floor(elapsed/60), elapsed%60))
+  if elapsed > (60*53):
+      globalTimerLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
+  elif elapsed > (60*45):
+      globalTimerLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
+  else:
+      globalTimerLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+
 def globalTimerSet():
   global globalTimerOffset
   nums = [int(i) for i in str(globalTimerSetTxt.text).split(':')]
@@ -294,7 +302,16 @@ drillTimerStartTime = time.time()
 drillTimerOffset = 0
 def drillTimerUpdate():
   elapsed = time.time() - drillTimerStartTime + drillTimerOffset
+  elapsed *= 50
   drillTimerLabel.setText("%02d:%02d" % (math.floor(elapsed/60), elapsed%60))
+  if elapsed > (60*5):
+      drillTimerLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
+  elif elapsed > (60*4):
+      drillTimerLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
+  else:
+      drillTimerLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+
+
 def drillTimerShow():
   global drillTimerOffset
   drillTimerLabel.show()
