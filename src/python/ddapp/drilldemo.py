@@ -2616,6 +2616,15 @@ class DrillTaskPanel(TaskUserPanel):
         self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
         self.drillDemo.planDrill(inPlane=False, inLine=True, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillDemo.drillTrajectoryMaxDegreesPerSecond)
 
+    def planDrillKnockOut(self):
+        self.setDrillTargetToDrillBit()
+        self.planDrillOut()
+        self.drillDemo.planDrillIntoWallPrep()
+        self.setDrillTargetToKnockOut()
+        self.planDrillAlign()
+        self.setDefaultKnockOutDepth()
+        self.planDrillIn()
+
     def setDefaultDrillInDepth(self):
         self.params.setProperty('drilling depth', 0.01)
 
