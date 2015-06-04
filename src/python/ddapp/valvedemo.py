@@ -759,7 +759,9 @@ class ValveTaskPanel(TaskUserPanel):
             addFunc(func, name='plan motion', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
-            addTask(rt.UserPromptTask(name='wait for plan execution', message='Continue when plan finishes.'),
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
+                    parent=group)
+            addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
                     parent=group)
 
         def addLargeValveTurn(parent=None):
