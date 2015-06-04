@@ -33,6 +33,7 @@ set(python_files
   ddapp/drilltaskpanel.py
   ddapp/drivingplanner.py
   ddapp/egressplanner.py
+  ddapp/frameupdater.py
   ddapp/fieldcontainer.py
   ddapp/filterUtils.py
   ddapp/footstepsdriver.py
