@@ -5,6 +5,7 @@ from ddapp.timercallback import TimerCallback
 from ddapp import robotsystem
 from PythonQt import QtCore, QtGui
 from collections import namedtuple
+import time, math
 
 FPS = 4
 LABEL_DEFAULT_STYLE_SHEET = "font: 36pt; border-style: outset; border-width: 2px; border-color: black;"
@@ -120,13 +121,39 @@ unstoppableTimer.start()
 
 
 batteryLabel = spawnProgressBar(100, 0)
-l.addWidget(wrapInVTitledItem("Battery", [batteryLabel]))
+batteryVoltageLabel = spawnBasicLabel()
+batteryTempLabel = spawnBasicLabel()
+batteryTVBox = QtGui.QWidget()
+batteryTVBoxLayout = QtGui.QVBoxLayout(batteryTVBox)
+batteryTVBoxLayout.addWidget(batteryVoltageLabel)
+batteryTVBoxLayout.addWidget(batteryTempLabel)
+l.addWidget(wrapInHTitledItem("Battery", [batteryLabel, batteryTVBox]))
 def batteryUpdate():
-  status = atlasDriver.getBatteryChargeRemaining()
-  if not status:
-    status = -1
-  #batteryLabel.setText(str(status) + "%")
-  batteryLabel.setValue(status)
+  percent = atlasDriver.getBatteryChargeRemaining()
+  voltage = atlasDriver.getBatteryVoltage()
+  temp = atlasDriver.getBatteryTemperature()
+  if not percent:
+    percent = 0
+  if not voltage:
+    voltage = 0
+  if not temp:
+    temp = 100
+  batteryLabel.setValue(percent)
+  batteryVoltageLabel.setText("%3.1fV" % voltage)
+  if (voltage < 160):
+    batteryVoltageLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
+  elif (voltage < 150):
+    batteryVoltageLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
+  else:
+    batteryVoltageLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+  batteryTempLabel.setText("%2.1f C" % temp)
+  if (temp > 50):
+    batteryTempLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:orange; color:white")
+  elif (temp > 55):
+    batteryTempLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
+  else:
+    batteryTempLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:white; color:black")
+
 batteryTimer = TimerCallback(targetFps=FPS)
 batteryTimer.callback = batteryUpdate
 batteryTimer.start()
@@ -225,14 +252,65 @@ rHandTimer = TimerCallback(targetFps=FPS)
 rHandTimer.callback = rHandUpdate
 rHandTimer.start()
 
-globalTimerLabl = spawnBasicLabel()
+globalTimerLabel = spawnBasicLabel()
 globalTimerSetBtn = spawnBasicButton("Set")
 globalTimerSetTxt = spawnBasicTextEntry()
 globalTimerAdjustBox = QtGui.QWidget()
 globalTimerAdjustBoxLayout = QtGui.QHBoxLayout(globalTimerAdjustBox)
 globalTimerAdjustBoxLayout.addWidget(globalTimerSetBtn)
 globalTimerAdjustBoxLayout.addWidget(globalTimerSetTxt)
-l.addWidget(wrapInVTitledItem("Run Timer", [globalTimerLabl, globalTimerAdjustBox]))
+l.addWidget(wrapInVTitledItem("Run Timer", [globalTimerLabel, globalTimerAdjustBox]))
+globalTimerStartTime = time.time()
+globalTimerOffset = 0
+def globalTimerUpdate():
+  elapsed = time.time() - globalTimerStartTime + globalTimerOffset
+  globalTimerLabel.setText("%02d:%02d" % (math.floor(elapsed/60), elapsed%60))
+def globalTimerSet():
+  global globalTimerOffset
+  nums = [int(i) for i in str(globalTimerSetTxt.text).split(':')]
+  if len(nums) == 1:
+    # desired time = time.time() - globalTimerStartTime - offset
+    # offset = des - (time.time - globaltimerstarttime)
+    if nums[0] >= 0:
+      globalTimerOffset = nums[0] - (time.time() - globalTimerStartTime)
+      globalTimerSetTxt.setText('')
+  elif len(nums) == 2:
+    if nums[0] >= 0 and nums[1] >= 0 and nums[1] < 60:
+      globalTimerOffset = (nums[0]*60 + nums[1]) - (time.time() - globalTimerStartTime)
+      globalTimerSetTxt.setText('')
+globalTimerTimer = TimerCallback(targetFps=FPS)
+globalTimerTimer.callback = globalTimerUpdate
+globalTimerTimer.start()
+globalTimerSetBtn.connect('clicked()', globalTimerSet)
+
+
+drillTimerLabel = spawnBasicLabel()
+drillTimerShowBtn = spawnBasicButton("Start")
+drillTimerHideBtn = spawnBasicButton("Done")
+drillTimerLabel.hide()
+drillTimerHideBtn.hide()
+l.addWidget(wrapInVTitledItem("Drill Timer", [drillTimerShowBtn, drillTimerLabel, drillTimerHideBtn]))
+drillTimerStartTime = time.time()
+drillTimerOffset = 0
+def drillTimerUpdate():
+  elapsed = time.time() - drillTimerStartTime + drillTimerOffset
+  drillTimerLabel.setText("%02d:%02d" % (math.floor(elapsed/60), elapsed%60))
+def drillTimerShow():
+  global drillTimerOffset
+  drillTimerLabel.show()
+  drillTimerShowBtn.hide()
+  drillTimerHideBtn.show()
+  drillTimerOffset = - (time.time() - drillTimerStartTime)
+def drillTimerHide():
+  drillTimerLabel.hide()
+  drillTimerShowBtn.show()
+  drillTimerHideBtn.hide()
+
+drillTimerTimer = TimerCallback(targetFps=FPS)
+drillTimerTimer.callback = drillTimerUpdate
+drillTimerTimer.start()
+drillTimerShowBtn.connect('clicked()', drillTimerShow)
+drillTimerHideBtn.connect('clicked()', drillTimerHide)
 
 w.setWindowTitle('Atlas Health Panel')
 w.show()

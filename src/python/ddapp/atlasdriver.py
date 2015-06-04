@@ -197,12 +197,16 @@ class AtlasDriver(object):
         return 0.0
 
     def getBatteryChargeRemaining(self):
-        '''
-        Returns the current controller rate hz or 0 is no controller rate
-        message has been received.
-        '''
         if self.lastAtlasBatteryDataMessage:
             return self.lastAtlasBatteryDataMessage.remaining_charge_percentage
+
+    def getBatteryVoltage(self):
+        if self.lastAtlasBatteryDataMessage:
+            return self.lastAtlasBatteryDataMessage.voltage
+
+    def getBatteryTemperature(self):
+        if self.lastAtlasBatteryDataMessage:
+            return self.lastAtlasBatteryDataMessage.temperature
 
     def getCurrentInletPressure(self):
         if self.lastAtlasStatusMessage:
