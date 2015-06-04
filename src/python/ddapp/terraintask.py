@@ -1509,7 +1509,7 @@ class TerrainTaskPanel(TaskUserPanel):
 
         def addApproach():
             approach = self.taskTree.addGroup("Approach")
-            addManipExecution(self.terrainTask.planArmsUp, "Arms up", approach)
+            addManipExecution(self.terrainTask.planArmsUpNarrow, "Arms up narrow", approach)
             addFunc(self.terrainTask.createStartingGoal, "plan approach to terrain", parent=approach)
             addTask(rt.UserPromptTask(name='approve footsteps',
                                       message='Please approve footstep plan.'), parent=approach)
@@ -1517,6 +1517,7 @@ class TerrainTaskPanel(TaskUserPanel):
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=approach)
             addTask(rt.UserPromptTask(name='Confirm approach complete',
                                       message='Please confirm approach is complete.'))
+            addManipExecution(self.terrainTask.planArmsUp, "Arms up", approach)
             if isStairs:
                 addFunc(self.terrainTask.switchToStairsParameters, "Switch to stairs params")
             else:
