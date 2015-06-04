@@ -91,9 +91,6 @@ class BoxAffordanceItem(AffordanceItem):
         self.properties.setPropertyIndex('Subdivisions', 1)
         self.updateGeometryFromProperties()
 
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
-
     def updateGeometryFromProperties(self):
         d = DebugData()
         d.addCube(self.getProperty('Dimensions'), (0,0,0), subdivisions=self.getProperty('Subdivisions'))
@@ -113,9 +110,6 @@ class SphereAffordanceItem(AffordanceItem):
         self.addProperty('Radius', 0.15, attributes=om.PropertyAttributes(decimals=3, singleStep=0.01, minimum=0.0, maximum=1e4))
         self.properties.setPropertyIndex('Radius', 0)
         self.updateGeometryFromProperties()
-
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
 
     def updateGeometryFromProperties(self):
         d = DebugData()
@@ -139,9 +133,6 @@ class CylinderAffordanceItem(AffordanceItem):
         self.properties.setPropertyIndex('Length', 1)
         self.updateGeometryFromProperties()
 
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
-
     def updateGeometryFromProperties(self):
         d = DebugData()
         length = self.getProperty('Length')
@@ -164,9 +155,6 @@ class CapsuleAffordanceItem(AffordanceItem):
         self.properties.setPropertyIndex('Radius', 0)
         self.properties.setPropertyIndex('Length', 1)
         self.updateGeometryFromProperties()
-
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
 
     def updateGeometryFromProperties(self):
         d = DebugData()
@@ -196,9 +184,6 @@ class CapsuleRingAffordanceItem(AffordanceItem):
 
         self.updateGeometryFromProperties()
 
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
-
     def updateGeometryFromProperties(self):
         radius = self.getProperty('Radius')
         circlePoints = np.linspace(0, 2*np.pi, self.getProperty('Segments')+1)
@@ -225,9 +210,6 @@ class MeshAffordanceItem(AffordanceItem):
         self.setProperty('Collision Enabled', False)
         self.addProperty('Filename', '')
         self.properties.setPropertyIndex('Filename', 0)
-
-    def loadDescription(self, desc):
-        AffordanceItem.loadDescription(self, desc)
 
         # attempt to reload geometry if it is currently empty
         if self.getProperty('Filename') and not self.polyData.GetNumberOfPoints():
