@@ -35,7 +35,7 @@ def shiftFrameZ(amount):
 	applyFrameTransform(0, 0, amount, 0)
 
 def handleKey(event):
-	linearDisplacement = 0.01
+	linearDisplacement = 0.005
 	angularDisplacement = 1
 	multiplier = 5
 
