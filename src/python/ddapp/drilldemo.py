@@ -28,6 +28,7 @@ from ddapp import segmentation
 from ddapp import planplayback
 from ddapp import affordanceupdater
 from ddapp import segmentationpanel
+from ddapp import footstepsdriverpanel
 from ddapp import vtkNumpy as vnp
 
 from ddapp.tasks.taskuserpanel import TaskUserPanel
@@ -1690,6 +1691,19 @@ class DrillPlannerDemo(object):
         #self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
 
 
+    def planNavigationGoalAwayFromShelf(self):
+
+        xoffset = -0.5
+        yoffset = 0.0
+        yaw = -60
+
+        stanceFrame = self.footstepPlanner.getFeetMidPoint(self.robotModel)
+        t = transformUtils.frameFromPositionAndRPY([xoffset, yoffset,  0.0], [0, 0, yaw])
+
+        goalFrame = transformUtils.concatenateTransforms([t, stanceFrame])
+        footstepsdriverpanel.panel.onNewWalkingGoal(goalFrame)
+
+
     ########## Glue Functions ####################################
     def moveRobotToStanceFrame(self, frame):
         self.sensorJointController.setPose('q_nom')
@@ -2614,7 +2628,7 @@ class DrillTaskPanel(TaskUserPanel):
     def planThumbPressPrep(self):
 
         self.drillDemo.addThumbTargetFramesFromModel()
-        self.drillDemo.setDrillPressTargetFrame(depthOffset=-0.1, horizOffset=0.0, vertOffset=-0.05)
+        self.drillDemo.setDrillPressTargetFrame(depthOffset=-0.07, horizOffset=0.0, vertOffset=0.0)
         self.drillDemo.planDrillButtonPress(30)
 
     def planThumbPressPrepClose(self):
@@ -2623,14 +2637,14 @@ class DrillTaskPanel(TaskUserPanel):
 
     def planThumbPressButton(self):
         self.drillDemo.setDrillPressTargetFrame(depthOffset=0.02, horizOffset=0.0, vertOffset=0.0)
-        self.drillDemo.planDrillButtonPress(3)
+        self.drillDemo.planDrillButtonPress(5)
 
     def planThumbPressExit(self):
-        self.drillDemo.setDrillPressTargetFrame(depthOffset=-0.1, horizOffset=0.0, vertOffset=-0.01)
-        self.drillDemo.planDrillButtonPress(3)
+        self.drillDemo.setDrillPressTargetFrame(depthOffset=-0.07, horizOffset=0.0, vertOffset=0.0)
+        self.drillDemo.planDrillButtonPress(15)
 
     def planThumbPressMove(self):
-        self.drillDemo.planDrillButtonPress(3)
+        self.drillDemo.planDrillButtonPress(5)
 
     def addButtons(self):
 
@@ -2642,8 +2656,11 @@ class DrillTaskPanel(TaskUserPanel):
         self.addManualButton('Spawn wall', self.spawnWall)
         self.addManualButton('Spawn drill', self.spawnDrill)
         self.addManualSpacer()
-        self.addManualButton('Grasp drill', self.graspDrill)
-        self.addManualButton('Ungrasp drill', self.ungraspDrill)
+        self.addManualButton('Reach', self.drillDemo.planReachNew)
+        self.addManualButton('Grasp', self.drillDemo.planGraspNew)
+        self.addManualSpacer()
+        self.addManualButton('Lock in hand', self.graspDrill)
+        self.addManualButton('Unlock in hand', self.ungraspDrill)
         self.addManualSpacer()
         self.addManualButton('Walk with drill posture', self.drillDemo.planWalkWithDrillPosture)
         self.addManualButton('Drill into wall prep', self.drillDemo.planDrillIntoWallPrep)
@@ -2749,8 +2766,8 @@ class DrillTaskPanel(TaskUserPanel):
 
         # fit drill
         addFolder('Fit drill')
-        addTask(rt.UserPromptTask(name='fit drill', message='Please fit and approve drill affordance.'))
-        addTask(rt.FindAffordance(name='check drill affordance', affordanceName='drill'))
+        addFunc('fit drill', self.fitDrill)
+        addTask(rt.UserPromptTask(name='adjust drill', message='Please fit and approve drill affordance.'))
         addFunc('compute walk target', self.drillDemo.computeDrillGraspStanceFrame)
 
 
@@ -2776,27 +2793,28 @@ class DrillTaskPanel(TaskUserPanel):
         addTask(rt.CloseHand(name='close hand', side=side.capitalize()))
         addTask(rt.DelayTask(name='wait to regrasp', delayTime=2.0))
         addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
-        addManipTask('lift drill', self.drillDemo.planLiftNew, userPrompt=True)
-        addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
+        #addManipTask('lift drill', self.drillDemo.planLiftNew, userPrompt=True)
         addManipTask('raise drill', self.drillDemo.planDrillRaiseNew, userPrompt=True)
+        addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
+        addTask(rt.UserPromptTask(name='adjust drill in hand', message='Please adjust drill fit in hand'))
 
         # walk back
         addFolder('Walk back')
-        addTask(rt.UserPromptTask(name='Walk back', message='Please walk back away from obstacles'), parent=None)
+        addFunc('drop nav goal', self.drillDemo.planNavigationGoalAwayFromShelf)
+        addTask(rt.UserPromptTask(name='Approve footstep plan', message='Please walk back away from obstacles'), parent=None)
 
         # turn on drill
         addFolder('Turn on drill')
-        addTask(rt.UserPromptTask(name='adjust drill in hand', message='Please adjust drill fit in hand'))
         addTask(rt.OpenHand(name='open press hand', side=pressSide.capitalize()))
         #addManipTask('pregrasp drill butt', self.drillDemo.planHandRaiseForDrillButtPreGrasp, userPrompt=True)
         #addManipTask('grasp drill butt', self.drillDemo.planHandRaiseForDrillButtGrasp, userPrompt=True)
         addManipTask('thumb press prep', self.planThumbPressPrep, userPrompt=True)
         addFunc('fit drill button press', self.fitDrillButtonPress)
         addTask(rt.UserPromptTask(name='approve fit', message='Please fit and approve drill button press'), parent=None)
-        addManipTask('thumb prep closer', self.planThumbPressPrepClose, userPrompt=True)
+        #addManipTask('thumb prep closer', self.planThumbPressPrepClose, userPrompt=True)
         addManipTask('thumb press', self.planThumbPressButton, userPrompt=True)
-        addTask(rt.UserPromptTask(name='verify drill is on', message='Please verify that drill is on'), parent=None)
         addManipTask('thumb press exit', self.planThumbPressExit, userPrompt=True)
+        addTask(rt.UserPromptTask(name='verify drill is on', message='Please verify that drill is on'), parent=None)
         #addManipTask('thumb press exit', self.drillDemo.planHandRaiseForDrillButtGrasp, userPrompt=True)
         #addManipTask('thumb press exit 2', self.drillDemo.planHandRaiseForDrillButtPreGrasp, userPrompt=True)
         addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
@@ -2863,6 +2881,4 @@ class DrillTaskPanel(TaskUserPanel):
         addManipTask('drill out', self.planDrillOut, userPrompt=True)
         addManipTask('drill prep posture', self.drillDemo.planDrillIntoWallPrep, userPrompt=True)
         addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
-
-
 
