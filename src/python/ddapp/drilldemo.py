@@ -2801,7 +2801,7 @@ class DrillTaskPanel(TaskUserPanel):
         # walk back
         addFolder('Walk back')
         addFunc('drop nav goal', self.drillDemo.planNavigationGoalAwayFromShelf)
-        addTask(rt.UserPromptTask(name='Approve footstep plan', message='Please walk back away from obstacles'), parent=None)
+        addTask(rt.UserPromptTask(name='Approve manual footstep plan', message='Please approve and manually execute footstep plan.'), parent=None)
 
         # turn on drill
         addFolder('Turn on drill')
