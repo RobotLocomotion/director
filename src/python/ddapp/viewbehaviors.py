@@ -21,6 +21,7 @@ from ddapp.shallowCopy import shallowCopy
 from ddapp import segmentationpanel
 from ddapp import segmentation
 from ddapp import segmentationroutines
+from ddapp import frameupdater
 import numpy as np
 import ioUtils
 import os
@@ -848,6 +849,10 @@ class KeyEventFilter(object):
             if str(event.text()).lower() == 'n':
                 if neckDriver:
                     neckDriver.deactivateNeckControl()
+        
+        if event.type() == QtCore.QEvent.KeyPress and not consumed:
+            consumed = frameupdater.handleKey(event)
+
 
         self.eventFilter.setEventHandlerResult(consumed)
 

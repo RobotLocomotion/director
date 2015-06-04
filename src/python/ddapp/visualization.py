@@ -5,6 +5,7 @@ import ddapp.vtkAll as vtk
 from ddapp.timercallback import TimerCallback
 from ddapp import transformUtils
 from ddapp import callbacks
+from ddapp import frameupdater
 import numpy as np
 from PythonQt import QtCore, QtGui
 
@@ -522,7 +523,11 @@ class FrameItem(PolyDataItem):
             if view not in self.views:
                 view = self.views[0]
             self.widget.SetInteractor(view.renderWindow().GetInteractor())
+            
             self.widget.SetEnabled(self.getProperty(propertyName))
+            isEditing = self.getProperty(propertyName)
+            if isEditing:
+                frameupdater.registerFrame(self)
         elif propertyName == 'Trace':
             trace = self.getProperty(propertyName)
             if trace and not self.traceData:
