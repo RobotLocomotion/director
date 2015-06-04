@@ -18,6 +18,10 @@ def applyFrameTransform(x, y, z, yaw):
 		t.Translate(x, y, z)
 		lastEditedFrame.copyFrame(t)	
 
+def disableFrameEdit():
+	if lastEditedFrame is not None and lastEditedFrame.getProperty('Edit'):
+		lastEditedFrame.setProperty('Edit', False)
+
 def shiftFrameX(amount):
 	applyFrameTransform(amount, 0, 0, 0)
 
@@ -62,6 +66,9 @@ def handleKey(event):
 			shiftFrameZ(-linearDisplacement)
 		else:
 			shiftFrameX(-linearDisplacement)
+		return True
+	elif event.key() == QtCore.Qt.Key_Escape:
+		disableFrameEdit()
 		return True
 	
 	return False
