@@ -43,25 +43,25 @@ def handleKey(event):
 		if event.modifiers() & QtCore.Qt.ShiftModifier:
 			shiftFrameYaw(angularDisplacement)
 		else:
-			shiftFrameX(-linearDisplacement)
+			shiftFrameY(linearDisplacement)
 		return True
 	elif event.key() == QtCore.Qt.Key_Right:
 		if event.modifiers() & QtCore.Qt.ShiftModifier:
 			shiftFrameYaw(-angularDisplacement)
 		else:
-			shiftFrameX(linearDisplacement)
+			shiftFrameY(-linearDisplacement)
 		return True
 	elif event.key() == QtCore.Qt.Key_Up:
 		if event.modifiers() & QtCore.Qt.ShiftModifier:
 			shiftFrameZ(linearDisplacement)
 		else:
-			shiftFrameY(linearDisplacement)
+			shiftFrameX(linearDisplacement)
 		return True
 	elif event.key() == QtCore.Qt.Key_Down:
 		if event.modifiers() & QtCore.Qt.ShiftModifier:
 			shiftFrameZ(-linearDisplacement)
 		else:
-			shiftFrameY(-linearDisplacement)
+			shiftFrameX(-linearDisplacement)
 		return True
 	
 	return False
