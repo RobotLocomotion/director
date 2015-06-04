@@ -106,7 +106,7 @@ class AffordanceObjectModelManager(object):
         aff = cls(desc['Name'], self.view)
         om.addToObjectModel(aff, parentObj=om.getOrCreateContainer('affordances'))
         vis.addChildFrame(aff)
-        aff.loadDescription(desc)
+        aff.loadDescription(desc, copyMode=aff.COPY_MODE_ALL)
         self.registerAffordance(aff, notify=False)
 
     def _onDescriptionUpdated(self, collection, descriptionId):
@@ -115,7 +115,7 @@ class AffordanceObjectModelManager(object):
 
         if aff:
             self._ignoreChanges = True
-            aff.loadDescription(desc)
+            aff.loadDescription(desc, copyMode=aff.COPY_MODE_SKIP_LOCAL)
             self._ignoreChanges = False
 
         else:
