@@ -2949,6 +2949,9 @@ class DrillTaskPanel(TaskUserPanel):
         addManipTask('prepare to drop drill', self.drillDemo.planDrillDrop, userPrompt=True)
         addTask(rt.UserPromptTask(name='approve drill drop', message='Please verify the drill is ready to be dropped'))
         addTask(rt.OpenHand(name='open hand', side=side.capitalize()))
+        addTask(rt.DelayTask(name='wait to close hand', delayTime=3.0))
+        addTask(rt.CloseHand(name='close left hand', side=side.capitalize()))
+        addManipTask('return to nominal posture', self.drillDemo.planNominal, userPrompt=True)
         #addManipTask('drill prep posture', self.drillDemo.planDrillIntoWallPrep, userPrompt=True)
         #addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
 
