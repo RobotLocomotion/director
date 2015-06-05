@@ -232,8 +232,9 @@ class SurpriseTaskPanel(TaskUserPanel):
         addManipTask('Arms Up 1', self.switchPlanner.planArmsPrep1, userPrompt=True)
         self.folder = armsUp
         addManipTask('Arms Up 2', self.switchPlanner.planArmsPrep2, userPrompt=True)
-
+        addTask(rt.CloseHand(side='Right', mode='Pinch', name='set finger pinch'))
         reach = addFolder('Reach')
+
         addFunc('update reach frame', self.switchPlanner.updateReachFrame)
         addTask(rt.UserPromptTask(name='adjust frame', message='adjust reach frame if necessary'))
         addManipTask('reach above box', self.switchPlanner.planReach, userPrompt=True)
@@ -243,9 +244,10 @@ class SurpriseTaskPanel(TaskUserPanel):
 
 
         armsDown = addFolder('Arms Down')
+        addTask(rt.UserPromptTask(name='check left hand free', message='check left hand free to close and move back'))
+        addTask(rt.CloseHand(name='close left hand', side='Right'))
         addManipTask('Arms Down 1', self.switchPlanner.planArmsPrep2, userPrompt=True)
         self.folder = armsDown
-        addTask(rt.CloseHand(name='close left hand', side='Right'))
         self.folder = armsDown
         addManipTask('Arms Down 2', self.switchPlanner.planArmsPrep1, userPrompt=True)
         self.folder = armsDown
