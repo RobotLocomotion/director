@@ -66,6 +66,8 @@ from ddapp import pfgrasp
 from ddapp import pfgrasppanel
 from ddapp.jointpropagator import JointPropagator
 
+from ddapp import coursemodel
+
 from ddapp import copmonitor
 from ddapp import robotplanlistener
 from ddapp import handdriver
@@ -156,6 +158,7 @@ useGamepad = True
 useBlackoutText = True
 useRandomWalk = True
 useCOPMonitor = True
+useCourseModel = False
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -1004,3 +1007,6 @@ class RandomWalk(object):
 
 if useRandomWalk:
     randomWalk = RandomWalk()
+
+if useCourseModel:
+    courseModel = coursemodel.CourseModel()

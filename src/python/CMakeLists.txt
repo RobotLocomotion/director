@@ -23,6 +23,7 @@ set(python_files
   ddapp/consoleapp.py
   ddapp/continuouswalkingdemo.py
   ddapp/copmonitor.py
+  ddapp/coursemodel.py
   ddapp/debrisdemo.py
   ddapp/debugVis.py
   ddapp/depthimageprovider.py

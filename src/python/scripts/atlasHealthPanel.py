@@ -78,6 +78,8 @@ def controllerUpdate():
   status = atlasDriver.getControllerStatus()
   if not status:
     status = "Unknown"
+  if len(status) > 6:
+    status = status[0:6]
   rate = atlasDriver.getControllerRate()
   if not rate:
     rate = 0.0
@@ -264,7 +266,6 @@ globalTimerStartTime = time.time()
 globalTimerOffset = 0
 def globalTimerUpdate():
   elapsed = time.time() - globalTimerStartTime + globalTimerOffset
-  elapsed *= 100
   globalTimerLabel.setText("%02d:%02d" % (math.floor(elapsed/60), elapsed%60))
   if elapsed > (60*53):
       globalTimerLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
@@ -302,7 +303,6 @@ drillTimerStartTime = time.time()
 drillTimerOffset = 0
 def drillTimerUpdate():
   elapsed = time.time() - drillTimerStartTime + drillTimerOffset
-  elapsed *= 50
   drillTimerLabel.setText("%02d:%02d" % (math.floor(elapsed/60), elapsed%60))
   if elapsed > (60*5):
       drillTimerLabel.setStyleSheet(LABEL_DEFAULT_STYLE_SHEET + "background-color:red; color:white")
