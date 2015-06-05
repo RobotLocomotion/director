@@ -16,6 +16,7 @@ from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp.debugVis import DebugData
+from ddapp import ik
 from ddapp import ikplanner
 from ddapp.ikparameters import IkParameters
 from ddapp import ioUtils
@@ -816,14 +817,18 @@ class DrillPlannerDemo(object):
         endPose, info = self.computeThumbPressPrepPose(startPose)
 
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose,
-                                                    ikParameters=IkParameters(maxDegreesPerSecond=15))
+                                                    ikParameters=IkParameters(maxDegreesPerSecond=15, quasiStaticShrinkFactor=0.5))
 
         self.addPlan(newPlan)
 
 
-    def planHandDown(self, side):
-        self.planPostureGoal(side, 'General', 'handdown',
-                             ikParameters=IkParameters(maxDegreesPerSecond=30))
+    def planHandsDown(self):
+        otherSide = 'right' if self.graspingHand == 'left' else 'left'
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side=otherSide)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'drill', 'new: walk with drill', side=self.graspingHand)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=IkParameters(maxDegreesPerSecond=30))
+        self.addPlan(newPlan)
 
 
     def planWalkWithDrillPosture(self):
@@ -959,8 +964,11 @@ class DrillPlannerDemo(object):
         print 'thumb press to hand frame:', self.thumbPressToHandFrame.GetPosition(), transformUtils.rollPitchYawFromTransform(self.thumbPressToHandFrame)
 
 
-    def planDrillButtonPress(self, jointDegreesPerSecond):
+    def planDrillButtonPress(self, jointDegreesPerSecond, quasiStaticShrinkFactor=None):
 
+        ikParameters = IkParameters(maxDegreesPerSecond=jointDegreesPerSecond)
+        if quasiStaticShrinkFactor is not None:
+            ikParameters.quasiStaticShrinkFactor = quasiStaticShrinkFactor
         ikPlanner = self.ikPlanner
         startPose = self.getPlanningStartPose()
         thumbSide = ikPlanner.flipSide(self.graspingHand)
@@ -976,14 +984,10 @@ class DrillPlannerDemo(object):
         constraintSet.seedPoseName = seedPoseName
         constraintSet.nominalPoseName = seedPoseName
 
-        jointSpeedOld = ikplanner.getIkOptions().getProperty('Max joint degrees/s')
-        ikplanner.getIkOptions().setProperty('Max joint degrees/s', jointDegreesPerSecond)
-
+        constraintSet.ikParameters = ikParameters
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
-
-        ikplanner.getIkOptions().setProperty('Max joint degrees/s', jointSpeedOld)
 
 
     def planDrill(self, inPlane, inLine, translationSpeed, jointSpeed):
@@ -1156,6 +1160,74 @@ class DrillPlannerDemo(object):
         else:
             constraintSet.endPose = startPose
         updateDrillPlan()
+
+
+    def planDrillDrop(self):
+        def saveOriginalTraj(name):
+            commands = ['%s = qtraj_orig;' % name]
+            self.ikPlanner.ikServer.comm.sendCommands(commands)
+
+        def concatenateAndRescaleTrajectories(trajectoryNames, concatenatedTrajectoryName, junctionTimesName, ikParameters):
+            commands = []
+            commands.append('joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1);' % ikParameters.maxDegreesPerSecond)
+            commands.append('xyz_v_max = repmat(%s, 3, 1);' % ikParameters.maxBaseMetersPerSecond)
+            commands.append('rpy_v_max = repmat(%s*pi/180, 3, 1);' % ikParameters.maxBaseRPYDegreesPerSecond)
+            commands.append('v_max = [xyz_v_max; rpy_v_max; joint_v_max];')
+            commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
+            commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
+            commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
+            commands.append('rescale_body_pts = reshape(%s, 3, []);' % ik.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
+            commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
+            commands.append('trajectories = {};')
+            for name in trajectoryNames:
+                commands.append('trajectories{end+1} = %s;' % name)
+            commands.append('[%s, %s] = concatAndRescaleTrajectories(trajectories, v_max, %s, %s, body_rescale_options);' % (concatenatedTrajectoryName, junctionTimesName, ikParameters.accelerationParam, ikParameters.accelerationFraction))
+            commands.append('t_new = linspace({0}.tspan(1),{0}.tspan(end),20);'.format(concatenatedTrajectoryName))
+            commands.append('{0} = PPTrajectory(pchip(t_new, {0}.eval(t_new)));'.format(concatenatedTrajectoryName))
+            commands.append('s.publishTraj(%s, 1);' % concatenatedTrajectoryName)
+            self.ikPlanner.ikServer.comm.sendCommands(commands)
+            return self.ikPlanner.ikServer.comm.getFloatArray(junctionTimesName)
+
+        planNames = []
+
+        planNames.append('qtraj_out_to_prep')
+        self.planDrillIntoWallPrep()
+        saveOriginalTraj(planNames[-1])
+
+        self.planFromCurrentRobotState = False
+        try:
+            planNames.append('qtraj_prep_to_walk');
+            self.planWalkWithDrillPosture()
+            saveOriginalTraj(planNames[-1])
+
+            planNames.append('qtraj_walk_to_raise');
+            q1 = self.getPlanningStartPose()
+            q2 = self.ikPlanner.getMergedPostureFromDatabase(q1, 'General', 'arm up pregrasp', side=self.graspingHand)
+            newPlan = self.ikPlanner.computePostureGoal(q1, q2)
+            self.addPlan(newPlan)
+            saveOriginalTraj(planNames[-1])
+
+            planNames.append('qtraj_walk_to_drop');
+            q1 = self.getPlanningStartPose()
+            q2 = self.ikPlanner.getMergedPostureFromDatabase(q1, 'drill', 'drop-drill', side=self.graspingHand)
+            newPlan = self.ikPlanner.computePostureGoal(q1, q2)
+            self.addPlan(newPlan)
+            saveOriginalTraj(planNames[-1])
+
+        finally:
+            self.planFromCurrentRobotState = True;
+
+        handLinkName = self.ikPlanner.getHandLink(self.graspingHand)
+        ikParameters = IkParameters(usePointwise=True,
+                                    rescaleBodyNames=[handLinkName], rescaleBodyPts=[0.0, 0.0, 0.0],
+                                    maxBodyTranslationSpeed=self.drillTrajectoryMetersPerSecondFast)
+
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
+        listener = self.ikPlanner.getManipPlanListener()
+        concatenateAndRescaleTrajectories(planNames, 'qtraj_drill_drop', 'ts', ikParameters)
+        plan = listener.waitForResponse()
+        listener.finish()
+        self.addPlan(plan)
 
 
     def spawnWallAffordanceTest(self, x, y, yaw, targetHeight, targetRadius):
@@ -2629,7 +2701,7 @@ class DrillTaskPanel(TaskUserPanel):
 
         self.drillDemo.addThumbTargetFramesFromModel()
         self.drillDemo.setDrillPressTargetFrame(depthOffset=-0.07, horizOffset=0.0, vertOffset=0.0)
-        self.drillDemo.planDrillButtonPress(30)
+        self.drillDemo.planDrillButtonPress(30, quasiStaticShrinkFactor=0.5)
 
     def planThumbPressPrepClose(self):
         self.drillDemo.setDrillPressTargetFrame(depthOffset=-0.025, horizOffset=0.0, vertOffset=-0.005)
@@ -2819,9 +2891,8 @@ class DrillTaskPanel(TaskUserPanel):
         #addManipTask('thumb press exit 2', self.drillDemo.planHandRaiseForDrillButtPreGrasp, userPrompt=True)
         addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
 
-        addManipTask('hand down', functools.partial(self.drillDemo.planHandDown, pressSide), userPrompt=True)
+        addManipTask('hands down', self.drillDemo.planHandsDown, userPrompt=True)
         addTask(rt.CloseHand(name='close press hand', side=pressSide.capitalize()))
-        addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
 
         # walk toward wall
         addFolder('Walk toward wall')
@@ -2879,6 +2950,12 @@ class DrillTaskPanel(TaskUserPanel):
         addFolder('Retract')
         addFunc('reset drill target', self.setDrillTargetToDrillBit)
         addManipTask('drill out', self.planDrillOut, userPrompt=True)
-        addManipTask('drill prep posture', self.drillDemo.planDrillIntoWallPrep, userPrompt=True)
-        addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
+        addManipTask('prepare to drop drill', self.drillDemo.planDrillDrop, userPrompt=True)
+        addTask(rt.UserPromptTask(name='approve drill drop', message='Please verify the drill is ready to be dropped'))
+        addTask(rt.OpenHand(name='open hand', side=side.capitalize()))
+        addTask(rt.DelayTask(name='wait to close hand', delayTime=3.0))
+        addTask(rt.CloseHand(name='close left hand', side=side.capitalize()))
+        addManipTask('return to nominal posture', self.drillDemo.planNominal, userPrompt=True)
+        #addManipTask('drill prep posture', self.drillDemo.planDrillIntoWallPrep, userPrompt=True)
+        #addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
 
