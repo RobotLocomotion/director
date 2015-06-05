@@ -168,7 +168,7 @@ class DrillPlannerDemo(object):
         # params:
         self.reachDepth = 0.12 # depth to reach to before going for grasp
         self.cutLength = 0.05 # length to cut each time
-        self.retractBitDepthNominal = -0.05 # depth to move drill away from wall
+        self.retractBitDepthNominal = -0.08 # depth to move drill away from wall
         self.goalThreshold = 0.05 # how close we need to get to the cut goal (the triangle corners
 
         #extraModels = [self.robotModel, self.playbackRobotModel, self.teleopRobotModel]
