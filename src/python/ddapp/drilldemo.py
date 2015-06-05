@@ -1223,7 +1223,11 @@ class DrillPlannerDemo(object):
                                     maxBodyTranslationSpeed=self.drillTrajectoryMetersPerSecondFast)
 
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
+        listener = self.ikPlanner.getManipPlanListener()
         concatenateAndRescaleTrajectories(planNames, 'qtraj_drill_drop', 'ts', ikParameters)
+        plan = listener.waitForResponse()
+        listener.finish()
+        self.addPlan(plan)
 
 
     def spawnWallAffordanceTest(self, x, y, yaw, targetHeight, targetRadius):
