@@ -16,6 +16,7 @@ from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp.debugVis import DebugData
+from ddapp import ik
 from ddapp import ikplanner
 from ddapp.ikparameters import IkParameters
 from ddapp import ioUtils
@@ -1158,7 +1159,71 @@ class DrillPlannerDemo(object):
         updateDrillPlan()
 
 
-    def spawnWallAffordanceTest(self, x, y, yaw, targetHeight, targetRadius):
+    def planDrillDrop(self):
+        def saveOriginalTraj(name):
+            commands = ['%s = qtraj_orig;' % name]
+            self.ikPlanner.ikServer.comm.sendCommands(commands)
+
+        def concatenateAndRescaleTrajectories(trajectoryNames, concatenatedTrajectoryName, junctionTimesName, ikParameters):
+            commands = []
+            commands.append('joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1);' % ikParameters.maxDegreesPerSecond)
+            commands.append('xyz_v_max = repmat(%s, 3, 1);' % ikParameters.maxBaseMetersPerSecond)
+            commands.append('rpy_v_max = repmat(%s*pi/180, 3, 1);' % ikParameters.maxBaseRPYDegreesPerSecond)
+            commands.append('v_max = [xyz_v_max; rpy_v_max; joint_v_max];')
+            commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
+            commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
+            commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
+            commands.append('rescale_body_pts = reshape(%s, 3, []);' % ik.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
+            commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
+            commands.append('trajectories = {};')
+            for name in trajectoryNames:
+                commands.append('trajectories{end+1} = %s;' % name)
+            commands.append('[%s, %s] = concatAndRescaleTrajectories(trajectories, v_max, %s, %s, body_rescale_options);' % (concatenatedTrajectoryName, junctionTimesName, ikParameters.accelerationParam, ikParameters.accelerationFraction))
+            commands.append('t_new = linspace({0}.tspan(1),{0}.tspan(end),20);'.format(concatenatedTrajectoryName))
+            commands.append('{0} = PPTrajectory(pchip(t_new, {0}.eval(t_new)));'.format(concatenatedTrajectoryName))
+            commands.append('s.publishTraj(%s, 1);' % concatenatedTrajectoryName)
+            self.ikPlanner.ikServer.comm.sendCommands(commands)
+            return self.ikPlanner.ikServer.comm.getFloatArray(junctionTimesName)
+
+        planNames = []
+
+        planNames.append('qtraj_out_to_prep')
+        self.planDrillIntoWallPrep()
+        saveOriginalTraj(planNames[-1])
+
+        self.planFromCurrentRobotState = False
+        try:
+            planNames.append('qtraj_prep_to_walk');
+            self.planWalkWithDrillPosture()
+            saveOriginalTraj(planNames[-1])
+
+            planNames.append('qtraj_walk_to_raise');
+            q1 = self.getPlanningStartPose()
+            q2 = self.ikPlanner.getMergedPostureFromDatabase(q1, 'General', 'arm up pregrasp', side=self.graspingHand)
+            newPlan = self.ikPlanner.computePostureGoal(q1, q2)
+            self.addPlan(newPlan)
+            saveOriginalTraj(planNames[-1])
+
+            planNames.append('qtraj_walk_to_drop');
+            q1 = self.getPlanningStartPose()
+            q2 = self.ikPlanner.getMergedPostureFromDatabase(q1, 'drill', 'drop-drill', side=self.graspingHand)
+            newPlan = self.ikPlanner.computePostureGoal(q1, q2)
+            self.addPlan(newPlan)
+            saveOriginalTraj(planNames[-1])
+
+        finally:
+            self.planFromCurrentRobotState = True;
+
+        handLinkName = self.ikPlanner.getHandLink(self.graspingHand)
+        ikParameters = IkParameters(usePointwise=True,
+                                    rescaleBodyNames=[handLinkName], rescaleBodyPts=[0.0, 0.0, 0.0],
+                                    maxBodyTranslationSpeed=self.drillTrajectoryMetersPerSecondFast)
+
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(ikParameters)
+        concatenateAndRescaleTrajectories(planNames, 'qtraj_drill_drop', 'ts', ikParameters)
+
+
+def spawnWallAffordanceTest(self, x, y, yaw, targetHeight, targetRadius):
 
         wallWidth = 1.0
         wallHeight = 2.0
@@ -2616,15 +2681,6 @@ class DrillTaskPanel(TaskUserPanel):
         self.params.setProperty('drilling depth', self.drillDemo.retractBitDepthNominal)
         self.drillDemo.planDrill(inPlane=False, inLine=True, translationSpeed=self.drillDemo.drillTrajectoryMetersPerSecondSlow, jointSpeed=self.drillDemo.drillTrajectoryMaxDegreesPerSecond)
 
-    def planDrillKnockOut(self):
-        self.setDrillTargetToDrillBit()
-        self.planDrillOut()
-        self.drillDemo.planDrillIntoWallPrep()
-        self.setDrillTargetToKnockOut()
-        self.planDrillAlign()
-        self.setDefaultKnockOutDepth()
-        self.planDrillIn()
-
     def setDefaultDrillInDepth(self):
         self.params.setProperty('drilling depth', 0.01)
 
@@ -2888,6 +2944,9 @@ class DrillTaskPanel(TaskUserPanel):
         addFolder('Retract')
         addFunc('reset drill target', self.setDrillTargetToDrillBit)
         addManipTask('drill out', self.planDrillOut, userPrompt=True)
-        addManipTask('drill prep posture', self.drillDemo.planDrillIntoWallPrep, userPrompt=True)
-        addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
+        addManipTask('prepare to drop drill', self.drillDemo.planDrillDrop, userPrompt=True)
+        addTask(rt.UserPromptTask(name='approve drill drop', message='Please verify the drill is ready to be dropped'))
+        addTask(rt.OpenHand(name='open hand', side=side.capitalize()))
+        #addManipTask('drill prep posture', self.drillDemo.planDrillIntoWallPrep, userPrompt=True)
+        #addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
 
