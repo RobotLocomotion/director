@@ -134,18 +134,36 @@ class SurpriseTaskPanel(TaskUserPanel):
         self.addManualButton('spawn switch box affordance', self.switchPlanner.spawnBoxAffordance)
         self.addManualButton('spawn footstep frame', self.switchPlanner.spawnFootstepFrame)
         self.addManualButton('reset reach frame', self.switchPlanner.updateReachFrame)
-        self.addManualButton('plan reach to reach frame', self.switchPlanner.planReach)
+        # self.addManualButton('plan reach to reach frame', self.switchPlanner.planReach)
+        self.addManualButton('Reach to pinch reach frame', self.onPlanPinchReach)
+        self.addManualButton('Commit Manip Plan', self.switchPlanner.commitManipPlan)
+
+    def onPlanPinchReach(self):
+        self.switchPlanner.planPinchReach(maxDegreesPerSecond=self.maxDegreesPerSecond)
 
     def getSide(self):
         return self.params.getPropertyEnumValue('Hand').lower()
 
     def addDefaultProperties(self):
+        self.params.addProperty('max degrees per second', 10, attributes=om.PropertyAttributes(singleStep=1, decimals=2))
         self.params.addProperty('Hand', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         self.params.setProperty('Hand', self.planner.side.capitalize())
+
 
     def onPropertyChanged(self, propertySet, propertyName):
         if propertyName == 'Hand':
             self.planner.side = self.getSide()
+
+        self.syncProperties()
+
+    def syncProperties(self):
+        self.maxDegreesPerSecond = self.params.getProperty('max degrees per second')
+
+    def setParamsPreTeleop(self):
+        self.params.setProperty('max degrees per second', 30)
+
+    def setParamsTeleop(self):
+        self.params.setProperty('max degrees per second', 10)
 
     def addTasks(self):
 
@@ -235,11 +253,13 @@ class SurpriseTaskPanel(TaskUserPanel):
         addTask(rt.CloseHand(side='Right', mode='Pinch', name='set finger pinch'))
         reach = addFolder('Reach')
 
+        addFunc('set degrees per second 30', self.setParamsPreTeleop)
         addFunc('update reach frame', self.switchPlanner.updateReachFrame)
         addTask(rt.UserPromptTask(name='adjust frame', message='adjust reach frame if necessary'))
-        addManipTask('reach above box', self.switchPlanner.planReach, userPrompt=True)
+        addManipTask('reach above box', self.onPlanPinchReach, userPrompt=True)
 
         teleop = addFolder('Teleop')
+        addFunc('set degrees per second 10', self.setParamsTeleop)
         addTask(rt.UserPromptTask(name='wait for teleop', message='continue when finished with task.'))
 
 
