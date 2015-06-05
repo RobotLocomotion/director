@@ -822,9 +822,13 @@ class DrillPlannerDemo(object):
         self.addPlan(newPlan)
 
 
-    def planHandDown(self, side):
-        self.planPostureGoal(side, 'General', 'handdown',
-                             ikParameters=IkParameters(maxDegreesPerSecond=30))
+    def planHandsDown(self):
+        otherSide = 'right' if self.graspingHand == 'left' else 'left'
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side=otherSide)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'drill', 'new: walk with drill', side=self.graspingHand)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose, ikParameters=IkParameters(maxDegreesPerSecond=30))
+        self.addPlan(newPlan)
 
 
     def planWalkWithDrillPosture(self):
@@ -1223,7 +1227,7 @@ class DrillPlannerDemo(object):
         concatenateAndRescaleTrajectories(planNames, 'qtraj_drill_drop', 'ts', ikParameters)
 
 
-def spawnWallAffordanceTest(self, x, y, yaw, targetHeight, targetRadius):
+    def spawnWallAffordanceTest(self, x, y, yaw, targetHeight, targetRadius):
 
         wallWidth = 1.0
         wallHeight = 2.0
@@ -2884,9 +2888,8 @@ class DrillTaskPanel(TaskUserPanel):
         #addManipTask('thumb press exit 2', self.drillDemo.planHandRaiseForDrillButtPreGrasp, userPrompt=True)
         addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
 
-        addManipTask('hand down', functools.partial(self.drillDemo.planHandDown, pressSide), userPrompt=True)
+        addManipTask('hands down', self.drillDemo.planHandsDown, userPrompt=True)
         addTask(rt.CloseHand(name='close press hand', side=pressSide.capitalize()))
-        addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
 
         # walk toward wall
         addFolder('Walk toward wall')
