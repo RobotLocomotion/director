@@ -1799,6 +1799,12 @@ class DrillPlannerDemo(object):
         #self.handDriver(side).sendClose(60)
         self.getHandDriver(side).sendCustom(100.0, 100.0, 100.0, 0)
 
+    def closeTopFingers(self, side):
+        self.getHandDriver(side).sendFingerControl(254, 254, 0, 100, 100, 200, 0)
+
+    def closeAllFingers(self, side):
+        self.getHandDriver(side).sendFingerControl(254, 254, 254, 100, 100, 200, 0)
+
     def sendNeckPitchLookDown(self):
         self.multisenseDriver.setNeckPitch(40)
 
