@@ -2767,25 +2767,22 @@ class DrillTaskPanel(TaskUserPanel):
         self.drillDemo.graspingHand = self.getSide()
 
         self.params.addProperty('drill grasp yaw', self.drillDemo.drillGraspYaw, attributes=om.PropertyAttributes(minimum=-360, maximum=360))
-        self.params.addProperty('wall offset x', 0.7, attributes=om.PropertyAttributes(minimum=0.0, maximum=2.0, decimals=2, singleStep=0.01, hidden=True))
-        self.params.addProperty('wall offset y', 0.0, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=2, singleStep=0.01, hidden=True))
         self.params.addProperty('wall yaw', 0, attributes=om.PropertyAttributes(minimum=-90, maximum=90, hidden=True))
-        self.params.addProperty('target height', 1.2, attributes=om.PropertyAttributes(minimum=0, maximum=2.0, decimals=2, singleStep=0.05, hidden=True))
-        self.params.addProperty('target radius', 0.2, attributes=om.PropertyAttributes(minimum=0, maximum=1.0, decimals=2, singleStep=0.01, hidden=True))
+        self.params.addProperty('wall offset x', 0.8, attributes=om.PropertyAttributes(minimum=0.0, maximum=2.0, decimals=2, singleStep=0.01, hidden=False))
+        self.params.addProperty('wall offset y', 0.3, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=2, singleStep=0.01, hidden=False))
+        self.params.addProperty('target height', 1.0, attributes=om.PropertyAttributes(minimum=0, maximum=2.0, decimals=2, singleStep=0.05, hidden=True))
+        self.params.addProperty('target radius', 0.16, attributes=om.PropertyAttributes(minimum=0, maximum=1.0, decimals=2, singleStep=0.01, hidden=True))
 
         self.params.addProperty('drilling depth', self.drillDemo.retractBitDepthNominal, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025))
         self.params.addProperty('drilling horiz offset', 0.0, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025, hidden=True))
-        self.params.addProperty('drilling vert offset', 0.2, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025, hidden=True))
+        self.params.addProperty('drilling vert offset', 0.16, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=4, singleStep=0.0025, hidden=True))
 
 
     def onPropertyChanged(self, propertySet, propertyName):
 
         propertyName = str(propertyName)
 
-        if om.findObjectByName('drill wall') and propertyName.startswith('wall ') or propertyName.startswith('target '):
-            self.spawnWallTest()
-
-        elif propertyName in ('drilling horiz offset', 'drilling vert offset'):
+        if propertyName in ('drilling horiz offset', 'drilling vert offset'):
             self.updateDrillTargetPosition()
 
         elif propertyName == 'drilling depth':
