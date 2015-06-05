@@ -130,6 +130,8 @@ class DrillPlannerDemo(object):
         self.lockBackForDrilling = False
         self.lockBaseForDrilling = True
 
+        self.useFingerGrasp = True
+
         self.drillTrajectoryMetersPerSecondSlow = 0.04
         self.drillTrajectoryMetersPerSecondFast = 0.20
         self.drillTrajectoryMaxDegreesPerSecond = 15
@@ -742,11 +744,16 @@ class DrillPlannerDemo(object):
 
 
     def planReachNew(self):
-        self.planParameterizedGrasp(-0.17, 0.1, self.drillGraspYaw,
+        self.planParameterizedGrasp(-0.17, 0.0, self.drillGraspYaw,
                                     ikParameters=IkParameters(maxDegreesPerSecond=30))
 
     def planGraspNew(self):
-        self.planParameterizedGrasp(0.0, 0.0, self.drillGraspYaw, inLine=True,
+        if self.useFingerGrasp:
+            graspHeight = 0.03
+        else:
+            graspHeight = 0.0
+
+        self.planParameterizedGrasp(0.0, graspHeight, self.drillGraspYaw, inLine=True,
                                     ikParameters=IkParameters(maxDegreesPerSecond=15))
 
     def planLiftNew(self):
@@ -1765,8 +1772,8 @@ class DrillPlannerDemo(object):
 
     def planNavigationGoalAwayFromShelf(self):
 
-        xoffset = -0.5
-        yoffset = 0.0
+        xoffset = -0.35
+        yoffset = -0.1
         yaw = -60
 
         stanceFrame = self.footstepPlanner.getFeetMidPoint(self.robotModel)
@@ -1800,10 +1807,20 @@ class DrillPlannerDemo(object):
         self.getHandDriver(side).sendCustom(100.0, 100.0, 100.0, 0)
 
     def closeTopFingers(self, side):
-        self.getHandDriver(side).sendFingerControl(254, 254, 0, 100, 100, 200, 0)
+        self.getHandDriver(side).sendFingerControl(254, 0, 254, 100, 100, 200, 0)
 
     def closeAllFingers(self, side):
         self.getHandDriver(side).sendFingerControl(254, 254, 254, 100, 100, 200, 0)
+
+    def fingerGrasp(self):
+        self.closeTopFingers('right')
+        time.sleep(1.5)
+        self.closeAllFingers('right')
+        time.sleep(1.5)
+        self.closeAllFingers('right')
+
+    def fingerGraspTighten(self):
+        self.closeAllFingers('right')
 
     def sendNeckPitchLookDown(self):
         self.multisenseDriver.setNeckPitch(40)
@@ -2756,6 +2773,9 @@ class DrillTaskPanel(TaskUserPanel):
         self.addManualButton('Plan drill circle', self.drillDemo.planDrillCircle)
         self.addManualSpacer()
         self.addManualButton('Commit Manip', self.drillDemo.commitManipPlan)
+        self.addManualSpacer()
+        self.addManualButton('Finger grasp', self.drillDemo.fingerGrasp)
+        self.addManualButton('Finger tighten', self.drillDemo.fingerGraspTighten)
 
     def getSide(self):
         return self.params.getPropertyEnumValue('Drill Hand').lower()
@@ -2768,8 +2788,8 @@ class DrillTaskPanel(TaskUserPanel):
 
         self.params.addProperty('drill grasp yaw', self.drillDemo.drillGraspYaw, attributes=om.PropertyAttributes(minimum=-360, maximum=360))
         self.params.addProperty('wall yaw', 0, attributes=om.PropertyAttributes(minimum=-90, maximum=90, hidden=True))
-        self.params.addProperty('wall offset x', 0.8, attributes=om.PropertyAttributes(minimum=0.0, maximum=2.0, decimals=2, singleStep=0.01, hidden=False))
-        self.params.addProperty('wall offset y', 0.3, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=2, singleStep=0.01, hidden=False))
+        self.params.addProperty('wall offset x', 0.72, attributes=om.PropertyAttributes(minimum=0.0, maximum=2.0, decimals=2, singleStep=0.01, hidden=False))
+        self.params.addProperty('wall offset y', 0.22, attributes=om.PropertyAttributes(minimum=-2.0, maximum=2.0, decimals=2, singleStep=0.01, hidden=False))
         self.params.addProperty('target height', 1.0, attributes=om.PropertyAttributes(minimum=0, maximum=2.0, decimals=2, singleStep=0.05, hidden=True))
         self.params.addProperty('target radius', 0.16, attributes=om.PropertyAttributes(minimum=0, maximum=1.0, decimals=2, singleStep=0.01, hidden=True))
 
@@ -2831,6 +2851,8 @@ class DrillTaskPanel(TaskUserPanel):
         side = self.getSide()
         pressSide = self.drillDemo.ikPlanner.flipSide(side)
 
+        useFingerGrasp = self.drillDemo.useFingerGrasp
+
         ###############
         # add the tasks
 
@@ -2861,17 +2883,26 @@ class DrillTaskPanel(TaskUserPanel):
         # pick up drill
         addFolder('Pick up drill')
         addManipTask('raise arm', self.drillDemo.planPreGrasp, userPrompt=True)
-        addTask(rt.OpenHand(name='open hand', side=side.capitalize()))
         addManipTask('reach to drill', self.drillDemo.planReachNew, userPrompt=True)
+        addTask(rt.OpenHand(name='open hand', side=side.capitalize()))
         addManipTask('grasp drill', self.drillDemo.planGraspNew, userPrompt=True)
         addTask(rt.UserPromptTask(name='Confirm hand position', message='Please verify hand position for grasping'), parent=None)
-        addTask(rt.CloseHand(name='close hand', side=side.capitalize()))
-        addTask(rt.DelayTask(name='wait to regrasp', delayTime=2.0))
-        addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
+
+        if useFingerGrasp:
+            addFunc('finger grasp', self.drillDemo.fingerGrasp)
+        else:
+            addTask(rt.CloseHand(name='close hand', side=side.capitalize()))
+            addTask(rt.DelayTask(name='wait to regrasp', delayTime=2.0))
+            addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
+
         #addManipTask('lift drill', self.drillDemo.planLiftNew, userPrompt=True)
         addManipTask('raise drill', self.drillDemo.planDrillRaiseNew, userPrompt=True)
-        addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
-        addTask(rt.UserPromptTask(name='adjust drill in hand', message='Please adjust drill fit in hand'))
+
+        if useFingerGrasp:
+            addFunc('finger grasp tighten', self.drillDemo.fingerGraspTighten)
+        else:
+            addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
+            addTask(rt.UserPromptTask(name='adjust drill in hand', message='Please adjust drill fit in hand'))
 
         # walk back
         addFolder('Walk back')
@@ -2892,7 +2923,11 @@ class DrillTaskPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name='verify drill is on', message='Please verify that drill is on'), parent=None)
         #addManipTask('thumb press exit', self.drillDemo.planHandRaiseForDrillButtGrasp, userPrompt=True)
         #addManipTask('thumb press exit 2', self.drillDemo.planHandRaiseForDrillButtPreGrasp, userPrompt=True)
-        addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
+
+        if useFingerGrasp:
+            addFunc('finger grasp tighten', self.drillDemo.fingerGraspTighten)
+        else:
+            addTask(rt.CloseHand(name='re-close grip hand', side=side.capitalize()))
 
         addManipTask('hands down', self.drillDemo.planHandsDown, userPrompt=True)
         addTask(rt.CloseHand(name='close press hand', side=pressSide.capitalize()))
