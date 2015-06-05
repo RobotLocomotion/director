@@ -96,6 +96,7 @@ set(python_files
   ddapp/startup.py
   ddapp/statelistener.py
   ddapp/surprisetask.py
+  ddapp/switchplanner.py
   ddapp/tabledemo.py
   ddapp/tasklaunchpanel.py
   ddapp/tdx.py
