@@ -394,8 +394,32 @@ class DoorDemo(object):
         newPlan = self.ikPlanner.computeMultiPostureGoal([startPose, q2, endPose], ikParameters=ikParameters)
         self.addPlan(newPlan)
 
+    def planTuckArmsPrePush(self):
 
-    def planChop(self, deltaZ=None, deltaY=None):
+
+        ikParameters = IkParameters(usePointwise=False, maxDegreesPerSecond=self.speedHigh)
+
+        otherSide = 'left' if self.graspingHand == 'right' else 'right'
+
+        startPose = self.getPlanningStartPose()
+
+        standPose, info = self.ikPlanner.computeStandPose(startPose, ikParameters=ikParameters)
+
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=self.graspingHand)
+        a = 0.25
+        q2 = (1.0 - a)*np.array(standPose) + a*q2
+        q2 = self.ikPlanner.getMergedPostureFromDatabase(q2, 'door', 'hand up tuck', side=otherSide)
+        a = 0.75
+        q2 = (1.0 - a)*np.array(standPose) + a*q2
+
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(standPose, 'door', 'hand up tuck', side=self.graspingHand)
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(endPose, 'door', 'hand up tuck', side=otherSide)
+
+        newPlan = self.ikPlanner.computeMultiPostureGoal([startPose, q2, endPose], ikParameters=ikParameters)
+        self.addPlan(newPlan)
+
+
+    def planChop(self, deltaZ=None, deltaY=None, deltaX=None):
 
         startPose = self.getPlanningStartPose()
 
@@ -403,11 +427,13 @@ class DoorDemo(object):
             deltaZ = self.chopDistance
         if deltaY is None:
             deltaY = self.chopSidewaysDistance
+        if deltaX is None:
+            deltaX = 0.0
 
         linkOffsetFrame = self.ikPlanner.getPalmToHandLink(self.graspingHand)
         handLinkName = self.ikPlanner.getHandLink(self.graspingHand)
         startFrame = self.ikPlanner.getLinkFrameAtPose(handLinkName, startPose)
-        endToStartTransform = transformUtils.frameFromPositionAndRPY([deltaZ, 0.0, -deltaY],
+        endToStartTransform = transformUtils.frameFromPositionAndRPY([deltaZ, -deltaX, -deltaY],
                                                                      [0, 0, 0])
         endFrame = transformUtils.concatenateTransforms([endToStartTransform, startFrame]);
         vis.updateFrame(endFrame, 'debug chop', parent=self.doorHandleAffordance, visible=False, scale=0.2)
@@ -1014,6 +1040,7 @@ class DoorTaskPanel(TaskUserPanel):
         self.addManualButton('Footsteps through door', self.doorDemo.planFootstepsThroughDoor)
         self.addManualSpacer()
         self.addManualButton('Raise arms', self.doorDemo.planPreReach)
+        self.addManualButton('Tuck Arms (pre-push)', self.doorDemo.planTuckArmsPrePush)
         self.addManualButton('Tuck Arms', self.doorDemo.planTuckArms)
         self.addManualSpacer()
         self.addManualButton('Open pinch', self.openPinch)
@@ -1024,6 +1051,7 @@ class DoorTaskPanel(TaskUserPanel):
         self.addManualSpacer()
         self.addManualButton('Pre-chop out', self.doorDemo.planPreChop)
         self.addManualButton('Chop', self.doorDemo.planChop)
+        self.addManualButton('Un-chop', functools.partial(self.doorDemo.planChop, deltaX=-0.1, deltaY=-0.1, deltaZ=0.1))
         self.addManualSpacer()
         self.addManualButton('Turn more', functools.partial(self.doorDemo.planHandleTurn, 10))
         self.addManualButton('Turn less', functools.partial(self.doorDemo.planHandleTurn, -10))
