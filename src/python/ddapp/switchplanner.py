@@ -45,6 +45,14 @@ from PythonQt import QtCore, QtGui
 class SwitchPlanner(object):
     def __init__(self, robotSystem):
         self.robotSystem = robotSystem
+
+
+        self.robotModel = robotSystem.robotStateModel
+        self.ikPlanner = robotSystem.ikPlanner
+        self.lockBackForManip = True
+        self.lockBaseForManip = True
+        self.graspingHand = 'right'
+
         self.assignFrames()
         self.plans = []
 
@@ -54,8 +62,17 @@ class SwitchPlanner(object):
         self.footToBox = transformUtils.transformFromPose(np.array([-0.6436723 ,  0.18848073, -1.13987699]),
                                              np.array([ 0.99576385,  0.        ,  0.        , -0.09194753]))
 
-        self.palmToBox = transformUtils.transformFromPose(np.array([-0.13628039, -0.12582009,  0.33638863]), np.array([-0.69866187,  0.07267815,  0.70683338,  0.08352274]))
+        # self.palmToBox = transformUtils.transformFromPose(np.array([-0.13628039, -0.12582009,  0.33638863]), np.array([-0.69866187,  0.07267815,  0.70683338,  0.08352274]))
 
+        self.palmToBox = transformUtils.transformFromPose(np.array([-0.13516451, -0.12463758,  0.25173153]), np.array([-0.69867721,  0.07265162,  0.70682793,  0.08346358]))
+
+        pinchToBox = self.getPinchToPalmFrame()
+        pinchToBox.PostMultiply()
+        pinchToBox.Concatenate(self.palmToBox)
+
+        self.pinchToBox = pinchToBox
+
+        # self.pinchToBox =
 
     def spawnBoxAffordanceAtFrame(self, boxFrame):
         print 'spawning switch box affordance'
@@ -69,12 +86,12 @@ class SwitchPlanner(object):
         self.updateReachFrame()
 
     def updateReachFrame(self):
-        graspFrame = transformUtils.copyFrame(self.palmToBox)
+        graspFrame = transformUtils.copyFrame(self.pinchToBox)
         boxFrame = om.findObjectByName('Switch Box').getChildFrame().transform
 
         graspFrame.PostMultiply()
         graspFrame.Concatenate(boxFrame)
-        vis.updateFrame(graspFrame, 'reach frame', scale=0.2)
+        vis.updateFrame(graspFrame, 'pinch reach frame', scale=0.2)
 
 
     def planArmsPrep1(self, startPose=None):
@@ -141,15 +158,35 @@ class SwitchPlanner(object):
         plan = constraintSet.planEndPoseGoal()
         self.addPlan(plan)
 
+    def planPinchReach(self, maxDegreesPerSecond=None):
+        if maxDegreesPerSecond is None:
+            maxDegreesPerSecond=10
+
+        ikPlanner = self.ikPlanner
+
+        targetFrame = om.findObjectByName('pinch reach frame').transform
+        pinchToHand = self.getPinchToHandFrame()
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.computeGraspPose(startPose, targetFrame, graspToHand=pinchToHand)
+
+        constraintSet.ikParameters = IkParameters(maxDegreesPerSecond=maxDegreesPerSecond)
+        seedPose = ikPlanner.getMergedPostureFromDatabase(startPose, 'surprise:switch', 'above_switch', side='right')
+        seedPoseName = 'q_above_switch'
+        self.robotSystem.ikPlanner.addPose(seedPose, seedPoseName)
+
+        constraintSet.seedPoseName = seedPoseName
+        constraintSet.nominalPoseName = seedPoseName
+
+        endPose, info = constraintSet.runIk()
+        plan = constraintSet.planEndPoseGoal()
+        self.addPlan(plan)
+
 
     def getPlanningStartPose(self):
         return self.robotSystem.robotStateJointController.q
 
     def addPlan(self, plan):
         self.plans.append(plan)
-
-    def handToPinch(self):
-        pass
 
 
     def planWalking(self):
@@ -196,3 +233,84 @@ class SwitchPlanner(object):
 
     def commitManipPlan(self):
         self.robotSystem.manipPlanner.commitManipPlan(self.plans[-1])
+
+    def getPinchToHandFrame(self):
+        pinchToHand = transformUtils.transformFromPose(np.array([ -1.22270636e-07,  -3.11575498e-01,   0.00000000e+00]), np.array([  3.26794897e-07,  -2.42861455e-17,  -1.85832253e-16,
+         1.00000000e+00]))
+
+        return pinchToHand
+
+    def getPinchToPalmFrame(self):
+        pinchToPalm = transformUtils.copyFrame(self.getPinchToHandFrame())
+        palmToHand = self.ikPlanner.getPalmToHandLink(side='right')
+        pinchToPalm.PostMultiply()
+        pinchToPalm.Concatenate(palmToHand.GetLinearInverse())
+
+        return pinchToPalm
+
+    def getThumbToPalmFrame(self):
+        return vtk.vtkTransform()
+
+    def getGraspToHandFrame(self):
+
+        mode = 'palm'
+
+        graspToPalm = {'palm':vtk.vtkTransform,
+                       'pinch':self.getPinchToPalmFrame,
+                       'thumb':self.getThumbToPalmFrame}[mode]()
+
+        return self.ikPlanner.newGraspToHandFrame(self.graspingHand, graspToPalmFrame=graspToPalm)
+
+
+    def computeGraspPose(self, startPose, targetFrame, graspToHand=None):
+
+        side = self.graspingHand
+        if graspToHand is None:
+            graspToHand = self.ikPlanner.getPalmToHandLink(side=self.graspingHand)
+
+
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, targetFrame, lockBase=self.lockBaseForManip, lockBack=self.lockBackForManip, graspToHandLinkFrame=graspToHand)
+
+        return constraintSet
+
+    def computeGraspPlan(self, targetFrame, graspToHandFrame, inLine=False, ikParameters=None):
+
+        startPose = self.getPlanningStartPose()
+        endPose, constraintSet = self.computeGraspPose(startPose, targetFrame)
+        if ikParameters:
+            constraintSet.ikParameters = ikParameters
+
+        constraintSet.ikParameters.usePointwise = False
+
+        if inLine:
+
+            handLinkName = self.ikPlanner.getHandLink(self.graspingHand)
+            graspToHand = graspToHandFrame
+
+            handToWorld1 = self.ikPlanner.getLinkFrameAtPose(handLinkName, startPose)
+            handToWorld2 = self.ikPlanner.getLinkFrameAtPose(handLinkName, endPose)
+
+            handToWorld1 = transformUtils.concatenateTransforms([graspToHand, handToWorld1])
+            handToWorld2 = transformUtils.concatenateTransforms([graspToHand, handToWorld2])
+
+            motionVector = np.array(handToWorld2.GetPosition()) - np.array(handToWorld1.GetPosition())
+            motionTargetFrame = transformUtils.getTransformFromOriginAndNormal(np.array(handToWorld2.GetPosition()), motionVector)
+
+
+            #vis.updateFrame(motionTargetFrame, 'motion target frame', scale=0.1)
+            #d = DebugData()
+            #d.addLine(np.array(handToWorld2.GetPosition()), np.array(handToWorld2.GetPosition()) - motionVector)
+            #vis.updatePolyData(d.getPolyData(), 'motion vector', visible=False)
+
+            p = self.ikPlanner.createLinePositionConstraint(handLinkName, graspToHand, motionTargetFrame,
+                  lineAxis=2, bounds=[-np.linalg.norm(motionVector), 0.001], positionTolerance=0.001)
+            p.tspan = np.linspace(0, 1, 5)
+
+            constraintSet.constraints.append(p)
+            newPlan = constraintSet.runIkTraj()
+
+        else:
+
+            newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+
+        return newPlan
