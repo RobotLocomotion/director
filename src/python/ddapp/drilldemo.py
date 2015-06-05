@@ -817,7 +817,7 @@ class DrillPlannerDemo(object):
         endPose, info = self.computeThumbPressPrepPose(startPose)
 
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose,
-                                                    ikParameters=IkParameters(maxDegreesPerSecond=15))
+                                                    ikParameters=IkParameters(maxDegreesPerSecond=15, quasiStaticShrinkFactor=0.5))
 
         self.addPlan(newPlan)
 
@@ -964,8 +964,11 @@ class DrillPlannerDemo(object):
         print 'thumb press to hand frame:', self.thumbPressToHandFrame.GetPosition(), transformUtils.rollPitchYawFromTransform(self.thumbPressToHandFrame)
 
 
-    def planDrillButtonPress(self, jointDegreesPerSecond):
+    def planDrillButtonPress(self, jointDegreesPerSecond, quasiStaticShrinkFactor=None):
 
+        ikParameters = IkParameters(maxDegreesPerSecond=jointDegreesPerSecond)
+        if quasiStaticShrinkFactor is not None:
+            ikParameters.quasiStaticShrinkFactor = quasiStaticShrinkFactor
         ikPlanner = self.ikPlanner
         startPose = self.getPlanningStartPose()
         thumbSide = ikPlanner.flipSide(self.graspingHand)
@@ -981,14 +984,10 @@ class DrillPlannerDemo(object):
         constraintSet.seedPoseName = seedPoseName
         constraintSet.nominalPoseName = seedPoseName
 
-        jointSpeedOld = ikplanner.getIkOptions().getProperty('Max joint degrees/s')
-        ikplanner.getIkOptions().setProperty('Max joint degrees/s', jointDegreesPerSecond)
-
+        constraintSet.ikParameters = ikParameters
         endPose, info = constraintSet.runIk()
         graspPlan = constraintSet.runIkTraj()
         self.addPlan(graspPlan)
-
-        ikplanner.getIkOptions().setProperty('Max joint degrees/s', jointSpeedOld)
 
 
     def planDrill(self, inPlane, inLine, translationSpeed, jointSpeed):
@@ -2698,7 +2697,7 @@ class DrillTaskPanel(TaskUserPanel):
 
         self.drillDemo.addThumbTargetFramesFromModel()
         self.drillDemo.setDrillPressTargetFrame(depthOffset=-0.07, horizOffset=0.0, vertOffset=0.0)
-        self.drillDemo.planDrillButtonPress(30)
+        self.drillDemo.planDrillButtonPress(30, quasiStaticShrinkFactor=0.5)
 
     def planThumbPressPrepClose(self):
         self.drillDemo.setDrillPressTargetFrame(depthOffset=-0.025, horizOffset=0.0, vertOffset=-0.005)
