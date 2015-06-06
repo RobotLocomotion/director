@@ -1027,6 +1027,7 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         self.addManualButton('Arms Egress Prep', self.drivingPlanner.planArmsEgressPrep)
         self.addManualButton('Arms Egress Start', self.drivingPlanner.planArmsEgressStart)
+        self.addManualButton('Plan Left Leg Egress Start', self.drivingPlanner.planLegEgressStart)
 
     def addDefaultProperties(self):
         self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
@@ -1192,6 +1193,10 @@ class DrivingPlannerPanel(TaskUserPanel):
     def stopSteering(self):
         self.params.setProperty('Steering Streaming', 0)
 
+    def stopStreaming(self):
+        self.params.setProperty('Steering Streaming', 0)
+        self.params.setProperty('Throttle Streaming', 0)
+
     def addTasks(self):
         self.taskTree.removeAllTasks()
 
@@ -1310,6 +1315,10 @@ class DrivingPlannerPanel(TaskUserPanel):
 
 
         dp = self.drivingPlanner
+
+        addFolder('Stop throttle and steering')
+        addFunc(self.stopStreaming, 'stop steering and throttle streaming')
+        addTask(rt.UserPromptTask(name="Confirm steering and throttle streaming is off", message='Confirm steering and throttle streaming is off, move sliders and wheel to check'))
 
         # footToEgress = addFolder('Foot to Egress Pose')
         self.folder = None
