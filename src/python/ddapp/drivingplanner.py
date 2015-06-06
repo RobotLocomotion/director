@@ -1316,9 +1316,9 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         dp = self.drivingPlanner
 
-        addFolder('Stop Streaming')
-        addFunc(self.stopStreaming, 'stop streaming')
-        addTask(rt.UserPromptTask(name="Confirm streaming is off", message='Confirm streaming is off, move sliders and wheel to check'))
+        addFolder('Stop throttle and steering')
+        addFunc(self.stopStreaming, 'stop steering and throttle streaming')
+        addTask(rt.UserPromptTask(name="Confirm steering and throttle streaming is off", message='Confirm steering and throttle streaming is off, move sliders and wheel to check'))
 
         # footToEgress = addFolder('Foot to Egress Pose')
         self.folder = None
