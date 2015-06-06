@@ -1027,6 +1027,7 @@ class DrivingPlannerPanel(TaskUserPanel):
 
         self.addManualButton('Arms Egress Prep', self.drivingPlanner.planArmsEgressPrep)
         self.addManualButton('Arms Egress Start', self.drivingPlanner.planArmsEgressStart)
+        self.addManualButton('Plan Left Leg Egress Start', self.drivingPlanner.planLegEgressStart)
 
     def addDefaultProperties(self):
         self.params.addProperty('PreGrasp/Retract Depth', 0.2, attributes=om.PropertyAttributes(singleStep=0.01, decimals=3))
