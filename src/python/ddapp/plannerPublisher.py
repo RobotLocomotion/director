@@ -17,16 +17,38 @@ import json
 from ddapp.utime import getUtime
 from ddapp import lcmUtils
 
+import ipab
+
 
 class PlannerPublisher(object):
 
   def __init__(self, ikPlanner, affordanceMan):
     self.ikPlanner = ikPlanner
     self.affordanceManager = affordanceMan
+    self.poses={}
 
-  def processIK(self, constraints):
+  def setupMessage(self, constraints, endPoseName="", nominalPoseName="", seedPoseName="", additionalTimeSamples=None):
+    poses = ikconstraintencoder.getPlanPoses(constraints, self.ikPlanner)
+    poses.update(self.poses)
+    msg = ipab.exotica_planner_request_t()
+    msg.utime = getUtime()
+    msg.poses = json.dumps(poses)
+    msg.constraints = ikconstraintencoder.encodeConstraints(constraints)
+    msg.seed_pose = seedPoseName
+    msg.nominal_pose = nominalPoseName
+    msg.end_pose = endPoseName
+    msg.joint_names = json.dumps(list(self.ikPlanner.jointController.jointNames))
+    msg.affordances = self.processAffordances()
+    opt=ikplanner.getIkOptions()._properties
+    if additionalTimeSamples:
+      opt.update({'timeSamples':additionalTimeSamples})
+    msg.options = json.dumps(opt)
+    return msg
+
+  def processIK(self, constraints, endPoseName="", nominalPoseName="", seedPoseName="", additionalTimeSamples=None):
     listener = self.ikPlanner.getManipIKListener()
-    self.ikPlanner.ikConstraintEncoder.publishConstraints( constraints, messageName='IK_REQUEST')
+    msg = self.setupMessage(constraints, endPoseName, nominalPoseName, seedPoseName, additionalTimeSamples)
+    lcmUtils.publish('IK_REQUEST', msg)
     ikplan = listener.waitForResponse(timeout=12000)
     listener.finish()
 
@@ -38,15 +60,10 @@ class PlannerPublisher(object):
       info = -1
     return endPose, info
 
-  def processTraj(self, constraints, poseEnd, nominalPoseName):
+  def processTraj(self, constraints, endPoseName="", nominalPoseName="", seedPoseName="", additionalTimeSamples=None):
     # Temporary fix / HACK / TODO (should be done in exotica_json)
     largestTspan = [0, 0]
     for constraintIndex, _ in enumerate(constraints):
-      if isinstance(constraints[constraintIndex], ikconstraints.PostureConstraint):
-        if constraints[constraintIndex].postureName == 'gaze_plan_start':
-          #print "(gaze_plan_start) Temporary start pose rewrite hack activated"
-          constraints[constraintIndex].__setattr__('postureName','reach_start')
-
       # Get tspan extend to normalise time-span
       if np.isfinite(constraints[constraintIndex].tspan[0]) and np.isfinite(constraints[constraintIndex].tspan[1]):
         largestTspan[0] = constraints[constraintIndex].tspan[0] if (constraints[constraintIndex].tspan[0] < largestTspan[0]) else largestTspan[0]
@@ -59,69 +76,47 @@ class PlannerPublisher(object):
           constraints[constraintIndex].tspan[0] = constraints[constraintIndex].tspan[0] / largestTspan[1]
           constraints[constraintIndex].tspan[1] = constraints[constraintIndex].tspan[1] / largestTspan[1]
 
-    self.publishCollisions()
     listener = self.ikPlanner.getManipPlanListener()
-    constraintSet = ikplanner.ConstraintSet(self, constraints, poseEnd, nominalPoseName)
-    self.ikPlanner.ikConstraintEncoder.publishConstraints( constraintSet.constraints, 'PLANNER_REQUEST')
+    msg = self.setupMessage(constraints, endPoseName, nominalPoseName, seedPoseName, additionalTimeSamples)
+    lcmUtils.publish('PLANNER_REQUEST', msg)
     lastManipPlan = listener.waitForResponse(timeout=20000)
     listener.finish()
     return lastManipPlan, lastManipPlan.plan_info[0]
 
   def processAddPose(self, pose, poseName):
-    # Temporary fix / HACK / TODO (should be done in exotica_json)
-    if poseName == 'gaze_plan_start':
-      #print "(gaze_plan_start) Temporary start pose rewrite hack activated"
-      poseName = 'reach_start'
-    elif poseName == 'q_start':
-      #print "(q_start) Temporary start pose rewrite hack activated"
-      poseName = 'reach_start'
+    self.poses[poseName]=list(pose);
 
-    msg = lcmdrc.planner_request_t()
-    msg.utime = getUtime()
-    msg.poses = json.dumps({poseName:list(pose)})
-    msg.constraints = ''
-    lcmUtils.publish('PLANNER_SETUP_POSES', msg)
 
-  def publishJointNames(self):
-    msg1 = lcmdrc.robot_state_t()
-    msg1.joint_name = list(self.ikPlanner.jointController.jointNames)
-    msg1.num_joints = len(msg1.joint_name)
-    msg1.joint_position = [0]*msg1.num_joints
-    msg1.joint_velocity = [0]*msg1.num_joints
-    msg1.joint_effort = [0]*msg1.num_joints
-    lcmUtils.publish('PLANNER_SETUP_JOINT_NAMES', msg1) 
+  def processAffordances(self):
+      affs = self.affordanceManager.getCollisionAffordances()
+      s='['
+      first=True
+      for aff in affs:
+        des=aff.getDescription()
+        classname=des['classname'];
+        if first:
+          s+='{'
+        else:
+          s+='\n,{'
+        first=False
+        s+='"classname":"'+classname+'"'
+        s+=',"uuid":"'+des['uuid']+'"'
+        s+=',"pose": {"position":{"__ndarray__":'+repr(des['pose'][0].tolist())+'},"quaternion":{"__ndarray__":'+repr(des['pose'][1].tolist())+'}}'
+        if classname=='MeshAffordanceItem':
+          s+=',"filename":"'+aff.getMeshManager().getFilesystemFilename(des['Filename'])+'"'
+        if classname=='SphereAffordanceItem':
+          s+=',"radius":'+repr(des['Radius'])
+        if classname=='CylinderAffordanceItem' or classname=='CapsuleAffordanceItem':
+          s+=',"radius":'+repr(des['Radius'])
+          s+=',"length":'+repr(des['Length'])
+        if classname=='BoxAffordanceItem':
+          s+=',"dimensions":'+repr(des['Dimensions'])
+        if classname=='CapsuleRingAffordanceItem':
+          s+=',"radius":'+repr(des['Radius'])
+          s+=',"tube_radius":'+repr(des['Tube Radius'])
+          s+=',"segments":'+repr(des['Segments'])
+        s+='}'
+      s=s+']'
+      return s
 
-  def publishCollisions(self):
-    affs = self.affordanceManager.getCollisionAffordances()
-    msg = lcmdrc.affordance_collection_t()
-    msg.utime = getUtime()
-    s='['
-    first=True
-    for aff in affs:
-      des=aff.getDescription()
-      classname=des['classname'];
-      if first:
-        s+='{'
-      else:
-        s+='\n,{'
-      first=False
-      s+='"classname":"'+classname+'"'
-      s+=',"uuid":"'+des['uuid']+'"'
-      s+=',"pose": {"position":{"__ndarray__":'+repr(des['pose'][0].tolist())+'},"quaternion":{"__ndarray__":'+repr(des['pose'][1].tolist())+'}}'
-      if classname=='MeshAffordanceItem':
-        s+=',"filename":"'+aff.getMeshManager().getFilesystemFilename(des['Filename'])+'"'
-      if classname=='SphereAffordanceItem':
-        s+=',"radius":'+repr(des['Radius'])
-      if classname=='CylinderAffordanceItem' or classname=='CapsuleAffordanceItem':
-        s+=',"radius":'+repr(des['Radius'])
-        s+=',"length":'+repr(des['Length'])
-      if classname=='BoxAffordanceItem':
-        s+=',"dimensions":'+repr(des['Dimensions'])
-      if classname=='CapsuleRingAffordanceItem':
-        s+=',"radius":'+repr(des['Radius'])
-        s+=',"tube_radius":'+repr(des['Tube Radius'])
-        s+=',"segments":'+repr(des['Segments'])
-      s+='}'
-    msg.name=s+']'
-    lcmUtils.publish('PLANNER_SETUP_COLLISION_AFFORDANCES', msg)
 import ikplanner
