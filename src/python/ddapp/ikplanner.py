@@ -66,8 +66,7 @@ class ConstraintSet(object):
             nominalPoseName = self.startPoseName
 
         if (self.ikPlanner.pushToMatlab is False):
-            self.ikPlanner.plannerPub.publishJointNames()
-            self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints)
+            self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints, nominalPoseName=nominalPoseName, seedPoseName=seedPoseName)
             return self.endPose, self.info
         else:
             ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
@@ -992,10 +991,6 @@ class IKPlanner(object):
     def addPose(self, pose, poseName):
         self.jointController.addPose(poseName, pose)
 
-        # HACK / TODO: make sure exotica runs with gaze_plan_start
-        if not self.pushToMatlab and poseName == 'gaze_plan_start':
-            self.jointController.addPose('reach_start', pose)
-
         if self.pushToMatlab:
             self.ikServer.sendPoseToServer(pose, poseName)
         else:
@@ -1337,8 +1332,7 @@ class IKPlanner(object):
 
 
         if (self.pushToMatlab is False):
-            self.plannerPub.publishJointNames()
-            self.lastManipPlan, info = self.plannerPub.processTraj(constraints,poseEnd, nominalPoseName)
+            self.lastManipPlan, info = self.plannerPub.processTraj(constraints,endPoseName=poseEnd, nominalPoseName=nominalPoseName,seedPoseName=poseStart, additionalTimeSamples=self.additionalTimeSamples)
         else:
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
             listener = self.getManipPlanListener()
