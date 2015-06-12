@@ -58,6 +58,7 @@ class PlannerPublisher(object):
       info=ikplan.plan_info[ikplan.num_states-1]
     else: 
       info = -1
+    self.ikPlanner.ikServer.infoFunc(info)
     return endPose, info
 
   def processTraj(self, constraints, endPoseName="", nominalPoseName="", seedPoseName="", additionalTimeSamples=None):
@@ -81,6 +82,7 @@ class PlannerPublisher(object):
     lcmUtils.publish('PLANNER_REQUEST', msg)
     lastManipPlan = listener.waitForResponse(timeout=20000)
     listener.finish()
+    self.ikPlanner.ikServer.infoFunc(lastManipPlan.plan_info[0])
     return lastManipPlan, lastManipPlan.plan_info[0]
 
   def processAddPose(self, pose, poseName):
