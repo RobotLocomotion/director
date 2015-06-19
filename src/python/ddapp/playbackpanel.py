@@ -69,8 +69,6 @@ class PlaybackPanel(object):
         self.ui = WidgetDict(self.widget.children())
 
         self.ui.viewModeCombo.connect('currentIndexChanged(const QString&)', self.viewModeChanged)
-        # disable visualization of the plan - for simulated execution:
-        self.disablePlaybackModel = False
         self.ui.playbackSpeedCombo.connect('currentIndexChanged(const QString&)', self.playbackSpeedChanged)
         self.ui.interpolationCombo.connect('currentIndexChanged(const QString&)', self.interpolationChanged)
 
@@ -156,16 +154,10 @@ class PlaybackPanel(object):
 
     def viewModeChanged(self):
         viewMode = self.getViewMode()
-        if viewMode == 'hidden':
-            self.disablePlaybackModel = True
-            playbackVisible = True
-            samplesVisible = False
-        elif viewMode == 'continuous':
-            self.disablePlaybackModel = False
+        if viewMode == 'continuous':
             playbackVisible = True
             samplesVisible = False
         else:
-            self.disablePlaybackModel = False
             playbackVisible = False
             samplesVisible = True
 
@@ -323,14 +315,6 @@ class PlaybackPanel(object):
 
     def showPlaybackModel(self):
         self.robotStateModel.setProperty('Visible', True)
-
-        # if executing e.g. in simulation, disable playback visualization
-        if (self.disablePlaybackModel):
-            self.robotStateModel.setProperty('Alpha', 1.0)
-            self.playbackRobotModel.setProperty('Visible', False)
-            return
-
-        self.robotStateModel.setProperty('Alpha', self.robotModelDisplayAlpha)
         self.playbackRobotModel.setProperty('Visible', True)
         self.playbackRobotModel.setProperty('Textures', self.playbackRobotModelUseTextures)
         self.robotStateModel.setProperty('Alpha', self.robotStateModelDisplayAlpha)
