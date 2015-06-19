@@ -25,8 +25,8 @@ class COPMonitor(object):
         self.robotStateModel = robotSystem.robotStateModel
         self.robotStateJointController = robotSystem.robotStateJointController
         self.robotSystem = robotSystem
-        self.lFootFtFrameId = self.robotStateModel.model.findLinkID('l_foot')
-        self.rFootFtFrameId = self.robotStateModel.model.findLinkID('r_foot')
+        self.lFootFtFrameId = self.robotStateModel.model.findLinkID( self.robotSystem.ikPlanner.leftFootLink)
+        self.rFootFtFrameId = self.robotStateModel.model.findLinkID( self.robotSystem.ikPlanner.rightFootLink)
         self.leftInContact = 0
         self.rightInContact = 0
         self.view = view
@@ -68,8 +68,8 @@ class COPMonitor(object):
                              0.0, 
                              0.0, 
                              self.robotStateJointController.lastRobotStateMessage.force_torque.r_foot_force_z]
-                rFootTransform = self.robotStateModel.getLinkFrame('r_foot')
-                lFootTransform = self.robotStateModel.getLinkFrame('l_foot')
+                lFootTransform = self.robotStateModel.getLinkFrame( self.robotSystem.ikPlanner.leftFootLink )
+                rFootTransform = self.robotStateModel.getLinkFrame( self.robotSystem.ikPlanner.rightFootLink)
 
                 rFootOrigin = np.array(rFootTransform.TransformPoint([0, 0, -0.07645]))
                 lFootOrigin = np.array(lFootTransform.TransformPoint([0, 0, -0.07645])) # down to sole
