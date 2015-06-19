@@ -544,7 +544,7 @@ class QuasiStaticConstraint(ConstraintBase):
         formatArgs = dict(varName=varName,
                           robotArg=self.robotArg,
                           tspan=self.getTSpanString(),
-                          shrinkFactor=shrinkFactor)
+                          shrinkFactor=shrinkFactor,
                           leftFootLinkName = self.leftFootLinkName,
                           rightFootLinkName = self.rightFootLinkName)
 
