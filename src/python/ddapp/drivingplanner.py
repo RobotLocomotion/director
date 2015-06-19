@@ -27,6 +27,7 @@ import functools
 import numpy as np
 import scipy.io
 from ddapp.tasks.taskuserpanel import TaskUserPanel
+from ddapp import drcargs
 
 class DrivingPlanner(object):
 
@@ -44,8 +45,10 @@ class DrivingPlanner(object):
         self.tagToLocalTransform = transformUtils.transformFromPose([0,0,0],[1,0,0,0])
 
         self.commandStreamChannel = 'JOINT_POSITION_GOAL'
-        self.akyIdx = robotstate.getDrakePoseJointNames().index('l_leg_aky')
-        self.lwyIdx = robotstate.getDrakePoseJointNames().index('l_arm_lwy')
+        self.drivingThrottleJoint = drcargs.getDirectorConfig()['drivingThrottleJoint']
+        self.drivingSteeringJoint = drcargs.getDirectorConfig()['drivingSteeringJoint']
+        self.akyIdx =  robotstate.getDrakePoseJointNames().index( self.drivingThrottleJoint )
+        self.lwyIdx =  robotstate.getDrakePoseJointNames().index( self.drivingSteeringJoint )
         self.anklePositions = np.array([np.nan,np.nan])
         self.jointLimitsMin = np.array([self.robotSystem.teleopRobotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.robotSystem.teleopRobotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
@@ -799,7 +802,7 @@ class DrivingPlanner(object):
         msg = lcmdrc.joint_position_goal_t()
         msg.utime = getUtime()
         msg.joint_position = ankleGoalPositionRadians
-        msg.joint_name = 'l_leg_aky'
+        msg.joint_name = drcargs.getDirectorConfig()['drivingThrottleJoint']
         self.throttleCommandMsg = msg
 
     def publishThrottleCommand(self):
@@ -827,7 +830,7 @@ class DrivingPlanner(object):
         msg = lcmdrc.joint_position_goal_t()
         msg.utime = getUtime()
         msg.joint_position = lwyPositionGoal
-        msg.joint_name = 'l_arm_lwy'
+        msg.joint_name = self.drivingThrottleJoint
         self.steeringCommandMsg = msg
 
 
