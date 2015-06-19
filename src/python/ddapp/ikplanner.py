@@ -1336,7 +1336,7 @@ class IKPlanner(object):
         else:
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
             listener = self.getManipPlanListener()
-            info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
+            info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
             self.lastManipPlan = listener.waitForResponse(timeout=12000)
             listener.finish()
 
