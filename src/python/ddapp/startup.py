@@ -398,6 +398,8 @@ if usePlanning:
 
     ikPlanner.addPostureGoalListener(robotStateJointController)
 
+    if 'fixedBaseArm' in drcargs.getDirectorConfig()['userConfig']:
+        ikPlanner.fixedBaseArm = True
 
     playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
                                       robotStateModel, robotStateJointController, manipPlanner)
@@ -1034,7 +1036,7 @@ if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
     import kinectlcm
     #kinectlcm.init()
     imageOverlayManager.viewName = "KINECT_RGB"
-    ikPlanner.fixedBaseArm = True
+    #ikPlanner.fixedBaseArm = True
     #showImageOverlay()
 
 
