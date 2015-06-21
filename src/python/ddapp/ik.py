@@ -30,28 +30,6 @@ class AsyncIKCommunicator():
         self.nominalName = 'q_nom'
         self.infoFunc = None
 
-        # Currently only left hand supported
-        self.rrtHand     = 'left'
-
-        self.maxDegreesPerSecond = 30.0
-        self.maxBaseMetersPerSecond = 0.05
-        self.maxBaseRPYDegreesPerSecond = 2
-        self.accelerationParam = 2;
-        self.accelerationFraction = 0.3;
-        self.maxPlanDuration = 30.0
-        self.usePointwise = True
-        self.useCollision = False
-        self.numberOfAddedKnots = 0
-        self.numberOfInterpolatedCollisionChecks = 2
-        self.collisionMinDistance = 0.03
-        self.majorIterationsLimit = 500
-        self.majorOptimalityTolerance = 1e-4
-        self.majorFeasibilityTolerance = 1e-6
-        self.rrtMaxEdgeLength = 0.05
-        self.rrtGoalBias = 1.0
-        self.rrtMaxNumVertices = 5000
-        self.rrtNSmoothingPasses = 10;
-
         self.callbacks = callbacks.CallbackRegistry([self.STARTUP_COMPLETED])
 
 
@@ -267,8 +245,8 @@ class AsyncIKCommunicator():
             timeSamples += np.linspace(timeSamples[0], timeSamples[-1], ikParameters.numberOfAddedKnots + 2).tolist()
             timeSamples = np.unique(timeSamples).tolist()
 
-        assert self.rrtHand in ('left', 'right')
-        collisionEndEffectorName = ( self.handModels[0].handLinkName if self.rrtHand == 'left' else self.handModels[1].handLinkName )
+        assert ikParameters.rrtHand in ('left', 'right')
+        collisionEndEffectorName = ( self.handModels[0].handLinkName if ikParameters.rrtHand == 'left' else self.handModels[1].handLinkName )
 
         commands = []
         commands.append('\n%-------- runIkTraj --------\n')
