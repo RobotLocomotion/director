@@ -471,7 +471,12 @@ class FootstepsDriver(object):
             if self.show_contact_slices:
                 self.drawContactVolumes(footstepTransform, color)
 
-            sole_offset = np.mean(FootstepsDriver.getContactPts(), axis=0)
+            contact_pts_left, contact_pts_right = FootstepsDriver.getContactPts()
+            if footstep.is_right_foot:
+                sole_offset = np.mean(contact_pts_right, axis=0)
+            else:
+                sole_offset = np.mean(contact_pts_left, axis=0)
+
             t_sole_prev = transformUtils.frameFromPositionMessage(msg.footsteps[i-2].pos)
             t_sole_prev.PreMultiply()
             t_sole_prev.Translate(sole_offset)
@@ -533,7 +538,10 @@ class FootstepsDriver(object):
             self.sendUpdatePlanRequest()
 
     def drawContactPts(self, obj, footstep, **kwargs):
-        contact_pts = self.getContactPts(footstep.params.support_contact_groups)
+        if footstep.is_right_foot:
+            _, contact_pts = FootstepsDriver.getContactPts()
+        else:
+            contact_pts, _ = FootstepsDriver.getContactPts()
         d = DebugData()
         for pt in contact_pts:
             d.addSphere(pt, radius=0.01)
@@ -567,13 +575,13 @@ class FootstepsDriver(object):
         else:
             raise ValueError("Unrecognized support contact group: {:d}".format(support_contact_groups))
 
-        contact_pts_right = contact_pts_left
+        contact_pts_right = contact_pts_left.copy()
 
         if (_robotValkyrie):
-            contact_pts_left[0,:] = [0.075, 0.0624435, 0.0775]
-            contact_pts_left[1,:] = [0.075,-0.0624435, 0.0775]
-            contact_pts_left[2,:] = [0.110, 0.0624435, -0.22]
-            contact_pts_left[3,:] = [0.110,-0.0624435, -0.22]
+            contact_pts_left[0,:] = [0.110, 0.0624435, -0.22]
+            contact_pts_left[1,:] = [0.110,-0.0624435, -0.22]
+            contact_pts_left[2,:] = [0.075, 0.0624435, 0.0775]
+            contact_pts_left[3,:] = [0.075,-0.0624435, 0.0775]
             contact_pts_right[0,:] = [0.075, 0.0624435, -0.0775]
             contact_pts_right[1,:] = [0.075,-0.0624435, -0.0775]
             contact_pts_right[2,:] = [0.110, 0.0624435, 0.22]
