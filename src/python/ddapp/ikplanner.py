@@ -130,7 +130,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.addProperty('RRT max vertices', ikPlanner.defaultIkParameters.rrtMaxNumVertices, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e5, singleStep=1e1))
         self.addProperty('RRT no. of smoothing passes', ikPlanner.defaultIkParameters.rrtNSmoothingPasses, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e2, singleStep=1e0))
         self.addProperty('RRT goal bias', ikPlanner.defaultIkParameters.rrtGoalBias, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=1e-2))
-        self.addProperty('RRT hand', 0, attributes=om.PropertyAttributes(enumNames=['left', 'right']))
+        self.addProperty('RRT hand', ikPlanner.defaultIkParameters.rrtHand, attributes=om.PropertyAttributes(enumNames=['left', 'right']))
         self.addProperty('Goal planning mode', 0, attributes=om.PropertyAttributes(enumNames=['fix end pose', 'fix goal joints']))
         #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
 
@@ -168,9 +168,9 @@ class IkOptionsItem(om.ObjectModelItem):
 
         if propertyName == 'RRT hand':
             if (self.getProperty(propertyName) == 0):
-                self.ikServer.rrtHand = "left"
+                self.ikPlanner.defaultIkParameters.rrtHand = "left"
             else:
-                self.ikServer.rrtHand = "right"
+                self.ikPlanner.defaultIkParameters.rrtHand = "right"
 
         if propertyName == 'RRT max edge length':
             self.ikPlanner.defaultIkParameters.rrtMaxEdgeLength = self.getProperty(propertyName)

@@ -23,6 +23,7 @@ class IkParameters(FieldContainer):
             collisionMinDistance = None,
             rrtMaxEdgeLength = None,
             rrtGoalBias = None,
+            rrtHand = None,
             rrtMaxNumVertices = None,
             rrtNSmoothingPasses = None,
             maxBodyTranslationSpeed = None,
@@ -57,6 +58,7 @@ class IkParameters(FieldContainer):
         self.collisionMinDistance = 0.03
         self.rrtMaxEdgeLength = 0.05
         self.rrtGoalBias = 1.0
+        self.rrtHand = "left"
         self.rrtMaxNumVertices = 5000
         self.rrtNSmoothingPasses = 10
         self.quasiStaticShrinkFactor = 0.2
