@@ -85,13 +85,8 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        if (self.ikPlanner.pushToMatlab is False):
-            # TODO: Implement IK Server Request over LCM here
-            print "push to lcm runIkTraj"
-            self.plan =[]
-        else:
-            ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
-            self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
 
         return self.plan
 
