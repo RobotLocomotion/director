@@ -1,8 +1,16 @@
 
-default:
-	@echo \\nOops!  Please specify a target:  $(MAKE)  \<drc\|drake-distro\|superbuild\>\\n
 
-help: default
+pod_dirs:=$(shell find distro/pods -maxdepth 2 -name pod-build -print0)
+
+
+default:
+	@if [ -z $(pod_dirs) ]; then \
+		echo \\nOops!  Please specify a target:  $(MAKE)  \<drc\|drake-distro\|superbuild\>\\n; \
+	else \
+		for d in $(pod_dirs); do \
+			$(MAKE) -C $(pod_dirs); \
+		done; \
+	fi
 
 drc:
 	$(MAKE) -C distro/pods/drc
