@@ -313,6 +313,7 @@ from ddapp.lcmgl import LCMGLManager
 from ddapp import objectmodel as om
 from ddapp import applogic
 from ddapp import viewbehaviors
+from ddapp import camerabookmarks
 import PythonQt
 from PythonQt import QtCore, QtGui
 
@@ -358,6 +359,10 @@ class DrakeVisualizerApp():
         self.screenGrabberDock = self.addWidgetToDock(self.screenGrabberPanel.widget, QtCore.Qt.RightDockWidgetArea)
         self.screenGrabberDock.setVisible(False)
 
+        self.cameraBookmarksPanel = camerabookmarks.CameraBookmarkWidget(self.view)
+        self.cameraBookmarksDock = self.addWidgetToDock(self.cameraBookmarksPanel.widget, QtCore.Qt.RightDockWidgetArea)
+        self.cameraBookmarksDock.setVisible(False)
+
         model = om.getDefaultObjectModel()
         model.getTreeWidget().setWindowTitle('Scene Browser')
         model.getPropertiesPanel().setWindowTitle('Properties Panel')
@@ -371,6 +376,7 @@ class DrakeVisualizerApp():
         applogic.addShortcut(self.mainWindow, 'Ctrl+Q', self.applicationInstance().quit)
         applogic.addShortcut(self.mainWindow, 'F1', self._toggleObjectModel)
         applogic.addShortcut(self.mainWindow, 'F2', self._toggleScreenGrabber)
+        applogic.addShortcut(self.mainWindow, 'F3', self._toggleCameraBookmarks)
         applogic.addShortcut(self.mainWindow, 'F8', applogic.showPythonConsole)
 
     def _toggleObjectModel(self):
@@ -379,6 +385,9 @@ class DrakeVisualizerApp():
 
     def _toggleScreenGrabber(self):
         self.screenGrabberDock.setVisible(not self.screenGrabberDock.visible)
+
+    def _toggleCameraBookmarks(self):
+        self.cameraBookmarksDock.setVisible(not self.cameraBookmarksDock.visible)
 
     def wrapScrollArea(self, widget):
         self.w = QtGui.QScrollArea()
