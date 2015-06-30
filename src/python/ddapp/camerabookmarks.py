@@ -61,6 +61,7 @@ class CameraBookmarkWidget(object):
             l.addWidget(storeButton, i, 0)
             l.addWidget(flyButton, i, 1)
             l.addWidget(textEdit, i, 2)
+            flyButton.setEnabled(False)
 
         self.flySpeedSpinner = QtGui.QDoubleSpinBox()
         self.flySpeedSpinner.setMinimum(0)
@@ -78,6 +79,7 @@ class CameraBookmarkWidget(object):
     def onStoreCamera(self, button):
         index = self.storeButtons.index(button)
         self.bookmarks.storeCameraBookmark(index)
+        self.flyButtons[index].setEnabled(True)
 
     def onFlyToCamera(self, button):
         index = self.flyButtons.index(button)
