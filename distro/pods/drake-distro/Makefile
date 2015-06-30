@@ -10,7 +10,7 @@ $(VERBOSE).SILENT:
 #   If not, search up to four parent directories for a 'build' directory.
 #   Otherwise, use ./build.
 ifeq "$(BUILD_PREFIX)" ""
-BUILD_PREFIX:=$(shell for pfx in ./ .. ../.. ../../.. ../../../..; do d=`pwd`/$$pfx/build;\
+BUILD_PREFIX:=$(shell cd ../../../.. && for pfx in ./ .. ../.. ../../.. ../../../..; do d=`pwd`/$$pfx/build;\
                if [ -d "$$d" ]; then echo $$d; exit 0; fi; done; echo `pwd`/build)
 endif
 # create the build directory if needed, and normalize its path name
