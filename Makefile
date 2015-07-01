@@ -8,7 +8,7 @@ default:
 		echo \\nOops!  Please specify a target:  $(MAKE)  \<drc\|drake-distro\|superbuild\>\\n; \
 	else \
 		for d in $(pod_dirs); do \
-			$(MAKE) -C $(pod_dirs); \
+			$(MAKE) -C `dirname "$$d"`; \
 		done; \
 	fi
 
