@@ -308,33 +308,49 @@ class DrakeVisualizer(object):
 
 
 ##########################################################
-from ddapp.consoleapp import ConsoleApp
 from ddapp.screengrabberpanel import ScreenGrabberPanel
-#from ddapp.drakevisualizer import DrakeVisualizer
 from ddapp.lcmgl import LCMGLManager
 from ddapp import objectmodel as om
 from ddapp import applogic
+from ddapp import viewbehaviors
+from ddapp import camerabookmarks
+import PythonQt
 from PythonQt import QtCore, QtGui
 
 
-
-class DrakeVisualizerApp(ConsoleApp):
+class DrakeVisualizerApp():
 
     def __init__(self):
-        ConsoleApp.__init__(self)
 
-        self.view = self.createView()
-        self.viewOptions.setProperty('Background color', [0.3, 0.3, 0.35])
-        self.viewOptions.setProperty('Background color 2', [0.95,0.95,1])
+        om.init()
+        self.view = PythonQt.dd.ddQVTKWidgetView()
+
+        # init grid
+        self.gridObj = vis.showGrid(self.view, parent='scene')
         self.gridObj.setProperty('Surface Mode', 'Surface with edges')
         self.gridObj.setProperty('Color', [0,0,0])
         self.gridObj.setProperty('Alpha', 0.1)
+
+        # init view options
+        self.viewOptions = vis.ViewOptionsItem(self.view)
+        om.addToObjectModel(self.viewOptions, parentObj=om.findObjectByName('scene'))
+        self.viewOptions.setProperty('Background color', [0.3, 0.3, 0.35])
+        self.viewOptions.setProperty('Background color 2', [0.95,0.95,1])
+
+        # setup camera
+        applogic.setCameraTerrainModeEnabled(self.view, True)
+        applogic.resetCamera(viewDirection=[-1, 0, -0.3], view=self.view)
+
+        # add view behaviors
+        viewBehaviors = viewbehaviors.ViewBehaviors(self.view)
+        applogic._defaultRenderView = self.view
 
         self.mainWindow = QtGui.QMainWindow()
         self.mainWindow.setCentralWidget(self.view)
         self.mainWindow.resize(768 * (16/9.0), 768)
         self.mainWindow.setWindowTitle('Drake Visualizer')
         self.mainWindow.setWindowIcon(QtGui.QIcon(':/images/drake_logo.png'))
+        self.mainWindow.show()
 
         self.drakeVisualizer = DrakeVisualizer(self.view)
         self.lcmglManager = LCMGLManager(self.view)
@@ -343,26 +359,42 @@ class DrakeVisualizerApp(ConsoleApp):
         self.screenGrabberDock = self.addWidgetToDock(self.screenGrabberPanel.widget, QtCore.Qt.RightDockWidgetArea)
         self.screenGrabberDock.setVisible(False)
 
+        self.cameraBookmarksPanel = camerabookmarks.CameraBookmarkWidget(self.view)
+        self.cameraBookmarksDock = self.addWidgetToDock(self.cameraBookmarksPanel.widget, QtCore.Qt.RightDockWidgetArea)
+        self.cameraBookmarksDock.setVisible(False)
+
         model = om.getDefaultObjectModel()
         model.getTreeWidget().setWindowTitle('Scene Browser')
         model.getPropertiesPanel().setWindowTitle('Properties Panel')
+        model.setActiveObject(self.viewOptions)
 
         self.sceneBrowserDock = self.addWidgetToDock(model.getTreeWidget(), QtCore.Qt.LeftDockWidgetArea)
-        self.propertiesDock = self.addWidgetToDock(model.getPropertiesPanel(), QtCore.Qt.LeftDockWidgetArea)
+        self.propertiesDock = self.addWidgetToDock(self.wrapScrollArea(model.getPropertiesPanel()), QtCore.Qt.LeftDockWidgetArea)
         self.sceneBrowserDock.setVisible(False)
         self.propertiesDock.setVisible(False)
 
-        applogic.addShortcut(self.mainWindow, 'Ctrl+Q', self.quit)
-        applogic.addShortcut(self.mainWindow, 'F1', self.toggleObjectModel)
-        applogic.addShortcut(self.mainWindow, 'F2', self.toggleScreenGrabber)
+        applogic.addShortcut(self.mainWindow, 'Ctrl+Q', self.applicationInstance().quit)
+        applogic.addShortcut(self.mainWindow, 'F1', self._toggleObjectModel)
+        applogic.addShortcut(self.mainWindow, 'F2', self._toggleScreenGrabber)
+        applogic.addShortcut(self.mainWindow, 'F3', self._toggleCameraBookmarks)
+        applogic.addShortcut(self.mainWindow, 'F8', applogic.showPythonConsole)
 
-
-    def toggleObjectModel(self):
+    def _toggleObjectModel(self):
         self.sceneBrowserDock.setVisible(not self.sceneBrowserDock.visible)
         self.propertiesDock.setVisible(not self.propertiesDock.visible)
 
-    def toggleScreenGrabber(self):
+    def _toggleScreenGrabber(self):
         self.screenGrabberDock.setVisible(not self.screenGrabberDock.visible)
+
+    def _toggleCameraBookmarks(self):
+        self.cameraBookmarksDock.setVisible(not self.cameraBookmarksDock.visible)
+
+    def wrapScrollArea(self, widget):
+        self.w = QtGui.QScrollArea()
+        self.w.setWidget(widget)
+        self.w.setWidgetResizable(True)
+        #self.w.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        return self.w
 
     def addWidgetToDock(self, widget, dockArea):
         dock = QtGui.QDockWidget()
@@ -371,16 +403,26 @@ class DrakeVisualizerApp(ConsoleApp):
         self.mainWindow.addDockWidget(dockArea, dock)
         return dock
 
+    def quit(self):
+        self.applicationInstance().quit()
+
+    def applicationInstance(self):
+        return QtCore.QCoreApplication.instance()
+
+    def start(self, globalsDict=None):
+        if globalsDict:
+            globalsDict['app'] = self
+            globalsDict['view'] = self.view
+            globalsDict['quit'] = self.quit
+            globalsDict['exit'] = self.quit
+
+        return QtCore.QCoreApplication.instance().exec_()
+
 
 def main():
 
-    # use global so the variable is available in the python console
-    global app
-
     app = DrakeVisualizerApp()
-    app.setupGlobals(globals())
-    app.mainWindow.show()
-    app.start()
+    app.start(globals())
 
 
 if __name__ == '__main__':
