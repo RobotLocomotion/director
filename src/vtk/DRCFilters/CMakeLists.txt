@@ -3,6 +3,7 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+find_package(OpenGL REQUIRED)
 
 set(sources
   vtkGridSource.cxx
@@ -59,6 +60,7 @@ set(VTK_LIBRARIES
 
 set(deps
   ${VTK_LIBRARIES}
+  ${OPENGL_LIBRARIES}
   )
 
 set(pkg_deps)
