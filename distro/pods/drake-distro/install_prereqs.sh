@@ -3,6 +3,9 @@
 
 case $1 in
   ("homebrew")
+    brew tap homebrew/science
+    brew tap homebrew/python
+    brew install python numpy
     brew install vtk5 --with-qt ;;
   ("macports")
     echo "WARNING: install_prereqs macports not implemented for this module" ;;

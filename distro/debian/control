@@ -1,0 +1,13 @@
+Source: director
+Section: devel
+Priority: optional
+Maintainer: Pat Marion <james.patrick.marion@gmail.com>
+Build-Depends: cmake, build-essential, libqt4-dev, libvtk5-dev, libvtk5-qt4-dev, python-vtk
+Homepage: https://github.com/RobotLocomotion/director
+
+Package: director
+Architecture: any
+Depends: libvtk5.8-qt4, python-vtk
+Description: Director application and libraries.
+ This package contains libraries and modules to build
+ visualization applications using Qt, VTK, and Python.
