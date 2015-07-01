@@ -1,4 +1,4 @@
-from ddapp import lcmobjectcollection
+#from ddapp import lcmobjectcollection
 from ddapp import geometryencoder
 from ddapp import ioUtils
 from ddapp.uuidutil import newUUID

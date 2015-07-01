@@ -10,20 +10,20 @@ import PythonQt
 from PythonQt import QtCore, QtGui
 import ddapp.applogic as app
 from ddapp import objectmodel as om
-from ddapp import perception
-from ddapp import lcmUtils
-from ddapp import roboturdf
+#from ddapp import perception
+#from ddapp import lcmUtils
+#from ddapp import roboturdf
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
-from ddapp import mapsregistrar
+#from ddapp import mapsregistrar
 from ddapp.affordanceitems import *
 from ddapp.visualization import *
 from ddapp.filterUtils import *
 from ddapp.fieldcontainer import FieldContainer
 from ddapp.segmentationroutines import *
-from ddapp import cameraview
+#from ddapp import cameraview
 
 import numpy as np
 import vtkNumpy
@@ -32,11 +32,11 @@ from shallowCopy import shallowCopy
 import ioUtils
 from ddapp.uuidutil import newUUID
 
-import drc as lcmdrc
-import bot_core as lcmbotcore
+#import drc as lcmdrc
+#import bot_core as lcmbotcore
 
-import vs as lcmvs
-from ddapp import lcmUtils
+#import vs as lcmvs
+#from ddapp import lcmUtils
 
 
 DRILL_TRIANGLE_BOTTOM_LEFT = 'bottom left'
@@ -45,8 +45,11 @@ DRILL_TRIANGLE_TOP_LEFT = 'top left'
 DRILL_TRIANGLE_TOP_RIGHT = 'top right'
 
 # using drc plane segmentation instead of PCL
-planeSegmentationFilter = vtk.vtkPlaneSegmentation
-#planeSegmentationFilter = vtk.vtkPCLSACSegmentationPlane
+try:
+    planeSegmentationFilter = vtk.vtkPlaneSegmentation
+    #planeSegmentationFilter = vtk.vtkPCLSACSegmentationPlane
+except AttributeError:
+    planeSegmentationFilter = None
 
 
 _defaultSegmentationView = None
