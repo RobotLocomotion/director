@@ -1,6 +1,5 @@
 import ddapp
 import ddapp.objectmodel as om
-from ddapp import affordance
 from ddapp import visualization as vis
 from ddapp.visualization import PolyDataItem
 from ddapp import filterUtils
@@ -296,7 +295,6 @@ class FrameAffordanceItem(AffordanceItem):
 
     def setAffordanceParams(self, params):
         self.params = params
-        assert 'otdf_type' in params
 
     def updateParamsFromActorTransform(self):
 
@@ -309,19 +307,3 @@ class FrameAffordanceItem(AffordanceItem):
         self.params['yaxis'] = yaxis
         self.params['zaxis'] = zaxis
         self.params['origin'] = t.GetPosition()
-
-
-    def publish(self):
-        self.updateParamsFromActorTransform()
-        aff = affordance.createFrameAffordance(self.params)
-        affordance.publishAffordance(aff)
-
-    def getActionNames(self):
-        actions = ['Publish affordance']
-        return AffordanceItem.getActionNames(self) + actions
-
-    def onAction(self, action):
-        if action == 'Publish affordance':
-            self.publish()
-        else:
-            AffordanceItem.onAction(self, action)

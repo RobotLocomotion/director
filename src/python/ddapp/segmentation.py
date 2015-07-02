@@ -29,7 +29,6 @@ import numpy as np
 import vtkNumpy
 from debugVis import DebugData
 from shallowCopy import shallowCopy
-import affordance
 import ioUtils
 from ddapp.uuidutil import newUUID
 
@@ -123,7 +122,6 @@ def lockAffordanceToHand(aff, hand='l_hand'):
     t.Concatenate(aff.handToAffT)
     t.Concatenate(linkFrame)
     aff.actor.GetUserTransform().SetMatrix(t.GetMatrix())
-    aff.publish()
 
 
 handAffUpdater = None
@@ -853,47 +851,6 @@ def poseFromFrame(frame):
     pose.translation = trans
     pose.rotation = quat
     return pose
-
-
-def publishStickyHand(handFrame, affordanceItem=None):
-
-    worldAffordanceId = affordance.publishWorldAffordance()
-
-    m = lcmdrc.desired_grasp_state_t()
-    m.utime = 0
-    m.robot_name = 'atlas'
-    m.object_name = worldAffordanceId
-    m.geometry_name = 'box_0'
-    m.unique_id = 3
-    m.grasp_type = m.IROBOT_RIGHT
-    m.power_grasp = False
-
-    m.l_hand_pose = poseFromFrame(vtk.vtkTransform())
-    m.r_hand_pose = poseFromFrame(handFrame)
-
-    m.num_l_joints = 0
-    m.l_joint_name = []
-    m.l_joint_position = []
-
-    m.num_r_joints = 8
-    m.r_joint_name = [
-        'right_finger[0]/joint_base_rotation',
-        'right_finger[0]/joint_base',
-        'right_finger[0]/joint_flex',
-        'right_finger[1]/joint_base_rotation',
-        'right_finger[1]/joint_base',
-        'right_finger[1]/joint_flex',
-        'right_finger[2]/joint_base',
-        'right_finger[2]/joint_flex',
-        ]
-
-    m.r_joint_position = [
-        0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0,
-        0.0, 0.0,
-        ]
-
-    lcmUtils.publish('CANDIDATE_GRASP', m)
 
 
 def cropToPlane(polyData, origin, normal, threshold):

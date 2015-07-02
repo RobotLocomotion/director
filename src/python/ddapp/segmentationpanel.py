@@ -402,10 +402,6 @@ class SegmentationPanel(object):
         self.drillOffset = getDrillInHandOffset(zRotation=rotation, zTranslation=offset, xTranslation=depthoffset, yTranslation=lateralOffset, flip=flip)
         moveDrillToHand(self.drillOffset, hand)
 
-        aff = om.findObjectByName('drill')
-        if aff:
-            aff.publish()
-
 
     def onMoveDrillToHandClicked(self):
         enabled = self.moveDrillToHandButton.isChecked()

@@ -29,7 +29,6 @@ taskLibrary = [
     [rt.FindDrillOnTableByAnnotation, {}],
     [rt.ComputeRobotFootFrame, {}],
     [rt.TransformFrame, {}],
-    [rt.PublishAffordance, {}],
   ]],
 
   ['spawn affordances', [

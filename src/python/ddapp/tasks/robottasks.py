@@ -665,24 +665,6 @@ class FindHorizontalSurfaces(PointCloudAlgorithmBase):
           )
 
 
-
-class PublishAffordance(AsyncTask):
-
-    @staticmethod
-    def getDefaultProperties(properties):
-        properties.addProperty('Affordance name', 'affordance')
-
-    def getAffordance(self):
-        obj = om.findObjectByName(self.properties.getProperty('Affordance name'))
-        assert obj and hasattr(obj, 'publish')
-        return obj
-
-    def run(self):
-        aff = self.getAffordance()
-        aff.publish()
-
-
-
 class SetNeckPitch(AsyncTask):
 
     @staticmethod
