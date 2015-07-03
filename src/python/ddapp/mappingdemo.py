@@ -160,19 +160,21 @@ class MappingDemo(object):
         self.planTrajectory()
 
 
-    def getRoomSweepFrames(self):
+    def getRoomSweepFrames(self, rotateHandFrame=False):
         topFrame = transformUtils.frameFromPositionAndRPY([0.65,0.0,0.8],[160,0,90])
         yawFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,0,self.currentYawDegrees])
-        fixHandFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,-90,0])
-        topFrame.PreMultiply()
-        topFrame.Concatenate( fixHandFrame )
+        if rotateHandFrame:
+            fixHandFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,-90,0])
+            topFrame.PreMultiply()
+            topFrame.Concatenate( fixHandFrame )
         topFrame.PostMultiply()
         topFrame.Concatenate( yawFrame )
 
         bottomFrame = transformUtils.frameFromPositionAndRPY([0.6,0.0,0.4],[210,0,90])
         yawFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,0,self.currentYawDegrees])
-        bottomFrame.PreMultiply()
-        bottomFrame.Concatenate( fixHandFrame )
+        if rotateHandFrame:
+            bottomFrame.PreMultiply()
+            bottomFrame.Concatenate( fixHandFrame )
         bottomFrame.PostMultiply()
         bottomFrame.Concatenate( yawFrame )
 
