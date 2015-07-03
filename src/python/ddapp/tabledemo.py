@@ -792,31 +792,33 @@ class TableDemo(object):
         if not self.ikPlanner.fixedBaseArm:
             self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
 
-        # Pick Objects from table:
-        if not self.ikPlanner.fixedBaseArm:
-            self.addTasksToQueueWalking(taskQueue, self.tableStanceFrame.transform, 'Walk to Table')
-        taskQueue.addTask(self.printAsync('Pick with Left Arm'))
-        self.addTasksToQueueTablePick(taskQueue, 'left')
-        #taskQueue.addTask(self.printAsync('Pick with Right Arm'))
-        #self.addTasksToQueueTablePick(taskQueue, 'right')
+        for _ in self.clusterObjects:
+            # Pick Objects from table:
+            if not self.ikPlanner.fixedBaseArm:
+                self.addTasksToQueueWalking(taskQueue, self.tableStanceFrame.transform, 'Walk to Table')
+            taskQueue.addTask(self.printAsync('Pick with Left Arm'))
+            self.addTasksToQueueTablePick(taskQueue, 'left')
+            #taskQueue.addTask(self.printAsync('Pick with Right Arm'))
+            #self.addTasksToQueueTablePick(taskQueue, 'right')
 
-        # Go home
-        if not self.ikPlanner.fixedBaseArm:
-            self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+            # Go home
+            if not self.ikPlanner.fixedBaseArm:
+                self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
 
-        # Go to Bin
-        if not self.ikPlanner.fixedBaseArm:
-            self.addTasksToQueueWalking(taskQueue, self.binStanceFrame.transform, 'Walk to Bin')
+            # Go to Bin
+            if not self.ikPlanner.fixedBaseArm:
+                self.addTasksToQueueWalking(taskQueue, self.binStanceFrame.transform, 'Walk to Bin')
 
-        # Drop into the Bin:
-        taskQueue.addTask(self.printAsync('Drop from Left Arm'))
-        self.addTasksToQueueDropIntoBin(taskQueue, 'left')
-        #taskQueue.addTask(self.printAsync('Drop from Right Arm'))
-        #self.addTasksToQueueDropIntoBin(taskQueue, 'right')
+            # Drop into the Bin:
+            taskQueue.addTask(self.printAsync('Drop from Left Arm'))
+            self.addTasksToQueueDropIntoBin(taskQueue, 'left')
+            #taskQueue.addTask(self.printAsync('Drop from Right Arm'))
+            #self.addTasksToQueueDropIntoBin(taskQueue, 'right')
 
-        # Go home
-        if not self.ikPlanner.fixedBaseArm:
-            self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+            # Go home
+            if not self.ikPlanner.fixedBaseArm:
+                self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+        
         taskQueue.addTask(self.printAsync('done!'))
 
         return taskQueue
