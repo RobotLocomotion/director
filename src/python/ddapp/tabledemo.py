@@ -331,6 +331,12 @@ class TableDemo(object):
         else:
             self.teleportRobotToStanceFrame(stanceTransform)
 
+    def planPostureFromDatabase(self, groupName, postureName, side='left'):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, groupName, postureName, side=side)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+        # TODO: integrate this function with the ones below
 
     def getRaisedArmPose(self, startPose, side):
         return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side)
