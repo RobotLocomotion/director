@@ -227,7 +227,7 @@ class TableDemo(object):
         self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
 
 
-    def dropTableObject(self, side):
+    def dropTableObject(self, side='left'):
 
         obj, _ = self.getNextTableObject(side)
         obj.setProperty('Visible', False)
@@ -336,7 +336,7 @@ class TableDemo(object):
     def getLoweredArmPose(self, startPose, side):
         return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side)
 
-    def planPreGrasp(self, side):
+    def planPreGrasp(self, side='left'):
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=side)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
