@@ -692,6 +692,7 @@ class TableDemo(object):
         # Plan sequence
         self.plans = []
 
+
     def prepTestDemoSequence(self):
         '''
         Running this function should launch a full planning sequence
