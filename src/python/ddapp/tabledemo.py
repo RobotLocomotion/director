@@ -234,7 +234,15 @@ class TableDemo(object):
         for child in obj.children():
             child.setProperty('Visible', False)
 
-        self.affordanceUpdater.ungraspAffordance( obj.getProperty('Name'))
+        self.clusterObjects.remove(obj) # remove from clusterObjects
+        om.removeFromObjectModel(obj) # remove from objectModel
+
+        if self.useCollisionEnvironment:
+            objAffordance = om.findObjectByName(obj.getProperty('Name') + ' affordance')
+            objAffordance.setProperty('Collision Enabled', False)
+            objAffordance.setProperty('Visible', False)
+
+        self.affordanceUpdater.ungraspAffordance(obj.getProperty('Name'))
 
     def getNextTableObject(self, side='left'):
 
