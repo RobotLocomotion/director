@@ -452,7 +452,7 @@ class MappingDemo(object):
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
         self.planFromCurrentRobotState = True
         self.visOnly = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 5
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 3#5
         self.currentYawDegrees = 60
         self.fromTop = True
         self.mapFolder=om.getOrCreateContainer('room mapping')
