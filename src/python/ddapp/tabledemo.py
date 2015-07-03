@@ -869,7 +869,10 @@ class TableDemo(object):
         taskQueue.addTask(functools.partial(self.dropTableObject, side))
 
         taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
-        taskQueue.addTask(functools.partial(self.planDropPostureLower, side))
+        if not self.ikPlanner.fixedBaseArm:
+            taskQueue.addTask(functools.partial(self.planDropPostureLower, side))
+        else:
+            taskQueue.addTask(functools.partial(self.planPreGrasp, side))
         taskQueue.addTask(self.animateLastPlan)
 
 
