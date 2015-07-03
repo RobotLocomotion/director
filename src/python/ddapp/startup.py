@@ -1043,7 +1043,6 @@ if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
 if 'exo' in drcargs.args():
     if (drcargs.args().exo):
         ikPlanner.pushToMatlab = False
-        showImageOverlay()
 
 def roomMap():
     mappingPanel.onStartMappingButton()
