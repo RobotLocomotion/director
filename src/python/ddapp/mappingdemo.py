@@ -443,6 +443,9 @@ class MappingDemo(object):
     def doneIndicator(self):
         print "We are done here."
 
+    def setMaxDegreesPerSecond(self, maxDeg):
+        self.ikPlanner.defaultIkParameters.maxDegreesPerSecond = maxDeg
+
     def autonomousExecuteRoomMap(self):
         self.graspingHand = 'left'
         self.targetSweepType = 'orientation'
