@@ -131,6 +131,10 @@ class TableDemo(object):
             obj = om.findObjectByName('scene')
             if obj:
                 polyData = obj.polyData
+            else: # fall back to map in case we used mapping rather than loading of a scene
+                obj = om.findObjectByName('map')
+                if obj:
+                    polyData = obj.polyData
 
         return polyData
 
@@ -150,7 +154,7 @@ class TableDemo(object):
         self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
 
         if self.useCollisionEnvironment:
-            self.addCollisionObject(self.tableObj)
+            self.addCollisionObject(self.tableObj, isTable=True)
 
     def onSegmentBin(self, p1, p2):
         print p1
@@ -223,14 +227,22 @@ class TableDemo(object):
         self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
 
 
-    def dropTableObject(self, side):
+    def dropTableObject(self, side='left'):
 
         obj, _ = self.getNextTableObject(side)
         obj.setProperty('Visible', False)
         for child in obj.children():
             child.setProperty('Visible', False)
 
-        self.affordanceUpdater.ungraspAffordance( obj.getProperty('Name'))
+        self.clusterObjects.remove(obj) # remove from clusterObjects
+        om.removeFromObjectModel(obj) # remove from objectModel
+
+        if self.useCollisionEnvironment:
+            objAffordance = om.findObjectByName(obj.getProperty('Name') + ' affordance')
+            objAffordance.setProperty('Collision Enabled', False)
+            objAffordance.setProperty('Visible', False)
+
+        self.affordanceUpdater.ungraspAffordance(obj.getProperty('Name'))
 
     def getNextTableObject(self, side='left'):
 
@@ -319,6 +331,12 @@ class TableDemo(object):
         else:
             self.teleportRobotToStanceFrame(stanceTransform)
 
+    def planPostureFromDatabase(self, groupName, postureName, side='left'):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, groupName, postureName, side=side)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+        # TODO: integrate this function with the ones below
 
     def getRaisedArmPose(self, startPose, side):
         return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side)
@@ -332,7 +350,7 @@ class TableDemo(object):
     def getLoweredArmPose(self, startPose, side):
         return self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side)
 
-    def planPreGrasp(self, side):
+    def planPreGrasp(self, side='left'):
         startPose = self.getPlanningStartPose()
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=side)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
@@ -399,7 +417,8 @@ class TableDemo(object):
             f.RotateY(90)
             f.Update()
             self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, f, lockBase=False, lockBack=True)
-            #self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, f, lockBase=False, lockBack=True, dist=self.reachDist)
+            #newFrame = vis.FrameItem('reach_item', f, self.view)
+            #self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, newFrame, constraints=None, dist=self.reachDist, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
         else:
             self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, constraints=None, dist=self.reachDist, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
             loweringSide = 'left' if side == 'right' else 'right'
@@ -622,7 +641,7 @@ class TableDemo(object):
         for obj in self.clusterObjects:
             self.addCollisionObject(obj)
 
-    def addCollisionObject(self, obj):
+    def addCollisionObject(self, obj, isTable=False):
         if om.getOrCreateContainer('affordances').findChild(obj.getProperty('Name') + ' affordance'):
             return # Affordance has been created previously
 
@@ -640,6 +659,15 @@ class TableDemo(object):
         zwidth = np.linalg.norm(box_max[2]-box_min[2])
         name = obj.getProperty('Name') + ' affordance'
 
+        if isTable: # The table frame is on the right far-out corner rather than the center - hence move
+            # The following values are hacks to fix the fitting for now
+            origin[0] = origin[0] - (ywidth / 2)
+            origin[1] = origin[1] + (xwidth / 2)
+            origin[2] = origin[2] - (zwidth)
+            xaxis = (0, 1, 0)
+            yaxis = (1, 0, 0)
+            zaxis = (0, 0, 1)
+
         boxAffordance = segmentation.createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances')
         boxAffordance.setSolidColor(obj.getProperty('Color'))
         boxAffordance.setProperty('Alpha', 0.3)
@@ -650,6 +678,10 @@ class TableDemo(object):
         scene = ioUtils.readPolyData(filename)
         vis.showPolyData(scene,"scene")
 
+        self.prepKukaLabScene()
+
+
+    def prepKukaLabScene(self):
         self.userFitTable()
         self.onSegmentTable( np.array([  0.91544128,  0.06092263,  0.14906664]), np.array([ 0.73494804, -0.21896157,  0.13435645]) )
         self.userFitBin() # TODO: actually fit bin, put bin in picture.
@@ -659,6 +691,7 @@ class TableDemo(object):
 
         # Plan sequence
         self.plans = []
+
 
     def prepTestDemoSequence(self):
         '''
@@ -779,31 +812,33 @@ class TableDemo(object):
         if not self.ikPlanner.fixedBaseArm:
             self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
 
-        # Pick Objects from table:
-        if not self.ikPlanner.fixedBaseArm:
-            self.addTasksToQueueWalking(taskQueue, self.tableStanceFrame.transform, 'Walk to Table')
-        taskQueue.addTask(self.printAsync('Pick with Left Arm'))
-        self.addTasksToQueueTablePick(taskQueue, 'left')
-        #taskQueue.addTask(self.printAsync('Pick with Right Arm'))
-        #self.addTasksToQueueTablePick(taskQueue, 'right')
+        for _ in self.clusterObjects:
+            # Pick Objects from table:
+            if not self.ikPlanner.fixedBaseArm:
+                self.addTasksToQueueWalking(taskQueue, self.tableStanceFrame.transform, 'Walk to Table')
+            taskQueue.addTask(self.printAsync('Pick with Left Arm'))
+            self.addTasksToQueueTablePick(taskQueue, 'left')
+            #taskQueue.addTask(self.printAsync('Pick with Right Arm'))
+            #self.addTasksToQueueTablePick(taskQueue, 'right')
 
-        # Go home
-        if not self.ikPlanner.fixedBaseArm:
-            self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+            # Go home
+            if not self.ikPlanner.fixedBaseArm:
+                self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
 
-        # Go to Bin
-        if not self.ikPlanner.fixedBaseArm:
-            self.addTasksToQueueWalking(taskQueue, self.binStanceFrame.transform, 'Walk to Bin')
+            # Go to Bin
+            if not self.ikPlanner.fixedBaseArm:
+                self.addTasksToQueueWalking(taskQueue, self.binStanceFrame.transform, 'Walk to Bin')
 
-        # Drop into the Bin:
-        taskQueue.addTask(self.printAsync('Drop from Left Arm'))
-        self.addTasksToQueueDropIntoBin(taskQueue, 'left')
-        #taskQueue.addTask(self.printAsync('Drop from Right Arm'))
-        #self.addTasksToQueueDropIntoBin(taskQueue, 'right')
+            # Drop into the Bin:
+            taskQueue.addTask(self.printAsync('Drop from Left Arm'))
+            self.addTasksToQueueDropIntoBin(taskQueue, 'left')
+            #taskQueue.addTask(self.printAsync('Drop from Right Arm'))
+            #self.addTasksToQueueDropIntoBin(taskQueue, 'right')
 
-        # Go home
-        if not self.ikPlanner.fixedBaseArm:
-            self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+            # Go home
+            if not self.ikPlanner.fixedBaseArm:
+                self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+        
         taskQueue.addTask(self.printAsync('done!'))
 
         return taskQueue
@@ -856,7 +891,10 @@ class TableDemo(object):
         taskQueue.addTask(functools.partial(self.dropTableObject, side))
 
         taskQueue.addTask(self.requiredUserPrompt('continue? y/n: '))
-        taskQueue.addTask(functools.partial(self.planDropPostureLower, side))
+        if not self.ikPlanner.fixedBaseArm:
+            taskQueue.addTask(functools.partial(self.planDropPostureLower, side))
+        else:
+            taskQueue.addTask(functools.partial(self.planPreGrasp, side))
         taskQueue.addTask(self.animateLastPlan)
 
 

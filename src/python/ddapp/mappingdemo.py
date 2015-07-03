@@ -87,6 +87,12 @@ class MappingDemo(object):
     def addPlan(self, plan):
         self.plans.append(plan)
 
+    def planPostureFromDatabase(self, groupName, postureName, side='left'):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, groupName, postureName, side=side)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
     ######### Target Focused Functions ##################################################################
     def spawnTargetAffordance(self):
         for obj in om.getObjects():
@@ -154,19 +160,21 @@ class MappingDemo(object):
         self.planTrajectory()
 
 
-    def getRoomSweepFrames(self):
+    def getRoomSweepFrames(self, rotateHandFrame=False):
         topFrame = transformUtils.frameFromPositionAndRPY([0.65,0.0,0.8],[160,0,90])
         yawFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,0,self.currentYawDegrees])
-        fixHandFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,-90,0])
-        topFrame.PreMultiply()
-        topFrame.Concatenate( fixHandFrame )
+        if rotateHandFrame:
+            fixHandFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,-90,0])
+            topFrame.PreMultiply()
+            topFrame.Concatenate( fixHandFrame )
         topFrame.PostMultiply()
         topFrame.Concatenate( yawFrame )
 
         bottomFrame = transformUtils.frameFromPositionAndRPY([0.6,0.0,0.4],[210,0,90])
         yawFrame = transformUtils.frameFromPositionAndRPY([0,0.0,0],[0,0,self.currentYawDegrees])
-        bottomFrame.PreMultiply()
-        bottomFrame.Concatenate( fixHandFrame )
+        if rotateHandFrame:
+            bottomFrame.PreMultiply()
+            bottomFrame.Concatenate( fixHandFrame )
         bottomFrame.PostMultiply()
         bottomFrame.Concatenate( yawFrame )
 
@@ -435,13 +443,68 @@ class MappingDemo(object):
     def doneIndicator(self):
         print "We are done here."
 
+    def setMaxDegreesPerSecond(self, maxDeg):
+        self.ikPlanner.defaultIkParameters.maxDegreesPerSecond = maxDeg
+
+    def autonomousRoomMapNew(self, side='left'):
+        taskQueue = AsyncTaskQueue()
+        lowSpeed = 5
+        highSpeed = 30
+        delayTime = 3 # TODO: for potential self.delay to wait for pointclouds to be registered
+
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'General', 'arm up pregrasp'))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p1_up'))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p1_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p2_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p2_up', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p3_up', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p3_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p4_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p4_up', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p5_up', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p5_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'General', 'arm up pregrasp', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(self.doneIndicator)
+        return taskQueue
+    
+
     def autonomousExecuteRoomMap(self):
         self.graspingHand = 'left'
         self.targetSweepType = 'orientation'
         self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
         self.planFromCurrentRobotState = True
         self.visOnly = False
-        self.ikPlanner.ikServer.maxDegreesPerSecond = 5
+        self.ikPlanner.ikServer.maxDegreesPerSecond = 3#5
         self.currentYawDegrees = 60
         self.fromTop = True
         self.mapFolder=om.getOrCreateContainer('room mapping')
