@@ -87,6 +87,12 @@ class MappingDemo(object):
     def addPlan(self, plan):
         self.plans.append(plan)
 
+    def planPostureFromDatabase(self, groupName, postureName, side='left'):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, groupName, postureName, side=side)
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
     ######### Target Focused Functions ##################################################################
     def spawnTargetAffordance(self):
         for obj in om.getObjects():
