@@ -403,7 +403,8 @@ class TableDemo(object):
             f.RotateY(90)
             f.Update()
             self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, f, lockBase=False, lockBack=True)
-            #self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, f, lockBase=False, lockBack=True, dist=self.reachDist)
+            #newFrame = vis.FrameItem('reach_item', f, self.view)
+            #self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, newFrame, constraints=None, dist=self.reachDist, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
         else:
             self.constraintSet = self.ikPlanner.planGraspOrbitReachPlan(startPose, side, frame, constraints=None, dist=self.reachDist, lockBase=self.lockBase, lockBack=self.lockBack, lockArm=False)
             loweringSide = 'left' if side == 'right' else 'right'
