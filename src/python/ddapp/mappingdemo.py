@@ -446,6 +446,58 @@ class MappingDemo(object):
     def setMaxDegreesPerSecond(self, maxDeg):
         self.ikPlanner.defaultIkParameters.maxDegreesPerSecond = maxDeg
 
+    def autonomousRoomMapNew(self, side='left'):
+        taskQueue = AsyncTaskQueue()
+        lowSpeed = 5
+        highSpeed = 30
+        delayTime = 3 # TODO: for potential self.delay to wait for pointclouds to be registered
+
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'General', 'arm up pregrasp'))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p1_up'))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p1_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p2_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p2_up', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p3_up', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p3_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p4_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p4_up', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p5_up', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, lowSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'roomMapping', 'p5_down', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(functools.partial(self.setMaxDegreesPerSecond, highSpeed))
+        taskQueue.addTask(functools.partial(self.planPostureFromDatabase, 'General', 'arm up pregrasp', side=side))
+        taskQueue.addTask(self.animateLastPlan)
+
+        taskQueue.addTask(self.doneIndicator)
+        return taskQueue
+    
+
     def autonomousExecuteRoomMap(self):
         self.graspingHand = 'left'
         self.targetSweepType = 'orientation'
