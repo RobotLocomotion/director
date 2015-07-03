@@ -154,7 +154,7 @@ class TableDemo(object):
         self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
 
         if self.useCollisionEnvironment:
-            self.addCollisionObject(self.tableObj)
+            self.addCollisionObject(self.tableObj, isTable=True)
 
     def onSegmentBin(self, p1, p2):
         print p1
@@ -626,7 +626,7 @@ class TableDemo(object):
         for obj in self.clusterObjects:
             self.addCollisionObject(obj)
 
-    def addCollisionObject(self, obj):
+    def addCollisionObject(self, obj, isTable=False):
         if om.getOrCreateContainer('affordances').findChild(obj.getProperty('Name') + ' affordance'):
             return # Affordance has been created previously
 
@@ -643,6 +643,15 @@ class TableDemo(object):
         ywidth = np.linalg.norm(box_max[1]-box_min[1])
         zwidth = np.linalg.norm(box_max[2]-box_min[2])
         name = obj.getProperty('Name') + ' affordance'
+
+        if isTable: # The table frame is on the right far-out corner rather than the center - hence move
+            # The following values are hacks to fix the fitting for now
+            origin[0] = origin[0] - (ywidth / 2)
+            origin[1] = origin[1] + (xwidth / 2)
+            origin[2] = origin[2] - (zwidth)
+            xaxis = (0, 1, 0)
+            yaxis = (1, 0, 0)
+            zaxis = (0, 0, 1)
 
         boxAffordance = segmentation.createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances')
         boxAffordance.setSolidColor(obj.getProperty('Color'))
