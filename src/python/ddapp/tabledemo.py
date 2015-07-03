@@ -663,6 +663,10 @@ class TableDemo(object):
         scene = ioUtils.readPolyData(filename)
         vis.showPolyData(scene,"scene")
 
+        self.prepKukaLabScene()
+
+
+    def prepKukaLabScene(self):
         self.userFitTable()
         self.onSegmentTable( np.array([  0.91544128,  0.06092263,  0.14906664]), np.array([ 0.73494804, -0.21896157,  0.13435645]) )
         self.userFitBin() # TODO: actually fit bin, put bin in picture.
