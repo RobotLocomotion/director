@@ -131,6 +131,10 @@ class TableDemo(object):
             obj = om.findObjectByName('scene')
             if obj:
                 polyData = obj.polyData
+            else: # fall back to map in case we used mapping rather than loading of a scene
+                obj = om.findObjectByName('map')
+                if obj:
+                    polyData = obj.polyData
 
         return polyData
 
