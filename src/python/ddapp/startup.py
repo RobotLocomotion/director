@@ -424,6 +424,7 @@ if usePlanning:
     tableDemo = tabledemo.TableDemo(robotStateModel, playbackRobotModel,
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                     perception.multisenseDriver, view, robotStateJointController, playPlans)
+    tableTaskPanel = tabledemo.TableTaskPanel(tableDemo)
 
     drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -465,6 +466,7 @@ if usePlanning:
     egressPanel = egressplanner.EgressPanel(robotSystem)
     egressPlanner = egressPanel.egressPlanner
 
+
     taskPanels = OrderedDict()
 
     taskPanels['Driving'] = drivingPlannerPanel.widget
@@ -474,6 +476,7 @@ if usePlanning:
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Surprise'] = surpriseTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
+    taskPanels['Table'] = tableTaskPanel.widget
 
     tasklaunchpanel.init(taskPanels)
 
