@@ -21,9 +21,16 @@ from ddapp.debugVis import DebugData
 from ddapp import affordanceitems
 from ddapp import ikplanner
 from ddapp import vtkNumpy
-
-
+from numpy import array
+from ddapp.uuidutil import newUUID
+import affordancepanel
 import ioUtils
+
+from ddapp.tasks.taskuserpanel import TaskUserPanel
+from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
+
+import ddapp.tasks.robottasks as rt
+
 
 class TableDemo(object):
 
@@ -634,6 +641,82 @@ class TableDemo(object):
             t = self.playbackRobotModel.getLinkFrame(linkName)
             vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
 
+
+
+    def createCollisionPlanningScene(self, scene=1, moveRobot=False, loadPerception=False):
+
+        if (loadPerception):
+            #filename = os.path.expanduser('~/drc-testing-data/collision_scene/collision_scene.vtp')
+            #polyData = ioUtils.readPolyData( filename )
+            pd = io.readPolyData('/home/mfallon/Desktop/rrt_scene/all.vtp')
+            vis.showPolyData(pd,'scene')
+
+        if (scene == 0):
+            pose = (array([ 1.20,  0. , 0.8]), array([ 1.,  0.,  0.,  0.]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene0-tabletop', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([ 1.20,  0.5 , 0.4]), array([ 1.,  0.,  0.,  0.]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene0-leg1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,0.05,0.8])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([ 1.20,  -0.5 , 0.4]), array([ 1.,  0.,  0.,  0.]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene0-leg2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,0.05,0.8])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([ 1.05,  0.3 , 0.98]), array([ 1.,  0.,  0.,  0.]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene0-object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.08,0.08,0.24])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([ 1.25,  0.1 , 0.98]), array([ 1.,  0.,  0.,  0.]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene0-object2', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Dimensions=[0.07,0.07,0.25])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([ 1.25,  -0.1 , 0.95]), array([ 1.,  0.,  0.,  0.]))
+            desc = dict(classname='CylinderAffordanceItem', Name='scene0-object3', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Radius=0.035, Length = 0.22)
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([ 1.05,  -0.2 , 0.95]), array([ 1.,  0.,  0.,  0.]))
+            desc = dict(classname='CylinderAffordanceItem', Name='scene0-object4', uuid=newUUID(), pose=pose, Color=[0.9, 0.1, 0.1], Radius=0.045, Length = 0.22)
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+
+            if (moveRobot):
+                self.sensorJointController.q[0] = 0.67
+                self.sensorJointController.push()
+
+        elif (scene == 1):
+            pose = (array([-0.69, -1.50,  0.92]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene1-tabletop', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([-1.05, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene1-edge1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([-0.35, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene1-edge2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([-0.6803156 , -1.1826616 ,  1.31299839]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene1-edge3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.14,1.0,0.07])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([ -0.7,  -1.5 , 1.03]), array([ 1.,  0.,  0.,  0.]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene1-object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.05,0.05,0.14])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+
+            if (moveRobot):
+                self.sensorJointController.q[5] = -1.571
+                self.sensorJointController.q[0] = -0.75
+                self.sensorJointController.q[1] = -0.85
+                self.sensorJointController.push()
+
+        elif (scene == 2):
+            pose = (array([-0.98873106,  1.50393395,  0.91420001]), array([ 0.49752312,  0.        ,  0.        ,  0.86745072]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene2-tabletop', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([-0.98873106,  1.50393395,  0.57]), array([ 0.49752312,  0.        ,  0.        ,  0.86745072]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene1-object1', uuid=newUUID(), pose=pose, Color=[0.005, 0.005, 0.3], Dimensions=[0.05,0.05,0.14])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+
+            if (moveRobot):
+                self.sensorJointController.q[0] = -0.6
+                self.sensorJointController.q[1] = 1.1
+                self.sensorJointController.q[5] = 2.1
+                self.sensorJointController.push()
+
+
+
     ######### Setup collision environment ####################
     def prepCollisionEnvironment(self):
         assert len(self.clusterObjects)
@@ -905,3 +988,213 @@ class TableDemo(object):
         taskQueue.addTask(self.commitFootstepPlan)
         #taskQueue.addTask(self.animateLastPlan) # ought to wait until arrival, currently doesnt wait the right amount of time
         taskQueue.addTask(self.requiredUserPrompt('Have you arrived? y/n: '))
+
+
+
+
+class TableTaskPanel(TaskUserPanel):
+
+    def __init__(self, tableDemo):
+
+        TaskUserPanel.__init__(self, windowTitle='Table Task')
+
+        self.tableDemo = tableDemo
+
+        #self.fitter = ValveImageFitter(self.tableDemo)
+        #self.initImageView(self.fitter.imageView)
+
+        self.addDefaultProperties()
+        self.addButtons()
+        self.addTasks()
+
+    def addButtons(self):
+
+        self.addManualButton('Spawn Valve', self.onSpawnValveClicked)
+        self.addManualSpacer()
+        #self.addManualButton('Footsteps', self.tableDemo.planFootstepsToStance)
+        #self.addManualButton('Footsteps (IK)',
+        #                     functools.partial(self.tableDemo.planFootstepsToStance,
+        #                                       useIkTraj=True))
+        self.addManualSpacer()
+        self.addManualButton('Raise arm', self.tableDemo.planPreGrasp)
+        self.addManualButton('Set fingers', self.setFingers)
+        self.addManualSpacer()
+        self.addManualButton('Reach', self.reach)
+        self.addManualButton('Touch', self.touch)
+        self.addManualButton('Turn', self.turnValve)
+        self.addManualButton('Retract', self.retract)
+        self.addManualSpacer()
+        #self.addManualButton('Nominal', self.tableDemo.planNominal)
+        self.addManualSpacer()
+        self.addManualButton('Commit Manip', self.tableDemo.commitManipPlan)
+
+    def onSpawnValveClicked(self):
+        self.tableDemo.spawnValveAffordance()
+
+    def setFingers(self):
+        driver = self.tableDemo.getHandDriver(self.tableDemo.graspingHand)
+        driver.sendClose(self.tableDemo.openAmount)
+
+    def reach(self):
+        self.tableDemo.setReachAndTouchPoses()
+        self.tableDemo.planReach(wristAngleCW=self.initialWristAngleCW)
+
+    def touch(self):
+        self.tableDemo.planTouch(wristAngleCW=self.initialWristAngleCW)
+
+    def turnValve(self):
+        self.tableDemo.planTurn(wristAngleCW=self.finalWristAngleCW)
+
+    def retract(self):
+        self.tableDemo.planRetract()
+
+    def addDefaultProperties(self):
+        self.params.addProperty('Turn direction', 1,
+                                attributes=om.PropertyAttributes(enumNames=['Clockwise',
+                                                                            'Counter clockwise']))
+        self.params.addProperty('Base', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
+        self.params.addProperty('Back', 1,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
+        self._syncProperties()
+
+    def onPropertyChanged(self, propertySet, propertyName):
+        self._syncProperties()
+        self.taskTree.removeAllTasks()
+        self.addTasks()
+
+    def _syncProperties(self):
+
+        self.tableDemo.planFromCurrentRobotState = True
+
+        if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise':
+            self.tableDemo.scribeDirection = 1
+            self.initialWristAngleCW = 0
+            self.finalWristAngleCW = np.radians(320)
+        else:
+            self.tableDemo.scribeDirection = -1
+            self.initialWristAngleCW = np.radians(320)
+            self.finalWristAngleCW = 0
+
+        if self.params.getPropertyEnumValue('Base') == 'Fixed':
+            self.tableDemo.lockBase = True
+        else:
+            self.tableDemo.lockBase = False
+
+        if self.params.getPropertyEnumValue('Back') == 'Fixed':
+            self.tableDemo.lockBack = True
+        else:
+            self.tableDemo.lockBack = False
+
+    def addTasks(self):
+
+        # some helpers
+        def addTask(task, parent=None):
+            self.taskTree.onAddTask(task, copy=False, parent=parent)
+
+        def addFunc(func, name, parent=None):
+            addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
+
+        def addManipulation(func, name, parent=None):
+            group = self.taskTree.addGroup(name, parent=parent)
+            addFunc(func, name='plan motion', parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
+            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
+                    parent=group)
+            addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
+                    parent=group)
+
+        def addLargeValveTurn(parent=None):
+            group = self.taskTree.addGroup('Valve Turn', parent=parent)
+
+            # valve manip actions
+            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
+                            name='Reach to valve', parent=group)
+            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
+                            name='Insert hand', parent=group)
+            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
+                            name='Turn valve', parent=group)
+            addManipulation(v.planRetract, name='Retract hand', parent=group)
+
+        def addSmallValveTurn(parent=None):
+            group = self.taskTree.addGroup('Valve Turn', parent=parent)
+            side = 'Right' if v.graspingHand == 'right' else 'Left'
+
+            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
+                            name='Reach to valve', parent=group)
+            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
+                            name='Insert hand', parent=group)
+            addTask(rt.CloseHand(name='grasp valve', side=side, mode='Basic',
+                                 amount=self.tableDemo.closedAmount),
+                    parent=group)
+            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
+                            name='plan turn valve', parent=group)
+            addTask(rt.CloseHand(name='release valve', side=side, mode='Basic',
+                                 amount=self.tableDemo.openAmount),
+                    parent=group)
+            addManipulation(v.planRetract, name='plan retract', parent=group)
+
+        v = self.tableDemo
+
+        self.taskTree.removeAllTasks()
+        side = 'left' # self.params.getPropertyEnumValue('Hand')'
+
+        ###############
+        # add the tasks
+
+        # prep
+        prep = self.taskTree.addGroup('Preparation')
+        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
+        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+        addFunc(v.prepIhmcDemoSequenceFromFile, 'prep from file', parent=prep)
+
+
+
+        # fit
+        fit = self.taskTree.addGroup('Fitting')
+        addTask(rt.UserPromptTask(name='fit valve',
+                                  message='Please fit and approve valve affordance.'), parent=fit)
+        addTask(rt.FindAffordance(name='check valve affordance', affordanceName='valve'),
+                parent=fit)
+
+        # walk
+        walk = self.taskTree.addGroup('Approach')
+        #addFunc(v.planFootstepsToStance, 'plan walk to valve', parent=walk)
+        addTask(rt.UserPromptTask(name='approve footsteps',
+                                  message='Please approve footstep plan.'), parent=walk)
+        addTask(rt.CommitFootstepPlan(name='walk to valve',
+                                      planName='valve grasp stance footstep plan'), parent=walk)
+        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
+        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
+
+        # refit
+        refit = self.taskTree.addGroup('Re-fitting')
+        addTask(rt.UserPromptTask(name='fit valve',
+                                  message='Please fit and approve valve affordance.'),
+                parent=refit)
+
+        # set fingers
+        #addTask(rt.CloseHand(name='set finger positions', side=side, mode='Basic',
+        #                     amount=self.tableDemo.openAmount), parent=refit)
+
+        # add valve turns
+        #if v.smallValve:
+        #    for i in range(0, 2):
+        #        addSmallValveTurn()
+
+        #else:
+        #    for i in range(0, 2):
+        #        addLargeValveTurn()
+
+
+        # go to finishing posture
+        prep = self.taskTree.addGroup('Prep for walking')
+
+        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
+        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+        addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General',
+                                   postureName='safe nominal', side='Default'), parent=prep)
+        addTask(rt.CommitManipulationPlan(name='execute manip plan',
+                                          planName='safe nominal posture plan'), parent=prep)
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)
