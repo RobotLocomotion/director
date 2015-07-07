@@ -52,9 +52,13 @@ class DRCArgParser(object):
         return os.path.join(ddapp.getDRCBaseDir(),
                             'software/models/atlas_v5/director_config.json')
 
-    def getDefaultValkyrieDirectorConfigFile(self):
+    def getDefaultValkyrieOldDirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
                             'software/models/valkyrie/director_config.json')
+
+    def getDefaultValkyrieDirectorConfigFile(self):
+        return os.path.join(ddapp.getDRCBaseDir(),
+                            'software/models/val_description/director_config.json')
 
     def getDefaultKukaLWRConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
@@ -83,6 +87,11 @@ class DRCArgParser(object):
                             action='store_const',
                             const=self.getDefaultAtlasV5DirectorConfigFile(),
                             help='Use Atlas V5')
+
+        directorConfig.add_argument('-valold', '--valkyrieold', dest='directorConfigFile',
+                            action='store_const',
+                            const=self.getDefaultValkyrieOldDirectorConfigFile(),
+                            help='Use Valkyrie')
 
         directorConfig.add_argument('-val', '--valkyrie', dest='directorConfigFile',
                             action='store_const',
