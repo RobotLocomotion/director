@@ -2,6 +2,8 @@
 #define __ddMainWindow_h
 
 #include <QMainWindow>
+#include "ddAppConfigure.h"
+
 
 class ddViewManager;
 class ddPropertiesPanel;
@@ -13,7 +15,7 @@ class QTextEdit;
 class QDockWidget;
 class QMenu;
 
-class ddMainWindow : public QMainWindow
+class DD_APP_EXPORT ddMainWindow : public QMainWindow
 {
     Q_OBJECT
 

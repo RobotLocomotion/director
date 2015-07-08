@@ -21,10 +21,10 @@
 #define __vtkSimpleActorInteractor_h
 
 #include "vtkInteractorStyleTrackballActor.h"
+#include "ddAppConfigure.h"
 
 
-
-class vtkSimpleActorInteractor : public vtkInteractorStyleTrackballActor
+class DD_APP_EXPORT vtkSimpleActorInteractor : public vtkInteractorStyleTrackballActor
 {
 public:
   static vtkSimpleActorInteractor *New();

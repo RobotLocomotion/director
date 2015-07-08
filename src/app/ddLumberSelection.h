@@ -2,8 +2,10 @@
 #define __ddLumberSelection_h
 
 #include <QWidget>
+#include "ddAppConfigure.h"
 
-class ddLumberSelection : public QWidget
+
+class DD_APP_EXPORT ddLumberSelection : public QWidget
 {
     Q_OBJECT
 

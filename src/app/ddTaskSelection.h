@@ -2,8 +2,10 @@
 #define __ddTaskSelection_h
 
 #include <QWidget>
+#include "ddAppConfigure.h"
 
-class ddTaskSelection : public QWidget
+
+class DD_APP_EXPORT ddTaskSelection : public QWidget
 {
     Q_OBJECT
 

@@ -15,13 +15,15 @@
 #include <lcm/lcm-cpp.hpp>
 
 #include "ddFPSCounter.h"
+#include "ddAppConfigure.h"
+
 
 namespace lcm
 {
   class LCM;
 }
 
-class ddLCMSubscriber : public QObject
+class DD_APP_EXPORT ddLCMSubscriber : public QObject
  {
   Q_OBJECT
 

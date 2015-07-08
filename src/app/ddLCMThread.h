@@ -3,6 +3,8 @@
 
 #include <QThread>
 #include <QMutex>
+#include "ddAppConfigure.h"
+
 
 class ddLCMSubscriber;
 
@@ -11,7 +13,7 @@ namespace lcm
   class LCM;
 }
 
-class ddLCMThread : public QThread
+class DD_APP_EXPORT ddLCMThread : public QThread
  {
   Q_OBJECT
 

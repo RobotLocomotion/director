@@ -2,9 +2,10 @@
 #define __ddObjectTree_h
 
 #include <QTreeWidget>
+#include "ddAppConfigure.h"
 
 
-class ddObjectTree : public QTreeWidget
+class DD_APP_EXPORT ddObjectTree : public QTreeWidget
 {
     Q_OBJECT
 

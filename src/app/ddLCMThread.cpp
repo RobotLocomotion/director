@@ -5,6 +5,7 @@
 #include <lcm/lcm-cpp.hpp>
 #include <iostream>
 
+#include <Windows.h>
 
 //-----------------------------------------------------------------------------
 ddLCMThread::ddLCMThread(QObject* parent) : QThread(parent)

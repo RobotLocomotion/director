@@ -2,9 +2,10 @@
 #define __ddGLWidgetView_h
 
 #include "ddViewBase.h"
+#include "ddAppConfigure.h"
 
 
-class ddGLWidgetView : public ddViewBase
+class DD_APP_EXPORT ddGLWidgetView : public ddViewBase
 {
     Q_OBJECT
 

@@ -5,6 +5,8 @@
 
 #include "ddLCMThread.h"
 #include "ddLCMSubscriber.h"
+#include "ddAppConfigure.h"
+
 
 #include <string>
 #include <sstream>
@@ -22,7 +24,7 @@
 
 #include <kinect/kinect-utils.h>
 
-class ddKinectLCM : public QObject
+class DD_APP_EXPORT ddKinectLCM : public QObject
 {
   Q_OBJECT
 

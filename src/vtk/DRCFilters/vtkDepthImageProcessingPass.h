@@ -51,6 +51,8 @@ Ph.D. thesis of Christian BOUCHENY.
 
 #include "vtkImageProcessingPass.h"
 
+#include <vtkDRCFiltersModule.h>
+
 class vtkOpenGLRenderWindow;
 class vtkDepthPeelingPassLayerList; // Pimpl
 class vtkShaderProgram2;
@@ -58,7 +60,7 @@ class vtkShader2;
 class vtkFrameBufferObject;
 class vtkTextureObject;
 
-class VTK_EXPORT vtkDepthImageProcessingPass : public vtkImageProcessingPass
+class VTKDRCFILTERS_EXPORT vtkDepthImageProcessingPass : public vtkImageProcessingPass
 {
 public:
   vtkTypeRevisionMacro(vtkDepthImageProcessingPass,vtkRenderPass);

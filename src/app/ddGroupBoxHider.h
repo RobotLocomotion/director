@@ -5,8 +5,10 @@
 #include <QGroupBox>
 #include <QLayout>
 #include <QLayoutItem>
+#include "ddAppConfigure.h"
 
-class ddGroupBoxHider : public QObject
+
+class DD_APP_EXPORT ddGroupBoxHider : public QObject
 {
     Q_OBJECT
 

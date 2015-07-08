@@ -3,8 +3,9 @@
 
 #include <QObject>
 #include <QEvent>
+#include "ddAppConfigure.h"
 
-class ddPythonEventFilter : public QObject
+class DD_APP_EXPORT ddPythonEventFilter : public QObject
 {
   Q_OBJECT
 

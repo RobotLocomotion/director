@@ -6,6 +6,8 @@
 
 #include "ddLCMThread.h"
 #include "ddLCMSubscriber.h"
+#include "ddAppConfigure.h"
+
 
 #include <string>
 #include <sstream>
@@ -32,7 +34,7 @@
 #include <vtkTransform.h>
 #include <vtkMatrix4x4.h>
 
-class ddBotImageQueue : public QObject
+class DD_APP_EXPORT ddBotImageQueue : public QObject
  {
   Q_OBJECT
 
