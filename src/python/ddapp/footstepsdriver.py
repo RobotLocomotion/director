@@ -29,7 +29,7 @@ from PythonQt import QtGui, QtCore
 
 _footMeshes = None
 _footMeshFiles = []
-_robotValkyrie = False
+_robotType = 0 # 0 - any atlas, 1 - val v1, 2 - val v2
 _pelvisLink = '' # pelvis
 _leftFootLink = '' # l_foot
 _rightFootLink = '' # r_foot
@@ -38,7 +38,9 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
 
     # dodgy use of filename to find valkyrie:
     if (directorConfigFile.name.find("valkyrie") > -1):
-        _robotValkyrie = True
+        _robotType = 1
+    if (directorConfigFile.name.find("val_description") > -1):
+        _robotType = 2
 
     directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
 
@@ -577,7 +579,7 @@ class FootstepsDriver(object):
 
         contact_pts_right = contact_pts_left.copy()
 
-        if (_robotValkyrie):
+        if (_robotType == 1):
             contact_pts_left[0,:] = [0.110, 0.0624435, -0.22]
             contact_pts_left[1,:] = [0.110,-0.0624435, -0.22]
             contact_pts_left[2,:] = [0.075, 0.0624435, 0.0775]
@@ -586,6 +588,13 @@ class FootstepsDriver(object):
             contact_pts_right[1,:] = [0.075,-0.0624435, -0.0775]
             contact_pts_right[2,:] = [0.110, 0.0624435, 0.22]
             contact_pts_right[3,:] = [0.110,-0.0624435, 0.22]
+        if (_robotType == 2):
+            # these are atlas values - not correct for val v2
+            contact_pts_left[0,:] = [-0.0676,  0.0624435, -0.07645]
+            contact_pts_left[1,:] = [-0.0676, -0.0624435, -0.07645]
+            contact_pts_left[2,:] = [0.1928,   0.0624435, -0.07645]
+            contact_pts_left[3,:] = [0.1928,  -0.0624435, -0.07645]
+            contact_pts_right = contact_pts_left.copy()
 
         return contact_pts_left, contact_pts_right
 
@@ -610,8 +619,10 @@ class FootstepsDriver(object):
         t_rf_mid.PreMultiply()
         t_rf_mid.Translate(contact_pts_mid_right)
 
-        if (_robotValkyrie):
-            # Valkyrie Foot orientation is silly
+        if (_robotType == 0): # Atlas
+            t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
+        elif (_robotType == 1):
+            # Valkyrie v1 Foot orientation is silly
             l_foot_sole = transformUtils.frameFromPositionAndRPY([0,0,0], [180.0, 82.5, 0])
             l_foot_sole.PostMultiply()
             l_foot_sole.Concatenate(t_lf_mid)
@@ -619,7 +630,8 @@ class FootstepsDriver(object):
             r_foot_sole.PostMultiply()
             r_foot_sole.Concatenate(t_rf_mid)
             t_feet_mid = transformUtils.frameInterpolate(l_foot_sole, r_foot_sole, 0.5)
-        else:
+        elif (_robotType == 2):
+            # Valkyrie v2 is better
             t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
 
 

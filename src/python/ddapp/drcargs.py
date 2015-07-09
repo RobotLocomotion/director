@@ -52,11 +52,11 @@ class DRCArgParser(object):
         return os.path.join(ddapp.getDRCBaseDir(),
                             'software/models/atlas_v5/director_config.json')
 
-    def getDefaultValkyrieOldDirectorConfigFile(self):
+    def getDefaultValkyrieV1DirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
                             'software/models/valkyrie/director_config.json')
 
-    def getDefaultValkyrieDirectorConfigFile(self):
+    def getDefaultValkyrieV2DirectorConfigFile(self):
         return os.path.join(ddapp.getDRCBaseDir(),
                             'software/models/val_description/director_config.json')
 
@@ -88,14 +88,14 @@ class DRCArgParser(object):
                             const=self.getDefaultAtlasV5DirectorConfigFile(),
                             help='Use Atlas V5')
 
-        directorConfig.add_argument('-valold', '--valkyrieold', dest='directorConfigFile',
+        directorConfig.add_argument('-val1', '--valkyrie_v1', dest='directorConfigFile',
                             action='store_const',
-                            const=self.getDefaultValkyrieOldDirectorConfigFile(),
+                            const=self.getDefaultValkyrieV1DirectorConfigFile(),
                             help='Use Valkyrie')
 
-        directorConfig.add_argument('-val', '--valkyrie', dest='directorConfigFile',
+        directorConfig.add_argument('-val2', '--valkyrie_v2', dest='directorConfigFile',
                             action='store_const',
-                            const=self.getDefaultValkyrieDirectorConfigFile(),
+                            const=self.getDefaultValkyrieV2DirectorConfigFile(),
                             help='Use Valkyrie')
 
         directorConfig.add_argument('-lwr', '--lwr', dest='directorConfigFile',
