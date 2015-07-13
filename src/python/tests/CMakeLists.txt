@@ -4,27 +4,30 @@ endif()
 
 include(python-coverage/setup.cmake)
 
-set(python_tests
+set(python_tests_core
+  testConsoleApp.py
+  testFrameSync.py
+  testObjectModel.py
+  testPropertiesPanel.py
+  testPythonConsole.py
+  testTaskQueue.py
+)
+
+set(python_tests_robot
   testActionSequence.py
   testAffordanceItems.py
   testAtlasDriver.py
   testCameraView.py
-  testConsoleApp.py
   testContinuousWalking.py
   testDrakeVisualizer.py
-  testFrameSync.py
   testImageView.py
   testKinematicPose.py
   testLoadUrdf.py
-  testObjectModel.py
   testOtdfParser.py
   testPlanConstraints.py
-  testPropertiesPanel.py
-  testPythonConsole.py
   testRobotSystem.py
   testTableFit.py
   testTableFitStereo.py
-  testTaskQueue.py
   testTeleopPanel.py
   testValveFit.py
   testValveFitStereo.py
@@ -39,14 +42,19 @@ set(python_test_args
 
 set(python_exe ${CMAKE_BINARY_DIR}/bin/ddConsoleApp)
 
-macro(add_python_test name)
+macro(add_python_test name label)
   get_filename_component(base_name ${name} NAME_WE)
   set(test_name test_${base_name})
   add_test(${test_name} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args})
   set_property(TEST ${test_name} PROPERTY ENVIRONMENT ${python_coverage_environment_arg})
+  set_property(TEST ${test_name} PROPERTY LABELS ${label})
 endmacro()
 
 
-foreach(name ${python_tests})
-  add_python_test(${name})
+foreach(name ${python_tests_core})
+  add_python_test(${name} core)
+endforeach()
+
+foreach(name ${python_tests_robot})
+  add_python_test(${name} robot)
 endforeach()

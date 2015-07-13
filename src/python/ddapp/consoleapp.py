@@ -165,3 +165,21 @@ class ConsoleApp(object):
     @staticmethod
     def getTestingEnabled():
         return ConsoleApp.getTestingArgs().testing
+
+
+
+def main():
+
+    global app, view
+    app = ConsoleApp()
+    app.setupGlobals(globals())
+    app.showPythonConsole()
+    view = app.createView()
+    view.show()
+    view.raise_()
+    view.activateWindow()
+    app.start()
+
+
+if __name__ == '__main__':
+    main()
