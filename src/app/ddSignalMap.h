@@ -4,8 +4,10 @@
 #include <QObject>
 #include <QMap>
 #include <QVariant>
+#include "ddAppConfigure.h"
 
-class ddSignalMap : public QObject
+
+class DD_APP_EXPORT ddSignalMap : public QObject
 {
     Q_OBJECT
 

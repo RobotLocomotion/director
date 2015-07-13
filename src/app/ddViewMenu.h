@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <QObject>
 #include <QIcon>
+#include "ddAppConfigure.h"
 
 class QAction;
 class QEvent;
@@ -43,7 +44,7 @@ class QMenu;
 class QString;
 
 /// Manages a menu containing a collection of widgets that can be shown/hidden
-class ddViewMenu : public QObject
+class DD_APP_EXPORT ddViewMenu : public QObject
 {
   Q_OBJECT
 

@@ -2,11 +2,12 @@
 #define __ddViewManager_h
 
 #include <QWidget>
+#include "ddAppConfigure.h"
 
 class QTabWidget;
 class ddViewBase;
 
-class ddViewManager : public QWidget
+class DD_APP_EXPORT ddViewManager : public QWidget
 {
     Q_OBJECT
 

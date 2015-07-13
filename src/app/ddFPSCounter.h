@@ -2,10 +2,12 @@
 #define __ddFPSCounter_h
 
 #include <QTime>
+#include "ddAppConfigure.h"
+
 
 // A class for keeping a exponential moving average of frames per second.
 
-class ddFPSCounter
+class DD_APP_EXPORT ddFPSCounter
 {
 public:
 

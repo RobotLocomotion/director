@@ -2,8 +2,10 @@
 #define __ddPythonQtWrapperFactory_h
 
 #include <PythonQtCppWrapperFactory.h>
+#include "ddAppConfigure.h"
 
-class ddPythonQtWrapperFactory : public PythonQtForeignWrapperFactory
+
+class DD_APP_EXPORT ddPythonQtWrapperFactory : public PythonQtForeignWrapperFactory
 {
 public:
   virtual PyObject* wrap(const QByteArray& classname, void *ptr);

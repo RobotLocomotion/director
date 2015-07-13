@@ -22,10 +22,11 @@
 #define __vtkTDxInteractorStyleCallback_h
 
 #include "vtkTDxInteractorStyle.h"
+#include "ddAppConfigure.h"
 
 class vtkTransform;
 
-class vtkTDxInteractorStyleCallback : public vtkTDxInteractorStyle
+class DD_APP_EXPORT vtkTDxInteractorStyleCallback : public vtkTDxInteractorStyle
 {
 public:
   static vtkTDxInteractorStyleCallback *New();

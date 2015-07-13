@@ -2,9 +2,10 @@
 #define __ddViewBase_h
 
 #include <QWidget>
+#include "ddAppConfigure.h"
 
 
-class ddViewBase : public QWidget
+class DD_APP_EXPORT ddViewBase : public QWidget
 {
     Q_OBJECT
 

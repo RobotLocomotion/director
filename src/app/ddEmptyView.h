@@ -2,9 +2,11 @@
 #define __ddEmptyView_h
 
 #include "ddViewBase.h"
+#include "ddAppConfigure.h"
 
 
-class ddEmptyView : public ddViewBase
+
+class DD_APP_EXPORT ddEmptyView : public ddViewBase
 {
     Q_OBJECT
 

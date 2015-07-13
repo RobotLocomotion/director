@@ -5,8 +5,10 @@
 #include <QColor>
 #include <QVector>
 #include "ddDrakeModel.h"
+#include "ddAppConfigure.h"
 
-class ddDrakeWrapper : public QObject
+
+class DD_APP_EXPORT ddDrakeWrapper : public QObject
 {
     Q_OBJECT
 

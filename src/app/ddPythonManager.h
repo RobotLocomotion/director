@@ -2,10 +2,12 @@
 #define __ddPythonManager_h
 
 #include <ctkAbstractPythonManager.h>
+#include "ddAppConfigure.h"
+
 
 class ctkPythonConsole;
 
-class ddPythonManager : public ctkAbstractPythonManager
+class DD_APP_EXPORT ddPythonManager : public ctkAbstractPythonManager
 {
     Q_OBJECT
 

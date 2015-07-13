@@ -2,11 +2,13 @@
 #define __ddSpreadsheetView_h
 
 #include "ddViewBase.h"
+#include "ddAppConfigure.h"
+
 
 class QAbstractItemModel;
 class QModelIndex;
 
-class ddSpreadsheetView : public ddViewBase
+class DD_APP_EXPORT ddSpreadsheetView : public ddViewBase
 {
     Q_OBJECT
 

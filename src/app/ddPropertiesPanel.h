@@ -2,14 +2,14 @@
 #define __ddPropertiesPanel_h
 
 #include <QWidget>
-
+#include "ddAppConfigure.h"
 
 class QtVariantPropertyManager;
 class QtAbstractPropertyBrowser;
 class QtVariantProperty;
 class QtProperty;
 
-class ddPropertiesPanel : public QWidget
+class DD_APP_EXPORT ddPropertiesPanel : public QWidget
 {
     Q_OBJECT
 

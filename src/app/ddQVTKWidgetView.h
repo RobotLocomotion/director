@@ -2,6 +2,8 @@
 #define __ddQVTKWidgetView_h
 
 #include "ddViewBase.h"
+#include "ddAppConfigure.h"
+
 
 class vtkCamera;
 class vtkOrientationMarkerWidget;
@@ -10,7 +12,7 @@ class vtkRenderWindow;
 class vtkLightKit;
 class QVTKWidget;
 
-class ddQVTKWidgetView : public ddViewBase
+class DD_APP_EXPORT ddQVTKWidgetView : public ddViewBase
 {
     Q_OBJECT
 

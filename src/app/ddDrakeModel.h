@@ -5,13 +5,15 @@
 #include <QColor>
 #include <QVector>
 #include "ddSharedPtr.h"
+#include "ddAppConfigure.h"
+
 
 class vtkRenderer;
 class vtkTransform;
 class vtkPolyData;
 class RigidBodyManipulator;
 
-class ddDrakeModel : public QObject
+class DD_APP_EXPORT ddDrakeModel : public QObject
 {
     Q_OBJECT
 

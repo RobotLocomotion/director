@@ -4,10 +4,12 @@
 #include <QObject>
 #include <QStringList>
 #include <QIcon>
+#include "ddAppConfigure.h"
+
 
 class QToolBar;
 
-class ddMacrosManager : public QObject
+class DD_APP_EXPORT ddMacrosManager : public QObject
 {
     Q_OBJECT
 

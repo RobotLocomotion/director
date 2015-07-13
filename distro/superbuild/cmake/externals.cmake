@@ -136,8 +136,8 @@ ExternalProject_Add(PythonQt
 ###############################################################################
 # ctkPythonConsole
 ExternalProject_Add(ctkPythonConsole
-  GIT_REPOSITORY http://github.com/patmarion/ctkPythonConsole
-  GIT_TAG b24d917ad
+  GIT_REPOSITORY https://github.com/patmarion/ctkPythonConsole
+  GIT_TAG 15988c5
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -150,7 +150,7 @@ ExternalProject_Add(ctkPythonConsole
 # QtPropertyBrowser
 ExternalProject_Add(QtPropertyBrowser
   GIT_REPOSITORY https://github.com/patmarion/QtPropertyBrowser
-  GIT_TAG 02671ee
+  GIT_TAG baf10af
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${qt_args}
@@ -160,16 +160,12 @@ ExternalProject_Add(QtPropertyBrowser
 ###############################################################################
 # vtk
 set(use_system_vtk_default ON)
-#if(APPLE)
-#  set(use_system_vtk_default ON)
-#endif()
-
 option(USE_SYSTEM_VTK "Use system version of VTK.  If off, VTK will be built." ${use_system_vtk_default})
 
 if(NOT USE_SYSTEM_VTK)
   ExternalProject_Add(vtk
-    GIT_REPOSITORY http://vtk.org/VTK.git
-    GIT_TAG v5.10.1
+    GIT_REPOSITORY https://github.com/bilke/VTK.git
+    GIT_TAG b753b7f # vtk 5.10 with fixes for Visual Studio 2013
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
@@ -329,6 +325,5 @@ ExternalProject_Add(ddapp
     PythonQt
     ctkPythonConsole
     QtPropertyBrowser
-
 
   )
