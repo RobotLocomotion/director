@@ -9,14 +9,14 @@
 #else
   #define GL_GLEXT_PROTOTYPES
   #ifdef _WIN32
-     #define NOMINMAX
-     #include <windows.h>
+    #define NOMINMAX
+    #include <windows.h>
     #include <GL/gl.h>
     #include <GL/glu.h>
   #else
-     #include <GL/gl.h>
-     #include <GL/glu.h>
-     #include <GL/glext.h>
+    #include <GL/gl.h>
+    #include <GL/glu.h>
+    #include <GL/glext.h>
   #endif
 #endif
 
