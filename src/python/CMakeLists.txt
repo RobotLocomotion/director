@@ -147,6 +147,7 @@ set(python_files
   ddapp/thirdparty/min_bounding_rect.py
   ddapp/thirdparty/NumericStringParser.py
   ddapp/thirdparty/numpyjsoncoder.py
+  ddapp/thirdparty/transformations.py
 
   urdf_parser_py/__init__.py
   urdf_parser_py/sdf.py
