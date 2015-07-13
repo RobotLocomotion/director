@@ -34,7 +34,9 @@ import ddapp.tasks.robottasks as rt
 
 class TableDemo(object):
 
-    def __init__(self, robotStateModel, playbackRobotModel, ikPlanner, manipPlanner, footstepPlanner, atlasDriver, lhandDriver, rhandDriver, multisenseDriver, view, sensorJointController, planPlaybackFunction):
+    def __init__(self, robotStateModel, playbackRobotModel, ikPlanner, manipPlanner, footstepPlanner,
+                 atlasDriver, lhandDriver, rhandDriver, multisenseDriver, view, sensorJointController,
+                 planPlaybackFunction, teleopPanel):
         self.planPlaybackFunction = planPlaybackFunction
         self.robotStateModel = robotStateModel
         self.playbackRobotModel = playbackRobotModel
@@ -47,6 +49,7 @@ class TableDemo(object):
         self.multisenseDriver = multisenseDriver
         self.sensorJointController = sensorJointController
         self.view = view
+        self.teleopPanel = teleopPanel
 
         # live operation flags:
         self.useFootstepPlanner = True
@@ -68,8 +71,7 @@ class TableDemo(object):
         self.plans = []
         self.frameSyncs = {}
 
-        self.useLeftArm = False
-        self.useRightArm = True
+        self.graspingHand = 'left' # left, right, both
 
         self.tableData = None
         self.binFrame = None
@@ -159,9 +161,10 @@ class TableDemo(object):
         self.tableFrame = vis.showFrame(self.tableData.frame, 'table frame', parent=self.tableObj, scale=0.2)
         self.tableBox = vis.showPolyData(self.tableData.box, 'table box', parent=self.tableObj, color=[0,1,0], visible=False)
         self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
+        self.tableBox.actor.SetUserTransform(self.tableFrame.transform)
 
         if self.useCollisionEnvironment:
-            self.addCollisionObject(self.tableObj, isTable=True)
+            self.addCollisionObject(self.tableObj)
 
     def onSegmentBin(self, p1, p2):
         print p1
@@ -264,17 +267,18 @@ class TableDemo(object):
 
         return obj, frameObj
 
-    # TODO: deprecate this function: (to end of section):
     def computeTableStanceFrame(self):
         assert self.tableData
 
         zGround = 0.0
         tableHeight = self.tableData.frame.GetPosition()[2] - zGround
 
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Translate(-0.35, self.tableData.dims[1]*0.5, -tableHeight)
-        t.Concatenate(self.tableData.frame)
+        t = transformUtils.copyFrame(self.tableData.frame)
+        t.PreMultiply()
+        t1 = transformUtils.frameFromPositionAndRPY([-x/2 for x in self.tableData.dims],[0,0,0])
+        t.Concatenate(t1)
+        t2 = transformUtils.frameFromPositionAndRPY([-0.35, self.tableData.dims[1]*0.5, -tableHeight],[0,0,0])
+        t.Concatenate(t2)
 
         self.tableStanceFrame = vis.showFrame(t, 'table stance frame', parent=self.tableObj, scale=0.2)
 
@@ -300,6 +304,7 @@ class TableDemo(object):
 
         self.startStanceFrame = vis.showFrame(t, 'start stance frame', parent=None, scale=0.2)
 
+    # TODO: deprecate this function: (to end of section):
     def moveRobotToTableStanceFrame(self):
         self.teleportRobotToStanceFrame(self.tableStanceFrame.transform)
 
@@ -460,6 +465,27 @@ class TableDemo(object):
         #self.constraintSet.constraints.append(armPostureConstraint)
 
         print 'planning reach to'
+        plan = self.constraintSet.runIkTraj()
+        self.addPlan(plan)
+
+
+    def planReachToTableObjectCollisionFree(self, side ='left'):
+        # Hard-coded demonstration of collision reaching to object on table
+        # Using RRT Connect
+
+        goalFrame = transformUtils.frameFromPositionAndRPY([1.05,0.4,1],[0,90,-90])
+        vis.showFrame(goalFrame,'goal frame')
+        frameObj = om.findObjectByName( 'goal frame')
+
+        startPose = self.getPlanningStartPose()
+        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, frameObj.transform, lockBase=self.lockBase, lockBack=self.lockBack)
+        self.constraintSet.runIk()
+
+        print 'planning reach to planReachToTableObjectCollisionFree'
+        self.constraintSet.ikParameters.usePointwise = False
+        self.constraintSet.ikParameters.useCollision = True
+        self.teleopPanel.endEffectorTeleop.updateCollisionEnvironment()
+
         plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
@@ -724,7 +750,7 @@ class TableDemo(object):
         for obj in self.clusterObjects:
             self.addCollisionObject(obj)
 
-    def addCollisionObject(self, obj, isTable=False):
+    def addCollisionObject(self, obj):
         if om.getOrCreateContainer('affordances').findChild(obj.getProperty('Name') + ' affordance'):
             return # Affordance has been created previously
 
@@ -741,15 +767,6 @@ class TableDemo(object):
         ywidth = np.linalg.norm(box_max[1]-box_min[1])
         zwidth = np.linalg.norm(box_max[2]-box_min[2])
         name = obj.getProperty('Name') + ' affordance'
-
-        if isTable: # The table frame is on the right far-out corner rather than the center - hence move
-            # The following values are hacks to fix the fitting for now
-            origin[0] = origin[0] - (ywidth / 2)
-            origin[1] = origin[1] + (xwidth / 2)
-            origin[2] = origin[2] - (zwidth)
-            xaxis = (0, 1, 0)
-            yaxis = (1, 0, 0)
-            zaxis = (0, 0, 1)
 
         boxAffordance = segmentation.createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances')
         boxAffordance.setSolidColor(obj.getProperty('Color'))
@@ -823,7 +840,6 @@ class TableDemo(object):
 
     def planSequence(self):
         self.useFootstepPlanner = True
-        side = 'left' # left, right, both
 
         self.cleanupFootstepPlans()
         self.planFromCurrentRobotState = False
@@ -835,13 +851,11 @@ class TableDemo(object):
 
         # Pick Objects from table:
         self.planWalkToStance(self.tableStanceFrame.transform)
-        if (side == 'left'):
-            self.planSequenceTablePick('left')
-        elif (side == 'right'):
-            self.planSequenceTablePick('right')
-        elif (side == 'both'):
+        if (self.graspingHand == 'both'):
             self.planSequenceTablePick('left')
             self.planSequenceTablePick('right')
+        else:
+            self.planSequenceTablePick(self.graspingHand)
 
         # Go home
         self.planWalkToStance(self.startStanceFrame.transform)
@@ -850,21 +864,17 @@ class TableDemo(object):
         self.planWalkToStance(self.binStanceFrame.transform)
 
         # Drop into the Bin:
-        if (side == 'left'):
-            self.planDropPostureRaise('left')
-            self.dropTableObject('left')
-            self.planDropPostureLower('left')
-        elif (side == 'right'):
-            self.planDropPostureRaise('right')
-            self.dropTableObject('right')
-            self.planDropPostureLower('right')
-        elif (side == 'both'):
+        if (self.graspingHand == 'both'):
             self.planDropPostureRaise('left')
             self.dropTableObject('left')
             self.planDropPostureLower('left')
             self.planDropPostureRaise('right')
             self.dropTableObject('right')
             self.planDropPostureLower('right')
+        else:
+            self.planDropPostureRaise(self.graspingHand)
+            self.dropTableObject(self.graspingHand)
+            self.planDropPostureLower(self.graspingHand)
 
         # Go home
         self.planWalkToStance(self.startStanceFrame.transform)
@@ -991,7 +1001,6 @@ class TableDemo(object):
 
 
 
-
 class TableTaskPanel(TaskUserPanel):
 
     def __init__(self, tableDemo):
@@ -1000,58 +1009,22 @@ class TableTaskPanel(TaskUserPanel):
 
         self.tableDemo = tableDemo
 
-        #self.fitter = ValveImageFitter(self.tableDemo)
-        #self.initImageView(self.fitter.imageView)
-
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
 
     def addButtons(self):
 
-        self.addManualButton('Spawn Valve', self.onSpawnValveClicked)
         self.addManualSpacer()
-        #self.addManualButton('Footsteps', self.tableDemo.planFootstepsToStance)
-        #self.addManualButton('Footsteps (IK)',
-        #                     functools.partial(self.tableDemo.planFootstepsToStance,
-        #                                       useIkTraj=True))
+        self.addManualButton('Lower arm', functools.partial(self.tableDemo.planLowerArm, 'left'))
         self.addManualSpacer()
         self.addManualButton('Raise arm', self.tableDemo.planPreGrasp)
-        self.addManualButton('Set fingers', self.setFingers)
-        self.addManualSpacer()
-        self.addManualButton('Reach', self.reach)
-        self.addManualButton('Touch', self.touch)
-        self.addManualButton('Turn', self.turnValve)
-        self.addManualButton('Retract', self.retract)
-        self.addManualSpacer()
-        #self.addManualButton('Nominal', self.tableDemo.planNominal)
         self.addManualSpacer()
         self.addManualButton('Commit Manip', self.tableDemo.commitManipPlan)
 
-    def onSpawnValveClicked(self):
-        self.tableDemo.spawnValveAffordance()
-
-    def setFingers(self):
-        driver = self.tableDemo.getHandDriver(self.tableDemo.graspingHand)
-        driver.sendClose(self.tableDemo.openAmount)
-
-    def reach(self):
-        self.tableDemo.setReachAndTouchPoses()
-        self.tableDemo.planReach(wristAngleCW=self.initialWristAngleCW)
-
-    def touch(self):
-        self.tableDemo.planTouch(wristAngleCW=self.initialWristAngleCW)
-
-    def turnValve(self):
-        self.tableDemo.planTurn(wristAngleCW=self.finalWristAngleCW)
-
-    def retract(self):
-        self.tableDemo.planRetract()
-
     def addDefaultProperties(self):
-        self.params.addProperty('Turn direction', 1,
-                                attributes=om.PropertyAttributes(enumNames=['Clockwise',
-                                                                            'Counter clockwise']))
+        self.params.addProperty('Hand', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         self.params.addProperty('Base', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
@@ -1067,14 +1040,10 @@ class TableTaskPanel(TaskUserPanel):
 
         self.tableDemo.planFromCurrentRobotState = True
 
-        if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise':
-            self.tableDemo.scribeDirection = 1
-            self.initialWristAngleCW = 0
-            self.finalWristAngleCW = np.radians(320)
+        if self.params.getPropertyEnumValue('Hand') == 'Left':
+            self.tableDemo.graspingHand = 'left'
         else:
-            self.tableDemo.scribeDirection = -1
-            self.initialWristAngleCW = np.radians(320)
-            self.finalWristAngleCW = 0
+            self.tableDemo.graspingHand = 'right'
 
         if self.params.getPropertyEnumValue('Base') == 'Fixed':
             self.tableDemo.lockBase = True
@@ -1105,96 +1074,62 @@ class TableTaskPanel(TaskUserPanel):
             addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
                     parent=group)
 
-        def addLargeValveTurn(parent=None):
-            group = self.taskTree.addGroup('Valve Turn', parent=parent)
-
-            # valve manip actions
-            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
-                            name='Reach to valve', parent=group)
-            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
-                            name='Insert hand', parent=group)
-            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
-                            name='Turn valve', parent=group)
-            addManipulation(v.planRetract, name='Retract hand', parent=group)
-
-        def addSmallValveTurn(parent=None):
-            group = self.taskTree.addGroup('Valve Turn', parent=parent)
-            side = 'Right' if v.graspingHand == 'right' else 'Left'
-
-            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
-                            name='Reach to valve', parent=group)
-            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
-                            name='Insert hand', parent=group)
-            addTask(rt.CloseHand(name='grasp valve', side=side, mode='Basic',
-                                 amount=self.tableDemo.closedAmount),
-                    parent=group)
-            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
-                            name='plan turn valve', parent=group)
-            addTask(rt.CloseHand(name='release valve', side=side, mode='Basic',
-                                 amount=self.tableDemo.openAmount),
-                    parent=group)
-            addManipulation(v.planRetract, name='plan retract', parent=group)
-
         v = self.tableDemo
 
         self.taskTree.removeAllTasks()
-        side = 'left' # self.params.getPropertyEnumValue('Hand')'
+
+        # graspingHand is 'left', side is 'Left'
+        side = self.params.getPropertyEnumValue('Hand')
 
         ###############
         # add the tasks
 
         # prep
         prep = self.taskTree.addGroup('Preparation')
+        addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
         addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
         addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
         addFunc(v.prepIhmcDemoSequenceFromFile, 'prep from file', parent=prep)
 
-
-
-        # fit
-        fit = self.taskTree.addGroup('Fitting')
-        addTask(rt.UserPromptTask(name='fit valve',
-                                  message='Please fit and approve valve affordance.'), parent=fit)
-        addTask(rt.FindAffordance(name='check valve affordance', affordanceName='valve'),
-                parent=fit)
-
         # walk
-        walk = self.taskTree.addGroup('Approach')
-        #addFunc(v.planFootstepsToStance, 'plan walk to valve', parent=walk)
+        walk = self.taskTree.addGroup('Approach Table')
+        addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
         addTask(rt.UserPromptTask(name='approve footsteps',
                                   message='Please approve footstep plan.'), parent=walk)
-        addTask(rt.CommitFootstepPlan(name='walk to valve',
-                                      planName='valve grasp stance footstep plan'), parent=walk)
+        addTask(rt.CommitFootstepPlan(name='walk to table',
+                                      planName='table grasp stance footstep plan'), parent=walk)
         addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
         addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
 
-        # refit
-        refit = self.taskTree.addGroup('Re-fitting')
-        addTask(rt.UserPromptTask(name='fit valve',
-                                  message='Please fit and approve valve affordance.'),
-                parent=refit)
+        # lift object
+        # Not Collision Free:
+        addManipulation(functools.partial(v.planPreGrasp, v.graspingHand ), name='raise arm') # seems to ignore arm side?
+        addManipulation(functools.partial(v.planReachToTableObject, v.graspingHand), name='reach')
+        # Collision Free:
+        #addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
 
-        # set fingers
-        #addTask(rt.CloseHand(name='set finger positions', side=side, mode='Basic',
-        #                     amount=self.tableDemo.openAmount), parent=refit)
+        addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach')
+        addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
 
-        # add valve turns
-        #if v.smallValve:
-        #    for i in range(0, 2):
-        #        addSmallValveTurn()
+        # walk to start
+        walkToStart = self.taskTree.addGroup('Walk to Start')
+        addTask(rt.RequestFootstepPlan(name='plan walk to start', stanceFrameName='start stance frame'), parent=walkToStart)
+        addTask(rt.UserPromptTask(name='approve footsteps',
+                                  message='Please approve footstep plan.'), parent=walkToStart)
+        addTask(rt.CommitFootstepPlan(name='walk to start',
+                                      planName='start stance footstep plan'), parent=walkToStart)
+        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToStart)
 
-        #else:
-        #    for i in range(0, 2):
-        #        addLargeValveTurn()
+        # walk to bin
+        walkToBin = self.taskTree.addGroup('Walk to Bin')
+        addTask(rt.RequestFootstepPlan(name='plan walk to bin', stanceFrameName='bin stance frame'), parent=walkToBin)
+        addTask(rt.UserPromptTask(name='approve footsteps',
+                                  message='Please approve footstep plan.'), parent=walkToBin)
+        addTask(rt.CommitFootstepPlan(name='walk to start',
+                                      planName='bin stance footstep plan'), parent=walkToBin)
+        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToBin)
 
-
-        # go to finishing posture
-        prep = self.taskTree.addGroup('Prep for walking')
-
-        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
-        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
-        addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General',
-                                   postureName='safe nominal', side='Default'), parent=prep)
-        addTask(rt.CommitManipulationPlan(name='execute manip plan',
-                                          planName='safe nominal posture plan'), parent=prep)
-        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)
+        # drop in bin
+        addManipulation(functools.partial(v.planDropPostureRaise, v.graspingHand), name='drop: raise arm') # seems to ignore arm side?
+        addFunc(functools.partial(v.dropTableObject, side=v.graspingHand), 'drop', parent='drop: release')
+        addManipulation(functools.partial(v.planDropPostureLower, v.graspingHand), name='drop: lower arm')

@@ -343,11 +343,11 @@ class WaitForWalkExecutionBDI(AsyncTask):
 
     def run(self):
 
-        self.statusMessage = 'Waiting for walking to begin...'
+        self.statusMessage = 'Waiting for BDI walking to begin...'
         while robotSystem.atlasDriver.getCurrentBehaviorName() != 'step':
             yield
 
-        self.statusMessage = 'Waiting for walk execution...'
+        self.statusMessage = 'Waiting for BDI walk execution...'
         while robotSystem.atlasDriver.getCurrentBehaviorName() != 'stand':
             yield
 

@@ -2556,6 +2556,11 @@ def segmentTableEdge(polyData, searchPoint, edgePoint):
     t.PostMultiply()
     t.Translate(edgeRight)
 
+    table_center = [edgeLengths[0]/2, edgeLengths[1]/2, -edgeLengths[2]/2]
+    t.PreMultiply()
+    t3 = transformUtils.frameFromPositionAndRPY(table_center,[0,0,0])
+    t.Concatenate(t3)
+
     tablePoints = transformPolyData(tablePoints, t.GetLinearInverse())
     wireframe = transformPolyData(wireframe, t.GetLinearInverse())
     tableMesh = transformPolyData(tableMesh, t.GetLinearInverse())
