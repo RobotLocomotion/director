@@ -34,7 +34,9 @@ import ddapp.tasks.robottasks as rt
 
 class TableDemo(object):
 
-    def __init__(self, robotStateModel, playbackRobotModel, ikPlanner, manipPlanner, footstepPlanner, atlasDriver, lhandDriver, rhandDriver, multisenseDriver, view, sensorJointController, planPlaybackFunction):
+    def __init__(self, robotStateModel, playbackRobotModel, ikPlanner, manipPlanner, footstepPlanner,
+                 atlasDriver, lhandDriver, rhandDriver, multisenseDriver, view, sensorJointController,
+                 planPlaybackFunction, teleopPanel):
         self.planPlaybackFunction = planPlaybackFunction
         self.robotStateModel = robotStateModel
         self.playbackRobotModel = playbackRobotModel
@@ -47,6 +49,7 @@ class TableDemo(object):
         self.multisenseDriver = multisenseDriver
         self.sensorJointController = sensorJointController
         self.view = view
+        self.teleopPanel = teleopPanel
 
         # live operation flags:
         self.useFootstepPlanner = True
@@ -462,6 +465,27 @@ class TableDemo(object):
         #self.constraintSet.constraints.append(armPostureConstraint)
 
         print 'planning reach to'
+        plan = self.constraintSet.runIkTraj()
+        self.addPlan(plan)
+
+
+    def planReachToTableObjectCollisionFree(self, side ='left'):
+        # Hard-coded demonstration of collision reaching to object on table
+        # Using RRT Connect
+
+        goalFrame = transformUtils.frameFromPositionAndRPY([1.05,0.4,1],[0,90,-90])
+        vis.showFrame(goalFrame,'goal frame')
+        frameObj = om.findObjectByName( 'goal frame')
+
+        startPose = self.getPlanningStartPose()
+        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, frameObj.transform, lockBase=self.lockBase, lockBack=self.lockBack)
+        self.constraintSet.runIk()
+
+        print 'planning reach to planReachToTableObjectCollisionFree'
+        self.constraintSet.ikParameters.usePointwise = False
+        self.constraintSet.ikParameters.useCollision = True
+        self.teleopPanel.endEffectorTeleop.updateCollisionEnvironment()
+
         plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
@@ -1078,8 +1102,12 @@ class TableTaskPanel(TaskUserPanel):
         addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
 
         # lift object
+        # Not Collision Free:
         addManipulation(functools.partial(v.planPreGrasp, v.graspingHand ), name='raise arm') # seems to ignore arm side?
         addManipulation(functools.partial(v.planReachToTableObject, v.graspingHand), name='reach')
+        # Collision Free:
+        #addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
+
         addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach')
         addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
 
