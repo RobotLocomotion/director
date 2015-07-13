@@ -158,9 +158,10 @@ class TableDemo(object):
         self.tableFrame = vis.showFrame(self.tableData.frame, 'table frame', parent=self.tableObj, scale=0.2)
         self.tableBox = vis.showPolyData(self.tableData.box, 'table box', parent=self.tableObj, color=[0,1,0], visible=False)
         self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
+        self.tableBox.actor.SetUserTransform(self.tableFrame.transform)
 
         if self.useCollisionEnvironment:
-            self.addCollisionObject(self.tableObj, isTable=True)
+            self.addCollisionObject(self.tableObj)
 
     def onSegmentBin(self, p1, p2):
         print p1
@@ -263,17 +264,18 @@ class TableDemo(object):
 
         return obj, frameObj
 
-    # TODO: deprecate this function: (to end of section):
     def computeTableStanceFrame(self):
         assert self.tableData
 
         zGround = 0.0
         tableHeight = self.tableData.frame.GetPosition()[2] - zGround
 
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Translate(-0.35, self.tableData.dims[1]*0.5, -tableHeight)
-        t.Concatenate(self.tableData.frame)
+        t = transformUtils.copyFrame(self.tableData.frame)
+        t.PreMultiply()
+        t1 = transformUtils.frameFromPositionAndRPY([-x/2 for x in self.tableData.dims],[0,0,0])
+        t.Concatenate(t1)
+        t2 = transformUtils.frameFromPositionAndRPY([-0.35, self.tableData.dims[1]*0.5, -tableHeight],[0,0,0])
+        t.Concatenate(t2)
 
         self.tableStanceFrame = vis.showFrame(t, 'table stance frame', parent=self.tableObj, scale=0.2)
 
@@ -299,6 +301,7 @@ class TableDemo(object):
 
         self.startStanceFrame = vis.showFrame(t, 'start stance frame', parent=None, scale=0.2)
 
+    # TODO: deprecate this function: (to end of section):
     def moveRobotToTableStanceFrame(self):
         self.teleportRobotToStanceFrame(self.tableStanceFrame.transform)
 
@@ -723,7 +726,7 @@ class TableDemo(object):
         for obj in self.clusterObjects:
             self.addCollisionObject(obj)
 
-    def addCollisionObject(self, obj, isTable=False):
+    def addCollisionObject(self, obj):
         if om.getOrCreateContainer('affordances').findChild(obj.getProperty('Name') + ' affordance'):
             return # Affordance has been created previously
 
@@ -740,15 +743,6 @@ class TableDemo(object):
         ywidth = np.linalg.norm(box_max[1]-box_min[1])
         zwidth = np.linalg.norm(box_max[2]-box_min[2])
         name = obj.getProperty('Name') + ' affordance'
-
-        if isTable: # The table frame is on the right far-out corner rather than the center - hence move
-            # The following values are hacks to fix the fitting for now
-            origin[0] = origin[0] - (ywidth / 2)
-            origin[1] = origin[1] + (xwidth / 2)
-            origin[2] = origin[2] - (zwidth)
-            xaxis = (0, 1, 0)
-            yaxis = (1, 0, 0)
-            zaxis = (0, 0, 1)
 
         boxAffordance = segmentation.createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances')
         boxAffordance.setSolidColor(obj.getProperty('Color'))
@@ -980,7 +974,6 @@ class TableDemo(object):
         taskQueue.addTask(self.commitFootstepPlan)
         #taskQueue.addTask(self.animateLastPlan) # ought to wait until arrival, currently doesnt wait the right amount of time
         taskQueue.addTask(self.requiredUserPrompt('Have you arrived? y/n: '))
-
 
 
 
