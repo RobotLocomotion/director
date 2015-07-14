@@ -139,7 +139,6 @@ usePerception = True
 useGrid = True
 useSpreadsheet = True
 useFootsteps = True
-useActionManager = False
 useHands = True
 usePlanning = True
 useAtlasDriver = True
