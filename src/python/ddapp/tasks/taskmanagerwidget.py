@@ -427,7 +427,7 @@ def init():
     global panel
 
     panel = TaskWidgetManager()
-    dock = app.addWidgetToDock(panel.taskQueueWidget.widget, action=app.getToolBarActions()['ActionActionManagerPanel'])
+    dock = app.addWidgetToDock(panel.taskQueueWidget.widget, action=app.getToolBarActions()['ActionTaskManagerPanel'])
     dock.hide()
 
     dock = app.addWidgetToDock(panel.taskLibraryWidget.widget)

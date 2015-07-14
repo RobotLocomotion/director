@@ -1,7 +1,6 @@
 
 set(python_files
   ddapp/actionhandlers.py
-  ddapp/actionmanagerpanel.py
   ddapp/affordanceupdater.py
   ddapp/affordanceitems.py
   ddapp/affordancemanager.py
@@ -135,12 +134,6 @@ set(python_files
   ddapp/tasks/descriptions/__init__.py
   ddapp/tasks/descriptions/drillTask.py
   ddapp/tasks/descriptions/taskLibrary.py
-
-  actionmanager/__init__.py
-  actionmanager/actions.py
-  actionmanager/actionmanager.py
-  actionmanager/simplefsm.py
-  actionmanager/sequences.py
 
   ddapp/thirdparty/__init__.py
   ddapp/thirdparty/qhull_2d.py
