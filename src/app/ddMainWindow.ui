@@ -241,7 +241,7 @@
    <addaction name="ActionFootstepPanel"/>
    <addaction name="ActionHandControlPanel"/>
    <addaction name="ActionTeleopPanel"/>
-   <addaction name="ActionActionManagerPanel"/>
+   <addaction name="ActionTaskManagerPanel"/>
    <addaction name="ActionScreenGrabberPanel"/>
    <addaction name="ActionSensorDataRequestPanel"/>
    <addaction name="ActionTaskLauncher"/>
@@ -468,7 +468,7 @@
     <string>Hand Control Panel</string>
    </property>
   </action>
-  <action name="ActionActionManagerPanel">
+  <action name="ActionTaskManagerPanel">
    <property name="checkable">
     <bool>true</bool>
    </property>
