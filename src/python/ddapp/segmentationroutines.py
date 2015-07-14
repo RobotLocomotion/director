@@ -14,7 +14,7 @@ from ddapp.transformUtils import getTransformFromAxes
 from ddapp import vtkAll as vtk
 
 
-#from ddapp.footstepsdriver import FootstepsDriver
+from ddapp.footstepsdriver import FootstepsDriver
 
 import vtkNumpy
 import numpy as np

@@ -5,20 +5,20 @@ import ddapp.objectmodel as om
 import ddapp.visualization as vis
 from ddapp.timercallback import TimerCallback
 from ddapp import affordanceitems
-#from ddapp import lcmUtils
+from ddapp import lcmUtils
 from ddapp import callbacks
 from ddapp import cameracontrol
-#from ddapp import midi
+from ddapp import midi
 from ddapp import propertyset
 from ddapp import splinewidget
 from ddapp import transformUtils
-#from ddapp import teleoppanel
-#from ddapp import footstepsdriverpanel
+from ddapp import teleoppanel
+from ddapp import footstepsdriverpanel
 from ddapp import applogic as app
 from ddapp import vtkAll as vtk
 from ddapp import filterUtils
 from ddapp.shallowCopy import shallowCopy
-#from ddapp import segmentationpanel
+from ddapp import segmentationpanel
 from ddapp import segmentation
 from ddapp import segmentationroutines
 from ddapp import frameupdater
@@ -913,7 +913,7 @@ class ViewBehaviors(object):
     def __init__(self, view):
         self.view = view
         self.mouseEventFilter = ViewEventFilter(view)
-        #self.logCommander = KeyPressLogCommander(view.vtkWidget())
+        self.logCommander = KeyPressLogCommander(view.vtkWidget())
         self.keyEventFilter = KeyEventFilter(view)
 
     @staticmethod
