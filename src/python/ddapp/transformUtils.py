@@ -19,6 +19,20 @@ def getTransformFromNumpy(mat):
     return t
 
 
+def getNumpyFromTransform(transform):
+    '''
+    Given a vtkTransform, return a numpy 4x4 array
+    '''
+    mat = transform.GetMatrix()
+    a = np.zeros((4,4))
+
+    for r in xrange(4):
+        for c in xrange(4):
+            a[r][c] = mat.GetElement(r, c)
+
+    return a
+
+
 def getTransformFromAxes(xaxis, yaxis, zaxis):
 
     t = vtk.vtkTransform()

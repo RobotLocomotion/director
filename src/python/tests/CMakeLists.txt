@@ -11,6 +11,7 @@ set(python_tests_core
   testPropertiesPanel.py
   testPythonConsole.py
   testTaskQueue.py
+  testTransformations.py
 )
 
 set(python_tests_robot
