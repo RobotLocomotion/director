@@ -1,7 +1,7 @@
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
-get_filename_component(python_lib_dir ${PYTHON_LIBRARY} DIRECTORY)
+get_filename_component(python_lib_dir ${PYTHON_LIBRARY} PATH)
 set(_include_dir_hint "${python_lib_dir}/python2.7/site-packages/numpy/core/include")
 find_path(NUMPY_INCLUDE_DIR numpy/arrayobject.h HINTS ${_include_dir_hint} DOC "Path to the NumPy include directory")
 mark_as_advanced(NUMPY_INCLUDE_DIR)
