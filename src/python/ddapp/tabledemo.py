@@ -87,6 +87,8 @@ class TableDemo(object):
         # Switch indicating whether to use affordances as a collision environment
         self.useCollisionEnvironment = True
 
+        self.sceneID = None
+
     # Switch between simulation/visualisation and real robot operation
     def setMode(self, mode='visualization'):
         '''
@@ -154,17 +156,31 @@ class TableDemo(object):
         om.removeFromObjectModel(self.picker.annotationObj)
         self.picker = None
 
-        om.removeFromObjectModel(om.findObjectByName('table demo'))
+        tableData = segmentation.segmentTableEdge(self.getInputPointCloud(), p1, p2)
 
-        self.tableData = segmentation.segmentTableEdge(self.getInputPointCloud(), p1, p2)
-        self.tableObj = vis.showPolyData(self.tableData.mesh, 'table', parent='table demo', color=[0,1,0])
-        self.tableFrame = vis.showFrame(self.tableData.frame, 'table frame', parent=self.tableObj, scale=0.2)
-        self.tableBox = vis.showPolyData(self.tableData.box, 'table box', parent=self.tableObj, color=[0,1,0], visible=False)
+        pose = transformUtils.poseFromTransform(tableData.frame)
+        desc = dict(classname='MeshAffordanceItem', Name='table', Color=[0,1,0], pose=pose)
+        aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        aff.setPolyData(tableData.mesh)
+
+        self.tableData = tableData
+
+        self.tableBox = vis.showPolyData(tableData.box, 'table box', parent=aff, color=[0,1,0], visible=False)
+        #self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
+        self.tableBox.actor.SetUserTransform(tableData.frame)
+
+
+        if self.useCollisionEnvironment:
+            self.addCollisionObject(aff)
+
+        return
+
+        self.tableObj = vis.showPolyData(tableData.mesh, 'table', parent='affordances', color=[0,1,0])
+        self.tableFrame = vis.showFrame(tableData.frame, 'table frame', parent=self.tableObj, scale=0.2)
+        self.tableBox = vis.showPolyData(tableData.box, 'table box', parent=self.tableObj, color=[0,1,0], visible=False)
         self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
         self.tableBox.actor.SetUserTransform(self.tableFrame.transform)
 
-        if self.useCollisionEnvironment:
-            self.addCollisionObject(self.tableObj)
 
     def onSegmentBin(self, p1, p2):
         print p1
@@ -185,15 +201,22 @@ class TableDemo(object):
         t.PostMultiply()
         t.Translate(p1)
 
-        self.binFrame = vis.showFrame(t, 'bin frame', parent=None, scale=0.2)
+        pose = transformUtils.poseFromTransform(t)
+        desc = dict(classname='BoxAffordanceItem', Name='bin', uuid=newUUID(), pose=pose, Color=[1, 0, 0], Dimensions=[0.02,0.02,0.02])
+        obj = affordancepanel.panel.affordanceFromDescription(desc)
+
+
+        #self.binFrame = vis.showFrame(t, 'bin frame', parent=None, scale=0.2)
 
     def sortClustersOnTable(self, clusters):
         '''
         returns list copy of clusters, sorted left to right using the
         table coordinate system.  (Table y axis points right to left)
         '''
-        tableYAxis = self.tableData.axes[1]
-        tableOrigin = np.array(self.tableData.frame.GetPosition())
+        tableTransform = om.findObjectByName('table').getChildFrame().transform
+
+        tableYAxis = transformUtils.getAxesFromTransform(tableTransform)[1]
+        tableOrigin = np.array(tableTransform.GetPosition())
 
         origins = [np.array(c.frame.GetPosition()) for c in clusters]
         dists = [np.dot(origin-tableOrigin, -tableYAxis) for origin in origins]
@@ -207,15 +230,23 @@ class TableDemo(object):
         self.segmentationData = None
 
     def segmentTableObjects(self):
+        tableFrame = om.findObjectByName('table').getChildFrame()
 
-        tableCentroid = segmentation.computeCentroid(self.tableData.box)
-        self.tableData.frame.TransformPoint(tableCentroid, tableCentroid)
+        #tableCentroid = segmentation.computeCentroid(self.tableData.box)
+        #self.tableData.frame.TransformPoint(tableCentroid, tableFrame)
 
-        data = segmentation.segmentTableScene(self.getInputPointCloud(), tableCentroid)
+        data = segmentation.segmentTableScene(self.getInputPointCloud(), tableFrame.transform.GetPosition() )
         data.clusters = self.sortClustersOnTable(data.clusters)
 
-        self.clusterObjects = vis.showClusterObjects(data.clusters, parent='segmentation')
+        objects = vis.showClusterObjects(data.clusters, parent='affordances')
         self.segmentationData = data
+
+        self.clusterObjects = []
+        for i, cluster in enumerate(objects):
+            affObj = affordanceitems.MeshAffordanceItem.promotePolyDataItem(cluster)
+            segmentation.affordanceManager.registerAffordance(affObj)
+            self.clusterObjects.append(affObj)
+
 
 
     def graspTableObject(self, side):
@@ -267,61 +298,44 @@ class TableDemo(object):
 
         return obj, frameObj
 
-    def computeTableStanceFrame(self):
-        assert self.tableData
-
+    def computeTableStanceFrame(self, relativeStance):
+        tableTransform = om.findObjectByName('table').getChildFrame().transform
         zGround = 0.0
-        tableHeight = self.tableData.frame.GetPosition()[2] - zGround
+        tableHeight = tableTransform.GetPosition()[2] - zGround
 
-        t = transformUtils.copyFrame(self.tableData.frame)
-        t.PreMultiply()
-        t1 = transformUtils.frameFromPositionAndRPY([-x/2 for x in self.tableData.dims],[0,0,0])
-        t.Concatenate(t1)
-        t2 = transformUtils.frameFromPositionAndRPY([-0.35, self.tableData.dims[1]*0.5, -tableHeight],[0,0,0])
-        t.Concatenate(t2)
-
-        self.tableStanceFrame = vis.showFrame(t, 'table stance frame', parent=self.tableObj, scale=0.2)
-
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Translate(relativeStance.GetPosition()[0], relativeStance.GetPosition()[1], -tableHeight)
+        t.Concatenate(tableTransform)
+        vis.showFrame(t, 'table stance frame', parent=om.findObjectByName('table'), scale=0.2)
 
     def computeBinStanceFrame(self):
-        assert self.binFrame
-
+        binTransform = om.findObjectByName('bin').getChildFrame().transform
         zGround = 0.0
-        binHeight = self.binFrame.transform.GetPosition()[2] - zGround
+        binHeight = binTransform.GetPosition()[2] - zGround
 
         t = vtk.vtkTransform()
         t.PostMultiply()
         t.Translate(-0.45, 0.1, -binHeight)
-        t.Concatenate(self.binFrame.transform)
-
-        self.binStanceFrame = vis.showFrame(t, 'bin stance frame', parent=None, scale=0.2)
+        t.Concatenate(binTransform)
+        vis.showFrame(t, 'bin stance frame', parent=om.findObjectByName('bin'), scale=0.2)
 
         t = vtk.vtkTransform()
         t.PostMultiply()
         t.RotateZ(30)
         t.Translate(-0.8, 0.4, -binHeight)
-        t.Concatenate(self.binFrame.transform)
-
-        self.startStanceFrame = vis.showFrame(t, 'start stance frame', parent=None, scale=0.2)
+        t.Concatenate(binTransform)
+        vis.showFrame(t, 'start stance frame', parent=om.findObjectByName('bin'), scale=0.2)
 
     # TODO: deprecate this function: (to end of section):
     def moveRobotToTableStanceFrame(self):
-        self.teleportRobotToStanceFrame(self.tableStanceFrame.transform)
+        self.teleportRobotToStanceFrame(om.findObjectByName('table stance frame').transform)
 
     def moveRobotToBinStanceFrame(self):
-        self.teleportRobotToStanceFrame(self.binStanceFrame.transform)
+        self.teleportRobotToStanceFrame(om.findObjectByName('bin stance frame').transform)
 
     def moveRobotToStartStanceFrame(self):
-        self.teleportRobotToStanceFrame(self.startStanceFrame.transform)
-
-    def planFootstepsToTable(self):
-        self.planFootsteps(self.tableStanceFrame.transform)
-
-    def planFootstepsToBin(self):
-        self.planFootsteps(self.binStanceFrame.transform)
-
-    def planFootstepsToStart(self):
-        self.planFootsteps(self.startStanceFrame.transform)
+        self.teleportRobotToStanceFrame(om.findObjectByName('start stance frame').transform)
 
     ### End Object Focused Functions ###############################################################
     ### Planning Functions ########################################################################
@@ -469,12 +483,25 @@ class TableDemo(object):
         self.addPlan(plan)
 
 
+    def computeCollisionFreeGoalFrame(self):
+        goalFrame = transformUtils.frameFromPositionAndRPY([1.05,0.4,1],[0,90,-90])
+        vis.showFrame(goalFrame,'goal frame')
+
+    def meah(self):
+        self.computeCollisionFreeGoalFrame()
+
+        self.prepIhmcDemoSequenceFromFile()
+
+        q = self.sensorJointController.q.copy()
+        q[0] = 0.6
+        self.sensorJointController.setPose('EST_ROBOT_STATE', q)
+
+
     def planReachToTableObjectCollisionFree(self, side ='left'):
         # Hard-coded demonstration of collision reaching to object on table
         # Using RRT Connect
 
-        goalFrame = transformUtils.frameFromPositionAndRPY([1.05,0.4,1],[0,90,-90])
-        vis.showFrame(goalFrame,'goal frame')
+        self.computeCollisionFreeGoalFrame()
         frameObj = om.findObjectByName( 'goal frame')
 
         startPose = self.getPlanningStartPose()
@@ -667,19 +694,23 @@ class TableDemo(object):
             t = self.playbackRobotModel.getLinkFrame(linkName)
             vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
 
+    def createCollisionPlanningScene(self, scene=0, loadPerception=True, moveRobot=False):
+            self.createCollisionPlanningSceneMain(self.sceneID,loadPerception,moveRobot)
 
+    def createCollisionPlanningSceneMain(self, scene=0, loadPerception=True, moveRobot=False):
+        if (self.sceneID is not None):
+            # use variable if one exists
+            scene = self.sceneID
 
-    def createCollisionPlanningScene(self, scene=1, moveRobot=False, loadPerception=False):
+        if (scene == 4):
+            self.prepIhmcDemoSequenceFromFile()
+            if (moveRobot):
+                self.moveRobotToTableStanceFrame()
+            return
 
-        if (loadPerception):
-            #filename = os.path.expanduser('~/drc-testing-data/collision_scene/collision_scene.vtp')
-            #polyData = ioUtils.readPolyData( filename )
-            pd = io.readPolyData('/home/mfallon/Desktop/rrt_scene/all.vtp')
-            vis.showPolyData(pd,'scene')
-
-        if (scene == 0):
+        elif (scene == 0):
             pose = (array([ 1.20,  0. , 0.8]), array([ 1.,  0.,  0.,  0.]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene0-tabletop', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
+            desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.20,  0.5 , 0.4]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='BoxAffordanceItem', Name='scene0-leg1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,0.05,0.8])
@@ -689,59 +720,89 @@ class TableDemo(object):
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.05,  0.3 , 0.98]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='BoxAffordanceItem', Name='scene0-object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.08,0.08,0.24])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj1 = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.25,  0.1 , 0.98]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='BoxAffordanceItem', Name='scene0-object2', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Dimensions=[0.07,0.07,0.25])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj2 = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.25,  -0.1 , 0.95]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='CylinderAffordanceItem', Name='scene0-object3', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Radius=0.035, Length = 0.22)
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj3 = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.05,  -0.2 , 0.95]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='CylinderAffordanceItem', Name='scene0-object4', uuid=newUUID(), pose=pose, Color=[0.9, 0.1, 0.1], Radius=0.045, Length = 0.22)
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj4 = affordancepanel.panel.affordanceFromDescription(desc)
 
-            if (moveRobot):
-                self.sensorJointController.q[0] = 0.67
-                self.sensorJointController.push()
+            self.clusterObjects = [obj1,obj2, obj3, obj4]
+            relativeStance = transformUtils.frameFromPositionAndRPY([-0.58, 0, 0],[0,0,0])
+            self.computeTableStanceFrame(relativeStance)
 
         elif (scene == 1):
-            pose = (array([-0.69, -1.50,  0.92]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene1-tabletop', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
-            pose = (array([-1.05, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene1-edge1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
-            pose = (array([-0.35, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene1-edge2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
-            pose = (array([-0.6803156 , -1.1826616 ,  1.31299839]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene1-edge3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.14,1.0,0.07])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
-            pose = (array([ -0.7,  -1.5 , 1.03]), array([ 1.,  0.,  0.,  0.]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene1-object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.05,0.05,0.14])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
-
-            if (moveRobot):
-                self.sensorJointController.q[5] = -1.571
-                self.sensorJointController.q[0] = -0.75
-                self.sensorJointController.q[1] = -0.85
-                self.sensorJointController.push()
-
-        elif (scene == 2):
             pose = (array([-0.98873106,  1.50393395,  0.91420001]), array([ 0.49752312,  0.        ,  0.        ,  0.86745072]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene2-tabletop', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
+            desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([-0.98873106,  1.50393395,  0.57]), array([ 0.49752312,  0.        ,  0.        ,  0.86745072]))
             desc = dict(classname='BoxAffordanceItem', Name='scene1-object1', uuid=newUUID(), pose=pose, Color=[0.005, 0.005, 0.3], Dimensions=[0.05,0.05,0.14])
+            obj1 = affordancepanel.panel.affordanceFromDescription(desc)
+
+            self.clusterObjects = [obj1]
+            relativeStance = transformUtils.frameFromPositionAndRPY([-0.6, 0, 0],[0,0,0])
+            self.computeTableStanceFrame(relativeStance)
+
+        elif (scene == 2):
+            pose = (array([ 0.49374956,  1.51828255,  0.84852654]), array([ 0.86198582,  0.        ,  0.        ,  0.50693238]))
+            desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([ 0.57555491,  1.6445656 ,  0.93993633]), array([ 0.86280979,  0.        ,  0.        ,  0.50552871]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene2-object', uuid=newUUID(), pose=pose, Color=[0.005, 0.005, 0.3], Dimensions=[0.05,0.05,0.12])
+            obj1 = affordancepanel.panel.affordanceFromDescription(desc)
+
+            pose = (array([ 0.38458635,  1.32625758,  1.37444768]), array([ 0.86314205,  0.        ,  0.        ,  0.50496119]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene2-wall1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,1.0,0.4])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
 
-            if (moveRobot):
-                self.sensorJointController.q[0] = -0.6
-                self.sensorJointController.q[1] = 1.1
-                self.sensorJointController.q[5] = 2.1
-                self.sensorJointController.push()
+            pose = (array([ 0.08282192,  1.49589397,  1.02518917]), array([ 0.86314205,  0.        ,  0.        ,  0.50496119]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene2-wall2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,0.3,0.29])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
 
+            pose = (array([ 0.69532105,  1.15157858,  1.02518917]), array([ 0.86314205,  0.        ,  0.        ,  0.50496119]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene2-wall3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,0.3,0.29])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
 
+            self.clusterObjects = [obj1]
+            relativeStance = transformUtils.frameFromPositionAndRPY([-0.65, -0.3, 0],[0,0,0])
+            self.computeTableStanceFrame(relativeStance)
+
+        elif (scene == 3):
+            pose = (array([-0.69, -1.50,  0.92]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
+            desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([-1.05, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene3-edge1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([-0.35, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene3-edge2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([-0.6803156 , -1.1826616 ,  1.31299839]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene3-edge3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.14,1.0,0.07])
+            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            pose = (array([ -0.7,  -1.5 , 1.03]), array([ 1.,  0.,  0.,  0.]))
+            desc = dict(classname='BoxAffordanceItem', Name='scene3-object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.05,0.05,0.14])
+            obj1 = affordancepanel.panel.affordanceFromDescription(desc)
+
+            self.clusterObjects = [obj1]
+            relativeStance = transformUtils.frameFromPositionAndRPY([-0.7, -0.1, 0],[0,0,0])
+            self.computeTableStanceFrame(relativeStance)
+
+        self.userFitBin()
+        self.onSegmentBin( np.array([ 0.62, -1.33, 0.80]), np.array([ 0.89, -0.87, 0.57]) )
+        self.computeBinStanceFrame()
+
+        if (moveRobot):
+            self.moveRobotToTableStanceFrame()
+
+        if (loadPerception):
+            filename = os.path.expanduser('~/drc-testing-data/ihmc_table/'+str(scene)+'.vtp')
+            pd = ioUtils.readPolyData( filename )
+            vis.showPolyData(pd,'scene')
 
     ######### Setup collision environment ####################
     def prepCollisionEnvironment(self):
@@ -811,7 +872,9 @@ class TableDemo(object):
         self.onSegmentTable( np.array([-1.72105646,  2.73210716,  0.79449952]), np.array([-1.67336452,  2.63351011,  0.78698605]) )
         self.userFitBin()
         self.onSegmentBin( np.array([-0.02, 2.43, 0.61 ]), np.array([-0.40,  2.79,  0.61964661]) )
-        self.computeTableStanceFrame()
+
+        relativeStance = transformUtils.frameFromPositionAndRPY([-0.65, 0, 0],[0,0,0])
+        self.computeTableStanceFrame(relativeStance)
         self.computeBinStanceFrame()
 
         # Actually plan the sequence:
@@ -835,7 +898,8 @@ class TableDemo(object):
 
         self.segmentTableObjects()
         self.computeBinStanceFrame()
-        self.computeTableStanceFrame()
+        relativeStance = transformUtils.frameFromPositionAndRPY([-0.6, 0, 0],[0,0,0])
+        self.computeTableStanceFrame(relativeStance)
 
 
     def planSequence(self):
@@ -847,10 +911,10 @@ class TableDemo(object):
         self.plans = []
 
         # Go home
-        self.planWalkToStance(self.startStanceFrame.transform)
+        self.planWalkToStance(om.findObjectByName('start stance frame').transform)
 
         # Pick Objects from table:
-        self.planWalkToStance(self.tableStanceFrame.transform)
+        self.planWalkToStance(om.findObjectByName('table stance frame').transform)
         if (self.graspingHand == 'both'):
             self.planSequenceTablePick('left')
             self.planSequenceTablePick('right')
@@ -858,10 +922,10 @@ class TableDemo(object):
             self.planSequenceTablePick(self.graspingHand)
 
         # Go home
-        self.planWalkToStance(self.startStanceFrame.transform)
+        self.planWalkToStance(om.findObjectByName('start stance frame').transform)
 
         # Go to Bin
-        self.planWalkToStance(self.binStanceFrame.transform)
+        self.planWalkToStance(om.findObjectByName('bin stance frame').transform)
 
         # Drop into the Bin:
         if (self.graspingHand == 'both'):
@@ -877,7 +941,7 @@ class TableDemo(object):
             self.planDropPostureLower(self.graspingHand)
 
         # Go home
-        self.planWalkToStance(self.startStanceFrame.transform)
+        self.planWalkToStance(om.findObjectByName('start stance frame').transform)
 
 
     def planSequenceTablePick(self, side):
@@ -903,12 +967,12 @@ class TableDemo(object):
 
         # Go home
         if not self.ikPlanner.fixedBaseArm:
-            self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+            self.addTasksToQueueWalking(taskQueue, om.findObjectByName('start stance frame').transform, 'Walk to Start')
 
         for _ in self.clusterObjects:
             # Pick Objects from table:
             if not self.ikPlanner.fixedBaseArm:
-                self.addTasksToQueueWalking(taskQueue, self.tableStanceFrame.transform, 'Walk to Table')
+                self.addTasksToQueueWalking(taskQueue, om.findObjectByName('table stance frame').transform, 'Walk to Table')
             taskQueue.addTask(self.printAsync('Pick with Left Arm'))
             self.addTasksToQueueTablePick(taskQueue, 'left')
             #taskQueue.addTask(self.printAsync('Pick with Right Arm'))
@@ -916,11 +980,11 @@ class TableDemo(object):
 
             # Go home
             if not self.ikPlanner.fixedBaseArm:
-                self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+                self.addTasksToQueueWalking(taskQueue, om.findObjectByName('start stance frame').transform, 'Walk to Start')
 
             # Go to Bin
             if not self.ikPlanner.fixedBaseArm:
-                self.addTasksToQueueWalking(taskQueue, self.binStanceFrame.transform, 'Walk to Bin')
+                self.addTasksToQueueWalking(taskQueue, om.findObjectByName('bin stance frame').transform, 'Walk to Bin')
 
             # Drop into the Bin:
             taskQueue.addTask(self.printAsync('Drop from Left Arm'))
@@ -930,7 +994,7 @@ class TableDemo(object):
 
             # Go home
             if not self.ikPlanner.fixedBaseArm:
-                self.addTasksToQueueWalking(taskQueue, self.startStanceFrame.transform, 'Walk to Start')
+                self.addTasksToQueueWalking(taskQueue, om.findObjectByName('start stance frame').transform, 'Walk to Start')
         
         taskQueue.addTask(self.printAsync('done!'))
 
@@ -948,7 +1012,7 @@ class TableDemo(object):
         taskQueue.addTask(self.waitForBinFit)
 
         if not self.ikPlanner.fixedBaseArm:
-            taskQueue.addTask(self.computeTableStanceFrame)
+            taskQueue.addTask( om.findObjectByName('table stance frame').transform )
             taskQueue.addTask(self.computeBinStanceFrame)
 
 
@@ -1029,6 +1093,8 @@ class TableTaskPanel(TaskUserPanel):
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
+        self.params.addProperty('Scene', 4,
+                                attributes=om.PropertyAttributes(enumNames=['Objects on table','Object below table','Object through slot','Object at depth','Objects on table (fit)']))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
@@ -1054,6 +1120,8 @@ class TableTaskPanel(TaskUserPanel):
             self.tableDemo.lockBack = True
         else:
             self.tableDemo.lockBack = False
+
+        self.tableDemo.sceneID = self.params.getProperty('Scene')
 
     def addTasks(self):
 
@@ -1089,7 +1157,9 @@ class TableTaskPanel(TaskUserPanel):
         addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
         addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
         addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
-        addFunc(v.prepIhmcDemoSequenceFromFile, 'prep from file', parent=prep)
+        #addFunc(v.prepIhmcDemoSequenceFromFile, 'prep from file', parent=prep)
+        addFunc(v.createCollisionPlanningScene, 'prep from file', parent=prep)
+
 
         # walk
         walk = self.taskTree.addGroup('Approach Table')
@@ -1103,10 +1173,10 @@ class TableTaskPanel(TaskUserPanel):
 
         # lift object
         # Not Collision Free:
-        addManipulation(functools.partial(v.planPreGrasp, v.graspingHand ), name='raise arm') # seems to ignore arm side?
-        addManipulation(functools.partial(v.planReachToTableObject, v.graspingHand), name='reach')
+        #addManipulation(functools.partial(v.planPreGrasp, v.graspingHand ), name='raise arm') # seems to ignore arm side?
+        #addManipulation(functools.partial(v.planReachToTableObject, v.graspingHand), name='reach')
         # Collision Free:
-        #addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
+        addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
 
         addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach')
         addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
