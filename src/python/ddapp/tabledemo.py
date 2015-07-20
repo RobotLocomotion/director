@@ -51,6 +51,9 @@ class TableDemo(object):
         self.view = view
         self.teleopPanel = teleopPanel
 
+        # Set flag whether fixed base
+        self.fixedBaseArm = self.ikPlanner.fixedBaseArm
+
         # live operation flags:
         self.useFootstepPlanner = True
         self.visOnly = False
@@ -144,6 +147,10 @@ class TableDemo(object):
                 obj = om.findObjectByName('map')
                 if obj:
                     polyData = obj.polyData
+                else: # fall back to kinect source and get a frame copy
+                    obj = om.findObjectByName('kinect source')
+                    if obj:
+                        polyData = obj.polyData
 
         return polyData
 
@@ -224,8 +231,6 @@ class TableDemo(object):
         #t = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
         #linkFrame = vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
 
-
-
         obj, objFrame = self.getNextTableObject(side)
         #frameSync = vis.FrameSync()
         #frameSync.addFrame(linkFrame)
@@ -236,8 +241,15 @@ class TableDemo(object):
 
         self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
 
+        if self.fixedBaseArm and not self.useDevelopment: # if we're dealing with the real world, close hand
+            self.closeHand(side)
+            self.delay(3) # wait for three seconds to allow for hand to close
 
     def dropTableObject(self, side='left'):
+
+        if self.fixedBaseArm and not self.useDevelopment: # if we're dealing with the real world, close hand
+            self.openHand(side)
+            self.delay(3)
 
         obj, _ = self.getNextTableObject(side)
         obj.setProperty('Visible', False)
@@ -773,6 +785,10 @@ class TableDemo(object):
         boxAffordance.setProperty('Alpha', 0.3)
 
     ######### Nominal Plans and Execution  #################################################################
+    def prepGetSceneFrame(self):
+        # TODO: call service for ply from octomap which returns file name
+        vis.showPolyData(self.getInputPointCloud(), "scene")
+
     def prepKukaTestDemoSequence(self, inputFile='~/drc-testing-data/tabletop/kinect_collision_environment.vtp'):
         filename = os.path.expanduser(inputFile)
         scene = ioUtils.readPolyData(filename)
@@ -1027,8 +1043,12 @@ class TableTaskPanel(TaskUserPanel):
                                 attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         self.params.addProperty('Base', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        self.params.addProperty('Back', 1,
-                                attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
+        if self.tableDemo.fixedBaseArm:
+            self.params.addProperty('Back', 0,
+                                    attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
+        else:
+            self.params.addProperty('Back', 1,
+                                    attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
@@ -1084,22 +1104,38 @@ class TableTaskPanel(TaskUserPanel):
         ###############
         # add the tasks
 
+        # pre-prep
+        if v.fixedBaseArm:
+            if not v.useDevelopment:
+                addManipulation(functools.partial(v.planPostureFromDatabase, 'roomMapping', 'p3_down', side='left'), 'go to pre-mapping pose')
+        # TODO: mapping
+
         # prep
         prep = self.taskTree.addGroup('Preparation')
-        addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
-        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
-        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
-        addFunc(v.prepIhmcDemoSequenceFromFile, 'prep from file', parent=prep)
+        if v.fixedBaseArm:
+            addTask(rt.OpenHand(name='open hand', side=side), parent=prep)
+            if v.useDevelopment:
+                addFunc(v.prepKukaTestDemoSequence, 'prep from file', parent=prep)
+            else:
+                # get one frame from camera, segment on there
+                addFunc(v.prepGetSceneFrame, 'capture scene frame', parent=prep)
+                addFunc(v.prepKukaLabScene, 'prep kuka lab scene', parent=prep)
+        else:
+            addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
+            addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
+            addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+            addFunc(v.prepIhmcDemoSequenceFromFile, 'prep from file', parent=prep)
 
         # walk
-        walk = self.taskTree.addGroup('Approach Table')
-        addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
-        addTask(rt.UserPromptTask(name='approve footsteps',
-                                  message='Please approve footstep plan.'), parent=walk)
-        addTask(rt.CommitFootstepPlan(name='walk to table',
-                                      planName='table grasp stance footstep plan'), parent=walk)
-        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
-        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
+        if not v.fixedBaseArm:
+            walk = self.taskTree.addGroup('Approach Table')
+            addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
+            addTask(rt.UserPromptTask(name='approve footsteps',
+                                      message='Please approve footstep plan.'), parent=walk)
+            addTask(rt.CommitFootstepPlan(name='walk to table',
+                                          planName='table grasp stance footstep plan'), parent=walk)
+            addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
+            addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
 
         # lift object
         # Not Collision Free:
@@ -1109,25 +1145,28 @@ class TableTaskPanel(TaskUserPanel):
         #addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
 
         addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach')
-        addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
+
+        addManipulation(functools.partial(v.closeHand, v.graspingHand), name='lift object')
 
         # walk to start
-        walkToStart = self.taskTree.addGroup('Walk to Start')
-        addTask(rt.RequestFootstepPlan(name='plan walk to start', stanceFrameName='start stance frame'), parent=walkToStart)
-        addTask(rt.UserPromptTask(name='approve footsteps',
-                                  message='Please approve footstep plan.'), parent=walkToStart)
-        addTask(rt.CommitFootstepPlan(name='walk to start',
-                                      planName='start stance footstep plan'), parent=walkToStart)
-        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToStart)
+        if not v.fixedBaseArm:
+            walkToStart = self.taskTree.addGroup('Walk to Start')
+            addTask(rt.RequestFootstepPlan(name='plan walk to start', stanceFrameName='start stance frame'), parent=walkToStart)
+            addTask(rt.UserPromptTask(name='approve footsteps',
+                                      message='Please approve footstep plan.'), parent=walkToStart)
+            addTask(rt.CommitFootstepPlan(name='walk to start',
+                                          planName='start stance footstep plan'), parent=walkToStart)
+            addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToStart)
 
         # walk to bin
-        walkToBin = self.taskTree.addGroup('Walk to Bin')
-        addTask(rt.RequestFootstepPlan(name='plan walk to bin', stanceFrameName='bin stance frame'), parent=walkToBin)
-        addTask(rt.UserPromptTask(name='approve footsteps',
-                                  message='Please approve footstep plan.'), parent=walkToBin)
-        addTask(rt.CommitFootstepPlan(name='walk to start',
-                                      planName='bin stance footstep plan'), parent=walkToBin)
-        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToBin)
+        if not v.fixedBaseArm:
+            walkToBin = self.taskTree.addGroup('Walk to Bin')
+            addTask(rt.RequestFootstepPlan(name='plan walk to bin', stanceFrameName='bin stance frame'), parent=walkToBin)
+            addTask(rt.UserPromptTask(name='approve footsteps',
+                                      message='Please approve footstep plan.'), parent=walkToBin)
+            addTask(rt.CommitFootstepPlan(name='walk to start',
+                                          planName='bin stance footstep plan'), parent=walkToBin)
+            addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToBin)
 
         # drop in bin
         addManipulation(functools.partial(v.planDropPostureRaise, v.graspingHand), name='drop: raise arm') # seems to ignore arm side?
