@@ -309,6 +309,15 @@ class TableDemo(object):
         t.Concatenate(tableTransform)
         vis.showFrame(t, 'table stance frame', parent=om.findObjectByName('table'), scale=0.2)
 
+    def computeCollisionGoalFrame(self, relativeFrame):
+        tableTransform = om.findObjectByName('table').getChildFrame().transform
+
+        #t = vtk.vtkTransform()
+        #t.PostMultiply()
+        #t.Translate(relativeStance.GetPosition()[0], relativeStance.GetPosition()[1], -tableHeight)
+        relativeFrame.Concatenate(tableTransform)
+        vis.showFrame(relativeFrame, 'table goal frame', parent=om.findObjectByName('table'), scale=0.2)
+
     def computeBinStanceFrame(self):
         binTransform = om.findObjectByName('bin').getChildFrame().transform
         zGround = 0.0
@@ -483,26 +492,17 @@ class TableDemo(object):
         self.addPlan(plan)
 
 
-    def computeCollisionFreeGoalFrame(self):
-        goalFrame = transformUtils.frameFromPositionAndRPY([1.05,0.4,1],[0,90,-90])
-        vis.showFrame(goalFrame,'goal frame')
-
-    def meah(self):
-        self.computeCollisionFreeGoalFrame()
-
-        self.prepIhmcDemoSequenceFromFile()
-
-        q = self.sensorJointController.q.copy()
-        q[0] = 0.6
-        self.sensorJointController.setPose('EST_ROBOT_STATE', q)
-
-
     def planReachToTableObjectCollisionFree(self, side ='left'):
         # Hard-coded demonstration of collision reaching to object on table
         # Using RRT Connect
+        if (self.lockBase is True):
+            if (self.lockBack is False):
+                print "Currently the combination Base Fixed, Back Free doesn't work"
+                print "setting to Base Free, Back Free for collision planning"
+                self.lockBase=False
+                self.lockBack=False
 
-        self.computeCollisionFreeGoalFrame()
-        frameObj = om.findObjectByName( 'goal frame')
+        frameObj = om.findObjectByName( 'table goal frame')
 
         startPose = self.getPlanningStartPose()
         self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, frameObj.transform, lockBase=self.lockBase, lockBack=self.lockBack)
@@ -698,12 +698,25 @@ class TableDemo(object):
             self.createCollisionPlanningSceneMain(self.sceneID,loadPerception,moveRobot)
 
     def createCollisionPlanningSceneMain(self, scene=0, loadPerception=True, moveRobot=False):
+        om.removeFromObjectModel(om.findObjectByName('affordances'))
+        om.removeFromObjectModel(om.findObjectByName('segmentation'))
+
         if (self.sceneID is not None):
             # use variable if one exists
             scene = self.sceneID
 
+
         if (scene == 4):
-            self.prepIhmcDemoSequenceFromFile()
+            filename = os.path.expanduser('~/drc-testing-data/ihmc_table/ihmc_table.vtp')
+            polyData = ioUtils.readPolyData( filename )
+            vis.showPolyData( polyData,'scene')
+            self.segmentIhmcScene()
+
+            relativeStance = transformUtils.frameFromPositionAndRPY([-0.6, 0, 0],[0,0,0])
+            relativeReachGoal = transformUtils.frameFromPositionAndRPY([-0.19,0.4,0.16],[90,90,0])
+            self.computeTableStanceFrame(relativeStance)
+            self.computeCollisionGoalFrame(relativeReachGoal)
+
             if (moveRobot):
                 self.moveRobotToTableStanceFrame()
             return
@@ -733,7 +746,9 @@ class TableDemo(object):
 
             self.clusterObjects = [obj1,obj2, obj3, obj4]
             relativeStance = transformUtils.frameFromPositionAndRPY([-0.58, 0, 0],[0,0,0])
+            relativeReachGoal = transformUtils.frameFromPositionAndRPY([-0.15,0.4,0.2],[90,90,0])
             self.computeTableStanceFrame(relativeStance)
+            self.computeCollisionGoalFrame(relativeReachGoal)
 
         elif (scene == 1):
             pose = (array([-0.98873106,  1.50393395,  0.91420001]), array([ 0.49752312,  0.        ,  0.        ,  0.86745072]))
@@ -745,7 +760,9 @@ class TableDemo(object):
 
             self.clusterObjects = [obj1]
             relativeStance = transformUtils.frameFromPositionAndRPY([-0.6, 0, 0],[0,0,0])
+            relativeReachGoal = transformUtils.frameFromPositionAndRPY([0,0.1,-0.35],[90,90,0])
             self.computeTableStanceFrame(relativeStance)
+            self.computeCollisionGoalFrame(relativeReachGoal)
 
         elif (scene == 2):
             pose = (array([ 0.49374956,  1.51828255,  0.84852654]), array([ 0.86198582,  0.        ,  0.        ,  0.50693238]))
@@ -769,7 +786,9 @@ class TableDemo(object):
 
             self.clusterObjects = [obj1]
             relativeStance = transformUtils.frameFromPositionAndRPY([-0.65, -0.3, 0],[0,0,0])
+            relativeReachGoal = transformUtils.frameFromPositionAndRPY([0.15,0.07,0.14],[90,90,0])
             self.computeTableStanceFrame(relativeStance)
+            self.computeCollisionGoalFrame(relativeReachGoal)
 
         elif (scene == 3):
             pose = (array([-0.69, -1.50,  0.92]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
@@ -790,7 +809,9 @@ class TableDemo(object):
 
             self.clusterObjects = [obj1]
             relativeStance = transformUtils.frameFromPositionAndRPY([-0.7, -0.1, 0],[0,0,0])
+            relativeReachGoal = transformUtils.frameFromPositionAndRPY([0.0,0.07,0.14],[90,90,0])
             self.computeTableStanceFrame(relativeStance)
+            self.computeCollisionGoalFrame(relativeReachGoal)
 
         self.userFitBin()
         self.onSegmentBin( np.array([ 0.62, -1.33, 0.80]), np.array([ 0.89, -0.87, 0.57]) )
@@ -881,16 +902,7 @@ class TableDemo(object):
         #self.demoSequence()
 
 
-    def prepIhmcDemoSequenceFromFile(self):
-
-        filename = os.path.expanduser('~/drc-testing-data/ihmc_table/ihmc_table.vtp')
-        polyData = ioUtils.readPolyData( filename )
-        vis.showPolyData( polyData,'scene')
-        self.prepIhmcDemoSequence()
-
-
-
-    def prepIhmcDemoSequence(self):
+    def segmentIhmcScene(self):
         self.userFitBin()
         self.onSegmentBin( np.array([ 0.62, -1.33, 0.80]), np.array([ 0.89, -0.87, 0.57]) )
         self.userFitTable()
@@ -898,9 +910,6 @@ class TableDemo(object):
 
         self.segmentTableObjects()
         self.computeBinStanceFrame()
-        relativeStance = transformUtils.frameFromPositionAndRPY([-0.6, 0, 0],[0,0,0])
-        self.computeTableStanceFrame(relativeStance)
-
 
     def planSequence(self):
         self.useFootstepPlanner = True
@@ -1089,7 +1098,7 @@ class TableTaskPanel(TaskUserPanel):
     def addDefaultProperties(self):
         self.params.addProperty('Hand', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
-        self.params.addProperty('Base', 0,
+        self.params.addProperty('Base', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
@@ -1157,7 +1166,6 @@ class TableTaskPanel(TaskUserPanel):
         addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
         addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
         addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
-        #addFunc(v.prepIhmcDemoSequenceFromFile, 'prep from file', parent=prep)
         addFunc(v.createCollisionPlanningScene, 'prep from file', parent=prep)
 
 
