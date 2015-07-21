@@ -161,6 +161,7 @@ useBlackoutText = True
 useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
+useMappingPanel = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -450,6 +451,9 @@ if usePlanning:
     mappingDemo = mappingdemo.MappingDemo(robotStateModel, playbackRobotModel,
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                     perception.multisenseDriver, view, robotStateJointController, playPlans)
+    if useMappingPanel: #  if false, might break task panel TODO: handle
+        mappingPanel = mappingpanel.init(robotStateJointController, footstepsDriver)
+    mappingTaskPanel = mappingpanel.MappingTaskPanel(mappingDemo, mappingPanel)
 
     doorDemo = doordemo.DoorDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -476,6 +480,8 @@ if usePlanning:
     taskPanels['Surprise'] = surpriseTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
     taskPanels['Table'] = tableTaskPanel.widget
+    if ikPlanner.fixedBaseArm: # 'Edinburgh' switch - this mapping currently was only tested and works on fixed base arms
+        taskPanels['Mapping'] = mappingTaskPanel.widget
 
     tasklaunchpanel.init(taskPanels)
 
@@ -507,11 +513,6 @@ if useNavigationPanel:
 if useLoggingWidget:
     w = lcmloggerwidget.LCMLoggerWidget(statusBar=app.getMainWindow().statusBar())
     app.getMainWindow().statusBar().addPermanentWidget(w.button)
-
-
-useMappingPanel = True
-if useMappingPanel:
-    mappingPanel = mappingpanel.init(robotStateJointController, footstepsDriver)
 
 
 
