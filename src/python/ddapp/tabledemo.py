@@ -1037,6 +1037,7 @@ class TableTaskPanel(TaskUserPanel):
         TaskUserPanel.__init__(self, windowTitle='Table Task')
 
         self.tableDemo = tableDemo
+        self.tableDemo.planFromCurrentRobotState = True
 
         self.addDefaultProperties()
         self.addButtons()
@@ -1065,31 +1066,34 @@ class TableTaskPanel(TaskUserPanel):
         else:
             self.params.addProperty('Back', 1,
                                     attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        self._syncProperties()
+
+        # Init values as above
+        self.tableDemo.graspingHand = self.getSide()
+        self.tableDemo.lockBase = self.getLockBase()
+        self.tableDemo.lockBack = self.getLockBack()
+
+    def getSide(self):
+        return self.params.getPropertyEnumValue('Hand').lower()
+
+    def getLockBase(self):
+        return True if self.params.getPropertyEnumValue('Base') == 'Fixed' else False
+
+    def getLockBack(self):
+        return True if self.params.getPropertyEnumValue('Back') == 'Fixed' else False
 
     def onPropertyChanged(self, propertySet, propertyName):
-        self._syncProperties()
-        self.taskTree.removeAllTasks()
-        self.addTasks()
+        propertyName = str(propertyName)
 
-    def _syncProperties(self):
+        if propertyName == 'Hand':
+            self.tableDemo.graspingHand = self.getSide()
+            self.taskTree.removeAllTasks()
+            self.addTasks()
 
-        self.tableDemo.planFromCurrentRobotState = True
+        elif propertyName == 'Base':
+            self.tableDemo.lockBase = self.getLockBase()
 
-        if self.params.getPropertyEnumValue('Hand') == 'Left':
-            self.tableDemo.graspingHand = 'left'
-        else:
-            self.tableDemo.graspingHand = 'right'
-
-        if self.params.getPropertyEnumValue('Base') == 'Fixed':
-            self.tableDemo.lockBase = True
-        else:
-            self.tableDemo.lockBase = False
-
-        if self.params.getPropertyEnumValue('Back') == 'Fixed':
-            self.tableDemo.lockBack = True
-        else:
-            self.tableDemo.lockBack = False
+        elif propertyName == 'Back':
+            self.tableDemo.lockBack = self.getLockBack()
 
     def addTasks(self):
 
