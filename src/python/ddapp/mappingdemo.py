@@ -21,8 +21,8 @@ from ddapp.debugVis import DebugData
 from ddapp import affordanceitems
 from ddapp import ikplanner
 
-
 import ioUtils
+
 
 class MappingDemo(object):
 
@@ -41,6 +41,7 @@ class MappingDemo(object):
         self.view = view
 
         # live operation flags:
+        self.fixedBaseArm = self.ikPlanner.fixedBaseArm
         self.visOnly = False
         self.planFromCurrentRobotState = True
         useDevelopment = False
