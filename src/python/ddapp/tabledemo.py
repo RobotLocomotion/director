@@ -1015,8 +1015,21 @@ class TableDemo(object):
         #taskQueue.addTask(self.animateLastPlan) # ought to wait until arrival, currently doesnt wait the right amount of time
         taskQueue.addTask(self.requiredUserPrompt('Have you arrived? y/n: '))
 
+'''
+Tabledemo Image Fit for live-stream of webcam
+'''
+class TableImageFitter(ImageBasedAffordanceFit):
 
+    def __init__(self, tableDemo):
+        ImageBasedAffordanceFit.__init__(self, numberOfPoints=1)
+        self.tableDemo = tableDemo
 
+    def fit(self, polyData, points):
+        pass
+
+'''
+Table Task Panel
+'''
 class TableTaskPanel(TaskUserPanel):
 
     def __init__(self, tableDemo):
@@ -1028,6 +1041,9 @@ class TableTaskPanel(TaskUserPanel):
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
+
+        self.fitter = TableImageFitter(self.tableDemo)
+        self.initImageView(self.fitter.imageView)
 
     def addButtons(self):
 

@@ -33,6 +33,7 @@ import ddapp.filterUtils as filterUtils
 from kinect.map_command_t import map_command_t
 
 from ddapp.tasks.taskuserpanel import TaskUserPanel
+from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
 import ddapp.tasks.robottasks as rt
 import functools
 
@@ -131,6 +132,17 @@ def init(jointController, footstepDriver):
     return panel
 
 
+'''
+Mapping Image Fit for live-stream of webcam
+'''
+class MappingImageFitter(ImageBasedAffordanceFit):
+
+    def __init__(self, mappingDemo):
+        ImageBasedAffordanceFit.__init__(self, numberOfPoints=1)
+        self.mappingDemo = mappingDemo
+
+    def fit(self, polyData, points):
+        pass
 
 '''
 Mapping Task Panel
@@ -147,6 +159,9 @@ class MappingTaskPanel(TaskUserPanel):
         #self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
+
+        self.fitter = MappingImageFitter(self.mappingDemo)
+        self.initImageView(self.fitter.imageView)
 
     def addButtons(self):
 
