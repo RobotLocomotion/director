@@ -516,6 +516,17 @@ class TableDemo(object):
         plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
+    def planReachToTableExotica(self, side ='left'):
+        self.computeCollisionFreeGoalFrame()
+        frameObj = om.findObjectByName( 'goal frame')
+
+        startPose = self.getPlanningStartPose()
+        constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, frameObj.transform, lockBase=self.lockBase, lockBack=self.lockBack)
+        endPose, info = constraintSet.runIk()
+        plan = constraintSet.runIkTraj()
+        self.addPlan(plan)
+
+
 
     def planTouchTableObject(self, side='left'):
 
@@ -1176,7 +1187,11 @@ class TableTaskPanel(TaskUserPanel):
         #addManipulation(functools.partial(v.planPreGrasp, v.graspingHand ), name='raise arm') # seems to ignore arm side?
         #addManipulation(functools.partial(v.planReachToTableObject, v.graspingHand), name='reach')
         # Collision Free:
-        addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
+        #addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
+        # Simple Reach Free:
+        addManipulation(functools.partial(v.planReachToTableExotica, v.graspingHand), name='reach')
+
+
 
         addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach')
         addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
