@@ -348,7 +348,7 @@ vtkSmartPointer<vtkTexture> getTextureForMesh(vtkSmartPointer<vtkPolyData> polyD
 ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
 {
   ddMeshVisual::Ptr visual(new ddMeshVisual);
-  visual->PolyData = computeNormals(polyData);
+  visual->PolyData = polyData;
   visual->Actor = vtkSmartPointer<vtkActor>::New();
   visual->Transform = vtkSmartPointer<vtkTransform>::New();
   visual->Actor->SetUserTransform(visual->Transform);
