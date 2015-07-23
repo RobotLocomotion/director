@@ -261,8 +261,6 @@ class SegmentationPanel(object):
 
         l.addWidget(QtGui.QLabel(''))
 
-
-
         l.addStretch()
         return drillWizard
 
@@ -333,8 +331,6 @@ class SegmentationPanel(object):
 
     def startTask(self, taskName):
         self._showTaskWidgets(self.wizards[taskName])
-
-
 
     def startValveSegmentation(self, radius):
 
