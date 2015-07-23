@@ -190,27 +190,8 @@ class MappingTaskPanel(TaskUserPanel):
         self._syncProperties()'''
 
     def onPropertyChanged(self, propertySet, propertyName):
-        self._syncProperties()
-        self.taskTree.removeAllTasks()
-        self.addTasks()
-
-    def _syncProperties(self):
-        '''self.tableDemo.planFromCurrentRobotState = True
-
-        if self.params.getPropertyEnumValue('Hand') == 'Left':
-            self.tableDemo.graspingHand = 'left'
-        else:
-            self.tableDemo.graspingHand = 'right'
-
-        if self.params.getPropertyEnumValue('Base') == 'Fixed':
-            self.tableDemo.lockBase = True
-        else:
-            self.tableDemo.lockBase = False
-
-        if self.params.getPropertyEnumValue('Back') == 'Fixed':
-            self.tableDemo.lockBack = True
-        else:
-            self.tableDemo.lockBack = False'''
+        #self.taskTree.removeAllTasks()
+        #self.addTasks()
 
     def loadFileAsMap(self):
         fileFilters = "Map Files (*.obj *.pcd *.ply *.stl *.vtk *.vtp)";
