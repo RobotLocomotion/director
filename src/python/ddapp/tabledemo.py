@@ -503,6 +503,7 @@ class TableDemo(object):
                 self.lockBack=False
 
         frameObj = om.findObjectByName( 'table goal frame')
+        print frameObj
 
         startPose = self.getPlanningStartPose()
         self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, frameObj.transform, lockBase=self.lockBase, lockBack=self.lockBack)
@@ -512,9 +513,13 @@ class TableDemo(object):
         self.constraintSet.ikParameters.usePointwise = False
         self.constraintSet.ikParameters.useCollision = True
         self.teleopPanel.endEffectorTeleop.updateCollisionEnvironment()
+        
+        print self.ikPlanner.ikServer.runMultiRRT(self.graspingHand, list(self.robotStateModel.model.getJointPositions()),
+                                                  list(np.append(self.clusterObjects[0].getPose()[0], self.clusterObjects[0].getPose()[1])),
+                                                  affordancepanel.panel.affordanceManager.getAffordances())
 
-        plan = self.constraintSet.runIkTraj()
-        self.addPlan(plan)
+#        plan = self.constraintSet.runIkTraj()
+#        self.addPlan(plan)
 
 
     def planTouchTableObject(self, side='left'):
