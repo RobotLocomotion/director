@@ -484,7 +484,15 @@ class TableDemo(object):
 
 
     def computeCollisionFreeGoalFrame(self):
-        goalFrame = transformUtils.frameFromPositionAndRPY([1.05,0.4,1],[0,90,-90])
+	if (self.sceneID is None or self.sceneID == 0):
+	        goalFrame = transformUtils.frameFromPositionAndRPY([1.05,0.4,1],[0,90,-90])
+	elif (self.sceneID == 1):
+		goalFrame = transformUtils.frameFromPositionAndRPY([-0.98873106,  1.40393395,  0.57],[0,90,20])	
+	elif (self.sceneID == 2):
+		goalFrame = transformUtils.frameFromPositionAndRPY([ 0.47555491,  1.6445656 ,  0.93993633],[0,90,-30])	
+	elif (self.sceneID == 3):
+		goalFrame = transformUtils.frameFromPositionAndRPY([ -0.63,  -1.5 , 1.03],[0,90,180])
+	
         vis.showFrame(goalFrame,'goal frame')
 
     def meah(self):
@@ -519,10 +527,11 @@ class TableDemo(object):
     def planReachToTableExotica(self, side ='left'):
         self.computeCollisionFreeGoalFrame()
         frameObj = om.findObjectByName( 'goal frame')
-
+	print 'planning using EXOTica'
         startPose = self.getPlanningStartPose()
         constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, frameObj.transform, lockBase=self.lockBase, lockBack=self.lockBack)
         endPose, info = constraintSet.runIk()
+	
         plan = constraintSet.runIkTraj()
         self.addPlan(plan)
 
