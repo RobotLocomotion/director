@@ -65,8 +65,9 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        if (self.ikPlanner.pushToMatlab is False):
+        if (self.ikPlanner.pushToMatlab is False and self.ikPlanner.pushToMatlabIK is False):
             self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints, nominalPoseName=nominalPoseName, seedPoseName=seedPoseName)
+	    print 'Using external (EXOTica) IK planner'
             return self.endPose, self.info
         else:
             ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
@@ -219,6 +220,7 @@ class IKPlanner(object):
         self.additionalTimeSamples = 0
         self.useQuasiStaticConstraint = True
         self.pushToMatlab = True
+	self.pushToMatlabIK = True
         # is this dodgy?
         self.ikConstraintEncoder = ikconstraintencoder.IKConstraintEncoder(self)
 
@@ -986,9 +988,10 @@ class IKPlanner(object):
     def addPose(self, pose, poseName):
         self.jointController.addPose(poseName, pose)
 
-        if self.pushToMatlab:
+        if (self.pushToMatlab is True or self.pushToMatlabIK is True):
             self.ikServer.sendPoseToServer(pose, poseName)
-        else:
+        #else:
+	if (self.pushToMatlab is False or self.pushToMatlabIK is False):
             self.plannerPub.processAddPose(pose, poseName)
 
 
