@@ -190,8 +190,8 @@ class MappingTaskPanel(TaskUserPanel):
         self._syncProperties()'''
 
     def onPropertyChanged(self, propertySet, propertyName):
-        #self.taskTree.removeAllTasks()
-        #self.addTasks()
+        self.taskTree.removeAllTasks()
+        self.addTasks()
 
     def loadFileAsMap(self):
         fileFilters = "Map Files (*.obj *.pcd *.ply *.stl *.vtk *.vtp)";
