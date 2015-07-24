@@ -85,7 +85,7 @@ class TableDemo(object):
 
         self.constraintSet = []
 
-        self.reachDist = 0.07
+        self.reachDist = 0.12
 
         # Switch indicating whether to use affordances as a collision environment
         self.useCollisionEnvironment = True
@@ -241,7 +241,7 @@ class TableDemo(object):
 
         self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
 
-        if self.fixedBaseArm and not self.useDevelopment: # if we're dealing with the real world, close hand
+        if self.fixedBaseArm: # and not self.useDevelopment: # if we're dealing with the real world, close hand
             self.closeHand(side)
             self.delay(3) # wait for three seconds to allow for hand to close
 
@@ -436,7 +436,7 @@ class TableDemo(object):
         startPose = self.getPlanningStartPose()
 
         if self.ikPlanner.fixedBaseArm: # includes reachDist hack instead of in ikPlanner (TODO!)
-            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist,0,0]), [0,0,-90] )
+            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist+.1,0,-.03]), [0,0,-90] )
             f.PreMultiply()
             f.RotateY(90)
             f.Update()
@@ -508,7 +508,7 @@ class TableDemo(object):
         startPose = self.getPlanningStartPose()
 
         if self.ikPlanner.fixedBaseArm: # includes distance hack and currently uses reachDist instead of touchDist (TODO!)
-            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist,0,0]), [0,0,-90] )
+            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist,0,-0.03]), [0,0,-90] )
             f.PreMultiply()
             f.RotateY(90)
             f.Update()
@@ -526,7 +526,7 @@ class TableDemo(object):
         self.addPlan(plan)
 
 
-    def planLiftTableObject(self, side):
+    def planLiftTableObject(self, side='left'):
 
         startPose = self.getPlanningStartPose()
         self.constraintSet = self.ikPlanner.planEndEffectorDelta(startPose, side, [0.0, 0.0, 0.15])
@@ -1101,8 +1101,10 @@ class TableTaskPanel(TaskUserPanel):
         def addTask(task, parent=None):
             self.taskTree.onAddTask(task, copy=False, parent=parent)
 
-        def addFunc(func, name, parent=None):
+        def addFunc(func, name, parent=None, confirm=False):
             addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
+            if confirm:
+                addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'), parent=parent)
 
         def addManipulation(func, name, parent=None):
             group = self.taskTree.addGroup(name, parent=parent)
@@ -1161,12 +1163,13 @@ class TableTaskPanel(TaskUserPanel):
         # Not Collision Free:
         addManipulation(functools.partial(v.planPreGrasp, v.graspingHand ), name='raise arm') # seems to ignore arm side?
         addManipulation(functools.partial(v.planReachToTableObject, v.graspingHand), name='reach')
+        addManipulation(functools.partial(v.planTouchTableObject, v.graspingHand), name='touch')
         # Collision Free:
         #addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
 
-        addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach')
+        addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach', confirm=True)
 
-        addManipulation(functools.partial(v.closeHand, v.graspingHand), name='lift object')
+        addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
 
         # walk to start
         if not v.fixedBaseArm:
@@ -1190,5 +1193,5 @@ class TableTaskPanel(TaskUserPanel):
 
         # drop in bin
         addManipulation(functools.partial(v.planDropPostureRaise, v.graspingHand), name='drop: raise arm') # seems to ignore arm side?
-        addFunc(functools.partial(v.dropTableObject, side=v.graspingHand), 'drop', parent='drop: release')
+        addFunc(functools.partial(v.dropTableObject, side=v.graspingHand), 'drop', parent='drop: release', confirm=True)
         addManipulation(functools.partial(v.planDropPostureLower, v.graspingHand), name='drop: lower arm')
