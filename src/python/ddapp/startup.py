@@ -1044,7 +1044,8 @@ if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
 
 if 'exo' in drcargs.args():
     if (drcargs.args().exo):
-        ikPlanner.pushToMatlab = False
+        ikPlanner.pushToMatlabIKPose = False
+	ikPlanner.pushToMatlabIKTraj = False
 
 def roomMap():
     mappingPanel.onStartMappingButton()

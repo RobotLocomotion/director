@@ -94,8 +94,8 @@ def testPlanConstraints():
 
     # this is required for now, makes it avoid communication with matlab
     # inside the call to ikPlanner.addPose
-    ikPlanner.pushToMatlab = False
-
+    ikPlanner.pushToMatlabIKPose = False
+    ikPlanner.pushToMatlabIKTraj = False
 
 
     constraints = buildConstraints()

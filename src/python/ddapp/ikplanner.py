@@ -65,9 +65,8 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        if (self.ikPlanner.pushToMatlab is False and self.ikPlanner.pushToMatlabIK is False):
+        if not self.ikPlanner.pushToMatlabIKPose:
             self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints, nominalPoseName=nominalPoseName, seedPoseName=seedPoseName)
-	    print 'Using external (EXOTica) IK planner'
             return self.endPose, self.info
         else:
             ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
@@ -219,8 +218,8 @@ class IKPlanner(object):
 
         self.additionalTimeSamples = 0
         self.useQuasiStaticConstraint = True
-        self.pushToMatlab = True
-	self.pushToMatlabIK = True
+        self.pushToMatlabIKPose = True
+	self.pushToMatlabIKTraj = True
         # is this dodgy?
         self.ikConstraintEncoder = ikconstraintencoder.IKConstraintEncoder(self)
 
@@ -988,10 +987,9 @@ class IKPlanner(object):
     def addPose(self, pose, poseName):
         self.jointController.addPose(poseName, pose)
 
-        if (self.pushToMatlab is True or self.pushToMatlabIK is True):
+        if self.pushToMatlabIKPose or self.pushToMatlabIKTraj:
             self.ikServer.sendPoseToServer(pose, poseName)
-        #else:
-	if (self.pushToMatlab is False or self.pushToMatlabIK is False):
+	if not self.pushToMatlabIKPose or not self.pushToMatlabIKTraj:
             self.plannerPub.processAddPose(pose, poseName)
 
 
@@ -1329,7 +1327,7 @@ class IKPlanner(object):
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
 
 
-        if (self.pushToMatlab is False):
+        if not self.pushToMatlabIKTraj:
             self.lastManipPlan, info = self.plannerPub.processTraj(constraints,endPoseName=poseEnd, nominalPoseName=nominalPoseName,seedPoseName=poseStart, additionalTimeSamples=self.additionalTimeSamples)
         else:
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
