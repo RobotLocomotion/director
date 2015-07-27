@@ -1,7 +1,6 @@
 from ddapp.segmentation import *
 
 from ddapp import mapsregistrar
-from ddapp import drilltaskpanel
 import PythonQt
 from PythonQt import QtCore, QtGui
 
@@ -113,8 +112,6 @@ class SegmentationPanel(object):
     def _makeLadderWizard(self):
         wizard = QtGui.QWidget()
         l = QtGui.QVBoxLayout(wizard)
-        l.addWidget(_makeButton('straighten - left', functools.partial(drilltaskpanel.sendControlMessage, drilltaskpanel.drill_control_t.LADDER_STRAIGHTEN_LEFT)))
-        l.addWidget(_makeButton('straighten - right', functools.partial(drilltaskpanel.sendControlMessage, drilltaskpanel.drill_control_t.LADDER_STRAIGHTEN_RIGHT)))
         l.addStretch()
         return wizard
 
@@ -155,7 +152,6 @@ class SegmentationPanel(object):
         hw = QtGui.QFrame()
         hl = QtGui.QHBoxLayout(hw)
         hl.setMargin(0)
-        hl.addWidget(_makeButton('request valve circle plan', self.requestValveCirclePlan))
         self.circlePlanAngle = QtGui.QSpinBox()
         self.circlePlanAngle.setMinimum(-360)
         self.circlePlanAngle.setMaximum(360)
@@ -265,10 +261,6 @@ class SegmentationPanel(object):
 
         l.addWidget(QtGui.QLabel(''))
 
-
-        #self.drillTaskPanel = drilltaskpanel.DrillTaskPanel()
-        #l.addWidget(self.drillTaskPanel.widget)
-
         l.addStretch()
         return drillWizard
 
@@ -339,10 +331,6 @@ class SegmentationPanel(object):
 
     def startTask(self, taskName):
         self._showTaskWidgets(self.wizards[taskName])
-
-    def requestValveCirclePlan(self):
-        self.drillTaskPanel.valveCirclePlan(self.circlePlanAngle.value)
-
 
     def startValveSegmentation(self, radius):
 
