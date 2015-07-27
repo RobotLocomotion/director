@@ -1049,11 +1049,15 @@ class TableTaskPanel(TaskUserPanel):
     def addButtons(self):
 
         self.addManualSpacer()
-        self.addManualButton('Lower arm', functools.partial(self.tableDemo.planLowerArm, 'left'))
+        self.addManualButton('Lower arm', functools.partial(self.tableDemo.planLowerArm, self.tableDemo.graspingHand))
         self.addManualSpacer()
         self.addManualButton('Raise arm', self.tableDemo.planPreGrasp)
         self.addManualSpacer()
         self.addManualButton('Commit Manip', self.tableDemo.commitManipPlan)
+        self.addManualSpacer()
+        self.addManualButton('Open Hand', functools.partial(self.tableDemo.openHand, self.tableDemo.graspingHand))
+        self.addManualSpacer()
+        self.addManualButton('Close Hand', functools.partial(self.tableDemo.closeHand, self.tableDemo.graspingHand))
 
     def addDefaultProperties(self):
         self.params.addProperty('Hand', 0,
@@ -1067,10 +1071,16 @@ class TableTaskPanel(TaskUserPanel):
             self.params.addProperty('Back', 1,
                                     attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
 
+        # Hand control for Kuka LWR / Schunk SDH
+        if self.tableDemo.fixedBaseArm:
+            self.params.addProperty('Hand Engaged (Powered)', False)
+
         # Init values as above
         self.tableDemo.graspingHand = self.getSide()
         self.tableDemo.lockBase = self.getLockBase()
         self.tableDemo.lockBack = self.getLockBack()
+        if self.tableDemo.fixedBaseArm:
+            self.handEngaged = self.getHandEngaged() # WARNING: does not check current state [no status message]
 
     def getSide(self):
         return self.params.getPropertyEnumValue('Hand').lower()
@@ -1080,6 +1090,9 @@ class TableTaskPanel(TaskUserPanel):
 
     def getLockBack(self):
         return True if self.params.getPropertyEnumValue('Back') == 'Fixed' else False
+
+    def getHandEngaged(self):
+        return self.params.getProperty('Hand Engaged (Powered)')
 
     def onPropertyChanged(self, propertySet, propertyName):
         propertyName = str(propertyName)
@@ -1094,6 +1107,14 @@ class TableTaskPanel(TaskUserPanel):
 
         elif propertyName == 'Back':
             self.tableDemo.lockBack = self.getLockBack()
+
+        elif propertyName == 'Hand Engaged (Powered)':
+            if self.handEngaged: # was engaged, hence deactivate
+                self.tableDemo.getHandDriver(self.getSide()).sendDeactivate() # deactivate hand
+            else: # was disenaged, hence activate
+                self.tableDemo.getHandDriver(self.getSide()).sendActivate() # activate hand
+            self.handEngaged = self.getHandEngaged()
+
 
     def addTasks(self):
 
