@@ -1044,7 +1044,7 @@ class TableTaskPanel(TaskUserPanel):
         self.addTasks()
 
         self.fitter = TableImageFitter(self.tableDemo)
-        self.initImageView(self.fitter.imageView)
+        self.initImageView(self.fitter.imageView, activateAffordanceUpdater=False)
 
     def addButtons(self):
 
