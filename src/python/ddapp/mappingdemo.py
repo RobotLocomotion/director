@@ -23,7 +23,6 @@ from ddapp import ikplanner
 
 import ioUtils
 
-
 class MappingDemo(object):
 
     def __init__(self, robotStateModel, playbackRobotModel, ikPlanner, manipPlanner, footstepPlanner, atlasDriver, lhandDriver, rhandDriver, multisenseDriver, view, sensorJointController, planPlaybackFunction):
@@ -41,7 +40,6 @@ class MappingDemo(object):
         self.view = view
 
         # live operation flags:
-        self.fixedBaseArm = self.ikPlanner.fixedBaseArm
         self.visOnly = False
         self.planFromCurrentRobotState = True
         useDevelopment = False

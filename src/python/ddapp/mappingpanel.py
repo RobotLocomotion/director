@@ -37,7 +37,6 @@ from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
 import ddapp.tasks.robottasks as rt
 import functools
 
-
 def addWidgetsToDict(widgets, d):
 
     for widget in widgets:
@@ -98,7 +97,7 @@ class MappingPanel(object):
         print filename
         pd = io.readPolyData(filename)
         if transform is not None:
-            pd = filterUtils.transformPolyData(pd, self.cameraToLocalInit )
+            pd = filterUtils.transformPolyData(pd, self.cameraToLocalInit)
 
         pdi = vis.updatePolyData(pd, 'map')
         try:
@@ -231,7 +230,7 @@ class MappingTaskPanel(TaskUserPanel):
 
         # TODO: add maxDegreesPerSecond
 
-        if v.fixedBaseArm:
+        if v.ikPlanner.fixedBaseArm:
             addManipulation(functools.partial(v.planPostureFromDatabase, 'General', 'arm up pregrasp', side=side), 'Arm up')
             addManipulation(functools.partial(v.planPostureFromDatabase, 'roomMapping', 'p1_up', side=side), 'Pose 1')
             addManipulation(functools.partial(v.planPostureFromDatabase, 'roomMapping', 'p1_down', side=side), 'Pose 2')
