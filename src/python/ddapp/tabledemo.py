@@ -51,9 +51,6 @@ class TableDemo(object):
         self.view = view
         self.teleopPanel = teleopPanel
 
-        # Set flag whether fixed base
-        self.fixedBaseArm = self.ikPlanner.fixedBaseArm
-
         # live operation flags:
         self.useFootstepPlanner = True
         self.visOnly = False
@@ -241,13 +238,13 @@ class TableDemo(object):
 
         self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
 
-        if self.fixedBaseArm: # and not self.useDevelopment: # if we're dealing with the real world, close hand
+        if self.ikPlanner.fixedBaseArm: # and not self.useDevelopment: # if we're dealing with the real world, close hand
             self.closeHand(side)
             self.delay(3) # wait for three seconds to allow for hand to close
 
     def dropTableObject(self, side='left'):
 
-        if self.fixedBaseArm and not self.useDevelopment: # if we're dealing with the real world, close hand
+        if self.ikPlanner.fixedBaseArm and not self.useDevelopment: # if we're dealing with the real world, close hand
             self.openHand(side)
             self.delay(3)
 
@@ -1148,14 +1145,14 @@ class TableTaskPanel(TaskUserPanel):
         # add the tasks
 
         # pre-prep
-        if v.fixedBaseArm:
+        if v.ikPlanner.fixedBaseArm:
             if not v.useDevelopment:
                 addManipulation(functools.partial(v.planPostureFromDatabase, 'roomMapping', 'p3_down', side='left'), 'go to pre-mapping pose')
         # TODO: mapping
 
         # prep
         prep = self.taskTree.addGroup('Preparation')
-        if v.fixedBaseArm:
+        if v.ikPlanner.fixedBaseArm:
             addTask(rt.OpenHand(name='open hand', side=side), parent=prep)
             if v.useDevelopment:
                 addFunc(v.prepKukaTestDemoSequence, 'prep from file', parent=prep)
@@ -1170,7 +1167,7 @@ class TableTaskPanel(TaskUserPanel):
             addFunc(v.prepIhmcDemoSequenceFromFile, 'prep from file', parent=prep)
 
         # walk
-        if not v.fixedBaseArm:
+        if not v.ikPlanner.fixedBaseArm:
             walk = self.taskTree.addGroup('Approach Table')
             addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
             addTask(rt.UserPromptTask(name='approve footsteps',
@@ -1193,7 +1190,7 @@ class TableTaskPanel(TaskUserPanel):
         addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
 
         # walk to start
-        if not v.fixedBaseArm:
+        if not v.ikPlanner.fixedBaseArm:
             walkToStart = self.taskTree.addGroup('Walk to Start')
             addTask(rt.RequestFootstepPlan(name='plan walk to start', stanceFrameName='start stance frame'), parent=walkToStart)
             addTask(rt.UserPromptTask(name='approve footsteps',
@@ -1203,7 +1200,7 @@ class TableTaskPanel(TaskUserPanel):
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToStart)
 
         # walk to bin
-        if not v.fixedBaseArm:
+        if not v.ikPlanner.fixedBaseArm:
             walkToBin = self.taskTree.addGroup('Walk to Bin')
             addTask(rt.RequestFootstepPlan(name='plan walk to bin', stanceFrameName='bin stance frame'), parent=walkToBin)
             addTask(rt.UserPromptTask(name='approve footsteps',
