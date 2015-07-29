@@ -1,3 +1,4 @@
+from ddapp import consoleapp
 from ddapp import drakevisualizer
 
 def main():
@@ -7,7 +8,7 @@ def main():
 
     app = drakevisualizer.DrakeVisualizerApp()
     app.mainWindow.show()
-    app.start()
+    consoleapp.ConsoleApp.start()
 
 if __name__ == '__main__':
     main()
