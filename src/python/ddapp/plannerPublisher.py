@@ -82,10 +82,6 @@ class PlannerPublisher(object):
     lcmUtils.publish('PLANNER_REQUEST', msg)
     lastManipPlan = listener.waitForResponse(timeout=20000)
     listener.finish()
-    if lastManipPlan:
-      # HACK: need to multiply by original trajectory length again (the one in the plan is planning and not real time), otherwise jumps to real hardware
-      for state in lastManipPlan.plan:
-        state.utime = state.utime * 50
 
     self.ikPlanner.ikServer.infoFunc(lastManipPlan.plan_info[0])
     return lastManipPlan, lastManipPlan.plan_info[0]
