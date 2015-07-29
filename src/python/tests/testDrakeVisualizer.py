@@ -6,7 +6,6 @@ def main():
     global app
 
     app = drakevisualizer.DrakeVisualizerApp()
-    app.setupGlobals(globals())
     app.mainWindow.show()
     app.start()
 

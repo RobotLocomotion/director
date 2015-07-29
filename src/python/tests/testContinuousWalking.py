@@ -3,15 +3,14 @@ import math
 from ddapp.consoleapp import ConsoleApp
 from ddapp import ioUtils
 from ddapp import segmentation
-from ddapp import segmentationroutines
-from ddapp import footstepsdriver
-from ddapp import footstepsdriverpanel
 from ddapp import applogic
 from ddapp import visualization as vis
 from ddapp import continuouswalkingdemo
-from ddapp import perception
-import ddapp.objectmodel as om
-from ddapp import roboturdf
+from ddapp import robotsystem
+from ddapp import objectmodel as om
+from ddapp import ikplanner
+from ddapp import navigationpanel
+from ddapp import cameraview
 
 app = ConsoleApp()
 dataDir = app.getTestingDataDirectory()
@@ -19,15 +18,9 @@ dataDir = app.getTestingDataDirectory()
 view = app.createView()
 segmentation._defaultSegmentationView = view
 
-
-#multisenseDriver, mapServerSource = perception.init(view)
-robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
-footstepsDriver = footstepsdriver.FootstepsDriver(robotStateJointController)
 #footstepsPanel = footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController, mapServerSource)
 footstepsPanel = None
-segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
-
-
+robotsystem.create(view, globals())
 
 
 
@@ -75,7 +68,10 @@ def processSnippet():
     # cwdemo.sendPlanningRequest(footsteps)
 
 
-continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController)
+#navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)
+navigationPanel = None
+continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController, ikPlanner,
+                                                                       teleopJointController, navigationPanel, cameraview)
 cwdemo = continuouswalkingDemo
 
 # test 1

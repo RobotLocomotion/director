@@ -38,7 +38,7 @@ segmentationroutines.SegmentationContext.initWithUser(groundHeight, viewFrame)
 
 # load poly data
 dataDir = app.getTestingDataDirectory()
-polyData = ioUtils.readPolyData(os.path.join(dataDir, 'tabletop/table-sparse-sterep.vtp'))
+polyData = ioUtils.readPolyData(os.path.join(dataDir, 'tabletop/table-sparse-stereo.vtp'))
 vis.showPolyData(polyData, 'pointcloud snapshot original', colorByName='rgb_colors')
 polyData = segmentationroutines.sparsifyStereoCloud( polyData )
 vis.showPolyData(polyData, 'pointcloud snapshot')
