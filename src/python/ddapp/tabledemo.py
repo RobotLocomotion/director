@@ -1061,7 +1061,7 @@ class TableTaskPanel(TaskUserPanel):
                                 attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         self.params.addProperty('Base', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        if self.tableDemo.fixedBaseArm:
+        if self.tableDemo.ikPlanner.fixedBaseArm:
             self.params.addProperty('Back', 0,
                                     attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         else:
@@ -1069,14 +1069,14 @@ class TableTaskPanel(TaskUserPanel):
                                     attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
 
         # Hand control for Kuka LWR / Schunk SDH
-        if self.tableDemo.fixedBaseArm:
+        if self.tableDemo.ikPlanner.fixedBaseArm:
             self.params.addProperty('Hand Engaged (Powered)', False)
 
         # Init values as above
         self.tableDemo.graspingHand = self.getSide()
         self.tableDemo.lockBase = self.getLockBase()
         self.tableDemo.lockBack = self.getLockBack()
-        if self.tableDemo.fixedBaseArm:
+        if self.tableDemo.ikPlanner.fixedBaseArm:
             self.handEngaged = self.getHandEngaged() # WARNING: does not check current state [no status message]
 
     def getSide(self):
