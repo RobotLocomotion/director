@@ -29,7 +29,6 @@ set(python_files
   ddapp/drakevisualizer.py
   ddapp/drcargs.py
   ddapp/drilldemo.py
-  ddapp/drilltaskpanel.py
   ddapp/drivingplanner.py
   ddapp/egressplanner.py
   ddapp/frameupdater.py
