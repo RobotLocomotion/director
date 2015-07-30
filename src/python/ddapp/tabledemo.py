@@ -256,17 +256,7 @@ class TableDemo(object):
 
     def graspTableObject(self, side):
 
-        #linkName = self.ikPlanner.getHandLink(side)
-        #t = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
-        #linkFrame = vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
-
         obj, objFrame = self.getNextTableObject(side)
-        #frameSync = vis.FrameSync()
-        #frameSync.addFrame(linkFrame)
-        #frameSync.addFrame(objFrame)
-        #self.frameSyncs[linkName] = frameSync
-
-        #self.playbackRobotModel.connectModelChanged(self.onRobotModelChanged)
 
         self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
 
