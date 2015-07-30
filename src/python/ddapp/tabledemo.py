@@ -269,15 +269,11 @@ class TableDemo(object):
 
         self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
 
-        if self.ikPlanner.fixedBaseArm: # and not self.useDevelopment: # if we're dealing with the real world, close hand
+        if self.ikPlanner.fixedBaseArm: # if we're dealing with the real world, close hand
             self.closeHand(side)
-            self.delay(3) # wait for three seconds to allow for hand to close
+            return self.delay(5) # wait for three seconds to allow for hand to close
 
     def dropTableObject(self, side='left'):
-
-        if self.ikPlanner.fixedBaseArm and not self.useDevelopment: # if we're dealing with the real world, close hand
-            self.openHand(side)
-            self.delay(3)
 
         obj, _ = self.getNextTableObject(side)
         obj.setProperty('Visible', False)
@@ -293,6 +289,10 @@ class TableDemo(object):
             objAffordance.setProperty('Visible', False)
 
         self.affordanceUpdater.ungraspAffordance(obj.getProperty('Name'))
+
+        if self.ikPlanner.fixedBaseArm: # if we're dealing with the real world, open hand
+            self.openHand(side)
+            return self.delay(5)
 
     def getNextTableObject(self, side='left'):
 
