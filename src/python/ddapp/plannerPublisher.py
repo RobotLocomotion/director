@@ -110,9 +110,9 @@ class PlannerPublisher(object):
           if des['Name'] in self.affordanceManager.affordanceUpdater.attachedAffordances:
             s+=',"attachedTo":"'+self.affordanceManager.affordanceUpdater.attachedAffordances[des['Name']]+'"'
           else: # it's not attached
-            s+=',"attachedTo":""'
+            s+=',"attachedTo":"__world__"' # __world__ means it's a fixed collision object (sometimes called world or map - we use __world__ here)
         else: # no affordanceUpdater - so no attached collision objects either
-          s+=',"attachedTo":""' # we dont have an affordanceUpdater, so not attached
+          s+=',"attachedTo":"__world__"'
         if classname=='MeshAffordanceItem':
           s+=',"filename":"'+aff.getMeshManager().getFilesystemFilename(des['Filename'])+'"'
         if classname=='SphereAffordanceItem':
