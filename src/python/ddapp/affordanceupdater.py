@@ -11,6 +11,7 @@ class AffordanceGraspUpdater(object):
         self.robotModel = robotModel
         self.ikPlanner = ikPlanner
         self.frameSyncs = {}
+        self.attachedAffordances = {}
 
         models = [robotModel]
         if extraModels:
@@ -62,10 +63,12 @@ class AffordanceGraspUpdater(object):
         frameSync.addFrame(affordanceFrame, ignoreIncoming=True)
 
         self.frameSyncs[affordanceName] = frameSync
+        self.attachedAffordances[affordanceName] = linkName
 
     def ungraspAffordance(self, affordanceName):
         try:
             del self.frameSyncs[affordanceName]
+            del self.attachedAffordances[affordanceName]
         except KeyError:
             pass
 
