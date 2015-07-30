@@ -282,6 +282,7 @@ class TableDemo(object):
             objAffordance = om.findObjectByName(obj.getProperty('Name') + ' affordance')
             objAffordance.setProperty('Collision Enabled', False)
             objAffordance.setProperty('Visible', False)
+            self.affordanceUpdater.ungraspAffordance(objAffordance.getProperty('Name'))
 
         self.affordanceUpdater.ungraspAffordance(obj.getProperty('Name'))
 
