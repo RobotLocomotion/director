@@ -254,11 +254,15 @@ class TableDemo(object):
 
 
 
-    def graspTableObject(self, side):
+    def graspTableObject(self, side='left'):
 
         obj, objFrame = self.getNextTableObject(side)
+        if self.useCollisionEnvironment:
+            objAffordance = om.findObjectByName(obj.getProperty('Name') + ' affordance')
 
-        self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
+        self.affordanceUpdater.graspAffordance(obj.getProperty('Name'), side)
+        if self.useCollisionEnvironment:
+            self.affordanceUpdater.graspAffordance(objAffordance.getProperty('Name'), side)
 
         if self.ikPlanner.fixedBaseArm: # if we're dealing with the real world, close hand
             self.closeHand(side)
