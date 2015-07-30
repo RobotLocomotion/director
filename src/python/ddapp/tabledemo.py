@@ -65,6 +65,7 @@ class TableDemo(object):
             extraModels = [self.playbackRobotModel]
             self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotStateModel, self.ikPlanner, extraModels)
 
+        segmentation.affordanceManager.setAffordanceUpdater(self.affordanceUpdater)
         self.optionalUserPromptEnabled = True
         self.requiredUserPromptEnabled = True
 
