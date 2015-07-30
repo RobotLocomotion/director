@@ -103,8 +103,16 @@ class PlannerPublisher(object):
           s+='\n,{'
         first=False
         s+='"classname":"'+classname+'"'
+        s+=',"name":"'+des['Name']+'"'
         s+=',"uuid":"'+des['uuid']+'"'
         s+=',"pose": {"position":{"__ndarray__":'+repr(des['pose'][0].tolist())+'},"quaternion":{"__ndarray__":'+repr(des['pose'][1].tolist())+'}}'
+        if self.affordanceManager.affordanceUpdater is not None: # attached collision object / frameSync
+          if des['Name'] in self.affordanceManager.affordanceUpdater.attachedAffordances:
+            s+=',"attachedTo":"'+self.affordanceManager.affordanceUpdater.attachedAffordances[des['Name']]+'"'
+          else: # it's not attached
+            s+=',"attachedTo":""'
+        else: # no affordanceUpdater - so no attached collision objects either
+          s+=',"attachedTo":""' # we dont have an affordanceUpdater, so not attached
         if classname=='MeshAffordanceItem':
           s+=',"filename":"'+aff.getMeshManager().getFilesystemFilename(des['Filename'])+'"'
         if classname=='SphereAffordanceItem':
