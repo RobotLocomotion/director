@@ -1351,7 +1351,8 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     xaxis = np.cross(yaxis, zaxis)
     xaxis /= np.linalg.norm(xaxis)
     yaxis /= np.linalg.norm(yaxis)
-    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    #t = getTransformFromAxes(xaxis, yaxis, zaxis) # this was added to be consistent with segmentValveByRim
+    t = getTransformFromAxes(zaxis, -yaxis, xaxis) # this was added to be consistent with segmentValveByRim
     t.PostMultiply()
     t.Translate(origin)
 
@@ -1376,28 +1377,16 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     spokeObj.addToView(app.getDRCView())
     t = spokeAngleTransform
 
-    zwidth = 0.0175
+    tubeRadius = 0.017
 
-    d = DebugData()
-    #d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
-    d.addTorus(radius, 0.127)
-    d.addLine(np.array([0,0,0]), np.array([radius-zwidth,0,0]), radius=zwidth) # main bar
+    pose = transformUtils.poseFromTransform(t)
+    desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=float(radius), Segments=20)
+    desc['Tube Radius'] = tubeRadius
 
-    name = 'valve'
-    obj = showPolyData(d.getPolyData(), name, cls=FrameAffordanceItem, parent='affordances', color=[0,1,0])
-    obj.actor.SetUserTransform(t)
-    obj.addToView(app.getDRCView())
-    refitWallCallbacks.append(functools.partial(refitValveAffordance, obj))
+    import affordancepanel
+    obj = affordancepanel.panel.affordanceFromDescription(desc)
+    obj.params = dict(radius=radius)
 
-    params = dict(axis=zaxis, radius=radius, length=zwidth, origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis,
-                  xwidth=radius, ywidth=radius, zwidth=zwidth,
-                  otdf_type='steering_cyl', friendly_name='valve')
-
-    obj.setAffordanceParams(params)
-    obj.updateParamsFromActorTransform()
-
-    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False, scale=radius)
-    frameObj.addToView(app.getDRCView())
 
 
 
