@@ -75,6 +75,7 @@ class TableDemo(object):
 
         self.tableData = None
         self.binFrame = None
+        self.targetObject = None
 
         # top level switch between BDI or IHMC (locked base) and MIT (moving base and back)
         self.lockBack = True
@@ -251,21 +252,25 @@ class TableDemo(object):
 
     def graspTableObject(self, side):
 
-        #linkName = self.ikPlanner.getHandLink(side)
-        #t = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
-        #linkFrame = vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
+        linkName = self.ikPlanner.getHandLink(side)
+        t = self.ikPlanner.getLinkFrameAtPose(linkName, self.getPlanningStartPose())
+        linkFrame = vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
+
+        targetObjectPose = self.targetObject.getDescription()['pose']
+        obj, objFrame = self.targetObject, transformUtils.transformFromPose(targetObjectPose[0], targetObjectPose[1])
+        objFrame = vis.updateFrame(objFrame, 'target Frame', scale = 0.2, visible = False, parent = 'planning')
+        frameSync = vis.FrameSync()
+        frameSync.addFrame(linkFrame)
+        frameSync.addFrame(objFrame)
+        self.frameSyncs[linkName] = frameSync
 
 
-
-        obj, objFrame = self.getNextTableObject(side)
-        #frameSync = vis.FrameSync()
-        #frameSync.addFrame(linkFrame)
-        #frameSync.addFrame(objFrame)
-        #self.frameSyncs[linkName] = frameSync
-
-        #self.playbackRobotModel.connectModelChanged(self.onRobotModelChanged)
+        self.playbackRobotModel.connectModelChanged(self.onRobotModelChanged)
 
         self.affordanceUpdater.graspAffordance( obj.getProperty('Name') , side)
+
+        om.removeFromObjectModel(self.targetObject)
+        self.teleopPanel.endEffectorTeleop.updateCollisionEnvironment()
 
 
     def dropTableObject(self, side='left'):
@@ -291,10 +296,10 @@ class TableDemo(object):
         obj = self.clusterObjects[0] if side == 'left' else self.clusterObjects[-1]
         frameObj = obj.findChild(obj.getProperty('Name') + ' frame')
 
-        if self.useCollisionEnvironment:
-            self.prepCollisionEnvironment()
-            collisionObj = om.findObjectByName(obj.getProperty('Name') + ' affordance')
-            collisionObj.setProperty('Collision Enabled', False)
+#        if self.useCollisionEnvironment:
+#            self.prepCollisionEnvironment()
+#            collisionObj = om.findObjectByName(obj.getProperty('Name') + ' affordance')
+#            collisionObj.setProperty('Collision Enabled', False)
 
         return obj, frameObj
 
@@ -503,7 +508,6 @@ class TableDemo(object):
                 self.lockBack=False
 
         frameObj = om.findObjectByName( 'table goal frame')
-        print frameObj
 
         startPose = self.getPlanningStartPose()
         self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, side, frameObj.transform, lockBase=self.lockBase, lockBack=self.lockBack)
@@ -513,13 +517,13 @@ class TableDemo(object):
         self.constraintSet.ikParameters.usePointwise = False
         self.constraintSet.ikParameters.useCollision = True
         self.teleopPanel.endEffectorTeleop.updateCollisionEnvironment()
+        self.targetObject = self.clusterObjects[-1]
         
-        print self.ikPlanner.ikServer.runMultiRRT(self.graspingHand, list(self.robotStateModel.model.getJointPositions()),
-                                                  list(np.append(self.clusterObjects[0].getPose()[0], self.clusterObjects[0].getPose()[1])),
-                                                  affordancepanel.panel.affordanceManager.getAffordances())
+        plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
+                      list(np.append(self.targetObject.getPose()[0], self.targetObject.getPose()[1])))
 
 #        plan = self.constraintSet.runIkTraj()
-#        self.addPlan(plan)
+        self.addPlan(plan)
 
 
     def planTouchTableObject(self, side='left'):
@@ -549,28 +553,33 @@ class TableDemo(object):
     def planLiftTableObject(self, side):
 
         startPose = self.getPlanningStartPose()
-        self.constraintSet = self.ikPlanner.planEndEffectorDelta(startPose, side, [0.0, 0.0, 0.15])
 
-        if not self.ikPlanner.fixedBaseArm:
-            self.constraintSet.constraints[-1].tspan[1] = 1.0
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        t.Translate(0.1, -0.3, 0.9)
+        t.Concatenate(om.findObjectByName('table stance frame').transform)
+#        self.constraintSet = self.ikPlanner.planEndEffectorDelta(startPose, side, [0.0, 0.0, 0.15])
 
-        endPose, info = self.constraintSet.runIk()
+#        if not self.ikPlanner.fixedBaseArm:
+#            self.constraintSet.constraints[-1].tspan[1] = 1.0
+
+#        endPose, info = self.constraintSet.runIk()
         
-        if not self.ikPlanner.fixedBaseArm:
-            endPose = self.getRaisedArmPose(endPose, side)
+#        if not self.ikPlanner.fixedBaseArm:
+#            endPose = self.getRaisedArmPose(endPose, side)
 
-            reachingSideJoints = []
-            if (side == 'left'):
-                reachingSideJoints += self.ikPlanner.leftArmJoints
-            else:
-                reachingSideJoints += self.ikPlanner.rightArmJoints
+#            reachingSideJoints = []
+#            if (side == 'left'):
+#                reachingSideJoints += self.ikPlanner.leftArmJoints
+#            else:
+#                reachingSideJoints += self.ikPlanner.rightArmJoints
 
 
-            endPoseName = 'raised_arm_end_pose'
-            self.ikPlanner.ikServer.sendPoseToServer(endPose, endPoseName)
-            postureConstraint = self.ikPlanner.createPostureConstraint(endPoseName, reachingSideJoints)
-            postureConstraint.tspan = np.array([2.0, 2.0])
-            self.constraintSet.constraints.append(postureConstraint)
+#            endPoseName = 'raised_arm_end_pose'
+#            self.ikPlanner.ikServer.sendPoseToServer(endPose, endPoseName)
+#            postureConstraint = self.ikPlanner.createPostureConstraint(endPoseName, reachingSideJoints)
+#            postureConstraint.tspan = np.array([2.0, 2.0])
+#            self.constraintSet.constraints.append(postureConstraint)
 
         #postureConstraint = self.ikPlanner.createPostureConstraint('q_nom', robotstate.matchJoints('.*_leg_kny'))
         #postureConstraint.tspan = np.array([2.0, 2.0])
@@ -581,7 +590,11 @@ class TableDemo(object):
         #self.constraintSet.constraints.append(postureConstraint)
 
         print 'planning lift'
-        plan = self.constraintSet.runIkTraj()
+
+        plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
+                                          list(np.append(t.GetPosition(), t.GetOrientationWXYZ())), True)
+
+#        plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
 
 
@@ -731,22 +744,22 @@ class TableDemo(object):
             desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.20,  0.5 , 0.4]), array([ 1.,  0.,  0.,  0.]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene0-leg1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,0.05,0.8])
+            desc = dict(classname='BoxAffordanceItem', Name='scene0_leg1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,0.05,0.8])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.20,  -0.5 , 0.4]), array([ 1.,  0.,  0.,  0.]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene0-leg2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,0.05,0.8])
+            desc = dict(classname='BoxAffordanceItem', Name='scene0_leg2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,0.05,0.8])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.05,  0.3 , 0.98]), array([ 1.,  0.,  0.,  0.]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene0-object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.08,0.08,0.24])
+            desc = dict(classname='BoxAffordanceItem', Name='scene0_object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.08,0.08,0.24])
             obj1 = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.25,  0.1 , 0.98]), array([ 1.,  0.,  0.,  0.]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene0-object2', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Dimensions=[0.07,0.07,0.25])
+            desc = dict(classname='BoxAffordanceItem', Name='scene0_object2', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Dimensions=[0.07,0.07,0.25])
             obj2 = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.25,  -0.1 , 0.95]), array([ 1.,  0.,  0.,  0.]))
-            desc = dict(classname='CylinderAffordanceItem', Name='scene0-object3', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Radius=0.035, Length = 0.22)
+            desc = dict(classname='CylinderAffordanceItem', Name='scene0_object3', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Radius=0.035, Length = 0.22)
             obj3 = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 1.05,  -0.2 , 0.95]), array([ 1.,  0.,  0.,  0.]))
-            desc = dict(classname='CylinderAffordanceItem', Name='scene0-object4', uuid=newUUID(), pose=pose, Color=[0.9, 0.1, 0.1], Radius=0.045, Length = 0.22)
+            desc = dict(classname='CylinderAffordanceItem', Name='scene0_object4', uuid=newUUID(), pose=pose, Color=[0.9, 0.1, 0.1], Radius=0.045, Length = 0.22)
             obj4 = affordancepanel.panel.affordanceFromDescription(desc)
 
             self.clusterObjects = [obj1,obj2, obj3, obj4]
@@ -760,7 +773,7 @@ class TableDemo(object):
             desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([-0.98873106,  1.50393395,  0.57]), array([ 0.49752312,  0.        ,  0.        ,  0.86745072]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene1-object1', uuid=newUUID(), pose=pose, Color=[0.005, 0.005, 0.3], Dimensions=[0.05,0.05,0.14])
+            desc = dict(classname='BoxAffordanceItem', Name='scene1_object1', uuid=newUUID(), pose=pose, Color=[0.005, 0.005, 0.3], Dimensions=[0.05,0.05,0.14])
             obj1 = affordancepanel.panel.affordanceFromDescription(desc)
 
             self.clusterObjects = [obj1]
@@ -774,19 +787,19 @@ class TableDemo(object):
             desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ 0.57555491,  1.6445656 ,  0.93993633]), array([ 0.86280979,  0.        ,  0.        ,  0.50552871]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene2-object', uuid=newUUID(), pose=pose, Color=[0.005, 0.005, 0.3], Dimensions=[0.05,0.05,0.12])
+            desc = dict(classname='BoxAffordanceItem', Name='scene2_object', uuid=newUUID(), pose=pose, Color=[0.005, 0.005, 0.3], Dimensions=[0.05,0.05,0.12])
             obj1 = affordancepanel.panel.affordanceFromDescription(desc)
 
             pose = (array([ 0.38458635,  1.32625758,  1.37444768]), array([ 0.86314205,  0.        ,  0.        ,  0.50496119]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene2-wall1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,1.0,0.4])
+            desc = dict(classname='BoxAffordanceItem', Name='scene2_wall1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,1.0,0.4])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
 
             pose = (array([ 0.08282192,  1.49589397,  1.02518917]), array([ 0.86314205,  0.        ,  0.        ,  0.50496119]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene2-wall2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,0.3,0.29])
+            desc = dict(classname='BoxAffordanceItem', Name='scene2_wall2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,0.3,0.29])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
 
             pose = (array([ 0.69532105,  1.15157858,  1.02518917]), array([ 0.86314205,  0.        ,  0.        ,  0.50496119]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene2-wall3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,0.3,0.29])
+            desc = dict(classname='BoxAffordanceItem', Name='scene2_wall3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,0.3,0.29])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
 
             self.clusterObjects = [obj1]
@@ -800,16 +813,16 @@ class TableDemo(object):
             desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([-1.05, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene3-edge1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
+            desc = dict(classname='BoxAffordanceItem', Name='scene3_edge1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([-0.35, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene3-edge2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
+            desc = dict(classname='BoxAffordanceItem', Name='scene3_edge2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([-0.6803156 , -1.1826616 ,  1.31299839]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene3-edge3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.14,1.0,0.07])
+            desc = dict(classname='BoxAffordanceItem', Name='scene3_edge3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.14,1.0,0.07])
             obj = affordancepanel.panel.affordanceFromDescription(desc)
             pose = (array([ -0.7,  -1.5 , 1.03]), array([ 1.,  0.,  0.,  0.]))
-            desc = dict(classname='BoxAffordanceItem', Name='scene3-object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.05,0.05,0.14])
+            desc = dict(classname='BoxAffordanceItem', Name='scene3_object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.05,0.05,0.14])
             obj1 = affordancepanel.panel.affordanceFromDescription(desc)
 
             self.clusterObjects = [obj1]
@@ -1101,13 +1114,13 @@ class TableTaskPanel(TaskUserPanel):
         self.addManualButton('Commit Manip', self.tableDemo.commitManipPlan)
 
     def addDefaultProperties(self):
-        self.params.addProperty('Hand', 0,
+        self.params.addProperty('Hand', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         self.params.addProperty('Base', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        self.params.addProperty('Scene', 4,
+        self.params.addProperty('Scene', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Objects on table','Object below table','Object through slot','Object at depth','Objects on table (fit)']))
         self._syncProperties()
 
@@ -1168,21 +1181,22 @@ class TableTaskPanel(TaskUserPanel):
 
         # prep
         prep = self.taskTree.addGroup('Preparation')
-        addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
-        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
-        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+#        addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
+#        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
+#        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
         addFunc(v.createCollisionPlanningScene, 'prep from file', parent=prep)
 
 
         # walk
         walk = self.taskTree.addGroup('Approach Table')
-        addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
-        addTask(rt.UserPromptTask(name='approve footsteps',
-                                  message='Please approve footstep plan.'), parent=walk)
-        addTask(rt.CommitFootstepPlan(name='walk to table',
-                                      planName='table grasp stance footstep plan'), parent=walk)
-        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
-        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
+#        addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
+#        addTask(rt.UserPromptTask(name='approve footsteps',
+#                                  message='Please approve footstep plan.'), parent=walk)
+#        addTask(rt.CommitFootstepPlan(name='walk to table',
+#                                      planName='table grasp stance footstep plan'), parent=walk)
+        addFunc(self.tableDemo.moveRobotToTableStanceFrame, 'walk to table', parent = walk)
+#        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
+#        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
 
         # lift object
         # Not Collision Free:

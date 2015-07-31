@@ -1,31 +1,40 @@
-function [r, grHand, qStart, xGoal, obstacles] = test_multiRRT_reach(r, grHand, qStart, xGoal, obstacles)
-  world = r.findLinkId('world');
+function info = test_multiRRT_reach(r, grHand, qStart, xGoal, objectGrasped)
+  if nargin < 5
+    objectGrasped = false;
+  end  
   hand.left = r.findLinkId('LeftPalm');
   hand.right = r.findLinkId('RightPalm');
-  for ob = 1:numel(obstacles)
-    r.addGeometryToBody(world, ob)
-  end
-  r = r.setTerrain(MyRigidBodyFlatTerrain());
-  r = r.compile();
+  point_in_link_frame = [0.08; -0.07; 0];
+  
+  addpath('/home/marco/drc/software/ddapp/src/matlab')
+  fixed_point_file = '/home/marco/drc/software/control/matlab/data/valkyrie_fp_june2015.mat';
+  left_foot_link = 'LeftFoot';
+  right_foot_link = 'RightFoot';
+  runRRTIKServer
   
   kinsol = r.doKinematics(qStart);
-  xStart = [r.forwardKin(kinsol, hand.(grHand), [0;0;0], 2); qStart'];
-  
-  goalFrame = [eye(3) xGoal(1:3)'; 0 0 0 1];
-  point_in_link_frame = [0.08; -0.07; 0];
-  goalEulerConstraint = WorldEulerConstraint(r, hand.(grHand), [0;0; -pi], [0; 0; pi]);
-  
-  goalDistConstraint = Point2PointDistanceConstraint(r, hand.(grHand), r.findLinkId('world'), point_in_link_frame, goalFrame(1:3, 4), -0.001, 0.001);
-  goalConstraints = {goalDistConstraint, goalEulerConstraint};
+  xStart = [r.forwardKin(kinsol, hand.(grHand), point_in_link_frame, 2); qStart'];
   
   l_foot = r.findLinkId('LeftFoot');
   r_foot = r.findLinkId('RightFoot');
-  footPose = r.forwardKin(kinsol,l_foot, [0; 0; 0], 2);
-  leftFootPosConstraint = WorldPositionConstraint(r, l_foot, [0; 0; 0], footPose(1:3), footPose(1:3));
-  leftFootQuatConstraint = WorldQuatConstraint(r, l_foot, footPose(4:7), 0.0, [0.0, 1.0]);
-  footPose = r.forwardKin(kinsol,r_foot, [0; 0; 0], 2);
-  rightFootPosConstraint = WorldPositionConstraint(r, r_foot, [0; 0; 0], footPose(1:3), footPose(1:3));
-  rightFootQuatConstraint = WorldQuatConstraint(r, r_foot, footPose(4:7), 0.0, [0.0, 1.0]);  
+  leftFootPose = r.forwardKin(kinsol,l_foot, [0; 0; 0], 2);
+  leftFootPosConstraint = WorldPositionConstraint(r, l_foot, [0; 0; 0], leftFootPose(1:3), leftFootPose(1:3));
+  leftFootQuatConstraint = WorldQuatConstraint(r, l_foot, leftFootPose(4:7), 0.0, [0.0, 1.0]);
+  rightFootPose = r.forwardKin(kinsol,r_foot, [0; 0; 0], 2);
+  rightFootPosConstraint = WorldPositionConstraint(r, r_foot, [0; 0; 0], rightFootPose(1:3), rightFootPose(1:3));
+  rightFootQuatConstraint = WorldQuatConstraint(r, r_foot, rightFootPose(4:7), 0.0, [0.0, 1.0]);
+  
+%   xGoal = [(leftFootPose(1:2) + rightFootPose(1:2))/2; 0]' + [0.1; -0.3; 0.9]'; 
+  
+  goalFrame = [eye(3) xGoal(1:3)'; 0 0 0 1];
+  goalEulerConstraint = WorldEulerConstraint(r, hand.(grHand), [0;0; -pi], [0; 0; pi]);
+  
+  goalDistConstraint = Point2PointDistanceConstraint(r, hand.(grHand), r.findLinkId('world'), point_in_link_frame, goalFrame(1:3, 4), -0.001, 0.001);
+  if ~objectGrasped
+    goalConstraints = {goalDistConstraint, goalEulerConstraint};
+  else
+    goalConstraints = {goalDistConstraint};
+  end
   
   l_foot_pts = r.getBody(l_foot).getTerrainContactPoints();
   r_foot_pts = r.getBody(r_foot).getTerrainContactPoints();
@@ -70,12 +79,41 @@ function [r, grHand, qStart, xGoal, obstacles] = test_multiRRT_reach(r, grHand, 
   ikoptions = ikoptions.setQ(Q);
   ikoptions = ikoptions.setMajorOptimalityTolerance(1e-3);
   
-  disp('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-  disp(1:r.getNumBodies())
+  options = struct();
   
-  MultipleTreeProblem(r, hand.(grHand), xStart, xGoal(1:3)', [],...
-    goalConstraints, additionalConstraints, qStart',...
+  if ~isfield(options,'goal_bias'), options.goal_bias = 0.5; end;
+  if ~isfield(options,'n_smoothing_passes'), options.n_smoothing_passes = 10; end;
+  if ~isfield(options,'planning_mode'), options.planning_mode = 'multiRRT'; end;
+  if ~isfield(options,'visualize'), options.visualize = true; end;
+  if ~isfield(options,'scene'), options.scene = 6; end;
+  if ~isfield(options,'model'), options.model = 'val2'; end;
+  if ~isfield(options,'convex_hull'), options.convex_hull = false; end;
+  if ~isfield(options,'graspingHand'), options.graspingHand = 'right'; end;
+  if ~isfield(options,'costType'), options.costType = 'length'; end;
+  if ~isfield(options,'firstFeasibleTraj'), options.firstFeasibleTraj = false; end;
+  if ~isfield(options,'robot'), options.robot = []; end;
+  if ~isfield(options,'nTrees'), options.nTrees = 4; end;
+  if ~isfield(options,'goalObject'), options.goalObject = 1; end;
+  
+  
+  options.floating = true;
+  options.terrain = RigidBodyFlatTerrain(); %Changed to a smaller terrain to avoid visualization problem when zooming
+  options.joint_v_max = 15*pi/180;
+  
+  fp = load([getDrakePath(), '/../control/matlab/data/valkyrie_fp_june2015.mat']);
+  qNom = fp.xstar(1:r.getNumPositions());
+  
+  multiTree = MultipleTreeProblem(r, hand.(grHand), xStart, xGoal(1:3)', [],...
+    goalConstraints, additionalConstraints, qNom,...
     'capabilityMap', cm, 'graspingHand', grHand, 'activecollisionoptions',...
-    struct('body_idx', []),...setdiff(1:r.getNumBodies(), inactive_collision_bodies)),...
+    struct('body_idx', setdiff(1:r.getNumBodies(), inactive_collision_bodies)),...
     'ikoptions', ikoptions, 'endeffectorpoint', point_in_link_frame);
+  [~, info, ~, q_path] = multiTree.rrt(options);  
+  info = info.status;
+  disp(info)
+  
+  path_length = size(q_path,2);  
+  q_traj = PPTrajectory(pchip(linspace(0, 1, path_length), q_path(8:end,:)));
+  disp(q_path(8:end,end))
+  s.publishTraj(q_traj, 1);  
 end
