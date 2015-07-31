@@ -624,6 +624,67 @@ class ValvePlannerDemo(object):
             nominalPose = self.ikPlanner.getMergedPostureFromDatabase(nominalPose, 'valve', 'reach-nominal-ccw', side=self.graspingHand)
         return nominalPose
 
+
+    def computeHumanTouchFrame(self, touchValve):
+        self.nextScribeAngle = -60#-60
+        self.palmInAngle = 30#30 # how much should the palm face the axis - 0 not at all, 90 entirely
+
+        if touchValve:
+            faceDepth = 0.0
+        else:
+            faceDepth = self.reachDepth
+
+        tDepth = transformUtils.frameFromPositionAndRPY([0,faceDepth,0], [0,0,0])
+
+        scribeRadius = om.findObjectByName('valve').params['radius']
+
+        position = [0, scribeRadius*math.sin( math.radians( self.nextScribeAngle )) , scribeRadius*math.cos( math.radians( self.nextScribeAngle ))   ]
+        # roll angle governs how much the palm points along towards the rotation axis
+        # yaw ensures thumb faces the axis
+        if (self.graspingObject is 'valve'):
+            # valve, left and right
+            rpy = [(-self.palmInAngle-90) , self.nextScribeAngle, (90)]
+        else:
+            if (self.graspingHand is 'left'): # lever left
+                rpy = [-90, (180+self.nextScribeAngle), 90]
+            else:
+                rpy = [-90, self.nextScribeAngle, 90]
+
+        t = om.findObjectByName('valve').getChildFrame().transform
+
+        t2 = transformUtils.frameFromPositionAndRPY(position, rpy)
+        t3=transformUtils.copyFrame(t)
+        t3.PreMultiply()
+        t3.Concatenate(t2)
+        t3.Concatenate(tDepth)
+
+        faceFrameDesired = vis.showFrame(t3, 'face frame desired', parent=om.findObjectByName('valve'), visible=True, scale=0.2)
+
+        return faceFrameDesired
+
+    def planHumanReach(self):
+        faceFrameDesired = self.computeHumanTouchFrame(False) # 0 = not in contact
+        self.computeHumanTouchPlan(faceFrameDesired)
+
+    def planHumanTouch(self):
+        faceFrameDesired = self.computeHumanTouchFrame(True)
+        self.computeHumanTouchPlan(faceFrameDesired)
+
+    def computeHumanTouchPlan(self, faceFrameDesired):
+        # new full 6 dof constraint:
+        startPose = self.getPlanningStartPose()
+        self.constraintSet = self.ikPlanner.planEndEffectorGoal(startPose, self.graspingHand, faceFrameDesired, lockBase=self.lockBase, lockBack=self.lockBack)
+        endPose, info = self.constraintSet.runIk()
+
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedLow
+        self.planTrajectory()
+        self.ikPlanner.ikServer.maxDegreesPerSecond = self.speedHigh
+
+    def planTrajectory(self):
+        self.ikPlanner.ikServer.usePointwise = False
+        plan = self.constraintSet.runIkTraj()
+        self.addPlan(plan)
+
     # Glue Functions ###########################################################
     def moveRobotToGraspStanceFrame(self):
         self.teleportRobotToStanceFrame(om.findObjectByName('valve grasp stance').transform)
@@ -806,7 +867,7 @@ class ValveTaskPanel(TaskUserPanel):
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        self.params.addProperty('Show Turning Modes',0,
+        self.params.addProperty('Show Turning Modes',1,
                                 attributes=om.PropertyAttributes(enumNames=['Simple Turn','Human-like Turn']))
 
         self._syncProperties()
@@ -1031,6 +1092,7 @@ class ValveTaskPanel(TaskUserPanel):
         prep = self.taskTree.addGroup('Preparation')
         addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
         addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+        addFunc(v.prepFromFile, 'prep from file', parent=prep)
 
         # fit
         fit = self.taskTree.addGroup('Fitting')
@@ -1061,11 +1123,18 @@ class ValveTaskPanel(TaskUserPanel):
 
         # raise the arm up
         turning = self.taskTree.addGroup('Turning')
-        addTask(rt.PlanPostureGoal(name='arm up pregrasp', postureGroup='General',
-                                   postureName='arm up pregrasp', side='Default'), parent=turning)
+        addTask(rt.PlanPostureGoal(name='plan arm up pregrasp', postureGroup='General',
+                                   postureName='arm up pregrasp', side=side), parent=turning)
         addTask(rt.CommitManipulationPlan(name='execute manip plan',
-                                          planName='arm up pregrasp plan'), parent=prep)
-        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)
+                                          planName='arm up pregrasp plan'), parent=turning)
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=turning)
+
+
+        addManipulation(functools.partial(v.planHumanReach),
+                            name='Reach to valve', parent=turning)
+        addManipulation(functools.partial(v.planHumanTouch),
+                            name='Touch valve', parent=turning)
+
 
 
         # go to finishing posture
