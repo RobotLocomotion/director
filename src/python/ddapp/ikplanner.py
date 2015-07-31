@@ -1353,6 +1353,15 @@ class IKPlanner(object):
         return np.sum(np.abs(pose - nominalPose)*cost)
 
 
+    def runMultiRRT(self, grHand, qStart, xGoal, objectGrasped = False):
+
+        listener = self.getManipPlanListener()
+        info = self.ikServer.runMultiRRT(grHand, qStart, xGoal, objectGrasped)
+        self.lastManipPlan = listener.waitForResponse(timeout=12000)
+        listener.finish()
+
+        print 'traj info:', info
+        return self.lastManipPlan
 
 
 sys.path.append(os.path.join(app.getDRCBase(), 'software/tools/tools/scripts'))

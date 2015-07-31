@@ -370,20 +370,13 @@ class AsyncIKCommunicator():
         if self.handleAsyncTasks() > 0:
             return
             
-    def runMultiRRT(self, grHand, qStart, xGoal, obstacles):
+    def runMultiRRT(self, grHand, qStart, xGoal, objectGrasped):
         print '################## multiRRT #################'
         
-        obStr = '{'
-        for ob in obstacles:
-            desc = ob.getDescription()
-            if desc['classname'] == 'BoxAffordanceItem':
-                obStr += 'RigidBodyBox(%s, %s, quat2rpy(%s)),'%(desc['Dimensions'], list(desc['pose'][0]), list(desc['pose'][1]))
-            elif desc['classname'] == 'CylinderAffordanceItem':
-                obStr += 'RigidBodyCylinder(%s, %s, %s, quat2rpy(%s)),'%(desc['Radius'], desc['Length'], list(desc['pose'][0]), list(desc['pose'][1]))
-        obStr = obStr[:-1] + '}'
-        
-        commands = []
-        commands.append('[r, grHand, qStart, xGoal, obstacles] = test_multiRRT_reach(r, \'%s\', %s, %s, %s)\n'%(grHand, qStart, xGoal, obStr))
+        commands = ['test_multiRRT_reach(r, \'%s\', %s, %s, %d)\n'%(grHand, qStart, xGoal, objectGrasped)]
         self.comm.sendCommands(commands)
+
+        info = self.comm.getFloatArray('info')[0]
         
         print '################## multiRRT END #################'
+        return info
