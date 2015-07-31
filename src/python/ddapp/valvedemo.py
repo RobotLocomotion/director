@@ -1,3 +1,4 @@
+import os
 import math
 import functools
 import numpy as np
@@ -14,6 +15,7 @@ from ddapp import segmentation
 from ddapp.tasks.taskuserpanel import TaskUserPanel
 from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
 from ddapp.uuidutil import newUUID
+import ioUtils
 
 import ddapp.tasks.robottasks as rt
 
@@ -623,7 +625,10 @@ class ValvePlannerDemo(object):
         return nominalPose
 
     # Glue Functions ###########################################################
-    def moveRobotToStanceFrame(self, frame):
+    def moveRobotToGraspStanceFrame(self):
+        self.teleportRobotToStanceFrame(om.findObjectByName('valve grasp stance').transform)
+
+    def teleportRobotToStanceFrame(self, frame):
         self.sensorJointController.setPose('q_nom')
         stancePosition = frame.GetPosition()
         stanceOrientation = frame.GetOrientation()
@@ -707,8 +712,17 @@ class ValvePlannerDemo(object):
     def commitManipPlan(self):
         self.manipPlanner.commitManipPlan(self.plans[-1])
 
-    # Nominal Plans and Execution  #############################################
 
+    def prepFromFile(self, moveRobot=True):
+        filename = os.path.expanduser('~/drc-testing-data/valve/valve-pod-wall-ihmc-new.vtp')
+        polyData = ioUtils.readPolyData( filename )
+        vis.showPolyData( polyData,'pointcloud snapshot')
+
+        segmentation.segmentValveWallAuto(.20, mode='valve', removeGroundMethod=segmentation.removeGround )
+        self.computeStanceFrame()
+
+        if (moveRobot):
+            self.moveRobotToGraspStanceFrame()
 
 class ValveImageFitter(ImageBasedAffordanceFit):
 
@@ -792,12 +806,18 @@ class ValveTaskPanel(TaskUserPanel):
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
+        self.params.addProperty('Show Turning Modes',0,
+                                attributes=om.PropertyAttributes(enumNames=['Simple Turn','Human-like Turn']))
+
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
+        taskToShowOld = self.taskToShow
         self._syncProperties()
-        self.taskTree.removeAllTasks()
-        self.addTasks()
+
+        if not taskToShowOld == self.taskToShow:
+            self.addTasks()
+
 
     def _syncProperties(self):
 
@@ -828,7 +848,19 @@ class ValveTaskPanel(TaskUserPanel):
         else:
             self.valveDemo.lockBack = False
 
+        self.taskToShow = self.params.getProperty('Show Turning Modes')
+
     def addTasks(self):
+        self.taskTree.removeAllTasks()
+
+        if self.taskToShow == 0:
+            self.addSimpleTurnTasks()
+        elif self.taskToShow == 1:
+            self.addHumanTurnTasks()
+        else:
+            return
+
+    def addSimpleTurnTasks(self):
 
         # some helpers
         def addTask(task, parent=None):
@@ -879,7 +911,6 @@ class ValveTaskPanel(TaskUserPanel):
 
         v = self.valveDemo
 
-        self.taskTree.removeAllTasks()
         side = self.params.getPropertyEnumValue('Hand')
 
         ###############
@@ -925,6 +956,116 @@ class ValveTaskPanel(TaskUserPanel):
         else:
             for i in range(0, 2):
                 addLargeValveTurn()
+
+
+        # go to finishing posture
+        prep = self.taskTree.addGroup('Prep for walking')
+
+        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
+        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+        addTask(rt.PlanPostureGoal(name='plan walk posture', postureGroup='General',
+                                   postureName='safe nominal', side='Default'), parent=prep)
+        addTask(rt.CommitManipulationPlan(name='execute manip plan',
+                                          planName='safe nominal posture plan'), parent=prep)
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)
+
+
+
+    def addHumanTurnTasks(self):
+
+        # some helpers
+        def addTask(task, parent=None):
+            self.taskTree.onAddTask(task, copy=False, parent=parent)
+
+        def addFunc(func, name, parent=None):
+            addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
+
+        def addManipulation(func, name, parent=None):
+            group = self.taskTree.addGroup(name, parent=parent)
+            addFunc(func, name='plan motion', parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
+            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
+                    parent=group)
+            addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
+                    parent=group)
+
+        def addLargeValveTurn(parent=None):
+            group = self.taskTree.addGroup('Valve Turn', parent=parent)
+
+            # valve manip actions
+            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
+                            name='Reach to valve', parent=group)
+            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
+                            name='Insert hand', parent=group)
+            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
+                            name='Turn valve', parent=group)
+            addManipulation(v.planRetract, name='Retract hand', parent=group)
+
+        def addSmallValveTurn(parent=None):
+            group = self.taskTree.addGroup('Valve Turn', parent=parent)
+            side = 'Right' if v.graspingHand == 'right' else 'Left'
+
+            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
+                            name='Reach to valve', parent=group)
+            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
+                            name='Insert hand', parent=group)
+            addTask(rt.CloseHand(name='grasp valve', side=side, mode='Basic',
+                                 amount=self.valveDemo.closedAmount),
+                    parent=group)
+            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
+                            name='plan turn valve', parent=group)
+            addTask(rt.CloseHand(name='release valve', side=side, mode='Basic',
+                                 amount=self.valveDemo.openAmount),
+                    parent=group)
+            addManipulation(v.planRetract, name='plan retract', parent=group)
+
+        v = self.valveDemo
+
+        side = self.params.getPropertyEnumValue('Hand')
+
+        ###############
+        # add the tasks
+
+        # prep
+        prep = self.taskTree.addGroup('Preparation')
+        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
+        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+
+        # fit
+        fit = self.taskTree.addGroup('Fitting')
+        addTask(rt.UserPromptTask(name='fit valve',
+                                  message='Please fit and approve valve affordance.'), parent=fit)
+        addTask(rt.FindAffordance(name='check valve affordance', affordanceName='valve'),
+                parent=fit)
+
+        # walk
+        walk = self.taskTree.addGroup('Approach')
+        addFunc(v.planFootstepsToStance, 'plan walk to valve', parent=walk)
+        addTask(rt.UserPromptTask(name='approve footsteps',
+                                  message='Please approve footstep plan.'), parent=walk)
+        addTask(rt.CommitFootstepPlan(name='walk to valve',
+                                      planName='valve grasp stance footstep plan'), parent=walk)
+        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
+        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
+
+        # refit
+        refit = self.taskTree.addGroup('Re-fitting')
+        addTask(rt.UserPromptTask(name='fit valve',
+                                  message='Please fit and approve valve affordance.'),
+                parent=refit)
+
+        # set fingers
+        addTask(rt.CloseHand(name='set finger positions', side=side, mode='Basic',
+                             amount=self.valveDemo.openAmount), parent=refit)
+
+        # raise the arm up
+        turning = self.taskTree.addGroup('Turning')
+        addTask(rt.PlanPostureGoal(name='arm up pregrasp', postureGroup='General',
+                                   postureName='arm up pregrasp', side='Default'), parent=turning)
+        addTask(rt.CommitManipulationPlan(name='execute manip plan',
+                                          planName='arm up pregrasp plan'), parent=prep)
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)
 
 
         # go to finishing posture
