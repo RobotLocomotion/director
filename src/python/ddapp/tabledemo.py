@@ -1199,15 +1199,16 @@ class TableTaskPanel(TaskUserPanel):
             if confirm:
                 addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'), parent=parent)
 
-        def addManipulation(func, name, parent=None):
+        def addManipulation(func, name, parent=None, confirm=True):
             group = self.taskTree.addGroup(name, parent=parent)
             addFunc(func, name='plan motion', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
                     parent=group)
-            addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
-                    parent=group)
+            if confirm:
+                addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
+                        parent=group)
 
         v = self.tableDemo
 
