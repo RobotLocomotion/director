@@ -863,6 +863,11 @@ class TableDemo(object):
     def prepGetSceneFrame(self):
         # TODO: call service for ply from octomap which returns file name
         vis.showPolyData(self.getInputPointCloud(), "scene")
+        try: # Set scene to RGB since by default it's colored as solid
+            objScene = om.findObjectByName("scene")
+            objScene.setProperty('Color By', 'rgb_colors')
+        except:
+            pass
 
     def prepKukaTestDemoSequence(self, inputFile='~/drc-testing-data/tabletop/kinect_collision_environment.vtp'):
         filename = os.path.expanduser(inputFile)
