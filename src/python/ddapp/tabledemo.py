@@ -860,11 +860,13 @@ class TableDemo(object):
         boxAffordance.setProperty('Alpha', 0.3)
 
     ######### Nominal Plans and Execution  #################################################################
-    def prepGetSceneFrame(self):
-        # TODO: call service for ply from octomap which returns file name
-        vis.showPolyData(self.getInputPointCloud(), "scene")
+    def prepGetSceneFrame(self, createNewObj=False):
+        if createNewObj:
+            objScene = vis.showPolyData(self.getInputPointCloud(), "scene")
+        else:
+            objScene = vis.updatePolyData(self.getInputPointCloud(), "scene")
+
         try: # Set scene to RGB since by default it's colored as solid
-            objScene = om.findObjectByName("scene")
             objScene.setProperty('Color By', 'rgb_colors')
         except:
             pass
