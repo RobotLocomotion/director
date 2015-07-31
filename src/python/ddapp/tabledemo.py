@@ -170,21 +170,11 @@ class TableDemo(object):
 
         self.tableData = tableData
 
-        self.tableBox = vis.showPolyData(tableData.box, 'table box', parent=aff, color=[0,1,0], visible=False)
-        #self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
-        self.tableBox.actor.SetUserTransform(tableData.frame)
-
+        tableBox = vis.showPolyData(tableData.box, 'table box', parent=aff, color=[0,1,0], visible=False)
+        tableBox.actor.SetUserTransform(tableData.frame)
 
         if self.useCollisionEnvironment:
             self.addCollisionObject(aff)
-
-        return
-
-        self.tableObj = vis.showPolyData(tableData.mesh, 'table', parent='affordances', color=[0,1,0])
-        self.tableFrame = vis.showFrame(tableData.frame, 'table frame', parent=self.tableObj, scale=0.2)
-        self.tableBox = vis.showPolyData(tableData.box, 'table box', parent=self.tableObj, color=[0,1,0], visible=False)
-        self.tableObj.actor.SetUserTransform(self.tableFrame.transform)
-        self.tableBox.actor.SetUserTransform(self.tableFrame.transform)
 
 
     def onSegmentBin(self, p1, p2):
