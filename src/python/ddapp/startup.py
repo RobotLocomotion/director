@@ -362,14 +362,14 @@ if usePlanning:
 
     handJoints = []
     if drcargs.args().directorConfigFile.find('atlas') != -1:
-        handJoints = roboturdf.getRobotiqJoints()
+        handJoints = roboturdf.getRobotiqJoints() + ['neck_ay']
     else:
         for handModel in ikPlanner.handModels:
             handJoints += handModel.handModel.model.getJointNames()
         # filter base joints out
         handJoints = [ joint for joint in handJoints if joint.find('base')==-1 ]
 
-    teleopJointPropagator = JointPropagator(robotStateModel, teleopRobotModel, handJoints + ['neck_ay'])
+    teleopJointPropagator = JointPropagator(robotStateModel, teleopRobotModel, handJoints)
     playbackJointPropagator = JointPropagator(robotStateModel, playbackRobotModel, handJoints)
     def doPropagation(model=None):
         if teleopRobotModel.getProperty('Visible'):
