@@ -862,14 +862,10 @@ class TableDemo(object):
     ######### Nominal Plans and Execution  #################################################################
     def prepGetSceneFrame(self, createNewObj=False):
         if createNewObj:
-            objScene = vis.showPolyData(self.getInputPointCloud(), "scene")
+            objScene = vis.showPolyData(self.getInputPointCloud(), 'scene', colorByName='rgb_colors')
         else:
-            objScene = vis.updatePolyData(self.getInputPointCloud(), "scene")
+            objScene = vis.updatePolyData(self.getInputPointCloud(), 'scene', colorByName='rgb_colors')
 
-        try: # Set scene to RGB since by default it's colored as solid
-            objScene.setProperty('Color By', 'rgb_colors')
-        except:
-            pass
 
     def prepKukaTestDemoSequence(self, inputFile='~/drc-testing-data/tabletop/kinect_collision_environment.vtp'):
         filename = os.path.expanduser(inputFile)
