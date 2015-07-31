@@ -451,7 +451,7 @@ if usePlanning:
     mappingDemo = mappingdemo.MappingDemo(robotStateModel, playbackRobotModel,
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                     perception.multisenseDriver, view, robotStateJointController, playPlans)
-    if useMappingPanel: #  if false, might break task panel TODO: handle
+    if useMappingPanel:
         mappingPanel = mappingpanel.init(robotStateJointController, footstepsDriver)
         mappingTaskPanel = mappingpanel.MappingTaskPanel(mappingDemo, mappingPanel)
 
