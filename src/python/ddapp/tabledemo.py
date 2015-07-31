@@ -83,7 +83,7 @@ class TableDemo(object):
 
         self.constraintSet = []
 
-        self.reachDist = 0.12
+        self.reachDist = 0.07
 
         # Switch indicating whether to use affordances as a collision environment
         self.useCollisionEnvironment = True
@@ -452,7 +452,7 @@ class TableDemo(object):
         startPose = self.getPlanningStartPose()
 
         if self.ikPlanner.fixedBaseArm: # includes reachDist hack instead of in ikPlanner (TODO!)
-            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist+.1,0,-.03]), [0,0,-90] )
+            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist+.15,0,-.03]), [0,0,-90] )
             f.PreMultiply()
             f.RotateY(90)
             f.Update()
@@ -528,7 +528,7 @@ class TableDemo(object):
         startPose = self.getPlanningStartPose()
 
         if self.ikPlanner.fixedBaseArm: # includes distance hack and currently uses reachDist instead of touchDist (TODO!)
-            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist,0,-0.03]), [0,0,-90] )
+            f = transformUtils.frameFromPositionAndRPY( np.array(frame.transform.GetPosition())-np.array([self.reachDist+.05,0,-0.03]), [0,0,-90] )
             f.PreMultiply()
             f.RotateY(90)
             f.Update()
