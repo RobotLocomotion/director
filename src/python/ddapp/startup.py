@@ -453,7 +453,7 @@ if usePlanning:
                     perception.multisenseDriver, view, robotStateJointController, playPlans)
     if useMappingPanel: #  if false, might break task panel TODO: handle
         mappingPanel = mappingpanel.init(robotStateJointController, footstepsDriver)
-    mappingTaskPanel = mappingpanel.MappingTaskPanel(mappingDemo, mappingPanel)
+        mappingTaskPanel = mappingpanel.MappingTaskPanel(mappingDemo, mappingPanel)
 
     doorDemo = doordemo.DoorDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -480,7 +480,7 @@ if usePlanning:
     taskPanels['Surprise'] = surpriseTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
     taskPanels['Table'] = tableTaskPanel.widget
-    if ikPlanner.fixedBaseArm: # 'Edinburgh' switch - this mapping currently was only tested and works on fixed base arms
+    if useMappingPanel:
         taskPanels['Mapping'] = mappingTaskPanel.widget
 
     tasklaunchpanel.init(taskPanels)
