@@ -82,10 +82,6 @@ class PlannerPublisher(object):
     lcmUtils.publish('PLANNER_REQUEST', msg)
     lastManipPlan = listener.waitForResponse(timeout=20000)
     listener.finish()
-    if lastManipPlan:
-      # HACK: need to multiply by original trajectory length again (the one in the plan is planning and not real time), otherwise jumps to real hardware
-      for state in lastManipPlan.plan:
-        state.utime = state.utime * 50
 
     self.ikPlanner.ikServer.infoFunc(lastManipPlan.plan_info[0])
     return lastManipPlan, lastManipPlan.plan_info[0]
@@ -107,8 +103,16 @@ class PlannerPublisher(object):
           s+='\n,{'
         first=False
         s+='"classname":"'+classname+'"'
+        s+=',"name":"'+des['Name']+'"'
         s+=',"uuid":"'+des['uuid']+'"'
         s+=',"pose": {"position":{"__ndarray__":'+repr(des['pose'][0].tolist())+'},"quaternion":{"__ndarray__":'+repr(des['pose'][1].tolist())+'}}'
+        if self.affordanceManager.affordanceUpdater is not None: # attached collision object / frameSync
+          if des['Name'] in self.affordanceManager.affordanceUpdater.attachedAffordances:
+            s+=',"attachedTo":"'+self.affordanceManager.affordanceUpdater.attachedAffordances[des['Name']]+'"'
+          else: # it's not attached
+            s+=',"attachedTo":"__world__"' # __world__ means it's a fixed collision object (sometimes called world or map - we use __world__ here)
+        else: # no affordanceUpdater - so no attached collision objects either
+          s+=',"attachedTo":"__world__"'
         if classname=='MeshAffordanceItem':
           s+=',"filename":"'+aff.getMeshManager().getFilesystemFilename(des['Filename'])+'"'
         if classname=='SphereAffordanceItem':
