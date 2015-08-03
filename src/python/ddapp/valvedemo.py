@@ -16,6 +16,8 @@ from ddapp.tasks.taskuserpanel import TaskUserPanel
 from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
 from ddapp.uuidutil import newUUID
 import ioUtils
+from ddapp import ikplanner
+from ddapp.debugVis import DebugData
 
 import ddapp.tasks.robottasks as rt
 
@@ -35,8 +37,8 @@ class ValvePlannerDemo(object):
         self.rhandDriver = rhandDriver
         self.sensorJointController = sensorJointController
         self.graspingObject = 'valve'
+        self.turningMode = 0 # Simple Mode
         self.setGraspingHand('left')
-        self.valveAffordance = None
         self.graspFrame = None
         self.stanceFrame = None
 
@@ -73,7 +75,7 @@ class ValvePlannerDemo(object):
         self.nominalPoseName = 'q_valve_nom'
         self.startPoseName = 'q_valve_start'
 
-        self.setupStance()
+
 
     def setGraspingHand(self, side):
         self.graspingHand = side
@@ -630,10 +632,9 @@ class ValvePlannerDemo(object):
         return nominalPose
 
 
-    def computeHumanTouchFrame(self, touchValve):
-        self.nextScribeAngle = -60#-60
-        self.palmInAngle = 30#30 # how much should the palm face the axis - 0 not at all, 90 entirely
-
+    def computeHumanTouchFrame(self, touchValve=True, reachAngle=-45):
+        # 0 is top, 90 is left, -90 is right
+        # positive turn is CCW
         if touchValve:
             faceDepth = 0.0
         else:
@@ -643,17 +644,17 @@ class ValvePlannerDemo(object):
 
         scribeRadius = om.findObjectByName('valve').params['radius']
 
-        position = [0, scribeRadius*math.sin( math.radians( self.nextScribeAngle )) , scribeRadius*math.cos( math.radians( self.nextScribeAngle ))   ]
+        position = [0, scribeRadius*math.sin( math.radians( reachAngle )) , scribeRadius*math.cos( math.radians( reachAngle ))   ]
         # roll angle governs how much the palm points along towards the rotation axis
         # yaw ensures thumb faces the axis
         if (self.graspingObject is 'valve'):
             # valve, left and right
-            rpy = [(-self.palmInAngle-90) , self.nextScribeAngle, (90)]
+            rpy = [(-self.palmInAngle-90) , reachAngle, (90)]
         else:
             if (self.graspingHand is 'left'): # lever left
-                rpy = [-90, (180+self.nextScribeAngle), 90]
+                rpy = [-90, (180+reachAngle), 90]
             else:
-                rpy = [-90, self.nextScribeAngle, 90]
+                rpy = [-90, reachAngle, 90]
 
         t = om.findObjectByName('valve').getChildFrame().transform
 
@@ -663,17 +664,22 @@ class ValvePlannerDemo(object):
         t3.Concatenate(t2)
         t3.Concatenate(tDepth)
 
-        faceFrameDesired = vis.showFrame(t3, 'face frame desired', parent=om.findObjectByName('valve'), visible=True, scale=0.2)
+        faceFrameDesired = vis.showFrame(t3, 'face frame desired', parent=om.findObjectByName('valve'), visible=False, scale=0.2)
 
         return faceFrameDesired
 
     def planHumanReach(self):
-        faceFrameDesired = self.computeHumanTouchFrame(False) # 0 = not in contact
+        faceFrameDesired = self.computeHumanTouchFrame(False, reachAngle=self.reachAngle) # 0 = not in contact
         self.computeHumanTouchPlan(faceFrameDesired)
 
     def planHumanTouch(self):
-        faceFrameDesired = self.computeHumanTouchFrame(True)
+        faceFrameDesired = self.computeHumanTouchFrame(True, reachAngle=self.reachAngle)
         self.computeHumanTouchPlan(faceFrameDesired)
+
+    def planHumanRetract(self):
+        faceFrameDesired = self.computeHumanTouchFrame(False, reachAngle=(self.reachAngle+self.turnAngle) )  # 0 = not in contact
+        self.computeHumanTouchPlan(faceFrameDesired)
+
 
     def computeHumanTouchPlan(self, faceFrameDesired):
         # new full 6 dof constraint:
@@ -689,6 +695,82 @@ class ValvePlannerDemo(object):
         self.ikPlanner.ikServer.usePointwise = False
         plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
+
+    def resetTurnPath(self):
+        for obj in om.getObjects():
+            if obj.getProperty('Name') == 'face frame desired':
+                om.removeFromObjectModel(obj)
+        for obj in om.getObjects():
+            if obj.getProperty('Name') == 'face frame desired path':
+                om.removeFromObjectModel(obj)
+
+    def initConstraintSet(self, goalFrame):
+
+        # create constraint set
+        startPose = self.getPlanningStartPose()
+        startPoseName = 'turn_plan_start'
+        endPoseName = 'turn_plan_end'
+        self.ikPlanner.addPose(startPose, startPoseName)
+        self.ikPlanner.addPose(startPose, endPoseName)
+        self.constraintSet = ikplanner.ConstraintSet(self.ikPlanner, [], startPoseName, endPoseName)
+        self.constraintSet.endPose = startPose
+
+        # add body constraints
+        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=self.lockBase, lockBack=self.lockBack, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
+        self.constraintSet.constraints.extend(bodyConstraints)
+
+        # add gaze constraint - TODO: this gaze constraint shouldn't be necessary, fix
+        self.graspToHandLinkFrame = self.ikPlanner.newGraspToHandFrame(self.graspingHand)
+        gazeConstraint = self.ikPlanner.createGazeGraspConstraint(self.graspingHand, goalFrame, self.graspToHandLinkFrame, coneThresholdDegrees=5.0)
+        self.constraintSet.constraints.insert(0, gazeConstraint)
+
+    def appendPositionOrientationConstraintForTargetFrame(self, goalFrame, t):
+        positionConstraint, orientationConstraint = self.ikPlanner.createPositionOrientationGraspConstraints(self.graspingHand, goalFrame, self.graspToHandLinkFrame)
+        positionConstraint.tspan = [t, t]
+        orientationConstraint.tspan = [t, t]
+        self.constraintSet.constraints.append(positionConstraint)
+        self.constraintSet.constraints.append(orientationConstraint)
+
+    def planHumanValveTurn(self):
+        initialReachAngle = self.reachAngle
+        # 10deg per sample
+        numberOfSamples = abs(int(round(self.turnAngle /10.0)))
+        degreeStep = float(self.turnAngle) / numberOfSamples
+
+        facePath = []
+        self.resetTurnPath()
+
+        reachAngle = initialReachAngle
+        faceFrameDesired = self.computeHumanTouchFrame(touchValve=True, reachAngle=reachAngle)
+        self.initConstraintSet(faceFrameDesired)
+        facePath.append(faceFrameDesired)
+
+        for i in xrange(numberOfSamples):
+            # reachAngle += self.scribeDirection*degreeStep
+            reachAngle += degreeStep
+            faceFrameDesired = self.computeHumanTouchFrame(touchValve=True, reachAngle=reachAngle)
+            self.appendPositionOrientationConstraintForTargetFrame(faceFrameDesired, i+1)
+            facePath.append(faceFrameDesired)
+
+        self.facePath = facePath
+        self.drawFacePath(facePath)
+        self.planTrajectory()
+
+    def drawFacePath(self, facePath):
+
+        valveTransform = om.findObjectByName('valve').getChildFrame().transform
+        path = DebugData()
+        for i in range(1,len(facePath)):
+            end0 = transformUtils.copyFrame( facePath[i-1].transform)
+            end0.Concatenate(valveTransform.GetLinearInverse())
+            end1 = transformUtils.copyFrame( facePath[i].transform)
+            end1.Concatenate(valveTransform.GetLinearInverse())
+            path.addLine ( np.array( end0.GetPosition() ) , np.array(  end1.GetPosition() ), radius= 0.025)
+
+        pathMesh = path.getPolyData()
+        pointerTipLinePath = vis.showPolyData(pathMesh, 'face frame desired path', color=[0.0, 0.3, 1.0], parent=om.findObjectByName('valve'), alpha=1.0)
+        pointerTipLinePath.actor.SetUserTransform(om.findObjectByName('valve').getChildFrame().transform)
+
 
     # Glue Functions ###########################################################
     def moveRobotToGraspStanceFrame(self):
@@ -872,16 +954,21 @@ class ValveTaskPanel(TaskUserPanel):
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        self.params.addProperty('Show Turning Modes',1,
-                                attributes=om.PropertyAttributes(enumNames=['Simple Turn','Human-like Turn']))
-
+        self.params.addProperty('Turning Mode',1,
+                                attributes=om.PropertyAttributes(enumNames=['Human-like Turn','Simple Turn']))
+        self.params.addProperty('Reach Angle (Human)', -45,
+                                attributes=om.PropertyAttributes(singleStep=5))
+        self.params.addProperty('Turn Angle (Human)', -90,
+                                attributes=om.PropertyAttributes(singleStep=5))
+        self.params.addProperty('Palm In Angle (Human)', 30,
+                                attributes=om.PropertyAttributes(singleStep=5))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
-        taskToShowOld = self.taskToShow
+        turningModeOld = self.valveDemo.turningMode
         self._syncProperties()
 
-        if not taskToShowOld == self.taskToShow:
+        if not turningModeOld == self.valveDemo.turningMode:
             self.addTasks()
 
 
@@ -914,14 +1001,20 @@ class ValveTaskPanel(TaskUserPanel):
         else:
             self.valveDemo.lockBack = False
 
-        self.taskToShow = self.params.getProperty('Show Turning Modes')
+        # Settings for Human Like Turning:
+        self.valveDemo.reachAngle = self.params.getProperty('Reach Angle (Human)')
+        self.valveDemo.turnAngle = self.params.getProperty('Turn Angle (Human)')
+        # how much should the palm face the valve axis - 0 not at all, 90 entirely
+        self.valveDemo.palmInAngle = self.params.getProperty('Palm In Angle (Human)')
+
+        self.valveDemo.turningMode = self.params.getProperty('Turning Mode')
 
     def addTasks(self):
         self.taskTree.removeAllTasks()
 
-        if self.taskToShow == 0:
+        if self.valveDemo.turningMode == 1:
             self.addSimpleTurnTasks()
-        elif self.taskToShow == 1:
+        elif self.valveDemo.turningMode == 0:
             self.addHumanTurnTasks()
         else:
             return
@@ -1056,36 +1149,6 @@ class ValveTaskPanel(TaskUserPanel):
             addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
                     parent=group)
 
-        def addLargeValveTurn(parent=None):
-            group = self.taskTree.addGroup('Valve Turn', parent=parent)
-
-            # valve manip actions
-            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
-                            name='Reach to valve', parent=group)
-            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
-                            name='Insert hand', parent=group)
-            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
-                            name='Turn valve', parent=group)
-            addManipulation(v.planRetract, name='Retract hand', parent=group)
-
-        def addSmallValveTurn(parent=None):
-            group = self.taskTree.addGroup('Valve Turn', parent=parent)
-            side = 'Right' if v.graspingHand == 'right' else 'Left'
-
-            addManipulation(functools.partial(v.planReach, wristAngleCW=self.initialWristAngleCW),
-                            name='Reach to valve', parent=group)
-            addManipulation(functools.partial(v.planTouch, wristAngleCW=self.initialWristAngleCW),
-                            name='Insert hand', parent=group)
-            addTask(rt.CloseHand(name='grasp valve', side=side, mode='Basic',
-                                 amount=self.valveDemo.closedAmount),
-                    parent=group)
-            addManipulation(functools.partial(v.planTurn, wristAngleCW=self.finalWristAngleCW),
-                            name='plan turn valve', parent=group)
-            addTask(rt.CloseHand(name='release valve', side=side, mode='Basic',
-                                 amount=self.valveDemo.openAmount),
-                    parent=group)
-            addManipulation(v.planRetract, name='plan retract', parent=group)
-
         v = self.valveDemo
 
         side = self.params.getPropertyEnumValue('Hand')
@@ -1128,19 +1191,23 @@ class ValveTaskPanel(TaskUserPanel):
 
         # raise the arm up
         turning = self.taskTree.addGroup('Turning')
+
+        preturn = self.taskTree.addGroup('Pre-grasp', parent=turning)
         addTask(rt.PlanPostureGoal(name='plan arm up pregrasp', postureGroup='General',
-                                   postureName='arm up pregrasp', side=side), parent=turning)
+                                   postureName='arm up pregrasp', side=side), parent=preturn)
         addTask(rt.CommitManipulationPlan(name='execute manip plan',
-                                          planName='arm up pregrasp plan'), parent=turning)
-        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=turning)
+                                          planName='arm up pregrasp plan'), parent=preturn)
+        addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=preturn)
 
 
         addManipulation(functools.partial(v.planHumanReach),
                             name='Reach to valve', parent=turning)
         addManipulation(functools.partial(v.planHumanTouch),
                             name='Touch valve', parent=turning)
-
-
+        addManipulation(functools.partial(v.planHumanValveTurn),
+                            name='Turn valve', parent=turning)
+        addManipulation(functools.partial(v.planHumanRetract),
+                            name='Retract from valve', parent=turning)
 
         # go to finishing posture
         prep = self.taskTree.addGroup('Prep for walking')
