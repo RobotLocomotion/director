@@ -112,8 +112,13 @@ class ValvePlannerDemo(object):
         self.smallValve = True
 
     def setupStance(self):
-        self.relativeStanceXYZInitial = [-0.9, -0.3, 0.0]
-        self.relativeStanceRPYInitial = [0, 0, 0]
+        if (self.turningMode==0): # simple
+            self.relativeStanceXYZInitial = [-0.9, -0.3, 0.0]
+            self.relativeStanceRPYInitial = [0, 0, 0]
+        else: # human-like
+            self.relativeStanceXYZInitial = [-0.5, 0.0, 0.0]
+            self.relativeStanceRPYInitial = [0, 0, 0]
+
         self.relativeStanceXYZ = self.relativeStanceXYZInitial
         self.relativeStanceRPY = self.relativeStanceRPYInitial
 
