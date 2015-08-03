@@ -30,6 +30,7 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
     handCombinations = directorConfig['handCombinations']
     numberOfHands = len(handCombinations)
 
+    headLink = directorConfig['headLink']
 
 
 def getRobotGrayColor():
@@ -112,6 +113,9 @@ class RobotModelItem(om.ObjectModelItem):
             return t
         else:
             return None
+
+    def getHeadLink(self):
+        return headLink
 
     def getLinkContactPoints(self, linkName):
         pts = self.model.getBodyContactPoints(linkName)
