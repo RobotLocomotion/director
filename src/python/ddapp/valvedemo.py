@@ -261,7 +261,7 @@ class ValvePlannerDemo(object):
         return graspFrame
 
     def spawnValveAffordance(self):
-        radius = 0.10
+        radius = 0.20
         tubeRadius = 0.02
         position = [0, 0, 1.2]
         rpy = [0, 0, 0]
