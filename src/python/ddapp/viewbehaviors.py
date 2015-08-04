@@ -541,10 +541,10 @@ def showRightClickMenu(displayPoint, view):
         rgb = colorsys.hls_to_rgb(lastRandomColor, 0.7, 1.0)
         obj = vis.showPolyData(polyData, pointCloudObj.getProperty('Name') + ' copy', color=rgb, parent='point clouds')
 
-        t = vtk.vtkTransform()
-        t.PostMultiply()
-        t.Translate(filterUtils.computeCentroid(polyData))
-        segmentation.makeMovable(obj, t)
+        #t = vtk.vtkTransform()
+        #t.PostMultiply()
+        #t.Translate(filterUtils.computeCentroid(polyData))
+        #segmentation.makeMovable(obj, t)
         om.setActiveObject(obj)
         pickedObj.setProperty('Visible', False)
 
