@@ -1,9 +1,9 @@
 if(DRAKE_DIR)
-  set(_source_dir_hint ${DRAKE_DIR})
-  set(_lib_dir_hint ${DRAKE_DIR}/pod-build/lib)
+  set(_include_dir_hint ${DRAKE_DIR})
+  set(_lib_dir_hint ${DRAKE_DIR}/lib)
 endif()
 
-find_path(DRAKE_SOURCE_DIR addpath_drake.m HINTS ${_source_dir_hint} DOC "Drake source directory")
+find_path(DRAKE_INCLUDE_DIR drakeUtil.h HINTS ${_include_dir_hint} PATH_SUFFIXES drake DOC "Drake source directory")
 
 set(DRAKE_LIBRARIES)
 set(_library_var_names)
@@ -20,15 +20,11 @@ find_drake_library(DRAKE_SHAPES_LIBRARY drakeShapes "Drake Shapes library")
 find_drake_library(DRAKE_CHULL_LIBRARY drakeConvexHull "Drake Convex Hull library")
 
 
-
 set(DRAKE_INCLUDE_DIRS
-  ${DRAKE_SOURCE_DIR}/util
-  ${DRAKE_SOURCE_DIR}/systems/plants
-  ${DRAKE_SOURCE_DIR}/systems/plants/joints
-  ${DRAKE_SOURCE_DIR}/systems/plants/tinyxml
-  )
+  ${DRAKE_INCLUDE_DIR}
+)
 
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Drake DEFAULT_MSG DRAKE_SOURCE_DIR ${_library_var_names})
-mark_as_advanced(DRAKE_SOURCE_DIR ${_library_var_names})
+find_package_handle_standard_args(Drake DEFAULT_MSG DRAKE_INCLUDE_DIR ${_library_var_names})
+mark_as_advanced(DRAKE_INCLUDE_DIR ${_library_var_names})
