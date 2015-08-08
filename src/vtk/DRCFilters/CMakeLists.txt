@@ -136,7 +136,7 @@ add_library(${library_name} ${sources} ${EXTRA_SRCS})
 target_link_libraries(${library_name} ${deps})
 
 if(pkg_deps)
-  use_pkg(${library_name} ${library_name}_pkgconfig_deps ${pkg_deps})
+  use_pkg(${library_name} ${pkg_deps})
 endif()
 
 install(TARGETS ${library_name}
