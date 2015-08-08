@@ -3,6 +3,7 @@
 option(USE_PCL "Build PCL." OFF)
 option(USE_LIBBOT "Build libbot." OFF)
 option(USE_LCM "Build lcm." OFF)
+option(USE_LCMGL "Build with lcm-gl." OFF)
 set(USE_EIGEN ${USE_PCL})
 
 option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
@@ -303,9 +304,9 @@ ExternalProject_Add(ddapp
     -DUSE_DRC_MAPS:BOOL=OFF
     -DUSE_DRC_PLANE_SEG:BOOL=OFF
     -DUSE_DRAKE:BOOL=OFF
-    -DUSE_LCM_GL:BOOL=${USE_LIBBOT}
     -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
     -DUSE_LCM:BOOL=${USE_LCM}
+    -DUSE_LCMGL:BOOL=${USE_LCMGL}
 
     ${default_cmake_args}
     ${eigen_args}
