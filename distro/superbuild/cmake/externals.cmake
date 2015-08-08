@@ -112,7 +112,7 @@ if(USE_LIBBOT AND NOT USE_SYSTEM_LIBBOT)
     BUILD_IN_SOURCE 1
 
     DEPENDS
-      lcm
+      ${lcm_depends}
     )
 
   set(libbot_depends libbot)
