@@ -1,9 +1,10 @@
 
 
-option(USE_PCL "Build PCL." OFF)
-option(USE_LIBBOT "Build libbot." OFF)
-option(USE_LCM "Build lcm." OFF)
+option(USE_PCL "Build with PCL." OFF)
+option(USE_LCM "Build with lcm." OFF)
 option(USE_LCMGL "Build with lcm-gl." OFF)
+option(USE_LIBBOT "Build with libbot." OFF)
+option(USE_DRAKE "Build with drake." OFF)
 set(USE_EIGEN ${USE_PCL})
 
 option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
@@ -299,14 +300,10 @@ ExternalProject_Add(ddapp
   DOWNLOAD_COMMAND ""
   CMAKE_CACHE_ARGS
 
-    -DUSE_PORTMIDI:BOOL=OFF
-    -DUSE_DRC:BOOL=OFF
-    -DUSE_DRC_MAPS:BOOL=OFF
-    -DUSE_DRC_PLANE_SEG:BOOL=OFF
-    -DUSE_DRAKE:BOOL=OFF
-    -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
     -DUSE_LCM:BOOL=${USE_LCM}
     -DUSE_LCMGL:BOOL=${USE_LCMGL}
+    -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
+    -DUSE_DRAKE:BOOL=${USE_DRAKE}
 
     ${default_cmake_args}
     ${eigen_args}
