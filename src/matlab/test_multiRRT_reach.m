@@ -1,16 +1,19 @@
-function info = test_multiRRT_reach(r, grHand, qStart, xGoal, objectGrasped)
-  if nargin < 5
+function info = test_multiRRT_reach(r, s, grHand, qStart, xGoal, objectGrasped)
+  if nargin < 6
     objectGrasped = false;
   end  
   hand.left = r.findLinkId('LeftPalm');
   hand.right = r.findLinkId('RightPalm');
   point_in_link_frame = [0.08; -0.07; 0];
   
+%   r.body(hand.(grHand)).collision_geometry  
+%   r.body(hand.(grHand)).visual_geometry
+  
   addpath('/home/marco/drc/software/ddapp/src/matlab')
   fixed_point_file = '/home/marco/drc/software/control/matlab/data/valkyrie_fp_june2015.mat';
   left_foot_link = 'LeftFoot';
   right_foot_link = 'RightFoot';
-  runRRTIKServer
+%   runRRTIKServer
   
   kinsol = r.doKinematics(qStart);
   xStart = [r.forwardKin(kinsol, hand.(grHand), point_in_link_frame, 2); qStart'];
@@ -26,7 +29,8 @@ function info = test_multiRRT_reach(r, grHand, qStart, xGoal, objectGrasped)
   
 %   xGoal = [(leftFootPose(1:2) + rightFootPose(1:2))/2; 0]' + [0.1; -0.3; 0.9]'; 
   
-  goalFrame = [eye(3) xGoal(1:3)'; 0 0 0 1];
+  xGoal = xGoal(:);
+  goalFrame = [eye(3) xGoal(1:3); 0 0 0 1];
   goalEulerConstraint = WorldEulerConstraint(r, hand.(grHand), [0;0; -pi], [0; 0; pi]);
   
   goalDistConstraint = Point2PointDistanceConstraint(r, hand.(grHand), r.findLinkId('world'), point_in_link_frame, goalFrame(1:3, 4), -0.001, 0.001);
@@ -102,18 +106,19 @@ function info = test_multiRRT_reach(r, grHand, qStart, xGoal, objectGrasped)
   
   fp = load([getDrakePath(), '/../control/matlab/data/valkyrie_fp_june2015.mat']);
   qNom = fp.xstar(1:r.getNumPositions());
-  
-  multiTree = MultipleTreeProblem(r, hand.(grHand), xStart, xGoal(1:3)', [],...
+  xGoal
+  multiTree = MultipleTreeProblem(r, hand.(grHand), xStart, xGoal, [],...
     goalConstraints, additionalConstraints, qNom,...
     'capabilityMap', cm, 'graspingHand', grHand, 'activecollisionoptions',...
     struct('body_idx', setdiff(1:r.getNumBodies(), inactive_collision_bodies)),...
     'ikoptions', ikoptions, 'endeffectorpoint', point_in_link_frame);
-  [~, info, ~, q_path] = multiTree.rrt(options);  
+  [~, info, ~, q_path] = multiTree.rrt(options);
+  disp(info)
   info = info.status;
   disp(info)
   
   path_length = size(q_path,2);  
   q_traj = PPTrajectory(pchip(linspace(0, 1, path_length), q_path(8:end,:)));
-  disp(q_path(8:end,end))
   s.publishTraj(q_traj, 1);  
+  
 end

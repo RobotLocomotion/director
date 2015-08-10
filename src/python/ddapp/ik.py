@@ -371,12 +371,59 @@ class AsyncIKCommunicator():
             return
             
     def runMultiRRT(self, grHand, qStart, xGoal, objectGrasped):
-        print '################## multiRRT #################'
         
-        commands = ['test_multiRRT_reach(r, \'%s\', %s, %s, %d)\n'%(grHand, qStart, xGoal, objectGrasped)]
+        commands = ['info = test_multiRRT_reach(r, s, \'%s\', %s, %s, %d);\n'%(grHand, qStart, xGoal, objectGrasped)]
         self.comm.sendCommands(commands)
 
         info = self.comm.getFloatArray('info')[0]
         
-        print '################## multiRRT END #################'
         return info
+        
+    def addAffordanceToHand(self, handLink, affordance, q, name):
+        affStr = ''
+        desc = affordance.getDescription()
+        if desc['classname'] == 'BoxAffordanceItem':
+            affStr += 'RigidBodyBox(%s, %s, quat2rpy(%s));,'%(desc['Dimensions'], list(desc['pose'][0]), list(desc['pose'][1]))
+        elif desc['classname'] == 'CylinderAffordanceItem':
+            affStr += 'RigidBodyCylinder(%s, %s, %s, quat2rpy(%s));,'%(desc['Radius'], desc['Length'], list(desc['pose'][0]), list(desc['pose'][1]))
+                
+#        urdf_lines = urdf_string.splitlines()
+#        urdf_lines = ["'%s'" % x for x in urdf_lines]
+#        urdf_lines = '...\n'.join(urdf_lines)   
+#        self.comm.send('urdf_string = [%s];' % urdf_lines )   
+        commands = []
+        commands.append('aff = %s;\n' % affStr )          
+        commands.append('s = s.addAffordanceToHand(\'%s\', aff, %s, \'%s\');' % (handLink, q, name))
+        self.comm.sendCommands(commands)
+    
+    def removeAffordanceFromHand(self, handLink, name):
+        commands = []        
+        commands.append('s = s.removeAffordanceFromHand(\'%s\', \'%s\');' % (handLink, name))
+        self.comm.sendCommands(commands)
+    
+    def planNominalPose(self, grHand, qStart, stanceFrame):
+        commands = []    
+        commands.append('qNom = s.q_nom;\n')
+        commands.append('qStart = %s;\n' % qStart)
+        commands.append('footLink = s.robot.findLinkId(\'LeftFoot\');\n')
+        commands.append('pelvisLink = s.robot.findLinkId(\'Pelvis\');\n')
+        commands.append('kinsol = s.robot.doKinematics(s.q_nom);\n')
+        commands.append('footPoseNominal = s.robot.forwardKin(kinsol, footLink, [0;0;0], 2);\n')
+        commands.append('pelvisPoseNominal = s.robot.forwardKin(kinsol, pelvisLink, [0;0;0], 2);\n')
+        commands.append('foot2pelvisrot = [quat2rotmat(footPoseNominal(4:7))\'*quat2rotmat(pelvisPoseNominal(4:7))];\n')
+        commands.append('foot2pelvisPos = foot2pelvisrot * (pelvisPoseNominal(1:3)-footPoseNominal(1:3));\n')
+        commands.append('kinsol = s.robot.doKinematics(qStart);\n')
+        commands.append('footPoseCurrent = s.robot.forwardKin(kinsol, footLink, [0;0;0], 2);\n')
+        commands.append('posCurrent = footPoseCurrent(1:3);\n')
+        commands.append('rotCurrent = quat2rotmat(footPoseCurrent(4:7));\n')
+        commands.append('newPelvisPose = [rotCurrent posCurrent; 0 0 0 1] * [foot2pelvisrot, foot2pelvisPos ;0 0 0 1]; \n')
+        commands.append('newPelvisPose = [newPelvisPose(1:3, 4); rotmat2rpy(newPelvisPose(1:3, 1:3))];\n')
+        commands.append('qNom = [newPelvisPose; s.q_nom(7:end)];\n')
+        commands.append('info = test_multiRRT_reach(r, s, \'%s\', %s, qNom);\n'%(grHand, qStart))
+        self.comm.sendCommands(commands)
+
+        info = self.comm.getFloatArray('info')[0]
+        
+        return info
+        
+        

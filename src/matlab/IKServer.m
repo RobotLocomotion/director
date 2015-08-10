@@ -17,6 +17,7 @@ classdef IKServer
       options.floating = true;
       options.ignore_terrain_collisions = true;
       options.terrain = [];
+      options.replace_cylinders_with_capsules = false;
 
       obj.robot = RigidBodyManipulator([], options);
 
@@ -180,6 +181,28 @@ classdef IKServer
       rpy = zeros(3,1);
       obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
       obj.robot = compile(obj.robot);
+    end
+    
+    function obj = addAffordanceToHand(obj, side, affordance, q, name)
+      hand.left = obj.robot.findLinkId('LeftPalm');
+      hand.right = obj.robot.findLinkId('RightPalm');
+      kinsol = obj.robot.doKinematics(q);
+      handPose = obj.robot.forwardKin(kinsol, hand.(side), [0;0;0], 2);
+      handT = [quat2rotmat(handPose(4:7)), handPose(1:3); 0 0 0 1];
+      affordance.T = [handT(1:3, 1:3)' * affordance.T(1:3, 1:3), handT(1:3, 1:3)' * (affordance.T(1:3, 4) - handT(1:3, 4)); 0 0 0 1];
+      obj.robot.body(hand.(side)).visual_geometry
+      obj.robot.body(hand.(side)).collision_geometry
+      obj.robot = addGeometryToBody(obj.robot, hand.(side), affordance, name);
+      obj.robot = obj.robot.compile();
+      obj.robot.body(hand.(side)).visual_geometry
+      obj.robot.body(hand.(side)).collision_geometry
+    end
+    
+    function obj = removeAffordanceFromHand(obj, side, name)      
+      hand.left = obj.robot.findLinkId('LeftPalm');
+      hand.right = obj.robot.findLinkId('RightPalm');
+      obj.robot = removeCollisionGeometryFromBody(obj.robot, hand.(side), name);
+      obj.robot = obj.robot.compile();
     end
 
     function linkNames = getLinkNames(obj)
