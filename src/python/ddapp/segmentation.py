@@ -18,6 +18,7 @@ from ddapp import visualization as vis
 from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
 from ddapp import mapsregistrar
+from ddapp import affordancemanager
 from ddapp.affordanceitems import *
 from ddapp.visualization import *
 from ddapp.filterUtils import *
@@ -65,7 +66,13 @@ def getCurrentView():
     return app.getCurrentRenderView()
 
 
-
+def initAffordanceManager(view):
+    '''
+    Normally the affordance manager is initialized by the application.
+    This function can be called from scripts and tests to initialize the manager.
+    '''
+    global affordanceManager
+    affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
 
 
 def cropToLineSegment(polyData, point1, point2):
