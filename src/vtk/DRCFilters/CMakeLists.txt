@@ -119,15 +119,16 @@ if (USE_DRC_PLANE_SEG)
   use_cpp11()
 endif()
 
-if(USE_LIBBOT)
-
-  find_package(LibBot REQUIRED)
-  include_directories(${LIBBOT_INCLUDE_DIRS})
+if(USE_LCMGL)
 
   find_package(OpenGL REQUIRED)
-
   list(APPEND sources vtkLCMGLProp.cxx)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
+
+  list(APPEND pkg_deps
+    bot2-lcmgl-client
+    bot2-lcmgl-renderer
+  )
 
 endif()
 
@@ -136,7 +137,7 @@ add_library(${library_name} ${sources} ${EXTRA_SRCS})
 target_link_libraries(${library_name} ${deps})
 
 if(pkg_deps)
-  use_pkg(${library_name} ${library_name}_pkgconfig_deps ${pkg_deps})
+  use_pkg(${library_name} ${pkg_deps})
 endif()
 
 install(TARGETS ${library_name}

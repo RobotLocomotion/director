@@ -18,23 +18,28 @@ macro(use_cpp11)
   elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     if (APPLE)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")  
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     endif()
   endif()
 endmacro()
 
 
-macro(use_pkg target cachevar)
-  find_package(PkgConfig)
-  pkg_check_modules(${cachevar}_pkgconfig ${ARGN})
+macro(use_pkg target)
 
-  string(REPLACE ";" " " _cflags_str "${${cachevar}_pkgconfig_CFLAGS}")
-  string(REPLACE ";" " " _ldflags_str "${${cachevar}_pkgconfig_LDFLAGS}")
+  find_package(PkgConfig REQUIRED)
 
-  set_target_properties(${target} PROPERTIES COMPILE_FLAGS ${_cflags_str})
-  set_target_properties(${target} PROPERTIES LINK_FLAGS ${_ldflags_str})
-  link_directories(${${cachevar}_pkgconfig_LIBRARY_DIRS})
-  target_link_libraries(${target} ${${cachevar}_pkgconfig_LIBRARIES})
+  foreach (pkgname ${ARGN})
+    set(cachevar ${pkgname}_pkgconfig)
+    pkg_check_modules(${cachevar} ${pkgname})
+
+    string(REPLACE ";" " " _cflags_str "${${cachevar}_CFLAGS}")
+    string(REPLACE ";" " " _ldflags_str "${${cachevar}_LDFLAGS}")
+    set_property(TARGET ${target} APPEND_STRING PROPERTY COMPILE_FLAGS "${_cflags_str} ")
+    set_property(TARGET ${target} APPEND_STRING PROPERTY LINK_FLAGS "${_ldflags_str} ")
+    link_directories(${${cachevar}_LIBRARY_DIRS})
+    target_link_libraries(${target} ${${cachevar}_LIBRARIES})
+
+  endforeach()
 
 endmacro()
 

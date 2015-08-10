@@ -199,11 +199,10 @@ if (USE_DRC)
   list (APPEND deps
     ${LIBBOT_LIBRARIES}
     ${PCL_LIBRARIES}
-    lcmtypes_kinect
   )
 
   list(APPEND pkg_deps
-    image-utils multisense_utils kinect-utils
+    image-utils multisense_utils kinect-utils lcmtypes_kinect
   )
 
 endif()
@@ -216,7 +215,7 @@ add_library(ddApp ${srcs})
 target_link_libraries(ddApp ${deps})
 
 if(pkg_deps)
-  use_pkg(ddApp ddApp_pkg_dep ${pkg_deps})
+  use_pkg(ddApp ${pkg_deps})
 endif()
 
 add_executable(drake-designer main.cpp)
