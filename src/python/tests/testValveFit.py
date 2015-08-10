@@ -14,6 +14,7 @@ app = ConsoleApp()
 # create a view
 view = app.createView()
 segmentation._defaultSegmentationView = view
+segmentation.initAffordanceManager(view)
 
 robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
 segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)

@@ -23,7 +23,6 @@ from ddapp import ikplanner
 from ddapp import vtkNumpy
 from numpy import array
 from ddapp.uuidutil import newUUID
-import affordancepanel
 import ioUtils
 
 from ddapp.tasks.taskuserpanel import TaskUserPanel
@@ -50,6 +49,7 @@ class TableDemo(object):
         self.sensorJointController = sensorJointController
         self.view = view
         self.teleopPanel = teleopPanel
+        self.affordanceManager = segmentation.affordanceManager
 
         # live operation flags:
         self.useFootstepPlanner = True
@@ -65,7 +65,7 @@ class TableDemo(object):
             extraModels = [self.playbackRobotModel]
             self.affordanceUpdater  = affordanceupdater.AffordanceGraspUpdater(self.robotStateModel, self.ikPlanner, extraModels)
 
-        segmentation.affordanceManager.setAffordanceUpdater(self.affordanceUpdater)
+        self.affordanceManager.setAffordanceUpdater(self.affordanceUpdater)
         self.optionalUserPromptEnabled = True
         self.requiredUserPromptEnabled = True
 
@@ -165,7 +165,7 @@ class TableDemo(object):
 
         pose = transformUtils.poseFromTransform(tableData.frame)
         desc = dict(classname='MeshAffordanceItem', Name='table', Color=[0,1,0], pose=pose)
-        aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        aff = self.affordanceManager.newAffordanceFromDescription(desc)
         aff.setPolyData(tableData.mesh)
 
         self.tableData = tableData
@@ -198,7 +198,7 @@ class TableDemo(object):
 
         pose = transformUtils.poseFromTransform(t)
         desc = dict(classname='BoxAffordanceItem', Name='bin', uuid=newUUID(), pose=pose, Color=[1, 0, 0], Dimensions=[0.02,0.02,0.02])
-        obj = affordancepanel.panel.affordanceFromDescription(desc)
+        obj = self.affordanceManager.newAffordanceFromDescription(desc)
 
 
         #self.binFrame = vis.showFrame(t, 'bin frame', parent=None, scale=0.2)
@@ -239,7 +239,7 @@ class TableDemo(object):
         self.clusterObjects = []
         for i, cluster in enumerate(objects):
             affObj = affordanceitems.MeshAffordanceItem.promotePolyDataItem(cluster)
-            segmentation.affordanceManager.registerAffordance(affObj)
+            self.affordanceManager.registerAffordance(affObj)
             self.clusterObjects.append(affObj)
 
 
@@ -719,25 +719,25 @@ class TableDemo(object):
         elif (scene == 0):
             pose = (array([ 1.20,  0. , 0.8]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([ 1.20,  0.5 , 0.4]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='BoxAffordanceItem', Name='scene0-leg1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,0.05,0.8])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([ 1.20,  -0.5 , 0.4]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='BoxAffordanceItem', Name='scene0-leg2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,0.05,0.8])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([ 1.05,  0.3 , 0.98]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='BoxAffordanceItem', Name='scene0-object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.08,0.08,0.24])
-            obj1 = affordancepanel.panel.affordanceFromDescription(desc)
+            obj1 = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([ 1.25,  0.1 , 0.98]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='BoxAffordanceItem', Name='scene0-object2', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Dimensions=[0.07,0.07,0.25])
-            obj2 = affordancepanel.panel.affordanceFromDescription(desc)
+            obj2 = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([ 1.25,  -0.1 , 0.95]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='CylinderAffordanceItem', Name='scene0-object3', uuid=newUUID(), pose=pose, Color=[0.0, 0.9, 0.0], Radius=0.035, Length = 0.22)
-            obj3 = affordancepanel.panel.affordanceFromDescription(desc)
+            obj3 = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([ 1.05,  -0.2 , 0.95]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='CylinderAffordanceItem', Name='scene0-object4', uuid=newUUID(), pose=pose, Color=[0.9, 0.1, 0.1], Radius=0.045, Length = 0.22)
-            obj4 = affordancepanel.panel.affordanceFromDescription(desc)
+            obj4 = self.affordanceManager.newAffordanceFromDescription(desc)
 
             self.clusterObjects = [obj1,obj2, obj3, obj4]
             relativeStance = transformUtils.frameFromPositionAndRPY([-0.58, 0, 0],[0,0,0])
@@ -748,10 +748,10 @@ class TableDemo(object):
         elif (scene == 1):
             pose = (array([-0.98873106,  1.50393395,  0.91420001]), array([ 0.49752312,  0.        ,  0.        ,  0.86745072]))
             desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([-0.98873106,  1.50393395,  0.57]), array([ 0.49752312,  0.        ,  0.        ,  0.86745072]))
             desc = dict(classname='BoxAffordanceItem', Name='scene1-object1', uuid=newUUID(), pose=pose, Color=[0.005, 0.005, 0.3], Dimensions=[0.05,0.05,0.14])
-            obj1 = affordancepanel.panel.affordanceFromDescription(desc)
+            obj1 = self.affordanceManager.newAffordanceFromDescription(desc)
 
             self.clusterObjects = [obj1]
             relativeStance = transformUtils.frameFromPositionAndRPY([-0.6, 0, 0],[0,0,0])
@@ -762,22 +762,22 @@ class TableDemo(object):
         elif (scene == 2):
             pose = (array([ 0.49374956,  1.51828255,  0.84852654]), array([ 0.86198582,  0.        ,  0.        ,  0.50693238]))
             desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([ 0.57555491,  1.6445656 ,  0.93993633]), array([ 0.86280979,  0.        ,  0.        ,  0.50552871]))
             desc = dict(classname='BoxAffordanceItem', Name='scene2-object', uuid=newUUID(), pose=pose, Color=[0.005, 0.005, 0.3], Dimensions=[0.05,0.05,0.12])
-            obj1 = affordancepanel.panel.affordanceFromDescription(desc)
+            obj1 = self.affordanceManager.newAffordanceFromDescription(desc)
 
             pose = (array([ 0.38458635,  1.32625758,  1.37444768]), array([ 0.86314205,  0.        ,  0.        ,  0.50496119]))
             desc = dict(classname='BoxAffordanceItem', Name='scene2-wall1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,1.0,0.4])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
 
             pose = (array([ 0.08282192,  1.49589397,  1.02518917]), array([ 0.86314205,  0.        ,  0.        ,  0.50496119]))
             desc = dict(classname='BoxAffordanceItem', Name='scene2-wall2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,0.3,0.29])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
 
             pose = (array([ 0.69532105,  1.15157858,  1.02518917]), array([ 0.86314205,  0.        ,  0.        ,  0.50496119]))
             desc = dict(classname='BoxAffordanceItem', Name='scene2-wall3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.05,0.3,0.29])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
 
             self.clusterObjects = [obj1]
             relativeStance = transformUtils.frameFromPositionAndRPY([-0.65, -0.3, 0],[0,0,0])
@@ -788,19 +788,19 @@ class TableDemo(object):
         elif (scene == 3):
             pose = (array([-0.69, -1.50,  0.92]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
             desc = dict(classname='BoxAffordanceItem', Name='table', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.5,1,0.06])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([-1.05, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
             desc = dict(classname='BoxAffordanceItem', Name='scene3-edge1', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([-0.35, -1.10,  0.95]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
             desc = dict(classname='BoxAffordanceItem', Name='scene3-edge2', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.1,0.3,0.05])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([-0.6803156 , -1.1826616 ,  1.31299839]), array([-0.707106781,  0.        ,  0.        ,  0.707106781 ]))
             desc = dict(classname='BoxAffordanceItem', Name='scene3-edge3', uuid=newUUID(), pose=pose, Color=[0.66, 0.66, 0.66], Dimensions=[0.14,1.0,0.07])
-            obj = affordancepanel.panel.affordanceFromDescription(desc)
+            obj = self.affordanceManager.newAffordanceFromDescription(desc)
             pose = (array([ -0.7,  -1.5 , 1.03]), array([ 1.,  0.,  0.,  0.]))
             desc = dict(classname='BoxAffordanceItem', Name='scene3-object1', uuid=newUUID(), pose=pose, Color=[0.9, 0.9, 0.1], Dimensions=[0.05,0.05,0.14])
-            obj1 = affordancepanel.panel.affordanceFromDescription(desc)
+            obj1 = self.affordanceManager.newAffordanceFromDescription(desc)
 
             self.clusterObjects = [obj1]
             relativeStance = transformUtils.frameFromPositionAndRPY([-0.7, -0.1, 0],[0,0,0])

@@ -18,6 +18,7 @@ from ddapp import visualization as vis
 from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
 from ddapp import mapsregistrar
+from ddapp import affordancemanager
 from ddapp.affordanceitems import *
 from ddapp.visualization import *
 from ddapp.filterUtils import *
@@ -65,7 +66,13 @@ def getCurrentView():
     return app.getCurrentRenderView()
 
 
-
+def initAffordanceManager(view):
+    '''
+    Normally the affordance manager is initialized by the application.
+    This function can be called from scripts and tests to initialize the manager.
+    '''
+    global affordanceManager
+    affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
 
 
 def cropToLineSegment(polyData, point1, point2):
@@ -1144,8 +1151,7 @@ def segmentValveByBoundingBox(polyData, searchPoint):
     desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=radius, Segments=20)
     desc['Tube Radius'] = tubeRadius
 
-    import affordancepanel
-    obj = affordancepanel.panel.affordanceFromDescription(desc)
+    obj = affordanceManager.newAffordanceFromDescription(desc)
     obj.params = dict(radius=radius)
 
     return obj
@@ -1263,8 +1269,7 @@ def segmentValveByRim(polyData, rimPoint1, rimPoint2):
     desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=float(radius), Segments=20)
     desc['Tube Radius'] = tubeRadius
 
-    import affordancepanel
-    obj = affordancepanel.panel.affordanceFromDescription(desc)
+    obj = affordanceManager.newAffordanceFromDescription(desc)
     obj.params = dict(radius=radius)
 
     return obj
@@ -1383,8 +1388,7 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=float(radius), Segments=20)
     desc['Tube Radius'] = tubeRadius
 
-    import affordancepanel
-    obj = affordancepanel.panel.affordanceFromDescription(desc)
+    obj = affordanceManager.newAffordanceFromDescription(desc)
     obj.params = dict(radius=radius)
 
 
@@ -2820,8 +2824,7 @@ def fitVerticalPosts(polyData):
                     uuid=newUUID(), pose=pose, Radius=0.05, Length=float(lineLength), Color=[0.0, 1.0, 0.0])
         desc['Collision Enabled'] = True
 
-        import affordancepanel
-        return affordancepanel.panel.affordanceFromDescription(desc)
+        return affordanceManager.newAffordanceFromDescription(desc)
 
 
     rejectFolder = om.getOrCreateContainer('nonpost clusters', parentObj=getDebugFolder())
