@@ -284,8 +284,7 @@ class ValvePlannerDemo(object):
                     Color=[0, 1, 0], Radius=float(radius), Segments=20)
         desc['Tube Radius'] = tubeRadius
 
-        import affordancepanel
-        obj = affordancepanel.panel.affordanceFromDescription(desc)
+        obj = segmentation.affordanceManager.newAffordanceFromDescription(desc)
         obj.params = dict(radius=radius)
 
     # End Valve Focused Functions ##############################################
