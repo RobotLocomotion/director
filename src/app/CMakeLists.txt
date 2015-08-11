@@ -175,21 +175,15 @@ if (USE_DRC)
   set(moc_srcs)
   qt4_wrap_cpp(moc_srcs
     ddBotImageQueue.h
+    ddKinectLCM.h
+    ddPointCloudLCM.h
   )
 
   list(APPEND srcs
     ${moc_srcs}
     ddBotImageQueue.cpp
-  )
-
-  set(moc_srcs)
-  qt4_wrap_cpp(moc_srcs
-    ddKinectLCM.h
-  )
-
-  list(APPEND srcs
-    ${moc_srcs}
     ddKinectLCM.cpp
+    ddPointCloudLCM.cpp
   )
 
   list(APPEND wrap_files
