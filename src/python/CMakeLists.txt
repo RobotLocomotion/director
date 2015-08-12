@@ -75,6 +75,7 @@ set(python_files
   ddapp/pfgrasppanel.py
   ddapp/planplayback.py
   ddapp/playbackpanel.py
+  ddapp/pointcloudlcm.py
   ddapp/pointpicker.py
   ddapp/polarisplatformplanner.py
   ddapp/propertyset.py
