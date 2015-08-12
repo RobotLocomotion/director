@@ -48,7 +48,7 @@ macro(use_pkg target)
 endmacro()
 
 macro(setup_pods_pkg_config_path)
-  set(ENV{PKG_CONFIG_PATH} "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}")
+  set(ENV{PKG_CONFIG_PATH} "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 endmacro()
 
 setup_pods_pkg_config_path()
