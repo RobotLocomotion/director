@@ -112,6 +112,9 @@ class DRCArgParser(object):
         parser.add_argument('data_files', type=str, nargs='*',
                             help='data files to load at startup')
 
+        parser.add_argument('--startup', type=str, nargs='*',
+                            help='Run other python startup scripts in addition to startup.py')
+
 
 _argParser = None
 def getGlobalArgParser():
