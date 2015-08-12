@@ -32,6 +32,10 @@ macro(use_pkg target)
     set(cachevar ${pkgname}_pkgconfig)
     pkg_check_modules(${cachevar} ${pkgname})
 
+    if (NOT ${cachevar}_FOUND)
+      message(SEND_ERROR "required package ${pkgname} not found. PKG_CONFIG_PATH=$ENV{PKG_CONFIG_PATH}")
+    endif()
+
     string(REPLACE ";" " " _cflags_str "${${cachevar}_CFLAGS}")
     string(REPLACE ";" " " _ldflags_str "${${cachevar}_LDFLAGS}")
     set_property(TARGET ${target} APPEND_STRING PROPERTY COMPILE_FLAGS "${_cflags_str} ")
@@ -44,7 +48,7 @@ macro(use_pkg target)
 endmacro()
 
 macro(setup_pods_pkg_config_path)
-  set(ENV{PKG_CONFIG_PATH} "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH}")
+  set(ENV{PKG_CONFIG_PATH} "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 endmacro()
 
 setup_pods_pkg_config_path()
