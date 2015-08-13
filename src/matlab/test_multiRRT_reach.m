@@ -4,7 +4,9 @@ function info = test_multiRRT_reach(r, s, grHand, qStart, xGoal, objectGrasped)
   end  
   hand.left = r.findLinkId('LeftPalm');
   hand.right = r.findLinkId('RightPalm');
-  point_in_link_frame = [0.08; -0.07; 0];
+  point_in_link_frame.right = [0.08; -0.07; 0];
+  point_in_link_frame.left = [0.08; 0.07; 0];
+  point_in_link_frame = point_in_link_frame.(grHand);
   
 %   r.body(hand.(grHand)).collision_geometry  
 %   r.body(hand.(grHand)).visual_geometry
@@ -14,7 +16,6 @@ function info = test_multiRRT_reach(r, s, grHand, qStart, xGoal, objectGrasped)
   left_foot_link = 'LeftFoot';
   right_foot_link = 'RightFoot';
 %   runRRTIKServer
-  
   kinsol = r.doKinematics(qStart);
   xStart = [r.forwardKin(kinsol, hand.(grHand), point_in_link_frame, 2); qStart'];
   
