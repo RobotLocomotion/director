@@ -162,7 +162,6 @@ useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
 useMappingPanel = True
-useAddStartupFile = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -1077,6 +1076,6 @@ def mappingSweepEnded(taskQ, task):
         print "DONE WITH MAPPING ROOM"
 
 
-if useAddStartupFile:
+if 'startup' in drcargs.args():
     for filename in drcargs.args().startup:
         execfile(filename)
