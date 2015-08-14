@@ -11,8 +11,8 @@ function info = test_multiRRT_reach(r, s, grHand, qStart, xGoal, objectGrasped)
 %   r.body(hand.(grHand)).collision_geometry  
 %   r.body(hand.(grHand)).visual_geometry
   
-  addpath('/home/marco/drc/software/ddapp/src/matlab')
-  fixed_point_file = '/home/marco/drc/software/control/matlab/data/valkyrie_fp_june2015.mat';
+  addpath(fullfile(getDrakePath(), '..', 'ddapp/src/matlab') )
+  fixed_point_file = [getDrakePath(), '/../control/matlab/data/val_description/valkyrie_fp_june2015.mat'];
   left_foot_link = 'LeftFoot';
   right_foot_link = 'RightFoot';
 %   runRRTIKServer
