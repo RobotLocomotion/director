@@ -105,7 +105,7 @@ function info = test_multiRRT_reach(r, s, grHand, qStart, xGoal, objectGrasped)
   options.terrain = RigidBodyFlatTerrain(); %Changed to a smaller terrain to avoid visualization problem when zooming
   options.joint_v_max = 15*pi/180;
   
-  fp = load([getDrakePath(), '/../control/matlab/data/valkyrie_fp_june2015.mat']);
+  fp = load([getDrakePath(), '/../control/matlab/data/val_description/valkyrie_fp_june2015.mat']);
   qNom = fp.xstar(1:r.getNumPositions());
   xGoal
   multiTree = MultipleTreeProblem(r, hand.(grHand), xStart, xGoal, [],...
