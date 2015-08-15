@@ -110,7 +110,7 @@ This is an alias for:
 
 
 Citing
-------
+======
 
 If you wish to cite the director, please use:
 
