@@ -467,6 +467,8 @@ class Link(SpatialEntity):
     self.inertial = Inertial()
     self.collision = Collision()
     self.visual = Visual()
+    self.collisions = []
+    self.visuals = []
     self.tree_parent_joint = None
     self.tree_child_joints = []
     if 'tree' in kwargs:
@@ -478,8 +480,10 @@ class Link(SpatialEntity):
       'Link(\n',
       '  %s\n' % indent(super(Link, self).__repr__(), 2),
       '  %s\n' % indent(str(self.inertial), 2),
-      '  collision: %s\n' % self.collision,
-      '  visual: %s\n' % self.visual,
+      '  collisions:\n',
+      '    %s' % '\n    '.join([indent(str(l), 4) for l in self.collisions]),
+      '  visuals:\n',
+      '    %s' % '\n    '.join([indent(str(l), 4) for l in self.visuals]),
       ')'
     ))
 
@@ -492,8 +496,10 @@ class Link(SpatialEntity):
       return
     super(Link, self).from_tree(node)
     self.inertial = Inertial(tree=get_node(node, 'inertial'))
+    self.collisions = [Collision(tree=link_node) for link_node in node.iter('collision')] 
     self.collision = Collision(tree=get_node(node, 'collision'))
     self.visual = Visual(tree=get_node(node, 'visual'))
+    self.visuals = [Visual(tree=link_node) for link_node in node.iter('visual')] 
 
   def is_empty(self):
     return not self.visual.geometry_type and not self.collision.geometry_type
