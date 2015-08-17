@@ -5,8 +5,8 @@ import os
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
 
-from tf.transformations import *
-
+import numpy
+from ddapp.thirdparty import transformations
 from naming import *
 from conversions import *
 
@@ -99,7 +99,7 @@ def model_from_include(parent, include_node):
 
 
 def homogeneous_times_vector(homogeneous, vector):
-  vector_as_hom = identity_matrix()
+  vector_as_hom = transformations.identity_matrix()
   vector_as_hom[:3,3] = vector.T
   res = numpy.dot(homogeneous, vector_as_hom)
   return res[:3,3].T 
@@ -204,8 +204,8 @@ class World(object):
 class SpatialEntity(object):
   def __init__(self, **kwargs):
     self.name = ''
-    self.pose = identity_matrix()
-    self.pose_world = identity_matrix()
+    self.pose = transformations.identity_matrix()
+    self.pose_world = transformations.identity_matrix()
 
 
   def __repr__(self):
@@ -285,7 +285,7 @@ class Model(SpatialEntity):
       self.name = kwargs_name
 
     # External pose offset (from <include>)
-    self.pose = numpy.dot(kwargs.get('pose', identity_matrix()), self.pose)
+    self.pose = numpy.dot(kwargs.get('pose', transformations.identity_matrix()), self.pose)
 
 
   def from_tree(self, node, **kwargs):
@@ -363,15 +363,15 @@ class Model(SpatialEntity):
       submodel.build_tree()
 
 
-  def calculate_absolute_pose(self, worldMVparent = identity_matrix()):
-    worldMVmodel = concatenate_matrices(worldMVparent, self.pose)
+  def calculate_absolute_pose(self, worldMVparent = transformations.identity_matrix()):
+    worldMVmodel = transformations.concatenate_matrices(worldMVparent, self.pose)
     self.pose_world = worldMVmodel
     for submodel in self.submodels:
       submodel.calculate_absolute_pose(worldMVmodel)
     for link in self.links:
-      link.pose_world = concatenate_matrices(worldMVmodel, link.pose)
+      link.pose_world = transformations.concatenate_matrices(worldMVmodel, link.pose)
     for joint in self.joints:
-      joint.pose_world = concatenate_matrices(joint.tree_child_link.pose_world, joint.pose)
+      joint.pose_world = transformations.concatenate_matrices(joint.tree_child_link.pose_world, joint.pose)
 
 
   def find_root_link(self):
@@ -504,9 +504,9 @@ class Link(SpatialEntity):
     # urdf links do not have a coordinate system themselves, only their parts (inertial, collision, visual) have one
     if self.tree_parent_joint:
       if self.tree_parent_joint.parent_model == self.parent_model:
-        urdf_pose = concatenate_matrices(inverse_matrix(self.tree_parent_joint.pose_world), self.pose_world)
+        urdf_pose = transformations.concatenate_matrices(inverse_matrix(self.tree_parent_joint.pose_world), self.pose_world)
       else: # joint crosses includes
-        urdf_pose = identity_matrix()
+        urdf_pose = transformations.identity_matrix()
     else: # root
       urdf_pose = self.pose_world
     self.inertial.add_urdf_elements(linknode, urdf_pose)
@@ -569,11 +569,11 @@ class Joint(SpatialEntity):
     parentnode = ET.SubElement(jointnode, 'parent', {'link': sdf2tfname(full_prefix + self.parent)})
     childnode = ET.SubElement(jointnode, 'child', {'link': sdf2tfname(full_prefix + self.child)})
     # in SDF a joint's pose is given in child link frame, in URDF joint frame = child link frame, i.e. specifiy relative to parent joint (not parent link)
-    parent_pose_world = self.tree_parent_link.tree_parent_joint.pose_world if self.tree_parent_link.tree_parent_joint else identity_matrix()
+    parent_pose_world = self.tree_parent_link.tree_parent_joint.pose_world if self.tree_parent_link.tree_parent_joint else transformations.identity_matrix()
     if self.tree_parent_link.parent_model == self.parent_model:
-      pose2origin(jointnode, concatenate_matrices(inverse_matrix(parent_pose_world), self.pose_world))
+      pose2origin(jointnode, transformations.concatenate_matrices(inverse_matrix(parent_pose_world), self.pose_world))
     else: # joint crosses includes
-      pose2origin(jointnode, concatenate_matrices(inverse_matrix(parent_pose_world), self.tree_child_link.pose_world))
+      pose2origin(jointnode, transformations.concatenate_matrices(inverse_matrix(parent_pose_world), self.tree_child_link.pose_world))
     if self.type == 'revolute' and self.axis.lower_limit == 0 and self.axis.upper_limit == 0:
       jointnode.attrib['type'] = 'fixed'
     elif self.type == 'universal':
@@ -586,12 +586,12 @@ class Joint(SpatialEntity):
       ET.SubElement(dummyjointnode, 'parent', {'link': dummylinknode.attrib['name']})
       ET.SubElement(dummyjointnode, 'child', {'link': sdf2tfname(full_prefix + self.child)})
       dummyjointnode.attrib['type'] = 'revolute'
-      self.axis2.add_urdf_elements(dummyjointnode, concatenate_matrices(inverse_matrix(self.pose_world), self.parent_model.pose_world))
+      self.axis2.add_urdf_elements(dummyjointnode, transformations.concatenate_matrices(inverse_matrix(self.pose_world), self.parent_model.pose_world))
     else:
       jointnode.attrib['type'] = self.type
     #print('self.pose_world\n', self.pose_world)
     #print('self.parent_model.pose_world\n', self.parent_model.pose_world)
-    self.axis.add_urdf_elements(jointnode, concatenate_matrices(inverse_matrix(self.pose_world), self.parent_model.pose_world))
+    self.axis.add_urdf_elements(jointnode, transformations.concatenate_matrices(inverse_matrix(self.pose_world), self.parent_model.pose_world))
 
 
   def get_full_name(self):
@@ -653,7 +653,7 @@ class Axis(object):
 
 class Inertial(object):
   def __init__(self, **kwargs):
-    self.pose = identity_matrix()
+    self.pose = transformations.identity_matrix()
     self.mass = 0
     self.inertia = Inertia()
     if 'tree' in kwargs:
@@ -684,7 +684,7 @@ class Inertial(object):
   def add_urdf_elements(self, node, link_pose):
     inertialnode = ET.SubElement(node, 'inertial')
     massnode = ET.SubElement(inertialnode, 'mass', {'value': str(self.mass)})
-    pose2origin(inertialnode, concatenate_matrices(link_pose, self.pose))
+    pose2origin(inertialnode, transformations.concatenate_matrices(link_pose, self.pose))
     self.inertia.add_urdf_elements(inertialnode)
 
 
@@ -765,7 +765,7 @@ class LinkPart(SpatialEntity):
     if not self.geometry_type:
       return
     partnode = ET.SubElement(node, part_type, {'name': sdf2tfname(prefix + '::' + self.name)})
-    pose2origin(partnode, concatenate_matrices(link_pose, self.pose))
+    pose2origin(partnode, transformations.concatenate_matrices(link_pose, self.pose))
     geometrynode = ET.SubElement(partnode, 'geometry')
     if self.geometry_type == 'box':
       boxnode = ET.SubElement(geometrynode, 'box', {'size': self.geometry_data['size']})

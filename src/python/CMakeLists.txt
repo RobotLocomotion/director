@@ -141,6 +141,10 @@ set(python_files
   ddapp/thirdparty/NumericStringParser.py
   ddapp/thirdparty/numpyjsoncoder.py
   ddapp/thirdparty/transformations.py
+  ddapp/thirdparty/conversions.py
+  ddapp/thirdparty/geometry_msgs_mock.py
+  ddapp/thirdparty/naming.py
+  ddapp/thirdparty/pysdf.py
 
   urdf_parser_py/__init__.py
   urdf_parser_py/sdf.py
