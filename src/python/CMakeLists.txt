@@ -145,6 +145,7 @@ set(python_files
   ddapp/thirdparty/geometry_msgs_mock.py
   ddapp/thirdparty/naming.py
   ddapp/thirdparty/pysdf.py
+  ddapp/sceneloader.py
 
   urdf_parser_py/__init__.py
   urdf_parser_py/sdf.py
