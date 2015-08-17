@@ -472,7 +472,7 @@ class EndEffectorTeleopPanel(object):
 
         if ikPlanner.robotNoFeet == True:
             constraints = []
-            constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
+            #constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
             if self.getBackConstraint() == 'fixed':
                 constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
                 ikPlanner.setBackLocked(True)
