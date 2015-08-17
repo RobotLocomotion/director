@@ -540,10 +540,9 @@ class FootstepsDriver(object):
             self.sendUpdatePlanRequest()
 
     def drawContactPts(self, obj, footstep, **kwargs):
-        if footstep.is_right_foot:
-            _, contact_pts = FootstepsDriver.getContactPts()
-        else:
-            contact_pts, _ = FootstepsDriver.getContactPts()
+        leftPoints, rightPoints = FootstepsDriver.getContactPts(footstep.params.support_contact_groups)
+        contact_pts = rightPoints if footstep.is_right_foot else leftPoints
+
         d = DebugData()
         for pt in contact_pts:
             d.addSphere(pt, radius=0.01)
@@ -990,7 +989,11 @@ class FootstepRequestGenerator(object):
         assert leadingFoot in ('left', 'right')
         isRightFootOffset = 0 if leadingFoot == 'left' else 1
 
-        footOriginToSole = -np.mean(FootstepsDriver.getContactPts(), axis=0)
+        leftPoints, rightPoints = FootstepsDriver.getContactPts()
+
+        # note, assumes symmetrical feet. the loop below should be
+        # updated to alternate between left/right contact point sets
+        footOriginToSole = -np.mean(leftPoints, axis=0)
 
         stepMessages = []
         for i, stepFrame in enumerate(stepFrames):
