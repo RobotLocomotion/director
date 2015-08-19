@@ -29,11 +29,16 @@ class SceneLoader(object):
                 t2=transformUtils.getTransformFromNumpy(link.pose)
                 t3=transformUtils.getTransformFromNumpy(col.pose)
                 t=t1
-                t.PostMultiply()
+                t.PreMultiply()
                 t.Concatenate(t2)  
-                t.PostMultiply()
+                t.PreMultiply()
                 t.Concatenate(t3)
                 p = transformUtils.poseFromTransform(t)
+                name = model.name;
+                if len(link.name)>0:
+                    name+='-'+link.name
+                if len(col.name)>0 and len(link.collisions)>1:
+                    name+='-'+col.name
                 if col.geometry_type=='mesh':
                     print 'Mesh geometry is unsupported - SKIPPING!'
                 if col.geometry_type=='image':
@@ -45,9 +50,9 @@ class SceneLoader(object):
                 if col.geometry_type=='sphere':
                     print 'Sphere geometry is unsupported - SKIPPING!'
                 if col.geometry_type=='box':
-                    desc = dict(classname='BoxAffordanceItem', Name='SDF-'+model.name+'-'+link.name+'-'+col.name, uuid=newUUID(), pose=p, Color=[0.8, 0.8, 0.8], Dimensions=map(float, col.geometry_data['size'].split(' ')))
+                    desc = dict(classname='BoxAffordanceItem', Name=name, uuid=newUUID(), pose=p, Color=[0.8, 0.8, 0.8], Dimensions=map(float, col.geometry_data['size'].split(' ')))
                     self.affordanceManager.newAffordanceFromDescription(desc)
                 if col.geometry_type=='cylinder':
-                    desc = dict(classname='CylinderAffordanceItem', Name='SDF-'+model.name+'-'+link.name+'-'+col.name, uuid=newUUID(), pose=p, Color=[0.8, 0.8, 0.8], Radius=float(col.geometry_data['radius']), Length = float(col.geometry_data['length']))
+                    desc = dict(classname='CylinderAffordanceItem', Name=name, uuid=newUUID(), pose=p, Color=[0.8, 0.8, 0.8], Radius=float(col.geometry_data['radius']), Length = float(col.geometry_data['length']))
                     self.affordanceManager.newAffordanceFromDescription(desc)            
 
