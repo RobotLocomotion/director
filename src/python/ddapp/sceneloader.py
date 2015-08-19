@@ -35,7 +35,7 @@ class SceneLoader(object):
                 t.Concatenate(t3)
                 p = transformUtils.poseFromTransform(t)
                 name = model.name;
-                if len(link.name)>0:
+                if len(link.name)>0 and link.name != model.name:
                     name+='-'+link.name
                 if len(col.name)>0 and len(link.collisions)>1:
                     name+='-'+col.name
