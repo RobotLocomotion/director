@@ -17,7 +17,6 @@ import ddapp.vtkNumpy as vnp
 import os
 import math
 import numpy as np
-from ddapp import botpy
 from ddapp import drcargs
 import drc as lcmdrc
 from bot_core.pose_t import pose_t
@@ -882,7 +881,7 @@ class FootstepsDriver(object):
     def onPoseBDI(self,msg):
         self.pose_bdi = msg
         # Set the xyzrpy of this pose to equal that estimated by BDI
-        rpy = botpy.quat_to_roll_pitch_yaw(msg.orientation)
+        rpy = transformUtils.quaternionToRollPitchYaw(msg.orientation)
         pose = self.jointController.q.copy()
         pose[0:3] = msg.pos
         pose[3:6] = rpy
@@ -907,7 +906,7 @@ class FootstepsDriver(object):
         t_bodybdi.PostMultiply()
 
         current_pose = self.jointController.q
-        t_bodymain = transformUtils.transformFromPose( current_pose[0:3]  , botpy.roll_pitch_yaw_to_quat(current_pose[3:6])   )
+        t_bodymain = transformUtils.transformFromPose( current_pose[0:3]  , transformUtils.rollPitchYawToQuaternion(current_pose[3:6])   )
         t_bodymain.PostMultiply()
 
         # iterate and transform

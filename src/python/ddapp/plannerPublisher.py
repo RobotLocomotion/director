@@ -2,7 +2,6 @@ from __future__ import division # for proper float division
 
 import os
 import sys
-from ddapp import botpy
 import math
 import time
 import types

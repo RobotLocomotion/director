@@ -12,7 +12,6 @@ from time import time
 import imp
 import ddapp.applogic as app
 from ddapp import drcargs
-from ddapp import botpy
 from ddapp import vtkAll as vtk
 from ddapp import matlab
 from ddapp import jointcontrol

@@ -126,15 +126,12 @@ def orientationFromNormal(normal):
 
 def orientationFromAxes(xaxis, yaxis, zaxis):
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
-    rpy = [0.0, 0.0, 0.0]
-    vtk.vtkMultisenseSource.GetBotRollPitchYaw(t, rpy)
-    return rpy
+    return rollPitchYawFromTransform(t)
 
 
 def rollPitchYawFromTransform(t):
-    rpy = np.zeros(3)
-    vtk.vtkMultisenseSource.GetBotRollPitchYaw(t, rpy)
-    return rpy
+    pos, quat = poseFromTransform(t)
+    return quaternionToRollPitchYaw(quat)
 
 
 def frameInterpolate(trans_a, trans_b, weight_b):
@@ -190,6 +187,14 @@ def frameFromPositionAndRPY(position, rpy):
     t.RotateWXYZ(math.degrees(angle), axis)
     t.Translate(position)
     return t
+
+
+def rollPitchYawToQuaternion(rpy):
+    return botpy.roll_pitch_yaw_to_quat(rpy)
+
+
+def quaternionToRollPitchYaw(quat):
+    return botpy.quat_to_roll_pitch_yaw(quat)
 
 
 def frameFromPositionMessage(positionMessage):

@@ -6,7 +6,6 @@ import ddapp.applogic as app
 import ddapp.objectmodel as om
 import ddapp.visualization as vis
 import ddapp.vtkAll as vtk
-from ddapp import botpy
 from ddapp import jointcontrol
 from ddapp import getDRCBaseDir
 from ddapp import lcmUtils
@@ -508,7 +507,7 @@ class HandLoader(object):
     @staticmethod
     def moveHandModelToFrame(model, frame):
         pos, quat = transformUtils.poseFromTransform(frame)
-        rpy = botpy.quat_to_roll_pitch_yaw(quat)
+        rpy = transformUtils.quaternionToRollPitchYaw(quat)
         pose = np.hstack((pos, rpy))
         model.model.setJointPositions(pose, ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw'])
 
