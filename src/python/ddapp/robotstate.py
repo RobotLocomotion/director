@@ -1,10 +1,10 @@
-import botpy
 import drc as lcmdrc
 import numpy as np
 import time
 import re
 import json
 from ddapp import drcargs
+from ddapp import transformUtils
 
 _robotStateToDrakePoseJointMap = None
 _drakePoseToRobotStateJointMap = None
@@ -14,7 +14,7 @@ _numPositions = None
 
 
 def getRollPitchYawFromRobotState(robotState):
-    return botpy.quat_to_roll_pitch_yaw(robotState[3:7])
+    return transformUtils.quaternionToRollPitchYaw(robotState[3:7])
 
 
 def getPositionFromRobotState(robotState):
@@ -64,7 +64,7 @@ def convertStateMessageToDrakePose(msg):
     quat = msg.pose.rotation
     trans = [trans.x, trans.y, trans.z]
     quat = [quat.w, quat.x, quat.y, quat.z]
-    rpy = botpy.quat_to_roll_pitch_yaw(quat)
+    rpy = transformUtils.quaternionToRollPitchYaw(quat)
 
     pose = np.hstack((trans, rpy, jointPositions))
     assert len(pose) == getNumPositions()
@@ -111,7 +111,7 @@ def robotStateToDrakePose(robotState):
 
 def getPoseLCMFromXYZRPY(xyz, rpy):
 
-    wxyz = botpy.roll_pitch_yaw_to_quat(rpy)
+    wxyz = transformUtils.rollPitchYawToQuaternion(rpy)
 
     trans = lcmdrc.vector_3d_t()
     trans.x, trans.y, trans.z = xyz

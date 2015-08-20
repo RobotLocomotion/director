@@ -1,6 +1,5 @@
 import os
 import vtkAll as vtk
-from ddapp import botpy
 import math
 import time
 import numpy as np
@@ -16,7 +15,6 @@ from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
 from ddapp import robotstate
-from ddapp import botpy
 
 import drc as lcmdrc
 import irobothand as lcmirobot

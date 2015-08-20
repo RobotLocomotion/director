@@ -13,7 +13,7 @@ from ddapp import ik
 import bot_frames
 
 from PythonQt import QtCore, QtGui
-from ddapp import botpy, filterUtils
+from ddapp import filterUtils
 from ddapp import lcmUtils
 from ddapp import planplayback
 from ddapp import transformUtils
@@ -347,8 +347,7 @@ class PFGrasp(object):
             return
         self.TargetMsg = deepcopy(data)
         
-        targetToWorld = transformUtils.frameFromPositionAndRPY(self.TargetMsg.trans,
-                                                   np.degrees(botpy.quat_to_roll_pitch_yaw(self.TargetMsg.quat)))
+        targetToWorld = transformUtils.transformFromPose(self.TargetMsg.trans, self.TargetMsg.quat)
     
         startPose = self.getPlanningStartPose()            
         

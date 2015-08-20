@@ -3,7 +3,6 @@ import math
 from ddapp.timercallback import TimerCallback
 from ddapp.simpletimer import SimpleTimer
 from ddapp import robotstate
-from ddapp import midi
 from ddapp import getDRCBaseDir
 from ddapp import lcmUtils
 import drc as lcmdrc
@@ -95,39 +94,6 @@ class JointController(object):
     def removeLCMUpdater(self):
         lcmUtils.removeSubscriber(self.subscriber)
         self.subscriber = None
-
-
-class MidiJointControl(TimerCallback):
-
-    def __init__(self, jointController):
-        TimerCallback.__init__(self)
-        self.reader = midi.MidiReader()
-        self.controller = jointController
-        self.channelToJoint = { 112: 13 }
-
-
-    def _scaleMidiValue(self, midiValue):
-        degrees = midiValue * 180.0/127.0
-        return degrees
-
-
-    def tick(self):
-        messages = self.reader.getMessages()
-        if not messages:
-            return
-
-        targets = {}
-        for message in messages:
-            channel = message[2]
-            value = message[3]
-            targets[channel] = value
-
-        for channel, value in targets.iteritems():
-            jointId = self.channelToJoint.get(channel)
-            position = self._scaleMidiValue(value)
-
-            if jointId is not None:
-                self.controller.setJointPosition(jointId, position)
 
 
 class JointControlTestRamp(TimerCallback):
