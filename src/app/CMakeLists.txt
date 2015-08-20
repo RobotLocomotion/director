@@ -1,6 +1,6 @@
 setup_qt4()
 
-if(USE_DRC)
+if(USE_DRC OR USE_DRAKE)
   use_cpp11()
 endif()
 
@@ -110,7 +110,12 @@ if (USE_DRAKE)
 
   find_package(Drake REQUIRED)
   find_package(Boost REQUIRED COMPONENTS system thread filesystem regex)
-  include_directories(${DRAKE_INCLUDE_DIRS})
+  find_package(Eigen REQUIRED)
+
+  include_directories(
+    ${EIGEN_INCLUDE_DIRS}
+    ${DRAKE_INCLUDE_DIRS}
+  )
 
   set(moc_srcs)
   qt4_wrap_cpp(moc_srcs
@@ -162,9 +167,6 @@ if (USE_LCM)
 endif()
 
 if (USE_DRC)
-
-  find_package(Eigen REQUIRED)
-  include_directories(${EIGEN_INCLUDE_DIRS})
 
   find_package(LibBot REQUIRED)
   include_directories(${LIBBOT_INCLUDE_DIRS})
