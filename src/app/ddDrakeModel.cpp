@@ -703,7 +703,7 @@ public:
       //auto pt = model->forwardKinNew(Vector3d::Zero().eval(), body->body_index, 0, 2, 0);
       //pose = pt.value();
 
-      pose = model->forwardKinNew(Vector3d::Zero().eval(), body->body_index, 0, 2, 0).value();
+      pose = model->forwardKin(Vector3d::Zero().eval(), body->body_index, 0, 2, 0).value();
 
       double* posedata = pose.data();
 
@@ -773,7 +773,7 @@ public:
 
     RigidBodyManipulator* model = this;
 
-    pose = model->forwardKinNew(Vector3d::Zero().eval(), linkMap.value(linkName), 0, 2, 0).value();
+    pose = model->forwardKin(Vector3d::Zero().eval(), linkMap.value(linkName), 0, 2, 0).value();
 
     double* posedata = pose.data();
     bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
@@ -977,7 +977,7 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
   }
 
   this->Internal->JointPositions = jointPositions;
-  model->doKinematicsNew(q, v, false, false);
+  model->doKinematics(q, v, false, false);
   model->updateModel();
   emit this->modelChanged();
 }
@@ -1033,7 +1033,8 @@ QVector<double> ddDrakeModel::getCenterOfMass() const
 {
   URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
   Vector3d com;
-  model->getCOM(com);
+  com = model->centerOfMass<double>(0).value();
+
   QVector<double> ret;
   ret << com[0] << com[1] << com[2];
   return ret;
