@@ -1193,7 +1193,7 @@ class TableTaskPanel(TaskUserPanel):
             if confirm:
                 addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'), parent=parent)
 
-        def addManipulation(func, name, parent=None, confirm=True):
+        def addManipulation(func, name, parent=None, confirm=False):
             group = self.taskTree.addGroup(name, parent=parent)
             addFunc(func, name='plan motion', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
