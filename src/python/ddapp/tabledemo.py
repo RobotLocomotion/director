@@ -1300,3 +1300,7 @@ class TableTaskPanel(TaskUserPanel):
             addManipulation(functools.partial(v.planDropPostureLower, v.graspingHand), name='drop: lower arm')
         else:
             addManipulation(functools.partial(v.planPreGrasp, v.graspingHand), name='go home')
+
+        if len(v.clusterObjects) > 0: # There is still sth on the table, let's do it again!
+            self.taskTree.selectTaskByName('reach')
+            self.onContinue()
