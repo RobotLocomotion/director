@@ -1283,3 +1283,7 @@ class TableTaskPanel(TaskUserPanel):
         addManipulation(functools.partial(v.planDropPostureRaise, v.graspingHand), name='drop: raise arm') # seems to ignore arm side?
         addFunc(functools.partial(v.dropTableObject, side=v.graspingHand), 'drop', parent='drop: release', confirm=True)
         addManipulation(functools.partial(v.planDropPostureLower, v.graspingHand), name='drop: lower arm')
+        if not v.ikPlanner.fixedBaseArm:
+            addManipulation(functools.partial(v.planDropPostureLower, v.graspingHand), name='drop: lower arm')
+        else:
+            addManipulation(functools.partial(v.planPreGrasp, v.graspingHand), name='go home')
