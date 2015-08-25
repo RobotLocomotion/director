@@ -22,6 +22,10 @@ class AffordanceObjectModelManager(object):
         self.timer = TimerCallback()
         self.timer.callback = self._notifyPendingUpdates
 
+        self.affordanceUpdater = None
+
+    def setAffordanceUpdater(self, affordanceUpdater):
+        self.affordanceUpdater = affordanceUpdater
 
     def getAffordances(self):
         return [obj for obj in om.getObjects() if isinstance(obj, affordanceitems.AffordanceItem)]

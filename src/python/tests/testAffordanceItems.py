@@ -11,6 +11,7 @@ from ddapp.timercallback import TimerCallback
 from ddapp import segmentation
 from ddapp.uuidutil import newUUID
 from ddapp import geometryencoder
+from ddapp import sceneloader
 import drc as lcmdrc
 import os
 import json
@@ -97,11 +98,26 @@ def testAffordanceToUrdf():
     for aff in affs:
         om.removeFromObjectModel(aff)
 
+def testSDF():
+    print "Testind SDF loader"
+    n_pre=len(affordanceManager.getAffordances())
+
+    dataDir = app.getTestingDataDirectory()
+    filename=os.path.join(dataDir, 'tabletop/tabledemo.sdf');
+    sc=sceneloader.SceneLoader()
+    print "Loading "+filename
+    sc.loadSDF(filename)
+
+    n_post=len(affordanceManager.getAffordances())
+    print "Number of affordances loaded: "+str(n_post-n_pre)
+    assert n_post>n_pre
+
 
 testCollection()
 testAffordanceToUrdf()
 loadTableTopPointCloud()
 segmentTableTopPointCloud()
+testSDF()
 
 from ddapp import affordancepanel
 panel = affordancepanel.AffordancePanel(view, affordanceManager, ikServer, robotStateJointController, raycastDriver)

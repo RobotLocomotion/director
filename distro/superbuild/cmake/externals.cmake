@@ -1,14 +1,16 @@
 
 
-option(USE_PCL "Build PCL." OFF)
-option(USE_LIBBOT "Build libbot." OFF)
-option(USE_LCM "Build lcm." OFF)
+option(USE_PCL "Build with PCL." OFF)
+option(USE_LCM "Build with lcm." OFF)
+option(USE_LCMGL "Build with lcm-gl." OFF)
+option(USE_LIBBOT "Build with libbot." OFF)
+option(USE_DRAKE "Build with drake." OFF)
+option(USE_STANDALONE_LCMGL "Build with standalone bot-lcmgl." OFF)
 set(USE_EIGEN ${USE_PCL})
 
 option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
 option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
 option(USE_SYSTEM_LIBBOT "Use system version of libbot.  If off, libbot will be built." OFF)
-
 
 set(default_cmake_args
   "-DCMAKE_PREFIX_PATH:PATH=${install_prefix};${CMAKE_PREFIX_PATH}"
@@ -104,20 +106,45 @@ if(USE_LIBBOT AND NOT USE_SYSTEM_LIBBOT)
 
   ExternalProject_Add(libbot
     GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
-    GIT_TAG 5561ed5
+    GIT_TAG c328b73
     CONFIGURE_COMMAND ""
     INSTALL_COMMAND ""
     BUILD_COMMAND $(MAKE) BUILD_PREFIX=${install_prefix} BUILD_TYPE=${CMAKE_BUILD_TYPE}
     BUILD_IN_SOURCE 1
 
     DEPENDS
-      lcm
+      ${lcm_depends}
     )
 
   set(libbot_depends libbot)
 
 endif()
 
+
+if(USE_STANDALONE_LCMGL)
+
+  ExternalProject_Add(bot-lcmgl-download
+    GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
+    GIT_TAG c328b73
+    SOURCE_DIR ${PROJECT_BINARY_DIR}/src/bot-lcmgl
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+    )
+
+  ExternalProject_Add(bot-lcmgl
+    SOURCE_DIR ${PROJECT_BINARY_DIR}/src/bot-lcmgl/bot2-lcmgl
+    DOWNLOAD_COMMAND ""
+    UPDATE_COMMAND ""
+    DEPENDS bot-lcmgl-download
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      -DUSE_BOT_VIS:BOOL=OFF
+    )
+
+  set(lcmgl_depends bot-lcmgl)
+
+endif()
 
 ###############################################################################
 # PythonQt
@@ -298,14 +325,10 @@ ExternalProject_Add(ddapp
   DOWNLOAD_COMMAND ""
   CMAKE_CACHE_ARGS
 
-    -DUSE_PORTMIDI:BOOL=OFF
-    -DUSE_DRC:BOOL=OFF
-    -DUSE_DRC_MAPS:BOOL=OFF
-    -DUSE_DRC_PLANE_SEG:BOOL=OFF
-    -DUSE_DRAKE:BOOL=OFF
-    -DUSE_LCM_GL:BOOL=${USE_LIBBOT}
-    -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
     -DUSE_LCM:BOOL=${USE_LCM}
+    -DUSE_LCMGL:BOOL=${USE_LCMGL}
+    -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
+    -DUSE_DRAKE:BOOL=${USE_DRAKE}
 
     ${default_cmake_args}
     ${eigen_args}

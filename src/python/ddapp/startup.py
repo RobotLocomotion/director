@@ -12,7 +12,6 @@ from time import time
 import imp
 import ddapp.applogic as app
 from ddapp import drcargs
-from ddapp import botpy
 from ddapp import vtkAll as vtk
 from ddapp import matlab
 from ddapp import jointcontrol
@@ -161,6 +160,7 @@ useBlackoutText = True
 useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
+useMappingPanel = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -459,6 +459,9 @@ if usePlanning:
     mappingDemo = mappingdemo.MappingDemo(robotStateModel, playbackRobotModel,
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
                     perception.multisenseDriver, view, robotStateJointController, playPlans)
+    if useMappingPanel:
+        mappingPanel = mappingpanel.init(robotStateJointController, footstepsDriver)
+        mappingTaskPanel = mappingpanel.MappingTaskPanel(mappingDemo, mappingPanel)
 
     doorDemo = doordemo.DoorDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -485,6 +488,8 @@ if usePlanning:
     taskPanels['Surprise'] = surpriseTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
     taskPanels['Table'] = tableTaskPanel.widget
+    if useMappingPanel:
+        taskPanels['Mapping'] = mappingTaskPanel.widget
 
     tasklaunchpanel.init(taskPanels)
 
@@ -516,11 +521,6 @@ if useNavigationPanel:
 if useLoggingWidget:
     w = lcmloggerwidget.LCMLoggerWidget(statusBar=app.getMainWindow().statusBar())
     app.getMainWindow().statusBar().addPermanentWidget(w.button)
-
-
-useMappingPanel = True
-if useMappingPanel:
-    mappingPanel = mappingpanel.init(robotStateJointController, footstepsDriver)
 
 
 
@@ -1073,3 +1073,8 @@ def mappingSweepEnded(taskQ, task):
         qq.sleep(3)
         mappingPanel.onShowMapButton()
         print "DONE WITH MAPPING ROOM"
+
+
+if 'startup' in drcargs.args():
+    for filename in drcargs.args().startup:
+        execfile(filename)

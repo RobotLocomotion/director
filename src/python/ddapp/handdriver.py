@@ -1,6 +1,5 @@
 import os
 import vtkAll as vtk
-from ddapp import botpy
 import math
 import time
 import numpy as np
@@ -16,7 +15,6 @@ from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
 from ddapp import robotstate
-from ddapp import botpy
 
 import drc as lcmdrc
 import irobothand as lcmirobot
@@ -196,5 +194,34 @@ class RobotiqHandDriver(object):
         msg.force = 0
         msg.velocity = 0
         msg.mode = int(mode)
+        channel = 'ROBOTIQ_%s_COMMAND' % self.side.upper()
+        lcmUtils.publish(channel, msg)
+
+    # NB: added by Wolfgang 2015-07-27
+    #     Not used on the Robotiq, but more for using the 
+    #     RobotiqHandDriver as a more generic hand driver
+    def sendDeactivate(self):
+        msg = lcmrobotiq.command_t()
+        msg.utime = getUtime()
+        msg.activate = 0
+        msg.emergency_release = 0
+        msg.do_move = 0
+        msg.mode = 0
+        msg.position = 0
+        msg.force = 0
+        msg.velocity = 0
+        channel = 'ROBOTIQ_%s_COMMAND' % self.side.upper()
+        lcmUtils.publish(channel, msg)
+
+    def sendActivate(self):
+        msg = lcmrobotiq.command_t()
+        msg.utime = getUtime()
+        msg.activate = 1
+        msg.emergency_release = 0
+        msg.do_move = 0
+        msg.mode = 0
+        msg.position = 0
+        msg.force = 0
+        msg.velocity = 0
         channel = 'ROBOTIQ_%s_COMMAND' % self.side.upper()
         lcmUtils.publish(channel, msg)

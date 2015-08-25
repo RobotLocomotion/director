@@ -17,7 +17,6 @@ import ddapp.vtkNumpy as vnp
 import os
 import math
 import numpy as np
-from ddapp import botpy
 from ddapp import drcargs
 import drc as lcmdrc
 from bot_core.pose_t import pose_t
@@ -540,10 +539,9 @@ class FootstepsDriver(object):
             self.sendUpdatePlanRequest()
 
     def drawContactPts(self, obj, footstep, **kwargs):
-        if footstep.is_right_foot:
-            _, contact_pts = FootstepsDriver.getContactPts()
-        else:
-            contact_pts, _ = FootstepsDriver.getContactPts()
+        leftPoints, rightPoints = FootstepsDriver.getContactPts(footstep.params.support_contact_groups)
+        contact_pts = rightPoints if footstep.is_right_foot else leftPoints
+
         d = DebugData()
         for pt in contact_pts:
             d.addSphere(pt, radius=0.01)
@@ -882,7 +880,7 @@ class FootstepsDriver(object):
     def onPoseBDI(self,msg):
         self.pose_bdi = msg
         # Set the xyzrpy of this pose to equal that estimated by BDI
-        rpy = botpy.quat_to_roll_pitch_yaw(msg.orientation)
+        rpy = transformUtils.quaternionToRollPitchYaw(msg.orientation)
         pose = self.jointController.q.copy()
         pose[0:3] = msg.pos
         pose[3:6] = rpy
@@ -907,7 +905,7 @@ class FootstepsDriver(object):
         t_bodybdi.PostMultiply()
 
         current_pose = self.jointController.q
-        t_bodymain = transformUtils.transformFromPose( current_pose[0:3]  , botpy.roll_pitch_yaw_to_quat(current_pose[3:6])   )
+        t_bodymain = transformUtils.transformFromPose( current_pose[0:3]  , transformUtils.rollPitchYawToQuaternion(current_pose[3:6])   )
         t_bodymain.PostMultiply()
 
         # iterate and transform
@@ -990,7 +988,11 @@ class FootstepRequestGenerator(object):
         assert leadingFoot in ('left', 'right')
         isRightFootOffset = 0 if leadingFoot == 'left' else 1
 
-        footOriginToSole = -np.mean(FootstepsDriver.getContactPts(), axis=0)
+        leftPoints, rightPoints = FootstepsDriver.getContactPts()
+
+        # note, assumes symmetrical feet. the loop below should be
+        # updated to alternate between left/right contact point sets
+        footOriginToSole = -np.mean(leftPoints, axis=0)
 
         stepMessages = []
         for i, stepFrame in enumerate(stepFrames):

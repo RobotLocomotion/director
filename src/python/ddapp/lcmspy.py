@@ -95,6 +95,27 @@ def onLCMMessage(channel, messageBytes, checkExistingChannel=False):
     lcmCatalog[channel] = msg
 
 
+def getArrayFieldInfo(value):
+
+    if not len(value):
+        return 'empty'
+
+    value = value[0]
+
+    if isinstance(value, float):
+        return 'float', None
+    elif isinstance(value, int):
+        return 'integer', None
+    elif isinstance(value, (str, unicode)):
+        return 'string', None
+    elif isinstance(value, (list, tuple)):
+        arrayType, messageType = getArrayFieldInfo(value)
+        return 'array[%d] of ' % len(value) + arrayType, messageType
+    elif type(value) in messageTypeToModule:
+        return getMessageFullName(value), value
+    else:
+        return 'unknown', None
+
 
 def printMessageFields(msg, indent=''):
 
@@ -105,6 +126,7 @@ def printMessageFields(msg, indent=''):
     for slot in msg.__slots__:
         print '%s%s' % (indent, slot),
         value = getattr(msg, slot)
+
         if isinstance(value, float):
             print ': float'
         elif isinstance(value, int):
@@ -112,7 +134,11 @@ def printMessageFields(msg, indent=''):
         elif isinstance(value, (str, unicode)):
             print ': string'
         elif isinstance(value, (list, tuple)):
-            print ': array'
+
+            arrayType, messageValue = getArrayFieldInfo(value)
+            print ': array[%d] of ' % len(value) + arrayType
+            printMessageFields(messageValue, indent + '  ')
+
         elif type(value) in messageTypeToModule:
             print getMessageFullName(value)
             printMessageFields(value, indent + '  ')

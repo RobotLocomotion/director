@@ -14,7 +14,6 @@ from ddapp.timercallback import TimerCallback
 from ddapp import visualization as vis
 from ddapp import planplayback
 from ddapp import lcmUtils
-from ddapp import affordancepanel
 from ddapp.uuidutil import newUUID
 
 import os

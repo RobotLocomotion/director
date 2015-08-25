@@ -109,3 +109,16 @@ This is an alias for:
     cmake ../distro/superbuild
 
 
+Citing
+======
+
+If you wish to cite the director, please use:
+
+::
+
+    @misc{director,
+      author = "Pat Marion",
+      title = "Director: A robotics interface and visualization framework",
+      year = 2015,
+      url = "http://github.com/RobotLocomotion/director"
+    }

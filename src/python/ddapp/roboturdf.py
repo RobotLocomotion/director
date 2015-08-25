@@ -6,7 +6,6 @@ import ddapp.applogic as app
 import ddapp.objectmodel as om
 import ddapp.visualization as vis
 import ddapp.vtkAll as vtk
-from ddapp import botpy
 from ddapp import jointcontrol
 from ddapp import getDRCBaseDir
 from ddapp import lcmUtils
@@ -30,6 +29,7 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
     handCombinations = directorConfig['handCombinations']
     numberOfHands = len(handCombinations)
 
+    headLink = directorConfig['headLink']
 
 
 def getRobotGrayColor():
@@ -112,6 +112,9 @@ class RobotModelItem(om.ObjectModelItem):
             return t
         else:
             return None
+
+    def getHeadLink(self):
+        return headLink
 
     def getLinkContactPoints(self, linkName):
         pts = self.model.getBodyContactPoints(linkName)
@@ -508,7 +511,7 @@ class HandLoader(object):
     @staticmethod
     def moveHandModelToFrame(model, frame):
         pos, quat = transformUtils.poseFromTransform(frame)
-        rpy = botpy.quat_to_roll_pitch_yaw(quat)
+        rpy = transformUtils.quaternionToRollPitchYaw(quat)
         pose = np.hstack((pos, rpy))
         model.model.setJointPositions(pose, ['base_x', 'base_y', 'base_z', 'base_roll', 'base_pitch', 'base_yaw'])
 

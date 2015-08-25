@@ -1,6 +1,6 @@
 setup_qt4()
 
-if(USE_DRC)
+if(USE_DRC OR USE_DRAKE)
   use_cpp11()
 endif()
 
@@ -110,7 +110,12 @@ if (USE_DRAKE)
 
   find_package(Drake REQUIRED)
   find_package(Boost REQUIRED COMPONENTS system thread filesystem regex)
-  include_directories(${DRAKE_INCLUDE_DIRS})
+  find_package(Eigen REQUIRED)
+
+  include_directories(
+    ${EIGEN_INCLUDE_DIRS}
+    ${DRAKE_INCLUDE_DIRS}
+  )
 
   set(moc_srcs)
   qt4_wrap_cpp(moc_srcs
@@ -163,9 +168,6 @@ endif()
 
 if (USE_DRC)
 
-  find_package(Eigen REQUIRED)
-  include_directories(${EIGEN_INCLUDE_DIRS})
-
   find_package(LibBot REQUIRED)
   include_directories(${LIBBOT_INCLUDE_DIRS})
 
@@ -175,21 +177,15 @@ if (USE_DRC)
   set(moc_srcs)
   qt4_wrap_cpp(moc_srcs
     ddBotImageQueue.h
+    ddKinectLCM.h
+    ddPointCloudLCM.h
   )
 
   list(APPEND srcs
     ${moc_srcs}
     ddBotImageQueue.cpp
-  )
-
-  set(moc_srcs)
-  qt4_wrap_cpp(moc_srcs
-    ddKinectLCM.h
-  )
-
-  list(APPEND srcs
-    ${moc_srcs}
     ddKinectLCM.cpp
+    ddPointCloudLCM.cpp
   )
 
   list(APPEND wrap_files
@@ -199,11 +195,10 @@ if (USE_DRC)
   list (APPEND deps
     ${LIBBOT_LIBRARIES}
     ${PCL_LIBRARIES}
-    lcmtypes_kinect
   )
 
   list(APPEND pkg_deps
-    image-utils multisense_utils kinect-utils
+    image-utils multisense_utils kinect-utils lcmtypes_kinect
   )
 
 endif()
@@ -216,7 +211,7 @@ add_library(ddApp ${srcs})
 target_link_libraries(ddApp ${deps})
 
 if(pkg_deps)
-  use_pkg(ddApp ddApp_pkg_dep ${pkg_deps})
+  use_pkg(ddApp ${pkg_deps})
 endif()
 
 add_executable(drake-designer main.cpp)
