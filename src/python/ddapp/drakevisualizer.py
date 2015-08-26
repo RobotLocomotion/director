@@ -55,10 +55,18 @@ class Geometry(object):
 
     @staticmethod
     def scaleGeometry(polyDataList, geom):
-        scale = geom.float_data[0]
-        if scale != 1.0:
+        if len(geom.float_data) == 1:
+            scale_x = scale_y = scale_z = geom.float_data[0]
+        elif len(geom.float_data) == 3:
+            scale_x = geom.float_data[0]
+            scale_y = geom.float_data[1]
+            scale_z = geom.float_data[2]
+        else:
+            scale_x = scale_y = scale_z = 1.0
+
+        if scale_x != 1.0 or scale_y != 1.0 or scale_z != 1.0:
             t = vtk.vtkTransform()
-            t.Scale(scale, scale, scale)
+            t.Scale(scale_x, scale_y, scale_z)
             polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
 
         return polyDataList
