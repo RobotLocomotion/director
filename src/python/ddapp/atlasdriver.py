@@ -1,6 +1,5 @@
 import os
 import vtkAll as vtk
-from ddapp import botpy
 import math
 import numpy as np
 from collections import deque

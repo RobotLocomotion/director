@@ -18,7 +18,6 @@ from ddapp import transformUtils
 import ddapp.visualization as vis
 import ddapp.objectmodel as om
 from ddapp import robotstate
-from ddapp import botpy
 
 
 from ddapp import ioUtils as io

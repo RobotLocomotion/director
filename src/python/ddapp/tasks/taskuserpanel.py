@@ -1,7 +1,6 @@
 import os
 import sys
 import vtkAll as vtk
-from ddapp import botpy
 import math
 import time
 import types
@@ -98,9 +97,10 @@ class TaskUserPanel(object):
     def addManualWidget(self, widget):
         self.ui.manualButtonsLayout.insertWidget(self.ui.manualButtonsLayout.count()-1, widget)
 
-    def initImageView(self, imageView):
-        self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, imageView)
-        self.affordanceUpdater.timer.start()
+    def initImageView(self, imageView, activateAffordanceUpdater=True):
+        if activateAffordanceUpdater:
+            self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, imageView)
+            self.affordanceUpdater.timer.start()
         self.imageViewLayout.addWidget(self.fitter.imageView.view)
 
 

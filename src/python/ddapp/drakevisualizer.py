@@ -309,7 +309,7 @@ class DrakeVisualizer(object):
 
 ##########################################################
 from ddapp.screengrabberpanel import ScreenGrabberPanel
-from ddapp.lcmgl import LCMGLManager
+from ddapp import lcmgl
 from ddapp import objectmodel as om
 from ddapp import applogic
 from ddapp import viewbehaviors
@@ -353,7 +353,7 @@ class DrakeVisualizerApp():
         self.mainWindow.show()
 
         self.drakeVisualizer = DrakeVisualizer(self.view)
-        self.lcmglManager = LCMGLManager(self.view)
+        self.lcmglManager = lcmgl.LCMGLManager(self.view) if lcmgl.LCMGL_AVAILABLE else None
 
         self.screenGrabberPanel = ScreenGrabberPanel(self.view)
         self.screenGrabberDock = self.addWidgetToDock(self.screenGrabberPanel.widget, QtCore.Qt.RightDockWidgetArea)

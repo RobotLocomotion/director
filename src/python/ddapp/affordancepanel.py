@@ -86,34 +86,30 @@ class AffordancePanel(object):
         xy = self.jointController.q[:2]
         self.raycastDriver.requestRaycast(affs, xy-2, xy+2)
 
-    def affordanceFromDescription(self, desc):
-        self.affordanceManager.collection.updateDescription(desc)
-        return self.affordanceManager.getAffordanceById(desc['uuid'])
-
     def onSpawnBox(self):
         pose = transformUtils.poseFromTransform(self.getSpawnFrame())
         desc = dict(classname='BoxAffordanceItem', Name='box', uuid=newUUID(), pose=pose)
-        return self.affordanceFromDescription(desc)
+        return self.affordanceManager.newAffordanceFromDescription(desc)
 
     def onSpawnSphere(self):
         pose = transformUtils.poseFromTransform(self.getSpawnFrame())
         desc = dict(classname='SphereAffordanceItem', Name='sphere', uuid=newUUID(), pose=pose)
-        return self.affordanceFromDescription(desc)
+        return self.affordanceManager.newAffordanceFromDescription(desc)
 
     def onSpawnCylinder(self):
         pose = transformUtils.poseFromTransform(self.getSpawnFrame())
         desc = dict(classname='CylinderAffordanceItem', Name='cylinder', uuid=newUUID(), pose=pose)
-        return self.affordanceFromDescription(desc)
+        return self.affordanceManager.newAffordanceFromDescription(desc)
 
     def onSpawnCapsule(self):
         pose = transformUtils.poseFromTransform(self.getSpawnFrame())
         desc = dict(classname='CapsuleAffordanceItem', Name='capsule', uuid=newUUID(), pose=pose)
-        return self.affordanceFromDescription(desc)
+        return self.affordanceManager.newAffordanceFromDescription(desc)
 
     def onSpawnRing(self):
         pose = transformUtils.poseFromTransform(self.getSpawnFrame())
         desc = dict(classname='CapsuleRingAffordanceItem', Name='ring', uuid=newUUID(), pose=pose)
-        return self.affordanceFromDescription(desc)
+        return self.affordanceManager.newAffordanceFromDescription(desc)
 
     def onSpawnMesh(self):
 
@@ -124,7 +120,7 @@ class AffordancePanel(object):
 
         pose = transformUtils.poseFromTransform(self.getSpawnFrame())
         desc = dict(classname='MeshAffordanceItem', Name='mesh', Filename=meshId, uuid=newUUID(), pose=pose)
-        return self.affordanceFromDescription(desc)
+        return self.affordanceManager.newAffordanceFromDescription(desc)
 
 
 def _getAction():

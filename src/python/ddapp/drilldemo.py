@@ -1,7 +1,6 @@
 import os
 import sys
 import vtkAll as vtk
-from ddapp import botpy
 import math
 import time
 import types
@@ -2573,7 +2572,7 @@ class DrillImageFitter(ImageBasedAffordanceFit):
         self.appendMessage('drill wall:')
         self.appendMessage('origin: %r' % list(pose[0]))
         self.appendMessage('quat: %r' % list(pose[1]))
-        self.appendMessage('rpy: %r' % list(transformUtils.botpy.quat_to_roll_pitch_yaw(pose[1])))
+        self.appendMessage('rpy: %r' % list(transformUtils.quaternionToRollPitchYaw(pose[1])))
 
 
 class DrillTaskPanel(TaskUserPanel):

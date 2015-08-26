@@ -62,7 +62,7 @@ def linkFromAffordance(aff):
 
     visual = urdf.Visual(geometry=geometry, material=material, origin=pose)
     collision =  urdf.Collision(geometry=geometry, origin=pose)
-    return urdf.Link(name=stringWithAffordanceName('link_%s', aff), visual=visual, collision=collision)
+    return urdf.Link(name=stringWithAffordanceId('link_%s', aff), visual=visual, collision=collision)
 
 
 def urdfStringFromAffordances(affordanceList):

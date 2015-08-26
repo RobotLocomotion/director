@@ -21,7 +21,6 @@ from ddapp.debugVis import DebugData
 from ddapp import affordanceitems
 from ddapp import ikplanner
 
-
 import ioUtils
 
 class MappingDemo(object):

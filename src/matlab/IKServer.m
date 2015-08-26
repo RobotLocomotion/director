@@ -17,7 +17,7 @@ classdef IKServer
       options.floating = true;
       options.ignore_terrain_collisions = true;
       options.terrain = [];
-      options.replace_cylinders_with_capsules = false;
+      options.replace_cylinders_with_capsules = true;
 
       obj.robot = RigidBodyManipulator([], options);
 

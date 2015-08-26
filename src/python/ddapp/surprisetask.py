@@ -1,7 +1,6 @@
 import os
 import sys
 import vtkAll as vtk
-from ddapp import botpy
 import math
 import time
 import types

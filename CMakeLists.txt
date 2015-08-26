@@ -27,13 +27,14 @@ include(cmake/dd-testing.cmake)
 include(cmake/dd-version.cmake)
 
 # dependency options
-option(USE_PORTMIDI "Build drake-designer with portmidi dependency." ON)
-option(USE_LIBBOT "Build drake-designer with libbot dependency." ON)
-option(USE_DRAKE "Build drake-designer with drake dependency." ON)
-option(USE_DRC "Build drake-designer with drc dependency." ON)
-option(USE_DRC_MAPS "Build drake-designer with drc maps dependency." ON)
-option(USE_DRC_PLANE_SEG "Build drake-designer with drc plane segmentation." ON)
-option(USE_LCM "Build drake-designer with lcm dependency." ON)
+option(USE_PORTMIDI "Build drake-designer with portmidi dependency." OFF)
+option(USE_LCM "Build drake-designer with lcm dependency." OFF)
+option(USE_LCMGL "Build drake-designer with lcmgl dependency." OFF)
+option(USE_LIBBOT "Build drake-designer with libbot dependency." OFF)
+option(USE_DRAKE "Build drake-designer with drake dependency." OFF)
+option(USE_DRC "Build drake-designer with drc dependency." OFF)
+option(USE_DRC_MAPS "Build drake-designer with drc maps dependency." OFF)
+option(USE_DRC_PLANE_SEG "Build drake-designer with drc plane segmentation." OFF)
 
 # build project
 add_subdirectory(src)

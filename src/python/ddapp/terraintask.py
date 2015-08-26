@@ -1,7 +1,6 @@
 import os
 import sys
 import vtkAll as vtk
-from ddapp import botpy
 import math
 import time
 import types
@@ -1204,7 +1203,8 @@ class TerrainTask(object):
             obj.safe_region = r
 
     def getFootFrameAtSole(self, linkName):
-        footSoleToOrigin = np.mean(self.robotSystem.footstepsDriver.getContactPts(), axis=0)
+        leftPoints, rightPoints = self.robotSystem.footstepsDriver.getContactPts()
+        footSoleToOrigin = np.mean(leftPoints, axis=0)
         startPose = self.getPlanningStartPose()
         footFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose(linkName, startPose)
         footFrame.PreMultiply()

@@ -18,6 +18,7 @@ from ddapp import visualization as vis
 from ddapp.transformUtils import getTransformFromAxes
 from ddapp.timercallback import TimerCallback
 from ddapp import mapsregistrar
+from ddapp import affordancemanager
 from ddapp.affordanceitems import *
 from ddapp.visualization import *
 from ddapp.filterUtils import *
@@ -65,7 +66,13 @@ def getCurrentView():
     return app.getCurrentRenderView()
 
 
-
+def initAffordanceManager(view):
+    '''
+    Normally the affordance manager is initialized by the application.
+    This function can be called from scripts and tests to initialize the manager.
+    '''
+    global affordanceManager
+    affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
 
 
 def cropToLineSegment(polyData, point1, point2):
@@ -1144,8 +1151,7 @@ def segmentValveByBoundingBox(polyData, searchPoint):
     desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=radius, Segments=20)
     desc['Tube Radius'] = tubeRadius
 
-    import affordancepanel
-    obj = affordancepanel.panel.affordanceFromDescription(desc)
+    obj = affordanceManager.newAffordanceFromDescription(desc)
     obj.params = dict(radius=radius)
 
     return obj
@@ -1263,8 +1269,7 @@ def segmentValveByRim(polyData, rimPoint1, rimPoint2):
     desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=float(radius), Segments=20)
     desc['Tube Radius'] = tubeRadius
 
-    import affordancepanel
-    obj = affordancepanel.panel.affordanceFromDescription(desc)
+    obj = affordanceManager.newAffordanceFromDescription(desc)
     obj.params = dict(radius=radius)
 
     return obj
@@ -1351,7 +1356,8 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     xaxis = np.cross(yaxis, zaxis)
     xaxis /= np.linalg.norm(xaxis)
     yaxis /= np.linalg.norm(yaxis)
-    t = getTransformFromAxes(xaxis, yaxis, zaxis)
+    #t = getTransformFromAxes(xaxis, yaxis, zaxis) # this was added to be consistent with segmentValveByRim
+    t = getTransformFromAxes(zaxis, -yaxis, xaxis) # this was added to be consistent with segmentValveByRim
     t.PostMultiply()
     t.Translate(origin)
 
@@ -1376,28 +1382,15 @@ def segmentValveByWallPlane(expectedValveRadius, point1, point2):
     spokeObj.addToView(app.getDRCView())
     t = spokeAngleTransform
 
-    zwidth = 0.0175
+    tubeRadius = 0.017
 
-    d = DebugData()
-    #d.addLine(np.array([0,0,-zwidth/2.0]), np.array([0,0,zwidth/2.0]), radius=radius)
-    d.addTorus(radius, 0.127)
-    d.addLine(np.array([0,0,0]), np.array([radius-zwidth,0,0]), radius=zwidth) # main bar
+    pose = transformUtils.poseFromTransform(t)
+    desc = dict(classname='CapsuleRingAffordanceItem', Name='valve', uuid=newUUID(), pose=pose, Color=[0,1,0], Radius=float(radius), Segments=20)
+    desc['Tube Radius'] = tubeRadius
 
-    name = 'valve'
-    obj = showPolyData(d.getPolyData(), name, cls=FrameAffordanceItem, parent='affordances', color=[0,1,0])
-    obj.actor.SetUserTransform(t)
-    obj.addToView(app.getDRCView())
-    refitWallCallbacks.append(functools.partial(refitValveAffordance, obj))
+    obj = affordanceManager.newAffordanceFromDescription(desc)
+    obj.params = dict(radius=radius)
 
-    params = dict(axis=zaxis, radius=radius, length=zwidth, origin=origin, xaxis=xaxis, yaxis=yaxis, zaxis=zaxis,
-                  xwidth=radius, ywidth=radius, zwidth=zwidth,
-                  otdf_type='steering_cyl', friendly_name='valve')
-
-    obj.setAffordanceParams(params)
-    obj.updateParamsFromActorTransform()
-
-    frameObj = showFrame(obj.actor.GetUserTransform(), name + ' frame', parent=obj, visible=False, scale=radius)
-    frameObj.addToView(app.getDRCView())
 
 
 
@@ -2831,8 +2824,7 @@ def fitVerticalPosts(polyData):
                     uuid=newUUID(), pose=pose, Radius=0.05, Length=float(lineLength), Color=[0.0, 1.0, 0.0])
         desc['Collision Enabled'] = True
 
-        import affordancepanel
-        return affordancepanel.panel.affordanceFromDescription(desc)
+        return affordanceManager.newAffordanceFromDescription(desc)
 
 
     rejectFolder = om.getOrCreateContainer('nonpost clusters', parentObj=getDebugFolder())

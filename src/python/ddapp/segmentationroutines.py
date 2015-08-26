@@ -106,14 +106,14 @@ class RobotModelViewProvider(object):
         self.model = model
 
     def getViewFrame(self):
-        return self.model.getLinkFrame('head')
+        return self.model.getLinkFrame(self.model.getHeadLink())
 
     def getViewOrigin(self):
-        headFrame = self.model.getLinkFrame('head')
+        headFrame = self.model.getLinkFrame(self.model.getHeadLink())
         return np.array(headFrame.GetPosition())
 
     def getViewDirection(self):
-        headFrame = self.model.getLinkFrame('head')
+        headFrame = self.model.getLinkFrame(self.model.getHeadLink())
         viewDirection = [1,0,0]
         headFrame.TransformVector(viewDirection, viewDirection)
         return np.array(viewDirection)
