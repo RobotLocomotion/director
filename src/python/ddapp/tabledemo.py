@@ -35,7 +35,7 @@ class TableDemo(object):
 
     def __init__(self, robotStateModel, playbackRobotModel, ikPlanner, manipPlanner, footstepPlanner,
                  atlasDriver, lhandDriver, rhandDriver, multisenseDriver, view, sensorJointController,
-                 planPlaybackFunction, teleopPanel):
+                 planPlaybackFunction, teleopPanel, playbackPanel):
         self.planPlaybackFunction = planPlaybackFunction
         self.robotStateModel = robotStateModel
         self.playbackRobotModel = playbackRobotModel
@@ -50,6 +50,7 @@ class TableDemo(object):
         self.view = view
         self.teleopPanel = teleopPanel
         self.affordanceManager = segmentation.affordanceManager
+        self.playbackPanel = playbackPanel
 
         # live operation flags:
         self.useFootstepPlanner = True
@@ -80,6 +81,7 @@ class TableDemo(object):
         # top level switch between BDI or IHMC (locked base) and MIT (moving base and back)
         self.lockBack = True
         self.lockBase = True
+        self.planner = 1
 
         self.constraintSet = []
 
@@ -269,7 +271,7 @@ class TableDemo(object):
         if self.ikPlanner.fixedBaseArm: # if we're dealing with the real world, open hand
             self.openHand(side)
             return self.delay(5)
-		elif self.planner == 1:
+        elif self.planner == 1:
 	        self.ikPlanner.ikServer.removeAffordanceFromHand(self.graspingHand, self.targetObject.getProperty('Name'))
 
     def getNextTableObject(self, side='left'):
@@ -278,10 +280,10 @@ class TableDemo(object):
         obj = self.clusterObjects[0] if side == 'left' else self.clusterObjects[-1]
         frameObj = obj.findChild(obj.getProperty('Name') + ' frame')
 
-        if self.useCollisionEnvironment:
-            self.prepCollisionEnvironment()
-            collisionObj = om.findObjectByName(obj.getProperty('Name') + ' affordance')
-            collisionObj.setProperty('Collision Enabled', False)
+#        if self.useCollisionEnvironment:
+#            self.prepCollisionEnvironment()
+#            collisionObj = om.findObjectByName(obj.getProperty('Name') + ' affordance')
+#            collisionObj.setProperty('Collision Enabled', False)
 
         return obj, frameObj
 
@@ -393,7 +395,7 @@ class TableDemo(object):
             startPose = self.getPlanningStartPose()
             
             print 'planning drop raise'
-    
+            
             plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
                           list(np.append(binAff.getPose()[0], binAff.getPose()[1])))
         else:
@@ -519,10 +521,12 @@ class TableDemo(object):
             self.constraintSet.ikParameters.useCollision = True
             
         self.teleopPanel.endEffectorTeleop.updateCollisionEnvironment()
+            
+        obj, objFrame = self.getNextTableObject()
         
         if self.planner == 1:
             plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
-                          list(np.append(self.targetObject.getPose()[0], self.targetObject.getPose()[1])))
+                          list(np.append(obj.getPose()[0], obj.getPose()[1])))
         else:
             plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
@@ -1189,13 +1193,14 @@ class TableTaskPanel(TaskUserPanel):
         # If we're dealing with humanoids, offer the scene selector
         if not self.tableDemo.ikPlanner.fixedBaseArm:
             self.params.addProperty('Scene', 0, attributes=om.PropertyAttributes(enumNames=['Objects on table','Object below table','Object through slot','Object at depth','Objects on table (fit)']))
-			self.params.addProperty('Planner', 1,
-                attributes=om.PropertyAttributes(enumNames=['RRT-Connect', 'Multi-RRT']))
+            self.params.addProperty('Planner', 1, attributes=om.PropertyAttributes(enumNames=['RRT-Connect', 'Multi-RRT']))
 
         # Init values as above
         self.tableDemo.graspingHand = self.getSide()
         self.tableDemo.lockBase = self.getLockBase()
         self.tableDemo.lockBack = self.getLockBack()
+        self.tableDemo.sceneID = self.getSceneId()
+        self.tableDemo.planner = self.getPlanner()
         if self.tableDemo.ikPlanner.fixedBaseArm:
             self.handEngaged = self.getHandEngaged() # WARNING: does not check current state [no status message]
 
@@ -1210,6 +1215,12 @@ class TableTaskPanel(TaskUserPanel):
 
     def getHandEngaged(self):
         return self.params.getProperty('Hand Engaged (Powered)')
+
+    def getSceneId(self):
+        return self.params.getProperty('Scene')
+
+    def getPlanner(self):
+        return self.params.getProperty('Planner')
 
     def onPropertyChanged(self, propertySet, propertyName):
         propertyName = str(propertyName)
@@ -1235,7 +1246,7 @@ class TableTaskPanel(TaskUserPanel):
         elif propertyName == 'Scene':
             self.tableDemo.sceneID = self.params.getProperty('Scene')
 		
-		elif propertyName == 'Planner':
+        elif propertyName == 'Planner':
         	self.tableDemo.planner = self.params.getProperty('Planner')
 
     def addTasks(self):
@@ -1255,11 +1266,9 @@ class TableTaskPanel(TaskUserPanel):
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
             addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
             if self.tableDemo.planner != 1:
-                addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
-                        parent=group)
-				if confirm:
-		            addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
-		                    parent=group)
+                addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
+                if confirm:
+                   addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'), parent=group)
                         
 
         v = self.tableDemo
@@ -1289,25 +1298,23 @@ class TableTaskPanel(TaskUserPanel):
                 addFunc(v.prepGetSceneFrame, 'capture scene frame', parent=prep)
                 addFunc(v.prepKukaLabScene, 'prep kuka lab scene', parent=prep)
         else:
-			if v.planner != 1:
-		        addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
-		        addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
-		        addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
+            if v.planner != 1:
+                addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
+                addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
+                addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
             addFunc(v.createCollisionPlanningScene, 'prep from file', parent=prep)
 
         # walk
         if not v.ikPlanner.fixedBaseArm:
-		    if v.planner == 1:
-		        addFunc(self.tableDemo.moveRobotToTableStanceFrame, 'walk to table', parent = walk)
-			else:
-		        walk = self.taskTree.addGroup('Approach Table')
-		        addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
-		        addTask(rt.UserPromptTask(name='approve footsteps',
-		                                  message='Please approve footstep plan.'), parent=walk)
-		        addTask(rt.CommitFootstepPlan(name='walk to table',
-		                                      planName='table grasp stance footstep plan'), parent=walk)
-		        addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
-		        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
+            walk = self.taskTree.addGroup('Approach Table')
+            if v.planner == 1:
+                addFunc(self.tableDemo.moveRobotToTableStanceFrame, 'walk to table', parent = walk)
+            else:
+                addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
+                addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'), parent=walk)
+                addTask(rt.CommitFootstepPlan(name='walk to table', planName='table grasp stance footstep plan'), parent=walk)
+                addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
+                addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
 
         # lift object
         if v.ikPlanner.fixedBaseArm:
@@ -1321,10 +1328,10 @@ class TableTaskPanel(TaskUserPanel):
 
         addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
         
-		if v.planner == 1:
-		    addFunc(self.tableDemo.addAffordanceToHand, name = 'add affordance to hand', parent = 'lift object')
-		    
-		    addManipulation(functools.partial(v.planWithdrawTableObject, v.graspingHand), name='withdraw object')
+        if v.planner == 1:
+            addFunc(self.tableDemo.addAffordanceToHand, name = 'add affordance to hand', parent = 'lift object')
+            
+            addManipulation(functools.partial(v.planWithdrawTableObject, v.graspingHand), name='withdraw object')
 
         # walk to start
         if not v.ikPlanner.fixedBaseArm and not v.planner != 1:
@@ -1337,16 +1344,14 @@ class TableTaskPanel(TaskUserPanel):
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToStart)
 
         # walk to bin
-		if not v.ikPlanner.fixedBaseArm:
-		    walkToBin = self.taskTree.addGroup('Walk to Bin')
-		    if v.planner != 1:
-		        addTask(rt.RequestFootstepPlan(name='plan walk to bin', stanceFrameName='bin stance frame'), parent=walkToBin)
-		        addTask(rt.UserPromptTask(name='approve footsteps',
-		                                  message='Please approve footstep plan.'), parent=walkToBin)
-		        addTask(rt.CommitFootstepPlan(name='walk to start',
-		                                      planName='bin stance footstep plan'), parent=walkToBin)
-		        addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToBin)
-        	addFunc(self.tableDemo.moveRobotToBinStanceFrame, 'walk to Bin', parent = walkToBin)
+        if not v.ikPlanner.fixedBaseArm:
+            walkToBin = self.taskTree.addGroup('Walk to Bin')
+            if v.planner != 1:
+                addTask(rt.RequestFootstepPlan(name='plan walk to bin', stanceFrameName='bin stance frame'), parent=walkToBin)
+                addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'), parent=walkToBin)
+                addTask(rt.CommitFootstepPlan(name='walk to start', planName='bin stance footstep plan'), parent=walkToBin)
+                addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToBin)
+            addFunc(self.tableDemo.moveRobotToBinStanceFrame, 'walk to Bin', parent = walkToBin)
 
         # drop in bin
         addManipulation(functools.partial(v.planDropPostureRaise, v.graspingHand), name='drop: raise arm') # seems to ignore arm side?
