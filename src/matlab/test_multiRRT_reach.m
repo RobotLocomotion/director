@@ -8,9 +8,9 @@ function info = test_multiRRT_reach(r, s, grHand, qStart, xGoal, objectGrasped)
   point_in_link_frame.left = [0.08; 0.07; 0];
   point_in_link_frame = point_in_link_frame.(grHand);
   
-  addpath(fullfile(getDrakePath(), '..', 'ddapp/src/matlab') )
-  fixed_point_file = [getDrakePath(), '/../control/matlab/data/val_description/valkyrie_fp_june2015.mat'];
-  capability_map_file = [getDrakePath(), '/../control/matlab/data/val_description/capabilityMap.mat'];
+  addpath(fullfile(getDrakePath(), '../..', 'ddapp/src/matlab') )
+  fixed_point_file = [getDrakePath(), '/../../control/matlab/data/val_description/valkyrie_fp_june2015.mat'];
+  capability_map_file = [getDrakePath(), '/../../control/matlab/data/val_description/capabilityMap.mat'];
   
   kinsol = r.doKinematics(qStart);
   xStart = [r.forwardKin(kinsol, hand.(grHand), point_in_link_frame, 2); qStart'];

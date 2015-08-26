@@ -271,8 +271,8 @@ class TableDemo(object):
         if self.ikPlanner.fixedBaseArm: # if we're dealing with the real world, open hand
             self.openHand(side)
             return self.delay(5)
-        elif self.planner == 1:
-	        self.ikPlanner.ikServer.removeAffordanceFromHand(self.graspingHand, self.targetObject.getProperty('Name'))
+#        elif self.planner == 1:
+#	        self.ikPlanner.ikServer.removeAffordanceFromHand(self.graspingHand, obj.getProperty('Name'))
 
     def getNextTableObject(self, side='left'):
 
@@ -522,7 +522,7 @@ class TableDemo(object):
             
         self.teleopPanel.endEffectorTeleop.updateCollisionEnvironment()
             
-        obj, objFrame = self.getNextTableObject()
+        obj, objFrame = self.getNextTableObject(side)
         
         if self.planner == 1:
             plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
@@ -563,10 +563,12 @@ class TableDemo(object):
         print 'planning lift'  
         
         if self.planner == 1:
+            
+            obj, objFrame = self.getNextTableObject(side)
             t = vtk.vtkTransform()
             t.PostMultiply()
             t.Translate(0, 0, 0.03)
-            t.Concatenate(transformUtils.transformFromPose(self.targetObject.getPose()[0], self.targetObject.getPose()[1]))
+            t.Concatenate(transformUtils.transformFromPose(obj.getPose()[0], obj.getPose()[1]))
   
             plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
                                           list(np.append(t.GetPosition(), t.GetOrientationWXYZ())))
@@ -604,12 +606,6 @@ class TableDemo(object):
 
             plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
-        
-    def addAffordanceToHand(self):
-        
-        self.ikPlanner.ikServer.addAffordanceToHand(self.graspingHand, self.targetObject, list(self.getPlanningStartPose()), self.targetObject.getProperty('Name'))
-
-        self.teleopPanel.endEffectorTeleop.updateCollisionEnvironment()
 
 
     def planWithdrawTableObject(self, side):
@@ -634,7 +630,8 @@ class TableDemo(object):
     ### End Planning Functions ####################################################################
     ########## Glue Functions #####################################################################
     def teleportRobotToStanceFrame(self, frame):
-        self.sensorJointController.setPose('q_nom')
+        if self.planner != 1:
+            self.sensorJointController.setPose('q_nom')
         stancePosition = frame.GetPosition()
         stanceOrientation = frame.GetOrientation()
 
@@ -722,6 +719,9 @@ class TableDemo(object):
         self.planPlaybackFunction(self.plans)
 
     def commitManipPlan(self):
+        if self.planner == 1:
+            self.playbackPanel.executePlan(visOnly = True)
+        else:
             self.manipPlanner.commitManipPlan(self.plans[-1])
 
     def commitFootstepPlan(self):
@@ -1324,17 +1324,18 @@ class TableTaskPanel(TaskUserPanel):
         else: # Collision Free - Marco et al.
             addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
 
-        addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach', confirm=True)
-
+        if v.planner == 1:
+            addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach', confirm=False)
+        else:
+            addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach', confirm=True)
+        
         addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
         
         if v.planner == 1:
-            addFunc(self.tableDemo.addAffordanceToHand, name = 'add affordance to hand', parent = 'lift object')
-            
             addManipulation(functools.partial(v.planWithdrawTableObject, v.graspingHand), name='withdraw object')
 
         # walk to start
-        if not v.ikPlanner.fixedBaseArm and not v.planner != 1:
+        if not v.ikPlanner.fixedBaseArm and v.planner != 1:
             walkToStart = self.taskTree.addGroup('Walk to Start')
             addTask(rt.RequestFootstepPlan(name='plan walk to start', stanceFrameName='start stance frame'), parent=walkToStart)
             addTask(rt.UserPromptTask(name='approve footsteps',
@@ -1355,5 +1356,8 @@ class TableTaskPanel(TaskUserPanel):
 
         # drop in bin
         addManipulation(functools.partial(v.planDropPostureRaise, v.graspingHand), name='drop: raise arm') # seems to ignore arm side?
-        addFunc(functools.partial(v.dropTableObject, side=v.graspingHand), 'drop', parent='drop: release', confirm=True)
+        if v.planner == 1:
+            addFunc(functools.partial(v.dropTableObject, side=v.graspingHand), 'drop', parent='drop: release', confirm=False)
+        else:
+            addFunc(functools.partial(v.dropTableObject, side=v.graspingHand), 'drop', parent='drop: release', confirm=True)
         addManipulation(functools.partial(v.planDropPostureLower, v.graspingHand), name='drop: lower arm')
