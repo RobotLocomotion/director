@@ -27,7 +27,7 @@ classdef IKServer
     function obj = loadNominalData(obj,filename)
       if nargin < 1
         filename = [getenv('DRC_BASE'), ...
-          '/software/control/matlab/data/atlas_bdi_fp.mat'];
+          '/software/control/matlab/data/atlas_v3/atlas_bdi_fp.mat'];
       end
       %nom_data = load([getDrakePath() '/examples/Atlas/data/atlas_bdi_fp.mat']);
       nom_data = load(filename);
@@ -175,7 +175,7 @@ classdef IKServer
     end
 
     function obj = addAffordance(obj, affordanceName)
-      filename = [getenv('DRC_PATH'), '/drake/systems/plants/test/', affordanceName, '.urdf'];
+      filename = [getenv('DRC_PATH'), '/drake/drake/systems/plants/test/', affordanceName, '.urdf'];
       options = struct('floating', false);
       xyz = zeros(3,1);
       rpy = zeros(3,1);
