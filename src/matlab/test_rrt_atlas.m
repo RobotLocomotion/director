@@ -8,8 +8,8 @@
 format long e
 addpath_control
 addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])
-robotURDF = '/home/mfallon/drc/software/models/atlas_v3/./model_convex_hull_robotiq_hands.urdf';
-fixed_point_file = '/home/mfallon/drc/software/models/atlas_v3/../../control/matlab/data/atlas_bdi_fp.mat';
+robotURDF = [getenv('DRC_BASE') '/software/models/atlas_v3/./model_convex_hull_robotiq_hands.urdf'];
+fixed_point_file = [getenv('DRC_BASE') '/software/models/atlas_v3/../../control/matlab/data/atlas_bdi_fp.mat'];
 left_foot_link = 'l_foot';
 right_foot_link = 'r_foot';
 runIKServer
