@@ -23,6 +23,7 @@ from ddapp import ikplanner
 from ddapp import vtkNumpy
 from numpy import array
 from ddapp.uuidutil import newUUID
+from ddapp import lcmUtils
 import ioUtils
 
 from ddapp.tasks.taskuserpanel import TaskUserPanel
@@ -850,6 +851,16 @@ class TableDemo(object):
         boxAffordance.setProperty('Alpha', 0.3)
 
     ######### Nominal Plans and Execution  #################################################################
+    def loadSDFFrameAndRunSim(self):
+        from ddapp import sceneloader
+        filename= os.environ['DRC_BASE'] + '/../drc-testing-data/tabletop/tabledemo.sdf'
+        sc=sceneloader.SceneLoader()
+        sc.loadSDF(filename)
+        import ipab
+        msg=ipab.scs_api_command_t()
+        msg.command="loadSDF "+filename+"\nsimulate"
+        lcmUtils.publish('SCS_API_CONTROL', msg)
+
     def prepGetSceneFrame(self, createNewObj=False):
         if createNewObj:
             objScene = vis.showPolyData(self.getInputPointCloud(), 'scene', colorByName='rgb_colors')
@@ -1117,6 +1128,8 @@ class TableTaskPanel(TaskUserPanel):
         self.addManualButton('Open Hand', functools.partial(self.tableDemo.openHand, self.tableDemo.graspingHand))
         self.addManualSpacer()
         self.addManualButton('Close Hand', functools.partial(self.tableDemo.closeHand, self.tableDemo.graspingHand))
+        self.addManualSpacer()
+        self.addManualButton('Read SDF & Sim', self.tableDemo.loadSDFFrameAndRunSim)
 
     def addDefaultProperties(self):
         self.params.addProperty('Hand', 0,
