@@ -372,7 +372,7 @@ class AsyncIKCommunicator():
             
     def runMultiRRT(self, grHand, qStart, xGoal, objectGrasped):
         
-        commands = ['info = test_multiRRT_reach(r, s, \'%s\', %s, %s, %d);\n'%(grHand, qStart, xGoal, objectGrasped)]
+        commands = ['info = optimalCollisionFreePlanner(r, s, \'%s\', %s, %s, %d);\n'%(grHand, qStart, xGoal, objectGrasped)]
         self.comm.sendCommands(commands)
 
         info = self.comm.getFloatArray('info')[0]
@@ -419,7 +419,7 @@ class AsyncIKCommunicator():
         commands.append('newPelvisPose = [rotCurrent posCurrent; 0 0 0 1] * [foot2pelvisrot, foot2pelvisPos ;0 0 0 1]; \n')
         commands.append('newPelvisPose = [newPelvisPose(1:3, 4); rotmat2rpy(newPelvisPose(1:3, 1:3))];\n')
         commands.append('qNom = [newPelvisPose; s.q_nom(7:end)];\n')
-        commands.append('info = test_multiRRT_reach(r, s, \'%s\', %s, qNom);\n'%(grHand, qStart))
+        commands.append('info = optimalCollisionFreePlanner(r, s, \'%s\', %s, qNom);\n'%(grHand, qStart))
         self.comm.sendCommands(commands)
 
         info = self.comm.getFloatArray('info')[0]
