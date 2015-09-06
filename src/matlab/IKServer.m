@@ -235,7 +235,7 @@ classdef IKServer
           phi = obj.robot_and_environment.collisionDetect(q);
           if info < 10 && any(phi < obj.min_distance);
             info = 13;
-            display('Could not satisfiy collision avoidance constraints.');
+            display('Could not satisfy collision avoidance constraints.');
           end
         end
       end
