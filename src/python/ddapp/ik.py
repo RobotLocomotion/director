@@ -397,13 +397,45 @@ class AsyncIKCommunicator():
         commands.append('options.right_foot_link = right_foot_link;')
         commands.append("options.fixed_point_file = fixed_point_file;")
 
-        print objectGrasped
-        commands.append('info = optimalCollisionFreePlanner(r, s, %s, %s, options, %d);\n'%( qStart, xGoal, objectGrasped))
+        commands.append('planner = optimalCollisionFreePlanner(r, s, %s, %s, options);\n'%( qStart, xGoal))
+        commands.append('[xGoalFull,info] = planner.findFinalPose();\n')
+        commands.append('[xtraj, info] = planner.findCollisionFreeTraj(xGoalFull);')
+        commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
+
+
+        commands.append('if ~isempty(xtraj), qtraj = xtraj(1:r.getNumPositions()); else, qtraj = []; end;')
+        commands.append('if ~isempty(qtraj), qtraj_orig = qtraj; end;')
+        commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1); end;' % ikParameters.maxDegreesPerSecond)
+        commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % ikParameters.maxBaseMetersPerSecond)
+        commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % ikParameters.maxBaseRPYDegreesPerSecond)
+        commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; rpy_v_max; joint_v_max]; end;')
+        commands.append("if ~isempty(qtraj), v_max(r.findPositionIndices('back')) = %s*pi/180; end;" % ikParameters.maxBackDegreesPerSecond)
+
+        commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
+        commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
+        commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
+        commands.append('rescale_body_pts = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
+        commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
+
+        commands.append('if ~isempty(qtraj_orig), qtraj = rescalePlanTiming(qtraj_orig, v_max, %s, %s, body_rescale_options); end;' % (ikParameters.accelerationParam, ikParameters.accelerationFraction))
+
+        publish = True
+        if publish:
+            commands.append('if ~isempty(qtraj_orig), s.publishTraj(qtraj, info); end;')
+
+        commands.append('\n%--- runMultiRRT end --------\n')
+        #self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
+        #self.taskQueue.start()
         self.comm.sendCommands(commands)
 
         info = self.comm.getFloatArray('info')[0]
-        
+        if self.infoFunc:
+            self.infoFunc(info)
+
         return info
+
+
+
         
     def addAffordanceToHand(self, handLink, affordance, q, name):
         affStr = ''
