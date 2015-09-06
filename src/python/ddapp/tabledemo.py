@@ -397,8 +397,8 @@ class TableDemo(object):
             
             print 'planning drop raise'
             
-            plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
-                          list(np.append(binAff.getPose()[0], binAff.getPose()[1])))
+            plan = self.ikPlanner.runMultiRRT(list(startPose),
+                          list(np.append(binAff.getPose()[0], binAff.getPose()[1])), ikParameters=None)
         else:
             startPose = self.getPlanningStartPose()
             poseA = self.getRaisedArmPose(startPose, side)
@@ -526,8 +526,8 @@ class TableDemo(object):
         obj, objFrame = self.getNextTableObject(side)
         
         if self.planner == 1:
-            plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
-                          list(np.append(obj.getPose()[0], obj.getPose()[1])))
+            plan = self.ikPlanner.runMultiRRT(list(startPose),
+                          list(np.append(obj.getPose()[0], obj.getPose()[1])), ikParameters=None)
         else:
             plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
@@ -571,8 +571,8 @@ class TableDemo(object):
             t.Translate(0, 0, 0.03)
             t.Concatenate(transformUtils.transformFromPose(obj.getPose()[0], obj.getPose()[1]))
   
-            plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
-                                          list(np.append(t.GetPosition(), t.GetOrientationWXYZ())))
+            plan = self.ikPlanner.runMultiRRT(list(startPose),
+                                          list(np.append(t.GetPosition(), t.GetOrientationWXYZ())), ikParameters=None)
         else:
             self.constraintSet = self.ikPlanner.planEndEffectorDelta(startPose, side, [0.0, 0.0, 0.15])
     
@@ -623,8 +623,8 @@ class TableDemo(object):
 
         print 'planning Withdraw'
 
-        plan = self.ikPlanner.runMultiRRT(self.graspingHand, list(startPose),
-                                          list(np.append(t.GetPosition(), t.GetOrientationWXYZ())), True)
+        plan = self.ikPlanner.runMultiRRT(list(startPose),
+                                          list(np.append(t.GetPosition(), t.GetOrientationWXYZ())), True, ikParameters=None)
         self.addPlan(plan)
 
 

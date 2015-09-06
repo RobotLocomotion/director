@@ -1352,10 +1352,11 @@ class IKPlanner(object):
         return np.sum(np.abs(pose - nominalPose)*cost)
 
 
-    def runMultiRRT(self, grHand, qStart, xGoal, objectGrasped = False):
+    def runMultiRRT(self, qStart, xGoal, objectGrasped = False, ikParameters = None):
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         listener = self.getManipPlanListener()
-        info = self.ikServer.runMultiRRT(grHand, qStart, xGoal, objectGrasped)
+        info = self.ikServer.runMultiRRT(qStart, xGoal, objectGrasped=objectGrasped, ikParameters=ikParameters)
         self.lastManipPlan = listener.waitForResponse(timeout=12000)
         listener.finish()
 

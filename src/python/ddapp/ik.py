@@ -370,9 +370,35 @@ class AsyncIKCommunicator():
         if self.handleAsyncTasks() > 0:
             return
             
-    def runMultiRRT(self, grHand, qStart, xGoal, objectGrasped):
-        
-        commands = ['info = optimalCollisionFreePlanner(r, s, \'%s\', %s, %s, %d);\n'%(grHand, qStart, xGoal, objectGrasped)]
+    def runMultiRRT(self, qStart, xGoal, objectGrasped, ikParameters):
+
+        assert ikParameters.rrtHand in ('left', 'right')
+        collisionEndEffectorName = ( self.handModels[0].handLinkName if ikParameters.rrtHand == 'left' else self.handModels[1].handLinkName )
+
+        commands = []
+        commands.append('\n%-------- runMultiRRT --------\n')
+        commands.append("end_effector_name = '%s';" % collisionEndEffectorName)
+        commands.append("end_effector_name_left = '%s';" % self.handModels[0].handLinkName)
+        if (len(self.handModels) > 1):
+            commands.append("end_effector_name_right = '%s';" % self.handModels[1].handLinkName)
+        commands.append("end_effector_pt = [];")
+
+        commands.append('options = struct();')
+        commands.append('options.MajorIterationsLimit = %s;' % ikParameters.majorIterationsLimit)
+        commands.append('options.MajorFeasibilityTolerance = %s;' % ikParameters.majorFeasibilityTolerance)
+        commands.append('options.MajorOptimalityTolerance = %s;' % ikParameters.majorOptimalityTolerance)
+        commands.append('options.FixInitialState = %s;' % ('true' if ikParameters.fixInitialState else 'false'))
+        commands.append('s = s.setupOptions(options);')
+        commands.append('options.end_effector_name = end_effector_name;')
+        commands.append('options.end_effector_name_left = end_effector_name_left;')
+        commands.append('options.end_effector_name_right = end_effector_name_right;')
+        commands.append('options.end_effector_pt = end_effector_pt;')
+        commands.append('options.left_foot_link = left_foot_link;')
+        commands.append('options.right_foot_link = right_foot_link;')
+        commands.append("options.fixed_point_file = fixed_point_file;")
+
+        print objectGrasped
+        commands.append('info = optimalCollisionFreePlanner(r, s, %s, %s, options, %d);\n'%( qStart, xGoal, objectGrasped))
         self.comm.sendCommands(commands)
 
         info = self.comm.getFloatArray('info')[0]

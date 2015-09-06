@@ -1,22 +1,19 @@
-function info = optimalCollisionFreePlanner(r, s, grHand, qStart, xGoal, objectGrasped)
-  if nargin < 6
+function info = optimalCollisionFreePlanner(r, s, qStart, xGoal, options, objectGrasped)
+  if nargin < 7
     objectGrasped = false;
   end  
-  hand.left = r.findLinkId('LeftPalm');
-  hand.right = r.findLinkId('RightPalm');
+  grHand = 'left';
+  hand.left = r.findLinkId(options.end_effector_name_left);
+  hand.right = r.findLinkId(options.end_effector_name_right);
   point_in_link_frame.right = [0.08; -0.07; 0];
   point_in_link_frame.left = [0.08; 0.07; 0];
   point_in_link_frame = point_in_link_frame.(grHand);
   
-  addpath(fullfile(getDrakePath(), '../..', 'ddapp/src/matlab') )
-  fixed_point_file = [getDrakePath(), '/../../control/matlab/data/val_description/valkyrie_fp_june2015.mat'];
-  capability_map_file = [getDrakePath(), '/../../control/matlab/data/val_description/capabilityMap.mat'];
-  
   kinsol = r.doKinematics(qStart);
   xStart = [r.forwardKin(kinsol, hand.(grHand), point_in_link_frame, 2); qStart'];
   
-  l_foot = r.findLinkId('LeftFoot');
-  r_foot = r.findLinkId('RightFoot');
+  l_foot = r.findLinkId(options.left_foot_link);
+  r_foot = r.findLinkId(options.right_foot_link);
   leftFootPose = r.forwardKin(kinsol,l_foot, [0; 0; 0], 2);
   leftFootPosConstraint = WorldPositionConstraint(r, l_foot, [0; 0; 0], leftFootPose(1:3), leftFootPose(1:3));
   leftFootQuatConstraint = WorldQuatConstraint(r, l_foot, leftFootPose(4:7), 0.0, [0.0, 1.0]);
@@ -51,7 +48,6 @@ function info = optimalCollisionFreePlanner(r, s, grHand, qStart, xGoal, objectG
   additionalConstraints = {leftFootPosConstraint, leftFootQuatConstraint,...
     rightFootPosConstraint, rightFootQuatConstraint, quasiStaticConstraint, nonGraspingHandConstraint};
   
-  cm = CapabilityMap(capability_map_file);
   
   LeftHipYawLink = r.findLinkId('LeftHipYawLink');
   RightHipYawLink = r.findLinkId('RightHipYawLink');
@@ -78,44 +74,47 @@ function info = optimalCollisionFreePlanner(r, s, grHand, qStart, xGoal, objectG
   ikoptions = ikoptions.setQ(Q);
   ikoptions = ikoptions.setMajorOptimalityTolerance(1e-3);
   
-  options = struct();
+  optionsPlanner = struct();
   
-  if ~isfield(options,'goal_bias'), options.goal_bias = 0.5; end;
-  if ~isfield(options,'n_smoothing_passes'), options.n_smoothing_passes = 10; end;
-  if ~isfield(options,'planning_mode'), options.planning_mode = 'multiRRT'; end;
-  if ~isfield(options,'visualize'), options.visualize = true; end;
-  if ~isfield(options,'scene'), options.scene = 6; end;
-  if ~isfield(options,'model'), options.model = 'val2'; end;
-  if ~isfield(options,'convex_hull'), options.convex_hull = false; end;
-  if ~isfield(options,'graspingHand'), options.graspingHand = 'right'; end;
-  if ~isfield(options,'costType'), options.costType = 'length'; end;
-  if ~isfield(options,'firstFeasibleTraj'), options.firstFeasibleTraj = false; end;
-  if ~isfield(options,'robot'), options.robot = []; end;
-  if ~isfield(options,'nTrees'), options.nTrees = 4; end;
-  if ~isfield(options,'goalObject'), options.goalObject = 1; end;
+  if ~isfield(optionsPlanner,'goal_bias'), optionsPlanner.goal_bias = 0.5; end;
+  if ~isfield(optionsPlanner,'n_smoothing_passes'), optionsPlanner.n_smoothing_passes = 10; end;
+  if ~isfield(optionsPlanner,'planning_mode'), optionsPlanner.planning_mode = 'multiRRT'; end;
+  if ~isfield(optionsPlanner,'visualize'), optionsPlanner.visualize = true; end;
+  if ~isfield(optionsPlanner,'scene'), optionsPlanner.scene = 6; end;
+  if ~isfield(optionsPlanner,'model'), optionsPlanner.model = 'val2'; end;
+  if ~isfield(optionsPlanner,'convex_hull'), optionsPlanner.convex_hull = false; end;
+  if ~isfield(optionsPlanner,'graspingHand'), optionsPlanner.graspingHand = 'right'; end;
+  if ~isfield(optionsPlanner,'costType'), optionsPlanner.costType = 'length'; end;
+  if ~isfield(optionsPlanner,'firstFeasibleTraj'), optionsPlanner.firstFeasibleTraj = false; end;
+  if ~isfield(optionsPlanner,'robot'), optionsPlanner.robot = []; end;
+  if ~isfield(optionsPlanner,'nTrees'), optionsPlanner.nTrees = 4; end;
+  if ~isfield(optionsPlanner,'goalObject'), optionsPlanner.goalObject = 1; end;
   
   
-  options.floating = true;
-  options.terrain = RigidBodyFlatTerrain(); %Changed to a smaller terrain to avoid visualization problem when zooming
-  options.joint_v_max = 15*pi/180;
+  optionsPlanner.floating = true;
+  optionsPlanner.terrain = RigidBodyFlatTerrain(); %Changed to a smaller terrain to avoid visualization problem when zooming
+  optionsPlanner.joint_v_max = 15*pi/180;
   
-  fp = load(fixed_point_file);
+  fp = load(options.fixed_point_file);
   qNom = fp.xstar(1:r.getNumPositions());
-
+  
+  activeCollisionOptions = struct('body_idx', setdiff(1:r.getNumBodies(), inactive_collision_bodies));
+  
+  capability_map_file = [getDrakePath(), '/../../control/matlab/data/val_description/capabilityMap.mat'];
+  cm = CapabilityMap(capability_map_file);
+  finalPose = FinalPoseProblem(r, hand.(grHand), xStart, xGoal, ...
+                     additionalConstraints, goalConstraints, qNom, ...
+                     'capabilityMap', cm, 'graspinghand', grHand, ...
+                     'activecollisionoptions', activeCollisionOptions, ...
+                     'ikoptions', ikoptions, ...
+                     'endeffectorpoint', point_in_link_frame);
+  [xGoal, info] = finalPose.getFinalPose(optionsPlanner);
+  
   multiTree = MultipleTreeProblem(r, hand.(grHand), xStart, xGoal, [],...
     additionalConstraints, qNom,...
-    'activecollisionoptions',...
-    struct('body_idx', setdiff(1:r.getNumBodies(), inactive_collision_bodies)),...
+    'activecollisionoptions', activeCollisionOptions , ...
     'ikoptions', ikoptions, 'endeffectorpoint', point_in_link_frame);
-  finalPose = FinalPoseProblem(r, hand.(grHand), xStart, xGoal, ...
-                     goalConstraints, qNom, ...
-                     'capabilityMap', cm, 'graspinghand', grHand, ...
-                     'activecollisionoptions', multiTree.activeCollisionOptions, ...
-                     'endeffectorpoint', point_in_link_frame, ...
-                     'tree', multiTree.trees(1));
-
-  [xGoal, info] = finalPose.getFinalPose(options);
-  [~, info, ~, q_path] = multiTree.rrtStar(options,xGoal);
+  [~, info, ~, q_path] = multiTree.rrtStar(optionsPlanner,xGoal);
   
   if info == 1
     path_length = size(q_path,2);  
