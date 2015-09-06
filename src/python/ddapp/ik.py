@@ -396,6 +396,7 @@ class AsyncIKCommunicator():
         commands.append('options.left_foot_link = left_foot_link;')
         commands.append('options.right_foot_link = right_foot_link;')
         commands.append("options.fixed_point_file = fixed_point_file;")
+        commands.append("options.graspingHand = '%s';" % ikParameters.rrtHand)
 
         commands.append('planner = optimalCollisionFreePlanner(r, s, %s, %s, options);\n'%( qStart, xGoal))
         commands.append('[xGoalFull,info] = planner.findFinalPose();\n')

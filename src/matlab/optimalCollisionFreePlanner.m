@@ -29,7 +29,7 @@ classdef optimalCollisionFreePlanner
       obj.endEffectorId = robot.findLinkId(options.end_effector_name);
       obj.qStart = qStart;
       obj.xGoal = xGoal;
-      obj.graspingHand = 'left';
+      obj.graspingHand = options.graspingHand;
       
       point_in_link_frame.right = [0.08; -0.07; 0];
       point_in_link_frame.left = [0.08; 0.07; 0];
