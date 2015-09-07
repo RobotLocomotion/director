@@ -451,7 +451,10 @@ class AsyncIKCommunicator():
             affStr += 'RigidBodyBox(%s, %s, quat2rpy(%s));' % (desc['Dimensions'], list(desc['pose'][0]), list(desc['pose'][1]))
         elif desc['classname'] == 'CylinderAffordanceItem':
             affStr += 'RigidBodyCylinder(%s, %s, %s, quat2rpy(%s));' % (desc['Radius'], desc['Length'], list(desc['pose'][0]), list(desc['pose'][1]))
-                
+        else:
+            raise Exception('Unsupported affordance type: ' + desc['classname'])
+
+
         commands = []
         commands.append('aff = %s;\n' % affStr )          
         commands.append('s = s.addAffordanceToLink(\'%s\', aff, %s, \'%s\');' % (linkName, ConstraintBase.toColumnVectorString(q), affordanceName))
