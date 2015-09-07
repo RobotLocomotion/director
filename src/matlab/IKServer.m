@@ -183,26 +183,21 @@ classdef IKServer
       obj.robot = compile(obj.robot);
     end
     
-    function obj = addAffordanceToHand(obj, side, affordance, q, name)
-      hand.left = obj.robot.findLinkId('LeftPalm');
-      hand.right = obj.robot.findLinkId('RightPalm');
+    function obj = addAffordanceToLink(obj, parentLinkName, affordance, q, affordanceName)
+      parentLink = obj.robot.findLinkId(parentLinkName);
       kinsol = obj.robot.doKinematics(q);
-      handPose = obj.robot.forwardKin(kinsol, hand.(side), [0;0;0], 2);
-      handT = [quat2rotmat(handPose(4:7)), handPose(1:3); 0 0 0 1];
-      affordance.T = [handT(1:3, 1:3)' * affordance.T(1:3, 1:3), handT(1:3, 1:3)' * (affordance.T(1:3, 4) - handT(1:3, 4)); 0 0 0 1];
-      obj.robot.body(hand.(side)).visual_geometry
-      obj.robot.body(hand.(side)).collision_geometry
-      obj.robot = addGeometryToBody(obj.robot, hand.(side), affordance, name);
+      parentLinkPose = obj.robot.forwardKin(kinsol, parentLink, [0;0;0], 2);
+      parentLinkT = [quat2rotmat(parentLinkPose(4:7)), parentLinkPose(1:3); 0 0 0 1];
+      affordance.T = [parentLinkT(1:3, 1:3)' * affordance.T(1:3, 1:3), parentLinkT(1:3, 1:3)' * (affordance.T(1:3, 4) - parentLinkT(1:3, 4)); 0 0 0 1];
+      obj.robot = addGeometryToBody(obj.robot, parentLink, affordance, affordanceName);
       obj.robot = obj.robot.compile();
-      obj.robot.body(hand.(side)).visual_geometry
-      obj.robot.body(hand.(side)).collision_geometry
     end
     
-    function obj = removeAffordanceFromHand(obj, side, name)      
-      hand.left = obj.robot.findLinkId('LeftPalm');
-      hand.right = obj.robot.findLinkId('RightPalm');
-      obj.robot = removeCollisionGeometryFromBody(obj.robot, hand.(side), name);
-      obj.robot = obj.robot.compile();
+    function obj = removeAffordanceFromLink(obj, parentLinkName, affordanceName)
+      % Not implemented yet
+      %parentLink = obj.robot.findLinkId(parentLinkName);
+      %obj.robot = removeCollisionGeometryFromBody(obj.robot, parentLink, affordanceName);
+      %obj.robot = obj.robot.compile();
     end
 
     function linkNames = getLinkNames(obj)

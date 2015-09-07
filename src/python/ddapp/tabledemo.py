@@ -273,7 +273,8 @@ class TableDemo(object):
             self.openHand(side)
             return self.delay(5)
 #        elif self.planner == 1:
-#	        self.ikPlanner.ikServer.removeAffordanceFromHand(self.graspingHand, obj.getProperty('Name'))
+#        self.ikPlanner.ikServer.removeAffordanceFromLink( self.ikPlanner.getHandLink(side) , obj.getProperty('Name'))
+
 
     def getNextTableObject(self, side='left'):
 

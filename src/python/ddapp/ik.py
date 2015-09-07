@@ -443,24 +443,21 @@ class AsyncIKCommunicator():
 
 
         
-    def addAffordanceToHand(self, handLink, affordance, q, name):
+    def addAffordanceToLink(self, linkName, affordance, q, affordanceName):
+
         affStr = ''
         desc = affordance.getDescription()
         if desc['classname'] == 'BoxAffordanceItem':
-            affStr += 'RigidBodyBox(%s, %s, quat2rpy(%s));,'%(desc['Dimensions'], list(desc['pose'][0]), list(desc['pose'][1]))
+            affStr += 'RigidBodyBox(%s, %s, quat2rpy(%s));' % (desc['Dimensions'], list(desc['pose'][0]), list(desc['pose'][1]))
         elif desc['classname'] == 'CylinderAffordanceItem':
-            affStr += 'RigidBodyCylinder(%s, %s, %s, quat2rpy(%s));,'%(desc['Radius'], desc['Length'], list(desc['pose'][0]), list(desc['pose'][1]))
+            affStr += 'RigidBodyCylinder(%s, %s, %s, quat2rpy(%s));' % (desc['Radius'], desc['Length'], list(desc['pose'][0]), list(desc['pose'][1]))
                 
-#        urdf_lines = urdf_string.splitlines()
-#        urdf_lines = ["'%s'" % x for x in urdf_lines]
-#        urdf_lines = '...\n'.join(urdf_lines)   
-#        self.comm.send('urdf_string = [%s];' % urdf_lines )   
         commands = []
         commands.append('aff = %s;\n' % affStr )          
-        commands.append('s = s.addAffordanceToHand(\'%s\', aff, %s, \'%s\');' % (handLink, q, name))
+        commands.append('s = s.addAffordanceToLink(\'%s\', aff, %s, \'%s\');' % (linkName, ConstraintBase.toColumnVectorString(q), affordanceName))
         self.comm.sendCommands(commands)
     
-    def removeAffordanceFromHand(self, handLink, name):
+    def removeAffordanceFromLink(self, linkName, affordanceName):
         commands = []        
-        commands.append('s = s.removeAffordanceFromHand(\'%s\', \'%s\');' % (handLink, name))
+        commands.append('s = s.removeAffordanceFromLink(\'%s\', \'%s\');' % (linkName, affordanceName))
         self.comm.sendCommands(commands)
