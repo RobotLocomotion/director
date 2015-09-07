@@ -19,30 +19,31 @@ classdef optimalCollisionFreePlanner
   methods
     
     function obj = optimalCollisionFreePlanner(robot, s, qStart, xGoal, options, objectGrasped)
-      
-      if nargin < 7
-        disp('fix me')
+      if nargin < 6
         objectGrasped = false;
-      end      
+      end
       
       obj.robot = robot;
       obj.endEffectorId = robot.findLinkId(options.end_effector_name);
       obj.qStart = qStart;
       obj.xGoal = xGoal;
       obj.graspingHand = options.graspingHand;
-      
-      point_in_link_frame.right = [0.08; -0.07; 0];
-      point_in_link_frame.left = [0.08; 0.07; 0];
-      obj.point_in_link_frame = point_in_link_frame.(obj.graspingHand);
+      obj.point_in_link_frame = options.point_in_link_frame;
 
-      elbow.right = robot.findLinkId('RightElbowPitchLink');
-      elbow.left = robot.findLinkId('LeftElbowPitchLink');
+      reachingElbowLink = robot.findLinkId(options.reachingElbowLink);
+      pelvisLink = robot.findLinkId(options.pelvisLink);
+      %LeftHipYawLink = robot.findLinkId('LeftHipYawLink');
+      %RightHipYawLink = robot.findLinkId('RightHipYawLink');
+      %LowerNeckPitchLink = robot.findLinkId('LowerNeckPitchLink');
+      %TorsoPitchLink = robot.findLinkId('TorsoPitchLink');
+      %TorsoYawLink = robot.findLinkId('TorsoYawLink');
+
+      l_foot = robot.findLinkId(options.left_foot_link);
+      r_foot = robot.findLinkId(options.right_foot_link);
       
       kinsol = robot.doKinematics(obj.qStart);
       obj.xStart = [robot.forwardKin(kinsol, obj.endEffectorId, obj.point_in_link_frame, 2); obj.qStart'];
       
-      l_foot = robot.findLinkId(options.left_foot_link);
-      r_foot = robot.findLinkId(options.right_foot_link);
       leftFootPose = robot.forwardKin(kinsol,l_foot, [0; 0; 0], 2);
       leftFootPosConstraint = WorldPositionConstraint(robot, l_foot, [0; 0; 0], leftFootPose(1:3), leftFootPose(1:3));
       leftFootQuatConstraint = WorldQuatConstraint(robot, l_foot, leftFootPose(4:7), 0.0, [0.0, 1.0]);
@@ -58,8 +59,7 @@ classdef optimalCollisionFreePlanner
       quasiStaticConstraint = quasiStaticConstraint.addContact(l_foot, l_foot_pts);
       quasiStaticConstraint = quasiStaticConstraint.addContact(r_foot, r_foot_pts);
       
-      trunk = robot.findLinkId('Torso');
-      nonGraspingHandConstraint = Point2PointDistanceConstraint(robot, elbow.(obj.graspingHand), trunk, [0; 0; 0], [0; 0; 0], 0.2, Inf);
+      nonGraspingHandConstraint = Point2PointDistanceConstraint(robot, reachingElbowLink, pelvisLink, [0; 0; 0], [0; 0; 0], 0.2, Inf);
       
       obj.additionalConstraints = {leftFootPosConstraint, leftFootQuatConstraint,...
         rightFootPosConstraint, rightFootQuatConstraint, quasiStaticConstraint, nonGraspingHandConstraint};
@@ -74,16 +74,6 @@ classdef optimalCollisionFreePlanner
       else
         obj.goalConstraints = {goalDistConstraint};
       end      
-      
-      
-      LeftHipYawLink = robot.findLinkId('LeftHipYawLink');
-      RightHipYawLink = robot.findLinkId('RightHipYawLink');
-      LowerNeckPitchLink = robot.findLinkId('LowerNeckPitchLink');
-      TorsoPitchLink = robot.findLinkId('TorsoPitchLink');
-      TorsoYawLink = robot.findLinkId('TorsoYawLink');
-      
-      inactive_collision_bodies = [l_foot, r_foot, LowerNeckPitchLink, RightHipYawLink,...
-        LeftHipYawLink, TorsoPitchLink, TorsoYawLink];
       
       %Set IK options
       cost = Point(robot.getPositionFrame(),10);
@@ -124,7 +114,10 @@ classdef optimalCollisionFreePlanner
       fp = load(options.fixed_point_file);
       obj.qNom = fp.xstar(1:robot.getNumPositions());
       
-      obj.activeCollisionOptions = struct('body_idx', setdiff(1:robot.getNumBodies(), inactive_collision_bodies));
+      %inactive_collision_bodies = [l_foot, r_foot, LowerNeckPitchLink, RightHipYawLink,...
+      %  LeftHipYawLink, TorsoPitchLink, TorsoYawLink];
+      %obj.activeCollisionOptions = struct('body_idx', setdiff(1:robot.getNumBodies(), inactive_collision_bodies));
+      obj.activeCollisionOptions = struct('body_idx', 1:robot.getNumBodies() );
     end
     
     function [xGoalFull, info] = findFinalPose(obj)
@@ -143,16 +136,12 @@ classdef optimalCollisionFreePlanner
       
       multiTree = MultipleTreeProblem(obj.robot, obj.endEffectorId, obj.xStart, obj.xGoal, [],...
         obj.additionalConstraints, obj.qNom,...
-        'activecollisionoptions', obj.activeCollisionOptions , ...
         'ikoptions', obj.ikoptions, 'endeffectorpoint', obj.point_in_link_frame);
       [~, info, ~, q_path] = multiTree.rrtStar(obj.optionsPlanner, xGoalFull);
       
       if info == 1
         path_length = size(q_path,2);
         xtraj = PPTrajectory(pchip(linspace(0, 1, path_length), [q_path(8:end,:); zeros(obj.robot.getNumVelocities(), size(q_path,2))] ));
-        
-        %q_traj = PPTrajectory(pchip(linspace(0, 1, path_length), q_path(8:end,:)));
-        %s.publishTraj(q_traj, 1);
       else
         xtraj = [];
         info = 13;

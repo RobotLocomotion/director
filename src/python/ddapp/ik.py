@@ -370,10 +370,11 @@ class AsyncIKCommunicator():
         if self.handleAsyncTasks() > 0:
             return
             
-    def runMultiRRT(self, qStart, xGoal, objectGrasped, ikParameters):
+    def runMultiRRT(self, qStart, xGoal, pelvisLink, elbowLinks, graspToHandLinkFrame, objectGrasped, ikParameters):
 
         assert ikParameters.rrtHand in ('left', 'right')
         collisionEndEffectorName = ( self.handModels[0].handLinkName if ikParameters.rrtHand == 'left' else self.handModels[1].handLinkName )
+        reachingElbowLink = ( elbowLinks[0] if ikParameters.rrtHand == 'left' else elbowLinks[1] )
 
         commands = []
         commands.append('\n%-------- runMultiRRT --------\n')
@@ -396,7 +397,11 @@ class AsyncIKCommunicator():
         commands.append('options.left_foot_link = left_foot_link;')
         commands.append('options.right_foot_link = right_foot_link;')
         commands.append("options.fixed_point_file = fixed_point_file;")
+
         commands.append("options.graspingHand = '%s';" % ikParameters.rrtHand)
+        commands.append("options.reachingElbowLink = '%s';" % reachingElbowLink)
+        commands.append("options.pelvisLink = '%s';" % pelvisLink)
+        commands.append('options.point_in_link_frame = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(graspToHandLinkFrame.GetPosition()) )
 
         commands.append('planner = optimalCollisionFreePlanner(r, s, %s, %s, options);\n'%( qStart, xGoal))
         commands.append('[xGoalFull,info] = planner.findFinalPose();\n')
@@ -459,30 +464,3 @@ class AsyncIKCommunicator():
         commands = []        
         commands.append('s = s.removeAffordanceFromHand(\'%s\', \'%s\');' % (handLink, name))
         self.comm.sendCommands(commands)
-    
-    def planNominalPose(self, grHand, qStart, stanceFrame):
-        commands = []    
-        commands.append('qNom = s.q_nom;\n')
-        commands.append('qStart = %s;\n' % qStart)
-        commands.append('footLink = s.robot.findLinkId(\'LeftFoot\');\n')
-        commands.append('pelvisLink = s.robot.findLinkId(\'Pelvis\');\n')
-        commands.append('kinsol = s.robot.doKinematics(s.q_nom);\n')
-        commands.append('footPoseNominal = s.robot.forwardKin(kinsol, footLink, [0;0;0], 2);\n')
-        commands.append('pelvisPoseNominal = s.robot.forwardKin(kinsol, pelvisLink, [0;0;0], 2);\n')
-        commands.append('foot2pelvisrot = [quat2rotmat(footPoseNominal(4:7))\'*quat2rotmat(pelvisPoseNominal(4:7))];\n')
-        commands.append('foot2pelvisPos = foot2pelvisrot * (pelvisPoseNominal(1:3)-footPoseNominal(1:3));\n')
-        commands.append('kinsol = s.robot.doKinematics(qStart);\n')
-        commands.append('footPoseCurrent = s.robot.forwardKin(kinsol, footLink, [0;0;0], 2);\n')
-        commands.append('posCurrent = footPoseCurrent(1:3);\n')
-        commands.append('rotCurrent = quat2rotmat(footPoseCurrent(4:7));\n')
-        commands.append('newPelvisPose = [rotCurrent posCurrent; 0 0 0 1] * [foot2pelvisrot, foot2pelvisPos ;0 0 0 1]; \n')
-        commands.append('newPelvisPose = [newPelvisPose(1:3, 4); rotmat2rpy(newPelvisPose(1:3, 1:3))];\n')
-        commands.append('qNom = [newPelvisPose; s.q_nom(7:end)];\n')
-        commands.append('info = optimalCollisionFreePlanner(r, s, \'%s\', %s, qNom);\n'%(grHand, qStart))
-        self.comm.sendCommands(commands)
-
-        info = self.comm.getFloatArray('info')[0]
-        
-        return info
-        
-        

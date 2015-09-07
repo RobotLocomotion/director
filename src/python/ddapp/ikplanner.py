@@ -257,6 +257,9 @@ class IKPlanner(object):
             # print "No foot links found in config, assuming fixedBaseArm=True"
             self.fixedBaseArm = True
 
+        if 'elbowLinks' in drcargs.getDirectorConfig():
+            self.elbowLinks = drcargs.getDirectorConfig()['elbowLinks']
+
 
     def getJointGroup(self, name):
         jointGroup = filter(lambda group: group['name'] == name, self.jointGroups)
@@ -1355,8 +1358,13 @@ class IKPlanner(object):
     def runMultiRRT(self, qStart, xGoal, objectGrasped = False, ikParameters = None):
         ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
+        assert ikParameters.rrtHand in ('left', 'right')
+        collisionEndEffectorName = ( self.handModels[0].handLinkName if ikParameters.rrtHand == 'left' else self.handModels[1].handLinkName )
+
+        graspToHandLinkFrame = self.newGraspToHandFrame(ikParameters.rrtHand)
+
         listener = self.getManipPlanListener()
-        info = self.ikServer.runMultiRRT(qStart, xGoal, objectGrasped=objectGrasped, ikParameters=ikParameters)
+        info = self.ikServer.runMultiRRT(qStart, xGoal, self.pelvisLink, self.elbowLinks, graspToHandLinkFrame, objectGrasped=objectGrasped, ikParameters=ikParameters)
         self.lastManipPlan = listener.waitForResponse(timeout=12000)
         listener.finish()
 

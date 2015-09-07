@@ -409,17 +409,18 @@ class TableDemo(object):
         self.addPlan(plan)
 
     def planDropPostureLower(self, side):
-        if self.planner == 1:
-            startPose = self.getPlanningStartPose()
-            stanceFrame = list(self.footstepPlanner.getFeetMidPoint(self.robotStateModel).GetPosition())
-            stanceFrame.extend(self.footstepPlanner.getFeetMidPoint(self.robotStateModel).GetOrientationWXYZ())
-            plan = self.ikPlanner.ikServer.planNominalPose(self.graspingHand, list(startPose), list(stanceFrame))
-        else:
-            poseA = self.getPreDropHighPose(startPose, side)
-            poseB = self.getRaisedArmPose(startPose, side)
-            poseC = self.getLoweredArmPose(startPose, side)
-    
-            plan = self.ikPlanner.computeMultiPostureGoal([startPose, poseA, poseB, poseC])
+        startPose = self.getPlanningStartPose()
+        # removed this as it duplicated calls to rrtStar planner:
+        #if self.planner == 1:
+        #    stanceFrame = list(self.footstepPlanner.getFeetMidPoint(self.robotStateModel).GetPosition())
+        #    stanceFrame.extend(self.footstepPlanner.getFeetMidPoint(self.robotStateModel).GetOrientationWXYZ())
+        #    plan = self.ikPlanner.ikServer.planNominalPose(self.graspingHand, list(startPose), list(stanceFrame))
+        #else:
+        poseA = self.getPreDropHighPose(startPose, side)
+        poseB = self.getRaisedArmPose(startPose, side)
+        poseC = self.getLoweredArmPose(startPose, side)
+        plan = self.ikPlanner.computeMultiPostureGoal([startPose, poseA, poseB, poseC])
+
         self.addPlan(plan)
 
     def planDropPostureSwap(self, lowerSide, raiseSide):
