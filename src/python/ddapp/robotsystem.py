@@ -163,6 +163,9 @@ class RobotSystem(object):
             plannerPub = plannerPublisher.PlannerPublisher(ikPlanner,affordanceManager)
             ikPlanner.setPublisher(plannerPub)
 
+            # This joint angle is mapped to the Multisense panel
+            neckPitchJoint = ikPlanner.neckPitchJoint
+
         applogic.resetCamera(viewDirection=[-1,0,0], view=view)
 
 
