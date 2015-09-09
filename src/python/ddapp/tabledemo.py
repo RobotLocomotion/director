@@ -851,7 +851,7 @@ class TableDemo(object):
         boxAffordance.setProperty('Alpha', 0.3)
 
     ######### Nominal Plans and Execution  #################################################################
-    def loadSDFFrameAndRunSim(self):
+    def loadSDFFileAndRunSim(self):
         from ddapp import sceneloader
         filename= os.environ['DRC_BASE'] + '/../drc-testing-data/tabletop/tabledemo.sdf'
         sc=sceneloader.SceneLoader()
@@ -1129,7 +1129,7 @@ class TableTaskPanel(TaskUserPanel):
         self.addManualSpacer()
         self.addManualButton('Close Hand', functools.partial(self.tableDemo.closeHand, self.tableDemo.graspingHand))
         self.addManualSpacer()
-        self.addManualButton('Read SDF & Sim', self.tableDemo.loadSDFFrameAndRunSim)
+        self.addManualButton('Read SDF & Sim', self.tableDemo.loadSDFFileAndRunSim)
 
     def addDefaultProperties(self):
         self.params.addProperty('Hand', 0,

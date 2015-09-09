@@ -1,3 +1,4 @@
+import os
 import math
 import numpy as np
 import operator
@@ -91,7 +92,7 @@ class ContinousWalkingDemo(object):
 
         self.lastContactState = "none"
         # Smooth Stereo or Raw or Lidar?
-        self.processContinuousStereo = True
+        self.processContinuousStereo = False
         self.processRawStereo = False
         self.committedStep = None
         self.useManualFootstepPlacement = False
@@ -804,6 +805,15 @@ class ContinousWalkingDemo(object):
 
         self.footstepsPanel.onNewWalkingGoal(goalFrame)
 
+    def loadSDFFileAndRunSim(self):
+        from ddapp import sceneloader
+        filename= os.environ['DRC_BASE'] + '/../drc-testing-data/terrain/terrain_simple.sdf'
+        sc=sceneloader.SceneLoader()
+        sc.loadSDF(filename)
+        import ipab
+        msg=ipab.scs_api_command_t()
+        msg.command="loadSDF "+filename+"\nsimulate"
+        lcmUtils.publish('SCS_API_CONTROL', msg)
 
     def addToolbarMacros(self):
 
