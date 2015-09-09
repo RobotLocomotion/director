@@ -18,7 +18,7 @@ classdef optimalCollisionFreePlanner
   
   methods
     
-    function obj = optimalCollisionFreePlanner(robot, s, qStart, xGoal, options, objectGrasped)
+    function obj = optimalCollisionFreePlanner(robot, qStart, xGoal, options, objectGrasped)
       if nargin < 6
         objectGrasped = false;
       end

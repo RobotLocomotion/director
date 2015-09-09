@@ -403,7 +403,7 @@ class AsyncIKCommunicator():
         commands.append("options.pelvisLink = '%s';" % pelvisLink)
         commands.append('options.point_in_link_frame = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(graspToHandLinkFrame.GetPosition()) )
 
-        commands.append('planner = optimalCollisionFreePlanner(r, s, %s, %s, options);\n'%( qStart, xGoal))
+        commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options);\n'%( qStart, xGoal))
         commands.append('[xGoalFull,info] = planner.findFinalPose();\n')
         commands.append('[xtraj, info] = planner.findCollisionFreeTraj(xGoalFull);')
         commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
