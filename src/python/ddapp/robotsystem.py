@@ -67,7 +67,7 @@ class RobotSystem(object):
         useWidgets = False
 
         directorConfig = self.getDirectorConfig()
-
+        neckPitchJoint = 'neck_ay'
 
         if useAtlasDriver:
             atlasDriver = atlasdriver.init(None)
@@ -85,7 +85,7 @@ class RobotSystem(object):
             multisenseDriver, mapServerSource = perception.init(view)
 
             def getNeckPitch():
-                return robotStateJointController.q[robotstate.getDrakePoseJointNames().index('neck_ay')]
+                return robotStateJointController.q[robotstate.getDrakePoseJointNames().index( neckPitchJoint )]
             neckDriver = perception.NeckDriver(view, getNeckPitch)
 
             def getSpindleAngleFunction():
