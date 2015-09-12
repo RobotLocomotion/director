@@ -287,7 +287,6 @@ def setupPackagePaths():
         'software/models/atlas_v5',
         'software/models/valkyrie',
         'software/models/val_description',
-        'software/models/valkyrie_original',
         'software/models/lwr_defs',
         'software/models/mit_gazebo_models/mit_robot',
         'software/models/mit_gazebo_models/V1',
