@@ -990,7 +990,7 @@ class RobotGridUpdater(object):
         t.Translate((x*10,y*10,z))
         self.gridFrame.copyFrame(t)
 
-gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
+#gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
 
 
 class IgnoreOldStateMessagesSelector(object):
