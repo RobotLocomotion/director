@@ -37,7 +37,7 @@ class IkParameters(FieldContainer):
 
     def setToDefaults(self):
         self.usePointwise = True
-        self.useCollision = False
+        self.useCollision = "none"
         self.majorIterationsLimit = 500
         self.majorOptimalityTolerance = 1e-4
         self.majorFeasibilityTolerance = 1e-6

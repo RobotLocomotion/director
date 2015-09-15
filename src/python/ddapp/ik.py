@@ -331,7 +331,7 @@ class AsyncIKCommunicator():
         commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
 
         if ikParameters.usePointwise:
-            assert not ikParameters.useCollision
+            assert ikParameters.useCollision == 'none'
             commands.append('\n%--- pointwise ik --------\n')
             commands.append('if ~isempty(qtraj), num_pointwise_time_points = 20; end;')
             commands.append('if ~isempty(qtraj), pointwise_time_points = linspace(qtraj.tspan(1), qtraj.tspan(2), num_pointwise_time_points); end;')

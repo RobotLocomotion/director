@@ -109,7 +109,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.ikPlanner = ikPlanner
 
         self.addProperty('Use pointwise', ikPlanner.defaultIkParameters.usePointwise)
-        self.addProperty('Use collision', ikPlanner.defaultIkParameters.useCollision)
+        self.addProperty('Use collision', ikPlanner.defaultIkParameters.useCollision, attributes=om.PropertyAttributes(enumNames=['none', 'RRT Connect', 'RRT*']))
         self.addProperty('Collision min distance', ikPlanner.defaultIkParameters.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikPlanner.defaultIkParameters.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
@@ -137,7 +137,16 @@ class IkOptionsItem(om.ObjectModelItem):
 
         if propertyName == 'Use collision':
             self.ikPlanner.defaultIkParameters.useCollision = self.getProperty(propertyName)
-            if self.ikPlanner.defaultIkParameters.useCollision:
+            if self.ikPlanner.defaultIkParameters.useCollision == 1:
+                self.ikPlanner.defaultIkParameters.useCollision = 'RRT Connect'
+                self.setProperty('Use pointwise', False)
+                self.setProperty('Add knots', 2)
+                self.setProperty('Quasistatic shrink factor', 0.5)
+                self.setProperty('Major iterations limit', 500)
+                self.setProperty('Major optimality tolerance', 1e-3)
+                self.setProperty('Major feasibility tolerance', 5e-5)
+            elif self.ikPlanner.defaultIkParameters.useCollision == 2:
+                self.ikPlanner.defaultIkParameters.useCollision = 'RRT*'
                 self.setProperty('Use pointwise', False)
                 self.setProperty('Add knots', 2)
                 self.setProperty('Quasistatic shrink factor', 0.5)
@@ -145,6 +154,7 @@ class IkOptionsItem(om.ObjectModelItem):
                 self.setProperty('Major optimality tolerance', 1e-3)
                 self.setProperty('Major feasibility tolerance', 5e-5)
             else:
+                self.ikPlanner.defaultIkParameters.useCollision = 'none'
                 self.setProperty('Add knots', 0)
                 self.setProperty('Quasistatic shrink factor', 0.5)
                 self.setProperty('Major iterations limit', 500)
@@ -1326,7 +1336,6 @@ class IKPlanner(object):
         return ikParameters
 
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
-
 
         if (self.pushToMatlab is False):
             self.lastManipPlan, info = self.plannerPub.processTraj(constraints,endPoseName=poseEnd, nominalPoseName=nominalPoseName,seedPoseName=poseStart, additionalTimeSamples=self.additionalTimeSamples)
