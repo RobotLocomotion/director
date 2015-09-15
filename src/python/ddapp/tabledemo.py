@@ -1196,6 +1196,14 @@ class TableTaskPanel(TaskUserPanel):
         elif propertyName == 'Scene':
             self.tableDemo.sceneID = self.params.getProperty('Scene')
 
+    def pickupMoreObjects(self):
+        if len(self.tableDemo.clusterObjects) > 0: # There is still sth on the table, let's do it again!
+            print "There are more objects on the table, going at it again!"
+            self.taskTree.selectTaskByName('reach')
+            #self.onContinue()
+        else:
+            print "Table clear, sir!"
+
     def addTasks(self):
 
         # some helpers
@@ -1307,6 +1315,4 @@ class TableTaskPanel(TaskUserPanel):
         else:
             addManipulation(functools.partial(v.planPreGrasp, v.graspingHand), name='go home')
 
-        if len(v.clusterObjects) > 0: # There is still sth on the table, let's do it again!
-            self.taskTree.selectTaskByName('reach')
-            self.onContinue()
+        addFunc(self.pickupMoreObjects, 'clear until table empty', parent='clear until table empty folder')
