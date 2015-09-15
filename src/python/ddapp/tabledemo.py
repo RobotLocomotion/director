@@ -71,6 +71,7 @@ class TableDemo(object):
         self.requiredUserPromptEnabled = True
 
         self.plans = []
+        self.clusterObjects = []
         self.frameSyncs = {}
 
         self.graspingHand = 'left' # left, right, both
