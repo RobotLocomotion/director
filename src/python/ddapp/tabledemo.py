@@ -853,7 +853,7 @@ class TableDemo(object):
     ######### Nominal Plans and Execution  #################################################################
     def loadSDFFileAndRunSim(self):
         from ddapp import sceneloader
-        filename= os.environ['DRC_BASE'] + '/../drc-testing-data/tabletop/tabledemo.sdf'
+        filename= os.environ['DRC_BASE'] + '/software/models/worlds/tabledemo.sdf'
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
         import ipab
