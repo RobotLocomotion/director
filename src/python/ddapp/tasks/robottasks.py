@@ -178,7 +178,7 @@ class CheckPlanInfo(UserPromptTask):
         properties.setProperty('Message', 'Plan is invalid. Do you want to accept it anyway?')
 
     def run(self):
-        if robotSystem.ikPlanner.lastManipPlan and max(robotSystem.ikPlanner.lastManipPlan.plan_info) <= 10:
+        if robotSystem.ikPlanner.lastManipPlan and max(robotSystem.ikPlanner.lastManipPlan.plan_info) <= 10 and min(robotSystem.ikPlanner.lastManipPlan.plan_info) >= 0:
             return
         else:
             return UserPromptTask.run(self)
