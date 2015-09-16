@@ -807,7 +807,7 @@ class ContinousWalkingDemo(object):
 
     def loadSDFFileAndRunSim(self):
         from ddapp import sceneloader
-        filename= os.environ['DRC_BASE'] + '/../drc-testing-data/terrain/terrain_simple.sdf'
+        filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_simple.sdf'
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
         import ipab
