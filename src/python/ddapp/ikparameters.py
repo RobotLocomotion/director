@@ -37,7 +37,7 @@ class IkParameters(FieldContainer):
 
     def setToDefaults(self):
         self.usePointwise = True
-        self.useCollision = "none"
+        self.useCollision = 'none'
         self.majorIterationsLimit = 500
         self.majorOptimalityTolerance = 1e-4
         self.majorFeasibilityTolerance = 1e-6
@@ -58,7 +58,7 @@ class IkParameters(FieldContainer):
         self.collisionMinDistance = 0.03
         self.rrtMaxEdgeLength = 0.05
         self.rrtGoalBias = 1.0
-        self.rrtHand = "left"
+        self.rrtHand = 'left'
         self.rrtMaxNumVertices = 5000
         self.rrtNSmoothingPasses = 10
         self.quasiStaticShrinkFactor = 0.2

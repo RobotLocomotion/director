@@ -42,7 +42,7 @@ classdef optimalCollisionFreePlanner
       r_foot = robot.findLinkId(options.right_foot_link);
       
       kinsol = robot.doKinematics(obj.qStart);
-      obj.xStart = [robot.forwardKin(kinsol, obj.endEffectorId, obj.point_in_link_frame, 2); obj.qStart'];
+      obj.xStart = [robot.forwardKin(kinsol, obj.endEffectorId, obj.point_in_link_frame, 2); obj.qStart];
       
       leftFootPose = robot.forwardKin(kinsol,l_foot, [0; 0; 0], 2);
       leftFootPosConstraint = WorldPositionConstraint(robot, l_foot, [0; 0; 0], leftFootPose(1:3), leftFootPose(1:3));
@@ -86,30 +86,23 @@ classdef optimalCollisionFreePlanner
       cost(1:6) = max(cost(7:end))/2;
       cost = cost/min(cost);
       Q = diag(cost);
-      ikoptions = IKoptions(robot);
-      ikoptions = ikoptions.setMajorIterationsLimit(100);
-      ikoptions = ikoptions.setQ(Q);
-      ikoptions = ikoptions.setMajorOptimalityTolerance(1e-3);
-      obj.ikoptions = ikoptions;
+      obj.ikoptions = IKoptions(robot);
+      obj.ikoptions = obj.ikoptions.setMajorIterationsLimit(100);
+      obj.ikoptions = obj.ikoptions.setQ(Q);
+      obj.ikoptions = obj.ikoptions.setMajorOptimalityTolerance(1e-3);
       
-      optionsPlanner = struct();
-      if ~isfield(optionsPlanner,'goal_bias'), optionsPlanner.goal_bias = 0.5; end;
-      if ~isfield(optionsPlanner,'n_smoothing_passes'), optionsPlanner.n_smoothing_passes = 10; end;
-      if ~isfield(optionsPlanner,'planning_mode'), optionsPlanner.planning_mode = 'multiRRT'; end;
-      if ~isfield(optionsPlanner,'visualize'), optionsPlanner.visualize = true; end;
-      if ~isfield(optionsPlanner,'scene'), optionsPlanner.scene = 6; end;
-      if ~isfield(optionsPlanner,'model'), optionsPlanner.model = 'val2'; end;
-      if ~isfield(optionsPlanner,'convex_hull'), optionsPlanner.convex_hull = false; end;
-      if ~isfield(optionsPlanner,'graspingHand'), optionsPlanner.graspingHand = 'right'; end;
-      if ~isfield(optionsPlanner,'costType'), optionsPlanner.costType = 'length'; end;
-      if ~isfield(optionsPlanner,'firstFeasibleTraj'), optionsPlanner.firstFeasibleTraj = false; end;
-      if ~isfield(optionsPlanner,'robot'), optionsPlanner.robot = []; end;
-      if ~isfield(optionsPlanner,'nTrees'), optionsPlanner.nTrees = 4; end;
-      if ~isfield(optionsPlanner,'goalObject'), optionsPlanner.goalObject = 1; end;
-      optionsPlanner.floating = true;
-      optionsPlanner.terrain = RigidBodyFlatTerrain(); %Changed to a smaller terrain to avoid visualization problem when zooming
-      optionsPlanner.joint_v_max = 15*pi/180;
-      obj.optionsPlanner = optionsPlanner;
+      obj.optionsPlanner = struct();
+      if ~isfield(obj.optionsPlanner,'goal_bias'), obj.optionsPlanner.goal_bias = 0.5; end;
+      if ~isfield(obj.optionsPlanner,'n_smoothing_passes'), obj.optionsPlanner.n_smoothing_passes = 10; end;
+      if ~isfield(obj.optionsPlanner,'visualize'), obj.optionsPlanner.visualize = true; end;
+      if ~isfield(obj.optionsPlanner,'model'), obj.optionsPlanner.model = 'val2'; end;
+      if ~isfield(obj.optionsPlanner,'convex_hull'), obj.optionsPlanner.convex_hull = false; end;
+      if ~isfield(obj.optionsPlanner,'costType'), obj.optionsPlanner.costType = 'length'; end;
+      if ~isfield(obj.optionsPlanner,'firstFeasibleTraj'), obj.optionsPlanner.firstFeasibleTraj = false; end;
+      if ~isfield(obj.optionsPlanner,'nTrees'), obj.optionsPlanner.nTrees = 4; end;
+      obj.optionsPlanner.floating = true;
+      obj.optionsPlanner.terrain = RigidBodyFlatTerrain();
+      obj.optionsPlanner.joint_v_max = 15*pi/180;
       
       fp = load(options.fixed_point_file);
       obj.qNom = fp.xstar(1:robot.getNumPositions());

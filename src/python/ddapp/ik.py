@@ -235,7 +235,7 @@ class AsyncIKCommunicator():
         self.fetchPoseFromServer('q_trajPose')
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0, elbowLinks = None, pelvisLink = None, graspToHandLinkFrame = None):
 
         if timeSamples is None:
             timeSamples = np.hstack([constraint.tspan for constraint in constraints])
@@ -288,7 +288,7 @@ class AsyncIKCommunicator():
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
         commands.append('\n')
 
-        if ikParameters.useCollision:
+        if ikParameters.useCollision == 'RRT Connect':
             commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
             commands.append('options.n_interp_points = %s;' % ikParameters.numberOfInterpolatedCollisionChecks)
@@ -307,6 +307,21 @@ class AsyncIKCommunicator():
             commands.append('options.N = %s;' % ikParameters.rrtMaxNumVertices)
             commands.append('options.n_smoothing_passes = %s;' % ikParameters.rrtNSmoothingPasses)
             commands.append('[xtraj,info] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);')
+            commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
+        elif ikParameters.useCollision == 'RRT*':
+            reachingElbowLink = ( elbowLinks[0] if ikParameters.rrtHand == 'left' else elbowLinks[1] )
+            commands.append('options.reachingElbowLink = \'%s\';' % reachingElbowLink)
+            commands.append('options.end_effector_name = end_effector_name;')
+            commands.append("options.graspingHand = '%s';" % ikParameters.rrtHand)
+            commands.append("options.pelvisLink = '%s';" % pelvisLink)
+            commands.append('options.point_in_link_frame = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(graspToHandLinkFrame.GetPosition()) )
+            commands.append('options.left_foot_link = left_foot_link;')
+            commands.append('options.right_foot_link = right_foot_link;')
+            commands.append('options.fixed_point_file = fixed_point_file;')
+
+            commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options);\n' % (poseStart, poseEnd))
+            commands.append('[xGoalFull,info] = planner.findFinalPose()\n')
+            commands.append('[xtraj, info] = planner.findCollisionFreeTraj(xGoalFull);')
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:
             commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(%s, 1, nt)));' % nominalPose)
@@ -369,79 +384,6 @@ class AsyncIKCommunicator():
 
         if self.handleAsyncTasks() > 0:
             return
-            
-    def runMultiRRT(self, qStart, xGoal, pelvisLink, elbowLinks, graspToHandLinkFrame, objectGrasped, ikParameters):
-
-        assert ikParameters.rrtHand in ('left', 'right')
-        collisionEndEffectorName = ( self.handModels[0].handLinkName if ikParameters.rrtHand == 'left' else self.handModels[1].handLinkName )
-        reachingElbowLink = ( elbowLinks[0] if ikParameters.rrtHand == 'left' else elbowLinks[1] )
-
-        commands = []
-        commands.append('\n%-------- runMultiRRT --------\n')
-        commands.append("end_effector_name = '%s';" % collisionEndEffectorName)
-        commands.append("end_effector_name_left = '%s';" % self.handModels[0].handLinkName)
-        if (len(self.handModels) > 1):
-            commands.append("end_effector_name_right = '%s';" % self.handModels[1].handLinkName)
-        commands.append("end_effector_pt = [];")
-
-        commands.append('options = struct();')
-        commands.append('options.MajorIterationsLimit = %s;' % ikParameters.majorIterationsLimit)
-        commands.append('options.MajorFeasibilityTolerance = %s;' % ikParameters.majorFeasibilityTolerance)
-        commands.append('options.MajorOptimalityTolerance = %s;' % ikParameters.majorOptimalityTolerance)
-        commands.append('options.FixInitialState = %s;' % ('true' if ikParameters.fixInitialState else 'false'))
-        commands.append('s = s.setupOptions(options);')
-        commands.append('options.end_effector_name = end_effector_name;')
-        commands.append('options.end_effector_name_left = end_effector_name_left;')
-        commands.append('options.end_effector_name_right = end_effector_name_right;')
-        commands.append('options.end_effector_pt = end_effector_pt;')
-        commands.append('options.left_foot_link = left_foot_link;')
-        commands.append('options.right_foot_link = right_foot_link;')
-        commands.append("options.fixed_point_file = fixed_point_file;")
-
-        commands.append("options.graspingHand = '%s';" % ikParameters.rrtHand)
-        commands.append("options.reachingElbowLink = '%s';" % reachingElbowLink)
-        commands.append("options.pelvisLink = '%s';" % pelvisLink)
-        commands.append('options.point_in_link_frame = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(graspToHandLinkFrame.GetPosition()) )
-
-        commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options);\n'%( qStart, xGoal))
-        commands.append('[xGoalFull,info] = planner.findFinalPose();\n')
-        commands.append('[xtraj, info] = planner.findCollisionFreeTraj(xGoalFull);')
-        commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
-
-
-        commands.append('if ~isempty(xtraj), qtraj = xtraj(1:r.getNumPositions()); else, qtraj = []; end;')
-        commands.append('if ~isempty(qtraj), qtraj_orig = qtraj; end;')
-        commands.append('if ~isempty(qtraj), joint_v_max = repmat(%s*pi/180, r.getNumVelocities()-6, 1); end;' % ikParameters.maxDegreesPerSecond)
-        commands.append('if ~isempty(qtraj), xyz_v_max = repmat(%s, 3, 1); end;' % ikParameters.maxBaseMetersPerSecond)
-        commands.append('if ~isempty(qtraj), rpy_v_max = repmat(%s*pi/180, 3, 1); end;' % ikParameters.maxBaseRPYDegreesPerSecond)
-        commands.append('if ~isempty(qtraj), v_max = [xyz_v_max; rpy_v_max; joint_v_max]; end;')
-        commands.append("if ~isempty(qtraj), v_max(r.findPositionIndices('back')) = %s*pi/180; end;" % ikParameters.maxBackDegreesPerSecond)
-
-        commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
-        commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
-        commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
-        commands.append('rescale_body_pts = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
-        commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
-
-        commands.append('if ~isempty(qtraj_orig), qtraj = rescalePlanTiming(qtraj_orig, v_max, %s, %s, body_rescale_options); end;' % (ikParameters.accelerationParam, ikParameters.accelerationFraction))
-
-        publish = True
-        if publish:
-            commands.append('if ~isempty(qtraj_orig), s.publishTraj(qtraj, info); end;')
-
-        commands.append('\n%--- runMultiRRT end --------\n')
-        #self.taskQueue.addTask(functools.partial(self.comm.sendCommandsAsync, commands))
-        #self.taskQueue.start()
-        self.comm.sendCommands(commands)
-
-        info = self.comm.getFloatArray('info')[0]
-        if self.infoFunc:
-            self.infoFunc(info)
-
-        return info
-
-
-
         
     def addAffordanceToLink(self, linkName, affordance, q, affordanceName):
 

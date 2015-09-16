@@ -109,7 +109,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.ikPlanner = ikPlanner
 
         self.addProperty('Use pointwise', ikPlanner.defaultIkParameters.usePointwise)
-        self.addProperty('Use collision', ikPlanner.defaultIkParameters.useCollision, attributes=om.PropertyAttributes(enumNames=['none', 'RRT Connect', 'RRT*']))
+        self.addProperty('Use collision', ['none', 'RRT Connect', 'RRT*'].index(ikPlanner.defaultIkParameters.useCollision), attributes=om.PropertyAttributes(enumNames=['none', 'RRT Connect', 'RRT*']))
         self.addProperty('Collision min distance', ikPlanner.defaultIkParameters.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikPlanner.defaultIkParameters.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
@@ -124,7 +124,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.addProperty('RRT max vertices', ikPlanner.defaultIkParameters.rrtMaxNumVertices, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e5, singleStep=1e1))
         self.addProperty('RRT no. of smoothing passes', ikPlanner.defaultIkParameters.rrtNSmoothingPasses, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e2, singleStep=1e0))
         self.addProperty('RRT goal bias', ikPlanner.defaultIkParameters.rrtGoalBias, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=1e-2))
-        self.addProperty('RRT hand', ikPlanner.defaultIkParameters.rrtHand, attributes=om.PropertyAttributes(enumNames=['left', 'right']))
+        self.addProperty('RRT hand', ['left', 'right'].index(ikPlanner.defaultIkParameters.rrtHand), attributes=om.PropertyAttributes(enumNames=['left', 'right']))
         self.addProperty('Goal planning mode', 0, attributes=om.PropertyAttributes(enumNames=['fix end pose', 'fix goal joints']))
         #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
 
@@ -137,7 +137,7 @@ class IkOptionsItem(om.ObjectModelItem):
 
         if propertyName == 'Use collision':
             self.ikPlanner.defaultIkParameters.useCollision = self.getProperty(propertyName)
-            if self.ikPlanner.defaultIkParameters.useCollision == 1:
+            if self.getProperty(propertyName) == 1:
                 self.ikPlanner.defaultIkParameters.useCollision = 'RRT Connect'
                 self.setProperty('Use pointwise', False)
                 self.setProperty('Add knots', 2)
@@ -145,7 +145,7 @@ class IkOptionsItem(om.ObjectModelItem):
                 self.setProperty('Major iterations limit', 500)
                 self.setProperty('Major optimality tolerance', 1e-3)
                 self.setProperty('Major feasibility tolerance', 5e-5)
-            elif self.ikPlanner.defaultIkParameters.useCollision == 2:
+            elif self.getProperty(propertyName) == 2:
                 self.ikPlanner.defaultIkParameters.useCollision = 'RRT*'
                 self.setProperty('Use pointwise', False)
                 self.setProperty('Add knots', 2)
@@ -205,7 +205,6 @@ class IkOptionsItem(om.ObjectModelItem):
 
         elif propertyName == 'Additional time samples':
             self.ikPlanner.additionalTimeSamples = self.getProperty(propertyName)
-
 
 class IKPlanner(object):
     def setPublisher(self, pub):
@@ -1342,7 +1341,8 @@ class IKPlanner(object):
         else:
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
             listener = self.getManipPlanListener()
-            info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
+            info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples,
+                                           elbowLinks = self.elbowLinks, pelvisLink = self.pelvisLink, graspToHandLinkFrame = self.newGraspToHandFrame(ikParameters.rrtHand))
             self.lastManipPlan = listener.waitForResponse(timeout=12000)
             listener.finish()
 
