@@ -1302,7 +1302,7 @@ class TableTaskPanel(TaskUserPanel):
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToBin)
 
         # drop in bin
-        if v.ikPlanner.fixedBaseArm: # v.ikPlanner.pushToMatlab: # latter statement doesnt work since not yet set when initialising
+        if not v.ikPlanner.fixedBaseArm: # v.ikPlanner.pushToMatlab: # latter statement doesnt work since not yet set when initialising
             addManipulation(functools.partial(v.planDropPostureRaise, v.graspingHand), name='drop: raise arm') # seems to ignore arm side?
         else: # multi-posture goal not working in EXOTica
             addManipulation(functools.partial(v.planPreGrasp, v.graspingHand), name='drop: pre-raise arm')
