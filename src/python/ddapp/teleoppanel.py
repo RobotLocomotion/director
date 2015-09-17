@@ -348,8 +348,19 @@ class EndEffectorTeleopPanel(object):
 
         # todo- need an option here
         goalMode = ikplanner.getIkOptions().getProperty('Goal planning mode')
-        if goalMode == 1 or ikplanner.getIkOptions().getProperty('Use collision'):
+        if goalMode == 1 or ikplanner.getIkOptions().getPropertyEnumValue('Use collision') == 'RRT Connect':
             plan = self.constraintSet.runIkTraj()
+        elif ikplanner.getIkOptions().getPropertyEnumValue('Use collision') == 'RRT*':
+            collisionEndEffectorName = ( self.panel.ikPlanner.handModels[0].handLinkName if self.constraintSet.ikParameters.rrtHand == 'left'
+                                        else self.panel.ikPlanner.handModels[1].handLinkName )
+            constraintToRemove = []
+            for constraint in self.constraintSet.constraints:
+                if hasattr(constraint, 'linkName') and constraint.linkName == collisionEndEffectorName:
+                    constraintToRemove.append(constraint)
+            for constraint in constraintToRemove:
+                self.constraintSet.constraints.remove(constraint)
+            plan = self.constraintSet.runIkTraj()
+            self.updateConstraints()
         else:
             plan = self.constraintSet.planEndPoseGoal()
 

@@ -319,8 +319,8 @@ class AsyncIKCommunicator():
             commands.append('options.right_foot_link = right_foot_link;')
             commands.append('options.fixed_point_file = fixed_point_file;')
 
-            commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options);\n' % (poseStart, poseEnd))
-            commands.append('[xGoalFull,info] = planner.findFinalPose()\n')
+            commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options, active_constraints);\n' % (poseStart, poseEnd))
+            commands.append('[xGoalFull,info] = planner.findFinalPose();\n')
             commands.append('[xtraj, info] = planner.findCollisionFreeTraj(xGoalFull);')
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:

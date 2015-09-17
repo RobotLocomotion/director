@@ -18,7 +18,10 @@ classdef optimalCollisionFreePlanner
   
   methods
     
-    function obj = optimalCollisionFreePlanner(robot, qStart, xGoal, options, objectGrasped)
+    function obj = optimalCollisionFreePlanner(robot, qStart, xGoal, options, additionalConstraints, objectGrasped)
+      if nargin < 5
+        additionalConstraints = {};
+      end
       if nargin < 6
         objectGrasped = false;
       end
@@ -29,40 +32,11 @@ classdef optimalCollisionFreePlanner
       obj.xGoal = xGoal;
       obj.graspingHand = options.graspingHand;
       obj.point_in_link_frame = options.point_in_link_frame;
-
-      reachingElbowLink = robot.findLinkId(options.reachingElbowLink);
-      pelvisLink = robot.findLinkId(options.pelvisLink);
-      %LeftHipYawLink = robot.findLinkId('LeftHipYawLink');
-      %RightHipYawLink = robot.findLinkId('RightHipYawLink');
-      %LowerNeckPitchLink = robot.findLinkId('LowerNeckPitchLink');
-      %TorsoPitchLink = robot.findLinkId('TorsoPitchLink');
-      %TorsoYawLink = robot.findLinkId('TorsoYawLink');
-
-      l_foot = robot.findLinkId(options.left_foot_link);
-      r_foot = robot.findLinkId(options.right_foot_link);
       
       kinsol = robot.doKinematics(obj.qStart);
       obj.xStart = [robot.forwardKin(kinsol, obj.endEffectorId, obj.point_in_link_frame, 2); obj.qStart];
       
-      leftFootPose = robot.forwardKin(kinsol,l_foot, [0; 0; 0], 2);
-      leftFootPosConstraint = WorldPositionConstraint(robot, l_foot, [0; 0; 0], leftFootPose(1:3), leftFootPose(1:3));
-      leftFootQuatConstraint = WorldQuatConstraint(robot, l_foot, leftFootPose(4:7), 0.0, [0.0, 1.0]);
-      rightFootPose = robot.forwardKin(kinsol,r_foot, [0; 0; 0], 2);
-      rightFootPosConstraint = WorldPositionConstraint(robot, r_foot, [0; 0; 0], rightFootPose(1:3), rightFootPose(1:3));
-      rightFootQuatConstraint = WorldQuatConstraint(robot, r_foot, rightFootPose(4:7), 0.0, [0.0, 1.0]);
-      
-      l_foot_pts = robot.getBody(l_foot).getTerrainContactPoints();
-      r_foot_pts = robot.getBody(r_foot).getTerrainContactPoints();
-      quasiStaticConstraint = QuasiStaticConstraint(robot, [-inf, inf], 1);
-      quasiStaticConstraint = quasiStaticConstraint.setShrinkFactor(0.5);
-      quasiStaticConstraint = quasiStaticConstraint.setActive(true);
-      quasiStaticConstraint = quasiStaticConstraint.addContact(l_foot, l_foot_pts);
-      quasiStaticConstraint = quasiStaticConstraint.addContact(r_foot, r_foot_pts);
-      
-      nonGraspingHandConstraint = Point2PointDistanceConstraint(robot, reachingElbowLink, pelvisLink, [0; 0; 0], [0; 0; 0], 0.2, Inf);
-      
-      obj.additionalConstraints = {leftFootPosConstraint, leftFootQuatConstraint,...
-        rightFootPosConstraint, rightFootQuatConstraint, quasiStaticConstraint, nonGraspingHandConstraint};
+      obj.additionalConstraints = additionalConstraints;
       
       obj.xGoal = obj.xGoal(:);
       goalFrame = [eye(3) obj.xGoal(1:3); 0 0 0 1];
