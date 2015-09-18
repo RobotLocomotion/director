@@ -318,6 +318,7 @@ class AsyncIKCommunicator():
             commands.append('options.left_foot_link = left_foot_link;')
             commands.append('options.right_foot_link = right_foot_link;')
             commands.append('options.fixed_point_file = fixed_point_file;')
+            commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
 
             commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options, active_constraints);\n' % (poseStart, poseEnd))
             commands.append('[xGoalFull,info] = planner.findFinalPose();\n')
