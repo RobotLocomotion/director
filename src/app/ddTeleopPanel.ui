@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>401</width>
-    <height>952</height>
+    <width>418</width>
+    <height>995</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -423,7 +423,7 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_3">
               <item>
-               <widget class="QPushButton" name="xLockButton">
+               <widget class="QCheckBox" name="xLockCheckbox">
                 <property name="text">
                  <string>Lock X</string>
                 </property>
@@ -433,7 +433,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="yLockButton">
+               <widget class="QCheckBox" name="yLockCheckbox">
                 <property name="text">
                  <string>Lock Y</string>
                 </property>
@@ -443,7 +443,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="zLockButton">
+               <widget class="QCheckBox" name="zLockCheckbox">
                 <property name="text">
                  <string>Lock Z</string>
                 </property>

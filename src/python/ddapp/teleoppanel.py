@@ -702,6 +702,18 @@ class EndEffectorTeleopPanel(object):
         finalPoseFrame = om.findObjectByName('Final Pose Frame')
         om.removeFromObjectModel(finalPoseFrame)
 
+    def getDistanceConstraint(self):
+        return self.ui.distanceSpinBox.value
+
+    def getXAxisLock(self):
+        return self.getCheckboxState(self.ui.xLockCheckbox)
+
+    def getYAxisLock(self):
+        return self.getCheckboxState(self.ui.yLockCheckbox)
+
+    def getZAxisLock(self):
+        return self.getCheckboxState(self.ui.zLockCheckbox)
+
 
 class PosturePlanShortcuts(object):
 
