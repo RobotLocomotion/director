@@ -89,6 +89,7 @@ class EndEffectorTeleopPanel(object):
         self.ui.rightHandExecutionSupportCheckbox.connect('toggled(bool)', self.rightHandExecutionSupportCheckboxChanged)
         self.ui.pelvisExecutionSupportCheckbox.connect('toggled(bool)', self.pelvisExecutionSupportCheckboxChanged)
         self.ui.executionSupportCheckbox.connect('toggled(bool)', self.executionSupportCheckboxChanged)
+        self.ui.finalPosePlanningOptions.connect('toggled(bool)', self.finalPosePlanningChanged)
 
         self.palmOffsetDistance = 0.0
         self.palmGazeAxis = [0.0, 1.0, 0.0]
@@ -684,6 +685,22 @@ class EndEffectorTeleopPanel(object):
         self.reachSide = side
         self.activate()
         return self.updateGoalFrame(self.panel.ikPlanner.getHandLink(side), frame)
+        
+    def finalPosePlanningChanged(self):
+        if self.getCheckboxState(self.ui.finalPosePlanningOptions) == True:
+            self.initFinalPosePlanning()
+        else:
+            self.terminateFinalPosePlanning()
+    
+    def initFinalPosePlanning(self):
+        pelvisFrame = self.panel.ikPlanner.robotModel.getLinkFrame(self.panel.ikPlanner.pelvisLink)
+        t = transformUtils.copyFrame(pelvisFrame)
+        t.Concatenate(transformUtils.frameFromPositionAndRPY([0.4,0,0], [0,0,0]))
+        vis.updateFrame(t, 'Final Pose Frame', parent = 'planning')
+        
+    def terminateFinalPosePlanning(self):
+        finalPoseFrame = om.findObjectByName('Final Pose Frame')
+        om.removeFromObjectModel(finalPoseFrame)
 
 
 class PosturePlanShortcuts(object):
