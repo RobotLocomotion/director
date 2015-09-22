@@ -1238,6 +1238,7 @@ class TeleopPanel(object):
             self.generalEndEffectorTeleopPanel = GeneralEndEffectorTeleopPanel(ikPlanner, self, robotStateModel, robotStateJointController)
             self.widget.layout().addWidget(self.generalEndEffectorTeleopPanel.widget, 0, 0, 1, 2)
         PythonQt.dd.ddGroupBoxHider(self.ui.paramsContainer)
+        PythonQt.dd.ddGroupBoxHider(self.ui.finalPosePlanningOptions)
 
     def onPostureDatabaseClicked(self):
         ikplanner.RobotPoseGUIWrapper.initCaptureMethods(self.robotStateJointController, self.teleopJointController)
