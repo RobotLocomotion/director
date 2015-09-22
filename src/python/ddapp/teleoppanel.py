@@ -693,6 +693,12 @@ class EndEffectorTeleopPanel(object):
             self.terminateFinalPosePlanning()
     
     def initFinalPosePlanning(self):
+        if drcargs.getDirectorConfig()['modelName'] not in {'valkyrie_v1', 'valkyrie_v2'}:
+            message = 'Final pose planning is not yet available for %s' % drcargs.getDirectorConfig()['modelName']
+            QtGui.QMessageBox.warning(app.getMainWindow(), 'Model not supported', message,
+                  QtGui.QMessageBox.Ok)
+            self.setCheckboxState(self.ui.finalPosePlanningOptions, False)
+            return
         pelvisFrame = self.panel.ikPlanner.robotModel.getLinkFrame(self.panel.ikPlanner.pelvisLink)
         t = transformUtils.copyFrame(pelvisFrame)
         t.Concatenate(transformUtils.frameFromPositionAndRPY([0.4,0,0], [0,0,0]))
