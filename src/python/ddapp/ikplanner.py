@@ -99,8 +99,11 @@ class ConstraintSet(object):
     def onFrameModified(self, frame):
         self.runIk()
     
-    def searchFinalPose(self):
-        self.ikPlanner.createDistanceToGoalConstraint(0)
+    def searchFinalPose(self, eeName, frame):
+        nominalPoseName = self.nominalPoseName
+        if not nominalPoseName:
+            nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
+        self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, eeName, frame, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'])
 
 class IkOptionsItem(om.ObjectModelItem):
 
@@ -1382,12 +1385,14 @@ class IKPlanner(object):
         print 'traj info:', info
         return self.lastManipPlan
         
-    def createDistanceToGoalConstraint(self, distance):
-        if getIkOptions().getPropertyEnumValue('RRT hand') == 'left':
-            endEffectorName = self.handModels[0].handLinkName
-        else:
-            endEffectorName = self.handModels[1].handLinkName
-        print endEffectorName
+    def createDistanceToGoalConstraint(self, eeName, distance):
+        framePos = np.array(om.findObjectByName('Final Pose Frame').transform.GetPosition())
+        constraint = ik.PointToPointDistanceConstraint(bodyNameA = eeName,
+                                                       bodyNameB = 'world',
+                                                       pointInBodyB = framePos,
+                                                       lowerBound = np.array([-0.001]),
+                                                       upperBound = np.array([0.001]))
+        return constraint
 
 
 sys.path.append(os.path.join(app.getDRCBase(), 'software/tools/tools/scripts'))

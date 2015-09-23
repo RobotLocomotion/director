@@ -403,7 +403,30 @@ class AsyncIKCommunicator():
         commands.append('s = s.addAffordanceToLink(\'%s\', aff, %s, \'%s\');' % (linkName, ConstraintBase.toColumnVectorString(q), affordanceName))
         self.comm.sendCommands(commands)
     
-    def removeAffordanceFromLink(self, linkName, affordanceName):
+    def removeAffordanceFromLink(self, linkName, affordanceName, nominalPoseName):
         commands = []        
         commands.append('s = s.removeAffordanceFromLink(\'%s\', \'%s\');' % (linkName, affordanceName))
         self.comm.sendCommands(commands)
+    
+    def searchFinalPose(self, constraints, eeName, frame, nominalPoseName, capabilityMapFile):
+        commands = []
+        xGoal = np.array(frame.transform.GetPosition())
+        constraintNames = []
+        for constraintId, constraint in enumerate(constraints):
+            if not constraint.enabled:
+                continue
+            constraint.getCommands(commands, constraintNames, suffix='_%d' % constraintId)
+            commands.append('\n')
+        commands.append('eeId = r.findLinkId(\'{:s}\');'.format(eeName))
+        commands.append('additional_constraints = {};')
+        commands.append('goal_constraints = {};')
+        commands.append('capability_map = CapabilityMap([\'{:s}\', \'/{:s}\']);'.format(os.path.dirname(drcargs.args().directorConfigFile), drcargs.getDirectorConfig()['capabilityMapFile']))
+        for constraint in constraintNames:
+            commands.append('if isa({0:s}, \'Point2PointDistanceConstraint\') && {0:s}.body_a.idx == eeId,'
+                            'goal_constraints = [goal_constraints, {{{0:s}}}]; else,'
+                            'additional_constraints = [additional_constraints, {{{0:s}}}];end;'.format(constraint))
+        commands.append('disp(\'startingFPP\')')
+        commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}, additional_constraints, goal_constraints, {:s}, \'capabilitymap\', capability_map)'.format(xGoal, nominalPoseName))
+        self.comm.sendCommands(commands)
+        return [1,1]
+#        commands.append(

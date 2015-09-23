@@ -562,7 +562,12 @@ class EndEffectorTeleopPanel(object):
                     endEffectorName = ikPlanner.handModels[1].handLinkName # 'r_hand'
 
                 constraints.append(ikPlanner.createActiveEndEffectorConstraint(endEffectorName,ikPlanner.getPalmPoint(self.reachSide)))
-
+        else:
+            if self.getFinalPoseGraspingHand() == 'left':
+                eeName = ikPlanner.handModels[0].handLinkName
+            else:
+                eeName = ikPlanner.handModels[1].handLinkName
+            constraints.append(ikPlanner.createDistanceToGoalConstraint(eeName, self.getDistanceFromFrame()))
 
         self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
 
@@ -589,8 +594,8 @@ class EndEffectorTeleopPanel(object):
                 if frameObj:
                     constraint.targetFrame = frameObj.transform
 
-
-        self.onGoalFrameModified(None)
+        if not self.getCheckboxState(self.ui.finalPosePlanningOptions):
+            self.onGoalFrameModified(None)
 
 
         om.removeFromObjectModel(self.getConstraintFolder())
@@ -693,7 +698,7 @@ class EndEffectorTeleopPanel(object):
     def finalPosePlanningChanged(self):
         if self.getCheckboxState(self.ui.finalPosePlanningOptions):
             self.setCheckboxState(self.ui.eeTeleopButton, False)
-            if self.ui.leftGraspingHandButton.checked:
+            if self.getFinalPoseGraspingHand() == 'left':
                 self.ui.lhandCombo.enabled = False
             else:
                 self.ui.rhandCombo.enabled = False
@@ -732,8 +737,13 @@ class EndEffectorTeleopPanel(object):
         finalPoseFrame = om.findObjectByName('Final Pose Frame')
         om.removeFromObjectModel(finalPoseFrame)
 
-    def getDistanceConstraint(self):
-        self.updateConstraints()
+    def getFinalPoseGraspingHand(self):
+        if self.ui.rightGraspingHandButton.checked:
+            return 'right'
+        else:
+            return 'left'
+
+    def getDistanceFromFrame(self):
         return self.ui.distanceSpinBox.value
 
     def getXAxisLock(self):
@@ -747,7 +757,11 @@ class EndEffectorTeleopPanel(object):
 
     def searchFinalPoseClicked(self):
         self.updateConstraints()
-        self.constraintSet.searchFinalPose()
+        if self.getFinalPoseGraspingHand() == 'left':
+            eeName = self.panel.ikPlanner.handModels[0].handLinkName
+        else:
+            eeName = self.panel.ikPlanner.handModels[1].handLinkName
+        self.constraintSet.searchFinalPose(eeName, om.findObjectByName('Final Pose Frame'))
 
 
 class PosturePlanShortcuts(object):
