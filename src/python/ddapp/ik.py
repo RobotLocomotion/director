@@ -410,7 +410,7 @@ class AsyncIKCommunicator():
     
     def searchFinalPose(self, constraints, eeName, frame, nominalPoseName, capabilityMapFile):
         commands = []
-        xGoal = np.array(frame.transform.GetPosition())
+        xGoal = np.transpose(frame.transform.GetPosition())
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
             if not constraint.enabled:
@@ -427,6 +427,7 @@ class AsyncIKCommunicator():
                             'additional_constraints = [additional_constraints, {{{0:s}}}];end;'.format(constraint))
         commands.append('disp(\'startingFPP\')')
         commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}, additional_constraints, goal_constraints, {:s}, \'capabilitymap\', capability_map)'.format(xGoal, nominalPoseName))
+        commands.append('[x_goal, info] = fpp.findFinalPose()')
         self.comm.sendCommands(commands)
         return [1,1]
 #        commands.append(
