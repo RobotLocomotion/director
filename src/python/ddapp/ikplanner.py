@@ -98,7 +98,9 @@ class ConstraintSet(object):
 
     def onFrameModified(self, frame):
         self.runIk()
-
+    
+    def searchFinalPose(self):
+        self.ikPlanner.createDistanceToGoalConstraint(0)
 
 class IkOptionsItem(om.ObjectModelItem):
 
@@ -1379,6 +1381,13 @@ class IKPlanner(object):
 
         print 'traj info:', info
         return self.lastManipPlan
+        
+    def createDistanceToGoalConstraint(self, distance):
+        if getIkOptions().getPropertyEnumValue('RRT hand') == 'left':
+            endEffectorName = self.handModels[0].handLinkName
+        else:
+            endEffectorName = self.handModels[1].handLinkName
+        print endEffectorName
 
 
 sys.path.append(os.path.join(app.getDRCBase(), 'software/tools/tools/scripts'))

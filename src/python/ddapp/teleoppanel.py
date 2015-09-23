@@ -90,6 +90,9 @@ class EndEffectorTeleopPanel(object):
         self.ui.pelvisExecutionSupportCheckbox.connect('toggled(bool)', self.pelvisExecutionSupportCheckboxChanged)
         self.ui.executionSupportCheckbox.connect('toggled(bool)', self.executionSupportCheckboxChanged)
         self.ui.finalPosePlanningOptions.connect('toggled(bool)', self.finalPosePlanningChanged)
+        self.ui.searchFinalPoseButton.connect('clicked()', self.searchFinalPoseClicked)
+        self.ui.rightGraspingHandButton.connect('clicked()', self.rightGraspingHandButtonClicked)
+        self.ui.leftGraspingHandButton.connect('clicked()', self.leftGraspingHandButtonClicked)
 
         self.palmOffsetDistance = 0.0
         self.palmGazeAxis = [0.0, 1.0, 0.0]
@@ -369,6 +372,7 @@ class EndEffectorTeleopPanel(object):
 
     def teleopButtonClicked(self):
         if self.ui.eeTeleopButton.checked:
+            self.setCheckboxState(self.ui.finalPosePlanningOptions, False)
             self.activate()
         else:
             self.deactivate()
@@ -411,9 +415,8 @@ class EndEffectorTeleopPanel(object):
 
     def updateConstraints(self):
 
-        if not self.ui.eeTeleopButton.checked:
+        if not self.ui.eeTeleopButton.checked and not self.getCheckboxState(self.ui.finalPosePlanningOptions):
             return
-
 
         self.updatePlanningSupports()
         ikPlanner = self.panel.ikPlanner
@@ -495,69 +498,70 @@ class EndEffectorTeleopPanel(object):
                 constraints.append(ikPlanner.createMovingBackPostureConstraint())
                 ikPlanner.setBackLocked(False)
 
-
-        for handModel in ikPlanner.handModels:
-            side = handModel.side
-            if (side == "left"):
-                thisHandConstraint = self.getLHandConstraint()
-            elif (side == "right"):
-                thisHandConstraint = self.getRHandConstraint()
-
-            linkName = ikPlanner.getHandLink(side)
-            graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, self.palmOffsetDistance)
-            graspToWorld = self.getGoalFrame(linkName)
-
-            p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
-            g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand, targetAxis=list(self.palmGazeAxis), bodyAxis=list(self.palmGazeAxis))
-
-            p.tspan = [1.0, 1.0]
-            q.tspan = [1.0, 1.0]
-            g.tspan = [1.0, 1.0]
-
-            if thisHandConstraint == 'arm fixed':
+        # Don't generate end effector constraints if in final pose planning
+        if not self.getCheckboxState(self.ui.finalPosePlanningOptions):
+            for handModel in ikPlanner.handModels:
+                side = handModel.side
                 if (side == "left"):
-                    constraints.append(ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
+                    thisHandConstraint = self.getLHandConstraint()
                 elif (side == "right"):
-                    constraints.append(ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
-                ikPlanner.setArmLocked(side,True)
+                    thisHandConstraint = self.getRHandConstraint()
 
-            elif thisHandConstraint == 'ee fixed':
-                constraints.extend([p, q])
-                ikPlanner.setArmLocked(side,False)
+                linkName = ikPlanner.getHandLink(side)
+                graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, self.palmOffsetDistance)
+                graspToWorld = self.getGoalFrame(linkName)
 
-            elif thisHandConstraint == 'position':
-                constraints.extend([p])
-                ikPlanner.setArmLocked(side,False)
+                p, q = ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
+                g = ikPlanner.createGazeGraspConstraint(side, graspToWorld, graspToHand, targetAxis=list(self.palmGazeAxis), bodyAxis=list(self.palmGazeAxis))
 
-            elif thisHandConstraint == 'gaze':
-                constraints.extend([p, g])
-                ikPlanner.setArmLocked(side,False)
+                p.tspan = [1.0, 1.0]
+                q.tspan = [1.0, 1.0]
+                g.tspan = [1.0, 1.0]
 
-            elif thisHandConstraint == 'orbit':
-                graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
-                constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
-                constraints[-3].tspan = [1.0, 1.0]
+                if thisHandConstraint == 'arm fixed':
+                    if (side == "left"):
+                        constraints.append(ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
+                    elif (side == "right"):
+                        constraints.append(ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+                    ikPlanner.setArmLocked(side,True)
 
-                if ikPlanner.defaultIkParameters.useCollision:
-                    constraints[-2].tspan = [0.5, 1.0]
-                    constraints[-1].tspan = [0.5, 1.0]
+                elif thisHandConstraint == 'ee fixed':
+                    constraints.extend([p, q])
+                    ikPlanner.setArmLocked(side,False)
+
+                elif thisHandConstraint == 'position':
+                    constraints.extend([p])
+                    ikPlanner.setArmLocked(side,False)
+
+                elif thisHandConstraint == 'gaze':
+                    constraints.extend([p, g])
+                    ikPlanner.setArmLocked(side,False)
+
+                elif thisHandConstraint == 'orbit':
+                    graspToHand = ikPlanner.newPalmOffsetGraspToHandFrame(side, distance=0.07)
+                    constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
+                    constraints[-3].tspan = [1.0, 1.0]
+
+                    if ikPlanner.defaultIkParameters.useCollision:
+                        constraints[-2].tspan = [0.5, 1.0]
+                        constraints[-1].tspan = [0.5, 1.0]
+                    else:
+                        constraints[-2].tspan = [1.0, 1.0]
+                        constraints[-1].tspan = [1.0, 1.0]
+
+                    ikPlanner.setArmLocked(side,False)
+
+                elif thisHandConstraint == 'free':
+                    ikPlanner.setArmLocked(side,False)
+
+
+            if hasattr(self,'reachSide'):
+                if self.reachSide == 'left':
+                    endEffectorName = ikPlanner.handModels[0].handLinkName # 'l_hand'
                 else:
-                    constraints[-2].tspan = [1.0, 1.0]
-                    constraints[-1].tspan = [1.0, 1.0]
+                    endEffectorName = ikPlanner.handModels[1].handLinkName # 'r_hand'
 
-                ikPlanner.setArmLocked(side,False)
-
-            elif thisHandConstraint == 'free':
-                ikPlanner.setArmLocked(side,False)
-
-
-        if hasattr(self,'reachSide'):
-            if self.reachSide == 'left':
-                endEffectorName = ikPlanner.handModels[0].handLinkName # 'l_hand'
-            else:
-                endEffectorName = ikPlanner.handModels[1].handLinkName # 'r_hand'
-
-            constraints.append(ikPlanner.createActiveEndEffectorConstraint(endEffectorName,ikPlanner.getPalmPoint(self.reachSide)))
+                constraints.append(ikPlanner.createActiveEndEffectorConstraint(endEffectorName,ikPlanner.getPalmPoint(self.reachSide)))
 
 
         self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
@@ -687,10 +691,30 @@ class EndEffectorTeleopPanel(object):
         return self.updateGoalFrame(self.panel.ikPlanner.getHandLink(side), frame)
         
     def finalPosePlanningChanged(self):
-        if self.getCheckboxState(self.ui.finalPosePlanningOptions) == True:
+        if self.getCheckboxState(self.ui.finalPosePlanningOptions):
+            self.setCheckboxState(self.ui.eeTeleopButton, False)
+            if self.ui.leftGraspingHandButton.checked:
+                self.ui.lhandCombo.enabled = False
+            else:
+                self.ui.rhandCombo.enabled = False
+            self.deactivate()
             self.initFinalPosePlanning()
         else:
             self.terminateFinalPosePlanning()
+            self.ui.lhandCombo.enabled = True
+            self.ui.rhandCombo.enabled = True
+
+    def rightGraspingHandButtonClicked(self):
+        self.ui.rightGraspingHandButton.checked = True
+        self.ui.leftGraspingHandButton.checked = False
+        self.ui.rhandCombo.enabled = False
+        self.ui.lhandCombo.enabled = True
+
+    def leftGraspingHandButtonClicked(self):
+        self.ui.rightGraspingHandButton.checked = False
+        self.ui.leftGraspingHandButton.checked = True
+        self.ui.rhandCombo.enabled = True
+        self.ui.lhandCombo.enabled = False
     
     def initFinalPosePlanning(self):
         if drcargs.getDirectorConfig()['modelName'] not in {'valkyrie_v1', 'valkyrie_v2'}:
@@ -709,6 +733,7 @@ class EndEffectorTeleopPanel(object):
         om.removeFromObjectModel(finalPoseFrame)
 
     def getDistanceConstraint(self):
+        self.updateConstraints()
         return self.ui.distanceSpinBox.value
 
     def getXAxisLock(self):
@@ -719,6 +744,10 @@ class EndEffectorTeleopPanel(object):
 
     def getZAxisLock(self):
         return self.getCheckboxState(self.ui.zLockCheckbox)
+
+    def searchFinalPoseClicked(self):
+        self.updateConstraints()
+        self.constraintSet.searchFinalPose()
 
 
 class PosturePlanShortcuts(object):

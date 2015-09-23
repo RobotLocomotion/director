@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>418</width>
-    <height>995</height>
+    <width>401</width>
+    <height>952</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -411,6 +411,40 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_11">
             <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_6">
+              <item>
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Grasping Hand</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="leftGraspingHandButton">
+                <property name="text">
+                 <string>Left</string>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="rightGraspingHandButton">
+                <property name="text">
+                 <string>Right</string>
+                </property>
+                <property name="checkable">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
              <widget class="QLabel" name="label_9">
               <property name="text">
                <string>Axis Lock</string>
@@ -423,7 +457,7 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_3">
               <item>
-               <widget class="QCheckBox" name="xLockCheckbox">
+               <widget class="QPushButton" name="xLockButton">
                 <property name="text">
                  <string>Lock X</string>
                 </property>
@@ -433,7 +467,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="yLockCheckbox">
+               <widget class="QPushButton" name="yLockButton">
                 <property name="text">
                  <string>Lock Y</string>
                 </property>
@@ -443,7 +477,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="zLockCheckbox">
+               <widget class="QPushButton" name="zLockButton">
                 <property name="text">
                  <string>Lock Z</string>
                 </property>
