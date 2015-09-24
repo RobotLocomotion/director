@@ -81,7 +81,7 @@ class ContinousWalkingDemo(object):
     SHORT_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.13, 0.13],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 
-    def __init__(self, robotStateModel, footstepsPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView):
+    def __init__(self, robotStateModel, footstepsPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
         self.footstepsPanel = footstepsPanel
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
@@ -89,6 +89,8 @@ class ContinousWalkingDemo(object):
         self.teleopJointController = teleopJointController
         self.navigationPanel = navigationPanel
         self.cameraView = cameraView
+        self.jointLimitChecker = jointLimitChecker
+
 
         self.lastContactState = "none"
         # Smooth Stereo or Raw or Lidar?
@@ -814,6 +816,10 @@ class ContinousWalkingDemo(object):
         msg=ipab.scs_api_command_t()
         msg.command="loadSDF "+filename+"\nsimulate"
         lcmUtils.publish('SCS_API_CONTROL', msg)
+
+
+    def disableJointChecker(self):
+        self.jointLimitChecker.automaticallyExtendLimits = True
 
     def addToolbarMacros(self):
 

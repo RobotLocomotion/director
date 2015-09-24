@@ -444,6 +444,11 @@ if usePlanning:
                                       lHandDriver, rHandDriver, robotStateJointController)
     valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
 
+    continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController, ikPlanner,
+                                                                       teleopJointController, navigationPanel, cameraview, jointLimitChecker)
+    continuousWalkingTaskPanel = continuouswalkingdemo.ContinuousWalkingTaskPanel(continuouswalkingDemo)
+
+
     drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
