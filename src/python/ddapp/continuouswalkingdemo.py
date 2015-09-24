@@ -4,6 +4,7 @@ import numpy as np
 import operator
 import vtkAll as vtk
 import vtkNumpy
+import functools
 
 from ddapp import lcmUtils
 from ddapp import segmentation
@@ -15,10 +16,13 @@ from ddapp import footstepsdriver
 from ddapp.debugVis import DebugData
 from ddapp import ikplanner
 from ddapp import applogic
+from ddapp.tasks.taskuserpanel import TaskUserPanel
 
 import ddapp.terrain
+import ddapp.tasks.robottasks as rt
 
 import drc as lcmdrc
+import ipab as lcmipab
 
 from thirdparty import qhull_2d
 from thirdparty import min_bounding_rect
@@ -91,6 +95,18 @@ class ContinousWalkingDemo(object):
         self.cameraView = cameraView
         self.jointLimitChecker = jointLimitChecker
 
+        # live operation flags
+        self.planFromCurrentRobotState = False
+
+        self.plans = []
+        self.planned_footsteps = []
+        self.footStatus = []
+        self.footStatus_right = []
+
+        self.last_footStatus_right = None
+
+        self.new_first_double_support = False
+        self.new_status = False
 
         self.lastContactState = "none"
         # Smooth Stereo or Raw or Lidar?
@@ -832,3 +848,125 @@ class ContinousWalkingDemo(object):
         applogic.addToolbarMacro('start continuous walk', self.startContinuousWalking)
         applogic.addToolbarMacro('short foot', useShortFoot)
         applogic.addToolbarMacro('long foot', useLongFoot)
+
+    def addPlan(self, plan):
+        self.plans.append(plan)
+
+    # Planning Functions #######################################################
+
+    # These are operational conveniences:
+    def planHandsDown(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handsdown both')
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+    def planHandsUp(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handsup both')
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+    def planNeckDown(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'neckdown')
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+    def planNeckUp(self):
+        startPose = self.getPlanningStartPose()
+        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'neckup')
+        newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
+        self.addPlan(newPlan)
+
+    # Glue Functions ###########################################################
+
+    def getEstimatedRobotStatePose(self):
+        return self.robotStateJointController.getPose('EST_ROBOT_STATE')
+
+    def getPlanningStartPose(self):
+        if self.planFromCurrentRobotState:
+            return self.robotStateJointController.getPose('EST_ROBOT_STATE')
+        else:
+            if self.plans:
+                return robotstate.convertStateMessageToDrakePose(
+                    self.plans[-1].plan[-1])
+            else:
+                return self.getEstimatedRobotStatePose()
+
+class ContinuousWalkingTaskPanel(TaskUserPanel):
+
+    def __init__(self, continuousWalkingDemo):
+
+        TaskUserPanel.__init__(self, windowTitle='Walking Task')
+
+        self.continuousWalkingDemo = continuousWalkingDemo
+
+        self.addDefaultProperties()
+        self.addButtons()
+        self.addTasks()
+
+    def addButtons(self):
+
+        self.addManualButton('Neck Up', self.continuousWalkingDemo.planNeckUp)
+        self.addManualButton('Neck Down', self.continuousWalkingDemo.planNeckDown)
+        self.addManualSpacer()
+        self.addManualButton('Arms Up', self.continuousWalkingDemo.planHandsUp)
+        self.addManualButton('Arms Down', self.continuousWalkingDemo.planHandsDown)      
+
+    def addDefaultProperties(self):
+        self.params.addProperty('Sensor', 0, attributes=om.PropertyAttributes(enumNames=['Lidar',
+                                                                                       'Stereo']))
+        self._syncProperties()
+
+    def onPropertyChanged(self, propertySet, propertyName):
+        self._syncProperties()
+
+    def _syncProperties(self):
+
+        if self.params.getPropertyEnumValue('Sensor') == 'Stereo':
+            self.continuousWalkingDemo.processContinuousStereo = True
+        else:
+            self.continuousWalkingDemo.processContinuousStereo = False
+     
+        self.continuousWalkingDemo.planFromCurrentRobotState = True
+
+
+    def addTasks(self):
+
+        # some helpers
+        def addTask(task, parent=None):
+            self.taskTree.onAddTask(task, copy=False, parent=parent)
+
+        def addFunc(func, name, parent=None):
+            addTask(rt.CallbackTask(callback=func, name=name), parent=parent)
+
+        def addManipulation(func, name, parent=None):
+            group = self.taskTree.addGroup(name, parent=parent)
+            addFunc(func, name='plan motion', parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
+            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
+            addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'),
+                    parent=group)
+            addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
+                    parent=group)
+
+        cw = self.continuousWalkingDemo
+
+        ###############
+        # add the tasks
+
+        # load
+        load = self.taskTree.addGroup('Loading')
+        addFunc(functools.partial(cw.loadSDFFileAndRunSim, 'simple'), 'load scenario', parent=load)
+
+        # prep
+        prep = self.taskTree.addGroup('Preparation')
+        addFunc(functools.partial(cw.disableJointChecker), 'disable joint checker', parent=prep)
+        addTask(rt.SetArmsPosition(name='set arms position'), parent=prep)
+        addTask(rt.SetNeckPitch(name='set neck position', angle=50), parent=prep)
+
+        # plan walking
+        load = self.taskTree.addGroup('Planning')
+        addFunc(functools.partial(cw.startContinuousWalking), 'plan footsteps', parent=load)
+
