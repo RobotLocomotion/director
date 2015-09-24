@@ -674,6 +674,21 @@ class SetNeckPitch(AsyncTask):
     def run(self):
         robotSystem.neckDriver.setNeckPitch(self.properties.getProperty('Angle'))
 
+class SetArmsPosition(AsyncTask):
+
+    @staticmethod
+    def getDefaultProperties(properties):
+        properties.addProperty('Posture group', 'General')
+        properties.addProperty('Posture name', 'handsdown both')
+
+    def run(self):
+        startPosture = robotSystem.robotStateJointController.q.copy()
+        side = None
+
+        pose = robotSystem.ikPlanner.getMergedPostureFromDatabase(startPosture, self.properties.getProperty('Posture group'), self.properties.getProperty('Posture name'), side)
+        plan = robotSystem.ikPlanner.computePostureGoal(startPosture, pose)
+
+        #_addPlanItem(plan, self.properties.getProperty('Posture name') + ' posture plan', ManipulationPlanItem)
 
 class CloseHand(AsyncTask):
 
