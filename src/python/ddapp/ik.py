@@ -408,9 +408,9 @@ class AsyncIKCommunicator():
         commands.append('s = s.removeAffordanceFromLink(\'%s\', \'%s\');' % (linkName, affordanceName))
         self.comm.sendCommands(commands)
     
-    def searchFinalPose(self, constraints, eeName, frame, nominalPoseName, capabilityMapFile):
+    def searchFinalPose(self, constraints, eeName, frame, nominalPoseName, capabilityMapFile, ikParameters):
         commands = []
-        xGoal = np.transpose(frame.transform.GetPosition())
+        xGoal = np.array(frame.transform.GetPosition())
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
             if not constraint.enabled:
@@ -423,10 +423,23 @@ class AsyncIKCommunicator():
         commands.append('capability_map = CapabilityMap([\'{:s}\', \'/{:s}\']);'.format(os.path.dirname(drcargs.args().directorConfigFile), drcargs.getDirectorConfig()['capabilityMapFile']))
         for constraint in constraintNames:
             commands.append('if isa({0:s}, \'Point2PointDistanceConstraint\') && {0:s}.body_a.idx == eeId,'
-                            'goal_constraints = [goal_constraints, {{{0:s}}}]; else,'
-                            'additional_constraints = [additional_constraints, {{{0:s}}}];end;'.format(constraint))
+                            'goal_constraints = {{goal_constraints{{:}}, {0:s}}}; else,'
+                            'additional_constraints = {{additional_constraints{{:}}, {0:s}}};end;'.format(constraint))
+        commands.append('cost = Point(r.getPositionFrame(),10);')
+        commands.append('for i = r.getNumBodies():-1:1')
+        commands.append('  if all(r.getBody(i).parent > 0) && all(r.getBody(r.getBody(i).parent).position_num > 0)')
+        commands.append('    cost(r.getBody(r.getBody(i).parent).position_num) = ...')
+        commands.append('      cost(r.getBody(r.getBody(i).parent).position_num) + cost(r.getBody(i).position_num);end;end;')
+        commands.append('cost(1:6) = max(cost(7:end))/2;')
+        commands.append('cost = cost/min(cost);')
+        commands.append('Q = diag(cost);')
+        commands.append('ikoptions = IKoptions(r);')
+        commands.append('ikoptions = ikoptions.setMajorIterationsLimit({:d});'.format(ikParameters.majorIterationsLimit))
+        commands.append('ikoptions = ikoptions.setQ(Q);')
+        commands.append('ikoptions = ikoptions.setMajorOptimalityTolerance({:f});' .format(ikParameters.majorOptimalityTolerance))
         commands.append('disp(\'startingFPP\')')
-        commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}, additional_constraints, goal_constraints, {:s}, \'capabilitymap\', capability_map)'.format(xGoal, nominalPoseName))
+        commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}\', additional_constraints, goal_constraints,'
+                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions)'.format(xGoal, nominalPoseName))
         commands.append('[x_goal, info] = fpp.findFinalPose()')
         self.comm.sendCommands(commands)
         return [1,1]

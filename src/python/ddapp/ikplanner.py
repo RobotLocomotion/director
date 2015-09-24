@@ -103,7 +103,8 @@ class ConstraintSet(object):
         nominalPoseName = self.nominalPoseName
         if not nominalPoseName:
             nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
-        self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, eeName, frame, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'])
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+        self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, eeName, frame, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
 
 class IkOptionsItem(om.ObjectModelItem):
 
