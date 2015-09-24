@@ -139,6 +139,9 @@ class ContinousWalkingDemo(object):
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
         lcmUtils.addSubscriber('NEXT_EXPECTED_DOUBLE_SUPPORT', lcmdrc.footstep_plan_t, self.onNextExpectedDoubleSupport)
+        #========================================================================
+        lcmUtils.addSubscriber('IHMC_FOOTSTEP_STATUS', lcmipab.footstep_status_t, self.onFootstepStatus)
+        #========================================================================
         stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
         stepParamsSub.setSpeedLimit(60)
 
@@ -455,22 +458,24 @@ class ContinousWalkingDemo(object):
         if not plan:
             return []
 
-        #print 'received footstep plan with %d steps.' % len(plan.footsteps)
+        print 'received footstep plan with %d steps.' % len(plan.footsteps)
 
         footsteps = []
         for i, footstep in enumerate(plan.footsteps):
             footstepTransform = self.transformFromFootstep(footstep)
             footsteps.append(Footstep(footstepTransform, footstep.is_right_foot))
 
-        return footsteps[2:]
+        return footsteps[2:] #returns the list from footsteps[2] to the end of the list 
 
 
     def transformFromFootstep(self, footstep):
-
+        #print 'footstep (trans and quat) :'
         trans = footstep.pos.translation
         trans = [trans.x, trans.y, trans.z]
+        #print (trans)
         quat = footstep.pos.rotation
         quat = [quat.w, quat.x, quat.y, quat.z]
+        #print (quat)
         return transformUtils.transformFromPose(trans, quat)
 
 
@@ -557,9 +562,7 @@ class ContinousWalkingDemo(object):
             nextDoubleSupportPose = self.robotStateJointController.getPose('EST_ROBOT_STATE')
         '''
 
-
         self.displayExpectedPose(nextDoubleSupportPose)
-
 
         if not self.useManualFootstepPlacement and self.queryPlanner:
             footsteps = self.computeFootstepPlanSafeRegions(blocks, nextDoubleSupportPose, standingFootName)
@@ -576,7 +579,16 @@ class ContinousWalkingDemo(object):
             else:
                 self.drawFittedSteps(footsteps)
 
-
+        self.planned_footsteps[:] = []
+	self.planned_footsteps.extend(footsteps)
+        #print (len(footsteps))
+        
+        print 'planned_footsteps:'
+        f0 = self.planned_footsteps[0]
+        f1 = self.planned_footsteps[1]
+        print (transformUtils.poseFromTransform(f0.transform))
+        print (transformUtils.poseFromTransform(f1.transform))
+        
         # retain the first step as it will be the committed step for execution
         #if (len(footsteps) > 0):
         #    self.committedStep = Footstep(footsteps[0].transform, footsteps[0].is_right_foot )
@@ -692,7 +704,7 @@ class ContinousWalkingDemo(object):
             doStereoFiltering = False
 
         self.replanFootsteps(polyData, standingFootName, removeFirstLeftStep, doStereoFiltering, nextDoubleSupportPose)
-
+        #self.footstepsPanel.driver.commitFootstepPlan(self.planned_footsteps)
 
     def startContinuousWalking(self, leadFoot=None):
         
@@ -714,11 +726,13 @@ class ContinousWalkingDemo(object):
 
         if msg.num_steps <= 2:
             return
-
+        '''
         if self.navigationPanel.automaticContinuousWalkingEnabled:
             print "Committing Footstep Plan for AUTOMATIC EXECUTION"
             lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
-
+        '''
+        print "Committing Footstep Plan for AUTOMATIC EXECUTION"
+        lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
 
     def onNextExpectedDoubleSupport(self, msg):
 
@@ -739,6 +753,99 @@ class ContinousWalkingDemo(object):
         standingFootName = self.ikPlanner.rightFootLink if msg.footsteps[0].is_right_foot else self.ikPlanner.leftFootLink
         self.makeReplanRequest(standingFootName, nextDoubleSupportPose=pose)
 
+    def onFootstepStatus(self, msg):
+        #print "got message"
+        
+        import ipab
+        #print  msg.actual_foot_position_in_world[0], msg.actual_foot_position_in_world[1], msg.actual_foot_position_in_world[2]
+        #print  msg.actual_foot_orientation_in_world[0], msg.actual_foot_orientation_in_world[1], msg.actual_foot_orientation_in_world[2], msg.actual_foot_orientation_in_world[3]
+        #print  msg.LEFT
+        #print  msg.RIGHT
+        x = msg.actual_foot_position_in_world[0]
+        y = msg.actual_foot_position_in_world[1]
+        z = msg.actual_foot_position_in_world[2]
+        q1 = msg.actual_foot_orientation_in_world[0]
+        q2 = msg.actual_foot_orientation_in_world[1]
+        q3 = msg.actual_foot_orientation_in_world[2]
+        q4 = msg.actual_foot_orientation_in_world[3] 
+
+        if msg.status == 1:
+            tf_footStatus = transformUtils.transformFromPose([x,y,z], [q1,q2,q3,q4])
+            '''
+            if (msg.footstep_index == 0 and len(self.footStatus) == 0) or (msg.footstep_index == 0 and self.footStatus[len(self.footStatus)-1].is_right_foot):
+                # left foot in contact (reached first single support)
+            	self.footStatus.append(Footstep(tf_footStatus, 0))
+            elif (msg.footstep_index == 1 and not self.footStatus[len(self.footStatus)-1].is_right_foot):
+                # right foot in contact (reached first double support)
+                self.footStatus.append(Footstep(tf_footStatus, 1))
+                self.new_first_double_supp = True
+            '''        
+            # I want to take the last status for the LEFT foot
+            if len(self.planned_footsteps) % 2 == 0:
+                temp_left = 2
+                temp_right = 1
+            else:
+                temp_left = 1 
+                temp_right = 2  
+            #if msg.footstep_index == 0 and self.new_status:
+            print 'len(self.planned_footsteps)-1:'
+            print len(self.planned_footsteps)-1
+            if msg.footstep_index == (len(self.planned_footsteps)-temp_left) and self.new_status:
+                # left foot in contact (reached first single support)
+            	self.footStatus.append(Footstep(tf_footStatus, 0))
+                self.new_first_double_supp = True
+                self.new_status = False
+                # right foot expected pose (from planning)
+                '''
+                if len(self.footStatus) > 2: # if at least second double support
+                    [planned_pos, planned_ori] = transformUtils.poseFromTransform(self.planned_footsteps[1].transform)
+                    [reached_pos_right, reached_ori_right] = transformUtils.poseFromTransform(self.footStatus_right[len(self.footStatus_right)-1].transform)
+                    [reached_pos_left, reached_ori_left] = transformUtils.poseFromTransform(self.footStatus[len(self.footStatus)-1].transform)
+                    planned_pos[0] = planned_pos[0] + reached_pos_right[0]
+                    planned_pos[2] = reached_pos_left[2]
+                    self.footStatus.append(Footstep(transformUtils.transformFromPose(planned_pos, planned_ori), 1))
+                else:
+                    self.footStatus.append(self.planned_footsteps[1])
+                '''
+                '''
+                if len(self.footStatus) > 2: # if at least second double support
+                    [planned_pos, planned_ori] = transformUtils.poseFromTransform(self.planned_footsteps[len(self.planned_footsteps)-temp_right].transform)
+                    [reached_pos_right, reached_ori_right] = transformUtils.poseFromTransform(self.footStatus_right[len(self.footStatus_right)-1].transform)
+                    [reached_pos_left, reached_ori_left] = transformUtils.poseFromTransform(self.footStatus[len(self.footStatus)-1].transform)
+                    planned_pos[0] = planned_pos[0] + reached_pos_right[0]
+                    planned_pos[2] = reached_pos_left[2]
+                    self.footStatus.append(Footstep(transformUtils.transformFromPose(planned_pos, planned_ori), 1))
+                else:
+                '''   
+                self.footStatus.append(self.planned_footsteps[len(self.planned_footsteps)-temp_right])
+
+            if msg.footstep_index % 2 != 0:
+                # right foot in contact
+            	self.footStatus_right.append(Footstep(tf_footStatus, 1))
+                if msg.footstep_index == (len(self.planned_footsteps)-temp_right):
+                    self.last_footStatus_right = Footstep(tf_footStatus, 1)
+        else: 
+            self.new_status = True
+        
+        if (len(self.footStatus) > 0 and self.new_first_double_supp):
+            t1 = self.footStatus[len(self.footStatus)-2].transform
+            t2 = self.footStatus[len(self.footStatus)-1].transform
+            print 't1 and t2:' 
+            print (transformUtils.poseFromTransform(t1))
+            print (transformUtils.poseFromTransform(t2)) 
+            print 'list lenght:'
+            print (len(self.footStatus))
+            self.new_first_double_supp = False
+            
+            if self.footStatus[len(self.footStatus)-2].is_right_foot:
+                t1, t2 = t2, t1
+            
+            pose = self.getNextDoubleSupportPose(t1, t2)
+            self.displayExpectedPose(pose)
+
+            standingFootName = self.ikPlanner.rightFootLink if self.footStatus[len(self.footStatus)-2].is_right_foot else self.ikPlanner.leftFootLink
+            self.makeReplanRequest(standingFootName, removeFirstLeftStep = False, nextDoubleSupportPose=pose)
+            
 
     def testDouble():
 
@@ -823,9 +930,14 @@ class ContinousWalkingDemo(object):
 
         self.footstepsPanel.onNewWalkingGoal(goalFrame)
 
-    def loadSDFFileAndRunSim(self):
+    def loadSDFFileAndRunSim(self, kindOfTerrain):
         from ddapp import sceneloader
-        filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_simple.sdf'
+
+        if kindOfTerrain == 'simple':
+            filename= os.environ['DRC_BASE'] + '/../drc-testing-data/terrain/terrain_simple.sdf'
+        elif kindOfTerrain == 'uneven':
+            filename= os.environ['DRC_BASE'] + '/../drc-testing-data/terrain/terrain_uneven.sdf'
+        
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
         import ipab
