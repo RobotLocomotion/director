@@ -426,10 +426,10 @@ class AsyncIKCommunicator():
                             'goal_constraints = {{goal_constraints{{:}}, {0:s}}}; else,'
                             'additional_constraints = {{additional_constraints{{:}}, {0:s}}};end;'.format(constraint))
         commands.append('cost = Point(r.getPositionFrame(),10);')
-        commands.append('for i = r.getNumBodies():-1:1')
-        commands.append('  if all(r.getBody(i).parent > 0) && all(r.getBody(r.getBody(i).parent).position_num > 0)')
-        commands.append('    cost(r.getBody(r.getBody(i).parent).position_num) = ...')
-        commands.append('      cost(r.getBody(r.getBody(i).parent).position_num) + cost(r.getBody(i).position_num);end;end;')
+        commands.append('for i = r.getNumBodies():-1:1 '
+                        'if all(r.getBody(i).parent > 0) && all(r.getBody(r.getBody(i).parent).position_num > 0) '
+                        'cost(r.getBody(r.getBody(i).parent).position_num) = '
+                        'cost(r.getBody(r.getBody(i).parent).position_num) + cost(r.getBody(i).position_num);end;end')
         commands.append('cost(1:6) = max(cost(7:end))/2;')
         commands.append('cost = cost/min(cost);')
         commands.append('Q = diag(cost);')
@@ -437,10 +437,13 @@ class AsyncIKCommunicator():
         commands.append('ikoptions = ikoptions.setMajorIterationsLimit({:d});'.format(ikParameters.majorIterationsLimit))
         commands.append('ikoptions = ikoptions.setQ(Q);')
         commands.append('ikoptions = ikoptions.setMajorOptimalityTolerance({:f});' .format(ikParameters.majorOptimalityTolerance))
-        commands.append('disp(\'startingFPP\')')
         commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}\', additional_constraints, goal_constraints,'
-                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions)'.format(xGoal, nominalPoseName))
-        commands.append('[x_goal, info] = fpp.findFinalPose()')
+                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions);'.format(xGoal, nominalPoseName))
+        commands.append('[x_goal, info] = fpp.findFinalPose();')
         self.comm.sendCommands(commands)
-        return [1,1]
+
+        endPose = self.comm.getFloatArray('x_goal(8:end)')
+        info = self.comm.getFloatArray('info')[0]
+
+        return endPose, info
 #        commands.append(

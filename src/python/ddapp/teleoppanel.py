@@ -563,11 +563,7 @@ class EndEffectorTeleopPanel(object):
 
                 constraints.append(ikPlanner.createActiveEndEffectorConstraint(endEffectorName,ikPlanner.getPalmPoint(self.reachSide)))
         else:
-            if self.getFinalPoseGraspingHand() == 'left':
-                eeName = ikPlanner.handModels[0].handLinkName
-            else:
-                eeName = ikPlanner.handModels[1].handLinkName
-            constraints.append(ikPlanner.createDistanceToGoalConstraint(eeName, self.getDistanceFromFrame()))
+            constraints.append(ikPlanner.createDistanceToGoalConstraint(self.getFinalPoseGraspingHand(), self.getDistanceFromFrame()))
 
         self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
 
@@ -761,7 +757,9 @@ class EndEffectorTeleopPanel(object):
             eeName = self.panel.ikPlanner.handModels[0].handLinkName
         else:
             eeName = self.panel.ikPlanner.handModels[1].handLinkName
-        self.constraintSet.searchFinalPose(eeName, om.findObjectByName('Final Pose Frame'))
+        endPose, info = self.constraintSet.searchFinalPose(eeName, om.findObjectByName('Final Pose Frame'))
+        self.panel.showPose(self.constraintSet.endPose)
+        app.displaySnoptInfo(info)
 
 
 class PosturePlanShortcuts(object):

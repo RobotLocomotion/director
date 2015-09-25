@@ -105,6 +105,8 @@ class ConstraintSet(object):
             nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
         self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, eeName, frame, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
+        print 'info:', self.info
+        return self.endPose, self.info
 
 class IkOptionsItem(om.ObjectModelItem):
 
@@ -1386,10 +1388,20 @@ class IKPlanner(object):
         print 'traj info:', info
         return self.lastManipPlan
         
-    def createDistanceToGoalConstraint(self, eeName, distance):
+    def createDistanceToGoalConstraint(self, side, distance):
+        if side == 'left':
+            eeName = self.handModels[0].handLinkName
+        else:
+            eeName = self.handModels[1].handLinkName
+        graspFrame = self.getPalmToHandLink(side)
+        t = vtk.vtkTransform()
+        t.Translate(0.0, 0.0, distance - graspFrame.GetPosition()[0])
+        t.PostMultiply()
+        t.Concatenate(graspFrame)
         framePos = np.array(om.findObjectByName('Final Pose Frame').transform.GetPosition())
         constraint = ik.PointToPointDistanceConstraint(bodyNameA = eeName,
                                                        bodyNameB = 'world',
+                                                       pointInBodyA = t,
                                                        pointInBodyB = framePos,
                                                        lowerBound = np.array([-0.001]),
                                                        upperBound = np.array([0.001]))
