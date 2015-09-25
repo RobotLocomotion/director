@@ -422,9 +422,12 @@ class AsyncIKCommunicator():
         commands.append('goal_constraints = {};')
         commands.append('capability_map = CapabilityMap([\'{:s}\', \'/{:s}\']);'.format(os.path.dirname(drcargs.args().directorConfigFile), drcargs.getDirectorConfig()['capabilityMapFile']))
         for constraint in constraintNames:
-            commands.append('if isa({0:s}, \'Point2PointDistanceConstraint\') && {0:s}.body_a.idx == eeId,'
-                            'goal_constraints = {{goal_constraints{{:}}, {0:s}}}; else,'
-                            'additional_constraints = {{additional_constraints{{:}}, {0:s}}};end;'.format(constraint))
+            commands.append('if isa({0:s}, \'Point2PointDistanceConstraint\') && {0:s}.body_a.idx == eeId '
+                            '|| isa({0:s}, \'EulerConstraint\') && {0:s}.body == eeId '
+                            'goal_constraints = {{goal_constraints{{:}}, {0:s}}}; else '
+                            'additional_constraints = {{additional_constraints{{:}}, {0:s}}};end'.format(constraint))
+        commands.append('goal_constraints')
+        commands.append('additional_constraints')
         commands.append('cost = Point(r.getPositionFrame(),10);')
         commands.append('for i = r.getNumBodies():-1:1 '
                         'if all(r.getBody(i).parent > 0) && all(r.getBody(r.getBody(i).parent).position_num > 0) '

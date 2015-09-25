@@ -1389,22 +1389,37 @@ class IKPlanner(object):
         return self.lastManipPlan
         
     def createDistanceToGoalConstraint(self, side, distance):
-        if side == 'left':
-            eeName = self.handModels[0].handLinkName
-        else:
-            eeName = self.handModels[1].handLinkName
         graspFrame = self.getPalmToHandLink(side)
         t = vtk.vtkTransform()
         t.Translate(0.0, 0.0, distance - graspFrame.GetPosition()[0])
         t.PostMultiply()
         t.Concatenate(graspFrame)
         framePos = np.array(om.findObjectByName('Final Pose Frame').transform.GetPosition())
-        constraint = ik.PointToPointDistanceConstraint(bodyNameA = eeName,
+        constraint = ik.PointToPointDistanceConstraint(bodyNameA = self.getHandLink(side),
                                                        bodyNameB = 'world',
                                                        pointInBodyA = t,
                                                        pointInBodyB = framePos,
                                                        lowerBound = np.array([-0.001]),
                                                        upperBound = np.array([0.001]))
+        return constraint
+
+    def createAxisLockConstraints(self, side, xLock, yLock, zLock):
+        framerot = np.deg2rad(om.findObjectByName('Final Pose Frame').transform.GetOrientation())
+        if xLock:
+            xlb, xub = framerot[0], framerot[0]
+        else:
+            xlb, xub = -np.pi, np.pi
+        if yLock:
+            ylb, yub = framerot[1], framerot[1]
+        else:
+            ylb, yub = -np.pi, np.pi
+        if zLock:
+            zlb, zub = framerot[2], framerot[2]
+        else:
+            zlb, zub = -np.pi, np.pi
+        constraint = ik.EulerConstraint(linkName = self.getHandLink(side),
+                                        lowerBound = [xlb, ylb, zlb],
+                                        upperBound = [xub, yub, zub])
         return constraint
 
 

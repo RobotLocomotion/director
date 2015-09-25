@@ -564,6 +564,7 @@ class EndEffectorTeleopPanel(object):
                 constraints.append(ikPlanner.createActiveEndEffectorConstraint(endEffectorName,ikPlanner.getPalmPoint(self.reachSide)))
         else:
             constraints.append(ikPlanner.createDistanceToGoalConstraint(self.getFinalPoseGraspingHand(), self.getDistanceFromFrame()))
+            constraints.append(ikPlanner.createAxisLockConstraints(self.getFinalPoseGraspingHand(), self.getXAxisLock(), self.getYAxisLock(), self.getZAxisLock()))
 
         self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
 
@@ -743,16 +744,17 @@ class EndEffectorTeleopPanel(object):
         return self.ui.distanceSpinBox.value
 
     def getXAxisLock(self):
-        return self.getCheckboxState(self.ui.xLockCheckbox)
+        return self.ui.xLockButton.checked
 
     def getYAxisLock(self):
-        return self.getCheckboxState(self.ui.yLockCheckbox)
+        return self.ui.yLockButton.checked
 
     def getZAxisLock(self):
-        return self.getCheckboxState(self.ui.zLockCheckbox)
+        return self.ui.zLockButton.checked
 
     def searchFinalPoseClicked(self):
         self.updateConstraints()
+        self.updateCollisionEnvironment()
         if self.getFinalPoseGraspingHand() == 'left':
             eeName = self.panel.ikPlanner.handModels[0].handLinkName
         else:
