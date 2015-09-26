@@ -12,8 +12,8 @@ addpath_control
 addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])
 robotURDF = [getenv('DRC_BASE'), '/software/models/val_description/urdf/valkyrie_A_sim_drake.urdf'];
 fixed_point_file = [getenv('DRC_BASE'), '/software/control/matlab/data/valkyrie_fp_june2015.mat'];
-left_foot_link = 'LeftFoot';
-right_foot_link = 'RightFoot';
+left_foot_link = 'leftFoot';
+right_foot_link = 'rightFoot';
 runIKServer
 
 %------ startup end ------
@@ -43,12 +43,12 @@ default_shrink_factor = 0.2;
 qsc_constraint_0 = QuasiStaticConstraint(r, [-inf, inf], 1);
 qsc_constraint_0 = qsc_constraint_0.setShrinkFactor(default_shrink_factor);
 qsc_constraint_0 = qsc_constraint_0.setActive(true);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.LeftFoot, l_foot_pts);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.RightFoot, r_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.leftFoot, l_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.rightFoot, r_foot_pts);
 
 
 posture_constraint_1 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.LowerNeckPitch; joints.NeckYaw; joints.UpperNeckPitch];
+joint_inds = [joints.lowerNeckPitch; joints.neckYaw; joints.upperNeckPitch];
 joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -56,22 +56,22 @@ posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lo
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.LeftFoot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.leftFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_2 = WorldPositionConstraint(r, links.LeftFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.LeftFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_2 = WorldPositionConstraint(r, links.leftFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.leftFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.RightFoot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.rightFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_3 = WorldPositionConstraint(r, links.RightFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.RightFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_3 = WorldPositionConstraint(r, links.rightFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.rightFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 posture_constraint_4 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.TorsoYaw; joints.TorsoPitch; joints.TorsoRoll];
+joint_inds = [joints.torsoYaw; joints.torsoPitch; joints.torsoRoll];
 joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 posture_constraint_4 = posture_constraint_4.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -85,7 +85,7 @@ posture_constraint_5 = posture_constraint_5.setJointLimits(joint_inds, joints_lo
 
 
 posture_constraint_6 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.LeftKneePitch; joints.RightKneePitch];
+joint_inds = [joints.leftKneePitch; joints.rightKneePitch];
 joints_lower_limit = q_zero(joint_inds) + [0.59999999999999998; 0.59999999999999998];
 joints_upper_limit = q_zero(joint_inds) + [1.8999999999999999; 1.8999999999999999];
 posture_constraint_6 = posture_constraint_6.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -95,14 +95,14 @@ point_in_link_frame = [0.040000000000391667; 0.079999999999804117; -1.9584334154
 ref_frame = [-0.022890304929222172, 0.99798757633456925, -0.059134012396437979, 0.32420285370477708; 0.19215897337516036, -0.053654578779544465, -0.9798959715844312, 0.3478790675945822; -0.9810968162682282, -0.03379324870213779, -0.19054409844050235, 1.0025125650269087; 0.0, 0.0, 0.0, 1.0];
 lower_bounds = [0.0; 0.0; 0.0] + [-0.0; -0.0; -0.0];
 upper_bounds = [0.0; 0.0; 0.0] + [0.0; 0.0; 0.0];
-position_constraint_7 = WorldPositionInFrameConstraint(r, links.LeftPalm, point_in_link_frame, ref_frame, lower_bounds, upper_bounds, [1.0, 1.0]);
+position_constraint_7 = WorldPositionInFrameConstraint(r, links.leftPalm, point_in_link_frame, ref_frame, lower_bounds, upper_bounds, [1.0, 1.0]);
 
 
-quat_constraint_8 = WorldQuatConstraint(r, links.LeftPalm, [0.6834303594924942; 0.057930454239059438; 0.078074671546915983; -0.72351320088748738], 0.0, [1.0, 1.0]);
+quat_constraint_8 = WorldQuatConstraint(r, links.leftPalm, [0.6834303594924942; 0.057930454239059438; 0.078074671546915983; -0.72351320088748738], 0.0, [1.0, 1.0]);
 
 
 posture_constraint_9 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.RightShoulderPitch; joints.RightShoulderRoll; joints.RightShoulderYaw; joints.RightElbowPitch; joints.RightForearmYaw; joints.RightWristRoll; joints.RightWristPitch];
+joint_inds = [joints.rightShoulderPitch; joints.rightShoulderRoll; joints.rightShoulderYaw; joints.rightElbowPitch; joints.rightForearmYaw; joints.rightWristRoll; joints.rightWristPitch];
 joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
 joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
 posture_constraint_9 = posture_constraint_9.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -168,12 +168,12 @@ default_shrink_factor = 0.5;
 qsc_constraint_0 = QuasiStaticConstraint(r, [-inf, inf], 1);
 qsc_constraint_0 = qsc_constraint_0.setShrinkFactor(default_shrink_factor);
 qsc_constraint_0 = qsc_constraint_0.setActive(true);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.LeftFoot, l_foot_pts);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.RightFoot, r_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.leftFoot, l_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.rightFoot, r_foot_pts);
 
 
 posture_constraint_1 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.LowerNeckPitch; joints.NeckYaw; joints.UpperNeckPitch];
+joint_inds = [joints.lowerNeckPitch; joints.neckYaw; joints.upperNeckPitch];
 joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -181,22 +181,22 @@ posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lo
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.LeftFoot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.leftFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_2 = WorldPositionConstraint(r, links.LeftFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.LeftFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_2 = WorldPositionConstraint(r, links.leftFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.leftFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.RightFoot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.rightFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_3 = WorldPositionConstraint(r, links.RightFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.RightFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_3 = WorldPositionConstraint(r, links.rightFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.rightFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 posture_constraint_4 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.TorsoYaw; joints.TorsoPitch; joints.TorsoRoll];
+joint_inds = [joints.torsoYaw; joints.torsoPitch; joints.torsoRoll];
 joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 posture_constraint_4 = posture_constraint_4.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -210,7 +210,7 @@ posture_constraint_5 = posture_constraint_5.setJointLimits(joint_inds, joints_lo
 
 
 posture_constraint_6 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.LeftKneePitch; joints.RightKneePitch];
+joint_inds = [joints.leftKneePitch; joints.rightKneePitch];
 joints_lower_limit = q_zero(joint_inds) + [0.59999999999999998; 0.59999999999999998];
 joints_upper_limit = q_zero(joint_inds) + [1.8999999999999999; 1.8999999999999999];
 posture_constraint_6 = posture_constraint_6.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -220,14 +220,14 @@ point_in_link_frame = [0.040000000000391667; 0.079999999999804117; -1.9584334154
 ref_frame = [-0.022890304929222172, 0.99798757633456925, -0.059134012396437979, 0.32420285370477708; 0.19215897337516036, -0.053654578779544465, -0.9798959715844312, 0.3478790675945822; -0.9810968162682282, -0.03379324870213779, -0.19054409844050235, 1.0025125650269087; 0.0, 0.0, 0.0, 1.0];
 lower_bounds = [0.0; 0.0; 0.0] + [-0.0; -0.0; -0.0];
 upper_bounds = [0.0; 0.0; 0.0] + [0.0; 0.0; 0.0];
-position_constraint_7 = WorldPositionInFrameConstraint(r, links.LeftPalm, point_in_link_frame, ref_frame, lower_bounds, upper_bounds, [1.0, 1.0]);
+position_constraint_7 = WorldPositionInFrameConstraint(r, links.leftPalm, point_in_link_frame, ref_frame, lower_bounds, upper_bounds, [1.0, 1.0]);
 
 
-quat_constraint_8 = WorldQuatConstraint(r, links.LeftPalm, [0.6834303594924942; 0.057930454239059438; 0.078074671546915983; -0.72351320088748738], 0.0, [1.0, 1.0]);
+quat_constraint_8 = WorldQuatConstraint(r, links.leftPalm, [0.6834303594924942; 0.057930454239059438; 0.078074671546915983; -0.72351320088748738], 0.0, [1.0, 1.0]);
 
 
 posture_constraint_9 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.RightShoulderPitch; joints.RightShoulderRoll; joints.RightShoulderYaw; joints.RightElbowPitch; joints.RightForearmYaw; joints.RightWristRoll; joints.RightWristPitch];
+joint_inds = [joints.rightShoulderPitch; joints.rightShoulderRoll; joints.rightShoulderYaw; joints.rightElbowPitch; joints.rightForearmYaw; joints.rightWristRoll; joints.rightWristPitch];
 joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
 joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
 posture_constraint_9 = posture_constraint_9.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -270,20 +270,20 @@ reach_end = [reach_end; zeros(r.getNumPositions()-numel(reach_end),1)];
 q_nom = [q_nom; zeros(r.getNumPositions()-numel(q_nom),1)];
 excluded_collision_groups = struct('name',{},'tspan',{});
 
-end_effector_name = 'LeftPalm';
-end_effector_name_left = 'LeftPalm';
-end_effector_name_right = 'RightPalm';
+end_effector_name = 'leftPalm';
+end_effector_name_left = 'leftPalm';
+end_effector_name_right = 'rightPalm';
 end_effector_pt = [];
 default_shrink_factor = 0.5;
 qsc_constraint_0 = QuasiStaticConstraint(r, [-inf, inf], 1);
 qsc_constraint_0 = qsc_constraint_0.setShrinkFactor(default_shrink_factor);
 qsc_constraint_0 = qsc_constraint_0.setActive(true);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.LeftFoot, l_foot_pts);
-qsc_constraint_0 = qsc_constraint_0.addContact(links.RightFoot, r_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.leftFoot, l_foot_pts);
+qsc_constraint_0 = qsc_constraint_0.addContact(links.rightFoot, r_foot_pts);
 
 
 posture_constraint_1 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.LowerNeckPitch; joints.NeckYaw; joints.UpperNeckPitch];
+joint_inds = [joints.lowerNeckPitch; joints.neckYaw; joints.upperNeckPitch];
 joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -291,22 +291,22 @@ posture_constraint_1 = posture_constraint_1.setJointLimits(joint_inds, joints_lo
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.LeftFoot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.leftFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_2 = WorldPositionConstraint(r, links.LeftFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.LeftFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_2 = WorldPositionConstraint(r, links.leftFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_2 = WorldQuatConstraint(r, links.leftFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 point_in_link_frame = [0; 0; 0];
 kinsol = r.doKinematics(reach_start);
-xyz_quat = r.forwardKin(kinsol, links.RightFoot, point_in_link_frame, 2);
+xyz_quat = r.forwardKin(kinsol, links.rightFoot, point_in_link_frame, 2);
 lower_bounds = xyz_quat(1:3) + [-0.0001; -0.0001; -0.0001];
 upper_bounds = xyz_quat(1:3) + [0.0001; 0.0001; 0.0001];
-position_constraint_3 = WorldPositionConstraint(r, links.RightFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.RightFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
+position_constraint_3 = WorldPositionConstraint(r, links.rightFoot, point_in_link_frame, lower_bounds, upper_bounds, [0.0, 1.0]);quaternion_constraint_3 = WorldQuatConstraint(r, links.rightFoot, xyz_quat(4:7), 0.0017453292519943296, [0.0, 1.0]);
 
 
 posture_constraint_4 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.TorsoYaw; joints.TorsoPitch; joints.TorsoRoll];
+joint_inds = [joints.torsoYaw; joints.torsoPitch; joints.torsoRoll];
 joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0];
 posture_constraint_4 = posture_constraint_4.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -320,7 +320,7 @@ posture_constraint_5 = posture_constraint_5.setJointLimits(joint_inds, joints_lo
 
 
 posture_constraint_6 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.LeftKneePitch; joints.RightKneePitch];
+joint_inds = [joints.leftKneePitch; joints.rightKneePitch];
 joints_lower_limit = q_zero(joint_inds) + [0.59999999999999998; 0.59999999999999998];
 joints_upper_limit = q_zero(joint_inds) + [1.8999999999999999; 1.8999999999999999];
 posture_constraint_6 = posture_constraint_6.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
@@ -330,14 +330,14 @@ point_in_link_frame = [0.040000000000391667; 0.079999999999804117; -1.9584334154
 ref_frame = [-0.022890304929222172, 0.99798757633456925, -0.059134012396437979, 0.32420285370477708; 0.19215897337516036, -0.053654578779544465, -0.9798959715844312, 0.3478790675945822; -0.9810968162682282, -0.03379324870213779, -0.19054409844050235, 1.0025125650269087; 0.0, 0.0, 0.0, 1.0];
 lower_bounds = [0.0; 0.0; 0.0] + [-0.0; -0.0; -0.0];
 upper_bounds = [0.0; 0.0; 0.0] + [0.0; 0.0; 0.0];
-position_constraint_7 = WorldPositionInFrameConstraint(r, links.LeftPalm, point_in_link_frame, ref_frame, lower_bounds, upper_bounds, [1.0, 1.0]);
+position_constraint_7 = WorldPositionInFrameConstraint(r, links.leftPalm, point_in_link_frame, ref_frame, lower_bounds, upper_bounds, [1.0, 1.0]);
 
 
-quat_constraint_8 = WorldQuatConstraint(r, links.LeftPalm, [0.6834303594924942; 0.057930454239059438; 0.078074671546915983; -0.72351320088748738], 0.0, [1.0, 1.0]);
+quat_constraint_8 = WorldQuatConstraint(r, links.leftPalm, [0.6834303594924942; 0.057930454239059438; 0.078074671546915983; -0.72351320088748738], 0.0, [1.0, 1.0]);
 
 
 posture_constraint_9 = PostureConstraint(r, [-inf, inf]);
-joint_inds = [joints.RightShoulderPitch; joints.RightShoulderRoll; joints.RightShoulderYaw; joints.RightElbowPitch; joints.RightForearmYaw; joints.RightWristRoll; joints.RightWristPitch];
+joint_inds = [joints.rightShoulderPitch; joints.rightShoulderRoll; joints.rightShoulderYaw; joints.rightElbowPitch; joints.rightForearmYaw; joints.rightWristRoll; joints.rightWristPitch];
 joints_lower_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
 joints_upper_limit = reach_start(joint_inds) + [0.0; 0.0; 0.0; 0.0; 0.0; 0.0; 0.0];
 posture_constraint_9 = posture_constraint_9.setJointLimits(joint_inds, joints_lower_limit, joints_upper_limit);
