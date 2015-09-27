@@ -11,7 +11,12 @@ from ddapp.shallowCopy import shallowCopy
 from ddapp import vtkAll as vtk
 from ddapp import visualization as vis
 
-import drake as lcmdrake
+try:
+    import lcmtypes.drake as lcmdrake
+except ImportError as e:
+    import warnings
+    warnings.warn("The drake python lcmtype bindings now live in lcmtypes.drake. You may want to upgrade your version of drake", FutureWarning)
+    import drake as lcmdrake
 
 from PythonQt import QtGui
 
