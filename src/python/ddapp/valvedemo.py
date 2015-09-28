@@ -558,7 +558,7 @@ class ValvePlannerDemo(object):
 
         plan = self.ikPlanner.runIkTraj(constraints, startPoseName, endPoseName, self.nominalPoseName, ikParameters=ikParameters)
 
-        if resetPoses and not retract and max(plan.plan_info) <= 10:
+        if resetPoses and not retract and max(plan.plan_info) <= 10 and min(plan.plan_info) >= 0:
             self.setReachAndTouchPoses(plan)
 
         return plan

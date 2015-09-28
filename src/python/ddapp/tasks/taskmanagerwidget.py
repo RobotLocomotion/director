@@ -2,7 +2,6 @@ from ddapp.tasks.robottasks import *
 from ddapp.tasks.descriptions import loadTaskDescription
 import ddapp.applogic as app
 
-
 def _splitCamelCase(name):
     name = re.sub('(.)([A-Z][a-z]+)', r'\1 \2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1 \2', name)
@@ -156,8 +155,18 @@ class TaskTree(object):
             if isinstance(obj, TaskItem) and obj.task == task:
                 return obj
 
+    def findTaskItemByName(self, name):
+        for obj in self.objectModel.getObjects():
+            if isinstance(obj, om.ContainerItem) and obj.getProperty('Name') == name:
+                return obj.children()[0]
+
     def selectTask(self, task):
         obj = self.findTaskItem(task)
+        if obj:
+            self.objectModel.setActiveObject(obj)
+
+    def selectTaskByName(self, name):
+        obj = self.findTaskItemByName(name)
         if obj:
             self.objectModel.setActiveObject(obj)
 
