@@ -4,6 +4,8 @@ import math
 import functools
 import numpy as np
 
+import drcargs
+
 from ddapp import transformUtils
 
 from ddapp.asynctaskqueue import AsyncTaskQueue
@@ -1134,31 +1136,39 @@ class TableTaskPanel(TaskUserPanel):
         self.addManualButton('Read SDF & Sim', self.tableDemo.loadSDFFileAndRunSim)
 
     def addDefaultProperties(self):
-        self.params.addProperty('Hand', 0,
+        if len(drcargs.getDirectorConfig()['handCombinations']) > 1:  # more than one hand
+            self.params.addProperty('Hand', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
-        self.params.addProperty('Base', 1,
-                                attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        if self.tableDemo.ikPlanner.fixedBaseArm:
-            self.params.addProperty('Back', 0,
-                                    attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         else:
+            # Hard-coded left for now per convention, can also be generic per drcargs.getDirectorConfig()['handCombinations']['side']
+            self.params.addProperty('Hand', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Left']))
+
+        if self.tableDemo.ikPlanner.fixedBaseArm:
+            self.params.addProperty('Base', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed']))
+            self.params.addProperty('Back', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed']))
+        else: # floating base
+            self.params.addProperty('Base', 1,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
             self.params.addProperty('Back', 1,
                                     attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
 
         # Hand control for Kuka LWR / Schunk SDH
-        if self.tableDemo.ikPlanner.fixedBaseArm:
+        if 'userConfig' in drcargs.getDirectorConfig() and 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
             self.params.addProperty('Hand Engaged (Powered)', False)
 
         # If we're dealing with humanoids, offer the scene selector
-        if not self.tableDemo.ikPlanner.fixedBaseArm:
+        if not self.tableDemo.ikPlanner.fixedBaseArm: # TODO(wxm): better way to differentiate whether humanoid
             self.params.addProperty('Scene', 4, attributes=om.PropertyAttributes(enumNames=['Objects on table','Object below table','Object through slot','Object at depth','Objects on table (fit)']))
 
         # Init values as above
         self.tableDemo.graspingHand = self.getSide()
         self.tableDemo.lockBase = self.getLockBase()
         self.tableDemo.lockBack = self.getLockBack()
-        if self.tableDemo.ikPlanner.fixedBaseArm:
-            self.handEngaged = self.getHandEngaged() # WARNING: does not check current state [no status message]
+        if 'userConfig' in drcargs.getDirectorConfig() and 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
+            self.handEngaged = self.getHandEngaged() # TODO(wxm): WARNING: does not check current state [no status message]
 
     def getSide(self):
         return self.params.getPropertyEnumValue('Hand').lower()
