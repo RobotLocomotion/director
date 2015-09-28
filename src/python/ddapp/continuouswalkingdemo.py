@@ -934,9 +934,9 @@ class ContinousWalkingDemo(object):
         from ddapp import sceneloader
 
         if kindOfTerrain == 'simple':
-            filename= os.environ['DRC_BASE'] + '/../drc-testing-data/terrain/terrain_simple.sdf'
+            filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_simple.sdf'
         elif kindOfTerrain == 'uneven':
-            filename= os.environ['DRC_BASE'] + '/../drc-testing-data/terrain/terrain_uneven.sdf'
+            filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_uneven.sdf'
         
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
