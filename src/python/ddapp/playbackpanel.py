@@ -258,7 +258,7 @@ class PlaybackPanel(object):
 
     def isPlanFeasible(self):
         plan = robotstate.asRobotPlan(self.plan)
-        return plan is not None and max(plan.plan_info) < 10 and min(plan.plan_info) >= 0:
+        return plan is not None and (max(plan.plan_info) < 10 and min(plan.plan_info) >= 0)
 
     def getPlanInfo(self, plan):
         plan = robotstate.asRobotPlan(self.plan)
