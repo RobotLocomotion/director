@@ -139,10 +139,8 @@ class ContinousWalkingDemo(object):
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
         lcmUtils.addSubscriber('NEXT_EXPECTED_DOUBLE_SUPPORT', lcmdrc.footstep_plan_t, self.onNextExpectedDoubleSupport)
-        #========================================================================
         lcmUtils.addSubscriber('IHMC_FOOTSTEP_STATUS', lcmipab.footstep_status_t, self.onFootstepStatus)
         lcmUtils.addSubscriber('EST_ROBOT_STATE', lcmdrc.robot_state_t, self.onRobotStatus)
-        #========================================================================
         stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
         stepParamsSub.setSpeedLimit(60)
 
@@ -586,11 +584,11 @@ class ContinousWalkingDemo(object):
 	    self.planned_footsteps.extend(footsteps)
             self.footstep_index = -1
         
-        print 'planned_footsteps:'
+        #print 'planned_footsteps:'
         f0 = self.planned_footsteps[0]
         f1 = self.planned_footsteps[1]
-        print (transformUtils.poseFromTransform(f0.transform))
-        print (transformUtils.poseFromTransform(f1.transform))
+        #print (transformUtils.poseFromTransform(f0.transform))
+        #print (transformUtils.poseFromTransform(f1.transform))
 
     def sendPlanningRequest(self, footsteps, nextDoubleSupportPose):
 
@@ -659,7 +657,7 @@ class ContinousWalkingDemo(object):
             standingFootName = self.ikPlanner.rightFootLink
 
         if (replanNow):
-            print "contact: ", self.lastContactState, " to ", contactState
+            #print "contact: ", self.lastContactState, " to ", contactState
             if (self.navigationPanel.automaticContinuousWalkingEnabled):
                 self.makeReplanRequest(standingFootName)
             else:
@@ -792,8 +790,8 @@ class ContinousWalkingDemo(object):
             self.footstep_index = self.footstep_index + 1
        
             # Check what foot is in contact
-            print 'self.footstep_index'
-            print self.footstep_index
+            #print 'self.footstep_index'
+            #print self.footstep_index
 
             [robot_pos, robot_ori] = transformUtils.poseFromTransform(self.tf_robotStatus)
             [current_pos, current_ori] = transformUtils.poseFromTransform(tf_foot_robot)  
@@ -801,12 +799,12 @@ class ContinousWalkingDemo(object):
                 current_left = True
             else:
                 current_left = False  
-            print 'current:'
-            print (current_pos)
+            #print 'current:'
+            #print (current_pos)
             #print 'robot:'
             #print (robot_pos)
-            print 'Left?'
-            print current_left
+            #print 'Left?'
+            #print current_left
 
             # I want to take the first status for the LEFT foot
             if self.new_status and current_left:
@@ -831,11 +829,11 @@ class ContinousWalkingDemo(object):
         if (len(self.footStatus) > 0 and self.new_first_double_supp):
             t1 = self.footStatus[len(self.footStatus)-2].transform
             t2 = self.footStatus[len(self.footStatus)-1].transform
-            print 't1 and t2:' 
-            print (transformUtils.poseFromTransform(t1))
-            print (transformUtils.poseFromTransform(t2)) 
-            print 'list lenght:'
-            print (len(self.footStatus))
+            #print 't1 and t2:' 
+            #print (transformUtils.poseFromTransform(t1))
+            #print (transformUtils.poseFromTransform(t2)) 
+            #print 'list lenght:'
+            #print (len(self.footStatus))
             self.new_first_double_supp = False
             
             if self.footStatus[len(self.footStatus)-2].is_right_foot:
