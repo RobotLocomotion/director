@@ -1200,7 +1200,8 @@ class TableTaskPanel(TaskUserPanel):
         if len(self.tableDemo.clusterObjects) > 0: # There is still sth on the table, let's do it again!
             print "There are more objects on the table, going at it again!"
             self.taskTree.selectTaskByName('reach')
-            #self.onContinue()
+            self.onPause()
+            self.onContinue()
         else:
             print "Table clear, sir!"
 
