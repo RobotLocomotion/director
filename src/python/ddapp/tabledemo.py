@@ -1237,6 +1237,24 @@ class TableTaskPanel(TaskUserPanel):
                 addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'),
                         parent=group)
 
+        def addGrasping(mode, name, parent=None, confirm=False):
+            assert mode in ('open', 'close')
+            group = self.taskTree.addGroup(name, parent=parent)
+            side = self.params.getPropertyEnumValue('Hand')
+
+            checkStatus = False  # whether to check that there is an object in gripper
+            if 'userConfig' in drcargs.getDirectorConfig() and 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
+                checkStatus = True
+
+            if mode == 'open':
+                addTask(rt.OpenHand(name='open grasp hand', side=side), parent=group)
+            else:
+                addTask(rt.CloseHand(name='close grasp hand', side=side, CheckStatus=checkStatus), parent=group)
+            if confirm:
+                addTask(rt.UserPromptTask(name='Confirm grasping has succeeded', message='Continue when grasp finishes.'),
+                        parent=group)
+
+
         v = self.tableDemo
 
         self.taskTree.removeAllTasks()
