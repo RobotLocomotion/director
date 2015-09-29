@@ -258,9 +258,6 @@ class TableDemo(object):
         if self.useCollisionEnvironment:
             self.affordanceUpdater.graspAffordance(objAffordance.getProperty('Name'), side)
 
-        if self.ikPlanner.fixedBaseArm: # if we're dealing with the real world, close hand
-            self.closeHand(side)
-            return self.delay(5) # wait for three seconds to allow for hand to close
 
     def dropTableObject(self, side='left'):
 
