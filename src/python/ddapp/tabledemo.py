@@ -1133,6 +1133,8 @@ class TableTaskPanel(TaskUserPanel):
         self.addManualButton('Read SDF & Sim', self.tableDemo.loadSDFFileAndRunSim)
 
     def addDefaultProperties(self):
+        # TODO: if there is a way not to display a property where there is only one value, that'd be great
+
         if len(drcargs.getDirectorConfig()['handCombinations']) > 1:  # more than one hand
             self.params.addProperty('Hand', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
@@ -1244,7 +1246,7 @@ class TableTaskPanel(TaskUserPanel):
                 checkStatus = True
 
             if mode == 'open':
-                addTask(rt.OpenHand(name='open grasp hand', side=side), parent=group)
+                addTask(rt.OpenHand(name='open grasp hand', side=side, CheckStatus=checkStatus), parent=group)
             else:
                 addTask(rt.CloseHand(name='close grasp hand', side=side, CheckStatus=checkStatus), parent=group)
             if confirm:
@@ -1266,7 +1268,7 @@ class TableTaskPanel(TaskUserPanel):
         if v.ikPlanner.fixedBaseArm:
             if not v.useDevelopment:
                 addManipulation(functools.partial(v.planPostureFromDatabase, 'roomMapping', 'p3_down', side='left'), 'go to pre-mapping pose')
-        # TODO: mapping
+        # TODO(wxm): mapping
 
         # prep
         prep = self.taskTree.addGroup('Preparation')
