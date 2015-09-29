@@ -17,6 +17,7 @@ from ddapp.debugVis import DebugData
 from ddapp.robotplanlistener import ManipulationPlanItem
 from ddapp.footstepsdriver import FootstepPlanItem
 from ddapp import vtkAll as vtk
+from ddapp import lcmUtils
 import drc as lcmdrc
 import numpy as np
 import copy
@@ -697,6 +698,7 @@ class CloseHand(AsyncTask):
         properties.addProperty('Side', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         properties.addProperty('Mode', 0, attributes=om.PropertyAttributes(enumNames=['Basic', 'Pinch']))
         properties.addProperty('Amount', 100, attributes=propertyset.PropertyAttributes(minimum=0, maximum=100))
+        properties.addProperty('Check Status', False)
 
     def getHandDriver(self, side):
         assert side in ('left', 'right')
@@ -705,6 +707,15 @@ class CloseHand(AsyncTask):
     def run(self):
         side = self.properties.getPropertyEnumValue('Side').lower()
         self.getHandDriver(side).sendCustom(self.properties.getProperty('Amount'), 100, 100, self.properties.getProperty('Mode'))
+
+        if self.properties.getProperty('Check Status'):
+            responseChannel = 'GRASPING_STATE'
+            responseMessageClass = lcmdrc.boolean_t
+            grasping_state = lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass).waitForResponse(timeout=5000)
+            if grasping_state is not None and grasping_state.data == 1:
+                self.statusMessage = "Grasping successful"
+            else:
+                self.fail("No object in hand")
 
 
 class OpenHand(AsyncTask):
