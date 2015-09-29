@@ -698,7 +698,7 @@ class CloseHand(AsyncTask):
         properties.addProperty('Side', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         properties.addProperty('Mode', 0, attributes=om.PropertyAttributes(enumNames=['Basic', 'Pinch']))
         properties.addProperty('Amount', 100, attributes=propertyset.PropertyAttributes(minimum=0, maximum=100))
-        properties.addProperty('Check Status', False)
+        properties.addProperty('Check status', False)
 
     def getHandDriver(self, side):
         assert side in ('left', 'right')
@@ -708,7 +708,7 @@ class CloseHand(AsyncTask):
         side = self.properties.getPropertyEnumValue('Side').lower()
         self.getHandDriver(side).sendCustom(self.properties.getProperty('Amount'), 100, 100, self.properties.getProperty('Mode'))
 
-        if self.properties.getProperty('Check Status'):
+        if self.properties.getProperty('Check status'):
             responseChannel = 'GRASPING_STATE'
             responseMessageClass = lcmdrc.boolean_t
             grasping_state = lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass).waitForResponse(timeout=5000)
