@@ -1242,7 +1242,7 @@ class TableTaskPanel(TaskUserPanel):
             group = self.taskTree.addGroup(name, parent=parent)
             side = self.params.getPropertyEnumValue('Hand')
 
-            checkStatus = False  # whether to check that there is an object in gripper
+            checkStatus = False  # whether to confirm that there is an object in the hand when closed
             if 'userConfig' in drcargs.getDirectorConfig() and 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
                 checkStatus = True
 
@@ -1274,7 +1274,7 @@ class TableTaskPanel(TaskUserPanel):
         # prep
         prep = self.taskTree.addGroup('Preparation')
         if v.ikPlanner.fixedBaseArm:
-            addTask(rt.OpenHand(name='open hand', side=side), parent=prep)
+            addGrasping('open', name='open hand', parent=prep, confirm=False)
             if v.useDevelopment:
                 addFunc(v.prepKukaTestDemoSequence, 'prep from file', parent=prep)
             else:
@@ -1282,6 +1282,7 @@ class TableTaskPanel(TaskUserPanel):
                 addFunc(v.prepGetSceneFrame, 'capture scene frame', parent=prep)
                 addFunc(v.prepKukaLabScene, 'prep kuka lab scene', parent=prep)
         else:
+            # TODO(tbd): replace with addGrasping()
             addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
             addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
             addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
