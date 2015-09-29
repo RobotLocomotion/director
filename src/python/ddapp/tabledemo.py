@@ -1306,7 +1306,8 @@ class TableTaskPanel(TaskUserPanel):
         else: # Collision Free - Marco et al.
             addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
 
-        addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach', confirm=True)
+        addGrasping('close', name='close grasp hand', parent=None, confirm=False)
+        addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'sync grasp', parent='reach', confirm=True)
 
         addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
 
