@@ -96,6 +96,7 @@ class ContinousWalkingDemo(object):
         self.jointLimitChecker = jointLimitChecker
 
         # live operation flags
+        self.leadingFootByUser = 'Left'
         self.planFromCurrentRobotState = False
 
         self.plans = []
@@ -705,7 +706,10 @@ class ContinousWalkingDemo(object):
     def startContinuousWalking(self, leadFoot=None):
         
         if (leadFoot is None):
-            leadFoot=self.ikPlanner.leftFootLink #'l_foot'
+            if self.leadingFootByUser == 'Right':
+                leadFoot=self.ikPlanner.rightFootLink #'r_foot'
+            else:
+                leadFoot=self.ikPlanner.leftFootLink #'l_foot'
 
         self._setupOnce()
 
@@ -768,10 +772,6 @@ class ContinousWalkingDemo(object):
         #print "got message"
         
         import ipab
-        #print  msg.actual_foot_position_in_world[0], msg.actual_foot_position_in_world[1], msg.actual_foot_position_in_world[2]
-        #print  msg.actual_foot_orientation_in_world[0], msg.actual_foot_orientation_in_world[1], msg.actual_foot_orientation_in_world[2], msg.actual_foot_orientation_in_world[3]
-        #print  msg.LEFT
-        #print  msg.RIGHT
         x = msg.actual_foot_position_in_world[0]
         y = msg.actual_foot_position_in_world[1]
         z = msg.actual_foot_position_in_world[2]
@@ -780,12 +780,14 @@ class ContinousWalkingDemo(object):
         q3 = msg.actual_foot_orientation_in_world[2]
         q4 = msg.actual_foot_orientation_in_world[3] 
 
-        if msg.status == 1:
+        if msg.status == 1:	#valid message
             tf_footStatus = transformUtils.transformFromPose([x,y,z], [q1,q2,q3,q4])
             self.transforms_series[:] = []
             self.transforms_series.append(tf_footStatus) 
             self.transforms_series.append(self.tf_robotStatus.GetInverse())
             tf_foot_robot = transformUtils.concatenateTransforms(self.transforms_series)
+            #vis.showFrame(self.tf_robotStatus,'tf_robotStatus')
+            #vis.showFrame(tf_foot_robot,'tf_foot_robot')
             
             self.footstep_index = self.footstep_index + 1
        
@@ -799,12 +801,14 @@ class ContinousWalkingDemo(object):
                 current_left = True
             else:
                 current_left = False  
-            #print 'current:'
-            #print (current_pos)
-            #print 'robot:'
-            #print (robot_pos)
-            #print 'Left?'
-            #print current_left
+            '''
+            print 'current:'
+            print (current_pos)
+            print 'robot:'
+            print (robot_pos)
+            print 'Left?'
+            print current_left
+            '''
 
             # I want to take the first status for the LEFT foot
             if self.new_status and current_left:
@@ -835,7 +839,7 @@ class ContinousWalkingDemo(object):
             #print 'list lenght:'
             #print (len(self.footStatus))
             self.new_first_double_supp = False
-            
+            '''
             if self.footStatus[len(self.footStatus)-2].is_right_foot:
                 t1, t2 = t2, t1
             
@@ -844,6 +848,7 @@ class ContinousWalkingDemo(object):
 
             standingFootName = self.ikPlanner.rightFootLink if self.footStatus[len(self.footStatus)-2].is_right_foot else self.ikPlanner.leftFootLink
             self.makeReplanRequest(standingFootName, removeFirstLeftStep = False, nextDoubleSupportPose=pose)
+            '''
 
     def testDouble():
 
@@ -1027,6 +1032,8 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
     def addDefaultProperties(self):
         self.params.addProperty('Sensor', 0, attributes=om.PropertyAttributes(enumNames=['Lidar',
                                                                                        'Stereo']))
+        self.params.addProperty('Leading Foot', 0, attributes=om.PropertyAttributes(enumNames=['Left',
+                                                                                       'Right']))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
@@ -1038,6 +1045,13 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
             self.continuousWalkingDemo.processContinuousStereo = True
         else:
             self.continuousWalkingDemo.processContinuousStereo = False
+     
+        self.continuousWalkingDemo.planFromCurrentRobotState = True
+
+        if self.params.getPropertyEnumValue('Leading Foot') == 'Left':
+            self.continuousWalkingDemo.leadingFootByUser = 'Left'
+        else:
+            self.continuousWalkingDemo.leadingFootByUser = 'Right'
      
         self.continuousWalkingDemo.planFromCurrentRobotState = True
 
