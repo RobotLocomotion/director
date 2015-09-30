@@ -239,6 +239,12 @@ install(TARGETS ${_install_targets}
     LIBRARY DESTINATION ${DD_INSTALL_LIB_DIR}
     ARCHIVE DESTINATION ${DD_INSTALL_LIB_DIR})
 
+if(APPLE)
+  install(DIRECTORY drake-visualizer.app
+      DESTINATION ${DD_INSTALL_BIN_DIR}
+      USE_SOURCE_PERMISSIONS)
+endif()
+
 add_custom_command(OUTPUT ${decorator_file}
   COMMAND ${PYTHON_EXECUTABLE} WrapPythonQt.py
   -i ${wrap_files} -o "${decorator_file}"
