@@ -432,11 +432,11 @@ class DrakeVisualizerApp():
         return QtCore.QCoreApplication.instance().exec_()
 
 
-def main():
+def main(globalsDict=None):
 
     app = DrakeVisualizerApp()
-    app.start(globals())
+    app.start(globalsDict)
 
 
 if __name__ == '__main__':
-    main()
+    main(globals())
