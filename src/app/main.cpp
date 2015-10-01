@@ -26,14 +26,10 @@ int main(int argc, char **argv)
 
   delete window;
 
-#ifdef Q_OS_MAC
-  // On MacOSX, there is a crash during PythonQt's finalization cleanup
-  // while destructing class metadata objects.
-#else
-  // crashes on Ubuntu 14.04 with Qt version 4.8.6
-  // this is a bug in PythonQt's finalize I think, to be investigated
-  //delete pythonManager;
-#endif
+  // delete pythonManager;
+  // Allow a leak to avoid a segfault in the PythonQt cleanup destructor.
+  // The segfault is fixed in upstream PythonQt, but we can't upgrade to
+  // that version yet because of a compile issue on Ubuntu 12 + Qt 4.8.
 
   return result;
 }
