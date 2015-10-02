@@ -573,7 +573,7 @@
     <string>Task Launcher</string>
    </property>
    <property name="shortcut">
-    <string/>
+    <string>F10</string>
    </property>
   </action>
   <action name="ActionPFGraspPanel">

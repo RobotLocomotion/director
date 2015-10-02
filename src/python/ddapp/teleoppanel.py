@@ -802,9 +802,18 @@ class JointLimitChecker(object):
         self.timer.callback = self.update
         self.warningButton = None
         self.action = None
+        self.automaticallyExtendLimits = False
 
     def update(self):
         limitData = self.checkJointLimits()
+
+        # Automatically extend limits (dangerous in practice)
+        if self.automaticallyExtendLimits:
+            if limitData:
+                self.extendJointLimitsAsExceeded(limitData)
+                self.clearStatusBarWarning()
+            return
+
         if limitData:
             self.notifyUserStatusBar(limitData)
         else:
@@ -865,17 +874,21 @@ class JointLimitChecker(object):
         if choice == QtGui.QMessageBox.No:
             self.stop()
         else:
+            self.extendJointLimitsAsExceeded(limitData)
 
-            # inflate the epsilon
-            limitData = [(jointName, epsilon+np.sign(epsilon)*self.inflationAmount) for jointName, epsilon in limitData]
 
-            # update limits on server
-            panel.ikPlanner.ikServer.updateJointLimits(limitData)
+    def extendJointLimitsAsExceeded(self, limitData):
 
-            # update limits on checker
-            for jointName, epsilon in limitData:
-                limitsArray = self.jointLimitsMin if epsilon < 0 else self.jointLimitsMax
-                limitsArray[self.toJointIndex(jointName)] += epsilon
+        # inflate the epsilon
+        limitData = [(jointName, epsilon+np.sign(epsilon)*self.inflationAmount) for jointName, epsilon in limitData]
+
+        # update limits on server
+        panel.ikPlanner.ikServer.updateJointLimits(limitData)
+
+        # update limits on checker
+        for jointName, epsilon in limitData:
+            limitsArray = self.jointLimitsMin if epsilon < 0 else self.jointLimitsMax
+            limitsArray[self.toJointIndex(jointName)] += epsilon
 
     def checkJointLimits(self):
 

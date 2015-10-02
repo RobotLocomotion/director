@@ -72,6 +72,7 @@ class TableDemo(object):
         self.requiredUserPromptEnabled = True
 
         self.plans = []
+        self.clusterObjects = []
         self.frameSyncs = {}
 
         self.graspingHand = 'left' # left, right, both
@@ -285,7 +286,8 @@ class TableDemo(object):
 #        if self.useCollisionEnvironment:
 #            self.prepCollisionEnvironment()
 #            collisionObj = om.findObjectByName(obj.getProperty('Name') + ' affordance')
-#            collisionObj.setProperty('Collision Enabled', False)
+            if not self.ikPlanner.fixedBaseArm:
+                collisionObj.setProperty('Collision Enabled', False)
 
         return obj, frameObj
 
@@ -909,9 +911,9 @@ class TableDemo(object):
         boxAffordance.setProperty('Alpha', 0.3)
 
     ######### Nominal Plans and Execution  #################################################################
-    def loadSDFFrameAndRunSim(self):
+    def loadSDFFileAndRunSim(self):
         from ddapp import sceneloader
-        filename= os.environ['DRC_BASE'] + '/../drc-testing-data/tabletop/tabledemo.sdf'
+        filename= os.environ['DRC_BASE'] + '/software/models/worlds/tabledemo.sdf'
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
         import ipab
@@ -1187,7 +1189,7 @@ class TableTaskPanel(TaskUserPanel):
         self.addManualSpacer()
         self.addManualButton('Close Hand', functools.partial(self.tableDemo.closeHand, self.tableDemo.graspingHand))
         self.addManualSpacer()
-        self.addManualButton('Read SDF & Sim', self.tableDemo.loadSDFFrameAndRunSim)
+        self.addManualButton('Read SDF & Sim', self.tableDemo.loadSDFFileAndRunSim)
 
     def addDefaultProperties(self):
         self.params.addProperty('Hand', 0,
@@ -1264,6 +1266,15 @@ class TableTaskPanel(TaskUserPanel):
         elif propertyName == 'Planner':
         	self.tableDemo.planner = self.params.getProperty('Planner')
 
+    def pickupMoreObjects(self):
+        if len(self.tableDemo.clusterObjects) > 0: # There is still sth on the table, let's do it again!
+            print "There are more objects on the table, going at it again!"
+            self.taskTree.selectTaskByName('reach')
+            self.onPause()
+            self.onContinue()
+        else:
+            print "Table clear, sir!"
+
     def addTasks(self):
 
         # some helpers
@@ -1275,7 +1286,7 @@ class TableTaskPanel(TaskUserPanel):
             if confirm:
                 addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'), parent=parent)
 
-        def addManipulation(func, name, parent=None, confirm=True):
+        def addManipulation(func, name, parent=None, confirm=False):
             group = self.taskTree.addGroup(name, parent=parent)
             addFunc(func, name='plan motion', parent=group)
             addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
@@ -1370,9 +1381,17 @@ class TableTaskPanel(TaskUserPanel):
             addFunc(self.tableDemo.moveRobotToBinStanceFrame, 'walk to Bin', parent = walkToBin)
 
         # drop in bin
-        addManipulation(functools.partial(v.planDropPostureRaise, v.graspingHand), name='drop: raise arm') # seems to ignore arm side?
+        if not v.ikPlanner.fixedBaseArm: # v.ikPlanner.pushToMatlab: # latter statement doesnt work since not yet set when initialising
+            addManipulation(functools.partial(v.planDropPostureRaise, v.graspingHand), name='drop: raise arm') # seems to ignore arm side?
         if v.planner == 1:
             addFunc(functools.partial(v.dropTableObject, side=v.graspingHand), 'drop', parent='drop: release', confirm=False)
         else:
+            addManipulation(functools.partial(v.planPostureFromDatabase, 'table clearing', 'pre drop 2', side=v.graspingHand), 'drop: lower arm')
             addFunc(functools.partial(v.dropTableObject, side=v.graspingHand), 'drop', parent='drop: release', confirm=True)
-        addManipulation(functools.partial(v.planDropPostureLower, v.graspingHand), name='drop: lower arm')
+
+        if not v.ikPlanner.fixedBaseArm:
+            addManipulation(functools.partial(v.planDropPostureLower, v.graspingHand), name='drop: lower arm')
+        else:
+            addManipulation(functools.partial(v.planPreGrasp, v.graspingHand), name='go home')
+
+        addFunc(self.pickupMoreObjects, 'clear until table empty', parent='clear until table empty folder')

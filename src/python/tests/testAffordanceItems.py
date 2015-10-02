@@ -103,7 +103,7 @@ def testSDF():
     n_pre=len(affordanceManager.getAffordances())
 
     dataDir = app.getTestingDataDirectory()
-    filename=os.path.join(dataDir, 'tabletop/tabledemo.sdf');
+    filename=os.environ['DRC_BASE'] + '/software/models/worlds/tabledemo.sdf'
     sc=sceneloader.SceneLoader()
     print "Loading "+filename
     sc.loadSDF(filename)

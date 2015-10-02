@@ -278,6 +278,12 @@ if useDrakeVisualizer:
     app.MenuActionToggleHelper('Tools', 'Renderer - Drake', drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
 
 
+if useNavigationPanel:
+    navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)
+    picker = PointPicker(view, callback=navigationPanel.pointPickerStoredFootsteps, numberOfPoints=2)
+    #picker.start()
+
+
 if usePlanning:
 
     def showPose(pose):
@@ -444,6 +450,11 @@ if usePlanning:
                                       lHandDriver, rHandDriver, robotStateJointController)
     valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
 
+    continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController, ikPlanner,
+                                                                       teleopJointController, navigationPanel, cameraview, jointLimitChecker)
+    continuousWalkingTaskPanel = continuouswalkingdemo.ContinuousWalkingTaskPanel(continuouswalkingDemo)
+
+
     drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
@@ -488,6 +499,7 @@ if usePlanning:
     taskPanels['Surprise'] = surpriseTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
     taskPanels['Table'] = tableTaskPanel.widget
+    taskPanels['Continuous Walking'] = continuousWalkingTaskPanel.widget
     if useMappingPanel:
         taskPanels['Mapping'] = mappingTaskPanel.widget
 
@@ -508,14 +520,6 @@ if usePlanning:
 
 if useCOPMonitor:
     copMonitor = copmonitor.COPMonitor(robotSystem, view);
-
-if useNavigationPanel:
-    navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)
-    picker = PointPicker(view, callback=navigationPanel.pointPickerStoredFootsteps, numberOfPoints=2)
-    #picker.start()
-
-    continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController, ikPlanner,
-                                                                       teleopJointController, navigationPanel, cameraview)
 
 
 if useLoggingWidget:
@@ -990,7 +994,7 @@ class RobotGridUpdater(object):
         t.Translate((x*10,y*10,z))
         self.gridFrame.copyFrame(t)
 
-gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
+#gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
 
 
 class IgnoreOldStateMessagesSelector(object):
