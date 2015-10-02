@@ -97,6 +97,7 @@ class ContinousWalkingDemo(object):
 
         # live operation flags
         self.leadingFootByUser = 'Left'
+        self.automaticContinuousWalkingEnabled = True
         self.planFromCurrentRobotState = False
 
         self.plans = []
@@ -659,6 +660,7 @@ class ContinousWalkingDemo(object):
 
         if (replanNow):
             #print "contact: ", self.lastContactState, " to ", contactState
+            if (self.automaticContinuousWalkingEnabled):
             if (self.navigationPanel.automaticContinuousWalkingEnabled):
                 self.makeReplanRequest(standingFootName)
             else:
@@ -727,7 +729,8 @@ class ContinousWalkingDemo(object):
         if msg.num_steps <= 2:
             return
         '''
-        if self.navigationPanel.automaticContinuousWalkingEnabled:
+        
+        if self.automaticContinuousWalkingEnabled:
             print "Committing Footstep Plan for AUTOMATIC EXECUTION"
             lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
         '''
@@ -736,7 +739,7 @@ class ContinousWalkingDemo(object):
 
     def onNextExpectedDoubleSupport(self, msg):
 
-        if not self.navigationPanel.automaticContinuousWalkingEnabled:
+        if not self.automaticContinuousWalkingEnabled:
             return
 
 
@@ -994,6 +997,12 @@ class ContinousWalkingDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
+    def onEnableContinuousButton(self):
+        self.automaticContinuousWalkingEnabled = True
+
+    def onDisableContinuousButton(self):
+        self.automaticContinuousWalkingEnabled = False
+
     # Glue Functions ###########################################################
 
     def getEstimatedRobotStatePose(self):
@@ -1027,13 +1036,18 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         self.addManualButton('Neck Down', self.continuousWalkingDemo.planNeckDown)
         self.addManualSpacer()
         self.addManualButton('Arms Up', self.continuousWalkingDemo.planHandsUp)
-        self.addManualButton('Arms Down', self.continuousWalkingDemo.planHandsDown)      
+        self.addManualButton('Arms Down', self.continuousWalkingDemo.planHandsDown) 
+        self.addManualSpacer()  
+        self.addManualButton('Continuous Off', self.continuousWalkingDemo.onDisableContinuousButton)
+        self.addManualButton('Continuous On', self.continuousWalkingDemo.onEnableContinuousButton)   
 
     def addDefaultProperties(self):
         self.params.addProperty('Sensor', 0, attributes=om.PropertyAttributes(enumNames=['Lidar',
                                                                                        'Stereo']))
         self.params.addProperty('Leading Foot', 0, attributes=om.PropertyAttributes(enumNames=['Left',
                                                                                        'Right']))
+        self.params.addProperty('Continuous Walking', 0, attributes=om.PropertyAttributes(enumNames=['Enabled',
+                                                                                       'Disabled']))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
@@ -1045,16 +1059,18 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
             self.continuousWalkingDemo.processContinuousStereo = True
         else:
             self.continuousWalkingDemo.processContinuousStereo = False
-     
-        self.continuousWalkingDemo.planFromCurrentRobotState = True
 
         if self.params.getPropertyEnumValue('Leading Foot') == 'Left':
             self.continuousWalkingDemo.leadingFootByUser = 'Left'
         else:
             self.continuousWalkingDemo.leadingFootByUser = 'Right'
+
+        if self.params.getPropertyEnumValue('Continuous Walking') == 'Enabled':
+            self.continuousWalkingDemo.automaticContinuousWalkingEnabled = True
+        else:
+            self.continuousWalkingDemo.automaticContinuousWalkingEnabled = False
      
         self.continuousWalkingDemo.planFromCurrentRobotState = True
-
 
     def addTasks(self):
 
