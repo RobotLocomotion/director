@@ -731,18 +731,15 @@ class ContinousWalkingDemo(object):
             return
         
         if self.automaticContinuousWalkingEnabled:
-            '''
-            print "Send Update Footstep Plan Request"
-            self.footstepsDriver.sendStopWalking()
-            #self.footstepsDriver.sendUpdatePlanRequest()
-            self.footstepsDriver.onClearClicked()
+
             print "Committing Footstep Plan for AUTOMATIC EXECUTION"
-            self.footstepsDriver.commitFootstepPlan(msg)
-            #lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
-            '''
-            self.footstepsDriver.clearFootstepPlan()
-            self.footstepsDriver.execButton.setEnabled(True)
-            self.footstepsDriver.commitFootstepPlan(msg)
+            lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
+            
+            #self.footstepsDriver.sendStopWalking()
+            #self.footstepsDriver.onClearClicked()
+            #self.footstepsDriver.lastFootstepPlan = msg
+            #self.footstepsDriver.onExecClicked()
+            #self.footstepsDriver.commitFootstepPlan(msg)
 
 
     '''
@@ -880,10 +877,10 @@ class ContinousWalkingDemo(object):
             if (distance > 0.65):
                 t1 = self.footStatus_left[len(self.footStatus_left)-1].transform
                 t2 = self.footStatus_right[len(self.footStatus_right)-1].transform
-                
+            '''
             if self.footStatus[len(self.footStatus)-2].is_right_foot:
                 t1, t2 = t2, t1
-                
+            '''    
             pose = self.getNextDoubleSupportPose(t1, t2)
             self.displayExpectedPose(pose)
 
