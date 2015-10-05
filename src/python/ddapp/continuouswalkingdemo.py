@@ -100,6 +100,7 @@ class ContinousWalkingDemo(object):
         self.leadingFootByUser = 'Left'
         self.automaticContinuousWalkingEnabled = True
         self.planFromCurrentRobotState = False
+        self.chosenTerrain = 'Simple'
 
         self.plans = []
         self.planned_footsteps = []
@@ -970,13 +971,17 @@ class ContinousWalkingDemo(object):
 
         self.footstepsPanel.onNewWalkingGoal(goalFrame)
 
-    def loadSDFFileAndRunSim(self, kindOfTerrain):
+    def loadSDFFileAndRunSim(self):
         from ddapp import sceneloader
 
-        if kindOfTerrain == 'simple':
+        if self.chosenTerrain == 'simple':
             filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_simple.sdf'
-        elif kindOfTerrain == 'uneven':
+        elif self.chosenTerrain == 'simple_nogaps':
+            filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_simple_nogaps.sdf'
+        elif self.chosenTerrain == 'uneven':
             filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_uneven.sdf'
+        elif self.chosenTerrain == '2steps':
+            filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_2steps.sdf'
         
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
@@ -1076,6 +1081,8 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         self.addManualButton('Continuous On', self.continuousWalkingDemo.onEnableContinuousButton)   
 
     def addDefaultProperties(self):
+        self.params.addProperty('Terrain Type', 1, attributes=om.PropertyAttributes(enumNames=['2 Steps', 'Simple', 'Simple, no Gaps',
+                                                                                       'Uneven']))
         self.params.addProperty('Sensor', 0, attributes=om.PropertyAttributes(enumNames=['Lidar',
                                                                                        'Stereo']))
         self.params.addProperty('Leading Foot', 0, attributes=om.PropertyAttributes(enumNames=['Left',
@@ -1088,6 +1095,14 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         self._syncProperties()
 
     def _syncProperties(self):
+        if self.params.getPropertyEnumValue('Terrain Type') == '2 Steps':
+            self.continuousWalkingDemo.chosenTerrain = '2steps'
+        elif self.params.getPropertyEnumValue('Terrain Type') == 'Simple':
+            self.continuousWalkingDemo.chosenTerrain = 'simple'
+        elif self.params.getPropertyEnumValue('Terrain Type') == 'Simple, no Gaps':
+            self.continuousWalkingDemo.chosenTerrain = 'simple_nogaps'
+        else:
+            self.continuousWalkingDemo.chosenTerrain = 'uneven'
 
         if self.params.getPropertyEnumValue('Sensor') == 'Stereo':
             self.continuousWalkingDemo.processContinuousStereo = True
@@ -1132,7 +1147,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
 
         # load
         load = self.taskTree.addGroup('Loading')
-        addFunc(functools.partial(cw.loadSDFFileAndRunSim, 'simple'), 'load scenario', parent=load)
+        addFunc(functools.partial(cw.loadSDFFileAndRunSim), 'load scenario', parent=load)
 
         # prep
         prep = self.taskTree.addGroup('Preparation')
