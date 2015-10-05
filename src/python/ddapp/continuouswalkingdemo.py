@@ -978,8 +978,8 @@ class ContinousWalkingDemo(object):
             filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_simple_nogaps.sdf'
         elif self.chosenTerrain == 'uneven':
             filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_uneven.sdf'
-        elif self.chosenTerrain == '2steps':
-            filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_2steps.sdf'
+        elif self.chosenTerrain == 'stairs':
+            filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_stairs.sdf'
         
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
@@ -1071,8 +1071,8 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         self.addManualSpacer()    
 
     def addDefaultProperties(self):
-        self.params.addProperty('Terrain Type', 1, attributes=om.PropertyAttributes(enumNames=['2 Steps', 'Simple', 'Simple, no Gaps',
-                                                                                       'Uneven']))
+        self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=['Simple', 'Simple, no Gaps',
+                                                                                       'Uneven', 'Stairs']))
         self.params.addProperty('Sensor', 0, attributes=om.PropertyAttributes(enumNames=['Lidar',
                                                                                        'Stereo']))
         self.params.addProperty('Leading Foot', 0, attributes=om.PropertyAttributes(enumNames=['Left',
@@ -1085,14 +1085,15 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         self._syncProperties()
 
     def _syncProperties(self):
-        if self.params.getPropertyEnumValue('Terrain Type') == '2 Steps':
-            self.continuousWalkingDemo.chosenTerrain = '2steps'
-        elif self.params.getPropertyEnumValue('Terrain Type') == 'Simple':
+        if self.params.getPropertyEnumValue('Terrain Type') == 'Simple':
             self.continuousWalkingDemo.chosenTerrain = 'simple'
         elif self.params.getPropertyEnumValue('Terrain Type') == 'Simple, no Gaps':
             self.continuousWalkingDemo.chosenTerrain = 'simple_nogaps'
-        else:
+        elif self.params.getPropertyEnumValue('Terrain Type') == 'Uneven':
             self.continuousWalkingDemo.chosenTerrain = 'uneven'
+        else:
+            self.continuousWalkingDemo.chosenTerrain = 'stairs'
+            
 
         if self.params.getPropertyEnumValue('Sensor') == 'Stereo':
             self.continuousWalkingDemo.processContinuousStereo = True
