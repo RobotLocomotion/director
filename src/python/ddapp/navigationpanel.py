@@ -70,16 +70,10 @@ class NavigationPanel(object):
         self.ui.startNewMapButton.connect("clicked()", self.onStartNewMapButton)
         self.ui.useNewMapButton.connect("clicked()", self.onUseNewMapButton)
 
-        self.ui.disableContinuousButton.connect("clicked()", self.onDisableContinuousButton)
-        self.ui.enableContinuousButton.connect("clicked()", self.onEnableContinuousButton)
-
         # Data Variables:
         self.goal = dict()
         self.init_frame = None
         self.octomap_cloud = None
-
-        # used by continuousWalkingDemo
-        self.automaticContinuousWalkingEnabled = False
 
     ###############################
 
@@ -238,12 +232,6 @@ class NavigationPanel(object):
         msg = lcmdrc.utime_t()
         msg.utime = getUtime()
         lcmUtils.publish('STATE_EST_LASER_DISABLE', msg)
-
-    def onEnableContinuousButton(self):
-        self.automaticContinuousWalkingEnabled = True
-
-    def onDisableContinuousButton(self):
-        self.automaticContinuousWalkingEnabled = False
 
     def onStartNewMapButton(self):
         '''
