@@ -570,7 +570,6 @@ class ContinousWalkingDemo(object):
 
         if not self.useManualFootstepPlacement and self.queryPlanner:
             footsteps = self.computeFootstepPlanSafeRegions(blocks, nextDoubleSupportPose, standingFootName)
-
         else:
             footsteps = self.placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep)
 
@@ -691,7 +690,7 @@ class ContinousWalkingDemo(object):
         obj.actor.SetUserTransform(footTransform)
 
 
-    def makeReplanRequest(self, standingFootName, removeFirstLeftStep = True, nextDoubleSupportPose=None):
+    def makeReplanRequest(self, standingFootName, removeFirstLeftStep = False, nextDoubleSupportPose=None):
 
         if (self.processContinuousStereo):
             polyData = self.cameraView.getStereoPointCloud(2,'CAMERA_FUSED', cameraName='CAMERA_TSDF', removeSize=4000)
@@ -731,16 +730,10 @@ class ContinousWalkingDemo(object):
         if msg.num_steps <= 2:
             return
         
-        if self.automaticContinuousWalkingEnabled:
+        #if self.automaticContinuousWalkingEnabled:
 
-            print "Committing Footstep Plan for AUTOMATIC EXECUTION"
-            lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
-            
-            #self.footstepsDriver.sendStopWalking()
-            #self.footstepsDriver.onClearClicked()
-            #self.footstepsDriver.lastFootstepPlan = msg
-            #self.footstepsDriver.onExecClicked()
-            #self.footstepsDriver.commitFootstepPlan(msg)
+        print "Committing Footstep Plan for AUTOMATIC EXECUTION"
+        lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
 
 
     '''
@@ -779,6 +772,9 @@ class ContinousWalkingDemo(object):
         '''
 
     def onFootstepStatus(self, msg):
+        if not self.automaticContinuousWalkingEnabled:
+            return
+
         import ipab
         x = msg.actual_foot_position_in_world[0]
         y = msg.actual_foot_position_in_world[1]
@@ -802,8 +798,8 @@ class ContinousWalkingDemo(object):
        
             # Increases at each contact     
             self.footstep_index = self.footstep_index + 1   
-            print 'self.footstep_index'
-            print self.footstep_index
+            #print 'self.footstep_index'
+            #print self.footstep_index
 
             [robot_pos, robot_ori] = transformUtils.poseFromTransform(self.tf_robotStatus)
             [current_pos, current_ori] = transformUtils.poseFromTransform(tf_foot_robot)  
@@ -841,8 +837,6 @@ class ContinousWalkingDemo(object):
             else:
                 # I want to take the first status for the RIGHT foot
                 if not current_left:
-                    # right foot in contact (reached right single support)
-                    self.footStatus.append(Footstep(tf_footStatus, 1))
                     self.new_first_double_supp = True
                     # left foot expected pose (from planning)   
                     if self.footstep_index+1 < len(self.planned_footsteps):
@@ -856,6 +850,8 @@ class ContinousWalkingDemo(object):
                 else:
                     # left foot in contact
                     self.footStatus_left.append(Footstep(tf_footStatus, 0))
+                # right foot in contact (reached right single support)
+                self.footStatus.append(Footstep(tf_footStatus, 1))
         elif msg.status == 0: 
             self.new_status = True
 
@@ -867,6 +863,7 @@ class ContinousWalkingDemo(object):
             [t1_pos, t1_ori] = transformUtils.poseFromTransform(t1)
             [t2_pos, t2_ori] = transformUtils.poseFromTransform(t2)
             distance = pow(pow(t1_pos[0]-t2_pos[0],2)+pow(t1_pos[1]-t2_pos[1],2)+pow(t1_pos[2]-t2_pos[2],2),0.5)
+            '''
             print 'distance:'
             print distance
             print 't1 and t2:' 
@@ -874,6 +871,7 @@ class ContinousWalkingDemo(object):
             print (transformUtils.poseFromTransform(t2)) 
             #print 'list lenght:'
             #print (len(self.footStatus))
+            '''
 
             if (distance > 0.65):
                 t1 = self.footStatus_left[len(self.footStatus_left)-1].transform
@@ -883,9 +881,8 @@ class ContinousWalkingDemo(object):
                 t1, t2 = t2, t1
             '''    
             pose = self.getNextDoubleSupportPose(t1, t2)
-            self.displayExpectedPose(pose)
 
-            standingFootName = self.ikPlanner.rightFootLink if self.footStatus[len(self.footStatus)-2].is_right_foot else self.ikPlanner.leftFootLink
+            standingFootName = self.ikPlanner.rightFootLink if self.leadingFootByUser == 'Right' else self.ikPlanner.leftFootLink
             self.makeReplanRequest(standingFootName, removeFirstLeftStep = False, nextDoubleSupportPose=pose)
 
     def testDouble():
@@ -934,6 +931,7 @@ class ContinousWalkingDemo(object):
     def displayExpectedPose(self, nextDoubleSupportPose):
         self.teleopJointController.setPose('double_support_pose', nextDoubleSupportPose)
         om.getOrCreateContainer('teleop model').setProperty('Visible',True)
+        om.getOrCreateContainer('teleop model').setProperty('Textures',False)
 
 
     def makeDebugRegions(self):
@@ -1036,12 +1034,6 @@ class ContinousWalkingDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
 
-    def onEnableContinuousButton(self):
-        self.automaticContinuousWalkingEnabled = True
-
-    def onDisableContinuousButton(self):
-        self.automaticContinuousWalkingEnabled = False
-
     # Glue Functions ###########################################################
 
     def getEstimatedRobotStatePose(self):
@@ -1076,9 +1068,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         self.addManualSpacer()
         self.addManualButton('Arms Up', self.continuousWalkingDemo.planHandsUp)
         self.addManualButton('Arms Down', self.continuousWalkingDemo.planHandsDown) 
-        self.addManualSpacer()  
-        self.addManualButton('Continuous Off', self.continuousWalkingDemo.onDisableContinuousButton)
-        self.addManualButton('Continuous On', self.continuousWalkingDemo.onEnableContinuousButton)   
+        self.addManualSpacer()    
 
     def addDefaultProperties(self):
         self.params.addProperty('Terrain Type', 1, attributes=om.PropertyAttributes(enumNames=['2 Steps', 'Simple', 'Simple, no Gaps',
