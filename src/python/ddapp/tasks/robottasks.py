@@ -709,13 +709,7 @@ class CloseHand(AsyncTask):
         self.getHandDriver(side).sendCustom(self.properties.getProperty('Amount'), 100, 100, self.properties.getProperty('Mode'))
 
         if self.properties.getProperty('Check status'):
-            responseChannel = 'GRASPING_STATE'
-            responseMessageClass = lcmdrc.boolean_t
-            grasping_state = lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass).waitForResponse(timeout=7000)
-            if grasping_state is not None and grasping_state.data == 1:
-                self.statusMessage = "Grasping successful"
-            else:
-                self.fail("No object in hand")
+            WaitForGraspingState(actionName='Grasp').run()
 
 
 class OpenHand(AsyncTask):
@@ -737,7 +731,7 @@ class OpenHand(AsyncTask):
         self.getHandDriver(side).sendCustom(100-self.properties.getProperty('Amount'), 100, 100, self.properties.getProperty('Mode'))
 
         if self.properties.getProperty('Check status'):
-            WaitForGraspingState().run()
+            WaitForGraspingState(actionName='Open').run()
 
 
 class WaitForGraspingState(AsyncTask):
@@ -745,16 +739,27 @@ class WaitForGraspingState(AsyncTask):
     @staticmethod
     def getDefaultProperties(properties):
         properties.addProperty('Channel name', 'GRASPING_STATE')
+        properties.addProperty('Action name', 0, attributes=om.PropertyAttributes(enumNames=['Open', 'Grasp']))
         # TODO: properties for timeout, responseMessageClass, expectedResponse
 
     def run(self):
         responseMessageClass = lcmdrc.boolean_t
         grasping_state = lcmUtils.MessageResponseHelper(self.properties.getProperty('Channel name'), responseMessageClass).waitForResponse(timeout=7000)
 
-        if grasping_state is not None and grasping_state.data == 0:
-            self.statusMessage = "Hand opening successful"
+        if grasping_state is not None and self.properties.getPropertyEnumValue('Action name') == 'Open':
+            if grasping_state.data == 0:
+                # print "Hand opening successful"
+                self.statusMessage = "Hand opening successful"
+            else:
+                self.fail("Could not open hand")
+        elif grasping_state is not None and self.properties.getPropertyEnumValue('Action name') == 'Grasp':
+            if grasping_state.data == 1:
+                # print "Grasping successful"
+                self.statusMessage = "Grasping successful"
+            else:
+                self.fail("No object in hand")
         else:
-            self.fail("Could not open hand")
+            self.fail("Grasping state timeout")
 
 
 class CommitFootstepPlan(AsyncTask):
