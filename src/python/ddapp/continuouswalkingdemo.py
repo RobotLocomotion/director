@@ -143,7 +143,6 @@ class ContinousWalkingDemo(object):
         #footContactSubContinuous.setSpeedLimit(60)
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
-        #lcmUtils.addSubscriber('NEXT_EXPECTED_DOUBLE_SUPPORT', lcmdrc.footstep_plan_t, self.onNextExpectedDoubleSupport)
         lcmUtils.addSubscriber('IHMC_FOOTSTEP_STATUS', lcmipab.footstep_status_t, self.onFootstepStatus)
         lcmUtils.addSubscriber('EST_ROBOT_STATE', lcmdrc.robot_state_t, self.onRobotStatus)
         stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
@@ -628,6 +627,7 @@ class ContinousWalkingDemo(object):
         request.params.map_mode = 1 #  2 footplane, 0 h+n, 1 h+zup, 3 hori
         request.params.max_num_steps = len(goalSteps)
         request.params.min_num_steps = len(goalSteps)
+        #request.params.support_contact_groups = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
 
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
 
@@ -635,40 +635,6 @@ class ContinousWalkingDemo(object):
             print "Requested Footstep Plan, it will be AUTOMATICALLY EXECUTED"
         else:
             print "Requested Footstep Plan, it will be not be executed"
-
-    '''
-    def onFootContactContinuous(self,msg):
-
-        leftInContact = msg.left_contact > 0.0
-        rightInContact = msg.right_contact > 0.0
-
-        if (leftInContact and rightInContact):
-            contactState="both"
-        elif (leftInContact and not rightInContact):
-            contactState="left"
-        elif (not leftInContact and rightInContact):
-            contactState="right"
-        else:
-            contactState="none"
-            #print "No foot contacts. Error!"
-
-        replanNow = False
-        if (self.lastContactState is "both") and (contactState is "left"):
-            replanNow = True
-            standingFootName = self.ikPlanner.leftFootLink
-        if (self.lastContactState is "both") and (contactState is "right"):
-            replanNow = True
-            standingFootName = self.ikPlanner.rightFootLink
-
-        if (replanNow):
-            #print "contact: ", self.lastContactState, " to ", contactState
-            if (self.automaticContinuousWalkingEnabled):
-                self.makeReplanRequest(standingFootName)
-            else:
-                print "not enabled, not planning"
-
-        self.lastContactState = contactState
-    '''
 
     def onAtlasStepParams(self,msg):
         if (msg.desired_step_spec.foot_index ==1):
@@ -730,31 +696,9 @@ class ContinousWalkingDemo(object):
         if msg.num_steps <= 2:
             return
         
-        #if self.automaticContinuousWalkingEnabled:
-
-        print "Committing Footstep Plan for AUTOMATIC EXECUTION"
-        lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
-
-
-    '''
-    def onNextExpectedDoubleSupport(self, msg):
-
-        if not self.automaticContinuousWalkingEnabled:
-            return
-
-        assert msg.num_steps == 2
-        t1 = self.transformFromFootstep(msg.footsteps[0])
-        t2 = self.transformFromFootstep(msg.footsteps[1])
-
-        if msg.footsteps[0].is_right_foot:
-            t1, t2 = t2, t1
-
-        pose = self.getNextDoubleSupportPose(t1, t2)
-        self.displayExpectedPose(pose)
-
-        standingFootName = self.ikPlanner.rightFootLink if msg.footsteps[0].is_right_foot else self.ikPlanner.leftFootLink
-        self.makeReplanRequest(standingFootName, nextDoubleSupportPose=pose)
-    '''
+        if self.automaticContinuousWalkingEnabled:
+            print "Committing Footstep Plan for AUTOMATIC EXECUTION"
+            lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
     
     def onRobotStatus(self, msg):
         x = msg.pose.translation.x
@@ -869,8 +813,6 @@ class ContinousWalkingDemo(object):
             print 't1 and t2:' 
             print (transformUtils.poseFromTransform(t1))
             print (transformUtils.poseFromTransform(t2)) 
-            #print 'list lenght:'
-            #print (len(self.footStatus))
             '''
 
             if (distance > 0.65):
@@ -1077,6 +1019,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
                                                                                        'Stereo']))
         self.params.addProperty('Leading Foot', 0, attributes=om.PropertyAttributes(enumNames=['Left',
                                                                                        'Right']))
+        #self.params.addProperty('Support Contact Groups', 0, attributes=om.PropertyAttributes(enumNames=['Whole Foot', 'Front 2/3', 'Back 2/3']))
         self.params.addProperty('Continuous Walking', 0, attributes=om.PropertyAttributes(enumNames=['Enabled',
                                                                                        'Disabled']))
         self._syncProperties()
