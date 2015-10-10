@@ -7,6 +7,7 @@ import vtkNumpy
 import functools
 
 from ddapp import lcmUtils
+from ddapp import ioUtils
 from ddapp import segmentation
 from ddapp import objectmodel as om
 from ddapp import visualization as vis
@@ -690,6 +691,18 @@ class ContinousWalkingDemo(object):
 
         self.makeReplanRequest(leadFoot, removeFirstLeftStep = False, nextDoubleSupportPose=startPose)
 
+    def testContinuousWalking(self):
+
+        leadFoot=self.ikPlanner.leftFootLink
+
+        filename =  ddapp.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_simple_ihmc.vtp'
+        polyData = ioUtils.readPolyData( filename )
+        vis.showPolyData(polyData,'terrain_simple_ihmc.vtp')
+
+        startPose = self.robotStateJointController.getPose('EST_ROBOT_STATE')
+
+        self.replanFootsteps(polyData, leadFoot, removeFirstLeftStep= True, nextDoubleSupportPose = startPose)
+
 
     def onFootstepPlanContinuous(self, msg):
 
@@ -1010,7 +1023,9 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         self.addManualSpacer()
         self.addManualButton('Arms Up', self.continuousWalkingDemo.planHandsUp)
         self.addManualButton('Arms Down', self.continuousWalkingDemo.planHandsDown) 
-        self.addManualSpacer()    
+        self.addManualSpacer() 
+        self.addManualSpacer()
+        self.addManualButton('RUN Test', self.continuousWalkingDemo.testContinuousWalking)    
 
     def addDefaultProperties(self):
         self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=['Simple', 'Simple, no Gaps',
