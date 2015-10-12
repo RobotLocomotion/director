@@ -170,9 +170,9 @@ class ContinousWalkingDemo(object):
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewZ, origin=viewOrigin, resultArrayName='distance_along_foot_z')
 
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.12, 1.6])
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.4, 0.4])
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.4])
+        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.30, 1.6])
+        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.45, 0.45])
+        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.9])
 
         vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='cont debug', visible=True)
         return polyData
@@ -300,7 +300,8 @@ class ContinousWalkingDemo(object):
         blocksGood = []
         groundPlane = None
         for i, block in enumerate(blocks):
-            if ((block.rectWidth>0.45) or (block.rectDepth>0.90)):
+            #if ((block.rectWidth>0.45) or (block.rectDepth>0.90)):
+            if ((block.rectWidth>0.90) or (block.rectDepth>0.90)):
                 #print " ground plane",i,block.rectWidth,block.rectDepth
                 groundPlane = block
             elif ((block.rectWidth<0.30) or (block.rectDepth<0.20)): # was 0.34 and 0.30 for 13 block successful walk with lidar
@@ -697,9 +698,14 @@ class ContinousWalkingDemo(object):
 
         leadFoot=self.ikPlanner.leftFootLink
 
-        filename =  ddapp.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_simple_ihmc.vtp'
-        polyData = ioUtils.readPolyData( filename )
-        vis.showPolyData(polyData,'terrain_simple_ihmc.vtp')
+        if (self.chosenTerrain == 'stairs'):
+            filename =  ddapp.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_stairs_ihmc.vtp'
+            polyData = ioUtils.readPolyData( filename )
+            vis.showPolyData(polyData,'terrain_stairs_ihmc.vtp')
+        else:
+            filename =  ddapp.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_simple_ihmc.vtp'
+            polyData = ioUtils.readPolyData( filename )
+            vis.showPolyData(polyData,'terrain_simple_ihmc.vtp')
 
         startPose = self.robotStateJointController.getPose('EST_ROBOT_STATE')
 
