@@ -102,6 +102,7 @@ class ContinousWalkingDemo(object):
         self.automaticContinuousWalkingEnabled = True
         self.planFromCurrentRobotState = False
         self.chosenTerrain = 'Simple'
+        self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
 
         self.plans = []
         self.planned_footsteps = []
@@ -456,6 +457,7 @@ class ContinousWalkingDemo(object):
         request.params.nom_forward_step = 0.12
         request.params.nom_step_width = 0.22
         request.params.max_num_steps = 8 #2*len(blocks)
+        request.default_step_params.support_contact_groups = self.supportContact
 
         plan = self.footstepsPanel.driver.sendFootstepPlanRequest(request, waitForResponse=True)
 
@@ -628,7 +630,7 @@ class ContinousWalkingDemo(object):
         request.params.map_mode = 1 #  2 footplane, 0 h+n, 1 h+zup, 3 hori
         request.params.max_num_steps = len(goalSteps)
         request.params.min_num_steps = len(goalSteps)
-        #request.params.support_contact_groups = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
+        request.default_step_params.support_contact_groups = self.supportContact
 
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
 
@@ -1034,7 +1036,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
                                                                                        'Stereo']))
         self.params.addProperty('Leading Foot', 0, attributes=om.PropertyAttributes(enumNames=['Left',
                                                                                        'Right']))
-        #self.params.addProperty('Support Contact Groups', 0, attributes=om.PropertyAttributes(enumNames=['Whole Foot', 'Front 2/3', 'Back 2/3']))
+        self.params.addProperty('Support Contact Groups', 0, attributes=om.PropertyAttributes(enumNames=['Whole Foot', 'Front 2/3', 'Back 2/3']))
         self.params.addProperty('Continuous Walking', 0, attributes=om.PropertyAttributes(enumNames=['Enabled',
                                                                                        'Disabled']))
         self._syncProperties()
@@ -1050,8 +1052,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         elif self.params.getPropertyEnumValue('Terrain Type') == 'Uneven':
             self.continuousWalkingDemo.chosenTerrain = 'uneven'
         else:
-            self.continuousWalkingDemo.chosenTerrain = 'stairs'
-            
+            self.continuousWalkingDemo.chosenTerrain = 'stairs'         
 
         if self.params.getPropertyEnumValue('Sensor') == 'Stereo':
             self.continuousWalkingDemo.processContinuousStereo = True
@@ -1062,6 +1063,13 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
             self.continuousWalkingDemo.leadingFootByUser = 'Left'
         else:
             self.continuousWalkingDemo.leadingFootByUser = 'Right'
+
+        if self.params.getPropertyEnumValue('Support Contact Groups') == 'Whole Foot':
+            self.continuousWalkingDemo.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
+        elif self.params.getPropertyEnumValue('Support Contact Groups') == 'Front 2/3':
+            self.continuousWalkingDemo.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
+        else:
+            self.continuousWalkingDemo.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
 
         if self.params.getPropertyEnumValue('Continuous Walking') == 'Enabled':
             self.continuousWalkingDemo.automaticContinuousWalkingEnabled = True
