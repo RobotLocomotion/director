@@ -11,6 +11,7 @@ from ddapp import footstepsdriver
 from ddapp import vtkAll as vtk
 from ddapp import drcargs
 from ddapp import affordanceurdf
+from ddapp.roboturdf import HandFactory
 import ddapp.applogic as app
 
 import functools
@@ -562,9 +563,9 @@ class EndEffectorTeleopPanel(object):
                     endEffectorName = ikPlanner.handModels[1].handLinkName # 'r_hand'
 
                 constraints.append(ikPlanner.createActiveEndEffectorConstraint(endEffectorName,ikPlanner.getPalmPoint(self.reachSide)))
-        else:
-            constraints.append(ikPlanner.createDistanceToGoalConstraint(self.getFinalPoseGraspingHand(), self.getDistanceFromFrame()))
-            constraints.append(ikPlanner.createAxisLockConstraints(self.getFinalPoseGraspingHand(), self.getXAxisLock(), self.getYAxisLock(), self.getZAxisLock()))
+#        else:
+#            constraints.append(ikPlanner.createDistanceToGoalConstraint(self.getFinalPoseGraspingHand(), self.getDistanceFromFrame()))
+#            constraints.append(ikPlanner.createAxisLockConstraints(self.getFinalPoseGraspingHand(), self.getXAxisLock(), self.getYAxisLock(), self.getZAxisLock()))
 
         self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
 
@@ -709,12 +710,16 @@ class EndEffectorTeleopPanel(object):
     def rightGraspingHandButtonClicked(self):
         self.ui.rightGraspingHandButton.checked = True
         self.ui.leftGraspingHandButton.checked = False
+        self.terminateFinalPosePlanning()
+        self.initFinalPosePlanning()
         self.ui.rhandCombo.enabled = False
         self.ui.lhandCombo.enabled = True
 
     def leftGraspingHandButtonClicked(self):
         self.ui.rightGraspingHandButton.checked = False
         self.ui.leftGraspingHandButton.checked = True
+        self.terminateFinalPosePlanning()
+        self.initFinalPosePlanning()
         self.ui.rhandCombo.enabled = True
         self.ui.lhandCombo.enabled = False
     
@@ -727,12 +732,20 @@ class EndEffectorTeleopPanel(object):
             return
         pelvisFrame = self.panel.ikPlanner.robotModel.getLinkFrame(self.panel.ikPlanner.pelvisLink)
         t = transformUtils.copyFrame(pelvisFrame)
-        t.Concatenate(transformUtils.frameFromPositionAndRPY([0.4,0,0], [0,0,0]))
-        vis.updateFrame(t, 'Final Pose Frame', parent = 'planning')
+        t.PreMultiply()
+        if self.getFinalPoseGraspingHand() == 'left':
+            rotation = [0, 90, -90]
+        else:
+            rotation = [0, -90, -90]
+        t.Concatenate(transformUtils.frameFromPositionAndRPY([0.4,0,0], rotation))
+        handFactory = HandFactory(self.panel.teleopRobotModel)
+        handFactory.placeHandModelWithTransform(t, self.panel.teleopRobotModel.views[0],
+                                                self.getFinalPoseGraspingHand(), 'Final Pose End Effector', 'planning')
+        
         
     def terminateFinalPosePlanning(self):
-        finalPoseFrame = om.findObjectByName('Final Pose Frame')
-        om.removeFromObjectModel(finalPoseFrame)
+        finalPoseEE = om.findObjectByName('Final Pose End Effector')
+        om.removeFromObjectModel(finalPoseEE)
 
     def getFinalPoseGraspingHand(self):
         if self.ui.rightGraspingHandButton.checked:
@@ -759,7 +772,7 @@ class EndEffectorTeleopPanel(object):
             eeName = self.panel.ikPlanner.handModels[0].handLinkName
         else:
             eeName = self.panel.ikPlanner.handModels[1].handLinkName
-        endPose, info = self.constraintSet.searchFinalPose(eeName, om.findObjectByName('Final Pose Frame'))
+        endPose, info = self.constraintSet.searchFinalPose(eeName, om.findObjectByName('Final Pose End Effector frame'))
         self.panel.showPose(self.constraintSet.endPose)
         app.displaySnoptInfo(info)
 

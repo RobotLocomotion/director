@@ -104,7 +104,8 @@ class ConstraintSet(object):
         if not nominalPoseName:
             nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
-        self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, eeName, frame, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
+        graspPose = np.concatenate(transformUtils.poseFromTransform(frame.transform))
+        self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, eeName, graspPose, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
         print 'info:', self.info
         return self.endPose, self.info
 

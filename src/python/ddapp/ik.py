@@ -408,9 +408,9 @@ class AsyncIKCommunicator():
         commands.append('s = s.removeAffordanceFromLink(\'%s\', \'%s\');' % (linkName, affordanceName))
         self.comm.sendCommands(commands)
     
-    def searchFinalPose(self, constraints, eeName, frame, nominalPoseName, capabilityMapFile, ikParameters):
+    def searchFinalPose(self, constraints, eeName, eePose, nominalPoseName, capabilityMapFile, ikParameters):
         commands = []
-        xGoal = np.array(frame.transform.GetPosition())
+        commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
         constraintNames = []
         for constraintId, constraint in enumerate(constraints):
             if not constraint.enabled:
@@ -440,13 +440,16 @@ class AsyncIKCommunicator():
         commands.append('ikoptions = ikoptions.setMajorIterationsLimit({:d});'.format(ikParameters.majorIterationsLimit))
         commands.append('ikoptions = ikoptions.setQ(Q);')
         commands.append('ikoptions = ikoptions.setMajorOptimalityTolerance({:f});' .format(ikParameters.majorOptimalityTolerance))
-        commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}\', additional_constraints, goal_constraints,'
-                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions);'.format(xGoal, nominalPoseName))
+#        commands.append('{:s}'.format(ConstraintBase.toColumnVectorString(xGoal)))
+        commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}, additional_constraints,'
+                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions);'.format(ConstraintBase.toColumnVectorString(eePose), nominalPoseName))
         commands.append('[x_goal, info] = fpp.findFinalPose();')
         self.comm.sendCommands(commands)
 
-        endPose = self.comm.getFloatArray('x_goal(8:end)')
-        info = self.comm.getFloatArray('info')[0]
+#        endPose = self.comm.getFloatArray('x_goal(8:end)')
+#        info = self.comm.getFloatArray('info')[0]
+        endPose = []
+        info = 1
 
         return endPose, info
 #        commands.append(
