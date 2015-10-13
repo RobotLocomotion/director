@@ -79,13 +79,14 @@ class Footstep():
 
 
 class ContinousWalkingDemo(object):
-
-    LONG_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.17, 0.17],
+    BACK_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.07, 0.07],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 
-    SHORT_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.13, 0.13],
+    FRONT_FOOT_CONTACT_POINTS = np.array([[-0.03, -0.03, 0.17, 0.17],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 
+    FULL_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.17, 0.17],
+                                  [0.0562, -0.0562, 0.0562, -0.0562]])
     def __init__(self, robotStateModel, footstepsPanel, footstepsDriver, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
         self.footstepsPanel = footstepsPanel
         self.footstepsDriver = footstepsDriver
@@ -127,7 +128,6 @@ class ContinousWalkingDemo(object):
         self.fixBlockYawWithInitial = False
         self.initialRobotYaw = np.Inf
 
-        self.footContactPoints = self.LONG_FOOT_CONTACT_POINTS
         self._setupComplete = False
 
 
@@ -491,7 +491,15 @@ class ContinousWalkingDemo(object):
         assert step.shape[1] == 3
 
         shapeVertices = np.array(step).transpose()[:2,:]
-        s = ddapp.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=self.footContactPoints)
+
+        if (self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT):
+            footContactPoints = self.BACK_FOOT_CONTACT_POINTS
+        elif (self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE):
+            footContactPoints = self.FRONT_FOOT_CONTACT_POINTS
+        else:
+            footContactPoints = self.FULL_FOOT_CONTACT_POINTS
+
+        s = ddapp.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=footContactPoints)
 
         stepCenter = np.mean(step, axis=0)
         startSeed = np.hstack([stepCenter, rpySeed])
@@ -954,18 +962,6 @@ class ContinousWalkingDemo(object):
 
     def disableJointChecker(self):
         self.jointLimitChecker.automaticallyExtendLimits = True
-
-    def addToolbarMacros(self):
-
-        def useShortFoot():
-            self.footContactPoints = self.SHORT_FOOT_CONTACT_POINTS
-
-        def useLongFoot():
-            self.footContactPoints = self.LONG_FOOT_CONTACT_POINTS
-
-        applogic.addToolbarMacro('start continuous walk', self.startContinuousWalking)
-        applogic.addToolbarMacro('short foot', useShortFoot)
-        applogic.addToolbarMacro('long foot', useLongFoot)
 
     def addPlan(self, plan):
         self.plans.append(plan)
