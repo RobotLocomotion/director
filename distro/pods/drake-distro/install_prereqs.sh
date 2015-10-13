@@ -8,7 +8,9 @@ case $1 in
     brew install python numpy
     brew install vtk5 --with-qt ;;
   ("macports")
-    echo "WARNING: install_prereqs macports not implemented for this module" ;;
+    port install qt4-mac qwt
+    port install python27 py-pip py-numpy
+    port install vtk5 +qt4_mac +python27 ;;
   ("ubuntu")
     apt-get install libqt4-dev libvtk5-dev libvtk5-qt4-dev python-vtk python-numpy ;;
   ("cygwin")
