@@ -556,28 +556,30 @@ class FootstepsDriver(object):
         contact_pts_left = np.zeros((4,3))
         contact_pts_right = np.zeros((4,3))
 
-        # atlas:
-        if support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE:
-            contact_pts_left[0,:] = [-0.0876,  0.0626, -0.07645]
-            contact_pts_left[1,:] = [-0.0876, -0.0626, -0.07645]
-            contact_pts_left[2,:] = [0.1728,   0.0626, -0.07645]
-            contact_pts_left[3,:] = [0.1728,  -0.0626, -0.07645]
-        elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE:
-            contact_pts_left[0,:] = [-0.0008,  0.0626, -0.07645]
-            contact_pts_left[1,:] = [-0.0008, -0.0626, -0.07645]
-            contact_pts_left[2,:] = [0.1728,   0.0626, -0.07645]
-            contact_pts_left[3,:] = [0.1728,  -0.0626, -0.07645]
-        elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT:
-            contact_pts_left[0,:] = [-0.0876,  0.0626, -0.07645]
-            contact_pts_left[1,:] = [-0.0876, -0.0626, -0.07645]
-            contact_pts_left[2,:] = [0.086,   0.0626, -0.07645]
-            contact_pts_left[3,:] = [0.086,  -0.0626, -0.07645]
-        else:
-            raise ValueError("Unrecognized support contact group: {:d}".format(support_contact_groups))
+        if (_robotType == 0):
+            # atlas
+            if support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE:
+                contact_pts_left[0,:] = [-0.0876,  0.0626, -0.07645]
+                contact_pts_left[1,:] = [-0.0876, -0.0626, -0.07645]
+                contact_pts_left[2,:] = [0.1728,   0.0626, -0.07645]
+                contact_pts_left[3,:] = [0.1728,  -0.0626, -0.07645]
+            elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE:
+                contact_pts_left[0,:] = [-0.0008,  0.0626, -0.07645]
+                contact_pts_left[1,:] = [-0.0008, -0.0626, -0.07645]
+                contact_pts_left[2,:] = [0.1728,   0.0626, -0.07645]
+                contact_pts_left[3,:] = [0.1728,  -0.0626, -0.07645]
+            elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT:
+                contact_pts_left[0,:] = [-0.0876,  0.0626, -0.07645]
+                contact_pts_left[1,:] = [-0.0876, -0.0626, -0.07645]
+                contact_pts_left[2,:] = [0.086,   0.0626, -0.07645]
+                contact_pts_left[3,:] = [0.086,  -0.0626, -0.07645]
+            else:
+                raise ValueError("Unrecognized support contact group: {:d}".format(support_contact_groups))
 
-        contact_pts_right = contact_pts_left.copy()
+            contact_pts_right = contact_pts_left.copy()
 
         if (_robotType == 1):
+            #val v1
             contact_pts_left[0,:] = [0.110, 0.0624435, -0.22]
             contact_pts_left[1,:] = [0.110,-0.0624435, -0.22]
             contact_pts_left[2,:] = [0.075, 0.0624435, 0.0775]
@@ -586,12 +588,27 @@ class FootstepsDriver(object):
             contact_pts_right[1,:] = [0.075,-0.0624435, -0.0775]
             contact_pts_right[2,:] = [0.110, 0.0624435, 0.22]
             contact_pts_right[3,:] = [0.110,-0.0624435, 0.22]
+
         if (_robotType == 2):
-            # these are atlas values - not correct for val v2
-            contact_pts_left[0,:] = [-0.0676,  0.0624435, -0.07645]
-            contact_pts_left[1,:] = [-0.0676, -0.0624435, -0.07645]
-            contact_pts_left[2,:] = [0.1928,   0.0624435, -0.07645]
-            contact_pts_left[3,:] = [0.1928,  -0.0624435, -0.07645]
+            #val v2
+            if support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE:
+                contact_pts_left[0,:] = [-0.0676,  0.0624435, -0.07645]
+                contact_pts_left[1,:] = [-0.0676, -0.0624435, -0.07645]
+                contact_pts_left[2,:] = [0.1928,   0.0624435, -0.07645]
+                contact_pts_left[3,:] = [0.1928,  -0.0624435, -0.07645]
+            elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE:
+                contact_pts_left[0,:] = [0.0192,  0.0624435, -0.07645]
+                contact_pts_left[1,:] = [0.0192, -0.0624435, -0.07645]
+                contact_pts_left[2,:] = [0.1928,   0.0624435, -0.07645]
+                contact_pts_left[3,:] = [0.1928,  -0.0624435, -0.07645]
+            elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT:
+                contact_pts_left[0,:] = [-0.0676,  0.0624435, -0.07645]
+                contact_pts_left[1,:] = [-0.0676, -0.0624435, -0.07645]
+                contact_pts_left[2,:] = [0.106,   0.0624435, -0.07645]
+                contact_pts_left[3,:] = [0.106,  -0.0624435, -0.07645]
+            else:
+                raise ValueError("Unrecognized support contact group: {:d}".format(support_contact_groups))
+
             contact_pts_right = contact_pts_left.copy()
 
         return contact_pts_left, contact_pts_right
