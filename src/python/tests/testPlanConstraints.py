@@ -1,50 +1,15 @@
 from ddapp.consoleapp import ConsoleApp
 from ddapp import robotsystem
-from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import objectmodel as om
 from ddapp import ikplanner
-from ddapp import fieldcontainer
-from ddapp import transformUtils
+from ddapp import ikconstraintencoder as ce
 
-import ddapp.vtkAll as vtk
-
-from PythonQt import QtCore, QtGui
 import numpy as np
-
 import pprint
 import json
-import ddapp.thirdparty.numpyjsoncoder as nje
-from collections import OrderedDict
-
-######################
-
-class ConstraintEncoder(nje.NumpyEncoder):
-    def default(self, obj):
-        if isinstance(obj, vtk.vtkTransform):
-            pos, quat = transformUtils.poseFromTransform(obj)
-            return OrderedDict(position=pos, quaternion=quat)
-        elif isinstance(obj, fieldcontainer.FieldContainer):
-            d = OrderedDict()
-            d['class'] = type(obj).__name__
-            for key in obj._fields:
-                d[key] = getattr(obj, key)
-            return d
-        return nje.NumpyEncoder.default(self, obj)
-
-def ConstraintDecoder(dct):
-    return NumpyDecoder(dct)
-
-def encode(dataObj, **kwargs):
-    return json.dumps(dataObj, cls=ConstraintEncoder, **kwargs)
-
-def decode(dataStream):
-    return json.loads(dataStream, object_hook=ConstraintDecoder)
 
 
-
-
-######################
 def getRobotState():
     return robotStateJointController.q.copy()
 
@@ -79,16 +44,6 @@ def buildConstraints():
     return constraints
 
 
-def getPlanPoses(constraints):
-    '''
-    Given a list of constraints, returns a dictionary of poses containing all
-    the poses that are references by the constraints by name
-    '''
-
-    poses = sorted([c.postureName for c in constraints if hasattr(c, 'postureName')])
-    poses = {poseName:list(ikPlanner.jointController.getPose(poseName)) for poseName in poses}
-    return poses
-
 
 def testPlanConstraints():
 
@@ -97,17 +52,19 @@ def testPlanConstraints():
     ikPlanner.pushToMatlab = False
 
 
-
     constraints = buildConstraints()
-    poses = getPlanPoses(constraints)
+    poses = ce.getPlanPoses(constraints, ikPlanner)
+
 
     poseJsonStr = json.dumps(poses, indent=4)
-    constraintsJsonStr = encode(constraints, indent=4)
+    constraintsJsonStr = ce.encodeConstraints(constraints, indent=4)
 
     print poseJsonStr
     print constraintsJsonStr
 
-    #pprint.pprint(constraints)
+
+    constraints = ce.decodeConstraints(constraintsJsonStr)
+    pprint.pprint(constraints)
 
 
 

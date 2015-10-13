@@ -11,7 +11,7 @@ import drc as lcmdrc
 import pprint
 import json
 
-class ConstraintEncoder(nje.NumpyEncoder):
+class ConstraintEncoder(nje.NumpyConvertEncoder):
     def default(self, obj):
         if isinstance(obj, vtk.vtkTransform):
             pos, quat = transformUtils.poseFromTransform(obj)
@@ -22,8 +22,7 @@ class ConstraintEncoder(nje.NumpyEncoder):
             for key in obj._fields:
                 d[key] = getattr(obj, key)
             return d
-        return nje.NumpyEncoder.default(self, obj)
-
+        return nje.NumpyConvertEncoder.default(self, obj)
 
 
 def ConstraintDecoder(dct):
