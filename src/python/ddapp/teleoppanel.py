@@ -753,18 +753,6 @@ class EndEffectorTeleopPanel(object):
         else:
             return 'left'
 
-    def getDistanceFromFrame(self):
-        return self.ui.distanceSpinBox.value
-
-    def getXAxisLock(self):
-        return self.ui.xLockButton.checked
-
-    def getYAxisLock(self):
-        return self.ui.yLockButton.checked
-
-    def getZAxisLock(self):
-        return self.ui.zLockButton.checked
-
     def searchFinalPoseClicked(self):
         self.updateConstraints()
         self.updateCollisionEnvironment()
@@ -775,8 +763,8 @@ class EndEffectorTeleopPanel(object):
         palmToHand = palmToHand.GetLinearInverse()
         handTransform.Concatenate(palmToHand)
         endPose, info = self.constraintSet.searchFinalPose(self.getFinalPoseGraspingHand(), handTransform)
-        print endPose
-        self.panel.showPose(self.constraintSet.endPose)
+        if info == 1:
+            self.panel.showPose(self.constraintSet.endPose)
         app.displaySnoptInfo(info)
 
 

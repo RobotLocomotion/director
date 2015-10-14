@@ -110,7 +110,6 @@ class ConstraintSet(object):
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
         eePose = np.concatenate(transformUtils.poseFromTransform(eeTransform))
         self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, side, eeName, eePose, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
-        print self.endPose
         print 'info:', self.info
         return self.endPose, self.info
 

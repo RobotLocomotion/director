@@ -426,8 +426,6 @@ class AsyncIKCommunicator():
                             '|| isa({0:s}, \'EulerConstraint\') && {0:s}.body == eeId '
                             'goal_constraints = {{goal_constraints{{:}}, {0:s}}}; else '
                             'additional_constraints = {{additional_constraints{{:}}, {0:s}}};end'.format(constraint))
-        commands.append('goal_constraints')
-        commands.append('additional_constraints')
         commands.append('cost = Point(r.getPositionFrame(),10);')
         commands.append('for i = r.getNumBodies():-1:1 '
                         'if all(r.getBody(i).parent > 0) && all(r.getBody(r.getBody(i).parent).position_num > 0) '
@@ -445,9 +443,12 @@ class AsyncIKCommunicator():
                         '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions, \'graspinghand\', \'{:s}\');'.format(ConstraintBase.toColumnVectorString(eePose), nominalPoseName, side))
         commands.append('[x_goal, info] = fpp.findFinalPose();')
         self.comm.sendCommands(commands)
-
-        endPose = self.comm.getFloatArray('x_goal(8:end)')
+        
         info = self.comm.getFloatArray('info')[0]
+        if info == 1:
+            endPose = self.comm.getFloatArray('x_goal(8:end)')
+        else:
+            endPose = []
 
         return endPose, info
 #        commands.append(
