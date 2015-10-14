@@ -99,13 +99,18 @@ class ConstraintSet(object):
     def onFrameModified(self, frame):
         self.runIk()
     
-    def searchFinalPose(self, eeName, frame):
+    def searchFinalPose(self, side, eeTransform):
         nominalPoseName = self.nominalPoseName
         if not nominalPoseName:
             nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
+        if side == 'left':
+            eeName = self.ikPlanner.handModels[0].handLinkName
+        else:
+            eeName = self.ikPlanner.handModels[1].handLinkName
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
-        graspPose = np.concatenate(transformUtils.poseFromTransform(frame.transform))
-        self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, eeName, graspPose, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
+        eePose = np.concatenate(transformUtils.poseFromTransform(eeTransform))
+        self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, side, eeName, eePose, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
+        print self.endPose
         print 'info:', self.info
         return self.endPose, self.info
 

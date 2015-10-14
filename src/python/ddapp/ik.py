@@ -408,7 +408,7 @@ class AsyncIKCommunicator():
         commands.append('s = s.removeAffordanceFromLink(\'%s\', \'%s\');' % (linkName, affordanceName))
         self.comm.sendCommands(commands)
     
-    def searchFinalPose(self, constraints, eeName, eePose, nominalPoseName, capabilityMapFile, ikParameters):
+    def searchFinalPose(self, constraints, side, eeName, eePose, nominalPoseName, capabilityMapFile, ikParameters):
         commands = []
         commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
         constraintNames = []
@@ -442,14 +442,12 @@ class AsyncIKCommunicator():
         commands.append('ikoptions = ikoptions.setMajorOptimalityTolerance({:f});' .format(ikParameters.majorOptimalityTolerance))
 #        commands.append('{:s}'.format(ConstraintBase.toColumnVectorString(xGoal)))
         commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}, additional_constraints,'
-                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions);'.format(ConstraintBase.toColumnVectorString(eePose), nominalPoseName))
+                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions, \'graspinghand\', \'{:s}\');'.format(ConstraintBase.toColumnVectorString(eePose), nominalPoseName, side))
         commands.append('[x_goal, info] = fpp.findFinalPose();')
         self.comm.sendCommands(commands)
 
-#        endPose = self.comm.getFloatArray('x_goal(8:end)')
-#        info = self.comm.getFloatArray('info')[0]
-        endPose = []
-        info = 1
+        endPose = self.comm.getFloatArray('x_goal(8:end)')
+        info = self.comm.getFloatArray('info')[0]
 
         return endPose, info
 #        commands.append(

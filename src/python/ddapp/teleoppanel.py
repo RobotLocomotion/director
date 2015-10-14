@@ -768,11 +768,14 @@ class EndEffectorTeleopPanel(object):
     def searchFinalPoseClicked(self):
         self.updateConstraints()
         self.updateCollisionEnvironment()
-        if self.getFinalPoseGraspingHand() == 'left':
-            eeName = self.panel.ikPlanner.handModels[0].handLinkName
-        else:
-            eeName = self.panel.ikPlanner.handModels[1].handLinkName
-        endPose, info = self.constraintSet.searchFinalPose(eeName, om.findObjectByName('Final Pose End Effector frame'))
+        frame = om.findObjectByName('Final Pose End Effector frame')
+        handTransform = transformUtils.copyFrame(frame.transform)
+        handTransform.PreMultiply()
+        palmToHand = self.panel.ikPlanner.getPalmToHandLink(self.getFinalPoseGraspingHand())
+        palmToHand = palmToHand.GetLinearInverse()
+        handTransform.Concatenate(palmToHand)
+        endPose, info = self.constraintSet.searchFinalPose(self.getFinalPoseGraspingHand(), handTransform)
+        print endPose
         self.panel.showPose(self.constraintSet.endPose)
         app.displaySnoptInfo(info)
 
