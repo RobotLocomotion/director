@@ -2,6 +2,7 @@
 # that all the variables defined here become console variables.
 
 import ddapp
+from ddapp import irisdriver
 
 import os
 import sys
