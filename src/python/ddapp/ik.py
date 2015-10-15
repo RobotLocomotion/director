@@ -235,7 +235,7 @@ class AsyncIKCommunicator():
         self.fetchPoseFromServer('q_trajPose')
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0, elbowLinks = None, pelvisLink = None, graspToHandLinkFrame = None):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0, pelvisLink = None, graspToHandLinkFrame = None):
 
         if timeSamples is None:
             timeSamples = np.hstack([constraint.tspan for constraint in constraints])
@@ -309,8 +309,8 @@ class AsyncIKCommunicator():
             commands.append('[xtraj,info] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);')
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         elif ikParameters.useCollision == 'RRT*':
-            reachingElbowLink = ( elbowLinks[0] if ikParameters.rrtHand == 'left' else elbowLinks[1] )
-            commands.append('options.reachingElbowLink = \'%s\';' % reachingElbowLink)
+#            reachingElbowLink = ( elbowLinks[0] if ikParameters.rrtHand == 'left' else elbowLinks[1] )
+#            commands.append('options.reachingElbowLink = \'%s\';' % reachingElbowLink)
             commands.append('options.end_effector_name = end_effector_name;')
             commands.append("options.graspingHand = '%s';" % ikParameters.rrtHand)
             commands.append("options.pelvisLink = '%s';" % pelvisLink)
@@ -321,8 +321,7 @@ class AsyncIKCommunicator():
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
 
             commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options, active_constraints);\n' % (poseStart, poseEnd))
-            commands.append('[xGoalFull,info] = planner.findFinalPose();\n')
-            commands.append('[xtraj, info] = planner.findCollisionFreeTraj(xGoalFull);')
+            commands.append('[xtraj, info] = planner.findCollisionFreeTraj({:s});'.format(poseEnd))
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:
             commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(%s, 1, nt)));' % nominalPose)

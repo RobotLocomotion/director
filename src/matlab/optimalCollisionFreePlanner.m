@@ -149,10 +149,13 @@ classdef optimalCollisionFreePlanner
       [xGoalFull, info] = finalPose.findFinalPose(obj.optionsPlanner);
     end
     
-    function [xtraj, info] = findCollisionFreeTraj(obj,xGoalFull)
+    function [xtraj, info] = findCollisionFreeTraj(obj,xGoal)
       multiTree = MultipleTreeProblem(obj.robot, obj.endEffectorId, obj.xStart, obj.xGoal, [],...
         obj.additionalConstraints, obj.qNom,...
         'ikoptions', obj.ikoptions, 'endeffectorpoint', obj.point_in_link_frame);
+      kinsol = obj.robot.doKinematics(xGoal);
+      eePose = obj.robot.forwardKin(kinsol, obj.endEffectorId, obj.point_in_link_frame, 2);
+      xGoalFull = [eePose; xGoal];
       [~, info, ~, q_path] = multiTree.rrtStar(obj.optionsPlanner, xGoalFull);
       
       if info == 1

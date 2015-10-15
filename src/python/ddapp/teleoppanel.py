@@ -340,16 +340,18 @@ class EndEffectorTeleopPanel(object):
             self.panel.ikPlanner.ikServer.setEnvironment(urdfStr)
 
     def planClicked(self):
-        if not self.ui.eeTeleopButton.checked:
+        if not self.ui.eeTeleopButton.checked and not self.getCheckboxState(self.ui.finalPosePlanningOptions):
             return
         self.updateCollisionEnvironment()
         self.generatePlan()
 
     def generatePlan(self):
-
+        
         self.updateConstraints()
         if not self.ui.interactiveCheckbox.checked:
             self.updateIk()
+        if self.getCheckboxState(self.ui.finalPosePlanningOptions):
+            self.constraintSet.endPose = self.panel.ikPlanner.jointController.poses['reach_end']
 
         # todo- need an option here
         goalMode = ikplanner.getIkOptions().getProperty('Goal planning mode')
@@ -365,7 +367,6 @@ class EndEffectorTeleopPanel(object):
             for constraint in constraintToRemove:
                 self.constraintSet.constraints.remove(constraint)
             plan = self.constraintSet.runIkTraj()
-            self.updateConstraints()
         else:
             plan = self.constraintSet.planEndPoseGoal()
 
@@ -563,10 +564,6 @@ class EndEffectorTeleopPanel(object):
                     endEffectorName = ikPlanner.handModels[1].handLinkName # 'r_hand'
 
                 constraints.append(ikPlanner.createActiveEndEffectorConstraint(endEffectorName,ikPlanner.getPalmPoint(self.reachSide)))
-#        else:
-#            constraints.append(ikPlanner.createDistanceToGoalConstraint(self.getFinalPoseGraspingHand(), self.getDistanceFromFrame()))
-#            constraints.append(ikPlanner.createAxisLockConstraints(self.getFinalPoseGraspingHand(), self.getXAxisLock(), self.getYAxisLock(), self.getZAxisLock()))
-
         self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
 
 

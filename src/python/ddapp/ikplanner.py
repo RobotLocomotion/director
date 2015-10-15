@@ -110,6 +110,8 @@ class ConstraintSet(object):
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
         eePose = np.concatenate(transformUtils.poseFromTransform(eeTransform))
         self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, side, eeName, eePose, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
+        if self.info == 1:
+            self.ikPlanner.addPose(self.endPose, 'reach_end')
         print 'info:', self.info
         return self.endPose, self.info
 
@@ -1357,7 +1359,7 @@ class IKPlanner(object):
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
             listener = self.getManipPlanListener()
             info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples,
-                                           elbowLinks = self.elbowLinks, pelvisLink = self.pelvisLink, graspToHandLinkFrame = self.newGraspToHandFrame(ikParameters.rrtHand))
+                                           pelvisLink = self.pelvisLink, graspToHandLinkFrame = self.newGraspToHandFrame(ikParameters.rrtHand))
             self.lastManipPlan = listener.waitForResponse(timeout=12000)
             listener.finish()
 
