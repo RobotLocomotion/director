@@ -709,6 +709,7 @@ class EndEffectorTeleopPanel(object):
         self.ui.leftGraspingHandButton.checked = False
         self.terminateFinalPosePlanning()
         self.initFinalPosePlanning()
+        ikplanner.getIkOptions().setProperty('RRT hand', 1)
         self.ui.rhandCombo.enabled = False
         self.ui.lhandCombo.enabled = True
 
@@ -717,6 +718,7 @@ class EndEffectorTeleopPanel(object):
         self.ui.leftGraspingHandButton.checked = True
         self.terminateFinalPosePlanning()
         self.initFinalPosePlanning()
+        ikplanner.getIkOptions().setProperty('RRT hand', 0)
         self.ui.rhandCombo.enabled = True
         self.ui.lhandCombo.enabled = False
     
