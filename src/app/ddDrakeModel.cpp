@@ -50,6 +50,7 @@ using std::map;
 using std::vector;
 using std::string;
 using std::istringstream;
+using namespace Eigen;
 
 #if VTK_MAJOR_VERSION == 6
  #define SetInputData(filter, obj) filter->SetInputData(obj);
@@ -445,6 +446,8 @@ public:
 
   typedef std::map<std::shared_ptr<RigidBody>, std::vector<ddMeshVisual::Ptr> > MeshMapType;
 
+  std::shared_ptr<KinematicsCache<double> > cache;
+
   MeshMapType meshMap;
 
   std::map<std::string, int> dofMap;
@@ -703,7 +706,7 @@ public:
       //auto pt = model->forwardKinNew(Vector3d::Zero().eval(), body->body_index, 0, 2, 0);
       //pose = pt.value();
 
-      pose = model->forwardKin(Vector3d::Zero().eval(), body->body_index, 0, 2, 0).value();
+      pose = model->forwardKin(*this->cache, Vector3d::Zero().eval(), body->body_index, 0, 2, 0).value();
 
       double* posedata = pose.data();
 
@@ -773,7 +776,7 @@ public:
 
     RigidBodyManipulator* model = this;
 
-    pose = model->forwardKin(Vector3d::Zero().eval(), linkMap.value(linkName), 0, 2, 0).value();
+    pose = model->forwardKin(*this->cache, Vector3d::Zero().eval(), linkMap.value(linkName), 0, 2, 0).value();
 
     double* posedata = pose.data();
     bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
@@ -892,6 +895,12 @@ const ddSharedPtr<RigidBodyManipulator> ddDrakeModel::getDrakeRBM() const
 }
 
 //-----------------------------------------------------------------------------
+const ddSharedPtr<KinematicsCache<double> > ddDrakeModel::getKinematicsCache() const
+{
+  return this->Internal->Model->cache;
+}
+
+//-----------------------------------------------------------------------------
 int ddDrakeModel::numberOfJoints()
 {
   if (!this->Internal->Model)
@@ -977,7 +986,10 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
   }
 
   this->Internal->JointPositions = jointPositions;
-  model->doKinematics(q, v, false, false);
+
+  model->cache = std::make_shared<KinematicsCache<double> >(model->bodies, 0);
+  model->cache->initialize(q);
+  model->doKinematics(*model->cache);
   model->updateModel();
   emit this->modelChanged();
 }
@@ -1033,7 +1045,7 @@ QVector<double> ddDrakeModel::getCenterOfMass() const
 {
   URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
   Vector3d com;
-  com = model->centerOfMass<double>(0).value();
+  com = model->centerOfMass<double>(*model->cache, 0).value();
 
   QVector<double> ret;
   ret << com[0] << com[1] << com[2];

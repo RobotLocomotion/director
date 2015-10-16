@@ -12,7 +12,7 @@
 #include <math.h>
 
 using std::vector;
-
+using namespace Eigen;
 
 //-----------------------------------------------------------------------------
 ddDrakeWrapper::ddDrakeWrapper(QObject* parent) : QObject(parent)
@@ -44,7 +44,7 @@ QVector<double> ddDrakeWrapper::resolveCenterOfPressure(const ddDrakeModel& ddMo
     for (int j=0; j<6; j++) ft.wrench[j] = ft_in[i*6+j];
     force_torque_measurements.push_back(ft);
   }
-  std::pair<Eigen::Vector3d, double> ret_eigen = model->resolveCenterOfPressure(force_torque_measurements, normal, point_on_contact_plane);
+  std::pair<Eigen::Vector3d, double> ret_eigen= model->resolveCenterOfPressure(*ddModel.getKinematicsCache(), force_torque_measurements, normal, point_on_contact_plane);
   QVector<double> ret; for (int i=0; i<3; i++) ret << ret_eigen.first[i];
   ret << ret_eigen.second;
   return ret;

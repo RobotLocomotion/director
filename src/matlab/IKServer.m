@@ -140,7 +140,7 @@ classdef IKServer
       xyz = zeros(3,1);
       rpy = zeros(3,1);
       obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
-      obj.plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, obj.robot.getPositionFrame.coordinates);
+      obj.plan_publisher = RobotPlanPublisherWKeyFrames('CANDIDATE_MANIP_PLAN', true, obj.robot.getPositionFrame.getCoordinateNames);
       obj = obj.compile();
     end
 
@@ -244,7 +244,7 @@ classdef IKServer
       ts = xtraj.pp.breaks;
 
       sfine = linspace(ts(1), ts(end), 50);
-      coords = obj.robot.getStateFrame.coordinates(1:nq);
+      coords = obj.robot.getStateFrame.getCoordinateNames(1:nq);
       neck_idx = strcmp(coords, 'neck_ay');
       back_joints = cellfun(@(s) ~isempty(strfind(s,'back_bk')), coords);
 

@@ -22,6 +22,16 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+class NumpyConvertEncoder(json.JSONEncoder):
+    def default(self, obj):
+        """
+        if input object is a ndarray it will be converted to a Python list with ndarray.tolist
+        """
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+
 def NumpyDecoder(dct):
     """
     Decodes a previously encoded numpy ndarray

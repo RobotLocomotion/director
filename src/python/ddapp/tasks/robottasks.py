@@ -17,6 +17,7 @@ from ddapp.debugVis import DebugData
 from ddapp.robotplanlistener import ManipulationPlanItem
 from ddapp.footstepsdriver import FootstepPlanItem
 from ddapp import vtkAll as vtk
+from ddapp import lcmUtils
 import drc as lcmdrc
 import numpy as np
 import copy
@@ -697,6 +698,7 @@ class CloseHand(AsyncTask):
         properties.addProperty('Side', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         properties.addProperty('Mode', 0, attributes=om.PropertyAttributes(enumNames=['Basic', 'Pinch']))
         properties.addProperty('Amount', 100, attributes=propertyset.PropertyAttributes(minimum=0, maximum=100))
+        properties.addProperty('Check status', False)
 
     def getHandDriver(self, side):
         assert side in ('left', 'right')
@@ -706,6 +708,9 @@ class CloseHand(AsyncTask):
         side = self.properties.getPropertyEnumValue('Side').lower()
         self.getHandDriver(side).sendCustom(self.properties.getProperty('Amount'), 100, 100, self.properties.getProperty('Mode'))
 
+        if self.properties.getProperty('Check status'):
+            WaitForGraspingState(actionName='Grasp').run()
+
 
 class OpenHand(AsyncTask):
 
@@ -714,6 +719,7 @@ class OpenHand(AsyncTask):
         properties.addProperty('Side', 0, attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
         properties.addProperty('Mode', 0, attributes=om.PropertyAttributes(enumNames=['Basic', 'Pinch']))
         properties.addProperty('Amount', 100, attributes=propertyset.PropertyAttributes(minimum=0, maximum=100))
+        properties.addProperty('Check status', False)
 
     def getHandDriver(self, side):
         assert side in ('left', 'right')
@@ -723,6 +729,37 @@ class OpenHand(AsyncTask):
         side = self.properties.getPropertyEnumValue('Side').lower()
         self.getHandDriver(side).sendOpen()
         self.getHandDriver(side).sendCustom(100-self.properties.getProperty('Amount'), 100, 100, self.properties.getProperty('Mode'))
+
+        if self.properties.getProperty('Check status'):
+            WaitForGraspingState(actionName='Open').run()
+
+
+class WaitForGraspingState(AsyncTask):
+
+    @staticmethod
+    def getDefaultProperties(properties):
+        properties.addProperty('Channel name', 'GRASPING_STATE')
+        properties.addProperty('Action name', 0, attributes=om.PropertyAttributes(enumNames=['Open', 'Grasp']))
+        # TODO: properties for timeout, responseMessageClass, expectedResponse
+
+    def run(self):
+        responseMessageClass = lcmdrc.boolean_t
+        grasping_state = lcmUtils.MessageResponseHelper(self.properties.getProperty('Channel name'), responseMessageClass).waitForResponse(timeout=7000)
+
+        if grasping_state is not None and self.properties.getPropertyEnumValue('Action name') == 'Open':
+            if grasping_state.data == 0:
+                # print "Hand opening successful"
+                self.statusMessage = "Hand opening successful"
+            else:
+                self.fail("Could not open hand")
+        elif grasping_state is not None and self.properties.getPropertyEnumValue('Action name') == 'Grasp':
+            if grasping_state.data == 1:
+                # print "Grasping successful"
+                self.statusMessage = "Grasping successful"
+            else:
+                self.fail("No object in hand")
+        else:
+            self.fail("Grasping state timeout")
 
 
 class CommitFootstepPlan(AsyncTask):

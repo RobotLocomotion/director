@@ -214,16 +214,30 @@ if(pkg_deps)
   use_pkg(ddApp ${pkg_deps})
 endif()
 
-add_executable(drake-designer main.cpp)
-target_link_libraries(drake-designer ddApp)
+set(_install_targets ddApp ddConsoleApp drake-visualizer)
+
+add_executable(drake-visualizer drakeVisualizerApp.cpp)
+target_link_libraries(drake-visualizer ddApp)
+
+if(USE_DRC)
+  add_executable(drake-designer main.cpp)
+  target_link_libraries(drake-designer ddApp)
+  list(APPEND _install_targets drake-designer)
+endif()
 
 add_executable(ddConsoleApp consoleApp.cpp)
 target_link_libraries(ddConsoleApp ddApp ${PYTHON_LIBRARIES})
 
-install(TARGETS drake-designer ddConsoleApp ddApp
+install(TARGETS ${_install_targets}
     RUNTIME DESTINATION ${DD_INSTALL_BIN_DIR}
     LIBRARY DESTINATION ${DD_INSTALL_LIB_DIR}
     ARCHIVE DESTINATION ${DD_INSTALL_LIB_DIR})
+
+if(APPLE)
+  install(DIRECTORY drake-visualizer.app
+      DESTINATION ${DD_INSTALL_BIN_DIR}
+      USE_SOURCE_PERMISSIONS)
+endif()
 
 add_custom_command(OUTPUT ${decorator_file}
   COMMAND ${PYTHON_EXECUTABLE} WrapPythonQt.py

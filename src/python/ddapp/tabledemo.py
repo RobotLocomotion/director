@@ -4,6 +4,8 @@ import math
 import functools
 import numpy as np
 
+import drcargs
+
 from ddapp import transformUtils
 
 from ddapp.asynctaskqueue import AsyncTaskQueue
@@ -254,9 +256,6 @@ class TableDemo(object):
             
         self.affordanceUpdater.graspAffordance(obj.getProperty('Name'), side)
 
-        if self.ikPlanner.fixedBaseArm: # if we're dealing with the real world, close hand
-            self.closeHand(side)
-            return self.delay(5) # wait for three seconds to allow for hand to close
 
     def dropTableObject(self, side='left'):
 
@@ -1192,19 +1191,29 @@ class TableTaskPanel(TaskUserPanel):
         self.addManualButton('Read SDF & Sim', self.tableDemo.loadSDFFileAndRunSim)
 
     def addDefaultProperties(self):
-        self.params.addProperty('Hand', 0,
+        # TODO: if there is a way not to display a property where there is only one value, that'd be great
+
+        if len(drcargs.getDirectorConfig()['handCombinations']) > 1:  # more than one hand
+            self.params.addProperty('Hand', 0,
                                 attributes=om.PropertyAttributes(enumNames=['Left', 'Right']))
-        self.params.addProperty('Base', 1,
-                                attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        if self.tableDemo.ikPlanner.fixedBaseArm:
-            self.params.addProperty('Back', 0,
-                                    attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         else:
+            # Hard-coded left for now per convention, can also be generic per drcargs.getDirectorConfig()['handCombinations']['side']
+            self.params.addProperty('Hand', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Left']))
+
+        if self.tableDemo.ikPlanner.fixedBaseArm:
+            self.params.addProperty('Base', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed']))
+            self.params.addProperty('Back', 0,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed']))
+        else: # floating base
+            self.params.addProperty('Base', 1,
+                                attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
             self.params.addProperty('Back', 1,
                                     attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
 
         # Hand control for Kuka LWR / Schunk SDH
-        if self.tableDemo.ikPlanner.fixedBaseArm:
+        if 'userConfig' in drcargs.getDirectorConfig() and 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
             self.params.addProperty('Hand Engaged (Powered)', False)
 
         # If we're dealing with humanoids, offer the scene selector
@@ -1297,6 +1306,24 @@ class TableTaskPanel(TaskUserPanel):
                    addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'), parent=group)
                         
 
+        def addGrasping(mode, name, parent=None, confirm=False):
+            assert mode in ('open', 'close')
+            group = self.taskTree.addGroup(name, parent=parent)
+            side = self.params.getPropertyEnumValue('Hand')
+
+            checkStatus = False  # whether to confirm that there is an object in the hand when closed
+            if 'userConfig' in drcargs.getDirectorConfig() and 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
+                checkStatus = True
+
+            if mode == 'open':
+                addTask(rt.OpenHand(name='open grasp hand', side=side, CheckStatus=checkStatus), parent=group)
+            else:
+                addTask(rt.CloseHand(name='close grasp hand', side=side, CheckStatus=checkStatus), parent=group)
+            if confirm:
+                addTask(rt.UserPromptTask(name='Confirm grasping has succeeded', message='Continue when grasp finishes.'),
+                        parent=group)
+
+
         v = self.tableDemo
 
         self.taskTree.removeAllTasks()
@@ -1311,12 +1338,12 @@ class TableTaskPanel(TaskUserPanel):
         if v.ikPlanner.fixedBaseArm:
             if not v.useDevelopment:
                 addManipulation(functools.partial(v.planPostureFromDatabase, 'roomMapping', 'p3_down', side='left'), 'go to pre-mapping pose')
-        # TODO: mapping
+        # TODO(wxm): mapping
 
         # prep
         prep = self.taskTree.addGroup('Preparation')
         if v.ikPlanner.fixedBaseArm:
-            addTask(rt.OpenHand(name='open hand', side=side), parent=prep)
+            addGrasping('open', name='open hand', parent=prep, confirm=False)
             if v.useDevelopment:
                 addFunc(v.prepKukaTestDemoSequence, 'prep from file', parent=prep)
             else:

@@ -7,6 +7,7 @@ import vtkNumpy
 import functools
 
 from ddapp import lcmUtils
+from ddapp import ioUtils
 from ddapp import segmentation
 from ddapp import objectmodel as om
 from ddapp import visualization as vis
@@ -78,15 +79,17 @@ class Footstep():
 
 
 class ContinousWalkingDemo(object):
-
-    LONG_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.17, 0.17],
+    BACK_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.07, 0.07],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 
-    SHORT_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.13, 0.13],
+    FRONT_FOOT_CONTACT_POINTS = np.array([[-0.03, -0.03, 0.17, 0.17],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
 
-    def __init__(self, robotStateModel, footstepsPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
+    FULL_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.17, 0.17],
+                                  [0.0562, -0.0562, 0.0562, -0.0562]])
+    def __init__(self, robotStateModel, footstepsPanel, footstepsDriver, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
         self.footstepsPanel = footstepsPanel
+        self.footstepsDriver = footstepsDriver
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
         self.ikPlanner = ikPlanner
@@ -96,12 +99,17 @@ class ContinousWalkingDemo(object):
         self.jointLimitChecker = jointLimitChecker
 
         # live operation flags
+        self.leadingFootByUser = 'Left'
+        self.automaticContinuousWalkingEnabled = True
         self.planFromCurrentRobotState = False
+        self.chosenTerrain = 'Simple'
+        self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
 
         self.plans = []
         self.planned_footsteps = []
         self.footStatus = []
         self.footStatus_right = []
+        self.footStatus_left = []
         self.tf_robotStatus = None
         self.transforms_series = []
 
@@ -120,7 +128,6 @@ class ContinousWalkingDemo(object):
         self.fixBlockYawWithInitial = False
         self.initialRobotYaw = np.Inf
 
-        self.footContactPoints = self.LONG_FOOT_CONTACT_POINTS
         self._setupComplete = False
 
 
@@ -138,7 +145,6 @@ class ContinousWalkingDemo(object):
         #footContactSubContinuous.setSpeedLimit(60)
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
-        lcmUtils.addSubscriber('NEXT_EXPECTED_DOUBLE_SUPPORT', lcmdrc.footstep_plan_t, self.onNextExpectedDoubleSupport)
         lcmUtils.addSubscriber('IHMC_FOOTSTEP_STATUS', lcmipab.footstep_status_t, self.onFootstepStatus)
         lcmUtils.addSubscriber('EST_ROBOT_STATE', lcmdrc.robot_state_t, self.onRobotStatus)
         stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
@@ -164,9 +170,9 @@ class ContinousWalkingDemo(object):
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewZ, origin=viewOrigin, resultArrayName='distance_along_foot_z')
 
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.12, 1.6])
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.4, 0.4])
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.4])
+        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.30, 1.6])
+        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.45, 0.45])
+        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.9])
 
         vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='cont debug', visible=True)
         return polyData
@@ -294,7 +300,8 @@ class ContinousWalkingDemo(object):
         blocksGood = []
         groundPlane = None
         for i, block in enumerate(blocks):
-            if ((block.rectWidth>0.45) or (block.rectDepth>0.90)):
+            #if ((block.rectWidth>0.45) or (block.rectDepth>0.90)):
+            if ((block.rectWidth>0.90) or (block.rectDepth>0.90)):
                 #print " ground plane",i,block.rectWidth,block.rectDepth
                 groundPlane = block
             elif ((block.rectWidth<0.30) or (block.rectDepth<0.20)): # was 0.34 and 0.30 for 13 block successful walk with lidar
@@ -451,6 +458,7 @@ class ContinousWalkingDemo(object):
         request.params.nom_forward_step = 0.12
         request.params.nom_step_width = 0.22
         request.params.max_num_steps = 8 #2*len(blocks)
+        request.default_step_params.support_contact_groups = self.supportContact
 
         plan = self.footstepsPanel.driver.sendFootstepPlanRequest(request, waitForResponse=True)
 
@@ -483,7 +491,15 @@ class ContinousWalkingDemo(object):
         assert step.shape[1] == 3
 
         shapeVertices = np.array(step).transpose()[:2,:]
-        s = ddapp.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=self.footContactPoints)
+
+        if (self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT):
+            footContactPoints = self.BACK_FOOT_CONTACT_POINTS
+        elif (self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE):
+            footContactPoints = self.FRONT_FOOT_CONTACT_POINTS
+        else:
+            footContactPoints = self.FULL_FOOT_CONTACT_POINTS
+
+        s = ddapp.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=footContactPoints)
 
         stepCenter = np.mean(step, axis=0)
         startSeed = np.hstack([stepCenter, rpySeed])
@@ -565,9 +581,7 @@ class ContinousWalkingDemo(object):
 
         if not self.useManualFootstepPlacement and self.queryPlanner:
             footsteps = self.computeFootstepPlanSafeRegions(blocks, nextDoubleSupportPose, standingFootName)
-
         else:
-
             footsteps = self.placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep)
 
             if not len(footsteps):
@@ -579,10 +593,11 @@ class ContinousWalkingDemo(object):
                 self.drawFittedSteps(footsteps)
 
         if (len(footsteps) > 2):
-            #self.footStatus_right[:] = []
             self.planned_footsteps[:] = []
-	    self.planned_footsteps.extend(footsteps)
+            self.planned_footsteps.extend(footsteps)
             self.footstep_index = -1
+            self.new_status = False
+            self.new_first_double_supp = False
         
         #print 'planned_footsteps:'
         f0 = self.planned_footsteps[0]
@@ -624,47 +639,14 @@ class ContinousWalkingDemo(object):
         request.params.map_mode = 1 #  2 footplane, 0 h+n, 1 h+zup, 3 hori
         request.params.max_num_steps = len(goalSteps)
         request.params.min_num_steps = len(goalSteps)
+        request.default_step_params.support_contact_groups = self.supportContact
 
         lcmUtils.publish('FOOTSTEP_PLAN_REQUEST', request)
 
-        #if (self.navigationPanel.automaticContinuousWalkingEnabled):
-        #    print "Requested Footstep Plan, it will be AUTOMATICALLY EXECUTED"
-        #else:
-        #    print "Requested Footstep Plan, it will be not be executed"
-
-
-    def onFootContactContinuous(self,msg):
-
-        leftInContact = msg.left_contact > 0.0
-        rightInContact = msg.right_contact > 0.0
-
-        if (leftInContact and rightInContact):
-            contactState="both"
-        elif (leftInContact and not rightInContact):
-            contactState="left"
-        elif (not leftInContact and rightInContact):
-            contactState="right"
+        if (self.automaticContinuousWalkingEnabled):
+            print "Requested Footstep Plan, it will be AUTOMATICALLY EXECUTED"
         else:
-            contactState="none"
-            #print "No foot contacts. Error!"
-
-        replanNow = False
-        if (self.lastContactState is "both") and (contactState is "left"):
-            replanNow = True
-            standingFootName = self.ikPlanner.leftFootLink
-        if (self.lastContactState is "both") and (contactState is "right"):
-            replanNow = True
-            standingFootName = self.ikPlanner.rightFootLink
-
-        if (replanNow):
-            #print "contact: ", self.lastContactState, " to ", contactState
-            if (self.navigationPanel.automaticContinuousWalkingEnabled):
-                self.makeReplanRequest(standingFootName)
-            else:
-                print "not enabled, not planning"
-
-        self.lastContactState = contactState
-
+            print "Requested Footstep Plan, it will be not be executed"
 
     def onAtlasStepParams(self,msg):
         if (msg.desired_step_spec.foot_index ==1):
@@ -686,7 +668,7 @@ class ContinousWalkingDemo(object):
         obj.actor.SetUserTransform(footTransform)
 
 
-    def makeReplanRequest(self, standingFootName, removeFirstLeftStep = True, nextDoubleSupportPose=None):
+    def makeReplanRequest(self, standingFootName, removeFirstLeftStep = False, nextDoubleSupportPose=None):
 
         if (self.processContinuousStereo):
             polyData = self.cameraView.getStereoPointCloud(2,'CAMERA_FUSED', cameraName='CAMERA_TSDF', removeSize=4000)
@@ -705,7 +687,10 @@ class ContinousWalkingDemo(object):
     def startContinuousWalking(self, leadFoot=None):
         
         if (leadFoot is None):
-            leadFoot=self.ikPlanner.leftFootLink #'l_foot'
+            if self.leadingFootByUser == 'Right':
+                leadFoot=self.ikPlanner.rightFootLink #'r_foot'
+            else:
+                leadFoot=self.ikPlanner.leftFootLink #'l_foot'
 
         self._setupOnce()
 
@@ -717,38 +702,33 @@ class ContinousWalkingDemo(object):
 
         self.makeReplanRequest(leadFoot, removeFirstLeftStep = False, nextDoubleSupportPose=startPose)
 
+    def testContinuousWalking(self):
+
+        leadFoot=self.ikPlanner.leftFootLink
+
+        if (self.chosenTerrain == 'stairs'):
+            filename =  ddapp.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_stairs_ihmc.vtp'
+            polyData = ioUtils.readPolyData( filename )
+            vis.showPolyData(polyData,'terrain_stairs_ihmc.vtp')
+        else:
+            filename =  ddapp.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_simple_ihmc.vtp'
+            polyData = ioUtils.readPolyData( filename )
+            vis.showPolyData(polyData,'terrain_simple_ihmc.vtp')
+
+        startPose = self.robotStateJointController.getPose('EST_ROBOT_STATE')
+
+        self.replanFootsteps(polyData, leadFoot, removeFirstLeftStep= True, nextDoubleSupportPose = startPose)
+
 
     def onFootstepPlanContinuous(self, msg):
 
         if msg.num_steps <= 2:
             return
-        '''
-        if self.navigationPanel.automaticContinuousWalkingEnabled:
+        
+        if self.automaticContinuousWalkingEnabled:
             print "Committing Footstep Plan for AUTOMATIC EXECUTION"
             lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
-        '''
-        print "Committing Footstep Plan for AUTOMATIC EXECUTION"
-        lcmUtils.publish('COMMITTED_FOOTSTEP_PLAN', msg)
-
-    def onNextExpectedDoubleSupport(self, msg):
-
-        if not self.navigationPanel.automaticContinuousWalkingEnabled:
-            return
-
-
-        assert msg.num_steps == 2
-        t1 = self.transformFromFootstep(msg.footsteps[0])
-        t2 = self.transformFromFootstep(msg.footsteps[1])
-
-        if msg.footsteps[0].is_right_foot:
-            t1, t2 = t2, t1
-
-        pose = self.getNextDoubleSupportPose(t1, t2)
-        self.displayExpectedPose(pose)
-
-        standingFootName = self.ikPlanner.rightFootLink if msg.footsteps[0].is_right_foot else self.ikPlanner.leftFootLink
-        self.makeReplanRequest(standingFootName, nextDoubleSupportPose=pose)
-
+    
     def onRobotStatus(self, msg):
         x = msg.pose.translation.x
         y = msg.pose.translation.y
@@ -765,13 +745,10 @@ class ContinousWalkingDemo(object):
         '''
 
     def onFootstepStatus(self, msg):
-        #print "got message"
-        
+        if not self.automaticContinuousWalkingEnabled:
+            return
+
         import ipab
-        #print  msg.actual_foot_position_in_world[0], msg.actual_foot_position_in_world[1], msg.actual_foot_position_in_world[2]
-        #print  msg.actual_foot_orientation_in_world[0], msg.actual_foot_orientation_in_world[1], msg.actual_foot_orientation_in_world[2], msg.actual_foot_orientation_in_world[3]
-        #print  msg.LEFT
-        #print  msg.RIGHT
         x = msg.actual_foot_position_in_world[0]
         y = msg.actual_foot_position_in_world[1]
         z = msg.actual_foot_position_in_world[2]
@@ -780,16 +757,20 @@ class ContinousWalkingDemo(object):
         q3 = msg.actual_foot_orientation_in_world[2]
         q4 = msg.actual_foot_orientation_in_world[3] 
 
-        if msg.status == 1:
+        if msg.status == 1 and self.new_status:	#valid message
+      
+            self.new_status = False
+
             tf_footStatus = transformUtils.transformFromPose([x,y,z], [q1,q2,q3,q4])
             self.transforms_series[:] = []
             self.transforms_series.append(tf_footStatus) 
             self.transforms_series.append(self.tf_robotStatus.GetInverse())
             tf_foot_robot = transformUtils.concatenateTransforms(self.transforms_series)
-            
-            self.footstep_index = self.footstep_index + 1
+            #vis.showFrame(self.tf_robotStatus,'tf_robotStatus')
+            #vis.showFrame(tf_foot_robot,'tf_foot_robot')
        
-            # Check what foot is in contact
+            # Increases at each contact     
+            self.footstep_index = self.footstep_index + 1   
             #print 'self.footstep_index'
             #print self.footstep_index
 
@@ -799,50 +780,80 @@ class ContinousWalkingDemo(object):
                 current_left = True
             else:
                 current_left = False  
-            #print 'current:'
-            #print (current_pos)
-            #print 'robot:'
-            #print (robot_pos)
-            #print 'Left?'
-            #print current_left
-
-            # I want to take the first status for the LEFT foot
-            if self.new_status and current_left:
-                # left foot in contact (reached left single support)
-            	self.footStatus.append(Footstep(tf_footStatus, 0))
-                self.new_first_double_supp = True
-                self.new_status = False
-                # right foot expected pose (from planning)   
-                if self.footstep_index+1 < len(self.planned_footsteps):
-                    if (self.planned_footsteps[self.footstep_index+1].is_right_foot):
-                        self.footStatus.append(self.planned_footsteps[self.footstep_index+1])
+            
+            '''
+            print 'current:'
+            print (current_pos)
+            print 'robot:'
+            print (robot_pos)
+            print 'Left?'
+            print current_left
+            '''
+            if (self.leadingFootByUser == 'Left'):
+                # I want to take the first status for the LEFT foot
+                if current_left:
+                    # left foot in contact (reached left single support)
+                    self.footStatus.append(Footstep(tf_footStatus, 0))
+                    self.new_first_double_supp = True
+                    # right foot expected pose (from planning)   
+                    if self.footstep_index+1 < len(self.planned_footsteps):
+                        if (self.planned_footsteps[self.footstep_index+1].is_right_foot):
+                            self.footStatus.append(self.planned_footsteps[self.footstep_index+1])
+                        else:
+                            self.footStatus.append(self.planned_footsteps[self.footstep_index])
                     else:
-                        self.footStatus.append(self.planned_footsteps[self.footstep_index])
+                        self.footStatus.append(self.footStatus_right[len(self.footStatus_right)-1])
+                    self.footStatus_left.append(Footstep(tf_footStatus, 0))
                 else:
-                    self.footStatus.append(self.footStatus_right[len(self.footStatus_right)-1])
-            elif not current_left:
-                # right foot in contact
-            	self.footStatus_right.append(Footstep(tf_footStatus, 1))
-        else: 
+                    # right foot in contact
+                	self.footStatus_right.append(Footstep(tf_footStatus, 1))
+            else:
+                # I want to take the first status for the RIGHT foot
+                if not current_left:
+                    self.new_first_double_supp = True
+                    # left foot expected pose (from planning)   
+                    if self.footstep_index+1 < len(self.planned_footsteps):
+                        if not (self.planned_footsteps[self.footstep_index+1].is_right_foot):
+                            self.footStatus.append(self.planned_footsteps[self.footstep_index+1])
+                        else:
+                            self.footStatus.append(self.planned_footsteps[self.footstep_index])
+                    else:
+                        self.footStatus.append(self.footStatus_left[len(self.footStatus_left)-1])
+                    self.footStatus_right.append(Footstep(tf_footStatus, 1))
+                else:
+                    # left foot in contact
+                    self.footStatus_left.append(Footstep(tf_footStatus, 0))
+                # right foot in contact (reached right single support)
+                self.footStatus.append(Footstep(tf_footStatus, 1))
+        elif msg.status == 0: 
             self.new_status = True
 
-        if (len(self.footStatus) > 0 and self.new_first_double_supp):
+        if self.footstep_index != -1 and len(self.footStatus) > 0 and self.new_first_double_supp:
+            self.new_first_double_supp = False
+
             t1 = self.footStatus[len(self.footStatus)-2].transform
             t2 = self.footStatus[len(self.footStatus)-1].transform
-            #print 't1 and t2:' 
-            #print (transformUtils.poseFromTransform(t1))
-            #print (transformUtils.poseFromTransform(t2)) 
-            #print 'list lenght:'
-            #print (len(self.footStatus))
-            self.new_first_double_supp = False
-            
+            [t1_pos, t1_ori] = transformUtils.poseFromTransform(t1)
+            [t2_pos, t2_ori] = transformUtils.poseFromTransform(t2)
+            distance = pow(pow(t1_pos[0]-t2_pos[0],2)+pow(t1_pos[1]-t2_pos[1],2)+pow(t1_pos[2]-t2_pos[2],2),0.5)
+            '''
+            print 'distance:'
+            print distance
+            print 't1 and t2:' 
+            print (transformUtils.poseFromTransform(t1))
+            print (transformUtils.poseFromTransform(t2)) 
+            '''
+
+            if (distance > 0.65):
+                t1 = self.footStatus_left[len(self.footStatus_left)-1].transform
+                t2 = self.footStatus_right[len(self.footStatus_right)-1].transform
+            '''
             if self.footStatus[len(self.footStatus)-2].is_right_foot:
                 t1, t2 = t2, t1
-            
+            '''    
             pose = self.getNextDoubleSupportPose(t1, t2)
-            self.displayExpectedPose(pose)
 
-            standingFootName = self.ikPlanner.rightFootLink if self.footStatus[len(self.footStatus)-2].is_right_foot else self.ikPlanner.leftFootLink
+            standingFootName = self.ikPlanner.rightFootLink if self.leadingFootByUser == 'Right' else self.ikPlanner.leftFootLink
             self.makeReplanRequest(standingFootName, removeFirstLeftStep = False, nextDoubleSupportPose=pose)
 
     def testDouble():
@@ -891,6 +902,7 @@ class ContinousWalkingDemo(object):
     def displayExpectedPose(self, nextDoubleSupportPose):
         self.teleopJointController.setPose('double_support_pose', nextDoubleSupportPose)
         om.getOrCreateContainer('teleop model').setProperty('Visible',True)
+        om.getOrCreateContainer('teleop model').setProperty('Textures',False)
 
 
     def makeDebugRegions(self):
@@ -928,13 +940,17 @@ class ContinousWalkingDemo(object):
 
         self.footstepsPanel.onNewWalkingGoal(goalFrame)
 
-    def loadSDFFileAndRunSim(self, kindOfTerrain):
+    def loadSDFFileAndRunSim(self):
         from ddapp import sceneloader
 
-        if kindOfTerrain == 'simple':
+        if self.chosenTerrain == 'simple':
             filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_simple.sdf'
-        elif kindOfTerrain == 'uneven':
+        elif self.chosenTerrain == 'simple_nogaps':
+            filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_simple_nogaps.sdf'
+        elif self.chosenTerrain == 'uneven':
             filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_uneven.sdf'
+        elif self.chosenTerrain == 'stairs':
+            filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_stairs.sdf'
         
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
@@ -946,18 +962,6 @@ class ContinousWalkingDemo(object):
 
     def disableJointChecker(self):
         self.jointLimitChecker.automaticallyExtendLimits = True
-
-    def addToolbarMacros(self):
-
-        def useShortFoot():
-            self.footContactPoints = self.SHORT_FOOT_CONTACT_POINTS
-
-        def useLongFoot():
-            self.footContactPoints = self.LONG_FOOT_CONTACT_POINTS
-
-        applogic.addToolbarMacro('start continuous walk', self.startContinuousWalking)
-        applogic.addToolbarMacro('short foot', useShortFoot)
-        applogic.addToolbarMacro('long foot', useLongFoot)
 
     def addPlan(self, plan):
         self.plans.append(plan)
@@ -1022,25 +1026,59 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         self.addManualButton('Neck Down', self.continuousWalkingDemo.planNeckDown)
         self.addManualSpacer()
         self.addManualButton('Arms Up', self.continuousWalkingDemo.planHandsUp)
-        self.addManualButton('Arms Down', self.continuousWalkingDemo.planHandsDown)      
+        self.addManualButton('Arms Down', self.continuousWalkingDemo.planHandsDown) 
+        self.addManualSpacer() 
+        self.addManualSpacer()
+        self.addManualButton('RUN Test', self.continuousWalkingDemo.testContinuousWalking)    
 
     def addDefaultProperties(self):
+        self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=['Simple', 'Simple, no Gaps',
+                                                                                       'Uneven', 'Stairs']))
         self.params.addProperty('Sensor', 0, attributes=om.PropertyAttributes(enumNames=['Lidar',
                                                                                        'Stereo']))
+        self.params.addProperty('Leading Foot', 0, attributes=om.PropertyAttributes(enumNames=['Left',
+                                                                                       'Right']))
+        self.params.addProperty('Support Contact Groups', 0, attributes=om.PropertyAttributes(enumNames=['Whole Foot', 'Front 2/3', 'Back 2/3']))
+        self.params.addProperty('Continuous Walking', 0, attributes=om.PropertyAttributes(enumNames=['Enabled',
+                                                                                       'Disabled']))
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
         self._syncProperties()
 
     def _syncProperties(self):
+        if self.params.getPropertyEnumValue('Terrain Type') == 'Simple':
+            self.continuousWalkingDemo.chosenTerrain = 'simple'
+        elif self.params.getPropertyEnumValue('Terrain Type') == 'Simple, no Gaps':
+            self.continuousWalkingDemo.chosenTerrain = 'simple_nogaps'
+        elif self.params.getPropertyEnumValue('Terrain Type') == 'Uneven':
+            self.continuousWalkingDemo.chosenTerrain = 'uneven'
+        else:
+            self.continuousWalkingDemo.chosenTerrain = 'stairs'         
 
         if self.params.getPropertyEnumValue('Sensor') == 'Stereo':
             self.continuousWalkingDemo.processContinuousStereo = True
         else:
             self.continuousWalkingDemo.processContinuousStereo = False
+
+        if self.params.getPropertyEnumValue('Leading Foot') == 'Left':
+            self.continuousWalkingDemo.leadingFootByUser = 'Left'
+        else:
+            self.continuousWalkingDemo.leadingFootByUser = 'Right'
+
+        if self.params.getPropertyEnumValue('Support Contact Groups') == 'Whole Foot':
+            self.continuousWalkingDemo.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
+        elif self.params.getPropertyEnumValue('Support Contact Groups') == 'Front 2/3':
+            self.continuousWalkingDemo.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
+        else:
+            self.continuousWalkingDemo.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
+
+        if self.params.getPropertyEnumValue('Continuous Walking') == 'Enabled':
+            self.continuousWalkingDemo.automaticContinuousWalkingEnabled = True
+        else:
+            self.continuousWalkingDemo.automaticContinuousWalkingEnabled = False
      
         self.continuousWalkingDemo.planFromCurrentRobotState = True
-
 
     def addTasks(self):
 
@@ -1068,7 +1106,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
 
         # load
         load = self.taskTree.addGroup('Loading')
-        addFunc(functools.partial(cw.loadSDFFileAndRunSim, 'simple'), 'load scenario', parent=load)
+        addFunc(functools.partial(cw.loadSDFFileAndRunSim), 'load scenario', parent=load)
 
         # prep
         prep = self.taskTree.addGroup('Preparation')
