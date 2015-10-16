@@ -98,7 +98,22 @@ class ConstraintSet(object):
 
     def onFrameModified(self, frame):
         self.runIk()
-
+    
+    def searchFinalPose(self, side, eeTransform):
+        nominalPoseName = self.nominalPoseName
+        if not nominalPoseName:
+            nominalPoseName = getIkOptions().getPropertyEnumValue('Nominal pose')
+        if side == 'left':
+            eeName = self.ikPlanner.handModels[0].handLinkName
+        else:
+            eeName = self.ikPlanner.handModels[1].handLinkName
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+        eePose = np.concatenate(transformUtils.poseFromTransform(eeTransform))
+        self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, side, eeName, eePose, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
+        if self.info == 1:
+            self.ikPlanner.addPose(self.endPose, 'reach_end')
+        print 'info:', self.info
+        return self.endPose, self.info
 
 class IkOptionsItem(om.ObjectModelItem):
 
@@ -109,7 +124,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.ikPlanner = ikPlanner
 
         self.addProperty('Use pointwise', ikPlanner.defaultIkParameters.usePointwise)
-        self.addProperty('Use collision', ikPlanner.defaultIkParameters.useCollision)
+        self.addProperty('Use collision', ['none', 'RRT Connect', 'RRT*'].index(ikPlanner.defaultIkParameters.useCollision), attributes=om.PropertyAttributes(enumNames=['none', 'RRT Connect', 'RRT*']))
         self.addProperty('Collision min distance', ikPlanner.defaultIkParameters.collisionMinDistance, attributes=om.PropertyAttributes(decimals=3, minimum=0.001, maximum=9.999, singleStep=0.01 ))
         self.addProperty('Add knots', ikPlanner.defaultIkParameters.numberOfAddedKnots)
         #self.addProperty('Use quasistatic constraint', ikPlanner.useQuasiStaticConstraint)
@@ -124,7 +139,7 @@ class IkOptionsItem(om.ObjectModelItem):
         self.addProperty('RRT max vertices', ikPlanner.defaultIkParameters.rrtMaxNumVertices, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e5, singleStep=1e1))
         self.addProperty('RRT no. of smoothing passes', ikPlanner.defaultIkParameters.rrtNSmoothingPasses, attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=1e2, singleStep=1e0))
         self.addProperty('RRT goal bias', ikPlanner.defaultIkParameters.rrtGoalBias, attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=1.0, singleStep=1e-2))
-        self.addProperty('RRT hand', ikPlanner.defaultIkParameters.rrtHand, attributes=om.PropertyAttributes(enumNames=['left', 'right']))
+        self.addProperty('RRT hand', ['left', 'right'].index(ikPlanner.defaultIkParameters.rrtHand), attributes=om.PropertyAttributes(enumNames=['left', 'right']))
         self.addProperty('Goal planning mode', 0, attributes=om.PropertyAttributes(enumNames=['fix end pose', 'fix goal joints']))
         #self.addProperty('Additional time samples', ikPlanner.additionalTimeSamples)
 
@@ -137,7 +152,16 @@ class IkOptionsItem(om.ObjectModelItem):
 
         if propertyName == 'Use collision':
             self.ikPlanner.defaultIkParameters.useCollision = self.getProperty(propertyName)
-            if self.ikPlanner.defaultIkParameters.useCollision:
+            if self.getProperty(propertyName) == 1:
+                self.ikPlanner.defaultIkParameters.useCollision = 'RRT Connect'
+                self.setProperty('Use pointwise', False)
+                self.setProperty('Add knots', 2)
+                self.setProperty('Quasistatic shrink factor', 0.5)
+                self.setProperty('Major iterations limit', 500)
+                self.setProperty('Major optimality tolerance', 1e-3)
+                self.setProperty('Major feasibility tolerance', 5e-5)
+            elif self.getProperty(propertyName) == 2:
+                self.ikPlanner.defaultIkParameters.useCollision = 'RRT*'
                 self.setProperty('Use pointwise', False)
                 self.setProperty('Add knots', 2)
                 self.setProperty('Quasistatic shrink factor', 0.5)
@@ -145,6 +169,7 @@ class IkOptionsItem(om.ObjectModelItem):
                 self.setProperty('Major optimality tolerance', 1e-3)
                 self.setProperty('Major feasibility tolerance', 5e-5)
             else:
+                self.ikPlanner.defaultIkParameters.useCollision = 'none'
                 self.setProperty('Add knots', 0)
                 self.setProperty('Quasistatic shrink factor', 0.5)
                 self.setProperty('Major iterations limit', 500)
@@ -195,7 +220,6 @@ class IkOptionsItem(om.ObjectModelItem):
 
         elif propertyName == 'Additional time samples':
             self.ikPlanner.additionalTimeSamples = self.getProperty(propertyName)
-
 
 class IKPlanner(object):
     def setPublisher(self, pub):
@@ -1329,13 +1353,13 @@ class IKPlanner(object):
 
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
 
-
         if (self.pushToMatlab is False):
             self.lastManipPlan, info = self.plannerPub.processTraj(constraints,endPoseName=poseEnd, nominalPoseName=nominalPoseName,seedPoseName=poseStart, additionalTimeSamples=self.additionalTimeSamples)
         else:
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
             listener = self.getManipPlanListener()
-            info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples)
+            info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples,
+                                           pelvisLink = self.pelvisLink, graspToHandLinkFrame = self.newGraspToHandFrame(ikParameters.rrtHand))
             self.lastManipPlan = listener.waitForResponse(timeout=12000)
             listener.finish()
 
@@ -1357,6 +1381,55 @@ class IKPlanner(object):
         return np.sum(np.abs(pose - nominalPose)*cost)
 
 
+    def runMultiRRT(self, qStart, xGoal, objectGrasped = False, ikParameters = None):
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
+
+        assert ikParameters.rrtHand in ('left', 'right')
+        collisionEndEffectorName = ( self.handModels[0].handLinkName if ikParameters.rrtHand == 'left' else self.handModels[1].handLinkName )
+
+        graspToHandLinkFrame = self.newGraspToHandFrame(ikParameters.rrtHand)
+
+        listener = self.getManipPlanListener()
+        info = self.ikServer.runMultiRRT(qStart, xGoal, self.pelvisLink, self.elbowLinks, graspToHandLinkFrame, objectGrasped=objectGrasped, ikParameters=ikParameters)
+        self.lastManipPlan = listener.waitForResponse(timeout=12000)
+        listener.finish()
+
+        print 'traj info:', info
+        return self.lastManipPlan
+        
+    def createDistanceToGoalConstraint(self, side, distance):
+        graspFrame = self.getPalmToHandLink(side)
+        t = vtk.vtkTransform()
+        t.Translate(0.0, 0.0, distance - graspFrame.GetPosition()[0])
+        t.PostMultiply()
+        t.Concatenate(graspFrame)
+        framePos = np.array(om.findObjectByName('Final Pose Frame').transform.GetPosition())
+        constraint = ik.PointToPointDistanceConstraint(bodyNameA = self.getHandLink(side),
+                                                       bodyNameB = 'world',
+                                                       pointInBodyA = t,
+                                                       pointInBodyB = framePos,
+                                                       lowerBound = np.array([-0.001]),
+                                                       upperBound = np.array([0.001]))
+        return constraint
+
+    def createAxisLockConstraints(self, side, xLock, yLock, zLock):
+        framerot = np.deg2rad(om.findObjectByName('Final Pose Frame').transform.GetOrientation())
+        if xLock:
+            xlb, xub = framerot[0], framerot[0]
+        else:
+            xlb, xub = -np.pi, np.pi
+        if yLock:
+            ylb, yub = framerot[1], framerot[1]
+        else:
+            ylb, yub = -np.pi, np.pi
+        if zLock:
+            zlb, zub = framerot[2], framerot[2]
+        else:
+            zlb, zub = -np.pi, np.pi
+        constraint = ik.EulerConstraint(linkName = self.getHandLink(side),
+                                        lowerBound = [xlb, ylb, zlb],
+                                        upperBound = [xub, yub, zub])
+        return constraint
 
 
 sys.path.append(os.path.join(app.getDRCBase(), 'software/tools/tools/scripts'))

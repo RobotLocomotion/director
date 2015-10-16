@@ -235,7 +235,7 @@ class AsyncIKCommunicator():
         self.fetchPoseFromServer('q_trajPose')
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0, pelvisLink = None, graspToHandLinkFrame = None):
 
         if timeSamples is None:
             timeSamples = np.hstack([constraint.tspan for constraint in constraints])
@@ -288,7 +288,7 @@ class AsyncIKCommunicator():
         #commands.append('ikoptions = ikoptions.setSequentialSeedFlag(true);')
         commands.append('\n')
 
-        if ikParameters.useCollision:
+        if ikParameters.useCollision == 'RRT Connect':
             commands.append('q_seed_traj = PPTrajectory(foh([t(1), t(end)], [%s, %s]));' % (poseStart, poseEnd))
             commands.append('q_nom_traj = ConstantTrajectory(q_nom);')
             commands.append('options.n_interp_points = %s;' % ikParameters.numberOfInterpolatedCollisionChecks)
@@ -307,6 +307,21 @@ class AsyncIKCommunicator():
             commands.append('options.N = %s;' % ikParameters.rrtMaxNumVertices)
             commands.append('options.n_smoothing_passes = %s;' % ikParameters.rrtNSmoothingPasses)
             commands.append('[xtraj,info] = collisionFreePlanner(r,t,q_seed_traj,q_nom_traj,options,active_constraints{:},s.ikoptions);')
+            commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
+        elif ikParameters.useCollision == 'RRT*':
+#            reachingElbowLink = ( elbowLinks[0] if ikParameters.rrtHand == 'left' else elbowLinks[1] )
+#            commands.append('options.reachingElbowLink = \'%s\';' % reachingElbowLink)
+            commands.append('options.end_effector_name = end_effector_name;')
+            commands.append("options.graspingHand = '%s';" % ikParameters.rrtHand)
+            commands.append("options.pelvisLink = '%s';" % pelvisLink)
+            commands.append('options.point_in_link_frame = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(graspToHandLinkFrame.GetPosition()) )
+            commands.append('options.left_foot_link = left_foot_link;')
+            commands.append('options.right_foot_link = right_foot_link;')
+            commands.append('options.fixed_point_file = fixed_point_file;')
+            commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
+
+            commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options, active_constraints);\n' % (poseStart, poseEnd))
+            commands.append('[xtraj, info] = planner.findCollisionFreeTraj({:s});'.format(poseEnd))
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:
             commands.append('q_nom_traj = PPTrajectory(foh(t, repmat(%s, 1, nt)));' % nominalPose)
@@ -331,7 +346,7 @@ class AsyncIKCommunicator():
         commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
 
         if ikParameters.usePointwise:
-            assert not ikParameters.useCollision
+            assert ikParameters.useCollision == 'none'
             commands.append('\n%--- pointwise ik --------\n')
             commands.append('if ~isempty(qtraj), num_pointwise_time_points = 20; end;')
             commands.append('if ~isempty(qtraj), pointwise_time_points = linspace(qtraj.tspan(1), qtraj.tspan(2), num_pointwise_time_points); end;')
@@ -369,3 +384,70 @@ class AsyncIKCommunicator():
 
         if self.handleAsyncTasks() > 0:
             return
+        
+    def addAffordanceToLink(self, linkName, affordance, q, affordanceName):
+
+        affStr = ''
+        desc = affordance.getDescription()
+        if desc['classname'] == 'BoxAffordanceItem':
+            affStr += 'RigidBodyBox(%s, %s, quat2rpy(%s));' % (desc['Dimensions'], list(desc['pose'][0]), list(desc['pose'][1]))
+        elif desc['classname'] == 'CylinderAffordanceItem':
+            affStr += 'RigidBodyCylinder(%s, %s, %s, quat2rpy(%s));' % (desc['Radius'], desc['Length'], list(desc['pose'][0]), list(desc['pose'][1]))
+        else:
+            raise Exception('Unsupported affordance type: ' + desc['classname'])
+
+
+        commands = []
+        commands.append('aff = %s;\n' % affStr )          
+        commands.append('s = s.addAffordanceToLink(\'%s\', aff, %s, \'%s\');' % (linkName, ConstraintBase.toColumnVectorString(q), affordanceName))
+        self.comm.sendCommands(commands)
+    
+    def removeAffordanceFromLink(self, linkName, affordanceName, nominalPoseName):
+        commands = []        
+        commands.append('s = s.removeAffordanceFromLink(\'%s\', \'%s\');' % (linkName, affordanceName))
+        self.comm.sendCommands(commands)
+    
+    def searchFinalPose(self, constraints, side, eeName, eePose, nominalPoseName, capabilityMapFile, ikParameters):
+        commands = []
+        commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
+        constraintNames = []
+        for constraintId, constraint in enumerate(constraints):
+            if not constraint.enabled:
+                continue
+            constraint.getCommands(commands, constraintNames, suffix='_%d' % constraintId)
+            commands.append('\n')
+        commands.append('eeId = r.findLinkId(\'{:s}\');'.format(eeName))
+        commands.append('additional_constraints = {};')
+        commands.append('goal_constraints = {};')
+        commands.append('capability_map = CapabilityMap([\'{:s}\', \'/{:s}\']);'.format(os.path.dirname(drcargs.args().directorConfigFile), drcargs.getDirectorConfig()['capabilityMapFile']))
+        for constraint in constraintNames:
+            commands.append('if isa({0:s}, \'Point2PointDistanceConstraint\') && {0:s}.body_a.idx == eeId '
+                            '|| isa({0:s}, \'EulerConstraint\') && {0:s}.body == eeId '
+                            'goal_constraints = {{goal_constraints{{:}}, {0:s}}}; else '
+                            'additional_constraints = {{additional_constraints{{:}}, {0:s}}};end'.format(constraint))
+        commands.append('cost = Point(r.getPositionFrame(),10);')
+        commands.append('for i = r.getNumBodies():-1:1 '
+                        'if all(r.getBody(i).parent > 0) && all(r.getBody(r.getBody(i).parent).position_num > 0) '
+                        'cost(r.getBody(r.getBody(i).parent).position_num) = '
+                        'cost(r.getBody(r.getBody(i).parent).position_num) + cost(r.getBody(i).position_num);end;end')
+        commands.append('cost(1:6) = max(cost(7:end))/2;')
+        commands.append('cost = cost/min(cost);')
+        commands.append('Q = diag(cost);')
+        commands.append('ikoptions = IKoptions(r);')
+        commands.append('ikoptions = ikoptions.setMajorIterationsLimit({:d});'.format(ikParameters.majorIterationsLimit))
+        commands.append('ikoptions = ikoptions.setQ(Q);')
+        commands.append('ikoptions = ikoptions.setMajorOptimalityTolerance({:f});' .format(ikParameters.majorOptimalityTolerance))
+#        commands.append('{:s}'.format(ConstraintBase.toColumnVectorString(xGoal)))
+        commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}, additional_constraints,'
+                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions, \'graspinghand\', \'{:s}\');'.format(ConstraintBase.toColumnVectorString(eePose), nominalPoseName, side))
+        commands.append('[x_goal, info] = fpp.findFinalPose();')
+        self.comm.sendCommands(commands)
+        
+        info = self.comm.getFloatArray('info')[0]
+        if info == 1:
+            endPose = self.comm.getFloatArray('x_goal(8:end)')
+        else:
+            endPose = []
+
+        return endPose, info
+#        commands.append(

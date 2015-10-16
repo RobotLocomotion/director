@@ -2,6 +2,7 @@
 # that all the variables defined here become console variables.
 
 import ddapp
+from ddapp import irisdriver
 
 import os
 import sys
@@ -437,7 +438,7 @@ if usePlanning:
 
     tableDemo = tabledemo.TableDemo(robotStateModel, playbackRobotModel,
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
-                    perception.multisenseDriver, view, robotStateJointController, playPlans, teleopPanel)
+                    perception.multisenseDriver, view, robotStateJointController, playPlans, teleopPanel, playbackPanel)
     tableTaskPanel = tabledemo.TableTaskPanel(tableDemo)
 
     drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
