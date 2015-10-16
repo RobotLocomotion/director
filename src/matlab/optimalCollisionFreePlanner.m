@@ -107,7 +107,7 @@ classdef optimalCollisionFreePlanner
             cost(obj.robot.getBody(obj.robot.getBody(i).parent).position_num) + cost(obj.robot.getBody(i).position_num);
         end
       end
-      cost(1:6) = max(cost(7:end))/2;
+%       cost(1:6) = max(cost(7:end))/2;
       cost = cost/min(cost);
       Q = diag(cost);
       obj.ikoptions = IKoptions(obj.robot);
