@@ -1,5 +1,5 @@
-from ddapp.consoleapp import ConsoleApp
 from ddapp import robotsystem
+from ddapp.consoleapp import ConsoleApp
 from ddapp import transformUtils
 from ddapp import visualization as vis
 from ddapp import objectmodel as om
