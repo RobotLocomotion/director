@@ -286,8 +286,8 @@ class TableDemo(object):
 #        if self.useCollisionEnvironment:
 #            self.prepCollisionEnvironment()
 #            collisionObj = om.findObjectByName(obj.getProperty('Name') + ' affordance')
-            if not self.ikPlanner.fixedBaseArm:
-                collisionObj.setProperty('Collision Enabled', False)
+        if not self.ikPlanner.fixedBaseArm:
+            collisionObj.setProperty('Collision Enabled', False)
 
         return obj, frameObj
 
