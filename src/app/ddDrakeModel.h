@@ -6,7 +6,7 @@
 #include <QVector>
 #include "ddSharedPtr.h"
 #include "ddAppConfigure.h"
-
+#include <RigidBodyManipulator.h>
 
 class vtkRenderer;
 class vtkTransform;
@@ -27,6 +27,7 @@ public:
   const QString& filename() const;
 
   const ddSharedPtr<RigidBodyManipulator> getDrakeRBM() const;
+  const ddSharedPtr<KinematicsCache<double> > getKinematicsCache() const;
 
   void addToRenderer(vtkRenderer* renderer);
   void removeFromRenderer(vtkRenderer* renderer);
