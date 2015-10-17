@@ -590,7 +590,8 @@ class FootstepsDriver(object):
             contact_pts_right[3,:] = [0.110,-0.0624435, 0.22]
 
         if (_robotType == 2):
-            #val v2
+            #val v2 (NOTE: at the moment, function createFootstepList in lcm2ros_ihmc.cpp depends on
+            #these values)
             if support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE:
                 contact_pts_left[0,:] = [-0.0676,  0.0624435, -0.07645]
                 contact_pts_left[1,:] = [-0.0676, -0.0624435, -0.07645]
