@@ -591,22 +591,22 @@ class FootstepsDriver(object):
 
         if (_robotType == 2):
             #val v2 (NOTE: at the moment, function createFootstepList in lcm2ros_ihmc.cpp depends on
-            #these values)
+            #these values (taken from ihmc code: ValkyriePhysicalProperties.java))
             if support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE:
-                contact_pts_left[0,:] = [-0.0676,  0.0624435, -0.07645]
-                contact_pts_left[1,:] = [-0.0676, -0.0624435, -0.07645]
-                contact_pts_left[2,:] = [0.1928,   0.0624435, -0.07645]
-                contact_pts_left[3,:] = [0.1928,  -0.0624435, -0.07645]
+                contact_pts_left[0,:] = [-0.038,  0.0624435, -0.09]
+                contact_pts_left[1,:] = [-0.038, -0.0624435, -0.09]
+                contact_pts_left[2,:] = [0.172,   0.0624435, -0.09]
+                contact_pts_left[3,:] = [0.172,  -0.0624435, -0.09]
             elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE:
-                contact_pts_left[0,:] = [0.0192,  0.0624435, -0.07645]
-                contact_pts_left[1,:] = [0.0192, -0.0624435, -0.07645]
-                contact_pts_left[2,:] = [0.1928,   0.0624435, -0.07645]
-                contact_pts_left[3,:] = [0.1928,  -0.0624435, -0.07645]
+                contact_pts_left[0,:] = [0.036,  0.0624435, -0.09]
+                contact_pts_left[1,:] = [0.036, -0.0624435, -0.09]
+                contact_pts_left[2,:] = [0.172,   0.0624435, -0.09]
+                contact_pts_left[3,:] = [0.172,  -0.0624435, -0.09]
             elif support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT:
-                contact_pts_left[0,:] = [-0.0676,  0.0624435, -0.07645]
-                contact_pts_left[1,:] = [-0.0676, -0.0624435, -0.07645]
-                contact_pts_left[2,:] = [0.106,   0.0624435, -0.07645]
-                contact_pts_left[3,:] = [0.106,  -0.0624435, -0.07645]
+                contact_pts_left[0,:] = [-0.038,  0.0624435, -0.09]
+                contact_pts_left[1,:] = [-0.038, -0.0624435, -0.09]
+                contact_pts_left[2,:] = [0.102,   0.0624435, -0.09]
+                contact_pts_left[3,:] = [0.102,  -0.0624435, -0.09]
             else:
                 raise ValueError("Unrecognized support contact group: {:d}".format(support_contact_groups))
 
