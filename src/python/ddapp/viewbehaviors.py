@@ -226,6 +226,12 @@ def placeHandModel(displayPoint, view, side='left'):
     t = transformUtils.getTransformFromAxes(-zaxis, yaxis, xaxis)
     t.PostMultiply()
     t.Translate(pickedPoint)
+
+    if side == 'right':
+        print "flip left to right"
+        t.PreMultiply()
+        t.RotateY(180)
+
     handObj, handFrame = handFactory.placeHandModelWithTransform(t, view, side=side, parent=obj)
 
     syncFrame = getChildFrame(obj)
@@ -489,6 +495,11 @@ def showRightClickMenu(displayPoint, view):
             if side == 'right':
                 color = [0.33, 1.0, 0.0]
             obj.setProperty('Color', color)
+
+            polyData = handFactory.getNewHandPolyData(side)
+            print obj.setPolyData(polyData)
+            #obj.getChildFrame()
+
 
     def flipHandThumb():
         handFrame = pickedObj.children()[0]
