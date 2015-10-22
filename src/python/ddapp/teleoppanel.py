@@ -544,7 +544,7 @@ class EndEffectorTeleopPanel(object):
                     constraints.extend(ikPlanner.createGraspOrbitConstraints(side, graspToWorld, graspToHand))
                     constraints[-3].tspan = [1.0, 1.0]
 
-                    if ikPlanner.defaultIkParameters.useCollision:
+                    if ikPlanner.defaultIkParameters.useCollision != 'none':
                         constraints[-2].tspan = [0.5, 1.0]
                         constraints[-1].tspan = [0.5, 1.0]
                     else:
@@ -675,12 +675,12 @@ class EndEffectorTeleopPanel(object):
         self.setRHandConstraint('arm fixed')
 
         if side == 'left':
-          if self.panel.ikPlanner.defaultIkParameters.useCollision:
+          if self.panel.ikPlanner.defaultIkParameters.useCollision != 'none':
             self.setLHandConstraint('ee fixed')
           else:
             self.setLHandConstraint('ee fixed')
         elif side == 'right':
-          if self.panel.ikPlanner.defaultIkParameters.useCollision:
+          if self.panel.ikPlanner.defaultIkParameters.useCollision != 'none':
             self.setRHandConstraint('ee fixed')
           else:
             self.setRHandConstraint('ee fixed')

@@ -211,7 +211,7 @@ class AsyncIKCommunicator():
         commands.append('clear info;')
         commands.append('clear infeasible_constraint;')
         commands.append('\n')
-        commands.append('use_collision = %s;' % ('true' if ikParameters.useCollision else 'false'))
+        commands.append('use_collision = %s;' % ('false' if (ikParameters.useCollision == 'none') else 'true'))
         commands.append('[q_end, info, infeasible_constraint] = s.runIk(ik_seed_pose, ik_nominal_pose, active_constraints, use_collision);')
         commands.append('\n')
 
