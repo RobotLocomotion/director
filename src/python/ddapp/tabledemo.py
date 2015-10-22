@@ -762,7 +762,7 @@ class TableDemo(object):
 
 
         if (scene == 4):
-            filename = os.path.expanduser('~/drc-testing-data/ihmc_table/ihmc_table.vtp')
+            filename = os.environ['DRC_BASE'] + '/../drc-testing-data/ihmc_table/ihmc_table.vtp'
             polyData = ioUtils.readPolyData( filename )
             vis.showPolyData( polyData,'scene')
             self.segmentIhmcScene()
@@ -876,7 +876,7 @@ class TableDemo(object):
             self.moveRobotToTableStanceFrame()
 
         if (loadPerception):
-            filename = os.path.expanduser('~/drc-testing-data/ihmc_table/'+str(scene)+'.vtp')
+            filename = os.environ['DRC_BASE'] + '/../drc-testing-data/ihmc_table/'+str(scene)+'.vtp'
             pd = ioUtils.readPolyData( filename )
             vis.showPolyData(pd,'scene')
 
@@ -927,7 +927,9 @@ class TableDemo(object):
             objScene = vis.updatePolyData(self.getInputPointCloud(), 'scene', colorByName='rgb_colors')
 
 
-    def prepKukaTestDemoSequence(self, inputFile='~/drc-testing-data/tabletop/kinect_collision_environment.vtp'):
+    def prepKukaTestDemoSequence(self, inputFile=None):
+        if inputFile is None:
+            inputFile = os.environ['DRC_BASE'] + '/../drc-testing-data/tabletop/kinect_collision_environment.vtp'
         filename = os.path.expanduser(inputFile)
         scene = ioUtils.readPolyData(filename)
         vis.showPolyData(scene,"scene")
@@ -954,7 +956,7 @@ class TableDemo(object):
         Requires footstep footstepPlanner
         '''
 
-        filename = os.path.expanduser('~/drc-testing-data/tabletop/table-and-bin-scene.vtp')
+        filename = os.environ['DRC_BASE'] + '/../drc-testing-data/tabletop/table-and-bin-scene.vtp'
         scene = ioUtils.readPolyData(filename)
         vis.showPolyData(scene,"scene")
 
