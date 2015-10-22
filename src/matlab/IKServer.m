@@ -17,6 +17,7 @@ classdef IKServer
       options.floating = true;
       options.ignore_terrain_collisions = true;
       options.terrain = [];
+      options.replace_cylinders_with_capsules = true;
 
       obj.robot = RigidBodyManipulator([], options);
 
@@ -26,7 +27,7 @@ classdef IKServer
     function obj = loadNominalData(obj,filename)
       if nargin < 1
         filename = [getenv('DRC_BASE'), ...
-          '/software/control/matlab/data/atlas_bdi_fp.mat'];
+          '/software/control/matlab/data/atlas_v3/atlas_bdi_fp.mat'];
       end
       %nom_data = load([getDrakePath() '/examples/Atlas/data/atlas_bdi_fp.mat']);
       nom_data = load(filename);
@@ -174,12 +175,29 @@ classdef IKServer
     end
 
     function obj = addAffordance(obj, affordanceName)
-      filename = [getenv('DRC_PATH'), '/drake/systems/plants/test/', affordanceName, '.urdf'];
+      filename = [getenv('DRC_PATH'), '/drake/drake/systems/plants/test/', affordanceName, '.urdf'];
       options = struct('floating', false);
       xyz = zeros(3,1);
       rpy = zeros(3,1);
       obj.robot = obj.robot.addRobotFromURDF(filename , xyz, rpy, options);
       obj.robot = compile(obj.robot);
+    end
+    
+    function obj = addAffordanceToLink(obj, parentLinkName, affordance, q, affordanceName)
+      parentLink = obj.robot.findLinkId(parentLinkName);
+      kinsol = obj.robot.doKinematics(q);
+      parentLinkPose = obj.robot.forwardKin(kinsol, parentLink, [0;0;0], 2);
+      parentLinkT = [quat2rotmat(parentLinkPose(4:7)), parentLinkPose(1:3); 0 0 0 1];
+      affordance.T = [parentLinkT(1:3, 1:3)' * affordance.T(1:3, 1:3), parentLinkT(1:3, 1:3)' * (affordance.T(1:3, 4) - parentLinkT(1:3, 4)); 0 0 0 1];
+      obj.robot = addGeometryToBody(obj.robot, parentLink, affordance, affordanceName);
+      obj.robot = obj.robot.compile();
+    end
+    
+    function obj = removeAffordanceFromLink(obj, parentLinkName, affordanceName)
+      % Not implemented yet
+      %parentLink = obj.robot.findLinkId(parentLinkName);
+      %obj.robot = removeCollisionGeometryFromBody(obj.robot, parentLink, affordanceName);
+      %obj.robot = obj.robot.compile();
     end
 
     function linkNames = getLinkNames(obj)
@@ -212,7 +230,7 @@ classdef IKServer
           phi = obj.robot_and_environment.collisionDetect(q);
           if info < 10 && any(phi < obj.min_distance);
             info = 13;
-            display('Could not satisfiy collision avoidance constraints.');
+            display('Could not satisfy collision avoidance constraints.');
           end
         end
       end

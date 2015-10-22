@@ -32,6 +32,10 @@ def stringWithAffordanceId(inputStr, aff):
     return inputStr % aff.getProperty('uuid')
 
 
+def stringWithAffordanceName(inputStr, aff):
+    return inputStr % aff.getProperty('Name')
+
+
 def colorFromAffordance(aff):
     color = aff.getProperty('Color')
     return urdf.Color(color[0], color[1], color[2] ,1)
