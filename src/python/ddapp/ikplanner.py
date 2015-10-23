@@ -1359,7 +1359,7 @@ class IKPlanner(object):
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
             listener = self.getManipPlanListener()
             info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples,
-                                           pelvisLink = self.pelvisLink, graspToHandLinkFrame = self.newGraspToHandFrame(ikParameters.rrtHand))
+                                           graspToHandLinkFrame=self.newGraspToHandFrame(ikParameters.rrtHand))
             self.lastManipPlan = listener.waitForResponse(timeout=12000)
             listener.finish()
 
