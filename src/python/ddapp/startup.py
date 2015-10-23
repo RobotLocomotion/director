@@ -455,8 +455,9 @@ if usePlanning:
                                                                        teleopJointController, navigationPanel, cameraview, jointLimitChecker)
     continuousWalkingTaskPanel = continuouswalkingdemo.ContinuousWalkingTaskPanel(continuouswalkingDemo)
 
-
-    drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
+    useDrivingPlanner = drivingplanner.DrivingPlanner.isCompatibleWithConfig()
+    if useDrivingPlanner:
+        drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -492,7 +493,9 @@ if usePlanning:
 
     taskPanels = OrderedDict()
 
-    taskPanels['Driving'] = drivingPlannerPanel.widget
+    if useDrivingPlanner:
+        taskPanels['Driving'] = drivingPlannerPanel.widget
+
     taskPanels['Egress'] = egressPanel.widget
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
