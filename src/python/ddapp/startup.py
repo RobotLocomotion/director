@@ -681,7 +681,7 @@ if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
     #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'KINECT_RGB', view)
 
-if useCameraFrustumVisualizer:
+if useCameraFrustumVisualizer and cameraview.CameraFrustumVisualizer.isCompatibleWithConfig():
     cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'CAMERA_LEFT')
 
 class ImageOverlayManager(object):
