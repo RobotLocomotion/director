@@ -522,7 +522,7 @@ if usePlanning:
     for obj in om.getObjects():
         obj.setProperty('Deletable', False)
 
-if useCOPMonitor:
+if useCOPMonitor and not ikPlanner.fixedBaseArm:
     copMonitor = copmonitor.COPMonitor(robotSystem, view);
 
 
@@ -959,7 +959,8 @@ def initCenterOfMassVisulization():
         model.connectModelChanged(drawCenterOfMass)
         drawCenterOfMass(model)
 
-initCenterOfMassVisulization()
+if not ikPlanner.fixedBaseArm:
+    initCenterOfMassVisulization()
 
 
 class RobotMoverWidget(object):
