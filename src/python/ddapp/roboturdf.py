@@ -460,7 +460,7 @@ class HandLoader(object):
         self.handModel.model.setJointPositions(np.zeros(self.handModel.model.numberOfJoints()))
         polyData = vtk.vtkPolyData()
         self.handModel.model.getModelMesh(polyData)
-        polyData = filterUtils.transformPolyData(polyData, self.modelToPalm)
+        return filterUtils.transformPolyData(polyData, self.modelToPalm)
 
 
     def newPolyData(self, name, view, parent=None):

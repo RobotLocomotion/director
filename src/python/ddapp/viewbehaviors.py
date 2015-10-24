@@ -228,7 +228,6 @@ def placeHandModel(displayPoint, view, side='left'):
     t.Translate(pickedPoint)
 
     if side == 'right':
-        print "flip left to right"
         t.PreMultiply()
         t.RotateY(180)
 
@@ -497,9 +496,23 @@ def showRightClickMenu(displayPoint, view):
             obj.setProperty('Color', color)
 
             polyData = handFactory.getNewHandPolyData(side)
-            print obj.setPolyData(polyData)
-            #obj.getChildFrame()
+            obj.setPolyData(polyData)
 
+            handFrame = obj.children()[0]
+            t = transformUtils.copyFrame(handFrame.transform)
+            t.PreMultiply()
+            t.RotateY(180)
+            handFrame.copyFrame(t)
+
+            objName = obj.getProperty('Name')
+            frameName = handFrame.getProperty('Name')
+            if side == 'left':
+                obj.setProperty('Name', objName.replace("right", "left"))
+                handFrame.setProperty('Name', frameName.replace("right", "left"))
+            else:
+                obj.setProperty('Name', objName.replace("left", "right"))
+                handFrame.setProperty('Name', frameName.replace("left", "right"))
+            obj._renderAllViews()
 
     def flipHandThumb():
         handFrame = pickedObj.children()[0]
