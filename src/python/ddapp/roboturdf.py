@@ -350,6 +350,12 @@ class HandFactory(object):
             self.loaders[handType] = loader
         return loader
 
+    def getNewHandPolyData(self, side, name=None):
+        loader = self.getLoader(side)
+        name = name or self.defaultHandTypes[side].replace('_', ' ')
+        return loader.getNewHandPolyData()
+
+
     def newPolyData(self, side, view, name=None, parent=None):
         loader = self.getLoader(side)
         name = name or self.defaultHandTypes[side].replace('_', ' ')
@@ -450,11 +456,15 @@ class HandLoader(object):
         '''
 
 
-    def newPolyData(self, name, view, parent=None):
+    def getNewHandPolyData(self):
         self.handModel.model.setJointPositions(np.zeros(self.handModel.model.numberOfJoints()))
         polyData = vtk.vtkPolyData()
         self.handModel.model.getModelMesh(polyData)
-        polyData = filterUtils.transformPolyData(polyData, self.modelToPalm)
+        return filterUtils.transformPolyData(polyData, self.modelToPalm)
+
+
+    def newPolyData(self, name, view, parent=None):
+        polyData = self.getNewHandPolyData()
 
         if isinstance(parent, str):
             parent = om.getOrCreateContainer(parent)
