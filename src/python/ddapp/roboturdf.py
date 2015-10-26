@@ -29,7 +29,7 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
     handCombinations = directorConfig['handCombinations']
     numberOfHands = len(handCombinations)
 
-    headLink = directorConfig['headLink']
+    headLink = directorConfig.get('headLink')
 
 
 def getRobotGrayColor():

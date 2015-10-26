@@ -1229,7 +1229,7 @@ class TableTaskPanel(TaskUserPanel):
         self.tableDemo.lockBack = self.getLockBack()
         self.tableDemo.sceneID = self.getSceneId()
         self.tableDemo.planner = self.getPlanner()
-        if self.tableDemo.ikPlanner.fixedBaseArm:
+        if 'userConfig' in drcargs.getDirectorConfig() and 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
             self.handEngaged = self.getHandEngaged() # WARNING: does not check current state [no status message]
 
     def getSide(self):
@@ -1245,10 +1245,10 @@ class TableTaskPanel(TaskUserPanel):
         return self.params.getProperty('Hand Engaged (Powered)')
 
     def getSceneId(self):
-        return self.params.getProperty('Scene')
+        return self.params.getProperty('Scene') if self.params.hasProperty('Scene') else None
 
     def getPlanner(self):
-        return self.params.getProperty('Planner')
+        return self.params.getProperty('Planner') if self.params.hasProperty('Planner') else None
 
     def onPropertyChanged(self, propertySet, propertyName):
         propertyName = str(propertyName)

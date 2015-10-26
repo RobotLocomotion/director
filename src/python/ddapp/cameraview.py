@@ -570,7 +570,9 @@ class CameraFrustumVisualizer(object):
         robotModel.connectModelChanged(self.update)
         self.update(robotModel)
 
-
+    @staticmethod
+    def isCompatibleWithConfig():
+        return 'headLink' in drcargs.getDirectorConfig()
 
     def getCameraToLocal(self):
         '''

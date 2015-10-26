@@ -15,7 +15,7 @@ class AsyncIKCommunicator():
 
     STARTUP_COMPLETED = 'STARTUP_COMPLETED'
 
-    def __init__(self, robotURDF, fixedPointFile, leftFootLink, rightFootLink):
+    def __init__(self, robotURDF, fixedPointFile, leftFootLink, rightFootLink, pelvisLink):
 
         self.comm = None
         self.outputConsole = None
@@ -25,6 +25,7 @@ class AsyncIKCommunicator():
         self.fixedPointFile = fixedPointFile
         self.leftFootLink = leftFootLink
         self.rightFootLink = rightFootLink
+        self.pelvisLink = pelvisLink
 
         self.seedName = 'q_nom'
         self.nominalName = 'q_nom'
@@ -47,6 +48,7 @@ class AsyncIKCommunicator():
         commands.append("fixed_point_file = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.fixedPointFile, ddapp.getDRCBaseDir()))
         commands.append("left_foot_link = '%s';" % self.leftFootLink)
         commands.append("right_foot_link = '%s';" % self.rightFootLink)
+        commands.append("pelvis_link = '%s';" % self.pelvisLink)
         commands.append('runIKServer')
         commands.append('\n%------ startup end ------\n')
         return self.comm.sendCommandsAsync(commands)
@@ -235,7 +237,7 @@ class AsyncIKCommunicator():
         self.fetchPoseFromServer('q_trajPose')
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0, pelvisLink = None, graspToHandLinkFrame = None):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0, graspToHandLinkFrame=None):
 
         if timeSamples is None:
             timeSamples = np.hstack([constraint.tspan for constraint in constraints])
@@ -313,10 +315,10 @@ class AsyncIKCommunicator():
 #            commands.append('options.reachingElbowLink = \'%s\';' % reachingElbowLink)
             commands.append('options.end_effector_name = end_effector_name;')
             commands.append("options.graspingHand = '%s';" % ikParameters.rrtHand)
-            commands.append("options.pelvisLink = '%s';" % pelvisLink)
             commands.append('options.point_in_link_frame = reshape(%s, 3, []);' % ConstraintBase.toColumnVectorString(graspToHandLinkFrame.GetPosition()) )
             commands.append('options.left_foot_link = left_foot_link;')
             commands.append('options.right_foot_link = right_foot_link;')
+            commands.append("options.pelvisLink = pelvis_link;")
             commands.append('options.fixed_point_file = fixed_point_file;')
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
 

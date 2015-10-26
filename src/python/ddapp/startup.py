@@ -455,8 +455,9 @@ if usePlanning:
                                                                        teleopJointController, navigationPanel, cameraview, jointLimitChecker)
     continuousWalkingTaskPanel = continuouswalkingdemo.ContinuousWalkingTaskPanel(continuouswalkingDemo)
 
-
-    drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
+    useDrivingPlanner = drivingplanner.DrivingPlanner.isCompatibleWithConfig()
+    if useDrivingPlanner:
+        drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
@@ -492,7 +493,9 @@ if usePlanning:
 
     taskPanels = OrderedDict()
 
-    taskPanels['Driving'] = drivingPlannerPanel.widget
+    if useDrivingPlanner:
+        taskPanels['Driving'] = drivingPlannerPanel.widget
+
     taskPanels['Egress'] = egressPanel.widget
     taskPanels['Door'] = doorTaskPanel.widget
     taskPanels['Valve'] = valveTaskPanel.widget
@@ -519,7 +522,7 @@ if usePlanning:
     for obj in om.getObjects():
         obj.setProperty('Deletable', False)
 
-if useCOPMonitor:
+if useCOPMonitor and not ikPlanner.fixedBaseArm:
     copMonitor = copmonitor.COPMonitor(robotSystem, view);
 
 
@@ -678,7 +681,7 @@ if useImageWidget:
     imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
     #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'KINECT_RGB', view)
 
-if useCameraFrustumVisualizer:
+if useCameraFrustumVisualizer and cameraview.CameraFrustumVisualizer.isCompatibleWithConfig():
     cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'CAMERA_LEFT')
 
 class ImageOverlayManager(object):
@@ -956,7 +959,8 @@ def initCenterOfMassVisulization():
         model.connectModelChanged(drawCenterOfMass)
         drawCenterOfMass(model)
 
-initCenterOfMassVisulization()
+if not ikPlanner.fixedBaseArm:
+    initCenterOfMassVisulization()
 
 
 class RobotMoverWidget(object):

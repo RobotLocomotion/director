@@ -74,6 +74,10 @@ class DrivingPlanner(object):
         self.steeringCommandTimer.callback = self.publishSteeringCommand
         self.steeringCommandMsg = None
 
+    @staticmethod
+    def isCompatibleWithConfig():
+        return 'drivingThrottleJoint' in drcargs.getDirectorConfig()
+
     def getInitCommands(self):
 
       commands = [textwrap.dedent('''
