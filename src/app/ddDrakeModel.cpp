@@ -1065,7 +1065,7 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
     {
       for (size_t i = 0; i < body->contact_pts.cols(); ++i)
       {
-        ret << body->contact_pts(0,i) << body->contact_pts(1,i) << body->contact_pts(2,1);
+        ret << body->contact_pts(0,i) << body->contact_pts(1,i) << body->contact_pts(2,i);
       }
     }
   }
