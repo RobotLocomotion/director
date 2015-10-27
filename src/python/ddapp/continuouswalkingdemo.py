@@ -116,7 +116,6 @@ class ContinousWalkingDemo(object):
         self.new_status = False
         self.footstep_index = -1
 
-        self.lastContactState = "none"
         # Smooth Stereo or Raw or Lidar?
         self.processContinuousStereo = False
         self.processRawStereo = False
@@ -414,8 +413,40 @@ class ContinousWalkingDemo(object):
             #frameObj = vis.showFrame(footstepTransform, stepName + ' frame', parent=obj, scale=0.3, visible=False)
             obj.actor.SetUserTransform(footstep.transform)
 
+    def updateContacts(self, idx, heights, block):
+        ''' Set the surface of contact depending on blocks configuration 
+        (going up or down) 
+        '''
+        print 'block idx:'
+        print idx
 
-    def computeFootstepPlanSafeRegions(self, blocks, robotPose, standingFootName):
+        safety_thresh = 0.05
+        if block.rectDepth <= (self.FOOT_LENGHT+safety_thresh):
+            if idx != 0:          
+                if heights[idx] < heights[idx-1]:
+                    print 'IF 1'
+                    self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
+                else:
+                    print 'IF 2'
+                    self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
+            elif len(self.footStatus) != 0:
+                t_lastContact = self.footStatus[len(self.footStatus)-1].transform
+                [t_lastContact_pos, t_lastContact_ori] = transformUtils.poseFromTransform(t_lastContact)
+                previous_height = t_lastContact_pos[2]
+                print 'previous_height'
+                print previous_height
+                if heights[idx] < previous_height:
+                    print 'IF 3'
+                    self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
+                else:
+                    print 'IF 4'
+                    self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
+        else:
+            print 'IF 5'
+            self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
+
+
+    def computeFootstepPlanSafeRegions(self, blocks, heights, robotPose, standingFootName):
 
         print 'planning with safe regions.  %d blocks.' % len(blocks)
 
@@ -427,7 +458,8 @@ class ContinousWalkingDemo(object):
         for i, block in enumerate(blocks):
             corners = block.getCorners()
             rpy = np.radians(block.cornerTransform.GetOrientation())
-            #rpy = [0.0, 0.0, 0.0]
+
+            self.updateContacts(i, heights, block)
             self.convertStepToSafeRegion(corners, rpy)
 
         lastBlock = blocks[-1]
@@ -492,11 +524,14 @@ class ContinousWalkingDemo(object):
 
         shapeVertices = np.array(step).transpose()[:2,:]
 
-        if (self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT):
+        if self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT:
+            print 'back'
             footContactPoints = self.BACK_FOOT_CONTACT_POINTS
-        elif (self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE):
+        elif self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE:
+            print 'front'
             footContactPoints = self.FRONT_FOOT_CONTACT_POINTS
         else:
+            print 'whole'
             footContactPoints = self.FULL_FOOT_CONTACT_POINTS
 
         s = ddapp.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=footContactPoints)
@@ -543,12 +578,23 @@ class ContinousWalkingDemo(object):
         # Step 2: find all the surfaces in front of the robot (about 0.75sec)
         clusters = segmentation.findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSearchRadius=0.05,
                                                        clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0])
-        if (clusters is None):
+        if clusters is None:
             print "No cluster found, stop walking now!"
             return
 
         # Step 3: find the corners of the minimum bounding rectangles
         blocks,groundPlane = self.extractBlocksFromSurfaces(clusters, standingFootFrame)
+
+
+        # Step 4:
+        heights = []
+        for i, block in enumerate(blocks):
+            corners = block.getCorners()
+            heights.append(corners[0,2])
+
+        print 'heights:'
+        print heights
+
 
         # Step 5: Find the two foot positions we should plan with: the next committed tool and the current standing foot
         '''
@@ -580,7 +626,7 @@ class ContinousWalkingDemo(object):
         self.displayExpectedPose(nextDoubleSupportPose)
 
         if not self.useManualFootstepPlacement and self.queryPlanner:
-            footsteps = self.computeFootstepPlanSafeRegions(blocks, nextDoubleSupportPose, standingFootName)
+            footsteps = self.computeFootstepPlanSafeRegions(blocks, heights, nextDoubleSupportPose, standingFootName)
         else:
             footsteps = self.placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep)
 
