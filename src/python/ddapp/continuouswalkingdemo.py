@@ -102,7 +102,7 @@ class ContinousWalkingDemo(object):
         self.leadingFootByUser = 'Left'
         self.automaticContinuousWalkingEnabled = True
         self.planFromCurrentRobotState = False
-        self.chosenTerrain = 'Simple'
+        self.chosenTerrain = 'simple'
         self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
 
         self.plans = []
@@ -169,9 +169,14 @@ class ContinousWalkingDemo(object):
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewZ, origin=viewOrigin, resultArrayName='distance_along_foot_z')
 
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.30, 1.6])
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.45, 0.45])
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.9])
+        if self.chosenTerrain == 'stairs':
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.30, 1.6])
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.45, 0.45])
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.9])
+        else:
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.12, 1.6])
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.4, 0.4])
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.4])
 
         vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='cont debug', visible=True)
         return polyData
@@ -298,9 +303,15 @@ class ContinousWalkingDemo(object):
         # TODO: pull out these parameters
         blocksGood = []
         groundPlane = None
+        if self.chosenTerrain == 'stairs':
+            rectWidth_thresh = 0.90
+            rectDepth_thresh = 0.90
+        else:
+            rectWidth_thresh = 0.45
+            rectDepth_thresh = 0.90
+
         for i, block in enumerate(blocks):
-            #if ((block.rectWidth>0.45) or (block.rectDepth>0.90)):
-            if ((block.rectWidth>0.90) or (block.rectDepth>0.90)):
+            if ((block.rectWidth>rectWidth_thresh) or (block.rectDepth>rectDepth_thresh)):
                 #print " ground plane",i,block.rectWidth,block.rectDepth
                 groundPlane = block
             elif ((block.rectWidth<0.30) or (block.rectDepth<0.20)): # was 0.34 and 0.30 for 13 block successful walk with lidar
