@@ -564,37 +564,44 @@ class ContinousWalkingDemo(object):
 
         # Step 4: reduce list of blocks to those which represent either going_up stairs or going_down stairs
         heights = []
+        safety_thresh = 0.05
+        blocks_big_enough = True
         for i, block in enumerate(blocks):
             corners = block.getCorners()
             heights.append(corners[0,2])
+            if block.rectDepth <= (self.FOOT_LENGHT+safety_thresh):
+                blocks_big_enough = False
 
-        cut_idx = -1
-        for i, height in enumerate(heights):
-            if i == 0 and len(self.footStatus) != 0:
-                t1_lastContact = self.footStatus[len(self.footStatus)-1].transform
-                [t1_lastContact_pos, t1_lastContact_ori] = transformUtils.poseFromTransform(t1_lastContact)
-                t2_lastContact = self.footStatus[len(self.footStatus)-2].transform
-                [t2_lastContact_pos, t2_lastContact_ori] = transformUtils.poseFromTransform(t2_lastContact)
-                previous_height1 = t1_lastContact_pos[2]
-                previous_height2 = t2_lastContact_pos[2]
-                if (heights[i] > previous_height1) or (heights[i] > previous_height2):  
-                    up = True
+        if not blocks_big_enough:
+            cut_idx = -1
+            for i, height in enumerate(heights):
+                if i == 0 and len(self.footStatus) != 0:
+                    t1_lastContact = self.footStatus[len(self.footStatus)-1].transform
+                    [t1_lastContact_pos, t1_lastContact_ori] = transformUtils.poseFromTransform(t1_lastContact)
+                    t2_lastContact = self.footStatus[len(self.footStatus)-2].transform
+                    [t2_lastContact_pos, t2_lastContact_ori] = transformUtils.poseFromTransform(t2_lastContact)
+                    previous_height1 = t1_lastContact_pos[2]
+                    previous_height2 = t2_lastContact_pos[2]
+                    if (heights[i] > previous_height1) or (heights[i] > previous_height2):  
+                        up = True
+                    else:
+                        up = False
+                elif len(self.footStatus) != 0 and cut_idx == -1:
+                    # Stairs are switching up/down or down/up 
+                    if (heights[i] > heights[i-1] and not up) or (heights[i] < heights[i-1] and up):
+                        cut_idx = i
+
+            if cut_idx != -1:
+                blocks = blocks[:cut_idx]
+                heights = heights[:cut_idx]
+
+            if len(self.footStatus) != 0 and len(heights) != 0:
+                if up: 
+                    self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
                 else:
-                    up = False
-            elif len(self.footStatus) != 0 and cut_idx == -1:
-                # Stairs are switching up/down or down/up 
-                if (heights[i] > heights[i-1] and not up) or (heights[i] < heights[i-1] and up):
-                    cut_idx = i
-
-        if cut_idx != -1:
-            blocks = blocks[:cut_idx]
-            heights = heights[:cut_idx]
-
-        if len(self.footStatus) != 0 and len(heights) != 0:
-            if up: 
-                self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
-            else:
-                self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
+                    self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
+        else:
+            self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
 
 
         # Step 5: Find the two foot positions we should plan with: the next committed tool and the current standing foot
