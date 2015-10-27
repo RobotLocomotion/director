@@ -438,7 +438,7 @@ if usePlanning:
 
     tableDemo = tabledemo.TableDemo(robotStateModel, playbackRobotModel,
                     ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
-                    perception.multisenseDriver, view, robotStateJointController, playPlans, teleopPanel, playbackPanel)
+                    perception.multisenseDriver, view, robotStateJointController, playPlans, teleopPanel, playbackPanel, jointLimitChecker)
     tableTaskPanel = tabledemo.TableTaskPanel(tableDemo)
 
     drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,

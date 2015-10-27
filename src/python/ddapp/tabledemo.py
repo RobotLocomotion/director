@@ -18,6 +18,7 @@ from ddapp.pointpicker import PointPicker
 from ddapp import vtkAll as vtk
 from ddapp.simpletimer import SimpleTimer
 from ddapp import affordanceupdater
+from ddapp import sceneloader
 
 from ddapp.debugVis import DebugData
 from ddapp import affordanceitems
@@ -38,7 +39,7 @@ class TableDemo(object):
 
     def __init__(self, robotStateModel, playbackRobotModel, ikPlanner, manipPlanner, footstepPlanner,
                  atlasDriver, lhandDriver, rhandDriver, multisenseDriver, view, sensorJointController,
-                 planPlaybackFunction, teleopPanel, playbackPanel):
+                 planPlaybackFunction, teleopPanel, playbackPanel, jointLimitChecker):
         self.planPlaybackFunction = planPlaybackFunction
         self.robotStateModel = robotStateModel
         self.playbackRobotModel = playbackRobotModel
@@ -54,6 +55,7 @@ class TableDemo(object):
         self.teleopPanel = teleopPanel
         self.affordanceManager = segmentation.affordanceManager
         self.playbackPanel = playbackPanel
+        self.jointLimitChecker = jointLimitChecker
 
         # live operation flags:
         self.useFootstepPlanner = True
@@ -85,7 +87,7 @@ class TableDemo(object):
         # top level switch between BDI or IHMC (locked base) and MIT (moving base and back)
         self.lockBack = True
         self.lockBase = True
-        self.planner = 'RRT*'
+        self.planner = None
 
         self.constraintSet = []
 
@@ -95,6 +97,7 @@ class TableDemo(object):
         self.useCollisionEnvironment = True
 
         self.sceneID = None
+        self.sceneName = None
 
     # Switch between simulation/visualisation and real robot operation
     def setMode(self, mode='visualization'):
@@ -382,12 +385,19 @@ class TableDemo(object):
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=side)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
+        
+    def disableJointChecker(self):
+        self.jointLimitChecker.automaticallyExtendLimits = True
 
-    def planLowerArm(self, side):
+    def planLowerArm(self, side = 'default'):
         startPose = self.getPlanningStartPose()
-        endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side=side)
+        if side == 'default':
+            endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handsdown both')
+        else:
+            endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side=side)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
+        self.commitManipPlan()
 
     def planDropPostureRaise(self, side):        
         if self.planner == 'RRT*':
@@ -723,10 +733,7 @@ class TableDemo(object):
         self.planPlaybackFunction(self.plans)
 
     def commitManipPlan(self):
-        if self.planner == 'RRT*':
-            self.playbackPanel.executePlan(visOnly = True)
-        else:
-            self.manipPlanner.commitManipPlan(self.plans[-1])
+        self.manipPlanner.commitManipPlan(self.plans[-1])
 
     def commitFootstepPlan(self):
         self.footstepPlanner.commitFootstepPlan(self.footstepPlan)
@@ -750,7 +757,12 @@ class TableDemo(object):
             vis.updateFrame(t, '%s frame' % linkName, scale=0.2, visible=False, parent='planning')
 
     def createCollisionPlanningScene(self, scene=0, loadPerception=True, moveRobot=False):
-            self.createCollisionPlanningSceneMain(self.sceneID,loadPerception,moveRobot)
+        self.createCollisionPlanningSceneMain(self.sceneID,loadPerception,moveRobot)
+        filename= os.environ['DRC_BASE'] + '/software/models/worlds/directorAffordances.sdf'
+        import ipab
+        msg=ipab.scs_api_command_t()
+        msg.command="loadSDF "+filename+"\nsimulate"
+        lcmUtils.publish('SCS_API_CONTROL', msg)
 
     def createCollisionPlanningSceneMain(self, scene=0, loadPerception=True, moveRobot=False):
         om.removeFromObjectModel(om.findObjectByName('affordances'))
@@ -879,6 +891,9 @@ class TableDemo(object):
             filename = os.environ['DRC_BASE'] + '/../drc-testing-data/ihmc_table/'+str(scene)+'.vtp'
             pd = ioUtils.readPolyData( filename )
             vis.showPolyData(pd,'scene')
+        
+        sc = sceneloader.SceneLoader()
+        sc.generateSDFfromAffordances()
 
     ######### Setup collision environment ####################
     def prepCollisionEnvironment(self):
@@ -911,7 +926,6 @@ class TableDemo(object):
 
     ######### Nominal Plans and Execution  #################################################################
     def loadSDFFileAndRunSim(self):
-        from ddapp import sceneloader
         filename= os.environ['DRC_BASE'] + '/software/models/worlds/tabledemo.sdf'
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
@@ -1228,6 +1242,7 @@ class TableTaskPanel(TaskUserPanel):
         self.tableDemo.lockBase = self.getLockBase()
         self.tableDemo.lockBack = self.getLockBack()
         self.tableDemo.sceneID = self.getSceneId()
+        self.tableDemo.sceneName = self.getSceneName()
         self.tableDemo.planner = self.getPlanner()
         if 'userConfig' in drcargs.getDirectorConfig() and 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
             self.handEngaged = self.getHandEngaged() # WARNING: does not check current state [no status message]
@@ -1246,6 +1261,9 @@ class TableTaskPanel(TaskUserPanel):
 
     def getSceneId(self):
         return self.params.getProperty('Scene') if self.params.hasProperty('Scene') else None
+
+    def getSceneName(self):
+        return self.params.getPropertyEnumValue('Scene') if self.params.hasProperty('Scene') else None
 
     def getPlanner(self):
         return self.params.getPropertyEnumValue('Planner') if self.params.hasProperty('Planner') else None
@@ -1273,6 +1291,7 @@ class TableTaskPanel(TaskUserPanel):
 
         elif propertyName == 'Scene':
             self.tableDemo.sceneID = self.params.getProperty('Scene')
+            self.tableDemo.sceneName = self.params.getPropertyEnumValue('Scene')
 		
         elif propertyName == 'Planner':
         	self.tableDemo.planner = self.params.getPropertyEnumValue('Planner')
@@ -1353,23 +1372,26 @@ class TableTaskPanel(TaskUserPanel):
                 addFunc(v.prepGetSceneFrame, 'capture scene frame', parent=prep)
                 addFunc(v.prepKukaLabScene, 'prep kuka lab scene', parent=prep)
         else:
+            addFunc(v.disableJointChecker, 'disable joint checker', parent =  prep)
+            addFunc(v.createCollisionPlanningScene, 'prep from file', parent=prep)
             if v.planner != 'RRT*':
                 addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
                 addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
                 addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
-            addFunc(v.createCollisionPlanningScene, 'prep from file', parent=prep)
+            else:
+                addFunc(v.planLowerArm, 'set arms down', parent=prep)
 
         # walk
         if not v.ikPlanner.fixedBaseArm:
             walk = self.taskTree.addGroup('Approach Table')
-            if v.planner == 'RRT*':
-                addFunc(self.tableDemo.moveRobotToTableStanceFrame, 'walk to table', parent = walk)
-            else:
-                addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
-                addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'), parent=walk)
-                addTask(rt.CommitFootstepPlan(name='walk to table', planName='table grasp stance footstep plan'), parent=walk)
-                addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
-                addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
+#            if v.planner == 'RRT*':
+#                addFunc(self.tableDemo.moveRobotToTableStanceFrame, 'walk to table', parent = walk)
+#            else:
+            addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
+            addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'), parent=walk)
+            addTask(rt.CommitFootstepPlan(name='walk to table', planName='table grasp stance footstep plan'), parent=walk)
+#            addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
+            addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
 
         # lift object
         if v.ikPlanner.fixedBaseArm:
