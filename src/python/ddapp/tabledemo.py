@@ -284,12 +284,14 @@ class TableDemo(object):
         assert len(self.clusterObjects)
         obj = self.clusterObjects[0] if side == 'left' else self.clusterObjects[-1]
         frameObj = obj.findChild(obj.getProperty('Name') + ' frame')
-
-#        if self.useCollisionEnvironment:
-#            self.prepCollisionEnvironment()
-#            collisionObj = om.findObjectByName(obj.getProperty('Name') + ' affordance')
-        if not self.ikPlanner.fixedBaseArm:
-            collisionObj.setProperty('Collision Enabled', False)
+        
+        if self.planner != 'RRT*':
+            if self.useCollisionEnvironment:
+                self.prepCollisionEnvironment()
+                collisionObj = om.findObjectByName(obj.getProperty('Name') + ' affordance')
+                collisionObj.setProperty('Collision Enabled', False)
+        else:
+            obj.setProperty('Collision Enabled', False)
 
         return obj, frameObj
 
@@ -539,13 +541,117 @@ class TableDemo(object):
         obj, objFrame = self.getNextTableObject(side)
         
         if self.planner == 'RRT*':
-            plan = self.ikPlanner.runMultiRRT(list(startPose),
-                          list(np.append(obj.getPose()[0], obj.getPose()[1])), ikParameters=None)
+            self.syncIkPlannerOptions()
+#            collisionEndEffectorName = ( self.ikPlanner.handModels[0].handLinkName if self.graspingHand == 'left'
+#                                        else self.ikPlanner.handModels[1].handLinkName )
+#            constraintToRemove = []
+#            for constraint in self.constraintSet.constraints:
+#                if hasattr(constraint, 'linkName') and constraint.linkName == collisionEndEffectorName:
+#                    constraintToRemove.append(constraint)
+#            for constraint in constraintToRemove:
+#                self.constraintSet.constraints.remove(constraint)
+            plan = self.constraintSet.runIkTraj()
+#            plan = self.ikPlanner.runMultiRRT(list(startPose),
+#                          list(np.append(obj.getPose()[0], obj.getPose()[1])), ikParameters=None)
         else:
             plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
+    
+    def initFinalPose(self):
+        self.syncIkPlannerOptions()
+        self.lockBase=False
+        self.lockBack=False
+        self.teleopPanel.endEffectorTeleop.initFinalPosePlanning()
+        ee = om.findObjectByName('Final Pose End Effector')
+        obj, frame = self.getNextTableObject()
+        transform = transformUtils.copyFrame(frame.transform)
+        transform.PreMultiply()
+        transform.Concatenate(transformUtils.frameFromPositionAndRPY([0,0,0],[0,90,-90]))
+        ee.getChildFrame().copyFrame(transform)
+    
+    def syncIkPlannerOptions(self):
+        if self.planner == 'RRT*':
+            ikplanner.getIkOptions().setProperty('Use collision', 'RRT*')
+        elif self.planner == 'RRT-Connect':
+            ikplanner.getIkOptions().setProperty('Use collision', 'RRT Connect')
+        
+        if self.graspingHand == 'left':
+            ikplanner.getIkOptions().setProperty('RRT hand', 'left')
+        else:
+            ikplanner.getIkOptions().setProperty('RRT hand', 'right')
+    
+    def searchFinalPose(self):
+        eeTeleop = self.teleopPanel.endEffectorTeleop
+        ikPlanner = self.ikPlanner
 
+        startPoseName = 'reach_start'
+        startPose = self.getPlanningStartPose()
+        ikPlanner.addPose(startPose, startPoseName)
 
+        constraints = []
+        constraints.append(ikPlanner.createQuasiStaticConstraint())
+        constraints.append(ikPlanner.createLockedNeckPostureConstraint(startPoseName))
+        constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, ikPlanner.leftFootLink, tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
+        constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, ikPlanner.rightFootLink, tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
+        if self.lockBack:
+            constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
+            ikPlanner.setBackLocked(True)
+        else:
+            constraints.append(ikPlanner.createMovingBackPostureConstraint())
+            ikPlanner.setBackLocked(False)
+
+        if self.lockBase:
+            constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName, lockLegs=False))
+            ikPlanner.setBaseLocked(True)
+        else:
+            constraints.append(ikPlanner.createKneePostureConstraint(drcargs.getDirectorConfig()['kneeJointLimits']))
+            ikPlanner.setBaseLocked(False)
+        
+        self.constraintSet = ikplanner.ConstraintSet(ikPlanner, constraints, 'reach_end', startPoseName)
+
+        handLinks = []
+        for handModel in ikPlanner.handModels: handLinks.append(handModel.handLinkName)
+
+        for constraint in constraints:
+            if hasattr(constraint, 'linkName') and constraint.linkName in handLinks:
+                continue
+
+            if isinstance(constraint, ikplanner.ik.PositionConstraint):
+                frameObj = self.getGoalFrame(constraint.linkName)
+                if frameObj:
+                    constraint.referenceFrame = frameObj.transform
+
+            elif isinstance(constraint, ikplanner.ik.QuatConstraint):
+                frameObj = self.getGoalFrame(constraint.linkName)
+                if frameObj:
+                    constraint.quaternion = frameObj.transform
+
+            elif isinstance(constraint, ikplanner.ik.WorldGazeDirConstraint):
+                frameObj = self.getGoalFrame(constraint.linkName)
+                if frameObj:
+                    constraint.targetFrame = frameObj.transform
+
+        om.removeFromObjectModel(eeTeleop.getConstraintFolder())
+        folder = eeTeleop.getConstraintFolder()
+        
+        from ddapp.teleoppanel import ConstraintItem
+        for i, pc in enumerate(constraints):
+            constraintItem = ConstraintItem(pc)
+            om.addToObjectModel(constraintItem, parentObj=folder)
+        
+        eeTeleop.updateCollisionEnvironment()
+        frame = om.findObjectByName('Final Pose End Effector frame')
+        handTransform = transformUtils.copyFrame(frame.transform)
+        handTransform.PreMultiply()
+        palmToHand = self.ikPlanner.getPalmToHandLink(self.graspingHand)
+        palmToHand = palmToHand.GetLinearInverse()
+        handTransform.Concatenate(palmToHand)
+        endPose, info = self.constraintSet.searchFinalPose(self.graspingHand, handTransform)
+        if info == 1:
+            self.teleopPanel.showPose(self.constraintSet.endPose)
+        else:
+            'No final pose found. Please try with a different end effector pose'
+        
     def planTouchTableObject(self, side='left'):
 
         obj, frame = self.getNextTableObject(side)
@@ -911,7 +1017,8 @@ class TableDemo(object):
         (xaxis, yaxis, zaxis) = transformUtils.getAxesFromTransform(frame.transform)
 
         # TODO: move this into transformUtils as getAxisDimensions or so
-        box = obj.findChild(obj.getProperty('Name') + ' box')
+#        box = obj.findChild(obj.getProperty('Name') + ' box')
+        box = obj
         box_np = vtkNumpy.getNumpyFromVtk(box.polyData, 'Points')
         box_min = np.amin(box_np, 0)
         box_max = np.amax(box_np, 0)
@@ -1294,7 +1401,8 @@ class TableTaskPanel(TaskUserPanel):
             self.tableDemo.sceneName = self.params.getPropertyEnumValue('Scene')
 		
         elif propertyName == 'Planner':
-        	self.tableDemo.planner = self.params.getPropertyEnumValue('Planner')
+            self.tableDemo.planner = self.params.getPropertyEnumValue('Planner')
+        self.syncIkPlannerOptions()
 
     def pickupMoreObjects(self):
         if len(self.tableDemo.clusterObjects) > 0: # There is still sth on the table, let's do it again!
@@ -1384,14 +1492,17 @@ class TableTaskPanel(TaskUserPanel):
         # walk
         if not v.ikPlanner.fixedBaseArm:
             walk = self.taskTree.addGroup('Approach Table')
-#            if v.planner == 'RRT*':
-#                addFunc(self.tableDemo.moveRobotToTableStanceFrame, 'walk to table', parent = walk)
-#            else:
             addTask(rt.RequestFootstepPlan(name='plan walk to table', stanceFrameName='table stance frame'), parent=walk)
             addTask(rt.UserPromptTask(name='approve footsteps', message='Please approve footstep plan.'), parent=walk)
             addTask(rt.CommitFootstepPlan(name='walk to table', planName='table grasp stance footstep plan'), parent=walk)
-#            addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
+            addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
             addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
+        
+        if v.planner == 'RRT*':
+            finalPose = self.taskTree.addGroup('Plan Final Pose')
+            addFunc(v.initFinalPose, 'init final pose planning', parent=finalPose)
+            addTask(rt.UserPromptTask(name='approve end-effector pose', message='Please approve end-effector pose.'), parent=finalPose)
+            addFunc(v.searchFinalPose, 'search final pose', parent=finalPose)
 
         # lift object
         if v.ikPlanner.fixedBaseArm:
