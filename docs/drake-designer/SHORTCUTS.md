@@ -20,6 +20,7 @@ This documents the shortcuts available in Director.
    * <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> -- plan nominal posture
    * <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> -- plan pregrasp with left hand
    * <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> -- plan pregrasp with right hand
+   * <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> -- equivalent to pressing the <kbd>Plan</kbd> button
  * Python Console:
    * <kbd>Ctrl</kbd>+<kbd>D</kbd> / <kbd>Ctrl</kbd>+<kbd>W</kbd> -- closes the python console
 
