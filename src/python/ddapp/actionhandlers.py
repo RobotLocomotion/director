@@ -119,6 +119,10 @@ def onFileSaveData():
 
     storeDefaultDirectory(filename)
 
+def onOpenOnlineHelp():
+
+    QtGui.QDesktopServices.openUrl(QtCore.QUrl('https://github.com/RobotLocomotion/director/tree/master/docs/README.md'))
+
 
 def init():
     mainWindow = app.getMainWindow()
@@ -126,3 +130,4 @@ def init():
     mainWindow.connect('fileOpen()', onFileOpen)
     mainWindow.connect('fileSaveData()', onFileSaveData)
     mainWindow.connect('fileExportUrdf()', onFileExportUrdf)
+    mainWindow.connect('openOnlineHelp()', onOpenOnlineHelp)

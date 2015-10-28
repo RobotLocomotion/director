@@ -48,6 +48,7 @@ signals:
   void fileOpen();
   void fileSaveData();
   void fileExportUrdf();
+  void openOnlineHelp();
 
 
 protected slots:

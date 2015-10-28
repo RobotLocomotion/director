@@ -63,9 +63,16 @@
     <addaction name="separator"/>
     <addaction name="ToolBarMenu"/>
    </widget>
+   <widget class="QMenu" name="HelpMenu">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="ActionOnlineHelp"/>
+   </widget>
    <addaction name="FileMenu"/>
    <addaction name="ViewMenu"/>
    <addaction name="ToolsMenu"/>
+   <addaction name="HelpMenu"/>
   </widget>
   <widget class="QStatusBar" name="StatusBar"/>
   <widget class="QDockWidget" name="ObjectsDock">
@@ -122,7 +129,6 @@
    <addaction name="ActionToggleBackgroundLight"/>
    <addaction name="ActionToggleCameraTerrainMode"/>
    <addaction name="ActionResetCamera"/>
-
   </widget>
   <widget class="QDockWidget" name="PropertiesDock">
    <property name="windowTitle">
@@ -592,6 +598,11 @@
    </property>
    <property name="shortcut">
     <string/>
+   </property>
+  </action>
+  <action name="ActionOnlineHelp">
+   <property name="text">
+    <string>Online Help</string>
    </property>
   </action>
  </widget>
