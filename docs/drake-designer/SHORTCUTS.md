@@ -2,18 +2,6 @@
 
 This documents the shortcuts available in Director.
 
-## Console App
- * <kbd>Ctrl</kbd>+<kbd>Q</kbd> -- quits the application
- * <kbd>F1</kbd> -- shows the object model
- * <kbd>F8</kbd> -- opens the Python console
-
-## Drake Visualizer
- * <kbd>Ctrl</kbd>+<kbd>Q</kbd> -- quits the application
- * <kbd>F1</kbd> -- shows the object model
- * <kbd>F2</kbd> -- toggles the screen grabber
- * <kbd>F3</kbd> -- toggles the camera bookmarks
- * <kbd>F8</kbd> -- opens the Python console
-
 ## Drake-Designer
  * <kbd>Ctrl</kbd>+<kbd>Q</kbd> -- quits the application
  * <kbd>Ctrl</kbd>+<kbd>O</kbd> -- load a polyData data file (vtp, ply)
@@ -34,3 +22,15 @@ This documents the shortcuts available in Director.
    * <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> -- plan pregrasp with right hand
  * Python Console:
    * <kbd>Ctrl</kbd>+<kbd>D</kbd> / <kbd>Ctrl</kbd>+<kbd>W</kbd> -- closes the python console
+
+## Console App
+ * <kbd>Ctrl</kbd>+<kbd>Q</kbd> -- quits the application
+ * <kbd>F1</kbd> -- shows the object model
+ * <kbd>F8</kbd> -- opens the Python console
+
+## Drake Visualizer
+ * <kbd>Ctrl</kbd>+<kbd>Q</kbd> -- quits the application
+ * <kbd>F1</kbd> -- shows the object model
+ * <kbd>F2</kbd> -- toggles the screen grabber
+ * <kbd>F3</kbd> -- toggles the camera bookmarks
+ * <kbd>F8</kbd> -- opens the Python console
