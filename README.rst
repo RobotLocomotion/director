@@ -108,6 +108,11 @@ This is an alias for:
     cd build
     cmake ../distro/superbuild
 
+Documentation
+=============
+
+A preliminary Online Help for drake-designer (currently in preparation) can be found `here <./tree/master/docs/drake-designer/README.md>`_.
+
 
 Citing
 ======
