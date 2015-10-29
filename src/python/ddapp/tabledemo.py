@@ -540,34 +540,29 @@ class TableDemo(object):
             
         obj, objFrame = self.getNextTableObject(side)
         
-        if self.planner == 'RRT*':
-            self.syncIkPlannerOptions()
-#            collisionEndEffectorName = ( self.ikPlanner.handModels[0].handLinkName if self.graspingHand == 'left'
-#                                        else self.ikPlanner.handModels[1].handLinkName )
-#            constraintToRemove = []
-#            for constraint in self.constraintSet.constraints:
-#                if hasattr(constraint, 'linkName') and constraint.linkName == collisionEndEffectorName:
-#                    constraintToRemove.append(constraint)
-#            for constraint in constraintToRemove:
-#                self.constraintSet.constraints.remove(constraint)
-            plan = self.constraintSet.runIkTraj()
-#            plan = self.ikPlanner.runMultiRRT(list(startPose),
-#                          list(np.append(obj.getPose()[0], obj.getPose()[1])), ikParameters=None)
-        else:
-            plan = self.constraintSet.runIkTraj()
+        plan = self.constraintSet.runIkTraj()
+        self.addPlan(plan)
+
+    def planMotionFromFinalPose(self):
+        self.syncIkPlannerOptions()
+        plan = self.constraintSet.runIkTraj()
         self.addPlan(plan)
     
-    def initFinalPose(self):
+    def initFinalPose(self, func):
         self.syncIkPlannerOptions()
         self.lockBase=False
         self.lockBack=False
         self.teleopPanel.endEffectorTeleop.initFinalPosePlanning()
         ee = om.findObjectByName('Final Pose End Effector')
+        transform = func()
+        ee.getChildFrame().copyFrame(transform)
+
+    def getTableObjectFrame(self):
         obj, frame = self.getNextTableObject()
         transform = transformUtils.copyFrame(frame.transform)
         transform.PreMultiply()
         transform.Concatenate(transformUtils.frameFromPositionAndRPY([0,0,0],[0,90,-90]))
-        ee.getChildFrame().copyFrame(transform)
+        return transform
     
     def syncIkPlannerOptions(self):
         if self.planner == 'RRT*':
@@ -1434,6 +1429,18 @@ class TableTaskPanel(TaskUserPanel):
                 if confirm:
                    addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'), parent=group)
                         
+        def addManipulationWithFinalPose(func, name, parent=None, confirm=False):
+            group = self.taskTree.addGroup(name, parent=parent)
+            addFunc(functools.partial(v.initFinalPose, func), 'init final pose planning', parent=group)
+            addTask(rt.UserPromptTask(name='approve end-effector pose', message='Please approve end-effector pose.'), parent=group)
+            addFunc(v.searchFinalPose, 'search final pose', parent=group)
+            addFunc(v.planMotionFromFinalPose, name='plan motion', parent=group)
+            addTask(rt.CheckPlanInfo(name='check manip plan info'), parent=group)
+            addFunc(v.commitManipPlan, name='execute manip plan', parent=group)
+            if self.tableDemo.planner != 1:
+                addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=group)
+                if confirm:
+                   addTask(rt.UserPromptTask(name='Confirm execution has finished', message='Continue when plan finishes.'), parent=group)
 
         def addGrasping(mode, name, parent=None, confirm=False):
             assert mode in ('open', 'close')
@@ -1497,30 +1504,21 @@ class TableTaskPanel(TaskUserPanel):
             addTask(rt.CommitFootstepPlan(name='walk to table', planName='table grasp stance footstep plan'), parent=walk)
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walk)
             addTask(rt.SetNeckPitch(name='set neck position', angle=35), parent=walk)
-        
-        if v.planner == 'RRT*':
-            finalPose = self.taskTree.addGroup('Plan Final Pose')
-            addFunc(v.initFinalPose, 'init final pose planning', parent=finalPose)
-            addTask(rt.UserPromptTask(name='approve end-effector pose', message='Please approve end-effector pose.'), parent=finalPose)
-            addFunc(v.searchFinalPose, 'search final pose', parent=finalPose)
 
         # lift object
         if v.ikPlanner.fixedBaseArm:
             addManipulation(functools.partial(v.planPreGrasp, v.graspingHand ), name='raise arm')
             addManipulation(functools.partial(v.planReachToTableObject, v.graspingHand), name='reach')
             addManipulation(functools.partial(v.planTouchTableObject, v.graspingHand), name='touch')
-        else: # Collision Free - Marco et al.
-            addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
-
-        if v.planner == 'RRT*':
+        elif v.planner == 'RRT*':
+            addManipulationWithFinalPose(v.getTableObjectFrame, name='reach')
             addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach', confirm=False)
+            addManipulationWithFinalPose(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
+            addManipulationWithFinalPose(functools.partial(v.planWithdrawTableObject, v.graspingHand), name='withdraw object')
         else:
+            addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
             addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach', confirm=True)
-        
-        addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
-        
-        if v.planner == 'RRT*':
-            addManipulation(functools.partial(v.planWithdrawTableObject, v.graspingHand), name='withdraw object')
+            addManipulation(functools.partial(v.planLiftTableObject, v.graspingHand), name='lift object')
 
         # walk to start
         if not v.ikPlanner.fixedBaseArm and v.planner != 'RRT*':
