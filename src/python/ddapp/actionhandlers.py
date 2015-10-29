@@ -121,7 +121,7 @@ def onFileSaveData():
 
 def onOpenOnlineHelp():
 
-    QtGui.QDesktopServices.openUrl(QtCore.QUrl('https://github.com/RobotLocomotion/director/tree/master/docs/README.md'))
+    QtGui.QDesktopServices.openUrl(QtCore.QUrl('https://github.com/RobotLocomotion/director/blob/master/docs/drake-designer/README.md'))
 
 
 def init():
