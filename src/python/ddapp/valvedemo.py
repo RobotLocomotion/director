@@ -861,7 +861,7 @@ class ValvePlannerDemo(object):
 
 
     def prepFromFile(self, moveRobot=True):
-        filename = os.path.expanduser('~/drc-testing-data/valve/valve-pod-wall-ihmc-new.vtp')
+        filename = os.path.expanduser('~/drc-testing-data/valve/valve-pod-wall-ihmc.vtp')
         polyData = ioUtils.readPolyData( filename )
         vis.showPolyData( polyData,'pointcloud snapshot')
 
