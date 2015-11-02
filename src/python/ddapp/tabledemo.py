@@ -562,7 +562,7 @@ class TableDemo(object):
         obj, frame = self.getNextTableObject(self.graspingHand)
         transform = transformUtils.copyFrame(frame.transform)
         transform.PreMultiply()
-        transform.Concatenate(transformUtils.frameFromPositionAndRPY([0,0.08,0],[0,90,-90]))
+        transform.Concatenate(transformUtils.frameFromPositionAndRPY([0,0,0],[0,90,-90]))
         return transform
     
     def getLiftOffsetFrame(self):
@@ -1527,8 +1527,8 @@ class TableTaskPanel(TaskUserPanel):
         elif v.planner == 'RRT*':
             addManipulationWithFinalPose(v.getTableObjectFrame, name='reach')
             addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach', confirm=False)
-            addManipulationWithFinalPose(v.getLiftOffsetFrame, name='lift object')
-            addFunc(v.planWithdrawTableObject, 'withdraw object', parent='lift object', confirm=False)
+#            addManipulationWithFinalPose(v.getLiftOffsetFrame, name='lift object')
+#            addFunc(v.planWithdrawTableObject, 'withdraw object', parent='lift object', confirm=False)
         else:
             addManipulation(functools.partial(v.planReachToTableObjectCollisionFree, v.graspingHand), name='reach')
             addFunc(functools.partial(v.graspTableObject, side=v.graspingHand), 'grasp', parent='reach', confirm=True)
@@ -1545,6 +1545,7 @@ class TableTaskPanel(TaskUserPanel):
             addTask(rt.WaitForWalkExecution(name='wait for walking'), parent=walkToStart)
 
         # walk to bin
+        '''
         if not v.ikPlanner.fixedBaseArm:
             walkToBin = self.taskTree.addGroup('Walk to Bin')
             if v.planner != 'RRT*':
@@ -1569,3 +1570,4 @@ class TableTaskPanel(TaskUserPanel):
             addManipulation(functools.partial(v.planPreGrasp, v.graspingHand), name='go home')
 
         addFunc(self.pickupMoreObjects, 'clear until table empty', parent='clear until table empty folder')
+        '''
