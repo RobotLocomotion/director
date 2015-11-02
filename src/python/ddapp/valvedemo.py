@@ -37,7 +37,7 @@ class ValvePlannerDemo(object):
         self.rhandDriver = rhandDriver
         self.sensorJointController = sensorJointController
         self.graspingObject = 'valve'
-        self.turningMode = 0 # Simple Mode
+        self.turningMode = 0  # Simple Mode
         self.setGraspingHand('left')
         self.graspFrame = None
         self.stanceFrame = None
@@ -114,10 +114,10 @@ class ValvePlannerDemo(object):
         self.smallValve = True
 
     def setupStance(self):
-        if (self.turningMode==0): # simple
+        if (self.turningMode == 0):  # simple
             self.relativeStanceXYZInitial = [-0.9, -0.3, 0.0]
             self.relativeStanceRPYInitial = [0, 0, 0]
-        else: # human-like
+        else:  # human-like
             self.relativeStanceXYZInitial = [-0.5, 0.0, 0.0]
             self.relativeStanceRPYInitial = [0, 0, 0]
 
@@ -138,9 +138,9 @@ class ValvePlannerDemo(object):
         the feet, on the ground, with z-axis up and x-axis aligned with the
         robot pelvis x-axis.
         '''
-        t1 = robotModel.getLinkFrame( self.ikPlanner.leftFootLink )
-        t2 = robotModel.getLinkFrame( self.ikPlanner.rightFootLink )
-        pelvisT = robotModel.getLinkFrame( self.ikPlanner.pelvisLink )
+        t1 = robotModel.getLinkFrame(self.ikPlanner.leftFootLink)
+        t2 = robotModel.getLinkFrame(self.ikPlanner.rightFootLink)
+        pelvisT = robotModel.getLinkFrame(self.ikPlanner.pelvisLink)
 
         xaxis = [1.0, 0.0, 0.0]
         pelvisT.TransformVector(xaxis, xaxis)
@@ -569,12 +569,12 @@ class ValvePlannerDemo(object):
                                           resetPoses=True, **kwargs)
         info = max(insert_plan.plan_info)
         reachPose = robotstate.convertStateMessageToDrakePose(insert_plan.plan[0])
-        ikParameters = IkParameters(maxDegreesPerSecond=2*self.speedTurn,
+        ikParameters = IkParameters(maxDegreesPerSecond=2 * self.speedTurn,
                                     rescaleBodyNames=[self.ikPlanner.getHandLink(side=self.graspingHand)],
                                     rescaleBodyPts=list(self.ikPlanner.getPalmPoint(side=self.graspingHand)),
                                     maxBodyTranslationSpeed=self.maxHandTranslationSpeed)
         plan = self.ikPlanner.computePostureGoal(startPose, reachPose, ikParameters=ikParameters)
-        plan.plan_info = [info]*len(plan.plan_info)
+        plan.plan_info = [info] * len(plan.plan_info)
         lcmUtils.publish('CANDIDATE_MANIP_PLAN', plan)
         self.addPlan(plan)
 
@@ -586,7 +586,7 @@ class ValvePlannerDemo(object):
     def planTurn(self, wristAngleCW=np.radians(320)):
         ikParameters = IkParameters(maxDegreesPerSecond=self.speedTurn)
         startPose = self.getPlanningStartPose()
-        wristAngleCW = min(np.radians(320)-0.01, max(-np.radians(160)+0.01, wristAngleCW))
+        wristAngleCW = min(np.radians(320) - 0.01, max(-np.radians(160) + 0.01, wristAngleCW))
         if self.graspingHand == 'left':
             postureJoints = {'l_arm_lwy': -np.radians(160) + wristAngleCW}
         else:
@@ -620,13 +620,13 @@ class ValvePlannerDemo(object):
 
         nominalPose = self.ikPlanner.jointController.getPose('q_nom')
         nominalPose[0] = (self.computeGraspFrame().transform.GetPosition()[0] -
-                          seedDistance*yaxis[0])
+                          seedDistance * yaxis[0])
         nominalPose[1] = (self.computeGraspFrame().transform.GetPosition()[1] -
-                          seedDistance*yaxis[1])
+                          seedDistance * yaxis[1])
         nominalPose[5] = yawDesired
-        if self.scribeDirection == 1: # Clockwise
+        if self.scribeDirection == 1:  # Clockwise
             nominalPose = self.ikPlanner.getMergedPostureFromDatabase(nominalPose, 'valve', 'reach-nominal-cw', side=self.graspingHand)
-        else: # Counter-clockwise
+        else:  # Counter-clockwise
             nominalPose = self.ikPlanner.getMergedPostureFromDatabase(nominalPose, 'valve', 'reach-nominal-ccw', side=self.graspingHand)
         return nominalPose
 
@@ -639,26 +639,26 @@ class ValvePlannerDemo(object):
         else:
             faceDepth = self.reachDepth
 
-        tDepth = transformUtils.frameFromPositionAndRPY([0,faceDepth,0], [0,0,0])
+        tDepth = transformUtils.frameFromPositionAndRPY([0, faceDepth, 0], [0, 0, 0])
 
         scribeRadius = om.findObjectByName('valve').params['radius']
 
-        position = [0, scribeRadius*math.sin( math.radians( reachAngle )) , scribeRadius*math.cos( math.radians( reachAngle ))   ]
+        position = [0, scribeRadius * math.sin(math.radians(reachAngle)), scribeRadius * math.cos(math.radians(reachAngle))]
         # roll angle governs how much the palm points along towards the rotation axis
         # yaw ensures thumb faces the axis
         if (self.graspingObject is 'valve'):
             # valve, left and right
-            rpy = [(-self.palmInAngle-90) , reachAngle, (90)]
+            rpy = [(-self.palmInAngle - 90), reachAngle, (90)]
         else:
-            if (self.graspingHand is 'left'): # lever left
-                rpy = [-90, (180+reachAngle), 90]
+            if (self.graspingHand is 'left'):  # lever left
+                rpy = [-90, (180 + reachAngle), 90]
             else:
                 rpy = [-90, reachAngle, 90]
 
         t = om.findObjectByName('valve').getChildFrame().transform
 
         t2 = transformUtils.frameFromPositionAndRPY(position, rpy)
-        t3=transformUtils.copyFrame(t)
+        t3 = transformUtils.copyFrame(t)
         t3.PreMultiply()
         t3.Concatenate(t2)
         t3.Concatenate(tDepth)
@@ -668,7 +668,7 @@ class ValvePlannerDemo(object):
         return faceFrameDesired
 
     def planHumanReach(self):
-        faceFrameDesired = self.computeHumanTouchFrame(False, reachAngle=self.reachAngle) # 0 = not in contact
+        faceFrameDesired = self.computeHumanTouchFrame(False, reachAngle=self.reachAngle)  # 0 = not in contact
         self.computeHumanTouchPlan(faceFrameDesired)
 
     def planHumanTouch(self):
@@ -676,7 +676,7 @@ class ValvePlannerDemo(object):
         self.computeHumanTouchPlan(faceFrameDesired)
 
     def planHumanRetract(self):
-        faceFrameDesired = self.computeHumanTouchFrame(False, reachAngle=(self.reachAngle+self.turnAngle) )  # 0 = not in contact
+        faceFrameDesired = self.computeHumanTouchFrame(False, reachAngle=(self.reachAngle + self.turnAngle))  # 0 = not in contact
         self.computeHumanTouchPlan(faceFrameDesired)
 
 
@@ -715,7 +715,7 @@ class ValvePlannerDemo(object):
         self.constraintSet.endPose = startPose
 
         # add body constraints
-        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=self.lockBase, lockBack=self.lockBack, lockLeftArm=self.graspingHand=='right', lockRightArm=self.graspingHand=='left')
+        bodyConstraints = self.ikPlanner.createMovingBodyConstraints(startPoseName, lockBase=self.lockBase, lockBack=self.lockBack, lockLeftArm=self.graspingHand == 'right', lockRightArm=self.graspingHand == 'left')
         self.constraintSet.constraints.extend(bodyConstraints)
 
         # add gaze constraint - TODO: this gaze constraint shouldn't be necessary, fix
@@ -733,7 +733,7 @@ class ValvePlannerDemo(object):
     def planHumanValveTurn(self):
         initialReachAngle = self.reachAngle
         # 10deg per sample
-        numberOfSamples = abs(int(round(self.turnAngle /10.0)))
+        numberOfSamples = abs(int(round(self.turnAngle / 10.0)))
         degreeStep = float(self.turnAngle) / numberOfSamples
 
         facePath = []
@@ -748,7 +748,7 @@ class ValvePlannerDemo(object):
             # reachAngle += self.scribeDirection*degreeStep
             reachAngle += degreeStep
             faceFrameDesired = self.computeHumanTouchFrame(touchValve=True, reachAngle=reachAngle)
-            self.appendPositionOrientationConstraintForTargetFrame(faceFrameDesired, i+1)
+            self.appendPositionOrientationConstraintForTargetFrame(faceFrameDesired, i + 1)
             facePath.append(faceFrameDesired)
 
         self.facePath = facePath
@@ -759,12 +759,12 @@ class ValvePlannerDemo(object):
 
         valveTransform = om.findObjectByName('valve').getChildFrame().transform
         path = DebugData()
-        for i in range(1,len(facePath)):
-            end0 = transformUtils.copyFrame( facePath[i-1].transform)
+        for i in range(1, len(facePath)):
+            end0 = transformUtils.copyFrame(facePath[i - 1].transform)
             end0.Concatenate(valveTransform.GetLinearInverse())
-            end1 = transformUtils.copyFrame( facePath[i].transform)
+            end1 = transformUtils.copyFrame(facePath[i].transform)
             end1.Concatenate(valveTransform.GetLinearInverse())
-            path.addLine ( np.array( end0.GetPosition() ) , np.array(  end1.GetPosition() ), radius= 0.025)
+            path.addLine(np.array(end0.GetPosition()), np.array(end1.GetPosition()), radius=0.025)
 
         pathMesh = path.getPolyData()
         pointerTipLinePath = vis.showPolyData(pathMesh, 'face frame desired path', color=[0.0, 0.3, 1.0], parent=om.findObjectByName('valve'), alpha=1.0)
@@ -789,10 +789,10 @@ class ValvePlannerDemo(object):
         assert side in ('left', 'right')
         return self.lhandDriver if side == 'left' else self.rhandDriver
 
-    def openHand(self,side):
+    def openHand(self, side):
         self.getHandDriver(side).sendCustom(0.0, 100.0, 100.0, 0)
 
-    def openPinch(self,side):
+    def openPinch(self, side):
         self.getHandDriver(side).sendCustom(20.0, 100.0, 100.0, 1)
 
     def closeHand(self, side):
@@ -862,14 +862,15 @@ class ValvePlannerDemo(object):
 
     def prepFromFile(self, moveRobot=True):
         filename = os.path.expanduser('~/drc-testing-data/valve/valve-pod-wall-ihmc.vtp')
-        polyData = ioUtils.readPolyData( filename )
-        vis.showPolyData( polyData,'pointcloud snapshot')
+        polyData = ioUtils.readPolyData(filename)
+        vis.showPolyData(polyData, 'pointcloud snapshot')
 
-        segmentation.segmentValveWallAuto(.20, mode='valve', removeGroundMethod=segmentation.removeGround )
+        segmentation.segmentValveWallAuto(.20, mode='valve', removeGroundMethod=segmentation.removeGround)
         self.computeStanceFrame()
 
         if (moveRobot):
             self.moveRobotToGraspStanceFrame()
+
 
 class ValveImageFitter(ImageBasedAffordanceFit):
 
@@ -1195,7 +1196,7 @@ class ValveTaskPanel(TaskUserPanel):
         addTask(rt.PlanPostureGoal(name='plan arm up pregrasp', postureGroup='General',
                                    postureName='arm up pregrasp', side=side), parent=preturn)
         addTask(rt.CommitManipulationPlan(name='execute manip plan',
-                                          planName='arm up pregrasp plan'), parent=preturn)
+                                          planName='arm up pregrasp posture plan'), parent=preturn)
         addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=preturn)
 
 
