@@ -75,6 +75,8 @@ class ValvePlannerDemo(object):
         self.nominalPoseName = 'q_valve_nom'
         self.startPoseName = 'q_valve_start'
 
+
+
     def setGraspingHand(self, side):
         self.graspingHand = side
         self.setupStance()
@@ -198,6 +200,7 @@ class ValvePlannerDemo(object):
         else:
             return vis.updatePolyData(segmentation.getDisparityPointCloud(4),
                                       'pointcloud snapshot', parent='segmentation')
+
     # Valve Focused Functions ##################################################
 
     def onImageViewDoubleClick(self, displayPoint, modifiers, imageView):
@@ -627,6 +630,7 @@ class ValvePlannerDemo(object):
             nominalPose = self.ikPlanner.getMergedPostureFromDatabase(nominalPose, 'valve', 'reach-nominal-ccw', side=self.graspingHand)
         return nominalPose
 
+
     def computeHumanTouchFrame(self, touchValve=True, reachAngle=-45):
         # 0 is top, 90 is left, -90 is right
         # positive turn is CCW
@@ -674,6 +678,7 @@ class ValvePlannerDemo(object):
     def planHumanRetract(self):
         faceFrameDesired = self.computeHumanTouchFrame(False, reachAngle=(self.reachAngle + self.turnAngle))  # 0 = not in contact
         self.computeHumanTouchPlan(faceFrameDesired)
+
 
     def computeHumanTouchPlan(self, faceFrameDesired):
         # new full 6 dof constraint:
@@ -765,6 +770,7 @@ class ValvePlannerDemo(object):
         pointerTipLinePath = vis.showPolyData(pathMesh, 'face frame desired path', color=[0.0, 0.3, 1.0], parent=om.findObjectByName('valve'), alpha=1.0)
         pointerTipLinePath.actor.SetUserTransform(om.findObjectByName('valve').getChildFrame().transform)
 
+
     # Glue Functions ###########################################################
     def moveRobotToGraspStanceFrame(self):
         self.teleportRobotToStanceFrame(om.findObjectByName('valve grasp stance').transform)
@@ -852,6 +858,7 @@ class ValvePlannerDemo(object):
 
     def commitManipPlan(self):
         self.manipPlanner.commitManipPlan(self.plans[-1])
+
 
     def prepFromFile(self, moveRobot=True):
         filename = os.path.expanduser('~/drc-testing-data/valve/valve-pod-wall-ihmc.vtp')
@@ -947,8 +954,8 @@ class ValveTaskPanel(TaskUserPanel):
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        self.params.addProperty('Turning Mode', 1,
-                                attributes=om.PropertyAttributes(enumNames=['Human-like Turn', 'Simple Turn']))
+        self.params.addProperty('Turning Mode',1,
+                                attributes=om.PropertyAttributes(enumNames=['Human-like Turn','Simple Turn']))
         self.params.addProperty('Reach Angle (Human)', -45,
                                 attributes=om.PropertyAttributes(singleStep=5))
         self.params.addProperty('Turn Angle (Human)', -90,
@@ -963,6 +970,7 @@ class ValveTaskPanel(TaskUserPanel):
 
         if not turningModeOld == self.valveDemo.turningMode:
             self.addTasks()
+
 
     def _syncProperties(self):
 
@@ -1108,6 +1116,7 @@ class ValveTaskPanel(TaskUserPanel):
             for i in range(0, 2):
                 addLargeValveTurn()
 
+
         # go to finishing posture
         prep = self.taskTree.addGroup('Prep for walking')
 
@@ -1118,6 +1127,8 @@ class ValveTaskPanel(TaskUserPanel):
         addTask(rt.CommitManipulationPlan(name='execute manip plan',
                                           planName='safe nominal posture plan'), parent=prep)
         addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=prep)
+
+
 
     def addHumanTurnTasks(self):
 
@@ -1187,6 +1198,7 @@ class ValveTaskPanel(TaskUserPanel):
         addTask(rt.CommitManipulationPlan(name='execute manip plan',
                                           planName='arm up pregrasp posture plan'), parent=preturn)
         addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=preturn)
+
 
         addManipulation(functools.partial(v.planHumanReach),
                             name='Reach to valve', parent=turning)
