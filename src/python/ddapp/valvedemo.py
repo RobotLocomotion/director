@@ -1185,7 +1185,7 @@ class ValveTaskPanel(TaskUserPanel):
         addTask(rt.PlanPostureGoal(name='plan arm up pregrasp', postureGroup='General',
                                    postureName='arm up pregrasp', side=side), parent=preturn)
         addTask(rt.CommitManipulationPlan(name='execute manip plan',
-                                          planName='arm up pregrasp plan'), parent=preturn)
+                                          planName='arm up pregrasp posture plan'), parent=preturn)
         addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'), parent=preturn)
 
         addManipulation(functools.partial(v.planHumanReach),
