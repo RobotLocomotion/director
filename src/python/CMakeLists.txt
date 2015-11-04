@@ -31,6 +31,7 @@ set(python_files
   ddapp/drilldemo.py
   ddapp/drivingplanner.py
   ddapp/egressplanner.py
+  ddapp/externalforce.py
   ddapp/frameupdater.py
   ddapp/fieldcontainer.py
   ddapp/filterUtils.py
@@ -120,6 +121,8 @@ set(python_files
   ddapp/wristforcetorquevisualizer.py
   ddapp/kinectlcm.py
   ddapp/plannerPublisher.py
+
+  ddapp/testLinkSelection.py
 
 
   ddapp/macros/segmentation_view/ortho_x.py
