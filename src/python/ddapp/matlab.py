@@ -147,8 +147,8 @@ class MatlabCommunicator(object):
 
     def getLogFile(self):
         if self.logFile is None:
-            if not os.path.exists(os.path.expanduser('~/.drake-designer')):
-                os.makedirs(os.path.expanduser('~/.drake-designer'))
+            if not os.path.exists(os.path.dirname(self.logFileName)):
+                os.makedirs(os.path.dirname(self.logFileName))
 
             self.logFile = open(self.logFileName, 'w')
         return self.logFile
