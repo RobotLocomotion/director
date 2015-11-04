@@ -1,12 +1,12 @@
 import os
 import math
+from ddapp import robotsystem
 from ddapp.consoleapp import ConsoleApp
 from ddapp import ioUtils
 from ddapp import segmentation
 from ddapp import applogic
 from ddapp import visualization as vis
 from ddapp import continuouswalkingdemo
-from ddapp import robotsystem
 from ddapp import objectmodel as om
 from ddapp import ikplanner
 from ddapp import navigationpanel
@@ -70,8 +70,9 @@ def processSnippet():
 
 #navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)
 navigationPanel = None
-continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, robotStateJointController, ikPlanner,
-                                                                       teleopJointController, navigationPanel, cameraview)
+continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, footstepsDriver, robotStateJointController, ikPlanner,
+                                                                       teleopJointController, navigationPanel, cameraview, jointLimitChecker=None)
+
 cwdemo = continuouswalkingDemo
 
 # test 1

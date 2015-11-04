@@ -1,48 +1,26 @@
-import os
-import sys
-import vtkAll as vtk
-import math
-import time
-import types
-import functools
-import numpy as np
-
 from ddapp import transformUtils
-from ddapp import lcmUtils
 from ddapp.timercallback import TimerCallback
-from ddapp.asynctaskqueue import AsyncTaskQueue
 from ddapp import objectmodel as om
 from ddapp import visualization as vis
 from ddapp import applogic as app
 from ddapp.debugVis import DebugData
-from ddapp import ik
-from ddapp import ikplanner
 from ddapp import ioUtils
 from ddapp.simpletimer import SimpleTimer
 from ddapp.utime import getUtime
 from ddapp.pointpicker import ImagePointPicker
 from ddapp import affordanceitems
 from ddapp import affordanceupdater
-from ddapp import robotstate
-from ddapp import robotplanlistener
 from ddapp import cameraview
 from ddapp import segmentation
-from ddapp import planplayback
 from ddapp import propertyset
 from ddapp import asynctaskqueue as atq
-
 import ddapp.tasks.robottasks as rt
 import ddapp.tasks.taskmanagerwidget as tmw
 
+import numpy as np
+import traceback
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-
-
-import drc as lcmdrc
-import traceback
-from PythonQt import QtCore, QtGui
-
-
 
 
 def addWidgetsToDict(widgets, d):
