@@ -27,6 +27,7 @@ from ddapp import mappingdemo
 from ddapp import valvedemo
 from ddapp import drivingplanner
 from ddapp import egressplanner
+from ddapp import externalforce
 from ddapp import polarisplatformplanner
 from ddapp import surprisetask
 from ddapp import continuouswalkingdemo
@@ -445,6 +446,8 @@ if usePlanning:
     valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
 
     drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
+
+    externalForce = externalforce.ExternalForce(robotSystem)
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
