@@ -134,7 +134,7 @@ class MatlabCommunicator(object):
         self.echoCommandsToStdOut = False
         self.writeCommandsToLogFile = False
         self.logFile = None
-        self.logFileName = '/tmp/matlab_commands.m'
+        self.logFileName = os.path.expanduser('~/.drake-designer/matlab_commands.m')
         self.clearResult()
 
     def checkForResult(self):
@@ -147,6 +147,9 @@ class MatlabCommunicator(object):
 
     def getLogFile(self):
         if self.logFile is None:
+            if not os.path.exists(os.path.dirname(self.logFileName)):
+                os.makedirs(os.path.dirname(self.logFileName))
+
             self.logFile = open(self.logFileName, 'w')
         return self.logFile
 
