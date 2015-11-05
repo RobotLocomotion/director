@@ -254,15 +254,6 @@ def forceMomentTransformation(inputFrame, outputFrame):
     FM[3:,3:] = inputToOutputRotationMatrix
 
     cross = crossProductMatrix(position)
-
-    # print "position is"
-
-    # print 'cross is'
-    # print cross
-    # print ""
-
-    # print "rotation matrix is"
-    # print inputToOutputRotationMatrix
     
     FM[0:3,3:] = np.dot(cross,inputToOutputRotationMatrix)
 
