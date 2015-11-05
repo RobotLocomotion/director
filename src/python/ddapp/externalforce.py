@@ -170,14 +170,15 @@ class ExternalForce(object):
 
             point = forceLocationInWorld - 0.1*forceDirectionInWorld
 
-            d = DebugData()
-            d.addSphere(forceLocationInWorld, radius=0.01)
-            d.addLine(point, forceLocationInWorld, radius=0.005)
-
             #Green is for a force, red is for a wrench
             color = [0,1,0]
             if val['isWrench']:
                 color = [1,0,0]
+
+            d = DebugData()
+            # d.addArrow(point, forceLocationInWorld, headRadius=0.025, tubeRadius=0.005, color=color)
+            d.addSphere(forceLocationInWorld, radius=0.01)
+            d.addLine(point, forceLocationInWorld, radius=0.005)
 
             obj = vis.updatePolyData(d.getPolyData(), name, color=color)
             obj.actor.SetPickable(False)
