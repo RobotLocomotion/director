@@ -60,6 +60,7 @@ set(python_files
   ddapp/lcmobjectcollection.py
   ddapp/lcmspy.py
   ddapp/lcmUtils.py
+  ddapp/linkselection.py
   ddapp/mappingdemo.py
   ddapp/mappingpanel.py
   ddapp/mapsregistrar.py
