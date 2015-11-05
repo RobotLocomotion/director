@@ -114,6 +114,7 @@ class ContinousWalkingDemo(object):
         self.footStatus_left = []
         self.tf_robotStatus = None
         self.transforms_series = []
+        self.blocks_series = []
 
         self.new_status = False
         self.footstep_index = -1
@@ -306,18 +307,22 @@ class ContinousWalkingDemo(object):
         blocksGood = []
         groundPlane = None
         if self.chosenTerrain == 'stairs':
-            rectWidth_thresh = 0.90
-            rectDepth_thresh = 0.90
+            ground_width_thresh = 0.90
+            ground_depth_thresh = 0.90
+            step_width_thresh = 0.30
+            step_depth_thresh = 0.125
         else:
-            rectWidth_thresh = 0.45
-            rectDepth_thresh = 0.90
+            ground_width_thresh = 0.45
+            ground_depth_thresh = 0.90
+            step_width_thresh = 0.30
+            step_depth_thresh = 0.20
 
         for i, block in enumerate(blocks):
-            if ((block.rectWidth>rectWidth_thresh) or (block.rectDepth>rectDepth_thresh)):
+            if ((block.rectWidth>ground_width_thresh) or (block.rectDepth>ground_depth_thresh)):
                 #print " ground plane",i,block.rectWidth,block.rectDepth
                 groundPlane = block
-            elif ((block.rectWidth<0.30) or (block.rectDepth<0.20)): # was 0.34 and 0.30 for 13 block successful walk with lidar
-                #print "removed block",i,block.rectWidth,block.rectDepth
+            elif ((block.rectWidth<step_width_thresh) or (block.rectDepth<step_depth_thresh)): # was 0.34 and 0.30 for 13 block successful walk with lidar
+                print "removed block",i,block.rectWidth,block.rectDepth
                 foobar=[]
             else:
                 blocksGood.append(block)
@@ -328,6 +333,36 @@ class ContinousWalkingDemo(object):
         for i, block in enumerate(blocks):
             block.distToRobot = np.linalg.norm(np.array(linkFrame.GetPosition()) - np.array(block.cornerTransform.GetPosition()))
         blocks.sort(key=operator.attrgetter('distToRobot'))
+
+        # populate global blocks list
+        tmp_dist = 1000
+        match_idx = -1
+        if len(self.blocks_series) == 0:
+            self.blocks_series.extend(blocks)
+        else:
+            for i, stored_block in enumerate(self.blocks_series):
+                curr_dist = np.linalg.norm(np.array(blocks[0].cornerTransform.GetPosition()) - np.array(stored_block.cornerTransform.GetPosition()))
+                if curr_dist < tmp_dist:
+                    tmp_dist = curr_dist
+                    match_idx = i
+            if tmp_dist < 0.10:
+                self.blocks_series = self.blocks_series[:match_idx]
+            else:
+                match_idx = match_idx + 1
+            self.blocks_series.extend(blocks)
+
+        # draw global blocks list
+        om.removeFromObjectModel(om.findObjectByName('blocks_list'))
+        blocksFolder=om.getOrCreateContainer('blocks_list',om.getOrCreateContainer('continuous'))
+        for i, block in enumerate(self.blocks_series):
+
+            blockCenter = transformUtils.frameFromPositionAndRPY([-block.rectDepth/2,block.rectWidth/2,0.0], [0,0,0])
+            blockCenter.Concatenate(block.cornerTransform)
+
+            d = DebugData()
+            d.addCube([ block.rectDepth, block.rectWidth,0.005],[0,0,0])
+            obj = vis.showPolyData(d.getPolyData(),'block %d' % i, color=[0,1,1],parent=blocksFolder)
+            obj.actor.SetUserTransform(blockCenter)
 
         # draw blocks including the ground plane:
         om.removeFromObjectModel(om.findObjectByName('blocks'))
@@ -354,7 +389,7 @@ class ContinousWalkingDemo(object):
             obj = vis.showPolyData(d.getPolyData(),'ground plane', color=[1,1,0],alpha=0.1, parent=blocksFolder)
             obj.actor.SetUserTransform(blockCenter)
 
-        return blocks,groundPlane
+        return blocks,match_idx,groundPlane
 
 
     def placeStepsOnBlocks(self, blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep = True):
@@ -561,7 +596,7 @@ class ContinousWalkingDemo(object):
             return
 
         # Step 3: find the corners of the minimum bounding rectangles
-        blocks,groundPlane = self.extractBlocksFromSurfaces(clusters, standingFootFrame)
+        blocks,match_idx,groundPlane = self.extractBlocksFromSurfaces(clusters, standingFootFrame)
 
 
         # Step 4: reduce list of blocks to those which represent either going_up stairs or going_down stairs
@@ -570,7 +605,8 @@ class ContinousWalkingDemo(object):
         blocks_big_enough = True
         for i, block in enumerate(blocks):
             corners = block.getCorners()
-            heights.append(corners[0,2])
+            h_mean = (corners[0,2]+corners[1,2]+corners[2,2]+corners[3,2])/4
+            heights.append(h_mean)
             if block.rectDepth <= (self.FOOT_LENGHT+safety_thresh):
                 blocks_big_enough = False
 
@@ -605,34 +641,28 @@ class ContinousWalkingDemo(object):
         else:
             self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
 
+        if match_idx > 0:
+            corners_prev = self.blocks_series[match_idx-1].getCorners()
+            h_mean_prev = (corners_prev[0,2]+corners_prev[1,2]+corners_prev[2,2]+corners_prev[3,2])/4
+            corners_next = blocks[0].getCorners()
+            h_mean_next = (corners_next[0,2]+corners_next[1,2]+corners_next[2,2]+corners_next[3,2])/4
+            print 'prev:'
+            print corners_prev
+            print 'next:'
+            print corners_next
+            if h_mean_next < h_mean_prev:
+                for i, block in enumerate(blocks):
+                    x_mean_prev = (corners_prev[1,0]+corners_prev[2,0])/2
+                    x_mean_next = (corners_next[1,0]+corners_next[2,0])/2
+                    print 'depth before:'
+                    print block.rectDepth
+                    block.rectDepth = abs(x_mean_next - x_mean_prev) # length of face away from robot
+                    print 'depth after:'
+                    print block.rectDepth
+                    block.rectArea = block.rectDepth * block.rectWidth          
 
-        # Step 5: Find the two foot positions we should plan with: the next committed tool and the current standing foot
-        '''
-        if (self.committedStep is not None):
-          #print "i got a committedStep. is_right_foot?" , self.committedStep.is_right_foot
-          if (self.committedStep.is_right_foot):
-              standingFootTransform = self.robotStateModel.getLinkFrame(self.ikPlanner.leftFootLink)
-              nextDoubleSupportPose = self.getNextDoubleSupportPose(standingFootTransform, self.committedStep.transform)
-          else:
-              standingFootTransform = self.robotStateModel.getLinkFrame(self.ikPlanner.rightFootLink)
-              nextDoubleSupportPose = self.getNextDoubleSupportPose(self.committedStep.transform, standingFootTransform)
 
-          comm_mesh,comm_color = self.getMeshAndColor(self.committedStep.is_right_foot)
-          comm_color[1] = 0.75 ; comm_color[2] = 0.25
-          stand_mesh, stand_color = self.getMeshAndColor( not self.committedStep.is_right_foot )
-          stand_color[1] = 0.75 ; stand_color[2] = 0.25
-          vis.updateFrame(self.committedStep.transform, 'committed foot', parent='foot placements', scale=0.2, visible=False)
-          obj = vis.showPolyData(comm_mesh, 'committed step', color=comm_color, alpha=1.0, parent='steps')
-          obj.actor.SetUserTransform(self.committedStep.transform)
-          vis.updateFrame(standingFootTransform, 'standing foot', parent='foot placements', scale=0.2, visible=False)
-          obj = vis.showPolyData(stand_mesh, 'standing step', color=stand_color, alpha=1.0, parent='steps')
-          obj.actor.SetUserTransform(standingFootTransform)
-
-        else:
-            # don't have a committed footstep, assume we are standing still
-            nextDoubleSupportPose = self.robotStateJointController.getPose('EST_ROBOT_STATE')
-        '''
-
+        # Step 5: Footsteps planning
         self.displayExpectedPose(nextDoubleSupportPose)
 
         if not self.useManualFootstepPlacement and self.queryPlanner:
@@ -656,10 +686,12 @@ class ContinousWalkingDemo(object):
             self.new_first_double_supp = False
         
         #print 'planned_footsteps:'
+        '''
         f0 = self.planned_footsteps[0]
         f1 = self.planned_footsteps[1]
-        #print (transformUtils.poseFromTransform(f0.transform))
-        #print (transformUtils.poseFromTransform(f1.transform))
+        print (transformUtils.poseFromTransform(f0.transform))
+        print (transformUtils.poseFromTransform(f1.transform))
+        '''
 
     def sendPlanningRequest(self, footsteps, nextDoubleSupportPose):
 
