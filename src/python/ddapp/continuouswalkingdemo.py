@@ -88,8 +88,10 @@ class ContinousWalkingDemo(object):
     FULL_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.17, 0.17],
                                   [0.0562, -0.0562, 0.0562, -0.0562]])
     def __init__(self, robotStateModel, footstepsPanel, footstepsDriver, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
+    def __init__(self, robotStateModel, footstepsPanel, footstepsDriver, playbackPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
         self.footstepsPanel = footstepsPanel
         self.footstepsDriver = footstepsDriver
+        self.playbackPanel = playbackPanel
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
         self.ikPlanner = ikPlanner
@@ -1017,6 +1019,9 @@ class ContinousWalkingDemo(object):
     def disableJointChecker(self):
         self.jointLimitChecker.automaticallyExtendLimits = True
 
+    def executeManipPlan(self):
+        self.playbackPanel.executePlan()
+
     def addPlan(self, plan):
         self.plans.append(plan)
 
@@ -1166,6 +1171,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         prep = self.taskTree.addGroup('Preparation')
         addFunc(functools.partial(cw.disableJointChecker), 'disable joint checker', parent=prep)
         addTask(rt.SetArmsPosition(name='set arms position'), parent=prep)
+        addFunc(functools.partial(cw.executeManipPlan), 'execute arms plan', parent=prep)
         addTask(rt.SetNeckPitch(name='set neck position', angle=50), parent=prep)
 
         # plan walking
