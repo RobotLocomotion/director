@@ -82,6 +82,36 @@ class LinkWidget(object):
         print self.linkName, self.pickedPoint
 
 
+class ForcesPanel(object):
+
+    def __init__(self):
+        self.forces = ['pelvis']
+        self.widget = QtGui.QWidget()
+        self.layout = QtGui.QVBoxLayout(self.widget)
+
+        self.rebuild()
+        self.layout.addStretch()
+
+    def rebuild(self):
+        for force in self.forces:
+            self.layout.addWidget(self.makeForcesWidget(force))
+
+    def makeForcesWidget(self, force):
+        w = QtGui.QWidget()
+        h = QtGui.QHBoxLayout(w)
+        h.addWidget(QtGui.QLabel(force))
+        slider = QtGui.QSlider(QtCore.Qt.Horizontal)
+        h.addWidget(slider)
+
+        def onSliderChanged(value):
+            print value, force
+
+        slider.connect('valueChanged(int)', onSliderChanged)
+        return w
+
+
+
+
 ###########################
 
 app = ConsoleApp()
@@ -100,5 +130,20 @@ app.viewOptions.setProperty('Background color', [1,1,1])
 app.viewOptions.setProperty('Orientation widget', False)
 app.gridObj.setProperty('Color', [0,0,0])
 app.gridObj.setProperty('Surface Mode', 'Surface with edges')
+
+
+w = ForcesPanel()
+
+m = QtGui.QMainWindow()
+m.setCentralWidget(view)
+dock = QtGui.QDockWidget()
+dock.setWindowTitle('Forces panel')
+dock.setWidget(w.widget)
+
+m.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock)
+m.resize(1080, 768)
+m.show()
+
+
 
 app.start()
