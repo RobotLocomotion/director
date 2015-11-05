@@ -37,6 +37,8 @@ class ExternalForce(object):
 
     def __init__(self, robotSystem):
         self.robotSystem = robotSystem
+        self.robotStateModel = robotSystem.robotStateModel
+        self.robotStateModel.connectModelChanged(self.onModelChanged)
 
         # keys = linkNames, wrench = 6 x 1 Torque-Force vector, all in body frame
         self.externalForces = dict()
@@ -46,52 +48,71 @@ class ExternalForce(object):
         # setup timercallback to publish, lets say at 5 hz
         self.timer = TimerCallback(targetFps=5)
         self.timer.callback = self.publish
+        self.startPublishing()
 
 
     # linkName is a string, wrench is an np.array
-    def addForceToDict(self, linkName, wrench=None, forceDirection=None, forceMagnitude=None, forceLocation=None):
+    def addForce(self, linkName, wrench=None, forceDirection=None, forceMagnitude=None, forceLocation=None, inWorldFrame=False):
+
 
         d = dict()
-        d['linkName'] = linkName
-
         # need at least one of wrench, or forceDirection and forceMagnitude
         assert (wrench is not None) or ((forceDirection is not None) and (forceMagnitude is not None) and (forceLocation is not None))
 
+        visName = linkName + ' external force'
+        om.removeFromObjectModel(om.findObjectByName(visName))
+
 
         if wrench is not None:
+            if inWorldFrame:
+                raise ValueError('do not support specifying wrench in world frame')
             d['wrench'] = wrench
             d['forceLocation'] = np.array([0,0,0])
-            d['forceDirection'] = wrench[3:end]
-            d['forceMagnitude'] = np.norm(wrench[3:end])
+            d['forceDirection'] = wrench[3:]/np.linalg.norm(wrench[3:])
+            d['forceMagnitude'] = np.linalg.norm(wrench[3:])
             d['isWrench'] = True
         else:
-            d['wrench'] = self.computeWrench(linkName, forceDirection, forceMagnitude, forceLocation)
+            if inWorldFrame:
+                linkToWorld = self.robotStateModel.getLinkFrame(linkName)
+                worldToLink = linkToWorld.GetLinearInverse()
+                forceLocation = np.array(worldToLink.TransformPoint(forceLocation))
+                forceDirection = np.array(worldToLink.TransformDoubleVector(forceDirection))
+
+            forceDirection = forceDirection/np.linalg.norm(forceDirection)
             d['forceDirection'] = forceDirection
             d['forceMagnitude'] = forceMagnitude
             d['forceLocation'] = forceLocation
+            d['isWrench'] = False
+
 
         d['time'] = time.time()
         self.externalForces[linkName] = d
+        self.updateContactWrench(linkName)
+        self.drawForces()
 
-    def computeWrench(linkName, forceDirection, forceMagnitude, forceLocation):
+    def computeWrench(self, linkName, forceDirection, forceMagnitude, forceLocation):
         outputFrame = vtk.vtkTransform()
         wrenchFrame = vtk.vtkTransform()
         wrenchFrame.Translate(forceLocation)
 
         forceMomentTransform = transformUtils.forceMomentTransformation(wrenchFrame, outputFrame)
 
-        wrench = np.zeros(6,1)
+        wrench = np.zeros(6)
         wrench[3:] = forceMagnitude*forceDirection
         wrenchTransformed = np.dot(forceMomentTransform, wrench)
 
         return wrenchTransformed
 
 
-    def removeForceFromDict(self, linkName):
-        del self.externalForces[linkName]
+    def removeForce(self, linkName, callFromFrameObj=False):
+        self.externalForces.pop(linkName, None)
+        name = linkName + ' external force'
+
+        if not callFromFrameObj:
+            om.removeFromObjectModel(om.findObjectByName(linkName))
 
     # remove forces from dict that haven't been refreshed in at least self.timeout seconds
-    def cleanupExternalForces(self):
+    def removeStaleExternalForces(self):
         keysToRemove = []
         for linkName, value in self.externalForces.iteritems():
             elapsed = time.time() - value['time']
@@ -101,35 +122,18 @@ class ExternalForce(object):
 
 
         for key in keysToRemove:
-            self.removeForceFromDict(key)
+            self.removeForce(key)
 
-    def setupTest(self):
-        w = np.array([1,2,3,4,5,6])
-        self.addForceToDict('pelvis', wrench=w)
-        self.startPublishing()
-
-    def constructTestFrames(self):
-        T = vtk.vtkTransform();
-        S = vtk.vtkTransform()
-        S.Translate([1,2,0])
-        FM = transformUtils.forceMomentTransformation(S,T)
-        print FM
-        return T,S, FM
+    
 
     def publish(self):
 
         if len(self.externalForces) == 0:
             return
 
-        # self.cleanupExternalForces()
+        # self.removeStaleExternalForces()
         msg = lcmdrake.lcmt_external_force_torque()
         msg.num_external_forces = len(self.externalForces);
-        # msg.body_names = []
-        # msg.tx = []
-        # msg.ty = []
-        # msg.tz = []
-        # msg.fx = []
-        # msg
 
 
         for linkName, val in self.externalForces.iteritems():
@@ -149,6 +153,106 @@ class ExternalForce(object):
 
     def stopPublishing(self):
         self.timer.stop()
+
+    # connect this with an on model changed
+    def drawForces(self):
+        if len(self.externalForces) == 0:
+            return
+
+
+
+        for linkName, val in self.externalForces.iteritems():
+            name = linkName + ' external force'
+            linkToWorld = self.robotStateModel.getLinkFrame(linkName)
+
+            forceLocationInWorld = np.array(linkToWorld.TransformPoint(val['forceLocation']))
+            forceDirectionInWorld = np.array(linkToWorld.TransformDoubleVector(val['forceDirection']))
+
+            point = forceLocationInWorld - 0.1*forceDirectionInWorld
+
+            d = DebugData()
+            d.addSphere(forceLocationInWorld, radius=0.01)
+            d.addLine(point, forceLocationInWorld, radius=0.005)
+
+            #Green is for a force, red is for a wrench
+            color = [0,1,0]
+            if val['isWrench']:
+                color = [1,0,0]
+
+            obj = vis.updatePolyData(d.getPolyData(), name, color=color)
+            obj.actor.SetPickable(False)
+            obj.connectRemovedFromObjectModel(self.removeForceFromFrameObject)
+            obj.addProperty('magnitude', 0.0)
+            obj.addProperty('linkName', linkName)
+            obj.properties.connectPropertyChanged(functools.partial(self.onPropertyChanged, obj))
+
+    def onModelChanged(self, model):
+        self.drawForces()
+
+    def onPropertyChanged(self, frameObj, propertySet, propertyName):
+        if propertyName != 'magnitude':
+            return
+        linkName = frameObj.getProperty('linkName')
+        magnitude = frameObj.getProperty('magnitude')
+        if magnitude < 0:
+            print "you must specify a positive magnitude"
+            print "external forces can only PUSH, NOT PULL"
+            return
+
+        self.externalForces[linkName]['forceMagnitude'] = magnitude
+        self.updateContactWrench(linkName)
+
+    def updateContactWrench(self, linkName):
+        if not self.externalForces.has_key(linkName):
+            return
+
+        val = self.externalForces[linkName]
+
+        # if it was specified as a wrench, then don't overwrite it
+        if val['isWrench']:
+            return
+
+        val['wrench'] = self.computeWrench(linkName, val['forceDirection'],  val['forceMagnitude'], val['forceLocation'])
+
+
+    def removeForceFromFrameObject(self, tree_, frameObj):
+        linkName = frameObj.getProperty('linkName')
+        self.removeForce(linkName, callFromFrameObj=True)
+
+    def printForces(self):
+        for key in self.externalForces.keys():
+            print key
+
+    # these are test methods
+    def setupTest(self):
+        w = np.array([1,2,3,4,5,6])
+        self.addForce('pelvis', wrench=w)
+        self.startPublishing()
+
+    def test1(self):
+        forceDirection = np.array([0,0,1])
+        forceMagnitude = 100
+        forceLocation = np.array([0,0,0])
+        linkName = 'pelvis'
+
+        self.addForce(linkName, forceDirection=forceDirection, forceMagnitude=forceMagnitude, forceLocation=forceLocation)
+        self.drawForces()
+
+    def test2(self):
+        wrench = np.array([0,0,0,0,0,100])
+        linkName = 'pelvis'
+        self.addForce(linkName, wrench=wrench)
+
+
+    def constructTestFrames(self):
+        T = vtk.vtkTransform();
+        S = vtk.vtkTransform()
+        S.Translate([1,2,0])
+        FM = transformUtils.forceMomentTransformation(S,T)
+        print FM
+        return T,S, FM
+
+
 
 
 
