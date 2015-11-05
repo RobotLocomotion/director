@@ -36,6 +36,7 @@ from ddapp import walkingtestdemo
 from ddapp import terraintask
 from ddapp import ik
 from ddapp import ikplanner
+from ddapp import linkselection
 from ddapp import objectmodel as om
 from ddapp import spreadsheet
 from ddapp import transformUtils
@@ -448,6 +449,7 @@ if usePlanning:
     drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
 
     externalForce = externalforce.ExternalForce(robotSystem)
+    linkSelection = linkselection.LinkWidget(view, robotStateModel, externalForce)
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
