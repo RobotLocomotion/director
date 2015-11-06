@@ -79,17 +79,21 @@ class Footstep():
 
 
 class ContinousWalkingDemo(object):
-    BACK_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.07, 0.07],
-                                  [0.0562, -0.0562, 0.0562, -0.0562]])
+    FOOTSIZE_REDUCTION = 0.04
+    FOOT_LENGHT = 0.25 - FOOTSIZE_REDUCTION
+    FOOT_WIDTH = 0.15 - FOOTSIZE_REDUCTION
+    BACK_FOOT_CONTACT_POINTS = np.array([[-0.5*FOOT_LENGHT, -0.5*FOOT_LENGHT, 0.166666667*FOOT_LENGHT, 0.166666667*FOOT_LENGHT],
+                                  [0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH, 0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH]])
 
-    FRONT_FOOT_CONTACT_POINTS = np.array([[-0.03, -0.03, 0.17, 0.17],
-                                  [0.0562, -0.0562, 0.0562, -0.0562]])
+    FRONT_FOOT_CONTACT_POINTS = np.array([[-0.166666667*FOOT_LENGHT, -0.166666667*FOOT_LENGHT, 0.5*FOOT_LENGHT, 0.5*FOOT_LENGHT],
+                                  [0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH, 0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH]])
 
-    FULL_FOOT_CONTACT_POINTS = np.array([[-0.13, -0.13, 0.17, 0.17],
-                                  [0.0562, -0.0562, 0.0562, -0.0562]])
-    def __init__(self, robotStateModel, footstepsPanel, footstepsDriver, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
+    FULL_FOOT_CONTACT_POINTS = np.array([[-0.5*FOOT_LENGHT, -0.5*FOOT_LENGHT, 0.5*FOOT_LENGHT, 0.5*FOOT_LENGHT],
+                                  [0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH, 0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH]])
+    def __init__(self, robotStateModel, footstepsPanel, footstepsDriver, playbackPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
         self.footstepsPanel = footstepsPanel
         self.footstepsDriver = footstepsDriver
+        self.playbackPanel = playbackPanel
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
         self.ikPlanner = ikPlanner
@@ -102,7 +106,7 @@ class ContinousWalkingDemo(object):
         self.leadingFootByUser = 'Left'
         self.automaticContinuousWalkingEnabled = True
         self.planFromCurrentRobotState = False
-        self.chosenTerrain = 'Simple'
+        self.chosenTerrain = 'simple'
         self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
 
         self.plans = []
@@ -112,11 +116,11 @@ class ContinousWalkingDemo(object):
         self.footStatus_left = []
         self.tf_robotStatus = None
         self.transforms_series = []
+        self.blocks_series = []
 
         self.new_status = False
         self.footstep_index = -1
 
-        self.lastContactState = "none"
         # Smooth Stereo or Raw or Lidar?
         self.processContinuousStereo = False
         self.processRawStereo = False
@@ -170,9 +174,14 @@ class ContinousWalkingDemo(object):
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
         polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewZ, origin=viewOrigin, resultArrayName='distance_along_foot_z')
 
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.30, 1.6])
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.45, 0.45])
-        polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.9])
+        if self.chosenTerrain == 'stairs':
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.30, 1.6])
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.45, 0.45])
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.9])
+        else:
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_x', [0.12, 1.6])
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_y', [-0.4, 0.4])
+            polyData = segmentation.thresholdPoints(polyData, 'distance_along_foot_z', [-0.4, 0.4])
 
         vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='cont debug', visible=True)
         return polyData
@@ -299,13 +308,23 @@ class ContinousWalkingDemo(object):
         # TODO: pull out these parameters
         blocksGood = []
         groundPlane = None
+        if self.chosenTerrain == 'stairs':
+            ground_width_thresh = 0.90
+            ground_depth_thresh = 0.90
+            step_width_thresh = 0.30
+            step_depth_thresh = 0.125
+        else:
+            ground_width_thresh = 0.45
+            ground_depth_thresh = 0.90
+            step_width_thresh = 0.30
+            step_depth_thresh = 0.20
+
         for i, block in enumerate(blocks):
-            #if ((block.rectWidth>0.45) or (block.rectDepth>0.90)):
-            if ((block.rectWidth>0.90) or (block.rectDepth>0.90)):
+            if ((block.rectWidth>ground_width_thresh) or (block.rectDepth>ground_depth_thresh)):
                 #print " ground plane",i,block.rectWidth,block.rectDepth
                 groundPlane = block
-            elif ((block.rectWidth<0.30) or (block.rectDepth<0.20)): # was 0.34 and 0.30 for 13 block successful walk with lidar
-                #print "removed block",i,block.rectWidth,block.rectDepth
+            elif ((block.rectWidth<step_width_thresh) or (block.rectDepth<step_depth_thresh)): # was 0.34 and 0.30 for 13 block successful walk with lidar
+                print "removed block",i,block.rectWidth,block.rectDepth
                 foobar=[]
             else:
                 blocksGood.append(block)
@@ -316,6 +335,50 @@ class ContinousWalkingDemo(object):
         for i, block in enumerate(blocks):
             block.distToRobot = np.linalg.norm(np.array(linkFrame.GetPosition()) - np.array(block.cornerTransform.GetPosition()))
         blocks.sort(key=operator.attrgetter('distToRobot'))
+
+        # merge blocks if represent multiple pieces of same step
+        '''
+        for i, block in enumerate(blocks):
+            j = i+1
+            while j != len(blocks):
+                block_position = block.cornerTransform.GetPosition()
+                next_block_position = blocks[j].cornerTransform.GetPosition()
+                if abs(block_position-next_block_position) < 0.05:
+                    block.
+                j = j+1
+        '''
+
+        # populate global blocks list
+        tmp_dist = 1000
+        match_idx = -1
+        if len(self.blocks_series) == 0:
+            self.blocks_series.extend(blocks)
+        else:
+            for i, stored_block in enumerate(self.blocks_series):
+                curr_dist = np.linalg.norm(np.array(blocks[0].cornerTransform.GetPosition()) - np.array(stored_block.cornerTransform.GetPosition()))
+                print 'dist:'
+                print curr_dist
+                if curr_dist < tmp_dist:
+                    tmp_dist = curr_dist
+                    match_idx = i
+            if tmp_dist < 0.10:
+                self.blocks_series = self.blocks_series[:match_idx]
+            else:
+                match_idx = match_idx + 1
+            self.blocks_series.extend(blocks)
+
+        # draw global blocks list
+        om.removeFromObjectModel(om.findObjectByName('blocks_list'))
+        blocksFolder=om.getOrCreateContainer('blocks_list',om.getOrCreateContainer('continuous'))
+        for i, block in enumerate(self.blocks_series):
+
+            blockCenter = transformUtils.frameFromPositionAndRPY([-block.rectDepth/2,block.rectWidth/2,0.0], [0,0,0])
+            blockCenter.Concatenate(block.cornerTransform)
+
+            d = DebugData()
+            d.addCube([ block.rectDepth, block.rectWidth,0.005],[0,0,0])
+            obj = vis.showPolyData(d.getPolyData(),'block %d' % i, color=[0,1,1],parent=blocksFolder)
+            obj.actor.SetUserTransform(blockCenter)
 
         # draw blocks including the ground plane:
         om.removeFromObjectModel(om.findObjectByName('blocks'))
@@ -342,7 +405,7 @@ class ContinousWalkingDemo(object):
             obj = vis.showPolyData(d.getPolyData(),'ground plane', color=[1,1,0],alpha=0.1, parent=blocksFolder)
             obj.actor.SetUserTransform(blockCenter)
 
-        return blocks,groundPlane
+        return blocks,match_idx,groundPlane
 
 
     def placeStepsOnBlocks(self, blocks, groundPlane, standingFootName, standingFootFrame, removeFirstLeftStep = True):
@@ -415,6 +478,7 @@ class ContinousWalkingDemo(object):
             obj.actor.SetUserTransform(footstep.transform)
 
 
+
     def computeFootstepPlanSafeRegions(self, blocks, robotPose, standingFootName):
 
         print 'planning with safe regions.  %d blocks.' % len(blocks)
@@ -427,7 +491,7 @@ class ContinousWalkingDemo(object):
         for i, block in enumerate(blocks):
             corners = block.getCorners()
             rpy = np.radians(block.cornerTransform.GetOrientation())
-            #rpy = [0.0, 0.0, 0.0]
+
             self.convertStepToSafeRegion(corners, rpy)
 
         lastBlock = blocks[-1]
@@ -492,9 +556,9 @@ class ContinousWalkingDemo(object):
 
         shapeVertices = np.array(step).transpose()[:2,:]
 
-        if (self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT):
+        if self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT:
             footContactPoints = self.BACK_FOOT_CONTACT_POINTS
-        elif (self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE):
+        elif self.supportContact == lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE:
             footContactPoints = self.FRONT_FOOT_CONTACT_POINTS
         else:
             footContactPoints = self.FULL_FOOT_CONTACT_POINTS
@@ -543,40 +607,78 @@ class ContinousWalkingDemo(object):
         # Step 2: find all the surfaces in front of the robot (about 0.75sec)
         clusters = segmentation.findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSearchRadius=0.05,
                                                        clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0])
-        if (clusters is None):
+        if clusters is None:
             print "No cluster found, stop walking now!"
             return
 
         # Step 3: find the corners of the minimum bounding rectangles
-        blocks,groundPlane = self.extractBlocksFromSurfaces(clusters, standingFootFrame)
+        blocks,match_idx,groundPlane = self.extractBlocksFromSurfaces(clusters, standingFootFrame)
 
-        # Step 5: Find the two foot positions we should plan with: the next committed tool and the current standing foot
-        '''
-        if (self.committedStep is not None):
-          #print "i got a committedStep. is_right_foot?" , self.committedStep.is_right_foot
-          if (self.committedStep.is_right_foot):
-              standingFootTransform = self.robotStateModel.getLinkFrame(self.ikPlanner.leftFootLink)
-              nextDoubleSupportPose = self.getNextDoubleSupportPose(standingFootTransform, self.committedStep.transform)
-          else:
-              standingFootTransform = self.robotStateModel.getLinkFrame(self.ikPlanner.rightFootLink)
-              nextDoubleSupportPose = self.getNextDoubleSupportPose(self.committedStep.transform, standingFootTransform)
 
-          comm_mesh,comm_color = self.getMeshAndColor(self.committedStep.is_right_foot)
-          comm_color[1] = 0.75 ; comm_color[2] = 0.25
-          stand_mesh, stand_color = self.getMeshAndColor( not self.committedStep.is_right_foot )
-          stand_color[1] = 0.75 ; stand_color[2] = 0.25
-          vis.updateFrame(self.committedStep.transform, 'committed foot', parent='foot placements', scale=0.2, visible=False)
-          obj = vis.showPolyData(comm_mesh, 'committed step', color=comm_color, alpha=1.0, parent='steps')
-          obj.actor.SetUserTransform(self.committedStep.transform)
-          vis.updateFrame(standingFootTransform, 'standing foot', parent='foot placements', scale=0.2, visible=False)
-          obj = vis.showPolyData(stand_mesh, 'standing step', color=stand_color, alpha=1.0, parent='steps')
-          obj.actor.SetUserTransform(standingFootTransform)
+        # Step 4: reduce list of blocks to those which represent either going_up stairs or going_down stairs
+        heights = []
+        safety_thresh = 0.05
+        blocks_big_enough = True
+        for i, block in enumerate(blocks):
+            corners = block.getCorners()
+            h_mean = (corners[0,2]+corners[1,2]+corners[2,2]+corners[3,2])/4
+            heights.append(h_mean)
+            if block.rectDepth <= (self.FOOT_LENGHT+safety_thresh):
+                blocks_big_enough = False
 
+        if not blocks_big_enough:
+            cut_idx = -1
+            for i, height in enumerate(heights):
+                if i == 0 and len(self.footStatus) != 0:
+                    t1_lastContact = self.footStatus[len(self.footStatus)-1].transform
+                    [t1_lastContact_pos, t1_lastContact_ori] = transformUtils.poseFromTransform(t1_lastContact)
+                    t2_lastContact = self.footStatus[len(self.footStatus)-2].transform
+                    [t2_lastContact_pos, t2_lastContact_ori] = transformUtils.poseFromTransform(t2_lastContact)
+                    previous_height1 = t1_lastContact_pos[2]
+                    previous_height2 = t2_lastContact_pos[2]
+                    if (heights[i] > previous_height1) or (heights[i] > previous_height2):  
+                        up = True
+                    else:
+                        up = False
+                elif len(self.footStatus) != 0 and cut_idx == -1:
+                    # Stairs are switching up/down or down/up 
+                    if (heights[i] > heights[i-1] and not up) or (heights[i] < heights[i-1] and up):
+                        cut_idx = i
+
+            if cut_idx != -1:
+                blocks = blocks[:cut_idx]
+                heights = heights[:cut_idx]
+
+            if len(self.footStatus) != 0 and len(heights) != 0:
+                if up: 
+                    self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
+                else:
+                    self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_MIDFOOT
         else:
-            # don't have a committed footstep, assume we are standing still
-            nextDoubleSupportPose = self.robotStateJointController.getPose('EST_ROBOT_STATE')
-        '''
+            self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
 
+        if match_idx > 0:
+            corners_prev = self.blocks_series[match_idx-1].getCorners()
+            h_mean_prev = (corners_prev[0,2]+corners_prev[1,2]+corners_prev[2,2]+corners_prev[3,2])/4
+            corners_next = blocks[0].getCorners()
+            h_mean_next = (corners_next[0,2]+corners_next[1,2]+corners_next[2,2]+corners_next[3,2])/4
+            print 'prev:'
+            print corners_prev
+            print 'next:'
+            print corners_next
+            if h_mean_next < h_mean_prev:
+                for i, block in enumerate(blocks):
+                    x_mean_prev = (corners_prev[1,0]+corners_prev[2,0])/2
+                    x_mean_next = (corners_next[1,0]+corners_next[2,0])/2
+                    print 'depth before:'
+                    print block.rectDepth
+                    block.rectDepth = abs(x_mean_next - x_mean_prev) # length of face away from robot
+                    print 'depth after:'
+                    print block.rectDepth
+                    block.rectArea = block.rectDepth * block.rectWidth          
+
+
+        # Step 5: Footsteps planning
         self.displayExpectedPose(nextDoubleSupportPose)
 
         if not self.useManualFootstepPlacement and self.queryPlanner:
@@ -600,10 +702,12 @@ class ContinousWalkingDemo(object):
             self.new_first_double_supp = False
         
         #print 'planned_footsteps:'
+        '''
         f0 = self.planned_footsteps[0]
         f1 = self.planned_footsteps[1]
-        #print (transformUtils.poseFromTransform(f0.transform))
-        #print (transformUtils.poseFromTransform(f1.transform))
+        print (transformUtils.poseFromTransform(f0.transform))
+        print (transformUtils.poseFromTransform(f1.transform))
+        '''
 
     def sendPlanningRequest(self, footsteps, nextDoubleSupportPose):
 
@@ -963,6 +1067,9 @@ class ContinousWalkingDemo(object):
     def disableJointChecker(self):
         self.jointLimitChecker.automaticallyExtendLimits = True
 
+    def executeManipPlan(self):
+        self.playbackPanel.executePlan()
+
     def addPlan(self, plan):
         self.plans.append(plan)
 
@@ -1112,6 +1219,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
         prep = self.taskTree.addGroup('Preparation')
         addFunc(functools.partial(cw.disableJointChecker), 'disable joint checker', parent=prep)
         addTask(rt.SetArmsPosition(name='set arms position'), parent=prep)
+        addFunc(functools.partial(cw.executeManipPlan), 'execute arms plan', parent=prep)
         addTask(rt.SetNeckPitch(name='set neck position', angle=50), parent=prep)
 
         # plan walking
