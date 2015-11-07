@@ -11,6 +11,7 @@ from ddapp import objectmodel as om
 from ddapp import ikplanner
 from ddapp import navigationpanel
 from ddapp import cameraview
+from ddapp import playbackpanel
 
 app = ConsoleApp()
 dataDir = app.getTestingDataDirectory()
@@ -21,7 +22,6 @@ segmentation._defaultSegmentationView = view
 #footstepsPanel = footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController, mapServerSource)
 footstepsPanel = None
 robotsystem.create(view, globals())
-
 
 
 def processSingleBlock(robotStateModel, whichFile=0):
@@ -60,7 +60,7 @@ def processSnippet():
         return
 
     # Step 3: find the corners of the minimum bounding rectangles
-    blocks,groundPlane = cwdemo.extractBlocksFromSurfaces(clusters, standingFootFrame)
+    blocks,match_idx,groundPlane = cwdemo.extractBlocksFromSurfaces(clusters, standingFootFrame)
 
     footsteps = cwdemo.placeStepsOnBlocks(blocks, groundPlane, standingFootName, standingFootFrame)
 
@@ -70,7 +70,7 @@ def processSnippet():
 
 #navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)
 navigationPanel = None
-continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, footstepsDriver, robotStateJointController, ikPlanner,
+continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, footstepsDriver, playbackpanel, robotStateJointController, ikPlanner,
                                                                        teleopJointController, navigationPanel, cameraview, jointLimitChecker=None)
 
 cwdemo = continuouswalkingDemo
@@ -91,3 +91,5 @@ if app.getTestingInteractiveEnabled():
     view.show()
     app.showObjectModel()
     app.start()
+
+

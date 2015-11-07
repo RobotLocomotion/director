@@ -324,7 +324,7 @@ class ContinousWalkingDemo(object):
                 #print " ground plane",i,block.rectWidth,block.rectDepth
                 groundPlane = block
             elif ((block.rectWidth<step_width_thresh) or (block.rectDepth<step_depth_thresh)): # was 0.34 and 0.30 for 13 block successful walk with lidar
-                print "removed block",i,block.rectWidth,block.rectDepth
+                #print "removed block",i,block.rectWidth,block.rectDepth
                 foobar=[]
             else:
                 blocksGood.append(block)
@@ -337,16 +337,32 @@ class ContinousWalkingDemo(object):
         blocks.sort(key=operator.attrgetter('distToRobot'))
 
         # merge blocks if represent multiple pieces of same step
-        '''
         for i, block in enumerate(blocks):
             j = i+1
-            while j != len(blocks):
-                block_position = block.cornerTransform.GetPosition()
-                next_block_position = blocks[j].cornerTransform.GetPosition()
-                if abs(block_position-next_block_position) < 0.05:
-                    block.
+            while j < len(blocks):
+                block_pos = block.cornerTransform.GetPosition()
+                next_block_pos = blocks[j].cornerTransform.GetPosition()
+                frames_dist = pow(pow(block_pos[0]-next_block_pos[0],2)+pow(block_pos[2]-next_block_pos[2],2),0.5)
+                if frames_dist < 0.05:
+                    print 'CORRECTION: SAME STEP!'
+                    print 'block_pos'
+                    print block_pos
+                    print 'next_block_pos'
+                    print next_block_pos
+                    if (block_pos[1] < next_block_pos[1]):  
+                        block.rectWidth = block_pos[1] - next_block_pos[1] + blocks[j].rectWidth
+                        #block.rectWidth = block.rectWidth+blocks[j].rectWidth
+                        block.rectArea = block.rectDepth*block.rectWidth 
+                    else:
+                        block.cornerTransform = blocks[j].cornerTransform
+                        block.rectWidth = block_pos[1] - next_block_pos[1] + blocks[j].rectWidth
+                        #block.rectWidth = block.rectWidth+blocks[j].rectWidth
+                        block.rectArea = block.rectDepth*block.rectWidth
+                    blocks.pop(j)
+                    j=j-1
+                    #i=i-1            
                 j = j+1
-        '''
+
 
         # populate global blocks list
         tmp_dist = 1000
@@ -355,13 +371,14 @@ class ContinousWalkingDemo(object):
             self.blocks_series.extend(blocks)
         else:
             for i, stored_block in enumerate(self.blocks_series):
-                curr_dist = np.linalg.norm(np.array(blocks[0].cornerTransform.GetPosition()) - np.array(stored_block.cornerTransform.GetPosition()))
-                print 'dist:'
-                print curr_dist
+                #curr_dist = np.linalg.norm(np.array(blocks[0].cornerTransform.GetPosition()) - np.array(stored_block.cornerTransform.GetPosition()))
+                block_pos = blocks[0].cornerTransform.GetPosition()
+                stored_block_pos = stored_block.cornerTransform.GetPosition()
+                curr_dist = pow(pow(block_pos[0]-stored_block_pos[0],2)+pow(block_pos[2]-stored_block_pos[2],2),0.5)
                 if curr_dist < tmp_dist:
                     tmp_dist = curr_dist
                     match_idx = i
-            if tmp_dist < 0.10:
+            if tmp_dist < 0.05:
                 self.blocks_series = self.blocks_series[:match_idx]
             else:
                 match_idx = match_idx + 1
@@ -657,6 +674,8 @@ class ContinousWalkingDemo(object):
         else:
             self.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE
 
+        # Assumption: going down the stairs visible segmented area is part of a larger step (occluded by previous step) 
+        # Increase step depth depending on the corner of the previous step:
         if match_idx > 0:
             corners_prev = self.blocks_series[match_idx-1].getCorners()
             h_mean_prev = (corners_prev[0,2]+corners_prev[1,2]+corners_prev[2,2]+corners_prev[3,2])/4
@@ -670,12 +689,19 @@ class ContinousWalkingDemo(object):
                 for i, block in enumerate(blocks):
                     x_mean_prev = (corners_prev[1,0]+corners_prev[2,0])/2
                     x_mean_next = (corners_next[1,0]+corners_next[2,0])/2
+                    depth_before = block.rectDepth
                     print 'depth before:'
-                    print block.rectDepth
+                    print depth_before
                     block.rectDepth = abs(x_mean_next - x_mean_prev) # length of face away from robot
+                    depth_after = block.rectDepth
                     print 'depth after:'
-                    print block.rectDepth
-                    block.rectArea = block.rectDepth * block.rectWidth          
+                    print depth_after
+                    block.rectArea = depth_after * block.rectWidth 
+                    print 'i+1:'
+                    print i+1
+                    if (match_idx+1)<len(self.blocks_series) and (i+1)<len(blocks):
+                        corners_prev = self.blocks_series[match_idx+i].getCorners()
+                        corners_next = blocks[i+1].getCorners()    
 
 
         # Step 5: Footsteps planning
