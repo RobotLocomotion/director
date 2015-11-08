@@ -27,6 +27,7 @@ from numpy import array
 from ddapp.uuidutil import newUUID
 from ddapp import lcmUtils
 import ioUtils
+import drc as lcmdrc
 
 from ddapp.tasks.taskuserpanel import TaskUserPanel
 from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
@@ -915,8 +916,7 @@ class TableDemo(object):
         filename= os.environ['DRC_BASE'] + '/software/models/worlds/tabledemo.sdf'
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
-        import ipab
-        msg=ipab.scs_api_command_t()
+        msg=lcmdrc.scs_api_command_t()
         msg.command="loadSDF "+filename+"\nsimulate"
         lcmUtils.publish('SCS_API_CONTROL', msg)
 

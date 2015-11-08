@@ -23,7 +23,6 @@ import ddapp.terrain
 import ddapp.tasks.robottasks as rt
 
 import drc as lcmdrc
-import ipab as lcmipab
 
 from thirdparty import qhull_2d
 from thirdparty import min_bounding_rect
@@ -145,7 +144,7 @@ class ContinousWalkingDemo(object):
         #footContactSubContinuous.setSpeedLimit(60)
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
-        lcmUtils.addSubscriber('IHMC_FOOTSTEP_STATUS', lcmipab.footstep_status_t, self.onFootstepStatus)
+        lcmUtils.addSubscriber('IHMC_FOOTSTEP_STATUS', lcmdrc.footstep_status_t, self.onFootstepStatus)
         lcmUtils.addSubscriber('EST_ROBOT_STATE', lcmdrc.robot_state_t, self.onRobotStatus)
         stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
         stepParamsSub.setSpeedLimit(60)
@@ -748,7 +747,7 @@ class ContinousWalkingDemo(object):
         if not self.automaticContinuousWalkingEnabled:
             return
 
-        import ipab
+        import ihmc
         x = msg.actual_foot_position_in_world[0]
         y = msg.actual_foot_position_in_world[1]
         z = msg.actual_foot_position_in_world[2]
@@ -954,8 +953,7 @@ class ContinousWalkingDemo(object):
         
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
-        import ipab
-        msg=ipab.scs_api_command_t()
+        msg=lcmdrc.scs_api_command_t()
         msg.command="loadSDF "+filename+"\nsimulate"
         lcmUtils.publish('SCS_API_CONTROL', msg)
 
