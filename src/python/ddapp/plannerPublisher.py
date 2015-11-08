@@ -16,8 +16,6 @@ import json
 from ddapp.utime import getUtime
 from ddapp import lcmUtils
 
-import ipab
-
 
 class PlannerPublisher(object):
 
@@ -29,7 +27,7 @@ class PlannerPublisher(object):
   def setupMessage(self, constraints, endPoseName="", nominalPoseName="", seedPoseName="", additionalTimeSamples=None):
     poses = ikconstraintencoder.getPlanPoses(constraints, self.ikPlanner)
     poses.update(self.poses)
-    msg = ipab.exotica_planner_request_t()
+    msg = lcmdrc.exotica_planner_request_t()
     msg.utime = getUtime()
     msg.poses = json.dumps(poses)
     msg.constraints = ikconstraintencoder.encodeConstraints(constraints)
