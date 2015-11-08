@@ -80,16 +80,18 @@ class Footstep():
 
 class ContinousWalkingDemo(object):
     FOOTSIZE_REDUCTION = 0.04
-    FOOT_LENGHT = 0.25 - FOOTSIZE_REDUCTION
+    FOOT_LENGTH = 0.25 - FOOTSIZE_REDUCTION
     FOOT_WIDTH = 0.15 - FOOTSIZE_REDUCTION
-    BACK_FOOT_CONTACT_POINTS = np.array([[-0.5*FOOT_LENGHT, -0.5*FOOT_LENGHT, 0.166666667*FOOT_LENGHT, 0.166666667*FOOT_LENGHT],
+    BACK_FOOT_CONTACT_POINTS = np.array([[-0.5*FOOT_LENGTH, -0.5*FOOT_LENGTH, 0.166666667*0.25, 0.166666667*0.25],
                                   [0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH, 0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH]])
 
-    FRONT_FOOT_CONTACT_POINTS = np.array([[-0.166666667*FOOT_LENGHT, -0.166666667*FOOT_LENGHT, 0.5*FOOT_LENGHT, 0.5*FOOT_LENGHT],
+    FRONT_FOOT_CONTACT_POINTS = np.array([[-0.166666667*0.25, -0.166666667*0.25, 0.5*FOOT_LENGTH, 0.5*FOOT_LENGTH],
                                   [0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH, 0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH]])
 
-    FULL_FOOT_CONTACT_POINTS = np.array([[-0.5*FOOT_LENGHT, -0.5*FOOT_LENGHT, 0.5*FOOT_LENGHT, 0.5*FOOT_LENGHT],
+    FULL_FOOT_CONTACT_POINTS = np.array([[-0.5*FOOT_LENGTH, -0.5*FOOT_LENGTH, 0.5*FOOT_LENGTH, 0.5*FOOT_LENGTH],
                                   [0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH, 0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH]])
+
+    
     def __init__(self, robotStateModel, footstepsPanel, footstepsDriver, playbackPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
         self.footstepsPanel = footstepsPanel
         self.footstepsDriver = footstepsDriver
@@ -344,11 +346,7 @@ class ContinousWalkingDemo(object):
                 next_block_pos = blocks[j].cornerTransform.GetPosition()
                 frames_dist = pow(pow(block_pos[0]-next_block_pos[0],2)+pow(block_pos[2]-next_block_pos[2],2),0.5)
                 if frames_dist < 0.05:
-                    print 'CORRECTION: SAME STEP!'
-                    print 'block_pos'
-                    print block_pos
-                    print 'next_block_pos'
-                    print next_block_pos
+                    print 'CORRECTION: Merging segments representing same step.'
                     if (block_pos[1] < next_block_pos[1]):  
                         block.rectWidth = block_pos[1] - next_block_pos[1] + blocks[j].rectWidth
                         #block.rectWidth = block.rectWidth+blocks[j].rectWidth
@@ -640,7 +638,7 @@ class ContinousWalkingDemo(object):
             corners = block.getCorners()
             h_mean = (corners[0,2]+corners[1,2]+corners[2,2]+corners[3,2])/4
             heights.append(h_mean)
-            if block.rectDepth <= (self.FOOT_LENGHT+safety_thresh):
+            if block.rectDepth <= (self.FOOT_LENGTH+safety_thresh):
                 blocks_big_enough = False
 
         if not blocks_big_enough:
@@ -681,24 +679,14 @@ class ContinousWalkingDemo(object):
             h_mean_prev = (corners_prev[0,2]+corners_prev[1,2]+corners_prev[2,2]+corners_prev[3,2])/4
             corners_next = blocks[0].getCorners()
             h_mean_next = (corners_next[0,2]+corners_next[1,2]+corners_next[2,2]+corners_next[3,2])/4
-            print 'prev:'
-            print corners_prev
-            print 'next:'
-            print corners_next
             if h_mean_next < h_mean_prev:
                 for i, block in enumerate(blocks):
                     x_mean_prev = (corners_prev[1,0]+corners_prev[2,0])/2
                     x_mean_next = (corners_next[1,0]+corners_next[2,0])/2
                     depth_before = block.rectDepth
-                    print 'depth before:'
-                    print depth_before
                     block.rectDepth = abs(x_mean_next - x_mean_prev) # length of face away from robot
                     depth_after = block.rectDepth
-                    print 'depth after:'
-                    print depth_after
                     block.rectArea = depth_after * block.rectWidth 
-                    print 'i+1:'
-                    print i+1
                     if (match_idx+1)<len(self.blocks_series) and (i+1)<len(blocks):
                         corners_prev = self.blocks_series[match_idx+i].getCorners()
                         corners_next = blocks[i+1].getCorners()    
@@ -727,13 +715,6 @@ class ContinousWalkingDemo(object):
             self.new_status = False
             self.new_first_double_supp = False
         
-        #print 'planned_footsteps:'
-        '''
-        f0 = self.planned_footsteps[0]
-        f1 = self.planned_footsteps[1]
-        print (transformUtils.poseFromTransform(f0.transform))
-        print (transformUtils.poseFromTransform(f1.transform))
-        '''
 
     def sendPlanningRequest(self, footsteps, nextDoubleSupportPose):
 
@@ -901,8 +882,6 @@ class ContinousWalkingDemo(object):
        
             # Increases at each contact     
             self.footstep_index = self.footstep_index + 1   
-            #print 'self.footstep_index'
-            #print self.footstep_index
 
             [robot_pos, robot_ori] = transformUtils.poseFromTransform(self.tf_robotStatus)
             [current_pos, current_ori] = transformUtils.poseFromTransform(tf_foot_robot)  
@@ -911,14 +890,6 @@ class ContinousWalkingDemo(object):
             else:
                 current_left = False  
             
-            '''
-            print 'current:'
-            print (current_pos)
-            print 'robot:'
-            print (robot_pos)
-            print 'Left?'
-            print current_left
-            '''
             if (self.leadingFootByUser == 'Left'):
                 # I want to take the first status for the LEFT foot
                 if current_left:
