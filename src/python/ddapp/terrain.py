@@ -10,11 +10,13 @@ import polyhedron._cdd
 from polyhedron import Vrep, Hrep
 from py_drake_utils.utils import rpy2rotmat
 
+FOOTSIZE_REDUCTION = 0.04
+FOOT_LENGTH = 0.25 - FOOTSIZE_REDUCTION
+FOOT_WIDTH = 0.15 - FOOTSIZE_REDUCTION
 
+DEFAULT_FOOT_CONTACTS = np.array([[-0.5*FOOT_LENGTH, -0.5*FOOT_LENGTH, 0.5*FOOT_LENGTH, 0.5*FOOT_LENGTH],
+                                  [0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH, 0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH]])
 
-
-DEFAULT_FOOT_CONTACTS = np.array([[-0.13, -0.13, 0.13, 0.13],
-                                  [0.0562, -0.0562, 0.0562, -0.0562]])
 DEFAULT_BOUNDING_BOX_WIDTH = 1
 
 
