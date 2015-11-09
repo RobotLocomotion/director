@@ -365,22 +365,23 @@ class ContinousWalkingDemo(object):
         # populate global blocks list
         tmp_dist = 1000
         match_idx = -1
-        if len(self.blocks_series) == 0:
-            self.blocks_series.extend(blocks)
-        else:
-            for i, stored_block in enumerate(self.blocks_series):
-                #curr_dist = np.linalg.norm(np.array(blocks[0].cornerTransform.GetPosition()) - np.array(stored_block.cornerTransform.GetPosition()))
-                block_pos = blocks[0].cornerTransform.GetPosition()
-                stored_block_pos = stored_block.cornerTransform.GetPosition()
-                curr_dist = pow(pow(block_pos[0]-stored_block_pos[0],2)+pow(block_pos[2]-stored_block_pos[2],2),0.5)
-                if curr_dist < tmp_dist:
-                    tmp_dist = curr_dist
-                    match_idx = i
-            if tmp_dist < 0.05:
-                self.blocks_series = self.blocks_series[:match_idx]
+        if len(blocks) > 0:
+            if len(self.blocks_series) == 0:
+                self.blocks_series.extend(blocks)
             else:
-                match_idx = match_idx + 1
-            self.blocks_series.extend(blocks)
+                for i, stored_block in enumerate(self.blocks_series):
+                    #curr_dist = np.linalg.norm(np.array(blocks[0].cornerTransform.GetPosition()) - np.array(stored_block.cornerTransform.GetPosition()))
+                    block_pos = blocks[0].cornerTransform.GetPosition()
+                    stored_block_pos = stored_block.cornerTransform.GetPosition()
+                    curr_dist = pow(pow(block_pos[0]-stored_block_pos[0],2)+pow(block_pos[2]-stored_block_pos[2],2),0.5)
+                    if curr_dist < tmp_dist:
+                        tmp_dist = curr_dist
+                        match_idx = i
+                if tmp_dist < 0.05:
+                    self.blocks_series = self.blocks_series[:match_idx]
+                else:
+                    match_idx = match_idx + 1
+                self.blocks_series.extend(blocks)
 
         # draw global blocks list
         om.removeFromObjectModel(om.findObjectByName('blocks_list'))
