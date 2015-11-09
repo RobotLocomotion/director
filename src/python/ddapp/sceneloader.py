@@ -2,6 +2,7 @@ import os
 import copy
 import math
 import numpy as np
+import xml.etree.ElementTree as etree
 
 from ddapp import transformUtils
 from ddapp import segmentation
@@ -55,80 +56,93 @@ class SceneLoader(object):
                 if col.geometry_type=='cylinder':
                     desc = dict(classname='CylinderAffordanceItem', Name=name, uuid=newUUID(), pose=p, Color=[0.8, 0.8, 0.8], Radius=float(col.geometry_data['radius']), Length = float(col.geometry_data['length']))
                     self.affordanceManager.newAffordanceFromDescription(desc)
+    
+    def generateBoxLinkNode(self, aff):
+        link = etree.Element('link', {'name':aff.getDescription()['Name']})
+        link.append(etree.Element('pose'))
+        pose = np.append(aff.getDescription()['pose'][0], transformUtils.quaternionToRollPitchYaw(aff.getDescription()['pose'][1]))
+        link.find('pose').text = ' '.join(map(str, pose))
+        dimensions = aff.getDescription()['Dimensions']
+        
+        if aff.getDescription()['Collision Enabled']:
+            link.append(etree.Element('collision', {'name': 'collision'}))
+            link.find('collision').append(etree.Element('geometry'))
+            link.find('collision/geometry').append(etree.Element('box'))
+            link.find('collision/geometry/box').append(etree.Element('size'))
+            link.find('collision/geometry/box/size').text = ' '.join(map(str, dimensions))
+        
+        link.append(etree.Element('visual', {'name': 'visual'}))
+        link.find('visual').append(etree.Element('geometry'))
+        link.find('visual/geometry').append(etree.Element('box'))
+        link.find('visual/geometry/box').append(etree.Element('size'))
+        link.find('visual/geometry/box/size').text = ' '.join(map(str, dimensions))
+        link.find('visual').append(etree.Element('material'))
+        link.find('visual/material').append(etree.Element('diffuse'))
+        link.find('visual/material/diffuse').text = '{:s} {:.1f}'.format(' '.join(map(str, aff.getDescription()['Color'])), aff.getDescription()['Alpha'])
+        link.find('visual/material').append(etree.Element('ambient'))
+        link.find('visual/material/ambient').text = '0 0 0 1'
+        
+        return link
+    
+    def generateCylinderLinkNode(self, aff):
+        link = etree.Element('link', {'name':aff.getDescription()['Name']})
+        link.append(etree.Element('pose'))
+        pose = np.append(aff.getDescription()['pose'][0], transformUtils.quaternionToRollPitchYaw(aff.getDescription()['pose'][1]))
+        link.find('pose').text = ' '.join(map(str, pose))
+        
+        if aff.getDescription()['Collision Enabled']:
+            link.append(etree.Element('collision', {'name': 'collision'}))
+            link.find('collision').append(etree.Element('geometry'))
+            link.find('collision/geometry').append(etree.Element('cylinder'))
+            link.find('collision/geometry/cylinder').append(etree.Element('radius'))
+            link.find('collision/geometry/cylinder/radius').text = '{:.4f}'.format(aff.getDescription()['Radius'])
+            link.find('collision/geometry/cylinder').append(etree.Element('length'))
+            link.find('collision/geometry/cylinder/length').text = '{:.4f}'.format(aff.getDescription()['Length'])
+        
+        link.append(etree.Element('visual', {'name': 'visual'}))
+        link.find('visual').append(etree.Element('geometry'))
+        link.find('visual/geometry').append(etree.Element('cylinder'))
+        link.find('visual/geometry/cylinder').append(etree.Element('radius'))
+        link.find('visual/geometry/cylinder/radius').text = '{:.4f}'.format(aff.getDescription()['Radius'])
+        link.find('visual/geometry/cylinder').append(etree.Element('length'))
+        link.find('visual/geometry/cylinder/length').text = '{:.4f}'.format(aff.getDescription()['Length'])
+        link.find('visual').append(etree.Element('material'))
+        link.find('visual/material').append(etree.Element('diffuse'))
+        link.find('visual/material/diffuse').text = '{:s} {:.1f}'.format(' '.join(map(str, aff.getDescription()['Color'])), aff.getDescription()['Alpha'])
+        link.find('visual/material').append(etree.Element('ambient'))
+        link.find('visual/material/ambient').text = '0 0 0 1'
+        
+        return link
+        
                     
     def generateSDFfromAffordances(self):
         filename= os.environ['DRC_BASE'] + '/software/models/worlds/directorAffordances.sdf'
         sdfFile = open(filename, 'w')
         am = segmentation.affordanceManager
         affordances = am.getAffordances()
-        xmlStr = '<sdf version=\'1.4\'>\n'\
-                 '\t<world name=\'directorAffordances\'>\n'
+        
+        root = etree.Element('sdf', {'version': '1.4'})
+        tree = etree.ElementTree(root)
+        world = etree.Element('world', {'name': 'directorAffordances'})
+        root.append(world)
+        
         for aff in affordances:
             if aff.getDescription()['classname'] in ['BoxAffordanceItem', 'CylinderAffordanceItem']:
-                name = aff.getDescription()['Name']
-                xmlStr += '\t\t<model name=\'{0:s}\'>\n'\
-                          '\t\t\t<pose>0 0 0 0 0 0</pose>\n'\
-                          '\t\t\t<link name=\'{0:s}\'>\n'.format(name)
-                pose = np.append(aff.getDescription()['pose'][0], transformUtils.quaternionToRollPitchYaw(aff.getDescription()['pose'][1]))
-                xmlStr += '\t\t\t\t<pose>{:s}</pose>\n'.format(' '.join(map(str, pose)))
-                collisions = aff.getDescription()['Collision Enabled']
-                color = aff.getDescription()['Color']
-                alpha = aff.getDescription()['Alpha']
-                if aff.getDescription()['classname'] == 'BoxAffordanceItem':
-                    geometry = 'box'
-                    dimensions = aff.getDescription()['Dimensions']
-                    if collisions:
-                        xmlStr += '\t\t\t\t<collision name=\'collision\'>\n'\
-                                  '\t\t\t\t\t<geometry>\n'\
-                                  '\t\t\t\t\t\t<{0:s}>\n'\
-                                  '\t\t\t\t\t\t\t<size>{1:s}</size>\n'\
-                                  '\t\t\t\t\t\t</{0:s}>\n'\
-                                  '\t\t\t\t\t</geometry>\n'\
-                                  '\t\t\t\t</collision>\n'.format(geometry, ' '.join(map(str, dimensions)))
-                    xmlStr += '\t\t\t\t<visual name=\'visual\'>\n'\
-                              '\t\t\t\t\t<geometry>\n'\
-                              '\t\t\t\t\t\t<{0:s}>\n'\
-                              '\t\t\t\t\t\t\t<size>{1:s}</size>\n'\
-                              '\t\t\t\t\t\t</{0:s}>\n'\
-                              '\t\t\t\t\t</geometry>\n'\
-                              '\t\t\t\t\t<material>\n'\
-                              '\t\t\t\t\t\t<diffuse>{2:s} {3:.1f}</diffuse>\n'\
-                              '\t\t\t\t\t\t<ambient>0 0 0 1</ambient>\n'\
-                              '\t\t\t\t\t</material>\n'\
-                              '\t\t\t\t</visual>\n'.format(geometry, ' '.join(map(str, dimensions)), ' '.join(map(str, color)), alpha)                    
-                elif aff.getDescription()['classname'] == 'CylinderAffordanceItem':
-                    geometry = 'cylinder'
-                    radius = aff.getDescription()['Radius']
-                    length = aff.getDescription()['Length']
-                    if collisions:
-                        xmlStr += '\t\t\t\t<collision name=\'collision\'>\n'\
-                                  '\t\t\t\t\t<geometry>\n'\
-                                  '\t\t\t\t\t\t<{0:s}>\n'\
-                                  '\t\t\t\t\t\t\t<radius>{1:f}</radius>\n'\
-                                  '\t\t\t\t\t\t\t<length>{2:f}</length>\n'\
-                                  '\t\t\t\t\t\t</{0:s}>\n'\
-                                  '\t\t\t\t\t</geometry>\n'\
-                                  '\t\t\t\t</collision>\n'.format(geometry, radius, length)
-                    xmlStr += '\t\t\t\t<visual name=\'visual\'>\n'\
-                              '\t\t\t\t\t<geometry>\n'\
-                              '\t\t\t\t\t\t<{0:s}>\n'\
-                              '\t\t\t\t\t\t\t<radius>{1:f}</radius>\n'\
-                              '\t\t\t\t\t\t\t<length>{2:f}</length>\n'\
-                              '\t\t\t\t\t\t</{0:s}>\n'\
-                              '\t\t\t\t\t</geometry>\n'\
-                              '\t\t\t\t\t<material>\n'\
-                              '\t\t\t\t\t\t<diffuse>{3:s} {4:.1f}</diffuse>\n'\
-                              '\t\t\t\t\t\t<ambient>0 0 0 1</ambient>\n'\
-                              '\t\t\t\t\t</material>\n'\
-                              '\t\t\t\t</visual>\n'.format(geometry, radius, length, ' '.join(map(str, color)), alpha) 
                 
-                xmlStr += '\t\t\t</link>\n'
-                xmlStr += '\t\t</model>\n'                
+                model = etree.Element('model', {'name': aff.getDescription()['Name']})
+                world.append(model)
+                
+                model.append(etree.Element('pose'))
+                model.find('pose').text = '0 0 0 0 0 0'
+                
+                if aff.getDescription()['classname'] == 'BoxAffordanceItem':
+                    model.append(self.generateBoxLinkNode(aff))
+                elif aff.getDescription()['classname'] == 'CylinderAffordanceItem':
+                    model.append(self.generateCylinderLinkNode(aff))
             else:
-                print '{:s} is unsupported skipping {:s} affordance!'.format(aff.getDescription()['classname'], name)
-        xmlStr += '\t</world>\n'\
-                 '</sdf>'
-        sdfFile.write(xmlStr.expandtabs(2))
+                print '{:s} is unsupported skipping {:s} affordance!'.format(aff.getDescription()['classname'], aff.getDescription()['Name'])
+        
+        tree.write(sdfFile)
         sdfFile.close()
                 
 
