@@ -399,7 +399,6 @@ class TableDemo(object):
             endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'handdown', side=side)
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
-        self.commitManipPlan()
 
     def planDropPostureRaise(self, side):        
         if self.planner == 'RRT*':
@@ -1508,7 +1507,7 @@ class TableTaskPanel(TaskUserPanel):
                 addTask(rt.CloseHand(name='close left hand', side='Left'), parent=prep)
                 addTask(rt.CloseHand(name='close right hand', side='Right'), parent=prep)
             else:
-                addFunc(v.planLowerArm, 'set arms down', parent=prep)
+                addManipulation(v.planLowerArm, name='set arms down')
 
         # walk
         if not v.ikPlanner.fixedBaseArm:
