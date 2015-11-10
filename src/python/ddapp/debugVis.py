@@ -123,13 +123,12 @@ class DebugData(object):
         self.addPolyData(cube.GetOutput(), color)
 
     def addCylinder(self, center, axis, length, radius, color=[1,1,1]):
-        axis = np.array(axis)
-        axis /= np.linalg.norm(axis)
+        axis = np.asarray(axis) / np.linalg.norm(axis)
         center = np.array(center)
         self.addLine(center - 0.5*length*axis, center + 0.5*length*axis, radius=radius, color=color)
 
     def addCapsule(self, center, axis, length, radius, color=[1,1,1]):
-        axis /= np.linalg.norm(axis)
+        axis = np.asarray(axis) / np.linalg.norm(axis)
         center = np.array(center)
         self.addCylinder(center=center, axis=axis, radius=radius, length=length)
         self.addSphere(center=center-0.5*length*axis, radius=radius)
