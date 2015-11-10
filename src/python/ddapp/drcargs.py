@@ -35,7 +35,7 @@ class DRCArgParser(object):
 
 
     def getDefaultBotConfigFile(self):
-        return os.path.join(ddapp.getDRCBaseDir(), 'software/config/drc_robot.cfg')
+        return os.path.join(ddapp.getDRCBaseDir(), 'software/config/atlas/robot.cfg')
 
     def getDefaultDirectorConfigFile(self):
         return self.getDefaultAtlasV5DirectorConfigFile();
