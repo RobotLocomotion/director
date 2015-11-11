@@ -55,13 +55,13 @@ class RobotModelItem(om.ObjectModelItem):
         self.views = []
         self.model = None
         self.callbacks.addSignal(self.MODEL_CHANGED_SIGNAL)
-        self.useUrdfColors = False
+        self.useUrdfColors = True
 
         self.addProperty('Filename', model.filename())
         self.addProperty('Visible', model.visible())
         self.addProperty('Alpha', model.alpha(),
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
-        self.addProperty('Textures', True)
+        self.addProperty('Textures', False) # False by default, unless in directorConfig - this is a fix for #111
         self.addProperty('Color', model.color())
 
 
@@ -151,6 +151,7 @@ class RobotModelItem(om.ObjectModelItem):
         elif not self.useUrdfColors:
             color = QtGui.QColor(*[c*255 for c in self.getProperty('Color')])
             self.model.setColor(color)
+        # TODO (fix for #111): add getLinkColor iterating over all joints and setting color after fixing ddDrakeModel.cpp
 
     def _setupTextureColors(self):
 
@@ -185,7 +186,7 @@ class RobotModelItem(om.ObjectModelItem):
         view.render()
 
 
-def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True):
+def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True, colorMode='Solid Color'):
 
     if not urdfFile:
         urdfFile = urdfConfig['default']
@@ -203,6 +204,12 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     obj.setProperty('Visible', visible)
     obj.setProperty('Name', name)
     obj.setProperty('Color', color or getRobotGrayColor())
+    if colorMode == 'Texture': # fix for #111
+        obj.setProperty('Textures', True)
+    elif colorMode == 'Solid Color':
+        obj.useUrdfColors = False
+        obj._updateModelColor()
+
     if view is not None:
         obj.addToView(view)
 
