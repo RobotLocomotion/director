@@ -69,12 +69,19 @@ class RobotSystem(object):
         directorConfig = self.getDirectorConfig()
         neckPitchJoint = 'neck_ay'
 
+        # Determine colorMode, fix for #111
+        colorMode = 'URDF Colors' # URDF colors by default
+        if 'colorMode' in directorConfig:
+            assert directorConfig['colorMode'] in ['URDF Colors', 'Solid Color', 'Texture']
+            colorMode = directorConfig['colorMode']
+
+
         if useAtlasDriver:
             atlasDriver = atlasdriver.init(None)
 
 
         if useRobotState:
-            robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, urdfFile=directorConfig['urdfConfig']['robotState'], parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
+            robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, urdfFile=directorConfig['urdfConfig']['robotState'], parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True, colorMode=colorMode)
             robotStateJointController.setPose('EST_ROBOT_STATE', robotStateJointController.getPose('q_nom'))
             roboturdf.startModelPublisherListener([(robotStateModel, robotStateJointController)])
             robotStateJointController.addLCMUpdater('EST_ROBOT_STATE')
@@ -129,8 +136,8 @@ class RobotSystem(object):
 
             #startIkServer()
 
-            playbackRobotModel, playbackJointController = roboturdf.loadRobotModel('playback model', view, urdfFile=directorConfig['urdfConfig']['playback'], parent='planning', color=roboturdf.getRobotBlueColor(), visible=False)
-            teleopRobotModel, teleopJointController = roboturdf.loadRobotModel('teleop model', view, urdfFile=directorConfig['urdfConfig']['teleop'], parent='planning', color=roboturdf.getRobotBlueColor(), visible=False)
+            playbackRobotModel, playbackJointController = roboturdf.loadRobotModel('playback model', view, urdfFile=directorConfig['urdfConfig']['playback'], parent='planning', color=roboturdf.getRobotBlueColor(), visible=False, colorMode=colorMode)
+            teleopRobotModel, teleopJointController = roboturdf.loadRobotModel('teleop model', view, urdfFile=directorConfig['urdfConfig']['teleop'], parent='planning', color=roboturdf.getRobotBlueColor(), visible=False, colorMode=colorMode)
 
             if useAtlasConvexHull:
                 chullRobotModel, chullJointController = roboturdf.loadRobotModel('convex hull atlas', view, urdfFile=urdfConfig['chull'], parent='planning',
