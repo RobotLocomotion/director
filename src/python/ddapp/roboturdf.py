@@ -186,7 +186,7 @@ class RobotModelItem(om.ObjectModelItem):
         view.render()
 
 
-def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True, colorMode='URDF Colors'):
+def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True, colorMode='Solid Color'):
 
     if not urdfFile:
         urdfFile = urdfConfig['default']
@@ -206,8 +206,9 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     obj.setProperty('Color', color or getRobotGrayColor())
     if colorMode == 'Texture': # fix for #111
         obj.setProperty('Textures', True)
-    elif colorMode == 'URDF Colors':
-        obj.useUrdfColors = True
+    elif colorMode == 'Solid Color':
+        obj.useUrdfColors = False
+        obj._updateModelColor()
 
     if view is not None:
         obj.addToView(view)
