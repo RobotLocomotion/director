@@ -166,17 +166,12 @@ useMappingPanel = True
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 
-
 if 'fixedBaseArm' in drcargs.getDirectorConfig()['userConfig']:
     ikPlanner.fixedBaseArm = True
-if 'useFootstepsDisable' in drcargs.getDirectorConfig()['userConfig']:
-    useFootsteps = False
-if 'usePlanningDisable' in drcargs.getDirectorConfig()['userConfig']:
-    usePlanning = False
-if 'useFootContactVisDisable' in drcargs.getDirectorConfig()['userConfig']:
-    useFootContactVis = False
-if 'useCOPMonitorDisable' in drcargs.getDirectorConfig()['userConfig']:
-    useCOPMonitor = False
+if 'disableComponents' in drcargs.getDirectorConfig():
+    for component in drcargs.getDirectorConfig()['disableComponents']:
+        print "Disabling", component
+        exec(component + " = False")
 
 
 if useSpreadsheet:
