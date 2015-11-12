@@ -166,6 +166,19 @@ useMappingPanel = True
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 
+
+if 'fixedBaseArm' in drcargs.getDirectorConfig()['userConfig']:
+    ikPlanner.fixedBaseArm = True
+if 'useFootstepsDisable' in drcargs.getDirectorConfig()['userConfig']:
+    useFootsteps = False
+if 'usePlanningDisable' in drcargs.getDirectorConfig()['userConfig']:
+    usePlanning = False
+if 'useFootContactVisDisable' in drcargs.getDirectorConfig()['userConfig']:
+    useFootContactVis = False
+if 'useCOPMonitorDisable' in drcargs.getDirectorConfig()['userConfig']:
+    useCOPMonitor = False
+
+
 if useSpreadsheet:
     spreadsheet.init(poseCollection, costCollection)
 
@@ -283,7 +296,6 @@ if useNavigationPanel:
     navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)
     picker = PointPicker(view, callback=navigationPanel.pointPickerStoredFootsteps, numberOfPoints=2)
     #picker.start()
-
 
 if usePlanning:
 
@@ -412,9 +424,6 @@ if usePlanning:
         affordancePanel.onGetRaycastTerrain()
 
     ikPlanner.addPostureGoalListener(robotStateJointController)
-
-    if 'fixedBaseArm' in drcargs.getDirectorConfig()['userConfig']:
-        ikPlanner.fixedBaseArm = True
 
     playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
                                       robotStateModel, robotStateJointController, manipPlanner)
