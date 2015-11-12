@@ -171,7 +171,7 @@ if 'fixedBaseArm' in drcargs.getDirectorConfig()['userConfig']:
 if 'disableComponents' in drcargs.getDirectorConfig():
     for component in drcargs.getDirectorConfig()['disableComponents']:
         print "Disabling", component
-        exec(component + " = False")
+        locals()[component] = False
 
 
 if useSpreadsheet:
