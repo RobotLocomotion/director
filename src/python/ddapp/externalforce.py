@@ -26,6 +26,7 @@ from ddapp.timercallback import TimerCallback
 
 
 import os
+import os.path
 import csv
 import functools
 import numpy as np
@@ -48,6 +49,7 @@ class ExternalForce(object):
         self.captureMode = False
         self.captureModeCounter = 0
         self.addSubscribers()
+        self.createPlunger()
 
         # setup timercallback to publish, lets say at 5 hz
         self.timer = TimerCallback(targetFps=5)
@@ -207,23 +209,33 @@ class ExternalForce(object):
         self.drawForce(name, msg.body_name, forceLocation, force, color=[0,0,1])
 
 
-    def drawForce(self, name, linkName, forceLocation, force, color):
+    def drawForce(self, name, linkName, forceLocation, force, color, key='null'):
         forceDirection = force/np.linalg.norm(force)
-        om.removeFromObjectModel(om.findObjectByName(name))
+        # om.removeFromObjectModel(om.findObjectByName(name))
 
         linkToWorld = self.robotStateModel.getLinkFrame(linkName)
         forceLocationInWorld = np.array(linkToWorld.TransformPoint(forceLocation))
         forceDirectionInWorld = np.array(linkToWorld.TransformDoubleVector(forceDirection))
 
-        point = forceLocationInWorld - 0.1*forceDirectionInWorld
+        # point = forceLocationInWorld - 0.1*forceDirectionInWorld
 
-        d = DebugData()
-        # d.addArrow(point, forceLocationInWorld, headRadius=0.025, tubeRadius=0.005, color=color)
-        d.addSphere(forceLocationInWorld, radius=0.01)
-        d.addLine(point, forceLocationInWorld, radius=0.005)
+        # d = DebugData()
+        # # d.addArrow(point, forceLocationInWorld, headRadius=0.025, tubeRadius=0.005, color=color)
+        # d.addSphere(forceLocationInWorld, radius=0.01)
+        # d.addLine(point, forceLocationInWorld, radius=0.005)
 
-        obj = vis.updatePolyData(d.getPolyData(), name, color=color)
-        obj.actor.SetPickable(False)
+        transformForVis = transformUtils.getTransformFromOriginAndNormal(forceLocationInWorld, forceDirectionInWorld)
+
+        obj = vis.updatePolyData(self.plungerPolyData, name, color=color)
+        obj.actor.SetUserTransform(transformForVis)
+        obj.connectRemovedFromObjectModel(self.removeForceFromFrameObject)
+        obj.addProperty('magnitude', 0.0)
+        obj.addProperty('linkName', linkName)
+        obj.addProperty('key', key)
+        
+
+        obj.properties.connectPropertyChanged(functools.partial(self.onPropertyChanged, obj))
+        return obj
 
 
     # connect this with an on model changed
@@ -253,13 +265,9 @@ class ExternalForce(object):
             d.addSphere(forceLocationInWorld, radius=0.01)
             d.addLine(point, forceLocationInWorld, radius=0.005)
 
-            obj = vis.updatePolyData(d.getPolyData(), name, color=color)
-            obj.actor.SetPickable(False)
-            obj.connectRemovedFromObjectModel(self.removeForceFromFrameObject)
-            obj.addProperty('magnitude', 0.0)
-            obj.addProperty('linkName', linkName)
-            obj.addProperty('key', key)
-            obj.properties.connectPropertyChanged(functools.partial(self.onPropertyChanged, obj))
+
+            obj = self.drawForce(name, linkName, val['forceLocation'], val['forceDirection'], color, key=key)
+            
 
     def onModelChanged(self, model):
         self.drawForces()
@@ -299,12 +307,18 @@ class ExternalForce(object):
         for key in self.externalForces.keys():
             print key
 
-    def saveForceLocationsToFile(self, filename=None, verbose=False):
+    def saveForceLocationsToFile(self, filename=None, verbose=False, overwrite=False):
         if filename is None:
             filename = "testDirector.csv"
 
+
         drcBase = os.getenv('DRC_BASE')
-        fullFilePath = drcBase + "/software/control/residual_detector/src/" + filename
+        fullFilePath = drcBase + "/software/control/residual_detector/src/particle_grids//" + filename
+
+        if os.path.isfile(fullFilePath) and not overwrite:
+            print "FILE ALREADY EXISTS, set the overwrite flag to true to overwrite"
+            return
+
         fileObject = open(fullFilePath, 'w')
         for key, val in self.externalForces.iteritems():
             line = str(val['linkName']) + ","
@@ -330,7 +344,7 @@ class ExternalForce(object):
             filename = "testDirector.csv"
 
         drcBase = os.getenv('DRC_BASE')
-        fullFilePath = drcBase + "/software/control/residual_detector/src/" + filename
+        fullFilePath = drcBase + "/software/control/residual_detector/src/particle_grids/" + filename
         fileObject = open(fullFilePath, 'r')
 
         reader = csv.reader(fileObject)
@@ -343,6 +357,18 @@ class ExternalForce(object):
             forceLocation = np.array([float(line[1]), float(line[2]), float(line[3])])
             forceDirection = np.array([float(line[4]), float(line[5]), float(line[6])])
             self.addForce(linkName, wrench=None, forceDirection=forceDirection, forceMagnitude=0.0, forceLocation=forceLocation, inWorldFrame=False)
+
+    def createPlunger(self):
+        forceLocationInWorld = np.array([0,0,0])
+        forceDirectionInWorld = np.array([0,0,1])
+
+        point = forceLocationInWorld - 0.1*forceDirectionInWorld
+        color = [1,0,0]
+        d = DebugData()
+        # d.addArrow(point, forceLocationInWorld, headRadius=0.025, tubeRadius=0.005, color=color)
+        d.addSphere(forceLocationInWorld, radius=0.01)
+        d.addLine(point, forceLocationInWorld, radius=0.005)
+        self.plungerPolyData = d.getPolyData()
 
     # these are test methods
     def setupTest(self):
