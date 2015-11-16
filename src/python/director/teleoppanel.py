@@ -1,18 +1,20 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-import director.applogic as app
-import director.objectmodel as om
-from director.timercallback import TimerCallback
-from director import robotstate
-from director import visualization as vis
-from director import transformUtils
-from director import ikplanner
-from director import footstepsdriver
-from director import vtkAll as vtk
-from director import drcargs
-from director import affordanceurdf
-from director.roboturdf import HandFactory
-import director.applogic as app
+import ddapp.applogic as app
+import ddapp.objectmodel as om
+from ddapp.timercallback import TimerCallback
+from ddapp import robotstate
+from ddapp import visualization as vis
+from ddapp import transformUtils
+from ddapp import ikplanner
+from ddapp import footstepsdriver
+from ddapp import vtkAll as vtk
+from ddapp import drcargs
+from ddapp import affordanceurdf
+from ddapp.roboturdf import HandFactory
+import ddapp.applogic as app
+from ddapp import lcmUtils
+import drc
 
 import functools
 import math
@@ -98,6 +100,8 @@ class EndEffectorTeleopPanel(object):
         self.palmOffsetDistance = 0.0
         self.palmGazeAxis = [0.0, 1.0, 0.0]
         self.constraintSet = None
+        
+        lcmUtils.addSubscriber('CANDIDATE_ROBOT_ENDPOSE', drc.robot_state_t, self.onCandidateEndPose)
 
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
@@ -765,6 +769,15 @@ class EndEffectorTeleopPanel(object):
         if info == 1:
             self.panel.showPose(self.constraintSet.endPose)
         app.displaySnoptInfo(info)
+    
+    def onCandidateEndPose(self, msg):
+        if not self.getCheckboxState(self.ui.finalPosePlanningOptions) and not self.ui.eeTeleopButton.checked:
+            translation = (msg.pose.translation.x, msg.pose.translation.y, msg.pose.translation.z)
+            rotation = transformUtils.quaternionToRollPitchYaw((msg.pose.rotation.w, msg.pose.rotation.x, msg.pose.rotation.y, msg.pose.rotation.z))
+            pose = list(translation)
+            pose.extend(rotation)
+            pose.extend(list(msg.joint_position))
+            self.panel.showPose(pose)
 
 
 class PosturePlanShortcuts(object):
