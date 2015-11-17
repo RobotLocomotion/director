@@ -65,8 +65,6 @@ from ddapp import mappingpanel
 from ddapp import handcontrolpanel
 from ddapp import sensordatarequestpanel
 from ddapp import tasklaunchpanel
-from ddapp import pfgrasp
-from ddapp import pfgrasppanel
 from ddapp.jointpropagator import JointPropagator
 
 from ddapp import coursemodel
@@ -155,7 +153,6 @@ useControllerRate = True
 useForceDisplay = False
 useSkybox = False
 useDataFiles = True
-usePFGrasp = False
 useGamepad = True
 useBlackoutText = True
 useRandomWalk = True
@@ -909,15 +906,6 @@ if useDrillDemo:
     app.addToolbarMacro('pointer press', sendPointerPress)
     app.addToolbarMacro('pointer press deep', sendPointerPressDeep)
 
-if usePFGrasp:
-    pfgrasper = pfgrasp.PFGrasp(drillDemo, robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
-                lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                fitDrillMultisense, robotStateJointController,
-                playPlans, showPose, cameraview, segmentationpanel)
-
-    showImageOverlay()
-    hideImageOverlay()
-    pfgrasppanel.init(pfgrasper, _prevParent, imageView, imagePicker, cameraview)
 
 import signal
 def sendMatlabSigint():

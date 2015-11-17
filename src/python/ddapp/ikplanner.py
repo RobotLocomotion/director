@@ -1432,7 +1432,7 @@ class IKPlanner(object):
         return constraint
 
 
-sys.path.append(os.path.join(app.getDRCBase(), 'software/tools/tools/scripts'))
+sys.path.append(os.path.join(app.getDRCBase(), 'software/utils/drc_utils/python'))
 import RobotPoseGUI as rpg
 
 

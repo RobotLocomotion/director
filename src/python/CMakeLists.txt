@@ -71,8 +71,6 @@ set(python_files
   ddapp/otdfmodel.py
   ddapp/openscope.py
   ddapp/perception.py
-  ddapp/pfgrasp.py
-  ddapp/pfgrasppanel.py
   ddapp/planplayback.py
   ddapp/playbackpanel.py
   ddapp/pointcloudlcm.py
