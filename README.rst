@@ -111,7 +111,7 @@ This is an alias for:
 Documentation
 =============
 
-A preliminary Online Help for drake-designer (currently in preparation) can be found `here <./tree/master/docs/drake-designer/README.md>`_.
+A preliminary Online Help for the Director (currently in preparation) can be found `here <./tree/master/docs/director/README.md>`_.
 
 
 Citing
