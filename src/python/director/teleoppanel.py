@@ -12,7 +12,8 @@ from director import vtkAll as vtk
 from director import drcargs
 from director import affordanceurdf
 from director.roboturdf import HandFactory
-import director.applogic as app
+from director import lcmUtils
+import drc as lcmdrc
 
 import functools
 import math
@@ -98,6 +99,8 @@ class EndEffectorTeleopPanel(object):
         self.palmOffsetDistance = 0.0
         self.palmGazeAxis = [0.0, 1.0, 0.0]
         self.constraintSet = None
+        
+        lcmUtils.addSubscriber('CANDIDATE_ROBOT_ENDPOSE', lcmdrc.robot_state_t, self.onCandidateEndPose)
 
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
@@ -765,6 +768,11 @@ class EndEffectorTeleopPanel(object):
         if info == 1:
             self.panel.showPose(self.constraintSet.endPose)
         app.displaySnoptInfo(info)
+    
+    def onCandidateEndPose(self, msg):
+        if not self.getCheckboxState(self.ui.finalPosePlanningOptions) and not self.ui.eeTeleopButton.checked:
+            pose = robotstate.convertStateMessageToDrakePose(msg)
+            self.panel.showPose(pose)
 
 
 class PosturePlanShortcuts(object):
