@@ -1,16 +1,16 @@
 import os
 import math
 import vtk
-from ddapp.consoleapp import ConsoleApp
-from ddapp import ioUtils
-from ddapp import segmentation
-from ddapp import segmentationroutines
-from ddapp import applogic
-from ddapp import visualization as vis
-from ddapp import transformUtils
-from ddapp import filterUtils
-from ddapp import roboturdf
-from ddapp import vtkNumpy as vnp
+from director.consoleapp import ConsoleApp
+from director import ioUtils
+from director import segmentation
+from director import segmentationroutines
+from director import applogic
+from director import visualization as vis
+from director import transformUtils
+from director import filterUtils
+from director import roboturdf
+from director import vtkNumpy as vnp
 
 import numpy as np
 

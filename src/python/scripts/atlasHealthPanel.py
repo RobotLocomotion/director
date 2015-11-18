@@ -1,8 +1,8 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import atlasdriver
-from ddapp import consoleapp
-from ddapp.timercallback import TimerCallback
-from ddapp import robotsystem
+from director.consoleapp import ConsoleApp
+from director import atlasdriver
+from director import consoleapp
+from director.timercallback import TimerCallback
+from director import robotsystem
 from PythonQt import QtCore, QtGui
 from collections import namedtuple
 import time, math

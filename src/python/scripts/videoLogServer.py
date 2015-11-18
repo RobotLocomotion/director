@@ -10,7 +10,7 @@ import re
 import select
 import numpy as np
 
-from ddapp import lcmspy as spy
+from director import lcmspy as spy
 
 
 VIDEO_LCM_URL = 'udpm://239.255.76.50:7650?ttl=1'

@@ -214,19 +214,19 @@ if(pkg_deps)
   use_pkg(ddApp ${pkg_deps})
 endif()
 
-set(_install_targets ddApp ddConsoleApp drake-visualizer)
+set(_install_targets ddApp directorPython drake-visualizer)
 
 add_executable(drake-visualizer drakeVisualizerApp.cpp)
 target_link_libraries(drake-visualizer ddApp)
 
 if(USE_DRC)
-  add_executable(drake-designer main.cpp)
-  target_link_libraries(drake-designer ddApp)
-  list(APPEND _install_targets drake-designer)
+  add_executable(director main.cpp)
+  target_link_libraries(director ddApp)
+  list(APPEND _install_targets director)
 endif()
 
-add_executable(ddConsoleApp consoleApp.cpp)
-target_link_libraries(ddConsoleApp ddApp ${PYTHON_LIBRARIES})
+add_executable(directorPython consoleApp.cpp)
+target_link_libraries(directorPython ddApp ${PYTHON_LIBRARIES})
 
 install(TARGETS ${_install_targets}
     RUNTIME DESTINATION ${DD_INSTALL_BIN_DIR}

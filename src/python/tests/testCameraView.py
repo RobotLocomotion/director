@@ -1,5 +1,5 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import cameraview
+from director.consoleapp import ConsoleApp
+from director import cameraview
 
 
 def main():

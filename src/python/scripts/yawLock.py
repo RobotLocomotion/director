@@ -1,11 +1,11 @@
 
-from ddapp.consoleapp import ConsoleApp
-from ddapp import robotsystem
-from ddapp import transformUtils
-from ddapp import vtkAll as vtk
-from ddapp.utime import getUtime
-from ddapp import lcmUtils
-from ddapp.timercallback import TimerCallback
+from director.consoleapp import ConsoleApp
+from director import robotsystem
+from director import transformUtils
+from director import vtkAll as vtk
+from director.utime import getUtime
+from director import lcmUtils
+from director.timercallback import TimerCallback
 
 import numpy as np
 import math

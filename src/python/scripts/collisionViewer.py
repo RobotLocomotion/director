@@ -3,11 +3,11 @@ import sys
 import PythonQt
 from PythonQt import QtCore, QtGui
 
-import ddapp.applogic as app
-from ddapp import jointcontrol
-from ddapp import lcmUtils
-from ddapp import robotstate
-from ddapp.timercallback import TimerCallback
+import director.applogic as app
+from director import jointcontrol
+from director import lcmUtils
+from director import robotstate
+from director.timercallback import TimerCallback
 import functools
 import drc as lcmdrc
 

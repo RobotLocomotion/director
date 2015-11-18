@@ -1,15 +1,15 @@
-from ddapp import transformUtils
-from ddapp.thirdparty import transformations
+from director import transformUtils
+from director.thirdparty import transformations
 import numpy as np
 
 try:
-  from ddapp import botpy
+  from director import botpy
 except ImportError:
   botpy = None
 
 '''
-This tests the routines in ddapp.transformUtils, botpy, and
-ddapp.thirdparty.transformations to make sure the modules
+This tests the routines in director.transformUtils, botpy, and
+director.thirdparty.transformations to make sure the modules
 agree about conversions between matrices, quaternions, and
 euler angles.
 '''

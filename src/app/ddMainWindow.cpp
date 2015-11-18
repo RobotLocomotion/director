@@ -78,7 +78,7 @@ ddMainWindow::ddMainWindow()
 
   this->Internal->UserMacrosManager = new ddMacrosManager(this);
   this->Internal->UserMacrosManager->setToolBar(this->Internal->MacrosToolBar);
-  this->Internal->UserMacrosManager->addPath(this->Internal->PythonManager->appSitePackagesDir() + "/ddapp/macros");
+  this->Internal->UserMacrosManager->addPath(this->Internal->PythonManager->appSitePackagesDir() + "/director/macros");
 
   this->connect(this->Internal->ViewManager, SIGNAL(currentViewChanged(ddViewBase*, ddViewBase*)), SLOT(onCurrentViewChanged(ddViewBase*, ddViewBase*)));
   this->onCurrentViewChanged(0, this->Internal->ViewManager->currentView());
@@ -182,8 +182,8 @@ void ddMainWindow::onCurrentViewChanged(ddViewBase* previousView, ddViewBase* cu
 {
   QMap<QString, QString> macroDirs;
 
-  macroDirs["Segmentation View"] = ddPythonManager::appSitePackagesDir() + "/ddapp/macros/segmentation_view";
-  macroDirs["DRC View"] = ddPythonManager::appSitePackagesDir() + "/ddapp/macros/drc_view";
+  macroDirs["Segmentation View"] = ddPythonManager::appSitePackagesDir() + "/director/macros/segmentation_view";
+  macroDirs["DRC View"] = ddPythonManager::appSitePackagesDir() + "/director/macros/drc_view";
 
   this->Internal->ViewMacrosManager->removePath(macroDirs.value(this->Internal->ViewManager->viewName(previousView)));
   this->Internal->ViewMacrosManager->addPath(macroDirs.value(this->Internal->ViewManager->viewName(currentView)));
@@ -209,7 +209,7 @@ void ddMainWindow::startup()
   this->handleCommandLineArgs();
 
   this->setupPython();
-  QString startupScript = ddPythonManager::appSitePackagesDir() + "/ddapp/startup.py";
+  QString startupScript = ddPythonManager::appSitePackagesDir() + "/director/startup.py";
   this->Internal->PythonManager->executeFile(startupScript);
 }
 

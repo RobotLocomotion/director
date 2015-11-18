@@ -1,6 +1,6 @@
 % test rrt script for valkyrie (version 1) to reach around a table to a
 % goal on the table
-% this is generated with the ddapp using and can be used to test end-to-end collision free planning
+% this is generated with the director using and can be used to test end-to-end collision free planning
 
 
 disp(exist('ikServerStarted'))
@@ -9,7 +9,7 @@ disp(exist('ikServerStarted'))
 
 format long e
 addpath_control
-addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])
+addpath([getenv('DRC_BASE'), '/software/director/src/matlab'])
 robotURDF = [getenv('DRC_BASE'), '/software/models/valkyrie/V1_sim_shells_reduced_polygon_count_mit.urdf'];
 fixed_point_file = [getenv('DRC_BASE'), '/software/control/matlab/data/valkyrie_fp.mat'];
 left_foot_link = 'LeftUpperFoot';

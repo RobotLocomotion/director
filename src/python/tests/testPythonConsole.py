@@ -1,5 +1,5 @@
 from PythonQt import QtCore, QtGui
-from ddapp.timercallback import TimerCallback
+from director.timercallback import TimerCallback
 
 
 def startApplication(enableQuitTimer=False):

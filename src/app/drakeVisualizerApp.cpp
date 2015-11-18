@@ -8,7 +8,7 @@ int main(int argc, char **argv)
   ddPythonManager* pythonManager = new ddPythonManager;
   pythonManager->setSysArgv(QApplication::instance()->arguments());
   PythonQt::self()->addVariable(PythonQt::self()->importModule("sys"), "executable", QCoreApplication::applicationFilePath());
-  pythonManager->executeString("import ddapp.drakevisualizer; ddapp.drakevisualizer.main(globals())");
+  pythonManager->executeString("import director.drakevisualizer; director.drakevisualizer.main(globals())");
 
   // delete pythonManager;
   // Allow a leak to avoid a segfault in the PythonQt cleanup destructor.

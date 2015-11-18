@@ -318,9 +318,9 @@ endif()
 
 
 ###############################################################################
-# ddapp
+# director
 
-ExternalProject_Add(ddapp
+ExternalProject_Add(director
   SOURCE_DIR ${Superbuild_SOURCE_DIR}/../..
   DOWNLOAD_COMMAND ""
   CMAKE_CACHE_ARGS

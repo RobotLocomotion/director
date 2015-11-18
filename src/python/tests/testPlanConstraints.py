@@ -1,9 +1,9 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import robotsystem
-from ddapp import visualization as vis
-from ddapp import objectmodel as om
-from ddapp import ikplanner
-from ddapp import ikconstraintencoder as ce
+from director.consoleapp import ConsoleApp
+from director import robotsystem
+from director import visualization as vis
+from director import objectmodel as om
+from director import ikplanner
+from director import ikconstraintencoder as ce
 
 import numpy as np
 import pprint

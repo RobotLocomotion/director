@@ -1,7 +1,7 @@
 import PythonQt
 from PythonQt import QtCore, QtGui
-from ddapp.timercallback import TimerCallback
-from ddapp.asynctaskqueue import *
+from director.timercallback import TimerCallback
+from director.asynctaskqueue import *
 
 def startApplication(enableQuitTimer=False):
     appInstance = QtGui.QApplication.instance()

@@ -1,6 +1,6 @@
-from ddapp import consoleapp
-from ddapp import lcmobjectcollection
-from ddapp.timercallback import TimerCallback
+from director import consoleapp
+from director import lcmobjectcollection
+from director.timercallback import TimerCallback
 import datetime
 
 def main():
