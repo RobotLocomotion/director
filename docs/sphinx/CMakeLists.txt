@@ -10,6 +10,6 @@ set(doc_dir ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 add_custom_target(docs-sphinx
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${doc_dir}"
-  COMMAND sphinx-apidoc -F -o "${doc_dir}" "${DD_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/ddapp"
+  COMMAND sphinx-apidoc -F -o "${doc_dir}" "${DD_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director"
   COMMAND make -C "${doc_dir}" SPHINXBUILD=\"${EXECUTABLE_OUTPUT_PATH}/ddConsoleApp ${SPHINX_BUILD}\" html
   )

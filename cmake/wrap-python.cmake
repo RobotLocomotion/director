@@ -22,7 +22,7 @@ function(wrap_python library_name sources)
     set_target_properties(${library_name}Python PROPERTIES SUFFIX ".pyd")
   endif(WIN32 AND NOT CYGWIN)
 
-  install(TARGETS ${library_name}Python DESTINATION ${DD_INSTALL_PYTHON_DIR}/ddapp)
+  install(TARGETS ${library_name}Python DESTINATION ${DD_INSTALL_PYTHON_DIR}/director)
   install(TARGETS ${library_name}PythonD DESTINATION ${DD_INSTALL_LIB_DIR})
 
 endfunction()

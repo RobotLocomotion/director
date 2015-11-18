@@ -1,5 +1,5 @@
 % test rrt script for atlas v3 to reach around a box (unseen)
-% using the ddapp integration script - ikServer
+% using the director integration script - ikServer
 % (its actually a hard planning problem)
 
 
@@ -7,7 +7,7 @@
 
 format long e
 addpath_control
-addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])
+addpath([getenv('DRC_BASE'), '/software/director/src/matlab'])
 robotURDF = [getenv('DRC_BASE') '/software/models/atlas_v3/./model_convex_hull_robotiq_hands.urdf'];
 fixed_point_file = [getenv('DRC_BASE') '/software/models/atlas_v3/../../control/matlab/data/atlas_v3/atlas_bdi_fp.mat'];
 left_foot_link = 'l_foot';

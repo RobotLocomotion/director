@@ -8,7 +8,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 # set project variables
 set(DD_INSTALL_BIN_DIR bin)
 set(DD_INSTALL_LIB_DIR lib)
-set(DD_INSTALL_INCLUDE_DIR include/ddapp)
+set(DD_INSTALL_INCLUDE_DIR include/director)
 set(DD_INSTALL_PYTHON_DIR ${DD_INSTALL_LIB_DIR}/python2.7/dist-packages)
 
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/${DD_INSTALL_BIN_DIR}")

@@ -6,7 +6,7 @@ disp(exist('ikServerStarted'))
 
 format long e
 addpath_control
-addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])
+addpath([getenv('DRC_BASE'), '/software/director/src/matlab'])
 robotURDF = [getenv('DRC_BASE'), '/software/models/val_description/urdf/valkyrie_A_sim_drake.urdf'];
 fixed_point_file = [getenv('DRC_BASE'), '/software/control/matlab/data/val_description/valkyrie_fp_june2015.mat'];
 left_foot_link = 'LeftFoot';
