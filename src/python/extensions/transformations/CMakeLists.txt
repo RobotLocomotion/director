@@ -25,5 +25,5 @@ else()
   set_target_properties(_transformations PROPERTIES PREFIX "" SUFFIX ".so")
 endif()
 
-set_target_properties(_transformations PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/ddapp/thirdparty")
-install(TARGETS _transformations DESTINATION ${DD_INSTALL_PYTHON_DIR}/ddapp/thirdparty)
+set_target_properties(_transformations PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director/thirdparty")
+install(TARGETS _transformations DESTINATION ${DD_INSTALL_PYTHON_DIR}/director/thirdparty)

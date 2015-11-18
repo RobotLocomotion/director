@@ -15,5 +15,5 @@ if(WIN32 AND NOT CYGWIN)
   set_target_properties(pypm PROPERTIES SUFFIX ".pyd")
 endif()
 
-set_target_properties(pypm PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/ddapp")
-install(TARGETS pypm DESTINATION ${DD_INSTALL_PYTHON_DIR}/ddapp)
+set_target_properties(pypm PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")
+install(TARGETS pypm DESTINATION ${DD_INSTALL_PYTHON_DIR}/director)
