@@ -6,21 +6,21 @@ import vtkAll as vtk
 import vtkNumpy
 import functools
 
-from ddapp import lcmUtils
-from ddapp import ioUtils
-from ddapp import segmentation
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp.debugVis import DebugData
-from ddapp import transformUtils
-from ddapp import footstepsdriver
-from ddapp.debugVis import DebugData
-from ddapp import ikplanner
-from ddapp import applogic
-from ddapp.tasks.taskuserpanel import TaskUserPanel
+from director import lcmUtils
+from director import ioUtils
+from director import segmentation
+from director import objectmodel as om
+from director import visualization as vis
+from director.debugVis import DebugData
+from director import transformUtils
+from director import footstepsdriver
+from director.debugVis import DebugData
+from director import ikplanner
+from director import applogic
+from director.tasks.taskuserpanel import TaskUserPanel
 
-import ddapp.terrain
-import ddapp.tasks.robottasks as rt
+import director.terrain
+import director.tasks.robottasks as rt
 
 import drc as lcmdrc
 
@@ -578,7 +578,7 @@ class ContinousWalkingDemo(object):
         else:
             footContactPoints = self.FULL_FOOT_CONTACT_POINTS
 
-        s = ddapp.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=footContactPoints)
+        s = director.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=footContactPoints)
 
         stepCenter = np.mean(step, axis=0)
         startSeed = np.hstack([stepCenter, rpySeed])
@@ -818,11 +818,11 @@ class ContinousWalkingDemo(object):
         leadFoot=self.ikPlanner.leftFootLink
 
         if (self.chosenTerrain == 'stairs'):
-            filename =  ddapp.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_stairs_ihmc.vtp'
+            filename =  director.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_stairs_ihmc.vtp'
             polyData = ioUtils.readPolyData( filename )
             vis.showPolyData(polyData,'terrain_stairs_ihmc.vtp')
         else:
-            filename =  ddapp.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_simple_ihmc.vtp'
+            filename =  director.getDRCBaseDir() + '/../drc-testing-data/terrain/terrain_simple_ihmc.vtp'
             polyData = ioUtils.readPolyData( filename )
             vis.showPolyData(polyData,'terrain_simple_ihmc.vtp')
 
@@ -1042,7 +1042,7 @@ class ContinousWalkingDemo(object):
         self.footstepsPanel.onNewWalkingGoal(goalFrame)
 
     def loadSDFFileAndRunSim(self):
-        from ddapp import sceneloader
+        from director import sceneloader
 
         if self.chosenTerrain == 'simple':
             filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_simple.sdf'

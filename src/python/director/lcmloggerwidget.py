@@ -1,7 +1,7 @@
 from PythonQt import QtCore, QtGui
-from ddapp import lcmUtils
-from ddapp.simpletimer import SimpleTimer
-from ddapp.timercallback import TimerCallback
+from director import lcmUtils
+from director.simpletimer import SimpleTimer
+from director.timercallback import TimerCallback
 import subprocess
 import os
 

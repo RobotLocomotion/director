@@ -1,10 +1,10 @@
-import ddapp.vtkAll as vtk
-import ddapp.thirdparty.numpyjsoncoder as nje
+import director.vtkAll as vtk
+import director.thirdparty.numpyjsoncoder as nje
 from collections import OrderedDict
-from ddapp import fieldcontainer
-from ddapp import transformUtils
-from ddapp import lcmUtils
-from ddapp.utime import getUtime
+from director import fieldcontainer
+from director import transformUtils
+from director import lcmUtils
+from director.utime import getUtime
 
 import drc as lcmdrc
 

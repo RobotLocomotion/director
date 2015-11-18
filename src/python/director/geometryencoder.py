@@ -1,6 +1,6 @@
-from ddapp import vtkAll as vtk
-from ddapp import vtkNumpy as vnp
-from ddapp.shallowCopy import shallowCopy
+from director import vtkAll as vtk
+from director import vtkNumpy as vnp
+from director.shallowCopy import shallowCopy
 import numpy as np
 
 def encodePolyData(polyData):

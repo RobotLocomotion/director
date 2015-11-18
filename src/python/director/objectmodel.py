@@ -1,8 +1,8 @@
 import os
 import PythonQt
 from PythonQt import QtCore, QtGui
-from ddapp.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelper
-from ddapp import callbacks
+from director.propertyset import PropertySet, PropertyAttributes, PropertyPanelHelper
+from director import callbacks
 
 class Icons(object):
 

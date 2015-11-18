@@ -1,5 +1,5 @@
-from ddapp import lcmUtils
-from ddapp import transformUtils
+from director import lcmUtils
+from director import transformUtils
 import PythonQt
 import bot_core as lcmbotcore
 

@@ -1,29 +1,29 @@
-from ddapp import applogic
-from ddapp import vtkAll as vtk
-from ddapp import callbacks
-from ddapp.fieldcontainer import FieldContainer
-from ddapp import ik
-from ddapp import ikplanner
-from ddapp import irisdriver
-from ddapp import raycastdriver
-from ddapp import objectmodel as om
-from ddapp import perception
-from ddapp import segmentation
-from ddapp import segmentationroutines
-from ddapp import robotstate
-from ddapp import roboturdf
-from ddapp import footstepsdriver
-from ddapp import drcargs
-from ddapp import atlasdriver
-from ddapp import affordanceitems
-from ddapp import affordancemanager
-from ddapp import robotplanlistener
-from ddapp import handdriver
-from ddapp import planplayback
-from ddapp import playbackpanel
-from ddapp import teleoppanel
-from ddapp import viewbehaviors
-from ddapp import plannerPublisher
+from director import applogic
+from director import vtkAll as vtk
+from director import callbacks
+from director.fieldcontainer import FieldContainer
+from director import ik
+from director import ikplanner
+from director import irisdriver
+from director import raycastdriver
+from director import objectmodel as om
+from director import perception
+from director import segmentation
+from director import segmentationroutines
+from director import robotstate
+from director import roboturdf
+from director import footstepsdriver
+from director import drcargs
+from director import atlasdriver
+from director import affordanceitems
+from director import affordancemanager
+from director import robotplanlistener
+from director import handdriver
+from director import planplayback
+from director import playbackpanel
+from director import teleoppanel
+from director import viewbehaviors
+from director import plannerPublisher
 
 import os
 import json

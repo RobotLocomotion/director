@@ -1,8 +1,8 @@
 import time
-from ddapp import segmentationroutines
-from ddapp import segmentation
-from ddapp.timercallback import TimerCallback
-from ddapp.visualization import *
+from director import segmentationroutines
+from director import segmentation
+from director.timercallback import TimerCallback
+from director.visualization import *
 
 class TrackDrillOnTable(object):
 

@@ -1,11 +1,11 @@
 import PythonQt
 from PythonQt import QtCore, QtGui
 
-import ddapp.objectmodel as om
-import ddapp.visualization as vis
-from ddapp import transformUtils
-from ddapp import applogic as app
-from ddapp import vtkAll as vtk
+import director.objectmodel as om
+import director.visualization as vis
+from director import transformUtils
+from director import applogic as app
+from director import vtkAll as vtk
 import numpy as np
 
 

@@ -1,9 +1,9 @@
-import ddapp.visualization as vis
-from ddapp import filterUtils
-import ddapp.vtkAll as vtk
-import ddapp.vtkNumpy as vnp
-from ddapp.shallowCopy import shallowCopy
-from ddapp import ioUtils
+import director.visualization as vis
+from director import filterUtils
+import director.vtkAll as vtk
+import director.vtkNumpy as vnp
+from director.shallowCopy import shallowCopy
+from director import ioUtils
 import numpy as np
 
 

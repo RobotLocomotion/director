@@ -8,24 +8,24 @@ import functools
 import random
 import numpy as np
 
-from ddapp import transformUtils
-from ddapp import lcmUtils
-from ddapp.timercallback import TimerCallback
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import applogic as app
-from ddapp.debugVis import DebugData
-from ddapp import ioUtils
-from ddapp.simpletimer import SimpleTimer
-from ddapp.utime import getUtime
-from ddapp import robotstate
-from ddapp import planplayback
-from ddapp import segmentation
-from ddapp import drcargs
+from director import transformUtils
+from director import lcmUtils
+from director.timercallback import TimerCallback
+from director import objectmodel as om
+from director import visualization as vis
+from director import applogic as app
+from director.debugVis import DebugData
+from director import ioUtils
+from director.simpletimer import SimpleTimer
+from director.utime import getUtime
+from director import robotstate
+from director import planplayback
+from director import segmentation
+from director import drcargs
 
-from ddapp import ik
-from ddapp.ikparameters import IkParameters
-from ddapp import ikconstraintencoder
+from director import ik
+from director.ikparameters import IkParameters
+from director import ikconstraintencoder
 
 import drc as lcmdrc
 import json

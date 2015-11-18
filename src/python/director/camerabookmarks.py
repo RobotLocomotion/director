@@ -1,5 +1,5 @@
-from ddapp import applogic
-from ddapp import cameracontrol
+from director import applogic
+from director import cameracontrol
 
 from PythonQt import QtCore, QtGui
 

@@ -1,7 +1,7 @@
-import ddapp
-from ddapp.consoleapp import ConsoleApp
-from ddapp import robotsystem
-from ddapp import kinematicposeplanner as kpp
+import director
+from director.consoleapp import ConsoleApp
+from director import robotsystem
+from director import kinematicposeplanner as kpp
 
 
 def onIkStartup(ikServer, startSuccess):

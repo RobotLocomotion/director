@@ -1,8 +1,8 @@
 # This script is executed in the main console namespace so
 # that all the variables defined here become console variables.
 
-import ddapp
-from ddapp import irisdriver
+import director
+from director import irisdriver
 
 import os
 import sys
@@ -11,92 +11,92 @@ import json
 from PythonQt import QtCore, QtGui
 from time import time
 import imp
-import ddapp.applogic as app
-from ddapp import drcargs
-from ddapp import vtkAll as vtk
-from ddapp import matlab
-from ddapp import jointcontrol
-from ddapp import callbacks
-from ddapp import camerabookmarks
-from ddapp import cameracontrol
-from ddapp import bihandeddemo
-from ddapp import debrisdemo
-from ddapp import doordemo
-from ddapp import drilldemo
-from ddapp import tabledemo
-from ddapp import mappingdemo
-from ddapp import valvedemo
-from ddapp import drivingplanner
-from ddapp import egressplanner
-from ddapp import polarisplatformplanner
-from ddapp import surprisetask
-from ddapp import continuouswalkingdemo
-from ddapp import sitstandplanner
-from ddapp import walkingtestdemo
-from ddapp import terraintask
-from ddapp import ik
-from ddapp import ikplanner
-from ddapp import objectmodel as om
-from ddapp import spreadsheet
-from ddapp import transformUtils
-from ddapp import tdx
-from ddapp import skybox
-from ddapp import perception
-from ddapp import segmentation
-from ddapp import cameraview
-from ddapp import colorize
-from ddapp import drakevisualizer
-from ddapp.fieldcontainer import FieldContainer
-from ddapp import robotstate
-from ddapp import roboturdf
-from ddapp import robotsystem
-from ddapp import affordancepanel
-from ddapp import filterUtils
-from ddapp import footstepsdriver
-from ddapp import footstepsdriverpanel
-from ddapp import framevisualization
-from ddapp import lcmloggerwidget
-from ddapp import lcmgl
-from ddapp import atlasdriver
-from ddapp import atlasdriverpanel
-from ddapp import multisensepanel
-from ddapp import navigationpanel
-from ddapp import mappingpanel
-from ddapp import handcontrolpanel
-from ddapp import sensordatarequestpanel
-from ddapp import tasklaunchpanel
-from ddapp.jointpropagator import JointPropagator
+import director.applogic as app
+from director import drcargs
+from director import vtkAll as vtk
+from director import matlab
+from director import jointcontrol
+from director import callbacks
+from director import camerabookmarks
+from director import cameracontrol
+from director import bihandeddemo
+from director import debrisdemo
+from director import doordemo
+from director import drilldemo
+from director import tabledemo
+from director import mappingdemo
+from director import valvedemo
+from director import drivingplanner
+from director import egressplanner
+from director import polarisplatformplanner
+from director import surprisetask
+from director import continuouswalkingdemo
+from director import sitstandplanner
+from director import walkingtestdemo
+from director import terraintask
+from director import ik
+from director import ikplanner
+from director import objectmodel as om
+from director import spreadsheet
+from director import transformUtils
+from director import tdx
+from director import skybox
+from director import perception
+from director import segmentation
+from director import cameraview
+from director import colorize
+from director import drakevisualizer
+from director.fieldcontainer import FieldContainer
+from director import robotstate
+from director import roboturdf
+from director import robotsystem
+from director import affordancepanel
+from director import filterUtils
+from director import footstepsdriver
+from director import footstepsdriverpanel
+from director import framevisualization
+from director import lcmloggerwidget
+from director import lcmgl
+from director import atlasdriver
+from director import atlasdriverpanel
+from director import multisensepanel
+from director import navigationpanel
+from director import mappingpanel
+from director import handcontrolpanel
+from director import sensordatarequestpanel
+from director import tasklaunchpanel
+from director.jointpropagator import JointPropagator
 
-from ddapp import coursemodel
+from director import coursemodel
 
-from ddapp import copmonitor
-from ddapp import robotplanlistener
-from ddapp import handdriver
-from ddapp import planplayback
-from ddapp import playbackpanel
-from ddapp import screengrabberpanel
-from ddapp import splinewidget
-from ddapp import teleoppanel
-from ddapp import vtkNumpy as vnp
-from ddapp import viewbehaviors
-from ddapp import visualization as vis
-from ddapp import actionhandlers
-from ddapp.timercallback import TimerCallback
-from ddapp.pointpicker import PointPicker, ImagePointPicker
-from ddapp import segmentationpanel
-from ddapp import lcmUtils
-from ddapp.utime import getUtime
-from ddapp.shallowCopy import shallowCopy
+from director import copmonitor
+from director import robotplanlistener
+from director import handdriver
+from director import planplayback
+from director import playbackpanel
+from director import screengrabberpanel
+from director import splinewidget
+from director import teleoppanel
+from director import vtkNumpy as vnp
+from director import viewbehaviors
+from director import visualization as vis
+from director import actionhandlers
+from director.timercallback import TimerCallback
+from director.pointpicker import PointPicker, ImagePointPicker
+from director import segmentationpanel
+from director import lcmUtils
+from director.utime import getUtime
+from director.shallowCopy import shallowCopy
 
-from ddapp import segmentationroutines
-from ddapp import trackers
+from director import segmentationroutines
+from director import trackers
 
-from ddapp import gamepad
-from ddapp import blackoutmonitor
+from director import gamepad
+from director import blackoutmonitor
 
-from ddapp.tasks import robottasks as rt
-from ddapp.tasks import taskmanagerwidget
-from ddapp.tasks.descriptions import loadTaskDescriptions
+from director.tasks import robottasks as rt
+from director.tasks import taskmanagerwidget
+from director.tasks.descriptions import loadTaskDescriptions
 import drc as lcmdrc
 
 from collections import OrderedDict
@@ -104,8 +104,8 @@ import functools
 import math
 
 import numpy as np
-from ddapp.debugVis import DebugData
-from ddapp import ioUtils as io
+from director.debugVis import DebugData
+from director import ioUtils as io
 
 drcargs.requireStrict()
 drcargs.args()

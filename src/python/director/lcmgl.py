@@ -1,6 +1,6 @@
-import ddapp.vtkAll as vtk
-import ddapp.objectmodel as om
-from ddapp import lcmUtils
+import director.vtkAll as vtk
+import director.objectmodel as om
+from director import lcmUtils
 
 # if bot_lcmgl cannot be important than this module will not be able to
 # support lcmgl, but it can still be imported in a disabled state

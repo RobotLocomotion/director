@@ -1,6 +1,6 @@
-import ddapp.applogic as app
-import ddapp.objectmodel as om
-from ddapp import cameraview
+import director.applogic as app
+import director.objectmodel as om
+from director import cameraview
 
 import functools
 

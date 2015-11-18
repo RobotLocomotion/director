@@ -2,13 +2,13 @@ import sys
 import time
 import math
 
-from ddapp import midi
-from ddapp import lcmUtils
-from ddapp import consoleapp
-from ddapp.utime import getUtime
+from director import midi
+from director import lcmUtils
+from director import consoleapp
+from director.utime import getUtime
 import drc as lcmdrc
 
-from ddapp.timercallback import TimerCallback
+from director.timercallback import TimerCallback
 
 class TriggerFingerPublisher():
 	def __init__(self, lcmChannel):

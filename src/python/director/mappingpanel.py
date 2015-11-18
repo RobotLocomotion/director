@@ -1,12 +1,12 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-import ddapp
-from ddapp import lcmUtils
-from ddapp import applogic as app
-from ddapp import actionhandlers
-from ddapp.utime import getUtime
-from ddapp.timercallback import TimerCallback
-from ddapp.simpletimer import SimpleTimer
+import director
+from director import lcmUtils
+from director import applogic as app
+from director import actionhandlers
+from director.utime import getUtime
+from director.timercallback import TimerCallback
+from director.simpletimer import SimpleTimer
 import numpy as np
 import math
 from time import sleep
@@ -16,24 +16,24 @@ import vtkAll as vtk
 
 from time import time
 from copy import deepcopy
-from ddapp import transformUtils
-import ddapp.visualization as vis
-import ddapp.objectmodel as om
-from ddapp import robotstate
-from ddapp import drcargs
+from director import transformUtils
+import director.visualization as vis
+import director.objectmodel as om
+from director import robotstate
+from director import drcargs
 
 
-from ddapp import ioUtils as io
-from ddapp import vtkNumpy as vnp
-from ddapp import segmentation
+from director import ioUtils as io
+from director import vtkNumpy as vnp
+from director import segmentation
 
-import ddapp.filterUtils as filterUtils
+import director.filterUtils as filterUtils
 
 from kinect.map_command_t import map_command_t
 
-from ddapp.tasks.taskuserpanel import TaskUserPanel
-from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
-import ddapp.tasks.robottasks as rt
+from director.tasks.taskuserpanel import TaskUserPanel
+from director.tasks.taskuserpanel import ImageBasedAffordanceFit
+import director.tasks.robottasks as rt
 import functools
 
 def addWidgetsToDict(widgets, d):

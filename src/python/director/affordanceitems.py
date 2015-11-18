@@ -1,14 +1,14 @@
-import ddapp
-import ddapp.objectmodel as om
-from ddapp import visualization as vis
-from ddapp.visualization import PolyDataItem
-from ddapp import filterUtils
-from ddapp import ioUtils
-from ddapp import meshmanager
-from ddapp import transformUtils
-from ddapp.uuidutil import newUUID
-from ddapp.debugVis import DebugData
-from ddapp import vtkAll as vtk
+import director
+import director.objectmodel as om
+from director import visualization as vis
+from director.visualization import PolyDataItem
+from director import filterUtils
+from director import ioUtils
+from director import meshmanager
+from director import transformUtils
+from director.uuidutil import newUUID
+from director.debugVis import DebugData
+from director import vtkAll as vtk
 import numpy as np
 
 import os
@@ -232,7 +232,7 @@ class MeshAffordanceItem(AffordanceItem):
         if not polyData:
 
             if not os.path.isabs(filename):
-                filename = os.path.join(ddapp.getDRCBaseDir(), filename)
+                filename = os.path.join(director.getDRCBaseDir(), filename)
 
             if os.path.isfile(filename):
                 polyData = ioUtils.readPolyData(filename)

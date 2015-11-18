@@ -2,14 +2,14 @@ from __future__ import division
 
 import numpy as np
 import drc as lcmdrc
-from ddapp import applogic as app
-from ddapp import objectmodel as om
-from ddapp import transformUtils
-from ddapp import irisUtils
-from ddapp import lcmUtils
-from ddapp import robotstate
-from ddapp.terrainitem import TerrainRegionItem
-from ddapp.utime import getUtime
+from director import applogic as app
+from director import objectmodel as om
+from director import transformUtils
+from director import irisUtils
+from director import lcmUtils
+from director import robotstate
+from director.terrainitem import TerrainRegionItem
+from director.utime import getUtime
 
 
 class IRISDriver(object):

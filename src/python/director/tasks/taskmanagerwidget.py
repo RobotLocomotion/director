@@ -1,6 +1,6 @@
-from ddapp.tasks.robottasks import *
-from ddapp.tasks.descriptions import loadTaskDescription
-import ddapp.applogic as app
+from director.tasks.robottasks import *
+from director.tasks.descriptions import loadTaskDescription
+import director.applogic as app
 
 def _splitCamelCase(name):
     name = re.sub('(.)([A-Z][a-z]+)', r'\1 \2', name)

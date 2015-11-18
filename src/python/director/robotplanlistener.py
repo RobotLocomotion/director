@@ -4,12 +4,12 @@ import math
 import time
 import numpy as np
 
-from ddapp import callbacks
-from ddapp import transformUtils
-from ddapp import lcmUtils
-from ddapp import objectmodel as om
-from ddapp.utime import getUtime
-from ddapp import robotstate
+from director import callbacks
+from director import transformUtils
+from director import lcmUtils
+from director import objectmodel as om
+from director.utime import getUtime
+from director import robotstate
 
 import drc as lcmdrc
 

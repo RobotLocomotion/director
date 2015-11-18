@@ -1,11 +1,11 @@
-from ddapp import objectmodel as om
-from ddapp import affordanceitems
-from ddapp import lcmobjectcollection
-from ddapp import visualization as vis
-from ddapp.timercallback import TimerCallback
-from ddapp.uuidutil import newUUID
-from ddapp import vtkAll as vtk
-from ddapp.thirdparty import numpyjsoncoder
+from director import objectmodel as om
+from director import affordanceitems
+from director import lcmobjectcollection
+from director import visualization as vis
+from director.timercallback import TimerCallback
+from director.uuidutil import newUUID
+from director import vtkAll as vtk
+from director.thirdparty import numpyjsoncoder
 import traceback
 
 class AffordanceObjectModelManager(object):

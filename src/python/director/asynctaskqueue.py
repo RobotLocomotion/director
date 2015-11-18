@@ -1,9 +1,9 @@
 import types
 import traceback
 from PythonQt import QtCore, QtGui
-from ddapp.timercallback import TimerCallback
-from ddapp.simpletimer import SimpleTimer
-from ddapp import callbacks
+from director.timercallback import TimerCallback
+from director.simpletimer import SimpleTimer
+from director import callbacks
 
 
 class AsyncTaskQueue(object):

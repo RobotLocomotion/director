@@ -1,17 +1,17 @@
 import os
 import math
-from ddapp import robotsystem
-from ddapp.consoleapp import ConsoleApp
-from ddapp import ioUtils
-from ddapp import segmentation
-from ddapp import applogic
-from ddapp import visualization as vis
-from ddapp import continuouswalkingdemo
-from ddapp import objectmodel as om
-from ddapp import ikplanner
-from ddapp import navigationpanel
-from ddapp import cameraview
-from ddapp import playbackpanel
+from director import robotsystem
+from director.consoleapp import ConsoleApp
+from director import ioUtils
+from director import segmentation
+from director import applogic
+from director import visualization as vis
+from director import continuouswalkingdemo
+from director import objectmodel as om
+from director import ikplanner
+from director import navigationpanel
+from director import cameraview
+from director import playbackpanel
 
 app = ConsoleApp()
 dataDir = app.getTestingDataDirectory()

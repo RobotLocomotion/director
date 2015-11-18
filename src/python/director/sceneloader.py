@@ -4,14 +4,14 @@ import math
 import numpy as np
 import xml.etree.ElementTree as etree
 
-from ddapp import transformUtils
-from ddapp import segmentation
-from ddapp import affordanceupdater
-from ddapp import affordanceitems
+from director import transformUtils
+from director import segmentation
+from director import affordanceupdater
+from director import affordanceitems
 from numpy import array
-from ddapp.uuidutil import newUUID
+from director.uuidutil import newUUID
 import ioUtils
-from ddapp.thirdparty import pysdf
+from director.thirdparty import pysdf
 
 class SceneLoader(object):
     def __init__(self):

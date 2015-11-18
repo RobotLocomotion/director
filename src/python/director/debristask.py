@@ -1,7 +1,7 @@
 from segmentation import getFootFramesFromReferenceFrame
 import math
 
-from ddapp.debugVis import DebugData
+from director.debugVis import DebugData
 
 
 def getBoardCorners(params):
@@ -73,7 +73,7 @@ def loadFeet():
 
 
 import vs as lcmvs
-from ddapp import lcmUtils
+from director import lcmUtils
 triadCount = 0
 
 def publishTriad(transform, collectionId=1234):

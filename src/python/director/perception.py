@@ -4,16 +4,16 @@ import vtk
 import math
 import PythonQt
 from PythonQt import QtCore, QtGui
-import ddapp.objectmodel as om
-from ddapp import drcargs
-from ddapp import robotstate
-from ddapp.timercallback import TimerCallback
-from ddapp.utime import getUtime
-from ddapp.simpletimer import MovingAverageComputer
+import director.objectmodel as om
+from director import drcargs
+from director import robotstate
+from director.timercallback import TimerCallback
+from director.utime import getUtime
+from director.simpletimer import MovingAverageComputer
 import vtkDRCFiltersPython as drc
-from ddapp.debugVis import DebugData
-import ddapp.visualization as vis
-from ddapp import vtkNumpy as vnp
+from director.debugVis import DebugData
+import director.visualization as vis
+from director import vtkNumpy as vnp
 import numpy as np
 
 import drc as lcmdrc

@@ -1,10 +1,10 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-from ddapp import applogic as app
-from ddapp.timercallback import TimerCallback
-from ddapp.simpletimer import FPSCounter
-from ddapp import ioUtils as io
-import ddapp.vtkAll as vtk
+from director import applogic as app
+from director.timercallback import TimerCallback
+from director.simpletimer import FPSCounter
+from director import ioUtils as io
+import director.vtkAll as vtk
 import os
 import glob
 import time

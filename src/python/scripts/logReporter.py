@@ -5,7 +5,7 @@ import lcm
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime as dt
-from ddapp import lcmspy as spy
+from director import lcmspy as spy
 import scipy.signal as sig
 
 def sizeof_fmt(num, suffix='B'):

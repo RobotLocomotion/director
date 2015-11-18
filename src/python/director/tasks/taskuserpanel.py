@@ -1,21 +1,21 @@
-from ddapp import transformUtils
-from ddapp.timercallback import TimerCallback
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import applogic as app
-from ddapp.debugVis import DebugData
-from ddapp import ioUtils
-from ddapp.simpletimer import SimpleTimer
-from ddapp.utime import getUtime
-from ddapp.pointpicker import ImagePointPicker
-from ddapp import affordanceitems
-from ddapp import affordanceupdater
-from ddapp import cameraview
-from ddapp import segmentation
-from ddapp import propertyset
-from ddapp import asynctaskqueue as atq
-import ddapp.tasks.robottasks as rt
-import ddapp.tasks.taskmanagerwidget as tmw
+from director import transformUtils
+from director.timercallback import TimerCallback
+from director import objectmodel as om
+from director import visualization as vis
+from director import applogic as app
+from director.debugVis import DebugData
+from director import ioUtils
+from director.simpletimer import SimpleTimer
+from director.utime import getUtime
+from director.pointpicker import ImagePointPicker
+from director import affordanceitems
+from director import affordanceupdater
+from director import cameraview
+from director import segmentation
+from director import propertyset
+from director import asynctaskqueue as atq
+import director.tasks.robottasks as rt
+import director.tasks.taskmanagerwidget as tmw
 
 import numpy as np
 import traceback

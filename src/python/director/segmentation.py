@@ -8,36 +8,36 @@ import functools
 import traceback
 import PythonQt
 from PythonQt import QtCore, QtGui
-import ddapp.applogic as app
-from ddapp import objectmodel as om
-from ddapp import perception
-from ddapp import lcmUtils
-from ddapp import roboturdf
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp.transformUtils import getTransformFromAxes
-from ddapp.timercallback import TimerCallback
-from ddapp import mapsregistrar
-from ddapp import affordancemanager
-from ddapp.affordanceitems import *
-from ddapp.visualization import *
-from ddapp.filterUtils import *
-from ddapp.fieldcontainer import FieldContainer
-from ddapp.segmentationroutines import *
-from ddapp import cameraview
+import director.applogic as app
+from director import objectmodel as om
+from director import perception
+from director import lcmUtils
+from director import roboturdf
+from director import transformUtils
+from director import visualization as vis
+from director.transformUtils import getTransformFromAxes
+from director.timercallback import TimerCallback
+from director import mapsregistrar
+from director import affordancemanager
+from director.affordanceitems import *
+from director.visualization import *
+from director.filterUtils import *
+from director.fieldcontainer import FieldContainer
+from director.segmentationroutines import *
+from director import cameraview
 
 import numpy as np
 import vtkNumpy
 from debugVis import DebugData
 from shallowCopy import shallowCopy
 import ioUtils
-from ddapp.uuidutil import newUUID
+from director.uuidutil import newUUID
 
 import drc as lcmdrc
 import bot_core as lcmbotcore
 
 import vs as lcmvs
-from ddapp import lcmUtils
+from director import lcmUtils
 
 
 DRILL_TRIANGLE_BOTTOM_LEFT = 'bottom left'

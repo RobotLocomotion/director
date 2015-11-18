@@ -3,15 +3,15 @@ import sys
 import PythonQt
 from PythonQt import QtCore, QtGui
 
-import ddapp.applogic as app
-from ddapp import jointcontrol
-from ddapp import lcmUtils
-from ddapp import robotstate
-from ddapp import drakevisualizer
-from ddapp import lcmgl
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp.timercallback import TimerCallback
+import director.applogic as app
+from director import jointcontrol
+from director import lcmUtils
+from director import robotstate
+from director import drakevisualizer
+from director import lcmgl
+from director import objectmodel as om
+from director import visualization as vis
+from director.timercallback import TimerCallback
 import functools
 import drc as lcmdrc
 

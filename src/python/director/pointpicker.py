@@ -1,12 +1,12 @@
 import PythonQt
 from PythonQt import QtCore, QtGui
-import ddapp.visualization as vis
-import ddapp.objectmodel as om
-from ddapp.debugVis import DebugData
-import ddapp.vtkAll as vtk
-from ddapp import callbacks
+import director.visualization as vis
+import director.objectmodel as om
+from director.debugVis import DebugData
+import director.vtkAll as vtk
+from director import callbacks
 import numpy as np
-from ddapp.affordanceitems import AffordanceItem
+from director.affordanceitems import AffordanceItem
 
 
 class PointPicker(object):

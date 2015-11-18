@@ -8,39 +8,39 @@ import functools
 import numpy as np
 from collections import defaultdict
 
-from ddapp import transformUtils
-from ddapp import lcmUtils
-from ddapp.timercallback import TimerCallback
-from ddapp.asynctaskqueue import AsyncTaskQueue
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import applogic as app
-from ddapp.debugVis import DebugData
-from ddapp import ikplanner
-from ddapp import ioUtils
-from ddapp.simpletimer import SimpleTimer
-from ddapp.utime import getUtime
-from ddapp import affordanceitems
-from ddapp import robotstate
-from ddapp import robotplanlistener
-from ddapp import segmentation
-from ddapp import planplayback
-from ddapp import affordanceupdater
-from ddapp import segmentationpanel
-from ddapp import footstepsdriver
-from ddapp import footstepsdriverpanel
+from director import transformUtils
+from director import lcmUtils
+from director.timercallback import TimerCallback
+from director.asynctaskqueue import AsyncTaskQueue
+from director import objectmodel as om
+from director import visualization as vis
+from director import applogic as app
+from director.debugVis import DebugData
+from director import ikplanner
+from director import ioUtils
+from director.simpletimer import SimpleTimer
+from director.utime import getUtime
+from director import affordanceitems
+from director import robotstate
+from director import robotplanlistener
+from director import segmentation
+from director import planplayback
+from director import affordanceupdater
+from director import segmentationpanel
+from director import footstepsdriver
+from director import footstepsdriverpanel
 
-from ddapp import pointpicker
+from director import pointpicker
 
-from ddapp.footstepsdriver import FootstepRequestGenerator
+from director.footstepsdriver import FootstepRequestGenerator
 
-import ddapp.terrain
+import director.terrain
 
-from ddapp.tasks.taskuserpanel import TaskUserPanel
-from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
+from director.tasks.taskuserpanel import TaskUserPanel
+from director.tasks.taskuserpanel import ImageBasedAffordanceFit
 
-import ddapp.tasks.robottasks as rt
-import ddapp.tasks.taskmanagerwidget as tmw
+import director.tasks.robottasks as rt
+import director.tasks.taskmanagerwidget as tmw
 
 import drc as lcmdrc
 import copy
@@ -84,7 +84,7 @@ class TerrainTask(object):
         self.relativeStartYaw = 0
 
         # terrain config file stuff
-        self.terrainConfigDir = os.path.join(ddapp.getDRCBaseDir(), 'software','config','terrain')
+        self.terrainConfigDir = os.path.join(director.getDRCBaseDir(), 'software','config','terrain')
         files = glob.glob(os.path.join(self.terrainConfigDir,'*.py'))
         self.terrainConfigList = []
         for f in files:
@@ -1183,7 +1183,7 @@ class TerrainTask(object):
         assert step.shape[1] == 3
 
         shapeVertices = np.array(step).transpose()[:2,:]
-        s = ddapp.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=ddapp.terrain.DEFAULT_FOOT_CONTACTS)
+        s = director.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=director.terrain.DEFAULT_FOOT_CONTACTS)
 
         stepCenter = np.mean(step, axis=0)
         startSeed = np.hstack([stepCenter, rpySeed])

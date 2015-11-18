@@ -1,8 +1,8 @@
 ''' Convienence methods on VTK routines only '''
 
-import ddapp.vtkAll as vtk
-import ddapp.vtkNumpy as vnp
-from ddapp.shallowCopy import shallowCopy
+import director.vtkAll as vtk
+import director.vtkNumpy as vnp
+from director.shallowCopy import shallowCopy
 import numpy as np
 
 

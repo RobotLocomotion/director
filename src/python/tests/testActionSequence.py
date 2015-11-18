@@ -1,15 +1,15 @@
 
-from ddapp.consoleapp import ConsoleApp
+from director.consoleapp import ConsoleApp
 
-from ddapp import visualization as vis
-import ddapp.objectmodel as om
+from director import visualization as vis
+import director.objectmodel as om
 import PythonQt
 from PythonQt import QtCore, QtGui
 
-import ddapp.tasks.robottasks as rt
-from ddapp.tasks.taskmanagerwidget import TaskWidgetManager
-from ddapp import robotsystem
-from ddapp.fieldcontainer import FieldContainer
+import director.tasks.robottasks as rt
+from director.tasks.taskmanagerwidget import TaskWidgetManager
+from director import robotsystem
+from director.fieldcontainer import FieldContainer
 
 
 ###############################

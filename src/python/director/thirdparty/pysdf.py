@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import xml.dom.minidom
 
 import numpy
-from ddapp.thirdparty import transformations
+from director.thirdparty import transformations
 from naming import *
 from conversions import *
 

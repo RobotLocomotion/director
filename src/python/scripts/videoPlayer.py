@@ -1,11 +1,11 @@
 import os
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-from ddapp.timercallback import TimerCallback
-import ddapp.objectmodel as om
-from ddapp import lcmUtils
-from ddapp import cameraview
-from ddapp import vtkAll as vtk
+from director.timercallback import TimerCallback
+import director.objectmodel as om
+from director import lcmUtils
+from director import cameraview
+from director import vtkAll as vtk
 import json
 import drc as lcmdrc
 

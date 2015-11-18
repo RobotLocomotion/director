@@ -1,5 +1,5 @@
-from ddapp import callbacks
-from ddapp.fieldcontainer import FieldContainer
+from director import callbacks
+from director.fieldcontainer import FieldContainer
 
 import re
 import numpy as np

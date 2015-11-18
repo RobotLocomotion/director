@@ -2,12 +2,12 @@ import os
 
 from PythonQt import QtCore, QtGui
 
-import ddapp.applogic as app
-import ddapp.objectmodel as om
-import ddapp.ioUtils as io
-import ddapp.visualization as vis
-from ddapp import roboturdf
-from ddapp import otdfmodel
+import director.applogic as app
+import director.objectmodel as om
+import director.ioUtils as io
+import director.visualization as vis
+from director import roboturdf
+from director import otdfmodel
 
 _lastDir = None
 

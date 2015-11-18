@@ -1,5 +1,5 @@
-import ddapp.vtkAll as vtk
-import ddapp.vtkNumpy as vnp
+import director.vtkAll as vtk
+import director.vtkNumpy as vnp
 import drc as lcmdrc
 import numpy as np
 import time

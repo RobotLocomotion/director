@@ -1,23 +1,23 @@
-from ddapp import lcmUtils
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp.utime import getUtime
-from ddapp import transformUtils
-from ddapp.debugVis import DebugData
-from ddapp import ioUtils
-from ddapp import robotstate
-from ddapp import applogic as app
-from ddapp import vtkAll as vtk
-from ddapp.simpletimer import SimpleTimer
-from ddapp.shallowCopy import shallowCopy
-from ddapp import roboturdf
-from ddapp import filterUtils
-import ddapp.vtkNumpy as vnp
+from director import lcmUtils
+from director import objectmodel as om
+from director import visualization as vis
+from director.utime import getUtime
+from director import transformUtils
+from director.debugVis import DebugData
+from director import ioUtils
+from director import robotstate
+from director import applogic as app
+from director import vtkAll as vtk
+from director.simpletimer import SimpleTimer
+from director.shallowCopy import shallowCopy
+from director import roboturdf
+from director import filterUtils
+import director.vtkNumpy as vnp
 
 import os
 import math
 import numpy as np
-from ddapp import drcargs
+from director import drcargs
 import drc as lcmdrc
 from bot_core.pose_t import pose_t
 from drc.robot_state_t import robot_state_t

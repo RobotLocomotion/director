@@ -1,6 +1,6 @@
-from ddapp.segmentation import *
+from director.segmentation import *
 
-from ddapp import mapsregistrar
+from director import mapsregistrar
 import PythonQt
 from PythonQt import QtCore, QtGui
 

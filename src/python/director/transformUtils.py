@@ -1,5 +1,5 @@
 import vtkAll as vtk
-from ddapp import botpy
+from director import botpy
 import math
 import numpy as np
 import drc as lcmdrc

@@ -1,7 +1,7 @@
 import vtk
 import time
 import numpy as np
-from ddapp.timercallback import TimerCallback
+from director.timercallback import TimerCallback
 
 class OrbitController(TimerCallback):
 

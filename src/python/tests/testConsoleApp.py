@@ -1,4 +1,4 @@
-from ddapp import consoleapp
+from director import consoleapp
 
 consoleapp.main()
 

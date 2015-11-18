@@ -1,13 +1,13 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-from ddapp import applogic as app
-from ddapp import visualization as vis
-from ddapp.debugVis import DebugData
-from ddapp.timercallback import TimerCallback
-from ddapp.simpletimer import FPSCounter
-from ddapp import cameraview
-from ddapp import objectmodel as om
-import ddapp.vtkAll as vtk
+from director import applogic as app
+from director import visualization as vis
+from director.debugVis import DebugData
+from director.timercallback import TimerCallback
+from director.simpletimer import FPSCounter
+from director import cameraview
+from director import objectmodel as om
+import director.vtkAll as vtk
 
 
 def addWidgetsToDict(widgets, d):

@@ -1,14 +1,14 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-from ddapp import applogic as app
-from ddapp import objectmodel as om
-from ddapp import propertyset
-from ddapp import visualization as vis
-from ddapp.debugVis import DebugData
-from ddapp.pointpicker import PlacerWidget
-from ddapp import segmentation
-from ddapp import filterUtils
-from ddapp import vtkNumpy as vnp
+from director import applogic as app
+from director import objectmodel as om
+from director import propertyset
+from director import visualization as vis
+from director.debugVis import DebugData
+from director.pointpicker import PlacerWidget
+from director import segmentation
+from director import filterUtils
+from director import vtkNumpy as vnp
 
 import numpy as np
 

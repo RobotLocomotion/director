@@ -6,34 +6,34 @@ import numpy as np
 
 import drcargs
 
-from ddapp import transformUtils
+from director import transformUtils
 
-from ddapp.asynctaskqueue import AsyncTaskQueue
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import robotstate
-from ddapp import segmentation
-from ddapp import planplayback
-from ddapp.pointpicker import PointPicker
-from ddapp import vtkAll as vtk
-from ddapp.simpletimer import SimpleTimer
-from ddapp import affordanceupdater
-from ddapp import sceneloader
+from director.asynctaskqueue import AsyncTaskQueue
+from director import objectmodel as om
+from director import visualization as vis
+from director import robotstate
+from director import segmentation
+from director import planplayback
+from director.pointpicker import PointPicker
+from director import vtkAll as vtk
+from director.simpletimer import SimpleTimer
+from director import affordanceupdater
+from director import sceneloader
 
-from ddapp.debugVis import DebugData
-from ddapp import affordanceitems
-from ddapp import ikplanner
-from ddapp import vtkNumpy
+from director.debugVis import DebugData
+from director import affordanceitems
+from director import ikplanner
+from director import vtkNumpy
 from numpy import array
-from ddapp.uuidutil import newUUID
-from ddapp import lcmUtils
+from director.uuidutil import newUUID
+from director import lcmUtils
 import ioUtils
 import drc as lcmdrc
 
-from ddapp.tasks.taskuserpanel import TaskUserPanel
-from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
+from director.tasks.taskuserpanel import TaskUserPanel
+from director.tasks.taskuserpanel import ImageBasedAffordanceFit
 
-import ddapp.tasks.robottasks as rt
+import director.tasks.robottasks as rt
 
 
 class TableDemo(object):
@@ -649,7 +649,7 @@ class TableDemo(object):
         om.removeFromObjectModel(eeTeleop.getConstraintFolder())
         folder = eeTeleop.getConstraintFolder()
         
-        from ddapp.teleoppanel import ConstraintItem
+        from director.teleoppanel import ConstraintItem
         for i, pc in enumerate(constraints):
             constraintItem = ConstraintItem(pc)
             om.addToObjectModel(constraintItem, parentObj=folder)

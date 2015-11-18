@@ -1,5 +1,5 @@
-import ddapp.objectmodel as om
-from ddapp.asynctaskqueue import AsyncTaskQueue
+import director.objectmodel as om
+from director.asynctaskqueue import AsyncTaskQueue
 
 
 class GraspSearchPlanner(object):

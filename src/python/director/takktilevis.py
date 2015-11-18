@@ -2,12 +2,12 @@ import math
 import takktile
 from time import sleep
 
-from ddapp import lcmUtils
-from ddapp.debugVis import DebugData
-from ddapp import roboturdf
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp import vtkAll as vtk
+from director import lcmUtils
+from director.debugVis import DebugData
+from director import roboturdf
+from director import transformUtils
+from director import visualization as vis
+from director import vtkAll as vtk
 
 sensorLocationLeft = {}
 

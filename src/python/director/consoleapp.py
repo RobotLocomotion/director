@@ -4,14 +4,14 @@ import argparse
 import PythonQt
 from PythonQt import QtCore, QtGui
 
-import ddapp
-from ddapp import applogic
-from ddapp import objectmodel as om
-from ddapp import vtkAll as vtk
-from ddapp import vtkNumpy as vnp
-from ddapp import viewbehaviors
-from ddapp import visualization as vis
-from ddapp.timercallback import TimerCallback
+import director
+from director import applogic
+from director import objectmodel as om
+from director import vtkAll as vtk
+from director import vtkNumpy as vnp
+from director import viewbehaviors
+from director import visualization as vis
+from director.timercallback import TimerCallback
 
 import numpy as np
 

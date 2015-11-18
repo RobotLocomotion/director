@@ -1,10 +1,10 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-import ddapp
-from ddapp import lcmUtils
-from ddapp import applogic as app
-from ddapp.utime import getUtime
-from ddapp.timercallback import TimerCallback
+import director
+from director import lcmUtils
+from director import applogic as app
+from director.utime import getUtime
+from director.timercallback import TimerCallback
 
 import numpy as np
 import math
@@ -14,15 +14,15 @@ import vtkAll as vtk
 
 from time import time
 from copy import deepcopy
-from ddapp import transformUtils
-import ddapp.visualization as vis
-import ddapp.objectmodel as om
-from ddapp import robotstate
+from director import transformUtils
+import director.visualization as vis
+import director.objectmodel as om
+from director import robotstate
 
 
-from ddapp import ioUtils as io
-from ddapp import vtkNumpy as vnp
-from ddapp import segmentation
+from director import ioUtils as io
+from director import vtkNumpy as vnp
+from director import segmentation
 
 
 # lcmtypes:
@@ -200,7 +200,7 @@ class NavigationPanel(object):
     def onShowMapButton(self):
         # reloads the map each time - in case its changed on disk:
         #if (self.octomap_cloud is None):
-        filename = ddapp.getDRCBaseDir() + "/software/build/data/octomap.pcd"
+        filename = director.getDRCBaseDir() + "/software/build/data/octomap.pcd"
         self.octomap_cloud = io.readPolyData(filename) # c++ object called vtkPolyData
 
         assert (self.octomap_cloud.GetNumberOfPoints() !=0 )

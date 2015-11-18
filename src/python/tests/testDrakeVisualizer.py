@@ -1,5 +1,5 @@
-from ddapp import consoleapp
-from ddapp import drakevisualizer
+from director import consoleapp
+from director import drakevisualizer
 
 def main():
 

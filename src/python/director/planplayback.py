@@ -5,11 +5,11 @@ import time
 import re
 import numpy as np
 
-from ddapp.timercallback import TimerCallback
-from ddapp import objectmodel as om
-from ddapp.simpletimer import SimpleTimer
-from ddapp.utime import getUtime
-from ddapp import robotstate
+from director.timercallback import TimerCallback
+from director import objectmodel as om
+from director.simpletimer import SimpleTimer
+from director.utime import getUtime
+from director import robotstate
 
 import pickle
 import scipy.interpolate

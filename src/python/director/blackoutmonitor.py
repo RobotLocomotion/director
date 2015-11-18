@@ -1,11 +1,11 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-import ddapp.objectmodel as om
-from ddapp import lcmUtils
-from ddapp import applogic as app
-from ddapp.utime import getUtime
-from ddapp.timercallback import TimerCallback
-from ddapp import visualization as vis
+import director.objectmodel as om
+from director import lcmUtils
+from director import applogic as app
+from director.utime import getUtime
+from director.timercallback import TimerCallback
+from director import visualization as vis
 import multisense as lcmmultisense
 import numpy as np
 import math

@@ -1,5 +1,5 @@
-from ddapp import transformUtils
-from ddapp import affordanceitems
+from director import transformUtils
+from director import affordanceitems
 from urdf_parser_py import urdf
 
 
