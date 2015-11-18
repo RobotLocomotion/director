@@ -41,7 +41,7 @@ set(python_test_args
   --testing --data-dir ${CMAKE_SOURCE_DIR}/../../../drc-testing-data --output-dir ${CMAKE_BINARY_DIR}/Testing/Temporary
 )
 
-set(python_exe ${CMAKE_BINARY_DIR}/bin/ddConsoleApp)
+set(python_exe ${CMAKE_BINARY_DIR}/bin/directorPython)
 
 macro(add_python_test name label)
   get_filename_component(base_name ${name} NAME_WE)

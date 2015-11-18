@@ -64,7 +64,7 @@ class TriggerFingerPublisher():
 
 def main(argv):
 	if len(argv) is not 2:
-		print 'Usage: ddConsoleApp triggerfinger.py <LCM_CHANNEL>'
+		print 'Usage: directorPython triggerfinger.py <LCM_CHANNEL>'
 		return
 
 	publisher = TriggerFingerPublisher(argv[1])
