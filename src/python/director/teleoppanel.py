@@ -12,7 +12,6 @@ from ddapp import vtkAll as vtk
 from ddapp import drcargs
 from ddapp import affordanceurdf
 from ddapp.roboturdf import HandFactory
-import ddapp.applogic as app
 from ddapp import lcmUtils
 import drc as lcmdrc
 
