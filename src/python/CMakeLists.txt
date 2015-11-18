@@ -57,6 +57,7 @@ set(python_files
   director/lcmloggerwidget.py
   director/lcmgl.py
   director/lcmobjectcollection.py
+  director/lcmoctomap.py
   director/lcmspy.py
   director/lcmUtils.py
   director/mappingdemo.py
@@ -68,7 +69,6 @@ set(python_files
   director/multisensepanel.py
   director/navigationpanel.py
   director/objectmodel.py
-  director/octomap.py
   director/otdfmodel.py
   director/openscope.py
   director/perception.py

@@ -19,10 +19,13 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include <vtkOpenGL.h>
 
-#include <lcmtypes/bot_lcmgl/data_t.hpp>
-#include <bot_lcmgl_render/lcmgl_decode.h>
+#include <lcmtypes/octomap/raw_t.hpp>
+#include <lcmtypes/octomap_raw_t.h>
 
+#include <octomap/octomap.h>
+#include <sstream>
 
+using namespace octomap;
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkOctomap);
 
@@ -31,10 +34,11 @@ class vtkOctomap::vtkInternal {
 public:
   vtkInternal()
     {
-      this->GLData.datalen = 0;
+      this->msg.length = 0;
     }
 
-  bot_lcmgl::data_t GLData;
+  octomap_raw_t msg;
+  OcTree * ocTree;
 
   std::vector<vtkSmartPointer<vtkActor> > Actors;
 };
@@ -61,12 +65,29 @@ double* vtkOctomap::GetBounds()
 //----------------------------------------------------------------------------
 void vtkOctomap::UpdateGLData(const char* messageData)
 {
-  int status = this->Internal->GLData.decode(messageData, 0, 1e6);
+
+  int status = octomap_raw_t_decode (messageData, 0, 1e9, &this->Internal->msg);
+
+  printf("got %d\n",this->Internal->msg.length);
+
   if (!status)
-    {
-    this->Internal->GLData.name = std::string();
-    this->Internal->GLData.datalen = 0;
-    }
+  {
+    this->Internal->msg.length = 0;
+  }else{
+
+
+    std::stringstream datastream;
+    datastream.write((const char*) this->Internal->msg.data, this->Internal->msg.length);
+    this->Internal->ocTree = new octomap::OcTree(1); //resolution will be set by data from message
+    this->Internal->ocTree->readBinary(datastream);
+    double minX, minY, minZ, maxX, maxY, maxZ;
+    this->Internal->ocTree->getMetricMin(minX, minY, minZ);
+    this->Internal->ocTree->getMetricMax(maxX, maxY, maxZ);
+
+    printf("minX %f\n",minX);
+    printf("minY %f\n",minY);
+
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -81,7 +102,7 @@ void vtkOctomap::ReleaseGraphicsResources(vtkWindow *w)
 //----------------------------------------------------------------------------
 int vtkOctomap::RenderOpaqueGeometry(vtkViewport *v)
 {
-  if (this->Internal->GLData.datalen)
+  if (this->Internal->msg.length)
     {
     glPushMatrix();
     glPushAttrib(GL_ENABLE_BIT | GL_POINT_BIT | GL_POLYGON_STIPPLE_BIT |

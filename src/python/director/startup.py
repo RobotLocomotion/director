@@ -57,7 +57,7 @@ from director import footstepsdriverpanel
 from director import framevisualization
 from director import lcmloggerwidget
 from director import lcmgl
-from director import octomap
+from director import lcmoctomap
 from director import atlasdriver
 from director import atlasdriverpanel
 from director import multisensepanel
@@ -282,7 +282,7 @@ if useLCMGL:
     app.MenuActionToggleHelper('Tools', 'Renderer - LCM GL', lcmglManager.isEnabled, lcmglManager.setEnabled)
 
 if useOctomap:
-    octomapManager = octomap.init(view)
+    octomapManager = lcmoctomap.init(view)
     app.MenuActionToggleHelper('Tools', 'Renderer - Octomap', octomapManager.isEnabled, octomapManager.setEnabled)
 
 if useDrakeVisualizer:

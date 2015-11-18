@@ -136,8 +136,7 @@ if(USE_LCMGL)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
 
   list(APPEND pkg_deps
-    bot2-lcmgl-client
-    bot2-lcmgl-renderer
+    lcmtypes_octomap-utils
   )
 
 

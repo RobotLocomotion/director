@@ -6,6 +6,7 @@ from director import lcmUtils
 # support lcmgl, but it can still be imported in a disabled state
 try:
     import bot_lcmgl
+    import octomap as lcmOctomap
     LCMGL_AVAILABLE = True
 except ImportError:
     LCMGL_AVAILABLE = False
@@ -55,6 +56,7 @@ class OctomapObject(om.ObjectModelItem):
         view.render()
 
     def onMessage(self, msgBytes):
+        print "about to draw"
         self.actor.UpdateGLData(msgBytes.data())
         self.renderAllViews()
 
@@ -74,7 +76,8 @@ class OctomapManager(object):
 
     def setEnabled(self, enabled):
         if enabled and not self.subscriber:
-            self.subscriber = lcmUtils.addSubscriber('LCMGL.*', callback=self.onMessage)
+            #self.subscriber = lcmUtils.addSubscriber('LCMGL.*', callback=self.onMessage)
+            self.subscriber = lcmUtils.addSubscriber('OCTOMAP', callback=self.onMessage)
         elif not enabled and self.subscriber:
             lcmUtils.removeSubscriber(self.subscriber)
             self.subscriber = None
@@ -86,11 +89,14 @@ class OctomapManager(object):
         self.setEnabled(False)
 
     def onMessage(self, msgBytes, channel):
-
-        msg = bot_lcmgl.data_t.decode(msgBytes.data())
-        drawObject = self.getDrawObject(msg.name)
+        print "got data"
+        print type(msgBytes)
+        print type(lcmOctomap)
+        print lcmOctomap
+        msg = lcmOctomap.raw_t.decode(msgBytes.data())
+        drawObject = self.getDrawObject('Octomap')
         if not drawObject:
-            drawObject = self.addDrawObject(msg.name, msgBytes)
+            drawObject = self.addDrawObject('Octomap', msgBytes)
         drawObject.onMessage(msgBytes)
 
     def getDrawObject(self, name):
