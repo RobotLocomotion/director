@@ -220,9 +220,9 @@ add_executable(drake-visualizer drakeVisualizerApp.cpp)
 target_link_libraries(drake-visualizer ddApp)
 
 if(USE_DRC)
-  add_executable(drake-designer main.cpp)
-  target_link_libraries(drake-designer ddApp)
-  list(APPEND _install_targets drake-designer)
+  add_executable(director main.cpp)
+  target_link_libraries(director ddApp)
+  list(APPEND _install_targets director)
 endif()
 
 add_executable(ddConsoleApp consoleApp.cpp)

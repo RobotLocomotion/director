@@ -2,7 +2,7 @@
 
 This documents the shortcuts available in Director.
 
-## Drake-Designer
+## Main Director Application
  * <kbd>Ctrl</kbd>+<kbd>Q</kbd> -- quits the application
  * <kbd>Ctrl</kbd>+<kbd>O</kbd> -- load a polyData data file (vtp, ply)
  * <kbd>Ctrl</kbd>+<kbd>S</kbd> -- save currently selected object-model polyData as a data file
