@@ -14,7 +14,7 @@ from ddapp import affordanceurdf
 from ddapp.roboturdf import HandFactory
 import ddapp.applogic as app
 from ddapp import lcmUtils
-import drc
+import drc as lcmdrc
 
 import functools
 import math
@@ -101,7 +101,7 @@ class EndEffectorTeleopPanel(object):
         self.palmGazeAxis = [0.0, 1.0, 0.0]
         self.constraintSet = None
         
-        lcmUtils.addSubscriber('CANDIDATE_ROBOT_ENDPOSE', drc.robot_state_t, self.onCandidateEndPose)
+        lcmUtils.addSubscriber('CANDIDATE_ROBOT_ENDPOSE', lcmdrc.robot_state_t, self.onCandidateEndPose)
 
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
