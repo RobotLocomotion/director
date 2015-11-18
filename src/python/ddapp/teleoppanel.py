@@ -13,11 +13,13 @@ from ddapp import drcargs
 from ddapp import affordanceurdf
 from ddapp.roboturdf import HandFactory
 import ddapp.applogic as app
+import ddapp.midi as midi
 
 import functools
 import math
 import numpy as np
 import types
+
 
 
 def addWidgetsToDict(widgets, d):
@@ -1055,8 +1057,52 @@ class JointTeleopPanel(object):
         self.endPose = None
         self.userJoints = {}
 
+        self.active=False
+
+        self.behringer=None
+
         self.updateWidgetState()
 
+        # Attach Behringer slider board if connected
+        device = midi.findInputDevice('BCF2000 MIDI 1')
+        if device is not None:
+            self.behringer = midi.BehringerBCF200()
+            self.behringerCallback = TimerCallback()
+            self.behringerCallback.callback = self.onBehringerCallback
+            self.behringerValues={}
+            self.setupSliderBoard()
+
+
+    def setupSliderBoard(self):
+        self.sliderBoardGroup={}
+        self.controls={}
+        self.tabControls=[]
+        for i in range(0,9):
+            self.tabControls.append(midi.IOControl(73+i,self.sliderBoardTabGetter,i))
+
+        for group in self.jointGroups:
+            groupName = group['name']
+            joints = group['joints']
+            controls={}
+            i=0
+            for jointName in joints:
+                controls[jointName]=midi.IOControl(81+i,self.sliderBoardGetter,jointName)
+                self.controls[jointName]=controls[jointName]
+                self.behringerValues[jointName]=-1
+                i=i+1
+            self.sliderBoardGroup[groupName]=controls
+
+    def sliderBoardTabGetter(self,val,id):
+        if id>=0 and id<self.ui.tabWidget.count:
+            self.ui.tabWidget.currentIndex=id
+        else:
+            self.behringer.sendMessage([73+id,0])
+
+
+
+    def sliderBoardGetter(self,val,sliderName):
+       slider=self.slidersMap[sliderName]
+       self.behringerValues[sliderName]=int(float(val)/127.0*float(self.sliderMax))
 
     def buildTabWidget(self, jointGroups):
 
@@ -1091,6 +1137,8 @@ class JointTeleopPanel(object):
 
         self.signalMapper = QtCore.QSignalMapper()
 
+        self.ui.tabWidget.connect('currentChanged(int)', self.tabChenged)
+
         self.sliderMax = 1000.0
         for jointName, slider in self.slidersMap.iteritems():
             slider.connect('valueChanged(int)', self.signalMapper, 'map()')
@@ -1098,6 +1146,27 @@ class JointTeleopPanel(object):
             slider.setMaximum(self.sliderMax)
 
         self.signalMapper.connect('mapped(const QString&)', self.sliderChanged)
+
+    def tabChenged(self, id):
+        tab=self.ui.tabWidget.tabText(id)
+        if self.behringer is not None and self.active:
+            for i in range(0,8):
+                if i==id:
+                    self.behringer.sendMessage([73+i,127])
+                else:
+                    self.behringer.sendMessage([73+i,0])
+            self.behringer.clear()
+            for tab_ in self.tabControls:
+                self.behringer.addVarieble(tab_)
+            i=0
+            for jointName,ctrl in self.sliderBoardGroup[tab].iteritems():
+                self.behringer.addVarieble(ctrl)
+                slider = self.slidersMap[jointName]
+                ctrl.setter((slider.value / float(self.sliderMax))*127)
+                self.behringerValues[jointName] = slider.value
+                i=i+1
+            for j in range(i,8):
+                self.behringer.sendMessage([81+j,0])
 
 
     def planClicked(self):
@@ -1127,13 +1196,21 @@ class JointTeleopPanel(object):
 
 
     def activate(self):
+        self.active=True
+        if self.behringer is not None:
+            self.behringerCallback.start()
         self.timerCallback.stop()
         self.panel.jointTeleopActivated()
         self.resetPose()
+        self.tabChenged(self.ui.tabWidget.currentIndex)
         self.updateWidgetState()
 
 
     def deactivate(self):
+        if self.behringer is not None:
+            self.behringer.clear()
+            self.behringerCallback.stop()
+        self.active=False
         self.ui.jointTeleopButton.blockSignals(True)
         self.ui.jointTeleopButton.checked = False
         self.ui.jointTeleopButton.blockSignals(False)
@@ -1146,8 +1223,10 @@ class JointTeleopPanel(object):
 
         enabled = self.ui.jointTeleopButton.checked
 
-        for slider in self.slidersMap.values():
+        for jointName, slider in self.slidersMap.iteritems():
             slider.setEnabled(enabled)
+            if self.behringer is not None:
+                self.behringerValues[jointName]=slider.value
 
         self.ui.resetJointsButton.setEnabled(enabled)
 
@@ -1161,6 +1240,15 @@ class JointTeleopPanel(object):
 
     def resetPose(self):
         self.userJoints = {}
+        if self.behringer is not None:
+            self.startPose = np.array(self.panel.robotStateJointController.q)
+            for jointName, slider in self.slidersMap.iteritems():
+                jointIndex = self.toJointIndex(jointName)
+                self.behringerValues[jointName]=self.toSliderValue(jointIndex,self.startPose[jointIndex])
+                slider.blockSignals(True)
+                slider.value=self.behringerValues[jointName]
+                slider.blockSignals(False)
+                self.controls[jointName].setter((slider.value / float(self.sliderMax))*127)
         self.computeEndPose()
         self.updateSliders()
 
@@ -1168,6 +1256,29 @@ class JointTeleopPanel(object):
         if not self.ui.tabWidget.visible:
             return
         self.resetPose()
+
+    def onBehringerCallback(self):
+        if not self.ui.tabWidget.visible:
+            return
+        updatePose=False
+        for jointName, slider in self.slidersMap.iteritems():
+            if self.behringerValues[jointName] != slider.value:
+                slider.blockSignals(True)
+                slider.value=self.behringerValues[jointName]
+                slider.blockSignals(False)
+                jointIndex = self.toJointIndex(jointName)
+                jointValue = self.toJointValue(jointIndex, slider.value / float(self.sliderMax))
+                self.userJoints[jointIndex] = jointValue
+                if jointName.startswith('base_'):
+                    self.computeBaseJointOffsets()
+                    self.userJoints[jointIndex] += self.baseJointOffsets.get(jointName, 0.0)
+                self.updateLabel(jointName, jointValue)
+                updatePose=True
+
+
+        if updatePose:
+            self.computeEndPose()
+            self.panel.showPose(self.endPose)
 
     def toJointIndex(self, jointName):
         return robotstate.getDrakePoseJointNames().index(jointName)
@@ -1250,12 +1361,13 @@ class JointTeleopPanel(object):
     def getJointValue(self, jointIndex):
         return self.endPose[jointIndex]
 
-
-    def sliderChanged(self, jointName):
-
+    def updateSliderValues(self, jointName, sendToSliderBoard):
         slider = self.slidersMap[jointName]
         jointIndex = self.toJointIndex(jointName)
         jointValue = self.toJointValue(jointIndex, slider.value / float(self.sliderMax))
+        if self.behringer is not None and sendToSliderBoard:
+            self.controls[jointName].setter((slider.value / float(self.sliderMax))*127)
+            self.behringerValues[jointName]=slider.value
         self.userJoints[jointIndex] = jointValue
 
         if jointName.startswith('base_'):
@@ -1265,6 +1377,10 @@ class JointTeleopPanel(object):
         self.computeEndPose()
         self.panel.showPose(self.endPose)
         self.updateLabel(jointName, jointValue)
+
+    def sliderChanged(self, jointName):
+        self.updateSliderValues(jointName, True)
+
 
     def updateLabel(self, jointName, jointValue):
 
@@ -1294,8 +1410,16 @@ class JointTeleopPanel(object):
 
             slider.blockSignals(True)
             slider.setValue(self.toSliderValue(jointIndex, jointValue)*self.sliderMax)
+            if self.behringer is not None:
+                self.behringerValues[jointName]=slider.value
             slider.blockSignals(False)
             self.updateLabel(jointName, jointValue)
+
+        if self.behringer is not None and self.active:
+            tab=self.ui.tabWidget.tabText(self.ui.tabWidget.currentIndex)
+            for jointName,ctrl in self.controls.iteritems():
+                slider = self.slidersMap[jointName]
+                ctrl.setter((slider.value / float(self.sliderMax))*127)
 
 
 class TeleopPanel(object):
