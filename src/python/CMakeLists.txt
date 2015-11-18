@@ -68,6 +68,7 @@ set(python_files
   director/multisensepanel.py
   director/navigationpanel.py
   director/objectmodel.py
+  director/octomap.py
   director/otdfmodel.py
   director/openscope.py
   director/perception.py

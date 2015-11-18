@@ -57,6 +57,7 @@ from director import footstepsdriverpanel
 from director import framevisualization
 from director import lcmloggerwidget
 from director import lcmgl
+from director import octomap
 from director import atlasdriver
 from director import atlasdriverpanel
 from director import multisensepanel
@@ -141,6 +142,7 @@ useHands = True
 usePlanning = True
 useAtlasDriver = True
 useLCMGL = True
+useOctomap = True
 useLightColorScheme = True
 useLoggingWidget = True
 useDrakeVisualizer = True
@@ -278,6 +280,10 @@ if useFootsteps:
 if useLCMGL:
     lcmglManager = lcmgl.init(view)
     app.MenuActionToggleHelper('Tools', 'Renderer - LCM GL', lcmglManager.isEnabled, lcmglManager.setEnabled)
+
+if useOctomap:
+    octomapManager = octomap.init(view)
+    app.MenuActionToggleHelper('Tools', 'Renderer - Octomap', octomapManager.isEnabled, octomapManager.setEnabled)
 
 if useDrakeVisualizer:
     drakeVisualizer = drakevisualizer.DrakeVisualizer(view)

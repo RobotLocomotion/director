@@ -130,6 +130,17 @@ if(USE_LCMGL)
     bot2-lcmgl-renderer
   )
 
+
+  find_package(OpenGL REQUIRED)
+  list(APPEND sources vtkOctomap.cxx)
+  list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
+
+  list(APPEND pkg_deps
+    bot2-lcmgl-client
+    bot2-lcmgl-renderer
+  )
+
+
 endif()
 
 set(library_name vtkDRCFilters)
