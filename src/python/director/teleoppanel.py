@@ -772,11 +772,7 @@ class EndEffectorTeleopPanel(object):
     
     def onCandidateEndPose(self, msg):
         if not self.getCheckboxState(self.ui.finalPosePlanningOptions) and not self.ui.eeTeleopButton.checked:
-            translation = (msg.pose.translation.x, msg.pose.translation.y, msg.pose.translation.z)
-            rotation = transformUtils.quaternionToRollPitchYaw((msg.pose.rotation.w, msg.pose.rotation.x, msg.pose.rotation.y, msg.pose.rotation.z))
-            pose = list(translation)
-            pose.extend(rotation)
-            pose.extend(list(msg.joint_position))
+            pose = robotstate.convertStateMessageToDrakePose(msg)
             self.panel.showPose(pose)
 
 
