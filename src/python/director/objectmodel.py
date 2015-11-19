@@ -16,6 +16,7 @@ class Icons(object):
   Laser = ':/images/laser_icon.jpg'
   Feet = ':/images/feet.png'
   Hand = ':/images/claw.png'
+  Octomap = ':/images/octomap.jpg'
 
   @staticmethod
   def getIcon(iconId):

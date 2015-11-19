@@ -16,11 +16,15 @@ class OctomapObject(om.ObjectModelItem):
 
     def __init__(self, name, actor):
 
-        om.ObjectModelItem.__init__(self, name, om.Icons.Robot)
+        om.ObjectModelItem.__init__(self, name, om.Icons.Octomap)
+
 
         self.actor = actor
         self.actor.SetUseBounds(False)
         self.addProperty('Visible', actor.GetVisibility())
+        self.addProperty('Color Mode', 0, attributes=om.PropertyAttributes(enumNames=['Drab', 'Height']))
+        self.addProperty('Alpha', 0.8,
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
         self.views = []
 
     def _onPropertyChanged(self, propertySet, propertyName):
@@ -29,6 +33,22 @@ class OctomapObject(om.ObjectModelItem):
         if propertyName == 'Visible':
             self.actor.SetVisibility(self.getProperty(propertyName))
             self.renderAllViews()
+
+        elif propertyName == 'Alpha':
+            self.actor.SetAlphaOccupied(self.getProperty(propertyName))
+            self.renderAllViews()
+
+        elif propertyName == 'Color Mode':
+            arrayMap = {
+              0 : 'Drab',
+              1 : 'Height'
+            }
+            heightColorMode = self.getProperty(propertyName)
+            arrayName = arrayMap.get(heightColorMode)
+            if (arrayName is 'Height'):
+                self.actor.SetHeightColorMode(True)
+            else:
+                self.actor.SetHeightColorMode(False)
 
     def addToView(self, view):
         if view in self.views:
@@ -57,7 +77,7 @@ class OctomapObject(om.ObjectModelItem):
 
     def onMessage(self, msgBytes):
         print "about to draw"
-        self.actor.UpdateGLData(msgBytes.data())
+        self.actor.UpdateOctomapData(msgBytes.data())
         self.renderAllViews()
 
 
@@ -89,14 +109,12 @@ class OctomapManager(object):
         self.setEnabled(False)
 
     def onMessage(self, msgBytes, channel):
+        print " "
         print "got data"
-        print type(msgBytes)
-        print type(lcmOctomap)
-        print lcmOctomap
         msg = lcmOctomap.raw_t.decode(msgBytes.data())
-        drawObject = self.getDrawObject('Octomap')
+        drawObject = self.getDrawObject(channel)
         if not drawObject:
-            drawObject = self.addDrawObject('Octomap', msgBytes)
+            drawObject = self.addDrawObject(channel, msgBytes)
         drawObject.onMessage(msgBytes)
 
     def getDrawObject(self, name):
@@ -117,4 +135,5 @@ def init(view):
 
     global managerInstance
     managerInstance = OctomapManager(view)
+
     return managerInstance

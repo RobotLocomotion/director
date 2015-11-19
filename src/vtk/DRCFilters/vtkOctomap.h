@@ -38,9 +38,10 @@ public:
   vtkTypeMacro(vtkOctomap,vtkProp);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  void UpdateGLData(const char* data);
+  void UpdateOctomapData(const char* data);
 
-  virtual double *GetBounds();
+  void SetHeightColorMode(bool heightColorMode);
+  void SetAlphaOccupied(double alphaOccupied);
 
   // Description:
   // Methods supporting, and required by, the rendering process.
