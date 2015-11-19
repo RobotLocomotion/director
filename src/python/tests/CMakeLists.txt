@@ -26,6 +26,7 @@ set(python_tests_robot
   testLoadUrdf.py
   testOtdfParser.py
   testPlanConstraints.py
+  testPlaneSegmentation.py
   testRobotSystem.py
   testTableFit.py
   testTableFitStereo.py
