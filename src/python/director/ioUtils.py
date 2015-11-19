@@ -71,6 +71,10 @@ def writePolyData(polyData, filename):
         polyData = _triangulate(polyData)
         writer.SetFileTypeToASCII()
 
+    if ext in ('.ply'):
+        if polyData.GetPointData().GetArray('RGB255'):
+            writer.SetArrayName('RGB255')
+
     writer.SetFileName(filename)
     writer.SetInput(polyData)
     writer.Update()
