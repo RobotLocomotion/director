@@ -77,6 +77,25 @@ def cleanPolyData(polyData):
     return shallowCopy(clean.GetOutput())
 
 
+def triangulatePolyData(polyData):
+    f = vtk.vtkTriangleFilter()
+    f.SetInput(polyData)
+    f.Update()
+    return shallowCopy(f.GetOutput())
+
+
+def decimateMesh(polyData, targetReduction=0.1):
+    '''
+    Reduce the number of  triangles in the input mesh by targetReduction.
+    0.1 = 10% reduction (if there was 100 triangles, now there will be 90)
+    '''
+    f = vtk.vtkDecimatePro()
+    f.SetInput(polyData)
+    f.SetTargetReduction(targetReduction)
+    f.Update()
+    return shallowCopy(f.GetOutput())
+
+
 def hasNonFinitePoints(polyData, arrayName='Points'):
     pts = vnp.getNumpyFromVtk(polyData, arrayName)
     return np.isfinite(pts).any()

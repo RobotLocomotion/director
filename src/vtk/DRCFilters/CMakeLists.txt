@@ -112,7 +112,12 @@ if (USE_DRC_PLANE_SEG)
   find_package(PlaneSeg REQUIRED)
   find_package(PCL REQUIRED)
 
-  list(APPEND sources vtkPlaneSegmentation.cxx)
+  list(APPEND sources
+    vtkPlaneSegmentation.cxx
+    vtkRobustNormalEstimator.cxx
+    vtkSurfaceFitter.cxx
+  )
+
   include_directories(${PLANE_SEG_INCLUDE_DIRS})
   include_directories(${PCL_INCLUDE_DIRS})
   list(APPEND deps ${PLANE_SEG_LIBRARIES} ${PCL_LIBRARIES})

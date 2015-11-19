@@ -1688,21 +1688,26 @@ def applyICP(source, target):
     return t
 
 
-def applyDiskGlyphs(polyData):
+def applyDiskGlyphs(polyData, computeNormals=True):
 
     voxelGridLeafSize = 0.03
     normalEstimationSearchRadius = 0.05
     diskRadius = 0.015
     diskResolution = 12
 
-    scanInput = polyData
+    if computeNormals:
+        scanInput = polyData
 
-    pd = applyVoxelGrid(scanInput, leafSize=voxelGridLeafSize)
+        pd = applyVoxelGrid(scanInput, leafSize=voxelGridLeafSize)
 
-    pd = labelOutliers(pd, searchRadius=normalEstimationSearchRadius, neighborsInSearchRadius=3)
-    pd = thresholdPoints(pd, 'is_outlier', [0, 0])
+        pd = labelOutliers(pd, searchRadius=normalEstimationSearchRadius, neighborsInSearchRadius=3)
+        pd = thresholdPoints(pd, 'is_outlier', [0, 0])
 
-    pd = normalEstimation(pd, searchRadius=normalEstimationSearchRadius, searchCloud=scanInput)
+        pd = normalEstimation(pd, searchRadius=normalEstimationSearchRadius, searchCloud=scanInput)
+    else:
+        pd = polyData
+
+    assert polyData.GetPointData().GetNormals()
 
     disk = vtk.vtkDiskSource()
     disk.SetOuterRadius(diskRadius)
@@ -1728,9 +1733,8 @@ def applyDiskGlyphs(polyData):
 
 def applyArrowGlyphs(polyData, computeNormals=True, voxelGridLeafSize=0.03, normalEstimationSearchRadius=0.05, arrowSize=0.02):
 
-    polyData = applyVoxelGrid(polyData, leafSize=0.02)
-
     if computeNormals:
+        polyData = applyVoxelGrid(polyData, leafSize=0.02)
         voxelData = applyVoxelGrid(polyData, leafSize=voxelGridLeafSize)
         polyData = normalEstimation(polyData, searchRadius=normalEstimationSearchRadius, searchCloud=voxelData)
         polyData = removeNonFinitePoints(polyData, 'normals')
@@ -2696,14 +2700,13 @@ def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDi
     return vis.showClusterObjects([obj], parent='segmentation')[0]
 
 def findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSearchRadius=0.05,
-                          clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0], showClusters=False):
+                          clusterTolerance=0.025, minClusterSize=150, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0], showClusters=False):
     '''
     Find the horizontal surfaces, tuned to work with walking terrain
     '''
 
     searchZ = [0.0, 2.0]
     voxelGridLeafSize = 0.01
-    minClusterSize = 150
     verboseFlag = False
 
     if (removeGroundFirst):
