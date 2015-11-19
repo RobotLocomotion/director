@@ -650,6 +650,7 @@ class FindHorizontalSurfaces(PointCloudAlgorithmBase):
     def getDefaultProperties(properties):
         properties.addProperty('Normal estimation search radius', 0.03, attributes=propertyset.PropertyAttributes(decimals=3, minimum=0.0, maximum=100))
         properties.addProperty('Cluster tolerance', 0.02, attributes=propertyset.PropertyAttributes(decimals=3, minimum=0.0, maximum=10))
+        properties.addProperty('Min cluster size', 150, attributes=propertyset.PropertyAttributes(minimum=3, maximum=1e6))
         properties.addProperty('Distance to plane threshold', 0.01, attributes=propertyset.PropertyAttributes(decimals=4, minimum=0.0, maximum=1))
         properties.addProperty('Normals dot up range', [0.9, 1.0], attributes=propertyset.PropertyAttributes(decimals=2, minimum=0.0, maximum=1))
 
@@ -661,6 +662,7 @@ class FindHorizontalSurfaces(PointCloudAlgorithmBase):
           showClusters=True,
           normalEstimationSearchRadius=self.properties.getProperty('Normal estimation search radius'),
           clusterTolerance=self.properties.getProperty('Cluster tolerance'),
+          minClusterSize=self.properties.getProperty('Min cluster size'),
           distanceToPlaneThreshold=self.properties.getProperty('Distance to plane threshold'),
           normalsDotUpRange=self.properties.getProperty('Normals dot up range')
           )

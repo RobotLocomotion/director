@@ -2696,14 +2696,13 @@ def fitGroundObject(polyData=None, expectedDimensionsMin=[0.2, 0.02], expectedDi
     return vis.showClusterObjects([obj], parent='segmentation')[0]
 
 def findHorizontalSurfaces(polyData, removeGroundFirst=False, normalEstimationSearchRadius=0.05,
-                          clusterTolerance=0.025, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0], showClusters=False):
+                          clusterTolerance=0.025, minClusterSize=150, distanceToPlaneThreshold=0.0025, normalsDotUpRange=[0.95, 1.0], showClusters=False):
     '''
     Find the horizontal surfaces, tuned to work with walking terrain
     '''
 
     searchZ = [0.0, 2.0]
     voxelGridLeafSize = 0.01
-    minClusterSize = 150
     verboseFlag = False
 
     if (removeGroundFirst):
