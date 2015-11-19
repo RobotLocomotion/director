@@ -129,7 +129,9 @@ if(USE_LCMGL)
     bot2-lcmgl-client
     bot2-lcmgl-renderer
   )
+endif()
 
+if(USE_OCTOMAP)
 
   find_package(OpenGL REQUIRED)
   list(APPEND sources vtkOctomap.cxx)
@@ -138,7 +140,6 @@ if(USE_LCMGL)
   list(APPEND pkg_deps
     lcmtypes_octomap-utils
   )
-
 
 endif()
 
