@@ -76,7 +76,7 @@ class OctomapObject(om.ObjectModelItem):
         view.render()
 
     def onMessage(self, msgBytes):
-        print "about to draw"
+        #print "about to draw"
         self.actor.UpdateOctomapData(msgBytes.data())
         self.renderAllViews()
 
@@ -109,8 +109,8 @@ class OctomapManager(object):
         self.setEnabled(False)
 
     def onMessage(self, msgBytes, channel):
-        print " "
-        print "got data"
+        #print " "
+        #print "got data"
         msg = lcmOctomap.raw_t.decode(msgBytes.data())
         drawObject = self.getDrawObject(channel)
         if not drawObject:
