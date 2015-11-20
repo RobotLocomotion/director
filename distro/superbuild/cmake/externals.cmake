@@ -3,6 +3,7 @@
 option(USE_PCL "Build with PCL." OFF)
 option(USE_LCM "Build with lcm." OFF)
 option(USE_LCMGL "Build with lcm-gl." OFF)
+option(USE_OCTOMAP "Build with octomap." OFF)
 option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
 option(USE_STANDALONE_LCMGL "Build with standalone bot-lcmgl." OFF)
@@ -327,6 +328,7 @@ ExternalProject_Add(director
 
     -DUSE_LCM:BOOL=${USE_LCM}
     -DUSE_LCMGL:BOOL=${USE_LCMGL}
+    -DUSE_OCTOMAP:BOOL=${USE_OCTOMAP}
     -DUSE_LIBBOT:BOOL=${USE_LIBBOT}
     -DUSE_DRAKE:BOOL=${USE_DRAKE}
 

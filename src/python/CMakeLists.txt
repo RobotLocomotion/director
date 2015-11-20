@@ -57,6 +57,7 @@ set(python_files
   director/lcmloggerwidget.py
   director/lcmgl.py
   director/lcmobjectcollection.py
+  director/lcmoctomap.py
   director/lcmspy.py
   director/lcmUtils.py
   director/mappingdemo.py

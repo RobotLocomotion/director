@@ -43,6 +43,7 @@ configure:
 		   -DUSE_PORTMIDI:BOOL=ON \
 		   -DUSE_LCM:BOOL=ON \
 		   -DUSE_LCMGL:BOOL=ON \
+		   -DUSE_OCTOMAP:BOOL=ON \
 		   -DUSE_LIBBOT:BOOL=ON \
 		   -DUSE_DRAKE:BOOL=ON \
 		   -DUSE_DRC:BOOL=ON \
