@@ -62,8 +62,7 @@ class RobotModelItem(om.ObjectModelItem):
         self.addProperty('Alpha', model.alpha(),
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
         self.addProperty('Color Mode', 0,
-                         attributes=om.PropertyAttributes(
-                            enumNames=['Solid Color', 'Textures', 'URDF Colors']))
+                         attributes=om.PropertyAttributes(enumNames=['Solid Color', 'Textures', 'URDF Colors']))
         self.addProperty('Color', model.color())
 
 
