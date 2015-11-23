@@ -61,7 +61,9 @@ class RobotModelItem(om.ObjectModelItem):
         self.addProperty('Visible', model.visible())
         self.addProperty('Alpha', model.alpha(),
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
-        self.addProperty('Textures', False) # False by default, unless in directorConfig - this is a fix for #111
+        self.addProperty('Color Mode', 0,
+                         attributes=om.PropertyAttributes(
+                            enumNames=['Solid Color', 'Textures', 'URDF Colors']))
         self.addProperty('Color', model.color())
 
 
@@ -75,8 +77,16 @@ class RobotModelItem(om.ObjectModelItem):
             self.model.setAlpha(self.getProperty(propertyName))
         elif propertyName == 'Visible':
             self.model.setVisible(self.getProperty(propertyName))
-        elif propertyName == 'Textures':
-            self.model.setTexturesEnabled(self.getProperty(propertyName))
+        elif propertyName == 'Color Mode':
+            if self.getProperty(propertyName) == 0: # Solid Color
+                self.useUrdfColors = False
+                self.model.setTexturesEnabled(False)
+            elif self.getProperty(propertyName) == 1: # Textures
+                self.useUrdfColors = False
+                self.model.setTexturesEnabled(True)
+            elif self.getProperty(propertyName) == 2: # URDF Colors
+                self.model.setTexturesEnabled(False)
+                self.useUrdfColors = True
             self._updateModelColor()
         elif propertyName == 'Color':
             self._updateModelColor()
@@ -134,7 +144,7 @@ class RobotModelItem(om.ObjectModelItem):
         self.model = model
         self.model.setAlpha(self.getProperty('Alpha'))
         self.model.setVisible(self.getProperty('Visible'))
-        self.model.setTexturesEnabled(self.getProperty('Textures'))
+        self.model.setTexturesEnabled((self.getProperty('Color Mode') == 1))
         self._updateModelColor()
 
         self.setProperty('Filename', model.filename())
@@ -146,7 +156,7 @@ class RobotModelItem(om.ObjectModelItem):
         self.onModelChanged()
 
     def _updateModelColor(self):
-        if self.getProperty('Textures'):
+        if self.getProperty('Color Mode') == 1: # Textures
             self._setupTextureColors()
         elif not self.useUrdfColors:
             color = QtGui.QColor(*[c*255 for c in self.getProperty('Color')])
@@ -205,11 +215,11 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     obj.setProperty('Name', name)
     obj.setProperty('Color', color or getRobotGrayColor())
     if colorMode == 'Textures': # fix for #111
-        obj.setProperty('Textures', True)
-        obj.useUrdfColors = False
+        obj.setProperty('Color Mode', 1)
     elif colorMode == 'Solid Color':
-        obj.useUrdfColors = False
-        obj._updateModelColor()
+        obj.setProperty('Color Mode', 0)
+    elif colorMode == 'URDF Colors':
+        obj.setProperty('Color Mode', 2)
 
     if view is not None:
         obj.addToView(view)
