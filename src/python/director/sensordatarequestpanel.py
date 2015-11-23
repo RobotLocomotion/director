@@ -43,6 +43,7 @@ class SensorDataRequestPanel(object):
         self.registerType('mapSceneDepth',data_request_t.DEPTH_MAP_SCENE)
         self.registerType('mapWorkspaceDepth',data_request_t.DEPTH_MAP_WORKSPACE_C)
         self.registerType('mapFusedStereoHeight',data_request_t.FUSED_HEIGHT)
+        self.registerType('mapWorkspaceOctomap',data_request_t.OCTREE_WORKSPACE)
 
         self.widget.applyAllButton.clicked.connect(self.applyAllButtonClicked)
         
