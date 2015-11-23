@@ -647,6 +647,7 @@ protected:
     mapData.Data = PolyDataFromPointCloud(pointCloud);
     mapData.Transform = this->ToVtkTransform(octreeView.getTransform());
     mapData.Mesh = mapData.Data;
+    AddZCoordinateArray(mapData.Mesh);
 
     // store data
     boost::lock_guard<boost::mutex> lock(this->Mutex);
