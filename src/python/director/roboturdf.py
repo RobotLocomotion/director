@@ -204,7 +204,7 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     obj.setProperty('Visible', visible)
     obj.setProperty('Name', name)
     obj.setProperty('Color', color or getRobotGrayColor())
-    if colorMode == 'Texture': # fix for #111
+    if colorMode == 'Textures': # fix for #111
         obj.setProperty('Textures', True)
         obj.useUrdfColors = False
     elif colorMode == 'Solid Color':
