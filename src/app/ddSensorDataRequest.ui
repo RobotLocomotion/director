@@ -67,6 +67,13 @@
        </property>
       </widget>
      </item>
+     <item row="11" column="0">
+      <widget class="QPushButton" name="mapWorkspaceOctomapButton">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
      <item row="3" column="1">
       <widget class="QCheckBox" name="camChestLeftCheck">
        <property name="text">
@@ -171,6 +178,23 @@
      </item>
      <item row="10" column="2">
       <widget class="QSpinBox" name="mapFusedStereoHeightSpinner">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>30</number>
+       </property>
+      </widget>
+     </item>
+     <item row="11" column="1">
+      <widget class="QCheckBox" name="mapWorkspaceOctomapCheck">
+       <property name="text">
+        <string>Workspace Octomap</string>
+       </property>
+      </widget>
+     </item>
+     <item row="11" column="2">
+      <widget class="QSpinBox" name="mapWorkspaceOctomapSpinner">
        <property name="minimum">
         <number>1</number>
        </property>
