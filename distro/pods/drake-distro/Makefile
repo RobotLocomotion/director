@@ -42,7 +42,6 @@ configure:
 		   -DCMAKE_PREFIX_PATH:PATH=$(BUILD_PREFIX) \
 		   -DUSE_LCM:BOOL=ON \
 		   -DUSE_LCMGL:BOOL=ON \
-		   -DUSE_OCTOMAP:BOOL=OFF \
 		   -DUSE_SYSTEM_LCM:BOOL=ON \
 		   -DUSE_EXTERNAL_INSTALL:BOOL=ON \
 		   ../../../superbuild
