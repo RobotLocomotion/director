@@ -35,6 +35,7 @@ option(USE_DRAKE "Build director with drake dependency." OFF)
 option(USE_DRC "Build director with drc dependency." OFF)
 option(USE_DRC_MAPS "Build director with drc maps dependency." OFF)
 option(USE_DRC_PLANE_SEG "Build director with drc plane segmentation." OFF)
+option(USE_OCTOMAP "Build director with octomap dependency." OFF)
 
 # build project
 add_subdirectory(src)
