@@ -1304,6 +1304,20 @@ void ddDrakeModel::setColor(const QColor& color)
 }
 
 //-----------------------------------------------------------------------------
+void ddDrakeModel::setUrdfColors()
+{
+  //std::cout << "Set Urdf Colors" << std::endl;
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->meshVisuals();
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    visuals[i]->Actor->GetProperty()->SetColor(visuals[i]->Color.redF(),
+                                               visuals[i]->Color.greenF(),
+                                               visuals[i]->Color.blueF());
+  }
+  emit this->displayChanged();
+}
+
+//-----------------------------------------------------------------------------
 bool ddDrakeModel::texturesEnabled() const
 {
   return this->Internal->TexturesEnabled;

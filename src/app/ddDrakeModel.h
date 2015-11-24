@@ -53,6 +53,8 @@ public:
   void setAlpha(double alpha);
   double alpha() const;
 
+  void setUrdfColors();
+
   void setTexturesEnabled(bool enabled);
   bool texturesEnabled() const;
 
