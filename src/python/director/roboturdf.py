@@ -55,7 +55,6 @@ class RobotModelItem(om.ObjectModelItem):
         self.views = []
         self.model = None
         self.callbacks.addSignal(self.MODEL_CHANGED_SIGNAL)
-        self.useUrdfColors = True
 
         self.addProperty('Filename', model.filename())
         self.addProperty('Visible', model.visible())
@@ -77,15 +76,10 @@ class RobotModelItem(om.ObjectModelItem):
         elif propertyName == 'Visible':
             self.model.setVisible(self.getProperty(propertyName))
         elif propertyName == 'Color Mode':
-            if self.getProperty(propertyName) == 0: # Solid Color
-                self.useUrdfColors = False
-                self.model.setTexturesEnabled(False)
-            elif self.getProperty(propertyName) == 1: # Textures
-                self.useUrdfColors = False
+            if self.getProperty(propertyName) == 1: # Textures
                 self.model.setTexturesEnabled(True)
-            elif self.getProperty(propertyName) == 2: # URDF Colors
+            else:
                 self.model.setTexturesEnabled(False)
-                self.useUrdfColors = True
             self._updateModelColor()
         elif propertyName == 'Color':
             self._updateModelColor()
@@ -155,12 +149,13 @@ class RobotModelItem(om.ObjectModelItem):
         self.onModelChanged()
 
     def _updateModelColor(self):
-        if self.getProperty('Color Mode') == 1: # Textures
-            self._setupTextureColors()
-        elif not self.useUrdfColors:
+        if self.getProperty('Color Mode') == 0: # Solid Color
             color = QtGui.QColor(*[c*255 for c in self.getProperty('Color')])
             self.model.setColor(color)
-        # TODO (fix for #111): add getLinkColor iterating over all joints and setting color after fixing ddDrakeModel.cpp
+        elif self.getProperty('Color Mode') == 1: # Textures
+            self._setupTextureColors()
+        elif self.getProperty('Color Mode') == 2: # URDF Colors
+            self.model.setUrdfColors()
 
     def _setupTextureColors(self):
 
