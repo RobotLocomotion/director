@@ -1003,7 +1003,7 @@ class ContinousWalkingDemo(object):
     def displayExpectedPose(self, nextDoubleSupportPose):
         self.teleopJointController.setPose('double_support_pose', nextDoubleSupportPose)
         om.getOrCreateContainer('teleop model').setProperty('Visible',True)
-        om.getOrCreateContainer('teleop model').setProperty('Textures',False)
+        om.getOrCreateContainer('teleop model').setProperty('Color Mode', 0)
 
 
     def makeDebugRegions(self):

@@ -122,8 +122,8 @@ class OtdfModelItem(roboturdf.RobotModelItem):
         roboturdf.RobotModelItem.__init__(self, model)
 
         self.setProperty('Name', os.path.basename(filename))
-        self.setProperty('Textures', False)
-        self.setPropertyAttribute('Textures', 'hidden', True)
+        self.setProperty('Color Mode', 0)
+        self.setPropertyAttribute('Color Mode', 'hidden', True)
         # add otdf properties
 
         basePropertyKeys = self.properties._properties.keys()
