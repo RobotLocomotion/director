@@ -20,6 +20,7 @@ int ddDrakeModel::findLinkID(const QString&) const;
 void ddDrakeModel::setAlpha(double);
 void ddDrakeModel::setVisible(bool);
 void ddDrakeModel::setTexturesEnabled(bool);
+void ddDrakeModel::setUrdfColors();
 QColor ddDrakeModel::color() const;
 void ddDrakeModel::setColor(const QColor&);
 void ddDrakeModel::setLinkColor(const QString&, const QColor&);

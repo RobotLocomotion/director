@@ -72,7 +72,7 @@ class RobotSystem(object):
         # Determine colorMode, fix for #111
         colorMode = 'URDF Colors' # URDF colors by default
         if 'colorMode' in directorConfig:
-            assert directorConfig['colorMode'] in ['URDF Colors', 'Solid Color', 'Texture']
+            assert directorConfig['colorMode'] in ['URDF Colors', 'Solid Color', 'Textures']
             colorMode = directorConfig['colorMode']
 
 
