@@ -69,8 +69,7 @@ class RobotSystem(object):
         directorConfig = self.getDirectorConfig()
         neckPitchJoint = 'neck_ay'
 
-        # Determine colorMode, fix for #111
-        colorMode = 'URDF Colors' # URDF colors by default
+        colorMode = 'URDF Colors'
         if 'colorMode' in directorConfig:
             assert directorConfig['colorMode'] in ['URDF Colors', 'Solid Color', 'Textures']
             colorMode = directorConfig['colorMode']

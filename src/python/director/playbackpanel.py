@@ -316,7 +316,7 @@ class PlaybackPanel(object):
     def showPlaybackModel(self):
         self.robotStateModel.setProperty('Visible', True)
         self.playbackRobotModel.setProperty('Visible', True)
-        self.playbackRobotModel.setProperty('Textures', self.playbackRobotModelUseTextures)
+        self.playbackRobotModel.setProperty('Color Mode', 1 if self.playbackRobotModelUseTextures else 0)
         self.robotStateModel.setProperty('Alpha', self.robotStateModelDisplayAlpha)
         self.playbackRobotModel.setProperty('Alpha', self.playbackRobotModelDisplayAlpha)
         if self.planFramesObj:
