@@ -76,6 +76,7 @@ class ddMeshVisual
   vtkSmartPointer<vtkTransform> Transform;
   vtkSmartPointer<vtkTransform> VisualToLink;
   vtkSmartPointer<vtkTexture> Texture;
+  QColor Color;
   std::string Name;
 
 private:
@@ -667,6 +668,7 @@ public:
           meshVisual->Name = body->linkname;
           meshMap[body].push_back(meshVisual);
 
+          meshVisual->Color = QColor(visual.getMaterial()[0]*255, visual.getMaterial()[1]*255, visual.getMaterial()[2]*255);
           meshVisual->Actor->GetProperty()->SetColor(visual.getMaterial()[0],
                                                      visual.getMaterial()[1],
                                                      visual.getMaterial()[2]);
