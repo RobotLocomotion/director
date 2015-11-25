@@ -37,7 +37,7 @@ Dependencies
 
 
 Required Dependencies
------------------
+---------------------
 
 The required 3rd party dependencies are:
 
