@@ -171,10 +171,10 @@ def resetCameraToRobot(view):
 def resetCameraToHeadView(view):
 
     head = robotModel.getLinkFrame('head')
-    utorso = robotModel.getLinkFrame('pelvis')
+    pelvis = robotModel.getLinkFrame('pelvis')
 
     viewDirection = np.array([1.0, 0.0, 0.0])
-    utorso.TransformVector(viewDirection, viewDirection)
+    pelvis.TransformVector(viewDirection, viewDirection)
 
     cameraPosition = np.array(head.GetPosition()) + 0.10 * viewDirection
 
