@@ -874,8 +874,7 @@ class TableDemo(object):
     def createCollisionPlanningScene(self, scene=0, loadPerception=True, moveRobot=False):
         self.createCollisionPlanningSceneMain(self.sceneID,loadPerception,moveRobot)
         filename= os.environ['DRC_BASE'] + '/software/models/worlds/directorAffordances.sdf'
-        import ipab
-        msg=ipab.scs_api_command_t()
+        msg=lcmdrc.scs_api_command_t()
         msg.command="loadSDF "+filename+"\nsimulate"
         lcmUtils.publish('SCS_API_CONTROL', msg)
 
