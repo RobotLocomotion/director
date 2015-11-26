@@ -156,19 +156,22 @@ class MidiBehaviorControl(object):
 
 
 def resetCameraToRobot(view):
-    t = robotModel.getLinkFrame('utorso')
-    focalPoint = [0.0, 0.0, 0.0]
-    position = [-4.0, -2.0, 2.0]
+    t = robotModel.getLinkFrame('pelvis')
+    if t is None:
+        t = vtk.vtkTransform()
+
+    focalPoint = [0.0, 0.0, 0.25]
+    position = [-4.0, -2.0, 2.25]
     t.TransformPoint(focalPoint, focalPoint)
     t.TransformPoint(position, position)
     flyer = cameracontrol.Flyer(view)
     flyer.zoomTo(focalPoint, position)
 
 
-def resetCameraToHeadView():
+def resetCameraToHeadView(view):
 
     head = robotModel.getLinkFrame('head')
-    utorso = robotModel.getLinkFrame('utorso')
+    utorso = robotModel.getLinkFrame('pelvis')
 
     viewDirection = np.array([1.0, 0.0, 0.0])
     utorso.TransformVector(viewDirection, viewDirection)
