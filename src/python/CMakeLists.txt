@@ -54,6 +54,7 @@ set(python_files
   director/jointcontrol.py
   director/jointpropagator.py
   director/kinematicposeplanner.py
+  director/korgnano.py
   director/lcmframe.py
   director/lcmloggerwidget.py
   director/lcmgl.py

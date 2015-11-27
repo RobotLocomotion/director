@@ -1,4 +1,7 @@
-
+from director import korgnano
+from director import applogic
+from director import teleoppanel
+from director import handcontrolpanel
 
 class HandControlMacros(object):
 
@@ -38,7 +41,7 @@ class HandControlMacros(object):
 
 
 
-midiController = viewbehaviors.MidiBehaviorControl()
+midiController = korgnano.KorgNanoKontrol()
 if midiController.reader:
     midiController.start()
 
@@ -68,6 +71,6 @@ def reachWithRight():
     teleoppanel.panel.endEffectorTeleop.setRHandConstraint('ee fixed')
 
 
-#app.addToolbarMacro('left arm', reachWithLeft)
-#app.addToolbarMacro('right arm', reachWithRight)
-#app.addToolbarMacro('plan nominal', planNominal)
+def setupToolbarButtons():
+    applogic.addToolbarMacro('left arm', reachWithLeft)
+    applogic.addToolbarMacro('right arm', reachWithRight)
