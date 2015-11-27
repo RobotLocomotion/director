@@ -173,6 +173,13 @@ vtkSmartPointer<vtkPolyData> transformPolyData(vtkPolyData* polyData, vtkTransfo
   return shallowCopy(transformFilter->GetOutput());
 }
 
+vtkSmartPointer<vtkPolyData> scalePolyData(vtkPolyData* polyData, double scale)
+{
+  vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
+  t->Scale(scale, scale, scale);
+  return transformPolyData(polyData, t);
+}
+
 bool endsWith(std::string const &fullString, std::string const &ending)
 {
   if (fullString.length() >= ending.length())
@@ -529,7 +536,6 @@ public:
 
   std::string locateMeshFile(const std::string& meshFilename, const std::string& root_dir)
   {
-
     string fname = meshFilename;
     bool has_package = boost::find_first(meshFilename,"package://");
 
@@ -633,6 +639,16 @@ public:
           {
             //printf("loading mesh: %s\n", filename.c_str());
             loadedVisuals = loadMeshVisuals(filename);
+          }
+
+          if (mesh.scale != 1.0)
+          {
+
+            for (size_t mvi = 0; mvi < loadedVisuals.size(); ++mvi)
+            {
+              ddMeshVisual::Ptr meshVisual = loadedVisuals[mvi];
+              meshVisual->PolyData->ShallowCopy(scalePolyData(meshVisual->PolyData, mesh.scale));
+            }
           }
 
         }
@@ -800,6 +816,8 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
   string token;
   istringstream iss(urdf_filename);
 
+  string pathname;
+
   while (getline(iss,token,':'))
   {
     fstream xml_file(token.c_str(), fstream::in);
@@ -820,7 +838,6 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
         return URDFRigidBodyManipulatorVTK::Ptr();
     }
 
-    string pathname;
     boost::filesystem::path mypath(urdf_filename);
     if (!mypath.empty() && mypath.has_parent_path())  
       pathname = mypath.parent_path().native();
@@ -833,7 +850,7 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
   }
 
   model->computeDofMap();
-  model->loadVisuals();
+  model->loadVisuals(pathname);
   return model;
 }
 
