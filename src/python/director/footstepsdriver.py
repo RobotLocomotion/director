@@ -8,6 +8,7 @@ from director import ioUtils
 from director import robotstate
 from director import applogic as app
 from director import vtkAll as vtk
+from director.lcmframe import frameFromPositionMessage, positionMessageFromFrame
 from director.simpletimer import SimpleTimer
 from director.shallowCopy import shallowCopy
 from director import roboturdf
@@ -478,7 +479,7 @@ class FootstepsDriver(object):
             else:
                 sole_offset = np.mean(contact_pts_left, axis=0)
 
-            t_sole_prev = transformUtils.frameFromPositionMessage(msg.footsteps[i-2].pos)
+            t_sole_prev = frameFromPositionMessage(msg.footsteps[i-2].pos)
             t_sole_prev.PreMultiply()
             t_sole_prev.Translate(sole_offset)
             t_sole = transformUtils.copyFrame(footstepTransform)
@@ -710,7 +711,7 @@ class FootstepsDriver(object):
             distanceForward += 0.15
             is_right_foot = not is_right_foot
             step = lcmdrc.footstep_t()
-            step.pos = transformUtils.positionMessageFromFrame(t)
+            step.pos = positionMessageFromFrame(t)
             step.is_right_foot = is_right_foot
             step.params = self.getDefaultStepParams()
             self.goalSteps.append(step)
@@ -722,7 +723,7 @@ class FootstepsDriver(object):
         self.sendFootstepPlanRequest(request)
 
     def onStepModified(self, ndx, frameObj):
-        self.lastFootstepPlan.footsteps[ndx+2].pos = transformUtils.positionMessageFromFrame(frameObj.transform)
+        self.lastFootstepPlan.footsteps[ndx+2].pos = positionMessageFromFrame(frameObj.transform)
         self.lastFootstepPlan.footsteps[ndx+2].fixed_x = True
         self.lastFootstepPlan.footsteps[ndx+2].fixed_y = True
         self.lastFootstepPlan.footsteps[ndx+2].fixed_yaw = True
@@ -751,7 +752,7 @@ class FootstepsDriver(object):
 
         if goalFrame is None:
             goalFrame = vtk.vtkTransform()
-        msg.goal_pos = transformUtils.positionMessageFromFrame(goalFrame)
+        msg.goal_pos = positionMessageFromFrame(goalFrame)
 
         msg = self.applyParams(msg)
         msg = self.applySafeRegions(msg)
@@ -931,7 +932,7 @@ class FootstepsDriver(object):
         for i, footstep in enumerate(self.bdi_plan.footsteps):
             step = footstep.pos
 
-            t_step = transformUtils.frameFromPositionMessage(step)
+            t_step = frameFromPositionMessage(step)
             t_body_to_step = vtk.vtkTransform()
             t_body_to_step.DeepCopy(t_step)
             t_body_to_step.PostMultiply()
@@ -941,7 +942,7 @@ class FootstepsDriver(object):
             t_stepbdi.DeepCopy(t_body_to_step)
             t_stepbdi.PostMultiply()
             t_stepbdi.Concatenate(t_bodybdi)
-            footstep.pos = transformUtils.positionMessageFromFrame(t_stepbdi)
+            footstep.pos = positionMessageFromFrame(t_stepbdi)
 
         if (self.showBDIPlan is True):
             self.drawBDIFootstepPlan()
@@ -1020,7 +1021,7 @@ class FootstepRequestGenerator(object):
             t.Translate(footOriginToSole)
 
             step = lcmdrc.footstep_t()
-            step.pos = transformUtils.positionMessageFromFrame(t)
+            step.pos = positionMessageFromFrame(t)
             step.is_right_foot = (i + isRightFootOffset) % 2
             step.params = self.footstepsDriver.getDefaultStepParams()
 

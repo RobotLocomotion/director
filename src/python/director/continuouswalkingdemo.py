@@ -18,6 +18,7 @@ from director.debugVis import DebugData
 from director import ikplanner
 from director import applogic
 from director.tasks.taskuserpanel import TaskUserPanel
+from director.lcmframe import positionMessageFromFrame
 
 import director.terrain
 import director.tasks.robottasks as rt
@@ -730,7 +731,7 @@ class ContinousWalkingDemo(object):
             step_t = footstep.transform
 
             step = lcmdrc.footstep_t()
-            step.pos = transformUtils.positionMessageFromFrame(step_t)
+            step.pos = positionMessageFromFrame(step_t)
             step.is_right_foot =  footstep.is_right_foot # flist[i,6] # is_right_foot
             step.params = self.footstepsPanel.driver.getDefaultStepParams()
 

@@ -5,6 +5,7 @@ from director import lcmUtils
 from director import applogic as app
 from director.utime import getUtime
 from director.timercallback import TimerCallback
+from director.lcmframe import positionMessageFromFrame
 
 import numpy as np
 import math
@@ -401,7 +402,7 @@ class NavigationPanel(object):
             step_t.Concatenate(foot_to_sole)
             step_t.Concatenate(frame_pt_to_centerline)
             step = lcmdrc.footstep_t()
-            step.pos = transformUtils.positionMessageFromFrame(step_t)
+            step.pos = positionMessageFromFrame(step_t)
             step.is_right_foot =  flist[i,6] # is_right_foot
             step.params = self.footstepDriver.getDefaultStepParams()
             # Visualization via triads
