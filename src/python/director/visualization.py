@@ -14,17 +14,6 @@ import os
 import weakref
 import itertools
 
-def computeAToB(a,b):
-
-    t = vtk.vtkTransform()
-    t.PostMultiply()
-    t.Concatenate(b)
-    t.Concatenate(a.GetLinearInverse())
-    tt = vtk.vtkTransform()
-    tt.SetMatrix(t.GetMatrix())
-    return tt
-
-
 
 class PolyDataItem(om.ObjectModelItem):
 
