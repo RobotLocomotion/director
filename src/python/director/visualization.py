@@ -5,14 +5,12 @@ import director.vtkAll as vtk
 from director import transformUtils
 from director import callbacks
 from director import frameupdater
-import numpy as np
 from PythonQt import QtCore, QtGui
-
-
 
 import os
 import weakref
 import itertools
+import numpy as np
 
 
 class PolyDataItem(om.ObjectModelItem):
