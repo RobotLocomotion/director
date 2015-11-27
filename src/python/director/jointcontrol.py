@@ -20,9 +20,11 @@ class JointController(object):
         self.currentPoseName = None
         self.lastRobotStateMessage = None
         self.ignoreOldStateMessages = False
-
         self.addPose('q_zero', [0.0 for i in xrange(self.numberOfJoints)])
-        self.addPose('q_nom', self.loadPoseFromFile(nominalPoseMatFile))
+        self.q = self.getPose('q_zero')
+
+        if nominalPoseMatFile is not None:
+            self.addPose('q_nom', self.loadPoseFromFile(nominalPoseMatFile))
 
     def setJointPosition(self, jointId, position):
         '''
