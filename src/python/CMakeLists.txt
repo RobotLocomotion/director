@@ -79,6 +79,7 @@ set(python_files
   director/pointcloudlcm.py
   director/pointpicker.py
   director/polarisplatformplanner.py
+  director/propertyanimation.py
   director/propertyset.py
   director/raycastdriver.py
   director/robotstate.py
