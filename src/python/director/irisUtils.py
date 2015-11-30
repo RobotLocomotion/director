@@ -1,6 +1,6 @@
 import numpy as np
 import drc as lcmdrc
-from director import transformUtils
+from director.lcmframe import frameFromPositionMessage, positionMessageFromFrame
 from irispy.utils import lcon_to_vert
 from scipy.spatial import ConvexHull
 
@@ -24,7 +24,7 @@ class SafeTerrainRegion:
     def to_iris_region_t(self):
         msg = lcmdrc.iris_region_t()
         msg.lin_con = self.to_lin_con_t()
-        msg.seed_pose = transformUtils.positionMessageFromFrame(self.tform)
+        msg.seed_pose = positionMessageFromFrame(self.tform)
         return msg
 
     def to_lin_con_t(self):
@@ -48,7 +48,7 @@ class SafeTerrainRegion:
         A, b = decodeLinCon(msg.lin_con)
         C = []
         d = []
-        tform = transformUtils.frameFromPositionMessage(msg.seed_pose)
+        tform = frameFromPositionMessage(msg.seed_pose)
         return SafeTerrainRegion(A, b, C, d, tform)
 
     @property

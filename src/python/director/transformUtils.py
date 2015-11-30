@@ -1,8 +1,16 @@
 import vtkAll as vtk
-from director import botpy
 import math
 import numpy as np
-import drc as lcmdrc
+
+try:
+    # This module uses libbot for some transformations.
+    # There is a pending branch that replaces libbot with the
+    # thirdparty.transformations module.  For now, libbot is
+    # imported with a try/except to make it an optional dependency,
+    # but eventually it will be removed and replaced with transformations.py
+    from director import botpy
+except ImportError:
+    pass
 
 
 def getTransformFromNumpy(mat):
@@ -195,38 +203,6 @@ def rollPitchYawToQuaternion(rpy):
 
 def quaternionToRollPitchYaw(quat):
     return botpy.quat_to_roll_pitch_yaw(quat)
-
-
-def frameFromPositionMessage(positionMessage):
-    '''
-    Given an lcmdrc.position_t message, returns a vtkTransform
-    '''
-    trans = positionMessage.translation
-    quat = positionMessage.rotation
-
-    trans = [trans.x, trans.y, trans.z]
-    quat = [quat.w, quat.x, quat.y, quat.z]
-
-    return transformFromPose(trans, quat)
-
-
-def positionMessageFromFrame(transform):
-    '''
-    Given a vtkTransform, returns an lcmdrc.position_t message
-    '''
-
-    pos, wxyz = poseFromTransform(transform)
-
-    trans = lcmdrc.vector_3d_t()
-    trans.x, trans.y, trans.z = pos
-
-    quat = lcmdrc.quaternion_t()
-    quat.w, quat.x, quat.y, quat.z = wxyz
-
-    pose = lcmdrc.position_3d_t()
-    pose.translation = trans
-    pose.rotation = quat
-    return pose
 
 
 def copyFrame(transform):

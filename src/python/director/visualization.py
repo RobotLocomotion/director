@@ -2,29 +2,15 @@ import director.objectmodel as om
 import director.applogic as app
 from shallowCopy import shallowCopy
 import director.vtkAll as vtk
-from director.timercallback import TimerCallback
 from director import transformUtils
 from director import callbacks
 from director import frameupdater
-import numpy as np
 from PythonQt import QtCore, QtGui
-
-
 
 import os
 import weakref
 import itertools
-
-def computeAToB(a,b):
-
-    t = vtk.vtkTransform()
-    t.PostMultiply()
-    t.Concatenate(b)
-    t.Concatenate(a.GetLinearInverse())
-    tt = vtk.vtkTransform()
-    tt.SetMatrix(t.GetMatrix())
-    return tt
-
+import numpy as np
 
 
 class PolyDataItem(om.ObjectModelItem):
@@ -919,43 +905,6 @@ def addChildFrame(obj, initialTransform=None):
         obj.actor.SetUserTransform(t)
 
     return frame
-
-
-def showHandCloud(hand='left', view=None):
-
-    view = view or app.getCurrentRenderView()
-    if view is None:
-        return
-
-    assert hand in ('left', 'right')
-
-    maps = om.findObjectByName('Map Server')
-    assert maps is not None
-
-    viewId = 52 if hand == 'left' else 53
-    reader = maps.source.reader
-
-    def getCurrentViewId():
-        return reader.GetCurrentMapId(viewId)
-
-    p = vtk.vtkPolyData()
-    obj = showPolyData(p, '%s hand cloud' % hand, view=view, parent='sensors')
-    obj.currentViewId = -1
-
-    def updateCloud():
-        currentViewId = getCurrentViewId()
-        #print 'updateCloud: current view id:', currentViewId
-        if currentViewId != obj.currentViewId:
-            reader.GetDataForMapId(viewId, currentViewId, p)
-            #print 'updated poly data.  %d points.' % p.GetNumberOfPoints()
-            obj._renderAllViews()
-
-    t = TimerCallback()
-    t.targetFps = 1
-    t.callback = updateCloud
-    t.start()
-    obj.updater = t
-    return obj
 
 
 def showClusterObjects(clusters, parent):

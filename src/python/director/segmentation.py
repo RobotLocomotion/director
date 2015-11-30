@@ -115,6 +115,16 @@ output.ShallowCopy(t.GetOutput())
 '''
 
 
+def computeAToB(a,b):
+
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    t.Concatenate(b)
+    t.Concatenate(a.GetLinearInverse())
+    tt = vtk.vtkTransform()
+    tt.SetMatrix(t.GetMatrix())
+    return tt
+
 
 def lockAffordanceToHand(aff, hand='l_hand'):
 

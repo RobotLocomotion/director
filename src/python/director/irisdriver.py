@@ -9,6 +9,7 @@ from director import irisUtils
 from director import lcmUtils
 from director import robotstate
 from director.terrainitem import TerrainRegionItem
+from director.lcmframe import positionMessageFromFrame
 from director.utime import getUtime
 
 
@@ -58,7 +59,7 @@ class IRISDriver(object):
         msg.initial_state = robotstate.drakePoseToRobotState(self.jointController.q)
         msg.map_mode = self.map_mode_map[self.params.properties.map_mode]
         msg.num_seed_poses = 1
-        msg.seed_poses = [transformUtils.positionMessageFromFrame(tform)]
+        msg.seed_poses = [positionMessageFromFrame(tform)]
         msg.region_id = [uid]
         msg.xy_bounds = [irisUtils.encodeLinCon(A_bounds, b_bounds)]
         lcmUtils.publish(self.request_channel, msg)
