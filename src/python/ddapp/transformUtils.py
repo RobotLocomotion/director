@@ -262,9 +262,9 @@ def forceMomentTransformation(inputFrame, outputFrame):
 # computes matrix P such that P*y = cross product of x and y
 def crossProductMatrix(x):
     cross = np.zeros((3,3))
-    cross[0,1] = -x[0]
+    cross[0,1] = -x[2]
     cross[0,2] = x[1]
-    cross[1,0] = x[0]
+    cross[1,0] = x[2]
     cross[1,2] = -x[0]
     cross[2,0] = -x[1]
     cross[2,1] = x[0]
