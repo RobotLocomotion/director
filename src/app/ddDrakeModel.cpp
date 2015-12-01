@@ -522,6 +522,20 @@ public:
     return visuals;
   }
 
+  std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName){
+
+    std::shared_ptr<RigidBody> rb = this->findLink(linkName);
+    std::vector<ddMeshVisual::Ptr> visuals;
+
+    if (this->meshMap.find(rb) != this->meshMap.end()){
+      visuals = this->meshMap.at(rb);
+    }
+
+    return visuals;
+  }
+
+
+
 
   std::string locateMeshFile(const std::string& meshFilename, const std::string& root_dir)
   {
@@ -1216,6 +1230,29 @@ void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
   }
 
   polyData->DeepCopy(appendFilter->GetOutput());
+}
+
+void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyData){
+  if (!polyData){
+    return;
+  }
+
+
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->linkMeshVisuals(linkName.toAscii().data());
+  vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    AddInputData(appendFilter, transformPolyData(visuals[i]->PolyData, visuals[i]->Transform));
+  }
+
+  if (visuals.size())
+  {
+    appendFilter->Update();
+  }
+
+  polyData->DeepCopy(appendFilter->GetOutput());
+
 }
 
 //-----------------------------------------------------------------------------

@@ -46,6 +46,7 @@ public:
   int findLinkID(const QString& linkName) const;
 
   void getModelMesh(vtkPolyData* polyData);
+  void getLinkModelMesh(const QString& linkName, vtkPolyData* polyData);
 
   QString getLinkNameForMesh(vtkPolyData* polyData);
 
