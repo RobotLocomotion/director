@@ -179,7 +179,7 @@ class RobotModelItem(om.ObjectModelItem):
         view.render()
 
 
-def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True, colorMode='Solid Color'):
+def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True, colorMode='URDF Colors'):
 
     if not urdfFile:
         urdfFile = drcargs.getDirectorConfig()['urdfConfig']['default']
