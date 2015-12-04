@@ -2,6 +2,7 @@ import os
 import PythonQt
 from PythonQt import QtCore, QtGui
 from director import callbacks
+from director import drcargs
 import director.applogic as app
 import director.objectmodel as om
 import director.visualization as vis
@@ -11,30 +12,18 @@ from director import getDRCBaseDir
 from director import lcmUtils
 from director import filterUtils
 from director import transformUtils
-from director import drcargs
+
 
 import drc as lcmdrc
 import math
 import numpy as np
 import json
 
-with open(drcargs.args().directorConfigFile) as directorConfigFile:
-    directorConfig = json.load(directorConfigFile)
-    directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
-    fixedPointFile = os.path.join(directorConfigDirectory, directorConfig['fixedPointFile'])
-    urdfConfig = directorConfig['urdfConfig']
-    for key, urdf in list(urdfConfig.items()):
-        urdfConfig[key] = os.path.join(directorConfigDirectory, urdf)
 
-    handCombinations = directorConfig['handCombinations']
-    numberOfHands = len(handCombinations)
-
-    headLink = directorConfig.get('headLink')
 
 
 def getRobotGrayColor():
     return QtGui.QColor(177, 180, 190)
-
 
 def getRobotOrangeColor():
     return QtGui.QColor(255, 190, 0)
@@ -117,7 +106,7 @@ class RobotModelItem(om.ObjectModelItem):
             return None
 
     def getHeadLink(self):
-        return headLink
+        return drcargs.getDirectorConfig()['headLink']
 
     def getLinkContactPoints(self, linkName):
         pts = self.model.getBodyContactPoints(linkName)
@@ -193,7 +182,7 @@ class RobotModelItem(om.ObjectModelItem):
 def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True, colorMode='Solid Color'):
 
     if not urdfFile:
-        urdfFile = urdfConfig['default']
+        urdfFile = drcargs.getDirectorConfig()['urdfConfig']['default']
 
     if isinstance(parent, str):
         parent = om.getOrCreateContainer(parent)
@@ -219,8 +208,9 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
         obj.addToView(view)
 
     jointController = jointcontrol.JointController([obj])
-    if fixedPointFile:
-        jointController.setPose('q_nom', jointController.loadPoseFromFile(fixedPointFile))
+
+    fixedPointFile = drcargs.getDirectorConfig()['fixedPointFile']
+    jointController.setPose('q_nom', jointController.loadPoseFromFile(fixedPointFile))
 
     return obj, jointController
 
@@ -336,6 +326,9 @@ class HandFactory(object):
         self.robotModel = robotModel
         self.loaders = {}
 
+        handCombinations = drcargs.getDirectorConfig()['handCombinations']
+        numberOfHands = len(handCombinations)
+
         if (numberOfHands==0):
             self.defaultHandTypes = {}
         elif (numberOfHands==1):
@@ -398,6 +391,9 @@ class HandLoader(object):
         assert self.side in ('left', 'right')
 
         thisCombination = None
+        handCombinations = drcargs.getDirectorConfig()['handCombinations']
+        numberOfHands = len(handCombinations)
+
         for i in range(0, numberOfHands ):
           if (handCombinations[i]['side'] == self.side):
             thisCombination = handCombinations[i]

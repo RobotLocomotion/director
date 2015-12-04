@@ -143,10 +143,33 @@ def requireStrict():
 def args():
     return getGlobalArgParser().getArgs()
 
-_directorConfig = None
+
+
+class DirectorConfig(object):
+
+    def __init__(self, filename):
+
+        self.filename = filename
+        if not os.path.isfile(filename):
+            raise Exception('File not found: %s' % filename)
+
+        self.dirname = os.path.dirname(os.path.abspath(filename))
+        self.config = json.load(open(filename))
+
+        self.config['fixedPointFile'] = os.path.join(self.dirname, self.config['fixedPointFile'])
+
+        self.urdfConfig = self.config['urdfConfig']
+        for key, urdf in list(self.urdfConfig.items()):
+            self.urdfConfig[key] = os.path.join(self.dirname, urdf)
+
+    _defaultInstance = None
+
+    @classmethod
+    def getDefaultInstance(cls):
+        if cls._defaultInstance is None:
+            cls._defaultInstance = DirectorConfig(args().directorConfigFile)
+        return cls._defaultInstance
+
+
 def getDirectorConfig():
-    global _directorConfig
-    if not _directorConfig:
-        with open(args().directorConfigFile) as directorConfigFile:
-            _directorConfig = json.load(directorConfigFile)
-    return _directorConfig
+    return DirectorConfig.getDefaultInstance().config

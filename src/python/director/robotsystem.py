@@ -25,32 +25,17 @@ from director import teleoppanel
 from director import viewbehaviors
 from director import plannerPublisher
 
-import os
-import json
-
 
 def create(view=None, globalsDict=None):
     s = RobotSystem()
     return s.init(view, globalsDict)
+
 
 class RobotSystem(object):
 
 
     def __init__(self):
         pass
-
-
-    @staticmethod
-    def getDirectorConfig():
-
-        with open(drcargs.args().directorConfigFile) as directorConfigFile:
-            directorConfig = json.load(directorConfigFile)
-            directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
-            directorConfig['fixedPointFile'] = os.path.join(directorConfigDirectory, directorConfig['fixedPointFile'])
-            urdfConfig = directorConfig['urdfConfig']
-            for key, urdf in list(urdfConfig.items()):
-                urdfConfig[key] = os.path.join(directorConfigDirectory, urdf)
-        return directorConfig
 
 
     def init(self, view=None, globalsDict=None):
@@ -66,7 +51,7 @@ class RobotSystem(object):
         useAtlasConvexHull = False
         useWidgets = False
 
-        directorConfig = self.getDirectorConfig()
+        directorConfig = drcargs.getDirectorConfig()
         neckPitchJoint = 'neck_ay'
 
         colorMode = 'URDF Colors'

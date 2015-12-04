@@ -2,7 +2,6 @@ import drc as lcmdrc
 import numpy as np
 import time
 import re
-import json
 from director import drcargs
 from director import transformUtils
 
@@ -158,7 +157,7 @@ def drakePoseToRobotState(drakePose):
 
     return m
 
-    
+
 def matchJoints(regex):
     search = re.compile(regex).search
     return [name for name in getDrakePoseJointNames() if search(name)]
@@ -170,8 +169,7 @@ def getDrakePoseJointNames():
     if _drakePoseJointNames:
         return _drakePoseJointNames
     else:
-        with open(drcargs.args().directorConfigFile) as directorConfigFile:
-            _drakePoseJointNames = json.load(directorConfigFile)['drakeJointNames']
+        _drakePoseJointNames = drcargs.getDirectorConfig()['drakeJointNames']
 
         return _drakePoseJointNames
 
@@ -181,8 +179,7 @@ def getRobotStateJointNames():
     if _robotStateJointNames:
         return _robotStateJointNames
     else:
-        with open(drcargs.args().directorConfigFile) as directorConfigFile:
-            _robotStateJointNames = json.load(directorConfigFile)['robotStateJointNames']
+        _robotStateJointNames = drcargs.getDirectorConfig()['robotStateJointNames']
 
         return _robotStateJointNames
 
