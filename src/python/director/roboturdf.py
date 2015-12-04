@@ -329,27 +329,15 @@ class HandFactory(object):
     def __init__(self, robotModel, defaultLeftHandType=None, defaultRightHandType=None):
 
         self.robotModel = robotModel
+        self.defaultHandTypes = {}
         self.loaders = {}
 
-        handCombinations = drcargs.getDirectorConfig()['handCombinations']
-        numberOfHands = len(handCombinations)
+        handCombinations = drcargs.getDirectorConfig().get('handCombinations', [])
+        for description in handCombinations:
 
-        if (numberOfHands==0):
-            self.defaultHandTypes = {}
-        elif (numberOfHands==1):
-            if not defaultLeftHandType:
-                defaultLeftHandType = handCombinations[0]['handType']
-            self.defaultHandTypes = { 'left' : defaultLeftHandType }
-        elif (numberOfHands==2):
-            if not defaultLeftHandType:
-                defaultLeftHandType = handCombinations[0]['handType']
-            if not defaultRightHandType:
-                defaultRightHandType = handCombinations[1]['handType']
-            self.defaultHandTypes = {
-              'left' : defaultLeftHandType,
-              'right' : defaultRightHandType
-              }
-
+            handType = description['handType']
+            side = description['side']
+            self.defaultHandTypes[side] = handType
 
     def getLoader(self, side):
 

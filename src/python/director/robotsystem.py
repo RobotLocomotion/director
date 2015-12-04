@@ -131,16 +131,12 @@ class RobotSystem(object):
 
             planPlayback = planplayback.PlanPlayback()
 
-            if (roboturdf.numberOfHands == 1):
-                handFactory = roboturdf.HandFactory(robotStateModel)
-                handModels = [handFactory.getLoader(side) for side in ['left']]
-            elif (roboturdf.numberOfHands == 2):
-                handFactory = roboturdf.HandFactory(robotStateModel)
-                handModels = [handFactory.getLoader(side) for side in ['left', 'right']]
-            else:
-                handFactory = None
-                handModels = []
+            handFactory = roboturdf.HandFactory(robotStateModel)
+            handModels = []
 
+            for side in ['left', 'right']:
+                if side in handFactory.defaultHandTypes:
+                    handModels.append(handFactory.getLoader(side))
 
             ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)
 
