@@ -218,8 +218,9 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     if view is not None:
         obj.addToView(view)
 
-    jointController = jointcontrol.JointController([obj], fixedPointFile)
-    jointController.setNominalPose()
+    jointController = jointcontrol.JointController([obj])
+    if fixedPointFile:
+        jointController.setPose('q_nom', jointController.loadPoseFromFile(fixedPointFile))
 
     return obj, jointController
 

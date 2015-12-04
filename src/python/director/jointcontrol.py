@@ -11,7 +11,7 @@ import numpy as np
 
 class JointController(object):
 
-    def __init__(self, models, nominalPoseMatFile, poseCollection=None, jointNames=None):
+    def __init__(self, models, poseCollection=None, jointNames=None):
         self.jointNames = jointNames or robotstate.getDrakePoseJointNames()
         self.numberOfJoints = len(self.jointNames)
         self.models = list(models)
@@ -20,11 +20,7 @@ class JointController(object):
         self.currentPoseName = None
         self.lastRobotStateMessage = None
         self.ignoreOldStateMessages = False
-        self.addPose('q_zero', [0.0 for i in xrange(self.numberOfJoints)])
-        self.q = self.getPose('q_zero')
-
-        if nominalPoseMatFile is not None:
-            self.addPose('q_nom', self.loadPoseFromFile(nominalPoseMatFile))
+        self.setPose('q_zero', np.zeros(self.numberOfJoints))
 
     def setJointPosition(self, jointId, position):
         '''
@@ -50,9 +46,6 @@ class JointController(object):
 
     def setZeroPose(self):
         self.setPose('q_zero')
-
-    def setNominalPose(self, poseData=None):
-        self.setPose('q_nom', poseData)
 
     def getPose(self, poseName):
         return self.poses.get(poseName)
