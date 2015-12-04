@@ -284,6 +284,11 @@ def startModelPublisherListener(modelsToReload):
 
 def setupPackagePaths():
 
+    try:
+        getDRCBaseDir()
+    except KeyError:
+        return
+
     searchPaths = [
         'software/models/atlas_v3',
         'software/models/atlas_v4',
