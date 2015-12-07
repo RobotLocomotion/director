@@ -230,7 +230,19 @@ void MyOcTreeDrawer::setOcTree(const octomap::OcTree& octree, double minDrawZ, d
 
   if (m_drawOccupied) {
     int numremoved = 0;
-    octree.getOccupied(occupiedThresVoxels, occupiedVoxels, m_max_tree_depth);
+    for (octomap::OcTree::tree_iterator it = octree.begin_tree(m_max_tree_depth), end=octree.end_tree(); it!= end; ++it) {
+      if (it.isLeaf()) { // leaf nodes only, to be removed if wanting to include inner nodes
+        octomap::OcTreeVolume voxel = OcTreeVolume(it.getCoordinate(), it.getSize());
+
+        if (octree.isNodeOccupied(*it)) {
+          if (octree.isNodeAtThreshold(*it)) {
+            occupiedThresVoxels.push_back(voxel);
+          } else {
+            occupiedVoxels.push_back(voxel);
+          }
+        }
+      }
+    }
 
     int size1 = occupiedVoxels.size();
     int size2 = occupiedThresVoxels.size();
@@ -258,7 +270,19 @@ void MyOcTreeDrawer::setOcTree(const octomap::OcTree& octree, double minDrawZ, d
   }
 
   if (m_drawFree) {
-    octree.getFreespace(freeThresVoxels, freeVoxels, m_max_tree_depth);
+    for (octomap::OcTree::tree_iterator it = octree.begin_tree(m_max_tree_depth), end=octree.end_tree(); it!= end; ++it) {
+      if (it.isLeaf()) { // leaf nodes only, to be removed if wanting to include inner nodes
+        octomap::OcTreeVolume voxel = OcTreeVolume(it.getCoordinate(), it.getSize());
+
+        if (!octree.isNodeOccupied(*it)) {
+          if (octree.isNodeAtThreshold(*it)) {
+            freeThresVoxels.push_back(voxel);
+          } else {
+            freeVoxels.push_back(voxel);
+          }
+        }
+      }
+    }
     int numremoved = 0;
     int size1 = freeVoxels.size();
     int size2 = freeThresVoxels.size();
