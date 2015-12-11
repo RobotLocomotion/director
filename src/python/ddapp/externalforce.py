@@ -44,7 +44,6 @@ class ExternalForce(object):
 
         # keys = linkNames, wrench = 6 x 1 Torque-Force vector, all in body frame
         self.externalForces = dict()
-        self.timeout = 1e10 # this is for testing
         self.publishChannel = 'EXTERNAL_FORCE_TORQUE'
         self.captureMode = False
         self.captureModeCounter = 0
@@ -53,10 +52,17 @@ class ExternalForce(object):
         self.createPlunger()
         self.createMeshDataAndLocators()
 
+        self.visObjectDrawTime = dict()
+        self.timeout = 1
+
         # setup timercallback to publish, lets say at 5 hz
         self.timer = TimerCallback(targetFps=5)
         self.timer.callback = self.publish
         self.startPublishing()
+
+        self.visObjectCleanupTimer = TimerCallback(targetFps = 1)
+        self.visObjectCleanupTimer.callback = self.removeStaleVisObjects
+        self.visObjectCleanupTimer.start()
 
     def addSubscribers(self):
         lcmUtils.addSubscriber('CONTACT_FILTER_POINT_ESTIMATE', lcmdrc.contact_filter_estimate_t, self.onContactEstimate)
@@ -180,6 +186,20 @@ class ExternalForce(object):
         for key in keysToRemove:
             self.removeForce(key)
 
+
+    def removeStaleVisObjects(self):
+        keysToRemove = []
+        for key, val in self.visObjectDrawTime.iteritems():
+            elapsed = time.time() - val
+            if elapsed > self.timeout:
+                keysToRemove.append(key)
+
+
+        for key in keysToRemove:
+            om.removeFromObjectModel(om.findObjectByName(key))
+            del self.visObjectDrawTime[key]
+
+
     
 
     def publish(self):
@@ -187,12 +207,18 @@ class ExternalForce(object):
         if len(self.externalForces) == 0:
             return
 
-        # self.removeStaleExternalForces()
+        tol = 1e-3
+        numExternalForces = 0
         msg = lcmdrake.lcmt_external_force_torque()
-        msg.num_external_forces = len(self.externalForces);
-
+        
 
         for key, val in self.externalForces.iteritems():
+            # don't publish it if the force is very small
+            if np.linalg.norm(val['wrench']) < tol:
+                continue
+
+            numExternalForces += 1
+
             msg.body_names.append(val['linkName'])
             msg.tx.append(val['wrench'][0])
             msg.ty.append(val['wrench'][1])
@@ -201,6 +227,7 @@ class ExternalForce(object):
             msg.fy.append(val['wrench'][4])
             msg.fz.append(val['wrench'][5])
 
+        msg.num_external_forces = numExternalForces;
         lcmUtils.publish(self.publishChannel, msg)
 
 
@@ -210,7 +237,7 @@ class ExternalForce(object):
         self.removeAllForces()
         self.timer.start()
 
-    def stopPublishing(self):
+    def stopPublishing(self): 
         print "stopping publishing"
         self.timer.stop()
 
@@ -232,9 +259,11 @@ class ExternalForce(object):
             return
 
         self.drawForce(name, msg.body_name, forceLocation, force, color=[0,0,1])
+        self.visObjectDrawTime[name] = time.time()
 
 
     def drawForce(self, name, linkName, forceLocation, force, color, key='null'):
+        
         forceDirection = force/np.linalg.norm(force)
         # om.removeFromObjectModel(om.findObjectByName(name))
 
@@ -374,7 +403,9 @@ class ExternalForce(object):
             d = DebugData()
             d.addLine(rayOriginInWorld, rayEndInWorld, radius=0.005)
             color=[0,0,1]
-            obj = vis.updatePolyData(d.getPolyData(), "contact ray world frame", color=color)
+            name = linkName + "contact ray world frame"
+            obj = vis.updatePolyData(d.getPolyData(), name, color=color)
+            self.visObjectDrawTime[name] = time.time()
         ################## DEBUGGING
 
         
@@ -425,50 +456,38 @@ class ExternalForce(object):
 
 
     def onActiveLinkContactEstimate(self, msg):
-        name = "active link estimated external force"
-        om.removeFromObjectModel(om.findObjectByName(name))
 
-        # debugging, allows us to work directly from external_force_torque msg
-        # being published by the director
-        # body_name = msg.body_names[0]
-        # fx = msg.fx[0]
-        # fy = msg.fy[0]
-        # fz = msg.fz[0]
-        # tx = msg.tx[0]
-        # ty = msg.ty[0]
-        # tz = msg.tz[0]
+        numBodies = msg.num_bodies
 
-        body_name = msg.body_name
-        fx = msg.fx
-        fy = msg.fy
-        fz = msg.fz
-        tx = msg.tx
-        ty = msg.ty
-        tz = msg.tz
+        for i in xrange(0,numBodies):     
+            linkName = msg.body_name[i]
+            fx = msg.fx[i]
+            fy = msg.fy[i]
+            fz = msg.fz[i]
+            tx = msg.tx[i]
+            ty = msg.ty[i]
+            tz = msg.tz[i]
 
-        force = np.array([fx, fy, fz])
-        torque = np.array([tx, ty, tz])
-        linkName = body_name
+            name = "active link estimated external force" + linkName
+            force = np.array([fx, fy, fz])
+            torque = np.array([tx, ty, tz])
 
-        eps = 0.5
-        if np.linalg.norm(force) < eps:
-            om.removeFromObjectModel(om.findObjectByName(name))
-            return
+            eps = 0.5
+            if np.linalg.norm(force) < eps:
+                om.removeFromObjectModel(om.findObjectByName(name))
+                return
 
-        forceLocation = self.computeContactLocation(linkName, force, torque)
-        # print "forceLocation", forceLocation
+            forceLocation = self.computeContactLocation(linkName, force, torque)
+            # print "forceLocation", forceLocation
 
 
-        if forceLocation is None:
-            return        
+            if forceLocation is None:
+                return        
 
-        self.drawForce(name, body_name, forceLocation, force, color=[1,0,0])
+            self.drawForce(name, linkName, forceLocation, force, color=[1,0,0])
+            self.visObjectDrawTime[name] = time.time()
 
     
-
-
-
-
     def printForces(self):
         for key in self.externalForces.keys():
             print key
