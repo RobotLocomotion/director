@@ -46,10 +46,18 @@
 #include <QMap>
 #include <QDir>
 
+#include <iostream>
+#include <fstream>
+#include <string>
+
+
+
+
 using std::map;
 using std::vector;
 using std::string;
 using std::istringstream;
+using namespace Eigen;
 
 #if VTK_MAJOR_VERSION == 6
  #define SetInputData(filter, obj) filter->SetInputData(obj);
@@ -1074,6 +1082,54 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
   return ret;
 }
 
+void ddDrakeModel::doKinematics(const QVector<double>& q, const QVector<double>& v, bool compute_gradients,
+  bool compute_JdotV){
+
+  Eigen::VectorXd v_eigen(q.size());
+  Eigen::VectorXd q_eigen(v.size());
+
+  for (int i=0; i < q.size(); i++){
+   q_eigen[i] = q[i];
+  }
+
+  for (int i=0; i < q.size(); i++){
+   v_eigen[i] = v[i]; 
+  }
+
+  this->Internal->Model->doKinematics(q_eigen, v_eigen, compute_gradients, compute_JdotV);
+}
+
+QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot){
+
+  std::vector<int> v_indices;
+
+  MatrixXd linkJacobian = this->Internal->Model->geometricJacobian<double>(base_body_or_frame_ind, end_effector_body_or_frame_ind,expressed_in_body_or_frame_ind, gradient_order, in_terms_of_qdot, &v_indices).value();
+
+  int num_velocities = this->Internal->Model->num_velocities;
+
+  std::cout << "v_indices" << std::endl;
+  std::cout << "linkJacobian" << linkJacobian << std::endl;
+
+
+  MatrixXd linkJacobianFull = MatrixXd::Zero(6, num_velocities);
+  for (int i=0; i < v_indices.size(); i++){
+    linkJacobianFull.col(v_indices[i]) = linkJacobian.col(i);
+  }
+
+  std::cout << "linkJacobianFull" << linkJacobianFull << std::endl;
+
+
+  QVector<double> linkJacobianVec(6*num_velocities);
+  for (int i = 0; i < 6; i++){
+    for (int j = 0; j < num_velocities; j++){
+      linkJacobianVec[num_velocities*i + j] = linkJacobianFull(i,j);
+    }
+  }
+
+  return linkJacobianVec;
+
+}
+
 //-----------------------------------------------------------------------------
 QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
 {
@@ -1135,6 +1191,13 @@ int ddDrakeModel::findLinkID(const QString& linkName) const
 {
   return this->Internal->Model->findLinkId(linkName.toAscii().data(), -1);
 }
+
+//-----------------------------------------------------------------------------
+int ddDrakeModel::findJointID(const QString& jointName) const
+{
+  return this->Internal->Model->findJointId(jointName.toAscii().data(), -1);
+}
+
 
 //-----------------------------------------------------------------------------
 QList<QString> ddDrakeModel::getJointNames()
