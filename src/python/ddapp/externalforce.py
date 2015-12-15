@@ -204,8 +204,8 @@ class ExternalForce(object):
 
     def publish(self):
 
-        if len(self.externalForces) == 0:
-            return
+        # if len(self.externalForces) == 0:
+        #     return
 
         tol = 1e-3
         numExternalForces = 0
@@ -262,7 +262,7 @@ class ExternalForce(object):
         self.visObjectDrawTime[name] = time.time()
 
 
-    def drawForce(self, name, linkName, forceLocation, force, color, key='null'):
+    def drawForce(self, name, linkName, forceLocation, force, color, key=None):
         
         forceDirection = force/np.linalg.norm(force)
         # om.removeFromObjectModel(om.findObjectByName(name))
@@ -282,11 +282,13 @@ class ExternalForce(object):
 
         obj = vis.updatePolyData(self.plungerPolyData, name, color=color)
         obj.actor.SetUserTransform(transformForVis)
-        obj.connectRemovedFromObjectModel(self.removeForceFromFrameObject)
-        obj.addProperty('magnitude', 0.0)
-        obj.addProperty('linkName', linkName)
-        obj.addProperty('key', key)
         
+
+        if key is not None and om.findObjectByName(name) is not None:
+            obj.addProperty('magnitude', self.externalForces[key]['forceMagnitude'])
+            obj.addProperty('linkName', linkName)
+            obj.addProperty('key', key)
+            obj.connectRemovedFromObjectModel(self.removeForceFromFrameObject)        
 
         obj.properties.connectPropertyChanged(functools.partial(self.onPropertyChanged, obj))
         return obj
@@ -302,22 +304,24 @@ class ExternalForce(object):
         for key, val in self.externalForces.iteritems():
             linkName = val['linkName']
             name = key + ' external force'
-            linkToWorld = self.robotStateModel.getLinkFrame(linkName)
-
-            forceLocationInWorld = np.array(linkToWorld.TransformPoint(val['forceLocation']))
-            forceDirectionInWorld = np.array(linkToWorld.TransformDoubleVector(val['forceDirection']))
-
-            point = forceLocationInWorld - 0.1*forceDirectionInWorld
-
             #Green is for a force, red is for a wrench
             color = [0,1,0]
             if val['isWrench']:
                 color = [1,0,0]
 
-            d = DebugData()
-            # d.addArrow(point, forceLocationInWorld, headRadius=0.025, tubeRadius=0.005, color=color)
-            d.addSphere(forceLocationInWorld, radius=0.01)
-            d.addLine(point, forceLocationInWorld, radius=0.005)
+            # linkToWorld = self.robotStateModel.getLinkFrame(linkName)
+
+            # forceLocationInWorld = np.array(linkToWorld.TransformPoint(val['forceLocation']))
+            # forceDirectionInWorld = np.array(linkToWorld.TransformDoubleVector(val['forceDirection']))
+
+            # point = forceLocationInWorld - 0.1*forceDirectionInWorld
+
+            
+
+            # d = DebugData()
+            # # d.addArrow(point, forceLocationInWorld, headRadius=0.025, tubeRadius=0.005, color=color)
+            # d.addSphere(forceLocationInWorld, radius=0.01)
+            # d.addLine(point, forceLocationInWorld, radius=0.005)
 
 
             obj = self.drawForce(name, linkName, val['forceLocation'], val['forceDirection'], color, key=key)
@@ -378,9 +382,7 @@ class ExternalForce(object):
         if forceNorm < 0.5:
             return None
 
-        forceNormalized = force/forceNorm
-
-        
+        forceNormalized = force/forceNorm       
         
 
         # now intersect line with linkMesh, choose the start and end of the ray
@@ -403,7 +405,7 @@ class ExternalForce(object):
             d = DebugData()
             d.addLine(rayOriginInWorld, rayEndInWorld, radius=0.005)
             color=[0,0,1]
-            name = linkName + "contact ray world frame"
+            name = linkName + " contact ray world frame"
             obj = vis.updatePolyData(d.getPolyData(), name, color=color)
             self.visObjectDrawTime[name] = time.time()
         ################## DEBUGGING
@@ -468,21 +470,23 @@ class ExternalForce(object):
             ty = msg.ty[i]
             tz = msg.tz[i]
 
-            name = "active link estimated external force" + linkName
+            name = linkName + " active link estimated external force"
             force = np.array([fx, fy, fz])
             torque = np.array([tx, ty, tz])
+
 
             eps = 0.5
             if np.linalg.norm(force) < eps:
                 om.removeFromObjectModel(om.findObjectByName(name))
                 return
 
+
             forceLocation = self.computeContactLocation(linkName, force, torque)
             # print "forceLocation", forceLocation
 
 
             if forceLocation is None:
-                return        
+                continue        
 
             self.drawForce(name, linkName, forceLocation, force, color=[1,0,0])
             self.visObjectDrawTime[name] = time.time()
