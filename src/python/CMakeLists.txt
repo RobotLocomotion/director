@@ -19,6 +19,9 @@ set(python_files
   ddapp/cameraview.py
   ddapp/colorize.py
   ddapp/consoleapp.py
+  ddapp/contactfilter.py
+  ddapp/contactfiltergurobi.py
+  ddapp/gurobiutils.py
   ddapp/continuouswalkingdemo.py
   ddapp/copmonitor.py
   ddapp/coursemodel.py
