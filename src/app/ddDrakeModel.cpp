@@ -1107,16 +1107,10 @@ QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int 
 
   int num_velocities = this->Internal->Model->num_velocities;
 
-  std::cout << "v_indices" << std::endl;
-  std::cout << "linkJacobian" << linkJacobian << std::endl;
-
-
   MatrixXd linkJacobianFull = MatrixXd::Zero(6, num_velocities);
   for (int i=0; i < v_indices.size(); i++){
     linkJacobianFull.col(v_indices[i]) = linkJacobian.col(i);
   }
-
-  std::cout << "linkJacobianFull" << linkJacobianFull << std::endl;
 
 
   QVector<double> linkJacobianVec(6*num_velocities);
