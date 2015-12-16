@@ -14,6 +14,10 @@ class ContactFilterGurobi(object):
         self.initializeModels(numContactsList)
 
 
+    def setVerboseFlag(self, val):
+        for int, d in self.modelData.iteritems():
+            d['model'].setParam('OutputFlag', val)
+
 
     def initializeModels(self, numContactsList):
 
@@ -24,6 +28,7 @@ class ContactFilterGurobi(object):
             d = dict()
             alphaVars = {}
             m = Model(str(numContacts) + " contact(s)")
+            m.setParam('OutputFlag', False)
 
             for i in xrange(0,numContacts):
                 for j in xrange(0,4):
@@ -41,9 +46,10 @@ class ContactFilterGurobi(object):
             raise ValueError("A model of size %i isn't available" % numContacts)
 
 
-        H = scipy.linalg.block_diag(*H_list)
+        H = np.concatenate(H_list, axis=1)
         Q = np.dot(np.dot(H.transpose(),W),H)
-        f = -2*np.dot(np.dot(residual.transpose(), W),H)
+        f = -2.0*np.dot(np.dot(residual.transpose(), W),H)
+        constant = np.dot(np.dot(residual.transpose(), W), residual)
 
 
         model = self.modelData[numContacts]['model']
@@ -51,7 +57,7 @@ class ContactFilterGurobi(object):
         varList = [alphaVars[i,j] for i in xrange(0,numContacts) for j in xrange(0,4)]
 
         grbUtils.clearObjective(model)
-        grbUtils.addObjective(model, Q, f, varList)
+        grbUtils.addObjective(model, Q, f, varList, constant=constant)
         model.optimize()
         return self.parseModelSolution(numContacts)
 
@@ -66,6 +72,7 @@ class ContactFilterGurobi(object):
                 for j in xrange(0,4):
                     d['alphaVals'][i,j] = alphaVars[i,j].getAttr('X')
 
+        d['objectiveValue'] = m.getAttr('ObjVal')
         return d
 
 

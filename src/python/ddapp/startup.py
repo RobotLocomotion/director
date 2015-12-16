@@ -2,8 +2,6 @@
 # that all the variables defined here become console variables.
 
 import ddapp
-import mosek
-import mosek.fusion
 import os
 import sys
 import PythonQt

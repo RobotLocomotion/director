@@ -38,10 +38,18 @@ def addLinearObjective(model, f, varList):
     model.setObjective(quadExpr)
     model.update()
 
+def addConstantToObjective(model, c):
+    quadExpr = model.getObjective()
+    quadExpr.addConstant(c)
+    model.setObjective(quadExpr)
+    model.update()
 
-def addObjective(model, Q, f, varList):
+def addObjective(model, Q, f, varList, constant=None):
     addQuadraticObjective(model, Q, varList)
     addLinearObjective(model, f, varList)
+
+    if constant is not None:
+        addConstantToObjective(model, constant)
 
 
 def clearObjective(model):

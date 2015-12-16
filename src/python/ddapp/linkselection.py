@@ -21,6 +21,7 @@ class LinkWidget(object):
 
     def start(self):
         self.installEventFilter()
+        self.externalForce.startPublishing()
 
     def stop(self):
         self.removeEventFilter()

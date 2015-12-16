@@ -53,12 +53,12 @@ class ExternalForce(object):
         self.createMeshDataAndLocators()
 
         self.visObjectDrawTime = dict()
-        self.timeout = 1
+        self.timeout = 1.5
 
         # setup timercallback to publish, lets say at 5 hz
         self.timer = TimerCallback(targetFps=5)
         self.timer.callback = self.publish
-        self.startPublishing()
+        # self.startPublishing() # this now gets activated when you start linkSelection
 
         self.visObjectCleanupTimer = TimerCallback(targetFps = 1)
         self.visObjectCleanupTimer.callback = self.removeStaleVisObjects
@@ -250,16 +250,20 @@ class ExternalForce(object):
 
     def onContactEstimate(self, msg):
         name = 'estimated external force'
-        forceLocation = np.array(msg.contact_position)
-        force = np.array(msg.contact_force)
 
-        eps = 0.5
-        if np.linalg.norm(force) < eps:
-            om.removeFromObjectModel(om.findObjectByName(name))
-            return
+        for i in xrange(0,msg.num_contact_points):
+            subMsg = msg.single_contact_estimate[i]
+            forceLocation = np.array(subMsg.contact_position)
+            force = np.array(subMsg.contact_force)
 
-        self.drawForce(name, msg.body_name, forceLocation, force, color=[0,0,1])
-        self.visObjectDrawTime[name] = time.time()
+            eps = 0.5
+            name = 'estimated external force ' + str(i)
+            if np.linalg.norm(force) < eps:
+                # om.removeFromObjectModel(om.findObjectByName(name))
+                return
+
+            self.drawForce(name, subMsg.body_name, forceLocation, force, color=[0,0,1])
+            self.visObjectDrawTime[name] = time.time()
 
 
     def drawForce(self, name, linkName, forceLocation, force, color, key=None):
@@ -404,7 +408,7 @@ class ExternalForce(object):
             rayEndInWorld = np.array(linkToWorld.TransformPoint(rayEnd))
             d = DebugData()
             d.addLine(rayOriginInWorld, rayEndInWorld, radius=0.005)
-            color=[0,0,1]
+            color=[1,1,0]
             name = linkName + " contact ray world frame"
             obj = vis.updatePolyData(d.getPolyData(), name, color=color)
             self.visObjectDrawTime[name] = time.time()

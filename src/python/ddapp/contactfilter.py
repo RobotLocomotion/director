@@ -9,17 +9,19 @@ import os
 import os.path
 import csv
 import copy
-import mosek
-import mosek.fusion as mf
-
+import time
+import itertools
 from PythonQt import QtCore, QtGui
 from ddapp import transformUtils
 from ddapp import lcmUtils
 from ddapp import contactfiltergurobi
 from ddapp import gurobiutils as grbUtils
 import drc as lcmdrc
+import drake as lcmdrake
+
 
 FRICTION_CONE_APPROX_SIZE = 4
+MU = 0.4
 
 class ContactFilter(object):
 
@@ -30,17 +32,34 @@ class ContactFilter(object):
         self.loadDrakeModelFromFilename()
         self.contactFilterPointDict = dict()
         self.loadContactFilterPointsFromFile()
+        self.running = False
+        self.publishResidual = False
+        self.doMultiContactEstimate = True
         self.addSubscribers()
+        self.initializePublishChannels()
         self.initializeGurobiModel()
+        self.currentUtime = 0.0
 
+    def start(self):
+        self.running = True
+
+    def stop(self):
+        self.running = False
 
     def addSubscribers(self):
         lcmUtils.addSubscriber('RESIDUAL_OBSERVER_STATE_W_FOOT_FT', lcmdrc.residual_observer_state_t,
                                self.onResidualObserverState)
+        lcmUtils.addSubscriber('EXTERNAL_FORCE_TORQUE', lcmdrake.lcmt_external_force_torque,
+                               self.onExternalForceTorque)
+
+    def initializePublishChannels(self):
+
+        # maybe call it CONTACT_FILTER_POINT_ESTIMATE_PYTHON so that we can compare the results . . .
+        self.contactEstimatePublishChannel = "CONTACT_FILTER_POINT_ESTIMATE"
 
 
     def initializeConstants(self):
-        mu = 0.6
+        mu = MU
         self.frictionCone = np.array([[mu,-mu,0,0],
                                       [0,0,mu,-mu],
                                       [1,1,1,1]])
@@ -101,7 +120,7 @@ class ContactFilter(object):
 
     def initializeGurobiModel(self):
         # careful here, Mosek models leak memory apparently
-        numContactsList = [1]
+        numContactsList = [1,2,3]
         self.gurobi = contactfiltergurobi.ContactFilterGurobi(numContactsList=numContactsList)
 
 
@@ -117,8 +136,8 @@ class ContactFilter(object):
     # inside this need to setup and solve the QP . . .
     def computeSingleLikelihood(self, residual, cfpList):
         # do kinematics at the correct pose
-        q = self.getCurrentPose()
-        self.drakeModel.model.doKinematics(q, 0*q, False, False)
+        # q = self.getCurrentPose()
+        # self.drakeModel.model.doKinematics(q, 0*q, False, False)
 
         H_list = []
         for cfp in cfpList:
@@ -145,22 +164,123 @@ class ContactFilter(object):
             impliedResidual = impliedResidual + np.dot(H_list[idx], alphaVals[i,:])
 
 
-        exponentVal = -1/2.0*np.dot(np.dot((residual - impliedResidual).transpose(), self.weightMatrix),
+        squaredError = np.dot(np.dot((residual - impliedResidual).transpose(), self.weightMatrix),
                                     (residual - impliedResidual))
 
         # record the data somehow . . .
-        solnData = {'cfpData': cfpData, 'impliedResidual': impliedResidual, 'exponentVal': exponentVal}
+        solnData = {'cfpData': cfpData, 'impliedResidual': impliedResidual, 'squaredError': squaredError,
+                    "numContactPoints": len(cfpList), 'gurobiObjValue': grbSolnData['objectiveValue']}
         return solnData
 
-    def computeLikelihoodFull(self, residual):
-
-        for linkName, cfpList in self.contactFilterPointDict.iteritems():
-            for cfp in cfpList:
-                self.computeSingleLikelihood(residual, cfp)
+    def computeLikelihoodFull(self, residual, publish=True, verbose=False):
 
 
 
-        # should we publish or not . . .
+        q = self.getCurrentPose()
+        self.drakeModel.model.doKinematics(q, 0*q, False, False)
+
+        startTime = time.time()
+        # this stores the current measurement update information
+        self.measurementUpdateSolnDataList = []
+
+        if not self.doMultiContactEstimate:
+            for linkName, cfpList in self.contactFilterPointDict.iteritems():
+                for cfp in cfpList:
+                    self.measurementUpdateSolnDataList.append(self.computeSingleLikelihood(residual, [cfp]))
+
+
+        if self.doMultiContactEstimate:
+            activeLinkContactPointList = []
+            if len(self.linksWithExternalForce) == 0:
+                return
+
+            for linkName in self.linksWithExternalForce:
+                activeLinkContactPointList.append(self.contactFilterPointDict[linkName])
+
+            for cfpList in itertools.product(*activeLinkContactPointList):
+                solnData = self.computeSingleLikelihood(residual, cfpList)
+                self.measurementUpdateSolnDataList.append(solnData)
+
+        elapsedTime = time.time() - startTime
+        if verbose:
+            print "computing full likelihood took " + str(elapsedTime) + " seconds"
+
+
+        if publish:
+            self.publishMostLikelyEstimate()
+
+    # this is a test method
+    def computeAndPublishResidual(self, msg):
+        if not self.publishResidual:
+            return
+
+        residual = np.zeros((self.drakeModel.numJoints,))
+
+        # need to call doKinematics before we can use geometricJacobian
+        q = self.getCurrentPose()
+        self.drakeModel.model.doKinematics(q, 0*q, False, False)
+
+        for idx, linkName in enumerate(msg.body_names):
+            linkName = str(linkName)
+            wrench = np.array([msg.tx[idx], msg.ty[idx], msg.tz[idx], msg.fx[idx],
+                               msg.fy[idx],msg.fz[idx]])
+
+            bodyId = self.drakeModel.model.findLinkID(linkName)
+            linkJacobian = self.drakeModel.geometricJacobian(0, bodyId, bodyId,
+                                                         0, False)
+
+            residual = residual + np.dot(linkJacobian.transpose(), wrench)
+
+        self.trueResidual = residual
+
+        msg = lcmdrc.residual_observer_state_t()
+        msg.utime = self.currentUtime
+        msg.num_joints = self.drakeModel.numJoints
+        msg.joint_name = self.drakeModel.jointNames
+        msg.residual = residual
+        msg.gravity = 0*residual
+        msg.internal_torque = 0*residual
+        msg.foot_contact_torque = 0*residual
+
+        lcmUtils.publish("TRUE_RESIDUAL", msg)
+
+
+    def publishMostLikelyEstimate(self):
+
+        mostLikelySolnData = self.measurementUpdateSolnDataList[0]
+
+        for solnData in self.measurementUpdateSolnDataList:
+            if solnData['gurobiObjValue'] < mostLikelySolnData['gurobiObjValue']:
+                mostLikelySolnData = solnData
+
+        self.mostLikelySolnData = mostLikelySolnData # store this for debugging
+        self.publishEstimate(mostLikelySolnData)
+
+
+    # currently only support single contact
+    def publishEstimate(self, solnData):
+        msg = lcmdrc.contact_filter_estimate_t()
+        msg.num_contact_points = solnData['numContactPoints']
+
+        msg.num_velocities = self.drakeModel.numJoints
+        msg.logLikelihood = solnData['gurobiObjValue']
+        msg.velocity_names = self.drakeModel.jointNames
+        msg.implied_residual = solnData['impliedResidual']
+
+        msg.single_contact_estimate = [None]*msg.num_contact_points
+        for i in xrange(0, msg.num_contact_points):
+            msg.single_contact_estimate[i] = self.msgFromSolnCFPData(solnData['cfpData'][i])
+
+        lcmUtils.publish(self.contactEstimatePublishChannel, msg)
+
+    def msgFromSolnCFPData(self, d):
+        msg = lcmdrc.single_contact_filter_estimate_t()
+        msg.body_name = d['ContactFilterPoint']['linkName']
+        msg.contact_force = d['force']
+        msg.contact_normal = d['ContactFilterPoint']['contactNormal']
+        msg.contact_position = d['ContactFilterPoint']['contactLocation']
+
+        return msg
 
 
     def getCurrentPose(self):
@@ -168,19 +288,38 @@ class ContactFilter(object):
 
 
     def onResidualObserverState(self, msg):
+        self.currentUtime = msg.utime
         msgJointNames = msg.joint_name
         msgData = msg.residual
 
         residual = self.drakeModel.extractDataFromMessage(msgJointNames, msgData)
         self.residual = residual
 
-        # self.computeLikelihoodFull(residual)
+        if self.running:
+            self.computeLikelihoodFull(residual)
 
-    def testLikelihood(self):
+    def onExternalForceTorque(self, msg):
+        self.linksWithExternalForce = [str(linkName) for linkName in msg.body_names]
+        self.computeAndPublishResidual(msg)
+
+
+    def testLikelihood(self, numContacts = 2):
         cfpList = [self.contactFilterPointDict['pelvis'][0]]
+
+        if numContacts > 1:
+            cfpList = self.contactFilterPointDict['pelvis'][0:numContacts]
+
         residual = np.zeros(self.drakeModel.numJoints)
+        # since we aren't calling it via computeLikelihoodFull we need to manually call doKinematics
+        q = self.getCurrentPose()
+        self.drakeModel.model.doKinematics(q, 0*q, False, False)
         solnData = self.computeSingleLikelihood(residual, cfpList)
+
         return solnData
+
+    def testLikelihoodFull(self):
+        residual = np.zeros(self.drakeModel.numJoints)
+        self.computeLikelihoodFull(residual, verbose=True)
 
 
 class PythonDrakeModel(object):
@@ -188,6 +327,7 @@ class PythonDrakeModel(object):
     def __init__(self):
         self.loadRobotModelFromURDFFilename()
         self.jointMap = self.getJointMap()
+        self.jointNames = self.model.getJointNames()
 
 
     def loadRobotModelFromURDFFilename(self, filename=None):
