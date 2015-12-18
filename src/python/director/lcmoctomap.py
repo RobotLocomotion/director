@@ -98,6 +98,8 @@ class OctomapManager(object):
         if enabled and not self.subscriber:
             #self.subscriber = lcmUtils.addSubscriber('LCMGL.*', callback=self.onMessage)
             self.subscriber = lcmUtils.addSubscriber('OCTOMAP', callback=self.onMessage)
+            self.subscriber = lcmUtils.addSubscriber('OCTOMAP_REF', callback=self.onMessage)
+            self.subscriber = lcmUtils.addSubscriber('OCTOMAP_IN', callback=self.onMessage)
         elif not enabled and self.subscriber:
             lcmUtils.removeSubscriber(self.subscriber)
             self.subscriber = None
