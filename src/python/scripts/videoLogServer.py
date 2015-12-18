@@ -13,8 +13,7 @@ import numpy as np
 from director import lcmspy as spy
 
 
-VIDEO_LCM_URL = 'udpm://239.255.76.50:7650?ttl=1'
-
+VIDEO_LCM_URL = os.getenv('VIDEO_LCM_URL', 'udpm://239.255.76.50:7650?ttl=1')
 
 class FieldData(object):
 
@@ -249,7 +248,7 @@ class ServerThread(object):
 class LogSyncThread(object):
 
     def __init__(self, sharedUtimeMap):
-
+        print 'Creating control class'
         self.sharedUtimeMap = sharedUtimeMap
         self.utimes = None
         self.logLookup = LogLookup()
@@ -281,7 +280,6 @@ class LogSyncThread(object):
 
 
     def onFrameRequest(self, utimeRequest):
-
         if self.logLookup.utimeMap is None:
 
             self.logLookup.setUtimeMap(dict(self.sharedUtimeMap))
@@ -308,7 +306,6 @@ class LogSyncThread(object):
 
 
     def onControlMessage(self, channel, msgBytes):
-
         if self.getLastPublishElapsedTime() > self.publishFrequency:
             msg = spy.decodeMessage(msgBytes)
             self.onFrameRequest(msg.utime)
