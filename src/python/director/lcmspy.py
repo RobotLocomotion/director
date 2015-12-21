@@ -98,7 +98,7 @@ def onLCMMessage(channel, messageBytes, checkExistingChannel=False):
 def getArrayFieldInfo(value):
 
     if not len(value):
-        return 'empty'
+        return 'empty', None
 
     value = value[0]
 
@@ -140,7 +140,7 @@ def printMessageFields(msg, indent=''):
             printMessageFields(messageValue, indent + '  ')
 
         elif type(value) in messageTypeToModule:
-            print getMessageFullName(value)
+            print ':', getMessageFullName(value)
             printMessageFields(value, indent + '  ')
         else:
             print ':', type(value)
