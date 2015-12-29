@@ -241,9 +241,13 @@ class EndEffectorTeleopPanel(object):
         self.updateConstraints()
 
     def lfootComboChanged(self):
+        if self.getLFootConstraint() in ['sliding', 'fixed']:
+            self.setRFootConstraint(self.getLFootConstraint())
         self.updateConstraints()
 
     def rfootComboChanged(self):
+        if self.getRFootConstraint() in ['sliding', 'fixed']:
+            self.setLFootConstraint(self.getRFootConstraint())
         self.updateConstraints()
 
     def leftFootExecutionSupportCheckboxChanged(self):
@@ -447,14 +451,18 @@ class EndEffectorTeleopPanel(object):
             elif self.getLFootConstraint() == 'constrained':
                 constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, ikPlanner.leftFootLink, tspan=[1.0, 1.0]))
             elif self.getLFootConstraint() == 'sliding':
-                constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[:2])
+                if not self.getCheckboxState(self.ui.finalPosePlanningOptions):
+                    constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[:2])
 
             if self.getRFootConstraint() == 'fixed':
                 constraints.append(ikPlanner.createFixedLinkConstraints(startPoseName, ikPlanner.rightFootLink, tspan=[0.0, 1.0], lowerBound=-0.0001*np.ones(3), upperBound=0.0001*np.ones(3), angleToleranceInDegrees=0.1))
             elif self.getRFootConstraint() == 'constrained':
                 constraints.extend(ikPlanner.createSixDofLinkConstraints(startPoseName, ikPlanner.rightFootLink, tspan=[1.0, 1.0]))
             elif self.getRFootConstraint() == 'sliding':
-                constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
+                if self.getCheckboxState(self.ui.finalPosePlanningOptions):
+                    constraints.extend(ikPlanner.createFeetTogetherConstraint(startPoseName))
+                else:
+                    constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
 
 
             if self.getBackConstraint() == 'fixed':
@@ -763,6 +771,8 @@ class EndEffectorTeleopPanel(object):
                   QtGui.QMessageBox.Ok)
             self.setCheckboxState(self.ui.finalPosePlanningOptions, False)
             return
+        self.setBackConstraint('free')
+        self.setBaseConstraint('free')
         pelvisFrame = self.panel.ikPlanner.robotModel.getLinkFrame(self.panel.ikPlanner.pelvisLink)
         t = transformUtils.copyFrame(pelvisFrame)
         t.PreMultiply()
