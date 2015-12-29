@@ -518,6 +518,22 @@ class MapServerSource(TimerCallback):
     def getSceneHeightData(self):
         return self.getDepthMapData(lcmdrc.data_request_t.HEIGHT_MAP_SCENE)
 
+    def getOctreeWorkspaceData(self):
+        return self.getPointCloudData(lcmdrc.data_request_t.OCTREE_WORKSPACE)
+
+    def getPointCloudData(self, viewId):
+
+        mapId = self.reader.GetCurrentMapId(viewId)
+        if mapId < 0:
+            return None, None
+
+        polyData = vtk.vtkPolyData()
+        self.reader.GetDataForMapId(viewId, mapId, polyData)
+
+        points = vnp.getNumpyFromVtk(polyData, 'Points')
+
+        return points
+
     def getDepthMapData(self, viewId):
 
         mapId = self.reader.GetCurrentMapId(viewId)
