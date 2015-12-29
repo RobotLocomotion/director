@@ -7,6 +7,7 @@ import types
 import functools
 import random
 import numpy as np
+from vtk.util.numpy_support import vtk_to_numpy
 
 from director import transformUtils
 from director import lcmUtils
@@ -22,6 +23,7 @@ from director import robotstate
 from director import planplayback
 from director import segmentation
 from director import drcargs
+from ddapp.perception import MapServerSource
 
 from director import ik
 from director.ikparameters import IkParameters
@@ -107,9 +109,19 @@ class ConstraintSet(object):
             eeName = self.ikPlanner.handModels[0].handLinkName
         else:
             eeName = self.ikPlanner.handModels[1].handLinkName
-        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
-        eePose = np.concatenate(transformUtils.poseFromTransform(eeTransform))
-        self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, side, eeName, eePose, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters)
+        polyData = vtk.vtkPolyData()
+        view = app.getDRCView()
+        mapServerSource = om.findObjectByName('Map Server').source
+        pointCloud = mapServerSource.getOctreeWorkspaceData()
+        if pointCloud == (None, None):
+            self.endPose = []
+            self.info = 13
+            print 'No point cloud data found'
+        else:
+            pointCloud = np.transpose(pointCloud)
+            ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+            eePose = np.concatenate(transformUtils.poseFromTransform(eeTransform))
+            self.endPose, self.info = self.ikPlanner.ikServer.searchFinalPose(self.constraints, side, eeName, eePose, nominalPoseName, drcargs.getDirectorConfig()['capabilityMapFile'], ikParameters, pointCloud)
         if self.info == 1:
             self.ikPlanner.addPose(self.endPose, 'reach_end')
         print 'info:', self.info
@@ -451,6 +463,41 @@ class IKPlanner(object):
             constraints.append(p)
             constraints.append(g)
             #constraints.append(WorldFixedBodyPoseConstraint(linkName=linkName))
+
+        return constraints
+
+    def createFeetTogetherConstraint(self, startPose):
+
+#        constraints = []
+#        for linkName in [self.leftFootLink, self.rightFootLink]:
+#
+#            linkFrame = self.getLinkFrameAtPose(linkName, startPose)
+#
+#            p = ik.PositionConstraint(linkName=linkName, referenceFrame=linkFrame)
+#            p.lowerBound = [-np.inf, -np.inf, 0.0]
+#            p.upperBound = [np.inf, np.inf, 0.0]
+#
+#            constraints.append(p)
+
+        constraints = self.createSlidingFootConstraints(startPose)
+
+        lfootToWorld = self.getLinkFrameAtPose(self.leftFootLink, startPose)
+        rfootToWorld = self.getLinkFrameAtPose(self.rightFootLink, startPose)
+        worldToRfoot = rfootToWorld.GetLinearInverse()
+        lFootToRfoot = transformUtils.concatenateTransforms([lfootToWorld, worldToRfoot])
+        position, quaternion = transformUtils.poseFromTransform(lFootToRfoot)
+
+        p = ik.RelativePositionConstraint()
+        p.bodyNameA = self.leftFootLink
+        p.bodyNameB = self.rightFootLink
+        p.lowerBound = position
+        p.upperBound = position
+        constraints.append(p)
+        q = ik.RelativeQuaternionConstraint()
+        q.quaternion = quaternion
+        q.bodyNameA = self.leftFootLink
+        q.bodyNameB = self.rightFootLink
+        constraints.append(q)
 
         return constraints
 

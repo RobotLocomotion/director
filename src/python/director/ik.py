@@ -409,7 +409,7 @@ class AsyncIKCommunicator():
         commands.append('s = s.removeAffordanceFromLink(\'%s\', \'%s\');' % (linkName, affordanceName))
         self.comm.sendCommands(commands)
     
-    def searchFinalPose(self, constraints, side, eeName, eePose, nominalPoseName, capabilityMapFile, ikParameters):
+    def searchFinalPose(self, constraints, side, eeName, eePose, nominalPoseName, capabilityMapFile, ikParameters, pointCloud):
         commands = []
         commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
         constraintNames = []
@@ -439,10 +439,14 @@ class AsyncIKCommunicator():
         commands.append('ikoptions = ikoptions.setMajorIterationsLimit({:d});'.format(ikParameters.majorIterationsLimit))
         commands.append('ikoptions = ikoptions.setQ(Q);')
         commands.append('ikoptions = ikoptions.setMajorOptimalityTolerance({:f});' .format(ikParameters.majorOptimalityTolerance))
-#        commands.append('{:s}'.format(ConstraintBase.toColumnVectorString(xGoal)))
         commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}, additional_constraints,'
-                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions, \'graspinghand\', \'{:s}\');'.format(ConstraintBase.toColumnVectorString(eePose), nominalPoseName, side))
-        commands.append('[x_goal, info] = fpp.findFinalPose();')
+                        '{:s}, capability_map, ikoptions, \'graspinghand\', \'{:s}\', \'verbose\', true);'.format(ConstraintBase.toColumnVectorString(eePose), nominalPoseName, side))
+        pcFileName = os.path.dirname(drcargs.args().directorConfigFile) + '/pointCloudFile.bin'
+        pcFile = open(pcFileName, 'wb')
+        pointCloud = np.ascontiguousarray(pointCloud)
+        pointCloud.astype('float32').tofile(pcFile)
+        commands.append('point_cloud = fread(fopen(\'{:s}\'), {:s}, \'float32\')\';'.format(pcFileName, ConstraintBase.toRowVectorString(pointCloud.T.shape)))
+        commands.append('[x_goal, info] = fpp.findFinalPose(point_cloud);')
         self.comm.sendCommands(commands)
         
         info = self.comm.getFloatArray('info')[0]
@@ -452,4 +456,3 @@ class AsyncIKCommunicator():
             endPose = []
 
         return endPose, info
-#        commands.append(
