@@ -87,7 +87,17 @@ class ConstraintSet(object):
             nominalPoseName = self.startPoseName
 
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
-        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
+
+        if getIkOptions().getPropertyEnumValue('Use collision') == 'RRT*':
+            mapServerSource = om.findObjectByName('Map Server').source
+            pointCloud = mapServerSource.getOctreeWorkspaceData()
+            if pointCloud == (None, None):
+                self.plan = []
+                print 'No point cloud data found'
+            else:
+                self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters, pointCloud = pointCloud)
+        else:
+            self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
 
         return self.plan
 
@@ -109,8 +119,7 @@ class ConstraintSet(object):
             eeName = self.ikPlanner.handModels[0].handLinkName
         else:
             eeName = self.ikPlanner.handModels[1].handLinkName
-        polyData = vtk.vtkPolyData()
-        view = app.getDRCView()
+
         mapServerSource = om.findObjectByName('Map Server').source
         pointCloud = mapServerSource.getOctreeWorkspaceData()
         if pointCloud == (None, None):
@@ -1398,7 +1407,7 @@ class IKPlanner(object):
         ikParameters.fillInWith(self.defaultIkParameters)
         return ikParameters
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None, pointCloud = None):
 
         if (self.pushToMatlab is False):
             self.lastManipPlan, info = self.plannerPub.processTraj(constraints,endPoseName=poseEnd, nominalPoseName=nominalPoseName,seedPoseName=poseStart, additionalTimeSamples=self.additionalTimeSamples)
@@ -1406,7 +1415,7 @@ class IKPlanner(object):
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
             listener = self.getManipPlanListener()
             info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples,
-                                           graspToHandLinkFrame=self.newGraspToHandFrame(ikParameters.rrtHand))
+                                           graspToHandLinkFrame=self.newGraspToHandFrame(ikParameters.rrtHand), pointCloud = pointCloud)
             self.lastManipPlan = listener.waitForResponse(timeout=12000)
             listener.finish()
 

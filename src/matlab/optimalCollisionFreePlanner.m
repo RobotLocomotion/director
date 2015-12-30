@@ -14,15 +14,17 @@ classdef optimalCollisionFreePlanner
     qNom
     goalConstraints
     graspingHand
+    point_cloud
   end
   
   methods
     
-    function obj = optimalCollisionFreePlanner(robot, qStart, xGoal, options, additionalConstraints, objectGrasped)
-      if nargin < 5
+    function obj = optimalCollisionFreePlanner(robot, qStart, xGoal, options, ...
+        point_cloud, additionalConstraints, objectGrasped)
+      if nargin < 6
         additionalConstraints = {};
       end
-      if nargin < 6
+      if nargin < 7
         objectGrasped = false;
       end
 
@@ -82,6 +84,7 @@ classdef optimalCollisionFreePlanner
       obj.xGoal = xGoal;
       obj.graspingHand = options.graspingHand;
       obj.point_in_link_frame = options.point_in_link_frame;
+      obj.point_cloud = point_cloud;
       
       kinsol = obj.robot.doKinematics(obj.qStart);
       obj.xStart = [obj.robot.forwardKin(kinsol, obj.endEffectorId, obj.point_in_link_frame, 2); obj.qStart];
@@ -140,7 +143,7 @@ classdef optimalCollisionFreePlanner
     function [xGoalFull, info] = findFinalPose(obj)
       capability_map_file = [getDrakePath(), '/../../control/matlab/data/val_description/capabilityMap.mat'];
       cm = CapabilityMap(capability_map_file);
-      finalPose = FinalPoseProblem(obj.robot, obj.endEffectorId, obj.xStart, obj.xGoal, ...
+      finalPose = FinalPosePlanner(obj.robot, obj.endEffectorId, obj.xStart, obj.xGoal, ...
         obj.additionalConstraints, obj.goalConstraints, obj.qNom, ...
         'capabilityMap', cm, 'graspinghand', obj.graspingHand, ...
         'activecollisionoptions', obj.activeCollisionOptions, ...
@@ -150,8 +153,8 @@ classdef optimalCollisionFreePlanner
     end
     
     function [xtraj, info] = findCollisionFreeTraj(obj,xGoal)
-      multiTree = MultipleTreeProblem(obj.robot, obj.endEffectorId, obj.xStart, obj.xGoal, [],...
-        obj.additionalConstraints, obj.qNom,...
+      multiTree = MultipleTreePlanner(obj.robot, obj.endEffectorId, obj.xStart, obj.xGoal, [],...
+        obj.additionalConstraints, obj.qNom, obj.point_cloud, ...
         'ikoptions', obj.ikoptions, 'endeffectorpoint', obj.point_in_link_frame);
       kinsol = obj.robot.doKinematics(xGoal);
       eePose = obj.robot.forwardKin(kinsol, obj.endEffectorId, obj.point_in_link_frame, 2);
