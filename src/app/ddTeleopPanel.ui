@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>teleopPanel</class>
- <widget class="QWidget" name="teleopPanel">
+ <class>moveFootDownButton</class>
+ <widget class="QWidget" name="moveFootDownButton">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>421</width>
+    <width>432</width>
     <height>1030</height>
    </rect>
   </property>
@@ -34,9 +34,6 @@
     <widget class="QPushButton" name="planButton">
      <property name="text">
       <string>Plan</string>
-     </property>
-     <property name="shortcut">
-      <string>Ctrl+Shift+P</string>
      </property>
     </widget>
    </item>
@@ -169,14 +166,7 @@
       <number>2</number>
      </property>
      <layout class="QGridLayout" name="gridLayout_8">
-      <item row="1" column="2">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>back</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="4">
+      <item row="0" column="5">
        <spacer name="horizontalSpacer_12">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -192,7 +182,14 @@
         </property>
        </spacer>
       </item>
-      <item row="2" column="3" colspan="2">
+      <item row="1" column="3">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>back</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="4" colspan="2">
        <widget class="QComboBox" name="lfootCombo">
         <item>
          <property name="text">
@@ -225,7 +222,7 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="3" colspan="2">
+      <item row="3" column="4" colspan="2">
        <widget class="QComboBox" name="rfootCombo">
         <item>
          <property name="text">
@@ -244,7 +241,7 @@
         </item>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="3" column="2">
        <widget class="QComboBox" name="rhandCombo">
         <item>
          <property name="text">
@@ -278,7 +275,7 @@
         </item>
        </widget>
       </item>
-      <item row="2" column="5">
+      <item row="2" column="6">
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -291,7 +288,7 @@
         </property>
        </spacer>
       </item>
-      <item row="1" column="3" colspan="2">
+      <item row="1" column="4" colspan="2">
        <widget class="QComboBox" name="backCombo">
         <item>
          <property name="text">
@@ -317,14 +314,14 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="2">
+      <item row="2" column="3">
        <widget class="QLabel" name="label_5">
         <property name="text">
          <string>l_foot</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="0" colspan="4">
+      <item row="0" column="0" colspan="5">
        <layout class="QGridLayout" name="gridLayout">
         <item row="0" column="1">
          <widget class="QPushButton" name="updateIkButton">
@@ -355,7 +352,7 @@
         </item>
        </layout>
       </item>
-      <item row="2" column="1">
+      <item row="2" column="2">
        <widget class="QComboBox" name="lhandCombo">
         <item>
          <property name="text">
@@ -389,7 +386,7 @@
         </item>
        </widget>
       </item>
-      <item row="6" column="0" colspan="5">
+      <item row="6" column="0" colspan="6">
        <widget class="QGroupBox" name="finalPosePlanningOptions">
         <property name="enabled">
          <bool>true</bool>
@@ -407,7 +404,7 @@
          <item>
           <widget class="QFrame" name="frame_6">
            <property name="enabled">
-            <bool>true</bool>
+            <bool>false</bool>
            </property>
            <property name="acceptDrops">
             <bool>false</bool>
@@ -460,7 +457,7 @@
         </layout>
        </widget>
       </item>
-      <item row="5" column="0" colspan="5">
+      <item row="5" column="0" colspan="6">
        <widget class="QGroupBox" name="paramsContainer">
         <property name="title">
          <string>Advanced Options</string>
@@ -590,14 +587,14 @@
         </layout>
        </widget>
       </item>
-      <item row="3" column="2">
+      <item row="3" column="3">
        <widget class="QLabel" name="label_6">
         <property name="text">
          <string>r_foot</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="1" column="2">
        <widget class="QComboBox" name="baseCombo">
         <item>
          <property name="text">
@@ -630,6 +627,36 @@
          </property>
         </item>
        </widget>
+      </item>
+      <item row="7" column="0" colspan="7">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QPushButton" name="moveFootUpButton">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Move Foot Up</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Move Foot Down</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
