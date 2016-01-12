@@ -631,7 +631,7 @@
       <item row="7" column="0" colspan="7">
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="QPushButton" name="moveFootUpButton">
+         <widget class="QPushButton" name="lFootUpButton">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -639,12 +639,19 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Move Foot Up</string>
+           <string>Lfoot Up</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="rFootUpButton">
+          <property name="text">
+           <string>Rfoot Up</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="lFootDownButton">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -652,7 +659,14 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Move Foot Down</string>
+           <string>Lfoot Down</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="rFootDownButton">
+          <property name="text">
+           <string>Rfoot Down</string>
           </property>
          </widget>
         </item>
