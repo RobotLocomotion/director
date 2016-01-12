@@ -591,20 +591,6 @@
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
-             <widget class="QPushButton" name="rFootUpButton">
-              <property name="text">
-               <string>Rfoot Up</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="rFootDownButton">
-              <property name="text">
-               <string>Rfoot Down</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QPushButton" name="lFootUpButton">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -627,6 +613,20 @@
               </property>
               <property name="text">
                <string>Lfoot Down</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="rFootUpButton">
+              <property name="text">
+               <string>Rfoot Up</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="rFootDownButton">
+              <property name="text">
+               <string>Rfoot Down</string>
               </property>
              </widget>
             </item>
