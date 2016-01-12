@@ -4,6 +4,7 @@ from director.simpletimer import SimpleTimer
 from director.timercallback import TimerCallback
 import subprocess
 import os
+import sys
 
 class LCMLoggerWidget(object):
 
@@ -124,6 +125,7 @@ class LCMLoggerWidget(object):
             newEnv = dict(os.environ)
             newEnv['LCM_DEFAULT_URL'] = newEnv['LCM_REVIEW_DEFAULT_URL']
             devnull = open(os.devnull, 'w')
-            subprocess.Popen('director', stdout=devnull, stderr=devnull, env=newEnv)
+            # Pass entire command line invocation of director to subprocess including cfg and json paths
+            subprocess.Popen(sys.argv, stdout=devnull, stderr=devnull, env=newEnv)
             subprocess.Popen(['lcm-logplayer-gui', self.lastActiveLogFile], stdout=devnull, stderr=devnull, env=newEnv)
             subprocess.Popen(['bot-procman-sheriff', '-o'], stdout=devnull, stderr=devnull, env=newEnv)
