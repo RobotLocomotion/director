@@ -404,7 +404,7 @@
          <item>
           <widget class="QFrame" name="frame_6">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="acceptDrops">
             <bool>false</bool>
@@ -446,6 +446,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="searchFinalPoseButton">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
               <property name="text">
                <string>Search Final Pose</string>
               </property>
