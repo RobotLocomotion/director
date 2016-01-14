@@ -910,7 +910,7 @@ class JointLimitChecker(object):
                    'then the joint limit checker will be disabled (use the Tools menu to re-enable).'
 
         choice = QtGui.QMessageBox.warning(app.getMainWindow(), 'Joint Limit Exceeded', message,
-                  QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
+                  QtGui.QMessageBox.Yes | QtGui.QMessageBox.Nr,
                   QtGui.QMessageBox.Yes)
 
         if choice == QtGui.QMessageBox.No:
