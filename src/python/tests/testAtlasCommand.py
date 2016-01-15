@@ -781,7 +781,7 @@ def debugMain():
     ConsoleApp.start()
 
 
-def robotMain(useDrivingGains=False, useController=True):
+def robotMain(useDrivingGains=False, useController=False):
 
     print 'waiting for robot state...'
     commandStream.waitForRobotState()
