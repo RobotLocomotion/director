@@ -1061,7 +1061,7 @@ class ContinousWalkingDemo(object):
         lcmUtils.publish('SCS_API_CONTROL', msg)
 
 
-    def disableJointChecker(self):
+    def autoExtendJointLimits(self):
         self.jointLimitChecker.automaticallyExtendLimits = True
 
     def executeManipPlan(self):
@@ -1214,7 +1214,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
 
         # prep
         prep = self.taskTree.addGroup('Preparation')
-        addFunc(functools.partial(cw.disableJointChecker), 'disable joint checker', parent=prep)
+        addFunc(functools.partial(cw.autoExtendJointLimits), 'auto extend joint limits', parent=prep)
         addTask(rt.SetArmsPosition(name='set arms position'), parent=prep)
         addFunc(functools.partial(cw.executeManipPlan), 'execute arms plan', parent=prep)
         addTask(rt.SetNeckPitch(name='set neck position', angle=50), parent=prep)
