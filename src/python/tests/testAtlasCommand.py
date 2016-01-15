@@ -102,70 +102,6 @@ def drakePoseToQPInput(pose, atlasVersion=5):
     return msg
 
 
-def getJointGroups():
-    return [
-        { "name" : "Back",
-          "joints" : [
-            "back_bkx",
-            "back_bky",
-            "back_bkz"
-            ],
-          "labels" : ["x", "y", "z"]
-        },
-
-        { "name" : "Left Arm",
-          "joints" : [
-            "l_arm_shz",
-            "l_arm_shx",
-            "l_arm_ely",
-            "l_arm_elx",
-            "l_arm_uwy",
-            "l_arm_mwx",
-            "l_arm_lwy",
-            ],
-          "labels" : ["shz", "shx", "ely", "elx", "uwy", "mwx", "lwy"]
-        },
-
-        { "name" : "Right Arm",
-          "joints" : [
-            "r_arm_shz",
-            "r_arm_shx",
-            "r_arm_ely",
-            "r_arm_elx",
-            "r_arm_uwy",
-            "r_arm_mwx",
-            "r_arm_lwy",
-            ],
-          "labels" : ["shz", "shx", "ely", "elx", "uwy", "mwx", "lwy"]
-        },
-
-        { "name" : "Left Leg",
-          "joints" : [
-            "l_leg_hpx",
-            "l_leg_hpy",
-            "l_leg_hpz",
-            "l_leg_kny",
-            "l_leg_akx",
-            "l_leg_aky"
-            ],
-          "labels" : ["hpx", "hpy", "hpz", "knee", "akx", "aky"]
-        },
-
-        { "name" : "Right Leg",
-          "joints" : [
-            "r_leg_hpx",
-            "r_leg_hpy",
-            "r_leg_hpz",
-            "r_leg_kny",
-            "r_leg_akx",
-            "r_leg_aky"
-            ],
-          "labels" : ["hpx", "hpy", "hpz", "knee", "akx", "aky"]
-        }
-      ]
-
-
-
 class AtlasCommandStream(object):
 
     def __init__(self):
@@ -570,6 +506,10 @@ class JointTeleopPanel(object):
             groupName = group['name']
             joints = group['joints']
             labels = group['labels']
+
+            if groupName.lower() == 'base':
+                continue
+
             if len(labels) != len(joints):
                 print 'error, joints/labels mismatch for joint group:', name
                 continue
@@ -695,7 +635,8 @@ class AtlasCommandPanel(object):
         self.view = self.app.createView()
         self.robotSystem = robotsystem.create(self.view)
 
-        jointGroups = getJointGroups()
+        self.config = drcargs.getDirectorConfig()
+        jointGroups = self.config['teleopJointGroups']
         self.jointTeleopPanel = JointTeleopPanel(self.robotSystem, jointGroups)
         self.jointCommandPanel = JointCommandPanel(self.robotSystem)
 
