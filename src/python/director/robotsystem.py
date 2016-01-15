@@ -147,7 +147,7 @@ class RobotSystem(object):
             affordanceManager.collection.sendEchoRequest()
             segmentation.affordanceManager = affordanceManager
 
-            plannerPub = plannerPublisher.PlannerPublisher(ikPlanner,affordanceManager)
+            plannerPub = plannerPublisher.PlannerPublisher(ikPlanner,affordanceManager,ikRobotModel)
             ikPlanner.setPublisher(plannerPub)
 
             # This joint angle is mapped to the Multisense panel
