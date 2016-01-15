@@ -166,7 +166,6 @@ classdef optimalCollisionFreePlanner
         xtraj = PPTrajectory(pchip(linspace(0, 1, path_length), [q_path(8:end,:); zeros(obj.robot.getNumVelocities(), size(q_path,2))] ));
       else
         xtraj = [];
-        info = 13;
       end
     end
     
