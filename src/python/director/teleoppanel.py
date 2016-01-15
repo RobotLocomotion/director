@@ -909,12 +909,18 @@ class JointLimitChecker(object):
         message += 'Would to like to update the joint limits used by the planning robot model?  If you select no '\
                    'then the joint limit checker will be disabled (use the Tools menu to re-enable).'
 
-        choice = QtGui.QMessageBox.warning(app.getMainWindow(), 'Joint Limit Exceeded', message,
-                  QtGui.QMessageBox.Yes | QtGui.QMessageBox.No,
-                  QtGui.QMessageBox.Yes)
+        msgBox = QtGui.QMessageBox()
+        msgBox.setText(message)
+        msgBox.addButton(QtGui.QPushButton('No'), QtGui.QMessageBox.NoRole)
+        msgBox.addButton(QtGui.QPushButton('Yes'), QtGui.QMessageBox.YesRole)
+        msgBox.addButton(QtGui.QPushButton('Yes, then auto'), QtGui.QMessageBox.HelpRole)
+        choice = msgBox.exec_()
 
-        if choice == QtGui.QMessageBox.No:
+        if choice == 0: # No
             self.stop()
+        elif choice == 2: # Yes, then auto
+            self.automaticallyExtendLimits = True
+            self.extendJointLimitsAsExceeded(limitData)
         else:
             self.extendJointLimitsAsExceeded(limitData)
 

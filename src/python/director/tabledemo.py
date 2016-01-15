@@ -389,7 +389,7 @@ class TableDemo(object):
         newPlan = self.ikPlanner.computePostureGoal(startPose, endPose)
         self.addPlan(newPlan)
         
-    def disableJointChecker(self):
+    def autoExtendJointLimits(self):
         self.jointLimitChecker.automaticallyExtendLimits = True
 
     def planLowerArm(self, side = 'default'):
@@ -1499,7 +1499,7 @@ class TableTaskPanel(TaskUserPanel):
                 addFunc(v.prepGetSceneFrame, 'capture scene frame', parent=prep)
                 addFunc(v.prepKukaLabScene, 'prep kuka lab scene', parent=prep)
         else:
-            addFunc(v.disableJointChecker, 'disable joint checker', parent =  prep)
+            addFunc(v.autoExtendJointLimits, 'auto extend joint limits', parent=prep)
             addFunc(v.createCollisionPlanningScene, 'prep from file', parent=prep)
             if v.planner != 'RRT*':
                 addTask(rt.CloseHand(name='close grasp hand', side=side), parent=prep)
