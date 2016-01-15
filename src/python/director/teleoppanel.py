@@ -904,7 +904,7 @@ class JointLimitChecker(object):
 
     def notifyUserDialog(self, limitData):
 
-        message = '\n'.join(['%s by %.2f degrees' % (name, np.degrees(epsilon)) for name, epsilon in limitData])
+        message = '\n'.join(['%s by %.2f degrees' % (name, np.degrees(epsilon)) for name, epsilon, jointPosition in limitData])
         message = 'The following joints have been detected to exceed joint limts specified by the model:\n\n' + message + '\n\n'
         message += 'Would to like to update the joint limits used by the planning robot model?  If you select no '\
                    'then the joint limit checker will be disabled (use the Tools menu to re-enable).'
@@ -928,13 +928,14 @@ class JointLimitChecker(object):
     def extendJointLimitsAsExceeded(self, limitData):
 
         # inflate the epsilon
-        limitData = [(jointName, epsilon+np.sign(epsilon)*self.inflationAmount) for jointName, epsilon in limitData]
+        limitData = [(jointName, epsilon+np.sign(epsilon)*self.inflationAmount, jointPosition) for jointName, epsilon, jointPosition in limitData]
 
         # update limits on server
         panel.ikPlanner.ikServer.updateJointLimits(limitData)
+        panel.ikPlanner.plannerPub.updateJointLimits(limitData)
 
         # update limits on checker
-        for jointName, epsilon in limitData:
+        for jointName, epsilon, jointPosition in limitData:
             limitsArray = self.jointLimitsMin if epsilon < 0 else self.jointLimitsMax
             limitsArray[self.toJointIndex(jointName)] += epsilon
 
@@ -949,7 +950,7 @@ class JointLimitChecker(object):
             if not (jointMin <= jointPosition <= jointMax):
                 epsilon = jointPosition - np.clip(jointPosition, jointMin, jointMax)
                 #print 'detected joint outside limit:', jointName, ' by %.3f degrees' % np.degrees(epsilon)
-                limitData.append((jointName, epsilon))
+                limitData.append((jointName, epsilon, jointPosition))
 
         return limitData
 

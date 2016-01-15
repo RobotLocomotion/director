@@ -15,14 +15,28 @@ import drc as lcmdrc
 import json
 from director.utime import getUtime
 from director import lcmUtils
+from director import robotstate
 
 
 class PlannerPublisher(object):
 
-  def __init__(self, ikPlanner, affordanceMan):
+  def __init__(self, ikPlanner, affordanceMan,robotModel):
     self.ikPlanner = ikPlanner
     self.affordanceManager = affordanceMan
     self.poses={}
+    self.robotModel=robotModel
+    self.jointLimits={}
+    for jointName in robotstate.getDrakePoseJointNames():
+       self.jointLimits[jointName]= [self.robotModel.model.getJointLimits(jointName)[0],self.robotModel.model.getJointLimits(jointName)[1]]
+
+  def updateJointLimits(self, limitData):
+    for jointName, epsilon, jointPosition in limitData:
+        if epsilon < 0:
+            self.jointLimits[jointName][0]=jointPosition
+        else:
+            self.jointLimits[jointName][1]=jointPosition
+    print limitData
+    print self.jointLimits
 
   def setupMessage(self, constraints, endPoseName="", nominalPoseName="", seedPoseName="", additionalTimeSamples=None):
     poses = ikconstraintencoder.getPlanPoses(constraints, self.ikPlanner)
@@ -39,6 +53,7 @@ class PlannerPublisher(object):
     opt=ikplanner.getIkOptions()._properties
     if additionalTimeSamples:
       opt.update({'timeSamples':additionalTimeSamples})
+    opt['jointLimits']=self.jointLimits
     msg.options = json.dumps(opt)
     return msg
 
