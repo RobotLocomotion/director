@@ -345,12 +345,13 @@ class EndEffectorTeleopPanel(object):
 
 
     def updateCollisionEnvironment(self):
-        affs = self.panel.affordanceManager.getCollisionAffordances()
-        if not affs:
-            self.panel.ikPlanner.ikServer.clearEnvironment()
-        else:
-            urdfStr = affordanceurdf.urdfStringFromAffordances(affs)
-            self.panel.ikPlanner.ikServer.setEnvironment(urdfStr)
+        if ~self.getCheckboxState(self.ui.finalPosePlanningOptions):
+            affs = self.panel.affordanceManager.getCollisionAffordances()
+            if not affs:
+                self.panel.ikPlanner.ikServer.clearEnvironment()
+            else:
+                urdfStr = affordanceurdf.urdfStringFromAffordances(affs)
+                self.panel.ikPlanner.ikServer.setEnvironment(urdfStr)
 
     def planClicked(self):
         if not self.ui.eeTeleopButton.checked and not self.getCheckboxState(self.ui.finalPosePlanningOptions):
@@ -798,7 +799,6 @@ class EndEffectorTeleopPanel(object):
 
     def searchFinalPoseClicked(self):
         self.updateConstraints()
-        self.updateCollisionEnvironment()
         frame = om.findObjectByName('Final Pose End Effector frame')
         handTransform = transformUtils.copyFrame(frame.transform)
         handTransform.PreMultiply()
@@ -806,6 +806,28 @@ class EndEffectorTeleopPanel(object):
         palmToHand = palmToHand.GetLinearInverse()
         handTransform.Concatenate(palmToHand)
         endPose, info = self.constraintSet.searchFinalPose(self.getFinalPoseGraspingHand(), handTransform)
+        if info == 1:
+            self.panel.showPose(self.constraintSet.endPose)
+        app.displaySnoptInfo(info)
+    
+    def planPoseFromFrame(self, side, frame):
+        if drcargs.getDirectorConfig()['modelName'] not in {'valkyrie_v1', 'valkyrie_v2'}:
+            message = 'Final pose planning is not yet available for %s' % drcargs.getDirectorConfig()['modelName']
+            QtGui.QMessageBox.warning(app.getMainWindow(), 'Model not supported', message,
+                  QtGui.QMessageBox.Ok)
+            return
+        self.setCheckboxState(self.ui.finalPosePlanningOptions, True)
+        finalPoseEE = om.findObjectByName('Final Pose End Effector')
+        om.removeFromObjectModel(finalPoseEE)
+        self.setBackConstraint('free')
+        self.setBaseConstraint('free')
+        self.updateConstraints()
+        handTransform = transformUtils.copyFrame(frame.transform)
+        handTransform.PreMultiply()
+        palmToHand = self.panel.ikPlanner.getPalmToHandLink(side)
+        palmToHand = palmToHand.GetLinearInverse()
+        handTransform.Concatenate(palmToHand)
+        endPose, info = self.constraintSet.searchFinalPose(side, handTransform)
         if info == 1:
             self.panel.showPose(self.constraintSet.endPose)
         app.displaySnoptInfo(info)
