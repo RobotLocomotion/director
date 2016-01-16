@@ -1,9 +1,9 @@
 #include "ddDrakeWrapper.h"
 #include "ddSharedPtr.h"
 
-#include <RigidBodyManipulator.h>
-#include <convexHull.h>
-#include <ForceTorqueMeasurement.h>
+#include <drake/systems/plants/RigidBodyTree.h>
+#include <drake/util/convexHull.h>
+#include <drake/systems/plants/ForceTorqueMeasurement.h>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -33,7 +33,7 @@ QVector<double> ddDrakeWrapper::resolveCenterOfPressure(const ddDrakeModel& ddMo
 {
   // Assumes size of ft_in = size of ft_frame_inds*6, in order (one wrench at a time)
   // returns a 4-vector, which is packed output of RBM resolveCOP, with vector first
-  ddSharedPtr<RigidBodyManipulator> model = ddModel.getDrakeRBM();
+  ddSharedPtr<RigidBodyTree> model = ddModel.getDrakeRBM();
   Vector3d normal; for (int i=0; i<normal_in.size(); i++) normal[i] = normal_in[i];
   Vector3d point_on_contact_plane; for (int i=0; i<point_on_contact_plane_in.size(); i++) point_on_contact_plane[i] = point_on_contact_plane_in[i];
   std::vector<ForceTorqueMeasurement> force_torque_measurements;

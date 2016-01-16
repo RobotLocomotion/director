@@ -3,7 +3,7 @@ if(DRAKE_DIR)
   set(_lib_dir_hint ${DRAKE_DIR}/lib)
 endif()
 
-find_path(DRAKE_INCLUDE_DIR drakeUtil.h HINTS ${_include_dir_hint} PATH_SUFFIXES drake DOC "Drake source directory")
+find_path(DRAKE_INCLUDE_DIR drakeUtil.h HINTS ${_include_dir_hint} PATH_SUFFIXES drake/util DOC "Drake source directory")
 
 set(DRAKE_LIBRARIES)
 set(_library_var_names)
