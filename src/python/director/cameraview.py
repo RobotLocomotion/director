@@ -146,6 +146,10 @@ class ImageManager(object):
         if imageUtime != self.imageUtimes[imageName]:
             image = self.images[imageName]
             self.imageUtimes[imageName] = self.queue.getImage(imageName, image)
+
+            if self.imageRotations180[imageName] is not None:
+                self.images[imageName].ShallowCopy(filterUtils.rotateImage180(image))
+
         return imageUtime
 
     def updateImages(self):
