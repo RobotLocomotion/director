@@ -417,6 +417,7 @@ class CameraImageView(object):
 
         imageManager.addImage(imageName)
 
+        self.cameraRoll = None
         self.imageManager = imageManager
         self.viewName = viewName or imageName
         self.imageName = imageName
@@ -509,12 +510,20 @@ class CameraImageView(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
         self.eventFilterEnabled = True
 
+    def setCameraRoll(self, roll):
+        self.cameraRoll = roll
+        self.resetCamera()
+
     def resetCamera(self):
         camera = self.view.camera()
         camera.ParallelProjectionOn()
         camera.SetFocalPoint(0,0,0)
         camera.SetPosition(0,0,-1)
         camera.SetViewUp(0,-1, 0)
+
+        if self.cameraRoll is not None:
+            camera.SetRoll(self.cameraRoll)
+
         self.view.resetCamera()
         self.fitImageToView()
         self.view.render()
@@ -566,7 +575,6 @@ class CameraFrustumVisualizer(object):
         self.cameraName = cameraName
         self.imageManager = imageManager
         self.rayLength = 2.0
-        self.headLink = drcargs.getDirectorConfig()['headLink']
         robotModel.connectModelChanged(self.update)
         self.update(robotModel)
 
@@ -579,10 +587,9 @@ class CameraFrustumVisualizer(object):
         Returns cameraToLocal.  cameraToHead is pulled from bot frames while
         headToLocal is pulled from the robot model forward kinematics.
         '''
-        headToLocal = self.robotModel.getLinkFrame( self.headLink )
+        headToLocal = self.robotModel.getLinkFrame( self.robotModel.getHeadLink() )
         cameraToHead = vtk.vtkTransform()
-        # TODO: 'head' should match self.headLink
-        self.imageManager.queue.getTransform(self.cameraName, 'head', 0, cameraToHead)
+        self.imageManager.queue.getTransform(self.cameraName, self.robotModel.getHeadLink(), 0, cameraToHead)
         return transformUtils.concatenateTransforms([cameraToHead, headToLocal])
 
     def getCameraFrustumRays(self):
