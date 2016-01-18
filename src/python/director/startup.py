@@ -716,6 +716,14 @@ class ImageOverlayManager(object):
         imageView.view.setParent(view)
         imageView.view.resize(self.size, self.size)
         imageView.view.move(*self.position)
+
+        if self.viewName is 'CAMERA_LEFT':
+            # Rotate Multisense image/CAMERA_LEFT if the camera frame is rotated (e.g. for Valkyrie)
+            tf = robotStateModel.getLinkFrame(robotStateModel.getHeadLink())
+            roll = transformUtils.rollPitchYawFromTransform(tf)[0]
+            if np.isclose(np.abs(roll), np.pi, atol=1e-1):
+                imageView.setCameraRoll(0)
+
         imageView.view.show()
 
         if self.usePicker:
@@ -762,6 +770,13 @@ camerabookmarks.init(view)
 def getLinkFrame(linkName, model=None):
     model = model or robotStateModel
     return model.getLinkFrame(linkName)
+
+
+def getBotFrame(frameName):
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    cameraview.imageManager.queue.getTransform(frameName, 'local', t)
+    return t
 
 
 def showLinkFrame(linkName, model=None):
