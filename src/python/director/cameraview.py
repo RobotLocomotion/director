@@ -417,6 +417,7 @@ class CameraImageView(object):
 
         imageManager.addImage(imageName)
 
+        self.cameraRoll = None
         self.imageManager = imageManager
         self.viewName = viewName or imageName
         self.imageName = imageName
@@ -509,12 +510,20 @@ class CameraImageView(object):
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
         self.eventFilterEnabled = True
 
+    def setCameraRoll(self, roll):
+        self.cameraRoll = roll
+        self.resetCamera()
+
     def resetCamera(self):
         camera = self.view.camera()
         camera.ParallelProjectionOn()
         camera.SetFocalPoint(0,0,0)
         camera.SetPosition(0,0,-1)
         camera.SetViewUp(0,-1, 0)
+
+        if self.cameraRoll is not None:
+            camera.SetRoll(self.cameraRoll)
+
         self.view.resetCamera()
         self.fitImageToView()
         self.view.render()
