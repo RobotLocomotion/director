@@ -764,6 +764,13 @@ def getLinkFrame(linkName, model=None):
     return model.getLinkFrame(linkName)
 
 
+def getBotFrame(frameName):
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    cameraview.imageManager.queue.getTransform(frameName, 'local', t)
+    return t
+
+
 def showLinkFrame(linkName, model=None):
     frame = getLinkFrame(linkName, model)
     if not frame:
