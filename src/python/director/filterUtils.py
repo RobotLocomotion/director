@@ -114,3 +114,18 @@ def removeNonFinitePoints(polyData, arrayName='Points'):
     polyData = shallowCopy(polyData)
     labelNonFinitePoints(polyData, arrayName)
     return thresholdPoints(polyData, 'is_nonfinite', [0, 0])
+
+
+def rotateImage180(image):
+    '''
+    rotates an image by 180 degrees
+    '''
+    r1 = vtk.vtkImageFlip()
+    r1.SetInput(image)
+    r1.SetFilteredAxis(0)
+    r1.Update()
+    r2 = vtk.vtkImageFlip()
+    r2.SetInput(r1.GetOutput())
+    r2.SetFilteredAxis(1)
+    r2.Update()
+    return r2.GetOutput()
