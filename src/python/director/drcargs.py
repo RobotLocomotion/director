@@ -95,17 +95,17 @@ class DRCArgParser(object):
         directorConfig.add_argument('-val1', '--valkyrie_v1', dest='directorConfigFile',
                             action='store_const',
                             const=self.getDefaultValkyrieV1DirectorConfigFile(),
-                            help='Use Valkyrie')
+                            help='Use Valkyrie (V1)')
 
         directorConfig.add_argument('-val2', '--valkyrie_v2', dest='directorConfigFile',
                             action='store_const',
                             const=self.getDefaultValkyrieV2DirectorConfigFile(),
-                            help='Use Valkyrie')
+                            help='Use Valkyrie (V2/Default)')
 
         directorConfig.add_argument('-val2s', '--valkyrie_v2_simple', dest='directorConfigFile',
                             action='store_const',
                             const=self.getDefaultValkyrieV2SimpleDirectorConfigFile(),
-                            help='Use Valkyrie')
+                            help='Use Valkyrie (Simple/Primitive Shapes)')
 
 
 
