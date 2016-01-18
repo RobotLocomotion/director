@@ -566,7 +566,6 @@ class CameraFrustumVisualizer(object):
         self.cameraName = cameraName
         self.imageManager = imageManager
         self.rayLength = 2.0
-        self.headLink = drcargs.getDirectorConfig()['headLink']
         robotModel.connectModelChanged(self.update)
         self.update(robotModel)
 
@@ -579,10 +578,9 @@ class CameraFrustumVisualizer(object):
         Returns cameraToLocal.  cameraToHead is pulled from bot frames while
         headToLocal is pulled from the robot model forward kinematics.
         '''
-        headToLocal = self.robotModel.getLinkFrame( self.headLink )
+        headToLocal = self.robotModel.getLinkFrame( self.robotModel.getHeadLink() )
         cameraToHead = vtk.vtkTransform()
-        # TODO: 'head' should match self.headLink
-        self.imageManager.queue.getTransform(self.cameraName, 'head', 0, cameraToHead)
+        self.imageManager.queue.getTransform(self.cameraName, self.robotModel.getHeadLink(), 0, cameraToHead)
         return transformUtils.concatenateTransforms([cameraToHead, headToLocal])
 
     def getCameraFrustumRays(self):
