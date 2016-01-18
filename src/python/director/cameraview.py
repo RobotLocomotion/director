@@ -113,6 +113,7 @@ class ImageManager(object):
         self.images = {}
         self.imageUtimes = {}
         self.textures = {}
+        self.imageRotations180 = {}
 
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
         self.queue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
@@ -132,6 +133,7 @@ class ImageManager(object):
         self.imageUtimes[name] = 0
         self.images[name] = image
         self.textures[name] = tex
+        self.imageRotations180[name] = None
 
     def writeImage(self, imageName, outFile):
         writer = vtk.vtkPNGWriter()
@@ -149,6 +151,10 @@ class ImageManager(object):
     def updateImages(self):
         for imageName in self.images.keys():
             self.updateImage(imageName)
+
+    def setImageRotation180(self, imageName):
+        assert imageName in self.images
+        self.imageRotations180[imageName] = True
 
     def hasImage(self, imageName):
         return imageName in self.images
