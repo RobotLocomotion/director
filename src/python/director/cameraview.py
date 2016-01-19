@@ -211,6 +211,7 @@ class CameraView(object):
 
         self.imageManager = imageManager
         self.updateUtimes = {}
+        self.robotModel = None
         self.sphereObjects = {}
         self.sphereImages = [
                 'CAMERA_LEFT',
@@ -273,6 +274,15 @@ class CameraView(object):
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
+
+    def initImageRotations(self, robotModel):
+        self.robotModel = robotModel
+        # Rotate Multisense image/CAMERA_LEFT if the camera frame is rotated (e.g. for Valkyrie)
+        if robotModel.getHeadLink():
+            tf = robotModel.getLinkFrame(robotModel.getHeadLink())
+            roll = transformUtils.rollPitchYawFromTransform(tf)[0]
+            if np.isclose(np.abs(roll), np.pi, atol=1e-1):
+                self.imageManager.setImageRotation180('CAMERA_LEFT')
 
     def initView(self, view):
 
