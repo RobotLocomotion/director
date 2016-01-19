@@ -387,8 +387,6 @@ class JointCommandPanel(object):
         self.ui.hidePreviewButton.connect('clicked()', self.onHidePreviewClicked)
         self.ui.previewSlider.connect('valueChanged(int)', self.onPreviewSliderChanged)
         self.ui.speedSpinBox.connect('valueChanged(double)', self.onSpeedChanged)
-        self.ui.steeringButton.connect('clicked()', self.onSteeringButtonClicked)
-        self.ui.throttleButton.connect('clicked()', self.onThrottleButtonClicked)
         self.hidePreviewModels()
 
         self.throttleControlEnabled = False
