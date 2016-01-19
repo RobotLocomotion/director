@@ -1,10 +1,10 @@
+from director import irisdriver
 from director import applogic
 from director import vtkAll as vtk
 from director import callbacks
 from director.fieldcontainer import FieldContainer
 from director import ik
 from director import ikplanner
-from director import irisdriver
 from director import raycastdriver
 from director import objectmodel as om
 from director import perception

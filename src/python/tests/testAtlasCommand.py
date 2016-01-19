@@ -1,5 +1,5 @@
-from director.consoleapp import ConsoleApp
 from director import robotsystem
+from director.consoleapp import ConsoleApp
 from director import robotstate
 from director import planplayback
 from director import lcmUtils
