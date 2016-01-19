@@ -34,6 +34,41 @@ class WidgetDict(object):
     def __init__(self, widgets):
         addWidgetsToDict(widgets, self.__dict__)
 
+val_gains = {
+  'torsoYaw': (100.0, 1.0),
+  'torsoPitch': (800.0, 1.0),
+  'torsoRoll': (800.0, 1.0),
+  'lowerNeckPitch': (30.0, 1.0),
+  'neckYaw': (30.0, 1.0),
+  'upperNeckPitch': (30.0, 1.0),
+  'rightShoulderPitch': (100.0, 1.0),
+  'rightShoulderRoll': (100.0, 1.0),
+  'rightShoulderYaw': (50.0, 1.0),
+  'rightElbowPitch': (50.0, 1.0),
+  'rightForearmYaw': (30.0, 1.0),
+  'rightWristRoll': (30.0, 1.0),
+  'rightWristPitch': (30.0, 1.0),
+  'leftShoulderPitch': (100.0, 1.0),
+  'leftShoulderRoll': ( 100.0, 1.0),
+  'leftShoulderYaw': (50.0, 1.0),
+  'leftElbowPitch': (30.0, 1.0),
+  'leftForearmYaw': (30.0, 1.0),
+  'leftWristRoll': (30.0, 1.0),
+  'leftWristPitch': (30.0, 1.0),
+  'rightHipYaw': (50.0, 1.0),
+  'rightHipRoll': (100.0, 1.0),
+  'rightHipPitch': ( 200.0, 1.0),
+  'rightKneePitch': (50.0, 1.0),
+  'rightAnklePitch': ( 30.0, 1.0),
+  'rightAnkleRoll': ( 30.0, 1.0),
+  'leftHipYaw': (50.0, 1.0),
+  'leftHipRoll': (100.0, 1.0),
+  'leftHipPitch': ( 200.0, 1.0),
+  'leftKneePitch': (50.0, 1.0),
+  'leftAnklePitch': (30.0, 1.0),
+  'leftAnkleRoll': (30.0, 1.0)
+}
+
 
 def newAtlasCommandMessageAtZero():
 
@@ -41,9 +76,9 @@ def newAtlasCommandMessageAtZero():
     msg.joint_names = [str(v) for v in robotstate.getRobotStateJointNames()]
     msg.num_joints = len(msg.joint_names)
     zeros = np.zeros(msg.num_joints)
-    msg.k_q_p = getDefaultUserModePositionGains()
+    msg.k_q_p = [val_gains[name][0] for name in msg.joint_names]
     msg.k_q_i = zeros.tolist()
-    msg.k_qd_p = zeros.tolist()
+    msg.k_qd_p = [val_gains[name][1] for name in msg.joint_names]
     msg.k_f_p = zeros.tolist()
     msg.ff_qd = zeros.tolist()
     msg.ff_qd_d = zeros.tolist()
@@ -56,7 +91,8 @@ def newAtlasCommandMessageAtZero():
     msg.k_effort = '0'*msg.num_joints
     return msg
 
-def getDefaultUserModePositionGains():
+
+def getAtlasUserModePositionGains():
     return [10.0, 70.0, 70.0, 1000.0, 60.0, 78.0, 50.0, 140.0, 2000.0, 2000.0, 60.0, 78.0, 50.0, 140.0, 2000.0, 2000.0, 4.0, 4.0, 4.0, 4.0, 20.0, 20.0, 20.0, 4.0, 4.0, 4.0, 4.0, 20.0, 20.0, 20.0]
 
 
