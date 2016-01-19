@@ -128,4 +128,4 @@ def rotateImage180(image):
     r2.SetInput(r1.GetOutput())
     r2.SetFilteredAxis(1)
     r2.Update()
-    return r2.GetOutput()
+    return shallowCopy(r2.GetOutput())
