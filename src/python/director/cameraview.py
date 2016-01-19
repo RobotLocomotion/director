@@ -133,7 +133,7 @@ class ImageManager(object):
         self.imageUtimes[name] = 0
         self.images[name] = image
         self.textures[name] = tex
-        self.imageRotations180[name] = None
+        self.imageRotations180[name] = False
 
     def writeImage(self, imageName, outFile):
         writer = vtk.vtkPNGWriter()
@@ -147,7 +147,7 @@ class ImageManager(object):
             image = self.images[imageName]
             self.imageUtimes[imageName] = self.queue.getImage(imageName, image)
 
-            if self.imageRotations180[imageName] is not None:
+            if self.imageRotations180[imageName]:
                 self.images[imageName].ShallowCopy(filterUtils.rotateImage180(image))
 
         return imageUtime
