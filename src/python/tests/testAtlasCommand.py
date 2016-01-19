@@ -829,7 +829,7 @@ def robotMain(useDrivingGains=False, useController=False):
     if useController==True:
         commandStream.useController()
     else:
-        commandStream.publishChannel = 'ATLAS_COMMAND'
+        commandStream.publishChannel = 'ROBOT_COMMAND'
 
     if useDrivingGains:
         commandStream.applyDrivingDefaults()
