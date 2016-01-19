@@ -1,8 +1,8 @@
 #include "ddDrakeModel.h"
 #include "ddSharedPtr.h"
 
-#include <RigidBodyManipulator.h>
-#include <shapes/Geometry.h>
+#include <drake/systems/plants/RigidBodyTree.h>
+#include <drake/systems/plants/shapes/Geometry.h>
 
 #include <vtkPolyData.h>
 #include <vtkAppendPolyData.h>
@@ -127,14 +127,14 @@ void bot_quat_to_roll_pitch_yaw (const double q[4], double rpy[3])
     rpy[2] = atan2 (yaw_a, yaw_b);
 }
 
-vtkSmartPointer<vtkTransform> makeTransform( const Eigen::Matrix4d& mat)
+vtkSmartPointer<vtkTransform> makeTransform( const Eigen::Isometry3d& mat)
 {
   vtkSmartPointer<vtkMatrix4x4> vtkmat = vtkSmartPointer<vtkMatrix4x4>::New();
   for (int i = 0; i < 4; ++i)
     {
     for (int j = 0; j < 4; ++j)
       {
-      vtkmat->SetElement(i, j, mat(i,j));
+      vtkmat->SetElement(i, j, mat.matrix()(i,j));
       }
     }
 
@@ -448,7 +448,7 @@ ddMeshVisual::Ptr makeBoxVisual(double x, double y, double z)
   return visualFromPolyData(shallowCopy(cube->GetOutput()));
 }
 
-class URDFRigidBodyManipulatorVTK : public RigidBodyManipulator
+class URDFRigidBodyTreeVTK : public RigidBodyTree
 {
 public:
 
@@ -462,16 +462,16 @@ public:
 
   std::unordered_set<std::string> fixedDOFs;
 
-  ddPtrMacro(URDFRigidBodyManipulatorVTK);
+  ddPtrMacro(URDFRigidBodyTreeVTK);
 
-  URDFRigidBodyManipulatorVTK() : RigidBodyManipulator()
+  URDFRigidBodyTreeVTK() : RigidBodyTree()
   {}
 
   void computeDofMap()
   {
     this->dofMap.clear();
 
-    RigidBodyManipulator* model = this;
+    RigidBodyTree* model = this;
 
     const std::shared_ptr<RigidBody> worldBody = model->bodies[0];
 
@@ -513,7 +513,7 @@ public:
     }
   }
 
-  virtual ~URDFRigidBodyManipulatorVTK()
+  virtual ~URDFRigidBodyTreeVTK()
   {
 
   }
@@ -607,7 +607,7 @@ public:
   {
 
     //printf("load visuals...\n");
-    RigidBodyManipulator* model = this;
+    RigidBodyTree* model = this;
 
     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
@@ -700,12 +700,7 @@ public:
 
   virtual void updateModel()
   {
-    const Vector4d zero(0,0,0,1);
-    double theta, axis[3], quat[4];
-    double angleAxis[4];
-    Matrix<double,7,1> pose;
-
-    RigidBodyManipulator* model = this;
+    RigidBodyTree* model = this;
 
 
 
@@ -720,23 +715,9 @@ public:
         continue;
       }
 
-      //model->forwardKin(body->body_index, zero, 2, pose);
-      //auto pt = model->forwardKinNew(Vector3d::Zero().eval(), body->body_index, 0, 2, 0);
-      //pose = pt.value();
+      vtkSmartPointer<vtkTransform> linkToWorld = makeTransform(relativeTransform(*cache, 0, body->body_index));
 
-      pose = model->forwardKin(*this->cache, Vector3d::Zero().eval(), body->body_index, 0, 2, 0).value();
-
-      double* posedata = pose.data();
-
-      bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
-      angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
-
-      vtkSmartPointer<vtkTransform> linkToWorld = vtkSmartPointer<vtkTransform>::New();
-      linkToWorld->PostMultiply();
-      linkToWorld->RotateWXYZ(angleAxis[0], angleAxis[1], angleAxis[2], angleAxis[3]);
-      linkToWorld->Translate(pose(0), pose(1), pose(2));
-
-      //printf("%s to world: %f %f %f\n", body->linkname.c_str(), pose(0), pose(1), pose(2));
+      //printf("%s to world: %f %f %f\n", body->linkname.c_str(), translation(0), translation(1), translation(2));
 
       for (size_t visualIndex = 0; visualIndex < itr->second.size(); ++visualIndex)
       {
@@ -761,7 +742,7 @@ public:
     QMap<QString, int> linkMap;
 
 
-    RigidBodyManipulator* model = this;
+    RigidBodyTree* model = this;
 
     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
@@ -786,32 +767,18 @@ public:
       return NULL;
     }
 
+    vtkSmartPointer<vtkTransform> linkToWorld = makeTransform(relativeTransform(*cache, 0, linkMap.value(linkName)));
 
-    const Vector4d zero(0,0,0,1);
-    double theta, axis[3], quat[4];
-    double angleAxis[4];
-    Matrix<double, 7 ,1> pose;
-
-    RigidBodyManipulator* model = this;
-
-    pose = model->forwardKin(*this->cache, Vector3d::Zero().eval(), linkMap.value(linkName), 0, 2, 0).value();
-
-    double* posedata = pose.data();
-    bot_quat_to_angle_axis(&posedata[3], &angleAxis[0], &angleAxis[1]);
-    vtkSmartPointer<vtkTransform> linkToWorld = vtkSmartPointer<vtkTransform>::New();
-    linkToWorld->PostMultiply();
-    linkToWorld->RotateWXYZ(vtkMath::DegreesFromRadians(angleAxis[0]), angleAxis[1], angleAxis[2], angleAxis[3]);
-    linkToWorld->Translate(pose(0), pose(1), pose(2));
     return linkToWorld;
   }
 
 };
 
 
-URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filename)
+URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const string &urdf_filename)
 {
   // urdf_filename can be a list of urdf files seperated by a :
-  URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
+  URDFRigidBodyTreeVTK::Ptr model(new URDFRigidBodyTreeVTK);
 
   string token;
   istringstream iss(urdf_filename);
@@ -835,17 +802,14 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
     else
     {
         cerr << "Could not open file ["<<urdf_filename.c_str()<<"] for parsing."<< endl;
-        return URDFRigidBodyManipulatorVTK::Ptr();
+        return URDFRigidBodyTreeVTK::Ptr();
     }
 
     boost::filesystem::path mypath(urdf_filename);
     if (!mypath.empty() && mypath.has_parent_path())  
       pathname = mypath.parent_path().native();
 
-    if (!model->addRobotFromURDFString(xml_string, PackageSearchPaths, pathname))
-    {
-      return URDFRigidBodyManipulatorVTK::Ptr();
-    }
+    model->addRobotFromURDFString(xml_string, PackageSearchPaths, pathname);
 
   }
 
@@ -855,13 +819,10 @@ URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromFile(const string &urdf_filenam
 }
 
 
-URDFRigidBodyManipulatorVTK::Ptr loadVTKModelFromXML(const string &xmlString)
+URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const string &xmlString)
 {
-  URDFRigidBodyManipulatorVTK::Ptr model(new URDFRigidBodyManipulatorVTK);
-  if (!model->addRobotFromURDFString(xmlString,PackageSearchPaths, ""))
-  {
-    return URDFRigidBodyManipulatorVTK::Ptr();
-  }
+  URDFRigidBodyTreeVTK::Ptr model(new URDFRigidBodyTreeVTK);
+  model->addRobotFromURDFString(xmlString,PackageSearchPaths, "");
 
   model->computeDofMap();
   model->loadVisuals();
@@ -884,7 +845,7 @@ public:
     this->Color = QColor(GRAY_DEFAULT, GRAY_DEFAULT, GRAY_DEFAULT);
   }
 
-  URDFRigidBodyManipulatorVTK::Ptr Model;
+  URDFRigidBodyTreeVTK::Ptr Model;
 
   QString FileName;
   bool Visible;
@@ -908,7 +869,7 @@ ddDrakeModel::~ddDrakeModel()
 }
 
 //-----------------------------------------------------------------------------
-const ddSharedPtr<RigidBodyManipulator> ddDrakeModel::getDrakeRBM() const
+const ddSharedPtr<RigidBodyTree> ddDrakeModel::getDrakeRBM() const
 {
   return this->Internal->Model;
 }
@@ -933,7 +894,7 @@ int ddDrakeModel::numberOfJoints()
 //-----------------------------------------------------------------------------
 void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, const QList<QString>& jointNames)
 {
-  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+  URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
 
   if (!model)
   {
@@ -982,7 +943,7 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
 //-----------------------------------------------------------------------------
 void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
 {
-  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+  URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
 
   if (!model)
   {
@@ -1006,7 +967,7 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
 
   this->Internal->JointPositions = jointPositions;
 
-  model->cache = std::make_shared<KinematicsCache<double> >(model->bodies, 0);
+  model->cache = std::make_shared<KinematicsCache<double> >(model->bodies);
   model->cache->initialize(q);
   model->doKinematics(*model->cache);
   model->updateModel();
@@ -1022,7 +983,7 @@ const QVector<double>& ddDrakeModel::getJointPositions() const
 //-----------------------------------------------------------------------------
 QVector<double> ddDrakeModel::getJointPositions(const QList<QString>& jointNames) const
 {
-  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+  URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
   QVector<double> ret(jointNames.size());
 
   if (!model)
@@ -1062,9 +1023,9 @@ QVector<double> ddDrakeModel::getJointPositions(const QList<QString>& jointNames
 //-----------------------------------------------------------------------------
 QVector<double> ddDrakeModel::getCenterOfMass() const
 {
-  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+  URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
   Vector3d com;
-  com = model->centerOfMass<double>(*model->cache, 0).value();
+  com = model->centerOfMass<double>(*model->cache);
 
   QVector<double> ret;
   ret << com[0] << com[1] << com[2];
@@ -1075,7 +1036,7 @@ QVector<double> ddDrakeModel::getCenterOfMass() const
 QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) const
 {
   QVector<double> ret;
-  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+  URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
 
   for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
   {
@@ -1097,7 +1058,7 @@ QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
   QVector<double> limits;
   limits << 0.0 << 0.0;
 
-  URDFRigidBodyManipulatorVTK::Ptr model = this->Internal->Model;
+  URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
 
   if (!model)
   {
@@ -1196,7 +1157,7 @@ QString ddDrakeModel::getLinkNameForMesh(vtkPolyData* polyData)
 //-----------------------------------------------------------------------------
 bool ddDrakeModel::loadFromFile(const QString& filename)
 {
-  URDFRigidBodyManipulatorVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data());
+  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromFile(filename.toAscii().data());
   if (!model)
   {
     return false;
@@ -1212,7 +1173,7 @@ bool ddDrakeModel::loadFromFile(const QString& filename)
 //-----------------------------------------------------------------------------
 bool ddDrakeModel::loadFromXML(const QString& xmlString)
 {
-  URDFRigidBodyManipulatorVTK::Ptr model = loadVTKModelFromXML(xmlString.toAscii().data());
+  URDFRigidBodyTreeVTK::Ptr model = loadVTKModelFromXML(xmlString.toAscii().data());
   if (!model)
   {
     return false;
