@@ -370,6 +370,9 @@ def showRightClickMenu(displayPoint, view):
         reachToFrame(reachFrame, 'left', collisionParent)
     def onReachRight():
         reachToFrame(reachFrame, 'right', collisionParent)
+    
+    def onCollisionFreePose():
+        teleoppanel.panel.endEffectorTeleop.planPoseFromFrame(pickedObj.side, reachFrame)
 
     def flipHandSide():
         for obj in [pickedObj] + pickedObj.children():
@@ -591,6 +594,7 @@ def showRightClickMenu(displayPoint, view):
             (None, None),
             ('Reach Left', onReachLeft),
             ('Reach Right', onReachRight),
+            ('Plan Collision Free Pose', onCollisionFreePose)
             #('Spline Left', onSplineLeft),
             #('Spline Right', onSplineRight),
             ])

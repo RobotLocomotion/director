@@ -2,6 +2,7 @@ import os
 import math
 import types
 import functools
+import datetime
 import numpy as np
 import director
 from director import matlab
@@ -237,7 +238,7 @@ class AsyncIKCommunicator():
         self.fetchPoseFromServer('q_trajPose')
 
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0, graspToHandLinkFrame=None):
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPose, ikParameters, timeSamples=None, additionalTimeSamples=0, graspToHandLinkFrame=None, pointCloud = None):
 
         if timeSamples is None:
             timeSamples = np.hstack([constraint.tspan for constraint in constraints])
@@ -322,7 +323,16 @@ class AsyncIKCommunicator():
             commands.append('options.fixed_point_file = fixed_point_file;')
             commands.append("options.frozen_groups = %s;" % self.getFrozenGroupString())
 
-            commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options, active_constraints);\n' % (poseStart, poseEnd))
+            pcFileName = '/tmp/pointCloudFile_' + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M") + '.bin'
+            pcFile = open(pcFileName, 'wb')
+            pointCloud = np.ascontiguousarray(pointCloud)
+            pointCloud.astype('float32').tofile(pcFile)
+            pcFile.close()
+            commands.append('pc_file = fopen(\'{:s}\');'.format(pcFileName))
+            commands.append('point_cloud = fread(pc_file, {:s}, \'float32\')\';'.format(ConstraintBase.toRowVectorString(pointCloud.T.shape)))
+            commands.append('fclose(pc_file);')
+
+            commands.append('planner = optimalCollisionFreePlanner(r, %s, %s, options, point_cloud, active_constraints);\n' % (poseStart, poseEnd))
             commands.append('[xtraj, info] = planner.findCollisionFreeTraj({:s});'.format(poseEnd))
             commands.append('if (info > 10), fprintf(\'The solver returned with info %d:\\n\',info); snoptInfo(info); end')
         else:
@@ -409,7 +419,7 @@ class AsyncIKCommunicator():
         commands.append('s = s.removeAffordanceFromLink(\'%s\', \'%s\');' % (linkName, affordanceName))
         self.comm.sendCommands(commands)
     
-    def searchFinalPose(self, constraints, side, eeName, eePose, nominalPoseName, capabilityMapFile, ikParameters):
+    def searchFinalPose(self, constraints, side, eeName, eePose, nominalPoseName, capabilityMapFile, ikParameters, pointCloud):
         commands = []
         commands.append('default_shrink_factor = %s;' % ikParameters.quasiStaticShrinkFactor)
         constraintNames = []
@@ -439,10 +449,18 @@ class AsyncIKCommunicator():
         commands.append('ikoptions = ikoptions.setMajorIterationsLimit({:d});'.format(ikParameters.majorIterationsLimit))
         commands.append('ikoptions = ikoptions.setQ(Q);')
         commands.append('ikoptions = ikoptions.setMajorOptimalityTolerance({:f});' .format(ikParameters.majorOptimalityTolerance))
-#        commands.append('{:s}'.format(ConstraintBase.toColumnVectorString(xGoal)))
-        commands.append('fpp = FinalPoseProblem(r, eeId, reach_start, {:s}, additional_constraints,'
-                        '{:s}, \'capabilitymap\', capability_map, \'ikoptions\', ikoptions, \'graspinghand\', \'{:s}\');'.format(ConstraintBase.toColumnVectorString(eePose), nominalPoseName, side))
-        commands.append('[x_goal, info] = fpp.findFinalPose();')
+        commands.append('fpp = FinalPosePlanner(r, eeId, reach_start, {:s}, additional_constraints,'
+                        '{:s}, capability_map, ikoptions, \'graspinghand\', \'{:s}\');'.format(ConstraintBase.toColumnVectorString(eePose), nominalPoseName, side))
+        pcFileName = '/tmp/pointCloudFile_' + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M") + '.bin'
+        pcFile = open(pcFileName, 'wb')
+        pointCloud = np.ascontiguousarray(pointCloud)
+        pointCloud.astype('float32').tofile(pcFile)
+        pcFile.close()
+#        commands.append('Scenes.visualizeOctomap(\'{:s}\');'.format(pcFileName))
+        commands.append('pc_file = fopen(\'{:s}\');'.format(pcFileName))
+        commands.append('point_cloud = fread(pc_file, {:s}, \'float32\')\';'.format(ConstraintBase.toRowVectorString(pointCloud.T.shape)))
+        commands.append('fclose(pc_file);')
+        commands.append('[x_goal, info] = fpp.findFinalPose(point_cloud);')
         self.comm.sendCommands(commands)
         
         info = self.comm.getFloatArray('info')[0]
@@ -452,4 +470,3 @@ class AsyncIKCommunicator():
             endPose = []
 
         return endPose, info
-#        commands.append(

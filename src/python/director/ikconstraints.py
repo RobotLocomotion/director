@@ -266,6 +266,43 @@ class RelativePositionConstraint(ConstraintBase):
             ''.format(**formatArgs))
 
 
+class RelativeQuaternionConstraint(ConstraintBase):
+
+    def __init__(self, **kwargs):
+
+        self._add_fields(
+            bodyNameA = '',
+            bodyNameB = '',
+            quaternion = np.array([1, 0, 0, 0]),
+            angleToleranceInDegrees = 0,
+            )
+
+        ConstraintBase.__init__(self, **kwargs)
+
+    def _getCommands(self, commands, constraintNames, suffix):
+
+        assert self.bodyNameA
+        assert self.bodyNameB
+
+        varName = 'relative_quaternion_constraint%s' % suffix
+        constraintNames.append(varName)
+
+        quat = self.toQuaternion(self.quaternion)
+
+        formatArgs = dict(varName=varName,
+                          robotArg=self.robotArg,
+                          tspan=self.getTSpanString(),
+                          bodyNameA=self.bodyNameA,
+                          bodyNameB=self.bodyNameB,
+                          quat=self.toColumnVectorString(quat),
+                          tolerance=repr(math.radians(self.angleToleranceInDegrees)))
+
+
+        commands.append(
+            '{varName} = RelativeQuatConstraint({robotArg}, links.{bodyNameA}, links.{bodyNameB}, {quat}, {tolerance}, {tspan});'
+            ''.format(**formatArgs))
+
+
 class PointToPointDistanceConstraint(ConstraintBase):
 
     def __init__(self, **kwargs):
