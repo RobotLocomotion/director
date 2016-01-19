@@ -583,8 +583,12 @@ class JointTeleopPanel(object):
     def showPose(self, pose):
         self.teleopJointController.setPose('teleop_pose', pose)
         self.teleopRobotModel.setProperty('Visible', True)
+        self.teleopRobotModel.setProperty('Color Mode', 'Solid Color')
+        self.teleopRobotModel.setProperty('Color', [1.0, 170/255.0, 0.0])
+        self.teleopRobotModel.setProperty('Alpha', 1.0)
+
         self.robotStateModel.setProperty('Visible', True)
-        self.robotStateModel.setProperty('Alpha', 0.1)
+        self.robotStateModel.setProperty('Alpha', 1.0)
         commandStream.setGoalPose(self.teleopJointController.q)
 
 
