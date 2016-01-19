@@ -161,6 +161,7 @@ useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
 useMappingPanel = True
+useDrivingPlanner = False
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -462,7 +463,7 @@ if usePlanning:
                                                                        teleopJointController, navigationPanel, cameraview, jointLimitChecker)
     continuousWalkingTaskPanel = continuouswalkingdemo.ContinuousWalkingTaskPanel(continuouswalkingDemo)
 
-    useDrivingPlanner = drivingplanner.DrivingPlanner.isCompatibleWithConfig()
+    #useDrivingPlanner = drivingplanner.DrivingPlanner.isCompatibleWithConfig()
     if useDrivingPlanner:
         drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
 
