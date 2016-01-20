@@ -47,7 +47,8 @@ class PlaybackPanel(object):
         manipPlanner.connectUseSupports(self.updateButtonColor)
 
         self.autoPlay = True
-        self.useOperationColors()
+        #self.useOperationColors()
+        self.useDevelopmentColors()
 
         self.planFramesObj = None
         self.plan = None
@@ -91,13 +92,14 @@ class PlaybackPanel(object):
 
     def useDevelopmentColors(self):
         self.robotStateModelDisplayAlpha = 0.1
-        self.playbackRobotModelUseTextures = True
+        self.playbackRobotModelUseTextures = False
         self.playbackRobotModelDisplayAlpha = 1
 
     def useOperationColors(self):
         self.robotStateModelDisplayAlpha = 1
         self.playbackRobotModelUseTextures = False
         self.playbackRobotModelDisplayAlpha = 0.5
+
     def showExecuteContextMenu(self, clickPosition):
 
         globalPos = self.ui.executeButton.mapToGlobal(clickPosition)
