@@ -86,7 +86,13 @@ class Geometry(object):
 
     @staticmethod
     def computeNormals(polyDataList):
-        return [filterUtils.computeNormals(polyData) for polyData in polyDataList]
+
+        def addNormals(polyData):
+            hasNormals = polyData.GetPointData().GetNormals() is not None
+            return polyData if hasNormals else filterUtils.computeNormals(polyData)
+
+        return [addNormals(polyData) for polyData in polyDataList]
+
 
     @staticmethod
     def getTextureFileName(polyData):
@@ -342,6 +348,12 @@ class DrakeVisualizerApp():
         # setup camera
         applogic.setCameraTerrainModeEnabled(self.view, True)
         applogic.resetCamera(viewDirection=[-1, 0, -0.3], view=self.view)
+
+        # This setting improves the near plane clipping resolution.
+        # Drake often draws a very large ground plane which is detrimental to
+        # the near clipping for up close objects.  The trade-off is Z buffer
+        # resolution but in practice things look good with this setting.
+        self.view.renderer().SetNearClippingPlaneTolerance(0.0001)
 
         # add view behaviors
         viewBehaviors = viewbehaviors.ViewBehaviors(self.view)
