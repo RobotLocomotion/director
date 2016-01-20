@@ -14,7 +14,7 @@ from director.transformUtils import getTransformFromAxes
 from director import vtkAll as vtk
 
 
-#from director.footstepsdriver import FootstepsDriver
+from director.footstepsdriver import FootstepsDriver
 
 import vtkNumpy
 import numpy as np

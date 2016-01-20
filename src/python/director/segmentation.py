@@ -10,21 +10,21 @@ import PythonQt
 from PythonQt import QtCore, QtGui
 import director.applogic as app
 from director import objectmodel as om
-#from director import perception
-#from director import lcmUtils
-#from director import roboturdf
+from director import perception
+from director import lcmUtils
+from director import roboturdf
 from director import transformUtils
 from director import visualization as vis
 from director.transformUtils import getTransformFromAxes
 from director.timercallback import TimerCallback
-#from director import mapsregistrar
+from director import mapsregistrar
 from director import affordancemanager
 from director.affordanceitems import *
 from director.visualization import *
 from director.filterUtils import *
 from director.fieldcontainer import FieldContainer
 from director.segmentationroutines import *
-#from director import cameraview
+from director import cameraview
 
 import numpy as np
 import vtkNumpy
@@ -33,11 +33,11 @@ from shallowCopy import shallowCopy
 import ioUtils
 from director.uuidutil import newUUID
 
-#import drc as lcmdrc
-#import bot_core as lcmbotcore
+import drc as lcmdrc
+import bot_core as lcmbotcore
 
-#import vs as lcmvs
-#from director import lcmUtils
+import vs as lcmvs
+from director import lcmUtils
 
 
 DRILL_TRIANGLE_BOTTOM_LEFT = 'bottom left'
@@ -46,11 +46,8 @@ DRILL_TRIANGLE_TOP_LEFT = 'top left'
 DRILL_TRIANGLE_TOP_RIGHT = 'top right'
 
 # using drc plane segmentation instead of PCL
-try:
-    planeSegmentationFilter = vtk.vtkPlaneSegmentation
-    #planeSegmentationFilter = vtk.vtkPCLSACSegmentationPlane
-except AttributeError:
-    planeSegmentationFilter = None
+planeSegmentationFilter = vtk.vtkPlaneSegmentation
+#planeSegmentationFilter = vtk.vtkPCLSACSegmentationPlane
 
 
 _defaultSegmentationView = None

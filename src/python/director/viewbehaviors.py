@@ -5,19 +5,19 @@ import director.objectmodel as om
 import director.visualization as vis
 from director.timercallback import TimerCallback
 from director import affordanceitems
-#from director import lcmUtils
+from director import lcmUtils
 from director import callbacks
 from director import cameracontrol
 from director import propertyset
 from director import splinewidget
 from director import transformUtils
-#from director import teleoppanel
-#from director import footstepsdriverpanel
+from director import teleoppanel
+from director import footstepsdriverpanel
 from director import applogic as app
 from director import vtkAll as vtk
 from director import filterUtils
 from director.shallowCopy import shallowCopy
-#from director import segmentationpanel
+from director import segmentationpanel
 from director import segmentation
 from director import segmentationroutines
 from director import frameupdater
@@ -824,7 +824,7 @@ class ViewBehaviors(object):
     def __init__(self, view):
         self.view = view
         self.mouseEventFilter = ViewEventFilter(view)
-        #self.logCommander = KeyPressLogCommander(view.vtkWidget())
+        self.logCommander = KeyPressLogCommander(view.vtkWidget())
         self.keyEventFilter = KeyEventFilter(view)
 
     @staticmethod
