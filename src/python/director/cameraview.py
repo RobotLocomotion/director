@@ -113,6 +113,7 @@ class ImageManager(object):
         self.images = {}
         self.imageUtimes = {}
         self.textures = {}
+        self.imageRotations180 = {}
 
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
         self.queue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
@@ -132,6 +133,7 @@ class ImageManager(object):
         self.imageUtimes[name] = 0
         self.images[name] = image
         self.textures[name] = tex
+        self.imageRotations180[name] = False
 
     def writeImage(self, imageName, outFile):
         writer = vtk.vtkPNGWriter()
@@ -144,11 +146,19 @@ class ImageManager(object):
         if imageUtime != self.imageUtimes[imageName]:
             image = self.images[imageName]
             self.imageUtimes[imageName] = self.queue.getImage(imageName, image)
+
+            if self.imageRotations180[imageName]:
+                self.images[imageName].ShallowCopy(filterUtils.rotateImage180(image))
+
         return imageUtime
 
     def updateImages(self):
         for imageName in self.images.keys():
             self.updateImage(imageName)
+
+    def setImageRotation180(self, imageName):
+        assert imageName in self.images
+        self.imageRotations180[imageName] = True
 
     def hasImage(self, imageName):
         return imageName in self.images
@@ -201,6 +211,7 @@ class CameraView(object):
 
         self.imageManager = imageManager
         self.updateUtimes = {}
+        self.robotModel = None
         self.sphereObjects = {}
         self.sphereImages = [
                 'CAMERA_LEFT',
@@ -263,6 +274,15 @@ class CameraView(object):
         self.eventFilter.addFilteredEventType(QtCore.QEvent.MouseButtonDblClick)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
+
+    def initImageRotations(self, robotModel):
+        self.robotModel = robotModel
+        # Rotate Multisense image/CAMERA_LEFT if the camera frame is rotated (e.g. for Valkyrie)
+        if robotModel.getHeadLink():
+            tf = robotModel.getLinkFrame(robotModel.getHeadLink())
+            roll = transformUtils.rollPitchYawFromTransform(tf)[0]
+            if np.isclose(np.abs(roll), np.pi, atol=1e-1):
+                self.imageManager.setImageRotation180('CAMERA_LEFT')
 
     def initView(self, view):
 

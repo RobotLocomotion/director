@@ -203,6 +203,7 @@ if usePerception:
     cameraview.init()
     colorize.init()
 
+    cameraview.cameraView.initImageRotations(robotStateModel)
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
     multisensepanel.init(perception.multisenseDriver, neckDriver)
     sensordatarequestpanel.init()
@@ -716,14 +717,6 @@ class ImageOverlayManager(object):
         imageView.view.setParent(view)
         imageView.view.resize(self.size, self.size)
         imageView.view.move(*self.position)
-
-        if self.viewName is 'CAMERA_LEFT':
-            # Rotate Multisense image/CAMERA_LEFT if the camera frame is rotated (e.g. for Valkyrie)
-            tf = robotStateModel.getLinkFrame(robotStateModel.getHeadLink())
-            roll = transformUtils.rollPitchYawFromTransform(tf)[0]
-            if np.isclose(np.abs(roll), np.pi, atol=1e-1):
-                imageView.setCameraRoll(0)
-
         imageView.view.show()
 
         if self.usePicker:
@@ -1076,6 +1069,7 @@ if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
 if 'exo' in drcargs.args():
     if (drcargs.args().exo):
         ikPlanner.pushToMatlab = False
+
 
 def roomMap():
     mappingPanel.onStartMappingButton()
