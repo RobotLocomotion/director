@@ -98,9 +98,8 @@ class Geometry(object):
     @staticmethod
     def loadTextureForMesh(polyData, meshFileName):
 
-
         textureFileName = Geometry.getTextureFileName(polyData)
-        if textureFileName in Geometry.TextureCache:
+        if textureFileName in Geometry.TextureCache or textureFileName is None:
             return
 
         if not os.path.isabs(textureFileName):
