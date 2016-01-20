@@ -1,4 +1,4 @@
-from director import lcmobjectcollection
+#from director import lcmobjectcollection
 from director import geometryencoder
 from director import ioUtils
 from director.uuidutil import newUUID

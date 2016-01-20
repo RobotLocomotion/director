@@ -1,6 +1,6 @@
 from director import objectmodel as om
 from director import affordanceitems
-from director import lcmobjectcollection
+#from director import lcmobjectcollection
 from director import visualization as vis
 from director.timercallback import TimerCallback
 from director.uuidutil import newUUID
