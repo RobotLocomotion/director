@@ -1,5 +1,5 @@
-from director.consoleapp import ConsoleApp
 from director import robotsystem
+from director.consoleapp import ConsoleApp
 from director import robotstate
 from director import planplayback
 from director import lcmUtils
@@ -34,6 +34,41 @@ class WidgetDict(object):
     def __init__(self, widgets):
         addWidgetsToDict(widgets, self.__dict__)
 
+val_gains = {
+  'torsoYaw': (100.0, 1.0),
+  'torsoPitch': (800.0, 1.0),
+  'torsoRoll': (800.0, 1.0),
+  'lowerNeckPitch': (30.0, 1.0),
+  'neckYaw': (30.0, 1.0),
+  'upperNeckPitch': (30.0, 1.0),
+  'rightShoulderPitch': (100.0, 1.0),
+  'rightShoulderRoll': (100.0, 1.0),
+  'rightShoulderYaw': (50.0, 1.0),
+  'rightElbowPitch': (50.0, 1.0),
+  'rightForearmYaw': (30.0, 1.0),
+  'rightWristRoll': (30.0, 1.0),
+  'rightWristPitch': (30.0, 1.0),
+  'leftShoulderPitch': (100.0, 1.0),
+  'leftShoulderRoll': ( 100.0, 1.0),
+  'leftShoulderYaw': (50.0, 1.0),
+  'leftElbowPitch': (30.0, 1.0),
+  'leftForearmYaw': (30.0, 1.0),
+  'leftWristRoll': (30.0, 1.0),
+  'leftWristPitch': (30.0, 1.0),
+  'rightHipYaw': (50.0, 1.0),
+  'rightHipRoll': (100.0, 1.0),
+  'rightHipPitch': ( 200.0, 1.0),
+  'rightKneePitch': (50.0, 1.0),
+  'rightAnklePitch': ( 30.0, 1.0),
+  'rightAnkleRoll': ( 30.0, 1.0),
+  'leftHipYaw': (50.0, 1.0),
+  'leftHipRoll': (100.0, 1.0),
+  'leftHipPitch': ( 200.0, 1.0),
+  'leftKneePitch': (50.0, 1.0),
+  'leftAnklePitch': (30.0, 1.0),
+  'leftAnkleRoll': (30.0, 1.0)
+}
+
 
 def newAtlasCommandMessageAtZero():
 
@@ -41,9 +76,9 @@ def newAtlasCommandMessageAtZero():
     msg.joint_names = [str(v) for v in robotstate.getRobotStateJointNames()]
     msg.num_joints = len(msg.joint_names)
     zeros = np.zeros(msg.num_joints)
-    msg.k_q_p = getDefaultUserModePositionGains()
+    msg.k_q_p = [val_gains[name][0] for name in msg.joint_names]
     msg.k_q_i = zeros.tolist()
-    msg.k_qd_p = zeros.tolist()
+    msg.k_qd_p = [val_gains[name][1] for name in msg.joint_names]
     msg.k_f_p = zeros.tolist()
     msg.ff_qd = zeros.tolist()
     msg.ff_qd_d = zeros.tolist()
@@ -56,7 +91,8 @@ def newAtlasCommandMessageAtZero():
     msg.k_effort = '0'*msg.num_joints
     return msg
 
-def getDefaultUserModePositionGains():
+
+def getAtlasUserModePositionGains():
     return [10.0, 70.0, 70.0, 1000.0, 60.0, 78.0, 50.0, 140.0, 2000.0, 2000.0, 60.0, 78.0, 50.0, 140.0, 2000.0, 2000.0, 4.0, 4.0, 4.0, 4.0, 20.0, 20.0, 20.0, 4.0, 4.0, 4.0, 4.0, 20.0, 20.0, 20.0]
 
 
@@ -100,70 +136,6 @@ def drakePoseToQPInput(pose, atlasVersion=5):
     msg.whole_body_data = whole_body_data
 
     return msg
-
-
-def getJointGroups():
-    return [
-        { "name" : "Back",
-          "joints" : [
-            "back_bkx",
-            "back_bky",
-            "back_bkz"
-            ],
-          "labels" : ["x", "y", "z"]
-        },
-
-        { "name" : "Left Arm",
-          "joints" : [
-            "l_arm_shz",
-            "l_arm_shx",
-            "l_arm_ely",
-            "l_arm_elx",
-            "l_arm_uwy",
-            "l_arm_mwx",
-            "l_arm_lwy",
-            ],
-          "labels" : ["shz", "shx", "ely", "elx", "uwy", "mwx", "lwy"]
-        },
-
-        { "name" : "Right Arm",
-          "joints" : [
-            "r_arm_shz",
-            "r_arm_shx",
-            "r_arm_ely",
-            "r_arm_elx",
-            "r_arm_uwy",
-            "r_arm_mwx",
-            "r_arm_lwy",
-            ],
-          "labels" : ["shz", "shx", "ely", "elx", "uwy", "mwx", "lwy"]
-        },
-
-        { "name" : "Left Leg",
-          "joints" : [
-            "l_leg_hpx",
-            "l_leg_hpy",
-            "l_leg_hpz",
-            "l_leg_kny",
-            "l_leg_akx",
-            "l_leg_aky"
-            ],
-          "labels" : ["hpx", "hpy", "hpz", "knee", "akx", "aky"]
-        },
-
-        { "name" : "Right Leg",
-          "joints" : [
-            "r_leg_hpx",
-            "r_leg_hpy",
-            "r_leg_hpz",
-            "r_leg_kny",
-            "r_leg_akx",
-            "r_leg_aky"
-            ],
-          "labels" : ["hpx", "hpy", "hpz", "knee", "akx", "aky"]
-        }
-      ]
-
 
 
 class AtlasCommandStream(object):
@@ -451,8 +423,6 @@ class JointCommandPanel(object):
         self.ui.hidePreviewButton.connect('clicked()', self.onHidePreviewClicked)
         self.ui.previewSlider.connect('valueChanged(int)', self.onPreviewSliderChanged)
         self.ui.speedSpinBox.connect('valueChanged(double)', self.onSpeedChanged)
-        self.ui.steeringButton.connect('clicked()', self.onSteeringButtonClicked)
-        self.ui.throttleButton.connect('clicked()', self.onThrottleButtonClicked)
         self.hidePreviewModels()
 
         self.throttleControlEnabled = False
@@ -570,6 +540,10 @@ class JointTeleopPanel(object):
             groupName = group['name']
             joints = group['joints']
             labels = group['labels']
+
+            if groupName.lower() == 'base':
+                continue
+
             if len(labels) != len(joints):
                 print 'error, joints/labels mismatch for joint group:', name
                 continue
@@ -609,8 +583,12 @@ class JointTeleopPanel(object):
     def showPose(self, pose):
         self.teleopJointController.setPose('teleop_pose', pose)
         self.teleopRobotModel.setProperty('Visible', True)
+        self.teleopRobotModel.setProperty('Color Mode', 'Solid Color')
+        self.teleopRobotModel.setProperty('Color', [1.0, 170/255.0, 0.0])
+        self.teleopRobotModel.setProperty('Alpha', 1.0)
+
         self.robotStateModel.setProperty('Visible', True)
-        self.robotStateModel.setProperty('Alpha', 0.1)
+        self.robotStateModel.setProperty('Alpha', 1.0)
         commandStream.setGoalPose(self.teleopJointController.q)
 
 
@@ -695,7 +673,8 @@ class AtlasCommandPanel(object):
         self.view = self.app.createView()
         self.robotSystem = robotsystem.create(self.view)
 
-        jointGroups = getJointGroups()
+        self.config = drcargs.getDirectorConfig()
+        jointGroups = self.config['teleopJointGroups']
         self.jointTeleopPanel = JointTeleopPanel(self.robotSystem, jointGroups)
         self.jointCommandPanel = JointCommandPanel(self.robotSystem)
 
@@ -840,7 +819,7 @@ def debugMain():
     ConsoleApp.start()
 
 
-def robotMain(useDrivingGains=False, useController=True):
+def robotMain(useDrivingGains=False, useController=False):
 
     print 'waiting for robot state...'
     commandStream.waitForRobotState()
@@ -850,7 +829,7 @@ def robotMain(useDrivingGains=False, useController=True):
     if useController==True:
         commandStream.useController()
     else:
-        commandStream.publishChannel = 'ATLAS_COMMAND'
+        commandStream.publishChannel = 'ROBOT_COMMAND'
 
     if useDrivingGains:
         commandStream.applyDrivingDefaults()
