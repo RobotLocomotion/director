@@ -98,9 +98,8 @@ class Geometry(object):
     @staticmethod
     def loadTextureForMesh(polyData, meshFileName):
 
-
         textureFileName = Geometry.getTextureFileName(polyData)
-        if textureFileName in Geometry.TextureCache:
+        if textureFileName in Geometry.TextureCache or textureFileName is None:
             return
 
         if not os.path.isabs(textureFileName):
@@ -125,38 +124,28 @@ class Geometry(object):
 
         Geometry.TextureCache[textureFileName] = texture
 
-
-    @staticmethod
-    def loadMultiBlockMeshes(filename):
-
-        reader = vtk.vtkXMLMultiBlockDataReader()
-        reader.SetFileName(filename)
-        reader.Update()
-
-        polyDataList = []
-        mb = reader.GetOutput()
-        for i in xrange(mb.GetNumberOfBlocks()):
-            polyData = vtk.vtkPolyData.SafeDownCast(mb.GetBlock(i))
-            if polyData and polyData.GetNumberOfPoints():
-                polyDataList.append(shallowCopy(polyData))
-                Geometry.loadTextureForMesh(polyData, filename)
-
-        return polyDataList
-
-
     @staticmethod
     def loadPolyDataMeshes(geom):
 
         filename = geom.string_data
         basename, ext = os.path.splitext(filename)
-        if ext.lower() == '.wrl':
-            filename = basename + '.obj'
 
-        alternateFilename = basename + '.vtm'
-        if USE_TEXTURE_MESHES and os.path.isfile(alternateFilename):
-            polyDataList = Geometry.loadMultiBlockMeshes(alternateFilename)
+        preferredExtensions = ['.vtm', '.vtp', '.obj']
+
+        for x in preferredExtensions:
+            if os.path.isfile(basename + x):
+                filename = basename + x
+                break
+
+        if filename.endswith('vtm'):
+            polyDataList = ioUtils.readMultiBlock(filename)
         else:
             polyDataList = [ioUtils.readPolyData(filename)]
+
+        if USE_TEXTURE_MESHES:
+            for polyData in polyDataList:
+                Geometry.loadTextureForMesh(polyData, filename)
+
 
         return polyDataList
 

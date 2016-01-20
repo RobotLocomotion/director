@@ -33,6 +33,23 @@ def readPolyData(filename, computeNormals=False):
         return polyData
 
 
+def readMultiBlock(filename):
+    '''Reads a .vtm file and returns a list of vtkPolyData objects'''
+
+    reader = vtk.vtkXMLMultiBlockDataReader()
+    reader.SetFileName(filename)
+    reader.Update()
+
+    polyDataList = []
+    mb = reader.GetOutput()
+    for i in xrange(mb.GetNumberOfBlocks()):
+        polyData = vtk.vtkPolyData.SafeDownCast(mb.GetBlock(i))
+        if polyData and polyData.GetNumberOfPoints():
+            polyDataList.append(shallowCopy(polyData))
+
+    return polyDataList
+
+
 def readImage(filename):
 
     ext = os.path.splitext(filename)[1].lower()
