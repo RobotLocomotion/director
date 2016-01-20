@@ -86,7 +86,13 @@ class Geometry(object):
 
     @staticmethod
     def computeNormals(polyDataList):
-        return [filterUtils.computeNormals(polyData) for polyData in polyDataList]
+
+        def addNormals(polyData):
+            hasNormals = polyData.GetPointData().GetNormals() is not None
+            return polyData if hasNormals else filterUtils.computeNormals(polyData)
+
+        return [addNormals(polyData) for polyData in polyDataList]
+
 
     @staticmethod
     def getTextureFileName(polyData):
