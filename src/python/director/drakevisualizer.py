@@ -353,7 +353,7 @@ class DrakeVisualizerApp():
         # Drake often draws a very large ground plane which is detrimental to
         # the near clipping for up close objects.  The trade-off is Z buffer
         # resolution but in practice things look good with this setting.
-        self.view.renderer().SetNearClippingPlaneTolerance(0.0001)
+        self.view.renderer().SetNearClippingPlaneTolerance(0.0005)
 
         # add view behaviors
         viewBehaviors = viewbehaviors.ViewBehaviors(self.view)
