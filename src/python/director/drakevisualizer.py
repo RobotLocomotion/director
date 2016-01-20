@@ -349,6 +349,12 @@ class DrakeVisualizerApp():
         applogic.setCameraTerrainModeEnabled(self.view, True)
         applogic.resetCamera(viewDirection=[-1, 0, -0.3], view=self.view)
 
+        # This setting improves the near plane clipping resolution.
+        # Drake often draws a very large ground plane which is detrimental to
+        # the near clipping for up close objects.  The trade-off is Z buffer
+        # resolution but in practice things look good with this setting.
+        self.view.renderer().SetNearClippingPlaneTolerance(0.0001)
+
         # add view behaviors
         viewBehaviors = viewbehaviors.ViewBehaviors(self.view)
         applogic._defaultRenderView = self.view
