@@ -157,12 +157,23 @@ class PlaybackPanel(object):
         if viewMode == 'continuous':
             playbackVisible = True
             samplesVisible = False
-        else:
+            interpolationVisible = True
+        elif viewMode == 'frames':
             playbackVisible = False
             samplesVisible = True
+            interpolationVisible = True
+        elif viewMode == 'hidden':
+            playbackVisible = False
+            samplesVisible = False
+            interpolationVisible = False
+        else:
+            raise Exception('Unexpected view mode')
 
-        self.ui.samplesLabel.setEnabled(samplesVisible)
-        self.ui.samplesSpinBox.setEnabled(samplesVisible)
+        self.ui.samplesLabel.setVisible(samplesVisible)
+        self.ui.samplesSpinBox.setVisible(samplesVisible)
+
+        self.ui.interpolationLabel.setVisible(interpolationVisible)
+        self.ui.interpolationCombo.setVisible(interpolationVisible)
 
         self.ui.playbackSpeedLabel.setVisible(playbackVisible)
         self.ui.playbackSpeedCombo.setVisible(playbackVisible)
@@ -170,13 +181,13 @@ class PlaybackPanel(object):
         self.ui.animateButton.setVisible(playbackVisible)
         self.ui.timeLabel.setVisible(playbackVisible)
 
+        self.hidePlan()
+
         if self.plan:
 
-            if self.getViewMode() == 'continuous' and self.autoPlay:
+            if viewMode == 'continuous' and self.autoPlay:
                 self.startAnimation()
-            else:
-                self.ui.playbackSlider.value = 0
-                self.stopAnimation()
+            elif viewMode == 'frames':
                 self.updatePlanFrames()
 
 
@@ -324,6 +335,8 @@ class PlaybackPanel(object):
 
     def hidePlan(self):
         self.stopAnimation()
+        self.ui.playbackSlider.value = 0
+
         if self.planFramesObj:
             self.planFramesObj.setProperty('Visible', False)
         if self.playbackRobotModel:
