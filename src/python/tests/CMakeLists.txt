@@ -27,6 +27,7 @@ set(python_tests_robot
   testOtdfParser.py
   testPlanConstraints.py
   testPlaneSegmentation.py
+  testRobotPoseGui.py
   testRobotSystem.py
   testTableFit.py
   testTableFitStereo.py
@@ -36,7 +37,10 @@ set(python_tests_robot
   testAmazonPod.py
 )
 
+# these tests use Atlas v5 robot model
 set(testKinematicPose_extra_args -v5)
+set(testTeleopPanel_extra_args -v5)
+set(testContinuousWalking_extra_args -v5)
 
 set(python_test_args
   --testing --data-dir ${CMAKE_SOURCE_DIR}/../../../drc-testing-data --output-dir ${CMAKE_BINARY_DIR}/Testing/Temporary

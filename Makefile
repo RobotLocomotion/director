@@ -23,5 +23,8 @@ superbuild:
 	@cd build && cmake ../distro/superbuild
 	$(MAKE) -C build
 
+test:
+	@for pod in distro/pods/*/pod-build; do $(MAKE) -C $$pod test; done
+
 clean:
 	@for pod in `ls distro/pods`; do $(MAKE) -C distro/pods/$$pod clean; done

@@ -1,4 +1,10 @@
+import sys
 import compileall
-compileall.compile_dir('@python_module_dir@')
-file = open('./compile_complete', 'w')
-file.write('Done')
+success = compileall.compile_dir('@python_module_dir@')
+
+if success:
+    file = open('./compile_complete', 'w')
+    file.write('Done')
+else:
+    print '\nPython byte compile failed.\n'
+    sys.exit(1)
