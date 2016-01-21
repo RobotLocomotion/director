@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>441</width>
+    <height>437</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Robot Pose Util</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>1</number>
+     </property>
+     <widget class="QWidget" name="sendPostureTab">
+      <attribute name="title">
+       <string>Send Posture</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="0" column="1">
+          <widget class="QComboBox" name="sendPostureGroupCombo">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>Group:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="postureFilterLabel">
+           <property name="text">
+            <string>Filter:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="postureFilter"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QListWidget" name="postureListWidget"/>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QLabel" name="label_8">
+           <property name="text">
+            <string>Send:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="sendLeftButton">
+           <property name="text">
+            <string>left</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="sendRightButton">
+           <property name="text">
+            <string>right</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="sendDefaultButton">
+           <property name="text">
+            <string>default</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="descriptionLabel">
+         <property name="text">
+          <string>Description:</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="sendEETrajTab">
+      <attribute name="title">
+       <string>Send EE Traj</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QListWidget" name="trajListWidget"/>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QLabel" name="label_9">
+           <property name="text">
+            <string>Send:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="sendTrajLeftButton">
+           <property name="text">
+            <string>left</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="sendTrajRightButton">
+           <property name="text">
+            <string>right</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="sendTrajDefaultButton">
+           <property name="text">
+            <string>default</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="captureTab">
+      <attribute name="title">
+       <string>Capture</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="nameEdit"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>Capture method:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Group:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QComboBox" name="groupCombo"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Name:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="descriptionEdit"/>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="captureChannelCombo">
+         <item>
+          <property name="text">
+           <string>EST_ROBOT_STATE</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>POSTURE_GOAL</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QPushButton" name="captureButton">
+         <property name="text">
+          <string>Capture</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Description:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Joint set:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="jointSetCombo">
+         <item>
+          <property name="text">
+           <string>left arm</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>right arm</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>left arm, back</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>right arm, back</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>left arm, right arm</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>left arm, right arm, back</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>left arm, right arm, back, left leg, right leg</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>left arm, right arm, back, left leg, right leg, base</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>back</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
