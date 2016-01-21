@@ -1448,7 +1448,8 @@ class RobotPoseGUIWrapper(object):
         rpg.setDirectorConfigFile(drcargs.args().directorConfigFile)
         rpg.lcmWrapper = rpg.LCMWrapper()
         cls.main = rpg.MainWindow()
-        mainWindow = [w for w in QtGui.QApplication.topLevelWidgets() if isinstance(w, PythonQt.dd.ddMainWindow)][0]
+        parents = [w for w in QtGui.QApplication.topLevelWidgets() if isinstance(w, PythonQt.dd.ddMainWindow)]
+        mainWindow = parents[0] if parents else None
         cls.main.messageBoxWarning = functools.partial(QtGui.QMessageBox.warning, mainWindow)
         cls.main.messageBoxQuestion = functools.partial(QtGui.QMessageBox.question, mainWindow)
         cls.main.messageBoxInput = functools.partial(QtGui.QInputDialog.getText, mainWindow)
