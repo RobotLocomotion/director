@@ -10,6 +10,7 @@
     <file>ddNavigation.ui</file>
     <file>ddMapping.ui</file>
     <file>ddPlaybackPanel.ui</file>
+    <file>ddRobotPoseGui.ui</file>
     <file>ddAtlasDriverPanel.ui</file>
     <file>ddScreenGrabber.ui</file>
     <file>ddTaskUserPanel.ui</file>

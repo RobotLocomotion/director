@@ -84,6 +84,7 @@ set(python_files
   director/raycastdriver.py
   director/robotstate.py
   director/robotplanlistener.py
+  director/robotposegui.py
   director/robotsystem.py
   director/roboturdf.py
   director/screengrabberpanel.py

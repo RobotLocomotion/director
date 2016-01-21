@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from PyQt4 import QtCore, QtGui, uic
 
 import lcm
@@ -608,11 +606,19 @@ class CapturePanel(object):
         self.ui.onPostureAdded()
 
 
+
 class MainWindow(QtGui.QWidget):
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'RobotPoseGUI.ui'), self)
+        uifile = QtCore.QFile(':/ui/ddRobotPoseGui.ui')
+        isOpen = uifile.open(uifile.ReadOnly)
+        if not isOpen:
+            uifile = os.path.join(os.environ['DRC_BASE'], 'software/director/src/app/ddRobotPoseGui.ui')
+            assert os.path.isfile(uifile)
+
+        uic.loadUi(uifile, self)
+
         self.setWindowTitle('Robot Pose Utility')
 
         if not self.checkEnvironment():
