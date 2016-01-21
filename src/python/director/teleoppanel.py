@@ -1377,6 +1377,9 @@ class TeleopPanel(object):
             self.ui.endEffectorTeleopFrame.setVisible(False)
             self.generalEndEffectorTeleopPanel = GeneralEndEffectorTeleopPanel(ikPlanner, self, robotStateModel, robotStateJointController)
             self.widget.layout().addWidget(self.generalEndEffectorTeleopPanel.widget, 0, 0, 1, 2)
+
+        app.addShortcut(app.getMainWindow(), 'Ctrl+Shift+P', self.ui.planButton.click)
+
         PythonQt.dd.ddGroupBoxHider(self.ui.paramsContainer)
         PythonQt.dd.ddGroupBoxHider(self.ui.finalPosePlanningOptions)
 
