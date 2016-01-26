@@ -103,8 +103,9 @@ def onFileSaveData():
         otdfFile.close()
     elif hasattr(obj, 'polyData'):
         mainWindow = app.getMainWindow()
-        fileFilters = "PLY (*.ply);;STL (*.stl);;VTP (*.vtp)";
-        filename = QtGui.QFileDialog.getSaveFileName(mainWindow, "Save Data...", getDefaultDirectory(), fileFilters, 'VTP (*.vtp)')
+        fileFilters = "PLY (*.ply);;STL (*.stl);;VTP (*.vtp);;VTK (*.vtk)";
+        defaultFilter = 'VTP (*.vtp)';
+        filename = QtGui.QFileDialog.getSaveFileName(mainWindow, "Save Data...", getDefaultDirectory(), fileFilters, defaultFilter)
 
         if not filename:
             return

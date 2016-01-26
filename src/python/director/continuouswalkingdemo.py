@@ -5,6 +5,7 @@ import operator
 import vtkAll as vtk
 import vtkNumpy
 import functools
+import ihmc
 
 from director import lcmUtils
 from director import ioUtils
@@ -151,7 +152,7 @@ class ContinousWalkingDemo(object):
         #footContactSubContinuous.setSpeedLimit(60)
 
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
-        lcmUtils.addSubscriber('IHMC_FOOTSTEP_STATUS', lcmdrc.footstep_status_t, self.onFootstepStatus)
+        lcmUtils.addSubscriber('IHMC_FOOTSTEP_STATUS', ihmc.footstep_status_t, self.onFootstepStatus)
         lcmUtils.addSubscriber('EST_ROBOT_STATE', lcmdrc.robot_state_t, self.onRobotStatus)
         stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
         stepParamsSub.setSpeedLimit(60)

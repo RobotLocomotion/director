@@ -75,6 +75,7 @@ def writePolyData(polyData, filename):
 
     writers = {
             '.vtp' : vtk.vtkXMLPolyDataWriter,
+            '.vtk' : vtk.vtkPolyDataWriter,
             '.ply' : vtk.vtkPLYWriter,
             '.stl' : vtk.vtkSTLWriter,
               }
