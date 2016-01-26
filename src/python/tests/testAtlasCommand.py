@@ -15,7 +15,7 @@ import math
 import argparse
 
 from director.utime import getUtime
-from lcmtypes.drake import lcmt_qp_controller_input, lcmt_whole_body_data
+from drake import lcmt_qp_controller_input, lcmt_whole_body_data
 
 import scipy.interpolate
 
