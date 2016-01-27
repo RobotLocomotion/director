@@ -120,7 +120,7 @@ class ContactFilter(object):
 
     def initializeGurobiModel(self):
         # careful here, Mosek models leak memory apparently
-        numContactsList = [1,2,3]
+        numContactsList = [1,2,3,4]
         self.gurobi = contactfiltergurobi.ContactFilterGurobi(numContactsList=numContactsList)
 
 
