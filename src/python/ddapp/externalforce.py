@@ -48,6 +48,8 @@ class ExternalForce(object):
         self.captureMode = False
         self.captureModeCounter = 0
         self.showContactRay = True
+        self.showContactFilterEstimate = True
+        self.showActiveLinkEstimate = True
         self.addSubscribers()
         self.createPlunger()
         self.createMeshDataAndLocators()
@@ -249,6 +251,10 @@ class ExternalForce(object):
         self.captureModeCounter = 0
 
     def onContactEstimate(self, msg):
+
+        if not self.showContactFilterEstimate:
+            return
+
         name = 'estimated external force'
 
         for i in xrange(0,msg.num_contact_points):
@@ -462,6 +468,10 @@ class ExternalForce(object):
 
 
     def onActiveLinkContactEstimate(self, msg):
+
+
+        if not self.showActiveLinkEstimate:
+            return
 
         numBodies = msg.num_bodies
 
