@@ -17,6 +17,7 @@ from director.utime import getUtime
 import time
 
 import drc as lcmdrc
+import atlas
 from mav.indexed_measurement_t import indexed_measurement_t
 
 
@@ -55,12 +56,12 @@ class AtlasDriver(object):
 
     def _setupSubscriptions(self):
         lcmUtils.addSubscriber('PLAN_EXECUTION_STATUS', lcmdrc.plan_status_t, self.onControllerStatus)
-        lcmUtils.addSubscriber('ATLAS_BATTERY_DATA', lcmdrc.atlas_battery_data_t, self.onAtlasBatteryData)
-        lcmUtils.addSubscriber('ATLAS_ELECTRIC_ARM_STATUS', lcmdrc.atlas_electric_arm_status_t, self.onAtlasElectricArmStatus)
+        lcmUtils.addSubscriber('ATLAS_BATTERY_DATA', atlas.battery_data_t, self.onAtlasBatteryData)
+        lcmUtils.addSubscriber('ATLAS_ELECTRIC_ARM_STATUS', atlas.electric_arm_status_t, self.onAtlasElectricArmStatus)
         lcmUtils.addSubscriber('CONTROLLER_RATE', lcmdrc.message_rate_t, self.onControllerRate)
-        sub = lcmUtils.addSubscriber('ATLAS_STATUS', lcmdrc.atlas_status_t, self.onAtlasStatus)
+        sub = lcmUtils.addSubscriber('ATLAS_STATUS', atlas.status_t, self.onAtlasStatus)
         sub.setSpeedLimit(60)
-        sub = lcmUtils.addSubscriber('ATLAS_STATE_EXTRA', lcmdrc.atlas_state_extra_t, self.onAtlasStateExtra)
+        sub = lcmUtils.addSubscriber('ATLAS_STATE_EXTRA', atlas.state_extra_t, self.onAtlasStateExtra)
         sub.setSpeedLimit(5)
 
     def onAtlasStatus(self, message):
@@ -236,7 +237,7 @@ class AtlasDriver(object):
         return self.averageRecentMaxPressure
 
     def sendDesiredPumpPsi(self, desiredPsi):
-        msg = lcmdrc.atlas_pump_command_t()
+        msg = atlas.pump_command_t()
         msg.utime = getUtime()
 
         msg.k_psi_p = 0.0  # Gain on pressure error (A/psi)
@@ -267,7 +268,7 @@ class AtlasDriver(object):
 
     def sendBehaviorCommand(self, behaviorName):
 
-        msg = lcmdrc.atlas_behavior_command_t()
+        msg = atlas.behavior_command_t()
         msg.utime = getUtime()
         msg.command = behaviorName
         lcmUtils.publish('ATLAS_BEHAVIOR_COMMAND', msg)
@@ -342,7 +343,7 @@ class AtlasDriver(object):
         self.sendBehaviorCommand('calibrate_electric_arms_freeze')
 
     def sendElectricArmEnabledState(self, enabledState):
-        msg = lcmdrc.atlas_electric_arm_enable_t()
+        msg = atlas.electric_arm_enable_t()
         msg.utime = getUtime()
         msg.num_electric_arm_joints = 6
         assert len(enabledState) == msg.num_electric_arm_joints
@@ -427,7 +428,7 @@ class AtlasDriver(object):
         heightLimit = self.getPelvisHeightLimits()
         assert heightLimit[0] <= height <= heightLimit[1]
 
-        pelvisParams = lcmdrc.atlas_behavior_pelvis_servo_params_t()
+        pelvisParams = atlas.behavior_pelvis_servo_params_t()
         pelvisParams.com_v0 = 0.0
         pelvisParams.com_v1 = 0.0
         pelvisParams.pelvis_height = height
@@ -435,7 +436,7 @@ class AtlasDriver(object):
         pelvisParams.pelvis_pitch = 0.0
         pelvisParams.pelvis_roll = 0.0
 
-        msg = lcmdrc.atlas_behavior_manipulate_params_t()
+        msg = atlas.behavior_manipulate_params_t()
         msg.use_demo_mode = 0
         msg.use_desired = 1
         msg.desired = pelvisParams
