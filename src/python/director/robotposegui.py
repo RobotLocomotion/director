@@ -287,7 +287,7 @@ def publishPostureGoal(joints, postureName, channel='POSTURE_GOAL'):
 
 def publishTrajGoal(name, channel=''):
 
-    msg = lcmdrc.atlas_behavior_command_t()
+    msg = atlas.behavior_command_t()
     msg.utime = getUtime()
     msg.command = name
     lcmWrapper.publish('EE_TRAJ_GOAL', msg)

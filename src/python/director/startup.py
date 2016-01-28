@@ -579,7 +579,7 @@ if useForceDisplay:
 
         def __init__(self, channel, statusBar=None):
 
-            self.sub = lcmUtils.addSubscriber(channel, lcmdrc.atlas_state_t, self.onAtlasState)
+            self.sub = lcmUtils.addSubscriber(channel, atlas.state_t, self.onAtlasState)
             self.label = QtGui.QLabel('')
             statusBar.addPermanentWidget(self.label)
 

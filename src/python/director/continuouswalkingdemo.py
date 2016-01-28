@@ -153,7 +153,7 @@ class ContinousWalkingDemo(object):
         lcmUtils.addSubscriber('FOOTSTEP_PLAN_RESPONSE', lcmdrc.footstep_plan_t, self.onFootstepPlanContinuous)# additional git decode stuff removed
         lcmUtils.addSubscriber('IHMC_FOOTSTEP_STATUS', lcmdrc.footstep_status_t, self.onFootstepStatus)
         lcmUtils.addSubscriber('EST_ROBOT_STATE', lcmdrc.robot_state_t, self.onRobotStatus)
-        stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', lcmdrc.atlas_behavior_step_params_t, self.onAtlasStepParams)
+        stepParamsSub = lcmUtils.addSubscriber('ATLAS_STEP_PARAMS', atlas.behavior_step_params_t, self.onAtlasStepParams)
         stepParamsSub.setSpeedLimit(60)
 
         self.footstepsPanel.driver.applyDefaults('BDI')

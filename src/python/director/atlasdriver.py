@@ -88,7 +88,7 @@ class AtlasDriver(object):
         Return a dict that maps behavior ids (int) to behavior names (string).
         '''
         if not self._behaviorMap:
-            msg = lcmdrc.atlas_status_t
+            msg = atlas.status_t
             self._behaviorMap = {
                     msg.BEHAVIOR_NONE        : 'none',
                     msg.BEHAVIOR_FREEZE      : 'freeze',
