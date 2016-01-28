@@ -99,6 +99,7 @@ from director.tasks import robottasks as rt
 from director.tasks import taskmanagerwidget
 from director.tasks.descriptions import loadTaskDescriptions
 import drc as lcmdrc
+import atlas
 
 from collections import OrderedDict
 import functools
