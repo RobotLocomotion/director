@@ -99,6 +99,7 @@ from director.tasks import robottasks as rt
 from director.tasks import taskmanagerwidget
 from director.tasks.descriptions import loadTaskDescriptions
 import drc as lcmdrc
+import atlas
 
 from collections import OrderedDict
 import functools
@@ -579,7 +580,7 @@ if useForceDisplay:
 
         def __init__(self, channel, statusBar=None):
 
-            self.sub = lcmUtils.addSubscriber(channel, lcmdrc.atlas_state_t, self.onAtlasState)
+            self.sub = lcmUtils.addSubscriber(channel, atlas.state_t, self.onAtlasState)
             self.label = QtGui.QLabel('')
             statusBar.addPermanentWidget(self.label)
 

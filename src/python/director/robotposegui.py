@@ -6,6 +6,7 @@ import json
 import time
 import os
 import drc as lcmdrc
+import atlas
 import functools
 
 # allow control-c to kill the program
@@ -287,7 +288,7 @@ def publishPostureGoal(joints, postureName, channel='POSTURE_GOAL'):
 
 def publishTrajGoal(name, channel=''):
 
-    msg = lcmdrc.atlas_behavior_command_t()
+    msg = atlas.behavior_command_t()
     msg.utime = getUtime()
     msg.command = name
     lcmWrapper.publish('EE_TRAJ_GOAL', msg)
