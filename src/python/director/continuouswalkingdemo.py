@@ -24,6 +24,7 @@ import director.terrain
 import director.tasks.robottasks as rt
 
 import drc as lcmdrc
+import atlas
 
 from thirdparty import qhull_2d
 from thirdparty import min_bounding_rect
