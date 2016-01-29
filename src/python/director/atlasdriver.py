@@ -268,7 +268,7 @@ class AtlasDriver(object):
 
     def sendBehaviorCommand(self, behaviorName):
 
-        msg = atlas.behavior_command_t()
+        msg = lcmdrc.behavior_command_t()
         msg.utime = getUtime()
         msg.command = behaviorName
         lcmUtils.publish('ATLAS_BEHAVIOR_COMMAND', msg)
