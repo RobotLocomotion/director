@@ -223,6 +223,7 @@ class DrakeVisualizer(object):
         self.subscribers = []
         self.view = view
         self.robots = {}
+        self.linkWarnings = set()
         self.sendStatusMessage('loaded')
         self.enable()
 
@@ -306,8 +307,14 @@ class DrakeVisualizer(object):
             robotNum = msg.robot_num[i]
             linkName = msg.link_name[i]
 
-            link = self.getLink(robotNum, linkName)
-            link.setTransform(pos, quat)
+            try:
+                link = self.getLink(robotNum, linkName)
+            except KeyError:
+                if linkName not in self.linkWarnings:
+                    print 'Error locating link name:', linkName
+                    self.linkWarnings.add(linkName)
+            else:
+                link.setTransform(pos, quat)
 
         self.view.render()
 
