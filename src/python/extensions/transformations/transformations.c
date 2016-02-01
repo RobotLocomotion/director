@@ -1,3 +1,5 @@
+
+
 /* transformations.c
 
 A Python C extension module for homogeneous transformation matrices and
@@ -11,7 +13,7 @@ Refer to the transformations.py module for documentation and tests.
 :Organization:
   Laboratory for Fluorescence Dynamics, University of California, Irvine
 
-:Version: 2015.03.19
+:Version: 2015.07.18
 
 Install
 -------
@@ -57,7 +59,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define _VERSION_ "2015.03.19"
+#define _VERSION_ "2015.07.18"
 
 #define WIN32_LEAN_AND_MEAN
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -213,7 +215,8 @@ int tridiagonalize_symmetric_44(
 
 /*
 Return largest eigenvalue of symmetric tridiagonal matrix.
-Matrix Algorithms: Basic decompositions. By GW Stewart. Chapter 3.
+Matrix Algorithms: Volume II: Eigensystems. By GW Stewart. 
+Chapter 3. page 197.
 */
 double max_eigenvalue_of_tridiag_44(
     double *diagonal,    /* double[4] */
@@ -244,12 +247,14 @@ double max_eigenvalue_of_tridiag_44(
     upper = MAX(upper, d);
 
     /* precision */
-    eps = (4.0 * (fabs(lower) + fabs(upper))) * DBL_EPSILON;
+    /* eps = (4.0 * (fabs(lower) + fabs(upper))) * DBL_EPSILON; */
+    eps = 1e-18;
 
     /* interval bisection until width is less than tolerance */
     while (fabs(upper - lower) > eps) {
 
         eigenv = (upper + lower) / 2.0;
+
         if ((eigenv == upper) || (eigenv == lower))
             return eigenv;
 
