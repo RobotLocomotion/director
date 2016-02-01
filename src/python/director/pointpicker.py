@@ -393,21 +393,16 @@ class PlacerWidget(object):
         return vis.pickPoint(displayPoint, self.view, obj=self.points, pickType='cells', tolerance=0.01)
 
 
+class ObjectPicker(object):
 
-
-
-
-class AffordancePicker(object):
-
-    def __init__(self, view, manager, callback=None, numberOfObjects=1, drawLines=True, abortCallback=None, filterFunc=None, hoverColor=[1.0, 0.8, 0.8, 1.0]):
+    def __init__(self, view, callback=None, abortCallback=None, numberOfObjects=1, getObjectsFunction=None, hoverColor=[1.0, 0.8, 0.8, 1.0]):
 
         self.view = view
-        self.affordanceManager = manager
         self.tolerance = 0.01
         self.numberOfObjects = numberOfObjects
+        self.getObjectsFunction = getObjectsFunction
         self.callbackFunc = callback
         self.abortFunc = abortCallback
-        self.filterFunc = filterFunc
         self.hoverColor = hoverColor[0:3]
         self.hoverAlpha = hoverColor[3]
         self.pickedObj = None
@@ -478,20 +473,12 @@ class AffordancePicker(object):
         self.stop()
 
 
-    def draw(self):
-        pass
-        # TODO
-
     def tick(self):
 
-        # get affordances
-        affs = self.affordanceManager.getAffordances()
-        affs = [a for a in affs if a.getProperty('Visible')]
-        if self.filterFunc is not None:
-            affs = [a for a in affs if self.filterFunc(a)]
+        objs = self.getObjectsFunction() if self.getObjectsFunction else None
 
-        # get picked affordance
-        self.hoverPos, prop, _ = vis.pickPoint(self.lastMovePos, self.view, pickType='cells', tolerance=self.tolerance, obj=affs)
+        # get picked object
+        self.hoverPos, prop, _ = vis.pickPoint(self.lastMovePos, self.view, pickType='cells', tolerance=self.tolerance, obj=objs)
         prevPickedObj = self.pickedObj
         curPickedObj = vis.getObjectByProp(prop)
         if curPickedObj is not prevPickedObj:
@@ -505,4 +492,17 @@ class AffordancePicker(object):
                 curPickedObj.setProperty('Alpha', self.hoverAlpha)
             self.pickedObj = curPickedObj
 
-        self.draw()
+
+class AffordancePicker(ObjectPicker):
+
+    def __init__(self, view, affordanceManager, filterFunc=None):
+        AffordancePicker.__init__(self, view, getObjectsFunction=self.getObjects)
+        self.affordanceManager = affordanceManager
+        self.filterFunc = filterFunc
+
+    def getObjects(self):
+        affs = self.affordanceManager.getAffordances()
+        affs = [a for a in affs if a.getProperty('Visible')]
+        if self.filterFunc is not None:
+            affs = [a for a in affs if self.filterFunc(a)]
+        return affs
