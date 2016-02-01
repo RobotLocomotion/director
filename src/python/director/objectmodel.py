@@ -171,6 +171,7 @@ class ContainerItem(ObjectModelItem):
 class ObjectModelTree(object):
 
     ACTION_SELECTED = 'ACTION_SELECTED'
+    SELECTION_CHANGED = 'SELECTION_CHANGED'
 
     def __init__(self):
         self._treeWidget = None
@@ -178,7 +179,7 @@ class ObjectModelTree(object):
         self._objects = {}
         self._blockSignals = False
         self.actions = []
-        self.callbacks = callbacks.CallbackRegistry([self.ACTION_SELECTED])
+        self.callbacks = callbacks.CallbackRegistry([self.ACTION_SELECTED, self.SELECTION_CHANGED])
 
     def getTreeWidget(self):
         return self._treeWidget
@@ -261,12 +262,12 @@ class ObjectModelTree(object):
         self._blockSignals = False
 
         obj = self.getActiveObject()
-        if not obj:
-            return
+        if obj:
+            self._blockSignals = True
+            PropertyPanelHelper.addPropertiesToPanel(obj.properties, panel)
+            self._blockSignals = False
 
-        self._blockSignals = True
-        PropertyPanelHelper.addPropertiesToPanel(obj.properties, panel)
-        self._blockSignals = False
+        self.callbacks.process(self.SELECTION_CHANGED, self)
 
     def updateVisIcon(self, obj):
 
@@ -455,6 +456,11 @@ class ObjectModelTree(object):
                 self._eventFilter.setEventHandlerResult(True)
                 self.removeSelectedItems()
 
+    def connectSelectionChanged(self, func):
+        return self.callbacks.connect(self.SELECTION_CHANGED, func)
+
+    def disconnectSelectionChanged(self, callbackId):
+        self.callbacks.disconnect(callbackId)
 
     def init(self, treeWidget, propertiesPanel):
 
