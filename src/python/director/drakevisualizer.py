@@ -187,7 +187,6 @@ class Geometry(object):
     def __init__(self, name, geom, polyData, parentTransform):
         self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
         self.polyDataItem.setProperty('Alpha', geom.color[3])
-        self.polyDataItem.actor.SetUserTransform(parentTransform)
         self.polyDataItem.actor.SetTexture(Geometry.TextureCache.get( Geometry.getTextureFileName(polyData) ))
 
         if self.polyDataItem.actor.GetTexture():
@@ -212,8 +211,8 @@ class Link(object):
 
     def setTransform(self, pos, quat):
         trans = transformUtils.transformFromPose(pos, quat)
-        self.transform.SetMatrix(trans.GetMatrix())
-        self.transform.Modified()
+        for g in self.geometry:
+            g.polyDataItem.getChildFrame().copyFrame(trans)
 
 
 class DrakeVisualizer(object):
@@ -274,6 +273,7 @@ class DrakeVisualizer(object):
         for geom in link.geometry:
             geom.polyDataItem.addToView(self.view)
             om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
+            vis.addChildFrame(geom.polyDataItem)
 
             if linkName == 'world':
                 #geom.polyDataItem.actor.SetUseBounds(False)
