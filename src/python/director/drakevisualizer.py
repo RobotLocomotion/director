@@ -12,11 +12,11 @@ from director import vtkAll as vtk
 from director import visualization as vis
 
 try:
-    import lcmtypes.drake as lcmdrake
+    import drake as lcmdrake
 except ImportError as e:
     import warnings
-    warnings.warn("The drake python lcmtype bindings now live in lcmtypes.drake. You may want to upgrade your version of drake", FutureWarning)
-    import drake as lcmdrake
+    warnings.warn("The drake python lcmtype bindings have been moved back to the `drake` package. You may want to upgrade your version of drake", FutureWarning)
+    import lcmtypes.drake as lcmdrake
 
 from PythonQt import QtGui
 
