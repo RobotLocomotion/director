@@ -1,5 +1,5 @@
+from director.thirdparty import transformations
 import vtkAll as vtk
-import math
 import numpy as np
 
 try:
@@ -17,13 +17,9 @@ def getTransformFromNumpy(mat):
     '''
     Given a numpy 4x4 array, return a vtkTransform.
     '''
-    m = vtk.vtkMatrix4x4()
-    for r in xrange(4):
-        for c in xrange(4):
-            m.SetElement(r, c, mat[r][c])
-
+    assert mat.shape == (4,4)
     t = vtk.vtkTransform()
-    t.SetMatrix(m)
+    t.SetMatrix(mat.flatten())
     return t
 
 
@@ -149,7 +145,7 @@ def frameInterpolate(trans_a, trans_b, weight_b):
     [pos_a, quat_a] = poseFromTransform(trans_a)
     [pos_b, quat_b] = poseFromTransform(trans_b)
     pos_c = pos_a *(1-weight_b) + pos_b * weight_b;
-    quat_c = botpy.quat_interpolate(quat_a,quat_b, weight_b)
+    quat_c = transformations.quaternion_slerp(quat_a, quat_b, weight_b)
     return transformFromPose(pos_c, quat_c)
 
 
@@ -157,28 +153,18 @@ def transformFromPose(position, quaternion):
     '''
     Returns a vtkTransform
     '''
-    rotationMatrix = np.zeros((3,3))
-    vtk.vtkMath.QuaternionToMatrix3x3(quaternion, rotationMatrix)
 
-    mat = np.eye(4)
-    mat[:3,:3] = rotationMatrix
+    mat = transformations.quaternion_matrix(quaternion)
     mat[:3,3] = position
-
-    t = vtk.vtkTransform()
-    t.SetMatrix(mat.flatten())
-    return t
+    return getTransformFromNumpy(mat)
 
 
 def poseFromTransform(transform):
     '''
     Returns position, quaternion
     '''
-    angleAxis = range(4)
-    transform.GetOrientationWXYZ(angleAxis)
-    angleAxis[0] = math.radians(angleAxis[0])
-    pos = transform.GetPosition()
-    quat = botpy.angle_axis_to_quat(angleAxis[0], angleAxis[1:])
-    return np.array(pos), np.array(quat)
+    mat = getNumpyFromTransform(transform)
+    return np.array(mat[:3,3]), transformations.quaternion_from_matrix(mat, isprecise=True)
 
 
 def frameFromPositionAndRPY(position, rpy):
@@ -186,23 +172,18 @@ def frameFromPositionAndRPY(position, rpy):
     rpy specified in degrees
     '''
 
-    rpy = [math.radians(deg) for deg in rpy]
-
-    angle, axis = botpy.roll_pitch_yaw_to_angle_axis(rpy)
-
-    t = vtk.vtkTransform()
-    t.PostMultiply()
-    t.RotateWXYZ(math.degrees(angle), axis)
-    t.Translate(position)
-    return t
+    rpy = np.radians(rpy)
+    mat = transformations.euler_matrix(rpy[0], rpy[1], rpy[2])
+    mat[:3,3] = position
+    return getTransformFromNumpy(mat)
 
 
 def rollPitchYawToQuaternion(rpy):
-    return botpy.roll_pitch_yaw_to_quat(rpy)
+    return transformations.quaternion_from_euler(rpy[0], rpy[1], rpy[2])
 
 
 def quaternionToRollPitchYaw(quat):
-    return botpy.quat_to_roll_pitch_yaw(quat)
+    return transformations.euler_from_quaternion(quat)
 
 
 def copyFrame(transform):
