@@ -475,6 +475,7 @@ class ObjectModelTree(object):
         treeWidget.connect('itemSelectionChanged()', self._onTreeSelectionChanged)
         treeWidget.connect('itemClicked(QTreeWidgetItem*, int)', self._onItemClicked)
         treeWidget.connect('customContextMenuRequested(const QPoint&)', self._onShowContextMenu)
+        treeWidget.setContextMenuPolicy(PythonQt.QtCore.Qt.CustomContextMenu);
 
         self._eventFilter = PythonQt.dd.ddPythonEventFilter()
         self._eventFilter.addFilteredEventType(QtCore.QEvent.KeyPress)
