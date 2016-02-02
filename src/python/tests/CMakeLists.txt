@@ -38,11 +38,13 @@ set(python_tests_robot
   testAmazonPod.py
 )
 
-# Tests are run by default on Valkyrie (val2)
+# Tests are run by default on the default robot
 #
-# If intending to test Atlas only, please set _extra_args -v5
-# Tests can also be run for both Atlas and Valkyrie by setting an additional
-#  _extra_args_2 -v5
+# If intending to test on a particular robot only, please set _extra_args to the
+# director argument for that robot.
+#
+# Tests can also be run on multiple (currently 2) robots by setting an additional
+#  _extra_args_2 to the director argument for the second robot to test.
 
 # these tests are tested on Atlas v5 robot model ONLY
 set(testKinematicPose_extra_args -v5)
