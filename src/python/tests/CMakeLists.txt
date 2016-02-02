@@ -55,6 +55,15 @@ macro(add_python_test name label)
   add_test(${test_name} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args})
   set_property(TEST ${test_name} PROPERTY ENVIRONMENT ${python_coverage_environment_arg})
   set_property(TEST ${test_name} PROPERTY LABELS ${label})
+
+  # Check whether a second test case has been defined
+  # TODO: replace with a loop over _extra_args_{n}
+  if(DEFINED ${base_name}_extra_args_2)
+    set(test_name test_${base_name}_2)
+    add_test(${test_name} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args_2})
+    set_property(TEST ${test_name} PROPERTY ENVIRONMENT ${python_coverage_environment_arg})
+    set_property(TEST ${test_name} PROPERTY LABELS ${label})
+  endif()
 endmacro()
 
 
