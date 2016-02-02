@@ -98,8 +98,8 @@ class CameraControlPanel(object):
 
         self.onAbortPick()
 
-        if not hasattr(obj, 'getChildFrame'):
-            return
+        if obj and not hasattr(obj, 'getChildFrame'):
+            obj = None
 
         if obj:
             vis.addChildFrame(obj)
