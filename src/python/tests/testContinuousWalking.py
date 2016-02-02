@@ -30,7 +30,7 @@ def processSingleBlock(robotStateModel, whichFile=0):
     else:
         polyData = ioUtils.readPolyData(os.path.join(dataDir, 'terrain/block_top.vtp'))
 
-    standingFootName = 'l_foot'
+    standingFootName = cwdemo.ikPlanner.leftFootLink
     standingFootFrame = robotStateModel.getLinkFrame(standingFootName)
     cwdemo.findMinimumBoundingRectangle(polyData, standingFootFrame)
 
@@ -48,7 +48,7 @@ def processSnippet():
 
 
     vis.updatePolyData( polyData, 'walking snapshot trimmed', parent='continuous')
-    standingFootName = 'l_foot'
+    standingFootName = cwdemo.ikPlanner.leftFootLink
 
     standingFootFrame = robotStateModel.getLinkFrame(standingFootName)
     vis.updateFrame(standingFootFrame, standingFootName, parent='continuous', visible=False)
@@ -91,5 +91,3 @@ if app.getTestingInteractiveEnabled():
     view.show()
     app.showObjectModel()
     app.start()
-
-
