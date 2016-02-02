@@ -98,6 +98,9 @@ class CameraControlPanel(object):
 
         self.onAbortPick()
 
+        if not hasattr(obj, 'getChildFrame'):
+            return
+
         if obj:
             vis.addChildFrame(obj)
             obj.connectRemovedFromObjectModel(self.onObjectRemoved)
