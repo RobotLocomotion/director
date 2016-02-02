@@ -11,11 +11,21 @@ import csv
 import copy
 import time
 import itertools
+import scipy.stats
+import contactfilterutils as cfUtils
+
+
 from PythonQt import QtCore, QtGui
 from ddapp import transformUtils
 from ddapp import lcmUtils
 from ddapp import contactfiltergurobi
+from ddapp.debugVis import DebugData
+from ddapp import visualization as vis
 from ddapp import gurobiutils as grbUtils
+from ddapp.timercallback import TimerCallback
+from ddapp import objectmodel as om
+
+
 import drc as lcmdrc
 import drake as lcmdrake
 
@@ -28,6 +38,7 @@ class ContactFilter(object):
     def __init__(self, robotSystem):
 
         self.robotSystem = robotSystem
+        self.robotStateModel = robotSystem.robotStateModel
         self.initializeConstants()
         self.loadDrakeModelFromFilename()
         self.contactFilterPointDict = dict()
@@ -40,10 +51,16 @@ class ContactFilter(object):
         self.initializeGurobiModel()
         self.initializeTestParticleSet()
         self.initializeOptions()
+        self.setupMotionModelData()
         self.currentUtime = 0.0
 
         self.residual = None
         self.particleSetList = []
+        self.lastTimeContactAdded = time.time()
+        self.removedParticleSet = False
+
+        self.initializeTestTimers()
+
         # self.addTestParticleSetToParticleSetList()
 
 
@@ -52,6 +69,7 @@ class ContactFilter(object):
 
     def stop(self):
         self.running = False
+
 
     def addSubscribers(self):
         lcmUtils.addSubscriber('RESIDUAL_OBSERVER_STATE_W_FOOT_FT', lcmdrc.residual_observer_state_t,
@@ -64,6 +82,10 @@ class ContactFilter(object):
         # maybe call it CONTACT_FILTER_POINT_ESTIMATE_PYTHON so that we can compare the results . . .
         self.contactEstimatePublishChannel = "CONTACT_FILTER_POINT_ESTIMATE"
 
+    #
+    # def initializeThresholdVars(self):
+    #     self.vars['threshold']['lastTime']
+
 
     def initializeConstants(self):
         mu = MU
@@ -73,10 +95,25 @@ class ContactFilter(object):
 
     def initializeOptions(self):
         self.options = {}
+
         self.options['thresholds'] = {}
         self.options['thresholds']['addContactPoint'] = 10.0 # threshold on squared error to add contact point
         self.options['thresholds']['removeContactPoint'] = 3.0 # threshold on force magnitude to eliminate a force that gets too small
         self.options['thresholds']['timeout'] = 2.0
+
+        self.options['motionModel'] = {}
+        self.options['motionModel']['var'] = 0.1
+
+        self.options['measurementModel'] = {}
+        self.options['measurementModel']['var'] = 1.0 # this is totally made up at the moment
+        self.weightMatrix = 1/self.options['measurementModel']['var']*np.eye(self.drakeModel.numJoints)
+
+
+    def initializeTestTimers(self):
+        self.justAppliedMotionModel = False
+        self.particleFilterTestTimer = TimerCallback(targetFps=1)
+        self.particleFilterTestTimer.callback = self.testFullParticleFilterCallback
+
 
     def addTestParticleSetToParticleSetList(self):
         self.particleSetList.append(self.testParticleSet)
@@ -85,7 +122,6 @@ class ContactFilter(object):
     def loadDrakeModelFromFilename(self, filename=None):
         self.drakeModel = PythonDrakeModel()
         self.drakeModel.loadRobotModelFromURDFFilename(filename)
-        self.weightMatrix = 1.0*np.eye(self.drakeModel.numJoints)
 
 
     def squaredErrorNoContacts(self, verbose=True):
@@ -101,8 +137,6 @@ class ContactFilter(object):
             print "squared error no contacts", squaredError
 
         return squaredError
-
-
 
 
     def loadContactFilterPointsFromFile(self, filename=None):
@@ -150,6 +184,30 @@ class ContactFilter(object):
                 self.contactFilterPointDict[linkName].append(contactFilterPoint)
             else:
                 self.contactFilterPointDict[linkName] = [contactFilterPoint]
+
+    def setupMotionModelData(self):
+        # need to make sure you call loadContactFilterPointsFromFile before you get here
+
+        self.motionModelData = {}
+        var = self.options['motionModel']['var']
+
+        # currently only allow motion model to move you within the same link
+        for linkName, cfpList in self.contactFilterPointDict.iteritems():
+            for cfp in cfpList:
+                numCFP = len(cfpList)
+                xk = np.arange(0,numCFP)
+                pk = np.zeros(numCFP)
+
+                for idx, cfpNext in enumerate(cfpList):
+                    distance = np.linalg.norm(cfp.contactLocation - cfpNext.contactLocation)
+                    prob = np.exp(-1.0/(2*var)*distance**2) # note that this is not properly normalized
+                    pk[idx] = prob
+
+                pk = pk/np.sum(pk)
+                rv = scipy.stats.rv_discrete(values=(xk,pk))
+                d = {'cfpList': cfpList, 'randomVar': rv}
+                self.motionModelData[cfp] = d
+
 
 
     def initializeGurobiModel(self):
@@ -231,9 +289,12 @@ class ContactFilter(object):
         squaredError = np.dot(np.dot((residual - impliedResidual).transpose(), self.weightMatrix),
                                     (residual - impliedResidual))
 
+        likelihood = np.exp(-1/2.0*squaredError)
+
         # record the data somehow . . .
         solnData = {'cfpData': cfpData, 'impliedResidual': impliedResidual, 'squaredError': squaredError,
-                    "numContactPoints": len(cfpList), 'gurobiObjValue': grbSolnData['objectiveValue']}
+                    "numContactPoints": len(cfpList), 'gurobiObjValue': grbSolnData['objectiveValue'],
+                    'likelihood': likelihood}
         return solnData
 
     def computeLikelihoodFull(self, residual, publish=True, verbose=False):
@@ -290,20 +351,24 @@ class ContactFilter(object):
             if particle.cfp in alreadySolved:
                 solnDataCopy = copy.deepcopy(alreadySolved[particle.cfp].solnData)
                 particle.solnData = solnDataCopy
+            else:
+                cfpList = [particle.cfp]
+                cfpList.extend(externalCFPList)
 
-            cfpList = [particle.cfp]
-            cfpList.extend(externalCFPList)
+                particleList = [particle]
+                particleList.extend(externalParticles)
 
-            particleList = [particle]
-            particleList.extend(externalParticles)
+                solnData = self.computeSingleLikelihood(residual, cfpList)
+                solnData['force'] = solnData['cfpData'][0]['force']
 
-            solnData = self.computeSingleLikelihood(residual, cfpList)
-            solnData['force'] = solnData['cfpData'][0]['force']
 
+            # this just makes sure we record the particle in addition to the cfp in the soln data
             for idx, d in enumerate(solnData['cfpData']):
                 d['particle'] = particleList[idx]
 
             particle.solnData = solnData
+
+        particleSet.updateMostLikelyParticle()
 
 
         # should probably update "most likely particle again"
@@ -320,8 +385,6 @@ class ContactFilter(object):
 
             self.measurementUpdateSingleParticleSet(residual, particleSet, externalParticles=externalParticles)
 
-            # not sure we should be doing this here or not
-            particleSet.updateMostLikelyParticle()
 
         if publish:
             self.publishMostLikelyEstimate()
@@ -330,19 +393,13 @@ class ContactFilter(object):
 
     def manageParticleSets(self, verbose=True):
         solnData = self.mostLikelySolnData
+        newParticleSet = None
 
         if solnData is None:
             if (self.squaredErrorNoContacts(verbose=False) > self.options['thresholds']['addContactPoint']):
-                print "squared error is large, adding a contact point"
                 newParticleSet = self.createParticleSet()
-                self.particleSetList.append(newParticleSet)
-            return
 
-        if solnData['squaredError'] > self.options['thresholds']['addContactPoint']:
-            # need to add a contact point
-            if verbose:
-                print "squared error is large, adding a contact point"
-
+        elif solnData['squaredError'] > self.options['thresholds']['addContactPoint']:
             linksWithContactPoints = []
             for d in solnData['cfpData']:
                 cfp = d['ContactFilterPoint']
@@ -352,24 +409,78 @@ class ContactFilter(object):
             newParticleSet = self.createParticleSet(dontUseLinks=linksWithContactPoints)
 
             # this is a hack for now
-            if len(self.particleSetList) >= 2:
-                print "particle set list is already of size 2, not adding any more"
-                return
+            # if len(self.particleSetList) >= 2:
+            #     print "particle set list is already of size 2, not adding any more"
+            #     return
 
-            self.particleSetList.append(newParticleSet)
+        # this means we have encountered a situation where we should add a new particle set
+        # for now will only add one if a sufficient time has passed since we last added a contact
+        if newParticleSet is not None:
+            if (time.time() - self.lastTimeContactAdded) > self.options['thresholds']['timeout'] or self.removedParticleSet:
+                if verbose:
+                    print "squared error is large, adding a contact point"
+                self.particleSetList.append(newParticleSet)
+                self.lastTimeContactAdded = time.time()
+            else:
+                if verbose:
+                    print "below timeout threshold when trying to add a new particle set, returning"
+
+            self.removedParticleSet = False
             return
 
+        if solnData is None:
+            self.removedParticleSet = False
+            return
 
         # now remove any particleSets that have sufficiently small "best" forces
         for d in solnData['cfpData']:
-            if np.linalg.norm(d['force']) < self.options['thresholds']['removeContactPoint']:
-                print "force is below threshold, eliminating containing particle set"
+            if (np.linalg.norm(d['force']) < self.options['thresholds']['removeContactPoint'] and
+                (self.squaredErrorNoContacts(verbose=False) < self.options['thresholds']['addContactPoint'])):
+                if verbose:
+                    print "force is below threshold, eliminating containing particle set"
+                self.removedParticleSet = True
                 particleSetToRemove = d['particle'].containingParticleSet
                 self.particleSetList.remove(particleSetToRemove)
 
+                # this return statement only allows you to remove a single particle at a time
+                return
+
+    def applyMotionModelSingleParticleSet(self, particleSet):
+        for particle in particleSet.particleList:
+            cfp = particle.cfp
+            motionData = self.motionModelData[cfp]
+            cfpNextIdx = motionData['randomVar'].rvs()
+            cfpNext = motionData['cfpList'][cfpNextIdx]
+            particle.cfp = cfpNext
 
     def applyMotionModel(self):
-        pass
+        for particleSet in self.particleSetList:
+            self.applyMotionModelSingleParticleSet(particleSet)
+
+
+    def importanceResamplingSingleParticleSet(self, particleSet, numParticles=None):
+        if numParticles is None:
+            numParticles = len(particleSet.particleList)
+
+        newParticleList = []
+        numExistingParticles = len(particleSet.particleList)
+        xk = np.arange(0,numExistingParticles)
+        pk = np.zeros(numExistingParticles)
+
+        for idx, particle in enumerate(particleSet.particleList):
+            pk[idx] = particle.solnData['likelihood']
+
+        # normalize the probabilities
+        pk = pk/np.sum(pk)
+        rv = scipy.stats.rv_discrete(values=(xk,pk)) # the random variable with importance weights
+
+        for i in xrange(0,numParticles):
+            # draw new particle
+            randomIdx = rv.rvs()
+            newParticle = particleSet.particleList[randomIdx].deepCopy()
+            newParticleList.append(newParticle)
+
+        particleSet.particleList = newParticleList
 
     def applyImportanceResampling(self):
         pass
@@ -482,6 +593,65 @@ class ContactFilter(object):
         self.computeAndPublishResidual(msg)
 
 
+    def drawParticleSet(self, particleSet, name="particle set", drawMostLikely=True):
+        numParticlesAtCFP = {}
+        numTotalParticles = len(particleSet.particleList)
+
+        for particle in particleSet.particleList:
+            cfp = particle.cfp
+            if numParticlesAtCFP.has_key(cfp):
+                numParticlesAtCFP[cfp] += 1
+            else:
+                numParticlesAtCFP[cfp] = 1
+
+        # now we need to draw this
+        plungerMaxLength = 0.4
+        plungerMinLength = 0.02
+
+        d = DebugData()
+        q = self.getCurrentPose()
+        defaultColor = [0.5, 0, 0.5]
+        mostLikelyColor = [0,0,1]
+
+        for cfp, numParticles in numParticlesAtCFP.iteritems():
+            color = defaultColor
+
+            if particleSet.mostLikelyParticle is not None:
+                if cfp == particleSet.mostLikelyParticle.cfp:
+                    color = mostLikelyColor
+
+            rayLength = plungerMinLength + 1.0*numParticles/numTotalParticles*plungerMaxLength
+            forceDirectionWorldFrame, forceLocationWorldFrame =\
+                cfUtils.getForceDirectionInWorld(q, self.robotStateModel,
+                                                                        cfp.linkName,
+                                                                        cfp.contactLocation,
+                                                                        cfp.contactNormal)
+
+            rayEnd = forceLocationWorldFrame - forceDirectionWorldFrame*rayLength
+            d.addSphere(forceLocationWorldFrame, radius=0.01, color=color)
+            d.addLine(rayEnd, forceLocationWorldFrame, radius = 0.005, color=color)
+
+
+        vis.updatePolyData(d.getPolyData(), 'particle set', colorByName='RGB255')
+
+    def testParticleSetDraw(self):
+        self.drawParticleSet(self.testParticleSet)
+
+
+    def testFullParticleFilterCallback(self):
+        if self.residual is None:
+            return
+
+        if not self.justAppliedMotionModel:
+            self.applyMotionModelSingleParticleSet(self.testParticleSet)
+            self.testParticleSetDraw()
+            self.justAppliedMotionModel = True
+        else:
+            self.measurementUpdateSingleParticleSet(self.residual, self.testParticleSet)
+            self.importanceResamplingSingleParticleSet(self.testParticleSet)
+            self.testParticleSetDraw()
+            self.justAppliedMotionModel = False
+
     def testLikelihood(self, numContacts = 2):
         cfpList = [self.contactFilterPointDict['pelvis'][0]]
 
@@ -516,6 +686,18 @@ class ContactFilter(object):
 
         print "single measurement update took " + str(elapsed) + " seconds"
         particle.printObject()
+
+
+
+    # these are all test methods
+    def startFilterTest(self):
+        self.particleFilterTestTimer.start()
+
+    def stopFilterTest(self):
+        self.particleFilterTestTimer.stop()
+
+    def removeStaleParticleDraw(self):
+        om.removeFromObjectModel(om.findObjectByName('particle set'))
 
 class PythonDrakeModel(object):
 
@@ -636,6 +818,11 @@ class ContactFilterParticle(object):
         if self.solnData is not None:
             print "squared error = ", self.solnData['squaredError']
             print "force in body frame = ", self.solnData['force']
+
+    def deepCopy(self):
+        newParticle = ContactFilterParticle(cfp=self.cfp)
+        newParticle.setContainingParticleSet(self.containingParticleSet)
+        return newParticle
 
 
 class SingleContactParticleSet(object):
