@@ -38,10 +38,19 @@ set(python_tests_robot
   testAmazonPod.py
 )
 
-# these tests use Atlas v5 robot model
+# Tests are run by default on Valkyrie (val2)
+#
+# If intending to test Atlas only, please set _extra_args -v5
+# Tests can also be run for both Atlas and Valkyrie by setting an additional
+#  _extra_args_2 -v5
+
+# these tests are tested on Atlas v5 robot model ONLY
 set(testKinematicPose_extra_args -v5)
-set(testTeleopPanel_extra_args -v5)
-set(testContinuousWalking_extra_args -v5)
+
+# these tests use both Atlas v5 and Valkyrie
+set(testTeleopPanel_extra_args_2 -v5)
+set(testContinuousWalking_extra_args_2 -v5)
+
 
 set(python_test_args
   --testing --data-dir ${CMAKE_SOURCE_DIR}/../../../drc-testing-data --output-dir ${CMAKE_BINARY_DIR}/Testing/Temporary
