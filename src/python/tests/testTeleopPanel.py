@@ -34,7 +34,7 @@ def checkGraspFrame(inputGraspFrame, side):
 def onIkStartup(ikServer, startSuccess):
 
     side = 'left'
-    goalFrame = transformUtils.frameFromPositionAndRPY([0.5, 0.7, 1.2], [0, 90, -90])
+    goalFrame = transformUtils.frameFromPositionAndRPY([0.5, 0.5, 1.2], [0, 90, -90])
 
     assert not checkGraspFrame(goalFrame, side)
     frame = teleopPanel.endEffectorTeleop.newReachTeleop(goalFrame, side)
