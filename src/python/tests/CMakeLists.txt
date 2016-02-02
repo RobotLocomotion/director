@@ -43,15 +43,15 @@ set(python_tests_robot
 # If intending to test on a particular robot only, please set _extra_args to the
 # director argument for that robot.
 #
-# Tests can also be run on multiple (currently 2) robots by setting an additional
-#  _extra_args_2 to the director argument for the second robot to test.
+# Tests can also be run on multiple robots by setting an additional
+# _extra_args_{n} to the director argument for the n-th robot to test.
 
 # these tests are tested on Atlas v5 robot model ONLY
 set(testKinematicPose_extra_args -v5)
 
 # these tests use both Atlas v5 and Valkyrie
-set(testTeleopPanel_extra_args_2 -v5)
-set(testContinuousWalking_extra_args_2 -v5)
+set(testTeleopPanel_extra_args_1 -v5)
+set(testContinuousWalking_extra_args_1 -v5)
 
 
 set(python_test_args
@@ -67,14 +67,15 @@ macro(add_python_test name label)
   set_property(TEST ${test_name} PROPERTY ENVIRONMENT ${python_coverage_environment_arg})
   set_property(TEST ${test_name} PROPERTY LABELS ${label})
 
-  # Check whether a second test case has been defined
-  # TODO: replace with a loop over _extra_args_{n}
-  if(DEFINED ${base_name}_extra_args_2)
-    set(test_name test_${base_name}_2)
-    add_test(${test_name} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args_2})
+  # Check whether additional test cases have been defined
+  set(n 1)
+  while(DEFINED ${base_name}_extra_args_${n})
+    set(test_name test_${base_name}_${n})
+    add_test(${test_name} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args_${n}})
     set_property(TEST ${test_name} PROPERTY ENVIRONMENT ${python_coverage_environment_arg})
     set_property(TEST ${test_name} PROPERTY LABELS ${label})
-  endif()
+    math(EXPR n "${n}+1")
+  endwhile()
 endmacro()
 
 
