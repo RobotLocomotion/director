@@ -406,6 +406,7 @@ class ObjectPicker(object):
         self.hoverColor = hoverColor[0:3]
         self.hoverAlpha = hoverColor[3]
         self.pickedObj = None
+        self.storedProps = {}
         self.clear()
 
     def start(self):
@@ -447,11 +448,9 @@ class ObjectPicker(object):
         self.objects = [None for i in xrange(self.numberOfObjects)]
         self.hoverPos = None
         self.lastMovePos = [0, 0]
-        if self.pickedObj is not None:
-            self.pickedObj.setProperty('Color', self.storedProps['Color'])
-            self.pickedObj.setProperty('Alpha', self.storedProps['Alpha'])
+        self.unsetHoverProperties(self.pickedObj)
         self.pickedObj = None
-        self.storedProps = {'Color': [0,0,0], 'Alpha':1.0}
+
 
     def onMouseMove(self, displayPoint, modifiers=None):
         self.lastMovePos = displayPoint
@@ -472,24 +471,38 @@ class ObjectPicker(object):
         self.clear()
         self.stop()
 
+    def unsetHoverProperties(self, obj):
+        if obj is None:
+            return
+
+        for propName, value in self.storedProps.iteritems():
+            if obj.hasProperty(propName):
+                obj.setProperty(propName, value)
+        self.storedProps = {}
+
+    def setHoverProperties(self, obj):
+        if obj is None:
+            return
+
+        for propName, value in [['Color', self.hoverColor],
+                                ['Color Mode', 'Solid Color'],
+                                ['Alpha', self.hoverAlpha]]:
+
+            if obj.hasProperty(propName):
+                self.storedProps[propName] = obj.getProperty(propName)
+                obj.setProperty(propName, value)
 
     def tick(self):
 
         objs = self.getObjectsFunction() if self.getObjectsFunction else None
 
-        # get picked object
         self.hoverPos, prop, _ = vis.pickPoint(self.lastMovePos, self.view, pickType='cells', tolerance=self.tolerance, obj=objs)
         prevPickedObj = self.pickedObj
         curPickedObj = vis.getObjectByProp(prop)
+
         if curPickedObj is not prevPickedObj:
-            if prevPickedObj is not None:
-                prevPickedObj.setProperty('Color', self.storedProps['Color'])
-                prevPickedObj.setProperty('Alpha', self.storedProps['Alpha'])
-            if curPickedObj is not None:
-                self.storedProps['Color'] = curPickedObj.getProperty('Color')
-                self.storedProps['Alpha'] = curPickedObj.getProperty('Alpha')
-                curPickedObj.setProperty('Color', self.hoverColor)
-                curPickedObj.setProperty('Alpha', self.hoverAlpha)
+            self.unsetHoverProperties(prevPickedObj)
+            self.setHoverProperties(curPickedObj)
             self.pickedObj = curPickedObj
 
 
