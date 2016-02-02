@@ -21,6 +21,7 @@ set(python_files
   ddapp/consoleapp.py
   ddapp/contactfilter.py
   ddapp/contactfiltergurobi.py
+  ddapp/contactfilterutils.py
   ddapp/gurobiutils.py
   ddapp/continuouswalkingdemo.py
   ddapp/copmonitor.py
