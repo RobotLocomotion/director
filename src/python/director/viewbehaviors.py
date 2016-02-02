@@ -31,6 +31,7 @@ import colorsys
 # several functions in this module depend on these global variables
 # which are set by calling ViewBehaviors.addRobotBehaviors().
 # These could be refactored to be members of a new behaviors class.
+robotSystem = None
 robotModel = None
 handFactory = None
 neckDriver = None
@@ -317,57 +318,32 @@ def getCollisionParent(obj):
 # The most recently cached PickedPoint - available as input to any other algorithm
 lastCachedPickedPoint = np.array([0,0,0])
 
-def showRightClickMenu(displayPoint, view):
 
-    pickedObj, pickedPoint = vis.findPickedObject(displayPoint, view)
-    if not pickedObj:
-        return
+def getObjectAsPointCloud(obj):
+    try:
+        obj = obj.model.polyDataObj
+    except AttributeError:
+        pass
 
-    objectName = pickedObj.getProperty('Name')
-    if objectName == 'grid':
-        return
+    try:
+        obj.polyData
+    except AttributeError:
+        return None
 
-    displayPoint = displayPoint[0], view.height - displayPoint[1]
-
-    globalPos = view.mapToGlobal(QtCore.QPoint(*displayPoint))
-
-    menu = QtGui.QMenu(view)
-
-    widgetAction = QtGui.QWidgetAction(menu)
-    label = QtGui.QLabel('<b>%s</b>' % objectName)
-    label.setContentsMargins(9,9,6,6)
-    widgetAction.setDefaultWidget(label)
-    menu.addAction(widgetAction)
-    menu.addSeparator()
+    if obj and obj.polyData.GetNumberOfPoints():# and (obj.polyData.GetNumberOfCells() == obj.polyData.GetNumberOfVerts()):
+        return obj
 
 
-    propertiesPanel = PythonQt.dd.ddPropertiesPanel()
-    propertiesPanel.setBrowserModeToWidget()
-    propertyset.PropertyPanelHelper.addPropertiesToPanel(pickedObj.properties, propertiesPanel)
-
-    def onPropertyChanged(prop):
-        om.PropertyPanelHelper.setPropertyFromPanel(prop, propertiesPanel, pickedObj.properties)
-    propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
-
-    propertiesMenu = menu.addMenu('Properties')
-    propertiesWidgetAction = QtGui.QWidgetAction(propertiesMenu)
-    propertiesWidgetAction.setDefaultWidget(propertiesPanel)
-    propertiesMenu.addAction(propertiesWidgetAction)
-
-
-    def onDelete():
-        om.removeFromObjectModel(pickedObj)
-
-    def onHide():
-        pickedObj.setProperty('Visible', False)
-
-    def onSelect():
-        om.setActiveObject(pickedObj)
+def getRobotActions(pickedObj):
 
     reachFrame = getAsFrame(pickedObj)
     collisionParent = getCollisionParent(pickedObj)
+    pointCloudObj = getObjectAsPointCloud(pickedObj)
+    affordanceObj = pickedObj if isinstance(pickedObj, affordanceitems.AffordanceItem) else None
+
     def onReachLeft():
         reachToFrame(reachFrame, 'left', collisionParent)
+
     def onReachRight():
         reachToFrame(reachFrame, 'right', collisionParent)
 
@@ -411,25 +387,10 @@ def showRightClickMenu(displayPoint, view):
 
     def onSplineLeft():
         splinewidget.planner.newSpline(pickedObj, 'left')
+
     def onSplineRight():
         splinewidget.planner.newSpline(pickedObj, 'right')
 
-
-    def getPointCloud(obj):
-        try:
-            obj = obj.model.polyDataObj
-        except AttributeError:
-            pass
-        try:
-            obj.polyData
-        except AttributeError:
-            return None
-        if obj and obj.polyData.GetNumberOfPoints():# and (obj.polyData.GetNumberOfCells() == obj.polyData.GetNumberOfVerts()):
-            return obj
-
-
-    pointCloudObj = getPointCloud(pickedObj)
-    affordanceObj = pickedObj if isinstance(pickedObj, affordanceitems.AffordanceItem) else None
 
     def onSegmentGround():
         groundPoints, scenePoints =  segmentation.removeGround(pointCloudObj.polyData)
@@ -442,7 +403,7 @@ def showRightClickMenu(displayPoint, view):
         global lastRandomColor
         polyData = vtk.vtkPolyData()
         polyData.DeepCopy(pointCloudObj.polyData)
-        
+
         if pointCloudObj.getChildFrame():
             polyData = segmentation.transformPolyData(polyData, pointCloudObj.getChildFrame().transform)
         polyData = segmentation.addCoordArraysToPolyData(polyData)
@@ -560,12 +521,8 @@ def showRightClickMenu(displayPoint, view):
         affObj = affordanceitems.MeshAffordanceItem.promotePolyDataItem(pickedObj)
         robotSystem.affordanceManager.registerAffordance(affObj)
 
-    actions = [
-      (None, None),
-      ('Hide', onHide),
-      ('Delete', onDelete),
-      ('Select', onSelect)
-      ]
+
+    actions = []
 
 
     if affordanceObj:
@@ -611,6 +568,76 @@ def showRightClickMenu(displayPoint, view):
             (None, None),
             ('Open Segmentation Editor', onSegmentationEditor)
             ])
+
+    return actions
+
+
+def getShortenedName(name, maxLength=30):
+    if len(name) > maxLength:
+        name = name[:maxLength-3] + '...'
+    return name
+
+def showRightClickMenu(displayPoint, view):
+
+    pickedObj, pickedPoint = vis.findPickedObject(displayPoint, view)
+    if not pickedObj:
+        return
+
+    objectName = pickedObj.getProperty('Name')
+    if objectName == 'grid':
+        return
+
+    objectName = getShortenedName(objectName)
+
+    displayPoint = displayPoint[0], view.height - displayPoint[1]
+
+    globalPos = view.mapToGlobal(QtCore.QPoint(*displayPoint))
+
+    menu = QtGui.QMenu(view)
+
+    widgetAction = QtGui.QWidgetAction(menu)
+    label = QtGui.QLabel('<b>%s</b>' % objectName)
+    label.setContentsMargins(9,9,6,6)
+    widgetAction.setDefaultWidget(label)
+    menu.addAction(widgetAction)
+    menu.addSeparator()
+
+
+    propertiesPanel = PythonQt.dd.ddPropertiesPanel()
+    propertiesPanel.setBrowserModeToWidget()
+    propertyset.PropertyPanelHelper.addPropertiesToPanel(pickedObj.properties, propertiesPanel)
+
+    def onPropertyChanged(prop):
+        om.PropertyPanelHelper.setPropertyFromPanel(prop, propertiesPanel, pickedObj.properties)
+    propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', onPropertyChanged)
+
+    propertiesMenu = menu.addMenu('Properties')
+    propertiesWidgetAction = QtGui.QWidgetAction(propertiesMenu)
+    propertiesWidgetAction.setDefaultWidget(propertiesPanel)
+    propertiesMenu.addAction(propertiesWidgetAction)
+
+
+    def onDelete():
+        om.removeFromObjectModel(pickedObj)
+
+    def onHide():
+        pickedObj.setProperty('Visible', False)
+
+    def onSelect():
+        om.setActiveObject(pickedObj)
+
+
+    actions = [
+      (None, None),
+      ('Select', onSelect),
+      ('Hide', onHide)
+      ]
+
+    if pickedObj.getProperty('Deletable'):
+        actions.append(['Delete', onDelete])
+
+    if robotSystem is not None:
+        actions.extend(getRobotActions(pickedObj))
 
     for actionName, func in actions:
         if not actionName:

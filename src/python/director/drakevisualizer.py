@@ -187,7 +187,6 @@ class Geometry(object):
     def __init__(self, name, geom, polyData, parentTransform):
         self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
         self.polyDataItem.setProperty('Alpha', geom.color[3])
-        self.polyDataItem.actor.SetUserTransform(parentTransform)
         self.polyDataItem.actor.SetTexture(Geometry.TextureCache.get( Geometry.getTextureFileName(polyData) ))
 
         if self.polyDataItem.actor.GetTexture():
@@ -212,8 +211,8 @@ class Link(object):
 
     def setTransform(self, pos, quat):
         trans = transformUtils.transformFromPose(pos, quat)
-        self.transform.SetMatrix(trans.GetMatrix())
-        self.transform.Modified()
+        for g in self.geometry:
+            g.polyDataItem.getChildFrame().copyFrame(trans)
 
 
 class DrakeVisualizer(object):
@@ -223,6 +222,7 @@ class DrakeVisualizer(object):
         self.subscribers = []
         self.view = view
         self.robots = {}
+        self.linkWarnings = set()
         self.sendStatusMessage('loaded')
         self.enable()
 
@@ -273,6 +273,7 @@ class DrakeVisualizer(object):
         for geom in link.geometry:
             geom.polyDataItem.addToView(self.view)
             om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
+            vis.addChildFrame(geom.polyDataItem)
 
             if linkName == 'world':
                 #geom.polyDataItem.actor.SetUseBounds(False)
@@ -306,8 +307,14 @@ class DrakeVisualizer(object):
             robotNum = msg.robot_num[i]
             linkName = msg.link_name[i]
 
-            link = self.getLink(robotNum, linkName)
-            link.setTransform(pos, quat)
+            try:
+                link = self.getLink(robotNum, linkName)
+            except KeyError:
+                if linkName not in self.linkWarnings:
+                    print 'Error locating link name:', linkName
+                    self.linkWarnings.add(linkName)
+            else:
+                link.setTransform(pos, quat)
 
         self.view.render()
 
@@ -322,6 +329,7 @@ from director import objectmodel as om
 from director import applogic
 from director import viewbehaviors
 from director import camerabookmarks
+from director import cameracontrolpanel
 import PythonQt
 from PythonQt import QtCore, QtGui
 
@@ -364,34 +372,50 @@ class DrakeVisualizerApp():
         self.mainWindow.resize(768 * (16/9.0), 768)
         self.mainWindow.setWindowTitle('Drake Visualizer')
         self.mainWindow.setWindowIcon(QtGui.QIcon(':/images/drake_logo.png'))
-        self.mainWindow.show()
+
+        self.fileMenu = self.mainWindow.menuBar().addMenu('&File')
+        self.viewMenu = self.mainWindow.menuBar().addMenu('&View')
+        self.viewMenuManager = PythonQt.dd.ddViewMenu(self.viewMenu)
 
         self.drakeVisualizer = DrakeVisualizer(self.view)
         self.lcmglManager = lcmgl.LCMGLManager(self.view) if lcmgl.LCMGL_AVAILABLE else None
 
-        self.screenGrabberPanel = ScreenGrabberPanel(self.view)
-        self.screenGrabberDock = self.addWidgetToDock(self.screenGrabberPanel.widget, QtCore.Qt.RightDockWidgetArea)
-        self.screenGrabberDock.setVisible(False)
-
-        self.cameraBookmarksPanel = camerabookmarks.CameraBookmarkWidget(self.view)
-        self.cameraBookmarksDock = self.addWidgetToDock(self.cameraBookmarksPanel.widget, QtCore.Qt.RightDockWidgetArea)
-        self.cameraBookmarksDock.setVisible(False)
-
         model = om.getDefaultObjectModel()
         model.getTreeWidget().setWindowTitle('Scene Browser')
         model.getPropertiesPanel().setWindowTitle('Properties Panel')
-        model.setActiveObject(self.viewOptions)
 
         self.sceneBrowserDock = self.addWidgetToDock(model.getTreeWidget(), QtCore.Qt.LeftDockWidgetArea)
         self.propertiesDock = self.addWidgetToDock(self.wrapScrollArea(model.getPropertiesPanel()), QtCore.Qt.LeftDockWidgetArea)
-        self.sceneBrowserDock.setVisible(False)
-        self.propertiesDock.setVisible(False)
 
-        applogic.addShortcut(self.mainWindow, 'Ctrl+Q', self.applicationInstance().quit)
+        self.addViewMenuSeparator()
+
+        self.screenGrabberPanel = ScreenGrabberPanel(self.view)
+        self.screenGrabberDock = self.addWidgetToDock(self.screenGrabberPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
+
+        self.cameraBookmarksPanel = camerabookmarks.CameraBookmarkWidget(self.view)
+        self.cameraBookmarksDock = self.addWidgetToDock(self.cameraBookmarksPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
+
+        self.cameraControlPanel = cameracontrolpanel.CameraControlPanel(self.view)
+        self.cameraControlPanel = self.addWidgetToDock(self.cameraControlPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
+
+        act = self.fileMenu.addAction('&Quit')
+        act.setShortcut(QtGui.QKeySequence('Ctrl+Q'))
+        act.connect('triggered()', self.applicationInstance().quit)
+
+        self.fileMenu.addSeparator()
+
+        self._lastDir = None
+        act = self.fileMenu.addAction('&Open Data...')
+        act.setShortcut(QtGui.QKeySequence('Ctrl+O'))
+        act.connect('triggered()', self._onOpenDataFile)
+
         applogic.addShortcut(self.mainWindow, 'F1', self._toggleObjectModel)
-        applogic.addShortcut(self.mainWindow, 'F2', self._toggleScreenGrabber)
-        applogic.addShortcut(self.mainWindow, 'F3', self._toggleCameraBookmarks)
         applogic.addShortcut(self.mainWindow, 'F8', applogic.showPythonConsole)
+
+        for obj in om.getObjects():
+            obj.setProperty('Deletable', False)
+
+        self.mainWindow.show()
 
     def _toggleObjectModel(self):
         self.sceneBrowserDock.setVisible(not self.sceneBrowserDock.visible)
@@ -403,18 +427,58 @@ class DrakeVisualizerApp():
     def _toggleCameraBookmarks(self):
         self.cameraBookmarksDock.setVisible(not self.cameraBookmarksDock.visible)
 
-    def wrapScrollArea(self, widget):
-        self.w = QtGui.QScrollArea()
-        self.w.setWidget(widget)
-        self.w.setWidgetResizable(True)
-        #self.w.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        return self.w
+    def _getDefaultDirectory(self):
+        return self._lastDir or os.getcwd()
 
-    def addWidgetToDock(self, widget, dockArea):
+    def _storeDefaultDirectory(self, filename):
+
+        if os.path.isfile(filename):
+            filename = os.path.dirname(filename)
+        if os.path.isdir(filename):
+            self._lastDir = filename
+
+    def _showErrorMessage(self, title, message):
+        QtGui.QMessageBox.warning(self.mainWindow, title, message)
+
+    def _openGeometry(self, filename):
+
+        polyData = ioUtils.readPolyData(filename)
+
+        if not polyData or not polyData.GetNumberOfPoints():
+            self._showErrorMessage('Failed to read any data from file: %s' % filename, title='Reader error')
+            return
+
+        vis.showPolyData(polyData, os.path.basename(filename), parent='files')
+
+    def _onOpenDataFile(self):
+        fileFilters = "Data Files (*.obj *.ply *.stl *.vtk *.vtp)";
+        filename = QtGui.QFileDialog.getOpenFileName(self.mainWindow, "Open...", self._getDefaultDirectory(), fileFilters)
+        if not filename:
+            return
+
+        self._openGeometry(filename)
+
+    def wrapScrollArea(self, widget):
+        w = QtGui.QScrollArea()
+        w.setWidget(widget)
+        w.setWidgetResizable(True)
+        w.setWindowTitle(widget.windowTitle)
+        #w.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        return w
+
+    def addWidgetToViewMenu(self, widget):
+        self.viewMenuManager.addWidget(widget, widget.windowTitle)
+
+    def addViewMenuSeparator(self):
+        self.viewMenuManager.addSeparator()
+
+    def addWidgetToDock(self, widget, dockArea, visible=True):
         dock = QtGui.QDockWidget()
         dock.setWidget(widget)
         dock.setWindowTitle(widget.windowTitle)
+        dock.setVisible(visible)
         self.mainWindow.addDockWidget(dockArea, dock)
+        self.addWidgetToViewMenu(dock)
         return dock
 
     def quit(self):

@@ -19,6 +19,7 @@ from director import jointcontrol
 from director import callbacks
 from director import camerabookmarks
 from director import cameracontrol
+from director import cameracontrolpanel
 from director import bihandeddemo
 from director import debrisdemo
 from director import doordemo
@@ -756,9 +757,10 @@ hideImageOverlay = imageOverlayManager.hide
 screengrabberpanel.init(view)
 framevisualization.init(view)
 affordancePanel = affordancepanel.init(view, affordanceManager, ikServer, robotStateJointController, raycastDriver)
-
-
 camerabookmarks.init(view)
+
+cameraControlPanel = cameracontrolpanel.CameraControlPanel(view)
+app.addWidgetToDock(cameraControlPanel.widget, action=None).hide()
 
 
 def getLinkFrame(linkName, model=None):

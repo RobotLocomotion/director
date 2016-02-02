@@ -84,6 +84,14 @@ int ddPropertiesPanel::getSubPropertyIndex(QtVariantProperty*) const;
 void ddPropertiesPanel::setBrowserModeToTree();
 void ddPropertiesPanel::setBrowserModeToWidget();
 
+ddViewMenu::ddViewMenu(QMenu&);
+ddViewMenu::~ddViewMenu();
+void ddViewMenu::addWidget(QWidget*, const QString&);
+void ddViewMenu::addWidget(QWidget*, const QString&, const QIcon&);
+void ddViewMenu::addWidget(QWidget*, QAction*);
+void ddViewMenu::addSeparator();
+void ddViewMenu::removeWidget(QWidget*);
+
 
 ddSignalMap::ddSignalMap();
 QMap<QString, QVariant> ddSignalMap::map() const;

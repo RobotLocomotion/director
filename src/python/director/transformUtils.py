@@ -67,6 +67,20 @@ def getAxesFromTransform(t):
     return xaxis, yaxis, zaxis
 
 
+def getLookAtTransform(lookAtPosition, lookFromPosition, viewUp=[0.0, 0.0, 1.0]):
+
+    xaxis = np.array(lookAtPosition) - np.array(lookFromPosition)
+    if np.linalg.norm(xaxis) < 1e-8:
+        xaxis = [1.0, 0.0, 0.0]
+    zaxis = np.array(viewUp)
+    xaxis /= np.linalg.norm(xaxis)
+    zaxis /= np.linalg.norm(zaxis)
+    yaxis = np.cross(zaxis, xaxis)
+    yaxis /= np.linalg.norm(yaxis)
+    zaxis = np.cross(xaxis, yaxis)
+    return getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, lookFromPosition)
+
+
 def concatenateTransforms(transformList):
     '''
     Given a list of vtkTransform objects, returns a new vtkTransform

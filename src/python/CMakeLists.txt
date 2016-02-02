@@ -16,6 +16,7 @@ set(python_files
   director/callbacks.py
   director/camerabookmarks.py
   director/cameracontrol.py
+  director/cameracontrolpanel.py
   director/cameraview.py
   director/colorize.py
   director/consoleapp.py
