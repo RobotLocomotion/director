@@ -24,7 +24,7 @@ before_install:
   - bash ./distro/travis/before_install.sh
 
 install:
-  - make superbuild -j
+  - make superbuild -j2
 
 script:
   - cd build/src/director-build
