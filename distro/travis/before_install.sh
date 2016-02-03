@@ -11,4 +11,5 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew install python numpy
   $scriptDir/brew_install.sh vtk5 --with-qt
   brew bottle vtk5
+  $scriptDir/copy_files.sh vtk5*.tar.gz
 fi
