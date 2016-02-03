@@ -1,6 +1,6 @@
 os:
-  - linux
-#  - osx
+#  - linux
+  - osx
 
 language: cpp
 
@@ -18,9 +18,9 @@ branches:
 
 before_install:
   - bash ./distro/travis/before_install.sh
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3 # give xvfb some time to start
+#  - "export DISPLAY=:99.0"
+#  - "sh -e /etc/init.d/xvfb start"
+#  - sleep 3 # give xvfb some time to start
 
 install:
   - make superbuild -j2

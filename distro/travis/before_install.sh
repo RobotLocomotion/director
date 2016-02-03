@@ -1,3 +1,4 @@
+scriptDir=$(cd $(dirname $0) && pwd)
 
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
@@ -8,5 +9,6 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew tap homebrew/science
   brew tap homebrew/python
   brew install python numpy
-  brew install vtk5 --with-qt
+  $scriptDir/brew_install.sh vtk5 --with-qt
+  brew bottle vtk5
 fi
