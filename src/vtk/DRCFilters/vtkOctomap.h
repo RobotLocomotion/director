@@ -29,18 +29,69 @@ PURPOSE.  See the above copyright notice for more information.
 #include <vtkDRCFiltersModule.h>
 
 #include <QMap>
+#include <QFileInfo>
 #include <QtXml/QDomElement>
 
 #include <octomap/AbstractOcTree.h>
 #include <octomap/OcTreeBase.h>
 #include <octomap/octomap_types.h>
 #include <octomap/ColorOcTree.h>
+#include <iostream>
+#include <sstream>
 
+namespace octomap {
+
+  /**
+  * Abstract base class for objects to be drawn in the ViewerWidget.
+  *
+  */
+  class SceneObject {
+  public:
+    enum ColorMode {
+      CM_FLAT,
+      CM_PRINTOUT,
+      CM_COLOR_HEIGHT,
+      CM_GRAY_HEIGHT,
+      CM_SEMANTIC
+    };
+
+  public:
+    SceneObject();
+    virtual ~SceneObject(){};
+
+    /**
+    * Actual draw function which will be called to visualize the object
+    */
+    virtual void draw() const = 0;
+
+    /**
+    * Clears the object's representation (will be called when it gets invalid)
+    */
+    virtual void clear(){};
+
+  public:
+    //! the color mode has to be set before calling OcTreDrawer::setMap()
+    //! because the cubes are generated in OcTreDrawer::setMap() using the color information
+    inline void setColorMode(ColorMode mode) { m_colorMode = mode; }
+    inline void enablePrintoutMode(bool enabled = true) { if (enabled) m_colorMode = CM_PRINTOUT; else m_colorMode = CM_FLAT; }
+    inline void enableHeightColorMode(bool enabled = true) { if (enabled) m_colorMode = CM_COLOR_HEIGHT; else m_colorMode = CM_FLAT; }
+    inline void enableSemanticColoring(bool enabled = true) { if (enabled) m_colorMode = CM_SEMANTIC; else m_colorMode = CM_FLAT; }
+
+  protected:
+    /// writes rgb values which correspond to a rel. height in the map.
+    /// (glArrayPos needs to have at least size 3!)
+    void heightMapColor(double h, GLfloat* glArrayPos) const;
+    void heightMapGray(double h, GLfloat* glArrayPos) const;
+    double m_zMin;
+    double m_zMax;
+    ColorMode m_colorMode;
+  };
+}
 
 
 namespace octomap {
 
-class OcTreeDrawer{//  class OcTreeDrawer: public SceneObject {
+class OcTreeDrawer: public SceneObject {
 public:
   OcTreeDrawer();
   virtual ~OcTreeDrawer();
@@ -100,6 +151,8 @@ public:
   void drawFreeVoxels() const;
   void drawSelection() const;
   void drawCubes(GLfloat** cubeArray, unsigned int cubeArraySize, GLfloat* cubeColorArray = NULL) const;
+
+  //  void drawAxes() const;
 
   //! Initializes the OpenGL visualization for a list of OcTreeVolumes
   //! The array is cleared first, if needed
@@ -161,6 +214,7 @@ public:
   bool m_drawFree;
   bool m_drawSelection;
   bool m_octree_grid_vis_initialized;
+    bool m_displayAxes;
 
   unsigned int m_max_tree_depth;
   double m_alphaOccupied;
@@ -235,6 +289,10 @@ public:
   virtual int RenderTranslucentPolygonalGeometry(vtkViewport*);
   virtual int HasTranslucentPolygonalGeometry();
 
+  void enableHeightColorMode (bool enabled = true);
+
+    // use this drawer id if loading files or none is specified in msg
+    static const unsigned int DEFAULT_OCTREE_ID  = 0; 
 
 
     void addOctree(octomap::AbstractOcTree* tree, int id, octomap::pose6d origin);
@@ -246,6 +304,20 @@ protected:
   ~vtkOctomap();
 
 private:
+
+
+
+  bool m_heightColorMode;
+    /// open "regular" file containing an octree
+    void openOcTree(std::string filename);
+
+    /// open binary format OcTree
+    void openTree(std::string filename);
+
+    void parseTree(std::string datastream_string);
+    void parseOcTree(std::string datastream_string);
+
+    void showOcTree();
 
   class vtkInternal;
   vtkInternal* Internal;
