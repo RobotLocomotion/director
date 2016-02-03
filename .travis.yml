@@ -4,14 +4,9 @@ os:
 
 language: cpp
 
-addons:
-  apt:
-    packages:
-    - libqt4-dev
-    - libvtk5-dev
-    - libvtk5-qt4-dev
-    - python-vtk
-    - python-numpy
+sudo: required
+
+dist: trusty
 
 notifications:
   email: false
