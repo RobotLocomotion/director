@@ -107,6 +107,12 @@ class ExternalForce(object):
         else:
             key = linkName
 
+
+        # check to see if a force on this body already exists, if so then use that as the forceMagnitude
+        if self.externalForces.has_key(key):
+            forceMagnitude = self.externalForces[key]['forceMagnitude']
+
+
         visName = key + ' external force'
         om.removeFromObjectModel(om.findObjectByName(visName))
 
