@@ -1,0 +1,49 @@
+os:
+  - linux
+#  - osx
+
+language: cpp
+
+addons:
+  apt:
+    packages:
+    - libqt4-dev
+    - libvtk5-dev
+    - libvtk5-qt4-dev
+    - python-vtk
+    - python-numpy
+
+notifications:
+  email: false
+
+branches:
+  only:
+    - master
+
+before_install:
+  - bash ./distro/travis/before_install.sh
+
+install:
+  - make superbuild -j
+
+script:
+  - cd build/src/director-build
+  - ctest -j 1 -L core -D Experimental -C $BUILD_TYPE --output-on-failure --timeout 1000 --track Continuous
+
+# The compiler and env:matrix options create an matrix of build configurations (gcc + Release, gcc + Debug, clang + Release, clang + Debug)
+
+#compiler:
+#  - gcc
+#  - clang
+
+python:
+  - '2.7'
+
+env:
+  matrix:
+    - BUILD_TYPE=Release
+    # - BUILD_TYPE=Debug
+
+matrix:
+  # allow_failures:
+  #   - compiler: gcc
