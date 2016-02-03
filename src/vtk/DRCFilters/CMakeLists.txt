@@ -159,7 +159,7 @@ ENDIF()
 if(USE_OCTOMAP)
 
   find_package(OpenGL REQUIRED)
-  list(APPEND sources vtkOctomap.cxx)
+  list(APPEND sources vtkOctomap.cxx SceneObject.cpp OcTreeDrawer.cpp ColorOcTreeDrawer.cpp)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
 
   list(APPEND pkg_deps

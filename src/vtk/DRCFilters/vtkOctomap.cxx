@@ -21,1351 +21,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include <lcmtypes/octomap/raw_t.hpp>
 #include <lcmtypes/octomap_raw_t.h>
-
-#include <octomap/octomap.h>
-//#include <octovis/SceneObject.h>
-//#include <octovis/OcTreeRecord.h>
 #include <sstream>
-
-#define OTD_RAD2DEG 57.2957795
-
-//----------------------------------------------------------------------------
-// random number between [0, 1)
-static inline float _randf()
-{
-    return ((float) rand()) / (RAND_MAX + 1.0);
-}
-
-/** Given an array of colors, a palette is created that linearly interpolates through all the colors. **/
-static void color_util_build_color_table(double color_palette[][3], int palette_size, float lut[][3], int lut_size)
-{
-    for (int idx = 0; idx < lut_size; idx++) {
-        double znorm = ((double) idx) / lut_size;
-
-        int color_index = (palette_size - 1) * znorm;
-        double alpha = (palette_size - 1) * znorm - color_index;
-
-        for (int i = 0; i < 3; i++) {
-            lut[idx][i] = color_palette[color_index][i] * (1.0 - alpha) + color_palette[color_index+1][i]*alpha;
-        }
-    }
-}
-
-#define JET_COLORS_LUT_SIZE 1024
-static float jet_colors[JET_COLORS_LUT_SIZE][3];
-static int jet_colors_initialized = 0;
-
-static void init_color_table_jet()
-{
-    double jet[][3] = {{ 0,   0,   1 },
-                       { 0,  .5,  .5 },
-                       { .8, .8,   0 },
-                       { 1,   0,   0 }};
-
-    color_util_build_color_table(jet, sizeof(jet)/(sizeof(double)*3), jet_colors, JET_COLORS_LUT_SIZE);
-    jet_colors_initialized = 1;
-}
-
-float *bot_color_util_jet(double v)
-{
-    if (!jet_colors_initialized)
-        init_color_table_jet();
-
-    v = fmax(0, v);
-    v = fmin(1, v);
-
-    int idx = (JET_COLORS_LUT_SIZE - 1) * v;
-    return jet_colors[idx];
-}
-
-
-
-
-
-
-
-namespace octomap {
-
-  SceneObject::SceneObject() :
-    m_zMin(0.0), m_zMax(1.0), m_colorMode(CM_FLAT) {
-  }
-
-  void SceneObject::heightMapColor(double h, GLfloat* glArrayPos) const {
-    if (m_zMin >= m_zMax)
-      h = 0.5;
-    else{
-      h = (1.0 - std::min(std::max((h-m_zMin)/ (m_zMax - m_zMin), 0.0), 1.0)) *0.8;
-    }
-
-    // blend over HSV-values (more colors)
-    double r, g, b;
-    double s = 1.0;
-    double v = 1.0;
-
-    h -= floor(h);
-    h *= 6;
-    int i;
-    double m, n, f;
-
-    i = floor(h);
-    f = h - i;
-    if (!(i & 1))
-      f = 1 - f; // if i is even
-    m = v * (1 - s);
-    n = v * (1 - s * f);
-
-    switch (i) {
-    case 6:
-    case 0:
-      r = v; g = n; b = m;
-      break;
-    case 1:
-      r = n; g = v; b = m;
-      break;
-    case 2:
-      r = m; g = v; b = n;
-      break;
-    case 3:
-      r = m; g = n; b = v;
-      break;
-    case 4:
-      r = n; g = m; b = v;
-      break;
-    case 5:
-      r = v; g = m; b = n;
-      break;
-    default:
-      r = 1; g = 0.5; b = 0.5;
-      break;
-    }
-
-    glArrayPos[0] = r;
-    glArrayPos[1] = g;
-    glArrayPos[2] = b;
-  }
-
-  void SceneObject::heightMapGray(double h, GLfloat* glArrayPos) const {
-    if (m_zMin >= m_zMax)
-      h = 0.5;
-    else{
-      h = std::min(std::max((h-m_zMin)/ (m_zMax - m_zMin), 0.0), 1.0) * 0.4 + 0.3; // h \in [0.3, 0.7]
-    }
-
-    glArrayPos[0] = h;
-    glArrayPos[1] = h;
-    glArrayPos[2] = h;
-  }
-  
-
-}
-
-
-namespace octomap {
-
-OcTreeDrawer::OcTreeDrawer() : SceneObject(),
-    m_occupiedThresSize(0), m_freeThresSize(0), m_occupiedSize(0), m_freeSize(0), m_selectionSize(0),
-        octree_grid_vertex_size(0), m_alphaOccupied(0.8), map_id(0)
-{
-  m_octree_grid_vis_initialized = false;
-  m_drawOccupied = true;
-  m_drawOcTreeGrid = false;
-  m_drawFree = false;
-  m_drawSelection = true;
-
-  m_heightColorMode = false;
-  m_zMin = -1;
-  m_zMax = 12;
-
-  m_occupiedArray = NULL;
-  m_freeArray = NULL;
-  m_occupiedThresArray = NULL;
-  m_freeThresArray = NULL;
-  m_occupiedColorArray = NULL;
-  m_occupiedThresColorArray = NULL;
-  m_selectionArray = NULL;
-
-    m_displayAxes = false;
-
-
-//    SceneObject::ColorMode m_colorMode;
-}
-
-OcTreeDrawer::~OcTreeDrawer()
-{
-  clear();
-}
-
-void OcTreeDrawer::setAlphaOccupied(double alpha)
-{
-  m_alphaOccupied = alpha;
-}
-
-void OcTreeDrawer::setOcTree(const AbstractOcTree& tree, const pose6d& origin, int map_id_) {
-//void OcTreeDrawer::setOcTree(const octomap::OcTree& octree, const pose6d& origin, int map_id_)//, double minDrawZ, double maxDrawZ)
-
-    const OcTree& octree = (const OcTree&) tree;
-    this->map_id = map_id_;
-
-    // save origin used during cube generation
-    this->initial_origin = octomap::pose6d(octomap::point3d(0,0,0), origin.rot());
-
-    // origin is in global coords
-    this->origin = origin;
-    
-    // maximum size to prevent crashes on large maps: (should be checked in a better way than a constant)
-    bool showAll = (octree.size() < 5 * 1e6);
-    bool uses_origin = ( (origin.rot().x() != 0.) && (origin.rot().y() != 0.)
-        && (origin.rot().z() != 0.) && (origin.rot().u() != 1.) );
-
-    // walk the tree one to find the number of nodes in each category
-    // (this is used to set up the OpenGL arrays)
-    // TODO: this step may be left out, if we maintained the GLArrays in std::vectors instead...
-    unsigned int cnt_occupied(0), cnt_occupied_thres(0), cnt_free(0), cnt_free_thres(0);
-    for(OcTree::tree_iterator it = octree.begin_tree(this->m_max_tree_depth),
-            end=octree.end_tree(); it!= end; ++it) {
-      if (it.isLeaf()) { 
-        if (octree.isNodeOccupied(*it)){ // occupied voxels
-          if (octree.isNodeAtThreshold(*it)) ++cnt_occupied_thres;
-          else                               ++cnt_occupied;
-        }
-        else if (showAll) { // freespace voxels
-          if (octree.isNodeAtThreshold(*it)) ++cnt_free_thres;
-          else                               ++cnt_free;
-        }
-      }        
-    }    
-    // setup GL arrays for cube quads and cube colors
-    initGLArrays(cnt_occupied      , m_occupiedSize     , &m_occupiedArray     , &m_occupiedColorArray);
-    initGLArrays(cnt_occupied_thres, m_occupiedThresSize, &m_occupiedThresArray, &m_occupiedThresColorArray);
-    initGLArrays(cnt_free          , m_freeSize         , &m_freeArray, NULL);
-    initGLArrays(cnt_free_thres    , m_freeThresSize    , &m_freeThresArray, NULL);
-
-    double minX, minY, minZ, maxX, maxY, maxZ;
-    octree.getMetricMin(minX, minY, minZ);
-    octree.getMetricMax(maxX, maxY, maxZ);
-
-    // set min/max Z for color height map
-    m_zMin = minZ;
-    m_zMax = maxZ;
-
-    std::vector<octomath::Vector3> cube_template;
-    initCubeTemplate(origin, cube_template);
-
-    unsigned int idx_occupied(0), idx_occupied_thres(0), idx_free(0), idx_free_thres(0);
-    unsigned int color_idx_occupied(0), color_idx_occupied_thres(0);
-
-    m_grid_voxels.clear();
-    OcTreeVolume voxel; // current voxel, possibly transformed 
-    for(OcTree::tree_iterator it = octree.begin_tree(this->m_max_tree_depth),
-            end=octree.end_tree(); it!= end; ++it) {
-
-      if (it.isLeaf()) { // voxels for leaf nodes
-        if (uses_origin) 
-          voxel = OcTreeVolume(origin.rot().rotate(it.getCoordinate()), it.getSize());
-        else 
-          voxel = OcTreeVolume(it.getCoordinate(), it.getSize());
-        
-        if (octree.isNodeOccupied(*it)){ // occupied voxels
-          if (octree.isNodeAtThreshold(*it)) {
-            idx_occupied_thres = generateCube(voxel, cube_template, idx_occupied_thres, &m_occupiedThresArray);
-      //      std::cout << "setOcTree a \n";
-            color_idx_occupied_thres = setCubeColorHeightmap(voxel, color_idx_occupied_thres, &m_occupiedThresColorArray);
-          }
-          else {
-            idx_occupied = generateCube(voxel, cube_template, idx_occupied, &m_occupiedArray);
-            std::cout << "setOcTree b \n";
-            color_idx_occupied = setCubeColorHeightmap(voxel, color_idx_occupied, &m_occupiedColorArray);
-          }
-        }
-        else if (showAll) { // freespace voxels
-          if (octree.isNodeAtThreshold(*it)) {
-            idx_free_thres = generateCube(voxel, cube_template, idx_free_thres, &m_freeThresArray);
-          }
-          else {
-            idx_free = generateCube(voxel, cube_template, idx_free, &m_freeArray);
-          }
-        }
-      }
-      
-      else { // inner node voxels (for grid structure only)
-        if (showAll) {
-          if (uses_origin)
-            voxel = OcTreeVolume(origin.rot().rotate(it.getCoordinate()), it.getSize());
-          else
-            voxel = OcTreeVolume(it.getCoordinate(), it.getSize());
-          m_grid_voxels.push_back(voxel);
-        }
-      }      
-    } // end for all voxels
-
-    m_octree_grid_vis_initialized = false;
-
-    if(m_drawOcTreeGrid)
-      initOctreeGridVis();
-
-
-/*
-  octree.getMetricMin(minX, minY, minZ);
-  octree.getMetricMax(maxX, maxY, maxZ);
-  //printf("map bounds: [%.2f, %.2f, %.2f] - [%.2f, %.2f, %.2f]\n", minX, minY, minZ, maxX, maxY, maxZ);
-
-  std::list<octomap::OcTreeVolume> occupiedThresVoxels;
-  std::list<octomap::OcTreeVolume> freeThresVoxels;
-  std::list<octomap::OcTreeVolume> occupiedVoxels;
-  std::list<octomap::OcTreeVolume> freeVoxels;
-
-  if (m_drawOccupied) {
-    int numremoved = 0;
-    for (octomap::OcTree::tree_iterator it = octree.begin_tree(m_max_tree_depth), end=octree.end_tree(); it!= end; ++it) {
-      if (it.isLeaf()) { // leaf nodes only, to be removed if wanting to include inner nodes
-        octomap::OcTreeVolume voxel = OcTreeVolume(it.getCoordinate(), it.getSize());
-
-        if (octree.isNodeOccupied(*it)) {
-          if (octree.isNodeAtThreshold(*it)) {
-            occupiedThresVoxels.push_back(voxel);
-          } else {
-            occupiedVoxels.push_back(voxel);
-          }
-        }
-      }
-    }
-
-    int size1 = occupiedVoxels.size();
-    int size2 = occupiedThresVoxels.size();
-    for (std::list<octomap::OcTreeVolume>::iterator it = occupiedVoxels.begin(); it != occupiedVoxels.end();) {
-      if (it->first.z() > maxDrawZ || it->first.z() < minDrawZ) {
-        it = occupiedVoxels.erase(it);
-        numremoved++;
-      }
-      else
-        it++;
-    }
-    for (std::list<octomap::OcTreeVolume>::iterator it = occupiedThresVoxels.begin(); it != occupiedThresVoxels.end();
-        ) {
-      if (it->first.z() > maxDrawZ || it->first.z() < minDrawZ) {
-        it = occupiedThresVoxels.erase(it);
-        numremoved++;
-      }
-      else
-        it++;
-    }
-    int size3 = occupiedVoxels.size();
-    int size4 = occupiedThresVoxels.size();
-    //printf("thresh=[%f,%f], numremoved=%d, sizes %d %d %d %d\n", minDrawZ, maxDrawZ, numremoved, size1, size2, size3,
-    //    size4);
-  }
-
-  if (m_drawFree) {
-    for (octomap::OcTree::tree_iterator it = octree.begin_tree(m_max_tree_depth), end=octree.end_tree(); it!= end; ++it) {
-      if (it.isLeaf()) { // leaf nodes only, to be removed if wanting to include inner nodes
-        octomap::OcTreeVolume voxel = OcTreeVolume(it.getCoordinate(), it.getSize());
-
-        if (!octree.isNodeOccupied(*it)) {
-          if (octree.isNodeAtThreshold(*it)) {
-            freeThresVoxels.push_back(voxel);
-          } else {
-            freeVoxels.push_back(voxel);
-          }
-        }
-      }
-    }
-    int numremoved = 0;
-    int size1 = freeVoxels.size();
-    int size2 = freeThresVoxels.size();
-    for (std::list<octomap::OcTreeVolume>::iterator it = freeVoxels.begin(); it != freeVoxels.end();) {
-      if (it->first.z() > maxDrawZ || it->first.z() < minDrawZ) {
-        it = freeVoxels.erase(it);
-        numremoved++;
-      }
-      else
-        it++;
-    }
-    for (std::list<octomap::OcTreeVolume>::iterator it = freeThresVoxels.begin(); it != freeThresVoxels.end();
-        ) {
-      if (it->first.z() > maxDrawZ || it->first.z() < minDrawZ) {
-        it = freeThresVoxels.erase(it);
-        numremoved++;
-      }
-      else
-        it++;
-    }
-    int size3 = freeVoxels.size();
-    int size4 = freeThresVoxels.size();
-    //printf("free numremoved=%d, sizes %d %d %d %d\n", numremoved, size1, size2, size3,
-    //    size4);
-  }
-
-  m_octree_grid_vis_initialized = false;
-//  if (m_drawOcTreeGrid && octree.size() < 10 * 1e6) {
-//    octree.getVoxels(m_grid_voxels, m_max_tree_depth - 1); // octree structure not drawn at lowest level
-//    initOctreeGridVis();
-//  }
-
-  // initialize visualization:
-  generateCubes(occupiedThresVoxels, &m_occupiedThresArray, m_occupiedThresSize, &m_occupiedThresColorArray);
-  generateCubes(freeThresVoxels, &m_freeThresArray, m_freeThresSize);
-
-  generateCubes(occupiedVoxels, &m_occupiedArray, m_occupiedSize, &m_occupiedColorArray);
-  generateCubes(freeVoxels, &m_freeArray, m_freeSize);
-*/
-}
-
-
-
-  void OcTreeDrawer::initGLArrays(const unsigned int& num_cubes,
-                                  unsigned int& glArraySize,
-                                  GLfloat*** glArray, GLfloat** glColorArray) {
-
-    clearCubes(glArray, glArraySize, glColorArray);
-
-    // store size of GL arrays for drawing
-    glArraySize = num_cubes * 4 * 3;
-
-    // allocate cube arrays, 6 quads per cube
-    *glArray = new GLfloat* [6];
-    for (unsigned i = 0; i<6; ++i){
-      (*glArray)[i] = new GLfloat[glArraySize];
-    }
-    // setup quad color array, if given
-    if (glColorArray != NULL)
-      *glColorArray = new GLfloat[glArraySize * 4 *4];
-  }
-
-  void OcTreeDrawer::initCubeTemplate(const octomath::Pose6D& origin,
-                                      std::vector<octomath::Vector3>& cube_template) {
-    cube_template.clear();
-    cube_template.reserve(24);
-
-    cube_template.push_back(octomath::Vector3( 1, 1,-1));
-    cube_template.push_back(octomath::Vector3( 1,-1,-1));
-    cube_template.push_back(octomath::Vector3( 1, 1,-1));
-    cube_template.push_back(octomath::Vector3(-1, 1,-1));
-    cube_template.push_back(octomath::Vector3( 1, 1,-1));
-    cube_template.push_back(octomath::Vector3( 1, 1, 1));
-
-    cube_template.push_back(octomath::Vector3(-1, 1,-1));
-    cube_template.push_back(octomath::Vector3(-1,-1,-1));
-    cube_template.push_back(octomath::Vector3( 1, 1, 1));
-    cube_template.push_back(octomath::Vector3(-1, 1, 1));
-    cube_template.push_back(octomath::Vector3( 1,-1,-1));
-    cube_template.push_back(octomath::Vector3( 1,-1, 1));
-
-    cube_template.push_back(octomath::Vector3(-1, 1, 1));
-    cube_template.push_back(octomath::Vector3(-1,-1, 1));
-    cube_template.push_back(octomath::Vector3( 1,-1, 1));
-    cube_template.push_back(octomath::Vector3(-1,-1, 1));
-    cube_template.push_back(octomath::Vector3(-1,-1,-1));
-    cube_template.push_back(octomath::Vector3(-1,-1, 1));
-
-    cube_template.push_back(octomath::Vector3( 1, 1, 1));
-    cube_template.push_back(octomath::Vector3( 1,-1, 1));
-    cube_template.push_back(octomath::Vector3( 1,-1,-1));
-    cube_template.push_back(octomath::Vector3(-1,-1,-1));
-    cube_template.push_back(octomath::Vector3(-1, 1,-1));
-    cube_template.push_back(octomath::Vector3(-1, 1, 1));
-  }
-
-  unsigned int OcTreeDrawer::generateCube(const octomap::OcTreeVolume& v,
-                                          const std::vector<octomath::Vector3>& cube_template,
-                                          const unsigned int& current_array_idx,
-                                          GLfloat*** glArray) {
-
-    // epsilon to be substracted from cube size so that neighboring planes don't overlap
-    // seems to introduce strange artifacts nevertheless...
-    double eps = 1e-5;
-    
-    octomath::Vector3 p;
-
-    double half_cube_size = GLfloat(v.second /2.0 -eps);
-    unsigned int i = current_array_idx;
-    // Cube surfaces are in gl_array in order: back, front, top, down, left, right.
-    // Arrays are filled in parallel (increasing i for all at once)
-    // One color array for all surfaces is filled when requested
-
-    p = v.first + cube_template[0] * half_cube_size;
-    (*glArray)[0][i]   = p.x();
-    (*glArray)[0][i+1] = p.y();
-    (*glArray)[0][i+2] = p.z();
-
-    p = v.first + cube_template[1] * half_cube_size;
-    (*glArray)[1][i]   = p.x();
-    (*glArray)[1][i+1] = p.y();
-    (*glArray)[1][i+2] = p.z();
-
-    p = v.first + cube_template[2] * half_cube_size;
-    (*glArray)[2][i]   = p.x();
-    (*glArray)[2][i+1] = p.y();
-    (*glArray)[2][i+2] = p.z();
-
-    p = v.first + cube_template[3] * half_cube_size;
-    (*glArray)[3][i]   = p.x(); 
-    (*glArray)[3][i+1] = p.y(); 
-    (*glArray)[3][i+2] = p.z(); 
-
-    p = v.first + cube_template[4] * half_cube_size;
-    (*glArray)[4][i]   = p.x(); 
-    (*glArray)[4][i+1] = p.y(); 
-    (*glArray)[4][i+2] = p.z(); 
-
-    p = v.first + cube_template[5] * half_cube_size;
-    (*glArray)[5][i]   = p.x(); 
-    (*glArray)[5][i+1] = p.y(); 
-    (*glArray)[5][i+2] = p.z(); 
-    i+= 3;  //-------------------
-
-    p = v.first + cube_template[6] * half_cube_size;
-    (*glArray)[0][i]   = p.x();
-    (*glArray)[0][i+1] = p.y();
-    (*glArray)[0][i+2] = p.z();
-
-    p = v.first + cube_template[7] * half_cube_size;
-    (*glArray)[1][i]   = p.x();
-    (*glArray)[1][i+1] = p.y();
-    (*glArray)[1][i+2] = p.z();
-
-    p = v.first + cube_template[8] * half_cube_size;
-    (*glArray)[2][i]   = p.x();
-    (*glArray)[2][i+1] = p.y();
-    (*glArray)[2][i+2] = p.z();
-
-    p = v.first + cube_template[9] * half_cube_size;
-    (*glArray)[3][i]   = p.x();
-    (*glArray)[3][i+1] = p.y();
-    (*glArray)[3][i+2] = p.z();
-
-    p = v.first + cube_template[10] * half_cube_size;
-    (*glArray)[4][i]   = p.x();
-    (*glArray)[4][i+1] = p.y();
-    (*glArray)[4][i+2] = p.z();
-
-    p = v.first + cube_template[11] * half_cube_size;
-    (*glArray)[5][i]   = p.x();
-    (*glArray)[5][i+1] = p.y();
-    (*glArray)[5][i+2] = p.z();
-    i+= 3;  //-------------------
-
-    p = v.first + cube_template[12] * half_cube_size;
-    (*glArray)[0][i]   = p.x();
-    (*glArray)[0][i+1] = p.y();
-    (*glArray)[0][i+2] = p.z();
-
-    p = v.first + cube_template[13] * half_cube_size;
-    (*glArray)[1][i]   = p.x();
-    (*glArray)[1][i+1] = p.y();
-    (*glArray)[1][i+2] = p.z();
-
-    p = v.first + cube_template[14] * half_cube_size;
-    (*glArray)[2][i]   = p.x();
-    (*glArray)[2][i+1] = p.y();
-    (*glArray)[2][i+2] = p.z();
-
-    p = v.first + cube_template[15] * half_cube_size;
-    (*glArray)[3][i]   = p.x();
-    (*glArray)[3][i+1] = p.y();
-    (*glArray)[3][i+2] = p.z();
-
-    p = v.first + cube_template[16] * half_cube_size;
-    (*glArray)[4][i]   = p.x();
-    (*glArray)[4][i+1] = p.y();
-    (*glArray)[4][i+2] = p.z();
-
-    p = v.first + cube_template[17] * half_cube_size;
-    (*glArray)[5][i]   = p.x();
-    (*glArray)[5][i+1] = p.y();
-    (*glArray)[5][i+2] = p.z();
-    i+= 3;  //-------------------
-
-    p = v.first + cube_template[18] * half_cube_size;
-    (*glArray)[0][i]   = p.x();
-    (*glArray)[0][i+1] = p.y();
-    (*glArray)[0][i+2] = p.z();
-
-    p = v.first + cube_template[19] * half_cube_size;
-    (*glArray)[1][i]   = p.x();
-    (*glArray)[1][i+1] = p.y();
-    (*glArray)[1][i+2] = p.z();
-
-    p = v.first + cube_template[20] * half_cube_size;
-    (*glArray)[2][i]   = p.x();
-    (*glArray)[2][i+1] = p.y();
-    (*glArray)[2][i+2] = p.z();
-
-    p = v.first + cube_template[21] * half_cube_size;
-    (*glArray)[3][i]   = p.x();
-    (*glArray)[3][i+1] = p.y();
-    (*glArray)[3][i+2] = p.z();
-
-    p = v.first + cube_template[22] * half_cube_size;
-    (*glArray)[4][i]   = p.x();
-    (*glArray)[4][i+1] = p.y();
-    (*glArray)[4][i+2] = p.z();
-
-    p = v.first + cube_template[23] * half_cube_size;
-    (*glArray)[5][i]   = p.x();
-    (*glArray)[5][i+1] = p.y();
-    (*glArray)[5][i+2] = p.z();
-    i += 3;  //-------------------
-    
-    return i; // updated array idx
-  }
-
-
-  unsigned int OcTreeDrawer::setCubeColorHeightmap(const octomap::OcTreeVolume& v,
-                                          const unsigned int& current_array_idx,
-                                          GLfloat** glColorArray) {
-
-    if (glColorArray == NULL) return current_array_idx;
-
-    unsigned int colorIdx = current_array_idx;
-    // color for all 4 vertices (same height)
-
-//    std::cout << "setCubeColorHeightmap\n";
-    for (int k = 0; k < 4; ++k) {
-      if (m_colorMode == CM_GRAY_HEIGHT){
-//        std::cout << "setCubeColorHeightmap heightMapGray\n";
-        SceneObject::heightMapGray(v.first.z(), *glColorArray + colorIdx);  // sets r,g,b
-      }else{
-//        std::cout << "setCubeColorHeightmap heightMapColor\n";
-        SceneObject::heightMapColor(v.first.z(), *glColorArray + colorIdx);   // sets r,g,b
-      }
-      // set Alpha value:
-      (*glColorArray)[colorIdx + 3] = m_alphaOccupied;
-      colorIdx += 4;
-    }  
-    return colorIdx;
-  }
-
-  unsigned int OcTreeDrawer::setCubeColorRGBA(const unsigned char& r,
-                                              const unsigned char& g,
-                                              const unsigned char& b,
-                                              const unsigned char& a,
-                                              const unsigned int& current_array_idx,
-                                              GLfloat** glColorArray) {
-
-    if (glColorArray == NULL) return current_array_idx;
-    unsigned int colorIdx = current_array_idx;
-    // set color for next 4 vertices (=one quad)
-    for (int k = 0; k < 4; ++k) {
-      (*glColorArray)[colorIdx    ] = (double) r/255.;
-      (*glColorArray)[colorIdx + 1] = (double) g/255.;
-      (*glColorArray)[colorIdx + 2] = (double) b/255.;
-      (*glColorArray)[colorIdx + 3] = (double) a/255.;
-      colorIdx += 4;
-    }  
-    return colorIdx;
-  }
-
-
-
-
-void OcTreeDrawer::setOcTreeSelection(const std::list<octomap::OcTreeVolume>& selectedVoxels)
-{
-  generateCubes(selectedVoxels, &m_selectionArray, m_selectionSize);
-
-}
-
-void OcTreeDrawer::clearOcTreeSelection()
-{
-  clearCubes(&m_selectionArray, m_selectionSize);
-}
-
-void OcTreeDrawer::generateCubes(const std::list<octomap::OcTreeVolume>& voxels, GLfloat*** glArray,
-    unsigned int& glArraySize, GLfloat** glColorArray)
-{
-
-  // clear arrays first if needed:
-  clearCubes(glArray, glArraySize, glColorArray);
-
-  // now, allocate arrays:
-  glArraySize = voxels.size() * 4 * 3;
-  *glArray = new GLfloat*[6];
-
-  for (unsigned i = 0; i < 6; ++i) {
-    (*glArray)[i] = new GLfloat[glArraySize];
-  }
-
-  if (glColorArray != NULL
-  )
-    *glColorArray = new GLfloat[glArraySize * 4 * 4];
-
-    // epsilon to be substracted from cube size so that neighboring planes don't overlap
-    // seems to introduce strange artifacts nevertheless...
-double  eps = 1e-5;
-
-  // generate the cubes, 6 quads each
-  // min and max-values are computed on-the-fly
-  unsigned int i = 0;
-  unsigned int colorIdx = 0;
-  double x, y, z;
-
-  for (std::list<octomap::OcTreeVolume>::const_iterator it = voxels.begin(); it != voxels.end(); it++) {
-
-    double half_cube_size = GLfloat(it->second / 2.0 - eps);
-
-    x = it->first.x();
-    y = it->first.y();
-    z = it->first.z();
-
-    // Cube surfaces are in gl_array in order: back, front, top, down, left, right.
-    // Arrays are filled in parrallel (increasing i for all at once)
-    // One color array for all surfaces is filled when requested
-
-    (*glArray)[0][i] = x + half_cube_size;
-    (*glArray)[0][i + 1] = y + half_cube_size;
-    (*glArray)[0][i + 2] = z - half_cube_size;
-
-    (*glArray)[1][i] = x + half_cube_size;
-    (*glArray)[1][i + 1] = y - half_cube_size;
-    (*glArray)[1][i + 2] = z - half_cube_size;
-
-    (*glArray)[2][i] = x + half_cube_size;
-    (*glArray)[2][i + 1] = y + half_cube_size;
-    (*glArray)[2][i + 2] = z - half_cube_size;
-
-    (*glArray)[3][i] = x - half_cube_size;
-    (*glArray)[3][i + 1] = y + half_cube_size;
-    (*glArray)[3][i + 2] = z - half_cube_size;
-
-    (*glArray)[4][i] = x + half_cube_size;
-    (*glArray)[4][i + 1] = y + half_cube_size;
-    (*glArray)[4][i + 2] = z - half_cube_size;
-
-    (*glArray)[5][i] = x + half_cube_size;
-    (*glArray)[5][i + 1] = y + half_cube_size;
-    (*glArray)[5][i + 2] = z + half_cube_size;
-    i += 3;
-
-    (*glArray)[0][i] = x - half_cube_size;
-    (*glArray)[0][i + 1] = y + half_cube_size;
-    (*glArray)[0][i + 2] = z - half_cube_size;
-
-    (*glArray)[1][i] = x - half_cube_size;
-    (*glArray)[1][i + 1] = y - half_cube_size;
-    (*glArray)[1][i + 2] = z - half_cube_size;
-
-    (*glArray)[2][i] = x + half_cube_size;
-    (*glArray)[2][i + 1] = y + half_cube_size;
-    (*glArray)[2][i + 2] = z + half_cube_size;
-
-    (*glArray)[3][i] = x - half_cube_size;
-    (*glArray)[3][i + 1] = y + half_cube_size;
-    (*glArray)[3][i + 2] = z + half_cube_size;
-
-    (*glArray)[4][i] = x + half_cube_size;
-    (*glArray)[4][i + 1] = y - half_cube_size;
-    (*glArray)[4][i + 2] = z - half_cube_size;
-
-    (*glArray)[5][i] = x + half_cube_size;
-    (*glArray)[5][i + 1] = y - half_cube_size;
-    (*glArray)[5][i + 2] = z + half_cube_size;
-    i += 3;
-
-    (*glArray)[0][i] = x - half_cube_size;
-    (*glArray)[0][i + 1] = y + half_cube_size;
-    (*glArray)[0][i + 2] = z + half_cube_size;
-
-    (*glArray)[1][i] = x - half_cube_size;
-    (*glArray)[1][i + 1] = y - half_cube_size;
-    (*glArray)[1][i + 2] = z + half_cube_size;
-
-    (*glArray)[2][i] = x + half_cube_size;
-    (*glArray)[2][i + 1] = y - half_cube_size;
-    (*glArray)[2][i + 2] = z + half_cube_size;
-
-    (*glArray)[3][i] = x - half_cube_size;
-    (*glArray)[3][i + 1] = y - half_cube_size;
-    (*glArray)[3][i + 2] = z + half_cube_size;
-
-    (*glArray)[4][i] = x - half_cube_size;
-    (*glArray)[4][i + 1] = y - half_cube_size;
-    (*glArray)[4][i + 2] = z - half_cube_size;
-
-    (*glArray)[5][i] = x - half_cube_size;
-    (*glArray)[5][i + 1] = y - half_cube_size;
-    (*glArray)[5][i + 2] = z + half_cube_size;
-    i += 3;
-
-    (*glArray)[0][i] = x + half_cube_size;
-    (*glArray)[0][i + 1] = y + half_cube_size;
-    (*glArray)[0][i + 2] = z + half_cube_size;
-
-    (*glArray)[1][i] = x + half_cube_size;
-    (*glArray)[1][i + 1] = y - half_cube_size;
-    (*glArray)[1][i + 2] = z + half_cube_size;
-
-    (*glArray)[2][i] = x + half_cube_size;
-    (*glArray)[2][i + 1] = y - half_cube_size;
-    (*glArray)[2][i + 2] = z - half_cube_size;
-
-    (*glArray)[3][i] = x - half_cube_size;
-    (*glArray)[3][i + 1] = y - half_cube_size;
-    (*glArray)[3][i + 2] = z - half_cube_size;
-
-    (*glArray)[4][i] = x - half_cube_size;
-    (*glArray)[4][i + 1] = y + half_cube_size;
-    (*glArray)[4][i + 2] = z - half_cube_size;
-
-    (*glArray)[5][i] = x - half_cube_size;
-    (*glArray)[5][i + 1] = y + half_cube_size;
-    (*glArray)[5][i + 2] = z + half_cube_size;
-    i += 3;
-
-    if (glColorArray != NULL) {
-      // color for 4 vertices (same height)
-      for (int k = 0; k < 4; ++k) {
-
-        //          SceneObject::heightMapColor(z, *glColorArray + colorIdx);
-        double z_norm = (z - m_zMin) / (m_zMax - m_zMin);
-        float * jetC = bot_color_util_jet(z_norm);
-        memcpy(*glColorArray + colorIdx, jetC, 3 * sizeof(float));
-        // set Alpha value:
-        (*glColorArray)[colorIdx + 3] = m_alphaOccupied;
-        colorIdx += 4;
-      }
-    }
-
-  }
-}
-
-void OcTreeDrawer::clearCubes(GLfloat*** glArray, unsigned int& glArraySize, GLfloat** glColorArray)
-{
-  if (glArraySize != 0) {
-    for (unsigned i = 0; i < 6; ++i) {
-      delete[] (*glArray)[i];
-    }
-    delete[] *glArray;
-    *glArray = NULL;
-    glArraySize = 0;
-  }
-
-  if (glColorArray != NULL && *glColorArray != NULL) {
-    delete[] *glColorArray;
-    *glColorArray = NULL;
-  }
-}
-
-void OcTreeDrawer::initOctreeGridVis()
-{
-
-  if (m_octree_grid_vis_initialized)
-    return;
-
-  clearOcTreeStructure();
-  // allocate arrays for octree grid visualization
-  octree_grid_vertex_size = m_grid_voxels.size() * 12 * 2 * 3;
-  octree_grid_vertex_array = new GLfloat[octree_grid_vertex_size];
-
-  // generate the cubes, 12 lines each
-
-  std::list<octomap::OcTreeVolume>::iterator it_rec;
-  unsigned int i = 0;
-  double x, y, z;
-  for (it_rec = m_grid_voxels.begin(); it_rec != m_grid_voxels.end(); it_rec++) {
-
-    x = it_rec->first.x();
-    y = it_rec->first.y();
-    z = it_rec->first.z();
-
-    double half_voxel_size = it_rec->second / 2.0;
-
-    // ----
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    // ----
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    // ----
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z - half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x - half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y + half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    octree_grid_vertex_array[i] = x + half_voxel_size;
-    octree_grid_vertex_array[i + 1] = y - half_voxel_size;
-    octree_grid_vertex_array[i + 2] = z + half_voxel_size;
-    i += 3;
-    // ----
-  }
-
-  m_octree_grid_vis_initialized = true;
-}
-
-void OcTreeDrawer::clearOcTreeStructure()
-{
-  if (octree_grid_vertex_size != 0) {
-    delete[] octree_grid_vertex_array;
-    octree_grid_vertex_size = 0;
-  }
-
-  m_octree_grid_vis_initialized = false;
-}
-
-void OcTreeDrawer::clear()
-{
-  //clearOcTree();
-  clearCubes(&m_occupiedArray, m_occupiedSize, &m_occupiedColorArray);
-  clearCubes(&m_occupiedThresArray, m_occupiedThresSize, &m_occupiedThresColorArray);
-  clearCubes(&m_freeArray, m_freeSize);
-  clearCubes(&m_freeThresArray, m_freeThresSize);
-  clearCubes(&m_selectionArray, m_selectionSize);
-
-  clearOcTreeStructure();
-}
-
-/*
-void OcTreeDrawer::draw() const
-{
-  glPushAttrib(GL_ALL_ATTRIB_BITS);
-  glPushMatrix();
-  glMultMatrixf(m_ocTreeTransform);
-  glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LESS);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-  //        glEnable(GL_LIGHTING);
-
-  glEnableClientState(GL_VERTEX_ARRAY);
-
-  if (m_drawOccupied)
-    drawOccupiedVoxels();
-  if (m_drawFree)
-    drawFreeVoxels();
-  if (m_drawOcTreeGrid)
-    drawOctreeGrid();
-  if (m_drawSelection)
-    drawSelection();
-
-  glDisableClientState(GL_VERTEX_ARRAY);
-
-  glPopMatrix();
-  glPopAttrib();
-
-}
-*/
-
-  void OcTreeDrawer::draw() const {
-//    std::cout << "draw OcTreeDrawer 1\n";
-
-    // push current status
-    glPushMatrix();
-    // octomap::pose6d relative_transform = origin * initial_origin.inv();
-
-    octomap::pose6d relative_transform = origin;// * initial_origin;
-
-    // apply relative transform
-    const octomath::Quaternion& q = relative_transform.rot();
-    glTranslatef(relative_transform.x(), relative_transform.y(), relative_transform.z());
-    
-    // convert quaternion to angle/axis notation
-    float scale = sqrt(q.x() * q.x() + q.y() * q.y() + q.z() * q.z());
-    if (scale) {
-      float axis_x = q.x() / scale;
-      float axis_y = q.y() / scale;
-      float axis_z = q.z() / scale;
-      float angle = acos(q.u()) * 2.0f * OTD_RAD2DEG;  //  opengl expects DEG
-      glRotatef(angle, axis_x, axis_y, axis_z);
-    }
-
-    glEnableClientState(GL_VERTEX_ARRAY);
-
-    if (m_drawOccupied)
-      drawOccupiedVoxels();
-    if (m_drawFree)
-      drawFreeVoxels();
-    if (m_drawOcTreeGrid)
-      drawOctreeGrid();
-    if (m_drawSelection)
-      drawSelection();
-
-//    if (m_displayAxes) {
-  //    drawAxes();
-    //}
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-
-    // reset previous status
-    glPopMatrix();
-
-//    std::cout << "draw OcTreeDrawer 2\n";
-
-  }
-
-
-
-
-void OcTreeDrawer::drawOccupiedVoxels() const
-{
-
-//    std::cout << "draw drawOccupiedVoxels 1\n";
-
-  // draw binary occupied cells
-  if (m_occupiedThresSize != 0) {
-//    std::cout << "draw drawOccupiedVoxels binary\n";
-
-    glColor4f(0.0, 0.0, 0.0, m_alphaOccupied);
-    drawCubes(m_occupiedThresArray, m_occupiedThresSize, m_occupiedThresColorArray);
-  }
-
-  // draw delta occupied cells
-  if (m_occupiedSize != 0) {
-  //  std::cout << "draw drawOccupiedVoxels delta\n";
-    glColor4f(0.2, 0.7, 1.0, m_alphaOccupied);
-    drawCubes(m_occupiedArray, m_occupiedSize, m_occupiedColorArray);
-  }
-
-}
-
-void OcTreeDrawer::drawFreeVoxels() const
-{
-
-  // draw binary freespace cells
-  if (m_freeThresSize != 0) {
-    glColor4f(0.0, 1.0, 0., 0.3);
-    drawCubes(m_freeThresArray, m_freeThresSize);
-  }
-
-  // draw delta freespace cells
-  if (m_freeSize != 0) {
-    glColor4f(0.5, 1.0, 0.1, 0.3);
-    drawCubes(m_freeArray, m_freeSize);
-  }
-}
-
-void OcTreeDrawer::drawSelection() const
-{
-  if (m_selectionSize != 0) {
-    glColor4f(1.0, 0.0, 0.0, 0.5);
-    drawCubes(m_selectionArray, m_selectionSize);
-  }
-}
-
-  void OcTreeDrawer::drawCubes(GLfloat** cubeArray, unsigned int cubeArraySize,
-                               GLfloat* cubeColorArray) const {
-    if (cubeArraySize == 0 || cubeArray == NULL){
-      std::cerr << "Warning: GLfloat array to draw cubes appears to be empty, nothing drawn.\n";
-      return;
-    }
-
-    // save current color
-    GLfloat* curcol = new GLfloat[4];
-    glGetFloatv(GL_CURRENT_COLOR, curcol);
-
-    // enable color pointer when heightColorMode is enabled:
-
-    if ((m_colorMode == CM_COLOR_HEIGHT || m_colorMode == CM_GRAY_HEIGHT) && (cubeColorArray != NULL)){
-      //std::cout << "enable color\n";
-      glEnableClientState(GL_COLOR_ARRAY);
-      glColorPointer(4, GL_FLOAT, 0, cubeColorArray);
-    }else{
-      //std::cout << "disable color\n";
-    }
-
-    // top surfaces:
-    glNormal3f(0.0f, 1.0f, 0.0f);
-    glVertexPointer(3, GL_FLOAT, 0, cubeArray[0]);
-    glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-    // bottom surfaces:
-    glNormal3f(0.0f, -1.0f, 0.0f);
-    glVertexPointer(3, GL_FLOAT, 0, cubeArray[1]);
-    glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-    // right surfaces:
-    glNormal3f(1.0f, 0.0f, 0.0f);
-    glVertexPointer(3, GL_FLOAT, 0, cubeArray[2]);
-    glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-    // left surfaces:
-    glNormal3f(-1.0f, 0.0f, 0.0f);
-    glVertexPointer(3, GL_FLOAT, 0, cubeArray[3]);
-    glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-    // back surfaces:
-    glNormal3f(0.0f, 0.0f, -1.0f);
-    glVertexPointer(3, GL_FLOAT, 0, cubeArray[4]);
-    glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-    // front surfaces:
-    glNormal3f(0.0f, 0.0f, 1.0f);
-    glVertexPointer(3, GL_FLOAT, 0, cubeArray[5]);
-    glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-
-    if ((m_colorMode == CM_COLOR_HEIGHT || m_colorMode == CM_GRAY_HEIGHT)
-        && (cubeColorArray != NULL)){
-      glDisableClientState(GL_COLOR_ARRAY);
-    }
-
-    // draw bounding linies of cubes in printout:
-    if (m_colorMode == CM_PRINTOUT){
-      glDisable(GL_LIGHTING);
-      glHint (GL_LINE_SMOOTH_HINT, GL_NICEST);
-      glEnable (GL_LINE_SMOOTH);
-      glPolygonMode (GL_FRONT_AND_BACK, GL_LINE);   // Draw Polygons only as Wireframes
-      glLineWidth(2.0f);
-      glColor3f(0.0f, 0.0f, 0.0f);
-      glCullFace(GL_FRONT_AND_BACK);        // Don't draw any Polygons faces
-      //glDepthFunc (GL_LEQUAL);
-
-      // top meshes:
-      glNormal3f(0.0f, 1.0f, 0.0f);
-      glVertexPointer(3, GL_FLOAT, 0, cubeArray[0]);
-      glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-      // bottom meshes:
-      glNormal3f(0.0f, -1.0f, 0.0f);
-      glVertexPointer(3, GL_FLOAT, 0, cubeArray[1]);
-      glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-      // right meshes:
-      glNormal3f(1.0f, 0.0f, 0.0f);
-      glVertexPointer(3, GL_FLOAT, 0, cubeArray[2]);
-      glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-      // left meshes:
-      glNormal3f(-1.0f, 0.0f, 0.0f);
-      glVertexPointer(3, GL_FLOAT, 0, cubeArray[3]);
-      glDrawArrays(GL_QUADS, 0, cubeArraySize / 3);
-
-      // restore defaults:
-      glCullFace(GL_BACK);
-      //glDepthFunc(GL_LESS);
-      glDisable(GL_LINE_SMOOTH);
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      glEnable(GL_LIGHTING);
-    }
-    // reset color
-    glColor4fv(curcol);
-    delete[] curcol;
-  }
-
-void OcTreeDrawer::drawOctreeGrid() const
-{
-  if (!m_octree_grid_vis_initialized)
-    return;
-
-  if (octree_grid_vertex_size == 0)
-    return;
-
-  glDisable(GL_LIGHTING);
-  glEnable(GL_LINE_SMOOTH);
-
-  glLineWidth(1.);
-  glVertexPointer(3, GL_FLOAT, 0, octree_grid_vertex_array);
-  glColor3f(0.0, 0.0, 0.0);
-  glDrawArrays(GL_LINES, 0, octree_grid_vertex_size / 3);
-
-  glDisable(GL_LINE_SMOOTH);
-  glEnable(GL_LIGHTING);
-}
-
-void OcTreeDrawer::enableOcTree(bool enabled)
-{
-  m_drawOcTreeGrid = enabled;
-  if (m_drawOcTreeGrid && !m_octree_grid_vis_initialized) {
-    initOctreeGridVis();
-  }
-}
-}
-
-
-///////////////// End of OcTreeDrawer ///////////////////
-
-
-namespace octomap {
-
-  ColorOcTreeDrawer::ColorOcTreeDrawer() 
-    : OcTreeDrawer() {
-  }
-
-  ColorOcTreeDrawer::~ColorOcTreeDrawer() {
-  }
-
-  void ColorOcTreeDrawer::setOcTree(const AbstractOcTree& tree_pnt,
-                                    const octomap::pose6d& origin_,
-                                    int map_id_) {
-
-    const ColorOcTree& tree = ((const ColorOcTree&) tree_pnt);
-
-    this->map_id = map_id_;
-
-    // save origin used during cube generation
-    this->initial_origin = octomap::pose6d(octomap::point3d(0,0,0), origin_.rot());
-    // origin is in global coords
-    this->origin = origin_;
-    
-    // maximum size to prevent crashes on large maps: (should be checked in a better way than a constant)
-    bool showAll = (tree.size() < 5 * 1e6);
-    bool uses_origin = ( (origin_.rot().x() != 0.) && (origin_.rot().y() != 0.)
-                         && (origin_.rot().z() != 0.) && (origin_.rot().u() != 1.) );
-
-    // walk the tree one to find the number of nodes in each category
-    // (this is used to set up the OpenGL arrays)
-    // TODO: this step may be left out, if we maintained the GLArrays in std::vectors instead...
-    unsigned int cnt_occupied(0), cnt_occupied_thres(0), cnt_free(0), cnt_free_thres(0);
-    for(ColorOcTree::tree_iterator it = tree.begin_tree(this->m_max_tree_depth),
-          end=tree.end_tree(); it!= end; ++it) {
-      if (it.isLeaf()) { 
-        if (tree.isNodeOccupied(*it)){ // occupied voxels
-          if (tree.isNodeAtThreshold(*it)) ++cnt_occupied_thres;
-          else                               ++cnt_occupied;
-        }
-        else if (showAll) { // freespace voxels
-          if (tree.isNodeAtThreshold(*it)) ++cnt_free_thres;
-          else                               ++cnt_free;
-        }
-      }        
-    }    
-    // setup GL arrays for cube quads and cube colors
-    initGLArrays(cnt_occupied      , m_occupiedSize     , &m_occupiedArray     , &m_occupiedColorArray);
-    initGLArrays(cnt_occupied_thres, m_occupiedThresSize, &m_occupiedThresArray, &m_occupiedThresColorArray);
-    initGLArrays(cnt_free          , m_freeSize         , &m_freeArray, NULL);
-    initGLArrays(cnt_free_thres    , m_freeThresSize    , &m_freeThresArray, NULL);
-
-    std::vector<octomath::Vector3> cube_template;
-    initCubeTemplate(origin, cube_template);
-
-    unsigned int idx_occupied(0), idx_occupied_thres(0), idx_free(0), idx_free_thres(0);
-    unsigned int color_idx_occupied(0), color_idx_occupied_thres(0);
-
-    m_grid_voxels.clear();
-    OcTreeVolume voxel; // current voxel, possibly transformed 
-    for(ColorOcTree::tree_iterator it = tree.begin_tree(this->m_max_tree_depth),
-          end=tree.end_tree(); it!= end; ++it) {
-      // std::cout << "ColorOcTreeDrawer::setOcTree\n";
-
-      if (it.isLeaf()) { // voxels for leaf nodes
-        if (uses_origin) 
-          voxel = OcTreeVolume(origin.rot().rotate(it.getCoordinate()), it.getSize());
-        else 
-          voxel = OcTreeVolume(it.getCoordinate(), it.getSize());
-        
-        if (tree.isNodeOccupied(*it)){ // occupied voxels
-          if (tree.isNodeAtThreshold(*it)) {
-            idx_occupied_thres = generateCube(voxel, cube_template, idx_occupied_thres, &m_occupiedThresArray);
-
-            //std::cout << "ColorOcTreeDrawer::setOcTree setCubeColorRGBA a\n";
-            color_idx_occupied_thres =  setCubeColorRGBA(it->getColor().r, it->getColor().g, it->getColor().b, 
-                                                         (unsigned char) (it->getOccupancy() * 255.),
-                                                         color_idx_occupied_thres, &m_occupiedThresColorArray);
-          }
-          else { // mfallon : this was done on recepit of the data
-            idx_occupied = generateCube(voxel, cube_template, idx_occupied, &m_occupiedArray);
-
-            //std::cout << "ColorOcTreeDrawer::setOcTree setCubeColorRGBA b\n";
-            color_idx_occupied = setCubeColorRGBA(it->getColor().r, it->getColor().g, it->getColor().b, 
-                                                  (unsigned char)(it->getOccupancy() * 255.),
-                                                  color_idx_occupied, &m_occupiedColorArray);
-          }
-        }
-        else if (showAll) { // freespace voxels
-          if (tree.isNodeAtThreshold(*it)) {
-            idx_free_thres = generateCube(voxel, cube_template, idx_free_thres, &m_freeThresArray);
-          }
-          else {
-            idx_free = generateCube(voxel, cube_template, idx_free, &m_freeArray);
-          }
-        }
-
-        // grid structure voxel
-        if (showAll) m_grid_voxels.push_back(voxel);        
-      }
-      
-      else { // inner node voxels (for grid structure only)
-        if (showAll) {
-          if (uses_origin)
-            voxel = OcTreeVolume(origin.rot().rotate(it.getCoordinate()), it.getSize());
-          else
-            voxel = OcTreeVolume(it.getCoordinate(), it.getSize());
-          m_grid_voxels.push_back(voxel);
-        }
-      }      
-    } // end for all voxels
-
-    m_octree_grid_vis_initialized = false;
-
-    if(m_drawOcTreeGrid)
-      initOctreeGridVis();    
-  }
-
-} // end namespace
-
-
 
 
 
@@ -1384,14 +40,12 @@ public:
     }
 
   octomap_raw_t msg;
-  OcTree * ocTree;
-  OcTreeDrawer * octd;
 
-    std::map<int, OcTreeRecord> m_octrees;
-    //ViewerWidget* m_glwidget;
+  std::map<int, OcTreeRecord> m_octrees;
+  //ViewerWidget* m_glwidget;
 
-    double m_octreeResolution;
-    unsigned int m_max_tree_depth;
+  double m_octreeResolution;
+  unsigned int m_max_tree_depth;
 
   std::vector<vtkSmartPointer<vtkActor> > Actors;
 
@@ -1401,22 +55,15 @@ public:
 
 void vtkOctomap::openTree(std::string filename){
 
-    std::cout << "mfallon2\n";
-
   OcTree* tree = new octomap::OcTree(filename);
   this->addOctree(tree, DEFAULT_OCTREE_ID);
 
   this->Internal->m_octreeResolution = tree->getResolution();
-  //emit 
-  //changeResolution(this->Internal->m_octreeResolution);
-
+  //emit changeResolution(this->Internal->m_octreeResolution);
   //setOcTreeUISwitches();
-
-    std::cout << "mfallon3\n";
 
   showOcTree();
 
-    std::cout << "mfallon4\n";
   //m_glwidget->resetView();
 }
 
@@ -1427,8 +74,7 @@ void vtkOctomap::openOcTree(std::string filename){
     this->addOctree(tree, DEFAULT_OCTREE_ID);
 
     this->Internal->m_octreeResolution = tree->getResolution();
-    //emit
-    //changeResolution(this->Internal->m_octreeResolution);
+    //emit changeResolution(this->Internal->m_octreeResolution);
 
     //setOcTreeUISwitches();
     showOcTree();
@@ -1436,9 +82,9 @@ void vtkOctomap::openOcTree(std::string filename){
 
     if (tree->getTreeType() == "ColorOcTree"){
       // map color and height map share the same color array and QAction
-    //  ui.actionHeight_map->setText ("Map color");  // rename QAction in Menu
-        this->enableHeightColorMode(true); // enable color view
-    //  ui.actionHeight_map->setChecked(true);
+      // ui.actionHeight_map->setText ("Map color");  // rename QAction in Menu
+      this->enableHeightColorMode(true); // enable color view
+      // ui.actionHeight_map->setChecked(true);
     }
   }
   else {
@@ -1452,32 +98,23 @@ void vtkOctomap::openOcTree(std::string filename){
 void vtkOctomap::parseTree(std::string datastream_string){
 
   std::stringstream datastream(datastream_string);
-
-    std::cout << "mfallon2 parseTree\n";
-
   OcTree* tree = new octomap::OcTree(1);
   tree->readBinary(datastream);
  
   this->addOctree(tree, DEFAULT_OCTREE_ID);
 
   this->Internal->m_octreeResolution = tree->getResolution();
-  //emit 
-  //changeResolution(this->Internal->m_octreeResolution);
-
+  //emit changeResolution(this->Internal->m_octreeResolution);
   //setOcTreeUISwitches();
-
-    std::cout << "mfallon3\n";
 
   showOcTree();
 
-    std::cout << "mfallon4\n";
   //m_glwidget->resetView();
 }
 
 
 void vtkOctomap::parseOcTree(std::string datastream_string){
 
-    std::cout << "mfallon2 parseOcTree\n";
   std::stringstream datastream(datastream_string);
 
   AbstractOcTree* tree = AbstractOcTree::read(datastream);
@@ -1495,9 +132,9 @@ void vtkOctomap::parseOcTree(std::string datastream_string){
 
     if (tree->getTreeType() == "ColorOcTree"){
       // map color and height map share the same color array and QAction
-    //  ui.actionHeight_map->setText ("Map color");  // rename QAction in Menu
-        this->enableHeightColorMode(true); // enable color view
-    //  ui.actionHeight_map->setChecked(true);
+      // ui.actionHeight_map->setText ("Map color");  // rename QAction in Menu
+      this->enableHeightColorMode(true); // enable color view
+      // ui.actionHeight_map->setChecked(true);
     }
   }
   else {
@@ -1509,29 +146,12 @@ void vtkOctomap::parseOcTree(std::string datastream_string){
 }
 
 
-
-
-
 void vtkOctomap::enableHeightColorMode (bool enabled) {
-//  std::cout << "cmode 1\n";
-
   m_heightColorMode = enabled;
-
-
-      for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
-// std::cout << "draw it\n";
-        it->second.octree_drawer->enableHeightColorMode(enabled);
-//        (*it(->enableHeightColorMode(enabled);
-      }
-
-//  for(std::vector<SceneObject*>::iterator it = m_sceneObjects.begin(); it != m_sceneObjects.end(); it++) {
-//    (*it)->enableHeightColorMode(enabled);
-//  }
-//  updateGL();
+  for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
+    it->second.octree_drawer->enableHeightColorMode(enabled);
+  }
 }
-
-
-
 
 
 void vtkOctomap::showOcTree() {
@@ -1673,13 +293,6 @@ void vtkOctomap::addOctree(octomap::AbstractOcTree* tree, int id) {
 vtkOctomap::vtkOctomap()
 {
   this->Internal = new vtkInternal;
-
-  this->Internal->ocTree = NULL;
-  this->Internal->octd = new OcTreeDrawer();
-
-//  this->Internal->octd->m_heightColorMode = true;
-  this->Internal->octd->m_zMin = -1.0;
-  this->Internal->octd->m_zMax = 12.0;
 }
 
 //----------------------------------------------------------------------------
@@ -1690,16 +303,11 @@ vtkOctomap::~vtkOctomap()
 
 //----------------------------------------------------------------------------
 
+/// depreciated remove/replace
 void vtkOctomap::SetHeightColorMode(bool heightColorMode){
-  this->Internal->octd->m_heightColorMode = heightColorMode;
 }
 
 void vtkOctomap::SetAlphaOccupied(double alphaOccupied){
-  this->Internal->octd->setAlphaOccupied(alphaOccupied);
-
-  // Currently necessary to force a recoloring
-  //this->Internal->octd->setOcTree(*this->Internal->ocTree, this->Internal->octd->m_zMin,
-  //    this->Internal->octd->m_zMax); //regenerate cubes etc..
 }
 
 //----------------------------------------------------------------------------
@@ -1715,96 +323,54 @@ void vtkOctomap::UpdateOctomapData(const char* messageData)
     this->Internal->msg.length = 0;
   }else{
 
-    if (this->Internal->ocTree != NULL)
-      delete this->Internal->ocTree;
-    this->Internal->octd->clear();
-
-    // set transform
+    // set transform. 
+    // TODO: fix this
     for (int i = 0; i < 4; ++i) {
       for (int j = 0; j < 4; ++j) {
-        this->Internal->octd->m_ocTreeTransform[j*4+i] = this->Internal->msg.transform[i][j];
+    //    this->Internal->octd->m_ocTreeTransform[j*4+i] = this->Internal->msg.transform[i][j];
       }
     }
 
     std::stringstream datastream;
     datastream.write((const char*) this->Internal->msg.data, this->Internal->msg.length);
 
-    bool newMode = true;
     bool fromMessage = true;
 
     if (fromMessage){
-      if (newMode){
+ 
+      // check if first line valid:
+      std::string line;
+      std::getline(datastream, line);
 
-
-
-    // check if first line valid:
-    std::string line;
-    std::getline(datastream, line);
-std::cout << line << " is the first line\n";
-//    if (line.compare(0,fileHeader.length(), fileHeader) !=0){
-//      OCTOMAP_ERROR_STR("First line of OcTree file header does not start with \""<< fileHeader);
-//      return NULL;
-//    }
-        std::string fileHeaderBt = "# Octomap OcTree binary file";
-        std::string fileHeaderOt = "# Octomap OcTree file";
-        if (line.compare(0,fileHeaderBt.length(), fileHeaderBt) ==0)
-{
-
-
-        //if (fileinfo.suffix() == "bt"){
-          std::cout << "mfallon bt stream\n";
-          parseTree(datastream.str());
-        }
-        else if (line.compare(0,fileHeaderOt.length(), fileHeaderOt) ==0)
-       {
-          std::cout << "mfallon ot steam\n";
+      std::string fileHeaderBt = "# Octomap OcTree binary file";
+      std::string fileHeaderOt = "# Octomap OcTree file";
+      if (line.compare(0,fileHeaderBt.length(), fileHeaderBt) ==0){
+        std::cout << "Octomap Binary Message received\n";
+        parseTree(datastream.str());
+      }else if (line.compare(0,fileHeaderOt.length(), fileHeaderOt) ==0){
+        std::cout << "Octomap OcTree Message received\n";
           parseOcTree(datastream.str());
-        }
-
-
       }else{
-        this->Internal->ocTree = new octomap::OcTree(1); //resolution will be set by data from message
-        this->Internal->ocTree->readBinary(datastream);
+        std::cout << line << " was the first line received\n";
+        std::cout << "input data format not understood\n";
       }
 
-    }else{
+    }else{ // read from a file, TODO: move this else where
       //  std::string m_filename = "/home/mfallon/Dropbox/shared/2015-11-octomap/octomap.bt";
       // std::string m_filename = "/home/mfallon/Dropbox/shared/2015-11-octomap/simple_color_tree.ot";
       std::string m_filename = "/home/mfallon/Dropbox/shared/2015-11-octomap/freiburg1_360.ot";
 
+      QString temp = QString(m_filename.c_str());
+      QFileInfo fileinfo(temp);
 
-      if (newMode){
-        std::cout << "read octomap from file new way\n";
-    
-        QString temp = QString(m_filename.c_str());
-        QFileInfo fileinfo(temp);
-
-        if (fileinfo.suffix() == "bt"){
-          std::cout << "mfallon bt\n";
-          openTree(m_filename);
-        }
-        else if (fileinfo.suffix() == "ot")
-        {
-          std::cout << "mfallon ot\n";
-          openOcTree(m_filename);
-        }
-
-      }else{
-
-
-
-        std::cout << "read octomap from file old way\n";
-
-        this->Internal->ocTree = new octomap::OcTree(m_filename);
-
-        double minX, minY, minZ, maxX, maxY, maxZ;
-        this->Internal->ocTree->getMetricMin(minX, minY, minZ);
-        this->Internal->ocTree->getMetricMax(maxX, maxY, maxZ);
-        //printf("\nmap bounds: [%.2f, %.2f, %.2f] - [%.2f, %.2f, %.2f]\n", minX, minY, minZ, maxX, maxY, maxZ);
-        this->Internal->octd->setOcTree(*this->Internal->ocTree);
-        //    this->Internal->octd->setOcTree(*this->Internal->ocTree,  this->Internal->octd->m_zMin ,
-        //      this->Internal->octd->m_zMax);
+      if (fileinfo.suffix() == "bt"){
+        openTree(m_filename);
       }
+      else if (fileinfo.suffix() == "ot")
+      {
+        openOcTree(m_filename);
+      }
+
     }
   }
 }
@@ -1891,26 +457,8 @@ int vtkOctomap::RenderOpaqueGeometry(vtkViewport *v)
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 
-    //printf("vtkOctomap RenderOpaqueGeometry\n");
-    if (1==0){
-
-      this->Internal->octd->enableOcTreeCells();
-      if (this->Internal->octd->m_drawOccupied || this->Internal->octd->m_drawFree || this->Internal->octd->m_drawOcTreeGrid) {
-        if (this->Internal->ocTree == NULL) {
-          return -1;
-        }
-        //printf("calling draw old style\n");
-        this->Internal->octd->draw();
-      }
-    }else{
-      //printf("calling draw new style\n");
-
-      for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
-// std::cout << "draw it\n";
-        it->second.octree_drawer->draw();
-      }
-
-
+    for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
+      it->second.octree_drawer->draw();
     }
 
     glPopAttrib ();
