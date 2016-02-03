@@ -58,6 +58,7 @@ namespace octomap {
   }
 
   void OcTreeDrawer::draw() const {
+
     // push current status
     glPushMatrix();
     // octomap::pose6d relative_transform = origin * initial_origin.inv();
@@ -723,11 +724,11 @@ namespace octomap {
     glGetFloatv(GL_CURRENT_COLOR, curcol);
 
     // enable color pointer when heightColorMode is enabled:
+
     if ((m_colorMode == CM_COLOR_HEIGHT || m_colorMode == CM_GRAY_HEIGHT) && (cubeColorArray != NULL)){
       glEnableClientState(GL_COLOR_ARRAY);
       glColorPointer(4, GL_FLOAT, 0, cubeColorArray);
-    } // else disable color
-
+    }
 
     // top surfaces:
     glNormal3f(0.0f, 1.0f, 0.0f);
