@@ -23,7 +23,7 @@
  */
 
 #define NOMINMAX
-#include <octovis/SceneObject.h>
+#include "SceneObject.h"
 
 #ifndef RAD2DEG
 #define RAD2DEG(x) ((x) * 57.29577951308232087721)

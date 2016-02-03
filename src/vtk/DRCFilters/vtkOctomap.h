@@ -34,8 +34,8 @@ PURPOSE.  See the above copyright notice for more information.
 #include <octomap/OcTreeBase.h>
 #include <octomap/octomap_types.h>
 #include <octomap/ColorOcTree.h>
-#include <octovis/ColorOcTreeDrawer.h>
-#include <octovis/OcTreeRecord.h>
+#include "ColorOcTreeDrawer.h"
+#include "OcTreeRecord.h"
 #include <iostream>
 #include <sstream>
 

@@ -22,7 +22,7 @@
  * along with this program. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <octovis/OcTreeDrawer.h>
+#include "OcTreeDrawer.h"
 
 #define OTD_RAD2DEG 57.2957795
 

@@ -25,7 +25,7 @@
 #ifndef OCTOVIS_OC_TREE_RECORD
 #define OCTOVIS_OC_TREE_RECORD
 
-#include <octovis/OcTreeDrawer.h>
+#include <OcTreeDrawer.h>
 
 namespace octomap {
 
