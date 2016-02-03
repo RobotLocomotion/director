@@ -24,10 +24,7 @@ PURPOSE.  See the above copyright notice for more information.
 #include <sstream>
 
 
-
 using namespace octomap;
-
-
 
 vtkStandardNewMacro(vtkOctomap);
 
