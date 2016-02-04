@@ -9,7 +9,6 @@ from director.timercallback import TimerCallback
 from director.consoleapp import ConsoleApp
 from director import applogic
 from director import transformUtils
-from director import lcmUtils
 from director import filterUtils
 from director import visualization as vis
 from director import ioUtils
