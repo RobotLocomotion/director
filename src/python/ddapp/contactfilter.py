@@ -4,6 +4,9 @@ from ddapp import roboturdf
 import numpy as np
 import vtkAll as vtk
 import PythonQt
+import Queue
+import collections
+from contactfilterutils import DequePeak
 
 import os
 import os.path
@@ -53,11 +56,11 @@ class ContactFilter(object):
         self.initializeTestParticleSet()
         self.initializeOptions()
         self.setupMotionModelData()
-        self.currentUtime = 0.0
+        self.setCurrentUtime(0)
 
         self.residual = None
         self.particleSetList = []
-        self.lastTimeContactAdded = time.time()
+        self.eventTimes = {'lastContactAdded': 0, 'lastContactRemoved': 0} # should be in simulator time
         self.removedParticleSet = False
         self.mostLikelySolnData = None
 
@@ -99,9 +102,10 @@ class ContactFilter(object):
         self.options = {}
 
         self.options['thresholds'] = {}
-        self.options['thresholds']['addContactPoint'] = 2.0 # threshold on squared error to add contact point
-        self.options['thresholds']['removeContactPoint'] = 3.0 # threshold on force magnitude to eliminate a force that gets too small
-        self.options['thresholds']['timeout'] = 5.0 # making it very conservative for now
+        self.options['thresholds']['addContactPointTimeout'] = 2.0
+        self.options['thresholds']['removeContactPointTimeout'] = 2.0
+        self.options['thresholds']['addContactPointSquaredError'] = 10.0 # threshold on squared error to add contact point
+        self.options['thresholds']['removeContactPointForce'] = 5.0 # threshold on force magnitude to eliminate a force that gets too small
 
         self.options['motionModel'] = {}
         self.options['motionModel']['var'] = 0.05
@@ -341,7 +345,7 @@ class ContactFilter(object):
         # record the data somehow . . .
         solnData = {'cfpData': cfpData, 'impliedResidual': impliedResidual, 'squaredError': squaredError,
                     "numContactPoints": len(cfpList), 'gurobiObjValue': grbSolnData['objectiveValue'],
-                    'likelihood': likelihood}
+                    'likelihood': likelihood, 'time':self.currentTime}
         return solnData
 
     def computeLikelihoodFull(self, residual, publish=True, verbose=False):
@@ -415,7 +419,7 @@ class ContactFilter(object):
 
             particle.solnData = solnData
 
-        particleSet.updateMostLikelyParticle()
+        particleSet.updateMostLikelyParticle(self.currentTime)
 
 
         # should probably update "most likely particle again"
@@ -427,8 +431,10 @@ class ContactFilter(object):
             externalParticles = []
 
             for ps in otherParticleSets:
-                if ps.mostLikelyParticle is not None:
-                    externalParticles.append(ps.mostLikelyParticle)
+                otherSolnData = ps.deque.peakRight()
+                if otherSolnData is not None:
+                    otherParticle = otherSolnData['cfpData'][0]['particle']
+                    externalParticles.append(otherParticle)
 
             self.measurementUpdateSingleParticleSet(residual, particleSet, externalParticles=externalParticles)
 
@@ -439,15 +445,31 @@ class ContactFilter(object):
         # don't think we should embed this here, just leave it as a separate step
         # self.manageParticleSets()
 
+    def checkTimeoutForSetAdditionRemoval(self):
+
+        val = True
+
+        if (self.currentTime - self.eventTimes['lastContactRemoved']) < self.options['thresholds']['removeContactPointTimeout']:
+            val = False
+
+        if (self.currentTime - self.eventTimes['lastContactAdded']) < self.options['thresholds']['addContactPointTimeout']:
+            val = False
+
+        return val
+
     def manageParticleSets(self, verbose=True):
         solnData = self.mostLikelySolnData
         newParticleSet = None
 
-        if solnData is None:
-            if (self.squaredErrorNoContacts(verbose=False) > self.options['thresholds']['addContactPoint']):
-                newParticleSet = self.createParticleSet()
+        timeoutSatisfied = self.checkTimeoutForSetAdditionRemoval()
 
-        elif solnData['squaredError'] > self.options['thresholds']['addContactPoint']:
+        if solnData is None:
+            if (self.squaredErrorNoContacts(verbose=False) > self.options['thresholds']['addContactPointSquaredError']):
+                newParticleSet = self.createParticleSet()
+            else:
+                return
+
+        elif solnData['squaredError'] > self.options['thresholds']['addContactPointSquaredError']:
             linksWithContactPoints = set()
             for d in solnData['cfpData']:
                 cfp = d['ContactFilterPoint']
@@ -464,40 +486,44 @@ class ContactFilter(object):
         # this means we have encountered a situation where we should add a new particle set
         # for now will only add one if a sufficient time has passed since we last added a contact
         if newParticleSet is not None:
-            if (time.time() - self.lastTimeContactAdded) > self.options['thresholds']['timeout'] or self.removedParticleSet:
-                if verbose:
-                    # print "squared error is large, adding a contact point"
-
+            if timeoutSatisfied:
                 if len(self.particleSetList) >= self.options['debug']['maxNumParticleSets']:
-                    # if verbose:
-                    #     print "reached maxNumParticleSets limit"
-                else:
-                    self.particleSetList.append(newParticleSet)
-                    self.lastTimeContactAdded = time.time()
+                    if verbose:
+                        print "reached max num particle sets"
+                        return
+                if verbose:
+                    print "adding a particle set"
+                self.particleSetList.append(newParticleSet)
+                self.eventTimes['lastContactAdded'] = self.currentTime
+
             else:
                 if verbose:
-                    print "below timeout threshold when trying to add a new particle set, returning"
-
-            self.removedParticleSet = False
+                    print "below timeout threshold when trying to ADD a new particle set, returning"
             return
 
-        if solnData is None:
-            self.removedParticleSet = False
-            return
 
         # now remove any particleSets that have sufficiently small "best" forces
         for d in solnData['cfpData']:
-            if (np.linalg.norm(d['force']) < self.options['thresholds']['removeContactPoint'] and
-                (self.squaredErrorNoContacts(verbose=False) < self.options['thresholds']['addContactPoint'])):
-                if verbose:
-                    print "force is below threshold, eliminating containing particle set"
-                self.removedParticleSet = True
-                particleSetToRemove = d['particle'].containingParticleSet
+            if (np.linalg.norm(d['force']) < self.options['thresholds']['removeContactPointForce']):
 
-                if particleSetToRemove in self.particleSetList:
-                    self.particleSetList.remove(particleSetToRemove)
-                    # this return statement only allows you to remove a single particle at a time
-                    return
+                # this extra 'and' condition is from an older specification, not sure it's the right thing to do
+                # and (self.squaredErrorNoContacts(verbose=False) < self.options['thresholds']['addContactPoint'])):
+
+
+                if timeoutSatisfied:
+                    if verbose:
+                        print "force is below threshold, eliminating containing particle set"
+                    particleSetToRemove = d['particle'].containingParticleSet
+
+                    if particleSetToRemove in self.particleSetList:
+                        self.particleSetList.remove(particleSetToRemove)
+                        self.eventTimes['lastContactRemoved'] = self.currentTime
+                        # this return statement only allows you to remove a single particle at a time
+                else:
+                    if verbose:
+                        print "below timeout threshold when trying to REMOVE a new particle set, returning"
+
+                return
 
     def applyMotionModelSingleParticleSet(self, particleSet):
         for particle in particleSet.particleList:
@@ -598,6 +624,10 @@ class ContactFilter(object):
 
         lcmUtils.publish("TRUE_RESIDUAL", msg)
 
+    def setCurrentUtime(self, utime):
+        self.currentUtime = utime
+        self.currentTime = 1.0*utime/1e6
+
 
     def publishMostLikelyEstimate(self):
         if self.mostLikelySolnData is None:
@@ -637,7 +667,7 @@ class ContactFilter(object):
 
 
     def onResidualObserverState(self, msg):
-        self.currentUtime = msg.utime
+        self.setCurrentUtime(msg.utime)
         msgJointNames = msg.joint_name
         msgData = msg.residual
 
@@ -927,15 +957,17 @@ class ContactFilterParticle(object):
 
 class SingleContactParticleSet(object):
 
-    def __init__(self):
+    def __init__(self, solnDataQueueTimeout=0.5):
         self.particleList = []
         self.mostLikelyParticle = None
+        self.solnDataQueueTimeout=solnDataQueueTimeout
+        self.deque = DequePeak() #older things will be on the right
 
     def addParticle(self, particle):
         self.particleList.append(particle)
         particle.setContainingParticleSet(self)
 
-    def updateMostLikelyParticle(self):
+    def updateMostLikelyParticle(self, currentTime):
         bestSquaredError = None
 
         for particle in self.particleList:
@@ -945,7 +977,23 @@ class SingleContactParticleSet(object):
                 bestSquaredError = squaredError
                 self.mostLikelyParticle = particle
 
+        self.updateSolnDataQueue(self.mostLikelyParticle.solnData, currentTime)
 
+    def updateSolnDataQueue(self, solnData, currentTime):
+        self.solnData = solnData
+        self.deque.appendleft(solnData)
+        self.cleanupDeque(currentTime)
+
+    def cleanupDeque(self, currentTime):
+
+        while True:
+            try:
+                tempSolnData = self.deque.pop()
+                if (currentTime - tempSolnData['time']) < self.solnDataQueueTimeout:
+                    self.deque.append(tempSolnData)
+                    break
+            except IndexError:
+                break
 
     def getNumberofParticles(self):
         return len(self.particleList)
