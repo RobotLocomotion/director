@@ -143,6 +143,7 @@ class RobotSystem(object):
             manipPlanner = robotplanlistener.ManipulationPlanDriver(ikPlanner)
 
             affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
+            affordanceitems.MeshAffordanceItem.getMeshManager().initLCM()
             affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
             affordanceManager.collection.sendEchoRequest()
             segmentation.affordanceManager = affordanceManager
