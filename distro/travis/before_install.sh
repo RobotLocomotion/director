@@ -23,5 +23,6 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
 	brew update
   brew tap homebrew/python
   brew install python numpy
+  brew install qt
   install_vtk_homebrew_bottle
 fi
