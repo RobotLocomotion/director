@@ -106,7 +106,7 @@ class RobotModelItem(om.ObjectModelItem):
             return None
 
     def getHeadLink(self):
-        return drcargs.getDirectorConfig()['headLink'] if 'headLink' in drcargs.getDirectorConfig() else None
+        return drcargs.getDirectorConfig().get('headLink')
 
     def getLinkContactPoints(self, linkName):
         pts = self.model.getBodyContactPoints(linkName)
