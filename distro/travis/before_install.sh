@@ -12,6 +12,7 @@ make_vtk_homebrew_bottle()
 install_vtk_homebrew_bottle()
 {
   wget https://dl.dropboxusercontent.com/s/mtacwrjgmtanfaz/vtk5-5.10.1_2.mavericks.bottle.1.tar.gz
+  brew tap homebrew/science
   brew install vtk5-5.10.1_2.mavericks.bottle.1.tar.gz
 }
 
