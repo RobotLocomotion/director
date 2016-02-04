@@ -314,8 +314,6 @@ class ContactFilter(object):
         for cfp in cfpList:
             H_list.append(self.computeJacobianToFrictionCone(cfp))
 
-
-
         # this is where the solve is really happening
         numContacts = len(cfpList)
         grbSolnData = self.gurobi.solve(numContacts, residual, H_list, self.weightMatrix)
@@ -331,10 +329,10 @@ class ContactFilter(object):
         impliedResidual = 0*residual
         for idx, cfp in enumerate(cfpList):
             d = {'ContactFilterPoint': cfp}
-            d['force'] = np.dot(cfp.rotatedFrictionCone, alphaVals[i,:])
-            d['alpha'] = alphaVals[i,:]
+            d['force'] = np.dot(cfp.rotatedFrictionCone, alphaVals[idx,:])
+            d['alpha'] = alphaVals[idx,:]
             cfpData.append(d)
-            impliedResidual = impliedResidual + np.dot(H_list[idx], alphaVals[i,:])
+            impliedResidual = impliedResidual + np.dot(H_list[idx], alphaVals[idx,:])
 
 
         squaredError = np.dot(np.dot((residual - impliedResidual).transpose(), self.weightMatrix),
@@ -431,10 +429,9 @@ class ContactFilter(object):
             externalParticles = []
 
             for ps in otherParticleSets:
-                otherSolnData = ps.deque.peakRight()
-                if otherSolnData is not None:
-                    otherParticle = otherSolnData['cfpData'][0]['particle']
-                    externalParticles.append(otherParticle)
+                otherHistoricalMostLikely = ps.historicalMostLikely
+                if otherHistoricalMostLikely['particle'] is not None:
+                    externalParticles.append(otherHistoricalMostLikely['particle'])
 
             self.measurementUpdateSingleParticleSet(residual, particleSet, externalParticles=externalParticles)
 
@@ -683,11 +680,14 @@ class ContactFilter(object):
         self.computeAndPublishResidual(msg)
 
 
-    def drawParticleSet(self, particleSet, name="particle set", color=None, drawMostLikely=True):
+    def drawParticleSet(self, particleSet, name="particle set", color=None, drawMostLikely=True,
+                        drawHistoricalMostLikely=True):
 
         # set the color if it was passed in
         defaultColor = [0.5,0,0.5]
         mostLikelyColor = [0,0,1]
+        historicalMostLikelyColor = [1,0,0]
+
         if color is not None:
             defaultColor = color
 
@@ -715,18 +715,37 @@ class ContactFilter(object):
                     color = mostLikelyColor
 
             rayLength = plungerMinLength + 1.0*numParticles/numTotalParticles*plungerMaxLength
-            forceDirectionWorldFrame, forceLocationWorldFrame =\
-                cfUtils.getForceDirectionInWorld(q, self.robotStateModel,
-                                                                        cfp.linkName,
-                                                                        cfp.contactLocation,
-                                                                        cfp.contactNormal)
+            self.addPlungerToDebugData(d, cfp.linkName, cfp.contactLocation, cfp.contactNormal, rayLength, color)
+            # forceDirectionWorldFrame, forceLocationWorldFrame =\
+            #     cfUtils.getForceDirectionInWorld(q, self.robotStateModel,
+            #                                                             cfp.linkName,
+            #                                                             cfp.contactLocation,
+            #                                                             cfp.contactNormal)
+            #
+            # rayEnd = forceLocationWorldFrame - forceDirectionWorldFrame*rayLength
+            # d.addSphere(forceLocationWorldFrame, radius=0.01, color=color)
+            # d.addLine(rayEnd, forceLocationWorldFrame, radius = 0.005, color=color)
 
-            rayEnd = forceLocationWorldFrame - forceDirectionWorldFrame*rayLength
-            d.addSphere(forceLocationWorldFrame, radius=0.01, color=color)
-            d.addLine(rayEnd, forceLocationWorldFrame, radius = 0.005, color=color)
-
+        if drawHistoricalMostLikely and (particleSet.historicalMostLikely['particle'] is not None):
+            cfp = particleSet.historicalMostLikely['particle'].cfp
+            color = historicalMostLikelyColor
+            rayLength = 0.3
+            self.addPlungerToDebugData(d, cfp.linkName, cfp.contactLocation, cfp.contactNormal, rayLength, color)
 
         vis.updatePolyData(d.getPolyData(), name, colorByName='RGB255')
+
+    def addPlungerToDebugData(self, d, linkName, contactLocation, contactDirection, rayLength, color):
+        q = self.getCurrentPose()
+        forceDirectionWorldFrame, forceLocationWorldFrame =\
+                cfUtils.getForceDirectionInWorld(q, self.robotStateModel,
+                                                                        linkName,
+                                                                        contactLocation,
+                                                                        contactDirection)
+
+        rayEnd = forceLocationWorldFrame - forceDirectionWorldFrame*rayLength
+        d.addSphere(forceLocationWorldFrame, radius=0.01, color=color)
+        d.addLine(rayEnd, forceLocationWorldFrame, radius = 0.005, color=color)
+
 
     def testParticleSetDraw(self):
         self.drawParticleSet(self.testParticleSet)
@@ -960,8 +979,9 @@ class SingleContactParticleSet(object):
     def __init__(self, solnDataQueueTimeout=0.5):
         self.particleList = []
         self.mostLikelyParticle = None
-        self.solnDataQueueTimeout=solnDataQueueTimeout
-        self.deque = DequePeak() #older things will be on the right
+        self.historicalMostLikely = {'solnData': None, 'particle': None}
+        self.solnDataTimeout = solnDataQueueTimeout
+        self.solnDataSet = []
 
     def addParticle(self, particle):
         self.particleList.append(particle)
@@ -973,27 +993,41 @@ class SingleContactParticleSet(object):
         for particle in self.particleList:
 
             squaredError = particle.solnData['squaredError']
-            if bestSquaredError is None or (squaredError < bestSquaredError):
+            if (bestSquaredError is None) or (squaredError < bestSquaredError):
                 bestSquaredError = squaredError
                 self.mostLikelyParticle = particle
 
-        self.updateSolnDataQueue(self.mostLikelyParticle.solnData, currentTime)
+        self.updateSolnDataSet(currentTime, solnData=self.mostLikelyParticle.solnData)
 
-    def updateSolnDataQueue(self, solnData, currentTime):
+    def updateSolnDataSet(self, currentTime, solnData=None):
         self.solnData = solnData
-        self.deque.appendleft(solnData)
-        self.cleanupDeque(currentTime)
+        if solnData is not None:
+            self.solnDataSet.append(solnData)
+        self.cleanupSet(currentTime)
+        self.updateHistoricalMostLikely()
 
-    def cleanupDeque(self, currentTime):
+    def cleanupSet(self, currentTime):
+        toRemove = []
+        for solnData in self.solnDataSet:
+            if (currentTime - solnData['time']) > self.solnDataTimeout:
+                toRemove.append(solnData)
 
-        while True:
-            try:
-                tempSolnData = self.deque.pop()
-                if (currentTime - tempSolnData['time']) < self.solnDataQueueTimeout:
-                    self.deque.append(tempSolnData)
-                    break
-            except IndexError:
-                break
+        cfUtils.removeElementsFromList(self.solnDataSet, toRemove)
+
+    def updateHistoricalMostLikely(self):
+        bestSquaredError = None
+        for solnData in self.solnDataSet:
+            squaredError = solnData['squaredError']
+
+            if bestSquaredError is None:
+                self.historicalMostLikely['solnData'] = solnData
+                self.historicalMostLikely['particle'] = solnData['cfpData'][0]['particle']
+                bestSquaredError = squaredError
+
+            if solnData['squaredError'] < bestSquaredError:
+                self.historicalMostLikely['solnData'] = solnData
+                self.historicalMostLikely['particle'] = solnData['cfpData'][0]['particle']
+                bestSquaredError = squaredError
 
     def getNumberofParticles(self):
         return len(self.particleList)
