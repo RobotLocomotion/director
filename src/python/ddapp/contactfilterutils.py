@@ -1,6 +1,8 @@
 __author__ = 'manuelli'
 import numpy as np
 import collections
+
+
 def getForceDirectionInWorld(q, robotStateModel, linkName, forceLocation, forceDirection):
     forceDirection = forceDirection/np.linalg.norm(forceDirection)
     linkToWorld = robotStateModel.getLinkFrame(linkName)
@@ -9,6 +11,11 @@ def getForceDirectionInWorld(q, robotStateModel, linkName, forceLocation, forceD
 
     return forceDirectionInWorld, forceLocationInWorld
 
+
+def removeElementsFromList(list, toRemove):
+    for x in toRemove:
+        if x in list:
+            list.remove(x)
 
 class DequePeak(collections.deque):
 
