@@ -22,7 +22,7 @@ from director import handdriver
 from director import planplayback
 from director import playbackpanel
 from director import teleoppanel
-from director import viewbehaviors
+from director import robotviewbehaviors
 from director import plannerPublisher
 
 
@@ -170,6 +170,8 @@ class RobotSystem(object):
             footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
             manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
+        viewBehaviors = None
+
         robotSystemArgs = dict(locals())
         for arg in ['globalsDict', 'self']:
             del robotSystemArgs[arg]
@@ -178,7 +180,9 @@ class RobotSystem(object):
             globalsDict.update(robotSystemArgs)
 
         robotSystem = FieldContainer(**robotSystemArgs)
-        viewbehaviors.ViewBehaviors.addRobotBehaviors(robotSystem)
+
+        robotSystem.viewBehaviors = robotviewbehaviors.RobotViewBehaviors(view, robotSystem)
+
         return robotSystem
 
 
