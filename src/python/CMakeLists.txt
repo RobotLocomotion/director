@@ -88,6 +88,7 @@ set(python_files
   director/robotposegui.py
   director/robotsystem.py
   director/roboturdf.py
+  director/robotviewbehaviors.py
   director/screengrabberpanel.py
   director/segmentation.py
   director/segmentationpanel.py
@@ -117,6 +118,7 @@ set(python_files
   director/uuidutil.py
   director/valvedemo.py
   director/viewbehaviors.py
+  director/vieweventfilter.py
   director/visualization.py
   director/vtkAll.py
   director/vtkNumpy.py

@@ -80,7 +80,6 @@ from director import screengrabberpanel
 from director import splinewidget
 from director import teleoppanel
 from director import vtkNumpy as vnp
-from director import viewbehaviors
 from director import visualization as vis
 from director import actionhandlers
 from director.timercallback import TimerCallback
@@ -807,7 +806,6 @@ def sendDesiredPumpPsi(desiredPsi):
 
 app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
-viewBehaviors = viewbehaviors.ViewBehaviors(view)
 
 
 # Drill Demo Functions for in-image rendering:

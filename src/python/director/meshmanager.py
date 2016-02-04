@@ -1,4 +1,3 @@
-from director import lcmobjectcollection
 from director import geometryencoder
 from director import ioUtils
 from director.uuidutil import newUUID
@@ -11,14 +10,20 @@ class MeshManager(object):
         self.meshes = {}
         self.cacheDirectory = '/tmp'
         self.cacheDataType = 'stl'
+        self.collection = None
+
+    def initLCM(self):
+        from director import lcmobjectcollection
         self.collection = lcmobjectcollection.LCMObjectCollection(channel='MESH_COLLECTION_COMMAND')
         self.collection.connectDescriptionUpdated(self._onDescriptionUpdated)
+        for meshId in self.meshes.keys():
+            self._publishMesh(meshId)
 
     def add(self, polyData, publish=True):
         meshId = newUUID()
         self.meshes[meshId] = polyData
-        if publish:
-            self.collection.updateDescription(dict(uuid=meshId, data=geometryencoder.encodePolyData(polyData)), notify=False)
+        if publish and self.collection:
+            self._publishMesh(meshId)
         return meshId
 
     def get(self, meshId):
@@ -31,6 +36,10 @@ class MeshManager(object):
                 ioUtils.writePolyData(self.get(meshId), filename)
             return filename
         return None
+
+    def _publishMesh(self, meshId):
+        polyData = self.meshes[meshId]
+        self.collection.updateDescription(dict(uuid=meshId, data=geometryencoder.encodePolyData(polyData)), notify=False)
 
     def _onDescriptionUpdated(self, collection, descriptionId):
         desc = collection.getDescription(descriptionId)
