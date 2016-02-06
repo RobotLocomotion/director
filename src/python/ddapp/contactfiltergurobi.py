@@ -88,8 +88,83 @@ class ContactFilterGurobi(object):
         grbUtils.addQuadraticObjective(model, Q, varList)
         grbUtils.addLinearObjective(model, f, varList)
 
+    def createLassoModel(self, numContacts):
+        d = {}
+        m = Model("LASSO " + str(numContacts) + " contact(s)")
+        alphaVars = {}
+        betaVars = {}
+        for i in xrange(0,numContacts):
+            # add betaVar
+            betaVars[i] = m.addVar(name="beta_%i" % (i,))
+            for j in xrange(0,4):
+                alphaVars[i,j] = m.addVar(lb=0.0, name="alpha_%i_%i" % (i,j))
+
+        # this update is critical, otherwise the addition of the constraints and stuff won't work
+        m.update()
+
+        for i in xrange(0,numContacts):
+            for j in xrange(0,4):
+                m.addConstr(betaVars[i] - alphaVars[i,j] >= 0, "beta_%i >= alpha_%i_%i" %(i,i,j))
+
+        m.update()
+        d['model'] = m
+        d['numContacts'] = numContacts
+        d['alphaVars'] = alphaVars
+        d['betaVars'] = betaVars
+
+        return d
+
+    # solves a given lasso model given the residual
+    def solveLasso(self, d, residual, H_list, W, lam):
+        if not (d['numContacts'] == len(H_list)):
+            raise ValueError("the model must have same number of contacts as things in H_list")
+
+        H = np.concatenate(H_list, axis=1)
+        Q = np.dot(np.dot(H.transpose(),W),H)
+        f = -2.0*np.dot(np.dot(residual.transpose(), W),H)
+        constant = np.dot(np.dot(residual.transpose(), W), residual)
+
+        numContacts = d['numContacts']
+        model = d['model']
+        alphaVars = d['alphaVars']
+        betaVars = d['betaVars']
 
 
+        alphaVarList = [alphaVars[i,j] for i in xrange(0,numContacts) for j in xrange(0,4)]
+        betaVarList = [betaVars[i] for i in xrange(0,numContacts)]
+        lamVec = lam*np.ones(d['numContacts'])
 
+        grbUtils.clearObjective(model)
+        grbUtils.addObjective(model, Q, f, alphaVarList, constant=constant)
+        grbUtils.addLinearObjective(model, lamVec, betaVarList)
+        model.optimize()
+
+
+    def test2(self):
+        m = Model("test")
+        d = {}
+        H = np.array([1,1])
+        H_matrix = np.reshape(H,(1,2))
+        Q = np.dot(H_matrix.transpose(),H_matrix)
+        f = -2.0*H
+        # Q = np.eye(2)
+        # f = -2*np.ones(2)
+        d['alpha_1'] = m.addVar(lb=0.0, name="alpha_1")
+        d['alpha_2'] = m.addVar(lb=0.0, name="alpha_2")
+
+        d['beta'] = m.addVar(name="beta")
+
+        # this update turns out to be critical!!!!
+        m.update()
+
+        m.addConstr(d['beta'] - d['alpha_1']>= 0, name="beta - alpha_1 > 0")
+        m.addConstr(d['beta'] - d['alpha_2']>= 0, name="beta - alpha_2 > 0")
+
+        m.update()
+        grbUtils.addObjective(m, Q,f,[d['alpha_1'], d['alpha_2']],constant=1)
+        m.optimize()
+
+        d['model'] = m
+        return d
 
 

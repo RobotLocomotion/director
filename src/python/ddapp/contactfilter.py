@@ -117,6 +117,7 @@ class ContactFilter(object):
 
         self.options['debug'] = {}
         self.options['debug']['maxNumParticleSets'] = 2
+        self.options['debug']['forceThreshold'] = 1.0
     def initializeTestTimers(self):
         self.justAppliedMotionModel = False
         self.particleFilterTestTimer = TimerCallback(targetFps=1)
@@ -564,6 +565,9 @@ class ContactFilter(object):
             self.importanceResamplingSingleParticleSet(particleSet)
 
 
+
+    # this definitely needs some work
+    # overall there are a ton of hacks in here, should get rid of some of them . . . .
     def updateMostLikelySolnData(self):
         if not self.particleSetList:
             self.mostLikelySolnData = None
@@ -843,6 +847,84 @@ class ContactFilter(object):
     def removeStaleParticleDraw(self):
         om.removeFromObjectModel(om.findObjectByName('particle set'))
 
+
+    def testLASSOSolve(self, lam=1, linkNames=None):
+        if linkNames is None:
+            linkNames = self.contactFilterPointDict.keys()
+
+
+        cfpList = []
+        for bodyName in linkNames:
+            cfpListTemp = self.contactFilterPointDict[bodyName]
+            cfpList = cfpList + cfpListTemp
+
+
+        numContacts = len(cfpList)
+        d = self.gurobi.createLassoModel(numContacts)
+        residual = self.residual
+
+        H_list = []
+        for cfp in cfpList:
+            H_list.append(self.computeJacobianToFrictionCone(cfp))
+
+        # this is where the solve is really happening
+        self.gurobi.solveLasso(d, residual, H_list, self.weightMatrix, lam)
+
+
+        alphaVals = np.zeros((numContacts, FRICTION_CONE_APPROX_SIZE))
+
+        for i in xrange(0,numContacts):
+            for j in xrange(0, FRICTION_CONE_APPROX_SIZE):
+                alphaVals[i,j] = d['alphaVars'][i,j].getAttr('X')
+
+
+        impliedResidual = 0
+        cfpData = []
+        for idx, cfp in enumerate(cfpList):
+            data = {'ContactFilterPoint': cfp}
+            data['force'] = np.dot(cfp.rotatedFrictionCone, alphaVals[idx,:])
+            data['alpha'] = alphaVals[idx,:]
+            cfpData.append(data)
+            impliedResidual = impliedResidual + np.dot(H_list[idx], alphaVals[idx,:])
+
+
+        squaredError = np.dot(np.dot((residual - impliedResidual).transpose(), self.weightMatrix),
+                                    (residual - impliedResidual))
+
+        # record the data somehow . . .
+        solnData = {'cfpData': cfpData, 'impliedResidual': impliedResidual, 'squaredError': squaredError,
+                    "numContactPoints": len(cfpList), 'time': self.currentTime}
+
+        self.testPlotCFPData(cfpData)
+        return d, solnData
+
+
+    def testPlotCFPData(self, cfpData, name="cfp data", verbose=True):
+        d = DebugData()
+
+        color = [0,0,1]
+        rayLength = 0.2
+        q = self.getCurrentPose()
+
+
+        for data in cfpData:
+            cfp = data['ContactFilterPoint']
+            force = data['force']
+            if np.linalg.norm(force) < self.options['debug']['forceThreshold']:
+                continue
+            forceDirection = force/np.linalg.norm(force)
+
+            if verbose:
+                print ""
+                print "contact on ", cfp.linkName
+                print "force magnitude is ", np.linalg.norm(force)
+                print ""
+            self.addPlungerToDebugData(d, cfp.linkName, cfp.contactLocation, forceDirection, rayLength, color)
+
+
+        vis.updatePolyData(d.getPolyData(), name, colorByName='RGB255')
+
+
 class PythonDrakeModel(object):
 
     def __init__(self):
@@ -1020,6 +1102,7 @@ class SingleContactParticleSet(object):
             squaredError = solnData['squaredError']
 
             if bestSquaredError is None:
+                # this is redundnat, should just store the particle, it has the solution data inside of it . . .
                 self.historicalMostLikely['solnData'] = solnData
                 self.historicalMostLikely['particle'] = solnData['cfpData'][0]['particle']
                 bestSquaredError = squaredError
