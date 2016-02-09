@@ -164,6 +164,24 @@ if (USE_LCM)
     wrapped_methods_lcm.txt
   )
 
+  if (USE_DRAKE)
+
+    set(moc_srcs)
+    qt4_wrap_cpp(moc_srcs
+      ddLidarPointCloudLCM.h
+    )
+
+    list(APPEND srcs
+      ${moc_srcs}
+      ddLidarPointCloudLCM.cpp
+    )
+
+    list(APPEND wrap_files
+      wrapped_methods_drake_lcm.txt
+    )
+
+  endif()
+
 endif()
 
 if (USE_DRC)
