@@ -24,7 +24,21 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include "vtkProp.h"
 
+#include <vtkOpenGL.h>
+
 #include <vtkDRCFiltersModule.h>
+
+#include <QFileInfo>
+
+#include <octomap/AbstractOcTree.h>
+#include <octomap/OcTreeBase.h>
+#include <octomap/octomap_types.h>
+#include <octomap/ColorOcTree.h>
+#include "ColorOcTreeDrawer.h"
+#include "OcTreeRecord.h"
+#include <iostream>
+#include <sstream>
+
 
 class VTKDRCFILTERS_EXPORT vtkOctomap : public vtkProp
 {
@@ -51,11 +65,35 @@ public:
   virtual int RenderTranslucentPolygonalGeometry(vtkViewport*);
   virtual int HasTranslucentPolygonalGeometry();
 
+  void enableHeightColorMode (bool enabled = true);
+
+    // use this drawer id if loading files or none is specified in msg
+    static const unsigned int DEFAULT_OCTREE_ID  = 0; 
+
+
+    void addOctree(octomap::AbstractOcTree* tree, int id, octomap::pose6d origin);
+    void addOctree(octomap::AbstractOcTree* tree, int id);
+    bool getOctreeRecord(int id, octomap::OcTreeRecord*& otr);
+
 protected:
   vtkOctomap();
   ~vtkOctomap();
 
 private:
+
+
+
+  bool m_heightColorMode;
+    /// open "regular" file containing an octree
+    void openOcTree(std::string filename);
+
+    /// open binary format OcTree
+    void openTree(std::string filename);
+
+    void parseTree(std::string datastream_string);
+    void parseOcTree(std::string datastream_string);
+
+    void showOcTree();
 
   class vtkInternal;
   vtkInternal* Internal;
