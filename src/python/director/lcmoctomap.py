@@ -22,9 +22,12 @@ class OctomapObject(om.ObjectModelItem):
         self.actor = actor
         self.actor.SetUseBounds(False)
         self.addProperty('Visible', actor.GetVisibility())
-        self.addProperty('Color Mode', 0, attributes=om.PropertyAttributes(enumNames=['Drab', 'Height']))
-        self.addProperty('Alpha', 0.8,
-                         attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
+        self.addProperty('Alpha', 0.8, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
+        self.addProperty('Color Mode', 2, attributes=om.PropertyAttributes(enumNames=['Flat', 'Print', 'Height', 'Gray', 'Semantic']))
+        self.addProperty('Occ. Space', 1, attributes=om.PropertyAttributes(enumNames=['Hide', 'Show']))
+        self.addProperty('Free Space', 0, attributes=om.PropertyAttributes(enumNames=['Hide', 'Show']))
+        self.addProperty('Structure', 0, attributes=om.PropertyAttributes(enumNames=['Hide', 'Show']))
+        self.addProperty('Tree Depth', 16, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=16, singleStep=1.0))
         self.views = []
 
     def _onPropertyChanged(self, propertySet, propertyName):
@@ -35,20 +38,29 @@ class OctomapObject(om.ObjectModelItem):
             self.renderAllViews()
 
         elif propertyName == 'Alpha':
-            self.actor.SetAlphaOccupied(self.getProperty(propertyName))
+            self.actor.setAlphaOccupied(self.getProperty(propertyName))
+            self.renderAllViews()
+
+        elif propertyName == 'Occ. Space':
+            self.actor.enableOcTreeCells(self.getProperty(propertyName))
+            self.renderAllViews()
+
+        elif propertyName == 'Free Space':
+            self.actor.enableFreespace(self.getProperty(propertyName))
+            self.renderAllViews()
+
+        elif propertyName == 'Structure':
+            self.actor.enableOctreeStructure(self.getProperty(propertyName))
+            self.renderAllViews()
+
+        elif propertyName == 'Tree Depth':
+            self.actor.changeTreeDepth(self.getProperty(propertyName))
             self.renderAllViews()
 
         elif propertyName == 'Color Mode':
-            arrayMap = {
-              0 : 'Drab',
-              1 : 'Height'
-            }
             heightColorMode = self.getProperty(propertyName)
-            arrayName = arrayMap.get(heightColorMode)
-            if (arrayName is 'Height'):
-                self.actor.SetHeightColorMode(True)
-            else:
-                self.actor.SetHeightColorMode(False)
+            self.actor.setColorMode(heightColorMode)
+            self.renderAllViews()
 
     def addToView(self, view):
         if view in self.views:

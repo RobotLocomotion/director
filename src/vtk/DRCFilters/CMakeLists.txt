@@ -138,9 +138,12 @@ endif()
 
 if(USE_OCTOMAP)
 
+  setup_qt4()
+
   find_package(OpenGL REQUIRED)
+  find_library(OCTOVIS_LIBRARY octovis)
   list(APPEND sources vtkOctomap.cxx)
-  list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
+  list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES} ${OCTOVIS_LIBRARY})
 
   list(APPEND pkg_deps
     lcmtypes_octomap-utils
