@@ -54,8 +54,12 @@ public:
 
   void UpdateOctomapData(const char* data);
 
-  void SetHeightColorMode(bool heightColorMode);
-  void SetAlphaOccupied(double alphaOccupied);
+  void setAlphaOccupied(double alphaOccupied);
+  void changeTreeDepth(int depth);
+  void setColorMode (int colorMode);
+  void enableOctreeStructure (bool enabled);
+  void enableOcTreeCells (bool enabled);
+  void enableFreespace (bool enabled);
 
   // Description:
   // Methods supporting, and required by, the rendering process.
@@ -65,7 +69,6 @@ public:
   virtual int RenderTranslucentPolygonalGeometry(vtkViewport*);
   virtual int HasTranslucentPolygonalGeometry();
 
-  void enableHeightColorMode (bool enabled = true);
 
     // use this drawer id if loading files or none is specified in msg
     static const unsigned int DEFAULT_OCTREE_ID  = 0; 
@@ -81,9 +84,6 @@ protected:
 
 private:
 
-
-
-  bool m_heightColorMode;
     /// open "regular" file containing an octree
     void openOcTree(std::string filename);
 

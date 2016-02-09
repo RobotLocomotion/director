@@ -80,7 +80,7 @@ void vtkOctomap::openOcTree(std::string filename){
     if (tree->getTreeType() == "ColorOcTree"){
       // map color and height map share the same color array and QAction
       // ui.actionHeight_map->setText ("Map color");  // rename QAction in Menu
-      this->enableHeightColorMode(true); // enable color view
+      this->setColorMode(SceneObject::CM_COLOR_HEIGHT); // enable color view
       // ui.actionHeight_map->setChecked(true);
     }
   }
@@ -130,7 +130,7 @@ void vtkOctomap::parseOcTree(std::string datastream_string){
     if (tree->getTreeType() == "ColorOcTree"){
       // map color and height map share the same color array and QAction
       // ui.actionHeight_map->setText ("Map color");  // rename QAction in Menu
-      this->enableHeightColorMode(true); // enable color view
+      this->setColorMode(SceneObject::CM_COLOR_HEIGHT); // enable color view
       // ui.actionHeight_map->setChecked(true);
     }
   }
@@ -142,13 +142,6 @@ void vtkOctomap::parseOcTree(std::string datastream_string){
 
 }
 
-
-void vtkOctomap::enableHeightColorMode (bool enabled) {
-  m_heightColorMode = enabled;
-  for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
-    it->second.octree_drawer->enableHeightColorMode(enabled);
-  }
-}
 
 
 void vtkOctomap::showOcTree() {
@@ -300,11 +293,48 @@ vtkOctomap::~vtkOctomap()
 
 //----------------------------------------------------------------------------
 
-/// depreciated remove/replace
-void vtkOctomap::SetHeightColorMode(bool heightColorMode){
+
+void vtkOctomap::setAlphaOccupied(double alphaOccupied){
+  for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
+    it->second.octree_drawer->setAlphaOccupied(alphaOccupied);
+  }
 }
 
-void vtkOctomap::SetAlphaOccupied(double alphaOccupied){
+
+void vtkOctomap::changeTreeDepth(int depth){
+  // range check:
+  if (depth < 1 || depth > 16)
+    return;
+
+  this->Internal->m_max_tree_depth = unsigned(depth);
+
+  if (this->Internal->m_octrees.size() > 0)
+    showOcTree();
+}
+
+void vtkOctomap::enableOctreeStructure(bool enabled) {
+  for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
+    it->second.octree_drawer->enableOcTree(enabled);
+  }
+}
+
+void vtkOctomap::enableOcTreeCells(bool enabled){
+  for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
+    it->second.octree_drawer->enableOcTreeCells(enabled);
+  }
+}
+
+void vtkOctomap::enableFreespace(bool enabled){
+  for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
+    it->second.octree_drawer->enableFreespace(enabled);
+  }
+}
+
+void vtkOctomap::setColorMode (int colorMode) {
+  SceneObject::ColorMode mode = (SceneObject::ColorMode) (colorMode);//SceneObject::CM_COLOR_HEIGHT;
+  for (std::map<int, OcTreeRecord>::iterator it = this->Internal->m_octrees.begin(); it != this->Internal->m_octrees.end(); ++it) {
+    it->second.octree_drawer->setColorMode(mode);
+  }
 }
 
 //----------------------------------------------------------------------------
