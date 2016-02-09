@@ -23,6 +23,8 @@ PURPOSE.  See the above copyright notice for more information.
 #include <lcmtypes/octomap_raw_t.h>
 #include <sstream>
 
+#include <QString>
+#include <QFileInfo>
 
 using namespace octomap;
 

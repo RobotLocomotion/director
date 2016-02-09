@@ -136,34 +136,17 @@ if(USE_LCMGL)
   )
 endif()
 
-
-# Look for required libraries:
-
-FIND_PACKAGE(OpenGL)
-FIND_PACKAGE(Qt4)
-setup_qt4()
-IF (OpenGL-NOTFOUND OR Qt4-NOTFOUND)
-	MESSAGE ( "OpenGL and QT4 are required for octovis but could not be found.")
-ELSE()
-	MESSAGE ( "OpenGL and QT4 are required for octovis was.")
-	FIND_PACKAGE(QGLViewer)
-	IF(QGLViewer_FOUND)
-	  SET( BUILD_VIEWER 1)
-	ELSE()
-	  MESSAGE ( "\n")
-	  MESSAGE ( "libQGLViewer could not be found or generated.")
-	ENDIF()
-ENDIF()
-
-
 if(USE_OCTOMAP)
 
+  setup_qt4()
+
   find_package(OpenGL REQUIRED)
+  find_library(OCTOVIS_LIBRARY octovis)
   list(APPEND sources vtkOctomap.cxx)
-  list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
+  list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES} ${OCTOVIS_LIBRARY})
 
   list(APPEND pkg_deps
-    lcmtypes_octomap-utils octovis
+    lcmtypes_octomap-utils
   )
 
 endif()

@@ -28,8 +28,6 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include <vtkDRCFiltersModule.h>
 
-#include <QFileInfo>
-
 #include <octomap/AbstractOcTree.h>
 #include <octomap/OcTreeBase.h>
 #include <octomap/octomap_types.h>
