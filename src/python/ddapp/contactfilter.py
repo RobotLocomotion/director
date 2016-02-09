@@ -116,8 +116,9 @@ class ContactFilter(object):
 
 
         self.options['debug'] = {}
-        self.options['debug']['maxNumParticleSets'] = 2
+        self.options['debug']['maxNumParticleSets'] = 4
         self.options['debug']['forceThreshold'] = 1.0
+        self.options['debug']['numQPSolves'] = 0
     def initializeTestTimers(self):
         self.justAppliedMotionModel = False
         self.particleFilterTestTimer = TimerCallback(targetFps=1)
@@ -317,7 +318,10 @@ class ContactFilter(object):
 
         # this is where the solve is really happening
         numContacts = len(cfpList)
+        startTime = time.time()
         grbSolnData = self.gurobi.solve(numContacts, residual, H_list, self.weightMatrix)
+        self.options['debug']['totalQPSolveTime'] += time.time() - startTime
+        self.options['debug']['numQPSolves'] += 1.0
 
 
         alphaVals = np.zeros((numContacts, FRICTION_CONE_APPROX_SIZE))
@@ -389,7 +393,7 @@ class ContactFilter(object):
         self.drakeModel.model.doKinematics(q, 0*q, False, False)
         # be smart about it, see if we have already computed the QP for a particle with the same cfp!!!
 
-        alreadySolved = {} # should be a dict with ContactFilterPoint as key, ContactFilterParticle as value\
+        alreadySolved = {} # should be a dict with ContactFilterPoint as key, ContactFilterParticle as value
         externalCFPList = []
 
         for particle in externalParticles:
@@ -411,6 +415,9 @@ class ContactFilter(object):
                 solnData = self.computeSingleLikelihood(residual, cfpList)
                 solnData['force'] = solnData['cfpData'][0]['force']
 
+                alreadySolved[particle.cfp] = particle
+
+
 
             # this just makes sure we record the particle in addition to the cfp in the soln data
             for idx, d in enumerate(solnData['cfpData']):
@@ -424,6 +431,12 @@ class ContactFilter(object):
         # should probably update "most likely particle again"
 
     def computeMeasurementUpdate(self, residual, publish=True):
+
+        self.options['debug']['numQPSolves'] = 0.0
+        self.options['debug']['totalQPSolveTime'] = 0.0
+
+        startTime = time.time()
+
         for particleSet in self.particleSetList:
             otherParticleSets = copy.copy(self.particleSetList)
             otherParticleSets.remove(particleSet)
@@ -437,11 +450,14 @@ class ContactFilter(object):
             self.measurementUpdateSingleParticleSet(residual, particleSet, externalParticles=externalParticles)
 
 
+        self.options['debug']['measurementUpdateTime'] = time.time() - startTime
+        self.options['debug']['avgQPSolveTime'] = self.options['debug']['totalQPSolveTime']/self.options['debug']['numQPSolves']
         if publish:
             self.publishMostLikelyEstimate()
 
         # don't think we should embed this here, just leave it as a separate step
         # self.manageParticleSets()
+
 
     def checkTimeoutForSetAdditionRemoval(self):
 
@@ -799,6 +815,12 @@ class ContactFilter(object):
             self.manageParticleSets(verbose=True) # there are timeouts inside of this
             self.testParticleSetDrawAll()
             self.justAppliedMotionModel = False
+
+    def printDebugData(self):
+        print "total measurement update time", self.options['debug']['measurementUpdateTime']
+        print "total QP solve time", self.options['debug']['totalQPSolveTime']
+        print "avg QP solve time", self.options['debug']['avgQPSolveTime']
+        print "numQPSolves", self.options['debug']['numQPSolves']
 
     def testLikelihood(self, numContacts = 2):
         cfpList = [self.contactFilterPointDict['pelvis'][0]]
