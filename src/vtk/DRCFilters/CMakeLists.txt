@@ -143,7 +143,7 @@ FIND_PACKAGE(OpenGL)
 FIND_PACKAGE(Qt4)
 setup_qt4()
 IF (OpenGL-NOTFOUND OR Qt4-NOTFOUND)
-	MESSAGE ( "OpenGL and QT4 are required for octovis but could not be found."
+	MESSAGE ( "OpenGL and QT4 are required for octovis but could not be found.")
 ELSE()
 	MESSAGE ( "OpenGL and QT4 are required for octovis was.")
 	FIND_PACKAGE(QGLViewer)
