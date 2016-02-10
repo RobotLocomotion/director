@@ -25,7 +25,7 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
                           --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1280x1024x16
 
 elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
-	brew update
+	brew update > brew_update_log.txt
   brew tap homebrew/python
   brew install python numpy
   brew install qt
