@@ -1,3 +1,7 @@
+#!/bin/bash
+
+set -xe
+
 scriptDir=$(cd $(dirname $0) && pwd)
 
 
@@ -18,9 +22,14 @@ install_vtk_homebrew_bottle()
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
 	sudo apt-get update -qq
-  sudo apt-get install -y libqt4-dev libvtk5-dev libvtk5-qt4-dev libvtk-java python-dev python-vtk python-numpy
+  sudo apt-get install -y build-essential cmake libqt4-dev libvtk5-dev libvtk5-qt4-dev libvtk-java python-dev python-vtk python-numpy xvfb
+
+  # start Xvfb for DISPLAY=:99.0
+  /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile \
+                          --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1280x1024x16
+
 elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
-	brew update
+	brew update > brew_update_log.txt
   brew tap homebrew/python
   brew install python numpy
   brew install qt
