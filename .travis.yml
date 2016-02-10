@@ -2,7 +2,7 @@ os:
   - linux
   - osx
 
-language: generic
+language: cpp
 
 virtualenv:
   system_site_packages: true
