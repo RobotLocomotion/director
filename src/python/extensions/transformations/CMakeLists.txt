@@ -1,6 +1,6 @@
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
-
+message("finding numpy...")
 find_package(NumPy)
 if (NOT NUMPY_FOUND)
   message(WARNING "Optimized transformations C extension module is disabled because numpy is not found.")
@@ -12,6 +12,7 @@ if (NUMPY_VERSION VERSION_LESS 1.7)
   return()
 endif()
 
+message("building _transformations.so")
 
 include_directories(${NUMPY_INCLUDE_DIRS})
 
