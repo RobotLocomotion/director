@@ -24,11 +24,11 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
 	sudo apt-get update -qq
   sudo apt-get install -y build-essential cmake libqt4-dev libvtk5-dev libvtk5-qt4-dev libvtk-java python-dev python-vtk python-numpy xvfb
 
-  wget https://raw.githubusercontent.com/gmonfort/xvfb-init/master/Xvfb
-  sudo mv Xvfb /etc/init.d/xvfb
-  sudo chown root:root /etc/init.d/xvfb
-  sudo chmod a+x /etc/init.d/xvfb
-  sudo update-rc.d  /etc/init.d/xvfb defaults
+  #wget https://raw.githubusercontent.com/gmonfort/xvfb-init/master/Xvfb
+  #sudo mv Xvfb /etc/init.d/xvfb
+  #sudo chown root:root /etc/init.d/xvfb
+  #sudo chmod a+x /etc/init.d/xvfb
+  #sudo update-rc.d  /etc/init.d/xvfb defaults
 
 elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
 	brew update > brew_update_log.txt
