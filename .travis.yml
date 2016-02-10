@@ -2,7 +2,10 @@ os:
   - linux
   - osx
 
-language: cpp
+language: generic
+
+virtualenv:
+  system_site_packages: true
 
 sudo: required
 
