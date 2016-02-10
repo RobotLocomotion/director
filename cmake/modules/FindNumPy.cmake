@@ -48,6 +48,7 @@ endif()
 
 if(NOT PYTHONINTERP_FOUND)
     set(NUMPY_FOUND FALSE)
+    message("PYTHONINTERP not found")
     return()
 endif()
 
@@ -58,11 +59,16 @@ execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c"
     ERROR_VARIABLE _NUMPY_ERROR_VALUE
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+message("test result: ${_NUMPY_SEARCH_SUCCESS}")
+message("test output: ${_NUMPY_VALUES_OUTPUT}")
+message("test error: ${_NUMPY_ERROR_VALUE}")
+
 if(NOT _NUMPY_SEARCH_SUCCESS MATCHES 0)
     if(NumPy_FIND_REQUIRED)
         message(FATAL_ERROR
             "NumPy import failure:\n${_NUMPY_ERROR_VALUE}")
     endif()
+    message("SEARCH_SUCCES is 0")
     set(NUMPY_FOUND FALSE)
     return()
 endif()
@@ -70,9 +76,15 @@ endif()
 # Convert the process output into a list
 string(REGEX REPLACE ";" "\\\\;" _NUMPY_VALUES ${_NUMPY_VALUES_OUTPUT})
 string(REGEX REPLACE "\n" ";" _NUMPY_VALUES ${_NUMPY_VALUES})
+
+message("values: ${_NUMPY_VALUES}")
+
 # Just in case there is unexpected output from the Python command.
 list(GET _NUMPY_VALUES -2 NUMPY_VERSION)
 list(GET _NUMPY_VALUES -1 NUMPY_INCLUDE_DIRS)
+
+message("version: ${NUMPY_VERSION}")
+message("include_dirs: ${NUMPY_INCLUDE_DIRS}")
 
 string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" _VER_CHECK "${NUMPY_VERSION}")
 if("${_VER_CHECK}" STREQUAL "")
