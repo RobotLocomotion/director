@@ -200,11 +200,9 @@ class Geometry(object):
             self.polyDataItem.shadowOn()
 
 
-class LidarSource(TimerCallback):
+class LidarSource(object):
 
     def __init__(self, view):
-        super(LidarSource, self).__init__(targetFps=30)
-
         self.lidars = {}
         self.view = view
 
@@ -216,7 +214,14 @@ class LidarSource(TimerCallback):
         self.channels = set(self.lidarAggregator.channels())
         self.lidarAggregator.init(lcm)
 
-        self.callback = self._updateSource
+        self.timer = TimerCallback(targetFps=30)
+        self.timer.callback = self._updateSource
+
+    def start(self):
+        self.timer.start()
+
+    def stop(self):
+        self.timer.stop()
 
     def addChannel(self, channel):
         self.channels.add(channel)
