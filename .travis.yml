@@ -2,7 +2,10 @@ os:
   - linux
   - osx
 
-language: cpp
+language: generic
+
+virtualenv:
+  system_site_packages: true
 
 sudo: required
 
@@ -16,9 +19,8 @@ branches:
     - master
 
 before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DISPLAY=:99.0 ; fi
   - distro/travis/before_install.sh
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DISPLAY=:99.0          ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sh -e /etc/init.d/xvfb start  ; fi
 
 install: true
 
