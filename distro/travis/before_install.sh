@@ -1,3 +1,7 @@
+#!/bin/bash
+
+set -xe
+
 scriptDir=$(cd $(dirname $0) && pwd)
 
 
