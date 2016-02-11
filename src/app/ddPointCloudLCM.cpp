@@ -41,14 +41,18 @@ void ddPointCloudLCM::init(ddLCMThread* lcmThread, const QString& botConfigFile)
 {
   
   mLCM = lcmThread;
-  
-  QString channelName = "VELODYNE";
-  ddLCMSubscriber* subscriber = new ddLCMSubscriber(channelName, this);
 
+  QString channelName = "POINTCLOUD";
+  ddLCMSubscriber* subscriber = new ddLCMSubscriber(channelName, this);
   this->connect(subscriber, SIGNAL(messageReceived(const QByteArray&, const QString&)),
           SLOT(onPointCloudFrame(const QByteArray&, const QString&)), Qt::DirectConnection);
-
   mLCM->addSubscriber(subscriber);
+
+  QString channelName2 = "VELODYNE";
+  ddLCMSubscriber* subscriber2 = new ddLCMSubscriber(channelName2, this);
+  this->connect(subscriber2, SIGNAL(messageReceived(const QByteArray&, const QString&)),
+          SLOT(onPointCloud2Frame(const QByteArray&, const QString&)), Qt::DirectConnection);
+  mLCM->addSubscriber(subscriber2);
 
 }
 
@@ -78,7 +82,7 @@ vtkSmartPointer<vtkCellArray> NewVertexCells(vtkIdType numberOfVerts)
 
 
 //----------------------------------------------------------------------------
-vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXYZIR>::ConstPtr cloud)
+vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud2Message(pcl::PointCloud<pcl::PointXYZIR>::ConstPtr cloud)
 {
   vtkIdType nr_points = cloud->points.size();
 
@@ -128,12 +132,59 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXY
 }
 
 
+//----------------------------------------------------------------------------
+vtkSmartPointer<vtkPolyData> PolyDataFromPointCloudMessage(drc::pointcloud_t msg)
+{
+
+  vtkIdType nr_points = msg.points.size();
+
+  vtkNew<vtkPoints> points;
+  points->SetDataTypeToFloat();
+  points->SetNumberOfPoints(nr_points);
+
+//  vtkNew<vtkFloatArray> intensityArray;
+//  intensityArray->SetName("intensity");
+//  intensityArray->SetNumberOfComponents(1);
+//  intensityArray->SetNumberOfValues(nr_points);
+
+//  vtkNew<vtkUnsignedIntArray> ringArray;
+//  ringArray->SetName("ring");
+//  ringArray->SetNumberOfComponents(1);
+//  ringArray->SetNumberOfValues(nr_points);
+
+  for (vtkIdType i = 0; i < nr_points; ++i)
+  {
+
+    float point[3] = {msg.points[i][0], msg.points[i][1], msg.points[i][2]};
+    points->SetPoint(i, point);
+
+    //float intensity = cloud->points[i].intensity;
+    //intensityArray->SetValue(j,intensity);
+
+    //uint16_t ring = cloud->points[i].ring;
+    //ringArray->SetValue(j,ring);
+
+  }
+  points->SetNumberOfPoints(nr_points);
+
+  vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+  polyData->SetPoints(points.GetPointer());
+//  polyData->GetPointData()->AddArray(intensityArray.GetPointer());
+//  polyData->GetPointData()->AddArray(ringArray.GetPointer());
+  polyData->SetVerts(NewVertexCells(nr_points));
+
+  return polyData;
+}
+
+
+
+
 };
 
 
 
 //-----------------------------------------------------------------------------
-void ddPointCloudLCM::onPointCloudFrame(const QByteArray& data, const QString& channel)
+void ddPointCloudLCM::onPointCloud2Frame(const QByteArray& data, const QString& channel)
 {
   
   drc::pointcloud2_t message;
@@ -142,7 +193,22 @@ void ddPointCloudLCM::onPointCloudFrame(const QByteArray& data, const QString& c
   //convert to pcl object:
   pcl::PointCloud<pcl::PointXYZIR>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZIR> ());
   pcl::fromLCMPointCloud2( message, *cloud);
-  vtkSmartPointer<vtkPolyData> polyData = PolyDataFromPointCloud(cloud);
+  vtkSmartPointer<vtkPolyData> polyData = PolyDataFromPointCloud2Message(cloud);
+
+  QMutexLocker locker(&this->mPolyDataMutex);
+  this->mPolyData = polyData;
+  this->mUtime = message.utime;
+}
+
+
+//-----------------------------------------------------------------------------
+void ddPointCloudLCM::onPointCloudFrame(const QByteArray& data, const QString& channel)
+{
+  
+  drc::pointcloud_t message;
+  message.decode(data.data(), 0, data.size());
+
+  vtkSmartPointer<vtkPolyData> polyData = PolyDataFromPointCloudMessage(message);
 
   QMutexLocker locker(&this->mPolyDataMutex);
   this->mPolyData = polyData;
