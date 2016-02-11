@@ -102,13 +102,13 @@ class ContactFilter(object):
         self.options = {}
 
         self.options['thresholds'] = {}
-        self.options['thresholds']['addContactPointTimeout'] = 2.0
-        self.options['thresholds']['removeContactPointTimeout'] = 2.0
+        self.options['thresholds']['addContactPointTimeout'] = 1.0
+        self.options['thresholds']['removeContactPointTimeout'] = 1.0
         self.options['thresholds']['addContactPointSquaredError'] = 10.0 # threshold on squared error to add contact point
         self.options['thresholds']['removeContactPointForce'] = 5.0 # threshold on force magnitude to eliminate a force that gets too small
 
         self.options['motionModel'] = {}
-        self.options['motionModel']['var'] = 0.05
+        self.options['motionModel']['var'] = 0.01
 
         self.options['measurementModel'] = {}
         self.options['measurementModel']['var'] = 1.0 # this is totally made up at the moment
@@ -119,6 +119,16 @@ class ContactFilter(object):
         self.options['debug']['maxNumParticleSets'] = 4
         self.options['debug']['forceThreshold'] = 1.0
         self.options['debug']['numQPSolves'] = 0
+        self.options['debug']['totalQPSolveTime'] = 0.0
+        self.options['debug']['jacobianTime'] = 0.0
+        self.options['debug']['measurementUpdateTime'] = 0.0
+        self.options['debug']['avgQPSolveTime'] = 0.0
+
+        self.options['noise'] = {}
+        self.options['noise']['addNoise'] = False
+        self.options['noise']['stddev'] = 0.1
+
+
     def initializeTestTimers(self):
         self.justAppliedMotionModel = False
         self.particleFilterTestTimer = TimerCallback(targetFps=1)
@@ -310,11 +320,17 @@ class ContactFilter(object):
 
 
     # inside this need to setup and solve the QP . . .
+    # should have already called doKinematics before you get here
+
     def computeSingleLikelihood(self, residual, cfpList):
 
+
+        # this section could be slow
         H_list = []
         for cfp in cfpList:
             H_list.append(self.computeJacobianToFrictionCone(cfp))
+
+        # self.options['debug']['jacobianTime'] += time.time() - startTime
 
         # this is where the solve is really happening
         numContacts = len(cfpList)
@@ -390,6 +406,9 @@ class ContactFilter(object):
 
     def measurementUpdateSingleParticleSet(self, residual, particleSet, externalParticles = []):
         q = self.getCurrentPose()
+
+        # be careful here, this doKinematics call could be the slow thing? But hopefully not because
+        # this call is ultimately getting pushed through to c++
         self.drakeModel.model.doKinematics(q, 0*q, False, False)
         # be smart about it, see if we have already computed the QP for a particle with the same cfp!!!
 
@@ -403,8 +422,10 @@ class ContactFilter(object):
 
             # check if we have already solved the problem for this particular contact filter point
             if particle.cfp in alreadySolved:
-                solnDataCopy = copy.deepcopy(alreadySolved[particle.cfp].solnData)
-                particle.solnData = solnDataCopy
+
+                # this deepcopy is what's killing us
+                # solnDataCopy = copy.deepcopy(alreadySolved[particle.cfp].solnData)
+                particle.solnData = alreadySolved[particle.cfp].solnData
             else:
                 cfpList = [particle.cfp]
                 cfpList.extend(externalCFPList)
@@ -434,6 +455,7 @@ class ContactFilter(object):
 
         self.options['debug']['numQPSolves'] = 0.0
         self.options['debug']['totalQPSolveTime'] = 0.0
+        self.options['debug']['jacobianTime'] = 0.0
 
         startTime = time.time()
 
@@ -451,7 +473,12 @@ class ContactFilter(object):
 
 
         self.options['debug']['measurementUpdateTime'] = time.time() - startTime
-        self.options['debug']['avgQPSolveTime'] = self.options['debug']['totalQPSolveTime']/self.options['debug']['numQPSolves']
+
+        if (self.options['debug']['numQPSolves'] > 0):
+            self.options['debug']['avgQPSolveTime'] = self.options['debug']['totalQPSolveTime']/self.options['debug']['numQPSolves']
+        else:
+            self.options['debug']['avgQPSolveTime'] = None
+
         if publish:
             self.publishMostLikelyEstimate()
 
@@ -691,6 +718,10 @@ class ContactFilter(object):
         residual = self.drakeModel.extractDataFromMessage(msgJointNames, msgData)
         self.residual = residual
 
+        if self.options['noise']['addNoise']:
+            residualSize = np.size(self.residual)
+            self.residual = self.residual + np.random.normal(scale=self.options['noise']['stddev'], size=residualSize)
+
         if self.running:
             self.computeMeasurementUpdate(residual)
 
@@ -776,7 +807,7 @@ class ContactFilter(object):
         colorList.append([0.5, 0, 0.5]) # purple
         colorList.append([1,0.64,0]) # orange
         colorList.append([1,1,0]) # yellow
-        colorList.append([0,1,0]) # green
+        colorList.append([0.13,0.7,0.66]) # blue-green
 
         numParticleSets = len(self.particleSetList)
         maxNumParticleSets = 4
@@ -821,6 +852,7 @@ class ContactFilter(object):
         print "total QP solve time", self.options['debug']['totalQPSolveTime']
         print "avg QP solve time", self.options['debug']['avgQPSolveTime']
         print "numQPSolves", self.options['debug']['numQPSolves']
+        # print "jacobianTime", self.options['debug']['jacobianTime']
 
     def testLikelihood(self, numContacts = 2):
         cfpList = [self.contactFilterPointDict['pelvis'][0]]
@@ -851,7 +883,7 @@ class ContactFilter(object):
         self.measurementUpdateSingleParticleSet(residual, self.testParticleSet)
         elapsed = time.time() - startTime
 
-        self.testParticleSet.updateMostLikelyParticle()
+        self.testParticleSet.updateMostLikelyParticle(self.currentTime)
         particle = self.testParticleSet.mostLikelyParticle
 
         print "single measurement update took " + str(elapsed) + " seconds"
