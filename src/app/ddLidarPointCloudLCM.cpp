@@ -17,6 +17,7 @@ namespace
   struct SensorData
   {
     QMap<float, drake::lcmt_lidar_data> data;
+    bool lastDirection;
     float lastAngle;
   };
 }
@@ -88,25 +89,46 @@ void ddLidarPointCloudLCM::addData(
   else
   {
     auto last = channelData.data.find(channelData.lastAngle);
-    auto const next = message.scan_angle;
+    auto next = message.scan_angle;
 
     if (message.scan_direction)
     {
-      // TODO
+      if (!channelData.lastDirection)
+      {
+        // Erase from after previous message to end of map
+        ++last;
+        while (last != channelData.data.end())
+          last = channelData.data.erase(last);
+      }
+      else
+      {
+        // Erase from previous message to insertion point
+        while (last != channelData.data.begin() && (--last).key() < next)
+          last = channelData.data.erase(last);
+      }
     }
     else
     {
-      // Start erasing after previous message
-      ++last;
-
-      if (next < channelData.lastAngle)
+      if (channelData.lastDirection)
       {
-        // Erase from after previous message to end of map
-        while (last != channelData.data.end())
-          last = channelData.data.erase(last);
-
-        // Continue erasing from start of map
+        // Erase from start to lesser of {last, next}
         last = channelData.data.begin();
+        next = qMin(next, channelData.lastAngle);
+      }
+      else
+      {
+        // Start erasing after previous message
+        ++last;
+
+        if (next < channelData.lastAngle)
+        {
+          // Erase from after previous message to end of map
+          while (last != channelData.data.end())
+            last = channelData.data.erase(last);
+
+          // Continue erasing from start of map
+          last = channelData.data.begin();
+        }
       }
 
       // Erase up to insertion point for new message
@@ -117,6 +139,7 @@ void ddLidarPointCloudLCM::addData(
 
   channelData.data.insert(message.scan_angle, message);
   channelData.lastAngle = message.scan_angle;
+  channelData.lastDirection = message.scan_direction;
 }
 
 //-----------------------------------------------------------------------------
