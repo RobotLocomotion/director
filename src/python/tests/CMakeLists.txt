@@ -22,6 +22,7 @@ set(python_tests_robot
   testCameraView.py
   testContinuousWalking.py
   testDrakeVisualizer.py
+  testEndEffectorIk.py
   testImageView.py
   testKinematicPose.py
   testLoadUrdf.py
@@ -53,6 +54,8 @@ set(testKinematicPose_extra_args -v5)
 set(testTeleopPanel_extra_args_2 -v5)
 set(testContinuousWalking_extra_args_2 -v5)
 
+set(testEndEffectorIk_extra_args --director_config ${CMAKE_SOURCE_DIR}/../models/IRB140/director_config.json)
+set(testEndEffectorIk_extra_args_2 -v5)
 
 set(python_test_args
   --testing --data-dir ${CMAKE_SOURCE_DIR}/../../../drc-testing-data --output-dir ${CMAKE_BINARY_DIR}/Testing/Temporary
