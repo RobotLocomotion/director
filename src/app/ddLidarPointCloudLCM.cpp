@@ -20,6 +20,18 @@ namespace
     bool lastDirection;
     float lastAngle;
   };
+
+  //---------------------------------------------------------------------------
+  int32_t pointCount(drake::lcmt_lidar_data const& data)
+  {
+    for (auto const& field : data.fields)
+    {
+      if (field.id == drake::lcmt_lidar_data::POSITION)
+        return field.num_values / 3;
+    }
+
+    return 0;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -153,7 +165,7 @@ void ddLidarPointCloudLCM::extractPolyData(
 
   auto totalPoints = vtkIdType{0};
   for (auto const& scan : currentData)
-    totalPoints += scan.num_points;
+    totalPoints += pointCount(scan);
 
   points->Allocate(totalPoints);
   verts->Allocate(totalPoints);
@@ -163,11 +175,19 @@ void ddLidarPointCloudLCM::extractPolyData(
 
   for (auto const& scan : currentData)
   {
-    for (auto const& p : scan.points)
+    for (auto const& field : scan.fields)
     {
-      auto const pointId = points->InsertNextPoint(p.x, p.y, p.z);
-      verts->InsertNextCell(1);
-      verts->InsertCellPoint(pointId);
+      if (field.id == drake::lcmt_lidar_data::POSITION)
+      {
+        auto const& v = field.values;
+        for (int32_t n = 0; n < field.num_values; n += 3)
+        {
+          auto const pointId =
+            points->InsertNextPoint(v[n + 0], v[n + 1], v[n + 2]);
+          verts->InsertNextCell(1);
+          verts->InsertCellPoint(pointId);
+        }
+      }
       // TODO field data
     }
   }
