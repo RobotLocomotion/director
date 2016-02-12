@@ -6,9 +6,12 @@
 #include <lcmtypes/drake/lcmt_lidar_data.hpp>
 
 #include <vtkCellArray.h>
+#include <vtkFloatArray.h>
 #include <vtkNew.h>
+#include <vtkPointData.h>
 #include <vtkPoints.h>
 #include <vtkPolyData.h>
+#include <vtkSmartPointer.h>
 
 #include <QMutexLocker>
 
@@ -31,6 +34,47 @@ namespace
     }
 
     return 0;
+  }
+
+  //---------------------------------------------------------------------------
+  vtkSmartPointer<vtkFloatArray> createDataArray(
+    int fieldId, vtkPolyData* polydata)
+  {
+    auto const fp = vtkSmartPointer<vtkFloatArray>::New();
+
+    switch (fieldId)
+    {
+      case drake::lcmt_lidar_data::RANGE:
+        fp->SetName("Range");
+        fp->SetNumberOfComponents(1);
+        break;
+
+      case drake::lcmt_lidar_data::INTENSITY:
+        fp->SetName("Intensity");
+        fp->SetNumberOfComponents(1);
+        break;
+
+      case drake::lcmt_lidar_data::RGB_COLOR:
+        fp->SetName("Color");
+        fp->SetNumberOfComponents(3);
+        break;
+
+      case drake::lcmt_lidar_data::ECHO:
+        fp->SetName("Echo");
+        fp->SetNumberOfComponents(1);
+        break;
+
+      case drake::lcmt_lidar_data::SCAN:
+        fp->SetName("Scan");
+        fp->SetNumberOfComponents(1);
+        break;
+
+      default:
+        return {};
+    }
+
+    polydata->GetPointData()->AddArray(fp);
+    return fp;
   }
 }
 
@@ -162,6 +206,7 @@ void ddLidarPointCloudLCM::extractPolyData(
 
   vtkNew<vtkPoints> points;
   vtkNew<vtkCellArray> verts;
+  QHash<int, vtkSmartPointer<vtkFloatArray>> fields;
 
   auto totalPoints = vtkIdType{0};
   for (auto const& scan : currentData)
@@ -188,7 +233,15 @@ void ddLidarPointCloudLCM::extractPolyData(
           verts->InsertCellPoint(pointId);
         }
       }
-      // TODO field data
+      else
+      {
+        auto& fp = fields[field.id];
+        if (!fp && !(fp = createDataArray(field.id, pd)))
+          continue; // Field not known
+
+        for (auto const v : field.values)
+          fp->InsertNextValue(v);
+      }
     }
   }
 }
