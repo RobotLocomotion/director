@@ -390,8 +390,8 @@ class DrakeVisualizerApp():
         model.getTreeWidget().setWindowTitle('Scene Browser')
         model.getPropertiesPanel().setWindowTitle('Properties Panel')
 
-        self.sceneBrowserDock = self.addWidgetToDock(model.getTreeWidget(), QtCore.Qt.LeftDockWidgetArea)
-        self.propertiesDock = self.addWidgetToDock(self.wrapScrollArea(model.getPropertiesPanel()), QtCore.Qt.LeftDockWidgetArea)
+        self.sceneBrowserDock = self.addWidgetToDock(model.getTreeWidget(), QtCore.Qt.LeftDockWidgetArea, visible=False)
+        self.propertiesDock = self.addWidgetToDock(self.wrapScrollArea(model.getPropertiesPanel()), QtCore.Qt.LeftDockWidgetArea, visible=False)
 
         self.addViewMenuSeparator()
 
