@@ -8,14 +8,18 @@ class ViewEventFilter(object):
         self.view = view
         self._leftMouseStart = None
         self._rightMouseStart = None
-        self.initEventFilter()
+        self.installEventFilter()
 
-    def initEventFilter(self):
+    def installEventFilter(self):
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.filterEvent)
         self.view.vtkWidget().installEventFilter(self.eventFilter)
         for eventType in self.getFilteredEvents():
             self.eventFilter.addFilteredEventType(eventType)
+
+    def removeEventFilter(self):
+        self.view.vtkWidget().removeEventFilter(self.eventFilter)
+        self.eventFilter.disconnect('handleEvent(QObject*, QEvent*)', self.filterEvent)
 
     def getFilteredEvents(self):
         return [QtCore.QEvent.MouseButtonDblClick,
@@ -65,7 +69,7 @@ class ViewEventFilter(object):
                         self._leftMouseStart = None
 
         elif event.type() == QtCore.QEvent.MouseButtonRelease and event.button() == QtCore.Qt.LeftButton and self._leftMouseStart is not None:
-            self._rightMouseStart = None
+            self._leftMouseStart = None
             self.onLeftClick(event)
 
         elif event.type() == QtCore.QEvent.MouseButtonRelease and event.button() == QtCore.Qt.RightButton and self._rightMouseStart is not None:

@@ -364,7 +364,7 @@ class DrakeVisualizerApp():
         self.view.renderer().SetNearClippingPlaneTolerance(0.0005)
 
         # add view behaviors
-        viewBehaviors = viewbehaviors.ViewBehaviors(self.view)
+        self.viewBehaviors = viewbehaviors.ViewBehaviors(self.view)
         applogic._defaultRenderView = self.view
 
         self.mainWindow = QtGui.QMainWindow()
