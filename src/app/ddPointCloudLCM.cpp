@@ -133,6 +133,17 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud2Message(pcl::PointCloud<pcl:
 
 
 //----------------------------------------------------------------------------
+
+void unpackColor(float f, unsigned char color[]) {
+    //unsigned char color[3];
+    color[2] = floor(f / 256.0 / 256.0);
+    color[1] = floor((f - color[2] * 256.0 * 256.0) / 256.0);
+    color[0] = floor(f - color[2] * 256.0 * 256.0 - color[1] * 256.0);
+    // now we have a vec3 with the 3 components in range [0..256]. Let's normalize it!
+//    return color;// / 256.0;
+}
+
+
 vtkSmartPointer<vtkPolyData> PolyDataFromPointCloudMessage(drc::pointcloud_t msg)
 {
 
@@ -147,10 +158,11 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloudMessage(drc::pointcloud_t msg
 //  intensityArray->SetNumberOfComponents(1);
 //  intensityArray->SetNumberOfValues(nr_points);
 
-//  vtkNew<vtkUnsignedIntArray> ringArray;
-//  ringArray->SetName("ring");
-//  ringArray->SetNumberOfComponents(1);
-//  ringArray->SetNumberOfValues(nr_points);
+  vtkNew<vtkUnsignedCharArray> rgbArray;
+  rgbArray->SetName("rgb_colors");
+  rgbArray->SetNumberOfComponents(3);
+  rgbArray->SetNumberOfTuples(nr_points);
+
 
   for (vtkIdType i = 0; i < nr_points; ++i)
   {
@@ -158,18 +170,20 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloudMessage(drc::pointcloud_t msg
     float point[3] = {msg.points[i][0], msg.points[i][1], msg.points[i][2]};
     points->SetPoint(i, point);
 
-    //float intensity = cloud->points[i].intensity;
-    //intensityArray->SetValue(j,intensity);
+    unsigned char color[3];
+    unpackColor(msg.channels[i][0], color);
+    rgbArray->SetTupleValue(i, color);
 
     //uint16_t ring = cloud->points[i].ring;
     //ringArray->SetValue(j,ring);
 
   }
   points->SetNumberOfPoints(nr_points);
+  rgbArray->SetNumberOfTuples(nr_points);
 
   vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
   polyData->SetPoints(points.GetPointer());
-//  polyData->GetPointData()->AddArray(intensityArray.GetPointer());
+  polyData->GetPointData()->AddArray(rgbArray.GetPointer());
 //  polyData->GetPointData()->AddArray(ringArray.GetPointer());
   polyData->SetVerts(NewVertexCells(nr_points));
 
