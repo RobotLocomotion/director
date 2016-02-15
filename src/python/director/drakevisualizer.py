@@ -327,6 +327,7 @@ from director.screengrabberpanel import ScreenGrabberPanel
 from director import lcmgl
 from director import objectmodel as om
 from director import applogic
+from director import appsettings
 from director import viewbehaviors
 from director import camerabookmarks
 from director import cameracontrolpanel
@@ -337,6 +338,9 @@ from PythonQt import QtCore, QtGui
 class DrakeVisualizerApp():
 
     def __init__(self):
+
+        self.applicationInstance().setOrganizationName('RobotLocomotionGroup')
+        self.applicationInstance().setApplicationName('drake-visualizer')
 
         om.init()
         self.view = PythonQt.dd.ddQVTKWidgetView()
@@ -373,6 +377,8 @@ class DrakeVisualizerApp():
         self.mainWindow.setWindowTitle('Drake Visualizer')
         self.mainWindow.setWindowIcon(QtGui.QIcon(':/images/drake_logo.png'))
 
+        self.settings = QtCore.QSettings()
+
         self.fileMenu = self.mainWindow.menuBar().addMenu('&File')
         self.viewMenu = self.mainWindow.menuBar().addMenu('&View')
         self.viewMenuManager = PythonQt.dd.ddViewMenu(self.viewMenu)
@@ -384,8 +390,8 @@ class DrakeVisualizerApp():
         model.getTreeWidget().setWindowTitle('Scene Browser')
         model.getPropertiesPanel().setWindowTitle('Properties Panel')
 
-        self.sceneBrowserDock = self.addWidgetToDock(model.getTreeWidget(), QtCore.Qt.LeftDockWidgetArea)
-        self.propertiesDock = self.addWidgetToDock(self.wrapScrollArea(model.getPropertiesPanel()), QtCore.Qt.LeftDockWidgetArea)
+        self.sceneBrowserDock = self.addWidgetToDock(model.getTreeWidget(), QtCore.Qt.LeftDockWidgetArea, visible=False)
+        self.propertiesDock = self.addWidgetToDock(self.wrapScrollArea(model.getPropertiesPanel()), QtCore.Qt.LeftDockWidgetArea, visible=False)
 
         self.addViewMenuSeparator()
 
@@ -404,18 +410,30 @@ class DrakeVisualizerApp():
 
         self.fileMenu.addSeparator()
 
-        self._lastDir = None
         act = self.fileMenu.addAction('&Open Data...')
         act.setShortcut(QtGui.QKeySequence('Ctrl+O'))
         act.connect('triggered()', self._onOpenDataFile)
 
         applogic.addShortcut(self.mainWindow, 'F1', self._toggleObjectModel)
         applogic.addShortcut(self.mainWindow, 'F8', applogic.showPythonConsole)
+        self.applicationInstance().connect('aboutToQuit()', self._onAboutToQuit)
 
         for obj in om.getObjects():
             obj.setProperty('Deletable', False)
 
         self.mainWindow.show()
+        self._saveWindowState('MainWindowDefault')
+        self._restoreWindowState('MainWindowCustom')
+
+    def _onAboutToQuit(self):
+        self._saveWindowState('MainWindowCustom')
+        self.settings.sync()
+
+    def _restoreWindowState(self, key):
+        appsettings.restoreState(self.settings, self.mainWindow, key)
+
+    def _saveWindowState(self, key):
+        appsettings.saveState(self.settings, self.mainWindow, key)
 
     def _toggleObjectModel(self):
         self.sceneBrowserDock.setVisible(not self.sceneBrowserDock.visible)
@@ -427,15 +445,16 @@ class DrakeVisualizerApp():
     def _toggleCameraBookmarks(self):
         self.cameraBookmarksDock.setVisible(not self.cameraBookmarksDock.visible)
 
-    def _getDefaultDirectory(self):
-        return self._lastDir or os.getcwd()
+    def _getOpenDataDirectory(self):
+        return self.settings.value('OpenDataDir') or os.path.expanduser('~')
 
-    def _storeDefaultDirectory(self, filename):
+    def _storeOpenDataDirectory(self, filename):
 
         if os.path.isfile(filename):
             filename = os.path.dirname(filename)
         if os.path.isdir(filename):
-            self._lastDir = filename
+            self.settings.setValue('OpenDataDir', filename)
+
 
     def _showErrorMessage(self, title, message):
         QtGui.QMessageBox.warning(self.mainWindow, title, message)
@@ -452,10 +471,11 @@ class DrakeVisualizerApp():
 
     def _onOpenDataFile(self):
         fileFilters = "Data Files (*.obj *.ply *.stl *.vtk *.vtp)";
-        filename = QtGui.QFileDialog.getOpenFileName(self.mainWindow, "Open...", self._getDefaultDirectory(), fileFilters)
+        filename = QtGui.QFileDialog.getOpenFileName(self.mainWindow, "Open...", self._getOpenDataDirectory(), fileFilters)
         if not filename:
             return
 
+        self._storeOpenDataDirectory(filename)
         self._openGeometry(filename)
 
     def wrapScrollArea(self, widget):
@@ -476,6 +496,7 @@ class DrakeVisualizerApp():
         dock = QtGui.QDockWidget()
         dock.setWidget(widget)
         dock.setWindowTitle(widget.windowTitle)
+        dock.setObjectName(widget.windowTitle + ' Dock')
         dock.setVisible(visible)
         self.mainWindow.addDockWidget(dockArea, dock)
         self.addWidgetToViewMenu(dock)
