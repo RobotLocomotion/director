@@ -135,12 +135,9 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud2Message(pcl::PointCloud<pcl:
 //----------------------------------------------------------------------------
 
 void unpackColor(float f, unsigned char color[]) {
-    //unsigned char color[3];
     color[2] = floor(f / 256.0 / 256.0);
     color[1] = floor((f - color[2] * 256.0 * 256.0) / 256.0);
     color[0] = floor(f - color[2] * 256.0 * 256.0 - color[1] * 256.0);
-    // now we have a vec3 with the 3 components in range [0..256]. Let's normalize it!
-//    return color;// / 256.0;
 }
 
 
