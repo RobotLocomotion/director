@@ -133,46 +133,65 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud2Message(pcl::PointCloud<pcl:
 
 
 //----------------------------------------------------------------------------
+
+void unpackColor(float f, unsigned char color[]) {
+    color[2] = floor(f / 256.0 / 256.0);
+    color[1] = floor((f - color[2] * 256.0 * 256.0) / 256.0);
+    color[0] = floor(f - color[2] * 256.0 * 256.0 - color[1] * 256.0);
+}
+
+
 vtkSmartPointer<vtkPolyData> PolyDataFromPointCloudMessage(drc::pointcloud_t msg)
 {
 
+  // Copy over XYZ data
   vtkIdType nr_points = msg.points.size();
-
   vtkNew<vtkPoints> points;
   points->SetDataTypeToFloat();
   points->SetNumberOfPoints(nr_points);
-
-//  vtkNew<vtkFloatArray> intensityArray;
-//  intensityArray->SetName("intensity");
-//  intensityArray->SetNumberOfComponents(1);
-//  intensityArray->SetNumberOfValues(nr_points);
-
-//  vtkNew<vtkUnsignedIntArray> ringArray;
-//  ringArray->SetName("ring");
-//  ringArray->SetNumberOfComponents(1);
-//  ringArray->SetNumberOfValues(nr_points);
-
   for (vtkIdType i = 0; i < nr_points; ++i)
   {
-
     float point[3] = {msg.points[i][0], msg.points[i][1], msg.points[i][2]};
     points->SetPoint(i, point);
-
-    //float intensity = cloud->points[i].intensity;
-    //intensityArray->SetValue(j,intensity);
-
-    //uint16_t ring = cloud->points[i].ring;
-    //ringArray->SetValue(j,ring);
-
   }
-  points->SetNumberOfPoints(nr_points);
-
   vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
   polyData->SetPoints(points.GetPointer());
-//  polyData->GetPointData()->AddArray(intensityArray.GetPointer());
-//  polyData->GetPointData()->AddArray(ringArray.GetPointer());
-  polyData->SetVerts(NewVertexCells(nr_points));
 
+  // Per channel attributes
+  for (size_t j=0; j<msg.channel_names.size(); j++)
+  {
+    if (msg.channel_names[j] == "rgb_colors" )
+    {
+       vtkNew<vtkUnsignedCharArray> rgbArray;
+       rgbArray->SetName("rgb_colors");
+       rgbArray->SetNumberOfComponents(3);
+       rgbArray->SetNumberOfTuples(nr_points);
+
+       for (vtkIdType i = 0; i < nr_points; ++i)
+       {
+         unsigned char color[3];
+         unpackColor(msg.channels[j][i], color);
+         rgbArray->SetTupleValue(i, color);
+       }
+       rgbArray->SetNumberOfTuples(nr_points);
+       polyData->GetPointData()->AddArray(rgbArray.GetPointer());
+
+    }
+    else
+    {
+
+      vtkNew<vtkFloatArray> floatArray;
+      floatArray->SetName(msg.channel_names[j].c_str() );
+      floatArray->SetNumberOfComponents(1);
+      floatArray->SetNumberOfValues(nr_points);
+      for (vtkIdType i = 0; i < nr_points; ++i)
+        floatArray->SetValue(j, (float) msg.channels[j][i] );
+
+      polyData->GetPointData()->AddArray(floatArray.GetPointer());
+    }
+  }
+
+  polyData->SetVerts(NewVertexCells(nr_points));
   return polyData;
 }
 
