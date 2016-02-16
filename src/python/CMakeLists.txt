@@ -75,6 +75,7 @@ set(python_files
   director/objectmodel.py
   director/otdfmodel.py
   director/openscope.py
+  director/packagepath.py
   director/perception.py
   director/planplayback.py
   director/playbackpanel.py
