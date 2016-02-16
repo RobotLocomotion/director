@@ -9,6 +9,7 @@ set(python_tests_core
   testConsoleApp.py
   testFrameSync.py
   testObjectModel.py
+  testPackagePath.py
   testPropertiesPanel.py
   testPythonConsole.py
   testTaskQueue.py
