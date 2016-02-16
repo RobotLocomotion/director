@@ -10,6 +10,7 @@ from director import filterUtils
 from director.shallowCopy import shallowCopy
 from director import vtkAll as vtk
 from director import visualization as vis
+from director import packagepath
 
 try:
     import drake as lcmdrake
@@ -27,6 +28,8 @@ class Geometry(object):
 
     TextureCache = {}
     MeshToTexture = {}
+
+    PackageMap = None
 
     @staticmethod
     def createPolyDataFromPrimitive(geom):
@@ -131,9 +134,24 @@ class Geometry(object):
         Geometry.TextureCache[textureFileName] = texture
 
     @staticmethod
+    def resolvePackageFilename(filename):
+
+        if not packagepath.PackageMap.isPackageUrl(filename):
+            return filename
+
+        if Geometry.PackageMap is None:
+            import pydrake
+            m = packagepath.PackageMap()
+            m.populateFromSearchPaths([pydrake.getDrakePath()])
+            m.populateFromEnvironment(['DRAKE_PACKAGE_PATH', 'ROS_PACKAGE_PATH'])
+            Geometry.PackageMap = m
+
+        return Geometry.PackageMap.resolveFilename(filename) or filename
+
+    @staticmethod
     def loadPolyDataMeshes(geom):
 
-        filename = geom.string_data
+        filename = Geometry.resolvePackageFilename(geom.string_data)
         basename, ext = os.path.splitext(filename)
 
         preferredExtensions = ['.vtm', '.vtp', '.obj']
@@ -142,6 +160,10 @@ class Geometry(object):
             if os.path.isfile(basename + x):
                 filename = basename + x
                 break
+
+        if not os.path.isfile(filename):
+            print 'warning, cannot find file:', filename
+            return []
 
         if filename.endswith('vtm'):
             polyDataList = ioUtils.readMultiBlock(filename)
