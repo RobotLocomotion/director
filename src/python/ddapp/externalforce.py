@@ -88,6 +88,9 @@ class ExternalForce(object):
             data['linkName'] = linkName
             data['polyData'] = polyData
             data['transform'] = transformUtils.copyFrame(self.robotStateModel.getLinkFrame(linkName))
+            if (polyData.GetNumberOfCells() == 0):
+                print linkName + " mesh has no cells, not building a locator for it"
+                continue
             data['locator'] = self.buildCellLocator(polyData)
             self.linkMeshData[linkName] = data
 
@@ -582,8 +585,7 @@ class ExternalForce(object):
 
     @staticmethod
     def buildCellLocator(polyData):
-        print "buidling cell locator"
-
+        print "building cell locator"
         loc = vtk.vtkCellLocator()
         loc.SetDataSet(polyData)
         loc.BuildLocator()
