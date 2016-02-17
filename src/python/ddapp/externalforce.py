@@ -49,7 +49,7 @@ class ExternalForce(object):
         self.captureModeCounter = 0
         self.showContactRay = True
         self.showContactFilterEstimate = True
-        self.showActiveLinkEstimate = True
+        self.showActiveLinkEstimate = False
         self.addSubscribers()
         self.createPlunger()
         self.createMeshDataAndLocators()
