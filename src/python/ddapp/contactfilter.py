@@ -4,6 +4,7 @@ from ddapp import roboturdf
 import numpy as np
 import vtkAll as vtk
 import PythonQt
+import matplotlib.pyplot as plt
 import Queue
 import collections
 from contactfilterutils import DequePeak
@@ -109,11 +110,13 @@ class ContactFilter(object):
         self.options['thresholds']['removeContactPointForce'] = 5.0 # threshold on force magnitude to eliminate a force that gets too small
 
         self.options['motionModel'] = {}
-        self.options['motionModel']['var'] = 0.01
+        self.options['motionModel']['var'] = 0.02
 
         self.options['measurementModel'] = {}
-        self.options['measurementModel']['var'] = 0.1 # this is totally made up at the moment
+        self.options['measurementModel']['var'] = 0.05 # this is totally made up at the moment
         self.weightMatrix = np.eye(self.drakeModel.numJoints)
+
+        self.options['numParticles'] = 100
 
 
         self.options['debug'] = {}
@@ -124,6 +127,7 @@ class ContactFilter(object):
         self.options['debug']['jacobianTime'] = 0.0
         self.options['debug']['measurementUpdateTime'] = 0.0
         self.options['debug']['avgQPSolveTime'] = 0.0
+        self.options['debug']['haveShownLikelihoodPlot'] = False
 
         self.options['noise'] = {}
         self.options['noise']['addNoise'] = False
@@ -509,6 +513,7 @@ class ContactFilter(object):
 
         particleSet.squaredErrorWithoutParticle = squaredErrorWithoutParticle
 
+
     def measurementUpdateForParticleSetRemoval(self, residual):
         for particleSet in self.particleSetList:
             self.singleMeasurementUpdateForParticleSetRemoval(residual, particleSet)
@@ -576,7 +581,9 @@ class ContactFilter(object):
                     print "below timeout threshold when trying to ADD a new particle set, returning"
             return
 
-
+        # if we reach this point it means we are not going to add a ParticleSet
+        # however, we may still remove a ParticleSet, this is what we are going
+        # to check below
 
         for particleSet in self.particleSetList:
             squaredErrorWithoutParticle = particleSet.squaredErrorWithoutParticle
@@ -585,8 +592,11 @@ class ContactFilter(object):
                     if timeoutSatisfied:
                         if verbose:
                             print "force is below threshold, eliminating containing particle set"
-                        particleSetToRemove = d['particle'].containingParticleSet
+                        particleSetToRemove = particle.containingParticleSet
 
+
+                        # make sure we don't try to remove a particle set that isn't in the the current
+                        # particleSetList
                         if particleSetToRemove in self.particleSetList:
                             self.particleSetList.remove(particleSetToRemove)
                             self.eventTimes['lastContactRemoved'] = self.currentTime
@@ -596,30 +606,9 @@ class ContactFilter(object):
                             print "below timeout threshold when trying to REMOVE a new particle set, returning"
                         particleSetToRemove = particle.containingParticleSet
 
+
+                    # only allow one particle set to be removed in a single pass
                     return
-        #
-        # # now remove any particleSets that have sufficiently small "best" forces
-        # for d in solnData['cfpData']:
-        #     if (np.linalg.norm(d['force']) < self.options['thresholds']['removeContactPointForce']):
-        #
-        #         # this extra 'and' condition is from an older specification, not sure it's the right thing to do
-        #         # and (self.squaredErrorNoContacts(verbose=False) < self.options['thresholds']['addContactPoint'])):
-        #
-        #
-        #         if timeoutSatisfied:
-        #             if verbose:
-        #                 print "force is below threshold, eliminating containing particle set"
-        #             particleSetToRemove = d['particle'].containingParticleSet
-        #
-        #             if particleSetToRemove in self.particleSetList:
-        #                 self.particleSetList.remove(particleSetToRemove)
-        #                 self.eventTimes['lastContactRemoved'] = self.currentTime
-        #                 # this return statement only allows you to remove a single particle at a time
-        #         else:
-        #             if verbose:
-        #                 print "below timeout threshold when trying to REMOVE a new particle set, returning"
-        #
-        #         return
 
     def applyMotionModelSingleParticleSet(self, particleSet):
         for particle in particleSet.particleList:
@@ -839,7 +828,7 @@ class ContactFilter(object):
             rayLength = 0.3
             self.addPlungerToDebugData(d, cfp.linkName, cfp.contactLocation, cfp.contactNormal, rayLength, color)
 
-        if drawHistoricalMostLikely and (particleSet.historicalMostLikely['particle'] is not None):
+        if drawMostLikely and (particleSet.mostLikelyParticle is not None):
             cfp = particleSet.mostLikelyParticle.cfp
             color = mostLikelyColor
             rayLength = 0.4
@@ -863,7 +852,7 @@ class ContactFilter(object):
     def testParticleSetDraw(self):
         self.drawParticleSet(self.testParticleSet)
 
-    def testParticleSetDrawAll(self):
+    def testParticleSetDrawAll(self, drawMostLikely=False, drawHistoricalMostLikely=True):
         colorList = []
 
         colorList.append([0.5, 0, 0.5]) # purple
@@ -878,7 +867,8 @@ class ContactFilter(object):
             om.removeFromObjectModel(om.findObjectByName(name))
 
             if i < numParticleSets:
-                self.drawParticleSet(self.particleSetList[i], name=name, color=colorList[i])
+                self.drawParticleSet(self.particleSetList[i], name=name, color=colorList[i],
+                                     drawMostLikely=drawMostLikely, drawHistoricalMostLikely=drawHistoricalMostLikely)
 
 
     def testFullParticleFilterCallback(self, verbose=False):
@@ -894,7 +884,7 @@ class ContactFilter(object):
             if verbose:
                 print "applying motion model"
             self.applyMotionModel()
-            self.testParticleSetDrawAll()
+            self.testParticleSetDrawAll(drawMostLikely=False, drawHistoricalMostLikely=True)
             self.justAppliedMotionModel = True
         else:
             if verbose:
@@ -907,7 +897,7 @@ class ContactFilter(object):
             self.updateMostLikelySolnData()
             self.publishMostLikelyEstimate()
             self.manageParticleSets(verbose=True) # there are timeouts inside of this
-            self.testParticleSetDrawAll()
+            self.testParticleSetDrawAll(drawMostLikely=True, drawHistoricalMostLikely=True)
             self.justAppliedMotionModel = False
 
     def printDebugData(self):
@@ -1016,6 +1006,13 @@ class ContactFilter(object):
         return d, solnData
 
 
+    def testImportanceResampling(self):
+        self.importanceResamplingSingleParticleSet(self.testParticleSet, numParticles=None)
+
+    def testMotionModel(self):
+        self.applyMotionModelSingleParticleSet(self.testParticleSet)
+
+
     def testPlotCFPData(self, cfpData, name="cfp data", verbose=True):
         d = DebugData()
 
@@ -1040,6 +1037,73 @@ class ContactFilter(object):
 
 
         vis.updatePolyData(d.getPolyData(), name, colorByName='RGB255')
+
+
+    def barPlot(self, data, title=None):
+
+        if title is not None:
+            plt.title(title)
+
+        barWidth = 0.5
+        numBars = np.size(data)
+        index = np.arange(0,numBars)
+        plt.bar(index, data, barWidth/2.0)
+
+
+    def plotLikelihoodData(self, particleSet=None):
+
+        if not self.options['debug']['haveShownLikelihoodPlot']:
+            plt.figure()
+
+        barWidth = 0.5
+        barCounter = 0
+
+
+        # draw the test particle set by default
+        if particleSet is None:
+            particleSet = self.testParticleSet
+
+        cfpPlotted = set()
+        likelihood = []
+        squaredError = []
+        # importanceWeights = []
+
+        for particle in particleSet.particleList:
+            cfp = particle.cfp
+
+            # skip if we have already logged the data for this particular cfp
+            if cfp in cfpPlotted:
+                continue
+
+            cfpPlotted.add(cfp)
+
+            likelihood.append(particle.solnData['likelihood'])
+            squaredError.append(particle.solnData['squaredError'])
+
+        # bookkeeping
+        likelihood = np.array(likelihood)
+        squaredError = np.array(squaredError)
+        importanceWeights = likelihood/np.sum(likelihood)
+
+        plt.clf()
+
+        plt.subplot(3,1,1)
+        self.barPlot(squaredError, title="Squared Error")
+
+        plt.subplot(3,1,2)
+        self.barPlot(likelihood, title="Likelihood")
+
+        plt.subplot(3,1,3)
+        self.barPlot(importanceWeights, title="Importance Weights")
+
+
+        if not self.options['debug']['haveShownLikelihoodPlot']:
+            self.options['debug']['haveShownLikelihoodPlot'] = True
+            plt.show()
+        else:
+            plt.draw()
+
+
 
 
 class PythonDrakeModel(object):
