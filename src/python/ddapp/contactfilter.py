@@ -56,6 +56,7 @@ class ContactFilter(object):
         self.initializeGurobiModel()
         self.initializeTestParticleSet()
         self.initializeOptions()
+        # self.initializeCellLocator()
         self.setupMotionModelData()
         self.setCurrentUtime(0)
 
@@ -138,6 +139,22 @@ class ContactFilter(object):
         self.justAppliedMotionModel = False
         self.particleFilterTestTimer = TimerCallback(targetFps=1)
         self.particleFilterTestTimer.callback = self.testFullParticleFilterCallback
+
+    def initializeCellLocator(self):
+
+        # for now use the zero pose to build the cell locator
+        # later we can use something better like the safe nominal pose
+        self.locatorData = {}
+        polyData = vtk.vtkPolyData()
+        self.robotStateModel.model.getModelMesh(polyData)
+        self.locatorData['polyData'] = polyData
+
+        loc = vtk.vtkCellLocator()
+        loc.SetDataSet(polyData)
+        loc.BuildLocator()
+        self.locatorData['locator'] = loc
+
+
 
 
     def addTestParticleSetToParticleSetList(self):
