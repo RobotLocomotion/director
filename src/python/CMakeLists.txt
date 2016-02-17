@@ -55,7 +55,6 @@ set(python_files
   director/irisdriver.py
   director/jointcontrol.py
   director/jointpropagator.py
-  director/kinematicposeplanner.py
   director/korgnano.py
   director/lcmframe.py
   director/lcmloggerwidget.py

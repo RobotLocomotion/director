@@ -25,7 +25,6 @@ set(python_tests_robot
   testDrakeVisualizer.py
   testEndEffectorIk.py
   testImageView.py
-  testKinematicPose.py
   testLoadUrdf.py
   testOtdfParser.py
   testPlanConstraints.py
@@ -48,8 +47,6 @@ set(python_tests_robot
 # Tests can also be run on multiple robots by setting an additional
 # _extra_args_{n} to the director argument for the n-th robot to test, n >= 2.
 
-# these tests are tested on Atlas v5 robot model ONLY
-set(testKinematicPose_extra_args -v5)
 
 # these tests use both Atlas v5 and Valkyrie
 set(testTeleopPanel_extra_args_2 -v5)
