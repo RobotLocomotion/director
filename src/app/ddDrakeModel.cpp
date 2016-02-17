@@ -10,6 +10,8 @@
 #include <vtkActor.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkCellData.h>
+#include <vtkIdTypeArray.h>
 #include <vtkRenderer.h>
 #include <vtkOBJReader.h>
 #include <vtkSTLReader.h>
@@ -1289,12 +1291,38 @@ void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
   polyData->DeepCopy(appendFilter->GetOutput());
 }
 
+void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
+{
+  if (!polyData){
+    return;
+  }
+
+  vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+  for (const auto & rb: this->Internal->Model->bodies){
+    std::string linkNameString = rb->linkname;
+    QString linkName = QString::fromStdString(linkNameString);
+    vtkSmartPointer<vtkPolyData> tempPolyData = vtkSmartPointer<vtkPolyData>::New();
+    this->getLinkModelMesh(linkName, tempPolyData);
+    AddInputData(appendFilter, tempPolyData);
+  }
+
+  appendFilter->Update();
+  polyData->DeepCopy(appendFilter->GetOutput());  
+}
+
 void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyData){
   if (!polyData){
     return;
   }
 
+  std::string linkNameString = linkName.toAscii().data();
+  if (this->Internal->Model->findLink(linkNameString, -1) == nullptr){
+    std::cout << "couldn't find link " << linkNameString << " in ddDrakeModel::getLinkModelMesh, returning" << std::endl;
+    return;
+  }
 
+  int linkId = this->findLinkID(linkName.toAscii().data());
   std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->linkMeshVisuals(linkName.toAscii().data());
   vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
@@ -1309,6 +1337,34 @@ void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyDa
   }
 
   polyData->DeepCopy(appendFilter->GetOutput());
+
+  // make sure we compute the cell normals, currently this is not computing point normals
+  // would need to implement GetCellNormals(), so just recompute the normals for now
+  // bool hasCellNormals = GetCellNormals(polyData);
+
+  bool hasCellNormals = false;
+  if (!hasCellNormals and visuals.size()){
+    // Generate normals
+    std::cout << "trying to generate cell normals" << std::endl;
+    vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
+    SetInputData(normalGenerator, polyData);
+    std::cout << "visuals size is " << visuals.size() << std::endl;
+    std::cout << "number of cells is " << polyData->GetNumberOfCells() << std::endl;
+    normalGenerator->ComputePointNormalsOff();
+    normalGenerator->ComputeCellNormalsOn();
+    normalGenerator->Update();
+    std::cout << "test break" << std::endl;
+    polyData->DeepCopy(normalGenerator->GetOutput());
+  }
+
+  int numCells = polyData->GetNumberOfCells();
+  vtkSmartPointer<vtkIdTypeArray> linkIdArray = vtkSmartPointer<vtkIdTypeArray>::New(); //fill with linkId repeated appropriate number of time
+  // set "name" of the array to be "linkId", function is setName
+  linkIdArray->SetName("linkId");
+  for (int i = 0; i < numCells; i++){
+    linkIdArray->InsertNextValue(linkId);
+  }
+  polyData->GetCellData()->AddArray(linkIdArray);
 
 }
 

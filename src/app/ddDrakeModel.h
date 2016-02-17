@@ -53,8 +53,8 @@ public:
   int findJointID(const QString& jointName) const;
 
   void getModelMesh(vtkPolyData* polyData);
+  void getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData);
   void getLinkModelMesh(const QString& linkName, vtkPolyData* polyData);
-
   QString getLinkNameForMesh(vtkPolyData* polyData);
 
   void setAlpha(double alpha);

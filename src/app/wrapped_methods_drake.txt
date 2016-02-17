@@ -28,6 +28,7 @@ void ddDrakeModel::setColor(const QColor&);
 void ddDrakeModel::setLinkColor(const QString&, const QColor&);
 QColor ddDrakeModel::getLinkColor(const QString&) const;
 void ddDrakeModel::getModelMesh(vtkPolyData*);
+void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData*);
 void ddDrakeModel::getLinkModelMesh(const QString&, vtkPolyData*);
 double ddDrakeModel::alpha() const;
 bool ddDrakeModel::visible() const;
