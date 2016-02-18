@@ -29,6 +29,7 @@ from ddapp import egressplanner
 from ddapp import externalforce
 from ddapp import contactfilter
 from ddapp import contactfiltergurobi as CFG
+from ddapp import contactpointlocator
 from ddapp import polarisplatformplanner
 from ddapp import surprisetask
 from ddapp import continuouswalkingdemo
@@ -451,6 +452,7 @@ if usePlanning:
 
     externalForce = externalforce.ExternalForce(robotSystem)
     contactFilter = contactfilter.ContactFilter(robotSystem)
+    contactPointLocator = contactpointlocator.ContactPointLocator(robotStateModel)
     linkSelection = linkselection.LinkWidget(view, robotStateModel, externalForce)
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
