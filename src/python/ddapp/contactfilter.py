@@ -28,6 +28,7 @@ from ddapp import visualization as vis
 from ddapp import gurobiutils as grbUtils
 from ddapp.timercallback import TimerCallback
 from ddapp import objectmodel as om
+from ddapp import contactpointlocator
 
 
 import drc as lcmdrc
@@ -56,6 +57,7 @@ class ContactFilter(object):
         self.initializeGurobiModel()
         self.initializeTestParticleSet()
         self.initializeOptions()
+        self.initializeContactPointLocator()
         # self.initializeCellLocator()
         self.setupMotionModelData()
         self.setCurrentUtime(0)
@@ -111,7 +113,7 @@ class ContactFilter(object):
         self.options['thresholds']['removeContactPointForce'] = 5.0 # threshold on force magnitude to eliminate a force that gets too small
 
         self.options['motionModel'] = {}
-        self.options['motionModel']['var'] = 0.02
+        self.options['motionModel']['var'] = 0.05
 
         self.options['measurementModel'] = {}
         self.options['measurementModel']['var'] = 0.05 # this is totally made up at the moment
@@ -146,15 +148,28 @@ class ContactFilter(object):
         # later we can use something better like the safe nominal pose
         self.locatorData = {}
         polyData = vtk.vtkPolyData()
-        self.robotStateModel.model.getModelMesh(polyData)
+        self.robotStateModel.model.getModelMeshWithLinkInfoAndNormals(polyData)
         self.locatorData['polyData'] = polyData
+        self.locatorData['linkIdArray'] = polyData.GetCellData().GetArray("linkId")
+        self.locatorData['normals'] = polyData.GetCellData().GetNormals()
+        self.locatorData['linkFrames'] = {}
+
+        linkNames = self.robotStateModel.model.getLinkNames()
+
+        for linkName in linkNames:
+            linkName = str(linkName)
+            linkFrame = vtk.vtkTransform()
+            linkFrame.DeepCopy(self.robotStateModel.getLinkFrame(linkName))
+            self.locatorData['linkFrames'][linkName] = linkFrame
 
         loc = vtk.vtkCellLocator()
         loc.SetDataSet(polyData)
         loc.BuildLocator()
         self.locatorData['locator'] = loc
 
-
+    def initializeContactPointLocator(self):
+        self.contactPointLocator = contactpointlocator.ContactPointLocator(self.robotStateModel)
+        self.contactPointLocator.loadCellsFromFile(filename="capturedCells")
 
 
     def addTestParticleSetToParticleSetList(self):
@@ -866,6 +881,13 @@ class ContactFilter(object):
         d.addLine(rayEnd, forceLocationWorldFrame, radius = 0.005, color=color)
 
 
+    def drawContactFilterPoint(self, cfp, name="test cfp"):
+        d = DebugData()
+        rayLength = 0.1
+        color=[0,1,0]
+        self.addPlungerToDebugData(d,cfp.linkName, cfp.contactLocation, cfp.contactNormal, rayLength, color)
+        vis.updatePolyData(d.getPolyData(), name, colorByName="RGB255")
+
     def testParticleSetDraw(self):
         self.drawParticleSet(self.testParticleSet)
 
@@ -1120,6 +1142,133 @@ class ContactFilter(object):
         else:
             plt.draw()
 
+
+
+    def testLocator(self, point=[0.0, 0.0, 0.0], verbose=True):
+        cell = vtk.vtkGenericCell()
+        cellId = vtk.mutable(0)
+        subId = vtk.mutable(0)
+        dist2 = vtk.mutable(0)
+        closestPoint = [0.0, 0.0, 0.0]
+
+        self.locatorData['locator'].FindClosestPoint(point, closestPoint, cellId, subId, dist2)
+        linkId = int(self.locatorData['linkIdArray'].GetTuple(cellId)[0])
+        linkName = self.robotStateModel.model.getBodyOrFrameName(linkId)
+        normal = np.array(self.locatorData['normals'].GetTuple(cellId))
+        if verbose:
+            # also want to transform it to local frame
+            linkToWorld = self.locatorData['linkFrames'][linkName]
+            worldToLink = linkToWorld.GetLinearInverse()
+            closestPointInLinkFrame = worldToLink.TransformPoint(closestPoint)
+
+            normalLinkFrame = worldToLink.TransformVector(normal)
+
+            d = DebugData()
+            d.addSphere(point, radius=0.03, color=[1,0,0])
+            d.addSphere(closestPoint, radius=0.03, color=[0,1,0])
+            om.removeFromObjectModel(om.findObjectByName("locator data"))
+            vis.showPolyData(d.getPolyData(),name="locator data",colorByName="RGB255")
+
+            print "-------- Closest Point Data -------------"
+            print "linkId = ", linkId
+            print "link name = " + linkName
+            print "closest point = ", closestPoint
+            print "closest point in link frame = ", closestPointInLinkFrame
+            print "normal = ", normal
+            print "normal link frame = ", normalLinkFrame
+            print " ------------------------------- "
+            print ""
+
+
+    def createTestCFP(self):
+        self.testCFP = self.contactFilterPointDict['l_uarm'][0]
+
+
+    def findClosestPoint(self, point):
+        cell = vtk.vtkGenericCell()
+        cellId = vtk.mutable(0)
+        subId = vtk.mutable(0)
+        dist2 = vtk.mutable(0)
+        closestPoint = [0.0, 0.0, 0.0]
+        self.locatorData['locator'].FindClosestPoint(point, closestPoint, cellId, subId, dist2)
+        linkId = int(self.locatorData['linkIdArray'].GetTuple(cellId)[0])
+        linkName = self.robotStateModel.model.getBodyOrFrameName(linkId)
+
+
+        # NOTE: I AM PUTTING A NEGATIVE SIGN HERE AS A TEMPORARY HACK
+        normal = -np.array(self.locatorData['normals'].GetTuple(cellId))
+
+        closestPointData = {'closestPoint': closestPoint, 'linkName': linkName, 'normal': normal, 'dist': dist2}
+        return closestPointData
+
+    def motionModelSingleCFP(self, cfp, visualize=False, tangentSampling=False):
+
+        linkToWorld = self.robotStateModel.getLinkFrame(cfp.linkName)
+        contactLocationWorldFrame = linkToWorld.TransformPoint(cfp.contactLocation)
+
+        contactNormalWorldFrame = linkToWorld.TransformVector(cfp.contactNormal)
+        randomVector = np.random.random(3)
+        tangentVector = np.cross(cfp.contactNormal, contactNormalWorldFrame)
+        tangentVector = tangentVector/np.linalg.norm(tangentVector)
+
+        if tangentSampling:
+            deltaToNewContactLocation = tangentVector*np.random.normal(scale=self.options['motionModel']['var'], size=1)
+        else:
+            deltaToNewContactLocation = np.random.normal(scale=self.options['motionModel']['var'], size=3)
+
+        closestPointLookupLocation = contactLocationWorldFrame + deltaToNewContactLocation
+
+        closestPointData = self.contactPointLocator.findClosestPoint(closestPointLookupLocation)
+
+
+        newLinkName = closestPointData['linkName']
+        # worldToLink = self.robotStateModel.getLinkFrame(newLinkName).GetLinearInverse()
+        # newContactLocation = worldToLink.TransformPoint(closestPointData['closestPoint'])
+        # newContactNormal = worldToLink.TransformVector(closestPointData['normal'])
+        newContactLocation = closestPointData['closestPoint']
+        newContactNormal = closestPointData['normal']
+        bodyId = self.drakeModel.model.findLinkID(newLinkName)
+
+        newCFP = self.createContactFilterPoint(linkName=newLinkName, contactLocation=newContactLocation,
+                                    contactNormal=newContactNormal, bodyId=bodyId)
+
+        if visualize:
+            d = DebugData()
+            d.addSphere(contactLocationWorldFrame, radius=0.01, color=[0,0,1])
+            d.addSphere(closestPointLookupLocation, radius=0.01, color=[1,0,0])
+            vis.updatePolyData(d.getPolyData(), "locator data", colorByName="RGB255")
+            self.drawContactFilterPoint(newCFP)
+
+        return newCFP
+
+    def createContactFilterPoint(self, linkName=None, contactLocation=None,
+                                    contactNormal=None, bodyId=None):
+        outputFrame = vtk.vtkTransform()
+        wrenchFrame = vtk.vtkTransform()
+        wrenchFrame.Translate(contactLocation)
+        forceMomentTransform = transformUtils.forceMomentTransformation(wrenchFrame, outputFrame)
+
+        t = transformUtils.getTransformFromOriginAndNormal([0.0,0.0,0.0], contactNormal)
+        rotatedFrictionCone = np.zeros((3,4))
+        for i in xrange(0,4):
+            rotatedFrictionCone[:,i] = t.TransformVector(self.frictionCone[:,i])
+
+
+        # need to be careful, the force moment transform is for a wrench, we just have a force
+        # J_alpha = 6 x 4, since there are 4 things in the friction cone
+        J_alpha = np.dot(forceMomentTransform[:,3:], rotatedFrictionCone)
+
+        contactFilterPoint = ContactFilterPoint(linkName=linkName, contactLocation=contactLocation,
+                              contactNormal=contactNormal, bodyId=bodyId,
+                              forceMomentTransform=forceMomentTransform,
+                              rotatedFrictionCone=rotatedFrictionCone,
+                              J_alpha = J_alpha)
+
+        return contactFilterPoint
+
+
+    def testNewMotionModel(self):
+        self.testCFP = self.motionModelSingleCFP(self.testCFP, visualize=True)
 
 
 
