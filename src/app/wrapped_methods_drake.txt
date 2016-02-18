@@ -18,6 +18,7 @@ bool ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
 QString ddDrakeModel::getLinkNameForMesh(vtkPolyData*);
 QStringList ddDrakeModel::getLinkNames();
 QStringList ddDrakeModel::getJointNames();
+QString ddDrakeModel::getBodyOrFrameName(int);
 int ddDrakeModel::findLinkID(const QString&) const;
 int ddDrakeModel::findJointID(const QString&) const;
 void ddDrakeModel::setAlpha(double);

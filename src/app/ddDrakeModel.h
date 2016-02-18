@@ -56,6 +56,7 @@ public:
   void getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData);
   void getLinkModelMesh(const QString& linkName, vtkPolyData* polyData);
   QString getLinkNameForMesh(vtkPolyData* polyData);
+  QString getBodyOrFrameName(int body_or_frame_id);
 
   void setAlpha(double alpha);
   double alpha() const;

@@ -1234,6 +1234,13 @@ QString ddDrakeModel::getLinkNameForMesh(vtkPolyData* polyData)
   return QString();
 }
 
+QString ddDrakeModel::getBodyOrFrameName(int body_or_frame_id)
+{
+  std::string linkName = this->Internal->Model->getBodyOrFrameName(body_or_frame_id);
+  QString linkNameQString = QString::fromStdString(linkName);
+  return linkNameQString;
+}
+
 
 //-----------------------------------------------------------------------------
 bool ddDrakeModel::loadFromFile(const QString& filename)
