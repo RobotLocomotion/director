@@ -111,9 +111,11 @@ class ContactFilter(object):
         self.options['thresholds']['addContactPointSquaredError'] = 10.0 # threshold on squared error to add contact point
         self.options['thresholds']['removeContactPointSquaredError'] = 10.0
         self.options['thresholds']['removeContactPointForce'] = 5.0 # threshold on force magnitude to eliminate a force that gets too small
+        self.options['thresholds']['squaredErrorBoundForMostLikelyParticleAveraging'] = 10.0
+
 
         self.options['motionModel'] = {}
-        self.options['motionModel']['var'] = 0.01
+        self.options['motionModel']['var'] = 0.02
 
         self.options['measurementModel'] = {}
         self.options['measurementModel']['var'] = 0.05 # this is totally made up at the moment
@@ -687,9 +689,92 @@ class ContactFilter(object):
         for particleSet in self.particleSetList:
             self.importanceResamplingSingleParticleSet(particleSet)
 
-    def updateAllParticleSetsMostLikelyParticle(self):
+
+    # takes avg of particles below some threshold
+    def updateSingleParticleSetMostLikelyData(self, particleSet):
+        smallestSquaredErrorParticle = None
+        particlesBelowThreshold = []
+
+        for particle in particleSet.particleList:
+            if (smallestSquaredErrorParticle is None or
+                    (particle.solnData['squaredError'] < smallestSquaredErrorParticle.solnData['squaredError'])):
+                smallestSquaredErrorParticle = particle
+
+            if particle.solnData['squaredError'] < self.options['thresholds']['squaredErrorBoundForMostLikelyParticleAveraging']:
+                particlesBelowThreshold.append(particle)
+
+
+        if len(particlesBelowThreshold) > 0:
+            # find particle that is at the average
+            numParticles = len(particlesBelowThreshold)
+            particleLocationsInWorld = np.zeros((3,numParticles))
+            for idx, particle in enumerate(particlesBelowThreshold):
+                linkFrame = self.robotStateModel.getLinkFrame(particle.cfp.linkName)
+                particleLocationsInWorld[:,idx] = np.array(linkFrame.TransformPoint(particle.cfp.contactLocation))
+
+            particleLocationAvg = np.mean(particleLocationsInWorld, axis=1)
+
+            closestPointData = self.contactPointLocator.findClosestPoint(particleLocationAvg)
+            mostLikelyParticle = self.createContactFilterParticleFromClosestPointData(closestPointData)
+            externalParticleList = self.getExternalMostLikelyParticles(particleSet)
+            self.computeSingleLikelihoodForParticle(self.residual, mostLikelyParticle, externalParticleList)
+            particleSet.setMostLikelyParticle(self.currentTime, mostLikelyParticle)
+        else:
+            particleSet.setMostLikelyParticle(self.currentTime, smallestSquaredErrorParticle)
+
+
+    def computeSingleLikelihoodForParticle(self, residual, particle, externalParticleList):
+
+        particleList = [particle]
+        particleList.extend(externalParticleList)
+        cfpList = []
+        for particle in particleList:
+            cfpList.append(particle.cfp)
+
+        solnData = self.computeSingleLikelihood(residual, cfpList)
+        solnData['force'] = solnData['cfpData'][0]['force']
+
+        # this just makes sure we record the particle in addition to the cfp in the soln data
+        for idx, d in enumerate(solnData['cfpData']):
+            d['particle'] = particleList[idx]
+
+        particle.solnData = solnData
+
+
+    def getExternalMostLikelyCFP(self, particleSet):
+        otherParticleSets = copy.copy(self.particleSetList)
+        otherParticleSets.remove(particleSet)
+        externalCFP = []
+
+        for ps in otherParticleSets:
+            otherHistoricalMostLikely = ps.historicalMostLikely
+            if otherHistoricalMostLikely['particle'] is not None:
+                externalCFP.append(otherHistoricalMostLikely['particle'].cfp)
+
+        return externalCFP
+
+    def getExternalMostLikelyParticles(self, particleSet):
+        otherParticleSets = copy.copy(self.particleSetList)
+
+        if particleSet in otherParticleSets:
+            otherParticleSets.remove(particleSet)
+        externalParticles = []
+
+        for ps in otherParticleSets:
+            otherHistoricalMostLikely = ps.historicalMostLikely
+            if otherHistoricalMostLikely['particle'] is not None:
+                externalParticles.append(otherHistoricalMostLikely['particle'])
+
+        return externalParticles
+
+
+    def updateAllParticleSetsMostLikelyParticle(self, useAvg=True):
+
         for particleSet in self.particleSetList:
-            particleSet.updateMostLikelyParticleUsingMode(self.currentTime)
+            if useAvg:
+                self.updateSingleParticleSetMostLikelyData(particleSet)
+            else:
+                particleSet.updateMostLikelyParticleUsingMode(self.currentTime)
 
     # this definitely needs some work
     # overall there are a ton of hacks in here, should get rid of some of them . . . .
@@ -1248,6 +1333,26 @@ class ContactFilter(object):
 
         return newCFP
 
+    def createContactFilterPointFromClosestPointData(self, closestPointData):
+        newLinkName = closestPointData['linkName']
+        # worldToLink = self.robotStateModel.getLinkFrame(newLinkName).GetLinearInverse()
+        # newContactLocation = worldToLink.TransformPoint(closestPointData['closestPoint'])
+        # newContactNormal = worldToLink.TransformVector(closestPointData['normal'])
+        newContactLocation = closestPointData['closestPoint']
+        newContactNormal = closestPointData['normal']
+        bodyId = self.drakeModel.model.findLinkID(newLinkName)
+
+        newCFP = self.createContactFilterPoint(linkName=newLinkName, contactLocation=newContactLocation,
+                                    contactNormal=newContactNormal, bodyId=bodyId)
+
+        return newCFP
+
+    def createContactFilterParticleFromClosestPointData(self, closestPointData):
+        cfp = self.createContactFilterPointFromClosestPointData(closestPointData)
+        particle = ContactFilterParticle(cfp=cfp)
+        return particle
+
+
     def createContactFilterPoint(self, linkName=None, contactLocation=None,
                                     contactNormal=None, bodyId=None):
         outputFrame = vtk.vtkTransform()
@@ -1389,6 +1494,7 @@ class ContactFilterParticle(object):
         self.containingParticleSet = None
 
     def setContactFilterPoint(self, cfp):
+        assert type(cfp) is ContactFilterPoint, "cfp is not of type ContactFilterPoint"
         self.cfp = cfp
 
     def setContainingParticleSet(self, containingParticleSet):
@@ -1468,6 +1574,10 @@ class SingleContactParticleSet(object):
         self.cfpCounterDict  = cfpCounterDict # this is for debugging purposes
         self.mostLikelyParticle = mostLikelyParticle
         self.updateSolnDataSet(currentTime, solnData=self.mostLikelyParticle.solnData)
+
+    def setMostLikelyParticle(self, currentTime, mostLikelyParticle):
+        self.mostLikelyParticle = mostLikelyParticle
+        self.updateSolnDataSet(currentTime, solnData = self.mostLikelyParticle.solnData)
 
     def updateSolnDataSet(self, currentTime, solnData=None):
         self.solnData = solnData
