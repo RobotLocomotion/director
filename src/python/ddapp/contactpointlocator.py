@@ -50,7 +50,7 @@ class ContactPointLocator(object):
 
     def loadCellsFromFile(self, filename=None):
         if filename is None:
-            filename = "test"
+            filename = "test2"
 
         drcBase = os.getenv('DRC_BASE')
         fullFilename = drcBase + "/software/ddapp/src/python/ddapp/data/" + filename + ".out"
@@ -131,7 +131,7 @@ class ContactPointLocator(object):
 
     def showPolyData(self):
         for linkName, data in self.locatorData.iteritems():
-            vis.showPolyData(data['polyData'], linkName)
+            vis.showPolyData(data['polyData'], linkName, color=[0,1,0])
 
 
     def removePolyData(self):

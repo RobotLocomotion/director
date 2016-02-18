@@ -113,7 +113,7 @@ class ContactFilter(object):
         self.options['thresholds']['removeContactPointForce'] = 5.0 # threshold on force magnitude to eliminate a force that gets too small
 
         self.options['motionModel'] = {}
-        self.options['motionModel']['var'] = 0.05
+        self.options['motionModel']['var'] = 0.01
 
         self.options['measurementModel'] = {}
         self.options['measurementModel']['var'] = 0.05 # this is totally made up at the moment
@@ -169,7 +169,7 @@ class ContactFilter(object):
 
     def initializeContactPointLocator(self):
         self.contactPointLocator = contactpointlocator.ContactPointLocator(self.robotStateModel)
-        self.contactPointLocator.loadCellsFromFile(filename="capturedCells")
+        self.contactPointLocator.loadCellsFromFile(filename="test2")
 
 
     def addTestParticleSetToParticleSetList(self):
@@ -623,7 +623,7 @@ class ContactFilter(object):
                 if squaredError < self.options['thresholds']['removeContactPointSquaredError']:
                     if timeoutSatisfied:
                         if verbose:
-                            print "force is below threshold, eliminating containing particle set"
+                            print "removing particle didn't have adverse affect on estimation, REMOVING particle set"
                         particleSetToRemove = particle.containingParticleSet
 
 
@@ -642,12 +642,16 @@ class ContactFilter(object):
                     # only allow one particle set to be removed in a single pass
                     return
 
-    def applyMotionModelSingleParticleSet(self, particleSet):
+    def applyMotionModelSingleParticleSet(self, particleSet, useNewMotionModel=True):
         for particle in particleSet.particleList:
             cfp = particle.cfp
-            motionData = self.motionModelData[cfp]
-            cfpNextIdx = motionData['randomVar'].rvs()
-            cfpNext = motionData['cfpList'][cfpNextIdx]
+            if useNewMotionModel:
+                cfpNext = self.motionModelSingleCFP(cfp, visualize=False)
+            else:
+                motionData = self.motionModelData[cfp]
+                cfpNextIdx = motionData['randomVar'].rvs()
+                cfpNext = motionData['cfpList'][cfpNextIdx]
+
             particle.cfp = cfpNext
 
     def applyMotionModel(self):
@@ -964,7 +968,7 @@ class ContactFilter(object):
         residual = np.zeros(self.drakeModel.numJoints)
         self.computeLikelihoodFull(residual, verbose=True)
 
-    def testMeasurementUpdate(self):
+    def testMeasurementUpdate(self, verbose=False):
 
         if self.residual is None:
             print "didn't find residual, using all zeros"
@@ -977,10 +981,11 @@ class ContactFilter(object):
 
         self.testParticleSet.updateMostLikelyParticle(self.currentTime)
         particle = self.testParticleSet.mostLikelyParticle
+        self.testParticleSetDraw()
 
-        print "single measurement update took " + str(elapsed) + " seconds"
-        particle.printObject()
-
+        if verbose:
+            print "single measurement update took " + str(elapsed) + " seconds"
+            particle.printObject()
 
 
     # these are all test methods
@@ -1047,9 +1052,11 @@ class ContactFilter(object):
 
     def testImportanceResampling(self):
         self.importanceResamplingSingleParticleSet(self.testParticleSet, numParticles=None)
+        self.testParticleSetDraw()
 
     def testMotionModel(self):
         self.applyMotionModelSingleParticleSet(self.testParticleSet)
+        self.testParticleSetDraw()
 
 
     def testPlotCFPData(self, cfpData, name="cfp data", verbose=True):
@@ -1270,7 +1277,9 @@ class ContactFilter(object):
     def testNewMotionModel(self):
         self.testCFP = self.motionModelSingleCFP(self.testCFP, visualize=True)
 
-
+    def testNewMotionModelFull(self):
+        self.applyMotionModelSingleParticleSet(self.testParticleSet)
+        self.testParticleSetDraw()
 
 class PythonDrakeModel(object):
 
