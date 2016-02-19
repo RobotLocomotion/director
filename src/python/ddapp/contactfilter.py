@@ -691,9 +691,10 @@ class ContactFilter(object):
 
 
     # takes avg of particles below some threshold
-    def updateSingleParticleSetMostLikelyData(self, particleSet):
+    def updateSingleParticleSetMostLikelyData(self, particleSet, verbose=False):
         smallestSquaredErrorParticle = None
         particlesBelowThreshold = []
+
 
         for particle in particleSet.particleList:
             if (smallestSquaredErrorParticle is None or
@@ -719,8 +720,13 @@ class ContactFilter(object):
             externalParticleList = self.getExternalMostLikelyParticles(particleSet)
             self.computeSingleLikelihoodForParticle(self.residual, mostLikelyParticle, externalParticleList)
             particleSet.setMostLikelyParticle(self.currentTime, mostLikelyParticle)
+
+            if verbose:
+                print "doing average"
         else:
             particleSet.setMostLikelyParticle(self.currentTime, smallestSquaredErrorParticle)
+            if verbose:
+                print "doing smallest squared error"
 
 
     def computeSingleLikelihoodForParticle(self, residual, particle, externalParticleList):
@@ -728,8 +734,8 @@ class ContactFilter(object):
         particleList = [particle]
         particleList.extend(externalParticleList)
         cfpList = []
-        for particle in particleList:
-            cfpList.append(particle.cfp)
+        for p in particleList:
+            cfpList.append(p.cfp)
 
         solnData = self.computeSingleLikelihood(residual, cfpList)
         solnData['force'] = solnData['cfpData'][0]['force']
@@ -738,8 +744,8 @@ class ContactFilter(object):
         for idx, d in enumerate(solnData['cfpData']):
             d['particle'] = particleList[idx]
 
+        # this isn't working correctly
         particle.solnData = solnData
-
 
     def getExternalMostLikelyCFP(self, particleSet):
         otherParticleSets = copy.copy(self.particleSetList)
@@ -790,6 +796,8 @@ class ContactFilter(object):
 
         for particleSet in self.particleSetList:
             particle = particleSet.mostLikelyParticle
+            if particle is None:
+                continue
             if mostLikelySolnData is None:
                 mostLikelySolnData = particle.solnData
 
@@ -944,16 +952,28 @@ class ContactFilter(object):
             # d.addLine(rayEnd, forceLocationWorldFrame, radius = 0.005, color=color)
 
         if drawHistoricalMostLikely and (particleSet.historicalMostLikely['particle'] is not None):
-            cfp = particleSet.historicalMostLikely['particle'].cfp
+            particle = particleSet.historicalMostLikely['particle']
+            cfp = particle.cfp
             color = historicalMostLikelyColor
             rayLength = 0.3
-            self.addPlungerToDebugData(d, cfp.linkName, cfp.contactLocation, cfp.contactNormal, rayLength, color)
+            forceDirection = cfp.contactNormal
+            if particle.solnData is not None:
+                forceDirection = particle.solnData['force']
+                forceDirection = forceDirection/np.linalg.norm(forceDirection)
+            self.addPlungerToDebugData(d, cfp.linkName, cfp.contactLocation, forceDirection, rayLength, color)
 
         if drawMostLikely and (particleSet.mostLikelyParticle is not None):
-            cfp = particleSet.mostLikelyParticle.cfp
+            particle = particleSet.mostLikelyParticle
+            cfp = particle.cfp
             color = mostLikelyColor
             rayLength = 0.4
-            self.addPlungerToDebugData(d, cfp.linkName, cfp.contactLocation, cfp.contactNormal, rayLength, color)
+
+            forceDirection = cfp.contactNormal
+            if particle.solnData is not None:
+                forceDirection = particle.solnData['force']
+                forceDirection = forceDirection/np.linalg.norm(forceDirection)
+
+            self.addPlungerToDebugData(d, cfp.linkName, cfp.contactLocation, forceDirection, rayLength, color)
 
         vis.updatePolyData(d.getPolyData(), name, colorByName='RGB255')
 
