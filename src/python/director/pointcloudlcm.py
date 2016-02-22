@@ -145,4 +145,7 @@ def startButton():
     init(view)
     _pointcloudSource.start()
 
-app.addToolbarMacro('start live pointcloud', startButton)
+try:
+    app.addToolbarMacro('start live pointcloud', startButton)
+except AttributeError:
+    pass
