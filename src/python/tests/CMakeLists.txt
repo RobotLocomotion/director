@@ -23,6 +23,7 @@ set(python_tests_robot
   testCameraView.py
   testContinuousWalking.py
   testDrakeVisualizer.py
+  testDrawRobotLog.py
   testEndEffectorIk.py
   testImageView.py
   testLoadUrdf.py
