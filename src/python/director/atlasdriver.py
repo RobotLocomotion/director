@@ -18,7 +18,7 @@ import time
 
 import drc as lcmdrc
 import atlas
-from mav.indexed_measurement_t import indexed_measurement_t
+from pronto.indexed_measurement_t import indexed_measurement_t
 
 
 class SystemStatusListener(object):
