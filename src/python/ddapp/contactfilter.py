@@ -115,7 +115,7 @@ class ContactFilter(object):
 
 
         self.options['motionModel'] = {}
-        self.options['motionModel']['var'] = 0.02
+        self.options['motionModel']['var'] = 0.05
 
         self.options['measurementModel'] = {}
         self.options['measurementModel']['var'] = 0.05 # this is totally made up at the moment
@@ -453,7 +453,7 @@ class ContactFilter(object):
         self.drakeModel.model.doKinematics(q, 0*q, False, False)
         # be smart about it, see if we have already computed the QP for a particle with the same cfp!!!
 
-        alreadySolved = {} # should be a dict with ContactFilterPoint as key, ContactFilterParticle as value
+        alreadySolved = {} # should be a dict with ContactFilterPoint as key, solnData as key
         externalCFPList = []
 
         for particle in externalParticles:
@@ -466,7 +466,7 @@ class ContactFilter(object):
 
                 # this deepcopy is what's killing us
                 # solnDataCopy = copy.deepcopy(alreadySolved[particle.cfp].solnData)
-                particle.solnData = alreadySolved[particle.cfp].solnData
+                particle.solnData = alreadySolved[particle.cfp]
             else:
                 cfpList = [particle.cfp]
                 cfpList.extend(externalCFPList)
@@ -477,15 +477,12 @@ class ContactFilter(object):
                 solnData = self.computeSingleLikelihood(residual, cfpList)
                 solnData['force'] = solnData['cfpData'][0]['force']
 
-                alreadySolved[particle.cfp] = particle
+                # this just makes sure we record the particle in addition to the cfp in the soln data
+                for idx, d in enumerate(solnData['cfpData']):
+                    d['particle'] = particleList[idx]
 
-
-
-            # this just makes sure we record the particle in addition to the cfp in the soln data
-            for idx, d in enumerate(solnData['cfpData']):
-                d['particle'] = particleList[idx]
-
-            particle.solnData = solnData
+                particle.solnData = solnData
+                alreadySolved[particle.cfp] = solnData
 
         # note this doesn't update the most likely particle
         # only do that after doing importance resampling
@@ -635,6 +632,9 @@ class ContactFilter(object):
                             self.particleSetList.remove(particleSetToRemove)
                             self.eventTimes['lastContactRemoved'] = self.currentTime
                             # this return statement only allows you to remove a single particle at a time
+                        else:
+                            if verbose:
+                                print "didn't find particle set I am trying to remove in current particle set list"
                     else:
                         if verbose:
                             print "below timeout threshold when trying to REMOVE a new particle set, returning"
@@ -674,7 +674,16 @@ class ContactFilter(object):
             pk[idx] = particle.solnData['likelihood']
 
         # normalize the probabilities
-        pk = pk/np.sum(pk)
+        # having some numerical issues here, I think it is because we essentially dividing by zero or something
+        # put in a hack that if sumProb < tol, then we just draw from all the particles equally . . .
+        sumProb = np.sum(pk)
+
+        tol = 1e-6
+        if sumProb < tol:
+            print "sum of probabilities really small, falling back to drawing randomly"
+            pk = 1.0/numExistingParticles * np.ones(numExistingParticles)
+        else:
+            pk = pk/np.sum(pk)
         rv = scipy.stats.rv_discrete(values=(xk,pk)) # the random variable with importance weights
 
         for i in xrange(0,numParticles):
@@ -716,7 +725,8 @@ class ContactFilter(object):
             particleLocationAvg = np.mean(particleLocationsInWorld, axis=1)
 
             closestPointData = self.contactPointLocator.findClosestPoint(particleLocationAvg)
-            mostLikelyParticle = self.createContactFilterParticleFromClosestPointData(closestPointData)
+            mostLikelyParticle = self.createContactFilterParticleFromClosestPointData(closestPointData,
+                                                                                      containingParticleSet = particleSet)
             externalParticleList = self.getExternalMostLikelyParticles(particleSet)
             self.computeSingleLikelihoodForParticle(self.residual, mostLikelyParticle, externalParticleList)
             particleSet.setMostLikelyParticle(self.currentTime, mostLikelyParticle)
@@ -1367,9 +1377,12 @@ class ContactFilter(object):
 
         return newCFP
 
-    def createContactFilterParticleFromClosestPointData(self, closestPointData):
+    def createContactFilterParticleFromClosestPointData(self, closestPointData, containingParticleSet=None):
+        if containingParticleSet is None:
+            raise ValueError('must specify a containing particle set')
         cfp = self.createContactFilterPointFromClosestPointData(closestPointData)
         particle = ContactFilterParticle(cfp=cfp)
+        particle.containingParticleSet = containingParticleSet
         return particle
 
 
