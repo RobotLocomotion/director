@@ -7,7 +7,7 @@ import PythonQt
 import matplotlib.pyplot as plt
 import Queue
 import collections
-from contactfilterutils import DequePeak
+
 
 import os
 import os.path
@@ -40,10 +40,10 @@ MU = 0.4
 
 class ContactFilter(object):
 
-    def __init__(self, robotSystem):
+    def __init__(self, robotStateModel, robotStateJointController):
 
-        self.robotSystem = robotSystem
-        self.robotStateModel = robotSystem.robotStateModel
+        self.robotStateJointController = robotStateJointController
+        self.robotStateModel = robotStateModel
         self.initializeConstants()
         self.loadDrakeModelFromFilename()
         self.contactFilterPointDict = dict()
@@ -55,9 +55,11 @@ class ContactFilter(object):
         self.addSubscribers()
         self.initializePublishChannels()
         self.initializeGurobiModel()
+        self.initializeColorsForParticleSets()
         self.initializeTestParticleSet()
         self.initializeOptions()
         self.initializeContactPointLocator()
+
         # self.initializeCellLocator()
         self.setupMotionModelData()
         self.setCurrentUtime(0)
@@ -69,6 +71,7 @@ class ContactFilter(object):
         self.mostLikelySolnData = None
 
         self.initializeTestTimers()
+
 
         # self.addTestParticleSetToParticleSetList()
 
@@ -138,6 +141,10 @@ class ContactFilter(object):
         self.options['noise']['addNoise'] = False
         self.options['noise']['stddev'] = 0.1
 
+        self.options['vis'] = {}
+        self.options['vis']['draw'] = False
+        self.options['vis']['publish'] = True
+
 
     def initializeTestTimers(self):
         self.justAppliedMotionModel = False
@@ -172,6 +179,16 @@ class ContactFilter(object):
     def initializeContactPointLocator(self):
         self.contactPointLocator = contactpointlocator.ContactPointLocator(self.robotStateModel)
         self.contactPointLocator.loadCellsFromFile(filename="test2")
+
+    def initializeColorsForParticleSets(self):
+        colorList = []
+
+        colorList.append([0.5, 0, 0.5]) # purple
+        colorList.append([1,0.64,0]) # orange
+        colorList.append([1,1,0]) # yellow
+        colorList.append([0.13,0.7,0.66]) # blue-green
+
+        self.colorForParticleSets = itertools.cycle(colorList)
 
 
     def addTestParticleSetToParticleSetList(self):
@@ -322,7 +339,7 @@ class ContactFilter(object):
 
     def initializeTestParticleSet(self):
         # creates a particle set with all particles
-        self.testParticleSet = SingleContactParticleSet()
+        self.testParticleSet = SingleContactParticleSet(color=self.colorForParticleSets.next())
 
         for linkName, cfpList in self.contactFilterPointDict.iteritems():
             for cfp in cfpList:
@@ -341,7 +358,7 @@ class ContactFilter(object):
         if dontUseLinks:
             linkNames = linkNames.difference(dontUseLinks)
 
-        particleSet = SingleContactParticleSet()
+        particleSet = SingleContactParticleSet(color=self.colorForParticleSets.next())
 
         for link in linkNames:
             cfpList = self.contactFilterPointDict[link]
@@ -891,8 +908,7 @@ class ContactFilter(object):
 
 
     def getCurrentPose(self):
-        return self.robotSystem.robotStateJointController.q
-
+        return self.robotStateJointController.q
 
     def onResidualObserverState(self, msg):
         self.setCurrentUtime(msg.utime)
@@ -907,7 +923,8 @@ class ContactFilter(object):
             self.residual = self.residual + np.random.normal(scale=self.options['noise']['stddev'], size=residualSize)
 
         if self.running:
-            self.contactParticleFilterStep(self.residual, drawParticleSets=True, applyMotionModel=True)
+            self.contactParticleFilterStep(self.residual, drawParticleSets=self.options['vis']['draw'],
+                                           applyMotionModel=True)
 
 
     def contactParticleFilterStep(self, residual, drawParticleSets=True, applyMotionModel=True):
@@ -915,15 +932,22 @@ class ContactFilter(object):
         if applyMotionModel:
             self.applyMotionModel()
 
+        # if len(self.particleSetList) == 0:
+        #     self.manageParticleSets(verbose=True)
+
         self.computeMeasurementUpdate(self.residual, publish=False)
         self.applyImportanceResampling()
         self.updateAllParticleSetsMostLikelyParticle()
         self.updateMostLikelySolnData()
         self.publishMostLikelyEstimate()
+        if self.options['vis']['publish']:
+            self.publishVisualizationData()
         self.manageParticleSets(verbose=True) # there are timeouts inside of this
 
         if drawParticleSets:
             self.testParticleSetDrawAll(drawMostLikely=True, drawHistoricalMostLikely=True)
+
+
 
     def onExternalForceTorque(self, msg):
         self.linksWithExternalForce = [str(linkName) for linkName in msg.body_names]
@@ -1004,7 +1028,7 @@ class ContactFilter(object):
 
             self.addPlungerToDebugData(d, cfp.linkName, cfp.contactLocation, forceDirection, rayLength, color)
 
-        vis.updatePolyData(d.getPolyData(), name, colorByName='RGB255')
+        vis.showPolyData(d.getPolyData(), name, colorByName='RGB255')
 
     def addPlungerToDebugData(self, d, linkName, contactLocation, contactDirection, rayLength, color):
         q = self.getCurrentPose()
@@ -1030,12 +1054,12 @@ class ContactFilter(object):
         self.drawParticleSet(self.testParticleSet)
 
     def testParticleSetDrawAll(self, drawMostLikely=False, drawHistoricalMostLikely=True):
-        colorList = []
-
-        colorList.append([0.5, 0, 0.5]) # purple
-        colorList.append([1,0.64,0]) # orange
-        colorList.append([1,1,0]) # yellow
-        colorList.append([0.13,0.7,0.66]) # blue-green
+        # colorList = []
+        #
+        # colorList.append([0.5, 0, 0.5]) # purple
+        # colorList.append([1,0.64,0]) # orange
+        # colorList.append([1,1,0]) # yellow
+        # colorList.append([0.13,0.7,0.66]) # blue-green
 
         numParticleSets = len(self.particleSetList)
         maxNumParticleSets = 4
@@ -1044,7 +1068,7 @@ class ContactFilter(object):
             om.removeFromObjectModel(om.findObjectByName(name))
 
             if i < numParticleSets:
-                self.drawParticleSet(self.particleSetList[i], name=name, color=colorList[i],
+                self.drawParticleSet(self.particleSetList[i], name=name, color=self.particleSetList[i].color,
                                      drawMostLikely=drawMostLikely, drawHistoricalMostLikely=drawHistoricalMostLikely)
 
 
@@ -1061,7 +1085,8 @@ class ContactFilter(object):
             if verbose:
                 print "applying motion model"
             self.applyMotionModel()
-            self.testParticleSetDrawAll(drawMostLikely=False, drawHistoricalMostLikely=True)
+            if self.options['vis']['draw']:
+                self.testParticleSetDrawAll(drawMostLikely=False, drawHistoricalMostLikely=True)
             self.justAppliedMotionModel = True
         else:
             if verbose:
@@ -1074,7 +1099,12 @@ class ContactFilter(object):
             self.updateMostLikelySolnData()
             self.publishMostLikelyEstimate()
             self.manageParticleSets(verbose=True) # there are timeouts inside of this
-            self.testParticleSetDrawAll(drawMostLikely=True, drawHistoricalMostLikely=True)
+            if self.options['vis']['draw']:
+                self.testParticleSetDrawAll(drawMostLikely=True, drawHistoricalMostLikely=True)
+
+            if self.options['vis']['publish']:
+                self.publishVisualizationData()
+
             self.justAppliedMotionModel = False
 
     def printDebugData(self):
@@ -1438,6 +1468,100 @@ class ContactFilter(object):
         self.applyMotionModelSingleParticleSet(self.testParticleSet)
         self.testParticleSetDraw()
 
+    @staticmethod
+    def encodeParticle(utime, particle):
+        if type(particle) is not ContactFilterParticle:
+            print "particle is of type", type(particle)
+        assert type(particle) is ContactFilterParticle
+
+        msg = lcmdrc.CPF_particle_t()
+        msg.utime = utime
+        msg.link_name = particle.cfp.linkName
+        msg.contact_location = particle.cfp.contactLocation.tolist()
+        msg.contact_normal = particle.cfp.contactNormal.tolist()
+
+        if particle.solnData is not None:
+            msg.contact_force = particle.solnData['force'].tolist()
+        else:
+            msg.contact_force = particle.cfp.contactNormal.tolist()
+
+        return msg
+
+    @staticmethod
+    def encodeParticleSet(utime, particleSet):
+        assert type(particleSet) is SingleContactParticleSet
+
+        msg = lcmdrc.CPF_particle_set_t()
+        msg.utime = utime
+
+        msg.num_particles = particleSet.getNumberOfParticles()
+        msg.particle_list = msg.num_particles *[None]
+
+        for idx, particle in enumerate(particleSet.particleList):
+            msg.particle_list[idx] = ContactFilter.encodeParticle(utime, particle)
+
+
+        msg.most_likely_particle = ContactFilter.encodeParticle(utime, particleSet.mostLikelyParticle)
+        msg.historical_most_likely_particle = ContactFilter.encodeParticle(utime, particleSet.historicalMostLikely['particle'])
+        msg.color = particleSet.color
+        return msg
+
+
+    @staticmethod
+    def encodeCPFData(utime, particleSetList):
+
+        msg = lcmdrc.CPF_data_t()
+        msg.utime = utime
+
+        msg.num_particle_sets = len(particleSetList)
+        msg.particle_sets = msg.num_particle_sets * [None]
+
+        for idx, particleSet in enumerate(particleSetList):
+            msg.particle_sets[idx] = ContactFilter.encodeParticleSet(utime, particleSet)
+
+
+        return msg
+
+
+    @staticmethod
+    def decodeCPFData(msg):
+        particleSetList = []
+        for particleSetMsg in msg.particle_sets:
+            particleSetList.append(ContactFilter.decodeParticleSet(particleSetMsg))
+
+        return particleSetList
+
+    @staticmethod
+    def decodeParticleSet(msg):
+        particleSet = SingleContactParticleSet()
+        particleSet.color = msg.color
+        particleSet.mostLikelyParticle = ContactFilter.decodeParticle(msg.most_likely_particle)
+        particleSet.historicalMostLikely = {'particle': ContactFilter.decodeParticle(msg.historical_most_likely_particle)}
+
+        for particleMsg in msg.particle_list:
+            particleSet.addParticle(ContactFilter.decodeParticle(particleMsg))
+
+        return particleSet
+
+
+    @staticmethod
+    def decodeParticle(msg):
+        cfp = ContactFilterPoint(linkName=msg.link_name, contactLocation=msg.contact_location, contactNormal=msg.contact_normal, bodyId=1,
+                                 forceMomentTransform=1, rotatedFrictionCone=1, J_alpha=1)
+        particle = ContactFilterParticle(cfp=cfp)
+        particle.solnData = {'force':np.array(msg.contact_force)}
+        return particle
+
+    def publishVisualizationData(self):
+        msg = ContactFilter.encodeCPFData(self.currentUtime, self.particleSetList)
+        lcmUtils.publish("CONTACT_PARTICLE_FILTER_DATA", msg)
+
+    def testDecodeCFPData(self):
+        msg = ContactFilter.encodeCPFData(self.currentUtime, self.particleSetList)
+        return ContactFilter.decodeCPFData(msg)
+
+
+
 class PythonDrakeModel(object):
 
     def __init__(self):
@@ -1513,8 +1637,8 @@ class ContactFilterPoint(object):
             raise ValueError("must specify all the optional input arguments")
 
         self.linkName = linkName
-        self.contactLocation = contactLocation
-        self.contactNormal = contactNormal
+        self.contactLocation = np.array(contactLocation)
+        self.contactNormal = np.array(contactNormal)
         self.bodyId = bodyId
         self.forceMomentTransform = forceMomentTransform
         self.rotatedFrictionCone = rotatedFrictionCone
@@ -1572,13 +1696,15 @@ class ContactFilterParticle(object):
 
 class SingleContactParticleSet(object):
 
-    def __init__(self, solnDataQueueTimeout=0.5):
+    def __init__(self, solnDataQueueTimeout=0.5, color=[0,0,1]):
         self.particleList = []
         self.mostLikelyParticle = None
         self.historicalMostLikely = {'solnData': None, 'particle': None}
         self.solnDataTimeout = solnDataQueueTimeout
         self.solnDataSet = []
         self.squaredErrorWithoutParticle = {}
+        self.color = color
+
 
     def addParticle(self, particle):
         self.particleList.append(particle)
@@ -1662,7 +1788,7 @@ class SingleContactParticleSet(object):
                 self.historicalMostLikely['particle'] = solnData['cfpData'][0]['particle']
                 bestSquaredError = squaredError
 
-    def getNumberofParticles(self):
+    def getNumberOfParticles(self):
         return len(self.particleList)
 
 
