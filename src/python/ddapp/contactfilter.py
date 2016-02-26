@@ -907,13 +907,32 @@ class ContactFilter(object):
             self.residual = self.residual + np.random.normal(scale=self.options['noise']['stddev'], size=residualSize)
 
         if self.running:
-            self.computeMeasurementUpdate(residual)
+            self.contactParticleFilterStep(self.residual, drawParticleSets=True, applyMotionModel=True)
 
+
+    def contactParticleFilterStep(self, residual, drawParticleSets=True, applyMotionModel=True):
+
+        if applyMotionModel:
+            self.applyMotionModel()
+
+        self.computeMeasurementUpdate(self.residual, publish=False)
+        self.applyImportanceResampling()
+        self.updateAllParticleSetsMostLikelyParticle()
+        self.updateMostLikelySolnData()
+        self.publishMostLikelyEstimate()
+        self.manageParticleSets(verbose=True) # there are timeouts inside of this
+
+        if drawParticleSets:
+            self.testParticleSetDrawAll(drawMostLikely=True, drawHistoricalMostLikely=True)
 
     def onExternalForceTorque(self, msg):
         self.linksWithExternalForce = [str(linkName) for linkName in msg.body_names]
         self.computeAndPublishResidual(msg)
 
+
+    def resetParticleFilter(self):
+        self.stop()
+        self.particleSetList = []
 
     def drawParticleSet(self, particleSet, name="particle set", color=None, drawMostLikely=True,
                         drawHistoricalMostLikely=True):
