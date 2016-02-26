@@ -22,6 +22,7 @@ set(python_files
   ddapp/contactfilter.py
   ddapp/contactfiltergurobi.py
   ddapp/contactfilterutils.py
+  ddapp/contactfiltervisualizer.py
   ddapp/contactpointlocator.py
   ddapp/gurobiutils.py
   ddapp/continuouswalkingdemo.py
