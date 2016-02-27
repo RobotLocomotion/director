@@ -221,6 +221,8 @@ class ExternalForce(object):
         tol = 1e-3
         numExternalForces = 0
         msg = lcmdrake.lcmt_external_force_torque()
+
+        msgMultipleContactLocations = lcmdrc.multiple_contact_location_t()
         
 
         for key, val in self.externalForces.iteritems():
@@ -238,8 +240,19 @@ class ExternalForce(object):
             msg.fy.append(val['wrench'][4])
             msg.fz.append(val['wrench'][5])
 
+            linkName = val['linkName']
+            linkFrame = self.robotStateModel.getLinkFrame(linkName)
+            contactLocationInWorld = linkFrame.TransformPoint(val['forceLocation'])
+            msgContactLocation = lcmdrc.contact_location_t()
+            msgContactLocation.link_name = linkName
+            msgContactLocation.contact_location_in_world = contactLocationInWorld
+            msgMultipleContactLocations.contacts.append(msgContactLocation)
+
         msg.num_external_forces = numExternalForces;
         lcmUtils.publish(self.publishChannel, msg)
+
+        msgMultipleContactLocations.num_contacts = numExternalForces
+        lcmUtils.publish("EXTERNAL_CONTACT_LOCATION", msgMultipleContactLocations)
 
 
     def startPublishing(self):

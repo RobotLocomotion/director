@@ -89,6 +89,8 @@ class ContactFilter(object):
         lcmUtils.addSubscriber('EXTERNAL_FORCE_TORQUE', lcmdrake.lcmt_external_force_torque,
                                self.onExternalForceTorque)
 
+        lcmUtils.addSubscriber("EXTERNAL_CONTACT_LOCATION", lcmdrc.multiple_contact_location_t, self.onExternalContactLocation)
+
     def initializePublishChannels(self):
 
         # maybe call it CONTACT_FILTER_POINT_ESTIMATE_PYTHON so that we can compare the results . . .
@@ -875,13 +877,29 @@ class ContactFilter(object):
 
 
     def publishMostLikelyEstimate(self):
-        if self.mostLikelySolnData is None:
-            return
+        # if self.mostLikelySolnData is None:
+        #     return
         self.publishEstimate(self.mostLikelySolnData)
+
+    def getCFPLocationInWorld(self, cfp):
+        linkFrame = self.robotStateModel.getLinkFrame(cfp.linkName)
+        contactLocationInWorld = linkFrame.TransformPoint(cfp.contactLocation)
+
+        return contactLocationInWorld
 
 
     # currently only support single contact
     def publishEstimate(self, solnData):
+
+
+        if solnData is None:
+            msg = lcmdrc.contact_filter_estimate_t()
+            msg.utime = self.currentUtime
+            msg.num_contact_points = 0
+            msg.logLikelihood = self.squaredErrorNoContacts(verbose=False)
+            lcmUtils.publish(self.contactEstimatePublishChannel, msg)
+            return
+
         msg = lcmdrc.contact_filter_estimate_t()
         msg.utime = self.currentUtime
         msg.num_contact_points = solnData['numContactPoints']
@@ -892,10 +910,27 @@ class ContactFilter(object):
         msg.implied_residual = solnData['impliedResidual']
 
         msg.single_contact_estimate = [None]*msg.num_contact_points
+
+        msgEstimatedContactLocations = lcmdrc.multiple_contact_location_t()
+        msgEstimatedContactLocations.num_contacts = msg.num_contact_points
+
         for i in xrange(0, msg.num_contact_points):
             msg.single_contact_estimate[i] = self.msgFromSolnCFPData(solnData['cfpData'][i])
 
+            cfp = solnData['cfpData'][i]['ContactFilterPoint']
+            contactLocationInWorld = self.getCFPLocationInWorld(cfp)
+            msgContactLocation = lcmdrc.contact_location_t()
+            msgContactLocation.link_name = cfp.linkName
+            msgContactLocation.contact_location_in_world = contactLocationInWorld
+            msgEstimatedContactLocations.contacts.append(msgContactLocation)
+
         lcmUtils.publish(self.contactEstimatePublishChannel, msg)
+
+        msgAllContactLocations = lcmdrc.actual_and_estimated_contact_locations_t()
+        msgAllContactLocations.utime = self.currentUtime
+        msgAllContactLocations.actual_contact_location = self.externalContactLocationMsg
+        msgAllContactLocations.estimated_contact_location = msgEstimatedContactLocations
+        lcmUtils.publish("ACTUAL_AND_ESTIMATED_CONTACT_LOCATIONS", msgAllContactLocations)
 
     def msgFromSolnCFPData(self, d):
         msg = lcmdrc.single_contact_filter_estimate_t()
@@ -953,6 +988,8 @@ class ContactFilter(object):
         self.linksWithExternalForce = [str(linkName) for linkName in msg.body_names]
         self.computeAndPublishResidual(msg)
 
+    def onExternalContactLocation(self, msg):
+        self.externalContactLocationMsg = msg
 
     def resetParticleFilter(self):
         self.stop()

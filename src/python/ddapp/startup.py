@@ -28,6 +28,7 @@ from ddapp import drivingplanner
 from ddapp import egressplanner
 from ddapp import externalforce
 from ddapp import contactfilter
+from ddapp import contactfiltervisualizer
 from ddapp import contactfiltergurobi as CFG
 from ddapp import contactpointlocator
 from ddapp import polarisplatformplanner
@@ -451,8 +452,9 @@ if usePlanning:
     drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
 
     externalForce = externalforce.ExternalForce(robotSystem)
-    contactFilter = contactfilter.ContactFilter(robotSystem)
+    contactFilter = contactfilter.ContactFilter(robotStateModel, robotSystem.robotStateJointController)
     contactPointLocator = contactpointlocator.ContactPointLocator(robotStateModel)
+    contactFilterVisualizer = contactfiltervisualizer.ContactFilterVisualizer(robotSystem, robotStateModel)
     linkSelection = linkselection.LinkWidget(view, robotStateModel, externalForce)
 
     walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
