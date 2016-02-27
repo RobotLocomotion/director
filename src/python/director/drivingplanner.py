@@ -21,7 +21,7 @@ import director.tasks.robottasks as rt
 from director.ikparameters import IkParameters
 from director.timercallback import TimerCallback
 
-
+import bot_core
 import os
 import functools
 import numpy as np
@@ -848,7 +848,7 @@ class DrivingPlanner(object):
         return slider
 
     def captureRobotPoseFromStreaming(self):
-        helper = lcmUtils.MessageResponseHelper(self.commandStreamChannel, lcmdrc.robot_state_t)
+        helper = lcmUtils.MessageResponseHelper(self.commandStreamChannel, bot_core.robot_state_t)
         msg = helper.waitForResponse(timeout=1000, keepAlive=False)
 
         if msg is None:
