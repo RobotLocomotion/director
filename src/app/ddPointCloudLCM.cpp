@@ -141,7 +141,7 @@ void unpackColor(float f, unsigned char color[]) {
 }
 
 
-vtkSmartPointer<vtkPolyData> PolyDataFromPointCloudMessage(drc::pointcloud_t msg)
+vtkSmartPointer<vtkPolyData> PolyDataFromPointCloudMessage(bot_core::pointcloud_t msg)
 {
 
   // Copy over XYZ data
@@ -206,7 +206,7 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloudMessage(drc::pointcloud_t msg
 void ddPointCloudLCM::onPointCloud2Frame(const QByteArray& data, const QString& channel)
 {
   
-  drc::pointcloud2_t message;
+  bot_core::pointcloud2_t message;
   message.decode(data.data(), 0, data.size());
 
   //convert to pcl object:
@@ -224,7 +224,7 @@ void ddPointCloudLCM::onPointCloud2Frame(const QByteArray& data, const QString& 
 void ddPointCloudLCM::onPointCloudFrame(const QByteArray& data, const QString& channel)
 {
   
-  drc::pointcloud_t message;
+  bot_core::pointcloud_t message;
   message.decode(data.data(), 0, data.size());
 
   vtkSmartPointer<vtkPolyData> polyData = PolyDataFromPointCloudMessage(message);

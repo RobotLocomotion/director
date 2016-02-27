@@ -1,10 +1,9 @@
 from director import transformUtils
-import drc as lcmdrc
-
+import bot_core
 
 def frameFromPositionMessage(positionMessage):
     '''
-    Given an lcmdrc.position_t message, returns a vtkTransform
+    Given an bot_core.position_t message, returns a vtkTransform
     '''
     trans = positionMessage.translation
     quat = positionMessage.rotation
@@ -17,18 +16,18 @@ def frameFromPositionMessage(positionMessage):
 
 def positionMessageFromFrame(transform):
     '''
-    Given a vtkTransform, returns an lcmdrc.position_t message
+    Given a vtkTransform, returns an bot_core.position_t message
     '''
 
     pos, wxyz = transformUtils.poseFromTransform(transform)
 
-    trans = lcmdrc.vector_3d_t()
+    trans = bot_core.vector_3d_t()
     trans.x, trans.y, trans.z = pos
 
-    quat = lcmdrc.quaternion_t()
+    quat = bot_core.quaternion_t()
     quat.w, quat.x, quat.y, quat.z = wxyz
 
-    pose = lcmdrc.position_3d_t()
+    pose = bot_core.position_3d_t()
     pose.translation = trans
     pose.rotation = quat
     return pose

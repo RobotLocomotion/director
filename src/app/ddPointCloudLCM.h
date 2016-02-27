@@ -17,8 +17,8 @@
 #include <vtkFloatArray.h>
 
 #include <lcm/lcm-cpp.hpp>
-#include <lcmtypes/drc/pointcloud2_t.hpp>
-#include <lcmtypes/drc/pointcloud_t.hpp>
+#include <lcmtypes/bot_core/pointcloud2_t.hpp>
+#include <lcmtypes/bot_core/pointcloud_t.hpp>
 
 class DD_APP_EXPORT ddPointCloudLCM : public QObject
 {
