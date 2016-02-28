@@ -16,6 +16,7 @@ from director import transformUtils
 
 
 import drc as lcmdrc
+import bot_core
 import math
 import numpy as np
 import json
@@ -279,7 +280,7 @@ def onModelPublisherString(msg):
 def startModelPublisherListener(modelsToReload):
     global _modelsToReload
     _modelsToReload = modelsToReload
-    lcmUtils.addSubscriber('ROBOT_MODEL', lcmdrc.robot_urdf_t, onModelPublisherString)
+    lcmUtils.addSubscriber('ROBOT_MODEL', bot_core.robot_urdf_t, onModelPublisherString)
 
 
 

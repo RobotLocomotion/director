@@ -6,6 +6,7 @@ import json
 import time
 import os
 import drc as lcmdrc
+import bot_core
 import atlas
 import functools
 
@@ -49,7 +50,7 @@ def captureRobotState():
     Blocks until a new LCM message is received on the EST_ROBOT_STATE channel,
     returns the new message.
     '''
-    return lcmWrapper.captureMessage('EST_ROBOT_STATE', lcmdrc.robot_state_t)
+    return lcmWrapper.captureMessage('EST_ROBOT_STATE', bot_core.robot_state_t)
 
 
 def capturePostureGoal():
