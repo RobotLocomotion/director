@@ -10,6 +10,7 @@ from director import cameraview
 from director import lcmUtils
 from PythonQt import QtCore, QtGui
 import drc as lcmdrc
+import bot_core as lcmbotcore
 
 
 # create the application
@@ -58,7 +59,7 @@ w.show()
 logCommander = robotviewbehaviors.KeyPressLogCommander(view)
 
 # reset camera position when first robot state message is received
-lcmUtils.captureMessageCallback('EST_ROBOT_STATE', lcmdrc.robot_state_t, lambda x: view.resetCamera())
+lcmUtils.captureMessageCallback('EST_ROBOT_STATE', lcmbotcore.robot_state_t, lambda x: view.resetCamera())
 
 # start the application
 app.start()
