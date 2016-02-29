@@ -21,7 +21,7 @@ import numpy as np
 from director import drcargs
 import drc as lcmdrc
 from bot_core.pose_t import pose_t
-from drc.robot_state_t import robot_state_t
+from bot_core.robot_state_t import robot_state_t
 import functools
 import json
 
