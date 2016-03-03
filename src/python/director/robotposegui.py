@@ -6,7 +6,7 @@ import json
 import time
 import os
 import drc as lcmdrc
-import bot_core
+import bot_core as lcmbotcore
 import atlas
 import functools
 
@@ -50,7 +50,7 @@ def captureRobotState():
     Blocks until a new LCM message is received on the EST_ROBOT_STATE channel,
     returns the new message.
     '''
-    return lcmWrapper.captureMessage('EST_ROBOT_STATE', bot_core.robot_state_t)
+    return lcmWrapper.captureMessage('EST_ROBOT_STATE', lcmbotcore.robot_state_t)
 
 
 def capturePostureGoal():
@@ -178,7 +178,7 @@ def loadConfig(filename):
 def saveConfig(config, filename):
     '''
     Overwrites the file at filename with a json string generated from the given
-    config argument, a dict. 
+    config argument, a dict.
     '''
     with open(filename, 'w') as outfile:
         json.dump(config, outfile, indent=2, separators=(',', ': '), sort_keys=True)
@@ -299,7 +299,7 @@ def publishTrajGoal(name, channel=''):
 
 def publishSystemStatus(text):
 
-    msg = lcmdrc.system_status_t()
+    msg = lcmbotcore.system_status_t()
     msg.utime = getUtime()
     msg.system = 5
     msg.importance = 0
