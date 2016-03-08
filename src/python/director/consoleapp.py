@@ -107,7 +107,7 @@ class ConsoleApp(object):
         om.addToObjectModel(self.viewOptions, parentObj=om.findObjectByName('scene'))
 
         applogic.resetCamera(viewDirection=[-1,-1,-0.3], view=view)
-        viewBehaviors = viewbehaviors.ViewBehaviors(view)
+        self.viewBehaviors = viewbehaviors.ViewBehaviors(view)
         applogic._defaultRenderView = view
 
         applogic.addShortcut(view, 'Ctrl+Q', self.quit)

@@ -28,7 +28,7 @@ from director import segmentation
 
 # lcmtypes:
 import drc as lcmdrc
-from mav.indexed_measurement_t import indexed_measurement_t
+from pronto.indexed_measurement_t import indexed_measurement_t
 
 
 

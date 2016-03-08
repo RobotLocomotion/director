@@ -7,6 +7,7 @@ set(python_files
   director/affordancepanel.py
   director/affordanceurdf.py
   director/applogic.py
+  director/appsettings.py
   director/asynctaskqueue.py
   director/atlasdriver.py
   director/atlasdriverpanel.py
@@ -16,6 +17,7 @@ set(python_files
   director/callbacks.py
   director/camerabookmarks.py
   director/cameracontrol.py
+  director/cameracontrolpanel.py
   director/cameraview.py
   director/colorize.py
   director/consoleapp.py
@@ -53,7 +55,6 @@ set(python_files
   director/irisdriver.py
   director/jointcontrol.py
   director/jointpropagator.py
-  director/kinematicposeplanner.py
   director/korgnano.py
   director/lcmframe.py
   director/lcmloggerwidget.py
@@ -73,6 +74,7 @@ set(python_files
   director/objectmodel.py
   director/otdfmodel.py
   director/openscope.py
+  director/packagepath.py
   director/perception.py
   director/planplayback.py
   director/playbackpanel.py
@@ -87,6 +89,7 @@ set(python_files
   director/robotposegui.py
   director/robotsystem.py
   director/roboturdf.py
+  director/robotviewbehaviors.py
   director/screengrabberpanel.py
   director/segmentation.py
   director/segmentationpanel.py
@@ -117,6 +120,7 @@ set(python_files
   director/uuidutil.py
   director/valvedemo.py
   director/viewbehaviors.py
+  director/vieweventfilter.py
   director/visualization.py
   director/vtkAll.py
   director/vtkNumpy.py

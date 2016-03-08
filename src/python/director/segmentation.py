@@ -856,15 +856,15 @@ def getFootFramesFromReferenceFrame(referenceFrame, stanceWidth, stanceRotation,
 
 def poseFromFrame(frame):
 
-    trans = lcmdrc.vector_3d_t()
+    trans = lcmbotcore.vector_3d_t()
     trans.x, trans.y, trans.z = frame.GetPosition()
 
     wxyz = range(4)
     perception.drc.vtkMultisenseSource.GetBotQuaternion(frame, wxyz)
-    quat = lcmdrc.quaternion_t()
+    quat = lcmbotcore.quaternion_t()
     quat.w, quat.x, quat.y, quat.z = wxyz
 
-    pose = lcmdrc.position_3d_t()
+    pose = lcmbotcore.position_3d_t()
     pose.translation = trans
     pose.rotation = quat
     return pose

@@ -6,6 +6,7 @@ from director import robotstate
 from director import getDRCBaseDir
 from director import lcmUtils
 import drc as lcmdrc
+import bot_core
 import numpy as np
 
 
@@ -83,7 +84,7 @@ class JointController(object):
             for model in self.models:
                 model.model.setJointPositions(jointPositions, jointNames)
 
-        self.subscriber = lcmUtils.addSubscriber(channelName, lcmdrc.robot_state_t, onRobotStateMessage)
+        self.subscriber = lcmUtils.addSubscriber(channelName, bot_core.robot_state_t, onRobotStateMessage)
         self.subscriber.setSpeedLimit(60)
 
     def removeLCMUpdater(self):

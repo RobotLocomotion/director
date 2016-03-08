@@ -15,6 +15,14 @@ _mainWindow = None
 _defaultRenderView = None
 
 def getMainWindow():
+
+    global _mainWindow
+    if _mainWindow is None:
+        for widget in QtGui.QApplication.topLevelWidgets():
+            if isinstance(widget, PythonQt.QtGui.QMainWindow):
+                _mainWindow = widget
+                break
+
     return _mainWindow
 
 

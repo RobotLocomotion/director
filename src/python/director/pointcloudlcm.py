@@ -118,7 +118,7 @@ class PointCloudSource(TimerCallback):
             return
 
         sensorToLocalFused = vtk.vtkTransform()
-        self.queue.getTransform('VELODYNE', 'local', utime, sensorToLocalFused)
+        self.queue.getTransform('local', 'local', utime, sensorToLocalFused)
         p = filterUtils.transformPolyData(p,sensorToLocalFused)
         self.polyDataObj.setPolyData(p)
 
@@ -145,4 +145,7 @@ def startButton():
     init(view)
     _pointcloudSource.start()
 
-app.addToolbarMacro('start live pointcloud', startButton)
+try:
+    app.addToolbarMacro('start live pointcloud', startButton)
+except AttributeError:
+    pass

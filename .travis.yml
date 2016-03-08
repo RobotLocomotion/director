@@ -1,0 +1,42 @@
+os:
+  - linux
+  - osx
+
+language: generic
+
+virtualenv:
+  system_site_packages: true
+
+sudo: required
+
+dist: trusty
+
+notifications:
+  email: false
+
+branches:
+  only:
+    - master
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DISPLAY=:99.0 ; fi
+  - distro/travis/before_install.sh
+
+install: true
+
+script:
+  - make superbuild -j2
+  - cd build/src/director-build
+  - ctest -j 1 -L core --dashboard Experimental --track travis --output-on-failure
+
+after_failure:
+  - echo "after_failure pwd: $PWD"
+
+after_success:
+  - echo "after_success pwd: $PWD"
+#  - cd build/src/director-build
+#  - make docs-sphinx-generate
+#  - make docs-sphinx-build
+#  - distro/package/make_app_bundle.sh
+#  - tar -czf DirectorConsole.tar.gz distro/package/DirectorConsole.app
+#  - distro/travis/copy_files.sh DirectorConsole.tar.gz

@@ -393,24 +393,20 @@ class PlacerWidget(object):
         return vis.pickPoint(displayPoint, self.view, obj=self.points, pickType='cells', tolerance=0.01)
 
 
+class ObjectPicker(object):
 
-
-
-
-class AffordancePicker(object):
-
-    def __init__(self, view, manager, callback=None, numberOfObjects=1, drawLines=True, abortCallback=None, filterFunc=None, hoverColor=[1.0, 0.8, 0.8, 1.0]):
+    def __init__(self, view, callback=None, abortCallback=None, numberOfObjects=1, getObjectsFunction=None, hoverColor=[1.0, 0.8, 0.8, 1.0]):
 
         self.view = view
-        self.affordanceManager = manager
         self.tolerance = 0.01
         self.numberOfObjects = numberOfObjects
+        self.getObjectsFunction = getObjectsFunction
         self.callbackFunc = callback
         self.abortFunc = abortCallback
-        self.filterFunc = filterFunc
         self.hoverColor = hoverColor[0:3]
         self.hoverAlpha = hoverColor[3]
         self.pickedObj = None
+        self.storedProps = {}
         self.clear()
 
     def start(self):
@@ -452,11 +448,9 @@ class AffordancePicker(object):
         self.objects = [None for i in xrange(self.numberOfObjects)]
         self.hoverPos = None
         self.lastMovePos = [0, 0]
-        if self.pickedObj is not None:
-            self.pickedObj.setProperty('Color', self.storedProps['Color'])
-            self.pickedObj.setProperty('Alpha', self.storedProps['Alpha'])
+        self.unsetHoverProperties(self.pickedObj)
         self.pickedObj = None
-        self.storedProps = {'Color': [0,0,0], 'Alpha':1.0}
+
 
     def onMouseMove(self, displayPoint, modifiers=None):
         self.lastMovePos = displayPoint
@@ -477,32 +471,51 @@ class AffordancePicker(object):
         self.clear()
         self.stop()
 
+    def unsetHoverProperties(self, obj):
+        if obj is None:
+            return
 
-    def draw(self):
-        pass
-        # TODO
+        for propName, value in self.storedProps.iteritems():
+            if obj.hasProperty(propName):
+                obj.setProperty(propName, value)
+        self.storedProps = {}
+
+    def setHoverProperties(self, obj):
+        if obj is None:
+            return
+
+        for propName, value in [['Color', self.hoverColor],
+                                ['Color Mode', 'Solid Color'],
+                                ['Alpha', self.hoverAlpha]]:
+
+            if obj.hasProperty(propName):
+                self.storedProps[propName] = obj.getProperty(propName)
+                obj.setProperty(propName, value)
 
     def tick(self):
 
-        # get affordances
+        objs = self.getObjectsFunction() if self.getObjectsFunction else None
+
+        self.hoverPos, prop, _ = vis.pickPoint(self.lastMovePos, self.view, pickType='cells', tolerance=self.tolerance, obj=objs)
+        prevPickedObj = self.pickedObj
+        curPickedObj = vis.getObjectByProp(prop)
+
+        if curPickedObj is not prevPickedObj:
+            self.unsetHoverProperties(prevPickedObj)
+            self.setHoverProperties(curPickedObj)
+            self.pickedObj = curPickedObj
+
+
+class AffordancePicker(ObjectPicker):
+
+    def __init__(self, view, affordanceManager, filterFunc=None):
+        AffordancePicker.__init__(self, view, getObjectsFunction=self.getObjects)
+        self.affordanceManager = affordanceManager
+        self.filterFunc = filterFunc
+
+    def getObjects(self):
         affs = self.affordanceManager.getAffordances()
         affs = [a for a in affs if a.getProperty('Visible')]
         if self.filterFunc is not None:
             affs = [a for a in affs if self.filterFunc(a)]
-
-        # get picked affordance
-        self.hoverPos, prop, _ = vis.pickPoint(self.lastMovePos, self.view, pickType='cells', tolerance=self.tolerance, obj=affs)
-        prevPickedObj = self.pickedObj
-        curPickedObj = vis.getObjectByProp(prop)
-        if curPickedObj is not prevPickedObj:
-            if prevPickedObj is not None:
-                prevPickedObj.setProperty('Color', self.storedProps['Color'])
-                prevPickedObj.setProperty('Alpha', self.storedProps['Alpha'])
-            if curPickedObj is not None:
-                self.storedProps['Color'] = curPickedObj.getProperty('Color')
-                self.storedProps['Alpha'] = curPickedObj.getProperty('Alpha')
-                curPickedObj.setProperty('Color', self.hoverColor)
-                curPickedObj.setProperty('Alpha', self.hoverAlpha)
-            self.pickedObj = curPickedObj
-
-        self.draw()
+        return affs

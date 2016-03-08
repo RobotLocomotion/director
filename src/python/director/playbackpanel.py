@@ -418,7 +418,6 @@ def init(planPlayback, playbackRobotModel, playbackJointController, robotStateMo
     global panel
     panel = PlaybackPanel(planPlayback, playbackRobotModel, playbackJointController, robotStateModel, robotStateJointController, manipPlanner)
 
-    #app.getMainWindow().viewManager().layout().addWidget(panel.widget)
     dock = app.addWidgetToDock(panel.widget, dockArea=QtCore.Qt.BottomDockWidgetArea)
     dock.hide()
 

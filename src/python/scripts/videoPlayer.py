@@ -134,7 +134,7 @@ class VideoPlayer(object):
         self.ui.slider.clearFocus()
 
     def sendCommand(self, channel, **kwargs):
-        msg = lcmdrc.atlas_behavior_command_t()
+        msg = lcmdrc.behavior_command_t()
         msg.command = json.dumps(kwargs)
         lcmUtils.publish(channel, msg)
 

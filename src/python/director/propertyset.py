@@ -283,6 +283,9 @@ class PropertyPanelConnector(object):
         PropertyPanelHelper.addPropertiesToPanel(self.propertySet, self.propertiesPanel)
         self._blockSignals = False
 
+    def cleanup(self):
+        self.propertiesPanel.disconnect('propertyValueChanged(QtVariantProperty*)', self._onPanelPropertyChanged)
+
     def _onPropertyAdded(self, propertySet, propertyName):
         self._blockSignals = True
         self.propertiesPanel.clear()

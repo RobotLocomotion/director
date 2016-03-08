@@ -10,6 +10,7 @@ from director.timercallback import TimerCallback
 from director.fieldcontainer import FieldContainer
 from PythonQt import QtCore, QtGui, QtUiTools
 import drc as lcmdrc
+import bot_core as lcmbotcore
 import numpy as np
 import math
 import argparse
@@ -231,7 +232,7 @@ class AtlasCommandStream(object):
         return pose
 
     def waitForRobotState(self):
-        msg = lcmUtils.captureMessage('EST_ROBOT_STATE', lcmdrc.robot_state_t)
+        msg = lcmUtils.captureMessage('EST_ROBOT_STATE', lcmbotcore.robot_state_t)
         pose = robotstate.convertStateMessageToDrakePose(msg)
         pose[:6] = np.zeros(6)
         self.initialize(pose)
@@ -360,7 +361,7 @@ class CommittedRobotPlanListener(object):
 class PositionGoalListener(object):
 
     def __init__(self):
-        self.sub = lcmUtils.addSubscriber('JOINT_POSITION_GOAL', lcmdrc.robot_state_t, self.onJointPositionGoal)
+        self.sub = lcmUtils.addSubscriber('JOINT_POSITION_GOAL', lcmbotcore.robot_state_t, self.onJointPositionGoal)
         self.sub = lcmUtils.addSubscriber('SINGLE_JOINT_POSITION_GOAL', lcmdrc.joint_position_goal_t, self.onSingleJointPositionGoal)
         lcmUtils.addSubscriber('COMMITTED_PLAN_PAUSE', lcmdrc.plan_control_t, self.onPause)
         self.debug = False

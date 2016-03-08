@@ -1,3 +1,5 @@
+
+
 # -*- coding: utf-8 -*-
 # transformations.py
 
@@ -44,13 +46,13 @@ functions to decompose transformation matrices.
 :Organization:
   Laboratory for Fluorescence Dynamics, University of California, Irvine
 
-:Version: 2015.03.19
+:Version: 2015.07.18
 
 Requirements
 ------------
 * `CPython 2.7 or 3.4 <http://www.python.org>`_
 * `Numpy 1.9 <http://www.numpy.org>`_
-* `Transformations.c 2015.03.19 <http://www.lfd.uci.edu/~gohlke/>`_
+* `Transformations.c 2015.07.18 <http://www.lfd.uci.edu/~gohlke/>`_
   (recommended for speedup of some functions)
 
 Notes
@@ -199,7 +201,7 @@ import math
 
 import numpy
 
-__version__ = '2015.03.19'
+__version__ = '2015.07.18'
 __docformat__ = 'restructuredtext en'
 __all__ = ()
 
@@ -1307,6 +1309,10 @@ def quaternion_from_matrix(matrix, isprecise=False):
     >>> R = random_rotation_matrix()
     >>> q = quaternion_from_matrix(R)
     >>> is_same_transform(R, quaternion_matrix(q))
+    True
+    >>> R = euler_matrix(0.0, 0.0, numpy.pi/2.0)
+    >>> numpy.allclose(quaternion_from_matrix(R, isprecise=False),
+    ...                quaternion_from_matrix(R, isprecise=True))
     True
 
     """

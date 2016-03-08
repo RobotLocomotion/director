@@ -73,7 +73,7 @@
           <item row="1" column="0" colspan="2">
            <widget class="QLineEdit" name="screenshotOutputDirectory">
             <property name="text">
-             <string>~/Desktop/screenshots</string>
+             <string>~/Pictures/director</string>
             </property>
            </widget>
           </item>
@@ -165,7 +165,7 @@
           <item row="1" column="0" colspan="2">
            <widget class="QLineEdit" name="movieOutputDirectory">
             <property name="text">
-             <string>~/Desktop/movie</string>
+             <string>~/Videos/director</string>
             </property>
            </widget>
           </item>

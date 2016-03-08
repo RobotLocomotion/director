@@ -19,6 +19,7 @@ from director import jointcontrol
 from director import callbacks
 from director import camerabookmarks
 from director import cameracontrol
+from director import cameracontrolpanel
 from director import bihandeddemo
 from director import debrisdemo
 from director import doordemo
@@ -80,7 +81,6 @@ from director import splinewidget
 from director import teleoppanel
 from director import motionplanningpanel
 from director import vtkNumpy as vnp
-from director import viewbehaviors
 from director import visualization as vis
 from director import actionhandlers
 from director.timercallback import TimerCallback
@@ -760,9 +760,10 @@ hideImageOverlay = imageOverlayManager.hide
 screengrabberpanel.init(view)
 framevisualization.init(view)
 affordancePanel = affordancepanel.init(view, affordanceManager, ikServer, robotStateJointController, raycastDriver)
-
-
 camerabookmarks.init(view)
+
+cameraControlPanel = cameracontrolpanel.CameraControlPanel(view)
+app.addWidgetToDock(cameraControlPanel.widget, action=None).hide()
 
 
 def getLinkFrame(linkName, model=None):
@@ -809,7 +810,6 @@ def sendDesiredPumpPsi(desiredPsi):
 
 app.setCameraTerrainModeEnabled(view, True)
 app.resetCamera(viewDirection=[-1,0,0], view=view)
-viewBehaviors = viewbehaviors.ViewBehaviors(view)
 
 
 # Drill Demo Functions for in-image rendering:

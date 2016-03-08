@@ -887,22 +887,22 @@ def addChildFrame(obj, initialTransform=None):
     and then a child frame is assigned to the object to maintain its original
     position.
     '''
-    pd = obj.polyData
-    t = initialTransform
+
+    if obj.getChildFrame():
+        return
+
+    if initialTransform:
+        pd = transformPolyData(obj.polyData, initialTransform.GetLinearInverse())
+        obj.setPolyData(pd)
+
+    t = obj.actor.GetUserTransform()
 
     if t is None:
         t = vtk.vtkTransform()
         t.PostMultiply()
-    else:
-        pd = transformPolyData(pd, t.GetLinearInverse())
-        obj.setPolyData(pd)
 
-    frame = obj.getChildFrame()
-    if frame:
-        frame.copyFrame(t)
-    else:
-        frame = showFrame(t, obj.getProperty('Name') + ' frame', parent=obj, scale=0.2, visible=False)
-        obj.actor.SetUserTransform(t)
+    frame = showFrame(t, obj.getProperty('Name') + ' frame', parent=obj, scale=0.2, visible=False)
+    obj.actor.SetUserTransform(t)
 
     return frame
 

@@ -17,15 +17,16 @@ from director.utime import getUtime
 import time
 
 import drc as lcmdrc
+import bot_core
 import atlas
-from mav.indexed_measurement_t import indexed_measurement_t
+from pronto.indexed_measurement_t import indexed_measurement_t
 
 
 class SystemStatusListener(object):
 
     def __init__(self, outputConsole):
         self.outputConsole = outputConsole
-        lcmUtils.addSubscriber('SYSTEM_STATUS', lcmdrc.system_status_t, self.onSystemStatus)
+        lcmUtils.addSubscriber('SYSTEM_STATUS', bot_core.system_status_t, self.onSystemStatus)
 
     def onSystemStatus(self, message):
         message = 'SYSTEM_STATUS: ' + message.value

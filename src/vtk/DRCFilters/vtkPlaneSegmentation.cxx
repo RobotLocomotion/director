@@ -80,7 +80,7 @@ int vtkPlaneSegmentation::RequestData(
   // perform plane model fit
   planeseg::PlaneFitter fitter;
   fitter.setMaxDistance(this->DistanceThreshold);
-  fitter.setMaxIterations(this->MaxIterations);
+  fitter.setMaxIterations(this->MaxIterations, 10);
   fitter.setRefineUsingInliers(true);
   if (this->PerpendicularConstraintEnabled) {
     Eigen::Vector3f prior(this->PerpendicularAxis[0],

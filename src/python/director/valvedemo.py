@@ -15,7 +15,7 @@ from director import segmentation
 from director.tasks.taskuserpanel import TaskUserPanel
 from director.tasks.taskuserpanel import ImageBasedAffordanceFit
 from director.uuidutil import newUUID
-import ioUtils
+from director import ioUtils
 from director import ikplanner
 from director.debugVis import DebugData
 
@@ -943,7 +943,7 @@ class ValveTaskPanel(TaskUserPanel):
         self.valveDemo.planRetract()
 
     def addDefaultProperties(self):
-        self.params.addProperty('Hand', 1, attributes=om.PropertyAttributes(enumNames=['Left',
+        self.params.addProperty('Hand', ['left','right'].index(self.valveDemo.graspingHand), attributes=om.PropertyAttributes(enumNames=['Left',
                                                                                        'Right']))
         self.params.addProperty('Turn direction', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Clockwise',
@@ -954,8 +954,8 @@ class ValveTaskPanel(TaskUserPanel):
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
         self.params.addProperty('Back', 1,
                                 attributes=om.PropertyAttributes(enumNames=['Fixed', 'Free']))
-        self.params.addProperty('Turning Mode',1,
-                                attributes=om.PropertyAttributes(enumNames=['Human-like Turn','Simple Turn']))
+        self.params.addProperty('Turning Mode', self.valveDemo.turningMode,
+                                attributes=om.PropertyAttributes(enumNames=['Simple Turn', 'Human-like Turn']))
         self.params.addProperty('Reach Angle (Human)', -45,
                                 attributes=om.PropertyAttributes(singleStep=5))
         self.params.addProperty('Turn Angle (Human)', -90,
@@ -965,16 +965,15 @@ class ValveTaskPanel(TaskUserPanel):
         self._syncProperties()
 
     def onPropertyChanged(self, propertySet, propertyName):
-        turningModeOld = self.valveDemo.turningMode
         self._syncProperties()
-
-        if not turningModeOld == self.valveDemo.turningMode:
-            self.addTasks()
+        self.taskTree.removeAllTasks()
+        self.addTasks()
 
 
     def _syncProperties(self):
 
         self.valveDemo.planFromCurrentRobotState = True
+        self.valveDemo.turningMode = self.params.getProperty('Turning Mode')
         self.valveDemo.setGraspingHand(self.params.getPropertyEnumValue('Hand').lower())
 
         if self.params.getPropertyEnumValue('Turn direction') == 'Clockwise':
@@ -1007,14 +1006,12 @@ class ValveTaskPanel(TaskUserPanel):
         # how much should the palm face the valve axis - 0 not at all, 90 entirely
         self.valveDemo.palmInAngle = self.params.getProperty('Palm In Angle (Human)')
 
-        self.valveDemo.turningMode = self.params.getProperty('Turning Mode')
-
     def addTasks(self):
         self.taskTree.removeAllTasks()
 
-        if self.valveDemo.turningMode == 1:
+        if self.valveDemo.turningMode == 0:
             self.addSimpleTurnTasks()
-        elif self.valveDemo.turningMode == 0:
+        elif self.valveDemo.turningMode == 1:
             self.addHumanTurnTasks()
         else:
             return

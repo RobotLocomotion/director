@@ -17,7 +17,8 @@
 #include <vtkFloatArray.h>
 
 #include <lcm/lcm-cpp.hpp>
-#include <lcmtypes/drc/pointcloud2_t.hpp>
+#include <lcmtypes/bot_core/pointcloud2_t.hpp>
+#include <lcmtypes/bot_core/pointcloud_t.hpp>
 
 class DD_APP_EXPORT ddPointCloudLCM : public QObject
 {
@@ -33,6 +34,7 @@ public:
 protected slots:
 
   void onPointCloudFrame(const QByteArray& data, const QString& channel);
+  void onPointCloud2Frame(const QByteArray& data, const QString& channel);
 
 
 protected:

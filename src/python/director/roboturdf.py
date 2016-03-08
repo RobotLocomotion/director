@@ -11,10 +11,12 @@ from director import jointcontrol
 from director import getDRCBaseDir
 from director import lcmUtils
 from director import filterUtils
+from director import packagepath
 from director import transformUtils
 
 
 import drc as lcmdrc
+import bot_core
 import math
 import numpy as np
 import json
@@ -106,7 +108,7 @@ class RobotModelItem(om.ObjectModelItem):
             return None
 
     def getHeadLink(self):
-        return drcargs.getDirectorConfig()['headLink']
+        return drcargs.getDirectorConfig().get('headLink')
 
     def getLinkContactPoints(self, linkName):
         pts = self.model.getBodyContactPoints(linkName)
@@ -278,7 +280,7 @@ def onModelPublisherString(msg):
 def startModelPublisherListener(modelsToReload):
     global _modelsToReload
     _modelsToReload = modelsToReload
-    lcmUtils.addSubscriber('ROBOT_MODEL', lcmdrc.robot_urdf_t, onModelPublisherString)
+    lcmUtils.addSubscriber('ROBOT_MODEL', bot_core.robot_urdf_t, onModelPublisherString)
 
 
 
@@ -309,14 +311,11 @@ def setupPackagePaths():
     for path in searchPaths:
         PythonQt.dd.ddDrakeModel.addPackageSearchPath(os.path.join(getDRCBaseDir(), path))
 
-    environmentVariables = ['ROS_PACKAGE_PATH']
+    packageMap = packagepath.PackageMap()
+    packageMap.populateFromEnvironment(['ROS_PACKAGE_PATH'])
 
-    for e in environmentVariables:
-        paths = os.environ.get(e, '').split(':')
-        for path in paths:
-            for root, dirnames, filenames in os.walk(path):
-                if os.path.isfile(os.path.join(root, 'package.xml')) or os.path.isfile(os.path.join(root, 'manifest.xml')):
-                    PythonQt.dd.ddDrakeModel.addPackageSearchPath(root)
+    for path in packageMap.map.values():
+        PythonQt.dd.ddDrakeModel.addPackageSearchPath(path)
 
 
 setupPackagePaths()
