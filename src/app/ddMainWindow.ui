@@ -247,6 +247,7 @@
    <addaction name="ActionFootstepPanel"/>
    <addaction name="ActionHandControlPanel"/>
    <addaction name="ActionTeleopPanel"/>
+   <addaction name="ActionMotionPlanningPanel"/>
    <addaction name="ActionTaskManagerPanel"/>
    <addaction name="ActionScreenGrabberPanel"/>
    <addaction name="ActionSensorDataRequestPanel"/>
@@ -517,6 +518,21 @@
    </property>
    <property name="toolTip">
     <string>Teleop Panel</string>
+   </property>
+  </action>
+  <action name="ActionMotionPlanningPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="images/resources.qrc">
+     <normaloff>:/images/hammer_icon.png</normaloff>:/images/hammer_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Motion Planning Panel</string>
+   </property>
+   <property name="toolTip">
+    <string>Motion Planning Panel</string>
    </property>
   </action>
   <action name="ActionNavigationPanel">

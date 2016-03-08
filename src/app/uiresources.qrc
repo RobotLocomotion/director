@@ -15,6 +15,7 @@
     <file>ddScreenGrabber.ui</file>
     <file>ddTaskUserPanel.ui</file>
     <file>ddTeleopPanel.ui</file>
+    <file>ddMotionPlanningPanel.ui</file>
     <file>ddVideoPlayer.ui</file>
     <file>ddSensorDataRequest.ui</file>
     <file>ddPFGrasp.ui</file>
