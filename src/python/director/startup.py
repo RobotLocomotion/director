@@ -723,7 +723,7 @@ class ImageOverlayManager(object):
         self._prevParent = imageView.view.parent()
 
         imageExtent = cameraview.imageManager.images[self.viewName].GetExtent()
-        if imageExtent[1] != -1 or imageExtent[3] != -1:
+        if imageExtent[1] != -1 and imageExtent[3] != -1:
             self.imageSize = [imageExtent[1]+1, imageExtent[3]+1]
             self.imageAspectRatio = self.imageSize[0] / self.imageSize[1]
             self.size = [self.desiredWidth, self.desiredWidth / self.imageAspectRatio]
