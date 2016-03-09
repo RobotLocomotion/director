@@ -416,6 +416,9 @@ class ImageWidget(object):
         self.imageName = imageName
         self.flip.SetInput(imageManager.getImage(imageName))
 
+    def setOpacity(self, opacity=1.0):
+        self.imageWidget.GetRepresentation().GetImageProperty().SetOpacity(opacity)
+
     def hide(self):
         self.imageWidget.Off()
 
