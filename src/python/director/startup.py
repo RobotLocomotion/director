@@ -758,7 +758,7 @@ class ToggleImageViewHandler(object):
 
 imageOverlayManager = ImageOverlayManager()
 imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view, visible=False)
-imageViewHandler = ToggleImageViewHandler(imageOverlayManager)
+imageViewHandler = ToggleImageViewHandler(imageWidget)
 showImageOverlay = imageOverlayManager.show
 hideImageOverlay = imageOverlayManager.hide
 showImageWidget = imageWidget.show
