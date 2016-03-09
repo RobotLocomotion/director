@@ -706,6 +706,8 @@ class ImageOverlayManager(object):
         self.imageView = None
         self.imagePicker = None
         self._prevParent = None
+        self.imageSize = [640, 480]
+        self.imageAspectRatio = 4/3.
 
     def show(self):
 
@@ -715,6 +717,12 @@ class ImageOverlayManager(object):
         imageView = cameraview.views[self.viewName]
         self.imageView = imageView
         self._prevParent = imageView.view.parent()
+
+        imageExtent = cameraview.imageManager.images[self.viewName].GetExtent()
+        if imageExtent[1] != -1 or imageExtent[3] != -1:
+            self.imageSize = [imageExtent[1]+1, imageExtent[3]+1]
+            self.imageAspectRatio = self.imageSize[0] / self.imageSize[1]
+            self.size = [self.desiredWidth, self.desiredWidth / self.imageAspectRatio]
 
         imageView.view.hide()
         imageView.view.setParent(view)
