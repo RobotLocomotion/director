@@ -761,6 +761,9 @@ imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', vie
 imageViewHandler = ToggleImageViewHandler(imageOverlayManager)
 showImageOverlay = imageOverlayManager.show
 hideImageOverlay = imageOverlayManager.hide
+showImageWidget = imageWidget.show
+hideImageWidget = imageWidget.hide
+setImageWidgetSource = imageWidget.setImage
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
