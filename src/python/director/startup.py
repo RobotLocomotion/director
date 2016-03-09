@@ -709,8 +709,12 @@ class ImageOverlayManager(object):
         self.imageSize = [640, 480]
         self.imageAspectRatio = 4/3.
 
-    def show(self):
+    def setWidth(self, width):
+        self.desiredWidth = width
+        self.hide()
+        self.show()
 
+    def show(self):
         if self.imageView:
             return
 
