@@ -395,23 +395,42 @@ class ImageWidget(object):
         self.initialized = False
 
         self.imageWidget = vtk.vtkLogoWidget()
-        rep = self.imageWidget.GetRepresentation()
-        rep.ProportionalResizeOn()
-        rep.SetPosition(0, 0.7)
-        rep.SetPosition2(0.3, 0.3) # Proportional size
-        rep.GetImageProperty().SetOpacity(1.0)
+        imageRep = self.imageWidget.GetRepresentation()
+        self.imageWidget.ResizableOff()
+        self.imageWidget.SelectableOn()
+
+        imageRep.GetImageProperty().SetOpacity(1.0)
         self.imageWidget.SetInteractor(self.view.renderWindow().GetInteractor())
 
         self.flip = vtk.vtkImageFlip()
         self.flip.SetFilteredAxis(1)
         self.flip.SetInput(imageManager.getImage(imageName))
-        rep.SetImage(self.flip.GetOutput())
+        imageRep.SetImage(self.flip.GetOutput())
 
         self.timerCallback = TimerCallback()
         self.timerCallback.targetFps = 60
         self.timerCallback.callback = self.updateView
         self.timerCallback.start()
 
+        self.initialized = False
+
+    def setWidgetSize(self, desiredWidth=400):
+        viewWidth, viewHeight = self.view.width, self.view.height
+        defaultImageAspectRatio = 4/3.
+        imageWidth, imageHeight = desiredWidth, desiredWidth/defaultImageAspectRatio
+
+        rep = self.imageWidget.GetBorderRepresentation()
+        rep.SetShowBorderToOff()
+        coord = rep.GetPositionCoordinate()
+        coord2 = rep.GetPosition2Coordinate()
+        coord.SetCoordinateSystemToDisplay()
+        coord2.SetCoordinateSystemToDisplay()
+        coord.SetValue(0, viewHeight-imageHeight)
+        coord2.SetValue(imageWidth, imageHeight)
+
+        if self.visible:
+            self.hide()
+            self.show()
 
     def setImage(self, imageName):
         self.imageName = imageName
@@ -425,6 +444,10 @@ class ImageWidget(object):
         self.imageWidget.Off()
 
     def show(self):
+        if not self.initialized:
+            self.setWidgetSize(400)
+            self.initialized = True
+
         self.visible = True
         self.imageWidget.On()
 
