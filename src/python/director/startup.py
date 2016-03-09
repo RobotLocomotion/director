@@ -152,7 +152,6 @@ useDrakeVisualizer = True
 useNavigationPanel = True
 useFootContactVis = True
 useFallDetectorVis = True
-useImageWidget = False
 useCameraFrustumVisualizer = True
 useControllerRate = True
 useForceDisplay = False
@@ -687,11 +686,6 @@ if useDataFiles:
         if polyData:
             vis.showPolyData(polyData, os.path.basename(filename))
 
-
-if useImageWidget:
-    imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
-    #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'KINECT_RGB', view)
-
 if useCameraFrustumVisualizer and cameraview.CameraFrustumVisualizer.isCompatibleWithConfig():
     cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'CAMERA_LEFT')
 
@@ -763,6 +757,7 @@ class ToggleImageViewHandler(object):
 
 
 imageOverlayManager = ImageOverlayManager()
+imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view, visible=False)
 imageViewHandler = ToggleImageViewHandler(imageOverlayManager)
 showImageOverlay = imageOverlayManager.show
 hideImageOverlay = imageOverlayManager.hide

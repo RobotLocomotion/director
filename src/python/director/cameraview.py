@@ -429,7 +429,6 @@ class ImageWidget(object):
         self.imageWidget.On()
 
     def updateView(self):
-
         if not self.view.isVisible():
             return
 
