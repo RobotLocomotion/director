@@ -699,8 +699,8 @@ class ImageOverlayManager(object):
 
     def __init__(self):
         self.viewName = 'CAMERA_LEFT'
-        #self.viewName = 'KINECT_RGB'
-        self.size = 400
+        self.desiredWidth = 400
+        self.size = [self.desiredWidth, self.desiredWidth/(4/3.)]
         self.position = [0, 0]
         self.usePicker = False
         self.imageView = None
@@ -718,7 +718,7 @@ class ImageOverlayManager(object):
 
         imageView.view.hide()
         imageView.view.setParent(view)
-        imageView.view.resize(self.size, self.size)
+        imageView.view.resize(*self.size)
         imageView.view.move(*self.position)
         imageView.view.show()
 
