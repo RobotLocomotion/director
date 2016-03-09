@@ -385,10 +385,11 @@ class CameraView(object):
 
 class ImageWidget(object):
 
-    def __init__(self, imageManager, imageName, view):
+    def __init__(self, imageManager, imageName, view, visible=True):
         self.view = view
         self.imageManager = imageManager
         self.imageName = imageName
+        self.visible = visible
 
         self.updateUtime = 0
         self.initialized = False
@@ -420,9 +421,11 @@ class ImageWidget(object):
         self.imageWidget.GetRepresentation().GetImageProperty().SetOpacity(opacity)
 
     def hide(self):
+        self.visible = False
         self.imageWidget.Off()
 
     def show(self):
+        self.visible = True
         self.imageWidget.On()
 
     def updateView(self):
@@ -432,7 +435,7 @@ class ImageWidget(object):
 
         currentUtime = self.imageManager.updateImage(self.imageName)
         if currentUtime != self.updateUtime:
-            if not self.initialized:
+            if not self.initialized and self.visible:
                 self.show()
                 self.initialized = True
 
