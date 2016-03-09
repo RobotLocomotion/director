@@ -395,6 +395,9 @@ class ImageWidget(object):
 
         self.imageWidget = vtk.vtkLogoWidget()
         rep = self.imageWidget.GetRepresentation()
+        rep.ProportionalResizeOn()
+        rep.SetPosition(0, 0.7)
+        rep.SetPosition2(0.3, 0.3) # Proportional size
         rep.GetImageProperty().SetOpacity(1.0)
         self.imageWidget.SetInteractor(self.view.renderWindow().GetInteractor())
 
