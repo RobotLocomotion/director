@@ -412,6 +412,10 @@ class ImageWidget(object):
         self.timerCallback.start()
 
 
+    def setImage(self, imageName):
+        self.imageName = imageName
+        self.flip.SetInput(imageManager.getImage(imageName))
+
     def hide(self):
         self.imageWidget.Off()
 
