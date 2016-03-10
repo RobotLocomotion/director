@@ -81,6 +81,7 @@ from director import playbackpanel
 from director import screengrabberpanel
 from director import splinewidget
 from director import teleoppanel
+from director import motionplanningpanel
 from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import actionhandlers
@@ -435,6 +436,9 @@ if usePlanning:
     teleopPanel = teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
+    motionPlanningPanel = motionplanningpanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, 
+                            ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan, footstepsDriver)
+    
     if useGamepad:
         gamePad = gamepad.Gamepad(teleopPanel, teleopJointController, ikPlanner, view)
 
