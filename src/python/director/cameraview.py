@@ -428,9 +428,7 @@ class ImageWidget(object):
         coord.SetValue(0, viewHeight-imageHeight)
         coord2.SetValue(imageWidth, imageHeight)
 
-        if self.visible:
-            self.hide()
-            self.show()
+        self.view.render()
 
     def setImage(self, imageName):
         self.imageName = imageName
