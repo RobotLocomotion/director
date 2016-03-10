@@ -66,7 +66,6 @@ class MotionPlanningPanel(object):
         self.ui.mpModeButton.connect('clicked()', self.onMotionPlanningMode)
 
         # End-pose planning
-        self.ui.fpPlannerCombo.connect('currentIndexChanged(const QString&)', self.onPlannerChanged)
         self.ui.handCombo.connect('currentIndexChanged(const QString&)', self.onHandChanged)
         self.ui.baseComboBox.connect('currentIndexChanged(const QString&)', self.onBaseConstraintChanged)
         self.ui.backComboBox.connect('currentIndexChanged(const QString&)', self.onBackConstraintChanged)
@@ -117,8 +116,21 @@ class MotionPlanningPanel(object):
         self.removePlanFolder()
         self.hideTeleopModel()
         
-    def onPlannerChanged(self, name):
-        assert len(name)
+    # Check final-pose and reaching planning separately
+    # so that one can switch between drake and exotica without restarting director 
+    def checkFinalPosePlanningMode(self):
+        algorithm = self.getComboText(self.ui.fpAlgComboBox)
+        if 'Drake' in algorithm:
+            self.ikPlanner.pushToMatlab = True
+        elif 'Exotica' in algorithm:
+            self.ikPlanner.pushToMatlab = False
+        
+    def checkReachingPlanningMode(self):
+        algorithm = self.getComboText(self.ui.mpAlgComboBox)
+        if 'Drake' in algorithm:
+            self.ikPlanner.pushToMatlab = True
+        elif 'Exotica' in algorithm:
+            self.ikPlanner.pushToMatlab = False
             
     def onHandChanged(self, combo):
         if self.ui.mpModeButton.checked:
@@ -284,6 +296,7 @@ class MotionPlanningPanel(object):
     def updateIk(self):
         if not self.constraintSet:
             self.updateIKConstraints()
+        self.checkFinalPosePlanningMode()
         endPose, info = self.constraintSet.runIk()
         endPoseName = 'reach_end'
         self.ikPlanner.addPose(endPose, endPoseName)
@@ -324,10 +337,11 @@ class MotionPlanningPanel(object):
     def onWalkingGoalModified(self, frame):
         request = self.footDriver.constructFootstepPlanRequest(self.robotStateJointController.q, frame)
         self.footDriver.sendFootstepPlanRequest(request)
-        
+            
     def onMotionPlan(self):
         startPoseName = 'reach_start'
         startPose = np.array(self.robotStateJointController.q)
+        self.checkReachingPlanningMode()
         self.ikPlanner.addPose(startPose, startPoseName)
         plan = self.constraintSet.runIkTraj()
         self.showPlan(plan)

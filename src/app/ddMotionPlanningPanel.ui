@@ -36,10 +36,15 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QComboBox" name="mpCombo">
+         <widget class="QComboBox" name="mpAlgComboBox">
           <property name="currentIndex">
            <number>0</number>
           </property>
+          <item>
+           <property name="text">
+            <string>Drake-RRTConnect</string>
+           </property>
+          </item>
           <item>
            <property name="text">
             <string>Exotica-RRTConnect</string>
@@ -319,7 +324,7 @@
       <item row="3" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>IK Constrain Set</string>
+         <string>IK Constraint Set</string>
         </property>
        </widget>
       </item>
@@ -333,13 +338,23 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QComboBox" name="fpPlannerCombo">
+         <widget class="QComboBox" name="fpAlgComboBox">
           <property name="contextMenuPolicy">
            <enum>Qt::DefaultContextMenu</enum>
           </property>
           <item>
            <property name="text">
-            <string>iDRM</string>
+            <string>Drake</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Exotica</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Exotica-iDRM</string>
            </property>
           </item>
          </widget>
