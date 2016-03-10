@@ -1,6 +1,8 @@
 # This script is executed in the main console namespace so
 # that all the variables defined here become console variables.
 
+from __future__ import division
+
 import director
 from director import irisdriver
 
@@ -150,7 +152,6 @@ useDrakeVisualizer = True
 useNavigationPanel = True
 useFootContactVis = True
 useFallDetectorVis = True
-useImageWidget = False
 useCameraFrustumVisualizer = True
 useControllerRate = True
 useForceDisplay = False
@@ -685,11 +686,6 @@ if useDataFiles:
         if polyData:
             vis.showPolyData(polyData, os.path.basename(filename))
 
-
-if useImageWidget:
-    imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view)
-    #imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'KINECT_RGB', view)
-
 if useCameraFrustumVisualizer and cameraview.CameraFrustumVisualizer.isCompatibleWithConfig():
     cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'CAMERA_LEFT')
 
@@ -697,16 +693,22 @@ class ImageOverlayManager(object):
 
     def __init__(self):
         self.viewName = 'CAMERA_LEFT'
-        #self.viewName = 'KINECT_RGB'
-        self.size = 400
+        self.desiredWidth = 400
+        self.size = [self.desiredWidth, self.desiredWidth/(4/3.)]
         self.position = [0, 0]
         self.usePicker = False
         self.imageView = None
         self.imagePicker = None
         self._prevParent = None
+        self.imageSize = [640, 480]
+        self.imageAspectRatio = 4/3.
+
+    def setWidth(self, width):
+        self.desiredWidth = width
+        self.hide()
+        self.show()
 
     def show(self):
-
         if self.imageView:
             return
 
@@ -714,9 +716,15 @@ class ImageOverlayManager(object):
         self.imageView = imageView
         self._prevParent = imageView.view.parent()
 
+        imageExtent = cameraview.imageManager.images[self.viewName].GetExtent()
+        if imageExtent[1] != -1 and imageExtent[3] != -1:
+            self.imageSize = [imageExtent[1]+1, imageExtent[3]+1]
+            self.imageAspectRatio = self.imageSize[0] / self.imageSize[1]
+            self.size = [self.desiredWidth, self.desiredWidth / self.imageAspectRatio]
+
         imageView.view.hide()
         imageView.view.setParent(view)
-        imageView.view.resize(self.size, self.size)
+        imageView.view.resize(*self.size)
         imageView.view.move(*self.position)
         imageView.view.show()
 
@@ -749,9 +757,13 @@ class ToggleImageViewHandler(object):
 
 
 imageOverlayManager = ImageOverlayManager()
-imageViewHandler = ToggleImageViewHandler(imageOverlayManager)
+imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view, visible=False)
+imageViewHandler = ToggleImageViewHandler(imageWidget)
 showImageOverlay = imageOverlayManager.show
 hideImageOverlay = imageOverlayManager.hide
+showImageWidget = imageWidget.show
+hideImageWidget = imageWidget.hide
+setImageWidgetSource = imageWidget.setImage
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
