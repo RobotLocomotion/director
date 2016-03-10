@@ -18,6 +18,7 @@ import drc as lcmdrc
 import functools
 import math
 import numpy as np
+from numpy import linalg as npla
 import types
 import lcm
 from bot_core.pose_t import pose_t
@@ -28,7 +29,7 @@ from director.pointpicker import PlacerWidget
 from director import segmentation
 from director import filterUtils
 from director import vtkNumpy as vnp
-
+from director import ik
 
 def addWidgetsToDict(widgets, d):
 
@@ -86,6 +87,7 @@ class MotionPlanningPanel(object):
         # Motion Planning
         self.ui.motionPlanButton.connect('clicked()', self.onMotionPlan)
         
+        self.deactivate()
     def onMotionPlanningMode(self):
         if self.ui.mpModeButton.checked:
             self.activate()
@@ -97,7 +99,10 @@ class MotionPlanningPanel(object):
         self.ui.mpModeButton.checked = True
         self.ui.mpModeButton.blockSignals(False)
         self.ui.EndPosePlanningPanel.setEnabled(True)
-        self.ui.walkingPlanningPanel.setEnabled(True)
+        if self.getComboText(self.ui.feetComboBox) == 'Sliding': 
+            self.ui.walkingPlanningPanel.setEnabled(True)
+        elif self.getComboText(self.ui.feetComboBox) == 'Fixed': 
+            self.ui.walkingPlanningPanel.setEnabled(False)
         self.ui.fixFeetPlanningPanel.setEnabled(True)
         self.createHandGoalFrame()
         self.updateIKConstraints()
@@ -197,7 +202,13 @@ class MotionPlanningPanel(object):
         elif self.getComboText(self.ui.feetComboBox) == 'Sliding':
             constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPoseName)[:2])
             constraints.extend(self.ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
-                
+            
+            # Ensure the end-pose's relative distance between two feet is the same as start pose
+            [pos_left, quat_left] = transformUtils.poseFromTransform(self.robotStateModel.getLinkFrame(self.ikPlanner.leftFootLink))
+            [pos_right, quat_right] = transformUtils.poseFromTransform(self.robotStateModel.getLinkFrame(self.ikPlanner.rightFootLink))
+            dist = npla.norm(pos_left - pos_right)
+            constraints.append(ik.PointToPointDistanceConstraint(bodyNameA=self.ikPlanner.leftFootLink, bodyNameB=self.ikPlanner.rightFootLink, lowerBound=np.array([dist - 0.0001]), upperBound=np.array([dist + 0.0001])))
+            
         if self.getReachHand() == 'Left':
             side = 'left'
             other_side = 'right'
@@ -231,13 +242,11 @@ class MotionPlanningPanel(object):
     @staticmethod
     def removePlanFolder():
         om.removeFromObjectModel(om.findObjectByName('teleop plan'))
-        om.removeFromObjectModel(om.findObjectByName('walking goal'))
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
         om.removeFromObjectModel(om.findObjectByName('iDRMStancePoses'))
 
     @staticmethod
     def removeWalkingPlanningInfo():
-        om.removeFromObjectModel(om.findObjectByName('walking goal'))
         om.removeFromObjectModel(om.findObjectByName('footstep plan'))
         om.removeFromObjectModel(om.findObjectByName('iDRMStancePoses'))
         
@@ -304,60 +313,16 @@ class MotionPlanningPanel(object):
         
     def getCurrentWalkingGoal(self):
         t = self.footDriver.getFeetMidPoint(self.teleopRobotModel)
-        t.PreMultiply()
-        t.Translate(0.0, 0.0, 0.0)
-        t.PostMultiply()
         return t
     
     def onWalkingPlan(self):
         walkingGoal = self.getCurrentWalkingGoal();
-        
-        frameObj = vis.updateFrame(walkingGoal, 'walking goal', parent='planning', scale=0.25)
-        frameObj.setProperty('Edit', False)
-        rep = frameObj.widget.GetRepresentation()
-        rep.SetTranslateAxisEnabled(2, False)
-        rep.SetRotateAxisEnabled(0, False)
-        rep.SetRotateAxisEnabled(1, False)
-        frameObj.widget.HandleRotationEnabledOff()
-
         if self.placer:
             self.placer.stop()
-
-        terrain = om.findObjectByName('HEIGHT_MAP_SCENE')
-        if terrain:
-
-            pos = np.array(frameObj.transform.GetPosition())
-
-            polyData = filterUtils.removeNonFinitePoints(terrain.polyData)
-            if polyData.GetNumberOfPoints():
-                polyData = segmentation.labelDistanceToLine(polyData, pos, pos+[0,0,1])
-                polyData = segmentation.thresholdPoints(polyData, 'distance_to_line', [0.0, 0.1])
-                if polyData.GetNumberOfPoints():
-                    pos[2] = np.nanmax(vnp.getNumpyFromVtk(polyData, 'Points')[:,2])
-                    frameObj.transform.Translate(pos - np.array(frameObj.transform.GetPosition()))
-
-            d = DebugData()
-            d.addSphere((0,0,0), radius=0.03)
-            handle = vis.showPolyData(d.getPolyData(), 'walking goal terrain handle', parent=frameObj, visible=True, color=[1,1,0])
-            handle.actor.SetUserTransform(frameObj.transform)
-            self.placer = PlacerWidget(app.getCurrentRenderView(), handle, terrain)
-
-            def onFramePropertyModified(propertySet, propertyName):
-                if propertyName == 'Edit':
-                    if propertySet.getProperty(propertyName):
-                        self.placer.start()
-                    else:
-                        self.placer.stop()
-
-            frameObj.properties.connectPropertyChanged(onFramePropertyModified)
-            onFramePropertyModified(frameObj, 'Edit')
-
-        frameObj.connectFrameModified(self.onWalkingGoalModified)
-        self.onWalkingGoalModified(frameObj)
+        self.onWalkingGoalModified(walkingGoal)
         
     def onWalkingGoalModified(self, frame):
-        om.removeFromObjectModel(om.findObjectByName('footstep widget'))
-        request = self.footDriver.constructFootstepPlanRequest(self.robotStateJointController.q, frame.transform)
+        request = self.footDriver.constructFootstepPlanRequest(self.robotStateJointController.q, frame)
         self.footDriver.sendFootstepPlanRequest(request)
         
     def onMotionPlan(self):
@@ -384,7 +349,6 @@ def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJoi
     global dock
 
     panel = MotionPlanningPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, footDriver)
-    panel.deactivate()
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
