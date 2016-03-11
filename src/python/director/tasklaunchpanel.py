@@ -10,10 +10,23 @@ class TaskLaunchPanel(object):
         self.widget.setWindowTitle('Task Panel')
 
         for name, widget in widgetMap.iteritems():
-            self.widget.addTab(widget, name)
+            self.addTaskPanel(name, widget)
 
+    def getTaskPanelNames(self):
+        return [self.widget.tabText(i) for i in xrange(self.widget.count)]
 
-    def showTaskPanel(self):
+    def removeTaskPanel(self, taskPanelName):
+        names = self.getTaskPanelNames()
+        assert taskPanelName in names
+        self.widget.removeTab(names.index(taskPanelName))
+
+    def clear(self):
+        self.widget.clear()
+
+    def addTaskPanel(self, taskPanelName, taskPanelWidget):
+        self.widget.addTab(taskPanelWidget, taskPanelName)
+
+    def showTaskLaunchPanel(self):
 
         widget = self.widget
         widget.show()
@@ -30,6 +43,6 @@ def init(widgetMap):
     global panel
 
     panel = TaskLaunchPanel(widgetMap)
-    _getAction().connect('triggered()', panel.showTaskPanel)
+    _getAction().connect('triggered()', panel.showTaskLaunchPanel)
 
     return panel
