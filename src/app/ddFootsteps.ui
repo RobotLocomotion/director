@@ -7,49 +7,35 @@
     <x>0</x>
     <y>0</y>
     <width>463</width>
-    <height>538</height>
+    <height>652</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Footsteps</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="2">
-    <widget class="QPushButton" name="walkingGoalButton">
+   <item row="4" column="1">
+    <widget class="QPushButton" name="haltSimulationDrakeButton">
      <property name="text">
-      <string>New Walking Goal</string>
+      <string>Halt Simulation</string>
      </property>
     </widget>
    </item>
-   <item row="6" column="1">
-    <widget class="QPushButton" name="showBDIButton">
+   <item row="4" column="0">
+    <widget class="QPushButton" name="simulateDrakeButton">
      <property name="text">
-      <string>Show BDI</string>
+      <string>Simulate Walking (drake)</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="QPushButton" name="walkingPlanButton">
-     <property name="text">
-      <string>Show Walking Plan</string>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="1">
+   <item row="17" column="1">
     <widget class="QCheckBox" name="showWalkingVolumesCheck">
      <property name="text">
       <string>Show Walking Volumes</string>
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
-    <widget class="QPushButton" name="hideBDIButton">
-     <property name="text">
-      <string>Hide BDI</string>
-     </property>
-    </widget>
-   </item>
-   <item row="16" column="0" colspan="2">
+   <item row="18" column="0" colspan="2">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -69,68 +55,99 @@
      </property>
     </widget>
    </item>
-   <item row="9" column="0" colspan="2">
-    <widget class="QGroupBox" name="paramsContainer">
-     <property name="focusPolicy">
-      <enum>Qt::NoFocus</enum>
-     </property>
-     <property name="title">
-      <string>Advanced Options</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>false</bool>
+   <item row="3" column="0" colspan="2">
+    <widget class="QPushButton" name="walkingPlanButton">
+     <property name="text">
+      <string>Show Walking Plan</string>
      </property>
     </widget>
    </item>
-   <item row="12" column="0">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="6" column="1">
+    <widget class="QPushButton" name="showBDIButton">
+     <property name="text">
+      <string>Show BDI</string>
      </property>
     </widget>
    </item>
-   <item row="12" column="1">
-    <widget class="Line" name="line_2">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="0">
+   <item row="15" column="0">
     <widget class="QPushButton" name="newRegionSeedButton">
      <property name="text">
       <string>New Step Region</string>
      </property>
     </widget>
    </item>
-   <item row="13" column="0" colspan="2" alignment="Qt::AlignHCenter">
+   <item row="13" column="0">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="14" column="0" colspan="2" alignment="Qt::AlignHCenter">
     <widget class="QLabel" name="label">
      <property name="text">
       <string>Terrain Planning</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="0">
-    <widget class="QPushButton" name="simulateDrakeButton">
+   <item row="0" column="0" colspan="2">
+    <widget class="QPushButton" name="walkingGoalButton">
      <property name="text">
-      <string>Simulate Walking (drake)</string>
+      <string>New Walking Goal</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="1">
-    <widget class="QPushButton" name="haltSimulationDrakeButton">
-     <property name="text">
-      <string>Halt Simulation</string>
+   <item row="13" column="1">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
-   <item row="15" column="0">
+   <item row="10" column="1">
+    <widget class="QGroupBox" name="controlParamsContainer">
+     <property name="focusPolicy">
+      <enum>Qt::NoFocus</enum>
+     </property>
+     <property name="title">
+      <string>Control Options</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <zorder>radioButton</zorder>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QPushButton" name="hideBDIButton">
+     <property name="text">
+      <string>Hide BDI</string>
+     </property>
+    </widget>
+   </item>
+   <item row="17" column="0">
     <widget class="QPushButton" name="autoIRISSegmentationButton">
      <property name="text">
       <string>Auto Segment Terrain</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0">
+    <widget class="QGroupBox" name="planningParamsContainer">
+     <property name="focusPolicy">
+      <enum>Qt::NoFocus</enum>
+     </property>
+     <property name="title">
+      <string>Planning Options</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
      </property>
     </widget>
    </item>
