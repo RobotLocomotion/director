@@ -118,6 +118,8 @@ set(python_files
   director/trackers.py
   director/utime.py
   director/uuidutil.py
+  director/valkyriedriver.py
+  director/valkyriedriverpanel.py
   director/valvedemo.py
   director/viewbehaviors.py
   director/vieweventfilter.py

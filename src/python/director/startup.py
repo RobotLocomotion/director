@@ -63,6 +63,8 @@ from director import lcmgl
 from director import lcmoctomap
 from director import atlasdriver
 from director import atlasdriverpanel
+from director import valkyriedriver
+from director import valkyriedriverpanel
 from director import multisensepanel
 from director import navigationpanel
 from director import mappingpanel
@@ -145,6 +147,7 @@ useFootsteps = True
 useHands = True
 usePlanning = True
 useAtlasDriver = True
+useValkyrieDriver = True
 useLCMGL = True
 useOctomap = True
 useLightColorScheme = True
@@ -199,6 +202,10 @@ if useAtlasDriver:
     atlasdriver.systemStatus.outputConsole = app.getOutputConsole()
     atlasdriverpanel.init(atlasDriver)
 
+
+if useValkyrieDriver:
+    valkyrieDriver = valkyriedriver.init()
+    valkyriedriverpanel.init(valkyrieDriver)
 
 if usePerception:
 
