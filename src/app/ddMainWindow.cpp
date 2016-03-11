@@ -46,7 +46,7 @@ ddMainWindow::ddMainWindow()
   this->setCentralWidget(this->Internal->ViewManager);
   this->Internal->PropertiesScrollArea->setWidget(this->Internal->PropertiesPanel);
 
-  this->setWindowTitle("Drake Designer");
+  this->setWindowTitle("Director");
   this->connect(this->Internal->ActionQuit, SIGNAL(triggered()), QApplication::instance(), SLOT(quit()));
 
   this->Internal->OutputConsoleDock->hide();
@@ -112,6 +112,12 @@ QToolBar* ddMainWindow::toolBar() const
 QToolBar* ddMainWindow::macrosToolBar() const
 {
   return this->Internal->MacrosToolBar;
+}
+
+//-----------------------------------------------------------------------------
+QToolBar* ddMainWindow::panelToolBar() const
+{
+  return this->Internal->PanelToolBar;
 }
 
 //-----------------------------------------------------------------------------
