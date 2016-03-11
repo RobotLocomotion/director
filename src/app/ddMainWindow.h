@@ -29,6 +29,7 @@ public:
   ddObjectTree* objectTree() const;
   QToolBar* toolBar() const;
   QToolBar* macrosToolBar() const;
+  QToolBar* panelToolBar() const;
   QTextEdit* outputConsole() const;
 
   void addWidgetToViewMenu(QWidget* widget);

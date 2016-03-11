@@ -115,6 +115,12 @@ QToolBar* ddMainWindow::macrosToolBar() const
 }
 
 //-----------------------------------------------------------------------------
+QToolBar* ddMainWindow::panelToolBar() const
+{
+  return this->Internal->PanelToolBar;
+}
+
+//-----------------------------------------------------------------------------
 ddObjectTree* ddMainWindow::objectTree() const
 {
   return this->Internal->ObjectTree;
