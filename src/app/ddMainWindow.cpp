@@ -46,7 +46,7 @@ ddMainWindow::ddMainWindow()
   this->setCentralWidget(this->Internal->ViewManager);
   this->Internal->PropertiesScrollArea->setWidget(this->Internal->PropertiesPanel);
 
-  this->setWindowTitle("Drake Designer");
+  this->setWindowTitle("Director");
   this->connect(this->Internal->ActionQuit, SIGNAL(triggered()), QApplication::instance(), SLOT(quit()));
 
   this->Internal->OutputConsoleDock->hide();
