@@ -58,7 +58,7 @@ def capturePostureGoal():
     Blocks until a new LCM message is received on the POSTURE_GOAL channel,
     returns the new message.
     '''
-    return lcmWrapper.captureMessage('POSTURE_GOAL', lcmdrc.joint_angles_t)
+    return lcmWrapper.captureMessage('POSTURE_GOAL', lcmbotcore.joint_angles_t)
 
 
 def capturePoseFromMessage(messageCaptureFunction):
@@ -275,7 +275,7 @@ def publishPostureGoal(joints, postureName, channel='POSTURE_GOAL'):
     Given a dict mapping joint name strings to joint positions, creates a
     joint_angles_t LCM message and publishes the result on the given channel name.
     '''
-    msg = lcmdrc.joint_angles_t()
+    msg = lcmbotcore.joint_angles_t()
     msg.utime = getUtime()
     for name, position in joints.iteritems():
         msg.joint_name.append(name)
