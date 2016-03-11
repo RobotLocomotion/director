@@ -73,7 +73,7 @@ val_gains = {
 
 def newAtlasCommandMessageAtZero():
 
-    msg = lcmdrc.atlas_command_t()
+    msg = lcmbotcore.atlas_command_t()
     msg.joint_names = [str(v) for v in robotstate.getRobotStateJointNames()]
     msg.num_joints = len(msg.joint_names)
     zeros = np.zeros(msg.num_joints)
@@ -298,7 +298,7 @@ class DebugAtlasCommandListener(object):
         self.robotModel, self.jointController = roboturdf.loadRobotModel('robot model', self.view)
         self.jointController.setZeroPose()
         self.view.show()
-        self.sub = lcmUtils.addSubscriber('ATLAS_COMMAND', lcmdrc.atlas_command_t, self.onAtlasCommand)
+        self.sub = lcmUtils.addSubscriber('ATLAS_COMMAND', lcmbotcore.atlas_command_t, self.onAtlasCommand)
         self.sub.setSpeedLimit(60)
 
     def onAtlasCommand(self, msg):
