@@ -14,6 +14,44 @@
    <string>Footsteps</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="11" column="1">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="IHMCParamsContainer">
+      <attribute name="title">
+       <string>IHMC</string>
+      </attribute>
+      <zorder>controlParamsContainer</zorder>
+      <zorder>IHMCParamsContainer</zorder>
+     </widget>
+     <widget class="QWidget" name="DrakeParamsContainer">
+      <attribute name="title">
+       <string>Drake</string>
+      </attribute>
+      <zorder>controlParamsContainer</zorder>
+     </widget>
+     <widget class="QWidget" name="BDIParamsContainer">
+      <attribute name="title">
+       <string>BDI</string>
+      </attribute>
+     </widget>
+    </widget>
+   </item>
+   <item row="22" column="0" colspan="2">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
    <item row="4" column="1">
     <widget class="QPushButton" name="haltSimulationDrakeButton">
      <property name="text">
@@ -28,25 +66,12 @@
      </property>
     </widget>
    </item>
-   <item row="17" column="1">
+   <item row="21" column="1">
     <widget class="QCheckBox" name="showWalkingVolumesCheck">
      <property name="text">
       <string>Show Walking Volumes</string>
      </property>
     </widget>
-   </item>
-   <item row="18" column="0" colspan="2">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
    </item>
    <item row="5" column="0" colspan="2">
     <widget class="QPushButton" name="stopButton">
@@ -62,6 +87,13 @@
      </property>
     </widget>
    </item>
+   <item row="19" column="0">
+    <widget class="QPushButton" name="newRegionSeedButton">
+     <property name="text">
+      <string>New Step Region</string>
+     </property>
+    </widget>
+   </item>
    <item row="6" column="1">
     <widget class="QPushButton" name="showBDIButton">
      <property name="text">
@@ -69,22 +101,14 @@
      </property>
     </widget>
    </item>
-   <item row="15" column="0">
-    <widget class="QPushButton" name="newRegionSeedButton">
-     <property name="text">
-      <string>New Step Region</string>
-     </property>
-    </widget>
-   </item>
-   <item row="13" column="0">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="0" colspan="2" alignment="Qt::AlignHCenter">
+   <item row="18" column="0" colspan="2" alignment="Qt::AlignHCenter">
     <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
      <property name="text">
       <string>Terrain Planning</string>
      </property>
@@ -97,30 +121,6 @@
      </property>
     </widget>
    </item>
-   <item row="13" column="1">
-    <widget class="Line" name="line_2">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="1">
-    <widget class="QGroupBox" name="controlParamsContainer">
-     <property name="focusPolicy">
-      <enum>Qt::NoFocus</enum>
-     </property>
-     <property name="title">
-      <string>Control Options</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-     <zorder>radioButton</zorder>
-    </widget>
-   </item>
    <item row="6" column="0">
     <widget class="QPushButton" name="hideBDIButton">
      <property name="text">
@@ -128,14 +128,21 @@
      </property>
     </widget>
    </item>
-   <item row="17" column="0">
+   <item row="21" column="0">
     <widget class="QPushButton" name="autoIRISSegmentationButton">
      <property name="text">
       <string>Auto Segment Terrain</string>
      </property>
     </widget>
    </item>
-   <item row="10" column="0">
+   <item row="7" column="0" colspan="2">
+    <widget class="QPushButton" name="restoreDefaultsButton">
+     <property name="text">
+      <string>Restore Defaults</string>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="0">
     <widget class="QGroupBox" name="planningParamsContainer">
      <property name="focusPolicy">
       <enum>Qt::NoFocus</enum>
@@ -149,12 +156,49 @@
      <property name="checked">
       <bool>false</bool>
      </property>
+     <zorder>groupBox</zorder>
     </widget>
    </item>
-   <item row="7" column="0" colspan="2">
-    <widget class="QPushButton" name="restoreDefaultsButton">
+   <item row="9" column="1">
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>ArrowCursor</cursorShape>
+     </property>
      <property name="text">
-      <string>Restore Defaults</string>
+      <string>Control Options</string>
+     </property>
+    </widget>
+   </item>
+   <item row="17" column="0" colspan="2">
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0">
+    <widget class="QLabel" name="label_3">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Advanced</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0" colspan="2">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>

@@ -65,12 +65,10 @@ class FootstepsPanel(object):
         self.ui.hideBDIButton.connect("clicked()", self.onHideBDIButton)
         self.ui.showBDIButton.connect("clicked()", self.onShowBDIButton)
 
-        self.old_set_name = self.driver.control_defaults_map[self.driver.controlParams.properties.control_defaults]
-
         self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
         self.ui.autoIRISSegmentationButton.connect("clicked()", self.onAutoIRISSegmentation)
         self._setupPlanningPropertiesPanel()
-        self._setupControlPropertiesPanel()
+        self._setupTabPropertiesPanel()
 
 
     def onShowWalkingVolumes(self):
@@ -97,32 +95,35 @@ class FootstepsPanel(object):
         self.driver.params.properties.connectPropertyChanged(self.onPropertyChanged)
         PythonQt.dd.ddGroupBoxHider(self.ui.planningParamsContainer)
 
-    def _setupControlPropertiesPanel(self):
-        l = QtGui.QVBoxLayout(self.ui.controlParamsContainer)
+    def _setupTabPropertiesPanel(self):
+        l = QtGui.QGridLayout(self.ui.IHMCParamsContainer)
         l.setMargin(0)
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         self.propertiesPanel.setBrowserModeToWidget()
         l.addWidget(self.propertiesPanel)
-        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.controlParams.properties, self.propertiesPanel)
-        self.driver.controlParams.properties.connectPropertyChanged(self.onPropertyChanged)
-        PythonQt.dd.ddGroupBoxHider(self.ui.controlParamsContainer)
+        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.IHMCParams.properties, self.propertiesPanel)
+        l = QtGui.QGridLayout(self.ui.DrakeParamsContainer)
+        l.setMargin(0)
+        self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
+        self.propertiesPanel.setBrowserModeToWidget()
+        l.addWidget(self.propertiesPanel)
+        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.drakeParams.properties, self.propertiesPanel)
+        l = QtGui.QGridLayout(self.ui.BDIParamsContainer)
+        l.setMargin(0)
+        self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
+        self.propertiesPanel.setBrowserModeToWidget()
+        l.addWidget(self.propertiesPanel)
+        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.BDIParams.properties, self.propertiesPanel)
 
     def onPropertyChanged(self, propertySet, propertyName):
         self.driver.updateRequest()
         if propertyName == 'Planning Defaults':
-            self.applyPlanningDefaults()
-        elif propertyName == 'Control Defaults':
-            self.applyControlDefaults()       
+            self.applyPlanningDefaults()       
                                                            
     def applyPlanningDefaults(self):
         set_name = self.driver.planning_defaults_map[self.driver.params.properties.planning_defaults]
         for k, v in self.driver.default_planning_params[set_name].iteritems():
             self.driver.params.setProperty(k, v)
-
-    def applyControlDefaults(self):
-        set_name = self.driver.control_defaults_map[self.driver.controlParams.properties.control_defaults]
-        for k, v in self.driver.default_step_params[set_name].iteritems():
-            self.driver.controlParams.setProperty(k, v)
 
     def newWalkingGoalFrame(self, robotModel, distanceForward=1.0):
         t = self.driver.getFeetMidPoint(robotModel)
