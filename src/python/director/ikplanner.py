@@ -28,6 +28,7 @@ from director.ikparameters import IkParameters
 from director import ikconstraintencoder
 
 import drc as lcmdrc
+import bot_core as lcmbotcore
 import json
 
 import PythonQt
@@ -1340,7 +1341,7 @@ class IKPlanner(object):
 
 
     def addPostureGoalListener(self, stateJointController):
-        lcmUtils.addSubscriber('POSTURE_GOAL', lcmdrc.joint_angles_t, functools.partial(self.onPostureGoalMessage, stateJointController))
+        lcmUtils.addSubscriber('POSTURE_GOAL', lcmbotcore.joint_angles_t, functools.partial(self.onPostureGoalMessage, stateJointController))
 
     def mergeWithDefaultIkParameters(self, ikParameters):
         if ikParameters is None:
