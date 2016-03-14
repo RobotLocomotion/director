@@ -20,6 +20,7 @@ import math
 import numpy as np
 from director import drcargs
 import drc as lcmdrc
+import ihmc
 from bot_core.pose_t import pose_t
 from bot_core.robot_state_t import robot_state_t
 import functools
@@ -264,6 +265,8 @@ class FootstepsDriver(object):
         if hasattr(self, 'execButton'):
             self.execButton.setEnabled(False)
 
+        self.IHMCParams.properties.connectPropertyChanged(functools.partial(self.onIHMCPropertyChanged, self.IHMCParams))
+
         self.committedPlans = []
 
 
@@ -271,7 +274,7 @@ class FootstepsDriver(object):
         self.params = om.ObjectModelItem('Footstep Params')
         self.drakeParams = om.ObjectModelItem('Drake Control Params')
         self.IHMCParams = om.ObjectModelItem('IHMC Control Params')
-        self.BDIParams = om.ObjectModelItem('IHMC Control Params')
+        self.BDIParams = om.ObjectModelItem('BDI Control Params')
         self.planning_defaults_map = ['Drake Nominal', 'BDI', 'IHMC Nominal', 'Terrain', 'Stairs', 'Polaris Platform']
         self.params.addProperty('Planning Defaults', 2, attributes=om.PropertyAttributes(enumNames=self.planning_defaults_map))
         self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Walking']))
@@ -318,6 +321,8 @@ class FootstepsDriver(object):
         self.applyControlDefaults('BDI')
         self.applyPlanningDefaults(DEFAULT_PLANNING_PARAM_SET)
 
+        self.setIHMCControlMsg(self.IHMCParams)
+
     def applyControlDefaults(self, set_name):
         defaults = self.default_step_params[set_name]
         if set_name == 'IHMC Nominal':
@@ -334,6 +339,13 @@ class FootstepsDriver(object):
         defaults = self.default_planning_params[set_name]
         for k, v in defaults.iteritems():
             self.params.setProperty(k, v)
+
+    def setIHMCControlMsg(self, obj):
+        msg = ihmc.control_params_t()
+        msg.utime = getUtime()
+        msg.ihmc_transfer_time = obj.properties.ihmc_transfer_time
+        msg.ihmc_swing_time = obj.properties.ihmc_swing_time       
+        lcmUtils.publish('IHMC_CONTROL_PARAMS', msg)
 
     def _setupSubscriptions(self):
 
@@ -378,8 +390,6 @@ class FootstepsDriver(object):
         default_step_params.bdi_sway_end_dist = 0.02
         default_step_params.bdi_step_end_dist = 0.02
         default_step_params.mu = 1.0
-        default_step_params.ihmc_transfer_time = self.IHMCParams.properties.ihmc_transfer_time
-        default_step_params.ihmc_swing_time = self.IHMCParams.properties.ihmc_swing_time
 
         default_step_params.support_contact_groups = self.params.properties.support_contact_groups
         default_step_params.prevent_swing_undershoot = self.params.properties.prevent_swing_undershoot
@@ -581,6 +591,10 @@ class FootstepsDriver(object):
             self.lastFootstepPlan.footsteps[obj.footstep_index].params.support_contact_groups = obj.properties.support_contact_groups
             self.sendUpdatePlanRequest()
 
+    def onIHMCPropertyChanged(self, obj, propertySet, propertyName):
+        if propertyName == "IHMC Transfer Time" or propertyName == "IHMC Swing Time":
+            self.setIHMCControlMsg(obj)
+        
     def drawContactPts(self, obj, footstep, **kwargs):
         leftPoints, rightPoints = FootstepsDriver.getContactPts(footstep.params.support_contact_groups)
         contact_pts = rightPoints if footstep.is_right_foot else leftPoints
