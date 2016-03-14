@@ -686,9 +686,7 @@ if useFallDetectorVis:
 if useDataFiles:
 
     for filename in drcargs.args().data_files:
-        polyData = io.readPolyData(filename)
-        if polyData:
-            vis.showPolyData(polyData, os.path.basename(filename))
+        actionhandlers.onOpenFile(filename)
 
 if useCameraFrustumVisualizer and cameraview.CameraFrustumVisualizer.isCompatibleWithConfig():
     cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'CAMERA_LEFT')
