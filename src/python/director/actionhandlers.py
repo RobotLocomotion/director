@@ -45,6 +45,10 @@ def onFileOpen():
 
 def onOpenGeometry(filename):
 
+    if filename.lower().endswith('wrl'):
+        onOpenVrml(filename)
+        return
+
     polyData = io.readPolyData(filename)
 
     if not polyData or not polyData.GetNumberOfPoints():
@@ -52,6 +56,14 @@ def onOpenGeometry(filename):
         return
 
     vis.showPolyData(polyData, os.path.basename(filename), parent='files')
+
+
+def onOpenVrml(filename):
+    meshes, color = io.readVrml(filename)
+    folder = om.getOrCreateContainer(os.path.basename(filename), parentObj=om.getOrCreateContainer('files'))
+    for i, pair in enumerate(zip(meshes, color)):
+        mesh, color = pair
+        vis.showPolyData(mesh, 'mesh %d' % i, color=color, parent=folder)
 
 
 def onOpenUrdf(filename):
