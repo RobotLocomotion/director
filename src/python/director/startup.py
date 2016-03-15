@@ -579,13 +579,13 @@ if useForceDisplay:
         '''
 
 
-        def onAtlasState(self,msg):
+        def onRobotState(self,msg):
             self.l_foot_force_z = msg.force_torque.l_foot_force_z
             self.r_foot_force_z = msg.force_torque.r_foot_force_z
 
         def __init__(self, channel, statusBar=None):
 
-            self.sub = lcmUtils.addSubscriber(channel, atlas.state_t, self.onAtlasState)
+            self.sub = lcmUtils.addSubscriber(channel, lcmdrc.robot_state_t, self.onRobotState)
             self.label = QtGui.QLabel('')
             statusBar.addPermanentWidget(self.label)
 
@@ -603,7 +603,7 @@ if useForceDisplay:
             global leftInContact, rightInContact
             self.label.text = '%.2f | %.2f' % (self.l_foot_force_z,self.r_foot_force_z)
 
-    rateComputer = LCMForceDisplay('ATLAS_STATE', app.getMainWindow().statusBar())
+    rateComputer = LCMForceDisplay('EST_ROBOT_STATE', app.getMainWindow().statusBar())
 
 
 if useSkybox:
