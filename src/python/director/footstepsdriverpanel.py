@@ -67,7 +67,7 @@ class FootstepsPanel(object):
 
         self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
         self.ui.autoIRISSegmentationButton.connect("clicked()", self.onAutoIRISSegmentation)
-        self._setupPlanningPropertiesPanel()
+        #self._setupPlanningPropertiesPanel()
         self._setupTabPropertiesPanel()
 
 
@@ -108,12 +108,12 @@ class FootstepsPanel(object):
         self.propertiesPanel.setBrowserModeToWidget()
         l.addWidget(self.propertiesPanel)
         self.panelConnector = propertyset.PropertyPanelConnector(self.driver.drakeParams.properties, self.propertiesPanel)
-        l = QtGui.QGridLayout(self.ui.BDIParamsContainer)
+        l = QtGui.QGridLayout(self.ui.planningParamsContainer)
         l.setMargin(0)
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         self.propertiesPanel.setBrowserModeToWidget()
         l.addWidget(self.propertiesPanel)
-        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.BDIParams.properties, self.propertiesPanel)
+        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.params.properties, self.propertiesPanel)
 
     def onPropertyChanged(self, propertySet, propertyName):
         self.driver.updateRequest()
