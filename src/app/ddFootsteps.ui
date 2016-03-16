@@ -141,14 +141,14 @@
        <string>Planning</string>
       </attribute>
      </widget>
+     <widget class="QWidget" name="controlParamsContainer">
+      <attribute name="title">
+       <string>Control</string>
+      </attribute>
+     </widget>
      <widget class="QWidget" name="IHMCParamsContainer">
       <attribute name="title">
        <string>IHMC</string>
-      </attribute>
-     </widget>
-     <widget class="QWidget" name="DrakeParamsContainer">
-      <attribute name="title">
-       <string>Drake</string>
       </attribute>
      </widget>
     </widget>
