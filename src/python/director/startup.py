@@ -102,6 +102,7 @@ from director.tasks import robottasks as rt
 from director.tasks import taskmanagerwidget
 from director.tasks.descriptions import loadTaskDescriptions
 import drc as lcmdrc
+import bot_core as lcmbotcore
 import atlas
 
 from collections import OrderedDict
@@ -155,7 +156,7 @@ useFootContactVis = True
 useFallDetectorVis = True
 useCameraFrustumVisualizer = True
 useControllerRate = True
-useForceDisplay = False
+useForceDisplay = True
 useSkybox = False
 useDataFiles = True
 useGamepad = True
@@ -585,7 +586,7 @@ if useForceDisplay:
 
         def __init__(self, channel, statusBar=None):
 
-            self.sub = lcmUtils.addSubscriber(channel, lcmdrc.robot_state_t, self.onRobotState)
+            self.sub = lcmUtils.addSubscriber(channel, lcmbotcore.robot_state_t, self.onRobotState)
             self.label = QtGui.QLabel('')
             statusBar.addPermanentWidget(self.label)
 
@@ -649,22 +650,27 @@ robotHighlighter = RobotLinkHighligher(robotStateModel)
 
 if useFootContactVis:
 
-    def onFootContact(msg):
+    class LCMContactDisplay(object):
+        '''
+        Displays (controller) contact state by changing foot mesh color
+        '''
 
-        leftInContact = msg.left_contact > 0.0
-        rightInContact = msg.right_contact > 0.0
+        def onFootContact(self, msg):
+            for linkName, inContact in [[self.leftFootLink, msg.left_contact > 0.0], [self.rightFootLink, msg.right_contact > 0.0]]:
+                if inContact:
+                    robotHighlighter.highlightLink(linkName, [0, 0, 1])
+                else:
+                    robotHighlighter.dehighlightLink(linkName)
 
-        for linkName, inContact in [['l_foot', msg.left_contact > 0.0], ['r_foot', msg.right_contact > 0.0]]:
-            if inContact:
-                robotHighlighter.highlightLink(linkName, [0, 0, 1])
-            else:
-                robotHighlighter.dehighlightLink(linkName)
+        def __init__(self, channel):
 
-        #robotStateModel.model.setLinkColor(drcargs.getDirectorConfig()['leftFootLink'], contactColor if leftInContact else noContactColor)
-        #robotStateModel.model.setLinkColor(drcargs.getDirectorConfig()['rightFootLink'], contactColor if rightInContact else noContactColor)
+            self.leftFootLink = drcargs.getDirectorConfig()['leftFootLink']
+            self.rightFootLink = drcargs.getDirectorConfig()['rightFootLink']
+            footContactSub = lcmUtils.addSubscriber(channel, lcmdrc.foot_contact_estimate_t, self.onFootContact)
+            footContactSub.setSpeedLimit(60)
 
-    footContactSub = lcmUtils.addSubscriber('FOOT_CONTACT_ESTIMATE', lcmdrc.foot_contact_estimate_t, onFootContact)
-    footContactSub.setSpeedLimit(60)
+    footContactVis = LCMContactDisplay('FOOT_CONTACT_ESTIMATE')
+
 
 
 if useFallDetectorVis:
