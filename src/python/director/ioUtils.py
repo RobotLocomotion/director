@@ -69,6 +69,22 @@ def readImage(filename):
     return image
 
 
+def readVrml(filename):
+    '''
+    Returns list of vtkPolyData meshes and a list of colors as 3-tuples
+    '''
+    l = vtk.vtkVRMLImporter()
+    l.SetFileName(filename)
+    l.Read()
+    w = l.GetRenderWindow()
+    ren = w.GetRenderers().GetItemAsObject(0)
+    actors = ren.GetActors()
+    actors = [actors.GetItemAsObject(i) for i in xrange(actors.GetNumberOfItems())]
+    meshes = [a.GetMapper().GetInput() for a in actors]
+    colors = [ac.GetProperty().GetColor() for ac in actors]
+    return meshes, colors
+
+
 def writePolyData(polyData, filename):
 
     ext = os.path.splitext(filename)[1].lower()

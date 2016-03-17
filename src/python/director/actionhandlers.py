@@ -24,16 +24,20 @@ def storeDefaultDirectory(filename):
         _lastDir = filename
 
 
-def onFileOpen():
+def onFileOpenDialog():
 
     mainWindow = app.getMainWindow()
 
-    fileFilters = "Data Files (*.obj *.pcd *.ply *.stl *.vtk *.vtp *.urdf *.otdf)";
+    fileFilters = "Data Files (*.obj *.pcd *.ply *.stl *.vtk *.vtp *.wrl *.urdf *.otdf)";
     filename = QtGui.QFileDialog.getOpenFileName(mainWindow, "Open...", getDefaultDirectory(), fileFilters)
     if not filename:
         return
 
     storeDefaultDirectory(filename)
+    onOpenFile(filename)
+
+
+def onOpenFile(filename):
 
     if filename.lower().endswith('urdf'):
         onOpenUrdf(filename)
@@ -45,6 +49,10 @@ def onFileOpen():
 
 def onOpenGeometry(filename):
 
+    if filename.lower().endswith('wrl'):
+        onOpenVrml(filename)
+        return
+
     polyData = io.readPolyData(filename)
 
     if not polyData or not polyData.GetNumberOfPoints():
@@ -52,6 +60,14 @@ def onOpenGeometry(filename):
         return
 
     vis.showPolyData(polyData, os.path.basename(filename), parent='files')
+
+
+def onOpenVrml(filename):
+    meshes, color = io.readVrml(filename)
+    folder = om.getOrCreateContainer(os.path.basename(filename), parentObj=om.getOrCreateContainer('files'))
+    for i, pair in enumerate(zip(meshes, color)):
+        mesh, color = pair
+        vis.showPolyData(mesh, 'mesh %d' % i, color=color, parent=folder)
 
 
 def onOpenUrdf(filename):
@@ -128,7 +144,7 @@ def onOpenOnlineHelp():
 def init():
     mainWindow = app.getMainWindow()
 
-    mainWindow.connect('fileOpen()', onFileOpen)
+    mainWindow.connect('fileOpen()', onFileOpenDialog)
     mainWindow.connect('fileSaveData()', onFileSaveData)
     mainWindow.connect('fileExportUrdf()', onFileExportUrdf)
     mainWindow.connect('openOnlineHelp()', onOpenOnlineHelp)
