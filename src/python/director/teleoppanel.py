@@ -1133,6 +1133,25 @@ class JointTeleopPanel(object):
                 self.slidersMap[jointName] = slider
                 self.labelMap[slider] = numericLabel
 
+            if groupName == 'Neck':
+                def onSendNeckJointPositionGoal():
+                    lc = lcm.LCM()
+                    msg = lcmbotcore.robot_state_t()
+                    msg.num_joints = len(joints)
+                    msg.joint_name = joints
+                    msg.joint_velocity = [0] * len(joints)
+                    msg.joint_effort = [0] * len(joints)
+                    msg.joint_position = [0] * len(joints)
+                    for i, jointName in enumerate(joints):
+                        jointIndex = self.toJointIndex(jointName)
+                        msg.joint_position[i] = self.getJointValue(jointIndex)
+
+                    lc.publish("JOINT_POSITION_GOAL", msg.encode())
+
+                sendNeckJointPositionGoalButton = QtGui.QPushButton('set')
+                sendNeckJointPositionGoalButton.connect('clicked()', onSendNeckJointPositionGoal)
+                gridLayout.addWidget(sendNeckJointPositionGoalButton, 3, gridLayout.columnCount())
+
             gridLayout.setColumnStretch(gridLayout.columnCount(), 1)
             self.ui.tabWidget.addTab(jointGroupWidget, groupName)
 
