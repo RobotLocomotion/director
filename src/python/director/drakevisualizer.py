@@ -14,12 +14,7 @@ from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import packagepath
 
-try:
-    import drake as lcmdrake
-except ImportError as e:
-    import warnings
-    warnings.warn("The drake python lcmtype bindings have been moved back to the `drake` package. You may want to upgrade your version of drake", FutureWarning)
-    import lcmtypes.drake as lcmdrake
+import drake as lcmdrake
 
 from PythonQt import QtGui
 
