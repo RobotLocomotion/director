@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from director import lcmUtils
 
 import director.objectmodel as om
@@ -9,6 +10,7 @@ from director import ioUtils
 from director import filterUtils
 from director.shallowCopy import shallowCopy
 from director import vtkAll as vtk
+from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import packagepath
 
@@ -60,6 +62,43 @@ class Geometry(object):
 
         raise Exception('Unsupported geometry type: %s' % geom.type)
 
+    @staticmethod
+    def createPolyDataFromMeshMessage(geom):
+
+        assert len(geom.float_data) >= 2
+
+        numPoints = int(geom.float_data[0])
+        numTris = int(geom.float_data[1])
+
+        headerOffset = 2
+        ptsOffset = 3*numPoints
+        trisOffset = 3*numTris
+
+        assert len(geom.float_data) == headerOffset + ptsOffset + trisOffset
+
+        pts = np.array(geom.float_data[headerOffset:headerOffset+ptsOffset])
+        pts = pts.reshape((numPoints, 3))
+        tris = np.array(geom.float_data[headerOffset+ptsOffset:], dtype=int)
+
+        return Geometry.createPolyDataFromMeshArrays(pts, tris)
+
+    @staticmethod
+    def createPolyDataFromMeshArrays(pts, faces):
+        pd = vtk.vtkPolyData()
+        pd.SetPoints(vtk.vtkPoints())
+        pd.GetPoints().SetData(vnp.getVtkFromNumpy(pts.copy()))
+
+        assert len(faces) % 3 == 0
+        cells = vtk.vtkCellArray()
+        for i in xrange(len(faces)/3):
+            tri = vtk.vtkTriangle()
+            tri.GetPointIds().SetId(0, faces[i*3 + 0])
+            tri.GetPointIds().SetId(1, faces[i*3 + 1])
+            tri.GetPointIds().SetId(2, faces[i*3 + 2])
+            cells.InsertNextCell(tri)
+
+        pd.SetPolys(cells)
+        return pd
 
     @staticmethod
     def scaleGeometry(polyDataList, geom):
@@ -187,8 +226,11 @@ class Geometry(object):
             polyDataList = [Geometry.createPolyDataFromPrimitive(geom)]
 
         else:
-            polyDataList = Geometry.loadPolyDataMeshes(geom)
-            polyDataList = Geometry.scaleGeometry(polyDataList, geom)
+            if not geom.string_data:
+                polyDataList = [Geometry.createPolyDataFromMeshMessage(geom)]
+            else:
+                polyDataList = Geometry.loadPolyDataMeshes(geom)
+                polyDataList = Geometry.scaleGeometry(polyDataList, geom)
 
         polyDataList = Geometry.transformGeometry(polyDataList, geom)
         polyDataList = Geometry.computeNormals(polyDataList)
