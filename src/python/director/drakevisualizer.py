@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from director import lcmUtils
 
 import director.objectmodel as om
@@ -64,7 +65,7 @@ class Geometry(object):
     @staticmethod
     def createPolyDataFromMeshMessage(geom):
 
-        assert len(geom.float_data >= 2)
+        assert len(geom.float_data) >= 2
 
         numPoints = int(geom.float_data[0])
         numTris = int(geom.float_data[1])
@@ -73,9 +74,10 @@ class Geometry(object):
         ptsOffset = 3*numPoints
         trisOffset = 3*numTris
 
-        assert len(geom.float_data) = headerOffset + ptsOffset + trisOffset
+        assert len(geom.float_data) == headerOffset + ptsOffset + trisOffset
 
         pts = np.array(geom.float_data[headerOffset:headerOffset+ptsOffset])
+        pts = pts.reshape((numPoints, 3))
         tris = np.array(geom.float_data[headerOffset+ptsOffset:], dtype=int)
 
         return Geometry.createPolyDataFromMeshArrays(pts, tris)
@@ -224,7 +226,7 @@ class Geometry(object):
             polyDataList = [Geometry.createPolyDataFromPrimitive(geom)]
 
         else:
-            if not geo.string_data:
+            if not geom.string_data:
                 polyDataList = [Geometry.createPolyDataFromMeshMessage(geom)]
             else:
                 polyDataList = Geometry.loadPolyDataMeshes(geom)
