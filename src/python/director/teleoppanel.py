@@ -20,7 +20,7 @@ import math
 import numpy as np
 import types
 import lcm
-import bot_core
+import bot_core as lcmbotcore
 from bot_core.pose_t import pose_t
 
 
@@ -107,7 +107,7 @@ class EndEffectorTeleopPanel(object):
         self.palmGazeAxis = [0.0, 1.0, 0.0]
         self.constraintSet = None
         
-        lcmUtils.addSubscriber('CANDIDATE_ROBOT_ENDPOSE', bot_core.robot_state_t, self.onCandidateEndPose)
+        lcmUtils.addSubscriber('CANDIDATE_ROBOT_ENDPOSE', lcmbotcore.robot_state_t, self.onCandidateEndPose)
 
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
