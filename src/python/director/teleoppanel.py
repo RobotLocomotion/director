@@ -20,7 +20,7 @@ import math
 import numpy as np
 import types
 import lcm
-import bot_core
+import bot_core as lcmbotcore
 from bot_core.pose_t import pose_t
 
 
@@ -107,7 +107,7 @@ class EndEffectorTeleopPanel(object):
         self.palmGazeAxis = [0.0, 1.0, 0.0]
         self.constraintSet = None
         
-        lcmUtils.addSubscriber('CANDIDATE_ROBOT_ENDPOSE', bot_core.robot_state_t, self.onCandidateEndPose)
+        lcmUtils.addSubscriber('CANDIDATE_ROBOT_ENDPOSE', lcmbotcore.robot_state_t, self.onCandidateEndPose)
 
         #self.ui.interactiveCheckbox.visible = False
         #self.ui.updateIkButton.visible = False
@@ -745,7 +745,6 @@ class EndEffectorTeleopPanel(object):
         self.moveFoot([0,0,-0.05], 'right')
     
     def moveFoot(self, offset, side):
-        lc = lcm.LCM()
         msg = pose_t();
         msg.utime = 0;
         foot_link = self.panel.ikPlanner.leftFootLink if side == 'left' else self.panel.ikPlanner.rightFootLink
@@ -753,9 +752,9 @@ class EndEffectorTeleopPanel(object):
         msg.pos = footPose[0] + offset
         msg.orientation = footPose[1]
         if side == 'left':
-            lc.publish("DESIRED_LEFT_FOOT_POSE", msg.encode())
+            lcmUtils.publish("DESIRED_LEFT_FOOT_POSE", msg)
         else:
-            lc.publish("DESIRED_RIGHT_FOOT_POSE", msg.encode())
+            lcmUtils.publish("DESIRED_RIGHT_FOOT_POSE", msg)
     
     def initFinalPosePlanning(self):
         if drcargs.getDirectorConfig()['modelName'] not in {'valkyrie_v1', 'valkyrie_v2'}:
@@ -1132,6 +1131,24 @@ class JointTeleopPanel(object):
                 gridLayout.addWidget(numericLabel, 2, column)
                 self.slidersMap[jointName] = slider
                 self.labelMap[slider] = numericLabel
+
+            if groupName == 'Neck':
+                def onSendNeckJointPositionGoal():
+                    msg = lcmbotcore.robot_state_t()
+                    msg.num_joints = len(joints)
+                    msg.joint_name = joints
+                    msg.joint_velocity = [0] * len(joints)
+                    msg.joint_effort = [0] * len(joints)
+                    msg.joint_position = [0] * len(joints)
+                    for i, jointName in enumerate(joints):
+                        jointIndex = self.toJointIndex(jointName)
+                        msg.joint_position[i] = self.getJointValue(jointIndex)
+
+                    lcmUtils.publish("JOINT_POSITION_GOAL", msg)
+
+                sendNeckJointPositionGoalButton = QtGui.QPushButton('set')
+                sendNeckJointPositionGoalButton.connect('clicked()', onSendNeckJointPositionGoal)
+                gridLayout.addWidget(sendNeckJointPositionGoalButton, 3, gridLayout.columnCount())
 
             gridLayout.setColumnStretch(gridLayout.columnCount(), 1)
             self.ui.tabWidget.addTab(jointGroupWidget, groupName)
