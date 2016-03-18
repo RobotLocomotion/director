@@ -747,9 +747,9 @@ class ContinousWalkingDemo(object):
 
         # force correct planning parameters:
         request.params.leading_foot = goalSteps[0].is_right_foot
-        request.params.planning_mode = 1
+        request.params.planning_mode = lcmdrc.footstep_plan_params_t.MODE_SPLINE
         request.params.nom_forward_step = 0.38
-        request.params.map_mode = 1 #  2 footplane, 0 h+n, 1 h+zup, 3 hori
+        request.params.map_mode = lcmdrc.footstep_plan_params_t.TERRAIN_HEIGHTS_Z_NORMALS
         request.params.max_num_steps = len(goalSteps)
         request.params.min_num_steps = len(goalSteps)
         request.default_step_params.support_contact_groups = self.supportContact
