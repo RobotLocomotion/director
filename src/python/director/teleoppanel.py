@@ -745,7 +745,6 @@ class EndEffectorTeleopPanel(object):
         self.moveFoot([0,0,-0.05], 'right')
     
     def moveFoot(self, offset, side):
-        lc = lcm.LCM()
         msg = pose_t();
         msg.utime = 0;
         foot_link = self.panel.ikPlanner.leftFootLink if side == 'left' else self.panel.ikPlanner.rightFootLink
@@ -753,9 +752,9 @@ class EndEffectorTeleopPanel(object):
         msg.pos = footPose[0] + offset
         msg.orientation = footPose[1]
         if side == 'left':
-            lc.publish("DESIRED_LEFT_FOOT_POSE", msg.encode())
+            lcmUtils.publish("DESIRED_LEFT_FOOT_POSE", msg)
         else:
-            lc.publish("DESIRED_RIGHT_FOOT_POSE", msg.encode())
+            lcmUtils.publish("DESIRED_RIGHT_FOOT_POSE", msg)
     
     def initFinalPosePlanning(self):
         if drcargs.getDirectorConfig()['modelName'] not in {'valkyrie_v1', 'valkyrie_v2'}:
@@ -1135,7 +1134,6 @@ class JointTeleopPanel(object):
 
             if groupName == 'Neck':
                 def onSendNeckJointPositionGoal():
-                    lc = lcm.LCM()
                     msg = lcmbotcore.robot_state_t()
                     msg.num_joints = len(joints)
                     msg.joint_name = joints
@@ -1146,7 +1144,7 @@ class JointTeleopPanel(object):
                         jointIndex = self.toJointIndex(jointName)
                         msg.joint_position[i] = self.getJointValue(jointIndex)
 
-                    lc.publish("JOINT_POSITION_GOAL", msg.encode())
+                    lcmUtils.publish("JOINT_POSITION_GOAL", msg)
 
                 sendNeckJointPositionGoalButton = QtGui.QPushButton('set')
                 sendNeckJointPositionGoalButton.connect('clicked()', onSendNeckJointPositionGoal)
