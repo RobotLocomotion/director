@@ -12,6 +12,7 @@ from director import vtkAll as vtk
 from director import drcargs
 from director import affordanceurdf
 from director.roboturdf import HandFactory
+from director.utime import getUtime
 from director import lcmUtils
 import drc as lcmdrc
 
@@ -746,7 +747,7 @@ class EndEffectorTeleopPanel(object):
     
     def moveFoot(self, offset, side):
         msg = pose_t();
-        msg.utime = 0;
+        msg.utime = getUtime();
         foot_link = self.panel.ikPlanner.leftFootLink if side == 'left' else self.panel.ikPlanner.rightFootLink
         footPose = transformUtils.poseFromTransform(self.panel.ikPlanner.robotModel.getLinkFrame(foot_link))
         msg.pos = footPose[0] + offset
@@ -1137,13 +1138,13 @@ class JointTeleopPanel(object):
                     if 'neck_ay' in joints:  # Atlas
                         neckPitch = self.getJointValue(self.toJointIndex('neck_ay'))
                         msg = lcmdrc.neck_pitch_t()
-                        msg.utime = 0
+                        msg.utime = getUtime()
                         msg.pitch = neckPitch
 
                         lcmUtils.publish('DESIRED_NECK_PITCH', msg)
                     elif 'lowerNeckPitch' in joints:  # Valkyrie
                         msg = lcmbotcore.joint_angles_t()
-                        msg.utime = 0
+                        msg.utime = getUtime()
                         msg.num_joints = len(joints)
                         msg.joint_name = joints
                         msg.joint_position = [0] * len(joints)
