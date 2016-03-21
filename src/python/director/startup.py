@@ -209,7 +209,7 @@ if usePerception:
 
     cameraview.cameraView.initImageRotations(robotStateModel)
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
-    multisensepanel.init(perception.multisenseDriver, neckDriver)
+    multisensepanel.init(perception.multisenseDriver)
     sensordatarequestpanel.init()
 
     # for kintinuous, use 'CAMERA_FUSED', 'CAMERA_TSDF'

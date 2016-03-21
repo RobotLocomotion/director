@@ -203,19 +203,6 @@
    </item>
    <item>
     <layout class="QGridLayout" name="gridLayout_2">
-     <item row="0" column="1">
-      <widget class="QSpinBox" name="neckPitchSpinner">
-       <property name="minimum">
-        <number>-90</number>
-       </property>
-       <property name="maximum">
-        <number>90</number>
-       </property>
-       <property name="singleStep">
-        <number>5</number>
-       </property>
-      </widget>
-     </item>
      <item row="2" column="1">
       <widget class="QDoubleSpinBox" name="scanDurationSpinner">
        <property name="minimum">
@@ -243,13 +230,6 @@
       <widget class="QLabel" name="spinRate">
        <property name="text">
         <string>Spin Rate (RPM)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="neckPitch">
-       <property name="text">
-        <string>Neck Pitch</string>
        </property>
       </widget>
      </item>
