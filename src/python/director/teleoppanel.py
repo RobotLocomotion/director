@@ -1142,11 +1142,9 @@ class JointTeleopPanel(object):
 
                         lcmUtils.publish('DESIRED_NECK_PITCH', msg)
                     elif 'lowerNeckPitch' in joints:  # Valkyrie
-                        msg = lcmbotcore.robot_state_t()
+                        msg = lcmbotcore.joint_angles_t()
                         msg.num_joints = len(joints)
                         msg.joint_name = joints
-                        msg.joint_velocity = [0] * len(joints)
-                        msg.joint_effort = [0] * len(joints)
                         msg.joint_position = [0] * len(joints)
                         for i, jointName in enumerate(joints):
                             jointIndex = self.toJointIndex(jointName)
