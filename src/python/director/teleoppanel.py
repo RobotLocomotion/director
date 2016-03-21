@@ -12,6 +12,7 @@ from director import vtkAll as vtk
 from director import drcargs
 from director import affordanceurdf
 from director.roboturdf import HandFactory
+from director.utime import getUtime
 from director import lcmUtils
 import drc as lcmdrc
 
@@ -746,7 +747,7 @@ class EndEffectorTeleopPanel(object):
     
     def moveFoot(self, offset, side):
         msg = pose_t();
-        msg.utime = 0;
+        msg.utime = getUtime();
         foot_link = self.panel.ikPlanner.leftFootLink if side == 'left' else self.panel.ikPlanner.rightFootLink
         footPose = transformUtils.poseFromTransform(self.panel.ikPlanner.robotModel.getLinkFrame(foot_link))
         msg.pos = footPose[0] + offset
@@ -1134,17 +1135,16 @@ class JointTeleopPanel(object):
 
             if groupName == 'Neck':
                 def onSendNeckJointPositionGoal():
-                    msg = lcmbotcore.robot_state_t()
+                    msg = lcmbotcore.joint_angles_t()
+                    msg.utime = getUtime()
                     msg.num_joints = len(joints)
                     msg.joint_name = joints
-                    msg.joint_velocity = [0] * len(joints)
-                    msg.joint_effort = [0] * len(joints)
                     msg.joint_position = [0] * len(joints)
                     for i, jointName in enumerate(joints):
                         jointIndex = self.toJointIndex(jointName)
                         msg.joint_position[i] = self.getJointValue(jointIndex)
 
-                    lcmUtils.publish("JOINT_POSITION_GOAL", msg)
+                    lcmUtils.publish('DESIRED_NECK_ANGLES', msg)
 
                 sendNeckJointPositionGoalButton = QtGui.QPushButton('set')
                 sendNeckJointPositionGoalButton.connect('clicked()', onSendNeckJointPositionGoal)

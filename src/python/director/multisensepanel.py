@@ -73,11 +73,9 @@ class SpindleSpinChecker(object):
 
 class MultisensePanel(object):
 
-    def __init__(self, multisenseDriver, neckDriver):
+    def __init__(self, multisenseDriver):
 
         self.multisenseDriver = multisenseDriver
-        self.neckDriver = neckDriver
-        self.neckPitchChanged = False
         self.multisenseChanged = False
 
         loader = QtUiTools.QUiLoader()
@@ -96,7 +94,6 @@ class MultisensePanel(object):
         self.widget.headCamExposureSpinner.setEnabled(False)
 
         #connect the callbacks
-        self.widget.neckPitchSpinner.valueChanged.connect(self.neckPitchChange)
         self.widget.spinRateSpinner.valueChanged.connect(self.spinRateChange)
         self.widget.scanDurationSpinner.valueChanged.connect(self.scanDurationChange)
         self.widget.headCamFpsSpinner.valueChanged.connect(self.headCamFpsChange)
@@ -135,9 +132,6 @@ class MultisensePanel(object):
     def getScanDuration(self):
         return self.widget.scanDurationSpinner.value
 
-    def getNeckPitch(self):
-        return self.widget.neckPitchSpinner.value
-
     def ledBrightnessChange(self, event):
         self.multisenseChanged = True
 
@@ -151,10 +145,6 @@ class MultisensePanel(object):
         self.multisenseChanged = True
         self.widget.headCamGainSpinner.setEnabled(not self.getCameraAutoGain())
         self.widget.headCamExposureSpinner.setEnabled(not self.getCameraAutoGain())
-
-    def neckPitchChange(self, event):
-        self.neckPitchChanged = True
-        self.updateTimer.stop()
 
     def headCamFpsChange(self, event):
         self.multisenseChanged = True
@@ -195,11 +185,6 @@ class MultisensePanel(object):
         if not self.widget.isVisible():
             return
 
-        if not self.neckPitchChanged:
-            self.widget.neckPitchSpinner.blockSignals(True)
-            self.widget.neckPitchSpinner.setValue(self.neckDriver.getNeckPitchDegrees())
-            self.widget.neckPitchSpinner.blockSignals(False)
-
     def publishCommand(self):
 
         fps = self.getCameraFps()
@@ -211,10 +196,8 @@ class MultisensePanel(object):
         autoGain = 1 if self.getCameraAutoGain() else 0
 
         self.multisenseDriver.sendMultisenseCommand(fps, camGain, exposure, autoGain, spinRate, ledFlash, ledDuty)
-        self.neckDriver.setNeckPitch(self.getNeckPitch())
 
         self.multisenseChanged = False
-        self.neckPitchChanged = False
         self.updateTimer.start()
 
 
@@ -222,12 +205,12 @@ def _getAction():
     return app.getToolBarActions()['ActionMultisensePanel']
 
 
-def init(driver, neckDriver):
+def init(driver):
 
     global panel
     global dock
 
-    panel = MultisensePanel(driver, neckDriver)
+    panel = MultisensePanel(driver)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 

@@ -17,6 +17,7 @@ from director import vtkNumpy as vnp
 import numpy as np
 
 import drc as lcmdrc
+import bot_core as lcmbotcore
 import multisense as lcmmultisense
 import lcmUtils
 
@@ -343,12 +344,16 @@ class MultiSenseSource(TimerCallback):
 
     @staticmethod
     def setNeckPitch(neckPitchDegrees):
-
+        '''
+        Currently hard-coded for Atlas to match previous functionality
+        '''
         assert neckPitchDegrees <= 90 and neckPitchDegrees >= -90
-        m = lcmdrc.neck_pitch_t()
-        m.utime = 0
-        m.pitch = math.radians(neckPitchDegrees)
-        lcmUtils.publish('DESIRED_NECK_PITCH', m)
+        m = lcmbotcore.joint_angles_t()
+        m.utime = getUtime()
+        m.num_joints = 1
+        m.joint_name = [ "neck_ay" ]
+        m.joint_position = math.radians(neckPitchDegrees)
+        lcmUtils.publish('DESIRED_NECK_ANGLES', m)
 
 
 class NeckDriver(object):
