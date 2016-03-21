@@ -1135,24 +1135,16 @@ class JointTeleopPanel(object):
 
             if groupName == 'Neck':
                 def onSendNeckJointPositionGoal():
-                    if 'neck_ay' in joints:  # Atlas
-                        neckPitch = self.getJointValue(self.toJointIndex('neck_ay'))
-                        msg = lcmdrc.neck_pitch_t()
-                        msg.utime = getUtime()
-                        msg.pitch = neckPitch
+                    msg = lcmbotcore.joint_angles_t()
+                    msg.utime = getUtime()
+                    msg.num_joints = len(joints)
+                    msg.joint_name = joints
+                    msg.joint_position = [0] * len(joints)
+                    for i, jointName in enumerate(joints):
+                        jointIndex = self.toJointIndex(jointName)
+                        msg.joint_position[i] = self.getJointValue(jointIndex)
 
-                        lcmUtils.publish('DESIRED_NECK_PITCH', msg)
-                    elif 'lowerNeckPitch' in joints:  # Valkyrie
-                        msg = lcmbotcore.joint_angles_t()
-                        msg.utime = getUtime()
-                        msg.num_joints = len(joints)
-                        msg.joint_name = joints
-                        msg.joint_position = [0] * len(joints)
-                        for i, jointName in enumerate(joints):
-                            jointIndex = self.toJointIndex(jointName)
-                            msg.joint_position[i] = self.getJointValue(jointIndex)
-
-                        lcmUtils.publish('DESIRED_NECK_ANGLES', msg)
+                    lcmUtils.publish('DESIRED_NECK_ANGLES', msg)
 
                 sendNeckJointPositionGoalButton = QtGui.QPushButton('set')
                 sendNeckJointPositionGoalButton.connect('clicked()', onSendNeckJointPositionGoal)
