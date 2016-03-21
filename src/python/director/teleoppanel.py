@@ -1135,14 +1135,15 @@ class JointTeleopPanel(object):
             if groupName == 'Neck':
                 def onSendNeckJointPositionGoal():
                     if 'neck_ay' in joints:  # Atlas
-                        neckPitchDegrees = self.getJointValue(self.toJointIndex('neck_ay'))
+                        neckPitch = self.getJointValue(self.toJointIndex('neck_ay'))
                         msg = lcmdrc.neck_pitch_t()
                         msg.utime = 0
-                        msg.pitch = neckPitchDegrees
+                        msg.pitch = neckPitch
 
                         lcmUtils.publish('DESIRED_NECK_PITCH', msg)
                     elif 'lowerNeckPitch' in joints:  # Valkyrie
                         msg = lcmbotcore.joint_angles_t()
+                        msg.utime = 0
                         msg.num_joints = len(joints)
                         msg.joint_name = joints
                         msg.joint_position = [0] * len(joints)
