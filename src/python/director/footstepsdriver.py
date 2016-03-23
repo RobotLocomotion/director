@@ -321,24 +321,24 @@ class FootstepsDriver(object):
         self.params.addProperty('Prevent Swing Undershoot', 0, attributes=om.PropertyAttributes(enumNames=['False', 'True']))
         self.params.addProperty('Prevent Swing Overshoot', 0, attributes=om.PropertyAttributes(enumNames=['False', 'True']))
 
-        self.applyControlDefaults('IHMC Nominal')
-        self.applyControlDefaults('Drake Nominal')
-        self.applyControlDefaults('BDI')
-        self.applyPlanningDefaults(DEFAULT_STEP_PARAM_SET)
+        #self.applyControlDefaults('IHMC Nominal')
+        #self.applyControlDefaults('Drake Nominal')
+        #self.applyControlDefaults('BDI')
+        self.applyDefaults(DEFAULT_PARAM_SET)
 
-    def applyControlDefaults(self, set_name):
-        defaults = self.default_step_params[set_name]
-        if set_name == 'IHMC Nominal':
-            for k, v in defaults.iteritems():
-                self.IHMCParams.setProperty(k, v)
-        elif set_name == 'Drake Nominal':
-            for k, v in defaults.iteritems():
-                self.controlParams.setProperty(k, v)
-        if set_name == 'BDI':
-            for k, v in defaults.iteritems():
-                self.BDIParams.setProperty(k, v)
+    #def applyControlDefaults(self, set_name):
+    #    defaults = self.default_step_params[set_name]
+    #    if set_name == 'IHMC Nominal':
+    #        for k, v in defaults.iteritems():
+    #            self.IHMCParams.setProperty(k, v)
+    #    elif set_name == 'Drake Nominal':
+    #        for k, v in defaults.iteritems():
+    #            self.controlParams.setProperty(k, v)
+    #    if set_name == 'BDI':
+    #        for k, v in defaults.iteritems():
+    #            self.BDIParams.setProperty(k, v)
 
-    def applyPlanningDefaults(self, set_name):
+    def applyDefaults(self, set_name):
         defaults = self.default_step_params[set_name]
         for k, v in defaults.iteritems():
             self.params.setProperty(k, v)
@@ -371,7 +371,6 @@ class FootstepsDriver(object):
 
     def getDefaultStepParams(self):
         default_step_params = lcmdrc.footstep_params_t()
-
         default_step_params.step_speed = self.params.properties.drake_swing_speed
         default_step_params.drake_min_hold_time = self.params.properties.drake_min_hold_time
         default_step_params.drake_instep_shift = self.params.properties.drake_instep_shift
@@ -390,10 +389,8 @@ class FootstepsDriver(object):
         default_step_params.ihmc_swing_time = self.IHMCParams.properties.ihmc_swing_time
 
         default_step_params.support_contact_groups = self.params.properties.support_contact_groups
-        
         default_step_params.prevent_swing_undershoot = self.params.properties.prevent_swing_undershoot
         default_step_params.prevent_swing_overshoot = self.params.properties.prevent_swing_overshoot
-
         return default_step_params
 
     def onWalkingPlan(self, msg):
@@ -828,7 +825,6 @@ class FootstepsDriver(object):
         # msg.params.map_command = self.map_command_lcm_map[self.params.properties.map_command]
         msg.params.leading_foot = self.leading_foot_map[self.params.properties.leading_foot]
         msg.default_step_params = self.getDefaultStepParams()
-
         return msg
 
     def applySafeRegions(self, msg):
