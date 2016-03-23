@@ -276,10 +276,9 @@ class FootstepsDriver(object):
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
-        self.BDIParams = om.ObjectModelItem('BDI Control Params')
         self.defaults_map = ['Drake Nominal', 'BDI', 'IHMC Nominal', 'Terrain', 'Stairs', 'Polaris Platform']
         self.params.addProperty('Planning Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.defaults_map))
-        self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Walking']))
+        self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
         self.params.addProperty('Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Auto', 'Left', 'Right']))
         self.leading_foot_map = [lcmdrc.footstep_plan_params_t.LEAD_AUTO,
                                  lcmdrc.footstep_plan_params_t.LEAD_LEFT,
@@ -304,11 +303,11 @@ class FootstepsDriver(object):
         self.params.addProperty('Swing Height', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.005))
         self.params.addProperty('Max Upward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Max Downward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
-        self.params.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.05, maximum=5.0, singleStep=0.05, hidden=False))
-        self.params.addProperty('Drake Min Hold Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=10.0, singleStep=0.05, hidden=False))
-        self.params.addProperty('Drake Instep Shift', None, attributes=om.PropertyAttributes(decimals=4, minimum=-0.3, maximum=0.3, singleStep=0.0005, hidden=False))
-        self.params.addProperty('IHMC Transfer Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05, hidden=False))
-        self.params.addProperty('IHMC Swing Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05, hidden=False))       
+        self.params.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.05, maximum=5.0, singleStep=0.05))
+        self.params.addProperty('Drake Min Hold Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=10.0, singleStep=0.05))
+        self.params.addProperty('Drake Instep Shift', None, attributes=om.PropertyAttributes(decimals=4, minimum=-0.3, maximum=0.3, singleStep=0.0005))
+        self.params.addProperty('IHMC Transfer Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05))
+        self.params.addProperty('IHMC Swing Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05))       
         self.behavior_lcm_map = {
                               0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
                               1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
@@ -318,22 +317,7 @@ class FootstepsDriver(object):
         self.params.addProperty('Prevent Swing Undershoot', 0, attributes=om.PropertyAttributes(enumNames=['False', 'True']))
         self.params.addProperty('Prevent Swing Overshoot', 0, attributes=om.PropertyAttributes(enumNames=['False', 'True']))
 
-        #self.applyControlDefaults('IHMC Nominal')
-        #self.applyControlDefaults('Drake Nominal')
-        #self.applyControlDefaults('BDI')
         self.applyDefaults(DEFAULT_PARAM_SET)
-
-    #def applyControlDefaults(self, set_name):
-    #    defaults = self.default_step_params[set_name]
-    #    if set_name == 'IHMC Nominal':
-    #        for k, v in defaults.iteritems():
-    #            self.IHMCParams.setProperty(k, v)
-    #    elif set_name == 'Drake Nominal':
-    #        for k, v in defaults.iteritems():
-    #            self.controlParams.setProperty(k, v)
-    #    if set_name == 'BDI':
-    #        for k, v in defaults.iteritems():
-    #            self.BDIParams.setProperty(k, v)
 
     def applyDefaults(self, set_name):
         defaults = self.default_step_params[set_name]
@@ -884,11 +868,11 @@ class FootstepsDriver(object):
             requestChannel = 'WALKING_TRAJ_REQUEST'
             responseChannel = 'WALKING_TRAJ_RESPONSE'
             response_type = lcmdrc.robot_plan_t
-        elif req_type == 'drake-controller':
+        elif req_type == 'controller':
             requestChannel = 'WALKING_CONTROLLER_PLAN_REQUEST'
             responseChannel = 'WALKING_CONTROLLER_PLAN_RESPONSE'
             response_type = lcmdrc.walking_plan_t
-        elif req_type == 'IHMC-controller':
+        elif req_type == 'ihmc':
             requestChannel = 'WALKING_CONTROLLER_PLAN_REQUEST'
             responseChannel = 'WALKING_CONTROLLER_PLAN_RESPONSE'
             response_type = lcmdrc.walking_plan_t
@@ -934,11 +918,11 @@ class FootstepsDriver(object):
 
     def _commitFootstepPlanDrake(self, footstepPlan):
         startPose = self.jointController.getPose('EST_ROBOT_STATE')
-        self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='drake-controller')
+        self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='controller')
 
     def _commitFootstepPlanIHMC(self, footstepPlan):
         startPose = self.jointController.getPose('EST_ROBOT_STATE')
-        self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='IHMC-controller')
+        self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='ihmc')
 
     def _commitFootstepPlanBDI(self, footstepPlan):
         footstepPlan.utime = getUtime()
