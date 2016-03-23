@@ -67,8 +67,7 @@ class FootstepsPanel(object):
 
         self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
         self.ui.autoIRISSegmentationButton.connect("clicked()", self.onAutoIRISSegmentation)
-        # self._setupPropertiesPanel()
-        self._setupTabPropertiesPanel()
+        self._setupPropertiesPanel()
 
 
     def onShowWalkingVolumes(self):
@@ -86,16 +85,6 @@ class FootstepsPanel(object):
         self.irisDriver.autoIRISSegmentation()
 
     def _setupPropertiesPanel(self):
-        l = QtGui.QVBoxLayout(self.ui.planningParamsContainer)
-        l.setMargin(0)
-        self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
-        self.propertiesPanel.setBrowserModeToWidget()
-        l.addWidget(self.propertiesPanel)
-        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.params.properties, self.propertiesPanel)
-        self.driver.params.properties.connectPropertyChanged(self.onPropertyChanged)
-        PythonQt.dd.ddGroupBoxHider(self.ui.planningParamsContainer)
-
-    def _setupTabPropertiesPanel(self):
 
         propertyNames = self.driver.params.propertyNames()
 
