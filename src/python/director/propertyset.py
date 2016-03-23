@@ -118,11 +118,6 @@ class PropertySet(object):
         del self._attributes[propertyName]
 
     def addProperty(self, propertyName, propertyValue, attributes=None):
-        #print "meah" , propertyName
-        if (propertyName is 'Max Num Steps'):
-           print "meah" , propertyName
-           print "======================="
-
         alternateName = cleanPropertyName(propertyName)
         if propertyName not in self._properties and alternateName in self._alternateNames:
             raise ValueError('Adding this property would conflict with a different existing property with alternate name {:s}'.format(alternateName))
