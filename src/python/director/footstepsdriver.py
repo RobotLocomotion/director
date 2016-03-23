@@ -276,8 +276,6 @@ class FootstepsDriver(object):
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
-        self.IHMCParams = om.ObjectModelItem('IHMC')
-        self.controlParams = om.ObjectModelItem('Control')        
         self.defaults_map = ['Drake Nominal', 'BDI', 'IHMC Nominal', 'Terrain', 'Stairs', 'Polaris Platform']
         self.params.addProperty('Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.defaults_map))
         self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
@@ -308,8 +306,6 @@ class FootstepsDriver(object):
         self.params.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.05, maximum=5.0, singleStep=0.05))
         self.params.addProperty('Drake Min Hold Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=10.0, singleStep=0.05))
         self.params.addProperty('Drake Instep Shift', None, attributes=om.PropertyAttributes(decimals=4, minimum=-0.3, maximum=0.3, singleStep=0.0005))
-        self.params.addProperty('IHMC Transfer Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05))
-        self.params.addProperty('IHMC Swing Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05))       
         self.behavior_lcm_map = {
                               0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
                               1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
@@ -318,6 +314,8 @@ class FootstepsDriver(object):
         self.params.addProperty('Support Contact Groups', 0, attributes=om.PropertyAttributes(enumNames=['Whole Foot', 'Front 2/3', 'Back 2/3']))
         self.params.addProperty('Prevent Swing Undershoot', 0, attributes=om.PropertyAttributes(enumNames=['False', 'True']))
         self.params.addProperty('Prevent Swing Overshoot', 0, attributes=om.PropertyAttributes(enumNames=['False', 'True']))
+        self.params.addProperty('IHMC Transfer Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05))
+        self.params.addProperty('IHMC Swing Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05))
 
         self.applyDefaults(DEFAULT_PARAM_SET)
 

@@ -118,6 +118,11 @@ class PropertySet(object):
         del self._attributes[propertyName]
 
     def addProperty(self, propertyName, propertyValue, attributes=None):
+        #print "meah" , propertyName
+        if (propertyName is 'Max Num Steps'):
+           print "meah" , propertyName
+           print "======================="
+
         alternateName = cleanPropertyName(propertyName)
         if propertyName not in self._properties and alternateName in self._alternateNames:
             raise ValueError('Adding this property would conflict with a different existing property with alternate name {:s}'.format(alternateName))
@@ -177,13 +182,21 @@ class PropertySet(object):
 class PropertyPanelHelper(object):
 
     @staticmethod
-    def addPropertiesToPanel(properties, panel):
+    def addPropertiesToPanel(properties, panel, propertyNamesToAdd = None):
 
         for propertyName in properties.propertyNames():
             value = properties.getProperty(propertyName)
             attributes = properties._attributes[propertyName]
+
             if value is not None and not attributes.hidden:
-                PropertyPanelHelper._addProperty(panel, propertyName, attributes, value)
+                addThisProperty = True
+                if (propertyNamesToAdd is not None):
+                    if (propertyName not in propertyNamesToAdd):
+                        addThisProperty = False
+
+                if addThisProperty:
+                    PropertyPanelHelper._addProperty(panel, propertyName, attributes, value)
+
 
     @staticmethod
     def onPropertyValueChanged(panel, properties, propertyName):
@@ -271,8 +284,9 @@ class PropertyPanelHelper(object):
 
 
 class PropertyPanelConnector(object):
-    def __init__(self, propertySet, propertiesPanel):
+    def __init__(self, propertySet, propertiesPanel, propertyNamesToAdd=None):
         self.propertySet = propertySet
+        self.propertyNamesToAdd = propertyNamesToAdd
         self.propertiesPanel = propertiesPanel
         self.propertySet.connectPropertyAdded(self._onPropertyAdded)
         self.propertySet.connectPropertyChanged(self._onPropertyChanged)
@@ -280,7 +294,7 @@ class PropertyPanelConnector(object):
         self.propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self._onPanelPropertyChanged)
 
         self._blockSignals = True
-        PropertyPanelHelper.addPropertiesToPanel(self.propertySet, self.propertiesPanel)
+        PropertyPanelHelper.addPropertiesToPanel(self.propertySet, self.propertiesPanel, self.propertyNamesToAdd)
         self._blockSignals = False
 
     def cleanup(self):

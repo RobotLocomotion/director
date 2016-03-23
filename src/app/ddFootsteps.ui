@@ -136,19 +136,14 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
-     <widget class="QWidget" name="planningParamsContainer">
+     <widget class="QWidget" name="paramsOneContainer">
       <attribute name="title">
-       <string>Planning</string>
+       <string>Alpha</string>
       </attribute>
      </widget>
-     <widget class="QWidget" name="controlParamsContainer">
+     <widget class="QWidget" name="paramsTwoContainer">
       <attribute name="title">
-       <string>Control</string>
-      </attribute>
-     </widget>
-     <widget class="QWidget" name="IHMCParamsContainer">
-      <attribute name="title">
-       <string>IHMC</string>
+       <string>Beta</string>
       </attribute>
      </widget>
     </widget>

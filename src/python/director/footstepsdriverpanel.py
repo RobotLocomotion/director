@@ -96,24 +96,21 @@ class FootstepsPanel(object):
         PythonQt.dd.ddGroupBoxHider(self.ui.planningParamsContainer)
 
     def _setupTabPropertiesPanel(self):
-        l = QtGui.QGridLayout(self.ui.IHMCParamsContainer)
+
+        propertyNames = self.driver.params.propertyNames()
+
+        l = QtGui.QGridLayout(self.ui.paramsOneContainer)
         l.setMargin(0)
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         self.propertiesPanel.setBrowserModeToWidget()
         l.addWidget(self.propertiesPanel)
-        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.IHMCParams.properties, self.propertiesPanel)
-        l = QtGui.QGridLayout(self.ui.controlParamsContainer)
+        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.params.properties, self.propertiesPanel,propertyNames[0:15])
+        l = QtGui.QGridLayout(self.ui.paramsTwoContainer)
         l.setMargin(0)
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         self.propertiesPanel.setBrowserModeToWidget()
         l.addWidget(self.propertiesPanel)
-        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.controlParams.properties, self.propertiesPanel)
-        l = QtGui.QGridLayout(self.ui.planningParamsContainer)
-        l.setMargin(0)
-        self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
-        self.propertiesPanel.setBrowserModeToWidget()
-        l.addWidget(self.propertiesPanel)
-        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.params.properties, self.propertiesPanel)
+        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.params.properties, self.propertiesPanel,propertyNames[15:])
         self.driver.params.properties.connectPropertyChanged(self.onPropertyChanged)
 
     def onPropertyChanged(self, propertySet, propertyName):
