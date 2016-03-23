@@ -63,7 +63,6 @@ DEFAULT_CONTROL_PARAMS = {'BDI': {},
                   'Drake Nominal': {'Drake Swing Speed': 0.6,
                                  'Drake Instep Shift': 0.005,
                                  'Drake Min Hold Time': 1.0,
-                                 'Swing Height': 0.03,
                                  'Prevent Swing Undershoot': 0,
                                  'Prevent Swing Overshoot': 0},
                   'IHMC Nominal': {'IHMC Transfer Time': 2.0,
@@ -81,6 +80,7 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                'Max Downward Step': 0.18,
                                'Behavior': 0,
                                'Leading Foot': 0,
+                               'Swing Height': 0.03,
                                'Support Contact Groups': 0,
                                'Map Mode': 0},
                        'Drake Nominal': {'Min Num Steps': 0,
@@ -363,7 +363,7 @@ class FootstepsDriver(object):
         default_step_params.step_speed = self.controlParams.properties.drake_swing_speed
         default_step_params.drake_min_hold_time = self.controlParams.properties.drake_min_hold_time
         default_step_params.drake_instep_shift = self.controlParams.properties.drake_instep_shift
-        default_step_params.step_height = self.controlParams.properties.swing_height
+        default_step_params.step_height = self.params.properties.swing_height
         default_step_params.constrain_full_foot_pose = True
         default_step_params.bdi_step_duration = 2.0
         default_step_params.bdi_sway_duration = 0.0
