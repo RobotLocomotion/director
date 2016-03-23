@@ -279,8 +279,8 @@ class FootstepsDriver(object):
         self.IHMCParams = om.ObjectModelItem('IHMC')
         self.controlParams = om.ObjectModelItem('Control')        
         self.defaults_map = ['Drake Nominal', 'BDI', 'IHMC Nominal', 'Terrain', 'Stairs', 'Polaris Platform']
-        self.params.addProperty('Planning Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.defaults_map))
-        self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Walking']))
+        self.params.addProperty('Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.defaults_map))
+        self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
         self.params.addProperty('Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Auto', 'Left', 'Right']))
         self.leading_foot_map = [lcmdrc.footstep_plan_params_t.LEAD_AUTO,
                                  lcmdrc.footstep_plan_params_t.LEAD_LEFT,
