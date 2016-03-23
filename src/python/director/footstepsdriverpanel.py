@@ -118,11 +118,11 @@ class FootstepsPanel(object):
 
     def onPropertyChanged(self, propertySet, propertyName):
         self.driver.updateRequest()
-        if propertyName == 'Planning Defaults':
+        if propertyName == 'Defaults':
             self.applyDefaults()
 
     def applyDefaults(self):
-        set_name = self.driver.defaults[self.driver.params.properties.defaults]
+        set_name = self.driver.defaults_map[self.driver.params.properties.defaults]
         for k, v in self.driver.default_step_params[set_name].iteritems():
             self.driver.params.setProperty(k, v)
 
