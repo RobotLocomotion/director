@@ -276,7 +276,7 @@ class FootstepsDriver(object):
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
-        self.IHMCParams = om.ObjectModelItem('IHMC Params')
+        self.IHMCParams = om.ObjectModelItem('IHMC')
         self.controlParams = om.ObjectModelItem('Control')        
         self.defaults_map = ['Drake Nominal', 'BDI', 'IHMC Nominal', 'Terrain', 'Stairs', 'Polaris Platform']
         self.params.addProperty('Planning Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.defaults_map))
@@ -870,11 +870,7 @@ class FootstepsDriver(object):
             requestChannel = 'WALKING_TRAJ_REQUEST'
             responseChannel = 'WALKING_TRAJ_RESPONSE'
             response_type = lcmdrc.robot_plan_t
-        elif req_type == 'drake-controller':
-            requestChannel = 'WALKING_CONTROLLER_PLAN_REQUEST'
-            responseChannel = 'WALKING_CONTROLLER_PLAN_RESPONSE'
-            response_type = lcmdrc.walking_plan_t
-        elif req_type == 'IHMC-controller':
+        elif req_type == 'controller':
             requestChannel = 'WALKING_CONTROLLER_PLAN_REQUEST'
             responseChannel = 'WALKING_CONTROLLER_PLAN_RESPONSE'
             response_type = lcmdrc.walking_plan_t
@@ -915,16 +911,10 @@ class FootstepsDriver(object):
             self._commitFootstepPlanBDI(footstepPlan)
         elif footstepPlan.params.behavior == lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING:
             self._commitFootstepPlanDrake(footstepPlan)
-        elif footstepPlan.params.behavior == lcmdrc.footstep_plan_params_t.BEHAVIOR_IHMC_WALKING:
-            self._commitFootstepPlanIHMC(footstepPlan)
 
     def _commitFootstepPlanDrake(self, footstepPlan):
         startPose = self.jointController.getPose('EST_ROBOT_STATE')
-        self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='drake-controller')
-
-    def _commitFootstepPlanIHMC(self, footstepPlan):
-        startPose = self.jointController.getPose('EST_ROBOT_STATE')
-        self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='IHMC-controller')
+        self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='controller')
 
     def _commitFootstepPlanBDI(self, footstepPlan):
         footstepPlan.utime = getUtime()
