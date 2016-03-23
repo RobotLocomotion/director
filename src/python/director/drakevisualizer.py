@@ -269,9 +269,9 @@ class Link(object):
 
 
     def setTransform(self, pos, quat):
-        trans = transformUtils.transformFromPose(pos, quat)
+        self.transform = transformUtils.transformFromPose(pos, quat)
         for g in self.geometry:
-            g.polyDataItem.getChildFrame().copyFrame(trans)
+            g.polyDataItem.getChildFrame().copyFrame(self.transform)
 
 
 class DrakeVisualizer(object):
