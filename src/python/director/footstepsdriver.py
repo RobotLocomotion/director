@@ -58,7 +58,7 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
         _leftFootLink = directorConfig['leftFootLink']
         _rightFootLink = directorConfig['rightFootLink']
 
-DEFAULT_PARAM_SET = 'IHMC Nominal'
+DEFAULT_PARAM_SET = 'Drake Nominal'
 DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                'Max Num Steps': 12,
                                'Min Step Width': 0.20,
@@ -276,11 +276,9 @@ class FootstepsDriver(object):
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
-        self.controlParams = om.ObjectModelItem('Drake Control Params')
-        self.IHMCParams = om.ObjectModelItem('IHMC Control Params')
         self.BDIParams = om.ObjectModelItem('BDI Control Params')
-        self.planning_defaults_map = ['Drake Nominal', 'BDI', 'IHMC Nominal', 'Terrain', 'Stairs', 'Polaris Platform']
-        self.params.addProperty('Planning Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.planning_defaults_map))
+        self.defaults_map = ['Drake Nominal', 'BDI', 'IHMC Nominal', 'Terrain', 'Stairs', 'Polaris Platform']
+        self.params.addProperty('Planning Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.defaults_map))
         self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Walking']))
         self.params.addProperty('Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Auto', 'Left', 'Right']))
         self.leading_foot_map = [lcmdrc.footstep_plan_params_t.LEAD_AUTO,
