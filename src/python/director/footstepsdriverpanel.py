@@ -67,7 +67,7 @@ class FootstepsPanel(object):
 
         self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
         self.ui.autoIRISSegmentationButton.connect("clicked()", self.onAutoIRISSegmentation)
-        #self._setupPropertiesPanel()
+        # self._setupPropertiesPanel()
         self._setupTabPropertiesPanel()
 
 
