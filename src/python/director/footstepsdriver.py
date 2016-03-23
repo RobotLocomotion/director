@@ -58,12 +58,6 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
         _leftFootLink = directorConfig['leftFootLink']
         _rightFootLink = directorConfig['rightFootLink']
 
-DEFAULT_CONTROL_PARAM_SET = 'IHMC Nominal'
-DEFAULT_CONTROL_PARAMS = {'BDI': {},
-                  'Drake Nominal': {},
-                  'IHMC Nominal': {'IHMC Transfer Time': 2.0,
-                                 'IHMC Swing Time': 1.5}}
-
 DEFAULT_PARAM_SET = 'IHMC Nominal'
 DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                'Max Num Steps': 12,
@@ -83,7 +77,9 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                'Support Contact Groups': 0,
                                'Prevent Swing Undershoot': 0,
                                'Prevent Swing Overshoot': 0,
-                               'Map Mode': 0},
+                               'Map Mode': 0,
+                               'IHMC Transfer Time': 2.0,
+                               'IHMC Swing Time': 1.5},
                        'Drake Nominal': {'Min Num Steps': 0,
                                  'Max Num Steps': 16,
                                  'Min Step Width': 0.20,
@@ -102,7 +98,9 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                  'Support Contact Groups': 0,
                                  'Prevent Swing Undershoot': 0,
                                  'Prevent Swing Overshoot': 0,
-                                 'Map Mode': 0},
+                                 'Map Mode': 0,
+                                 'IHMC Transfer Time': 2.0,
+                                 'IHMC Swing Time': 1.5},
                        'IHMC Nominal': {'Min Num Steps': 0,
                                  'Max Num Steps': 16,
                                  'Min Step Width': 0.20,
@@ -121,7 +119,9 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                  'Support Contact Groups': 0,
                                  'Prevent Swing Undershoot': 0,
                                  'Prevent Swing Overshoot': 0,
-                                 'Map Mode': 0}}
+                                 'Map Mode': 0,
+                                 'IHMC Transfer Time': 2.0,
+                                 'IHMC Swing Time': 1.5}}
 DEFAULT_STEP_PARAMS['Terrain'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
 DEFAULT_STEP_PARAMS['Terrain'].update({'Drake Min Hold Time': 1.0,
                                        'Drake Swing Speed': 0.6,
@@ -244,7 +244,6 @@ class FootstepsDriver(object):
         self.goalSteps = None
         self.lastWalkingPlan = None
         self.walkingPlanCallback = None
-        self.default_control_params = DEFAULT_CONTROL_PARAMS
         self.default_step_params = DEFAULT_STEP_PARAMS
         self.contact_slices = DEFAULT_CONTACT_SLICES
         self.show_contact_slices = False
@@ -310,8 +309,8 @@ class FootstepsDriver(object):
         self.params.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.05, maximum=5.0, singleStep=0.05, hidden=False))
         self.params.addProperty('Drake Min Hold Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=10.0, singleStep=0.05, hidden=False))
         self.params.addProperty('Drake Instep Shift', None, attributes=om.PropertyAttributes(decimals=4, minimum=-0.3, maximum=0.3, singleStep=0.0005, hidden=False))
-        self.IHMCParams.addProperty('IHMC Transfer Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05, hidden=False))
-        self.IHMCParams.addProperty('IHMC Swing Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05, hidden=False))       
+        self.params.addProperty('IHMC Transfer Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05, hidden=False))
+        self.params.addProperty('IHMC Swing Time', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.6, maximum=5.0, singleStep=0.05, hidden=False))       
         self.behavior_lcm_map = {
                               0: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_STEPPING,
                               1: lcmdrc.footstep_plan_params_t.BEHAVIOR_BDI_WALKING,
@@ -385,8 +384,8 @@ class FootstepsDriver(object):
         default_step_params.bdi_sway_end_dist = 0.02
         default_step_params.bdi_step_end_dist = 0.02
         default_step_params.mu = 1.0
-        default_step_params.ihmc_transfer_time = self.IHMCParams.properties.ihmc_transfer_time
-        default_step_params.ihmc_swing_time = self.IHMCParams.properties.ihmc_swing_time
+        default_step_params.ihmc_transfer_time = self.params.properties.ihmc_transfer_time
+        default_step_params.ihmc_swing_time = self.params.properties.ihmc_swing_time
 
         default_step_params.support_contact_groups = self.params.properties.support_contact_groups
         default_step_params.prevent_swing_undershoot = self.params.properties.prevent_swing_undershoot
@@ -586,7 +585,7 @@ class FootstepsDriver(object):
         if propertyName == "Support Contact Groups":
             self.lastFootstepPlan.footsteps[obj.footstep_index].params.support_contact_groups = obj.properties.support_contact_groups
             self.sendUpdatePlanRequest()
-        
+
     def drawContactPts(self, obj, footstep, **kwargs):
         leftPoints, rightPoints = FootstepsDriver.getContactPts(footstep.params.support_contact_groups)
         contact_pts = rightPoints if footstep.is_right_foot else leftPoints

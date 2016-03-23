@@ -56,7 +56,7 @@ class FootstepsPanel(object):
         self.ui.stopButton.connect("clicked()", self.onStop)
         self.ui.simulateDrakeButton.connect("clicked()", self.onSimulateDrake)
         self.ui.haltSimulationDrakeButton.connect("clicked()", self.onHaltSimulationDrake)
-        self.ui.restoreDefaultsButton.connect("clicked()", lambda: self.applyPlanningDefaults())
+        self.ui.restoreDefaultsButton.connect("clicked()", lambda: self.applyDefaults())
         self.ui.showWalkingVolumesCheck.connect("clicked()", self.onShowWalkingVolumes)
 
         ### BDI frame logic
