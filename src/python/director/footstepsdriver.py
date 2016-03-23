@@ -60,11 +60,7 @@ with open(drcargs.args().directorConfigFile) as directorConfigFile:
 
 DEFAULT_CONTROL_PARAM_SET = 'IHMC Nominal'
 DEFAULT_CONTROL_PARAMS = {'BDI': {},
-                  'Drake Nominal': {'Drake Swing Speed': 0.6,
-                                 'Drake Instep Shift': 0.005,
-                                 'Drake Min Hold Time': 1.0,
-                                 'Prevent Swing Undershoot': 0,
-                                 'Prevent Swing Overshoot': 0},
+                  'Drake Nominal': {},
                   'IHMC Nominal': {'IHMC Transfer Time': 2.0,
                                  'IHMC Swing Time': 1.5}}
 
@@ -81,7 +77,12 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                'Behavior': 0,
                                'Leading Foot': 0,
                                'Swing Height': 0.05,
+                               'Drake Swing Speed': 0.2,
+                               'Drake Instep Shift': 0.0275,
+                               'Drake Min Hold Time': 2.0,
                                'Support Contact Groups': 0,
+                               'Prevent Swing Undershoot': 0,
+                               'Prevent Swing Overshoot': 0,
                                'Map Mode': 0},
                        'Drake Nominal': {'Min Num Steps': 0,
                                  'Max Num Steps': 16,
@@ -95,7 +96,12 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                  'Behavior': 2,
                                  'Leading Foot': 0,
                                  'Swing Height': 0.03,
+                                 'Drake Swing Speed': 0.6,
+                                 'Drake Instep Shift': 0.005,
+                                 'Drake Min Hold Time': 1.0,
                                  'Support Contact Groups': 0,
+                                 'Prevent Swing Undershoot': 0,
+                                 'Prevent Swing Overshoot': 0,
                                  'Map Mode': 0},
                        'IHMC Nominal': {'Min Num Steps': 0,
                                  'Max Num Steps': 16,
@@ -293,7 +299,7 @@ class FootstepsDriver(object):
         self.params.addProperty('Max Step Width', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.22, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Nominal Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Max Forward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
-        self.controlParams.addProperty('Swing Height', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.005, hidden=False))
+        self.params.addProperty('Swing Height', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.005))
         self.params.addProperty('Max Upward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
         self.params.addProperty('Max Downward Step', None, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=0.5, singleStep=0.01))
         self.controlParams.addProperty('Drake Swing Speed', None, attributes=om.PropertyAttributes(decimals=2, minimum=0.05, maximum=5.0, singleStep=0.05, hidden=False))
