@@ -101,7 +101,7 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                  'Map Mode': 0,
                                  'IHMC Transfer Time': 2.0,
                                  'IHMC Swing Time': 1.5},
-                       'IHMC Nominal': {'Min Num Steps': 0,
+                       'IHMC': {'Min Num Steps': 0,
                                  'Max Num Steps': 16,
                                  'Min Step Width': 0.20,
                                  'Nominal Step Width': 0.26,
@@ -276,7 +276,7 @@ class FootstepsDriver(object):
 
     def _setupProperties(self):
         self.params = om.ObjectModelItem('Footstep Params')
-        self.defaults_map = ['Drake Nominal', 'BDI', 'IHMC Nominal', 'Terrain', 'Stairs', 'Polaris Platform']
+        self.defaults_map = ['Drake Nominal', 'BDI', 'IHMC', 'Terrain', 'Stairs', 'Polaris Platform']
         self.params.addProperty('Planning Defaults', 0, attributes=om.PropertyAttributes(enumNames=self.defaults_map))
         self.params.addProperty('Behavior', 0, attributes=om.PropertyAttributes(enumNames=['BDI Stepping', 'BDI Walking', 'Drake Walking']))
         self.params.addProperty('Leading Foot', 1, attributes=om.PropertyAttributes(enumNames=['Auto', 'Left', 'Right']))
@@ -872,10 +872,6 @@ class FootstepsDriver(object):
             requestChannel = 'WALKING_CONTROLLER_PLAN_REQUEST'
             responseChannel = 'WALKING_CONTROLLER_PLAN_RESPONSE'
             response_type = lcmdrc.walking_plan_t
-        elif req_type == 'ihmc':
-            requestChannel = 'WALKING_CONTROLLER_PLAN_REQUEST'
-            responseChannel = 'WALKING_CONTROLLER_PLAN_RESPONSE'
-            response_type = lcmdrc.walking_plan_t
         elif req_type == 'simulate_drake':
             requestChannel = 'WALKING_SIMULATION_DRAKE_REQUEST'
             responseChannel = 'WALKING_SIMULATION_TRAJ_RESPONSE'
@@ -913,16 +909,10 @@ class FootstepsDriver(object):
             self._commitFootstepPlanBDI(footstepPlan)
         elif footstepPlan.params.behavior == lcmdrc.footstep_plan_params_t.BEHAVIOR_WALKING:
             self._commitFootstepPlanDrake(footstepPlan)
-        elif footstepPlan.params.behavior == lcmdrc.footstep_plan_params_t.BEHAVIOR_IHMC_WALKING:
-            self._commitFootstepPlanIHMC(footstepPlan)
 
     def _commitFootstepPlanDrake(self, footstepPlan):
         startPose = self.jointController.getPose('EST_ROBOT_STATE')
         self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='controller')
-
-    def _commitFootstepPlanIHMC(self, footstepPlan):
-        startPose = self.jointController.getPose('EST_ROBOT_STATE')
-        self.sendWalkingPlanRequest(footstepPlan, startPose, req_type='ihmc')
 
     def _commitFootstepPlanBDI(self, footstepPlan):
         footstepPlan.utime = getUtime()
