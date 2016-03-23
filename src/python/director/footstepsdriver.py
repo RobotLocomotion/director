@@ -69,7 +69,7 @@ DEFAULT_CONTROL_PARAMS = {'BDI': {},
                   'IHMC Nominal': {'IHMC Transfer Time': 2.0,
                                  'IHMC Swing Time': 1.5}}
 
-DEFAULT_PLANNING_PARAM_SET = 'IHMC Nominal'
+DEFAULT_STEP_PARAM_SET = 'IHMC Nominal'
 DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                'Max Num Steps': 12,
                                'Min Step Width': 0.20,
@@ -312,7 +312,7 @@ class FootstepsDriver(object):
         self.applyControlDefaults('IHMC Nominal')
         self.applyControlDefaults('Drake Nominal')
         self.applyControlDefaults('BDI')
-        self.applyPlanningDefaults(DEFAULT_PLANNING_PARAM_SET)
+        self.applyPlanningDefaults(DEFAULT_STEP_PARAM_SET)
 
     def applyControlDefaults(self, set_name):
         defaults = self.default_step_params[set_name]
