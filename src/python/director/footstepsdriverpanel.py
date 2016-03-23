@@ -67,7 +67,7 @@ class FootstepsPanel(object):
 
         self.ui.newRegionSeedButton.connect("clicked()", self.onNewRegionSeed)
         self.ui.autoIRISSegmentationButton.connect("clicked()", self.onAutoIRISSegmentation)
-        #self._setupPlanningPropertiesPanel()
+        #self._setupPropertiesPanel()
         self._setupTabPropertiesPanel()
 
 
@@ -85,7 +85,7 @@ class FootstepsPanel(object):
     def onAutoIRISSegmentation(self):
         self.irisDriver.autoIRISSegmentation()
 
-    def _setupPlanningPropertiesPanel(self):
+    def _setupPropertiesPanel(self):
         l = QtGui.QVBoxLayout(self.ui.planningParamsContainer)
         l.setMargin(0)
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
