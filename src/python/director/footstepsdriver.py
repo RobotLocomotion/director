@@ -114,29 +114,35 @@ DEFAULT_STEP_PARAMS = {'BDI': {'Min Num Steps': 0,
                                  'Max Downward Step': 0.18,
                                  'Behavior': 2,
                                  'Leading Foot': 0,
+                                 'Swing Height': 0.05,
+                                 'Drake Swing Speed': 0.2,
+                                 'Drake Instep Shift': 0.0275,
+                                 'Drake Min Hold Time': 2.0,                                 
                                  'Support Contact Groups': 0,
+                                 'Prevent Swing Undershoot': 0,
+                                 'Prevent Swing Overshoot': 0,
                                  'Map Mode': 0}}
 
 DEFAULT_STEP_PARAMS['Terrain'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
-DEFAULT_STEP_PARAMS['Terrain'].update({#'Drake Min Hold Time': 1.0,
-                                       #'Drake Swing Speed': 0.6,
+DEFAULT_STEP_PARAMS['Terrain'].update({'Drake Min Hold Time': 1.0,
+                                       'Drake Swing Speed': 0.6,
                                        'Swing Height': 0.05,
                                        'Max Forward Step': 0.36,
                                        'Max Num Steps': 6,
                                        'Nominal Step Width': 0.22,
                                        'Map Mode': 1})
 DEFAULT_STEP_PARAMS['Stairs'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
-DEFAULT_STEP_PARAMS['Stairs'].update({#'Drake Min Hold Time': 2.0,
+DEFAULT_STEP_PARAMS['Stairs'].update({'Drake Min Hold Time': 2.0,
                                       'Swing Height': 0.05,
                                       'Max Num Steps': 8,
                                       'Min Num Steps': 8,
-                                      #'Drake Swing Speed': 0.6,
+                                      'Drake Swing Speed': 0.6,
                                       'Support Contact Groups': lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE,
                                       'Map Mode': 2})
 
 DEFAULT_STEP_PARAMS['Polaris Platform'] = DEFAULT_STEP_PARAMS['Drake Nominal'].copy()
-DEFAULT_STEP_PARAMS['Polaris Platform'].update({#'Drake Min Hold Time': 2.0,
-                                      #'Prevent Swing Undershoot': 1,
+DEFAULT_STEP_PARAMS['Polaris Platform'].update({'Drake Min Hold Time': 2.0,
+                                      'Prevent Swing Undershoot': 1,
                                       'Swing Height': 0.05,
                                       'Map Mode': 1})
 
@@ -240,7 +246,7 @@ class FootstepsDriver(object):
         self.lastWalkingPlan = None
         self.walkingPlanCallback = None
         self.default_step_params = DEFAULT_CONTROL_PARAMS
-        self.default_planning_params = DEFAULT_STEP_PARAMS
+        self.default_step_params = DEFAULT_STEP_PARAMS
         self.contact_slices = DEFAULT_CONTACT_SLICES
         self.show_contact_slices = False
         self.toolbarWidget = None
@@ -334,7 +340,7 @@ class FootstepsDriver(object):
                 self.BDIParams.setProperty(k, v)
 
     def applyPlanningDefaults(self, set_name):
-        defaults = self.default_planning_params[set_name]
+        defaults = self.default_step_params[set_name]
         for k, v in defaults.iteritems():
             self.params.setProperty(k, v)
 
