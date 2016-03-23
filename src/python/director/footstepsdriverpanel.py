@@ -85,14 +85,22 @@ class FootstepsPanel(object):
         self.irisDriver.autoIRISSegmentation()
 
     def _setupPropertiesPanel(self):
-        l = QtGui.QVBoxLayout(self.ui.paramsContainer)
+
+        propertyNames = self.driver.params.propertyNames()
+
+        l = QtGui.QGridLayout(self.ui.paramsOneContainer)
         l.setMargin(0)
         self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
         self.propertiesPanel.setBrowserModeToWidget()
         l.addWidget(self.propertiesPanel)
-        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.params.properties, self.propertiesPanel)
+        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.params.properties, self.propertiesPanel,propertyNames[0:15])
+        l = QtGui.QGridLayout(self.ui.paramsTwoContainer)
+        l.setMargin(0)
+        self.propertiesPanel = PythonQt.dd.ddPropertiesPanel()
+        self.propertiesPanel.setBrowserModeToWidget()
+        l.addWidget(self.propertiesPanel)
+        self.panelConnector = propertyset.PropertyPanelConnector(self.driver.params.properties, self.propertiesPanel,propertyNames[15:])
         self.driver.params.properties.connectPropertyChanged(self.onPropertyChanged)
-        PythonQt.dd.ddGroupBoxHider(self.ui.paramsContainer)
 
     def onPropertyChanged(self, propertySet, propertyName):
         self.driver.updateRequest()
