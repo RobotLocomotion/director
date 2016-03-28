@@ -284,12 +284,7 @@ def startModelPublisherListener(modelsToReload):
 
 
 
-def setupPackagePaths():
-
-    try:
-        getDRCBaseDir()
-    except KeyError:
-        return
+def getBuiltinPackagePaths():
 
     searchPaths = [
         'software/models/atlas_v3',
@@ -308,17 +303,30 @@ def setupPackagePaths():
         'software/models/otdf',
                   ]
 
-    for path in searchPaths:
-        PythonQt.dd.ddDrakeModel.addPackageSearchPath(os.path.join(getDRCBaseDir(), path))
+    baseDir = getDRCBaseDir()
+    return [os.path.join(baseDir, path) for path in searchPaths]
+
+
+def getEnvironmentPackagePaths():
 
     packageMap = packagepath.PackageMap()
     packageMap.populateFromEnvironment(['ROS_PACKAGE_PATH'])
+    return packageMap.map.values()
 
-    for path in packageMap.map.values():
+
+def setupPackagePaths():
+
+    paths = getBuiltinPackagePaths() + getEnvironmentPackagePaths()
+    for path in paths:
         PythonQt.dd.ddDrakeModel.addPackageSearchPath(path)
 
 
-setupPackagePaths()
+try:
+    getDRCBaseDir()
+except KeyError:
+    pass
+else:
+    setupPackagePaths()
 
 
 
