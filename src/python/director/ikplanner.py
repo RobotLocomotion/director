@@ -1014,8 +1014,11 @@ class IKPlanner(object):
 
     def addPose(self, pose, poseName):
         self.jointController.addPose(poseName, pose)
-        self.ikServer.sendPoseToServer(pose, poseName)
-        self.plannerPub.processAddPose(pose, poseName)
+
+        if self.pushToMatlab:
+            self.ikServer.sendPoseToServer(pose, poseName)
+        else:
+            self.plannerPub.processAddPose(pose, poseName)
 
 
     def newPalmOffsetGraspToHandFrame(self, side, distance):
