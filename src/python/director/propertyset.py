@@ -1,5 +1,6 @@
 from director import callbacks
 from director.fieldcontainer import FieldContainer
+from director.timercallback import TimerCallback
 
 import re
 import numpy as np
@@ -288,6 +289,9 @@ class PropertyPanelConnector(object):
         self.propertySet.connectPropertyAttributeChanged(self._onPropertyAttributeChanged)
         self.propertiesPanel.connect('propertyValueChanged(QtVariantProperty*)', self._onPanelPropertyChanged)
 
+        self.timer = TimerCallback()
+        self.timer.callback = self._rebuildNow
+
         self._blockSignals = True
         PropertyPanelHelper.addPropertiesToPanel(self.propertySet, self.propertiesPanel, self.propertyNamesToAdd)
         self._blockSignals = False
@@ -295,17 +299,21 @@ class PropertyPanelConnector(object):
     def cleanup(self):
         self.propertiesPanel.disconnect('propertyValueChanged(QtVariantProperty*)', self._onPanelPropertyChanged)
 
-    def _onPropertyAdded(self, propertySet, propertyName):
+    def _rebuild(self):
+        if not self.timer.singleShotTimer.isActive():
+            self.timer.singleShot(0)
+
+    def _rebuildNow(self):
         self._blockSignals = True
         self.propertiesPanel.clear()
-        PropertyPanelHelper.addPropertiesToPanel(propertySet, self.propertiesPanel)
+        PropertyPanelHelper.addPropertiesToPanel(self.propertySet, self.propertiesPanel)
         self._blockSignals = False
 
+    def _onPropertyAdded(self, propertySet, propertyName):
+        self._rebuild()
+
     def _onPropertyAttributeChanged(self, propertySet, propertyName, propertyAttribute):
-        self._blockSignals = True
-        self.propertiesPanel.clear()
-        PropertyPanelHelper.addPropertiesToPanel(propertySet, self.propertiesPanel)
-        self._blockSignals = False
+        self._rebuild()
 
     def _onPropertyChanged(self, propertySet, propertyName):
         self._blockSignals = True
