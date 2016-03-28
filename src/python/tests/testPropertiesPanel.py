@@ -2,6 +2,7 @@ import PythonQt
 from PythonQt import QtCore, QtGui
 from director.timercallback import TimerCallback
 import director.objectmodel as om
+from director import propertyset
 
 def startApplication(enableQuitTimer=False):
     appInstance = QtGui.QApplication.instance()
@@ -12,7 +13,10 @@ def startApplication(enableQuitTimer=False):
     appInstance.exec_()
 
 
+
+
 def main():
+
 
     obj = om.ObjectModelItem('test')
     obj.addProperty('double', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=100, singleStep=0.5))
@@ -31,9 +35,21 @@ def main():
 
     panel = PythonQt.dd.ddPropertiesPanel()
     panel.setBrowserModeToWidget()
-    om.PropertyPanelHelper.addPropertiesToPanel(obj.properties, panel)
     panel.show()
 
+    panelConnector = propertyset.PropertyPanelConnector(obj.properties, panel)
+
+
+    def onPropertyChanged(propertySet, propertyName):
+        obj.properties.setPropertyAttribute('str list', 'enumNames', ['one','two','three'])
+
+    obj.properties.connectPropertyChanged(onPropertyChanged)
+    obj.setProperty('bool', False)
+
+    assert 'one' in obj.properties.getPropertyAttribute('str list', 'enumNames')
+
+
+    _pythonManager.consoleWidget().show()
     startApplication(enableQuitTimer=True)
 
 
