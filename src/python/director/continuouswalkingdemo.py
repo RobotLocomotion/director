@@ -34,15 +34,6 @@ from thirdparty import min_bounding_rect
 from PythonQt import QtCore,QtGui
 
 
-def get2DAsPolyData(xy_points):
-    '''
-    Convert a 2D np array to a 3D polydata by appending z=0
-    '''
-    d = np.vstack((xy_points.T, np.zeros( xy_points.shape[0]) )).T
-    d2=d.copy()
-    return vtkNumpy.getVtkPolyDataFromNumpyPoints( d2 )
-
-
 class BlockTop():
     def __init__(self, cornerTransform, rectDepth, rectWidth, rectArea):
         self.cornerTransform = cornerTransform # location of far right corner
@@ -133,10 +124,6 @@ class ContinousWalkingDemo(object):
         self.useManualFootstepPlacement = False
         self.queryPlanner = True
 
-        # overwrite all of the above with the yaw of the robt when it was standing in front of the blocks:
-        self.fixBlockYawWithInitial = False
-        self.initialRobotYaw = np.Inf
-
         self._setupComplete = False
 
 
@@ -192,102 +179,6 @@ class ContinousWalkingDemo(object):
         return polyData
 
 
-    def findFarRightCorner(self, polyData, linkFrame):
-        '''
-        Within a point cloud find the point to the far right from the link
-        The input is typically the 4 corners of a minimum bounding box
-        '''
-
-        diagonalTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,45])
-        diagonalTransform.Concatenate(linkFrame)
-        vis.updateFrame(diagonalTransform, 'diagonal frame', parent='cont debug', visible=False)
-
-        #polyData = shallowCopy(polyData)
-        points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
-        #vtkNumpy.addNumpyToVtk(polyData, points[:,0].copy(), 'x')
-        #vtkNumpy.addNumpyToVtk(polyData, points[:,1].copy(), 'y')
-        #vtkNumpy.addNumpyToVtk(polyData, points[:,2].copy(), 'z')
-
-        viewOrigin = diagonalTransform.TransformPoint([0.0, 0.0, 0.0])
-        viewX = diagonalTransform.TransformVector([1.0, 0.0, 0.0])
-        viewY = diagonalTransform.TransformVector([0.0, 1.0, 0.0])
-        viewZ = diagonalTransform.TransformVector([0.0, 0.0, 1.0])
-        #polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewX, origin=viewOrigin, resultArrayName='distance_along_foot_x')
-        polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
-        #polyData = segmentation.labelPointDistanceAlongAxis(polyData, viewZ, origin=viewOrigin, resultArrayName='distance_along_foot_z')
-
-        vis.updatePolyData( polyData, 'cornerPoints', parent='cont debug', visible=False)
-        farRightIndex = vtkNumpy.getNumpyFromVtk(polyData, 'distance_along_foot_y').argmin()
-        points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
-        return points[farRightIndex,:]
-
-
-    def findMinimumBoundingRectangle(self, polyData, linkFrame):
-        '''
-        Find minimum bounding rectangle.
-        The input is assumed to be a rectangular point cloud of cinder blocks
-        Returns transform of far right corner (pointing away from robot)
-        '''
-        # TODO: for non-z up surfaces, this needs work
-        # TODO: return other parameters
-
-        # Originally From: https://github.com/dbworth/minimum-area-bounding-rectangle
-        polyData = segmentation.applyVoxelGrid(polyData, leafSize=0.02)
-        #vis.updatePolyData( polyData, 'block top', parent='cont debug', visible=False)
-        polyDataCentroid = segmentation.computeCentroid(polyData)
-        pts =vtkNumpy.getNumpyFromVtk( polyData , 'Points' )
-
-        xy_points =  pts[:,[0,1]]
-        vis.updatePolyData( get2DAsPolyData(xy_points) , 'xy_points', parent='cont debug', visible=False)
-        hull_points = qhull_2d.qhull2D(xy_points)
-        vis.updatePolyData( get2DAsPolyData(hull_points) , 'hull_points', parent='cont debug', visible=False)
-        # Reverse order of points, to match output from other qhull implementations
-        hull_points = hull_points[::-1]
-        # print 'Convex hull points: \n', hull_points, "\n"
-
-        # Find minimum area bounding rectangle
-        (rot_angle, rectArea, rectDepth, rectWidth, center_point, corner_points_ground) = min_bounding_rect.minBoundingRect(hull_points)
-        vis.updatePolyData( get2DAsPolyData(corner_points_ground) , 'corner_points_ground', parent='cont debug', visible=False)
-        cornerPoints = np.vstack((corner_points_ground.T, polyDataCentroid[2]*np.ones( corner_points_ground.shape[0]) )).T
-        cornerPolyData = vtkNumpy.getVtkPolyDataFromNumpyPoints(cornerPoints)
-
-        # Create a frame at the far right point - which points away from the robot
-        farRightCorner = self.findFarRightCorner(cornerPolyData , linkFrame)
-        viewDirection = segmentation.SegmentationContext.getGlobalInstance().getViewDirection()
-        robotYaw = math.atan2( viewDirection[1], viewDirection[0] )*180.0/np.pi
-        blockAngle =  rot_angle*(180/math.pi)
-        #print "robotYaw   ", robotYaw
-        #print "blockAngle ", blockAngle
-        blockAngleAll = np.array([blockAngle , blockAngle+90 , blockAngle+180, blockAngle+270])
-        #print blockAngleAll
-        for i in range(0,4):
-            if(blockAngleAll[i]>180):
-              blockAngleAll[i]=blockAngleAll[i]-360
-        #print blockAngleAll
-        values = abs(blockAngleAll - robotYaw)
-        #print values
-        min_idx = np.argmin(values)
-        if ( (min_idx==1) or (min_idx==3) ):
-            #print "flip rectDepth and rectWidth as angle is not away from robot"
-            temp = rectWidth ; rectWidth = rectDepth ; rectDepth = temp
-
-        #print "best angle", blockAngleAll[min_idx]
-        rot_angle = blockAngleAll[min_idx]*math.pi/180.0
-
-
-        # Optional: overwrite all of the above with the yaw of the robt when it was standing in front of the blocks:
-        if (self.fixBlockYawWithInitial):
-            rot_angle = self.initialRobotYaw
-
-        cornerTransform = transformUtils.frameFromPositionAndRPY( farRightCorner , [0,0, np.rad2deg(rot_angle) ] )
-
-        #print "Minimum area bounding box:"
-        #print "Rotation angle:", rot_angle, "rad  (", rot_angle*(180/math.pi), "deg )"
-        #print "rectDepth:", rectDepth, " rectWidth:", rectWidth, "  Area:", rectArea
-        #print "Center point: \n", center_point # numpy array
-        #print "Corner points: \n", cornerPoints, "\n"  # numpy array
-        return cornerTransform, rectDepth, rectWidth, rectArea
-
 
     def extractBlocksFromSurfaces(self, clusters, linkFrame):
         ''' find the corners of the minimum bounding rectangles '''
@@ -303,7 +194,7 @@ class ContinousWalkingDemo(object):
         # get the rectangles from the clusters:
         blocks = []
         for i, cluster in enumerate(clusters):
-                cornerTransform, rectDepth, rectWidth, rectArea = self.findMinimumBoundingRectangle( cluster, linkFrame )
+                cornerTransform, rectDepth, rectWidth, rectArea = segmentation.findMinimumBoundingRectangle( cluster, linkFrame )
                 #print 'min bounding rect:', rectDepth, rectWidth, rectArea, cornerTransform.GetPosition()
 
                 block = BlockTop(cornerTransform, rectDepth, rectWidth, rectArea)
@@ -812,8 +703,6 @@ class ContinousWalkingDemo(object):
         self.committedStep = None
 
         startPose = self.robotStateJointController.getPose('EST_ROBOT_STATE')
-        if self.fixBlockYawWithInitial:
-            self.initialRobotYaw = startPose[5]
 
         self.makeReplanRequest(leadFoot, removeFirstLeftStep = False, nextDoubleSupportPose=startPose)
 

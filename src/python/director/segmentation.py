@@ -26,6 +26,9 @@ from director.fieldcontainer import FieldContainer
 from director.segmentationroutines import *
 from director import cameraview
 
+from thirdparty import qhull_2d
+from thirdparty import min_bounding_rect
+
 import numpy as np
 import vtkNumpy
 from debugVis import DebugData
@@ -2529,47 +2532,33 @@ def segmentTableEdge(polyData, searchPoint, edgePoint):
     '''
 
     polyData, tablePoints, origin, normal = segmentTable(polyData, searchPoint)
-
     tableMesh = computeDelaunay3D(tablePoints)
-    origin, edges, wireframe = getOrientedBoundingBox(tableMesh)
-    origin = origin + 0.5*np.sum(edges, axis=0)
 
+    # TODO: replace this frame with view frame. (Currently viewframe is inverted on Valkyrie)
+    viewFrame = getLinkFrame("pelvis")# SegmentationContext.getGlobalInstance().getViewFrame()
+    cornerTransform, rectDepth, rectWidth, _ = findMinimumBoundingRectangle(tablePoints, viewFrame)
+    rectHeight = 0.02 # arbitrary table width
 
-    edgeLengths = np.array([np.linalg.norm(edge) for edge in edges])
-    axes = [edge / np.linalg.norm(edge) for edge in edges]
-
-    def findAxis(referenceVector):
-        refAxis = referenceVector / np.linalg.norm(referenceVector)
-        axisProjections = np.array([np.abs(np.dot(axis, refAxis)) for axis in axes])
-        axisIndex = axisProjections.argmax()
-        axis = axes[axisIndex]
-        if np.dot(axis, refAxis) < 0:
-            axis = -axis
-        return axis, axisIndex
-
-    tableXAxis, tableXAxisIndex = findAxis(searchPoint - edgePoint)
-    tableZAxis, tableZAxisIndex = findAxis([0,0,1])
-    tableYAxis, tableYAxisIndex = findAxis(np.cross(tableZAxis, tableXAxis))
-    assert len(set([tableXAxisIndex, tableYAxisIndex, tableZAxisIndex])) == 3
-
-    axes = tableXAxis, tableYAxis, tableZAxis
-    edgeLengths = edgeLengths[tableXAxisIndex], edgeLengths[tableYAxisIndex], edgeLengths[tableZAxisIndex]
-
-    edgeCenter = origin - 0.5 * axes[0]*edgeLengths[0] + 0.5*axes[2]*edgeLengths[2]
-    edgeLeft = edgeCenter + 0.5 * axes[1]*edgeLengths[1]
-    edgeRight = edgeCenter - 0.5 * axes[1]*edgeLengths[1]
-
-    t = getTransformFromAxes(axes[0], axes[1], axes[2])
-    t.PostMultiply()
-    t.Translate(edgeRight)
-
-    table_center = [edgeLengths[0]/2, edgeLengths[1]/2, -edgeLengths[2]/2]
+    # Function returns frame that is far right from the robot, recover mid point
+    t = transformUtils.copyFrame(cornerTransform)
     t.PreMultiply()
+    table_center = [-rectDepth/2, rectWidth/2, 0]
     t3 = transformUtils.frameFromPositionAndRPY(table_center,[0,0,0])
     t.Concatenate(t3)
 
+    # Create required outputs
+    edgeLengths = [rectDepth, rectWidth, rectHeight]
+    tableXAxis, tableYAxis, tableZAxis = transformUtils.getAxesFromTransform(t)
+    axes = tableXAxis, tableYAxis, tableZAxis
+    wf = vtk.vtkOutlineSource()
+    wf.SetBounds([-rectDepth/2,rectDepth/2, -rectWidth/2,rectWidth/2, -rectHeight/2,rectHeight/2])
+    #wf.SetBoxTypeToOriented()
+    #cube =[0,0,0,1,0,0,0,1,0,1,1,0,0,0,1,1,0,1,0,1,1,1,1,1]
+    #wf.SetCorners(cube)
+    wireframe = wf.GetOutput()
+
     tablePoints = transformPolyData(tablePoints, t.GetLinearInverse())
-    wireframe = transformPolyData(wireframe, t.GetLinearInverse())
+    #wireframe = transformPolyData(wireframe, t.GetLinearInverse())
     tableMesh = transformPolyData(tableMesh, t.GetLinearInverse())
 
     return FieldContainer(points=tablePoints, box=wireframe, mesh=tableMesh, frame=t, dims=edgeLengths, axes=axes)
@@ -4756,3 +4745,97 @@ def segmentDrillWallFromWallCenter():
 
     wall=  om.findObjectByName('wall')
     vis.updateFrame( wallFrame ,'wall fit lidar', parent=wall, visible=False, scale=0.2)
+
+
+
+def findFarRightCorner(polyData, linkFrame):
+    '''
+    Within a point cloud find the point to the far right from the link
+    The input is the 4 corners of a minimum bounding box
+    '''
+
+    diagonalTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,45])
+    diagonalTransform.Concatenate(linkFrame)
+    vis.updateFrame(diagonalTransform, 'diagonal frame', parent='cont debug', visible=False)
+
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    viewOrigin = diagonalTransform.TransformPoint([0.0, 0.0, 0.0])
+    viewX = diagonalTransform.TransformVector([1.0, 0.0, 0.0])
+    viewY = diagonalTransform.TransformVector([0.0, 1.0, 0.0])
+    viewZ = diagonalTransform.TransformVector([0.0, 0.0, 1.0])
+    polyData = labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
+
+    vis.updatePolyData( polyData, 'cornerPoints', parent='cont debug', visible=False)
+    farRightIndex = vtkNumpy.getNumpyFromVtk(polyData, 'distance_along_foot_y').argmin()
+    points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
+    return points[farRightIndex,:]
+
+
+def findMinimumBoundingRectangle(polyData, linkFrame):
+    '''
+    Find minimum bounding rectangle of a rectangular point cloud
+    The input is assumed to be a rectangular point cloud e.g. the top of a block or table
+    Returns transform of far right corner (pointing away from robot)
+    '''
+
+    # Originally From: https://github.com/dbworth/minimum-area-bounding-rectangle
+    polyData = applyVoxelGrid(polyData, leafSize=0.02)
+
+    def get2DAsPolyData(xy_points):
+        '''
+        Convert a 2D numpy array to a 3D polydata by appending z=0
+        '''
+        d = np.vstack((xy_points.T, np.zeros( xy_points.shape[0]) )).T
+        d2=d.copy()
+        return vtkNumpy.getVtkPolyDataFromNumpyPoints( d2 )
+
+    pts =vtkNumpy.getNumpyFromVtk( polyData , 'Points' )
+    xy_points =  pts[:,[0,1]]
+    vis.updatePolyData( get2DAsPolyData(xy_points) , 'xy_points', parent='cont debug', visible=False)
+    hull_points = qhull_2d.qhull2D(xy_points)
+    vis.updatePolyData( get2DAsPolyData(hull_points) , 'hull_points', parent='cont debug', visible=False)
+    # Reverse order of points, to match output from other qhull implementations
+    hull_points = hull_points[::-1]
+    # print 'Convex hull points: \n', hull_points, "\n"
+
+    # Find minimum area bounding rectangle
+    (rot_angle, rectArea, rectDepth, rectWidth, center_point, corner_points_ground) = min_bounding_rect.minBoundingRect(hull_points)
+    vis.updatePolyData( get2DAsPolyData(corner_points_ground) , 'corner_points_ground', parent='cont debug', visible=False)
+
+    polyDataCentroid = computeCentroid(polyData)
+    cornerPoints = np.vstack((corner_points_ground.T, polyDataCentroid[2]*np.ones( corner_points_ground.shape[0]) )).T
+    cornerPolyData = vtkNumpy.getVtkPolyDataFromNumpyPoints(cornerPoints)
+
+    # Create a frame at the far right point - which points away from the robot
+    farRightCorner = findFarRightCorner(cornerPolyData , linkFrame)
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+    robotYaw = math.atan2( viewDirection[1], viewDirection[0] )*180.0/np.pi
+    blockAngle =  rot_angle*(180/math.pi)
+    #print "robotYaw   ", robotYaw
+    #print "blockAngle ", blockAngle
+    blockAngleAll = np.array([blockAngle , blockAngle+90 , blockAngle+180, blockAngle+270])
+    #print blockAngleAll
+    for i in range(0,4):
+        if(blockAngleAll[i]>180):
+          blockAngleAll[i]=blockAngleAll[i]-360
+    #print blockAngleAll
+    values = abs(blockAngleAll - robotYaw)
+    #print values
+    min_idx = np.argmin(values)
+    if ( (min_idx==1) or (min_idx==3) ):
+        #print "flip rectDepth and rectWidth as angle is not away from robot"
+        temp = rectWidth ; rectWidth = rectDepth ; rectDepth = temp
+
+    #print "best angle", blockAngleAll[min_idx]
+    rot_angle = blockAngleAll[min_idx]*math.pi/180.0
+
+    cornerTransform = transformUtils.frameFromPositionAndRPY( farRightCorner , [0,0, np.rad2deg(rot_angle) ] )
+
+    vis.showFrame(cornerTransform, "cornerTransform")
+
+    #print "Minimum area bounding box:"
+    #print "Rotation angle:", rot_angle, "rad  (", rot_angle*(180/math.pi), "deg )"
+    #print "rectDepth:", rectDepth, " rectWidth:", rectWidth, "  Area:", rectArea
+    #print "Center point: \n", center_point # numpy array
+    #print "Corner points: \n", cornerPoints, "\n"  # numpy array
+    return cornerTransform, rectDepth, rectWidth, rectArea
