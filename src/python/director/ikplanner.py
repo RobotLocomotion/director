@@ -68,7 +68,7 @@ class ConstraintSet(object):
         if self.ikPlanner.planningMode == 'exotica':
             self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints, nominalPoseName=nominalPoseName, seedPoseName=seedPoseName)
             return self.endPose, self.info
-        elif self.ikPlanner.planningMode == 'drake' and self.ikPlanner.pushToMatlab:
+        elif self.ikPlanner.planningMode == 'drake':
             ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
 
             self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, ikParameters, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
@@ -1357,7 +1357,7 @@ class IKPlanner(object):
 
         if self.planningMode == 'exotica':
             self.lastManipPlan, info = self.plannerPub.processTraj(constraints,endPoseName=poseEnd, nominalPoseName=nominalPoseName,seedPoseName=poseStart, additionalTimeSamples=self.additionalTimeSamples)
-        elif self.planningMode == 'drake' and self.pushToMatlab:
+        elif self.planningMode == 'drake':
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
             listener = self.getManipPlanListener()
             info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples,
