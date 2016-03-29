@@ -1086,12 +1086,6 @@ if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
     #ikPlanner.fixedBaseArm = True
     #showImageOverlay()
 
-
-if 'exo' in drcargs.args():
-    if (drcargs.args().exo):
-        ikPlanner.pushToMatlab = False
-
-
 def roomMap():
     mappingPanel.onStartMappingButton()
     t = mappingdemo.MappingDemo(robotStateModel, playbackRobotModel,
