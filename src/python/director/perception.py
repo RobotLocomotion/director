@@ -344,15 +344,21 @@ class MultiSenseSource(TimerCallback):
 
     @staticmethod
     def setNeckPitch(neckPitchDegrees):
-        '''
-        Currently hard-coded for Atlas to match previous functionality
-        '''
         assert neckPitchDegrees <= 90 and neckPitchDegrees >= -90
+
+        jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
+        jointGroupNeck = filter(lambda group: group['name'] == 'Neck', jointGroups)
+        if (len(jointGroupNeck) == 1):
+            neckJoints = jointGroupNeck[0]['joints']
+        else:
+            return
+
+        # Assume first neck joint is the pitch joint
         m = lcmbotcore.joint_angles_t()
         m.utime = getUtime()
         m.num_joints = 1
-        m.joint_name = [ "neck_ay" ]
-        m.joint_position = math.radians(neckPitchDegrees)
+        m.joint_name = [ neckJoints[0] ]
+        m.joint_position = [math.radians(neckPitchDegrees)]
         lcmUtils.publish('DESIRED_NECK_ANGLES', m)
 
 
