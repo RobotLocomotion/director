@@ -74,8 +74,6 @@ class DRCArgParser(object):
 
         parser.add_argument('--matlab-host', type=str, help='Hostname to use external matlab server')
 
-        parser.add_argument('-exo', '--exo', action='store_true', dest='exo', help='Publish plannig requests to external planner instead of Drake')
-
         directorConfig = parser.add_mutually_exclusive_group(required=False)
         directorConfig.add_argument('-v3', '--atlas_v3', dest='directorConfigFile',
                             action='store_const',
