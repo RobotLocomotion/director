@@ -95,7 +95,7 @@ def captureMessageCallback(channel, messageClass, callback):
     return subscriber
 
 
-def addSubscriber(channel, messageClass=None, callback=None, historicalLoader=None):
+def addSubscriber(channel, messageClass=None, callback=None, historicalLoader=None, callbackNeedsChannel=False):
 
     lcmThread = getGlobalLCMThread()
     subscriber = PythonQt.dd.ddLCMSubscriber(channel, lcmThread)
@@ -113,9 +113,9 @@ def addSubscriber(channel, messageClass=None, callback=None, historicalLoader=No
                 # except ValueError:
                 #     pass
         if loadSuccessful:
-            try:
-                callback(msg, channel)
-            except TypeError:
+            if callbackNeedsChannel:
+                callback(msg, channel=channel)
+            else:
                 callback(msg)
         else:
             print 'error decoding message on channel:', channel
