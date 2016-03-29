@@ -1,4 +1,4 @@
-import os
+import math, os
 import numpy as np
 from director import lcmUtils
 
@@ -15,6 +15,7 @@ from director import visualization as vis
 from director import packagepath
 
 import drake as lcmdrake
+import bot_core as lcmbot
 
 from PythonQt import QtGui
 
@@ -269,9 +270,9 @@ class Link(object):
 
 
     def setTransform(self, pos, quat):
-        trans = transformUtils.transformFromPose(pos, quat)
+        self.transform = transformUtils.transformFromPose(pos, quat)
         for g in self.geometry:
-            g.polyDataItem.getChildFrame().copyFrame(trans)
+            g.polyDataItem.getChildFrame().copyFrame(self.transform)
 
 
 class DrakeVisualizer(object):
@@ -288,6 +289,7 @@ class DrakeVisualizer(object):
     def _addSubscribers(self):
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmdrake.lcmt_viewer_load_robot, self.onViewerLoadRobot))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmdrake.lcmt_viewer_draw, self.onViewerDraw))
+        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_PLANAR_LIDAR_.*', lcmbot.planar_lidar_t, self.onPlanarLidar, callbackNeedsChannel=True))
 
     def _removeSubscribers(self):
         for sub in self.subscribers:
@@ -330,18 +332,20 @@ class DrakeVisualizer(object):
         self.robots.setdefault(robotNum, {})[linkName] = link
         linkFolder = self.getLinkFolder(robotNum, linkName)
         for geom in link.geometry:
-            geom.polyDataItem.addToView(self.view)
-            om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
-            vis.addChildFrame(geom.polyDataItem)
+            self.addLinkGeometry(geom, linkName, linkFolder)
 
-            if linkName == 'world':
-                #geom.polyDataItem.actor.SetUseBounds(False)
-                #geom.polyDataItem.actor.GetProperty().LightingOff()
-                geom.polyDataItem.actor.GetProperty().SetSpecular(0.0)
-            else:
-                geom.polyDataItem.actor.GetProperty().SetSpecular(0.9)
-                geom.polyDataItem.actor.GetProperty().SetSpecularPower(20)
+    def addLinkGeometry(self, geom, linkName, linkFolder):
+        geom.polyDataItem.addToView(self.view)
+        om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
+        vis.addChildFrame(geom.polyDataItem)
 
+        if linkName == 'world':
+            #geom.polyDataItem.actor.SetUseBounds(False)
+            #geom.polyDataItem.actor.GetProperty().LightingOff()
+            geom.polyDataItem.actor.GetProperty().SetSpecular(0.0)
+        else:
+            geom.polyDataItem.actor.GetProperty().SetSpecular(0.9)
+            geom.polyDataItem.actor.GetProperty().SetSpecularPower(20)
 
     def getLink(self, robotNum, linkName):
         return self.robots[robotNum][linkName]
@@ -377,6 +381,51 @@ class DrakeVisualizer(object):
 
         self.view.render()
 
+    def onPlanarLidar(self, msg, channel):
+
+        linkName = channel.replace('DRAKE_PLANAR_LIDAR_', '', 1)
+        robotNum, linkName = linkName.split('_', 1)
+        robotNum = int(robotNum)
+
+        try:
+            link = self.getLink(robotNum, linkName)
+        except KeyError:
+            if linkName not in self.linkWarnings:
+                print 'Error locating link name:', linkName
+                self.linkWarnings.add(linkName)
+        else:
+            if len(link.geometry):
+                polyData = link.geometry[0].polyDataItem
+            else:
+                polyData = vtk.vtkPolyData()
+
+                name = linkName + ' geometry data'
+                geom = type('', (), {})
+                geom.color = [1.0,0.0,0.0,1.0]
+                g = Geometry(name, geom, polyData, link.transform)
+                link.geometry.append(g)
+
+                linkFolder = self.getLinkFolder(robotNum, linkName)
+                self.addLinkGeometry(g, linkName, linkFolder)
+                g.polyDataItem.getChildFrame().copyFrame(link.transform)
+
+            points = vtk.vtkPoints()
+            verts = vtk.vtkCellArray()
+
+            t = msg.rad0
+            for r in msg.ranges:
+                if r >= 0:
+                    x = r * math.cos(t)
+                    y = r * math.sin(t)
+
+                    pointId = points.InsertNextPoint([x,y,0])
+                    verts.InsertNextCell(1)
+                    verts.InsertCellPoint(pointId)
+
+                t += msg.radstep
+
+            polyData.SetPoints(points)
+            polyData.SetVerts(verts)
 
 
 
