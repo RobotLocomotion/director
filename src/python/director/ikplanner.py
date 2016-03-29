@@ -65,10 +65,10 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        if (self.ikPlanner.pushToMatlab is False):
+        if self.ikPlanner.planningMode == 'exotica':
             self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints, nominalPoseName=nominalPoseName, seedPoseName=seedPoseName)
             return self.endPose, self.info
-        else:
+        elif self.ikPlanner.planningMode == 'drake' and self.ikPlanner.pushToMatlab:
             ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
 
             self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, ikParameters, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
@@ -243,6 +243,7 @@ class IKPlanner(object):
         self.additionalTimeSamples = 0
         self.useQuasiStaticConstraint = True
         self.pushToMatlab = True
+        self.planningMode = 'drake'
         # is this dodgy?
         self.ikConstraintEncoder = ikconstraintencoder.IKConstraintEncoder(self)
 
@@ -1015,9 +1016,9 @@ class IKPlanner(object):
     def addPose(self, pose, poseName):
         self.jointController.addPose(poseName, pose)
 
-        if self.pushToMatlab:
+        if self.planningMode == 'drake' and self.pushToMatlab:
             self.ikServer.sendPoseToServer(pose, poseName)
-        else:
+        elif self.planningMode == 'exotica':
             self.plannerPub.processAddPose(pose, poseName)
 
 
@@ -1354,9 +1355,9 @@ class IKPlanner(object):
 
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
 
-        if (self.pushToMatlab is False):
+        if self.planningMode == 'exotica':
             self.lastManipPlan, info = self.plannerPub.processTraj(constraints,endPoseName=poseEnd, nominalPoseName=nominalPoseName,seedPoseName=poseStart, additionalTimeSamples=self.additionalTimeSamples)
-        else:
+        elif self.planningMode == 'drake' and self.pushToMatlab:
             ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
             listener = self.getManipPlanListener()
             info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples,

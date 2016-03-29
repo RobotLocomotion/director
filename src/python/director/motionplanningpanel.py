@@ -121,16 +121,16 @@ class MotionPlanningPanel(object):
     def checkFinalPosePlanningMode(self):
         algorithm = self.getComboText(self.ui.fpAlgComboBox)
         if 'Drake' in algorithm:
-            self.ikPlanner.pushToMatlab = True
+            self.ikPlanner.planningMode = 'drake'
         elif 'Exotica' in algorithm:
-            self.ikPlanner.pushToMatlab = False
+            self.ikPlanner.planningMode = 'exotica'
         
     def checkReachingPlanningMode(self):
         algorithm = self.getComboText(self.ui.mpAlgComboBox)
         if 'Drake' in algorithm:
-            self.ikPlanner.pushToMatlab = True
+            self.ikPlanner.planningMode = 'drake'
         elif 'Exotica' in algorithm:
-            self.ikPlanner.pushToMatlab = False
+            self.ikPlanner.planningMode = 'exotica'
             
     def onHandChanged(self, combo):
         if self.ui.mpModeButton.checked:
