@@ -32,7 +32,7 @@ def processSingleBlock(robotStateModel, whichFile=0):
 
     standingFootName = cwdemo.ikPlanner.leftFootLink
     standingFootFrame = robotStateModel.getLinkFrame(standingFootName)
-    cwdemo.findMinimumBoundingRectangle(polyData, standingFootFrame)
+    segmentation.findMinimumBoundingRectangle(polyData, standingFootFrame)
 
 
 def processSnippet():
