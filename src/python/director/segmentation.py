@@ -2535,7 +2535,7 @@ def segmentTableEdge(polyData, searchPoint, edgePoint):
     tableMesh = computeDelaunay3D(tablePoints)
 
     # TODO: replace this frame with view frame. (Currently viewframe is inverted on Valkyrie)
-    viewFrame = getLinkFrame("pelvis")# SegmentationContext.getGlobalInstance().getViewFrame()
+    viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
     cornerTransform, rectDepth, rectWidth, _ = findMinimumBoundingRectangle(tablePoints, viewFrame)
     rectHeight = 0.02 # arbitrary table width
 
@@ -4809,18 +4809,21 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
     # Create a frame at the far right point - which points away from the robot
     farRightCorner = findFarRightCorner(cornerPolyData , linkFrame)
     viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+    viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
+    #vis.showFrame(viewFrame, "viewFrame")
+
     robotYaw = math.atan2( viewDirection[1], viewDirection[0] )*180.0/np.pi
     blockAngle =  rot_angle*(180/math.pi)
     #print "robotYaw   ", robotYaw
     #print "blockAngle ", blockAngle
     blockAngleAll = np.array([blockAngle , blockAngle+90 , blockAngle+180, blockAngle+270])
-    #print blockAngleAll
+
+    values = blockAngleAll - robotYaw
     for i in range(0,4):
-        if(blockAngleAll[i]>180):
-          blockAngleAll[i]=blockAngleAll[i]-360
-    #print blockAngleAll
-    values = abs(blockAngleAll - robotYaw)
-    #print values
+        if(values[i]>180):
+          values[i]=values[i]-360
+
+    values = abs(values)
     min_idx = np.argmin(values)
     if ( (min_idx==1) or (min_idx==3) ):
         #print "flip rectDepth and rectWidth as angle is not away from robot"
