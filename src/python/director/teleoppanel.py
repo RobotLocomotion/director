@@ -22,8 +22,6 @@ import numpy as np
 import types
 import lcm
 import bot_core as lcmbotcore
-from bot_core.pose_t import pose_t
-
 
 def addWidgetsToDict(widgets, d):
 
@@ -99,10 +97,6 @@ class EndEffectorTeleopPanel(object):
         self.ui.searchFinalPoseButton.connect('clicked()', self.searchFinalPoseClicked)
         self.ui.rightGraspingHandButton.connect('clicked()', self.rightGraspingHandButtonClicked)
         self.ui.leftGraspingHandButton.connect('clicked()', self.leftGraspingHandButtonClicked)
-        self.ui.lFootUpButton.connect('clicked()', self.moveLfootUpButtonClicked)
-        self.ui.lFootDownButton.connect('clicked()', self.moveLfootDownButtonClicked)
-        self.ui.rFootUpButton.connect('clicked()', self.moveRfootUpButtonClicked)
-        self.ui.rFootDownButton.connect('clicked()', self.moveRfootDownButtonClicked)
 
         self.palmOffsetDistance = 0.0
         self.palmGazeAxis = [0.0, 1.0, 0.0]
@@ -732,31 +726,7 @@ class EndEffectorTeleopPanel(object):
         ikplanner.getIkOptions().setProperty('RRT hand', 0)
         self.ui.rhandCombo.enabled = True
         self.ui.lhandCombo.enabled = False
-    
-    def moveLfootUpButtonClicked(self):
-        self.moveFoot([0,0,0.05], 'left')
-    
-    def moveLfootDownButtonClicked(self):
-        self.moveFoot([0,0,-0.05], 'left')
-    
-    def moveRfootUpButtonClicked(self):
-        self.moveFoot([0,0,0.05], 'right')
-    
-    def moveRfootDownButtonClicked(self):
-        self.moveFoot([0,0,-0.05], 'right')
-    
-    def moveFoot(self, offset, side):
-        msg = pose_t();
-        msg.utime = getUtime();
-        foot_link = self.panel.ikPlanner.leftFootLink if side == 'left' else self.panel.ikPlanner.rightFootLink
-        footPose = transformUtils.poseFromTransform(self.panel.ikPlanner.robotModel.getLinkFrame(foot_link))
-        msg.pos = footPose[0] + offset
-        msg.orientation = footPose[1]
-        if side == 'left':
-            lcmUtils.publish("DESIRED_LEFT_FOOT_POSE", msg)
-        else:
-            lcmUtils.publish("DESIRED_RIGHT_FOOT_POSE", msg)
-    
+
     def initFinalPosePlanning(self):
         if drcargs.getDirectorConfig()['modelName'] not in {'valkyrie_v1', 'valkyrie_v2'}:
             message = 'Final pose planning is not yet available for %s' % drcargs.getDirectorConfig()['modelName']
