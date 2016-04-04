@@ -82,7 +82,7 @@ class MotionPlanningPanel(object):
         # Foot step planning
         self.placer = None
         self.ui.walkingPlanButton.connect('clicked()', self.onWalkingPlan)
-        
+        self.ui.teleportRobotButton.connect('clicked()', self.onTeleportRobotToStanceFrame)
         # Motion Planning
         self.ui.motionPlanButton.connect('clicked()', self.onMotionPlan)
         
@@ -100,9 +100,10 @@ class MotionPlanningPanel(object):
         self.ui.EndPosePlanningPanel.setEnabled(True)
         if self.getComboText(self.ui.feetComboBox) == 'Sliding': 
             self.ui.walkingPlanningPanel.setEnabled(True)
+            self.ui.fixFeetPlanningPanel.setEnabled(False)
         elif self.getComboText(self.ui.feetComboBox) == 'Fixed': 
             self.ui.walkingPlanningPanel.setEnabled(False)
-        self.ui.fixFeetPlanningPanel.setEnabled(True)
+            self.ui.fixFeetPlanningPanel.setEnabled(True)
         self.createHandGoalFrame()
         self.updateIKConstraints()
         
@@ -136,6 +137,11 @@ class MotionPlanningPanel(object):
         if self.ui.mpModeButton.checked:
             self.createHandGoalFrame()
             self.updateIKConstraints()
+            self.hideTeleopModel()
+            if self.getReachHand() == 'Both':
+                self.ui.otherHandComboBox.setEnabled(False)
+            else:
+                self.ui.otherHandComboBox.setEnabled(True)
         
     def onBaseConstraintChanged(self):
         if self.getComboText(self.ui.baseComboBox) == 'Fixed':
@@ -154,9 +160,11 @@ class MotionPlanningPanel(object):
     def onFeetConstraintChanged(self):
         if self.getComboText(self.ui.feetComboBox) == 'Fixed': 
             self.ui.walkingPlanningPanel.setEnabled(False)
+            self.ui.fixFeetPlanningPanel.setEnabled(True)
             self.removeWalkingPlanningInfo()
         elif self.getComboText(self.ui.feetComboBox) == 'Sliding': 
             self.ui.walkingPlanningPanel.setEnabled(True)
+            self.ui.fixFeetPlanningPanel.setEnabled(False)
             self.ui.baseComboBox.setCurrentIndex(0)
             self.ui.baseComboBox.show()
         self.updateIKConstraints()
@@ -220,36 +228,34 @@ class MotionPlanningPanel(object):
             [pos_right, quat_right] = transformUtils.poseFromTransform(self.robotStateModel.getLinkFrame(self.ikPlanner.rightFootLink))
             dist = npla.norm(pos_left - pos_right)
             constraints.append(ik.PointToPointDistanceConstraint(bodyNameA=self.ikPlanner.leftFootLink, bodyNameB=self.ikPlanner.rightFootLink, lowerBound=np.array([dist - 0.0001]), upperBound=np.array([dist + 0.0001])))
-            
+
+        sides = []
         if self.getReachHand() == 'Left':
-            side = 'left'
-            other_side = 'right'
-            endEffectorName = self.ikPlanner.handModels[0].handLinkName
+            sides.append('left')
         elif self.getReachHand() == 'Right':
-            side = 'right'
-            other_side = 'left'
-            endEffectorName = self.ikPlanner.handModels[1].handLinkName
-            
-        self.ikPlanner.setArmLocked(side, False)
-        if self.getComboText(self.ui.otherHandComboBox) == 'Fixed':
-            self.ikPlanner.setArmLocked(other_side, True)
-            if other_side == 'left':
-                constraints.append(self.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
-            elif other_side == 'right':
-                constraints.append(self.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
-        elif self.getComboText(self.ui.otherHandComboBox) == 'Free':
-            self.ikPlanner.setArmLocked(other_side, False)
+            sides.append('right')
+        elif self.getReachHand() == 'Both':
+            sides.append('left')
+            sides.append('right')
         
-                
-        linkName = self.ikPlanner.getHandLink(side)
-        graspToHand = self.ikPlanner.newPalmOffsetGraspToHandFrame(side, self.palmOffsetDistance)
-        graspToWorld = self.getGoalFrame(linkName)
-        p, q = self.ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
-        p.tspan = [1.0, 1.0]
-        q.tspan = [1.0, 1.0]
-        constraints.extend([p, q])
-        constraints.append(self.ikPlanner.createActiveEndEffectorConstraint(endEffectorName, self.ikPlanner.getPalmPoint(side)))
-        self.constraintSet = ikplanner.ConstraintSet(self.ikPlanner, constraints, 'reach_end', startPoseName)
+        if self.getComboText(self.ui.otherHandComboBox) == 'Fixed':
+            if not 'left' in sides:
+                self.ikPlanner.setArmLocked('left', True)
+                constraints.append(self.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
+            if not 'right' in sides:
+                self.ikPlanner.setArmLocked('right', True)
+                constraints.append(self.ikPlanner.createLockedRightArmPostureConstraint(startPoseName))
+        
+        for side in sides:        
+            linkName = self.ikPlanner.getHandLink(side)
+            graspToHand = self.ikPlanner.newPalmOffsetGraspToHandFrame(side, self.palmOffsetDistance)
+            graspToWorld = self.getGoalFrame(linkName)
+            p, q = self.ikPlanner.createPositionOrientationGraspConstraints(side, graspToWorld, graspToHand)
+            p.tspan = [1.0, 1.0]
+            q.tspan = [1.0, 1.0]
+            constraints.extend([p, q])
+            constraints.append(self.ikPlanner.createActiveEndEffectorConstraint(linkName, self.ikPlanner.getPalmPoint(side)))
+            self.constraintSet = ikplanner.ConstraintSet(self.ikPlanner, constraints, 'reach_end', startPoseName)
         
     @staticmethod
     def removePlanFolder():
@@ -267,25 +273,28 @@ class MotionPlanningPanel(object):
         return om.getOrCreateContainer('constraint frames', parentObj=om.getOrCreateContainer('teleop plan', parentObj=om.findObjectByName('planning')))
     
     def removeHandFrames(self):
-        linkName = self.ikPlanner.getHandLink('left')
-        frameName = '%s constraint frame' % linkName
-        om.removeFromObjectModel(om.findObjectByName(frameName))
-        linkName = self.ikPlanner.getHandLink('right')
-        frameName = '%s constraint frame' % linkName
-        om.removeFromObjectModel(om.findObjectByName(frameName))
+        sides = ['left', 'right']
+        for side in sides:
+            linkName = self.ikPlanner.getHandLink(side)
+            frameName = '%s constraint frame' % linkName
+            frame = om.findObjectByName(frameName)
+            if frame:
+                om.removeFromObjectModel(frame)
         
     def createHandGoalFrame(self):
+        sides = []
         if self.getReachHand() == 'Left':
-            side = 'left'
+            sides.append('left')
         elif self.getReachHand() == 'Right':
-            side = 'right'
-        else:
-            side = 'none'
+            sides.append('right')
+        elif self.getReachHand() == 'Both':
+            sides.append('left')
+            sides.append('right')
         self.removeHandFrames()
-        
-        if not side == 'none':
-            folder = self.getConstraintFrameFolder()
-            startPose = np.array(self.robotStateJointController.q)
+
+        folder = self.getConstraintFrameFolder()
+        startPose = np.array(self.robotStateJointController.q)        
+        for side in sides:
             linkName = self.ikPlanner.getHandLink(side)
             frameName = '%s constraint frame' % linkName
             graspToHand = self.ikPlanner.newPalmOffsetGraspToHandFrame(side, self.palmOffsetDistance)
@@ -334,11 +343,20 @@ class MotionPlanningPanel(object):
             self.placer.stop()
         self.onWalkingGoalModified(walkingGoal)
         
+    def onTeleportRobotToStanceFrame(self):
+        self.robotStateJointController.q[:6] = self.teleopJointController.q[:6]
+        self.robotStateJointController.push()
+        startPoseName = 'reach_start'
+        startPose = np.array(self.robotStateJointController.q)
+        self.ikPlanner.addPose(startPose, startPoseName)
+        self.ui.feetComboBox.setCurrentIndex(1)   
+        
     def onWalkingGoalModified(self, frame):
         request = self.footDriver.constructFootstepPlanRequest(self.robotStateJointController.q, frame)
         self.footDriver.sendFootstepPlanRequest(request)
             
     def onMotionPlan(self):
+        self.ui.feetComboBox.setCurrentIndex(1)
         startPoseName = 'reach_start'
         startPose = np.array(self.robotStateJointController.q)
         self.checkReachingPlanningMode()
