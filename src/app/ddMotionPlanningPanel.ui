@@ -638,9 +638,9 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="walkingFakeExeButton">
+         <widget class="QPushButton" name="teleportRobotButton">
           <property name="text">
-           <string>Fake Execute</string>
+           <string>TeleportRobot</string>
           </property>
          </widget>
         </item>

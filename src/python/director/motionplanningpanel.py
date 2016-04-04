@@ -82,7 +82,7 @@ class MotionPlanningPanel(object):
         # Foot step planning
         self.placer = None
         self.ui.walkingPlanButton.connect('clicked()', self.onWalkingPlan)
-        self.ui.walkingFakeExeButton.connect('clicked()', self.onWalkingFakeExecute)
+        self.ui.teleportRobotButton.connect('clicked()', self.onTeleportRobotToStanceFrame)
         # Motion Planning
         self.ui.motionPlanButton.connect('clicked()', self.onMotionPlan)
         
@@ -343,7 +343,7 @@ class MotionPlanningPanel(object):
             self.placer.stop()
         self.onWalkingGoalModified(walkingGoal)
         
-    def onWalkingFakeExecute(self):
+    def onTeleportRobotToStanceFrame(self):
         self.robotStateJointController.q[:6] = self.teleopJointController.q[:6]
         self.robotStateJointController.push()
         startPoseName = 'reach_start'
