@@ -54,12 +54,15 @@ class ExternalForce(object):
         self.createPlunger()
         self.createMeshDataAndLocators()
 
+        self.initializeOptions()
+
         self.visObjectDrawTime = dict()
         self.timeout = 1.5
 
         # setup timercallback to publish, lets say at 5 hz
         self.timer = TimerCallback(targetFps=5)
         self.timer.callback = self.publish
+        self.startPublishing()
         # self.startPublishing() # this now gets activated when you start linkSelection
 
         self.visObjectCleanupTimer = TimerCallback(targetFps = 1)
@@ -93,6 +96,14 @@ class ExternalForce(object):
                 continue
             data['locator'] = self.buildCellLocator(polyData)
             self.linkMeshData[linkName] = data
+
+
+    def initializeOptions(self):
+        self.options = {}
+
+        self.options['noise'] = {}
+        self.options['noise']['addNoise'] = True
+        self.options['noise']['stddev'] = 0.1
 
 
 
@@ -510,11 +521,15 @@ class ExternalForce(object):
             force = np.array([fx, fy, fz])
             torque = np.array([tx, ty, tz])
 
-
             eps = 0.5
             if np.linalg.norm(force) < eps:
                 om.removeFromObjectModel(om.findObjectByName(name))
                 return
+
+            # add noise if it was called for
+            if self.options['noise']['addNoise']:
+                force += np.random.normal(scale=self.options['noise']['stddev'], size=3)
+                torque += np.random.normal(scale=self.options['noise']['stddev'], size=3)
 
 
             forceLocation = self.computeContactLocation(linkName, force, torque)

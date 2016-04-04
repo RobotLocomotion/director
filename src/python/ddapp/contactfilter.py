@@ -111,16 +111,27 @@ class ContactFilter(object):
         self.options = {}
 
         self.options['thresholds'] = {}
-        self.options['thresholds']['addContactPointTimeout'] = 1.0
-        self.options['thresholds']['removeContactPointTimeout'] = 1.0
-        self.options['thresholds']['addContactPointSquaredError'] = 10.0 # threshold on squared error to add contact point
-        self.options['thresholds']['removeContactPointSquaredError'] = 10.0
+        self.options['thresholds']['addContactPointTimeout'] = 0.25
+        self.options['thresholds']['removeContactPointTimeout'] = 0.25
+        self.options['thresholds']['addContactPointSquaredError'] = 20.0 # threshold on squared error to add contact point
+        self.options['thresholds']['removeContactPointSquaredError'] = 20.0
         self.options['thresholds']['removeContactPointForce'] = 5.0 # threshold on force magnitude to eliminate a force that gets too small
         self.options['thresholds']['squaredErrorBoundForMostLikelyParticleAveraging'] = 10.0
+        self.options['thresholds']['lastTimeBelowThreshold'] = 0.0
+        self.options['thresholds']['timeAboveThresholdToAddParticleSet'] = 0.1
 
+
+        # sensitive params
+        if False:
+            self.options['thresholds']['addContactPointSquaredError'] = 10.0 # threshold on squared error to add contact point
+            self.options['thresholds']['removeContactPointSquaredError'] = 10.0
+            self.options['thresholds']['timeAboveThresholdToAddParticleSet'] = 0.01
 
         self.options['motionModel'] = {}
         self.options['motionModel']['var'] = 0.05
+        self.options['motionModel']['varMin'] = 0.01
+        self.options['motionModel']['varMax'] = 0.05
+        self.options['motionModel']['varMaxSquaredErrorCutoff'] = 10
 
         self.options['measurementModel'] = {}
         self.options['measurementModel']['var'] = 0.05 # this is totally made up at the moment
@@ -141,7 +152,7 @@ class ContactFilter(object):
 
         self.options['noise'] = {}
         self.options['noise']['addNoise'] = False
-        self.options['noise']['stddev'] = 0.1
+        self.options['noise']['stddev'] = 0.2
 
         self.options['vis'] = {}
         self.options['vis']['draw'] = False
@@ -594,19 +605,46 @@ class ContactFilter(object):
 
 
         if solnData is None:
-            if (self.squaredErrorNoContacts(verbose=False) > self.options['thresholds']['addContactPointSquaredError']):
+            # if we aren't below the threshold then reset the timer
+            if (self.squaredErrorNoContacts(verbose=False) < self.options['thresholds']['addContactPointSquaredError']):
+                self.options['thresholds']['lastTimeBelowThreshold'] = self.currentTime
+
+            # if the last time we were below the threshold is above the timeout for adding a contact point, then add the
+            # contact point
+
+
+            if ((self.currentTime - self.options['thresholds']['lastTimeBelowThreshold']) >
+                    self.options['thresholds']['timeAboveThresholdToAddParticleSet']):
                 newParticleSet = self.createParticleSet()
             else:
+                if verbose and (self.squaredErrorNoContacts(verbose=False) >
+                                    self.options['thresholds']['addContactPointSquaredError']):
+                    print "squared error is large, but haven't yet exceeded time threshold, not adding particle set"
+
                 return
 
-        elif solnData['squaredError'] > self.options['thresholds']['addContactPointSquaredError']:
-            linksWithContactPoints = set()
-            for d in solnData['cfpData']:
-                cfp = d['ContactFilterPoint']
-                linksWithContactPoints.add(cfp.linkName)
+        else:
+            if (solnData['squaredError'] < self.options['thresholds']['addContactPointSquaredError']):
+                self.options['thresholds']['lastTimeBelowThreshold'] = self.currentTime
 
 
-            newParticleSet = self.createParticleSet(dontUseLinks=linksWithContactPoints)
+            if ((self.currentTime - self.options['thresholds']['lastTimeBelowThreshold']) >
+                self.options['thresholds']['timeAboveThresholdToAddParticleSet']):
+
+                linksWithContactPoints = set()
+                for d in solnData['cfpData']:
+                    cfp = d['ContactFilterPoint']
+                    linksWithContactPoints.add(cfp.linkName)
+
+
+                newParticleSet = self.createParticleSet(dontUseLinks=linksWithContactPoints)
+            else:
+                if verbose and (solnData['squaredError'] > self.options['thresholds']['addContactPointSquaredError']):
+                    print "squared error is large, but haven't yet exceeded time threshold, not adding particle set"
+
+                # make sure we don't return here, should go and check whether we need to remove any particl sets
+                # if we are here newParticleSet should be None
+
 
             # this is a hack for now
             # if len(self.particleSetList) >= 2:
@@ -688,9 +726,11 @@ class ContactFilter(object):
         numExistingParticles = len(particleSet.particleList)
         xk = np.arange(0,numExistingParticles)
         pk = np.zeros(numExistingParticles)
+        pkHack = np.zeros(numExistingParticles)
 
         for idx, particle in enumerate(particleSet.particleList):
             pk[idx] = particle.solnData['likelihood']
+            pkHack[idx] = 1/particle.solnData['squaredError']
 
         # normalize the probabilities
         # having some numerical issues here, I think it is because we essentially dividing by zero or something
@@ -701,6 +741,7 @@ class ContactFilter(object):
         if sumProb < tol:
             print "sum of probabilities really small, falling back to drawing randomly"
             pk = 1.0/numExistingParticles * np.ones(numExistingParticles)
+            pk = pkHack/np.sum(pkHack)
         else:
             pk = pk/np.sum(pk)
         rv = scipy.stats.rv_discrete(values=(xk,pk)) # the random variable with importance weights
@@ -1003,6 +1044,9 @@ class ContactFilter(object):
         mostLikelyColor = [1,0.4,0.7] # hot pink
         historicalMostLikelyColor = [1,0,0]
 
+        if color is None:
+            color = particleSet.color
+
         if color is not None:
             defaultColor = color
 
@@ -1088,7 +1132,7 @@ class ContactFilter(object):
         vis.updatePolyData(d.getPolyData(), name, colorByName="RGB255")
 
     def testParticleSetDraw(self):
-        self.drawParticleSet(self.testParticleSet)
+        self.drawParticleSet(self.testParticleSet, drawMostLikely=False, drawHistoricalMostLikely=False)
 
     def testParticleSetDrawAll(self, drawMostLikely=False, drawHistoricalMostLikely=True):
         # colorList = []
@@ -1419,10 +1463,17 @@ class ContactFilter(object):
         tangentVector = np.cross(cfp.contactNormal, contactNormalWorldFrame)
         tangentVector = tangentVector/np.linalg.norm(tangentVector)
 
+
+        variance = self.options['motionModel']['varMax']
+        if self.mostLikelySolnData is not None:
+            squaredError = self.mostLikelySolnData['squaredError']
+            alpha = min(squaredError/self.options['motionModel']['varMaxSquaredErrorCutoff'], 1.0)
+            variance = alpha*self.options['motionModel']['varMax'] + (1-alpha)*self.options['motionModel']['varMin']
+
         if tangentSampling:
-            deltaToNewContactLocation = tangentVector*np.random.normal(scale=self.options['motionModel']['var'], size=1)
+            deltaToNewContactLocation = tangentVector*np.random.normal(scale=variance, size=1)
         else:
-            deltaToNewContactLocation = np.random.normal(scale=self.options['motionModel']['var'], size=3)
+            deltaToNewContactLocation = np.random.normal(scale=variance, size=3)
 
         closestPointLookupLocation = contactLocationWorldFrame + deltaToNewContactLocation
 
