@@ -37,11 +37,17 @@ def printDevices():
 
 
 def findInputDevice(deviceName):
-
     init()
     for deviceId in xrange(pypm.CountDevices()):
         interf, name, inp, outp, opened = pypm.GetDeviceInfo(deviceId)
         if inp and (deviceName in name):
+                return deviceId
+
+def findOutputDevice(deviceName):
+    init()
+    for deviceId in xrange(pypm.CountDevices()):
+        interf, name, inp, outp, opened = pypm.GetDeviceInfo(deviceId)
+        if outp and (deviceName in name):
                 return deviceId
 
 
