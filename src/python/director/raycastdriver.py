@@ -1,4 +1,5 @@
 import drc as lcmdrc
+import bot_core as lcmbotcore
 from director import lcmUtils
 from director import affordanceurdf
 
@@ -10,7 +11,7 @@ class RaycastDriver(object):
     def requestRaycast(self, affordances, lb=[-2,-2], ub=[2,2], step=0.02):
         urdfStr = affordanceurdf.urdfStringFromAffordances(affordances)
         msg = lcmdrc.terrain_raycast_request_t()
-        msg.urdf = lcmdrc.robot_urdf_t()
+        msg.urdf = lcmbotcore.robot_urdf_t()
         msg.urdf.robot_name = "collision_environment"
         msg.urdf.urdf_xml_string = urdfStr
         msg.x_min = lb[0]
