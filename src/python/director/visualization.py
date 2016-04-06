@@ -8,6 +8,7 @@ from director import frameupdater
 from PythonQt import QtCore, QtGui
 
 import os
+import colorsys
 import weakref
 import itertools
 import numpy as np
@@ -905,6 +906,13 @@ def addChildFrame(obj, initialTransform=None):
     obj.actor.SetUserTransform(t)
 
     return frame
+
+
+def getRandomColor():
+    '''
+    Return a random color as a list of RGB values between 0.0 and 1.0.
+    '''
+    return colorsys.hsv_to_rgb(np.random.rand(), 1.0, 0.9)
 
 
 def showClusterObjects(clusters, parent):

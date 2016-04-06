@@ -2,7 +2,6 @@ import os
 import sys
 import math
 import vtk
-import colorsys
 import time
 import functools
 import traceback
@@ -228,14 +227,6 @@ class DisparityPointCloudItem(vis.PolyDataItem):
             self.setProperty('Color By', 'rgb_colors')
 
         self.lastUtime = utime
-
-
-def getRandomColor():
-    '''
-    Return a random color as a list of RGB values between 0.0 and 1.0.
-    '''
-    return colorsys.hsv_to_rgb(np.random.rand(), 1.0, 0.9)
-
 
 
 def extractLargestCluster(polyData, minClusterSize=100):
