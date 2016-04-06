@@ -119,6 +119,7 @@ set(python_files
   director/utime.py
   director/uuidutil.py
   director/valvedemo.py
+  director/viconvisualizer.py
   director/viewbehaviors.py
   director/vieweventfilter.py
   director/visualization.py
