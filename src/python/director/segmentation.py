@@ -2536,7 +2536,11 @@ def segmentTableEdge(polyData, searchPoint, edgePoint):
 
     # TODO: replace this frame with view frame. (Currently viewframe is inverted on Valkyrie)
     viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
-    cornerTransform, rectDepth, rectWidth, _ = findMinimumBoundingRectangle(tablePoints, viewFrame)
+    viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+    robotYaw = math.atan2( viewDirection[1], viewDirection[0] )*180.0/np.pi
+    linkFrame = transformUtils.frameFromPositionAndRPY( viewFrame.GetPosition() , [0,0, robotYaw ] )    
+
+    cornerTransform, rectDepth, rectWidth, _ = findMinimumBoundingRectangle(tablePoints, linkFrame)
     rectHeight = 0.02 # arbitrary table width
 
     # Function returns frame that is far right from the robot, recover mid point
@@ -4754,8 +4758,9 @@ def findFarRightCorner(polyData, linkFrame):
     The input is the 4 corners of a minimum bounding box
     '''
 
-    diagonalTransform = transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,45])
-    diagonalTransform.Concatenate(linkFrame)
+    diagonalTransform =  transformUtils.copyFrame(linkFrame)
+    diagonalTransform.PreMultiply()
+    diagonalTransform.Concatenate( transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,45]) )
     vis.updateFrame(diagonalTransform, 'diagonal frame', parent='cont debug', visible=False)
 
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
@@ -4809,6 +4814,7 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
     # Create a frame at the far right point - which points away from the robot
     farRightCorner = findFarRightCorner(cornerPolyData , linkFrame)
     viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
+
     viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
     #vis.showFrame(viewFrame, "viewFrame")
 
