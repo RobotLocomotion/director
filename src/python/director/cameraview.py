@@ -407,17 +407,26 @@ class ImageWidget(object):
         self.flip.SetInput(imageManager.getImage(imageName))
         imageRep.SetImage(self.flip.GetOutput())
 
+        self.eventFilter = PythonQt.dd.ddPythonEventFilter()
+        self.view.installEventFilter(self.eventFilter)
+        self.eventFilter.addFilteredEventType(QtCore.QEvent.Resize)
+        self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onResizeEvent)
+
         self.timerCallback = TimerCallback()
         self.timerCallback.targetFps = 60
         self.timerCallback.callback = self.updateView
         self.timerCallback.start()
 
-        self.initialized = False
-
     def setWidgetSize(self, desiredWidth=400):
+
+        image = self.imageManager.getImage(self.imageName)
+        dims = image.GetDimensions()
+        if 0.0 in dims:
+            return
+
+        aspectRatio = float(dims[0])/dims[1]
+        imageWidth, imageHeight = desiredWidth, desiredWidth/aspectRatio
         viewWidth, viewHeight = self.view.width, self.view.height
-        defaultImageAspectRatio = 4/3.
-        imageWidth, imageHeight = desiredWidth, desiredWidth/defaultImageAspectRatio
 
         rep = self.imageWidget.GetBorderRepresentation()
         rep.SetShowBorderToOff()
@@ -430,6 +439,9 @@ class ImageWidget(object):
 
         self.view.render()
 
+    def onResizeEvent(self):
+        self.setWidgetSize(400)
+
     def setImage(self, imageName):
         self.imageName = imageName
         self.flip.SetInput(imageManager.getImage(imageName))
@@ -440,28 +452,33 @@ class ImageWidget(object):
     def hide(self):
         self.visible = False
         self.imageWidget.Off()
+        self.view.render()
 
     def show(self):
-        if not self.initialized:
-            self.setWidgetSize(400)
-            self.initialized = True
-
         self.visible = True
-        self.imageWidget.On()
+        if self.haveImage():
+            self.imageWidget.On()
+            self.view.render()
+
+    def haveImage(self):
+        image = self.imageManager.getImage(self.imageName)
+        dims = image.GetDimensions()
+        return 0.0 not in dims
 
     def updateView(self):
-        if not self.view.isVisible():
+        if not self.visible or not self.view.isVisible():
             return
 
         currentUtime = self.imageManager.updateImage(self.imageName)
         if currentUtime != self.updateUtime:
-            if not self.initialized and self.visible:
-                self.show()
-                self.initialized = True
-
             self.updateUtime = currentUtime
             self.flip.Update()
             self.view.render()
+
+            if not self.initialized and self.visible and self.haveImage():
+                self.show()
+                self.setWidgetSize(400)
+                self.initialized = True
 
 
 class CameraImageView(object):
