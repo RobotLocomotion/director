@@ -581,9 +581,11 @@ class RobotViewEventFilter(ViewEventFilter):
 
         useHorizontalWidget =  (event.modifiers() == QtCore.Qt.ShiftModifier)
         if toggleFootstepWidget(displayPoint, self.view, useHorizontalWidget):
+            self.consumeEvent()
             return
 
         if robotLinkSelector and robotLinkSelector.selectLink(displayPoint, self.view):
+            self.consumeEvent()
             return
 
     def onKeyPress(self, event):
