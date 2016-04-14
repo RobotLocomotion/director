@@ -442,7 +442,7 @@ class ImageWidget(object):
     def onResizeEvent(self):
         self.setWidgetSize(400)
 
-    def setImage(self, imageName):
+    def setImageName(self, imageName):
         self.imageName = imageName
         self.flip.SetInput(imageManager.getImage(imageName))
 

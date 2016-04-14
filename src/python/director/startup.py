@@ -771,7 +771,7 @@ showImageOverlay = imageOverlayManager.show
 hideImageOverlay = imageOverlayManager.hide
 showImageWidget = imageWidget.show
 hideImageWidget = imageWidget.hide
-setImageWidgetSource = imageWidget.setImage
+setImageWidgetSource = imageWidget.setImageName
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
