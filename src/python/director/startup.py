@@ -767,10 +767,6 @@ class ToggleImageViewHandler(object):
 imageOverlayManager = ImageOverlayManager()
 imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view, visible=False)
 imageViewHandler = ToggleImageViewHandler(imageWidget)
-showImageOverlay = imageOverlayManager.show
-hideImageOverlay = imageOverlayManager.hide
-showImageWidget = imageWidget.show
-hideImageWidget = imageWidget.hide
 setImageWidgetSource = imageWidget.setImageName
 
 screengrabberpanel.init(view)
