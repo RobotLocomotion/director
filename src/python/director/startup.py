@@ -702,19 +702,25 @@ class ImageOverlayManager(object):
     def __init__(self):
         self.viewName = 'CAMERA_LEFT'
         self.desiredWidth = 400
-        self.size = [self.desiredWidth, self.desiredWidth/(4/3.)]
         self.position = [0, 0]
         self.usePicker = False
         self.imageView = None
         self.imagePicker = None
         self._prevParent = None
-        self.imageSize = [640, 480]
-        self.imageAspectRatio = 4/3.
+        self._updateAspectRatio()
 
     def setWidth(self, width):
         self.desiredWidth = width
+        self._updateAspectRatio()
         self.hide()
         self.show()
+
+    def _updateAspectRatio(self):
+        imageExtent = cameraview.imageManager.images[self.viewName].GetExtent()
+        if imageExtent[1] != -1 and imageExtent[3] != -1:
+            self.imageSize = [imageExtent[1]+1, imageExtent[3]+1]
+            imageAspectRatio = self.imageSize[0] / self.imageSize[1]
+            self.size = [self.desiredWidth, self.desiredWidth / imageAspectRatio]
 
     def show(self):
         if self.imageView:
@@ -724,16 +730,12 @@ class ImageOverlayManager(object):
         self.imageView = imageView
         self._prevParent = imageView.view.parent()
 
-        imageExtent = cameraview.imageManager.images[self.viewName].GetExtent()
-        if imageExtent[1] != -1 and imageExtent[3] != -1:
-            self.imageSize = [imageExtent[1]+1, imageExtent[3]+1]
-            self.imageAspectRatio = self.imageSize[0] / self.imageSize[1]
-            self.size = [self.desiredWidth, self.desiredWidth / self.imageAspectRatio]
+        self._updateAspectRatio()
 
         imageView.view.hide()
         imageView.view.setParent(view)
-        imageView.view.resize(*self.size)
-        imageView.view.move(*self.position)
+        imageView.view.resize(self.size[0], self.size[1])
+        imageView.view.move(self.position[0], self.position[1])
         imageView.view.show()
 
         if self.usePicker:
@@ -767,11 +769,7 @@ class ToggleImageViewHandler(object):
 imageOverlayManager = ImageOverlayManager()
 imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view, visible=False)
 imageViewHandler = ToggleImageViewHandler(imageWidget)
-showImageOverlay = imageOverlayManager.show
-hideImageOverlay = imageOverlayManager.hide
-showImageWidget = imageWidget.show
-hideImageWidget = imageWidget.hide
-setImageWidgetSource = imageWidget.setImage
+setImageWidgetSource = imageWidget.setImageName
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
