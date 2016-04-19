@@ -3,8 +3,8 @@ import numpy as np
 import time
 import re
 import json
-from ddapp import drcargs
-from ddapp import transformUtils
+from director import drcargs
+from director import transformUtils
 
 _robotStateToDrakePoseJointMap = None
 _drakePoseToRobotStateJointMap = None

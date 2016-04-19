@@ -1,5 +1,5 @@
 from copy import deepcopy
-from ddapp.fieldcontainer import FieldContainer
+from director.fieldcontainer import FieldContainer
 
 class IkParameters(FieldContainer):
 

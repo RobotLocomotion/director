@@ -6,7 +6,7 @@
 #include <QVector>
 #include <QGenericMatrix>
 #include "ddSharedPtr.h"
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 
 class vtkRenderer;

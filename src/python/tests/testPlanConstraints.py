@@ -1,20 +1,20 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import robotsystem
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp import objectmodel as om
-from ddapp import ikplanner
-from ddapp import fieldcontainer
-from ddapp import transformUtils
+from director.consoleapp import ConsoleApp
+from director import robotsystem
+from director import transformUtils
+from director import visualization as vis
+from director import objectmodel as om
+from director import ikplanner
+from director import fieldcontainer
+from director import transformUtils
 
-import ddapp.vtkAll as vtk
+import director.vtkAll as vtk
 
 from PythonQt import QtCore, QtGui
 import numpy as np
 
 import pprint
 import json
-import ddapp.thirdparty.numpyjsoncoder as nje
+import director.thirdparty.numpyjsoncoder as nje
 from collections import OrderedDict
 
 ######################

@@ -2,7 +2,7 @@
 #define __ddMainWindow_h
 
 #include <QMainWindow>
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 
 class ddViewManager;

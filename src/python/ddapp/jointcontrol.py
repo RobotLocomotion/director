@@ -1,10 +1,10 @@
 import os
 import math
-from ddapp.timercallback import TimerCallback
-from ddapp.simpletimer import SimpleTimer
-from ddapp import robotstate
-from ddapp import getDRCBaseDir
-from ddapp import lcmUtils
+from director.timercallback import TimerCallback
+from director.simpletimer import SimpleTimer
+from director import robotstate
+from director import getDRCBaseDir
+from director import lcmUtils
 import drc as lcmdrc
 import numpy as np
 

@@ -3,13 +3,13 @@ import math
 import types
 import functools
 import numpy as np
-import ddapp
-from ddapp import matlab
-from ddapp import callbacks
-from ddapp.asynctaskqueue import AsyncTaskQueue
-from ddapp.ikconstraints import *
+import director
+from director import matlab
+from director import callbacks
+from director.asynctaskqueue import AsyncTaskQueue
+from director.ikconstraints import *
 
-from ddapp import drcargs
+from director import drcargs
 
 class AsyncIKCommunicator():
 
@@ -42,9 +42,9 @@ class AsyncIKCommunicator():
         commands.append('\n%-------- startup --------\n')
         commands.append('format long e')
         commands.append('addpath_control')
-        commands.append("addpath([getenv('DRC_BASE'), '/software/ddapp/src/matlab'])")
-        commands.append("robotURDF = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.robotURDF, ddapp.getDRCBaseDir()))
-        commands.append("fixed_point_file = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.fixedPointFile, ddapp.getDRCBaseDir()))
+        commands.append("addpath([getenv('DRC_BASE'), '/software/director/src/matlab'])")
+        commands.append("robotURDF = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.robotURDF, director.getDRCBaseDir()))
+        commands.append("fixed_point_file = [getenv('DRC_BASE'), '/%s'];" % os.path.relpath(self.fixedPointFile, director.getDRCBaseDir()))
         commands.append("left_foot_link = '%s';" % self.leftFootLink)
         commands.append("right_foot_link = '%s';" % self.rightFootLink)
         commands.append('runIKServer')

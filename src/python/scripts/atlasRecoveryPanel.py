@@ -1,5 +1,5 @@
-from ddapp import atlasdriver
-from ddapp import consoleapp
+from director import atlasdriver
+from director import consoleapp
 from PythonQt import QtCore, QtGui
 from collections import namedtuple
 

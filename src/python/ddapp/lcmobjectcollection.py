@@ -3,11 +3,11 @@ import pprint
 import uuid
 import json
 from collections import OrderedDict
-from ddapp import lcmUtils
-from ddapp.thirdparty import numpyjsoncoder
-from ddapp import callbacks
-from ddapp.utime import getUtime
-from ddapp.uuidutil import newUUID
+from director import lcmUtils
+from director.thirdparty import numpyjsoncoder
+from director import callbacks
+from director.utime import getUtime
+from director.uuidutil import newUUID
 import drc as lcmdrc
 
 

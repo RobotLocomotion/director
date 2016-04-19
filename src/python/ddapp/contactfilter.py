@@ -1,6 +1,6 @@
 __author__ = 'manuelli'
-import ddapp
-from ddapp import roboturdf
+import director
+from director import roboturdf
 import numpy as np
 import vtkAll as vtk
 import PythonQt
@@ -20,15 +20,15 @@ import contactfilterutils as cfUtils
 
 
 from PythonQt import QtCore, QtGui
-from ddapp import transformUtils
-from ddapp import lcmUtils
-from ddapp import contactfiltergurobi
-from ddapp.debugVis import DebugData
-from ddapp import visualization as vis
-from ddapp import gurobiutils as grbUtils
-from ddapp.timercallback import TimerCallback
-from ddapp import objectmodel as om
-from ddapp import contactpointlocator
+from director import transformUtils
+from director import lcmUtils
+from director import contactfiltergurobi
+from director.debugVis import DebugData
+from director import visualization as vis
+from director import gurobiutils as grbUtils
+from director.timercallback import TimerCallback
+from director import objectmodel as om
+from director import contactpointlocator
 
 
 import drc as lcmdrc

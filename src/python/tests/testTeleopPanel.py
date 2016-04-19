@@ -1,10 +1,10 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import robotsystem
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp import objectmodel as om
-from ddapp import teleoppanel
-from ddapp import playbackpanel
+from director.consoleapp import ConsoleApp
+from director import robotsystem
+from director import transformUtils
+from director import visualization as vis
+from director import objectmodel as om
+from director import teleoppanel
+from director import playbackpanel
 
 from PythonQt import QtCore, QtGui
 import numpy as np

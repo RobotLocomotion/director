@@ -1,8 +1,8 @@
-import ddapp
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp import objectmodel as om
-from ddapp import ik
+import director
+from director import transformUtils
+from director import visualization as vis
+from director import objectmodel as om
+from director import ik
 
 import os
 import functools
@@ -73,7 +73,7 @@ class KinematicPosePlannerPanel(object):
 
     def testDemo(self):
 
-        postureFile = os.path.join(ddapp.getDRCBaseDir(), 'software/control/matlab/planners/prone/data_KPT.mat')
+        postureFile = os.path.join(director.getDRCBaseDir(), 'software/control/matlab/planners/prone/data_KPT.mat')
         self.nominalPosture = scipy.io.loadmat(postureFile)['q_sol'][:,0]
         self.contacts = ['l_toe', 'l_knee', 'r_toe', 'r_knee', 'l_hand']
         self.positionCosts = [

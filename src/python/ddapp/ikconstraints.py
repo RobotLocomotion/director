@@ -1,7 +1,7 @@
-from ddapp import robotstate
-import ddapp.vtkAll as vtk
-from ddapp.transformUtils import poseFromTransform
-from ddapp.fieldcontainer import FieldContainer
+from director import robotstate
+import director.vtkAll as vtk
+from director.transformUtils import poseFromTransform
+from director.fieldcontainer import FieldContainer
 import numpy as np
 import math
 

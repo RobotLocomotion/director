@@ -3,8 +3,8 @@ from __future__ import division
 import numpy as np
 from scipy.spatial import ConvexHull
 
-from ddapp.irisUtils import SafeTerrainRegion
-from ddapp import transformUtils
+from director.irisUtils import SafeTerrainRegion
+from director import transformUtils
 from irispy.utils import sample_convex_polytope
 import polyhedron._cdd
 from polyhedron import Vrep, Hrep

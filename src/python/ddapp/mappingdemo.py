@@ -4,22 +4,22 @@ import math
 import functools
 import numpy as np
 
-from ddapp import transformUtils
+from director import transformUtils
 
-from ddapp.asynctaskqueue import AsyncTaskQueue
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import robotstate
-from ddapp import segmentation
-from ddapp import planplayback
-from ddapp.pointpicker import PointPicker
-from ddapp import vtkAll as vtk
-from ddapp.simpletimer import SimpleTimer
-from ddapp import affordanceupdater
+from director.asynctaskqueue import AsyncTaskQueue
+from director import objectmodel as om
+from director import visualization as vis
+from director import robotstate
+from director import segmentation
+from director import planplayback
+from director.pointpicker import PointPicker
+from director import vtkAll as vtk
+from director.simpletimer import SimpleTimer
+from director import affordanceupdater
 
-from ddapp.debugVis import DebugData
-from ddapp import affordanceitems
-from ddapp import ikplanner
+from director.debugVis import DebugData
+from director import affordanceitems
+from director import ikplanner
 
 import ioUtils
 

@@ -1,7 +1,7 @@
 import argparse
-from ddapp.consoleapp import ConsoleApp
-from ddapp import cameraview
-from ddapp import vtkAll as vtk
+from director.consoleapp import ConsoleApp
+from director import cameraview
+from director import vtkAll as vtk
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 

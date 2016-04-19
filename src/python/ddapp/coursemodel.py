@@ -1,21 +1,21 @@
 
-#import ddapp
-from ddapp import cameraview
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp import objectmodel as om
-from ddapp import ik
-from ddapp.ikparameters import IkParameters
-from ddapp.ikplanner import ConstraintSet
-from ddapp import polarisplatformplanner
-from ddapp import robotstate
-from ddapp import segmentation
-from ddapp import sitstandplanner
-from ddapp.timercallback import TimerCallback
-from ddapp import visualization as vis
-from ddapp import planplayback
-from ddapp import lcmUtils
-from ddapp.uuidutil import newUUID
+#import director
+from director import cameraview
+from director import transformUtils
+from director import visualization as vis
+from director import objectmodel as om
+from director import ik
+from director.ikparameters import IkParameters
+from director.ikplanner import ConstraintSet
+from director import polarisplatformplanner
+from director import robotstate
+from director import segmentation
+from director import sitstandplanner
+from director.timercallback import TimerCallback
+from director import visualization as vis
+from director import planplayback
+from director import lcmUtils
+from director.uuidutil import newUUID
 
 import os
 import functools
@@ -23,11 +23,11 @@ import numpy as np
 import scipy.io
 import vtkAll as vtk
 import bot_core as lcmbotcore
-from ddapp.tasks.taskuserpanel import TaskUserPanel
-import ddapp.tasks.robottasks as rt
-from ddapp import filterUtils
-from ddapp import ioUtils
-import ddapp
+from director.tasks.taskuserpanel import TaskUserPanel
+import director.tasks.robottasks as rt
+from director import filterUtils
+from director import ioUtils
+import director
 from numpy import array
 
 class CourseModel(object):
@@ -37,7 +37,7 @@ class CourseModel(object):
         pose = transformUtils.poseFromTransform(vtk.vtkTransform())
 
 
-        self.pointcloud  = ioUtils.readPolyData(ddapp.getDRCBaseDir() + '/software/models/rehearsal_pointcloud.vtp')
+        self.pointcloud  = ioUtils.readPolyData(director.getDRCBaseDir() + '/software/models/rehearsal_pointcloud.vtp')
         self.pointcloudPD = vis.showPolyData(self.pointcloud, 'coursemodel', parent=None)
         segmentation.makeMovable(self.pointcloudPD, transformUtils.transformFromPose(array([0, 0, 0]), array([ 1.0,  0.        ,  0.        , 0.0])))
 

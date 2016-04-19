@@ -1,21 +1,21 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import robotsystem
-from ddapp import affordanceitems
-from ddapp import affordanceurdf
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import lcmUtils
-from ddapp import ioUtils
-from ddapp.debugVis import DebugData
-from ddapp.timercallback import TimerCallback
-from ddapp import segmentation
-from ddapp.uuidutil import newUUID
-from ddapp import geometryencoder
-from ddapp import sceneloader
+from director.consoleapp import ConsoleApp
+from director import robotsystem
+from director import affordanceitems
+from director import affordanceurdf
+from director import objectmodel as om
+from director import visualization as vis
+from director import lcmUtils
+from director import ioUtils
+from director.debugVis import DebugData
+from director.timercallback import TimerCallback
+from director import segmentation
+from director.uuidutil import newUUID
+from director import geometryencoder
+from director import sceneloader
 import drc as lcmdrc
 import os
 import json
-from ddapp.utime import getUtime
+from director.utime import getUtime
 app = ConsoleApp()
 
 app.setupGlobals(globals())
@@ -119,7 +119,7 @@ loadTableTopPointCloud()
 segmentTableTopPointCloud()
 testSDF()
 
-from ddapp import affordancepanel
+from director import affordancepanel
 panel = affordancepanel.AffordancePanel(view, affordanceManager, ikServer, robotStateJointController, raycastDriver)
 panel.widget.show()
 

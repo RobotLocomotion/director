@@ -7,14 +7,14 @@
 '''
 
 
-from ddapp.filterUtils import *
-import ddapp.visualization as vis
-from ddapp import objectmodel as om
-from ddapp.transformUtils import getTransformFromAxes
-from ddapp import vtkAll as vtk
+from director.filterUtils import *
+import director.visualization as vis
+from director import objectmodel as om
+from director.transformUtils import getTransformFromAxes
+from director import vtkAll as vtk
 
 
-from ddapp.footstepsdriver import FootstepsDriver
+from director.footstepsdriver import FootstepsDriver
 
 import vtkNumpy
 import numpy as np

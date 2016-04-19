@@ -15,7 +15,7 @@
 #include <lcm/lcm-cpp.hpp>
 
 #include "ddFPSCounter.h"
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 
 namespace lcm

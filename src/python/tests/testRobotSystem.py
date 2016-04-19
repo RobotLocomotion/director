@@ -1,6 +1,6 @@
 
-from ddapp.consoleapp import ConsoleApp
-from ddapp import robotsystem
+from director.consoleapp import ConsoleApp
+from director import robotsystem
 
 app = ConsoleApp()
 

@@ -1,11 +1,11 @@
-import ddapp.objectmodel as om
-import ddapp.applogic as app
+import director.objectmodel as om
+import director.applogic as app
 from shallowCopy import shallowCopy
-import ddapp.vtkAll as vtk
-from ddapp.timercallback import TimerCallback
-from ddapp import transformUtils
-from ddapp import callbacks
-from ddapp import frameupdater
+import director.vtkAll as vtk
+from director.timercallback import TimerCallback
+from director import transformUtils
+from director import callbacks
+from director import frameupdater
 import numpy as np
 from PythonQt import QtCore, QtGui
 

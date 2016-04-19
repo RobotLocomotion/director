@@ -1,12 +1,12 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-from ddapp import lcmUtils
-from ddapp import applogic as app
-from ddapp.utime import getUtime
-from ddapp.timercallback import TimerCallback
-from ddapp import visualization as vis
-from ddapp.debugVis import DebugData
-from ddapp.wristforcetorquevisualizer import WristForceTorqueVisualizer
+from director import lcmUtils
+from director import applogic as app
+from director.utime import getUtime
+from director.timercallback import TimerCallback
+from director import visualization as vis
+from director.debugVis import DebugData
+from director.wristforcetorquevisualizer import WristForceTorqueVisualizer
 
 import numpy as np
 import math

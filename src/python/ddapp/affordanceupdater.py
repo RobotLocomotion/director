@@ -1,9 +1,9 @@
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import vtkAll as vtk
-from ddapp import transformUtils
-from ddapp import filterUtils
-from ddapp.timercallback import TimerCallback
+from director import objectmodel as om
+from director import visualization as vis
+from director import vtkAll as vtk
+from director import transformUtils
+from director import filterUtils
+from director.timercallback import TimerCallback
 
 class AffordanceGraspUpdater(object):
 

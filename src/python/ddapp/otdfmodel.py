@@ -4,11 +4,11 @@ import sys
 import re
 import os
 from collections import OrderedDict
-from ddapp.thirdparty import NumericStringParser
+from director.thirdparty import NumericStringParser
 
-from ddapp import roboturdf
-from ddapp import propertyset
-import ddapp.objectmodel as om
+from director import roboturdf
+from director import propertyset
+import director.objectmodel as om
 
 
 def getElementNodes(node):

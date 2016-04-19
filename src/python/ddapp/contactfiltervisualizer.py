@@ -1,11 +1,11 @@
 __author__ = 'manuelli'
-from ddapp import contactfilter
+from director import contactfilter
 from contactfilter import ContactFilter
 
 
 __author__ = 'manuelli'
-import ddapp
-from ddapp import roboturdf
+import director
+from director import roboturdf
 import numpy as np
 import vtkAll as vtk
 import PythonQt
@@ -18,13 +18,13 @@ import contactfilterutils as cfUtils
 
 
 from PythonQt import QtCore, QtGui
-from ddapp import transformUtils
-from ddapp import lcmUtils
+from director import transformUtils
+from director import lcmUtils
 
-from ddapp.debugVis import DebugData
-from ddapp import visualization as vis
+from director.debugVis import DebugData
+from director import visualization as vis
 
-from ddapp import objectmodel as om
+from director import objectmodel as om
 
 import drc as lcmdrc
 

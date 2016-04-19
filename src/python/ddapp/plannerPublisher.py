@@ -8,13 +8,13 @@ import types
 import functools
 import random
 import numpy as np
-from ddapp import ik
-from ddapp import ikconstraints
-from ddapp import ikconstraintencoder
+from director import ik
+from director import ikconstraints
+from director import ikconstraintencoder
 import drc as lcmdrc
 import json
-from ddapp.utime import getUtime
-from ddapp import lcmUtils
+from director.utime import getUtime
+from director import lcmUtils
 
 import ipab
 

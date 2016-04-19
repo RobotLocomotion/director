@@ -1,22 +1,22 @@
-from ddapp import asynctaskqueue as atq
-from ddapp import segmentation
-from ddapp import visualization as vis
-import ddapp.objectmodel as om
-from ddapp import propertyset
-from ddapp import pointpicker
-from ddapp import planplayback
-from ddapp.timercallback import TimerCallback
-from ddapp.simpletimer import SimpleTimer
-from ddapp import ikplanner
-from ddapp import callbacks
-from ddapp import robotsystem
-from ddapp import transformUtils
-from ddapp import affordanceitems
-from ddapp import vtkNumpy as vnp
-from ddapp.debugVis import DebugData
-from ddapp.robotplanlistener import ManipulationPlanItem
-from ddapp.footstepsdriver import FootstepPlanItem
-from ddapp import vtkAll as vtk
+from director import asynctaskqueue as atq
+from director import segmentation
+from director import visualization as vis
+import director.objectmodel as om
+from director import propertyset
+from director import pointpicker
+from director import planplayback
+from director.timercallback import TimerCallback
+from director.simpletimer import SimpleTimer
+from director import ikplanner
+from director import callbacks
+from director import robotsystem
+from director import transformUtils
+from director import affordanceitems
+from director import vtkNumpy as vnp
+from director.debugVis import DebugData
+from director.robotplanlistener import ManipulationPlanItem
+from director.footstepsdriver import FootstepPlanItem
+from director import vtkAll as vtk
 import drc as lcmdrc
 import numpy as np
 import copy

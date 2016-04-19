@@ -1,15 +1,15 @@
 import os
-from ddapp import lcmUtils
+from director import lcmUtils
 
-import ddapp.objectmodel as om
-import ddapp.applogic as app
-from ddapp import transformUtils
-from ddapp.debugVis import DebugData
-from ddapp import ioUtils
-from ddapp import filterUtils
-from ddapp.shallowCopy import shallowCopy
-from ddapp import vtkAll as vtk
-from ddapp import visualization as vis
+import director.objectmodel as om
+import director.applogic as app
+from director import transformUtils
+from director.debugVis import DebugData
+from director import ioUtils
+from director import filterUtils
+from director.shallowCopy import shallowCopy
+from director import vtkAll as vtk
+from director import visualization as vis
 
 import drake as lcmdrake
 
@@ -316,12 +316,12 @@ class DrakeVisualizer(object):
 
 
 ##########################################################
-from ddapp.screengrabberpanel import ScreenGrabberPanel
-from ddapp import lcmgl
-from ddapp import objectmodel as om
-from ddapp import applogic
-from ddapp import viewbehaviors
-from ddapp import camerabookmarks
+from director.screengrabberpanel import ScreenGrabberPanel
+from director import lcmgl
+from director import objectmodel as om
+from director import applogic
+from director import viewbehaviors
+from director import camerabookmarks
 import PythonQt
 from PythonQt import QtCore, QtGui
 

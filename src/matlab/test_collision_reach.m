@@ -14,7 +14,7 @@ do_setup = true;
 if (do_setup)
 
   %addpath_control
-  addpath([getenv('DRC_BASE'), '/software/ddapp/pod-build/lib/python2.7/dist-packages/ddapp/../../../../../src/matlab'])
+  addpath([getenv('DRC_BASE'), '/software/director/pod-build/lib/python2.7/dist-packages/director/../../../../../src/matlab'])
 
   checkDependency('lcmgl');
   lcmgl = drake.util.BotLCMGLClient(lcm.lcm.LCM.getSingleton(),  'test_collision_reach');

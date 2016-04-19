@@ -7,33 +7,33 @@ import types
 import functools
 import numpy as np
 
-from ddapp import transformUtils
-from ddapp import lcmUtils
-from ddapp.timercallback import TimerCallback
-from ddapp.asynctaskqueue import AsyncTaskQueue
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import applogic as app
-from ddapp.debugVis import DebugData
-from ddapp import ikplanner
-from ddapp.ikparameters import IkParameters
-from ddapp import ioUtils
-from ddapp.simpletimer import SimpleTimer
-from ddapp.utime import getUtime
-from ddapp import affordanceitems
-from ddapp import robotstate
-from ddapp import robotplanlistener
-from ddapp import segmentation
-from ddapp import planplayback
-from ddapp import affordanceupdater
-from ddapp import segmentationpanel
-from ddapp import vtkNumpy as vnp
+from director import transformUtils
+from director import lcmUtils
+from director.timercallback import TimerCallback
+from director.asynctaskqueue import AsyncTaskQueue
+from director import objectmodel as om
+from director import visualization as vis
+from director import applogic as app
+from director.debugVis import DebugData
+from director import ikplanner
+from director.ikparameters import IkParameters
+from director import ioUtils
+from director.simpletimer import SimpleTimer
+from director.utime import getUtime
+from director import affordanceitems
+from director import robotstate
+from director import robotplanlistener
+from director import segmentation
+from director import planplayback
+from director import affordanceupdater
+from director import segmentationpanel
+from director import vtkNumpy as vnp
 
-from ddapp.tasks.taskuserpanel import TaskUserPanel
-from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
+from director.tasks.taskuserpanel import TaskUserPanel
+from director.tasks.taskuserpanel import ImageBasedAffordanceFit
 
-import ddapp.tasks.robottasks as rt
-import ddapp.tasks.taskmanagerwidget as tmw
+import director.tasks.robottasks as rt
+import director.tasks.taskmanagerwidget as tmw
 
 import drc as lcmdrc
 import copy

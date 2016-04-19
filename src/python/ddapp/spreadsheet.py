@@ -2,7 +2,7 @@
 from PythonQt import QtCore, QtGui
 import functools
 
-from ddapp import applogic as app
+from director import applogic as app
 
 _spreadsheetView = None
 def getSpreadsheetView():

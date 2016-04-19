@@ -7,32 +7,32 @@ import types
 import functools
 import numpy as np
 
-from ddapp import transformUtils
-from ddapp import lcmUtils
-from ddapp.timercallback import TimerCallback
-from ddapp.asynctaskqueue import AsyncTaskQueue
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import applogic as app
-from ddapp.debugVis import DebugData
-from ddapp import ik
-from ddapp import ikplanner
-from ddapp import ioUtils
-from ddapp.simpletimer import SimpleTimer
-from ddapp.utime import getUtime
-from ddapp.pointpicker import ImagePointPicker
-from ddapp import affordanceitems
-from ddapp import affordanceupdater
-from ddapp import robotstate
-from ddapp import robotplanlistener
-from ddapp import cameraview
-from ddapp import segmentation
-from ddapp import planplayback
-from ddapp import propertyset
-from ddapp import asynctaskqueue as atq
+from director import transformUtils
+from director import lcmUtils
+from director.timercallback import TimerCallback
+from director.asynctaskqueue import AsyncTaskQueue
+from director import objectmodel as om
+from director import visualization as vis
+from director import applogic as app
+from director.debugVis import DebugData
+from director import ik
+from director import ikplanner
+from director import ioUtils
+from director.simpletimer import SimpleTimer
+from director.utime import getUtime
+from director.pointpicker import ImagePointPicker
+from director import affordanceitems
+from director import affordanceupdater
+from director import robotstate
+from director import robotplanlistener
+from director import cameraview
+from director import segmentation
+from director import planplayback
+from director import propertyset
+from director import asynctaskqueue as atq
 
-import ddapp.tasks.robottasks as rt
-import ddapp.tasks.taskmanagerwidget as tmw
+import director.tasks.robottasks as rt
+import director.tasks.taskmanagerwidget as tmw
 
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools

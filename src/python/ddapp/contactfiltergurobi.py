@@ -1,6 +1,6 @@
 __author__ = 'manuelli'
 from gurobipy import *
-from ddapp import gurobiutils as grbUtils
+from director import gurobiutils as grbUtils
 import numpy as np
 import scipy.linalg
 

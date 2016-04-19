@@ -21,7 +21,7 @@
 #define __vtkSimpleActorInteractor_h
 
 #include "vtkInteractorStyleTrackballActor.h"
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 
 class DD_APP_EXPORT vtkSimpleActorInteractor : public vtkInteractorStyleTrackballActor

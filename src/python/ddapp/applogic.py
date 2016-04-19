@@ -2,13 +2,13 @@
 import os
 import time
 import math
-import ddapp.vtkAll as vtk
+import director.vtkAll as vtk
 import PythonQt
 from PythonQt import QtCore
 from PythonQt import QtGui
-from ddapp import getDRCBaseDir as getDRCBase
-from ddapp import botspy
-from ddapp import openscope
+from director import getDRCBaseDir as getDRCBase
+from director import botspy
+from director import openscope
 import functools
 
 _mainWindow = None

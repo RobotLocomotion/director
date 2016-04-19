@@ -2,14 +2,14 @@ from __future__ import division
 
 import numpy as np
 
-import ddapp.objectmodel as om
-import ddapp.visualization as vis
-import ddapp.vtkNumpy as vnp
+import director.objectmodel as om
+import director.visualization as vis
+import director.vtkNumpy as vnp
 from scipy.spatial.qhull import QhullError
-from ddapp import filterUtils
-from ddapp import segmentation
-from ddapp.debugVis import DebugData
-from ddapp.pointpicker import PlacerWidget
+from director import filterUtils
+from director import segmentation
+from director.debugVis import DebugData
+from director.pointpicker import PlacerWidget
 from PythonQt import QtGui
 
 class TerrainRegionItem(vis.PolyDataItem):

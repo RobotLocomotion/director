@@ -1,7 +1,7 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-from ddapp import applogic as app
-from ddapp.timercallback import TimerCallback
+from director import applogic as app
+from director.timercallback import TimerCallback
 from functools import partial
 
 

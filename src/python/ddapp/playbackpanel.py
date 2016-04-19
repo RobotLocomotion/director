@@ -1,13 +1,13 @@
 from PythonQt import QtCore, QtGui, QtUiTools
-import ddapp.applogic as app
+import director.applogic as app
 import math
 import numpy as np
-from ddapp.timercallback import TimerCallback
-from ddapp.simpletimer import SimpleTimer
-from ddapp.debugVis import DebugData
-from ddapp import robotstate
-import ddapp.visualization as vis
-import ddapp.vtkAll as vtk
+from director.timercallback import TimerCallback
+from director.simpletimer import SimpleTimer
+from director.debugVis import DebugData
+from director import robotstate
+import director.visualization as vis
+import director.vtkAll as vtk
 import scipy.interpolate
 
 

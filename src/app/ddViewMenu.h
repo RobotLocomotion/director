@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <QObject>
 #include <QIcon>
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 class QAction;
 class QEvent;

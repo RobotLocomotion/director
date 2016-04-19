@@ -1,22 +1,22 @@
-import ddapp.applogic as app
-from ddapp import lcmUtils
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp import filterUtils
-from ddapp import drcargs
-from ddapp.shallowCopy import shallowCopy
-from ddapp.timercallback import TimerCallback
-from ddapp import vtkNumpy
-from ddapp import objectmodel as om
-import ddapp.vtkAll as vtk
-from ddapp.debugVis import DebugData
+import director.applogic as app
+from director import lcmUtils
+from director import transformUtils
+from director import visualization as vis
+from director import filterUtils
+from director import drcargs
+from director.shallowCopy import shallowCopy
+from director.timercallback import TimerCallback
+from director import vtkNumpy
+from director import objectmodel as om
+import director.vtkAll as vtk
+from director.debugVis import DebugData
 
 import PythonQt
 from PythonQt import QtCore, QtGui
 import bot_core as lcmbotcore
 import numpy as np
-from ddapp.simpletimer import SimpleTimer
-from ddapp import ioUtils
+from director.simpletimer import SimpleTimer
+from director import ioUtils
 import sys
 import drc as lcmdrc
 import multisense as lcmmultisense

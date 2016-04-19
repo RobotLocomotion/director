@@ -5,12 +5,12 @@ import time
 import types
 import numpy as np
 import vtkAll as vtk
-from ddapp.timercallback import TimerCallback
+from director.timercallback import TimerCallback
 
-from ddapp import transformUtils
-from ddapp import lcmUtils
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
+from director import transformUtils
+from director import lcmUtils
+from director import objectmodel as om
+from director import visualization as vis
 
 import drc as lcmdrc
 

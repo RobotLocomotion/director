@@ -1,6 +1,6 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import visualization as vis
-from ddapp import roboturdf
+from director.consoleapp import ConsoleApp
+from director import visualization as vis
+from director import roboturdf
 
 app = ConsoleApp()
 view = app.createView()

@@ -1,7 +1,7 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import lcmspy
-from ddapp import lcmUtils
-from ddapp import simpletimer as st
+from director.consoleapp import ConsoleApp
+from director import lcmspy
+from director import lcmUtils
+from director import simpletimer as st
 
 app = ConsoleApp()
 

@@ -1,5 +1,5 @@
 from PythonQt import QtCore, QtGui
-from ddapp import applogic as app
+from director import applogic as app
 import functools
 
 class TaskLaunchPanel(object):

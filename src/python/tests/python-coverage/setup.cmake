@@ -1,7 +1,7 @@
 
 
 set(python_coverage_dir ${CMAKE_CURRENT_SOURCE_DIR}/python-coverage)
-set(python_coverage_source ddapp)
+set(python_coverage_source director)
 set(python_coverage_data_dir ${CMAKE_BINARY_DIR}/python-coverage)
 set(python_coverage_conf_file ${python_coverage_data_dir}/coverage.conf)
 set(python_coverage_html_dir ${python_coverage_data_dir}/html)

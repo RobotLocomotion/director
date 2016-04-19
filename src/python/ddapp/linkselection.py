@@ -1,11 +1,11 @@
-from ddapp import robotsystem
-from ddapp.consoleapp import ConsoleApp
-from ddapp import visualization as vis
-from ddapp.debugVis import DebugData
-from ddapp import objectmodel as om
-from ddapp import vtkNumpy
-import ddapp.vtkAll as vtk
-from ddapp import ioUtils
+from director import robotsystem
+from director.consoleapp import ConsoleApp
+from director import visualization as vis
+from director.debugVis import DebugData
+from director import objectmodel as om
+from director import vtkNumpy
+import director.vtkAll as vtk
+from director import ioUtils
 
 import numpy as np
 import os
@@ -200,7 +200,7 @@ class LinkWidget(object):
             filename = "capturedCells"
 
         drcBase = os.getenv('DRC_BASE')
-        fullFilename = drcBase + "/software/ddapp/src/python/ddapp/data/" + filename + ".out"
+        fullFilename = drcBase + "/software/director/src/python/director/data/" + filename + ".out"
 
 
         dataDict = {}
@@ -214,7 +214,7 @@ class LinkWidget(object):
     def loadCapturedCellsFromFile(self, filename="test"):
 
         drcBase = os.getenv('DRC_BASE')
-        fullFilename = drcBase + "/software/ddapp/src/python/ddapp/data/" + filename + ".out"
+        fullFilename = drcBase + "/software/director/src/python/director/data/" + filename + ".out"
 
         dataDict = ioUtils.readDataFromFile(fullFilename)
 

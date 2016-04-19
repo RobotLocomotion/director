@@ -1,11 +1,11 @@
 import sys
 import PythonQt
 from PythonQt import QtCore, QtGui
-from ddapp.timercallback import TimerCallback
-import ddapp.objectmodel as om
-import ddapp.visualization as vis
-from ddapp import applogic
-from ddapp import vtkAll as vtk
+from director.timercallback import TimerCallback
+import director.objectmodel as om
+import director.visualization as vis
+from director import applogic
+from director import vtkAll as vtk
 
 import weakref
 

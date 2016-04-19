@@ -5,18 +5,18 @@ import operator
 import vtkAll as vtk
 import vtkNumpy
 
-from ddapp import lcmUtils
-from ddapp import segmentation
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp.debugVis import DebugData
-from ddapp import transformUtils
-from ddapp import footstepsdriver
-from ddapp.debugVis import DebugData
-from ddapp import ikplanner
-from ddapp import applogic
+from director import lcmUtils
+from director import segmentation
+from director import objectmodel as om
+from director import visualization as vis
+from director.debugVis import DebugData
+from director import transformUtils
+from director import footstepsdriver
+from director.debugVis import DebugData
+from director import ikplanner
+from director import applogic
 
-import ddapp.terrain
+import director.terrain
 
 import drc as lcmdrc
 
@@ -461,7 +461,7 @@ class ContinousWalkingDemo(object):
         assert step.shape[1] == 3
 
         shapeVertices = np.array(step).transpose()[:2,:]
-        s = ddapp.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=self.footContactPoints)
+        s = director.terrain.PolygonSegmentationNonIRIS(shapeVertices, bot_pts=self.footContactPoints)
 
         stepCenter = np.mean(step, axis=0)
         startSeed = np.hstack([stepCenter, rpySeed])
@@ -806,7 +806,7 @@ class ContinousWalkingDemo(object):
         self.footstepsPanel.onNewWalkingGoal(goalFrame)
 
     def loadSDFFileAndRunSim(self):
-        from ddapp import sceneloader
+        from director import sceneloader
         filename= os.environ['DRC_BASE'] + '/../drc-testing-data/terrain/terrain_simple.sdf'
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)

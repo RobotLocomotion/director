@@ -1,17 +1,17 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-import ddapp.applogic as app
-import ddapp.objectmodel as om
-from ddapp.timercallback import TimerCallback
-from ddapp import robotstate
-from ddapp import visualization as vis
-from ddapp import transformUtils
-from ddapp import ikplanner
-from ddapp import footstepsdriver
-from ddapp import vtkAll as vtk
-from ddapp import drcargs
-from ddapp import affordanceurdf
-import ddapp.applogic as app
+import director.applogic as app
+import director.objectmodel as om
+from director.timercallback import TimerCallback
+from director import robotstate
+from director import visualization as vis
+from director import transformUtils
+from director import ikplanner
+from director import footstepsdriver
+from director import vtkAll as vtk
+from director import drcargs
+from director import affordanceurdf
+import director.applogic as app
 
 import functools
 import math

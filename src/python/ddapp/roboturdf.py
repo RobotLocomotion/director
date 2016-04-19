@@ -1,17 +1,17 @@
 import os
 import PythonQt
 from PythonQt import QtCore, QtGui
-from ddapp import callbacks
-import ddapp.applogic as app
-import ddapp.objectmodel as om
-import ddapp.visualization as vis
-import ddapp.vtkAll as vtk
-from ddapp import jointcontrol
-from ddapp import getDRCBaseDir
-from ddapp import lcmUtils
-from ddapp import filterUtils
-from ddapp import transformUtils
-from ddapp import drcargs
+from director import callbacks
+import director.applogic as app
+import director.objectmodel as om
+import director.visualization as vis
+import director.vtkAll as vtk
+from director import jointcontrol
+from director import getDRCBaseDir
+from director import lcmUtils
+from director import filterUtils
+from director import transformUtils
+from director import drcargs
 
 import drc as lcmdrc
 import math

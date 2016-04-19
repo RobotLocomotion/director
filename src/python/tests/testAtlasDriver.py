@@ -1,6 +1,6 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import atlasdriver
-from ddapp import atlasdriverpanel
+from director.consoleapp import ConsoleApp
+from director import atlasdriver
+from director import atlasdriverpanel
 
 def main():
 

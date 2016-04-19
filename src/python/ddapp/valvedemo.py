@@ -3,23 +3,23 @@ import math
 import functools
 import numpy as np
 
-from ddapp import transformUtils
-from ddapp import objectmodel as om
-from ddapp import visualization as vis
-from ddapp import applogic as app
-from ddapp import ik
-from ddapp.ikparameters import IkParameters
-from ddapp import lcmUtils
-from ddapp import robotstate
-from ddapp import segmentation
-from ddapp.tasks.taskuserpanel import TaskUserPanel
-from ddapp.tasks.taskuserpanel import ImageBasedAffordanceFit
-from ddapp.uuidutil import newUUID
+from director import transformUtils
+from director import objectmodel as om
+from director import visualization as vis
+from director import applogic as app
+from director import ik
+from director.ikparameters import IkParameters
+from director import lcmUtils
+from director import robotstate
+from director import segmentation
+from director.tasks.taskuserpanel import TaskUserPanel
+from director.tasks.taskuserpanel import ImageBasedAffordanceFit
+from director.uuidutil import newUUID
 import ioUtils
-from ddapp import ikplanner
-from ddapp.debugVis import DebugData
+from director import ikplanner
+from director.debugVis import DebugData
 
-import ddapp.tasks.robottasks as rt
+import director.tasks.robottasks as rt
 
 from PythonQt import QtCore
 

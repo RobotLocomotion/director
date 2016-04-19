@@ -1,14 +1,14 @@
-import ddapp
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp import objectmodel as om
-from ddapp import ik
+import director
+from director import transformUtils
+from director import visualization as vis
+from director import objectmodel as om
+from director import ik
 
 import os
 import functools
 import numpy as np
 import scipy.io
-from ddapp.tasks.taskuserpanel import TaskUserPanel
+from director.tasks.taskuserpanel import TaskUserPanel
 
 class SitStandPlanner(object):
 

@@ -5,8 +5,8 @@ import select
 import socket
 import os
 
-import ddapp
-from ddapp.simpletimer import SimpleTimer
+import director
+from director.simpletimer import SimpleTimer
 
 import numpy as np
 

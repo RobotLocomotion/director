@@ -1,10 +1,10 @@
 __author__ = 'manuelli'
 
-from ddapp.consoleapp import ConsoleApp
-from ddapp import visualization as vis
-from ddapp import roboturdf
-from ddapp import robotsystem
-from ddapp import contactfilter
+from director.consoleapp import ConsoleApp
+from director import visualization as vis
+from director import roboturdf
+from director import robotsystem
+from director import contactfilter
 
 app = ConsoleApp()
 view = app.createView()

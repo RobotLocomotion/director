@@ -1,20 +1,20 @@
-from ddapp.consoleapp import ConsoleApp
-from ddapp import robotsystem
-from ddapp import robotstate
-from ddapp import planplayback
-from ddapp import lcmUtils
-from ddapp import drcargs
-from ddapp import roboturdf
-from ddapp import simpletimer
-from ddapp.timercallback import TimerCallback
-from ddapp.fieldcontainer import FieldContainer
+from director.consoleapp import ConsoleApp
+from director import robotsystem
+from director import robotstate
+from director import planplayback
+from director import lcmUtils
+from director import drcargs
+from director import roboturdf
+from director import simpletimer
+from director.timercallback import TimerCallback
+from director.fieldcontainer import FieldContainer
 from PythonQt import QtCore, QtGui, QtUiTools
 import drc as lcmdrc
 import numpy as np
 import math
 import argparse
 
-from ddapp.utime import getUtime
+from director.utime import getUtime
 from drake import lcmt_qp_controller_input, lcmt_whole_body_data
 
 import scipy.interpolate

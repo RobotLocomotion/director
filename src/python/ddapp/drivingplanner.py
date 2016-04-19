@@ -1,33 +1,33 @@
-import ddapp
+import director
 import math
 import textwrap
 import drc as lcmdrc
 import bot_core as lcmbotcore
 import vtkAll as vtk
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp import objectmodel as om
-from ddapp import lcmUtils
-from ddapp import ik
-from ddapp import cameraview
-from ddapp import affordanceupdater
-from ddapp import affordancemanager
-from ddapp import segmentation
-from ddapp import robotstate
-from ddapp.debugVis import DebugData
-from ddapp.utime import getUtime
-from ddapp.ikplanner import ConstraintSet
-import ddapp.tasks.robottasks as rt
-from ddapp.ikparameters import IkParameters
-from ddapp.timercallback import TimerCallback
+from director import transformUtils
+from director import visualization as vis
+from director import objectmodel as om
+from director import lcmUtils
+from director import ik
+from director import cameraview
+from director import affordanceupdater
+from director import affordancemanager
+from director import segmentation
+from director import robotstate
+from director.debugVis import DebugData
+from director.utime import getUtime
+from director.ikplanner import ConstraintSet
+import director.tasks.robottasks as rt
+from director.ikparameters import IkParameters
+from director.timercallback import TimerCallback
 
 
 import os
 import functools
 import numpy as np
 import scipy.io
-from ddapp.tasks.taskuserpanel import TaskUserPanel
-from ddapp import drcargs
+from director.tasks.taskuserpanel import TaskUserPanel
+from director import drcargs
 
 class DrivingPlanner(object):
 

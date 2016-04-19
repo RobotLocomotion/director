@@ -6,20 +6,20 @@ import subprocess
 import time
 import vtk
 from vtk import vtkTransform
-from ddapp import objectmodel as om
-from ddapp import ikplanner
+from director import objectmodel as om
+from director import ikplanner
 
-from ddapp import ik
+from director import ik
 import bot_frames
 
 from PythonQt import QtCore, QtGui
-from ddapp import filterUtils
-from ddapp import lcmUtils
-from ddapp import planplayback
-from ddapp import transformUtils
-from ddapp import visualization as vis
-from ddapp.simpletimer import SimpleTimer
-from ddapp.drilldemo import Drill
+from director import filterUtils
+from director import lcmUtils
+from director import planplayback
+from director import transformUtils
+from director import visualization as vis
+from director.simpletimer import SimpleTimer
+from director.drilldemo import Drill
 import drc as lcmdrc
 import numpy as np
 

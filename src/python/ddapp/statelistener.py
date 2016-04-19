@@ -1,8 +1,8 @@
-from ddapp import lcmUtils
-from ddapp import transformUtils
+from director import lcmUtils
+from director import transformUtils
 import PythonQt
 import bot_core as lcmbotcore
-from ddapp.simpletimer import SimpleTimer
+from director.simpletimer import SimpleTimer
 
 import numpy as np
 

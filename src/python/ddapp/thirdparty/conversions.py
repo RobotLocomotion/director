@@ -3,7 +3,7 @@ from __future__ import print_function
 import numbers
 
 import numpy
-from ddapp.thirdparty import transformations
+from director.thirdparty import transformations
 from geometry_msgs_mock import Pose
 
 

@@ -1,6 +1,6 @@
 import drc as lcmdrc
-from ddapp import lcmUtils
-from ddapp import affordanceurdf
+from director import lcmUtils
+from director import affordanceurdf
 
 
 class RaycastDriver(object):

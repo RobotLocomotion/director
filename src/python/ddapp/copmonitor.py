@@ -1,11 +1,11 @@
 import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
-import ddapp.objectmodel as om
-from ddapp import lcmUtils
-from ddapp import applogic as app
-from ddapp.utime import getUtime
-from ddapp import visualization as vis
-from ddapp.debugVis import DebugData
+import director.objectmodel as om
+from director import lcmUtils
+from director import applogic as app
+from director.utime import getUtime
+from director import visualization as vis
+from director.debugVis import DebugData
 from scipy.spatial import Delaunay
 import drc as lcmdrc
 import numpy as np

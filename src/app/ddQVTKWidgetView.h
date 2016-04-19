@@ -2,7 +2,7 @@
 #define __ddQVTKWidgetView_h
 
 #include "ddViewBase.h"
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 
 class vtkCamera;
