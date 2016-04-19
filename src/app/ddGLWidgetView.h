@@ -2,7 +2,7 @@
 #define __ddGLWidgetView_h
 
 #include "ddViewBase.h"
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 class DD_APP_EXPORT ddGLWidgetView : public ddViewBase

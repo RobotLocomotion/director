@@ -2,7 +2,7 @@
 #define __ddEmptyView_h
 
 #include "ddViewBase.h"
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 

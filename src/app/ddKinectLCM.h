@@ -5,7 +5,7 @@
 
 #include "ddLCMThread.h"
 #include "ddLCMSubscriber.h"
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 #include <string>

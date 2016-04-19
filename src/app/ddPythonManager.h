@@ -2,7 +2,7 @@
 #define __ddPythonManager_h
 
 #include <ctkAbstractPythonManager.h>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 class ctkPythonConsole;

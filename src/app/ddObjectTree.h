@@ -2,7 +2,7 @@
 #define __ddObjectTree_h
 
 #include <QTreeWidget>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 class DD_APP_EXPORT ddObjectTree : public QTreeWidget

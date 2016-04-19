@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QStringList>
 #include <QIcon>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 class QToolBar;

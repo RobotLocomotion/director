@@ -2,7 +2,7 @@
 #define __ddPropertiesPanel_h
 
 #include <QWidget>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 class QtVariantPropertyManager;
 class QtAbstractPropertyBrowser;

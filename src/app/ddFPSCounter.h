@@ -2,7 +2,7 @@
 #define __ddFPSCounter_h
 
 #include <QTime>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 // A class for keeping a exponential moving average of frames per second.

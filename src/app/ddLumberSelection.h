@@ -2,7 +2,7 @@
 #define __ddLumberSelection_h
 
 #include <QWidget>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 class DD_APP_EXPORT ddLumberSelection : public QWidget

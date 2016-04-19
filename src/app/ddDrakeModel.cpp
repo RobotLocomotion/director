@@ -1089,14 +1089,19 @@ void ddDrakeModel::doKinematics(const QVector<double>& q, const QVector<double>&
    v_eigen[i] = v[i]; 
   }
 
-  this->Internal->Model->doKinematics(q_eigen, v_eigen, compute_gradients, compute_JdotV);
+  // this signature changed in RigidBodyTree, there is no longer a compute_gradients flag
+  this->Internal->Model->doKinematics(q_eigen, v_eigen, compute_JdotV);
 }
 
+
+// make sure we call do kinematics before we get here
 QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot){
 
   std::vector<int> v_indices;
 
-  MatrixXd linkJacobian = this->Internal->Model->geometricJacobian<double>(base_body_or_frame_ind, end_effector_body_or_frame_ind,expressed_in_body_or_frame_ind, gradient_order, in_terms_of_qdot, &v_indices).value();
+  // this signature changed
+  auto cache = this->Internal->Model->cache;
+  MatrixXd linkJacobian = this->Internal->Model->geometricJacobian(*this->Internal->Model->cache, base_body_or_frame_ind, end_effector_body_or_frame_ind,expressed_in_body_or_frame_ind, in_terms_of_qdot, &v_indices);
 
   int num_velocities = this->Internal->Model->num_velocities;
 

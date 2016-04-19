@@ -2,7 +2,7 @@
 #define __ddViewBase_h
 
 #include <QWidget>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 class DD_APP_EXPORT ddViewBase : public QWidget

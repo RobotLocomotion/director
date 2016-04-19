@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QEvent>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 class DD_APP_EXPORT ddPythonEventFilter : public QObject
 {

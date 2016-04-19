@@ -22,7 +22,7 @@
 #define __vtkTDxInteractorStyleCallback_h
 
 #include "vtkTDxInteractorStyle.h"
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 class vtkTransform;
 

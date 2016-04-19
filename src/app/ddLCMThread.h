@@ -3,7 +3,7 @@
 
 #include <QThread>
 #include <QMutex>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 class ddLCMSubscriber;

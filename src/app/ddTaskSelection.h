@@ -2,7 +2,7 @@
 #define __ddTaskSelection_h
 
 #include <QWidget>
-#include "directorConfigure.h"
+#include "ddAppConfigure.h"
 
 
 class DD_APP_EXPORT ddTaskSelection : public QWidget
