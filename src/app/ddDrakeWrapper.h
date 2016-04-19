@@ -5,7 +5,7 @@
 #include <QColor>
 #include <QVector>
 #include "ddDrakeModel.h"
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 
 class DD_APP_EXPORT ddDrakeWrapper : public QObject

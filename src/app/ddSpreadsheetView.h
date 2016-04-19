@@ -2,7 +2,7 @@
 #define __ddSpreadsheetView_h
 
 #include "ddViewBase.h"
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 
 class QAbstractItemModel;

@@ -4,9 +4,11 @@
 #include <QObject>
 #include <QColor>
 #include <QVector>
+#include <QGenericMatrix>
 #include "ddSharedPtr.h"
 #include "ddAppConfigure.h"
 #include <drake/systems/plants/RigidBodyTree.h>
+
 
 class vtkRenderer;
 class vtkTransform;
@@ -40,15 +42,23 @@ public:
   QVector<double> getCenterOfMass() const;
   QVector<double> getJointLimits(const QString& jointName) const;
   QVector<double> getBodyContactPoints(const QString& bodyName) const;
+  void doKinematics(const QVector<double>& q, const QVector<double>& v, bool compute_gradients = false,
+  bool compute_JdotV = true);
+
+  QVector<double> geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot = false);
+
 
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
   QList<QString> getLinkNames();
   QList<QString> getJointNames();
   int findLinkID(const QString& linkName) const;
+  int findJointID(const QString& jointName) const;
 
   void getModelMesh(vtkPolyData* polyData);
-
+  void getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData);
+  void getLinkModelMesh(const QString& linkName, vtkPolyData* polyData);
   QString getLinkNameForMesh(vtkPolyData* polyData);
+  QString getBodyOrFrameName(int body_or_frame_id);
 
   void setAlpha(double alpha);
   double alpha() const;

@@ -207,11 +207,11 @@ endif()
 
 
 
-add_library(ddApp ${srcs})
-target_link_libraries(ddApp ${deps})
+add_library(director ${srcs})
+target_link_libraries(director ${deps})
 
 if(pkg_deps)
-  use_pkg(ddApp ${pkg_deps})
+  use_pkg(director ${pkg_deps})
 endif()
 
 set(_install_targets ddApp directorPython drake-visualizer)
@@ -243,7 +243,7 @@ add_custom_command(OUTPUT ${decorator_file}
   COMMAND ${PYTHON_EXECUTABLE} WrapPythonQt.py
   -i ${wrap_files} -o "${decorator_file}"
   --class-prefixes vtk dd QVTK --qt-class-prefixes dd QVTK
-  --export-header ddAppConfigure.h --export-symbol DD_APP_EXPORT
+  --export-header directorConfigure.h --export-symbol DD_APP_EXPORT
   --module-name dd
   DEPENDS ${wrap_files} WrapPythonQt.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

@@ -2,7 +2,7 @@
 #define __ddViewManager_h
 
 #include <QWidget>
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 class QTabWidget;
 class ddViewBase;

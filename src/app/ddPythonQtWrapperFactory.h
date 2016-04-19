@@ -2,7 +2,7 @@
 #define __ddPythonQtWrapperFactory_h
 
 #include <PythonQtCppWrapperFactory.h>
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 
 class DD_APP_EXPORT ddPythonQtWrapperFactory : public PythonQtForeignWrapperFactory

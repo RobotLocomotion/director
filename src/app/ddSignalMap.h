@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QMap>
 #include <QVariant>
-#include "ddAppConfigure.h"
+#include "directorConfigure.h"
 
 
 class DD_APP_EXPORT ddSignalMap : public QObject

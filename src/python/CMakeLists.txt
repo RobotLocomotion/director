@@ -8,6 +8,7 @@ set(python_files
   director/affordanceurdf.py
   director/applogic.py
   director/appsettings.py
+
   director/asynctaskqueue.py
   director/atlasdriver.py
   director/atlasdriverpanel.py
@@ -21,6 +22,12 @@ set(python_files
   director/cameraview.py
   director/colorize.py
   director/consoleapp.py
+  director/contactfilter.py
+  director/contactfiltergurobi.py
+  director/contactfilterutils.py
+  director/contactfiltervisualizer.py
+  director/contactpointlocator.py
+  director/gurobiutils.py
   director/continuouswalkingdemo.py
   director/copmonitor.py
   director/coursemodel.py
@@ -33,6 +40,7 @@ set(python_files
   director/drilldemo.py
   director/drivingplanner.py
   director/egressplanner.py
+  director/externalforce.py
   director/frameupdater.py
   director/fieldcontainer.py
   director/filterUtils.py
@@ -57,12 +65,14 @@ set(python_files
   director/jointpropagator.py
   director/korgnano.py
   director/lcmframe.py
+  director/lcmoctomap.py
+  director/kinematicposeplanner.py
   director/lcmloggerwidget.py
   director/lcmgl.py
   director/lcmobjectcollection.py
-  director/lcmoctomap.py
   director/lcmspy.py
   director/lcmUtils.py
+  director/linkselection.py
   director/mappingdemo.py
   director/mappingpanel.py
   director/mapsregistrar.py
@@ -76,6 +86,8 @@ set(python_files
   director/openscope.py
   director/packagepath.py
   director/perception.py
+  director/pfgrasp.py
+  director/pfgrasppanel.py
   director/planplayback.py
   director/playbackpanel.py
   director/pointcloudlcm.py
@@ -128,6 +140,8 @@ set(python_files
   director/wristforcetorquevisualizer.py
   director/kinectlcm.py
   director/plannerPublisher.py
+
+  director/testLinkSelection.py
 
 
   director/macros/segmentation_view/ortho_x.py
