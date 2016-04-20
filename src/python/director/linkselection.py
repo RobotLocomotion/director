@@ -129,6 +129,9 @@ class LinkWidget(object):
 
     def startCellCaptureMode(self):
         self.cellCaptureMode = True
+        # make sure we start the event filter
+        self.installEventFilter()
+
         linkNames = self.robotModel.model.getLinkNames()
         self.linkDict = {}
         for linkName in linkNames:
@@ -159,6 +162,8 @@ class LinkWidget(object):
 
     def stopCellCaptureMode(self):
         self.cellCaptureMode = False
+        # remove the event filter as well
+        self.removeEventFilter()
         pass
 
 
