@@ -66,7 +66,6 @@ set(python_files
   director/korgnano.py
   director/lcmframe.py
   director/lcmoctomap.py
-  director/kinematicposeplanner.py
   director/lcmloggerwidget.py
   director/lcmgl.py
   director/lcmobjectcollection.py
@@ -86,8 +85,6 @@ set(python_files
   director/openscope.py
   director/packagepath.py
   director/perception.py
-  director/pfgrasp.py
-  director/pfgrasppanel.py
   director/planplayback.py
   director/playbackpanel.py
   director/pointcloudlcm.py
