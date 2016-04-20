@@ -29,6 +29,7 @@ from director import gurobiutils as grbUtils
 from director.timercallback import TimerCallback
 from director import objectmodel as om
 from director import contactpointlocator
+from director import drcargs
 
 
 import drc as lcmdrc

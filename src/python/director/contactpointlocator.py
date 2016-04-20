@@ -24,12 +24,14 @@ from director import transformUtils
 from director import lcmUtils
 from director import contactfiltergurobi
 from director.debugVis import DebugData
+from director import drcargs
 from director import visualization as vis
 from director import gurobiutils as grbUtils
 from director.timercallback import TimerCallback
 from director import objectmodel as om
 from director import filterUtils
 from director import ioUtils
+
 
 try:
     from vtk.util import numpy_support
@@ -53,7 +55,11 @@ class ContactPointLocator(object):
             filename = "test2"
 
         drcBase = os.getenv('DRC_BASE')
-        fullFilename = drcBase + "/software/director/src/python/director/data/" + filename + ".out"
+        robotType = drcargs.getGlobalArgParser().getRobotType()
+        fullFilename = drcBase + "/software/director/src/python/data/contactparticlefilter/" + \
+                       robotType + "/" + filename + ".out"
+
+        print "filename is ", fullFilename
 
         dataDict = ioUtils.readDataFromFile(fullFilename)
         self.createCellLocators(dataDict=dataDict)

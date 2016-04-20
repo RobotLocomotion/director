@@ -6,6 +6,7 @@ from director import objectmodel as om
 from director import vtkNumpy
 import director.vtkAll as vtk
 from director import ioUtils
+from director import drcargs
 
 import numpy as np
 import os
@@ -200,7 +201,9 @@ class LinkWidget(object):
             filename = "capturedCells"
 
         drcBase = os.getenv('DRC_BASE')
-        fullFilename = drcBase + "/software/director/src/python/director/data/" + filename + ".out"
+        robotType = drcargs.getGlobalArgParser().getRobotType()
+        fullFilename = drcBase + "/software/director/src/python/data/contactparticlefilter/" + \
+                       robotType + "/" + filename + ".out"
 
 
         dataDict = {}
@@ -214,7 +217,9 @@ class LinkWidget(object):
     def loadCapturedCellsFromFile(self, filename="test"):
 
         drcBase = os.getenv('DRC_BASE')
-        fullFilename = drcBase + "/software/director/src/python/director/data/" + filename + ".out"
+        robotType = drcargs.getGlobalArgParser().getRobotType()
+        fullFilename = drcBase + "/software/director/src/python/data/contactparticlefilter/" + \
+                       robotType + "/" + filename + ".out"
 
         dataDict = ioUtils.readDataFromFile(fullFilename)
 
