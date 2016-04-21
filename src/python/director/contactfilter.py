@@ -85,7 +85,7 @@ class ContactFilter(object):
 
 
     def addSubscribers(self):
-        lcmUtils.addSubscriber('RESIDUAL_OBSERVER_STATE_W_FOOT_FT', lcmdrc.residual_observer_state_t,
+        lcmUtils.addSubscriber('RESIDUAL_OBSERVER_STATE', lcmdrc.residual_observer_state_t,
                                self.onResidualObserverState)
         lcmUtils.addSubscriber('EXTERNAL_FORCE_TORQUE', lcmdrake.lcmt_external_force_torque,
                                self.onExternalForceTorque)
@@ -1663,8 +1663,17 @@ class PythonDrakeModel(object):
         if filename is None:
             drcBase = os.getenv("DRC_BASE")
             # modelName = "model_LR_RR.urdf"
-            modelName = "model_chull.urdf"
-            filename = drcBase + "/software/models/atlas_v5/" + modelName
+
+
+
+            robotType = drcargs.getGlobalArgParser().getRobotType()
+            if("atlas" in robotType):
+                modelName = "model_chull.urdf"
+                filename = drcBase + "/software/models/" + robotType + "/" + modelName
+
+            if("valkyrie" in robotType):
+                modelName = "valkyrie_sim_drake_simple.urdf"
+                filename = drcBase + "/software/models/val_description/urdf/" + modelName
 
 
         self.model = PythonQt.dd.ddDrakeModel()
