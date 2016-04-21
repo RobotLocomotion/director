@@ -552,8 +552,9 @@ class ExternalForce(object):
             filename = "testDirector.csv"
 
 
+        robotType = drcargs.getGlobalArgParser().getRobotType()
         drcBase = os.getenv('DRC_BASE')
-        fullFilePath = drcBase + "/software/control/residual_detector/src/particle_grids//" + filename
+        fullFilePath = drcBase + "/software/director/src/python/data/contactparticlefilter/" + robotType + "/" + filename
 
         if os.path.isfile(fullFilePath) and not overwrite:
             print "FILE ALREADY EXISTS, set the overwrite flag to true to overwrite"
@@ -581,7 +582,7 @@ class ExternalForce(object):
     def addForcesFromFile(self, filename=None):
         self.startCaptureMode()
         if filename is None:
-            filename = "testDirector.csv"
+            filename = "directorDense.csv"
 
         drcBase = os.getenv('DRC_BASE')
         fullFilePath = drcBase + "/software/control/residual_detector/src/particle_grids/" + filename
