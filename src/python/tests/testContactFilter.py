@@ -17,7 +17,5 @@ view = app.createView()
 robotSystem = robotsystem.create(view)
 contactFilter = contactfilter.ContactFilter(robotSystem.robotStateModel, robotSystem.robotStateJointController)
 contactFilter.start()
-
-if app.getTestingInteractiveEnabled():
-    view.show()
-    app.start()
+# view.show()
+app.start()
