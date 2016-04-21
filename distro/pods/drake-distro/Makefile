@@ -1,10 +1,5 @@
 # Default makefile distributed with pods version: 12.01.11
 
-
-# Default to a less-verbose build.  If you want all the gory compiler output,
-# run "make VERBOSE=1"
-$(VERBOSE).SILENT:
-
 # Figure out where to build the software.
 #   Use BUILD_PREFIX if it was passed in.
 #   If not, search up to four parent directories for a 'build' directory.
@@ -53,3 +48,8 @@ clean:
 # other (custom) targets are passed through to the cmake-generated Makefile 
 %::
 	$(MAKE) -C pod-build $@
+
+# Default to a less-verbose build.  If you want all the gory compiler output,
+# run "make VERBOSE=1"
+$(VERBOSE).SILENT:
+
