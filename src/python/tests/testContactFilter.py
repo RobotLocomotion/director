@@ -19,3 +19,4 @@ contactFilter = contactfilter.ContactFilter(robotSystem.robotStateModel, robotSy
 contactFilter.start()
 # view.show()
 app.start()
+
