@@ -1,5 +1,6 @@
 from weakref import ref
 import new
+from director.timercallback import TimerCallback
 
 '''
 CallbackRegistry is a class taken from matplotlib.cbook.
@@ -188,3 +189,16 @@ class BoundMethodProxy(object):
         Inverse of __eq__.
         '''
         return not self.__eq__(other)
+
+
+class CallbackExecutor:
+
+    def __init__(self, callbackFunction, targetFps=30):
+        self.timer = TimerCallback(targetFps=targetFps)
+        self.timer.callback = callbackFunction
+
+    def start(self):
+        self.timer.start()
+
+    def stop(self):
+        self.timer.stop()

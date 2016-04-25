@@ -805,6 +805,8 @@ def sendEstRobotState(pose=None):
     msg = robotstate.drakePoseToRobotState(pose)
     lcmUtils.publish('EST_ROBOT_STATE', msg)
 
+estRobotStatePublisher = callbacks.CallbackExecutor(sendEstRobotState)
+
 
 def enableArmEncoders():
     msg = lcmdrc.utime_t()
