@@ -115,10 +115,15 @@ def atlasCommandToDrakePose(msg):
     return drakePose.tolist()
 
 def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True):
-    if atlasVersion == 4:
-        numPositions = 34
-    else:
-        numPositions = 36
+    # if atlasVersion == 4:
+    #     numPositions = 34
+    # else:
+    #     numPositions = 36
+    #
+    # if useValkyrie:
+    #     numPositions = 38
+
+    numPositions = np.size(pose)
 
     msg = lcmt_qp_controller_input()
     msg.timestamp = getUtime()
@@ -126,7 +131,11 @@ def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True):
     msg.num_tracked_bodies = 0
     msg.num_external_wrenches = 0
     msg.num_joint_pd_overrides = 0
-    msg.param_set_name = 'position_control'
+
+    if useValkyrie:
+        msg.param_set_name = 'base'
+    else:
+        msg.param_set_name = 'position_control'
 
     whole_body_data = lcmt_whole_body_data()
     whole_body_data.timestamp = getUtime()
