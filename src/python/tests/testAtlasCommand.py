@@ -114,7 +114,7 @@ def atlasCommandToDrakePose(msg):
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()
 
-def drakePoseToQPInput(pose, atlasVersion=5):
+def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True):
     if atlasVersion == 4:
         numPositions = 34
     else:
@@ -155,7 +155,7 @@ class AtlasCommandStream(object):
         # self.lastCommandMessage = newAtlasCommandMessageAtZero()
         self._numPositions = len(robotstate.getDrakePoseJointNames())
         self._previousElapsedTime = 100
-        self._baseFlag = 0;
+        self._baseFlag = 0
         self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.useControllerFlag = False
@@ -637,6 +637,9 @@ class JointTeleopPanel(object):
 
         self.endPose[jointIndex] = jointValue
         self.updateLabel(jointName, jointValue)
+
+        # this is what is causing the position goal to be published using the commandStream.setGoalPose function
+        # call
         self.showPose(self.endPose)
         self.updateSliders()
 
@@ -780,6 +783,7 @@ def parseArgs():
     p = parser.add_mutually_exclusive_group(required=True)
     p.add_argument('--base', dest='mode', action='store_const', const='base')
     p.add_argument('--robot', dest='mode', action='store_const', const='robot')
+    p.add_argument('--robotWithController', dest='mode', action='store_const', const='robotWithController')
     p.add_argument('--debug', dest='mode', action='store_const', const='debug')
     p.add_argument('--robotDrivingGains', dest='mode', action='store_const', const='robotDrivingGains')
     p.add_argument('--robotWithoutController', dest='mode', action='store_const', const='robotWithoutController')
@@ -796,6 +800,8 @@ def main():
         baseMain()
     elif args.mode == 'robot':
         robotMain()
+    elif args.mode == 'robotWithController':
+        robotMain(useDrivingGains=False, useController=True)
     elif args.mode == 'robotDrivingGains':
         robotMain(useDrivingGains=True)
     elif args.mode == 'robotWithoutController':
