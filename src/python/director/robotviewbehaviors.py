@@ -432,7 +432,16 @@ def getRobotActions(view, pickedObj, pickedPoint):
 
     def onSegmentTableScene():
         data = segmentation.segmentTableScene(pointCloudObj.polyData, pickedPoint)
-        vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
+        vis.showClusterObjects(data.clusters, parent='segmentation')
+
+        # explictly draw the table and its frames
+        pose = transformUtils.poseFromTransform(data.table.frame)
+        desc = dict(classname='MeshAffordanceItem', Name='table', Color=[0,1,0], pose=pose)
+        aff = segmentation.affordanceManager.newAffordanceFromDescription(desc)
+        aff.setPolyData(data.table.mesh)
+
+        tableBox = vis.showPolyData(data.table.box, 'table box', parent=aff, color=[0,1,0], visible=False)
+        tableBox.actor.SetUserTransform(data.table.frame)
 
     def onSegmentDrillAlignedWithTable():
         segmentation.segmentDrillAlignedWithTable(pickedPoint, pointCloudObj.polyData)

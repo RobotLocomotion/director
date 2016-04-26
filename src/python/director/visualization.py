@@ -939,6 +939,10 @@ def showClusterObjects(clusters, parent):
         clusterFrame = showFrame(cluster.frame, name + ' frame', scale=0.2, visible=False, parent=clusterObj)
         clusterBox = showPolyData(cluster.box, name + ' box', color=color, parent=clusterObj, alpha=0.6, visible=False)
         clusterPoints = showPolyData(cluster.points, name + ' points', color=color, parent=clusterObj, visible=False, alpha=1.0)
+        if hasattr(cluster,'oriented_frame'):
+            orientedFrame = showFrame(cluster.oriented_frame, name + ' oriented frame', scale=0.2, visible=False, parent=clusterObj)
+
+
         clusterPoints.setProperty('Point Size', 7)
         clusterPoints.colorBy(None)
         objects.append(clusterObj)

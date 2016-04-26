@@ -2433,12 +2433,26 @@ def filterClusterObjects(clusters):
 
 
 def segmentTableScene(polyData, searchPoint, filterClustering = True):
-    ''' This seems to be unused, depreciated? '''
-
     objectClusters, tableData = segmentTableSceneClusters(polyData, searchPoint)
 
     clusters = [makePolyDataFields(cluster) for cluster in objectClusters]
     clusters = [cluster for cluster in clusters if cluster is not None]
+
+    # Add an additional frame to these objects which has z-axis aligned upwards
+    # but rotated to have the x-axis facing away from the robot
+    table_axes= transformUtils.getAxesFromTransform(tableData.frame)
+    for cluster in clusters:
+        cluster_axes= transformUtils.getAxesFromTransform(cluster.frame)
+
+        zaxis = cluster_axes[2]
+        xaxis = table_axes[0]
+        yaxis = np.cross(zaxis, xaxis)
+        xaxis = np.cross(yaxis, zaxis)
+        xaxis /= np.linalg.norm(xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        orientedFrame = transformUtils.getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, cluster.frame.GetPosition() )
+        cluster._add_fields(oriented_frame=orientedFrame)
+
     if (filterClustering):
         clusters = filterClusterObjects(clusters)
 
@@ -4721,7 +4735,7 @@ def findFarRightCorner(polyData, linkFrame):
     diagonalTransform =  transformUtils.copyFrame(linkFrame)
     diagonalTransform.PreMultiply()
     diagonalTransform.Concatenate( transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,45]) )
-    vis.updateFrame(diagonalTransform, 'diagonal frame', parent='cont debug', visible=False)
+    vis.updateFrame(diagonalTransform, 'diagonal frame', parent=getDebugFolder(), visible=False)
 
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
     viewOrigin = diagonalTransform.TransformPoint([0.0, 0.0, 0.0])
@@ -4730,7 +4744,7 @@ def findFarRightCorner(polyData, linkFrame):
     viewZ = diagonalTransform.TransformVector([0.0, 0.0, 1.0])
     polyData = labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
 
-    vis.updatePolyData( polyData, 'cornerPoints', parent='cont debug', visible=False)
+    vis.updatePolyData( polyData, 'cornerPoints', parent='segmentation', visible=False)
     farRightIndex = vtkNumpy.getNumpyFromVtk(polyData, 'distance_along_foot_y').argmin()
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
     return points[farRightIndex,:]
@@ -4756,16 +4770,16 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
 
     pts =vtkNumpy.getNumpyFromVtk( polyData , 'Points' )
     xy_points =  pts[:,[0,1]]
-    vis.updatePolyData( get2DAsPolyData(xy_points) , 'xy_points', parent='cont debug', visible=False)
+    vis.updatePolyData( get2DAsPolyData(xy_points) , 'xy_points', parent=getDebugFolder(), visible=False)
     hull_points = qhull_2d.qhull2D(xy_points)
-    vis.updatePolyData( get2DAsPolyData(hull_points) , 'hull_points', parent='cont debug', visible=False)
+    vis.updatePolyData( get2DAsPolyData(hull_points) , 'hull_points', parent=getDebugFolder(), visible=False)
     # Reverse order of points, to match output from other qhull implementations
     hull_points = hull_points[::-1]
     # print 'Convex hull points: \n', hull_points, "\n"
 
     # Find minimum area bounding rectangle
     (rot_angle, rectArea, rectDepth, rectWidth, center_point, corner_points_ground) = min_bounding_rect.minBoundingRect(hull_points)
-    vis.updatePolyData( get2DAsPolyData(corner_points_ground) , 'corner_points_ground', parent='cont debug', visible=False)
+    vis.updatePolyData( get2DAsPolyData(corner_points_ground) , 'corner_points_ground', parent=getDebugFolder(), visible=False)
 
     polyDataCentroid = computeCentroid(polyData)
     cornerPoints = np.vstack((corner_points_ground.T, polyDataCentroid[2]*np.ones( corner_points_ground.shape[0]) )).T
@@ -4800,7 +4814,7 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
 
     cornerTransform = transformUtils.frameFromPositionAndRPY( farRightCorner , [0,0, np.rad2deg(rot_angle) ] )
 
-    vis.showFrame(cornerTransform, "cornerTransform", visible=False)
+    vis.showFrame(cornerTransform, "cornerTransform", parent=getDebugFolder(), visible=False)
 
     #print "Minimum area bounding box:"
     #print "Rotation angle:", rot_angle, "rad  (", rot_angle*(180/math.pi), "deg )"
