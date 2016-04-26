@@ -2423,56 +2423,6 @@ def filterClusterObjects(clusters):
 
 
 
-
-
-def segmentTableThenFindDrills(polyData,pickedPoint):
-    ''' Given a point cloud of a table with drills on it.
-        Find all clusters and fit drills
-        Assumes that all clusters are of drills
-        Nothing else is ever on a table ;)
-    '''
-
-    # 1 segment a table and return clusters and the plane normal
-    clusters, tablePoints, plane_origin, plane_normal = segmentTableSceneClusters(polyData, pickedPoint, True)
-
-    # 2 Detect drills within the clusters:
-    viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
-    forwardDirection = np.array([1.0, 0.0, 0.0])
-    viewFrame.TransformVector(forwardDirection, forwardDirection)
-    robotForward =forwardDirection
-
-    fitResults=[]
-
-    for clusterObj in clusters:
-        # vis.showPolyData(clusterObj, 'cluster debug')
-        drillFrame = fitDrillBarrel (clusterObj, robotForward, plane_origin, plane_normal)
-
-        if drillFrame is not None:
-            fitResults.append((clusterObj, drillFrame))
-
-    if not fitResults:
-        return
-
-
-    for i, fitResult in enumerate(fitResults):
-        cluster, drillFrame = fitResult
-        drillOrigin = np.array(drillFrame.GetPosition())
-        drillMesh = getDrillBarrelMesh()
-
-        #drill = om.findObjectByName('drill')
-        name= 'drill %d' % i
-        name2= 'drill %d frame' % i
-        drill = showPolyData(drillMesh, name, cls=FrameAffordanceItem, color=[0, 1, 0], visible=True)
-        drillFrame = updateFrame(drillFrame, name2, parent=drill, scale=0.2, visible=False)
-
-        drill.actor.SetUserTransform(drillFrame.transform)
-
-        drill.setSolidColor([0, 1, 0])
-        #cluster.setProperty('Visible', True)
-
-
-
-
 def segmentTableScene(polyData, searchPoint, filterClustering = True):
     ''' This seems to be unused, depreciated? '''
 
@@ -2517,24 +2467,30 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
 
 def segmentTableEdge(polyData, searchPoint, edgePoint):
     '''
-    segment a table using two points:
-    searchPoint is a point on the table top
-    edgePoint is a point on the edge facing the robot
+    Segment a table using a searchPoint on the table top
+    and then recover its coordinate frame, facing away from the robot
+    Objects/points on the table are ignored
+
+    Input: polyData and searchPoint on the table
+
+    Output: FieldContainer with:
+    - all relevent details about the table (only)
+
     '''
 
-    polyData, tablePoints, origin, normal = segmentTable(polyData, searchPoint)
+    polyData, tablePoints, _, _ = segmentTable(polyData, searchPoint)
     tableMesh = computeDelaunay3D(tablePoints)
 
-    # TODO: replace this frame with view frame. (Currently viewframe is inverted on Valkyrie)
     viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
     viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
     robotYaw = math.atan2( viewDirection[1], viewDirection[0] )*180.0/np.pi
     linkFrame = transformUtils.frameFromPositionAndRPY( viewFrame.GetPosition() , [0,0, robotYaw ] )    
 
+    # Function returns corner point that is far right from the robot
     cornerTransform, rectDepth, rectWidth, _ = findMinimumBoundingRectangle(tablePoints, linkFrame)
     rectHeight = 0.02 # arbitrary table width
-
-    # Function returns frame that is far right from the robot, recover mid point
+   
+    # recover mid point
     t = transformUtils.copyFrame(cornerTransform)
     t.PreMultiply()
     table_center = [-rectDepth/2, rectWidth/2, 0]
@@ -4831,7 +4787,7 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
 
     cornerTransform = transformUtils.frameFromPositionAndRPY( farRightCorner , [0,0, np.rad2deg(rot_angle) ] )
 
-    vis.showFrame(cornerTransform, "cornerTransform")
+    vis.showFrame(cornerTransform, "cornerTransform", visible=False)
 
     #print "Minimum area bounding box:"
     #print "Rotation angle:", rot_angle, "rad  (", rot_angle*(180/math.pi), "deg )"
