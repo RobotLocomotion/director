@@ -2335,6 +2335,12 @@ def makePolyDataFields(pd):
     edgeLengths = np.array([np.linalg.norm(edge) for edge in edges])
     axes = [edge / np.linalg.norm(edge) for edge in edges]
 
+    # Use upward axis for z direction
+    zaxis = [0, 0, 1]
+    dot_products = [  np.dot(axe, zaxis)  for axe in axes  ]
+    axes = [ axes[i] for i in np.argsort( dot_products ) ]
+    edgeLengths = [ edgeLengths[i] for i in np.argsort( dot_products ) ]
+
     boxCenter = computeCentroid(wireframe)
 
     t = getTransformFromAxes(axes[0], axes[1], axes[2])
@@ -2382,10 +2388,13 @@ def makeMovable(obj, initialTransform=None):
 def segmentTable(polyData, searchPoint):
     '''
     Segment a horizontal table surface (perpendicular to +Z) in the given polyData
-    using the given search point.
+    Input:
+    - polyData
+    - search point on plane
 
-    Returns polyData, tablePoints, origin, normal
-    polyData is the input polyData with a new 'dist_to_plane' attribute.
+    Output:
+    - polyData, tablePoints, origin, normal
+    - polyData is the input polyData with a new 'dist_to_plane' attribute.
     '''
     expectedNormal = np.array([0.0, 0.0, 1.0])
     tableNormalEpsilon = 0.4
@@ -2412,10 +2421,10 @@ def filterClusterObjects(clusters):
     result = []
     for cluster in clusters:
 
-        if np.abs(np.dot(cluster.axes[0], [0,0,1])) < 0.5:
+        if np.abs(np.dot(cluster.axes[2], [0,0,1])) < 0.5:
             continue
 
-        if cluster.dims[0] < 0.1:
+        if cluster.dims[2] < 0.1:
             continue
 
         result.append(cluster)
@@ -2426,14 +2435,14 @@ def filterClusterObjects(clusters):
 def segmentTableScene(polyData, searchPoint, filterClustering = True):
     ''' This seems to be unused, depreciated? '''
 
-    objectClusters, tablePoints, _, _ = segmentTableSceneClusters(polyData, searchPoint)
+    objectClusters, tableData = segmentTableSceneClusters(polyData, searchPoint)
 
     clusters = [makePolyDataFields(cluster) for cluster in objectClusters]
     clusters = [cluster for cluster in clusters if cluster is not None]
     if (filterClustering):
         clusters = filterClusterObjects(clusters)
 
-    return FieldContainer(table=makePolyDataFields(tablePoints), clusters=clusters)
+    return FieldContainer(table=tableData, clusters=clusters)
 
 
 def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
@@ -2443,16 +2452,20 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
         extract clusters above the table
     '''
 
-    polyData, tablePoints, plane_origin, plane_normal = segmentTable(polyData, searchPoint)
+    #polyData, tablePoints, _, _ = segmentTable(polyData, searchPoint)
 
-    tableCentroid = computeCentroid(tablePoints)
+    tableData, polyData = segmentTableAndFrame(polyData, searchPoint)
+
+    #tableCentroid = computeCentroid( tableData.points )
+    #tableCentroidFrame = transformUtils.frameFromPositionAndRPY(tableCentroid, [0,0,0])
+
+    tableFrame = tableData.frame
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.5])
     # TODO: replace with 'all points above the table':
-    searchRegion = cropToSphere(searchRegion, tableCentroid, 0.5) # was 1.0
+    searchRegion = cropToSphere(searchRegion, tableFrame.GetPosition() , 0.5) # was 1.0
 
-    tableCentroidFrame = transformUtils.frameFromPositionAndRPY(tableCentroid, [0,0,0])
-    showFrame(tableCentroidFrame, 'tableCentroid', visible=False, parent=getDebugFolder(), scale=0.15)
+    showFrame(tableFrame, 'tableFrame', visible=False, parent=getDebugFolder(), scale=0.15)
     showPolyData(searchRegion, 'searchRegion', color=[1,0,0], visible=False, parent=getDebugFolder())
 
     objectClusters = extractClusters(searchRegion, clusterInXY, clusterTolerance=0.02, minClusterSize=10)
@@ -2462,10 +2475,10 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
         name= "cluster %d" % i
         showPolyData(c, name, color=getRandomColor(), visible=False, parent=getDebugFolder())
 
-    return objectClusters, tablePoints, plane_origin, plane_normal
+    return objectClusters, tableData
 
 
-def segmentTableEdge(polyData, searchPoint, edgePoint):
+def segmentTableAndFrame(polyData, searchPoint):
     '''
     Segment a table using a searchPoint on the table top
     and then recover its coordinate frame, facing away from the robot
@@ -2512,7 +2525,7 @@ def segmentTableEdge(polyData, searchPoint, edgePoint):
     #wireframe = transformPolyData(wireframe, t.GetLinearInverse())
     tableMesh = transformPolyData(tableMesh, t.GetLinearInverse())
 
-    return FieldContainer(points=tablePoints, box=wireframe, mesh=tableMesh, frame=t, dims=edgeLengths, axes=axes)
+    return FieldContainer(points=tablePoints, box=wireframe, mesh=tableMesh, frame=t, dims=edgeLengths, axes=axes), polyData
 
 
 def segmentDrillAuto(point1, polyData=None):

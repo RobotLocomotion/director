@@ -131,7 +131,7 @@ class TableDemo(object):
     ### Table and Bin Focused Functions
     def userFitTable(self):
         self.tableData = None
-        self.picker = PointPicker(self.view, numberOfPoints=2, drawLines=True, callback=self.onSegmentTable)
+        self.picker = PointPicker(self.view, numberOfPoints=1, drawLines=True, callback=self.onSegmentTable)
         self.picker.start()
 
     def userFitBin(self):
@@ -164,14 +164,13 @@ class TableDemo(object):
 
         return polyData
 
-    def onSegmentTable(self, p1, p2):
+    def onSegmentTable(self, p1):
         print p1
-        print p2
         self.picker.stop()
         om.removeFromObjectModel(self.picker.annotationObj)
         self.picker = None
 
-        tableData = segmentation.segmentTableEdge(self.getInputPointCloud(), p1, p2)
+        tableData = segmentation.segmentTableAndFrame(self.getInputPointCloud(), p1)
 
         pose = transformUtils.poseFromTransform(tableData.frame)
         desc = dict(classname='MeshAffordanceItem', Name='table', Color=[0,1,0], pose=pose)
@@ -1067,7 +1066,7 @@ class TableDemo(object):
 
     def prepKukaLabScene(self):
         self.userFitTable()
-        self.onSegmentTable( np.array([  0.91544128,  0.06092263,  0.14906664]), np.array([ 0.73494804, -0.21896157,  0.13435645]) )
+        self.onSegmentTable( np.array([  0.91544128,  0.06092263,  0.14906664]))
         self.userFitBin() # TODO: actually fit bin, put bin in picture.
         self.onSegmentBin( np.array([-0.02, 2.43, 0.61 ]), np.array([-0.40,  2.79,  0.61964661]) ) # TODO: fix bin location
 
@@ -1092,7 +1091,7 @@ class TableDemo(object):
         #self.teleportRobotToStanceFrame(stanceFrame)
 
         self.userFitTable()
-        self.onSegmentTable( np.array([-1.72105646,  2.73210716,  0.79449952]), np.array([-1.67336452,  2.63351011,  0.78698605]) )
+        self.onSegmentTable( np.array([-1.72105646,  2.73210716,  0.79449952]))
         self.userFitBin()
         self.onSegmentBin( np.array([-0.02, 2.43, 0.61 ]), np.array([-0.40,  2.79,  0.61964661]) )
 
@@ -1108,7 +1107,7 @@ class TableDemo(object):
         self.userFitBin()
         self.onSegmentBin( np.array([ 0.62, -1.33, 0.80]), np.array([ 0.89, -0.87, 0.57]) )
         self.userFitTable()
-        self.onSegmentTable( np.array([ 1.11, 0.11, 0.85]), np.array([ 0.97, 0.044, 0.84]) )
+        self.onSegmentTable( np.array([ 1.11, 0.11, 0.85]))
 
         self.segmentTableObjects()
         self.computeBinStanceFrame()
