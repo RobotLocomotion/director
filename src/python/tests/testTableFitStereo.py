@@ -47,7 +47,9 @@ vis.showPolyData(polyData, 'pointcloud snapshot')
 polyData = segmentation.addCoordArraysToPolyData(polyData)
 polyData = segmentation.thresholdPoints(polyData, 'distance_along_view_x', [0, 1.3])
 
-segmentation.segmentTableThenFindDrills(polyData, [1.2864902,  -0.93351376,  1.10208917])
+# I removed segmentTableThenFindDrills() because it used a depreciated function: 
+#segmentation.segmentTableThenFindDrills(polyData, [1.2864902,  -0.93351376,  1.10208917])
+segmentation.segmentTableSceneClusters(polyData, [1.2864902,  -0.93351376,  1.10208917], clusterInXY=True )
 
 if app.getTestingInteractiveEnabled():
 

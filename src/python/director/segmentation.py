@@ -1412,6 +1412,19 @@ def showHistogram(polyData, arrayName, numberOfBins=100):
     return bins[np.argmax(hist)] + (bins[1] - bins[0])/2.0
 
 
+def showTable(table, parent):
+    '''
+    explictly draw a table and its frames
+    '''
+    pose = transformUtils.poseFromTransform(table.frame)
+    desc = dict(classname='MeshAffordanceItem', Name='table', Color=[0,1,0], pose=pose)
+    aff = affordanceManager.newAffordanceFromDescription(desc)
+    aff.setPolyData(table.mesh)
+
+    tableBox = vis.showPolyData(table.box, 'table box', parent=aff, color=[0,1,0], visible=False)
+    tableBox.actor.SetUserTransform(table.frame)
+
+
 def applyKmeansLabel(polyData, arrayName, numberOfClusters, whiten=False):
 
     import scipy.cluster
@@ -2335,6 +2348,12 @@ def makePolyDataFields(pd):
     edgeLengths = np.array([np.linalg.norm(edge) for edge in edges])
     axes = [edge / np.linalg.norm(edge) for edge in edges]
 
+    # Use upward axis for z direction
+    zaxis = [0, 0, 1]
+    dot_products = [  np.dot(axe, zaxis)  for axe in axes  ]
+    axes = [ axes[i] for i in np.argsort( dot_products ) ]
+    edgeLengths = [ edgeLengths[i] for i in np.argsort( dot_products ) ]
+
     boxCenter = computeCentroid(wireframe)
 
     t = getTransformFromAxes(axes[0], axes[1], axes[2])
@@ -2381,11 +2400,16 @@ def makeMovable(obj, initialTransform=None):
 
 def segmentTable(polyData, searchPoint):
     '''
+    NB: If you wish to use the table frame use segmentTableAndFrame instead 
+    ##################
     Segment a horizontal table surface (perpendicular to +Z) in the given polyData
-    using the given search point.
+    Input:
+    - polyData
+    - search point on plane
 
-    Returns polyData, tablePoints, origin, normal
-    polyData is the input polyData with a new 'dist_to_plane' attribute.
+    Output:
+    - polyData, tablePoints, origin, normal
+    - polyData is the input polyData with a new 'dist_to_plane' attribute.
     '''
     expectedNormal = np.array([0.0, 0.0, 1.0])
     tableNormalEpsilon = 0.4
@@ -2412,10 +2436,10 @@ def filterClusterObjects(clusters):
     result = []
     for cluster in clusters:
 
-        if np.abs(np.dot(cluster.axes[0], [0,0,1])) < 0.5:
+        if np.abs(np.dot(cluster.axes[2], [0,0,1])) < 0.5:
             continue
 
-        if cluster.dims[0] < 0.1:
+        if cluster.dims[2] < 0.1:
             continue
 
         result.append(cluster)
@@ -2423,67 +2447,31 @@ def filterClusterObjects(clusters):
 
 
 
-
-
-def segmentTableThenFindDrills(polyData,pickedPoint):
-    ''' Given a point cloud of a table with drills on it.
-        Find all clusters and fit drills
-        Assumes that all clusters are of drills
-        Nothing else is ever on a table ;)
-    '''
-
-    # 1 segment a table and return clusters and the plane normal
-    clusters, tablePoints, plane_origin, plane_normal = segmentTableSceneClusters(polyData, pickedPoint, True)
-
-    # 2 Detect drills within the clusters:
-    viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
-    forwardDirection = np.array([1.0, 0.0, 0.0])
-    viewFrame.TransformVector(forwardDirection, forwardDirection)
-    robotForward =forwardDirection
-
-    fitResults=[]
-
-    for clusterObj in clusters:
-        # vis.showPolyData(clusterObj, 'cluster debug')
-        drillFrame = fitDrillBarrel (clusterObj, robotForward, plane_origin, plane_normal)
-
-        if drillFrame is not None:
-            fitResults.append((clusterObj, drillFrame))
-
-    if not fitResults:
-        return
-
-
-    for i, fitResult in enumerate(fitResults):
-        cluster, drillFrame = fitResult
-        drillOrigin = np.array(drillFrame.GetPosition())
-        drillMesh = getDrillBarrelMesh()
-
-        #drill = om.findObjectByName('drill')
-        name= 'drill %d' % i
-        name2= 'drill %d frame' % i
-        drill = showPolyData(drillMesh, name, cls=FrameAffordanceItem, color=[0, 1, 0], visible=True)
-        drillFrame = updateFrame(drillFrame, name2, parent=drill, scale=0.2, visible=False)
-
-        drill.actor.SetUserTransform(drillFrame.transform)
-
-        drill.setSolidColor([0, 1, 0])
-        #cluster.setProperty('Visible', True)
-
-
-
-
 def segmentTableScene(polyData, searchPoint, filterClustering = True):
-    ''' This seems to be unused, depreciated? '''
-
-    objectClusters, tablePoints, _, _ = segmentTableSceneClusters(polyData, searchPoint)
+    objectClusters, tableData = segmentTableSceneClusters(polyData, searchPoint)
 
     clusters = [makePolyDataFields(cluster) for cluster in objectClusters]
     clusters = [cluster for cluster in clusters if cluster is not None]
+
+    # Add an additional frame to these objects which has z-axis aligned upwards
+    # but rotated to have the x-axis facing away from the robot
+    table_axes= transformUtils.getAxesFromTransform(tableData.frame)
+    for cluster in clusters:
+        cluster_axes= transformUtils.getAxesFromTransform(cluster.frame)
+
+        zaxis = cluster_axes[2]
+        xaxis = table_axes[0]
+        yaxis = np.cross(zaxis, xaxis)
+        xaxis = np.cross(yaxis, zaxis)
+        xaxis /= np.linalg.norm(xaxis)
+        yaxis /= np.linalg.norm(yaxis)
+        orientedFrame = transformUtils.getTransformFromAxesAndOrigin(xaxis, yaxis, zaxis, cluster.frame.GetPosition() )
+        cluster._add_fields(oriented_frame=orientedFrame)
+
     if (filterClustering):
         clusters = filterClusterObjects(clusters)
 
-    return FieldContainer(table=makePolyDataFields(tablePoints), clusters=clusters)
+    return FieldContainer(table=tableData, clusters=clusters)
 
 
 def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
@@ -2493,16 +2481,13 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
         extract clusters above the table
     '''
 
-    polyData, tablePoints, plane_origin, plane_normal = segmentTable(polyData, searchPoint)
-
-    tableCentroid = computeCentroid(tablePoints)
+    tableData, polyData = segmentTableAndFrame(polyData, searchPoint)
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.5])
     # TODO: replace with 'all points above the table':
-    searchRegion = cropToSphere(searchRegion, tableCentroid, 0.5) # was 1.0
+    searchRegion = cropToSphere(searchRegion, tableData.frame.GetPosition() , 0.5) # was 1.0
 
-    tableCentroidFrame = transformUtils.frameFromPositionAndRPY(tableCentroid, [0,0,0])
-    showFrame(tableCentroidFrame, 'tableCentroid', visible=False, parent=getDebugFolder(), scale=0.15)
+    showFrame(tableData.frame, 'tableFrame', visible=False, parent=getDebugFolder(), scale=0.15)
     showPolyData(searchRegion, 'searchRegion', color=[1,0,0], visible=False, parent=getDebugFolder())
 
     objectClusters = extractClusters(searchRegion, clusterInXY, clusterTolerance=0.02, minClusterSize=10)
@@ -2512,29 +2497,35 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
         name= "cluster %d" % i
         showPolyData(c, name, color=getRandomColor(), visible=False, parent=getDebugFolder())
 
-    return objectClusters, tablePoints, plane_origin, plane_normal
+    return objectClusters, tableData
 
 
-def segmentTableEdge(polyData, searchPoint, edgePoint):
+def segmentTableAndFrame(polyData, searchPoint):
     '''
-    segment a table using two points:
-    searchPoint is a point on the table top
-    edgePoint is a point on the edge facing the robot
+    Segment a table using a searchPoint on the table top
+    and then recover its coordinate frame, facing away from the robot
+    Objects/points on the table are ignored
+
+    Input: polyData and searchPoint on the table
+
+    Output: FieldContainer with:
+    - all relevent details about the table (only)
+
     '''
 
-    polyData, tablePoints, origin, normal = segmentTable(polyData, searchPoint)
+    polyData, tablePoints, _, _ = segmentTable(polyData, searchPoint)
     tableMesh = computeDelaunay3D(tablePoints)
 
-    # TODO: replace this frame with view frame. (Currently viewframe is inverted on Valkyrie)
     viewFrame = SegmentationContext.getGlobalInstance().getViewFrame()
     viewDirection = SegmentationContext.getGlobalInstance().getViewDirection()
     robotYaw = math.atan2( viewDirection[1], viewDirection[0] )*180.0/np.pi
     linkFrame = transformUtils.frameFromPositionAndRPY( viewFrame.GetPosition() , [0,0, robotYaw ] )    
 
+    # Function returns corner point that is far right from the robot
     cornerTransform, rectDepth, rectWidth, _ = findMinimumBoundingRectangle(tablePoints, linkFrame)
     rectHeight = 0.02 # arbitrary table width
-
-    # Function returns frame that is far right from the robot, recover mid point
+   
+    # recover mid point
     t = transformUtils.copyFrame(cornerTransform)
     t.PreMultiply()
     table_center = [-rectDepth/2, rectWidth/2, 0]
@@ -2556,7 +2547,7 @@ def segmentTableEdge(polyData, searchPoint, edgePoint):
     #wireframe = transformPolyData(wireframe, t.GetLinearInverse())
     tableMesh = transformPolyData(tableMesh, t.GetLinearInverse())
 
-    return FieldContainer(points=tablePoints, box=wireframe, mesh=tableMesh, frame=t, dims=edgeLengths, axes=axes)
+    return FieldContainer(points=tablePoints, box=wireframe, mesh=tableMesh, frame=t, dims=edgeLengths, axes=axes), polyData
 
 
 def segmentDrillAuto(point1, polyData=None):
@@ -4752,7 +4743,7 @@ def findFarRightCorner(polyData, linkFrame):
     diagonalTransform =  transformUtils.copyFrame(linkFrame)
     diagonalTransform.PreMultiply()
     diagonalTransform.Concatenate( transformUtils.frameFromPositionAndRPY([0,0,0], [0,0,45]) )
-    vis.updateFrame(diagonalTransform, 'diagonal frame', parent='cont debug', visible=False)
+    vis.updateFrame(diagonalTransform, 'diagonal frame', parent=getDebugFolder(), visible=False)
 
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
     viewOrigin = diagonalTransform.TransformPoint([0.0, 0.0, 0.0])
@@ -4761,7 +4752,7 @@ def findFarRightCorner(polyData, linkFrame):
     viewZ = diagonalTransform.TransformVector([0.0, 0.0, 1.0])
     polyData = labelPointDistanceAlongAxis(polyData, viewY, origin=viewOrigin, resultArrayName='distance_along_foot_y')
 
-    vis.updatePolyData( polyData, 'cornerPoints', parent='cont debug', visible=False)
+    vis.updatePolyData( polyData, 'cornerPoints', parent='segmentation', visible=False)
     farRightIndex = vtkNumpy.getNumpyFromVtk(polyData, 'distance_along_foot_y').argmin()
     points = vtkNumpy.getNumpyFromVtk(polyData, 'Points')
     return points[farRightIndex,:]
@@ -4787,16 +4778,16 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
 
     pts =vtkNumpy.getNumpyFromVtk( polyData , 'Points' )
     xy_points =  pts[:,[0,1]]
-    vis.updatePolyData( get2DAsPolyData(xy_points) , 'xy_points', parent='cont debug', visible=False)
+    vis.updatePolyData( get2DAsPolyData(xy_points) , 'xy_points', parent=getDebugFolder(), visible=False)
     hull_points = qhull_2d.qhull2D(xy_points)
-    vis.updatePolyData( get2DAsPolyData(hull_points) , 'hull_points', parent='cont debug', visible=False)
+    vis.updatePolyData( get2DAsPolyData(hull_points) , 'hull_points', parent=getDebugFolder(), visible=False)
     # Reverse order of points, to match output from other qhull implementations
     hull_points = hull_points[::-1]
     # print 'Convex hull points: \n', hull_points, "\n"
 
     # Find minimum area bounding rectangle
     (rot_angle, rectArea, rectDepth, rectWidth, center_point, corner_points_ground) = min_bounding_rect.minBoundingRect(hull_points)
-    vis.updatePolyData( get2DAsPolyData(corner_points_ground) , 'corner_points_ground', parent='cont debug', visible=False)
+    vis.updatePolyData( get2DAsPolyData(corner_points_ground) , 'corner_points_ground', parent=getDebugFolder(), visible=False)
 
     polyDataCentroid = computeCentroid(polyData)
     cornerPoints = np.vstack((corner_points_ground.T, polyDataCentroid[2]*np.ones( corner_points_ground.shape[0]) )).T
@@ -4831,7 +4822,7 @@ def findMinimumBoundingRectangle(polyData, linkFrame):
 
     cornerTransform = transformUtils.frameFromPositionAndRPY( farRightCorner , [0,0, np.rad2deg(rot_angle) ] )
 
-    vis.showFrame(cornerTransform, "cornerTransform")
+    vis.showFrame(cornerTransform, "cornerTransform", parent=getDebugFolder(), visible=False)
 
     #print "Minimum area bounding box:"
     #print "Rotation angle:", rot_angle, "rad  (", rot_angle*(180/math.pi), "deg )"

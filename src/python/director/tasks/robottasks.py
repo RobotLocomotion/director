@@ -298,20 +298,6 @@ class FitDrill(PointCloudAlgorithmBase):
         segmentation.findAndFitDrillBarrel(polyData)
 
 
-class FindDrillOnTableByAnnotation(PointCloudAlgorithmBase):
-
-    def getAnnotationInputPoint(self):
-        obj = om.findObjectByName('drill on table annotation')
-        if obj is None:
-            self.fail('user annotation not found')
-        return obj.annotationPoints[0]
-
-    def run(self):
-        point = self.getAnnotationInputPoint()
-        polyData = self.getPointCloud()
-        segmentation.segmentTableThenFindDrills(polyData, point)
-
-
 class FindRotaryDrillByAnnotation(PointCloudAlgorithmBase):
 
     def getAnnotationInputPoint(self):

@@ -26,7 +26,6 @@ taskLibrary = [
     [rt.FitWallFrameFromAnnotation, {}],
     [rt.FitShelfItem, {}],
     [rt.FindRotaryDrillByAnnotation, {}],
-    [rt.FindDrillOnTableByAnnotation, {}],
     [rt.ComputeRobotFootFrame, {}],
     [rt.TransformFrame, {}],
   ]],
