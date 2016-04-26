@@ -14,6 +14,7 @@ app = ConsoleApp()
 # create a view
 view = app.createView()
 segmentation._defaultSegmentationView = view
+segmentation.initAffordanceManager(view)
 
 robotStateModel, robotStateJointController = roboturdf.loadRobotModel('robot state model', view, parent='sensors', color=roboturdf.getRobotGrayColor(), visible=True)
 segmentationroutines.SegmentationContext.initWithRobot(robotStateModel)
@@ -30,8 +31,10 @@ dataDir = app.getTestingDataDirectory()
 polyData = ioUtils.readPolyData(os.path.join(dataDir, 'tabletop/table-and-bin-scene.vtp'))
 vis.showPolyData(polyData, 'pointcloud snapshot')
 
-#segmentation.segmentTableScene(polyData, [-1.58661389,  2.91242337,  0.79958105] )
-segmentation.segmentTableSceneClusters(polyData, [-1.58661389,  2.91242337,  0.79958105], clusterInXY=True )
+p1 = [-1.58661389,  2.91242337,  0.79958105]
+data = segmentation.segmentTableScene(polyData, p1)
+vis.showClusterObjects(data.clusters, parent='segmentation')
+segmentation.showTable(data.table, parent='segmentation')
 
 if app.getTestingInteractiveEnabled():
     view.show()

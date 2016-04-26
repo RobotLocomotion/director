@@ -1412,6 +1412,19 @@ def showHistogram(polyData, arrayName, numberOfBins=100):
     return bins[np.argmax(hist)] + (bins[1] - bins[0])/2.0
 
 
+def showTable(table, parent):
+    '''
+    explictly draw a table and its frames
+    '''
+    pose = transformUtils.poseFromTransform(table.frame)
+    desc = dict(classname='MeshAffordanceItem', Name='table', Color=[0,1,0], pose=pose)
+    aff = affordanceManager.newAffordanceFromDescription(desc)
+    aff.setPolyData(table.mesh)
+
+    tableBox = vis.showPolyData(table.box, 'table box', parent=aff, color=[0,1,0], visible=False)
+    tableBox.actor.SetUserTransform(table.frame)
+
+
 def applyKmeansLabel(polyData, arrayName, numberOfClusters, whiten=False):
 
     import scipy.cluster
@@ -2387,6 +2400,8 @@ def makeMovable(obj, initialTransform=None):
 
 def segmentTable(polyData, searchPoint):
     '''
+    NB: If you wish to use the table frame use segmentTableAndFrame instead 
+    ##################
     Segment a horizontal table surface (perpendicular to +Z) in the given polyData
     Input:
     - polyData
@@ -2466,20 +2481,13 @@ def segmentTableSceneClusters(polyData, searchPoint, clusterInXY=False):
         extract clusters above the table
     '''
 
-    #polyData, tablePoints, _, _ = segmentTable(polyData, searchPoint)
-
     tableData, polyData = segmentTableAndFrame(polyData, searchPoint)
-
-    #tableCentroid = computeCentroid( tableData.points )
-    #tableCentroidFrame = transformUtils.frameFromPositionAndRPY(tableCentroid, [0,0,0])
-
-    tableFrame = tableData.frame
 
     searchRegion = thresholdPoints(polyData, 'dist_to_plane', [0.02, 0.5])
     # TODO: replace with 'all points above the table':
-    searchRegion = cropToSphere(searchRegion, tableFrame.GetPosition() , 0.5) # was 1.0
+    searchRegion = cropToSphere(searchRegion, tableData.frame.GetPosition() , 0.5) # was 1.0
 
-    showFrame(tableFrame, 'tableFrame', visible=False, parent=getDebugFolder(), scale=0.15)
+    showFrame(tableData.frame, 'tableFrame', visible=False, parent=getDebugFolder(), scale=0.15)
     showPolyData(searchRegion, 'searchRegion', color=[1,0,0], visible=False, parent=getDebugFolder())
 
     objectClusters = extractClusters(searchRegion, clusterInXY, clusterTolerance=0.02, minClusterSize=10)
