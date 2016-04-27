@@ -20,6 +20,7 @@ from drake import lcmt_qp_controller_input, lcmt_whole_body_data
 
 import scipy.interpolate
 import yaml
+import os
 
 
 
@@ -73,7 +74,9 @@ val_gains = {
 
 
 def loadValkyrieGains():
-    f = open("../config/valStreamingGains.yaml")
+    drcBase = os.getenv("DRC_BASE")
+    filename = drcBase + "/software/director/src/python/config/valStreamingGains.yaml"
+    f = open(filename)
     data = yaml.load(f)
     KpGains = data['KpGains']
     dampingRatio = data['dampingRatio']
