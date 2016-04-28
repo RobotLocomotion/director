@@ -4,7 +4,7 @@ import traceback
 
 class TimerCallback(object):
 
-    def __init__(self, targetFps=30):
+    def __init__(self, targetFps=30, callback=None):
         '''
         Construct TimerCallback.  The targetFps defines frames per second, the
         frequency for the ticks() callback method.
@@ -16,7 +16,7 @@ class TimerCallback(object):
 
         self.singleShotTimer = QtCore.QTimer()
         self.singleShotTimer.setSingleShot(True)
-        self.callback = None
+        self.callback = callback
 
     def start(self):
         '''
