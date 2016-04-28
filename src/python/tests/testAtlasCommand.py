@@ -75,7 +75,7 @@ val_gains = {
 
 def loadValkyrieGains():
     drcBase = os.getenv("DRC_BASE")
-    filename = drcBase + "/software/director/src/python/config/valStreamingGains.yaml"
+    filename = drcBase + "/software/models/val_description/valStreamingGains.yaml"
     f = open(filename)
     data = yaml.load(f)
     KpGains = data['KpGains']
