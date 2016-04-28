@@ -153,14 +153,6 @@ def atlasCommandToDrakePose(msg):
     return drakePose.tolist()
 
 def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True):
-    # if atlasVersion == 4:
-    #     numPositions = 34
-    # else:
-    #     numPositions = 36
-    #
-    # if useValkyrie:
-    #     numPositions = 38
-
     numPositions = np.size(pose)
 
     msg = lcmt_qp_controller_input()
