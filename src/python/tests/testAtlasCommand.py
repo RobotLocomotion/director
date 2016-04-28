@@ -19,6 +19,8 @@ from director.utime import getUtime
 from drake import lcmt_qp_controller_input, lcmt_whole_body_data
 
 import scipy.interpolate
+import yaml
+import os
 
 
 
@@ -71,15 +73,51 @@ val_gains = {
 }
 
 
+def loadValkyrieGains():
+    drcBase = os.getenv("DRC_BASE")
+    filename = drcBase + "/software/models/val_description/valStreamingGains.yaml"
+    f = open(filename)
+    data = yaml.load(f)
+    KpGains = data['KpGains']
+    dampingRatio = data['dampingRatio']
+    gains = dict()
+
+    for key, value in KpGains.iteritems():
+        jointName = str(key)
+        d = {'Kp': value}
+        d['Kd'] = 2*dampingRatio*np.sqrt(value)
+        gains[jointName] = d
+
+    return gains
+
+valkyrieGains = loadValkyrieGains()
+
+
+
+# special for Valkyrie, note the off by one indexing of the constrained dofs
+# not sure why it is off by one, something to do with how we do this message in lcm
+# see QPLocomotionPlan.cpp for an example of the same shifting
+valJointNames = robotstate.getRobotStateJointNames()
+valJointIdx = dict()
+
+for idx, singleJointName in enumerate(valJointNames):
+    valJointIdx[str(singleJointName)] = idx
+
+valConstrainedJoints = ['lowerNeckPitch', 'neckYaw', 'upperNeckPitch']
+valConstrainedJointsIdx = []
+for jointName in valConstrainedJoints:
+    valConstrainedJointsIdx.append(1+valJointIdx[jointName])
+
+
 def newAtlasCommandMessageAtZero():
 
     msg = lcmbotcore.atlas_command_t()
     msg.joint_names = [str(v) for v in robotstate.getRobotStateJointNames()]
     msg.num_joints = len(msg.joint_names)
     zeros = np.zeros(msg.num_joints)
-    msg.k_q_p = [val_gains[name][0] for name in msg.joint_names]
+    msg.k_q_p = [valkyrieGains[name]['Kp'] for name in msg.joint_names]
     msg.k_q_i = zeros.tolist()
-    msg.k_qd_p = [val_gains[name][1] for name in msg.joint_names]
+    msg.k_qd_p = [valkyrieGains[name]['Kd'] for name in msg.joint_names]
     msg.k_f_p = zeros.tolist()
     msg.ff_qd = zeros.tolist()
     msg.ff_qd_d = zeros.tolist()
@@ -114,11 +152,8 @@ def atlasCommandToDrakePose(msg):
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()
 
-def drakePoseToQPInput(pose, atlasVersion=5):
-    if atlasVersion == 4:
-        numPositions = 34
-    else:
-        numPositions = 36
+def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True):
+    numPositions = np.size(pose)
 
     msg = lcmt_qp_controller_input()
     msg.timestamp = getUtime()
@@ -126,16 +161,29 @@ def drakePoseToQPInput(pose, atlasVersion=5):
     msg.num_tracked_bodies = 0
     msg.num_external_wrenches = 0
     msg.num_joint_pd_overrides = 0
-    msg.param_set_name = 'position_control'
+
+    if useValkyrie:
+        msg.param_set_name = 'streaming'
+    else:
+        msg.param_set_name = 'position_control'
 
     whole_body_data = lcmt_whole_body_data()
     whole_body_data.timestamp = getUtime()
     whole_body_data.num_positions = numPositions
     whole_body_data.q_des = pose
+
+    # what are these? Is it still correct for valkyrie
+    # if useValkyrie:
+    #     whole_body_data.num_constrained_dofs = len(valConstrainedJointsIdx)
+    #     whole_body_data.constrained_dofs = valConstrainedJointsIdx
+    # else:
+    #     whole_body_data.num_constrained_dofs = numPositions - 6
+    #     whole_body_data.constrained_dofs = range(7, numPositions+1)
+
+
     whole_body_data.num_constrained_dofs = numPositions - 6
     whole_body_data.constrained_dofs = range(7, numPositions+1)
     msg.whole_body_data = whole_body_data
-
     return msg
 
 
@@ -155,7 +203,7 @@ class AtlasCommandStream(object):
         # self.lastCommandMessage = newAtlasCommandMessageAtZero()
         self._numPositions = len(robotstate.getDrakePoseJointNames())
         self._previousElapsedTime = 100
-        self._baseFlag = 0;
+        self._baseFlag = 0
         self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.useControllerFlag = False
@@ -637,6 +685,9 @@ class JointTeleopPanel(object):
 
         self.endPose[jointIndex] = jointValue
         self.updateLabel(jointName, jointValue)
+
+        # this is what is causing the position goal to be published using the commandStream.setGoalPose function
+        # call
         self.showPose(self.endPose)
         self.updateSliders()
 
@@ -780,6 +831,7 @@ def parseArgs():
     p = parser.add_mutually_exclusive_group(required=True)
     p.add_argument('--base', dest='mode', action='store_const', const='base')
     p.add_argument('--robot', dest='mode', action='store_const', const='robot')
+    p.add_argument('--robotWithController', dest='mode', action='store_const', const='robotWithController')
     p.add_argument('--debug', dest='mode', action='store_const', const='debug')
     p.add_argument('--robotDrivingGains', dest='mode', action='store_const', const='robotDrivingGains')
     p.add_argument('--robotWithoutController', dest='mode', action='store_const', const='robotWithoutController')
@@ -796,6 +848,8 @@ def main():
         baseMain()
     elif args.mode == 'robot':
         robotMain()
+    elif args.mode == 'robotWithController':
+        robotMain(useDrivingGains=False, useController=True)
     elif args.mode == 'robotDrivingGains':
         robotMain(useDrivingGains=True)
     elif args.mode == 'robotWithoutController':
