@@ -339,9 +339,9 @@ class FootstepsDriver(object):
         sub2 = lcmUtils.addSubscriber('BDI_ADJUSTED_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, self.onBDIAdjustedFootstepPlan)
         sub2.setSpeedLimit(1) # was 5 but was slow rendering
 
-    def changeSubscriptionAlt(self, newBDIChannel="POSE_BODY_ALT"):
+    def changeSubscriptionAlt(self, newAltChannel="POSE_BODY_ALT"):
         # used to monitor a different pose e.g. POSE_BODY_LOGGED in playback
-        self.altChannel = newBDIChannel
+        self.altChannel = newAltChannel
         lcmUtils.removeSubscriber ( self.altSubscribe )
 
         self.altSubscribe = lcmUtils.addSubscriber( self.altChannel , pose_t, self.onPoseAlt)
@@ -946,7 +946,7 @@ class FootstepsDriver(object):
             # print "haven't received POSE_BODY_ALT"
             return
 
-        # TODO: This transformation should be rewritten using the LOCAL_TO_LOCAL_BDI frame
+        # TODO: This transformation should be rewritten using the LOCAL_TO_LOCAL_ALT frame
         # instead of using FK here
 
         t_bodybdi  = transformUtils.transformFromPose(self.poseAlt.pos, self.poseAlt.orientation)
