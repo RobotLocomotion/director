@@ -152,7 +152,16 @@ def atlasCommandToDrakePose(msg):
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()
 
-def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True):
+def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True, useConstrainedDofs=False, fixedBase=False,
+                       forceControl=False):
+
+    numFloatingBaseJoints = 6
+
+    # only publish the fixed base joints
+    if fixedBase:
+        numFloatingBaseJoints = 0
+        pose = pose[6:]
+
     numPositions = np.size(pose)
 
     msg = lcmt_qp_controller_input()
@@ -163,7 +172,10 @@ def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True):
     msg.num_joint_pd_overrides = 0
 
     if useValkyrie:
-        msg.param_set_name = 'streaming'
+        if forceControl:
+            msg.param_set_name = 'base'
+        else:
+            msg.param_set_name = 'streaming'
     else:
         msg.param_set_name = 'position_control'
 
@@ -181,8 +193,12 @@ def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True):
     #     whole_body_data.constrained_dofs = range(7, numPositions+1)
 
 
-    whole_body_data.num_constrained_dofs = numPositions - 6
-    whole_body_data.constrained_dofs = range(7, numPositions+1)
+    # be careful with off by one indexing of constrained_dofs for lcm
+    if useConstrainedDofs:
+        # if we aren't using the fixed base then remove the fixed base from this
+        whole_body_data.num_constrained_dofs = numPositions - numFloatingBaseJoints
+        whole_body_data.constrained_dofs = range(numFloatingBaseJoints+1, numPositions+1)
+
     msg.whole_body_data = whole_body_data
     return msg
 
@@ -216,6 +232,9 @@ class AtlasCommandStream(object):
         self._previousCommandedPose = np.array(currentRobotPose)
         self._goalPose = np.array(currentRobotPose)
         self._initialized = True
+
+    def setOptions(self, options):
+        self.options = options
 
     def useController(self):
         self.useControllerFlag = True
@@ -293,7 +312,8 @@ class AtlasCommandStream(object):
             msg = drakePoseToAtlasCommand(self._currentCommandedPose)
 
         if self.useControllerFlag:
-            msg = drakePoseToQPInput(self._currentCommandedPose)
+            msg = drakePoseToQPInput(self._currentCommandedPose, useConstrainedDofs=self.options['useConstrainedDofs'],
+                                     fixedBase=self.options['fixedBase'], forceControl=self.options['forceControl'])
 
         lcmUtils.publish(self.publishChannel, msg)
 
@@ -836,6 +856,12 @@ def parseArgs():
     p.add_argument('--robotDrivingGains', dest='mode', action='store_const', const='robotDrivingGains')
     p.add_argument('--robotWithoutController', dest='mode', action='store_const', const='robotWithoutController')
     p.add_argument('--robotDrivingGainsWithoutController', dest='mode', action='store_const', const='robotDrivingGainsWithoutController')
+
+    # allow specification that this is a floating base robot
+    parser.add_argument('--fixedBase', dest='fixedBase', action='store_const', const=True, default=False)
+    parser.add_argument('--noConstrainedDofs', dest='useConstrainedDofs', action='store_const', const=False,
+                        default=True)
+    parser.add_argument('--forceControl', dest='forceControl', action='store_const', const=True, default=False)
     args, unknown = parser.parse_known_args()
     return args
 
@@ -844,18 +870,25 @@ def main():
 
     args = parseArgs()
 
+    options = {}
+    options['fixedBase'] = args.fixedBase
+    options['useConstrainedDofs'] = args.useConstrainedDofs
+    options['forceControl'] = args.forceControl
+
+    print "forceControl", options['forceControl']
+
     if args.mode == 'base':
         baseMain()
     elif args.mode == 'robot':
         robotMain()
     elif args.mode == 'robotWithController':
-        robotMain(useDrivingGains=False, useController=True)
+        robotMain(useDrivingGains=False, useController=True, options=options)
     elif args.mode == 'robotDrivingGains':
-        robotMain(useDrivingGains=True)
+        robotMain(useDrivingGains=True, options=options)
     elif args.mode == 'robotWithoutController':
-        robotMain(useController=False)
+        robotMain(useController=False, options=options)
     elif args.mode == 'robotDrivingGainsWithoutController':
-        robotMain(useDrivingGains=True, useController=False)
+        robotMain(useDrivingGains=True, useController=False, options=options)
     else:
         debugMain()
 
@@ -874,7 +907,9 @@ def debugMain():
     ConsoleApp.start()
 
 
-def robotMain(useDrivingGains=False, useController=False):
+def robotMain(useDrivingGains=False, useController=False, options=None):
+
+    commandStream.setOptions(options)
 
     print 'waiting for robot state...'
     commandStream.waitForRobotState()
