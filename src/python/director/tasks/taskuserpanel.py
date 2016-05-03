@@ -79,7 +79,7 @@ class TaskUserPanel(object):
         if activateAffordanceUpdater:
             self.affordanceUpdater = affordanceupdater.AffordanceInCameraUpdater(segmentation.affordanceManager, imageView)
             self.affordanceUpdater.timer.start()
-        self.imageViewLayout.addWidget(self.fitter.imageView.view)
+        self.imageViewLayout.addWidget(imageView.view)
 
 
     def _setupParams(self):
