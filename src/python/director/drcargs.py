@@ -68,6 +68,10 @@ class DRCArgParser(object):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/lwr_defs/director_config.json')
 
+    def getDefaultHuskyConfigFile(self):
+        return os.path.join(director.getDRCBaseDir(),
+                            'software/models/husky_description/director_config.json')
+
     def addDefaultArgs(self, parser):
         parser.add_argument('-c', '--config_file', type=str, help='Robot cfg file',
                             default=self.getDefaultBotConfigFile())
@@ -105,12 +109,15 @@ class DRCArgParser(object):
                             const=self.getDefaultValkyrieV2SimpleDirectorConfigFile(),
                             help='Use Valkyrie (Simple/Primitive Shapes)')
 
-
-
         directorConfig.add_argument('-lwr', '--lwr', dest='directorConfigFile',
                             action='store_const',
                             const=self.getDefaultKukaLWRConfigFile(),
                             help='Use Kuka LWR')
+
+        directorConfig.add_argument('-husky', '--husky', dest='directorConfigFile',
+                            action='store_const',
+                            const=self.getDefaultHuskyConfigFile(),
+                            help='Use Husky')
 
         directorConfig.add_argument('--director_config', dest='directorConfigFile',
                             type=str,
