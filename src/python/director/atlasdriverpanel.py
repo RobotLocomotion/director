@@ -44,6 +44,7 @@ class AtlasDriverPanel(object):
 
         self.ui.calibrateNullBiasButton.connect('clicked()', self.onCalibrateNullBias)
         self.ui.calibrateElectricArmsButton.connect('clicked()', self.onCalibrateElectricArms)
+        self.ui.tareFTButton.connect('clicked()', self.onTareFT)
         self.ui.initNavButton.connect('clicked()', self.onInitNav)
         self.ui.standButton.connect('clicked()', self.onStand)
         self.ui.mitStandButton.connect('clicked()', self.onMITStand)
@@ -165,6 +166,9 @@ class AtlasDriverPanel(object):
 
     def onInitNav(self):
         self.driver.sendInitAtZero()
+
+    def onTareFT(self):
+        self.driver.sendTareFT()
 
     def onPrep(self):
         self.driver.sendPrepCommand()
