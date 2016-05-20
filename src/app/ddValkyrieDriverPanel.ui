@@ -465,6 +465,13 @@
                 </layout>
                </item>
                <item>
+                <widget class="QLabel" name="label_2">
+                 <property name="text">
+                  <string>Transition Time</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QDoubleSpinBox" name="transitionTimeSpinBox">
                  <property name="maximum">
                   <double>5.000000000000000</double>
@@ -476,6 +483,9 @@
                   <double>1.000000000000000</double>
                  </property>
                 </widget>
+               </item>
+               <item>
+                <widget class="QWidget" name="widget_2" native="true"/>
                </item>
               </layout>
              </item>
