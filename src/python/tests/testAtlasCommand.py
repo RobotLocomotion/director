@@ -153,7 +153,7 @@ def atlasCommandToDrakePose(msg):
     return drakePose.tolist()
 
 def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True, useConstrainedDofs=False, fixedBase=False,
-                       forceControl=False):
+                       forceControl=False, paramSetName='base'):
 
     numFloatingBaseJoints = 6
 
@@ -172,17 +172,18 @@ def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True, useConstrainedDof
     msg.num_joint_pd_overrides = 0
 
     if useValkyrie:
-        if forceControl:
-            msg.param_set_name = 'base'
-        else:
-            msg.param_set_name = 'streaming'
+        msg.param_set_name = paramSetName
     else:
         msg.param_set_name = 'position_control'
 
     whole_body_data = lcmt_whole_body_data()
     whole_body_data.timestamp = getUtime()
     whole_body_data.num_positions = numPositions
+
+    # will need to update this to the new qp_controller_input msg type once we start
+    # encoding entire trajectories for q, rather than just a single q_des
     whole_body_data.q_des = pose
+
 
     # what are these? Is it still correct for valkyrie
     # if useValkyrie:
@@ -224,7 +225,11 @@ class AtlasCommandStream(object):
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.useControllerFlag = False
         self.drivingGainsFlag = False
+
+        self.initializeLCMSubscriptions()
         self.applyDefaults()
+        self.options = dict()
+        self.applyDefaultOptions()
 
     def initialize(self, currentRobotPose):
         assert not self._initialized
@@ -233,8 +238,15 @@ class AtlasCommandStream(object):
         self._goalPose = np.array(currentRobotPose)
         self._initialized = True
 
+    def initializeLCMSubscriptions(self):
+        lcmUtils.addSubscriber("STREAMING_QP_PARAM_SET", lcmdrc.string_t, self.onStreamingQPParamSet)
+
     def setOptions(self, options):
         self.options = options
+        self.applyDefaultOptions()
+
+    def applyDefaultOptions(self):
+        self.options.setdefault('qp_param_set_name', 'base')
 
     def useController(self):
         self.useControllerFlag = True
@@ -313,7 +325,9 @@ class AtlasCommandStream(object):
 
         if self.useControllerFlag:
             msg = drakePoseToQPInput(self._currentCommandedPose, useConstrainedDofs=self.options['useConstrainedDofs'],
-                                     fixedBase=self.options['fixedBase'], forceControl=self.options['forceControl'])
+                                     fixedBase=self.options['fixedBase'], forceControl=self.options['forceControl'],
+                                     paramSetName=self.options['qp_param_set_name'])
+
 
         lcmUtils.publish(self.publishChannel, msg)
 
@@ -353,6 +367,10 @@ class AtlasCommandStream(object):
         nextPose = currentPose + v_next*elapsed
         nextPose = self.clipPoseToJointLimits(nextPose)
         return nextPose
+
+
+    def onStreamingQPParamSet(self, msg):
+        self.options['qp_param_set_name'] = msg.data
 
 commandStream = AtlasCommandStream()
 
@@ -492,6 +510,7 @@ class JointCommandPanel(object):
         self.ui.hidePreviewButton.connect('clicked()', self.onHidePreviewClicked)
         self.ui.previewSlider.connect('valueChanged(int)', self.onPreviewSliderChanged)
         self.ui.speedSpinBox.connect('valueChanged(double)', self.onSpeedChanged)
+        self.ui.qpParamSetComboBox.connect('currentIndexChanged(const QString &)', self.onQPParamSetChanged)
         self.hidePreviewModels()
 
         self.throttleControlEnabled = False
@@ -519,6 +538,16 @@ class JointCommandPanel(object):
 
     def onSpeedChanged(self, value):
         commandStream._maxSpeed = np.deg2rad(value)
+
+    def onQPParamSetChanged(self, comboBoxText):
+        d = {'position': 'base', 'gravity comp': 'gravity_comp'}
+        if comboBoxText not in d:
+            print "didn't recognize that QP param set, doing nothing"
+
+        msg = lcmdrc.string_t()
+        msg.data = d[comboBoxText]
+        lcmUtils.publish("STREAMING_QP_PARAM_SET", msg)
+
 
     def onStreamingClicked(self):
         streamingEnabled = bool(self.ui.streamingButton.checked)
