@@ -2,6 +2,8 @@ import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 from director import applogic as app
 from director.timercallback import TimerCallback
+from director import drcargs
+
 from functools import partial
 
 
@@ -27,48 +29,83 @@ class AtlasDriverPanel(object):
         self.driver = driver
 
         loader = QtUiTools.QUiLoader()
+
+        # load Atlas by default
         uifile = QtCore.QFile(':/ui/ddAtlasDriverPanel.ui')
+
+        # if we have a valkyrie, load that panel instead
+        robotType = drcargs.getGlobalArgParser().getRobotType()
+        # robotType='atlas'
+        if robotType == 'val':
+            print "loading valkyrie panel"
+            uifile = QtCore.QFile(':/ui/ddValkyrieDriverPanel.ui')
+
+        if robotType not in ['val','atlas']:
+            raise ValueError('only know how to load ui panel for Valkyrie or Atlas')
+
         assert uifile.open(uifile.ReadOnly)
 
         self.widget = loader.load(uifile)
-        self.widget.setWindowTitle('Atlas Driver Panel')
         self.ui = WidgetDict(self.widget.children())
 
         # Main Panel
-        self.ui.calibrateEncodersButton.connect('clicked()', self.onCalibrateEncoders)
-        self.ui.prepButton.connect('clicked()', self.onPrep)
-        self.ui.combinedStandButton.connect('clicked()', self.onCombinedStand)
-        self.ui.stopButton.connect('clicked()', self.onStop)
-        self.ui.freezeButton.connect('clicked()', self.onFreeze)
+        if robotType == 'atlas':
+            self.widget.setWindowTitle('Atlas Driver Panel')
+            self.ui.calibrateEncodersButton.connect('clicked()', self.onCalibrateEncoders)
+            self.ui.prepButton.connect('clicked()', self.onPrep)
+            self.ui.combinedStandButton.connect('clicked()', self.onCombinedStand)
+            self.ui.stopButton.connect('clicked()', self.onStop)
+            self.ui.freezeButton.connect('clicked()', self.onFreeze)
 
 
-        self.ui.calibrateNullBiasButton.connect('clicked()', self.onCalibrateNullBias)
-        self.ui.calibrateElectricArmsButton.connect('clicked()', self.onCalibrateElectricArms)
-        self.ui.tareFTButton.connect('clicked()', self.onTareFT)
-        self.ui.initNavButton.connect('clicked()', self.onInitNav)
-        self.ui.standButton.connect('clicked()', self.onStand)
-        self.ui.mitStandButton.connect('clicked()', self.onMITStand)
-        self.ui.userButton.connect('clicked()', self.onUser)
-        self.ui.manipButton.connect('clicked()', self.onManip)
-        self.ui.recoveryOnButton.connect('clicked()', self.driver.sendRecoveryEnable)
-        self.ui.recoveryOffButton.connect('clicked()', self.driver.sendRecoveryDisable)
-        self.ui.bracingOnButton.connect('clicked()', self.driver.sendBracingEnable)
-        self.ui.bracingOffButton.connect('clicked()', self.driver.sendBracingDisable)
-        for psi in [1000, 1500, 2000, 2400, 2650]:
-            self.ui.__dict__['setPressure' + str(psi) + 'Button'].connect('clicked()', partial(self.driver.sendDesiredPumpPsi, psi))
-        self.ui.sendCustomPressureButton.connect('clicked()', self.sendCustomPressure)
-        self.setupElectricArmCheckBoxes()
+            self.ui.calibrateNullBiasButton.connect('clicked()', self.onCalibrateNullBias)
+            self.ui.calibrateElectricArmsButton.connect('clicked()', self.onCalibrateElectricArms)
+            self.ui.tareFTButton.connect('clicked()', self.onTareFT)
+            self.ui.initNavButton.connect('clicked()', self.onInitNav)
+            self.ui.standButton.connect('clicked()', self.onStand)
+            self.ui.mitStandButton.connect('clicked()', self.onMITStand)
+            self.ui.userButton.connect('clicked()', self.onUser)
+            self.ui.manipButton.connect('clicked()', self.onManip)
+            self.ui.recoveryOnButton.connect('clicked()', self.driver.sendRecoveryEnable)
+            self.ui.recoveryOffButton.connect('clicked()', self.driver.sendRecoveryDisable)
+            self.ui.bracingOnButton.connect('clicked()', self.driver.sendBracingEnable)
+            self.ui.bracingOffButton.connect('clicked()', self.driver.sendBracingDisable)
+            for psi in [1000, 1500, 2000, 2400, 2650]:
+                self.ui.__dict__['setPressure' + str(psi) + 'Button'].connect('clicked()', partial(self.driver.sendDesiredPumpPsi, psi))
+            self.ui.sendCustomPressureButton.connect('clicked()', self.sendCustomPressure)
+            self.setupElectricArmCheckBoxes()
 
-        PythonQt.dd.ddGroupBoxHider(self.ui.calibrationGroupBox)
-        PythonQt.dd.ddGroupBoxHider(self.ui.pumpStatusGroupBox)
-        PythonQt.dd.ddGroupBoxHider(self.ui.electricArmStatusGroupBox)
+            PythonQt.dd.ddGroupBoxHider(self.ui.calibrationGroupBox)
+            PythonQt.dd.ddGroupBoxHider(self.ui.pumpStatusGroupBox)
+            PythonQt.dd.ddGroupBoxHider(self.ui.electricArmStatusGroupBox)
+
+        if robotType=='val':
+            self.widget.setWindowTitle('Valkyrie Driver Panel')
+            self.ui.calibrateEncodersButton.connect('clicked()', self.onCalibrateEncoders)
+            self.ui.prepButton.connect('clicked()', self.onPrep)
+            self.ui.combinedStandButton.connect('clicked()', self.onCombinedStand)
+            self.ui.stopButton.connect('clicked()', self.onStop)
+            self.ui.freezeButton.connect('clicked()', self.onValkyrieFreeze)
+
+
+            self.ui.tareFTButton.connect('clicked()', self.onTareFT)
+            self.ui.forceControlButton.connect('clicked()', self.onForceControl)
+            self.ui.positionControlButton.connect('clicked()', self.onPositionControl)
+
 
         self.updateTimer = TimerCallback(targetFps=5)
-        self.updateTimer.callback = self.updatePanel
-        self.updateTimer.start()
-        self.updatePanel()
 
-    def updatePanel(self):
+        if robotType=='atlas':
+            self.updateTimer.callback = self.updatePanelAtlas
+            self.updatePanelAtlas()
+        if robotType=='val':
+            self.updateTimer.callback = self.updatePanelValkyrie
+            self.updatePanelValkyrie()
+
+        self.updateTimer.start()
+
+
+    def updatePanelAtlas(self):
         self.updateBehaviorLabel()
         self.updateControllerStatusLabel()
         self.updateRecoveryEnabledLabel()
@@ -78,6 +115,14 @@ class AtlasDriverPanel(object):
         self.updateButtons()
         self.updateElectricArmStatus()
         self.driver.updateCombinedStandLogic()
+
+    def updatePanelValkyrie(self):
+        self.updateValkyrieLCM2ROSControlLabel()
+        self.updateRecoveryEnabledLabel()
+        self.updateBracingEnabledLabel()
+
+    def updateValkyrieLCM2ROSControlLabel(self):
+        self.ui.LCM2ROSControlBehaviorLabel.text = self.driver.getCurrentBehaviorName() or '<unknown>'
 
     def updateBehaviorLabel(self):
         self.ui.behaviorLabel.text = self.driver.getCurrentBehaviorName() or '<unknown>'
@@ -190,6 +235,17 @@ class AtlasDriverPanel(object):
 
     def sendCustomPressure(self):
         self.driver.sendDesiredPumpPsi(self.ui.customPumpPressure.value)
+
+
+    # valkyrie specific
+    def onForceControl(self):
+        self.driver.sendForceControlCommand(self.ui.transitionTimeSpinBox.value)
+
+    def onPositionControl(self):
+        self.driver.sendPositionControlCommand(self.ui.transitionTimeSpinBox.value)
+
+    def onValkyrieFreeze(self):
+        self.driver.sendValkyrieFreezeCommand()
 
 
 
