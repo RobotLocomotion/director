@@ -81,6 +81,7 @@ class AtlasDriverPanel(object):
 
         if robotType=='val':
             self.widget.setWindowTitle('Valkyrie Driver Panel')
+            self.ui.initNavButton.connect('clicked()', self.onInitNav)
             self.ui.calibrateEncodersButton.connect('clicked()', self.onCalibrateEncoders)
             self.ui.prepButton.connect('clicked()', self.onPrep)
             self.ui.combinedStandButton.connect('clicked()', self.onCombinedStand)
