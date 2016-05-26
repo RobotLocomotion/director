@@ -56,6 +56,12 @@ class Geometry(object):
             d.addSphere(center=(0,0,-length/2.0), radius=radius)
             return d.getPolyData()
 
+        elif hasattr(lcmdrake.lcmt_viewer_geometry_data, "ELLIPSOID") and geom.type == lcmdrake.lcmt_viewer_geometry_data.ELLIPSOID:
+            d = DebugData()
+            radii = geom.float_data[0:3]
+            d.addEllipsoid(center=(0,0,0), radii=radii)
+            return d.getPolyData()
+
         raise Exception('Unsupported geometry type: %s' % geom.type)
 
     @staticmethod

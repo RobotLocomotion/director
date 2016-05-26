@@ -153,6 +153,28 @@ class DebugData(object):
         transformFilter.Update()
         self.addPolyData(transformFilter.GetOutput())
 
+    def addEllipsoid(self, center, radii, color=[1,1,1], alpha=1.0, resolution=24):
+        """
+        Add an ellipsoid centered at [center] with x, y, and z principal axis radii given by
+        radii = [x_scale, y_scale, z_scale]
+        """
+        sphere = vtk.vtkSphereSource()
+        sphere.SetCenter([0,0,0])
+        sphere.SetThetaResolution(resolution)
+        sphere.SetPhiResolution(resolution)
+        sphere.SetRadius(1.0)
+        sphere.Update()
+
+        transform = vtk.vtkTransform()
+        transform.Translate(center)
+        transform.Scale(radii)
+
+        transformFilter = vtk.vtkTransformPolyDataFilter()
+        transformFilter.SetTransform(transform)
+        transformFilter.SetInputConnection(sphere.GetOutputPort())
+        transformFilter.Update()
+        self.addPolyData(transformFilter.GetOutput())
+
     def getPolyData(self):
 
         if self.append.GetNumberOfInputConnections(0):
