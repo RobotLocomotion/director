@@ -1,3 +1,4 @@
+import warnings
 import math, os
 import numpy as np
 from director import lcmUtils
@@ -14,8 +15,16 @@ from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import packagepath
 
-import drake as lcmdrake
 import bot_core as lcmbot
+
+if not hasattr(lcmbot, "viewer_load_robot_t"):
+    warnings.warn("Drake visualizer LCM types have been moved out of Drake and into bot_core_lcmtypes, but your version of bot_core_lcmtypes is too old. You will need a newer version of bot_core_lcmtypes (which you can get by installing a newer version of Drake).")
+    import drake as lcmdrake
+    lcmbot.viewer_command_t = lcmdrake.lcmt_viewer_command
+    lcmbot.viewer_draw_t = lcmdrake.lcmt_viewer_draw
+    lcmbot.viewer_geometry_data_t = lcmdrake.lcmt_viewer_geometry_data
+    lcmbot.viewer_link_data_t = lcmdrake.lcmt_viewer_link_data
+    lcmbot.viewer_load_robot_t = lcmdrake.lcmt_viewer_load_robot
 
 from PythonQt import QtGui
 
