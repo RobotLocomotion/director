@@ -65,7 +65,7 @@ class Geometry(object):
             d.addSphere(center=(0,0,-length/2.0), radius=radius)
             return d.getPolyData()
 
-        elif hasattr(lcmdrake.lcmt_viewer_geometry_data, "ELLIPSOID") and geom.type == lcmdrake.lcmt_viewer_geometry_data.ELLIPSOID:
+        elif hasattr(lcmbot.viewer_geometry_data_t, "ELLIPSOID") and geom.type == lcmbot.viewer_geometry_data_t.ELLIPSOID:
             d = DebugData()
             radii = geom.float_data[0:3]
             d.addEllipsoid(center=(0,0,0), radii=radii)
