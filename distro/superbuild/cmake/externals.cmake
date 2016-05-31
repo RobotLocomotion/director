@@ -154,7 +154,7 @@ endif()
 
 if (USE_BOT_CORE_LCMTYPES AND NOT USE_SYSTEM_BOT_CORE_LCMTYPES)
   if (NOT USE_LCM)
-    message(SEND_ERROR "Error, USE_BOT_CORE_LCMTYPES is enabled but USE_LCM is OFF."
+    message(SEND_ERROR "Error, USE_BOT_CORE_LCMTYPES is enabled but USE_LCM is OFF.")
   endif()
 
   ExternalProject_Add(bot_core_lcmtypes
