@@ -76,6 +76,7 @@ The dependencies can be installed on Mac using `Homebrew <http://brew.sh/>`_:
 
     brew tap homebrew/science
     brew tap homebrew/python
+    brew tap robotlocomotion/director
     brew install cmake
     brew install python numpy
     brew install vtk5 --with-qt
