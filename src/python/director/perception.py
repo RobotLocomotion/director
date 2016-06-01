@@ -789,22 +789,21 @@ def init(view):
     global _lidarItem
     global lidarDriver
 
+    sensorsFolder = om.getOrCreateContainer('sensors')
+
     m = MultiSenseSource(view)
     m.start()
     multisenseDriver = m
-
-    l = LidarSource(view)
-    l.start()
-    lidarDriver = l
-
-
-    sensorsFolder = om.getOrCreateContainer('sensors')
-
     _multisenseItem = MultisenseItem(m)
     om.addToObjectModel(_multisenseItem, sensorsFolder)
 
-    _lidarItem = LidarItem(l)
-    om.addToObjectModel(_lidarItem, sensorsFolder)
+    useLidarSource = False
+    if useLidarSource:
+        l = LidarSource(view)
+        l.start()
+        lidarDriver = l
+        _lidarItem = LidarItem(l)
+        om.addToObjectModel(_lidarItem, sensorsFolder)
 
 
     useMapServer = hasattr(drc, 'vtkMapServerSource')
