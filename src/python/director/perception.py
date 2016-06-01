@@ -119,6 +119,107 @@ class MultisenseItem(om.ObjectModelItem):
         self.model.polyDataObj.setProperty('Show Scalar Bar', self.getProperty('Show Scalar Bar'))
 
 
+class LidarItem(om.ObjectModelItem):
+
+    def __init__(self, model):
+
+        om.ObjectModelItem.__init__(self, 'Lidar', om.Icons.EyeOff)
+
+        self.model = model
+        self.scalarBarWidget = None
+        self.addProperty('Color By', 0,
+                         attributes=om.PropertyAttributes(enumNames=['Solid Color', 'Intensity', 'Z Coordinate', 'Range', 'Spindle Angle', 'Azimuth', 'Camera RGB', 'Scan Delta']))
+        self.addProperty('Show Scalar Bar', False)
+        self.addProperty('Updates Enabled', True)
+        self.addProperty('Min Range', model.reader.GetDistanceRange()[0],
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
+        self.addProperty('Max Range', model.reader.GetDistanceRange()[1],
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
+
+        print "min thres",model.reader.GetDistanceRange()[0]
+        print "max thres",model.reader.GetDistanceRange()[1]
+
+
+        self.addProperty('Edge Filter Angle', model.reader.GetEdgeAngleThreshold(),
+                         attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=60.0, singleStep=1, hidden=False))
+        self.addProperty('Number of Scan Lines', model.numberOfScanLines,
+                         attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=5000, singleStep=1, hidden=False))
+        self.addProperty('Visible', model.visible)
+        self.addProperty('Point Size', model.pointSize,
+                         attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
+        self.addProperty('Alpha', model.alpha,
+                         attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
+
+        #self.addProperty('Color', QtGui.QColor(255,255,255))
+        #self.addProperty('Scanline Color', QtGui.QColor(255,0,0))
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Updates Enabled':
+            if self.getProperty('Updates Enabled'):
+                self.model.start()
+            else:
+                self.model.stop()
+
+        elif propertyName == 'Edge Filter Angle':
+            self.model.reader.SetEdgeAngleThreshold(self.getProperty('Edge Filter Angle'))
+            #    self.model.showRevolution(self.model.displayedRevolution)
+
+        elif propertyName == 'Alpha':
+            self.model.setAlpha(self.getProperty(propertyName))
+
+        elif propertyName == 'Visible':
+            self.model.setVisible(self.getProperty(propertyName))
+
+        elif propertyName == 'Point Size':
+            self.model.setPointSize(self.getProperty(propertyName))
+
+        elif propertyName == 'Number of Scan Lines':
+            self.model.numberOfScanLines = self.getProperty(propertyName)
+            self.model.initScanLines()
+
+        elif propertyName in ('Min Range', 'Max Range'):
+            self.model.reader.SetDistanceRange(self.getProperty('Min Range'), self.getProperty('Max Range'))
+            #    self.model.showRevolution(self.model.displayedRevolution)
+
+        elif propertyName == 'Color By':
+            self._updateColorBy()
+
+        elif propertyName == 'Show Scalar Bar':
+            self._updateScalarBar()
+
+        self.model.polyDataObj._renderAllViews()
+
+
+    def _updateColorBy(self):
+
+        arrayMap = {
+          0 : 'Solid Color',
+          1 : 'intensity',
+          2 : 'z',
+          3 : 'distance',
+          4 : 'spindle_angle',
+          5 : 'azimuth',
+          6 : 'rgb',
+          7 : 'scan_delta'
+          }
+
+        colorBy = self.getProperty('Color By')
+        arrayName = arrayMap.get(colorBy)
+
+        if arrayName == 'rgb' and arrayName not in self.model.polyDataObj.getArrayNames():
+            self.model.colorizeCallback()
+            self.model.polyDataObj._updateColorByProperty()
+        self.model.polyDataObj.setProperty('Color By', arrayName)
+        self._updateScalarBar()
+
+    def hasDataSet(self, dataSet):
+        return self.model.polyDataObj.hasDataSet(dataSet)
+
+    def _updateScalarBar(self):
+        self.model.polyDataObj.setProperty('Show Scalar Bar', self.getProperty('Show Scalar Bar'))
+
 
 class SpindleAxisDebug(vis.PolyDataItem):
 
@@ -362,6 +463,110 @@ class MultiSenseSource(TimerCallback):
         lcmUtils.publish('DESIRED_NECK_ANGLES', m)
 
 
+
+class LidarSource(TimerCallback):
+
+    def __init__(self, view):
+        TimerCallback.__init__(self)
+        self.view = view
+        self.reader = None
+        self.displayedRevolution = -1
+        self.lastScanLine = 0
+        self.numberOfScanLines = 1000
+        self.nextScanLineId = 0
+        self.scanLines = []
+        self.pointSize = 1
+        self.alpha = 0.5
+        self.visible = True
+        self.initScanLines()
+
+        self.revPolyData = vtk.vtkPolyData()
+        self.polyDataObj = vis.PolyDataItem('Lidar Sweep', self.revPolyData, view)
+        self.polyDataObj.actor.SetPickable(1)
+
+
+        self.setPointSize(self.pointSize)
+        self.setAlpha(self.alpha)
+        self.targetFps = 60
+        self.colorizeCallback = None
+
+    def initScanLines(self):
+
+        for scanLine in self.scanLines:
+            scanLine.removeFromAllViews()
+
+        self.scanLines = []
+        self.nextScanLineId = 0
+        self.lastScanLine = max(self.lastScanLine - self.numberOfScanLines, 0)
+
+        for i in xrange(self.numberOfScanLines):
+            polyData = vtk.vtkPolyData()
+            scanLine = vis.PolyDataItem('scan line %d' % i, polyData, self.view)
+            scanLine.actor.SetPickable(0)
+            scanLine.setSolidColor((0,1,0))
+            self.scanLines.append(scanLine)
+
+    def getScanToLocal(self):
+        return None
+
+    def setPointSize(self, pointSize):
+        for scanLine in self.scanLines:
+            scanLine.setProperty('Point Size', pointSize + 2)
+        self.polyDataObj.setProperty('Point Size', pointSize)
+
+    def setAlpha(self, alpha):
+        self.alpha = alpha
+        for scanLine in self.scanLines:
+            scanLine.setProperty('Alpha', alpha)
+        self.polyDataObj.setProperty('Alpha', alpha)
+
+    def setVisible(self, visible):
+        self.visible = visible
+        for scanLine in self.scanLines:
+            scanLine.setProperty('Visible', visible)
+        self.polyDataObj.setProperty('Visible', visible)
+
+    def start(self):
+        if self.reader is None:
+            self.reader = drc.vtkLidarSource()
+            self.reader.InitBotConfig(drcargs.args().config_file)
+            #self.reader.SetDistanceRange(0.25, 4.0)
+            self.reader.Start()
+
+        TimerCallback.start(self)
+
+    def updateScanLines(self):
+
+        if not self.numberOfScanLines:
+            return
+
+        currentScanLine = self.reader.GetCurrentScanLine() - 1
+        scanLinesToUpdate = currentScanLine - self.lastScanLine
+        scanLinesToUpdate = min(scanLinesToUpdate, self.numberOfScanLines)
+
+        if not scanLinesToUpdate:
+            return
+
+        #print 'current scanline:', currentScanLine
+        #print 'scan lines to update:', scanLinesToUpdate
+        #print 'updating actors:', self.nextScanLineId, (self.nextScanLineId + (scanLinesToUpdate-1)) % self.numberOfActors
+        #print 'updating scan lines:', self.lastScanLine + 1, self.lastScanLine + 1 + (scanLinesToUpdate-1)
+
+        for i in xrange(scanLinesToUpdate):
+            scanLine = self.scanLines[(self.nextScanLineId + i) % self.numberOfScanLines]
+            self.reader.GetDataForScanLine(self.lastScanLine + i + 1, scanLine.polyData)
+
+        self.lastScanLine = currentScanLine
+        self.nextScanLineId = (self.nextScanLineId + scanLinesToUpdate) % self.numberOfScanLines
+
+        if self.scanLines[0].getProperty('Visible'):
+            self.view.render()
+
+    def tick(self):
+        self.updateScanLines()
+
+
+
 class NeckDriver(object):
 
     def __init__(self, view, getNeckPitchFunction):
@@ -573,15 +778,26 @@ def init(view):
     global _multisenseItem
     global multisenseDriver
 
+    global _lidarItem
+    global lidarDriver
 
     m = MultiSenseSource(view)
     m.start()
     multisenseDriver = m
 
+    l = LidarSource(view)
+    l.start()
+    lidarDriver = m
+
+
     sensorsFolder = om.getOrCreateContainer('sensors')
 
     _multisenseItem = MultisenseItem(m)
     om.addToObjectModel(_multisenseItem, sensorsFolder)
+
+    _lidarItem = LidarItem(l)
+    om.addToObjectModel(_lidarItem, sensorsFolder)
+
 
     useMapServer = hasattr(drc, 'vtkMapServerSource')
     if useMapServer:
@@ -597,7 +813,6 @@ def init(view):
     spindleDebug = SpindleAxisDebug(multisenseDriver)
     spindleDebug.addToView(view)
     om.addToObjectModel(spindleDebug, sensorsFolder)
-
 
     return multisenseDriver, mapServerSource
 
