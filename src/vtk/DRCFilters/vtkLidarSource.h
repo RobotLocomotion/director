@@ -48,6 +48,8 @@ public:
   int GetCurrentRevolution();
   void GetDataForRevolution(int revolution, vtkPolyData* polyData);
 
+  void GetDataForHistory(int numberOfScanLines, vtkPolyData* polyData);
+
   int GetCurrentScanLine();
   void GetDataForScanLine(int scanLine, vtkPolyData* polyData);
   vtkIdType GetCurrentScanTime();

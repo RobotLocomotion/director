@@ -525,14 +525,13 @@ class LidarSource(TimerCallback):
             if colorBy and colorBy in scanLine.getArrayNames():
                 scanLine.colorBy(self.colorBy)
             elif colorBy == "Solid Color":
-                print "solid color recolor"
                 scanLine.setSolidColor((1,1,1))
 
     def start(self):
         if self.reader is None:
             self.reader = drc.vtkLidarSource()
             self.reader.InitBotConfig(drcargs.args().config_file)
-            #self.reader.SetDistanceRange(0.25, 4.0)
+            self.reader.SetDistanceRange(0.25, 80.0)
             self.reader.Start()
 
         TimerCallback.start(self)
@@ -565,6 +564,11 @@ class LidarSource(TimerCallback):
 
         if self.scanLines[0].getProperty('Visible'):
             self.view.render()
+
+    def getPolyData(self):
+        self.revPolyData = vtk.vtkPolyData()
+        self.reader.GetDataForHistory(self.numberOfScanLines, self.revPolyData)
+        vis.updatePolyData( self.revPolyData , 'point cloud', colorByName=self.colorBy)
 
     def tick(self):
         self.updateScanLines()
