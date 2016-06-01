@@ -135,18 +135,13 @@ class LidarItem(om.ObjectModelItem):
                          attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
         self.addProperty('Max Range', model.reader.GetDistanceRange()[1],
                          attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
-
-        print "min thres",model.reader.GetDistanceRange()[0]
-        print "max thres",model.reader.GetDistanceRange()[1]
-
-
         self.addProperty('Edge Filter Angle', model.reader.GetEdgeAngleThreshold(),
                          attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=60.0, singleStep=1, hidden=False))
         self.addProperty('Number of Scan Lines', model.numberOfScanLines,
                          attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=5000, singleStep=1, hidden=False))
         self.addProperty('Visible', model.visible)
         self.addProperty('Point Size', model.pointSize,
-                         attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
+                         attributes=om.PropertyAttributes(decimals=0, minimum=-1, maximum=20, singleStep=1, hidden=False))
         self.addProperty('Alpha', model.alpha,
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
 
@@ -208,10 +203,7 @@ class LidarItem(om.ObjectModelItem):
         colorBy = self.getProperty('Color By')
         arrayName = arrayMap.get(colorBy)
 
-        if arrayName == 'rgb' and arrayName not in self.model.polyDataObj.getArrayNames():
-            self.model.colorizeCallback()
-            self.model.polyDataObj._updateColorByProperty()
-        self.model.polyDataObj.setProperty('Color By', arrayName)
+        self.model.setColorBy(arrayName)
         self._updateScalarBar()
 
     def hasDataSet(self, dataSet):
@@ -478,6 +470,7 @@ class LidarSource(TimerCallback):
         self.pointSize = 1
         self.alpha = 0.5
         self.visible = True
+        self.colorBy = 'Solid Color'
         self.initScanLines()
 
         self.revPolyData = vtk.vtkPolyData()
@@ -503,7 +496,7 @@ class LidarSource(TimerCallback):
             polyData = vtk.vtkPolyData()
             scanLine = vis.PolyDataItem('scan line %d' % i, polyData, self.view)
             scanLine.actor.SetPickable(0)
-            scanLine.setSolidColor((0,1,0))
+            #scanLine.setSolidColor((0,1,0))
             self.scanLines.append(scanLine)
 
     def getScanToLocal(self):
@@ -525,6 +518,15 @@ class LidarSource(TimerCallback):
         for scanLine in self.scanLines:
             scanLine.setProperty('Visible', visible)
         self.polyDataObj.setProperty('Visible', visible)
+
+    def setColorBy(self, colorBy):
+        self.colorBy = colorBy
+        for scanLine in self.scanLines:
+            if colorBy and colorBy in scanLine.getArrayNames():
+                scanLine.colorBy(self.colorBy)
+            elif colorBy == "Solid Color":
+                print "solid color recolor"
+                scanLine.setSolidColor((1,1,1))
 
     def start(self):
         if self.reader is None:
@@ -555,6 +557,8 @@ class LidarSource(TimerCallback):
         for i in xrange(scanLinesToUpdate):
             scanLine = self.scanLines[(self.nextScanLineId + i) % self.numberOfScanLines]
             self.reader.GetDataForScanLine(self.lastScanLine + i + 1, scanLine.polyData)
+            if self.colorBy and self.colorBy in scanLine.getArrayNames():
+                scanLine.colorBy(self.colorBy)
 
         self.lastScanLine = currentScanLine
         self.nextScanLineId = (self.nextScanLineId + scanLinesToUpdate) % self.numberOfScanLines
@@ -787,7 +791,7 @@ def init(view):
 
     l = LidarSource(view)
     l.start()
-    lidarDriver = m
+    lidarDriver = l
 
 
     sensorsFolder = om.getOrCreateContainer('sensors')
