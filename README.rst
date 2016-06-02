@@ -74,6 +74,7 @@ The dependencies can be installed on Mac using `Homebrew <http://brew.sh/>`_:
 
 ::
 
+    brew tap robotlocomotion/director
     brew tap homebrew/science
     brew tap homebrew/python
     brew install cmake
