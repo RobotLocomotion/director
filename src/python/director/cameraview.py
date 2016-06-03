@@ -736,7 +736,7 @@ def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA
     cameraToLocal = vtk.vtkTransform()
 
     q.getPointCloudFromImages(imagesChannel, p, decimation, removeSize)
-    q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
+    q.getTransform(cameraName, 'local', utime, cameraToLocal)
     p = filterUtils.transformPolyData(p, cameraToLocal)
 
     return p
