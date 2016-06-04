@@ -337,6 +337,20 @@ public:
     }
   }
 
+  void GetScanLinesForHistory(std::vector<ScanLineData>& scanLines, int numberOfScanLines)
+  {
+    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    int counter = 0;
+    for (std::deque<ScanLineData>::const_iterator itr = this->ScanLines.end(); itr != this->ScanLines.begin(); --itr)
+    {
+      counter++;
+      scanLines.push_back(*itr);
+
+      if (counter > numberOfScanLines)
+        return;
+    }
+  }
+
   vtkSmartPointer<vtkPolyData> GetDataForScanLine(int scanLine)
   {
     std::vector<ScanLineData> scanLines;
@@ -354,6 +368,19 @@ public:
 
     std::vector<ScanLineData> scanLines;
     this->GetScanLinesForRevolution(scanLines, revolution);
+
+    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold);
+  }
+
+  vtkSmartPointer<vtkPolyData> GetDataForHistory(int numberOfScanLines)
+  {
+    //if (revolution == this->SweepPolyDataRevolution)
+    //{
+    //  return this->SweepPolyData;
+    //}
+
+    std::vector<ScanLineData> scanLines;
+    this->GetScanLinesForHistory(scanLines, numberOfScanLines);
 
     return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold);
   }
@@ -683,6 +710,14 @@ void vtkLidarSource::GetDataForRevolution(int revolution, vtkPolyData* polyData)
 {
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
   vtkSmartPointer<vtkPolyData> data = this->Internal->Listener->GetDataForRevolution(revolution);
+  polyData->ShallowCopy(data);
+}
+
+//-----------------------------------------------------------------------------
+void vtkLidarSource::GetDataForHistory(int numberOfScanLines, vtkPolyData* polyData)
+{
+  this->Internal->Listener->SetDistanceRange(this->DistanceRange);
+  vtkSmartPointer<vtkPolyData> data = this->Internal->Listener->GetDataForHistory(numberOfScanLines);
   polyData->ShallowCopy(data);
 }
 

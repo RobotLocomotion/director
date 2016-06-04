@@ -141,7 +141,7 @@ class LidarItem(om.ObjectModelItem):
                          attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=5000, singleStep=1, hidden=False))
         self.addProperty('Visible', model.visible)
         self.addProperty('Point Size', model.pointSize,
-                         attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
+                         attributes=om.PropertyAttributes(decimals=0, minimum=-1, maximum=20, singleStep=1, hidden=False))
         self.addProperty('Alpha', model.alpha,
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
 
@@ -203,10 +203,7 @@ class LidarItem(om.ObjectModelItem):
         colorBy = self.getProperty('Color By')
         arrayName = arrayMap.get(colorBy)
 
-        if arrayName == 'rgb' and arrayName not in self.model.polyDataObj.getArrayNames():
-            self.model.colorizeCallback()
-            self.model.polyDataObj._updateColorByProperty()
-        self.model.polyDataObj.setProperty('Color By', arrayName)
+        self.model.setColorBy(arrayName)
         self._updateScalarBar()
 
     def hasDataSet(self, dataSet):
@@ -473,6 +470,7 @@ class LidarSource(TimerCallback):
         self.pointSize = 1
         self.alpha = 0.5
         self.visible = True
+        self.colorBy = 'Solid Color'
         self.initScanLines()
 
         self.revPolyData = vtk.vtkPolyData()
@@ -498,7 +496,7 @@ class LidarSource(TimerCallback):
             polyData = vtk.vtkPolyData()
             scanLine = vis.PolyDataItem('scan line %d' % i, polyData, self.view)
             scanLine.actor.SetPickable(0)
-            scanLine.setSolidColor((0,1,0))
+            #scanLine.setSolidColor((0,1,0))
             self.scanLines.append(scanLine)
 
     def getScanToLocal(self):
@@ -521,11 +519,19 @@ class LidarSource(TimerCallback):
             scanLine.setProperty('Visible', visible)
         self.polyDataObj.setProperty('Visible', visible)
 
+    def setColorBy(self, colorBy):
+        self.colorBy = colorBy
+        for scanLine in self.scanLines:
+            if colorBy and colorBy in scanLine.getArrayNames():
+                scanLine.colorBy(self.colorBy)
+            elif colorBy == "Solid Color":
+                scanLine.setSolidColor((1,1,1))
+
     def start(self):
         if self.reader is None:
             self.reader = drc.vtkLidarSource()
             self.reader.InitBotConfig(drcargs.args().config_file)
-            #self.reader.SetDistanceRange(0.25, 4.0)
+            self.reader.SetDistanceRange(0.25, 80.0)
             self.reader.Start()
 
         TimerCallback.start(self)
@@ -550,12 +556,19 @@ class LidarSource(TimerCallback):
         for i in xrange(scanLinesToUpdate):
             scanLine = self.scanLines[(self.nextScanLineId + i) % self.numberOfScanLines]
             self.reader.GetDataForScanLine(self.lastScanLine + i + 1, scanLine.polyData)
+            if self.colorBy and self.colorBy in scanLine.getArrayNames():
+                scanLine.colorBy(self.colorBy)
 
         self.lastScanLine = currentScanLine
         self.nextScanLineId = (self.nextScanLineId + scanLinesToUpdate) % self.numberOfScanLines
 
         if self.scanLines[0].getProperty('Visible'):
             self.view.render()
+
+    def getPolyData(self):
+        self.revPolyData = vtk.vtkPolyData()
+        self.reader.GetDataForHistory(self.numberOfScanLines, self.revPolyData)
+        vis.updatePolyData( self.revPolyData , 'point cloud', colorByName=self.colorBy)
 
     def tick(self):
         self.updateScanLines()
@@ -776,22 +789,21 @@ def init(view):
     global _lidarItem
     global lidarDriver
 
+    sensorsFolder = om.getOrCreateContainer('sensors')
+
     m = MultiSenseSource(view)
     m.start()
     multisenseDriver = m
-
-    l = LidarSource(view)
-    l.start()
-    lidarDriver = m
-
-
-    sensorsFolder = om.getOrCreateContainer('sensors')
-
     _multisenseItem = MultisenseItem(m)
     om.addToObjectModel(_multisenseItem, sensorsFolder)
 
-    _lidarItem = LidarItem(l)
-    om.addToObjectModel(_lidarItem, sensorsFolder)
+    useLidarSource = False
+    if useLidarSource:
+        l = LidarSource(view)
+        l.start()
+        lidarDriver = l
+        _lidarItem = LidarItem(l)
+        om.addToObjectModel(_lidarItem, sensorsFolder)
 
 
     useMapServer = hasattr(drc, 'vtkMapServerSource')
