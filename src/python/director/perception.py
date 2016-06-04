@@ -135,11 +135,6 @@ class LidarItem(om.ObjectModelItem):
                          attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
         self.addProperty('Max Range', model.reader.GetDistanceRange()[1],
                          attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
-
-        print "min thres",model.reader.GetDistanceRange()[0]
-        print "max thres",model.reader.GetDistanceRange()[1]
-
-
         self.addProperty('Edge Filter Angle', model.reader.GetEdgeAngleThreshold(),
                          attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=60.0, singleStep=1, hidden=False))
         self.addProperty('Number of Scan Lines', model.numberOfScanLines,
