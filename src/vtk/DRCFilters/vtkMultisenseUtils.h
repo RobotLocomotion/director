@@ -169,9 +169,14 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
   double theta = msg->rad0;
   const double thetaStep = msg->radstep;
   const int numPoints = msg->nranges;
-  const double edgeFilterEnabledRange = 2.0;
   const std::vector<float>&  ranges = msg->ranges;
+  const int numIntensities = msg->nintensities;
   const std::vector<float>& intensities = msg->intensities;
+
+  bool useIntensities = true;
+  if (numIntensities != numPoints){
+    useIntensities = false;
+  }
 
   if (numPoints < 2)
     {
@@ -238,7 +243,14 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 
     dataArrays.Points->InsertNextPoint(pt[0], pt[1], pt[2]);
 
-    dataArrays.Intensity->InsertNextValue(intensities[i]);
+    if (useIntensities)
+    {
+      dataArrays.Intensity->InsertNextValue(intensities[i]);
+    }else
+    {
+      dataArrays.Intensity->InsertNextValue(0); // TODO: is it preferable NOT to insert a value?
+    }
+
     dataArrays.ScanLineId->InsertNextValue(scanLineId);
     dataArrays.Azimuth->InsertNextValue(theta);
     dataArrays.SpindleAngle->InsertNextValue(spindleAngle);
