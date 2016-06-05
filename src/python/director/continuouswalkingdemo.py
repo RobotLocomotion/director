@@ -947,6 +947,8 @@ class ContinousWalkingDemo(object):
             filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_uneven.sdf'
         elif self.chosenTerrain == 'stairs':
             filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_stairs.sdf'
+        elif self.chosenTerrain == 'boxroom':
+            filename= os.environ['DRC_BASE'] + '/software/models/worlds/terrain_boxroom.sdf'
         
         sc=sceneloader.SceneLoader()
         sc.loadSDF(filename)
@@ -1031,7 +1033,7 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
 
     def addDefaultProperties(self):
         self.params.addProperty('Terrain Type', 0, attributes=om.PropertyAttributes(enumNames=['Simple', 'Simple, no Gaps', 'Simple Flagstones',
-                                                                                       'Uneven', 'Stairs']))
+                                                                                       'Uneven', 'Stairs', 'Box Room']))
         self.params.addProperty('Sensor', 0, attributes=om.PropertyAttributes(enumNames=['Lidar',
                                                                                        'Stereo']))
         self.params.addProperty('Leading Foot', 0, attributes=om.PropertyAttributes(enumNames=['Left',
@@ -1053,8 +1055,10 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
             self.continuousWalkingDemo.chosenTerrain = 'uneven'
         elif self.params.getPropertyEnumValue('Terrain Type') == 'Simple Flagstones':
             self.continuousWalkingDemo.chosenTerrain = 'simple_flagstones'
-        else:
+        elif self.params.getPropertyEnumValue('Terrain Type') == 'Stairs':
             self.continuousWalkingDemo.chosenTerrain = 'stairs'         
+        else:
+            self.continuousWalkingDemo.chosenTerrain = 'boxroom'
 
         if self.params.getPropertyEnumValue('Sensor') == 'Stereo':
             self.continuousWalkingDemo.processContinuousStereo = True
