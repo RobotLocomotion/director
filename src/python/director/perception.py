@@ -797,7 +797,7 @@ def init(view):
     _multisenseItem = MultisenseItem(m)
     om.addToObjectModel(_multisenseItem, sensorsFolder)
 
-    useLidarSource = False
+    useLidarSource = True
     if useLidarSource:
         l = LidarSource(view)
         l.start()
