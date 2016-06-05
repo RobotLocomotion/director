@@ -6,6 +6,8 @@ from director import lcmUtils
 from director import drcargs
 from director import roboturdf
 from director import simpletimer
+from director.jointstreamscript import JointStreamScript
+# from jointstreamscript import JointStreamScript
 from director.timercallback import TimerCallback
 from director.fieldcontainer import FieldContainer
 from PythonQt import QtCore, QtGui, QtUiTools
@@ -212,7 +214,7 @@ class AtlasCommandStream(object):
         self.robotModel, self.jointController = roboturdf.loadRobotModel('robot model')
         self.fpsCounter = simpletimer.FPSCounter()
         self.drakePoseJointNames = robotstate.getDrakePoseJointNames()
-        self.fpsCounter.printToConsole = True
+        self.fpsCounter.printToConsole = False
         self.timer.callback = self._tick
         self._initialized = False
         self.publishChannel = 'JOINT_POSITION_GOAL'
@@ -585,6 +587,8 @@ class JointTeleopPanel(object):
     def __init__(self, robotSystem, jointGroups):
 
         self.widget = QtGui.QTabWidget()
+        self.jointStreamScriptTimer = TimerCallback(targetFps=30)
+        self.jointStreamScriptTimer.callback = self.jointStreamScriptCallback
 
         self.robotStateModel = robotSystem.robotStateModel
         self.teleopRobotModel = robotSystem.teleopRobotModel
@@ -599,6 +603,8 @@ class JointTeleopPanel(object):
 
         self.buildTabWidget(jointGroups)
         self.resetPoseToRobotState()
+
+
 
     def buildTabWidget(self, jointGroups):
 
@@ -662,9 +668,15 @@ class JointTeleopPanel(object):
 
 
     def resetPoseToRobotState(self):
+        self.jointStreamScriptTimer.stop()
         self.endPose = self.robotStateJointController.q.copy()
         self.updateSliders()
         self.showPose(self.endPose)
+
+    def setAndShowPose(self, pose):
+        self.endPose = pose
+        self.updateSliders()
+        self.showPose(pose)
 
     def toJointIndex(self, jointName):
         return robotstate.getDrakePoseJointNames().index(jointName)
@@ -736,6 +748,23 @@ class JointTeleopPanel(object):
             self.updateLabel(jointName, jointValue)
 
 
+    def setupStreamingScript(self, jointName='rightHipPitch', frequency=0.5, amplitude=20, type='sin'):
+        currentPose = self.robotStateJointController.q
+        self.jointStreamScript = JointStreamScript(currentPose, jointName=jointName, frequency=frequency,
+                                                   amplitude=amplitude, type=type)
+
+    def startStreamingScript(self):
+        self.jointStreamScript.start()
+        self.jointStreamScriptTimer.start()
+
+
+    def jointStreamScriptCallback(self):
+        if self.jointStreamScript is None:
+            self.jointStreamScriptTimer.stop()
+            self.resetButtonClicked()
+
+        self.setAndShowPose(self.jointStreamScript.currentPose)
+
 
 class AtlasCommandPanel(object):
 
@@ -794,7 +823,7 @@ class AtlasCommandPanel(object):
             print 'ignoring throttle command'
             return
             
-        jointIdx = self.jointTeleopPanel.toJointIndex(joint_name)
+        jointIdx = self.jointTeleopPanel.toJointIndex(jointName)
         self.jointTeleopPanel.endPose[jointIdx] = jointPositionGoal
         self.jointTeleopPanel.updateSliders()
         self.jointTeleopPanel.sliderChanged(jointName)
@@ -842,7 +871,8 @@ class AtlasCommandPanel(object):
     def resetJointTeleopSliders(self):
         self.jointTeleopPanel.resetPoseToRobotState()
   
-
+atlasCommandPanel = AtlasCommandPanel();
+teleopPanel = atlasCommandPanel.jointTeleopPanel
 
 def parseArgs():
 
@@ -893,7 +923,7 @@ def main():
         debugMain()
 
 def baseMain():
-    p = AtlasCommandPanel()
+    p = atlasCommandPanel;
     commandStream._baseFlag = 1
     p.widget.show()
     p.widget.resize(1400, 1400*9/16.0)

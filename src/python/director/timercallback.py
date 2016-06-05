@@ -40,6 +40,9 @@ class TimerCallback(object):
         self.timer.stop()
         self.timer.disconnect('timeout()', self._timerEvent)
 
+    def getElapsedTime(self):
+        return time.time() - self.startTime
+
     def tick(self):
         '''
         Timer event callback method.  Subclasses can override this method.

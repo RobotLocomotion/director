@@ -63,6 +63,7 @@ set(python_files
   director/lcmoctomap.py
   director/lcmspy.py
   director/lcmUtils.py
+  director/jointstreamscript.py
   director/mappingdemo.py
   director/mappingpanel.py
   director/mapsregistrar.py
