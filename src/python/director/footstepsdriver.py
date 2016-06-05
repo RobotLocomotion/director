@@ -250,18 +250,18 @@ class FootstepsDriver(object):
         self.toolbarWidget = None
 
         ### Stuff pertaining to rendering BDI-frame steps
-        self.pose_bdi = None
+        self.poseAlt = None
         self.bdi_plan = None
         self.bdi_plan_adjusted = None
 
         view = app.getDRCView()
-        self.bdiRobotModel, self.bdiJointController = roboturdf.loadRobotModel('bdi model', view, parent='bdi model', color=roboturdf.getRobotOrangeColor(), visible=False)
-        self.bdiRobotModel.setProperty('Visible', False)
+        self.altRobotModel, self.altJointController = roboturdf.loadRobotModel('alt model', view, parent='alt model', color=roboturdf.getRobotOrangeColor(), visible=False)
+        self.altRobotModel.setProperty('Visible', False)
         self.showBDIPlan = False # hide the BDI plans when created
-        self.bdiChannel = "POSE_BDI"
-        self.bdiSubcribe = None
-        #enable this to used the bdi model to render a different state
-        #self.bdiJointController.addLCMUpdater("EST_ROBOT_STATE_ALT")
+        self.altChannel = "POSE_BODY_ALT"
+        self.altSubscribe = None
+        #enable this to used the alt model to render a different state
+        #self.altJointController.addLCMUpdater("EST_ROBOT_STATE_ALT")
 
         self._setupSubscriptions()
         self._setupProperties()
@@ -334,18 +334,18 @@ class FootstepsDriver(object):
         lcmUtils.addSubscriber('WALKING_SIMULATION_TRAJ_RESPONSE', lcmdrc.robot_plan_t, self.onWalkingPlan)
 
         ### Related to BDI-frame adjustment:
-        self.bdiSubcribe = lcmUtils.addSubscriber( self.bdiChannel , pose_t, self.onPoseBDI)
-        self.bdiSubcribe.setSpeedLimit(60)
+        self.altSubscribe = lcmUtils.addSubscriber( self.altChannel , pose_t, self.onPoseAlt)
+        self.altSubscribe.setSpeedLimit(60)
         sub2 = lcmUtils.addSubscriber('BDI_ADJUSTED_FOOTSTEP_PLAN', lcmdrc.footstep_plan_t, self.onBDIAdjustedFootstepPlan)
         sub2.setSpeedLimit(1) # was 5 but was slow rendering
 
-    def changeSubscriptionBDI(self, newBDIChannel="POSE_BDI"):
+    def changeSubscriptionAlt(self, newAltChannel="POSE_BODY_ALT"):
         # used to monitor a different pose e.g. POSE_BODY_LOGGED in playback
-        self.bdiChannel = newBDIChannel
-        lcmUtils.removeSubscriber ( self.bdiSubcribe )
+        self.altChannel = newAltChannel
+        lcmUtils.removeSubscriber ( self.altSubscribe )
 
-        self.bdiSubcribe = lcmUtils.addSubscriber( self.bdiChannel , pose_t, self.onPoseBDI)
-        self.bdiSubcribe.setSpeedLimit(60)
+        self.altSubscribe = lcmUtils.addSubscriber( self.altChannel , pose_t, self.onPoseAlt)
+        self.altSubscribe.setSpeedLimit(60)
 
 
     ##############################
@@ -925,14 +925,14 @@ class FootstepsDriver(object):
 
 
     ####################### BDI Adjustment Logic and Visualization ##################
-    def onPoseBDI(self,msg):
-        self.pose_bdi = msg
+    def onPoseAlt(self,msg):
+        self.poseAlt = msg
         # Set the xyzrpy of this pose to equal that estimated by BDI
         rpy = transformUtils.quaternionToRollPitchYaw(msg.orientation)
         pose = self.jointController.q.copy()
         pose[0:3] = msg.pos
         pose[3:6] = rpy
-        self.bdiJointController.setPose("ERS BDI", pose)
+        self.altJointController.setPose("ERS Alt", pose)
 
     def onBDIAdjustedFootstepPlan(self,msg):
         self.bdi_plan_adjusted = msg.decode( msg.encode() ) # decode and encode ensures deepcopy
@@ -942,14 +942,14 @@ class FootstepsDriver(object):
         #    print "not showing adjusted bdi plan"
 
     def transformPlanToBDIFrame(self, plan):
-        if (self.pose_bdi is None):
-            # print "haven't received POSE_BDI"
+        if (self.poseAlt is None):
+            # print "haven't received POSE_BODY_ALT"
             return
 
-        # TODO: This transformation should be rewritten using the LOCAL_TO_LOCAL_BDI frame
+        # TODO: This transformation should be rewritten using the LOCAL_TO_LOCAL_ALT frame
         # instead of using FK here
 
-        t_bodybdi  = transformUtils.transformFromPose(self.pose_bdi.pos, self.pose_bdi.orientation)
+        t_bodybdi  = transformUtils.transformFromPose(self.poseAlt.pos, self.poseAlt.orientation)
         t_bodybdi.PostMultiply()
 
         current_pose = self.jointController.q

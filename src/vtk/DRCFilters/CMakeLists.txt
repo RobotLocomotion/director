@@ -83,6 +83,7 @@ if (USE_DRC)
 
   list(APPEND sources
     vtkMultisenseSource.cxx
+    vtkLidarSource.cxx
   )
 
   list(APPEND deps

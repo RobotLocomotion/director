@@ -83,9 +83,12 @@ void ddBotImageQueue::init(ddLCMThread* lcmThread, const QString& botConfigFile)
   this->addCameraStream("CAMERACHEST_RIGHT");
   this->addCameraStream("CAMERA_LEFT");
   this->addCameraStream("CAMERA", "CAMERA_LEFT", bot_core::images_t::LEFT);
-  this->addCameraStream("CAMERA_FUSED", "CAMERA_TSDF", bot_core::images_t::LEFT);
+  this->addCameraStream("OPENNI_FRAME_LEFT");
+  this->addCameraStream("OPENNI_FRAME", "OPENNI_FRAME_LEFT", bot_core::images_t::LEFT);
+
+  //this->addCameraStream("CAMERA_FUSED", "CAMERA_TSDF", bot_core::images_t::LEFT);
   //this->addCameraStream("CAMERA", "CAMERA_RIGHT", bot_core::images_t::RIGHT);
-  this->addCameraStream("KINECT_RGB");
+  //this->addCameraStream("KINECT_RGB");
 }
 
 //-----------------------------------------------------------------------------
@@ -570,9 +573,10 @@ void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyDat
   bot_core::images_t& msg = this->mImagesMessageMap[channel];
 
   // Read the camera calibration from params (including baseline:
-  CameraData* cameraData = this->getCameraData("CAMERA_LEFT");
-  QString key = QString("coordinate_frames.CAMERA_RIGHT.initial_transform.translation");
-  double baseline = 0.07; // an approximate value
+  QString channel_left = channel + QString("_LEFT");
+  CameraData* cameraData = this->getCameraData(channel_left);
+  QString key = QString("coordinate_frames.") + channel + QString("_RIGHT.initial_transform.translation");
+  double baseline = 0.07; // an approximate value for multisense
   if (!bot_param_get_double(mBotParam, key.toAscii().data(), &baseline) == 0){
     printf("CAMERA_RIGHT baseline not found\n");
     return;

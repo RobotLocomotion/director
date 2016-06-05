@@ -990,6 +990,13 @@ class IKPlanner(object):
         return constraintSet
 
 
+    def makeConstraintSet(self, constraints, startPose):
+        startPoseName = 'reach_start'
+        self.addPose(startPose, startPoseName)
+        endPoseName = 'reach_end'
+        constraintSet = ConstraintSet(self, constraints, endPoseName, startPoseName)
+        return constraintSet
+
     def planGraspOrbitReachPlan(self, startPose, side, graspFrame, constraints=None, dist=0.0, lockBase=False, lockBack=False, lockArm=True):
 
         self.reachingSide = side

@@ -293,6 +293,7 @@ def getBuiltinPackagePaths():
         'software/models/valkyrie',
         'software/models/val_description',
         'software/models/lwr_defs',
+        'software/models/husky_description',
         'software/models/mit_gazebo_models/mit_robot',
         'software/models/mit_gazebo_models/V1',
         'software/models/common_components/multisense_sl',

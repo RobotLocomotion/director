@@ -40,14 +40,6 @@ drillTaskRight = [
           [rt.FindRotaryDrillByAnnotation, {}],
         ]],
 
-#        ['user fit table', [
-#          [rt.SnapshotMultisensePointcloud, {}],
-#          [rt.UserAnnotatePointCloud, {'Annotation name':'drill on table annotation', 'Number of points':1}],
-#          [rt.FindDrillOnTableByAnnotation, {}],
-#          [rt.UserSelectAffordanceCandidate, {'Candidate name prefix':'drill', 'New name':'drill'}],
-#         ]],
-
-
         ['plan walk to drill', [
           [rt.ComputeRobotFootFrame, {}],
           [rt.ProjectAffordanceToGround, {'Affordance name':'drill', 'Ground frame name':'robot foot frame', 'Frame output name':'drill ground frame'}],

@@ -19,6 +19,8 @@ from director.utime import getUtime
 from drake import lcmt_qp_controller_input, lcmt_whole_body_data
 
 import scipy.interpolate
+import yaml
+import os
 
 
 
@@ -71,15 +73,51 @@ val_gains = {
 }
 
 
+def loadValkyrieGains():
+    drcBase = os.getenv("DRC_BASE")
+    filename = drcBase + "/software/models/val_description/valStreamingGains.yaml"
+    f = open(filename)
+    data = yaml.load(f)
+    KpGains = data['KpGains']
+    dampingRatio = data['dampingRatio']
+    gains = dict()
+
+    for key, value in KpGains.iteritems():
+        jointName = str(key)
+        d = {'Kp': value}
+        d['Kd'] = 2*dampingRatio*np.sqrt(value)
+        gains[jointName] = d
+
+    return gains
+
+valkyrieGains = loadValkyrieGains()
+
+
+
+# special for Valkyrie, note the off by one indexing of the constrained dofs
+# not sure why it is off by one, something to do with how we do this message in lcm
+# see QPLocomotionPlan.cpp for an example of the same shifting
+valJointNames = robotstate.getRobotStateJointNames()
+valJointIdx = dict()
+
+for idx, singleJointName in enumerate(valJointNames):
+    valJointIdx[str(singleJointName)] = idx
+
+valConstrainedJoints = ['lowerNeckPitch', 'neckYaw', 'upperNeckPitch']
+valConstrainedJointsIdx = []
+for jointName in valConstrainedJoints:
+    valConstrainedJointsIdx.append(1+valJointIdx[jointName])
+
+
 def newAtlasCommandMessageAtZero():
 
     msg = lcmbotcore.atlas_command_t()
     msg.joint_names = [str(v) for v in robotstate.getRobotStateJointNames()]
     msg.num_joints = len(msg.joint_names)
     zeros = np.zeros(msg.num_joints)
-    msg.k_q_p = [val_gains[name][0] for name in msg.joint_names]
+    msg.k_q_p = [valkyrieGains[name]['Kp'] for name in msg.joint_names]
     msg.k_q_i = zeros.tolist()
-    msg.k_qd_p = [val_gains[name][1] for name in msg.joint_names]
+    msg.k_qd_p = [valkyrieGains[name]['Kd'] for name in msg.joint_names]
     msg.k_f_p = zeros.tolist()
     msg.ff_qd = zeros.tolist()
     msg.ff_qd_d = zeros.tolist()
@@ -114,11 +152,17 @@ def atlasCommandToDrakePose(msg):
         drakePose[drakeIdx] = msg.position[jointIdx]
     return drakePose.tolist()
 
-def drakePoseToQPInput(pose, atlasVersion=5):
-    if atlasVersion == 4:
-        numPositions = 34
-    else:
-        numPositions = 36
+def drakePoseToQPInput(pose, atlasVersion=5, useValkyrie=True, useConstrainedDofs=False, fixedBase=False,
+                       forceControl=False):
+
+    numFloatingBaseJoints = 6
+
+    # only publish the fixed base joints
+    if fixedBase:
+        numFloatingBaseJoints = 0
+        pose = pose[6:]
+
+    numPositions = np.size(pose)
 
     msg = lcmt_qp_controller_input()
     msg.timestamp = getUtime()
@@ -126,16 +170,36 @@ def drakePoseToQPInput(pose, atlasVersion=5):
     msg.num_tracked_bodies = 0
     msg.num_external_wrenches = 0
     msg.num_joint_pd_overrides = 0
-    msg.param_set_name = 'position_control'
+
+    if useValkyrie:
+        if forceControl:
+            msg.param_set_name = 'base'
+        else:
+            msg.param_set_name = 'streaming'
+    else:
+        msg.param_set_name = 'position_control'
 
     whole_body_data = lcmt_whole_body_data()
     whole_body_data.timestamp = getUtime()
     whole_body_data.num_positions = numPositions
     whole_body_data.q_des = pose
-    whole_body_data.num_constrained_dofs = numPositions - 6
-    whole_body_data.constrained_dofs = range(7, numPositions+1)
-    msg.whole_body_data = whole_body_data
 
+    # what are these? Is it still correct for valkyrie
+    # if useValkyrie:
+    #     whole_body_data.num_constrained_dofs = len(valConstrainedJointsIdx)
+    #     whole_body_data.constrained_dofs = valConstrainedJointsIdx
+    # else:
+    #     whole_body_data.num_constrained_dofs = numPositions - 6
+    #     whole_body_data.constrained_dofs = range(7, numPositions+1)
+
+
+    # be careful with off by one indexing of constrained_dofs for lcm
+    if useConstrainedDofs:
+        # if we aren't using the fixed base then remove the fixed base from this
+        whole_body_data.num_constrained_dofs = numPositions - numFloatingBaseJoints
+        whole_body_data.constrained_dofs = range(numFloatingBaseJoints+1, numPositions+1)
+
+    msg.whole_body_data = whole_body_data
     return msg
 
 
@@ -155,7 +219,7 @@ class AtlasCommandStream(object):
         # self.lastCommandMessage = newAtlasCommandMessageAtZero()
         self._numPositions = len(robotstate.getDrakePoseJointNames())
         self._previousElapsedTime = 100
-        self._baseFlag = 0;
+        self._baseFlag = 0
         self.jointLimitsMin = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
         self.jointLimitsMax = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
         self.useControllerFlag = False
@@ -168,6 +232,9 @@ class AtlasCommandStream(object):
         self._previousCommandedPose = np.array(currentRobotPose)
         self._goalPose = np.array(currentRobotPose)
         self._initialized = True
+
+    def setOptions(self, options):
+        self.options = options
 
     def useController(self):
         self.useControllerFlag = True
@@ -245,7 +312,8 @@ class AtlasCommandStream(object):
             msg = drakePoseToAtlasCommand(self._currentCommandedPose)
 
         if self.useControllerFlag:
-            msg = drakePoseToQPInput(self._currentCommandedPose)
+            msg = drakePoseToQPInput(self._currentCommandedPose, useConstrainedDofs=self.options['useConstrainedDofs'],
+                                     fixedBase=self.options['fixedBase'], forceControl=self.options['forceControl'])
 
         lcmUtils.publish(self.publishChannel, msg)
 
@@ -637,6 +705,9 @@ class JointTeleopPanel(object):
 
         self.endPose[jointIndex] = jointValue
         self.updateLabel(jointName, jointValue)
+
+        # this is what is causing the position goal to be published using the commandStream.setGoalPose function
+        # call
         self.showPose(self.endPose)
         self.updateSliders()
 
@@ -780,10 +851,17 @@ def parseArgs():
     p = parser.add_mutually_exclusive_group(required=True)
     p.add_argument('--base', dest='mode', action='store_const', const='base')
     p.add_argument('--robot', dest='mode', action='store_const', const='robot')
+    p.add_argument('--robotWithController', dest='mode', action='store_const', const='robotWithController')
     p.add_argument('--debug', dest='mode', action='store_const', const='debug')
     p.add_argument('--robotDrivingGains', dest='mode', action='store_const', const='robotDrivingGains')
     p.add_argument('--robotWithoutController', dest='mode', action='store_const', const='robotWithoutController')
     p.add_argument('--robotDrivingGainsWithoutController', dest='mode', action='store_const', const='robotDrivingGainsWithoutController')
+
+    # allow specification that this is a floating base robot
+    parser.add_argument('--fixedBase', dest='fixedBase', action='store_const', const=True, default=False)
+    parser.add_argument('--noConstrainedDofs', dest='useConstrainedDofs', action='store_const', const=False,
+                        default=True)
+    parser.add_argument('--forceControl', dest='forceControl', action='store_const', const=True, default=False)
     args, unknown = parser.parse_known_args()
     return args
 
@@ -792,16 +870,25 @@ def main():
 
     args = parseArgs()
 
+    options = {}
+    options['fixedBase'] = args.fixedBase
+    options['useConstrainedDofs'] = args.useConstrainedDofs
+    options['forceControl'] = args.forceControl
+
+    print "forceControl", options['forceControl']
+
     if args.mode == 'base':
         baseMain()
     elif args.mode == 'robot':
         robotMain()
+    elif args.mode == 'robotWithController':
+        robotMain(useDrivingGains=False, useController=True, options=options)
     elif args.mode == 'robotDrivingGains':
-        robotMain(useDrivingGains=True)
+        robotMain(useDrivingGains=True, options=options)
     elif args.mode == 'robotWithoutController':
-        robotMain(useController=False)
+        robotMain(useController=False, options=options)
     elif args.mode == 'robotDrivingGainsWithoutController':
-        robotMain(useDrivingGains=True, useController=False)
+        robotMain(useDrivingGains=True, useController=False, options=options)
     else:
         debugMain()
 
@@ -820,7 +907,9 @@ def debugMain():
     ConsoleApp.start()
 
 
-def robotMain(useDrivingGains=False, useController=False):
+def robotMain(useDrivingGains=False, useController=False, options=None):
+
+    commandStream.setOptions(options)
 
     print 'waiting for robot state...'
     commandStream.waitForRobotState()

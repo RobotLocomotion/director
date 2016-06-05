@@ -582,7 +582,20 @@ class DrakeVisualizerApp():
     def _showErrorMessage(self, title, message):
         QtGui.QMessageBox.warning(self.mainWindow, title, message)
 
+
+    def onOpenVrml(self, filename):
+        meshes, color = ioUtils.readVrml(filename)
+        folder = om.getOrCreateContainer(os.path.basename(filename), parentObj=om.getOrCreateContainer('files'))
+        for i, pair in enumerate(zip(meshes, color)):
+            mesh, color = pair
+            obj = vis.showPolyData(mesh, 'mesh %d' % i, color=color, parent=folder)
+            vis.addChildFrame(obj)
+
     def _openGeometry(self, filename):
+
+        if filename.lower().endswith('wrl'):
+            self.onOpenVrml(filename)
+            return
 
         polyData = ioUtils.readPolyData(filename)
 
@@ -593,7 +606,7 @@ class DrakeVisualizerApp():
         vis.showPolyData(polyData, os.path.basename(filename), parent='files')
 
     def _onOpenDataFile(self):
-        fileFilters = "Data Files (*.obj *.ply *.stl *.vtk *.vtp)";
+        fileFilters = "Data Files (*.obj *.ply *.stl *.vtk *.vtp *.wrl)";
         filename = QtGui.QFileDialog.getOpenFileName(self.mainWindow, "Open...", self._getOpenDataDirectory(), fileFilters)
         if not filename:
             return

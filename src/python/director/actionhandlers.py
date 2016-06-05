@@ -138,7 +138,7 @@ def onFileSaveData():
 
 def onOpenOnlineHelp():
 
-    QtGui.QDesktopServices.openUrl(QtCore.QUrl('https://github.com/RobotLocomotion/director/blob/master/docs/director/README.md'))
+    QtGui.QDesktopServices.openUrl(QtCore.QUrl('https://openhumanoids.github.io/director/'))
 
 
 def init():

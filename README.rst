@@ -111,7 +111,7 @@ This is an alias for:
 Documentation
 =============
 
-A preliminary Online Help for the Director (currently in preparation) can be found `here <./tree/master/docs/director/README.md>`_.
+A preliminary Online Help for the Director (currently in preparation) can be found `here <https://openhumanoids.github.io/director/>`_.
 
 
 Citing

@@ -382,6 +382,10 @@ class AtlasDriver(object):
         lcmUtils.publish('STATE_EST_READY', ready_init)
         time.sleep(1) # sleep needed to give SE time to restart
 
+    def sendTareFT(self):
+        msg = bot_core.utime_t()
+        lcmUtils.publish("TARE_FOOT_SENSORS", msg)
+
 
     def sendInitMessage(self, pos, yaw):
         init = indexed_measurement_t()

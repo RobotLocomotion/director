@@ -432,7 +432,9 @@ def getRobotActions(view, pickedObj, pickedPoint):
 
     def onSegmentTableScene():
         data = segmentation.segmentTableScene(pointCloudObj.polyData, pickedPoint)
-        vis.showClusterObjects(data.clusters + [data.table], parent='segmentation')
+        vis.showClusterObjects(data.clusters, parent='segmentation')
+        segmentation.showTable(data.table, parent='segmentation')
+
 
     def onSegmentDrillAlignedWithTable():
         segmentation.segmentDrillAlignedWithTable(pickedPoint, pointCloudObj.polyData)
