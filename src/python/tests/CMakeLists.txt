@@ -41,7 +41,7 @@ set(python_tests_robot
 )
 
 set(python_tests_standalone
-  testDrakeVisualizerDemo.py
+  testDrakeVisualizerInterface.py
 )
 
 
@@ -85,6 +85,9 @@ macro(add_python_test name label)
   endwhile()
 endmacro()
 
+
+# Add a test which uses the system python interpreter instead of the
+# directorPython exectuable. This also sets PYTHONPATH and PATH for the test.
 macro(add_standalone_python_test name label)
   get_filename_component(base_name ${name} NAME_WE)
   set(test_name test_${base_name})
