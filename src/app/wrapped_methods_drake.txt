@@ -17,6 +17,7 @@ QString ddDrakeModel::getLinkNameForMesh(vtkPolyData*);
 QStringList ddDrakeModel::getLinkNames();
 QStringList ddDrakeModel::getJointNames();
 int ddDrakeModel::findLinkID(const QString&) const;
+int ddDrakeModel::findFrameID(const QString&) const;
 void ddDrakeModel::setAlpha(double);
 void ddDrakeModel::setVisible(bool);
 void ddDrakeModel::setTexturesEnabled(bool);

@@ -1114,6 +1114,11 @@ int ddDrakeModel::findLinkID(const QString& linkName) const
   return this->Internal->Model->findLinkId(linkName.toAscii().data(), -1);
 }
 
+int ddDrakeModel::findFrameID(const QString& frameName) const
+{
+  return this->Internal->Model->findFrame(frameName.toAscii().data())->frame_index;
+}
+
 //-----------------------------------------------------------------------------
 QList<QString> ddDrakeModel::getJointNames()
 {

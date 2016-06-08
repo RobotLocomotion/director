@@ -45,6 +45,9 @@ public:
   QList<QString> getLinkNames();
   QList<QString> getJointNames();
   int findLinkID(const QString& linkName) const;
+  int findFrameID(const QString& frameName) const;
+
+
 
   void getModelMesh(vtkPolyData* polyData);
 
