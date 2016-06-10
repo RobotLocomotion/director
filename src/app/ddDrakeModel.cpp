@@ -772,6 +772,14 @@ public:
     return linkToWorld;
   }
 
+  vtkSmartPointer<vtkTransform> getFrameToWorld(int frameId)
+  {
+
+    vtkSmartPointer<vtkTransform> frameToWorld = makeTransform(relativeTransform(*cache, 0, frameId));
+
+    return frameToWorld;
+  }
+
 };
 
 
@@ -1093,6 +1101,23 @@ bool ddDrakeModel::getLinkToWorld(const QString& linkName, vtkTransform* transfo
   if (linkToWorld)
   {
     transform->SetMatrix(linkToWorld->GetMatrix());
+    return true;
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
+bool ddDrakeModel::getFrameToWorld(int frameId, vtkTransform* transform)
+{
+  if (!transform || !this->Internal->Model)
+  {
+    return false;
+  }
+
+  vtkSmartPointer<vtkTransform> frameToWorld = this->Internal->Model->getFrameToWorld(frameId);
+  if (frameToWorld)
+  {
+    transform->SetMatrix(frameToWorld->GetMatrix());
     return true;
   }
   return false;

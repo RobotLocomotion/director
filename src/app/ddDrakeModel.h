@@ -42,6 +42,7 @@ public:
   QVector<double> getBodyContactPoints(const QString& bodyName) const;
 
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
+  bool getFrameToWorld(int frameId, vtkTransform* transform);
   QList<QString> getLinkNames();
   QList<QString> getJointNames();
   int findLinkID(const QString& linkName) const;

@@ -13,6 +13,7 @@ QVector<double> ddDrakeModel::getCenterOfMass() const;
 QVector<double> ddDrakeModel::getJointLimits(const QString&) const;
 QVector<double> ddDrakeModel::getBodyContactPoints(const QString&) const;
 bool ddDrakeModel::getLinkToWorld(const QString&, vtkTransform*);
+bool ddDrakeModel::getFrameToWorld(int, vtkTransform*);
 QString ddDrakeModel::getLinkNameForMesh(vtkPolyData*);
 QStringList ddDrakeModel::getLinkNames();
 QStringList ddDrakeModel::getJointNames();
