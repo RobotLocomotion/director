@@ -60,6 +60,8 @@ public:
   virtual int RenderTranslucentPolygonalGeometry(vtkViewport*);
   virtual int HasTranslucentPolygonalGeometry();
 
+  class vtkInternal;
+  vtkInternal* Internal;
 
 protected:
   vtkCollections();
@@ -67,8 +69,15 @@ protected:
 
 private:
 
-  class vtkInternal;
-  vtkInternal* Internal;
+
+
+  template <class MyCollection>
+    void on_collection_data(const typename MyCollection::my_vs_collection_t *msg);
+
+  void calculate_ranges(int64_t& range_start, int64_t& range_end);
+
+  double time_elevation(int64_t id, double z, int collid);
+
 
   vtkCollections(const vtkCollections&);  //Not implemented
   void operator=(const vtkCollections&);  //Not implemented

@@ -23,11 +23,58 @@ PURPOSE.  See the above copyright notice for more information.
 #include <lcmtypes/vs_object_collection_t.h>
 #include <sstream>
 
+#include <Eigen/Core>
+#include <Eigen/Eigenvalues>
+
 #include <QString>
 #include <QFileInfo>
 
 using namespace std;
-using namespace octomap;
+
+
+#define bot_to_degrees(rad) ((rad)*180/M_PI)
+
+const bool PARAM_USE_TIME_COLLECTION_DEFAULT = false;
+const bool PARAM_USE_TIME_DEFAULT = false;
+
+const double PARAM_TIME_SCALE_DEFAULT = 10.;
+const double PARAM_RANGE_START_DEFAULT = 0.;
+const double PARAM_RANGE_END_DEFAULT = 1.;
+const double PARAM_POSE_WIDTH_POSES_DEFAULT = 1;
+
+float colors[] = {
+    51/255.0, 160/255.0, 44/255.0,
+    166/255.0, 206/255.0, 227/255.0,
+    178/255.0, 223/255.0, 138/255.0,
+    31/255.0, 120/255.0, 180/255.0,
+    251/255.0, 154/255.0, 153/255.0,
+    227/255.0, 26/255.0, 28/255.0,
+    253/255.0, 191/255.0, 111/255.0,
+    106/255.0, 61/255.0, 154/255.0,
+    255/255.0, 127/255.0, 0/255.0,
+    202/255.0, 178/255.0, 214/255.0,
+    1.0, 0.0, 0.0, // red
+    0.0, 1.0, 0.0, // green
+    0.0, 0.0, 1.0, // blue
+    1.0, 1.0, 0.0,
+    1.0, 0.0, 1.0,
+    0.0, 1.0, 1.0,
+    0.5, 1.0, 0.0,
+    1.0, 0.5, 0.0,
+    0.5, 0.0, 1.0,
+    1.0, 0.0, 0.5,
+    0.0, 0.5, 1.0,
+    0.0, 1.0, 0.5,
+    1.0, 0.5, 0.5,
+    0.5, 1.0, 0.5,
+    0.5, 0.5, 1.0,
+    0.5, 0.5, 1.0,
+    0.5, 1.0, 0.5,
+    0.5, 0.5, 1.0
+};
+
+const int num_colors = sizeof(colors)/(3*sizeof(float));
+
 
 vtkStandardNewMacro(vtkCollections);
 
@@ -123,7 +170,21 @@ public:
 
   collections_t collections;
 
-  //ViewerWidget* m_glwidget;
+  //GMutex* collectionsMutex;
+
+  bool param_use_time;
+  bool param_use_time_collection;
+
+
+  double param_time_scale;
+  double param_range_start;
+  double param_range_end;
+
+  double param_pose_width;
+
+
+  int64_t    obj_maxid;
+  int64_t    obj_minid;
 
   std::vector<vtkSmartPointer<vtkActor> > Actors;
 
@@ -134,6 +195,16 @@ public:
 vtkCollections::vtkCollections()
 {
   this->Internal = new vtkInternal;
+
+  this->Internal->param_use_time    = PARAM_USE_TIME_DEFAULT;
+  this->Internal->param_use_time_collection    = PARAM_USE_TIME_COLLECTION_DEFAULT;
+
+
+  this->Internal->param_time_scale  = PARAM_TIME_SCALE_DEFAULT;
+  this->Internal->param_range_start = PARAM_RANGE_START_DEFAULT;
+  this->Internal->param_range_end   = PARAM_RANGE_END_DEFAULT;  
+  this->Internal->param_pose_width = PARAM_POSE_WIDTH_POSES_DEFAULT;
+
 }
 
 //----------------------------------------------------------------------------
@@ -143,6 +214,105 @@ vtkCollections::~vtkCollections()
 }
 
 //----------------------------------------------------------------------------
+
+
+
+// Config for the collections
+std::map<int32_t, CollectionConfig> collectionConfig;
+
+
+// helper function
+/**
+ * Combines time and collection elevation
+ */
+double time_elevation(vtkCollections *self, int64_t id, double z, int collid) {
+
+  double time_scale;
+  time_scale =self->Internal->param_time_scale * self->Internal->param_pose_width;
+
+  if (!self->Internal->param_use_time && !self->Internal->param_use_time_collection) return z;
+  double newz = 0.0;
+  if (self->Internal->param_use_time) {
+    int64_t min_id = self->Internal->obj_minid;
+    int64_t max_id = self->Internal->obj_maxid;
+
+    newz += ((double)(id-min_id) / (double)(max_id-min_id) * time_scale);
+  }
+  if (self->Internal->param_use_time_collection) {
+    newz += collid * time_scale;
+  }
+  return newz;
+}
+
+
+
+
+
+
+static void draw_tetra(vtkCollections *self, double x, double y, double z, double yaw, double pitch, double roll, double size, bool mark) {
+  //if (!self->viewer) return;
+  std::cout << "draw_tetra\n";
+
+  glPushMatrix();
+  glTranslatef(x, y, z);
+  glRotatef(bot_to_degrees(yaw),  0., 0., 1.);
+  glRotatef(bot_to_degrees(pitch),0., 1., 0.);
+  glRotatef(bot_to_degrees(roll), 1., 0., 0.);
+
+  if (mark) {
+//    glutWireSphere(size*1.5, 5, 5);
+  }
+  glBegin(GL_POLYGON);
+  glVertex3f(size,0.0,0.0);
+  glVertex3f(-size,size/2.0,0.0);
+  glVertex3f(-size,-size/2.0,0.0);
+  glEnd();
+  glBegin(GL_POLYGON);
+  glVertex3f(size,0.0,0.0);
+  glVertex3f(-size,0.0,size/2.0);
+  glVertex3f(-size,-size/2.0,0.0);
+  glEnd();
+  glBegin(GL_POLYGON);
+  glVertex3f(size,0.0,0.0);
+  glVertex3f(-size,size/2.0,0.0);
+  glVertex3f(-size,0.0,size/2.0);
+  glEnd();
+  glBegin(GL_POLYGON);
+  glVertex3f(-size,0.0,size/2.0);
+  glVertex3f(-size,size/2.0,0.0);
+  glVertex3f(-size,-size/2.0,0.0);
+  glEnd();
+  // draw outline in black
+  glPushAttrib(GL_CURRENT_BIT);
+  glColor3f(0,0,0);
+  glBegin(GL_LINE_LOOP);
+  glVertex3f(size,0.0,0.0);
+  glVertex3f(-size,size/2.0,0.0);
+  glVertex3f(-size,-size/2.0,0.0);
+  glEnd();
+  glBegin(GL_LINE_LOOP);
+  glVertex3f(size,0.0,0.0);
+  glVertex3f(-size,0.0,size/2.0);
+  glVertex3f(-size,-size/2.0,0.0);
+  glEnd();
+  glBegin(GL_LINE_LOOP);
+  glVertex3f(size,0.0,0.0);
+  glVertex3f(-size,size/2.0,0.0);
+  glVertex3f(-size,0.0,size/2.0);
+  glEnd();
+  glBegin(GL_LINE_LOOP);
+  glVertex3f(-size,0.0,size/2.0);
+  glVertex3f(-size,size/2.0,0.0);
+  glVertex3f(-size,-size/2.0,0.0);
+  glEnd();
+  glPopAttrib();
+  // todo: reset color?
+  glPopMatrix();
+}
+
+
+
+
 
 
 
@@ -170,13 +340,16 @@ public:
   virtual ~ObjCollection() {}
 
   virtual void draw(void *_self, int64_t range_start, int64_t range_end) {
-    /*
-    RendererCollections *self = (RendererCollections*) _self;
+    std::cout << "draw function\n";
+    
+    vtkCollections *self = (vtkCollections*) _self;
     // preparations
+    
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glEnable(GL_DEPTH_TEST);
 
+    
     switch(type) {
     case VS_OBJECT_COLLECTION_T_TREE:
       glEnable(GL_RESCALE_NORMAL);
@@ -211,7 +384,9 @@ public:
         double z = time_elevation(self, obj.id, obj.z, it->first);
 
         double size = 0.1; // 0.1m is the size of the plotted poses
-        size = size*self->param_pose_width;
+        size = size*self->Internal->param_pose_width;
+
+        std::cout << size << " size\n";
 
         // Retrive euler angles and reverse the order to get rpy:
         // Corresponds to a snippet of code from Matt Antone. (AffordanceUpdater.cpp in map server)
@@ -221,42 +396,43 @@ public:
         bool is_last = (maxid == obj.id);
         switch(type) {
         case VS_OBJECT_COLLECTION_T_SQUARE:
-          draw_square (self, obj.x, obj.y, z, obj_rpy(2), size);
+          //draw_square (self, obj.x, obj.y, z, obj_rpy(2), size);
           break;
         case VS_OBJECT_COLLECTION_T_POSE:
-          draw_triangle (self, obj.x, obj.y, z, obj_rpy(2), size, is_last);
+          //draw_triangle (self, obj.x, obj.y, z, obj_rpy(2), size, is_last);
           break;
         case VS_OBJECT_COLLECTION_T_POSE3D:
           draw_tetra (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
         case VS_OBJECT_COLLECTION_T_AXIS3D:
-          draw_axis (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          //draw_axis (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
         case VS_OBJECT_COLLECTION_T_TREE:
-          draw_tree (self, obj.x, obj.y, z);
+          //draw_tree (self, obj.x, obj.y, z);
           break;
         case VS_OBJECT_COLLECTION_T_TAG:
-          draw_tag (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0));
+          //draw_tag (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0));
           break;
         case VS_OBJECT_COLLECTION_T_CAMERA:
-          draw_camera (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
-          draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          //draw_camera (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          //draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
         case VS_OBJECT_COLLECTION_T_TRIANGLE:
-          draw_equilateral_triangle (self, obj.x, obj.y, z, obj_rpy(2), size, is_last );
+          //draw_equilateral_triangle (self, obj.x, obj.y, z, obj_rpy(2), size, is_last );
           break;
         case VS_OBJECT_COLLECTION_T_HEXAGON:
-          draw_hexagon (self, obj.x, obj.y, z, obj_rpy(2), size, is_last);
+          //draw_hexagon (self, obj.x, obj.y, z, obj_rpy(2), size, is_last);
           break;
         case VS_OBJECT_COLLECTION_T_SONARCONE:
-          draw_sonarcone(self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
-          draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          //draw_sonarcone(self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          //draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
-  }
+        }
+        
       }
     }
     glPopAttrib ();
-    */
+    
   }
   virtual void clear() {
     elements.clear();
@@ -270,12 +446,12 @@ public:
 // general method for parsing different collection messages, and
 // adding to local data structures as well as GUI
 template <class MyCollection>
-static void on_collection_data(const typename MyCollection::my_vs_collection_t *msg) {
+void vtkCollections::on_collection_data(const typename MyCollection::my_vs_collection_t *msg) {
   std::cout << "on_collection_data\n";
-/*  RendererCollections *self = (RendererCollections*) user_data;
-  collections_t* collections = &self->collections;
+/*  RendererCollections *self = (RendererCollections*) user_data;*/
+  collections_t* collections = &this->Internal->collections;
 
-  g_mutex_lock(self->collectionsMutex);
+/*  g_mutex_lock(self->collectionsMutex); */
 
   // find object collection, create new one if necessary, update record
   collections_t::iterator collection_it = collections->find(msg->id);
@@ -284,7 +460,7 @@ static void on_collection_data(const typename MyCollection::my_vs_collection_t *
     collections->insert(make_pair(msg->id, collection));
     collection_it = collections->find(msg->id);
     // also add new menu entry for trajectory
-    add_checkbox(self, msg->name, msg->id);
+    //add_checkbox(self, msg->name, msg->id);
   }
   Collection* collection = collection_it->second;
 
@@ -296,7 +472,7 @@ static void on_collection_data(const typename MyCollection::my_vs_collection_t *
   for (int i=0; i<MyCollection::get_size(msg); i++) {
     MyCollection::copy(msg, i, elements);
   }
-  g_mutex_unlock(self->collectionsMutex);
+/*  g_mutex_unlock(self->collectionsMutex);
 
   bot_viewer_request_redraw (self->viewer);
   */
@@ -393,6 +569,37 @@ void vtkCollections::ReleaseGraphicsResources(vtkWindow *w)
     }
 }
 
+
+// Update min max values (only used ids from collections that are being displayed
+void vtkCollections::calculate_ranges(int64_t& range_start, int64_t& range_end) {
+  bool initialized = false;
+
+  for (collections_t::iterator collection_it = this->Internal->collections.begin(); collection_it != this->Internal->collections.end(); collection_it++) {
+    // ObjCollection?
+    ObjCollection* obj_col = dynamic_cast<ObjCollection*>(collection_it->second);
+    if (obj_col != NULL) {
+      ObjCollection::elements_t& objs = obj_col->elements;
+      if (!initialized) {
+        this->Internal->obj_minid = this->Internal->obj_maxid = objs.begin()->second.id;
+        initialized = true;
+      }
+      for (ObjCollection::elements_t::iterator it = objs.begin(); it != objs.end(); it++) {
+        vs_object_t& obj = it->second;
+        if (it==objs.begin()) {
+          obj_col->maxid = obj.id;
+        }
+        if (obj.id > this->Internal->obj_maxid) this->Internal->obj_maxid = obj.id;
+        if (obj.id < this->Internal->obj_minid) this->Internal->obj_minid = obj.id;
+        if (obj.id > obj_col->maxid) obj_col->maxid = obj.id;
+      }
+    }
+  }
+  double range = (double)(this->Internal->obj_maxid - this->Internal->obj_minid);
+  range_start = this->Internal->obj_minid + (int64_t)(range*this->Internal->param_range_start);
+  range_end   = this->Internal->obj_minid + (int64_t)(range*this->Internal->param_range_end);
+}
+
+
 //----------------------------------------------------------------------------
 int vtkCollections::RenderOpaqueGeometry(vtkViewport *v)
 {
@@ -400,7 +607,38 @@ int vtkCollections::RenderOpaqueGeometry(vtkViewport *v)
 
   if (this->Internal->msg.nobjects)
     {
-    glPushMatrix();
+
+
+std::cout << "now rendering stuff\n";
+
+  glPushMatrix();
+
+  //if (!self->param_z_up) {
+    // Viewer is (x,y,z) = (forward,left,up) coordinates
+    //    Collections are in (forward,right,down) coordinates
+    //    We rotate 180 around x-axis
+  //  glRotatef(180.0,1.0,0.0,0.0);
+  //}
+
+  /// @todo have GROUND_LEVEL configurable
+  //glTranslatef(0.,0., GROUND_LEVEL);
+
+  int64_t range_start;
+  int64_t range_end;
+  calculate_ranges(range_start, range_end);
+
+  for (collections_t::iterator collection_it = this->Internal->collections.begin(); collection_it != this->Internal->collections.end(); collection_it++) {
+    Collection* collection = collection_it->second;
+    if (collection->show) {
+      collection->draw(this, range_start, range_end);
+    }
+  }
+
+  glPopMatrix ();
+
+
+/*
+
     glPushAttrib(GL_ENABLE_BIT | GL_POINT_BIT | GL_POLYGON_STIPPLE_BIT |
                  GL_POLYGON_BIT | GL_LINE_BIT | GL_FOG_BIT | GL_LIGHTING_BIT);
 
@@ -472,6 +710,8 @@ int vtkCollections::RenderOpaqueGeometry(vtkViewport *v)
 
     glPopAttrib ();
     glPopMatrix();
+
+    */
     return 1;
     }
 
