@@ -51,7 +51,9 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   void on_obj_collection_data(const char* data);
-
+  void on_link_collection_data(const char* data);
+  void on_points_collection_data(const char* data);
+    
   // Description:
   // Methods supporting, and required by, the rendering process.
   virtual void ReleaseGraphicsResources(vtkWindow*);

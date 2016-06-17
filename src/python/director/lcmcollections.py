@@ -87,11 +87,17 @@ class CollectionsObject(om.ObjectModelItem):
         view.renderer().RemoveActor(self.actor)
         view.render()
 
-    def onMessage(self, msgBytes):
-        #print "about to draw"
+    def on_obj_collection_data(self, msgBytes):
         self.actor.on_obj_collection_data(msgBytes.data())
         self.renderAllViews()
 
+    def on_link_collection_data(self, msgBytes):
+        self.actor.on_link_collection_data(msgBytes.data())
+        self.renderAllViews()
+
+    def on_points_collection_data(self, msgBytes):
+        self.actor.on_points_collection_data(msgBytes.data())
+        self.renderAllViews()
 
 managerInstance = None
 
@@ -109,9 +115,9 @@ class CollectionsManager(object):
     def setEnabled(self, enabled):
         if enabled and not self.subscriber:
             #self.subscriber = lcmUtils.addSubscriber('LCMGL.*', callback=self.onMessage)
-            self.subscriber = lcmUtils.addSubscriber('OBJECT_COLLECTION', callback=self.onMessage)
-            self.subscriber = lcmUtils.addSubscriber('OCTOMAP_REF', callback=self.onMessage)
-            self.subscriber = lcmUtils.addSubscriber('OCTOMAP_IN', callback=self.onMessage)
+            self.subscriber = lcmUtils.addSubscriber('OBJECT_COLLECTION', callback=self.on_obj_collection_data)
+            self.subscriber1 = lcmUtils.addSubscriber('LINK_COLLECTION', callback=self.on_link_collection_data)
+            self.subscriber2 = lcmUtils.addSubscriber('POINTS_COLLECTION', callback=self.on_points_collection_data)
         elif not enabled and self.subscriber:
             lcmUtils.removeSubscriber(self.subscriber)
             self.subscriber = None
@@ -122,14 +128,27 @@ class CollectionsManager(object):
     def disable(self):
         self.setEnabled(False)
 
-    def onMessage(self, msgBytes, channel):
-        #print " "
-        print "got collections data"
+    def on_obj_collection_data(self, msgBytes, channel):
         msg = lcmCollections.object_collection_t.decode(msgBytes.data())
-        drawObject = self.getDrawObject(channel)
+        drawObject = self.getDrawObject("COLLECTIONS")
         if not drawObject:
-            drawObject = self.addDrawObject(channel, msgBytes)
-        drawObject.onMessage(msgBytes)
+            drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
+        drawObject.on_obj_collection_data(msgBytes)
+
+    def on_link_collection_data(self, msgBytes, channel):
+        msg = lcmCollections.link_collection_t.decode(msgBytes.data())
+        drawObject = self.getDrawObject("COLLECTIONS")
+        if not drawObject:
+            drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
+        drawObject.on_link_collection_data(msgBytes)
+
+
+    def on_points_collection_data(self, msgBytes, channel):
+        msg = lcmCollections.point3d_list_collection_t.decode(msgBytes.data())
+        drawObject = self.getDrawObject("COLLECTIONS")
+        if not drawObject:
+            drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
+        drawObject.on_points_collection_data(msgBytes)
 
     def getDrawObject(self, name):
         parent = om.getOrCreateContainer('Collections')
