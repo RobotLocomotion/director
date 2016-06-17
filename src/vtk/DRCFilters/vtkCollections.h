@@ -50,14 +50,7 @@ public:
   vtkTypeMacro(vtkCollections,vtkProp);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  void UpdateOctomapData(const char* data);
-
-  void setAlphaOccupied(double alphaOccupied);
-  void changeTreeDepth(int depth);
-  void setColorMode (int colorMode);
-  void enableOctreeStructure (bool enabled);
-  void enableOcTreeCells (bool enabled);
-  void enableFreespace (bool enabled);
+  void on_obj_collection_data(const char* data);
 
   // Description:
   // Methods supporting, and required by, the rendering process.
@@ -68,30 +61,11 @@ public:
   virtual int HasTranslucentPolygonalGeometry();
 
 
-    // use this drawer id if loading files or none is specified in msg
-    static const unsigned int DEFAULT_OCTREE_ID  = 0; 
-
-
-    void addOctree(octomap::AbstractOcTree* tree, int id, octomap::pose6d origin);
-    void addOctree(octomap::AbstractOcTree* tree, int id);
-    bool getOctreeRecord(int id, octomap::OcTreeRecord*& otr);
-
 protected:
   vtkCollections();
   ~vtkCollections();
 
 private:
-
-    /// open "regular" file containing an octree
-    void openOcTree(std::string filename);
-
-    /// open binary format OcTree
-    void openTree(std::string filename);
-
-    void parseTree(std::string datastream_string);
-    void parseOcTree(std::string datastream_string);
-
-    void showOcTree();
 
   class vtkInternal;
   vtkInternal* Internal;

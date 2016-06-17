@@ -89,7 +89,7 @@ class CollectionsObject(om.ObjectModelItem):
 
     def onMessage(self, msgBytes):
         #print "about to draw"
-        self.actor.UpdateOctomapData(msgBytes.data())
+        self.actor.on_obj_collection_data(msgBytes.data())
         self.renderAllViews()
 
 
