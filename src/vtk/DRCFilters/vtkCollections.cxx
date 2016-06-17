@@ -247,6 +247,32 @@ double time_elevation(vtkCollections *self, int64_t id, double z, int collid) {
 
 
 
+static void draw_axis(vtkCollections *self, double x, double y, double z, double yaw, double pitch, double roll, double size, bool mark) 
+{
+  std::cout << "draw_axis\n";
+  glPushMatrix();
+  glPushAttrib(GL_CURRENT_BIT);
+
+  glTranslatef(x, y, z);
+
+  glRotatef(bot_to_degrees(yaw),  0., 0., 1.);
+  glRotatef(bot_to_degrees(pitch),0., 1., 0.);
+  glRotatef(bot_to_degrees(roll), 1., 0., 0.);
+
+  glBegin(GL_LINES);
+    glColor3f(1.0,0.0,0.0); glVertex3f(0.0,0.0,0.0); glVertex3f(size*1.0,0.0,0.0);
+    glColor3f(0.0,1.0,0.0); glVertex3f(0.0,0.0,0.0); glVertex3f(0.0,size*1.0,0.0);
+    glColor3f(0.0,0.0,1.0); glVertex3f(0.0,0.0,0.0); glVertex3f(0.0,0.0,size*1.0);
+  glEnd();
+
+  if (mark) {
+//    glutWireSphere(size*1.5, 5, 5);
+  }
+
+  glPopAttrib();
+  // todo: reset color?
+  glPopMatrix();
+}
 
 
 static void draw_tetra(vtkCollections *self, double x, double y, double z, double yaw, double pitch, double roll, double size, bool mark) {
@@ -405,7 +431,7 @@ public:
           draw_tetra (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
         case VS_OBJECT_COLLECTION_T_AXIS3D:
-          //draw_axis (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          draw_axis (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
         case VS_OBJECT_COLLECTION_T_TREE:
           //draw_tree (self, obj.x, obj.y, z);
@@ -415,7 +441,7 @@ public:
           break;
         case VS_OBJECT_COLLECTION_T_CAMERA:
           //draw_camera (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
-          //draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
         case VS_OBJECT_COLLECTION_T_TRIANGLE:
           //draw_equilateral_triangle (self, obj.x, obj.y, z, obj_rpy(2), size, is_last );
@@ -425,7 +451,7 @@ public:
           break;
         case VS_OBJECT_COLLECTION_T_SONARCONE:
           //draw_sonarcone(self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
-          //draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
         }
         
@@ -520,43 +546,6 @@ void vtkCollections::on_obj_collection_data(const char* messageData)
     this->Internal->msg.nobjects = 0;
   }else{
 
-
-    // set transform. 
-    // TODO: fix this
-    for (int i = 0; i < 4; ++i) {
-      for (int j = 0; j < 4; ++j) {
-    //    this->Internal->octd->m_ocTreeTransform[j*4+i] = this->Internal->msg.transform[i][j];
-      }
-    }
-
-    /*
-    std::stringstream datastream;
-    datastream.write((const char*) this->Internal->msg.data, this->Internal->msg.nobjects);
-
-    bool fromMessage = true;
-
-    if (fromMessage){
- 
-      // check if first line valid:
-      std::string line;
-      std::getline(datastream, line);
-
-      std::string fileHeaderBt = "# Octomap OcTree binary file";
-      std::string fileHeaderOt = "# Octomap OcTree file";
-
-
-    }else{ // read from a file, TODO: move this else where
-      //  std::string m_filename = "/home/mfallon/Dropbox/shared/2015-11-octomap/octomap.bt";
-      // std::string m_filename = "/home/mfallon/Dropbox/shared/2015-11-octomap/simple_color_tree.ot";
-      std::string m_filename = "/home/mfallon/Dropbox/shared/2015-11-octomap/freiburg1_360.ot";
-
-      QString temp = QString(m_filename.c_str());
-      QFileInfo fileinfo(temp);
-
-
-
-    }
-    */
   }
 }
 
