@@ -230,6 +230,64 @@ vtkCollections::~vtkCollections()
 
 //----------------------------------------------------------------------------
 
+int vtkCollections::getCollectionsSize(){
+  collections_t* collections = &this->Internal->collections;
+  return collections->size();
+}
+
+int vtkCollections::getCollectionsId(int mapIndex ){
+  collections_t &collections = this->Internal->collections;
+  int counter = 0;
+  for (collections_t::iterator it = collections.begin(); it!=collections.end(); it++) {
+    if (counter== mapIndex){
+      return it->second->id;
+    }
+    counter++;
+  }
+  return -1;
+}
+std::string vtkCollections::getCollectionsName(int mapIndex ){
+  collections_t &collections = this->Internal->collections;
+  int counter = 0;
+  for (collections_t::iterator it = collections.begin(); it!=collections.end(); it++) {
+    if (counter== mapIndex){
+      return it->second->name;
+    }
+    counter++;
+  }
+  return std::string("");
+}
+int vtkCollections::getCollectionsType(int mapIndex ){
+  collections_t &collections = this->Internal->collections;
+  int counter = 0;
+  for (collections_t::iterator it = collections.begin(); it!=collections.end(); it++) {
+    if (counter== mapIndex){
+      return it->second->type;
+    }
+    counter++;
+  }
+  return -1;
+}
+bool vtkCollections::getCollectionsShow(int mapIndex ){
+  collections_t &collections = this->Internal->collections;
+  int counter = 0;
+  for (collections_t::iterator it = collections.begin(); it!=collections.end(); it++) {
+    if (counter== mapIndex){
+      return it->second->show;
+    }
+    counter++;
+  }
+  return false;
+}
+
+void vtkCollections::setEnabled(int id, bool show){
+  collections_t &collections = this->Internal->collections;
+  collections_t::iterator it = collections.find(id);
+  if (it!=collections.end()) {
+    it->second->show = show;
+  }
+}
+
 
 
 // Config for the collections
@@ -1087,6 +1145,7 @@ void vtkCollections::on_collection_data(const typename MyCollection::my_vs_colle
   collections_t* collections = &this->Internal->collections;
 
   //  g_mutex_lock(self->collectionsMutex); 
+  std::cout << "insert new data into" << msg->name << "\n";
 
   // find object collection, create new one if necessary, update record
   collections_t::iterator collection_it = collections->find(msg->id);

@@ -12,6 +12,55 @@ except ImportError:
     LCMGL_AVAILABLE = False
 
 
+class CollectionInfo():
+    def __init__(self, collectionId, collectionName, collectionType, collectionShow):
+        self.id =   collectionId
+        self.name = collectionName
+        self.type = collectionType
+        self.show = collectionShow
+
+
+class CollectionInfoObject(om.ObjectModelItem):
+
+    def __init__(self, collectionInfo, actor):
+
+        om.ObjectModelItem.__init__(self, collectionInfo.name, om.Icons.Robot)
+
+        self.actor = actor
+        self.collectionInfo = collectionInfo
+        #self.actor.SetUseBounds(False)
+        self.addProperty('Visible', actor.GetVisibility())
+        self.views = []
+
+    def _onPropertyChanged(self, propertySet, propertyName):
+        om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
+
+        if propertyName == 'Visible':
+            makeVisible = self.getProperty(propertyName)
+            self.actor.SetVisibility(makeVisible)
+            print "doing visible", makeVisible
+            print self.collectionInfo.id
+
+            drawObject = self.getDrawObject("COLLECTIONS")
+            drawObject.setCollectionEnable(self.collectionInfo.id, makeVisible)
+            drawObject.renderAllViews()
+
+    def getDrawObject(self, name):
+        parent = om.getOrCreateContainer('Collections')
+        return parent.findChild(name)
+
+    def addToView(self, view):
+        if view in self.views:
+            return
+        self.views.append(view)
+        view.renderer().AddActor(self.actor)
+        view.render()
+
+    def setEnabled(self, enabled):
+        print enabled
+        print "sfdasdf"
+
+
 class CollectionsObject(om.ObjectModelItem):
 
     def __init__(self, name, actor):
@@ -87,16 +136,39 @@ class CollectionsObject(om.ObjectModelItem):
         view.renderer().RemoveActor(self.actor)
         view.render()
 
+    def getCollectionsInfo(self):
+        numberOfCollections = self.actor.getCollectionsSize()
+        print "numberOfCollections: ", numberOfCollections
+
+        self.collectionInfos = []
+        for i in range(0,numberOfCollections):
+            cId = self.actor.getCollectionsId(i)
+            cName = self.actor.getCollectionsName(i)
+            cType = self.actor.getCollectionsType(i)
+            cShow = self.actor.getCollectionsShow(i)
+            cInfo = CollectionInfo(cId, cName, cType, cShow )
+            self.collectionInfos.append(cInfo)
+            print i, cId
+
+    def disableOne(self):
+        self.setCollectionEnable(1,False)
+
+    def setCollectionEnable(self, cId, enable):
+        self.actor.setEnabled(cId, enable)
+
     def on_obj_collection_data(self, msgBytes):
         self.actor.on_obj_collection_data(msgBytes.data())
+        self.getCollectionsInfo()
         self.renderAllViews()
 
     def on_link_collection_data(self, msgBytes):
         self.actor.on_link_collection_data(msgBytes.data())
+        self.getCollectionsInfo()
         self.renderAllViews()
 
     def on_points_collection_data(self, msgBytes):
         self.actor.on_points_collection_data(msgBytes.data())
+        self.getCollectionsInfo()
         self.renderAllViews()
 
 managerInstance = None
@@ -142,13 +214,14 @@ class CollectionsManager(object):
             drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
         drawObject.on_link_collection_data(msgBytes)
 
-
     def on_points_collection_data(self, msgBytes, channel):
         msg = lcmCollections.point3d_list_collection_t.decode(msgBytes.data())
         drawObject = self.getDrawObject("COLLECTIONS")
         if not drawObject:
             drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
         drawObject.on_points_collection_data(msgBytes)
+
+        self.addAllObjects()
 
     def getDrawObject(self, name):
         parent = om.getOrCreateContainer('Collections')
@@ -158,6 +231,29 @@ class CollectionsManager(object):
         actor = vtk.vtkCollections()
         obj = CollectionsObject(name, actor)
         om.addToObjectModel(obj, om.getOrCreateContainer('Collections'))
+        obj.addToView(self.view)
+        return obj
+
+    def addAllObjects(self):
+        drawObject = self.getDrawObject("COLLECTIONS")
+        if not drawObject:
+            return
+
+        for coll in drawObject.collectionInfos:
+            actor = vtk.vtkCollections()
+            obj = CollectionInfoObject(coll, actor)
+            om.addToObjectModel(obj, om.getOrCreateContainer('COLLECTIONS'))
+            obj.addToView(self.view)
+
+
+    def getDrawObject2(self, name):
+        parent = om.getOrCreateContainer('COLLECTIONS')
+        return parent.findChild(name)
+
+    def addDrawObject2(self, name, msgBytes):
+        actor = vtk.vtkCollections()
+        obj = CollectionsObject(name, actor)
+        om.addToObjectModel(obj, om.getOrCreateContainer('COLLECTIONS'))
         obj.addToView(self.view)
         return obj
 

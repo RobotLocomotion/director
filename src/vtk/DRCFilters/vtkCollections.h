@@ -65,6 +65,14 @@ public:
   class vtkInternal;
   vtkInternal* Internal;
 
+  // Getter and Setter
+  int getCollectionsSize();
+  int getCollectionsId(int mapIndex);
+  std::string getCollectionsName(int mapIndex);
+  int getCollectionsType(int mapIndex);
+  bool getCollectionsShow(int mapIndex);
+  void setEnabled(int id, bool show);
+
 protected:
   vtkCollections();
   ~vtkCollections();
