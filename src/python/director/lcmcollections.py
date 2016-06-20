@@ -32,6 +32,8 @@ class CollectionInfoObject(om.ObjectModelItem):
         self.addProperty('Visible', actor.GetVisibility())
         self.views = []
 
+        self.collectionsObject = self.getDrawObject("COLLECTIONS")
+
     def _onPropertyChanged(self, propertySet, propertyName):
         om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
 
@@ -41,9 +43,8 @@ class CollectionInfoObject(om.ObjectModelItem):
             print "doing visible", makeVisible
             print self.collectionInfo.id
 
-            drawObject = self.getDrawObject("COLLECTIONS")
-            drawObject.setCollectionEnable(self.collectionInfo.id, makeVisible)
-            drawObject.renderAllViews()
+            self.collectionsObject.setCollectionEnable(self.collectionInfo.id, makeVisible)
+            self.collectionsObject.renderAllViews()
 
     def getDrawObject(self, name):
         parent = om.getOrCreateContainer('Collections')
@@ -56,9 +57,10 @@ class CollectionInfoObject(om.ObjectModelItem):
         view.renderer().AddActor(self.actor)
         view.render()
 
-    def setEnabled(self, enabled):
-        print enabled
-        print "sfdasdf"
+    def onRemoveFromObjectModel(self):
+        self.collectionsObject.removeIdFromCollections(self.collectionInfo.id)
+        self.collectionsObject.getCollectionsInfo()
+        self.collectionsObject.renderAllViews()
 
 
 class CollectionsObject(om.ObjectModelItem):
@@ -71,12 +73,13 @@ class CollectionsObject(om.ObjectModelItem):
         self.actor = actor
         self.actor.SetUseBounds(False)
         self.addProperty('Visible', actor.GetVisibility())
-        self.addProperty('Alpha', 0.8, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
-        self.addProperty('Color Mode', 2, attributes=om.PropertyAttributes(enumNames=['Flat', 'Print', 'Height', 'Gray', 'Semantic']))
-        self.addProperty('Occ. Space', 1, attributes=om.PropertyAttributes(enumNames=['Hide', 'Show']))
-        self.addProperty('Free Space', 0, attributes=om.PropertyAttributes(enumNames=['Hide', 'Show']))
-        self.addProperty('Structure', 0, attributes=om.PropertyAttributes(enumNames=['Hide', 'Show']))
-        self.addProperty('Tree Depth', 16, attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=16, singleStep=1.0))
+        self.addProperty('Pose Width', 1.0, attributes=om.PropertyAttributes(decimals=0.1, minimum=0.1, maximum=30.0, singleStep=0.1))
+        self.addProperty('Point Width', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=1, maximum=30.0, singleStep=1))
+        self.addProperty('Alpha', 0.8, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1))
+
+        self.addProperty('Start', 0.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.01))
+        self.addProperty('End', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.01))
+
         self.views = []
 
     def _onPropertyChanged(self, propertySet, propertyName):
@@ -86,30 +89,26 @@ class CollectionsObject(om.ObjectModelItem):
             self.actor.SetVisibility(self.getProperty(propertyName))
             self.renderAllViews()
 
+        elif propertyName == 'Pose Width':
+            self.actor.setPoseWidth(self.getProperty(propertyName))
+            self.renderAllViews()
+
+        elif propertyName == 'Point Width':
+            self.actor.setPointWidth(self.getProperty(propertyName))
+            self.renderAllViews()
+
         elif propertyName == 'Alpha':
-            self.actor.setAlphaOccupied(self.getProperty(propertyName))
+            self.actor.setAlphaPoints(self.getProperty(propertyName))
             self.renderAllViews()
 
-        elif propertyName == 'Occ. Space':
-            self.actor.enableOcTreeCells(self.getProperty(propertyName))
+        elif propertyName == 'Start':
+            self.actor.setRangeStart(self.getProperty(propertyName))
             self.renderAllViews()
 
-        elif propertyName == 'Free Space':
-            self.actor.enableFreespace(self.getProperty(propertyName))
+        elif propertyName == 'End':
+            self.actor.setRangeEnd(self.getProperty(propertyName))
             self.renderAllViews()
 
-        elif propertyName == 'Structure':
-            self.actor.enableOctreeStructure(self.getProperty(propertyName))
-            self.renderAllViews()
-
-        elif propertyName == 'Tree Depth':
-            self.actor.changeTreeDepth(self.getProperty(propertyName))
-            self.renderAllViews()
-
-        elif propertyName == 'Color Mode':
-            heightColorMode = self.getProperty(propertyName)
-            self.actor.setColorMode(heightColorMode)
-            self.renderAllViews()
 
     def addToView(self, view):
         if view in self.views:
@@ -152,6 +151,9 @@ class CollectionsObject(om.ObjectModelItem):
 
     def disableOne(self):
         self.setCollectionEnable(1,False)
+
+    def removeIdFromCollections(self, cId):
+        self.actor.removeIdFromCollections(cId)
 
     def setCollectionEnable(self, cId, enable):
         self.actor.setEnabled(cId, enable)

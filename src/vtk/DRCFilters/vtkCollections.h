@@ -71,7 +71,15 @@ public:
   std::string getCollectionsName(int mapIndex);
   int getCollectionsType(int mapIndex);
   bool getCollectionsShow(int mapIndex);
+
   void setEnabled(int id, bool show);
+  void removeIdFromCollections(int id);
+
+  void setPoseWidth(double poseWidth);
+  void setPointWidth(double pointWidth);
+  void setAlphaPoints(double alphaPoints);
+  void setRangeStart(double rangeStart);
+  void setRangeEnd(double rangeEnd);  
 
 protected:
   vtkCollections();

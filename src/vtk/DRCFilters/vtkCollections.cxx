@@ -288,6 +288,29 @@ void vtkCollections::setEnabled(int id, bool show){
   }
 }
 
+void vtkCollections::removeIdFromCollections(int id){
+  collections_t &collections = this->Internal->collections;
+  collections_t::iterator collection_it = collections.find(id);
+  collections.erase (collection_it);
+}
+
+
+void vtkCollections::setPoseWidth(double poseWidth){
+  this->Internal->param_pose_width = poseWidth;
+}
+void vtkCollections::setPointWidth(double pointWidth){
+  this->Internal->param_point_width = pointWidth;
+}
+void vtkCollections::setAlphaPoints(double alphaPoints){
+  this->Internal->param_alpha_points = alphaPoints;
+}
+void vtkCollections::setRangeStart(double rangeStart){
+  this->Internal->param_range_start = rangeStart;
+}
+void vtkCollections::setRangeEnd(double rangeEnd){
+  this->Internal->param_range_end = rangeEnd;
+}
+
 
 
 // Config for the collections
