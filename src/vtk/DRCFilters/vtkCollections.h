@@ -75,11 +75,21 @@ public:
   void setEnabled(int id, bool show);
   void removeIdFromCollections(int id);
 
-  void setPoseWidth(double poseWidth);
-  void setPointWidth(double pointWidth);
-  void setAlphaPoints(double alphaPoints);
   void setRangeStart(double rangeStart);
-  void setRangeEnd(double rangeEnd);  
+  void setRangeEnd(double rangeEnd);
+  void setAlphaPoints(double alphaPoints);
+
+  void setFillScans(bool colorByTime);
+
+  void setPointWidth(double pointWidth);
+  void setPoseWidth(double poseWidth);
+  void setColorByTime(bool colorByTime);
+
+  void setElevationByTime(bool elevationByTime);
+  void setElevationByCollection(bool elevationByCollection);
+  void setMaxElevation(double maxElevation);
+
+  void setShowToggle();
 
 protected:
   vtkCollections();

@@ -40,11 +40,9 @@ class CollectionInfoObject(om.ObjectModelItem):
         if propertyName == 'Visible':
             makeVisible = self.getProperty(propertyName)
             self.actor.SetVisibility(makeVisible)
-            print "doing visible", makeVisible
-            print self.collectionInfo.id
-
             self.collectionsObject.setCollectionEnable(self.collectionInfo.id, makeVisible)
             self.collectionsObject.renderAllViews()
+
 
     def getDrawObject(self, name):
         parent = om.getOrCreateContainer('Collections')
@@ -73,12 +71,19 @@ class CollectionsObject(om.ObjectModelItem):
         self.actor = actor
         self.actor.SetUseBounds(False)
         self.addProperty('Visible', actor.GetVisibility())
-        self.addProperty('Pose Width', 1.0, attributes=om.PropertyAttributes(decimals=0.1, minimum=0.1, maximum=30.0, singleStep=0.1))
-        self.addProperty('Point Width', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=1, maximum=30.0, singleStep=1))
-        self.addProperty('Alpha', 0.8, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1))
-
         self.addProperty('Start', 0.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.01))
         self.addProperty('End', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.01))
+        self.addProperty('Points Alpha', 0.8, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1))
+
+        self.addProperty('Fill Scans', False)
+
+        self.addProperty('Point Width', 1.0, attributes=om.PropertyAttributes(decimals=0, minimum=5, maximum=30.0, singleStep=1))
+        self.addProperty('Pose Width', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=30.0, singleStep=0.1))
+        self.addProperty('Color by Time', False)
+
+        self.addProperty('Elevation by Time', False)
+        self.addProperty('Elevation by Collection', False)
+        self.addProperty('Max Elevation', 0.0, attributes=om.PropertyAttributes(decimals=1, minimum=0, maximum=100.0, singleStep=0.1))
 
         self.views = []
 
@@ -87,28 +92,39 @@ class CollectionsObject(om.ObjectModelItem):
 
         if propertyName == 'Visible':
             self.actor.SetVisibility(self.getProperty(propertyName))
-            self.renderAllViews()
+            makeVisible = self.getProperty(propertyName)
 
-        elif propertyName == 'Pose Width':
-            self.actor.setPoseWidth(self.getProperty(propertyName))
-            self.renderAllViews()
+            parent = om.getOrCreateContainer('COLLECTIONS')
+            for coll in self.children():
+                coll.setProperty('Visible',makeVisible)
 
-        elif propertyName == 'Point Width':
-            self.actor.setPointWidth(self.getProperty(propertyName))
-            self.renderAllViews()
-
-        elif propertyName == 'Alpha':
-            self.actor.setAlphaPoints(self.getProperty(propertyName))
-            self.renderAllViews()
+            #for coll in self.collectionInfos:
+            #    self.actor.SetVisibility(makeVisible)
+            #    self.actor.setProperty('Visible',makeVisible)
+            #    self.actor.setEnabled(coll.id, makeVisible)
 
         elif propertyName == 'Start':
             self.actor.setRangeStart(self.getProperty(propertyName))
-            self.renderAllViews()
-
         elif propertyName == 'End':
             self.actor.setRangeEnd(self.getProperty(propertyName))
-            self.renderAllViews()
+        elif propertyName == 'Points Alpha':
+            self.actor.setAlphaPoints(self.getProperty(propertyName))
+        elif propertyName == 'Fill Scans':
+            self.actor.setFillScans(self.getProperty(propertyName))
+        elif propertyName == 'Point Width':
+            self.actor.setPointWidth(self.getProperty(propertyName))
+        elif propertyName == 'Pose Width':
+            self.actor.setPoseWidth(self.getProperty(propertyName))
+        elif propertyName == 'Color by Time':
+            self.actor.setColorByTime(self.getProperty(propertyName))
+        elif propertyName == 'Elevation by Time':
+            self.actor.setElevationByTime(self.getProperty(propertyName))
+        elif propertyName == 'Elevation by Collection':
+            self.actor.setElevationByCollection(self.getProperty(propertyName))
+        elif propertyName == 'Max Elevation':
+            self.actor.setMaxElevation(self.getProperty(propertyName))
 
+        self.renderAllViews()
 
     def addToView(self, view):
         if view in self.views:
@@ -137,7 +153,6 @@ class CollectionsObject(om.ObjectModelItem):
 
     def getCollectionsInfo(self):
         numberOfCollections = self.actor.getCollectionsSize()
-        print "numberOfCollections: ", numberOfCollections
 
         self.collectionInfos = []
         for i in range(0,numberOfCollections):
@@ -147,7 +162,6 @@ class CollectionsObject(om.ObjectModelItem):
             cShow = self.actor.getCollectionsShow(i)
             cInfo = CollectionInfo(cId, cName, cType, cShow )
             self.collectionInfos.append(cInfo)
-            print i, cId
 
     def disableOne(self):
         self.setCollectionEnable(1,False)
@@ -246,18 +260,6 @@ class CollectionsManager(object):
             obj = CollectionInfoObject(coll, actor)
             om.addToObjectModel(obj, om.getOrCreateContainer('COLLECTIONS'))
             obj.addToView(self.view)
-
-
-    def getDrawObject2(self, name):
-        parent = om.getOrCreateContainer('COLLECTIONS')
-        return parent.findChild(name)
-
-    def addDrawObject2(self, name, msgBytes):
-        actor = vtk.vtkCollections()
-        obj = CollectionsObject(name, actor)
-        om.addToObjectModel(obj, om.getOrCreateContainer('COLLECTIONS'))
-        obj.addToView(self.view)
-        return obj
 
 
 def init(view):

@@ -37,7 +37,7 @@ using namespace Eigen;
 const bool PARAM_USE_TIME_COLLECTION_DEFAULT = false;
 const bool PARAM_FILL_SCANS_DEFAULT = false;
 
-const double PARAM_POINT_WIDTH_POINTS_DEFAULT = 1;
+const double PARAM_POINT_WIDTH_POINTS_DEFAULT = 5;//1
 const double PARAM_TIME_SCALE_DEFAULT = 10.;
 const double PARAM_RANGE_START_DEFAULT = 0.;
 const double PARAM_RANGE_END_DEFAULT = 1.;
@@ -47,6 +47,8 @@ const bool PARAM_COLOR_TIME_DEFAULT = false;
 
 const bool PARAM_USE_TIME_DEFAULT = false;
 const bool PARAM_Z_UP_DEFAULT = true;
+
+const bool PARAM_SHOW_TOGGLE_DEFAULT = false;
 
 float colors[] = {
     51/255.0, 160/255.0, 44/255.0,
@@ -194,6 +196,7 @@ public:
   bool param_color_time;
   bool param_z_up;
 
+  bool param_show_toggle;
 
   int64_t    obj_maxid;
   int64_t    obj_minid;
@@ -220,6 +223,7 @@ vtkCollections::vtkCollections()
   this->Internal->param_pose_width = PARAM_POSE_WIDTH_POSES_DEFAULT;
   this->Internal->param_z_up = PARAM_Z_UP_DEFAULT;
 
+  this->Internal->param_show_toggle = PARAM_SHOW_TOGGLE_DEFAULT;
 }
 
 //----------------------------------------------------------------------------
@@ -294,23 +298,49 @@ void vtkCollections::removeIdFromCollections(int id){
   collections.erase (collection_it);
 }
 
-
-void vtkCollections::setPoseWidth(double poseWidth){
-  this->Internal->param_pose_width = poseWidth;
-}
-void vtkCollections::setPointWidth(double pointWidth){
-  this->Internal->param_point_width = pointWidth;
-}
-void vtkCollections::setAlphaPoints(double alphaPoints){
-  this->Internal->param_alpha_points = alphaPoints;
-}
 void vtkCollections::setRangeStart(double rangeStart){
   this->Internal->param_range_start = rangeStart;
 }
 void vtkCollections::setRangeEnd(double rangeEnd){
   this->Internal->param_range_end = rangeEnd;
 }
+void vtkCollections::setAlphaPoints(double alphaPoints){
+  this->Internal->param_alpha_points = alphaPoints;
+}
 
+void vtkCollections::setFillScans(bool fillScans){
+  this->Internal->param_fill_scans = fillScans;
+}
+
+void vtkCollections::setPointWidth(double pointWidth){
+  this->Internal->param_point_width = pointWidth;
+}
+void vtkCollections::setPoseWidth(double poseWidth){
+  this->Internal->param_pose_width = poseWidth;
+}
+void vtkCollections::setColorByTime(bool colorByTime){
+  this->Internal->param_color_time = colorByTime;
+}
+
+void vtkCollections::setElevationByTime(bool elevationByTime){
+  this->Internal->param_use_time = elevationByTime;
+}
+void vtkCollections::setElevationByCollection(bool elevationByCollection){
+  this->Internal->param_use_time_collection = elevationByCollection;
+}
+void vtkCollections::setMaxElevation(double maxElevation){
+  this->Internal->param_time_scale = maxElevation;
+}
+void vtkCollections::setShowToggle(){
+  std::cout << (int) this->Internal->param_show_toggle << " meah\n";
+  // When toggled, set the show property to the toggle value
+  // multiple presses of toggle will turn all on or off
+  collections_t &collections = this->Internal->collections;
+  for (collections_t::iterator it = collections.begin(); it!=collections.end(); it++) {
+    it->second->show = this->Internal->param_show_toggle;
+  }
+  this->Internal->param_show_toggle = !this->Internal->param_show_toggle;
+}
 
 
 // Config for the collections
@@ -1168,7 +1198,7 @@ void vtkCollections::on_collection_data(const typename MyCollection::my_vs_colle
   collections_t* collections = &this->Internal->collections;
 
   //  g_mutex_lock(self->collectionsMutex); 
-  std::cout << "insert new data into" << msg->name << "\n";
+  //std::cout << "insert new data into " << msg->name << "\n";
 
   // find object collection, create new one if necessary, update record
   collections_t::iterator collection_it = collections->find(msg->id);
