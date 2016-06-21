@@ -154,19 +154,6 @@ const std::string & CollectionConfig::get(const std::string & name)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 class vtkCollections::vtkInternal {
 public:
   vtkInternal()
@@ -180,12 +167,8 @@ public:
 
   collections_t collections;
 
-  //GMutex* collectionsMutex;
-
   bool param_use_time;
   bool param_use_time_collection;
-
-
   double param_time_scale;
   double param_range_start;
   double param_range_end;
@@ -195,14 +178,14 @@ public:
   double param_pose_width;
   bool param_color_time;
   bool param_z_up;
+  
+  bool toggle_onoff;
 
-  bool param_show_toggle;
 
   int64_t    obj_maxid;
   int64_t    obj_minid;
 
   std::vector<vtkSmartPointer<vtkActor> > Actors;
-
 };
 
 
@@ -223,7 +206,7 @@ vtkCollections::vtkCollections()
   this->Internal->param_pose_width = PARAM_POSE_WIDTH_POSES_DEFAULT;
   this->Internal->param_z_up = PARAM_Z_UP_DEFAULT;
 
-  this->Internal->param_show_toggle = PARAM_SHOW_TOGGLE_DEFAULT;
+  this->Internal->toggle_onoff = PARAM_SHOW_TOGGLE_DEFAULT;
 }
 
 //----------------------------------------------------------------------------
@@ -332,20 +315,19 @@ void vtkCollections::setMaxElevation(double maxElevation){
   this->Internal->param_time_scale = maxElevation;
 }
 void vtkCollections::setShowToggle(){
-  std::cout << (int) this->Internal->param_show_toggle << " meah\n";
+  std::cout << (int) this->Internal->toggle_onoff << " meah\n";
   // When toggled, set the show property to the toggle value
   // multiple presses of toggle will turn all on or off
   collections_t &collections = this->Internal->collections;
   for (collections_t::iterator it = collections.begin(); it!=collections.end(); it++) {
-    it->second->show = this->Internal->param_show_toggle;
+    it->second->show = this->Internal->toggle_onoff;
   }
-  this->Internal->param_show_toggle = !this->Internal->param_show_toggle;
+  this->Internal->toggle_onoff = !this->Internal->toggle_onoff;
 }
 
 
 // Config for the collections
 std::map<int32_t, CollectionConfig> collectionConfig;
-
 
 // helper function
 /**
@@ -369,6 +351,7 @@ double time_elevation(vtkCollections *self, int64_t id, double z, int collid) {
   }
   return newz;
 }
+
 /**
  * Only look at collection elevation
  */
@@ -766,12 +749,10 @@ public:
   virtual void draw(void *_self, int64_t range_start, int64_t range_end) {
     vtkCollections *self = (vtkCollections*) _self;
     // preparations
-    
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glEnable(GL_DEPTH_TEST);
 
-    
     switch(type) {
     case VS_OBJECT_COLLECTION_T_TREE:
       glEnable(GL_RESCALE_NORMAL);
@@ -848,11 +829,9 @@ public:
           draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
         }
-        
       }
     }
     glPopAttrib ();
-    
   }
   virtual void clear() {
     elements.clear();
@@ -882,7 +861,7 @@ public:
 
   virtual void draw(void *_self, int64_t range_start, int64_t range_end) {
     vtkCollections *self = (vtkCollections*) _self;
-    
+
     CollectionConfig & config = collectionConfig[id];
     bool isconf = config.is_configured();
 
@@ -898,7 +877,7 @@ public:
       color[2] = colors[3*(id%num_colors)+2];
       color[3] = colors[3*(id%num_colors)+3];
     }
-    
+
     for (elements_t::iterator it = elements.begin(); it != elements.end(); it++) {
       vs_link_t& link = it->second;
       collections_t::iterator collection_it1 = self->Internal->collections.find(link.collection1);
@@ -1045,7 +1024,6 @@ public:
   }
 
   virtual void draw(void *_self, int64_t range_start, int64_t range_end) {
-
     vtkCollections *self = (vtkCollections*) _self;
     glPushAttrib(GL_ALL_ATTRIB_BITS);
 
@@ -1118,8 +1096,8 @@ public:
                 glRotatef(bot_to_degrees(obj_rpy(1)),0.0,1.0,0.0);
                 glRotatef(bot_to_degrees(obj_rpy(0)),1.0,0.0,0.0);
 
-    glColor4f(255,255,155,1.0);
-    glLineWidth((GLfloat)self->Internal->param_point_width);
+                glColor4f(255,255,155,1.0);
+                glLineWidth((GLfloat)self->Internal->param_point_width);
 
                 float line_fan[2*element.npoints*3];
                 for (int i=0; i<element.npoints; ++i) {
@@ -1145,9 +1123,9 @@ public:
             }
 
             if (self->Internal->param_fill_scans) {
-          rgb[0] = 0;
-    rgb[1] = 0;
-    rgb[2] = 0;
+              rgb[0] = 0;
+              rgb[1] = 0;
+              rgb[2] = 0;
             }
 
             glTranslatef(obj.x, obj.y, z);
@@ -1222,30 +1200,6 @@ void vtkCollections::on_collection_data(const typename MyCollection::my_vs_colle
   //  g_mutex_unlock(self->collectionsMutex);
   //bot_viewer_request_redraw (self->viewer);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
