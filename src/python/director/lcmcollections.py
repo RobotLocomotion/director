@@ -256,9 +256,15 @@ class CollectionsManager(object):
             return
 
         for coll in drawObject.collectionInfos:
+
+            # If the icon exists, don't re-add it
+            for existingCollection in drawObject.children():
+                if coll.id == existingCollection.collectionInfo.id:
+                    return
+
             actor = vtk.vtkCollections()
             obj = CollectionInfoObject(coll, actor)
-            om.addToObjectModel(obj, om.getOrCreateContainer('COLLECTIONS'))
+            om.addToObjectModel(obj, drawObject)
             obj.addToView(self.view)
 
 
