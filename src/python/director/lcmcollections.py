@@ -1,17 +1,10 @@
 import director.vtkAll as vtk
 import director.objectmodel as om
 from director import lcmUtils
-
-# if bot_lcmgl cannot be important than this module will not be able to
-# support lcmgl, but it can still be imported in a disabled state
-try:
-    import bot_lcmgl
-    import vs as lcmCollections
-    LCMGL_AVAILABLE = True
-except ImportError:
-    LCMGL_AVAILABLE = False
+import vs as lcmCollections
 
 
+#------ Individual Collections To Be Rendered--------------------
 class CollectionInfo():
     def __init__(self, collectionId, collectionName, collectionType, collectionShow):
         self.id =   collectionId
@@ -182,6 +175,8 @@ class CollectionsObject(om.ObjectModelItem):
         self.getCollectionsInfo()
         self.renderAllViews()
 
+
+#------ Overall Set of Collections To Be Rendered--------------------
 managerInstance = None
 
 class CollectionsManager(object):
