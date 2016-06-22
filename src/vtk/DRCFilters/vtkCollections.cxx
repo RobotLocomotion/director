@@ -315,7 +315,6 @@ void vtkCollections::setMaxElevation(double maxElevation){
   this->Internal->param_time_scale = maxElevation;
 }
 void vtkCollections::setShowToggle(){
-  std::cout << (int) this->Internal->toggle_onoff << " meah\n";
   // When toggled, set the show property to the toggle value
   // multiple presses of toggle will turn all on or off
   collections_t &collections = this->Internal->collections;

@@ -24,7 +24,7 @@ class CollectionInfoObject(om.ObjectModelItem):
 
     def __init__(self, collectionInfo, actor):
 
-        om.ObjectModelItem.__init__(self, collectionInfo.name, om.Icons.Robot)
+        om.ObjectModelItem.__init__(self, collectionInfo.name, om.Icons.Collections)
 
         self.actor = actor
         self.collectionInfo = collectionInfo
@@ -86,6 +86,7 @@ class CollectionsObject(om.ObjectModelItem):
         self.addProperty('Max Elevation', 0.0, attributes=om.PropertyAttributes(decimals=1, minimum=0, maximum=100.0, singleStep=0.1))
 
         self.views = []
+        self.collectionInfos = None
 
     def _onPropertyChanged(self, propertySet, propertyName):
         om.ObjectModelItem._onPropertyChanged(self, propertySet, propertyName)
@@ -93,15 +94,9 @@ class CollectionsObject(om.ObjectModelItem):
         if propertyName == 'Visible':
             self.actor.SetVisibility(self.getProperty(propertyName))
             makeVisible = self.getProperty(propertyName)
-
             parent = om.getOrCreateContainer('COLLECTIONS')
             for coll in self.children():
                 coll.setProperty('Visible',makeVisible)
-
-            #for coll in self.collectionInfos:
-            #    self.actor.SetVisibility(makeVisible)
-            #    self.actor.setProperty('Visible',makeVisible)
-            #    self.actor.setEnabled(coll.id, makeVisible)
 
         elif propertyName == 'Start':
             self.actor.setRangeStart(self.getProperty(propertyName))
@@ -194,21 +189,30 @@ class CollectionsManager(object):
     def __init__(self, view):
         assert LCMGL_AVAILABLE
         self.view = view
-        self.subscriber = None
+        self.subscriber0 = None
+        self.subscriber1 = None
+        self.subscriber2 = None
+
         self.enable()
 
     def isEnabled(self):
-        return self.subscriber is not None
+        return self.subscriber0 is not None
 
     def setEnabled(self, enabled):
-        if enabled and not self.subscriber:
-            #self.subscriber = lcmUtils.addSubscriber('LCMGL.*', callback=self.onMessage)
-            self.subscriber = lcmUtils.addSubscriber('OBJECT_COLLECTION', callback=self.on_obj_collection_data)
+        if enabled and not self.subscriber0:
+            self.subscriber0 = lcmUtils.addSubscriber('OBJECT_COLLECTION', callback=self.on_obj_collection_data)
             self.subscriber1 = lcmUtils.addSubscriber('LINK_COLLECTION', callback=self.on_link_collection_data)
             self.subscriber2 = lcmUtils.addSubscriber('POINTS_COLLECTION', callback=self.on_points_collection_data)
-        elif not enabled and self.subscriber:
-            lcmUtils.removeSubscriber(self.subscriber)
-            self.subscriber = None
+            self.subscriber0.setNotifyAllMessagesEnabled(True)
+            self.subscriber1.setNotifyAllMessagesEnabled(True)
+            self.subscriber2.setNotifyAllMessagesEnabled(True)
+        elif not enabled and self.subscriber0:
+            lcmUtils.removeSubscriber(self.subscriber0)
+            lcmUtils.removeSubscriber(self.subscriber1)
+            lcmUtils.removeSubscriber(self.subscriber2)
+            self.subscriber0 = None
+            self.subscriber1 = None
+            self.subscriber2 = None
 
     def enable(self):
         self.setEnabled(True)
@@ -222,6 +226,7 @@ class CollectionsManager(object):
         if not drawObject:
             drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
         drawObject.on_obj_collection_data(msgBytes)
+        self.addAllObjects()
 
     def on_link_collection_data(self, msgBytes, channel):
         msg = lcmCollections.link_collection_t.decode(msgBytes.data())
@@ -229,6 +234,7 @@ class CollectionsManager(object):
         if not drawObject:
             drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
         drawObject.on_link_collection_data(msgBytes)
+        self.addAllObjects()
 
     def on_points_collection_data(self, msgBytes, channel):
         msg = lcmCollections.point3d_list_collection_t.decode(msgBytes.data())
@@ -236,7 +242,6 @@ class CollectionsManager(object):
         if not drawObject:
             drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
         drawObject.on_points_collection_data(msgBytes)
-
         self.addAllObjects()
 
     def getDrawObject(self, name):
@@ -255,12 +260,17 @@ class CollectionsManager(object):
         if not drawObject:
             return
 
+        drawObject.getCollectionsInfo()
         for coll in drawObject.collectionInfos:
 
             # If the icon exists, don't re-add it
+            existing = False
             for existingCollection in drawObject.children():
                 if coll.id == existingCollection.collectionInfo.id:
-                    return
+                    existing = True
+                    continue
+            if existing:
+                continue
 
             actor = vtk.vtkCollections()
             obj = CollectionInfoObject(coll, actor)
