@@ -152,13 +152,16 @@ if(USE_OCTOMAP)
 
 endif()
 
-#find_package(OpenGL REQUIRED)
-#find_library(OCTOVIS_LIBRARY octovis)
-list(APPEND sources vtkCollections.cxx)
-#list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
-list(APPEND pkg_deps
-  lcmtypes_visualization
-)
+if (USE_COLLECTIONS)
+
+  find_package(OpenGL REQUIRED)
+  list(APPEND sources vtkCollections.cxx)
+  list(APPEND deps ${OPENGL_LIBRARIES})
+
+  list(APPEND pkg_deps
+    lcmtypes_visualization
+  )
+endif()
 
 
 set(library_name vtkDRCFilters)
