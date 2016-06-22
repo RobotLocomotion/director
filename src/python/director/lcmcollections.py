@@ -66,14 +66,14 @@ class CollectionsObject(om.ObjectModelItem):
         self.addProperty('Visible', actor.GetVisibility())
         self.addProperty('Start', 0.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.01))
         self.addProperty('End', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.01))
+
         self.addProperty('Points Alpha', 0.8, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1))
-
-        self.addProperty('Fill Scans', False)
-
         self.addProperty('Point Width', 1.0, attributes=om.PropertyAttributes(decimals=0, minimum=5, maximum=30.0, singleStep=1))
         self.addProperty('Pose Width', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=30.0, singleStep=0.1))
-        self.addProperty('Color by Time', False)
+        self.addProperty('Color Poses', False)
 
+        self.addProperty('Fill Scans', False)
+        self.addProperty('Color by Time', False)
         self.addProperty('Elevation by Time', False)
         self.addProperty('Elevation by Collection', False)
         self.addProperty('Max Elevation', 0.0, attributes=om.PropertyAttributes(decimals=1, minimum=0, maximum=100.0, singleStep=0.1))
@@ -103,6 +103,8 @@ class CollectionsObject(om.ObjectModelItem):
             self.actor.setPointWidth(self.getProperty(propertyName))
         elif propertyName == 'Pose Width':
             self.actor.setPoseWidth(self.getProperty(propertyName))
+        elif propertyName == 'Color Poses':
+            self.actor.setColorPoses(self.getProperty(propertyName))
         elif propertyName == 'Color by Time':
             self.actor.setColorByTime(self.getProperty(propertyName))
         elif propertyName == 'Elevation by Time':
@@ -175,6 +177,10 @@ class CollectionsObject(om.ObjectModelItem):
         self.getCollectionsInfo()
         self.renderAllViews()
 
+    def on_reset_collections_data(self, msgBytes):
+        self.actor.on_reset_collections_data(msgBytes.data())
+        self.getCollectionsInfo()
+        self.renderAllViews()
 
 #------ Overall Set of Collections To Be Rendered--------------------
 managerInstance = None
@@ -182,11 +188,11 @@ managerInstance = None
 class CollectionsManager(object):
 
     def __init__(self, view):
-        assert LCMGL_AVAILABLE
         self.view = view
         self.subscriber0 = None
         self.subscriber1 = None
         self.subscriber2 = None
+        self.subscriber3 = None
 
         self.enable()
 
@@ -198,16 +204,20 @@ class CollectionsManager(object):
             self.subscriber0 = lcmUtils.addSubscriber('OBJECT_COLLECTION', callback=self.on_obj_collection_data)
             self.subscriber1 = lcmUtils.addSubscriber('LINK_COLLECTION', callback=self.on_link_collection_data)
             self.subscriber2 = lcmUtils.addSubscriber('POINTS_COLLECTION', callback=self.on_points_collection_data)
+            self.subscriber3 = lcmUtils.addSubscriber('RESET_COLLECTIONS', callback=self.on_reset_collections_data)
             self.subscriber0.setNotifyAllMessagesEnabled(True)
             self.subscriber1.setNotifyAllMessagesEnabled(True)
             self.subscriber2.setNotifyAllMessagesEnabled(True)
+            self.subscriber3.setNotifyAllMessagesEnabled(True)
         elif not enabled and self.subscriber0:
             lcmUtils.removeSubscriber(self.subscriber0)
             lcmUtils.removeSubscriber(self.subscriber1)
             lcmUtils.removeSubscriber(self.subscriber2)
+            lcmUtils.removeSubscriber(self.subscriber3)
             self.subscriber0 = None
             self.subscriber1 = None
             self.subscriber2 = None
+            self.subscriber3 = None
 
     def enable(self):
         self.setEnabled(True)
@@ -216,7 +226,6 @@ class CollectionsManager(object):
         self.setEnabled(False)
 
     def on_obj_collection_data(self, msgBytes, channel):
-        msg = lcmCollections.object_collection_t.decode(msgBytes.data())
         drawObject = self.getDrawObject("COLLECTIONS")
         if not drawObject:
             drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
@@ -224,7 +233,6 @@ class CollectionsManager(object):
         self.addAllObjects()
 
     def on_link_collection_data(self, msgBytes, channel):
-        msg = lcmCollections.link_collection_t.decode(msgBytes.data())
         drawObject = self.getDrawObject("COLLECTIONS")
         if not drawObject:
             drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
@@ -232,11 +240,17 @@ class CollectionsManager(object):
         self.addAllObjects()
 
     def on_points_collection_data(self, msgBytes, channel):
-        msg = lcmCollections.point3d_list_collection_t.decode(msgBytes.data())
         drawObject = self.getDrawObject("COLLECTIONS")
         if not drawObject:
             drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
         drawObject.on_points_collection_data(msgBytes)
+        self.addAllObjects()
+
+    def on_reset_collections_data(self, msgBytes, channel):
+        drawObject = self.getDrawObject("COLLECTIONS")
+        if not drawObject:
+            drawObject = self.addDrawObject("COLLECTIONS", msgBytes)
+        drawObject.on_reset_collections_data(msgBytes)
         self.addAllObjects()
 
     def getDrawObject(self, name):

@@ -53,6 +53,7 @@ public:
   void on_obj_collection_data(const char* data);
   void on_link_collection_data(const char* data);
   void on_points_collection_data(const char* data);
+  void on_reset_collections_data(const char* data);
     
   // Description:
   // Methods supporting, and required by, the rendering process.
@@ -83,6 +84,8 @@ public:
 
   void setPointWidth(double pointWidth);
   void setPoseWidth(double poseWidth);
+  void setColorPoses(bool colorPoses);
+
   void setColorByTime(bool colorByTime);
 
   void setElevationByTime(bool elevationByTime);

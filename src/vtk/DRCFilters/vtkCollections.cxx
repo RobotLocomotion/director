@@ -1,3 +1,10 @@
+// TODO:
+// - Internal should not be public. Resolve this, perhaps not by passing around a void* to vtkCollections
+// - explore if mutex is needed
+// - remove need for different msg_point and msg_link
+// Missing features from old renderer:
+// Renderer other information e.g. text, covariance ellipses
+
 /*=========================================================================
 
 Program:   Visualization Toolkit
@@ -47,6 +54,8 @@ const bool PARAM_COLOR_TIME_DEFAULT = false;
 
 const bool PARAM_USE_TIME_DEFAULT = false;
 const bool PARAM_Z_UP_DEFAULT = true;
+
+const bool PARAM_COLOR_AXES = false;
 
 const bool PARAM_SHOW_TOGGLE_DEFAULT = false;
 
@@ -178,6 +187,8 @@ public:
   double param_pose_width;
   bool param_color_time;
   bool param_z_up;
+
+  bool param_color_axes;
   
   bool toggle_onoff;
 
@@ -205,6 +216,8 @@ vtkCollections::vtkCollections()
   this->Internal->param_point_width = PARAM_POINT_WIDTH_POINTS_DEFAULT;
   this->Internal->param_pose_width = PARAM_POSE_WIDTH_POSES_DEFAULT;
   this->Internal->param_z_up = PARAM_Z_UP_DEFAULT;
+
+  this->Internal->param_color_axes = PARAM_COLOR_AXES;
 
   this->Internal->toggle_onoff = PARAM_SHOW_TOGGLE_DEFAULT;
 }
@@ -301,6 +314,10 @@ void vtkCollections::setPointWidth(double pointWidth){
 void vtkCollections::setPoseWidth(double poseWidth){
   this->Internal->param_pose_width = poseWidth;
 }
+void vtkCollections::setColorPoses(bool colorPoses){
+  this->Internal->param_color_axes = colorPoses;
+}
+
 void vtkCollections::setColorByTime(bool colorByTime){
   this->Internal->param_color_time = colorByTime;
 }
@@ -432,8 +449,9 @@ static void draw_tree(vtkCollections *self, double x, double y, double z) {
   glPopMatrix();
 }
 
-static void draw_axis(vtkCollections *self, double x, double y, double z, double yaw, double pitch, double roll, double size, bool mark) 
+static void draw_axis(vtkCollections *self, double x, double y, double z, double yaw, double pitch, double roll, double size, bool mark, int id) 
 {
+
   glPushMatrix();
   glPushAttrib(GL_CURRENT_BIT);
 
@@ -444,9 +462,22 @@ static void draw_axis(vtkCollections *self, double x, double y, double z, double
   glRotatef(bot_to_degrees(roll), 1., 0., 0.);
 
   glBegin(GL_LINES);
+
+  if (self->Internal->param_color_axes){
+    GLfloat color[3];
+    color[0] = colors[3*(id%num_colors)];
+    color[1] = colors[3*(id%num_colors)+1];
+    color[2] = colors[3*(id%num_colors)+2];
+
+    glColor3f(color[0],color[1],color[2]); glVertex3f(0.0,0.0,0.0); glVertex3f(size*1.0,0.0,0.0);
+    glColor3f(color[0],color[1],color[2]); glVertex3f(0.0,0.0,0.0); glVertex3f(0.0,size*1.0,0.0);
+    glColor3f(color[0],color[1],color[2]); glVertex3f(0.0,0.0,0.0); glVertex3f(0.0,0.0,size*1.0);
+  }else{
     glColor3f(1.0,0.0,0.0); glVertex3f(0.0,0.0,0.0); glVertex3f(size*1.0,0.0,0.0);
     glColor3f(0.0,1.0,0.0); glVertex3f(0.0,0.0,0.0); glVertex3f(0.0,size*1.0,0.0);
     glColor3f(0.0,0.0,1.0); glVertex3f(0.0,0.0,0.0); glVertex3f(0.0,0.0,size*1.0);
+  }
+
   glEnd();
 
   if (mark) {
@@ -805,7 +836,7 @@ public:
           draw_tetra (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
           break;
         case VS_OBJECT_COLLECTION_T_AXIS3D:
-          draw_axis (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          draw_axis (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last, id);
           break;
         case VS_OBJECT_COLLECTION_T_TREE:
           draw_tree (self, obj.x, obj.y, z);
@@ -815,7 +846,7 @@ public:
           break;
         case VS_OBJECT_COLLECTION_T_CAMERA:
           draw_camera (self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
-          draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last, id);
           break;
         case VS_OBJECT_COLLECTION_T_TRIANGLE:
           draw_equilateral_triangle (self, obj.x, obj.y, z, obj_rpy(2), size, is_last );
@@ -825,7 +856,7 @@ public:
           break;
         case VS_OBJECT_COLLECTION_T_SONARCONE:
           draw_sonarcone(self, obj.x, obj.y, z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
-          draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last);
+          draw_axis(self, obj.x, obj.y, obj.z, obj_rpy(2), obj_rpy(1), obj_rpy(0), size, is_last, id);
           break;
         }
       }
@@ -1219,6 +1250,17 @@ void vtkCollections::on_points_collection_data(const char* messageData)
 {
   int status = vs_point3d_list_collection_t_decode (messageData, 0, 1e9, &this->Internal->msg_points);
   on_collection_data<PointsCollection>(&this->Internal->msg_points);
+}
+
+void vtkCollections::on_reset_collections_data(const char* messageData)
+{
+  //int status = vs_reset_collections_t_decode (messageData, 0, 1e9, &this->Internal->msg_points);
+
+  collections_t &collections = this->Internal->collections;
+  for (collections_t::iterator it = collections.begin(); it!=collections.end(); it++) {
+    Collection* collection = it->second;
+    collection->clear();
+  }
 }
 
 //----------------------------------------------------------------------------
