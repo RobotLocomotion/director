@@ -68,7 +68,7 @@ class CollectionsObject(om.ObjectModelItem):
         self.addProperty('End', 1.0, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.01))
 
         self.addProperty('Points Alpha', 0.8, attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1))
-        self.addProperty('Point Width', 1.0, attributes=om.PropertyAttributes(decimals=0, minimum=5, maximum=30.0, singleStep=1))
+        self.addProperty('Point Width', 5.0, attributes=om.PropertyAttributes(decimals=0, minimum=1.0, maximum=30.0, singleStep=1))
         self.addProperty('Pose Width', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=30.0, singleStep=0.1))
         self.addProperty('Color Poses', False)
 
