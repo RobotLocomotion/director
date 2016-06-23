@@ -61,6 +61,7 @@ from director import framevisualization
 from director import lcmloggerwidget
 from director import lcmgl
 from director import lcmoctomap
+from director import lcmcollections
 from director import atlasdriver
 from director import atlasdriverpanel
 from director import multisensepanel
@@ -297,6 +298,11 @@ if useLCMGL:
 if useOctomap:
     octomapManager = lcmoctomap.init(view)
     app.MenuActionToggleHelper('Tools', 'Renderer - Octomap', octomapManager.isEnabled, octomapManager.setEnabled)
+
+useCollections = True
+if useCollections:
+    collectionsManager = lcmcollections.init(view)
+    app.MenuActionToggleHelper('Tools', 'Renderer - Collections', collectionsManager.isEnabled, collectionsManager.setEnabled)
 
 if useDrakeVisualizer:
     drakeVisualizer = drakevisualizer.DrakeVisualizer(view)

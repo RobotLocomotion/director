@@ -61,6 +61,7 @@ set(python_files
   director/lcmgl.py
   director/lcmobjectcollection.py
   director/lcmoctomap.py
+  director/lcmcollections.py  
   director/lcmspy.py
   director/lcmUtils.py
   director/mappingdemo.py

@@ -152,6 +152,18 @@ if(USE_OCTOMAP)
 
 endif()
 
+if (USE_COLLECTIONS)
+
+  find_package(OpenGL REQUIRED)
+  list(APPEND sources vtkCollections.cxx)
+  list(APPEND deps ${OPENGL_LIBRARIES})
+
+  list(APPEND pkg_deps
+    lcmtypes_visualization
+  )
+endif()
+
+
 set(library_name vtkDRCFilters)
 add_library(${library_name} ${sources} ${EXTRA_SRCS})
 target_link_libraries(${library_name} ${deps})
