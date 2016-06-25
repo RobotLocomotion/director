@@ -49,10 +49,12 @@ public:
 
 
   bool getLinkToWorld(const QString& linkName, vtkTransform* transform);
+  bool getFrameToWorld(int frameId, vtkTransform* transform);
   QList<QString> getLinkNames();
   QList<QString> getJointNames();
   int findLinkID(const QString& linkName) const;
   int findJointID(const QString& jointName) const;
+  int findFrameID(const QString& frameName) const;
 
   void getModelMesh(vtkPolyData* polyData);
   void getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData);

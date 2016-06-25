@@ -795,6 +795,14 @@ public:
     return linkToWorld;
   }
 
+  vtkSmartPointer<vtkTransform> getFrameToWorld(int frameId)
+  {
+
+    vtkSmartPointer<vtkTransform> frameToWorld = makeTransform(relativeTransform(*cache, 0, frameId));
+
+    return frameToWorld;
+  }
+
 };
 
 
@@ -1169,6 +1177,23 @@ bool ddDrakeModel::getLinkToWorld(const QString& linkName, vtkTransform* transfo
 }
 
 //-----------------------------------------------------------------------------
+bool ddDrakeModel::getFrameToWorld(int frameId, vtkTransform* transform)
+{
+  if (!transform || !this->Internal->Model)
+  {
+    return false;
+  }
+
+  vtkSmartPointer<vtkTransform> frameToWorld = this->Internal->Model->getFrameToWorld(frameId);
+  if (frameToWorld)
+  {
+    transform->SetMatrix(frameToWorld->GetMatrix());
+    return true;
+  }
+  return false;
+}
+
+//-----------------------------------------------------------------------------
 QList<QString> ddDrakeModel::getLinkNames()
 {
   if (!this->Internal->Model)
@@ -1182,6 +1207,11 @@ QList<QString> ddDrakeModel::getLinkNames()
 int ddDrakeModel::findLinkID(const QString& linkName) const
 {
   return this->Internal->Model->findLinkId(linkName.toAscii().data(), -1);
+}
+
+int ddDrakeModel::findFrameID(const QString& frameName) const
+{
+  return this->Internal->Model->findFrame(frameName.toAscii().data())->frame_index;
 }
 
 //-----------------------------------------------------------------------------

@@ -107,6 +107,14 @@ class RobotModelItem(om.ObjectModelItem):
         else:
             return None
 
+    def getFrameToWorld(self, frameId):
+        t = vtk.vtkTransform()
+        t.PostMultiply()
+        if self.model.getFrameToWorld(frameId, t):
+            return t
+        else:
+            return None
+
     def getHeadLink(self):
         return drcargs.getDirectorConfig().get('headLink')
 

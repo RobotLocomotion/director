@@ -27,6 +27,12 @@ class COPMonitor(object):
         self.robotSystem = robotSystem
         self.lFootFtFrameId = self.robotStateModel.model.findLinkID( self.robotSystem.ikPlanner.leftFootLink)
         self.rFootFtFrameId = self.robotStateModel.model.findLinkID( self.robotSystem.ikPlanner.rightFootLink)
+
+        useValkyrie = True
+        if useValkyrie:
+            self.rFootFtFrameId = self.robotStateModel.model.findFrameID("r_foot_force_torque")
+            self.lFootFtFrameId = self.robotStateModel.model.findFrameID("l_foot_force_torque")
+
         self.leftInContact = 0
         self.rightInContact = 0
         self.view = view
@@ -51,8 +57,8 @@ class COPMonitor(object):
                 app.getMainWindow().statusBar().insertPermanentWidget(0, self.warningButton)
                 self.dialogVisible = True
 
-            self.leftInContact = self.robotStateJointController.lastRobotStateMessage.force_torque.l_foot_force_z > 500
-            self.rightInContact = self.robotStateJointController.lastRobotStateMessage.force_torque.r_foot_force_z > 500
+            self.leftInContact = int(np.abs(self.robotStateJointController.lastRobotStateMessage.force_torque.l_foot_force_z) > 200)
+            self.rightInContact = int(np.abs(self.robotStateJointController.lastRobotStateMessage.force_torque.r_foot_force_z) > 200)
 
             if self.rightInContact or self.leftInContact:
 
@@ -73,9 +79,10 @@ class COPMonitor(object):
 
                 rFootOrigin = np.array(rFootTransform.TransformPoint([0, 0, -0.07645]))
                 lFootOrigin = np.array(lFootTransform.TransformPoint([0, 0, -0.07645])) # down to sole
+                pointOnSupportPolygon = (self.rightInContact*rFootOrigin+self.leftInContact*lFootOrigin)/(self.leftInContact + self.rightInContact)
 
                 measured_cop = self.ddDrakeWrapper.resolveCenterOfPressure(self.robotStateModel.model, [self.lFootFtFrameId, self.rFootFtFrameId], 
-                                lFootFt + rFootFt, [0., 0., 1.], (self.rightInContact*rFootOrigin+self.leftInContact*lFootOrigin)/(self.leftInContact + self.rightInContact))
+                                lFootFt + rFootFt, [0., 0., 1.], pointOnSupportPolygon)
 
                 allFootContacts = np.empty([0, 2])
                 if self.rightInContact:
@@ -103,6 +110,16 @@ class COPMonitor(object):
                 d.addSphere(measured_cop[0:3], radius=0.02)
                 vis.updatePolyData(d.getPolyData(), 'measured cop', view=self.view, parent='robot state model').setProperty('Color', colorStatus)
 
+                print "measured cop", measured_cop
+                print "rFootOrigin", rFootOrigin
+                print "rFootOrigin", lFootOrigin
+                print "rFootInContact", self.rightInContact
+                print "lFootInContact", self.leftInContact
+                print "pointOnSupportPolygon", pointOnSupportPolygon
+                return measured_cop
+
         elif self.dialogVisible:
             app.getMainWindow().statusBar().removeWidget(self.warningButton)
             self.dialogVisible = False
+
+
