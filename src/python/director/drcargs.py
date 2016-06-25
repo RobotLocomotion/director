@@ -132,6 +132,29 @@ class DRCArgParser(object):
                             default=[],
                             help='Run other python startup scripts in addition to startup.py')
 
+    def getRobotType(self):
+        directorConfigFile = self._args.directorConfigFile
+
+        if(directorConfigFile == self.getDefaultAtlasV3DirectorConfigFile()):
+            return 'atlas_v3'
+
+        if(directorConfigFile == self.getDefaultAtlasV4DirectorConfigFile()):
+            return 'atlas_v4'
+
+        if(directorConfigFile == self.getDefaultAtlasV5DirectorConfigFile()):
+            return 'atlas_v5'
+
+        if(directorConfigFile == self.getDefaultValkyrieV1DirectorConfigFile()):
+            return 'valkyrie_v1'
+
+        if(directorConfigFile == self.getDefaultValkyrieV2DirectorConfigFile()):
+            return 'valkyrie_v2'
+
+        if(directorConfigFile == self.getDefaultValkyrieV2SimpleDirectorConfigFile()):
+            return 'valkyrie_v2_simple'
+
+
+
 
 _argParser = None
 def getGlobalArgParser():
