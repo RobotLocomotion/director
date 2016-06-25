@@ -10,6 +10,8 @@
 #include <vtkActor.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkCellData.h>
+#include <vtkIdTypeArray.h>
 #include <vtkRenderer.h>
 #include <vtkOBJReader.h>
 #include <vtkSTLReader.h>
@@ -45,6 +47,13 @@
 
 #include <QMap>
 #include <QDir>
+
+#include <iostream>
+#include <fstream>
+#include <string>
+
+
+
 
 using std::map;
 using std::vector;
@@ -532,6 +541,20 @@ public:
 
     return visuals;
   }
+
+  std::vector<ddMeshVisual::Ptr> linkMeshVisuals(std::string linkName){
+
+    std::shared_ptr<RigidBody> rb = this->findLink(linkName);
+    std::vector<ddMeshVisual::Ptr> visuals;
+
+    if (this->meshMap.find(rb) != this->meshMap.end()){
+      visuals = this->meshMap.at(rb);
+    }
+
+    return visuals;
+  }
+
+
 
 
   std::string locateMeshFile(const std::string& meshFilename, const std::string& root_dir)
@@ -1052,6 +1075,53 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
   return ret;
 }
 
+void ddDrakeModel::doKinematics(const QVector<double>& q, const QVector<double>& v, bool compute_gradients,
+  bool compute_JdotV){
+
+  Eigen::VectorXd v_eigen(q.size());
+  Eigen::VectorXd q_eigen(v.size());
+
+  for (int i=0; i < q.size(); i++){
+   q_eigen[i] = q[i];
+  }
+
+  for (int i=0; i < q.size(); i++){
+   v_eigen[i] = v[i]; 
+  }
+
+  // this signature changed in RigidBodyTree, there is no longer a compute_gradients flag
+  this->Internal->Model->doKinematics(q_eigen, v_eigen, compute_JdotV);
+}
+
+
+// make sure we call do kinematics before we get here
+QVector<double> ddDrakeModel::geometricJacobian(int base_body_or_frame_ind, int end_effector_body_or_frame_ind, int expressed_in_body_or_frame_ind, int gradient_order, bool in_terms_of_qdot){
+
+  std::vector<int> v_indices;
+
+  // this signature changed
+  auto cache = this->Internal->Model->cache;
+  MatrixXd linkJacobian = this->Internal->Model->geometricJacobian(*this->Internal->Model->cache, base_body_or_frame_ind, end_effector_body_or_frame_ind,expressed_in_body_or_frame_ind, in_terms_of_qdot, &v_indices);
+
+  int num_velocities = this->Internal->Model->num_velocities;
+
+  MatrixXd linkJacobianFull = MatrixXd::Zero(6, num_velocities);
+  for (int i=0; i < v_indices.size(); i++){
+    linkJacobianFull.col(v_indices[i]) = linkJacobian.col(i);
+  }
+
+
+  QVector<double> linkJacobianVec(6*num_velocities);
+  for (int i = 0; i < 6; i++){
+    for (int j = 0; j < num_velocities; j++){
+      linkJacobianVec[num_velocities*i + j] = linkJacobianFull(i,j);
+    }
+  }
+
+  return linkJacobianVec;
+
+}
+
 //-----------------------------------------------------------------------------
 QVector<double> ddDrakeModel::getJointLimits(const QString& jointName) const
 {
@@ -1115,6 +1185,13 @@ int ddDrakeModel::findLinkID(const QString& linkName) const
 }
 
 //-----------------------------------------------------------------------------
+int ddDrakeModel::findJointID(const QString& jointName) const
+{
+  return this->Internal->Model->findJointId(jointName.toAscii().data(), -1);
+}
+
+
+//-----------------------------------------------------------------------------
 QList<QString> ddDrakeModel::getJointNames()
 {
   if (!this->Internal->Model)
@@ -1151,6 +1228,13 @@ QString ddDrakeModel::getLinkNameForMesh(vtkPolyData* polyData)
     }
   }
   return QString();
+}
+
+QString ddDrakeModel::getBodyOrFrameName(int body_or_frame_id)
+{
+  std::string linkName = this->Internal->Model->getBodyOrFrameName(body_or_frame_id);
+  QString linkNameQString = QString::fromStdString(linkName);
+  return linkNameQString;
 }
 
 
@@ -1208,6 +1292,83 @@ void ddDrakeModel::getModelMesh(vtkPolyData* polyData)
   }
 
   polyData->DeepCopy(appendFilter->GetOutput());
+}
+
+void ddDrakeModel::getModelMeshWithLinkInfoAndNormals(vtkPolyData* polyData)
+{
+  if (!polyData){
+    return;
+  }
+
+  vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+  for (const auto & rb: this->Internal->Model->bodies){
+    std::string linkNameString = rb->linkname;
+    QString linkName = QString::fromStdString(linkNameString);
+    vtkSmartPointer<vtkPolyData> tempPolyData = vtkSmartPointer<vtkPolyData>::New();
+    this->getLinkModelMesh(linkName, tempPolyData);
+    AddInputData(appendFilter, tempPolyData);
+  }
+
+  appendFilter->Update();
+  polyData->DeepCopy(appendFilter->GetOutput());  
+}
+
+void ddDrakeModel::getLinkModelMesh(const QString& linkName, vtkPolyData* polyData){
+  if (!polyData){
+    return;
+  }
+
+  std::string linkNameString = linkName.toAscii().data();
+  if (this->Internal->Model->findLink(linkNameString, -1) == nullptr){
+    std::cout << "couldn't find link " << linkNameString << " in ddDrakeModel::getLinkModelMesh, returning" << std::endl;
+    return;
+  }
+
+  int linkId = this->findLinkID(linkName.toAscii().data());
+  std::vector<ddMeshVisual::Ptr> visuals = this->Internal->Model->linkMeshVisuals(linkName.toAscii().data());
+  vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+  for (size_t i = 0; i < visuals.size(); ++i)
+  {
+    AddInputData(appendFilter, transformPolyData(visuals[i]->PolyData, visuals[i]->Transform));
+  }
+
+  if (visuals.size())
+  {
+    appendFilter->Update();
+  }
+
+  polyData->DeepCopy(appendFilter->GetOutput());
+
+  // make sure we compute the cell normals, currently this is not computing point normals
+  // would need to implement GetCellNormals(), so just recompute the normals for now
+  // bool hasCellNormals = GetCellNormals(polyData);
+
+  bool hasCellNormals = false;
+  if (!hasCellNormals and visuals.size()){
+    // Generate normals
+    std::cout << "trying to generate cell normals" << std::endl;
+    vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
+    SetInputData(normalGenerator, polyData);
+    std::cout << "visuals size is " << visuals.size() << std::endl;
+    std::cout << "number of cells is " << polyData->GetNumberOfCells() << std::endl;
+    normalGenerator->ComputePointNormalsOff();
+    normalGenerator->ComputeCellNormalsOn();
+    normalGenerator->Update();
+    std::cout << "test break" << std::endl;
+    polyData->DeepCopy(normalGenerator->GetOutput());
+  }
+
+  int numCells = polyData->GetNumberOfCells();
+  vtkSmartPointer<vtkIdTypeArray> linkIdArray = vtkSmartPointer<vtkIdTypeArray>::New(); //fill with linkId repeated appropriate number of time
+  // set "name" of the array to be "linkId", function is setName
+  linkIdArray->SetName("linkId");
+  for (int i = 0; i < numCells; i++){
+    linkIdArray->InsertNextValue(linkId);
+  }
+  polyData->GetCellData()->AddArray(linkIdArray);
+
 }
 
 //-----------------------------------------------------------------------------

@@ -1,8 +1,8 @@
-#ifndef __ddAppConfigure_h
-#define __ddAppConfigure_h
+#ifndef __directorConfigure_h
+#define __directorConfigure_h
 
 #if defined(WIN32)
-#  if defined(ddApp_EXPORTS)
+#  if defined(director_EXPORTS)
 #    define DD_APP_EXPORT __declspec( dllexport )
 #  else
 #    define DD_APP_EXPORT __declspec( dllimport )
