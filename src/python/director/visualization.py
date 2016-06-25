@@ -921,13 +921,11 @@ def addChildFrame(obj, initialTransform=None):
     return frame
 
 
-<<<<<<< HEAD
 def getRandomColor():
     '''
     Return a random color as a list of RGB values between 0.0 and 1.0.
     '''
     return colorsys.hsv_to_rgb(np.random.rand(), 1.0, 0.9)
-=======
 def showHandCloud(hand='left', view=None):
 
     view = view or app.getCurrentRenderView()
@@ -963,7 +961,6 @@ def showHandCloud(hand='left', view=None):
     t.start()
     obj.updater = t
     return obj
->>>>>>> lm-contact-filter-new
 
 
 def showClusterObjects(clusters, parent):
