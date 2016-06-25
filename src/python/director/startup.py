@@ -31,11 +31,7 @@ from director import mappingdemo
 from director import valvedemo
 from director import drivingplanner
 from director import egressplanner
-from director import externalforce
-from director import contactfilter
-from director import contactfiltervisualizer
-from director import contactfiltergurobi as CFG
-from director import contactpointlocator
+from director import polarisplatformplanner
 from director import surprisetask
 from director import continuouswalkingdemo
 from director import sitstandplanner
@@ -43,7 +39,6 @@ from director import walkingtestdemo
 from director import terraintask
 from director import ik
 from director import ikplanner
-from director import linkselection
 from director import objectmodel as om
 from director import spreadsheet
 from director import transformUtils
@@ -456,9 +451,9 @@ if usePlanning:
     teleopPanel = teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                      ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
 
-    motionPlanningPanel = motionplanningpanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
+    motionPlanningPanel = motionplanningpanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, 
                             ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan, footstepsDriver)
-
+    
     if useGamepad:
         gamePad = gamepad.Gamepad(teleopPanel, teleopJointController, ikPlanner, view)
 
@@ -515,13 +510,6 @@ if usePlanning:
                                       fitDrillMultisense, robotStateJointController,
                                       playPlans, showPose)
     doorTaskPanel = doordemo.DoorTaskPanel(doorDemo)
-
-    externalForce = externalforce.ExternalForce(robotSystem)
-    contactFilter = contactfilter.ContactFilter(robotStateModel, robotSystem.robotStateJointController)
-    contactPointLocator = contactpointlocator.ContactPointLocator(robotStateModel)
-    contactFilterVisualizer = contactfiltervisualizer.ContactFilterVisualizer(robotSystem, robotStateModel)
-    linkSelection = linkselection.LinkWidget(view, robotStateModel, externalForce)
-
 
     terrainTaskPanel = terraintask.TerrainTaskPanel(robotSystem)
     terrainTask = terrainTaskPanel.terrainTask
