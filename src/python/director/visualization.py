@@ -1096,7 +1096,10 @@ def pickProp(displayPoint, view):
 
     for tolerance in (0.0, 0.005, 0.01):
         pickType = 'render' if tolerance == 0.0 else 'cells'
-        pickedPoint, pickedProp, pickedDataset = pickPoint(displayPoint, view, pickType=pickType, tolerance=tolerance)
+        pickData = pickPoint(displayPoint, view, pickType=pickType, tolerance=tolerance)
+        pickedPoint = pickData[0]
+        pickedProp = pickData[1]
+        pickedDataset = pickData[2]
         if pickedProp is not None:
             return pickedPoint, pickedProp, pickedDataset
 
