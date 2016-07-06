@@ -173,10 +173,10 @@ vtkSmartPointer<vtkPolyData> transformPolyData(vtkPolyData* polyData, vtkTransfo
   return shallowCopy(transformFilter->GetOutput());
 }
 
-vtkSmartPointer<vtkPolyData> scalePolyData(vtkPolyData* polyData, double scale)
+vtkSmartPointer<vtkPolyData> scalePolyData(vtkPolyData* polyData, Eigen::Vector3d scale)
 {
   vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
-  t->Scale(scale, scale, scale);
+  t->Scale(scale[0], scale[1], scale[2]);
   return transformPolyData(polyData, t);
 }
 
@@ -641,7 +641,7 @@ public:
             loadedVisuals = loadMeshVisuals(filename);
           }
 
-          if (mesh.scale != 1.0)
+          if (mesh.scale[0] != 1.0 || mesh.scale[1] != 1.0 || mesh.scale[2] != 1.0)
           {
 
             for (size_t mvi = 0; mvi < loadedVisuals.size(); ++mvi)
