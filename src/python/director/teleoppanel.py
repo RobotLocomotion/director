@@ -888,7 +888,8 @@ class JointLimitChecker(object):
         choice = msgBox.exec_()
 
         if choice == 0: # No
-            self.stop()
+            # don't do anything except close the dialog window
+            return
         elif choice == 2: # Yes, then auto
             self.automaticallyExtendLimits = True
             self.extendJointLimitsAsExceeded(limitData)
