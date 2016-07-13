@@ -838,6 +838,47 @@ class IKPlanner(object):
         return self.computePostureGoal(startPose, endPose)
 
 
+    def computeHomePose(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167, ikParameters=None):
+        ''' Compute a pose with the pelvis above the mid point of the feet with zero roll and pitch.
+            The back and neck joints are also zeroed. Don't move the arm joints.
+            The default height is Valkyrie specific
+            This function originally required usePointwise=False, doesn't seem to be necessary
+        '''
+
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
+
+        startPoseName = 'stand_start'
+        self.addPose(startPose, startPoseName)
+
+        constraints = []
+        constraints.append(self.createQuasiStaticConstraint())
+        constraints.extend(self.createFixedFootConstraints(startPoseName))
+        constraints.append( self.createPostureConstraint('q_zero', self.backJoints) )
+
+        pos = np.array(footReferenceFrame.GetPosition()) + np.array([0,0,pelvisHeightAboveFeet])
+        tf = transformUtils.frameFromPositionAndRPY( pos ,[0,0, footReferenceFrame.GetOrientation()[2] ])
+        #vis.updateFrame(tf,'goal pelvis frame', visible=True)
+        p, q = self.createPositionOrientationConstraint("pelvis", tf, vtk.vtkTransform(), positionTolerance=0.0, angleToleranceInDegrees=0.0)
+        p.tspan = [1.0, 1.0]
+        q.tspan = [1.0, 1.0]
+        constraints.extend([p, q])
+
+        constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
+        constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append( self.createPostureConstraint('q_zero', self.neckJoints) )
+
+        endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
+        return endPose, info
+
+
+    def computeHomePlan(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0):
+
+        endPose, info = self.computeHomePose(startPose, footReferenceFrame, pelvisHeightAboveFeet)
+        print 'info:', info
+
+        return self.computePostureGoal(startPose, endPose)
+
+
     def createPostureConstraint(self, startPostureName, jointNames):
         p = ik.PostureConstraint()
         p.postureName = startPostureName
