@@ -29,18 +29,14 @@ from PythonQt import QtGui, QtCore
 
 _footMeshes = None
 _footMeshFiles = []
-_robotType = 0 # 0 - any atlas, 1 - val v1, 2 - val v2
+_modelName = "valkyrie" # either atlas_v3/v4/v5 or valkyrie
 _pelvisLink = '' # pelvis
 _leftFootLink = '' # l_foot
 _rightFootLink = '' # r_foot
 with open(drcargs.args().directorConfigFile) as directorConfigFile:
     directorConfig = json.load(directorConfigFile)
 
-    # dodgy use of filename to find valkyrie:
-    if (directorConfigFile.name.find("valkyrie") > -1):
-        _robotType = 1
-    if (directorConfigFile.name.find("val_description") > -1):
-        _robotType = 2
+    _modelName = directorConfig['modelName']
 
     directorConfigDirectory = os.path.dirname(os.path.abspath(directorConfigFile.name))
 
@@ -586,8 +582,7 @@ class FootstepsDriver(object):
         contact_pts_left = np.zeros((4,3))
         contact_pts_right = np.zeros((4,3))
 
-        if (_robotType == 0):
-            # atlas
+        if "atlas" in _modelName: # atlas_v3/v4/v5
             if support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE:
                 contact_pts_left[0,:] = [-0.0876,  0.0626, -0.07645]
                 contact_pts_left[1,:] = [-0.0876, -0.0626, -0.07645]
@@ -608,20 +603,9 @@ class FootstepsDriver(object):
 
             contact_pts_right = contact_pts_left.copy()
 
-        if (_robotType == 1):
-            #val v1
-            contact_pts_left[0,:] = [0.110, 0.0624435, -0.22]
-            contact_pts_left[1,:] = [0.110,-0.0624435, -0.22]
-            contact_pts_left[2,:] = [0.075, 0.0624435, 0.0775]
-            contact_pts_left[3,:] = [0.075,-0.0624435, 0.0775]
-            contact_pts_right[0,:] = [0.075, 0.0624435, -0.0775]
-            contact_pts_right[1,:] = [0.075,-0.0624435, -0.0775]
-            contact_pts_right[2,:] = [0.110, 0.0624435, 0.22]
-            contact_pts_right[3,:] = [0.110,-0.0624435, 0.22]
-
-        if (_robotType == 2):
-            #val v2 (NOTE: at the moment, function createFootstepList in lcm2ros_ihmc.cpp depends on
-            #these values (taken from ihmc code: ValkyriePhysicalProperties.java))
+        elif (_modelName == "valkyrie"):  #valkyrie
+            #these values were taken from ihmc code: ValkyriePhysicalProperties.java
+            #they are also used in createFootstepList in lcm2ros_ihmc.cpp
             if support_contact_groups == lcmdrc.footstep_params_t.SUPPORT_GROUPS_HEEL_TOE:
                 contact_pts_left[0,:] = [-0.038,  0.055, -0.09]
                 contact_pts_left[1,:] = [-0.038, -0.055, -0.09]
@@ -641,6 +625,10 @@ class FootstepsDriver(object):
                 raise ValueError("Unrecognized support contact group: {:d}".format(support_contact_groups))
 
             contact_pts_right = contact_pts_left.copy()
+
+        else:
+                print _modelName
+                raise ValueError("modelName not recognised")
 
         return contact_pts_left, contact_pts_right
 
@@ -665,21 +653,12 @@ class FootstepsDriver(object):
         t_rf_mid.PreMultiply()
         t_rf_mid.Translate(contact_pts_mid_right)
 
-        if (_robotType == 0): # Atlas
+        if "atlas" in _modelName: # atlas_v3/v4/v5
             t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
-        elif (_robotType == 1):
-            # Valkyrie v1 Foot orientation is silly
-            l_foot_sole = transformUtils.frameFromPositionAndRPY([0,0,0], [180.0, 82.5, 0])
-            l_foot_sole.PostMultiply()
-            l_foot_sole.Concatenate(t_lf_mid)
-            r_foot_sole = transformUtils.frameFromPositionAndRPY([0,0,0], [0.0, -82.5, 0])
-            r_foot_sole.PostMultiply()
-            r_foot_sole.Concatenate(t_rf_mid)
-            t_feet_mid = transformUtils.frameInterpolate(l_foot_sole, r_foot_sole, 0.5)
-        elif (_robotType == 2):
-            # Valkyrie v2 is better
+        elif (_modelName == "valkyrie"): # valkyrie
             t_feet_mid = transformUtils.frameInterpolate(t_lf_mid, t_rf_mid, 0.5)
-
+        else:
+            raise ValueError("Model Name not recognised")
 
         if useWorldZ:
             rpy = [0.0, 0.0, np.degrees(transformUtils.rollPitchYawFromTransform(t_feet_mid)[2])]
