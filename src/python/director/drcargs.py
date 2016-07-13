@@ -38,7 +38,7 @@ class DRCArgParser(object):
         return os.path.join(director.getDRCBaseDir(), 'software/config/val/robot.cfg')
 
     def getDefaultDirectorConfigFile(self):
-        return self.getDefaultValkyrieV2DirectorConfigFile();
+        return self.getDefaultValkyrieDirectorConfigFile();
 
     def getDefaultAtlasV3DirectorConfigFile(self):
         return os.path.join(director.getDRCBaseDir(),
@@ -52,15 +52,11 @@ class DRCArgParser(object):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/atlas_v5/director_config.json')
 
-    def getDefaultValkyrieV1DirectorConfigFile(self):
-        return os.path.join(director.getDRCBaseDir(),
-                            'software/models/valkyrie/director_config.json')
-
-    def getDefaultValkyrieV2DirectorConfigFile(self):
+    def getDefaultValkyrieDirectorConfigFile(self):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/val_description/director_config.json')
 
-    def getDefaultValkyrieV2SimpleDirectorConfigFile(self):
+    def getDefaultValkyrieSimpleDirectorConfigFile(self):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/val_description/director_config_simple.json')
 
@@ -94,19 +90,14 @@ class DRCArgParser(object):
                             const=self.getDefaultAtlasV5DirectorConfigFile(),
                             help='Use Atlas V5')
 
-        directorConfig.add_argument('-val1', '--valkyrie_v1', dest='directorConfigFile',
+        directorConfig.add_argument('-val', '--valkyrie', dest='directorConfigFile',
                             action='store_const',
-                            const=self.getDefaultValkyrieV1DirectorConfigFile(),
-                            help='Use Valkyrie (V1)')
+                            const=self.getDefaultValkyrieDirectorConfigFile(),
+                            help='Use Valkyrie (Default)')
 
-        directorConfig.add_argument('-val2', '--valkyrie_v2', dest='directorConfigFile',
+        directorConfig.add_argument('-val_simple', '--valkyrie_simple', dest='directorConfigFile',
                             action='store_const',
-                            const=self.getDefaultValkyrieV2DirectorConfigFile(),
-                            help='Use Valkyrie (V2/Default)')
-
-        directorConfig.add_argument('-val2s', '--valkyrie_v2_simple', dest='directorConfigFile',
-                            action='store_const',
-                            const=self.getDefaultValkyrieV2SimpleDirectorConfigFile(),
+                            const=self.getDefaultValkyrieSimpleDirectorConfigFile(),
                             help='Use Valkyrie (Simple/Primitive Shapes)')
 
         directorConfig.add_argument('-lwr', '--lwr', dest='directorConfigFile',

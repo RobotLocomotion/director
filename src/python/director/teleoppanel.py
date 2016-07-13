@@ -728,7 +728,7 @@ class EndEffectorTeleopPanel(object):
         self.ui.lhandCombo.enabled = False
 
     def initFinalPosePlanning(self):
-        if drcargs.getDirectorConfig()['modelName'] not in {'valkyrie_v1', 'valkyrie_v2'}:
+        if drcargs.getDirectorConfig()['modelName'] != 'valkyrie':
             message = 'Final pose planning is not yet available for %s' % drcargs.getDirectorConfig()['modelName']
             QtGui.QMessageBox.warning(app.getMainWindow(), 'Model not supported', message,
                   QtGui.QMessageBox.Ok)

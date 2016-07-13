@@ -290,7 +290,6 @@ def getBuiltinPackagePaths():
         'software/models/atlas_v3',
         'software/models/atlas_v4',
         'software/models/atlas_v5',
-        'software/models/valkyrie',
         'software/models/val_description',
         'software/models/lwr_defs',
         'software/models/husky_description',
