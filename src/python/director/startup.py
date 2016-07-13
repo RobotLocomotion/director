@@ -343,9 +343,14 @@ if usePlanning:
     def planNominal():
         ikPlanner.computeNominalPlan(robotStateJointController.q)
 
-    def planHome():
+    def planHomeStand():
         ''' Move the robot back to a safe posture, 1m above its feet, w/o moving the hands '''
-        ikPlanner.computeHomePlan(robotStateJointController.q, footstepsDriver.getFeetMidPoint(robotStateModel), 1.0167)
+        ikPlanner.computeHomeStandPlan(robotStateJointController.q, footstepsDriver.getFeetMidPoint(robotStateModel), 1.0167)
+
+    def planHomeNominal():
+        ''' Move the robot back to a safe posture, 1m above its feet, w/o moving the hands '''
+        ikPlanner.computeHomeNominalPlan(robotStateJointController.q, footstepsDriver.getFeetMidPoint(robotStateModel), 1.0167)
+
 
     def fitDrillMultisense():
         pd = om.findObjectByName('Multisense').model.revPolyData
