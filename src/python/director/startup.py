@@ -299,7 +299,7 @@ if useOctomap:
     octomapManager = lcmoctomap.init(view)
     app.MenuActionToggleHelper('Tools', 'Renderer - Octomap', octomapManager.isEnabled, octomapManager.setEnabled)
 
-useCollections = True
+useCollections = False
 if useCollections:
     collectionsManager = lcmcollections.init(view)
     app.MenuActionToggleHelper('Tools', 'Renderer - Collections', collectionsManager.isEnabled, collectionsManager.setEnabled)
