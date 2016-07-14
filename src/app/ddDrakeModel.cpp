@@ -554,7 +554,10 @@ public:
     return visuals;
   }
 
-
+  // initializes the kinematics cache with the current model
+  void initializeKinematicsCache(){
+    this->cache = std::make_shared<KinematicsCache<double> >(this->bodies);
+  }
 
 
   std::string locateMeshFile(const std::string& meshFilename, const std::string& root_dir)
@@ -998,7 +1001,7 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
 
   this->Internal->JointPositions = jointPositions;
 
-  model->cache = std::make_shared<KinematicsCache<double> >(model->bodies);
+  // model->cache = std::make_shared<KinematicsCache<double> >(model->bodies);
   model->cache->initialize(q);
   model->doKinematics(*model->cache);
   model->updateModel();
@@ -1083,6 +1086,7 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
   return ret;
 }
 
+// this is all wrong now . . . need ot do the whole kinematics cache thing
 void ddDrakeModel::doKinematics(const QVector<double>& q, const QVector<double>& v, bool compute_gradients,
   bool compute_JdotV){
 
@@ -1097,8 +1101,14 @@ void ddDrakeModel::doKinematics(const QVector<double>& q, const QVector<double>&
    v_eigen[i] = v[i]; 
   }
 
-  // this signature changed in RigidBodyTree, there is no longer a compute_gradients flag
-  this->Internal->Model->doKinematics(q_eigen, v_eigen, compute_JdotV);
+  // Need to do things through a kinematics cache object now
+  // just calling doKinematics on the model isn't enough
+  URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
+
+  // we have already initialized it with initializeKinematicsCache, so we don't need to do it again
+  // model->cache = std::make_shared<KinematicsCache<double> >(model->bodies);
+  model->cache->initialize(q_eigen,v_eigen);
+  model->doKinematics(*model->cache);
 }
 
 
@@ -1280,6 +1290,7 @@ bool ddDrakeModel::loadFromFile(const QString& filename)
   this->Internal->FileName = filename;
   this->Internal->Model = model;
 
+  this->Internal->Model->initializeKinematicsCache();
   this->setJointPositions(QVector<double>(model->num_positions, 0.0));
   return true;
 }
@@ -1296,6 +1307,7 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
   this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
 
+  this->Internal->Model->initializeKinematicsCache();
   this->setJointPositions(QVector<double>(model->num_positions, 0.0));
   return true;
 }
