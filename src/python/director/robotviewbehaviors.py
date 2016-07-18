@@ -191,9 +191,9 @@ def newWalkingGoal(displayPoint, view):
     t = vtk.mutable(0.0)
     vtk.vtkPlane.IntersectWithLine(worldPt1, worldPt2, groundNormal, groundOrigin, t, selectedGroundPoint)
 
-    footFrame.Translate(np.array(selectedGroundPoint) - np.array(footFrame.GetPosition()))
+    walkingTarget = transformUtils.frameFromPositionAndRPY(selectedGroundPoint, np.array(footFrame.GetOrientation()))
 
-    footstepsdriverpanel.panel.onNewWalkingGoal(footFrame)
+    footstepsdriverpanel.panel.onNewWalkingGoal(walkingTarget)
 
 
 def toggleFootstepWidget(displayPoint, view, useHorizontalWidget=False):
