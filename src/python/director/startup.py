@@ -93,6 +93,8 @@ from director import lcmUtils
 from director.utime import getUtime
 from director.shallowCopy import shallowCopy
 
+from director import finger_test
+
 from director import segmentationroutines
 from director import trackers
 
@@ -285,6 +287,9 @@ if not useLightColorScheme:
 
 if useHands:
     handcontrolpanel.init(lHandDriver, rHandDriver, robotStateModel, robotStateJointController, view)
+
+    fingerTest = finger_test.FingerTest()
+    fingerTestTaskPanel = finger_test.FingerTestTaskPanel(fingerTest)
 
 
 if useFootsteps:
@@ -541,6 +546,8 @@ if usePlanning:
     taskPanels['Surprise'] = surpriseTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
     taskPanels['Table'] = tableTaskPanel.widget
+    if useHands:
+        taskPanels['Finger test'] = fingerTestTaskPanel.widget
     taskPanels['Continuous Walking'] = continuousWalkingTaskPanel.widget
     if useMappingPanel:
         taskPanels['Mapping'] = mappingTaskPanel.widget
