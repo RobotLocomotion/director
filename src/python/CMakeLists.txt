@@ -163,6 +163,8 @@ set(python_files
   urdf_parser_py/xml_reflection/__init__.py
   urdf_parser_py/xml_reflection/basics.py
   urdf_parser_py/xml_reflection/core.py
+
+  director/finger_test.py
   )
 
 
