@@ -64,8 +64,6 @@ set(python_files
   director/lcmcollections.py  
   director/lcmspy.py
   director/lcmUtils.py
-  director/mappingdemo.py
-  director/mappingpanel.py
   director/mapsregistrar.py
   director/matlab.py
   director/meshmanager.py

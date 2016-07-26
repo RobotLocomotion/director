@@ -9,7 +9,6 @@
     <file>ddJointCommandPanel.ui</file>
     <file>ddFrameVisualization.ui</file>
     <file>ddNavigation.ui</file>
-    <file>ddMapping.ui</file>
     <file>ddPlaybackPanel.ui</file>
     <file>ddRobotPoseGui.ui</file>
     <file>ddAtlasDriverPanel.ui</file>
