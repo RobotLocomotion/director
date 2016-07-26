@@ -26,7 +26,6 @@ from director import bihandeddemo
 from director import debrisdemo
 from director import doordemo
 from director import drilldemo
-from director import tabledemo
 from director import valvedemo
 from director import drivingplanner
 from director import egressplanner
@@ -471,11 +470,6 @@ if usePlanning:
                     ikPlanner, manipPlanner, atlasdriver.driver, lHandDriver,
                     perception.multisenseDriver, refitBlocks)
 
-    tableDemo = tabledemo.TableDemo(robotStateModel, playbackRobotModel,
-                    ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
-                    perception.multisenseDriver, view, robotStateJointController, playPlans, teleopPanel, playbackPanel, jointLimitChecker)
-    tableTaskPanel = tabledemo.TableTaskPanel(tableDemo)
-
     drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
@@ -530,7 +524,6 @@ if usePlanning:
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Surprise'] = surpriseTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
-    taskPanels['Table'] = tableTaskPanel.widget
     taskPanels['Continuous Walking'] = continuousWalkingTaskPanel.widget
 
     tasklaunchpanel.init(taskPanels)
