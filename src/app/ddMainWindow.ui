@@ -550,21 +550,6 @@
     <string>Navigation Panel</string>
    </property>
   </action>
-  <action name="ActionMappingPanel">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="images/resources.qrc">
-     <normaloff>:/images/map_icon.png</normaloff>:/images/map_icon.png</iconset>
-   </property>
-   <property name="text">
-    <string>Mapping Panel</string>
-   </property>
-   <property name="toolTip">
-    <string>Mapping Panel</string>
-   </property>
-  </action>
   <action name="ActionSensorDataRequestPanel">
    <property name="checkable">
     <bool>true</bool>

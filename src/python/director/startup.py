@@ -26,8 +26,6 @@ from director import bihandeddemo
 from director import debrisdemo
 from director import doordemo
 from director import drilldemo
-from director import tabledemo
-from director import mappingdemo
 from director import valvedemo
 from director import drivingplanner
 from director import egressplanner
@@ -66,7 +64,6 @@ from director import atlasdriver
 from director import atlasdriverpanel
 from director import multisensepanel
 from director import navigationpanel
-from director import mappingpanel
 from director import handcontrolpanel
 from director import sensordatarequestpanel
 from director import tasklaunchpanel
@@ -165,7 +162,6 @@ useBlackoutText = True
 useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
-useMappingPanel = True
 notUseOpenniDepthImage = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -474,11 +470,6 @@ if usePlanning:
                     ikPlanner, manipPlanner, atlasdriver.driver, lHandDriver,
                     perception.multisenseDriver, refitBlocks)
 
-    tableDemo = tabledemo.TableDemo(robotStateModel, playbackRobotModel,
-                    ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
-                    perception.multisenseDriver, view, robotStateJointController, playPlans, teleopPanel, playbackPanel, jointLimitChecker)
-    tableTaskPanel = tabledemo.TableTaskPanel(tableDemo)
-
     drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
                     lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                     fitDrillMultisense, robotStateJointController,
@@ -507,13 +498,6 @@ if usePlanning:
                     fitDrillMultisense, robotStateJointController,
                     playPlans, showPose, cameraview, segmentationpanel)
 
-    mappingDemo = mappingdemo.MappingDemo(robotStateModel, playbackRobotModel,
-                    ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
-                    perception.multisenseDriver, view, robotStateJointController, playPlans)
-    if useMappingPanel:
-        mappingPanel = mappingpanel.init(robotStateJointController, footstepsDriver)
-        mappingTaskPanel = mappingpanel.MappingTaskPanel(mappingDemo, mappingPanel)
-
     doorDemo = doordemo.DoorDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
                                       lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
                                       fitDrillMultisense, robotStateJointController,
@@ -540,10 +524,7 @@ if usePlanning:
     taskPanels['Drill'] = drillTaskPanel.widget
     taskPanels['Surprise'] = surpriseTaskPanel.widget
     taskPanels['Terrain'] = terrainTaskPanel.widget
-    taskPanels['Table'] = tableTaskPanel.widget
     taskPanels['Continuous Walking'] = continuousWalkingTaskPanel.widget
-    if useMappingPanel:
-        taskPanels['Mapping'] = mappingTaskPanel.widget
 
     tasklaunchpanel.init(taskPanels)
 
@@ -1108,26 +1089,6 @@ if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
     imageOverlayManager.viewName = "KINECT_RGB"
     #ikPlanner.fixedBaseArm = True
     #showImageOverlay()
-
-def roomMap():
-    mappingPanel.onStartMappingButton()
-    t = mappingdemo.MappingDemo(robotStateModel, playbackRobotModel,
-                    ikPlanner, manipPlanner, footstepsDriver, atlasdriver.driver, lHandDriver, rHandDriver,
-                    perception.multisenseDriver, view, robotStateJointController, playPlans)
-    t.visOnly = False
-    t.optionalUserPromptEnabled = False
-    q = t.autonomousExecuteRoomMap()
-    q.connectTaskEnded(mappingSweepEnded)
-    q.start()
-
-def mappingSweepEnded(taskQ, task):
-    if task.func_name == 'doneIndicator':
-        import time as qq
-        mappingPanel.onStopMappingButton()
-        qq.sleep(3)
-        mappingPanel.onShowMapButton()
-        print "DONE WITH MAPPING ROOM"
-
 
 if 'startup' in drcargs.args():
     for filename in drcargs.args().startup:

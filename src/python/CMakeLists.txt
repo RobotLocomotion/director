@@ -64,8 +64,6 @@ set(python_files
   director/lcmcollections.py  
   director/lcmspy.py
   director/lcmUtils.py
-  director/mappingdemo.py
-  director/mappingpanel.py
   director/mapsregistrar.py
   director/matlab.py
   director/meshmanager.py
@@ -106,7 +104,6 @@ set(python_files
   director/statelistener.py
   director/surprisetask.py
   director/switchplanner.py
-  director/tabledemo.py
   director/tasklaunchpanel.py
   director/tdx.py
   director/teleoppanel.py
