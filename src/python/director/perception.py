@@ -441,17 +441,21 @@ class MultiSenseSource(TimerCallback):
 
         jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
         jointGroupNeck = filter(lambda group: group['name'] == 'Neck', jointGroups)
-        if (len(jointGroupNeck) == 1):
-            neckJoints = jointGroupNeck[0]['joints']
+
+        neckJoints = jointGroupNeck[0]['joints']
+        if (len(neckJoints) == 1): # Atlas
+            jointPositions = [math.radians(neckPitchDegrees)]
+        elif (len(neckJoints) == 3): # Valkyrie, assuming joint 0 is lowerNeckPitch
+            jointPositions = [math.radians(neckPitchDegrees), 0, 0]
         else:
             return
 
         # Assume first neck joint is the pitch joint
         m = lcmbotcore.joint_angles_t()
         m.utime = getUtime()
-        m.num_joints = 1
-        m.joint_name = [ neckJoints[0] ]
-        m.joint_position = [math.radians(neckPitchDegrees)]
+        m.num_joints = len(neckJoints)
+        m.joint_name = neckJoints
+        m.joint_position = jointPositions
         lcmUtils.publish('DESIRED_NECK_ANGLES', m)
 
 
