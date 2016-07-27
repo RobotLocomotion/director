@@ -75,6 +75,7 @@ set(python_files
   director/openscope.py
   director/packagepath.py
   director/perception.py
+  director/planningutils.py
   director/planplayback.py
   director/playbackpanel.py
   director/pointcloudlcm.py

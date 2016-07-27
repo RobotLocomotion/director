@@ -429,7 +429,7 @@ class EndEffectorTeleopPanel(object):
         ikPlanner = self.panel.ikPlanner
 
         startPoseName = 'reach_start'
-        startPose = np.array(self.panel.robotStateJointController.q)
+        startPose = self.panel.planningUtils.getPlanningStartPose()
         ikPlanner.addPose(startPose, startPoseName)
 
         if (ikPlanner.fixedBaseArm==False):
@@ -634,7 +634,7 @@ class EndEffectorTeleopPanel(object):
     def createGoalFrames(self):
 
         ikPlanner = self.panel.ikPlanner
-        startPose = np.array(self.panel.robotStateJointController.q)
+        startPose = self.panel.planningUtils.getPlanningStartPose()
 
         self.removePlanFolder()
         folder = self.getConstraintFrameFolder()
@@ -779,9 +779,10 @@ class EndEffectorTeleopPanel(object):
 
 class PosturePlanShortcuts(object):
 
-    def __init__(self, jointController, ikPlanner, widget=None):
+    def __init__(self, jointController, ikPlanner, planningUtils, widget=None):
         self.jointController = jointController
         self.ikPlanner = ikPlanner
+        self.planningUtils = planningUtils
 
         widget = widget or app.getMainWindow()
         app.addShortcut(widget, 'Ctrl+Shift+S', self.planStand)
@@ -790,13 +791,13 @@ class PosturePlanShortcuts(object):
         app.addShortcut(widget, 'Ctrl+Shift+R', functools.partial(self.planPreGrasp, 'right'))
 
     def planStand(self):
-        self.ikPlanner.computeStandPlan(self.jointController.q)
+        self.ikPlanner.computeStandPlan(self.planningUtils.getPlanningStartPose())
 
     def planNominal(self):
-        self.ikPlanner.computeNominalPlan(self.jointController.q)
+        self.ikPlanner.computeNominalPlan(self.planningUtils.getPlanningStartPose())
 
     def planPreGrasp(self, side):
-        startPose = self.jointController.q
+        startPose = self.jointController.q # wxm
         endPose = self.ikPlanner.getMergedPostureFromDatabase(startPose, 'General', 'arm up pregrasp', side=side)
         self.ikPlanner.computePostureGoal(startPose, endPose)
 
@@ -971,7 +972,7 @@ class GeneralEndEffectorTeleopPanel(object):
 
         startPoseName = 'reach_start'
         endPoseName = 'reach_end'
-        startPose = np.array(self.robotStateJointController.q)
+        startPose = self.teleopPanel.planningUtils.getPlanningStartPose()
         self.ikPlanner.addPose(startPose, startPoseName)
 
         plan = self.constraintSet.runIkTraj()
@@ -989,7 +990,7 @@ class GeneralEndEffectorTeleopPanel(object):
 
         startPoseName = 'reach_start'
         endPoseName = 'reach_end'
-        startPose = np.array(self.robotStateJointController.q)
+        startPose = self.teleopPanel.planningUtils.getPlanningStartPose()
         ikPlanner.addPose(startPose, startPoseName)
 
         endEffectorLinkName = str(self.endEffectorCombo.currentText)
@@ -1241,7 +1242,7 @@ class JointTeleopPanel(object):
 
     def computeEndPose(self):
 
-        self.startPose = np.array(self.panel.robotStateJointController.q)
+        self.startPose = self.panel.planningUtils.getPlanningStartPose()
         self.endPose = self.startPose.copy()
 
         hasBase = False
@@ -1335,7 +1336,7 @@ class JointTeleopPanel(object):
 
 class TeleopPanel(object):
 
-    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction):
+    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, planningUtils):
 
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
@@ -1346,6 +1347,7 @@ class TeleopPanel(object):
         self.affordanceManager = affordanceManager
         self.showPlanFunction = showPlanFunction
         self.hidePlanFunction = hidePlanFunction
+        self.planningUtils = planningUtils
 
         manipPlanner.connectPlanCommitted(self.onPlanCommitted)
 
@@ -1443,12 +1445,12 @@ def _getAction():
     return app.getToolBarActions()['ActionTeleopPanel']
 
 
-def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction):
+def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, planningUtils):
 
     global panel
     global dock
 
-    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction)
+    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, planningUtils)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 

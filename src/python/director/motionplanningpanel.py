@@ -44,7 +44,8 @@ class WidgetDict(object):
         addWidgetsToDict(widgets, self.__dict__)
         
 class MotionPlanningPanel(object):
-    def __init__(self, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, footDriver):
+    def __init__(self, planningUtils, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, footDriver):
+        self.planningUtils = planningUtils
         self.robotStateModel = robotStateModel
         self.robotStateJointController = robotStateJointController
         self.teleopRobotModel = teleopRobotModel
@@ -188,7 +189,7 @@ class MotionPlanningPanel(object):
     
     def updateIKConstraints(self):
         startPoseName = 'reach_start'
-        startPose = np.array(self.robotStateJointController.q)
+        startPose = self.planningUtils.getPlanningStartPose()
         self.ikPlanner.addPose(startPose, startPoseName)
 
         constraints = []
@@ -293,7 +294,7 @@ class MotionPlanningPanel(object):
         self.removeHandFrames()
 
         folder = self.getConstraintFrameFolder()
-        startPose = np.array(self.robotStateJointController.q)        
+        startPose = self.planningUtils.getPlanningStartPose()
         for side in sides:
             linkName = self.ikPlanner.getHandLink(side)
             frameName = '%s constraint frame' % linkName
@@ -347,7 +348,7 @@ class MotionPlanningPanel(object):
         self.robotStateJointController.q[:6] = self.teleopJointController.q[:6]
         self.robotStateJointController.push()
         startPoseName = 'reach_start'
-        startPose = np.array(self.robotStateJointController.q)
+        startPose = self.planningUtils.getPlanningStartPose()
         self.ikPlanner.addPose(startPose, startPoseName)
         self.ui.feetComboBox.setCurrentIndex(1)   
         
@@ -358,7 +359,7 @@ class MotionPlanningPanel(object):
     def onMotionPlan(self):
         self.ui.feetComboBox.setCurrentIndex(1)
         startPoseName = 'reach_start'
-        startPose = np.array(self.robotStateJointController.q)
+        startPose = self.planningUtils.getPlanningStartPose()
         self.checkReachingPlanningMode()
         self.ikPlanner.addPose(startPose, startPoseName)
         plan = self.constraintSet.runIkTraj()
@@ -375,12 +376,12 @@ class MotionPlanningPanel(object):
 def _getAction():
     return app.getToolBarActions()['ActionMotionPlanningPanel']
 
-def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, footDriver):
+def init(planningUtils, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, footDriver):
 
     global panel
     global dock
 
-    panel = MotionPlanningPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, footDriver)
+    panel = MotionPlanningPanel(planningUtils, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, footDriver)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 
