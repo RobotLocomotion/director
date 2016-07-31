@@ -163,7 +163,7 @@ useBlackoutText = True
 useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
-useLimitJointsSentToPlanner = True
+useLimitJointsSentToPlanner = False
 notUseOpenniDepthImage = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
