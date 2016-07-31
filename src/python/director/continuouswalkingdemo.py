@@ -86,7 +86,7 @@ class ContinousWalkingDemo(object):
                                   [0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH, 0.5*FOOT_WIDTH, -0.5*FOOT_WIDTH]])
 
     
-    def __init__(self, robotStateModel, footstepsPanel, footstepsDriver, playbackPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView, jointLimitChecker):
+    def __init__(self, robotStateModel, footstepsPanel, footstepsDriver, playbackPanel, robotStateJointController, ikPlanner, teleopJointController, navigationPanel, cameraView):
         self.footstepsPanel = footstepsPanel
         self.footstepsDriver = footstepsDriver
         self.playbackPanel = playbackPanel
@@ -96,7 +96,6 @@ class ContinousWalkingDemo(object):
         self.teleopJointController = teleopJointController
         self.navigationPanel = navigationPanel
         self.cameraView = cameraView
-        self.jointLimitChecker = jointLimitChecker
 
         # live operation flags
         self.leadingFootByUser = 'Left'
@@ -957,9 +956,6 @@ class ContinousWalkingDemo(object):
         lcmUtils.publish('SCS_API_CONTROL', msg)
 
 
-    def autoExtendJointLimits(self):
-        self.jointLimitChecker.automaticallyExtendLimits = True
-
     def executeManipPlan(self):
         self.playbackPanel.executePlan()
 
@@ -1114,7 +1110,6 @@ class ContinuousWalkingTaskPanel(TaskUserPanel):
 
         # prep
         prep = self.taskTree.addGroup('Preparation')
-        addFunc(functools.partial(cw.autoExtendJointLimits), 'auto extend joint limits', parent=prep)
         addTask(rt.SetArmsPosition(name='set arms position'), parent=prep)
         addFunc(functools.partial(cw.executeManipPlan), 'execute arms plan', parent=prep)
         addTask(rt.SetNeckPitch(name='set neck position', angle=50), parent=prep)
