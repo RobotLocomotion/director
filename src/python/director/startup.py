@@ -163,6 +163,7 @@ useBlackoutText = True
 useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
+useLimitJointsSentToPlanner = True
 notUseOpenniDepthImage = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -426,6 +427,8 @@ if usePlanning:
     #app.addToolbarMacro('stereo depth', sendFusedDepthRequest)
 
     planningUtils = planningutils.PlanningUtils(robotStateModel, robotStateJointController)
+    if useLimitJointsSentToPlanner:
+        planningUtils.clampToJointLimits = True
 
     jointLimitChecker = teleoppanel.JointLimitChecker(robotStateModel, robotStateJointController)
     jointLimitChecker.setupMenuAction()
