@@ -816,17 +816,9 @@ class JointLimitChecker(object):
         self.timer.callback = self.update
         self.warningButton = None
         self.action = None
-        self.automaticallyExtendLimits = False
 
     def update(self):
         limitData = self.checkJointLimits()
-
-        # Automatically extend limits (dangerous in practice)
-        if self.automaticallyExtendLimits:
-            if limitData:
-                self.extendJointLimitsAsExceeded(limitData)
-                self.clearStatusBarWarning()
-            return
 
         if limitData:
             self.notifyUserStatusBar(limitData)
@@ -885,15 +877,11 @@ class JointLimitChecker(object):
         msgBox.setText(message)
         msgBox.addButton(QtGui.QPushButton('No'), QtGui.QMessageBox.NoRole)
         msgBox.addButton(QtGui.QPushButton('Yes'), QtGui.QMessageBox.YesRole)
-        msgBox.addButton(QtGui.QPushButton('Yes, then auto'), QtGui.QMessageBox.HelpRole)
         choice = msgBox.exec_()
 
         if choice == 0: # No
             # don't do anything except close the dialog window
             return
-        elif choice == 2: # Yes, then auto
-            self.automaticallyExtendLimits = True
-            self.extendJointLimitsAsExceeded(limitData)
         else:
             self.extendJointLimitsAsExceeded(limitData)
 
