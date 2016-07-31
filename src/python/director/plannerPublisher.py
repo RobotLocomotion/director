@@ -35,8 +35,6 @@ class PlannerPublisher(object):
             self.jointLimits[jointName][0]=jointPosition
         else:
             self.jointLimits[jointName][1]=jointPosition
-    print limitData
-    print self.jointLimits
 
   def setupMessage(self, constraints, endPoseName="", nominalPoseName="", seedPoseName="", additionalTimeSamples=None):
     poses = ikconstraintencoder.getPlanPoses(constraints, self.ikPlanner)
