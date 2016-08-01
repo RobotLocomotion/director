@@ -164,7 +164,7 @@ useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
 useLimitJointsSentToPlanner = False
-notUseOpenniDepthImage = True
+useOpenniDepthImage = False
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -227,8 +227,7 @@ if usePerception:
         return trackers.PointerTracker(robotStateModel, disparityPointCloud)
 
 
-# TODO: change this logic, currently can only disable components rather than re-enable them
-if (not notUseOpenniDepthImage):
+if useOpenniDepthImage:
     openniDepthPointCloud = segmentation.DisparityPointCloudItem('openni point cloud', 'OPENNI_FRAME', 'OPENNI_FRAME_LEFT', cameraview.imageManager)
     openniDepthPointCloud.addToView(view)
     om.addToObjectModel(openniDepthPointCloud, parentObj=om.findObjectByName('sensors'))
