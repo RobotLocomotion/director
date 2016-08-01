@@ -68,6 +68,7 @@ from director import handcontrolpanel
 from director import sensordatarequestpanel
 from director import tasklaunchpanel
 from director.jointpropagator import JointPropagator
+from director import planningutils
 
 from director import coursemodel
 
@@ -162,6 +163,7 @@ useBlackoutText = True
 useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
+useLimitJointsSentToPlanner = False
 notUseOpenniDepthImage = True
 
 poseCollection = PythonQt.dd.ddSignalMap()
@@ -169,10 +171,16 @@ costCollection = PythonQt.dd.ddSignalMap()
 
 if 'fixedBaseArm' in drcargs.getDirectorConfig()['userConfig']:
     ikPlanner.fixedBaseArm = True
+
 if 'disableComponents' in drcargs.getDirectorConfig():
     for component in drcargs.getDirectorConfig()['disableComponents']:
         print "Disabling", component
         locals()[component] = False
+
+if 'enableComponents' in drcargs.getDirectorConfig():
+    for component in drcargs.getDirectorConfig()['enableComponents']:
+        print "Enabling", component
+        locals()[component] = True
 
 
 if useSpreadsheet:
@@ -424,6 +432,9 @@ if usePlanning:
     #app.addToolbarMacro('stereo height', sendFusedHeightRequest)
     #app.addToolbarMacro('stereo depth', sendFusedDepthRequest)
 
+    planningUtils = planningutils.PlanningUtils(robotStateModel, robotStateJointController)
+    if useLimitJointsSentToPlanner:
+        planningUtils.clampToJointLimits = True
 
     jointLimitChecker = teleoppanel.JointLimitChecker(robotStateModel, robotStateJointController)
     jointLimitChecker.setupMenuAction()
@@ -432,7 +443,7 @@ if usePlanning:
     spindleSpinChecker =  multisensepanel.SpindleSpinChecker(spindleMonitor)
     spindleSpinChecker.setupMenuAction()
 
-    postureShortcuts = teleoppanel.PosturePlanShortcuts(robotStateJointController, ikPlanner)
+    postureShortcuts = teleoppanel.PosturePlanShortcuts(robotStateJointController, ikPlanner, planningUtils)
 
 
     def drillTrackerOn():
@@ -454,9 +465,9 @@ if usePlanning:
     manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
     teleopPanel = teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                     ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
+                     ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan, planningUtils)
 
-    motionPlanningPanel = motionplanningpanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, 
+    motionPlanningPanel = motionplanningpanel.init(planningUtils, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                             ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan, footstepsDriver)
     
     if useGamepad:
@@ -481,7 +492,7 @@ if usePlanning:
     valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
 
     continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, footstepsDriver, playbackPanel, robotStateJointController, ikPlanner,
-                                                                       teleopJointController, navigationPanel, cameraview, jointLimitChecker)
+                                                                       teleopJointController, navigationPanel, cameraview)
     continuousWalkingTaskPanel = continuouswalkingdemo.ContinuousWalkingTaskPanel(continuouswalkingDemo)
 
     useDrivingPlanner = drivingplanner.DrivingPlanner.isCompatibleWithConfig()
