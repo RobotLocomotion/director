@@ -34,7 +34,7 @@ def processSingleBlock(robotStateModel, whichFile=0):
         polyData = ioUtils.readPolyData(os.path.join(dataDir, 'terrain/terrain_simple_ihmc.vtp'))
         vis.updatePolyData( polyData, 'terrain_simple_ihmc.vtp', parent='continuous')
     else:
-        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'terrain/terrain_stairs_ihmc.vtp'))
+        polyData = ioUtils.readPolyData(os.path.join(dataDir, 'terrain/terrain_flagstones_ihmc.vtp'))
         cwdemo.chosenTerrain = 'stairs'
         cwdemo.supportContact = lcmdrc.footstep_params_t.SUPPORT_GROUPS_MIDFOOT_TOE
         vis.updatePolyData( polyData, 'terrain_stairs_ihmc.vtp', parent='continuous')
@@ -103,7 +103,7 @@ def processSnippet():
 #navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)
 navigationPanel = None
 continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, footstepsDriver, playbackpanel, robotStateJointController, ikPlanner,
-                                                                       teleopJointController, navigationPanel, cameraview, jointLimitChecker=None)
+                                                                       teleopJointController, navigationPanel, cameraview)
 
 cwdemo = continuouswalkingDemo
 
