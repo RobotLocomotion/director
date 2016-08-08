@@ -5,6 +5,7 @@ from director import visualization as vis
 from director import objectmodel as om
 from director import teleoppanel
 from director import playbackpanel
+from director import planningutils
 
 from PythonQt import QtCore, QtGui
 import numpy as np
@@ -61,8 +62,9 @@ robotsystem.create(view, globals())
 playbackPanel = playbackpanel.PlaybackPanel(planPlayback, playbackRobotModel, playbackJointController,
                                   robotStateModel, robotStateJointController, manipPlanner)
 
+planningUtils = planningutils.PlanningUtils(robotStateModel, robotStateJointController)
 teleopPanel = teleoppanel.TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                 ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan)
+                 ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan, planningUtils)
 
 manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 

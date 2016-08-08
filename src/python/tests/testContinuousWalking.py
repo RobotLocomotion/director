@@ -71,7 +71,7 @@ def processSnippet():
 #navigationPanel = navigationpanel.init(robotStateJointController, footstepsDriver)
 navigationPanel = None
 continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, footstepsDriver, playbackpanel, robotStateJointController, ikPlanner,
-                                                                       teleopJointController, navigationPanel, cameraview, jointLimitChecker=None)
+                                                                       teleopJointController, navigationPanel, cameraview)
 
 cwdemo = continuouswalkingDemo
 
