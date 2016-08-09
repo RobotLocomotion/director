@@ -7,7 +7,7 @@ scriptDir=$(cd $(dirname $0) && pwd)
 
 make_vtk_homebrew_bottle()
 {
-  brew tap rdeits/director
+  brew tap openhumanoids/director
   brew tap homebrew/science
   $scriptDir/brew_install.sh vtk5 --with-qt
   brew bottle vtk5
@@ -17,7 +17,7 @@ make_vtk_homebrew_bottle()
 install_vtk_homebrew_bottle()
 {
   wget https://robot.blob.core.windows.net/packages/vtk5-5.10.1.el_capitan.bottle.tar.gz
-  brew tap rdeits/director
+  brew tap openhumanoids/director
   brew tap homebrew/science
   brew update > /dev/null
   brew install vtk5-5.10.1.el_capitan.bottle.tar.gz
