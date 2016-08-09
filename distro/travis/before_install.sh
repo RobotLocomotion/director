@@ -19,6 +19,7 @@ install_vtk_homebrew_bottle()
   wget https://www.dropbox.com/s/r0o7b3zrv6een6o/vtk5-5.10.1_2.mavericks.bottle.1.tar.gz
   brew tap robotlocomotion/director
   brew tap homebrew/science
+  brew update > /dev/null
   brew install vtk5-5.10.1_2.mavericks.bottle.1.tar.gz
 }
 
