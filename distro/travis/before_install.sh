@@ -7,7 +7,7 @@ scriptDir=$(cd $(dirname $0) && pwd)
 
 make_vtk_homebrew_bottle()
 {
-  brew tap rdeits/director
+  brew tap robotlocomotion/director
   brew tap homebrew/science
   $scriptDir/brew_install.sh vtk5 --with-qt
   brew bottle vtk5
@@ -16,11 +16,11 @@ make_vtk_homebrew_bottle()
 
 install_vtk_homebrew_bottle()
 {
-  wget https://www.dropbox.com/s/r0o7b3zrv6een6o/vtk5-5.10.1_2.mavericks.bottle.1.tar.gz
+  wget https://robot.blob.core.windows.net/packages/vtk5-5.10.1.el_capitan.bottle.tar.gz
   brew tap robotlocomotion/director
   brew tap homebrew/science
   brew update > /dev/null
-  brew install vtk5-5.10.1_2.mavericks.bottle.1.tar.gz
+  brew install vtk5-5.10.1.el_capitan.bottle.tar.gz
 }
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
