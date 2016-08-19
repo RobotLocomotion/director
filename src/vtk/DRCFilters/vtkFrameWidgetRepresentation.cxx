@@ -496,8 +496,8 @@ void vtkFrameWidgetRepresentation::TranslateInPlane(double e[2])
   planeNormal[this->RotateAxis] = 1.0;
   this->Internal->Transform->TransformVector(planeNormal, planeNormal);
 
-  double rayP0[3];
-  double rayP1[3];
+  double rayP0[4];
+  double rayP1[4];
   double displayPoint[2];
 
 
