@@ -19,6 +19,7 @@ import numpy as np
 import drc as lcmdrc
 import bot_core as lcmbotcore
 import multisense as lcmmultisense
+import maps as lcmmaps
 import lcmUtils
 
 
@@ -686,7 +687,7 @@ class MapServerSource(TimerCallback):
 
     def getNameForViewId(self, viewId):
 
-        for typeName, typeValue in lcmdrc.data_request_t.__dict__.iteritems():
+        for typeName, typeValue in lcmmaps.data_request_t.__dict__.iteritems():
             if typeValue == viewId:
                 return typeName
 
@@ -709,7 +710,7 @@ class MapServerSource(TimerCallback):
             else:
                 obj.setProperty('Color', [0, 0.68, 1])
 
-            if viewId == lcmdrc.data_request_t.HEIGHT_MAP_SCENE:
+            if viewId == lcmmaps.data_request_t.HEIGHT_MAP_SCENE:
                 obj.setProperty('Surface Mode', 'Wireframe')
 
             folder = om.findObjectByName('Map Server')
@@ -744,7 +745,7 @@ class MapServerSource(TimerCallback):
             self.callbackFunc()
 
     def getSceneHeightData(self):
-        return self.getDepthMapData(lcmdrc.data_request_t.HEIGHT_MAP_SCENE)
+        return self.getDepthMapData(lcmmaps.data_request_t.HEIGHT_MAP_SCENE)
 
     def getDepthMapData(self, viewId):
 

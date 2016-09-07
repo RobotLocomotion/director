@@ -6,8 +6,8 @@ from director.utime import getUtime
 
 from time import time
 
-from drc import data_request_t
-from drc import data_request_list_t
+from maps import data_request_t
+from maps import data_request_list_t
 
 def addWidgetsToDict(widgets, d):
 
