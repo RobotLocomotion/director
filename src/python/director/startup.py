@@ -114,7 +114,7 @@ import numpy as np
 from director.debugVis import DebugData
 from director import ioUtils as io
 
-drcargs.requireStrict()
+# drcargs.requireStrict()
 drcargs.args()
 app.startup(globals())
 om.init(app.getMainWindow().objectTree(), app.getMainWindow().propertiesPanel())
@@ -342,6 +342,9 @@ if usePlanning:
 
     def planNominal():
         ikPlanner.computeNominalPlan(robotStateJointController.q)
+
+    def planStandNominal():
+        ikPlanner.computeStandNominalPlan(robotStateJointController.q)
 
     def fitDrillMultisense():
         pd = om.findObjectByName('Multisense').model.revPolyData

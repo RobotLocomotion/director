@@ -801,17 +801,7 @@ class IKPlanner(object):
         endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
         return endPose, info
 
-
-    def computeNominalPlan(self, startPose):
-
-        endPose, info = self.computeNominalPose(startPose)
-        print 'info:', info
-
-        return self.computePostureGoal(startPose, endPose)
-
-
-    def computeStandPose(self, startPose, ikParameters=None):
-
+    def computeStandNominalPose(self, startPose, ikParameters=None):
         ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         nominalPoseName = 'q_nom'
@@ -821,8 +811,10 @@ class IKPlanner(object):
         constraints = []
         constraints.extend(self.createFixedFootConstraints(startPoseName))
         constraints.append(self.createMovingBaseSafeLimitsConstraint())
-        constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
-        constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append(self.createLockedLeftArmPostureConstraint(nominalPoseName))
+        constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
+        constraints.append(self.createBaseGroundHeightConstraint(1.0,[-0.05,0.05]))
+        constraints.append(self.createQuasiStaticConstraint())
         backJoints = self.backJoints
         constraints.append(self.createPostureConstraint(nominalPoseName, backJoints))
 
@@ -830,7 +822,48 @@ class IKPlanner(object):
         return endPose, info
 
 
-    def computeStandPlan(self, startPose):
+    def computeStandNominalPlan(self, startPose):
+        endPose, info = self.computeStandNominalPose(startPose)
+        print 'info:', info
+        return self.computePostureGoal(startPose, endPose)
+
+
+
+    def computeNominalPlan(self, startPose):
+
+        endPose, info = self.computeNominalPose(startPose)
+        print 'info:', info
+
+        return self.computePostureGoal(startPose, endPose)
+
+
+    def computeStandPose(self, startPose, ikParameters=None, useCurrentAsNominal=True):
+
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
+
+        nominalPoseName = 'q_nom'
+        startPoseName = 'stand_start'
+        nominalPoseName = 'q_nom'
+        defaultNominalPoseName = 'q_nom'
+        self.addPose(startPose, startPoseName)
+
+        if useCurrentAsNominal:
+            nominalPoseName = startPoseName
+
+        constraints = []
+        constraints.extend(self.createFixedFootConstraints(startPoseName))
+        constraints.append(self.createMovingBaseSafeLimitsConstraint())
+        constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
+        constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
+        constraints.append(self.createQuasiStaticConstraint())
+        backJoints = self.backJoints
+        constraints.append(self.createPostureConstraint(defaultNominalPoseName, backJoints))
+
+        endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName, nominalPostureName=nominalPoseName)
+        return endPose, info
+
+
+    def computeStandPlan(self, startPose, useCurrentAsNominal=True):
 
         endPose, info = self.computeStandPose(startPose)
         print 'info:', info
