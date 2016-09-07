@@ -176,7 +176,7 @@ class ManipulationPlanDriver(object):
        self.publishPlansWithSupports = useSupports
        self.callbacks.process(self.USE_SUPPORTS)
 
-    def commitManipPlan(self, manipPlan):
+    def commitManipPlan(self, manipPlan, paramSet=None):
 
         for previousPlan in self.committedPlans:
             if previousPlan.utime == manipPlan.utime:
@@ -187,9 +187,17 @@ class ManipulationPlanDriver(object):
         if isinstance(manipPlan, lcmdrc.robot_plan_w_keyframes_t):
             manipPlan = self.convertKeyframePlan(manipPlan)
             supports = self.getSupports()
+
+
+            if paramSet is not None:
+                manipPlan.param_set = paramSet
+            else:
+                manipPlan.param_set = 'manip'
+
             if supports is not None:
                 manipPlan = self.convertPlanToPlanWithSupports(manipPlan, supports, [0.0],
                                                                self.plansWithSupportsAreQuasistatic)
+
         manipPlan.utime = getUtime()
 
         channelMap = {lcmdrc.robot_plan_with_supports_t:'COMMITTED_ROBOT_PLAN_WITH_SUPPORTS'}
