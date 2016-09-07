@@ -93,7 +93,7 @@ if (USE_DRC)
   )
 
   list(APPEND pkg_deps
-    drc-lcmtypes
+    drc-lcmtypes lcmtypes_maps
   )
 
 endif()

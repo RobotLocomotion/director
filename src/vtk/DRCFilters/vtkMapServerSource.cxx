@@ -43,11 +43,11 @@
 #include <lcm/lcm-cpp.hpp>
 
 //#include <lcmtypes/drc_lcmtypes.hpp>
-#include <lcmtypes/drc/map_image_t.hpp>
-#include <lcmtypes/drc/map_cloud_t.hpp>
-#include <lcmtypes/drc/map_octree_t.hpp>
-#include <lcmtypes/drc/map_scans_t.hpp>
-#include <lcmtypes/drc/data_request_t.hpp>
+#include <lcmtypes/maps/image_t.hpp>
+#include <lcmtypes/maps/cloud_t.hpp>
+#include <lcmtypes/maps/octree_t.hpp>
+#include <lcmtypes/maps/scans_t.hpp>
+#include <lcmtypes/maps/data_request_t.hpp>
 
 
 #include <maps/LcmTranslator.hpp>
@@ -64,7 +64,7 @@
 namespace
 {
 
-const int WORKSPACE_DEPTH_VIEW_ID = drc::data_request_t::DEPTH_MAP_WORKSPACE;
+const int WORKSPACE_DEPTH_VIEW_ID = maps::data_request_t::DEPTH_MAP_WORKSPACE;
 
 /* commented out due to conflict with vtkMultisenseUtils.h version
 //----------------------------------------------------------------------------
@@ -256,22 +256,22 @@ public:
   }
 
 
-  void cloudHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_cloud_t* msg)
+  void cloudHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const maps::cloud_t* msg)
   {
     this->HandleNewData(msg);
   }
 
-  void depthHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_image_t* msg)
+  void depthHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const maps::image_t* msg)
   {
     this->HandleNewData(msg);
   }
 
-  void octreeHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_octree_t* msg)
+  void octreeHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const maps::octree_t* msg)
   {
     this->HandleNewData(msg);
   }
 
-  void scanBundleHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const drc::map_scans_t* msg)
+  void scanBundleHandler(const lcm::ReceiveBuffer* rbuf, const std::string& channel, const maps::scans_t* msg)
   {
     this->HandleNewData(msg);
   }
@@ -586,7 +586,7 @@ protected:
     return image;
   }
 
-  void HandleNewData(const drc::map_image_t* msg)
+  void HandleNewData(const maps::image_t* msg)
   {
     int viewId = msg->view_id;
     maps::DepthImageView depthImageView;
@@ -613,7 +613,7 @@ protected:
     this->NewData = true;
   }
 
-  void HandleNewData(const drc::map_cloud_t* msg)
+  void HandleNewData(const maps::cloud_t* msg)
   {
     int viewId = msg->view_id;
     maps::PointCloudView cloudView;
@@ -635,7 +635,7 @@ protected:
     this->NewData = true;
   }
 
-  void HandleNewData(const drc::map_octree_t* msg)
+  void HandleNewData(const maps::octree_t* msg)
   {
     int viewId = msg->view_id;
     maps::OctreeView octreeView;
@@ -658,7 +658,7 @@ protected:
     this->NewData = true;
   }
 
-  void HandleNewData(const drc::map_scans_t* msg)
+  void HandleNewData(const maps::scans_t* msg)
   {
     if (msg->utime == this->LastScanBundleUtime) return;
     this->LastScanBundleUtime = msg->utime;

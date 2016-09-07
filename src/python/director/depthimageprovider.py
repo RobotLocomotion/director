@@ -1,6 +1,7 @@
 import director.vtkAll as vtk
 import director.vtkNumpy as vnp
 import drc as lcmdrc
+import maps as lcmmaps
 import numpy as np
 import time
 
@@ -12,12 +13,12 @@ class DepthImageProvider(object):
         self.source.Start()
 
     def waitForSceneHeight(self):
-        viewId = lcmdrc.data_request_t.HEIGHT_MAP_SCENE
+        viewId = lcmmaps.data_request_t.HEIGHT_MAP_SCENE
         while self.source.GetCurrentMapId(viewId) < 0:
             time.sleep(0.1)
 
     def getSceneHeightData(self):
-        return self.getDepthMapData(lcmdrc.data_request_t.HEIGHT_MAP_SCENE)
+        return self.getDepthMapData(lcmmaps.data_request_t.HEIGHT_MAP_SCENE)
 
     def getDepthMapData(self, viewId):
 
