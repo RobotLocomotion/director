@@ -96,3 +96,24 @@ class TimerCallback(object):
         else:
             self.stop()
 
+class SingleShotCallback(object):
+
+    def __init__(self, callback, timeDelay=1.0):
+
+        self.hasBeenCalled = False
+        self.callback = callback
+        self.timerCallback = TimerCallback(targetFps=1.0/timeDelay, callback=self.internalCallback)
+        self.timerCallback.start()
+
+    def internalCallback(self):
+        # print "in internal callback"
+        if self.hasBeenCalled:
+            self.callback()
+            self.timerCallback.stop()
+        else:
+            self.hasBeenCalled = True
+
+
+
+
+
