@@ -19,6 +19,7 @@ from director.simpletimer import SimpleTimer
 from director import ioUtils
 import sys
 import drc as lcmdrc
+import maps as lcmmaps
 import multisense as lcmmultisense
 
 
@@ -63,12 +64,12 @@ def colorizePoints(polyData, cameraName='CAMERA_LEFT'):
 def sendFOVRequest(channel, imagePoints):
 
     channelToImageType = {
-        'CAMERA_LEFT' : lcmdrc.data_request_t.CAMERA_IMAGE_HEAD_LEFT,
-        'CAMERACHEST_LEFT' : lcmdrc.data_request_t.CAMERA_IMAGE_LCHEST,
-        'CAMERACHEST_RIGHT' : lcmdrc.data_request_t.CAMERA_IMAGE_RCHEST,
+        'CAMERA_LEFT' : lcmmaps.data_request_t.CAMERA_IMAGE_HEAD_LEFT,
+        'CAMERACHEST_LEFT' : lcmmaps.data_request_t.CAMERA_IMAGE_LCHEST,
+        'CAMERACHEST_RIGHT' : lcmmaps.data_request_t.CAMERA_IMAGE_RCHEST,
                          }
 
-    dataRequest = lcmdrc.data_request_t()
+    dataRequest = lcmmaps.data_request_t()
     dataRequest.type = channelToImageType[channel]
 
     message = lcmdrc.subimage_request_t()
