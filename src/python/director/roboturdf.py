@@ -15,7 +15,6 @@ from director import packagepath
 from director import transformUtils
 
 
-import drc as lcmdrc
 import bot_core
 import math
 import numpy as np

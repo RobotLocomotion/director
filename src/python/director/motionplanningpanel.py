@@ -13,7 +13,6 @@ from director import drcargs
 from director import affordanceurdf
 from director.roboturdf import HandFactory
 from director import lcmUtils
-import drc as lcmdrc
 
 import functools
 import math
@@ -26,7 +25,6 @@ from bot_core.pose_t import pose_t
 from director import propertyset
 from director.debugVis import DebugData
 from director.pointpicker import PlacerWidget
-from director import segmentation
 from director import filterUtils
 from director import vtkNumpy as vnp
 from director import ikconstraints
