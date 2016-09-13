@@ -25,7 +25,6 @@ from director import drcargs
 
 from director import ikconstraints
 from director.ikparameters import IkParameters
-from director import ikconstraintencoder
 
 import drc as lcmdrc
 import bot_core as lcmbotcore
@@ -244,8 +243,6 @@ class IKPlanner(object):
         self.useQuasiStaticConstraint = True
         self.pushToMatlab = True
         self.planningMode = 'drake'
-        # is this dodgy?
-        self.ikConstraintEncoder = ikconstraintencoder.IKConstraintEncoder(self)
 
         # If the robot an arm on a fixed base, set true e.g. ABB or Kuka?
         self.fixedBaseArm = False
@@ -1602,7 +1599,3 @@ class RobotPoseGUIWrapper(object):
                     joints = rpg.applyMirror(joints)
 
         return joints
-
-
-# Keep this at the end of the file!
-import plannerPublisher
