@@ -6,6 +6,7 @@ from director.timercallback import TimerCallback
 from director import robotstate
 from director import visualization as vis
 from director import transformUtils
+from director import ikconstraints
 from director import ikplanner
 from director import footstepsdriver
 from director import vtkAll as vtk
@@ -579,17 +580,17 @@ class EndEffectorTeleopPanel(object):
             if hasattr(constraint, 'linkName') and constraint.linkName in handLinks:
                 continue
 
-            if isinstance(constraint, ikplanner.ik.PositionConstraint):
+            if isinstance(constraint, ikconstraints.PositionConstraint):
                 frameObj = self.getGoalFrame(constraint.linkName)
                 if frameObj:
                     constraint.referenceFrame = frameObj.transform
 
-            elif isinstance(constraint, ikplanner.ik.QuatConstraint):
+            elif isinstance(constraint, ikconstraints.QuatConstraint):
                 frameObj = self.getGoalFrame(constraint.linkName)
                 if frameObj:
                     constraint.quaternion = frameObj.transform
 
-            elif isinstance(constraint, ikplanner.ik.WorldGazeDirConstraint):
+            elif isinstance(constraint, ikconstraints.WorldGazeDirConstraint):
                 frameObj = self.getGoalFrame(constraint.linkName)
                 if frameObj:
                     constraint.targetFrame = frameObj.transform

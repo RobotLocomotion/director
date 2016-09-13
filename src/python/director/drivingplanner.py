@@ -8,7 +8,7 @@ from director import transformUtils
 from director import visualization as vis
 from director import objectmodel as om
 from director import lcmUtils
-from director import ik
+from director import ikconstraints
 from director import cameraview
 from director import affordanceupdater
 from director import affordancemanager
@@ -119,8 +119,8 @@ class DrivingPlanner(object):
 
         commands = []
         startPose = self.getPlanningStartPose()
-        commands.append("q0 = %s;" % ik.ConstraintBase.toColumnVectorString(startPose))
-        commands.append("xyzquat = %s;" % ik.ConstraintBase.toColumnVectorString(xyzquat))
+        commands.append("q0 = %s;" % ikconstraints.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("xyzquat = %s;" % ikconstraints.ConstraintBase.toColumnVectorString(xyzquat))
         commands.append("dp = dp.updateWheelTransform(xyzquat, q0);")
 
         self.ikServer.comm.sendCommands(commands)
@@ -130,7 +130,7 @@ class DrivingPlanner(object):
         commands.append("clear options;")
         commands.append("options.speed = %r;" % speed)
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planSafe(options,%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planSafe(options,%s);" % ikconstraints.ConstraintBase.toColumnVectorString(startPose))
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
@@ -146,9 +146,9 @@ class DrivingPlanner(object):
         commands.append("options.speed = %r;" % speed)
 
         if xyz_des is not None:
-            commands.append("options.xyz_des = {%s};",ik.ConstraintBase.toColumnVectorString(xyz_des))
+            commands.append("options.xyz_des = {%s};",ikconstraints.ConstraintBase.toColumnVectorString(xyz_des))
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planPreGrasp(options, %s);" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planPreGrasp(options, %s);" % ikconstraints.ConstraintBase.toColumnVectorString(startPose))
 
         listener = self.getManipPlanListener()
         self.ikServer.comm.sendCommands(commands)
@@ -162,7 +162,7 @@ class DrivingPlanner(object):
         commands.append("options = struct('depth',{%r});" % depth)
         commands.append("options.speed = %r;" % speed)
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planTouch(options, %s);" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planTouch(options, %s);" % ikconstraints.ConstraintBase.toColumnVectorString(startPose))
 
         listener = self.getManipPlanListener()
         self.ikServer.comm.sendCommands(commands)
@@ -176,7 +176,7 @@ class DrivingPlanner(object):
         commands.append("options = struct('depth',{%r});" % depth)
         commands.append("options.speed = %s;" % speed)
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planRetract(options, %s);" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planRetract(options, %s);" % ikconstraints.ConstraintBase.toColumnVectorString(startPose))
 
         listener = self.getManipPlanListener()
         self.ikServer.comm.sendCommands(commands)
@@ -191,7 +191,7 @@ class DrivingPlanner(object):
         commands.append("options.speed = %r;" % speed)
         commands.append("options.use_raw_angle = 1;")
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planTurn(options,%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planTurn(options,%s);" % ikconstraints.ConstraintBase.toColumnVectorString(startPose))
 
         listener = self.getManipPlanListener()
         self.ikServer.comm.sendCommands(commands)
@@ -207,7 +207,7 @@ class DrivingPlanner(object):
         commands.append("options.N = %r;" % knotPoints)
         commands.append("options.steering_gaze_tol = %r;" % gazeTol)
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planSteeringWheelTurn(options,%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planSteeringWheelTurn(options,%s);" % ikconstraints.ConstraintBase.toColumnVectorString(startPose))
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
@@ -215,7 +215,7 @@ class DrivingPlanner(object):
     def planSeed(self):
         commands = []
         startPose = self.getPlanningStartPose()
-        commands.append("dp.planSeed(%s);" % ik.ConstraintBase.toColumnVectorString(startPose))
+        commands.append("dp.planSeed(%s);" % ikconstraints.ConstraintBase.toColumnVectorString(startPose))
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
         self.ikServer.taskQueue.start()
 
@@ -961,7 +961,7 @@ class DrivingPlanner(object):
         commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
         commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
         commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
-        commands.append('rescale_body_pts = reshape(%s, 3, []);' % ik.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
+        commands.append('rescale_body_pts = reshape(%s, 3, []);' % ikconstraints.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
         commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
         commands.append('trajectories = {};')
         for name in trajectoryNames:
@@ -1435,4 +1435,3 @@ class DrivingPlannerPanel(TaskUserPanel):
             updater.extraObjects = [obj]
 
         return obj
-

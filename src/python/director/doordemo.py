@@ -16,9 +16,8 @@ from director import objectmodel as om
 from director import visualization as vis
 from director import applogic as app
 from director.debugVis import DebugData
-from director import ik
+from director import ikconstraints
 from director.ikparameters import IkParameters
-from director import ikplanner
 from director import ioUtils
 from director import affordanceitems
 from director.simpletimer import SimpleTimer
@@ -514,7 +513,7 @@ class DoorDemo(object):
                                                                #turnTransform,
                                                                #referenceFrame.transform])
         def addPivotPoint(constraints, pivotPoint):
-            constraints.append(ik.PositionConstraint())
+            constraints.append(ikplanner.PositionConstraint())
             constraints[-1].linkName = linkName
             constraints[-1].referenceFrame = referenceFrame.transform
             constraints[-1].lowerBound = np.array(pivotPoint)
@@ -1209,4 +1208,3 @@ class DoorTaskPanel(TaskUserPanel):
         addTask(rt.UserPromptTask(name='approve manip plan', message='Please approve manip plan.'))
         addTask(rt.CommitManipulationPlan(name='execute manip plan', planName='safe nominal posture plan'))
         addTask(rt.WaitForManipulationPlanExecution(name='wait for manip execution'))
-

@@ -3,7 +3,7 @@ from director import cameraview
 from director import transformUtils
 from director import visualization as vis
 from director import objectmodel as om
-from director import ik
+from director import ikconstraints
 from director.ikparameters import IkParameters
 from director.ikplanner import ConstraintSet
 from director import polarisplatformplanner
@@ -190,7 +190,7 @@ class EgressPlanner(object):
         self.robotSystem.ikPlanner.addPose(startPose, startPoseName)
         endPoseName = 'q_egress_end'
         constraints = []
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
+        constraints.append(ikconstraints.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
                                                     pelvisEnabled=False,
                                                     shrinkFactor=0.5))
         constraints.append(self.robotSystem.ikPlanner.createLockedBasePostureConstraint(startPoseName))
@@ -222,11 +222,11 @@ class EgressPlanner(object):
         utorsoFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('utorso', startPose)
         g = self.createUtorsoGazeConstraints([1.0, 1.0])
         constraints.append(g[1])
-        p = ik.PositionConstraint(linkName='pelvis', referenceFrame=liftFrame,
+        p = ikconstraints.PositionConstraint(linkName='pelvis', referenceFrame=liftFrame,
                                   lowerBound=np.array([0.0, -np.inf, 0.0]),
                                   upperBound=np.array([np.inf, np.inf, 0.0]))
         constraints.append(p)
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False,
+        constraints.append(ikconstraints.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True, pelvisEnabled=False,
                                                     shrinkFactor=self.quasiStaticShrinkFactor))
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
@@ -247,7 +247,7 @@ class EgressPlanner(object):
 
     def createUtorsoGazeConstraints(self, tspan):
         constraints = []
-        g = ik.WorldGazeDirConstraint()
+        g = ikconstraints.WorldGazeDirConstraint()
         g.linkName = 'utorso'
         g.targetFrame = vtk.vtkTransform()
         axes = transformUtils.getAxesFromTransform(self.polaris.leftFootEgressOutsideFrame.transform)
@@ -257,7 +257,7 @@ class EgressPlanner(object):
         g.tspan = tspan
         constraints.append(g)
 
-        g = ik.WorldGazeDirConstraint()
+        g = ikconstraints.WorldGazeDirConstraint()
         g.linkName = 'utorso'
         g.targetFrame = vtk.vtkTransform()
         g.targetAxis = [0,0,1]
@@ -281,7 +281,7 @@ class EgressPlanner(object):
             commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
             commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
             commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
-            commands.append('rescale_body_pts = reshape(%s, 3, []);' % ik.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
+            commands.append('rescale_body_pts = reshape(%s, 3, []);' % ikconstraints.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
             commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
             commands.append('trajectories = {};')
             for name in trajectoryNames:
@@ -342,7 +342,7 @@ class EgressPlanner(object):
         utorsoFrame = self.robotSystem.ikPlanner.getLinkFrameAtPose('utorso', startPose)
         constraints.extend(self.createUtorsoGazeConstraints([1.0, 1.0]))
 
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
+        constraints.append(ikconstraints.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
                                                     pelvisEnabled=False,
                                                     shrinkFactor=self.quasiStaticShrinkFactor))
         constraints.append(self.robotSystem.ikPlanner.createXYZMovingBasePostureConstraint(startPoseName))
@@ -385,7 +385,7 @@ class EgressPlanner(object):
 
         constraints = []
         constraints.extend(self.createUtorsoGazeConstraints([0.0, 1.0]))
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
+        constraints.append(ikconstraints.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
                                                     pelvisEnabled=False, shrinkFactor=0.01))
         constraints.append(self.robotSystem.ikPlanner.createMovingBaseSafeLimitsConstraint())
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
@@ -410,7 +410,7 @@ class EgressPlanner(object):
         liftFrame = transformUtils.concatenateTransforms([footFrame, t])
         vis.updateFrame(liftFrame, 'lift frame')
 
-        c = ik.WorldFixedOrientConstraint()
+        c = ikconstraints.WorldFixedOrientConstraint()
         c.linkName = 'l_foot'
         c.tspan = [0.0, 0.1, 0.2]
         constraints.append(c)
@@ -438,7 +438,7 @@ class EgressPlanner(object):
 
         constraints = []
         constraints.extend(self.createUtorsoGazeConstraints([0.0, 1.0]))
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
+        constraints.append(ikconstraints.QuasiStaticConstraint(leftFootEnabled=False, rightFootEnabled=True,
                                                     pelvisEnabled=False, shrinkFactor=0.01))
         constraints.append(self.robotSystem.ikPlanner.createMovingBaseSafeLimitsConstraint())
         constraints.append(self.robotSystem.ikPlanner.createLockedLeftArmPostureConstraint(startPoseName))
@@ -479,7 +479,7 @@ class EgressPlanner(object):
         constraints = [backConstraint]
         constraints.extend(footFixedConstraints)
         constraints.extend(armsLocked)
-        constraints.append(ik.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
+        constraints.append(ikconstraints.QuasiStaticConstraint(leftFootEnabled=True, rightFootEnabled=True,
                                                     pelvisEnabled=False,
                                                     shrinkFactor=self.quasiStaticShrinkFactor))
         constraints.append(self.robotSystem.ikPlanner.createKneePostureConstraint([0.7, 2.5]))
@@ -720,5 +720,3 @@ class EgressPanel(TaskUserPanel):
         addManipTask('plan nominal', pp.planNominal, userPrompt=True)
         addTask(rt.UserPromptTask(name="reset walking parameters", message="Please set walking parameters to drake nominal"))
         addTask(rt.SetNeckPitch(name='set neck position', angle=20))
-
-

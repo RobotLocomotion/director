@@ -15,7 +15,7 @@ from director import objectmodel as om
 from director import visualization as vis
 from director import applogic as app
 from director.debugVis import DebugData
-from director import ik
+from director import ikconstraints
 from director import ikplanner
 from director.ikparameters import IkParameters
 from director import ioUtils
@@ -705,7 +705,7 @@ class DrillPlannerDemo(object):
             '''
             p = None
             for c in constraintSet.constraints:
-                if isinstance(c, ik.PositionConstraint) and c.linkName == self.ikPlanner.getHandLink(self.graspingHand):
+                if isinstance(c, ikconstraints.PositionConstraint) and c.linkName == self.ikPlanner.getHandLink(self.graspingHand):
                     print c
                     p = c
             assert p
@@ -1182,7 +1182,7 @@ class DrillPlannerDemo(object):
             commands.append("max_body_translation_speed = %r;" % ikParameters.maxBodyTranslationSpeed)
             commands.append("max_body_rotation_speed = %r;" % ikParameters.maxBodyRotationSpeed)
             commands.append('rescale_body_ids = [%s];' % (','.join(['links.%s' % linkName for linkName in ikParameters.rescaleBodyNames])))
-            commands.append('rescale_body_pts = reshape(%s, 3, []);' % ik.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
+            commands.append('rescale_body_pts = reshape(%s, 3, []);' % ikconstraints.ConstraintBase.toColumnVectorString(ikParameters.rescaleBodyPts))
             commands.append("body_rescale_options = struct('body_id',rescale_body_ids,'pts',rescale_body_pts,'max_v',max_body_translation_speed,'max_theta',max_body_rotation_speed,'robot',r);")
             commands.append('trajectories = {};')
             for name in trajectoryNames:
@@ -2995,4 +2995,3 @@ class DrillTaskPanel(TaskUserPanel):
         addManipTask('return to nominal posture', self.drillDemo.planNominal, userPrompt=True)
         #addManipTask('drill prep posture', self.drillDemo.planDrillIntoWallPrep, userPrompt=True)
         #addManipTask('tuck for walking', self.drillDemo.planWalkWithDrillPosture, userPrompt=True)
-

@@ -8,7 +8,6 @@ import types
 import functools
 import random
 import numpy as np
-from director import ik
 from director import ikconstraints
 from director import ikconstraintencoder
 import drc as lcmdrc

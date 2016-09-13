@@ -4,7 +4,6 @@ from director import cameraview
 from director import transformUtils
 from director import visualization as vis
 from director import objectmodel as om
-from director import ik
 from director.ikparameters import IkParameters
 from director.ikplanner import ConstraintSet
 from director import polarisplatformplanner
@@ -33,7 +32,7 @@ from numpy import array
 class CourseModel(object):
 
     def __init__(self):
-        
+
         pose = transformUtils.poseFromTransform(vtk.vtkTransform())
 
 
@@ -51,25 +50,25 @@ class CourseModel(object):
 
         t = transformUtils.transformFromPose(array([-2.24553758, -0.52990939, -0.73255338]), array([ 0.93697004,  0.        ,  0.        , -0.34940972]))
         self.drillWalkFrame  = vis.updateFrame(t, 'DrillWalk', scale=0.2,visible=True, parent=self.pointcloudPD)
-        
+
         t = transformUtils.transformFromPose(array([-2.51306835, -0.92994004, -0.74173541 ]), array([-0.40456572,  0.        ,  0.        ,  0.91450893]))
         self.drillWallWalkFarthestSafeFrame  = vis.updateFrame(t, 'DrillWallWalkFarthestSafe', scale=0.2,visible=True, parent=self.pointcloudPD)
-        
+
         t = transformUtils.transformFromPose(array([-2.5314524 , -0.27401861, -0.71302976]), array([ 0.98691519,  0.        ,  0.        , -0.16124022]))
         self.drillWallWalkBackFrame  = vis.updateFrame(t, 'DrillWallWalkBack', scale=0.2,visible=True, parent=self.pointcloudPD)
-        
+
         t = transformUtils.transformFromPose(array([-1.16122318,  0.04723203, -0.67493468]), array([ 0.93163145,  0.        ,  0.        , -0.36340451]))
         self.surprisePreWalkFrame  = vis.updateFrame(t, 'SurprisePreWalk', scale=0.2,visible=True, parent=self.pointcloudPD)
-        
+
         t = transformUtils.transformFromPose(array([-0.5176186 , -1.00151554, -0.70650799]), array([ 0.84226497,  0.        ,  0.        , -0.53906374]))
         self.surpriseWalkFrame  = vis.updateFrame(t, 'SurpriseWalk', scale=0.2,visible=True, parent=self.pointcloudPD)
-        
+
         t = transformUtils.transformFromPose(array([-0.69100097, -0.43713269, -0.68495922]), array([ 0.98625075,  0.        ,  0.        , -0.16525575]))
         self.surpriseWalkBackFrame  = vis.updateFrame(t, 'SurpriseWalkBack', scale=0.2,visible=True, parent=self.pointcloudPD)
-        
+
         t = transformUtils.transformFromPose(array([ 0.65827322, -0.08028796, -0.77370834]), array([ 0.94399977,  0.        ,  0.        , -0.3299461 ]))
         self.terrainPreWalkFrame = vis.updateFrame(t, 'TerrainPreWalk', scale=0.2,visible=True, parent=self.pointcloudPD)
-        
+
         t = transformUtils.transformFromPose(array([ 5.47126425, -0.09790393, -0.70504679]), array([ 1.,  0.,  0.,  0.]))
         self.stairsPreWalkFrame = vis.updateFrame(t, 'StairsPreWalk', scale=0.2,visible=True, parent=self.pointcloudPD)
 
