@@ -40,6 +40,11 @@ set(python_tests_robot
   testAmazonPod.py
 )
 
+set(python_tests_standalone
+  testDrakeVisualizerInterface.py
+)
+
+
 # Tests are run by default on the default robot
 #
 # If intending to test on a particular robot only, please set _extra_args to the
@@ -81,10 +86,35 @@ macro(add_python_test name label)
 endmacro()
 
 
+# Add a test which uses the system python interpreter instead of the
+# directorPython exectuable. This also sets PYTHONPATH and PATH for the test.
+macro(add_standalone_python_test name label)
+  get_filename_component(base_name ${name} NAME_WE)
+  set(test_name test_${base_name})
+  add_test(${test_name} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args})
+  set_property(TEST ${test_name} PROPERTY ENVIRONMENT PYTHONPATH=$ENV{PYTHONPATH}:${CMAKE_INSTALL_PREFIX}/${DD_INSTALL_PYTHON_DIR}:${CMAKE_INSTALL_PREFIX}/${DD_INSTALL_PYTHON_DIR}/../site-packages PATH=$ENV{PATH}:${CMAKE_INSTALL_PREFIX}/bin ${python_coverage_environment_arg})
+  message("path: " ${CMAKE_INSTALL_PREFIX}/${DD_INSTALL_PYTHON_DIR})
+  set_property(TEST ${test_name} PROPERTY LABELS ${label})
+
+  # Check whether additional test cases have been defined
+  set(n 2)
+  while(DEFINED ${base_name}_extra_args_${n})
+    set(test_name test_${base_name}_${n})
+    add_test(${test_name} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args_${n}})
+    set_property(TEST ${test_name} PROPERTY ENVIRONMENT ${python_coverage_environment_arg})
+    set_property(TEST ${test_name} PROPERTY LABELS ${label})
+    math(EXPR n "${n}+1")
+  endwhile()
+endmacro()
+
 foreach(name ${python_tests_core})
   add_python_test(${name} core)
 endforeach()
 
 foreach(name ${python_tests_robot})
   add_python_test(${name} robot)
+endforeach()
+
+foreach(name ${python_tests_standalone})
+  add_standalone_python_test(${name} standalone)
 endforeach()

@@ -7,12 +7,14 @@ option(USE_OCTOMAP "Build with octomap." OFF)
 option(USE_COLLECTIONS "Build with collections." OFF)
 option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
+option(USE_BOT_CORE_LCMTYPES "Build with core LCM types for robot state and visualization" OFF)
 option(USE_STANDALONE_LCMGL "Build with standalone bot-lcmgl." OFF)
 set(USE_EIGEN ${USE_PCL})
 
 option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
 option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
 option(USE_SYSTEM_LIBBOT "Use system version of libbot.  If off, libbot will be built." OFF)
+option(USE_SYSTEM_BOT_CORE_LCMTYPES "Use system version of the bot_core_lcmtypes. If off, bot_core_lcmtypes will be built." OFF)
 
 set(default_cmake_args
   "-DCMAKE_PREFIX_PATH:PATH=${install_prefix};${CMAKE_PREFIX_PATH}"
@@ -146,6 +148,29 @@ if(USE_STANDALONE_LCMGL)
 
   set(lcmgl_depends bot-lcmgl)
 
+endif()
+
+###############################################################################
+# bot_core_lcmtypes
+
+if (USE_BOT_CORE_LCMTYPES AND NOT USE_SYSTEM_BOT_CORE_LCMTYPES)
+  if (NOT USE_LCM)
+    message(SEND_ERROR "Error, USE_BOT_CORE_LCMTYPES is enabled but USE_LCM is OFF.")
+  endif()
+
+  ExternalProject_Add(bot_core_lcmtypes
+    GIT_REPOSITORY https://github.com/rdeits/bot_core_lcmtypes.git
+    GIT_TAG 6075540797c6ea23cd48a055d699eb08a9101855
+    CONFIGURE_COMMAND ""
+    INSTALL_COMMAND ""
+    BUILD_COMMAND $(MAKE) BUILD_PREFIX=${install_prefix} BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    BUILD_IN_SOURCE 1
+
+    DEPENDS
+      ${lcm_depends}
+    )
+
+  set(bot_core_lcmtypes_depends bot_core_lcmtypes)
 endif()
 
 ###############################################################################

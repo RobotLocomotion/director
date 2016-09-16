@@ -1,3 +1,4 @@
+import warnings
 import math, os
 import numpy as np
 from director import lcmUtils
@@ -14,8 +15,16 @@ from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import packagepath
 
-import drake as lcmdrake
 import bot_core as lcmbot
+
+if not hasattr(lcmbot, "viewer_load_robot_t"):
+    warnings.warn("Drake visualizer LCM types have been moved out of Drake and into bot_core_lcmtypes, but your version of bot_core_lcmtypes is too old. You will need a newer version of bot_core_lcmtypes (which you can get by installing a newer version of Drake).")
+    import drake as lcmdrake
+    lcmbot.viewer_command_t = lcmdrake.lcmt_viewer_command
+    lcmbot.viewer_draw_t = lcmdrake.lcmt_viewer_draw
+    lcmbot.viewer_geometry_data_t = lcmdrake.lcmt_viewer_geometry_data
+    lcmbot.viewer_link_data_t = lcmdrake.lcmt_viewer_link_data
+    lcmbot.viewer_load_robot_t = lcmdrake.lcmt_viewer_load_robot
 
 from PythonQt import QtGui
 
@@ -32,22 +41,22 @@ class Geometry(object):
     @staticmethod
     def createPolyDataFromPrimitive(geom):
 
-        if geom.type == lcmdrake.lcmt_viewer_geometry_data.BOX:
+        if geom.type == lcmbot.viewer_geometry_data_t.BOX:
             d = DebugData()
             d.addCube(dimensions=geom.float_data[0:3], center=[0,0,0])
             return d.getPolyData()
 
-        elif geom.type == lcmdrake.lcmt_viewer_geometry_data.SPHERE:
+        elif geom.type == lcmbot.viewer_geometry_data_t.SPHERE:
             d = DebugData()
             d.addSphere(center=(0,0,0), radius=geom.float_data[0])
             return d.getPolyData()
 
-        elif geom.type == lcmdrake.lcmt_viewer_geometry_data.CYLINDER:
+        elif geom.type == lcmbot.viewer_geometry_data_t.CYLINDER:
             d = DebugData()
             d.addCylinder(center=(0,0,0), axis=(0,0,1), radius=geom.float_data[0], length=geom.float_data[1])
             return d.getPolyData()
 
-        elif geom.type == lcmdrake.lcmt_viewer_geometry_data.CAPSULE:
+        elif geom.type == lcmbot.viewer_geometry_data_t.CAPSULE:
             d = DebugData()
             radius = geom.float_data[0]
             length = geom.float_data[1]
@@ -56,7 +65,7 @@ class Geometry(object):
             d.addSphere(center=(0,0,-length/2.0), radius=radius)
             return d.getPolyData()
 
-        elif hasattr(lcmdrake.lcmt_viewer_geometry_data, "ELLIPSOID") and geom.type == lcmdrake.lcmt_viewer_geometry_data.ELLIPSOID:
+        elif hasattr(lcmbot.viewer_geometry_data_t, "ELLIPSOID") and geom.type == lcmbot.viewer_geometry_data_t.ELLIPSOID:
             d = DebugData()
             radii = geom.float_data[0:3]
             d.addEllipsoid(center=(0,0,0), radii=radii)
@@ -224,7 +233,7 @@ class Geometry(object):
 
         polyDataList = []
 
-        if geom.type != lcmdrake.lcmt_viewer_geometry_data.MESH:
+        if geom.type != lcmbot.viewer_geometry_data_t.MESH:
             polyDataList = [Geometry.createPolyDataFromPrimitive(geom)]
 
         else:
@@ -289,12 +298,12 @@ class DrakeVisualizer(object):
         self.view = view
         self.robots = {}
         self.linkWarnings = set()
-        self.sendStatusMessage('loaded')
         self.enable()
+        self.sendStatusMessage('loaded')
 
     def _addSubscribers(self):
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmdrake.lcmt_viewer_load_robot, self.onViewerLoadRobot))
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmdrake.lcmt_viewer_draw, self.onViewerDraw))
+        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmbot.viewer_load_robot_t, self.onViewerLoadRobot))
+        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmbot.viewer_draw_t, self.onViewerDraw))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_PLANAR_LIDAR_.*', lcmbot.planar_lidar_t, self.onPlanarLidar, callbackNeedsChannel=True))
 
     def _removeSubscribers(self):
@@ -362,8 +371,8 @@ class DrakeVisualizer(object):
         self.robots = {}
 
     def sendStatusMessage(self, message):
-        msg = lcmdrake.lcmt_viewer_command()
-        msg.command_type = lcmdrake.lcmt_viewer_command.STATUS
+        msg = lcmbot.viewer_command_t()
+        msg.command_type = lcmbot.viewer_command_t.STATUS
         msg.command_data = message
         lcmUtils.publish('DRAKE_VIEWER_STATUS', msg)
 
