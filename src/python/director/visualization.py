@@ -6,12 +6,25 @@ from director import transformUtils
 from director import callbacks
 from director import frameupdater
 from PythonQt import QtCore, QtGui
+import numpy as np
+
+
 
 import os
 import colorsys
 import weakref
 import itertools
-import numpy as np
+
+def computeAToB(a,b):
+
+    t = vtk.vtkTransform()
+    t.PostMultiply()
+    t.Concatenate(b)
+    t.Concatenate(a.GetLinearInverse())
+    tt = vtk.vtkTransform()
+    tt.SetMatrix(t.GetMatrix())
+    return tt
+
 
 
 class PolyDataItem(om.ObjectModelItem):
@@ -913,6 +926,41 @@ def getRandomColor():
     Return a random color as a list of RGB values between 0.0 and 1.0.
     '''
     return colorsys.hsv_to_rgb(np.random.rand(), 1.0, 0.9)
+def showHandCloud(hand='left', view=None):
+
+    view = view or app.getCurrentRenderView()
+    if view is None:
+        return
+
+    assert hand in ('left', 'right')
+
+    maps = om.findObjectByName('Map Server')
+    assert maps is not None
+
+    viewId = 52 if hand == 'left' else 53
+    reader = maps.source.reader
+
+    def getCurrentViewId():
+        return reader.GetCurrentMapId(viewId)
+
+    p = vtk.vtkPolyData()
+    obj = showPolyData(p, '%s hand cloud' % hand, view=view, parent='sensors')
+    obj.currentViewId = -1
+
+    def updateCloud():
+        currentViewId = getCurrentViewId()
+        #print 'updateCloud: current view id:', currentViewId
+        if currentViewId != obj.currentViewId:
+            reader.GetDataForMapId(viewId, currentViewId, p)
+            #print 'updated poly data.  %d points.' % p.GetNumberOfPoints()
+            obj._renderAllViews()
+
+    t = TimerCallback()
+    t.targetFps = 1
+    t.callback = updateCloud
+    t.start()
+    obj.updater = t
+    return obj
 
 
 def showClusterObjects(clusters, parent):
@@ -1048,7 +1096,10 @@ def pickProp(displayPoint, view):
 
     for tolerance in (0.0, 0.005, 0.01):
         pickType = 'render' if tolerance == 0.0 else 'cells'
-        pickedPoint, pickedProp, pickedDataset = pickPoint(displayPoint, view, pickType=pickType, tolerance=tolerance)
+        pickData = pickPoint(displayPoint, view, pickType=pickType, tolerance=tolerance)
+        pickedPoint = pickData[0]
+        pickedProp = pickData[1]
+        pickedDataset = pickData[2]
         if pickedProp is not None:
             return pickedPoint, pickedProp, pickedDataset
 
@@ -1089,6 +1140,10 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, r
     pickedDataset = pickedProp.GetMapper().GetInput() if isinstance(pickedProp, vtk.vtkActor) else None
 
     pickedNormal = np.zeros(3)
+    pickedCellId = 0 # only fill this in if we are picking with cells
+
+    if pickType == "cells":
+        pickedCellId = picker.GetCellId()
 
     if returnNormal:
         if pickType == 'cells':
@@ -1106,6 +1161,9 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, r
         else:
             return pickedPoint if pickedProp else None
     else:
+        if pickType == "cells":
+            return (pickedPoint, pickedProp, pickedDataset, pickedNormal, pickedCellId)
+
         return (pickedPoint, pickedProp, pickedDataset, pickedNormal) if returnNormal else (pickedPoint, pickedProp, pickedDataset)
 
 

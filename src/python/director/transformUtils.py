@@ -1,5 +1,6 @@
 from director.thirdparty import transformations
 import vtkAll as vtk
+import math
 import numpy as np
 
 try:
@@ -167,6 +168,8 @@ def transformFromPose(position, quaternion):
     '''
     Returns a vtkTransform
     '''
+    rotationMatrix = np.zeros((3,3))
+    vtk.vtkMath.QuaternionToMatrix3x3(quaternion, rotationMatrix)
 
     mat = transformations.quaternion_matrix(quaternion)
     mat[:3,3] = position
@@ -205,3 +208,41 @@ def copyFrame(transform):
     t.PostMultiply()
     t.SetMatrix(transform.GetMatrix())
     return t
+
+
+# accepts vtkTransforms(). Outputs 6x6 matrix FM which represents the force-moment transformation
+# that is if wrench is 6 x 1 (moment, force) expressed in input frame, then corresponding wrench in
+# output frame would be numpy.dot(FM, wrench) = wrench_in_output_frame.
+def forceMomentTransformation(inputFrame, outputFrame):
+    FM = np.zeros((6,6))
+
+    inputToOutputFrame = copyFrame(inputFrame)
+    inputToOutputFrame.PostMultiply()
+    inputToOutputFrame.Concatenate(outputFrame.GetLinearInverse())
+
+    position, quaternion = poseFromTransform(inputToOutputFrame)
+    inputToOutputRotationMatrix = np.zeros((3,3))
+    vtk.vtkMath.QuaternionToMatrix3x3(quaternion, inputToOutputRotationMatrix)
+
+    FM[0:3, 0:3] = inputToOutputRotationMatrix
+    FM[3:,3:] = inputToOutputRotationMatrix
+
+    cross = crossProductMatrix(position)
+    
+    FM[0:3,3:] = np.dot(cross,inputToOutputRotationMatrix)
+
+    return FM
+
+# computes matrix P such that P*y = cross product of x and y
+def crossProductMatrix(x):
+    cross = np.zeros((3,3))
+    cross[0,1] = -x[2]
+    cross[0,2] = x[1]
+    cross[1,0] = x[2]
+    cross[1,2] = -x[0]
+    cross[2,0] = -x[1]
+    cross[2,1] = x[0]
+
+    return cross
+
+
