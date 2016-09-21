@@ -2,7 +2,7 @@ import director
 from director import transformUtils
 from director import visualization as vis
 from director import objectmodel as om
-from director import ik
+from director import ikconstraints
 
 import os
 import functools
@@ -48,13 +48,14 @@ class SitStandPlanner(object):
         commands.append("pss.plan_options.bky_angle = %s;" %self.planOptions['bky_angle'])
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
-        self.ikServer.taskQueue.start()        
+        self.ikServer.taskQueue.start()
 
     def plan(self,planType):
         self.applyParams()
         startPose = self.getPlanningStartPose()
         commands = []
-        commands.append("pss.planSitting(%s, '%s');" % (ik.ConstraintBase.toColumnVectorString(startPose),
+        commands.append("pss.planSitting(%s, '%s');" % (
+            ikconstraints.ConstraintBase.toColumnVectorString(startPose),
             planType))
 
         self.ikServer.taskQueue.addTask(functools.partial(self.ikServer.comm.sendCommandsAsync, commands))
@@ -75,7 +76,7 @@ class SitStandPlannerPanel(TaskUserPanel):
         self.addDefaultProperties()
         self.addButtons()
         self.addTasks()
-        
+
 
     def addButtons(self):
         self.addManualButton('Start', self.onStart)

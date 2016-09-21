@@ -16,10 +16,8 @@ from director.simpletimer import SimpleTimer
 from director.utime import getUtime
 from director import robotstate
 
-import drc as lcmdrc
 import irobothand as lcmirobot
 import robotiqhand as lcmrobotiq
-
 
 
 class IRobotHandDriver(object):
@@ -198,7 +196,7 @@ class RobotiqHandDriver(object):
         lcmUtils.publish(channel, msg)
 
     # NB: added by Wolfgang 2015-07-27
-    #     Not used on the Robotiq, but more for using the 
+    #     Not used on the Robotiq, but more for using the
     #     RobotiqHandDriver as a more generic hand driver
     def sendDeactivate(self):
         msg = lcmrobotiq.command_t()

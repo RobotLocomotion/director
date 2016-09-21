@@ -1,7 +1,6 @@
 import director.vtkAll as vtk
 import director.objectmodel as om
 from director import lcmUtils
-import vs as lcmCollections
 
 
 #------ Individual Collections To Be Rendered--------------------

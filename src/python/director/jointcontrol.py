@@ -5,7 +5,6 @@ from director.simpletimer import SimpleTimer
 from director import robotstate
 from director import getDRCBaseDir
 from director import lcmUtils
-import drc as lcmdrc
 import bot_core
 import numpy as np
 

@@ -13,7 +13,6 @@ from director import drcargs
 from director import affordanceurdf
 from director.roboturdf import HandFactory
 from director import lcmUtils
-import drc as lcmdrc
 
 import functools
 import math
@@ -26,10 +25,9 @@ from bot_core.pose_t import pose_t
 from director import propertyset
 from director.debugVis import DebugData
 from director.pointpicker import PlacerWidget
-from director import segmentation
 from director import filterUtils
 from director import vtkNumpy as vnp
-from director import ik
+from director import ikconstraints
 
 def addWidgetsToDict(widgets, d):
 
@@ -228,7 +226,7 @@ class MotionPlanningPanel(object):
             [pos_left, quat_left] = transformUtils.poseFromTransform(self.robotStateModel.getLinkFrame(self.ikPlanner.leftFootLink))
             [pos_right, quat_right] = transformUtils.poseFromTransform(self.robotStateModel.getLinkFrame(self.ikPlanner.rightFootLink))
             dist = npla.norm(pos_left - pos_right)
-            constraints.append(ik.PointToPointDistanceConstraint(bodyNameA=self.ikPlanner.leftFootLink, bodyNameB=self.ikPlanner.rightFootLink, lowerBound=np.array([dist - 0.0001]), upperBound=np.array([dist + 0.0001])))
+            constraints.append(ikconstraints.PointToPointDistanceConstraint(bodyNameA=self.ikPlanner.leftFootLink, bodyNameB=self.ikPlanner.rightFootLink, lowerBound=np.array([dist - 0.0001]), upperBound=np.array([dist + 0.0001])))
 
         sides = []
         if self.getReachHand() == 'Left':

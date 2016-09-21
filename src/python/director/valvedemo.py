@@ -7,7 +7,7 @@ from director import transformUtils
 from director import objectmodel as om
 from director import visualization as vis
 from director import applogic as app
-from director import ik
+from director import ikconstraints
 from director.ikparameters import IkParameters
 from director import lcmUtils
 from director import robotstate
@@ -316,7 +316,7 @@ class ValvePlannerDemo(object):
         else:
             elxJoint = 'r_arm_elx'
             shxJoint = 'r_arm_shx'
-        constraint = ik.GravityCompensationTorqueConstraint()
+        constraint = ikconstraints.GravityCompensationTorqueConstraint()
         constraint.joints = [shxJoint, elxJoint]
         constraint.torquesLowerBound = -np.array([self.shxMaxTorque, self.elxMaxTorque])
         constraint.torquesUpperBound = np.array([self.shxMaxTorque, self.elxMaxTorque])
@@ -331,7 +331,7 @@ class ValvePlannerDemo(object):
             elxJoint = 'r_arm_elx'
             elxLowerBound = -2.5
             elxUpperBound = np.radians(-self.elxLowerBoundDegrees)
-        constraint = ik.PostureConstraint()
+        constraint = ikconstraints.PostureConstraint()
         constraint.joints = [elxJoint]
         constraint.jointsLowerBound = [elxLowerBound]
         constraint.jointsUpperBound = [elxUpperBound]
@@ -346,7 +346,7 @@ class ValvePlannerDemo(object):
             wristJoint = ['r_arm_lwy']
             wristJointLowerBound = [np.radians(160) - wristAngleCW]
             wristJointUpperBound = [np.radians(160) - wristAngleCW]
-        constraint = ik.PostureConstraint()
+        constraint = ikconstraints.PostureConstraint()
         constraint.joints = wristJoint
         constraint.jointsLowerBound = wristJointLowerBound
         constraint.jointsUpperBound = wristJointUpperBound
@@ -365,7 +365,7 @@ class ValvePlannerDemo(object):
             handLink = 'l_hand'
         else:
             handLink = 'r_hand'
-        return ik.WorldFixedOrientConstraint(linkName=handLink)
+        return ikconstraints.WorldFixedOrientConstraint(linkName=handLink)
 
     def createBackPostureConstraint(self):
         if self.lockBack:
@@ -379,10 +379,12 @@ class ValvePlannerDemo(object):
         else:
             constraints = []
             constraints.extend(self.ikPlanner.createSlidingFootConstraints(self.startPoseName))
-            constraints.append(ik.WorldFixedBodyPoseConstraint(linkName='l_foot'))
-            constraints.append(ik.WorldFixedBodyPoseConstraint(linkName='r_foot'))
+            constraints.append(ikconstraints.WorldFixedBodyPoseConstraint(
+                linkName='l_foot'))
+            constraints.append(ikconstraints.WorldFixedBodyPoseConstraint(
+                linkName='r_foot'))
 
-            p = ik.RelativePositionConstraint()
+            p = ikconstraints.RelativePositionConstraint()
             p.bodyNameA = self.ikPlanner.leftFootLink
             p.bodyNameB = self.ikPlanner.rightFootLink
             p.positionTarget = np.array([0, 0.3, 0])
@@ -390,7 +392,7 @@ class ValvePlannerDemo(object):
             p.upperBound = np.array([0, 0, np.inf])
             constraints.append(p)
 
-            p = ik.RelativePositionConstraint()
+            p = ikconstraints.RelativePositionConstraint()
             p.bodyNameA = self.ikPlanner.rightFootLink
             p.bodyNameB = self.ikPlanner.leftFootLink
             p.lowerBound = np.array([0, -np.inf, -np.inf])
@@ -401,8 +403,9 @@ class ValvePlannerDemo(object):
 
     def createHeadGazeConstraint(self):
         valveCenter = np.array(self.computeGraspFrame().transform.GetPosition())
-        return ik.WorldGazeTargetConstraint(linkName='head', bodyPoint=np.zeros(3),
-                                            worldPoint=valveCenter, coneThreshold=np.radians(20))
+        return ikconstraints.WorldGazeTargetConstraint(
+            linkName='head', bodyPoint=np.zeros(3),
+            worldPoint=valveCenter, coneThreshold=np.radians(20))
 
     def createBaseConstraints(self, resetBase, lockBase, lockFeet, yawDesired):
         constraints = []
@@ -422,13 +425,15 @@ class ValvePlannerDemo(object):
             else:
                 constraints.append(
                     self.ikPlanner.createXYZMovingBasePostureConstraint(poseName))
-                constraints.append(ik.WorldFixedBodyPoseConstraint(linkName='pelvis'))
+                constraints.append(
+                    ikconstraints.WorldFixedBodyPoseConstraint(linkName='pelvis'))
         else:
             constraints.append(self.ikPlanner.createXYZYawMovingBasePostureConstraint(poseName))
-            constraints.append(ik.WorldFixedBodyPoseConstraint(linkName='pelvis'))
+            constraints.append(
+                ikconstraints.WorldFixedBodyPoseConstraint(linkName='pelvis'))
             constraints.append(self.createHeadGazeConstraint())
 
-            p = ik.PostureConstraint()
+            p = ikconstraints.PostureConstraint()
             p.joints = ['base_yaw']
             p.jointsLowerBound = [yawDesired - np.radians(20)]
             p.jointsUpperBound = [yawDesired + np.radians(20)]
@@ -460,7 +465,7 @@ class ValvePlannerDemo(object):
 
     def createHandPositionConstraint(self, radialTol, axialLowerBound, axialUpperBound, tspan):
         linkOffsetFrame = self.ikPlanner.getPalmToHandLink(self.graspingHand)
-        constraint = ik.PositionConstraint()
+        constraint = ikconstraints.PositionConstraint()
         constraint.linkName = self.ikPlanner.getHandLink(self.graspingHand)
         constraint.pointInLink = np.array(linkOffsetFrame.GetPosition())
         constraint.referenceFrame = self.computeGraspFrame().transform

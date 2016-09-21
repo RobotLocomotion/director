@@ -35,7 +35,6 @@ from director import continuouswalkingdemo
 from director import sitstandplanner
 from director import walkingtestdemo
 from director import terraintask
-from director import ik
 from director import ikplanner
 from director import objectmodel as om
 from director import spreadsheet
@@ -469,7 +468,7 @@ if usePlanning:
 
     motionPlanningPanel = motionplanningpanel.init(planningUtils, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                             ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan, footstepsDriver)
-    
+
     if useGamepad:
         gamePad = gamepad.Gamepad(teleopPanel, teleopJointController, ikPlanner, view)
 
