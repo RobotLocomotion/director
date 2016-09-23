@@ -289,6 +289,8 @@ def getBuiltinPackagePaths():
         'software/models/atlas_v3',
         'software/models/atlas_v4',
         'software/models/atlas_v5',
+        'software/models/dual_arm_husky_description',
+        'software/models/ur_description',
         'software/models/val_description',
         'software/models/lwr_defs',
         'software/models/husky_description',
@@ -297,7 +299,9 @@ def getBuiltinPackagePaths():
         'software/models/common_components/multisense_sl',
         'software/models/common_components/irobot_hand',
         'software/models/common_components/handle_description',
+        'software/models/common_components/lms1xx',
         'software/models/common_components/robotiq_hand_description',
+        'software/models/common_components/robotiq_force_torque_sensor',
         'software/models/common_components/schunk_description',
         'software/models/otdf',
                   ]
