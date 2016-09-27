@@ -68,6 +68,10 @@ class DRCArgParser(object):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/husky_description/director_config.json')
 
+    def getDefaultDualArmHuskyConfigFile(self):
+        return os.path.join(director.getDRCBaseDir(),
+                            'software/models/dual_arm_husky_description/director_config.json')
+
     def addDefaultArgs(self, parser):
         parser.add_argument('-c', '--config_file', type=str, help='Robot cfg file',
                             default=self.getDefaultBotConfigFile())
@@ -109,6 +113,11 @@ class DRCArgParser(object):
                             action='store_const',
                             const=self.getDefaultHuskyConfigFile(),
                             help='Use Husky')
+
+        directorConfig.add_argument('-dual_arm_husky', '--dual_arm_husky', dest='directorConfigFile',
+                            action='store_const',
+                            const=self.getDefaultDualArmHuskyConfigFile(),
+                            help='Use Dual Arm Husky')
 
         directorConfig.add_argument('--director_config', dest='directorConfigFile',
                             type=str,
