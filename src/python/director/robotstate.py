@@ -50,7 +50,7 @@ def getDrakePoseToRobotStateJointMap():
     return _drakePoseToRobotStateJointMap
 
 
-def convertStateMessageToDrakePose(msg, strict=True):
+def convertStateMessageToDrakePose(msg, strict=False):
     '''
     If strict is true, then the state message must contain a joint_position
     for each named joint in the drake pose joint names.  If strict is false,
