@@ -299,9 +299,7 @@ def getBuiltinPackagePaths():
         'software/models/common_components/multisense_sl',
         'software/models/common_components/irobot_hand',
         'software/models/common_components/handle_description',
-        'software/models/common_components/lms1xx',
         'software/models/common_components/robotiq_hand_description',
-        'software/models/common_components/robotiq_force_torque_sensor',
         'software/models/common_components/schunk_description',
         'software/models/otdf',
                   ]
