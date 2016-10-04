@@ -14,7 +14,7 @@
 #include <bot_frames/bot_frames.h>
 #include <bot_param/param_client.h>
 
-#include <lcmtypes/bot_core.hpp>
+#include <lcmtypes/bot_core/planar_lidar_t.hpp>
 #include <lcmtypes/multisense.hpp>
 
 
