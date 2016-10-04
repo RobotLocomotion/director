@@ -5,7 +5,6 @@ from director import visualization as vis
 from director import cameracontrol
 from director import propertyset
 from director import pointpicker
-from director import roboturdf
 
 def addWidgetsToDict(widgets, d):
 
@@ -29,10 +28,10 @@ def clearLayout(w):
 
 class CameraControlPanel(object):
 
-    def __init__(self, view, jointController):
+    def __init__(self, view):
 
         self.view = view
-        self.trackerManager = cameracontrol.CameraTrackerManager(jointController)
+        self.trackerManager = cameracontrol.CameraTrackerManager()
         self.trackerManager.setView(view)
 
         loader = QtUiTools.QUiLoader()
@@ -99,21 +98,16 @@ class CameraControlPanel(object):
 
         self.onAbortPick()
 
-        if isinstance(obj, roboturdf.RobotModelItem):
-            self.trackerManager.setTargetAsRobot(obj)
-            name = "robot state"
+        if obj and not hasattr(obj, 'getChildFrame'):
+            obj = None
 
-        else:
-            if obj and not hasattr(obj, 'getChildFrame'):
-                obj = None
+        if obj:
+            vis.addChildFrame(obj)
+            obj.connectRemovedFromObjectModel(self.onObjectRemoved)
 
-            if obj:
-                vis.addChildFrame(obj)
-                obj.connectRemovedFromObjectModel(self.onObjectRemoved)
+        self.trackerManager.setTarget(obj)
 
-            self.trackerManager.setTarget(obj)
-            name = self.getObjectShortName(obj) if obj else 'None'
-
+        name = self.getObjectShortName(obj) if obj else 'None'
         self.ui.targetNameLabel.setText(name)
         self.ui.controlFrame.setEnabled(obj is not None)
 
