@@ -286,6 +286,19 @@ class SmoothFollowTracker(CameraTracker):
         self.view.render()
 
 
+class TargetFrameConverter(object):
+
+    def __init__(self):
+        self.targetFrame = None
+
+    def getTargetFrame(self):
+        return self.targetFrame
+
+    @classmethod
+    def canConvert(cls, obj):
+        return False
+
+
 class CameraTrackerManager(object):
 
     def __init__(self):
@@ -312,18 +325,22 @@ class CameraTrackerManager(object):
         self.view = view
         self.camera = view.camera()
 
-    def setTarget(self, obj):
+    def setTarget(self, target):
+        '''
+        target should be an instance of TargetFrameConverter or
+        any object that provides a method getTargetFrame().
+        '''
 
-        if obj == self.target:
+        if target == self.target:
             return
 
         self.disableActiveTracker()
 
-        if not obj:
+        if not target:
             return
 
-        self.target = obj
-        self.targetFrame = obj.getChildFrame()
+        self.target = target
+        self.targetFrame = target.getTargetFrame()
         self.callbackId = self.targetFrame.connectFrameModified(self.onTargetFrameModified)
 
         self.initTracker()

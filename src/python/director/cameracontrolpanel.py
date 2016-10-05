@@ -2,9 +2,13 @@ import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 from director import objectmodel as om
 from director import visualization as vis
+from director import transformUtils
+from director import vtkAll as vtk
 from director import cameracontrol
 from director import propertyset
 from director import pointpicker
+
+import numpy as np
 
 def addWidgetsToDict(widgets, d):
 
@@ -24,6 +28,44 @@ def clearLayout(w):
     children = w.findChildren(QtGui.QWidget)
     for child in children:
         child.delete()
+
+
+class PolyDataFrameConverter(cameracontrol.TargetFrameConverter):
+
+    def __init__(self, obj):
+        if obj is not None:
+            vis.addChildFrame(obj)
+            self.targetFrame = obj.getChildFrame()
+        else:
+            self.targetFrame = None
+
+    @classmethod
+    def canConvert(cls, obj):
+        return hasattr(obj, 'getChildFrame')
+
+
+class RobotFrameConverter(cameracontrol.TargetFrameConverter):
+
+    def __init__(self, robotModel):
+        self.robotModel = robotModel
+        self.targetFrame = vis.FrameItem('robot frame', vtk.vtkTransform(), None)
+        self.callbackId = robotModel.connectModelChanged(self.onModelChanged)
+        self.updateTargetFrame()
+
+    def updateTargetFrame(self):
+        q = self.robotModel.model.getJointPositions()
+        pos = q[:3]
+        rpy = np.degrees(q[3:6])
+        transform = transformUtils.frameFromPositionAndRPY(pos, rpy)
+        self.targetFrame.copyFrame(transform)
+
+    def onModelChanged(self, robotModel):
+        self.updateTargetFrame()
+
+    @classmethod
+    def canConvert(cls, obj):
+        return hasattr(obj, 'connectModelChanged')
+
 
 
 class CameraControlPanel(object):
@@ -98,14 +140,20 @@ class CameraControlPanel(object):
 
         self.onAbortPick()
 
-        if obj and not hasattr(obj, 'getChildFrame'):
-            obj = None
+        converters = [PolyDataFrameConverter, RobotFrameConverter]
 
-        if obj:
-            vis.addChildFrame(obj)
+        for converter in converters:
+            if converter.canConvert(obj):
+                converter = converter(obj)
+                break
+        else:
+            obj = None
+            converter = None
+
+        if obj is not None:
             obj.connectRemovedFromObjectModel(self.onObjectRemoved)
 
-        self.trackerManager.setTarget(obj)
+        self.trackerManager.setTarget(converter)
 
         name = self.getObjectShortName(obj) if obj else 'None'
         self.ui.targetNameLabel.setText(name)
