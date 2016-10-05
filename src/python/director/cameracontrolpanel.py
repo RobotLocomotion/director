@@ -2,10 +2,13 @@ import PythonQt
 from PythonQt import QtCore, QtGui, QtUiTools
 from director import objectmodel as om
 from director import visualization as vis
+from director import transformUtils
+from director import vtkAll as vtk
 from director import cameracontrol
 from director import propertyset
 from director import pointpicker
-from director import roboturdf
+
+import numpy as np
 
 def addWidgetsToDict(widgets, d):
 
@@ -27,12 +30,50 @@ def clearLayout(w):
         child.delete()
 
 
+class PolyDataFrameConverter(cameracontrol.TargetFrameConverter):
+
+    def __init__(self, obj):
+        if obj is not None:
+            vis.addChildFrame(obj)
+            self.targetFrame = obj.getChildFrame()
+        else:
+            self.targetFrame = None
+
+    @classmethod
+    def canConvert(cls, obj):
+        return hasattr(obj, 'getChildFrame')
+
+
+class RobotFrameConverter(cameracontrol.TargetFrameConverter):
+
+    def __init__(self, robotModel):
+        self.robotModel = robotModel
+        self.targetFrame = vis.FrameItem('robot frame', vtk.vtkTransform(), None)
+        self.callbackId = robotModel.connectModelChanged(self.onModelChanged)
+        self.updateTargetFrame()
+
+    def updateTargetFrame(self):
+        q = self.robotModel.model.getJointPositions()
+        pos = q[:3]
+        rpy = np.degrees(q[3:6])
+        transform = transformUtils.frameFromPositionAndRPY(pos, rpy)
+        self.targetFrame.copyFrame(transform)
+
+    def onModelChanged(self, robotModel):
+        self.updateTargetFrame()
+
+    @classmethod
+    def canConvert(cls, obj):
+        return hasattr(obj, 'connectModelChanged')
+
+
+
 class CameraControlPanel(object):
 
-    def __init__(self, view, jointController):
+    def __init__(self, view):
 
         self.view = view
-        self.trackerManager = cameracontrol.CameraTrackerManager(jointController)
+        self.trackerManager = cameracontrol.CameraTrackerManager()
         self.trackerManager.setView(view)
 
         loader = QtUiTools.QUiLoader()
@@ -99,21 +140,22 @@ class CameraControlPanel(object):
 
         self.onAbortPick()
 
-        if isinstance(obj, roboturdf.RobotModelItem):
-            self.trackerManager.setTargetAsRobot(obj)
-            name = "robot state"
+        converters = [PolyDataFrameConverter, RobotFrameConverter]
 
+        for converter in converters:
+            if converter.canConvert(obj):
+                converter = converter(obj)
+                break
         else:
-            if obj and not hasattr(obj, 'getChildFrame'):
-                obj = None
+            obj = None
+            converter = None
 
-            if obj:
-                vis.addChildFrame(obj)
-                obj.connectRemovedFromObjectModel(self.onObjectRemoved)
+        if obj is not None:
+            obj.connectRemovedFromObjectModel(self.onObjectRemoved)
 
-            self.trackerManager.setTarget(obj)
-            name = self.getObjectShortName(obj) if obj else 'None'
+        self.trackerManager.setTarget(converter)
 
+        name = self.getObjectShortName(obj) if obj else 'None'
         self.ui.targetNameLabel.setText(name)
         self.ui.controlFrame.setEnabled(obj is not None)
 

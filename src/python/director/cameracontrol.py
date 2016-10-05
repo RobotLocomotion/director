@@ -76,10 +76,9 @@ class Flyer(TimerCallback):
 
 class CameraTracker(object):
 
-    def __init__(self, view, targetFrame, jointController):
+    def __init__(self, view, targetFrame):
         self.view = view
         self.targetFrame = targetFrame
-        self.jointController = jointController
         self.camera = view.camera()
         self.actions = []
         self.properties = propertyset.PropertySet()
@@ -87,22 +86,13 @@ class CameraTracker(object):
         self.setup()
 
     def getTargetPose(self):
-        if (self.targetFrame is None):
-            # target is the robot
-            pos = self.jointController.q[:3]
-            rpy = np.degrees(self.jointController.q[3:6])
-            transform = transformUtils.frameFromPositionAndRPY(pos, rpy)
-            return transformUtils.poseFromTransform(transform)
-        else:
-            # target is an object
-            return transformUtils.poseFromTransform(self.targetFrame.transform)
+        return transformUtils.poseFromTransform(self.targetFrame.transform)
 
     def getTargetQuaternion(self):
         return self.getTargetPose()[1]
 
     def getTargetPosition(self):
-        position, _ = self.getTargetPose()
-        return np.array(position)
+        return np.array(self.targetFrame.transform.GetPosition())
 
     def getCameraTransform(self):
         c = self.camera
@@ -215,8 +205,7 @@ class PositionOrientationTracker(CameraTracker):
     def reset(self):
         self.storeTargetPose()
 
-        targetPosition, targetOrientation = self.getTargetPose()
-        targetToWorld = transformUtils.transformFromPose(targetPosition, targetOrientation)
+        targetToWorld = transformUtils.copyFrame(self.targetFrame.transform)
         cameraToWorld = self.getCameraTransform()
 
         cameraToTarget = transformUtils.concatenateTransforms([cameraToWorld, targetToWorld.GetLinearInverse()])
@@ -231,9 +220,7 @@ class PositionOrientationTracker(CameraTracker):
 
         cameraToTarget, focalDistance = self.getCameraToTargetTransform(previousTargetFrame)
 
-        targetPosition, targetOrientation = self.getTargetPose()
-        targetToWorld = transformUtils.transformFromPose(targetPosition, targetOrientation)
-
+        targetToWorld = self.targetFrame.transform
         #cameraToTarget = self.boomTransform
         cameraToWorld = transformUtils.concatenateTransforms([cameraToTarget, targetToWorld])
 
@@ -269,8 +256,8 @@ class SmoothFollowTracker(CameraTracker):
 
     def update(self):
 
-        #if not self.targetFrame:
-        #    return
+        if not self.targetFrame:
+            return
 
 
         r = self.properties.getProperty('Distance (m)')
@@ -283,8 +270,7 @@ class SmoothFollowTracker(CameraTracker):
 
 
         c = self.camera
-        targetPosition, targetOrientation = self.getTargetPose()
-        targetToWorld = transformUtils.transformFromPose(targetPosition, targetOrientation)
+        targetToWorld = self.targetFrame.transform
 
         currentPosition = np.array(c.GetPosition())
         desiredPosition = np.array(targetToWorld.TransformPoint([x, y, z]))
@@ -300,9 +286,22 @@ class SmoothFollowTracker(CameraTracker):
         self.view.render()
 
 
+class TargetFrameConverter(object):
+
+    def __init__(self):
+        self.targetFrame = None
+
+    def getTargetFrame(self):
+        return self.targetFrame
+
+    @classmethod
+    def canConvert(cls, obj):
+        return False
+
+
 class CameraTrackerManager(object):
 
-    def __init__(self, jointController):
+    def __init__(self):
         self.target = None
         self.targetFrame = None
         self.trackerClass = None
@@ -310,7 +309,6 @@ class CameraTrackerManager(object):
         self.view = None
         self.timer = TimerCallback()
         self.timer.callback = self.updateTimer
-        self.jointController = jointController
         self.addTrackers()
         self.initTracker()
 
@@ -327,29 +325,22 @@ class CameraTrackerManager(object):
         self.view = view
         self.camera = view.camera()
 
-    def setTargetAsRobot(self, obj):
+    def setTarget(self, target):
+        '''
+        target should be an instance of TargetFrameConverter or
+        any object that provides a method getTargetFrame().
+        '''
 
-        self.disableActiveTracker()
-
-        self.callbackId = obj.connectModelChanged(self.onTargetFrameModified)
-
-        self.target = None
-        self.targetFrame = None
-
-        self.initTracker()
-
-    def setTarget(self, obj):
-
-        if obj == self.target:
+        if target == self.target:
             return
 
         self.disableActiveTracker()
 
-        if not obj:
+        if not target:
             return
 
-        self.target = obj
-        self.targetFrame = obj.getChildFrame()
+        self.target = target
+        self.targetFrame = target.getTargetFrame()
         self.callbackId = self.targetFrame.connectFrameModified(self.onTargetFrameModified)
 
         self.initTracker()
@@ -361,7 +352,6 @@ class CameraTrackerManager(object):
 
         self.target = None
         self.targetFrame = None
-        self.trackerClass = None
         self.initTracker()
 
     def update(self):
@@ -400,8 +390,7 @@ class CameraTrackerManager(object):
     def initTracker(self):
 
         self.timer.stop()
-        self.activeTracker = self.trackerClass(self.view, self.targetFrame, self.jointController) if self.trackerClass else None
-
+        self.activeTracker = self.trackerClass(self.view, self.targetFrame) if (self.trackerClass and self.targetFrame) else None
         self.reset()
         self.update()
 
@@ -453,8 +442,6 @@ def smoothDamp(current, target, currentVelocity, smoothTime, maxSpeed, deltaTime
     return num8, currentVelocity
 
 
-# This RobotModelFollower has been superseeded by the Camera Follower above
-# which has more features. DEPRECIATED
 class RobotModelFollower(object):
 
     def __init__(self, view, robotModel, jointController):
