@@ -352,7 +352,6 @@ class CameraTrackerManager(object):
 
         self.target = None
         self.targetFrame = None
-        self.trackerClass = None
         self.initTracker()
 
     def update(self):
@@ -391,7 +390,7 @@ class CameraTrackerManager(object):
     def initTracker(self):
 
         self.timer.stop()
-        self.activeTracker = self.trackerClass(self.view, self.targetFrame) if self.trackerClass else None
+        self.activeTracker = self.trackerClass(self.view, self.targetFrame) if (self.trackerClass and self.targetFrame) else None
         self.reset()
         self.update()
 
