@@ -7,19 +7,21 @@ scriptDir=$(cd $(dirname $0) && pwd)
 
 make_vtk_homebrew_bottle()
 {
-  brew tap rdeits/director
-  brew tap homebrew/science
-  $scriptDir/brew_install.sh vtk5 --with-qt
+  brew tap patmarion/director
+
+  # old options: --with-qt --without-boost --without-pyqt --without-sip
+  # not needed with new vtk5.rb from above tap
+
+  $scriptDir/brew_install.sh vtk5 --build-bottle
   brew bottle vtk5
+
   $scriptDir/copy_files.sh vtk5*.tar.gz
 }
 
 install_vtk_homebrew_bottle()
 {
-  wget https://www.dropbox.com/s/r0o7b3zrv6een6o/vtk5-5.10.1_2.mavericks.bottle.1.tar.gz
-  brew tap rdeits/director
-  brew tap homebrew/science
-  brew install vtk5-5.10.1_2.mavericks.bottle.1.tar.gz
+  brew tap patmarion/director
+  brew install vtk5
 }
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
@@ -31,9 +33,15 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
                           --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1280x1024x16
 
 elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
-	brew update > brew_update_log.txt
+
   brew tap homebrew/python
-  brew install python numpy
-  brew install qt
+  brew tap homebrew/science
+  brew update > brew_update_log.txt
+  #brew upgrade
+
+  brew install python qt
+  brew install numpy || echo "error on brew install numpy"
+
   install_vtk_homebrew_bottle
+  #make_vtk_homebrew_bottle
 fi
