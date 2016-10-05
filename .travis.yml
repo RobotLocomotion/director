@@ -11,6 +11,8 @@ sudo: required
 
 dist: trusty
 
+osx_image: xcode6.4
+
 notifications:
   email: false
 
