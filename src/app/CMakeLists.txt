@@ -198,7 +198,7 @@ if (USE_DRC)
   )
 
   list(APPEND pkg_deps
-    image-utils multisense_utils kinect-utils lcmtypes_kinect
+    image-utils multisense_utils kinect-utils lcmtypes_kinect lcmtypes_bot2-core
   )
 
 endif()
