@@ -36,6 +36,10 @@ set(GLSL_SRCS
 # -----------------------------------------------------------------------------
 set(EXTRA_SRCS)
 
+if(NOT EXISTS "${VTK_ENCODESTRING_EXE}")
+  message(SEND_ERROR "The required vtkEncodeString executable was not found.\nThis may indicate an error in your VTK install or configuration.")
+endif()
+
 foreach(file ${GLSL_SRCS})
   set(src ${CMAKE_CURRENT_SOURCE_DIR}/${GLSL_RESOURCES_DIR}/${file}.glsl)
   set(res ${CMAKE_CURRENT_BINARY_DIR}/${file}.cxx)
