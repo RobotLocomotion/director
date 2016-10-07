@@ -72,7 +72,9 @@ class JointController(object):
             if self.ignoreOldStateMessages and self.lastRobotStateMessage is not None and msg.utime < self.lastRobotStateMessage.utime:
                 return
             poseName = channelName
+            
             pose = robotstate.convertStateMessageToDrakePose(msg)
+
             self.lastRobotStateMessage = msg
 
             # use joint name/positions from robot_state_t and append base_{x,y,z,roll,pitch,yaw}

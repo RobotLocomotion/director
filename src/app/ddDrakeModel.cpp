@@ -1,6 +1,7 @@
 #include "ddDrakeModel.h"
 #include "ddSharedPtr.h"
 
+#include <drake/systems/plants/parser_urdf.h>
 #include <drake/systems/plants/RigidBodyTree.h>
 #include <drake/systems/plants/shapes/Geometry.h>
 
@@ -51,6 +52,7 @@ using std::vector;
 using std::string;
 using std::istringstream;
 using namespace Eigen;
+using namespace drake::parsers::urdf;
 
 #if VTK_MAJOR_VERSION == 6
  #define SetInputData(filter, obj) filter->SetInputData(obj);
@@ -89,7 +91,7 @@ namespace
 
 const int GRAY_DEFAULT = 190;
 
-std::map<std::string, std::string> PackageSearchPaths;
+PackageMap PackageSearchPaths;
 
 int feq (double a, double b)
 {
@@ -173,10 +175,10 @@ vtkSmartPointer<vtkPolyData> transformPolyData(vtkPolyData* polyData, vtkTransfo
   return shallowCopy(transformFilter->GetOutput());
 }
 
-vtkSmartPointer<vtkPolyData> scalePolyData(vtkPolyData* polyData, double scale)
+vtkSmartPointer<vtkPolyData> scalePolyData(vtkPolyData* polyData, Eigen::Vector3d scale)
 {
   vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
-  t->Scale(scale, scale, scale);
+  t->Scale(scale[0], scale[1], scale[2]);
   return transformPolyData(polyData, t);
 }
 
@@ -452,7 +454,7 @@ class URDFRigidBodyTreeVTK : public RigidBodyTree
 {
 public:
 
-  typedef std::map<std::shared_ptr<RigidBody>, std::vector<ddMeshVisual::Ptr> > MeshMapType;
+  typedef std::map<const RigidBody *, std::vector<ddMeshVisual::Ptr> > MeshMapType;
 
   std::shared_ptr<KinematicsCache<double> > cache;
 
@@ -473,12 +475,12 @@ public:
 
     RigidBodyTree* model = this;
 
-    const std::shared_ptr<RigidBody> worldBody = model->bodies[0];
+    const RigidBody * worldBody = &(model->world());
 
     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
 
-      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+      const RigidBody * body = model->bodies[bodyIndex].get();
 
       if (!body->hasParent())
       {
@@ -491,9 +493,9 @@ public:
         continue;
       }
 
-      int dofId = body->position_num_start;
+      int dofId = body->get_position_start_index();
 
-      if (body->parent == worldBody)
+      if (body->get_parent() == worldBody)
       {
         //printf("dofMap base\n");
 
@@ -537,7 +539,10 @@ public:
   std::string locateMeshFile(const std::string& meshFilename, const std::string& root_dir)
   {
     string fname = meshFilename;
+    //cout << "meshFilename: " << meshFilename << endl;
     bool has_package = boost::find_first(meshFilename,"package://");
+    //cout << "has package: " << has_package << endl;
+    //cout << endl << endl;
 
     if (has_package)
     {
@@ -560,7 +565,9 @@ public:
     }
     else
     {
-      fname = root_dir + "/" + meshFilename;
+      // TODO(gizatt): work out if this is the right thing to do from now on...
+      // drake seems to work by global paths now
+      fname = meshFilename; // root_dir + "/" + meshFilename;
     }
 
     if (!boost::filesystem::exists(fname))
@@ -603,7 +610,7 @@ public:
   }
 
 
-  void loadVisuals(const std::string& root_dir=".")
+  void loadVisuals(const std::string& root_dir="")
   {
 
     //printf("load visuals...\n");
@@ -612,15 +619,15 @@ public:
     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
 
-      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+      const RigidBody * body = model->bodies[bodyIndex].get();
 
-      //printf("body: %s\n", body->linkname.c_str());
+      //printf("body: %s\n", body->get_name().c_str());
 
-      for (size_t visualIndex = 0 ; visualIndex < body->visual_elements.size(); ++visualIndex)
+      for (size_t visualIndex = 0 ; visualIndex < body->get_visual_elements().size(); ++visualIndex)
       {
         //printf("vi %d\n", visualIndex);
 
-        const DrakeShapes::VisualElement& visual = body->visual_elements[visualIndex];
+        const DrakeShapes::VisualElement& visual = body->get_visual_elements()[visualIndex];
 
         const DrakeShapes::Shape visualType = visual.getShape();
 
@@ -634,20 +641,20 @@ public:
 
           const DrakeShapes::Mesh& mesh = static_cast<const DrakeShapes::Mesh&>(visual.getGeometry());
 
-          std::string filename = locateMeshFile(mesh.filename, root_dir);
+          std::string filename = locateMeshFile(mesh.resolved_filename_, root_dir);
           if (filename.size())
           {
             //printf("loading mesh: %s\n", filename.c_str());
             loadedVisuals = loadMeshVisuals(filename);
           }
 
-          if (mesh.scale != 1.0)
+          if (mesh.scale_[0] != 1.0 || mesh.scale_[1] != 1.0 || mesh.scale_[2] != 1.0)
           {
 
             for (size_t mvi = 0; mvi < loadedVisuals.size(); ++mvi)
             {
               ddMeshVisual::Ptr meshVisual = loadedVisuals[mvi];
-              meshVisual->PolyData->ShallowCopy(scalePolyData(meshVisual->PolyData, mesh.scale));
+              meshVisual->PolyData->ShallowCopy(scalePolyData(meshVisual->PolyData, mesh.scale_));
             }
           }
 
@@ -681,7 +688,7 @@ public:
 
           meshVisual->VisualToLink = makeTransform(visual.getLocalTransform());
 
-          meshVisual->Name = body->linkname;
+          meshVisual->Name = body->get_name();
           meshMap[body].push_back(meshVisual);
 
           meshVisual->Color = QColor(visual.getMaterial()[0]*255, visual.getMaterial()[1]*255, visual.getMaterial()[2]*255);
@@ -707,7 +714,7 @@ public:
     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
 
-      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+      const RigidBody * body = model->bodies[bodyIndex].get();
 
       MeshMapType::iterator itr = meshMap.find(body);
       if (itr == this->meshMap.end())
@@ -715,9 +722,9 @@ public:
         continue;
       }
 
-      vtkSmartPointer<vtkTransform> linkToWorld = makeTransform(relativeTransform(*cache, 0, body->body_index));
+      vtkSmartPointer<vtkTransform> linkToWorld = makeTransform(relativeTransform(*cache, 0, body->get_body_index()));
 
-      //printf("%s to world: %f %f %f\n", body->linkname.c_str(), translation(0), translation(1), translation(2));
+      //printf("%s to world: %f %f %f\n", body->get_name().c_str(), translation(0), translation(1), translation(2));
 
       for (size_t visualIndex = 0; visualIndex < itr->second.size(); ++visualIndex)
       {
@@ -746,11 +753,11 @@ public:
 
     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
-      std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
+      RigidBody * body = model->bodies[bodyIndex].get();
 
-      if (body->linkname.size())
+      if (body->get_name().size())
       {
-        linkMap[body->linkname.c_str()] = body->body_index;
+        linkMap[body->get_name().c_str()] = body->get_body_index();
       }
     }
 
@@ -809,7 +816,15 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const string &urdf_filename)
     if (!mypath.empty() && mypath.has_parent_path())  
       pathname = mypath.parent_path().native();
 
-    model->addRobotFromURDFString(xml_string, PackageSearchPaths, pathname);
+    cout << endl << "****" << endl;
+    cout << "urdf: " << urdf_filename << endl;
+    cout << "pathname: " << pathname << endl;
+    cout << "****" << endl;
+    // model.get() converts down from shared_ptr to raw ptr
+    // which both suits this function signature, and 
+    // allows compiler to see that the subclassing works out
+    AddModelInstanceFromURDFString(xml_string, PackageSearchPaths, pathname,
+      DrakeJoint::ROLLPITCHYAW, NULL, model.get());
 
   }
 
@@ -822,7 +837,8 @@ URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const string &urdf_filename)
 URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const string &xmlString)
 {
   URDFRigidBodyTreeVTK::Ptr model(new URDFRigidBodyTreeVTK);
-  model->addRobotFromURDFString(xmlString,PackageSearchPaths, "");
+  // Same trick as above use of this function
+  AddModelInstanceFromURDFString(xmlString, PackageSearchPaths, model.get());
 
   model->computeDofMap();
   model->loadVisuals();
@@ -888,7 +904,7 @@ int ddDrakeModel::numberOfJoints()
     return 0;
   }
 
-  return this->Internal->Model->num_positions;
+  return this->Internal->Model->number_of_positions();
 }
 
 //-----------------------------------------------------------------------------
@@ -910,7 +926,7 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions, cons
     return;
   }
 
-  if (this->Internal->JointPositions.size() != model->num_positions)
+  if (this->Internal->JointPositions.size() != model->number_of_positions())
   {
     std::cout << "Internal joint positions vector has inconsistent size." << std::endl;
     return;
@@ -951,15 +967,15 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
     return;
   }
 
-  if (jointPositions.size() != model->num_positions)
+  if (jointPositions.size() != model->number_of_positions())
   {
     std::cout << "ddDrakeModel::setJointPositions(): input jointPositions size "
-              << jointPositions.size() << " != " << model->num_positions << std::endl;
+              << jointPositions.size() << " != " << model->number_of_positions() << std::endl;
     return;
   }
 
-  VectorXd q = VectorXd::Zero(model->num_positions);
-  VectorXd v = VectorXd::Zero(model->num_velocities);
+  VectorXd q = VectorXd::Zero(model->number_of_positions());
+  VectorXd v = VectorXd::Zero(model->number_of_velocities());
   for (int i = 0; i < jointPositions.size(); ++i)
   {
     q(i) = jointPositions[i];
@@ -992,7 +1008,7 @@ QVector<double> ddDrakeModel::getJointPositions(const QList<QString>& jointNames
     return ret;
   }
 
-  if (this->Internal->JointPositions.size() != model->num_positions)
+  if (this->Internal->JointPositions.size() != model->number_of_positions())
   {
     std::cout << "Internal joint positions vector has inconsistent size." << std::endl;
     return ret;
@@ -1040,12 +1056,12 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
 
   for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
   {
-    std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
-    if (body->linkname.c_str() == bodyName)
+    const RigidBody * body = model->bodies[bodyIndex].get();
+    if (body->get_name().c_str() == bodyName)
     {
-      for (size_t i = 0; i < body->contact_pts.cols(); ++i)
+      for (size_t i = 0; i < body->get_contact_points().cols(); ++i)
       {
-        ret << body->contact_pts(0,i) << body->contact_pts(1,i) << body->contact_pts(2,i);
+        ret << body->get_contact_points()(0,i) << body->get_contact_points()(1,i) << body->get_contact_points()(2,i);
       }
     }
   }
@@ -1111,7 +1127,7 @@ QList<QString> ddDrakeModel::getLinkNames()
 //-----------------------------------------------------------------------------
 int ddDrakeModel::findLinkID(const QString& linkName) const
 {
-  return this->Internal->Model->findLinkId(linkName.toAscii().data(), -1);
+  return this->Internal->Model->FindBodyIndex(linkName.toAscii().data(), -1);
 }
 
 //-----------------------------------------------------------------------------
@@ -1165,8 +1181,7 @@ bool ddDrakeModel::loadFromFile(const QString& filename)
 
   this->Internal->FileName = filename;
   this->Internal->Model = model;
-
-  this->setJointPositions(QVector<double>(model->num_positions, 0.0));
+  this->setJointPositions(QVector<double>(model->number_of_positions(), 0.0));
   return true;
 }
 
@@ -1181,8 +1196,7 @@ bool ddDrakeModel::loadFromXML(const QString& xmlString)
 
   this->Internal->FileName = "<xml string>";
   this->Internal->Model = model;
-
-  this->setJointPositions(QVector<double>(model->num_positions, 0.0));
+  this->setJointPositions(QVector<double>(model->number_of_positions(), 0.0));
   return true;
 }
 
