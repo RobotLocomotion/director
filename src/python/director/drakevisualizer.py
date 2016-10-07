@@ -14,8 +14,14 @@ from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import packagepath
 
-import drake as lcmdrake
 import bot_core as lcmbot
+
+# Currently, viewer lcm message types are in bot_core_lcmtypes and
+# robotlocomotion-lcmtypes, but drake only builds bot_core_lcmtypes.
+# When drake starts using robotlocomotion-lcmtypes, then the following
+# import can be used instead of getting viewer messages from bot_core_lcmtypes.
+#import robotlocomotion as lcmrl
+lcmrl = lcmbot
 
 from PythonQt import QtGui
 
@@ -32,22 +38,22 @@ class Geometry(object):
     @staticmethod
     def createPolyDataFromPrimitive(geom):
 
-        if geom.type == lcmdrake.lcmt_viewer_geometry_data.BOX:
+        if geom.type == lcmrl.viewer_geometry_data_t.BOX:
             d = DebugData()
             d.addCube(dimensions=geom.float_data[0:3], center=[0,0,0])
             return d.getPolyData()
 
-        elif geom.type == lcmdrake.lcmt_viewer_geometry_data.SPHERE:
+        elif geom.type == lcmrl.viewer_geometry_data_t.SPHERE:
             d = DebugData()
             d.addSphere(center=(0,0,0), radius=geom.float_data[0])
             return d.getPolyData()
 
-        elif geom.type == lcmdrake.lcmt_viewer_geometry_data.CYLINDER:
+        elif geom.type == lcmrl.viewer_geometry_data_t.CYLINDER:
             d = DebugData()
             d.addCylinder(center=(0,0,0), axis=(0,0,1), radius=geom.float_data[0], length=geom.float_data[1])
             return d.getPolyData()
 
-        elif geom.type == lcmdrake.lcmt_viewer_geometry_data.CAPSULE:
+        elif geom.type == lcmrl.viewer_geometry_data_t.CAPSULE:
             d = DebugData()
             radius = geom.float_data[0]
             length = geom.float_data[1]
@@ -56,7 +62,7 @@ class Geometry(object):
             d.addSphere(center=(0,0,-length/2.0), radius=radius)
             return d.getPolyData()
 
-        elif hasattr(lcmdrake.lcmt_viewer_geometry_data, "ELLIPSOID") and geom.type == lcmdrake.lcmt_viewer_geometry_data.ELLIPSOID:
+        elif hasattr(lcmrl.viewer_geometry_data_t, "ELLIPSOID") and geom.type == lcmrl.viewer_geometry_data_t.ELLIPSOID:
             d = DebugData()
             radii = geom.float_data[0:3]
             d.addEllipsoid(center=(0,0,0), radii=radii)
@@ -224,7 +230,7 @@ class Geometry(object):
 
         polyDataList = []
 
-        if geom.type != lcmdrake.lcmt_viewer_geometry_data.MESH:
+        if geom.type != lcmrl.viewer_geometry_data_t.MESH:
             polyDataList = [Geometry.createPolyDataFromPrimitive(geom)]
 
         else:
@@ -293,8 +299,8 @@ class DrakeVisualizer(object):
         self.enable()
 
     def _addSubscribers(self):
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmdrake.lcmt_viewer_load_robot, self.onViewerLoadRobot))
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmdrake.lcmt_viewer_draw, self.onViewerDraw))
+        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))
+        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmrl.viewer_draw_t, self.onViewerDraw))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_PLANAR_LIDAR_.*', lcmbot.planar_lidar_t, self.onPlanarLidar, callbackNeedsChannel=True))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_POINTCLOUD_.*', lcmbot.pointcloud_t, self.onPointCloud, callbackNeedsChannel=True))
 
@@ -367,8 +373,8 @@ class DrakeVisualizer(object):
         self.robots = {}
 
     def sendStatusMessage(self, message):
-        msg = lcmdrake.lcmt_viewer_command()
-        msg.command_type = lcmdrake.lcmt_viewer_command.STATUS
+        msg = lcmrl.viewer_command_t()
+        msg.command_type = lcmrl.viewer_command_t.STATUS
         msg.command_data = message
         lcmUtils.publish('DRAKE_VIEWER_STATUS', msg)
 
