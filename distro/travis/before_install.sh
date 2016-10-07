@@ -42,6 +42,6 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew install python qt
   brew install numpy || echo "error on brew install numpy"
 
-  install_vtk_homebrew_bottle
-  #make_vtk_homebrew_bottle
+  #install_vtk_homebrew_bottle
+  make_vtk_homebrew_bottle
 fi
