@@ -85,12 +85,13 @@ endif()
 
 if (USE_LCM AND NOT USE_SYSTEM_LCM)
 
-  ExternalProject_Add(
-    lcm
-    URL http://lcm.googlecode.com/files/lcm-1.0.0.tar.gz
-    URL_MD5 69bfbdd9e0d7095c5d7423e71b2fb1a9
-    CONFIGURE_COMMAND ${source_prefix}/lcm/configure --prefix=${install_prefix}
-  )
+  ExternalProject_Add(lcm
+    GIT_REPOSITORY https://github.com/lcm-proj/lcm.git
+    GIT_TAG a8cda6a6
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+    )
 
   set(lcm_depends lcm)
 
