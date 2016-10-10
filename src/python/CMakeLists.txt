@@ -153,6 +153,8 @@ set(python_files
   director/thirdparty/geometry_msgs_mock.py
   director/thirdparty/naming.py
   director/thirdparty/pysdf.py
+  director/thirdparty/toposort.py
+
   director/sceneloader.py
 
   urdf_parser_py/__init__.py
