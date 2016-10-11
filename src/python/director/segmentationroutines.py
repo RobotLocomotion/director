@@ -86,8 +86,8 @@ class SegmentationContext(object):
         SegmentationContext.installGlobalInstance(sc)
 
     @staticmethod
-    def initWithUser(userGroundHeight, userViewFrame):
-        sc = SegmentationContext(UserGroundHeightProvider(userGroundHeight), UserViewProvider(userViewFrame))
+    def initWithUser(userGroundHeight, userViewFrame, viewAxis=0):
+        sc = SegmentationContext(UserGroundHeightProvider(userGroundHeight), UserViewProvider(userViewFrame, viewAxis))
         SegmentationContext.installGlobalInstance(sc)
 
 
@@ -128,8 +128,9 @@ class UserGroundHeightProvider(object):
 
 class UserViewProvider(object):
 
-    def __init__(self, viewFrame):
+    def __init__(self, viewFrame, viewAxis):
         self.viewFrame = viewFrame
+        self.viewAxis = viewAxis
 
     def getViewFrame(self):
         return self.viewFrame
@@ -138,7 +139,8 @@ class UserViewProvider(object):
         return np.array( self.viewFrame.GetPosition())
 
     def getViewDirection(self):
-        viewDirection = [1,0,0]
+        viewDirection = [0.0, 0.0, 0.0]
+        viewDirection[self.viewAxis] = 1.0
         self.viewFrame.TransformVector(viewDirection, viewDirection)
         return np.array(viewDirection)
 
