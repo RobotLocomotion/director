@@ -441,7 +441,7 @@ class ObjectPicker(object):
 
         if event.type() == QtCore.QEvent.MouseMove:
             self.onMouseMove(vis.mapMousePosition(obj, event), event.modifiers())
-        elif event.type() == QtCore.QEvent.MouseButtonPress:
+        elif event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.LeftButton:
             self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
 
     def clear(self):
