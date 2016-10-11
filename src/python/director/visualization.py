@@ -945,6 +945,7 @@ def showClusterObjects(clusters, parent):
 
         clusterPoints.setProperty('Point Size', 7)
         clusterPoints.colorBy(None)
+        clusterObj.data = cluster
         objects.append(clusterObj)
 
         for obj in [clusterObj, clusterBox, clusterPoints]:
