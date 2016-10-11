@@ -236,6 +236,12 @@ void ddQVTKWidgetView::onRenderTimer()
 }
 
 //-----------------------------------------------------------------------------
+double ddQVTKWidgetView::getAverageFramesPerSecond()
+{
+  return this->Internal->FPSCounter.averageFPS();
+}
+
+//-----------------------------------------------------------------------------
 void ddQVTKWidgetView::addCustomBounds(const QList<double>& bounds)
 {
   this->Internal->CustomBounds.append(bounds);
