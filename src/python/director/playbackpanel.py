@@ -413,12 +413,18 @@ class PlaybackPanel(object):
             self.widget.parent().show()
 
 
+def addPanelToMainWindow(playbackPanel):
 
-def init(planPlayback, playbackRobotModel, playbackJointController, robotStateModel, robotStateJointController, manipPlanner):
     global panel
-    panel = PlaybackPanel(planPlayback, playbackRobotModel, playbackJointController, robotStateModel, robotStateJointController, manipPlanner)
-
+    global dock
+    panel = playbackPanel
     dock = app.addWidgetToDock(panel.widget, dockArea=QtCore.Qt.BottomDockWidgetArea)
     dock.hide()
+
+
+def init(planPlayback, playbackRobotModel, playbackJointController, robotStateModel, robotStateJointController, manipPlanner):
+
+    panel = PlaybackPanel(planPlayback, playbackRobotModel, playbackJointController, robotStateModel, robotStateJointController, manipPlanner)
+    addPanelToMainWindow(panel)
 
     return panel

@@ -12,6 +12,21 @@ if app.getTestingInteractiveEnabled():
 view = app.createView()
 view.show()
 
-robotsystem.create(view, globals())
+useMinimalOptions = False
+
+if useMinimalOptions:
+
+    factory = robotsystem.RobotSystemFactory()
+
+    options = factory.getDisabledOptions()
+    options.useDirectorConfig = True
+    options.useRobotState = True
+
+    robotSystem = factory.construct(view=view, options=options)
+
+else:
+
+    robotSystem = robotsystem.create(view)
+
 
 app.start()

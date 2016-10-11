@@ -281,10 +281,8 @@ class IKPlanner(object):
             self.fixedBaseArm = True
 
         # Assume first neck joint is the joint which pitches then neck
-        if len(self.neckJoints) > 0:
+        if len(self.neckJoints):
             self.neckPitchJoint = self.neckJoints[0]
-        else:
-            self.neckPitchJoint = 'neck_ay'
 
     def getJointGroup(self, name):
         jointGroup = filter(lambda group: group['name'] == name, self.jointGroups)

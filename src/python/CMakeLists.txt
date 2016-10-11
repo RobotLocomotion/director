@@ -20,6 +20,7 @@ set(python_files
   director/cameracontrolpanel.py
   director/cameraview.py
   director/colorize.py
+  director/componentgraph.py
   director/consoleapp.py
   director/continuouswalkingdemo.py
   director/copmonitor.py
@@ -153,6 +154,8 @@ set(python_files
   director/thirdparty/geometry_msgs_mock.py
   director/thirdparty/naming.py
   director/thirdparty/pysdf.py
+  director/thirdparty/toposort.py
+
   director/sceneloader.py
 
   urdf_parser_py/__init__.py
