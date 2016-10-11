@@ -1,4 +1,4 @@
-from ddapp.consoleapp import ConsoleApp
+from director.consoleapp import ConsoleApp
 
 app = ConsoleApp()
 view = app.createView()
