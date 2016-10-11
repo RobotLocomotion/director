@@ -273,7 +273,7 @@ class ImageBasedAffordanceFit(object):
 
     def __init__(self, imageView=None, numberOfPoints=1):
 
-        self.imageView = imageView or cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'image view')
+        self.imageView = imageView or cameraview.CameraImageView(cameraview.imageManager, self.getImageChannel(), 'image view')
         self.imagePicker = ImagePointPicker(self.imageView, numberOfPoints=numberOfPoints)
         self.imagePicker.connectDoubleClickEvent(self.onImageViewDoubleClick)
         self.imagePicker.annotationFunc = self.onImageAnnotation
@@ -282,6 +282,9 @@ class ImageBasedAffordanceFit(object):
         self.pointCloudSource = 'lidar'
         self.pickLineRadius = 0.05
         self.pickNearestToCamera = True
+
+    def getImageChannel(self):
+        return 'CAMERA_LEFT'
 
     def getPointCloud(self):
         assert self.pointCloudSource in ('lidar', 'stereo')
