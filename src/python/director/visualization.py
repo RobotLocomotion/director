@@ -36,7 +36,9 @@ class PolyDataItem(om.ObjectModelItem):
             #'distance' : (0.5, 4.0),
             'spindle_angle' : (0, 360),
             'azimuth' : (-2.5, 2.5),
-            'scan_delta' : (0.0, 0.3)
+            'scan_delta' : (0.0, 0.3),
+            'point distance to plane' : (-0.2, 0.2),
+            'normal angle to plane' : (0.0, 10.0),
             }
 
         self.addProperty('Color By', 0, attributes=om.PropertyAttributes(enumNames=['Solid Color']))
