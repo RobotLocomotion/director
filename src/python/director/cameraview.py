@@ -567,6 +567,10 @@ class CameraImageView(object):
         self.imageActor.SetVisibility(False)
         self.view.renderer().AddActor(self.imageActor)
 
+        self.view.orientationMarkerWidget().Off()
+        self.view.backgroundRenderer().SetBackground(0,0,0)
+        self.view.backgroundRenderer().SetBackground2(0,0,0)
+
         self.timerCallback = TimerCallback()
         self.timerCallback.targetFps = 60
         self.timerCallback.callback = self.updateView
