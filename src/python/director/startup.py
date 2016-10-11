@@ -780,7 +780,7 @@ setImageWidgetSource = imageWidget.setImageName
 
 screengrabberpanel.init(view)
 framevisualization.init(view)
-affordancePanel = affordancepanel.init(view, affordanceManager, ikServer, robotStateJointController, raycastDriver)
+affordancePanel = affordancepanel.init(view, affordanceManager, robotStateJointController, raycastDriver)
 camerabookmarks.init(view)
 
 cameraControlPanel = cameracontrolpanel.CameraControlPanel(view)
