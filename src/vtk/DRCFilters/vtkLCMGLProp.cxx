@@ -21,6 +21,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include <lcmtypes/bot_lcmgl/data_t.hpp>
 #include <bot_lcmgl_render/lcmgl_decode.h>
+#include <GL/glut.h>
 
 
 //----------------------------------------------------------------------------
@@ -43,6 +44,10 @@ public:
 vtkLCMGLProp::vtkLCMGLProp()
 {
   this->Internal = new vtkInternal;
+  char *myargv[1];
+  int myargc = 1;
+  myargv[0] = strdup("director");
+  glutInit(&myargc, myargv);
 }
 
 //----------------------------------------------------------------------------
