@@ -26,7 +26,7 @@ install_vtk_homebrew_bottle()
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
 	sudo apt-get update -qq
-  sudo apt-get install -y build-essential cmake libqt4-dev libvtk5-dev libvtk5-qt4-dev libvtk-java python-dev python-vtk python-numpy xvfb
+  sudo apt-get install -y build-essential cmake libqt4-dev libvtk5-dev libvtk5-qt4-dev libvtk-java python-dev python-vtk python-numpy python-yaml python-lxml xvfb
 
   # start Xvfb for DISPLAY=:99.0
   /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile \
@@ -42,6 +42,8 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew install qt
   brew ls --versions python || brew install python
   brew ls --versions numpy || brew install numpy || echo "error on brew install numpy"
+
+  pip install pyyaml lxml
 
   install_vtk_homebrew_bottle
   #make_vtk_homebrew_bottle
