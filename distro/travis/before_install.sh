@@ -39,8 +39,9 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew update > brew_update_log.txt
   #brew upgrade
 
-  brew install python qt
-  brew install numpy || echo "error on brew install numpy"
+  brew install qt
+  brew ls --versions python || brew install python
+  brew ls --versions numpy || brew install numpy || echo "error on brew install numpy"
 
   install_vtk_homebrew_bottle
   #make_vtk_homebrew_bottle
