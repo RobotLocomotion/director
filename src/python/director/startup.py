@@ -431,7 +431,6 @@ if usePlanning:
     #app.addToolbarMacro('stereo height', sendFusedHeightRequest)
     #app.addToolbarMacro('stereo depth', sendFusedDepthRequest)
 
-    planningUtils = planningutils.PlanningUtils(robotStateModel, robotStateJointController)
     if useLimitJointsSentToPlanner:
         planningUtils.clampToJointLimits = True
 
@@ -457,14 +456,8 @@ if usePlanning:
 
     ikPlanner.addPostureGoalListener(robotStateJointController)
 
-    playbackPanel = playbackpanel.init(planPlayback, playbackRobotModel, playbackJointController,
-                                      robotStateModel, robotStateJointController, manipPlanner)
-
-    footstepsDriver.walkingPlanCallback = playbackPanel.setPlan
-    manipPlanner.connectPlanReceived(playbackPanel.setPlan)
-
-    teleopPanel = teleoppanel.init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                     ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan, planningUtils)
+    playbackpanel.addPanelToMainWindow(playbackPanel)
+    teleoppanel.addPanelToMainWindow(teleopPanel)
 
     motionPlanningPanel = motionplanningpanel.init(planningUtils, robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
                             ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan, footstepsDriver)

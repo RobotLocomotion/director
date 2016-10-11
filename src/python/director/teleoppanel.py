@@ -15,7 +15,6 @@ from director import affordanceurdf
 from director.roboturdf import HandFactory
 from director.utime import getUtime
 from director import lcmUtils
-import drc as lcmdrc
 
 import functools
 import math
@@ -1434,13 +1433,18 @@ def _getAction():
     return app.getToolBarActions()['ActionTeleopPanel']
 
 
-def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, planningUtils):
+def addPanelToMainWindow(teleopPanel):
 
     global panel
     global dock
-
-    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, debrisPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, planningUtils)
+    panel = teleopPanel
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
+
+
+def init(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, planningUtils):
+
+    panel = TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController, ikPlanner, manipPlanner, affordanceManager, showPlanFunction, hidePlanFunction, planningUtils)
+    addPanelToMainWindow(panel)
 
     return panel
