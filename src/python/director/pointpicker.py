@@ -467,9 +467,11 @@ class ObjectPicker(object):
 
     def finish(self):
         if self.callbackFunc is not None:
-            self.callbackFunc(self.objects)
-        self.clear()
-        self.stop()
+            try:
+                self.callbackFunc(self.objects)
+            finally:
+                self.clear()
+                self.stop()
 
     def unsetHoverProperties(self, obj):
         if obj is None:
