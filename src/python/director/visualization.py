@@ -224,6 +224,15 @@ class PolyDataItem(om.ObjectModelItem):
         self.scalarBarWidget = createScalarBarWidget(view, lut, title)
         self._renderAllViews()
 
+    def _setScalarBarTextColor(self, color=(0,0,0)):
+        act = self.scalarBarWidget.GetScalarBarActor()
+        act.GetTitleTextProperty().SetColor(color)
+        act.GetLabelTextProperty().SetColor(color)
+
+    def _setScalarBarTitle(self, titleText):
+        act = self.scalarBarWidget.GetScalarBarActor()
+        act.SetTitle(titleText)
+
     def getCoolToWarmColorMap(self, scalarRange):
 
         f = vtk.vtkDiscretizableColorTransferFunction()
