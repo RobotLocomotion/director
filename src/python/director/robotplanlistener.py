@@ -65,6 +65,28 @@ class ManipulationPlanDriver(object):
 
         return msg
 
+    def createPlanMessageFromPose(self, pose):
+        msg = lcmdrc.robot_plan_t()
+        msg.utime = 0.0
+        msg.robot_name = 'robot'
+        msg.num_states = 2
+        state1 = robotstate.drakePoseToRobotState(pose)
+        state2 = robotstate.drakePoseToRobotState(pose)
+        state1.utime = 0.0
+        state2.utime = 0.01
+        msg.plan = [state1, state2]
+        msg.plan_info = [1, 1]
+        msg.num_bytes = 0
+        msg.matlab_data = []
+        msg.num_grasp_transitions = 0
+
+        msg.left_arm_control_type = msg.NONE
+        msg.right_arm_control_type = msg.NONE
+        msg.left_leg_control_type = msg.NONE
+        msg.right_leg_control_type = msg.NONE
+
+        return msg
+
     def convertPlanToPlanWithSupports(self, planMsg, supports, ts, isQuasistatic):
         assert(len(supports) == len(ts))
         msg = lcmdrc.robot_plan_with_supports_t()
