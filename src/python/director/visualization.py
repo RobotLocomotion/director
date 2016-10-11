@@ -1074,7 +1074,7 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, r
         picker.SetTolerance(tolerance)
 
 
-    if obj:
+    if obj is not None:
         if isinstance(obj, list):
             for o in obj:
                 picker.AddPickList(o.actor)
