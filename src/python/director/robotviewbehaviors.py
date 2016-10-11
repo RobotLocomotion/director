@@ -471,7 +471,7 @@ def getRobotActions(view, pickedObj, pickedPoint):
 
     def onArrowGlyph():
         result = segmentation.applyArrowGlyphs(pointCloudObj.polyData)
-        obj = vis.showPolyData(result, 'disks')
+        obj = vis.showPolyData(result, 'arrows')
 
     def onSegmentationEditor():
         segmentationpanel.activateSegmentationMode(pointCloudObj.polyData)
