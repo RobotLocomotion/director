@@ -267,9 +267,11 @@ class RobotSystemFactory(ComponentFactory):
         from director import affordanceitems
 
         affordanceManager = affordancemanager.AffordanceObjectModelManager(robotSystem.view)
-        affordanceitems.MeshAffordanceItem.getMeshManager().initLCM()
-        affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
-        affordanceManager.collection.sendEchoRequest()
+        affordanceitems.MeshAffordanceItem.getMeshManager()
+
+        if affordancemanager.lcmobjectcollection.USE_LCM:
+            affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
+            affordanceManager.collection.sendEchoRequest()
 
         robotSystem._add_fields(
             affordanceManager=affordanceManager,
