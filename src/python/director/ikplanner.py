@@ -1527,21 +1527,24 @@ class IKPlanner(object):
 
 
 
-from director import robotposegui as rpg
-
 class RobotPoseGUIWrapper(object):
 
     initialized = False
     main = None
+    rpg = None
 
     @classmethod
     def init(cls):
+
         if cls.initialized:
             return True
 
-        rpg.setDirectorConfigFile(drcargs.args().directorConfigFile)
-        rpg.lcmWrapper = rpg.LCMWrapper()
-        cls.main = rpg.MainWindow()
+        from director import robotposegui as rpg
+        cls.rpg = rpg
+
+        cls.rpg.setDirectorConfigFile(drcargs.args().directorConfigFile)
+        cls.rpg.lcmWrapper = cls.rpg.LCMWrapper()
+        cls.main = cls.rpg.MainWindow()
         parents = [w for w in QtGui.QApplication.topLevelWidgets() if isinstance(w, PythonQt.dd.ddMainWindow)]
         mainWindow = parents[0] if parents else None
         cls.main.messageBoxWarning = functools.partial(QtGui.QMessageBox.warning, mainWindow)
@@ -1576,7 +1579,7 @@ class RobotPoseGUIWrapper(object):
 
         cls.init()
 
-        config = rpg.loadConfig(cls.main.getPoseConfigFile())
+        config = cls.rpg.loadConfig(cls.main.getPoseConfigFile())
         assert groupName in config
 
         poses = {}
@@ -1594,6 +1597,6 @@ class RobotPoseGUIWrapper(object):
 
             if pose['nominal_handedness'] != side:
                 if 'leftFootLink' in drcargs.getDirectorConfig(): #if not self.fixedBaseArm:
-                    joints = rpg.applyMirror(joints)
+                    joints = cls.rpg.applyMirror(joints)
 
         return joints
