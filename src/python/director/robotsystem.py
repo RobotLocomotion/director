@@ -250,7 +250,7 @@ class RobotSystemFactory(ComponentFactory):
 
 
         teleopPanel = teleoppanel.TeleopPanel(robotSystem.robotStateModel, robotSystem.robotStateJointController, teleopRobotModel, teleopJointController,
-                          robotSystem.ikPlanner, robotSystem.manipPlanner, robotSystem.ikPlanner, robotSystem.playbackPanel.setPlan, robotSystem.playbackPanel.hidePlan, robotSystem.planningUtils)
+                          robotSystem.ikPlanner, robotSystem.manipPlanner, robotSystem.affordanceManager, robotSystem.playbackPanel.setPlan, robotSystem.playbackPanel.hidePlan, robotSystem.planningUtils)
 
         robotSystem._add_fields(
             teleopRobotModel=teleopRobotModel,
