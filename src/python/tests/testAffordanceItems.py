@@ -120,7 +120,7 @@ segmentTableTopPointCloud()
 testSDF()
 
 from director import affordancepanel
-panel = affordancepanel.AffordancePanel(view, affordanceManager, ikServer, robotStateJointController, raycastDriver)
+panel = affordancepanel.AffordancePanel(view, affordanceManager, robotStateJointController, raycastDriver)
 panel.widget.show()
 
 

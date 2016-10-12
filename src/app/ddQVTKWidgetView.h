@@ -38,6 +38,8 @@ public:
 
   void setLightKitEnabled(bool enabled);
 
+  double getAverageFramesPerSecond();
+
 signals:
 
   void computeBoundsRequest(ddQVTKWidgetView* view);

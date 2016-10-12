@@ -3,12 +3,19 @@ import pprint
 import uuid
 import json
 from collections import OrderedDict
-from director import lcmUtils
 from director.thirdparty import numpyjsoncoder
 from director import callbacks
 from director.utime import getUtime
 from director.uuidutil import newUUID
-import drc as lcmdrc
+
+try:
+    import drc as lcmdrc
+    USE_LCM = True
+except ImportError:
+    USE_LCM = False
+
+if USE_LCM:
+    from director import lcmUtils
 
 
 class LCMObjectCollection(object):
@@ -22,16 +29,18 @@ class LCMObjectCollection(object):
         self.sentCommands = set()
         self.sentRequest = None
         self.channel = channel
-
         self.callbacks = callbacks.CallbackRegistry([self.DESCRIPTION_UPDATED_SIGNAL,
                                                      self.DESCRIPTION_REMOVED_SIGNAL])
-
-        self.sub = lcmUtils.addSubscriber(self.channel, messageClass=lcmdrc.affordance_collection_t, callback=self._onCommandMessage)
-        self.sub.setNotifyAllMessagesEnabled(True)
+        self.sub = None
         self._modified()
 
+        if USE_LCM:
+            self.sub = lcmUtils.addSubscriber(self.channel, messageClass=lcmdrc.affordance_collection_t, callback=self._onCommandMessage)
+            self.sub.setNotifyAllMessagesEnabled(True)
+
     def __del__(self):
-        lcmUtils.removeSubscriber(self.sub)
+        if self.sub:
+            lcmUtils.removeSubscriber(self.sub)
 
     def connectDescriptionUpdated(self, func):
         return self.callbacks.connect(self.DESCRIPTION_UPDATED_SIGNAL, func)
@@ -57,7 +66,7 @@ class LCMObjectCollection(object):
     def updateDescription(self, desc, publish=True, notify=True):
         self.collection[self.getDescriptionId(desc)] = desc
         self._modified()
-        if publish:
+        if publish and USE_LCM:
             msg = self._newCommandMessage('update', description=desc)
             lcmUtils.publish(self.channel, msg)
 
@@ -72,7 +81,7 @@ class LCMObjectCollection(object):
         except KeyError:
             pass
 
-        if publish:
+        if publish and USE_LCM:
             msg = self._newCommandMessage('remove', descriptionId=descriptionId,)
             lcmUtils.publish(self.channel, msg)
 

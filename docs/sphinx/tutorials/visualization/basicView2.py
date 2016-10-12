@@ -1,4 +1,4 @@
-from ddapp.consoleapp import ConsoleApp
+from director.consoleapp import ConsoleApp
 
 # initialize application components
 app = ConsoleApp()

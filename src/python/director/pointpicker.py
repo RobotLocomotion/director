@@ -441,7 +441,7 @@ class ObjectPicker(object):
 
         if event.type() == QtCore.QEvent.MouseMove:
             self.onMouseMove(vis.mapMousePosition(obj, event), event.modifiers())
-        elif event.type() == QtCore.QEvent.MouseButtonPress:
+        elif event.type() == QtCore.QEvent.MouseButtonPress and event.button() == QtCore.Qt.LeftButton:
             self.onMousePress(vis.mapMousePosition(obj, event), event.modifiers())
 
     def clear(self):
@@ -467,9 +467,11 @@ class ObjectPicker(object):
 
     def finish(self):
         if self.callbackFunc is not None:
-            self.callbackFunc(self.objects)
-        self.clear()
-        self.stop()
+            try:
+                self.callbackFunc(self.objects)
+            finally:
+                self.clear()
+                self.stop()
 
     def unsetHoverProperties(self, obj):
         if obj is None:

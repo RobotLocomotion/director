@@ -119,6 +119,7 @@ class DebugData(object):
         cube = vtk.vtkTessellatedBoxSource()
         cube.SetBounds(bmin[0], bmax[0], bmin[1], bmax[1], bmin[2], bmax[2])
         cube.SetLevel(subdivisions)
+        cube.QuadsOn()
         cube.Update()
         self.addPolyData(cube.GetOutput(), color)
 

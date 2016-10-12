@@ -109,7 +109,8 @@ class AffordanceObjectModelManager(object):
         cls = getattr(affordanceitems, className)
         aff = cls(desc['Name'], self.view)
         om.addToObjectModel(aff, parentObj=om.getOrCreateContainer('affordances'))
-        vis.addChildFrame(aff)
+        frame = vis.addChildFrame(aff)
+        frame.setProperty('Deletable', False)
         aff.loadDescription(desc, copyMode=aff.COPY_MODE_ALL)
         self.registerAffordance(aff, notify=False)
 

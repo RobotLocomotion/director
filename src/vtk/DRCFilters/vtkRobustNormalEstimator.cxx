@@ -110,6 +110,7 @@ int vtkRobustNormalEstimator::RequestData(
   // pass input thru to output and add new array
   output->ShallowCopy(input);
   output->GetPointData()->AddArray(normals);
+  output->GetPointData()->SetNormals(normals);
 
   // early exit if input data has no points
   if (!input->GetNumberOfPoints())

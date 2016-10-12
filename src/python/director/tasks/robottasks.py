@@ -435,10 +435,7 @@ class UserSelectAffordanceCandidate(AsyncTask):
 
         newName = self.properties.getProperty('New name')
         if newName:
-            oldName = selectedObj.getProperty('Name')
-            selectedObj.setProperty('Name', newName)
-            for child in selectedObj.children():
-                child.setProperty('Name', child.getProperty('Name').replace(oldName, newName))
+            selectedObj.rename(newName)
 
     def run(self):
 

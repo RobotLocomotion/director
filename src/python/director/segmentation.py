@@ -2348,11 +2348,18 @@ def makePolyDataFields(pd):
     edgeLengths = np.array([np.linalg.norm(edge) for edge in edges])
     axes = [edge / np.linalg.norm(edge) for edge in edges]
 
+
     # Use upward axis for z direction
     zaxis = [0, 0, 1]
     dot_products = [  np.dot(axe, zaxis)  for axe in axes  ]
     axes = [ axes[i] for i in np.argsort( dot_products ) ]
     edgeLengths = [ edgeLengths[i] for i in np.argsort( dot_products ) ]
+
+#    zEdgeIndex = 2
+#    if np.dot(axes[2], [0,0,1]) < 0:
+#        print 'flipping z axis'
+#        axes[1] = -axes[1]
+#        axes[2] = -axes[2]
 
     boxCenter = computeCentroid(wireframe)
 

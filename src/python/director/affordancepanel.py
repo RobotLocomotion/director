@@ -1,18 +1,17 @@
-import PythonQt
-from PythonQt import QtCore, QtGui, QtUiTools
 from director import applogic as app
-from director import visualization as vis
 from director.debugVis import DebugData
 from director import transformUtils
-from director.timercallback import TimerCallback
-from director.simpletimer import FPSCounter
 from director import objectmodel as om
 from director import affordanceitems
 from director import affordanceurdf
 from director.uuidutil import newUUID
-
 import director.vtkAll as vtk
 import numpy as np
+
+import PythonQt
+from PythonQt import QtCore, QtGui, QtUiTools
+
+
 
 def addWidgetsToDict(widgets, d):
 
@@ -30,11 +29,10 @@ class WidgetDict(object):
 
 class AffordancePanel(object):
 
-    def __init__(self, view, affordanceManager, ikServer, jointController, raycastDriver):
+    def __init__(self, view, affordanceManager, jointController=None, raycastDriver=None):
 
         self.view = view
         self.affordanceManager = affordanceManager
-        self.ikServer = ikServer
         self.jointController = jointController
         self.raycastDriver = raycastDriver
 
@@ -55,31 +53,31 @@ class AffordancePanel(object):
         self.ui.spawnMeshButton.connect('clicked()', self.onSpawnMesh)
         self.ui.getRaycastTerrainButton.connect('clicked()', self.onGetRaycastTerrain)
 
+        if not self.raycastDriver:
+            self.ui.getRaycastTerrainButton.hide()
+
         self.eventFilter = PythonQt.dd.ddPythonEventFilter()
         self.ui.scrollArea.installEventFilter(self.eventFilter)
         self.eventFilter.addFilteredEventType(QtCore.QEvent.Resize)
         self.eventFilter.connect('handleEvent(QObject*, QEvent*)', self.onEvent)
 
-        self.updateTimer = TimerCallback(targetFps=30)
-        self.updateTimer.callback = self.updatePanel
-        self.updateTimer.start()
-
     def onEvent(self, obj, event):
         minSize = self.ui.scrollArea.widget().minimumSizeHint.width() + self.ui.scrollArea.verticalScrollBar().width
         self.ui.scrollArea.setMinimumWidth(minSize)
 
-    def updatePanel(self):
-        if not self.widget.isVisible():
-            return
-
     def getSpawnFrame(self):
-        pos = self.jointController.q[:3]
-        rpy = np.degrees(self.jointController.q[3:6])
-        frame = transformUtils.frameFromPositionAndRPY(pos, rpy)
-        frame.PreMultiply()
-        frame.Translate(0.5, 0.0, 0.3)
-        return frame
 
+        if self.jointController:
+            # get spawn frame in front of robot
+            pos = self.jointController.q[:3]
+            rpy = np.degrees(self.jointController.q[3:6])
+            frame = transformUtils.frameFromPositionAndRPY(pos, rpy)
+            frame.PreMultiply()
+            frame.Translate(0.5, 0.0, 0.3)
+        else:
+            frame = vtk.vtkTransform()
+
+        return frame
 
     def onGetRaycastTerrain(self):
         affs = self.affordanceManager.getCollisionAffordances()
@@ -126,12 +124,13 @@ class AffordancePanel(object):
 def _getAction():
     return None
 
-def init(view, affordanceManager, ikServer, jointController, raycastDriver):
+
+def init(view, affordanceManager, jointController, raycastDriver):
 
     global panel
     global dock
 
-    panel = AffordancePanel(view, affordanceManager, ikServer, jointController, raycastDriver)
+    panel = AffordancePanel(view, affordanceManager, jointController, raycastDriver)
     dock = app.addWidgetToDock(panel.widget, action=_getAction())
     dock.hide()
 

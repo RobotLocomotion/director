@@ -36,7 +36,9 @@ class PolyDataItem(om.ObjectModelItem):
             #'distance' : (0.5, 4.0),
             'spindle_angle' : (0, 360),
             'azimuth' : (-2.5, 2.5),
-            'scan_delta' : (0.0, 0.3)
+            'scan_delta' : (0.0, 0.3),
+            'point distance to plane' : (-0.2, 0.2),
+            'normal angle to plane' : (0.0, 10.0),
             }
 
         self.addProperty('Color By', 0, attributes=om.PropertyAttributes(enumNames=['Solid Color']))
@@ -221,6 +223,15 @@ class PolyDataItem(om.ObjectModelItem):
         lut = self.mapper.GetLookupTable()
         self.scalarBarWidget = createScalarBarWidget(view, lut, title)
         self._renderAllViews()
+
+    def _setScalarBarTextColor(self, color=(0,0,0)):
+        act = self.scalarBarWidget.GetScalarBarActor()
+        act.GetTitleTextProperty().SetColor(color)
+        act.GetLabelTextProperty().SetColor(color)
+
+    def _setScalarBarTitle(self, titleText):
+        act = self.scalarBarWidget.GetScalarBarActor()
+        act.SetTitle(titleText)
 
     def getCoolToWarmColorMap(self, scalarRange):
 
@@ -945,6 +956,7 @@ def showClusterObjects(clusters, parent):
 
         clusterPoints.setProperty('Point Size', 7)
         clusterPoints.colorBy(None)
+        clusterObj.data = cluster
         objects.append(clusterObj)
 
         for obj in [clusterObj, clusterBox, clusterPoints]:
@@ -1074,7 +1086,7 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, r
         picker.SetTolerance(tolerance)
 
 
-    if obj:
+    if obj is not None:
         if isinstance(obj, list):
             for o in obj:
                 picker.AddPickList(o.actor)
