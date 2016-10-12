@@ -1178,7 +1178,7 @@ class PlanGazeTrajectory(AsyncTask):
             self.appendPositionConstraintForTargetFrame(targetFrame, i+1)
 
         gazeConstraint = self.constraintSet.constraints[0]
-        assert isinstance(gazeConstraint, ikplanner.ik.WorldGazeDirConstraint)
+        assert isinstance(gazeConstraint, ikplanner.ikconstraints.WorldGazeDirConstraint)
         gazeConstraint.tspan = [1.0, numberOfSamples]
 
 

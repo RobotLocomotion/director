@@ -154,7 +154,7 @@ class RobotSystemFactory(ComponentFactory):
         from director import planningutils
         from director import roboturdf
         from director import ikplanner
-        from director import ik
+        from director import matlabik
 
 
         directorConfig = robotSystem.directorConfig
@@ -166,9 +166,9 @@ class RobotSystemFactory(ComponentFactory):
 
 
         if 'leftFootLink' in directorConfig:
-            ikServer = ik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'], directorConfig['leftFootLink'], directorConfig['rightFootLink'], directorConfig['pelvisLink'])
+            ikServer = matlabik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'], directorConfig['leftFootLink'], directorConfig['rightFootLink'], directorConfig['pelvisLink'])
         else: # assume that robot has no feet e.g. fixed base arm
-            ikServer = ik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'], '', '', '')
+            ikServer = matlabik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'], '', '', '')
 
         def startIkServer():
             ikServer.startServerAsync()
