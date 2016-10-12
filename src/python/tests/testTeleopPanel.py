@@ -59,16 +59,6 @@ view = app.createView()
 robotsystem.create(view, globals())
 
 
-playbackPanel = playbackpanel.PlaybackPanel(planPlayback, playbackRobotModel, playbackJointController,
-                                  robotStateModel, robotStateJointController, manipPlanner)
-
-planningUtils = planningutils.PlanningUtils(robotStateModel, robotStateJointController)
-teleopPanel = teleoppanel.TeleopPanel(robotStateModel, robotStateJointController, teleopRobotModel, teleopJointController,
-                 ikPlanner, manipPlanner, affordanceManager, playbackPanel.setPlan, playbackPanel.hidePlan, planningUtils)
-
-manipPlanner.connectPlanReceived(playbackPanel.setPlan)
-
-
 ikServer.connectStartupCompleted(onIkStartup)
 startIkServer()
 
