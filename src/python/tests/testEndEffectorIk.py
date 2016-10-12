@@ -12,18 +12,20 @@ import itertools
 
 
 
-def onIkStartup(ikServer, startSuccess):
+def onMatlabStartup(ikServer, startSuccess):
     assert startSuccess
     runTest()
 
 
 
-def computeIk(goalFrame, constraints, ikParameters):
+def computeIk(goalFrame, constraints, ikParameters, seedPoseName, nominalPoseName):
 
     constraints[-2].referenceFrame = goalFrame
     constraints[-1].quaternion = goalFrame
-    return robotSystem.ikServer.runIk(constraints, ikParameters)
-
+    cs = ikplanner.ConstraintSet(robotSystem.ikPlanner, constraints, '', '')
+    cs.seedPoseName = seedPoseName
+    cs.nominalPoseName = nominalPoseName
+    return cs.runIk()
 
 def runTest():
 
@@ -36,7 +38,6 @@ def runTest():
     jointLimitPadding = np.radians(5)
 
     ikPlanner = robotSystem.ikPlanner
-    ikServer = robotSystem.ikServer
     jointController = robotSystem.robotStateJointController
     robotModel = robotSystem.robotStateModel
 
@@ -89,10 +90,10 @@ def runTest():
     ikParameters.majorOptimalityTolerance = 1e-4
     ikParameters.majorFeasibilityTolerance = 1e-6
 
-    #ikServer.seedName = 'q_nom'
-    #ikServer.nominalName = 'q_nom'
-    ikServer.seedName = 'sample_pose'
-    ikServer.nominalName = 'sample_pose'
+    #seedPoseName = 'q_nom'
+    #nominalPoseName = 'q_nom'
+    seedPoseName = 'sample_pose'
+    nominalPoseName = 'sample_pose'
 
     print
     print 'constraints:'
@@ -103,13 +104,13 @@ def runTest():
     print
     print ikParameters
     print
-    print 'seed pose name:', ikServer.seedName
-    print 'nominal pose name:', ikServer.nominalName
+    print 'seed pose name:', seedPoseName
+    print 'nominal pose name:', nominalPoseName
     print
 
 
     ikPlanner.addPose(jointController.q, 'sample_pose')
-    endPose, info = computeIk(linkFrame, constraints, ikParameters)
+    endPose, info = computeIk(linkFrame, constraints, ikParameters, seedPoseName, nominalPoseName)
 
     assert info == 1
     assert np.allclose(endPose, jointController.q)
@@ -144,7 +145,7 @@ def runTest():
         targetFrame = robotModel.getLinkFrame(linkName)
         #pos, quat = transformUtils.poseFromTransform(frame)
 
-        endPose, info = computeIk(targetFrame, constraints, ikParameters)
+        endPose, info = computeIk(targetFrame, constraints, ikParameters, seedPoseName, nominalPoseName)
 
         if info >= 10:
             print
@@ -165,7 +166,7 @@ def runTest():
 
                     print 'retry tolerance:', tol
                     setTolerance(tol[0], tol[1])
-                    endPose, info = computeIk(frame, constraints, ikParameters)
+                    endPose, info = computeIk(frame, constraints, ikParameters, seedPoseName, nominalPoseName)
                     if info < 10:
                         succeeded = True
                         print 'Worked!'
@@ -198,9 +199,13 @@ view = app.createView()
 view.show()
 
 robotSystem = robotsystem.create(view)
-robotSystem.ikServer.connectStartupCompleted(onIkStartup)
-robotSystem.startIkServer()
 
+#robotSystem.ikPlanner.planningMode = 'pydrake'
 
-app.start(enableAutomaticQuit=False)
+if robotSystem.ikPlanner.planningMode == 'matlabdrake':
+    robotSystem.ikServer.connectStartupCompleted(onMatlabStartup)
+    robotSystem.startIkServer()
+    app.start(enableAutomaticQuit=False)
+else:
+    runTest()
 
