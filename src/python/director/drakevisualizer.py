@@ -448,6 +448,7 @@ class DrakeVisualizer(object):
         # the pointcloud.
         channels = {msg.channel_names[i]: msg.channels[i] for i in range(msg.n_channels)}
         if "r" in channels and "g" in channels and "b" in channels:
+            colorized = True
             rgb = vtk.vtkUnsignedCharArray()
             rgb.SetName("rgb")
             rgb.SetNumberOfComponents(3)
@@ -457,6 +458,8 @@ class DrakeVisualizer(object):
                 channel = channels[color]
                 for i in range(msg.n_points):
                     rgb.SetComponent(i, color_index, 255 * channel[i])
+        else:
+            colorized = False
 
         folder = self.getPointcloudFolder(pointcloudName)
         # If there was an existing point cloud by this name, then just
@@ -470,7 +473,9 @@ class DrakeVisualizer(object):
         else:
             item = vis.PolyDataItem("pointcloud", polyData, view=None)
             item.addToView(self.view)
-            item._updateColorByProperty()
+            if colorized:
+                item._updateColorByProperty()
+                item.setProperty("Color By", "rgb")
             om.addToObjectModel(item, parentObj=self.getPointcloudFolder(pointcloudName))
 
 
