@@ -335,9 +335,8 @@ class DrakeVisualizer(object):
     def getLinkFolder(self, robotNum, linkName):
         return om.getOrCreateContainer(linkName, parentObj=self.getRobotFolder(robotNum))
 
-    def getPointcloudFolder(self, pointcloudName):
-        parent = om.getOrCreateContainer('pointclouds', parentObj=self.getRootFolder())
-        return om.getOrCreateContainer(pointcloudName, parentObj=parent)
+    def getPointCloudFolder(self):
+        return om.getOrCreateContainer('pointclouds', parentObj=self.getRootFolder())
 
     def addLink(self, link, robotNum, linkName):
         self.robots.setdefault(robotNum, {})[linkName] = link
@@ -449,34 +448,30 @@ class DrakeVisualizer(object):
         channels = {msg.channel_names[i]: msg.channels[i] for i in range(msg.n_channels)}
         if "r" in channels and "g" in channels and "b" in channels:
             colorized = True
-            rgb = vtk.vtkUnsignedCharArray()
-            rgb.SetName("rgb")
-            rgb.SetNumberOfComponents(3)
-            rgb.SetNumberOfTuples(msg.n_points)
-            polyData.GetPointData().AddArray(rgb)
-            for (color_index, color) in enumerate(["r", "g", "b"]):
-                channel = channels[color]
-                for i in range(msg.n_points):
-                    rgb.SetComponent(i, color_index, 255 * channel[i])
+            colorArray = np.empty((msg.n_points, 3), dtype=np.uint8)
+            for (colorIndex, color) in enumerate(["r", "g", "b"]):
+                colorArray[:, colorIndex] = 255 * np.asarray(channels[color])
+            vnp.addNumpyToVtk(polyData, colorArray, "rgb")
         else:
             colorized = False
 
-        folder = self.getPointcloudFolder(pointcloudName)
+        folder = self.getPointCloudFolder()
+
         # If there was an existing point cloud by this name, then just
         # set its polyData to the new point cloud.
         # This has the effect of preserving all the user-specified properties
         # like point size, coloration mode, alpha, etc.
-        if len(folder.children()):
-            previous_pointcloud = folder.children()[0]
-            previous_pointcloud.setPolyData(polyData)
-            previous_pointcloud._updateColorByProperty()
+        previousPointcloud = folder.findChild(pointcloudName)
+        if previousPointcloud is not None:
+            previousPointcloud.setPolyData(polyData)
+            previousPointcloud._updateColorByProperty()
         else:
-            item = vis.PolyDataItem("pointcloud", polyData, view=None)
+            item = vis.PolyDataItem(pointcloudName, polyData, view=None)
             item.addToView(self.view)
             if colorized:
                 item._updateColorByProperty()
                 item.setProperty("Color By", "rgb")
-            om.addToObjectModel(item, parentObj=self.getPointcloudFolder(pointcloudName))
+            om.addToObjectModel(item, parentObj=folder)
 
 
 ##########################################################
