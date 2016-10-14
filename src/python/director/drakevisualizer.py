@@ -362,7 +362,8 @@ class DrakeVisualizer(object):
 
     def removeAllRobots(self):
         for child in self.getRootFolder().children():
-            om.removeFromObjectModel(child)
+            if child.getProperty('Name') != "pointclouds":
+                om.removeFromObjectModel(child)
         self.robots = {}
 
     def sendStatusMessage(self, message):
