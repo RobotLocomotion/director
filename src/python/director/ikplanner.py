@@ -1409,10 +1409,14 @@ class IKPlanner(object):
         lcmUtils.addSubscriber('POSTURE_GOAL', lcmbotcore.joint_angles_t, functools.partial(self.onPostureGoalMessage, stateJointController))
 
     def mergeWithDefaultIkParameters(self, ikParameters):
-        if ikParameters is None:
-            ikParameters = IkParameters()
-        ikParameters.fillInWith(self.defaultIkParameters)
-        return ikParameters
+
+        newIkParameters = IkParameters()
+
+        if ikParameters is not None:
+            newIkParameters.fillInWith(ikParameters)
+
+        newIkParameters.fillInWith(self.defaultIkParameters)
+        return newIkParameters
 
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
 
