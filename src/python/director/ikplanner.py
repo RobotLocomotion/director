@@ -117,10 +117,9 @@ class ConstraintSet(object):
 
 class IkOptionsItem(om.ObjectModelItem):
 
-    def __init__(self, ikServer, ikPlanner):
+    def __init__(self, ikPlanner):
         om.ObjectModelItem.__init__(self, 'IK Planner Options')
 
-        self.ikServer = ikServer
         self.ikPlanner = ikPlanner
 
         self.addProperty('Use pointwise', ikPlanner.defaultIkParameters.usePointwise)
@@ -254,7 +253,7 @@ class IKPlanner(object):
         self.rightHandSupportEnabled = False
         self.pelvisSupportEnabled  = False
 
-        om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
+        om.addToObjectModel(IkOptionsItem(self), parentObj=om.getOrCreateContainer('planning'))
 
         self.jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
         
@@ -291,34 +290,6 @@ class IKPlanner(object):
         else:
             return []
 
-    def setIkParameters(self, ikParameterDict):
-        originalIkParameterDict = {}
-        if 'usePointwise' in ikParameterDict:
-            originalIkParameterDict['usePointwise'] = self.ikServer.usePointwise
-            self.ikServer.usePointwise = ikParameterDict['usePointwise']
-        if 'maxDegreesPerSecond' in ikParameterDict:
-            originalIkParameterDict['maxDegreesPerSecond'] = self.defaultIkParameters.maxDegreesPerSecond
-            self.ikServer.maxDegreesPerSecond = ikParameterDict['maxDegreesPerSecond']
-        if 'numberOfAddedKnots' in ikParameterDict:
-            originalIkParameterDict['numberOfAddedKnots'] = self.ikServer.numberOfAddedKnots
-            self.ikServer.numberOfAddedKnots = ikParameterDict['numberOfAddedKnots']
-        if 'quasiStaticShrinkFactor' in ikParameterDict:
-            originalIkParameterDict['quasiStaticShrinkFactor'] = ikconstraints.QuasiStaticConstraint.shrinkFactor
-            ikconstraints.QuasiStaticConstraint.shrinkFactor = ikParameterDict['quasiStaticShrinkFactor']
-        if 'fixInitialState' in ikParameterDict:
-            originalIkParameterDict['fixInitialState'] = self.ikServer.fixInitialState
-            self.ikServer.fixInitialState = ikParameterDict['fixInitialState']
-        if 'leftFootSupportEnabled' in ikParameterDict:
-            originalIkParameterDict['leftFootSupportEnabled'] = self.leftFootSupportEnabled
-            self.leftFootSupportEnabled = ikParameterDict['leftFootSupportEnabled']
-        if 'rightFootSupportEnabled' in ikParameterDict:
-            originalIkParameterDict['rightFootSupportEnabled'] = self.rightFootSupportEnabled
-            self.rightFootSupportEnabled = ikParameterDict['rightFootSupportEnabled']
-        if 'pelvisSupportEnabled' in ikParameterDict:
-            originalIkParameterDict['pelvisSupportEnabled'] = self.pelvisSupportEnabled
-            self.pelvisSupportEnabled = ikParameterDict['pelvisSupportEnabled']
-
-        return originalIkParameterDict
 
     def getHandModel(self, side=None):
         if self.fixedBaseArm:
