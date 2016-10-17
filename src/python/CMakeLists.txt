@@ -45,11 +45,10 @@ set(python_files
   director/handcontrolpanel.py
   director/handdriver.py
   director/takktilevis.py
-  director/ik.py
+  director/ikconstraintencoder.py
   director/ikconstraints.py
   director/ikparameters.py
   director/ikplanner.py
-  director/ikconstraintencoder.py
   director/__init__.py
   director/ioUtils.py
   director/irisUtils.py
@@ -67,6 +66,7 @@ set(python_files
   director/lcmUtils.py
   director/mapsregistrar.py
   director/matlab.py
+  director/matlabik.py
   director/meshmanager.py
   director/midi.py
   director/multisensepanel.py
@@ -84,6 +84,7 @@ set(python_files
   director/polarisplatformplanner.py
   director/propertyanimation.py
   director/propertyset.py
+  director/pydrakeik.py
   director/raycastdriver.py
   director/robotstate.py
   director/robotplanlistener.py

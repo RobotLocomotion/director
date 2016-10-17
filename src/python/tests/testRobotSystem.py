@@ -12,15 +12,19 @@ if app.getTestingInteractiveEnabled():
 view = app.createView()
 view.show()
 
-useMinimalOptions = False
+testMinimalOptions = True
 
-if useMinimalOptions:
+if testMinimalOptions:
 
     factory = robotsystem.RobotSystemFactory()
 
     options = factory.getDisabledOptions()
     options.useDirectorConfig = True
+    options.useAffordances = True
     options.useRobotState = True
+    options.usePlanning = True
+    options.usePlayback = True
+    options.useTeleop = True
 
     robotSystem = factory.construct(view=view, options=options)
 

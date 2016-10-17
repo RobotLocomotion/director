@@ -26,9 +26,6 @@ class AsyncIKCommunicator():
         self.leftFootLink = leftFootLink
         self.rightFootLink = rightFootLink
         self.pelvisLink = pelvisLink
-
-        self.seedName = 'q_nom'
-        self.nominalName = 'q_nom'
         self.infoFunc = None
 
         self.callbacks = callbacks.CallbackRegistry([self.STARTUP_COMPLETED])
@@ -180,7 +177,7 @@ class AsyncIKCommunicator():
     def clearEnvironment(self):
         self.setEnvironment('')
 
-    def runIk(self, constraints, ikParameters, nominalPostureName=None, seedPostureName=None):
+    def runIk(self, constraints, ikParameters, nominalPostureName, seedPostureName):
 
         commands = []
         commands.append('\n%-------- runIk --------\n')
@@ -192,9 +189,6 @@ class AsyncIKCommunicator():
                 continue
             constraint.getCommands(commands, constraintNames, suffix='_%d' % constraintId)
             commands.append('\n')
-
-        nominalPostureName = nominalPostureName or self.nominalName
-        seedPostureName = seedPostureName or self.seedName
 
         commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(nominalPostureName))
         commands.append('{0} = [{0}; zeros(r.getNumPositions()-numel({0}),1)];'.format(seedPostureName))

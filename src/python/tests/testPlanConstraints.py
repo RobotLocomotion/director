@@ -47,10 +47,7 @@ def buildConstraints():
 
 def testPlanConstraints():
 
-    # this is required for now, makes it avoid communication with matlab
-    # inside the call to ikPlanner.addPose
-    ikPlanner.pushToMatlab = False
-
+    ikPlanner.planningMode = 'dummy'
 
     constraints = buildConstraints()
     poses = ce.getPlanPoses(constraints, ikPlanner)

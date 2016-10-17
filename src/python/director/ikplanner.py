@@ -19,8 +19,6 @@ from director import ioUtils
 from director.simpletimer import SimpleTimer
 from director.utime import getUtime
 from director import robotstate
-from director import planplayback
-from director import segmentation
 from director import drcargs
 
 from director import ikconstraints
@@ -50,6 +48,7 @@ class ConstraintSet(object):
         self.endPose = None
         self.seedPoseName = None
         self.nominalPoseName = None
+        self.positionCosts = []
 
     def runIk(self):
         seedPoseName = self.seedPoseName
@@ -64,19 +63,21 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
-        if self.ikPlanner.planningMode == 'exotica':
-            self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints, nominalPoseName=nominalPoseName, seedPoseName=seedPoseName)
-            return self.endPose, self.info
-        elif self.ikPlanner.planningMode == 'drake':
-            ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+        if not self.positionCosts:
+            positionCosts = self.ikPlanner.defaultPositionCosts
 
-            self.endPose, self.info = self.ikPlanner.ikServer.runIk(self.constraints, ikParameters, nominalPostureName=nominalPoseName, seedPostureName=seedPoseName)
-            print 'info:', self.info
-            return self.endPose, self.info
+        ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
+
+        self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints, ikParameters, positionCosts, nominalPoseName=nominalPoseName, seedPoseName=seedPoseName)
+
+        self.ikPlanner.addPose(self.endPose, 'q_end')
+        print 'info:', self.info
+        return self.endPose, self.info
 
     def runIkTraj(self):
         assert self.endPose is not None
-        self.ikPlanner.addPose(self.endPose, self.endPoseName)
+        endPoseName = self.endPoseName or 'q_end'
+        self.ikPlanner.addPose(self.endPose, endPoseName)
 
         nominalPoseName = self.nominalPoseName
         if not nominalPoseName:
@@ -84,16 +85,23 @@ class ConstraintSet(object):
         if nominalPoseName == 'q_start':
             nominalPoseName = self.startPoseName
 
+        if not self.positionCosts:
+            positionCosts = self.ikPlanner.defaultPositionCosts
+
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
-        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, self.endPoseName, nominalPoseName, ikParameters=ikParameters)
+        self.plan = self.ikPlanner.runIkTraj(self.constraints, self.startPoseName, endPoseName, nominalPoseName, ikParameters=ikParameters, positionCosts=positionCosts)
 
         return self.plan
 
     def planEndPoseGoal(self, feetOnGround = True):
         assert self.endPose is not None
         self.ikPlanner.addPose(self.endPose, self.endPoseName)
+
+        if not self.positionCosts:
+            positionCosts = self.ikPlanner.defaultPositionCosts
+
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
-        self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName, feetOnGround, ikParameters=ikParameters)
+        self.plan = self.ikPlanner.computePostureGoal(self.startPoseName, self.endPoseName, feetOnGround, ikParameters=ikParameters, positionCosts=positionCosts)
         return self.plan
 
     def onFrameModified(self, frame):
@@ -117,10 +125,9 @@ class ConstraintSet(object):
 
 class IkOptionsItem(om.ObjectModelItem):
 
-    def __init__(self, ikServer, ikPlanner):
+    def __init__(self, ikPlanner):
         om.ObjectModelItem.__init__(self, 'IK Planner Options')
 
-        self.ikServer = ikServer
         self.ikPlanner = ikPlanner
 
         self.addProperty('Use pointwise', ikPlanner.defaultIkParameters.usePointwise)
@@ -222,27 +229,40 @@ class IkOptionsItem(om.ObjectModelItem):
             self.ikPlanner.additionalTimeSamples = self.getProperty(propertyName)
 
 class IKPlanner(object):
-    def setPublisher(self, pub):
-        self.plannerPub = pub
 
-    def __init__(self, ikServer, robotModel, jointController, handModels):
+    def addPublisher(self, name, pub):
+        assert name not in self.publishers
+        self.publishers[name] = pub
 
-        self.ikServer = ikServer
+    @property
+    def planningMode(self):
+        return self._planningMode
+
+    @planningMode.setter
+    def planningMode(self, mode):
+        assert mode in self.publishers
+        self._planningMode = mode
+
+    @property
+    def plannerPub(self):
+        return self.publishers[self._planningMode]
+
+    def __init__(self, robotModel, jointController, handModels):
+
         self.defaultIkParameters = IkParameters()
         self.defaultIkParameters.setToDefaults()
         self.robotModel = robotModel
         self.jointController = jointController
         self.handModels = handModels
-        self.plannerPub = None
 
-        self.ikServer.handModels = self.handModels
+        self._planningMode = ''
+        self._activePlannerPublisher = None
+        self.publishers = dict()
 
         self.reachingSide = 'left'
 
         self.additionalTimeSamples = 0
         self.useQuasiStaticConstraint = True
-        self.pushToMatlab = True
-        self.planningMode = 'drake'
 
         # If the robot an arm on a fixed base, set true e.g. ABB or Kuka?
         self.fixedBaseArm = False
@@ -254,7 +274,7 @@ class IKPlanner(object):
         self.rightHandSupportEnabled = False
         self.pelvisSupportEnabled  = False
 
-        om.addToObjectModel(IkOptionsItem(ikServer, self), parentObj=om.getOrCreateContainer('planning'))
+        om.addToObjectModel(IkOptionsItem(self), parentObj=om.getOrCreateContainer('planning'))
 
         self.jointGroups = drcargs.getDirectorConfig()['teleopJointGroups']
         
@@ -284,6 +304,8 @@ class IKPlanner(object):
         if len(self.neckJoints):
             self.neckPitchJoint = self.neckJoints[0]
 
+        self.initDefaultPositionCosts()
+
     def getJointGroup(self, name):
         jointGroup = filter(lambda group: group['name'] == name, self.jointGroups)
         if (len(jointGroup) == 1):
@@ -291,34 +313,37 @@ class IKPlanner(object):
         else:
             return []
 
-    def setIkParameters(self, ikParameterDict):
-        originalIkParameterDict = {}
-        if 'usePointwise' in ikParameterDict:
-            originalIkParameterDict['usePointwise'] = self.ikServer.usePointwise
-            self.ikServer.usePointwise = ikParameterDict['usePointwise']
-        if 'maxDegreesPerSecond' in ikParameterDict:
-            originalIkParameterDict['maxDegreesPerSecond'] = self.defaultIkParameters.maxDegreesPerSecond
-            self.ikServer.maxDegreesPerSecond = ikParameterDict['maxDegreesPerSecond']
-        if 'numberOfAddedKnots' in ikParameterDict:
-            originalIkParameterDict['numberOfAddedKnots'] = self.ikServer.numberOfAddedKnots
-            self.ikServer.numberOfAddedKnots = ikParameterDict['numberOfAddedKnots']
-        if 'quasiStaticShrinkFactor' in ikParameterDict:
-            originalIkParameterDict['quasiStaticShrinkFactor'] = ikconstraints.QuasiStaticConstraint.shrinkFactor
-            ikconstraints.QuasiStaticConstraint.shrinkFactor = ikParameterDict['quasiStaticShrinkFactor']
-        if 'fixInitialState' in ikParameterDict:
-            originalIkParameterDict['fixInitialState'] = self.ikServer.fixInitialState
-            self.ikServer.fixInitialState = ikParameterDict['fixInitialState']
-        if 'leftFootSupportEnabled' in ikParameterDict:
-            originalIkParameterDict['leftFootSupportEnabled'] = self.leftFootSupportEnabled
-            self.leftFootSupportEnabled = ikParameterDict['leftFootSupportEnabled']
-        if 'rightFootSupportEnabled' in ikParameterDict:
-            originalIkParameterDict['rightFootSupportEnabled'] = self.rightFootSupportEnabled
-            self.rightFootSupportEnabled = ikParameterDict['rightFootSupportEnabled']
-        if 'pelvisSupportEnabled' in ikParameterDict:
-            originalIkParameterDict['pelvisSupportEnabled'] = self.pelvisSupportEnabled
-            self.pelvisSupportEnabled = ikParameterDict['pelvisSupportEnabled']
+    def initDefaultPositionCosts(self):
 
-        return originalIkParameterDict
+        groupCosts = [
+          ('Left Leg', 1e3),
+          ('Right Leg', 1e3),
+          ('Left Arm', 1),
+          ('Right Arm', 1),
+          ('Back', 1e4),
+          ('Neck', 1e6),
+          ]
+
+        jointNames = robotstate.getDrakePoseJointNames()
+        costs = np.ones(len(jointNames))
+
+        for groupName, costValue in groupCosts:
+            names = self.getJointGroup(groupName)
+            inds = [jointNames.index(name) for name in names]
+            costs[inds] = costValue
+
+        costs[jointNames.index('base_x')] = 0
+        costs[jointNames.index('base_y')] = 0
+        costs[jointNames.index('base_z')] = 0
+        costs[jointNames.index('base_roll')] = 1e3
+        costs[jointNames.index('base_pitch')] = 1e3
+        costs[jointNames.index('base_yaw')] = 0
+
+        self.defaultPositionCosts = costs
+
+    def getIkOptions(self):
+        return getIkOptions()
+
 
     def getHandModel(self, side=None):
         if self.fixedBaseArm:
@@ -547,7 +572,7 @@ class IKPlanner(object):
     def createPositionOrientationGraspConstraints(self, side, targetFrame, graspToHandLinkFrame=None, positionTolerance=0.0, angleToleranceInDegrees=0.0):
         graspToHandLinkFrame = graspToHandLinkFrame or self.getPalmToHandLink(side)
         linkName = self.getHandLink(side)
-        return self.createPositionOrientationConstraint(linkName, targetFrame, graspToHandLinkFrame)
+        return self.createPositionOrientationConstraint(linkName, targetFrame, graspToHandLinkFrame, positionTolerance, angleToleranceInDegrees)
 
     def createPositionOrientationConstraint(self, linkName, targetFrame, linkOffsetFrame, positionTolerance=0.0, angleToleranceInDegrees=0.0):
 
@@ -798,21 +823,16 @@ class IKPlanner(object):
         backJoints = self.backJoints
         constraints.append(self.createPostureConstraint(nominalPoseName, backJoints))
 
-        endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
+        endPose, info = ConstraintSet(self, constraints, '', startPoseName).runIk()
         return endPose, info
 
 
     def computeNominalPlan(self, startPose):
-
         endPose, info = self.computeNominalPose(startPose)
-        print 'info:', info
-
         return self.computePostureGoal(startPose, endPose)
 
 
     def computeStandPose(self, startPose, ikParameters=None):
-
-        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
@@ -826,7 +846,9 @@ class IKPlanner(object):
         backJoints = self.backJoints
         constraints.append(self.createPostureConstraint(nominalPoseName, backJoints))
 
-        endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
+        constraintSet = ConstraintSet(self, constraints, '', startPoseName)
+        constraintSet.ikParameters = ikParameters
+        endPose, info = constraintSet.runIk()
         return endPose, info
 
 
@@ -844,8 +866,6 @@ class IKPlanner(object):
             The default height is Valkyrie specific
             This function originally required usePointwise=False, doesn't seem to be necessary
         '''
-
-        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         nominalPoseName = 'q_nom'
         startPoseName = 'stand_start'
@@ -868,7 +888,9 @@ class IKPlanner(object):
         constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
         constraints.append( self.createPostureConstraint('q_zero', self.neckJoints) )
 
-        endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
+        constraintSet = ConstraintSet(self, constraints, '', startPoseName)
+        constraintSet.ikParameters = ikParameters
+        endPose, info = constraintSet.runIk()
         return endPose, info
 
 
@@ -886,8 +908,6 @@ class IKPlanner(object):
             The default height is Valkyrie specific
             This function originally required usePointwise=False, doesn't seem to be necessary
         '''
-
-        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         startPoseName = 'stand_start'
         self.addPose(startPose, startPoseName)
@@ -909,7 +929,9 @@ class IKPlanner(object):
         constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append( self.createPostureConstraint('q_zero', self.neckJoints) )
 
-        endPose, info = self.ikServer.runIk(constraints, ikParameters, seedPostureName=startPoseName)
+        constraintSet = ConstraintSet(self, constraints, '', startPoseName)
+        constraintSet.ikParameters = ikParameters
+        endPose, info = constraintSet.runIk()
         return endPose, info
 
 
@@ -1105,11 +1127,7 @@ class IKPlanner(object):
 
     def addPose(self, pose, poseName):
         self.jointController.addPose(poseName, pose)
-
-        if self.planningMode == 'drake' and self.pushToMatlab:
-            self.ikServer.sendPoseToServer(pose, poseName)
-        elif self.planningMode == 'exotica':
-            self.plannerPub.processAddPose(pose, poseName)
+        self.plannerPub.processAddPose(pose, poseName)
 
 
     def newPalmOffsetGraspToHandFrame(self, side, distance):
@@ -1347,7 +1365,7 @@ class IKPlanner(object):
 
 
 
-    def computeMultiPostureGoal(self, poses, feetOnGround=True, times=None, ikParameters=None):
+    def computeMultiPostureGoal(self, poses, feetOnGround=True, times=None, ikParameters=None, positionCosts=None):
 
         assert len(poses) >= 2
 
@@ -1375,11 +1393,11 @@ class IKPlanner(object):
         #if self.useQuasiStaticConstraint:
         #    constraints.append(self.createQuasiStaticConstraint())
 
-        return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1], nominalPoseName=poseNames[0], ikParameters=ikParameters)
+        return self.runIkTraj(constraints[1:], poseNames[0], poseNames[-1], nominalPoseName=poseNames[0], ikParameters=ikParameters, positionCosts=positionCosts)
 
 
-    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True, ikParameters=None):
-        return self.computeMultiPostureGoal([poseStart, poseEnd], feetOnGround, ikParameters=ikParameters)
+    def computePostureGoal(self, poseStart, poseEnd, feetOnGround=True, ikParameters=None, positionCosts=None):
+        return self.computeMultiPostureGoal([poseStart, poseEnd], feetOnGround, ikParameters=ikParameters, positionCosts=positionCosts)
 
 
     def computeJointPostureGoal(self, startPose, postureJoints, ikParameters=None):
@@ -1438,25 +1456,26 @@ class IKPlanner(object):
         lcmUtils.addSubscriber('POSTURE_GOAL', lcmbotcore.joint_angles_t, functools.partial(self.onPostureGoalMessage, stateJointController))
 
     def mergeWithDefaultIkParameters(self, ikParameters):
-        if ikParameters is None:
-            ikParameters = IkParameters()
-        ikParameters.fillInWith(self.defaultIkParameters)
-        return ikParameters
 
-    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', timeSamples=None, ikParameters=None):
+        newIkParameters = IkParameters()
 
-        if self.planningMode == 'exotica':
-            self.lastManipPlan, info = self.plannerPub.processTraj(constraints,endPoseName=poseEnd, nominalPoseName=nominalPoseName,seedPoseName=poseStart, additionalTimeSamples=self.additionalTimeSamples)
-        elif self.planningMode == 'drake':
-            ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
-            listener = self.getManipPlanListener()
-            info = self.ikServer.runIkTraj(constraints, poseStart=poseStart, poseEnd=poseEnd, nominalPose=nominalPoseName, ikParameters=ikParameters, timeSamples=timeSamples, additionalTimeSamples=self.additionalTimeSamples,
-                                           graspToHandLinkFrame=self.newGraspToHandFrame(ikParameters.rrtHand))
-            self.lastManipPlan = listener.waitForResponse(timeout=12000)
-            listener.finish()
+        if ikParameters is not None:
+            newIkParameters.fillInWith(ikParameters)
+
+        newIkParameters.fillInWith(self.defaultIkParameters)
+        return newIkParameters
+
+    def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', ikParameters=None, positionCosts=None):
+
+        if positionCosts is None:
+            positionCosts = self.defaultPositionCosts
+
+        ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
+
+        self.lastManipPlan, info = self.plannerPub.processTraj(constraints, ikParameters, positionCosts, nominalPoseName=nominalPoseName, seedPoseName=poseStart, endPoseName=poseEnd)
 
         print 'traj info:', info
-        return self.lastManipPlan        
+        return self.lastManipPlan
 
 
     def computePostureCost(self, pose):
@@ -1527,21 +1546,24 @@ class IKPlanner(object):
 
 
 
-from director import robotposegui as rpg
-
 class RobotPoseGUIWrapper(object):
 
     initialized = False
     main = None
+    rpg = None
 
     @classmethod
     def init(cls):
+
         if cls.initialized:
             return True
 
-        rpg.setDirectorConfigFile(drcargs.args().directorConfigFile)
-        rpg.lcmWrapper = rpg.LCMWrapper()
-        cls.main = rpg.MainWindow()
+        from director import robotposegui as rpg
+        cls.rpg = rpg
+
+        cls.rpg.setDirectorConfigFile(drcargs.args().directorConfigFile)
+        cls.rpg.lcmWrapper = cls.rpg.LCMWrapper()
+        cls.main = cls.rpg.MainWindow()
         parents = [w for w in QtGui.QApplication.topLevelWidgets() if isinstance(w, PythonQt.dd.ddMainWindow)]
         mainWindow = parents[0] if parents else None
         cls.main.messageBoxWarning = functools.partial(QtGui.QMessageBox.warning, mainWindow)
@@ -1576,7 +1598,7 @@ class RobotPoseGUIWrapper(object):
 
         cls.init()
 
-        config = rpg.loadConfig(cls.main.getPoseConfigFile())
+        config = cls.rpg.loadConfig(cls.main.getPoseConfigFile())
         assert groupName in config
 
         poses = {}
@@ -1594,6 +1616,6 @@ class RobotPoseGUIWrapper(object):
 
             if pose['nominal_handedness'] != side:
                 if 'leftFootLink' in drcargs.getDirectorConfig(): #if not self.fixedBaseArm:
-                    joints = rpg.applyMirror(joints)
+                    joints = cls.rpg.applyMirror(joints)
 
         return joints

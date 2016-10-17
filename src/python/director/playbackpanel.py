@@ -339,13 +339,16 @@ class PlaybackPanel(object):
         self.stopAnimation()
         self.ui.playbackSlider.value = 0
 
+        wasShowing = self.playbackRobotModel.getProperty('Visible') or (self.planFramesObj and self.planFramesObj.getProperty('Visible'))
+
         if self.planFramesObj:
             self.planFramesObj.setProperty('Visible', False)
         if self.playbackRobotModel:
             self.playbackRobotModel.setProperty('Visible', False)
 
-        self.robotStateModel.setProperty('Visible', True)
-        self.robotStateModel.setProperty('Alpha', 1.0)
+        if wasShowing:
+            self.robotStateModel.setProperty('Visible', True)
+            self.robotStateModel.setProperty('Alpha', 1.0)
 
 
     def showPoseAtTime(self, time):

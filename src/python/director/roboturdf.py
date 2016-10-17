@@ -315,19 +315,25 @@ def getEnvironmentPackagePaths():
     return packageMap.map.values()
 
 
-def setupPackagePaths():
+def getPackagePaths():
 
-    paths = getBuiltinPackagePaths() + getEnvironmentPackagePaths()
-    for path in paths:
+    paths = []
+    try:
+        getDRCBaseDir()
+    except KeyError:
+        pass
+    else:
+        paths += getBuiltinPackagePaths()
+
+    paths += getEnvironmentPackagePaths()
+    return paths
+
+
+def _setupPackagePaths():
+    for path in getPackagePaths():
         PythonQt.dd.ddDrakeModel.addPackageSearchPath(path)
 
-
-try:
-    getDRCBaseDir()
-except KeyError:
-    pass
-else:
-    setupPackagePaths()
+_setupPackagePaths()
 
 
 

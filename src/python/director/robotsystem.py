@@ -154,7 +154,6 @@ class RobotSystemFactory(ComponentFactory):
         from director import planningutils
         from director import roboturdf
         from director import ikplanner
-        from director import ik
 
 
         directorConfig = robotSystem.directorConfig
@@ -164,16 +163,6 @@ class RobotSystemFactory(ComponentFactory):
         ikJointController.addPose('q_end', ikJointController.getPose('q_nom'))
         ikJointController.addPose('q_start', ikJointController.getPose('q_nom'))
 
-
-        if 'leftFootLink' in directorConfig:
-            ikServer = ik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'], directorConfig['leftFootLink'], directorConfig['rightFootLink'], directorConfig['pelvisLink'])
-        else: # assume that robot has no feet e.g. fixed base arm
-            ikServer = ik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'], '', '', '')
-
-        def startIkServer():
-            ikServer.startServerAsync()
-            ikServer.comm.writeCommandsToLogFile = True
-
         handFactory = roboturdf.HandFactory(robotSystem.robotStateModel)
         handModels = []
 
@@ -181,15 +170,13 @@ class RobotSystemFactory(ComponentFactory):
             if side in handFactory.defaultHandTypes:
                 handModels.append(handFactory.getLoader(side))
 
-        ikPlanner = ikplanner.IKPlanner(ikServer, ikRobotModel, ikJointController, handModels)
+        ikPlanner = ikplanner.IKPlanner(ikRobotModel, ikJointController, handModels)
 
         planningUtils = planningutils.PlanningUtils(robotSystem.robotStateModel, robotSystem.robotStateJointController)
 
         robotSystem._add_fields(
             ikRobotModel=ikRobotModel,
             ikJointController=ikJointController,
-            ikServer=ikServer,
-            startIkServer=startIkServer,
             handFactory=handFactory,
             handModels=handModels,
             ikPlanner=ikPlanner,
@@ -267,9 +254,11 @@ class RobotSystemFactory(ComponentFactory):
         from director import affordanceitems
 
         affordanceManager = affordancemanager.AffordanceObjectModelManager(robotSystem.view)
-        affordanceitems.MeshAffordanceItem.getMeshManager().initLCM()
-        affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
-        affordanceManager.collection.sendEchoRequest()
+        affordanceitems.MeshAffordanceItem.getMeshManager()
+
+        if affordancemanager.lcmobjectcollection.USE_LCM:
+            affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
+            affordanceManager.collection.sendEchoRequest()
 
         robotSystem._add_fields(
             affordanceManager=affordanceManager,
@@ -283,9 +272,41 @@ class RobotSystemFactory(ComponentFactory):
     def initPlannerPublisher(self, robotSystem):
 
         from director import plannerPublisher
+        from director import pydrakeik
+        from director import matlabik
 
-        plannerPub = plannerPublisher.PlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager, robotSystem.ikRobotModel)
-        robotSystem.ikPlanner.setPublisher(plannerPub)
+        dummyPlannerPub = plannerPublisher.DummyPlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager)
+        pyDrakePlannerPub = pydrakeik.PyDrakePlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager)
+        exoticaPlannerPub = plannerPublisher.ExoticaPlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager)
+        matlabPlannerPub = plannerPublisher.MatlabDrakePlannerPublisher(robotSystem.ikPlanner, robotSystem.affordanceManager)
+
+        robotSystem.ikPlanner.addPublisher('dummy', dummyPlannerPub)
+        robotSystem.ikPlanner.addPublisher('pydrake', pyDrakePlannerPub)
+        robotSystem.ikPlanner.addPublisher('matlabdrake', matlabPlannerPub)
+        robotSystem.ikPlanner.addPublisher('exotica', exoticaPlannerPub)
+
+        robotSystem.ikPlanner.planningMode = 'matlabdrake'
+
+        linkNameArgs = ['','','']
+        directorConfig = robotSystem.directorConfig
+        if 'leftFootLink' in directorConfig:
+            linkNameArgs = [directorConfig['leftFootLink'], directorConfig['rightFootLink'], directorConfig['pelvisLink']]
+
+        matlabIkServer = matlabik.AsyncIKCommunicator(directorConfig['urdfConfig']['ik'], directorConfig['fixedPointFile'], *linkNameArgs)
+
+        def startIkServer():
+            matlabIkServer.startServerAsync()
+            matlabIkServer.comm.writeCommandsToLogFile = True
+
+        matlabIkServer.handModels = robotSystem.ikPlanner.handModels
+        matlabPlannerPub.ikServer = matlabIkServer
+
+        robotSystem.ikPlanner.ikServer = matlabIkServer
+
+        robotSystem._add_fields(
+            ikServer=matlabIkServer,
+            startIkServer=startIkServer
+            )
 
     def initViewBehaviors(self, robotSystem):
 
