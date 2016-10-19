@@ -181,6 +181,7 @@ class DisparityPointCloudItem(vis.PolyDataItem):
         self.addProperty('Decimation', 0, attributes=om.PropertyAttributes(enumNames=['1', '2', '4', '8', '16']))
         self.addProperty('Remove Size', 1000, attributes=om.PropertyAttributes(decimals=0, minimum=0, maximum=100000.0, singleStep=1000))
         self.addProperty('Target FPS', 1.0, attributes=om.PropertyAttributes(decimals=1, minimum=0.1, maximum=30.0, singleStep=0.1))
+        self.addProperty('Max Range', 2.0,  attributes=om.PropertyAttributes(decimals=2, minimum=0., maximum=30.0, singleStep=0.25))
 
         self.timer = TimerCallback()
         self.timer.callback = self.update
@@ -198,7 +199,7 @@ class DisparityPointCloudItem(vis.PolyDataItem):
             else:
                 self.timer.stop()
 
-        elif propertyName in ('Decimation', 'Remove outliers'):
+        elif propertyName in ('Decimation', 'Remove outliers', 'Max Range'):
             self.lastUtime = 0
 
 
@@ -219,12 +220,15 @@ class DisparityPointCloudItem(vis.PolyDataItem):
 
         decimation = int(self.properties.getPropertyEnumValue('Decimation'))
         removeSize = int(self.properties.getProperty('Remove Size'))
+        rangeThreshold = float(self.properties.getProperty('Max Range'))
         polyData = getDisparityPointCloud(decimation, imagesChannel=self.getProperty('Channel'), cameraName=self.getProperty('Camera name'),
-                                          removeOutliers=False, removeSize=removeSize)
+                                          removeOutliers=False, removeSize=removeSize, rangeThreshold = rangeThreshold)
+
         self.setPolyData(polyData)
 
-        if not self.lastUtime:
+        if polyData.GetNumberOfPoints() > 0 and not self.lastUtime:
             self.setProperty('Color By', 'rgb_colors')
+           
 
         self.lastUtime = utime
 
@@ -586,9 +590,9 @@ def getCurrentRevolutionData():
     return addCoordArraysToPolyData(revPolyData)
 
 
-def getDisparityPointCloud(decimation=4, removeOutliers=True, removeSize=0, imagesChannel='CAMERA', cameraName='CAMERA_LEFT'):
+def getDisparityPointCloud(decimation=4, removeOutliers=True, removeSize=0, rangeThreshold=-1, imagesChannel='CAMERA', cameraName='CAMERA_LEFT'):
 
-    p = cameraview.getStereoPointCloud(decimation, imagesChannel=imagesChannel, cameraName=cameraName, removeSize=removeSize)
+    p = cameraview.getStereoPointCloud(decimation, imagesChannel=imagesChannel, cameraName=cameraName, removeSize=removeSize, rangeThreshold=rangeThreshold)
     if not p:
       return None
 

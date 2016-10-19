@@ -23,6 +23,7 @@
 #include <bot_frames/bot_frames.h>
 
 #include <image_utils/jpeg.h>
+#include <pcl/filters/passthrough.h>
 
 #include <vtkSmartPointer.h>
 #include <vtkPNGWriter.h>
@@ -105,7 +106,8 @@ public:
   // that contains disparity and color images.
   // decimation: power of 2 to reduce the data by (1,2,4,8...)
   // removeSize: remove disconnected components smaller than this size (in pixels), set=0 to skip
-  void getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize);
+  // rangeThreshold: remove points which are further than rangeThreshold (in meters), set -1 to skip
+  void getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize, float rangeThreshold);
 
   // Project the points of the given polydata into image space.  The points must
   // already be in the camera coordinate system.  The points will be written to
