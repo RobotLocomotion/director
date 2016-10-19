@@ -27,18 +27,10 @@ before_install:
 install: true
 
 script:
-  - make superbuild -j2
-  - cd build/src/director-build
-  - ctest -j 1 -L core --dashboard Experimental --track travis --output-on-failure
+ - distro/travis/build_and_test.sh
 
 after_failure:
-  - echo "after_failure pwd: $PWD"
+  - echo 'after_failure'
 
 after_success:
-  - echo "after_success pwd: $PWD"
-#  - cd build/src/director-build
-#  - make docs-sphinx-generate
-#  - make docs-sphinx-build
-#  - distro/package/make_app_bundle.sh
-#  - tar -czf DirectorConsole.tar.gz distro/package/DirectorConsole.app
-#  - distro/travis/copy_files.sh DirectorConsole.tar.gz
+  - distro/travis/after_success.sh
