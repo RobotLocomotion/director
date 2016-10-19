@@ -48,6 +48,10 @@ class MultisenseItem(om.ObjectModelItem):
                          attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
         self.addProperty('Alpha', model.alpha,
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
+        self.addProperty('Min Height', model.reader.GetHeightRange()[0],
+                         attributes=om.PropertyAttributes(decimals=2, minimum=-80.0, maximum=80.0, singleStep=0.25, hidden=False))
+        self.addProperty('Max Height', model.reader.GetHeightRange()[1],
+                         attributes=om.PropertyAttributes(decimals=2, minimum=-80.0, maximum=80.0, singleStep=0.25, hidden=False))
 
         #self.addProperty('Color', QtGui.QColor(255,255,255))
         #self.addProperty('Scanline Color', QtGui.QColor(255,0,0))
@@ -80,6 +84,10 @@ class MultisenseItem(om.ObjectModelItem):
 
         elif propertyName in ('Min Range', 'Max Range'):
             self.model.reader.SetDistanceRange(self.getProperty('Min Range'), self.getProperty('Max Range'))
+            self.model.showRevolution(self.model.displayedRevolution)
+
+        elif propertyName in ('Min Height', 'Max Height'):
+            self.model.reader.SetHeightRange(self.getProperty('Min Height'), self.getProperty('Max Height'))
             self.model.showRevolution(self.model.displayedRevolution)
 
         elif propertyName == 'Color By':
@@ -145,6 +153,10 @@ class LidarItem(om.ObjectModelItem):
                          attributes=om.PropertyAttributes(decimals=0, minimum=-1, maximum=20, singleStep=1, hidden=False))
         self.addProperty('Alpha', model.alpha,
                          attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
+        self.addProperty('Min Height', model.reader.GetHeightRange()[0],
+                         attributes=om.PropertyAttributes(decimals=2, minimum=-80.0, maximum=80.0, singleStep=0.25, hidden=False))
+        self.addProperty('Max Height', model.reader.GetHeightRange()[1],
+                         attributes=om.PropertyAttributes(decimals=2, minimum=-80.0, maximum=80.0, singleStep=0.25, hidden=False))
 
         #self.addProperty('Color', QtGui.QColor(255,255,255))
         #self.addProperty('Scanline Color', QtGui.QColor(255,0,0))
@@ -177,6 +189,10 @@ class LidarItem(om.ObjectModelItem):
 
         elif propertyName in ('Min Range', 'Max Range'):
             self.model.reader.SetDistanceRange(self.getProperty('Min Range'), self.getProperty('Max Range'))
+            #    self.model.showRevolution(self.model.displayedRevolution)
+
+        elif propertyName in ('Min Height', 'Max Height'):
+            self.model.reader.SetHeightRange(self.getProperty('Min Height'), self.getProperty('Max Height'))
             #    self.model.showRevolution(self.model.displayedRevolution)
 
         elif propertyName == 'Color By':
@@ -339,6 +355,7 @@ class MultiSenseSource(TimerCallback):
             self.reader = drc.vtkMultisenseSource()
             self.reader.InitBotConfig(drcargs.args().config_file)
             self.reader.SetDistanceRange(0.25, 4.0)
+            self.reader.SetHeightRange(-80.0, 80.0)
             self.reader.Start()
 
         TimerCallback.start(self)
@@ -537,6 +554,7 @@ class LidarSource(TimerCallback):
             self.reader = drc.vtkLidarSource()
             self.reader.InitBotConfig(drcargs.args().config_file)
             self.reader.SetDistanceRange(0.25, 80.0)
+            self.reader.SetHeightRange(-80.0, 80.0)
             self.reader.Start()
 
         TimerCallback.start(self)
@@ -720,6 +738,10 @@ class MapServerSource(TimerCallback):
                              attributes=om.PropertyAttributes(decimals=2, minimum=0.0, maximum=100.0, singleStep=0.25, hidden=False))
             folder.addProperty('Edge Filter Angle', self.reader.GetEdgeAngleThreshold(),
                          attributes=om.PropertyAttributes(decimals=0, minimum=0.0, maximum=60.0, singleStep=1, hidden=False))
+            folder.addProperty('Min Height', self.reader.GetHeightRange()[0],
+                             attributes=om.PropertyAttributes(decimals=2, minimum=-80.0, maximum=80.0, singleStep=0.25, hidden=False))
+            folder.addProperty('Max Height', self.reader.GetHeightRange()[1],
+                             attributes=om.PropertyAttributes(decimals=2, minimum=-80.0, maximum=80.0, singleStep=0.25, hidden=False))
             om.addToObjectModel(obj, folder)
             om.expand(folder)
             self.folder = folder
@@ -775,6 +797,7 @@ class MapServerSource(TimerCallback):
         if (self.folder):
             self.reader.SetDistanceRange(self.folder.getProperty('Min Range'), self.folder.getProperty('Max Range'))
             self.reader.SetEdgeAngleThreshold(self.folder.getProperty('Edge Filter Angle'))
+            self.reader.SetHeightRange(self.folder.getProperty('Min Height'), self.folder.getProperty('Max Height'))
             
         viewIds = self.reader.GetViewIds()
         viewIds = vnp.numpy_support.vtk_to_numpy(viewIds) if viewIds.GetNumberOfTuples() else []

@@ -158,6 +158,9 @@ public:
     // Used to filter out range returns which are oblique to lidar sensor
     this->EdgeAngleThreshold = 0;  // degrees, 30 was  default
 
+    this->HeightRange[0] = -80.0;
+    this->HeightRange[1] = 80.0;
+
     this->LCMHandle = std::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
     {
@@ -352,7 +355,7 @@ public:
     std::vector<ScanLineData> scanLines;
     this->GetScanLine(scanLines, scanLine);
 
-    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold);
+    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold, this->HeightRange);
   }
 
   vtkSmartPointer<vtkPolyData> GetDataForRevolution(int revolution)
@@ -365,7 +368,7 @@ public:
     std::vector<ScanLineData> scanLines;
     this->GetScanLinesForRevolution(scanLines, revolution);
 
-    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold);
+    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold, this->HeightRange);
   }
 
   vtkSmartPointer<vtkPolyData> GetDataForHistory(int numberOfScanLines)
@@ -378,7 +381,7 @@ public:
     std::vector<ScanLineData> scanLines;
     this->GetScanLinesForHistory(scanLines, numberOfScanLines);
 
-    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold);
+    return GetPointCloudFromScanLines(scanLines, this->DistanceRange, this->EdgeAngleThreshold, this->HeightRange);
   }
 
   int get_trans_with_utime(std::string from_frame, std::string to_frame,
@@ -407,6 +410,12 @@ public:
     this->DistanceRange[0] = distanceRange[0];
     this->DistanceRange[1] = distanceRange[1];
   }
+
+  void SetHeightRange(double heightRange[2])
+  {
+    this->HeightRange[0] = heightRange[0];
+    this->HeightRange[1] = heightRange[1];
+  }  
 
   void SetEdgeAngleThreshold(double edgeAngleThreshold)
   {
@@ -467,11 +476,13 @@ protected:
 
     Eigen::Isometry3d scanToLocalStart;
     Eigen::Isometry3d scanToLocalEnd;
+    Eigen::Isometry3d bodyToLocalStart;
+
 
     get_trans_with_utime("SICK_SCAN", "local", msg->utime, scanToLocalStart);
     get_trans_with_utime("SICK_SCAN", "local", msg->utime +  1e6*3/(40*4), scanToLocalEnd);
 
-    //get_trans_with_utime("SCAN", "PRE_SPINDLE", msg->utime, scanToLocal);
+    get_trans_with_utime("body", "local", msg->utime, bodyToLocalStart);
 
     Eigen::Isometry3d spindleRotation;
     get_trans_with_utime("PRE_SPINDLE", "POST_SPINDLE", msg->utime, spindleRotation);
@@ -509,6 +520,7 @@ protected:
     scanLine.ScanLineId = this->CurrentScanLine++;
     scanLine.ScanToLocalStart = scanToLocalStart;
     scanLine.ScanToLocalEnd = scanToLocalEnd;
+    scanLine.BodyToLocalStart = bodyToLocalStart;
     scanLine.SpindleAngle = spindleAngle;
     scanLine.Revolution = this->CurrentRevolution;
     scanLine.msg = *msg;
@@ -528,6 +540,7 @@ protected:
 
   double EdgeAngleThreshold;
   double DistanceRange[2];
+  double HeightRange[2];
 
   vtkSmartPointer<vtkPolyData> SweepPolyData;
   int SweepPolyDataRevolution;
@@ -583,6 +596,10 @@ vtkLidarSource::vtkLidarSource()
   this->DistanceRange[0] = 0.0;
   this->DistanceRange[1] = 80.0;
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
+  this->HeightRange[0] = -80.0;
+  this->HeightRange[1] = 80.0;
+  this->Internal->Listener->SetHeightRange(this->HeightRange);
+
 }
 
 //----------------------------------------------------------------------------
@@ -691,6 +708,7 @@ vtkIdType vtkLidarSource::GetCurrentScanTime()
 int vtkLidarSource::GetCurrentRevolution()
 {
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
+  this->Internal->Listener->SetHeightRange(this->HeightRange);
   return this->Internal->Listener->GetCurrentRevolution();
 }
 
@@ -698,6 +716,7 @@ int vtkLidarSource::GetCurrentRevolution()
 int vtkLidarSource::GetCurrentScanLine()
 {
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
+  this->Internal->Listener->SetHeightRange(this->HeightRange);
   return this->Internal->Listener->GetCurrentScanLine();
 }
 
@@ -705,6 +724,7 @@ int vtkLidarSource::GetCurrentScanLine()
 void vtkLidarSource::GetDataForRevolution(int revolution, vtkPolyData* polyData)
 {
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
+  this->Internal->Listener->SetHeightRange(this->HeightRange);
   vtkSmartPointer<vtkPolyData> data = this->Internal->Listener->GetDataForRevolution(revolution);
   polyData->ShallowCopy(data);
 }
@@ -713,6 +733,7 @@ void vtkLidarSource::GetDataForRevolution(int revolution, vtkPolyData* polyData)
 void vtkLidarSource::GetDataForHistory(int numberOfScanLines, vtkPolyData* polyData)
 {
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
+  this->Internal->Listener->SetHeightRange(this->HeightRange);
   vtkSmartPointer<vtkPolyData> data = this->Internal->Listener->GetDataForHistory(numberOfScanLines);
   polyData->ShallowCopy(data);
 }
@@ -721,6 +742,7 @@ void vtkLidarSource::GetDataForHistory(int numberOfScanLines, vtkPolyData* polyD
 void vtkLidarSource::GetDataForScanLine(int scanLine, vtkPolyData* polyData)
 {
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
+  this->Internal->Listener->SetHeightRange(this->HeightRange);
   vtkSmartPointer<vtkPolyData> data = this->Internal->Listener->GetDataForScanLine(scanLine);
   polyData->ShallowCopy(data);
 }
@@ -765,6 +787,7 @@ int vtkLidarSource::RequestData(
     }
 
   this->Internal->Listener->SetDistanceRange(this->DistanceRange);
+  this->Internal->Listener->SetHeightRange(this->HeightRange);
   vtkSmartPointer<vtkPolyData> polyData = this->Internal->Listener->GetDataForRevolution(timestep);
   if (polyData)
     {

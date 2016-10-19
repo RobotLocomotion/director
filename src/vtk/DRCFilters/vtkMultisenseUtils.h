@@ -44,6 +44,7 @@ public:
   double SpindleAngle;
   Eigen::Isometry3d ScanToLocalStart;
   Eigen::Isometry3d ScanToLocalEnd;
+  Eigen::Isometry3d BodyToLocalStart;
   bot_core::planar_lidar_t msg;
 };
 
@@ -158,7 +159,7 @@ DataArrays CreateData(vtkIdType numberOfPoints)
 }
 
 
-void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double distanceRange[2], double edgeAngleThreshold)
+void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double distanceRange[2], double edgeAngleThreshold, double heightRange[2])
 {
 
   const bot_core::planar_lidar_t* msg = &scanLine.msg;
@@ -240,6 +241,11 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
     Eigen::Vector3d pos = (1-t)*pos0 + t*pos1;
     pt = q*pt + pos;
 
+    Eigen::Vector3d posBody(scanLine.BodyToLocalStart.translation());
+
+    if ( (pt[2] < (posBody[2] + heightRange[0]))  || (pt[2] > (posBody[2] + heightRange[1])) )
+      continue;
+
     dataArrays.Points->InsertNextPoint(pt[0], pt[1], pt[2]);
 
     if (useIntensities)
@@ -265,14 +271,14 @@ void AddScanLine(const ScanLineData& scanLine, DataArrays& dataArrays, double di
 
 }
 
-vtkSmartPointer<vtkPolyData> GetPointCloudFromScanLines(const std::vector<ScanLineData>& scanLines, double distanceRange[2], double edgeAngleThreshold)
+vtkSmartPointer<vtkPolyData> GetPointCloudFromScanLines(const std::vector<ScanLineData>& scanLines, double distanceRange[2], double edgeAngleThreshold, double heightRange[2])
 {
   //printf("GetPointCloud, given %d scan lines\n", scanLines.size());
   DataArrays dataArrays = CreateData(800 * scanLines.size());
 
   for (size_t i = 0; i < scanLines.size(); ++i)
   {
-    AddScanLine(scanLines[i], dataArrays, distanceRange, edgeAngleThreshold);
+    AddScanLine(scanLines[i], dataArrays, distanceRange, edgeAngleThreshold, heightRange);
   }
 
   dataArrays.Dataset->SetVerts(NewVertexCells(dataArrays.Dataset->GetNumberOfPoints()));
