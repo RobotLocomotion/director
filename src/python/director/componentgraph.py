@@ -92,9 +92,6 @@ class ComponentFactory(object):
             isEnabled = getattr(options, 'use'+name)
 
             if isEnabled:
-                print 'initializing component:', name
                 initFunction(fields)
-            else:
-                print 'disabled component:', name
 
         return fields
