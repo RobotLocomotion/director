@@ -729,7 +729,7 @@ def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     return view
 
 
-def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT', removeSize=0):
+def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT', removeSize=0, rangeThreshold = -1):
 
     q = imageManager.queue
 
@@ -740,12 +740,13 @@ def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA
     p = vtk.vtkPolyData()
     cameraToLocal = vtk.vtkTransform()
 
-    q.getPointCloudFromImages(imagesChannel, p, decimation, removeSize)
-    q.getTransform(cameraName, 'local', utime, cameraToLocal)
-    p = filterUtils.transformPolyData(p, cameraToLocal)
+    q.getPointCloudFromImages(imagesChannel, p, decimation, removeSize, rangeThreshold)
+
+    if (p.GetNumberOfPoints() > 0):
+      q.getTransform(cameraName, 'local', utime, cameraToLocal)
+      p = filterUtils.transformPolyData(p, cameraToLocal)
 
     return p
-
 
 
 class KintinuousMapping(object):
@@ -786,7 +787,7 @@ class KintinuousMapping(object):
         if (distTravelled  < 0.2 ):
             return None, None, None
 
-        q.getPointCloudFromImages(imagesChannel, p, decimation, removeSize)
+        q.getPointCloudFromImages(imagesChannel, p, decimation, removeSize, removeThreshold = -1)
 
         self.lastCameraToLocal = cameraToLocal
         self.lastUtime = utime

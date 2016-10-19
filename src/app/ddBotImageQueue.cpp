@@ -562,7 +562,7 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXY
 };
 
 //-----------------------------------------------------------------------------
-void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize)
+void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize, float rangeThreshold)
 {
   if (!this->mImagesMessageMap.contains(channel))
   {
@@ -595,6 +595,15 @@ void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyDat
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
   m.unpack_multisense(&msg, Q_, cloud);
+
+  if (rangeThreshold >= 0) {
+    pcl::PassThrough<pcl::PointXYZRGB> pass;
+    pass.setInputCloud (cloud);
+    pass.setFilterFieldName ("z");
+    pass.setFilterLimits (0.0, rangeThreshold);
+    pass.filter(*cloud);
+  }
+
   polyData->ShallowCopy(PolyDataFromPointCloud(cloud));
 }
 
