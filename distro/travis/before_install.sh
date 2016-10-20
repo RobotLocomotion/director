@@ -44,6 +44,7 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   #brew upgrade
 
   brew install doxygen graphviz
+  brew install glib # for lcm
   brew install qt
   brew ls --versions python || brew install python
   brew ls --versions numpy || brew install numpy || echo "error on brew install numpy"
