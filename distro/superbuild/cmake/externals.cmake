@@ -95,6 +95,31 @@ if (USE_LCM AND NOT USE_SYSTEM_LCM)
 
   set(lcm_depends lcm)
 
+
+  ExternalProject_Add(bot_core_lcmtypes
+    GIT_REPOSITORY https://github.com/openhumanoids/bot_core_lcmtypes
+    GIT_TAG 9967654
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+
+    DEPENDS
+      ${lcm_depends}
+    )
+
+  ExternalProject_Add(robotlocomotion-lcmtypes
+    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes
+    GIT_TAG b9ce3fa
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+
+    DEPENDS
+      ${lcm_depends} bot_core_lcmtypes
+    )
+
+    list(APPEND lcm_depends bot_core_lcmtypes robotlocomotion-lcmtypes)
+
 endif()
 
 
