@@ -3,8 +3,6 @@ import sys
 import subprocess
 import commands
 
-patchElfCommand = os.path.join(os.environ['HOME'], 'install/patchelf/bin/patchelf')
-assert os.path.isfile(patchElfCommand)
 
 
 def findElfFiles(searchPath, recursive=True):
@@ -17,7 +15,9 @@ def main():
 
     baseDir = sys.argv[1]
     libraryDir = sys.argv[2]
+    patchElfCommand = sys.argv[3]
 
+    assert os.path.isfile(patchElfCommand)
     assert os.path.isdir(libraryDir)
     assert os.path.isdir(baseDir)
     assert '..' not in os.path.relpath(libraryDir, baseDir)
