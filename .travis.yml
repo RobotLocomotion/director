@@ -10,9 +10,9 @@ matrix:
   include:
     - os: osx
       osx_image: xcode7.3
-      env: USE_LCM=ON
+      env: USE_LCM=ON MAKE_PACKAGE=ON
     - os: linux
-      env: USE_LCM=ON
+      env: USE_LCM=ON MAKE_PACKAGE=ON MAKE_DOCS=ON
     - os: linux
       env: USE_LCM=OFF
 
