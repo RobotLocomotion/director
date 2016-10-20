@@ -85,14 +85,40 @@ endif()
 
 if (USE_LCM AND NOT USE_SYSTEM_LCM)
 
-  ExternalProject_Add(
-    lcm
-    URL http://lcm.googlecode.com/files/lcm-1.0.0.tar.gz
-    URL_MD5 69bfbdd9e0d7095c5d7423e71b2fb1a9
-    CONFIGURE_COMMAND ${source_prefix}/lcm/configure --prefix=${install_prefix}
-  )
+  ExternalProject_Add(lcm
+    GIT_REPOSITORY https://github.com/lcm-proj/lcm.git
+    GIT_TAG a8cda6a6
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+    )
 
   set(lcm_depends lcm)
+
+
+  ExternalProject_Add(bot_core_lcmtypes
+    GIT_REPOSITORY https://github.com/openhumanoids/bot_core_lcmtypes
+    GIT_TAG 9967654
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+
+    DEPENDS
+      ${lcm_depends}
+    )
+
+  ExternalProject_Add(robotlocomotion-lcmtypes
+    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes
+    GIT_TAG b9ce3fa
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+
+    DEPENDS
+      ${lcm_depends} bot_core_lcmtypes
+    )
+
+    list(APPEND lcm_depends bot_core_lcmtypes robotlocomotion-lcmtypes)
 
 endif()
 

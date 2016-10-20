@@ -4,12 +4,13 @@ set -xe
 
 scriptDir=$(cd $(dirname $0) && pwd)
 
-
 # build
 cd $TRAVIS_BUILD_DIR
-make superbuild -j2
+mkdir build && cd build
+cmake -DUSE_LCM:BOOL=$USE_LCM ../distro/superbuild
+make -j2
 
 # test
-cd build/src/director-build
-cmake -DSITE:STRING=travis-$TRAVIS_OS_NAME -DBUILDNAME:STRING=$TRAVIS_OS_NAME-branch-$TRAVIS_BRANCH .
-ctest -j 1 -L core --dashboard Experimental --track travis --output-on-failure
+cd $TRAVIS_BUILD_DIR/build/src/director-build
+cmake -DSITE:STRING=travis-$TRAVIS_OS_NAME -DBUILDNAME:STRING=${TRAVIS_BRANCH}_lcm-$USE_LCM .
+ctest -j 1 --dashboard Experimental --track travis --output-on-failure

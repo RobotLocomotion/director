@@ -17,13 +17,16 @@ set(python_tests_core
   testTransformations.py
 )
 
+set(python_tests_lcm
+  testDrakeVisualizer.py
+)
+
 set(python_tests_robot
   testActionSequence.py
   testAffordanceItems.py
   testAtlasDriver.py
   testCameraView.py
   testContinuousWalking.py
-  testDrakeVisualizer.py
   testDrawRobotLog.py
   testEndEffectorIk.py
   testImageView.py
@@ -61,7 +64,7 @@ set(python_test_args
   --testing --data-dir ${CMAKE_SOURCE_DIR}/../../../drc-testing-data --output-dir ${CMAKE_BINARY_DIR}/Testing/Temporary
 )
 
-set(python_exe ${CMAKE_BINARY_DIR}/bin/directorPython)
+set(python_exe ${CMAKE_INSTALL_PREFIX}/bin/directorPython)
 
 macro(add_python_test name label)
   get_filename_component(base_name ${name} NAME_WE)
@@ -86,6 +89,14 @@ foreach(name ${python_tests_core})
   add_python_test(${name} core)
 endforeach()
 
-foreach(name ${python_tests_robot})
-  add_python_test(${name} robot)
-endforeach()
+if(USE_LCM)
+  foreach(name ${python_tests_lcm})
+    add_python_test(${name} lcm)
+  endforeach()
+endif()
+
+if(USE_DRC)
+  foreach(name ${python_tests_robot})
+    add_python_test(${name} robot)
+  endforeach()
+endif()
