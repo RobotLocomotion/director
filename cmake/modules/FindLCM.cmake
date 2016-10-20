@@ -27,7 +27,7 @@ macro(pkg_config_find_module varname pkgname header library pathsuffix)
     find_package_handle_standard_args(${varname} DEFAULT_MSG ${varname}_INCLUDE_DIR ${varname}_LIBRARY)
 
     mark_as_advanced(${varname}_INCLUDE_DIR)
-    mark_as_advanced(${varmame}_LIBRARY)
+    mark_as_advanced(${varname}_LIBRARY)
 
 endmacro()
 
