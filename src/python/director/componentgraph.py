@@ -71,6 +71,31 @@ class ComponentFactory(object):
         self.initDefaultOptions(options)
         return options
 
+    def _toComponentName(self, optionName):
+        assert optionName[:3] == 'use'
+        return optionName[3:]
+
+    def _toOptionName(self, componentName):
+        return 'use' + componentName
+
+    def setDependentOptions(self, options, **kwargs):
+
+        # verify the given args exist in the options fields
+        for name in kwargs.keys():
+            if name not in options._fields:
+                raise Exception('unknown option given: ' + name)
+
+        for name, enabled in kwargs.iteritems():
+            setattr(options, name, enabled)
+
+            # if option is being enabled, also enable its dependencies
+            if enabled:
+                name = self._toComponentName(name)
+                dependencies = self.componentGraph.getComponentDependencies(name)
+                for dep in dependencies:
+                    setattr(options, self._toOptionName(dep), True)
+
+
     def construct(self, options=None, **kwargs):
 
         options = options or self.getDefaultOptions()
