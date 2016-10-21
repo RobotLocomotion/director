@@ -124,9 +124,16 @@ if (USE_DRAKE)
 
   list(APPEND srcs
     ${moc_srcs}
-    ddDrakeModel.cpp
     ddDrakeWrapper.cpp
   )
+
+  # openhumanoids uses an old drake fork which has a divergent api so we
+  # use a fork of ddDrakeModel.cpp to encapsulate the api incompatibilities
+  if (USE_DRC)
+    list(APPEND srcs ddDrakeModelOH.cpp)
+  else()
+    list(APPEND srcs ddDrakeModel.cpp)
+  endif()
 
   list(APPEND wrap_files
     wrapped_methods_drake.txt
