@@ -9,14 +9,10 @@ import PythonQt
 from PythonQt import QtCore, QtGui
 import director.applogic as app
 from director import objectmodel as om
-from director import perception
-from director import lcmUtils
-from director import roboturdf
 from director import transformUtils
 from director import visualization as vis
 from director.transformUtils import getTransformFromAxes
 from director.timercallback import TimerCallback
-from director import mapsregistrar
 from director import affordancemanager
 from director.affordanceitems import *
 from director.visualization import *
@@ -34,13 +30,6 @@ from debugVis import DebugData
 from shallowCopy import shallowCopy
 import ioUtils
 from director.uuidutil import newUUID
-
-import drc as lcmdrc
-import bot_core as lcmbotcore
-
-import vs as lcmvs
-from director import lcmUtils
-
 
 DRILL_TRIANGLE_BOTTOM_LEFT = 'bottom left'
 DRILL_TRIANGLE_BOTTOM_RIGHT = 'bottom right'
@@ -564,7 +553,7 @@ def getDebugRevolutionData():
     return addCoordArraysToPolyData(ioUtils.readPolyData(filename))
 
 
-def getCurrentScanBundle():
+def getCurrentScanBundle(useVoxelGrid=False):
     obj = om.findObjectByName('SCANS_HALF_SWEEP')
     if not obj:
         return None
@@ -579,7 +568,8 @@ def getCurrentScanBundle():
     return addCoordArraysToPolyData(revPolyData)
 
 
-def getCurrentRevolutionData():
+def getCurrentRevolutionData(useVoxelGrid=False):
+    from director import perception
     revPolyData = perception._multisenseItem.model.revPolyData
     if not revPolyData or not revPolyData.GetNumberOfPoints():
         return getCurrentScanBundle()
@@ -615,11 +605,6 @@ def getCurrentMapServerData():
         return None
 
     return addCoordArraysToPolyData(polyData)
-
-
-useVoxelGrid = False
-
-
 
 
 def segmentGroundPlanes():
@@ -854,17 +839,18 @@ def getFootFramesFromReferenceFrame(referenceFrame, stanceWidth, stanceRotation,
 
 def poseFromFrame(frame):
 
-    trans = lcmbotcore.vector_3d_t()
-    trans.x, trans.y, trans.z = frame.GetPosition()
+    import bot_core as lcmbotcore
 
-    wxyz = range(4)
-    perception.drc.vtkMultisenseSource.GetBotQuaternion(frame, wxyz)
-    quat = lcmbotcore.quaternion_t()
-    quat.w, quat.x, quat.y, quat.z = wxyz
+    pos, quat = transformUtils.poseFromTransform(frame)
+    trans = lcmbotcore.vector_3d_t()
+    trans.x, trans.y, trans.z = pos
+
+    quatMsg = lcmbotcore.quaternion_t()
+    quatMsg.w, quatMsg.x, quatMsg.y, quatMsg.z = quat
 
     pose = lcmbotcore.position_3d_t()
     pose.translation = trans
-    pose.rotation = quat
+    pose.rotation = quatMsg
     return pose
 
 
@@ -3198,7 +3184,6 @@ def addDrillAffordance():
 
 def getLinkFrame(linkName):
     robotStateModel = om.findObjectByName('robot state model')
-    robotStateModel = robotStateModel or getVisibleRobotModel()
     assert robotStateModel
     t = vtk.vtkTransform()
     robotStateModel.model.getLinkToWorld(linkName, t)
@@ -3703,28 +3688,6 @@ def computeCornerFrame(aff, referenceFrame):
     return cornerFrame
 
 
-def publishTriad(transform, collectionId=1234):
-
-    o = lcmvs.obj_t()
-
-    xyz = transform.GetPosition()
-    rpy = transformUtils.rollPitchYawFromTransform(transform)
-
-    o.roll, o.pitch, o.yaw = rpy
-    o.x, o.y, o.z = xyz
-    o.id = 1
-
-    m = lcmvs.obj_collection_t()
-    m.id = collectionId
-    m.name = 'stance_triads'
-    m.type = lcmvs.obj_collection_t.AXIS3D
-    m.nobjs = 1
-    m.reset = False
-    m.objs = [o]
-
-    lcmUtils.publish('OBJ_COLLECTION', m)
-
-
 def createBlockAffordance(origin, xaxis, yaxis, zaxis, xwidth, ywidth, zwidth, name, parent='affordances'):
 
     t = getTransformFromAxes(xaxis, yaxis, zaxis)
@@ -3835,7 +3798,6 @@ def segmentBlockByTopPlane(polyData, blockDimensions, expectedNormal, expectedXA
     t = computeDebrisStanceFrame(obj)
     if t:
         showFrame(t, 'debris stance frame', parent=obj)
-        obj.publishCallback = functools.partial(publishDebrisStanceFrame, obj)
 
     return obj
 
@@ -3897,11 +3859,6 @@ def computeDebrisStanceFrame(aff):
         stanceFrame, _, _ = getFootFramesFromReferenceFrame(affWallFrame, stanceWidth, math.degrees(stanceRotation), [stanceOffsetX, stanceOffsetY, 0.0])
 
         return stanceFrame
-
-
-def publishDebrisStanceFrame(aff):
-    frame = computeDebrisStanceFrame(aff)
-    publishTriad(frame)
 
 
 def segmentBlockByPlanes(blockDimensions):
@@ -4497,11 +4454,6 @@ def getDefaultAffordanceObject():
 
     for obj in om.getObjects():
         if isinstance(obj, AffordanceItem):
-            return obj
-
-def getVisibleRobotModel():
-    for obj in om.getObjects():
-        if isinstance(obj, roboturdf.RobotModelItem) and obj.getProperty('Visible'):
             return obj
 
 def orthoX():
