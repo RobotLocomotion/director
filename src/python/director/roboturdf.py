@@ -180,7 +180,7 @@ class RobotModelItem(om.ObjectModelItem):
         view.render()
 
 
-def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None, visible=True, colorMode='URDF Colors'):
+def loadRobotModel(name=None, view=None, parent='scene', urdfFile=None, color=None, visible=True, colorMode='URDF Colors', useConfigFile=True):
 
     if not urdfFile:
         urdfFile = drcargs.getDirectorConfig()['urdfConfig']['default']
@@ -195,8 +195,10 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     obj = RobotModelItem(model)
     om.addToObjectModel(obj, parent)
 
+    if name:
+        obj.setProperty('Name', name)
+
     obj.setProperty('Visible', visible)
-    obj.setProperty('Name', name)
     obj.setProperty('Color', color or getRobotGrayColor())
     if colorMode == 'Textures':
         obj.setProperty('Color Mode', 1)
@@ -208,10 +210,16 @@ def loadRobotModel(name, view=None, parent='planning', urdfFile=None, color=None
     if view is not None:
         obj.addToView(view)
 
-    jointController = jointcontrol.JointController([obj])
+    if useConfigFile:
+        jointNames = None
+    else:
+        jointNames = model.getJointNames()
 
-    fixedPointFile = drcargs.getDirectorConfig()['fixedPointFile']
-    jointController.setPose('q_nom', jointController.loadPoseFromFile(fixedPointFile))
+    jointController = jointcontrol.JointController([obj], jointNames=jointNames)
+
+    if useConfigFile:
+        fixedPointFile = drcargs.getDirectorConfig()['fixedPointFile']
+        jointController.setPose('q_nom', jointController.loadPoseFromFile(fixedPointFile))
 
     return obj, jointController
 
