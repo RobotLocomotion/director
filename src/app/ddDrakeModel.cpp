@@ -21,7 +21,6 @@
 #include <vtkStringArray.h>
 #include <vtkFieldData.h>
 #include <vtkMath.h>
-//#include <vtkQuaternion.h>
 #include <vtkProperty.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkXMLMultiBlockDataReader.h>
@@ -293,14 +292,6 @@ std::vector<vtkSmartPointer<vtkPolyData> > loadPolyData(const std::string& filen
   return polyDataList;
 }
 
-/*
-void QuaternionToAngleAxis(double wxyz[4], double angleAxis[4])
-{
-  vtkQuaternion<double> quat(wxyz);
-  angleAxis[0] = quat.GetRotationAngleAndAxis(angleAxis+1);
-  angleAxis[0] = vtkMath::DegreesFromRadians(angleAxis[0]);
-}
-*/
 
 namespace {
 
