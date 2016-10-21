@@ -7,7 +7,6 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include <boost/shared_ptr.hpp>
 
 #include <math.h>
 

@@ -7,7 +7,6 @@
 #include <string>
 
 #include <Eigen/Dense>
-#include <boost/shared_ptr.hpp>
 
 #include <lcm/lcm-cpp.hpp>
 

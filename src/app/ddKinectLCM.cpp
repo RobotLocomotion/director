@@ -1,8 +1,4 @@
-#include <boost/thread.hpp>
-
 #include "ddKinectLCM.h"
-
-#include <zlib.h>
 
 #include <vtkIdTypeArray.h>
 #include <vtkCellArray.h>

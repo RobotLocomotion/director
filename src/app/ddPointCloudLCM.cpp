@@ -1,5 +1,3 @@
-#include <boost/thread.hpp>
-
 #include "ddPointCloudLCM.h"
 
 #include <vtkIdTypeArray.h>

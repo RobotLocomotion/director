@@ -14,7 +14,6 @@
 =========================================================================*/
 #include "vtkMultisenseSource.h"
 
-
 #include "vtkPolyData.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -28,22 +27,20 @@
 #include "vtkMath.h"
 #include "vtkSetGet.h"
 
-#include <boost/thread/thread.hpp>
-
 #include <Eigen/Dense>
-#include <boost/shared_ptr.hpp>
-
 #include <lcm/lcm-cpp.hpp>
 
 #include <bot_frames/bot_frames.h>
 #include <bot_param/param_client.h>
-
 #include <lcmtypes/bot_core/planar_lidar_t.hpp>
 
 #include <sys/select.h>
-
 #include <queue>
 #include <deque>
+#include <mutex>
+#include <thread>
+#include <functional>
+#include <condition_variable>
 
 #include "vtkMultisenseUtils.h"
 
@@ -62,7 +59,7 @@ class SynchronizedQueue
     void
     enqueue (const T& data)
     {
-      boost::unique_lock<boost::mutex> lock (mutex_);
+      std::unique_lock<std::mutex> lock (mutex_);
 
       if (enqueue_data_)
       {
@@ -74,7 +71,7 @@ class SynchronizedQueue
     bool
     dequeue (T& result)
     {
-      boost::unique_lock<boost::mutex> lock (mutex_);
+      std::unique_lock<std::mutex> lock (mutex_);
 
       while (queue_.empty () && (!request_to_end_))
       {
@@ -96,7 +93,7 @@ class SynchronizedQueue
     void
     stopQueue ()
     {
-      boost::unique_lock<boost::mutex> lock (mutex_);
+      std::unique_lock<std::mutex> lock (mutex_);
       request_to_end_ = true;
       cond_.notify_one ();
     }
@@ -104,14 +101,14 @@ class SynchronizedQueue
     unsigned int
     size ()
     {
-      boost::unique_lock<boost::mutex> lock (mutex_);
+      std::unique_lock<std::mutex> lock (mutex_);
       return static_cast<unsigned int> (queue_.size ());
     }
 
     bool
     isEmpty () const
     {
-      boost::unique_lock<boost::mutex> lock (mutex_);
+      std::unique_lock<std::mutex> lock (mutex_);
       return (queue_.empty ());
     }
 
@@ -128,8 +125,8 @@ class SynchronizedQueue
     }
 
     std::queue<T> queue_;              // Use STL queue to store data
-    mutable boost::mutex mutex_;       // The mutex to synchronise on
-    boost::condition_variable cond_;   // The condition to wait for
+    mutable std::mutex mutex_;       // The mutex to synchronise on
+    std::condition_variable cond_;   // The condition to wait for
 
     bool request_to_end_;
     bool enqueue_data_;
@@ -161,7 +158,7 @@ public:
     this->DistanceRange[1] = 30.0;
     this->EdgeAngleThreshold = 30;  // degrees
 
-    this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
+    this->LCMHandle = std::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
     {
       std::cerr <<"ERROR: lcm is not good()" <<std::endl;
@@ -197,7 +194,7 @@ public:
 
   bool CheckForNewData()
   {
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     bool newData = this->NewData;
     this->NewData = false;
     return newData;
@@ -271,11 +268,11 @@ public:
       }
 
     this->ShouldStop = false;
-    this->Thread = boost::shared_ptr<boost::thread>(
-      new boost::thread(boost::bind(&LCMListener::ThreadLoopWithSelect, this)));
+    this->Thread = std::shared_ptr<std::thread>(
+      new std::thread(std::bind(&LCMListener::ThreadLoopWithSelect, this)));
 
-    this->SweepThread = boost::shared_ptr<boost::thread>(
-      new boost::thread(boost::bind(&LCMListener::SweepThreadLoop, this)));
+    this->SweepThread = std::shared_ptr<std::thread>(
+      new std::thread(std::bind(&LCMListener::SweepThreadLoop, this)));
   }
 
   void Stop()
@@ -313,7 +310,7 @@ public:
 
   void GetScanLine(std::vector<ScanLineData>& scanLines, int scanLine)
   {
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     for (std::deque<ScanLineData>::const_iterator itr = this->ScanLines.begin(); itr != this->ScanLines.end(); ++itr)
     {
       if (itr->ScanLineId == scanLine)
@@ -326,7 +323,7 @@ public:
 
   void GetScanLinesForRevolution(std::vector<ScanLineData>& scanLines, int revolution)
   {
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     for (std::deque<ScanLineData>::const_iterator itr = this->ScanLines.begin(); itr != this->ScanLines.end(); ++itr)
     {
       if (itr->Revolution == revolution)
@@ -403,7 +400,7 @@ public:
   {
     while (!this->ShouldStop)
       {
-      boost::unique_lock<boost::mutex> lock(this->SweepMutex);
+      std::unique_lock<std::mutex> lock(this->SweepMutex);
 
       this->Condition.wait(lock);
       if (this->ShouldStop)
@@ -478,7 +475,7 @@ protected:
 
     this->LastOffsetSpindleAngle = offsetSpindleAngle;
 
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
 
     this->ScanLines.resize(this->ScanLines.size() + 1);
     ScanLineData& scanLine = this->ScanLines.back();
@@ -508,16 +505,16 @@ protected:
   vtkSmartPointer<vtkPolyData> SweepPolyData;
   int SweepPolyDataRevolution;
 
-  boost::mutex Mutex;
-  boost::mutex SweepMutex;
-  boost::condition_variable Condition;
+  std::mutex Mutex;
+  std::mutex SweepMutex;
+  std::condition_variable Condition;
 
   std::deque<ScanLineData> ScanLines;
 
-  boost::shared_ptr<lcm::LCM> LCMHandle;
+  std::shared_ptr<lcm::LCM> LCMHandle;
 
-  boost::shared_ptr<boost::thread> Thread;
-  boost::shared_ptr<boost::thread> SweepThread;
+  std::shared_ptr<std::thread> Thread;
+  std::shared_ptr<std::thread> SweepThread;
 
   vtkIdType CurrentScanTime;
 
@@ -536,14 +533,14 @@ public:
 
   vtkInternal()
   {
-    this->Listener = boost::shared_ptr<LCMListener>(new LCMListener);
+    this->Listener = std::shared_ptr<LCMListener>(new LCMListener);
   }
 
   ~vtkInternal()
   {
   }
 
-  boost::shared_ptr<LCMListener> Listener;
+  std::shared_ptr<LCMListener> Listener;
 };
 
 //----------------------------------------------------------------------------

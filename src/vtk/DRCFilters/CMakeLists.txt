@@ -71,10 +71,7 @@ set(pkg_deps)
 
 if (USE_DRC)
 
-  # requires libbot, lcm, eigen, boost, drc lcmtypes
-  set(Boost_USE_MULTITHREADED ON)
-  find_package(Boost REQUIRED COMPONENTS system thread)
-  include_directories(${Boost_INCLUDE_DIRS})
+  # requires libbot, lcm, eigen, drc lcmtypes
 
   find_package(LibBot REQUIRED)
   include_directories(${LIBBOT_INCLUDE_DIRS})
@@ -91,7 +88,6 @@ if (USE_DRC)
   )
 
   list(APPEND deps
-    ${Boost_LIBRARIES}
     ${LIBBOT_LIBRARIES}
     ${LCM_LIBRARIES}
   )
@@ -182,7 +178,8 @@ install(TARGETS ${library_name}
     ARCHIVE DESTINATION ${DD_INSTALL_LIB_DIR})
 
 if(VTK_WRAP_PYTHON)
-  include_directories(${VTK_PYTHON_INCLUDE_DIR})
+  find_package(PythonLibs 2.7 REQUIRED)
+  include_directories(${PYTHON_INCLUDE_DIR})
   include(${CMAKE_SOURCE_DIR}/cmake/wrap-python.cmake)
   wrap_python(${library_name} "${sources}")
   set_target_properties(${library_name}Python PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")

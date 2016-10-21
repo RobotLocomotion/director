@@ -196,7 +196,6 @@ class TerrainTask(object):
         configFile = os.path.join(self.terrainConfigDir, terrainType+'.py')
         self.terrainConfig = {}
         execfile(configFile, self.terrainConfig)
-        print 'loaded config from', configFile
 
     def getAllBlockAffordances(self):
         return [obj for obj in om.getObjects() if obj.getProperty('Name').startswith(self.terrainConfig['blockName'])]
