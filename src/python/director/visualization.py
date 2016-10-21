@@ -16,6 +16,15 @@ import numpy as np
 
 class PolyDataItem(om.ObjectModelItem):
 
+    defaultScalarRangeMap = {
+        'intensity' : (400, 4000),
+        'spindle_angle' : (0, 360),
+        'azimuth' : (-2.5, 2.5),
+        'scan_delta' : (0.0, 0.3),
+        'point distance to plane' : (-0.2, 0.2),
+        'normal angle to plane' : (0.0, 10.0),
+        }
+
     def __init__(self, name, polyData, view):
 
         om.ObjectModelItem.__init__(self, name, om.Icons.Robot)
@@ -30,16 +39,7 @@ class PolyDataItem(om.ObjectModelItem):
         self.scalarBarWidget = None
         self.extraViewRenderers = {}
 
-        self.rangeMap = {
-            'intensity' : (400, 4000),
-            #'z' : (0.0, 2.0),
-            #'distance' : (0.5, 4.0),
-            'spindle_angle' : (0, 360),
-            'azimuth' : (-2.5, 2.5),
-            'scan_delta' : (0.0, 0.3),
-            'point distance to plane' : (-0.2, 0.2),
-            'normal angle to plane' : (0.0, 10.0),
-            }
+        self.rangeMap = dict(PolyDataItem.defaultScalarRangeMap)
 
         self.addProperty('Color By', 0, attributes=om.PropertyAttributes(enumNames=['Solid Color']))
         self.addProperty('Visible', True)
@@ -317,7 +317,6 @@ class PolyDataItem(om.ObjectModelItem):
         for renderer in self.extraViewRenderers.get(view, []):
             renderer.RemoveActor(self.actor)
         view.render()
-
 
 
 class TextItem(om.ObjectModelItem):
@@ -1111,6 +1110,10 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, r
           if normals:
               pickedNormal = np.array(normals.GetTuple3(pointId))
 
+    if pickedDataset and pickType == 'cells':
+        print 'point id:', pickedDataset.GetCell(picker.GetCellId()).GetPointIds().GetId(picker.GetSubId())
+    if pickType == 'points':
+        print 'point id:', picker.GetPointId()
 
     if obj:
         if returnNormal:
