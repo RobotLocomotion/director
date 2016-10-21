@@ -25,7 +25,6 @@
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkNew.h"
 
-
 #include <vtkIdList.h>
 #include <vtkCellArray.h>
 #include <vtkPoints.h>
@@ -33,22 +32,16 @@
 #include <vtkFloatArray.h>
 #include <vtkPointData.h>
 #include <vtkImageData.h>
-
 #include <vtkMultisenseUtils.h>
 
 #include <Eigen/Dense>
-#include <boost/shared_ptr.hpp>
-#include <boost/thread/thread.hpp>
-
 #include <lcm/lcm-cpp.hpp>
 
-//#include <lcmtypes/drc_lcmtypes.hpp>
 #include <lcmtypes/maps/image_t.hpp>
 #include <lcmtypes/maps/cloud_t.hpp>
 #include <lcmtypes/maps/octree_t.hpp>
 #include <lcmtypes/maps/scans_t.hpp>
 #include <lcmtypes/maps/data_request_t.hpp>
-
 
 #include <maps/LcmTranslator.hpp>
 #include <maps/DepthImageView.hpp>
@@ -57,9 +50,12 @@
 #include <maps/OctreeView.hpp>
 #include <maps/ScanBundleView.hpp>
 
-
 #include <sys/select.h>
+#include <map>
 #include <deque>
+#include <mutex>
+#include <thread>
+#include <functional>
 
 namespace
 {
@@ -242,7 +238,7 @@ public:
     this->DistanceRange[1] = 4.0;
     this->EdgeAngleThreshold = 30;  // degrees
 
-    this->LCMHandle = boost::shared_ptr<lcm::LCM>(new lcm::LCM);
+    this->LCMHandle = std::shared_ptr<lcm::LCM>(new lcm::LCM);
     if(!this->LCMHandle->good())
     {
       std::cerr <<"ERROR: lcm is not good()" <<std::endl;
@@ -294,7 +290,7 @@ public:
 
   bool CheckForNewData()
   {
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     bool newData = this->NewData;
     this->NewData = false;
     return newData;
@@ -369,8 +365,8 @@ public:
       }
 
     this->ShouldStop = false;
-    this->Thread = boost::shared_ptr<boost::thread>(
-      new boost::thread(boost::bind(&LCMListener::ThreadLoopWithSelect, this)));
+    this->Thread = std::shared_ptr<std::thread>(
+      new std::thread(std::bind(&LCMListener::ThreadLoopWithSelect, this)));
   }
 
   void Stop()
@@ -378,7 +374,6 @@ public:
     if (this->Thread)
       {
       this->ShouldStop = true;
-      this->Thread->interrupt();
       this->Thread->join();
       this->Thread.reset();
       }
@@ -388,7 +383,7 @@ public:
   {
     std::vector<vtkSmartPointer<vtkPolyData> > polyData;
 
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     for (size_t i = 0; i < datasets.size(); ++i)
       {
@@ -400,7 +395,7 @@ public:
 
   std::vector<double> GetTimesteps(int viewId)
   {
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
 
     std::vector<double> timesteps;
     std::deque<MapData>& datasets = this->Datasets[viewId];
@@ -413,7 +408,7 @@ public:
 
   vtkSmartPointer<vtkPolyData> GetDatasetForTime(int viewId, int timestep)
   {
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     if (timestep >= 0 && timestep < datasets.size())
       {
@@ -427,7 +422,7 @@ public:
 
   vtkIdType GetCurrentMapId(int viewId)
   {
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::map<int, vtkIdType>::const_iterator itr = this->CurrentMapIds.find(viewId);
     if (itr == this->CurrentMapIds.end())
       {
@@ -443,7 +438,7 @@ public:
       return;
       }
 
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     for (size_t i = 0; i < datasets.size(); ++i)
       {
@@ -461,7 +456,7 @@ public:
       return;
       }
 
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     for (size_t i = 0; i < datasets.size(); ++i)
       {
@@ -479,7 +474,7 @@ public:
       return;
       }
 
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     for (size_t i = 0; i < datasets.size(); ++i)
       {
@@ -605,7 +600,7 @@ protected:
     //printf("storing depth map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
 
     // store data
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     mapData.Id = this->GetNextMapId(viewId);
     datasets.push_back(mapData);
@@ -627,7 +622,7 @@ protected:
     //printf("storing cloud map %d.  %d points.  (view id %d)\n", mapData.Id, mapData.Data->GetNumberOfPoints(), viewId);
 
     // store data    
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     mapData.Id = this->GetNextMapId(viewId);
     datasets.push_back(mapData);
@@ -650,7 +645,7 @@ protected:
     AddZCoordinateArray(mapData.Mesh);
 
     // store data
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     mapData.Id = this->GetNextMapId(viewId);
     datasets.push_back(mapData);
@@ -703,7 +698,7 @@ protected:
     mapData.Mesh = mapData.Data;
 
     // store data
-    boost::lock_guard<boost::mutex> lock(this->Mutex);
+    std::lock_guard<std::mutex> lock(this->Mutex);
     std::deque<MapData>& datasets = this->Datasets[viewId];
     mapData.Id = this->GetNextMapId(viewId);
     datasets.push_back(mapData);
@@ -720,16 +715,16 @@ protected:
   double EdgeAngleThreshold;
   double DistanceRange[2];
 
-  boost::mutex Mutex;
+  std::mutex Mutex;
   int64_t LastScanBundleUtime;
   int32_t CurrentScanBundleId;
 
   std::map<int, std::deque<MapData> > Datasets;
   std::map<int, vtkIdType> CurrentMapIds;
 
-  boost::shared_ptr<lcm::LCM> LCMHandle;
+  std::shared_ptr<lcm::LCM> LCMHandle;
 
-  boost::shared_ptr<boost::thread> Thread;
+  std::shared_ptr<std::thread> Thread;
 
 };
 
@@ -743,14 +738,14 @@ public:
 
   vtkInternal()
   {
-    this->Listener = boost::shared_ptr<LCMListener>(new LCMListener);
+    this->Listener = std::shared_ptr<LCMListener>(new LCMListener);
   }
 
   ~vtkInternal()
   {
   }
 
-  boost::shared_ptr<LCMListener> Listener;
+  std::shared_ptr<LCMListener> Listener;
 };
 
 //----------------------------------------------------------------------------

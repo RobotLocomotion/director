@@ -71,10 +71,7 @@ set(pkg_deps)
 
 if (USE_DRC)
 
-  # requires libbot, lcm, eigen, boost, drc lcmtypes
-  set(Boost_USE_MULTITHREADED ON)
-  find_package(Boost REQUIRED COMPONENTS system thread)
-  include_directories(${Boost_INCLUDE_DIRS})
+  # requires libbot, lcm, eigen, drc lcmtypes
 
   find_package(LibBot REQUIRED)
   include_directories(${LIBBOT_INCLUDE_DIRS})
@@ -91,7 +88,6 @@ if (USE_DRC)
   )
 
   list(APPEND deps
-    ${Boost_LIBRARIES}
     ${LIBBOT_LIBRARIES}
     ${LCM_LIBRARIES}
   )
