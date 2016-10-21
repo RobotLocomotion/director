@@ -85,20 +85,37 @@ endif()
 
 if (USE_LCM AND NOT USE_SYSTEM_LCM)
 
+
+  if(CMAKE_VERSION VERSION_LESS 3.1)
+    ExternalProject_Add(
+      cmake3
+      URL https://cmake.org/files/v3.5/cmake-3.5.2-Linux-x86_64.tar.gz
+      URL_MD5 c7a119aad057a3c0508a2c6d281c6291
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND ""
+      INSTALL_COMMAND ""
+    )
+    set(cmake3_args CMAKE_COMMAND ${PROJECT_BINARY_DIR}/src/cmake3/bin/cmake)
+    set(cmake3_depends cmake3)
+  endif()
+
   ExternalProject_Add(lcm
     GIT_REPOSITORY https://github.com/lcm-proj/lcm.git
     GIT_TAG a8cda6a6
+    ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
+    DEPENDS
+      ${cmake3_depends}
     )
 
-  set(lcm_depends lcm)
-
+  set(lcm_depends lcm ${cmake3_depends})
 
   ExternalProject_Add(bot_core_lcmtypes
     GIT_REPOSITORY https://github.com/openhumanoids/bot_core_lcmtypes
     GIT_TAG 9967654
+    ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
@@ -110,6 +127,7 @@ if (USE_LCM AND NOT USE_SYSTEM_LCM)
   ExternalProject_Add(robotlocomotion-lcmtypes
     GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes
     GIT_TAG b9ce3fa
+    ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
