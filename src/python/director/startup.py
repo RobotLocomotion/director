@@ -144,6 +144,7 @@ useSpreadsheet = True
 useFootsteps = True
 useHands = True
 usePlanning = True
+useHumanoidDRCDemos = True
 useAtlasDriver = True
 useLCMGL = True
 useOctomap = True
@@ -469,65 +470,65 @@ if usePlanning:
         blackoutMonitor = blackoutmonitor.BlackoutMonitor(robotStateJointController, view, cameraview, mapServerSource)
 
 
-    debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, robotStateJointController, playbackRobotModel,
-                    ikPlanner, manipPlanner, atlasdriver.driver, lHandDriver,
-                    perception.multisenseDriver, refitBlocks)
-
-    drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
-                    lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                    fitDrillMultisense, robotStateJointController,
-                    playPlans, teleopPanel.showPose, cameraview, segmentationpanel)
-    drillTaskPanel = drilldemo.DrillTaskPanel(drillDemo)
-
-    valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, footstepsPanel, manipPlanner, ikPlanner,
-                                      lHandDriver, rHandDriver, robotStateJointController)
-    valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
-
-    continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, footstepsDriver, playbackPanel, robotStateJointController, ikPlanner,
-                                                                       teleopJointController, navigationPanel, cameraview)
-    continuousWalkingTaskPanel = continuouswalkingdemo.ContinuousWalkingTaskPanel(continuouswalkingDemo)
-
-    useDrivingPlanner = drivingplanner.DrivingPlanner.isCompatibleWithConfig()
-    if useDrivingPlanner:
-        drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
-
-    walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
-                    lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                    robotStateJointController,
-                    playPlans, showPose)
-
-    bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
-                    lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                    fitDrillMultisense, robotStateJointController,
-                    playPlans, showPose, cameraview, segmentationpanel)
-
-    doorDemo = doordemo.DoorDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
-                                      lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
-                                      fitDrillMultisense, robotStateJointController,
-                                      playPlans, showPose)
-    doorTaskPanel = doordemo.DoorTaskPanel(doorDemo)
-
-    terrainTaskPanel = terraintask.TerrainTaskPanel(robotSystem)
-    terrainTask = terrainTaskPanel.terrainTask
-
-    surpriseTaskPanel = surprisetask.SurpriseTaskPanel(robotSystem)
-    surpriseTask = surpriseTaskPanel.planner
-    egressPanel = egressplanner.EgressPanel(robotSystem)
-    egressPlanner = egressPanel.egressPlanner
-
-
     taskPanels = OrderedDict()
 
-    if useDrivingPlanner:
-        taskPanels['Driving'] = drivingPlannerPanel.widget
+    if useHumanoidDRCDemos:
+        debrisDemo = debrisdemo.DebrisPlannerDemo(robotStateModel, robotStateJointController, playbackRobotModel,
+                        ikPlanner, manipPlanner, atlasdriver.driver, lHandDriver,
+                        perception.multisenseDriver, refitBlocks)
 
-    taskPanels['Egress'] = egressPanel.widget
-    taskPanels['Door'] = doorTaskPanel.widget
-    taskPanels['Valve'] = valveTaskPanel.widget
-    taskPanels['Drill'] = drillTaskPanel.widget
-    taskPanels['Surprise'] = surpriseTaskPanel.widget
-    taskPanels['Terrain'] = terrainTaskPanel.widget
-    taskPanels['Continuous Walking'] = continuousWalkingTaskPanel.widget
+        drillDemo = drilldemo.DrillPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                        lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                        fitDrillMultisense, robotStateJointController,
+                        playPlans, teleopPanel.showPose, cameraview, segmentationpanel)
+        drillTaskPanel = drilldemo.DrillTaskPanel(drillDemo)
+
+        valveDemo = valvedemo.ValvePlannerDemo(robotStateModel, footstepsDriver, footstepsPanel, manipPlanner, ikPlanner,
+                                          lHandDriver, rHandDriver, robotStateJointController)
+        valveTaskPanel = valvedemo.ValveTaskPanel(valveDemo)
+
+        continuouswalkingDemo = continuouswalkingdemo.ContinousWalkingDemo(robotStateModel, footstepsPanel, footstepsDriver, playbackPanel, robotStateJointController, ikPlanner,
+                                                                           teleopJointController, navigationPanel, cameraview)
+        continuousWalkingTaskPanel = continuouswalkingdemo.ContinuousWalkingTaskPanel(continuouswalkingDemo)
+
+        useDrivingPlanner = drivingplanner.DrivingPlanner.isCompatibleWithConfig()
+        if useDrivingPlanner:
+            drivingPlannerPanel = drivingplanner.DrivingPlannerPanel(robotSystem)
+
+        walkingDemo = walkingtestdemo.walkingTestDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                        lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                        robotStateJointController,
+                        playPlans, showPose)
+
+        bihandedDemo = bihandeddemo.BihandedPlannerDemo(robotStateModel, playbackRobotModel, teleopRobotModel, footstepsDriver, manipPlanner, ikPlanner,
+                        lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                        fitDrillMultisense, robotStateJointController,
+                        playPlans, showPose, cameraview, segmentationpanel)
+
+        doorDemo = doordemo.DoorDemo(robotStateModel, footstepsDriver, manipPlanner, ikPlanner,
+                                          lHandDriver, rHandDriver, atlasdriver.driver, perception.multisenseDriver,
+                                          fitDrillMultisense, robotStateJointController,
+                                          playPlans, showPose)
+        doorTaskPanel = doordemo.DoorTaskPanel(doorDemo)
+
+        terrainTaskPanel = terraintask.TerrainTaskPanel(robotSystem)
+        terrainTask = terrainTaskPanel.terrainTask
+
+        surpriseTaskPanel = surprisetask.SurpriseTaskPanel(robotSystem)
+        surpriseTask = surpriseTaskPanel.planner
+        egressPanel = egressplanner.EgressPanel(robotSystem)
+        egressPlanner = egressPanel.egressPlanner
+
+        if useDrivingPlanner:
+            taskPanels['Driving'] = drivingPlannerPanel.widget
+
+        taskPanels['Egress'] = egressPanel.widget
+        taskPanels['Door'] = doorTaskPanel.widget
+        taskPanels['Valve'] = valveTaskPanel.widget
+        taskPanels['Drill'] = drillTaskPanel.widget
+        taskPanels['Surprise'] = surpriseTaskPanel.widget
+        taskPanels['Terrain'] = terrainTaskPanel.widget
+        taskPanels['Continuous Walking'] = continuousWalkingTaskPanel.widget
 
     tasklaunchpanel.init(taskPanels)
 
