@@ -13,9 +13,6 @@ from director import objectmodel as om
 from director.transformUtils import getTransformFromAxes
 from director import vtkAll as vtk
 
-
-from director.footstepsdriver import FootstepsDriver
-
 import vtkNumpy
 import numpy as np
 from shallowCopy import shallowCopy
@@ -97,6 +94,7 @@ class RobotModelGroundHeightProvider(object):
         self.model = model
 
     def getGroundHeight(self):
+        from director.footstepsdriver import FootstepsDriver
         return FootstepsDriver.getFeetMidPoint(self.model).GetPosition()[2]
 
 
