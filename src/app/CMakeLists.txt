@@ -109,7 +109,6 @@ set(pkg_deps)
 if (USE_DRAKE)
 
   find_package(Drake REQUIRED)
-  find_package(Boost REQUIRED COMPONENTS system thread filesystem regex)
   find_package(Eigen REQUIRED)
 
   include_directories(
@@ -135,7 +134,6 @@ if (USE_DRAKE)
 
   list(APPEND deps
     ${DRAKE_LIBRARIES}
-    ${Boost_LIBRARIES}
   )
 
 endif()
