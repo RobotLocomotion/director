@@ -13,14 +13,10 @@ from director.debugVis import DebugData
 
 import PythonQt
 from PythonQt import QtCore, QtGui
-import bot_core as lcmbotcore
 import numpy as np
 from director.simpletimer import SimpleTimer
 from director import ioUtils
 import sys
-import drc as lcmdrc
-import maps as lcmmaps
-import multisense as lcmmultisense
 
 
 def clipRange(dataObj, arrayName, thresholdRange):
@@ -63,6 +59,8 @@ def colorizePoints(polyData, cameraName='CAMERA_LEFT'):
 
 def sendFOVRequest(channel, imagePoints):
 
+    import maps as lcmmaps
+
     channelToImageType = {
         'CAMERA_LEFT' : lcmmaps.data_request_t.CAMERA_IMAGE_HEAD_LEFT,
         'CAMERACHEST_LEFT' : lcmmaps.data_request_t.CAMERA_IMAGE_LCHEST,
@@ -72,7 +70,7 @@ def sendFOVRequest(channel, imagePoints):
     dataRequest = lcmmaps.data_request_t()
     dataRequest.type = channelToImageType[channel]
 
-    message = lcmdrc.subimage_request_t()
+    message = lcmmaps.subimage_request_t()
     message.data_request = dataRequest
 
     imagePoints = np.array([[pt[0], pt[1]] for pt in imagePoints])
@@ -864,8 +862,9 @@ def init():
     cameraView = CameraView(imageManager)
 
     addCameraView('CAMERA_LEFT', 'Head camera')
-    #addCameraView('CAMERA', 'Head camera right', 'CAMERA_RIGHT', lcmmultisense.images_t.RIGHT)
-    #addCameraView('CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmmultisense.images_t.DISPARITY_ZIPPED)
+    #import bot_core as lcmbotcore
+    #addCameraView('CAMERA', 'Head camera right', 'CAMERA_RIGHT', lcmbotcore.images_t.RIGHT)
+    #addCameraView('CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmbotcore.images_t.DISPARITY_ZIPPED)
     addCameraView('CAMERACHEST_LEFT', 'Chest left')
     addCameraView('CAMERACHEST_RIGHT', 'Chest right')
     addCameraView('CAMERALHAND')
