@@ -34,14 +34,10 @@
 #include <unordered_set>
 #include <string>
 #include <sstream>
-#include <boost/shared_ptr.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string/find.hpp>
-#include <boost/algorithm/string/case_conv.hpp>
-#include <boost/algorithm/string/replace.hpp>
-
 #include <math.h>
 
+#include <QFileInfo>
+#include <QTextStream>
 #include <QMap>
 #include <QDir>
 
@@ -179,39 +175,29 @@ vtkSmartPointer<vtkPolyData> scalePolyData(vtkPolyData* polyData, double scale)
   return transformPolyData(polyData, t);
 }
 
-bool endsWith(std::string const &fullString, std::string const &ending)
-{
-  if (fullString.length() >= ending.length())
-  {
-    return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
-  } else
-  {
-    return false;
-  }
-}
-
-vtkSmartPointer<vtkImageData> loadImage(const std::string& filename)
+vtkSmartPointer<vtkImageData> loadImage(const QString& filename)
 {
   vtkSmartPointer<vtkImageData> image;
+  QString ext = QFileInfo(filename).suffix().toLower();
 
-  if (endsWith(boost::to_lower_copy(filename), "jpg"))
+  if (ext == "jpg")
   {
     vtkSmartPointer<vtkJPEGReader> reader = vtkSmartPointer<vtkJPEGReader>::New();
-    reader->SetFileName(filename.c_str());
+    reader->SetFileName(filename.toLatin1().constData());
     reader->Update();
     image = reader->GetOutput();
   }
-  else if (endsWith(boost::to_lower_copy(filename), "png"))
+  else if (ext == "png")
   {
     vtkSmartPointer<vtkPNGReader> reader = vtkSmartPointer<vtkPNGReader>::New();
-    reader->SetFileName(filename.c_str());
+    reader->SetFileName(filename.toLatin1().constData());
     reader->Update();
     image = reader->GetOutput();
   }
 
   if (!image->GetNumberOfPoints())
   {
-    std::cout << "Failed to load data from: " << filename << std::endl;
+    std::cout << "Failed to load data from: " << qPrintable(filename) << std::endl;
     return 0;
   }
 
@@ -219,60 +205,60 @@ vtkSmartPointer<vtkImageData> loadImage(const std::string& filename)
 
 }
 
-std::vector<vtkSmartPointer<vtkPolyData> > loadPolyData(const std::string& filename)
+std::vector<vtkSmartPointer<vtkPolyData> > loadPolyData(const QString& filename)
 {
   std::vector<vtkSmartPointer<vtkPolyData> > polyDataList;
+  QString ext = QFileInfo(filename).suffix().toLower();
 
-
-  if (endsWith(boost::to_lower_copy(filename), "obj"))
+  if (ext == "obj")
   {
     vtkSmartPointer<vtkOBJReader> reader = vtkSmartPointer<vtkOBJReader>::New();
-    reader->SetFileName(filename.c_str());
+    reader->SetFileName(filename.toLatin1().constData());
     reader->Update();
 
     if (!reader->GetOutput()->GetNumberOfPoints())
     {
-      std::cout << "Failed to load data from: " << filename << std::endl;
+      std::cout << "Failed to load data from: " << qPrintable(filename) << std::endl;
     }
     else
     {
       polyDataList.push_back(shallowCopy(reader->GetOutput()));
     }
   }
-  else if (endsWith(boost::to_lower_copy(filename), "stl"))
+  else if (ext == "stl")
   {
     vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
-    reader->SetFileName(filename.c_str());
+    reader->SetFileName(filename.toLatin1().constData());
     reader->Update();
 
     if (!reader->GetOutput()->GetNumberOfPoints())
     {
-      std::cout << "Failed to load data from: " << filename << std::endl;
+      std::cout << "Failed to load data from: " << qPrintable(filename) << std::endl;
     }
     else
     {
       polyDataList.push_back(shallowCopy(reader->GetOutput()));
     }
   }
-  else if (endsWith(boost::to_lower_copy(filename), "vtp"))
+  else if (ext == "vtp")
   {
     vtkSmartPointer<vtkXMLPolyDataReader> reader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
-    reader->SetFileName(filename.c_str());
+    reader->SetFileName(filename.toLatin1().constData());
     reader->Update();
 
     if (!reader->GetOutput()->GetNumberOfPoints())
     {
-      std::cout << "Failed to load data from: " << filename << std::endl;
+      std::cout << "Failed to load data from: " << qPrintable(filename) << std::endl;
     }
     else
     {
       polyDataList.push_back(shallowCopy(reader->GetOutput()));
     }
   }
-  else if (endsWith(boost::to_lower_copy(filename), "vtm"))
+  else if (ext == "vtm")
   {
     vtkSmartPointer<vtkXMLMultiBlockDataReader> reader = vtkSmartPointer<vtkXMLMultiBlockDataReader>::New();
-    reader->SetFileName(filename.c_str());
+    reader->SetFileName(filename.toLatin1().constData());
     reader->Update();
 
     vtkMultiBlockDataSet* mb = vtkMultiBlockDataSet::SafeDownCast(reader->GetOutput());
@@ -295,12 +281,12 @@ std::vector<vtkSmartPointer<vtkPolyData> > loadPolyData(const std::string& filen
 
 namespace {
 
-typedef std::map<std::string, vtkSmartPointer<vtkTexture> > TextureMapType;
+typedef QMap<QString, vtkSmartPointer<vtkTexture> > TextureMapType;
 TextureMapType TextureMap;
 
 }
 
-vtkSmartPointer<vtkTexture> getTextureForMesh(vtkSmartPointer<vtkPolyData> polyData, const std::string& meshFileName)
+vtkSmartPointer<vtkTexture> getTextureForMesh(vtkSmartPointer<vtkPolyData> polyData, const QString& meshFileName)
 {
   vtkStringArray* textureArray = vtkStringArray::SafeDownCast(polyData->GetFieldData()->GetAbstractArray("texture_filename"));
   if (!textureArray)
@@ -308,25 +294,23 @@ vtkSmartPointer<vtkTexture> getTextureForMesh(vtkSmartPointer<vtkPolyData> polyD
     return 0;
   }
 
-  std::string textureFileName = textureArray->GetValue(0);
-  //if (boost::filesystem::path(textureFileName).is_relative())
-  //{
-    std::string baseDir = boost::filesystem::path(meshFileName).parent_path().native();
-    textureFileName = baseDir + "/" + textureFileName;
-  //}
-
-  if (!boost::filesystem::exists(textureFileName))
+  QString textureFileName = textureArray->GetValue(0).c_str();
+  if (QFileInfo(textureFileName).isRelative())
   {
-    printf("cannot find texture file: %s\n", textureFileName.c_str());
+    QString baseDir = QFileInfo(meshFileName).absolutePath();
+    textureFileName = baseDir + "/" + textureFileName;
+  }
+
+  if (!QFileInfo(textureFileName).exists())
+  {
+    printf("cannot find texture file: %s\n", qPrintable(textureFileName));
     return 0;
   }
 
 
-
-  TextureMapType::const_iterator itr = TextureMap.find(textureFileName);
-  if (itr != TextureMap.end())
+  if (TextureMap.contains(textureFileName))
   {
-    return itr->second;
+    return TextureMap[textureFileName];
   }
 
 
@@ -383,7 +367,7 @@ ddMeshVisual::Ptr visualFromPolyData(vtkSmartPointer<vtkPolyData> polyData)
   return visual;
 }
 
-std::vector<ddMeshVisual::Ptr> loadMeshVisuals(const std::string& filename)
+std::vector<ddMeshVisual::Ptr> loadMeshVisuals(const QString& filename)
 {
   std::vector<ddMeshVisual::Ptr> visuals;
 
@@ -475,7 +459,7 @@ public:
       {
         continue;
       }
-      
+
       if (body->getJoint().getNumPositions() == 0)
       {
         fixedDOFs.insert(body->getJoint().getName());
@@ -524,80 +508,89 @@ public:
     return visuals;
   }
 
-
-  std::string locateMeshFile(const std::string& meshFilename, const std::string& root_dir)
+  void replaceFirst(QString& inputStr, const QString& subStr, const QString& replacement)
   {
-    string fname = meshFilename;
-    bool has_package = boost::find_first(meshFilename,"package://");
+    if (inputStr.indexOf(subStr) >= 0)
+      inputStr.replace(inputStr.indexOf(subStr), subStr.size(), replacement);
+  }
 
-    if (has_package)
+  QString replaceExtension(const QString& inputStr, const QString& newExtension)
+  {
+    return inputStr.left(inputStr.size() - QFileInfo(inputStr).suffix().size()) + newExtension;
+  }
+
+  QString locateMeshFile(const QString& meshFilename, const QString& rootDir)
+  {
+    bool hasPackage = meshFilename.startsWith("package://");
+    QString fname = meshFilename;
+
+    if (hasPackage)
     {
-      //cout << "replacing " << fname;
-      boost::replace_first(fname,"package://","");
-      string package = fname.substr(0,fname.find_first_of("/"));
 
-      QString packageDir = ddDrakeModel::findPackageDirectory(package.c_str());
+      // if there is a package:// prefix then we
+      // are looking at a string of the form: package://<package_name>/path/to/mesh.obj
+
+      replaceFirst(fname, "package://", "");
+
+      QString package = fname.left(fname.indexOf("/"));
+      QString packageDir = ddDrakeModel::findPackageDirectory(package);
       if (packageDir.isEmpty())
       {
-        std::cout << "Failed to locate package: " << package << " in filename: " << fname << std::endl;
-        return std::string();
+        std::cout << "Failed to locate package: " << qPrintable(package) << " in filename: " << qPrintable(fname) << std::endl;
+        return QString();
       }
 
-
-      //boost::replace_first(fname,package,rospack(package));
-
-      boost::replace_first(fname, package, packageDir.toAscii().data());
-      //cout << " with " << fname << endl;
+      replaceFirst(fname, package, packageDir.toLatin1().data());
     }
-    else
+    else if (QFileInfo(meshFilename).isRelative())
     {
-      fname = root_dir + "/" + meshFilename;
+      fname = rootDir + "/" + meshFilename;
     }
 
-    if (!boost::filesystem::exists(fname))
+    fname = QFileInfo(fname).absoluteFilePath();
+
+    if (!QFileInfo(fname).exists())
     {
-      cerr << "cannot find mesh file: " << fname;
-      if (has_package)
-        cerr << " (note: original mesh string had a package:// in it, and I haven't really implemented rospack yet)";
+      cerr << "cannot find mesh file: " << qPrintable(fname);
+      if (hasPackage)
+        cerr << " (note: original mesh string had a package://, perhaps a package path issue)";
       cerr << endl;
-      return std::string();
+      return QString();
     }
 
-    boost::filesystem::path mypath(fname);
-    //std::string fileExtension = boost::to_lower_copy(mypath.extension().native());
 
-    std::vector<std::string> supportedExtensions;
-    supportedExtensions.push_back(".vtm");
-    supportedExtensions.push_back(".vtp");
-    supportedExtensions.push_back(".obj");
-    supportedExtensions.push_back(".stl");
+    std::vector<QString> supportedExtensions;
+    supportedExtensions.push_back("vtm");
+    supportedExtensions.push_back("vtp");
+    supportedExtensions.push_back("obj");
+    supportedExtensions.push_back("stl");
 
     for (size_t i = 0; i < supportedExtensions.size(); ++i)
     {
-      std::string fileWithExtension = mypath.replace_extension(supportedExtensions[i]).native();
+      QString fileWithExtension = replaceExtension(fname, supportedExtensions[i]);
 
-      if (boost::filesystem::exists(fileWithExtension))
+      if (QFileInfo(fileWithExtension).exists())
       {
         return fileWithExtension;
       }
 
-      fileWithExtension = mypath.replace_extension(boost::to_upper_copy(supportedExtensions[i])).native();
-      if (boost::filesystem::exists(fileWithExtension))
+      fileWithExtension = replaceExtension(fname, supportedExtensions[i].toUpper());
+
+      if (QFileInfo(fileWithExtension).exists())
       {
         return fileWithExtension;
       }
 
     }
 
-    cerr << "Warning: Mesh " << fname << " ignored because it does not have supported file extension (obj, stl)" << endl;
-    return std::string();
+    cerr << "Warning: Mesh " << qPrintable(fname) << " ignored because it could not be located" << endl;
+    return QString();
   }
 
 
-  void loadVisuals(const std::string& root_dir=".")
+  void loadVisuals(const QString& rootDir=".")
   {
 
-    //printf("load visuals...\n");
     RigidBodyTree* model = this;
 
     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
@@ -605,30 +598,21 @@ public:
 
       std::shared_ptr<RigidBody> body = model->bodies[bodyIndex];
 
-      //printf("body: %s\n", body->linkname.c_str());
-
       for (size_t visualIndex = 0 ; visualIndex < body->visual_elements.size(); ++visualIndex)
       {
-        //printf("vi %d\n", visualIndex);
 
         const DrakeShapes::VisualElement& visual = body->visual_elements[visualIndex];
-
         const DrakeShapes::Shape visualType = visual.getShape();
-
-        //printf("shape: %d\n", visualType);
-
         std::vector<ddMeshVisual::Ptr> loadedVisuals;
-
 
         if (visualType == DrakeShapes::MESH)
         {
 
           const DrakeShapes::Mesh& mesh = static_cast<const DrakeShapes::Mesh&>(visual.getGeometry());
 
-          std::string filename = locateMeshFile(mesh.filename, root_dir);
+          QString filename = locateMeshFile(mesh.filename.c_str(), rootDir);
           if (filename.size())
           {
-            //printf("loading mesh: %s\n", filename.c_str());
             loadedVisuals = loadMeshVisuals(filename);
           }
 
@@ -683,17 +667,12 @@ public:
 
       }
     }
-
-    //printf("done\n");
-
   }
 
 
   virtual void updateModel()
   {
     RigidBodyTree* model = this;
-
-
 
     for (size_t bodyIndex = 0; bodyIndex < model->bodies.size(); ++bodyIndex)
     {
@@ -708,23 +687,17 @@ public:
 
       vtkSmartPointer<vtkTransform> linkToWorld = makeTransform(relativeTransform(*cache, 0, body->body_index));
 
-      //printf("%s to world: %f %f %f\n", body->linkname.c_str(), translation(0), translation(1), translation(2));
-
       for (size_t visualIndex = 0; visualIndex < itr->second.size(); ++visualIndex)
       {
         ddMeshVisual::Ptr meshVisual = itr->second[visualIndex];
-
 
         vtkSmartPointer<vtkTransform> visualToWorld = vtkSmartPointer<vtkTransform>::New();
         visualToWorld->PostMultiply();
         visualToWorld->Concatenate(meshVisual->VisualToLink);
         visualToWorld->Concatenate(linkToWorld);
         meshVisual->Transform->SetMatrix(visualToWorld->GetMatrix());
-
       }
-
     }
-
   }
 
 
@@ -765,59 +738,31 @@ public:
 
 };
 
-
-URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const string &urdf_filename)
+URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QString& rootDir="")
 {
-  // urdf_filename can be a list of urdf files seperated by a :
   URDFRigidBodyTreeVTK::Ptr model(new URDFRigidBodyTreeVTK);
-
-  string token;
-  istringstream iss(urdf_filename);
-
-  string pathname;
-
-  while (getline(iss,token,':'))
-  {
-    fstream xml_file(token.c_str(), fstream::in);
-      string xml_string;
-    if (xml_file.is_open())
-    {
-        while ( xml_file.good() )
-      {
-          string line;
-          getline( xml_file, line);
-          xml_string += (line + "\n");
-        }
-        xml_file.close();
-    }
-    else
-    {
-        cerr << "Could not open file ["<<urdf_filename.c_str()<<"] for parsing."<< endl;
-        return URDFRigidBodyTreeVTK::Ptr();
-    }
-
-    boost::filesystem::path mypath(urdf_filename);
-    if (!mypath.empty() && mypath.has_parent_path())  
-      pathname = mypath.parent_path().native();
-
-    model->addRobotFromURDFString(xml_string, PackageSearchPaths, pathname);
-
-  }
-
+  model->addRobotFromURDFString(xmlString.toUtf8().constData(), PackageSearchPaths, rootDir.toLatin1().constData());
   model->computeDofMap();
-  model->loadVisuals(pathname);
+  model->loadVisuals(rootDir);
   return model;
 }
 
-
-URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const string &xmlString)
+URDFRigidBodyTreeVTK::Ptr loadVTKModelFromFile(const QString &urdfFilename)
 {
-  URDFRigidBodyTreeVTK::Ptr model(new URDFRigidBodyTreeVTK);
-  model->addRobotFromURDFString(xmlString,PackageSearchPaths, "");
+  QFile f(urdfFilename);
 
-  model->computeDofMap();
-  model->loadVisuals();
-  return model;
+  if (!f.open(QFile::ReadOnly | QFile::Text))
+  {
+    cerr << "Could not open file [" << qPrintable(urdfFilename) << "] for parsing." << endl;
+    return URDFRigidBodyTreeVTK::Ptr();
+  }
+
+  QTextStream in(&f);
+  QString xmlString = in.readAll();
+  f.close();
+
+  QString rootDir = QFileInfo(urdfFilename).dir().absolutePath();
+  return loadVTKModelFromXML(xmlString, rootDir);
 }
 
 
