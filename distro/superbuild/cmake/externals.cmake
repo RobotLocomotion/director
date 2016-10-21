@@ -238,7 +238,7 @@ option(USE_SYSTEM_VTK "Use system version of VTK.  If off, VTK will be built." $
 if(NOT USE_SYSTEM_VTK)
   ExternalProject_Add(vtk
     GIT_REPOSITORY https://github.com/liangfok/VTK.git
-    GIT_TAG ec43254f432af2e49f10bd2d1996cc578895c19f # vtk 5.10 with fixes for Visual Studio 2013 and GLX_GLXEXT_LEGACY.
+    GIT_TAG ec43254 # vtk 5.10 with fixes for Visual Studio 2013 and GLX_GLXEXT_LEGACY.
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       ${python_args}
@@ -346,8 +346,7 @@ if(USE_PCL)
 
 ExternalProject_Add(PointCloudLibraryPlugin
   GIT_REPOSITORY https://github.com/patmarion/PointCloudLibraryPlugin.git
-  GIT_TAG filters-library
-  INSTALL_COMMAND ""
+  GIT_TAG cb119b0
   CMAKE_CACHE_ARGS
     ${default_cmake_args}
     ${eigen_args}
