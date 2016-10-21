@@ -52,7 +52,7 @@ make_mac_package()
 {
   cd $TRAVIS_BUILD_DIR/distro/package
   ./make_app_bundle.sh 2>&1 > log.txt || cat log.txt
-  find . -name \*.h DirectorConsole.app | xargs rm
+  find DirectorConsole.app -name \*.h | xargs rm
   tar -czf DirectorConsole.tar.gz DirectorConsole.app
   $scriptDir/copy_files.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
 }
