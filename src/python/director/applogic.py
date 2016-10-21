@@ -165,7 +165,10 @@ def findMenu(menuTitle, mainWindow=None):
     mainWindow = mainWindow or getMainWindow()
     menus = mainWindow.findChildren('QMenu')
     for menu in menus:
-        if menu.title == menuTitle:
+        title = str(menu.title)
+        if title.startswith('&'):
+            title = title[1:]
+        if title == menuTitle:
             return menu
 
 
