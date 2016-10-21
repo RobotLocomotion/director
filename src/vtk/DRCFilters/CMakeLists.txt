@@ -182,7 +182,8 @@ install(TARGETS ${library_name}
     ARCHIVE DESTINATION ${DD_INSTALL_LIB_DIR})
 
 if(VTK_WRAP_PYTHON)
-  include_directories(${VTK_PYTHON_INCLUDE_DIR})
+  find_package(PythonLibs 2.7 REQUIRED)
+  include_directories(${PYTHON_INCLUDE_DIR})
   include(${CMAKE_SOURCE_DIR}/cmake/wrap-python.cmake)
   wrap_python(${library_name} "${sources}")
   set_target_properties(${library_name}Python PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${DD_INSTALL_PYTHON_DIR}/director")
