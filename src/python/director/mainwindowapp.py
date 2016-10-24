@@ -283,6 +283,16 @@ class MainWindowAppFactory(ComponentFactory):
 
 class MainWindowPanelFactory(ComponentFactory):
 
+    def initDefaultOptions(self, options):
+        '''
+        Components are enabled by default.  This function
+        determines which components should be disabled.
+        '''
+
+        # drake visualizer depends on lcm so this
+        # module is disabled by default
+        options.useDrakeVisualizer = False
+
     def addComponents(self, componentGraph):
 
         addComponent = componentGraph.addComponent
