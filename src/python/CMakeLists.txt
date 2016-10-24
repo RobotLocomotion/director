@@ -122,6 +122,7 @@ set(python_files
   director/valvedemo.py
   director/viconvisualizer.py
   director/viewbehaviors.py
+  director/viewcolors.py
   director/vieweventfilter.py
   director/visualization.py
   director/vtkAll.py
