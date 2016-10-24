@@ -54,6 +54,8 @@ class ConsoleApp(object):
             print 'TESTING PROGRAM RETURNING EXIT CODE:', result
             sys.exit(result)
 
+        return result
+
 
     @staticmethod
     def startTestingModeQuitTimer(timeoutInSeconds=0.1):
