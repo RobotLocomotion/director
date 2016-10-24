@@ -68,6 +68,7 @@ from director import sensordatarequestpanel
 from director import tasklaunchpanel
 from director.jointpropagator import JointPropagator
 from director import planningutils
+from director import viewcolors
 
 from director import coursemodel
 
@@ -243,47 +244,8 @@ app.setBackgroundColor([0.3, 0.3, 0.35], [0.95,0.95,1])
 viewOptions = vis.ViewOptionsItem(view)
 om.addToObjectModel(viewOptions, parentObj=om.findObjectByName('sensors'))
 
-class ViewBackgroundLightHandler(object):
-
-    def __init__(self, viewOptions, grid):
-        self.viewOptions = viewOptions
-        self.action = app.getToolsMenuActions()['ActionToggleBackgroundLight']
-        self.action.connect('triggered()', self.toggle)
-
-        self.properties = { viewOptions : {'Gradient background':True, 'Background color':[0.0, 0.0, 0.0], 'Background color 2':[0.3, 0.3, 0.3]},
-                            grid : {'Surface Mode':'Wireframe', 'Alpha':0.05, 'Color':[1.0, 1.0, 1.0], 'Color By':0}
-                          }
-
-        self.cachedProperties = {}
-        self.storeProperties()
-
-    def storeProperties(self):
-
-        def grab(obj, props):
-            for key in props.keys():
-                self.cachedProperties.setdefault(obj, dict())[key] = obj.getProperty(key)
-
-        for obj, props in self.properties.iteritems():
-            grab(obj, props)
-
-    def applyProperties(self, properties):
-
-        def send(obj, props):
-            for key, value in props.iteritems():
-                obj.setProperty(key, value)
-
-        for obj, props in properties.iteritems():
-            send(obj, props)
-
-    def toggle(self):
-        if self.action.checked:
-            self.storeProperties()
-            self.applyProperties(self.properties)
-        else:
-            self.applyProperties(self.cachedProperties)
-
-
-viewBackgroundLightHandler = ViewBackgroundLightHandler(viewOptions, grid)
+viewBackgroundLightHandler = viewcolors.ViewBackgroundLightHandler(viewOptions, grid,
+                                app.getToolsMenuActions()['ActionToggleBackgroundLight'])
 if not useLightColorScheme:
     viewBackgroundLightHandler.action.trigger()
 

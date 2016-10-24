@@ -1,4 +1,5 @@
 from director.componentgraph import ComponentFactory
+from director.fieldcontainer import FieldContainer
 
 
 class RobotSystemFactory(ComponentFactory):
@@ -46,7 +47,7 @@ class RobotSystemFactory(ComponentFactory):
 
         assert directorConfig['colorMode'] in ['URDF Colors', 'Solid Color', 'Textures']
 
-        robotSystem._add_fields(directorConfig=directorConfig)
+        return FieldContainer(directorConfig=directorConfig)
 
     def initRobotState(self, robotSystem):
 
@@ -65,7 +66,7 @@ class RobotSystemFactory(ComponentFactory):
         roboturdf.startModelPublisherListener([(robotStateModel, robotStateJointController)])
         robotStateJointController.addLCMUpdater('EST_ROBOT_STATE')
 
-        robotSystem._add_fields(robotStateModel=robotStateModel,
+        return FieldContainer(robotStateModel=robotStateModel,
                                 robotStateJointController=robotStateJointController)
 
     def initSegmentation(self, robotSystem):
@@ -109,7 +110,7 @@ class RobotSystemFactory(ComponentFactory):
         spindleMonitor = perception.SpindleMonitor(getSpindleAngleFunction)
         robotSystem.robotStateModel.connectModelChanged(spindleMonitor.onRobotStateChanged)
 
-        robotSystem._add_fields(multisenseDriver=multisenseDriver,
+        return FieldContainer(multisenseDriver=multisenseDriver,
                                 mapServerSource=mapServerSource,
                                 neckDriver=neckDriver,
                                 spindleMonitor=spindleMonitor)
@@ -120,33 +121,33 @@ class RobotSystemFactory(ComponentFactory):
 
         rHandDriver = handdriver.RobotiqHandDriver(side='right')
         lHandDriver = handdriver.RobotiqHandDriver(side='left')
-        robotSystem._add_fields(rHandDriver=rHandDriver, lHandDriver=lHandDriver)
+        return FieldContainer(rHandDriver=rHandDriver, lHandDriver=lHandDriver)
 
     def initFootsteps(self, robotSystem):
 
         from director import footstepsdriver
         footstepsDriver = footstepsdriver.FootstepsDriver(robotSystem.robotStateJointController)
-        robotSystem._add_fields(footstepsDriver=footstepsDriver)
+        return FieldContainer(footstepsDriver=footstepsDriver)
 
     def initRaycastDriver(self, robotSystem):
 
         from director import raycastdriver
         raycastDriver = raycastdriver.RaycastDriver()
-        robotSystem._add_fields(raycastDriver=raycastDriver)
+        return FieldContainer(raycastDriver=raycastDriver)
 
     def initIRISDriver(self, robotSystem):
 
         from director import irisdriver
 
         irisDriver = irisdriver.IRISDriver(robotSystem.robotStateJointController, robotSystem.footstepsDriver.params)
-        robotSystem._add_fields(irisDriver=irisDriver)
+        return FieldContainer(irisDriver=irisDriver)
 
     def initAtlasDriver(self, robotSystem):
 
         from director import atlasdriver
 
         atlasDriver = atlasdriver.init(None)
-        robotSystem._add_fields(atlasDriver=atlasDriver)
+        return FieldContainer(atlasDriver=atlasDriver)
 
     def initPlanning(self, robotSystem):
 
@@ -174,7 +175,7 @@ class RobotSystemFactory(ComponentFactory):
 
         planningUtils = planningutils.PlanningUtils(robotSystem.robotStateModel, robotSystem.robotStateJointController)
 
-        robotSystem._add_fields(
+        return FieldContainer(
             ikRobotModel=ikRobotModel,
             ikJointController=ikJointController,
             handFactory=handFactory,
@@ -192,7 +193,7 @@ class RobotSystemFactory(ComponentFactory):
 
         robotSystem.playbackJointController.models.append(chullRobotModel)
 
-        robotSystem._add_fields(
+        return FieldContainer(
             chullRobotModel=chullRobotModel,
             chullJointController=chullJointController
             )
@@ -218,7 +219,7 @@ class RobotSystemFactory(ComponentFactory):
         manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 
 
-        robotSystem._add_fields(
+        return FieldContainer(
             playbackRobotModel=playbackRobotModel,
             playbackJointController=playbackJointController,
             planPlayback=planPlayback,
@@ -239,7 +240,7 @@ class RobotSystemFactory(ComponentFactory):
         teleopPanel = teleoppanel.TeleopPanel(robotSystem.robotStateModel, robotSystem.robotStateJointController, teleopRobotModel, teleopJointController,
                           robotSystem.ikPlanner, robotSystem.manipPlanner, robotSystem.affordanceManager, robotSystem.playbackPanel.setPlan, robotSystem.playbackPanel.hidePlan, robotSystem.planningUtils)
 
-        robotSystem._add_fields(
+        return FieldContainer(
             teleopRobotModel=teleopRobotModel,
             teleopJointController=teleopJointController,
             teleopPanel=teleopPanel,
@@ -260,7 +261,7 @@ class RobotSystemFactory(ComponentFactory):
             affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
             affordanceManager.collection.sendEchoRequest()
 
-        robotSystem._add_fields(
+        return FieldContainer(
             affordanceManager=affordanceManager,
             )
 
@@ -303,7 +304,7 @@ class RobotSystemFactory(ComponentFactory):
 
         robotSystem.ikPlanner.ikServer = matlabIkServer
 
-        robotSystem._add_fields(
+        return FieldContainer(
             ikServer=matlabIkServer,
             startIkServer=startIkServer
             )
@@ -315,7 +316,7 @@ class RobotSystemFactory(ComponentFactory):
 
         viewBehaviors = robotviewbehaviors.RobotViewBehaviors(robotSystem.view, robotSystem)
         applogic.resetCamera(viewDirection=[-1,0,0], view=robotSystem.view)
-        robotSystem._add_fields(viewBehaviors=viewBehaviors)
+        return FieldContainer(viewBehaviors=viewBehaviors)
 
 
 

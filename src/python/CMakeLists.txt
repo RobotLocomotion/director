@@ -64,6 +64,7 @@ set(python_files
   director/lcmcollections.py  
   director/lcmspy.py
   director/lcmUtils.py
+  director/mainwindowapp.py
   director/mapsregistrar.py
   director/matlab.py
   director/matlabik.py
@@ -122,6 +123,7 @@ set(python_files
   director/valvedemo.py
   director/viconvisualizer.py
   director/viewbehaviors.py
+  director/viewcolors.py
   director/vieweventfilter.py
   director/visualization.py
   director/vtkAll.py

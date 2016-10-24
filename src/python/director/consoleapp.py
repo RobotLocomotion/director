@@ -1,22 +1,16 @@
 import os
 import sys
+import traceback
 import argparse
-import PythonQt
-from PythonQt import QtCore, QtGui
 
-import director
 from director import applogic
 from director import objectmodel as om
-from director import vtkAll as vtk
-from director import vtkNumpy as vnp
 from director import viewbehaviors
 from director import visualization as vis
 from director.timercallback import TimerCallback
 
-import numpy as np
-
-import sys
-import traceback
+import PythonQt
+from PythonQt import QtCore, QtGui
 
 
 def _consoleAppExceptionHook(exc_type, exc_value, exc_traceback):
@@ -53,6 +47,8 @@ class ConsoleApp(object):
         if ConsoleApp.getTestingEnabled() and not ConsoleApp.getTestingInteractiveEnabled():
             print 'TESTING PROGRAM RETURNING EXIT CODE:', result
             sys.exit(result)
+
+        return result
 
 
     @staticmethod
@@ -168,18 +164,21 @@ class ConsoleApp(object):
 
 
 
-def main():
+def main(globalsDict=None):
 
-    global app, view
     app = ConsoleApp()
-    app.setupGlobals(globals())
     app.showPythonConsole()
     view = app.createView()
     view.show()
     view.raise_()
     view.activateWindow()
+
+    if globalsDict is not None:
+        app.setupGlobals(globalsDict)
+        globalsDict.update(dict(view=view, app=app))
+
     app.start()
 
 
 if __name__ == '__main__':
-    main()
+    main(globals())

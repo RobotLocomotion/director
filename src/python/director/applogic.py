@@ -165,8 +165,19 @@ def findMenu(menuTitle, mainWindow=None):
     mainWindow = mainWindow or getMainWindow()
     menus = mainWindow.findChildren('QMenu')
     for menu in menus:
-        if menu.title == menuTitle:
+        title = str(menu.title)
+        if title.startswith('&'):
+            title = title[1:]
+        if title == menuTitle:
             return menu
+
+
+def findToolBar(title, mainWindow=None):
+    mainWindow = mainWindow or getMainWindow()
+    bars = mainWindow.findChildren('QToolBar')
+    for bar in bars:
+        if title == str(bar.windowTitle):
+            return bar
 
 
 def addMenuAction(menuTitle, actionName):
@@ -200,17 +211,17 @@ def updateToggleTerrainAction(view):
     getToolBarActions()['ActionToggleCameraTerrainMode'].checked = isTerrainMode
 
 
-class MenuActionToggleHelper(object):
+class ActionToggleHelper(object):
     '''
-    This class manages a checkable menu action and  forwards checked events
+    This class manages a checkable action and forwards checked events
     to user selected callbacks.
     '''
 
-    def __init__(self, menuName, actionName, getEnabledFunc, setEnabledFunc):
+    def __init__(self, action, getEnabledFunc, setEnabledFunc):
         self.getEnabled = getEnabledFunc
         self.setEnabled = setEnabledFunc
 
-        self.action = addMenuAction(menuName, actionName)
+        self.action = action
         self.action.setCheckable(True)
         self.action.checked = getEnabledFunc()
         self.action.connect('triggered()', self.onActionChanged)
@@ -224,6 +235,13 @@ class MenuActionToggleHelper(object):
         else:
             self.setEnabled(False)
         self.updateAction()
+
+
+class MenuActionToggleHelper(ActionToggleHelper):
+
+    def __init__(self, menuName, actionName, getEnabledFunc, setEnabledFunc):
+        action = addMenuAction(menuName, actionName)
+        ActionToggleHelper.__init__(self, action, getEnabledFunc, setEnabledFunc)
 
 
 def onCurrentViewChanged(previousView, currentView):

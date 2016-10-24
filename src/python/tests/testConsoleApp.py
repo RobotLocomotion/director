@@ -1,4 +1,4 @@
 from director import consoleapp
 
-consoleapp.main()
+consoleapp.main(globals())
 
