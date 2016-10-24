@@ -256,6 +256,11 @@ if(NOT USE_SYSTEM_VTK)
   set(vtk_args -DVTK_DIR:PATH=${install_prefix}/lib/vtk-5.10)
   set(vtk_depends vtk)
 else()
+  # Verifies that the system has VTK5.
+  find_package(VTK REQUIRED)
+  if (NOT ${VTK_VERSION_MAJOR} EQUAL 5)
+    message(FATAL_ERROR "System does not have VTK5. It has version ${VTK_VERSION}.")
+  endif()
 
   set(vtk_homebrew_dir /usr/local/opt/vtk5/lib/vtk-5.10)
   if (APPLE AND IS_DIRECTORY ${vtk_homebrew_dir})
