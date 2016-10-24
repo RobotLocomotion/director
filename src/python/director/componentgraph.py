@@ -95,11 +95,22 @@ class ComponentFactory(object):
                 for dep in dependencies:
                     setattr(options, self._toOptionName(dep), True)
 
+    def _verifyOptions(self, options):
+
+        for name, enabled in options:
+
+            if enabled:
+                name = self._toComponentName(name)
+                dependencies = self.componentGraph.getComponentDependencies(name)
+                for dep in dependencies:
+                    if not getattr(options, self._toOptionName(dep)):
+                        raise Exception('Component %s depends on component %s, but %s is disabled.' % (name, dep, dep))
+
 
     def construct(self, options=None, **kwargs):
 
         options = options or self.getDefaultOptions()
-        fields = FieldContainer(options=options, **kwargs)
+        self._verifyOptions(options)
 
         componentGraph = self.componentGraph
 
