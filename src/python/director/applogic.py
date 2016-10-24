@@ -172,6 +172,14 @@ def findMenu(menuTitle, mainWindow=None):
             return menu
 
 
+def findToolBar(title, mainWindow=None):
+    mainWindow = mainWindow or getMainWindow()
+    bars = mainWindow.findChildren('QToolBar')
+    for bar in bars:
+        if title == str(bar.windowTitle):
+            return bar
+
+
 def addMenuAction(menuTitle, actionName):
     menu = findMenu(menuTitle)
     assert menu
