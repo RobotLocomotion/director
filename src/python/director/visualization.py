@@ -1110,10 +1110,10 @@ def pickPoint(displayPoint, view, obj=None, pickType='points', tolerance=0.01, r
           if normals:
               pickedNormal = np.array(normals.GetTuple3(pointId))
 
-    if pickedDataset and pickType == 'cells':
-        print 'point id:', pickedDataset.GetCell(picker.GetCellId()).GetPointIds().GetId(picker.GetSubId())
-    if pickType == 'points':
-        print 'point id:', picker.GetPointId()
+    #if pickedDataset and pickType == 'cells':
+    #    print 'point id:', pickedDataset.GetCell(picker.GetCellId()).GetPointIds().GetId(picker.GetSubId())
+    #if pickType == 'points':
+    #    print 'point id:', picker.GetPointId()
 
     if obj:
         if returnNormal:
