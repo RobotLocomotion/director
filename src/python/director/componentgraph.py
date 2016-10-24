@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from director.fieldcontainer import FieldContainer
 from director.thirdparty.toposort import toposort_flatten
 
@@ -78,6 +79,12 @@ class ComponentFactory(object):
     def _toOptionName(self, componentName):
         return 'use' + componentName
 
+    def _joinFields(self, fieldsList):
+        f = FieldContainer()
+        for fields in fieldsList:
+            f._add_fields(**dict(fields))
+        return f
+
     def setDependentOptions(self, options, **kwargs):
 
         # verify the given args exist in the options fields
@@ -122,12 +129,28 @@ class ComponentFactory(object):
 
         initOrder = toposort_flatten(componentGraph._graph)
 
+        componentFields = OrderedDict()
+        defaultFields = FieldContainer(options=options, **kwargs)
+
         for name in initOrder:
 
             initFunction = getattr(self, 'init'+name)
             isEnabled = getattr(options, 'use'+name)
 
             if isEnabled:
-                initFunction(fields)
+                dependencies = componentGraph.getComponentDependencies(name)
+                inputFields = self._joinFields([defaultFields] + [componentFields[dep] for dep in dependencies])
+                newFields = initFunction(inputFields)
 
+                if not newFields:
+                    newFields = FieldContainer()
+                componentFields[name] = newFields
+
+
+#        for componentName, componentFields in app.iteritems():
+#            print componentName, 'exports fields:'
+#            for name in componentFields._fields:
+#                print '  ', name
+
+        fields = self._joinFields([defaultFields] + componentFields.values())
         return fields
