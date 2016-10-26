@@ -20,8 +20,8 @@ install_patchelf()
   pushd  patchelf-0.8
   ./configure --prefix=$scriptDir/patchelf-install
   make install
-  rm -r patchelf-0.8 patchelf-0.8.tar.gz
   popd
+  rm -rf patchelf-0.8 patchelf-0.8.tar.gz
 }
 
 patchelfExe=$scriptDir/patchelf-install/bin/patchelf
@@ -31,6 +31,7 @@ if [ ! -f "$patchelfExe" ]; then
 fi
 
 cd $scriptDir
+echo 'running fixup_elf script'
 python fixup_elf.py $superbuildInstallDir $superbuildInstallDir/lib $patchelfExe
 
 cp -r $superbuildInstallDir director-install
