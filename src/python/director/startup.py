@@ -171,8 +171,9 @@ useKinect = False
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 
-if 'fixedBaseArm' in drcargs.getDirectorConfig()['userConfig']:
-    ikPlanner.fixedBaseArm = True
+if 'userConfig' in drcargs.getDirectorConfig():
+    if 'fixedBaseArm' in drcargs.getDirectorConfig()['userConfig']:
+        ikPlanner.fixedBaseArm = True
 
 if 'disableComponents' in drcargs.getDirectorConfig():
     for component in drcargs.getDirectorConfig()['disableComponents']:
