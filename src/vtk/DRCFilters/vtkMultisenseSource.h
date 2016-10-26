@@ -42,6 +42,9 @@ public:
   vtkGetVector2Macro(DistanceRange, double);
   vtkSetVector2Macro(DistanceRange, double);
 
+  vtkGetVector2Macro(HeightRange, double);
+  vtkSetVector2Macro(HeightRange, double);
+
   void SetEdgeAngleThreshold(double threshold);
   double GetEdgeAngleThreshold();
 
@@ -74,6 +77,7 @@ protected:
   virtual ~vtkMultisenseSource();
 
   double DistanceRange[2];
+  double HeightRange[2];
   double EdgeAngleThreshold;
 
 private:

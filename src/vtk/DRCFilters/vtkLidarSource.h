@@ -42,6 +42,9 @@ public:
   vtkGetVector2Macro(DistanceRange, double);
   vtkSetVector2Macro(DistanceRange, double);
 
+  vtkGetVector2Macro(HeightRange, double);
+  vtkSetVector2Macro(HeightRange, double);
+
   void SetEdgeAngleThreshold(double threshold);
   double GetEdgeAngleThreshold();
 
@@ -77,6 +80,7 @@ protected:
 
   double DistanceRange[2];
   double EdgeAngleThreshold;
+  double HeightRange[2];
 
 private:
   vtkLidarSource(const vtkLidarSource&);  // Not implemented.
