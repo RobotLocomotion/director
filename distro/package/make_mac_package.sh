@@ -11,6 +11,9 @@ if [ ! -d "$superbuildInstallDir" ]; then
   superbuildInstallDir=$scriptDir/../../../build/install
 fi
 
+versionString=$($superbuildInstallDir/bin/directorPython -c 'import director.version as ver; print ver.versionString()')
+packageName=director-$versionString-mac
+
 ######
 libDir=$bundleDir/Contents/MacOS/lib
 binDir=$bundleDir/Contents/MacOS/bin
@@ -35,9 +38,9 @@ python $scriptDir/fixup_mach_o.py $superbuildInstallDir $bundleDir $libDir
 rm $libDir/Python.framework/Versions/Current/lib/python2.7/site-packages
 
 cd $scriptDir
-mkdir director-install
-mv $bundleDir director-install
-cd director-install
+mkdir $packageName
+mv $bundleDir $packageName/
+cd $packageName
 ln -s $appName.app/Contents/MacOs/bin
 ln -s $appName.app/Contents/MacOs/lib
 ln -s $appName.app/Contents/MacOs/incude
@@ -47,4 +50,4 @@ ln -s $appName.app/Contents/MacOs/share
 #find $appName.app -name \*.h | xargs rm
 
 cd ..
-tar -czf director-install.tar.gz director-install
+tar -czf $packageName.tar.gz $packageName
