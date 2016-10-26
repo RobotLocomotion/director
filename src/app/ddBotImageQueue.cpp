@@ -742,6 +742,10 @@ QList<double> ddBotImageQueue::unprojectPixel(const QString& cameraName, int px,
 //-----------------------------------------------------------------------------
 QList<double> ddBotImageQueue::getCameraFrustumBounds(CameraData* cameraData)
 {
+  // Check whether transform exists and return to avoid segfault
+  if (!cameraData->mCamTrans)
+    return QList<double>();
+
   double width = bot_camtrans_get_image_width(cameraData->mCamTrans);
   double height = bot_camtrans_get_image_width(cameraData->mCamTrans);
   double ray[4][3];
