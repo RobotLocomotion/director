@@ -107,13 +107,26 @@ class Dependency(object):
         #commands.getoutput('chmod a-w "%s"' % filedest)
 
 
+def resolveDependencyName(dep, libraryDir):
+    if os.path.isfile(dep):
+        return dep
+
+
+    buildDir = os.path.realpath(sys.argv[1])
+
+    depInLibDir = os.path.join(buildDir, 'lib', dep)
+
+    print '  dep name is not file:', dep
+    print '  trying depInLibDir:', depInLibDir
+
+    if os.path.isfile(depInLibDir):
+        return depInLibDir
+
+    return dep
 
 def scan(packageDir, libraryDir, processed, excludedDeps, excludeFunc):
 
     files = findMachOFiles(packageDir)
-    #files = ['drake/systems/plants/joints/test/testDrakeJointsmex.mexmaci64']
-    #files = ['build/lib/QtOpenGL.framework/Versions/4/QtOpenGL']
-
 
     numCopied = 0
 
@@ -138,8 +151,10 @@ def scan(packageDir, libraryDir, processed, excludedDeps, excludeFunc):
 
         for dep in deps:
 
+            dep = resolveDependencyName(dep, libraryDir)
             if not os.path.isfile(dep):
                 print '  warning, skipping dependency not found:', dep
+                raise Exception()
                 continue
 
             if excludeFunc(dep):

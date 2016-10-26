@@ -5,17 +5,6 @@ set -xe
 scriptDir=$(cd $(dirname $0) && pwd)
 
 
-install_patchelf()
-{
-  cd $TRAVIS_BUILD_DIR
-  wget http://nixos.org/releases/patchelf/patchelf-0.8/patchelf-0.8.tar.gz
-  tar -zxf patchelf-0.8.tar.gz
-  pushd  patchelf-0.8
-  ./configure --prefix=$TRAVIS_BUILD_DIR/patchelf-install
-  make install
-  popd
-}
-
 make_docs()
 {
   cd $TRAVIS_BUILD_DIR/build/src/director-build
@@ -38,22 +27,15 @@ make_docs()
 
 make_linux_package()
 {
-  install_patchelf
-
   cd $TRAVIS_BUILD_DIR/distro/package
-  python fixup_elf.py $TRAVIS_BUILD_DIR/build/install $TRAVIS_BUILD_DIR/build/install/lib $TRAVIS_BUILD_DIR/patchelf-install/bin/patchelf
-
-  mv $TRAVIS_BUILD_DIR/build/install director-install
-  tar -czf director-install.tar.gz director-install
+  ./make_linux_package 2>&1 > log.txt || cat log.txt
   $scriptDir/copy_files.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
 }
 
 make_mac_package()
 {
   cd $TRAVIS_BUILD_DIR/distro/package
-  ./make_app_bundle.sh 2>&1 > log.txt || cat log.txt
-  find DirectorConsole.app -name \*.h | xargs rm
-  tar -czf DirectorConsole.tar.gz DirectorConsole.app
+  ./make_mac_package.sh 2>&1 > log.txt || cat log.txt
   $scriptDir/copy_files.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
 }
 
