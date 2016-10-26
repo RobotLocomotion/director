@@ -137,7 +137,6 @@ globals().update(dict(robotSystem))
 
 
 useIk = True
-useAtlasConvexHull = False
 useRobotState = True
 usePerception = True
 useGrid = True
@@ -167,6 +166,7 @@ useCOPMonitor = True
 useCourseModel = False
 useLimitJointsSentToPlanner = False
 useOpenniDepthImage = False
+useKinect = False
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -1049,12 +1049,10 @@ if useRandomWalk:
 if useCourseModel:
     courseModel = coursemodel.CourseModel()
 
-if 'useKuka' in drcargs.getDirectorConfig()['userConfig']:
+if useKinect:
     import kinectlcm
-    #kinectlcm.init()
     imageOverlayManager.viewName = "KINECT_RGB"
-    #ikPlanner.fixedBaseArm = True
-    #showImageOverlay()
+    kinectlcm.startButton()
 
 if 'startup' in drcargs.args():
     for filename in drcargs.args().startup:
