@@ -3,9 +3,13 @@
 scriptDir=$(cd $(dirname $0) && pwd)
 
 
-appName=DirectorConsole
+appName=Director
 bundleDir=$scriptDir/$appName.app
 superbuildInstallDir=$scriptDir/../../build/install
+
+if [ ! -d "$superbuildInstallDir" ]; then
+  superbuildInstallDir=$scriptDir/../../../build/install
+fi
 
 ######
 libDir=$bundleDir/Contents/MacOS/lib
@@ -15,7 +19,7 @@ sitePackagesDir=$libDir/python2.7/site-packages
 rm -rf $bundleDir
 cp -r $scriptDir/bundle_template.app $bundleDir
 
-cp -r $superbuildInstallDir/{bin,lib,include} $bundleDir/Contents/MacOS/
+cp -r $superbuildInstallDir/{bin,lib,include,share} $bundleDir/Contents/MacOS/
 cp /usr/local/bin/python $binDir/
 touch $binDir/qt.conf
 
@@ -29,3 +33,18 @@ python $scriptDir/fixup_mach_o.py $superbuildInstallDir $bundleDir $libDir
 
 # remove broken symlink to homebrew python site-packages
 rm $libDir/Python.framework/Versions/Current/lib/python2.7/site-packages
+
+cd $scriptDir
+mkdir director-install
+mv $bundleDir director-install
+cd director-install
+ln -s $appName.app/Contents/MacOs/bin
+ln -s $appName.app/Contents/MacOs/lib
+ln -s $appName.app/Contents/MacOs/incude
+ln -s $appName.app/Contents/MacOs/share
+
+# remove headers
+#find $appName.app -name \*.h | xargs rm
+
+cd ..
+tar -czf director-install.tar.gz director-install
