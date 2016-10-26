@@ -1,0 +1,12 @@
+#ifndef __ddVersion_h
+#define __ddVersion_h
+
+#define DD_VERSION "@DD_VERSION@"
+#define DD_VERSION_MAJOR @DD_VERSION_MAJOR@
+#define DD_VERSION_MINOR @DD_VERSION_MINOR@
+#define DD_VERSION_PATCH @DD_VERSION_PATCH@
+
+#define DD_GIT_BRANCH "@DD_VERSION_BRANCH@"
+#define DD_GIT_COMMIT_HASH "@DD_VERSION_COMMIT_HASH@"
+
+#endif

@@ -121,6 +121,7 @@ set(python_files
   director/utime.py
   director/uuidutil.py
   director/valvedemo.py
+  director/version.py.in
   director/viconvisualizer.py
   director/viewbehaviors.py
   director/viewcolors.py
@@ -177,15 +178,24 @@ set(copied_python_files)
 foreach(file ${python_files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
   set(tgt "${python_module_dir}/${file}")
-  set(copied_python_files ${copied_python_files} ${tgt})
   get_filename_component(tgtDir ${tgt} PATH)
-  file(MAKE_DIRECTORY ${tgtDir})
-  add_custom_command(DEPENDS ${src}
-                     COMMAND ${CMAKE_COMMAND} -E copy ${src} ${tgt}
-                     OUTPUT ${tgt}
-                     COMMENT "source copy")
-
+  get_filename_component(tgtExt ${tgt} EXT)
   get_filename_component(tgt_we ${tgt} NAME_WE)
+
+  file(MAKE_DIRECTORY ${tgtDir})
+
+  if(${tgtExt} STREQUAL ".py.in")
+    set(tgt "${tgtDir}/${tgt_we}.py")
+    configure_file(${src} ${tgt} @ONLY)
+  else()
+    add_custom_command(DEPENDS ${src}
+                       COMMAND ${CMAKE_COMMAND} -E copy ${src} ${tgt}
+                       OUTPUT ${tgt}
+                       COMMENT "source copy")
+  endif()
+
+
+  set(copied_python_files ${copied_python_files} ${tgt})
   get_filename_component(installDirSuffix ${file} PATH)
   install(FILES ${tgt} ${tgtDir}/${tgt_we}.pyc DESTINATION ${DD_INSTALL_PYTHON_DIR}/${installDirSuffix} COMPONENT Runtime)
 endforeach(file)

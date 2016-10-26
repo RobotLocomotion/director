@@ -1,0 +1,21 @@
+
+def versionString():
+    return '@DD_VERSION@'
+
+def versionTuple():
+    return (versionMajor(), versionMinor(), versionPatch())
+
+def versionMajor():
+    return @DD_VERSION_MAJOR@
+
+def versionMinor():
+    return @DD_VERSION_MINOR@
+
+def versionPatch():
+    return @DD_VERSION_PATCH@
+
+def branch():
+    return '@DD_VERSION_BRANCH@'
+
+def commitHash():
+    return '@DD_VERSION_COMMIT_HASH@'
