@@ -1,26 +1,14 @@
 import director.applogic as app
 from director import lcmUtils
-from director import transformUtils
 from director import visualization as vis
 from director import filterUtils
 from director import drcargs
 from director.shallowCopy import shallowCopy
 from director.timercallback import TimerCallback
-from director import vtkNumpy
 from director import objectmodel as om
 import director.vtkAll as vtk
-from director.debugVis import DebugData
-
 import PythonQt
 from PythonQt import QtCore, QtGui
-import bot_core as lcmbotcore
-import numpy as np
-from director.simpletimer import SimpleTimer
-from director import ioUtils
-import sys
-import drc as lcmdrc
-import multisense as lcmmultisense
-from director.consoleapp import ConsoleApp
 
 
 class KinectItem(om.ObjectModelItem):
@@ -41,7 +29,6 @@ class KinectItem(om.ObjectModelItem):
         #                 attributes=om.PropertyAttributes(decimals=0, minimum=1, maximum=20, singleStep=1, hidden=False))
         #self.addProperty('Alpha', model.alpha,
         #                 attributes=om.PropertyAttributes(decimals=2, minimum=0, maximum=1.0, singleStep=0.1, hidden=False))
-
         #self.addProperty('Color', QtGui.QColor(255,255,255))
         
     def _onPropertyChanged(self, propertySet, propertyName):
@@ -133,7 +120,7 @@ class KinectSource(TimerCallback):
 
         cameraToLocalFused = vtk.vtkTransform()
         self.queue.getTransform('KINECT_RGB', 'local', utime, cameraToLocalFused)
-        p = filterUtils.transformPolyData(p,cameraToLocalFused)
+        p = filterUtils.transformPolyData(p, cameraToLocalFused)
         self.polyDataObj.setPolyData(p)
 
         if not self.polyDataObj.initialized:
