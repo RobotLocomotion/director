@@ -10,16 +10,24 @@ set(_library_var_names)
 
 macro(find_drake_library varName name doc)
   find_library(${varName} ${name} HINTS ${_lib_dir_hint} DOC ${doc})
-  list(APPEND DRAKE_LIBRARIES ${${varName}})
   list(APPEND _library_var_names ${varName})
 endmacro()
 
 find_drake_library(DRAKE_RBM_LIBRARY drakeRBM "Drake RBM library")
+find_drake_library(DRAKE_COMMON_LIBRARY drakeCommon "Drake Common library")
 find_drake_library(DRAKE_JOINTS_LIBRARY drakeJoints "Drake Joints library")
 find_drake_library(DRAKE_SHAPES_LIBRARY drakeShapes "Drake Shapes library")
 find_drake_library(DRAKE_CHULL_LIBRARY drakeConvexHull "Drake Convex Hull library")
 find_drake_library(DRAKE_GEOMETRYUTIL_LIBRARY drakeGeometryUtil "Drake Geometry Util library")
 
+
+if(NOT DRAKE_COMMON_LIBRARY)
+  list(REMOVE_ITEM _library_var_names DRAKE_COMMON_LIBRARY)
+endif()
+
+foreach(varName ${_library_var_names})
+  list(APPEND DRAKE_LIBRARIES ${${varName}})
+endforeach()
 
 set(DRAKE_INCLUDE_DIRS
   ${DRAKE_INCLUDE_DIR}
