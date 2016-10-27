@@ -45,7 +45,7 @@ mv $bundleDir $packageName/
 cd $packageName
 ln -s $appName.app/Contents/MacOs/bin
 ln -s $appName.app/Contents/MacOs/lib
-ln -s $appName.app/Contents/MacOs/incude
+ln -s $appName.app/Contents/MacOs/inlcude
 ln -s $appName.app/Contents/MacOs/share
 
 # remove headers
