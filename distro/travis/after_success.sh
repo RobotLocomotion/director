@@ -28,7 +28,7 @@ make_docs()
 make_linux_package()
 {
   cd $TRAVIS_BUILD_DIR/distro/package
-  ./make_linux_package 2>&1 > log.txt || cat log.txt
+  ./make_linux_package.sh 2>&1 > log.txt || cat log.txt
   $scriptDir/copy_files.sh $TRAVIS_BUILD_DIR/distro/package/*.tar.gz
 }
 
