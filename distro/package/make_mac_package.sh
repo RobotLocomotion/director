@@ -30,6 +30,8 @@ mkdir -p $sitePackagesDir
 cp -r /usr/local/opt/vtk5/lib/python2.7/site-packages/vtk $sitePackagesDir/
 cp -r /usr/local/lib/python2.7/site-packages/numpy $sitePackagesDir/
 cp -r /usr/local/lib/python2.7/site-packages/scipy $sitePackagesDir/
+cp -r /usr/local/lib/python2.7/site-packages/yaml $sitePackagesDir/
+cp -r /usr/local/lib/python2.7/site-packages/lxml $sitePackagesDir/
 
 
 python $scriptDir/fixup_mach_o.py $superbuildInstallDir $bundleDir $libDir
