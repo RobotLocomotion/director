@@ -63,6 +63,7 @@ set(python_files
   director/korgnano.py
   director/lcmframe.py
   director/lcmloggerwidget.py
+  director/lcmlogplayer.py
   director/lcmgl.py
   director/lcmobjectcollection.py
   director/lcmoctomap.py
