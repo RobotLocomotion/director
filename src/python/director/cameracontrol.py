@@ -20,6 +20,31 @@ class OrbitController(TimerCallback):
         self.view.render()
 
 
+class CameraInterpolator(object):
+
+    def __init__(self, view):
+        self.view = view
+        self.reset()
+
+    def getViewCameraCopy(self):
+        camera = vtk.vtkCamera()
+        camera.DeepCopy(self.view.camera())
+        return camera
+
+    def reset(self):
+        self.interp = vtk.vtkCameraInterpolator()
+
+    def addCameraAtTime(self, camera, t):
+        self.interp.AddCamera(t, camera)
+
+    def addViewCameraAtTime(self, t):
+        self.addCameraAtTime(self.getViewCameraCopy(), t)
+
+    def setViewCameraAtTime(self, t):
+        self.interp.InterpolateCamera(t, self.view.camera())
+        self.view.render()
+
+
 class Flyer(TimerCallback):
 
     def __init__(self, view):
