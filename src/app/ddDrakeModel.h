@@ -11,7 +11,6 @@
 class vtkRenderer;
 class vtkTransform;
 class vtkPolyData;
-class RigidBodyTreed;
 
 class DD_APP_EXPORT ddDrakeModel : public QObject
 {
