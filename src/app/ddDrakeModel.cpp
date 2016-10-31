@@ -424,7 +424,7 @@ ddMeshVisual::Ptr makeBoxVisual(double x, double y, double z)
   return visualFromPolyData(shallowCopy(cube->GetOutput()));
 }
 
-class URDFRigidBodyTreeVTK : public RigidBodyTree
+class URDFRigidBodyTreeVTK : public RigidBodyTreed
 {
 public:
 
@@ -447,7 +447,7 @@ public:
   {
     this->dofMap.clear();
 
-    RigidBodyTree* model = this;
+    RigidBodyTreed* model = this;
 
     const RigidBody& worldBody = model->world();
     for (const RigidBody* body : model->FindModelInstanceBodies(
@@ -588,7 +588,7 @@ public:
   void loadVisuals(const QString& rootDir=".")
   {
 
-    RigidBodyTree* model = this;
+    RigidBodyTreed* model = this;
 
     for (const RigidBody* body : model->FindModelInstanceBodies(
              model->world().get_model_instance_id())) {
@@ -668,7 +668,7 @@ public:
 
   virtual void updateModel()
   {
-    RigidBodyTree* model = this;
+    RigidBodyTreed* model = this;
 
     for (const RigidBody* body : model->FindModelInstanceBodies(
              model->world().get_model_instance_id())) {
@@ -699,7 +699,7 @@ public:
     QMap<QString, int> linkMap;
 
 
-    RigidBodyTree* model = this;
+    RigidBodyTreed* model = this;
 
     for (const RigidBody* body : model->FindModelInstanceBodies(
              model->world().get_model_instance_id())) {
@@ -796,7 +796,7 @@ ddDrakeModel::~ddDrakeModel()
 }
 
 //-----------------------------------------------------------------------------
-const ddSharedPtr<RigidBodyTree> ddDrakeModel::getDrakeRBM() const
+const ddSharedPtr<RigidBodyTreed> ddDrakeModel::getDrakeRBM() const
 {
   return this->Internal->Model;
 }
