@@ -11,6 +11,7 @@
 class vtkRenderer;
 class vtkTransform;
 class vtkPolyData;
+class RigidBodyTree;
 
 class DD_APP_EXPORT ddDrakeModel : public QObject
 {
@@ -25,7 +26,7 @@ public:
   bool loadFromXML(const QString& xmlString);
   const QString& filename() const;
 
-  const ddSharedPtr<RigidBodyTreed> getDrakeRBM() const;
+  const ddSharedPtr<RigidBodyTree> getDrakeRBM() const;
   const ddSharedPtr<KinematicsCache<double> > getKinematicsCache() const;
 
   void addToRenderer(vtkRenderer* renderer);
