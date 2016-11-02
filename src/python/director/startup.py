@@ -1053,7 +1053,7 @@ if useCourseModel:
 if useKinect:
     import kinectlcm
     imageOverlayManager.viewName = "KINECT_RGB"
-    kinectlcm.startButton()
+    #kinectlcm.startButton()
 
 if 'startup' in drcargs.args():
     for filename in drcargs.args().startup:
