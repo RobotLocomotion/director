@@ -5,7 +5,7 @@ import numpy as np
 from director.timercallback import TimerCallback
 from director.simpletimer import SimpleTimer
 from director.debugVis import DebugData
-from director import robotstate
+from director import planplayback
 import director.visualization as vis
 import director.vtkAll as vtk
 import scipy.interpolate
@@ -270,11 +270,11 @@ class PlaybackPanel(object):
 
 
     def isPlanFeasible(self):
-        plan = robotstate.asRobotPlan(self.plan)
+        plan = planplayback.asRobotPlan(self.plan)
         return plan is not None and (max(plan.plan_info) < 10 and min(plan.plan_info) >= 0)
 
     def getPlanInfo(self, plan):
-        plan = robotstate.asRobotPlan(self.plan)
+        plan = planplayback.asRobotPlan(self.plan)
         return max(plan.plan_info)
 
 
