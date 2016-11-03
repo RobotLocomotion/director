@@ -67,8 +67,7 @@ class PlanPlayback(object):
 
 
     def playPlan(self, msg, jointController):
-
-        self.playPlans(poseTimes, [msg], jointController)
+        self.playPlans([msg], jointController)
 
 
     def playPlans(self, messages, jointController):
