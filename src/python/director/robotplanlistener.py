@@ -11,8 +11,12 @@ from director import objectmodel as om
 from director.utime import getUtime
 from director import robotstate
 
-import drc as lcmdrc
-
+try:
+    import robotlocomotion as lcmrl
+    USE_DRC_MESSAGES = False
+except ImportError:
+    import drc as lcmdrc
+    USE_DRC_MESSAGES = True
 
 
 class ManipulationPlanItem(om.ObjectModelItem):
@@ -26,8 +30,13 @@ class ManipulationPlanDriver(object):
     USE_SUPPORTS = 'USE_SUPPORTS'
 
     def __init__(self, ikPlanner):
-        lcmUtils.addSubscriber('CANDIDATE_MANIP_PLAN', lcmdrc.robot_plan_w_keyframes_t, self.onManipPlan)
-        lcmUtils.addSubscriber('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS',lcmdrc.robot_plan_with_supports_t, self.onManipPlan)
+
+        if USE_DRC_MESSAGES:
+            lcmUtils.addSubscriber('CANDIDATE_MANIP_PLAN', lcmdrc.robot_plan_w_keyframes_t, self.onManipPlan)
+            lcmUtils.addSubscriber('CANDIDATE_ROBOT_PLAN_WITH_SUPPORTS',lcmdrc.robot_plan_with_supports_t, self.onManipPlan)
+        else:
+            lcmUtils.addSubscriber('CANDIDATE_MANIP_PLAN', lcmrl.robot_plan_t, self.onManipPlan)
+
         self.lastManipPlan = None
         self.committedPlans = []
         self.callbacks = callbacks.CallbackRegistry([self.PLAN_RECEIVED,
@@ -206,15 +215,18 @@ class ManipulationPlanDriver(object):
 
         self.committedPlans.append(manipPlan)
 
-        if isinstance(manipPlan, lcmdrc.robot_plan_w_keyframes_t):
-            manipPlan = self.convertKeyframePlan(manipPlan)
-            supports = self.getSupports()
-            if supports is not None:
-                manipPlan = self.convertPlanToPlanWithSupports(manipPlan, supports, [0.0],
-                                                               self.plansWithSupportsAreQuasistatic)
+        channelMap = {}
+
+        if USE_DRC_MESSAGES:
+            channelMap[lcmdrc.robot_plan_with_supports_t] = 'COMMITTED_ROBOT_PLAN_WITH_SUPPORTS'
+            if isinstance(manipPlan, lcmdrc.robot_plan_w_keyframes_t):
+                manipPlan = self.convertKeyframePlan(manipPlan)
+                supports = self.getSupports()
+                if supports is not None:
+                    manipPlan = self.convertPlanToPlanWithSupports(manipPlan, supports, [0.0],
+                                                                   self.plansWithSupportsAreQuasistatic)
         manipPlan.utime = getUtime()
 
-        channelMap = {lcmdrc.robot_plan_with_supports_t:'COMMITTED_ROBOT_PLAN_WITH_SUPPORTS'}
         defaultChannel = 'COMMITTED_ROBOT_PLAN'
         channel = channelMap.get(type(manipPlan), defaultChannel)
         lcmUtils.publish(channel, manipPlan)
