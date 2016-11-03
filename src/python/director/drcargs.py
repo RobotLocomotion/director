@@ -161,7 +161,8 @@ class DirectorConfig(object):
         self.dirname = os.path.dirname(os.path.abspath(filename))
         self.config = json.load(open(filename))
 
-        self.config['fixedPointFile'] = os.path.join(self.dirname, self.config['fixedPointFile'])
+        if self.config.get('fixedPointFile'):
+            self.config['fixedPointFile'] = os.path.join(self.dirname, self.config['fixedPointFile'])
 
         self.urdfConfig = self.config['urdfConfig']
         for key, urdf in list(self.urdfConfig.items()):
