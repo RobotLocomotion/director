@@ -2,6 +2,7 @@ import os
 import json
 from collections import OrderedDict
 import numpy as np
+import scipy.interpolate
 
 from director import ikconstraints
 from director import ikconstraintencoder
@@ -14,8 +15,15 @@ from director.simpletimer import FPSCounter
 from director import vtkAll as vtk
 from director import transformUtils
 
+from director import lcmUtils
+
 import pydrake
 import pydrake.solvers.ik as pydrakeik
+
+try:
+    from robotlocomotion import robot_plan_t
+except ImportError:
+    from drc import robot_plan_t
 
 
 class PyDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
@@ -66,6 +74,33 @@ class PyDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
 
         return fields
 
+    def makePlanMessage(self, poses, poseTimes, info, fields):
+
+        from director import robotstate
+
+        # rescale poseTimes
+        poseTimes = np.array(poseTimes)*2.0
+
+        states = [robotstate.drakePoseToRobotState(pose) for pose in poses]
+        for i, state in enumerate(states):
+            state.utime = poseTimes[i]*1e6
+
+        msg = robot_plan_t()
+        msg.utime = fields.utime
+        msg.robot_name = 'robot'
+        msg.num_states = len(states)
+        msg.plan = states
+        msg.plan_info = [info]*len(states)
+        msg.num_bytes = 0
+        msg.matlab_data = []
+        msg.num_grasp_transitions = 0
+        msg.left_arm_control_type = msg.NONE
+        msg.right_arm_control_type = msg.NONE
+        msg.left_leg_control_type = msg.NONE
+        msg.right_leg_control_type = msg.NONE
+
+        return msg
+
     def processIK(self, constraints, ikParameters, positionCosts, nominalPoseName="", seedPoseName=""):
 
         fields = self.setupFields(constraints, ikParameters, positionCosts, nominalPoseName, seedPoseName)
@@ -78,7 +113,9 @@ class PyDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
 
         fields = self.setupFields(constraints, ikParameters, positionCosts, nominalPoseName, seedPoseName, endPoseName)
         fields = self.testEncodeDecode(fields)
-        plan, info = self.ikServer.runIkTraj(fields)
+        poses, poseTimes, info = self.ikServer.runIkTraj(fields)
+        plan = self.makePlanMessage(poses, poseTimes, info, fields)
+        lcmUtils.publish('CANDIDATE_MANIP_PLAN', plan)
         return plan, info
 
 
@@ -171,9 +208,11 @@ class PyDrakeIkServer(object):
 
         urdfString = open(urdfFile, 'r').read()
 
+        baseDir = str(os.path.dirname(urdfFile))
+
         rigidBodyTree = pydrake.rbtree.RigidBodyTree()
-        rigidBodyTree.addRobotFromURDFString(urdfString, packageMap)
-        return  rigidBodyTree
+        rigidBodyTree.addRobotFromURDFString(urdfString, packageMap, baseDir)
+        return rigidBodyTree
 
     def makeIkOptions(self, fields):
 
@@ -356,8 +395,6 @@ class PyDrakeIkServer(object):
         q_seed = np.asarray(fields.poses[fields.seedPose], dtype=float)
 
 
-
-
         if rbt is RigidBodyTreeCompatOld:
             results = pydrakeik.inverseKinSimple(self.rigidBodyTree, q_seed, q_nom, constraints, ikoptions)
             q_end = results.q_sol
@@ -383,14 +420,27 @@ class PyDrakeIkServer(object):
 
         q_nom = np.asarray(fields.poses[fields.nominalPose])
         q_seed = np.asarray(fields.poses[fields.seedPose])
+        q_seed_end = np.asarray(fields.poses[fields.endPose])
 
         q_nom_array = np.tile(q_nom, (len(timeSamples), 1)).transpose()
 
-        # todo
-        # q_seed_array should be interpolated from startPose (seedPose) to endPose
-        q_seed_array = np.tile(q_seed, (len(timeSamples), 1)).transpose()
+        values = np.vstack((q_seed, q_seed_end))
+        timeRange = [timeSamples[0], timeSamples[-1]]
 
-        results = pydrakeik.InverseKinTraj(self.rigidBodyTree, timeSamples, q_seed, q_nom, constraints, ikoptions)
+        #q_seed_array = scipy.interpolate.interp1d(timeRange, values, axis=0, kind='slinear')(timeSamples).transpose()
+        q_seed_array = scipy.interpolate.pchip(timeRange, values, axis=0)(timeSamples).transpose()
+
+        assert q_seed_array.shape == (len(q_nom), len(timeSamples))
+        #print 'time range:', timeRange
+        #print 'time samples:', timeSamples
+        #print 'q_seed:', q_seed
+        #print 'q_seed_end:', q_seed_end
+        #print 'q_seed_array:', q_seed_array
+        #print 'q_nom_array:', q_nom_array
+
+        results = pydrakeik.InverseKinTraj(self.rigidBodyTree, timeSamples, q_seed_array, q_nom_array, constraints, ikoptions)
+
+        assert len(results.q_sol) == len(timeSamples)
 
         poses = []
         for i in xrange(len(results.q_sol)):
@@ -400,4 +450,30 @@ class PyDrakeIkServer(object):
 
         info = results.info[0]
 
-        return poses, info
+
+        if fields.options.usePointwise:
+            numPointwiseSamples = 20
+            pointwiseTimeSamples = np.linspace(timeRange[0], timeRange[1], numPointwiseSamples)
+            #q_seed_array = scipy.interpolate.interp1d(timeSamples, np.array(poses), axis=0, kind='slinear')(pointwiseTimeSamples).transpose()
+            q_seed_array = scipy.interpolate.pchip(timeSamples, np.array(poses), axis=0)(pointwiseTimeSamples).transpose()
+
+            assert q_seed_array.shape == (len(q_nom), numPointwiseSamples)
+
+            results = pydrakeik.InverseKinPointwise(self.rigidBodyTree, pointwiseTimeSamples, q_seed_array, q_seed_array, constraints, ikoptions)
+
+
+            assert len(results.q_sol) == len(pointwiseTimeSamples)
+
+            print 'pointwise info len:', len(results.info)
+
+            poses = []
+            for i in xrange(len(results.q_sol)):
+                q = results.q_sol[i]
+                q.shape = q.shape[0]
+                poses.append(q)
+
+            info = results.info[0]
+            timeSamples = pointwiseTimeSamples
+
+
+        return poses, timeSamples, info
