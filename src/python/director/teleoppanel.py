@@ -963,7 +963,12 @@ class GeneralEndEffectorTeleopPanel(object):
         startPose = self.teleopPanel.planningUtils.getPlanningStartPose()
         self.ikPlanner.addPose(startPose, startPoseName)
 
-        plan = self.constraintSet.runIkTraj()
+        goalMode = ikplanner.getIkOptions().getProperty('Goal planning mode')
+        if goalMode == 1:
+            plan = self.constraintSet.runIkTraj()
+        else:
+            plan = self.constraintSet.planEndPoseGoal()
+
         self.teleopPanel.showPlan(plan)
 
     def endIk(self):
@@ -1012,7 +1017,7 @@ class GeneralEndEffectorTeleopPanel(object):
             app.displaySnoptInfo(info)
 
         goalFrame.connectFrameModified(onGoalFrameModified)
-        onGoalFrameModified()
+        onGoalFrameModified(goalFrame)
 
         folder = EndEffectorTeleopPanel.getConstraintFolder()
         for i, constraint in enumerate(constraints):

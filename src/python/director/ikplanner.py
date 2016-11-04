@@ -24,7 +24,6 @@ from director import drcargs
 from director import ikconstraints
 from director.ikparameters import IkParameters
 
-import drc as lcmdrc
 import bot_core as lcmbotcore
 import json
 
@@ -1420,11 +1419,13 @@ class IKPlanner(object):
         return constraintSet.runIkTraj(ikParameters=ikParameters)
 
     def getManipPlanListener(self):
+        import drc as lcmdrc
         responseChannel = 'CANDIDATE_MANIP_PLAN'
         responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
         return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
 
     def getManipIKListener(self):
+        import drc as lcmdrc
         responseChannel = 'CANDIDATE_MANIP_IKPLAN'
         responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
         return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
