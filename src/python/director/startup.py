@@ -167,6 +167,7 @@ useCourseModel = False
 useLimitJointsSentToPlanner = False
 useOpenniDepthImage = False
 useKinect = False
+useFeetlessRobot = False
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -1054,6 +1055,9 @@ if useKinect:
     import kinectlcm
     imageOverlayManager.viewName = "KINECT_RGB"
     #kinectlcm.startButton()
+
+if useFeetlessRobot:
+    ikPlanner.robotNoFeet = True
 
 if 'startup' in drcargs.args():
     for filename in drcargs.args().startup:

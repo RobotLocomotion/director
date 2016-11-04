@@ -756,9 +756,7 @@ class IKPlanner(object):
 
 
     def createMovingBodyConstraints(self, startPoseName, lockBase=False, lockBack=False, lockLeftArm=False, lockRightArm=False):
-
-        if (self.fixedBaseArm==False):
-
+        if not self.fixedBaseArm and not self.robotNoFeet:
             constraints = []
             if self.useQuasiStaticConstraint:
                 constraints.append(self.createQuasiStaticConstraint())
@@ -770,6 +768,7 @@ class IKPlanner(object):
             else:
                 constraints.append(self.createMovingBackPostureConstraint())
 
+        if not self.fixedBaseArm:
             if lockBase:
                 constraints.append(self.createLockedBasePostureConstraint(startPoseName))
             else:
@@ -781,7 +780,7 @@ class IKPlanner(object):
             if lockRightArm:
                 constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
 
-        else: # Remove all except the fixed base constraint if you only have an arm:
+        if self.fixedBaseArm: # Remove all except the fixed base constraint if you only have an arm:
             constraints = []
             constraints.append(self.createLockedBasePostureConstraint(startPoseName))
 
