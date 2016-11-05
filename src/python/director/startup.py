@@ -148,6 +148,7 @@ useHumanoidDRCDemos = True
 useAtlasDriver = True
 useLCMGL = True
 useOctomap = True
+useCollections = True
 useLightColorScheme = True
 useLoggingWidget = True
 useDrakeVisualizer = True
@@ -165,9 +166,12 @@ useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
 useLimitJointsSentToPlanner = False
-useOpenniDepthImage = False
-useKinect = False
 useFeetlessRobot = False
+
+# Sensor Flags
+useKinect = False
+useMultisense = True
+useOpenniDepthImage = False
 
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
@@ -192,7 +196,6 @@ if useSpreadsheet:
 
 
 if useIk:
-
     def onIkStartup(ikServer, startSuccess):
         if startSuccess:
             app.getMainWindow().statusBar().showMessage('Planning server started.', 2000)
@@ -209,17 +212,23 @@ if useIk:
 if useAtlasDriver:
     atlasdriver.systemStatus.outputConsole = app.getOutputConsole()
     atlasdriverpanel.init(atlasDriver)
+else:
+    app.removeToolbarMacro('ActionAtlasDriverPanel')
 
 
 if usePerception:
-
     segmentationpanel.init()
     cameraview.init()
     colorize.init()
 
     cameraview.cameraView.initImageRotations(robotStateModel)
     cameraview.cameraView.rayCallback = segmentation.extractPointsAlongClickRay
-    multisensepanel.init(perception.multisenseDriver)
+
+    if useMultisense:
+        multisensepanel.init(perception.multisenseDriver)
+    else:
+        app.removeToolbarMacro('ActionMultisensePanel')
+
     sensordatarequestpanel.init()
 
     # for kintinuous, use 'CAMERA_FUSED', 'CAMERA_TSDF'
@@ -253,10 +262,14 @@ if not useLightColorScheme:
 
 if useHands:
     handcontrolpanel.init(lHandDriver, rHandDriver, robotStateModel, robotStateJointController, view)
+else:
+    app.removeToolbarMacro('ActionHandControlPanel')
 
 
 if useFootsteps:
     footstepsPanel = footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController, irisDriver)
+else:
+    app.removeToolbarMacro('ActionFootstepPanel')
 
 
 if useLCMGL:
@@ -267,7 +280,6 @@ if useOctomap:
     octomapManager = lcmoctomap.init(view)
     app.MenuActionToggleHelper('Tools', 'Renderer - Octomap', octomapManager.isEnabled, octomapManager.setEnabled)
 
-useCollections = True
 if useCollections:
     collectionsManager = lcmcollections.init(view)
     app.MenuActionToggleHelper('Tools', 'Renderer - Collections', collectionsManager.isEnabled, collectionsManager.setEnabled)
@@ -283,7 +295,6 @@ if useNavigationPanel:
     #picker.start()
 
 if usePlanning:
-
     def showPose(pose):
         playbackRobotModel.setProperty('Visible', True)
         playbackJointController.setPose('show_pose', pose)
@@ -319,20 +330,19 @@ if usePlanning:
         ''' Move the robot back to a safe posture, 1m above its feet, w/o moving the hands '''
         ikPlanner.computeHomeNominalPlan(robotStateJointController.q, footstepsDriver.getFeetMidPoint(robotStateModel), 1.0167)
 
+    if useMultisense:
+        def fitDrillMultisense():
+            pd = om.findObjectByName('Multisense').model.revPolyData
+            om.removeFromObjectModel(om.findObjectByName('debug'))
+            segmentation.findAndFitDrillBarrel(pd)
 
-    def fitDrillMultisense():
-        pd = om.findObjectByName('Multisense').model.revPolyData
-        om.removeFromObjectModel(om.findObjectByName('debug'))
-        segmentation.findAndFitDrillBarrel(pd)
-
-    def refitBlocks(autoApprove=True):
-        polyData = om.findObjectByName('Multisense').model.revPolyData
-        segmentation.updateBlockAffordances(polyData)
-        if autoApprove:
-            approveRefit()
+        def refitBlocks(autoApprove=True):
+            polyData = om.findObjectByName('Multisense').model.revPolyData
+            segmentation.updateBlockAffordances(polyData)
+            if autoApprove:
+                approveRefit()
 
     def approveRefit():
-
         for obj in om.getObjects():
             if isinstance(obj, segmentation.BlockAffordanceItem):
                 if 'refit' in obj.getProperty('Name'):
@@ -346,7 +356,6 @@ if usePlanning:
 
 
     def sendDataRequest(requestType, repeatTime=0.0):
-
       msg = lcmmaps.data_request_t()
       msg.type = requestType
       msg.period = int(repeatTime*10) # period is specified in tenths of a second
@@ -403,17 +412,19 @@ if usePlanning:
     jointLimitChecker.setupMenuAction()
     jointLimitChecker.start()
 
-    spindleSpinChecker =  multisensepanel.SpindleSpinChecker(spindleMonitor)
-    spindleSpinChecker.setupMenuAction()
+    if useMultisense:
+        spindleSpinChecker =  multisensepanel.SpindleSpinChecker(spindleMonitor)
+        spindleSpinChecker.setupMenuAction()
 
     postureShortcuts = teleoppanel.PosturePlanShortcuts(robotStateJointController, ikPlanner, planningUtils)
 
 
-    def drillTrackerOn():
-        om.findObjectByName('Multisense').model.showRevolutionCallback = fitDrillMultisense
+    if useMultisense:
+        def drillTrackerOn():
+            om.findObjectByName('Multisense').model.showRevolutionCallback = fitDrillMultisense
 
-    def drillTrackerOff():
-        om.findObjectByName('Multisense').model.showRevolutionCallback = None
+        def drillTrackerOff():
+            om.findObjectByName('Multisense').model.showRevolutionCallback = None
 
     def fitPosts():
         segmentation.fitVerticalPosts(segmentation.getCurrentRevolutionData())
