@@ -259,6 +259,8 @@ if not useLightColorScheme:
 
 if useHands:
     handcontrolpanel.init(lHandDriver, rHandDriver, robotStateModel, robotStateJointController, view)
+else:
+    app.removeToolbarMacro('ActionHandControlPanel')
 
 
 if useFootsteps:
