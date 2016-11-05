@@ -148,6 +148,7 @@ useHumanoidDRCDemos = True
 useAtlasDriver = True
 useLCMGL = True
 useOctomap = True
+useCollections = True
 useLightColorScheme = True
 useLoggingWidget = True
 useDrakeVisualizer = True
@@ -275,7 +276,6 @@ if useOctomap:
     octomapManager = lcmoctomap.init(view)
     app.MenuActionToggleHelper('Tools', 'Renderer - Octomap', octomapManager.isEnabled, octomapManager.setEnabled)
 
-useCollections = True
 if useCollections:
     collectionsManager = lcmcollections.init(view)
     app.MenuActionToggleHelper('Tools', 'Renderer - Collections', collectionsManager.isEnabled, collectionsManager.setEnabled)
@@ -291,7 +291,6 @@ if useNavigationPanel:
     #picker.start()
 
 if usePlanning:
-
     def showPose(pose):
         playbackRobotModel.setProperty('Visible', True)
         playbackJointController.setPose('show_pose', pose)
