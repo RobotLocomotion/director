@@ -13,6 +13,7 @@ int ddBotImageQueue::projectPoints(const QString&, vtkPolyData*);
 int ddBotImageQueue::getTransform(const QString&, const QString&, qint64, vtkTransform*);
 int ddBotImageQueue::getTransform(const QString&, const QString&, vtkTransform*);
 QStringList ddBotImageQueue::getBotFrameNames() const;
+QStringList ddBotImageQueue::getCameraNames() const;
 bool ddBotImageQueue::addCameraStream(const QString&);
 bool ddBotImageQueue::addCameraStream(const QString&, const QString&, int);
 QList<double> ddBotImageQueue::getCameraFrustumBounds(const QString&);

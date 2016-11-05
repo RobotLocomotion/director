@@ -124,6 +124,7 @@ public:
   int getTransform(const QString& fromFrame, const QString& toFrame, vtkTransform* transform);
 
   QStringList getBotFrameNames() const;
+  QStringList getCameraNames() const;
 
 protected slots:
 
