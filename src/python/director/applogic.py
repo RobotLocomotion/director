@@ -249,10 +249,15 @@ def onCurrentViewChanged(previousView, currentView):
 
 
 def addToolbarMacro(name, func):
-
     toolbar = getMainWindow().macrosToolBar()
     action = toolbar.addAction(name)
     action.connect('triggered()', func)
+
+
+def removeToolbarMacro(name):
+    action = getToolBarActions()[name]
+    if action:
+        getMainWindow().panelToolBar().removeAction(action)
 
 
 def addShortcut(widget, keySequence, func):
