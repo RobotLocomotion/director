@@ -89,7 +89,6 @@ def sendFOVRequest(channel, imagePoints):
 
 
 def testColorize():
-
     radius = 10
     resolution = 400
     s = makeSphere(radius, resolution)
@@ -717,7 +716,6 @@ views = {}
 
 
 def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
-
     cameraName = cameraName or channel
     imageManager.queue.addCameraStream(channel, cameraName, imageType)
     imageManager.addImage(cameraName)
@@ -854,19 +852,30 @@ class KintinuousMapping(object):
 
 
 def init():
-
     global imageManager
     imageManager = ImageManager()
 
     global cameraView
     cameraView = CameraView(imageManager)
 
-    addCameraView('CAMERA_LEFT', 'Head camera')
-    #import bot_core as lcmbotcore
-    #addCameraView('CAMERA', 'Head camera right', 'CAMERA_RIGHT', lcmbotcore.images_t.RIGHT)
-    #addCameraView('CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmbotcore.images_t.DISPARITY_ZIPPED)
-    addCameraView('CAMERACHEST_LEFT', 'Chest left')
-    addCameraView('CAMERACHEST_RIGHT', 'Chest right')
-    addCameraView('CAMERALHAND')
-    addCameraView('CAMERARHAND')
-    addCameraView('KINECT_RGB', 'Kinect RGB')
+    if "modelName" in drcargs.getDirectorConfig():
+        _modelName = drcargs.getDirectorConfig()['modelName']
+        cameraNames = imageManager.queue.getCameraNames()
+
+        if "CAMERA_LEFT" in cameraNames:
+            addCameraView('CAMERA_LEFT', 'Head camera')
+
+        #import bot_core as lcmbotcore
+        #addCameraView('CAMERA', 'Head camera right', 'CAMERA_RIGHT', lcmbotcore.images_t.RIGHT)
+        #addCameraView('CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmbotcore.images_t.DISPARITY_ZIPPED)
+
+        if "atlas" in _modelName or "valkyrie" in _modelName:
+            addCameraView('CAMERACHEST_LEFT', 'Chest left')
+            addCameraView('CAMERACHEST_RIGHT', 'Chest right')
+
+        if "atlas" in drcargs.getDirectorConfig()['modelName']:
+            addCameraView('CAMERALHAND', 'Hand left')
+            addCameraView('CAMERARHAND', 'Hand right')
+
+        if "KINECT_RGB" in cameraNames:
+            addCameraView('KINECT_RGB', 'Kinect RGB')
