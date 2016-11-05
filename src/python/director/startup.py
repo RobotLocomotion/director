@@ -268,6 +268,8 @@ else:
 
 if useFootsteps:
     footstepsPanel = footstepsdriverpanel.init(footstepsDriver, robotStateModel, robotStateJointController, irisDriver)
+else:
+    app.removeToolbarMacro('ActionFootstepPanel')
 
 
 if useLCMGL:
