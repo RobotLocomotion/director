@@ -67,26 +67,43 @@ void ddBotImageQueue::init(ddLCMThread* lcmThread, const QString& botConfigFile)
     }
   }
 
-  mBotFrames = bot_frames_get_global(lcmThread->lcmHandle()->getUnderlyingLCM(), mBotParam);
+  mBotFrames = bot_frames_get_global(lcmThread->lcmHandle()->getUnderlyingLCM(),
+                                     mBotParam);
 
-
-  //char** cameraNames =  bot_param_get_all_camera_names(mBotParam);
-  //for (int i = 0; cameraNames[i] != 0; ++i)
-  //{
-  //  printf("camera: %s\n", cameraNames[i]);
-  //}
+  char** cameraNames = bot_param_get_all_camera_names(mBotParam);
+  std::vector<std::string> camera_names;
+  for (int i = 0; cameraNames[i] != 0; ++i) {
+    // printf("camera: %s\n", cameraNames[i]);
+    camera_names.push_back(std::string(cameraNames[i]));
+  }
 
   mLCM = lcmThread;
-  this->addCameraStream("CAMERACHEST_LEFT");
-  this->addCameraStream("CAMERACHEST_RIGHT");
-  this->addCameraStream("CAMERA_LEFT");
-  this->addCameraStream("CAMERA", "CAMERA_LEFT", bot_core::images_t::LEFT);
-  this->addCameraStream("OPENNI_FRAME_LEFT");
-  this->addCameraStream("OPENNI_FRAME", "OPENNI_FRAME_LEFT", bot_core::images_t::LEFT);
 
-  //this->addCameraStream("CAMERA_FUSED", "CAMERA_TSDF", bot_core::images_t::LEFT);
-  //this->addCameraStream("CAMERA", "CAMERA_RIGHT", bot_core::images_t::RIGHT);
-  //this->addCameraStream("KINECT_RGB");
+  if (std::find(camera_names.begin(), camera_names.end(), "CAMERACHEST_LEFT") !=
+      camera_names.end())
+    this->addCameraStream("CAMERACHEST_LEFT");
+
+  if (std::find(camera_names.begin(), camera_names.end(),
+                "CAMERACHEST_RIGHT") != camera_names.end())
+    this->addCameraStream("CAMERACHEST_RIGHT");
+
+  if (std::find(camera_names.begin(), camera_names.end(), "CAMERA_LEFT") !=
+      camera_names.end()) {
+    this->addCameraStream("CAMERA_LEFT");
+    this->addCameraStream("CAMERA", "CAMERA_LEFT", bot_core::images_t::LEFT);
+  }
+
+  if (std::find(camera_names.begin(), camera_names.end(),
+                "OPENNI_FRAME_LEFT") != camera_names.end()) {
+    this->addCameraStream("OPENNI_FRAME_LEFT");
+    this->addCameraStream("OPENNI_FRAME", "OPENNI_FRAME_LEFT",
+                          bot_core::images_t::LEFT);
+  }
+
+  // this->addCameraStream("CAMERA_FUSED", "CAMERA_TSDF",
+  // bot_core::images_t::LEFT);
+  // this->addCameraStream("CAMERA", "CAMERA_RIGHT", bot_core::images_t::RIGHT);
+  // this->addCameraStream("KINECT_RGB");
 }
 
 //-----------------------------------------------------------------------------
