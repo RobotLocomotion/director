@@ -211,6 +211,8 @@ if useIk:
 if useAtlasDriver:
     atlasdriver.systemStatus.outputConsole = app.getOutputConsole()
     atlasdriverpanel.init(atlasDriver)
+else:
+    app.removeToolbarMacro('ActionAtlasDriverPanel')
 
 
 if usePerception:
