@@ -166,11 +166,13 @@ useRandomWalk = True
 useCOPMonitor = True
 useCourseModel = False
 useLimitJointsSentToPlanner = False
-useOpenniDepthImage = False
-useKinect = False
 useFeetlessRobot = False
 
+# Sensor Flags
+useKinect = False
 useMultisense = True
+useOpenniDepthImage = False
+
 poseCollection = PythonQt.dd.ddSignalMap()
 costCollection = PythonQt.dd.ddSignalMap()
 
@@ -194,7 +196,6 @@ if useSpreadsheet:
 
 
 if useIk:
-
     def onIkStartup(ikServer, startSuccess):
         if startSuccess:
             app.getMainWindow().statusBar().showMessage('Planning server started.', 2000)
@@ -216,7 +217,6 @@ else:
 
 
 if usePerception:
-
     segmentationpanel.init()
     cameraview.init()
     colorize.init()
