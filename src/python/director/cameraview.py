@@ -116,6 +116,28 @@ class ImageManager(object):
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
         self.queue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
 
+        # Subscribe to camera streams
+        cameraNames = self.queue.getCameraNames()
+
+        if "CAMERACHEST_LEFT" in cameraNames:
+            self.queue.addCameraStream("CAMERACHEST_LEFT")
+
+        if "CAMERACHEST_RIGHT" in cameraNames:
+            self.queue.addCameraStream("CAMERACHEST_RIGHT")
+
+        if "CAMERA_LEFT" in cameraNames:
+            import bot_core as lcmbot
+            self.queue.addCameraStream("CAMERA_LEFT")
+            self.queue.addCameraStream(
+                "CAMERA", "CAMERA_LEFT", lcmbot.images_t.LEFT)
+
+        if "OPENNI_FRAME_LEFT" in cameraNames:
+            import bot_core as lcmbot
+            self.queue.addCameraStream("OPENNI_FRAME_LEFT")
+            self.queue.addCameraStream(
+                "OPENNI_FRAME", "OPENNI_FRAME_LEFT", lcmbot.images_t.LEFT)
+
+
 
     def addImage(self, name):
 
