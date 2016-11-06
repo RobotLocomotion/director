@@ -116,28 +116,6 @@ class ImageManager(object):
         self.queue = PythonQt.dd.ddBotImageQueue(lcmUtils.getGlobalLCMThread())
         self.queue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
 
-        # Subscribe to camera streams
-        cameraNames = self.queue.getCameraNames()
-
-        if "CAMERACHEST_LEFT" in cameraNames:
-            self.queue.addCameraStream("CAMERACHEST_LEFT")
-
-        if "CAMERACHEST_RIGHT" in cameraNames:
-            self.queue.addCameraStream("CAMERACHEST_RIGHT")
-
-        if "CAMERA_LEFT" in cameraNames:
-            import bot_core as lcmbot
-            self.queue.addCameraStream("CAMERA_LEFT")
-            self.queue.addCameraStream(
-                "CAMERA", "CAMERA_LEFT", lcmbot.images_t.LEFT)
-
-        if "OPENNI_FRAME_LEFT" in cameraNames:
-            import bot_core as lcmbot
-            self.queue.addCameraStream("OPENNI_FRAME_LEFT")
-            self.queue.addCameraStream(
-                "OPENNI_FRAME", "OPENNI_FRAME_LEFT", lcmbot.images_t.LEFT)
-
-
 
     def addImage(self, name):
 
@@ -740,6 +718,16 @@ views = {}
 def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     cameraName = cameraName or channel
     imageManager.queue.addCameraStream(channel, cameraName, imageType)
+    if cameraName == "CAMERA_LEFT":
+        import bot_core as lcmbotcore
+        imageManager.queue.addCameraStream(
+            "CAMERA", "CAMERA_LEFT", lcmbotcore.images_t.LEFT)
+
+    if cameraName == "OPENNI_FRAME_LEFT":
+        import bot_core as lcmbotcore
+        imageManager.queue.addCameraStream(
+            "OPENNI_FRAME", "OPENNI_FRAME_LEFT", lcmbotcore.images_t.LEFT)
+
     imageManager.addImage(cameraName)
     view = CameraImageView(imageManager, cameraName, viewName)
     global views
