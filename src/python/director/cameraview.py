@@ -717,6 +717,10 @@ views = {}
 
 def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     cameraName = cameraName or channel
+    if cameraName not in imageManager.queue.getCameraNames():
+        import warnings
+        warnings.warn(cameraName + " is not defined in the bot config")
+
     imageManager.queue.addCameraStream(channel, cameraName, imageType)
     if cameraName == "CAMERA_LEFT":
         import bot_core as lcmbotcore

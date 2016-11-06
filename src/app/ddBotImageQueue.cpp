@@ -122,8 +122,7 @@ bool ddBotImageQueue::addCameraStream(const QString& channel, const QString& cam
 }
 
 //-----------------------------------------------------------------------------
-QStringList ddBotImageQueue::getCameraNames() const
-{
+QStringList ddBotImageQueue::getCameraNames() const {
   char** cameraNames = bot_param_get_all_camera_names(mBotParam);
 
   QStringList names;
