@@ -53,40 +53,26 @@ bool ddBotImageQueue::initCameraData(const QString& cameraName, CameraData* came
 }
 
 //-----------------------------------------------------------------------------
-void ddBotImageQueue::init(ddLCMThread* lcmThread, const QString& botConfigFile)
-{
-  if (botConfigFile.length())
-  {
+void ddBotImageQueue::init(ddLCMThread* lcmThread,
+                           const QString& botConfigFile) {
+  if (botConfigFile.length()) {
     mBotParam = bot_param_new_from_file(botConfigFile.toAscii().data());
-  }
-  else
-  {
-    while (!mBotParam)
-    {
-      mBotParam = bot_param_new_from_server(lcmThread->lcmHandle()->getUnderlyingLCM(), 0);
+  } else {
+    while (!mBotParam) {
+      mBotParam = bot_param_new_from_server(
+          lcmThread->lcmHandle()->getUnderlyingLCM(), 0);
     }
   }
 
-  mBotFrames = bot_frames_get_global(lcmThread->lcmHandle()->getUnderlyingLCM(), mBotParam);
+  mBotFrames = bot_frames_get_global(lcmThread->lcmHandle()->getUnderlyingLCM(),
+                                     mBotParam);
 
-
-  //char** cameraNames =  bot_param_get_all_camera_names(mBotParam);
-  //for (int i = 0; cameraNames[i] != 0; ++i)
-  //{
-  //  printf("camera: %s\n", cameraNames[i]);
-  //}
+  // char** cameraNames = bot_param_get_all_camera_names(mBotParam);
+  // for (int i = 0; cameraNames[i] != 0; ++i) {
+  //   printf("camera: %s\n", cameraNames[i]);
+  // }
 
   mLCM = lcmThread;
-  this->addCameraStream("CAMERACHEST_LEFT");
-  this->addCameraStream("CAMERACHEST_RIGHT");
-  this->addCameraStream("CAMERA_LEFT");
-  this->addCameraStream("CAMERA", "CAMERA_LEFT", bot_core::images_t::LEFT);
-  this->addCameraStream("OPENNI_FRAME_LEFT");
-  this->addCameraStream("OPENNI_FRAME", "OPENNI_FRAME_LEFT", bot_core::images_t::LEFT);
-
-  //this->addCameraStream("CAMERA_FUSED", "CAMERA_TSDF", bot_core::images_t::LEFT);
-  //this->addCameraStream("CAMERA", "CAMERA_RIGHT", bot_core::images_t::RIGHT);
-  //this->addCameraStream("KINECT_RGB");
 }
 
 //-----------------------------------------------------------------------------
@@ -133,6 +119,18 @@ bool ddBotImageQueue::addCameraStream(const QString& channel, const QString& cam
 
 
   return true;
+}
+
+//-----------------------------------------------------------------------------
+QStringList ddBotImageQueue::getCameraNames() const {
+  char** cameraNames = bot_param_get_all_camera_names(mBotParam);
+
+  QStringList names;
+  for (int i = 0; cameraNames[i] != 0; ++i) {
+    names << cameraNames[i];
+  }
+
+  return names;
 }
 
 //-----------------------------------------------------------------------------
