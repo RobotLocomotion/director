@@ -4,9 +4,11 @@
 #include <QObject>
 #include <QColor>
 #include <QVector>
-#include "ddDrakeModel.h"
+
 #include "ddAppConfigure.h"
 
+
+class ddDrakeModel;
 
 class DD_APP_EXPORT ddDrakeWrapper : public QObject
 {
