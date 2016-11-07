@@ -6,7 +6,7 @@
 #include <QVector>
 #include "ddSharedPtr.h"
 #include "ddAppConfigure.h"
-#include <drake/systems/plants/RigidBodyTree.h>
+#include <drake/multibody/RigidBodyTree.h>
 
 class vtkRenderer;
 class vtkTransform;

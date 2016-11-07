@@ -1,9 +1,9 @@
 #include "ddDrakeWrapper.h"
 #include "ddSharedPtr.h"
 
-#include <drake/systems/plants/RigidBodyTree.h>
+#include <drake/multibody/RigidBodyTree.h>
 #include <drake/util/convexHull.h>
-#include <drake/systems/plants/ForceTorqueMeasurement.h>
+#include <drake/multibody/ForceTorqueMeasurement.h>
 #include <vector>
 #include <string>
 #include <sstream>
