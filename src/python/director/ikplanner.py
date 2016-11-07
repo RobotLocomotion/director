@@ -24,7 +24,6 @@ from director import drcargs
 from director import ikconstraints
 from director.ikparameters import IkParameters
 
-import drc as lcmdrc
 import bot_core as lcmbotcore
 import json
 
@@ -756,9 +755,7 @@ class IKPlanner(object):
 
 
     def createMovingBodyConstraints(self, startPoseName, lockBase=False, lockBack=False, lockLeftArm=False, lockRightArm=False):
-
-        if (self.fixedBaseArm==False):
-
+        if not self.fixedBaseArm and not self.robotNoFeet:
             constraints = []
             if self.useQuasiStaticConstraint:
                 constraints.append(self.createQuasiStaticConstraint())
@@ -770,6 +767,7 @@ class IKPlanner(object):
             else:
                 constraints.append(self.createMovingBackPostureConstraint())
 
+        if not self.fixedBaseArm:
             if lockBase:
                 constraints.append(self.createLockedBasePostureConstraint(startPoseName))
             else:
@@ -781,7 +779,7 @@ class IKPlanner(object):
             if lockRightArm:
                 constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
 
-        else: # Remove all except the fixed base constraint if you only have an arm:
+        if self.fixedBaseArm: # Remove all except the fixed base constraint if you only have an arm:
             constraints = []
             constraints.append(self.createLockedBasePostureConstraint(startPoseName))
 
@@ -1421,11 +1419,13 @@ class IKPlanner(object):
         return constraintSet.runIkTraj(ikParameters=ikParameters)
 
     def getManipPlanListener(self):
+        import drc as lcmdrc
         responseChannel = 'CANDIDATE_MANIP_PLAN'
         responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
         return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
 
     def getManipIKListener(self):
+        import drc as lcmdrc
         responseChannel = 'CANDIDATE_MANIP_IKPLAN'
         responseMessageClass = lcmdrc.robot_plan_w_keyframes_t
         return lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)

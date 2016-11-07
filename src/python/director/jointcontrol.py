@@ -57,10 +57,19 @@ class JointController(object):
             self.poseCollection.setItem(poseName, poseData)
 
     def loadPoseFromFile(self, filename):
-        assert os.path.splitext(filename)[1] == '.mat'
-        import scipy.io
-        matData = scipy.io.loadmat(filename)
-        return np.array(matData['xstar'][:self.numberOfJoints].flatten(), dtype=float)
+        ext = os.path.splitext(filename)[1].lower()
+
+        if ext == '.mat':
+            import scipy.io
+            matData = scipy.io.loadmat(filename)
+            pose = np.array(matData['xstar'][:self.numberOfJoints].flatten(), dtype=float)
+        elif ext == '.csv':
+            pose = np.loadtxt(filename, delimiter=',', dtype=float).flatten()
+        else:
+            raise Exception('Unsupported pose file format: %s' % filename)
+
+        assert pose.shape[0] == self.numberOfJoints
+        return pose
 
     def addLCMUpdater(self, channelName):
         '''

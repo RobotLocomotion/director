@@ -4,6 +4,8 @@ from director import visualization as vis
 from director import objectmodel as om
 from director import ikplanner
 from director import ikconstraintencoder as ce
+from director import ikconstraints
+from director import transformUtils
 
 import numpy as np
 import pprint
@@ -44,6 +46,26 @@ def buildConstraints():
     return constraints
 
 
+def reconstructConstraints(constraints):
+    '''
+    Convert dicts (decoded from json) back to the original
+    constraint classes using the 'class' information in the dict
+    '''
+    objs = []
+
+    for c in constraints:
+        objClass = getattr(ikconstraints, c['class'])
+        del c['class']
+        obj = objClass()
+        objs.append(obj)
+
+        for attr, value in c.iteritems():
+            if isinstance(value, dict) and 'position' in value and 'quaternion' in value:
+                value = transformUtils.transformFromPose(value['position'], value['quaternion'])
+            setattr(obj, attr, value)
+
+    return objs
+
 
 def testPlanConstraints():
 
@@ -59,19 +81,31 @@ def testPlanConstraints():
     print poseJsonStr
     print constraintsJsonStr
 
-
+    print '--------------decoding--------------------'
     constraints = ce.decodeConstraints(constraintsJsonStr)
     pprint.pprint(constraints)
+
+    print '--------------reconstructing--------------'
+    constraints = reconstructConstraints(constraints)
+
+    print '--------------matlab commands---------------'
+    for c in constraints:
+        c.printCommands()
 
 
 
 app = ConsoleApp()
-app.setupGlobals(globals())
-
 view = app.createView()
-robotsystem.create(view, globals())
+
+
+factory = robotsystem.RobotSystemFactory()
+options = factory.getDisabledOptions()
+factory.setDependentOptions(options, usePlannerPublisher=True)
+robotSystem = factory.construct(view=view, options=options)
+
+
+app.setupGlobals(globals())
+globals().update(dict(robotSystem))
 
 
 testPlanConstraints()
-
-#app.start()

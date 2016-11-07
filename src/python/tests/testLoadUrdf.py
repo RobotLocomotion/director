@@ -3,7 +3,7 @@ import fnmatch
 import argparse
 import traceback
 
-from director.consoleapp import ConsoleApp
+from director import mainwindowapp
 from director import visualization as vis
 from director import roboturdf
 from director import jointcontrol
@@ -17,8 +17,8 @@ def getArgs():
     return args
 
 
-app = ConsoleApp()
-view = app.createView()
+app = mainwindowapp.MainWindowAppFactory().construct()
+view = app.view
 
 args = getArgs()
 
@@ -63,5 +63,5 @@ else:
         robotModel.getLinkFrame(link)
 
 
-view.show()
-app.start()
+
+app.app.start()

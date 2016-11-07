@@ -1,0 +1,6 @@
+#ifndef __ddDrakeVersion_h
+#define __ddDrakeVersion_h
+
+#cmakedefine DRAKE_OH_FORK
+
+#endif

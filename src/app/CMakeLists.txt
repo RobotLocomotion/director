@@ -130,10 +130,14 @@ if (USE_DRAKE)
   # openhumanoids uses an old drake fork which has a divergent api so we
   # use a fork of ddDrakeModel.cpp to encapsulate the api incompatibilities
   if (USE_DRC)
+    set(DRAKE_OH_FORK TRUE)
     list(APPEND srcs ddDrakeModelOH.cpp)
   else()
+    set(DRAKE_OH_FORK FALSE)
     list(APPEND srcs ddDrakeModel.cpp)
   endif()
+
+  configure_file(ddDrakeVersion.h.in ddDrakeVersion.h)
 
   list(APPEND wrap_files
     wrapped_methods_drake.txt

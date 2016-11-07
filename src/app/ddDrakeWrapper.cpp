@@ -1,9 +1,17 @@
 #include "ddDrakeWrapper.h"
+#include "ddDrakeModel.h"
+#include "ddDrakeVersion.h"
 #include "ddSharedPtr.h"
 
+#ifdef DRAKE_OH_FORK
+#include <drake/systems/plants/RigidBodyTree.h>
+#include <drake/systems/plants/ForceTorqueMeasurement.h>
+#else
 #include <drake/multibody/RigidBodyTree.h>
-#include <drake/util/convexHull.h>
 #include <drake/multibody/ForceTorqueMeasurement.h>
+#endif
+#include <drake/util/convexHull.h>
+
 #include <vector>
 #include <string>
 #include <sstream>
@@ -12,6 +20,10 @@
 
 using std::vector;
 using namespace Eigen;
+
+#ifdef DRAKE_OH_FORK
+#define RigidBodyTreed RigidBodyTree
+#endif
 
 //-----------------------------------------------------------------------------
 ddDrakeWrapper::ddDrakeWrapper(QObject* parent) : QObject(parent)

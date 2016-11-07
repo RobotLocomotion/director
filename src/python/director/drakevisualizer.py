@@ -284,7 +284,7 @@ class Link(object):
     def setTransform(self, pos, quat):
         self.transform = transformUtils.transformFromPose(pos, quat)
         for g in self.geometry:
-            g.polyDataItem.getChildFrame().copyFrame(self.transform)
+            g.polyDataItem.actor.SetUserTransform(self.transform)
 
 
 class DrakeVisualizer(object):
@@ -353,7 +353,6 @@ class DrakeVisualizer(object):
     def addLinkGeometry(self, geom, linkName, linkFolder):
         geom.polyDataItem.addToView(self.view)
         om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
-        vis.addChildFrame(geom.polyDataItem)
 
         if linkName == 'world':
             #geom.polyDataItem.actor.SetUseBounds(False)
@@ -424,7 +423,7 @@ class DrakeVisualizer(object):
 
                 linkFolder = self.getLinkFolder(robotNum, linkName)
                 self.addLinkGeometry(g, linkName, linkFolder)
-                g.polyDataItem.getChildFrame().copyFrame(link.transform)
+                g.polyDataItem.actor.SetUserTransform(link.transform)
 
             points = vtk.vtkPoints()
             verts = vtk.vtkCellArray()

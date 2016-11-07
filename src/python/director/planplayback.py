@@ -15,6 +15,22 @@ import pickle
 import scipy.interpolate
 
 
+def asRobotPlan(msg):
+    '''
+    If the given message is a robot_plan_with_supports_t then this function returns
+    the plan message contained within it.  For any other message type, this function
+    just returns its input argument.
+    '''
+    try:
+        import drc as lcmdrc
+    except ImportError:
+        pass
+    else:
+        if isinstance(msg, lcmdrc.robot_plan_with_supports_t):
+            return msg.plan
+    return msg
+
+
 class PlanPlayback(object):
 
     def __init__(self):
@@ -39,7 +55,7 @@ class PlanPlayback(object):
             return allPoseTimes, allPoses
 
         else:
-            msg = robotstate.asRobotPlan(msgOrList)
+            msg = asRobotPlan(msgOrList)
 
             poses = []
             poseTimes = []
@@ -51,7 +67,7 @@ class PlanPlayback(object):
 
     @staticmethod
     def getPlanElapsedTime(msg):
-        msg = robotstate.asRobotPlan(msg)
+        msg = asRobotPlan(msg)
         startTime = msg.plan[0].utime
         endTime = msg.plan[-1].utime
         return (endTime - startTime) / 1e6
@@ -67,8 +83,7 @@ class PlanPlayback(object):
 
 
     def playPlan(self, msg, jointController):
-
-        self.playPlans(poseTimes, [msg], jointController)
+        self.playPlans([msg], jointController)
 
 
     def playPlans(self, messages, jointController):

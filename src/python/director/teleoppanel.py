@@ -432,8 +432,8 @@ class EndEffectorTeleopPanel(object):
         startPose = self.panel.planningUtils.getPlanningStartPose()
         ikPlanner.addPose(startPose, startPoseName)
 
-        if (ikPlanner.fixedBaseArm==False):
-
+        # Humanoid, i.e. robot has feet and is not a fixed base arm
+        if not ikPlanner.fixedBaseArm and not ikPlanner.robotNoFeet:
             constraints = []
             constraints.append(ikPlanner.createQuasiStaticConstraint())
             constraints.append(ikPlanner.createLockedNeckPostureConstraint(startPoseName))
@@ -452,7 +452,6 @@ class EndEffectorTeleopPanel(object):
             elif self.getRFootConstraint() == 'sliding':
                 constraints.extend(ikPlanner.createSlidingFootConstraints(startPoseName)[2:])
 
-
             if self.getBackConstraint() == 'fixed':
                 constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
                 ikPlanner.setBackLocked(True)
@@ -462,7 +461,6 @@ class EndEffectorTeleopPanel(object):
             elif self.getBackConstraint() == 'free':
                 constraints.append(ikPlanner.createMovingBackPostureConstraint())
                 ikPlanner.setBackLocked(False)
-
 
             if self.getBaseConstraint() == 'fixed':
                 constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName, lockLegs=False))
@@ -486,15 +484,17 @@ class EndEffectorTeleopPanel(object):
                 constraints.append(ikPlanner.createKneePostureConstraint(self.kneeJointLimits))
                 ikPlanner.setBaseLocked(False)
 
-        # Remove all except the fixed base constraint if you only have an arm:
-        else:
+        # Fixed Base Arm: Remove all except the fixed base constraint
+        if ikPlanner.fixedBaseArm:
             constraints = []
             constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName, lockLegs=False))
 
-
-        if ikPlanner.robotNoFeet == True:
+        if ikPlanner.robotNoFeet:
             constraints = []
             constraints.append(ikPlanner.createLockedBasePostureConstraint(startPoseName))
+
+        # Only add Back constraints if robot has a back
+        if ikPlanner.getJointGroup('Back'):
             if self.getBackConstraint() == 'fixed':
                 constraints.append(ikPlanner.createLockedBackPostureConstraint(startPoseName))
                 ikPlanner.setBackLocked(True)
@@ -963,7 +963,12 @@ class GeneralEndEffectorTeleopPanel(object):
         startPose = self.teleopPanel.planningUtils.getPlanningStartPose()
         self.ikPlanner.addPose(startPose, startPoseName)
 
-        plan = self.constraintSet.runIkTraj()
+        goalMode = ikplanner.getIkOptions().getProperty('Goal planning mode')
+        if goalMode == 1:
+            plan = self.constraintSet.runIkTraj()
+        else:
+            plan = self.constraintSet.planEndPoseGoal()
+
         self.teleopPanel.showPlan(plan)
 
     def endIk(self):
@@ -1012,7 +1017,7 @@ class GeneralEndEffectorTeleopPanel(object):
             app.displaySnoptInfo(info)
 
         goalFrame.connectFrameModified(onGoalFrameModified)
-        onGoalFrameModified()
+        onGoalFrameModified(goalFrame)
 
         folder = EndEffectorTeleopPanel.getConstraintFolder()
         for i, constraint in enumerate(constraints):
