@@ -1,4 +1,6 @@
 #include "ddDrakeWrapper.h"
+#include "ddDrakeModel.h"
+#include "ddDrakeVersion.h"
 #include "ddSharedPtr.h"
 
 #include <drake/systems/plants/RigidBodyTree.h>
@@ -12,6 +14,10 @@
 
 using std::vector;
 using namespace Eigen;
+
+#ifdef DRAKE_OH_FORK
+#define RigidBodyTreed RigidBodyTree
+#endif
 
 //-----------------------------------------------------------------------------
 ddDrakeWrapper::ddDrakeWrapper(QObject* parent) : QObject(parent)

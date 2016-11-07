@@ -6,11 +6,17 @@
 #include <QVector>
 #include "ddSharedPtr.h"
 #include "ddAppConfigure.h"
+#include "ddDrakeVersion.h"
 #include <drake/systems/plants/RigidBodyTree.h>
 
 class vtkRenderer;
 class vtkTransform;
 class vtkPolyData;
+
+
+#ifdef DRAKE_OH_FORK
+#define RigidBodyTreed RigidBodyTree
+#endif
 
 class DD_APP_EXPORT ddDrakeModel : public QObject
 {
