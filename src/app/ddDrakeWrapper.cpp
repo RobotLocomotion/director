@@ -7,8 +7,8 @@
 #include <drake/systems/plants/RigidBodyTree.h>
 #include <drake/systems/plants/ForceTorqueMeasurement.h>
 #else
-#include <drake/multibody/RigidBodyTree.h>
-#include <drake/multibody/ForceTorqueMeasurement.h>
+#include <drake/multibody/rigid_body_tree.h>
+#include <drake/multibody/force_torque_measurement.h>
 #endif
 #include <drake/util/convexHull.h>
 

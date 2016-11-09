@@ -5,8 +5,8 @@
 #include <drake/systems/plants/RigidBodyTree.h>
 #include <drake/systems/plants/shapes/Geometry.h>
 #else
-#include <drake/multibody/RigidBodyTree.h>
-#include <drake/multibody/shapes/Geometry.h>
+#include <drake/multibody/rigid_body_tree.h>
+#include <drake/multibody/shapes/geometry.h>
 #endif
 
 #include <vtkPolyData.h>

@@ -10,7 +10,7 @@
 #ifdef DRAKE_OH_FORK
 #include <drake/systems/plants/RigidBodyTree.h>
 #else
-#include <drake/multibody/RigidBodyTree.h>
+#include <drake/multibody/rigid_body_tree.h>
 #endif
 
 class vtkRenderer;
