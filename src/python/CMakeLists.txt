@@ -8,6 +8,7 @@ set(python_files
   director/affordanceurdf.py
   director/applogic.py
   director/appsettings.py
+  director/assimp2vtk.py
   director/asynctaskqueue.py
   director/atlasdriver.py
   director/atlasdriverpanel.py
