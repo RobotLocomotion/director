@@ -7,12 +7,15 @@
 #include "ddSharedPtr.h"
 #include "ddAppConfigure.h"
 #include "ddDrakeVersion.h"
+#ifdef DRAKE_OH_FORK
 #include <drake/systems/plants/RigidBodyTree.h>
+#else
+#include <drake/multibody/RigidBodyTree.h>
+#endif
 
 class vtkRenderer;
 class vtkTransform;
 class vtkPolyData;
-
 
 #ifdef DRAKE_OH_FORK
 #define RigidBodyTreed RigidBodyTree

@@ -1,8 +1,13 @@
 #include "ddDrakeModel.h"
 #include "ddSharedPtr.h"
 
+#ifdef DRAKE_OH_FORK
 #include <drake/systems/plants/RigidBodyTree.h>
 #include <drake/systems/plants/shapes/Geometry.h>
+#else
+#include <drake/multibody/RigidBodyTree.h>
+#include <drake/multibody/shapes/Geometry.h>
+#endif
 
 #include <vtkPolyData.h>
 #include <vtkAppendPolyData.h>
