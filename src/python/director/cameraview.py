@@ -879,6 +879,9 @@ def init():
         if "CAMERA_LEFT" in cameraNames:
             addCameraView('CAMERA_LEFT', 'Head camera')
 
+        if "OPENNI_FRAME_LEFT" in cameraNames:
+            addCameraView('OPENNI_FRAME_LEFT', 'OpenNI')
+
         #import bot_core as lcmbotcore
         #addCameraView('CAMERA', 'Head camera right', 'CAMERA_RIGHT', lcmbotcore.images_t.RIGHT)
         #addCameraView('CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmbotcore.images_t.DISPARITY_ZIPPED)
