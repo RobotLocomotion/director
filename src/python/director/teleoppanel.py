@@ -8,7 +8,6 @@ from director import visualization as vis
 from director import transformUtils
 from director import ikconstraints
 from director import ikplanner
-from director import footstepsdriver
 from director import vtkAll as vtk
 from director import drcargs
 from director import affordanceurdf
@@ -1226,7 +1225,12 @@ class JointTeleopPanel(object):
 
     def computeBaseJointOffsets(self):
 
-        baseReferenceFrame = footstepsdriver.FootstepsDriver.getFeetMidPoint(self.panel.ikPlanner.getRobotModelAtPose(self.startPose))
+        if self.panel.ikPlanner.robotNoFeet:
+            baseReferenceFrame = vtk.vtkTransform()
+        else:
+            from director import footstepsdriver
+            baseReferenceFrame = footstepsdriver.FootstepsDriver.getFeetMidPoint(self.panel.ikPlanner.getRobotModelAtPose(self.startPose))
+
         baseReferenceWorldPos = np.array(baseReferenceFrame.GetPosition())
         baseReferenceWorldYaw = math.radians(baseReferenceFrame.GetOrientation()[2])
 
