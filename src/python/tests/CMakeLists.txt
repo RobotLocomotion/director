@@ -36,6 +36,7 @@ set(python_tests_robot
   testOtdfParser.py
   testPlanConstraints.py
   testPlaneSegmentation.py
+  testPyDrakeIk.py
   testRobotPoseGui.py
   testRobotSystem.py
   testTableFit.py
