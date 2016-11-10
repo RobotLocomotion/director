@@ -12,10 +12,14 @@ def makeRobotSystem(view):
 
 app = mainwindowapp.MainWindowAppFactory().construct()
 robotSystem = makeRobotSystem(app.view)
-robotSystem.ikPlanner.planningMode = 'pydrake'
 
 app.app.addWidgetToDock(robotSystem.teleopPanel.widget, QtCore.Qt.RightDockWidgetArea)
 app.app.addWidgetToDock(robotSystem.playbackPanel.widget, QtCore.Qt.BottomDockWidgetArea)
-applogic.resetCamera(viewDirection=[-1,0,0], view=app.view)
 
+# use pydrake ik backend
+ikPlanner = robotSystem.ikPlanner
+ikPlanner.planningMode = 'pydrake'
+ikPlanner.plannerPub._setupLocalServer()
+
+applogic.resetCamera(viewDirection=[-1,0,0], view=app.view)
 app.app.start()
