@@ -5,7 +5,11 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 find_package(OpenGL REQUIRED)
 
+find_package(Eigen REQUIRED)
+include_directories(${EIGEN_INCLUDE_DIRS})
+
 set(sources
+  vtkDepthImageUtils.cxx
   vtkGridSource.cxx
   vtkFrameWidget.cxx
   vtkFrameWidgetRepresentation.cxx
