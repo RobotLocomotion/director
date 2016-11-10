@@ -8,6 +8,7 @@ set(python_tests_core
   testAffordancePanel.py
   testCameraControl.py
   testConsoleApp.py
+  testDepthScanner.py
   testFrameSync.py
   testMainWindowApp.py
   testObjectModel.py

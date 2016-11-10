@@ -173,6 +173,7 @@ class ObjectModelTree(object):
 
     ACTION_SELECTED = 'ACTION_SELECTED'
     SELECTION_CHANGED = 'SELECTION_CHANGED'
+    OBJECT_ADDED = 'OBJECT_ADDED'
 
     def __init__(self):
         self._treeWidget = None
@@ -180,7 +181,7 @@ class ObjectModelTree(object):
         self._objects = {}
         self._blockSignals = False
         self.actions = []
-        self.callbacks = callbacks.CallbackRegistry([self.ACTION_SELECTED, self.SELECTION_CHANGED])
+        self.callbacks = callbacks.CallbackRegistry([self.ACTION_SELECTED, self.SELECTION_CHANGED, self.OBJECT_ADDED])
 
     def getTreeWidget(self):
         return self._treeWidget
@@ -360,6 +361,8 @@ class ObjectModelTree(object):
             tree.addTopLevelItem(item)
             tree.expandItem(item)
 
+        self.callbacks.process(self.OBJECT_ADDED, self, obj)
+
 
     def collapse(self, obj):
         item = self._getItemForObject(obj)
@@ -461,6 +464,12 @@ class ObjectModelTree(object):
         return self.callbacks.connect(self.SELECTION_CHANGED, func)
 
     def disconnectSelectionChanged(self, callbackId):
+        self.callbacks.disconnect(callbackId)
+
+    def connectObjectAdded(self, func):
+        return self.callbacks.connect(self.OBJECT_ADDED, func)
+
+    def disconnectObjectAdded(self, callbackId):
         self.callbacks.disconnect(callbackId)
 
     def init(self, treeWidget, propertiesPanel):

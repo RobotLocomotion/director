@@ -1,4 +1,5 @@
 from director.consoleapp import ConsoleApp
+from director import mainwindowapp
 from director import affordancemanager
 from director import affordanceitems
 from director import affordanceurdf
@@ -90,23 +91,24 @@ def getAffordanceContextMenuActions(view, pickedObj, pickedPoint):
 viewbehaviors.registerContextMenuActions(getAffordanceContextMenuActions)
 
 
-app = ConsoleApp()
-view = app.createView()
-view.show()
+app = mainwindowapp.MainWindowAppFactory().construct()
+view = app.view
+
 
 affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
 
-#testAffordanceToUrdf()
-
+if affordancemanager.lcmobjectcollection.USE_LCM:
+    affordanceitems.MeshAffordanceItem.getMeshManager().collection.sendEchoRequest()
+    affordanceManager.collection.sendEchoRequest()
 
 objectPicker = pointpicker.ObjectPicker(view=view, callback=onAffordancePick, getObjectsFunction=affordanceManager.getAffordances)
 
 
 panel = affordancepanel.AffordancePanel(view, affordanceManager)
-panel.widget.show()
+dock = app.app.addWidgetToDock(panel.widget, QtCore.Qt.RightDockWidgetArea)
 
 printButton = QtGui.QPushButton('Print URDF')
 printButton.connect('clicked()', printAffordanceUrdf)
 panel.ui.spawnTab.layout().addWidget(printButton)
 
-app.start()
+app.app.start()

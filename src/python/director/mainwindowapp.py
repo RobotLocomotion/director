@@ -54,8 +54,8 @@ class MainWindowApp(object):
     def exit(self, exitCode=0):
         MainWindowApp.applicationInstance().exit(exitCode)
 
-    def start(self, enableAutomaticQuit=True):
-        if not consoleapp.ConsoleApp.getTestingEnabled():
+    def start(self, enableAutomaticQuit=True, restoreWindow=True):
+        if not consoleapp.ConsoleApp.getTestingEnabled() and restoreWindow:
             self.initWindowSettings()
         self.mainWindow.show()
         self.mainWindow.raise_()
