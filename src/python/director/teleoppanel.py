@@ -337,6 +337,11 @@ class EndEffectorTeleopPanel(object):
 
 
     def updateCollisionEnvironment(self):
+
+        # the collision environment is only supported by the matlab backend ik planner
+        if self.panel.ikPlanner.planningMode != 'matlabdrake':
+            return
+
         affs = self.panel.affordanceManager.getCollisionAffordances()
         if not affs:
             self.panel.ikPlanner.ikServer.clearEnvironment()
