@@ -1,5 +1,6 @@
 
 set(python_files
+  director/__init__.py
   director/actionhandlers.py
   director/affordanceupdater.py
   director/affordanceitems.py
@@ -50,7 +51,7 @@ set(python_files
   director/ikconstraints.py
   director/ikparameters.py
   director/ikplanner.py
-  director/__init__.py
+  director/imageview.py
   director/ioUtils.py
   director/irisUtils.py
   director/irisdriver.py
