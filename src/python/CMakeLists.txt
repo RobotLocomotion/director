@@ -30,6 +30,7 @@ set(python_files
   director/debrisdemo.py
   director/debugVis.py
   director/depthimageprovider.py
+  director/depthscanner.py
   director/doordemo.py
   director/drakevisualizer.py
   director/drcargs.py
