@@ -74,20 +74,15 @@ The dependencies can be installed on Mac using `Homebrew <http://brew.sh/>`_:
 
 ::
 
-    brew tap robotlocomotion/director
-    brew tap homebrew/science
     brew tap homebrew/python
-    brew install cmake
-    brew install python numpy
-    brew install vtk5 --with-qt
+    brew tap patmarion/director
+    brew install cmake python numpy vtk5 eigen
 
 The dependencies can be installed on Ubuntu using apt-get:
 
 ::
 
-    sudo apt-get install cmake libvtk5-qt4-dev python-dev python-vtk python-numpy
-
-
+    sudo apt-get install cmake libvtk5-qt4-dev libeigen3-dev python-dev python-vtk python-numpy
 
 
 Building
@@ -108,6 +103,7 @@ This is an alias for:
     mkdir build
     cd build
     cmake ../distro/superbuild
+
 
 Documentation
 =============
