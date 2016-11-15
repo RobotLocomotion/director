@@ -338,13 +338,48 @@ if usePlanning:
         planPlayback.plotPlan(manipPlanner.lastManipPlan)
 
     def planStand():
-        ikPlanner.computeStandPlan(robotStateJointController.q)
+        return ikPlanner.computeStandPlan(robotStateJointController.q)
 
-    def planNominal():
-        ikPlanner.computeNominalPlan(robotStateJointController.q)
+    def planNominal(executePlan=False):
+        plan = ikPlanner.computeNominalPlan(robotStateJointController.q)
+
+        if executePlan:
+            manipPlanner.commitManipPlan(plan)
+
+    # def executeNominal():
+
+    #     def myFunc():
+    #         plan = planStand()
+    #         yield rt.DelayTask(time=1.0)
+    #         sdkfjs
+
+    #     taskQueue = AsyncTaskQueue()
+    #     taskQueue.addTask(myFunc)
+    #     taskQueue.start()
+
+    #     class MyHelper():
+
+    #         def computePlan():
+    #          self.plan = planStand()
+
+    #         def commit():
+    #             manipPlanner.commitManipPlan(plan)
+
+    #         addTask( functools.partial(manipPlanner.commitManipPlan, plan))
+
+
+    #     timer = TimerCallback(callback=commit)
+    #     timer.singleShot(1.0)
 
     def planStandNominal():
         ikPlanner.computeStandNominalPlan(robotStateJointController.q)
+
+
+    def executeNominal(msg):
+        planNominal(executePlan=True)
+
+    # allows us to trigger a nominal plan via LCM. Used when starting the matlab director thing
+    lcmUtils.addSubscriber("EXECUTE_NOMINAL_PLAN", lcmdrc.string_t, executeNominal)
 
     def fitDrillMultisense():
         pd = om.findObjectByName('Multisense').model.revPolyData
