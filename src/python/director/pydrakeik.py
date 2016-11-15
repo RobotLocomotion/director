@@ -183,6 +183,7 @@ class PyDrakeIkServer(object):
 
     def __init__(self):
         self.rigidBodyTree = None
+        self.trajInterpolationMode = 'cubic'
 
     def initInstance(self, fields):
 
@@ -412,6 +413,37 @@ class PyDrakeIkServer(object):
 
         return q_end, info
 
+    def getInterpolationFunction(self, x, y, kind):
+        '''
+        Given arrays x and y and an interpolation kind 'linear', 'cubic' or 'pchip',
+        this function returns the result of scipy.interpolate.interp1d or
+        scipy.interpolate.pchip.
+
+        If the interpolation is cubic or pchip, this function will duplicate the
+        values at the end points of x and y (and add/subtract a very small x delta)
+        to enforce zero slope at the end points.
+
+        See scipy documentation for more details.
+        '''
+        assert kind in ('linear', 'cubic', 'pchip')
+
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
+        assert x.ndim == 1
+
+        if kind == 'linear':
+            kind == 'slinear'
+
+        xdelta = 1e-9
+        if kind in ('cubic', 'pchip'):
+            x = np.hstack(([x[0]-xdelta], x, [x[-1]+xdelta]))
+            y = np.vstack(([y[0]], y, [y[-1]]))
+
+        if kind == 'pchip':
+            return scipy.interpolate.pchip(x, y, axis=0)
+        else:
+            return scipy.interpolate.interp1d(x, y, axis=0, kind=kind)
+
     def runIkTraj(self, fields):
 
         timeSamples = self.makeTimeSamplesFromConstraints(fields)
@@ -427,8 +459,8 @@ class PyDrakeIkServer(object):
         values = np.vstack((q_seed, q_seed_end))
         timeRange = [timeSamples[0], timeSamples[-1]]
 
-        #q_seed_array = scipy.interpolate.interp1d(timeRange, values, axis=0, kind='slinear')(timeSamples).transpose()
-        q_seed_array = scipy.interpolate.pchip(timeRange, values, axis=0)(timeSamples).transpose()
+        q_seed_array = self.getInterpolationFunction(timeRange, values,
+                                kind=self.trajInterpolationMode)(timeSamples).transpose()
 
         assert q_seed_array.shape == (len(q_nom), len(timeSamples))
         #print 'time range:', timeRange
@@ -454,9 +486,9 @@ class PyDrakeIkServer(object):
         if fields.options.usePointwise:
             numPointwiseSamples = 20
             pointwiseTimeSamples = np.linspace(timeRange[0], timeRange[1], numPointwiseSamples)
-            #q_seed_array = scipy.interpolate.interp1d(timeSamples, np.array(poses), axis=0, kind='slinear')(pointwiseTimeSamples).transpose()
-            q_seed_array = scipy.interpolate.pchip(timeSamples, np.array(poses), axis=0)(pointwiseTimeSamples).transpose()
 
+            q_seed_array = self.getInterpolationFunction(timeSamples, np.array(poses),
+                                    kind=self.trajInterpolationMode)(pointwiseTimeSamples).transpose()
             assert q_seed_array.shape == (len(q_nom), numPointwiseSamples)
 
             results = pydrakeik.InverseKinPointwise(self.rigidBodyTree, pointwiseTimeSamples, q_seed_array, q_seed_array, constraints, ikoptions)
