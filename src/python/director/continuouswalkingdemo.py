@@ -680,7 +680,7 @@ class ContinousWalkingDemo(object):
             doStereoFiltering = True
             print "makeReplanRequest processContinuousStereo"
         elif (self.processRawStereo):
-            polyData = self.cameraView.getStereoPointCloud(2,'CAMERA')
+            polyData = self.cameraView.getStereoPointCloud(2,'MULTISENSE_CAMERA')
             doStereoFiltering = True
             print "makeReplanRequest processRawStereo"
         else:

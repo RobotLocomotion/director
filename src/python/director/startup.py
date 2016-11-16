@@ -232,7 +232,7 @@ if usePerception:
     sensordatarequestpanel.init()
 
     # for kintinuous, use 'CAMERA_FUSED', 'CAMERA_TSDF'
-    disparityPointCloud = segmentation.DisparityPointCloudItem('stereo point cloud', 'CAMERA', 'CAMERA_LEFT', cameraview.imageManager)
+    disparityPointCloud = segmentation.DisparityPointCloudItem('stereo point cloud', 'MULTISENSE_CAMERA', 'CAMERA_LEFT', cameraview.imageManager)
     disparityPointCloud.addToView(view)
     om.addToObjectModel(disparityPointCloud, parentObj=om.findObjectByName('sensors'))
 
