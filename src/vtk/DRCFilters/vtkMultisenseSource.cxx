@@ -167,7 +167,7 @@ public:
       std::cerr <<"ERROR: lcm is not good()" <<std::endl;
     }
 
-    this->LCMHandle->subscribe("SCAN", &LCMListener::lidarHandler, this);
+    this->LCMHandle->subscribe("MULTISENSE_SCAN", &LCMListener::lidarHandler, this);
   }
 
 
@@ -451,8 +451,8 @@ protected:
     Eigen::Isometry3d scanToLocalEnd;
     Eigen::Isometry3d bodyToLocalStart;
 
-    get_trans_with_utime("SCAN", "local", msg->utime, scanToLocalStart);
-    get_trans_with_utime("SCAN", "local", msg->utime +  1e6*3/(40*4), scanToLocalEnd);
+    get_trans_with_utime("MULTISENSE_SCAN", "local", msg->utime, scanToLocalStart);
+    get_trans_with_utime("MULTISENSE_SCAN", "local", msg->utime +  1e6*3/(40*4), scanToLocalEnd);
 
     get_trans_with_utime("body", "local", msg->utime, bodyToLocalStart);
 
