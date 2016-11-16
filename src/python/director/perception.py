@@ -255,7 +255,7 @@ class SpindleAxisDebug(vis.PolyDataItem):
 
     def update(self):
 
-        t = self.frameProvider.getFrame('SCAN')
+        t = self.frameProvider.getFrame('MULTISENSE_SCAN')
 
         p1 = [0.0, 0.0, 0.0]
         p2 = [2.0, 0.0, 0.0]
@@ -396,7 +396,7 @@ class MultiSenseSource(TimerCallback):
         self.showRevolution(currentRevolution)
 
     def getSpindleAxis(self):
-        return self.getAxis('SCAN', [1.0, 0.0, 0.0])
+        return self.getAxis('MULTISENSE_SCAN', [1.0, 0.0, 0.0])
 
     def getAxis(self, frameName, axisVector):
         t = self.getFrame(frameName)

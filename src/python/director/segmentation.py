@@ -582,7 +582,7 @@ def getCurrentRevolutionData(useVoxelGrid=False):
     return addCoordArraysToPolyData(revPolyData)
 
 
-def getDisparityPointCloud(decimation=4, removeOutliers=True, removeSize=0, rangeThreshold=-1, imagesChannel='CAMERA', cameraName='CAMERA_LEFT'):
+def getDisparityPointCloud(decimation=4, removeOutliers=True, removeSize=0, rangeThreshold=-1, imagesChannel='MULTISENSE_CAMERA', cameraName='CAMERA_LEFT'):
 
     p = cameraview.getStereoPointCloud(decimation, imagesChannel=imagesChannel, cameraName=cameraName, removeSize=removeSize, rangeThreshold=rangeThreshold)
     if not p:
