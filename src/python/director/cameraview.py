@@ -739,7 +739,7 @@ def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     return view
 
 
-def getStereoPointCloud(decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT', removeSize=0, rangeThreshold = -1):
+def getStereoPointCloud(decimation=4, imagesChannel='MULTISENSE_CAMERA', cameraName='CAMERA_LEFT', removeSize=0, rangeThreshold = -1):
 
     q = imageManager.queue
 
@@ -770,7 +770,7 @@ class KintinuousMapping(object):
         self.cameraToLocalTransforms = []
         self.pointClouds = []
 
-    def getStereoPointCloudElapsed(self,decimation=4, imagesChannel='CAMERA', cameraName='CAMERA_LEFT', removeSize=0):
+    def getStereoPointCloudElapsed(self,decimation=4, imagesChannel='MULTISENSE_CAMERA', cameraName='CAMERA_LEFT', removeSize=0):
         q = imageManager.queue
 
         utime = q.getCurrentImageTime(cameraName)
@@ -883,8 +883,8 @@ def init():
             addCameraView('OPENNI_FRAME_LEFT', 'OpenNI')
 
         #import bot_core as lcmbotcore
-        #addCameraView('CAMERA', 'Head camera right', 'CAMERA_RIGHT', lcmbotcore.images_t.RIGHT)
-        #addCameraView('CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmbotcore.images_t.DISPARITY_ZIPPED)
+        #addCameraView('MULTISENSE_CAMERA', 'Head camera right', 'CAMERA_RIGHT', lcmbotcore.images_t.RIGHT)
+        #addCameraView('MULTISENSE_CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmbotcore.images_t.DISPARITY_ZIPPED)
 
         if "atlas" in _modelName or "valkyrie" in _modelName:
             addCameraView('CAMERACHEST_LEFT', 'Chest left')
