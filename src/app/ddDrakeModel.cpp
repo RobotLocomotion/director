@@ -433,7 +433,7 @@ class URDFRigidBodyTreeVTK : public RigidBodyTreed
 {
 public:
 
-  typedef std::map<const RigidBody*, std::vector<ddMeshVisual::Ptr> > MeshMapType;
+  typedef std::map<const RigidBody<double>*, std::vector<ddMeshVisual::Ptr> > MeshMapType;
 
   std::shared_ptr<KinematicsCache<double> > cache;
 
@@ -454,8 +454,8 @@ public:
 
     RigidBodyTreed* model = this;
 
-    const RigidBody& worldBody = model->world();
-    for (const RigidBody* body : model->FindModelInstanceBodies(
+    const RigidBody<double>& worldBody = model->world();
+    for (const RigidBody<double>* body : model->FindModelInstanceBodies(
              worldBody.get_model_instance_id())) {
       if (!body->has_parent_body())
       {
@@ -595,7 +595,7 @@ public:
 
     RigidBodyTreed* model = this;
 
-    for (const RigidBody* body : model->FindModelInstanceBodies(
+    for (const RigidBody<double>* body : model->FindModelInstanceBodies(
              model->world().get_model_instance_id())) {
 
       const auto& visual_elements = body->get_visual_elements();
@@ -675,7 +675,7 @@ public:
   {
     RigidBodyTreed* model = this;
 
-    for (const RigidBody* body : model->FindModelInstanceBodies(
+    for (const RigidBody<double>* body : model->FindModelInstanceBodies(
              model->world().get_model_instance_id())) {
       MeshMapType::iterator itr = meshMap.find(body);
       if (itr == this->meshMap.end())
@@ -706,7 +706,7 @@ public:
 
     RigidBodyTreed* model = this;
 
-    for (const RigidBody* body : model->FindModelInstanceBodies(
+    for (const RigidBody<double>* body : model->FindModelInstanceBodies(
              model->world().get_model_instance_id())) {
       if (body->get_name().size())
       {
@@ -970,7 +970,7 @@ QVector<double> ddDrakeModel::getBodyContactPoints(const QString& bodyName) cons
   QVector<double> ret;
   URDFRigidBodyTreeVTK::Ptr model = this->Internal->Model;
 
-  for (const RigidBody* body : model->FindModelInstanceBodies(
+  for (const RigidBody<double>* body : model->FindModelInstanceBodies(
            model->world().get_model_instance_id())) {
     if (body->get_name().c_str() == bodyName)
     {
