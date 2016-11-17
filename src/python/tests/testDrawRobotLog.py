@@ -39,7 +39,7 @@ manipPlanner.connectPlanReceived(playbackPanel.setPlan)
 pointcloudlcm.init(view)
 
 # initialize camera view
-cameraChannel = 'CAMERA_LEFT'
+cameraChannel = 'MULTISENSE_CAMERA_LEFT'
 imageManager = cameraview.ImageManager()
 imageManager.queue.addCameraStream(cameraChannel)
 imageManager.addImage(cameraChannel)

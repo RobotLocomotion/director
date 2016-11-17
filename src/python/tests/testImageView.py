@@ -4,7 +4,7 @@ from director import cameraview
 from director import vtkAll as vtk
 
 
-def parseChannelArgument(defaultChannel='CAMERA_LEFT'):
+def parseChannelArgument(defaultChannel='MULTISENSE_CAMERA_LEFT'):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--channel', type=str, help='image channel', default=defaultChannel)
