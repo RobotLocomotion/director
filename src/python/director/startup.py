@@ -232,7 +232,7 @@ if usePerception:
     sensordatarequestpanel.init()
 
     # for kintinuous, use 'CAMERA_FUSED', 'CAMERA_TSDF'
-    disparityPointCloud = segmentation.DisparityPointCloudItem('stereo point cloud', 'MULTISENSE_CAMERA', 'CAMERA_LEFT', cameraview.imageManager)
+    disparityPointCloud = segmentation.DisparityPointCloudItem('stereo point cloud', 'MULTISENSE_CAMERA', 'MULTISENSE_CAMERA_LEFT', cameraview.imageManager)
     disparityPointCloud.addToView(view)
     om.addToObjectModel(disparityPointCloud, parentObj=om.findObjectByName('sensors'))
 
@@ -678,12 +678,12 @@ if useDataFiles:
         actionhandlers.onOpenFile(filename)
 
 if useCameraFrustumVisualizer and cameraview.CameraFrustumVisualizer.isCompatibleWithConfig():
-    cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'CAMERA_LEFT')
+    cameraFrustumVisualizer = cameraview.CameraFrustumVisualizer(robotStateModel, cameraview.imageManager, 'MULTISENSE_CAMERA_LEFT')
 
 class ImageOverlayManager(object):
 
     def __init__(self):
-        self.viewName = 'CAMERA_LEFT'
+        self.viewName = 'MULTISENSE_CAMERA_LEFT'
         self.desiredWidth = 400
         self.position = [0, 0]
         self.usePicker = False
@@ -750,7 +750,7 @@ class ToggleImageViewHandler(object):
 
 
 imageOverlayManager = ImageOverlayManager()
-imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'CAMERA_LEFT', view, visible=False)
+imageWidget = cameraview.ImageWidget(cameraview.imageManager, 'MULTISENSE_CAMERA_LEFT', view, visible=False)
 imageViewHandler = ToggleImageViewHandler(imageWidget)
 setImageWidgetSource = imageWidget.setImageName
 
@@ -828,21 +828,21 @@ if useDrillDemo:
         v = imageView.view
         q = cameraview.imageManager.queue
         localToCameraT = vtk.vtkTransform()
-        q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+        q.getTransform('local', 'MULTISENSE_CAMERA_LEFT', localToCameraT)
 
         res = vis.showFrame( vtk.vtkTransform() , 'temp',view=v, visible=True, scale = 0.2)
         om.removeFromObjectModel(res)
         pd = res.polyData
         pd = filterUtils.transformPolyData(pd, t)
         pd = filterUtils.transformPolyData(pd, localToCameraT)
-        q.projectPoints('CAMERA_LEFT', pd )
+        q.projectPoints('MULTISENSE_CAMERA_LEFT', pd )
         vis.showPolyData(pd, ('overlay ' + frameName), view=v, colorByName='Axes',parent='camera overlay',visible=visible)
 
     def drawObjectInCamera(objectName,visible=True):
         v = imageView.view
         q = cameraview.imageManager.queue
         localToCameraT = vtk.vtkTransform()
-        q.getTransform('local', 'CAMERA_LEFT', localToCameraT)
+        q.getTransform('local', 'MULTISENSE_CAMERA_LEFT', localToCameraT)
 
         obj = om.findObjectByName(objectName)
         if obj is None:
@@ -852,14 +852,14 @@ if useDrillDemo:
         pd = objPolyDataOriginal
         pd = filterUtils.transformPolyData(pd, objToLocalT)
         pd = filterUtils.transformPolyData(pd, localToCameraT)
-        q.projectPoints('CAMERA_LEFT', pd)
+        q.projectPoints('MULTISENSE_CAMERA_LEFT', pd)
         vis.showPolyData(pd, ('overlay ' + objectName), view=v, color=[0,1,0],parent='camera overlay',visible=visible)
 
     def projectDrillDemoInCamera():
         q = om.findObjectByName('camera overlay')
         om.removeFromObjectModel(q)
 
-        imageView = cameraview.views['CAMERA_LEFT']
+        imageView = cameraview.views['MULTISENSE_CAMERA_LEFT']
         imageView.imageActor.SetOpacity(.2)
 
         drawFrameInCamera(drillDemo.drill.frame.transform, 'drill frame',visible=False)

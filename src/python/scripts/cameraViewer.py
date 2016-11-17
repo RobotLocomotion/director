@@ -49,7 +49,7 @@ class CameraVisualizer(object):
         frame1Layout.setMargin(0)
         frame1Layout.addWidget(view)
 
-        view = self.createCameraView('CAMERA_LEFT')
+        view = self.createCameraView('MULTISENSE_CAMERA_LEFT')
         frame2Layout = QtGui.QVBoxLayout(self.ui.frame2)        
         frame2Layout.setSpacing(0)
         frame2Layout.setMargin(0)

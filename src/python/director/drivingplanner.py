@@ -985,7 +985,7 @@ class DrivingPlannerPanel(TaskUserPanel):
         self.addTasks()
         self.apriltagSub = lcmUtils.addSubscriber('APRIL_TAG_TO_CAMERA_LEFT', lcmbotcore.rigid_transform_t, self.onAprilTag)
         self.imageView = cameraview.CameraImageView(cameraview.imageManager, 'CAMERACHEST_RIGHT', 'right image view')
-        self.imageViewLeft = cameraview.CameraImageView(cameraview.imageManager, 'CAMERA_LEFT', 'left image view')
+        self.imageViewLeft = cameraview.CameraImageView(cameraview.imageManager, 'MULTISENSE_CAMERA_LEFT', 'left image view')
 
         self.imageView.view.orientationMarkerWidget().Off()
         self.imageView.view.backgroundRenderer().SetBackground([0,0,0])

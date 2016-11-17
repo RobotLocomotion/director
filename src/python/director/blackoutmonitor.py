@@ -39,7 +39,7 @@ class BlackoutMonitor(object):
         self.updateTimer.start()
 
     def update(self):
-        self.lastCameraMessageTime = self.cameraview.imageManager.queue.getCurrentImageTime('CAMERA_LEFT')
+        self.lastCameraMessageTime = self.cameraview.imageManager.queue.getCurrentImageTime('MULTISENSE_CAMERA_LEFT')
         self.lastScanBundleMessageTime = self.mapServerSource.reader.GetLastScanBundleUTime()
         if self.robotStateJointController.lastRobotStateMessage:
             elapsedCam = max((self.robotStateJointController.lastRobotStateMessage.utime - self.lastCameraMessageTime) / (1000*1000), 0.0)

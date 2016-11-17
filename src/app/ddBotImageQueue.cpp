@@ -574,7 +574,7 @@ void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyDat
   QString key = QString("coordinate_frames.") + channel + QString("_RIGHT.initial_transform.translation");
   double baseline = 0.07; // an approximate value for multisense
   if (!bot_param_get_double(mBotParam, key.toAscii().data(), &baseline) == 0){
-    printf("CAMERA_RIGHT baseline not found\n");
+    printf("MULTISENSE_CAMERA_RIGHT baseline not found\n");
     return;
   }
   cv::Mat_<double> Q_(4, 4, 0.0);

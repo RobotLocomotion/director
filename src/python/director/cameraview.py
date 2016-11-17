@@ -52,7 +52,7 @@ def makeSphere(radius, resolution):
     return shallowCopy(s.GetOutput())
 
 
-def colorizePoints(polyData, cameraName='CAMERA_LEFT'):
+def colorizePoints(polyData, cameraName='MULTISENSE_CAMERA_LEFT'):
     imageManager.queue.colorizePoints(cameraName, polyData)
 
 
@@ -62,7 +62,7 @@ def sendFOVRequest(channel, imagePoints):
     import maps as lcmmaps
 
     channelToImageType = {
-        'CAMERA_LEFT' : lcmmaps.data_request_t.CAMERA_IMAGE_HEAD_LEFT,
+        'MULTISENSE_CAMERA_LEFT' : lcmmaps.data_request_t.CAMERA_IMAGE_HEAD_LEFT,
         'CAMERACHEST_LEFT' : lcmmaps.data_request_t.CAMERA_IMAGE_LCHEST,
         'CAMERACHEST_RIGHT' : lcmmaps.data_request_t.CAMERA_IMAGE_RCHEST,
                          }
@@ -176,7 +176,7 @@ def disableCameraTexture(obj):
     obj.actor.GetProperty().LightingOn()
     obj.actor.GetProperty().SetColor(obj.getProperty('Color'))
 
-def applyCameraTexture(obj, imageManager, imageName='CAMERA_LEFT'):
+def applyCameraTexture(obj, imageManager, imageName='MULTISENSE_CAMERA_LEFT'):
 
     imageUtime = imageManager.getUtime(imageName)
     if not imageUtime:
@@ -212,7 +212,7 @@ class CameraView(object):
         self.robotModel = None
         self.sphereObjects = {}
         self.sphereImages = [
-                'CAMERA_LEFT',
+                'MULTISENSE_CAMERA_LEFT',
                 'CAMERACHEST_RIGHT',
                 'CAMERACHEST_LEFT']
 
@@ -275,12 +275,12 @@ class CameraView(object):
 
     def initImageRotations(self, robotModel):
         self.robotModel = robotModel
-        # Rotate Multisense image/CAMERA_LEFT if the camera frame is rotated (e.g. for Valkyrie)
+        # Rotate Multisense image/MULTISENSE_CAMERA_LEFT if the camera frame is rotated (e.g. for Valkyrie)
         if robotModel.getHeadLink():
             tf = robotModel.getLinkFrame(robotModel.getHeadLink())
             roll = transformUtils.rollPitchYawFromTransform(tf)[0]
             if np.isclose(np.abs(roll), np.pi, atol=1e-1):
-                self.imageManager.setImageRotation180('CAMERA_LEFT')
+                self.imageManager.setImageRotation180('MULTISENSE_CAMERA_LEFT')
 
     def initView(self, view):
 
@@ -321,7 +321,7 @@ class CameraView(object):
 
         sphereResolution = 50
         sphereRadii = {
-                'CAMERA_LEFT' : 20,
+                'MULTISENSE_CAMERA_LEFT' : 20,
                 'CAMERACHEST_LEFT' : 20,
                 'CAMERACHEST_RIGHT' : 20
                 }
@@ -722,10 +722,10 @@ def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
         warnings.warn(cameraName + " is not defined in the bot config")
 
     imageManager.queue.addCameraStream(channel, cameraName, imageType)
-    if cameraName == "CAMERA_LEFT":
+    if cameraName == "MULTISENSE_CAMERA_LEFT":
         import bot_core as lcmbotcore
         imageManager.queue.addCameraStream(
-            "CAMERA", "CAMERA_LEFT", lcmbotcore.images_t.LEFT)
+            "MULTISENSE_CAMERA", "MULTISENSE_CAMERA_LEFT", lcmbotcore.images_t.LEFT)
 
     if cameraName == "OPENNI_FRAME_LEFT":
         import bot_core as lcmbotcore
@@ -739,7 +739,7 @@ def addCameraView(channel, viewName=None, cameraName=None, imageType=-1):
     return view
 
 
-def getStereoPointCloud(decimation=4, imagesChannel='MULTISENSE_CAMERA', cameraName='CAMERA_LEFT', removeSize=0, rangeThreshold = -1):
+def getStereoPointCloud(decimation=4, imagesChannel='MULTISENSE_CAMERA', cameraName='MULTISENSE_CAMERA_LEFT', removeSize=0, rangeThreshold = -1):
 
     q = imageManager.queue
 
@@ -770,7 +770,7 @@ class KintinuousMapping(object):
         self.cameraToLocalTransforms = []
         self.pointClouds = []
 
-    def getStereoPointCloudElapsed(self,decimation=4, imagesChannel='MULTISENSE_CAMERA', cameraName='CAMERA_LEFT', removeSize=0):
+    def getStereoPointCloudElapsed(self,decimation=4, imagesChannel='MULTISENSE_CAMERA', cameraName='MULTISENSE_CAMERA_LEFT', removeSize=0):
         q = imageManager.queue
 
         utime = q.getCurrentImageTime(cameraName)
@@ -782,9 +782,9 @@ class KintinuousMapping(object):
 
         p = vtk.vtkPolyData()
         cameraToLocalFused = vtk.vtkTransform()
-        q.getTransform('CAMERA_LEFT_ALT', 'local', utime, cameraToLocalFused)
+        q.getTransform('MULTISENSE_CAMERA_LEFT_ALT', 'local', utime, cameraToLocalFused)
         cameraToLocal = vtk.vtkTransform()
-        q.getTransform('CAMERA_LEFT', 'local', utime, cameraToLocal)
+        q.getTransform('MULTISENSE_CAMERA_LEFT', 'local', utime, cameraToLocal)
         prevToCurrentCameraTransform = vtk.vtkTransform()
         prevToCurrentCameraTransform.PostMultiply()
         prevToCurrentCameraTransform.Concatenate( cameraToLocal )
@@ -812,9 +812,9 @@ class KintinuousMapping(object):
         cameraToLocalNow = vtk.vtkTransform()
         utime = q.getCurrentImageTime('CAMERA_TSDF')
 
-        q.getTransform('CAMERA_LEFT','local', utime,cameraToLocalNow)
+        q.getTransform('MULTISENSE_CAMERA_LEFT','local', utime,cameraToLocalNow)
         cameraToLocalFusedNow = vtk.vtkTransform()
-        q.getTransform('CAMERA_LEFT_ALT','local', utime,cameraToLocalFusedNow)
+        q.getTransform('MULTISENSE_CAMERA_LEFT_ALT','local', utime,cameraToLocalFusedNow)
 
         for i in range(len(self.pointClouds)):
 
@@ -876,15 +876,15 @@ def init():
         _modelName = drcargs.getDirectorConfig()['modelName']
         cameraNames = imageManager.queue.getCameraNames()
 
-        if "CAMERA_LEFT" in cameraNames:
-            addCameraView('CAMERA_LEFT', 'Head camera')
+        if "MULTISENSE_CAMERA_LEFT" in cameraNames:
+            addCameraView('MULTISENSE_CAMERA_LEFT', 'Head camera')
 
         if "OPENNI_FRAME_LEFT" in cameraNames:
             addCameraView('OPENNI_FRAME_LEFT', 'OpenNI')
 
         #import bot_core as lcmbotcore
-        #addCameraView('MULTISENSE_CAMERA', 'Head camera right', 'CAMERA_RIGHT', lcmbotcore.images_t.RIGHT)
-        #addCameraView('MULTISENSE_CAMERA', 'Head camera depth', 'CAMERA_DISPARITY', lcmbotcore.images_t.DISPARITY_ZIPPED)
+        #addCameraView('MULTISENSE_CAMERA', 'Head camera right', 'MULTISENSE_CAMERA_RIGHT', lcmbotcore.images_t.RIGHT)
+        #addCameraView('MULTISENSE_CAMERA', 'Head camera depth', 'MULTISENSE_CAMERA_DISPARITY', lcmbotcore.images_t.DISPARITY_ZIPPED)
 
         if "atlas" in _modelName or "valkyrie" in _modelName:
             addCameraView('CAMERACHEST_LEFT', 'Chest left')
