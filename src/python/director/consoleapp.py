@@ -21,6 +21,8 @@ def _consoleAppExceptionHook(exc_type, exc_value, exc_traceback):
 
 class ConsoleApp(object):
 
+    _startupCallbacks = []
+
     def __init__(self):
         om.init()
         self.objectModelWidget = None
@@ -41,6 +43,13 @@ class ConsoleApp(object):
 
         if ConsoleApp.getTestingEnabled() and not ConsoleApp.getTestingInteractiveEnabled():
             sys.excepthook = _consoleAppExceptionHook
+
+        def onStartup():
+            for func in ConsoleApp._startupCallbacks:
+                func()
+
+        startTimer = TimerCallback(callback=onStartup)
+        startTimer.singleShot(0)
 
         result = ConsoleApp.applicationInstance().exec_()
 
