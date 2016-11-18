@@ -1,13 +1,11 @@
-from director import consoleapp
 from director import imageview
 from director import vtkAll as vtk
 from director import transformUtils
 from director import visualization as vis
+from director import viewbehaviors
 from director import vtkNumpy as vnp
 from director.debugVis import DebugData
 from director.timercallback import TimerCallback
-from director import ioUtils
-from director import filterUtils
 import PythonQt
 import numpy as np
 
@@ -97,6 +95,7 @@ class DepthScanner(object):
     def initPointCloudView(self):
         self.pointCloudView = PythonQt.dd.ddQVTKWidgetView()
         self.pointCloudView.setWindowTitle('Pointcloud')
+        self.pointCloudViewBehaviors = viewbehaviors.ViewBehaviors(self.pointCloudView)
 
     def update(self):
 
@@ -130,38 +129,52 @@ class DepthScanner(object):
 
 def main(globalsDict=None):
 
-    app = consoleapp.ConsoleApp()
-    view = app.createView()
-    app.gridObj.setProperty('Visible', False)
+    from director import mainwindowapp
+    from PythonQt import QtCore, QtGui
 
-    d = DebugData()
-    d.addArrow((0,0,0), (0,0,1), color=[1,0,0])
-    d.addArrow((0,0,1), (0,.5,1), color=[0,1,0])
+    app = mainwindowapp.construct()
+    app.gridObj.setProperty('Visible', True)
+    app.viewOptions.setProperty('Orientation widget', False)
+    app.viewOptions.setProperty('View angle', 30)
+    app.sceneBrowserDock.setVisible(False)
+    app.propertiesDock.setVisible(False)
+    app.mainWindow.setWindowTitle('Depth Scanner')
+    app.mainWindow.show()
+    app.mainWindow.resize(920,600)
+    app.mainWindow.move(0,0)
 
-    vis.showPolyData(d.getPolyData(), 'debug data', colorByName='RGB255')
-    view.orientationMarkerWidget().Off()
-    view.show()
-    view.resize(600,600)
-    view.move(0,0)
-    view.camera().SetPosition(3,3,0)
-    view.camera().SetFocalPoint(0,0,0)
-    view.camera().SetViewUp(0,0,1)
-    view.resetCamera()
-    view.forceRender()
+    view = app.view
+    view.setParent(None)
+    mdiArea = QtGui.QMdiArea()
+    app.mainWindow.setCentralWidget(mdiArea)
+    subWindow = mdiArea.addSubWindow(view)
+    subWindow.setMinimumSize(300,300)
+    subWindow.setWindowTitle('Camera image')
+    mdiArea.tileSubWindows()
+
+    #affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
 
     depthScanner = DepthScanner(view)
     depthScanner.update()
 
-    pcView = depthScanner.pointCloudView
-    pcView.show()
-    pcView.resize(300,300)
-    pcView.move(600,0)
+    dock = app.app.addWidgetToDock(depthScanner.imageView.view, QtCore.Qt.RightDockWidgetArea)
+    dock.setMinimumWidth(300)
+    dock.setMinimumHeight(300)
 
-    imageView = depthScanner.imageView
-    imageView.view.show()
-    imageView.view.resize(300,300)
-    imageView.view.move(600,300)
-    imageView.resetCamera()
+    dock = app.app.addWidgetToDock(depthScanner.pointCloudView, QtCore.Qt.RightDockWidgetArea)
+    dock.setMinimumWidth(300)
+    dock.setMinimumHeight(300)
+
+
+    # add some test data
+    def addTestData():
+        d = DebugData()
+        d.addArrow((0,0,0), (0,0,1), color=[1,0,0])
+        d.addArrow((0,0,1), (0,.5,1), color=[0,1,0])
+        vis.showPolyData(d.getPolyData(), 'debug data', colorByName='RGB255')
+        view.resetCamera()
+
+    addTestData()
 
     # xvfb command
     # /usr/bin/Xvfb  :99 -ac -screen 0 1280x1024x16
@@ -169,7 +182,8 @@ def main(globalsDict=None):
     if globalsDict is not None:
         globalsDict.update(dict(app=app, view=view, depthScanner=depthScanner))
 
-    app.start()
+    app.app.start(restoreWindow=False)
+
 
 
 if __name__ == '__main__':

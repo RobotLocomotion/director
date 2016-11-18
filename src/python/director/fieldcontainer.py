@@ -65,7 +65,6 @@ class FieldContainer(object):
 
     __repr__ = _repr
 
-
     def __init__(self, **kwargs):
         self._set_fields(**kwargs)
 
@@ -87,6 +86,18 @@ class FieldContainer(object):
         else:
             for name, value in fields.iteritems():
                 self.__setattr__(name, value)
+
+    def __getitem__(self, name):
+        return getattr(self, name)
+
+    def __setitem__(self, name, value):
+        setattr(self, name, value)
+
+    def __len__(self):
+        return len(self._fields)
+
+    def __contains__(self, name):
+        return name in self._fields
 
     def __setattr__(self, name, value):
         if hasattr(self, name):
