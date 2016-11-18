@@ -5,6 +5,7 @@ import director.visualization as vis
 from director.fieldcontainer import FieldContainer
 from director import applogic
 from director import appsettings
+from director import drcargs
 
 import functools
 import PythonQt
@@ -123,6 +124,9 @@ class MainWindowApp(object):
 
         return action
 
+    def registerStartupCallback(self, func):
+        consoleapp.ConsoleApp._startupCallbacks.append(func)
+
     def _restoreWindowState(self, key):
         appsettings.restoreState(self.settings, self.mainWindow, key)
 
@@ -153,6 +157,8 @@ class MainWindowAppFactory(ComponentFactory):
         addComponent = componentGraph.addComponent
 
         addComponent('View', [])
+        addComponent('Globals', [])
+        addComponent('GlobalModules', ['Globals'])
         addComponent('ObjectModel', [])
         addComponent('ViewOptions', ['View', 'ObjectModel'])
         addComponent('MainToolBar', ['View', 'Grid', 'ViewOptions', 'MainWindow'])
@@ -160,6 +166,7 @@ class MainWindowAppFactory(ComponentFactory):
         addComponent('Grid', ['View', 'ObjectModel'])
         addComponent('MainWindow', ['View', 'ObjectModel'])
         addComponent('AdjustedClippingRange', ['View'])
+        addComponent('ScriptLoader', ['MainWindow', 'GlobalModules'])
 
     def initView(self, fields):
         view = PythonQt.dd.ddQVTKWidgetView()
@@ -246,7 +253,8 @@ class MainWindowAppFactory(ComponentFactory):
           mainWindow=app.mainWindow,
           sceneBrowserDock=sceneBrowserDock,
           propertiesDock=propertiesDock,
-          toggleObjectModelDock=toggleObjectModelDock
+          toggleObjectModelDock=toggleObjectModelDock,
+          commandLineArgs=drcargs.args()
           )
 
 
@@ -279,6 +287,39 @@ class MainWindowAppFactory(ComponentFactory):
 
         return FieldContainer(viewBackgroundLightHandler=viewBackgroundLightHandler, terrainToggle=terrainToggle)
 
+    def initGlobalModules(self, fields):
+
+        from director import objectmodel as om
+        from director import visualization as vis
+        from director import applogic
+        from director import transformUtils
+        from director import filterUtils
+        from director import ioUtils
+        from director import vtkAll as vtk
+        from director import vtkNumpy as vnp
+        from director.debugVis import DebugData
+        from director.timercallback import TimerCallback
+        from director.fieldcontainer import FieldContainer
+        import numpy as np
+
+        modules = dict(locals())
+        del modules['fields']
+        fields.globalsDict.update(modules)
+
+    def initGlobals(self, fields):
+        try:
+            globalsDict = fields.globalsDict
+        except AttributeError:
+            globalsDict = dict()
+        if globalsDict is None:
+            globalsDict = dict()
+        return FieldContainer(globalsDict=globalsDict)
+
+    def initScriptLoader(self, fields):
+        def loadScripts():
+            for filename in fields.commandLineArgs.scripts:
+                execfile(filename, fields.globalsDict)
+        fields.app.registerStartupCallback(loadScripts)
 
 
 class MainWindowPanelFactory(ComponentFactory):
@@ -342,12 +383,19 @@ class MainWindowPanelFactory(ComponentFactory):
           )
 
 
+def construct(globalsDict=None):
+    app = MainWindowAppFactory().construct(globalsDict=globalsDict)
+    MainWindowPanelFactory().construct(view=app.view, app=app.app)
+    return app
+
+
 def main(globalsDict=None):
 
-    app = MainWindowAppFactory().construct()
-    MainWindowPanelFactory().construct(view=app.view, app=app.app)
+    app = construct(globalsDict)
+
     if globalsDict is not None:
         globalsDict.update(**dict(app))
+
     app.app.start()
 
 
