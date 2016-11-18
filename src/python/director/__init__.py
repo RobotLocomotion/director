@@ -14,6 +14,8 @@ def _initCoverage():
 def getDRCBaseDir():
     return os.environ['DRC_BASE']
 
+def getDRCBaseIsSet():
+    return 'DRC_BASE' in os.environ
 
 def updateSysPath(path):
     if path and os.path.isdir(path) and path not in sys.path:
