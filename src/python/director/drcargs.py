@@ -34,6 +34,14 @@ class DRCArgParser(object):
             self._args = parser.parse_args()
 
 
+        def flatten(l):
+            return [item for sublist in l for item in sublist]
+
+        # now flatten some list of lists
+        self._args.scripts = flatten(self._args.scripts)
+        self._args.data_files = flatten(self._args.data_files)
+
+
     def getDefaultBotConfigFile(self):
         return os.path.join(director.getDRCBaseDir(), 'software/config/val/robot.cfg')
 
@@ -71,7 +79,6 @@ class DRCArgParser(object):
     def getDefaultDualArmHuskyConfigFile(self):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/dual_arm_husky_description/director_config.json')
-
 
     def addDirectorConfigShortcuts(self, directorConfig):
 
@@ -115,17 +122,18 @@ class DRCArgParser(object):
                             const=self.getDefaultDualArmHuskyConfigFile(),
                             help='Use Dual Arm Husky')
 
-
-
     def addDefaultArgs(self, parser):
 
-        parser.add_argument('-c', '--config_file', type=str, help='Robot cfg file')
-        parser.add_argument('--matlab-host', type=str, help='Hostname to use external matlab server')
+        parser.add_argument('-c', '--bot-config', '--config_file', dest='config_file',
+                            metavar='filename', type=str, help='Robot cfg file')
+
+        parser.add_argument('--matlab-host', metavar='hostname', type=str,
+                            help='hostname to connect with external matlab server')
 
         directorConfig = parser.add_mutually_exclusive_group(required=False)
-        directorConfig.add_argument('--director_config', dest='directorConfigFile',
-                            type=str,
-                            help='JSON file specifying which urdfs to use')
+        directorConfig.add_argument('--director-config', '--director_config', dest='directorConfigFile',
+                                    type=str, metavar='filename',
+                                    help='JSON file specifying which urdfs to use')
 
         if director.getDRCBaseIsSet():
             self.addDirectorConfigShortcuts(directorConfig)
@@ -133,11 +141,16 @@ class DRCArgParser(object):
                                 config_file=self.getDefaultBotConfigFile())
 
         parser.add_argument('data_files', type=str, nargs='*',
+                            default=[], action='append', metavar='filename',
                             help='data files to load at startup')
 
-        parser.add_argument('--startup', type=str, nargs='*', dest='startup',
-                            default=[],
-                            help='Run other python startup scripts in addition to startup.py')
+        parser.add_argument('--data', type=str, nargs='+', dest='data_files',
+                            default=[], action='append', metavar='filename',
+                            help='data files to load at startup')
+
+        parser.add_argument('--script', '--startup', type=str, nargs='+', dest='scripts',
+                            default=[], action='append', metavar='filename',
+                            help='python scripts to run at startup')
 
 
 _argParser = None
@@ -147,14 +160,15 @@ def getGlobalArgParser():
         _argParser = DRCArgParser()
     return _argParser
 
+
 def requireStrict():
     global _argParser
     _argParser = None
     getGlobalArgParser().strict = True
 
+
 def args():
     return getGlobalArgParser().getArgs()
-
 
 
 class DirectorConfig(object):
