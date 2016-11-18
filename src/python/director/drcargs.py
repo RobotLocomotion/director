@@ -72,13 +72,9 @@ class DRCArgParser(object):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/dual_arm_husky_description/director_config.json')
 
-    def addDefaultArgs(self, parser):
-        parser.add_argument('-c', '--config_file', type=str, help='Robot cfg file',
-                            default=self.getDefaultBotConfigFile())
 
-        parser.add_argument('--matlab-host', type=str, help='Hostname to use external matlab server')
+    def addDirectorConfigShortcuts(self, directorConfig):
 
-        directorConfig = parser.add_mutually_exclusive_group(required=False)
         directorConfig.add_argument('-v3', '--atlas_v3', dest='directorConfigFile',
                             action='store_const',
                             const=self.getDefaultAtlasV3DirectorConfigFile(),
@@ -119,11 +115,22 @@ class DRCArgParser(object):
                             const=self.getDefaultDualArmHuskyConfigFile(),
                             help='Use Dual Arm Husky')
 
+
+
+    def addDefaultArgs(self, parser):
+
+        parser.add_argument('-c', '--config_file', type=str, help='Robot cfg file')
+        parser.add_argument('--matlab-host', type=str, help='Hostname to use external matlab server')
+
+        directorConfig = parser.add_mutually_exclusive_group(required=False)
         directorConfig.add_argument('--director_config', dest='directorConfigFile',
                             type=str,
                             help='JSON file specifying which urdfs to use')
 
-        parser.set_defaults(directorConfigFile=self.getDefaultDirectorConfigFile())
+        if director.getDRCBaseIsSet():
+            self.addDirectorConfigShortcuts(directorConfig)
+            parser.set_defaults(directorConfigFile=self.getDefaultDirectorConfigFile(),
+                                config_file=self.getDefaultBotConfigFile())
 
         parser.add_argument('data_files', type=str, nargs='*',
                             help='data files to load at startup')
