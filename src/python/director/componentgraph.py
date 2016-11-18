@@ -56,13 +56,14 @@ class ComponentFactory(object):
     def initDefaultOptions(self, options):
         pass
 
-    def getDisabledOptions(self):
+    def getDisabledOptions(self, **kwargs):
         options = self.getDefaultOptions()
         for opt in options._fields:
-            setattr(options, opt, False)
+            options[opt] = False
+        self.setDependentOptions(options, **kwargs)
         return options
 
-    def getDefaultOptions(self):
+    def getDefaultOptions(self, **kwargs):
 
         options = dict()
         for name in self.componentGraph.getComponentNames():
@@ -70,6 +71,7 @@ class ComponentFactory(object):
 
         options = FieldContainer(**options)
         self.initDefaultOptions(options)
+        self.setDependentOptions(options, **kwargs)
         return options
 
     def _toComponentName(self, optionName):
@@ -102,6 +104,8 @@ class ComponentFactory(object):
                 for dep in dependencies:
                     setattr(options, self._toOptionName(dep), True)
 
+        return options
+
     def _verifyOptions(self, options):
 
         for name, enabled in options:
@@ -117,6 +121,8 @@ class ComponentFactory(object):
     def construct(self, options=None, **kwargs):
 
         options = options or self.getDefaultOptions()
+        if isinstance(options, dict):
+            options = self.setDependentOptions(self.getDefaultOptions(), **options)
         self._verifyOptions(options)
 
         componentGraph = self.componentGraph
