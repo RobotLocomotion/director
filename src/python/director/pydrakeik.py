@@ -250,6 +250,26 @@ class PyDrakeIkServer(object):
 
         return options
 
+    def handleFixedLinkFromRobotPoseConstraint(self, c, fields):
+
+        bodyId = self.bodyNameToId[c.linkName]
+        pose = np.asarray(fields.poses[c.poseName], dtype=float)
+        pointInBodyFrame = np.zeros(3)
+        tolerance = np.radians(c.angleToleranceInDegrees)
+        tspan = np.asarray(c.tspan, dtype=float)
+
+        bodyToWorld = self.computeBodyToWorld(pose, c.linkName, pointInBodyFrame)
+        bodyPos = transformUtils.transformations.translation_from_matrix(bodyToWorld)
+        bodyQuat = transformUtils.transformations.quaternion_from_matrix(bodyToWorld)
+
+        lowerBound = bodyPos + c.lowerBound
+        upperBound = bodyPos + c.upperBound
+
+        pc = pydrakeik.WorldPositionConstraint(self.rigidBodyTree, bodyId, pointInBodyFrame, lowerBound, upperBound, tspan)
+        qc = pydrakeik.WorldQuatConstraint(self.rigidBodyTree, bodyId, bodyQuat, tolerance, tspan)
+
+        return [pc, qc]
+
     def handlePositionConstraint(self, c, fields):
 
         bodyId = self.bodyNameToId[c.linkName]
@@ -339,6 +359,7 @@ class PyDrakeIkServer(object):
 
         dispatchMap = {
             ikconstraints.PositionConstraint : self.handlePositionConstraint,
+            ikconstraints.FixedLinkFromRobotPoseConstraint : self.handleFixedLinkFromRobotPoseConstraint,
             ikconstraints.QuatConstraint : self.handleQuatConstraint,
             ikconstraints.WorldGazeDirConstraint : self.handleWorldGazeDirConstraint,
             ikconstraints.PostureConstraint : self.handlePostureConstraint,
@@ -347,21 +368,32 @@ class PyDrakeIkServer(object):
 
         constraints = [dispatchMap[type(c)](c, fields) for c in fields.constraints]
 
-        constraints = [c for c in constraints if c is not None]
+        constraintList = []
+        for c in constraints:
+            if c is None:
+                continue
+            if isinstance(c, list):
+                constraintList.extend(c)
+            else:
+                constraintList.append(c)
 
-        return constraints
+        return constraintList
 
-    def forwardKinematicsExample(self):
+    def computeBodyToWorld(self, pose, bodyName, pointInBody=None):
+        if pointInBody is None:
+            pointInBody = np.zeros(3)
 
-        q = np.zeros(self.rigidBodyTree.get_num_positions())
+        assert len(pose) == self.rigidBodyTree.get_num_positions()
         v = np.zeros(self.rigidBodyTree.get_num_velocities())
-        kinsol = self.rigidBodyTree.doKinematics(q,v)
+        kinsol = self.rigidBodyTree.doKinematics(pose, v)
 
-        t = self.rigidBodyTree.relativeTransform(kinsol, self.bodyNameToId['world'], self.bodyNameToId['leftFoot'])
-        tt = transformUtils.getTransformFromNumpy(t)
-        pos = transformUtils.transformations.translation_from_matrix(t)
-        quat = transformUtils.transformations.quaternion_from_matrix(t)
+        t = self.rigidBodyTree.relativeTransform(kinsol, self.bodyNameToId['world'], self.bodyNameToId[bodyName])
+        assert t.shape == (4,4)
 
+        #tt = transformUtils.getTransformFromNumpy(t)
+        #pos = transformUtils.transformations.translation_from_matrix(t)
+        #quat = transformUtils.transformations.quaternion_from_matrix(t)
+        return t
 
     def checkJointNameOrder(self, fields):
 
