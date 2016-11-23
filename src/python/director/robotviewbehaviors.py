@@ -501,12 +501,12 @@ class RobotViewEventFilter(ViewEventFilter):
             if not picker.enabled:
                 continue
 
-            picker.onMouseMove(vis.mapMousePosition(self.view, event), event.modifiers())
+            picker.onMouseMove(self.getMousePositionInView(event), event.modifiers())
             self.consumeEvent()
 
     def onLeftMousePress(self, event):
         if event.modifiers() == QtCore.Qt.ControlModifier:
-            displayPoint = vis.mapMousePosition(self.view, event)
+            displayPoint = self.getMousePositionInView(event)
             if footstepsDriver:
                 newWalkingGoal(displayPoint, self.view)
                 self.consumeEvent()
@@ -515,12 +515,12 @@ class RobotViewEventFilter(ViewEventFilter):
             if not picker.enabled:
                 continue
 
-            picker.onMousePress(vis.mapMousePosition(self.view, event), event.modifiers())
+            picker.onMousePress(self.getMousePositionInView(event), event.modifiers())
             self.consumeEvent()
 
     def onLeftDoubleClick(self, event):
 
-        displayPoint = vis.mapMousePosition(self.view, event)
+        displayPoint = self.getMousePositionInView(event)
 
         useHorizontalWidget =  (event.modifiers() == QtCore.Qt.ShiftModifier)
         if toggleFootstepWidget(displayPoint, self.view, useHorizontalWidget):

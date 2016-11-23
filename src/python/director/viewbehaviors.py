@@ -146,9 +146,8 @@ class ViewBehaviors(vieweventfilter.ViewEventFilter):
             self.consumeEvent()
 
     def onRightClick(self, event):
-        displayPoint = vis.mapMousePosition(self.view, event)
+        displayPoint = self.getMousePositionInView(event)
         showRightClickMenu(displayPoint, self.view)
-
 
     def onKeyPress(self, event):
 
