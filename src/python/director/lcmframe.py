@@ -1,12 +1,12 @@
 from director import transformUtils
 import bot_core
 
-def frameFromPositionMessage(positionMessage):
+def frameFromPositionMessage(msg):
     '''
     Given an bot_core.position_t message, returns a vtkTransform
     '''
-    trans = positionMessage.translation
-    quat = positionMessage.rotation
+    trans = msg.translation
+    quat = msg.rotation
 
     trans = [trans.x, trans.y, trans.z]
     quat = [quat.w, quat.x, quat.y, quat.z]
@@ -14,9 +14,18 @@ def frameFromPositionMessage(positionMessage):
     return transformUtils.transformFromPose(trans, quat)
 
 
+def frameFromRigidTransformMessage(msg):
+    '''
+    Given an bot_core.rigid_transform_t message, returns a vtkTransform
+    '''
+    trans = msg.trans
+    quat = msg.quat
+    return transformUtils.transformFromPose(trans, quat)
+
+
 def positionMessageFromFrame(transform):
     '''
-    Given a vtkTransform, returns an bot_core.position_t message
+    Given a vtkTransform, returns a bot_core.position_t message
     '''
 
     pos, wxyz = transformUtils.poseFromTransform(transform)
@@ -31,3 +40,12 @@ def positionMessageFromFrame(transform):
     pose.translation = trans
     pose.rotation = quat
     return pose
+
+
+def rigidTransformMessageFromFrame(transform):
+    '''
+    Given a vtkTransform, returns a bot_core.rigid_transform_t message
+    '''
+    msg = bot_core.rigid_transform_t()
+    msg.trans, msg.quat = transformUtils.poseFromTransform(transform)
+    return msg
