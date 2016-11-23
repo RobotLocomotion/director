@@ -141,9 +141,11 @@ class ViewBehaviors(vieweventfilter.ViewEventFilter):
 
     def onLeftDoubleClick(self, event):
 
-        displayPoint = vis.mapMousePosition(self.view, event)
+        displayPoint = self.getMousePositionInView(event)
         if toggleFrameWidget(displayPoint, self.view):
             self.consumeEvent()
+        else:
+            self.callHandler(self.LEFT_DOUBLE_CLICK_EVENT, displayPoint, self.view, event)
 
     def onRightClick(self, event):
         displayPoint = self.getMousePositionInView(event)
