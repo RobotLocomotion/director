@@ -44,6 +44,7 @@ set(python_files
   director/footstepsdriverpanel.py
   director/framevisualization.py
   director/gamepad.py
+  director/genericdrakeik.py
   director/geometryencoder.py
   director/handcontrolpanel.py
   director/handdriver.py
