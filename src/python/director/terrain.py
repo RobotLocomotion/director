@@ -5,10 +5,10 @@ from scipy.spatial import ConvexHull
 
 from director.irisUtils import SafeTerrainRegion
 from director import transformUtils
-from irispy.utils import sample_convex_polytope
-import polyhedron._cdd
-from polyhedron import Vrep, Hrep
-from py_drake_utils.utils import rpy2rotmat
+#from irispy.utils import sample_convex_polytope
+#import polyhedron._cdd
+#from polyhedron import Vrep, Hrep
+#from py_drake_utils.utils import rpy2rotmat
 
 FOOTSIZE_REDUCTION = 0.04
 FOOT_LENGTH = 0.25 - FOOTSIZE_REDUCTION

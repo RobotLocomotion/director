@@ -1,6 +1,6 @@
 import numpy as np
 import drc as lcmdrc
-from irispy.utils import lcon_to_vert
+#from irispy.utils import lcon_to_vert
 from director.lcmframe import frameFromPositionMessage, positionMessageFromFrame
 from scipy.spatial import ConvexHull
 

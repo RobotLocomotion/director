@@ -18,7 +18,7 @@ import time
 
 import drc as lcmdrc
 import bot_core
-import atlas
+#import atlas
 from pronto.indexed_measurement_t import indexed_measurement_t
 
 
