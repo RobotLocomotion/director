@@ -132,7 +132,7 @@ class DRCArgParser(object):
 
         directorConfig = parser.add_mutually_exclusive_group(required=False)
         directorConfig.add_argument('--director-config', '--director_config', dest='directorConfigFile',
-                                    type=str, metavar='filename',
+                                    type=str, default='', metavar='filename',
                                     help='JSON file specifying which urdfs to use')
 
         if director.getDRCBaseIsSet():
@@ -177,7 +177,7 @@ class DirectorConfig(object):
 
         self.filename = filename
         if not os.path.isfile(filename):
-            raise Exception('File not found: %s' % filename)
+            raise Exception('Director config file not found: %s' % filename)
 
         self.dirname = os.path.dirname(os.path.abspath(filename))
         self.config = json.load(open(filename))
@@ -194,6 +194,9 @@ class DirectorConfig(object):
     @classmethod
     def getDefaultInstance(cls):
         if cls._defaultInstance is None:
+            if not args().directorConfigFile:
+                raise Exception('Director config file is not defined. '
+                                'Use --director-config <filename> on the command line.')
             cls._defaultInstance = DirectorConfig(args().directorConfigFile)
         return cls._defaultInstance
 
