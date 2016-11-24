@@ -16,8 +16,8 @@ from director.simpletimer import SimpleTimer
 from director.utime import getUtime
 from director import robotstate
 
-import irobothand as lcmirobot
-import robotiqhand as lcmrobotiq
+#import irobothand as lcmirobot
+#import robotiqhand as lcmrobotiq
 
 
 class IRobotHandDriver(object):
