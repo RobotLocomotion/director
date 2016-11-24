@@ -9,7 +9,7 @@ class RobotSystemFactory(ComponentFactory):
         Components are enabled by default.  This function
         determines which components should be disabled.
         '''
-        options.useConvexHullModel = False
+        #options.useConvexHullModel = False
 
     def addComponents(self, componentGraph):
 
@@ -24,16 +24,16 @@ class RobotSystemFactory(ComponentFactory):
         addComponent('HandDrivers', [])
         addComponent('Footsteps', ['RobotState'])
         addComponent('RaycastDriver', ['Footsteps'])
-        addComponent('IRISDriver', ['RobotState', 'Footsteps'])
-        addComponent('AtlasDriver', [])
+        #addComponent('IRISDriver', ['RobotState', 'Footsteps'])
+        #addComponent('AtlasDriver', [])
         addComponent('Planning', ['RobotState'])
-        addComponent('Playback', ['Planning'])
-        addComponent('Teleop', ['Planning', 'Playback', 'Affordances'])
-        addComponent('ConvexHullModel', ['Playback'])
-        addComponent('FootstepsPlayback', ['Footsteps', 'Playback'])
+        #addComponent('Playback', ['Planning'])
+        #addComponent('Teleop', ['Planning', 'Playback', 'Affordances'])
+        #addComponent('ConvexHullModel', ['Playback'])
+        #addComponent('FootstepsPlayback', ['Footsteps', 'Playback'])
         addComponent('Affordances', [])
-        addComponent('PlannerPublisher', ['Planning', 'Affordances'])
-        addComponent('ViewBehaviors', ['Footsteps', 'PerceptionDrivers', 'Planning'])
+        #addComponent('PlannerPublisher', ['Planning', 'Affordances'])
+        #addComponent('ViewBehaviors', ['Footsteps', 'PerceptionDrivers', 'Planning'])
 
     def initDirectorConfig(self, robotSystem):
 
