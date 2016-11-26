@@ -68,6 +68,10 @@ class DRCArgParser(object):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/val_description/director_config_simple.json')
 
+    def getDefaultHyQDirectorConfigFile(self):
+        return os.path.join(director.getDRCBaseDir(),
+                            'software/models/hyq_description/director_config.json')
+
     def getDefaultKukaLWRConfigFile(self):
         return os.path.join(director.getDRCBaseDir(),
                             'software/models/lwr_defs/director_config.json')
@@ -106,6 +110,11 @@ class DRCArgParser(object):
                             action='store_const',
                             const=self.getDefaultValkyrieSimpleDirectorConfigFile(),
                             help='Use Valkyrie (Simple/Primitive Shapes)')
+
+        directorConfig.add_argument('-hyq', '--hyq', dest='directorConfigFile',
+                            action='store_const',
+                            const=self.getDefaultHyQDirectorConfigFile(),
+                            help='Use HyQ')
 
         directorConfig.add_argument('-lwr', '--lwr', dest='directorConfigFile',
                             action='store_const',

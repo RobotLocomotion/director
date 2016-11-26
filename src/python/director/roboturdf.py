@@ -308,6 +308,7 @@ def getBuiltinPackagePaths():
         'software/models/dual_arm_husky_description',
         'software/models/ur_description',
         'software/models/val_description',
+        'software/models/hyq_description',
         'software/models/lwr_defs',
         'software/models/husky_description',
         'software/models/mit_gazebo_models/mit_robot',
