@@ -166,7 +166,7 @@ useCOPMonitor = True
 useCourseModel = False
 useLimitJointsSentToPlanner = False
 useFeetlessRobot = False
-useCOMVisualization = True
+useCOMMonitor = True
 
 # Sensor Flags
 useKinect = False
@@ -969,7 +969,7 @@ def initCenterOfMassVisualization():
         model.connectModelChanged(drawCenterOfMass)
         drawCenterOfMass(model)
 
-if useCOMVisualization:
+if useCOMMonitor:
     initCenterOfMassVisualization()
 
 
