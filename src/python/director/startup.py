@@ -963,13 +963,13 @@ def drawCenterOfMass(model):
     d.addSphere(com, radius=0.015)
     obj = vis.updatePolyData(d.getPolyData(), 'COM %s' % model.getProperty('Name'), color=[1,0,0], visible=False, parent=model)
 
-def initCenterOfMassVisulization():
+def initCenterOfMassVisualization():
     for model in [robotStateModel, teleopRobotModel, playbackRobotModel]:
         model.connectModelChanged(drawCenterOfMass)
         drawCenterOfMass(model)
 
-if not ikPlanner.fixedBaseArm:
-    initCenterOfMassVisulization()
+if useCOMVisualization:
+    initCenterOfMassVisualization()
 
 
 class RobotMoverWidget(object):
