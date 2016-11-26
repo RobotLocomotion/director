@@ -997,7 +997,7 @@ class RobotGridUpdater(object):
         self.robotModel = robotModel
         self.jointController = jointController
         self.robotModel.connectModelChanged(self.updateGrid)
-        self.z_offset = 0.13 # for Husky # 0.85 for Atlas
+        self.z_offset = 0.627 # for Husky # 0.85 for Atlas
 
     def setZOffset(self, z_offset):
         self.z_offset = z_offset
