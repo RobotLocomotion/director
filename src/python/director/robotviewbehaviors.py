@@ -19,12 +19,15 @@ from director import segmentation
 from director import segmentationroutines
 from director.vieweventfilter import ViewEventFilter
 from director import viewbehaviors
+from director.utime import getUtime
 import numpy as np
 import ioUtils
 import os
 import re
 import random
 import colorsys
+
+import bot_core as lcmbotcore
 
 # todo: refactor these global variables
 # several functions in this module depend on these global variables
@@ -194,6 +197,43 @@ def newWalkingGoal(displayPoint, view):
     walkingTarget = transformUtils.frameFromPositionAndRPY(selectedGroundPoint, np.array(footFrame.GetOrientation()))
 
     footstepsdriverpanel.panel.onNewWalkingGoal(walkingTarget)
+
+
+def onNewDrivingGoal(frame):
+    msg = lcmbotcore.pose_t()
+    msg.utime = getUtime()
+    msg.pos, msg.orientation = transformUtils.poseFromTransform(frame.transform)
+    lcmUtils.publish('DRIVING_PLAN_REQUEST', msg)
+
+def newDrivingGoal(displayPoint, view):
+    # Places the driving goal on the plane of the footprint and uses current yaw
+
+    footFrame = robotModel.getLinkFrame('base_footprint')
+
+    worldPt1, worldPt2 = vis.getRayFromDisplayPoint(view, displayPoint)
+    groundOrigin = footFrame.GetPosition()
+    groundNormal = [0.0, 0.0, 1.0]
+    selectedGroundPoint = [0.0, 0.0, 0.0]
+
+    t = vtk.mutable(0.0)
+    vtk.vtkPlane.IntersectWithLine(worldPt1, worldPt2, groundNormal, groundOrigin, t, selectedGroundPoint)
+
+    footFrameRPY = transformUtils.rollPitchYawFromTransform(footFrame)
+    drivingTarget = transformUtils.frameFromPositionAndRPY(selectedGroundPoint, [0, 0, footFrameRPY[2]*180.0/np.pi ] )
+
+    # Create the widget and send a message:
+    #walkingGoal = walkingGoal or self.newWalkingGoalFrame(self.robotModel)
+    frameObj = vis.updateFrame(drivingTarget, 'driving goal', parent='planning', scale=0.25)
+    frameObj.setProperty('Edit', True)
+
+    rep = frameObj.widget.GetRepresentation()
+    rep.SetTranslateAxisEnabled(2, False)
+    rep.SetRotateAxisEnabled(0, False)
+    rep.SetRotateAxisEnabled(1, False)
+    frameObj.widget.HandleRotationEnabledOff()
+
+    frameObj.connectFrameModified(onNewDrivingGoal)
+    onNewDrivingGoal(frameObj)
 
 
 def toggleFootstepWidget(displayPoint, view, useHorizontalWidget=False):
@@ -568,6 +608,9 @@ class RobotViewEventFilter(ViewEventFilter):
             displayPoint = vis.mapMousePosition(self.view, event)
             if footstepsDriver:
                 newWalkingGoal(displayPoint, self.view)
+                self.consumeEvent()
+            else:
+                newDrivingGoal(displayPoint, self.view)
                 self.consumeEvent()
 
         for picker in segmentation.viewPickers:
