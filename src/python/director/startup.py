@@ -166,6 +166,7 @@ useCOPMonitor = True
 useCourseModel = False
 useLimitJointsSentToPlanner = False
 useFeetlessRobot = False
+useCOMVisualization = True
 
 # Sensor Flags
 useKinect = False
