@@ -996,19 +996,25 @@ class RobotGridUpdater(object):
         self.robotModel = robotModel
         self.jointController = jointController
         self.robotModel.connectModelChanged(self.updateGrid)
+        self.z_offset = 0.13 # for Husky # 0.85 for Atlas
+
+    def setZOffset(self, z_offset):
+        self.z_offset = z_offset
+        self.updateGrid(None)
 
     def updateGrid(self, model):
         pos = self.jointController.q[:3]
 
         x = int(np.round(pos[0])) / 10
         y = int(np.round(pos[1])) / 10
-        z = int(np.round(pos[2] - 0.85)) / 1
+        z = np.round( (pos[2]-self.z_offset)*10.0 ) / 10.0
+
 
         t = vtk.vtkTransform()
         t.Translate((x*10,y*10,z))
         self.gridFrame.copyFrame(t)
 
-#gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
+gridUpdater = RobotGridUpdater(grid.getChildFrame(), robotStateModel, robotStateJointController)
 
 
 class IgnoreOldStateMessagesSelector(object):
