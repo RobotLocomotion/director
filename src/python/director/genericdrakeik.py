@@ -1,11 +1,13 @@
 import json
 from collections import OrderedDict
+import numpy as np
 
 from director import plannerPublisher
 from director import ikconstraintencoder
 from director import lcmUtils
 
 import drake as lcm_drake
+from robotlocomotion import robot_plan_t
 
 class GenericDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
 
@@ -40,7 +42,7 @@ class GenericDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
 
     # create listener
     responseChannel = 'CANDIDATE_MANIP_IKPLAN'
-    responseMessageClass = lcm_drake.lcmt_plan
+    responseMessageClass = robot_plan_t
     listener = lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
     
     #publish and listen
@@ -56,7 +58,7 @@ class GenericDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
     
     if ikplan.num_states>0:
       endPose[-len(pose):] = pose
-      info = ikplan.info[ikplan.num_states-1]
+      info = ikplan.plan_info[ikplan.num_states-1]
     else: 
       info = -1
 
@@ -81,24 +83,21 @@ class GenericDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
         if largestTspan[1] != 0:
           constraints[constraintIndex].tspan[0] = constraints[constraintIndex].tspan[0] / largestTspan[1]
           constraints[constraintIndex].tspan[1] = constraints[constraintIndex].tspan[1] / largestTspan[1]
-    
-    fields = self.setupFields(constraints, ikParameters, positionCosts, nominalPoseName, seedPoseName, endPoseName)
-    msg = self.setupMessage(fields)
 
     # create listener
     responseChannel = 'CANDIDATE_MANIP_PLAN'
-    responseMessageClass = lcm_drake.lcmt_plan
+    responseMessageClass = robot_plan_t
     listener = lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
-    
-    if ikplan is None:
-      raise Exception('Timeout: No plan returned')
-    
+
+    # publish message and wait for response
+    fields = self.setupFields(constraints, ikParameters, positionCosts, nominalPoseName, seedPoseName, endPoseName)
+    msg = self.setupMessage(fields)
     lcmUtils.publish('PLANNER_REQUEST', msg)
     lastManipPlan = listener.waitForResponse(timeout=20000)
     listener.finish()
 
     # TODO: Re-add this line so that the info information gets displayed properly
     # should be set in startup.py as "ikServer.infoFunc = app.displaySnoptInfo"
-    # self.ikPlanner.ikServer.infoFunc(lastManipPlan.info[0])
+    # self.ikPlanner.ikServer.infoFunc(lastManipPlan.plan_info[0])
     
-    return lastManipPlan, lastManipPlan.info[0]
+    return lastManipPlan, lastManipPlan.plan_info[0]
