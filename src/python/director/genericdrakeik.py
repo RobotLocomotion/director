@@ -18,6 +18,7 @@ class GenericDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
     options['jointLimits'] = fields.jointLimits
 
     msg = lcm_drake.lcmt_generic_planner_request()
+    
     msg.utime = fields.utime
     msg.poses = json.dumps(fields.poses)
     msg.constraints = ikconstraintencoder.encodeConstraints(fields.constraints)
@@ -49,14 +50,19 @@ class GenericDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
 
     if ikplan is None:
       raise Exception('Timeout: No plan returned')
-
+    
     endPose = [0] * self.ikPlanner.jointController.numberOfJoints
+    pose = ikplan.plan[ikplan.num_states-1].joint_position
+    
     if ikplan.num_states>0:
-      endPose = ikplan.plan[ikplan.num_states-1].joint_position
+      endPose[-len(pose):] = pose
       info = ikplan.info[ikplan.num_states-1]
     else: 
       info = -1
-    self.ikPlanner.ikServer.infoFunc(info)
+
+    # TODO: Re-add this line so that the info information gets displayed properly
+    # should be set in startup.py as "ikServer.infoFunc = app.displaySnoptInfo"
+    # self.ikPlanner.ikServer.infoFunc(info)
     return endPose, info
 
   def processTraj(self, constraints, ikParameters, positionCosts, nominalPoseName="", seedPoseName="", endPoseName=""):
@@ -80,16 +86,19 @@ class GenericDrakePlannerPublisher(plannerPublisher.PlannerPublisher):
     msg = self.setupMessage(fields)
 
     # create listener
-    responseChannel = 'CANDIDATE_MANIP_IKPLAN'
+    responseChannel = 'CANDIDATE_MANIP_PLAN'
     responseMessageClass = lcm_drake.lcmt_plan
     listener = lcmUtils.MessageResponseHelper(responseChannel, responseMessageClass)
-
+    
     if ikplan is None:
       raise Exception('Timeout: No plan returned')
-
+    
     lcmUtils.publish('PLANNER_REQUEST', msg)
     lastManipPlan = listener.waitForResponse(timeout=20000)
     listener.finish()
 
-    self.ikPlanner.ikServer.infoFunc(lastManipPlan.info[0])
+    # TODO: Re-add this line so that the info information gets displayed properly
+    # should be set in startup.py as "ikServer.infoFunc = app.displaySnoptInfo"
+    # self.ikPlanner.ikServer.infoFunc(lastManipPlan.info[0])
+    
     return lastManipPlan, lastManipPlan.info[0]
