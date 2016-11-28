@@ -46,6 +46,7 @@ class SensorDataRequestPanel(object):
         self.registerType('mapWorkspaceOctomap',data_request_t.OCTREE_WORKSPACE)
         self.registerType('mapHeightCoarse',data_request_t.HEIGHT_MAP_COARSE)
         self.registerType('mapHeightDense',data_request_t.HEIGHT_MAP_DENSE)
+        self.registerType('mapHeightSceneLong',data_request_t.HEIGHT_MAP_SCENE_LONG)
 
         self.widget.applyAllButton.clicked.connect(self.applyAllButtonClicked)
         

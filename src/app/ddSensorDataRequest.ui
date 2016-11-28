@@ -251,6 +251,30 @@
        </property>
       </widget>
      </item>
+     <item row="14" column="0">
+      <widget class="QPushButton" name="mapHeightSceneLongButton">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="14" column="1">
+      <widget class="QCheckBox" name="mapHeightSceneLongCheck">
+       <property name="text">
+        <string>Scene Height Long</string>
+       </property>
+      </widget>
+     </item>
+     <item row="14" column="2">
+      <widget class="QSpinBox" name="mapHeightSceneLongSpinner">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>30</number>
+       </property>
+      </widget>
+     </item>
      <item row="5" column="0" colspan="3">
       <widget class="Line" name="line_2">
        <property name="lineWidth">
