@@ -33,7 +33,7 @@ class RobotSystemFactory(ComponentFactory):
         addComponent('FootstepsPlayback', ['Footsteps', 'Playback'])
         addComponent('Affordances', [])
         addComponent('PlannerPublisher', ['Planning', 'Affordances'])
-        addComponent('ViewBehaviors', ['Footsteps', 'PerceptionDrivers', 'Planning'])
+        addComponent('ViewBehaviors', ['Footsteps', 'PerceptionDrivers', 'Planning', 'Affordances'])
 
     def initDirectorConfig(self, robotSystem):
 
