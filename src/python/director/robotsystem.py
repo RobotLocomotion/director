@@ -286,10 +286,14 @@ class RobotSystemFactory(ComponentFactory):
         robotSystem.ikPlanner.addPublisher('matlabdrake', matlabPlannerPub)
         robotSystem.ikPlanner.addPublisher('exotica', exoticaPlannerPub)
 
-        robotSystem.ikPlanner.planningMode = 'matlabdrake'
+        directorConfig = robotSystem.directorConfig
+        if 'planningMode' in directorConfig:
+            robotSystem.ikPlanner.planningMode = directorConfig['planningMode']
+        else:
+            robotSystem.ikPlanner.planningMode = 'matlabdrake'
+
 
         linkNameArgs = ['','','']
-        directorConfig = robotSystem.directorConfig
         if 'leftFootLink' in directorConfig:
             linkNameArgs = [directorConfig['leftFootLink'], directorConfig['rightFootLink'], directorConfig['pelvisLink']]
 
