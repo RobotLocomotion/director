@@ -122,6 +122,10 @@ if(USE_LCM)
   foreach(name ${python_tests_lcm})
     add_python_test(${name} lcm)
   endforeach()
+  
+  foreach(name ${python_tests_standalone})
+    add_standalone_python_test(${name} standalone)
+  endforeach()
 endif()
 
 if(USE_DRC)
@@ -130,6 +134,3 @@ if(USE_DRC)
   endforeach()
 endif()
 
-foreach(name ${python_tests_standalone})
-  add_standalone_python_test(${name} standalone)
-endforeach()
