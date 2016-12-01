@@ -304,6 +304,8 @@ class DrakeVisualizer(object):
 
     def _addSubscribers(self):
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))
+        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_ADD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerAddRobot))
+        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_REMOVE_ROBOT', lcmrl.utime_t, self.onViewerRemoveRobot))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmrl.viewer_draw_t, self.onViewerDraw))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_PLANAR_LIDAR_.*', lcmbot.planar_lidar_t, self.onPlanarLidar, callbackNeedsChannel=True))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_POINTCLOUD_.*', lcmbot.pointcloud_t, self.onPointCloud, callbackNeedsChannel=True))
@@ -330,11 +332,19 @@ class DrakeVisualizer(object):
 
     def onViewerLoadRobot(self, msg):
         self.removeAllRobots()
-        for link in msg.link:
-            l = Link(link)
-            self.addLink(l, link.robot_num, link.name)
-
+        self.addLinksFromLCM(msg)
         self.sendStatusMessage('successfully loaded robot')
+
+    def onViewerAddRobot(self, msg):
+        robotNumsToReplace = set(link.robot_num for link in msg.link)
+        for robotNum in robotNumsToReplace:
+            self.removeRobot(robotNum)
+        self.addLinksFromLCM(msg)
+        self.sendStatusMessage('successfully added robot')
+
+    def onViewerRemoveRobot(self, msg):
+        self.removeRobot(msg.utime)
+        self.sendStatusMessage('successfully removed robot')
 
     def getRootFolder(self):
         return om.getOrCreateContainer('drake viewer', parentObj=om.findObjectByName('scene'))
@@ -347,6 +357,10 @@ class DrakeVisualizer(object):
 
     def getPointCloudFolder(self):
         return om.getOrCreateContainer('pointclouds', parentObj=self.getRootFolder())
+
+    def addLinksFromLCM(self, load_msg):
+        for link in load_msg.link:
+            self.addLink(Link(link), link.robot_num, link.name)
 
     def addLink(self, link, robotNum, linkName):
         self.robots.setdefault(robotNum, {})[linkName] = link
@@ -374,6 +388,9 @@ class DrakeVisualizer(object):
             if child.getProperty('Name') != "pointclouds":
                 om.removeFromObjectModel(child)
         self.robots = {}
+
+    def removeRobot(self, robotNum):
+        om.removeFromObjectModel(self.getRobotFolder(robotNum))
 
     def sendStatusMessage(self, message):
         msg = lcmrl.viewer_command_t()
