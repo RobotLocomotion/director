@@ -390,7 +390,9 @@ class DrakeVisualizer(object):
         self.robots = {}
 
     def removeRobot(self, robotNum):
-        om.removeFromObjectModel(self.getRobotFolder(robotNum))
+        if robotNum in self.robots:
+            om.removeFromObjectModel(self.getRobotFolder(robotNum))
+            del self.robots[robotNum]
 
     def sendStatusMessage(self, message):
         msg = lcmrl.viewer_command_t()
