@@ -305,7 +305,6 @@ class DrakeVisualizer(object):
     def _addSubscribers(self):
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_ADD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerAddRobot))
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_REMOVE_ROBOT', lcmrl.utime_t, self.onViewerRemoveRobot))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmrl.viewer_draw_t, self.onViewerDraw))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_PLANAR_LIDAR_.*', lcmbot.planar_lidar_t, self.onPlanarLidar, callbackNeedsChannel=True))
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_POINTCLOUD_.*', lcmbot.pointcloud_t, self.onPointCloud, callbackNeedsChannel=True))
@@ -341,13 +340,6 @@ class DrakeVisualizer(object):
             self.removeRobot(robotNum)
         self.addLinksFromLCM(msg)
         self.sendStatusMessage('successfully added robot')
-
-    def onViewerRemoveRobot(self, msg):
-        if msg.utime >= 0:
-            self.removeRobot(msg.utime)
-        else:
-            self.removeAllRobots()
-        self.sendStatusMessage('successfully removed robot')
 
     def getRootFolder(self):
         return om.getOrCreateContainer('drake viewer', parentObj=om.findObjectByName('scene'))
