@@ -343,7 +343,10 @@ class DrakeVisualizer(object):
         self.sendStatusMessage('successfully added robot')
 
     def onViewerRemoveRobot(self, msg):
-        self.removeRobot(msg.utime)
+        if msg.utime >= 0:
+            self.removeRobot(msg.utime)
+        else:
+            self.removeAllRobots()
         self.sendStatusMessage('successfully removed robot')
 
     def getRootFolder(self):
