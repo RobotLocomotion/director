@@ -1,13 +1,10 @@
 #include "ddDrakeModel.h"
 #include "ddSharedPtr.h"
 
-#ifdef DRAKE_OH_FORK
-#include <drake/systems/plants/RigidBodyTree.h>
-#include <drake/systems/plants/shapes/Geometry.h>
-#else
+#include <drake/multibody/joints/floating_base_types.h>
+#include <drake/multibody/parser_urdf.h>
 #include <drake/multibody/rigid_body_tree.h>
 #include <drake/multibody/shapes/geometry.h>
-#endif
 
 #include <vtkPolyData.h>
 #include <vtkAppendPolyData.h>
@@ -737,7 +734,12 @@ public:
 URDFRigidBodyTreeVTK::Ptr loadVTKModelFromXML(const QString& xmlString, const QString& rootDir="")
 {
   URDFRigidBodyTreeVTK::Ptr model(new URDFRigidBodyTreeVTK);
-  model->addRobotFromURDFString(xmlString.toUtf8().constData(), PackageSearchPaths, rootDir.toLatin1().constData());
+
+  drake::parsers::urdf::AddModelInstanceFromUrdfStringSearchingInRosPackages(
+      xmlString.toUtf8().constData(), PackageSearchPaths,
+      rootDir.toLatin1().constData(), drake::multibody::joints::kRollPitchYaw,
+      nullptr /* weld to frame */, model.get());
+
   model->computeDofMap();
   model->loadVisuals(rootDir);
   return model;
