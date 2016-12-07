@@ -1,3 +1,4 @@
+import os
 from director.componentgraph import ComponentFactory
 from director import consoleapp
 import director.objectmodel as om
@@ -318,7 +319,14 @@ class MainWindowAppFactory(ComponentFactory):
     def initScriptLoader(self, fields):
         def loadScripts():
             for filename in fields.commandLineArgs.scripts:
-                execfile(filename, fields.globalsDict)
+                filename = os.path.abspath(filename)
+                globalsDict = fields.globalsDict
+                prevFile = globalsDict.get('__file__')
+                globalsDict['__file__'] = filename
+                try:
+                    execfile(filename, fields.globalsDict)
+                finally:
+                    prevFile = globalsDict['__file__'] = prevFile
         fields.app.registerStartupCallback(loadScripts)
 
 
