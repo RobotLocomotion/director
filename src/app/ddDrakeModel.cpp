@@ -901,7 +901,8 @@ void ddDrakeModel::setJointPositions(const QVector<double>& jointPositions)
 
   this->Internal->JointPositions = jointPositions;
 
-  model->cache = std::make_shared<KinematicsCache<double> >(model->bodies);
+  model->cache = std::make_shared<KinematicsCache<double> >(
+      model->CreateKinematicsCache());
   model->cache->initialize(q);
   model->doKinematics(*model->cache);
   model->updateModel();
