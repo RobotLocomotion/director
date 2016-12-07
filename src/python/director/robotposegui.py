@@ -1,18 +1,14 @@
-from PyQt4 import QtCore, QtGui, uic
+import director
+from PythonQt import QtCore, QtGui, QtUiTools
 
 import lcm
 import sys
 import json
 import time
 import os
-import drc as lcmdrc
 import bot_core as lcmbotcore
-import atlas
 import functools
-
-# allow control-c to kill the program
-import signal
-signal.signal(signal.SIGINT, signal.SIG_DFL)
+from collections import OrderedDict
 
 
 class LCMWrapper(object):
@@ -104,7 +100,7 @@ def getJointSets():
     config = getDirectorConfig()
     jointGroups = config['teleopJointGroups']
 
-    jointSets = {}
+    jointSets = OrderedDict()
     groups = ['left arm', 'right arm', 'back', 'left leg', 'right leg', 'base']
     for group in jointGroups:
         groupName = group['name'].lower()
@@ -153,16 +149,16 @@ def updateComboStrings(combo, strings, defaultSelection):
     Restores the combo's current value, or if the combo was empty, uses the
     string given in defaultSelection.
     '''
-    currentText = str(combo.currentText()) if combo.count() else defaultSelection
+    currentText = str(combo.currentText) if combo.count else defaultSelection
     combo.clear()
     for text in strings:
         if not text:
-            combo.insertSeparator(combo.count())
+            combo.insertSeparator(combo.count)
             continue
 
         combo.addItem(text)
         if text == currentText:
-            combo.setCurrentIndex(combo.count() - 1)
+            combo.setCurrentIndex(combo.count - 1)
 
 
 def loadConfig(filename):
@@ -289,6 +285,7 @@ def publishPostureGoal(joints, postureName, channel='POSTURE_GOAL'):
 
 def publishTrajGoal(name, channel=''):
 
+    import drc as lcmdrc
     msg = lcmdrc.behavior_command_t()
     msg.utime = getUtime()
     msg.command = name
@@ -310,8 +307,9 @@ def publishSystemStatus(text):
 
 class SendPosturePanel(object):
 
-    def __init__(self, ui):
-        self.ui = ui
+    def __init__(self, parent):
+        self.parent = parent
+        self.ui = parent.ui
         self.selectedPosture = None
         self.setup()
 
@@ -319,17 +317,17 @@ class SendPosturePanel(object):
     def setup(self):
         self.ui.postureFilter.hide()
         self.ui.postureFilterLabel.hide()
-        self.ui.connect(self.ui.sendLeftButton, QtCore.SIGNAL('clicked()'), self.onLeftClicked)
-        self.ui.connect(self.ui.sendRightButton, QtCore.SIGNAL('clicked()'), self.onRightClicked)
-        self.ui.connect(self.ui.sendDefaultButton, QtCore.SIGNAL('clicked()'), self.onDefaultClicked)
-        self.ui.connect(self.ui.sendPostureGroupCombo, QtCore.SIGNAL('currentIndexChanged(const QString&)'), self.onGroupComboChanged)
-        self.ui.connect(self.ui.postureListWidget, QtCore.SIGNAL('currentRowChanged(int)'), self.onPostureSelected)
+        self.ui.sendLeftButton.connect(QtCore.SIGNAL('clicked()'), self.onLeftClicked)
+        self.ui.sendRightButton.connect(QtCore.SIGNAL('clicked()'), self.onRightClicked)
+        self.ui.sendDefaultButton.connect(QtCore.SIGNAL('clicked()'), self.onDefaultClicked)
+        self.ui.sendPostureGroupCombo.connect(QtCore.SIGNAL('currentIndexChanged(const QString&)'), self.onGroupComboChanged)
+        self.ui.postureListWidget.connect(QtCore.SIGNAL('currentRowChanged(int)'), self.onPostureSelected)
         self.updateGroupCombo()
         self.updatePostureListWidget()
 
 
     def updateGroupCombo(self):
-        groupNames = self.ui.getGroupNames()
+        groupNames = self.parent.getGroupNames()
 
         try:
             groupNames.remove('General')
@@ -353,11 +351,11 @@ class SendPosturePanel(object):
         self.updatePostureListWidget()
 
     def getSelectedGroup(self):
-        return str(self.ui.sendPostureGroupCombo.currentText())
+        return str(self.ui.sendPostureGroupCombo.currentText)
 
     def updatePostureListWidget(self):
         groupName = self.getSelectedGroup()
-        self.currentPostures = self.ui.getPosturesInGroup(groupName)
+        self.currentPostures = self.parent.getPosturesInGroup(groupName)
 
         self.ui.postureListWidget.blockSignals(True)
         self.ui.postureListWidget.clear()
@@ -378,9 +376,10 @@ class SendPosturePanel(object):
             if posture['name'] == postureName:
                 return posture
 
-
     def getPostureCanBeMirrored(self, posture):
-        return posture['allow_mirror'] and self.getNominalHandedness(posture) in ('left', 'right')
+        return (posture['allow_mirror']
+                and self.getNominalHandedness(posture) in ('left', 'right')
+                and 'mirrorJointSignFlips' in getDirectorConfig())
 
     def getNominalHandedness(self, posture):
         handedness = posture['nominal_handedness']
@@ -388,7 +387,6 @@ class SendPosturePanel(object):
         return handedness
 
     def onPostureSelected(self):
-
         self.selectedPosture = self.getSelectedPosture()
         self.updateDescriptionLabel()
 
@@ -442,82 +440,30 @@ class SendPosturePanel(object):
         settings.setValue('sendPose/currentGroup', self.getSelectedGroup())
 
     def restoreSettings(self, settings):
-        self.setSelectedGroup(settings.value('sendPose/currentGroup', 'All').toString())
-
-
-class SendEETrajPanel(object):
-
-    def __init__(self, ui):
-        self.ui = ui
-        self.selectedTraj = None
-        self.setup()
-
-
-    def setup(self):
-        self.ui.sendTrajDefaultButton.setVisible(False)
-        self.ui.connect(self.ui.sendTrajLeftButton, QtCore.SIGNAL('clicked()'), self.onLeftClicked)
-        self.ui.connect(self.ui.sendTrajRightButton, QtCore.SIGNAL('clicked()'), self.onRightClicked)
-        self.ui.connect(self.ui.sendTrajDefaultButton, QtCore.SIGNAL('clicked()'), self.onDefaultClicked)
-        #self.ui.connect(self.ui.trajListWidget, QtCore.SIGNAL('currentRowChanged(int)'), self.onTrajSelected)
-        self.updateListWidget()
-
-    def updateListWidget(self):
-
-        trajList = ['ladder_reach_up']
-
-        self.ui.trajListWidget.blockSignals(True)
-        self.ui.trajListWidget.clear()
-        for name in sorted(trajList):
-            self.ui.trajListWidget.addItem(name)
-        self.ui.trajListWidget.setCurrentRow(0)
-        self.ui.trajListWidget.blockSignals(False)
-
-        #self.onTrajSelected()
-
-    def getSelectedTraj(self):
-        currentItem = self.ui.trajListWidget.currentItem()
-        if not currentItem:
-            return None
-
-        name = str(currentItem.text())
-        return name
-
-    def onLeftClicked(self):
-        traj = self.getSelectedTraj()
-        publishTrajGoal(traj + ':LEFT')
-
-    def onRightClicked(self):
-        traj = self.getSelectedTraj()
-        publishTrajGoal(traj + ':RIGHT')
-
-    def onDefaultClicked(self):
-        traj = self.getSelectedTraj()
-        publishTrajGoal(traj + ':DEFAULT')
-
-    def saveSettings(self, settings):
-        pass
-
-    def restoreSettings(self, settings):
-        pass
+        self.setSelectedGroup(str(settings.value('sendPose/currentGroup', 'All')))
 
 
 class CapturePanel(object):
 
-    def __init__(self, ui):
-        self.ui = ui
+    def __init__(self, parent):
+        self.parent = parent
+        self.ui = parent.ui
         self.captureMethods = []
         self.setup()
 
 
     def setup(self):
-        self.ui.connect(self.ui.captureButton, QtCore.SIGNAL('clicked()'), self.onCaptureClicked)
-        self.ui.connect(self.ui.groupCombo, QtCore.SIGNAL('currentIndexChanged(const QString&)'), self.onGroupComboChanged)
+        self.ui.captureButton.connect(QtCore.SIGNAL('clicked()'), self.onCaptureClicked)
+        self.ui.groupCombo.connect(QtCore.SIGNAL('currentIndexChanged(const QString&)'), self.onGroupComboChanged)
         self.updateGroupCombo()
         self.initCaptureMethods()
 
+        jointSetNames = getJointSets().keys()
+        updateComboStrings(self.ui.jointSetCombo, jointSetNames, jointSetNames[0])
+
 
     def updateGroupCombo(self):
-        groupNames = self.ui.getGroupNames()
+        groupNames = self.parent.getGroupNames()
         try:
             groupNames.remove('General')
         except ValueError:
@@ -537,19 +483,19 @@ class CapturePanel(object):
         self.ui.groupCombo.setCurrentIndex(index)
 
     def getSelectedGroup(self):
-        return str(self.ui.groupCombo.currentText())
+        return str(self.ui.groupCombo.currentText)
 
     def onGroupComboChanged(self):
 
-        if str(self.ui.groupCombo.currentText()) == 'New group...':
-            groupName = self.ui.messageBoxInput('Enter new group name', 'Group name:')
+        if str(self.ui.groupCombo.currentText) == 'New group...':
+            groupName = self.parent.messageBoxInput('Enter new group name', 'Group name:')
             if not groupName or groupName == '':
                 self.setSelectedGroup('General')
                 return
 
             groupName = str(groupName)
 
-            self.ui.addNewGroup(groupName)
+            self.parent.addNewGroup(groupName)
             self.setSelectedGroup(groupName)
 
     def onGroupsChanged(self):
@@ -559,7 +505,7 @@ class CapturePanel(object):
         settings.setValue('sendPose/currentGroup', self.getSelectedGroup())
 
     def restoreSettings(self, settings):
-        self.setSelectedGroup(settings.value('capturePanel/currentGroup', 'General').toString())
+        self.setSelectedGroup(str(settings.value('capturePanel/currentGroup', 'General')))
 
 
     def initCaptureMethods(self):
@@ -580,51 +526,62 @@ class CapturePanel(object):
 
     def onCaptureClicked(self):
 
-        captureMethod = self.getCaptureMethod(self.ui.captureChannelCombo.currentText())
-        group = str(self.ui.groupCombo.currentText())
-        name = str(self.ui.nameEdit.text())
-        description = str(self.ui.descriptionEdit.text())
-        poseType = str(self.ui.jointSetCombo.currentText())
-        outFile = self.ui.getPoseConfigFile()
+        captureMethod = self.getCaptureMethod(self.ui.captureChannelCombo.currentText)
+        group = str(self.ui.groupCombo.currentText)
+        name = str(self.ui.nameEdit.text)
+        description = str(self.ui.descriptionEdit.text)
+        poseType = str(self.ui.jointSetCombo.currentText)
+        outFile = self.parent.getPoseConfigFile()
 
         if not name:
-            self.ui.showWarning('Empty field', 'Please enter a name into the text box.')
+            self.parent.showWarning('Empty field', 'Please enter a name into the text box.')
             return
 
-        if not description:
-            self.ui.showWarning('Empty field', 'Please enter a description into the text box.')
-            return
-
-        existingPostures = self.ui.getPosturesInGroup(group)
+        existingPostures = self.parent.getPosturesInGroup(group)
         for posture in existingPostures:
             if posture['name'] == name:
-                reply = self.ui.showQuestion('Overwrite posture?', 'Posture with name "%s" already exists.\nDo you want to overwrite?' % name,
+                reply = self.parent.showQuestion('Overwrite posture?', 'Posture with name "%s" already exists.\nDo you want to overwrite?' % name,
                                                   QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
 
                 if reply == QtGui.QMessageBox.No:
                     return
 
         storePose(poseType, captureMethod, group, name, description, outFile)
-        self.ui.onPostureAdded()
+        self.parent.onPostureAdded()
 
 
 
-class MainWindow(QtGui.QWidget):
+def addWidgetsToDict(widgets, d):
+
+    for widget in widgets:
+        if widget.objectName:
+            d[str(widget.objectName)] = widget
+        addWidgetsToDict(widget.children(), d)
+
+
+class WidgetDict(object):
+
+    def __init__(self, widgets):
+        addWidgetsToDict(widgets, self.__dict__)
+
+
+class MainWindow(object):
 
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+
+        loader = QtUiTools.QUiLoader()
         uifile = QtCore.QFile(':/ui/ddRobotPoseGui.ui')
-        isOpen = uifile.open(uifile.ReadOnly)
-        if not isOpen:
-            uifile = os.path.join(os.environ['DRC_BASE'], 'software/director/src/app/ddRobotPoseGui.ui')
-            assert os.path.isfile(uifile)
+        assert uifile.open(uifile.ReadOnly)
 
-        uic.loadUi(uifile, self)
+        self.widget = loader.load(uifile)
+        uifile.close()
 
-        self.setWindowTitle('Robot Pose Utility')
+        self.ui = WidgetDict(self.widget.children())
 
-        if not self.checkEnvironment():
-            return
+        self.widget.setWindowTitle('Robot Pose Utility')
+        self.messageBoxWarning = functools.partial(QtGui.QMessageBox.warning, self.widget)
+        self.messageBoxQuestion = functools.partial(QtGui.QMessageBox.question, self.widget)
+        self.messageBoxInput = functools.partial(QtGui.QInputDialog.getText, self.widget)
 
         assert directorConfigFile is not None
         self.configFile = os.path.join(os.path.dirname(directorConfigFile), getDirectorConfig()['postureDatabaseFile'])
@@ -633,15 +590,12 @@ class MainWindow(QtGui.QWidget):
 
         self.setup()
         self.restoreSettings()
-        self.messageBoxWarning = functools.partial(QtGui.QMessageBox.warning, self)
-        self.messageBoxQuestion = functools.partial(QtGui.QMessageBox.question, self)
 
     def setup(self):
-        self.connect(QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self), QtCore.SIGNAL('activated()'), self.close)
-        self.connect(QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Q'), self), QtCore.SIGNAL('activated()'), self.close)
+        QtGui.QShortcut(QtGui.QKeySequence('Ctrl+W'), self.widget).connect(QtCore.SIGNAL('activated()'), self.close)
+        QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Q'), self.widget).connect(QtCore.SIGNAL('activated()'), self.close)
         self.capturePanel = CapturePanel(self)
         self.sendPosturePanel = SendPosturePanel(self)
-        self.sendTrajPanel = SendEETrajPanel(self)
 
     def showWarning(self, title, message):
         return self.messageBoxWarning(title, message)
@@ -657,26 +611,20 @@ class MainWindow(QtGui.QWidget):
 
     def saveSettings(self):
         settings = self.getSettings()
-        settings.setValue('currentTabIndex', self.tabWidget.currentIndex())
+        settings.setValue('currentTabIndex', int(self.ui.tabWidget.currentIndex))
         self.capturePanel.saveSettings(settings)
         self.sendPosturePanel.saveSettings(settings)
 
     def restoreSettings(self):
         settings = self.getSettings()
-        self.tabWidget.setCurrentIndex(settings.value('currentTabIndex', 0).toInt()[0])
+        self.ui.tabWidget.setCurrentIndex(int(settings.value('currentTabIndex', 0)))
         self.capturePanel.restoreSettings(settings)
         self.sendPosturePanel.restoreSettings(settings)
 
 
-    def closeEvent(self, event):
+    def close(self):
         self.saveSettings()
-
-    def checkEnvironment(self):
-        if not os.path.isdir(os.environ['DRC_BASE']):
-            self.showWarning('Environment not set', 'Error loading configuration.  DRC_BASE environment variable is not set to a valid directory.')
-            self.setEnabled(False)
-            return False
-        return True
+        self.widget.close()
 
     def checkConfigFile(self):
 
@@ -750,22 +698,22 @@ class MainWindow(QtGui.QWidget):
 
 def main():
 
+    try:
+        configFile = os.path.abspath(sys.argv[1])
+        setDirectorConfigFile(configFile)
+    except IndexError:
+        print 'You must provide a director_config.json file.'
+        print 'Usage: %s <path to director_config.json>' % sys.argv[0]
+        return
 
     # create a global instance of the LCMWrapper
     global lcmWrapper
     lcmWrapper = LCMWrapper()
 
-    try:
-        configFile = os.path.abspath(sys.argv[1])
-        setDirectorConfigFile(configFile)
-    except IndexError:
-        setDirectorConfigFile(getDefaultDirectorConfigFile())
-
     # start the application
-    app = QtGui.QApplication(sys.argv)
     mainWindow = MainWindow()
-    mainWindow.show()
-    app.exec_()
+    mainWindow.widget.show()
+    QtCore.QCoreApplication.instance().exec_()
 
 if __name__ == '__main__':
     main()

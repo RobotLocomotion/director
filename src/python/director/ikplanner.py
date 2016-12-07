@@ -830,6 +830,11 @@ class IKPlanner(object):
         return self.computePostureGoal(startPose, endPose)
 
 
+    def computeDatabasePosturePlan(self, startPose, poseGroup, poseName, side=None):
+        endPose = self.getMergedPostureFromDatabase(startPose, poseGroup, poseName)
+        return self.computePostureGoal(startPose, endPose)
+
+
     def computeStandPose(self, startPose, ikParameters=None):
 
         nominalPoseName = 'q_nom'
@@ -1564,11 +1569,6 @@ class RobotPoseGUIWrapper(object):
         cls.rpg.setDirectorConfigFile(drcargs.args().directorConfigFile)
         cls.rpg.lcmWrapper = cls.rpg.LCMWrapper()
         cls.main = cls.rpg.MainWindow()
-        parents = [w for w in QtGui.QApplication.topLevelWidgets() if isinstance(w, PythonQt.dd.ddMainWindow)]
-        mainWindow = parents[0] if parents else None
-        cls.main.messageBoxWarning = functools.partial(QtGui.QMessageBox.warning, mainWindow)
-        cls.main.messageBoxQuestion = functools.partial(QtGui.QMessageBox.question, mainWindow)
-        cls.main.messageBoxInput = functools.partial(QtGui.QInputDialog.getText, mainWindow)
         cls.initialized = True
 
     @classmethod
@@ -1589,9 +1589,9 @@ class RobotPoseGUIWrapper(object):
     @classmethod
     def show(cls):
         cls.init()
-        cls.main.show()
-        cls.main.raise_()
-        cls.main.activateWindow()
+        cls.main.widget.show()
+        cls.main.widget.raise_()
+        cls.main.widget.activateWindow()
 
     @classmethod
     def getPose(cls, groupName, poseName, side=None):
