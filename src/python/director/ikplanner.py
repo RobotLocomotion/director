@@ -830,6 +830,11 @@ class IKPlanner(object):
         return self.computePostureGoal(startPose, endPose)
 
 
+    def computeDatabasePosturePlan(self, startPose, poseGroup, poseName, side=None):
+        endPose = self.getMergedPostureFromDatabase(startPose, poseGroup, poseName)
+        return self.computePostureGoal(startPose, endPose)
+
+
     def computeStandPose(self, startPose, ikParameters=None):
 
         nominalPoseName = 'q_nom'
