@@ -203,9 +203,9 @@ class PyDrakeIkServer(object):
 
         assert os.path.isfile(urdfFile)
 
-        packageMap = pydrake.rbtree.mapStringString()
+        packageMap = pydrake.rbtree.PackageMap()
         for path in packagePaths:
-            packageMap[os.path.basename(path)] = path
+            packageMap.Add(os.path.basename(path), path)
 
         urdfString = open(urdfFile, 'r').read()
         baseDir = str(os.path.dirname(urdfFile))
