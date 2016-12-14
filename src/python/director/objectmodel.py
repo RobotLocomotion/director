@@ -172,8 +172,9 @@ class ContainerItem(ObjectModelItem):
 class ObjectModelTree(object):
 
     ACTION_SELECTED = 'ACTION_SELECTED'
-    SELECTION_CHANGED = 'SELECTION_CHANGED'
     OBJECT_ADDED = 'OBJECT_ADDED'
+    OBJECT_CLICKED = 'OBJECT_CLICKED'
+    SELECTION_CHANGED = 'SELECTION_CHANGED'
 
     def __init__(self):
         self._treeWidget = None
@@ -181,7 +182,12 @@ class ObjectModelTree(object):
         self._objects = {}
         self._blockSignals = False
         self.actions = []
-        self.callbacks = callbacks.CallbackRegistry([self.ACTION_SELECTED, self.SELECTION_CHANGED, self.OBJECT_ADDED])
+        self.callbacks = callbacks.CallbackRegistry([
+                            self.ACTION_SELECTED,
+                            self.OBJECT_ADDED,
+                            self.OBJECT_CLICKED,
+                            self.SELECTION_CHANGED,
+                            ])
 
     def getTreeWidget(self):
         return self._treeWidget
@@ -309,7 +315,7 @@ class ObjectModelTree(object):
         if column == 1 and obj.hasProperty('Visible'):
             obj.setProperty('Visible', not obj.getProperty('Visible'))
             self.updateVisIcon(obj)
-
+        self.callbacks.process(self.OBJECT_CLICKED, self, obj)
 
     def _removeItemFromObjectModel(self, item):
         while item.childCount():
@@ -470,6 +476,12 @@ class ObjectModelTree(object):
         return self.callbacks.connect(self.OBJECT_ADDED, func)
 
     def disconnectObjectAdded(self, callbackId):
+        self.callbacks.disconnect(callbackId)
+
+    def connectObjectClicked(self, func):
+        return self.callbacks.connect(self.OBJECT_CLICKED, func)
+
+    def disconnectObjectClicked(self, func):
         self.callbacks.disconnect(callbackId)
 
     def init(self, treeWidget, propertiesPanel):
