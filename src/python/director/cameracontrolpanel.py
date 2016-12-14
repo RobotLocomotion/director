@@ -103,7 +103,8 @@ class CameraControlPanel(object):
         self.objectPicker = pointpicker.ObjectPicker(self.view)
         self.objectPicker.callbackFunc = self.onPickObject
         self.objectPicker.abortFunc = self.onAbortPick
-
+        self.picking = False
+        om.getDefaultObjectModel().connectObjectClicked(self.onTreeClicked)
 
     def onPickObject(self, objs):
         if objs:
@@ -111,10 +112,16 @@ class CameraControlPanel(object):
         else:
             self.onAbortPick()
 
+    def onTreeClicked(self, tree, obj):
+        if not self.picking:
+            return
+        self.setTarget(obj)
+
     def onAbortPick(self):
         self.ui.selectedObjectNameLabel.setText('')
         self.ui.setTargetButton.setVisible(True)
         self.objectPicker.stop()
+        self.picking = False
 
     def getSelectedTarget(self):
         obj = om.getActiveObject()
@@ -135,6 +142,7 @@ class CameraControlPanel(object):
         self.ui.setTargetButton.setVisible(False)
         self.ui.selectedObjectNameLabel.setText('Click an object in the view...')
         self.objectPicker.start()
+        self.picking = True
 
     def setTarget(self, obj):
 
