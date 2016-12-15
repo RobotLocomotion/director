@@ -111,33 +111,6 @@ if (USE_LCM AND NOT USE_SYSTEM_LCM)
     )
 
   set(lcm_depends lcm ${cmake3_depends})
-
-  ExternalProject_Add(bot_core_lcmtypes
-    GIT_REPOSITORY https://github.com/openhumanoids/bot_core_lcmtypes
-    GIT_TAG 9967654
-    ${cmake3_args}
-    CMAKE_CACHE_ARGS
-      ${default_cmake_args}
-      ${python_args}
-
-    DEPENDS
-      ${lcm_depends}
-    )
-
-  ExternalProject_Add(robotlocomotion-lcmtypes
-    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes
-    GIT_TAG b9ce3fa
-    ${cmake3_args}
-    CMAKE_CACHE_ARGS
-      ${default_cmake_args}
-      ${python_args}
-
-    DEPENDS
-      ${lcm_depends} bot_core_lcmtypes
-    )
-
-    list(APPEND lcm_depends bot_core_lcmtypes robotlocomotion-lcmtypes)
-
 endif()
 
 
@@ -152,11 +125,10 @@ if(USE_LIBBOT AND NOT USE_SYSTEM_LIBBOT)
 
   ExternalProject_Add(libbot
     GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
-    GIT_TAG c328b73
-    CONFIGURE_COMMAND ""
-    INSTALL_COMMAND ""
-    BUILD_COMMAND $(MAKE) BUILD_PREFIX=${install_prefix} BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    BUILD_IN_SOURCE 1
+    GIT_TAG 2cfd369
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      -DWITH_BOT_VIS:BOOL=OFF
 
     DEPENDS
       ${lcm_depends}
@@ -167,7 +139,51 @@ if(USE_LIBBOT AND NOT USE_SYSTEM_LIBBOT)
 endif()
 
 
+###############################################################################
+# lcm message types repos
+
+if (USE_LCM)
+
+  ExternalProject_Add(bot_core_lcmtypes
+    GIT_REPOSITORY https://github.com/openhumanoids/bot_core_lcmtypes
+    GIT_TAG 9967654
+    ${cmake3_args}
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+
+    DEPENDS
+      ${lcm_depends}
+
+      # build bot_core_lcmtypes after libbot, even though it is not a dependency.
+      # see https://github.com/RobotLocomotion/libbot/issues/20
+      ${libbot_depends}
+    )
+
+  ExternalProject_Add(robotlocomotion-lcmtypes
+    GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes
+    GIT_TAG b9ce3fa
+    ${cmake3_args}
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+      ${python_args}
+
+    DEPENDS
+      ${lcm_depends}
+      bot_core_lcmtypes
+    )
+
+    list(APPEND lcm_depends bot_core_lcmtypes robotlocomotion-lcmtypes)
+
+endif()
+
+
+###############################################################################
 if(USE_STANDALONE_LCMGL)
+
+  if(USE_LIBBOT)
+    message(SEND_ERROR "USE_LIBBOT and USE_STANDALONE_LCMGL are incompatible.  Please disable one options.")
+  endif()
 
   ExternalProject_Add(bot-lcmgl-download
     GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
