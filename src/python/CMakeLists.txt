@@ -90,6 +90,7 @@ set(python_files
   director/propertyset.py
   director/pydrakeik.py
   director/raycastdriver.py
+  director/robotlinkselector.py
   director/robotstate.py
   director/robotplanlistener.py
   director/robotposegui.py

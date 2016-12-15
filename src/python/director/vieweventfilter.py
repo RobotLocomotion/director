@@ -4,10 +4,13 @@ import director.visualization as vis
 
 class ViewEventFilter(object):
 
+    LEFT_DOUBLE_CLICK_EVENT = 'LEFT_DOUBLE_CLICK_EVENT'
+
     def __init__(self, view):
         self.view = view
         self._leftMouseStart = None
         self._rightMouseStart = None
+        self._handlers = {}
         self.installEventFilter()
 
     def installEventFilter(self):
@@ -29,6 +32,15 @@ class ViewEventFilter(object):
                 QtCore.QEvent.Wheel,
                 QtCore.QEvent.KeyPress,
                 QtCore.QEvent.KeyRelease]
+
+    def addHandler(self, eventType, handler):
+        self._handlers.setdefault(eventType, []).append(handler)
+
+    def callHandler(self, eventType, *args, **kwargs):
+        for handler in self._handlers.get(eventType, []):
+            if handler(*args, **kwargs):
+                self.consumeEvent()
+                break
 
     def getMousePositionInView(self, event):
         return vis.mapMousePosition(self.view, event)

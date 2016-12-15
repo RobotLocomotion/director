@@ -138,6 +138,9 @@ class MainWindowApp(object):
     def _saveCustomWindowState(self):
         self._saveWindowState('MainWindowCustom')
 
+    def restoreDefaultWindowState(self):
+        self._restoreWindowState('MainWindowDefault')
+
     def initWindowSettings(self):
         self._saveWindowState('MainWindowDefault')
         self._restoreWindowState('MainWindowCustom')
