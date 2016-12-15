@@ -10,6 +10,7 @@ class RobotSystemFactory(ComponentFactory):
         determines which components should be disabled.
         '''
         options.useConvexHullModel = False
+        options.useRobotLinkSelector = False
 
     def addComponents(self, componentGraph):
 
@@ -34,6 +35,7 @@ class RobotSystemFactory(ComponentFactory):
         addComponent('Affordances', [])
         addComponent('PlannerPublisher', ['Planning', 'Affordances'])
         addComponent('ViewBehaviors', ['Footsteps', 'PerceptionDrivers', 'Planning', 'Affordances'])
+        addComponent('RobotLinkSelector', ['ViewBehaviors'])
 
     def initDirectorConfig(self, robotSystem):
 
@@ -312,6 +314,15 @@ class RobotSystemFactory(ComponentFactory):
             ikServer=matlabIkServer,
             startIkServer=startIkServer
             )
+
+    def initRobotLinkSelector(self, robotSystem):
+
+        from director import robotlinkselector
+        robotLinkSelector = robotlinkselector.RobotLinkSelector()
+        robotSystem.viewBehaviors.addHandler(
+            robotSystem.viewBehaviors.LEFT_DOUBLE_CLICK_EVENT,
+            robotLinkSelector.onLeftDoubleClick)
+        return FieldContainer(robotLinkSelector=robotLinkSelector)
 
     def initViewBehaviors(self, robotSystem):
 
