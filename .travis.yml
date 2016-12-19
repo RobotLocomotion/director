@@ -35,7 +35,7 @@ before_install:
 install: true
 
 script:
- - if [[ "$USE_DOCKER" == 'ON' ]]; then distro/travis/build_and_test.sh ; fi
+ - if [[ "$USE_DOCKER" != 'ON' ]]; then distro/travis/build_and_test.sh ; else docker build -f distro/docker/Dockerfile . ; fi
 
 after_failure:
   - echo 'after_failure'
