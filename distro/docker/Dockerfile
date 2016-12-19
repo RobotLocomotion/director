@@ -30,7 +30,8 @@ RUN apt-get install -y \
     xvfb
 
 RUN apt-get install -y \
-	libglib2.0-dev
+	libglib2.0-dev \
+	wget
 
 RUN pip install sphinx-rtd-theme
 
@@ -48,6 +49,4 @@ RUN make -j2
 
 WORKDIR /root/build/src/director-build
 RUN cmake -DSITE:STRING=travis-docker -DBUILDNAME:STRING=travis-docker_lcm-$USE_LCM .
-RUN /root/distro/docker/run_tests.sh
-
-RUN /root/distro/docker/after_success.sh
+RUN /root/distro/docker/run_tests_and_package.sh
