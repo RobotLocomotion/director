@@ -1,4 +1,4 @@
-set -xe
+set -e
 
 docker build \
 	-f distro/docker/Dockerfile \
