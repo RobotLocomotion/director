@@ -8,5 +8,6 @@ chmod 600 $scriptDir/travisci.key
 dest=$encrypted_copyfiles_host
 user=travis
 
+mkdir -p ~/.ssh
 ssh-keyscan -H $dest >> ~/.ssh/known_hosts
 scp -i $scriptDir/travisci.key $* $user@$dest:files/
