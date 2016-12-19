@@ -299,8 +299,8 @@ class DrakeVisualizer(object):
         self.view = view
         self.robots = {}
         self.linkWarnings = set()
-        self.sendStatusMessage('loaded')
         self.enable()
+        self.sendStatusMessage('loaded')
 
     def _addSubscribers(self):
         self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))

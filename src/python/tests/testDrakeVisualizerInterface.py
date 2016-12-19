@@ -1,3 +1,8 @@
+# import the director module first to setup python paths
+# which may be required on certain platforms to find the
+# bot_core lcmtypes python module which is imported next.
+# see https://github.com/RobotLocomotion/libbot/issues/20
+import director
 import bot_core as lcmbot
 import lcm
 import time
@@ -86,9 +91,10 @@ def spawn_robot():
 
 def animate_robot():
     """
-    Animate the robot by moving the two links separately for 10 seconds.
+    Animate the robot by publishing lcm messages to move the two links.
     """
     start = time.time()
+    animationTime = 2.0
     lc = lcm.LCM()
     while True:
         elapsed = time.time() - start
@@ -100,7 +106,7 @@ def animate_robot():
         # and robot numbers must match those given in the viewer_load_robot_t
         # message
         draw_msg = lcmbot.viewer_draw_t()
-        draw_msg.timestamp = int(elapsed * 1e9)
+        draw_msg.timestamp = int(elapsed * 1e6)
         draw_msg.num_links = 2
         draw_msg.link_name = ["link_0", "link_1"]
         draw_msg.robot_num = [1, 1]
@@ -108,7 +114,7 @@ def animate_robot():
         draw_msg.quaternion = [[1, 0, 0, 0], [1, 0, 0, 0]]
         lc.publish("DRAKE_VIEWER_DRAW", draw_msg.encode())
 
-        if elapsed > 10:
+        if elapsed > animationTime:
             break
 
 def publish_robot_data():
