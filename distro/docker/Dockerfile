@@ -33,14 +33,13 @@ RUN apt-get install -y \
 	libglib2.0-dev
 
 RUN pip install sphinx-rtd-theme
-RUN /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile \
-                          --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1280x1024x16
 
 ENV CXX g++-4.9
 ENV CC gcc-4.9
 ENV TRAVIS_OS_NAME linux
 
 COPY . /root/
+
 
 RUN mkdir build
 WORKDIR /root/build
@@ -49,7 +48,8 @@ RUN make -j2
 
 WORKDIR /root/build/src/director-build
 RUN cmake -DSITE:STRING=travis-docker -DBUILDNAME:STRING=travis-docker_lcm-$USE_LCM .
-RUN ctest -j 1 --dashboard Experimental --track travis --output-on-failure
+RUN /root/distro/docker/run_tests.sh
 
-WORKDIR /root
-RUN /root/distro/travis/after_success.sh
+WORKDIR /root/distro/package
+RUN ./make_linux_package.sh 2>&1 > log.txt || cat log.txt
+  /root/distro/travis/copy_files.sh /root/distro/package/*.tar.gz
