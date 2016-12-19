@@ -21,6 +21,7 @@ set(python_tests_core
 
 set(python_tests_lcm
   testDrakeVisualizer.py
+  testDrakeVisualizerInterface.py
 )
 
 set(python_tests_robot
@@ -46,6 +47,10 @@ set(python_tests_robot
   testValveFitStereo.py
   testAmazonPod.py
 )
+
+set(python_tests_standalone
+)
+
 
 # Tests are run by default on the default robot
 #
@@ -87,7 +92,6 @@ macro(add_python_test name label)
   endwhile()
 endmacro()
 
-
 foreach(name ${python_tests_core})
   add_python_test(${name} core)
 endforeach()
@@ -103,3 +107,4 @@ if(USE_DRC)
     add_python_test(${name} robot)
   endforeach()
 endif()
+
