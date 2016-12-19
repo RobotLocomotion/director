@@ -1,3 +1,8 @@
+# import the director module first to setup python paths
+# which may be required on certain platforms to find the
+# bot_core lcmtypes python module which is imported next.
+# see https://github.com/RobotLocomotion/libbot/issues/20
+import director
 import bot_core as lcmbot
 import lcm
 import time
