@@ -11,12 +11,12 @@ fi
 
 versionString=$($superbuildInstallDir/bin/directorPython -c 'import director.version as ver; print ver.versionString()')
 
-os_id = $( cat /etc/os-release | grep "^ID=" | sed s/ID=// )
-os_version = $( cat /etc/os-release | grep "VERSION_ID=" | sed s/VERSION_ID=// | sed 's/"\(.*\)"/\1/' )
+osid=$( cat /etc/os-release | grep "^ID=" | sed s/ID=// )
+osversion=$( cat /etc/os-release | grep "VERSION_ID=" | sed s/VERSION_ID=// | sed 's/"\(.*\)"/\1/' )
 
-echo "OS ID and version set as: $os_id-$os_version"
+echo "OS ID and version set as: $osid-$osversion"
 
-packageName=director-$versionString-$os_id-$os_version
+packageName=director-$versionString-$osid-$osversion
 
 ######
 
