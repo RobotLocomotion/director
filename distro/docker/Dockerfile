@@ -1,14 +1,39 @@
 FROM ubuntu:16.04
 ENV DISPLAY :99.0
-ENV USE_LCM ON
-ENV MAKE_PACKAGE ON
+
+ARG USE_LCM
+ENV USE_LCM ${USE_LCM:ON}
+
+ARG MAKE_PACKAGE
+ENV MAKE_PACKAGE ${MAKE_PACKAGE:ON}
+
+ARG TRAVIS_PULL_REQUEST
+ENV TRAVIS_PULL_REQUEST $TRAVIS_PULL_REQUEST
+
+ARG encrypted_444f3458e047_key
+ENV encrypted_444f3458e047_key $encrypted_444f3458e047_key
+
+ARG encrypted_444f3458e047_iv
+ENV encrypted_444f3458e047_iv $encrypted_444f3458e047_iv
+
+ARG TRAVIS_OS_NAME
+ENV TRAVIS_OS_NAME ${TRAVIS_OS_NAME:linux}
 
 RUN apt-get update
+
+# These packages are already available on Travis CI,
+# but we need to add them inside the docker instance
 RUN apt-get install -y \
 	gcc-4.9 \
 	g++-4.9 \
+    libglib2.0-dev \
+    wget \
 	git
+ENV CXX g++-4.9
+ENV CC gcc-4.9
 
+# These are the Director dependencies we need inside
+# Travis CI
 RUN apt-get install -y \
 	build-essential \
 	cmake \
@@ -29,24 +54,17 @@ RUN apt-get install -y \
     python-yaml \
     xvfb
 
-RUN apt-get install -y \
-	libglib2.0-dev \
-	wget
-
 RUN pip install sphinx-rtd-theme
-
-ENV CXX g++-4.9
-ENV CC gcc-4.9
-ENV TRAVIS_OS_NAME linux
 
 COPY . /root/
 
-
+# Build
 RUN mkdir build
 WORKDIR /root/build
 RUN cmake -DUSE_LCM:BOOL=$USE_LCM ../distro/superbuild
 RUN make -j2
-
 WORKDIR /root/build/src/director-build
 RUN cmake -DSITE:STRING=travis-docker -DBUILDNAME:STRING=travis-docker_lcm-$USE_LCM .
+
+# Run the tests and build the package
 RUN /root/distro/docker/run_tests_and_package.sh
