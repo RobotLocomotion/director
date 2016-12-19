@@ -50,6 +50,4 @@ WORKDIR /root/build/src/director-build
 RUN cmake -DSITE:STRING=travis-docker -DBUILDNAME:STRING=travis-docker_lcm-$USE_LCM .
 RUN /root/distro/docker/run_tests.sh
 
-WORKDIR /root/distro/package
-RUN ./make_linux_package.sh 2>&1 > log.txt || cat log.txt
-  /root/distro/travis/copy_files.sh /root/distro/package/*.tar.gz
+RUN /root/distro/docker/after_success.sh
