@@ -122,7 +122,9 @@ def main():
     # We'll open the visualizer by spawning it as a subprocess. See
     # testDrakeVisualizer.py for an example of how to spawn it within Python
     # instead.
-    vis_binary = os.path.join(os.path.dirname(sys.argv[0]), "drake-visualizer")
+    vis_binary = os.path.join(os.path.dirname(sys.executable),
+                              "drake-visualizer")
+    print "vis_binary:", vis_binary
     vis_process = subprocess.Popen(vis_binary)
 
     # The viewer will take some time to load before it is ready to receive
