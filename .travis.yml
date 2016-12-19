@@ -30,15 +30,15 @@ branches:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DISPLAY=:99.0 ; fi
-  - if [[ "$USE_DOCKER" != 'ON' ]]; then distro/travis/before_install.sh
+  - if [[ "$USE_DOCKER" != 'ON' ]]; then distro/travis/before_install.sh ; fi
 
 install: true
 
 script:
- - if [[ "$USE_DOCKER" == 'ON' ]]; then distro/travis/build_and_test.sh
+ - if [[ "$USE_DOCKER" == 'ON' ]]; then distro/travis/build_and_test.sh ; fi
 
 after_failure:
   - echo 'after_failure'
 
 after_success:
-  - if [[ "$USE_DOCKER" != 'ON' ]]; then distro/travis/after_success.sh
+  - if [[ "$USE_DOCKER" != 'ON' ]]; then distro/travis/after_success.sh ; fi
