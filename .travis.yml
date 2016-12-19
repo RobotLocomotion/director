@@ -15,6 +15,11 @@ matrix:
       env: USE_LCM=ON MAKE_PACKAGE=ON MAKE_DOCS=ON
     - os: linux
       env: USE_LCM=OFF
+    - os: linux
+      services: 
+        - docker
+      env: USE_DOCKER=ON
+
 
 notifications:
   email: false
@@ -25,15 +30,15 @@ branches:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DISPLAY=:99.0 ; fi
-  - distro/travis/before_install.sh
+  - if [[ "$USE_DOCKER" != 'ON' ]]; then distro/travis/before_install.sh ; fi
 
 install: true
 
 script:
- - distro/travis/build_and_test.sh
+ - if [[ "$USE_DOCKER" != 'ON' ]]; then distro/travis/build_and_test.sh ; else distro/travis/run_docker.sh ; fi
 
 after_failure:
   - echo 'after_failure'
 
 after_success:
-  - distro/travis/after_success.sh
+  - if [[ "$USE_DOCKER" != 'ON' ]]; then distro/travis/after_success.sh ; fi
