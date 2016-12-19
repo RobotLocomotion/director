@@ -4,6 +4,8 @@ import time
 import math
 import threading
 import subprocess
+import os
+import sys
 
 """
 This script demonstrates interacting with the drake-visualizer application
@@ -120,7 +122,8 @@ def main():
     # We'll open the visualizer by spawning it as a subprocess. See
     # testDrakeVisualizer.py for an example of how to spawn it within Python
     # instead.
-    vis_process = subprocess.Popen("drake-visualizer")
+    vis_binary = os.path.join(os.path.dirname(sys.argv[0]), "drake-visualizer")
+    vis_process = subprocess.Popen(vis_binary)
 
     # The viewer will take some time to load before it is ready to receive
     # messages, so we'll wait until it sends its first status message.
