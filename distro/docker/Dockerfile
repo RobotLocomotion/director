@@ -19,6 +19,9 @@ ENV encrypted_444f3458e047_key $encrypted_444f3458e047_key
 ARG encrypted_444f3458e047_iv
 ENV encrypted_444f3458e047_iv $encrypted_444f3458e047_iv
 
+ARG encrypted_copyfiles_host
+ENV encrypted_copyfiles_host $encrypted_copyfiles_host
+
 RUN apt-get update
 
 # These packages are already available on Travis CI,

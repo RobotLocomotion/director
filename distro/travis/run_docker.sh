@@ -8,4 +8,5 @@ docker build \
 	--build-arg TRAVIS_OS_NAME="$TRAVIS_OS_NAME" \
 	--build-arg encrypted_444f3458e047_key="$encrypted_444f3458e047_key" \
 	--build-arg encrypted_444f3458e047_iv="$encrypted_444f3458e047_iv" \
+	--build-arg encrypted_copyfiles_host="$encrypted_copyfiles_host" \
 	.

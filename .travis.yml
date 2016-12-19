@@ -16,7 +16,7 @@ matrix:
     - os: linux
       env: USE_LCM=OFF
     - os: linux
-      services: 
+      services:
         - docker
       env: USE_DOCKER=ON
 
