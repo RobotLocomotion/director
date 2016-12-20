@@ -1,5 +1,6 @@
 import math, os
 import numpy as np
+import hashlib
 from director import lcmUtils
 
 import director.objectmodel as om
@@ -277,9 +278,11 @@ class Link(object):
         self.transform = vtk.vtkTransform()
 
         self.geometry = []
-        for g in link.geom:
-            self.geometry.extend(Geometry.createGeometry(link.name + ' geometry data', g, self.transform))
-
+        for items in [link.primitives, link.pointclouds, link.meshes]:
+            for g in items:
+                self.geometry.extend(Geometry.createGeometry(link.name + ' geometry data', g, self.transform))
+        # for g in link.geom:
+        #     self.geometry.extend(Geometry.createGeometry(link.name + ' geometry data', g, self.transform))
 
     def setTransform(self, pos, quat):
         self.transform = transformUtils.transformFromPose(pos, quat)
@@ -300,14 +303,27 @@ class DrakeVisualizer(object):
         self.robots = {}
         self.linkWarnings = set()
         self.enable()
-        self.sendStatusMessage('loaded')
+        self.sendStatusMessage(lcmrl.viewer2_response_t.STATUS_OK, 'loaded')
 
     def _addSubscribers(self):
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_ADD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerAddRobot))
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmrl.viewer_draw_t, self.onViewerDraw))
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_PLANAR_LIDAR_.*', lcmbot.planar_lidar_t, self.onPlanarLidar, callbackNeedsChannel=True))
-        self.subscribers.append(lcmUtils.addSubscriber('DRAKE_POINTCLOUD_.*', lcmbot.pointcloud_t, self.onPointCloud, callbackNeedsChannel=True))
+        self.subscribers.append(lcmUtils.addSubscriber(
+            'DRAKE_VIEWER2_LOAD_LINK',
+            lcmrl.viewer2_load_link_t,
+            self.onViewerLoadLink))
+        # self.subscribers.append(lcmUtils.addSubscriber(
+        #     'DRAKE_VIEWER2_DRAW',
+        #     lcmrl.viewer2_draw_t,
+        #     self.onViewerDraw))
+        # self.subscribers.append(lcmUtils.addSubscriber(
+        #     'DRAKE_VIEWER2_COMMAND',
+        #     lcmrl.viewer2_command_t,
+        #     self.onViewerCommand))
+
+        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))
+        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_ADD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerAddRobot))
+        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmrl.viewer_draw_t, self.onViewerDraw))
+        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_PLANAR_LIDAR_.*', lcmbot.planar_lidar_t, self.onPlanarLidar, callbackNeedsChannel=True))
+        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_POINTCLOUD_.*', lcmbot.pointcloud_t, self.onPointCloud, callbackNeedsChannel=True))
 
     def _removeSubscribers(self):
         for sub in self.subscribers:
@@ -329,39 +345,61 @@ class DrakeVisualizer(object):
     def disable(self):
         self.setEnabled(False)
 
-    def onViewerLoadRobot(self, msg):
-        self.removeAllRobots()
-        self.addLinksFromLCM(msg)
-        self.sendStatusMessage('successfully loaded robot')
+    def onViewerLoadLink(self, msg):
+        try:
+            hash = self.addLinkFromLCM(msg)
+            self.sendStatusMessage(
+                lcmrl.viewer2_response_t.STATUS_OK,
+                {"hash": hash})
+        except Exception as e:
+            self.sendStatusMessage(
+                lcmrl.viewer2_response_t.STATUS_LINK_LOAD_FAILURE,
+                {"error": e})
 
-    def onViewerAddRobot(self, msg):
-        robotNumsToReplace = set(link.robot_num for link in msg.link)
-        for robotNum in robotNumsToReplace:
-            self.removeRobot(robotNum)
-        self.addLinksFromLCM(msg)
-        self.sendStatusMessage('successfully added robot')
+    def addLinkFromLCM(self, msg):
+        link = Link(msg.link_data)
+        hash = hashlib.sha1(linkDataMsg.encode()).hexdigest()
+        self.robots.setdefault(msg.robot_id, {})[hash] = link
+        self.addLink(link, msg.robot_id, msg.link_data.name)
+
+    def addLink(self, link, robotId, linkName):
+        linkFolder = self.getLinkFolder(msg.robot_id, msg.link_data.name)
+        for geom in link.geometry:
+            self.addLinkGeometry(geom, linkName, linkFolder)
+
+    # def onViewerLoadRobot(self, msg):
+    #     self.removeAllRobots()
+    #     self.addLinksFromLCM(msg)
+    #     self.sendStatusMessage('successfully loaded robot')
+
+    # def onViewerAddRobot(self, msg):
+    #     robotNumsToReplace = set(link.robot_num for link in msg.link)
+    #     for robotNum in robotNumsToReplace:
+    #         self.removeRobot(robotNum)
+    #     self.addLinksFromLCM(msg)
+    #     self.sendStatusMessage('successfully added robot')
 
     def getRootFolder(self):
         return om.getOrCreateContainer('drake viewer', parentObj=om.findObjectByName('scene'))
 
-    def getRobotFolder(self, robotNum):
-        return om.getOrCreateContainer('robot %d' % robotNum, parentObj=self.getRootFolder())
+    def getRobotFolder(self, robotId):
+        return om.getOrCreateContainer('robot %s' % str(robotId), parentObj=self.getRootFolder())
 
     def getLinkFolder(self, robotNum, linkName):
         return om.getOrCreateContainer(linkName, parentObj=self.getRobotFolder(robotNum))
 
-    def getPointCloudFolder(self):
-        return om.getOrCreateContainer('pointclouds', parentObj=self.getRootFolder())
+    # def getPointCloudFolder(self):
+    #     return om.getOrCreateContainer('pointclouds', parentObj=self.getRootFolder())
 
-    def addLinksFromLCM(self, load_msg):
-        for link in load_msg.link:
-            self.addLink(Link(link), link.robot_num, link.name)
+    # def addLinksFromLCM(self, load_msg):
+    #     for link in load_msg.link:
+    #         self.addLink(Link(link), link.robot_num, link.name)
 
-    def addLink(self, link, robotNum, linkName):
-        self.robots.setdefault(robotNum, {})[linkName] = link
-        linkFolder = self.getLinkFolder(robotNum, linkName)
-        for geom in link.geometry:
-            self.addLinkGeometry(geom, linkName, linkFolder)
+    # def addLink(self, link, robotNum, linkName):
+    #     self.robots.setdefault(robotNum, {})[linkName] = link
+    #     linkFolder = self.getLinkFolder(robotNum, linkName)
+    #     for geom in link.geometry:
+    #         self.addLinkGeometry(geom, linkName, linkFolder)
 
     def addLinkGeometry(self, geom, linkName, linkFolder):
         geom.polyDataItem.addToView(self.view)
@@ -375,25 +413,25 @@ class DrakeVisualizer(object):
             geom.polyDataItem.actor.GetProperty().SetSpecular(0.9)
             geom.polyDataItem.actor.GetProperty().SetSpecularPower(20)
 
-    def getLink(self, robotNum, linkName):
-        return self.robots[robotNum][linkName]
+    # def getLink(self, robotNum, linkName):
+    #     return self.robots[robotNum][linkName]
 
-    def removeAllRobots(self):
-        for child in self.getRootFolder().children():
-            if child.getProperty('Name') != "pointclouds":
-                om.removeFromObjectModel(child)
-        self.robots = {}
+    # def removeAllRobots(self):
+    #     for child in self.getRootFolder().children():
+    #         if child.getProperty('Name') != "pointclouds":
+    #             om.removeFromObjectModel(child)
+    #     self.robots = {}
 
-    def removeRobot(self, robotNum):
-        if robotNum in self.robots:
-            om.removeFromObjectModel(self.getRobotFolder(robotNum))
-            del self.robots[robotNum]
+    # def removeRobot(self, robotNum):
+    #     if robotNum in self.robots:
+    #         om.removeFromObjectModel(self.getRobotFolder(robotNum))
+    #         del self.robots[robotNum]
 
-    def sendStatusMessage(self, message):
-        msg = lcmrl.viewer_command_t()
-        msg.command_type = lcmrl.viewer_command_t.STATUS
-        msg.command_data = message
-        lcmUtils.publish('DRAKE_VIEWER_STATUS', msg)
+    def sendStatusMessage(self, status, data):
+        msg = lcmrl.viewer2_command_t()
+        msg.status = status
+        msg.json = json.dumps(data)
+        lcmUtils.publish('DRAKE_VIEWER2_STATUS', msg)
 
     def onViewerDraw(self, msg):
 
