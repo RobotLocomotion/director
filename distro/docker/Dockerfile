@@ -24,38 +24,29 @@ ENV encrypted_copyfiles_host $encrypted_copyfiles_host
 
 RUN apt-get update
 
-# These packages are already available on Travis CI,
-# but we need to add them inside the docker instance
+# Install packages required to build and test
 RUN apt-get install -y \
-	gcc-4.9 \
-	g++-4.9 \
-    libglib2.0-dev \
-    wget \
-	git
-ENV CXX g++-4.9
-ENV CC gcc-4.9
-
-# These are the Director dependencies we need inside
-# Travis CI
-RUN apt-get install -y \
-	build-essential \
-	cmake \
-    doxygen \
-    graphviz \
-    libeigen3-dev \
-	libqt4-dev \
-	libvtk5-dev \
-	libvtk5-qt4-dev \
-    libvtk-java \
-    python-coverage \
-    python-dev \
-    python-lxml \
-    python-numpy \
-    python-pip \
-    python-sphinx \
-    python-vtk \
-    python-yaml \
-    xvfb
+  wget \
+  git \
+  build-essential \
+  cmake \
+  doxygen \
+  graphviz \
+  libglib2.0-dev \
+  libeigen3-dev \
+  libqt4-dev \
+  libvtk5-dev \
+  libvtk5-qt4-dev \
+  libvtk-java \
+  python-coverage \
+  python-dev \
+  python-lxml \
+  python-numpy \
+  python-pip \
+  python-sphinx \
+  python-vtk \
+  python-yaml \
+  xvfb
 
 RUN pip install sphinx-rtd-theme
 
