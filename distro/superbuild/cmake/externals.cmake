@@ -145,8 +145,8 @@ endif()
 if (USE_LCM)
 
   ExternalProject_Add(bot_core_lcmtypes
-    GIT_REPOSITORY https://github.com/openhumanoids/bot_core_lcmtypes
-    GIT_TAG 9967654
+    GIT_REPOSITORY https://github.com/rdeits/bot_core_lcmtypes
+    GIT_TAG 9446ce422b679e88968718f63715c681cf621b70
     ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
