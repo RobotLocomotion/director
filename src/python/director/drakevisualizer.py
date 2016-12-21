@@ -1,6 +1,7 @@
 import math, os
 import numpy as np
 import hashlib
+import json
 from director import lcmUtils
 
 import director.objectmodel as om
@@ -274,15 +275,13 @@ class Geometry(object):
 
 class Link(object):
 
-    def __init__(self, link):
+    def __init__(self, path):
         self.transform = vtk.vtkTransform()
+        self.path = path
+        self.geometry = {}
 
-        self.geometry = []
-        for items in [link.primitives, link.pointclouds, link.meshes]:
-            for g in items:
-                self.geometry.extend(Geometry.createGeometry(link.name + ' geometry data', g, self.transform))
-        # for g in link.geom:
-        #     self.geometry.extend(Geometry.createGeometry(link.name + ' geometry data', g, self.transform))
+    def addGeometry(self, geom):
+        self.geometry.extend(Geometry.createGeometry(self.path.split('/')[-1] + ' geometry data', geom, self.transform))
 
     def setTransform(self, pos, quat):
         self.transform = transformUtils.transformFromPose(pos, quat)
@@ -301,23 +300,19 @@ class DrakeVisualizer(object):
         self.subscribers = []
         self.view = view
         self.robots = {}
-        self.linkWarnings = set()
+        # self.linkWarnings = set()
         self.enable()
         self.sendStatusMessage(lcmrl.viewer2_response_t.STATUS_OK, 'loaded')
 
     def _addSubscribers(self):
         self.subscribers.append(lcmUtils.addSubscriber(
-            'DRAKE_VIEWER2_LOAD_LINK',
-            lcmrl.viewer2_load_link_t,
-            self.onViewerLoadLink))
-        # self.subscribers.append(lcmUtils.addSubscriber(
-        #     'DRAKE_VIEWER2_DRAW',
-        #     lcmrl.viewer2_draw_t,
-        #     self.onViewerDraw))
-        # self.subscribers.append(lcmUtils.addSubscriber(
-        #     'DRAKE_VIEWER2_COMMAND',
-        #     lcmrl.viewer2_command_t,
-        #     self.onViewerCommand))
+            'DRAKE_VIEWER2_LOAD_LINKS',
+            lcmrl.viewer2_load_links_t,
+            self.onViewerLoadLinks))
+        self.subscribers.append(lcmUtils.addSubscriber(
+            'DRAKE_VIEWER2_DRAW',
+            lcmrl.viewer2_draw_t,
+            self.onViewerDraw))
 
         # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))
         # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_ADD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerAddRobot))
@@ -345,73 +340,52 @@ class DrakeVisualizer(object):
     def disable(self):
         self.setEnabled(False)
 
-    def onViewerLoadLink(self, msg):
+    def onViewerLoadLinks(self, msg):
         try:
-            hash = self.addLinkFromLCM(msg)
-            self.sendStatusMessage(
-                lcmrl.viewer2_response_t.STATUS_OK,
-                {"hash": hash})
+            for link in msg.link_data:
+                self.loadLinkData(link)
         except Exception as e:
             self.sendStatusMessage(
-                lcmrl.viewer2_response_t.STATUS_LINK_LOAD_FAILURE,
-                {"error": e})
+                lcmrl.viewer2_response_t.STATUS_LINK_LOAD_ERROR,
+                {"error": str(e)})
+        else:
+            self.sendStatusMessage(
+                lcmrl.viewer2_response_t.STATUS_OK,
+                {"loaded_paths": [m.path for m in msg.link_data]})
 
-    def addLinkFromLCM(self, msg):
-        link = Link(msg.link_data)
-        hash = hashlib.sha1(linkDataMsg.encode()).hexdigest()
-        self.robots.setdefault(msg.robot_id, {})[hash] = link
-        self.addLink(link, msg.robot_id, msg.link_data.name)
-
-    def addLink(self, link, robotId, linkName):
-        linkFolder = self.getLinkFolder(msg.robot_id, msg.link_data.name)
+    def loadLinkData(self, link_data):
+        linkFolder = self.getPathFolder(link_data.path)
+        try:
+            link = self.robots[link_data.path]
+        except KeyError:
+            link = Link(link_data.path)
+            self.robots[link_data.path] = link
+        for geometry_msg in link_data.geometries:
+            link.addGeometry(geometry_msg)
         for geom in link.geometry:
-            self.addLinkGeometry(geom, linkName, linkFolder)
-
-    # def onViewerLoadRobot(self, msg):
-    #     self.removeAllRobots()
-    #     self.addLinksFromLCM(msg)
-    #     self.sendStatusMessage('successfully loaded robot')
-
-    # def onViewerAddRobot(self, msg):
-    #     robotNumsToReplace = set(link.robot_num for link in msg.link)
-    #     for robotNum in robotNumsToReplace:
-    #         self.removeRobot(robotNum)
-    #     self.addLinksFromLCM(msg)
-    #     self.sendStatusMessage('successfully added robot')
+            geom.polyDataItem.addToView(self.view)
+            om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
 
     def getRootFolder(self):
         return om.getOrCreateContainer('drake viewer', parentObj=om.findObjectByName('scene'))
 
-    def getRobotFolder(self, robotId):
-        return om.getOrCreateContainer('robot %s' % str(robotId), parentObj=self.getRootFolder())
+    def getPathFolder(self, path):
+        folder = self.getRootFolder()
+        for element in path.split('/'):
+            folder = om.getOrCreateContainer(element, parentObj=folder)
+        return folder
 
-    def getLinkFolder(self, robotNum, linkName):
-        return om.getOrCreateContainer(linkName, parentObj=self.getRobotFolder(robotNum))
+    # def addLinkGeometry(self, geom, linkName, linkFolder):
+    #     geom.polyDataItem.addToView(self.view)
+    #     om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
 
-    # def getPointCloudFolder(self):
-    #     return om.getOrCreateContainer('pointclouds', parentObj=self.getRootFolder())
-
-    # def addLinksFromLCM(self, load_msg):
-    #     for link in load_msg.link:
-    #         self.addLink(Link(link), link.robot_num, link.name)
-
-    # def addLink(self, link, robotNum, linkName):
-    #     self.robots.setdefault(robotNum, {})[linkName] = link
-    #     linkFolder = self.getLinkFolder(robotNum, linkName)
-    #     for geom in link.geometry:
-    #         self.addLinkGeometry(geom, linkName, linkFolder)
-
-    def addLinkGeometry(self, geom, linkName, linkFolder):
-        geom.polyDataItem.addToView(self.view)
-        om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
-
-        if linkName == 'world':
-            #geom.polyDataItem.actor.SetUseBounds(False)
-            #geom.polyDataItem.actor.GetProperty().LightingOff()
-            geom.polyDataItem.actor.GetProperty().SetSpecular(0.0)
-        else:
-            geom.polyDataItem.actor.GetProperty().SetSpecular(0.9)
-            geom.polyDataItem.actor.GetProperty().SetSpecularPower(20)
+    #     if linkName == 'world':
+    #         #geom.polyDataItem.actor.SetUseBounds(False)
+    #         #geom.polyDataItem.actor.GetProperty().LightingOff()
+    #         geom.polyDataItem.actor.GetProperty().SetSpecular(0.0)
+    #     else:
+    #         geom.polyDataItem.actor.GetProperty().SetSpecular(0.9)
+    #         geom.polyDataItem.actor.GetProperty().SetSpecularPower(20)
 
     # def getLink(self, robotNum, linkName):
     #     return self.robots[robotNum][linkName]
@@ -428,30 +402,42 @@ class DrakeVisualizer(object):
     #         del self.robots[robotNum]
 
     def sendStatusMessage(self, status, data):
-        msg = lcmrl.viewer2_command_t()
+        msg = lcmrl.viewer2_response_t()
         msg.status = status
         msg.json = json.dumps(data)
-        lcmUtils.publish('DRAKE_VIEWER2_STATUS', msg)
+        lcmUtils.publish('DRAKE_VIEWER2_RESPONSE', msg)
 
     def onViewerDraw(self, msg):
+        try:
+            missing_paths = []
+            for (path, pose) in zip(msg.paths, msg.poses):
+                pos = np.array([pose.translation.x,
+                                pose.translation.y,
+                                pose.translation.z])
+                quat = np.array([pose.rotation.w,
+                                 pose.rotation.x,
+                                 pose.rotation.y,
+                                 pose.rotation.z])
+                try:
+                    link = self.robots[path]
+                except KeyError:
+                    missing_paths.append(path)
+                else:
+                    link.setTransform(pos, quat)
 
-        for i in xrange(msg.num_links):
-
-            pos = msg.position[i]
-            quat = msg.quaternion[i]
-            robotNum = msg.robot_num[i]
-            linkName = msg.link_name[i]
-
-            try:
-                link = self.getLink(robotNum, linkName)
-            except KeyError:
-                if linkName not in self.linkWarnings:
-                    print 'Error locating link name:', linkName
-                    self.linkWarnings.add(linkName)
+            self.view.render()
+            if not missing_paths:
+                self.sendStatusMessage(lcmrl.viewer2_response_t.STATUS_OK,
+                                       {})
             else:
-                link.setTransform(pos, quat)
-
-        self.view.render()
+                self.sendStatusMessage(
+                    lcmrl.viewer2_response_t.STATUS_NO_SUCH_LINK,
+                    {"missing_paths": missing_paths})
+        except Exception as e:
+            print e
+            self.sendStatusMessage(
+                lcmrl.viewer2_response_t.STATUS_DRAW_ERROR,
+                {"error": str(e)})
 
     def onPlanarLidar(self, msg, channel):
 
