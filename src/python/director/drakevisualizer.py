@@ -133,41 +133,6 @@ class Geometry(object):
                 "Unsupported geometry type: {}".format(geom["type"]))
 
     # @staticmethod
-    # def createPolyDataFromPrimitive(geom):
-
-    #     if geom.type == lcmrl.viewer_geometry_data_t.BOX:
-    #         d = DebugData()
-    #         d.addCube(dimensions=geom.float_data[0:3], center=[0,0,0])
-    #         return d.getPolyData()
-
-    #     elif geom.type == lcmrl.viewer_geometry_data_t.SPHERE:
-    #         d = DebugData()
-    #         d.addSphere(center=(0,0,0), radius=geom.float_data[0])
-    #         return d.getPolyData()
-
-    #     elif geom.type == lcmrl.viewer_geometry_data_t.CYLINDER:
-    #         d = DebugData()
-    #         d.addCylinder(center=(0,0,0), axis=(0,0,1), radius=geom.float_data[0], length=geom.float_data[1])
-    #         return d.getPolyData()
-
-    #     elif geom.type == lcmrl.viewer_geometry_data_t.CAPSULE:
-    #         d = DebugData()
-    #         radius = geom.float_data[0]
-    #         length = geom.float_data[1]
-    #         d.addCylinder(center=(0,0,0), axis=(0,0,1), radius=radius, length=length)
-    #         d.addSphere(center=(0,0,length/2.0), radius=radius)
-    #         d.addSphere(center=(0,0,-length/2.0), radius=radius)
-    #         return d.getPolyData()
-
-    #     elif hasattr(lcmrl.viewer_geometry_data_t, "ELLIPSOID") and geom.type == lcmrl.viewer_geometry_data_t.ELLIPSOID:
-    #         d = DebugData()
-    #         radii = geom.float_data[0:3]
-    #         d.addEllipsoid(center=(0,0,0), radii=radii)
-    #         return d.getPolyData()
-
-    #     raise Exception('Unsupported geometry type: %s' % geom.type)
-
-    # @staticmethod
     # def createPolyDataFromMeshMessage(geom):
 
     #     assert len(geom.float_data) >= 2
@@ -461,10 +426,6 @@ class DrakeVisualizer(object):
             'DRAKE_VIEWER2_REQUEST',
             lcmrl.viewer2_comms_t,
             self.onViewerRequest))
-        # self.subscribers.append(lcmUtils.addSubscriber(
-        #     'DRAKE_VIEWER2_DRAW',
-        #     lcmrl.viewer2_comms_t,
-        #     self.onViewerDraw))
 
         # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))
         # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_ADD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerAddRobot))
@@ -537,46 +498,14 @@ class DrakeVisualizer(object):
         elif data["type"] == "draw":
             return self.drawLinks(data["data"])
 
-    # def onViewerLoadLinks(self, msg):
-    #     if msg.format == "viewer2_json":
-    #         if msg.format_version_major == 1 and msg.format_version_minor == 0:
-    #             data = json.loads(msg.data)
-    #             try:
-    #                 self.loadLinks(data)
-    #             except Exception as e:
-    #                 self.sendStatusMessage(
-    #                     msg.timestamp,
-    #                     ERROR_LOADING,
-    #                     {"error": str(e)})
-    #                 print e
-    #             else:
-    #                 self.sendStatusMessage(
-    #                     msg.timestamp,
-    #                     OK,
-    #                     {"loaded_paths": [l["path"] for l in data["links"]]})
-    #         else:
-    #             self.sendStatusMessage(
-    #                 msg.timestamp,
-    #                 ERROR_UNKNOWN_FORMAT_VERSION,
-    #                 {"supported_formats": {
-    #                     "viewer2_json": [{"major": 1, "minor": 0}]
-    #                 }})
-    #     else:
-    #         self.sendStatusMessage(
-    #             msg.timestamp,
-    #             ERROR_UNKNOWN_FORMAT,
-    #             {"supported_formats": {
-    #                 "viewer2_json": [{"major": 1, "minor": 0}]
-    #             }})
-
     def loadLinks(self, data):
-        # try:
+        try:
             for linkData in data["links"]:
                 self.loadLinkData(linkData)
-        # except Exception as e:
-        #     raise e
-        #     return ViewerResponse(ERROR_HANDLING_REQUEST, {"error": str(e)})
-        # else:
+        except Exception as e:
+            print e
+            return ViewerResponse(ERROR_HANDLING_REQUEST, {"error": str(e)})
+        else:
             return ViewerResponse(OK, {})
 
     def loadLinkData(self, linkData):
@@ -654,7 +583,7 @@ class DrakeVisualizer(object):
             else:
                 return ViewerResponse(OK, {})
         except Exception as e:
-            raise e
+            print e
             return ViewerResponse(ERROR_HANDLING_REQUEST,
                                   {"error": str(e)})
 
