@@ -1,4 +1,3 @@
-import hashlib
 import json
 import threading
 import time
@@ -8,15 +7,6 @@ sys.path.append("build/install/lib/python2.7/site-packages")
 
 import lcm
 import bot_core
-
-
-# def to_pose_3d(trans, quat):
-#     msg = bot_core.position_3d_t()
-#     msg.translation = bot_core.vector_3d_t()
-#     msg.translation.x, msg.translation.y, msg.translation.z = trans
-#     msg.rotation = bot_core.quaternion_t()
-#     msg.rotation.w, msg.rotation.x, msg.rotation.y, msg.rotation.z = quat
-#     return msg
 
 
 def comms_msg(timestamp, data):
@@ -105,29 +95,6 @@ if __name__ == '__main__':
             "lengths": [1, 1, 1]
         }
     }
-    # geometry_data = bot_core.viewer2_geometry_data_t()
-    # geometry_data.name = "box"
-    # geometry_data.pose = to_pose_3d([0, 0, 0], [1, 0, 0, 0])
-    # geometry_data.color = [1.0, 0, 0, 0.5]
-    # geometry_data.format = "json"
-    # geometry_data.format_version = 1
-
-    # geom = {
-    #     "type": "box",
-    #     "parameters": {
-    #         "lengths": [1, 1, 1]
-    #     }
-    # }
-    # data = json.dumps(geom)
-    # geometry_data.num_bytes = len(data)
-    # geometry_data.data = data
-    # geometry_data = bot_core.viewer_geometry_data_t()
-    # geometry_data.type = geometry_data.BOX
-    # geometry_data.position = [0, 0, 0]
-    # geometry_data.quaternion = [1, 0, 0, 0]
-    # geometry_data.color = [1, 0, 0, 0.5]
-    # geometry_data.num_float_data = 3
-    # geometry_data.float_data = [1, 1, 1]
     vis = Visualizer(["robot1", "link1"], [geometry])
     # vis.load()
     while True:
