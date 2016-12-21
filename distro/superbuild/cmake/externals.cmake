@@ -146,7 +146,7 @@ if (USE_LCM)
 
   ExternalProject_Add(bot_core_lcmtypes
     GIT_REPOSITORY https://github.com/rdeits/bot_core_lcmtypes
-    GIT_TAG 9446ce422b679e88968718f63715c681cf621b70
+    GIT_TAG dd1236b5bf5f2662e200d78297393333fe97ae64
     ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
