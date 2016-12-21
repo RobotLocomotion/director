@@ -1,7 +1,8 @@
-import math, os
-import numpy as np
-import hashlib
+import math
+import os
 import json
+import numpy as np
+from collections import namedtuple
 from director import lcmUtils
 
 import director.objectmodel as om
@@ -30,6 +31,19 @@ from PythonQt import QtGui
 USE_TEXTURE_MESHES = True
 USE_SHADOWS = False
 
+OK = 0
+NO_SUCH_LINK = 1
+ERROR_UNKNOWN_FORMAT = 2
+ERROR_UNKNOWN_FORMAT_VERSION = 3
+ERROR_HANDLING_REQUEST = 4
+
+
+
+def transformFromDict(pose_data):
+    return transformUtils.transformFromPose(pose_data["translation"],
+                                            pose_data["quaternion"])
+
+
 class Geometry(object):
 
     TextureCache = {}
@@ -38,59 +52,140 @@ class Geometry(object):
     PackageMap = None
 
     @staticmethod
-    def createPolyDataFromPrimitive(geom):
-
-        if geom.type == lcmrl.viewer_geometry_data_t.BOX:
-            d = DebugData()
-            d.addCube(dimensions=geom.float_data[0:3], center=[0,0,0])
-            return d.getPolyData()
-
-        elif geom.type == lcmrl.viewer_geometry_data_t.SPHERE:
-            d = DebugData()
-            d.addSphere(center=(0,0,0), radius=geom.float_data[0])
-            return d.getPolyData()
-
-        elif geom.type == lcmrl.viewer_geometry_data_t.CYLINDER:
-            d = DebugData()
-            d.addCylinder(center=(0,0,0), axis=(0,0,1), radius=geom.float_data[0], length=geom.float_data[1])
-            return d.getPolyData()
-
-        elif geom.type == lcmrl.viewer_geometry_data_t.CAPSULE:
-            d = DebugData()
-            radius = geom.float_data[0]
-            length = geom.float_data[1]
-            d.addCylinder(center=(0,0,0), axis=(0,0,1), radius=radius, length=length)
-            d.addSphere(center=(0,0,length/2.0), radius=radius)
-            d.addSphere(center=(0,0,-length/2.0), radius=radius)
-            return d.getPolyData()
-
-        elif hasattr(lcmrl.viewer_geometry_data_t, "ELLIPSOID") and geom.type == lcmrl.viewer_geometry_data_t.ELLIPSOID:
-            d = DebugData()
-            radii = geom.float_data[0:3]
-            d.addEllipsoid(center=(0,0,0), radii=radii)
-            return d.getPolyData()
-
-        raise Exception('Unsupported geometry type: %s' % geom.type)
+    def createBox(params):
+        d = DebugData()
+        d.addCube(dimensions=params["lengths"], center=(0, 0, 0))
+        return [d.getPolyData()]
 
     @staticmethod
-    def createPolyDataFromMeshMessage(geom):
+    def createSphere(params):
+        d = DebugData()
+        d.addSphere(center=(0, 0, 0), radius=params["radius"])
+        return [d.getPolyData()]
 
-        assert len(geom.float_data) >= 2
+    @staticmethod
+    def createCylinder(params):
+        d = DebugData()
+        d.addCylinder(center=(0, 0, 0),
+                      axis=(0, 0, 1),
+                      radius=params["radius"],
+                      length=params["length"])
+        return [d.getPolyData()]
 
-        numPoints = int(geom.float_data[0])
-        numTris = int(geom.float_data[1])
+    @staticmethod
+    def createCapsule(params):
+        d = DebugData()
+        radius = params["radius"]
+        length = params["length"]
+        d.addCylinder(center=(0, 0, 0),
+                      axis=(0, 0, 1),
+                      radius=radius,
+                      length=length)
+        d.addSphere(center=(0, 0, length / 2.0), radius=radius)
+        d.addSphere(center=(0, 0, -length / 2.0), radius=radius)
+        return [d.getPolyData()]
 
-        headerOffset = 2
-        ptsOffset = 3*numPoints
-        trisOffset = 3*numTris
+    @staticmethod
+    def createEllipsoid(params):
+        d = DebugData()
+        radii = params["radii"]
+        d.addEllipsoid(center=(0, 0, 0), radii=radii)
+        return [d.getPolyData()]
 
-        assert len(geom.float_data) == headerOffset + ptsOffset + trisOffset
+    @staticmethod
+    def createMeshFromFile(params):
+        polyDataList = Geometry.loadPolyDataMeshes(params["filename"])
+        if "scale" in params:
+            polyDataList = Geometry.scaleGeometry(polyDataList,
+                                                  params["scale"])
+        return polyDataList
 
-        pts = np.array(geom.float_data[headerOffset:headerOffset+ptsOffset])
-        pts = pts.reshape((numPoints, 3))
-        tris = np.array(geom.float_data[headerOffset+ptsOffset:], dtype=int)
+    @staticmethod
+    def createMeshFromData(params):
+        verts = np.asarray(params["vertices"])
+        faces = np.asarray(params["faces"])
+        return [Geometry.createPolyDataFromMeshArrays(verts, faces)]
 
-        return Geometry.createPolyDataFromMeshArrays(pts, tris)
+    @staticmethod
+    def createPointcloud(params):
+        pass
+
+    @staticmethod
+    def createPolyData(geom):
+        if geom["type"] == "box":
+            return Geometry.createBox(geom["parameters"])
+        elif geom["type"] == "sphere":
+            return Geometry.createSphere(geom["parameters"])
+        elif geom["type"] == "cylinder":
+            return Geometry.createCylinder(geom["parameters"])
+        elif geom["type"] == "capsule":
+            return Geometry.createCapsule(geom["parameters"])
+        elif geom["type"] == "ellipsoid":
+            return Geometry.createEllipsoid(geom["parameters"])
+        elif geom["type"] == "mesh_file":
+            return Geometry.createMeshFromFile(geom["parameters"])
+        elif geom["type"] == "mesh_data":
+            return Geometry.createMeshFromData(geom["parameters"])
+        elif geom["type"] == "pointcloud":
+            return Geometry.createPointcloud(geom["parameters"])
+        else:
+            raise Exception(
+                "Unsupported geometry type: {}".format(geom["type"]))
+
+    # @staticmethod
+    # def createPolyDataFromPrimitive(geom):
+
+    #     if geom.type == lcmrl.viewer_geometry_data_t.BOX:
+    #         d = DebugData()
+    #         d.addCube(dimensions=geom.float_data[0:3], center=[0,0,0])
+    #         return d.getPolyData()
+
+    #     elif geom.type == lcmrl.viewer_geometry_data_t.SPHERE:
+    #         d = DebugData()
+    #         d.addSphere(center=(0,0,0), radius=geom.float_data[0])
+    #         return d.getPolyData()
+
+    #     elif geom.type == lcmrl.viewer_geometry_data_t.CYLINDER:
+    #         d = DebugData()
+    #         d.addCylinder(center=(0,0,0), axis=(0,0,1), radius=geom.float_data[0], length=geom.float_data[1])
+    #         return d.getPolyData()
+
+    #     elif geom.type == lcmrl.viewer_geometry_data_t.CAPSULE:
+    #         d = DebugData()
+    #         radius = geom.float_data[0]
+    #         length = geom.float_data[1]
+    #         d.addCylinder(center=(0,0,0), axis=(0,0,1), radius=radius, length=length)
+    #         d.addSphere(center=(0,0,length/2.0), radius=radius)
+    #         d.addSphere(center=(0,0,-length/2.0), radius=radius)
+    #         return d.getPolyData()
+
+    #     elif hasattr(lcmrl.viewer_geometry_data_t, "ELLIPSOID") and geom.type == lcmrl.viewer_geometry_data_t.ELLIPSOID:
+    #         d = DebugData()
+    #         radii = geom.float_data[0:3]
+    #         d.addEllipsoid(center=(0,0,0), radii=radii)
+    #         return d.getPolyData()
+
+    #     raise Exception('Unsupported geometry type: %s' % geom.type)
+
+    # @staticmethod
+    # def createPolyDataFromMeshMessage(geom):
+
+    #     assert len(geom.float_data) >= 2
+
+    #     numPoints = int(geom.float_data[0])
+    #     numTris = int(geom.float_data[1])
+
+    #     headerOffset = 2
+    #     ptsOffset = 3*numPoints
+    #     trisOffset = 3*numTris
+
+    #     assert len(geom.float_data) == headerOffset + ptsOffset + trisOffset
+
+    #     pts = np.array(geom.float_data[headerOffset:headerOffset+ptsOffset])
+    #     pts = pts.reshape((numPoints, 3))
+    #     tris = np.array(geom.float_data[headerOffset+ptsOffset:], dtype=int)
+
+    #     return Geometry.createPolyDataFromMeshArrays(pts, tris)
 
     @staticmethod
     def createPolyDataFromMeshArrays(pts, faces):
@@ -98,28 +193,42 @@ class Geometry(object):
         pd.SetPoints(vtk.vtkPoints())
         pd.GetPoints().SetData(vnp.getVtkFromNumpy(pts.copy()))
 
-        assert len(faces) % 3 == 0
         cells = vtk.vtkCellArray()
-        for i in xrange(len(faces)/3):
+        for face in faces:
+            assert len(face) == 3, "Non-triangular faces are not supported."
             tri = vtk.vtkTriangle()
-            tri.GetPointIds().SetId(0, faces[i*3 + 0])
-            tri.GetPointIds().SetId(1, faces[i*3 + 1])
-            tri.GetPointIds().SetId(2, faces[i*3 + 2])
+            tri.GetPointIds().SetId(0, face[0])
+            tri.GetPointIds().SetId(1, face[1])
+            tri.GetPointIds().SetId(2, face[2])
             cells.InsertNextCell(tri)
 
         pd.SetPolys(cells)
         return pd
 
+    # @staticmethod
+    # def createPolyDataFromMeshArrays(pts, faces):
+    #     pd = vtk.vtkPolyData()
+    #     pd.SetPoints(vtk.vtkPoints())
+    #     pd.GetPoints().SetData(vnp.getVtkFromNumpy(pts.copy()))
+
+    #     assert len(faces) % 3 == 0
+    #     cells = vtk.vtkCellArray()
+    #     for i in xrange(len(faces)/3):
+    #         tri = vtk.vtkTriangle()
+    #         tri.GetPointIds().SetId(0, faces[i*3 + 0])
+    #         tri.GetPointIds().SetId(1, faces[i*3 + 1])
+    #         tri.GetPointIds().SetId(2, faces[i*3 + 2])
+    #         cells.InsertNextCell(tri)
+
+    #     pd.SetPolys(cells)
+    #     return pd
+
     @staticmethod
-    def scaleGeometry(polyDataList, geom):
-        if len(geom.float_data) == 1:
-            scale_x = scale_y = scale_z = geom.float_data[0]
+    def scaleGeometry(polyDataList, scale):
+        if len(scale) == 1:
+            scale_x = scale_y = scale_z = scale
         elif len(geom.float_data) == 3:
-            scale_x = geom.float_data[0]
-            scale_y = geom.float_data[1]
-            scale_z = geom.float_data[2]
-        else:
-            scale_x = scale_y = scale_z = 1.0
+            scale_x, scale_y, scale_z = scale
 
         if scale_x != 1.0 or scale_y != 1.0 or scale_z != 1.0:
             t = vtk.vtkTransform()
@@ -128,13 +237,34 @@ class Geometry(object):
 
         return polyDataList
 
+    # @staticmethod
+    # def scaleGeometry(polyDataList, geom):
+    #     if len(geom.float_data) == 1:
+    #         scale_x = scale_y = scale_z = geom.float_data[0]
+    #     elif len(geom.float_data) == 3:
+    #         scale_x = geom.float_data[0]
+    #         scale_y = geom.float_data[1]
+    #         scale_z = geom.float_data[2]
+    #     else:
+    #         scale_x = scale_y = scale_z = 1.0
+
+    #     if scale_x != 1.0 or scale_y != 1.0 or scale_z != 1.0:
+    #         t = vtk.vtkTransform()
+    #         t.Scale(scale_x, scale_y, scale_z)
+    #         polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
+
+    #     return polyDataList
+
+    # @staticmethod
+    # def transformGeometry(polyDataList, geom):
+    #     t = transformUtils.transformFromPose(geom.position, geom.quaternion)
+    #     polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
+    #     return polyDataList
 
     @staticmethod
-    def transformGeometry(polyDataList, geom):
-        t = transformUtils.transformFromPose(geom.position, geom.quaternion)
-        polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
+    def transformGeometry(polyDataList, transform):
+        polyDataList = [filterUtils.transformPolyData(polyData, transform) for polyData in polyDataList]
         return polyDataList
-
 
     @staticmethod
     def computeNormals(polyDataList):
@@ -198,9 +328,9 @@ class Geometry(object):
         return Geometry.PackageMap.resolveFilename(filename) or filename
 
     @staticmethod
-    def loadPolyDataMeshes(geom):
+    def loadPolyDataMeshes(filename):
 
-        filename = Geometry.resolvePackageFilename(geom.string_data)
+        filename = Geometry.resolvePackageFilename(filename)
         basename, ext = os.path.splitext(filename)
 
         preferredExtensions = ['.vtm', '.vtp', '.obj']
@@ -223,29 +353,33 @@ class Geometry(object):
             for polyData in polyDataList:
                 Geometry.loadTextureForMesh(polyData, filename)
 
-
         return polyDataList
-
 
     @staticmethod
     def createPolyDataForGeometry(geom):
-
-        polyDataList = []
-
-        if geom.type != lcmrl.viewer_geometry_data_t.MESH:
-            polyDataList = [Geometry.createPolyDataFromPrimitive(geom)]
-
-        else:
-            if not geom.string_data:
-                polyDataList = [Geometry.createPolyDataFromMeshMessage(geom)]
-            else:
-                polyDataList = Geometry.loadPolyDataMeshes(geom)
-                polyDataList = Geometry.scaleGeometry(polyDataList, geom)
-
-        polyDataList = Geometry.transformGeometry(polyDataList, geom)
+        polyDataList = Geometry.createPolyData(geom)
+        polyDataList = Geometry.transformGeometry(
+            polyDataList,
+            transformFromDict(geom["pose"]))
         polyDataList = Geometry.computeNormals(polyDataList)
-
         return polyDataList
+
+    # @staticmethod
+    # def createPolyDataForGeometry(geom):
+    #     if geom.type != lcmrl.viewer_geometry_data_t.MESH:
+    #         polyDataList = [Geometry.createPolyDataFromPrimitive(geom)]
+
+    #     else:
+    #         if not geom.string_data:
+    #             polyDataList = [Geometry.createPolyDataFromMeshMessage(geom)]
+    #         else:
+    #             polyDataList = Geometry.loadPolyDataMeshes(geom)
+    #             polyDataList = Geometry.scaleGeometry(polyDataList, geom)
+
+    #     polyDataList = Geometry.transformGeometry(polyDataList, geom)
+    #     polyDataList = Geometry.computeNormals(polyDataList)
+
+    #     return polyDataList
 
     @staticmethod
     def createGeometry(name, geom, parentTransform):
@@ -260,14 +394,16 @@ class Geometry(object):
 
     def __init__(self, name, geom, polyData, parentTransform):
         self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
-        self.polyDataItem.setProperty('Alpha', geom.color[3])
+        self.polyDataItem.setProperty('Alpha', geom["color"][3])
         self.polyDataItem.actor.SetTexture(Geometry.TextureCache.get( Geometry.getTextureFileName(polyData) ))
 
         if self.polyDataItem.actor.GetTexture():
             self.polyDataItem.setProperty('Color', QtGui.QColor(255, 255, 255))
 
         else:
-            self.polyDataItem.setProperty('Color', QtGui.QColor(geom.color[0]*255, geom.color[1]*255, geom.color[2]*255))
+            self.polyDataItem.setProperty('Color', QtGui.QColor(255 * geom["color"][0],
+                                                                255 * geom["color"][1],
+                                                                255 * geom["color"][2]))
 
         if USE_SHADOWS:
             self.polyDataItem.shadowOn()
@@ -278,19 +414,35 @@ class Link(object):
     def __init__(self, path):
         self.transform = vtk.vtkTransform()
         self.path = path
-        self.geometry = {}
+        self.geometry = []
 
     def addGeometry(self, geom):
-        self.geometry.extend(Geometry.createGeometry(self.path.split('/')[-1] + ' geometry data', geom, self.transform))
+        vtkGeometries = Geometry.createGeometry(
+            geom["name"],
+            geom,
+            self.transform)
+        self.geometry.extend(vtkGeometries)
+        return vtkGeometries
 
-    def setTransform(self, pos, quat):
-        self.transform = transformUtils.transformFromPose(pos, quat)
+    def setTransform(self, transform):
+        self.transform = transform
         for g in self.geometry:
             childFrame = g.polyDataItem.getChildFrame()
             if childFrame:
                 childFrame.copyFrame(self.transform)
             else:
                 g.polyDataItem.actor.SetUserTransform(self.transform)
+
+
+class UnknownFormatException(Exception):
+    pass
+
+
+class BadFormatVersionException(Exception):
+    pass
+
+
+ViewerResponse = namedtuple("ViewerResponse", ["status", "data"])
 
 
 class DrakeVisualizer(object):
@@ -302,17 +454,17 @@ class DrakeVisualizer(object):
         self.robots = {}
         # self.linkWarnings = set()
         self.enable()
-        self.sendStatusMessage(lcmrl.viewer2_response_t.STATUS_OK, 'loaded')
+        # self.sendStatusMessage(lcmrl.viewer2_response_t.STATUS_OK, 'loaded')
 
     def _addSubscribers(self):
         self.subscribers.append(lcmUtils.addSubscriber(
-            'DRAKE_VIEWER2_LOAD_LINKS',
-            lcmrl.viewer2_load_links_t,
-            self.onViewerLoadLinks))
-        self.subscribers.append(lcmUtils.addSubscriber(
-            'DRAKE_VIEWER2_DRAW',
-            lcmrl.viewer2_draw_t,
-            self.onViewerDraw))
+            'DRAKE_VIEWER2_REQUEST',
+            lcmrl.viewer2_comms_t,
+            self.onViewerRequest))
+        # self.subscribers.append(lcmUtils.addSubscriber(
+        #     'DRAKE_VIEWER2_DRAW',
+        #     lcmrl.viewer2_comms_t,
+        #     self.onViewerDraw))
 
         # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))
         # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_ADD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerAddRobot))
@@ -340,38 +492,112 @@ class DrakeVisualizer(object):
     def disable(self):
         self.setEnabled(False)
 
-    def onViewerLoadLinks(self, msg):
-        try:
-            for link in msg.link_data:
-                self.loadLinkData(link)
-        except Exception as e:
-            self.sendStatusMessage(
-                lcmrl.viewer2_response_t.STATUS_LINK_LOAD_ERROR,
-                {"error": str(e)})
-        else:
-            self.sendStatusMessage(
-                lcmrl.viewer2_response_t.STATUS_OK,
-                {"loaded_paths": [m.path for m in msg.link_data]})
+    def sendStatusMessage(self, timestamp, status, data):
+        msg = lcmrl.viewer2_comms_t()
+        msg.format = "viewer2_json"
+        msg.format_version_major = 1
+        msg.format_version_minor = 0
+        msg.data = json.dumps({
+            "timestamp": timestamp,
+            "status": status,
+            "data": data
+            })
+        msg.num_bytes = len(msg.data)
+        lcmUtils.publish('DRAKE_VIEWER2_RESPONSE', msg)
 
-    def loadLinkData(self, link_data):
-        linkFolder = self.getPathFolder(link_data.path)
+    def decodeCommsMsg(self, msg):
+        if msg.format == "viewer2_json":
+            if msg.format_version_major == 1 and msg.format_version_minor == 0:
+                data = json.loads(msg.data)
+                return data, ViewerResponse(OK, {})
+            else:
+                return None, ViewerResponse(ERROR_UNKNOWN_FORMAT_VERSION,
+                                            {"supported_formats": {
+                                                 "viewer2_json": [{"major": 1,
+                                                                   "minor": 0}]
+                                            }})
+        else:
+            return None, ViewerResponse(ERROR_UNKNOWN_FORMAT,
+                                        {"supported_formats": {
+                                             "viewer2_json": [{"major": 1,
+                                                               "minor": 0}]
+                                        }})
+
+    def onViewerRequest(self, msg):
+        data, response = self.decodeCommsMsg(msg)
+        if data is not None:
+            response = self.handleViewerRequest(data)
+        self.sendStatusMessage(msg.timestamp,
+                               response.status,
+                               response.data)
+
+    def handleViewerRequest(self, data):
+        if data["type"] == "load":
+            return self.loadLinks(data["data"])
+        elif data["type"] == "draw":
+            return self.drawLinks(data["data"])
+
+    # def onViewerLoadLinks(self, msg):
+    #     if msg.format == "viewer2_json":
+    #         if msg.format_version_major == 1 and msg.format_version_minor == 0:
+    #             data = json.loads(msg.data)
+    #             try:
+    #                 self.loadLinks(data)
+    #             except Exception as e:
+    #                 self.sendStatusMessage(
+    #                     msg.timestamp,
+    #                     ERROR_LOADING,
+    #                     {"error": str(e)})
+    #                 print e
+    #             else:
+    #                 self.sendStatusMessage(
+    #                     msg.timestamp,
+    #                     OK,
+    #                     {"loaded_paths": [l["path"] for l in data["links"]]})
+    #         else:
+    #             self.sendStatusMessage(
+    #                 msg.timestamp,
+    #                 ERROR_UNKNOWN_FORMAT_VERSION,
+    #                 {"supported_formats": {
+    #                     "viewer2_json": [{"major": 1, "minor": 0}]
+    #                 }})
+    #     else:
+    #         self.sendStatusMessage(
+    #             msg.timestamp,
+    #             ERROR_UNKNOWN_FORMAT,
+    #             {"supported_formats": {
+    #                 "viewer2_json": [{"major": 1, "minor": 0}]
+    #             }})
+
+    def loadLinks(self, data):
+        # try:
+            for linkData in data["links"]:
+                self.loadLinkData(linkData)
+        # except Exception as e:
+        #     raise e
+        #     return ViewerResponse(ERROR_HANDLING_REQUEST, {"error": str(e)})
+        # else:
+            return ViewerResponse(OK, {})
+
+    def loadLinkData(self, linkData):
+        linkFolder = self.getPathFolder(linkData["path"])
         try:
-            link = self.robots[link_data.path]
+            link = self.robots[tuple(linkData["path"])]
         except KeyError:
-            link = Link(link_data.path)
-            self.robots[link_data.path] = link
-        for geometry_msg in link_data.geometries:
-            link.addGeometry(geometry_msg)
-        for geom in link.geometry:
-            geom.polyDataItem.addToView(self.view)
-            om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
+            link = Link(linkData["path"])
+            self.robots[tuple(linkData["path"])] = link
+        for geometry in linkData["geometries"]:
+            vtkGeoms = link.addGeometry(geometry)
+            for vtkGeom in vtkGeoms:
+                vtkGeom.polyDataItem.addToView(self.view)
+                om.addToObjectModel(vtkGeom.polyDataItem, parentObj=linkFolder)
 
     def getRootFolder(self):
         return om.getOrCreateContainer('drake viewer', parentObj=om.findObjectByName('scene'))
 
     def getPathFolder(self, path):
         folder = self.getRootFolder()
-        for element in path.split('/'):
+        for element in path:
             folder = om.getOrCreateContainer(element, parentObj=folder)
         return folder
 
@@ -401,43 +627,36 @@ class DrakeVisualizer(object):
     #         om.removeFromObjectModel(self.getRobotFolder(robotNum))
     #         del self.robots[robotNum]
 
-    def sendStatusMessage(self, status, data):
-        msg = lcmrl.viewer2_response_t()
-        msg.status = status
-        msg.json = json.dumps(data)
-        lcmUtils.publish('DRAKE_VIEWER2_RESPONSE', msg)
+    # def sendStatusMessage(self, status, data):
+    #     msg = lcmrl.viewer2_response_t()
+    #     msg.status = status
+    #     msg.json = json.dumps(data)
+    #     lcmUtils.publish('DRAKE_VIEWER2_RESPONSE', msg)
 
-    def onViewerDraw(self, msg):
+    def drawLinks(self, data):
         try:
             missing_paths = []
-            for (path, pose) in zip(msg.paths, msg.poses):
-                pos = np.array([pose.translation.x,
-                                pose.translation.y,
-                                pose.translation.z])
-                quat = np.array([pose.rotation.w,
-                                 pose.rotation.x,
-                                 pose.rotation.y,
-                                 pose.rotation.z])
+            for command in data["commands"]:
+                path = command["path"]
+                transform = transformFromDict(command["pose"])
                 try:
-                    link = self.robots[path]
+                    link = self.robots[tuple(path)]
                 except KeyError:
                     missing_paths.append(path)
                 else:
-                    link.setTransform(pos, quat)
+                    link.setTransform(transform)
 
             self.view.render()
-            if not missing_paths:
-                self.sendStatusMessage(lcmrl.viewer2_response_t.STATUS_OK,
-                                       {})
+
+            if missing_paths:
+                return ViewerResponse(NO_SUCH_LINK,
+                                      {"missing_paths": missing_paths})
             else:
-                self.sendStatusMessage(
-                    lcmrl.viewer2_response_t.STATUS_NO_SUCH_LINK,
-                    {"missing_paths": missing_paths})
+                return ViewerResponse(OK, {})
         except Exception as e:
-            print e
-            self.sendStatusMessage(
-                lcmrl.viewer2_response_t.STATUS_DRAW_ERROR,
-                {"error": str(e)})
+            raise e
+            return ViewerResponse(ERROR_HANDLING_REQUEST,
+                                  {"error": str(e)})
 
     def onPlanarLidar(self, msg, channel):
 
