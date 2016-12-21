@@ -108,7 +108,9 @@ class Geometry(object):
 
     @staticmethod
     def createPointcloud(params):
-        pass
+        polyData = vnp.numpyToPolyData(np.asarray(params["points"]),
+                                       createVertexCells=True)
+        return [polyData]
 
     @staticmethod
     def createPolyData(geom):
@@ -352,23 +354,41 @@ class Geometry(object):
 
         geometry = []
         for polyData in polyDataList:
-            g = Geometry(name, geom, polyData, parentTransform)
+            g = Geometry(name, geom["parameters"], polyData, parentTransform)
             geometry.append(g)
         return geometry
 
+    def __init__(self, name, params, polyData, parentTransform):
+        colorized = False
+        if "channels" in params:
+            channels = params["channels"]
+            if "r" in channels and "g" in channels and "b" in channels:
+                colorized = True
+                colorArray = np.empty((len(channels["r"]), 3), dtype=np.uint8)
+                for (colorIndex, color) in enumerate(["r", "g", "b"]):
+                    colorArray[:, colorIndex] = 255 * np.asarray(
+                        channels[color])
+                vnp.addNumpyToVtk(polyData, colorArray, "rgb")
 
-    def __init__(self, name, geom, polyData, parentTransform):
         self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
-        self.polyDataItem.setProperty('Alpha', geom["color"][3])
-        self.polyDataItem.actor.SetTexture(Geometry.TextureCache.get( Geometry.getTextureFileName(polyData) ))
 
-        if self.polyDataItem.actor.GetTexture():
-            self.polyDataItem.setProperty('Color', QtGui.QColor(255, 255, 255))
-
+        if colorized:
+            self.polyDataItem._updateColorByProperty()
+            self.polyDataItem.setProperty("Color By", "rgb")
         else:
-            self.polyDataItem.setProperty('Color', QtGui.QColor(255 * geom["color"][0],
-                                                                255 * geom["color"][1],
-                                                                255 * geom["color"][2]))
+            color = params.get("color", [1, 0, 0, 0.5])
+            self.polyDataItem.setProperty('Alpha', color[3])
+            self.polyDataItem.actor.SetTexture(
+                Geometry.TextureCache.get(
+                    Geometry.getTextureFileName(polyData)))
+
+            if self.polyDataItem.actor.GetTexture():
+                self.polyDataItem.setProperty('Color',
+                                              QtGui.QColor(255, 255, 255))
+            else:
+                self.polyDataItem.setProperty(
+                    'Color',
+                    QtGui.QColor(*(255 * np.asarray(color[:3]))))
 
         if USE_SHADOWS:
             self.polyDataItem.shadowOn()

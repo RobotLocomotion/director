@@ -70,9 +70,7 @@ class Visualizer:
 
     def onResponse(self, channel, raw_data):
         msg = bot_core.viewer2_comms_t.decode(raw_data)
-        print "response data:", msg.data
         data = json.loads(msg.data)
-        print "decoded"
         if data["status"] == 0:
             return
         elif data["status"] == 1:
@@ -83,19 +81,48 @@ class Visualizer:
 
 
 if __name__ == '__main__':
-    geometry = {
-        "name": "box",
-        "type": "box",
-        "pose": {
-            "translation": [0, 0, 0],
-            "quaternion": [1, 0, 0, 0]
+    geometries = [{
+            "name": "box",
+            "type": "box",
+            "pose": {
+                "translation": [0, 0, 0],
+                "quaternion": [1, 0, 0, 0]
+            },
+            "parameters": {
+                "color": [0, 1, 0, 0.5],
+                "lengths": [1, 1, 1]
+            },
         },
-        "color": [1, 0, 0, 0.5],
-        "parameters": {
-            "lengths": [1, 1, 1]
-        }
-    }
-    vis = Visualizer(["robot1", "link1"], [geometry])
+        {
+            "name": "box2",
+            "type": "box",
+            "pose": {
+                "translation": [1, 0, 0],
+                "quaternion": [1, 0, 0, 0]
+            },
+            "parameters": {
+                "color": [0, 0, 1, 0.5],
+                "lengths": [1, 1, 1]
+            }
+        },
+        {
+            "name": "points",
+            "type": "pointcloud",
+            "pose": {
+                "translation": [1, 0, 0],
+                "quaternion": [1, 0, 0, 0]
+            },
+            "parameters": {
+                "points": [[0, 0, 2 + x / 100.] for x in range(100)],
+                "channels": {
+                    "r": [x / 100. for x in range(100)],
+                    "g": [1 - x / 100. for x in range(100)],
+                    "b": [x / 100. for x in range(100)]
+                }
+            }
+        },
+        ]
+    vis = Visualizer(["robot1", "link1"], geometries)
     # vis.load()
     while True:
         for i in range(1000):
