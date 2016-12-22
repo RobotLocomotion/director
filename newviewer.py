@@ -3,6 +3,7 @@ import threading
 import time
 import math
 import sys
+import numpy as np
 sys.path.append("build/install/lib/python2.7/site-packages")
 
 import lcm
@@ -130,6 +131,22 @@ if __name__ == '__main__':
                     "r": [x / 100. for x in range(100)],
                     "g": [1 - x / 100. for x in range(100)],
                     "b": [x / 100. for x in range(100)]
+                }
+            }
+        },
+        {
+            "name": "planar lidar",
+            "type": "planar_lidar",
+            "pose": {
+                "translation": [0, 2, 0],
+                "quaternion": [1, 0, 0, 0]
+            },
+            "parameters": {
+                "angle_start": -np.pi/2,
+                "angle_step": np.pi / 100,
+                "ranges": [1 for i in range(100)],
+                "channels": {
+                    "intensity": [i / 100. for i in range(100)]
                 }
             }
         },
