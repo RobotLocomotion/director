@@ -114,6 +114,21 @@ class Geometry(object):
         return [polyData]
 
     @staticmethod
+    def createPlanarLidar(params):
+        ranges = np.asarray(params["ranges"])
+        angle_stop = (params["angle_start"] +
+                      len(ranges) * params["angle_step"])
+        angles = np.arange(
+            params["angle_start"],
+            angle_stop,
+            params["angle_step"])
+        x = ranges * np.cos(angles)
+        y = ranges * np.sin(angles)
+        z = np.zeros(x.shape)
+        points = np.vstack((x, y, z)).T
+        return [vnp.numpyToPolyData(points, createVertexCells=True)]
+
+    @staticmethod
     def createPolyData(geom):
         if geom["type"] == "box":
             return Geometry.createBox(geom["parameters"])
@@ -131,6 +146,8 @@ class Geometry(object):
             return Geometry.createMeshFromData(geom["parameters"])
         elif geom["type"] == "pointcloud":
             return Geometry.createPointcloud(geom["parameters"])
+        elif geom["type"] == "planar_lidar":
+            return Geometry.createPlanarLidar(geom["parameters"])
         else:
             raise Exception(
                 "Unsupported geometry type: {}".format(geom["type"]))
@@ -360,11 +377,17 @@ class Geometry(object):
         return geometry
 
     def __init__(self, name, params, polyData):
-        colorized = False
+        colorBy = None
         if "channels" in params:
             channels = params["channels"]
+            if "intensity" in channels:
+                colorBy = "intensity"
+                intensity = np.asarray(channels["intensity"]) * 255
+                vnp.addNumpyToVtk(polyData,
+                                  intensity.astype(np.uint8),
+                                  "intensity")
             if "r" in channels and "g" in channels and "b" in channels:
-                colorized = True
+                colorBy = "rgb"  # default to rgb if provided
                 colorArray = np.empty((len(channels["r"]), 3), dtype=np.uint8)
                 for (colorIndex, color) in enumerate(["r", "g", "b"]):
                     colorArray[:, colorIndex] = 255 * np.asarray(
@@ -373,23 +396,23 @@ class Geometry(object):
 
         self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
 
-        if colorized:
+        if colorBy:
             self.polyDataItem._updateColorByProperty()
-            self.polyDataItem.setProperty("Color By", "rgb")
-        else:
-            color = params.get("color", [1, 0, 0, 0.5])
-            self.polyDataItem.setProperty('Alpha', color[3])
-            self.polyDataItem.actor.SetTexture(
-                Geometry.TextureCache.get(
-                    Geometry.getTextureFileName(polyData)))
+            self.polyDataItem.setProperty("Color By", colorBy)
 
-            if self.polyDataItem.actor.GetTexture():
-                self.polyDataItem.setProperty('Color',
-                                              QtGui.QColor(255, 255, 255))
-            else:
-                self.polyDataItem.setProperty(
-                    'Color',
-                    QtGui.QColor(*(255 * np.asarray(color[:3]))))
+        color = params.get("color", [1, 0, 0, 0.5])
+        self.polyDataItem.setProperty('Alpha', color[3])
+        self.polyDataItem.actor.SetTexture(
+            Geometry.TextureCache.get(
+                Geometry.getTextureFileName(polyData)))
+
+        if self.polyDataItem.actor.GetTexture():
+            self.polyDataItem.setProperty('Color',
+                                          QtGui.QColor(255, 255, 255))
+        else:
+            self.polyDataItem.setProperty(
+                'Color',
+                QtGui.QColor(*(255 * np.asarray(color[:3]))))
 
         if USE_SHADOWS:
             self.polyDataItem.shadowOn()
