@@ -31,13 +31,16 @@ from PythonQt import QtGui
 USE_TEXTURE_MESHES = True
 USE_SHADOWS = False
 
-OK = 0
-NO_SUCH_LINK = 1
-ERROR_UNKNOWN_FORMAT = 2
-ERROR_UNKNOWN_FORMAT_VERSION = 3
-ERROR_HANDLING_REQUEST = 4
-ERROR_UKNOWN_REQUEST_TYPE = 5
 
+class ViewerStatus:
+    OK = 0
+    NO_SUCH_LINK = 1
+    ERROR_UNKNOWN_FORMAT = 2
+    ERROR_UNKNOWN_FORMAT_VERSION = 3
+    ERROR_HANDLING_REQUEST = 4
+    ERROR_UKNOWN_REQUEST_TYPE = 5
+
+ViewerResponse = namedtuple("ViewerResponse", ["status", "data"])
 
 
 def transformFromDict(pose_data):
@@ -46,10 +49,7 @@ def transformFromDict(pose_data):
 
 
 class Geometry(object):
-
     TextureCache = {}
-    MeshToTexture = {}
-
     PackageMap = None
 
     @staticmethod
@@ -152,26 +152,6 @@ class Geometry(object):
             raise Exception(
                 "Unsupported geometry type: {}".format(geom["type"]))
 
-    # @staticmethod
-    # def createPolyDataFromMeshMessage(geom):
-
-    #     assert len(geom.float_data) >= 2
-
-    #     numPoints = int(geom.float_data[0])
-    #     numTris = int(geom.float_data[1])
-
-    #     headerOffset = 2
-    #     ptsOffset = 3*numPoints
-    #     trisOffset = 3*numTris
-
-    #     assert len(geom.float_data) == headerOffset + ptsOffset + trisOffset
-
-    #     pts = np.array(geom.float_data[headerOffset:headerOffset+ptsOffset])
-    #     pts = pts.reshape((numPoints, 3))
-    #     tris = np.array(geom.float_data[headerOffset+ptsOffset:], dtype=int)
-
-    #     return Geometry.createPolyDataFromMeshArrays(pts, tris)
-
     @staticmethod
     def createPolyDataFromMeshArrays(pts, faces):
         pd = vtk.vtkPolyData()
@@ -190,24 +170,6 @@ class Geometry(object):
         pd.SetPolys(cells)
         return pd
 
-    # @staticmethod
-    # def createPolyDataFromMeshArrays(pts, faces):
-    #     pd = vtk.vtkPolyData()
-    #     pd.SetPoints(vtk.vtkPoints())
-    #     pd.GetPoints().SetData(vnp.getVtkFromNumpy(pts.copy()))
-
-    #     assert len(faces) % 3 == 0
-    #     cells = vtk.vtkCellArray()
-    #     for i in xrange(len(faces)/3):
-    #         tri = vtk.vtkTriangle()
-    #         tri.GetPointIds().SetId(0, faces[i*3 + 0])
-    #         tri.GetPointIds().SetId(1, faces[i*3 + 1])
-    #         tri.GetPointIds().SetId(2, faces[i*3 + 2])
-    #         cells.InsertNextCell(tri)
-
-    #     pd.SetPolys(cells)
-    #     return pd
-
     @staticmethod
     def scaleGeometry(polyDataList, scale):
         if len(scale) == 1:
@@ -221,30 +183,6 @@ class Geometry(object):
             polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
 
         return polyDataList
-
-    # @staticmethod
-    # def scaleGeometry(polyDataList, geom):
-    #     if len(geom.float_data) == 1:
-    #         scale_x = scale_y = scale_z = geom.float_data[0]
-    #     elif len(geom.float_data) == 3:
-    #         scale_x = geom.float_data[0]
-    #         scale_y = geom.float_data[1]
-    #         scale_z = geom.float_data[2]
-    #     else:
-    #         scale_x = scale_y = scale_z = 1.0
-
-    #     if scale_x != 1.0 or scale_y != 1.0 or scale_z != 1.0:
-    #         t = vtk.vtkTransform()
-    #         t.Scale(scale_x, scale_y, scale_z)
-    #         polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
-
-    #     return polyDataList
-
-    # @staticmethod
-    # def transformGeometry(polyDataList, geom):
-    #     t = transformUtils.transformFromPose(geom.position, geom.quaternion)
-    #     polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
-    #     return polyDataList
 
     @staticmethod
     def transformGeometry(polyDataList, transform):
@@ -349,23 +287,6 @@ class Geometry(object):
         polyDataList = Geometry.computeNormals(polyDataList)
         return polyDataList
 
-    # @staticmethod
-    # def createPolyDataForGeometry(geom):
-    #     if geom.type != lcmrl.viewer_geometry_data_t.MESH:
-    #         polyDataList = [Geometry.createPolyDataFromPrimitive(geom)]
-
-    #     else:
-    #         if not geom.string_data:
-    #             polyDataList = [Geometry.createPolyDataFromMeshMessage(geom)]
-    #         else:
-    #             polyDataList = Geometry.loadPolyDataMeshes(geom)
-    #             polyDataList = Geometry.scaleGeometry(polyDataList, geom)
-
-    #     polyDataList = Geometry.transformGeometry(polyDataList, geom)
-    #     polyDataList = Geometry.computeNormals(polyDataList)
-
-    #     return polyDataList
-
     @staticmethod
     def createGeometry(geom):
         polyDataList = Geometry.createPolyDataForGeometry(geom)
@@ -376,29 +297,27 @@ class Geometry(object):
             geometry.append(g)
         return geometry
 
+    @staticmethod
+    def addColorChannels(polyData, channels):
+        if "intensity" in channels:
+            colorBy = "intensity"
+            intensity = np.asarray(channels["intensity"]) * 255
+            vnp.addNumpyToVtk(polyData,
+                              intensity.astype(np.uint8),
+                              "intensity")
+        if "r" in channels and "g" in channels and "b" in channels:
+            colorBy = "rgb"  # default to rgb if provided
+            colorArray = np.empty((len(channels["r"]), 3), dtype=np.uint8)
+            for (colorIndex, color) in enumerate(["r", "g", "b"]):
+                colorArray[:, colorIndex] = 255 * np.asarray(
+                    channels[color])
+            vnp.addNumpyToVtk(polyData, colorArray, "rgb")
+
     def __init__(self, name, params, polyData):
-        colorBy = None
         if "channels" in params:
-            channels = params["channels"]
-            if "intensity" in channels:
-                colorBy = "intensity"
-                intensity = np.asarray(channels["intensity"]) * 255
-                vnp.addNumpyToVtk(polyData,
-                                  intensity.astype(np.uint8),
-                                  "intensity")
-            if "r" in channels and "g" in channels and "b" in channels:
-                colorBy = "rgb"  # default to rgb if provided
-                colorArray = np.empty((len(channels["r"]), 3), dtype=np.uint8)
-                for (colorIndex, color) in enumerate(["r", "g", "b"]):
-                    colorArray[:, colorIndex] = 255 * np.asarray(
-                        channels[color])
-                vnp.addNumpyToVtk(polyData, colorArray, "rgb")
-
+            Geometry.addColorChannels(polyData, params["channels"])
         self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
-
-        if colorBy:
-            self.polyDataItem._updateColorByProperty()
-            self.polyDataItem.setProperty("Color By", colorBy)
+        self.polyDataItem._updateColorByProperty()
 
         color = params.get("color", [1, 0, 0, 0.5])
         self.polyDataItem.setProperty('Alpha', color[3])
@@ -418,64 +337,20 @@ class Geometry(object):
             self.polyDataItem.shadowOn()
 
 
-# class Link(object):
-
-#     def __init__(self, path):
-#         self.transform = vtk.vtkTransform()
-#         self.path = path
-#         self.geometry = []
-
-#     def addGeometry(self, geom):
-#         vtkGeometries = Geometry.createGeometry(
-#             geom["name"],
-#             geom,
-#             self.transform)
-#         self.geometry.extend(vtkGeometries)
-#         return vtkGeometries
-
-#     def setTransform(self, transform):
-#         self.transform = transform
-#         for g in self.geometry:
-#             childFrame = g.polyDataItem.getChildFrame()
-#             if childFrame:
-#                 childFrame.copyFrame(self.transform)
-#             else:
-#                 g.polyDataItem.actor.SetUserTransform(self.transform)
-
-
-class UnknownFormatException(Exception):
-    pass
-
-
-class BadFormatVersionException(Exception):
-    pass
-
-
-ViewerResponse = namedtuple("ViewerResponse", ["status", "data"])
-
-
 class DrakeVisualizer(object):
 
     def __init__(self, view):
 
         self.subscribers = []
         self.view = view
-        # self.robots = {}
-        # self.linkWarnings = set()
         self.enable()
-        # self.sendStatusMessage(lcmrl.viewer2_response_t.STATUS_OK, 'loaded')
+        self.sendStatusMessage(0, ViewerStatus.OK, "ready")
 
     def _addSubscribers(self):
         self.subscribers.append(lcmUtils.addSubscriber(
             'DRAKE_VIEWER2_REQUEST',
             lcmrl.viewer2_comms_t,
             self.onViewerRequest))
-
-        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_LOAD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerLoadRobot))
-        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_ADD_ROBOT', lcmrl.viewer_load_robot_t, self.onViewerAddRobot))
-        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_VIEWER_DRAW', lcmrl.viewer_draw_t, self.onViewerDraw))
-        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_PLANAR_LIDAR_.*', lcmbot.planar_lidar_t, self.onPlanarLidar, callbackNeedsChannel=True))
-        # self.subscribers.append(lcmUtils.addSubscriber('DRAKE_POINTCLOUD_.*', lcmbot.pointcloud_t, self.onPointCloud, callbackNeedsChannel=True))
 
     def _removeSubscribers(self):
         for sub in self.subscribers:
@@ -514,15 +389,15 @@ class DrakeVisualizer(object):
         if msg.format == "viewer2_json":
             if msg.format_version_major == 1 and msg.format_version_minor == 0:
                 data = json.loads(msg.data)
-                return data, ViewerResponse(OK, {})
+                return data, ViewerResponse(ViewerStatus.OK, {})
             else:
-                return None, ViewerResponse(ERROR_UNKNOWN_FORMAT_VERSION,
+                return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT_VERSION,
                                             {"supported_formats": {
                                                  "viewer2_json": [{"major": 1,
                                                                    "minor": 0}]
                                             }})
         else:
-            return None, ViewerResponse(ERROR_UNKNOWN_FORMAT,
+            return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT,
                                         {"supported_formats": {
                                              "viewer2_json": [{"major": 1,
                                                                "minor": 0}]
@@ -544,7 +419,7 @@ class DrakeVisualizer(object):
         elif data["type"] == "delete":
             return self.deletePaths(data["data"])
         else:
-            return ViewerResponse(ERROR_UKNOWN_REQUEST_TYPE,
+            return ViewerResponse(ViewerStatus.ERROR_UKNOWN_REQUEST_TYPE,
                                   {"supported_requests":
                                       ["load", "draw", "delete"]})
 
@@ -556,7 +431,7 @@ class DrakeVisualizer(object):
         #     raise e
         #     return ViewerResponse(ERROR_HANDLING_REQUEST, {"error": str(e)})
         # else:
-            return ViewerResponse(OK, {})
+            return ViewerResponse(ViewerStatus.OK, {})
 
     def deletePaths(self, data):
         for path in data["paths"]:
@@ -565,15 +440,10 @@ class DrakeVisualizer(object):
             print "item:", item
             if item is not None:
                 om.removeFromObjectModel(item)
-        return ViewerResponse(OK, {})
+        return ViewerResponse(ViewerStatus.OK, {})
 
     def loadLinkData(self, linkData):
         linkFolder = self.getPathFolder(linkData["path"])
-        # try:
-        #     link = self.robots[tuple(linkData["path"])]
-        # except KeyError:
-        #     link = Link(linkData["path"])
-        #     self.robots[tuple(linkData["path"])] = link
         for geometry in linkData["geometries"]:
             vtkGeoms = Geometry.createGeometry(geometry)
             for vtkGeom in vtkGeoms:
@@ -584,6 +454,16 @@ class DrakeVisualizer(object):
                     for prop in existing_item.propertyNames():
                         item.setProperty(prop, existing_item.getProperty(prop))
                     om.removeFromObjectModel(existing_item)
+                else:
+                    item.setProperty("Point Size", 2)
+                    for colorBy in ["rgb", "intensity"]:
+                        try:
+                            item.setProperty("Color By", colorBy)
+                        except ValueError:
+                            pass
+                        else:
+                            break
+
                 item.addToView(self.view)
                 om.addToObjectModel(item, parentObj=linkFolder)
 
@@ -603,38 +483,6 @@ class DrakeVisualizer(object):
         for element in path:
             folder = om.getOrCreateContainer(element, parentObj=folder)
         return folder
-
-    # def addLinkGeometry(self, geom, linkName, linkFolder):
-    #     geom.polyDataItem.addToView(self.view)
-    #     om.addToObjectModel(geom.polyDataItem, parentObj=linkFolder)
-
-    #     if linkName == 'world':
-    #         #geom.polyDataItem.actor.SetUseBounds(False)
-    #         #geom.polyDataItem.actor.GetProperty().LightingOff()
-    #         geom.polyDataItem.actor.GetProperty().SetSpecular(0.0)
-    #     else:
-    #         geom.polyDataItem.actor.GetProperty().SetSpecular(0.9)
-    #         geom.polyDataItem.actor.GetProperty().SetSpecularPower(20)
-
-    # def getLink(self, robotNum, linkName):
-    #     return self.robots[robotNum][linkName]
-
-    # def removeAllRobots(self):
-    #     for child in self.getRootFolder().children():
-    #         if child.getProperty('Name') != "pointclouds":
-    #             om.removeFromObjectModel(child)
-    #     self.robots = {}
-
-    # def removeRobot(self, robotNum):
-    #     if robotNum in self.robots:
-    #         om.removeFromObjectModel(self.getRobotFolder(robotNum))
-    #         del self.robots[robotNum]
-
-    # def sendStatusMessage(self, status, data):
-    #     msg = lcmrl.viewer2_response_t()
-    #     msg.status = status
-    #     msg.json = json.dumps(data)
-    #     lcmUtils.publish('DRAKE_VIEWER2_RESPONSE', msg)
 
     def drawLinks(self, data):
         try:
@@ -656,96 +504,14 @@ class DrakeVisualizer(object):
             self.view.render()
 
             if missing_paths:
-                return ViewerResponse(NO_SUCH_LINK,
+                return ViewerResponse(ViewerStatus.NO_SUCH_LINK,
                                       {"missing_paths": missing_paths})
             else:
-                return ViewerResponse(OK, {})
+                return ViewerResponse(ViewerStatus.OK, {})
         except Exception as e:
             print e
-            return ViewerResponse(ERROR_HANDLING_REQUEST,
+            return ViewerResponse(ViewerStatus.ERROR_HANDLING_REQUEST,
                                   {"error": str(e)})
-
-    def onPlanarLidar(self, msg, channel):
-
-        linkName = channel.replace('DRAKE_PLANAR_LIDAR_', '', 1)
-        robotNum, linkName = linkName.split('_', 1)
-        robotNum = int(robotNum)
-
-        try:
-            link = self.getLink(robotNum, linkName)
-        except KeyError:
-            if linkName not in self.linkWarnings:
-                print 'Error locating link name:', linkName
-                self.linkWarnings.add(linkName)
-        else:
-            if len(link.geometry):
-                polyData = link.geometry[0].polyDataItem
-            else:
-                polyData = vtk.vtkPolyData()
-
-                name = linkName + ' geometry data'
-                geom = type('', (), {})
-                geom.color = [1.0,0.0,0.0,1.0]
-                g = Geometry(name, geom, polyData, link.transform)
-                link.geometry.append(g)
-
-                linkFolder = self.getLinkFolder(robotNum, linkName)
-                self.addLinkGeometry(g, linkName, linkFolder)
-                g.polyDataItem.actor.SetUserTransform(link.transform)
-
-            points = vtk.vtkPoints()
-            verts = vtk.vtkCellArray()
-
-            t = msg.rad0
-            for r in msg.ranges:
-                if r >= 0:
-                    x = r * math.cos(t)
-                    y = r * math.sin(t)
-
-                    pointId = points.InsertNextPoint([x,y,0])
-                    verts.InsertNextCell(1)
-                    verts.InsertCellPoint(pointId)
-
-                t += msg.radstep
-
-            polyData.SetPoints(points)
-            polyData.SetVerts(verts)
-
-
-    def onPointCloud(self, msg, channel):
-        pointcloudName = channel.replace('DRAKE_POINTCLOUD_', '', 1)
-
-        polyData = vnp.numpyToPolyData(np.asarray(msg.points), createVertexCells=True)
-
-        # If the user provided color channels, then use them to colorize
-        # the pointcloud.
-        channels = {msg.channel_names[i]: msg.channels[i] for i in range(msg.n_channels)}
-        if "r" in channels and "g" in channels and "b" in channels:
-            colorized = True
-            colorArray = np.empty((msg.n_points, 3), dtype=np.uint8)
-            for (colorIndex, color) in enumerate(["r", "g", "b"]):
-                colorArray[:, colorIndex] = 255 * np.asarray(channels[color])
-            vnp.addNumpyToVtk(polyData, colorArray, "rgb")
-        else:
-            colorized = False
-
-        folder = self.getPointCloudFolder()
-
-        # If there was an existing point cloud by this name, then just
-        # set its polyData to the new point cloud.
-        # This has the effect of preserving all the user-specified properties
-        # like point size, coloration mode, alpha, etc.
-        previousPointcloud = folder.findChild(pointcloudName)
-        if previousPointcloud is not None:
-            previousPointcloud.setPolyData(polyData)
-            previousPointcloud._updateColorByProperty()
-        else:
-            item = vis.PolyDataItem(pointcloudName, polyData, view=None)
-            item.addToView(self.view)
-            if colorized:
-                item._updateColorByProperty()
-                item.setProperty("Color By", "rgb")
-            om.addToObjectModel(item, parentObj=folder)
 
 
 ##########################################################
