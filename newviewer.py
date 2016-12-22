@@ -35,6 +35,7 @@ class Visualizer:
             self.lcm.handle_timeout(10)
 
     def load(self):
+        print "Loading model"
         timestamp = 0
         data = {
             "timestamp": timestamp,
@@ -68,13 +69,24 @@ class Visualizer:
         msg = comms_msg(timestamp, data)
         self.lcm.publish("DRAKE_VIEWER2_REQUEST", msg.encode())
 
+    def delete(self):
+        timestamp = 0
+        data = {
+            "timestamp": timestamp,
+            "type": "delete",
+            "data": {
+                "paths": [self.path]
+            }
+        }
+        msg = comms_msg(timestamp, data)
+        self.lcm.publish("DRAKE_VIEWER2_REQUEST", msg.encode())
+
     def onResponse(self, channel, raw_data):
         msg = bot_core.viewer2_comms_t.decode(raw_data)
         data = json.loads(msg.data)
         if data["status"] == 0:
             return
         elif data["status"] == 1:
-            print "Loading model"
             self.load()
         else:
             print "Warning: unhandled failure: ", data
@@ -123,13 +135,18 @@ if __name__ == '__main__':
         },
         ]
     vis = Visualizer(["robot1", "link1"], geometries)
-    # vis.load()
-    while True:
-        for i in range(1000):
-            x = math.sin(math.pi * 2 * i / 1000.0)
-            pose = {
-                "translation": [x, 0, 0],
-                "quaternion": [1, 0, 0, 0]
-            }
-            vis.draw(pose)
-            time.sleep(0.001)
+    vis.load()
+    try:
+        while True:
+            for i in range(1000):
+                x = math.sin(math.pi * 2 * i / 1000.0)
+                pose = {
+                    "translation": [x, 0, 0],
+                    "quaternion": [1, 0, 0, 0]
+                }
+                vis.draw(pose)
+                time.sleep(0.001)
+    except:
+        # vis.delete()
+        raise
+

@@ -36,6 +36,7 @@ NO_SUCH_LINK = 1
 ERROR_UNKNOWN_FORMAT = 2
 ERROR_UNKNOWN_FORMAT_VERSION = 3
 ERROR_HANDLING_REQUEST = 4
+ERROR_UKNOWN_REQUEST_TYPE = 5
 
 
 
@@ -517,6 +518,12 @@ class DrakeVisualizer(object):
             return self.loadLinks(data["data"])
         elif data["type"] == "draw":
             return self.drawLinks(data["data"])
+        elif data["type"] == "delete":
+            return self.deletePaths(data["data"])
+        else:
+            return ViewerResponse(ERROR_UKNOWN_REQUEST_TYPE,
+                                  {"supported_requests":
+                                      ["load", "draw", "delete"]})
 
     def loadLinks(self, data):
         # try:
@@ -528,6 +535,15 @@ class DrakeVisualizer(object):
         # else:
             return ViewerResponse(OK, {})
 
+    def deletePaths(self, data):
+        for path in data["paths"]:
+            print "deleting path:", path
+            item = self.getItemByPath(path)
+            print "item:", item
+            if item is not None:
+                om.removeFromObjectModel(item)
+        return ViewerResponse(OK, {})
+
     def loadLinkData(self, linkData):
         linkFolder = self.getPathFolder(linkData["path"])
         # try:
@@ -538,11 +554,26 @@ class DrakeVisualizer(object):
         for geometry in linkData["geometries"]:
             vtkGeoms = Geometry.createGeometry(geometry)
             for vtkGeom in vtkGeoms:
-                vtkGeom.polyDataItem.addToView(self.view)
-                om.addToObjectModel(vtkGeom.polyDataItem, parentObj=linkFolder)
+                existing_item = self.getItemByPath(
+                    linkData["path"] + [geometry["name"]])
+                item = vtkGeom.polyDataItem
+                if existing_item is not None:
+                    for prop in existing_item.propertyNames():
+                        item.setProperty(prop, existing_item.getProperty(prop))
+                    om.removeFromObjectModel(existing_item)
+                item.addToView(self.view)
+                om.addToObjectModel(item, parentObj=linkFolder)
 
     def getRootFolder(self):
         return om.getOrCreateContainer('drake viewer', parentObj=om.findObjectByName('scene'))
+
+    def getItemByPath(self, path):
+        item = self.getRootFolder()
+        for element in path:
+            item = item.findChild(element)
+            if item is None:
+                return None
+        return item
 
     def getPathFolder(self, path):
         folder = self.getRootFolder()
