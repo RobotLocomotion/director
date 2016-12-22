@@ -349,16 +349,16 @@ class Geometry(object):
     #     return polyDataList
 
     @staticmethod
-    def createGeometry(name, geom, parentTransform):
+    def createGeometry(geom):
         polyDataList = Geometry.createPolyDataForGeometry(geom)
 
         geometry = []
         for polyData in polyDataList:
-            g = Geometry(name, geom["parameters"], polyData, parentTransform)
+            g = Geometry(geom["name"], geom["parameters"], polyData)
             geometry.append(g)
         return geometry
 
-    def __init__(self, name, params, polyData, parentTransform):
+    def __init__(self, name, params, polyData):
         colorized = False
         if "channels" in params:
             channels = params["channels"]
@@ -394,29 +394,29 @@ class Geometry(object):
             self.polyDataItem.shadowOn()
 
 
-class Link(object):
+# class Link(object):
 
-    def __init__(self, path):
-        self.transform = vtk.vtkTransform()
-        self.path = path
-        self.geometry = []
+#     def __init__(self, path):
+#         self.transform = vtk.vtkTransform()
+#         self.path = path
+#         self.geometry = []
 
-    def addGeometry(self, geom):
-        vtkGeometries = Geometry.createGeometry(
-            geom["name"],
-            geom,
-            self.transform)
-        self.geometry.extend(vtkGeometries)
-        return vtkGeometries
+#     def addGeometry(self, geom):
+#         vtkGeometries = Geometry.createGeometry(
+#             geom["name"],
+#             geom,
+#             self.transform)
+#         self.geometry.extend(vtkGeometries)
+#         return vtkGeometries
 
-    def setTransform(self, transform):
-        self.transform = transform
-        for g in self.geometry:
-            childFrame = g.polyDataItem.getChildFrame()
-            if childFrame:
-                childFrame.copyFrame(self.transform)
-            else:
-                g.polyDataItem.actor.SetUserTransform(self.transform)
+#     def setTransform(self, transform):
+#         self.transform = transform
+#         for g in self.geometry:
+#             childFrame = g.polyDataItem.getChildFrame()
+#             if childFrame:
+#                 childFrame.copyFrame(self.transform)
+#             else:
+#                 g.polyDataItem.actor.SetUserTransform(self.transform)
 
 
 class UnknownFormatException(Exception):
@@ -436,7 +436,7 @@ class DrakeVisualizer(object):
 
         self.subscribers = []
         self.view = view
-        self.robots = {}
+        # self.robots = {}
         # self.linkWarnings = set()
         self.enable()
         # self.sendStatusMessage(lcmrl.viewer2_response_t.STATUS_OK, 'loaded')
@@ -519,24 +519,24 @@ class DrakeVisualizer(object):
             return self.drawLinks(data["data"])
 
     def loadLinks(self, data):
-        try:
+        # try:
             for linkData in data["links"]:
                 self.loadLinkData(linkData)
-        except Exception as e:
-            print e
-            return ViewerResponse(ERROR_HANDLING_REQUEST, {"error": str(e)})
-        else:
+        # except Exception as e:
+        #     raise e
+        #     return ViewerResponse(ERROR_HANDLING_REQUEST, {"error": str(e)})
+        # else:
             return ViewerResponse(OK, {})
 
     def loadLinkData(self, linkData):
         linkFolder = self.getPathFolder(linkData["path"])
-        try:
-            link = self.robots[tuple(linkData["path"])]
-        except KeyError:
-            link = Link(linkData["path"])
-            self.robots[tuple(linkData["path"])] = link
+        # try:
+        #     link = self.robots[tuple(linkData["path"])]
+        # except KeyError:
+        #     link = Link(linkData["path"])
+        #     self.robots[tuple(linkData["path"])] = link
         for geometry in linkData["geometries"]:
-            vtkGeoms = link.addGeometry(geometry)
+            vtkGeoms = Geometry.createGeometry(geometry)
             for vtkGeom in vtkGeoms:
                 vtkGeom.polyDataItem.addToView(self.view)
                 om.addToObjectModel(vtkGeom.polyDataItem, parentObj=linkFolder)
@@ -588,12 +588,16 @@ class DrakeVisualizer(object):
             for command in data["commands"]:
                 path = command["path"]
                 transform = transformFromDict(command["pose"])
-                try:
-                    link = self.robots[tuple(path)]
-                except KeyError:
-                    missing_paths.append(path)
+                linkFolder = self.getPathFolder(path)
+                if linkFolder.children():
+                    for polyDataItem in linkFolder.children():
+                        childFrame = polyDataItem.getChildFrame()
+                        if childFrame:
+                            childFrame.copyFrame(transform)
+                        else:
+                            polyDataItem.actor.SetUserTransform(transform)
                 else:
-                    link.setTransform(transform)
+                    missing_paths.append(path)
 
             self.view.render()
 
