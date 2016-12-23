@@ -293,7 +293,7 @@ class Geometry(object):
 
         geometry = []
         for polyData in polyDataList:
-            g = Geometry(geom, polyData)
+            g = Geometry(geom["name"], geom["parameters"], polyData)
             geometry.append(g)
         return geometry
 
@@ -310,15 +310,13 @@ class Geometry(object):
             colorArray = np.asarray(channels["rgb"]) * 255
             vnp.addNumpyToVtk(polyData, colorArray.astype(np.uint8), "rgb")
 
-    def __init__(self, geom, polyData):
-        params = geom["parameters"]
-        name = geom["name"]
+    def __init__(self, name, params, polyData):
         if "channels" in params:
             Geometry.addColorChannels(polyData, params["channels"])
         self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
         self.polyDataItem._updateColorByProperty()
 
-        color = geom.get("color", [1, 0, 0, 0.5])
+        color = params.get("color", [1, 0, 0, 0.5])
         self.polyDataItem.setProperty('Alpha', color[3])
         self.polyDataItem.actor.SetTexture(
             Geometry.TextureCache.get(
@@ -343,7 +341,7 @@ class DrakeVisualizer(object):
         self.subscribers = []
         self.view = view
         self.enable()
-        self.sendStatusMessage(0, ViewerStatus.OK, "ready")
+        self.sendStatusMessage(0, ViewerStatus.OK, {"ready": True})
 
     def _addSubscribers(self):
         self.subscribers.append(lcmUtils.addSubscriber(
