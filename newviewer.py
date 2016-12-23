@@ -100,8 +100,8 @@ if __name__ == '__main__':
                 "translation": [0, 0, 0],
                 "quaternion": [1, 0, 0, 0]
             },
-            "color": [0, 1, 0, 0.5],
             "parameters": {
+                "color": [0, 1, 0, 0.5],
                 "type": "box",
                 "lengths": [1, 1, 1]
             },
@@ -112,8 +112,8 @@ if __name__ == '__main__':
                 "translation": [1, 0, 0],
                 "quaternion": [1, 0, 0, 0]
             },
-            "color": [0, 0, 1, 0.5],
             "parameters": {
+                "color": [0, 0, 1, 0.5],
                 "type": "box",
                 "lengths": [1, 1, 1]
             }
