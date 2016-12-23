@@ -129,28 +129,28 @@ class Geometry(object):
         return [vnp.numpyToPolyData(points, createVertexCells=True)]
 
     @staticmethod
-    def createPolyData(geom):
-        if geom["type"] == "box":
-            return Geometry.createBox(geom["parameters"])
-        elif geom["type"] == "sphere":
-            return Geometry.createSphere(geom["parameters"])
-        elif geom["type"] == "cylinder":
-            return Geometry.createCylinder(geom["parameters"])
-        elif geom["type"] == "capsule":
-            return Geometry.createCapsule(geom["parameters"])
-        elif geom["type"] == "ellipsoid":
-            return Geometry.createEllipsoid(geom["parameters"])
-        elif geom["type"] == "mesh_file":
-            return Geometry.createMeshFromFile(geom["parameters"])
-        elif geom["type"] == "mesh_data":
-            return Geometry.createMeshFromData(geom["parameters"])
-        elif geom["type"] == "pointcloud":
-            return Geometry.createPointcloud(geom["parameters"])
-        elif geom["type"] == "planar_lidar":
-            return Geometry.createPlanarLidar(geom["parameters"])
+    def createPolyData(params):
+        if params["type"] == "box":
+            return Geometry.createBox(params)
+        elif params["type"] == "sphere":
+            return Geometry.createSphere(params)
+        elif params["type"] == "cylinder":
+            return Geometry.createCylinder(params)
+        elif params["type"] == "capsule":
+            return Geometry.createCapsule(params)
+        elif params["type"] == "ellipsoid":
+            return Geometry.createEllipsoid(params)
+        elif params["type"] == "mesh_file":
+            return Geometry.createMeshFromFile(params)
+        elif params["type"] == "mesh_data":
+            return Geometry.createMeshFromData(params)
+        elif params["type"] == "pointcloud":
+            return Geometry.createPointcloud(params)
+        elif params["type"] == "planar_lidar":
+            return Geometry.createPlanarLidar(params)
         else:
             raise Exception(
-                "Unsupported geometry type: {}".format(geom["type"]))
+                "Unsupported geometry type: {}".format(params["type"]))
 
     @staticmethod
     def createPolyDataFromMeshArrays(pts, faces):
@@ -280,7 +280,7 @@ class Geometry(object):
 
     @staticmethod
     def createPolyDataForGeometry(geom):
-        polyDataList = Geometry.createPolyData(geom)
+        polyDataList = Geometry.createPolyData(geom["parameters"])
         polyDataList = Geometry.transformGeometry(
             polyDataList,
             transformFromDict(geom["pose"]))
@@ -293,7 +293,7 @@ class Geometry(object):
 
         geometry = []
         for polyData in polyDataList:
-            g = Geometry(geom["name"], geom["parameters"], polyData)
+            g = Geometry(geom, polyData)
             geometry.append(g)
         return geometry
 
@@ -305,21 +305,20 @@ class Geometry(object):
             vnp.addNumpyToVtk(polyData,
                               intensity.astype(np.uint8),
                               "intensity")
-        if "r" in channels and "g" in channels and "b" in channels:
+        if "rgb" in channels:
             colorBy = "rgb"  # default to rgb if provided
-            colorArray = np.empty((len(channels["r"]), 3), dtype=np.uint8)
-            for (colorIndex, color) in enumerate(["r", "g", "b"]):
-                colorArray[:, colorIndex] = 255 * np.asarray(
-                    channels[color])
-            vnp.addNumpyToVtk(polyData, colorArray, "rgb")
+            colorArray = np.asarray(channels["rgb"]) * 255
+            vnp.addNumpyToVtk(polyData, colorArray.astype(np.uint8), "rgb")
 
-    def __init__(self, name, params, polyData):
+    def __init__(self, geom, polyData):
+        params = geom["parameters"]
+        name = geom["name"]
         if "channels" in params:
             Geometry.addColorChannels(polyData, params["channels"])
         self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
         self.polyDataItem._updateColorByProperty()
 
-        color = params.get("color", [1, 0, 0, 0.5])
+        color = geom.get("color", [1, 0, 0, 0.5])
         self.polyDataItem.setProperty('Alpha', color[3])
         self.polyDataItem.actor.SetTexture(
             Geometry.TextureCache.get(
@@ -431,7 +430,9 @@ class DrakeVisualizer(object):
         #     raise e
         #     return ViewerResponse(ERROR_HANDLING_REQUEST, {"error": str(e)})
         # else:
-            return ViewerResponse(ViewerStatus.OK, {})
+            return ViewerResponse(ViewerStatus.OK, {
+                                  "loaded_paths": [link["path"] for link in data["links"]]
+                                  })
 
     def deletePaths(self, data):
         for path in data["paths"]:
@@ -440,7 +441,9 @@ class DrakeVisualizer(object):
             print "item:", item
             if item is not None:
                 om.removeFromObjectModel(item)
-        return ViewerResponse(ViewerStatus.OK, {})
+        return ViewerResponse(ViewerStatus.OK, {
+                              "deleted_paths": data["paths"]
+                              })
 
     def loadLinkData(self, linkData):
         linkFolder = self.getPathFolder(linkData["path"])
@@ -486,6 +489,7 @@ class DrakeVisualizer(object):
 
     def drawLinks(self, data):
         try:
+            found_paths = []
             missing_paths = []
             for command in data["commands"]:
                 path = command["path"]
@@ -498,6 +502,7 @@ class DrakeVisualizer(object):
                             childFrame.copyFrame(transform)
                         else:
                             polyDataItem.actor.SetUserTransform(transform)
+                    found_paths.append(path)
                 else:
                     missing_paths.append(path)
 
@@ -505,9 +510,12 @@ class DrakeVisualizer(object):
 
             if missing_paths:
                 return ViewerResponse(ViewerStatus.NO_SUCH_LINK,
-                                      {"missing_paths": missing_paths})
+                                      {"missing_paths": missing_paths,
+                                       "drew_paths": found_paths})
             else:
-                return ViewerResponse(ViewerStatus.OK, {})
+                return ViewerResponse(ViewerStatus.OK, {
+                                       "drew_paths": found_paths,
+                                      })
         except Exception as e:
             print e
             return ViewerResponse(ViewerStatus.ERROR_HANDLING_REQUEST,
