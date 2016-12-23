@@ -4,7 +4,7 @@ import time
 import math
 import sys
 import numpy as np
-sys.path.append("build/install/lib/python2.7/site-packages")
+sys.path.append("build/install/lib/python2.7/dist-packages")
 
 import lcm
 import bot_core
@@ -96,52 +96,50 @@ class Visualizer:
 if __name__ == '__main__':
     geometries = [{
             "name": "box",
-            "type": "box",
             "pose": {
                 "translation": [0, 0, 0],
                 "quaternion": [1, 0, 0, 0]
             },
+            "color": [0, 1, 0, 0.5],
             "parameters": {
-                "color": [0, 1, 0, 0.5],
+                "type": "box",
                 "lengths": [1, 1, 1]
             },
         },
         {
             "name": "box2",
-            "type": "box",
             "pose": {
                 "translation": [1, 0, 0],
                 "quaternion": [1, 0, 0, 0]
             },
+            "color": [0, 0, 1, 0.5],
             "parameters": {
-                "color": [0, 0, 1, 0.5],
+                "type": "box",
                 "lengths": [1, 1, 1]
             }
         },
         {
             "name": "points",
-            "type": "pointcloud",
             "pose": {
                 "translation": [1, 0, 0],
                 "quaternion": [1, 0, 0, 0]
             },
             "parameters": {
+                "type": "pointcloud",
                 "points": [[0, 0, 2 + x / 100.] for x in range(100)],
                 "channels": {
-                    "r": [x / 100. for x in range(100)],
-                    "g": [1 - x / 100. for x in range(100)],
-                    "b": [x / 100. for x in range(100)]
+                    "rgb": [[x / 100., 1 - x / 100., x / 100.] for x in range(100)]
                 }
             }
         },
         {
             "name": "planar lidar",
-            "type": "planar_lidar",
             "pose": {
                 "translation": [0, 2, 0],
                 "quaternion": [1, 0, 0, 0]
             },
             "parameters": {
+                "type": "planar_lidar",
                 "angle_start": -np.pi/2,
                 "angle_step": np.pi / 100,
                 "ranges": [1 for i in range(100)],
