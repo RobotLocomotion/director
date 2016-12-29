@@ -131,6 +131,8 @@ endif()
 
 if(USE_LCMGL)
 
+  find_package(LibBot REQUIRED)
+  include_directories(${LIBBOT_INCLUDE_DIRS})
   find_package(OpenGL REQUIRED)
   list(APPEND sources vtkLCMGLProp.cxx)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
