@@ -74,10 +74,18 @@ set(python_test_args
 
 set(python_exe ${CMAKE_INSTALL_PREFIX}/bin/directorPython)
 
+set(wrap_vfb)
+if(NOT APPLE AND NOT WIN32 AND NOT DEFINED ENV{DISPLAY})
+  find_program(xvfb-run xvfb-run)
+  if(xvfb-run)
+    set(wrap_vfb ${xvfb-run} -s "-screen 0 1024x768x24")
+  endif()
+endif()
+
 macro(add_python_test name label)
   get_filename_component(base_name ${name} NAME_WE)
   set(test_name test_${base_name})
-  add_test(${test_name} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args})
+  add_test(${test_name} ${wrap_vfb} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args})
   set_property(TEST ${test_name} PROPERTY ENVIRONMENT ${python_coverage_environment_arg})
   set_property(TEST ${test_name} PROPERTY LABELS ${label})
 
@@ -85,7 +93,7 @@ macro(add_python_test name label)
   set(n 2)
   while(DEFINED ${base_name}_extra_args_${n})
     set(test_name test_${base_name}_${n})
-    add_test(${test_name} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args_${n}})
+    add_test(${test_name} ${wrap_vfb} ${python_exe} ${CMAKE_CURRENT_SOURCE_DIR}/${name} ${python_test_args} ${${base_name}_extra_args_${n}})
     set_property(TEST ${test_name} PROPERTY ENVIRONMENT ${python_coverage_environment_arg})
     set_property(TEST ${test_name} PROPERTY LABELS ${label})
     math(EXPR n "${n}+1")
