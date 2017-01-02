@@ -184,10 +184,10 @@ class Geometry(object):
 
         return polyDataList
 
-    @staticmethod
-    def transformGeometry(polyDataList, transform):
-        polyDataList = [filterUtils.transformPolyData(polyData, transform) for polyData in polyDataList]
-        return polyDataList
+    # @staticmethod
+    # def transformGeometry(polyDataList, transform):
+    #     polyDataList = [filterUtils.transformPolyData(polyData, transform) for polyData in polyDataList]
+    #     return polyDataList
 
     @staticmethod
     def computeNormals(polyDataList):
@@ -280,10 +280,10 @@ class Geometry(object):
 
     @staticmethod
     def createPolyDataForGeometry(geom):
-        polyDataList = Geometry.createPolyData(geom["parameters"])
-        polyDataList = Geometry.transformGeometry(
-            polyDataList,
-            transformFromDict(geom["pose"]))
+        polyDataList = Geometry.createPolyData(geom)
+        # polyDataList = Geometry.transformGeometry(
+        #     polyDataList,
+        #     transformFromDict(geom["pose"]))
         polyDataList = Geometry.computeNormals(polyDataList)
         return polyDataList
 
@@ -293,7 +293,7 @@ class Geometry(object):
 
         geometry = []
         for polyData in polyDataList:
-            g = Geometry(geom["name"], geom["parameters"], polyData)
+            g = Geometry(geom, polyData)
             geometry.append(g)
         return geometry
 
@@ -310,13 +310,14 @@ class Geometry(object):
             colorArray = np.asarray(channels["rgb"]) * 255
             vnp.addNumpyToVtk(polyData, colorArray.astype(np.uint8), "rgb")
 
-    def __init__(self, name, params, polyData):
-        if "channels" in params:
-            Geometry.addColorChannels(polyData, params["channels"])
+    def __init__(self, geomData, polyData):
+        name = geomData["name"]
+        if "channels" in geomData:
+            Geometry.addColorChannels(polyData, geomData["channels"])
         self.polyDataItem = vis.PolyDataItem(name, polyData, view=None)
         self.polyDataItem._updateColorByProperty()
 
-        color = params.get("color", [1, 0, 0, 0.5])
+        color = geomData.get("color", [1, 0, 0, 0.5])
         self.polyDataItem.setProperty('Alpha', color[3])
         self.polyDataItem.actor.SetTexture(
             Geometry.TextureCache.get(
@@ -332,6 +333,18 @@ class Geometry(object):
 
         if USE_SHADOWS:
             self.polyDataItem.shadowOn()
+
+
+def findPathToAncestor(fromItem, toItem):
+    path = [fromItem]
+    while fromItem is not toItem:
+        parent = fromItem.parent()
+        if parent is None:
+            raise ValueError(
+                "Cannot find a path from {} to {}".format(fromItem, toItem))
+        path.append(parent)
+        fromItem = parent
+    return path
 
 
 class DrakeVisualizer(object):
@@ -420,6 +433,92 @@ class DrakeVisualizer(object):
                                   {"supported_requests":
                                       ["load", "draw", "delete"]})
 
+    # def addDemo(self):
+    #     self.addGeometry({
+    #         "path": ["foo", "bar", "baz"],
+    #         "geometry": {
+    #             "name": "box1",
+    #             "type": "box",
+    #             "lengths": [1, 1, 1.5]
+    #         }
+    #     })
+
+    # def transformDemo(self):
+    #     self._setTransform(["foo", "bar"], transformFromDict({
+    #         "translation": [0.25, 0, 0],
+    #         "quaternion": [1, 0, 0, 0]}))
+
+
+    def addGeometry(self, data):
+        path = data["path"]
+        vtkGeoms = Geometry.createGeometry(data["geometry"])
+        return self._addGeometry(path, vtkGeoms)
+
+    def _addGeometry(self, path, geomItems):
+        folder = self.getPathFolder(path[:-1])
+        for item in findPathToAncestor(folder, self.getRootFolder()):
+            if not hasattr(item, "transform"):
+                item.transform = vtk.vtkTransform()
+                item.transform.PostMultiply()
+                item.knownTransform = False
+        for geom in geomItems:
+            existing_item = self.getItemByPath(path)
+            item = geom.polyDataItem
+            item.transform = vtk.vtkTransform()
+            item.transform.PostMultiply()
+            item.knownTransform = False
+            if existing_item is not None:
+                for prop in existing_item.propertyNames():
+                    item.setProperty(prop, existing_item.getProperty(prop))
+                om.removeFromObjectModel(existing_item)
+            else:
+                item.setProperty("Point Size", 2)
+                for colorBy in ["rgb", "intensity"]:
+                    try:
+                        item.setProperty("Color By", colorBy)
+                    except ValueError:
+                        pass
+                    else:
+                        break
+
+            item.addToView(self.view)
+            om.addToObjectModel(item, parentObj=folder)
+
+    def getPathForItem(self, item):
+        return [x.getProperty("Name") for x in reversed(findPathToAncestor(
+            item, self.getRootFolder())[:-1])]
+
+    def updateTransforms(self, item, parentToRoot, unknownTransforms):
+        transformToRoot = vtk.vtkTransform()
+        transformToRoot.DeepCopy(parentToRoot)
+        transformToRoot.PostMultiply()
+        transformToRoot.Concatenate(item.transform)
+        if not item.knownTransform:
+            unknownTransforms.append(self.getPathForItem(item))
+
+        if isinstance(item, om.ContainerItem):
+            for child in item.children():
+                self.updateTransforms(child, transformToRoot, unknownTransforms)
+        else:
+            childFrame = item.getChildFrame()
+            if childFrame:
+                childFrame.copyFrame(transformToRoot)
+            else:
+                item.actor.SetUserTransform(transformToRoot)
+
+    def _setTransform(self, path, transform):
+        item = self.getItemByPath(path)
+        item.transform = transform
+        item.knownTransform = True
+
+        ancestors = findPathToAncestor(item.parent(), self.getRootFolder())[:-1]
+        transforms = [x.transform for x in reversed(ancestors)]
+        unknownTransforms = [self.getPathForItem(x) for x in ancestors if not x.knownTransform]
+        parentToRoot = transformUtils.concatenateTransforms(transforms)
+        self.updateTransforms(item, parentToRoot, unknownTransforms)
+        for t in unknownTransforms:
+            print "Unknown transform for path:", t
+
     def loadLinks(self, data):
         # try:
             for linkData in data["links"]:
@@ -443,30 +542,30 @@ class DrakeVisualizer(object):
                               "deleted_paths": data["paths"]
                               })
 
-    def loadLinkData(self, linkData):
-        linkFolder = self.getPathFolder(linkData["path"])
-        for geometry in linkData["geometries"]:
-            vtkGeoms = Geometry.createGeometry(geometry)
-            for vtkGeom in vtkGeoms:
-                existing_item = self.getItemByPath(
-                    linkData["path"] + [geometry["name"]])
-                item = vtkGeom.polyDataItem
-                if existing_item is not None:
-                    for prop in existing_item.propertyNames():
-                        item.setProperty(prop, existing_item.getProperty(prop))
-                    om.removeFromObjectModel(existing_item)
-                else:
-                    item.setProperty("Point Size", 2)
-                    for colorBy in ["rgb", "intensity"]:
-                        try:
-                            item.setProperty("Color By", colorBy)
-                        except ValueError:
-                            pass
-                        else:
-                            break
+    # def loadLinkData(self, linkData):
+    #     linkFolder = self.getPathFolder(linkData["path"])
+    #     for geometry in linkData["geometries"]:
+    #         vtkGeoms = Geometry.createGeometry(geometry)
+    #         for vtkGeom in vtkGeoms:
+    #             existing_item = self.getItemByPath(
+    #                 linkData["path"] + [geometry["name"]])
+    #             item = vtkGeom.polyDataItem
+    #             if existing_item is not None:
+    #                 for prop in existing_item.propertyNames():
+    #                     item.setProperty(prop, existing_item.getProperty(prop))
+    #                 om.removeFromObjectModel(existing_item)
+    #             else:
+    #                 item.setProperty("Point Size", 2)
+    #                 for colorBy in ["rgb", "intensity"]:
+    #                     try:
+    #                         item.setProperty("Color By", colorBy)
+    #                     except ValueError:
+    #                         pass
+    #                     else:
+    #                         break
 
-                item.addToView(self.view)
-                om.addToObjectModel(item, parentObj=linkFolder)
+    #             item.addToView(self.view)
+    #             om.addToObjectModel(item, parentObj=linkFolder)
 
     def getRootFolder(self):
         return om.getOrCreateContainer('drake viewer', parentObj=om.findObjectByName('scene'))
