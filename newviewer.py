@@ -25,7 +25,7 @@ class Visualizer:
     def __init__(self, geometries={}):
         self.geometries = {}
         self.poses = {}
-        self.queue = []
+        self.queue = {"load": [], "draw": [], "delete": []}
         for (path, geom) in geometries.items():
             self.load(path, geom)
         self.lcm = lcm.LCM()
@@ -42,41 +42,47 @@ class Visualizer:
         timestamp = 0
         data = {
             "timestamp": timestamp,
-            "commands": self.queue
+            "delete": self.queue["delete"],
+            "load": self.queue["load"],
+            "draw": self.queue["draw"]
         }
         msg = comms_msg(timestamp, data)
         self.lcm.publish("DRAKE_VIEWER2_REQUEST", msg.encode())
-        self.queue = []
+        self.queue["load"] = []
+        self.queue["delete"] = []
+        self.queue["draw"] = []
 
     def load(self, path, geometry):
         self.geometries[path] = geometry
-        self.queue.append({
-            "type": "load",
+        self.queue["load"].append({
             "path": path.split("/"),
             "geometry": geometry
         })
 
     def draw(self, path, pose):
         self.poses[path] = pose
-        self.queue.append({
-            "type": "draw",
+        self.queue["draw"].append({
             "path": path.split("/"),
             "transform": pose
         })
 
+    def delete(self, path):
+        del self.poses[path]
+        del self.geometries[path]
+        self.queue["delete"].append({
+            "path": path.split("/")
+        })
+
     def onResponse(self, channel, raw_data):
         msg = bot_core.viewer2_comms_t.decode(raw_data)
-        data = json.loads(msg.data)
-        response = data["response"]
+        response = json.loads(msg.data)
         if response["status"] == 0:
             print("ok")
         elif response["status"] == 1:
-            if response["missing_paths"]:
-                for path, geom in self.geometries.items():
-                    self.load(path, geom)
-            for path in response["missing_transforms"]:
-                path = "/".join(path)
-                self.draw(path, self.poses.get(path, {}))
+            for path, geom in self.geometries.items():
+                self.load(path, geom)
+            for path, pose in self.poses.items():
+                self.draw(path, pose)
         else:
             print("unhandled:", response)
 
@@ -111,15 +117,9 @@ if __name__ == '__main__':
     }
     vis = Visualizer(geometries)
 
-    # vis.draw("robot1/link1/box1", {"translation": [0, 0, 0], "quaternion": [1, 0, 0, 0]})
     vis.draw("robot1/link1/box2", {"translation": [1, 0, 0], "quaternion": [1, 0, 0, 0]})
     vis.draw("robot1/link1/points", {"translation": [0, 1, 0], "quaternion": [1, 0, 0, 0]})
     vis.draw("robot1/link1/planar lidar", {"translation": [0, 2, 0], "quaternion": [1, 0, 0, 0]})
-    # vis.loadall()
-
-    # while True:
-    #     if vis.queue:
-    #         vis.publish()
     try:
         while True:
             for i in range(1000):
