@@ -343,7 +343,6 @@ def findPathToAncestor(fromItem, toItem):
 
 
 class DrakeVisualizer(object):
-
     def __init__(self, view):
 
         self.subscribers = []
@@ -444,14 +443,18 @@ class DrakeVisualizer(object):
     def handleAddGeometry(self, command):
         path = command["path"]
         vtkGeoms = Geometry.createGeometry(command["geometry"])
-        return self._addGeometry(path, vtkGeoms)
+        return self.addGeometry(path, vtkGeoms)
 
-    def _addGeometry(self, path, geomItems):
+    def addGeometry(self, path, geomItems):
         folder = self.getPathFolder(path)
-        for item in findPathToAncestor(folder, self.getRootFolder()):
+        ancestors = findPathToAncestor(folder, self.getRootFolder())
+        geomTransform = vtk.vtkTransform()
+        for item in reversed(ancestors):
             if not hasattr(item, "transform"):
                 item.transform = vtk.vtkTransform()
                 item.transform.PostMultiply()
+            geomTransform.Concatenate(item.transform)
+
         for geom in geomItems:
             existing_item = self.getItemByPath(path + ["geometry"])
             item = geom.polyDataItem
@@ -471,27 +474,13 @@ class DrakeVisualizer(object):
 
             item.addToView(self.view)
             om.addToObjectModel(item, parentObj=folder)
+            item.actor.SetUserTransform(geomTransform)
+
         return path
 
     def getPathForItem(self, item):
         return [x.getProperty("Name") for x in reversed(findPathToAncestor(
             item, self.getRootFolder())[:-1])]
-
-    def updateTransforms(self, item, transformToRoot):
-        if isinstance(item, om.ContainerItem):
-            for child in item.children():
-                childTransform = vtk.vtkTransform()
-                childTransform.DeepCopy(transformToRoot)
-                childTransform.PostMultiply()
-                childTransform.Concatenate(item.transform)
-                self.updateTransforms(child, childTransform)
-        else:
-            childFrame = item.getChildFrame()
-            if childFrame:
-                childFrame.copyFrame(transformToRoot)
-            else:
-                item.actor.SetUserTransform(transformToRoot)
-            self.view.render()
 
     def handleSetTransform(self, command):
         return self._setTransform(command["path"],
@@ -499,15 +488,11 @@ class DrakeVisualizer(object):
 
     def _setTransform(self, path, transform):
         folder = self.getPathFolder(path)
-        folder.transform = transform
-        ancestors = findPathToAncestor(folder,
-                                       self.getRootFolder())[:-1]
-        for t in ancestors:
-            if not hasattr(t, "transform"):
-                t.transform = vtk.vtkTransform()
-        transforms = [x.transform for x in reversed(ancestors)]
-        transformToRoot = transformUtils.concatenateTransforms(transforms)
-        self.updateTransforms(folder, transformToRoot)
+        if not hasattr(folder, "transform"):
+            folder.transform = transform
+        else:
+            folder.transform.SetMatrix(transform.GetMatrix())
+        self.view.render()
         return path, len(folder.children()) == 0
 
     def handleDeletePath(self, command):
