@@ -131,7 +131,8 @@ endif()
 
 if(USE_LCMGL)
 
-  find_package(OpenGL REQUIRED)
+  find_package(LibBot REQUIRED)
+  include_directories(${LIBBOT_INCLUDE_DIRS})
   list(APPEND sources vtkLCMGLProp.cxx)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES})
 
@@ -141,7 +142,6 @@ if(USE_OCTOMAP)
 
   setup_qt4()
 
-  find_package(OpenGL REQUIRED)
   find_library(OCTOVIS_LIBRARY octovis)
   list(APPEND sources vtkOctomap.cxx)
   list(APPEND deps ${LIBBOT_LIBRARIES} ${OPENGL_LIBRARIES} ${OCTOVIS_LIBRARY})
@@ -154,7 +154,6 @@ endif()
 
 if (USE_COLLECTIONS)
 
-  find_package(OpenGL REQUIRED)
   list(APPEND sources vtkCollections.cxx)
   list(APPEND deps ${OPENGL_LIBRARIES})
 
