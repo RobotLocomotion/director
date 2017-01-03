@@ -67,8 +67,10 @@ class Visualizer:
         })
 
     def delete(self, path):
-        del self.poses[path]
-        del self.geometries[path]
+        if path in self.poses:
+            del self.poses[path]
+        if path in self.geometries:
+            del self.geometries[path]
         self.queue["delete"].append({
             "path": path.split("/")
         })
@@ -132,6 +134,10 @@ if __name__ == '__main__':
                 vis.publish()
                 time.sleep(0.001)
     except:
-        # vis.delete()
+        print "deleting"
+        paths = vis.geometries.keys()
+        for path in paths:
+            vis.delete(path)
+        vis.publish()
         raise
 

@@ -32,43 +32,13 @@ USE_TEXTURE_MESHES = True
 USE_SHADOWS = False
 
 
-# class ViewerResult(object):
-#     __slots__ = ["addedGeometries",
-#                  "setTransforms",
-#                  "deletedPaths",
-#                  "missingPaths",
-#                  "missingTransforms"]
-
-#     def __init__(self,
-#                  addedGeometries=[],
-#                  setTransforms=[],
-#                  deletedPaths=[],
-#                  missingPaths=[],
-#                  missingTransforms=[]):
-#         self.addedGeometries = set(addedGeometries)
-#         self.setTransforms = set(setTransforms)
-#         self.deletedPaths = set(deletedPaths)
-#         self.missingPaths = set(missingPaths)
-#         self.missingTransforms = set(missingTransforms)
-
-#     def combine(self, other):
-#         self.addedGeometries.update(other.addedGeometries)
-#         self.setTransforms.update(other.setTransforms)
-#         self.deletePaths.update(other.deletedPaths)
-#         self.missingPaths.update(other.missingPaths)
-#         self.missingPaths.difference_update(self.addedGeometries)
-#         self.missingTransforms.update(other.missingTransforms)
-#         self.missingTransforms.difference_update(self.setTransforms)
-#         return self
-
-
 class ViewerStatus:
     OK = 0
-    MISSING_DATA = 1
-    ERROR_UNKNOWN_FORMAT = 3
-    ERROR_UNKNOWN_FORMAT_VERSION = 4
-    ERROR_HANDLING_REQUEST = 5
-    ERROR_UKNOWN_REQUEST_TYPE = 6
+    MISSING_PATHS = 1
+    ERROR_UNKNOWN_FORMAT = -1
+    ERROR_UNKNOWN_FORMAT_VERSION = -2
+    ERROR_HANDLING_REQUEST = -3
+    ERROR_UKNOWN_REQUEST_TYPE = -4
 
 
 class ViewerResponse(namedtuple("ViewerResponse", ["status", "data"])):
@@ -217,11 +187,6 @@ class Geometry(object):
             polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
 
         return polyDataList
-
-    # @staticmethod
-    # def transformGeometry(polyDataList, transform):
-    #     polyDataList = [filterUtils.transformPolyData(polyData, transform) for polyData in polyDataList]
-    #     return polyDataList
 
     @staticmethod
     def computeNormals(polyDataList):
@@ -413,37 +378,6 @@ class DrakeVisualizer(object):
     def disable(self):
         self.setEnabled(False)
 
-    # @staticmethod
-    # def consolidateResponses(responses):
-    #     addedGeometries = set()
-    #     setTransforms = set()
-    #     missingTransforms = set()
-    #     missingPaths = set()
-    #     for response in responses:
-    #         if response.status == ViewerStatus.OK:
-    #             if "set_transform" in response.data:
-    #                 setTransforms.add(tuple(response.data["set_transform"]))
-    #             elif "added_geometry" in response.data:
-    #                 addedGeometries.add(tuple(response.data["added_geometry"]))
-    #         elif response.status == ViewerStatus.MISSING_DATA:
-    #             for path in response.data["missing_paths"]:
-    #                 missingPaths.add(tuple(path))
-    #             for path in response.data["missing_transforms"]:
-    #                 missingTransforms.add(tuple(path))
-    #         else:
-    #             raise NotImplementedError()
-    #     missingTransforms.difference_update(setTransforms)
-    #     missingPaths.difference_update(addedGeometries)
-    #     if missingTransforms or missingPaths:
-    #         status = ViewerStatus.MISSING_DATA
-    #     else:
-    #         status = ViewerStatus.OK
-    #     return ViewerResponse(status, {
-    #                         "missing_paths": list(missingPaths),
-    #                         "missing_transforms": list(missingTransforms),
-    #                         "added_geometries": list(addedGeometries),
-    #                         "set_transforms": list(setTransforms)})
-
     def sendStatusMessage(self, timestamp, response):
         msg = lcmrl.viewer2_comms_t()
         msg.format = "viewer2_json"
@@ -505,7 +439,7 @@ class DrakeVisualizer(object):
         if not result["missing_paths"]:
             return ViewerResponse(ViewerStatus.OK, result)
         else:
-            return ViewerResponse(ViewerStatus.MISSING_DATA, result)
+            return ViewerResponse(ViewerStatus.MISSING_PATHS, result)
 
     def handleAddGeometry(self, command):
         path = command["path"]
@@ -518,7 +452,6 @@ class DrakeVisualizer(object):
             if not hasattr(item, "transform"):
                 item.transform = vtk.vtkTransform()
                 item.transform.PostMultiply()
-                item.knownTransform = False
         for geom in geomItems:
             existing_item = self.getItemByPath(path + ["geometry"])
             item = geom.polyDataItem
@@ -544,17 +477,14 @@ class DrakeVisualizer(object):
         return [x.getProperty("Name") for x in reversed(findPathToAncestor(
             item, self.getRootFolder())[:-1])]
 
-    def updateTransforms(self, item, transformToRoot, unknownTransforms):
+    def updateTransforms(self, item, transformToRoot):
         if isinstance(item, om.ContainerItem):
-            if not item.knownTransform:
-                unknownTransforms.append(self.getPathForItem(item))
             for child in item.children():
                 childTransform = vtk.vtkTransform()
                 childTransform.DeepCopy(transformToRoot)
                 childTransform.PostMultiply()
                 childTransform.Concatenate(item.transform)
-                self.updateTransforms(child,
-                                      childTransform, unknownTransforms)
+                self.updateTransforms(child, childTransform)
         else:
             childFrame = item.getChildFrame()
             if childFrame:
@@ -570,36 +500,19 @@ class DrakeVisualizer(object):
     def _setTransform(self, path, transform):
         folder = self.getPathFolder(path)
         folder.transform = transform
-        folder.knownTransform = True
         ancestors = findPathToAncestor(folder,
                                        self.getRootFolder())[:-1]
         for t in ancestors:
             if not hasattr(t, "transform"):
                 t.transform = vtk.vtkTransform()
-                t.knownTransform = False
         transforms = [x.transform for x in reversed(ancestors)]
-        unknownTransforms = [self.getPathForItem(x) for x in ancestors
-                             if not x.knownTransform]
         transformToRoot = transformUtils.concatenateTransforms(transforms)
-        self.updateTransforms(folder, transformToRoot, unknownTransforms)
+        self.updateTransforms(folder, transformToRoot)
         return path, len(folder.children()) == 0
-
-        # if len(folder.children()) == 0:
-        #     missingPaths = [path]
-        # else:
-        #     missingPaths = []
-        # if unknownTransforms or missingPaths:
-        #     return ViewerResponse(ViewerStatus.MISSING_DATA,
-        #                           {"missing_transforms": unknownTransforms,
-        #                            "missing_paths": missingPaths})
-        # return ViewerResponse(ViewerStatus.OK,
-        #                       {"set_transform": path})
 
     def handleDeletePath(self, command):
         path = command["path"]
-        print "deleting path:", path
         item = self.getItemByPath(path)
-        print "item:", item
         if item is not None:
             om.removeFromObjectModel(item)
         return path
