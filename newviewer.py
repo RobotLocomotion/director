@@ -4,7 +4,7 @@ import time
 import math
 import sys
 import numpy as np
-sys.path.append("build/install/lib/python2.7/dist-packages")
+sys.path.append("build/install/lib/python2.7/site-packages")
 
 import lcm
 import bot_core
@@ -22,9 +22,12 @@ def comms_msg(timestamp, data):
 
 
 class Visualizer:
-    def __init__(self, path, geometries):
-        self.path = path
-        self.geometries = geometries
+    def __init__(self, geometries={}):
+        self.geometries = {}
+        self.poses = {}
+        self.queue = []
+        for (path, geom) in geometries.items():
+            self.load(path, geom)
         self.lcm = lcm.LCM()
         self.lcm.subscribe("DRAKE_VIEWER2_RESPONSE", self.onResponse)
         self.listener = threading.Thread(target=self.listen)
@@ -35,122 +38,88 @@ class Visualizer:
         while True:
             self.lcm.handle_timeout(10)
 
-    def load(self):
-        print "Loading model"
+    def publish(self):
         timestamp = 0
         data = {
             "timestamp": timestamp,
+            "commands": self.queue
+        }
+        msg = comms_msg(timestamp, data)
+        self.lcm.publish("DRAKE_VIEWER2_REQUEST", msg.encode())
+        self.queue = []
+
+    def load(self, path, geometry):
+        self.geometries[path] = geometry
+        self.queue.append({
             "type": "load",
-            "data": {
-                "links": [
-                    {
-                        "path": self.path,
-                        "geometries": self.geometries
-                    }
-                ]
-            }
-        }
-        msg = comms_msg(timestamp, data)
-        self.lcm.publish("DRAKE_VIEWER2_REQUEST", msg.encode())
+            "path": path.split("/"),
+            "geometry": geometry
+        })
 
-    def draw(self, pose):
-        timestamp = 0
-        data = {
-            "timestamp": timestamp,
+    def draw(self, path, pose):
+        self.poses[path] = pose
+        self.queue.append({
             "type": "draw",
-            "data": {
-                "commands": [
-                    {
-                        "path": self.path,
-                        "pose": pose
-                    }
-                ]
-            }
-        }
-        msg = comms_msg(timestamp, data)
-        self.lcm.publish("DRAKE_VIEWER2_REQUEST", msg.encode())
-
-    def delete(self):
-        timestamp = 0
-        data = {
-            "timestamp": timestamp,
-            "type": "delete",
-            "data": {
-                "paths": [self.path]
-            }
-        }
-        msg = comms_msg(timestamp, data)
-        self.lcm.publish("DRAKE_VIEWER2_REQUEST", msg.encode())
+            "path": path.split("/"),
+            "transform": pose
+        })
 
     def onResponse(self, channel, raw_data):
         msg = bot_core.viewer2_comms_t.decode(raw_data)
         data = json.loads(msg.data)
-        if data["status"] == 0:
-            return
-        elif data["status"] == 1:
-            self.load()
+        response = data["response"]
+        if response["status"] == 0:
+            print("ok")
+        elif response["status"] == 1:
+            if response["missing_paths"]:
+                for path, geom in self.geometries.items():
+                    self.load(path, geom)
+            for path in response["missing_transforms"]:
+                path = "/".join(path)
+                self.draw(path, self.poses.get(path, {}))
         else:
-            print "Warning: unhandled failure: ", data
-
+            print("unhandled:", response)
 
 if __name__ == '__main__':
-    geometries = [{
-            "name": "box",
-            "pose": {
-                "translation": [0, 0, 0],
-                "quaternion": [1, 0, 0, 0]
-            },
-            "parameters": {
-                "color": [0, 1, 0, 0.5],
-                "type": "box",
-                "lengths": [1, 1, 1]
-            },
+    geometries = {
+        "robot1/link1/box1": {
+            "type": "box",
+            "color": [0, 1, 0, 0.5],
+            "lengths": [1, 1, 1]
         },
-        {
-            "name": "box2",
-            "pose": {
-                "translation": [1, 0, 0],
-                "quaternion": [1, 0, 0, 0]
-            },
-            "parameters": {
-                "color": [0, 0, 1, 0.5],
-                "type": "box",
-                "lengths": [1, 1, 1]
+        "robot1/link1/box2": {
+            "type": "box",
+            "color": [0, 0, 1, 0.5],
+            "lengths": [1, 1, 1]
+        },
+        "robot1/link1/points": {
+            "type": "pointcloud",
+            "points": [[0, 0, 2 + x / 100.] for x in range(100)],
+            "channels": {
+                "rgb": [[x / 100., 1 - x / 100., x / 100.] for x in range(100)]
             }
         },
-        {
-            "name": "points",
-            "pose": {
-                "translation": [1, 0, 0],
-                "quaternion": [1, 0, 0, 0]
-            },
-            "parameters": {
-                "type": "pointcloud",
-                "points": [[0, 0, 2 + x / 100.] for x in range(100)],
-                "channels": {
-                    "rgb": [[x / 100., 1 - x / 100., x / 100.] for x in range(100)]
-                }
+        "robot1/link1/planar lidar": {
+            "type": "planar_lidar",
+            "angle_start": -np.pi/2,
+            "angle_step": np.pi / 100,
+            "ranges": [1 for i in range(100)],
+            "channels": {
+                "intensity": [i / 100. for i in range(100)]
             }
-        },
-        {
-            "name": "planar lidar",
-            "pose": {
-                "translation": [0, 2, 0],
-                "quaternion": [1, 0, 0, 0]
-            },
-            "parameters": {
-                "type": "planar_lidar",
-                "angle_start": -np.pi/2,
-                "angle_step": np.pi / 100,
-                "ranges": [1 for i in range(100)],
-                "channels": {
-                    "intensity": [i / 100. for i in range(100)]
-                }
-            }
-        },
-        ]
-    vis = Visualizer(["robot1", "link1"], geometries)
-    vis.load()
+        }
+    }
+    vis = Visualizer(geometries)
+
+    # vis.draw("robot1/link1/box1", {"translation": [0, 0, 0], "quaternion": [1, 0, 0, 0]})
+    vis.draw("robot1/link1/box2", {"translation": [1, 0, 0], "quaternion": [1, 0, 0, 0]})
+    vis.draw("robot1/link1/points", {"translation": [0, 1, 0], "quaternion": [1, 0, 0, 0]})
+    vis.draw("robot1/link1/planar lidar", {"translation": [0, 2, 0], "quaternion": [1, 0, 0, 0]})
+    # vis.loadall()
+
+    # while True:
+    #     if vis.queue:
+    #         vis.publish()
     try:
         while True:
             for i in range(1000):
@@ -159,7 +128,8 @@ if __name__ == '__main__':
                     "translation": [x, 0, 0],
                     "quaternion": [1, 0, 0, 0]
                 }
-                vis.draw(pose)
+                vis.draw("robot1/link1", pose)
+                vis.publish()
                 time.sleep(0.001)
     except:
         # vis.delete()
