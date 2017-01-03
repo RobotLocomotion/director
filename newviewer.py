@@ -125,19 +125,27 @@ if __name__ == '__main__':
     try:
         while True:
             for i in range(1000):
-                x = math.sin(math.pi * 2 * i / 1000.0)
+                x1 = math.sin(math.pi * 2 * i / 1000.0)
                 pose = {
-                    "translation": [x, 0, 0],
+                    "translation": [x1, 0, 0],
                     "quaternion": [1, 0, 0, 0]
                 }
                 vis.draw("robot1/link1", pose)
+
+                x2 = math.sin(math.pi * 2 * i / 500.0)
+                pose = {
+                    "translation": [x2, 0, 0],
+                    "quaternion": [1, 0, 0, 0]
+                }
+                vis.draw("robot1/link1/box1", pose)
+
                 vis.publish()
                 time.sleep(0.001)
     except:
-        print "deleting"
-        paths = vis.geometries.keys()
-        for path in paths:
-            vis.delete(path)
-        vis.publish()
+        # print "deleting"
+        # paths = vis.geometries.keys()
+        # for path in paths:
+        #     vis.delete(path)
+        # vis.publish()
         raise
 
