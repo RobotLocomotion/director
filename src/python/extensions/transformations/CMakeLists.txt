@@ -17,7 +17,12 @@ include_directories(${NUMPY_INCLUDE_DIRS})
 
 add_library(_transformations SHARED transformations.c)
 target_link_libraries(_transformations ${PYTHON_LIBRARIES})
-
+if(NOT WIN32)
+  find_library(M_LIBRARY NAMES m)
+  if(M_LIBRARY)
+    target_link_libraries(_transformations ${M_LIBRARY})
+  endif()
+endif()
 
 if(WIN32 AND NOT CYGWIN)
   set_target_properties(_transformations PROPERTIES SUFFIX ".pyd")
