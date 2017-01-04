@@ -43,10 +43,12 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   brew update > brew_update_log.txt
   #brew upgrade
 
+  # use a fixed revision of homebrew qt4
+  brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/1c4bb08cc9cff85d0ae921886263064ef8bd3b30/Formula/qt.rb
+
   brew install doxygen graphviz
   brew install glib # for lcm
   brew install eigen
-  brew install qt
   brew ls --versions python || brew install python
   brew ls --versions numpy || brew install numpy || echo "error on brew install numpy"
 
