@@ -8,7 +8,13 @@ int main(int argc, char **argv)
   ddPythonManager* pythonManager = new ddPythonManager;
   pythonManager->setSysArgv(QApplication::instance()->arguments());
   PythonQt::self()->addVariable(PythonQt::self()->importModule("sys"), "executable", QCoreApplication::applicationFilePath());
-  pythonManager->executeString("import director.drakevisualizer; director.drakevisualizer.main(globals())");
+
+  if (argc > 1 && strcmp(argv[1], "-v2") == 0) {
+    pythonManager->executeString("import director.drakevisualizerapp2; director.drakevisualizerapp2.main(globals())");
+  } else {
+    pythonManager->executeString("import director.drakevisualizerapp1; director.drakevisualizerapp1.main(globals())");
+  }
+
 
   // delete pythonManager;
   // Allow a leak to avoid a segfault in the PythonQt cleanup destructor.
