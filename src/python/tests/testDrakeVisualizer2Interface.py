@@ -4,8 +4,6 @@ import time
 import math
 import sys
 import numpy as np
-sys.path.append("build/install/lib/python2.7/site-packages")
-
 import lcm
 import bot_core
 
@@ -122,30 +120,22 @@ if __name__ == '__main__':
     vis.draw("robot1/link1/box2", {"translation": [1, 0, 0], "quaternion": [1, 0, 0, 0]})
     vis.draw("robot1/link1/points", {"translation": [0, 1, 0], "quaternion": [1, 0, 0, 0]})
     vis.draw("robot1/link1/planar lidar", {"translation": [0, 2, 0], "quaternion": [1, 0, 0, 0]})
-    try:
-        while True:
-            for i in range(1000):
-                x1 = math.sin(math.pi * 2 * i / 1000.0)
-                pose = {
-                    "translation": [x1, 0, 0],
-                    "quaternion": [1, 0, 0, 0]
-                }
-                vis.draw("robot1/link1", pose)
+    for j in range(2):
+        for i in range(1000):
+            x1 = math.sin(math.pi * 2 * i / 1000.0)
+            pose = {
+                "translation": [x1, 0, 0],
+                "quaternion": [1, 0, 0, 0]
+            }
+            vis.draw("robot1/link1", pose)
 
-                x2 = math.sin(math.pi * 2 * i / 500.0)
-                pose = {
-                    "translation": [x2, 0, 0],
-                    "quaternion": [1, 0, 0, 0]
-                }
-                vis.draw("robot1/link1/box1", pose)
+            x2 = math.sin(math.pi * 2 * i / 500.0)
+            pose = {
+                "translation": [x2, 0, 0],
+                "quaternion": [1, 0, 0, 0]
+            }
+            vis.draw("robot1/link1/box1", pose)
 
-                vis.publish()
-                time.sleep(0.001)
-    except:
-        # print "deleting"
-        # paths = vis.geometries.keys()
-        # for path in paths:
-        #     vis.delete(path)
-        # vis.publish()
-        raise
+            vis.publish()
+            time.sleep(0.001)
 

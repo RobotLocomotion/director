@@ -383,7 +383,6 @@ class DrakeVisualizer(object):
         msg.format_version_major = 1
         msg.format_version_minor = 0
         data = dict(timestamp=timestamp, **response.toJson())
-        print "responding:", data
         msg.data = json.dumps(data)
         msg.num_bytes = len(msg.data)
         lcmUtils.publish('DRAKE_VIEWER2_RESPONSE', msg)
@@ -424,13 +423,10 @@ class DrakeVisualizer(object):
             "missing_paths": []
         }
         for command in data["delete"]:
-            print "delete:", command["path"]
             result["deleted_paths"].append(self.handleDeletePath(command))
         for command in data["load"]:
-            print "load:", command["path"]
             result["added_geometries"].append(self.handleAddGeometry(command))
         for command in data["draw"]:
-            print "draw:", command["path"]
             path, missingGeometry = self.handleSetTransform(command)
             result["set_transforms"].append(path)
             if missingGeometry:
