@@ -78,7 +78,7 @@ set(wrap_vfb)
 if(NOT APPLE AND NOT WIN32 AND NOT DEFINED ENV{DISPLAY})
   find_program(xvfb-run xvfb-run)
   if(xvfb-run)
-    set(wrap_vfb ${xvfb-run} -s "-screen 0 1024x768x24")
+    set(wrap_vfb ${xvfb-run} -a -s "-screen 0 1024x768x24")
   endif()
 endif()
 
