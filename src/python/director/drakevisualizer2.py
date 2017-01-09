@@ -189,6 +189,13 @@ class Geometry(object):
         return polyDataList
 
     @staticmethod
+    def transformGeometry(polyDataList, geom):
+        if "transform" in geom:
+            t = transformFromDict(geom["transform"])
+            polyDataList = [filterUtils.transformPolyData(polyData, t) for polyData in polyDataList]
+        return polyDataList
+
+    @staticmethod
     def computeNormals(polyDataList):
 
         def addNormals(polyData):
@@ -280,6 +287,7 @@ class Geometry(object):
     @staticmethod
     def createPolyDataForGeometry(geom):
         polyDataList = Geometry.createPolyData(geom)
+        polyDataList = Geometry.transformGeometry(polyDataList, geom)
         polyDataList = Geometry.computeNormals(polyDataList)
         return polyDataList
 
