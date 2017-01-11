@@ -519,9 +519,6 @@ class DrakeVisualizer(object):
         item = self.getItemByPath(path)
         if item is not None:
             om.removeFromObjectModel(item)
-        t = tuple(path)
-        if t in self.folderCache:
-            del self.folderCache[t]
         return path
 
     def getRootFolder(self):
@@ -537,12 +534,7 @@ class DrakeVisualizer(object):
         return item
 
     def getPathFolder(self, path):
-        t = tuple(path)
-        try:
-            return self.folderCache[t]
-        except KeyError:
-            folder = self.getRootFolder()
-            for element in path:
-                folder = om.getOrCreateContainer(element, parentObj=folder)
-            self.folderCache[t] = folder
-            return folder
+        folder = self.getRootFolder()
+        for element in path:
+            folder = om.getOrCreateContainer(element, parentObj=folder)
+        return folder
