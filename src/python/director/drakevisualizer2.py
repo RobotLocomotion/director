@@ -432,23 +432,27 @@ class DrakeVisualizer(object):
             print "responded in:", time.time() - tic
 
     def handleViewerRequest(self, data):
-        result = {
-            "deleted_paths": [],
-            "added_geometries": [],
-            "set_transforms": [],
-            "missing_paths": []
-        }
+        deletedPaths = set()
+        addedGeometries = set()
+        setTransforms = set()
+        missingPaths = set()
         for command in data["delete"]:
-            result["deleted_paths"].append(self.handleDeletePath(command))
+            deletedPaths.add(tuple(self.handleDeletePath(command)))
         for command in data["load"]:
-            result["added_geometries"].append(self.handleAddGeometry(command))
+            addedGeometries.add(tuple(self.handleAddGeometry(command)))
         for command in data["draw"]:
             path, missingGeometry = self.handleSetTransform(command)
-            result["set_transforms"].append(path)
+            setTransforms.add(tuple(path))
             if missingGeometry:
-                result["missing_paths"].append(path)
+                missingPaths.add(tuple(path))
+        result = {
+            "deleted_paths": list(deletedPaths),
+            "added_geometries": list(addedGeometries),
+            "set_transforms": list(setTransforms),
+            "missing_paths": list(missingPaths)
+        }
         print "result:", result
-        if not result["missing_paths"]:
+        if not missingPaths:
             return ViewerResponse(ViewerStatus.OK, result)
         else:
             return ViewerResponse(ViewerStatus.MISSING_PATHS, result)
