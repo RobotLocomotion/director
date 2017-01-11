@@ -1,6 +1,7 @@
 import math
 import os
 import json
+import time
 import numpy as np
 from collections import namedtuple
 from director import lcmUtils
@@ -355,6 +356,7 @@ class DrakeVisualizer(object):
 
         self.subscribers = []
         self.view = view
+        self.folderCache = {}
         self.enable()
         self.sendStatusMessage(
             0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
@@ -414,14 +416,20 @@ class DrakeVisualizer(object):
                                         }})
 
     def onViewerRequest(self, msg):
+        tic = time.time()
         data, response = self.decodeCommsMsg(msg)
+        print "decoded in:", time.time() - tic
         if data is None:
             self.sendStatusMessage(msg.timestamp,
                                    [responses])
         else:
+            tic = time.time()
             responses = self.handleViewerRequest(data)
+            print "handled in:", time.time() - tic
+            tic = time.time()
             self.sendStatusMessage(msg.timestamp,
                                    responses)
+            print "responded in:", time.time() - tic
 
     def handleViewerRequest(self, data):
         result = {
@@ -439,6 +447,7 @@ class DrakeVisualizer(object):
             result["set_transforms"].append(path)
             if missingGeometry:
                 result["missing_paths"].append(path)
+        print "result:", result
         if not result["missing_paths"]:
             return ViewerResponse(ViewerStatus.OK, result)
         else:
@@ -491,12 +500,18 @@ class DrakeVisualizer(object):
                                   transformFromDict(command["transform"]))
 
     def _setTransform(self, path, transform):
+        # tic = time.time()
         folder = self.getPathFolder(path)
+        # print "get folder:", time.time() - tic
+        # tic = time.time()
         if not hasattr(folder, "transform"):
             folder.transform = transform
         else:
             folder.transform.SetMatrix(transform.GetMatrix())
+        # print "set:", time.time() - tic
+        # tic = time.time()
         self.view.render()
+        # print "render:", time.time() - tic
         return path, len(folder.children()) == 0
 
     def handleDeletePath(self, command):
@@ -504,6 +519,9 @@ class DrakeVisualizer(object):
         item = self.getItemByPath(path)
         if item is not None:
             om.removeFromObjectModel(item)
+        t = tuple(path)
+        if t in self.folderCache:
+            del self.folderCache[t]
         return path
 
     def getRootFolder(self):
@@ -519,7 +537,12 @@ class DrakeVisualizer(object):
         return item
 
     def getPathFolder(self, path):
-        folder = self.getRootFolder()
-        for element in path:
-            folder = om.getOrCreateContainer(element, parentObj=folder)
-        return folder
+        t = tuple(path)
+        try:
+            return self.folderCache[t]
+        except KeyError:
+            folder = self.getRootFolder()
+            for element in path:
+                folder = om.getOrCreateContainer(element, parentObj=folder)
+            self.folderCache[t] = folder
+            return folder
