@@ -48,6 +48,9 @@ class ConstraintSet(object):
         self.seedPoseName = None
         self.nominalPoseName = None
         self.positionCosts = []
+        # Get joint limits
+        self.jointLimitsLower = np.array([ikPlanner.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
+        self.jointLimitsUpper = np.array([ikPlanner.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
 
     def runIk(self):
         seedPoseName = self.seedPoseName
@@ -68,6 +71,8 @@ class ConstraintSet(object):
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
 
         self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints, ikParameters, positionCosts, nominalPoseName=nominalPoseName, seedPoseName=seedPoseName)
+
+        self.endPose = self.ikPlanner.clipState(self.endPose,self.jointLimitsLower,self.jointLimitsUpper) 
 
         self.ikPlanner.addPose(self.endPose, 'q_end')
         print 'info:', self.info
@@ -863,7 +868,7 @@ class IKPlanner(object):
         return self.computePostureGoal(startPose, endPose)
 
 
-    def computeHomeNominalPose(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167, ikParameters=None):
+    def computeHomeNominalPose(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167, ikParameters=None, moveArms=True):
         ''' Compute a pose with the pelvis above the mid point of the feet with zero roll and pitch.
             The back and neck joints are also zeroed. Don't move the arm joints.
             The default height is Valkyrie specific
@@ -887,8 +892,12 @@ class IKPlanner(object):
         q.tspan = [1.0, 1.0]
         constraints.extend([p, q])
 
-        constraints.append(self.createLockedLeftArmPostureConstraint(nominalPoseName))
-        constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
+        if moveArms:
+          constraints.append(self.createLockedLeftArmPostureConstraint(nominalPoseName))
+          constraints.append(self.createLockedRightArmPostureConstraint(nominalPoseName))
+        else:
+          constraints.append(self.createLockedLeftArmPostureConstraint(startPoseName))
+          constraints.append(self.createLockedRightArmPostureConstraint(startPoseName))
         constraints.append( self.createPostureConstraint('q_zero', self.neckJoints) )
 
         constraintSet = ConstraintSet(self, constraints, '', startPoseName)
@@ -897,9 +906,9 @@ class IKPlanner(object):
         return endPose, info
 
 
-    def computeHomeNominalPlan(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167):
+    def computeHomeNominalPlan(self, startPose, footReferenceFrame, pelvisHeightAboveFeet=1.0167,moveArms=True):
 
-        endPose, info = self.computeHomeNominalPose(startPose, footReferenceFrame, pelvisHeightAboveFeet)
+        endPose, info = self.computeHomeNominalPose(startPose, footReferenceFrame, pelvisHeightAboveFeet,None,moveArms)
         print 'info:', info
 
         return self.computePostureGoal(startPose, endPose)
@@ -1470,6 +1479,23 @@ class IKPlanner(object):
         newIkParameters.fillInWith(self.defaultIkParameters)
         return newIkParameters
 
+    def clipState(self,q,l,u):
+        state = np.array(q)
+        ret = np.clip(state, l+1e-6, u-1e-6)
+        if np.max(np.abs(state-ret))>1e-4:
+            print 'State is outside of joint limits'
+            return ret.tolist()
+        else:
+            return ret.tolist()
+
+    def clipPlan(self,plan):
+        names=plan.plan[0].joint_name
+        jointLimitsLower = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in names])
+        jointLimitsUpper = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in names])
+        for i in range(0,plan.num_states):
+          plan.plan[i].joint_position=tuple(self.clipState(plan.plan[i].joint_position,jointLimitsLower,jointLimitsUpper))
+        return plan
+
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', ikParameters=None, positionCosts=None):
 
         if positionCosts is None:
@@ -1478,6 +1504,7 @@ class IKPlanner(object):
         ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         self.lastManipPlan, info = self.plannerPub.processTraj(constraints, ikParameters, positionCosts, nominalPoseName=nominalPoseName, seedPoseName=poseStart, endPoseName=poseEnd)
+        self.lastManipPlan = self.clipPlan(self.lastManipPlan)
 
         print 'traj info:', info
         return self.lastManipPlan
