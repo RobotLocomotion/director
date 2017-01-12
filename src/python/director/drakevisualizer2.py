@@ -356,7 +356,8 @@ class DrakeVisualizer(object):
 
         self.subscribers = []
         self.view = view
-        self.folderCache = {}
+        self.itemToPathCache = {}
+        self.pathToItemCache = {}
         self.enable()
         self.sendStatusMessage(
             0, ViewerResponse(ViewerStatus.OK, {"ready": True}))
@@ -451,7 +452,8 @@ class DrakeVisualizer(object):
             "set_transforms": list(setTransforms),
             "missing_paths": list(missingPaths)
         }
-        print "result:", result
+        self.view.render()
+        # print "result:", result
         if not missingPaths:
             return ViewerResponse(ViewerStatus.OK, result)
         else:
@@ -504,18 +506,11 @@ class DrakeVisualizer(object):
                                   transformFromDict(command["transform"]))
 
     def _setTransform(self, path, transform):
-        # tic = time.time()
         folder = self.getPathFolder(path)
-        # print "get folder:", time.time() - tic
-        # tic = time.time()
         if not hasattr(folder, "transform"):
             folder.transform = transform
         else:
             folder.transform.SetMatrix(transform.GetMatrix())
-        # print "set:", time.time() - tic
-        # tic = time.time()
-        self.view.render()
-        # print "render:", time.time() - tic
         return path, len(folder.children()) == 0
 
     def handleDeletePath(self, command):
@@ -530,15 +525,40 @@ class DrakeVisualizer(object):
                                        parentObj=om.findObjectByName('scene'))
 
     def getItemByPath(self, path):
-        item = self.getRootFolder()
-        for element in path:
-            item = item.findChild(element)
-            if item is None:
-                return None
-        return item
+        path = tuple(path)
+        if path in self.pathToItemCache:
+            # print "hit for path:", path
+            item = self.pathToItemCache[path]
+        else:
+            # print "miss for path:", path
+            item = self.getRootFolder()
+            for element in path:
+                item = item.findChild(element)
+                if item is None:
+                    return None
+            self.pathToItemCache[path] = item
+            self.itemToPathCache[item] = path
+            item.connectRemovedFromObjectModel(self.onItemRemoved)
+            return item
+
+    def onItemRemoved(self, objModel, item):
+        if item in self.itemToPathCache:
+            path = self.itemToPathCache[item]
+            del self.itemToPathCache[item]
+            if path in self.pathToItemCache:
+                del self.pathToItemCache[path]
 
     def getPathFolder(self, path):
-        folder = self.getRootFolder()
-        for element in path:
-            folder = om.getOrCreateContainer(element, parentObj=folder)
-        return folder
+        path = tuple(path)
+        if path in self.pathToItemCache:
+            # print "hit for path:", path
+            return self.pathToItemCache[path]
+        else:
+            # print "miss for path:", path
+            folder = self.getRootFolder()
+            for element in path:
+                folder = om.getOrCreateContainer(element, parentObj=folder)
+                folder.connectRemovedFromObjectModel(self.onItemRemoved)
+            self.pathToItemCache[path] = folder
+            self.itemToPathCache[folder] = path
+            return folder
