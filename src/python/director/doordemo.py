@@ -28,7 +28,7 @@ from director import segmentation
 from director import planplayback
 from director.footstepsdriver import FootstepRequestGenerator
 from director.tasks.taskuserpanel import TaskUserPanel
-from director.tasks.taskuserpanel import ImageBasedAffordanceFit
+from director.tasks.imagebasedaffordancefit import ImageBasedAffordanceFit
 
 
 import director.tasks.robottasks as rt

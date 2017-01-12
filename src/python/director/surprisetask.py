@@ -31,7 +31,7 @@ from director import vtkNumpy as vnp
 from director import switchplanner
 
 from director.tasks.taskuserpanel import TaskUserPanel
-from director.tasks.taskuserpanel import ImageBasedAffordanceFit
+from director.tasks.imagebasedaffordancefit import ImageBasedAffordanceFit
 
 import director.tasks.robottasks as rt
 import director.tasks.taskmanagerwidget as tmw
@@ -278,7 +278,3 @@ class SurpriseTaskPanel(TaskUserPanel):
         self.fitter.imagePicker.numberOfPoints = 2
         self.fitter.pointCloudSource = 'lidar'
         self.fitter.fitFunc = self.fitter.fitSwitchBox
-
-
-
-

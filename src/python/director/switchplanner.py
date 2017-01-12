@@ -30,7 +30,6 @@ from director import segmentationpanel
 from director import vtkNumpy as vnp
 
 from director.tasks.taskuserpanel import TaskUserPanel
-from director.tasks.taskuserpanel import ImageBasedAffordanceFit
 
 import director.tasks.robottasks as rt
 import director.tasks.taskmanagerwidget as tmw

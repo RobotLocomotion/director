@@ -37,7 +37,7 @@ from director.footstepsdriver import FootstepRequestGenerator
 import director.terrain
 
 from director.tasks.taskuserpanel import TaskUserPanel
-from director.tasks.taskuserpanel import ImageBasedAffordanceFit
+from director.tasks.imagebasedaffordancefit import ImageBasedAffordanceFit
 
 import director.tasks.robottasks as rt
 import director.tasks.taskmanagerwidget as tmw
@@ -1545,7 +1545,3 @@ class TerrainTaskPanel(TaskUserPanel):
                                   message='Please enable recovery.'), parent=finish)
         addTask(rt.UserPromptTask(name='Enable pressure control',
                                   message='Please enable pressure control.'), parent=finish)
-
-
-
-

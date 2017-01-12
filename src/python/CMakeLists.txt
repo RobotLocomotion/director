@@ -67,7 +67,7 @@ set(python_files
   director/lcmgl.py
   director/lcmobjectcollection.py
   director/lcmoctomap.py
-  director/lcmcollections.py  
+  director/lcmcollections.py
   director/lcmspy.py
   director/lcmUtils.py
   director/mainwindowapp.py
@@ -155,6 +155,8 @@ set(python_files
   director/macros/segmentation_view/perspective.py
 
   director/tasks/__init__.py
+  director/tasks/basictasks.py
+  director/tasks/imagebasedaffordancefit.py
   director/tasks/robottasks.py
   director/tasks/taskmanagerwidget.py
   director/tasks/taskuserpanel.py

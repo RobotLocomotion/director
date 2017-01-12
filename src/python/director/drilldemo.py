@@ -32,7 +32,7 @@ from director import footstepsdriverpanel
 from director import vtkNumpy as vnp
 
 from director.tasks.taskuserpanel import TaskUserPanel
-from director.tasks.taskuserpanel import ImageBasedAffordanceFit
+from director.tasks.imagebasedaffordancefit import ImageBasedAffordanceFit
 
 import director.tasks.robottasks as rt
 import director.tasks.taskmanagerwidget as tmw
