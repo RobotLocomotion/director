@@ -48,6 +48,9 @@ class ConstraintSet(object):
         self.seedPoseName = None
         self.nominalPoseName = None
         self.positionCosts = []
+        # Get joint limits
+        self.jointLimitsLower = np.array([ikPlanner.robotModel.model.getJointLimits(jointName)[0] for jointName in robotstate.getDrakePoseJointNames()])
+        self.jointLimitsUpper = np.array([ikPlanner.robotModel.model.getJointLimits(jointName)[1] for jointName in robotstate.getDrakePoseJointNames()])
 
     def runIk(self):
         seedPoseName = self.seedPoseName
@@ -68,6 +71,8 @@ class ConstraintSet(object):
         ikParameters = self.ikPlanner.mergeWithDefaultIkParameters(self.ikParameters)
 
         self.endPose, self.info = self.ikPlanner.plannerPub.processIK(self.constraints, ikParameters, positionCosts, nominalPoseName=nominalPoseName, seedPoseName=seedPoseName)
+
+        self.endPose = self.ikPlanner.clipState(self.endPose, self.jointLimitsLower, self.jointLimitsUpper)
 
         self.ikPlanner.addPose(self.endPose, 'q_end')
         print 'info:', self.info
@@ -304,6 +309,8 @@ class IKPlanner(object):
             self.neckPitchJoint = self.neckJoints[0]
 
         self.initDefaultPositionCosts()
+
+        self.clipFloat32SafeJointLimits = False
 
     def getJointGroup(self, name):
         jointGroup = filter(lambda group: group['name'] == name, self.jointGroups)
@@ -1470,6 +1477,27 @@ class IKPlanner(object):
         newIkParameters.fillInWith(self.defaultIkParameters)
         return newIkParameters
 
+    def clipState(self, q, l, u):
+        if self.clipFloat32SafeJointLimits:
+            state = np.array(q)
+            ret = np.clip(state, l + 1e-6, u - 1e-6)
+            if np.max(np.abs(state-ret)) > 1e-6:
+                print 'State is outside of joint limits'
+                return ret.tolist()
+            else:
+                return ret.tolist()
+        else:
+            return q
+
+    def clipPlan(self, plan):
+        if self.clipFloat32SafeJointLimits:
+            names = plan.plan[0].joint_name
+            jointLimitsLower = np.array([self.robotModel.model.getJointLimits(jointName)[0] for jointName in names])
+            jointLimitsUpper = np.array([self.robotModel.model.getJointLimits(jointName)[1] for jointName in names])
+            for i in range(0, plan.num_states):
+                plan.plan[i].joint_position = tuple(self.clipState(plan.plan[i].joint_position, jointLimitsLower, jointLimitsUpper))
+        return plan
+
     def runIkTraj(self, constraints, poseStart, poseEnd, nominalPoseName='q_nom', ikParameters=None, positionCosts=None):
 
         if positionCosts is None:
@@ -1478,6 +1506,7 @@ class IKPlanner(object):
         ikParameters = self.mergeWithDefaultIkParameters(ikParameters)
 
         self.lastManipPlan, info = self.plannerPub.processTraj(constraints, ikParameters, positionCosts, nominalPoseName=nominalPoseName, seedPoseName=poseStart, endPoseName=poseEnd)
+        self.lastManipPlan = self.clipPlan(self.lastManipPlan)
 
         print 'traj info:', info
         return self.lastManipPlan
