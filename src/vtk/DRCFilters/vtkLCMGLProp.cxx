@@ -21,7 +21,7 @@ PURPOSE.  See the above copyright notice for more information.
 
 #include <lcmtypes/bot_lcmgl/data_t.hpp>
 #include <bot_lcmgl_render/lcmgl_decode.h>
-
+#include <GL/glut.h>
 
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkLCMGLProp);
@@ -43,6 +43,15 @@ public:
 vtkLCMGLProp::vtkLCMGLProp()
 {
   this->Internal = new vtkInternal;
+
+  // Initialize GLUT
+  int glut_time = glutGet(GLUT_ELAPSED_TIME);
+  if (glut_time > 0) {
+    char *myargv[1];
+    int myargc = 1;
+    myargv[0] = strdup("director");
+    glutInit(&myargc, myargv);
+  }
 }
 
 //----------------------------------------------------------------------------
