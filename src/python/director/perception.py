@@ -132,7 +132,7 @@ class LidarItem(om.ObjectModelItem):
 
     def __init__(self, model):
 
-        om.ObjectModelItem.__init__(self, 'Lidar', om.Icons.EyeOff)
+        om.ObjectModelItem.__init__(self, model.sensorName, om.Icons.EyeOff)
 
         self.model = model
         self.scalarBarWidget = None
@@ -290,7 +290,6 @@ class MultiSenseSource(TimerCallback):
         self.polyDataObj = vis.PolyDataItem('Multisense Sweep', self.revPolyData, view)
         self.polyDataObj.actor.SetPickable(1)
 
-
         self.setPointSize(self.pointSize)
         self.setAlpha(self.alpha)
         self.targetFps = 60
@@ -357,6 +356,8 @@ class MultiSenseSource(TimerCallback):
             self.reader.SetDistanceRange(0.25, 4.0)
             self.reader.SetHeightRange(-80.0, 80.0)
             self.reader.Start()
+
+        self.setIntensityRange(400, 4000)
 
         TimerCallback.start(self)
 
@@ -476,13 +477,17 @@ class MultiSenseSource(TimerCallback):
         m.joint_position = jointPositions
         lcmUtils.publish('DESIRED_NECK_ANGLES', m)
 
+    def setIntensityRange(self, lowerBound, upperBound):
+        self.polyDataObj.setRangeMap('intensity', [lowerBound, upperBound])
+
 
 
 class LidarSource(TimerCallback):
 
-    def __init__(self, view):
+    def __init__(self, view, channelName, sensorName, intensityRange):
         TimerCallback.__init__(self)
         self.view = view
+        self.channelName = channelName
         self.reader = None
         self.displayedRevolution = -1
         self.lastScanLine = 0
@@ -494,11 +499,13 @@ class LidarSource(TimerCallback):
         self.visible = True
         self.colorBy = 'Solid Color'
         self.initScanLines()
+        self.sensorName = sensorName
 
         self.revPolyData = vtk.vtkPolyData()
         self.polyDataObj = vis.PolyDataItem('Lidar Sweep', self.revPolyData, view)
         self.polyDataObj.actor.SetPickable(1)
 
+        self.polyDataObj.setRangeMap('intensity', intensityRange)
 
         self.setPointSize(self.pointSize)
         self.setAlpha(self.alpha)
@@ -552,6 +559,7 @@ class LidarSource(TimerCallback):
     def start(self):
         if self.reader is None:
             self.reader = drc.vtkLidarSource()
+            self.reader.subscribe(self.channelName)
             self.reader.InitBotConfig(drcargs.args().config_file)
             self.reader.SetDistanceRange(0.25, 80.0)
             self.reader.SetHeightRange(-80.0, 80.0)
@@ -596,7 +604,8 @@ class LidarSource(TimerCallback):
     def tick(self):
         self.updateScanLines()
 
-
+    def setIntensityRange(self, lowerBound, upperBound):
+        self.polyDataObj.setRangeMap('intensity', [lowerBound, upperBound])
 
 class NeckDriver(object):
 
@@ -814,9 +823,6 @@ def init(view):
     global _multisenseItem
     global multisenseDriver
 
-    global _lidarItem
-    global lidarDriver
-
     sensorsFolder = om.getOrCreateContainer('sensors')
 
     m = MultiSenseSource(view)
@@ -825,13 +831,17 @@ def init(view):
     _multisenseItem = MultisenseItem(m)
     om.addToObjectModel(_multisenseItem, sensorsFolder)
 
-    useLidarSource = True
-    if useLidarSource:
-        l = LidarSource(view)
-        l.start()
-        lidarDriver = l
-        _lidarItem = LidarItem(l)
-        om.addToObjectModel(_lidarItem, sensorsFolder)
+    queue = PythonQt.dd.ddPointCloudLCM(lcmUtils.getGlobalLCMThread())
+    queue.init(lcmUtils.getGlobalLCMThread(), drcargs.args().config_file)
+    lidarNames = queue.getLidarNames()
+    for lidar in lidarNames:
+        if queue.displayLidar(lidar):
+            
+            l = LidarSource(view, lidar, queue.getLidarFriendlyName(lidar), queue.getLidarIntensity(lidar))
+            l.start()
+            lidarDriver = l
+            _lidarItem = LidarItem(l)
+            om.addToObjectModel(_lidarItem, sensorsFolder)
 
 
     useMapServer = hasattr(drc, 'vtkMapServerSource')
@@ -850,5 +860,3 @@ def init(view):
     om.addToObjectModel(spindleDebug, sensorsFolder)
 
     return multisenseDriver, mapServerSource
-
-

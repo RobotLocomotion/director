@@ -157,6 +157,7 @@ public:
     this->DistanceRange[1] = 80.0;
     // Used to filter out range returns which are oblique to lidar sensor
     this->EdgeAngleThreshold = 0;  // degrees, 30 was  default
+    this->channelName = ""; // none set, no subscription made
 
     this->HeightRange[0] = -80.0;
     this->HeightRange[1] = 80.0;
@@ -166,8 +167,12 @@ public:
     {
       std::cerr <<"ERROR: lcm is not good()" <<std::endl;
     }
+  }
 
-    this->LCMHandle->subscribe("SICK_SCAN", &LCMListener::lidarHandler, this);
+  void subscribe(std::string channelName)
+  {
+    this->channelName = channelName;
+    this->LCMHandle->subscribe(this->channelName, &LCMListener::lidarHandler, this);
   }
 
 
@@ -479,9 +484,10 @@ protected:
     Eigen::Isometry3d bodyToLocalStart;
 
 
-    get_trans_with_utime("SICK_SCAN", "local", msg->utime, scanToLocalStart);
-    get_trans_with_utime("SICK_SCAN", "local", msg->utime +  1e6*3/(40*4), scanToLocalEnd);
-
+    // Assumes frame is same as channel name. TODO: look up channel from botconfig
+    get_trans_with_utime(this->channelName, "local", msg->utime, scanToLocalStart);
+    get_trans_with_utime(this->channelName, "local", msg->utime +  1e6*3/(40*4), scanToLocalEnd);
+    
     get_trans_with_utime("body", "local", msg->utime, bodyToLocalStart);
 
     Eigen::Isometry3d spindleRotation;
@@ -528,6 +534,7 @@ protected:
     this->UpdateDequeSize();
   }
 
+  std::string channelName;
   bool NewData;
   bool ShouldStop;
   int MaxNumberOfScanLines;
@@ -628,6 +635,12 @@ void vtkLidarSource::Poll()
     {
     this->Modified();
     }
+}
+
+//-----------------------------------------------------------------------------
+void vtkLidarSource::subscribe(const char* channelName)
+{
+  this->Internal->Listener->subscribe(channelName);
 }
 
 //-----------------------------------------------------------------------------
