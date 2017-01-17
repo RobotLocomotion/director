@@ -26,6 +26,8 @@ void ddPointCloudLCM::init(ddLCMThread*, const QString&);
 qint64 ddPointCloudLCM::getPointCloudFromPointCloud(vtkPolyData*);
 QStringList ddPointCloudLCM::getLidarNames() const;
 QString ddPointCloudLCM::getLidarFriendlyName(const QString&);
+QString ddPointCloudLCM::getLidarChannelName(const QString&);
+QString ddPointCloudLCM::getLidarCoordinateFrame(const QString&);
 int ddPointCloudLCM::getLidarFrequency(const QString&);
 bool ddPointCloudLCM::displayLidar(const QString&);
 QList<int> ddPointCloudLCM::getLidarIntensity(const QString&);

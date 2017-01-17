@@ -39,6 +39,8 @@ public:
   int getLidarFrequency(const QString& lidarName);
   bool displayLidar(const QString& lidarName);
   QList<int> getLidarIntensity(const QString& lidarName);
+  QString getLidarChannelName(const QString& lidarName);
+  QString getLidarCoordinateFrame(const QString& lidarName);
 
 protected slots:
 

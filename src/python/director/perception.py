@@ -484,7 +484,7 @@ class MultiSenseSource(TimerCallback):
 
 class LidarSource(TimerCallback):
 
-    def __init__(self, view, channelName, sensorName, intensityRange):
+    def __init__(self, view, channelName, coordinateFrame, sensorName, intensityRange):
         TimerCallback.__init__(self)
         self.view = view
         self.channelName = channelName
@@ -500,6 +500,7 @@ class LidarSource(TimerCallback):
         self.colorBy = 'Solid Color'
         self.initScanLines()
         self.sensorName = sensorName
+        self.coordinateFrame = coordinateFrame
 
         self.revPolyData = vtk.vtkPolyData()
         self.polyDataObj = vis.PolyDataItem('Lidar Sweep', self.revPolyData, view)
@@ -560,6 +561,7 @@ class LidarSource(TimerCallback):
         if self.reader is None:
             self.reader = drc.vtkLidarSource()
             self.reader.subscribe(self.channelName)
+            self.reader.setCoordinateFrame(self.coordinateFrame)
             self.reader.InitBotConfig(drcargs.args().config_file)
             self.reader.SetDistanceRange(0.25, 80.0)
             self.reader.SetHeightRange(-80.0, 80.0)
@@ -837,7 +839,7 @@ def init(view):
     for lidar in lidarNames:
         if queue.displayLidar(lidar):
             
-            l = LidarSource(view, lidar, queue.getLidarFriendlyName(lidar), queue.getLidarIntensity(lidar))
+            l = LidarSource(view, queue.getLidarChannelName(lidar), queue.getLidarCoordinateFrame(lidar), queue.getLidarFriendlyName(lidar), queue.getLidarIntensity(lidar))
             l.start()
             lidarDriver = l
             _lidarItem = LidarItem(l)
