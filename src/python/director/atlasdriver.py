@@ -18,9 +18,12 @@ import time
 
 import drc as lcmdrc
 import bot_core
-import atlas
-from pronto.indexed_measurement_t import indexed_measurement_t
+try:
+    import atlas
+except ImportError:
+    pass
 
+from pronto.indexed_measurement_t import indexed_measurement_t
 
 class SystemStatusListener(object):
 
