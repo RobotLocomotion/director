@@ -17,7 +17,7 @@ import numpy as np
 class PolyDataItem(om.ObjectModelItem):
 
     defaultScalarRangeMap = {
-        'intensity' : (400, 4000),
+        # 'intensity' : (400, 4000),
         'spindle_angle' : (0, 360),
         'azimuth' : (-2.5, 2.5),
         'scan_delta' : (0.0, 0.3),
@@ -79,6 +79,8 @@ class PolyDataItem(om.ObjectModelItem):
         if self.getProperty('Visible'):
             self._renderAllViews()
 
+    def setRangeMap(self, key, value):
+        self.rangeMap[key] = value
 
     def getArrayNames(self):
         pointData = self.polyData.GetPointData()
