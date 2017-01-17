@@ -158,6 +158,8 @@ public:
     // Used to filter out range returns which are oblique to lidar sensor
     this->EdgeAngleThreshold = 0;  // degrees, 30 was  default
     this->channelName = ""; // none set, no subscription made
+    this->coordinateFrame = ""; // none set, no transform made
+
 
     this->HeightRange[0] = -80.0;
     this->HeightRange[1] = 80.0;
@@ -167,6 +169,11 @@ public:
     {
       std::cerr <<"ERROR: lcm is not good()" <<std::endl;
     }
+  }
+
+  void setCoordinateFrame(std::string coordinateFrame)
+  {
+    this->coordinateFrame = coordinateFrame;
   }
 
   void subscribe(std::string channelName)
@@ -485,8 +492,8 @@ protected:
 
 
     // Assumes frame is same as channel name. TODO: look up channel from botconfig
-    get_trans_with_utime(this->channelName, "local", msg->utime, scanToLocalStart);
-    get_trans_with_utime(this->channelName, "local", msg->utime +  1e6*3/(40*4), scanToLocalEnd);
+    get_trans_with_utime(this->coordinateFrame, "local", msg->utime, scanToLocalStart);
+    get_trans_with_utime(this->coordinateFrame, "local", msg->utime +  1e6*3/(40*4), scanToLocalEnd);
     
     get_trans_with_utime("body", "local", msg->utime, bodyToLocalStart);
 
@@ -535,6 +542,7 @@ protected:
   }
 
   std::string channelName;
+  std::string coordinateFrame;
   bool NewData;
   bool ShouldStop;
   int MaxNumberOfScanLines;
@@ -641,6 +649,12 @@ void vtkLidarSource::Poll()
 void vtkLidarSource::subscribe(const char* channelName)
 {
   this->Internal->Listener->subscribe(channelName);
+}
+
+//-----------------------------------------------------------------------------
+void vtkLidarSource::setCoordinateFrame(const char* coordinateFrame)
+{
+  this->Internal->Listener->setCoordinateFrame(coordinateFrame);
 }
 
 //-----------------------------------------------------------------------------

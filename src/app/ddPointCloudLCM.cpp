@@ -265,6 +265,19 @@ QStringList ddPointCloudLCM::getLidarNames() const {
 }
 
 //-----------------------------------------------------------------------------
+QString ddPointCloudLCM::getLidarChannelName(const QString& lidarName) {
+  QString key = QString("planar_lidars.") + lidarName + QString(".lcm_channel");
+
+  char* channelName;
+  if (!bot_param_get_str(mBotParam, key.toAscii().data(), &channelName) == 0){
+    printf("Could not find lcm_channel property of %s\n", lidarName.toAscii().data());
+    return 0;
+  }
+
+  return QString(channelName);
+}
+
+//-----------------------------------------------------------------------------
 QString ddPointCloudLCM::getLidarFriendlyName(const QString& lidarName) {
   QString key = QString("planar_lidars.") + lidarName + QString(".sensor_name");
 
@@ -275,6 +288,19 @@ QString ddPointCloudLCM::getLidarFriendlyName(const QString& lidarName) {
   }
 
   return QString(friendlyName);
+}
+
+//-----------------------------------------------------------------------------
+QString ddPointCloudLCM::getLidarCoordinateFrame(const QString& lidarName) {
+  QString key = QString("planar_lidars.") + lidarName + QString(".coord_frame");
+
+  char* coordFrame;
+  if (!bot_param_get_str(mBotParam, key.toAscii().data(), &coordFrame) == 0){
+    printf("Could not find coord_frame property of %s\n", lidarName.toAscii().data());
+    return 0;
+  }
+
+  return QString(coordFrame);
 }
 
 //-----------------------------------------------------------------------------
