@@ -130,11 +130,6 @@ if (USE_DRC_PLANE_SEG)
 endif()
 
 if(USE_LCMGL)
-  # Check whether GLUT is available to enable/disable some LCMGL-features
-  find_package(GLUT)
-  if(GLUT_FOUND)
-    add_definitions(-DGLUT_AVAILABLE)
-  endif()
 
   find_package(LibBot REQUIRED)
   include_directories(${LIBBOT_INCLUDE_DIRS})
