@@ -735,6 +735,7 @@ class LinkPart(SpatialEntity):
     self.geometry_type = None
     self.geometry_data = {}
     self.gtypes = 'box', 'cylinder', 'sphere', 'mesh'
+    self.color = [ 0.8, 0.8, 0.8, 1 ]  # RGBA
     if 'tree' in kwargs:
       self.from_tree(kwargs['tree'])
 
@@ -749,6 +750,15 @@ class LinkPart(SpatialEntity):
     gnode = get_node(node, 'geometry')
     if gnode == None:
       return
+    material = get_node(node, 'material')
+    if material is not None:
+      color_node = get_node(material, 'color')
+      if color_node is not None:
+        try:
+          color = color_node.attrib['rgba'].split(' ')
+          self.color = [ float(e) for e in color ]
+        except:
+          pass
     for gtype in self.gtypes:
       typenode = get_node(gnode, gtype)
       if typenode != None:
