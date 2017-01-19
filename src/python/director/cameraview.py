@@ -491,6 +491,7 @@ class CameraImageView(object):
         self.imageName = imageName
         self.imageInitialized = False
         self.updateUtime = 0
+        self.useImageColorMap = False
         self.initView(view)
         self.initEventFilter()
 
@@ -624,6 +625,25 @@ class CameraImageView(object):
         self.imageActor.SetVisibility(False)
         self.view.render()
 
+    def initImageColorMap(self):
+
+        self.depthImageColorByRange = self.getImage().GetScalarRange()
+
+        lut = vtk.vtkLookupTable()
+        lut.SetNumberOfColors(256)
+        lut.SetHueRange(0, 0.667) # red to blue
+        lut.SetRange(self.depthImageColorByRange) # map red (near) to blue (far)
+        lut.SetRampToLinear()
+        lut.Build()
+
+        im = vtk.vtkImageMapToColors()
+        im.SetLookupTable(lut)
+        im.SetInput(self.getImage())
+        im.Update()
+        self.depthImageLookupTable = lut
+        self.imageMapToColors = im
+        self.imageActor.SetInput(im.GetOutput())
+
     def updateView(self):
 
         if not self.view.isVisible():
@@ -634,7 +654,11 @@ class CameraImageView(object):
             self.updateUtime = currentUtime
             self.view.render()
 
-            if not self.imageInitialized and self.imageActor.GetInput().GetDimensions()[0]:
+            if not self.imageInitialized and self.getImage().GetDimensions()[0]:
+
+                if self.useImageColorMap:
+                    self.initImageColorMap()
+
                 self.imageActor.SetVisibility(True)
                 self.resetCamera()
                 self.imageInitialized = True
