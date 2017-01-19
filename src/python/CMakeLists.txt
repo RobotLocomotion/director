@@ -54,6 +54,7 @@ set(python_files
   director/ikparameters.py
   director/ikplanner.py
   director/imageview.py
+  director/imageviewapp.py
   director/ioUtils.py
   director/irisUtils.py
   director/irisdriver.py
