@@ -311,6 +311,7 @@ class MainWindowAppFactory(ComponentFactory):
 
         modules = dict(locals())
         del modules['fields']
+        del modules['self']
         fields.globalsDict.update(modules)
 
     def initGlobals(self, fields):
@@ -344,9 +345,11 @@ class MainWindowPanelFactory(ComponentFactory):
         determines which components should be disabled.
         '''
 
-        # drake visualizer depends on lcm so this
-        # module is disabled by default
+        # these components depend on lcm and lcmgl, so they
+        # are disabled by default
         options.useDrakeVisualizer = False
+        options.useLCMVisualizer = False
+        options.useLCMGLRenderer = False
 
     def addComponents(self, componentGraph):
 
@@ -358,6 +361,8 @@ class MainWindowPanelFactory(ComponentFactory):
         addComponent('CameraBookmarksPanel', ['MainWindow'])
         addComponent('CameraControlPanel', ['MainWindow'])
         addComponent('DrakeVisualizer', ['MainWindow'])
+        addComponent('LCMVisualizer', ['MainWindow'])
+        addComponent('LCMGLRenderer', ['MainWindow'])
 
     def initMainWindow(self, fields):
         assert fields.view and fields.app
@@ -396,11 +401,36 @@ class MainWindowPanelFactory(ComponentFactory):
         from director import drakevisualizer
         drakeVisualizer = drakevisualizer.DrakeVisualizer(fields.view)
 
-        applogic.MenuActionToggleHelper('Tools', 'Renderer - Drake', drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
+        applogic.MenuActionToggleHelper('Tools', 'Drake Visualizer', drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
 
         return FieldContainer(
           drakeVisualizer=drakeVisualizer
           )
+
+    def initLCMVisualizer(self, fields):
+
+        from director import drakevisualizer2
+        lcmVisualizer = drakevisualizer2.DrakeVisualizer(fields.view)
+
+        applogic.MenuActionToggleHelper('Tools', 'LCM Visualizer', lcmVisualizer.isEnabled, lcmVisualizer.setEnabled)
+
+        return FieldContainer(
+          lcmVisualizer=lcmVisualizer
+          )
+
+    def initLCMGLRenderer(self, fields):
+
+        from director import lcmgl
+        if lcmgl.LCMGL_AVAILABLE:
+            lcmglManager = lcmgl.LCMGLManager(fields.view)
+            applogic.MenuActionToggleHelper('Tools', 'LCMGL Renderer', lcmglManager.isEnabled, lcmglManager.setEnabled)
+        else:
+            lcmglManager = None
+
+        return FieldContainer(
+          lcmglManager=lcmglManager
+          )
+
 
 
 def construct(globalsDict=None):
