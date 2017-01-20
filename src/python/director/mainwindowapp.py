@@ -219,11 +219,14 @@ class MainWindowAppFactory(ComponentFactory):
 
         organizationName = 'RobotLocomotion'
         applicationName = 'DirectorMainWindow'
+        windowTitle = 'Director App'
 
         if hasattr(fields, 'organizationName'):
             organizationName = fields.organizationName
         if hasattr(fields, 'applicationName'):
             applicationName = fields.applicationName
+        if hasattr(fields, 'windowTitle'):
+            windowTitle = fields.windowTitle
 
         MainWindowApp.applicationInstance().setOrganizationName(organizationName)
         MainWindowApp.applicationInstance().setApplicationName(applicationName)
@@ -232,7 +235,7 @@ class MainWindowAppFactory(ComponentFactory):
         app = MainWindowApp()
 
         app.mainWindow.setCentralWidget(fields.view)
-        app.mainWindow.setWindowTitle('Director App')
+        app.mainWindow.setWindowTitle(windowTitle)
         app.mainWindow.setWindowIcon(QtGui.QIcon(':/images/drake_logo.png'))
 
         sceneBrowserDock = app.addWidgetToDock(fields.objectModel.getTreeWidget(),
@@ -308,6 +311,7 @@ class MainWindowAppFactory(ComponentFactory):
 
         modules = dict(locals())
         del modules['fields']
+        del modules['self']
         fields.globalsDict.update(modules)
 
     def initGlobals(self, fields):
@@ -341,22 +345,38 @@ class MainWindowPanelFactory(ComponentFactory):
         determines which components should be disabled.
         '''
 
-        # drake visualizer depends on lcm so this
-        # module is disabled by default
+        # these components depend on lcm and lcmgl, so they
+        # are disabled by default
         options.useDrakeVisualizer = False
+        options.useLCMVisualizer = False
+        options.useLCMGLRenderer = False
 
     def addComponents(self, componentGraph):
 
         addComponent = componentGraph.addComponent
 
         addComponent('MainWindow', [])
+        addComponent('OpenDataHandler', ['MainWindow'])
         addComponent('ScreenGrabberPanel', ['MainWindow'])
         addComponent('CameraBookmarksPanel', ['MainWindow'])
         addComponent('CameraControlPanel', ['MainWindow'])
         addComponent('DrakeVisualizer', ['MainWindow'])
+        addComponent('LCMVisualizer', ['MainWindow'])
+        addComponent('LCMGLRenderer', ['MainWindow'])
 
     def initMainWindow(self, fields):
         assert fields.view and fields.app
+
+    def initOpenDataHandler(self, fields):
+        from director import opendatahandler
+        openDataHandler = opendatahandler.OpenDataHandler(fields.app)
+
+        def loadData():
+            for filename in drcargs.args().data_files:
+                openDataHandler.openGeometry(filename)
+        fields.app.registerStartupCallback(loadData)
+
+        return FieldContainer(openDataHandler=openDataHandler)
 
     def initScreenGrabberPanel(self, fields):
 
@@ -387,11 +407,36 @@ class MainWindowPanelFactory(ComponentFactory):
         from director import drakevisualizer
         drakeVisualizer = drakevisualizer.DrakeVisualizer(fields.view)
 
-        applogic.MenuActionToggleHelper('Tools', 'Renderer - Drake', drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
+        applogic.MenuActionToggleHelper('Tools', 'Drake Visualizer', drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
 
         return FieldContainer(
           drakeVisualizer=drakeVisualizer
           )
+
+    def initLCMVisualizer(self, fields):
+
+        from director import drakevisualizer2
+        lcmVisualizer = drakevisualizer2.DrakeVisualizer(fields.view)
+
+        applogic.MenuActionToggleHelper('Tools', 'LCM Visualizer', lcmVisualizer.isEnabled, lcmVisualizer.setEnabled)
+
+        return FieldContainer(
+          lcmVisualizer=lcmVisualizer
+          )
+
+    def initLCMGLRenderer(self, fields):
+
+        from director import lcmgl
+        if lcmgl.LCMGL_AVAILABLE:
+            lcmglManager = lcmgl.LCMGLManager(fields.view)
+            applogic.MenuActionToggleHelper('Tools', 'LCMGL Renderer', lcmglManager.isEnabled, lcmglManager.setEnabled)
+        else:
+            lcmglManager = None
+
+        return FieldContainer(
+          lcmglManager=lcmglManager
+          )
+
 
 
 def construct(globalsDict=None):

@@ -33,6 +33,8 @@ set(python_files
   director/depthscanner.py
   director/doordemo.py
   director/drakevisualizer.py
+  director/drakevisualizer2.py
+  director/drakevisualizerapp.py
   director/drcargs.py
   director/drilldemo.py
   director/drivingplanner.py
@@ -76,8 +78,9 @@ set(python_files
   director/multisensepanel.py
   director/navigationpanel.py
   director/objectmodel.py
-  director/otdfmodel.py
+  director/opendatahandler.py
   director/openscope.py
+  director/otdfmodel.py
   director/packagepath.py
   director/perception.py
   director/planningutils.py
