@@ -33,6 +33,10 @@ set(python_files
   director/depthscanner.py
   director/doordemo.py
   director/drakevisualizer.py
+  director/drakevisualizer2.py
+  director/drakevisualizerapp.py
+  director/drakevisualizerapp1.py
+  director/drakevisualizerapp2.py
   director/drcargs.py
   director/drilldemo.py
   director/drivingplanner.py
