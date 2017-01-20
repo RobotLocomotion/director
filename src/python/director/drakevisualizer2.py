@@ -406,14 +406,12 @@ class DrakeVisualizer(object):
             else:
                 return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT_VERSION,
                                             {"supported_formats": {
-                                                 "viewer2_json": [{"major": 1,
-                                                                   "minor": 0}]
+                                                 "viewer2_json": ["1.0"]
                                             }})
         else:
             return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT,
                                         {"supported_formats": {
-                                             "viewer2_json": [{"major": 1,
-                                                               "minor": 0}]
+                                             "viewer2_json": ["1.0"]
                                         }})
 
     def onViewerRequest(self, msg):
