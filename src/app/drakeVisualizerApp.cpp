@@ -9,11 +9,8 @@ int main(int argc, char **argv)
   pythonManager->setSysArgv(QApplication::instance()->arguments());
   PythonQt::self()->addVariable(PythonQt::self()->importModule("sys"), "executable", QCoreApplication::applicationFilePath());
 
-  if (argc > 1 && strcmp(argv[1], "-v2") == 0) {
-    pythonManager->executeString("import director.drakevisualizerapp2; director.drakevisualizerapp2.main(globals())");
-  } else {
-    pythonManager->executeString("import director.drakevisualizerapp1; director.drakevisualizerapp1.main(globals())");
-  }
+
+  pythonManager->executeString("import director.drakevisualizerapp; director.drakevisualizerapp.main(globals())");
 
 
   // delete pythonManager;
