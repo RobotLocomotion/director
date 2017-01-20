@@ -1,16 +1,3 @@
-from director import consoleapp
-from director import drakevisualizer
 from director import drakevisualizerapp
 
-
-def main():
-
-    # use global so the variable is available in the python console
-    global app
-
-    app = drakevisualizerapp.DrakeVisualizerApp(drakevisualizer.DrakeVisualizer)
-    app.mainWindow.show()
-    consoleapp.ConsoleApp.start()
-
-if __name__ == '__main__':
-    main()
+drakevisualizerapp.main(globals())
