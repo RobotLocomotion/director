@@ -131,7 +131,7 @@ def main():
     vis_binary = os.path.join(os.path.dirname(sys.executable),
                               "drake-visualizer")
     print "vis_binary:", vis_binary
-    vis_process = subprocess.Popen(vis_binary)
+    vis_process = subprocess.Popen([vis_binary, '--testing', '--interactive'])
 
     # The viewer will take some time to load before it is ready to receive
     # messages, so we'll wait until it sends its first status message.
