@@ -46,7 +46,10 @@ class ConsoleApp(object):
 
         def onStartup():
             for func in ConsoleApp._startupCallbacks:
-                func()
+                try:
+                    func()
+                except:
+                    print traceback.format_exc()
 
         startTimer = TimerCallback(callback=onStartup)
         startTimer.singleShot(0)

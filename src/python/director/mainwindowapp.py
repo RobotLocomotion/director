@@ -370,6 +370,12 @@ class MainWindowPanelFactory(ComponentFactory):
     def initOpenDataHandler(self, fields):
         from director import opendatahandler
         openDataHandler = opendatahandler.OpenDataHandler(fields.app)
+
+        def loadData():
+            for filename in drcargs.args().data_files:
+                openDataHandler.openGeometry(filename)
+        fields.app.registerStartupCallback(loadData)
+
         return FieldContainer(openDataHandler=openDataHandler)
 
     def initScreenGrabberPanel(self, fields):
