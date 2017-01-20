@@ -6,11 +6,11 @@ import math
 import sys
 import numpy as np
 import lcm
-import bot_core
+import robotlocomotion as lcmrl
 
 
 def comms_msg(timestamp, data):
-    msg = bot_core.viewer2_comms_t()
+    msg = lcmrl.viewer2_comms_t()
     msg.format = "viewer2_json"
     msg.format_version_major = 1
     msg.format_version_minor = 0
@@ -75,7 +75,7 @@ class Visualizer:
         })
 
     def onResponse(self, channel, raw_data):
-        msg = bot_core.viewer2_comms_t.decode(raw_data)
+        msg = lcmrl.viewer2_comms_t.decode(raw_data)
         response = json.loads(msg.data)
         if response["status"] == 0:
             print("ok")
