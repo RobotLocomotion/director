@@ -18,14 +18,7 @@ from director import vtkNumpy as vnp
 from director import visualization as vis
 from director import packagepath
 
-import bot_core as lcmbot
-
-# Currently, viewer lcm message types are in bot_core_lcmtypes and
-# robotlocomotion-lcmtypes, but drake only builds bot_core_lcmtypes.
-# When drake starts using robotlocomotion-lcmtypes, then the following
-# import can be used instead of getting viewer messages from bot_core_lcmtypes.
-#import robotlocomotion as lcmrl
-lcmrl = lcmbot
+import robotlocomotion as lcmrl
 
 from PythonQt import QtGui
 
@@ -419,14 +412,14 @@ class DrakeVisualizer(object):
         data, response = self.decodeCommsMsg(msg)
         #print "decoded in:", time.time() - tic
         if data is None:
-            self.sendStatusMessage(msg.timestamp,
+            self.sendStatusMessage(msg.utime,
                                    [responses])
         else:
             tic = time.time()
             responses = self.handleViewerRequest(data)
             #print "handled in:", time.time() - tic
             tic = time.time()
-            self.sendStatusMessage(msg.timestamp,
+            self.sendStatusMessage(msg.utime,
                                    responses)
             #print "responded in:", time.time() - tic
 
