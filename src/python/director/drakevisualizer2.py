@@ -417,18 +417,18 @@ class DrakeVisualizer(object):
     def onViewerRequest(self, msg):
         tic = time.time()
         data, response = self.decodeCommsMsg(msg)
-        print "decoded in:", time.time() - tic
+        #print "decoded in:", time.time() - tic
         if data is None:
             self.sendStatusMessage(msg.timestamp,
                                    [responses])
         else:
             tic = time.time()
             responses = self.handleViewerRequest(data)
-            print "handled in:", time.time() - tic
+            #print "handled in:", time.time() - tic
             tic = time.time()
             self.sendStatusMessage(msg.timestamp,
                                    responses)
-            print "responded in:", time.time() - tic
+            #print "responded in:", time.time() - tic
 
     def handleViewerRequest(self, data):
         deletedPaths = set()
