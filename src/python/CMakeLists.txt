@@ -80,8 +80,9 @@ set(python_files
   director/multisensepanel.py
   director/navigationpanel.py
   director/objectmodel.py
-  director/otdfmodel.py
+  director/opendatahandler.py
   director/openscope.py
+  director/otdfmodel.py
   director/packagepath.py
   director/perception.py
   director/planningutils.py

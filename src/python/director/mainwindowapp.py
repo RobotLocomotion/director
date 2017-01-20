@@ -350,6 +350,7 @@ class MainWindowPanelFactory(ComponentFactory):
         addComponent = componentGraph.addComponent
 
         addComponent('MainWindow', [])
+        addComponent('OpenDataHandler', ['MainWindow'])
         addComponent('ScreenGrabberPanel', ['MainWindow'])
         addComponent('CameraBookmarksPanel', ['MainWindow'])
         addComponent('CameraControlPanel', ['MainWindow'])
@@ -357,6 +358,11 @@ class MainWindowPanelFactory(ComponentFactory):
 
     def initMainWindow(self, fields):
         assert fields.view and fields.app
+
+    def initOpenDataHandler(self, fields):
+        from director import opendatahandler
+        openDataHandler = opendatahandler.OpenDataHandler(fields.app)
+        return FieldContainer(openDataHandler=openDataHandler)
 
     def initScreenGrabberPanel(self, fields):
 
