@@ -292,7 +292,7 @@ class Link(object):
 
 
 class DrakeVisualizer(object):
-    name = "drake viewer"
+    name = 'Drake Visualizer'
 
     def __init__(self, view):
 
@@ -343,7 +343,7 @@ class DrakeVisualizer(object):
         self.sendStatusMessage('successfully added robot')
 
     def getRootFolder(self):
-        return om.getOrCreateContainer(self.name, parentObj=om.findObjectByName('scene'))
+        return om.getOrCreateContainer(self.name.lower(), parentObj=om.findObjectByName('scene'))
 
     def getRobotFolder(self, robotNum):
         return om.getOrCreateContainer('robot %d' % robotNum, parentObj=self.getRootFolder())

@@ -514,7 +514,7 @@ class TreeViewer(object):
         return path
 
     def getRootFolder(self):
-        return om.getOrCreateContainer(self.name,
+        return om.getOrCreateContainer(self.name.lower(),
                                        parentObj=om.findObjectByName('scene'))
 
     def getItemByPath(self, path):
