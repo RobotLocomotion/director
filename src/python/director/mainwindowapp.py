@@ -348,7 +348,7 @@ class MainWindowPanelFactory(ComponentFactory):
         # these components depend on lcm and lcmgl, so they
         # are disabled by default
         options.useDrakeVisualizer = False
-        options.useLCMVisualizer = False
+        options.useTreeViewer = False
         options.useLCMGLRenderer = False
 
     def addComponents(self, componentGraph):
@@ -361,7 +361,7 @@ class MainWindowPanelFactory(ComponentFactory):
         addComponent('CameraBookmarksPanel', ['MainWindow'])
         addComponent('CameraControlPanel', ['MainWindow'])
         addComponent('DrakeVisualizer', ['MainWindow'])
-        addComponent('LCMVisualizer', ['MainWindow'])
+        addComponent('TreeViewer', ['MainWindow'])
         addComponent('LCMGLRenderer', ['MainWindow'])
 
     def initMainWindow(self, fields):
@@ -407,21 +407,21 @@ class MainWindowPanelFactory(ComponentFactory):
         from director import drakevisualizer
         drakeVisualizer = drakevisualizer.DrakeVisualizer(fields.view)
 
-        applogic.MenuActionToggleHelper('Tools', 'Drake Visualizer', drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
+        applogic.MenuActionToggleHelper('Tools', drakeVisualizer.name, drakeVisualizer.isEnabled, drakeVisualizer.setEnabled)
 
         return FieldContainer(
           drakeVisualizer=drakeVisualizer
           )
 
-    def initLCMVisualizer(self, fields):
+    def initTreeViewer(self, fields):
 
-        from director import drakevisualizer2
-        lcmVisualizer = drakevisualizer2.DrakeVisualizer(fields.view)
+        from director import treeviewer
+        treeViewer = treeviewer.TreeViewer(fields.view)
 
-        applogic.MenuActionToggleHelper('Tools', 'LCM Visualizer', lcmVisualizer.isEnabled, lcmVisualizer.setEnabled)
+        applogic.MenuActionToggleHelper('Tools', treeViewer.name, treeViewer.isEnabled, treeViewer.setEnabled)
 
         return FieldContainer(
-          lcmVisualizer=lcmVisualizer
+          treeViewer=treeViewer
           )
 
     def initLCMGLRenderer(self, fields):

@@ -33,7 +33,6 @@ set(python_files
   director/depthscanner.py
   director/doordemo.py
   director/drakevisualizer.py
-  director/drakevisualizer2.py
   director/drakevisualizerapp.py
   director/drcargs.py
   director/drilldemo.py
@@ -125,6 +124,7 @@ set(python_files
   director/timercallback.py
   director/transformUtils.py
   director/trackers.py
+  director/treeviewer.py
   director/utime.py
   director/uuidutil.py
   director/valvedemo.py
