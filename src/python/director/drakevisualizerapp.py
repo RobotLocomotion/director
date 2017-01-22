@@ -14,6 +14,9 @@ except ImportError:
 
 def main(globalsDict=None):
 
+    if '--testing' not in sys.argv:
+        drcargs.requireStrict()
+
     appName = 'Drake Visualizer'
     app = mainwindowapp.MainWindowAppFactory().construct(globalsDict=globalsDict, windowTitle=appName, applicationName=appName)
 
