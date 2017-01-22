@@ -11,7 +11,7 @@ import robotlocomotion as lcmrl
 
 def comms_msg(timestamp, data):
     msg = lcmrl.viewer2_comms_t()
-    msg.format = "viewer2_json"
+    msg.format = "treeviewer_json"
     msg.format_version_major = 1
     msg.format_version_minor = 0
     encoded = json.dumps(data)
@@ -28,7 +28,7 @@ class Visualizer:
         for (path, geom) in geometries.items():
             self.load(path, geom)
         self.lcm = lcm.LCM()
-        self.lcm.subscribe("DRAKE_VIEWER2_RESPONSE", self.onResponse)
+        self.lcm.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE", self.onResponse)
         self.listener = threading.Thread(target=self.listen)
         self.listener.daemon = True
         self.listener.start()
@@ -46,7 +46,7 @@ class Visualizer:
             "draw": self.queue["draw"]
         }
         msg = comms_msg(timestamp, data)
-        self.lcm.publish("DRAKE_VIEWER2_REQUEST", msg.encode())
+        self.lcm.publish("DIRECTOR_TREE_VIEWER_REQUEST", msg.encode())
         self.queue["load"] = []
         self.queue["delete"] = []
         self.queue["draw"] = []

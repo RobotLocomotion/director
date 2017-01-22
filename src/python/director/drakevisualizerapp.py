@@ -2,35 +2,31 @@ import sys
 from director import drcargs
 from director import mainwindowapp
 
+# todo:
+# this check is required because openhumanoids
+# does not yet have robotlocomotion/lcmtypes
+try:
+    import robotlocomotion as lcmrl
+    HAVE_LCMRL = True
+except ImportError:
+    HAVE_LCMRL = False
+
 
 def main(globalsDict=None):
 
     if '--testing' not in sys.argv:
         drcargs.requireStrict()
 
-    parser = drcargs.getGlobalArgParser().getParser()
-    parser.add_argument('--protocol', dest='visualizer_protocol', default='drake', type=str, help='Visualizer protocol (drake or json)')
-    args = drcargs.args()
-
-    knownProtocols = ('drake', 'json')
-    if args.visualizer_protocol not in knownProtocols:
-        print
-        print 'Unrecognized visualizer protocol:', args.visualizer_protocol
-        print 'Available protocols:', ', '.join(knownProtocols)
-        print
-        sys.exit(1)
-
     appName = 'Drake Visualizer'
     app = mainwindowapp.MainWindowAppFactory().construct(globalsDict=globalsDict, windowTitle=appName, applicationName=appName)
 
     fact = mainwindowapp.MainWindowPanelFactory()
-    options = fact.getDefaultOptions()
-    options.useLCMGLRenderer = True
 
-    if args.visualizer_protocol == 'json':
-        fact.setDependentOptions(options, useLCMVisualizer=True)
-    elif args.visualizer_protocol == 'drake':
-        fact.setDependentOptions(options, useDrakeVisualizer=True)
+    options = fact.getDefaultOptions()
+    fact.setDependentOptions(options,
+        useTreeViewer=HAVE_LCMRL,
+        useDrakeVisualizer=True,
+        useLCMGLRenderer=True)
 
     fact.construct(options, app=app.app, view=app.view)
 

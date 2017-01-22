@@ -344,7 +344,9 @@ def findPathToAncestor(fromItem, toItem):
     return path
 
 
-class DrakeVisualizer(object):
+class TreeViewer(object):
+    name = "Remote Tree Viewer"
+
     def __init__(self, view):
 
         self.subscribers = []
@@ -357,7 +359,7 @@ class DrakeVisualizer(object):
 
     def _addSubscribers(self):
         self.subscribers.append(lcmUtils.addSubscriber(
-            'DRAKE_VIEWER2_REQUEST',
+            'DIRECTOR_TREE_VIEWER_REQUEST',
             lcmrl.viewer2_comms_t,
             self.onViewerRequest))
 
@@ -383,28 +385,28 @@ class DrakeVisualizer(object):
 
     def sendStatusMessage(self, timestamp, response):
         msg = lcmrl.viewer2_comms_t()
-        msg.format = "viewer2_json"
+        msg.format = "treeviewer_json"
         msg.format_version_major = 1
         msg.format_version_minor = 0
         data = dict(timestamp=timestamp, **response.toJson())
         msg.data = json.dumps(data)
         msg.num_bytes = len(msg.data)
-        lcmUtils.publish('DRAKE_VIEWER2_RESPONSE', msg)
+        lcmUtils.publish('DIRECTOR_TREE_VIEWER_RESPONSE', msg)
 
     def decodeCommsMsg(self, msg):
-        if msg.format == "viewer2_json":
+        if msg.format == "treeviewer_json":
             if msg.format_version_major == 1 and msg.format_version_minor == 0:
                 data = json.loads(msg.data)
                 return data, ViewerResponse(ViewerStatus.OK, {})
             else:
                 return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT_VERSION,
                                             {"supported_formats": {
-                                                 "viewer2_json": ["1.0"]
+                                                 "treeviewer_json": ["1.0"]
                                             }})
         else:
             return None, ViewerResponse(ViewerStatus.ERROR_UNKNOWN_FORMAT,
                                         {"supported_formats": {
-                                             "viewer2_json": ["1.0"]
+                                             "treeviewer_json": ["1.0"]
                                         }})
 
     def onViewerRequest(self, msg):
@@ -512,7 +514,7 @@ class DrakeVisualizer(object):
         return path
 
     def getRootFolder(self):
-        return om.getOrCreateContainer('drake viewer',
+        return om.getOrCreateContainer(self.name.lower(),
                                        parentObj=om.findObjectByName('scene'))
 
     def getItemByPath(self, path):

@@ -22,7 +22,7 @@ set(python_tests_core
 set(python_tests_lcm
   testDrakeVisualizer.py
   testDrakeVisualizerInterface.py
-  testDrakeVisualizer2Interface.py
+  testTreeViewerInterface.py
 )
 
 set(python_tests_robot
