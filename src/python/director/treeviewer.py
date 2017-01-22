@@ -412,18 +412,15 @@ class TreeViewer(object):
     def onViewerRequest(self, msg):
         tic = time.time()
         data, response = self.decodeCommsMsg(msg)
-        #print "decoded in:", time.time() - tic
         if data is None:
             self.sendStatusMessage(msg.utime,
                                    [responses])
         else:
             tic = time.time()
             responses = self.handleViewerRequest(data)
-            #print "handled in:", time.time() - tic
             tic = time.time()
             self.sendStatusMessage(msg.utime,
                                    responses)
-            #print "responded in:", time.time() - tic
 
     def handleViewerRequest(self, data):
         deletedPaths = set()
@@ -468,7 +465,7 @@ class TreeViewer(object):
             geomTransform.Concatenate(item.transform)
 
         for geom in geomItems:
-            existing_item = self.getItemByPath(path + ["geometry"])
+            existing_item = folder.findChild("geometry")
             item = geom.polyDataItem
             if existing_item is not None:
                 for prop in existing_item.propertyNames():
@@ -508,31 +505,23 @@ class TreeViewer(object):
 
     def handleDeletePath(self, command):
         path = command["path"]
-        item = self.getItemByPath(path)
+        item = self.getPathFolder(path)
         if item is not None:
             om.removeFromObjectModel(item)
         return path
 
     def getRootFolder(self):
-        return om.getOrCreateContainer(self.name.lower(),
-                                       parentObj=om.findObjectByName('scene'))
-
-    def getItemByPath(self, path):
-        path = tuple(path)
+        path = tuple()
         if path in self.pathToItemCache:
-            # print "hit for path:", path
-            item = self.pathToItemCache[path]
+            return self.pathToItemCache[path]
         else:
-            # print "miss for path:", path
-            item = self.getRootFolder()
-            for element in path:
-                item = item.findChild(element)
-                if item is None:
-                    return None
-            self.pathToItemCache[path] = item
-            self.itemToPathCache[item] = path
-            item.connectRemovedFromObjectModel(self.onItemRemoved)
-            return item
+            folder = om.getOrCreateContainer(
+                self.name.lower(),
+                parentObj=om.findObjectByName('scene'))
+            self.pathToItemCache[path] = folder
+            self.itemToPathCache[folder] = path
+            folder.connectRemovedFromObjectModel(self.onItemRemoved)
+            return folder
 
     def onItemRemoved(self, objModel, item):
         if item in self.itemToPathCache:
