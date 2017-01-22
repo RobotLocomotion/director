@@ -2,6 +2,15 @@ import sys
 from director import drcargs
 from director import mainwindowapp
 
+# todo:
+# this check is required because openhumanoids
+# does not yet have robotlocomotion/lcmtypes
+try:
+    import robotlocomotion as lcmrl
+    HAVE_LCMRL = True
+except ImportError:
+    HAVE_LCMRL = False
+
 
 def main(globalsDict=None):
 
@@ -9,10 +18,13 @@ def main(globalsDict=None):
     app = mainwindowapp.MainWindowAppFactory().construct(globalsDict=globalsDict, windowTitle=appName, applicationName=appName)
 
     fact = mainwindowapp.MainWindowPanelFactory()
+
     options = fact.getDefaultOptions()
-    options.useLCMGLRenderer = True
-    fact.setDependentOptions(options, useTreeViewer=True)
-    fact.setDependentOptions(options, useDrakeVisualizer=True)
+    fact.setDependentOptions(options,
+        useTreeViewer=HAVE_LCMRL,
+        useDrakeVisualizer=True,
+        useLCMGLRenderer=True)
+
     fact.construct(options, app=app.app, view=app.view)
 
     if globalsDict is not None:
