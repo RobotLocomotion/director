@@ -127,6 +127,12 @@ class Geometry(object):
         return [vnp.numpyToPolyData(points, createVertexCells=True)]
 
     @staticmethod
+    def createTriad(params):
+        polyData = vis.createAxesPolyData(params.get("scale", 1.0),
+                                          params.get("tube", True))
+        return [polyData]
+
+    @staticmethod
     def createPolyData(params):
         if params["type"] == "box":
             return Geometry.createBox(params)
@@ -146,6 +152,8 @@ class Geometry(object):
             return Geometry.createPointcloud(params)
         elif params["type"] == "planar_lidar":
             return Geometry.createPlanarLidar(params)
+        elif params["type"] == "triad":
+            return Geometry.createTriad(params)
         else:
             raise Exception(
                 "Unsupported geometry type: {}".format(params["type"]))
@@ -476,7 +484,7 @@ class TreeViewer(object):
                 om.removeFromObjectModel(existing_item)
             else:
                 item.setProperty("Point Size", 2)
-                for colorBy in ["rgb", "intensity"]:
+                for colorBy in ["rgb", "intensity", "Axes"]:
                     try:
                         item.setProperty("Color By", colorBy)
                     except ValueError:
