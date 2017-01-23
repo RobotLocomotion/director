@@ -114,6 +114,9 @@ if __name__ == '__main__':
             "channels": {
                 "intensity": [i / 100. for i in range(100)]
             }
+        },
+        "triads/triad1": {
+            "type": "triad"
         }
     }
     vis = Visualizer(geometries)
