@@ -1,4 +1,6 @@
 import director
+import os
+import subprocess
 import json
 import threading
 import time
@@ -88,6 +90,22 @@ class Visualizer:
             print("unhandled:", response)
 
 if __name__ == '__main__':
+    # We'll open the visualizer by spawning it as a subprocess. See
+    # testDrakeVisualizer.py for an example of how to spawn it within Python
+    # instead.
+    vis_binary = os.path.join(os.path.dirname(sys.executable),
+                              "drake-visualizer")
+
+    # The viewer will take some time to load before it is ready to receive
+    # messages, so we'll wait until it sends its first status message.
+    print "waiting for viewer to initialize"
+    lc = lcm.LCM()
+    lc.subscribe("DIRECTOR_TREE_VIEWER_RESPONSE", lambda c, d: None)
+    vis_process = subprocess.Popen([vis_binary, '--testing', '--interactive'])
+
+    # Wait for one LCM message to be received.
+    lc.handle()
+
     geometries = {
         "robot1/link1/box1": {
             "type": "box",
@@ -143,3 +161,4 @@ if __name__ == '__main__':
             vis.publish()
             time.sleep(0.001)
 
+    vis_process.terminate()
