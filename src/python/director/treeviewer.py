@@ -484,12 +484,11 @@ class TreeViewer(object):
                 om.removeFromObjectModel(existing_item)
             else:
                 item.setProperty("Point Size", 2)
+                availableColorModes = set(
+                    item.getPropertyAttribute('Color By', 'enumNames'))
                 for colorBy in ["rgb", "intensity", "Axes"]:
-                    try:
+                    if colorBy in availableColorModes:
                         item.setProperty("Color By", colorBy)
-                    except ValueError:
-                        pass
-                    else:
                         break
 
             item.addToView(self.view)
