@@ -341,6 +341,24 @@ class PyDrakeIkServer(object):
         wc = pydrakeik.WorldGazeDirConstraint(self.rigidBodyTree, bodyId, bodyAxis, worldAxis, coneThreshold, tspan)
         return wc
 
+    def handleWorldGazeOrientConstraint(self, c, fields):
+
+        bodyId = self.bodyNameToId[c.linkName]
+        tspan = np.asarray(c.tspan, dtype=float)
+        axis = np.asarray(c.axis, dtype=float)
+        coneThreshold = c.coneThreshold
+        threshold = c.threshold
+
+        if isinstance(c.quaternion, vtk.vtkTransform):
+            quat = transformUtils.getNumpyFromTransform(c.quaternion)
+        else:
+            quat = np.asarray(c.quaternion, dtype=float)
+        if quat.shape == (4,4):
+            quat = transformUtils.transformations.quaternion_from_matrix(quat)
+
+        wc = pydrakeik.WorldGazeOrientConstraint(self.rigidBodyTree, bodyId, axis, quat, coneThreshold, threshold, tspan)
+        return wc
+
     def handlePostureConstraint(self, c, fields):
 
         tspan = np.asarray(c.tspan, dtype=float)
@@ -391,6 +409,7 @@ class PyDrakeIkServer(object):
             ikconstraints.FixedLinkFromRobotPoseConstraint : self.handleFixedLinkFromRobotPoseConstraint,
             ikconstraints.QuatConstraint : self.handleQuatConstraint,
             ikconstraints.WorldGazeDirConstraint : self.handleWorldGazeDirConstraint,
+            ikconstraints.WorldGazeOrientConstraint : self.handleWorldGazeOrientConstraint,
             ikconstraints.PostureConstraint : self.handlePostureConstraint,
             ikconstraints.QuasiStaticConstraint : self.handleQuasiStaticConstraint,
             }
