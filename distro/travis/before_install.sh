@@ -44,7 +44,13 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
   #brew upgrade
 
   # use a fixed revision of homebrew qt4
-  brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/1c4bb08cc9cff85d0ae921886263064ef8bd3b30/Formula/qt.rb
+  #brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/1c4bb08cc9cff85d0ae921886263064ef8bd3b30/Formula/qt.rb
+
+  brew tap cartr/qt4
+  brew tap-pin cartr/qt4
+  brew tap robotlocomotion/director
+  brew tap-pin robotlocomotion/director
+  brew install vtk5
 
   brew install doxygen graphviz
   brew install glib # for lcm
@@ -54,6 +60,6 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
 
   pip install pyyaml lxml Sphinx sphinx-rtd-theme coverage
 
-  install_vtk_homebrew_bottle
+  #install_vtk_homebrew_bottle
   #make_vtk_homebrew_bottle
 fi
