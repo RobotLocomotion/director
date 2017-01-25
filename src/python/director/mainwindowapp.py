@@ -396,11 +396,21 @@ class MainWindowPanelFactory(ComponentFactory):
         cameraBookmarksPanel = camerabookmarks.CameraBookmarkWidget(fields.view)
         cameraBookmarksDock = fields.app.addWidgetToDock(cameraBookmarksPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
 
+        return FieldContainer(
+          cameraBookmarksPanel=cameraBookmarksPanel,
+          cameraBookmarksDock=cameraBookmarksDock
+          )
+
     def initCameraControlPanel(self, fields):
 
         from director import cameracontrolpanel
         cameraControlPanel = cameracontrolpanel.CameraControlPanel(fields.view)
         cameraControlDock = fields.app.addWidgetToDock(cameraControlPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
+
+        return FieldContainer(
+          cameraControlPanel=cameraControlPanel,
+          cameraControlDock=cameraControlDock
+          )
 
     def initDrakeVisualizer(self, fields):
 
