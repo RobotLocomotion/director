@@ -72,6 +72,7 @@ set(python_files
   director/mapsregistrar.py
   director/matlab.py
   director/matlabik.py
+  director/measurementpanel.py
   director/meshmanager.py
   director/midi.py
   director/multisensepanel.py

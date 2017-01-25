@@ -361,6 +361,7 @@ class MainWindowPanelFactory(ComponentFactory):
         addComponent('ScreenGrabberPanel', ['MainWindow'])
         addComponent('CameraBookmarksPanel', ['MainWindow'])
         addComponent('CameraControlPanel', ['MainWindow'])
+        addComponent('MeasurementPanel', ['MainWindow'])
         addComponent('OutputConsole', ['MainWindow'])
         addComponent('DrakeVisualizer', ['MainWindow'])
         addComponent('TreeViewer', ['MainWindow'])
@@ -386,6 +387,16 @@ class MainWindowPanelFactory(ComponentFactory):
         outputConsole.addToAppWindow(fields.app, visible=False)
 
         return FieldContainer(outputConsole=outputConsole)
+
+    def initMeasurementPanel(self, fields):
+        from director import measurementpanel
+        measurementPanel = measurementpanel.MeasurementPanel(fields.app, fields.view)
+        measurementDock = fields.app.addWidgetToDock(measurementPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
+
+        return FieldContainer(
+          measurementPanel=measurementPanel,
+          measurementDock=measurementDock
+          )
 
     def initScreenGrabberPanel(self, fields):
 
