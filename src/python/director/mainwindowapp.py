@@ -296,6 +296,7 @@ class MainWindowAppFactory(ComponentFactory):
 
     def initGlobalModules(self, fields):
 
+        from PythonQt import QtCore, QtGui
         from director import objectmodel as om
         from director import visualization as vis
         from director import applogic
@@ -360,6 +361,8 @@ class MainWindowPanelFactory(ComponentFactory):
         addComponent('ScreenGrabberPanel', ['MainWindow'])
         addComponent('CameraBookmarksPanel', ['MainWindow'])
         addComponent('CameraControlPanel', ['MainWindow'])
+        addComponent('MeasurementPanel', ['MainWindow'])
+        addComponent('OutputConsole', ['MainWindow'])
         addComponent('DrakeVisualizer', ['MainWindow'])
         addComponent('TreeViewer', ['MainWindow'])
         addComponent('LCMGLRenderer', ['MainWindow'])
@@ -377,6 +380,23 @@ class MainWindowPanelFactory(ComponentFactory):
         fields.app.registerStartupCallback(loadData)
 
         return FieldContainer(openDataHandler=openDataHandler)
+
+    def initOutputConsole(self, fields):
+        from director import outputconsole
+        outputConsole = outputconsole.OutputConsole()
+        outputConsole.addToAppWindow(fields.app, visible=False)
+
+        return FieldContainer(outputConsole=outputConsole)
+
+    def initMeasurementPanel(self, fields):
+        from director import measurementpanel
+        measurementPanel = measurementpanel.MeasurementPanel(fields.app, fields.view)
+        measurementDock = fields.app.addWidgetToDock(measurementPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
+
+        return FieldContainer(
+          measurementPanel=measurementPanel,
+          measurementDock=measurementDock
+          )
 
     def initScreenGrabberPanel(self, fields):
 
@@ -396,11 +416,21 @@ class MainWindowPanelFactory(ComponentFactory):
         cameraBookmarksPanel = camerabookmarks.CameraBookmarkWidget(fields.view)
         cameraBookmarksDock = fields.app.addWidgetToDock(cameraBookmarksPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
 
+        return FieldContainer(
+          cameraBookmarksPanel=cameraBookmarksPanel,
+          cameraBookmarksDock=cameraBookmarksDock
+          )
+
     def initCameraControlPanel(self, fields):
 
         from director import cameracontrolpanel
         cameraControlPanel = cameracontrolpanel.CameraControlPanel(fields.view)
         cameraControlDock = fields.app.addWidgetToDock(cameraControlPanel.widget, QtCore.Qt.RightDockWidgetArea, visible=False)
+
+        return FieldContainer(
+          cameraControlPanel=cameraControlPanel,
+          cameraControlDock=cameraControlDock
+          )
 
     def initDrakeVisualizer(self, fields):
 

@@ -162,7 +162,7 @@ if (USE_LCM)
 
   ExternalProject_Add(robotlocomotion-lcmtypes
     GIT_REPOSITORY https://github.com/robotlocomotion/lcmtypes
-    GIT_TAG a9f386b
+    GIT_TAG 4bd59a1
     ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}

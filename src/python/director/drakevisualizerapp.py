@@ -28,10 +28,11 @@ def main(globalsDict=None):
         useDrakeVisualizer=True,
         useLCMGLRenderer=True)
 
-    fact.construct(options, app=app.app, view=app.view)
+    fields = fact.construct(options, app=app.app, view=app.view)
 
     if globalsDict is not None:
-        globalsDict.update(**dict(app))
+        for d in [app, fields]:
+            globalsDict.update(**dict(d))
 
     app.app.start()
 

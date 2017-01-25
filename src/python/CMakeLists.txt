@@ -72,6 +72,7 @@ set(python_files
   director/mapsregistrar.py
   director/matlab.py
   director/matlabik.py
+  director/measurementpanel.py
   director/meshmanager.py
   director/midi.py
   director/multisensepanel.py
@@ -80,6 +81,7 @@ set(python_files
   director/opendatahandler.py
   director/openscope.py
   director/otdfmodel.py
+  director/outputconsole.py
   director/packagepath.py
   director/perception.py
   director/planningutils.py
@@ -125,6 +127,7 @@ set(python_files
   director/transformUtils.py
   director/trackers.py
   director/treeviewer.py
+  director/uipanel.py
   director/utime.py
   director/uuidutil.py
   director/valvedemo.py
