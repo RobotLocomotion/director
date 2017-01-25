@@ -296,6 +296,7 @@ class MainWindowAppFactory(ComponentFactory):
 
     def initGlobalModules(self, fields):
 
+        from PythonQt import QtCore, QtGui
         from director import objectmodel as om
         from director import visualization as vis
         from director import applogic
@@ -360,6 +361,7 @@ class MainWindowPanelFactory(ComponentFactory):
         addComponent('ScreenGrabberPanel', ['MainWindow'])
         addComponent('CameraBookmarksPanel', ['MainWindow'])
         addComponent('CameraControlPanel', ['MainWindow'])
+        addComponent('OutputConsole', ['MainWindow'])
         addComponent('DrakeVisualizer', ['MainWindow'])
         addComponent('TreeViewer', ['MainWindow'])
         addComponent('LCMGLRenderer', ['MainWindow'])
@@ -377,6 +379,13 @@ class MainWindowPanelFactory(ComponentFactory):
         fields.app.registerStartupCallback(loadData)
 
         return FieldContainer(openDataHandler=openDataHandler)
+
+    def initOutputConsole(self, fields):
+        from director import outputconsole
+        outputConsole = outputconsole.OutputConsole()
+        outputConsole.addToAppWindow(fields.app, visible=False)
+
+        return FieldContainer(outputConsole=outputConsole)
 
     def initScreenGrabberPanel(self, fields):
 

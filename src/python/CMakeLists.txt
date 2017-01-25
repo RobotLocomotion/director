@@ -80,6 +80,7 @@ set(python_files
   director/opendatahandler.py
   director/openscope.py
   director/otdfmodel.py
+  director/outputconsole.py
   director/packagepath.py
   director/perception.py
   director/planningutils.py
