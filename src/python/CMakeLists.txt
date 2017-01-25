@@ -126,6 +126,7 @@ set(python_files
   director/transformUtils.py
   director/trackers.py
   director/treeviewer.py
+  director/uipanel.py
   director/utime.py
   director/uuidutil.py
   director/valvedemo.py
