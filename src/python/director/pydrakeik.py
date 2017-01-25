@@ -328,6 +328,14 @@ class PyDrakeIkServer(object):
         qc = pydrakeik.WorldQuatConstraint(self.rigidBodyTree, bodyId, quat, tolerance, tspan)
         return qc
 
+    def handleWorldFixedOrientConstraint(self, c, fields):
+
+        bodyId = self.bodyNameToId[c.linkName]
+        tspan = np.asarray(c.tspan, dtype=float)
+
+        wc = pydrakeik.WorldFixedOrientConstraint(self.rigidBodyTree, bodyId, tspan)
+        return wc
+
     def handleWorldGazeDirConstraint(self, c, fields):
 
         bodyId = self.bodyNameToId[c.linkName]
@@ -408,6 +416,7 @@ class PyDrakeIkServer(object):
             ikconstraints.PositionConstraint : self.handlePositionConstraint,
             ikconstraints.FixedLinkFromRobotPoseConstraint : self.handleFixedLinkFromRobotPoseConstraint,
             ikconstraints.QuatConstraint : self.handleQuatConstraint,
+            ikconstraints.WorldFixedOrientConstraint : self.handleWorldFixedOrientConstraint,
             ikconstraints.WorldGazeDirConstraint : self.handleWorldGazeDirConstraint,
             ikconstraints.WorldGazeOrientConstraint : self.handleWorldGazeOrientConstraint,
             ikconstraints.PostureConstraint : self.handlePostureConstraint,
