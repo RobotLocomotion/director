@@ -35,7 +35,6 @@ class MainWindowApp(object):
         self.quitAction.connect('triggered()', self.quit)
         self.fileMenu.addSeparator()
 
-
         self.pythonConsoleAction = self.toolsMenu.addAction('&Python Console')
         self.pythonConsoleAction.setShortcut(QtGui.QKeySequence('F8'))
         self.pythonConsoleAction.connect('triggered()', self.showPythonConsole)
@@ -48,7 +47,6 @@ class MainWindowApp(object):
         helpKeyboardShortcutsAction = self.helpMenu.addAction('Keyboard Shortcuts')
         helpKeyboardShortcutsAction.connect('triggered()', self.showOnlineKeyboardShortcuts)
         self.helpMenu.addSeparator()
-
 
     def quit(self):
         MainWindowApp.applicationInstance().quit()
@@ -147,30 +145,26 @@ class MainWindowApp(object):
         self.applicationInstance().connect('aboutToQuit()', self._saveCustomWindowState)
 
 
-class MainWindowAppFactory(ComponentFactory):
+class MainWindowAppFactory(object):
 
-    def initDefaultOptions(self, options):
-        '''
-        Components are enabled by default.  This function
-        determines which components should be disabled.
-        '''
-        pass
+    def getComponents(self):
 
-    def addComponents(self, componentGraph):
+        components = {
+            'View' : [],
+            'Globals' : [],
+            'GlobalModules' : ['Globals'],
+            'ObjectModel' : [],
+            'ViewOptions' : ['View', 'ObjectModel'],
+            'MainToolBar' : ['View', 'Grid', 'ViewOptions', 'MainWindow'],
+            'ViewBehaviors' : ['View'],
+            'Grid': ['View', 'ObjectModel'],
+            'MainWindow' : ['View', 'ObjectModel'],
+            'AdjustedClippingRange' : ['View'],
+            'ScriptLoader' : ['MainWindow', 'GlobalModules']}
 
-        addComponent = componentGraph.addComponent
+        disabledComponents = []
 
-        addComponent('View', [])
-        addComponent('Globals', [])
-        addComponent('GlobalModules', ['Globals'])
-        addComponent('ObjectModel', [])
-        addComponent('ViewOptions', ['View', 'ObjectModel'])
-        addComponent('MainToolBar', ['View', 'Grid', 'ViewOptions', 'MainWindow'])
-        addComponent('ViewBehaviors', ['View'])
-        addComponent('Grid', ['View', 'ObjectModel'])
-        addComponent('MainWindow', ['View', 'ObjectModel'])
-        addComponent('AdjustedClippingRange', ['View'])
-        addComponent('ScriptLoader', ['MainWindow', 'GlobalModules'])
+        return components, disabledComponents
 
     def initView(self, fields):
         view = PythonQt.dd.ddQVTKWidgetView()
@@ -215,8 +209,6 @@ class MainWindowAppFactory(ComponentFactory):
 
     def initMainWindow(self, fields):
 
-        from director import viewcolors
-
         organizationName = 'RobotLocomotion'
         applicationName = 'DirectorMainWindow'
         windowTitle = 'Director App'
@@ -252,8 +244,6 @@ class MainWindowAppFactory(ComponentFactory):
 
         applogic.addShortcut(app.mainWindow, 'F1', toggleObjectModelDock)
         #applogic.addShortcut(app.mainWindow, 'F8', app.showPythonConsole)
-
-
 
         return FieldContainer(
           app=app,
@@ -338,37 +328,30 @@ class MainWindowAppFactory(ComponentFactory):
         fields.app.registerStartupCallback(loadScripts)
 
 
-class MainWindowPanelFactory(ComponentFactory):
+class MainWindowPanelFactory(object):
 
-    def initDefaultOptions(self, options):
-        '''
-        Components are enabled by default.  This function
-        determines which components should be disabled.
-        '''
+    def getComponents(self):
 
-        # these components depend on lcm and lcmgl, so they
-        # are disabled by default
-        options.useDrakeVisualizer = False
-        options.useTreeViewer = False
-        options.useLCMGLRenderer = False
+        components = {
+            'OpenDataHandler' : ['MainWindow'],
+            'ScreenGrabberPanel' : ['MainWindow'],
+            'CameraBookmarksPanel' : ['MainWindow'],
+            'CameraControlPanel' : ['MainWindow'],
+            'MeasurementPanel' : ['MainWindow'],
+            'OutputConsole' : ['MainWindow'],
+            'DrakeVisualizer' : ['MainWindow'],
+            'TreeViewer' : ['MainWindow'],
+            'LCMGLRenderer' : ['MainWindow']}
 
-    def addComponents(self, componentGraph):
+        # these components depend on lcm and lcmgl
+        # so they are disabled by default
+        disabledComponents = [
+            'DrakeVisualizer',
+            'TreeViewer',
+            'LCMGLRenderer']
 
-        addComponent = componentGraph.addComponent
+        return components, disabledComponents
 
-        addComponent('MainWindow', [])
-        addComponent('OpenDataHandler', ['MainWindow'])
-        addComponent('ScreenGrabberPanel', ['MainWindow'])
-        addComponent('CameraBookmarksPanel', ['MainWindow'])
-        addComponent('CameraControlPanel', ['MainWindow'])
-        addComponent('MeasurementPanel', ['MainWindow'])
-        addComponent('OutputConsole', ['MainWindow'])
-        addComponent('DrakeVisualizer', ['MainWindow'])
-        addComponent('TreeViewer', ['MainWindow'])
-        addComponent('LCMGLRenderer', ['MainWindow'])
-
-    def initMainWindow(self, fields):
-        assert fields.view and fields.app
 
     def initOpenDataHandler(self, fields):
         from director import opendatahandler
@@ -468,11 +451,11 @@ class MainWindowPanelFactory(ComponentFactory):
           )
 
 
-
 def construct(globalsDict=None):
-    app = MainWindowAppFactory().construct(globalsDict=globalsDict)
-    MainWindowPanelFactory().construct(view=app.view, app=app.app)
-    return app
+    fact = ComponentFactory()
+    fact.register(MainWindowAppFactory)
+    fact.register(MainWindowPanelFactory)
+    return fact.construct(globalsDict=globalsDict)
 
 
 def main(globalsDict=None):

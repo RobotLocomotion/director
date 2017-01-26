@@ -17,7 +17,7 @@ def getArgs():
     return args
 
 
-app = mainwindowapp.MainWindowAppFactory().construct()
+app = mainwindowapp.construct()
 view = app.view
 
 args = getArgs()

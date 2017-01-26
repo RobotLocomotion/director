@@ -96,13 +96,7 @@ def testPlanConstraints():
 
 app = ConsoleApp()
 view = app.createView()
-
-
-factory = robotsystem.RobotSystemFactory()
-options = factory.getDisabledOptions()
-factory.setDependentOptions(options, usePlannerPublisher=True)
-robotSystem = factory.construct(view=view, options=options)
-
+robotSystem = robotsystem.create(view=view, planningOnly=True)
 
 app.setupGlobals(globals())
 globals().update(dict(robotSystem))

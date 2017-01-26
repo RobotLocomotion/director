@@ -91,7 +91,7 @@ def getAffordanceContextMenuActions(view, pickedObj, pickedPoint):
 viewbehaviors.registerContextMenuActions(getAffordanceContextMenuActions)
 
 
-app = mainwindowapp.MainWindowAppFactory().construct()
+app = mainwindowapp.construct()
 view = app.view
 
 

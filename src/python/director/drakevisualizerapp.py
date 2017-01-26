@@ -18,9 +18,10 @@ def main(globalsDict=None):
         drcargs.requireStrict()
 
     appName = 'Drake Visualizer'
-    app = mainwindowapp.MainWindowAppFactory().construct(globalsDict=globalsDict, windowTitle=appName, applicationName=appName)
 
-    fact = mainwindowapp.MainWindowPanelFactory()
+    fact = mainwindowapp.ComponentFactory()
+    fact.register(mainwindowapp.MainWindowAppFactory)
+    fact.register(mainwindowapp.MainWindowPanelFactory)
 
     options = fact.getDefaultOptions()
     fact.setDependentOptions(options,
@@ -28,13 +29,16 @@ def main(globalsDict=None):
         useDrakeVisualizer=True,
         useLCMGLRenderer=True)
 
-    fields = fact.construct(options, app=app.app, view=app.view)
+    fields = fact.construct(
+        options=options,
+        globalsDict=globalsDict,
+        windowTitle=appName,
+        applicationName=appName)
 
     if globalsDict is not None:
-        for d in [app, fields]:
-            globalsDict.update(**dict(d))
+        globalsDict.update(**dict(fields))
 
-    app.app.start()
+    fields.app.start()
 
 
 if __name__ == '__main__':

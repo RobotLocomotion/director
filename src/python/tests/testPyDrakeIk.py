@@ -4,13 +4,15 @@ from director import applogic
 from PythonQt import QtCore
 
 def makeRobotSystem(view):
-    factory = robotsystem.RobotSystemFactory()
+    factory = robotsystem.ComponentFactory()
+    factory.register(robotsystem.RobotSystemFactory)
     options = factory.getDisabledOptions()
     factory.setDependentOptions(options, usePlannerPublisher=True, useTeleop=True)
     return factory.construct(view=view, options=options)
 
+app = mainwindowapp.construct()
 
-app = mainwindowapp.MainWindowAppFactory().construct()
+
 robotSystem = makeRobotSystem(app.view)
 
 app.app.addWidgetToDock(robotSystem.teleopPanel.widget, QtCore.Qt.RightDockWidgetArea)
