@@ -118,7 +118,7 @@ class CallbackTask(AsyncTask):
 
     def run(self):
         if self.callback:
-            self.callback()
+            yield self.callback()
 
 
 class ExceptionTask(AsyncTask):
