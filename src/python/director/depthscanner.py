@@ -63,6 +63,9 @@ class DepthScanner(object):
     def getDepthBufferImage(self):
         return self.windowToDepthBuffer.GetOutput()
 
+    def getDepthImage(self):
+        return self.depthScaleFilter.GetOutput()
+
     def getColorBufferImage(self):
         return self.windowToColorBuffer.GetOutput()
 
@@ -82,11 +85,14 @@ class DepthScanner(object):
         lut.SetRampToLinear()
         lut.Build()
 
-        im = vtk.vtkImageMapToColors()
-        im.SetLookupTable(lut)
+        self.depthScaleFilter = vtk.vtkImageShiftScale()
+        self.depthScaleFilter.SetScale(1000)
+        self.depthScaleFilter.SetOutputScalarTypeToUnsignedShort()
 
         self.depthImageLookupTable = lut
-        self.imageMapToColors = im
+        self.imageMapToColors = vtk.vtkImageMapToColors()
+        self.imageMapToColors.SetLookupTable(self.depthImageLookupTable)
+        self.imageMapToColors.SetInputConnection(self.depthScaleFilter.GetOutputPort())
 
         self.imageView = imageview.ImageView()
         self.imageView.view.setWindowTitle('Depth image')
@@ -114,7 +120,10 @@ class DepthScanner(object):
 
         depthImage, polyData = computeDepthImageAndPointCloud(self.getDepthBufferImage(), self.getColorBufferImage(), self.view.camera())
 
-        self.imageMapToColors.SetInput(depthImage)
+        self.depthScaleFilter.SetInput(depthImage)
+        self.depthScaleFilter.Update()
+
+        self.depthImageLookupTable.SetRange(self.depthScaleFilter.GetOutput().GetScalarRange())
         self.imageMapToColors.Update()
         self.imageView.resetCamera()
         #self.imageView.view.render()
@@ -150,6 +159,7 @@ def main(globalsDict=None):
     subWindow = mdiArea.addSubWindow(view)
     subWindow.setMinimumSize(300,300)
     subWindow.setWindowTitle('Camera image')
+    subWindow.resize(640, 480)
     mdiArea.tileSubWindows()
 
     #affordanceManager = affordancemanager.AffordanceObjectModelManager(view)
