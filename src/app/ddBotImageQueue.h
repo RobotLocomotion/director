@@ -46,6 +46,7 @@ public:
     public:
 
     bool mHasCalibration;
+    bool mZlibCompression;
     std::string mName;
     std::string mCoordFrame;
     BotCamTrans* mCamTrans;
@@ -58,6 +59,7 @@ public:
     CameraData()
     {
       mHasCalibration = false;
+      mZlibCompression = false;
       mImageMessage.width = 0;
       mImageMessage.height = 0;
       mImageMessage.utime = 0;

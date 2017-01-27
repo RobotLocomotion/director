@@ -95,6 +95,12 @@ bool ddBotImageQueue::addCameraStream(const QString& channel, const QString& cam
     }
 
     this->mCameraData[cameraName] = cameraData;
+    if (   imageType == bot_core::images_t::MASK_ZIPPED
+        || imageType == bot_core::images_t::DISPARITY_ZIPPED
+        || imageType == bot_core::images_t::DEPTH_MM_ZIPPED)
+    {
+      cameraData->mZlibCompression = true;
+    }
   }
 
   this->mChannelMap[channel][imageType] = cameraName;
@@ -443,9 +449,8 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
 
   size_t w = cameraData->mImageMessage.width;
   size_t h = cameraData->mImageMessage.height;
-  size_t buf_size = w*h*3;
 
-  if (buf_size == 0)
+  if (w == 0 || h == 0)
   {
     return vtkSmartPointer<vtkImageData>::New();
   }
@@ -453,37 +458,55 @@ vtkSmartPointer<vtkImageData> ddBotImageQueue::toVtkImage(CameraData* cameraData
   int nComponents = 3;
   int componentType = VTK_UNSIGNED_CHAR;
 
+  int pixelFormat = cameraData->mImageMessage.pixelformat;
+  bool isZlibCompressed = cameraData->mZlibCompression;
+
+  if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_INVALID)
+  {
+    pixelFormat = bot_core::image_t::PIXEL_FORMAT_LE_GRAY16;
+    isZlibCompressed = true;
+  }
+
+
   if (!cameraData->mImageBuffer.size())
   {
-    if (cameraData->mImageMessage.pixelformat == bot_core::image_t::PIXEL_FORMAT_RGB)
+    if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_RGB)
     {
       cameraData->mImageBuffer = cameraData->mImageMessage.data;
     }
-    /*
-    else if (cameraData->mImageMessage.pixelformat == bot_core::image_t::PIXEL_FORMAT_GRAY)
+    else if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_MJPEG)
     {
-      cameraData->mImageBuffer.resize(w*h*2);
-      unsigned long len = cameraData->mImageBuffer.size();
-
-      uncompress(cameraData->mImageBuffer.data(), &len, cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size);
-
-      componentType = VTK_UNSIGNED_SHORT;
+      cameraData->mImageBuffer.resize(w*h*3);
+      jpeg_decompress_8u_rgb(cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size, cameraData->mImageBuffer.data(), w, h, w*3);
+    }
+    else if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_GRAY)
+    {
+      cameraData->mImageBuffer = cameraData->mImageMessage.data;
       nComponents = 1;
     }
-    */
-    else if (cameraData->mImageMessage.pixelformat != bot_core::image_t::PIXEL_FORMAT_MJPEG)
+    else if (pixelFormat == bot_core::image_t::PIXEL_FORMAT_LE_GRAY16)
     {
-      printf("Error: expected PIXEL_FORMAT_MJPEG for camera %s\n", cameraData->mName.c_str());
-      return vtkSmartPointer<vtkImageData>::New();
+
+      if (isZlibCompressed)
+      {
+        cameraData->mImageBuffer.resize(w*h*2);
+        unsigned long len = cameraData->mImageBuffer.size();
+        uncompress(cameraData->mImageBuffer.data(), &len, cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size);
+      }
+      else
+      {
+        cameraData->mImageBuffer = cameraData->mImageMessage.data;
+      }
+
+      nComponents = 1;
+      componentType = VTK_UNSIGNED_SHORT;
     }
     else
     {
-      //printf("jpeg decompress: %s\n", cameraData->mName.c_str());
-      cameraData->mImageBuffer.resize(buf_size);
-      jpeg_decompress_8u_rgb(cameraData->mImageMessage.data.data(), cameraData->mImageMessage.size, cameraData->mImageBuffer.data(), w, h, w*3);
+      std::cout << "unhandled image pixelformat " << pixelFormat << " for camera " << cameraData->mName.c_str() << std::endl;
+      return vtkSmartPointer<vtkImageData>::New();
     }
   }
-  //else printf("already decompressed: %s\n", cameraData->mName.c_str());
 
   vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
 
