@@ -14,11 +14,8 @@ from director import transformUtils
 from director import affordanceitems
 from director import vtkNumpy as vnp
 from director.debugVis import DebugData
-from director.robotplanlistener import ManipulationPlanItem
-from director.footstepsdriver import FootstepPlanItem
 from director import vtkAll as vtk
 from director import lcmUtils
-import drc as lcmdrc
 import numpy as np
 import copy
 import pickle
@@ -28,8 +25,26 @@ from PythonQt import QtCore, QtGui
 import re
 import inspect
 
+try:
+    import drc as lcmdrc
+    HAVE_DRC_MESSAGES = True
+except ImportError:
+    HAVE_DRC_MESSAGES = False
+
 
 robotSystem = None
+
+
+class ManipulationPlanItem(om.ObjectModelItem):
+    pass
+
+
+class FootstepPlanItem(om.ObjectModelItem):
+    pass
+
+
+class WalkingPlanItem(om.ObjectModelItem):
+    pass
 
 
 def _splitCamelCase(name):

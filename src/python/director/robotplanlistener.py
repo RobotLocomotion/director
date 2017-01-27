@@ -19,10 +19,6 @@ except ImportError:
     USE_DRC_MESSAGES = True
 
 
-class ManipulationPlanItem(om.ObjectModelItem):
-    pass
-
-
 class ManipulationPlanDriver(object):
 
     PLAN_RECEIVED = 'PLAN_RECEIVED'

@@ -223,14 +223,6 @@ def getBDIAdjustedFootstepsFolder():
     return obj
 
 
-class FootstepPlanItem(om.ObjectModelItem):
-    pass
-
-
-class WalkingPlanItem(om.ObjectModelItem):
-    pass
-
-
 class FootstepsDriver(object):
 
     def __init__(self, jointController):
