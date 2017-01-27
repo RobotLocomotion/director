@@ -7,6 +7,8 @@
 #include <vtkNew.h>
 
 #include <multisense_utils/multisense_utils.hpp>
+#include <vector>
+
 
 //-----------------------------------------------------------------------------
 ddBotImageQueue::ddBotImageQueue(QObject* parent) : QObject(parent)
@@ -398,7 +400,6 @@ void ddBotImageQueue::onImagesMessage(const QByteArray& data, const QString& cha
       return;
     }
 
-
     CameraData* cameraData = this->getCameraData(cameraName);
 
     QMutexLocker locker(&cameraData->mMutex);
@@ -586,6 +587,89 @@ vtkSmartPointer<vtkPolyData> PolyDataFromPointCloud(pcl::PointCloud<pcl::PointXY
 
 
 };
+
+namespace {
+
+  void vtkToRGBImageMessage(vtkImageData* image, bot_core::image_t& msg)
+  {
+    int width = image->GetDimensions()[0];
+    int height = image->GetDimensions()[1];
+    int nComponents = image->GetNumberOfScalarComponents();
+
+    msg.width = width;
+    msg.height = height;
+    msg.nmetadata = 0;
+    msg.row_stride = nComponents * width;
+    msg.pixelformat = bot_core::image_t::PIXEL_FORMAT_RGB;
+
+    msg.data.resize(width*height*nComponents);
+    msg.size = msg.data.size();
+    memcpy(&msg.data[0], image->GetScalarPointer(), msg.size);
+  }
+
+  void vtkToCompressedDepthMessage(vtkImageData* image, bot_core::image_t& msg)
+  {
+    int width = image->GetDimensions()[0];
+    int height = image->GetDimensions()[1];
+    int nComponents = image->GetNumberOfScalarComponents();
+
+
+    static std::vector<uint8_t> compressBuffer;
+
+    uLongf sourceSize = width*height*nComponents*2;
+    uLongf bufferSize = compressBound(sourceSize);
+
+    if (compressBuffer.size() < bufferSize)
+    {
+      printf("--->resizing compress buffer to %lu\n", bufferSize);
+      compressBuffer.resize(bufferSize);
+    }
+
+    uLongf compressedSize = compressBuffer.size();
+
+    compress2(&compressBuffer[0], &compressedSize,
+      static_cast<Bytef*>(image->GetScalarPointer()), sourceSize, Z_BEST_SPEED);
+
+    msg.width = width;
+    msg.height = height;
+    msg.nmetadata = 0;
+    msg.row_stride = 0;
+    msg.pixelformat = bot_core::image_t::PIXEL_FORMAT_INVALID;
+    msg.data.resize(compressedSize);
+    msg.size = msg.data.size();
+    memcpy(&msg.data[0], &compressBuffer[0], compressedSize);
+  }
+
+}
+
+
+//-----------------------------------------------------------------------------
+void ddBotImageQueue::publishRGBDImagesMessage(const QString& channel,
+    vtkImageData* colorImage, vtkImageData* depthImage, qint64 utime)
+{
+  bot_core::images_t msg;
+  msg.images.resize(2);
+  msg.n_images = msg.images.size();
+  msg.image_types.push_back(int(bot_core::images_t::LEFT));
+  msg.image_types.push_back(int(bot_core::images_t::DEPTH_MM_ZIPPED));
+
+  msg.utime = utime;
+  msg.images[0].utime = utime;
+  msg.images[1].utime = utime;
+
+  vtkToRGBImageMessage(colorImage, msg.images[0]);
+  vtkToCompressedDepthMessage(depthImage, msg.images[1]);
+  mLCM->lcmHandle()->publish(channel.toLatin1().data(), &msg);
+}
+
+//-----------------------------------------------------------------------------
+void ddBotImageQueue::publishRGBImageMessage(const QString& channel, vtkImageData* image, qint64 utime)
+{
+  bot_core::image_t msg;
+  msg.utime = utime;
+  vtkToRGBImageMessage(image, msg);
+  mLCM->lcmHandle()->publish(channel.toLatin1().data(), &msg);
+}
 
 //-----------------------------------------------------------------------------
 void ddBotImageQueue::getPointCloudFromImages(const QString& channel, vtkPolyData* polyData, int decimation, int removeSize, float rangeThreshold)

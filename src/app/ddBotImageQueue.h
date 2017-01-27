@@ -103,6 +103,9 @@ public:
 
   void computeTextureCoords(const QString& cameraName, vtkPolyData* polyData);
 
+  void publishRGBDImagesMessage(const QString& channel, vtkImageData* colorImage, vtkImageData* depthImage, qint64 utime);
+  void publishRGBImageMessage(const QString& channel, vtkImageData* image, qint64 utime);
+
   // Computes a point cloud with rgb and copies it into the given polyData.
   // The channel argument names an lcm channel where an images message are received
   // that contains disparity and color images.
