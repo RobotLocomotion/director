@@ -29,6 +29,7 @@ bool ddBotImageQueue::initCameraData(const QString& cameraName, CameraData* came
 {
   cameraData->mName = cameraName.toAscii().data();
   cameraData->mHasCalibration = true;
+  cameraData->mImageMessage.utime = 0;
 
   cameraData->mCamTrans = bot_param_get_new_camtrans(mBotParam, cameraName.toAscii().data());
   if (!cameraData->mCamTrans)
@@ -415,10 +416,16 @@ void ddBotImageQueue::onImageMessage(const QByteArray& data, const QString& chan
 
   CameraData* cameraData = this->getCameraData(cameraName);
 
+  int64_t prevTimestamp = cameraData->mImageMessage.utime;
 
   QMutexLocker locker(&cameraData->mMutex);
   cameraData->mImageMessage.decode(data.data(), 0, data.size());
   cameraData->mImageBuffer.clear();
+
+  if (cameraData->mImageMessage.utime == 0)
+  {
+    cameraData->mImageMessage.utime = prevTimestamp + 1;
+  }
 
   if (cameraData->mHasCalibration)
   {
