@@ -4,7 +4,6 @@
 #include <vtkCellArray.h>
 #include <vtkNew.h>
 
-#include <multisense_utils/multisense_utils.hpp>
 #include <lcmtypes/kinect/frame_msg_t.hpp>
 #include <lcmtypes/kinect_frame_msg_t.h>
 #include <zlib.h>
