@@ -4,6 +4,8 @@ option(USE_PCL "Build with PCL." OFF)
 option(USE_LCM "Build with lcm." OFF)
 option(USE_LCMGL "Build with lcm-gl." OFF)
 option(USE_OCTOMAP "Build with octomap." OFF)
+option(USE_APRILTAGS "Build with apriltags lcm driver." OFF)
+option(USE_KINECT "Build with kinect lcm driver." OFF)
 option(USE_COLLECTIONS "Build with collections." OFF)
 option(USE_LIBBOT "Build with libbot." OFF)
 option(USE_DRAKE "Build with drake." OFF)
@@ -13,9 +15,21 @@ set(USE_EIGEN ${USE_PCL})
 option(USE_SYSTEM_EIGEN "Use system version of eigen.  If off, eigen will be built." OFF)
 option(USE_SYSTEM_LCM "Use system version of lcm.  If off, lcm will be built." OFF)
 option(USE_SYSTEM_LIBBOT "Use system version of libbot.  If off, libbot will be built." OFF)
+option(USE_SYSTEM_PCL "Use system version of pcl.  If off, pcl will be built." OFF)
+
+if(USE_DRAKE)
+  set(DRAKE_SOURCE_DIR CACHE PATH "")
+  set(DRAKE_SUPERBUILD_PREFIX_PATH "")
+  if(DRAKE_SOURCE_DIR)
+    set(DRAKE_SUPERBUILD_PREFIX_PATH "${DRAKE_SOURCE_DIR}/build/install")
+    if(NOT EXISTS "${DRAKE_SUPERBUILD_PREFIX_PATH}")
+        message(SEND_ERROR "Cannot find build directory in DRAKE_SOURCE_DIR: ${DRAKE_SOURCE_DIR}")
+    endif()
+  endif()
+endif()
 
 set(default_cmake_args
-  "-DCMAKE_PREFIX_PATH:PATH=${install_prefix};${CMAKE_PREFIX_PATH}"
+  "-DCMAKE_PREFIX_PATH:PATH=${install_prefix};${DRAKE_SUPERBUILD_PREFIX_PATH};${CMAKE_PREFIX_PATH}"
   "-DCMAKE_INSTALL_PREFIX:PATH=${install_prefix}"
   "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}"
   "-DBUILD_SHARED_LIBS:BOOL=ON"
@@ -101,7 +115,7 @@ if (USE_LCM AND NOT USE_SYSTEM_LCM)
 
   ExternalProject_Add(lcm
     GIT_REPOSITORY https://github.com/lcm-proj/lcm.git
-    GIT_TAG a8cda6a6
+    GIT_TAG 89f26a4
     ${cmake3_args}
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
@@ -124,8 +138,8 @@ if(USE_LIBBOT AND NOT USE_SYSTEM_LIBBOT)
   endif()
 
   ExternalProject_Add(libbot
-    GIT_REPOSITORY https://github.com/RobotLocomotion/libbot.git
-    GIT_TAG 2cfd369
+    GIT_REPOSITORY https://github.com/RobotLocomotion/libbot2.git
+    GIT_TAG bc73f60
     CMAKE_CACHE_ARGS
       ${default_cmake_args}
       -DWITH_BOT_VIS:BOOL=OFF
@@ -142,7 +156,7 @@ endif()
 ###############################################################################
 # lcm message types repos
 
-if (USE_LCM)
+if (USE_LCM AND NOT USE_SYSTEM_LIBBOT)
 
   ExternalProject_Add(bot_core_lcmtypes
     GIT_REPOSITORY https://github.com/openhumanoids/bot_core_lcmtypes
@@ -207,6 +221,7 @@ if(USE_STANDALONE_LCMGL)
   set(lcmgl_depends bot-lcmgl)
 
 endif()
+
 
 ###############################################################################
 # PythonQt
@@ -289,7 +304,7 @@ endif()
 ###############################################################################
 # pcl, flann
 
-if(USE_PCL)
+if(USE_PCL AND NOT USE_SYSTEM_PCL)
 
   # boost is an external dependency
   find_package(Boost REQUIRED)
@@ -375,9 +390,73 @@ ExternalProject_Add(PointCloudLibraryPlugin
     ${vtk_args}
     -DPCL_REQUIRED_VERSION:STRING=1.7.1
   DEPENDS
-    pcl
+    ${pcl_depends}
     ${vtk_depends}
   )
+
+endif()
+
+
+###############################################################################
+# camera driver
+
+if(USE_KINECT)
+
+  ExternalProject_Add(openni2-camera-lcm
+    GIT_REPOSITORY https://github.com/openhumanoids/openni2-camera-lcm
+    GIT_TAG master
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+    DEPENDS
+      ${lcm_depends}
+    )
+
+
+  ExternalProject_Add(cv-utils
+    GIT_REPOSITORY https://github.com/patmarion/cv-utils
+    GIT_TAG 1d1465d
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+    DEPENDS
+      ${lcm_depends} ${pcl_depends}
+    )
+
+  #ExternalProject_Add(kinect
+  #  GIT_REPOSITORY https://github.com/openhumanoids/kinect.git
+  #  GIT_TAG 3e94f58
+  #  CMAKE_CACHE_ARGS
+  #    ${default_cmake_args}
+  #  DEPENDS
+  #    ${lcm_depends} ${libbot_depends}
+  #  )
+
+  set(cvutils_depends cv-utils)
+
+endif()
+
+
+###############################################################################
+# apriltags
+
+if(USE_APRILTAGS)
+
+  ExternalProject_Add(apriltags
+    GIT_REPOSITORY https://github.com/psiorx/apriltags-pod.git
+    GIT_TAG ed2972f
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+    )
+
+  ExternalProject_Add(apriltags_driver
+    GIT_REPOSITORY https://github.com/patmarion/apriltags_driver.git
+    GIT_TAG 3d84ae4
+    CMAKE_CACHE_ARGS
+      ${default_cmake_args}
+    DEPENDS
+      ${lcm_depends}
+    )
+
+  set(apriltags_depends apriltags)
 
 endif()
 
@@ -412,6 +491,7 @@ ExternalProject_Add(director
     ${eigen_depends}
     ${lcm_depends}
     ${libbot_depends}
+    ${cvutils_depends}
     PythonQt
     ctkPythonConsole
     QtPropertyBrowser
