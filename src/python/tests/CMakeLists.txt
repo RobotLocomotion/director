@@ -10,6 +10,7 @@ set(python_tests_core
   testConsoleApp.py
   testDepthScanner.py
   testFrameSync.py
+  testHeatMap.py
   testMainWindowApp.py
   testObjectModel.py
   testPackagePath.py
