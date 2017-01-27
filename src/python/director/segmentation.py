@@ -224,9 +224,12 @@ class DisparityPointCloudItem(vis.PolyDataItem):
         self.lastUtime = utime
 
 
-def extractLargestCluster(polyData, minClusterSize=100):
-
-    polyData = applyEuclideanClustering(polyData, minClusterSize=minClusterSize)
+def extractLargestCluster(polyData, **kwargs):
+    '''
+    Calls applyEuclideanClustering and then extracts the first (largest) cluster.
+    The given keyword arguments are passed into the applyEuclideanClustering function.
+    '''
+    polyData = applyEuclideanClustering(polyData, **kwargs)
     return thresholdPoints(polyData, 'cluster_labels', [1, 1])
 
 
